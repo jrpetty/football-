@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useData, usePlayer, useActions } from '../store/store'
+import type { DevObjective } from '../types'
 import {
   playerAggregate,
   playerMatchLog,
@@ -10,6 +12,7 @@ import {
   overallRating,
 } from '../analytics/selectors'
 import {
+  fmtDate,
   fmtDateShort,
   num,
   pct,
@@ -18,9 +21,12 @@ import {
   RESULT_COLOR,
   resultOf,
   ratingColor,
+  objectiveStatusColor,
+  genId,
 } from '../utils/format'
 import { fmtClock } from '../utils/video'
 import { tagMeta } from '../data/tags'
+import { DevObjectiveEditor } from '../components/DevObjectiveEditor'
 import { StatCard } from '../components/ui/StatCard'
 import { RadarChart } from '../components/charts/RadarChart'
 import { LineChart } from '../components/charts/LineChart'
@@ -50,6 +56,7 @@ export function PlayerProfile() {
   const data = useData()
   const player = usePlayer(playerId)
   const actions = useActions()
+  const [editingObj, setEditingObj] = useState<DevObjective | null>(null)
 
   if (!player) {
     return (
@@ -97,6 +104,27 @@ export function PlayerProfile() {
     value: stat.goals + stat.assists,
     color: player.color,
   }))
+
+  // Development objectives for this player.
+  const objectives = data.objectives.filter((o) => o.playerId === id)
+  const today = new Date().toISOString().slice(0, 10)
+  function newObjectiveFor(): DevObjective {
+    return { id: '', playerId: id, title: '', area: '', detail: '', status: 'Not started', target: '', created: today, reviewDate: '' }
+  }
+  function suggestObjectives() {
+    const existingAreas = new Set(objectives.map((o) => o.area))
+    for (const f of focus) {
+      if (existingAreas.has(f.label)) continue
+      actions.saveObjective({
+        id: genId('ob'), playerId: id,
+        title: `Improve ${f.label.replace(/ \/90$/, '').toLowerCase()}`,
+        area: f.label,
+        detail: `Currently in the ${f.percentile}th percentile vs position peers — develop toward the squad average.`,
+        status: 'Not started', target: `Reach the squad average for ${f.label}`,
+        created: today, reviewDate: '',
+      })
+    }
+  }
 
   return (
     <div className="content">
@@ -553,8 +581,56 @@ export function PlayerProfile() {
               />
             </div>
           </div>
+
+          {/* Development plan */}
+          <div className="card card-pad">
+            <div className="card-head">
+              <h3>Development plan</h3>
+              <div className="row gap-sm center">
+                {focus.length > 0 && <button className="btn ghost sm" onClick={suggestObjectives}>✨ Suggest from focus</button>}
+                <button className="btn primary sm" onClick={() => setEditingObj(newObjectiveFor())}>＋ Objective</button>
+              </div>
+            </div>
+            {objectives.length === 0 ? (
+              <p className="muted tiny" style={{ marginTop: 8 }}>
+                No objectives yet. Add one, or generate targets from this player’s focus areas.
+              </p>
+            ) : (
+              <div className="col" style={{ gap: 8, marginTop: 8 }}>
+                {objectives.map((o) => {
+                  const c = objectiveStatusColor(o.status)
+                  return (
+                    <div key={o.id} className="panel" style={{ padding: 11, borderLeft: `3px solid ${c}` }}>
+                      <div className="row between center" style={{ gap: 8 }}>
+                        <span className="bold">{o.title || '(untitled)'}</span>
+                        <div className="row gap-sm center">
+                          <span className="badge tiny" style={{ borderColor: `${c}55`, color: c }}>{o.status}</span>
+                          <span className="link tiny" onClick={() => setEditingObj(o)}>edit</span>
+                          <span className="link tiny" style={{ color: 'var(--red)' }} onClick={() => actions.removeObjective(o.id)}>✕</span>
+                        </div>
+                      </div>
+                      <div className="faint tiny" style={{ marginTop: 3 }}>
+                        {o.area && `${o.area}`}{o.target && ` · target: ${o.target}`}{o.reviewDate && ` · review ${fmtDate(o.reviewDate)}`}
+                      </div>
+                      {o.detail && <div className="tiny muted" style={{ marginTop: 4 }}>{o.detail}</div>}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+      {editingObj && (
+        <DevObjectiveEditor
+          objective={editingObj}
+          players={data.players}
+          lockPlayer
+          onClose={() => setEditingObj(null)}
+          onSave={(o) => { actions.saveObjective({ ...o, id: o.id || genId('ob') }); setEditingObj(null) }}
+        />
+      )}
     </div>
   )
 }

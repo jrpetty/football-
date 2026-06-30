@@ -8,6 +8,7 @@ import {
 } from 'react'
 import type {
   AppData, Player, Match, Drill, TrainingSession, Lineup, TeamInfo, VideoClip,
+  ScoutingReport, SetPiece, DevObjective,
 } from '../types'
 import { buildSeedData, SCHEMA_VERSION } from '../data/seed'
 
@@ -28,6 +29,9 @@ function loadData(): AppData {
     if (!Array.isArray(parsed.videos)) parsed.videos = []
     if (!Array.isArray(parsed.lineups)) parsed.lineups = []
     if (!Array.isArray(parsed.sessions)) parsed.sessions = []
+    if (!Array.isArray(parsed.scouting)) parsed.scouting = []
+    if (!Array.isArray(parsed.setPieces)) parsed.setPieces = []
+    if (!Array.isArray(parsed.objectives)) parsed.objectives = []
     return parsed
   } catch {
     return buildSeedData()
@@ -66,6 +70,12 @@ type Action =
   | { type: 'ADD_VIDEO'; video: VideoClip }
   | { type: 'UPDATE_VIDEO'; video: VideoClip }
   | { type: 'REMOVE_VIDEO'; id: string }
+  | { type: 'SAVE_SCOUTING'; report: ScoutingReport }
+  | { type: 'REMOVE_SCOUTING'; id: string }
+  | { type: 'SAVE_SETPIECE'; setPiece: SetPiece }
+  | { type: 'REMOVE_SETPIECE'; id: string }
+  | { type: 'SAVE_OBJECTIVE'; objective: DevObjective }
+  | { type: 'REMOVE_OBJECTIVE'; id: string }
 
 function upsert<T extends { id: string }>(list: T[], item: T): T[] {
   const i = list.findIndex((x) => x.id === item.id)
@@ -112,6 +122,18 @@ function reducer(state: AppData, action: Action): AppData {
       return { ...state, videos: upsert(state.videos, action.video) }
     case 'REMOVE_VIDEO':
       return { ...state, videos: state.videos.filter((v) => v.id !== action.id) }
+    case 'SAVE_SCOUTING':
+      return { ...state, scouting: upsert(state.scouting, action.report) }
+    case 'REMOVE_SCOUTING':
+      return { ...state, scouting: state.scouting.filter((s) => s.id !== action.id) }
+    case 'SAVE_SETPIECE':
+      return { ...state, setPieces: upsert(state.setPieces, action.setPiece) }
+    case 'REMOVE_SETPIECE':
+      return { ...state, setPieces: state.setPieces.filter((s) => s.id !== action.id) }
+    case 'SAVE_OBJECTIVE':
+      return { ...state, objectives: upsert(state.objectives, action.objective) }
+    case 'REMOVE_OBJECTIVE':
+      return { ...state, objectives: state.objectives.filter((o) => o.id !== action.id) }
     default:
       return state
   }
@@ -142,6 +164,12 @@ export interface AppActions {
   addVideo(video: VideoClip): void
   updateVideo(video: VideoClip): void
   removeVideo(id: string): void
+  saveScouting(report: ScoutingReport): void
+  removeScouting(id: string): void
+  saveSetPiece(setPiece: SetPiece): void
+  removeSetPiece(id: string): void
+  saveObjective(objective: DevObjective): void
+  removeObjective(id: string): void
 }
 
 interface AppContextValue {
@@ -181,6 +209,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addVideo: (video) => dispatch({ type: 'ADD_VIDEO', video }),
       updateVideo: (video) => dispatch({ type: 'UPDATE_VIDEO', video }),
       removeVideo: (id) => dispatch({ type: 'REMOVE_VIDEO', id }),
+      saveScouting: (report) => dispatch({ type: 'SAVE_SCOUTING', report }),
+      removeScouting: (id) => dispatch({ type: 'REMOVE_SCOUTING', id }),
+      saveSetPiece: (setPiece) => dispatch({ type: 'SAVE_SETPIECE', setPiece }),
+      removeSetPiece: (id) => dispatch({ type: 'REMOVE_SETPIECE', id }),
+      saveObjective: (objective) => dispatch({ type: 'SAVE_OBJECTIVE', objective }),
+      removeObjective: (id) => dispatch({ type: 'REMOVE_OBJECTIVE', id }),
     }),
     [data],
   )

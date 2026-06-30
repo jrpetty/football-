@@ -384,6 +384,56 @@ export function playerVideoMoments(data: AppData, playerId: string): PlayerMomen
   return out.sort((a, b) => a.video.title.localeCompare(b.video.title) || a.tag.time - b.tag.time)
 }
 
+// ---------------------------------------------------------------------------
+// Opposition scouting
+// ---------------------------------------------------------------------------
+
+/** All opponent names we know about (matches, footage, saved reports). */
+export function opponentNames(data: AppData): string[] {
+  const set = new Set<string>()
+  for (const m of data.matches) set.add(m.opponent)
+  for (const v of data.videos) if (v.opponent) set.add(v.opponent)
+  for (const s of data.scouting) set.add(s.opponent)
+  return [...set].sort((a, b) => a.localeCompare(b))
+}
+
+/** Opposition-tagged video moments, optionally limited to one opponent. */
+export function oppositionMoments(data: AppData, opponent?: string): PlayerMoment[] {
+  const out: PlayerMoment[] = []
+  for (const v of data.videos) {
+    if (opponent && v.opponent !== opponent) continue
+    for (const t of v.tags) {
+      if (t.team === 'them') out.push({ video: v, tag: t })
+    }
+  }
+  return out.sort((a, b) => a.tag.time - b.tag.time)
+}
+
+export interface HeadToHead {
+  opponent: string
+  played: number
+  wins: number
+  draws: number
+  losses: number
+  goalsFor: number
+  goalsAgainst: number
+  matches: Match[]
+}
+
+export function headToHead(data: AppData, opponent: string): HeadToHead {
+  const ms = data.matches.filter((m) => m.opponent === opponent)
+  let wins = 0, draws = 0, losses = 0, gf = 0, ga = 0
+  for (const m of ms) {
+    const r = resultOf(m.goalsFor, m.goalsAgainst)
+    if (r === 'W') wins++
+    else if (r === 'D') draws++
+    else losses++
+    gf += m.goalsFor
+    ga += m.goalsAgainst
+  }
+  return { opponent, played: ms.length, wins, draws, losses, goalsFor: gf, goalsAgainst: ga, matches: recent(ms) }
+}
+
 /** Mean of the six attribute axes (an overall rating proxy). */
 export function overallRating(player: Player): number {
   const a = player.attributes

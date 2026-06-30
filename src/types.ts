@@ -289,6 +289,89 @@ export interface VideoClip {
 }
 
 // ---------------------------------------------------------------------------
+// Opposition scouting
+// ---------------------------------------------------------------------------
+
+export interface ScoutingReport {
+  id: string
+  opponent: string
+  /** Their main attacking threats / dangerous players & patterns. */
+  threats: string
+  /** Where they can be exploited. */
+  weaknesses: string
+  /** Set-piece tendencies (theirs). */
+  setPieces: string
+  /** Our game plan against them. */
+  gameplan: string
+  /** Likely shape, if known (free text e.g. "4-2-3-1"). */
+  formation: string
+  updated: string // ISO date
+}
+
+// ---------------------------------------------------------------------------
+// Set-piece / routine designer
+// ---------------------------------------------------------------------------
+
+export type SetPieceType =
+  | 'Attacking Corner'
+  | 'Defending Corner'
+  | 'Attacking Free-kick'
+  | 'Defending Free-kick'
+  | 'Throw-in'
+  | 'Kick-off'
+  | 'Penalty'
+
+export type TokenKind = 'player' | 'opponent' | 'ball' | 'cone'
+
+export interface RoutineToken {
+  id: string
+  kind: TokenKind
+  label: string
+  /** Pitch coordinate, 0..100 each axis (own goal at y=0). */
+  x: number
+  y: number
+}
+
+export type ArrowKind = 'run' | 'pass' | 'dribble'
+
+export interface RoutineArrow {
+  id: string
+  kind: ArrowKind
+  color: string
+  /** Pitch coordinates 0..100; 2+ points (last point gets the arrowhead). */
+  points: { x: number; y: number }[]
+}
+
+export interface SetPiece {
+  id: string
+  name: string
+  type: SetPieceType
+  tokens: RoutineToken[]
+  arrows: RoutineArrow[]
+  notes: string
+}
+
+// ---------------------------------------------------------------------------
+// Player development plans
+// ---------------------------------------------------------------------------
+
+export type ObjectiveStatus = 'Not started' | 'In progress' | 'On track' | 'Achieved'
+
+export interface DevObjective {
+  id: string
+  playerId: string
+  title: string
+  /** The focus area / metric this targets, e.g. "Tackles /90". */
+  area: string
+  detail: string
+  status: ObjectiveStatus
+  /** Free-text target, e.g. "Top 50% for tackles". */
+  target: string
+  created: string // ISO date
+  reviewDate: string // ISO date ('' if none)
+}
+
+// ---------------------------------------------------------------------------
 // Team / club
 // ---------------------------------------------------------------------------
 
@@ -312,6 +395,9 @@ export interface AppData {
   sessions: TrainingSession[]
   lineups: Lineup[]
   videos: VideoClip[]
+  scouting: ScoutingReport[]
+  setPieces: SetPiece[]
+  objectives: DevObjective[]
   /** Schema version for forward-compatible migrations. */
   version: number
 }

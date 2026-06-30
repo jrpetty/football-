@@ -22,13 +22,16 @@ const NAV: { section: string; items: NavItem[] }[] = [
     items: [
       { to: '/squad', label: 'Squad', icon: '👥' },
       { to: '/compare', label: 'Compare', icon: '⚖️' },
+      { to: '/development', label: 'Development', icon: '🎯' },
     ],
   },
   {
     section: 'Matches',
     items: [
       { to: '/matches', label: 'Matches', icon: '🗓️' },
+      { to: '/scouting', label: 'Scouting', icon: '🔍' },
       { to: '/tactics', label: 'Tactics Board', icon: '♟️' },
+      { to: '/set-pieces', label: 'Set Pieces', icon: '🚩' },
     ],
   },
   {
@@ -50,7 +53,10 @@ const PAGE_TITLES: Record<string, string> = {
   '/squad': 'Squad',
   '/compare': 'Player Comparison',
   '/matches': 'Matches',
+  '/scouting': 'Scouting',
   '/tactics': 'Tactics Board',
+  '/set-pieces': 'Set Pieces',
+  '/development': 'Player Development',
   '/video': 'Video Analysis',
   '/training': 'Training',
   '/data': 'Data & Export',

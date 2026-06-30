@@ -10,10 +10,13 @@ import type {
   TrainingSession,
   Lineup,
   VideoClip,
+  ScoutingReport,
+  SetPiece,
+  DevObjective,
 } from '../types'
 import { FORMATIONS, getFormation, positionGroupOf } from './formations'
 
-export const SCHEMA_VERSION = 2
+export const SCHEMA_VERSION = 3
 
 // ---------------------------------------------------------------------------
 // Deterministic pseudo-random number generator (so the demo data is stable).
@@ -505,6 +508,89 @@ function buildVideos(matches: Match[]): VideoClip[] {
 }
 
 // ---------------------------------------------------------------------------
+// Opposition scouting
+// ---------------------------------------------------------------------------
+function buildScouting(): ScoutingReport[] {
+  return [
+    {
+      id: 'sc1',
+      opponent: 'Northbridge City',
+      formation: '4-2-3-1',
+      threats:
+        'Dangerous in transition through their number 10 who drifts left to combine with the overlapping full-back. Striker makes early near-post runs at crosses.',
+      weaknesses:
+        'Left centre-back is uncomfortable defending in wide areas — isolate him 1v1. They push both full-backs high, leaving space in behind to attack quickly.',
+      setPieces:
+        'Zonal marking at corners with two on the posts — the gap is the penalty spot. They are slow to react to short corners.',
+      gameplan:
+        'Play through the lines into the 10’s space, then switch quickly to attack the channel behind their high full-backs. Be compact when they have it centrally.',
+      updated: '2026-06-26',
+    },
+  ]
+}
+
+// ---------------------------------------------------------------------------
+// Set-piece routines
+// ---------------------------------------------------------------------------
+function buildSetPieces(): SetPiece[] {
+  return [
+    {
+      id: 'sp1',
+      name: 'Near-post flick — right corner',
+      type: 'Attacking Corner',
+      notes:
+        'Taker delivers a driven ball to the near-post zone. Big man attacks the near post to flick on; two runners arrive at the central and far-post zones. One short option to retain.',
+      tokens: [
+        { id: 't1', kind: 'ball', label: '', x: 97, y: 92 },
+        { id: 't2', kind: 'player', label: '7', x: 94, y: 90 }, // taker
+        { id: 't3', kind: 'player', label: '9', x: 62, y: 88 }, // near-post flick
+        { id: 't4', kind: 'player', label: '4', x: 50, y: 84 }, // central
+        { id: 't5', kind: 'player', label: '5', x: 40, y: 86 }, // far post
+        { id: 't6', kind: 'player', label: '8', x: 82, y: 80 }, // short option
+        { id: 't7', kind: 'player', label: '6', x: 50, y: 64 }, // edge of box (rest defence)
+        { id: 't8', kind: 'opponent', label: '', x: 56, y: 90 },
+        { id: 't9', kind: 'opponent', label: '', x: 46, y: 88 },
+      ],
+      arrows: [
+        { id: 'a1', kind: 'pass', color: '#fbbf24', points: [{ x: 95, y: 90 }, { x: 64, y: 88 }] },
+        { id: 'a2', kind: 'run', color: '#38bdf8', points: [{ x: 70, y: 82 }, { x: 62, y: 88 }] },
+        { id: 'a3', kind: 'run', color: '#38bdf8', points: [{ x: 52, y: 78 }, { x: 50, y: 85 }] },
+        { id: 'a4', kind: 'run', color: '#38bdf8', points: [{ x: 36, y: 80 }, { x: 41, y: 86 }] },
+      ],
+    },
+  ]
+}
+
+// ---------------------------------------------------------------------------
+// Development plans
+// ---------------------------------------------------------------------------
+function buildObjectives(): DevObjective[] {
+  return [
+    {
+      id: 'ob1', playerId: 'p13', title: 'Improve defensive work-rate',
+      area: 'Tackles /90',
+      detail: 'Track back consistently on transitions and contribute defensively from the wing.',
+      status: 'In progress', target: 'Lift tackles/90 into the top half for forwards',
+      created: '2026-05-20', reviewDate: '2026-07-15',
+    },
+    {
+      id: 'ob2', playerId: 'p13', title: 'End-product in the final third',
+      area: 'Goals /90',
+      detail: 'More direct, get shots away earlier when cutting inside.',
+      status: 'On track', target: '0.40 goals/90',
+      created: '2026-05-20', reviewDate: '2026-07-15',
+    },
+    {
+      id: 'ob3', playerId: 'p16', title: 'Decision-making in the final pass',
+      area: 'Key passes /90',
+      detail: 'Pick the right moment to release runners; weight of pass into channels.',
+      status: 'Not started', target: 'Top third for key passes',
+      created: '2026-06-10', reviewDate: '2026-08-01',
+    },
+  ]
+}
+
+// ---------------------------------------------------------------------------
 // Assemble the seed dataset
 // ---------------------------------------------------------------------------
 export function buildSeedData(): AppData {
@@ -527,6 +613,9 @@ export function buildSeedData(): AppData {
     sessions,
     lineups,
     videos,
+    scouting: buildScouting(),
+    setPieces: buildSetPieces(),
+    objectives: buildObjectives(),
     version: SCHEMA_VERSION,
   }
 }

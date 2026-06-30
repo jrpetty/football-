@@ -8,6 +8,9 @@ import { Matches } from './pages/Matches'
 import { MatchDetail } from './pages/MatchDetail'
 import { TeamAnalysis } from './pages/TeamAnalysis'
 import { Tactics } from './pages/Tactics'
+import { SetPieces } from './pages/SetPieces'
+import { Scouting } from './pages/Scouting'
+import { Development } from './pages/Development'
 import { VideoAnalysis } from './pages/VideoAnalysis'
 import { VideoDetail } from './pages/VideoDetail'
 import { Training } from './pages/Training'
@@ -25,6 +28,9 @@ export function App() {
         <Route path="/matches" element={<Matches />} />
         <Route path="/matches/:matchId" element={<MatchDetail />} />
         <Route path="/tactics" element={<Tactics />} />
+        <Route path="/set-pieces" element={<SetPieces />} />
+        <Route path="/scouting" element={<Scouting />} />
+        <Route path="/development" element={<Development />} />
         <Route path="/video" element={<VideoAnalysis />} />
         <Route path="/video/:videoId" element={<VideoDetail />} />
         <Route path="/training" element={<Training />} />

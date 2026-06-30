@@ -84,6 +84,16 @@ export function statusColor(status: Player['status']): string {
   }
 }
 
+export function objectiveStatusColor(status: string): string {
+  switch (status) {
+    case 'Achieved': return '#22c55e'
+    case 'On track': return '#10b981'
+    case 'In progress': return '#38bdf8'
+    case 'Not started': return '#94a3b8'
+    default: return '#94a3b8'
+  }
+}
+
 export function genId(prefix: string): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 9)}${Date.now().toString(36).slice(-4)}`
 }

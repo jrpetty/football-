@@ -139,6 +139,9 @@ export function DataManagement() {
     { k: 'Saved lineups', v: data.lineups.length },
     { k: 'Video clips', v: data.videos.length },
     { k: 'Tagged moments', v: taggedMoments },
+    { k: 'Scouting reports', v: data.scouting.length },
+    { k: 'Set-piece routines', v: data.setPieces.length },
+    { k: 'Development objectives', v: data.objectives.length },
   ]
 
   return (
