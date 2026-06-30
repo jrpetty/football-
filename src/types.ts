@@ -240,6 +240,16 @@ export type TagCategory =
   | 'Skill'
   | 'Other'
 
+/** Telestration drawing primitives (coordinates normalised 0..1 over the frame). */
+export type DrawTool = 'arrow' | 'line' | 'rect' | 'ellipse' | 'pen'
+
+export interface DrawShape {
+  tool: DrawTool
+  color: string
+  /** Normalised points. 2 points for arrow/line/rect/ellipse; many for pen. */
+  points: { x: number; y: number }[]
+}
+
 /** A timestamped, categorised moment within a video. */
 export interface VideoTag {
   id: string
@@ -254,6 +264,8 @@ export interface VideoTag {
   playerId?: string
   /** 'us' = our team, 'them' = opposition. */
   team: 'us' | 'them'
+  /** Telestration drawn over this moment's frame. */
+  drawing?: DrawShape[]
 }
 
 export interface VideoClip {

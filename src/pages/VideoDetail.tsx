@@ -1,16 +1,29 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useData, useActions } from '../store/store'
-import type { VideoClip, VideoTag, TagCategory } from '../types'
+import type { VideoClip, VideoTag, TagCategory, DrawShape, DrawTool } from '../types'
 import { TAG_CATEGORIES, tagMeta } from '../data/tags'
 import { youTubeEmbedUrl, fmtClock, parseClock } from '../utils/video'
 import { genId, clamp } from '../utils/format'
 import { Modal } from '../components/ui/Modal'
 import { EmptyState } from '../components/ui/Primitives'
+import { Telestration } from '../components/video/Telestration'
 
 function emptyTag(time: number): VideoTag {
   return { id: '', time, category: 'Chance', title: '', note: '', team: 'us' }
 }
+
+const DRAW_TOOLS: { tool: DrawTool; icon: string; label: string }[] = [
+  { tool: 'arrow', icon: '↗', label: 'Arrow' },
+  { tool: 'line', icon: '╱', label: 'Line' },
+  { tool: 'rect', icon: '▭', label: 'Box' },
+  { tool: 'ellipse', icon: '◯', label: 'Circle' },
+  { tool: 'pen', icon: '✎', label: 'Pen' },
+]
+const DRAW_COLORS = ['#fbbf24', '#ef4444', '#22c55e', '#38bdf8', '#ffffff', '#000000']
+
+interface Annotate { tagId: string; shapes: DrawShape[] }
+interface Reel { idx: number }
 
 export function VideoDetail() {
   const { videoId } = useParams()
@@ -30,6 +43,13 @@ export function VideoDetail() {
   const [filter, setFilter] = useState<TagCategory | 'all'>('all')
   const [editing, setEditing] = useState<VideoTag | null>(null)
   const [fileError, setFileError] = useState(false)
+  // Telestration
+  const [annotate, setAnnotate] = useState<Annotate | null>(null)
+  const [tool, setTool] = useState<DrawTool>('arrow')
+  const [color, setColor] = useState('#fbbf24')
+  const [activeTagId, setActiveTagId] = useState<string | null>(null)
+  // Moment reel
+  const [reel, setReel] = useState<Reel | null>(null)
 
   const isYouTube = video?.source === 'youtube'
 
@@ -79,22 +99,79 @@ export function VideoDetail() {
       videoRef.current.play().catch(() => {})
     }
   }
+  function seekToTag(t: VideoTag) {
+    setActiveTagId(t.id)
+    seekTo(t.time)
+  }
   function togglePlay() {
     const el = videoRef.current
     if (!el) return
+    setActiveTagId(null)
     el.paused ? el.play() : el.pause()
   }
   function nudge(seconds: number) {
     const el = videoRef.current
     if (!el) return
+    setActiveTagId(null)
     el.currentTime = clamp(el.currentTime + seconds, 0, el.duration || 1e9)
   }
   function onTrackPointer(e: React.PointerEvent) {
     const rect = trackRef.current?.getBoundingClientRect()
     const el = videoRef.current
     if (!rect || !el || !duration) return
+    setActiveTagId(null)
+    setReel(null)
     const frac = clamp((e.clientX - rect.left) / rect.width, 0, 1)
     el.currentTime = frac * duration
+  }
+
+  // ---- Telestration ------------------------------------------------------
+  function startAnnotate(t: VideoTag) {
+    videoRef.current?.pause()
+    seekTo(t.time)
+    setActiveTagId(t.id)
+    setAnnotate({ tagId: t.id, shapes: t.drawing ? [...t.drawing] : [] })
+  }
+  function saveAnnotation() {
+    if (!annotate || !video) return
+    const tags = video.tags.map((t) => (t.id === annotate.tagId ? { ...t, drawing: annotate.shapes } : t))
+    persist({ ...video, tags })
+    setAnnotate(null)
+  }
+
+  // ---- Moment reel -------------------------------------------------------
+  function playReel() {
+    if (shownTags.length === 0) return
+    setReel({ idx: 0 })
+    seekToTag(shownTags[0])
+  }
+  function jumpMoment(dir: 1 | -1) {
+    if (shownTags.length === 0) return
+    const here = current
+    let next: VideoTag | undefined
+    if (dir === 1) next = shownTags.find((t) => t.time > here + 0.4)
+    else next = [...shownTags].reverse().find((t) => t.time < here - 0.4)
+    if (next) { setReel(null); seekToTag(next) }
+  }
+  // YouTube can't report currentTime to us, so step by index instead.
+  function ytStep(dir: 1 | -1) {
+    if (shownTags.length === 0) return
+    const idx = clamp((reel ? reel.idx : -1) + dir, 0, shownTags.length - 1)
+    setReel({ idx })
+    seekToTag(shownTags[idx])
+  }
+  // Advance the reel when playback passes the current moment's window.
+  function handleTimeUpdate(t: number) {
+    setCurrent(t)
+    if (!reel) return
+    const tag = shownTags[reel.idx]
+    if (!tag) { setReel(null); return }
+    const end = tag.endTime ?? tag.time + 6
+    if (t >= end) {
+      const nextIdx = reel.idx + 1
+      if (nextIdx < shownTags.length) { setReel({ idx: nextIdx }); seekToTag(shownTags[nextIdx]) }
+      else { setReel(null); videoRef.current?.pause() }
+    }
   }
 
   // ---- Tag CRUD ----------------------------------------------------------
@@ -121,6 +198,15 @@ export function VideoDetail() {
   }
 
   const playerName = (id?: string) => data.players.find((p) => p.id === id)?.name
+
+  const activeTag = annotate
+    ? video.tags.find((t) => t.id === annotate.tagId)
+    : activeTagId
+      ? video.tags.find((t) => t.id === activeTagId)
+      : undefined
+  const overlayShapes: DrawShape[] = annotate ? annotate.shapes : activeTag?.drawing ?? []
+  const showOverlay = annotate != null || overlayShapes.length > 0
+  const annotateTag = annotate ? video.tags.find((t) => t.id === annotate.tagId) : undefined
 
   return (
     <div className="content">
@@ -157,7 +243,7 @@ export function VideoDetail() {
                   src={video.url}
                   style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
                   onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
-                  onTimeUpdate={(e) => setCurrent(e.currentTarget.currentTime)}
+                  onTimeUpdate={(e) => handleTimeUpdate(e.currentTarget.currentTime)}
                   onPlay={() => setPlaying(true)}
                   onPause={() => setPlaying(false)}
                   onError={() => setFileError(true)}
@@ -165,8 +251,18 @@ export function VideoDetail() {
                 />
               )}
 
+              {showOverlay && (
+                <Telestration
+                  shapes={overlayShapes}
+                  editable={annotate != null}
+                  tool={tool}
+                  color={color}
+                  onChange={(s) => setAnnotate((a) => (a ? { ...a, shapes: s } : a))}
+                />
+              )}
+
               {fileError && video.source === 'file' && (
-                <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', background: 'rgba(10,15,26,0.92)', textAlign: 'center', padding: 24 }}>
+                <div style={{ position: 'absolute', inset: 0, zIndex: 10, display: 'grid', placeItems: 'center', background: 'rgba(10,15,26,0.92)', textAlign: 'center', padding: 24 }}>
                   <div>
                     <div style={{ fontSize: 40 }}>📁</div>
                     <p className="muted" style={{ maxWidth: 360, margin: '10px auto' }}>
@@ -180,6 +276,38 @@ export function VideoDetail() {
                 </div>
               )}
             </div>
+
+            {/* Telestration toolbar */}
+            {annotate && (
+              <div className="card-pad" style={{ borderTop: '1px solid var(--border-soft)', background: 'rgba(56,189,248,0.06)' }}>
+                <div className="row between center wrap" style={{ gap: 10 }}>
+                  <div className="row gap-sm center wrap">
+                    <span className="tiny bold" style={{ color: 'var(--accent)' }}>✏️ Drawing on “{annotateTag?.title || 'moment'}”</span>
+                    <div className="btn-group">
+                      {DRAW_TOOLS.map((d) => (
+                        <button key={d.tool} className={tool === d.tool ? 'active' : ''} title={d.label} onClick={() => setTool(d.tool)}>{d.icon}</button>
+                      ))}
+                    </div>
+                    <div className="row gap-sm center">
+                      {DRAW_COLORS.map((c) => (
+                        <button
+                          key={c}
+                          onClick={() => setColor(c)}
+                          title={c}
+                          style={{ width: 22, height: 22, borderRadius: '50%', background: c, cursor: 'pointer', border: color === c ? '2px solid #fff' : '2px solid rgba(255,255,255,0.25)' }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="row gap-sm center">
+                    <button className="btn sm ghost" disabled={annotate.shapes.length === 0} onClick={() => setAnnotate((a) => (a ? { ...a, shapes: a.shapes.slice(0, -1) } : a))}>↺ Undo</button>
+                    <button className="btn sm ghost" disabled={annotate.shapes.length === 0} onClick={() => setAnnotate((a) => (a ? { ...a, shapes: [] } : a))}>Clear</button>
+                    <button className="btn sm" onClick={() => setAnnotate(null)}>Cancel</button>
+                    <button className="btn sm primary" onClick={saveAnnotation}>💾 Save drawing</button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Custom controls (native video only) */}
             {!isYouTube && (
@@ -195,7 +323,7 @@ export function VideoDetail() {
                     <div
                       key={t.id}
                       title={`${fmtClock(t.time)} — ${t.title}`}
-                      onPointerDown={(e) => { e.stopPropagation(); seekTo(t.time) }}
+                      onPointerDown={(e) => { e.stopPropagation(); seekToTag(t) }}
                       style={{ position: 'absolute', top: -3, left: `${(t.time / duration) * 100}%`, width: 4, height: 18, marginLeft: -2, background: tagMeta(t.category).color, borderRadius: 2, boxShadow: '0 0 0 1px rgba(0,0,0,0.4)' }}
                     />
                   ))}
@@ -207,6 +335,15 @@ export function VideoDetail() {
                     <button className="btn primary icon" onClick={togglePlay} style={{ width: 44 }}>{playing ? '⏸' : '▶'}</button>
                     <button className="btn icon" onClick={() => nudge(5)} title="Forward 5s">⏩</button>
                     <span className="mono tiny muted" style={{ minWidth: 96 }}>{fmtClock(current)} / {fmtClock(duration)}</span>
+                  </div>
+                  <div className="row gap-sm center">
+                    <div className="btn-group" title="Step through tagged moments">
+                      <button onClick={() => jumpMoment(-1)} disabled={shownTags.length === 0} title="Previous moment">⏮</button>
+                      <button onClick={reel ? () => setReel(null) : playReel} disabled={shownTags.length === 0} className={reel ? 'active' : ''}>
+                        {reel ? `■ ${reel.idx + 1}/${shownTags.length}` : `▶ Reel (${shownTags.length})`}
+                      </button>
+                      <button onClick={() => jumpMoment(1)} disabled={shownTags.length === 0} title="Next moment">⏭</button>
+                    </div>
                   </div>
                   <div className="row gap-sm center">
                     <select
@@ -227,7 +364,13 @@ export function VideoDetail() {
             {isYouTube && (
               <div className="card-pad" style={{ borderTop: '1px solid var(--border-soft)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <span className="tiny muted">YouTube clip · tag moments by timecode, then click a tag to jump to it.</span>
-                <button className="btn primary" onClick={() => setEditing(emptyTag(0))}>⊕ Add moment</button>
+                <div className="row gap-sm center">
+                  <div className="btn-group" title="Step through tagged moments">
+                    <button onClick={() => ytStep(-1)} disabled={shownTags.length === 0} title="Previous moment">⏮</button>
+                    <button onClick={() => ytStep(1)} disabled={shownTags.length === 0} title="Next moment">⏭</button>
+                  </div>
+                  <button className="btn primary" onClick={() => setEditing(emptyTag(0))}>⊕ Add moment</button>
+                </div>
               </div>
             )}
           </div>
@@ -278,11 +421,13 @@ export function VideoDetail() {
                     return (
                       <div key={t.id} className="panel" style={{ padding: 11, borderLeft: `3px solid ${meta.color}` }}>
                         <div className="row between center" style={{ gap: 8 }}>
-                          <button className="badge mono" onClick={() => seekTo(t.time)} style={{ cursor: 'pointer', borderColor: meta.color, color: meta.color }}>
+                          <button className="badge mono" onClick={() => seekToTag(t)} style={{ cursor: 'pointer', borderColor: meta.color, color: meta.color }}>
                             ▶ {fmtClock(t.time)}{t.endTime ? `–${fmtClock(t.endTime)}` : ''}
                           </button>
                           <span className="tiny" style={{ color: meta.color, fontWeight: 700 }}>{meta.icon} {t.category}</span>
+                          {t.drawing && t.drawing.length > 0 && <span title="Has telestration" className="tiny">✏️</span>}
                           <span style={{ flex: 1 }} />
+                          <span className="link tiny" onClick={() => startAnnotate(t)} title="Draw on this moment">draw</span>
                           <span className="link tiny" onClick={() => setEditing(t)}>edit</span>
                           <span className="link tiny" onClick={() => deleteTag(t.id)} style={{ color: 'var(--red)' }}>✕</span>
                         </div>
