@@ -27,6 +27,8 @@ import {
 import { fmtClock } from '../utils/video'
 import { tagMeta } from '../data/tags'
 import { DevObjectiveEditor } from '../components/DevObjectiveEditor'
+import { AiPanel } from '../components/ai/AiPanel'
+import { playerAnalysis } from '../ai/analyses'
 import { StatCard } from '../components/ui/StatCard'
 import { RadarChart } from '../components/charts/RadarChart'
 import { LineChart } from '../components/charts/LineChart'
@@ -581,6 +583,14 @@ export function PlayerProfile() {
               />
             </div>
           </div>
+
+          {/* AI analysis */}
+          <AiPanel
+            title="AI scouting & development report"
+            build={() => playerAnalysis(data, id)}
+            onSave={(t) => actions.updatePlayer({ ...player, notes: player.notes ? `${player.notes}\n\n${t}` : t })}
+            saveLabel="Append to notes"
+          />
 
           {/* Development plan */}
           <div className="card card-pad">

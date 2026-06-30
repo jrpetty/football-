@@ -7,6 +7,8 @@ import { genId, fmtDate, RESULT_COLOR, resultOf } from '../utils/format'
 import { fmtClock } from '../utils/video'
 import { tagMeta } from '../data/tags'
 import { EmptyState, FormPips } from '../components/ui/Primitives'
+import { AiPanel } from '../components/ai/AiPanel'
+import { scoutingAnalysis } from '../ai/analyses'
 
 const BLANK = (opponent: string): ScoutingReport => ({
   id: '', opponent, threats: '', weaknesses: '', setPieces: '', gameplan: '', formation: '', updated: '',
@@ -144,6 +146,16 @@ export function Scouting() {
                     <ReportField label="🚩 Their set pieces" value={form.setPieces} onChange={(v) => set({ setPieces: v })} />
                     <ReportField label="📋 Our game plan" value={form.gameplan} onChange={(v) => set({ gameplan: v })} />
                   </div>
+                </div>
+
+                {/* AI dossier */}
+                <div style={{ marginTop: 16 }}>
+                  <AiPanel
+                    title="AI scouting dossier"
+                    build={() => scoutingAnalysis(data, selected)}
+                    onSave={(t) => set({ gameplan: form.gameplan ? `${form.gameplan}\n\n${t}` : t })}
+                    saveLabel="Add to game plan"
+                  />
                 </div>
 
                 {/* Footage */}

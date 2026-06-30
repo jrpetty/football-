@@ -2,6 +2,8 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { Match, MatchResult } from '../types'
 import { useData } from '../store/store'
+import { AiPanel } from '../components/ai/AiPanel'
+import { teamAnalysis } from '../ai/analyses'
 import {
   teamSeasonStats,
   chronological,
@@ -126,6 +128,10 @@ export function TeamAnalysis() {
         <p className="page-subtitle">
           {team.name} · {team.season} · season deep dive across {stats.played} matches
         </p>
+      </div>
+
+      <div style={{ marginBottom: 16 }}>
+        <AiPanel title="AI season review" build={() => teamAnalysis(data)} />
       </div>
 
       {/* Headline expected-goals stats */}

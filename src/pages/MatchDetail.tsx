@@ -1,7 +1,9 @@
 import { useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import type { MatchEvent, Player } from '../types'
-import { useData, useMatch } from '../store/store'
+import { useData, useMatch, useActions } from '../store/store'
+import { AiPanel } from '../components/ai/AiPanel'
+import { matchAnalysis } from '../ai/analyses'
 import {
   fmtDate,
   resultOf,
@@ -86,6 +88,7 @@ export function MatchDetail() {
   const { matchId } = useParams()
   const match = useMatch(matchId)
   const data = useData()
+  const actions = useActions()
 
   const playerById = useMemo(() => {
     const map = new Map<string, Player>()
@@ -403,6 +406,16 @@ export function MatchDetail() {
             </table>
           </div>
         )}
+      </div>
+
+      {/* AI analysis ------------------------------------------------------ */}
+      <div style={{ marginTop: 16 }}>
+        <AiPanel
+          title="AI match analysis"
+          build={() => matchAnalysis(data, match.id)}
+          onSave={(t) => actions.updateMatch({ ...match, notes: match.notes ? `${match.notes}\n\n${t}` : t })}
+          saveLabel="Append to notes"
+        />
       </div>
     </div>
   )

@@ -5,6 +5,7 @@ import { resultOf } from '../utils/format'
 import { overallRating } from '../analytics/selectors'
 import { StatCard } from '../components/ui/StatCard'
 import { Modal } from '../components/ui/Modal'
+import { AI_MODELS, getApiKey, setApiKey, getModel, setModel } from '../ai/client'
 
 // Replace anything that is not safe in a filename with a dash so exported files
 // land cleanly on every OS.
@@ -161,6 +162,8 @@ export function DataManagement() {
         <StatCard label="Drills" value={data.drills.length} icon="target" accent="#eab308" />
         <StatCard label="Tagged moments" value={taggedMoments} sub={`across ${data.videos.length} clips`} icon="video" accent="#a855f7" />
       </div>
+
+      <AiSettingsCard />
 
       <div className="grid grid-2">
         {/* ── Team settings ───────────────────────────────────────────── */}
@@ -375,6 +378,68 @@ export function DataManagement() {
           </p>
         </Modal>
       )}
+    </div>
+  )
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// AI Analysis settings — Anthropic API key + model, stored locally in browser.
+// ───────────────────────────────────────────────────────────────────────────
+function AiSettingsCard() {
+  const [key, setKey] = useState(getApiKey())
+  const [model, setModelState] = useState(getModel())
+  const [reveal, setReveal] = useState(false)
+  const [savedAt, setSavedAt] = useState(false)
+
+  function save() {
+    setApiKey(key)
+    setModel(model)
+    setSavedAt(true)
+    window.setTimeout(() => setSavedAt(false), 1500)
+  }
+
+  return (
+    <div className="card" style={{ marginBottom: 16, borderColor: 'rgba(139,92,246,0.35)' }}>
+      <div className="card-head">
+        <h3>✨ AI Analysis</h3>
+        <span className="sub">Powered by Claude · key stays in this browser</span>
+      </div>
+      <div className="card-pad">
+        <p className="tiny muted" style={{ marginBottom: 12 }}>
+          Add an Anthropic API key to generate AI-written player, match, team and scouting reports across the app.
+          The key is stored only in this browser and sent directly to Anthropic — get one at{' '}
+          <a className="link" href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer">console.anthropic.com</a>.
+          Without a key you still get instant data summaries.
+        </p>
+        <div className="grid grid-2">
+          <div className="field">
+            <label>Anthropic API key</label>
+            <div className="row gap-sm">
+              <input
+                className="input mono"
+                type={reveal ? 'text' : 'password'}
+                value={key}
+                placeholder="sk-ant-..."
+                onChange={(e) => setKey(e.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <button className="btn ghost" type="button" onClick={() => setReveal((r) => !r)}>{reveal ? 'Hide' : 'Show'}</button>
+            </div>
+          </div>
+          <div className="field">
+            <label>Model</label>
+            <select className="select" value={model} onChange={(e) => setModelState(e.target.value)}>
+              {AI_MODELS.map((m) => <option key={m.id} value={m.id}>{m.label} — {m.hint}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="row gap-sm center" style={{ marginTop: 12 }}>
+          <button className="btn primary" onClick={save}>{savedAt ? '✓ Saved' : 'Save AI settings'}</button>
+          {key && <button className="btn danger" onClick={() => { setKey(''); setApiKey(''); }}>Clear key</button>}
+          <span className="tiny faint">Your key is never sent anywhere except Anthropic’s API.</span>
+        </div>
+      </div>
     </div>
   )
 }
