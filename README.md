@@ -54,7 +54,21 @@ Athletic* — so every screen is populated the moment you open it.
 
 ---
 
-## Getting started
+## Easiest way to use it — no install
+
+Open **`gaffer.html`** (in the repo root) directly in any modern browser
+(double-click it, or drag it onto a browser tab). It's the entire app inlined
+into one self-contained file — no server, no install, works offline, and your
+data still saves locally in that browser.
+
+Re-generate it after code changes with:
+
+```bash
+npm install
+npm run build:single   # writes ./gaffer.html
+```
+
+## Getting started (development)
 
 ```bash
 npm install      # install dependencies
