@@ -10,7 +10,7 @@ import type {
   AppData, Player, Match, Drill, TrainingSession, Lineup, TeamInfo, VideoClip,
   ScoutingReport, SetPiece, DevObjective,
 } from '../types'
-import { buildSeedData, SCHEMA_VERSION } from '../data/seed'
+import { buildSeedData, buildEmptyData, SCHEMA_VERSION } from '../data/seed'
 
 const STORAGE_KEY = 'gaffer.appdata.v1'
 
@@ -52,6 +52,7 @@ function saveData(data: AppData) {
 type Action =
   | { type: 'SET_ALL'; data: AppData }
   | { type: 'RESET' }
+  | { type: 'CLEAR' }
   | { type: 'UPDATE_TEAM'; team: Partial<TeamInfo> }
   | { type: 'ADD_PLAYER'; player: Player }
   | { type: 'UPDATE_PLAYER'; player: Player }
@@ -91,6 +92,8 @@ function reducer(state: AppData, action: Action): AppData {
       return action.data
     case 'RESET':
       return buildSeedData()
+    case 'CLEAR':
+      return buildEmptyData()
     case 'UPDATE_TEAM':
       return { ...state, team: { ...state.team, ...action.team } }
     case 'ADD_PLAYER':
@@ -144,6 +147,7 @@ function reducer(state: AppData, action: Action): AppData {
 // ---------------------------------------------------------------------------
 export interface AppActions {
   resetData(): void
+  clearData(): void
   importData(data: AppData): void
   exportData(): AppData
   updateTeam(team: Partial<TeamInfo>): void
@@ -189,6 +193,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const actions = useMemo<AppActions>(
     () => ({
       resetData: () => dispatch({ type: 'RESET' }),
+      clearData: () => dispatch({ type: 'CLEAR' }),
       importData: (d) => dispatch({ type: 'SET_ALL', data: d }),
       exportData: () => data,
       updateTeam: (team) => dispatch({ type: 'UPDATE_TEAM', team }),

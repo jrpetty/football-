@@ -593,6 +593,23 @@ function buildObjectives(): DevObjective[] {
 // ---------------------------------------------------------------------------
 // Assemble the seed dataset
 // ---------------------------------------------------------------------------
+/** A blank dataset — keeps the season but clears all squad/match/analysis data. */
+export function buildEmptyData(): AppData {
+  return {
+    team: { name: 'My Team', season: '2025/26', coach: '', primaryColor: '#0ea5e9', secondaryColor: '#0b1220' },
+    players: [],
+    matches: [],
+    drills: [],
+    sessions: [],
+    lineups: [],
+    videos: [],
+    scouting: [],
+    setPieces: [],
+    objectives: [],
+    version: SCHEMA_VERSION,
+  }
+}
+
 export function buildSeedData(): AppData {
   const players = buildPlayers()
   const matches = buildMatches(players, 12)

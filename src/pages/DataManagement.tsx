@@ -4,6 +4,7 @@ import { useData, useActions } from '../store/store'
 import { resultOf } from '../utils/format'
 import { overallRating } from '../analytics/selectors'
 import { StatCard } from '../components/ui/StatCard'
+import { Modal } from '../components/ui/Modal'
 
 // Replace anything that is not safe in a filename with a dash so exported files
 // land cleanly on every OS.
@@ -32,6 +33,8 @@ export function DataManagement() {
   const fileRef = useRef<HTMLInputElement>(null)
   const [importMsg, setImportMsg] = useState<ImportMsg>(null)
   const [importName, setImportName] = useState<string>('')
+  // In-app confirmation (native window.confirm is blocked in embedded views).
+  const [confirmKind, setConfirmKind] = useState<'reset' | 'clear' | null>(null)
 
   // Single download helper: build a blob from text, hand the browser an anchor
   // with a download attribute, click it, then revoke the object URL.
@@ -122,11 +125,10 @@ export function DataManagement() {
     reader.readAsText(f)
   }
 
-  function onReset() {
-    const ok = window.confirm(
-      'Reset to sample data?\n\nThis permanently wipes every edit you have made — players, matches, drills, sessions, lineups and videos — and restores the bundled demo dataset. This cannot be undone.',
-    )
-    if (ok) actions.resetData()
+  function runConfirm() {
+    if (confirmKind === 'reset') actions.resetData()
+    else if (confirmKind === 'clear') actions.clearData()
+    setConfirmKind(null)
   }
 
   const taggedMoments = data.videos.reduce((sum, v) => sum + v.tags.length, 0)
@@ -324,23 +326,55 @@ export function DataManagement() {
         </div>
       </div>
 
-      {/* ── Danger zone ───────────────────────────────────────────────── */}
+      {/* ── Start fresh / Danger zone ─────────────────────────────────── */}
       <div className="card" style={{ marginTop: 16, borderColor: '#ef4444' }}>
         <div className="card-head">
-          <h3 className="text-red">Danger zone</h3>
-          <span className="sub">Irreversible</span>
+          <h3 className="text-red">Start fresh / Danger zone</h3>
+          <span className="sub">Irreversible — export a backup first</span>
+        </div>
+        <div className="card-pad row between center wrap gap-lg" style={{ borderBottom: '1px solid var(--border-soft)' }}>
+          <div className="col flex-1">
+            <span className="bold">Start fresh (empty)</span>
+            <span className="tiny muted">
+              Clears the demo team completely so you can enter your own club, players, matches and analysis from a blank slate.
+            </span>
+          </div>
+          <button className="btn danger" onClick={() => setConfirmKind('clear')}>Start fresh</button>
         </div>
         <div className="card-pad row between center wrap gap-lg">
           <div className="col flex-1">
             <span className="bold">Reset to sample data</span>
             <span className="tiny muted">
-              Wipes every change you have made and reloads the bundled demo squad, fixtures, drills and videos. There is
-              no undo.
+              Wipes every change you have made and reloads the bundled demo squad, fixtures, drills and videos.
             </span>
           </div>
-          <button className="btn danger" onClick={onReset}>Reset to sample data</button>
+          <button className="btn danger" onClick={() => setConfirmKind('reset')}>Reset to sample data</button>
         </div>
       </div>
+
+      {confirmKind && (
+        <Modal
+          title={confirmKind === 'clear' ? 'Start fresh?' : 'Reset to sample data?'}
+          onClose={() => setConfirmKind(null)}
+          footer={
+            <>
+              <button className="btn ghost" onClick={() => setConfirmKind(null)}>Cancel</button>
+              <button className="btn danger" onClick={runConfirm}>
+                {confirmKind === 'clear' ? 'Yes, clear everything' : 'Yes, reset to demo'}
+              </button>
+            </>
+          }
+        >
+          <p className="muted">
+            {confirmKind === 'clear'
+              ? 'This permanently removes the current team and all players, matches, videos, drills, scouting, set pieces and objectives, leaving an empty workspace for your own data.'
+              : 'This permanently wipes every edit you have made and restores the bundled demo dataset (Riverside Athletic).'}
+          </p>
+          <p className="tiny faint" style={{ marginTop: 10 }}>
+            This cannot be undone. If you want to keep your current data, cancel and use “Export JSON” first.
+          </p>
+        </Modal>
+      )}
     </div>
   )
 }
