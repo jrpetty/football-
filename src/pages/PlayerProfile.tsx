@@ -5,20 +5,26 @@ import {
   playerMatchLog,
   playerRatingTrend,
   playerTouches,
+  playerPercentiles,
+  playerVideoMoments,
   overallRating,
 } from '../analytics/selectors'
 import {
   fmtDateShort,
   num,
   pct,
+  POSITION_GROUP_LABEL,
   POSITION_LABEL,
   RESULT_COLOR,
   resultOf,
   ratingColor,
 } from '../utils/format'
+import { fmtClock } from '../utils/video'
+import { tagMeta } from '../data/tags'
 import { StatCard } from '../components/ui/StatCard'
 import { RadarChart } from '../components/charts/RadarChart'
 import { LineChart } from '../components/charts/LineChart'
+import { BarChart } from '../components/charts/BarChart'
 import { Heatmap } from '../components/pitch/Heatmap'
 import {
   Avatar,
@@ -30,6 +36,14 @@ import {
 } from '../components/ui/Primitives'
 
 const RADAR_AXES = ['Pace', 'Shooting', 'Passing', 'Dribbling', 'Defending', 'Physical']
+
+function pctColor(p: number): string {
+  if (p >= 80) return '#22c55e'
+  if (p >= 60) return '#84cc16'
+  if (p >= 40) return '#eab308'
+  if (p >= 20) return '#f97316'
+  return '#ef4444'
+}
 
 export function PlayerProfile() {
   const { playerId } = useParams()
@@ -61,6 +75,8 @@ export function PlayerProfile() {
   const trend = playerRatingTrend(data, id)
   const log = playerMatchLog(data, id)
   const ovr = overallRating(player)
+  const percentiles = playerPercentiles(data, id)
+  const moments = playerVideoMoments(data, id)
 
   const a = player.attributes
   const radarValues = [a.pace, a.shooting, a.passing, a.dribbling, a.defending, a.physical]
@@ -70,6 +86,17 @@ export function PlayerProfile() {
 
   // newest first for the match log table
   const logRows = [...log].reverse()
+
+  // Strengths / focus areas derived from peer percentiles.
+  const strengths = percentiles.rows.filter((r) => r.percentile >= 70).sort((x, y) => y.percentile - x.percentile).slice(0, 4)
+  const focus = percentiles.rows.filter((r) => r.percentile <= 35).sort((x, y) => x.percentile - y.percentile).slice(0, 4)
+
+  // Goal contribution per match (chronological) for the timeline chart.
+  const contribData = log.map(({ match, stat }) => ({
+    label: `${match.venue === 'Home' ? 'v' : '@'}${match.opponent.slice(0, 3)}`,
+    value: stat.goals + stat.assists,
+    color: player.color,
+  }))
 
   return (
     <div className="content">
@@ -315,6 +342,110 @@ export function PlayerProfile() {
                   </div>
                 </div>
               </>
+            )}
+          </div>
+
+          {/* Percentile ranking vs position peers */}
+          <div className="card card-pad">
+            <div className="card-head">
+              <h3>Percentile rank</h3>
+              <span className="sub">vs {POSITION_GROUP_LABEL[percentiles.group]}s · {percentiles.peers} players</span>
+            </div>
+            {agg.appearances === 0 || percentiles.peers < 2 ? (
+              <p className="muted tiny" style={{ marginTop: 8 }}>Not enough peer data to rank this player yet.</p>
+            ) : (
+              <>
+                {(strengths.length > 0 || focus.length > 0) && (
+                  <div className="row wrap gap-lg" style={{ marginTop: 4, marginBottom: 14 }}>
+                    {strengths.length > 0 && (
+                      <div className="col gap-sm" style={{ minWidth: 200, flex: 1 }}>
+                        <span className="muted tiny bold" style={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>💪 Strengths</span>
+                        <div className="tag-list">
+                          {strengths.map((s) => (
+                            <span key={s.key} className="badge" style={{ borderColor: 'rgba(34,197,94,0.4)', color: '#22c55e' }}>{s.label} · {s.percentile}%</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {focus.length > 0 && (
+                      <div className="col gap-sm" style={{ minWidth: 200, flex: 1 }}>
+                        <span className="muted tiny bold" style={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>🎯 Focus areas</span>
+                        <div className="tag-list">
+                          {focus.map((s) => (
+                            <span key={s.key} className="badge" style={{ borderColor: 'rgba(239,68,68,0.4)', color: '#f97316' }}>{s.label} · {s.percentile}%</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div className="col" style={{ gap: 9 }}>
+                  {percentiles.rows.map((r) => (
+                    <div key={r.key} style={{ display: 'grid', gridTemplateColumns: '132px 1fr 96px', alignItems: 'center', gap: 10 }}>
+                      <span className="tiny muted">{r.label}</span>
+                      <span className="meter"><span style={{ width: `${r.percentile}%`, background: pctColor(r.percentile) }} /></span>
+                      <span className="tiny tnum" style={{ textAlign: 'right' }}>
+                        <span className="bold" style={{ color: pctColor(r.percentile) }}>{r.percentile}</span>
+                        <span className="faint"> · {r.display}</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <p className="faint tiny" style={{ marginTop: 10 }}>
+                  Percentile vs squad peers in the same position — higher means the player ranks above more team-mates per 90.
+                </p>
+              </>
+            )}
+          </div>
+
+          {/* Goal contributions per match */}
+          {contribData.length > 0 && (
+            <div className="card card-pad">
+              <div className="card-head">
+                <h3>Goal contributions</h3>
+                <span className="sub">goals + assists by match</span>
+              </div>
+              <div style={{ marginTop: 10 }}>
+                <BarChart data={contribData} digits={0} accent={player.color} />
+              </div>
+            </div>
+          )}
+
+          {/* Player film — tagged video moments */}
+          <div className="card card-pad">
+            <div className="card-head">
+              <h3>Film</h3>
+              <span className="sub">{moments.length} tagged moments</span>
+            </div>
+            {moments.length === 0 ? (
+              <p className="muted tiny" style={{ marginTop: 8 }}>
+                No video moments tagged to this player yet. Tag them on the{' '}
+                <Link className="link" to="/video">Video Analysis</Link> screen and link the player.
+              </p>
+            ) : (
+              <div className="col" style={{ gap: 8, marginTop: 6 }}>
+                {moments.map(({ video, tag }) => {
+                  const meta = tagMeta(tag.category)
+                  return (
+                    <Link
+                      key={tag.id}
+                      to={`/video/${video.id}?t=${Math.floor(tag.time)}`}
+                      className="panel"
+                      style={{ padding: 10, borderLeft: `3px solid ${meta.color}`, display: 'block' }}
+                    >
+                      <div className="row between center" style={{ gap: 8 }}>
+                        <span className="badge mono" style={{ borderColor: meta.color, color: meta.color }}>▶ {fmtClock(tag.time)}</span>
+                        <span className="tiny" style={{ color: meta.color, fontWeight: 700 }}>{meta.icon} {tag.category}</span>
+                        <span style={{ flex: 1 }} />
+                        {tag.drawing && tag.drawing.length > 0 && <span title="Has telestration" className="tiny">✏️</span>}
+                        <span className="faint tiny">{video.title}</span>
+                      </div>
+                      <div className="bold" style={{ marginTop: 5 }}>{tag.title || '(untitled)'}</div>
+                      {tag.note && <div className="tiny muted" style={{ marginTop: 2 }}>{tag.note}</div>}
+                    </Link>
+                  )
+                })}
+              </div>
             )}
           </div>
 

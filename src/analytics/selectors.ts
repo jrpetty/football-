@@ -2,7 +2,9 @@
 // Pure analytics functions over AppData. No React here — just data → numbers.
 // Pages and charts consume these so the maths lives in exactly one place.
 // ---------------------------------------------------------------------------
-import type { AppData, Match, Player, PlayerMatchStat, PositionGroup } from '../types'
+import type {
+  AppData, Match, Player, PlayerMatchStat, PositionGroup, VideoClip, VideoTag,
+} from '../types'
 import { resultOf } from '../utils/format'
 
 export interface TeamSeasonStats {
@@ -293,6 +295,93 @@ export function playerRatingTrend(data: AppData, playerId: string): { label: str
     label: e.match.opponent,
     rating: e.stat.rating,
   }))
+}
+
+// ---------------------------------------------------------------------------
+// Individual player analysis: percentile ranking vs position peers
+// ---------------------------------------------------------------------------
+export interface PercentileRow {
+  key: string
+  label: string
+  /** Raw metric value. */
+  value: number
+  /** Pre-formatted value for display. */
+  display: string
+  /** 0..100 percentile within the position-peer group. */
+  percentile: number
+}
+
+export interface PlayerPercentiles {
+  group: PositionGroup
+  /** Number of peers in the comparison set (including this player). */
+  peers: number
+  rows: PercentileRow[]
+}
+
+interface MetricDef {
+  key: string
+  label: string
+  get: (a: PlayerAggregate) => number
+  fmt: (v: number) => string
+}
+
+const p90 = (total: number, minutes: number) => (minutes ? (total / minutes) * 90 : 0)
+const d2 = (v: number) => (Math.round(v * 100) / 100).toFixed(2)
+const d1 = (v: number) => (Math.round(v * 10) / 10).toFixed(1)
+const pctStr = (v: number) => `${Math.round(v)}%`
+
+const PERCENTILE_METRICS: MetricDef[] = [
+  { key: 'goalsP90', label: 'Goals /90', get: (a) => a.goalsPer90, fmt: d2 },
+  { key: 'assistsP90', label: 'Assists /90', get: (a) => a.assistsPer90, fmt: d2 },
+  { key: 'gaP90', label: 'G+A /90', get: (a) => a.contributionsPer90, fmt: d2 },
+  { key: 'xgP90', label: 'xG /90', get: (a) => p90(a.xg, a.minutes), fmt: d2 },
+  { key: 'shotsP90', label: 'Shots /90', get: (a) => p90(a.shots, a.minutes), fmt: d1 },
+  { key: 'keyP90', label: 'Key passes /90', get: (a) => p90(a.keyPasses, a.minutes), fmt: d1 },
+  { key: 'passAcc', label: 'Pass accuracy', get: (a) => a.passAccuracy, fmt: pctStr },
+  { key: 'tackP90', label: 'Tackles /90', get: (a) => p90(a.tackles, a.minutes), fmt: d1 },
+  { key: 'intP90', label: 'Interceptions /90', get: (a) => p90(a.interceptions, a.minutes), fmt: d1 },
+  { key: 'duels', label: 'Duels won', get: (a) => a.duelWinRate, fmt: pctStr },
+  { key: 'distP90', label: 'Distance /90 (km)', get: (a) => p90(a.distanceKm, a.minutes), fmt: d1 },
+  { key: 'rating', label: 'Avg rating', get: (a) => a.avgRating, fmt: d1 },
+]
+
+/**
+ * Rank a player against same-position peers (who have played) on a basket of
+ * per-90 and rate metrics. Percentile = share of peers at or below the value.
+ */
+export function playerPercentiles(data: AppData, playerId: string): PlayerPercentiles {
+  const player = data.players.find((p) => p.id === playerId)
+  if (!player) throw new Error(`Unknown player ${playerId}`)
+  const peerAggs = allPlayerAggregates(data).filter(
+    (a) => a.player.positionGroup === player.positionGroup && a.minutes > 0,
+  )
+  const me = peerAggs.find((a) => a.player.id === playerId)
+  const rows: PercentileRow[] = PERCENTILE_METRICS.map((m) => {
+    const mine = me ? m.get(me) : 0
+    const values = peerAggs.map((a) => m.get(a))
+    const atOrBelow = values.filter((v) => v <= mine + 1e-9).length
+    const percentile = peerAggs.length ? (atOrBelow / peerAggs.length) * 100 : 0
+    return { key: m.key, label: m.label, value: mine, display: m.fmt(mine), percentile: Math.round(percentile) }
+  })
+  return { group: player.positionGroup, peers: peerAggs.length, rows }
+}
+
+// ---------------------------------------------------------------------------
+// Player film: every tagged video moment featuring a player
+// ---------------------------------------------------------------------------
+export interface PlayerMoment {
+  video: VideoClip
+  tag: VideoTag
+}
+
+export function playerVideoMoments(data: AppData, playerId: string): PlayerMoment[] {
+  const out: PlayerMoment[] = []
+  for (const v of data.videos) {
+    for (const t of v.tags) {
+      if (t.playerId === playerId) out.push({ video: v, tag: t })
+    }
+  }
+  return out.sort((a, b) => a.video.title.localeCompare(b.video.title) || a.tag.time - b.tag.time)
 }
 
 /** Mean of the six attribute axes (an overall rating proxy). */

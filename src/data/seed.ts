@@ -13,7 +13,7 @@ import type {
 } from '../types'
 import { FORMATIONS, getFormation, positionGroupOf } from './formations'
 
-export const SCHEMA_VERSION = 1
+export const SCHEMA_VERSION = 2
 
 // ---------------------------------------------------------------------------
 // Deterministic pseudo-random number generator (so the demo data is stable).
@@ -132,11 +132,17 @@ function chooseStarters(players: Player[], formation: string, r: Rng): LineupSlo
   const slots: LineupSlot[] = []
   for (const slot of preset.slots) {
     const group = positionGroupOf(slot.position)
-    let candidate = byGroup[group].find((p) => !used.has(p.id) && p.status === 'Available')
-    if (!candidate) candidate = byGroup[group].find((p) => !used.has(p.id))
-    if (!candidate) {
-      candidate = players.find((p) => !used.has(p.id))!
+    const avail = byGroup[group].filter((p) => !used.has(p.id) && p.status === 'Available')
+    const pool = avail.length ? avail : byGroup[group].filter((p) => !used.has(p.id))
+    let candidate: Player | undefined
+    if (pool.length) {
+      // Usually the strongest available, but rotate in the 2nd/3rd choice some
+      // weeks so squad minutes are spread realistically across the season.
+      const roll = r()
+      const idx = roll < 0.62 ? 0 : roll < 0.86 ? Math.min(1, pool.length - 1) : Math.min(2, pool.length - 1)
+      candidate = pool[idx]
     }
+    if (!candidate) candidate = players.find((p) => !used.has(p.id))!
     used.add(candidate.id)
     slots.push({
       playerId: candidate.id,
@@ -145,7 +151,6 @@ function chooseStarters(players: Player[], formation: string, r: Rng): LineupSlo
       y: slot.y,
       isStarter: true,
     })
-    void r
   }
   return slots
 }

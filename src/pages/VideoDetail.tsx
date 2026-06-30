@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useData, useActions } from '../store/store'
 import type { VideoClip, VideoTag, TagCategory, DrawShape, DrawTool } from '../types'
 import { TAG_CATEGORIES, tagMeta } from '../data/tags'
@@ -32,9 +32,11 @@ export function VideoDetail() {
   const navigate = useNavigate()
 
   const video = data.videos.find((v) => v.id === videoId)
+  const [params] = useSearchParams()
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const trackRef = useRef<HTMLDivElement>(null)
+  const seekedRef = useRef(false)
   const [current, setCurrent] = useState(0)
   const [duration, setDuration] = useState(video?.durationSec ?? 0)
   const [playing, setPlaying] = useState(false)
@@ -69,6 +71,25 @@ export function VideoDetail() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [isYouTube, editing])
+
+  // Deep-link: ?t=<seconds> jumps to a moment (e.g. from a player's film list).
+  useEffect(() => {
+    const raw = params.get('t')
+    if (raw == null || seekedRef.current || !video) return
+    const t = Number(raw)
+    if (Number.isNaN(t)) return
+    const match = video.tags.find((tg) => Math.abs(tg.time - t) < 1.5)
+    if (match) setActiveTagId(match.id)
+    if (video.source === 'youtube') {
+      setYtStart({ t: Math.floor(t), key: Date.now() })
+      seekedRef.current = true
+    } else if (videoRef.current && videoRef.current.readyState >= 1) {
+      videoRef.current.currentTime = t
+      videoRef.current.play().catch(() => {})
+      seekedRef.current = true
+    }
+    // For native video not yet ready, onLoadedMetadata applies the seek.
+  }, [params, video])
 
   const tags = useMemo(
     () => (video ? [...video.tags].sort((a, b) => a.time - b.time) : []),
@@ -242,7 +263,18 @@ export function VideoDetail() {
                   ref={videoRef}
                   src={video.url}
                   style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
-                  onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+                  onLoadedMetadata={(e) => {
+                    setDuration(e.currentTarget.duration)
+                    const raw = params.get('t')
+                    if (raw != null && !seekedRef.current) {
+                      const t = Number(raw)
+                      if (!Number.isNaN(t)) {
+                        e.currentTarget.currentTime = t
+                        e.currentTarget.play().catch(() => {})
+                        seekedRef.current = true
+                      }
+                    }
+                  }}
                   onTimeUpdate={(e) => handleTimeUpdate(e.currentTarget.currentTime)}
                   onPlay={() => setPlaying(true)}
                   onPause={() => setPlaying(false)}
