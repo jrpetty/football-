@@ -22,8 +22,24 @@ export function parseYouTubeId(input: string): string | null {
 
 export function youTubeEmbedUrl(idOrUrl: string): string {
   const id = parseYouTubeId(idOrUrl) ?? idOrUrl
-  // enablejsapi lets us control playback via postMessage.
-  return `https://www.youtube.com/embed/${id}?enablejsapi=1&rel=0&modestbranding=1`
+  const params = new URLSearchParams({ rel: '0', modestbranding: '1', playsinline: '1', enablejsapi: '1' })
+  // A valid origin improves embed compatibility; only meaningful over http(s).
+  if (typeof window !== 'undefined' && window.location?.protocol?.startsWith('http')) {
+    params.set('origin', window.location.origin)
+  }
+  return `https://www.youtube.com/embed/${id}?${params.toString()}`
+}
+
+/** Public watch URL for opening a clip on YouTube. */
+export function youTubeWatchUrl(idOrUrl: string, atSeconds?: number): string {
+  const id = parseYouTubeId(idOrUrl) ?? idOrUrl
+  const t = atSeconds && atSeconds > 0 ? `&t=${Math.floor(atSeconds)}` : ''
+  return `https://www.youtube.com/watch?v=${id}${t}`
+}
+
+/** True when the app is opened directly from disk (YouTube embeds are flaky here). */
+export function isFileProtocol(): boolean {
+  return typeof window !== 'undefined' && window.location?.protocol === 'file:'
 }
 
 /** Best-effort guess of the source type from a pasted string. */

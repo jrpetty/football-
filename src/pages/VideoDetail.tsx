@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useData, useActions } from '../store/store'
 import type { VideoClip, VideoTag, TagCategory, DrawShape, DrawTool } from '../types'
 import { TAG_CATEGORIES, tagMeta } from '../data/tags'
-import { youTubeEmbedUrl, fmtClock, parseClock } from '../utils/video'
+import { youTubeEmbedUrl, youTubeWatchUrl, isFileProtocol, fmtClock, parseClock } from '../utils/video'
 import { genId, clamp } from '../utils/format'
 import { Modal } from '../components/ui/Modal'
 import { EmptyState } from '../components/ui/Primitives'
@@ -394,15 +394,24 @@ export function VideoDetail() {
             )}
 
             {isYouTube && (
-              <div className="card-pad" style={{ borderTop: '1px solid var(--border-soft)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <span className="tiny muted">YouTube clip · tag moments by timecode, then click a tag to jump to it.</span>
-                <div className="row gap-sm center">
-                  <div className="btn-group" title="Step through tagged moments">
-                    <button onClick={() => ytStep(-1)} disabled={shownTags.length === 0} title="Previous moment">⏮</button>
-                    <button onClick={() => ytStep(1)} disabled={shownTags.length === 0} title="Next moment">⏭</button>
+              <div className="card-pad" style={{ borderTop: '1px solid var(--border-soft)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <span className="tiny muted">YouTube clip · tag moments by timecode, then click a tag to jump to it.</span>
+                  <div className="row gap-sm center">
+                    <div className="btn-group" title="Step through tagged moments">
+                      <button onClick={() => ytStep(-1)} disabled={shownTags.length === 0} title="Previous moment">⏮</button>
+                      <button onClick={() => ytStep(1)} disabled={shownTags.length === 0} title="Next moment">⏭</button>
+                    </div>
+                    <a className="btn" href={youTubeWatchUrl(video.url, ytStart?.t)} target="_blank" rel="noreferrer">↗ Open on YouTube</a>
+                    <button className="btn primary" onClick={() => setEditing(emptyTag(0))}>⊕ Add moment</button>
                   </div>
-                  <button className="btn primary" onClick={() => setEditing(emptyTag(0))}>⊕ Add moment</button>
                 </div>
+                <p className="tiny faint" style={{ marginTop: 8 }}>
+                  Player shows an error? Many official/sports clips have embedding disabled by the owner
+                  {isFileProtocol() ? ', and YouTube also restricts embeds when opening this file directly from disk' : ''}.
+                  You can still tag moments by timecode and use “Open on YouTube” to watch — or add the clip as a direct
+                  video URL / upload instead.
+                </p>
               </div>
             )}
           </div>
