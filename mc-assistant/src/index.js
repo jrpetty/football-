@@ -20,23 +20,32 @@ function spawnBot() {
   log.info(`Connecting to ${config.host}:${config.port} as ${config.username}…`)
   const bot = createAssistantBot(config, log, brain)
 
-  bot.on('end', (reason) => {
-    if (stopping) return
-    log.warn('Disconnected:', reason || 'unknown')
+  // Recover exactly once per bot, whether we learn of the disconnect via 'end'
+  // (normal kicks, socket-level errors) or only via 'error' — a failed
+  // Microsoft auth, for instance, emits 'error' with no following 'end'.
+  let recovered = false
+  const recover = (why) => {
+    if (stopping || recovered) return
+    recovered = true
+    log.warn('Disconnected:', why || 'unknown')
     if (config.autoReconnect) {
       log.info(`Reconnecting in ${config.reconnectDelayMs}ms…`)
       setTimeout(spawnBot, config.reconnectDelayMs)
     } else {
       process.exit(0)
     }
-  })
+  }
 
-  // A fatal error before 'end' (bad host, auth) shouldn't spin forever silently.
+  bot.on('end', (reason) => recover(reason))
+
   bot.on('error', (err) => {
     const msg = err && err.message ? err.message : String(err)
     if (/ENOTFOUND|ECONNREFUSED|EAI_AGAIN/.test(msg)) {
       log.error(`Can't reach the server (${msg}). Check MC_HOST / MC_PORT and that the server is running.`)
     }
+    // A fatal error (bad host/auth) shouldn't spin forever silently; drive
+    // recovery here too, deduped with 'end' so socket errors don't reconnect twice.
+    recover(msg)
   })
 }
 

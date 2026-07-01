@@ -33,7 +33,7 @@ function stop(bot) {
 }
 
 function tick(bot) {
-  if (!bot.entity || bot.health == null || bot.isDead) return
+  if (!bot.entity || bot.health == null || bot.isAlive === false) return
   const cfg = bot.assistant.config
   const nearestThreat = threatsNear(bot, cfg.guardRadius)[0] || null
 

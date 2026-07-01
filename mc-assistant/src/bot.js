@@ -91,6 +91,17 @@ function wireEvents(bot, brain) {
 
   bot.on('kicked', (reason) => log.warn('Kicked:', typeof reason === 'string' ? reason : JSON.stringify(reason)))
   bot.on('error', (err) => log.error('Bot error:', err && err.message ? err.message : err))
+
+  // Tear down this bot's timers on disconnect so reconnects don't leak an
+  // ever-growing pile of survival intervals firing against dead bot objects.
+  bot.once('end', () => {
+    survival.stop(bot)
+    if (bot.assistant._chatTimer) {
+      clearTimeout(bot.assistant._chatTimer)
+      bot.assistant._chatTimer = null
+    }
+    bot.assistant._chatQueue = []
+  })
 }
 
 // ------------------------------- chat plumbing -----------------------------
