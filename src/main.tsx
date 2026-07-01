@@ -14,3 +14,11 @@ createRoot(document.getElementById('root')!).render(
     </HashRouter>
   </StrictMode>,
 )
+
+// Register the service worker for offline/installable use — only when served
+// over http(s) (a service worker can't run from a file:// single-file build).
+if (import.meta.env.PROD && 'serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {})
+  })
+}

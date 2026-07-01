@@ -68,6 +68,34 @@ npm install
 npm run build:single   # writes ./gaffer.html
 ```
 
+## Host it online (GitHub Pages) — recommended for real use
+
+A hosted URL is the most reliable way to use Gaffer: browser storage persists
+properly and the AI features (which call the Anthropic API directly from the
+browser) work without the cross-origin restrictions some browsers apply to
+local files.
+
+This repo ships a GitHub Actions workflow (`.github/workflows/deploy.yml`) that
+builds and publishes the app to GitHub Pages on every push. **One-time setup:**
+
+1. In the repo, go to **Settings → Pages**.
+2. Under **Build and deployment → Source**, choose **GitHub Actions**.
+3. Push (or re-run the "Deploy to GitHub Pages" workflow from the Actions tab).
+
+The app then goes live at `https://<user>.github.io/<repo>/` — for this repo,
+`https://jrpetty.github.io/football-/`.
+
+## Install as an app (PWA)
+
+Once hosted over https, Gaffer is an installable Progressive Web App:
+
+- **Desktop (Chrome/Edge):** click the install icon in the address bar.
+- **iOS Safari:** Share → *Add to Home Screen*.
+- **Android Chrome:** menu → *Install app*.
+
+It gets its own icon, opens full-screen, and works **offline** after the first
+load (a service worker caches the app shell). Your data stays on that device.
+
 ## Getting started (development)
 
 ```bash
