@@ -45,6 +45,8 @@ export function AiPanel({
         user: analysis.user,
         onText: (full) => setText(full),
         signal: ctrl.signal,
+        maxTokens: analysis.maxTokens,
+        effort: analysis.effort,
       })
     } catch (err) {
       if (!ctrl.signal.aborted) {

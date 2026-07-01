@@ -45,12 +45,18 @@ export function modelLabel(id: string): string {
   return AI_MODELS.find((m) => m.id === id)?.label ?? id
 }
 
+export type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max'
+
 export interface AnalysisRequest {
   system: string
   user: string
   /** Called with the full accumulated text on each streamed delta. */
   onText: (full: string) => void
   signal?: AbortSignal
+  /** Output token budget (default 3000). */
+  maxTokens?: number
+  /** Reasoning effort on thinking-capable models (default 'medium'). */
+  effort?: Effort
 }
 
 /** Stream a Claude analysis, returning the full text. Throws on error. */
@@ -64,14 +70,14 @@ export async function streamAnalysis(req: AnalysisRequest): Promise<string> {
   const thinkingCapable = model.startsWith('claude-opus') || model === 'claude-sonnet-5'
   const body: Record<string, unknown> = {
     model,
-    max_tokens: 3000,
+    max_tokens: req.maxTokens ?? 3000,
     stream: true,
     system: req.system,
     messages: [{ role: 'user', content: req.user }],
   }
   if (thinkingCapable) {
     body.thinking = { type: 'adaptive' }
-    body.output_config = { effort: 'medium' }
+    body.output_config = { effort: req.effort ?? 'medium' }
   }
 
   const resp = await fetch(API_URL, {

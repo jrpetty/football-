@@ -7,13 +7,18 @@ import {
   playerAggregate, playerPercentiles, playerRatingTrend, overallRating,
   teamSeasonStats, formationUsage, leaderboard, headToHead, oppositionMoments,
 } from '../analytics/selectors'
-import { POSITION_LABEL, resultOf, fmtDateShort } from '../utils/format'
+import { POSITION_LABEL, resultOf, fmtDate, fmtDateShort } from '../utils/format'
+import { positionGroupOf } from '../data/formations'
+import type { PlayerMatchStat, PositionGroup } from '../types'
 
 export interface Analysis {
   system: string
   user: string
   /** Offline, rules-based fallback shown when no API key is set. */
   heuristic: string
+  /** Optional output-length / reasoning-effort overrides for richer analyses. */
+  maxTokens?: number
+  effort?: 'low' | 'medium' | 'high' | 'xhigh' | 'max'
 }
 
 const ANALYST_SYSTEM =
@@ -21,6 +26,15 @@ const ANALYST_SYSTEM =
   'specific, actionable analysis for a coach. Use short markdown sections with **bold** ' +
   'headers and bullet points. Ground every point in the numbers provided — no generic ' +
   'filler. Be direct and practical. Keep the whole response under ~260 words.'
+
+const MATCH_SYSTEM =
+  'You are an elite football (soccer) match analyst and head coach preparing the post-match ' +
+  'review for your coaching staff. You are given a complete data pack for one game: team stats ' +
+  'versus the opponent, the goal/card timeline, every player’s full stat line, unit-by-unit ' +
+  'aggregates, and how the performance compares to the season. Deliver a thorough, genuinely ' +
+  'insightful tactical breakdown. Use markdown with **bold** section headers and bullet points. ' +
+  'Ground EVERY point in the data — cite specific numbers, players and minutes. Explain WHY, not ' +
+  'just what. Be candid about what went well and what went wrong. No generic filler. Aim for 450–650 words.'
 
 const n1 = (v: number) => (Math.round(v * 10) / 10).toFixed(1)
 const n2 = (v: number) => (Math.round(v * 100) / 100).toFixed(2)
@@ -63,30 +77,107 @@ export function playerAnalysis(data: AppData, playerId: string): Analysis {
 // ---------------------------------------------------------------------------
 export function matchAnalysis(data: AppData, matchId: string): Analysis {
   const m = data.matches.find((x) => x.id === matchId)!
-  const name = (id: string) => data.players.find((p) => p.id === id)?.name ?? 'Unknown'
+  const players = new Map(data.players.map((p) => [p.id, p]))
+  const name = (id?: string) => (id && players.get(id)?.name) || 'Unknown'
   const res = resultOf(m.goalsFor, m.goalsAgainst)
-  const ratings = [...m.playerStats].sort((x, y) => y.rating - x.rating)
-  const top = ratings.slice(0, 3)
-  const low = ratings.slice(-2)
-  const scorers = m.events.filter((e) => e.type === 'goal').map((e) => name(e.playerId))
+  const resWord = res === 'W' ? 'Win' : res === 'D' ? 'Draw' : 'Loss'
+
+  // Team totals derived from our players' stat lines.
+  const ps = m.playerStats
+  const sum = (f: (s: PlayerMatchStat) => number) => ps.reduce((a, s) => a + f(s), 0)
+  const passes = sum((s) => s.passes)
+  const passesC = sum((s) => s.passesCompleted)
+  const passAcc = passes ? (passesC / passes) * 100 : 0
+  const shotsOnTarget = sum((s) => s.shotsOnTarget)
+  const tackles = sum((s) => s.tackles)
+  const interceptions = sum((s) => s.interceptions)
+  const duelsWon = sum((s) => s.duelsWon)
+  const duelsTotal = sum((s) => s.duelsTotal)
+  const distance = sum((s) => s.distanceKm)
+  const keyPasses = sum((s) => s.keyPasses)
+
+  // Goal / card timeline.
+  const events = [...m.events].sort((a, b) => a.minute - b.minute)
+  const goals = events.filter((e) => e.type === 'goal')
+  const assistEvents = events.filter((e) => e.type === 'assist')
+  const goalLines = goals.map((g) => {
+    const a = assistEvents.find((x) => x.relatedPlayerId === g.playerId && Math.abs(x.minute - g.minute) <= 1)
+    return `${g.minute}' ${name(g.playerId)}${a ? ` (assist: ${name(a.playerId)})` : ''}`
+  })
+  const cards = events
+    .filter((e) => e.type === 'yellow' || e.type === 'red')
+    .map((e) => `${e.minute}' ${e.type === 'red' ? 'RED card' : 'yellow'} — ${name(e.playerId)}`)
+
+  // Per-player stat lines, best to worst.
+  const ratings = [...ps].sort((a, b) => b.rating - a.rating)
+  const playerLines = ratings.map((s) => {
+    const p = players.get(s.playerId)
+    return `#${p?.number ?? '?'} ${name(s.playerId)} (${s.position}, ${s.minutes}'): rating ${n1(s.rating)}, ` +
+      `${s.goals}G ${s.assists}A, ${s.shots} shots (${s.shotsOnTarget} on target), xG ${n2(s.xg)}, ` +
+      `${s.passesCompleted}/${s.passes} passes, ${s.keyPasses} key passes, ${s.tackles} tackles, ` +
+      `${s.interceptions} interceptions, ${s.duelsWon}/${s.duelsTotal} duels, ${n1(s.distanceKm)}km`
+  })
+
+  // Unit aggregates.
+  const groups: Record<PositionGroup, PlayerMatchStat[]> = { GK: [], DEF: [], MID: [], FWD: [] }
+  for (const s of ps) groups[positionGroupOf(s.position)].push(s)
+  const unitLine = (g: PositionGroup): string | null => {
+    const arr = groups[g]
+    if (!arr.length) return null
+    const avg = arr.reduce((a, s) => a + s.rating, 0) / arr.length
+    const gA = arr.reduce((a, s) => a + s.goals, 0)
+    const aA = arr.reduce((a, s) => a + s.assists, 0)
+    const def = arr.reduce((a, s) => a + s.tackles + s.interceptions, 0)
+    return `${g}: avg rating ${n1(avg)}, ${gA}G ${aA}A, ${def} tackles+interceptions, ${arr.reduce((a, s) => a + s.keyPasses, 0)} key passes`
+  }
+  const unitLines = (['DEF', 'MID', 'FWD'] as PositionGroup[]).map(unitLine).filter(Boolean) as string[]
+
+  // Season context.
+  const season = teamSeasonStats(data.matches)
+  const perGameXg = season.played ? season.xgFor / season.played : 0
+  const xgDiff = m.xgFor - m.xgAgainst
 
   const user =
-    `Match: ${m.venue} vs ${m.opponent}, ${m.competition}. Result: ${res} ${m.goalsFor}-${m.goalsAgainst}. Formation ${m.formation}.\n` +
-    `Team stats (us vs them): possession ${m.possession}% vs ${100 - m.possession}%, shots ${m.shotsFor} vs ${m.shotsAgainst}, xG ${n1(m.xgFor)} vs ${n1(m.xgAgainst)}, corners ${m.cornersFor} vs ${m.cornersAgainst}.\n` +
-    (scorers.length ? `Scorers: ${scorers.join(', ')}.\n` : 'No goals scored.\n') +
-    `Top performers: ${top.map((s) => `${name(s.playerId)} ${n1(s.rating)}`).join(', ')}. Lowest: ${low.map((s) => `${name(s.playerId)} ${n1(s.rating)}`).join(', ')}.\n` +
-    (m.notes ? `Coach notes: ${m.notes}\n` : '') +
-    `\nWrite a match analysis with sections: Verdict, What worked, What didn't, Key moments/decisions, and Fixes for next time.`
+    `MATCH REPORT — ${data.team.name} vs ${m.opponent}\n` +
+    `Competition: ${m.competition}. Venue: ${m.venue}. Date: ${fmtDate(m.date)}. Our formation: ${m.formation}.\n` +
+    `FINAL SCORE: ${resWord} ${m.goalsFor}-${m.goalsAgainst}.\n\n` +
+    `TEAM STATS (us vs opponent):\n` +
+    `- Possession: ${m.possession}% vs ${100 - m.possession}%\n` +
+    `- Shots: ${m.shotsFor} vs ${m.shotsAgainst}; our shots on target: ${shotsOnTarget}\n` +
+    `- Expected goals (xG): ${n1(m.xgFor)} vs ${n1(m.xgAgainst)} — we ${xgDiff >= 0 ? 'created more' : 'were out-created'} by ${n1(Math.abs(xgDiff))}\n` +
+    `- Corners: ${m.cornersFor} vs ${m.cornersAgainst}\n` +
+    `- Our passing: ${passesC}/${passes} completed (${n1(passAcc)}%), ${keyPasses} key passes\n` +
+    `- Duels won: ${duelsWon}/${duelsTotal}, tackles ${tackles}, interceptions ${interceptions}, distance covered ${n1(distance)}km\n\n` +
+    `GOAL & CARD TIMELINE (our team — opponent goal minutes are not recorded):\n` +
+    `${goalLines.length ? goalLines.map((l) => `- ${l}`).join('\n') : '- No goals scored by us.'}\n` +
+    (cards.length ? `${cards.map((l) => `- ${l}`).join('\n')}\n` : '') +
+    `We conceded ${m.goalsAgainst} goal(s).\n\n` +
+    `UNIT PERFORMANCE:\n${unitLines.map((l) => `- ${l}`).join('\n')}\n\n` +
+    `PLAYER STAT LINES (best rating to worst):\n${playerLines.map((l) => `- ${l}`).join('\n')}\n\n` +
+    `SEASON CONTEXT: ${season.wins}W-${season.draws}D-${season.losses}L, ${n1(season.ppg)} ppg; the team averages ${n1(perGameXg)} xG/game and ${n1(season.avgPossession)}% possession. Judge whether this display was above or below par.\n` +
+    (m.notes ? `\nCOACH'S NOTES: ${m.notes}\n` : '') +
+    `\nUsing ALL of the above, produce a FULL tactical breakdown of the game with these markdown sections:\n` +
+    `**Game state & story** — how the match unfolded and what the result means in context.\n` +
+    `**Attacking** — chance creation, xG vs goals (finishing quality), who created and finished.\n` +
+    `**Defending** — how we coped with the opponent, what likely led to the goal(s) conceded or the clean sheet, key defensive contributors.\n` +
+    `**Control & midfield** — possession, passing, duels, tempo and who dictated it.\n` +
+    `**Standouts & concerns** — 2–3 best performers and 1–2 who struggled, justified by their numbers.\n` +
+    `**Tactical adjustments** — concrete changes to make next time.\n` +
+    `**Training priorities** — 2–3 specific things to work on this week.\n` +
+    `Reference specific numbers, players and minutes throughout. Avoid generic filler.`
 
-  const xgDiff = m.xgFor - m.xgAgainst
+  const topCreators = ratings.filter((s) => s.keyPasses > 0).slice(0, 3).map((s) => `${name(s.playerId)} (${s.keyPasses} KP)`)
   const heuristic =
-    `**Verdict**\n` +
-    `${res === 'W' ? 'Win' : res === 'D' ? 'Draw' : 'Loss'} ${m.goalsFor}-${m.goalsAgainst} ${m.venue.toLowerCase()} vs ${m.opponent}. ` +
-    `${m.possession}% possession and ${n1(m.xgFor)}–${n1(m.xgAgainst)} xG (${xgDiff >= 0 ? 'out-created' : 'out-created by'} the opponent by ${n1(Math.abs(xgDiff))}).\n\n` +
-    `**What worked**\n- ${top.map((s) => name(s.playerId)).join(', ')} were the standout performers.\n${m.goalsFor > m.xgFor ? '- Clinical finishing — outscored the xG.' : '- Created chances steadily through the formation shape.'}\n\n` +
-    `**What to fix**\n${m.goalsAgainst > 0 ? `- Conceded ${m.goalsAgainst}; tighten the defensive transitions.` : '- Kept a clean sheet — maintain the defensive structure.'}\n- ${low.map((s) => name(s.playerId)).join(' and ')} need support or rotation.`
+    `**Game state & story**\n` +
+    `${resWord} ${m.goalsFor}-${m.goalsAgainst} ${m.venue.toLowerCase()} vs ${m.opponent} (${m.competition}). ${m.possession}% possession and ${n1(m.xgFor)}–${n1(m.xgAgainst)} xG — ${xgDiff >= 0 ? `we out-created them by ${n1(xgDiff)}` : `out-created by ${n1(-xgDiff)}`}.\n\n` +
+    `**Attacking**\n- ${m.shotsFor} shots (${shotsOnTarget} on target) worth ${n1(m.xgFor)} xG; scored ${m.goalsFor} (${m.goalsFor >= m.xgFor ? 'clinical — above xG' : 'below xG, finishing to sharpen'}).\n- Creators: ${topCreators.length ? topCreators.join(', ') : 'chances shared across the side'}.\n${goalLines.length ? `- Goals: ${goalLines.join('; ')}.\n` : ''}\n` +
+    `**Defending**\n- Conceded ${m.goalsAgainst} on ${n1(m.xgAgainst)} xG against; ${tackles} tackles, ${interceptions} interceptions, ${duelsWon}/${duelsTotal} duels won.\n\n` +
+    `**Control & midfield**\n- ${passesC}/${passes} passes (${n1(passAcc)}%), ${keyPasses} key passes, ${n1(distance)}km covered.\n\n` +
+    `**Standouts**\n${ratings.slice(0, 3).map((s) => `- ${name(s.playerId)} — ${n1(s.rating)}${s.goals ? `, ${s.goals}G` : ''}${s.assists ? `, ${s.assists}A` : ''}.`).join('\n')}\n\n` +
+    `**Concerns**\n${ratings.slice(-2).map((s) => `- ${name(s.playerId)} — ${n1(s.rating)} rating; review involvement/role.`).join('\n')}\n\n` +
+    `_Add an Anthropic API key in Data & Export for a full AI tactical breakdown from this data pack._`
 
-  return { system: ANALYST_SYSTEM, user, heuristic }
+  return { system: MATCH_SYSTEM, user, heuristic, maxTokens: 4000, effort: 'high' }
 }
 
 // ---------------------------------------------------------------------------

@@ -411,7 +411,7 @@ export function MatchDetail() {
       {/* AI analysis ------------------------------------------------------ */}
       <div style={{ marginTop: 16 }}>
         <AiPanel
-          title="AI match analysis"
+          title="AI match breakdown"
           build={() => matchAnalysis(data, match.id)}
           onSave={(t) => actions.updateMatch({ ...match, notes: match.notes ? `${match.notes}\n\n${t}` : t })}
           saveLabel="Append to notes"
