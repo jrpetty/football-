@@ -4,6 +4,7 @@ import type { MatchEvent, Player } from '../types'
 import { useData, useMatch, useActions } from '../store/store'
 import { AiPanel } from '../components/ai/AiPanel'
 import { matchAnalysis } from '../ai/analyses'
+import { TacticalReplay } from '../components/pitch/TacticalReplay'
 import {
   fmtDate,
   resultOf,
@@ -348,6 +349,12 @@ export function MatchDetail() {
             <ShotMap shots={shots} />
           )}
         </div>
+      </div>
+
+      {/* Tactical view (2D animated) ------------------------------------- */}
+      <div className="card card-pad" style={{ marginTop: 16 }}>
+        <SectionTitle action={<span className="muted tiny">▶ press play</span>}>Tactical view</SectionTitle>
+        <TacticalReplay match={match} players={data.players} />
       </div>
 
       {/* Player ratings -------------------------------------------------- */}
