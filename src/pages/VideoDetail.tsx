@@ -8,6 +8,8 @@ import { genId, clamp } from '../utils/format'
 import { Modal } from '../components/ui/Modal'
 import { EmptyState } from '../components/ui/Primitives'
 import { Telestration } from '../components/video/Telestration'
+import { AiPanel } from '../components/ai/AiPanel'
+import { videoGameAnalysis } from '../ai/analyses'
 
 function emptyTag(time: number): VideoTag {
   return { id: '', time, category: 'Chance', title: '', note: '', team: 'us' }
@@ -427,6 +429,16 @@ export function VideoDetail() {
                 onChange={(e) => persist({ ...video, notes: e.target.value })}
               />
             </div>
+          </div>
+
+          {/* AI game breakdown from the tagged moments + match context */}
+          <div style={{ marginTop: 16 }}>
+            <AiPanel
+              title="AI game breakdown"
+              build={() => videoGameAnalysis(data, video.id)}
+              onSave={(t) => persist({ ...video, notes: video.notes ? `${video.notes}\n\n${t}` : t })}
+              saveLabel="Append to notes"
+            />
           </div>
         </div>
 

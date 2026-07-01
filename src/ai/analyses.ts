@@ -9,7 +9,8 @@ import {
 } from '../analytics/selectors'
 import { POSITION_LABEL, resultOf, fmtDate, fmtDateShort } from '../utils/format'
 import { positionGroupOf } from '../data/formations'
-import type { PlayerMatchStat, PositionGroup } from '../types'
+import type { PlayerMatchStat, PositionGroup, VideoTag } from '../types'
+import { fmtClock } from '../utils/video'
 
 export interface Analysis {
   system: string
@@ -35,6 +36,15 @@ const MATCH_SYSTEM =
   'insightful tactical breakdown. Use markdown with **bold** section headers and bullet points. ' +
   'Ground EVERY point in the data — cite specific numbers, players and minutes. Explain WHY, not ' +
   'just what. Be candid about what went well and what went wrong. No generic filler. Aim for 450–650 words.'
+
+const FILM_SYSTEM =
+  'You are an elite football (soccer) video analyst breaking down game footage for a coaching staff. ' +
+  'You are given the coach’s timecoded tags from the film (each a key moment they marked, with category, ' +
+  'note, player and whether it is our team or the opposition) plus the linked match data. You cannot see ' +
+  'the video itself — the tags and match data are your ONLY evidence, so do NOT invent events, players or ' +
+  'moments that are not in them. Turn this evidence into a thorough, insightful game breakdown. Use markdown ' +
+  'with **bold** section headers and bullet points, and reference the relevant timecodes (e.g. 12:30) and ' +
+  'players throughout. Explain patterns and causes, not just descriptions. Aim for 450–650 words.'
 
 const n1 = (v: number) => (Math.round(v * 10) / 10).toFixed(1)
 const n2 = (v: number) => (Math.round(v * 100) / 100).toFixed(2)
@@ -178,6 +188,64 @@ export function matchAnalysis(data: AppData, matchId: string): Analysis {
     `_Add an Anthropic API key in Data & Export for a full AI tactical breakdown from this data pack._`
 
   return { system: MATCH_SYSTEM, user, heuristic, maxTokens: 4000, effort: 'high' }
+}
+
+// ---------------------------------------------------------------------------
+// Game film — break down the game from the tagged video moments + match data
+// ---------------------------------------------------------------------------
+export function videoGameAnalysis(data: AppData, videoId: string): Analysis {
+  const v = data.videos.find((x) => x.id === videoId)!
+  const playerName = (id?: string) => (id && data.players.find((p) => p.id === id)?.name) || undefined
+  const tags = [...v.tags].sort((a, b) => a.time - b.time)
+  const tagLine = (t: VideoTag) =>
+    `${fmtClock(t.time)}${t.endTime ? `–${fmtClock(t.endTime)}` : ''} [${t.team === 'us' ? 'US' : 'OPP'} · ${t.category}] ${t.title}` +
+    `${playerName(t.playerId) ? ` (${playerName(t.playerId)})` : ''}${t.note ? ` — ${t.note}` : ''}`
+
+  const usTags = tags.filter((t) => t.team === 'us')
+  const oppTags = tags.filter((t) => t.team === 'them')
+
+  // Category counts for the heuristic.
+  const byCat = new Map<string, number>()
+  for (const t of tags) byCat.set(t.category, (byCat.get(t.category) ?? 0) + 1)
+  const catSummary = [...byCat.entries()].sort((a, b) => b[1] - a[1]).map(([c, n]) => `${c} ×${n}`).join(', ')
+
+  // Linked match context, if any.
+  const m = v.matchId ? data.matches.find((x) => x.id === v.matchId) : undefined
+  let matchCtx = ''
+  if (m) {
+    const r = resultOf(m.goalsFor, m.goalsAgainst)
+    matchCtx =
+      `LINKED MATCH DATA: ${m.venue} vs ${m.opponent} (${m.competition}). Result ${r} ${m.goalsFor}-${m.goalsAgainst}. ` +
+      `Formation ${m.formation}. Possession ${m.possession}%, xG ${n1(m.xgFor)}-${n1(m.xgAgainst)}, shots ${m.shotsFor}-${m.shotsAgainst}, corners ${m.cornersFor}-${m.cornersAgainst}.\n`
+  }
+
+  const user =
+    `GAME FILM — "${v.title}"${v.opponent ? ` vs ${v.opponent}` : ''}${v.date ? `, ${v.date}` : ''}.\n` +
+    matchCtx +
+    `\nThe analyst tagged ${tags.length} key moment(s) in this footage (timecoded). This is the evidence to work from:\n` +
+    (tags.length ? tags.map((t) => `- ${tagLine(t)}`).join('\n') : '- No moments tagged yet.') +
+    (v.notes ? `\n\nANALYST NOTES: ${v.notes}\n` : '\n') +
+    `\nUsing the linked match data and these tagged moments as your only evidence, break down the game in full. ` +
+    `Structure the response with these markdown sections:\n` +
+    `**The story of the game** — what the moments and result reveal about how it unfolded.\n` +
+    `**Our attacking** — how we created and threatened (build-up, chances, transitions, set pieces), citing timecodes.\n` +
+    `**Our defending** — problems and strong moments out of possession (errors, pressing, transitions), citing timecodes.\n` +
+    `**Opposition** — their threats and where they can be exploited, from the moments tagged as opposition.\n` +
+    `**Key players & moments** — who and what stood out, with timecodes.\n` +
+    `**Coaching points** — the 3–4 clearest lessons to reinforce this week.\n` +
+    `**Clips to review with the team** — pick the 4–6 most instructive tagged moments; list each timecode with one line on why.\n` +
+    `Reference specific timecodes and players throughout. Do not invent events that are not in the tags.`
+
+  const notable = tags.slice(0, 6).map((t) => `- ${fmtClock(t.time)} — ${t.category}: ${t.title}${playerName(t.playerId) ? ` (${playerName(t.playerId)})` : ''}`)
+  const heuristic =
+    `**Overview**\n` +
+    `${tags.length} moments tagged in "${v.title}"${m ? ` (${resultOf(m.goalsFor, m.goalsAgainst)} ${m.goalsFor}-${m.goalsAgainst} vs ${m.opponent})` : ''}: ${usTags.length} for us, ${oppTags.length} on the opposition.\n\n` +
+    `**By theme**\n- ${catSummary || 'nothing tagged yet'}.\n\n` +
+    `**Notable moments**\n${notable.length ? notable.join('\n') : '- None tagged yet — mark moments on the clip to build this out.'}\n\n` +
+    `**Next step**\n- Turn the opposition-tagged moments into your scouting report, and drill the recurring themes above.\n\n` +
+    `_Add an Anthropic API key in Data & Export for a full AI film breakdown that reads across all these moments._`
+
+  return { system: FILM_SYSTEM, user, heuristic, maxTokens: 4000, effort: 'high' }
 }
 
 // ---------------------------------------------------------------------------
