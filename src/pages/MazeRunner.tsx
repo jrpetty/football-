@@ -117,9 +117,32 @@ function Minimap({
 
 // --------------------------------------------------------------- Page
 export function MazeRunner() {
-  const today = useMemo(() => dayOfWeek(new Date()), [])
+  const [today, setToday] = useState(() => dayOfWeek(new Date()))
   const [day, setDay] = useState(today)
   const maze = useMemo(() => buildMaze(day), [day])
+  const todayRef = useRef(today)
+  const idleRef = useRef(true) // no run in progress → safe to follow the calendar
+
+  // Keep "today" honest across midnight for long-lived sessions. If the player
+  // is idle on the old day's maze, follow the calendar; never swap mid-run.
+  useEffect(() => {
+    const refresh = () => {
+      const now = dayOfWeek(new Date())
+      const prev = todayRef.current
+      if (now === prev) return
+      todayRef.current = now
+      setToday(now)
+      setDay((d) => (d === prev && idleRef.current ? now : d))
+    }
+    const id = window.setInterval(refresh, 30_000)
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    return () => {
+      window.clearInterval(id)
+      window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', refresh)
+    }
+  }, [])
 
   const [pos, setPos] = useState<Point>(maze.spawn)
   const [facing, setFacing] = useState<Point>({ x: 0, y: 1 })
@@ -141,6 +164,7 @@ export function MazeRunner() {
     setElapsed(0)
     setWon(false)
     setHint(false)
+    idleRef.current = true
   }, [maze])
   useEffect(() => { resetRun() }, [resetRun])
 
@@ -169,6 +193,7 @@ export function MazeRunner() {
 
       setPos({ x: nx, y: ny })
       setMoves((m) => m + 1)
+      idleRef.current = false
       if (startedAt === null) setStartedAt(Date.now())
       setDiscovered((prev) => {
         const next = new Set(prev)
@@ -179,6 +204,7 @@ export function MazeRunner() {
       if (nx === maze.exit.x && ny === maze.exit.y) {
         setWon(true)
         const timeMs = startedAt ? Date.now() - startedAt : 0
+        setElapsed(timeMs) // freeze the exact finish time so the panel matches the best
         const finalMoves = moves + 1
         const prevBest = best[day]
         if (!prevBest || timeMs < prevBest.timeMs) {

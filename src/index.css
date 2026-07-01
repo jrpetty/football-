@@ -363,7 +363,7 @@ p { margin: 0; }
 .dpad .sp { visibility: hidden; }
 
 .maze-win { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(4, 7, 14, 0.82); backdrop-filter: blur(3px); z-index: 5; padding: 20px; }
-.maze-win .panel { text-align: center; max-width: 340px; }
+.maze-win .panel { text-align: center; max-width: 340px; padding: 22px 24px; }
 .maze-win .big { font-size: 46px; margin-bottom: 6px; }
 .maze-win h2 { font-size: 24px; margin-bottom: 4px; }
 
