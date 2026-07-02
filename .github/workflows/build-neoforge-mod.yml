@@ -1,0 +1,64 @@
+name: Build NeoForge mod jar
+
+# Compiles mc-assistant-neoforge and publishes the jar two ways:
+#  - as a run artifact (Actions tab -> this run -> Artifacts)
+#  - attached to the rolling "neoforge-mod-latest" release (Releases page)
+
+on:
+  push:
+    branches:
+      - claude/minecraft-ai-assistant-44hj4f
+      - main
+    paths:
+      - "mc-assistant-neoforge/**"
+      - ".github/workflows/build-neoforge-mod.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: neoforge-mod-build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Build mod
+        working-directory: mc-assistant-neoforge
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon build
+
+      - name: List outputs
+        working-directory: mc-assistant-neoforge
+        run: ls -la build/libs/
+
+      - name: Upload jar artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mc-assistant-neoforge-jar
+          path: mc-assistant-neoforge/build/libs/*.jar
+          if-no-files-found: error
+
+      - name: Attach jar to rolling release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: neoforge-mod-latest
+          name: "MC Assistant — NeoForge mod (latest build)"
+          body: |
+            Compiled mod jar for **Minecraft 1.21.1 / NeoForge 21.1**.
+            Drop it into your `mods/` folder (client for single player;
+            server + client for multiplayer). Spawn your companion with
+            `/assistant spawn`, then command it in chat: `!follow`, `!guard`,
+            `!gather logs 16`, `!deposit`, `!status`.
+          files: mc-assistant-neoforge/build/libs/*.jar
