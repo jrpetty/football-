@@ -3,7 +3,7 @@ package com.jrpetty.mcassistant.entity;
 import com.jrpetty.mcassistant.entity.goal.DepositGoal;
 import com.jrpetty.mcassistant.entity.goal.FollowOwnerGoal;
 import com.jrpetty.mcassistant.entity.goal.GatherGoal;
-import net.minecraft.ContainerHelper;
+import net.minecraft.world.ContainerHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
