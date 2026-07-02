@@ -63,21 +63,24 @@ function versionAtLeast(version, target) {
   return true
 }
 
-// Pure builder so it's testable offline. Returns the tellraw JSON string.
-function renderClickable(botName, presets, { newKeys = false, click = 'run' } = {}) {
+// Pure builders so they're testable offline. Minecraft caps chat commands at
+// 256 chars, so the clickable menu is one /tellraw line PER preset.
+function renderClickableLines(botName, presets, { newKeys = false, click = 'run' } = {}) {
   const clickKey = newKeys ? 'click_event' : 'clickEvent'
   const cmdKey = newKeys ? 'command' : 'value'
   const action = click === 'suggest' ? 'suggest_command' : 'run_command'
-  const parts = [{ text: `— ${botName}'s tasks (click one) —`, color: 'gold' }]
+  const lines = [JSON.stringify({ text: `— ${botName}'s tasks (click one) —`, color: 'gold' })]
   presets.forEach((p, i) => {
-    parts.push({ text: `\n[${i + 1}] `, color: 'gray' })
-    parts.push({
-      text: p.label,
-      color: 'aqua',
-      [clickKey]: { action, [cmdKey]: `/w ${botName} m ${i + 1}` },
-    })
+    lines.push(JSON.stringify([
+      { text: `[${i + 1}] `, color: 'gray' },
+      {
+        text: p.label,
+        color: 'aqua',
+        [clickKey]: { action, [cmdKey]: `/w ${botName} m ${i + 1}` },
+      },
+    ]))
   })
-  return JSON.stringify(parts)
+  return lines
 }
 
 // Compact numbered lines for plain chat (a few presets per line).
@@ -104,11 +107,16 @@ function show(bot, username) {
   bot.assistant._menuAt[username.toLowerCase()] = Date.now()
 
   if (cfg.menuClickable) {
-    const json = renderClickable(bot.username, presets, {
+    const lines = renderClickableLines(bot.username, presets, {
       newKeys: versionAtLeast(bot.version, '1.21.5'),
       click: cfg.menuClick,
     })
-    try { bot.chat(`/tellraw ${username} ${json}`) } catch (_) { /* no perms */ }
+    // One tellraw per line (256-char command cap), lightly spaced out.
+    lines.forEach((json, i) => {
+      setTimeout(() => {
+        try { bot.chat(`/tellraw ${username} ${json}`) } catch (_) { /* no perms */ }
+      }, i * 120)
+    })
     bot.assistant.reply(`Menu sent — click a task, or say "m <number>". (No clickable menu? I need op; say "m 1"–"m ${presets.length}".)`)
   } else {
     for (const line of renderTextLines(presets)) bot.assistant.reply(line)
@@ -144,4 +152,4 @@ async function pick(bot, username, n) {
   }
 }
 
-module.exports = { show, pick, isRecent, loadPresets, renderClickable, renderTextLines, versionAtLeast, DEFAULT_PRESETS }
+module.exports = { show, pick, isRecent, loadPresets, renderClickableLines, renderTextLines, versionAtLeast, DEFAULT_PRESETS }

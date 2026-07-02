@@ -67,6 +67,19 @@ const config = {
   // 'run' fires the pick on click; 'suggest' pre-fills chat for confirmation.
   menuClick: str('MC_MENU_CLICK', 'run'),
 
+  // --- Proactivity ---
+  // With no orders, find useful work: sleep at night, cook raw meat, stash
+  // overflow, harvest ripe crops, replant saplings, torch dark spots, fish
+  // when food runs low. Player commands always take priority.
+  proactive: bool('MC_PROACTIVE', true),
+  // Run back for its dropped items after dying.
+  recoverItems: bool('MC_RECOVER_ITEMS', true),
+
+  // --- Web dashboard (local browser control panel) ---
+  // Binds to localhost only. Set MC_WEB_PORT=0 to disable.
+  webPort: num('MC_WEB_PORT', 3210),
+  webHost: str('MC_WEB_HOST', '127.0.0.1'),
+
   // --- Behaviour ---
   // Narrate what it's doing / feeling in chat (the "self-aware" voice).
   narrate: bool('MC_NARRATE', true),

@@ -37,6 +37,15 @@ function tick(bot) {
   const cfg = bot.assistant.config
   const nearestThreat = threatsNear(bot, cfg.guardRadius)[0] || null
 
+  // 0) ASLEEP — stay down unless something hostile shows up.
+  if (bot.isSleeping) {
+    if (nearestThreat) {
+      require('./rest').wake(bot).catch(() => {})
+      bot.assistant.narrate('Something woke me up!')
+    }
+    return
+  }
+
   // 1) SURVIVE — critically hurt with a threat present: break off and run.
   if (bot.health <= cfg.fleeHealth && nearestThreat) {
     if (!bot.assistant.fleeing) {
@@ -79,7 +88,8 @@ function tick(bot) {
 
   // 4) STANDING ORDERS — if we're meant to be following but the pathfinder
   // goal got dropped (owner left render distance, a one-shot task finished,
-  // combat cleared while they were away), quietly pick it back up.
+  // combat cleared while they were away), quietly pick it back up. Patrol
+  // advances to its next point the same way.
   if (bot.assistant.mode === 'follow' && !bot.assistant.busy && !bot.assistant.eating) {
     const owner = ownerEntity(bot)
     if (owner && !bot.pathfinder.goal) {
@@ -88,6 +98,14 @@ function tick(bot) {
       } catch (_) { /* pathfinder busy */ }
     }
   }
+  if (bot.assistant.mode === 'patrol' && !bot.assistant.busy && !bot.pathfinder.goal) {
+    require('./patrol').advance(bot)
+  }
+
+  // 5) PROACTIVE — nothing to do at all? Find useful work (cook, stash,
+  // harvest, replant, torch, fish, sleep). chores.maybeRun checks that the
+  // queue is empty and we're truly idle before starting anything.
+  require('./chores').maybeRun(bot)
 }
 
 function maybeEat(bot) {

@@ -121,4 +121,50 @@ async function give(bot, { item, amount } = {}) {
   }
 }
 
-module.exports = { deposit, drop, give, matchingStacks, isKeeper }
+// Fetch items back OUT of nearby chests/barrels ("get me arrows from the chest").
+async function withdraw(bot, { item, amount } = {}) {
+  if (!item) return 'Tell me what to fetch from storage.'
+  const mcData = require('minecraft-data')(bot.version)
+  const ids = ['chest', 'trapped_chest', 'barrel']
+    .map((n) => mcData.blocksByName[n] && mcData.blocksByName[n].id)
+    .filter((v) => v != null)
+  const spots = bot.findBlocks({ matching: ids, maxDistance: 16, count: 4 })
+  if (spots.length === 0) return 'No chest or barrel within 16 blocks.'
+
+  const want = String(item).toLowerCase().trim().replace(/\s+/g, '_')
+  let remaining = amount ? Math.floor(amount) : Infinity
+  let got = 0
+  bot.assistant.currentTask = `fetching ${want.replace(/_/g, ' ')} from storage`
+  try {
+    for (const pos of spots) {
+      if (remaining <= 0) break
+      const blockNow = bot.blockAt(pos)
+      if (!blockNow) continue
+      try {
+        await bot.pathfinder.goto(new goals.GoalNear(pos.x, pos.y, pos.z, 2))
+        const container = await bot.openContainer(blockNow)
+        const inside = container.containerItems()
+          .filter((it) => it.name === want || it.name.includes(want))
+        for (const stack of inside) {
+          if (remaining <= 0) break
+          const n = Math.min(stack.count, remaining)
+          try {
+            await container.withdraw(stack.type, null, n)
+            got += n
+            remaining -= n
+          } catch (_) { /* inventory full */ }
+        }
+        container.close()
+      } catch (err) {
+        bot.assistant.log.debug('withdraw failed:', err && err.message)
+      }
+    }
+  } finally {
+    bot.assistant.currentTask = null
+  }
+  return got > 0
+    ? `Fetched ${got} ${want.replace(/_/g, ' ')} from storage.`
+    : `Couldn't find any ${String(item).replace(/_/g, ' ')} in the chests nearby.`
+}
+
+module.exports = { deposit, drop, give, withdraw, matchingStacks, isKeeper }

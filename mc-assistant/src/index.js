@@ -15,10 +15,20 @@ const log = make(config.logLevel)
 const brain = createBrain(config, log)
 
 let stopping = false
+let currentBot = null
+
+// The dashboard outlives reconnects — it always talks to the current bot.
+require('./web').start({
+  getBot: () => currentBot,
+  getBrain: () => brain,
+  config,
+  log,
+})
 
 function spawnBot() {
   log.info(`Connecting to ${config.host}:${config.port} as ${config.username}…`)
   const bot = createAssistantBot(config, log, brain)
+  currentBot = bot
 
   // Recover exactly once per bot, whether we learn of the disconnect via 'end'
   // (normal kicks, socket-level errors) or only via 'error' — a failed

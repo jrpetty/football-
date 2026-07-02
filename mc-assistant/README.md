@@ -29,6 +29,11 @@ way.
 | **Farming** | `farm` harvests ripe wheat/carrots/potatoes/beetroot in its radius, replants from the drops, and seeds bare farmland. |
 | **Delivery** | `bring me 16 wood` gathers then walks back and hands it over; `give me the iron` / "hand over the loot" tosses items at your feet. |
 | **Task menu** | `menu` opens a preset task list in game — clickable buttons (if the bot is op'd) or numbered picks (`m 3`). Presets are yours to edit in `presets.json`, including **multi-step jobs** ("Full wood run: chop → plank → stash"). |
+| **Job queue** | Orders line up: give it three tasks and it finishes each before starting the next (`jobs` shows the queue, `stop` clears it). |
+| **Proactive** | No orders? It finds work: sleeps at night, cooks its raw meat, stashes overflow, harvests ripe crops, replants saplings, torches dark spots, fishes when food runs low. Your commands always jump the line. |
+| **Memory** | `remember this as home`, `go home`, `waypoints` — saved to disk, along with its owner, so it survives restarts. Dies? It runs back for its dropped gear. |
+| **More skills** | `fish` (needs a rod), `breed cows` (needs the right food), `mine to y11` (torch-lit branch tunnel, grabs every ore vein, walks back), `patrol` (loops the base fighting mobs), `sleep`, `get arrows from the chest` (withdraw), bow shots at distant hostiles (if carrying bow + arrows). |
+| **Web dashboard** | `http://localhost:3210` — the menu as big buttons, live HP/hunger/task/queue, chat transcript, and a command box. Local only, zero setup. |
 | **Logistics** | Stashes loot in a nearby chest (`deposit`), drops items (`drop <item>`), holds a named tool (`equip axe`). |
 | **Awareness** | Reports `status` / `inventory`, and narrates what it's doing/feeling in chat. |
 
@@ -121,7 +126,10 @@ The essentials:
 ## How it fits together
 
 ```
-index.js            → connect + reconnect loop
+index.js            → connect + reconnect loop, web dashboard host
+  web.js            → local browser control panel (buttons, status, chat)
+  jobs.js           → the job queue: one task at a time, in order
+  memory.js         → persistent memory on disk: owner, waypoints, death spot
   bot.js            → build bot, load plugins, chat throttling, shared state (bot.assistant)
     state.js        → the self-report: health, hunger, threats, inventory (the "self-awareness")
     commands.js     → the action registry — the single source of truth for what it can do
@@ -138,10 +146,17 @@ index.js            → connect + reconnect loop
       craft.js      → player-rules crafting: planks -> sticks -> table -> tools
       smelt.js      → furnace smelting/cooking with real fuel
       farm.js       → harvest ripe crops, replant, seed farmland
+      mine.js       → mining trips: descend, tunnel, torch, grab ore veins, return
+      fishing.js    → rod + open water fishing
+      breed.js      → feed animal pairs to grow the herd
+      patrol.js     → loop around home/base fighting hostiles
+      rest.js       → sleep in beds at night
+      torch.js      → light up work areas
+      chores.js     → the proactive idle brain (what to do when nobody's asking)
       food.js       → hunt animals, eat
-      defense.js    → fight hostiles, guard, equip gear         (mineflayer-pvp, armor-manager)
-      inventory.js  → deposit to chests, drop items, hand deliveries to the owner
-      survival.js   → the autonomy loop (eat / defend / flee)
+      defense.js    → fight hostiles, guard, equip gear, bow at range (pvp, armor-manager, hawkeye)
+      inventory.js  → deposit/withdraw chests, drop items, hand deliveries to the owner
+      survival.js   → the autonomy loop (eat / defend / flee / standing orders / chores)
 ```
 
 Because the brain can only call tools defined in `commands.js`, adding a new

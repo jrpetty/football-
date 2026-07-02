@@ -31,6 +31,12 @@
     },
     { "label": "Hand over the loot", "action": "give", "args": {} },
     { "label": "Stash loot in a chest", "action": "deposit", "args": {} },
+    { "label": "Go home", "action": "gowaypoint", "args": { "name": "home" } },
+    { "label": "Patrol the base", "action": "patrol", "args": {} },
+    { "label": "Fish for food", "action": "fish", "args": { "amount": 3 } },
+    { "label": "Branch mine here (24)", "action": "mine", "args": { "length": 24 } },
+    { "label": "Breed the animals", "action": "breed", "args": {} },
+    { "label": "Sleep", "action": "sleep", "args": {} },
     { "label": "Status report", "action": "status", "args": {} },
     { "label": "Stop", "action": "stop", "args": {} }
   ]

@@ -26,12 +26,36 @@ async function equipBestWeapon(bot) {
   }
 }
 
+function hasBowAndArrows(bot) {
+  const items = bot.inventory.items()
+  return items.some((it) => it.name === 'bow') && items.some((it) => it.name === 'arrow')
+}
+
 // Start attacking a specific entity. Sets the `combat` flag so the survival
-// loop and gather routine yield to the fight.
+// loop and gather routine yield to the fight. Distant targets get an arrow
+// first (if the optional hawkeye aim plugin loaded and we carry bow + arrows);
+// melee handles everything close.
 async function engage(bot, entity) {
   if (!entity || !entity.isValid) return
   bot.assistant.combat = true
   bot.assistant.currentTask = `fighting ${entity.name || 'a hostile'}`
+
+  const dist = bot.entity ? entity.position.distanceTo(bot.entity.position) : 0
+  if (dist > 10 && bot.hawkEye && hasBowAndArrows(bot)) {
+    const now = Date.now()
+    if (now - (bot.assistant._lastShotAt || 0) > 2000) {
+      bot.assistant._lastShotAt = now
+      try {
+        bot.hawkEye.oneShot(entity, 'bow')
+        return // survival re-engages next tick; melee takes over once close
+      } catch (err) {
+        bot.assistant.log.debug('bow shot failed:', err && err.message)
+      }
+    } else {
+      return // between shots — hold
+    }
+  }
+
   await equipBestWeapon(bot)
   bot.pvp.attack(entity)
 }

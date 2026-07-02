@@ -65,9 +65,19 @@ function parse(text) {
     return { action: 'stop', args: {} }
   }
 
+  // job queue status
+  if (/^(jobs?|queue|what(?:'s| is) (?:next|queued))[!.?\s]*$/.test(t)) {
+    return { action: 'jobs', args: {} }
+  }
+
   // status / how are you
   if (/\b(status|report|how are you|you ok|sitrep|how's it going|health)\b/.test(t)) {
     return { action: 'status', args: {} }
+  }
+
+  // recover dropped gear (before inventory — "your items" is not an inv query)
+  if (/\brecover\b|\byour (stuff|items|gear)\b/.test(t)) {
+    return { action: 'recover', args: {} }
   }
 
   // inventory
@@ -83,6 +93,49 @@ function parse(text) {
   // guard / protect
   if (/\b(guard|protect|defend me|watch my back|cover me|keep me safe|bodyguard)\b/.test(t)) {
     return { action: 'guard', args: {} }
+  }
+
+  // sleep
+  if (/\b(sleep|go to bed|take a nap|bedtime)\b/.test(t)) {
+    return { action: 'sleep', args: {} }
+  }
+
+  // patrol
+  const pat = t.match(/\bpatrol\b(?:.*?\b(\d+)\b)?/)
+  if (pat) {
+    return { action: 'patrol', args: pat[1] ? { radius: Number(pat[1]) } : {} }
+  }
+
+  // place a torch
+  if (/\b(?:place|put|drop)\s+(?:a\s+|some\s+)?torch(es)?\b|\blight (?:it|this|the area|this place) up\b/.test(t)) {
+    return { action: 'torch', args: {} }
+  }
+
+  // waypoints: remember / forget / list / go home
+  const rem = t.match(/\b(?:remember|mark|save)\b.*?\b(?:as|this is)\s+([a-z0-9_ ]+)/) ||
+    t.match(/\bset\s+([a-z0-9_ ]+?)\s+here\b/)
+  if (rem) {
+    return { action: 'remember', args: { name: rem[1].trim() } }
+  }
+  if (/\bthis is home\b|\bset home\b/.test(t)) {
+    return { action: 'remember', args: { name: 'home' } }
+  }
+  const fg = t.match(/\bforget\s+(?:the\s+)?([a-z0-9_ ]+)/)
+  if (fg) {
+    return { action: 'forget', args: { name: fg[1].trim() } }
+  }
+  if (/\b(waypoints|saved places|where can you go|locations)\b/.test(t)) {
+    return { action: 'waypoints', args: {} }
+  }
+  if (/\b(?:go|head|get|walk|run|return)\b.{0,12}\bhome\b|^home[!.?\s]*$/.test(t)) {
+    return { action: 'gowaypoint', args: { name: 'home' } }
+  }
+
+  // withdraw from storage — before gather, so "get stone from the chest"
+  // isn't a mining request.
+  const wd = t.match(/\b(?:get|grab|take|fetch|bring)\b\s+(?:me\s+)?(?:(\d+)\s+)?([a-z_ ]+?)\s+(?:out\s+)?(?:of|from)\s+(?:the\s+)?(?:chest|barrel|storage)\b/)
+  if (wd) {
+    return { action: 'withdraw', args: { item: wd[2].trim(), amount: wd[1] ? Number(wd[1]) : undefined } }
   }
 
   // deposit / stash
@@ -157,6 +210,19 @@ function parse(text) {
     }
   }
 
+  // fishing
+  if (/\b(fish|fishing)\b/.test(t)) {
+    const amt = t.match(/\b(\d+)\b/)
+    return { action: 'fish', args: amt ? { amount: Number(amt[1]) } : {} }
+  }
+
+  // breeding
+  const br = t.match(/\bbreed(?:ing)?\b(?:\s+(?:the|some|my|your))?\s*([a-z]+)?/)
+  if (br) {
+    const animal = br[1] && !['them', 'animals', 'something'].includes(br[1]) ? br[1] : undefined
+    return { action: 'breed', args: animal ? { animal } : {} }
+  }
+
   // craft an item — after build (structure words win), before gather so
   // "craft a stone pickaxe" doesn't read "stone" as a mining request.
   if (/\b(craft|make|create|whip up)\b/.test(t)) {
@@ -199,12 +265,30 @@ function parse(text) {
     }
   }
 
+  // mining trip — after gather ("mine 3 iron" stays a gather); "mine to y11",
+  // "branch mine", "go mining"
+  const mt = t.match(/\b(?:strip|branch)\s*mine\b|\bmine\b\s+(?:down\s+)?(?:to|at)\s+y?\s*(-?\d+)|\bgo\s+mining\b/)
+  if (mt) {
+    const args = {}
+    if (mt[1] !== undefined) args.y = Number(mt[1])
+    const len = t.match(/\b(\d+)\s+blocks?\b/)
+    if (len) args.length = Number(len[1])
+    return { action: 'mine', args }
+  }
+
   // attack / kill — only treat the next word as a target if it's a known mob,
   // so "attack now" / "kill him" mean "nearest hostile", not a mob named "now".
   const atk = t.match(/\b(?:attack|kill|fight|slay)\b(?:\s+(?:the|that|a)?\s*([a-z_]+))?/)
   if (atk) {
     const target = atk[1] && KNOWN_MOBS.has(atk[1]) ? atk[1] : undefined
     return { action: 'attack', args: target ? { target } : {} }
+  }
+
+  // "go to the mine" — a named waypoint (checked at runtime; unknown names
+  // get a friendly "I don't know that place" from the action itself).
+  const wpGo = t.match(/\b(?:go|head|travel|walk|return)\s+(?:back\s+)?to\s+(?:the\s+)?([a-z][a-z0-9_]*)\b/)
+  if (wpGo && !['sleep', 'bed', 'me', 'him', 'her', 'them', 'it', 'chest', 'water', 'work'].includes(wpGo[1])) {
+    return { action: 'gowaypoint', args: { name: wpGo[1] } }
   }
 
   // come here

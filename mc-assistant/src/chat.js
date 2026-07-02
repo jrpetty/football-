@@ -2,6 +2,7 @@
 
 const rules = require('./brain/rules')
 const menu = require('./menu')
+const memory = require('./memory')
 const { dispatch, statusLine } = require('./commands')
 
 // ---------------------------------------------------------------------------
@@ -51,9 +52,11 @@ function classify(bot, username, message, isWhisper) {
 async function handle(bot, brain, username, body, rawMessage) {
   const cfg = bot.assistant.config
 
-  // Claim ownership on first contact if no owner was configured.
+  // Claim ownership on first contact if no owner was configured — and
+  // remember it across restarts.
   if (!bot.assistant.owner) {
     bot.assistant.owner = username
+    memory.set('owner', username, bot.assistant.log)
     bot.assistant.reply(`You're my owner now, ${username}. I've got your back.`)
   }
 
@@ -63,6 +66,12 @@ async function handle(bot, brain, username, body, rawMessage) {
     return
   }
 
+  return processBody(bot, brain, username, body, rawMessage)
+}
+
+// The command pipeline after addressing/ownership — also the entry point the
+// web dashboard uses (its caller is the owner by definition).
+async function processBody(bot, brain, username, body, rawMessage) {
   if (!body) { bot.assistant.reply(statusLine(bot)); return }
 
   // Bare "help" only — "help me fight the creeper" must reach the brain.
@@ -122,4 +131,4 @@ async function handle(bot, brain, username, body, rawMessage) {
   if (res) bot.assistant.reply(res)
 }
 
-module.exports = { setup, classify }
+module.exports = { setup, classify, processBody }
