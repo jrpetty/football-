@@ -79,7 +79,22 @@ public final class AssistantCommands {
         }
         AssistantEntity assistant = McAssistantMod.ASSISTANT.get().create(player.serverLevel());
         if (assistant == null) return 0;
-        assistant.moveTo(player.getX() + 1, player.getY(), player.getZ(), player.getYRot(), 0);
+        // Pick a collision-free spot — a hardcoded offset could embed the
+        // 2-block-tall entity in a wall next to the player and suffocate it
+        // (a dead assistant answers no commands, ever).
+        double sx = player.getX();
+        double sz = player.getZ();
+        double[][] offsets = { {1, 0}, {-1, 0}, {0, 1}, {0, -1}, {0, 0} };
+        for (double[] off : offsets) {
+            net.minecraft.world.phys.AABB box = McAssistantMod.ASSISTANT.get().getDimensions()
+                .makeBoundingBox(player.getX() + off[0], player.getY(), player.getZ() + off[1]);
+            if (player.serverLevel().noCollision(box)) {
+                sx = player.getX() + off[0];
+                sz = player.getZ() + off[1];
+                break;
+            }
+        }
+        assistant.moveTo(sx, player.getY(), sz, player.getYRot(), 0);
         assistant.setOwner(player);
         player.serverLevel().addFreshEntity(assistant);
         assistant.say("Assistant online. Talk to me with ! commands (\"!follow\", \"!gather logs 16\", \"!status\") or /assistant.");
