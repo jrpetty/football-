@@ -1,0 +1,6 @@
+{
+  "generator.mazerunner.maze_runner": "Maze Runner",
+  "biome.mazerunner.glade": "The Glade",
+  "block.mazerunner.maze_wall": "Maze Wall",
+  "block.mazerunner.exit_portal": "Exit Portal"
+}

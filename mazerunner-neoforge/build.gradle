@@ -1,0 +1,41 @@
+plugins {
+    id 'java'
+    id 'net.neoforged.moddev' version '2.0.141'
+}
+
+group = 'com.jrpetty.mazerunner'
+version = project.mod_version
+base { archivesName = 'mazerunner' }
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
+}
+
+neoForge {
+    version = project.neoforge_version
+
+    runs {
+        client {
+            client()
+        }
+        server {
+            server()
+        }
+    }
+
+    mods {
+        mazerunner {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+jar {
+    manifest {
+        attributes([
+            'Specification-Title'   : 'mazerunner',
+            'Implementation-Title'  : 'Maze Runner',
+            'Implementation-Version': project.version,
+        ])
+    }
+}

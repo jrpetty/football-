@@ -1,0 +1,6 @@
+{
+  "variants": {
+    "active=false": { "model": "mazerunner:block/exit_portal" },
+    "active=true": { "model": "mazerunner:block/exit_portal_active" }
+  }
+}

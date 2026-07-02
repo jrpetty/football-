@@ -1,0 +1,245 @@
+package com.jrpetty.mazerunner.gen;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
+import com.jrpetty.mazerunner.ModBlocks;
+import com.jrpetty.mazerunner.ModWorldgen;
+import com.jrpetty.mazerunner.config.MazeConfigData;
+import com.jrpetty.mazerunner.config.MazeConfigs;
+import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.resources.RegistryOps;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.LevelHeightAccessor;
+import net.minecraft.world.level.NoiseColumn;
+import net.minecraft.world.level.StructureManager;
+import net.minecraft.world.level.WorldGenLevel;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.BiomeManager;
+import net.minecraft.world.level.biome.FixedBiomeSource;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.ChunkAccess;
+import net.minecraft.world.level.chunk.ChunkGenerator;
+import net.minecraft.world.level.levelgen.GenerationStep;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.levelgen.RandomState;
+import net.minecraft.world.level.levelgen.blending.Blender;
+import net.minecraft.server.level.WorldGenRegion;
+
+/**
+ * Generates the authored Maze Runner world from {@code maze_config_v2.json}:
+ * a 96×96-chunk square — floor at y60, unbreakable walls y61..100, a barrier
+ * ceiling at y101 — with the 16×16-chunk Glade at the centre and seven exit
+ * pads just outside the border. Everything beyond is void. Toggle points,
+ * Glade doors and exit gaps generate CLOSED; the runtime opens them per day.
+ */
+public class MazeChunkGenerator extends ChunkGenerator {
+
+    public static final MapCodec<MazeChunkGenerator> CODEC = RecordCodecBuilder.mapCodec(
+        instance -> instance.group(
+            RegistryOps.retrieveElement(ModWorldgen.GLADE_BIOME)
+        ).apply(instance, instance.stable(MazeChunkGenerator::new)));
+
+    private final MazeConfigData cfg;
+    private final List<ExitPad> pads;
+
+    public MazeChunkGenerator(Holder.Reference<Biome> biome) {
+        super(new FixedBiomeSource(biome));
+        this.cfg = MazeConfigs.get();
+        this.pads = buildPads(cfg);
+    }
+
+    @Override
+    protected MapCodec<? extends ChunkGenerator> codec() {
+        return CODEC;
+    }
+
+    // ------------------------------------------------------------- terrain
+
+    @Override
+    public CompletableFuture<ChunkAccess> fillFromNoise(Blender blender, RandomState randomState,
+            StructureManager structureManager, ChunkAccess chunk) {
+        buildChunk(chunk);
+        return CompletableFuture.completedFuture(chunk);
+    }
+
+    private void buildChunk(ChunkAccess chunk) {
+        ChunkPos cp = chunk.getPos();
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+
+        BlockState bedrock = Blocks.BEDROCK.defaultBlockState();
+        BlockState dirt = Blocks.DIRT.defaultBlockState();
+        BlockState grass = Blocks.GRASS_BLOCK.defaultBlockState();
+        BlockState wall = ModBlocks.MAZE_WALL.get().defaultBlockState();
+        BlockState barrier = Blocks.BARRIER.defaultBlockState();
+
+        boolean inGrid = cfg.inGrid(cp.x, cp.z);
+
+        if (inGrid) {
+            int floorY = cfg.floorY;
+            for (int lx = 0; lx < 16; lx++) {
+                for (int lz = 0; lz < 16; lz++) {
+                    int wx = cp.getMinBlockX() + lx;
+                    int wz = cp.getMinBlockZ() + lz;
+                    boolean open = cfg.isBaseOpen(wx, wz);
+
+                    chunk.setBlockState(pos.set(wx, floorY - 5, wz), bedrock, false);
+                    for (int y = floorY - 4; y < floorY; y++) {
+                        chunk.setBlockState(pos.set(wx, y, wz), dirt, false);
+                    }
+                    chunk.setBlockState(pos.set(wx, floorY, wz), open ? grass : dirt, false);
+
+                    if (!open) {
+                        for (int y = cfg.wallBaseY; y <= cfg.wallTopY; y++) {
+                            chunk.setBlockState(pos.set(wx, y, wz), wall, false);
+                        }
+                    }
+                    chunk.setBlockState(pos.set(wx, cfg.wallTopY + 1, wz), barrier, false);
+
+                    if (cfg.inGlade(Math.floorDiv(wx, cfg.cellSize), Math.floorDiv(wz, cfg.cellSize))) {
+                        GladeBuilder.column(cfg, chunk, pos, wx, wz);
+                    }
+                }
+            }
+        }
+
+        // Exit pads live just outside the grid (and their barrier roof).
+        for (ExitPad pad : pads) {
+            pad.emit(cfg, chunk, pos);
+        }
+    }
+
+    // ------------------------------------------------------------- exit pads
+
+    /** The escape platform outside the border wall in front of one exit. */
+    record ExitPad(String exitId, int x0, int z0, int x1, int z1, int portalX, int portalZ) {
+
+        void emit(MazeConfigData cfg, ChunkAccess chunk, BlockPos.MutableBlockPos pos) {
+            ChunkPos cp = chunk.getPos();
+            int cx0 = Math.max(x0, cp.getMinBlockX());
+            int cx1 = Math.min(x1, cp.getMaxBlockX());
+            int cz0 = Math.max(z0, cp.getMinBlockZ());
+            int cz1 = Math.min(z1, cp.getMaxBlockZ());
+            if (cx0 > cx1 || cz0 > cz1) return;
+
+            BlockState stone = Blocks.STONE_BRICKS.defaultBlockState();
+            BlockState wall = ModBlocks.MAZE_WALL.get().defaultBlockState();
+            BlockState barrier = Blocks.BARRIER.defaultBlockState();
+            int floorY = cfg.floorY + 1; // pad floor one step above the maze floor
+
+            for (int x = cx0; x <= cx1; x++) {
+                for (int z = cz0; z <= cz1; z++) {
+                    chunk.setBlockState(pos.set(x, floorY - 1, z), stone, false);
+                    chunk.setBlockState(pos.set(x, floorY, z), stone, false);
+                    // rim wall on the pad's outer edges (the maze-facing side stays open)
+                    boolean gridSide = closestToGrid(cfg, x, z);
+                    boolean edge = x == x0 || x == x1 || z == z0 || z == z1;
+                    if (edge && !gridSide) {
+                        for (int y = floorY + 1; y <= floorY + 4; y++) {
+                            chunk.setBlockState(pos.set(x, y, z), wall, false);
+                        }
+                    }
+                    chunk.setBlockState(pos.set(x, cfg.wallTopY + 1, z), barrier, false);
+                }
+            }
+
+            if (portalX >= cx0 && portalX <= cx1 && portalZ >= cz0 && portalZ <= cz1) {
+                chunk.setBlockState(pos.set(portalX, floorY + 1, portalZ),
+                    ModBlocks.EXIT_PORTAL.get().defaultBlockState(), false);
+            }
+        }
+
+        private boolean closestToGrid(MazeConfigData cfg, int x, int z) {
+            int max = cfg.gridCells * cfg.cellSize - 1;
+            if (z1 < 0) return z == z1;          // pad north of grid → south edge faces maze
+            if (z0 > max) return z == z0;        // pad south of grid → north edge
+            if (x1 < 0) return x == x1;          // west pad → east edge
+            return x == x0;                      // east pad → west edge
+        }
+    }
+
+    private static List<ExitPad> buildPads(MazeConfigData cfg) {
+        List<ExitPad> pads = new ArrayList<>();
+        int max = cfg.gridCells * cfg.cellSize; // 1536
+        for (MazeConfigData.ExitDef exit : cfg.exits.values()) {
+            int stripX0 = exit.cellX() * cfg.cellSize + 4;
+            int stripZ0 = exit.cellZ() * cfg.cellSize + 4;
+            switch (exit.facing()) {
+                case "north" -> pads.add(new ExitPad(exit.id(),
+                    stripX0 - 3, -10, stripX0 + 10, -1, exit.portalX(), exit.portalZ()));
+                case "south" -> pads.add(new ExitPad(exit.id(),
+                    stripX0 - 3, max, stripX0 + 10, max + 9, exit.portalX(), exit.portalZ()));
+                case "west" -> pads.add(new ExitPad(exit.id(),
+                    -10, stripZ0 - 3, -1, stripZ0 + 10, exit.portalX(), exit.portalZ()));
+                default -> pads.add(new ExitPad(exit.id(),
+                    max, stripZ0 - 3, max + 9, stripZ0 + 10, exit.portalX(), exit.portalZ()));
+            }
+        }
+        return pads;
+    }
+
+    // ------------------------------------------------------------- inert steps
+
+    @Override
+    public void applyCarvers(WorldGenRegion region, long seed, RandomState randomState,
+            BiomeManager biomeManager, StructureManager structureManager, ChunkAccess chunk,
+            GenerationStep.Carving step) {}
+
+    @Override
+    public void buildSurface(WorldGenRegion region, StructureManager structureManager,
+            RandomState randomState, ChunkAccess chunk) {}
+
+    @Override
+    public void applyBiomeDecoration(WorldGenLevel level, ChunkAccess chunk,
+            StructureManager structureManager) {}
+
+    @Override
+    public void spawnOriginalMobs(WorldGenRegion region) {}
+
+    // ------------------------------------------------------------- shape info
+
+    @Override
+    public int getGenDepth() {
+        return 384;
+    }
+
+    @Override
+    public int getSeaLevel() {
+        return cfg.floorY;
+    }
+
+    @Override
+    public int getMinY() {
+        return -64;
+    }
+
+    @Override
+    public int getBaseHeight(int x, int z, Heightmap.Types type, LevelHeightAccessor level,
+            RandomState randomState) {
+        if (!cfg.inGrid(Math.floorDiv(x, cfg.cellSize), Math.floorDiv(z, cfg.cellSize))) {
+            return level.getMinBuildHeight();
+        }
+        return cfg.isBaseOpen(x, z) ? cfg.floorY + 1 : cfg.wallTopY + 1;
+    }
+
+    @Override
+    public NoiseColumn getBaseColumn(int x, int z, LevelHeightAccessor level, RandomState randomState) {
+        int minY = level.getMinBuildHeight();
+        BlockState[] states = new BlockState[cfg.floorY - minY + 1];
+        for (int i = 0; i < states.length; i++) {
+            states[i] = Blocks.STONE.defaultBlockState();
+        }
+        return new NoiseColumn(minY, states);
+    }
+
+    @Override
+    public void addDebugScreenInfo(List<String> info, RandomState randomState, BlockPos pos) {
+        info.add("Maze Runner section " + cfg.sectionOf(pos.getX(), pos.getZ()));
+    }
+}

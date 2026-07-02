@@ -1,0 +1,10 @@
+{
+  "dimensions": {
+    "minecraft:overworld": {
+      "type": "minecraft:overworld",
+      "generator": {
+        "type": "mazerunner:maze"
+      }
+    }
+  }
+}
