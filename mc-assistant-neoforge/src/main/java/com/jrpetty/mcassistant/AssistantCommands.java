@@ -48,10 +48,18 @@ public final class AssistantCommands {
 
     @Nullable
     public static AssistantEntity findAssistant(ServerPlayer player) {
+        // Primary: the owner->assistant registry, so it's found no matter how
+        // far it has wandered (as long as it's in the player's dimension).
+        AssistantEntity byOwner = AssistantEntity.byOwner(player.getUUID());
+        if (byOwner != null && byOwner.level() == player.level()) {
+            return byOwner;
+        }
+        // Fallback: a generous proximity scan (covers the tick before the
+        // registry is populated, e.g. immediately after /assistant spawn).
         ServerLevel level = player.serverLevel();
         List<AssistantEntity> found = level.getEntitiesOfClass(
             AssistantEntity.class,
-            player.getBoundingBox().inflate(96.0),
+            player.getBoundingBox().inflate(256.0),
             a -> a.isAlive() && a.isOwner(player));
         AssistantEntity best = null;
         double bestDist = Double.MAX_VALUE;
@@ -90,7 +98,8 @@ public final class AssistantCommands {
         ServerPlayer player = ctx.getSource().getPlayer();
         AssistantEntity a = requireAssistant(ctx);
         if (a == null || player == null) return 0;
-        a.setMode(AssistantEntity.Mode.STAY);
+        a.cancelTasks();
+        a.setMode(AssistantEntity.Mode.FOLLOW); // come over, then keep following
         a.getNavigation().moveTo(player, 1.25D);
         a.say("Coming to you.");
         return 1;

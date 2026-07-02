@@ -59,6 +59,8 @@ public class GatherGoal extends Goal {
     private int collected;
     private int workTicks;
     private int stuckTicks;
+    private int myGen;
+    private final java.util.Set<BlockPos> unreachable = new java.util.HashSet<>();
 
     public GatherGoal(AssistantEntity assistant) {
         this.assistant = assistant;
@@ -67,21 +69,24 @@ public class GatherGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        return assistant.hasGatherRequest() && assistant.getTarget() == null && !assistant.isStopRequested();
+        return assistant.hasGatherRequest() && assistant.getTarget() == null;
     }
 
     @Override
     public boolean canContinueToUse() {
-        return request != null && assistant.getTarget() == null && !assistant.isStopRequested();
+        // Abort if a newer order came in (taskGen changed) or combat started.
+        return request != null && assistant.getTarget() == null && assistant.taskGen() == myGen;
     }
 
     @Override
     public void start() {
         this.request = assistant.takeGatherRequest();
+        this.myGen = assistant.taskGen();
         this.collected = 0;
         this.targetPos = null;
         this.workTicks = 0;
         this.stuckTicks = 0;
+        this.unreachable.clear();
         if (request != null) {
             assistant.say("On it — gathering " + request.amount() + " " + request.kind().label + ".");
         }
@@ -137,7 +142,8 @@ public class GatherGoal extends Goal {
                 assistant.getNavigation().moveTo(
                     targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5, 1.1D);
             }
-            if (++stuckTicks > 100) { // ~5s without arriving — unreachable, skip it
+            if (++stuckTicks > 100) { // ~5s without arriving — mark unreachable so
+                unreachable.add(targetPos); // findNearest won't pick it again (no infinite crawl)
                 targetPos = null;
             }
             return;
@@ -180,6 +186,7 @@ public class GatherGoal extends Goal {
         for (BlockPos pos : BlockPos.betweenClosed(
                 feet.offset(-SEARCH_RADIUS, -6, -SEARCH_RADIUS),
                 feet.offset(SEARCH_RADIUS, 8, SEARCH_RADIUS))) {
+            if (unreachable.contains(pos)) continue; // don't re-target blocks we couldn't reach
             if (!request.kind().matches(assistant.level().getBlockState(pos))) continue;
             double d = pos.distSqr(feet);
             if (d < bestDist) {

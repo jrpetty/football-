@@ -114,11 +114,12 @@ public class AssistantMenu extends AbstractContainerMenu {
         if (assistant == null || !assistant.isOwner(player)) return false;
         switch (id) {
             case BTN_STOP -> assistant.requestStop();
-            case BTN_FOLLOW -> { assistant.setMode(AssistantEntity.Mode.FOLLOW); assistant.say("Following you."); }
-            case BTN_STAY -> { assistant.setMode(AssistantEntity.Mode.STAY); assistant.say("Holding here."); }
-            case BTN_GUARD -> { assistant.setMode(AssistantEntity.Mode.GUARD); assistant.say("Guard mode on."); }
+            case BTN_FOLLOW -> { assistant.cancelTasks(); assistant.setMode(AssistantEntity.Mode.FOLLOW); assistant.say("Following you."); }
+            case BTN_STAY -> { assistant.cancelTasks(); assistant.setMode(AssistantEntity.Mode.STAY); assistant.say("Holding here."); }
+            case BTN_GUARD -> { assistant.cancelTasks(); assistant.setMode(AssistantEntity.Mode.GUARD); assistant.say("Guard mode on."); }
             case BTN_DEPOSIT -> assistant.requestDeposit();
             case BTN_COME -> {
+                assistant.cancelTasks();
                 assistant.setMode(AssistantEntity.Mode.FOLLOW);
                 assistant.getNavigation().moveTo(player, 1.25D);
                 assistant.say("Coming.");

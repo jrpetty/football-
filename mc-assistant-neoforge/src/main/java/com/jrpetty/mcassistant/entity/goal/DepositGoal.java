@@ -22,6 +22,7 @@ public class DepositGoal extends Goal {
     private boolean active;
     @Nullable private BlockPos chestPos;
     private int stuckTicks;
+    private int myGen;
 
     public DepositGoal(AssistantEntity assistant) {
         this.assistant = assistant;
@@ -30,17 +31,18 @@ public class DepositGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        return assistant.hasDepositRequest() && assistant.getTarget() == null && !assistant.isStopRequested();
+        return assistant.hasDepositRequest() && assistant.getTarget() == null;
     }
 
     @Override
     public boolean canContinueToUse() {
-        return active && assistant.getTarget() == null && !assistant.isStopRequested();
+        return active && assistant.getTarget() == null && assistant.taskGen() == myGen;
     }
 
     @Override
     public void start() {
         assistant.takeDepositRequest();
+        this.myGen = assistant.taskGen();
         this.active = true;
         this.stuckTicks = 0;
         if (assistant.countItems() == 0) {

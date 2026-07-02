@@ -52,18 +52,22 @@ public final class ChatControl {
         }
 
         if (lower.startsWith("!follow")) {
+            a.cancelTasks(); // a new order supersedes a running gather/deposit
             a.setMode(AssistantEntity.Mode.FOLLOW);
             a.say("Following you.");
         } else if (lower.startsWith("!stop") || lower.startsWith("!halt") || lower.startsWith("!cancel")) {
             a.requestStop(); // cancels the current task too, not just future movement
         } else if (lower.startsWith("!stay") || lower.startsWith("!wait")) {
+            a.cancelTasks();
             a.setMode(AssistantEntity.Mode.STAY);
             a.say("Holding here.");
         } else if (lower.startsWith("!guard") || lower.startsWith("!protect")) {
+            a.cancelTasks();
             a.setMode(AssistantEntity.Mode.GUARD);
             a.say("Guard mode on — I'll watch your back.");
         } else if (lower.startsWith("!come") || lower.startsWith("!here")) {
             // Come to me and keep following, rather than freezing on arrival.
+            a.cancelTasks();
             a.setMode(AssistantEntity.Mode.FOLLOW);
             a.getNavigation().moveTo(player, 1.25D);
             a.say("Coming.");

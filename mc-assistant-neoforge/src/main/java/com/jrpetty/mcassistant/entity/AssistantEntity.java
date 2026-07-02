@@ -28,7 +28,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.core.NonNullList;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The companion. Player-parity on purpose: it has normal mob health, walks
@@ -46,6 +48,17 @@ public class AssistantEntity extends PathfinderMob {
 
     public static final int INVENTORY_SIZE = 27;
 
+    // Owner UUID -> live assistant, so commands find it no matter how far it
+    // has wandered (the old proximity-only search lost it after a gather trip,
+    // which is why it "stopped listening" after one command).
+    private static final Map<UUID, AssistantEntity> BY_OWNER = new ConcurrentHashMap<>();
+
+    @Nullable
+    public static AssistantEntity byOwner(UUID ownerId) {
+        AssistantEntity a = BY_OWNER.get(ownerId);
+        return (a != null && a.isAlive()) ? a : null;
+    }
+
     @Nullable private UUID ownerId;
     private Mode mode = Mode.FOLLOW;
     private final NonNullList<ItemStack> inventory = NonNullList.withSize(INVENTORY_SIZE, ItemStack.EMPTY);
@@ -53,9 +66,11 @@ public class AssistantEntity extends PathfinderMob {
     // One-shot task state, driven by GatherGoal / DepositGoal.
     @Nullable private GatherGoal.Request gatherRequest;
     private boolean depositRequested;
-    // Momentary "abort current task" flag — set by the Stop button / !stop,
-    // read by the one-shot goals, and auto-cleared each tick.
-    private boolean stopRequested;
+    // A generation counter bumped by every new order (gather/deposit/cancel).
+    // A running one-shot goal captures it and aborts when it changes, so any
+    // fresh command (Stop button, !follow, a new !gather) cleanly supersedes
+    // whatever the bot is currently doing.
+    private int taskGen;
 
     public AssistantEntity(EntityType<? extends PathfinderMob> type, Level level) {
         super(type, level);
@@ -186,7 +201,7 @@ public class AssistantEntity extends PathfinderMob {
     // ------------------------------ task requests -----------------------------
 
     public void requestGather(GatherGoal.Kind kind, int amount) {
-        this.stopRequested = false;
+        this.taskGen++;
         this.gatherRequest = new GatherGoal.Request(kind, Math.max(1, Math.min(64, amount)));
     }
 
@@ -202,7 +217,8 @@ public class AssistantEntity extends PathfinderMob {
     }
 
     public void requestDeposit() {
-        this.stopRequested = false;
+        this.taskGen++;
+        this.gatherRequest = null; // a deposit order supersedes a running gather
         this.depositRequested = true;
     }
 
@@ -216,20 +232,28 @@ public class AssistantEntity extends PathfinderMob {
         return depositRequested;
     }
 
-    /** Stop the current task and any pending one, and hold position. */
-    public void requestStop() {
-        this.stopRequested = true;
+    /** Cancel the running/pending one-shot task without changing mode or
+     *  chatting — used so a new order (follow/guard/gather) supersedes a
+     *  gather that's already in progress. */
+    public void cancelTasks() {
+        this.taskGen++; // running goals see the mismatch and abort
         this.gatherRequest = null;
         this.depositRequested = false;
-        this.setTarget(null);
         this.getNavigation().stop();
+    }
+
+    /** Full stop: cancel tasks, drop the target, hold position, and say so. */
+    public void requestStop() {
+        cancelTasks();
+        this.setTarget(null);
         this.setMode(Mode.STAY);
         say("Stopping.");
     }
 
-    /** Read by the one-shot goals so they abort mid-task. */
-    public boolean isStopRequested() {
-        return stopRequested;
+    /** Current task generation — a one-shot goal captures this at start and
+     *  aborts when it no longer matches (i.e. a newer order came in). */
+    public int taskGen() {
+        return taskGen;
     }
 
     // ------------------------------ persistence ------------------------------
@@ -278,13 +302,21 @@ public class AssistantEntity extends PathfinderMob {
         return net.minecraft.world.InteractionResult.sidedSuccess(this.level().isClientSide());
     }
 
-    /** Clear the momentary stop flag after the goals have had a tick to see it. */
+    /** Keep the owner->assistant registry fresh (survives reloads). */
     @Override
     public void aiStep() {
         super.aiStep();
-        if (!this.level().isClientSide && this.stopRequested) {
-            this.stopRequested = false;
+        if (!this.level().isClientSide && ownerId != null && BY_OWNER.get(ownerId) != this) {
+            BY_OWNER.put(ownerId, this);
         }
+    }
+
+    @Override
+    public void remove(net.minecraft.world.entity.Entity.RemovalReason reason) {
+        if (ownerId != null) {
+            BY_OWNER.remove(ownerId, this);
+        }
+        super.remove(reason);
     }
 
     @Override
