@@ -145,7 +145,8 @@ function clampDim(v, max = 16) {
 // Friendly material word -> predicate over an inventory item name.
 function materialMatcher(requested) {
   if (!requested) return null
-  const r = String(requested).toLowerCase().trim()
+  // Item names use underscores; the brain may pass "oak planks" verbatim.
+  const r = String(requested).toLowerCase().trim().replace(/\s+/g, '_')
   const table = {
     cobble: (n) => n === 'cobblestone' || n === 'cobbled_deepslate',
     cobblestone: (n) => n === 'cobblestone' || n === 'cobbled_deepslate',
@@ -291,6 +292,10 @@ async function build(bot, { structure, material, width, length, height } = {}) {
   if (!bot.entity) return "I'm not in the world yet."
 
   const dims = { width: clampDim(width), length: clampDim(length), height: clampDim(height) }
+  // Forgive dimension-name mixups: walls only have a length, towers a width —
+  // if the caller sent the other one, use it rather than silently defaulting.
+  if (kind === 'wall' && dims.length === undefined) dims.length = dims.width
+  if (kind === 'tower' && dims.width === undefined) dims.width = dims.length
   Object.keys(dims).forEach((k) => dims[k] === undefined && delete dims[k])
   const cells = BLUEPRINTS[kind](dims)
     .sort((a, b) => a.v - b.v || a.w - b.w || Math.abs(a.u) - Math.abs(b.u))
@@ -314,8 +319,14 @@ async function build(bot, { structure, material, width, length, height } = {}) {
   bot.assistant.mode = 'build'
   bot.assistant.busy = true
   bot.assistant.currentTask = `building a ${kind}`
-  if (have < targets.length) {
-    bot.assistant.narrate(`Heads up: I have ${have} blocks for ~${targets.length} spots — I'll build what I can.`)
+  // Warn about shortages against spots that actually need filling — cells
+  // already occupied by solid blocks (rebuilds, terrain) cost nothing.
+  const need = targets.filter((p) => {
+    const b = bot.blockAt(p)
+    return !b || REPLACEABLE.has(b.name)
+  }).length
+  if (have < need) {
+    bot.assistant.narrate(`Heads up: I have ${have} blocks for ~${need} spots — I'll build what I can.`)
   }
 
   let placed = 0
@@ -351,7 +362,7 @@ async function build(bot, { structure, material, width, length, height } = {}) {
   const remaining = targets.length - placed - present
   if (interrupted) return `Had to break off the ${kind} — ${placed} blocks placed. Say "build ${kind}" again to keep going.`
   if (ranOut) return `Ran out of blocks after placing ${placed} — I need about ${remaining} more for the ${kind}.`
-  if (placed === 0 && present > 0) return `Looks like that ${kind} is already built.`
+  if (placed === 0 && present > 0 && remaining === 0) return `Looks like that ${kind} is already built.`
   if (remaining > 0) return `${kind} mostly done: ${placed} placed, ${remaining} spots I couldn't reach.`
   return `Done — ${kind} built (${placed} blocks).`
 }

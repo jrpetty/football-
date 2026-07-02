@@ -20,7 +20,7 @@ const STRUCTURES = {
   house: 'house', hut: 'house', shelter: 'house', cabin: 'house', base: 'house', shack: 'house', home: 'house',
   tower: 'tower', turret: 'tower',
   pillar: 'pillar', column: 'pillar', post: 'pillar',
-  platform: 'platform', floor: 'platform',
+  platform: 'platform', floor: 'platform', pad: 'platform',
   bridge: 'bridge', walkway: 'bridge',
 }
 
@@ -74,8 +74,16 @@ function parse(text) {
     const word = Object.keys(STRUCTURES).find((k) => new RegExp(`\\b${k}\\b`).test(t))
     if (word) {
       const args = { structure: STRUCTURES[word] }
+      // "NxM" means different things per layout: a 10x4 wall is long x high,
+      // a 4x8 tower is wide x high, a 5x5 platform/house is wide x long.
       const dims = t.match(/\b(\d+)\s*(?:x|by)\s*(\d+)\b/)
-      if (dims) { args.width = Number(dims[1]); args.length = Number(dims[2]) }
+      if (dims) {
+        const [a, b] = [Number(dims[1]), Number(dims[2])]
+        if (args.structure === 'wall') { args.length = a; args.height = b }
+        else if (args.structure === 'tower') { args.width = a; args.height = b }
+        else if (args.structure === 'pillar') { args.height = b }
+        else { args.width = a; args.length = b }
+      }
       const high = t.match(/\b(\d+)\s*(?:blocks?\s*)?(?:high|tall)\b/)
       if (high) args.height = Number(high[1])
       const long = t.match(/\b(\d+)\s*(?:blocks?\s*)?long\b/)
