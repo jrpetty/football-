@@ -6,6 +6,7 @@ const food = require('./skills/food')
 const defense = require('./skills/defense')
 const inventory = require('./skills/inventory')
 const build = require('./skills/build')
+const craft = require('./skills/craft')
 const { snapshot } = require('./state')
 
 // ---------------------------------------------------------------------------
@@ -104,6 +105,41 @@ const registry = {
     run: (bot, a) => defense.attack(bot, a),
   },
 
+  craft: {
+    describe: 'Craft an item by player rules (needs materials, and a crafting table nearby for 3x3 recipes). item examples: planks, stick, crafting_table, wooden_pickaxe, stone_axe, torch, furnace, chest. Generic words work: "pickaxe" crafts the best tier it has materials for.',
+    schema: {
+      type: 'object',
+      properties: {
+        item: { type: 'string' },
+        amount: { type: 'integer', minimum: 1, maximum: 64 },
+      },
+      required: ['item'],
+      additionalProperties: false,
+    },
+    run: (bot, a) => craft.craft(bot, a),
+  },
+
+  equip: {
+    describe: 'Hold a named item in hand, e.g. axe, pickaxe, sword, torch, or an exact item name.',
+    schema: {
+      type: 'object',
+      properties: { item: { type: 'string' } },
+      required: ['item'],
+      additionalProperties: false,
+    },
+    run: (bot, a) => equipItem(bot, a),
+  },
+
+  menu: {
+    describe: 'Show the task menu (preset jobs the player can pick by number or click).',
+    schema: { type: 'object', properties: {}, additionalProperties: false },
+    run: (bot) => {
+      const menu = require('./menu') // lazy: menu.js requires commands.js
+      menu.show(bot, bot.assistant.owner || bot.username)
+      return null
+    },
+  },
+
   deposit: {
     describe: 'Store gathered loot into the nearest chest or barrel (keeps tools and food).',
     schema: { type: 'object', properties: {}, additionalProperties: false },
@@ -152,6 +188,23 @@ const registry = {
     },
     run: (bot, a) => { bot.assistant.reply(String(a.text || '')); return null },
   },
+}
+
+async function equipItem(bot, { item } = {}) {
+  if (!item) return 'Tell me what to hold.'
+  const want = String(item).toLowerCase().trim().replace(/\s+/g, '_')
+  const items = bot.inventory.items()
+  const match =
+    items.find((it) => it.name === want) ||
+    items.find((it) => it.name.endsWith(`_${want}`)) || // "axe" -> stone_axe
+    items.find((it) => it.name.includes(want))
+  if (!match) return `I'm not carrying a ${item}.`
+  try {
+    await bot.equip(match, 'hand')
+    return `Holding my ${match.name.replace(/_/g, ' ')}.`
+  } catch (err) {
+    return `Couldn't equip that: ${err && err.message ? err.message : 'unknown error'}.`
+  }
 }
 
 function stopAll(bot) {

@@ -41,6 +41,24 @@ function blockIdsFor(bot, resource) {
   return ids
 }
 
+// Player rules: you only get drops with the right tool tier. Returns ok, or
+// the friendliest tool that would unlock the block (e.g. "stone pickaxe").
+const TOOL_TIERS = ['wooden', 'stone', 'golden', 'iron', 'diamond', 'netherite']
+
+function harvestCheck(bot, block) {
+  if (block.canHarvest(null)) return { ok: true } // hand works (logs, dirt, ...)
+  for (const it of bot.inventory.items()) {
+    if (block.canHarvest(it.type)) return { ok: true }
+  }
+  const mcData = require('minecraft-data')(bot.version)
+  const usable = Object.keys(block.harvestTools || {})
+    .map((id) => mcData.items[id] && mcData.items[id].name)
+    .filter(Boolean)
+    .sort((a, b) =>
+      TOOL_TIERS.findIndex((t) => a.startsWith(t)) - TOOL_TIERS.findIndex((t) => b.startsWith(t)))
+  return { ok: false, needed: usable[0] ? usable[0].replace(/_/g, ' ') : 'the right tool' }
+}
+
 // Gather `amount` of a resource within the configured search radius (default
 // 20 blocks; override per-call). Digs one target at a time, re-scanning after
 // each so it keeps finding fresh veins/trees until it hits the quota.
@@ -67,6 +85,14 @@ async function gather(bot, { resource, amount = 8, maxDistance }) {
 
       const block = bot.findBlock({ matching: ids, maxDistance: radius, count: 1 })
       if (!block) { misses++; continue }
+
+      // Same rules as a player: no drops without the right tool tier.
+      const tool = harvestCheck(bot, block)
+      if (!tool.ok) {
+        return collected > 0
+          ? `Got ${collected} ${key}, but I need a ${tool.needed} or better for the rest.`
+          : `I can't mine ${key} yet — I need a ${tool.needed} or better. Ask me to craft one.`
+      }
       misses = 0
       try {
         await bot.collectBlock.collect(block)
@@ -83,8 +109,8 @@ async function gather(bot, { resource, amount = 8, maxDistance }) {
     if (bot.assistant.mode === 'gather') bot.assistant.mode = 'idle'
   }
 
-  if (collected === 0) return `Couldn't find any ${key} within ${radius} blocks.`
-  if (collected < want) return `Got ${collected} ${key} — couldn't reach any more nearby.`
+  if (collected === 0) return `Can't do that here — no ${key} within ${radius} blocks of me.`
+  if (collected < want) return `Got ${collected} ${key} — that's all there was within ${radius} blocks.`
   return `Done — gathered ${collected} ${key}.`
 }
 

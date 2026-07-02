@@ -34,12 +34,27 @@ const MATERIAL_WORDS = [
 // "attack"/"kill" (e.g. "attack now", "kill him") means "nearest hostile".
 const KNOWN_MOBS = new Set([...HOSTILES, ...FOOD_MOBS, 'enderman', 'wolf', 'piglin', 'iron_golem', 'zombified_piglin'])
 
+// Things "craft/make X" understands offline. Longest first so "stone pickaxe"
+// wins over "pickaxe" and "crafting table" over "table".
+const CRAFTABLES = [
+  'crafting table', 'crafting_table', 'workbench',
+  'wooden pickaxe', 'stone pickaxe', 'iron pickaxe',
+  'wooden axe', 'stone axe', 'iron axe',
+  'wooden sword', 'stone sword', 'iron sword',
+  'wooden shovel', 'stone shovel', 'iron shovel',
+  'pickaxe', 'sword', 'shovel', 'hoe',
+  'planks', 'sticks', 'stick', 'torches', 'torch',
+  'furnace', 'chest', 'shield', 'ladder', 'boat', 'bed',
+  'axe',
+]
+
 function parse(text) {
   if (!text) return null
   const t = text.toLowerCase().trim()
 
-  // stop / hold — but "stay with/close/near/by me" means follow, not stop
-  if (/\b(stop|halt|wait|stay(?!\s+(?:with|close|near|by))|hold|freeze|chill|stand down|nevermind|cancel)\b/.test(t)) {
+  // stop / hold — but "stay with me" means follow, and "hold the sword" means
+  // equip; "hold" only stops when it means hold position.
+  if (/\b(stop|halt|wait|stay(?!\s+(?:with|close|near|by))|hold(?=\s*$|\s+(?:position|up|on|still|here|it)\b)|freeze|chill|stand down|nevermind|cancel)\b/.test(t)) {
     return { action: 'stop', args: {} }
   }
 
@@ -100,6 +115,22 @@ function parse(text) {
   const coord = t.match(/\b(?:go\s*to|goto|head to|travel to|move to)\b[^-\d]*(-?\d+)[ ,]+(-?\d+)[ ,]+(-?\d+)/)
   if (coord) {
     return { action: 'goto', args: { x: Number(coord[1]), y: Number(coord[2]), z: Number(coord[3]) } }
+  }
+
+  // craft an item — after build (structure words win), before gather so
+  // "craft a stone pickaxe" doesn't read "stone" as a mining request.
+  if (/\b(craft|make|create|whip up)\b/.test(t)) {
+    const found = CRAFTABLES.find((c) => new RegExp(`\\b${c.replace(/_/g, '[_ ]')}\\b`).test(t))
+    if (found) {
+      const amt = t.match(/\b(\d+)\b/)
+      return { action: 'craft', args: { item: found.replace(/ /g, '_'), amount: amt ? Number(amt[1]) : 1 } }
+    }
+  }
+
+  // equip / hold a tool
+  const eq = t.match(/\b(?:equip|hold|wield|take out|get out)\b\s+(?:your|the|a|an)?\s*([a-z_ ]+)/)
+  if (eq) {
+    return { action: 'equip', args: { item: eq[1].trim() } }
   }
 
   // hunt for food

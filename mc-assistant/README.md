@@ -24,8 +24,37 @@ way.
 | **Building** | Builds layouts you pick, right where it's facing: **wall, platform, pillar, tower, house, bridge** — with your choice of size and material (`build house`, `build a stone wall 8 long 3 high`, `build 5x5 platform`). |
 | **Defense** | Fights hostiles that come near it or you, equips its best weapon + armor, guards you on command (`guard`, `attack`). |
 | **Movement** | `come`, `follow`, `goto <x> <y> <z>`, `stop`. |
-| **Logistics** | Stashes loot in a nearby chest (`deposit`), drops items (`drop <item>`). |
+| **Crafting** | Crafts by player rules — planks, sticks, crafting table, tools, torches, furnace, chest (`craft stone pickaxe`). Finds a crafting table for 3x3 recipes or tells you it needs one. |
+| **Task menu** | `menu` opens a preset task list in game — clickable buttons (if the bot is op'd) or numbered picks (`m 3`). Presets are yours to edit in `presets.json`. |
+| **Logistics** | Stashes loot in a nearby chest (`deposit`), drops items (`drop <item>`), holds a named tool (`equip axe`). |
 | **Awareness** | Reports `status` / `inventory`, and narrates what it's doing/feeling in chat. |
+
+### Player rules — no cheating
+
+The bot is a real player entity and is held to player limits on purpose:
+
+- **Tool tiers are enforced.** Mining stone needs a pickaxe; iron needs stone
+  tier or better; diamond needs iron+. If it lacks the tool it says so
+  (*"I can't mine iron yet — I need a stone pickaxe or better. Ask me to craft
+  one."*) instead of pretending.
+- **It has to craft like you do**: logs → planks → sticks → crafting table →
+  tools. `craft pickaxe` makes the best tier its materials allow.
+- **It gets hungry and takes damage** — real hunger bar, real HP, no flying,
+  no creative. It eats, hunts, and retreats to survive.
+- **If a resource isn't nearby, it says it can't.** Gathering scans a
+  20-block radius (configurable); *"Can't do that here — no iron within 20
+  blocks of me."*
+
+### The task menu
+
+Say **`menu`** (or `!menu`). If the bot has op (`/op Assistant`), it sends a
+clickable list — click a task and it goes. Without op, it lists numbered
+presets; reply `m 3` (or just `3`) to pick. Edit **`presets.json`** to make
+the menu yours — each entry is a label plus any command the bot knows:
+
+```json
+{ "label": "Get logs (16)", "action": "gather", "args": { "resource": "wood", "amount": 16 } }
+```
 
 The **survival loop** (`src/skills/survival.js`) runs every ~0.7s and enforces
 priorities on its own, without being told: **survive (flee) → defend → feed →
@@ -98,10 +127,12 @@ index.js            → connect + reconnect loop
     brain/
       llm.js        → Claude: plain English → tool calls, grounded in current state
       rules.js      → offline keyword parser (no API key needed)
+    menu.js         → the task menu: presets.json -> clickable tellraw / numbered picks
     skills/
       movement.js   → come / follow / goto / retreat            (mineflayer-pathfinder)
-      gather.js     → mine resources within a radius            (mineflayer-collectblock)
+      gather.js     → mine resources within a radius, tool-tier rules (mineflayer-collectblock)
       build.js      → blueprint layouts: wall/platform/pillar/tower/house/bridge
+      craft.js      → player-rules crafting: planks -> sticks -> table -> tools
       food.js       → hunt animals, eat
       defense.js    → fight hostiles, guard, equip gear         (mineflayer-pvp, armor-manager)
       inventory.js  → deposit to chests, drop items

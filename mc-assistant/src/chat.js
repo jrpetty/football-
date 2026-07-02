@@ -1,6 +1,7 @@
 'use strict'
 
 const rules = require('./brain/rules')
+const menu = require('./menu')
 const { dispatch, statusLine } = require('./commands')
 
 // ---------------------------------------------------------------------------
@@ -66,7 +67,21 @@ async function handle(bot, brain, username, body, rawMessage) {
 
   // Bare "help" only — "help me fight the creeper" must reach the brain.
   if (/^help[!.?\s]*$/i.test(body)) {
-    bot.assistant.reply('I can: come, follow, stop, goto x y z, gather <res> [n], hunt, eat, guard, attack, build <wall|house|tower|platform|pillar|bridge>, deposit, drop <item>, status, inventory. Just talk normally too.')
+    bot.assistant.reply('I can: menu (task list), come, follow, stop, goto x y z, gather <res> [n], hunt, eat, guard, attack, build <wall|house|tower|platform|pillar|bridge>, craft <item>, equip <item>, deposit, drop <item>, status, inventory. Just talk normally too.')
+    return
+  }
+
+  // The task menu: "menu" shows it; "m 3" (or a bare "3" right after the menu
+  // was shown, or a click on the tellraw list) picks a preset.
+  if (/^(menu|tasks|options|presets)[!.?\s]*$/i.test(body)) {
+    menu.show(bot, username)
+    return
+  }
+  const pickMatch =
+    body.match(/^m(?:enu)?\s*#?\s*(\d{1,2})[!.?\s]*$/i) ||
+    (menu.isRecent(bot, username) ? body.match(/^#?(\d{1,2})[!.?\s]*$/) : null)
+  if (pickMatch) {
+    await menu.pick(bot, username, Number(pickMatch[1]))
     return
   }
 

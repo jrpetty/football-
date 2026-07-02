@@ -60,6 +60,13 @@ const config = {
   followRange: num('MC_FOLLOW_RANGE', 3), // how close we trail the owner
   gatherRadius: num('MC_GATHER_RADIUS', 20), // blocks: how far it searches for resources
 
+  // --- Task menu ---
+  // Send a clickable /tellraw menu (needs the bot to be op'd on the server).
+  // Numbered "m <n>" picks always work regardless.
+  menuClickable: bool('MC_MENU_CLICKABLE', true),
+  // 'run' fires the pick on click; 'suggest' pre-fills chat for confirmation.
+  menuClick: str('MC_MENU_CLICK', 'run'),
+
   // --- Behaviour ---
   // Narrate what it's doing / feeling in chat (the "self-aware" voice).
   narrate: bool('MC_NARRATE', true),
