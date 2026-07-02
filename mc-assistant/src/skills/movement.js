@@ -16,6 +16,12 @@ function configureMovements(bot) {
   const moves = new Movements(bot, mcData)
   moves.allowParkour = true
   moves.canDig = true // allow it to mine through to reach a target
+  // Never path through things that burn/hurt (fire and cobwebs are avoided
+  // by default; lava/magma are the ones that actually kill it).
+  for (const name of ['lava', 'magma_block', 'sweet_berry_bush', 'powder_snow', 'cactus']) {
+    const def = mcData.blocksByName[name]
+    if (def) moves.blocksToAvoid.add(def.id)
+  }
   bot.pathfinder.setMovements(moves)
   bot.assistant.movements = moves
 }

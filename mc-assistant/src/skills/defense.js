@@ -2,6 +2,7 @@
 
 const pvpPlugin = require('mineflayer-pvp').plugin
 const armorManager = require('mineflayer-armor-manager')
+const { goals } = require('mineflayer-pathfinder')
 const { threatsNear, ownerEntity, isHostile } = require('../state')
 
 // Combat & protection, built on mineflayer-pvp. The bot equips its best gear
@@ -70,10 +71,71 @@ async function engage(bot, entity) {
 
 function disengage(bot) {
   bot.assistant.combat = false
+  bot.assistant._customTarget = null
+  bot.assistant._creeperBackoffUntil = 0
   try { bot.pvp.stop() } catch (_) { /* ignore */ }
   if (bot.assistant.currentTask && bot.assistant.currentTask.startsWith('fighting')) {
     bot.assistant.currentTask = null
   }
+}
+
+// Creepers are the one mob melee-brawling gets you killed by: the fuse lights
+// inside ~3 blocks, but it RESETS when you back out of range. So: dash in,
+// one knockback swing, back off until the hiss dies, repeat. Bow from range
+// when possible. Called every survival tick while a creeper is the target.
+async function creeperDance(bot, creeper) {
+  if (!creeper || !creeper.isValid || !bot.entity) return
+  if (!bot.assistant.combat) bot.assistant.narrate('Creeper — hit-and-run, stay back.')
+  bot.assistant.combat = true
+  bot.assistant._customTarget = creeper
+  bot.assistant.currentTask = 'fighting a creeper'
+
+  const now = Date.now()
+  const dist = creeper.position.distanceTo(bot.entity.position)
+
+  // Prefer an arrow whenever we can shoot from outside fuse range.
+  if (dist > 7 && bot.hawkEye && hasBowAndArrows(bot)) {
+    if (now - (bot.assistant._lastShotAt || 0) > 2000) {
+      try {
+        const { Vec3 } = require('vec3')
+        const grade = bot.hawkEye.getMasterGrade(creeper, new Vec3(0, 0, 0), 'bow')
+        if (grade) {
+          bot.assistant._lastShotAt = now
+          bot.hawkEye.oneShot(creeper, 'bow')
+          return
+        }
+      } catch (_) { /* fall through to melee dance */ }
+    } else {
+      return // between shots
+    }
+  }
+
+  // Backing off after a swing — keep moving until the fuse has reset.
+  if ((bot.assistant._creeperBackoffUntil || 0) > now) {
+    const movement = require('./movement')
+    movement.retreatFrom(bot, creeper.position)
+    return
+  }
+
+  if (dist > 3.0) {
+    // Close the gap (weapon out as we come in).
+    try { await equipBestWeapon(bot) } catch (_) { /* bare fists then */ }
+    try { bot.pathfinder.setGoal(new goals.GoalFollow(creeper, 2.5), true) } catch (_) { /* retry next tick */ }
+    return
+  }
+
+  // In range: one knockback swing, then straight back out of fuse range.
+  try {
+    await equipBestWeapon(bot)
+    await bot.lookAt(creeper.position.offset(0, 1, 0), true)
+    bot.attack(creeper)
+  } catch (err) {
+    bot.assistant.log.debug('creeper swing failed:', err && err.message)
+  }
+  bot.assistant._creeperBackoffUntil = Date.now() + 1500
+  try { bot.pathfinder.setGoal(null) } catch (_) { /* ignore */ }
+  const movement = require('./movement')
+  movement.retreatFrom(bot, creeper.position)
 }
 
 // Explicit "attack" command: hit the nearest hostile, or a named player/mob.
@@ -108,9 +170,12 @@ function guard(bot) {
 function autoDefend(bot) {
   const cfg = bot.assistant.config
 
-  // Keep hitting the current target until it's gone.
+  // Keep hitting the current target until it's gone (pvp-held or the
+  // custom creeper-dance target).
   const current = bot.pvp.target
   if (current && current.isValid && isHostile(current)) return current
+  const custom = bot.assistant._customTarget
+  if (custom && custom.isValid && isHostile(custom)) return custom
 
   const selfThreats = threatsNear(bot, cfg.defendRadius)
   if (selfThreats.length > 0) return selfThreats[0].entity
@@ -125,4 +190,4 @@ function autoDefend(bot) {
   return null
 }
 
-module.exports = { install, engage, disengage, attack, guard, autoDefend, equipBestWeapon }
+module.exports = { install, engage, disengage, attack, guard, autoDefend, creeperDance, equipBestWeapon }

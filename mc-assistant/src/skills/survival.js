@@ -71,16 +71,23 @@ function tick(bot) {
     resumeStandingOrders(bot)
   }
 
-  // 2) DEFEND — engage the highest-priority hostile (self, then owner if guarding).
+  // 2) DEFEND — engage the highest-priority hostile (self, then owner if
+  // guarding). Creepers get the hit-and-run treatment instead of pvp brawling.
   const foe = defense.autoDefend(bot)
   if (foe) {
+    if (foe.name === 'creeper') {
+      defense.creeperDance(bot, foe).catch(() => {})
+      return
+    }
     if (bot.pvp.target !== foe) {
       if (!bot.assistant.combat) bot.assistant.narrate(`${pretty(foe.name)} spotted — engaging.`)
       defense.engage(bot, foe).catch(() => {})
     }
     return
   }
-  if (bot.assistant.combat && !(bot.pvp.target && bot.pvp.target.isValid)) {
+  const pvpBusy = bot.pvp.target && bot.pvp.target.isValid
+  const customBusy = bot.assistant._customTarget && bot.assistant._customTarget.isValid
+  if (bot.assistant.combat && !pvpBusy && !customBusy) {
     defense.disengage(bot)
     bot.assistant.narrate('Threat cleared.')
     resumeStandingOrders(bot)

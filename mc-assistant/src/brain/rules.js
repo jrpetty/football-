@@ -76,8 +76,9 @@ function parse(text) {
     return { action: 'status', args: {} }
   }
 
-  // recover dropped gear (before inventory — "your items" is not an inv query)
-  if (/\brecover\b|\byour (stuff|items|gear)\b/.test(t)) {
+  // recover dropped gear (before inventory — "get your items back" is not an
+  // inv query; but plain mentions of "your gear" belong to other branches)
+  if (/\brecover\b|\b(?:get|grab|fetch|go(?:\s+back)?\s+for)\b.*\byour (stuff|items|gear)\b/.test(t)) {
     return { action: 'recover', args: {} }
   }
 
@@ -110,6 +111,34 @@ function parse(text) {
   // place a torch
   if (/\b(?:place|put|drop)\s+(?:a\s+|some\s+)?torch(es)?\b|\blight (?:it|this|the area|this place) up\b/.test(t)) {
     return { action: 'torch', args: {} }
+  }
+
+  // chest labels — BEFORE waypoint-remember ("remember this chest as ores"
+  // is storage, not a place)
+  const lc = t.match(/\b(?:remember|mark|label)\b[^.]*?\bchest\b[^.]*?\bas\s+([a-z0-9_ ]+)/) ||
+    t.match(/\blabel\s+(?:this\s+|that\s+)?chest\s+(?:as\s+)?([a-z0-9_ ]+)/)
+  if (lc) {
+    const name = lc[1].replace(/\b(please|now|thanks)\b/g, '').trim()
+    return { action: 'labelchest', args: { name } }
+  }
+  if (/^(chests|chest labels|storage)[!.?\s]*$/.test(t)) {
+    return { action: 'chests', args: {} }
+  }
+
+  // enchanting
+  const en = t.match(/\benchant\b(?:\s+(?:my|your|the|an?))?\s*([a-z_ ]+)?/)
+  if (en) {
+    const raw = (en[1] || '').replace(/\b(please|now|gear|something|stuff)\b/g, '').trim()
+    return { action: 'enchant', args: raw ? { item: raw } : {} }
+  }
+
+  // scouting / exploring
+  const sc = t.match(/\b(?:scout|explore)\b(?:\s+(?:out\s+|to\s+the\s+)?(north|south|east|west))?(?:\s+(\d+))?/)
+  if (sc) {
+    const args = {}
+    if (sc[1]) args.direction = sc[1]
+    if (sc[2]) args.distance = Number(sc[2])
+    return { action: 'scout', args }
   }
 
   // waypoints: remember / forget / list / go home

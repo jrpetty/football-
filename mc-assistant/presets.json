@@ -36,6 +36,8 @@
     { "label": "Fish for food", "action": "fish", "args": { "amount": 3 } },
     { "label": "Branch mine here (24)", "action": "mine", "args": { "length": 24 } },
     { "label": "Breed the animals", "action": "breed", "args": {} },
+    { "label": "Scout ahead (100)", "action": "scout", "args": { "distance": 100 } },
+    { "label": "Enchant my best gear", "action": "enchant", "args": {} },
     { "label": "Sleep", "action": "sleep", "args": {} },
     { "label": "Status report", "action": "status", "args": {} },
     { "label": "Stop", "action": "stop", "args": {} }

@@ -16,6 +16,8 @@ const mineSkill = require('./skills/mine')
 const patrolSkill = require('./skills/patrol')
 const rest = require('./skills/rest')
 const torch = require('./skills/torch')
+const enchantSkill = require('./skills/enchant')
+const scoutSkill = require('./skills/scout')
 const memory = require('./memory')
 const jobs = require('./jobs')
 const { snapshot } = require('./state')
@@ -278,6 +280,60 @@ const registry = {
     run: (bot, a) => inventory.withdraw(bot, a),
   },
 
+  enchant: {
+    describe: 'Enchant its own gear at a nearby enchanting table — costs its real XP levels and lapis lazuli. item optional (sword, pickaxe, ...); otherwise it picks its best unenchanted piece.',
+    schema: {
+      type: 'object',
+      properties: { item: { type: 'string' } },
+      additionalProperties: false,
+    },
+    run: (bot, a) => enchantSkill.enchant(bot, a),
+  },
+
+  scout: {
+    describe: 'Scout out in a direction (north/south/east/west, default: facing) up to 300 blocks: notes biomes, animal herds, and structures (villages, dungeons, portals), saves finds as waypoints, then returns and reports.',
+    schema: {
+      type: 'object',
+      properties: {
+        direction: { type: 'string' },
+        distance: { type: 'integer', minimum: 30, maximum: 300 },
+      },
+      additionalProperties: false,
+    },
+    run: (bot, a) => scoutSkill.scout(bot, a),
+  },
+
+  labelchest: {
+    describe: 'Label the nearest chest/barrel (within 6 blocks) so deposit sorts into it and withdraw checks it first. Category labels get smart matching: ores, food, wood, blocks, tools, farm. Any other label matches items by name.',
+    schema: {
+      type: 'object',
+      properties: { name: { type: 'string' } },
+      required: ['name'],
+      additionalProperties: false,
+    },
+    run: (bot, a) => {
+      const mcData = require('minecraft-data')(bot.version)
+      const ids = ['chest', 'trapped_chest', 'barrel']
+        .map((n) => mcData.blocksByName[n] && mcData.blocksByName[n].id)
+        .filter((v) => v != null)
+      const chest = bot.findBlock({ matching: ids, maxDistance: 6 })
+      if (!chest) return 'Stand next to the chest you want labeled (within 6 blocks).'
+      const key = memory.setChest(a.name, chest.position, bot.assistant.log)
+      return key ? `Labeled that chest "${key}" — I'll sort matching loot into it.` : 'Give the chest a proper name.'
+    },
+  },
+
+  chests: {
+    describe: 'List the labeled storage chests.',
+    schema: { type: 'object', properties: {}, additionalProperties: false },
+    run: () => {
+      const list = memory.listChests()
+      return list.length
+        ? `Labeled chests: ${list.map(({ name, pos }) => `${name} (${pos.x},${pos.y},${pos.z})`).join(', ')}.`
+        : 'No labeled chests yet — stand by one and say "remember this chest as ores".'
+    },
+  },
+
   remember: {
     describe: 'Save the current spot as a named waypoint (e.g. home, mine, farm). Persists across restarts.',
     schema: {
@@ -294,16 +350,20 @@ const registry = {
   },
 
   forget: {
-    describe: 'Delete a saved waypoint by name.',
+    describe: 'Delete a saved waypoint or chest label by name.',
     schema: {
       type: 'object',
       properties: { name: { type: 'string' } },
       required: ['name'],
       additionalProperties: false,
     },
-    run: (bot, a) => (memory.deleteWaypoint(a.name, bot.assistant.log)
-      ? `Forgot "${a.name}".`
-      : `I don't have a place called "${a.name}".`),
+    run: (bot, a) => {
+      const wasWaypoint = memory.deleteWaypoint(a.name, bot.assistant.log)
+      const wasChest = memory.deleteChest(a.name, bot.assistant.log)
+      return wasWaypoint || wasChest
+        ? `Forgot "${a.name}".`
+        : `I don't have a place or chest called "${a.name}".`
+    },
   },
 
   waypoints: {
@@ -453,7 +513,7 @@ function inventoryLine(bot) {
 const QUEUED_ACTIONS = new Set([
   'gather', 'hunt', 'build', 'craft', 'smelt', 'farm', 'give', 'deposit',
   'withdraw', 'mine', 'fish', 'breed', 'goto', 'come', 'gowaypoint',
-  'recover', 'sleep', 'eat', 'drop',
+  'recover', 'sleep', 'eat', 'drop', 'enchant', 'scout',
 ])
 
 function jobLabel(action, args = {}) {

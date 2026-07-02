@@ -15,35 +15,100 @@ function isKeeper(name) {
   )
 }
 
+// ----------------------------- labeled storage ------------------------------
+// Chests can be labeled ("remember this chest as ores"); deposit then sorts
+// loot into matching chests and withdraw checks the right chest first.
+// Category labels below get smart matching; any other label matches items by
+// name (a chest labeled "torches" receives torches).
+
+const LABEL_MATCHERS = {
+  ores: (n) => /(_ore$|^raw_|^coal$|^diamond$|^emerald$|^redstone$|^lapis_lazuli$|_ingot$|^ancient_debris$|^netherite_scrap$|^quartz$)/.test(n),
+  food: (n) => FOODS.has(n),
+  wood: (n) => /(_log$|_planks$|^stick$|_sapling$|_stem$)/.test(n),
+  blocks: (n) => /^(cobblestone|stone|dirt|coarse_dirt|gravel|sand|red_sand|andesite|diorite|granite|tuff|netherrack|cobbled_deepslate|deepslate|sandstone)$/.test(n),
+  tools: (n) => /(_pickaxe$|_axe$|_shovel$|_hoe$|_sword$|^bow$|^crossbow$|^shield$|^fishing_rod$|_helmet$|_chestplate$|_leggings$|_boots$)/.test(n),
+  farm: (n) => /(seeds$|^wheat$|^carrot$|^potato$|^beetroot$|^melon_slice$|^pumpkin$|^sugar_cane$|^egg$|^bone_meal$)/.test(n),
+}
+
+function matcherForLabel(label) {
+  if (LABEL_MATCHERS[label]) return LABEL_MATCHERS[label]
+  // Accept the label and its singular forms ("torches" -> torch, "arrows" -> arrow).
+  const forms = new Set([label])
+  if (label.endsWith('es')) forms.add(label.slice(0, -2))
+  if (label.endsWith('s')) forms.add(label.slice(0, -1))
+  return (n) => [...forms].some((f) => f.length >= 3 && (n === f || n.includes(f)))
+}
+
+async function openChestAt(bot, pos) {
+  const { Vec3 } = require('vec3')
+  const block = bot.blockAt(new Vec3(pos.x, pos.y, pos.z))
+  if (!block || !/chest|barrel/.test(block.name)) return null
+  await bot.pathfinder.goto(new goals.GoalNear(pos.x, pos.y, pos.z, 2))
+  return bot.openContainer(block)
+}
+
 async function deposit(bot) {
+  const memory = require('../memory')
   const mcData = require('minecraft-data')(bot.version)
   const chestIds = ['chest', 'trapped_chest', 'barrel']
     .map((n) => mcData.blocksByName[n] && mcData.blocksByName[n].id)
     .filter((v) => v != null)
 
-  const chestBlock = bot.findBlock({ matching: chestIds, maxDistance: 32 })
-  if (!chestBlock) return 'No chest or barrel within 32 blocks.'
-
   bot.assistant.currentTask = 'depositing loot'
+  let moved = 0
+  const sortedInto = []
   try {
-    const p = chestBlock.position
-    await bot.pathfinder.goto(new goals.GoalNear(p.x, p.y, p.z, 2))
-    const container = await bot.openContainer(chestBlock)
-    let moved = 0
-    for (const item of bot.inventory.items()) {
-      if (isKeeper(item.name)) continue
+    // 1) Sort into labeled chests first.
+    for (const { name, pos } of memory.listChests()) {
+      const match = matcherForLabel(name)
+      const toStash = bot.inventory.items().filter((it) => !isKeeper(it.name) && match(it.name))
+      if (toStash.length === 0) continue
       try {
-        await container.deposit(item.type, null, item.count)
-        moved += item.count
-      } catch (_) { /* chest full or slot issue — skip */ }
+        const container = await openChestAt(bot, pos)
+        if (!container) continue // chest was removed — leave the label for now
+        let here = 0
+        for (const item of toStash) {
+          try {
+            await container.deposit(item.type, null, item.count)
+            here += item.count
+          } catch (_) { /* chest full — skip */ }
+        }
+        container.close()
+        if (here > 0) { moved += here; sortedInto.push(`${here} → ${name}`) }
+      } catch (err) {
+        bot.assistant.log.debug(`deposit to "${name}" failed:`, err && err.message)
+      }
     }
-    container.close()
-    bot.assistant.currentTask = null
-    return moved > 0 ? `Stashed ${moved} items.` : 'Nothing to stash (kept my kit and food).'
+
+    // 2) Everything left goes to the nearest chest (old behavior).
+    const leftovers = bot.inventory.items().filter((it) => !isKeeper(it.name))
+    if (leftovers.length > 0) {
+      const chestBlock = bot.findBlock({ matching: chestIds, maxDistance: 32 })
+      if (!chestBlock && moved === 0) return 'No chest or barrel within 32 blocks.'
+      if (chestBlock) {
+        const p = chestBlock.position
+        await bot.pathfinder.goto(new goals.GoalNear(p.x, p.y, p.z, 2))
+        const container = await bot.openContainer(chestBlock)
+        for (const item of bot.inventory.items()) {
+          if (isKeeper(item.name)) continue
+          try {
+            await container.deposit(item.type, null, item.count)
+            moved += item.count
+          } catch (_) { /* chest full or slot issue — skip */ }
+        }
+        container.close()
+      }
+    }
+
+    if (moved === 0) return 'Nothing to stash (kept my kit and food).'
+    return sortedInto.length > 0
+      ? `Stashed ${moved} items (sorted: ${sortedInto.join(', ')}).`
+      : `Stashed ${moved} items.`
   } catch (err) {
-    bot.assistant.currentTask = null
     bot.assistant.log.debug('deposit failed:', err && err.message)
-    return "Couldn't reach or open the chest."
+    return moved > 0 ? `Stashed ${moved} items, then lost access to the chest.` : "Couldn't reach or open the chest."
+  } finally {
+    bot.assistant.currentTask = null
   }
 }
 
@@ -121,17 +186,26 @@ async function give(bot, { item, amount } = {}) {
   }
 }
 
-// Fetch items back OUT of nearby chests/barrels ("get me arrows from the chest").
+// Fetch items back OUT of storage ("get me arrows from the chest"). Labeled
+// chests whose label matches the item are checked first, then nearby chests.
 async function withdraw(bot, { item, amount } = {}) {
   if (!item) return 'Tell me what to fetch from storage.'
+  const memory = require('../memory')
   const mcData = require('minecraft-data')(bot.version)
   const ids = ['chest', 'trapped_chest', 'barrel']
     .map((n) => mcData.blocksByName[n] && mcData.blocksByName[n].id)
     .filter((v) => v != null)
-  const spots = bot.findBlocks({ matching: ids, maxDistance: 16, count: 4 })
-  if (spots.length === 0) return 'No chest or barrel within 16 blocks.'
 
+  const { Vec3 } = require('vec3')
   const want = String(item).toLowerCase().trim().replace(/\s+/g, '_')
+  // Labeled chests that should hold this item come first, then a local scan.
+  const labeled = memory.listChests()
+    .filter(({ name }) => name === want || matcherForLabel(name)(want))
+    .map(({ pos }) => new Vec3(pos.x, pos.y, pos.z))
+  const nearby = bot.findBlocks({ matching: ids, maxDistance: 16, count: 4 })
+  const spots = [...labeled, ...nearby]
+  if (spots.length === 0) return 'No chest or barrel within 16 blocks (and no labeled chests).'
+
   let remaining = amount ? Math.floor(amount) : Infinity
   let got = 0
   bot.assistant.currentTask = `fetching ${want.replace(/_/g, ' ')} from storage`
@@ -167,4 +241,4 @@ async function withdraw(bot, { item, amount } = {}) {
     : `Couldn't find any ${String(item).replace(/_/g, ' ')} in the chests nearby.`
 }
 
-module.exports = { deposit, drop, give, withdraw, matchingStacks, isKeeper }
+module.exports = { deposit, drop, give, withdraw, matchingStacks, matcherForLabel, LABEL_MATCHERS, isKeeper }

@@ -33,6 +33,10 @@ way.
 | **Proactive** | No orders? It finds work: sleeps at night, cooks its raw meat, stashes overflow, harvests ripe crops, replants saplings, torches dark spots, fishes when food runs low. Your commands always jump the line. |
 | **Memory** | `remember this as home`, `go home`, `waypoints` — saved to disk, along with its owner, so it survives restarts. Dies? It runs back for its dropped gear. |
 | **More skills** | `fish` (needs a rod), `breed cows` (needs the right food), `mine to y11` (torch-lit branch tunnel, grabs every ore vein, walks back), `patrol` (loops the base fighting mobs), `sleep`, `get arrows from the chest` (withdraw), bow shots at distant hostiles (if carrying bow + arrows). |
+| **Enchanting** | Its XP from mining and kills is real — with an enchanting table, lapis, and levels it enchants its own gear (`enchant`, `enchant your sword`). Picks the best offer it can afford and tells you what it got. |
+| **Smart storage** | Label chests: stand by one and say `remember this chest as ores` — `deposit` then sorts loot into matching chests (ores/food/wood/blocks/tools/farm get smart matching; any other label matches by item name) and `withdraw` checks the right chest first. `chests` lists labels. |
+| **Scouting** | `scout north 200` — heads out in legs, notes the biomes it crosses, animal herds, and structure signatures (village bells, dungeon spawners, portals), saves finds as waypoints ("village_1"), then walks back and reports. |
+| **Combat safety** | Creepers get hit-and-run spacing (dash in, one knockback swing, back out before the fuse blows — or an arrow from range), and the pathfinder never walks through lava, magma, cactus, or powder snow. |
 | **Web dashboard** | `http://localhost:3210` — the menu as big buttons, live HP/hunger/task/queue, chat transcript, and a command box. Local only, zero setup. |
 | **Logistics** | Stashes loot in a nearby chest (`deposit`), drops items (`drop <item>`), holds a named tool (`equip axe`). |
 | **Awareness** | Reports `status` / `inventory`, and narrates what it's doing/feeling in chat. |

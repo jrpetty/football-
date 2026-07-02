@@ -21,7 +21,8 @@ function load(log) {
     state = {}
   }
   state.waypoints = state.waypoints || {}
-  if (log) log.debug(`memory loaded: owner=${state.owner || '-'}, waypoints=${Object.keys(state.waypoints).length}`)
+  state.chests = state.chests || {}
+  if (log) log.debug(`memory loaded: owner=${state.owner || '-'}, waypoints=${Object.keys(state.waypoints).length}, chests=${Object.keys(state.chests).length}`)
   return state
 }
 
@@ -86,4 +87,37 @@ function listWaypoints() {
     .map(([name, p]) => `${name} (${p.x},${p.y},${p.z})`)
 }
 
-module.exports = { load, save, get, set, setWaypoint, getWaypoint, deleteWaypoint, listWaypoints, normName }
+// --- labeled chests (same shape as waypoints, separate namespace) ---
+
+function setChest(name, pos, log) {
+  load()
+  const key = normName(name)
+  if (!key) return null
+  state.chests[key] = { x: Math.round(pos.x), y: Math.round(pos.y), z: Math.round(pos.z) }
+  save(log)
+  return key
+}
+
+function getChest(name) {
+  return load().chests[normName(name)] || null
+}
+
+function deleteChest(name, log) {
+  load()
+  const key = normName(name)
+  if (!state.chests[key]) return false
+  delete state.chests[key]
+  save(log)
+  return true
+}
+
+function listChests() {
+  return Object.entries(load().chests).map(([name, p]) => ({ name, pos: p }))
+}
+
+module.exports = {
+  load, save, get, set,
+  setWaypoint, getWaypoint, deleteWaypoint, listWaypoints,
+  setChest, getChest, deleteChest, listChests,
+  normName,
+}
