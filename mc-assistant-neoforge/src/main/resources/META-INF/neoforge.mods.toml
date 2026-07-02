@@ -1,0 +1,29 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "MIT"
+
+[[mods]]
+modId = "${mod_id}"
+version = "${mod_version}"
+displayName = "MC Assistant"
+description = '''
+An in-game AI companion: spawn it, and it follows you, guards you against
+hostiles, gathers logs and stone on command, and stashes loot in chests.
+Control it with /assistant commands or by chat: "!follow", "!guard",
+"!gather logs 16", "!deposit", "!come", "!stay", "!status".
+'''
+authors = "jrpetty"
+
+[[dependencies."${mod_id}"]]
+modId = "neoforge"
+type = "required"
+ordering = "NONE"
+side = "BOTH"
+versionRange = "[21.1.0,)"
+
+[[dependencies."${mod_id}"]]
+modId = "minecraft"
+type = "required"
+ordering = "NONE"
+side = "BOTH"
+versionRange = "[1.21.1,1.21.2)"

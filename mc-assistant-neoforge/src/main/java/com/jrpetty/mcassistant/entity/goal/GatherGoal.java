@@ -1,0 +1,192 @@
+package com.jrpetty.mcassistant.entity.goal;
+
+import com.jrpetty.mcassistant.entity.AssistantEntity;
+import net.minecraft.core.BlockPos;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+
+import javax.annotation.Nullable;
+import java.util.EnumSet;
+
+/**
+ * The gather task: find matching blocks within radius, walk over, break them
+ * (with a per-block work delay, roughly like a player without the right tool
+ * speed), sweep the drops into the assistant's inventory, repeat until the
+ * requested amount is collected or nothing is left nearby.
+ */
+public class GatherGoal extends Goal {
+
+    public enum Kind {
+        LOGS("logs"),
+        STONE("stone"),
+        DIRT("dirt");
+
+        public final String label;
+        Kind(String label) { this.label = label; }
+
+        boolean matches(BlockState state) {
+            return switch (this) {
+                case LOGS -> state.is(BlockTags.LOGS);
+                case STONE -> state.is(BlockTags.BASE_STONE_OVERWORLD)
+                    || state.is(net.minecraft.world.level.block.Blocks.COBBLESTONE);
+                case DIRT -> state.is(BlockTags.DIRT);
+            };
+        }
+
+        @Nullable
+        public static Kind fromWord(String word) {
+            String w = word == null ? "" : word.toLowerCase().trim();
+            if (w.startsWith("log") || w.startsWith("wood") || w.startsWith("tree")) return LOGS;
+            if (w.startsWith("stone") || w.startsWith("cobble") || w.startsWith("rock")) return STONE;
+            if (w.startsWith("dirt")) return DIRT;
+            return null;
+        }
+    }
+
+    /** A one-shot request handed to the goal by commands/chat. */
+    public record Request(Kind kind, int amount) {}
+
+    private static final int SEARCH_RADIUS = 16;
+    private static final int WORK_TICKS_PER_BLOCK = 30; // ~1.5s per block
+
+    private final AssistantEntity assistant;
+    @Nullable private Request request;
+    @Nullable private BlockPos targetPos;
+    private int collected;
+    private int workTicks;
+    private int stuckTicks;
+
+    public GatherGoal(AssistantEntity assistant) {
+        this.assistant = assistant;
+        this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
+    }
+
+    @Override
+    public boolean canUse() {
+        return assistant.hasGatherRequest() && assistant.getTarget() == null;
+    }
+
+    @Override
+    public boolean canContinueToUse() {
+        return request != null && assistant.getTarget() == null;
+    }
+
+    @Override
+    public void start() {
+        this.request = assistant.takeGatherRequest();
+        this.collected = 0;
+        this.targetPos = null;
+        this.workTicks = 0;
+        this.stuckTicks = 0;
+        if (request != null) {
+            assistant.say("On it — gathering " + request.amount() + " " + request.kind().label + ".");
+        }
+    }
+
+    @Override
+    public void stop() {
+        if (request != null) {
+            // Interrupted (usually combat) — report and drop the task.
+            assistant.say("Gathered " + collected + " " + request.kind().label + " before I had to stop.");
+        }
+        this.request = null;
+        this.targetPos = null;
+        assistant.getNavigation().stop();
+    }
+
+    private void finish(String message) {
+        assistant.say(message);
+        this.request = null; // canContinueToUse turns false; stop() sees null and stays quiet
+        this.targetPos = null;
+        assistant.getNavigation().stop();
+    }
+
+    @Override
+    public void tick() {
+        if (request == null) return;
+
+        if (collected >= request.amount()) {
+            finish("Done — gathered " + collected + " " + request.kind().label + ".");
+            return;
+        }
+
+        if (targetPos == null || !request.kind().matches(assistant.level().getBlockState(targetPos))) {
+            targetPos = findNearest();
+            workTicks = 0;
+            stuckTicks = 0;
+            if (targetPos == null) {
+                finish(collected > 0
+                    ? "Got " + collected + " " + request.kind().label + " — that's all there is within " + SEARCH_RADIUS + " blocks."
+                    : "Can't do that here — no " + request.kind().label + " within " + SEARCH_RADIUS + " blocks of me.");
+                return;
+            }
+        }
+
+        double distSq = assistant.distanceToSqr(
+            targetPos.getX() + 0.5, targetPos.getY() + 0.5, targetPos.getZ() + 0.5);
+        assistant.getLookControl().setLookAt(
+            targetPos.getX() + 0.5, targetPos.getY() + 0.5, targetPos.getZ() + 0.5);
+
+        if (distSq > 4.5 * 4.5) {
+            // Still walking there.
+            if (assistant.getNavigation().isDone()) {
+                assistant.getNavigation().moveTo(
+                    targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5, 1.1D);
+            }
+            if (++stuckTicks > 100) { // ~5s without arriving — unreachable, skip it
+                targetPos = null;
+            }
+            return;
+        }
+
+        // In range: put in the work, then break the block and sweep the drops.
+        if (++workTicks < WORK_TICKS_PER_BLOCK) {
+            if (workTicks % 8 == 0) {
+                assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+            }
+            return;
+        }
+
+        BlockPos pos = targetPos;
+        targetPos = null;
+        workTicks = 0;
+        if (assistant.level().destroyBlock(pos, true, assistant)) {
+            collected++;
+            sweepDrops(pos);
+        }
+    }
+
+    private void sweepDrops(BlockPos around) {
+        for (ItemEntity drop : assistant.level().getEntitiesOfClass(
+                ItemEntity.class, new AABB(around).inflate(2.5))) {
+            ItemStack leftover = assistant.insertItem(drop.getItem());
+            if (leftover.isEmpty()) {
+                drop.discard();
+            } else {
+                drop.setItem(leftover);
+            }
+        }
+    }
+
+    @Nullable
+    private BlockPos findNearest() {
+        BlockPos feet = assistant.feetPos();
+        BlockPos best = null;
+        double bestDist = Double.MAX_VALUE;
+        for (BlockPos pos : BlockPos.betweenClosed(
+                feet.offset(-SEARCH_RADIUS, -6, -SEARCH_RADIUS),
+                feet.offset(SEARCH_RADIUS, 8, SEARCH_RADIUS))) {
+            if (!request.kind().matches(assistant.level().getBlockState(pos))) continue;
+            double d = pos.distSqr(feet);
+            if (d < bestDist) {
+                bestDist = d;
+                best = pos.immutable();
+            }
+        }
+        return best;
+    }
+}

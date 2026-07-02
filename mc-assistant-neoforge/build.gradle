@@ -1,0 +1,48 @@
+plugins {
+    id 'java'
+    // ModDevGradle — the official NeoForge toolchain. If this exact version
+    // ever fails to resolve, use the latest 2.0.x from
+    // https://plugins.gradle.org/plugin/net.neoforged.moddev
+    id 'net.neoforged.moddev' version '2.0.78'
+}
+
+group = mod_group
+version = mod_version
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+neoForge {
+    version = neo_version
+
+    runs {
+        client {
+            client()
+        }
+        server {
+            server()
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+processResources {
+    var replaceProperties = [
+        minecraft_version: minecraft_version,
+        neo_version      : neo_version,
+        mod_id           : mod_id,
+        mod_version      : mod_version,
+    ]
+    inputs.properties replaceProperties
+    filesMatching(['META-INF/neoforge.mods.toml']) {
+        expand replaceProperties
+    }
+}
