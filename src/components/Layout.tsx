@@ -42,10 +42,6 @@ const NAV: { section: string; items: NavItem[] }[] = [
     ],
   },
   {
-    section: 'Arena',
-    items: [{ to: '/maze', label: 'Maze Runner', icon: '🌀' }],
-  },
-  {
     section: 'System',
     items: [{ to: '/data', label: 'Data & Export', icon: '⚙️' }],
   },
@@ -63,7 +59,6 @@ const PAGE_TITLES: Record<string, string> = {
   '/development': 'Player Development',
   '/video': 'Video Analysis',
   '/training': 'Training',
-  '/maze': 'Maze Runner',
   '/data': 'Data & Export',
 }
 

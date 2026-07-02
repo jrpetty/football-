@@ -14,7 +14,6 @@ import { Development } from './pages/Development'
 import { VideoAnalysis } from './pages/VideoAnalysis'
 import { VideoDetail } from './pages/VideoDetail'
 import { Training } from './pages/Training'
-import { MazeRunner } from './pages/MazeRunner'
 import { DataManagement } from './pages/DataManagement'
 
 export function App() {
@@ -35,7 +34,6 @@ export function App() {
         <Route path="/video" element={<VideoAnalysis />} />
         <Route path="/video/:videoId" element={<VideoDetail />} />
         <Route path="/training" element={<Training />} />
-        <Route path="/maze" element={<MazeRunner />} />
         <Route path="/data" element={<DataManagement />} />
         <Route path="*" element={<Dashboard />} />
       </Routes>
