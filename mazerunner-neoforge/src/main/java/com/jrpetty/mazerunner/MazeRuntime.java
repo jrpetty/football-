@@ -30,6 +30,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -134,7 +135,9 @@ public final class MazeRuntime {
 
     @SubscribeEvent
     public static void onChunkLoad(ChunkEvent.Load event) {
-        if (event.getLevel() instanceof ServerLevel level && isMazeLevel(level)) {
+        // Only fully-loaded chunks — this event also fires for proto-chunks mid-worldgen.
+        if (event.getLevel() instanceof ServerLevel level && isMazeLevel(level)
+            && event.getChunk() instanceof LevelChunk) {
             pendingLoads.add(event.getChunk().getPos().toLong());
         }
     }

@@ -63,9 +63,16 @@ public final class WallAnimator {
         return pending.size() + active.size();
     }
 
-    /** Queue a segment to open (sink) or close (rise). No-op if already queued. */
+    /**
+     * Queue a segment to open (sink) or close (rise). If the segment is
+     * already animating, the old animation is cancelled and replaced — a full
+     * fresh pass always ends in the requested final state.
+     */
     public static void enqueue(MazeConfigData.Box box, boolean close) {
-        if (!animatingBoxes.add(box)) return;
+        if (!animatingBoxes.add(box)) {
+            pending.removeIf(a -> a.box.equals(box));
+            active.removeIf(a -> a.box.equals(box));
+        }
         pending.add(new Anim(box, close));
     }
 
