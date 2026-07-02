@@ -36,6 +36,7 @@ public final class MazeCommands {
                 .then(Commands.literal("status").executes(ctx -> status(ctx.getSource())))
                 .then(Commands.literal("section").executes(ctx -> section(ctx.getSource())))
                 .then(Commands.literal("skip").executes(ctx -> skip(ctx.getSource())))
+                .then(Commands.literal("tp").executes(ctx -> tpExit(ctx.getSource())))
                 .then(Commands.literal("validate")
                     .then(Commands.argument("layout", IntegerArgumentType.integer(1, 7))
                         .executes(ctx -> validate(ctx.getSource(),
@@ -99,6 +100,7 @@ public final class MazeCommands {
         String timer = state.timerRunning()
             ? "running (" + MazeRuntime.formatMs(System.currentTimeMillis() - state.timerStartMs()) + ")"
             : state.lastRunMs() >= 0 ? "stopped — last run " + MazeRuntime.formatMs(state.lastRunMs()) : "stopped";
+        if (state.bestRunMs() >= 0) timer += " · best " + MazeRuntime.formatMs(state.bestRunMs());
 
         source.sendSuccess(() -> Component.literal(String.join("\n",
             "Maze — day " + state.dayNumber() + ", layout " + layout.name()
@@ -139,6 +141,25 @@ public final class MazeCommands {
         source.sendSuccess(() -> Component.literal(
             "You are in " + where + " (cell " + cellX + "," + cellZ + ").")
             .withStyle(ChatFormatting.AQUA), false);
+        return 1;
+    }
+
+    private static int tpExit(CommandSourceStack source) {
+        ServerLevel level = maze(source);
+        if (level == null) return 0;
+        if (!(source.getEntity() instanceof net.minecraft.server.level.ServerPlayer player)) {
+            source.sendFailure(Component.literal("Only a player can teleport."));
+            return 0;
+        }
+        MazeConfigData cfg = MazeConfigs.get();
+        MazeWorldState state = MazeWorldState.get(level);
+        MazeConfigData.LayoutDef layout = cfg.layout(state.physicalLayout());
+        MazeConfigData.ExitDef exit = cfg.exits.get(layout.exitId());
+        player.teleportTo(level, exit.portalX() + 0.5, cfg.floorY + 2, exit.portalZ() + 0.5,
+            player.getYRot(), player.getXRot());
+        source.sendSuccess(() -> Component.literal(
+            "Teleported to the active exit (" + exit.id() + ", facing " + exit.facing() + ").")
+            .withStyle(ChatFormatting.YELLOW), true);
         return 1;
     }
 

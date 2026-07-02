@@ -28,17 +28,26 @@ the maze but the seven exit pads.
   cannot be mined through or blown up. Hostile mobs roam the corridors at
   night. (Custom Grievers are a later phase.)
 
-The Glade currently ships as a procedural stand-in for the hand-authored
-build: the Box (iron spawn platform) at the centre, the lake and the Deadheads
-forest/graveyard to the southwest, grassland elsewhere. Swap in structure
-templates when the builds are ready.
+**The Glade is a fresh slate** — flat grass with nothing in it, ready to be
+hand-built in-game (the Box, the Deadheads, the lake…). World spawn and death
+respawn are pinned to its exact centre (768, 61, 768). Hostile mobs are
+automatically purged inside the Glade — it is safe ground; the maze is not.
+
+Quality-of-life on top of the spec:
+
+- A **boss-bar clock**: "Day N — doors seal in 41:23" by day, "Night N — the
+  Maze shifts. Dawn in 12:41" by night.
+- A red **"doors seal soon"** warning shortly before dusk.
+- A persistent **best-time world record**, announced when beaten.
+- `/maze tp` — teleport an op to the day's active exit portal for testing.
 
 ## Install & play
 
 1. Install [NeoForge](https://neoforged.net/) for **Minecraft 1.21.1** and drop
    `mazerunner-1.0.0.jar` into `mods/`.
 2. Create a new world → World Type → **"Maze Runner"**.
-3. You spawn on the Box. Doors open shortly after the world starts.
+3. You spawn at the centre of the empty Glade. Doors open shortly after the
+   world starts.
 
 ## Commands (op level 2)
 
@@ -48,6 +57,7 @@ templates when the builds are ready.
 | `/maze status` | Day, layout, doors, clock, timer, week schedule |
 | `/maze validate <1-7>` | BFS-verify a layout is solvable (debug) |
 | `/maze section` | Which of the 8 maze sections you're standing in |
+| `/maze tp` | Teleport to the day's active exit portal (debug) |
 | `/maze skip` | Jump to next dawn — fires dusk/shift/portal swap on the way (debug) |
 
 ## Build from source

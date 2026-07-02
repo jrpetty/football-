@@ -18,10 +18,14 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.BossEvent;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
@@ -52,6 +56,7 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 public final class MazeRuntime {
 
     private static final int DOORS_OPEN_AT = 1000;
+    private static final int DOORS_WARN_AT = 11500; // "get back to the Glade" warning
     private static final int DOORS_CLOSE_AT = 12500;
     private static final int SHIFT_AT = 18000;
     private static final int DAY_TICKS = 24000;
@@ -59,14 +64,18 @@ public final class MazeRuntime {
     public static final ResourceKey<LootTable> MAZE_CACHE_LOOT = ResourceKey.create(
         Registries.LOOT_TABLE, ResourceLocation.fromNamespaceAndPath(MazeRunnerMod.MODID, "chests/maze_cache"));
 
-    /** Spawn point on top of the Box, centre of the Glade. */
-    public static final BlockPos BOX_SPAWN = new BlockPos(768, 61, 768);
+    /** Spawn point at the centre of the (fresh-slate) Glade. */
+    public static final BlockPos GLADE_SPAWN = new BlockPos(768, 61, 768);
 
     // Chunk events can fire off-thread during generation; buffer, drain on tick.
     private static final ConcurrentLinkedQueue<Long> pendingLoads = new ConcurrentLinkedQueue<>();
     private static final ConcurrentLinkedQueue<Long> pendingUnloads = new ConcurrentLinkedQueue<>();
     private static final Set<Long> loadedChunks = new HashSet<>();
     private static final Map<UUID, Long> portalCooldown = new HashMap<>();
+
+    /** Always-visible clock: day number + real time until the doors seal / dawn. */
+    private static final ServerBossEvent CLOCK_BAR = new ServerBossEvent(
+        Component.empty(), BossEvent.BossBarColor.YELLOW, BossEvent.BossBarOverlay.PROGRESS);
 
     private MazeRuntime() {}
 
@@ -118,7 +127,7 @@ public final class MazeRuntime {
             for (int idx : state.schedule()) order.append(cfg.layout(idx).name()).append(' ');
             MazeRunnerMod.LOGGER.info("Maze Runner: world schedule rolled: {}", order.toString().trim());
         }
-        level.setDefaultSpawnPos(BOX_SPAWN, 0.0F);
+        level.setDefaultSpawnPos(GLADE_SPAWN, 0.0F);
         MazeRunnerMod.LOGGER.info("Maze Runner world active — day {}, layout {}, exit {}",
             state.dayNumber(), cfg.layout(state.physicalLayout()).name(),
             cfg.layout(state.physicalLayout()).exitId());
@@ -131,6 +140,15 @@ public final class MazeRuntime {
         loadedChunks.clear();
         portalCooldown.clear();
         WallAnimator.clear();
+        CLOCK_BAR.removeAllPlayers();
+    }
+
+    @SubscribeEvent
+    public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            CLOCK_BAR.removePlayer(player);
+            portalCooldown.remove(player.getUUID());
+        }
     }
 
     @SubscribeEvent
@@ -154,7 +172,7 @@ public final class MazeRuntime {
         // Death sends runners back to the Box, always.
         if (event.getEntity() instanceof ServerPlayer player
             && player.serverLevel() != null && isMazeLevel(player.serverLevel())) {
-            player.teleportTo(BOX_SPAWN.getX() + 0.5, BOX_SPAWN.getY(), BOX_SPAWN.getZ() + 0.5);
+            player.teleportTo(GLADE_SPAWN.getX() + 0.5, GLADE_SPAWN.getY(), GLADE_SPAWN.getZ() + 0.5);
         }
     }
 
@@ -169,6 +187,63 @@ public final class MazeRuntime {
         drainChunkEvents(level, state);
         advanceClock(level, state);
         WallAnimator.tick(level);
+
+        long gameTime = level.getGameTime();
+        if (gameTime % 20 == 0) updateClockBar(level, state);
+        if (gameTime % 100 == 0) sweepGlade(level);
+    }
+
+    /** The Glade is safe ground — hostile mobs never survive inside it. */
+    private static void sweepGlade(ServerLevel level) {
+        MazeConfigData cfg = MazeConfigs.get();
+        AABB glade = new AABB(cfg.gladeBlockMin, cfg.floorY - 4, cfg.gladeBlockMin,
+            cfg.gladeBlockMax + 1, cfg.wallTopY + 2, cfg.gladeBlockMax + 1);
+        for (Monster monster : level.getEntitiesOfClass(Monster.class, glade)) {
+            if (!monster.isPersistenceRequired() && !monster.hasCustomName()) {
+                monster.discard();
+            }
+        }
+    }
+
+    /** Real seconds until a future day-time tick, accounting for the 1/6 day and 1/3 night rates. */
+    private static int realSecondsUntil(int t, int target) {
+        long realTicks = 0;
+        if (t < 12000) {
+            int dayTicks = Math.min(target, 12000) - t;
+            realTicks += Math.max(0, dayTicks) * 6L;
+            if (target > 12000) realTicks += (target - 12000) * 3L;
+        } else {
+            realTicks += (target - t) * 3L;
+        }
+        return (int) (realTicks / 20);
+    }
+
+    private static String mmss(int seconds) {
+        return String.format("%d:%02d", seconds / 60, seconds % 60);
+    }
+
+    private static void updateClockBar(ServerLevel level, MazeWorldState state) {
+        for (ServerPlayer player : level.players()) {
+            CLOCK_BAR.addPlayer(player); // set-backed, idempotent
+        }
+        int t = (int) ((state.virtualSixths() / 6) % DAY_TICKS);
+        if (t < DOORS_CLOSE_AT) {
+            int remain = realSecondsUntil(t, DOORS_CLOSE_AT);
+            CLOCK_BAR.setName(Component.literal(
+                "☀ Day " + state.dayNumber() + " — doors seal in " + mmss(remain))
+                .withStyle(ChatFormatting.GOLD));
+            CLOCK_BAR.setColor(BossEvent.BossBarColor.YELLOW);
+            CLOCK_BAR.setProgress(Math.max(0.0F, Math.min(1.0F,
+                (DOORS_CLOSE_AT - t) / (float) DOORS_CLOSE_AT)));
+        } else {
+            int remain = realSecondsUntil(t, DAY_TICKS);
+            CLOCK_BAR.setName(Component.literal(
+                "☾ Night " + state.dayNumber() + " — the Maze shifts. Dawn in " + mmss(remain))
+                .withStyle(ChatFormatting.DARK_PURPLE));
+            CLOCK_BAR.setColor(BossEvent.BossBarColor.PURPLE);
+            CLOCK_BAR.setProgress(Math.max(0.0F, Math.min(1.0F,
+                (DAY_TICKS - t) / (float) (DAY_TICKS - DOORS_CLOSE_AT))));
+        }
     }
 
     private static void drainChunkEvents(ServerLevel level, MazeWorldState state) {
@@ -197,6 +272,11 @@ public final class MazeRuntime {
 
         boolean wrapped = newT < prevT;
         if (crossed(prevT, newT, wrapped, DOORS_OPEN_AT)) onDoorsOpen(level, state);
+        if (crossed(prevT, newT, wrapped, DOORS_WARN_AT)) {
+            broadcast(level, Component.literal(
+                "⚠ The sun is setting — the Glade doors seal soon. Get back.")
+                .withStyle(ChatFormatting.RED));
+        }
         if (crossed(prevT, newT, wrapped, DOORS_CLOSE_AT)) onDoorsClose(level, state);
         if (crossed(prevT, newT, wrapped, SHIFT_AT)) onMazeShift(level, state);
         if (wrapped) onDawn(level, state);
@@ -387,9 +467,11 @@ public final class MazeRuntime {
         MazeWorldState state = MazeWorldState.get(level);
         if (state.timerRunning()) {
             long elapsed = state.stopTimer(System.currentTimeMillis());
+            boolean record = state.recordRun(elapsed);
             broadcast(level, Component.literal(
                 "🏁 " + player.getName().getString() + " reached the exit — the Maze is beaten in "
-                    + formatMs(elapsed) + "!").withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD));
+                    + formatMs(elapsed) + (record ? " — NEW WORLD RECORD!" : "!"))
+                .withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD));
             for (ServerPlayer p : level.players()) {
                 p.playNotifySound(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.MASTER, 1.0F, 1.0F);
             }

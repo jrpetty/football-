@@ -101,10 +101,8 @@ public class MazeChunkGenerator extends ChunkGenerator {
                         }
                     }
                     chunk.setBlockState(pos.set(wx, cfg.wallTopY + 1, wz), barrier, false);
-
-                    if (cfg.inGlade(Math.floorDiv(wx, cfg.cellSize), Math.floorDiv(wz, cfg.cellSize))) {
-                        GladeBuilder.column(cfg, chunk, pos, wx, wz);
-                    }
+                    // The Glade generates as a fresh slate — flat grass, no
+                    // structures — ready to be built by hand in-game.
                 }
             }
         }

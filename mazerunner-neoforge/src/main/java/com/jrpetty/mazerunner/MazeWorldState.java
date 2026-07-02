@@ -27,6 +27,7 @@ public class MazeWorldState extends SavedData {
     private boolean timerRunning = false;
     private long timerStartMs = 0;
     private long lastRunMs = -1;
+    private long bestRunMs = -1;
     private int chestCycle = 0;
     private final Map<Long, Integer> chestRolled = new HashMap<>(); // BlockPos.asLong → cycle
 
@@ -45,6 +46,7 @@ public class MazeWorldState extends SavedData {
         state.timerRunning = tag.getBoolean("timerRunning");
         state.timerStartMs = tag.getLong("timerStartMs");
         state.lastRunMs = tag.contains("lastRunMs") ? tag.getLong("lastRunMs") : -1;
+        state.bestRunMs = tag.contains("bestRunMs") ? tag.getLong("bestRunMs") : -1;
         state.chestCycle = tag.getInt("chestCycle");
         long[] keys = tag.getLongArray("chestKeys");
         int[] cycles = tag.getIntArray("chestCycles");
@@ -64,6 +66,7 @@ public class MazeWorldState extends SavedData {
         tag.putBoolean("timerRunning", timerRunning);
         tag.putLong("timerStartMs", timerStartMs);
         tag.putLong("lastRunMs", lastRunMs);
+        tag.putLong("bestRunMs", bestRunMs);
         tag.putInt("chestCycle", chestCycle);
         long[] keys = new long[chestRolled.size()];
         int[] cycles = new int[chestRolled.size()];
@@ -133,6 +136,16 @@ public class MazeWorldState extends SavedData {
     public long timerStartMs() { return timerStartMs; }
 
     public long lastRunMs() { return lastRunMs; }
+
+    public long bestRunMs() { return bestRunMs; }
+
+    /** Records a finished run; returns true if it's a new world record. */
+    public boolean recordRun(long elapsedMs) {
+        boolean record = bestRunMs < 0 || elapsedMs < bestRunMs;
+        if (record) bestRunMs = elapsedMs;
+        setDirty();
+        return record;
+    }
 
     public void startTimer(long nowMs) {
         this.timerRunning = true;
