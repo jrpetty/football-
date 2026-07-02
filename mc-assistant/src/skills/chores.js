@@ -58,9 +58,9 @@ const CHORES = [
   },
   {
     name: 'light this place up',
-    when: (bot) => !!torch.torchItem(bot),
+    when: (bot) => !!torch.torchItem(bot) && torch.isDarkHere(bot),
     run: async (bot) => {
-      const placed = await torch.placeTorchIfDark(bot)
+      const placed = await torch.placeTorch(bot)
       return placed ? 'Placed a torch — it was getting dark here.' : null
     },
   },

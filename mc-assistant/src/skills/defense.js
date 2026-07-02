@@ -44,13 +44,21 @@ async function engage(bot, entity) {
   if (dist > 10 && bot.hawkEye && hasBowAndArrows(bot)) {
     const now = Date.now()
     if (now - (bot.assistant._lastShotAt || 0) > 2000) {
-      bot.assistant._lastShotAt = now
       try {
-        bot.hawkEye.oneShot(entity, 'bow')
-        return // survival re-engages next tick; melee takes over once close
+        // Only loose an arrow when hawkeye actually has a firing solution —
+        // oneShot with no solution holds the bow drawn forever and stacks
+        // physics listeners on every retry. No solution → close to melee.
+        const { Vec3 } = require('vec3')
+        const grade = bot.hawkEye.getMasterGrade(entity, new Vec3(0, 0, 0), 'bow')
+        if (grade) {
+          bot.assistant._lastShotAt = now
+          bot.hawkEye.oneShot(entity, 'bow')
+          return // survival re-engages next tick; melee takes over once close
+        }
       } catch (err) {
         bot.assistant.log.debug('bow shot failed:', err && err.message)
       }
+      // fall through to melee — no line of sight / out of range
     } else {
       return // between shots — hold
     }

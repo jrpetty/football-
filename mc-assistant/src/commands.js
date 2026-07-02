@@ -462,25 +462,27 @@ function jobLabel(action, args = {}) {
   return detail ? `${action}${amount} ${detail}`.trim() : action
 }
 
-// Run an action by name; always resolves to a string (or null for silent ones).
-async function dispatch(bot, action, args = {}) {
+// Run an action right now, bypassing the queue — used by the queue runner
+// itself and by multi-step presets (which are one job wrapping many actions).
+async function dispatchDirect(bot, action, args = {}) {
   const entry = registry[action]
   if (!entry) return `I don't know how to "${action}".`
-
-  const runner = async () => {
-    try {
-      const result = await entry.run(bot, args || {})
-      return typeof result === 'string' ? result : null
-    } catch (err) {
-      bot.assistant.log.warn(`action "${action}" failed:`, err && err.message)
-      return `That didn't work: ${err && err.message ? err.message : 'unknown error'}.`
-    }
+  try {
+    const result = await entry.run(bot, args || {})
+    return typeof result === 'string' ? result : null
+  } catch (err) {
+    bot.assistant.log.warn(`action "${action}" failed:`, err && err.message)
+    return `That didn't work: ${err && err.message ? err.message : 'unknown error'}.`
   }
+}
 
+// Run an action by name; always resolves to a string (or null for silent ones).
+async function dispatch(bot, action, args = {}) {
+  if (!registry[action]) return `I don't know how to "${action}".`
   if (QUEUED_ACTIONS.has(action)) {
-    return jobs.submit(bot, jobLabel(action, args), runner)
+    return jobs.submit(bot, jobLabel(action, args), () => dispatchDirect(bot, action, args))
   }
-  return runner()
+  return dispatchDirect(bot, action, args)
 }
 
 // Anthropic tool definitions, generated from the registry.
@@ -496,4 +498,4 @@ function actionNames() {
   return Object.keys(registry)
 }
 
-module.exports = { registry, dispatch, toolDefinitions, actionNames, stopAll, statusLine }
+module.exports = { registry, dispatch, dispatchDirect, toolDefinitions, actionNames, stopAll, statusLine }

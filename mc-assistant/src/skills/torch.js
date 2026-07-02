@@ -34,15 +34,21 @@ async function placeTorch(bot) {
   return false
 }
 
-// Chore-friendly: only place when we can *measure* darkness (block light < 8
-// with no skylight). Servers that don't send light data just skip this.
-async function placeTorchIfDark(bot) {
+// True only when we can *measure* darkness here (block light < 8, no
+// skylight). Servers that don't send light data always return false, so the
+// idle chore never spins on guesswork.
+function isDarkHere(bot) {
+  if (!bot.entity) return false
   const feet = bot.blockAt(bot.entity.position.floored())
   if (!feet) return false
   const light = feet.light
   const sky = feet.skyLight
   if (typeof light !== 'number' || typeof sky !== 'number') return false
-  if (sky > 0 || light >= 8) return false
+  return sky === 0 && light < 8
+}
+
+async function placeTorchIfDark(bot) {
+  if (!isDarkHere(bot)) return false
   return placeTorch(bot)
 }
 
@@ -52,4 +58,4 @@ async function torchCommand(bot) {
   return ok ? 'Torch placed.' : "Couldn't find a good spot for a torch right here."
 }
 
-module.exports = { placeTorch, placeTorchIfDark, torchCommand, torchItem }
+module.exports = { placeTorch, placeTorchIfDark, isDarkHere, torchCommand, torchItem }

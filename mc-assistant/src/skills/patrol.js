@@ -35,15 +35,32 @@ function patrol(bot, { radius } = {}) {
   return `Patrolling a ${r}-block loop around ${home ? 'home' : 'here'}. Say "stop" to end it.`
 }
 
-// Called from the survival loop whenever the pathfinder goal is empty.
+// Called from the survival loop each tick while patrolling. Moves to the next
+// point when the goal is empty — and also when a point has been "in progress"
+// too long (pathfinder keeps unreachable goals forever, which would otherwise
+// freeze the patrol on rough terrain).
+const STALL_MS = 30_000
+
+function tick(bot) {
+  const p = bot.assistant.patrol
+  if (!p || bot.assistant.mode !== 'patrol') return
+  const stalled = p.advancedAt && Date.now() - p.advancedAt > STALL_MS
+  if (bot.pathfinder.goal && !stalled) return
+  if (stalled) {
+    try { bot.pathfinder.setGoal(null) } catch (_) { /* ignore */ }
+  }
+  advance(bot)
+}
+
 function advance(bot) {
   const p = bot.assistant.patrol
   if (!p || bot.assistant.mode !== 'patrol') return
   const point = p.route[p.index % p.route.length]
   p.index++
+  p.advancedAt = Date.now()
   try {
     bot.pathfinder.setGoal(new goals.GoalNear(point.x, point.y, point.z, 2))
   } catch (_) { /* try again next tick */ }
 }
 
-module.exports = { patrol, advance, makeRoute }
+module.exports = { patrol, advance, tick, makeRoute }

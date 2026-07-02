@@ -48,10 +48,24 @@ async function fish(bot, { amount = 3 } = {}) {
       try {
         await bot.equip(rodItem(bot), 'hand')
         await bot.lookAt(water.position.offset(0.5, 1, 0.5))
-        await bot.fish() // one full cast; resolves when something bites
+        // bot.fish() only resolves on a bite — a bobber stuck on a block
+        // would hang forever and wedge the job queue. Race a timeout that
+        // reels the line back in and ends the trip.
+        let timer
+        const timeout = new Promise((_, reject) => {
+          timer = setTimeout(() => {
+            try { bot.activateItem() } catch (_) { /* reel in */ }
+            reject(new Error('cast timed out'))
+          }, 60_000)
+        })
+        try {
+          await Promise.race([bot.fish(), timeout])
+        } finally {
+          clearTimeout(timer)
+        }
         caught++
       } catch (err) {
-        // Interrupted cast (moved/hit) — one retry-worthy failure, then bail.
+        // Interrupted or timed-out cast — reel in and call it a day.
         bot.assistant.log.debug('cast failed:', err && err.message)
         break
       }

@@ -49,6 +49,7 @@ const CRAFTABLES = [
   'wooden axe', 'stone axe', 'iron axe',
   'wooden sword', 'stone sword', 'iron sword',
   'wooden shovel', 'stone shovel', 'iron shovel',
+  'fishing rod', 'fishing_rod', 'rod',
   'pickaxe', 'sword', 'shovel', 'hoe',
   'planks', 'sticks', 'stick', 'torches', 'torch',
   'furnace', 'chest', 'shield', 'ladder', 'boat', 'bed',
@@ -115,7 +116,10 @@ function parse(text) {
   const rem = t.match(/\b(?:remember|mark|save)\b.*?\b(?:as|this is)\s+([a-z0-9_ ]+)/) ||
     t.match(/\bset\s+([a-z0-9_ ]+?)\s+here\b/)
   if (rem) {
-    return { action: 'remember', args: { name: rem[1].trim() } }
+    const name = rem[1]
+      .replace(/\b(please|now|thanks|thank you|mate|bro|for me)\b/g, '')
+      .trim()
+    return { action: 'remember', args: { name } }
   }
   if (/\bthis is home\b|\bset home\b/.test(t)) {
     return { action: 'remember', args: { name: 'home' } }
@@ -133,7 +137,7 @@ function parse(text) {
 
   // withdraw from storage — before gather, so "get stone from the chest"
   // isn't a mining request.
-  const wd = t.match(/\b(?:get|grab|take|fetch|bring)\b\s+(?:me\s+)?(?:(\d+)\s+)?([a-z_ ]+?)\s+(?:out\s+)?(?:of|from)\s+(?:the\s+)?(?:chest|barrel|storage)\b/)
+  const wd = t.match(/\b(?:get|grab|take|fetch|bring)\b\s+(?:me\s+)?(?:(\d+)\s+)?(?:the\s+|my\s+|some\s+)?([a-z_ ]+?)\s+(?:out\s+)?(?:of|from)\s+(?:the\s+)?(?:chest|barrel|storage)\b/)
   if (wd) {
     return { action: 'withdraw', args: { item: wd[2].trim(), amount: wd[1] ? Number(wd[1]) : undefined } }
   }
@@ -191,13 +195,15 @@ function parse(text) {
   }
 
   // give / hand over what it's carrying
-  const giveMatch = t.match(/\b(?:give me|hand me|hand over|pass me)\b\s*(?:the|my|your|some)?\s*([a-z_ ]+)?/)
+  const giveMatch = t.match(/\b(?:give me|hand me|hand over|pass me)\b\s*(?:the|my|your|some)?\s*(?:(\d+)\s+)?([a-z_ ]+)?/)
   if (giveMatch) {
-    const raw = (giveMatch[1] || '')
+    const raw = (giveMatch[2] || '')
       .replace(/\b(please|now|thanks|thank you|mate|bro)\b/g, '')
       .trim()
     const item = raw && !/^(everything|all|loot|items|stuff)$/.test(raw) ? raw : undefined
-    return { action: 'give', args: item ? { item } : {} }
+    const args = item ? { item } : {}
+    if (giveMatch[1] && item) args.amount = Number(giveMatch[1])
+    return { action: 'give', args }
   }
 
   // bring me X — gather it (if needed) and deliver it
@@ -208,12 +214,6 @@ function parse(text) {
       const resource = res === 'log' ? 'wood' : res
       return { action: 'gather', args: { resource, amount: amt ? Number(amt[1]) : 8, deliver: true } }
     }
-  }
-
-  // fishing
-  if (/\b(fish|fishing)\b/.test(t)) {
-    const amt = t.match(/\b(\d+)\b/)
-    return { action: 'fish', args: amt ? { amount: Number(amt[1]) } : {} }
   }
 
   // breeding
@@ -233,10 +233,16 @@ function parse(text) {
     }
   }
 
-  // equip / hold a tool
-  const eq = t.match(/\b(?:equip|hold|wield|take out|get out)\b\s+(?:your|the|a|an)?\s*([a-z_ ]+)/)
+  // equip / hold a tool ("take out" removed — "take out the zombie" is an attack)
+  const eq = t.match(/\b(?:equip|hold|wield|draw)\b\s+(?:your|the|a|an)?\s*([a-z_ ]+)/)
   if (eq) {
     return { action: 'equip', args: { item: eq[1].trim() } }
+  }
+
+  // fishing — after craft/equip so "craft a fishing rod" stays a craft
+  if (/\b(fish|fishing)\b/.test(t)) {
+    const amt = t.match(/\b(\d+)\b/)
+    return { action: 'fish', args: amt ? { amount: Number(amt[1]) } : {} }
   }
 
   // hunt for food
@@ -278,7 +284,7 @@ function parse(text) {
 
   // attack / kill — only treat the next word as a target if it's a known mob,
   // so "attack now" / "kill him" mean "nearest hostile", not a mob named "now".
-  const atk = t.match(/\b(?:attack|kill|fight|slay)\b(?:\s+(?:the|that|a)?\s*([a-z_]+))?/)
+  const atk = t.match(/\b(?:attack|kill|fight|slay|take\s+out)\b(?:\s+(?:the|that|a)?\s*([a-z_]+))?/)
   if (atk) {
     const target = atk[1] && KNOWN_MOBS.has(atk[1]) ? atk[1] : undefined
     return { action: 'attack', args: target ? { target } : {} }

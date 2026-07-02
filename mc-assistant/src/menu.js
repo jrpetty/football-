@@ -139,17 +139,29 @@ async function pick(bot, username, n) {
   const preset = presets[idx]
   bot.assistant.reply(`On it: ${preset.label}`)
   // Lazy require avoids a cycle (commands.js exposes a menu action too).
-  const { dispatch } = require('./commands')
-  const steps = Array.isArray(preset.steps)
-    ? preset.steps
-    : [{ action: preset.action, args: preset.args }]
-  const seq = bot.assistant.taskSeq
-  for (let i = 0; i < steps.length; i++) {
-    if (bot.assistant.taskSeq !== seq) break // "stop" cancels the rest of the job
-    const step = steps[i]
-    const result = await dispatch(bot, step.action, step.args || {})
-    if (result) bot.assistant.reply(steps.length > 1 ? `[${i + 1}/${steps.length}] ${result}` : result)
+  const { dispatch, dispatchDirect } = require('./commands')
+  const jobs = require('./jobs')
+
+  // Single-action preset: normal dispatch (queues like any other order).
+  if (!Array.isArray(preset.steps)) {
+    const result = await dispatch(bot, preset.action, preset.args || {})
+    if (result) bot.assistant.reply(result)
+    return
   }
+
+  // Multi-step preset: the WHOLE sequence is one job, so orders given while
+  // it runs queue after the last step instead of cutting into the middle.
+  const result = await jobs.submit(bot, preset.label, async () => {
+    const seq = bot.assistant.taskSeq
+    for (let i = 0; i < preset.steps.length; i++) {
+      if (bot.assistant.taskSeq !== seq) return 'Job cancelled.' // "stop"
+      const step = preset.steps[i]
+      const res = await dispatchDirect(bot, step.action, step.args || {})
+      if (res) bot.assistant.reply(`[${i + 1}/${preset.steps.length}] ${res}`)
+    }
+    return `Finished: ${preset.label}`
+  })
+  if (result) bot.assistant.reply(result)
 }
 
 module.exports = { show, pick, isRecent, loadPresets, renderClickableLines, renderTextLines, versionAtLeast, DEFAULT_PRESETS }

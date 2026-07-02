@@ -37,9 +37,12 @@ function tick(bot) {
   const cfg = bot.assistant.config
   const nearestThreat = threatsNear(bot, cfg.guardRadius)[0] || null
 
-  // 0) ASLEEP — stay down unless something hostile shows up.
+  // 0) ASLEEP — stay down unless something hostile gets genuinely close.
+  // (Vanilla blocks re-sleep only within ~8 blocks; waking for anything in
+  // the wider guard radius would churn sleep/wake all night.)
   if (bot.isSleeping) {
-    if (nearestThreat) {
+    const closeThreat = threatsNear(bot, cfg.defendRadius)[0]
+    if (closeThreat) {
       require('./rest').wake(bot).catch(() => {})
       bot.assistant.narrate('Something woke me up!')
     }
@@ -98,8 +101,8 @@ function tick(bot) {
       } catch (_) { /* pathfinder busy */ }
     }
   }
-  if (bot.assistant.mode === 'patrol' && !bot.assistant.busy && !bot.pathfinder.goal) {
-    require('./patrol').advance(bot)
+  if (bot.assistant.mode === 'patrol' && !bot.assistant.busy) {
+    require('./patrol').tick(bot) // advances on arrival AND on stalled goals
   }
 
   // 5) PROACTIVE — nothing to do at all? Find useful work (cook, stash,

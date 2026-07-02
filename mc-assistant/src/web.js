@@ -87,10 +87,16 @@ refresh(); setInterval(refresh, 2000)
 function readBody(req) {
   return new Promise((resolve) => {
     let data = ''
+    let done = false
+    const finish = (value) => { if (!done) { done = true; resolve(value) } }
     req.on('data', (c) => { data += c; if (data.length > 8192) req.destroy() })
     req.on('end', () => {
-      try { resolve(JSON.parse(data || '{}')) } catch (_) { resolve({}) }
+      try { finish(JSON.parse(data || '{}')) } catch (_) { finish({}) }
     })
+    // A destroyed/aborted request never emits 'end' — settle anyway so the
+    // awaiting route handler doesn't leak.
+    req.on('close', () => finish({}))
+    req.on('error', () => finish({}))
   })
 }
 

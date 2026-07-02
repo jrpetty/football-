@@ -108,10 +108,19 @@ async function mine(bot, { y, length = 24 } = {}) {
       const feet = base.plus(forward.scaled(i))
       const head = feet.offset(0, 1, 0)
 
-      // Hazard check one step ahead before we open the wall.
-      for (const probe of [feet, head, feet.plus(forward), head.plus(forward)]) {
+      // Hazard check before opening the wall: ahead of, beside, and above the
+      // cells we're about to dig — a pocket on any face floods the tunnel.
+      const right = new Vec3(-forward.z, 0, forward.x)
+      const probes = [
+        feet.plus(forward), head.plus(forward), // ahead
+        feet.plus(right), feet.minus(right), // side walls (feet)
+        head.plus(right), head.minus(right), // side walls (head)
+        feet.offset(0, 2, 0), // ceiling
+        feet, head, // the cells themselves
+      ]
+      for (const probe of probes) {
         const b = bot.blockAt(probe)
-        if (b && LIQUIDS.has(b.name)) { stoppedBy = `${b.name.replace('flowing_', '')} ahead`; break }
+        if (b && LIQUIDS.has(b.name)) { stoppedBy = `${b.name.replace('flowing_', '')} in the wall`; break }
       }
       if (stoppedBy) break
 
@@ -143,11 +152,14 @@ async function mine(bot, { y, length = 24 } = {}) {
       if (i % 8 === 0) await torch.placeTorch(bot)
     }
 
-    // --- 3) Walk home to the start point. ---
-    bot.assistant.currentTask = 'heading back from the mine'
-    try {
-      await bot.pathfinder.goto(new goals.GoalNear(start.x, start.y, start.z, 2))
-    } catch (_) { /* report from wherever we ended up */ }
+    // --- 3) Walk home to the start point — unless we were told to stop
+    // (or died), in which case setting a new goal would undo the stop.
+    if (stoppedBy !== 'orders' && bot.assistant.taskSeq === seq) {
+      bot.assistant.currentTask = 'heading back from the mine'
+      try {
+        await bot.pathfinder.goto(new goals.GoalNear(start.x, start.y, start.z, 2))
+      } catch (_) { /* report from wherever we ended up */ }
+    }
   } finally {
     bot.assistant.busy = false
     bot.assistant.currentTask = null

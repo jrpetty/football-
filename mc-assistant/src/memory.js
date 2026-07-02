@@ -28,7 +28,10 @@ function load(log) {
 function save(log) {
   try {
     fs.mkdirSync(DATA_DIR, { recursive: true })
-    fs.writeFileSync(FILE, JSON.stringify(state, null, 2))
+    // Write-then-rename so a crash mid-write can't corrupt the whole file.
+    const tmp = FILE + '.tmp'
+    fs.writeFileSync(tmp, JSON.stringify(state, null, 2))
+    fs.renameSync(tmp, FILE)
   } catch (err) {
     if (log) log.warn('could not save memory:', err && err.message)
   }
@@ -46,8 +49,14 @@ function set(key, value, log) {
 
 // --- waypoints ---
 
+const RESERVED = new Set(['__proto__', 'constructor', 'prototype'])
+
 function normName(name) {
-  return String(name || '').toLowerCase().trim().replace(/\s+/g, '_').slice(0, 32)
+  const key = String(name || '').toLowerCase().trim().replace(/\s+/g, '_').slice(0, 32)
+  // Only plain identifiers, and never object-prototype keys (a waypoint named
+  // "constructor" would resolve to Object and path the bot to undefined).
+  if (!/^[a-z0-9_]+$/.test(key) || RESERVED.has(key)) return ''
+  return key
 }
 
 function setWaypoint(name, pos, dimension, log) {

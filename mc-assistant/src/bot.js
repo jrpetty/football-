@@ -104,6 +104,7 @@ function wireEvents(bot, brain) {
     bot.assistant.busy = false
     bot.assistant.eating = false // a consume() cut short by death never clears it
     bot.assistant.taskSeq++ // abandon whatever long task was running
+    jobs.clear(bot) // drop stale queued work — recovering the gear comes first
     bot.assistant.currentTask = null
     bot.assistant.mode = 'idle'
     bot.assistant.patrol = null
