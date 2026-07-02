@@ -97,10 +97,12 @@ public final class MazeCommands {
             if (i > 0) schedule.append(" → ");
             schedule.append(cfg.layout(order[i]).name());
         }
-        String timer = state.timerRunning()
+        String timerBase = state.timerRunning()
             ? "running (" + MazeRuntime.formatMs(System.currentTimeMillis() - state.timerStartMs()) + ")"
             : state.lastRunMs() >= 0 ? "stopped — last run " + MazeRuntime.formatMs(state.lastRunMs()) : "stopped";
-        if (state.bestRunMs() >= 0) timer += " · best " + MazeRuntime.formatMs(state.bestRunMs());
+        String timer = state.bestRunMs() >= 0
+            ? timerBase + " · best " + MazeRuntime.formatMs(state.bestRunMs())
+            : timerBase; // effectively final for the lambda below
 
         source.sendSuccess(() -> Component.literal(String.join("\n",
             "Maze — day " + state.dayNumber() + ", layout " + layout.name()
