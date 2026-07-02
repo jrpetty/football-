@@ -31,6 +31,8 @@ async function goto(bot, { x, y, z, range = 1 }) {
   if ([x, y, z].some((v) => typeof v !== 'number' || Number.isNaN(v))) {
     return 'I need valid x, y, z coordinates to go there.'
   }
+  // A one-shot destination supersedes a follow standing order.
+  if (bot.assistant.mode === 'follow') bot.assistant.mode = 'idle'
   bot.assistant.currentTask = `going to ${Math.round(x)}, ${Math.round(y)}, ${Math.round(z)}`
   await bot.pathfinder.goto(new goals.GoalNear(x, y, z, range))
   bot.assistant.currentTask = null
@@ -41,6 +43,8 @@ async function goto(bot, { x, y, z, range = 1 }) {
 async function come(bot) {
   const owner = ownerEntity(bot)
   if (!owner) return "I can't see you right now — get closer or say where you are."
+  // "Come" is one-shot; it replaces a follow standing order.
+  if (bot.assistant.mode === 'follow') bot.assistant.mode = 'idle'
   bot.assistant.currentTask = 'coming to you'
   const p = owner.position
   await bot.pathfinder.goto(new goals.GoalNear(p.x, p.y, p.z, bot.assistant.config.followRange))

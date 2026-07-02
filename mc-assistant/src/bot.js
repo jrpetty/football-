@@ -32,10 +32,11 @@ function createAssistantBot(config, log, brain) {
     owner: config.owner || null,
     mode: 'idle', // idle | follow | guard | gather | hunt
     currentTask: null,
-    busy: false, // a long action (gather/hunt) is running
+    busy: false, // a long action (gather/hunt/build) is running
     combat: false, // survival loop has taken over for a fight
     fleeing: false, // retreating due to low health
     eating: false,
+    taskSeq: 0, // bumped by stop() so long-running loops know to bail
     history: [],
     _chatQueue: [],
     _chatTimer: null,
@@ -79,6 +80,8 @@ function wireEvents(bot, brain) {
     bot.assistant.combat = false
     bot.assistant.fleeing = false
     bot.assistant.busy = false
+    bot.assistant.eating = false // a consume() cut short by death never clears it
+    bot.assistant.taskSeq++ // abandon whatever long task was running
     bot.assistant.currentTask = null
     log.warn('I died.')
     bot.assistant.narrate('Ugh — I died. Respawning.')

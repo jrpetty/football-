@@ -37,9 +37,11 @@ function classify(bot, username, message, isWhisper) {
   if (cfg.prefix && message.startsWith(cfg.prefix)) {
     return { addressed: true, body: message.slice(cfg.prefix.length).trim() }
   }
-  if (lower.includes(name)) {
+  // Whole-word match only, so a short bot name doesn't fire on substrings
+  // (e.g. a bot named "Bot" must not trigger on "what about diamonds").
+  const re = new RegExp(`\\b${bot.username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i')
+  if (re.test(message)) {
     // Strip the first mention of the bot's name so parsers see just the request.
-    const re = new RegExp(bot.username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
     return { addressed: true, body: message.replace(re, '').replace(/^[,:\s]+/, '').trim() }
   }
   return { addressed: false, body: '' }
@@ -54,16 +56,17 @@ async function handle(bot, brain, username, body, rawMessage) {
     bot.assistant.reply(`You're my owner now, ${username}. I've got your back.`)
   }
 
-  // Owner policy.
-  if (cfg.ownerOnly && username !== bot.assistant.owner) {
+  // Owner policy (case-insensitive: MC_OWNER casing may not match the account).
+  if (cfg.ownerOnly && username.toLowerCase() !== String(bot.assistant.owner).toLowerCase()) {
     bot.assistant.log.debug(`Ignoring non-owner ${username}: ${rawMessage}`)
     return
   }
 
   if (!body) { bot.assistant.reply(statusLine(bot)); return }
 
-  if (/^help\b/i.test(body)) {
-    bot.assistant.reply('I can: come, follow, stop, goto x y z, gather <res> [n], hunt, eat, guard, attack, deposit, drop <item>, status, inventory. Just talk normally too.')
+  // Bare "help" only — "help me fight the creeper" must reach the brain.
+  if (/^help[!.?\s]*$/i.test(body)) {
+    bot.assistant.reply('I can: come, follow, stop, goto x y z, gather <res> [n], hunt, eat, guard, attack, build <wall|house|tower|platform|pillar|bridge>, deposit, drop <item>, status, inventory. Just talk normally too.')
     return
   }
 

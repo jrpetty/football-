@@ -76,6 +76,18 @@ function tick(bot) {
 
   // 3) FEED — top up hunger when it's safe to do so.
   maybeEat(bot)
+
+  // 4) STANDING ORDERS — if we're meant to be following but the pathfinder
+  // goal got dropped (owner left render distance, a one-shot task finished,
+  // combat cleared while they were away), quietly pick it back up.
+  if (bot.assistant.mode === 'follow' && !bot.assistant.busy && !bot.assistant.eating) {
+    const owner = ownerEntity(bot)
+    if (owner && !bot.pathfinder.goal) {
+      try {
+        bot.pathfinder.setGoal(new goals.GoalFollow(owner, cfg.followRange), true)
+      } catch (_) { /* pathfinder busy */ }
+    }
+  }
 }
 
 function maybeEat(bot) {

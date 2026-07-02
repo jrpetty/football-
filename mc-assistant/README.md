@@ -20,7 +20,8 @@ way.
 | Category | Capabilities |
 |---|---|
 | **Food** | Hunts nearby animals (`hunt`), auto-eats when hunger drops, eats on command (`eat`). |
-| **Resources** | Mines/collects wood, stone, coal, iron, gold, diamond, dirt, sand and more (`gather <resource> [amount]`). |
+| **Resources** | Mines/collects wood, stone, coal, iron, gold, diamond, dirt, sand and more within a **20-block radius** by default (`gather <resource> [amount]`, radius configurable). |
+| **Building** | Builds layouts you pick, right where it's facing: **wall, platform, pillar, tower, house, bridge** — with your choice of size and material (`build house`, `build a stone wall 8 long 3 high`, `build 5x5 platform`). |
 | **Defense** | Fights hostiles that come near it or you, equips its best weapon + armor, guards you on command (`guard`, `attack`). |
 | **Movement** | `come`, `follow`, `goto <x> <y> <z>`, `stop`. |
 | **Logistics** | Stashes loot in a nearby chest (`deposit`), drops items (`drop <item>`). |
@@ -51,10 +52,17 @@ In game, talk to it (owner only by default):
 !gather 16 wood
 !hunt
 !guard
+!build house                             # or: build a cobblestone wall 8 long 3 high
+!build 5x5 platform
 grab me some stone then come back        # natural language (needs an API key)
 !status
 !stop
 ```
+
+Building happens **in front of the bot, facing the way it looks** — walk it to
+the spot (`come` / `follow`), face it the right way, then ask. Houses and
+towers get a doorway on the side facing it. It builds with the material you
+name (if it's carrying any), otherwise common blocks from its inventory.
 
 It also answers to **whispers** (`/msg Assistant follow me`) and to messages
 that mention its name.
@@ -92,7 +100,8 @@ index.js            → connect + reconnect loop
       rules.js      → offline keyword parser (no API key needed)
     skills/
       movement.js   → come / follow / goto / retreat            (mineflayer-pathfinder)
-      gather.js     → mine resources                            (mineflayer-collectblock)
+      gather.js     → mine resources within a radius            (mineflayer-collectblock)
+      build.js      → blueprint layouts: wall/platform/pillar/tower/house/bridge
       food.js       → hunt animals, eat
       defense.js    → fight hostiles, guard, equip gear         (mineflayer-pvp, armor-manager)
       inventory.js  → deposit to chests, drop items

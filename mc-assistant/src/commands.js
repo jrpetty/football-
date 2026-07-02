@@ -5,6 +5,7 @@ const gather = require('./skills/gather')
 const food = require('./skills/food')
 const defense = require('./skills/defense')
 const inventory = require('./skills/inventory')
+const build = require('./skills/build')
 const { snapshot } = require('./state')
 
 // ---------------------------------------------------------------------------
@@ -44,17 +45,35 @@ const registry = {
   },
 
   gather: {
-    describe: 'Mine/collect a resource. resource is one of: wood, stone, coal, iron, gold, diamond, redstone, lapis, copper, emerald, dirt, sand, gravel.',
+    describe: 'Mine/collect a resource within a search radius (default 20 blocks). resource is one of: wood, stone, coal, iron, gold, diamond, redstone, lapis, copper, emerald, dirt, sand, gravel. Optional radius widens/narrows the search.',
     schema: {
       type: 'object',
       properties: {
         resource: { type: 'string' },
         amount: { type: 'integer', minimum: 1, maximum: 64 },
+        radius: { type: 'integer', minimum: 4, maximum: 64 },
       },
       required: ['resource'],
       additionalProperties: false,
     },
-    run: (bot, a) => gather.gather(bot, a),
+    run: (bot, a) => gather.gather(bot, { resource: a.resource, amount: a.amount, maxDistance: a.radius }),
+  },
+
+  build: {
+    describe: 'Build a structure right in front of the bot, facing the way it looks. structure is one of: wall, platform, pillar, tower, house, bridge (aliases like hut/shelter/floor/column work). Optional material (cobblestone, stone, dirt, planks, sand, ...) — otherwise it uses common blocks it carries. Optional width/length/height in blocks (max 16).',
+    schema: {
+      type: 'object',
+      properties: {
+        structure: { type: 'string' },
+        material: { type: 'string' },
+        width: { type: 'integer', minimum: 1, maximum: 16 },
+        length: { type: 'integer', minimum: 1, maximum: 16 },
+        height: { type: 'integer', minimum: 1, maximum: 16 },
+      },
+      required: ['structure'],
+      additionalProperties: false,
+    },
+    run: (bot, a) => build.build(bot, a),
   },
 
   hunt: {
@@ -136,6 +155,9 @@ const registry = {
 }
 
 function stopAll(bot) {
+  // Bump the task sequence so long-running loops (gather/hunt/build) notice
+  // they've been superseded and bail out at their next check.
+  bot.assistant.taskSeq++
   bot.assistant.mode = 'idle'
   bot.assistant.currentTask = null
   bot.assistant.busy = false

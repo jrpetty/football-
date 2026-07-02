@@ -41,16 +41,19 @@ function blockIdsFor(bot, resource) {
   return ids
 }
 
-// Gather `amount` of a resource. Digs blocks one target at a time, re-scanning
-// after each so it keeps finding fresh veins/trees until it hits the quota.
-async function gather(bot, { resource, amount = 8, maxDistance = 48 }) {
+// Gather `amount` of a resource within the configured search radius (default
+// 20 blocks; override per-call). Digs one target at a time, re-scanning after
+// each so it keeps finding fresh veins/trees until it hits the quota.
+async function gather(bot, { resource, amount = 8, maxDistance }) {
   const key = String(resource || '').toLowerCase()
   const ids = blockIdsFor(bot, key)
   if (!ids || ids.length === 0) {
     return `I don't know how to gather "${resource}". Try wood, stone, coal, iron, gold, diamond, dirt, or sand.`
   }
 
+  const radius = Math.max(4, Math.min(64, Math.floor(Number(maxDistance)) || bot.assistant.config.gatherRadius))
   const want = Math.max(1, Math.min(64, Math.floor(amount) || 8))
+  const seq = bot.assistant.taskSeq
   bot.assistant.mode = 'gather'
   bot.assistant.currentTask = `gathering ${want} ${key}`
   bot.assistant.busy = true
@@ -59,10 +62,10 @@ async function gather(bot, { resource, amount = 8, maxDistance = 48 }) {
   let misses = 0
   try {
     while (collected < want && misses < 3) {
-      // Bail out if survival reflexes took over (combat / fleeing).
-      if (bot.assistant.combat || bot.assistant.fleeing) break
+      // Bail out if told to stop, or if survival reflexes took over.
+      if (bot.assistant.taskSeq !== seq || bot.assistant.combat || bot.assistant.fleeing) break
 
-      const block = bot.findBlock({ matching: ids, maxDistance, count: 1 })
+      const block = bot.findBlock({ matching: ids, maxDistance: radius, count: 1 })
       if (!block) { misses++; continue }
       misses = 0
       try {
@@ -80,7 +83,7 @@ async function gather(bot, { resource, amount = 8, maxDistance = 48 }) {
     if (bot.assistant.mode === 'gather') bot.assistant.mode = 'idle'
   }
 
-  if (collected === 0) return `Couldn't find any ${key} within ${maxDistance} blocks.`
+  if (collected === 0) return `Couldn't find any ${key} within ${radius} blocks.`
   if (collected < want) return `Got ${collected} ${key} — couldn't reach any more nearby.`
   return `Done — gathered ${collected} ${key}.`
 }

@@ -37,16 +37,19 @@ async function hunt(bot, { radius = 32 } = {}) {
   const target = nearestFoodMob(bot, radius)
   if (!target) return `No animals to hunt within ${radius} blocks.`
 
+  const seq = bot.assistant.taskSeq
   bot.assistant.mode = 'hunt'
   bot.assistant.currentTask = `hunting ${target.name}`
   bot.assistant.busy = true
   const killPos = target.position.clone()
+  const cancelled = () => bot.assistant.taskSeq !== seq
 
   try {
-    // Chase and attack until it dies or wanders off.
+    // Chase and attack until it dies, wanders off, or we're told to stop.
     bot.pvp.attack(target)
-    await waitUntil(bot, () => !target.isValid || bot.assistant.combat, 15000)
+    await waitUntil(bot, () => !target.isValid || bot.assistant.combat || cancelled(), 15000)
     bot.pvp.stop()
+    if (cancelled()) return 'Called off the hunt.'
 
     // Sweep up drops around where it fell.
     try {

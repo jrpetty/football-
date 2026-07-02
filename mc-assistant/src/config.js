@@ -58,6 +58,7 @@ const config = {
   defendRadius: num('MC_DEFEND_RADIUS', 8), // blocks: hostiles this close trigger self-defense
   guardRadius: num('MC_GUARD_RADIUS', 12), // blocks around owner we watch while guarding
   followRange: num('MC_FOLLOW_RANGE', 3), // how close we trail the owner
+  gatherRadius: num('MC_GATHER_RADIUS', 20), // blocks: how far it searches for resources
 
   // --- Behaviour ---
   // Narrate what it's doing / feeling in chat (the "self-aware" voice).
