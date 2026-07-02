@@ -131,12 +131,13 @@ public class GatherGoal extends Goal {
             }
         }
 
-        double distSq = assistant.distanceToSqr(
+        // Player-parity reach: measured eye-to-block-center, 4.5 blocks.
+        double distSq = assistant.getEyePosition().distanceToSqr(
             targetPos.getX() + 0.5, targetPos.getY() + 0.5, targetPos.getZ() + 0.5);
         assistant.getLookControl().setLookAt(
             targetPos.getX() + 0.5, targetPos.getY() + 0.5, targetPos.getZ() + 0.5);
 
-        if (distSq > 4.5 * 4.5) {
+        if (distSq > AssistantEntity.BLOCK_REACH * AssistantEntity.BLOCK_REACH) {
             // Still walking there.
             if (assistant.getNavigation().isDone()) {
                 assistant.getNavigation().moveTo(

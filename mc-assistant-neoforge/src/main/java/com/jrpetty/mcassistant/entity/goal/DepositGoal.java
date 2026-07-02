@@ -73,12 +73,13 @@ public class DepositGoal extends Goal {
     public void tick() {
         if (!active || chestPos == null) return;
 
-        double distSq = assistant.distanceToSqr(
+        // Player-parity reach: use a chest from 4.5 blocks, like a player would.
+        double distSq = assistant.getEyePosition().distanceToSqr(
             chestPos.getX() + 0.5, chestPos.getY() + 0.5, chestPos.getZ() + 0.5);
         assistant.getLookControl().setLookAt(
             chestPos.getX() + 0.5, chestPos.getY() + 0.5, chestPos.getZ() + 0.5);
 
-        if (distSq > 3.0 * 3.0) {
+        if (distSq > AssistantEntity.BLOCK_REACH * AssistantEntity.BLOCK_REACH) {
             if (assistant.getNavigation().isDone()) {
                 assistant.getNavigation().moveTo(
                     chestPos.getX() + 0.5, chestPos.getY(), chestPos.getZ() + 0.5, 1.1D);

@@ -48,6 +48,11 @@ public class AssistantEntity extends PathfinderMob {
 
     public static final int INVENTORY_SIZE = 27;
 
+    // Player-parity reach: same as a survival player's default
+    // block_interaction_range (4.5) and entity_interaction_range (3.0).
+    public static final double BLOCK_REACH = 4.5;
+    public static final double ENTITY_REACH = 3.0;
+
     // Owner UUID -> live assistant, so commands find it no matter how far it
     // has wandered (the old proximity-only search lost it after a gather trip,
     // which is why it "stopped listening" after one command).
@@ -317,6 +322,12 @@ public class AssistantEntity extends PathfinderMob {
             BY_OWNER.remove(ownerId, this);
         }
         super.remove(reason);
+    }
+
+    /** Melee reach like a player's ~3 blocks, instead of the stubby mob default. */
+    @Override
+    protected net.minecraft.world.phys.AABB getAttackBoundingBox() {
+        return super.getAttackBoundingBox().inflate(1.25, 0.0, 1.25);
     }
 
     @Override
