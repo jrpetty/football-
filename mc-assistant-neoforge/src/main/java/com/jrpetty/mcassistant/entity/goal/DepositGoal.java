@@ -30,12 +30,12 @@ public class DepositGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        return assistant.hasDepositRequest() && assistant.getTarget() == null;
+        return assistant.hasDepositRequest() && assistant.getTarget() == null && !assistant.isStopRequested();
     }
 
     @Override
     public boolean canContinueToUse() {
-        return active && assistant.getTarget() == null;
+        return active && assistant.getTarget() == null && !assistant.isStopRequested();
     }
 
     @Override

@@ -34,6 +34,8 @@ public final class AssistantCommands {
             .then(Commands.literal("stay").executes(ctx -> setMode(ctx, AssistantEntity.Mode.STAY, "Holding position.")))
             .then(Commands.literal("guard").executes(ctx -> setMode(ctx, AssistantEntity.Mode.GUARD, "Guard mode on — I'll watch your back.")))
             .then(Commands.literal("come").executes(AssistantCommands::come))
+            .then(Commands.literal("stop").executes(AssistantCommands::stop))
+            .then(Commands.literal("open").executes(AssistantCommands::open))
             .then(Commands.literal("status").executes(AssistantCommands::status))
             .then(Commands.literal("deposit").executes(AssistantCommands::deposit))
             .then(Commands.literal("dismiss").executes(AssistantCommands::dismiss))
@@ -107,6 +109,25 @@ public final class AssistantCommands {
         AssistantEntity a = requireAssistant(ctx);
         if (a == null) return 0;
         a.requestDeposit();
+        return 1;
+    }
+
+    private static int stop(CommandContext<CommandSourceStack> ctx) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        a.requestStop();
+        return 1;
+    }
+
+    private static int open(CommandContext<CommandSourceStack> ctx) {
+        ServerPlayer player = ctx.getSource().getPlayer();
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null || player == null) return 0;
+        player.openMenu(
+            new net.minecraft.world.SimpleMenuProvider(
+                (id, inv, p) -> new com.jrpetty.mcassistant.menu.AssistantMenu(id, inv, a),
+                Component.literal("Assistant")),
+            buf -> buf.writeVarInt(a.getId()));
         return 1;
     }
 

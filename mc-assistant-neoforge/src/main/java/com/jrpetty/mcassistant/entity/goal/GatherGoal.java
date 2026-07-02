@@ -67,12 +67,12 @@ public class GatherGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        return assistant.hasGatherRequest() && assistant.getTarget() == null;
+        return assistant.hasGatherRequest() && assistant.getTarget() == null && !assistant.isStopRequested();
     }
 
     @Override
     public boolean canContinueToUse() {
-        return request != null && assistant.getTarget() == null;
+        return request != null && assistant.getTarget() == null && !assistant.isStopRequested();
     }
 
     @Override

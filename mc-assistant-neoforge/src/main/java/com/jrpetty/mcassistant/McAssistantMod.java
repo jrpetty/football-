@@ -1,12 +1,15 @@
 package com.jrpetty.mcassistant;
 
 import com.jrpetty.mcassistant.entity.AssistantEntity;
+import com.jrpetty.mcassistant.menu.AssistantMenu;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.inventory.MenuType;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -23,6 +26,8 @@ public final class McAssistantMod {
 
     private static final DeferredRegister<EntityType<?>> ENTITY_TYPES =
         DeferredRegister.create(Registries.ENTITY_TYPE, MODID);
+    private static final DeferredRegister<MenuType<?>> MENU_TYPES =
+        DeferredRegister.create(Registries.MENU, MODID);
 
     public static final DeferredHolder<EntityType<?>, EntityType<AssistantEntity>> ASSISTANT =
         ENTITY_TYPES.register("assistant", () -> EntityType.Builder
@@ -31,8 +36,13 @@ public final class McAssistantMod {
             .clientTrackingRange(10)
             .build("assistant"));
 
+    // Extended menu type: the entity id travels to the client in the buffer.
+    public static final DeferredHolder<MenuType<?>, MenuType<AssistantMenu>> ASSISTANT_MENU =
+        MENU_TYPES.register("assistant", () -> IMenuTypeExtension.create(AssistantMenu::new));
+
     public McAssistantMod(IEventBus modBus) {
         ENTITY_TYPES.register(modBus);
+        MENU_TYPES.register(modBus);
         modBus.addListener(this::onEntityAttributes);
 
         NeoForge.EVENT_BUS.register(AssistantCommands.class);

@@ -53,6 +53,9 @@ public class AssistantEntity extends PathfinderMob {
     // One-shot task state, driven by GatherGoal / DepositGoal.
     @Nullable private GatherGoal.Request gatherRequest;
     private boolean depositRequested;
+    // Momentary "abort current task" flag — set by the Stop button / !stop,
+    // read by the one-shot goals, and auto-cleared each tick.
+    private boolean stopRequested;
 
     public AssistantEntity(EntityType<? extends PathfinderMob> type, Level level) {
         super(type, level);
@@ -183,6 +186,7 @@ public class AssistantEntity extends PathfinderMob {
     // ------------------------------ task requests -----------------------------
 
     public void requestGather(GatherGoal.Kind kind, int amount) {
+        this.stopRequested = false;
         this.gatherRequest = new GatherGoal.Request(kind, Math.max(1, Math.min(64, amount)));
     }
 
@@ -198,6 +202,7 @@ public class AssistantEntity extends PathfinderMob {
     }
 
     public void requestDeposit() {
+        this.stopRequested = false;
         this.depositRequested = true;
     }
 
@@ -209,6 +214,22 @@ public class AssistantEntity extends PathfinderMob {
 
     public boolean hasDepositRequest() {
         return depositRequested;
+    }
+
+    /** Stop the current task and any pending one, and hold position. */
+    public void requestStop() {
+        this.stopRequested = true;
+        this.gatherRequest = null;
+        this.depositRequested = false;
+        this.setTarget(null);
+        this.getNavigation().stop();
+        this.setMode(Mode.STAY);
+        say("Stopping.");
+    }
+
+    /** Read by the one-shot goals so they abort mid-task. */
+    public boolean isStopRequested() {
+        return stopRequested;
     }
 
     // ------------------------------ persistence ------------------------------
@@ -235,6 +256,37 @@ public class AssistantEntity extends PathfinderMob {
 
     // -------------------------------- behavior --------------------------------
 
+    /** Right-click by the owner opens the management GUI (backpack, armor, tools, buttons). */
+    @Override
+    protected net.minecraft.world.InteractionResult mobInteract(Player player, net.minecraft.world.InteractionHand hand) {
+        ItemStack held = player.getItemInHand(hand);
+        // Let leads / name tags behave normally; everything else opens the menu.
+        if (held.is(net.minecraft.world.item.Items.LEAD) || held.is(net.minecraft.world.item.Items.NAME_TAG)) {
+            return super.mobInteract(player, hand);
+        }
+        if (!isOwner(player)) {
+            if (!this.level().isClientSide) say("You're not my owner.");
+            return net.minecraft.world.InteractionResult.sidedSuccess(this.level().isClientSide());
+        }
+        if (!this.level().isClientSide && player instanceof net.minecraft.server.level.ServerPlayer sp) {
+            sp.openMenu(
+                new net.minecraft.world.SimpleMenuProvider(
+                    (id, inv, p) -> new com.jrpetty.mcassistant.menu.AssistantMenu(id, inv, this),
+                    net.minecraft.network.chat.Component.literal("Assistant")),
+                buf -> buf.writeVarInt(this.getId()));
+        }
+        return net.minecraft.world.InteractionResult.sidedSuccess(this.level().isClientSide());
+    }
+
+    /** Clear the momentary stop flag after the goals have had a tick to see it. */
+    @Override
+    public void aiStep() {
+        super.aiStep();
+        if (!this.level().isClientSide && this.stopRequested) {
+            this.stopRequested = false;
+        }
+    }
+
     @Override
     public boolean hurt(DamageSource source, float amount) {
         // Don't fight the owner over friendly fire.
@@ -244,7 +296,7 @@ public class AssistantEntity extends PathfinderMob {
         return super.hurt(source, amount);
     }
 
-    /** Drop the whole inventory on death so nothing is lost. */
+    /** Drop the backpack AND worn gear on death so nothing the player gave it is lost. */
     @Override
     protected void dropCustomDeathLoot(net.minecraft.server.level.ServerLevel level, DamageSource source, boolean hitByPlayer) {
         super.dropCustomDeathLoot(level, source, hitByPlayer);
@@ -253,6 +305,13 @@ public class AssistantEntity extends PathfinderMob {
             if (!s.isEmpty()) {
                 this.spawnAtLocation(s);
                 inventory.set(i, ItemStack.EMPTY);
+            }
+        }
+        for (net.minecraft.world.entity.EquipmentSlot slot : net.minecraft.world.entity.EquipmentSlot.values()) {
+            ItemStack s = this.getItemBySlot(slot);
+            if (!s.isEmpty()) {
+                this.spawnAtLocation(s);
+                this.setItemSlot(slot, ItemStack.EMPTY);
             }
         }
     }

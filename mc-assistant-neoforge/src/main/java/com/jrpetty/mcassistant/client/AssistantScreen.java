@@ -1,0 +1,107 @@
+package com.jrpetty.mcassistant.client;
+
+import com.jrpetty.mcassistant.entity.AssistantEntity;
+import com.jrpetty.mcassistant.menu.AssistantInventoryContainer;
+import com.jrpetty.mcassistant.menu.AssistantMenu;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Inventory;
+
+/**
+ * The right-click management GUI. Draws a simple panel (no texture asset
+ * needed), the assistant's backpack + equipment slots, the player's inventory,
+ * and a row of control buttons — Stop, Follow, Stay, Guard, Deposit, Come —
+ * that fire server-side actions on the entity via the menu.
+ */
+public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
+
+    private static final int PANEL = 0xFFC6C6C6;   // vanilla-ish grey
+    private static final int PANEL_HI = 0xFFFFFFFF; // top/left highlight
+    private static final int PANEL_LO = 0xFF555555; // bottom/right shadow
+    private static final int SLOT_BG = 0xFF8B8B8B;
+    private static final int SLOT_HI = 0xFF373737;
+
+    public AssistantScreen(AssistantMenu menu, Inventory playerInv, Component title) {
+        super(menu, playerInv, title);
+        this.imageWidth = 176;
+        this.imageHeight = 222;
+        this.inventoryLabelY = this.imageHeight - 94; // unused label, kept sane
+    }
+
+    @Override
+    protected void init() {
+        super.init();
+        int x = this.leftPos;
+        int y = this.topPos;
+
+        // Two rows of three control buttons, between equipment and inventory.
+        int bw = 48, bh = 18;
+        int[] cols = { x + 8, x + 62, x + 116 };
+        int row1 = y + 98, row2 = y + 118;
+
+        addButton(cols[0], row1, bw, bh, "Stop", AssistantMenu.BTN_STOP);
+        addButton(cols[1], row1, bw, bh, "Follow", AssistantMenu.BTN_FOLLOW);
+        addButton(cols[2], row1, bw, bh, "Stay", AssistantMenu.BTN_STAY);
+        addButton(cols[0], row2, bw, bh, "Guard", AssistantMenu.BTN_GUARD);
+        addButton(cols[1], row2, bw, bh, "Deposit", AssistantMenu.BTN_DEPOSIT);
+        addButton(cols[2], row2, bw, bh, "Come", AssistantMenu.BTN_COME);
+    }
+
+    private void addButton(int x, int y, int w, int h, String label, int buttonId) {
+        this.addRenderableWidget(Button.builder(Component.literal(label), b -> {
+            if (this.minecraft != null && this.minecraft.gameMode != null) {
+                this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, buttonId);
+            }
+        }).bounds(x, y, w, h).build());
+    }
+
+    @Override
+    protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
+        int x = this.leftPos;
+        int y = this.topPos;
+
+        // Panel with a beveled border.
+        g.fill(x, y, x + imageWidth, y + imageHeight, PANEL);
+        g.fill(x, y, x + imageWidth, y + 1, PANEL_HI);
+        g.fill(x, y, x + 1, y + imageHeight, PANEL_HI);
+        g.fill(x, y + imageHeight - 1, x + imageWidth, y + imageHeight, PANEL_LO);
+        g.fill(x + imageWidth - 1, y, x + imageWidth, y + imageHeight, PANEL_LO);
+
+        // Slot cells (18x18) matching the menu's slot positions.
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 9; col++) drawSlot(g, x + 8 + col * 18, y + 18 + row * 18);
+        }
+        for (int i = 0; i < AssistantInventoryContainer.EQUIP; i++) {
+            drawSlot(g, x + 8 + i * 18, y + 78);
+        }
+        int invY = 140;
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 9; col++) drawSlot(g, x + 8 + col * 18, y + invY + row * 18);
+        }
+        for (int col = 0; col < 9; col++) drawSlot(g, x + 8 + col * 18, y + invY + 58);
+    }
+
+    private void drawSlot(GuiGraphics g, int x, int y) {
+        // 18x18 cell drawn one pixel out so the 16x16 item sits centered at +1.
+        g.fill(x - 1, y - 1, x + 17, y + 17, SLOT_HI);
+        g.fill(x - 1, y - 1, x + 17, y, SLOT_HI);
+        g.fill(x, y, x + 16, y + 16, SLOT_BG);
+    }
+
+    @Override
+    protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
+        g.drawString(this.font, this.title, 8, 6, 0x404040, false);
+        AssistantEntity a = this.menu.getAssistant();
+        String mode = a != null ? a.getMode().name() : "?";
+        g.drawString(this.font, Component.literal("Mode: " + mode), 8, 68, 0x404040, false);
+        g.drawString(this.font, Component.literal("armor + hands →"), 8 + 6 * 18 + 2, 82, 0x606060, false);
+    }
+
+    @Override
+    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        super.render(g, mouseX, mouseY, partialTick);
+        this.renderTooltip(g, mouseX, mouseY);
+    }
+}

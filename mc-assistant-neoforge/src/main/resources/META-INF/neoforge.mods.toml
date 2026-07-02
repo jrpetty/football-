@@ -10,7 +10,9 @@ description = '''
 An in-game AI companion: spawn it, and it follows you, guards you against
 hostiles, gathers logs and stone on command, and stashes loot in chests.
 Control it with /assistant commands or by chat: "!follow", "!guard",
-"!gather logs 16", "!deposit", "!come", "!stay", "!status".
+"!gather logs 16", "!deposit", "!come", "!stay", "!stop", "!status".
+Right-click it to open its inventory — manage its backpack, armor, and tools,
+with Stop / Follow / Stay / Guard / Deposit / Come buttons built in.
 '''
 authors = "jrpetty"
 
