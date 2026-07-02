@@ -34,8 +34,11 @@ function loadPresets(log) {
   try {
     const raw = JSON.parse(fs.readFileSync(PRESETS_FILE, 'utf8'))
     const list = Array.isArray(raw) ? raw : raw.presets
+    // A preset is either a single action or a multi-step job (steps: [...]).
     const valid = (list || []).filter(
-      (p) => p && typeof p.label === 'string' && typeof p.action === 'string',
+      (p) => p && typeof p.label === 'string' &&
+        (typeof p.action === 'string' ||
+          (Array.isArray(p.steps) && p.steps.every((s) => s && typeof s.action === 'string'))),
     )
     if (valid.length > 0) {
       cached = valid
@@ -129,8 +132,16 @@ async function pick(bot, username, n) {
   bot.assistant.reply(`On it: ${preset.label}`)
   // Lazy require avoids a cycle (commands.js exposes a menu action too).
   const { dispatch } = require('./commands')
-  const result = await dispatch(bot, preset.action, preset.args || {})
-  if (result) bot.assistant.reply(result)
+  const steps = Array.isArray(preset.steps)
+    ? preset.steps
+    : [{ action: preset.action, args: preset.args }]
+  const seq = bot.assistant.taskSeq
+  for (let i = 0; i < steps.length; i++) {
+    if (bot.assistant.taskSeq !== seq) break // "stop" cancels the rest of the job
+    const step = steps[i]
+    const result = await dispatch(bot, step.action, step.args || {})
+    if (result) bot.assistant.reply(steps.length > 1 ? `[${i + 1}/${steps.length}] ${result}` : result)
+  }
 }
 
 module.exports = { show, pick, isRecent, loadPresets, renderClickable, renderTextLines, versionAtLeast, DEFAULT_PRESETS }

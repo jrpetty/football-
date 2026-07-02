@@ -25,7 +25,10 @@ way.
 | **Defense** | Fights hostiles that come near it or you, equips its best weapon + armor, guards you on command (`guard`, `attack`). |
 | **Movement** | `come`, `follow`, `goto <x> <y> <z>`, `stop`. |
 | **Crafting** | Crafts by player rules — planks, sticks, crafting table, tools, torches, furnace, chest (`craft stone pickaxe`). Finds a crafting table for 3x3 recipes or tells you it needs one. |
-| **Task menu** | `menu` opens a preset task list in game — clickable buttons (if the bot is op'd) or numbered picks (`m 3`). Presets are yours to edit in `presets.json`. |
+| **Smelting** | Real furnace, real fuel, real time: `smelt iron`, `cook my meat` (cooks whatever raw meat it holds), sand → glass, cobble → stone. Says what's missing (furnace/fuel/materials). |
+| **Farming** | `farm` harvests ripe wheat/carrots/potatoes/beetroot in its radius, replants from the drops, and seeds bare farmland. |
+| **Delivery** | `bring me 16 wood` gathers then walks back and hands it over; `give me the iron` / "hand over the loot" tosses items at your feet. |
+| **Task menu** | `menu` opens a preset task list in game — clickable buttons (if the bot is op'd) or numbered picks (`m 3`). Presets are yours to edit in `presets.json`, including **multi-step jobs** ("Full wood run: chop → plank → stash"). |
 | **Logistics** | Stashes loot in a nearby chest (`deposit`), drops items (`drop <item>`), holds a named tool (`equip axe`). |
 | **Awareness** | Reports `status` / `inventory`, and narrates what it's doing/feeling in chat. |
 
@@ -133,9 +136,11 @@ index.js            → connect + reconnect loop
       gather.js     → mine resources within a radius, tool-tier rules (mineflayer-collectblock)
       build.js      → blueprint layouts: wall/platform/pillar/tower/house/bridge
       craft.js      → player-rules crafting: planks -> sticks -> table -> tools
+      smelt.js      → furnace smelting/cooking with real fuel
+      farm.js       → harvest ripe crops, replant, seed farmland
       food.js       → hunt animals, eat
       defense.js    → fight hostiles, guard, equip gear         (mineflayer-pvp, armor-manager)
-      inventory.js  → deposit to chests, drop items
+      inventory.js  → deposit to chests, drop items, hand deliveries to the owner
       survival.js   → the autonomy loop (eat / defend / flee)
 ```
 

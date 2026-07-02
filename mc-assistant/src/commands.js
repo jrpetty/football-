@@ -7,6 +7,8 @@ const defense = require('./skills/defense')
 const inventory = require('./skills/inventory')
 const build = require('./skills/build')
 const craft = require('./skills/craft')
+const smelt = require('./skills/smelt')
+const farm = require('./skills/farm')
 const { snapshot } = require('./state')
 
 // ---------------------------------------------------------------------------
@@ -53,11 +55,49 @@ const registry = {
         resource: { type: 'string' },
         amount: { type: 'integer', minimum: 1, maximum: 64 },
         radius: { type: 'integer', minimum: 4, maximum: 64 },
+        deliver: { type: 'boolean', description: 'Bring the haul back to the owner and hand it over when done.' },
       },
       required: ['resource'],
       additionalProperties: false,
     },
-    run: (bot, a) => gather.gather(bot, { resource: a.resource, amount: a.amount, maxDistance: a.radius }),
+    run: (bot, a) => gather.gather(bot, { resource: a.resource, amount: a.amount, maxDistance: a.radius, deliver: a.deliver }),
+  },
+
+  smelt: {
+    describe: 'Smelt/cook items in a nearby furnace using real fuel from the inventory. item examples: iron, gold, copper, meat (cooks whatever raw meat it holds), fish, sand (glass), cobblestone (stone), potato.',
+    schema: {
+      type: 'object',
+      properties: {
+        item: { type: 'string' },
+        amount: { type: 'integer', minimum: 1, maximum: 64 },
+      },
+      required: ['item'],
+      additionalProperties: false,
+    },
+    run: (bot, a) => smelt.smelt(bot, a),
+  },
+
+  farm: {
+    describe: 'Harvest ripe crops (wheat, carrots, potatoes, beetroot) within the search radius, replant them, and seed any bare farmland with seeds it holds.',
+    schema: {
+      type: 'object',
+      properties: { radius: { type: 'integer', minimum: 4, maximum: 64 } },
+      additionalProperties: false,
+    },
+    run: (bot, a) => farm.farm(bot, a),
+  },
+
+  give: {
+    describe: 'Walk to the owner and hand items over (tosses them at their feet). item can be an exact name, a resource word (wood, iron, ...), or omitted for all loot (keeps tools/armor/food).',
+    schema: {
+      type: 'object',
+      properties: {
+        item: { type: 'string' },
+        amount: { type: 'integer', minimum: 1 },
+      },
+      additionalProperties: false,
+    },
+    run: (bot, a) => inventory.give(bot, a),
   },
 
   build: {

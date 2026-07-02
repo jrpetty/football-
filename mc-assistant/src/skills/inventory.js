@@ -1,7 +1,7 @@
 'use strict'
 
 const { goals } = require('mineflayer-pathfinder')
-const { FOODS } = require('../state')
+const { FOODS, ownerEntity } = require('../state')
 
 // Inventory management: stash loot into a nearby chest, or drop items on demand.
 
@@ -66,4 +66,59 @@ async function drop(bot, { item, amount } = {}) {
   return dropped > 0 ? `Dropped ${dropped} ${target}.` : `Couldn't drop ${item}.`
 }
 
-module.exports = { deposit, drop, isKeeper }
+// Which inventory stacks match a requested "thing" — accepts exact item names
+// ("oak_log"), resource words ("wood" -> logs; see gather's DROP_MATCHERS),
+// or loot/everything for all non-kit items.
+function matchingStacks(bot, item) {
+  const items = bot.inventory.items()
+  if (!item || /^(everything|all|loot|it)$/i.test(String(item).trim())) {
+    return items.filter((it) => !isKeeper(it.name))
+  }
+  const want = String(item).toLowerCase().trim().replace(/\s+/g, '_')
+  const { DROP_MATCHERS } = require('./gather') // lazy: gather requires us back
+  const dropMatch = DROP_MATCHERS[want]
+  if (dropMatch) return items.filter((it) => dropMatch(it.name))
+  return items.filter((it) => it.name === want || it.name.includes(want))
+}
+
+// Walk to the owner and toss items at their feet ("bring me the wood").
+async function give(bot, { item, amount } = {}) {
+  const owner = ownerEntity(bot)
+  if (!owner) return "I can't see you to hand anything over — come closer."
+
+  const stacks = matchingStacks(bot, item)
+  if (stacks.length === 0) {
+    return item ? `I'm not carrying any ${String(item).replace(/_/g, ' ')}.` : "I've got nothing to hand over."
+  }
+
+  bot.assistant.currentTask = 'bringing you the goods'
+  try {
+    const p = owner.position
+    try {
+      await bot.pathfinder.goto(new goals.GoalNear(p.x, p.y, p.z, 2))
+    } catch (_) {
+      return "I couldn't reach you to make the delivery."
+    }
+    // Face the owner so the toss lands at their feet.
+    try { await bot.lookAt(owner.position.offset(0, 1, 0)) } catch (_) { /* fine */ }
+
+    let remaining = amount ? Math.floor(amount) : Infinity
+    let handed = 0
+    for (const stack of stacks) {
+      if (remaining <= 0) break
+      const n = Math.min(stack.count, remaining)
+      try {
+        await bot.toss(stack.type, null, n)
+        handed += n
+        remaining -= n
+      } catch (err) {
+        bot.assistant.log.debug('toss failed:', err && err.message)
+      }
+    }
+    return handed > 0 ? `Here you go — ${handed} items.` : "Couldn't toss the items over."
+  } finally {
+    bot.assistant.currentTask = null
+  }
+}
+
+module.exports = { deposit, drop, give, matchingStacks, isKeeper }

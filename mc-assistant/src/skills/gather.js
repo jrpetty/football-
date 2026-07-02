@@ -41,6 +41,27 @@ function blockIdsFor(bot, resource) {
   return ids
 }
 
+// What each resource looks like in the inventory afterwards (drops differ
+// from blocks: stone drops cobblestone, iron ore drops raw iron, ...).
+const DROP_MATCHERS = {
+  wood: (n) => n.endsWith('_log') || n.endsWith('_stem'),
+  log: (n) => n.endsWith('_log') || n.endsWith('_stem'),
+  stone: (n) => n === 'cobblestone' || n === 'cobbled_deepslate',
+  cobblestone: (n) => n === 'cobblestone',
+  coal: (n) => n === 'coal',
+  iron: (n) => n === 'raw_iron',
+  gold: (n) => n === 'raw_gold' || n === 'gold_nugget',
+  diamond: (n) => n === 'diamond',
+  redstone: (n) => n === 'redstone',
+  lapis: (n) => n === 'lapis_lazuli',
+  copper: (n) => n === 'raw_copper',
+  emerald: (n) => n === 'emerald',
+  dirt: (n) => n === 'dirt',
+  sand: (n) => n === 'sand' || n === 'red_sand',
+  gravel: (n) => n === 'gravel' || n === 'flint',
+  netherrack: (n) => n === 'netherrack',
+}
+
 // Player rules: you only get drops with the right tool tier. Returns ok, or
 // the friendliest tool that would unlock the block (e.g. "stone pickaxe").
 const TOOL_TIERS = ['wooden', 'stone', 'golden', 'iron', 'diamond', 'netherite']
@@ -62,7 +83,8 @@ function harvestCheck(bot, block) {
 // Gather `amount` of a resource within the configured search radius (default
 // 20 blocks; override per-call). Digs one target at a time, re-scanning after
 // each so it keeps finding fresh veins/trees until it hits the quota.
-async function gather(bot, { resource, amount = 8, maxDistance }) {
+// With deliver=true it brings the haul back and hands it over.
+async function gather(bot, { resource, amount = 8, maxDistance, deliver = false }) {
   const key = String(resource || '').toLowerCase()
   const ids = blockIdsFor(bot, key)
   if (!ids || ids.length === 0) {
@@ -110,8 +132,15 @@ async function gather(bot, { resource, amount = 8, maxDistance }) {
   }
 
   if (collected === 0) return `Can't do that here — no ${key} within ${radius} blocks of me.`
-  if (collected < want) return `Got ${collected} ${key} — that's all there was within ${radius} blocks.`
-  return `Done — gathered ${collected} ${key}.`
+
+  let note = ''
+  if (deliver) {
+    const { give } = require('./inventory') // lazy: inventory has no cycle back, but keep symmetry
+    const handed = await give(bot, { item: key })
+    note = ` ${handed}`
+  }
+  if (collected < want) return `Got ${collected} ${key} — that's all there was within ${radius} blocks.${note}`
+  return `Done — gathered ${collected} ${key}.${note}`
 }
 
-module.exports = { install, gather, RESOURCE_MATCHERS }
+module.exports = { install, gather, RESOURCE_MATCHERS, DROP_MATCHERS }

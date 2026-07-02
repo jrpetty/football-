@@ -34,6 +34,13 @@ const MATERIAL_WORDS = [
 // "attack"/"kill" (e.g. "attack now", "kill him") means "nearest hostile".
 const KNOWN_MOBS = new Set([...HOSTILES, ...FOOD_MOBS, 'enderman', 'wolf', 'piglin', 'iron_golem', 'zombified_piglin'])
 
+// Words "smelt/cook X" understands offline (mapped further in skills/smelt.js).
+const SMELTABLE_WORDS = [
+  'iron', 'gold', 'copper', 'meat', 'food', 'fish', 'beef', 'porkchop', 'pork',
+  'chicken', 'mutton', 'rabbit', 'cod', 'salmon', 'potatoes', 'potato', 'kelp',
+  'sand', 'glass', 'cobblestone', 'stone', 'clay',
+]
+
 // Things "craft/make X" understands offline. Longest first so "stone pickaxe"
 // wins over "pickaxe" and "crafting table" over "table".
 const CRAFTABLES = [
@@ -115,6 +122,39 @@ function parse(text) {
   const coord = t.match(/\b(?:go\s*to|goto|head to|travel to|move to)\b[^-\d]*(-?\d+)[ ,]+(-?\d+)[ ,]+(-?\d+)/)
   if (coord) {
     return { action: 'goto', args: { x: Number(coord[1]), y: Number(coord[2]), z: Number(coord[3]) } }
+  }
+
+  // smelt / cook — before gather ("smelt iron" must not become a mining trip)
+  if (/\b(smelt|cook|bake|roast)\b/.test(t)) {
+    const word = SMELTABLE_WORDS.find((w) => new RegExp(`\\b${w}\\b`).test(t))
+    const amt = t.match(/\b(\d+)\b/)
+    return { action: 'smelt', args: { item: word || 'meat', amount: amt ? Number(amt[1]) : 8 } }
+  }
+
+  // farm / harvest crops — before gather ("harvest the wheat")
+  if (/\b(farm|crops?|replant|wheat|carrots?|potato(es)?|beetroots?)\b/.test(t) &&
+      /\b(farm|harvest|tend|plant|replant|pick)\b/.test(t)) {
+    return { action: 'farm', args: {} }
+  }
+
+  // give / hand over what it's carrying
+  const giveMatch = t.match(/\b(?:give me|hand me|hand over|pass me)\b\s*(?:the|my|your|some)?\s*([a-z_ ]+)?/)
+  if (giveMatch) {
+    const raw = (giveMatch[1] || '')
+      .replace(/\b(please|now|thanks|thank you|mate|bro)\b/g, '')
+      .trim()
+    const item = raw && !/^(everything|all|loot|items|stuff)$/.test(raw) ? raw : undefined
+    return { action: 'give', args: item ? { item } : {} }
+  }
+
+  // bring me X — gather it (if needed) and deliver it
+  if (/\b(bring|deliver|fetch)\b.*\bme\b|\bbring me\b/.test(t)) {
+    const res = RESOURCES.find((r) => new RegExp(`\\b${r}s?\\b`).test(t))
+    if (res) {
+      const amt = t.match(/\b(\d+)\b/)
+      const resource = res === 'log' ? 'wood' : res
+      return { action: 'gather', args: { resource, amount: amt ? Number(amt[1]) : 8, deliver: true } }
+    }
   }
 
   // craft an item — after build (structure words win), before gather so

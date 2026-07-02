@@ -67,7 +67,7 @@ async function handle(bot, brain, username, body, rawMessage) {
 
   // Bare "help" only — "help me fight the creeper" must reach the brain.
   if (/^help[!.?\s]*$/i.test(body)) {
-    bot.assistant.reply('I can: menu (task list), come, follow, stop, goto x y z, gather <res> [n], hunt, eat, guard, attack, build <wall|house|tower|platform|pillar|bridge>, craft <item>, equip <item>, deposit, drop <item>, status, inventory. Just talk normally too.')
+    bot.assistant.reply('I can: menu (task list), come, follow, stop, goto x y z, gather <res> [n], bring me <res>, hunt, eat, cook/smelt <item>, farm, guard, attack, build <wall|house|tower|platform|pillar|bridge>, craft <item>, equip <item>, give me <item>, deposit, drop <item>, status, inventory. Just talk normally too.')
     return
   }
 
