@@ -1,13 +1,19 @@
 package com.jrpetty.mcassistant.entity;
 
+import com.jrpetty.mcassistant.entity.goal.BowAttackGoal;
 import com.jrpetty.mcassistant.entity.goal.BuildGoal;
 import com.jrpetty.mcassistant.entity.goal.CraftGoal;
 import com.jrpetty.mcassistant.entity.goal.DepositGoal;
 import com.jrpetty.mcassistant.entity.goal.FarmGoal;
 import com.jrpetty.mcassistant.entity.goal.FollowOwnerGoal;
 import com.jrpetty.mcassistant.entity.goal.GatherGoal;
+import com.jrpetty.mcassistant.entity.goal.GiveGoal;
+import com.jrpetty.mcassistant.entity.goal.HuntGoal;
+import com.jrpetty.mcassistant.entity.goal.MineGoal;
 import com.jrpetty.mcassistant.entity.goal.RetreatGoal;
+import com.jrpetty.mcassistant.entity.goal.ShearGoal;
 import com.jrpetty.mcassistant.entity.goal.SmeltGoal;
+import com.jrpetty.mcassistant.entity.goal.TravelGoal;
 import com.jrpetty.mcassistant.entity.goal.WithdrawGoal;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -33,14 +39,20 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
+import net.minecraft.world.entity.ai.goal.OpenDoorGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.monster.RangedAttackMob;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.Arrow;
 import net.minecraft.world.food.FoodProperties;
+import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -66,7 +78,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * stocked with 64 logs"), and with autonomy on it picks role-based work by
  * itself when idle — the seed of the self-running town.
  */
-public class AssistantEntity extends PathfinderMob {
+public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     public enum Mode { STAY, FOLLOW, GUARD }
 
@@ -157,13 +169,22 @@ public class AssistantEntity extends PathfinderMob {
     private int eatCooldown;
     private boolean retreating;
     private int idleBackoffUntil;
+    private int lastWarnTick = -1000;
 
     @Nullable private BlockPos homePos;
+
+    // Named waypoints: "remember this spot as the mine" -> "go to the mine".
+    private final Map<String, BlockPos> waypoints = new ConcurrentHashMap<>();
 
     public AssistantEntity(EntityType<? extends PathfinderMob> type, Level level) {
         super(type, level);
         this.setPersistenceRequired();
         this.setCanPickUpLoot(false); // we manage pickups into our own inventory
+        // Doors are not walls: path through them and open them on the way.
+        if (this.getNavigation() instanceof GroundPathNavigation ground) {
+            ground.setCanOpenDoors(true);
+            ground.setCanPassDoors(true);
+        }
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -178,6 +199,7 @@ public class AssistantEntity extends PathfinderMob {
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new RetreatGoal(this));
+        this.goalSelector.addGoal(1, new OpenDoorGoal(this, true));
         this.goalSelector.addGoal(2, new GatherGoal(this));
         this.goalSelector.addGoal(2, new DepositGoal(this));
         this.goalSelector.addGoal(2, new CraftGoal(this));
@@ -185,8 +207,14 @@ public class AssistantEntity extends PathfinderMob {
         this.goalSelector.addGoal(2, new FarmGoal(this));
         this.goalSelector.addGoal(2, new BuildGoal(this));
         this.goalSelector.addGoal(2, new SmeltGoal(this));
-        this.goalSelector.addGoal(3, new MeleeAttackGoal(this, 1.25D, true));
-        this.goalSelector.addGoal(4, new FollowOwnerGoal(this, 1.2D, 4.0F, 32.0F));
+        this.goalSelector.addGoal(2, new MineGoal(this));
+        this.goalSelector.addGoal(2, new ShearGoal(this));
+        this.goalSelector.addGoal(2, new GiveGoal(this));
+        this.goalSelector.addGoal(2, new TravelGoal(this));
+        this.goalSelector.addGoal(2, new HuntGoal(this)); // flagless coordinator
+        this.goalSelector.addGoal(3, new BowAttackGoal(this));
+        this.goalSelector.addGoal(4, new MeleeAttackGoal(this, 1.25D, true));
+        this.goalSelector.addGoal(5, new FollowOwnerGoal(this, 1.2D, 4.0F, 32.0F));
         this.goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 8.0F));
         this.goalSelector.addGoal(9, new RandomLookAroundGoal(this));
 
@@ -197,7 +225,9 @@ public class AssistantEntity extends PathfinderMob {
 
     private boolean shouldAutoAttack(LivingEntity target) {
         if (retreating) return false;
-        if (target instanceof Creeper) return false;
+        // Creepers are melee suicide — but with a bow and arrows we can take
+        // them from range instead of just ignoring them.
+        if (target instanceof Creeper && !(hasBow() && hasArrows())) return false;
         if (this.mode == Mode.STAY) return false;
         double toMe = target.distanceToSqr(this);
         if (toMe <= 8.0 * 8.0) return true;
@@ -389,6 +419,174 @@ public class AssistantEntity extends PathfinderMob {
         }
     }
 
+    // ------------------------- combat gear & ranged --------------------------
+
+    public boolean hasBow() {
+        return getMainHandItem().is(Items.BOW) || countMatching(s -> s.is(Items.BOW)) > 0;
+    }
+
+    public boolean hasArrows() {
+        return countMatching(s -> s.is(Items.ARROW)) > 0;
+    }
+
+    private void equipBow() {
+        if (getMainHandItem().is(Items.BOW)) return;
+        for (int i = 0; i < inventory.size(); i++) {
+            if (inventory.get(i).is(Items.BOW)) {
+                ItemStack old = getMainHandItem();
+                setItemSlot(EquipmentSlot.MAINHAND, inventory.get(i));
+                inventory.set(i, old);
+                return;
+            }
+        }
+    }
+
+    private static int weaponScore(ItemStack s) {
+        if (s.isEmpty()) return 0;
+        String path = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).getPath();
+        int material = path.contains("netherite") ? 60 : path.contains("diamond") ? 50
+            : path.contains("iron") ? 40 : path.contains("stone") ? 30
+            : path.contains("golden") ? 20 : path.contains("wooden") ? 10 : 0;
+        if (path.endsWith("_sword")) return material + 8;
+        if (path.endsWith("_axe")) return material + 6;
+        return 0;
+    }
+
+    public void equipBestWeapon() {
+        int best = weaponScore(getMainHandItem());
+        int bestIdx = -1;
+        for (int i = 0; i < inventory.size(); i++) {
+            int score = weaponScore(inventory.get(i));
+            if (score > best) {
+                best = score;
+                bestIdx = i;
+            }
+        }
+        if (bestIdx >= 0) {
+            ItemStack old = getMainHandItem();
+            setItemSlot(EquipmentSlot.MAINHAND, inventory.get(bestIdx));
+            inventory.set(bestIdx, old);
+        }
+    }
+
+    /** Pick the right weapon for the current fight. */
+    private void combatTick() {
+        LivingEntity t = getTarget();
+        if (t == null || !t.isAlive()) return;
+        boolean creeper = t instanceof Creeper;
+        boolean far = distanceToSqr(t) > 49.0;
+        boolean ranged = hasBow() && hasArrows();
+        if ((creeper || far) && ranged) {
+            equipBow();
+        } else if (creeper) {
+            setTarget(null); // bow broke / out of arrows — do not melee a creeper
+        } else {
+            equipBestWeapon();
+        }
+    }
+
+    @Override
+    public void performRangedAttack(LivingEntity target, float velocity) {
+        if (removeMatching(s -> s.is(Items.ARROW), 1) < 1) return;
+        Arrow arrow = new Arrow(level(), this, new ItemStack(Items.ARROW), getMainHandItem().copy());
+        double dx = target.getX() - getX();
+        double dy = target.getY(0.3333) - arrow.getY();
+        double dz = target.getZ() - getZ();
+        double horiz = Math.sqrt(dx * dx + dz * dz);
+        arrow.shoot(dx, dy + horiz * 0.2, dz, 1.6F, 6.0F);
+        this.playSound(net.minecraft.sounds.SoundEvents.SKELETON_SHOOT, 1.0F,
+            1.0F / (getRandom().nextFloat() * 0.4F + 0.8F));
+        level().addFreshEntity(arrow);
+        ItemStack bow = getMainHandItem();
+        if (bow.is(Items.BOW)) {
+            bow.hurtAndBreak(1, this, EquipmentSlot.MAINHAND);
+        }
+    }
+
+    /** Wear the best armor in the pack, piece by piece (like tools, for the body). */
+    private void autoEquipArmor() {
+        for (int i = 0; i < inventory.size(); i++) {
+            ItemStack s = inventory.get(i);
+            if (s.isEmpty() || !(s.getItem() instanceof ArmorItem candidate)) continue;
+            EquipmentSlot slot = this.getEquipmentSlotForItem(s);
+            if (slot != EquipmentSlot.HEAD && slot != EquipmentSlot.CHEST
+                && slot != EquipmentSlot.LEGS && slot != EquipmentSlot.FEET) continue;
+            ItemStack current = this.getItemBySlot(slot);
+            int currentDefense = current.getItem() instanceof ArmorItem worn ? worn.getDefense() : -1;
+            if (current.isEmpty() || candidate.getDefense() > currentDefense) {
+                this.setItemSlot(slot, s);
+                inventory.set(i, current);
+            }
+        }
+    }
+
+    // --------------------------- companion awareness -------------------------
+
+    /** Warn the owner about hostiles closing in that they might not see. */
+    private void dangerCallouts() {
+        Player owner = getOwnerPlayer();
+        if (!(owner instanceof ServerPlayer) || distanceToSqr(owner) > 48.0 * 48.0) return;
+        var creepers = level().getEntitiesOfClass(Creeper.class,
+            owner.getBoundingBox().inflate(7.0), LivingEntity::isAlive);
+        if (!creepers.isEmpty() && tickCount - lastWarnTick > 120) {
+            lastWarnTick = tickCount;
+            say("CREEPER " + directionFrom(owner, creepers.get(0)) + " of you — move!");
+            return;
+        }
+        if (tickCount - lastWarnTick > 400) {
+            Monster nearest = null;
+            double best = Double.MAX_VALUE;
+            for (Monster m : level().getEntitiesOfClass(Monster.class,
+                    owner.getBoundingBox().inflate(12.0), LivingEntity::isAlive)) {
+                double d = m.distanceToSqr(owner);
+                if (d < best) { best = d; nearest = m; }
+            }
+            if (nearest != null) {
+                lastWarnTick = tickCount;
+                say("Heads up — " + nearest.getName().getString() + " "
+                    + directionFrom(owner, nearest) + " of you.");
+            }
+        }
+    }
+
+    private static String directionFrom(net.minecraft.world.entity.Entity from, net.minecraft.world.entity.Entity to) {
+        double dx = to.getX() - from.getX();
+        double dz = to.getZ() - from.getZ();
+        double ax = Math.abs(dx);
+        double az = Math.abs(dz);
+        String ew = dx > 0 ? "east" : "west";
+        String ns = dz > 0 ? "south" : "north";
+        if (ax > 2 * az) return ew;
+        if (az > 2 * ax) return ns;
+        return ns + ew;
+    }
+
+    /** Drop a torch at our feet when working somewhere dark. */
+    private void torchIfDark() {
+        BlockPos pos = blockPosition();
+        if (level().getMaxLocalRawBrightness(pos) >= 6) return;
+        if (!level().getBlockState(pos).canBeReplaced()) return;
+        if (!level().getBlockState(pos.below()).isFaceSturdy(level(), pos.below(), net.minecraft.core.Direction.UP)) return;
+        if (removeMatching(s -> s.is(Items.TORCH), 1) == 1) {
+            level().setBlockAndUpdate(pos, Blocks.TORCH.defaultBlockState());
+        }
+    }
+
+    // ------------------------------- waypoints --------------------------------
+
+    public void setWaypoint(String name, BlockPos pos) {
+        waypoints.put(name.toLowerCase().trim(), pos.immutable());
+    }
+
+    @Nullable
+    public BlockPos getWaypoint(String name) {
+        return waypoints.get(name.toLowerCase().trim());
+    }
+
+    public List<String> waypointNames() {
+        return new ArrayList<>(waypoints.keySet());
+    }
+
     // ------------------------------ food & health ----------------------------
 
     private int findFoodSlot() {
@@ -419,6 +617,20 @@ public class AssistantEntity extends PathfinderMob {
 
     public void enqueue(Job job) {
         jobs.addLast(job);
+    }
+
+    /** Push a job in FRONT of everything — used for interjections like
+     *  "pack's full, deposit first, then keep going". */
+    public void enqueueFront(Job job) {
+        jobs.addFirst(job);
+    }
+
+    /** No empty slot left (stacks may have room, but it's time to stash). */
+    public boolean isPackFull() {
+        for (ItemStack s : inventory) {
+            if (s.isEmpty()) return false;
+        }
+        return true;
     }
 
     @Nullable
@@ -543,6 +755,23 @@ public class AssistantEntity extends PathfinderMob {
         return false;
     }
 
+    /** Nearest chest we REMEMBER (no world scan — safe at long range). */
+    @Nullable
+    public BlockPos nearestRememberedChest(int maxRadius) {
+        BlockPos best = null;
+        double bestDist = Double.MAX_VALUE;
+        for (Long key : chestMemory.keySet()) {
+            BlockPos pos = BlockPos.of(key);
+            double d = pos.distSqr(blockPosition());
+            if (d > (double) maxRadius * maxRadius || d >= bestDist) continue;
+            if (level().getBlockEntity(pos) instanceof Container) {
+                bestDist = d;
+                best = pos;
+            }
+        }
+        return best;
+    }
+
     /** Nearest container of any kind. */
     @Nullable
     public BlockPos findAnyChest(int radius) {
@@ -578,6 +807,14 @@ public class AssistantEntity extends PathfinderMob {
             orders.add(ot);
         }
         tag.put("Standing", orders);
+        ListTag points = new ListTag();
+        for (Map.Entry<String, BlockPos> e : waypoints.entrySet()) {
+            CompoundTag wt = new CompoundTag();
+            wt.putString("Name", e.getKey());
+            wt.putLong("Pos", e.getValue().asLong());
+            points.add(wt);
+        }
+        tag.put("Waypoints", points);
         ContainerHelper.saveAllItems(tag, inventory, this.registryAccess());
     }
 
@@ -607,6 +844,11 @@ public class AssistantEntity extends PathfinderMob {
                     GatherGoal.Kind.valueOf(ot.getString("Kind")), ot.getInt("Amount")));
             } catch (IllegalArgumentException ignored) {
             }
+        }
+        waypoints.clear();
+        for (Tag t : tag.getList("Waypoints", Tag.TAG_COMPOUND)) {
+            CompoundTag wt = (CompoundTag) t;
+            waypoints.put(wt.getString("Name"), BlockPos.of(wt.getLong("Pos")));
         }
         ContainerHelper.loadAllItems(tag, inventory, this.registryAccess());
     }
@@ -645,7 +887,9 @@ public class AssistantEntity extends PathfinderMob {
                 .put(assistantName.toLowerCase(), this);
         }
 
-        // Queued mode switches / go-home apply the instant they reach the head.
+        // Queued mode switches apply the instant they reach the head.
+        // (GO_HOME and GOTO are real walking jobs now — TravelGoal runs them
+        // to completion so "go to the mine THEN gather iron" works in order.)
         Job head = peekJob();
         if (head != null && head.type() == Job.Type.MODE && head.mode() != null) {
             pollJob();
@@ -659,9 +903,27 @@ public class AssistantEntity extends PathfinderMob {
                 case STAY -> "Holding here.";
                 case GUARD -> "Guard mode on.";
             });
-        } else if (head != null && head.type() == Job.Type.GO_HOME) {
-            pollJob();
-            goHome();
+        }
+
+        // Combat loadout: right weapon for the fight (bow for creepers and
+        // distant targets, best melee otherwise).
+        if (getTarget() != null && tickCount % 20 == 0) {
+            combatTick();
+        }
+
+        // Wear the best armor we're carrying (like tools, but for the body).
+        if (tickCount % 80 == 0) {
+            autoEquipArmor();
+        }
+
+        // Companion awareness: warn the owner about danger they might not see.
+        if (tickCount % 40 == 0) {
+            dangerCallouts();
+        }
+
+        // Light the worksite: working in the dark invites mobs onto our head.
+        if (tickCount % 60 == 0 && !jobs.isEmpty()) {
+            torchIfDark();
         }
 
         // Eat to heal (player rules: no free lunch). Slow fallback regen when

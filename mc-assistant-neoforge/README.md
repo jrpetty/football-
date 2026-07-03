@@ -195,3 +195,25 @@ blueprints, web dashboard) are not in the mod yet.
   eating and re-equipping as needed, and backs off when an area is
   tapped out. "take a break" stops it. This is the town seed: a farmer,
   a miner, a lumberjack and a builder around one chest run themselves.
+- **Real mining** — "dig a mine" / "mine down to level 12": digs an
+  actual torch-lit staircase to depth, opens a gallery, chases every ore
+  vein it exposes, bridges cavities, and refuses to dig into lava/water.
+- **Ranged combat** — with a bow and arrows (craftable) it fights from
+  range and *can* take creepers — kiting at 9+ blocks. No bow? It still
+  refuses creeper melee.
+- **Armor & weapon auto-equip** — wears the best armor in its pack and
+  draws the best sword/axe when a fight starts, automatically.
+- **Danger callouts** — "CREEPER east of you — move!" It warns you about
+  hostiles near you, and "what do you see?" reports everything nearby.
+- **Auto-deposit when full** — pack fills mid-gather: it stashes (walking
+  back to a remembered chest if none is near) and resumes the same job.
+- **Tree replanting** — saplings go back on every stump it makes.
+- **Named waypoints** — "remember this spot as the mine", then
+  "go to the mine, dig a mine, then go home and deposit" — travel is a
+  real queued job that completes on arrival, so chains run in order.
+- **Hunting & shearing** — "hunt 3 cows", "shear the sheep" (needs
+  shears): meat, leather, feathers (arrows!), wool — drops all collected.
+- **"Give me X" & inventory report** — "give me 10 torches" walks over
+  and hands them to you; "what are you carrying?" itemizes the pack.
+- **Doors & worksite torches** — opens doors while pathing and drops a
+  torch when working in the dark.

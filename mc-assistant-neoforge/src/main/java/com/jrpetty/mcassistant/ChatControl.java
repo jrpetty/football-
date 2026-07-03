@@ -64,6 +64,16 @@ public final class ChatControl {
         "^(?:your name is|call yourself|i'?ll call you|rename(?:\\s+yourself)?(?:\\s+to)?)\\s+([a-z0-9_]{2,16})\\b");
     private static final Pattern BUILD_WORD = Pattern.compile(
         "\\b(wall|platform|shelter|hut|house|smeltery|forge|furnace|storage|warehouse|workshop|watchtower|tower)\\b");
+    private static final Pattern MINE_LEVEL = Pattern.compile("\\b(?:level|y)\\s*(-?\\d+)\\b");
+    private static final Pattern ANIMAL_WORD = Pattern.compile("\\b(cows?|pigs?|chickens?|sheep|rabbits?)\\b");
+    private static final Pattern WAYPOINT_AS = Pattern.compile(
+        "^(?:remember|save|mark)\\b.*?\\bas\\s+(?:the\\s+)?([a-z0-9_ ]{2,24})$");
+    private static final Pattern WAYPOINT_CALL = Pattern.compile(
+        "^call\\s+this\\s+(?:place|spot)\\s+(?:the\\s+)?([a-z0-9_ ]{2,24})$");
+    private static final Pattern GOTO_PLACE = Pattern.compile(
+        "^(?:travel\\s+|head\\s+|walk\\s+)?to\\s+(?:the\\s+)?([a-z0-9_ ]{2,24})$");
+    private static final Pattern GIVE_ME = Pattern.compile(
+        "^(?:give|hand|pass|toss)(?:\\s+(?:me|us))?\\s+(?:the\\s+|some\\s+|a\\s+)?(?:(\\d+)\\s+)?([a-z_ ]+?)\\s*$");
 
     private ChatControl() {}
 
@@ -73,6 +83,7 @@ public final class ChatControl {
         enum Type { GATHER, DEPOSIT, MODE, COME, STOP, STATUS, JOBS, HELP,
                     DISMISS, OPEN, GO_HOME, SET_HOME,
                     CRAFT, WITHDRAW, FARM, BUILD, SMELT,
+                    MINE, HUNT, SHEAR, GIVE, GOTO, WAYPOINT_SET, PLACES, INVENTORY, LOOK,
                     ROLE, RENAME, AUTO_ON, AUTO_OFF, STANDING_ADD, STANDING_CLEAR }
 
         static Action gather(GatherGoal.Kind k, int n) { return new Action(Type.GATHER, k, n, null, null); }
@@ -210,7 +221,7 @@ public final class ChatControl {
             return;
         }
 
-        execute(a, player, actions, unknownMaterial);
+        execute(a, player, actions, unknownMaterial, explicit);
     }
 
     @Nullable
@@ -230,6 +241,17 @@ public final class ChatControl {
         if (c.matches("^(?:status|report)\\b.*") || c.contains("how are you")) return Action.of(Action.Type.STATUS);
         if (c.matches("^(?:jobs|queue|tasks)\\b.*") || c.contains("what are you doing")) return Action.of(Action.Type.JOBS);
         if (c.matches("^help\\b.*") || c.contains("what can you do")) return Action.of(Action.Type.HELP);
+        if (c.contains("what do you have") || c.contains("what are you carrying")
+            || c.contains("what's in your") || c.matches("^inventory\\b.*")) {
+            return Action.of(Action.Type.INVENTORY);
+        }
+        if (c.contains("what do you see") || c.contains("anything nearby")
+            || c.matches("^look\\s+around\\b.*")) {
+            return Action.of(Action.Type.LOOK);
+        }
+        if (c.matches("^(?:places|waypoints)\\b.*") || c.contains("where can you go")) {
+            return Action.of(Action.Type.PLACES);
+        }
         if (c.contains("work on your own") || c.matches("^auto\\s*on\\b.*")
             || c.contains("be autonomous") || c.contains("do your own thing")) {
             return Action.of(Action.Type.AUTO_ON);
@@ -272,6 +294,43 @@ public final class ChatControl {
         }
         if (c.matches("^(?:(?:head|return|walk)\\s+(?:back\\s+)?)?home\\b.*")) {
             return Action.of(Action.Type.GO_HOME);
+        }
+
+        // Waypoints: "remember this spot as the mine" / "go to the mine".
+        Matcher wpAs = WAYPOINT_AS.matcher(c);
+        if (wpAs.matches()) return Action.with(Action.Type.WAYPOINT_SET, wpAs.group(1).trim(), 0);
+        Matcher wpCall = WAYPOINT_CALL.matcher(c);
+        if (wpCall.matches()) return Action.with(Action.Type.WAYPOINT_SET, wpCall.group(1).trim(), 0);
+        Matcher gp = GOTO_PLACE.matcher(c);
+        if (gp.matches()) return Action.with(Action.Type.GOTO, gp.group(1).trim(), 0);
+
+        // Real mining: "dig a mine", "mine down to level 12" (a bare
+        // "mine 20 stone" stays a gather).
+        if (c.matches("^(?:dig|mine)\\b.*\\b(?:mine|tunnel|shaft|down|level)\\b.*")) {
+            Matcher lvl = MINE_LEVEL.matcher(c);
+            int targetY = lvl.find() ? Integer.parseInt(lvl.group(1)) : 12;
+            return Action.with(Action.Type.MINE, null, targetY);
+        }
+
+        // Hunting & shearing: "hunt 3 cows", "shear the sheep".
+        if (c.matches("^(?:hunt|slaughter)\\b.*")
+            || (c.matches("^kill\\b.*") && ANIMAL_WORD.matcher(c).find())) {
+            Matcher aw = ANIMAL_WORD.matcher(c);
+            String animal = aw.find() ? aw.group(1) : null;
+            return Action.with(Action.Type.HUNT, animal, parseAmount(c, 3));
+        }
+        if (c.matches("^shear\\b.*")) {
+            return Action.with(Action.Type.SHEAR, null, parseAmount(c, 8));
+        }
+
+        // Handing things over: "give me 10 torches", "hand me the logs".
+        // ("...from the chest" is a withdraw; "...in the chest" is a deposit.)
+        if (!c.contains("from") && !c.contains("chest") && !c.contains("barrel")) {
+            Matcher gm = GIVE_ME.matcher(c);
+            if (gm.matches()) {
+                int n = gm.group(1) != null ? clamp(Integer.parseInt(gm.group(1))) : 8;
+                return Action.with(Action.Type.GIVE, gm.group(2).trim(), n);
+            }
         }
 
         // Farming: "farm", "tend the crops"; "harvest" only when it isn't
@@ -360,7 +419,8 @@ public final class ChatControl {
         return Math.max(1, Math.min(Job.MAX_AMOUNT, n));
     }
 
-    private static void execute(AssistantEntity a, ServerPlayer player, List<Action> actions, boolean unknownMaterial) {
+    private static void execute(AssistantEntity a, ServerPlayer player, List<Action> actions,
+                                boolean unknownMaterial, boolean explicit) {
         boolean single = actions.size() == 1;
         int queuedBefore = a.jobCount();
         List<String> queuedLabels = new ArrayList<>();
@@ -375,12 +435,12 @@ public final class ChatControl {
                     a.countItems(), a.countFood(), a.jobCount(), a.standingOrders().size()));
                 case JOBS -> reportJobs(a);
                 case HELP -> a.say("Talk to me like a person — orders chain with \"and\"/\"then\" and queue up. I understand: "
-                    + "gather/mine/chop (logs, stone, dirt, iron, coal), deposit, \"grab X from the chest\", "
-                    + "smelt/cook (\"smelt 8 iron\", \"cook the beef\"), craft/make (planks, sticks, wood/stone/IRON "
-                    + "tools & armor, furnace, chest, torches, bread...), \"build a wall/platform/shelter/smeltery/"
-                    + "storage/workshop/watchtower\", farm/harvest, follow/stay/guard/come/stop, go home, set home here, "
-                    + "open (my gear), \"keep the chest stocked with 64 logs\", \"be a miner/farmer/lumberjack/builder\", "
-                    + "\"work on your own\" / \"take a break\", \"your name is <name>\", spawn (a crew!), dismiss. "
+                    + "gather/mine/chop (logs, stone, dirt, iron, coal), \"dig a mine (down to level 12)\", deposit, "
+                    + "\"grab X from the chest\", \"give me 10 torches\", smelt/cook, craft/make (tools, armor, bow, arrows...), "
+                    + "\"build a wall/shelter/smeltery/storage/workshop/watchtower\", farm/harvest, \"hunt 3 cows\", "
+                    + "\"shear the sheep\", follow/stay/guard/come/stop, go home, \"remember this spot as the mine\" / "
+                    + "\"go to the mine\", \"what do you see/have?\", open (my gear), \"keep the chest stocked with 64 logs\", "
+                    + "\"be a miner/farmer/lumberjack/builder\" + \"work on your own\", \"your name is <name>\", spawn, dismiss. "
                     + "Hold the voice key (default V) to speak any of this.");
                 case GATHER -> {
                     Job job = Job.gather(act.gatherKind(), act.amount());
@@ -420,6 +480,57 @@ public final class ChatControl {
                         queuedLabels.add(job.label());
                     }
                 }
+                case MINE -> {
+                    Job job = Job.mine(act.amount());
+                    a.enqueue(job);
+                    queuedLabels.add(job.label());
+                }
+                case HUNT -> {
+                    Job job = Job.hunt(act.arg(), act.amount());
+                    a.enqueue(job);
+                    queuedLabels.add(job.label());
+                }
+                case SHEAR -> {
+                    Job job = Job.shear(act.amount());
+                    a.enqueue(job);
+                    queuedLabels.add(job.label());
+                }
+                case GIVE -> {
+                    // Bare chat like "give up dude" must not trigger a reply —
+                    // only hand over things we actually carry (unless addressed).
+                    if (!explicit && a.countMatching(
+                            com.jrpetty.mcassistant.entity.goal.WithdrawGoal.matcherFor(act.arg())) == 0) {
+                        break;
+                    }
+                    Job job = Job.give(act.arg(), act.amount());
+                    a.enqueue(job);
+                    queuedLabels.add(job.label());
+                }
+                case GOTO -> {
+                    boolean known = "home".equals(act.arg())
+                        ? a.getHome() != null
+                        : a.getWaypoint(act.arg()) != null;
+                    if (!known && !explicit) {
+                        break; // "to be honest..." is chat, not a travel order
+                    }
+                    if (single) a.clearQueue(); // a lone travel order takes over now
+                    Job job = Job.goTo(act.arg());
+                    a.enqueue(job);
+                    if (!single) queuedLabels.add(job.label());
+                }
+                case WAYPOINT_SET -> {
+                    a.setWaypoint(act.arg(), a.blockPosition());
+                    a.say("Got it — this spot is \"" + act.arg() + "\" now. Say \"go to " + act.arg() + "\" anytime.");
+                }
+                case PLACES -> {
+                    var names = a.waypointNames();
+                    if (a.getHome() != null) names.add("home");
+                    a.say(names.isEmpty()
+                        ? "I don't know any places yet — say \"remember this spot as the mine\"."
+                        : "I know: " + String.join(", ", names) + ".");
+                }
+                case INVENTORY -> sayInventory(a);
+                case LOOK -> sayLook(a);
                 case BUILD -> {
                     if (act.arg() == null) {
                         a.say("I can build: " + String.join(", ", BuildGoal.STRUCTURES) + ".");
@@ -531,6 +642,66 @@ public final class ChatControl {
         if (unknownMaterial) {
             a.say("(One part asked for a material I can't gather yet — I know logs, stone, dirt, iron, and coal.)");
         }
+    }
+
+    /** "what are you carrying?" — itemized pack contents. */
+    private static void sayInventory(AssistantEntity a) {
+        java.util.Map<String, Integer> counts = new java.util.LinkedHashMap<>();
+        for (var stack : a.getInventoryItems()) {
+            if (stack.isEmpty()) continue;
+            counts.merge(stack.getHoverName().getString(), stack.getCount(), Integer::sum);
+        }
+        if (counts.isEmpty()) {
+            a.say("Pack's empty.");
+            return;
+        }
+        var sorted = counts.entrySet().stream()
+            .sorted((x, y) -> y.getValue() - x.getValue()).toList();
+        StringBuilder sb = new StringBuilder("Carrying: ");
+        int shown = 0;
+        for (var e : sorted) {
+            if (shown++ == 8) {
+                sb.append(" (+").append(sorted.size() - 8).append(" more kinds)");
+                break;
+            }
+            if (shown > 1) sb.append(", ");
+            sb.append(e.getValue()).append(" ").append(e.getKey());
+        }
+        a.say(sb + ".");
+    }
+
+    /** "what do you see?" — nearby threats, animals, and loose loot. */
+    private static void sayLook(AssistantEntity a) {
+        var box = a.getBoundingBox().inflate(16.0);
+        java.util.Map<String, Integer> hostiles = new java.util.TreeMap<>();
+        for (var m : a.level().getEntitiesOfClass(net.minecraft.world.entity.monster.Monster.class, box,
+                net.minecraft.world.entity.LivingEntity::isAlive)) {
+            hostiles.merge(m.getName().getString(), 1, Integer::sum);
+        }
+        java.util.Map<String, Integer> animals = new java.util.TreeMap<>();
+        for (var an : a.level().getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class, box,
+                net.minecraft.world.entity.LivingEntity::isAlive)) {
+            animals.merge(an.getName().getString(), 1, Integer::sum);
+        }
+        int loot = a.level().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, box).size();
+
+        StringBuilder sb = new StringBuilder();
+        if (hostiles.isEmpty()) {
+            sb.append("No hostiles in sight.");
+        } else {
+            sb.append("Hostiles: ");
+            sb.append(String.join(", ", hostiles.entrySet().stream()
+                .map(e -> e.getValue() + " " + e.getKey()).toList()));
+            sb.append(".");
+        }
+        if (!animals.isEmpty()) {
+            sb.append(" Animals: ").append(String.join(", ", animals.entrySet().stream()
+                .map(e -> e.getValue() + " " + e.getKey()).toList())).append(".");
+        }
+        if (loot > 0) {
+            sb.append(" ").append(loot).append(" item drop").append(loot == 1 ? "" : "s").append(" on the ground.");
+        }
+        a.say(sb.toString());
     }
 
     private static void reportJobs(AssistantEntity a) {

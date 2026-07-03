@@ -43,6 +43,29 @@ public final class AssistantCommands {
             .then(Commands.literal("deposit").executes(AssistantCommands::deposit))
             .then(Commands.literal("dismiss").executes(AssistantCommands::dismiss))
             .then(Commands.literal("farm").executes(AssistantCommands::farm))
+            .then(Commands.literal("mine")
+                .executes(ctx -> mine(ctx, 12))
+                .then(Commands.argument("level", IntegerArgumentType.integer(-58, 100))
+                    .executes(ctx -> mine(ctx, IntegerArgumentType.getInteger(ctx, "level")))))
+            .then(Commands.literal("hunt")
+                .executes(ctx -> hunt(ctx, null, 3))
+                .then(Commands.argument("animal", StringArgumentType.word())
+                    .executes(ctx -> hunt(ctx, StringArgumentType.getString(ctx, "animal"), 3))
+                    .then(Commands.argument("count", IntegerArgumentType.integer(1, 16))
+                        .executes(ctx -> hunt(ctx, StringArgumentType.getString(ctx, "animal"),
+                            IntegerArgumentType.getInteger(ctx, "count"))))))
+            .then(Commands.literal("shear").executes(AssistantCommands::shear))
+            .then(Commands.literal("give")
+                .then(Commands.argument("item", StringArgumentType.word())
+                    .executes(ctx -> give(ctx, 8))
+                    .then(Commands.argument("count", IntegerArgumentType.integer(1, 1024))
+                        .executes(ctx -> give(ctx, IntegerArgumentType.getInteger(ctx, "count"))))))
+            .then(Commands.literal("goto")
+                .then(Commands.argument("place", StringArgumentType.greedyString())
+                    .executes(AssistantCommands::gotoPlace)))
+            .then(Commands.literal("mark")
+                .then(Commands.argument("place", StringArgumentType.greedyString())
+                    .executes(AssistantCommands::mark)))
             .then(Commands.literal("smelt")
                 .then(Commands.argument("what", StringArgumentType.word())
                     .executes(ctx -> smelt(ctx, 8))
@@ -184,6 +207,53 @@ public final class AssistantCommands {
         AssistantEntity a = requireAssistant(ctx);
         if (a == null) return 0;
         a.enqueue(com.jrpetty.mcassistant.entity.Job.farm());
+        return 1;
+    }
+
+    private static int mine(CommandContext<CommandSourceStack> ctx, int level) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        a.enqueue(com.jrpetty.mcassistant.entity.Job.mine(level));
+        return 1;
+    }
+
+    private static int hunt(CommandContext<CommandSourceStack> ctx, @Nullable String animal, int count) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        a.enqueue(com.jrpetty.mcassistant.entity.Job.hunt(animal, count));
+        return 1;
+    }
+
+    private static int shear(CommandContext<CommandSourceStack> ctx) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        a.enqueue(com.jrpetty.mcassistant.entity.Job.shear(8));
+        return 1;
+    }
+
+    private static int give(CommandContext<CommandSourceStack> ctx, int count) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        a.enqueue(com.jrpetty.mcassistant.entity.Job.give(
+            StringArgumentType.getString(ctx, "item").toLowerCase(), count));
+        return 1;
+    }
+
+    private static int gotoPlace(CommandContext<CommandSourceStack> ctx) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        a.clearQueue();
+        a.enqueue(com.jrpetty.mcassistant.entity.Job.goTo(
+            StringArgumentType.getString(ctx, "place").toLowerCase().trim()));
+        return 1;
+    }
+
+    private static int mark(CommandContext<CommandSourceStack> ctx) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        String place = StringArgumentType.getString(ctx, "place").toLowerCase().trim();
+        a.setWaypoint(place, a.blockPosition());
+        a.say("Got it — this spot is \"" + place + "\" now.");
         return 1;
     }
 

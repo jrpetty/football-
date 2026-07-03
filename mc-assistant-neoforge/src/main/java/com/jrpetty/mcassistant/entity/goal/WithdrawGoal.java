@@ -39,6 +39,9 @@ public class WithdrawGoal extends Goal {
         String w = rawWord.trim().toLowerCase();
         if (w.endsWith("s") && w.length() > 3) w = w.substring(0, w.length() - 1);
         final String word = w;
+        // "torches" -> "torche" -> also try "torch" so plurals in -es match.
+        final String base = word.endsWith("e") && word.length() > 3
+            ? word.substring(0, word.length() - 1) : word;
         return switch (word) {
             case "log", "wood" -> s -> s.is(ItemTags.LOGS);
             case "plank" -> s -> s.is(ItemTags.PLANKS);
@@ -47,7 +50,10 @@ public class WithdrawGoal extends Goal {
                     || BuiltInRegistries.ITEM.getKey(s.getItem()).getPath().equals("stone");
             case "food" -> s -> s.get(DataComponents.FOOD) != null;
             case "tool" -> ItemStack::isDamageableItem;
-            default -> s -> BuiltInRegistries.ITEM.getKey(s.getItem()).getPath().contains(word);
+            default -> s -> {
+                String path = BuiltInRegistries.ITEM.getKey(s.getItem()).getPath();
+                return path.contains(word) || path.contains(base);
+            };
         };
     }
 

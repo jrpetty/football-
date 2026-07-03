@@ -17,7 +17,8 @@ import javax.annotation.Nullable;
 public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount,
                   @Nullable AssistantEntity.Mode mode, @Nullable String arg) {
 
-    public enum Type { GATHER, DEPOSIT, MODE, GO_HOME, CRAFT, WITHDRAW, FARM, BUILD, SMELT }
+    public enum Type { GATHER, DEPOSIT, MODE, GO_HOME, CRAFT, WITHDRAW, FARM, BUILD, SMELT,
+                       MINE, HUNT, SHEAR, GIVE, GOTO }
 
     /** Biggest single gather order (well past a full backpack of one item). */
     public static final int MAX_AMOUNT = 1024;
@@ -58,6 +59,27 @@ public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount,
         return new Job(Type.SMELT, null, Math.max(1, Math.min(256, amount)), null, itemWord);
     }
 
+    /** amount carries the target Y level here (can be negative — deepslate). */
+    public static Job mine(int targetY) {
+        return new Job(Type.MINE, null, Math.max(-58, Math.min(100, targetY)), null, null);
+    }
+
+    public static Job hunt(@Nullable String animal, int amount) {
+        return new Job(Type.HUNT, null, Math.max(1, Math.min(16, amount)), null, animal);
+    }
+
+    public static Job shear(int amount) {
+        return new Job(Type.SHEAR, null, Math.max(1, Math.min(16, amount)), null, null);
+    }
+
+    public static Job give(String itemWord, int amount) {
+        return new Job(Type.GIVE, null, Math.max(1, Math.min(MAX_AMOUNT, amount)), null, itemWord);
+    }
+
+    public static Job goTo(String place) {
+        return new Job(Type.GOTO, null, 0, null, place);
+    }
+
     public String label() {
         return switch (type) {
             case GATHER -> "gather " + amount + " " + (kind != null ? kind.label : "?");
@@ -69,6 +91,11 @@ public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount,
             case FARM -> "tend the farm";
             case BUILD -> "build a " + arg;
             case SMELT -> "smelt " + amount + " " + arg;
+            case MINE -> "dig a mine to Y" + amount;
+            case HUNT -> "hunt " + amount + " " + (arg != null ? arg : "animals");
+            case SHEAR -> "shear the sheep";
+            case GIVE -> "hand over " + amount + " " + arg;
+            case GOTO -> "go to " + arg;
         };
     }
 }

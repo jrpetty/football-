@@ -70,6 +70,7 @@ public class GatherGoal extends Goal {
 
     private final AssistantEntity assistant;
     @Nullable private Request request;
+    @Nullable private com.jrpetty.mcassistant.entity.Job myJob;
     @Nullable private BlockPos targetPos;
     private int collected;
     private int workTicks;
@@ -77,6 +78,7 @@ public class GatherGoal extends Goal {
     private int stuckTicks;
     private int myGen;
     private final java.util.Set<BlockPos> unreachable = new java.util.HashSet<>();
+    private final java.util.Set<BlockPos> stumps = new java.util.HashSet<>(); // for replanting
 
     public GatherGoal(AssistantEntity assistant) {
         this.assistant = assistant;
@@ -94,20 +96,27 @@ public class GatherGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
-        // Abort if a newer order/stop came in (taskGen changed) or combat started.
-        return request != null && assistant.getTarget() == null && assistant.taskGen() == myGen;
+        // Abort if a newer order/stop came in (taskGen changed), our job was
+        // displaced (pack-full deposit interjection), or combat started.
+        return request != null && assistant.getTarget() == null
+            && assistant.taskGen() == myGen && assistant.peekJob() == myJob;
     }
 
     @Override
     public void start() {
-        com.jrpetty.mcassistant.entity.Job j = assistant.peekJob(); // peek: only remove when finished
-        this.request = new Request(j.kind(), j.amount());
+        this.myJob = assistant.peekJob(); // peek: only remove when finished
+        this.request = new Request(myJob.kind(), myJob.amount());
         this.myGen = assistant.taskGen();
         this.collected = 0;
         this.targetPos = null;
         this.workTicks = 0;
         this.stuckTicks = 0;
         this.unreachable.clear();
+        this.stumps.clear();
+        if (assistant.isPackFull()) {
+            finish("Pack's full — I need to deposit before gathering more.");
+            return;
+        }
         assistant.say("On it — gathering " + request.amount() + " " + request.kind().label + ".");
     }
 
@@ -120,16 +129,64 @@ public class GatherGoal extends Goal {
             assistant.say("Paused gathering (" + collected + " " + request.kind().label + " so far).");
         }
         this.request = null;
+        this.myJob = null;
         this.targetPos = null;
         assistant.getNavigation().stop();
     }
 
     /** A job finished (or gave up) — drop it from the queue and move on. */
     private void finish(String message) {
+        replantStumps();
         assistant.say(message);
         assistant.noteJobOutcome(collected > 0); // idle initiative backs off when the area is dry
         assistant.pollJob();
         this.request = null;
+        this.myJob = null;
+        this.targetPos = null;
+        assistant.getNavigation().stop();
+    }
+
+    /** Sustainable forestry: put a sapling back on every stump we made. */
+    private void replantStumps() {
+        if (stumps.isEmpty()) return;
+        int planted = 0;
+        for (BlockPos stump : stumps) {
+            if (!assistant.level().getBlockState(stump).canBeReplaced()) continue;
+            if (!assistant.level().getBlockState(stump.below()).is(BlockTags.DIRT)) continue;
+            var inv = assistant.getInventoryItems();
+            boolean done = false;
+            for (int i = 0; i < inv.size() && !done; i++) {
+                ItemStack s = inv.get(i);
+                if (s.isEmpty() || !s.is(net.minecraft.tags.ItemTags.SAPLINGS)) continue;
+                if (s.getItem() instanceof net.minecraft.world.item.BlockItem sapling) {
+                    assistant.level().setBlockAndUpdate(stump, sapling.getBlock().defaultBlockState());
+                    s.shrink(1);
+                    if (s.isEmpty()) inv.set(i, ItemStack.EMPTY);
+                    planted++;
+                    done = true;
+                }
+            }
+        }
+        stumps.clear();
+        if (planted > 0) {
+            assistant.say("Replanted " + planted + " sapling" + (planted == 1 ? "" : "s") + ".");
+        }
+    }
+
+    /** Pack filled mid-job: stash, then come back for the rest — automatically. */
+    private void interjectDeposit() {
+        int remaining = request != null ? request.amount() - collected : 0;
+        GatherGoal.Kind kind = request != null ? request.kind() : null;
+        replantStumps();
+        assistant.say("Pack's full — stashing, then I'll get the rest"
+            + (remaining > 0 ? " (" + remaining + " to go)" : "") + ".");
+        assistant.pollJob(); // remove our job...
+        if (remaining > 0 && kind != null) {
+            assistant.enqueueFront(com.jrpetty.mcassistant.entity.Job.gather(kind, remaining));
+        }
+        assistant.enqueueFront(com.jrpetty.mcassistant.entity.Job.deposit());
+        this.request = null; // silent stop (no "Paused" message)
+        this.myJob = null;
         this.targetPos = null;
         assistant.getNavigation().stop();
     }
@@ -195,10 +252,18 @@ public class GatherGoal extends Goal {
         BlockPos pos = targetPos;
         targetPos = null;
         workTicks = 0;
+        // Chopping the bottom log of a tree leaves a stump spot to replant.
+        if (request.kind() == Kind.LOGS
+            && assistant.level().getBlockState(pos.below()).is(BlockTags.DIRT)) {
+            stumps.add(pos.immutable());
+        }
         if (assistant.level().destroyBlock(pos, true, assistant)) {
             collected++;
             assistant.damageHeldTool(); // tools wear like a player's
             sweepDrops(pos);
+            if (assistant.isPackFull() && collected < request.amount()) {
+                interjectDeposit();
+            }
         }
     }
 

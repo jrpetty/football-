@@ -97,6 +97,16 @@ public class CraftGoal extends Goal {
             () -> new ItemStack(Items.SHEARS), true));
         RECIPES.put("bucket", new Recipe(List.of(new Need(IRON, 3, "iron ingots")),
             () -> new ItemStack(Items.BUCKET), true));
+        // Ranged kit: string from spiders, feathers from hunting chickens.
+        RECIPES.put("bow", new Recipe(List.of(
+            new Need(STICK, 3, "sticks"),
+            new Need(s -> s.is(Items.STRING), 3, "string")),
+            () -> new ItemStack(Items.BOW), true));
+        RECIPES.put("arrows", new Recipe(List.of(
+            new Need(s -> s.is(Items.FLINT), 1, "flint"),
+            new Need(STICK, 1, "stick"),
+            new Need(s -> s.is(Items.FEATHER), 1, "feather")),
+            () -> new ItemStack(Items.ARROW, 4), true));
     }
 
     private static Recipe tool(Predicate<ItemStack> head, int n, String label, net.minecraft.world.item.Item out) {

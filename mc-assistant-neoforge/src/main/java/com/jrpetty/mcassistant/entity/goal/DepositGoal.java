@@ -22,6 +22,7 @@ public class DepositGoal extends Goal {
     private boolean active;
     @Nullable private BlockPos chestPos;
     private int stuckTicks;
+    private double bestDistSq = Double.MAX_VALUE;
     private int myGen;
 
     public DepositGoal(AssistantEntity assistant) {
@@ -48,13 +49,21 @@ public class DepositGoal extends Goal {
         this.myGen = assistant.taskGen();
         this.active = true;
         this.stuckTicks = 0;
+        this.bestDistSq = Double.MAX_VALUE;
         if (assistant.countItems() == 0) {
             finish("Nothing to stash — my pack is empty.");
             return;
         }
         this.chestPos = findChest();
         if (chestPos == null) {
-            finish("No chest or barrel within " + SEARCH_RADIUS + " blocks.");
+            // No chest here — but maybe we remember one (home base, the depot).
+            this.chestPos = assistant.nearestRememberedChest(160);
+            if (chestPos != null) {
+                assistant.say("No chest nearby — heading to the one I remember.");
+            }
+        }
+        if (chestPos == null) {
+            finish("No chest or barrel within " + SEARCH_RADIUS + " blocks, and I don't remember one.");
         }
     }
 
@@ -89,7 +98,12 @@ public class DepositGoal extends Goal {
                 assistant.getNavigation().moveTo(
                     chestPos.getX() + 0.5, chestPos.getY(), chestPos.getZ() + 0.5, 1.1D);
             }
-            if (++stuckTicks > 120) {
+            // Progress-based watchdog: long walks to a remembered chest are
+            // fine; standing still without getting closer is not.
+            if (distSq < bestDistSq - 1.0) {
+                bestDistSq = distSq;
+                stuckTicks = 0;
+            } else if (++stuckTicks > 300) {
                 finish("I couldn't reach the chest.");
             }
             return;
