@@ -325,30 +325,45 @@ public final class MazeRuntime {
      * at 1/6 tick per tick (60 min), night at 1/3 (30 min).
      */
     private static void advanceClock(ServerLevel level, MazeWorldState state) {
-        long sixths = state.virtualSixths();
-        int prevT = (int) ((sixths / 6) % DAY_TICKS);
-        sixths += prevT < 12000 ? 1 : 2;
-        state.setVirtualSixths(sixths);
-        int newT = (int) ((sixths / 6) % DAY_TICKS);
-        if (newT == prevT) return;
-
-        boolean wrapped = newT < prevT;
-        if (crossed(prevT, newT, wrapped, DOORS_OPEN_AT)) onDoorsOpen(level, state);
-        if (crossed(prevT, newT, wrapped, DOORS_WARN_AT)) {
-            broadcast(level, Component.literal(
-                "⚠ The sun is setting — the Glade doors seal soon. Get back.")
-                .withStyle(ChatFormatting.RED));
-        }
-        if (crossed(prevT, newT, wrapped, DOORS_CLOSE_AT)) onDoorsClose(level, state);
-        if (crossed(prevT, newT, wrapped, SHIFT_AT)) onMazeShift(level, state);
-        if (wrapped) onDawn(level, state);
-
-        level.setDayTime((state.dayNumber() - 1) * DAY_TICKS + newT);
+        long from = state.virtualSixths();
+        int t = (int) ((from / 6) % DAY_TICKS);
+        long to = from + (t < 12000 ? 1 : 2); // day at 1/6 tick, night at 1/3
+        applyTimeAdvance(level, state, from, to);
     }
 
-    private static boolean crossed(int prev, int next, boolean wrapped, int threshold) {
-        if (wrapped) return threshold > prev || threshold <= next;
-        return threshold > prev && threshold <= next;
+    /**
+     * Advances the clock to {@code toSixths}, firing every day-event crossed on
+     * the way (dawn, doors open, dusk warning, doors seal, maze shift). Because
+     * it iterates each whole tick, a big jump from a command triggers all the
+     * events it passes — so skipping to night actually seals the doors and
+     * skipping to morning actually reshapes the maze.
+     */
+    static void applyTimeAdvance(ServerLevel level, MazeWorldState state, long fromSixths, long toSixths) {
+        long fromTick = fromSixths / 6;
+        long toTick = toSixths / 6;
+        state.setVirtualSixths(toSixths);
+        for (long tk = fromTick + 1; tk <= toTick; tk++) {
+            switch ((int) (tk % DAY_TICKS)) {
+                case 0 -> onDawn(level, state);
+                case DOORS_OPEN_AT -> onDoorsOpen(level, state);
+                case DOORS_WARN_AT -> broadcast(level, Component.literal(
+                    "⚠ The sun is setting — the Glade doors seal soon. Get back.")
+                    .withStyle(ChatFormatting.RED));
+                case DOORS_CLOSE_AT -> onDoorsClose(level, state);
+                case SHIFT_AT -> onMazeShift(level, state);
+                default -> { }
+            }
+        }
+        int nowT = (int) ((toSixths / 6) % DAY_TICKS);
+        level.setDayTime((state.dayNumber() - 1) * DAY_TICKS + nowT);
+    }
+
+    /** Jumps forward to the next occurrence of a day-tick, firing events crossed. */
+    static void jumpToDayTick(ServerLevel level, MazeWorldState state, int targetTick) {
+        long abs = state.virtualSixths() / 6;
+        long base = abs - Math.floorMod(abs, (long) DAY_TICKS) + targetTick;
+        if (base <= abs) base += DAY_TICKS;
+        applyTimeAdvance(level, state, state.virtualSixths(), base * 6);
     }
 
     // ------------------------------------------------------------- day events

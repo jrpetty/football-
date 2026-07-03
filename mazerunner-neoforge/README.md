@@ -37,6 +37,17 @@ which is also world spawn and death respawn (768, 61, 768). Vines and
 mangrove-moss climb the Glade-facing walls. Hostile mobs are automatically
 purged inside the Glade — it is safe ground; the maze is not.
 
+**v1.5 changes** — the permanent **ring corridor around the Glade is cut at its
+four corners**, so each door now leads into its own separate part of the maze
+instead of all four sharing one loop (some doors dead-end or miss the exit on a
+given day — pick wisely; all 7 days remain solvable). The **forest is a natural
+mix** of oak/birch/dark-oak/apple rather than single-species stands. **Fixed the
+day/night skip**: jumping time now fires every event it passes, so doors
+actually seal and walls actually move. New creative controls: **`/maze night`**
+(skip to nightfall, doors seal), **`/maze shift`** (deep night — seal doors and
+move the walls now), and **`/maze morning`** (= skip/endday: seal → reshape →
+dawn → open).
+
 **v1.4 changes** — the **exit portal is now fixed** in one place (the south
 exit); every day only the *walls* reshape, so the route you navigate to that
 one exit changes (routes range ~150–350 cells across the week) while the goal

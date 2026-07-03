@@ -38,6 +38,9 @@ public final class MazeCommands {
                 .then(Commands.literal("skip").executes(ctx -> skip(ctx.getSource())))
                 .then(Commands.literal("tp").executes(ctx -> tpExit(ctx.getSource())))
                 .then(Commands.literal("endday").executes(ctx -> skip(ctx.getSource())))
+                .then(Commands.literal("morning").executes(ctx -> skip(ctx.getSource())))
+                .then(Commands.literal("night").executes(ctx -> night(ctx.getSource())))
+                .then(Commands.literal("shift").executes(ctx -> forceShift(ctx.getSource())))
                 .then(Commands.literal("validate")
                     .then(Commands.argument("layout", IntegerArgumentType.integer(1, 7))
                         .executes(ctx -> validate(ctx.getSource(),
@@ -168,15 +171,33 @@ public final class MazeCommands {
         ServerLevel level = maze(source);
         if (level == null) return 0;
         MazeWorldState state = MazeWorldState.get(level);
-        // Jump the clock to just before next dawn; the tick handler fires any
-        // missed dusk/shift events on the way through.
-        long sixthsPerDay = 24000L * 6;
-        long next = ((state.virtualSixths() / sixthsPerDay) + 1) * sixthsPerDay - 6;
-        state.setVirtualSixths(next);
+        MazeRuntime.jumpToDayTick(level, state, 1100); // next morning: dusk seal → shift → dawn → doors open
         source.sendSuccess(() -> Component.literal(
-            "Skipping to dawn of day " + (state.dayNumber() + 1)
-                + " — doors, shift and portals will catch up this tick.")
+            "Skipped to morning of day " + state.dayNumber()
+                + " — the doors sealed, the maze reshaped overnight, and the doors are open again.")
             .withStyle(ChatFormatting.YELLOW), true);
+        return 1;
+    }
+
+    private static int night(CommandSourceStack source) {
+        ServerLevel level = maze(source);
+        if (level == null) return 0;
+        MazeWorldState state = MazeWorldState.get(level);
+        MazeRuntime.jumpToDayTick(level, state, 12600); // just past dusk — doors seal
+        source.sendSuccess(() -> Component.literal(
+            "Skipped to nightfall — the Glade doors are sealing. The maze reshapes at deep night.")
+            .withStyle(ChatFormatting.DARK_PURPLE), true);
+        return 1;
+    }
+
+    private static int forceShift(CommandSourceStack source) {
+        ServerLevel level = maze(source);
+        if (level == null) return 0;
+        MazeWorldState state = MazeWorldState.get(level);
+        MazeRuntime.jumpToDayTick(level, state, 18000); // deep night — seals doors and moves the walls
+        source.sendSuccess(() -> Component.literal(
+            "Forcing the overnight shift — the doors seal and the walls are moving now.")
+            .withStyle(ChatFormatting.DARK_AQUA), true);
         return 1;
     }
 }

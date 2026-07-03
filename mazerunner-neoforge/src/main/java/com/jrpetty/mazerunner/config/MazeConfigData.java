@@ -157,9 +157,29 @@ public final class MazeConfigData {
             doors.add(new DoorDef(entry.getKey(), rx, rz, doorBox(rx, rz)));
         }
 
+        breakGladeRing();
         chooseFixedExit();
         indexBoxes();
         pickChestCells();
+    }
+
+    /**
+     * Cuts the permanent ring corridor around the Glade at its four corners, so
+     * the loop splits into four arcs — one per door. Each door then leads into
+     * its own part of the maze instead of all four sharing one highway. The
+     * doors themselves and the outward branches are untouched, and
+     * {@link #chooseFixedExit()} re-verifies solvability afterwards.
+     */
+    private void breakGladeRing() {
+        int lo = gladeCellMin - 1; // 39
+        int hi = gladeCellMax + 1; // 56
+        long[] corners = {
+            edgeKey(hi, lo, hi, lo + 1),     // NE: (56,39)-(56,40)
+            edgeKey(hi, hi, hi - 1, hi),     // SE: (56,56)-(55,56)
+            edgeKey(lo, hi, lo, hi - 1),     // SW: (39,56)-(39,55)
+            edgeKey(lo, lo, lo + 1, lo),     // NW: (39,39)-(40,39)
+        };
+        for (long e : corners) baseOpenEdges.remove(e);
     }
 
     public ExitDef fixedExit() {

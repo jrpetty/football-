@@ -156,12 +156,19 @@ public final class GladeTerrain {
 
     public static final int OAK = 0, BIRCH = 1, DARK_OAK = 2, APPLE_OAK = 3;
 
-    /** Tree species, chosen in broad clumps so woods feel like stands, not confetti. */
+    /**
+     * Tree species — mostly per-tree so the woods are a natural mix of all
+     * four kinds standing side by side, with only a mild regional lean so the
+     * mix drifts across the forest instead of being uniform noise.
+     */
     public static int speciesAt(int x, int z) {
-        double clump = Noise.value2(x, z, 30, 0x5EED5);
-        if (clump < 0.30) return DARK_OAK;   // a darker grove
-        if (clump > 0.82) return BIRCH;      // a birch stand
-        return Noise.hash2(x, z, 0xA997) < 0.18 ? APPLE_OAK : OAK;
+        double perTree = Noise.hash2(x, z, 0xA997);
+        double lean = (Noise.value2(x, z, 24, 0x5EED5) - 0.5) * 0.22; // gentle drift
+        double v = perTree + lean;
+        if (v < 0.40) return OAK;
+        if (v < 0.62) return BIRCH;
+        if (v < 0.85) return DARK_OAK;
+        return APPLE_OAK;
     }
 
     public static int trunkHeight(int x, int z) {
