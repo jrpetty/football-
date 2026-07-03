@@ -67,8 +67,8 @@ public final class MazeRuntime {
     public static final ResourceKey<LootTable> MAZE_CACHE_LOOT = ResourceKey.create(
         Registries.LOOT_TABLE, ResourceLocation.fromNamespaceAndPath(MazeRunnerMod.MODID, "chests/maze_cache"));
 
-    /** Spawn point at the centre of the (fresh-slate) Glade. */
-    public static final BlockPos GLADE_SPAWN = new BlockPos(768, 61, 768);
+    /** Spawn point on the grate inside the Box elevator at the Glade centre. */
+    public static final BlockPos GLADE_SPAWN = new BlockPos(768, 62, 768);
 
     // Chunk events can fire off-thread during generation; buffer, drain on tick.
     private static final ConcurrentLinkedQueue<Long> pendingLoads = new ConcurrentLinkedQueue<>();

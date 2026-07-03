@@ -56,11 +56,14 @@ public final class MazeConfigData {
 
     // ------------------------------------------------------------- fields
 
+    /** World build limit: blocks exist at y 0..85, dimension height 86. */
+    public static final int WORLD_MAX_Y = 85;
+
     public final int gridCells;
     public final int cellSize;
     public final int floorY;
     public final int wallBaseY;
-    public final int wallTopY; // inclusive
+    public final int wallTopY; // inclusive, clamped to the world build limit
     public final int gladeCellMin;
     public final int gladeCellMax;
     public final int gladeBlockMin;
@@ -89,7 +92,7 @@ public final class MazeConfigData {
         this.cellSize = meta.get("cellSize").getAsInt();
         this.floorY = meta.get("floorY").getAsInt();
         this.wallBaseY = meta.get("wallBaseY").getAsInt();
-        this.wallTopY = wallBaseY + meta.get("wallHeight").getAsInt() - 1;
+        this.wallTopY = Math.min(wallBaseY + meta.get("wallHeight").getAsInt() - 1, WORLD_MAX_Y);
 
         JsonArray glade = meta.getAsJsonArray("gladeBlocks");
         this.gladeBlockMin = glade.get(0).getAsInt();
@@ -107,8 +110,8 @@ public final class MazeConfigData {
             int[] c = parseEdgeKey(tp.get("edge").getAsString());
             JsonArray f = tp.getAsJsonArray("from");
             JsonArray t = tp.getAsJsonArray("to");
-            Box box = new Box(f.get(0).getAsInt(), f.get(1).getAsInt(), f.get(2).getAsInt(),
-                t.get(0).getAsInt(), t.get(1).getAsInt(), t.get(2).getAsInt());
+            Box box = new Box(f.get(0).getAsInt(), Math.min(f.get(1).getAsInt(), WORLD_MAX_Y), f.get(2).getAsInt(),
+                t.get(0).getAsInt(), Math.min(t.get(1).getAsInt(), WORLD_MAX_Y), t.get(2).getAsInt());
             togglePoints.put(entry.getKey(),
                 new TogglePoint(entry.getKey(), tp.get("kind").getAsString(), c[0], c[1], c[2], c[3], box));
         }

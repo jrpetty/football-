@@ -10,6 +10,7 @@ import com.jrpetty.mazerunner.WallPalette;
 import com.jrpetty.mazerunner.config.MazeConfigData;
 import com.jrpetty.mazerunner.config.MazeConfigs;
 import com.jrpetty.mazerunner.config.MazeStructures;
+import com.jrpetty.mazerunner.config.MazeWalls;
 import com.jrpetty.mazerunner.config.WallStyle;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -37,10 +38,10 @@ import net.minecraft.server.level.WorldGenRegion;
 
 /**
  * Generates the authored Maze Runner world from {@code maze_config_v2.json}:
- * a 96×96-chunk square — floor at y60, unbreakable walls y61..100, a barrier
- * ceiling at y101 — with the 16×16-chunk Glade at the centre and seven exit
- * pads just outside the border. Everything beyond is void. Toggle points,
- * Glade doors and exit gaps generate CLOSED; the runtime opens them per day.
+ * a 96×96-chunk square — floor at y60, unbreakable relief walls up to the y85
+ * build limit (no ceiling) — with the 16×16-chunk Glade at the centre and
+ * seven exit pads just outside the border. Everything beyond is void. Toggle
+ * points, Glade doors and exit gaps generate CLOSED; the runtime opens them.
  */
 public class MazeChunkGenerator extends ChunkGenerator {
 
@@ -79,7 +80,6 @@ public class MazeChunkGenerator extends ChunkGenerator {
         BlockState bedrock = Blocks.BEDROCK.defaultBlockState();
         BlockState dirt = Blocks.DIRT.defaultBlockState();
         BlockState grass = Blocks.GRASS_BLOCK.defaultBlockState();
-        BlockState barrier = Blocks.BARRIER.defaultBlockState();
 
         boolean inGrid = cfg.inGrid(cp.x, cp.z);
 
@@ -92,24 +92,28 @@ public class MazeChunkGenerator extends ChunkGenerator {
                     int wz = cp.getMinBlockZ() + lz;
                     chunk.setBlockState(pos.set(wx, floorY - 5, wz), bedrock, false);
 
-                    boolean open = MazeStructures.isOpen(cfg, wx, wz);
                     if (glade) {
                         GladeBuilder.column(cfg, chunk, pos, wx, wz);
-                    } else {
-                        for (int y = floorY - 4; y < floorY; y++) {
-                            chunk.setBlockState(pos.set(wx, y, wz), dirt, false);
-                        }
-                        chunk.setBlockState(pos.set(wx, floorY, wz), open ? grass : dirt, false);
-                        if (!open) {
-                            for (int y = cfg.wallBaseY; y <= cfg.wallTopY; y++) {
-                                chunk.setBlockState(pos.set(wx, y, wz),
-                                    WallPalette.stateAt(cfg, wx, y, wz), false);
-                            }
+                        continue;
+                    }
+                    for (int y = floorY - 4; y < floorY; y++) {
+                        chunk.setBlockState(pos.set(wx, y, wz), dirt, false);
+                    }
+                    boolean floorOpen = MazeStructures.isOpen(cfg, wx, wz);
+                    chunk.setBlockState(pos.set(wx, floorY, wz), floorOpen ? grass : dirt, false);
+                    // Walls with movie-panel relief (may push into corridor edges).
+                    for (int y = cfg.wallBaseY; y <= cfg.wallTopY; y++) {
+                        if (MazeWalls.solid(cfg, wx, y, wz)) {
+                            chunk.setBlockState(pos.set(wx, y, wz), WallPalette.stateAt(cfg, wx, y, wz), false);
                         }
                     }
+                }
+            }
 
-                    if (open) greenery(chunk, pos, wx, wz);
-                    chunk.setBlockState(pos.set(wx, cfg.wallTopY + 1, wz), barrier, false);
+            // Ivy pass — after all walls in the chunk exist.
+            for (int lx = 0; lx < 16; lx++) {
+                for (int lz = 0; lz < 16; lz++) {
+                    ivy(chunk, pos, cp.getMinBlockX() + lx, cp.getMinBlockZ() + lz);
                 }
             }
 
@@ -118,63 +122,69 @@ public class MazeChunkGenerator extends ChunkGenerator {
             if (plaza != null) RuinBuilder.render(cfg, plaza, chunk);
         }
 
-        // Exit pads live just outside the grid (and their barrier roof).
         for (ExitPad pad : pads) {
             pad.emit(cfg, chunk, pos);
         }
     }
 
-    // ------------------------------------------------------------- greenery
+    // ------------------------------------------------------------- ivy
 
     private static final int[] DX = { 0, 1, 0, -1 };
     private static final int[] DZ = { -1, 0, 1, 0 };
 
     /**
-     * Ivy runs and mangrove-moss clumps on the wall faces bordering this open
-     * column — noticeable, never a full coat. Faces of movable segments
-     * (toggles, doors, exit gates) stay bare so nothing floats when they move.
+     * Cascading ivy on the wall faces bordering an open maze column: clustered
+     * hanging strands, tapering, biome-tinted. Movable-segment faces stay bare
+     * so nothing floats when doors, toggles or exit gates shift.
      */
-    private void greenery(ChunkAccess chunk, BlockPos.MutableBlockPos pos, int wx, int wz) {
+    private void ivy(ChunkAccess chunk, BlockPos.MutableBlockPos pos, int wx, int wz) {
+        int cx = Math.floorDiv(wx, cfg.cellSize);
+        int cz = Math.floorDiv(wz, cfg.cellSize);
+        if (!cfg.inGrid(cx, cz) || cfg.inGlade(cx, cz)) return;
+        if (MazeWalls.solid(cfg, wx, cfg.wallBaseY, wz)) return; // this column is wall, not air
+
+        int flags = 0;
+        int start = Integer.MAX_VALUE;
+        int end = Integer.MIN_VALUE;
         for (int dir = 0; dir < 4; dir++) {
             int nx = wx + DX[dir];
             int nz = wz + DZ[dir];
-            if (!cfg.inGrid(Math.floorDiv(nx, cfg.cellSize), Math.floorDiv(nz, cfg.cellSize))) continue;
-            if (MazeStructures.isOpen(cfg, nx, nz)) continue; // neighbour isn't a wall
+            if (!isSolidWall(nx, nz)) continue;
             if (isMovableFace(nx, nz)) continue;
+            boolean normalX = DX[dir] != 0;
+            int run = normalX ? wz : wx;
+            int line = normalX ? nx : nz;
+            int[] span = WallStyle.ivySpan(run, line, cfg.wallBaseY, cfg.wallTopY);
+            if (span == null) continue;
+            flags |= faceBit(dir);
+            start = Math.min(start, span[0]);
+            end = Math.max(end, span[1]);
+        }
+        if (flags == 0) return;
 
-            int[] moss = WallStyle.mossClump(nx, nz, dir);
-            if (moss != null) {
-                BlockState leaves = Blocks.MANGROVE_LEAVES.defaultBlockState()
-                    .setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true);
-                int start = cfg.wallBaseY + moss[0];
-                for (int y = start; y < start + moss[1] && y <= cfg.wallTopY; y++) {
-                    if (chunk.getBlockState(pos.set(wx, y, wz)).isAir()) {
-                        chunk.setBlockState(pos, leaves, false);
-                    }
-                }
-            }
-
-            int[] run = WallStyle.vineRun(nx, nz, dir);
-            if (run != null) {
-                BlockState vine = ModBlocks.MAZE_VINE.get().defaultBlockState()
-                    .setValue(vineFace(dir), true);
-                int start = cfg.wallBaseY + run[0];
-                for (int y = start; y < start + run[1] && y <= cfg.wallTopY; y++) {
-                    if (chunk.getBlockState(pos.set(wx, y, wz)).isAir()) {
-                        chunk.setBlockState(pos, vine, false);
-                    }
-                }
+        BlockState vine = ModBlocks.MAZE_VINE.get().defaultBlockState()
+            .setValue(net.minecraft.world.level.block.VineBlock.NORTH, (flags & 1) != 0)
+            .setValue(net.minecraft.world.level.block.VineBlock.EAST, (flags & 2) != 0)
+            .setValue(net.minecraft.world.level.block.VineBlock.SOUTH, (flags & 4) != 0)
+            .setValue(net.minecraft.world.level.block.VineBlock.WEST, (flags & 8) != 0);
+        for (int y = Math.max(cfg.wallBaseY, start); y <= Math.min(cfg.wallTopY, end); y++) {
+            if (chunk.getBlockState(pos.set(wx, y, wz)).isAir()) {
+                chunk.setBlockState(pos, vine, false);
             }
         }
     }
 
-    private static net.minecraft.world.level.block.state.properties.BooleanProperty vineFace(int dir) {
+    private static int faceBit(int dir) {
         return switch (dir) {
-            case 0 -> net.minecraft.world.level.block.VineBlock.NORTH;
-            case 1 -> net.minecraft.world.level.block.VineBlock.EAST;
-            case 2 -> net.minecraft.world.level.block.VineBlock.SOUTH;
-            default -> net.minecraft.world.level.block.VineBlock.WEST;
+            case 0 -> 1; // north
+            case 1 -> 2; // east
+            case 2 -> 4; // south
+            default -> 8; // west
         };
+    }
+
+    private boolean isSolidWall(int wallX, int wallZ) {
+        return MazeWalls.solid(cfg, wallX, cfg.wallBaseY, wallZ);
     }
 
     /** True if the wall column belongs to a toggle point, Glade door, or exit gate. */
@@ -202,7 +212,6 @@ public class MazeChunkGenerator extends ChunkGenerator {
             if (cx0 > cx1 || cz0 > cz1) return;
 
             BlockState stone = Blocks.STONE_BRICKS.defaultBlockState();
-            BlockState barrier = Blocks.BARRIER.defaultBlockState();
             int floorY = cfg.floorY + 1; // pad floor one step above the maze floor
 
             for (int x = cx0; x <= cx1; x++) {
@@ -217,7 +226,6 @@ public class MazeChunkGenerator extends ChunkGenerator {
                             chunk.setBlockState(pos.set(x, y, z), WallPalette.stateAt(cfg, x, y, z), false);
                         }
                     }
-                    chunk.setBlockState(pos.set(x, cfg.wallTopY + 1, z), barrier, false);
                 }
             }
 
@@ -278,7 +286,7 @@ public class MazeChunkGenerator extends ChunkGenerator {
 
     @Override
     public int getGenDepth() {
-        return 384;
+        return 96; // matches the mazerunner:maze dimension type (min_y 0, height 96)
     }
 
     @Override
@@ -288,7 +296,7 @@ public class MazeChunkGenerator extends ChunkGenerator {
 
     @Override
     public int getMinY() {
-        return -64;
+        return 0;
     }
 
     @Override

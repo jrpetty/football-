@@ -37,6 +37,7 @@ public final class MazeCommands {
                 .then(Commands.literal("section").executes(ctx -> section(ctx.getSource())))
                 .then(Commands.literal("skip").executes(ctx -> skip(ctx.getSource())))
                 .then(Commands.literal("tp").executes(ctx -> tpExit(ctx.getSource())))
+                .then(Commands.literal("endday").executes(ctx -> skip(ctx.getSource())))
                 .then(Commands.literal("validate")
                     .then(Commands.argument("layout", IntegerArgumentType.integer(1, 7))
                         .executes(ctx -> validate(ctx.getSource(),

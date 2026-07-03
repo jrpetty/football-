@@ -37,7 +37,19 @@ which is also world spawn and death respawn (768, 61, 768). Vines and
 mangrove-moss climb the Glade-facing walls. Hostile mobs are automatically
 purged inside the Glade — it is safe ground; the maze is not.
 
-**The maze (v1.1)** — walls wear a weathered palette from dark to light
+**v1.2 changes** — the world is now a custom dimension with a **Y86 build
+limit and no barrier ceiling** (open sky above the walls). Maze walls carry
+**movie-panel relief** (each 8-block panel pushed 1 in or out, alternating),
+with **bulked entry posts** framing each Glade door. The **ivy** is rebuilt:
+cascading, clustered, biome-tinted strands that hang from the top and taper —
+no more dark stripes (the mangrove moss is gone). The **lake** is deeper and
+irregular with a mixed **sand/clay/gravel/dirt** bed. Glade **elevation** is
+fuller, and **world spawn is now inside the Box elevator**. The Glade forest
+uses **oak, birch, dark-oak and apple-oak** stands (built-in; see the Dynamic
+Trees note below). New: **`/maze endday`** (alias of `/maze skip`) to fast-
+forward a day for creative testing.
+
+**The maze (v1.1 base)** — walls wear a weathered palette from dark to light
 (polished tuff → tuff → polished andesite → mossy stone bricks → stone
 bricks → andesite) with wandering band boundaries, all still bedrock-grade
 unbreakable. Non-spreading ivy and moss clumps break up the faces (movable
@@ -89,3 +101,10 @@ cd mazerunner-neoforge
 
 Maze dataset: regenerate with `generate_maze.py` (attached to the project
 spec) and replace `src/main/resources/data/mazerunner/maze/maze_config_v2.json`.
+
+### Dynamic Trees
+
+The Glade forest ships with built-in oak/birch/dark-oak/apple-oak trees so it
+always populates. True Dynamic Trees integration (growing DT species) requires
+compiling against the Dynamic Trees API — tell me the DT version you run and
+I'll wire it as a compile-time dependency so the forest uses real DT trees.

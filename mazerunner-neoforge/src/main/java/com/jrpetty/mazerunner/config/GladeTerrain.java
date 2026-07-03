@@ -17,11 +17,15 @@ public final class GladeTerrain {
     public static final int CENTER = 768;
     public static final int MAX_RAISE = 5;
 
-    // Lake — southwest corner.
-    public static final double LAKE_CX = 700;
-    public static final double LAKE_CZ = 838;
-    public static final double LAKE_RX = 40;
-    public static final double LAKE_RZ = 30;
+    // Lake — southwest corner. Deeper and irregular (noise-warped shoreline).
+    public static final double LAKE_CX = 698;
+    public static final double LAKE_CZ = 840;
+    public static final double LAKE_RX = 44;
+    public static final double LAKE_RZ = 33;
+    public static final int LAKE_MAX_DEPTH = 6;
+
+    /** Bed materials. */
+    public static final int BED_DIRT = 0, BED_SAND = 1, BED_CLAY = 2, BED_GRAVEL = 3;
 
     // Forest — a blob centred in the northeast quadrant (~1/4 of the Glade).
     public static final double FOREST_CX = 838;
@@ -34,32 +38,49 @@ public final class GladeTerrain {
         return x >= MIN && x <= MAX && z >= MIN && z <= MAX;
     }
 
-    /** Normalised (0 at centre, 1 at edge) squared radial distance to the lake. */
+    /**
+     * Normalised radial field warped by low-frequency noise so the shoreline
+     * is lobed and natural rather than a clean ellipse. ≤1 is water.
+     */
     public static double lakeField(int x, int z) {
         double dx = (x - LAKE_CX) / LAKE_RX;
         double dz = (z - LAKE_CZ) / LAKE_RZ;
-        return dx * dx + dz * dz;
+        double base = Math.sqrt(dx * dx + dz * dz);
+        double warp = (Noise.fbm2(x, z, 22, 0x1A4E) - 0.5) * 0.55; // in-out bays and points
+        return base + warp;
     }
 
     public static boolean inLake(int x, int z) {
         return lakeField(x, z) <= 1.0;
     }
 
-    /** Water depth (0..3) — deepest at the middle, shelving to the shore. */
+    /** Water depth (0..6) — a warped basin, deepest off-centre, shelving to shore. */
     public static int lakeDepth(int x, int z) {
         double f = lakeField(x, z);
         if (f > 1.0) return 0;
-        double edgeWobble = (Noise.value2(x, z, 9, 0x1AEE) - 0.5) * 0.25;
-        double d = (1.0 - f + edgeWobble) * 3.4;
-        return Math.max(0, Math.min(3, (int) Math.round(d)));
+        double basin = Math.pow(1.0 - f, 0.75);                       // steep drop near shore
+        double lumps = (Noise.fbm2(x, z, 14, 0x0DEE) - 0.5) * 0.9;    // uneven bed
+        double d = basin * LAKE_MAX_DEPTH + lumps * LAKE_MAX_DEPTH * 0.35;
+        return Math.max(1, Math.min(LAKE_MAX_DEPTH, (int) Math.round(d)));
     }
 
-    /** Sandy patches: lake bed shallows and the shore band. */
+    /** Bed material at a lake/shore column: mixed clay, dirt, sand and gravel. */
+    public static int bedMaterial(int x, int z) {
+        double n = Noise.fbm2(x, z, 11, 0x5A9D);
+        double g = Noise.value2(x, z, 6, 0x6AC0);
+        boolean deep = lakeField(x, z) < 0.55;
+        if (g > 0.80) return BED_GRAVEL;            // scattered gravel patches
+        if (deep && n > 0.62) return BED_CLAY;      // clay in the deep middle
+        if (n < 0.42) return BED_SAND;              // sandy shallows/shore
+        return BED_DIRT;                            // muddy dirt elsewhere
+    }
+
+    /** Sand on the shore band and sandy bed cells. */
     public static boolean isSandy(int x, int z) {
         double f = lakeField(x, z);
-        if (f > 1.35) return false;
-        if (f >= 0.75) return Noise.value2(x, z, 7, 0x5A9D) > 0.35; // shore band mostly sand
-        return Noise.value2(x, z, 7, 0x5A9D) > 0.55;                // deeper bed part sand
+        if (f > 1.28) return false;
+        if (f > 1.0) return Noise.value2(x, z, 7, 0x5A9D) > 0.35; // beach ring
+        return bedMaterial(x, z) == BED_SAND;
     }
 
     /** Forest membership — a noise-eroded blob, denser toward the middle. */
@@ -79,8 +100,10 @@ public final class GladeTerrain {
     public static int heightAt(int x, int z) {
         if (!inGlade(x, z)) return 0;
 
-        double n = Noise.fbm2(x, z, 34, 0x6E1A11); // broad rolling hills
-        double h = Math.max(0, (n - 0.30) / 0.70) * MAX_RAISE;
+        // Two broad octaves for fuller, more varied hills that reach the cap
+        // more often. Kept low-frequency so elevation never steps by >1 block.
+        double n = Noise.value2(x, z, 40, 0x6E1A11) * 0.6 + Noise.value2(x, z, 21, 0x2C71) * 0.4;
+        double h = Math.max(0, (n - 0.18) / 0.82) * MAX_RAISE;
 
         // feather to zero at the walls so corridors and doors meet flat ground
         int edge = Math.min(Math.min(x - MIN, MAX - x), Math.min(z - MIN, MAX - z));
@@ -129,13 +152,22 @@ public final class GladeTerrain {
         return Noise.hash2(x * 7 + 1, z * 7 + 3, 0x7EE5) < 0.55;
     }
 
-    /** True → birch, false → oak. */
-    public static boolean isBirch(int x, int z) {
-        return Noise.hash2(x, z, 0xB12C) < 0.3;
+    public static final int OAK = 0, BIRCH = 1, DARK_OAK = 2, APPLE_OAK = 3;
+
+    /** Tree species, chosen in broad clumps so woods feel like stands, not confetti. */
+    public static int speciesAt(int x, int z) {
+        double clump = Noise.value2(x, z, 30, 0x5EED5);
+        if (clump < 0.30) return DARK_OAK;   // a darker grove
+        if (clump > 0.82) return BIRCH;      // a birch stand
+        return Noise.hash2(x, z, 0xA997) < 0.18 ? APPLE_OAK : OAK;
     }
 
     public static int trunkHeight(int x, int z) {
-        int base = isBirch(x, z) ? 5 : 4;
-        return base + (int) (Noise.hash2(x, z * 3 + 1, 0x71EE) * 3); // 4..7
+        int base = switch (speciesAt(x, z)) {
+            case BIRCH -> 6;
+            case DARK_OAK -> 6;
+            default -> 5;
+        };
+        return base + (int) (Noise.hash2(x, z * 3 + 1, 0x71EE) * 3); // +0..2
     }
 }
