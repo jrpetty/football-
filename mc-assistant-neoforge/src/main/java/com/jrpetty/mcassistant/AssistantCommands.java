@@ -43,7 +43,7 @@ public final class AssistantCommands {
             .then(Commands.literal("gather")
                 .then(Commands.argument("what", StringArgumentType.word())
                     .executes(ctx -> gather(ctx, 8))
-                    .then(Commands.argument("amount", IntegerArgumentType.integer(1, 64))
+                    .then(Commands.argument("amount", IntegerArgumentType.integer(1, com.jrpetty.mcassistant.entity.Job.MAX_AMOUNT))
                         .executes(ctx -> gather(ctx, IntegerArgumentType.getInteger(ctx, "amount")))))));
     }
 

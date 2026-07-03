@@ -9,12 +9,14 @@ displayName = "MC Assistant"
 description = '''
 An in-game AI companion: spawn it, and it follows you, guards you against
 hostiles, gathers logs and stone on command, and stashes loot in chests.
-Control it with /assistant commands or by chat: "!follow", "!guard",
-"!gather logs 16", "!deposit", "!come", "!stay", "!stop", "!jobs", "!status".
-Gather/deposit orders queue and run in sequence. It's mortal — a live HP
-readout floats over its head and it regenerates out of combat. Right-click it
-to manage its backpack, armor, and tools, with Stop / Follow / Stay / Guard /
-Deposit / Come buttons. Craft an Assistant Spawner block to summon it anywhere.
+Just talk to it in chat — "gather 128 logs and deposit it into the chest,
+then follow me" — orders queue and run in sequence. Classic commands work
+too: /assistant, "!follow", "!gather logs 16", "!stop", "!jobs", "!status".
+It's mortal — a live HP readout floats over its head and it regenerates out
+of combat. Right-click it to manage its backpack, armor, and tools, with
+Stop / Follow / Stay / Guard / Deposit / Come buttons. Craft an Assistant
+Spawner block to summon it anywhere. Works with any speech-to-text that
+types into chat for hands-free voice control.
 '''
 authors = "jrpetty"
 

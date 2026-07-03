@@ -48,14 +48,37 @@ client for multiplayer, since it adds an entity).
 | `!status` | HP, mode, carry count, jobs queued. |
 | `/assistant dismiss` | Sends it away (it drops its pack first). |
 
+### Natural language — just talk to it
+
+You don't need command syntax. Type plain sentences in chat and the
+assistant understands, three ways:
+
+- **Bare orders**: `gather 128 logs and deposit it into the chest`
+- **By name**: `assistant, get 2 stacks of stone then follow me`
+- **Classic `!` commands**: `!gather logs 16` (still works)
+
+Sentences split on **"and" / "then" / commas** into a sequence of queued
+jobs. It knows gather verbs (gather/get/mine/chop/collect/fetch/dig),
+deposit phrasings ("deposit", "stash it", "put it in the chest"), stack
+math ("2 stacks" = 128, "a stack" = 64), amounts up to 1024, and carries
+the verb across clauses ("gather 64 logs and 32 stone"). A sentence that
+isn't clearly an order is left alone as normal chat.
+
+**Voice control**: since the assistant understands plain sentences, any
+speech-to-text that types into the chat box drives it hands-free — open
+chat (`T`), dictate with **Windows voice typing (Win+H)** or **macOS
+dictation (double-tap Fn)**, say "gather 128 logs and deposit it into the
+chest", hit Enter. Done.
+
 ### Job queue
 
 Gather and deposit orders **queue up and run in sequence** — fire off
 `!gather logs 16`, `!gather stone 32`, `!deposit` and it works the list
 top to bottom, telling you as each one starts and finishes. `!jobs` shows
-what's lined up; `!stop` clears the list. A **movement/mode** order
+what's lined up; `!stop` clears the list. A **lone movement/mode** order
 (`!follow`, `!stay`, `!guard`, `!come`, or the GUI buttons) takes over
-immediately and empties the queue — those are "do this now", not "later".
+immediately and empties the queue — but as part of a sentence ("gather
+logs **then follow me**") it queues and runs in order like everything else.
 
 ### Health
 
@@ -101,8 +124,23 @@ names shift between majors, so 1.21.2+ may need small code fixes (e.g.
 
 This port covers the companion core: spawn/ownership, follow/stay/guard
 modes, melee combat with creeper avoidance, gather (logs/stone/dirt), chest
-deposit, a **sequential job queue**, a **visible health/regen system**, a
+deposit, a **sequential job queue**, **natural-language chat control**
+(voice-ready via any speech-to-text), a **visible health/regen system**, a
 craftable **Assistant Spawner** block, chat + command control, and persistent
 inventory/mode. The Node bot's bigger systems (crafting, smelting, building
-blueprints, Claude natural-language brain, web dashboard) are not in the mod
-yet — they port incrementally on this foundation.
+blueprints, web dashboard) are not in the mod yet.
+
+## Roadmap (toward autonomy)
+
+The long-term direction, roughly in order:
+
+1. **Self-sufficiency** — keep tools repaired/replaced, eat, retreat and
+   heal when hurt, return home (the Spawner block) when idle.
+2. **Standing jobs** — repeating orders ("keep the chest stocked with 64
+   logs") that re-queue themselves.
+3. **Multiple named assistants** — a crew instead of one companion, each
+   with its own queue and role.
+4. **Building** — blueprint jobs (walls, shelters, layouts you choose).
+5. **The town** — assistants that assign each other work: farmers,
+   miners, builders sharing storage and expanding a settlement on their
+   own. Fully autonomous, self-evolving — the end goal.

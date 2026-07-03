@@ -326,6 +326,23 @@ public class AssistantEntity extends PathfinderMob {
             BY_OWNER.put(ownerId, this);
         }
 
+        // A queued mode switch ("gather logs THEN follow me") applies the
+        // instant it reaches the head of the queue — no goal needed.
+        Job head = peekJob();
+        if (head != null && head.type() == Job.Type.MODE && head.mode() != null) {
+            pollJob();
+            setMode(head.mode());
+            Player owner = getOwnerPlayer();
+            if (head.mode() == Mode.FOLLOW && owner != null) {
+                this.getNavigation().moveTo(owner, 1.25D);
+            }
+            say(switch (head.mode()) {
+                case FOLLOW -> "Now following you.";
+                case STAY -> "Holding here.";
+                case GUARD -> "Guard mode on.";
+            });
+        }
+
         // Slow regen once it's been out of combat for ~6 seconds.
         if (isAlive() && getHealth() < getMaxHealth()
             && tickCount - lastDamageTick > 120 && tickCount % 40 == 0) {
