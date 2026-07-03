@@ -43,6 +43,7 @@ public class WithdrawGoal extends Goal {
         final String base = word.endsWith("e") && word.length() > 3
             ? word.substring(0, word.length() - 1) : word;
         return switch (word) {
+            case "everything", "stuff", "my stuff", "all", "loot", "item" -> s -> true;
             case "log", "wood" -> s -> s.is(ItemTags.LOGS);
             case "plank" -> s -> s.is(ItemTags.PLANKS);
             case "stone", "cobble", "cobblestone", "rock" -> s ->

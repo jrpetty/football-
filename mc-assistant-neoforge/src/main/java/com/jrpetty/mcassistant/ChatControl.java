@@ -74,6 +74,13 @@ public final class ChatControl {
         "^(?:travel\\s+|head\\s+|walk\\s+)?to\\s+(?:the\\s+)?([a-z0-9_ ]{2,24})$");
     private static final Pattern GIVE_ME = Pattern.compile(
         "^(?:give|hand|pass|toss)(?:\\s+(?:me|us))?\\s+(?:the\\s+|some\\s+|a\\s+)?(?:(\\d+)\\s+)?([a-z_ ]+?)\\s*$");
+    private static final Pattern PATROL_BETWEEN = Pattern.compile(
+        "^!?patrol\\s+(?:between\\s+)?(?:the\\s+)?([a-z0-9_ ]+?)\\s+and\\s+(?:the\\s+)?([a-z0-9_ ]+?)\\s*$");
+    private static final Pattern AREA_DIM = Pattern.compile("(\\d+)\\s*x\\s*(\\d+)");
+    private static final Pattern REPAIR_WORD = Pattern.compile(
+        "^(?:repair|fix|mend)\\b(?:\\s+(?:your|my|the))?\\s*([a-z_ ]*)$");
+    private static final Pattern LOCATE_WORD = Pattern.compile(
+        "^(?:find|locate)\\b.*\\b(village|mineshaft|shipwreck|stronghold|portal)\\b");
 
     private ChatControl() {}
 
@@ -84,6 +91,8 @@ public final class ChatControl {
                     DISMISS, OPEN, GO_HOME, SET_HOME,
                     CRAFT, WITHDRAW, FARM, BUILD, SMELT,
                     MINE, HUNT, SHEAR, GIVE, GOTO, WAYPOINT_SET, PLACES, INVENTORY, LOOK,
+                    CLEAR_AREA, TORCH_AREA, BRIDGE, BREED, HERD, FISH, CLEANUP,
+                    REPAIR, LOCATE, NIGHT_ON, NIGHT_OFF,
                     ROLE, RENAME, AUTO_ON, AUTO_OFF, STANDING_ADD, STANDING_CLEAR }
 
         static Action gather(GatherGoal.Kind k, int n) { return new Action(Type.GATHER, k, n, null, null); }
@@ -197,6 +206,15 @@ public final class ChatControl {
     }
 
     private static void dispatch(AssistantEntity a, ServerPlayer player, String text, boolean explicit) {
+        // "patrol between X and Y" contains "and", which the clause splitter
+        // would cut in half — handle the whole sentence up front.
+        Matcher patrol = PATROL_BETWEEN.matcher(text);
+        if (patrol.matches()) {
+            a.clearQueue();
+            a.enqueue(Job.patrol(patrol.group(1).trim(), patrol.group(2).trim()));
+            return;
+        }
+
         List<Action> actions = new ArrayList<>();
         boolean unknownMaterial = false;
         Action prev = null;
@@ -289,11 +307,66 @@ public final class ChatControl {
             || c.equals("open") || c.equals("open up")) {
             return Action.of(Action.Type.OPEN);
         }
+        // Night routine toggles — must outrank the plain "home" patterns
+        // ("go home at night" is a toggle, not an order to walk home now).
+        if (c.contains("at night")) {
+            if (c.contains("work") || c.matches("^(?:stop|don'?t|quit|no)\\b.*")) {
+                return Action.of(Action.Type.NIGHT_OFF);
+            }
+            if (c.contains("home")) return Action.of(Action.Type.NIGHT_ON);
+        }
+        if (c.contains("night shift") || c.contains("work nights")) {
+            return Action.of(Action.Type.NIGHT_OFF);
+        }
+
         if (c.matches("^(?:set|make)\\b.*\\bhome\\b.*") || c.contains("this is home")) {
             return Action.of(Action.Type.SET_HOME);
         }
         if (c.matches("^(?:(?:head|return|walk)\\s+(?:back\\s+)?)?home\\b.*")) {
             return Action.of(Action.Type.GO_HOME);
+        }
+
+        // Repair, locate, and area work.
+        Matcher rp = REPAIR_WORD.matcher(c);
+        if (rp.matches()) {
+            String w = rp.group(1).trim();
+            // "fix it later dude" is chat; "repair your pickaxe" is an order.
+            if (explicit || w.isEmpty()
+                || w.matches(".*(?:pick|axe|shovel|sword|hoe|tool|shear|rod|helmet|plate|legging|boot|gear).*")) {
+                return Action.with(Action.Type.REPAIR, w, 0);
+            }
+        }
+        Matcher lc = LOCATE_WORD.matcher(c);
+        if (lc.find()) return Action.with(Action.Type.LOCATE, lc.group(1), 0);
+        if (c.matches("^(?:clear|flatten)\\b.*")
+            && (explicit || c.contains("area") || c.startsWith("flatten") || AREA_DIM.matcher(c).find())) {
+            Matcher dim = AREA_DIM.matcher(c);
+            String size = dim.find() ? dim.group(1) + "x" + dim.group(2) : "8x8";
+            return Action.with(Action.Type.CLEAR_AREA, size, 0);
+        }
+        if (c.matches("^(?:light|torch)\\b.*\\b(?:up|area|place|around|here)\\b.*")) {
+            return Action.with(Action.Type.TORCH_AREA, null, parseAmount(c, 12));
+        }
+        if (c.matches("^bridge\\b.*")
+            || (c.matches("^(?:build|construct)\\b.*") && c.contains("bridge"))) {
+            return Action.of(Action.Type.BRIDGE);
+        }
+        if (c.matches("^(?:breed|mate)\\b.*")) {
+            Matcher aw = ANIMAL_WORD.matcher(c);
+            return Action.with(Action.Type.BREED, aw.find() ? aw.group(1) : null, parseAmount(c, 2));
+        }
+        if (c.matches("^(?:bring|herd|lead)\\b.*\\b(?:home|pen|back|in)\\b.*")) {
+            Matcher aw = ANIMAL_WORD.matcher(c);
+            if (aw.find()) {
+                return Action.with(Action.Type.HERD, aw.group(1), parseAmount(c, 2));
+            }
+        }
+        if (c.matches("^(?:fish(?:ing)?|catch)\\b.*") && (explicit || c.contains("fish"))) {
+            return Action.with(Action.Type.FISH, null, parseAmount(c, 5));
+        }
+        if ((c.matches("^(?:pick|clean|tidy)\\s+up\\b.*") || c.contains("pick up the items"))
+            && (explicit || c.contains("item") || c.contains("stuff") || c.contains("loot") || c.contains("drop"))) {
+            return Action.of(Action.Type.CLEANUP);
         }
 
         // Waypoints: "remember this spot as the mine" / "go to the mine".
@@ -437,9 +510,12 @@ public final class ChatControl {
                 case HELP -> a.say("Talk to me like a person — orders chain with \"and\"/\"then\" and queue up. I understand: "
                     + "gather/mine/chop (logs, stone, dirt, iron, coal), \"dig a mine (down to level 12)\", deposit, "
                     + "\"grab X from the chest\", \"give me 10 torches\", smelt/cook, craft/make (tools, armor, bow, arrows...), "
-                    + "\"build a wall/shelter/smeltery/storage/workshop/watchtower\", farm/harvest, \"hunt 3 cows\", "
-                    + "\"shear the sheep\", follow/stay/guard/come/stop, go home, \"remember this spot as the mine\" / "
-                    + "\"go to the mine\", \"what do you see/have?\", open (my gear), \"keep the chest stocked with 64 logs\", "
+                    + "\"build a wall/shelter/smeltery/storage/workshop/watchtower\", \"bridge forward\", \"clear a 10x10 area\", "
+                    + "\"light up the area\", farm/harvest, \"hunt 3 cows\", \"breed the cows\", \"bring 2 cows home\", "
+                    + "\"shear the sheep\", \"catch 5 fish\", \"pick up the items\", \"repair your pickaxe\", "
+                    + "\"find the nearest village\", \"patrol between home and the mine\", \"head home at night\", "
+                    + "follow/stay/guard/come/stop, go home, \"remember this spot as the mine\" / \"go to the mine\", "
+                    + "\"what do you see/have?\", open (my gear), \"keep the chest stocked with 64 logs\", "
                     + "\"be a miner/farmer/lumberjack/builder\" + \"work on your own\", \"your name is <name>\", spawn, dismiss. "
                     + "Hold the voice key (default V) to speak any of this.");
                 case GATHER -> {
@@ -531,6 +607,53 @@ public final class ChatControl {
                 }
                 case INVENTORY -> sayInventory(a);
                 case LOOK -> sayLook(a);
+                case CLEAR_AREA -> {
+                    Job job = Job.clear(act.arg());
+                    a.enqueue(job);
+                    queuedLabels.add(job.label());
+                }
+                case TORCH_AREA -> {
+                    Job job = Job.torchArea(act.amount());
+                    a.enqueue(job);
+                    queuedLabels.add(job.label());
+                }
+                case BRIDGE -> {
+                    Job job = Job.bridge();
+                    a.enqueue(job);
+                    queuedLabels.add(job.label());
+                }
+                case BREED -> {
+                    Job job = Job.breed(act.arg(), act.amount());
+                    a.enqueue(job);
+                    queuedLabels.add(job.label());
+                }
+                case HERD -> {
+                    Job job = Job.herd(act.arg(), act.amount());
+                    a.enqueue(job);
+                    queuedLabels.add(job.label());
+                }
+                case FISH -> {
+                    Job job = Job.fish(act.amount());
+                    a.enqueue(job);
+                    queuedLabels.add(job.label());
+                }
+                case CLEANUP -> {
+                    Job job = Job.cleanup();
+                    a.enqueue(job);
+                    queuedLabels.add(job.label());
+                }
+                case REPAIR -> repairItems(a, act.arg() != null ? act.arg() : "");
+                case LOCATE -> locateStructure(a, act.arg());
+                case NIGHT_ON -> {
+                    a.setNightHome(true);
+                    a.say(a.getHome() == null
+                        ? "I'll head home at night — but I need a home first (Spawner block or \"set home here\")."
+                        : "Understood — home at dusk, back to it at dawn.");
+                }
+                case NIGHT_OFF -> {
+                    a.setNightHome(false);
+                    a.say("Night shift it is — I'll keep working after dark.");
+                }
                 case BUILD -> {
                     if (act.arg() == null) {
                         a.say("I can build: " + String.join(", ", BuildGoal.STRUCTURES) + ".");
@@ -642,6 +765,61 @@ public final class ChatControl {
         if (unknownMaterial) {
             a.say("(One part asked for a material I can't gather yet — I know logs, stone, dirt, iron, and coal.)");
         }
+    }
+
+    /** Grindstone-style repair: two damaged same-type tools become one better one. */
+    private static void repairItems(AssistantEntity a, String word) {
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> match =
+            word.isEmpty() || word.startsWith("tool") || word.startsWith("gear")
+                ? net.minecraft.world.item.ItemStack::isDamageableItem
+                : com.jrpetty.mcassistant.entity.goal.WithdrawGoal.matcherFor(word);
+        var inv = a.getInventoryItems();
+        for (int i = 0; i < inv.size(); i++) {
+            var s1 = inv.get(i);
+            if (s1.isEmpty() || !s1.isDamageableItem() || s1.getDamageValue() == 0 || !match.test(s1)) continue;
+            for (int k = i + 1; k < inv.size(); k++) {
+                var s2 = inv.get(k);
+                if (s2.isEmpty() || !s2.is(s1.getItem()) || !s2.isDamageableItem()) continue;
+                int max = s1.getMaxDamage();
+                int remaining = (max - s1.getDamageValue()) + (max - s2.getDamageValue()) + max * 5 / 100;
+                s1.setDamageValue(Math.max(0, max - Math.min(max, remaining)));
+                inv.set(k, net.minecraft.world.item.ItemStack.EMPTY);
+                a.say("Combined two " + s1.getHoverName().getString() + "s — now at "
+                    + (100 * (max - s1.getDamageValue()) / max) + "% durability.");
+                return;
+            }
+        }
+        a.say("I need two damaged copies of the same tool to combine"
+            + (word.isEmpty() ? "" : " (" + word + ")") + ".");
+    }
+
+    /** "find the nearest village" — real structure locator + a saved waypoint. */
+    private static void locateStructure(AssistantEntity a, String word) {
+        if (!(a.level() instanceof net.minecraft.server.level.ServerLevel level)) return;
+        var tag = switch (word) {
+            case "village" -> net.minecraft.tags.StructureTags.VILLAGE;
+            case "mineshaft" -> net.minecraft.tags.StructureTags.MINESHAFT;
+            case "shipwreck" -> net.minecraft.tags.StructureTags.SHIPWRECK;
+            case "stronghold" -> net.minecraft.tags.StructureTags.EYE_OF_ENDER_LOCATED;
+            default -> net.minecraft.tags.StructureTags.RUINED_PORTAL;
+        };
+        a.say("Scanning for the nearest " + word + " — one moment...");
+        net.minecraft.core.BlockPos found =
+            level.findNearestMapStructure(tag, a.blockPosition(), 100, false);
+        if (found == null) {
+            a.say("No " + word + " anywhere near here.");
+            return;
+        }
+        double dx = found.getX() - a.getX();
+        double dz = found.getZ() - a.getZ();
+        int dist = (int) Math.sqrt(dx * dx + dz * dz);
+        String ew = dx > 0 ? "east" : "west";
+        String ns = dz > 0 ? "south" : "north";
+        String dir = Math.abs(dx) > 2 * Math.abs(dz) ? ew
+            : Math.abs(dz) > 2 * Math.abs(dx) ? ns : ns + ew;
+        a.setWaypoint(word, found);
+        a.say("Found a " + word + " about " + dist + " blocks " + dir
+            + " of here — say \"go to " + word + "\" and I'll lead the way.");
     }
 
     /** "what are you carrying?" — itemized pack contents. */

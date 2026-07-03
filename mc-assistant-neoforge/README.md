@@ -217,3 +217,30 @@ blueprints, web dashboard) are not in the mod yet.
   and hands them to you; "what are you carrying?" itemizes the pack.
 - **Doors & worksite torches** — opens doors while pathing and drops a
   torch when working in the dark.
+- **Grave guard** — if you die within ~128 blocks, your nearest assistant
+  races to the spot and secures your entire drop. "give me my stuff"
+  hands it all back after you respawn.
+- **Totem, shield & creeper dodge** — auto-holds a carried totem of
+  undying in its off-hand (a real second life), a shield soaks frontal
+  hits, and a hissing creeper triggers an instant sprint out of the blast.
+- **Patrols** — "patrol between home and the mine": endless guard laps
+  between two waypoints, fighting whatever it meets. "stop" ends it.
+- **Night routine** — "head home at night": idle workers walk home at
+  dusk and resume at dawn. "work nights" turns it off.
+- **Clear & flatten** — "clear a 10x10 area": digs the region clean
+  (3 high), keeps the drops, never opens lava.
+- **Area lighting** — "light up the area": torch grid until nothing can
+  spawn nearby.
+- **Bridging** — "bridge forward": places floor ahead of itself across
+  gaps, rivers, or lava until it reaches solid ground.
+- **Breeding & herding** — "breed the cows" (feeds pairs their real
+  breeding food), "bring 2 cows home" (leashes strays with real leads,
+  delivers to the "pen" waypoint or home, recovers the leads).
+- **Fishing** — "catch 5 fish": real rod, real bite times, vanilla-style
+  catches. Rod wears out.
+- **Tool repair** — "repair your pickaxe": combines two damaged same-type
+  tools grindstone-style into one with summed durability.
+- **Structure finding** — "find the nearest village": real locator, gives
+  distance + direction, saves it as a waypoint so "go to village" works.
+- **Cleanup** — "pick up the items around here": sweeps every drop within
+  16 blocks into its pack.

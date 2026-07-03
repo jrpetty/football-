@@ -107,6 +107,14 @@ public class CraftGoal extends Goal {
             new Need(STICK, 1, "stick"),
             new Need(s -> s.is(Items.FEATHER), 1, "feather")),
             () -> new ItemStack(Items.ARROW, 4), true));
+        RECIPES.put("fishing rod", new Recipe(List.of(
+            new Need(STICK, 3, "sticks"),
+            new Need(s -> s.is(Items.STRING), 2, "string")),
+            () -> new ItemStack(Items.FISHING_ROD), true));
+        RECIPES.put("leads", new Recipe(List.of(
+            new Need(s -> s.is(Items.STRING), 4, "string"),
+            new Need(s -> s.is(Items.SLIME_BALL), 1, "slimeball")),
+            () -> new ItemStack(Items.LEAD, 2), true));
     }
 
     private static Recipe tool(Predicate<ItemStack> head, int n, String label, net.minecraft.world.item.Item out) {

@@ -1,18 +1,28 @@
 package com.jrpetty.mcassistant.entity;
 
 import com.jrpetty.mcassistant.entity.goal.BowAttackGoal;
+import com.jrpetty.mcassistant.entity.goal.BreedGoal;
+import com.jrpetty.mcassistant.entity.goal.BridgeGoal;
 import com.jrpetty.mcassistant.entity.goal.BuildGoal;
+import com.jrpetty.mcassistant.entity.goal.CleanupGoal;
+import com.jrpetty.mcassistant.entity.goal.ClearGoal;
 import com.jrpetty.mcassistant.entity.goal.CraftGoal;
+import com.jrpetty.mcassistant.entity.goal.CreeperDodgeGoal;
 import com.jrpetty.mcassistant.entity.goal.DepositGoal;
 import com.jrpetty.mcassistant.entity.goal.FarmGoal;
+import com.jrpetty.mcassistant.entity.goal.FishGoal;
 import com.jrpetty.mcassistant.entity.goal.FollowOwnerGoal;
 import com.jrpetty.mcassistant.entity.goal.GatherGoal;
 import com.jrpetty.mcassistant.entity.goal.GiveGoal;
+import com.jrpetty.mcassistant.entity.goal.HerdGoal;
 import com.jrpetty.mcassistant.entity.goal.HuntGoal;
 import com.jrpetty.mcassistant.entity.goal.MineGoal;
+import com.jrpetty.mcassistant.entity.goal.PatrolGoal;
+import com.jrpetty.mcassistant.entity.goal.RecoverGoal;
 import com.jrpetty.mcassistant.entity.goal.RetreatGoal;
 import com.jrpetty.mcassistant.entity.goal.ShearGoal;
 import com.jrpetty.mcassistant.entity.goal.SmeltGoal;
+import com.jrpetty.mcassistant.entity.goal.TorchAreaGoal;
 import com.jrpetty.mcassistant.entity.goal.TravelGoal;
 import com.jrpetty.mcassistant.entity.goal.WithdrawGoal;
 import net.minecraft.ChatFormatting;
@@ -170,6 +180,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private boolean retreating;
     private int idleBackoffUntil;
     private int lastWarnTick = -1000;
+    private boolean nightHome;        // "head home at night" toggle
+    private boolean wentHomeTonight;  // one trip per night
 
     @Nullable private BlockPos homePos;
 
@@ -198,6 +210,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
+        this.goalSelector.addGoal(0, new CreeperDodgeGoal(this));
         this.goalSelector.addGoal(1, new RetreatGoal(this));
         this.goalSelector.addGoal(1, new OpenDoorGoal(this, true));
         this.goalSelector.addGoal(2, new GatherGoal(this));
@@ -211,6 +224,15 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         this.goalSelector.addGoal(2, new ShearGoal(this));
         this.goalSelector.addGoal(2, new GiveGoal(this));
         this.goalSelector.addGoal(2, new TravelGoal(this));
+        this.goalSelector.addGoal(2, new PatrolGoal(this));
+        this.goalSelector.addGoal(2, new ClearGoal(this));
+        this.goalSelector.addGoal(2, new TorchAreaGoal(this));
+        this.goalSelector.addGoal(2, new BridgeGoal(this));
+        this.goalSelector.addGoal(2, new BreedGoal(this));
+        this.goalSelector.addGoal(2, new HerdGoal(this));
+        this.goalSelector.addGoal(2, new FishGoal(this));
+        this.goalSelector.addGoal(2, new CleanupGoal(this));
+        this.goalSelector.addGoal(2, new RecoverGoal(this));
         this.goalSelector.addGoal(2, new HuntGoal(this)); // flagless coordinator
         this.goalSelector.addGoal(3, new BowAttackGoal(this));
         this.goalSelector.addGoal(4, new MeleeAttackGoal(this, 1.25D, true));
@@ -561,6 +583,56 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         return ns + ew;
     }
 
+    /** Totem beats shield beats nothing in the off-hand. */
+    private void manageOffhand() {
+        ItemStack off = getItemBySlot(EquipmentSlot.OFFHAND);
+        if (off.is(Items.TOTEM_OF_UNDYING)) return;
+        int totem = slotWith(s -> s.is(Items.TOTEM_OF_UNDYING));
+        if (totem >= 0) {
+            ItemStack old = off;
+            setItemSlot(EquipmentSlot.OFFHAND, inventory.get(totem));
+            inventory.set(totem, old);
+            return;
+        }
+        if (off.isEmpty()) {
+            int shield = slotWith(s -> s.is(Items.SHIELD));
+            if (shield >= 0) {
+                setItemSlot(EquipmentSlot.OFFHAND, inventory.get(shield));
+                inventory.set(shield, ItemStack.EMPTY);
+            }
+        }
+    }
+
+    private int slotWith(java.util.function.Predicate<ItemStack> what) {
+        for (int i = 0; i < inventory.size(); i++) {
+            ItemStack s = inventory.get(i);
+            if (!s.isEmpty() && what.test(s)) return i;
+        }
+        return -1;
+    }
+
+    public boolean isNightHome() {
+        return nightHome;
+    }
+
+    public void setNightHome(boolean nightHome) {
+        this.nightHome = nightHome;
+    }
+
+    /** At dusk, an idle worker with the toggle on walks home and holds. */
+    private void nightRoutine() {
+        if (!this.level().isNight()) {
+            wentHomeTonight = false;
+            return;
+        }
+        if (!nightHome || wentHomeTonight || homePos == null || retreating) return;
+        if (!jobs.isEmpty()) return; // explicit orders outrank bedtime
+        if (homePos.distSqr(blockPosition()) < 16 * 16) return;
+        wentHomeTonight = true;
+        say("Sun's down — heading home for the night.");
+        goHome();
+    }
+
     /** Drop a torch at our feet when working somewhere dark. */
     private void torchIfDark() {
         BlockPos pos = blockPosition();
@@ -799,6 +871,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         tag.putString("Role", role.name());
         tag.putString("Name", assistantName);
         tag.putBoolean("Auto", autonomous);
+        tag.putBoolean("NightHome", nightHome);
         ListTag orders = new ListTag();
         for (StandingOrder o : standingOrders) {
             CompoundTag ot = new CompoundTag();
@@ -836,6 +909,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (tag.contains("Name")) assistantName = tag.getString("Name");
         if (assistantName.isEmpty()) assistantName = "assistant";
         autonomous = tag.getBoolean("Auto");
+        nightHome = tag.getBoolean("NightHome");
         standingOrders.clear();
         for (Tag t : tag.getList("Standing", Tag.TAG_COMPOUND)) {
             CompoundTag ot = (CompoundTag) t;
@@ -926,6 +1000,17 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             torchIfDark();
         }
 
+        // Off-hand management: totem of undying first (a real second life for
+        // mobs too), shield otherwise.
+        if (tickCount % 40 == 0) {
+            manageOffhand();
+        }
+
+        // Night routine: idle workers head home at dusk when asked to.
+        if (tickCount % 100 == 0) {
+            nightRoutine();
+        }
+
         // Eat to heal (player rules: no free lunch). Slow fallback regen when
         // starving so it's never permanently crippled.
         if (eatCooldown > 0) eatCooldown--;
@@ -950,9 +1035,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             checkStandingOrders();
         }
 
-        // Idle initiative: with autonomy on and nothing to do, pick role work.
+        // Idle initiative: with autonomy on and nothing to do, pick role work
+        // (but not at night if it's supposed to be home in bed).
         if (autonomous && role != Role.NONE && jobs.isEmpty() && !retreating
-            && mode != Mode.STAY && tickCount % 400 == 0 && tickCount >= idleBackoffUntil) {
+            && mode != Mode.STAY && tickCount % 400 == 0 && tickCount >= idleBackoffUntil
+            && !(nightHome && this.level().isNight())) {
             enqueueRoleWork();
         }
 
@@ -1064,6 +1151,17 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     @Override
     public boolean hurt(DamageSource source, float amount) {
         boolean fromOwner = source.getEntity() instanceof Player p && isOwner(p);
+        // A held shield soaks half of frontal hits (and wears down doing it).
+        if (!fromOwner && source.getEntity() != null && amount > 0
+            && getItemBySlot(EquipmentSlot.OFFHAND).is(Items.SHIELD)) {
+            net.minecraft.world.phys.Vec3 toAttacker =
+                source.getEntity().position().subtract(this.position());
+            if (toAttacker.lengthSqr() > 0.001
+                && toAttacker.normalize().dot(this.getViewVector(1.0F)) > 0.0) {
+                amount *= 0.5F;
+                getItemBySlot(EquipmentSlot.OFFHAND).hurtAndBreak(1, this, EquipmentSlot.OFFHAND);
+            }
+        }
         boolean took = super.hurt(source, fromOwner ? amount * 0.5F : amount);
         if (took) this.lastDamageTick = this.tickCount;
         return took;

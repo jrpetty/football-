@@ -18,7 +18,8 @@ public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount,
                   @Nullable AssistantEntity.Mode mode, @Nullable String arg) {
 
     public enum Type { GATHER, DEPOSIT, MODE, GO_HOME, CRAFT, WITHDRAW, FARM, BUILD, SMELT,
-                       MINE, HUNT, SHEAR, GIVE, GOTO }
+                       MINE, HUNT, SHEAR, GIVE, GOTO,
+                       PATROL, CLEAR, TORCH_AREA, BRIDGE, BREED, HERD, FISH, CLEANUP, RECOVER }
 
     /** Biggest single gather order (well past a full backpack of one item). */
     public static final int MAX_AMOUNT = 1024;
@@ -80,6 +81,48 @@ public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount,
         return new Job(Type.GOTO, null, 0, null, place);
     }
 
+    /** arg = "placeA|placeB" — loops between them until stopped. */
+    public static Job patrol(String placeA, String placeB) {
+        return new Job(Type.PATROL, null, 0, null, placeA + "|" + placeB);
+    }
+
+    /** arg = "WxD", e.g. "10x10". Clears 3 blocks high at the bot's level. */
+    public static Job clear(String size) {
+        return new Job(Type.CLEAR, null, 0, null, size);
+    }
+
+    /** amount = radius to light up with torches. */
+    public static Job torchArea(int radius) {
+        return new Job(Type.TORCH_AREA, null, Math.max(4, Math.min(24, radius)), null, null);
+    }
+
+    public static Job bridge() {
+        return new Job(Type.BRIDGE, null, 0, null, null);
+    }
+
+    /** amount = pairs to breed; arg = animal word or null for any. */
+    public static Job breed(@Nullable String animal, int pairs) {
+        return new Job(Type.BREED, null, Math.max(1, Math.min(8, pairs)), null, animal);
+    }
+
+    /** amount = animals to lead (max 2); arg = animal word. */
+    public static Job herd(String animal, int count) {
+        return new Job(Type.HERD, null, Math.max(1, Math.min(2, count)), null, animal);
+    }
+
+    public static Job fish(int amount) {
+        return new Job(Type.FISH, null, Math.max(1, Math.min(32, amount)), null, null);
+    }
+
+    public static Job cleanup() {
+        return new Job(Type.CLEANUP, null, 0, null, null);
+    }
+
+    /** arg = "x y z" of the owner's death spot. */
+    public static Job recover(String pos) {
+        return new Job(Type.RECOVER, null, 0, null, pos);
+    }
+
     public String label() {
         return switch (type) {
             case GATHER -> "gather " + amount + " " + (kind != null ? kind.label : "?");
@@ -96,6 +139,15 @@ public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount,
             case SHEAR -> "shear the sheep";
             case GIVE -> "hand over " + amount + " " + arg;
             case GOTO -> "go to " + arg;
+            case PATROL -> "patrol " + (arg != null ? arg.replace("|", " <-> ") : "?");
+            case CLEAR -> "clear a " + arg + " area";
+            case TORCH_AREA -> "light up the area";
+            case BRIDGE -> "bridge the gap";
+            case BREED -> "breed " + (arg != null ? arg : "animals");
+            case HERD -> "bring " + amount + " " + arg + " home";
+            case FISH -> "catch " + amount + " fish";
+            case CLEANUP -> "pick up loose items";
+            case RECOVER -> "recover the owner's drops";
         };
     }
 }

@@ -74,6 +74,7 @@ public final class McAssistantMod {
 
         NeoForge.EVENT_BUS.register(AssistantCommands.class);
         NeoForge.EVENT_BUS.register(ChatControl.class);
+        NeoForge.EVENT_BUS.register(GraveWatch.class);
     }
 
     private void onEntityAttributes(EntityAttributeCreationEvent event) {

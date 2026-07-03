@@ -55,6 +55,36 @@ public final class AssistantCommands {
                         .executes(ctx -> hunt(ctx, StringArgumentType.getString(ctx, "animal"),
                             IntegerArgumentType.getInteger(ctx, "count"))))))
             .then(Commands.literal("shear").executes(AssistantCommands::shear))
+            .then(Commands.literal("patrol")
+                .then(Commands.argument("placeA", StringArgumentType.word())
+                    .then(Commands.argument("placeB", StringArgumentType.word())
+                        .executes(AssistantCommands::patrol))))
+            .then(Commands.literal("clear")
+                .executes(ctx -> clearArea(ctx, 8))
+                .then(Commands.argument("size", IntegerArgumentType.integer(2, 24))
+                    .executes(ctx -> clearArea(ctx, IntegerArgumentType.getInteger(ctx, "size")))))
+            .then(Commands.literal("lightup")
+                .executes(ctx -> lightup(ctx, 12))
+                .then(Commands.argument("radius", IntegerArgumentType.integer(4, 24))
+                    .executes(ctx -> lightup(ctx, IntegerArgumentType.getInteger(ctx, "radius")))))
+            .then(Commands.literal("bridge").executes(AssistantCommands::bridge))
+            .then(Commands.literal("breed")
+                .executes(ctx -> breed(ctx, null))
+                .then(Commands.argument("animal", StringArgumentType.word())
+                    .executes(ctx -> breed(ctx, StringArgumentType.getString(ctx, "animal")))))
+            .then(Commands.literal("herd")
+                .then(Commands.argument("animal", StringArgumentType.word())
+                    .executes(ctx -> herd(ctx, 2))
+                    .then(Commands.argument("count", IntegerArgumentType.integer(1, 2))
+                        .executes(ctx -> herd(ctx, IntegerArgumentType.getInteger(ctx, "count"))))))
+            .then(Commands.literal("fish")
+                .executes(ctx -> fish(ctx, 5))
+                .then(Commands.argument("count", IntegerArgumentType.integer(1, 32))
+                    .executes(ctx -> fish(ctx, IntegerArgumentType.getInteger(ctx, "count")))))
+            .then(Commands.literal("cleanup").executes(AssistantCommands::cleanup))
+            .then(Commands.literal("night")
+                .then(Commands.argument("state", StringArgumentType.word())
+                    .executes(AssistantCommands::night)))
             .then(Commands.literal("give")
                 .then(Commands.argument("item", StringArgumentType.word())
                     .executes(ctx -> give(ctx, 8))
@@ -254,6 +284,75 @@ public final class AssistantCommands {
         String place = StringArgumentType.getString(ctx, "place").toLowerCase().trim();
         a.setWaypoint(place, a.blockPosition());
         a.say("Got it — this spot is \"" + place + "\" now.");
+        return 1;
+    }
+
+    private static int patrol(CommandContext<CommandSourceStack> ctx) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        a.clearQueue();
+        a.enqueue(com.jrpetty.mcassistant.entity.Job.patrol(
+            StringArgumentType.getString(ctx, "placeA").toLowerCase(),
+            StringArgumentType.getString(ctx, "placeB").toLowerCase()));
+        return 1;
+    }
+
+    private static int clearArea(CommandContext<CommandSourceStack> ctx, int size) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        a.enqueue(com.jrpetty.mcassistant.entity.Job.clear(size + "x" + size));
+        return 1;
+    }
+
+    private static int lightup(CommandContext<CommandSourceStack> ctx, int radius) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        a.enqueue(com.jrpetty.mcassistant.entity.Job.torchArea(radius));
+        return 1;
+    }
+
+    private static int bridge(CommandContext<CommandSourceStack> ctx) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        a.enqueue(com.jrpetty.mcassistant.entity.Job.bridge());
+        return 1;
+    }
+
+    private static int breed(CommandContext<CommandSourceStack> ctx, @Nullable String animal) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        a.enqueue(com.jrpetty.mcassistant.entity.Job.breed(animal, 2));
+        return 1;
+    }
+
+    private static int herd(CommandContext<CommandSourceStack> ctx, int count) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        a.enqueue(com.jrpetty.mcassistant.entity.Job.herd(
+            StringArgumentType.getString(ctx, "animal").toLowerCase(), count));
+        return 1;
+    }
+
+    private static int fish(CommandContext<CommandSourceStack> ctx, int count) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        a.enqueue(com.jrpetty.mcassistant.entity.Job.fish(count));
+        return 1;
+    }
+
+    private static int cleanup(CommandContext<CommandSourceStack> ctx) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        a.enqueue(com.jrpetty.mcassistant.entity.Job.cleanup());
+        return 1;
+    }
+
+    private static int night(CommandContext<CommandSourceStack> ctx) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        boolean on = StringArgumentType.getString(ctx, "state").equalsIgnoreCase("on");
+        a.setNightHome(on);
+        a.say(on ? "Home at dusk, back at dawn." : "I'll keep working after dark.");
         return 1;
     }
 
