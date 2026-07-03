@@ -33,6 +33,18 @@ final class TreePlacer {
     private static boolean contribute(ChunkAccess chunk, BlockPos.MutableBlockPos pos,
             int wx, int wz, int tx, int tz, int floorY) {
         int species = GladeTerrain.speciesAt(tx, tz);
+
+        // If Dynamic Trees is installed, plant its sapling and let it grow.
+        BlockState dtSapling = MazeCompat.sapling(species);
+        if (dtSapling != null) {
+            if (wx == tx && wz == tz) {
+                int ground = floorY + GladeTerrain.heightAt(tx, tz);
+                chunk.setBlockState(pos.set(wx, ground + 1, wz), dtSapling, false);
+                return true;
+            }
+            return false; // DT grows the canopy itself
+        }
+
         BlockState log = logFor(species);
         BlockState leaves = leavesFor(species);
         int ground = floorY + GladeTerrain.heightAt(tx, tz);

@@ -17,7 +17,7 @@
   "has_raids": true,
   "logical_height": 86,
   "min_y": 0,
-  "height": 96,
+  "height": 128,
   "infiniburn": "#minecraft:infiniburn_overworld",
   "effects": "minecraft:overworld"
 }

@@ -37,6 +37,15 @@ which is also world spawn and death respawn (768, 61, 768). Vines and
 mangrove-moss climb the Glade-facing walls. Hostile mobs are automatically
 purged inside the Glade — it is safe ground; the maze is not.
 
+**v1.3 changes** — the walls that enclose the Glade are now **thickly overgrown**
+(mangrove-leaf bushes and cascading vines, with natural gaps) and carry the same
+panel relief. **Walls now rise to y110** while a **build cap keeps players at
+y86** (survival; creative bypasses). The **lake is 5 blocks deeper** — the
+**bedrock was lowered** to make room — and the Glade **hills now reach +8** in
+the tallest spots (still smooth). Forest trunk sites use **Dynamic Trees**
+species (apple-oak/oak/dark-oak/birch) when that mod is installed, falling back
+to built-in trees otherwise. World spawn sits inside the Box elevator.
+
 **v1.2 changes** — the world is now a custom dimension with a **Y86 build
 limit and no barrier ceiling** (open sky above the walls). Maze walls carry
 **movie-panel relief** (each 8-block panel pushed 1 in or out, alternating),

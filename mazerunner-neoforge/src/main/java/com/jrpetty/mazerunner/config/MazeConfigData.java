@@ -56,14 +56,19 @@ public final class MazeConfigData {
 
     // ------------------------------------------------------------- fields
 
-    /** World build limit: blocks exist at y 0..85, dimension height 86. */
-    public static final int WORLD_MAX_Y = 85;
+    /** Walls generate up to here… */
+    public static final int WALL_TOP_Y = 110;
+    /** …but players may not place blocks above here. */
+    public static final int BUILD_LIMIT_Y = 86;
+    /** Bedrock sits this far below the maze floor (room for a deep lake). */
+    public static final int BEDROCK_DEPTH = 13;
 
     public final int gridCells;
     public final int cellSize;
     public final int floorY;
     public final int wallBaseY;
-    public final int wallTopY; // inclusive, clamped to the world build limit
+    public final int wallTopY; // inclusive
+    public final int bedrockY;
     public final int gladeCellMin;
     public final int gladeCellMax;
     public final int gladeBlockMin;
@@ -92,7 +97,8 @@ public final class MazeConfigData {
         this.cellSize = meta.get("cellSize").getAsInt();
         this.floorY = meta.get("floorY").getAsInt();
         this.wallBaseY = meta.get("wallBaseY").getAsInt();
-        this.wallTopY = Math.min(wallBaseY + meta.get("wallHeight").getAsInt() - 1, WORLD_MAX_Y);
+        this.wallTopY = WALL_TOP_Y; // tall movie walls, above the build limit
+        this.bedrockY = floorY - BEDROCK_DEPTH;
 
         JsonArray glade = meta.getAsJsonArray("gladeBlocks");
         this.gladeBlockMin = glade.get(0).getAsInt();
@@ -110,8 +116,10 @@ public final class MazeConfigData {
             int[] c = parseEdgeKey(tp.get("edge").getAsString());
             JsonArray f = tp.getAsJsonArray("from");
             JsonArray t = tp.getAsJsonArray("to");
-            Box box = new Box(f.get(0).getAsInt(), Math.min(f.get(1).getAsInt(), WORLD_MAX_Y), f.get(2).getAsInt(),
-                t.get(0).getAsInt(), Math.min(t.get(1).getAsInt(), WORLD_MAX_Y), t.get(2).getAsInt());
+            // Movable segments keep their authored height (61..100); the tall
+            // permanent walls above them (to y110) form the lintels.
+            Box box = new Box(f.get(0).getAsInt(), f.get(1).getAsInt(), f.get(2).getAsInt(),
+                t.get(0).getAsInt(), t.get(1).getAsInt(), t.get(2).getAsInt());
             togglePoints.put(entry.getKey(),
                 new TogglePoint(entry.getKey(), tp.get("kind").getAsString(), c[0], c[1], c[2], c[3], box));
         }

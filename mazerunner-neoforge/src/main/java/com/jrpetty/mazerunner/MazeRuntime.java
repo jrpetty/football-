@@ -171,6 +171,18 @@ public final class MazeRuntime {
     }
 
     @SubscribeEvent
+    public static void onBlockPlace(net.neoforged.neoforge.event.level.BlockEvent.EntityPlaceEvent event) {
+        if (!(event.getLevel() instanceof ServerLevel level) || !isMazeLevel(level)) return;
+        if (event.getPos().getY() > MazeConfigData.BUILD_LIMIT_Y
+            && event.getEntity() instanceof ServerPlayer player && !player.isCreative()) {
+            event.setCanceled(true);
+            player.displayClientMessage(Component.literal(
+                "You can't build above y" + MazeConfigData.BUILD_LIMIT_Y + " in the Maze.")
+                .withStyle(ChatFormatting.RED), true);
+        }
+    }
+
+    @SubscribeEvent
     public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
         // Death sends runners back to the Box, always.
         if (event.getEntity() instanceof ServerPlayer player

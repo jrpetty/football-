@@ -11,6 +11,7 @@ import com.jrpetty.mazerunner.config.MazeConfigData;
 import com.jrpetty.mazerunner.config.MazeConfigs;
 import com.jrpetty.mazerunner.config.MazeStructures;
 import com.jrpetty.mazerunner.config.MazeWalls;
+import com.jrpetty.mazerunner.config.Noise;
 import com.jrpetty.mazerunner.config.WallStyle;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -90,13 +91,13 @@ public class MazeChunkGenerator extends ChunkGenerator {
                 for (int lz = 0; lz < 16; lz++) {
                     int wx = cp.getMinBlockX() + lx;
                     int wz = cp.getMinBlockZ() + lz;
-                    chunk.setBlockState(pos.set(wx, floorY - 5, wz), bedrock, false);
+                    chunk.setBlockState(pos.set(wx, cfg.bedrockY, wz), bedrock, false);
 
                     if (glade) {
                         GladeBuilder.column(cfg, chunk, pos, wx, wz);
                         continue;
                     }
-                    for (int y = floorY - 4; y < floorY; y++) {
+                    for (int y = cfg.bedrockY + 1; y < floorY; y++) {
                         chunk.setBlockState(pos.set(wx, y, wz), dirt, false);
                     }
                     boolean floorOpen = MazeStructures.isOpen(cfg, wx, wz);
@@ -110,10 +111,13 @@ public class MazeChunkGenerator extends ChunkGenerator {
                 }
             }
 
-            // Ivy pass — after all walls in the chunk exist.
+            // Greenery pass — after all walls in the chunk exist.
             for (int lx = 0; lx < 16; lx++) {
                 for (int lz = 0; lz < 16; lz++) {
-                    ivy(chunk, pos, cp.getMinBlockX() + lx, cp.getMinBlockZ() + lz);
+                    int wx = cp.getMinBlockX() + lx;
+                    int wz = cp.getMinBlockZ() + lz;
+                    if (glade) gladeWallCoat(chunk, pos, wx, wz);
+                    else ivy(chunk, pos, wx, wz);
                 }
             }
 
@@ -169,6 +173,55 @@ public class MazeChunkGenerator extends ChunkGenerator {
             .setValue(net.minecraft.world.level.block.VineBlock.WEST, (flags & 8) != 0);
         for (int y = Math.max(cfg.wallBaseY, start); y <= Math.min(cfg.wallTopY, end); y++) {
             if (chunk.getBlockState(pos.set(wx, y, wz)).isAir()) {
+                chunk.setBlockState(pos, vine, false);
+            }
+        }
+    }
+
+    /**
+     * Thick, natural overgrowth on the walls that enclose the Glade: mangrove
+     * leaf bushes for volume with cascading vines filling around them, up most
+     * of the wall, with organic gaps. Movable (door) faces stay bare.
+     */
+    private void gladeWallCoat(ChunkAccess chunk, BlockPos.MutableBlockPos pos, int gx, int gz) {
+        int cx = Math.floorDiv(gx, cfg.cellSize);
+        int cz = Math.floorDiv(gz, cfg.cellSize);
+        if (!cfg.inGlade(cx, cz)) return;
+
+        int flags = 0;
+        int run = 0;
+        int line = 0;
+        for (int dir = 0; dir < 4; dir++) {
+            int nx = gx + DX[dir];
+            int nz = gz + DZ[dir];
+            if (!MazeWalls.solid(cfg, nx, cfg.wallBaseY, nz)) continue;
+            if (isMovableFace(nx, nz)) continue;
+            boolean normalX = DX[dir] != 0;
+            flags |= faceBit(dir);
+            run = normalX ? gz : gx;
+            line = normalX ? nx : nz;
+        }
+        if (flags == 0) return;
+
+        double cover = Noise.fbm2(run, line * 7 + 11, 14, 0x9E15);
+        if (cover < 0.12) return; // an occasional bare stretch of wall
+
+        int topJ = cfg.wallTopY - (int) (Noise.hash2(run, line, 0x3131) * 8);
+        BlockState leaves = Blocks.MANGROVE_LEAVES.defaultBlockState()
+            .setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true);
+        BlockState vine = ModBlocks.MAZE_VINE.get().defaultBlockState()
+            .setValue(net.minecraft.world.level.block.VineBlock.NORTH, (flags & 1) != 0)
+            .setValue(net.minecraft.world.level.block.VineBlock.EAST, (flags & 2) != 0)
+            .setValue(net.minecraft.world.level.block.VineBlock.SOUTH, (flags & 4) != 0)
+            .setValue(net.minecraft.world.level.block.VineBlock.WEST, (flags & 8) != 0);
+
+        for (int y = cfg.wallBaseY; y <= topJ; y++) {
+            if (!chunk.getBlockState(pos.set(gx, y, gz)).isAir()) continue;
+            if (Noise.hash3(gx, y, gz, 0x0DA9) < 0.15) continue; // organic gaps
+            double leaf = Noise.fbm2(run, y, 5, 0x51A7);
+            if (leaf > 0.55 && cover > 0.4) {
+                chunk.setBlockState(pos, leaves, false); // bushy clump
+            } else {
                 chunk.setBlockState(pos, vine, false);
             }
         }
@@ -286,7 +339,7 @@ public class MazeChunkGenerator extends ChunkGenerator {
 
     @Override
     public int getGenDepth() {
-        return 96; // matches the mazerunner:maze dimension type (min_y 0, height 96)
+        return 128; // matches the mazerunner:maze dimension type (min_y 0, height 128)
     }
 
     @Override

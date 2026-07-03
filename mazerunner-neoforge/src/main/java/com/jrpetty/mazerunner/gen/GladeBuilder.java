@@ -31,14 +31,14 @@ final class GladeBuilder {
 
         if (GladeTerrain.inLake(wx, wz)) {
             int depth = GladeTerrain.lakeDepth(wx, wz);
-            int bedY = floorY - depth;
+            int bedY = floorY - depth; // as low as floorY-11 (bedrock is floorY-13)
             BlockState bed = switch (GladeTerrain.bedMaterial(wx, wz)) {
                 case GladeTerrain.BED_SAND -> sand;
                 case GladeTerrain.BED_CLAY -> Blocks.CLAY.defaultBlockState();
                 case GladeTerrain.BED_GRAVEL -> Blocks.GRAVEL.defaultBlockState();
                 default -> dirt;
             };
-            for (int y = floorY - 4; y < bedY; y++) {
+            for (int y = cfg.bedrockY + 1; y < bedY; y++) {
                 chunk.setBlockState(pos.set(wx, y, wz), dirt, false);
             }
             chunk.setBlockState(pos.set(wx, bedY, wz), bed, false);
@@ -51,7 +51,7 @@ final class GladeBuilder {
         int raise = GladeTerrain.heightAt(wx, wz);
         int surfaceY = floorY + raise;
         boolean sandyShore = GladeTerrain.isSandy(wx, wz) && raise == 0;
-        for (int y = floorY - 4; y < surfaceY; y++) {
+        for (int y = cfg.bedrockY + 1; y < surfaceY; y++) {
             chunk.setBlockState(pos.set(wx, y, wz), dirt, false);
         }
         chunk.setBlockState(pos.set(wx, surfaceY, wz), sandyShore ? sand : grass, false);

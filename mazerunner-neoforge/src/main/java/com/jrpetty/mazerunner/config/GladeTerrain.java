@@ -15,14 +15,14 @@ public final class GladeTerrain {
     public static final int MIN = 640;
     public static final int MAX = 895;
     public static final int CENTER = 768;
-    public static final int MAX_RAISE = 5;
+    public static final int MAX_RAISE = 8;
 
     // Lake — southwest corner. Deeper and irregular (noise-warped shoreline).
     public static final double LAKE_CX = 698;
     public static final double LAKE_CZ = 840;
     public static final double LAKE_RX = 44;
     public static final double LAKE_RZ = 33;
-    public static final int LAKE_MAX_DEPTH = 6;
+    public static final int LAKE_MAX_DEPTH = 11;
 
     /** Bed materials. */
     public static final int BED_DIRT = 0, BED_SAND = 1, BED_CLAY = 2, BED_GRAVEL = 3;
@@ -100,10 +100,12 @@ public final class GladeTerrain {
     public static int heightAt(int x, int z) {
         if (!inGlade(x, z)) return 0;
 
-        // Two broad octaves for fuller, more varied hills that reach the cap
-        // more often. Kept low-frequency so elevation never steps by >1 block.
-        double n = Noise.value2(x, z, 40, 0x6E1A11) * 0.6 + Noise.value2(x, z, 21, 0x2C71) * 0.4;
-        double h = Math.max(0, (n - 0.18) / 0.82) * MAX_RAISE;
+        // Two broad, low-frequency octaves so hills reach up to +8 in places
+        // while elevation still never steps by more than 1 block per cell.
+        double n = Noise.value2(x, z, 52, 0x6E1A11) * 0.62 + Noise.value2(x, z, 28, 0x2C71) * 0.38;
+        // Slight overshoot so the tallest hills clip to the +8 cap (see clamp
+        // below); still low-frequency, so the surface never steps by >1 block.
+        double h = Math.max(0, (n - 0.18) / 0.64) * MAX_RAISE;
 
         // feather to zero at the walls so corridors and doors meet flat ground
         int edge = Math.min(Math.min(x - MIN, MAX - x), Math.min(z - MIN, MAX - z));
