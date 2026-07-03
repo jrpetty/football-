@@ -160,6 +160,18 @@ blueprints, web dashboard) are not in the mod yet.
 - **Crafting** — "craft a stone pickaxe", "make planks/sticks/torches/
   bread/chest". Needs a crafting table for tools — and if none is nearby
   it places its own (from 4 planks). Closes the self-maintenance loop.
+- **Smelting** — "smelt 16 iron", "smelt logs" (charcoal), "cook the
+  beef". It loads a REAL furnace with input + fuel from its pack (coal
+  first, then planks/sticks/logs), tends it while vanilla does the
+  cooking, tops it up, and collects the output. If nothing progresses it
+  takes its materials back and tells you. Requires a placed furnace —
+  which it can craft (8 cobblestone) or get by building the smeltery.
+- **The iron age** — "gather iron" / "gather coal" (needs the right
+  pickaxe — ores follow player tool rules, no pickaxe means no ore), then
+  "smelt 8 iron", then "craft an iron pickaxe/axe/sword/helmet/
+  chestplate/leggings/boots/shears/bucket". Better tools dig faster, so
+  the whole progression loop pays off: mine coal + iron → smelt → iron
+  gear → faster everything.
 - **Withdraw & storage memory** — "grab 10 iron from the chest". It
   remembers which chest holds what from every chest it touches.
 - **Standing orders** — "keep the chest stocked with 64 logs": it checks

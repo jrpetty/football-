@@ -39,6 +39,7 @@ public class CraftGoal extends Goal {
         || s.is(Blocks.COBBLED_DEEPSLATE.asItem());
     private static final Predicate<ItemStack> COAL = s -> s.is(Items.COAL) || s.is(Items.CHARCOAL);
     private static final Predicate<ItemStack> WHEAT = s -> s.is(Items.WHEAT);
+    private static final Predicate<ItemStack> IRON = s -> s.is(Items.IRON_INGOT);
 
     public static final Map<String, Recipe> RECIPES = new LinkedHashMap<>();
 
@@ -75,6 +76,27 @@ public class CraftGoal extends Goal {
             () -> new ItemStack(Items.STONE_HOE), true));
         RECIPES.put("stone sword", new Recipe(List.of(new Need(COBBLE, 2, "cobblestone"), new Need(STICK, 1, "stick")),
             () -> new ItemStack(Items.STONE_SWORD), true));
+        // The iron tier — smelt raw iron first ("smelt 8 iron"), then gear up.
+        RECIPES.put("iron pickaxe", tool(IRON, 3, "iron ingots", Items.IRON_PICKAXE));
+        RECIPES.put("iron axe", tool(IRON, 3, "iron ingots", Items.IRON_AXE));
+        RECIPES.put("iron shovel", new Recipe(List.of(new Need(IRON, 1, "iron ingot"), new Need(STICK, 2, "sticks")),
+            () -> new ItemStack(Items.IRON_SHOVEL), true));
+        RECIPES.put("iron hoe", new Recipe(List.of(new Need(IRON, 2, "iron ingots"), new Need(STICK, 2, "sticks")),
+            () -> new ItemStack(Items.IRON_HOE), true));
+        RECIPES.put("iron sword", new Recipe(List.of(new Need(IRON, 2, "iron ingots"), new Need(STICK, 1, "stick")),
+            () -> new ItemStack(Items.IRON_SWORD), true));
+        RECIPES.put("iron helmet", new Recipe(List.of(new Need(IRON, 5, "iron ingots")),
+            () -> new ItemStack(Items.IRON_HELMET), true));
+        RECIPES.put("iron chestplate", new Recipe(List.of(new Need(IRON, 8, "iron ingots")),
+            () -> new ItemStack(Items.IRON_CHESTPLATE), true));
+        RECIPES.put("iron leggings", new Recipe(List.of(new Need(IRON, 7, "iron ingots")),
+            () -> new ItemStack(Items.IRON_LEGGINGS), true));
+        RECIPES.put("iron boots", new Recipe(List.of(new Need(IRON, 4, "iron ingots")),
+            () -> new ItemStack(Items.IRON_BOOTS), true));
+        RECIPES.put("shears", new Recipe(List.of(new Need(IRON, 2, "iron ingots")),
+            () -> new ItemStack(Items.SHEARS), true));
+        RECIPES.put("bucket", new Recipe(List.of(new Need(IRON, 3, "iron ingots")),
+            () -> new ItemStack(Items.BUCKET), true));
     }
 
     private static Recipe tool(Predicate<ItemStack> head, int n, String label, net.minecraft.world.item.Item out) {

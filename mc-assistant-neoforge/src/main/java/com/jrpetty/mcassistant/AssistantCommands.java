@@ -43,6 +43,11 @@ public final class AssistantCommands {
             .then(Commands.literal("deposit").executes(AssistantCommands::deposit))
             .then(Commands.literal("dismiss").executes(AssistantCommands::dismiss))
             .then(Commands.literal("farm").executes(AssistantCommands::farm))
+            .then(Commands.literal("smelt")
+                .then(Commands.argument("what", StringArgumentType.word())
+                    .executes(ctx -> smelt(ctx, 8))
+                    .then(Commands.argument("amount", IntegerArgumentType.integer(1, 256))
+                        .executes(ctx -> smelt(ctx, IntegerArgumentType.getInteger(ctx, "amount"))))))
             .then(Commands.literal("craft")
                 .then(Commands.argument("what", StringArgumentType.greedyString())
                     .executes(AssistantCommands::craft)))
@@ -182,6 +187,20 @@ public final class AssistantCommands {
         return 1;
     }
 
+    private static int smelt(CommandContext<CommandSourceStack> ctx, int amount) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        String word = com.jrpetty.mcassistant.entity.goal.SmeltGoal.canonical(
+            StringArgumentType.getString(ctx, "what").toLowerCase());
+        if (word == null) {
+            ctx.getSource().sendFailure(Component.literal("I can smelt: "
+                + com.jrpetty.mcassistant.entity.goal.SmeltGoal.smeltableList()));
+            return 0;
+        }
+        a.enqueue(com.jrpetty.mcassistant.entity.Job.smelt(word, amount));
+        return 1;
+    }
+
     private static int craft(CommandContext<CommandSourceStack> ctx) {
         AssistantEntity a = requireAssistant(ctx);
         if (a == null) return 0;
@@ -310,7 +329,7 @@ public final class AssistantCommands {
         String what = StringArgumentType.getString(ctx, "what");
         GatherGoal.Kind kind = GatherGoal.Kind.fromWord(what);
         if (kind == null) {
-            ctx.getSource().sendFailure(Component.literal("I can gather: logs, stone, dirt."));
+            ctx.getSource().sendFailure(Component.literal("I can gather: logs, stone, dirt, iron, coal."));
             return 0;
         }
         a.requestGather(kind, amount);

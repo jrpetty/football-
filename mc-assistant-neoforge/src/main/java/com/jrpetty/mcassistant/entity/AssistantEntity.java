@@ -7,6 +7,7 @@ import com.jrpetty.mcassistant.entity.goal.FarmGoal;
 import com.jrpetty.mcassistant.entity.goal.FollowOwnerGoal;
 import com.jrpetty.mcassistant.entity.goal.GatherGoal;
 import com.jrpetty.mcassistant.entity.goal.RetreatGoal;
+import com.jrpetty.mcassistant.entity.goal.SmeltGoal;
 import com.jrpetty.mcassistant.entity.goal.WithdrawGoal;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -183,6 +184,7 @@ public class AssistantEntity extends PathfinderMob {
         this.goalSelector.addGoal(2, new WithdrawGoal(this));
         this.goalSelector.addGoal(2, new FarmGoal(this));
         this.goalSelector.addGoal(2, new BuildGoal(this));
+        this.goalSelector.addGoal(2, new SmeltGoal(this));
         this.goalSelector.addGoal(3, new MeleeAttackGoal(this, 1.25D, true));
         this.goalSelector.addGoal(4, new FollowOwnerGoal(this, 1.2D, 4.0F, 32.0F));
         this.goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 8.0F));
@@ -735,6 +737,9 @@ public class AssistantEntity extends PathfinderMob {
             case STONE -> s -> s.is(Blocks.COBBLESTONE.asItem()) || s.is(Blocks.STONE.asItem())
                 || s.is(Blocks.COBBLED_DEEPSLATE.asItem());
             case DIRT -> s -> s.is(Blocks.DIRT.asItem());
+            case IRON -> s -> s.is(net.minecraft.world.item.Items.RAW_IRON)
+                || s.is(net.minecraft.world.item.Items.IRON_INGOT);
+            case COAL -> s -> s.is(net.minecraft.world.item.Items.COAL);
         };
     }
 

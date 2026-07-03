@@ -17,7 +17,7 @@ import javax.annotation.Nullable;
 public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount,
                   @Nullable AssistantEntity.Mode mode, @Nullable String arg) {
 
-    public enum Type { GATHER, DEPOSIT, MODE, GO_HOME, CRAFT, WITHDRAW, FARM, BUILD }
+    public enum Type { GATHER, DEPOSIT, MODE, GO_HOME, CRAFT, WITHDRAW, FARM, BUILD, SMELT }
 
     /** Biggest single gather order (well past a full backpack of one item). */
     public static final int MAX_AMOUNT = 1024;
@@ -54,6 +54,10 @@ public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount,
         return new Job(Type.BUILD, null, 0, null, structure);
     }
 
+    public static Job smelt(String itemWord, int amount) {
+        return new Job(Type.SMELT, null, Math.max(1, Math.min(256, amount)), null, itemWord);
+    }
+
     public String label() {
         return switch (type) {
             case GATHER -> "gather " + amount + " " + (kind != null ? kind.label : "?");
@@ -64,6 +68,7 @@ public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount,
             case WITHDRAW -> "withdraw " + amount + " " + arg;
             case FARM -> "tend the farm";
             case BUILD -> "build a " + arg;
+            case SMELT -> "smelt " + amount + " " + arg;
         };
     }
 }

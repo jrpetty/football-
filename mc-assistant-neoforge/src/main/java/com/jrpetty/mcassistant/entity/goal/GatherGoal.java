@@ -23,7 +23,9 @@ public class GatherGoal extends Goal {
     public enum Kind {
         LOGS("logs"),
         STONE("stone"),
-        DIRT("dirt");
+        DIRT("dirt"),
+        IRON("iron ore"),
+        COAL("coal ore");
 
         public final String label;
         Kind(String label) { this.label = label; }
@@ -34,13 +36,27 @@ public class GatherGoal extends Goal {
                 case STONE -> state.is(BlockTags.BASE_STONE_OVERWORLD)
                     || state.is(net.minecraft.world.level.block.Blocks.COBBLESTONE);
                 case DIRT -> state.is(BlockTags.DIRT);
+                case IRON -> state.is(BlockTags.IRON_ORES);
+                case COAL -> state.is(BlockTags.COAL_ORES);
             };
+        }
+
+        /** Player rules: ores and stone yield nothing without the right pickaxe. */
+        public boolean needsProperTool() {
+            return this == STONE || this == IRON || this == COAL;
+        }
+
+        public String toolHint() {
+            return this == IRON ? "a stone pickaxe or better (\"craft a stone pickaxe\")"
+                : "a pickaxe (\"craft a wooden pickaxe\")";
         }
 
         @Nullable
         public static Kind fromWord(String word) {
             String w = word == null ? "" : word.toLowerCase().trim();
             if (w.startsWith("log") || w.startsWith("wood") || w.startsWith("tree")) return LOGS;
+            if (w.startsWith("iron")) return IRON;
+            if (w.startsWith("coal")) return COAL;
             if (w.startsWith("stone") || w.startsWith("cobble") || w.startsWith("rock")) return STONE;
             if (w.startsWith("dirt")) return DIRT;
             return null;
@@ -141,6 +157,11 @@ public class GatherGoal extends Goal {
             // follows the tool (bare hands are slow, diamond is fast).
             var state = assistant.level().getBlockState(targetPos);
             assistant.equipBestTool(state);
+            if (request.kind().needsProperTool()
+                && !assistant.getMainHandItem().isCorrectToolForDrops(state)) {
+                finish("I can't harvest " + request.kind().label + " without " + request.kind().toolHint() + ".");
+                return;
+            }
             workNeeded = assistant.workTicksFor(state);
         }
 

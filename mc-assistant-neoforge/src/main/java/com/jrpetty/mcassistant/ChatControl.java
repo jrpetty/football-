@@ -5,6 +5,7 @@ import com.jrpetty.mcassistant.entity.Job;
 import com.jrpetty.mcassistant.entity.goal.BuildGoal;
 import com.jrpetty.mcassistant.entity.goal.CraftGoal;
 import com.jrpetty.mcassistant.entity.goal.GatherGoal;
+import com.jrpetty.mcassistant.entity.goal.SmeltGoal;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -71,7 +72,7 @@ public final class ChatControl {
                           @Nullable AssistantEntity.Mode mode, @Nullable String arg) {
         enum Type { GATHER, DEPOSIT, MODE, COME, STOP, STATUS, JOBS, HELP,
                     DISMISS, OPEN, GO_HOME, SET_HOME,
-                    CRAFT, WITHDRAW, FARM, BUILD,
+                    CRAFT, WITHDRAW, FARM, BUILD, SMELT,
                     ROLE, RENAME, AUTO_ON, AUTO_OFF, STANDING_ADD, STANDING_CLEAR }
 
         static Action gather(GatherGoal.Kind k, int n) { return new Action(Type.GATHER, k, n, null, null); }
@@ -203,8 +204,8 @@ public final class ChatControl {
         if (actions.isEmpty()) {
             if (explicit) {
                 a.say(unknownMaterial
-                    ? "I can gather logs, stone, or dirt (for now)."
-                    : "Didn't catch that — try \"gather 32 logs then deposit\", \"craft a stone pickaxe\", \"build a shelter\", or !help.");
+                    ? "I can gather logs, stone, dirt, iron, or coal."
+                    : "Didn't catch that — try \"gather 32 logs then deposit\", \"smelt 8 iron\", \"craft an iron pickaxe\", \"build a shelter\", or !help.");
             }
             return;
         }
@@ -289,6 +290,13 @@ public final class ChatControl {
             return explicit ? Action.with(Action.Type.BUILD, null, 0) : null;
         }
 
+        // Smelting: "smelt 16 iron", "cook the beef", "smelt logs" (charcoal).
+        if (c.matches("^(?:smelt|cook)\\b.*")) {
+            String word = SmeltGoal.canonical(c);
+            if (word != null) return Action.with(Action.Type.SMELT, word, parseAmount(c, 8));
+            return explicit ? Action.with(Action.Type.SMELT, null, 0) : null;
+        }
+
         // Withdraw (before gather — "take"/"get"/"grab" overlap): needs
         // "... from the chest/barrel/storage".
         Matcher wd = WITHDRAW_FROM.matcher(c);
@@ -367,10 +375,11 @@ public final class ChatControl {
                     a.countItems(), a.countFood(), a.jobCount(), a.standingOrders().size()));
                 case JOBS -> reportJobs(a);
                 case HELP -> a.say("Talk to me like a person — orders chain with \"and\"/\"then\" and queue up. I understand: "
-                    + "gather/mine/chop (logs, stone, dirt), deposit, \"grab X from the chest\", craft/make ("
-                    + "planks, sticks, tools, chest, torches, bread...), \"build a wall/platform/shelter\", "
-                    + "farm/harvest, follow/stay/guard/come/stop, go home, set home here, open (my gear), "
-                    + "\"keep the chest stocked with 64 logs\", \"be a miner/farmer/lumberjack/builder\", "
+                    + "gather/mine/chop (logs, stone, dirt, iron, coal), deposit, \"grab X from the chest\", "
+                    + "smelt/cook (\"smelt 8 iron\", \"cook the beef\"), craft/make (planks, sticks, wood/stone/IRON "
+                    + "tools & armor, furnace, chest, torches, bread...), \"build a wall/platform/shelter/smeltery/"
+                    + "storage/workshop/watchtower\", farm/harvest, follow/stay/guard/come/stop, go home, set home here, "
+                    + "open (my gear), \"keep the chest stocked with 64 logs\", \"be a miner/farmer/lumberjack/builder\", "
                     + "\"work on your own\" / \"take a break\", \"your name is <name>\", spawn (a crew!), dismiss. "
                     + "Hold the voice key (default V) to speak any of this.");
                 case GATHER -> {
@@ -401,6 +410,15 @@ public final class ChatControl {
                     Job job = Job.farm();
                     a.enqueue(job);
                     queuedLabels.add(job.label());
+                }
+                case SMELT -> {
+                    if (act.arg() == null) {
+                        a.say("I can smelt: " + SmeltGoal.smeltableList() + ".");
+                    } else {
+                        Job job = Job.smelt(act.arg(), act.amount());
+                        a.enqueue(job);
+                        queuedLabels.add(job.label());
+                    }
                 }
                 case BUILD -> {
                     if (act.arg() == null) {
@@ -511,7 +529,7 @@ public final class ChatControl {
             a.say("Queued: " + queuedLabels.get(0) + " (#" + a.jobCount() + " in line).");
         }
         if (unknownMaterial) {
-            a.say("(One part asked for a material I can't gather yet — I know logs, stone, and dirt.)");
+            a.say("(One part asked for a material I can't gather yet — I know logs, stone, dirt, iron, and coal.)");
         }
     }
 
