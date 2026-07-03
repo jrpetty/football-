@@ -9,11 +9,14 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 import javax.annotation.Nullable;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Predicate;
 
 /**
@@ -78,6 +81,15 @@ public class SmeltGoal extends Goal {
         s -> s.is(Items.STICK),
         s -> s.is(ItemTags.LOGS));
 
+    // Foods cook in a furnace or smoker; ores in a furnace or blast furnace;
+    // stone/sand/logs only in a plain furnace.
+    private static final Set<String> FOODS = Set.of(
+        "beef", "porkchop", "chicken", "mutton", "rabbit", "fish", "potato");
+
+    private static boolean isOreWord(String c) {
+        return c.equals("iron") || c.equals("gold") || c.equals("copper");
+    }
+
     private final AssistantEntity assistant;
     @Nullable private Job job;
     @Nullable private Predicate<ItemStack> input;
@@ -122,16 +134,18 @@ public class SmeltGoal extends Goal {
             finish("I don't have any " + job.arg() + " to smelt — \"gather iron\" or \"grab " + job.arg() + " from the chest\" first.");
             return;
         }
-        this.remainingToLoad = Math.min(job.amount(), have);
-        if (countFuel() == 0) {
-            finish("I have no fuel — coal, planks, sticks, or logs.");
-            return;
-        }
-        this.furnacePos = findFurnace();
+        this.furnacePos = findFurnace(job.arg());
         if (furnacePos == null) {
-            finish("No furnace within 16 blocks — \"craft a furnace\" and place it, or have me \"build a furnace building\".");
+            finish("No usable furnace within 16 blocks — \"craft a furnace\" and place it, or \"build a furnace building\".");
             return;
         }
+        // We can smelt if we carry fuel OR the furnace already has fuel / is
+        // burning — so a furnace you've already lit works even with an empty pack.
+        if (countFuel() == 0 && !furnaceHasFuel(furnacePos)) {
+            finish("I have no fuel and the furnace isn't lit — give me coal/planks/sticks/logs, or fuel the furnace yourself.");
+            return;
+        }
+        this.remainingToLoad = Math.min(job.amount(), have);
         assistant.say("Smelting " + remainingToLoad + " " + job.arg() + ".");
     }
 
@@ -162,7 +176,7 @@ public class SmeltGoal extends Goal {
     public void tick() {
         if (job == null || input == null || furnacePos == null) return;
 
-        if (!(assistant.level().getBlockState(furnacePos).is(Blocks.FURNACE))) {
+        if (!isFurnaceBlock(assistant.level().getBlockState(furnacePos))) {
             finish("The furnace is gone.");
             return;
         }
@@ -230,8 +244,11 @@ public class SmeltGoal extends Goal {
             }
         }
 
-        // 3) Keep it fueled while there's work left.
-        if (furnace.getItem(1).isEmpty() && !furnace.getItem(0).isEmpty()) {
+        // 3) Keep it fueled — but only when the furnace has actually gone dark
+        //    (not currently burning) and there's still input to smelt. A lit
+        //    furnace is already cooking on the fuel it consumed, so leave it be
+        //    and don't waste ours (and never bail while it's still burning).
+        if (!isLit(furnacePos) && furnace.getItem(1).isEmpty() && !furnace.getItem(0).isEmpty()) {
             for (Predicate<ItemStack> fuelType : FUEL_PRIORITY) {
                 var inv = assistant.getInventoryItems();
                 boolean loaded = false;
@@ -253,7 +270,7 @@ public class SmeltGoal extends Goal {
             }
             if (furnace.getItem(1).isEmpty()) {
                 reclaim(furnace);
-                finish("Ran out of fuel — smelted " + collected + " so far.");
+                finish("Out of fuel and the furnace went cold — smelted " + collected + " so far.");
                 return;
             }
         }
@@ -294,14 +311,15 @@ public class SmeltGoal extends Goal {
         };
     }
 
+    /** Nearest furnace-type block that can smelt the given item. */
     @Nullable
-    private BlockPos findFurnace() {
+    private BlockPos findFurnace(String canonical) {
         BlockPos feet = assistant.feetPos();
         BlockPos best = null;
         double bestDist = Double.MAX_VALUE;
         for (BlockPos pos : BlockPos.betweenClosed(
                 feet.offset(-16, -4, -16), feet.offset(16, 4, 16))) {
-            if (!assistant.level().getBlockState(pos).is(Blocks.FURNACE)) continue;
+            if (!furnaceAccepts(assistant.level().getBlockState(pos), canonical)) continue;
             double d = pos.distSqr(feet);
             if (d < bestDist) {
                 bestDist = d;
@@ -309,5 +327,32 @@ public class SmeltGoal extends Goal {
             }
         }
         return best;
+    }
+
+    /** A plain furnace smelts anything; a blast furnace only ores/metals; a
+     *  smoker only food. */
+    private static boolean furnaceAccepts(BlockState state, String canonical) {
+        if (state.is(Blocks.FURNACE)) return true;
+        if (state.is(Blocks.BLAST_FURNACE)) return isOreWord(canonical);
+        if (state.is(Blocks.SMOKER)) return FOODS.contains(canonical);
+        return false;
+    }
+
+    private static boolean isFurnaceBlock(BlockState state) {
+        return state.is(Blocks.FURNACE) || state.is(Blocks.BLAST_FURNACE) || state.is(Blocks.SMOKER);
+    }
+
+    /** Is the furnace currently burning (fuel lit)? */
+    private boolean isLit(BlockPos pos) {
+        BlockState state = assistant.level().getBlockState(pos);
+        return state.hasProperty(BlockStateProperties.LIT) && state.getValue(BlockStateProperties.LIT);
+    }
+
+    /** True if the furnace can burn right now — already lit, or with fuel in
+     *  its fuel slot — so we don't need to supply our own. */
+    private boolean furnaceHasFuel(BlockPos pos) {
+        if (isLit(pos)) return true;
+        return assistant.level().getBlockEntity(pos) instanceof AbstractFurnaceBlockEntity f
+            && !f.getItem(1).isEmpty();
     }
 }

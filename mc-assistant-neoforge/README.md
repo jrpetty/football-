@@ -169,11 +169,13 @@ blueprints, web dashboard) are not in the mod yet.
   bread/chest". Needs a crafting table for tools — and if none is nearby
   it places its own (from 4 planks). Closes the self-maintenance loop.
 - **Smelting** — "smelt 16 iron", "smelt logs" (charcoal), "cook the
-  beef". It loads a REAL furnace with input + fuel from its pack (coal
-  first, then planks/sticks/logs), tends it while vanilla does the
-  cooking, tops it up, and collects the output. If nothing progresses it
-  takes its materials back and tells you. Requires a placed furnace —
-  which it can craft (8 cobblestone) or get by building the smeltery.
+  beef". It walks to a nearby **furnace, blast furnace, or smoker**, loads
+  the input, and tends it while vanilla does the cooking. It uses fuel from
+  its pack (coal first, then planks/sticks/logs) **or the furnace's own fuel
+  if you've already lit it** — an already-burning furnace works even when
+  its pack is empty. It won't waste fuel on a furnace that's still burning,
+  tops up when needed, collects the output, and reclaims its materials if
+  something's stuck. Craft a furnace (8 cobblestone) or build the smeltery.
 - **The iron age** — "gather iron" / "gather coal" (needs the right
   pickaxe — ores follow player tool rules, no pickaxe means no ore), then
   "smelt 8 iron", then "craft an iron pickaxe/axe/sword/helmet/
