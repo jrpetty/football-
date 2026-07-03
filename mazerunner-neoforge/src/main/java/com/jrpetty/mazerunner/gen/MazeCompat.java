@@ -22,7 +22,7 @@ import net.neoforged.fml.ModList;
  * <p>If DT's block names differ on your version, the lookups return empty and
  * the built-in forest is used; report the version and I'll pin the exact ids.
  */
-final class MazeCompat {
+public final class MazeCompat {
 
     private static volatile Boolean dtLoaded;
     private static BlockState[] dtSaplingBySpecies; // indexed by GladeTerrain species
