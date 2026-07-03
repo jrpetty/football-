@@ -29,7 +29,7 @@ final class MazeCompat {
 
     private MazeCompat() {}
 
-    static boolean dynamicTrees() {
+    public static boolean dynamicTrees() {
         Boolean local = dtLoaded;
         if (local == null) {
             synchronized (MazeCompat.class) {

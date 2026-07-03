@@ -107,7 +107,7 @@ public final class MazeCommands {
 
         source.sendSuccess(() -> Component.literal(String.join("\n",
             "Maze — day " + state.dayNumber() + ", layout " + layout.name()
-                + " (exit " + layout.exitId() + ")",
+                + " · fixed exit " + cfg.fixedExitId + " (only walls change)",
             "Clock: " + t + "/24000 (" + (t < 12000 ? "day" : "night") + ") · doors "
                 + (state.doorsOpen() ? "OPEN" : "sealed") + " · wall animations queued: "
                 + WallAnimator.queuedCount(),
@@ -122,11 +122,11 @@ public final class MazeCommands {
         MazeConfigData.LayoutDef layout = cfg.layout(layoutNumber - 1);
         if (dist < 0) {
             source.sendFailure(Component.literal(
-                layout.name() + " is NOT solvable — no path Glade → " + layout.exitId() + "!"));
+                layout.name() + " is NOT solvable — no path Glade → " + cfg.fixedExitId + "!"));
             return 0;
         }
         source.sendSuccess(() -> Component.literal(
-            layout.name() + " solvable: Glade → " + layout.exitId() + " in " + dist
+            layout.name() + " solvable: Glade → fixed exit " + cfg.fixedExitId + " in " + dist
                 + " cells (~" + dist * cfg.cellSize + " blocks).").withStyle(ChatFormatting.GREEN), false);
         return dist;
     }
@@ -155,13 +155,11 @@ public final class MazeCommands {
             return 0;
         }
         MazeConfigData cfg = MazeConfigs.get();
-        MazeWorldState state = MazeWorldState.get(level);
-        MazeConfigData.LayoutDef layout = cfg.layout(state.physicalLayout());
-        MazeConfigData.ExitDef exit = cfg.exits.get(layout.exitId());
+        MazeConfigData.ExitDef exit = cfg.fixedExit();
         player.teleportTo(level, exit.portalX() + 0.5, cfg.floorY + 2, exit.portalZ() + 0.5,
             player.getYRot(), player.getXRot());
         source.sendSuccess(() -> Component.literal(
-            "Teleported to the active exit (" + exit.id() + ", facing " + exit.facing() + ").")
+            "Teleported to the fixed exit (" + exit.id() + ", facing " + exit.facing() + ").")
             .withStyle(ChatFormatting.YELLOW), true);
         return 1;
     }

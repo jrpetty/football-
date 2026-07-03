@@ -76,10 +76,10 @@ public final class MazeWalls {
             // A flat outer face (exactly one open orthogonal neighbour) can recess.
             int open = 0;
             int run = 0;
-            if (openMaze(cfg, x - 1, z)) { open++; run = z; }
-            if (openMaze(cfg, x + 1, z)) { open++; run = z; }
-            if (openMaze(cfg, x, z - 1)) { open++; run = x; }
-            if (openMaze(cfg, x, z + 1)) { open++; run = x; }
+            if (isOpenForRelief(cfg, x - 1, z)) { open++; run = z; }
+            if (isOpenForRelief(cfg, x + 1, z)) { open++; run = z; }
+            if (isOpenForRelief(cfg, x, z - 1)) { open++; run = x; }
+            if (isOpenForRelief(cfg, x, z + 1)) { open++; run = x; }
             if (open == 1 && panelOffset(run) == -1) return false; // 1-deep niche
             return true;
         }
@@ -96,6 +96,39 @@ public final class MazeWalls {
 
     private static boolean openMaze(MazeConfigData cfg, int x, int z) {
         return inMaze(cfg, x, z) && MazeStructures.isOpen(cfg, x, z);
+    }
+
+    /** Open for relief purposes — maze corridors AND the open Glade both count,
+     *  so the walls facing the Glade recess/protrude just like the maze. */
+    private static boolean isOpenForRelief(MazeConfigData cfg, int x, int z) {
+        int cx = cell(x, cfg.cellSize);
+        int cz = cell(z, cfg.cellSize);
+        if (!cfg.inGrid(cx, cz)) return false;
+        if (cfg.inGlade(cx, cz)) return true;
+        return MazeStructures.isOpen(cfg, x, z);
+    }
+
+    /** A Glade-edge block that a neighbouring wall panel pushes out into. */
+    public static boolean gladeProtrusion(MazeConfigData cfg, int gx, int gz) {
+        int cx = cell(gx, cfg.cellSize);
+        int cz = cell(gz, cfg.cellSize);
+        if (!cfg.inGrid(cx, cz) || !cfg.inGlade(cx, cz)) return false;
+        return protrudeGladeFrom(cfg, gx - 1, gz, gz) || protrudeGladeFrom(cfg, gx + 1, gz, gz)
+            || protrudeGladeFrom(cfg, gx, gz - 1, gx) || protrudeGladeFrom(cfg, gx, gz + 1, gx);
+    }
+
+    private static boolean protrudeGladeFrom(MazeConfigData cfg, int nx, int nz, int run) {
+        return baseSolid(cfg, nx, nz) && !nearMovable(cfg, nx, nz) && !inPlaza(cfg, nx, nz)
+            && panelOffset(run) == 1;
+    }
+
+    /** Solidity including Glade-edge protrusions; use for generation & greenery. */
+    public static boolean solidWithGlade(MazeConfigData cfg, int x, int y, int z) {
+        if (y < cfg.wallBaseY || y > cfg.wallTopY) return false;
+        int cx = cell(x, cfg.cellSize);
+        int cz = cell(z, cfg.cellSize);
+        if (cfg.inGrid(cx, cz) && cfg.inGlade(cx, cz)) return gladeProtrusion(cfg, x, z);
+        return solid(cfg, x, y, z);
     }
 
     private static boolean protrudesFrom(MazeConfigData cfg, int nx, int nz, int run) {

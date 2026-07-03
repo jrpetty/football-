@@ -85,6 +85,11 @@ public final class MazeConfigData {
     /** Deterministically chosen dead-end cells that hold a supply chest. */
     public final List<int[]> chestCells = new ArrayList<>();
 
+    /** The single fixed exit used every day; only the walls change the route. */
+    public String fixedExitId;
+    /** Per-layout open toggle ids, augmented if needed to reach the fixed exit. */
+    private final Map<Integer, Set<String>> effectiveOpen = new HashMap<>();
+
     // ------------------------------------------------------------- parse
 
     public static MazeConfigData parse(Reader reader) {
@@ -152,8 +157,146 @@ public final class MazeConfigData {
             doors.add(new DoorDef(entry.getKey(), rx, rz, doorBox(rx, rz)));
         }
 
+        chooseFixedExit();
         indexBoxes();
         pickChestCells();
+    }
+
+    public ExitDef fixedExit() {
+        return exits.get(fixedExitId);
+    }
+
+    /** Effective open toggles for a layout (authored + any reachability fix-ups). */
+    public Set<String> open(int layoutIndex) {
+        return effectiveOpen.getOrDefault(Math.floorMod(layoutIndex, layouts.size()),
+            layout(layoutIndex).open());
+    }
+
+    private Set<Long> edgesFor(Set<String> openIds) {
+        Set<Long> edges = new HashSet<>(baseOpenEdges);
+        for (String id : openIds) {
+            TogglePoint tp = togglePoints.get(id);
+            if (tp != null) edges.add(edgeKey(tp.ax(), tp.az(), tp.bx(), tp.bz()));
+        }
+        return edges;
+    }
+
+    /** BFS glade→(tx,tz) over an open-edge set; distance in cells or -1. */
+    private int reachDist(Set<Long> edges, int tx, int tz) {
+        Map<Long, Integer> dist = new HashMap<>();
+        ArrayDeque<long[]> queue = new ArrayDeque<>();
+        for (DoorDef d : doors) {
+            dist.put(d.ringCellX() * 4096L + d.ringCellZ(), 0);
+            queue.add(new long[] { d.ringCellX(), d.ringCellZ() });
+        }
+        int[][] steps = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+        while (!queue.isEmpty()) {
+            long[] c = queue.poll();
+            int cx = (int) c[0];
+            int cz = (int) c[1];
+            int d = dist.get(cx * 4096L + cz);
+            if (cx == tx && cz == tz) return d;
+            for (int[] s : steps) {
+                int nx = cx + s[0];
+                int nz = cz + s[1];
+                if (!inGrid(nx, nz) || inGlade(nx, nz)) continue;
+                if (!edges.contains(edgeKey(cx, cz, nx, nz))) continue;
+                long nk = nx * 4096L + nz;
+                if (dist.containsKey(nk)) continue;
+                dist.put(nk, d + 1);
+                queue.add(new long[] { nx, nz });
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Picks the single fixed exit: the one reachable in the most layouts (ties
+     * broken by the longest shortest-route, for a substantial goal), then
+     * augments any layout that can't reach it by opening the toggles along a
+     * path through the full graph — so every day stays solvable to that one exit.
+     */
+    private void chooseFixedExit() {
+        Set<Long> full = new HashSet<>(baseOpenEdges);
+        Map<Long, String> edgeToId = new HashMap<>();
+        for (TogglePoint tp : togglePoints.values()) {
+            long k = edgeKey(tp.ax(), tp.az(), tp.bx(), tp.bz());
+            full.add(k);
+            edgeToId.put(k, tp.id());
+        }
+
+        String best = null;
+        int bestReach = -1;
+        int bestMin = -1;
+        for (ExitDef e : exits.values()) {
+            int reach = 0;
+            int min = Integer.MAX_VALUE;
+            for (LayoutDef l : layouts) {
+                int d = reachDist(edgesFor(l.open()), e.cellX(), e.cellZ());
+                if (d >= 0) {
+                    reach++;
+                    min = Math.min(min, d);
+                }
+            }
+            int minVal = min == Integer.MAX_VALUE ? 0 : min;
+            if (reach > bestReach || (reach == bestReach && minVal > bestMin)) {
+                best = e.id();
+                bestReach = reach;
+                bestMin = minVal;
+            }
+        }
+        fixedExitId = best;
+
+        ExitDef fx = exits.get(fixedExitId);
+        for (LayoutDef l : layouts) {
+            Set<String> eff = new HashSet<>(l.open());
+            if (reachDist(edgesFor(eff), fx.cellX(), fx.cellZ()) < 0) {
+                for (String id : pathToggles(full, edgeToId, fx.cellX(), fx.cellZ())) eff.add(id);
+            }
+            effectiveOpen.put(l.index(), eff);
+        }
+    }
+
+    /** Toggle ids along a full-graph path glade→(tx,tz), to guarantee reachability. */
+    private List<String> pathToggles(Set<Long> full, Map<Long, String> edgeToId, int tx, int tz) {
+        Map<Long, Long> prev = new HashMap<>(); // cellKey → previous cellKey
+        ArrayDeque<long[]> queue = new ArrayDeque<>();
+        for (DoorDef d : doors) {
+            long k = d.ringCellX() * 4096L + d.ringCellZ();
+            prev.put(k, -1L);
+            queue.add(new long[] { d.ringCellX(), d.ringCellZ() });
+        }
+        int[][] steps = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+        long target = tx * 4096L + tz;
+        boolean found = false;
+        while (!queue.isEmpty() && !found) {
+            long[] c = queue.poll();
+            int cx = (int) c[0];
+            int cz = (int) c[1];
+            for (int[] s : steps) {
+                int nx = cx + s[0];
+                int nz = cz + s[1];
+                if (!inGrid(nx, nz) || inGlade(nx, nz)) continue;
+                if (!full.contains(edgeKey(cx, cz, nx, nz))) continue;
+                long nk = nx * 4096L + nz;
+                if (prev.containsKey(nk)) continue;
+                prev.put(nk, cx * 4096L + cz);
+                if (nk == target) { found = true; break; }
+                queue.add(new long[] { nx, nz });
+            }
+        }
+        List<String> ids = new ArrayList<>();
+        if (!prev.containsKey(target)) return ids;
+        long cur = target;
+        while (prev.get(cur) != null && prev.get(cur) != -1L) {
+            long p = prev.get(cur);
+            int cx = (int) (cur / 4096), cz = (int) (cur % 4096);
+            int px = (int) (p / 4096), pz = (int) (p % 4096);
+            String id = edgeToId.get(edgeKey(cx, cz, px, pz));
+            if (id != null) ids.add(id);
+            cur = p;
+        }
+        return ids;
     }
 
     private static int[] parseEdgeKey(String key) {
@@ -327,40 +470,7 @@ public final class MazeConfigData {
      * cells, or -1 if unreachable.
      */
     public int validate(int layoutIndex) {
-        LayoutDef layout = layout(layoutIndex);
-        Set<Long> open = new HashSet<>(baseOpenEdges);
-        for (String id : layout.open()) {
-            TogglePoint tp = togglePoints.get(id);
-            if (tp != null) open.add(edgeKey(tp.ax(), tp.az(), tp.bx(), tp.bz()));
-        }
-        ExitDef exit = exits.get(layout.exitId());
-        long target = exit.cellX() * 4096L + exit.cellZ();
-
-        Map<Long, Integer> dist = new HashMap<>();
-        ArrayDeque<Long> queue = new ArrayDeque<>();
-        for (DoorDef door : doors) {
-            long start = door.ringCellX() * 4096L + door.ringCellZ();
-            dist.put(start, 0);
-            queue.add(start);
-        }
-        while (!queue.isEmpty()) {
-            long cur = queue.poll();
-            if (cur == target) return dist.get(cur);
-            int cx = (int) (cur / 4096);
-            int cz = (int) (cur % 4096);
-            int d = dist.get(cur);
-            int[][] steps = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
-            for (int[] s : steps) {
-                int nx = cx + s[0];
-                int nz = cz + s[1];
-                if (!inGrid(nx, nz) || inGlade(nx, nz)) continue;
-                if (!open.contains(edgeKey(cx, cz, nx, nz))) continue;
-                long nk = nx * 4096L + nz;
-                if (dist.containsKey(nk)) continue;
-                dist.put(nk, d + 1);
-                queue.add(nk);
-            }
-        }
-        return -1;
+        ExitDef exit = fixedExit();
+        return reachDist(edgesFor(open(layoutIndex)), exit.cellX(), exit.cellZ());
     }
 }

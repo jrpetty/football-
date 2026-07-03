@@ -12,6 +12,7 @@ import com.jrpetty.mazerunner.config.MazeConfigData.StateBox;
 import com.jrpetty.mazerunner.config.MazeConfigs;
 import com.jrpetty.mazerunner.config.MazeStructures;
 import com.jrpetty.mazerunner.gen.MazeChunkGenerator;
+import com.jrpetty.mazerunner.gen.MazeCompat;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -75,6 +76,8 @@ public final class MazeRuntime {
     private static final ConcurrentLinkedQueue<Long> pendingUnloads = new ConcurrentLinkedQueue<>();
     private static final Set<Long> loadedChunks = new HashSet<>();
     private static final Map<UUID, Long> portalCooldown = new HashMap<>();
+    // Glade chunks whose Dynamic Trees saplings still need maturing.
+    private static final ConcurrentLinkedQueue<Long> pendingGladeGrow = new ConcurrentLinkedQueue<>();
 
     /** Always-visible clock: day number + real time until the doors seal / dawn. */
     private static final ServerBossEvent CLOCK_BAR = new ServerBossEvent(
@@ -131,9 +134,8 @@ public final class MazeRuntime {
             MazeRunnerMod.LOGGER.info("Maze Runner: world schedule rolled: {}", order.toString().trim());
         }
         level.setDefaultSpawnPos(GLADE_SPAWN, 0.0F);
-        MazeRunnerMod.LOGGER.info("Maze Runner world active — day {}, layout {}, exit {}",
-            state.dayNumber(), cfg.layout(state.physicalLayout()).name(),
-            cfg.layout(state.physicalLayout()).exitId());
+        MazeRunnerMod.LOGGER.info("Maze Runner world active — day {}, layout {}, fixed exit {}",
+            state.dayNumber(), cfg.layout(state.physicalLayout()).name(), cfg.fixedExitId);
     }
 
     @SubscribeEvent
@@ -142,6 +144,7 @@ public final class MazeRuntime {
         pendingUnloads.clear();
         loadedChunks.clear();
         portalCooldown.clear();
+        pendingGladeGrow.clear();
         WallAnimator.clear();
         CLOCK_BAR.removeAllPlayers();
     }
@@ -270,6 +273,50 @@ public final class MazeRuntime {
             loadedChunks.add(key);
             ChunkPos pos = new ChunkPos(key);
             snapChunk(level, state, pos.x, pos.z);
+            if (cfg().inGlade(pos.x, pos.z) && MazeCompat.dynamicTrees()) {
+                pendingGladeGrow.add(key);
+            }
+        }
+
+        // Mature a Glade chunk's Dynamic Trees saplings (one chunk per tick).
+        Long grow = pendingGladeGrow.poll();
+        if (grow != null) {
+            ChunkPos p = new ChunkPos(grow);
+            growDynamicTrees(level, p.x, p.z);
+        }
+    }
+
+    private static com.jrpetty.mazerunner.config.MazeConfigData cfg() {
+        return MazeConfigs.get();
+    }
+
+    /**
+     * Bonemeals any Dynamic Trees saplings in a Glade chunk to full growth, so
+     * the forest is mature at first sight rather than tiny saplings. Uses the
+     * vanilla BonemealableBlock interface (DT saplings implement it), so no DT
+     * API is needed. Fully guarded — a failure just leaves the saplings.
+     */
+    private static void growDynamicTrees(ServerLevel level, int cx, int cz) {
+        try {
+            var cfg = cfg();
+            for (int lx = 0; lx < 16; lx++) {
+                for (int lz = 0; lz < 16; lz++) {
+                    int wx = (cx << 4) + lx;
+                    int wz = (cz << 4) + lz;
+                    if (!com.jrpetty.mazerunner.config.GladeTerrain.isTrunkSite(wx, wz)) continue;
+                    int ground = cfg.floorY + com.jrpetty.mazerunner.config.GladeTerrain.heightAt(wx, wz);
+                    BlockPos p = new BlockPos(wx, ground + 1, wz);
+                    for (int i = 0; i < 24; i++) {
+                        BlockState st = level.getBlockState(p);
+                        if (!(st.getBlock() instanceof net.minecraft.world.level.block.BonemealableBlock bm)) break;
+                        if (!bm.isValidBonemealTarget(level, p, st)) break;
+                        bm.performBonemeal(level, level.random, p, st);
+                    }
+                }
+            }
+        } catch (Throwable t) {
+            MazeRunnerMod.LOGGER.warn("Maze Runner: Dynamic Trees growth failed in chunk {},{}: {}",
+                cx, cz, t.toString());
         }
     }
 
@@ -338,31 +385,27 @@ public final class MazeRuntime {
         MazeConfigData.LayoutDef next = cfg.layout(state.layoutIndexForDay(state.dayNumber() + 1));
         if (next.index() == current.index()) return;
 
+        // Only the walls move — the exit portal stays fixed. Toggle points that
+        // differ between today's and tomorrow's layout animate open/closed,
+        // reshaping the route to the same exit.
+        java.util.Set<String> openNow = cfg.open(current.index());
+        java.util.Set<String> openNext = cfg.open(next.index());
         int changes = 0;
         for (MazeConfigData.TogglePoint tp : cfg.togglePoints.values()) {
-            boolean openNow = current.open().contains(tp.id());
-            boolean openNext = next.open().contains(tp.id());
-            if (openNow != openNext) {
-                WallAnimator.enqueue(tp.box(), !openNext);
+            if (openNow.contains(tp.id()) != openNext.contains(tp.id())) {
+                WallAnimator.enqueue(tp.box(), !openNext.contains(tp.id()));
                 changes++;
             }
         }
-        // exit gates: seal the old exit, open the new one
-        MazeConfigData.ExitDef oldExit = cfg.exits.get(current.exitId());
-        MazeConfigData.ExitDef newExit = cfg.exits.get(next.exitId());
-        WallAnimator.enqueue(oldExit.gapBox(), true);
-        WallAnimator.enqueue(newExit.gapBox(), false);
 
         state.setPhysicalLayout(next.index());
-        setPortalActive(level, oldExit, false);
-        setPortalActive(level, newExit, true);
 
         broadcast(level, Component.literal(
             "The Maze is shifting — " + changes + " passages are moving in the dark.")
             .withStyle(ChatFormatting.DARK_AQUA));
         rumble(level, 0.4F);
-        MazeRunnerMod.LOGGER.info("Maze shift: {} -> {} ({} toggle changes, exit {} -> {})",
-            current.name(), next.name(), changes, oldExit.id(), newExit.id());
+        MazeRunnerMod.LOGGER.info("Maze shift: {} -> {} ({} passages changed; exit fixed at {})",
+            current.name(), next.name(), changes, cfg.fixedExitId);
     }
 
     private static void onDawn(ServerLevel level, MazeWorldState state) {
@@ -384,20 +427,21 @@ public final class MazeRuntime {
         MazeConfigData cfg = MazeConfigs.get();
         MazeConfigData.LayoutDef layout = cfg.layout(state.physicalLayout());
 
+        java.util.Set<String> openToggles = cfg.open(layout.index());
         for (StateBox sb : cfg.boxesIn(cx, cz)) {
             if (WallAnimator.isAnimating(sb.box())) continue;
             boolean open = switch (sb.kind()) {
-                case TOGGLE -> layout.open().contains(sb.id());
+                case TOGGLE -> openToggles.contains(sb.id());
                 case DOOR -> state.doorsOpen();
-                case EXIT_GAP -> layout.exitId().equals(sb.id());
+                case EXIT_GAP -> cfg.fixedExitId.equals(sb.id()); // only the fixed exit is open
             };
             applyBoxInChunk(level, sb.box(), open, cx, cz);
         }
 
-        for (MazeConfigData.ExitDef exit : cfg.exits.values()) {
-            if (exit.portalX() >> 4 == cx && exit.portalZ() >> 4 == cz) {
-                setPortalActive(level, exit, layout.exitId().equals(exit.id()));
-            }
+        // Only the fixed exit has a portal, always lit.
+        MazeConfigData.ExitDef fixed = cfg.fixedExit();
+        if (fixed.portalX() >> 4 == cx && fixed.portalZ() >> 4 == cz) {
+            setPortalActive(level, fixed, true);
         }
 
         for (int[] cell : cfg.chestCells) {

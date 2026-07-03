@@ -94,7 +94,18 @@ public class MazeChunkGenerator extends ChunkGenerator {
                     chunk.setBlockState(pos.set(wx, cfg.bedrockY, wz), bedrock, false);
 
                     if (glade) {
-                        GladeBuilder.column(cfg, chunk, pos, wx, wz);
+                        if (MazeWalls.gladeProtrusion(cfg, wx, wz)) {
+                            // A wall panel pushed out into the Glade edge.
+                            for (int y = cfg.bedrockY + 1; y < floorY; y++) {
+                                chunk.setBlockState(pos.set(wx, y, wz), dirt, false);
+                            }
+                            chunk.setBlockState(pos.set(wx, floorY, wz), dirt, false);
+                            for (int y = cfg.wallBaseY; y <= cfg.wallTopY; y++) {
+                                chunk.setBlockState(pos.set(wx, y, wz), WallPalette.stateAt(cfg, wx, y, wz), false);
+                            }
+                        } else {
+                            GladeBuilder.column(cfg, chunk, pos, wx, wz);
+                        }
                         continue;
                     }
                     for (int y = cfg.bedrockY + 1; y < floorY; y++) {
@@ -166,11 +177,7 @@ public class MazeChunkGenerator extends ChunkGenerator {
         }
         if (flags == 0) return;
 
-        BlockState vine = ModBlocks.MAZE_VINE.get().defaultBlockState()
-            .setValue(net.minecraft.world.level.block.VineBlock.NORTH, (flags & 1) != 0)
-            .setValue(net.minecraft.world.level.block.VineBlock.EAST, (flags & 2) != 0)
-            .setValue(net.minecraft.world.level.block.VineBlock.SOUTH, (flags & 4) != 0)
-            .setValue(net.minecraft.world.level.block.VineBlock.WEST, (flags & 8) != 0);
+        BlockState vine = vineState(flags);
         for (int y = Math.max(cfg.wallBaseY, start); y <= Math.min(cfg.wallTopY, end); y++) {
             if (chunk.getBlockState(pos.set(wx, y, wz)).isAir()) {
                 chunk.setBlockState(pos, vine, false);
@@ -187,6 +194,7 @@ public class MazeChunkGenerator extends ChunkGenerator {
         int cx = Math.floorDiv(gx, cfg.cellSize);
         int cz = Math.floorDiv(gz, cfg.cellSize);
         if (!cfg.inGlade(cx, cz)) return;
+        if (MazeWalls.gladeProtrusion(cfg, gx, gz)) return; // this column is a wall panel
 
         int flags = 0;
         int run = 0;
@@ -194,7 +202,7 @@ public class MazeChunkGenerator extends ChunkGenerator {
         for (int dir = 0; dir < 4; dir++) {
             int nx = gx + DX[dir];
             int nz = gz + DZ[dir];
-            if (!MazeWalls.solid(cfg, nx, cfg.wallBaseY, nz)) continue;
+            if (!MazeWalls.solidWithGlade(cfg, nx, cfg.wallBaseY, nz)) continue;
             if (isMovableFace(nx, nz)) continue;
             boolean normalX = DX[dir] != 0;
             flags |= faceBit(dir);
@@ -209,11 +217,7 @@ public class MazeChunkGenerator extends ChunkGenerator {
         int topJ = cfg.wallTopY - (int) (Noise.hash2(run, line, 0x3131) * 8);
         BlockState leaves = Blocks.MANGROVE_LEAVES.defaultBlockState()
             .setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true);
-        BlockState vine = ModBlocks.MAZE_VINE.get().defaultBlockState()
-            .setValue(net.minecraft.world.level.block.VineBlock.NORTH, (flags & 1) != 0)
-            .setValue(net.minecraft.world.level.block.VineBlock.EAST, (flags & 2) != 0)
-            .setValue(net.minecraft.world.level.block.VineBlock.SOUTH, (flags & 4) != 0)
-            .setValue(net.minecraft.world.level.block.VineBlock.WEST, (flags & 8) != 0);
+        BlockState vine = vineState(flags);
 
         for (int y = cfg.wallBaseY; y <= topJ; y++) {
             if (!chunk.getBlockState(pos.set(gx, y, gz)).isAir()) continue;
@@ -234,6 +238,15 @@ public class MazeChunkGenerator extends ChunkGenerator {
             case 2 -> 4; // south
             default -> 8; // west
         };
+    }
+
+    /** Vanilla vine attached on the given faces (bit 1=N,2=E,4=S,8=W). */
+    private static BlockState vineState(int flags) {
+        return Blocks.VINE.defaultBlockState()
+            .setValue(net.minecraft.world.level.block.VineBlock.NORTH, (flags & 1) != 0)
+            .setValue(net.minecraft.world.level.block.VineBlock.EAST, (flags & 2) != 0)
+            .setValue(net.minecraft.world.level.block.VineBlock.SOUTH, (flags & 4) != 0)
+            .setValue(net.minecraft.world.level.block.VineBlock.WEST, (flags & 8) != 0);
     }
 
     private boolean isSolidWall(int wallX, int wallZ) {
@@ -300,7 +313,8 @@ public class MazeChunkGenerator extends ChunkGenerator {
     private static List<ExitPad> buildPads(MazeConfigData cfg) {
         List<ExitPad> pads = new ArrayList<>();
         int max = cfg.gridCells * cfg.cellSize; // 1536
-        for (MazeConfigData.ExitDef exit : cfg.exits.values()) {
+        // Only the single fixed exit gets a pad and a portal.
+        for (MazeConfigData.ExitDef exit : List.of(cfg.fixedExit())) {
             int stripX0 = exit.cellX() * cfg.cellSize + 4;
             int stripZ0 = exit.cellZ() * cfg.cellSize + 4;
             switch (exit.facing()) {

@@ -37,6 +37,19 @@ which is also world spawn and death respawn (768, 61, 768). Vines and
 mangrove-moss climb the Glade-facing walls. Hostile mobs are automatically
 purged inside the Glade — it is safe ground; the maze is not.
 
+**v1.4 changes** — the **exit portal is now fixed** in one place (the south
+exit); every day only the *walls* reshape, so the route you navigate to that
+one exit changes (routes range ~150–350 cells across the week) while the goal
+never moves. All seven daily layouts are verified solvable to it. The
+**Glade-enclosing walls now carry the same in/out panel relief** as the maze (protruding into the Glade edge and recessing into niches,
+alternating every 8 blocks). Wall greenery now uses **vanilla vines** instead of
+the custom ivy block. When **Dynamic Trees** is installed, the Glade forest's DT
+saplings are **bonemealed to full maturity** on load (via the vanilla
+bonemealable interface — no DT API needed), so the woods are grown at first
+sight; without DT, built-in trees are used. (Reminder, unchanged and verified:
+Glade doors open at dawn and seal at dusk, and the day→layout schedule repeats
+weekly — week 1 day 1 == week 2 day 1 — with paths opening/closing each night.)
+
 **v1.3 changes** — the walls that enclose the Glade are now **thickly overgrown**
 (mangrove-leaf bushes and cascading vines, with natural gaps) and carry the same
 panel relief. **Walls now rise to y110** while a **build cap keeps players at
