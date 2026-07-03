@@ -83,7 +83,7 @@ public final class WallAnimator {
         if (active.isEmpty()) return;
 
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
-        BlockState wall = ModBlocks.MAZE_WALL.get().defaultBlockState();
+        MazeConfigData cfg = com.jrpetty.mazerunner.config.MazeConfigs.get();
         BlockState air = Blocks.AIR.defaultBlockState();
 
         Iterator<Anim> it = active.iterator();
@@ -106,9 +106,9 @@ public final class WallAnimator {
             int height = box.y1() - box.y0() + 1;
             // rising walls build bottom-up; sinking walls dissolve top-down
             int y = anim.closing ? box.y0() + anim.layersDone : box.y1() - anim.layersDone;
-            BlockState place = anim.closing ? wall : air;
             for (int x = box.x0(); x <= box.x1(); x++) {
                 for (int z = box.z0(); z <= box.z1(); z++) {
+                    BlockState place = anim.closing ? WallPalette.stateAt(cfg, x, y, z) : air;
                     pos.set(x, y, z);
                     if (level.getBlockState(pos) != place) {
                         level.setBlock(pos, place, SET_FLAGS);

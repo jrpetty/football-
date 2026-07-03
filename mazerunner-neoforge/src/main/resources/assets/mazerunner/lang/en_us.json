@@ -2,5 +2,12 @@
   "generator.mazerunner.maze_runner": "Maze Runner",
   "biome.mazerunner.glade": "The Glade",
   "block.mazerunner.maze_wall": "Maze Wall",
+  "block.mazerunner.maze_wall_polished_tuff": "Maze Wall (Polished Tuff)",
+  "block.mazerunner.maze_wall_tuff": "Maze Wall (Tuff)",
+  "block.mazerunner.maze_wall_polished_andesite": "Maze Wall (Polished Andesite)",
+  "block.mazerunner.maze_wall_mossy_bricks": "Maze Wall (Mossy Bricks)",
+  "block.mazerunner.maze_wall_bricks": "Maze Wall (Bricks)",
+  "block.mazerunner.maze_wall_andesite": "Maze Wall (Andesite)",
+  "block.mazerunner.maze_vine": "Maze Ivy",
   "block.mazerunner.exit_portal": "Exit Portal"
 }

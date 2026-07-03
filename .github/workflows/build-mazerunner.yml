@@ -63,7 +63,7 @@ jobs:
 
       - name: Commit jar back to the branch
         run: |
-          mkdir -p dist
+          mkdir -p dist && rm -f dist/*.jar
           cp build/libs/mazerunner-*.jar dist/
           cd "$GITHUB_WORKSPACE"
           git config user.name "github-actions[bot]"

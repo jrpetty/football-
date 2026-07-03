@@ -6,8 +6,11 @@ import java.util.concurrent.CompletableFuture;
 
 import com.jrpetty.mazerunner.ModBlocks;
 import com.jrpetty.mazerunner.ModWorldgen;
+import com.jrpetty.mazerunner.WallPalette;
 import com.jrpetty.mazerunner.config.MazeConfigData;
 import com.jrpetty.mazerunner.config.MazeConfigs;
+import com.jrpetty.mazerunner.config.MazeStructures;
+import com.jrpetty.mazerunner.config.WallStyle;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
@@ -76,41 +79,113 @@ public class MazeChunkGenerator extends ChunkGenerator {
         BlockState bedrock = Blocks.BEDROCK.defaultBlockState();
         BlockState dirt = Blocks.DIRT.defaultBlockState();
         BlockState grass = Blocks.GRASS_BLOCK.defaultBlockState();
-        BlockState wall = ModBlocks.MAZE_WALL.get().defaultBlockState();
         BlockState barrier = Blocks.BARRIER.defaultBlockState();
 
         boolean inGrid = cfg.inGrid(cp.x, cp.z);
 
         if (inGrid) {
             int floorY = cfg.floorY;
+            boolean glade = cfg.inGlade(cp.x, cp.z);
             for (int lx = 0; lx < 16; lx++) {
                 for (int lz = 0; lz < 16; lz++) {
                     int wx = cp.getMinBlockX() + lx;
                     int wz = cp.getMinBlockZ() + lz;
-                    boolean open = cfg.isBaseOpen(wx, wz);
-
                     chunk.setBlockState(pos.set(wx, floorY - 5, wz), bedrock, false);
-                    for (int y = floorY - 4; y < floorY; y++) {
-                        chunk.setBlockState(pos.set(wx, y, wz), dirt, false);
-                    }
-                    chunk.setBlockState(pos.set(wx, floorY, wz), open ? grass : dirt, false);
 
-                    if (!open) {
-                        for (int y = cfg.wallBaseY; y <= cfg.wallTopY; y++) {
-                            chunk.setBlockState(pos.set(wx, y, wz), wall, false);
+                    boolean open = MazeStructures.isOpen(cfg, wx, wz);
+                    if (glade) {
+                        GladeBuilder.column(cfg, chunk, pos, wx, wz);
+                    } else {
+                        for (int y = floorY - 4; y < floorY; y++) {
+                            chunk.setBlockState(pos.set(wx, y, wz), dirt, false);
+                        }
+                        chunk.setBlockState(pos.set(wx, floorY, wz), open ? grass : dirt, false);
+                        if (!open) {
+                            for (int y = cfg.wallBaseY; y <= cfg.wallTopY; y++) {
+                                chunk.setBlockState(pos.set(wx, y, wz),
+                                    WallPalette.stateAt(cfg, wx, y, wz), false);
+                            }
                         }
                     }
+
+                    if (open) greenery(chunk, pos, wx, wz);
                     chunk.setBlockState(pos.set(wx, cfg.wallTopY + 1, wz), barrier, false);
-                    // The Glade generates as a fresh slate — flat grass, no
-                    // structures — ready to be built by hand in-game.
                 }
             }
+
+            // A plaza ruin overlapping this chunk renders its slice here.
+            MazeStructures.Plaza plaza = MazeStructures.plazaAtCell(cfg, cp.x, cp.z);
+            if (plaza != null) RuinBuilder.render(cfg, plaza, chunk);
         }
 
         // Exit pads live just outside the grid (and their barrier roof).
         for (ExitPad pad : pads) {
             pad.emit(cfg, chunk, pos);
         }
+    }
+
+    // ------------------------------------------------------------- greenery
+
+    private static final int[] DX = { 0, 1, 0, -1 };
+    private static final int[] DZ = { -1, 0, 1, 0 };
+
+    /**
+     * Ivy runs and mangrove-moss clumps on the wall faces bordering this open
+     * column — noticeable, never a full coat. Faces of movable segments
+     * (toggles, doors, exit gates) stay bare so nothing floats when they move.
+     */
+    private void greenery(ChunkAccess chunk, BlockPos.MutableBlockPos pos, int wx, int wz) {
+        for (int dir = 0; dir < 4; dir++) {
+            int nx = wx + DX[dir];
+            int nz = wz + DZ[dir];
+            if (!cfg.inGrid(Math.floorDiv(nx, cfg.cellSize), Math.floorDiv(nz, cfg.cellSize))) continue;
+            if (MazeStructures.isOpen(cfg, nx, nz)) continue; // neighbour isn't a wall
+            if (isMovableFace(nx, nz)) continue;
+
+            int[] moss = WallStyle.mossClump(nx, nz, dir);
+            if (moss != null) {
+                BlockState leaves = Blocks.MANGROVE_LEAVES.defaultBlockState()
+                    .setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true);
+                int start = cfg.wallBaseY + moss[0];
+                for (int y = start; y < start + moss[1] && y <= cfg.wallTopY; y++) {
+                    if (chunk.getBlockState(pos.set(wx, y, wz)).isAir()) {
+                        chunk.setBlockState(pos, leaves, false);
+                    }
+                }
+            }
+
+            int[] run = WallStyle.vineRun(nx, nz, dir);
+            if (run != null) {
+                BlockState vine = ModBlocks.MAZE_VINE.get().defaultBlockState()
+                    .setValue(vineFace(dir), true);
+                int start = cfg.wallBaseY + run[0];
+                for (int y = start; y < start + run[1] && y <= cfg.wallTopY; y++) {
+                    if (chunk.getBlockState(pos.set(wx, y, wz)).isAir()) {
+                        chunk.setBlockState(pos, vine, false);
+                    }
+                }
+            }
+        }
+    }
+
+    private static net.minecraft.world.level.block.state.properties.BooleanProperty vineFace(int dir) {
+        return switch (dir) {
+            case 0 -> net.minecraft.world.level.block.VineBlock.NORTH;
+            case 1 -> net.minecraft.world.level.block.VineBlock.EAST;
+            case 2 -> net.minecraft.world.level.block.VineBlock.SOUTH;
+            default -> net.minecraft.world.level.block.VineBlock.WEST;
+        };
+    }
+
+    /** True if the wall column belongs to a toggle point, Glade door, or exit gate. */
+    private boolean isMovableFace(int wallX, int wallZ) {
+        for (MazeConfigData.StateBox box : cfg.boxesIn(wallX >> 4, wallZ >> 4)) {
+            if (wallX >= box.box().x0() && wallX <= box.box().x1()
+                && wallZ >= box.box().z0() && wallZ <= box.box().z1()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // ------------------------------------------------------------- exit pads
@@ -127,7 +202,6 @@ public class MazeChunkGenerator extends ChunkGenerator {
             if (cx0 > cx1 || cz0 > cz1) return;
 
             BlockState stone = Blocks.STONE_BRICKS.defaultBlockState();
-            BlockState wall = ModBlocks.MAZE_WALL.get().defaultBlockState();
             BlockState barrier = Blocks.BARRIER.defaultBlockState();
             int floorY = cfg.floorY + 1; // pad floor one step above the maze floor
 
@@ -140,7 +214,7 @@ public class MazeChunkGenerator extends ChunkGenerator {
                     boolean edge = x == x0 || x == x1 || z == z0 || z == z1;
                     if (edge && !gridSide) {
                         for (int y = floorY + 1; y <= floorY + 4; y++) {
-                            chunk.setBlockState(pos.set(x, y, z), wall, false);
+                            chunk.setBlockState(pos.set(x, y, z), WallPalette.stateAt(cfg, x, y, z), false);
                         }
                     }
                     chunk.setBlockState(pos.set(x, cfg.wallTopY + 1, z), barrier, false);
@@ -223,7 +297,7 @@ public class MazeChunkGenerator extends ChunkGenerator {
         if (!cfg.inGrid(Math.floorDiv(x, cfg.cellSize), Math.floorDiv(z, cfg.cellSize))) {
             return level.getMinBuildHeight();
         }
-        return cfg.isBaseOpen(x, z) ? cfg.floorY + 1 : cfg.wallTopY + 1;
+        return MazeStructures.isOpen(cfg, x, z) ? cfg.floorY + 1 : cfg.wallTopY + 1;
     }
 
     @Override

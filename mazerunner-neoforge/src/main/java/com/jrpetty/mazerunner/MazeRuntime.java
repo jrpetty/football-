@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import com.jrpetty.mazerunner.config.MazeConfigData;
 import com.jrpetty.mazerunner.config.MazeConfigData.StateBox;
 import com.jrpetty.mazerunner.config.MazeConfigs;
+import com.jrpetty.mazerunner.config.MazeStructures;
 import com.jrpetty.mazerunner.gen.MazeChunkGenerator;
 
 import net.minecraft.ChatFormatting;
@@ -31,8 +32,10 @@ import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.level.block.entity.SpawnerBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.storage.loot.LootTable;
@@ -386,9 +389,17 @@ public final class MazeRuntime {
         }
 
         for (int[] cell : cfg.chestCells) {
-            if (cell[0] == cx && cell[1] == cz) {
-                ensureChest(level, state, cell[0], cell[1]);
+            if (cell[0] == cx && cell[1] == cz
+                && MazeStructures.plazaAtCell(cfg, cell[0], cell[1]) == null) {
+                ensureChestAt(level, state,
+                    new BlockPos(cell[0] * cfg.cellSize + 7, cfg.floorY + 1, cell[1] * cfg.cellSize + 7));
             }
+        }
+        for (int[] c : MazeStructures.chestsIn(cfg, cx, cz)) {
+            ensureChestAt(level, state, new BlockPos(c[0], c[1], c[2]));
+        }
+        for (int[] s : MazeStructures.spawnersIn(cfg, cx, cz)) {
+            ensureSpawner(level, new BlockPos(s[0], s[1], s[2]));
         }
     }
 
@@ -400,13 +411,14 @@ public final class MazeRuntime {
         int z0 = Math.max(box.z0(), cz << 4);
         int z1 = Math.min(box.z1(), (cz << 4) + 15);
         if (x0 > x1 || z0 > z1) return;
-        BlockState target = open ? Blocks.AIR.defaultBlockState()
-            : ModBlocks.MAZE_WALL.get().defaultBlockState();
+        MazeConfigData cfg = MazeConfigs.get();
+        BlockState air = Blocks.AIR.defaultBlockState();
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
         int flags = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
         for (int x = x0; x <= x1; x++) {
             for (int z = z0; z <= z1; z++) {
                 for (int y = box.y0(); y <= box.y1(); y++) {
+                    BlockState target = open ? air : WallPalette.stateAt(cfg, x, y, z);
                     pos.set(x, y, z);
                     if (level.getBlockState(pos) != target) {
                         level.setBlock(pos, target, flags);
@@ -428,9 +440,7 @@ public final class MazeRuntime {
         }
     }
 
-    private static void ensureChest(ServerLevel level, MazeWorldState state, int cellX, int cellZ) {
-        MazeConfigData cfg = MazeConfigs.get();
-        BlockPos pos = new BlockPos(cellX * cfg.cellSize + 7, cfg.floorY + 1, cellZ * cfg.cellSize + 7);
+    private static void ensureChestAt(ServerLevel level, MazeWorldState state, BlockPos pos) {
         int cycle = state.chestCycle();
         if (state.chestRolledCycle(pos.asLong()) == cycle) return;
         if (!(level.getBlockState(pos).getBlock() instanceof ChestBlock)) {
@@ -443,12 +453,29 @@ public final class MazeRuntime {
         }
     }
 
+    private static void ensureSpawner(ServerLevel level, BlockPos pos) {
+        if (!level.getBlockState(pos).is(Blocks.SPAWNER)) {
+            level.setBlock(pos, Blocks.SPAWNER.defaultBlockState(), Block.UPDATE_ALL);
+        }
+        if (level.getBlockEntity(pos) instanceof SpawnerBlockEntity spawner) {
+            spawner.setEntityId(EntityType.ZOMBIE, level.random);
+        }
+    }
+
     private static int rerollLoadedChests(ServerLevel level, MazeWorldState state) {
         MazeConfigData cfg = MazeConfigs.get();
         int count = 0;
         for (int[] cell : cfg.chestCells) {
+            if (MazeStructures.plazaAtCell(cfg, cell[0], cell[1]) != null) continue;
             if (loadedChunks.contains(ChunkPos.asLong(cell[0], cell[1]))) {
-                ensureChest(level, state, cell[0], cell[1]);
+                ensureChestAt(level, state,
+                    new BlockPos(cell[0] * cfg.cellSize + 7, cfg.floorY + 1, cell[1] * cfg.cellSize + 7));
+                count++;
+            }
+        }
+        for (int[] c : MazeStructures.allChests(cfg)) {
+            if (loadedChunks.contains(ChunkPos.asLong(c[0] >> 4, c[2] >> 4))) {
+                ensureChestAt(level, state, new BlockPos(c[0], c[1], c[2]));
                 count++;
             }
         }

@@ -28,10 +28,26 @@ the maze but the seven exit pads.
   cannot be mined through or blown up. Hostile mobs roam the corridors at
   night. (Custom Grievers are a later phase.)
 
-**The Glade is a fresh slate** — flat grass with nothing in it, ready to be
-hand-built in-game (the Box, the Deadheads, the lake…). World spawn and death
-respawn are pinned to its exact centre (768, 61, 768). Hostile mobs are
-automatically purged inside the Glade — it is safe ground; the maze is not.
+**The Glade (v1.1)** — natural rolling terrain (up to +5 blocks, feathered
+flat at the walls and doors), a sandy-bedded lake in the southwest, an
+oak/birch forest covering about a quarter of the area in the northeast,
+flower patches and grasses across the meadow, and the movie-style **Box
+elevator** (decorative iron cage, grate and cable) at the exact centre —
+which is also world spawn and death respawn (768, 61, 768). Vines and
+mangrove-moss climb the Glade-facing walls. Hostile mobs are automatically
+purged inside the Glade — it is safe ground; the maze is not.
+
+**The maze (v1.1)** — walls wear a weathered palette from dark to light
+(polished tuff → tuff → polished andesite → mossy stone bricks → stone
+bricks → andesite) with wandering band boundaries, all still bedrock-grade
+unbreakable. Non-spreading ivy and moss clumps break up the faces (movable
+segments stay bare). **Fog** rolls through the corridors for the first ten
+real minutes of each morning and for ten minutes in the dead of night —
+exactly while the walls shift. Ten **plaza clearings** interrupt the
+corridors: ruined shelters with campfires, pillar courts, collapsed
+watchtowers, and surface ruins hiding **underground dungeon rooms** with a
+zombie spawner and extra loot. Plazas only remove walls, so every layout
+stays solvable.
 
 Quality-of-life on top of the spec:
 

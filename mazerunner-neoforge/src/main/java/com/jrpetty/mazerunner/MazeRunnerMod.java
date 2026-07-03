@@ -5,8 +5,10 @@ import org.slf4j.LoggerFactory;
 
 import com.jrpetty.mazerunner.config.MazeConfigs;
 
+import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.common.NeoForge;
 
 /**
@@ -29,6 +31,12 @@ public class MazeRunnerMod {
 
         NeoForge.EVENT_BUS.register(MazeRuntime.class);
         NeoForge.EVENT_BUS.register(MazeCommands.class);
+
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            // client-only classes are never loaded on a dedicated server
+            NeoForge.EVENT_BUS.register(com.jrpetty.mazerunner.client.MazeClientEvents.class);
+            modEventBus.register(com.jrpetty.mazerunner.client.MazeClientColors.class);
+        }
 
         var cfg = MazeConfigs.get(); // fail fast if the bundled maze data is broken
         LOGGER.info("Maze Runner loaded — {}×{} cells, {} toggle points, {} layouts, {} exits.",
