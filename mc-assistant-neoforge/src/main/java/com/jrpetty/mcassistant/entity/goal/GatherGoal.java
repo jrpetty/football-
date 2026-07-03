@@ -51,13 +51,13 @@ public class GatherGoal extends Goal {
     public record Request(Kind kind, int amount) {}
 
     private static final int SEARCH_RADIUS = 16;
-    private static final int WORK_TICKS_PER_BLOCK = 30; // ~1.5s per block
 
     private final AssistantEntity assistant;
     @Nullable private Request request;
     @Nullable private BlockPos targetPos;
     private int collected;
     private int workTicks;
+    private int workNeeded = 30; // recomputed per block from the equipped tool
     private int stuckTicks;
     private int myGen;
     private final java.util.Set<BlockPos> unreachable = new java.util.HashSet<>();
@@ -111,6 +111,7 @@ public class GatherGoal extends Goal {
     /** A job finished (or gave up) — drop it from the queue and move on. */
     private void finish(String message) {
         assistant.say(message);
+        assistant.noteJobOutcome(collected > 0); // idle initiative backs off when the area is dry
         assistant.pollJob();
         this.request = null;
         this.targetPos = null;
@@ -136,6 +137,11 @@ public class GatherGoal extends Goal {
                     : "Can't do that here — no " + request.kind().label + " within " + SEARCH_RADIUS + " blocks of me.");
                 return;
             }
+            // Player rules: grab the right tool for this block; work speed
+            // follows the tool (bare hands are slow, diamond is fast).
+            var state = assistant.level().getBlockState(targetPos);
+            assistant.equipBestTool(state);
+            workNeeded = assistant.workTicksFor(state);
         }
 
         // Player-parity reach: measured eye-to-block-center, 4.5 blocks.
@@ -158,7 +164,7 @@ public class GatherGoal extends Goal {
         }
 
         // In range: put in the work, then break the block and sweep the drops.
-        if (++workTicks < WORK_TICKS_PER_BLOCK) {
+        if (++workTicks < workNeeded) {
             if (workTicks % 8 == 0) {
                 assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
             }
@@ -170,6 +176,7 @@ public class GatherGoal extends Goal {
         workTicks = 0;
         if (assistant.level().destroyBlock(pos, true, assistant)) {
             collected++;
+            assistant.damageHeldTool(); // tools wear like a player's
             sweepDrops(pos);
         }
     }

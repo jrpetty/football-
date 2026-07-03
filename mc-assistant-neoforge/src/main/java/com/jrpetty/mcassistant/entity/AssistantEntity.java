@@ -1,16 +1,30 @@
 package com.jrpetty.mcassistant.entity;
 
+import com.jrpetty.mcassistant.entity.goal.BuildGoal;
+import com.jrpetty.mcassistant.entity.goal.CraftGoal;
 import com.jrpetty.mcassistant.entity.goal.DepositGoal;
+import com.jrpetty.mcassistant.entity.goal.FarmGoal;
 import com.jrpetty.mcassistant.entity.goal.FollowOwnerGoal;
 import com.jrpetty.mcassistant.entity.goal.GatherGoal;
-import net.minecraft.world.ContainerHelper;
+import com.jrpetty.mcassistant.entity.goal.RetreatGoal;
+import com.jrpetty.mcassistant.entity.goal.WithdrawGoal;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.NonNullList;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.util.Mth;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.util.Mth;
+import net.minecraft.world.Container;
+import net.minecraft.world.ContainerHelper;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -24,61 +38,125 @@ import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraft.core.NonNullList;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The companion. Player-parity on purpose: it has normal mob health, walks
- * everywhere, fights with whatever damage it has, and carries loot in a real
- * 27-slot inventory that it deposits into real chests.
+ * everywhere, eats real food to heal, uses the right tool for the job (and
+ * wears tools out like a player), and carries loot in a real 27-slot
+ * inventory that it deposits into real chests.
  *
- * Modes are standing orders (like the Node bot): FOLLOW trails the owner,
- * GUARD holds position but attacks hostiles that come near it or the owner,
- * STAY does nothing but defend itself. Gather/deposit are one-shot tasks that
- * run on top of the current mode and end by themselves.
+ * Modes are standing orders: FOLLOW trails the owner, GUARD holds but fights,
+ * STAY parks. Work (gather/deposit/craft/withdraw/farm/build) runs through a
+ * sequential job queue. It can hold standing supply orders ("keep the chest
+ * stocked with 64 logs"), and with autonomy on it picks role-based work by
+ * itself when idle — the seed of the self-running town.
  */
 public class AssistantEntity extends PathfinderMob {
 
     public enum Mode { STAY, FOLLOW, GUARD }
 
+    public enum Role {
+        NONE, MINER, LUMBERJACK, FARMER, BUILDER;
+
+        @Nullable
+        public static Role fromWord(String w) {
+            return switch (w) {
+                case "miner", "mining" -> MINER;
+                case "lumberjack", "logger", "woodcutter" -> LUMBERJACK;
+                case "farmer", "farming" -> FARMER;
+                case "builder", "building" -> BUILDER;
+                default -> null;
+            };
+        }
+    }
+
+    /** A supply contract: keep ~amount of kind in the nearest chest, forever. */
+    public record StandingOrder(GatherGoal.Kind kind, int amount) {}
+
     public static final int INVENTORY_SIZE = 27;
+    public static final int MAX_PER_OWNER = 10;
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
     public static final double BLOCK_REACH = 4.5;
     public static final double ENTITY_REACH = 3.0;
 
-    // Owner UUID -> live assistant, so commands find it no matter how far it
-    // has wandered (the old proximity-only search lost it after a gather trip,
-    // which is why it "stopped listening" after one command).
-    private static final Map<UUID, AssistantEntity> BY_OWNER = new ConcurrentHashMap<>();
+    // Owner UUID -> (lowercase name -> live assistant). One owner can run a
+    // whole crew; commands route by name or to the nearest one.
+    private static final Map<UUID, ConcurrentHashMap<String, AssistantEntity>> BY_OWNER = new ConcurrentHashMap<>();
 
     @Nullable
     public static AssistantEntity byOwner(UUID ownerId) {
-        AssistantEntity a = BY_OWNER.get(ownerId);
+        Map<String, AssistantEntity> m = BY_OWNER.get(ownerId);
+        if (m == null) return null;
+        for (AssistantEntity a : m.values()) {
+            if (a.isAlive()) return a;
+        }
+        return null;
+    }
+
+    @Nullable
+    public static AssistantEntity byName(UUID ownerId, String name) {
+        Map<String, AssistantEntity> m = BY_OWNER.get(ownerId);
+        if (m == null) return null;
+        AssistantEntity a = m.get(name.toLowerCase());
         return (a != null && a.isAlive()) ? a : null;
+    }
+
+    public static List<AssistantEntity> allFor(UUID ownerId) {
+        Map<String, AssistantEntity> m = BY_OWNER.get(ownerId);
+        if (m == null) return List.of();
+        List<AssistantEntity> out = new ArrayList<>();
+        for (AssistantEntity a : m.values()) {
+            if (a.isAlive()) out.add(a);
+        }
+        return out;
+    }
+
+    public static List<String> namesFor(UUID ownerId) {
+        List<String> out = new ArrayList<>();
+        for (AssistantEntity a : allFor(ownerId)) out.add(a.getAssistantName());
+        return out;
     }
 
     @Nullable private UUID ownerId;
     private Mode mode = Mode.FOLLOW;
+    private Role role = Role.NONE;
+    private String assistantName = "assistant";
+    private boolean autonomous;
     private final NonNullList<ItemStack> inventory = NonNullList.withSize(INVENTORY_SIZE, ItemStack.EMPTY);
 
     // The work queue — jobs run in order (finish one, start the next).
     private final java.util.ArrayDeque<Job> jobs = new java.util.ArrayDeque<>();
-    // Bumped by requestStop() so a running goal aborts on the next check.
     private int taskGen;
 
-    // Health feedback.
+    // Standing supply orders, checked when idle.
+    private final List<StandingOrder> standingOrders = new ArrayList<>();
+
+    // Which chest held what, learned from every chest it touches.
+    private final Map<Long, Set<String>> chestMemory = new ConcurrentHashMap<>();
+
+    // Health / survival state.
     private int lastDamageTick = -1000;
     private int lastShownHealth = -1;
+    private int eatCooldown;
+    private boolean retreating;
+    private int idleBackoffUntil;
 
-    // Home block (an Assistant Spawner), if one summoned it.
     @Nullable private BlockPos homePos;
 
     public AssistantEntity(EntityType<? extends PathfinderMob> type, Level level) {
@@ -98,22 +176,25 @@ public class AssistantEntity extends PathfinderMob {
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
+        this.goalSelector.addGoal(1, new RetreatGoal(this));
         this.goalSelector.addGoal(2, new GatherGoal(this));
         this.goalSelector.addGoal(2, new DepositGoal(this));
+        this.goalSelector.addGoal(2, new CraftGoal(this));
+        this.goalSelector.addGoal(2, new WithdrawGoal(this));
+        this.goalSelector.addGoal(2, new FarmGoal(this));
+        this.goalSelector.addGoal(2, new BuildGoal(this));
         this.goalSelector.addGoal(3, new MeleeAttackGoal(this, 1.25D, true));
         this.goalSelector.addGoal(4, new FollowOwnerGoal(this, 1.2D, 4.0F, 32.0F));
         this.goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 8.0F));
         this.goalSelector.addGoal(9, new RandomLookAroundGoal(this));
 
-        // Fight back when hit, and pick fights with hostiles near us / the
-        // owner when guarding. Creepers are excluded from melee brawls — the
-        // fuse wins those; vanilla knockback pacing isn't enough.
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(
             this, Monster.class, 10, true, false, this::shouldAutoAttack));
     }
 
     private boolean shouldAutoAttack(LivingEntity target) {
+        if (retreating) return false;
         if (target instanceof Creeper) return false;
         if (this.mode == Mode.STAY) return false;
         double toMe = target.distanceToSqr(this);
@@ -146,12 +227,50 @@ public class AssistantEntity extends PathfinderMob {
         return this.level().getPlayerByUUID(ownerId);
     }
 
-    /** Say something to the owner (falls back to nearby players). */
+    // ------------------------------ name & role ------------------------------
+
+    public String getAssistantName() {
+        return assistantName;
+    }
+
+    public String displayNameCap() {
+        return assistantName.isEmpty() ? "Assistant"
+            : Character.toUpperCase(assistantName.charAt(0)) + assistantName.substring(1);
+    }
+
+    public void rename(String newName) {
+        String clean = newName.toLowerCase().replaceAll("[^a-z0-9_]", "");
+        if (clean.isEmpty()) return;
+        if (ownerId != null) {
+            Map<String, AssistantEntity> m = BY_OWNER.get(ownerId);
+            if (m != null) m.remove(assistantName.toLowerCase(), this);
+        }
+        this.assistantName = clean;
+        this.lastShownHealth = -1; // refresh the nametag
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public void setRole(Role role) {
+        this.role = role;
+    }
+
+    public boolean isAutonomous() {
+        return autonomous;
+    }
+
+    public void setAutonomous(boolean autonomous) {
+        this.autonomous = autonomous;
+        this.idleBackoffUntil = 0;
+    }
+
+    /** Say something to the owner. */
     public void say(String message) {
         Player owner = getOwnerPlayer();
-        Component text = Component.literal("<Assistant> " + message);
         if (owner instanceof ServerPlayer sp) {
-            sp.sendSystemMessage(text);
+            sp.sendSystemMessage(Component.literal("<" + displayNameCap() + "> " + message));
         }
     }
 
@@ -179,7 +298,6 @@ public class AssistantEntity extends PathfinderMob {
     public ItemStack insertItem(ItemStack stack) {
         if (stack.isEmpty()) return ItemStack.EMPTY;
         ItemStack remaining = stack.copy();
-        // merge pass
         for (int i = 0; i < inventory.size() && !remaining.isEmpty(); i++) {
             ItemStack slot = inventory.get(i);
             if (!slot.isEmpty() && ItemStack.isSameItemSameComponents(slot, remaining)) {
@@ -191,7 +309,6 @@ public class AssistantEntity extends PathfinderMob {
                 }
             }
         }
-        // empty-slot pass
         for (int i = 0; i < inventory.size() && !remaining.isEmpty(); i++) {
             if (inventory.get(i).isEmpty()) {
                 inventory.set(i, remaining);
@@ -207,9 +324,97 @@ public class AssistantEntity extends PathfinderMob {
         return n;
     }
 
+    /** Count backpack items matching a predicate. */
+    public int countMatching(java.util.function.Predicate<ItemStack> what) {
+        int n = 0;
+        for (ItemStack s : inventory) {
+            if (!s.isEmpty() && what.test(s)) n += s.getCount();
+        }
+        return n;
+    }
+
+    /** Remove up to n matching items from the backpack. Returns removed count. */
+    public int removeMatching(java.util.function.Predicate<ItemStack> what, int n) {
+        int removed = 0;
+        for (int i = 0; i < inventory.size() && removed < n; i++) {
+            ItemStack s = inventory.get(i);
+            if (s.isEmpty() || !what.test(s)) continue;
+            int take = Math.min(n - removed, s.getCount());
+            s.shrink(take);
+            removed += take;
+            if (s.isEmpty()) inventory.set(i, ItemStack.EMPTY);
+        }
+        return removed;
+    }
+
+    // --------------------------- tool intelligence ---------------------------
+
+    /** Swap the best tool for this block into the main hand (player rules:
+     *  axe for logs, pickaxe for stone — whatever digs fastest wins). */
+    public void equipBestTool(BlockState state) {
+        float bestSpeed = this.getMainHandItem().getDestroySpeed(state);
+        int bestIdx = -1;
+        for (int i = 0; i < inventory.size(); i++) {
+            ItemStack s = inventory.get(i);
+            if (s.isEmpty()) continue;
+            float speed = s.getDestroySpeed(state);
+            if (speed > bestSpeed + 0.01F) {
+                bestSpeed = speed;
+                bestIdx = i;
+            }
+        }
+        if (bestIdx >= 0) {
+            ItemStack old = this.getMainHandItem();
+            this.setItemSlot(EquipmentSlot.MAINHAND, inventory.get(bestIdx));
+            inventory.set(bestIdx, old);
+        }
+    }
+
+    /** Ticks of work to break this block with the current tool (player-ish pacing). */
+    public int workTicksFor(BlockState state) {
+        float speed = Math.max(1.0F, this.getMainHandItem().getDestroySpeed(state));
+        return Math.max(5, Math.round(48.0F / speed));
+    }
+
+    /** Wear the held tool by one use; announces when it breaks. */
+    public void damageHeldTool() {
+        ItemStack tool = this.getMainHandItem();
+        if (tool.isEmpty() || !tool.isDamageableItem()) return;
+        boolean nearlyDone = tool.getDamageValue() >= tool.getMaxDamage() - 2;
+        tool.hurtAndBreak(1, this, EquipmentSlot.MAINHAND);
+        if (nearlyDone && this.getMainHandItem().isEmpty()) {
+            say("My tool just broke — I could craft a new one if I have materials (\"craft a stone pickaxe\").");
+        }
+    }
+
+    // ------------------------------ food & health ----------------------------
+
+    private int findFoodSlot() {
+        for (int i = 0; i < inventory.size(); i++) {
+            ItemStack s = inventory.get(i);
+            if (!s.isEmpty() && s.get(DataComponents.FOOD) != null) return i;
+        }
+        return -1;
+    }
+
+    public int countFood() {
+        return countMatching(s -> s.get(DataComponents.FOOD) != null);
+    }
+
+    public int lastDamageTick() {
+        return lastDamageTick;
+    }
+
+    public boolean isRetreating() {
+        return retreating;
+    }
+
+    public void setRetreating(boolean retreating) {
+        this.retreating = retreating;
+    }
+
     // -------------------------------- job queue -------------------------------
 
-    /** Add a job to the end of the queue (it runs after the current ones). */
     public void enqueue(Job job) {
         jobs.addLast(job);
     }
@@ -219,7 +424,6 @@ public class AssistantEntity extends PathfinderMob {
         return jobs.peekFirst();
     }
 
-    /** Remove and return the head — a goal calls this when it FINISHES a job. */
     @Nullable
     public Job pollJob() {
         return jobs.pollFirst();
@@ -229,13 +433,12 @@ public class AssistantEntity extends PathfinderMob {
         return jobs.size();
     }
 
-    public java.util.List<String> jobLabels() {
-        java.util.List<String> out = new java.util.ArrayList<>();
+    public List<String> jobLabels() {
+        List<String> out = new ArrayList<>();
         for (Job j : jobs) out.add(j.label());
         return out;
     }
 
-    // Convenience for chat/command/GUI: enqueue common jobs.
     public void requestGather(GatherGoal.Kind kind, int amount) {
         enqueue(Job.gather(kind, amount));
     }
@@ -244,16 +447,12 @@ public class AssistantEntity extends PathfinderMob {
         enqueue(Job.deposit());
     }
 
-    /** Clear the queue and abort the running job (no chat, no mode change).
-     *  Used by direct movement/mode orders so they take over immediately. */
     public void clearQueue() {
         this.jobs.clear();
-        this.taskGen++; // running goal sees the mismatch and aborts
+        this.taskGen++;
         this.getNavigation().stop();
     }
 
-    /** Full stop: clear the queue, abort the running job, drop the target,
-     *  hold position, and say so. */
     public void requestStop() {
         int had = jobs.size();
         clearQueue();
@@ -262,10 +461,100 @@ public class AssistantEntity extends PathfinderMob {
         say(had > 0 ? "Stopping — cleared " + had + " queued job" + (had == 1 ? "" : "s") + "." : "Stopping.");
     }
 
-    /** Current task generation — a one-shot goal captures this at start and
-     *  aborts when it no longer matches (i.e. a newer order came in). */
     public int taskGen() {
         return taskGen;
+    }
+
+    /** Goals report how each job went so idle initiative can back off when
+     *  the area is tapped out instead of spamming doomed jobs. */
+    public void noteJobOutcome(boolean productive) {
+        if (!productive) {
+            idleBackoffUntil = tickCount + 2400; // ~2 min cool-off
+        }
+    }
+
+    // ---------------------------- standing orders ----------------------------
+
+    public List<StandingOrder> standingOrders() {
+        return standingOrders;
+    }
+
+    public void addStandingOrder(GatherGoal.Kind kind, int amount) {
+        standingOrders.removeIf(o -> o.kind() == kind);
+        standingOrders.add(new StandingOrder(kind, Math.max(1, Math.min(Job.MAX_AMOUNT, amount))));
+    }
+
+    public int clearStandingOrders() {
+        int n = standingOrders.size();
+        standingOrders.clear();
+        return n;
+    }
+
+    // ----------------------------- storage memory ----------------------------
+
+    /** Learn what a chest holds (called whenever we touch one). */
+    public void rememberChest(BlockPos pos, Container container) {
+        Set<String> ids = ConcurrentHashMap.newKeySet();
+        for (int i = 0; i < container.getContainerSize(); i++) {
+            ItemStack s = container.getItem(i);
+            if (!s.isEmpty()) {
+                ids.add(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).getPath());
+            }
+        }
+        chestMemory.put(pos.asLong(), ids);
+    }
+
+    /** Nearest container that (per memory, then live scan) holds a match. */
+    @Nullable
+    public BlockPos findChestWith(java.util.function.Predicate<ItemStack> what, int radius) {
+        // Remembered chests first — verify they still match.
+        BlockPos best = null;
+        double bestDist = Double.MAX_VALUE;
+        for (Long key : chestMemory.keySet()) {
+            BlockPos pos = BlockPos.of(key);
+            if (pos.distSqr(blockPosition()) > (double) radius * radius) continue;
+            if (containerHas(pos, what)) {
+                double d = pos.distSqr(blockPosition());
+                if (d < bestDist) { bestDist = d; best = pos; }
+            }
+        }
+        if (best != null) return best;
+        // Fall back to a live scan.
+        BlockPos feet = blockPosition();
+        for (BlockPos pos : BlockPos.betweenClosed(
+                feet.offset(-radius, -4, -radius), feet.offset(radius, 4, radius))) {
+            if (containerHas(pos, what)) {
+                double d = pos.distSqr(feet);
+                if (d < bestDist) { bestDist = d; best = pos.immutable(); }
+            }
+        }
+        return best;
+    }
+
+    private boolean containerHas(BlockPos pos, java.util.function.Predicate<ItemStack> what) {
+        BlockEntity be = level().getBlockEntity(pos);
+        if (!(be instanceof Container c)) return false;
+        for (int i = 0; i < c.getContainerSize(); i++) {
+            ItemStack s = c.getItem(i);
+            if (!s.isEmpty() && what.test(s)) return true;
+        }
+        return false;
+    }
+
+    /** Nearest container of any kind. */
+    @Nullable
+    public BlockPos findAnyChest(int radius) {
+        BlockPos feet = blockPosition();
+        BlockPos best = null;
+        double bestDist = Double.MAX_VALUE;
+        for (BlockPos pos : BlockPos.betweenClosed(
+                feet.offset(-radius, -4, -radius), feet.offset(radius, 4, radius))) {
+            if (level().getBlockEntity(pos) instanceof Container) {
+                double d = pos.distSqr(feet);
+                if (d < bestDist) { bestDist = d; best = pos.immutable(); }
+            }
+        }
+        return best;
     }
 
     // ------------------------------ persistence ------------------------------
@@ -276,6 +565,17 @@ public class AssistantEntity extends PathfinderMob {
         if (ownerId != null) tag.putUUID("Owner", ownerId);
         if (homePos != null) tag.putLong("Home", homePos.asLong());
         tag.putString("Mode", mode.name());
+        tag.putString("Role", role.name());
+        tag.putString("Name", assistantName);
+        tag.putBoolean("Auto", autonomous);
+        ListTag orders = new ListTag();
+        for (StandingOrder o : standingOrders) {
+            CompoundTag ot = new CompoundTag();
+            ot.putString("Kind", o.kind().name());
+            ot.putInt("Amount", o.amount());
+            orders.add(ot);
+        }
+        tag.put("Standing", orders);
         ContainerHelper.saveAllItems(tag, inventory, this.registryAccess());
     }
 
@@ -289,16 +589,32 @@ public class AssistantEntity extends PathfinderMob {
         } catch (IllegalArgumentException ignored) {
             mode = Mode.FOLLOW;
         }
+        try {
+            role = Role.valueOf(tag.getString("Role"));
+        } catch (IllegalArgumentException ignored) {
+            role = Role.NONE;
+        }
+        if (tag.contains("Name")) assistantName = tag.getString("Name");
+        if (assistantName.isEmpty()) assistantName = "assistant";
+        autonomous = tag.getBoolean("Auto");
+        standingOrders.clear();
+        for (Tag t : tag.getList("Standing", Tag.TAG_COMPOUND)) {
+            CompoundTag ot = (CompoundTag) t;
+            try {
+                standingOrders.add(new StandingOrder(
+                    GatherGoal.Kind.valueOf(ot.getString("Kind")), ot.getInt("Amount")));
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
         ContainerHelper.loadAllItems(tag, inventory, this.registryAccess());
     }
 
     // -------------------------------- behavior --------------------------------
 
-    /** Right-click by the owner opens the management GUI (backpack, armor, tools, buttons). */
+    /** Right-click by the owner opens the management GUI. */
     @Override
-    protected net.minecraft.world.InteractionResult mobInteract(Player player, net.minecraft.world.InteractionHand hand) {
+    protected net.minecraft.world.InteractionResult mobInteract(Player player, InteractionHand hand) {
         ItemStack held = player.getItemInHand(hand);
-        // Let leads / name tags behave normally; everything else opens the menu.
         if (held.is(net.minecraft.world.item.Items.LEAD) || held.is(net.minecraft.world.item.Items.NAME_TAG)) {
             return super.mobInteract(player, hand);
         }
@@ -306,28 +622,28 @@ public class AssistantEntity extends PathfinderMob {
             if (!this.level().isClientSide) say("You're not my owner.");
             return net.minecraft.world.InteractionResult.sidedSuccess(this.level().isClientSide());
         }
-        if (!this.level().isClientSide && player instanceof net.minecraft.server.level.ServerPlayer sp) {
+        if (!this.level().isClientSide && player instanceof ServerPlayer sp) {
             sp.openMenu(
                 new net.minecraft.world.SimpleMenuProvider(
                     (id, inv, p) -> new com.jrpetty.mcassistant.menu.AssistantMenu(id, inv, this),
-                    net.minecraft.network.chat.Component.literal("Assistant")),
+                    Component.literal(displayNameCap())),
                 buf -> buf.writeVarInt(this.getId()));
         }
         return net.minecraft.world.InteractionResult.sidedSuccess(this.level().isClientSide());
     }
 
-    /** Registry upkeep, out-of-combat regen, and the always-visible HP name. */
     @Override
     public void aiStep() {
         super.aiStep();
         if (this.level().isClientSide) return;
 
-        if (ownerId != null && BY_OWNER.get(ownerId) != this) {
-            BY_OWNER.put(ownerId, this);
+        // Registry upkeep (owner -> name -> entity).
+        if (ownerId != null) {
+            BY_OWNER.computeIfAbsent(ownerId, k -> new ConcurrentHashMap<>())
+                .put(assistantName.toLowerCase(), this);
         }
 
-        // A queued mode switch ("gather logs THEN follow me") or go-home
-        // applies the instant it reaches the head of the queue — no goal needed.
+        // Queued mode switches / go-home apply the instant they reach the head.
         Job head = peekJob();
         if (head != null && head.type() == Job.Type.MODE && head.mode() != null) {
             pollJob();
@@ -346,32 +662,113 @@ public class AssistantEntity extends PathfinderMob {
             goHome();
         }
 
-        // Slow regen once it's been out of combat for ~6 seconds.
-        if (isAlive() && getHealth() < getMaxHealth()
-            && tickCount - lastDamageTick > 120 && tickCount % 40 == 0) {
-            heal(1.0F);
+        // Eat to heal (player rules: no free lunch). Slow fallback regen when
+        // starving so it's never permanently crippled.
+        if (eatCooldown > 0) eatCooldown--;
+        if (isAlive() && getHealth() < getMaxHealth() && tickCount - lastDamageTick > 100) {
+            if (eatCooldown == 0) {
+                int slot = findFoodSlot();
+                if (slot >= 0) {
+                    ItemStack food = inventory.get(slot);
+                    FoodProperties fp = food.get(DataComponents.FOOD);
+                    ItemStack rest = this.eat(this.level(), food); // vanilla: sound, particles, shrink
+                    inventory.set(slot, rest.isEmpty() ? ItemStack.EMPTY : rest);
+                    heal(fp != null ? Math.max(2.0F, fp.nutrition()) : 2.0F);
+                    eatCooldown = 50;
+                } else if (tickCount % 160 == 0) {
+                    heal(1.0F);
+                }
+            }
         }
 
-        // Keep a live HP readout floating over its head so you can see it's
-        // mortal and how it's doing.
+        // Standing orders: when idle, check stock levels and restock.
+        if (!standingOrders.isEmpty() && jobs.isEmpty() && !retreating && tickCount % 600 == 0) {
+            checkStandingOrders();
+        }
+
+        // Idle initiative: with autonomy on and nothing to do, pick role work.
+        if (autonomous && role != Role.NONE && jobs.isEmpty() && !retreating
+            && mode != Mode.STAY && tickCount % 400 == 0 && tickCount >= idleBackoffUntil) {
+            enqueueRoleWork();
+        }
+
+        // Live HP nametag (name + hearts, colored by health).
         int hp = Mth.ceil(getHealth());
         if (hp != lastShownHealth) {
             lastShownHealth = hp;
             int max = (int) getMaxHealth();
-            net.minecraft.ChatFormatting color = hp > max * 0.6 ? net.minecraft.ChatFormatting.GREEN
-                : hp > max * 0.3 ? net.minecraft.ChatFormatting.YELLOW
-                : net.minecraft.ChatFormatting.RED;
-            setCustomName(Component.literal("Assistant ")
+            ChatFormatting color = hp > max * 0.6 ? ChatFormatting.GREEN
+                : hp > max * 0.3 ? ChatFormatting.YELLOW
+                : ChatFormatting.RED;
+            setCustomName(Component.literal(displayNameCap() + " ")
                 .append(Component.literal(hp + "/" + max + "❤").withStyle(color)));
             setCustomNameVisible(true);
+        }
+    }
+
+    private void checkStandingOrders() {
+        for (StandingOrder o : standingOrders) {
+            java.util.function.Predicate<ItemStack> match = kindItemMatcher(o.kind());
+            BlockPos chest = findChestWith(s -> true, 24); // any chest = the depot
+            if (chest == null) return;
+            int stock = 0;
+            if (level().getBlockEntity(chest) instanceof Container c) {
+                for (int i = 0; i < c.getContainerSize(); i++) {
+                    ItemStack s = c.getItem(i);
+                    if (!s.isEmpty() && match.test(s)) stock += s.getCount();
+                }
+                rememberChest(chest, c);
+            }
+            if (stock < o.amount()) {
+                int deficit = Math.min(64, o.amount() - stock);
+                say("Standing order: chest is low on " + o.kind().label + " (" + stock + "/" + o.amount() + ") — restocking.");
+                enqueue(Job.gather(o.kind(), deficit));
+                enqueue(Job.deposit());
+                return; // one restock cycle at a time
+            }
+        }
+    }
+
+    public static java.util.function.Predicate<ItemStack> kindItemMatcher(GatherGoal.Kind kind) {
+        return switch (kind) {
+            case LOGS -> s -> s.is(ItemTags.LOGS);
+            case STONE -> s -> s.is(Blocks.COBBLESTONE.asItem()) || s.is(Blocks.STONE.asItem())
+                || s.is(Blocks.COBBLED_DEEPSLATE.asItem());
+            case DIRT -> s -> s.is(Blocks.DIRT.asItem());
+        };
+    }
+
+    private void enqueueRoleWork() {
+        switch (role) {
+            case MINER -> {
+                say("Nothing queued — mining a bit. (Say \"take a break\" to stop.)");
+                enqueue(Job.gather(GatherGoal.Kind.STONE, 16));
+                enqueue(Job.deposit());
+            }
+            case LUMBERJACK -> {
+                say("Nothing queued — getting wood. (Say \"take a break\" to stop.)");
+                enqueue(Job.gather(GatherGoal.Kind.LOGS, 16));
+                enqueue(Job.deposit());
+            }
+            case FARMER -> {
+                say("Nothing queued — tending the crops. (Say \"take a break\" to stop.)");
+                enqueue(Job.farm());
+                enqueue(Job.deposit());
+            }
+            case BUILDER -> {
+                say("Nothing queued — stocking building materials. (Say \"take a break\" to stop.)");
+                enqueue(Job.gather(GatherGoal.Kind.LOGS, 8));
+                enqueue(Job.craft("planks", 8));
+                enqueue(Job.deposit());
+            }
+            default -> { }
         }
     }
 
     @Nullable public BlockPos getHome() { return homePos; }
     public void setHome(@Nullable BlockPos pos) { this.homePos = pos == null ? null : pos.immutable(); }
 
-    /** Walk back to the home point (an Assistant Spawner, or wherever
-     *  "set home here" was said) and hold there. */
+    /** Walk back to the home point and hold there. */
     public void goHome() {
         if (homePos == null) {
             say("No home set — right-click an Assistant Spawner, or tell me \"set home here\".");
@@ -385,7 +782,8 @@ public class AssistantEntity extends PathfinderMob {
     @Override
     public void remove(net.minecraft.world.entity.Entity.RemovalReason reason) {
         if (ownerId != null) {
-            BY_OWNER.remove(ownerId, this);
+            Map<String, AssistantEntity> m = BY_OWNER.get(ownerId);
+            if (m != null) m.remove(assistantName.toLowerCase(), this);
         }
         super.remove(reason);
     }
@@ -398,9 +796,6 @@ public class AssistantEntity extends PathfinderMob {
 
     @Override
     public boolean hurt(DamageSource source, float amount) {
-        // Owner friendly-fire is softened so you can't one-shot your companion
-        // by accident, but it is NOT invincible — mobs, lava, and falls all
-        // hurt it at full strength, and it dies at 0 HP.
         boolean fromOwner = source.getEntity() instanceof Player p && isOwner(p);
         boolean took = super.hurt(source, fromOwner ? amount * 0.5F : amount);
         if (took) this.lastDamageTick = this.tickCount;
@@ -417,7 +812,7 @@ public class AssistantEntity extends PathfinderMob {
                 inventory.set(i, ItemStack.EMPTY);
             }
         }
-        for (net.minecraft.world.entity.EquipmentSlot slot : net.minecraft.world.entity.EquipmentSlot.values()) {
+        for (EquipmentSlot slot : EquipmentSlot.values()) {
             ItemStack s = this.getItemBySlot(slot);
             if (!s.isEmpty()) {
                 this.spawnAtLocation(s);
@@ -434,10 +829,9 @@ public class AssistantEntity extends PathfinderMob {
 
     @Override
     public boolean removeWhenFarAway(double distance) {
-        return false; // a companion doesn't despawn
+        return false;
     }
 
-    /** Convenience used by goals: block position rounded from our feet. */
     public BlockPos feetPos() {
         return this.blockPosition();
     }

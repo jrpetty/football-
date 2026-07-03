@@ -111,6 +111,7 @@ public class DepositGoal extends Goal {
             items.set(i, leftover);
         }
         container.setChanged();
+        assistant.rememberChest(chestPos, container); // storage memory: learn what's where
         finish(moved > 0 ? "Stashed " + moved + " items." : "That chest is full.");
     }
 

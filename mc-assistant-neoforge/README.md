@@ -148,17 +148,31 @@ craftable **Assistant Spawner** block, chat + command control, and persistent
 inventory/mode. The Node bot's bigger systems (crafting, smelting, building
 blueprints, web dashboard) are not in the mod yet.
 
-## Roadmap (toward autonomy)
+## Survival & autonomy systems
 
-The long-term direction, roughly in order:
-
-1. **Self-sufficiency** — keep tools repaired/replaced, eat, retreat and
-   heal when hurt, return home (the Spawner block) when idle.
-2. **Standing jobs** — repeating orders ("keep the chest stocked with 64
-   logs") that re-queue themselves.
-3. **Multiple named assistants** — a crew instead of one companion, each
-   with its own queue and role.
-4. **Building** — blueprint jobs (walls, shelters, layouts you choose).
-5. **The town** — assistants that assign each other work: farmers,
-   miners, builders sharing storage and expanding a settlement on their
-   own. Fully autonomous, self-evolving — the end goal.
+- **Eating** — it heals by eating real food from its pack (nutrition =
+  hearts). No food means barely-there regen, so keep it fed.
+- **Tool intelligence** — it auto-equips the best tool in its pack for the
+  block (axe→logs, pickaxe→stone), digs faster with better tools, and
+  wears tools out like a player (it warns you when one breaks).
+- **Retreat instinct** — badly hurt, it breaks off, runs home (or to you),
+  eats itself back to health, then **resumes the interrupted job queue**.
+- **Crafting** — "craft a stone pickaxe", "make planks/sticks/torches/
+  bread/chest". Needs a crafting table for tools — and if none is nearby
+  it places its own (from 4 planks). Closes the self-maintenance loop.
+- **Withdraw & storage memory** — "grab 10 iron from the chest". It
+  remembers which chest holds what from every chest it touches.
+- **Standing orders** — "keep the chest stocked with 64 logs": it checks
+  stock when idle and restocks forever. "stop keeping" cancels.
+- **Farming** — "tend the farm": harvests mature wheat/carrots/potatoes/
+  beetroot, sweeps the drops, replants from collected seeds.
+- **Building** — "build a wall / platform / shelter": places blueprints
+  block-by-block from carried blocks (planks, cobble, dirt...).
+- **A crew, not a bot** — "spawn a miner named bob" (up to 10). Address
+  one by name ("bob, gather stone") or talk normally for the nearest.
+  Roles: miner, lumberjack, farmer, builder ("be a farmer").
+- **Idle initiative** — "work on your own": when its queue is empty it
+  does role work by itself (mine/chop/farm/stock materials + deposit),
+  eating and re-equipping as needed, and backs off when an area is
+  tapped out. "take a break" stops it. This is the town seed: a farmer,
+  a miner, a lumberjack and a builder around one chest run themselves.

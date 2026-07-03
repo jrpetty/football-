@@ -42,6 +42,27 @@ public final class AssistantCommands {
             .then(Commands.literal("status").executes(AssistantCommands::status))
             .then(Commands.literal("deposit").executes(AssistantCommands::deposit))
             .then(Commands.literal("dismiss").executes(AssistantCommands::dismiss))
+            .then(Commands.literal("farm").executes(AssistantCommands::farm))
+            .then(Commands.literal("craft")
+                .then(Commands.argument("what", StringArgumentType.greedyString())
+                    .executes(AssistantCommands::craft)))
+            .then(Commands.literal("build")
+                .then(Commands.argument("structure", StringArgumentType.word())
+                    .executes(AssistantCommands::build)))
+            .then(Commands.literal("withdraw")
+                .then(Commands.argument("item", StringArgumentType.word())
+                    .executes(ctx -> withdraw(ctx, 8))
+                    .then(Commands.argument("amount", IntegerArgumentType.integer(1, com.jrpetty.mcassistant.entity.Job.MAX_AMOUNT))
+                        .executes(ctx -> withdraw(ctx, IntegerArgumentType.getInteger(ctx, "amount"))))))
+            .then(Commands.literal("role")
+                .then(Commands.argument("role", StringArgumentType.word())
+                    .executes(AssistantCommands::role)))
+            .then(Commands.literal("auto")
+                .then(Commands.argument("state", StringArgumentType.word())
+                    .executes(AssistantCommands::auto)))
+            .then(Commands.literal("rename")
+                .then(Commands.argument("name", StringArgumentType.word())
+                    .executes(AssistantCommands::rename)))
             .then(Commands.literal("gather")
                 .then(Commands.argument("what", StringArgumentType.word())
                     .executes(ctx -> gather(ctx, 8))
@@ -51,12 +72,16 @@ public final class AssistantCommands {
 
     @Nullable
     public static AssistantEntity findAssistant(ServerPlayer player) {
-        // Primary: the owner->assistant registry, so it's found no matter how
-        // far it has wandered (as long as it's in the player's dimension).
-        AssistantEntity byOwner = AssistantEntity.byOwner(player.getUUID());
-        if (byOwner != null && byOwner.level() == player.level()) {
-            return byOwner;
+        // Primary: the owner->crew registry — pick the nearest one in the
+        // player's dimension, no matter how far it has wandered.
+        AssistantEntity best = null;
+        double bestDist = Double.MAX_VALUE;
+        for (AssistantEntity a : AssistantEntity.allFor(player.getUUID())) {
+            if (a.level() != player.level()) continue;
+            double d = a.distanceToSqr(player);
+            if (d < bestDist) { bestDist = d; best = a; }
         }
+        if (best != null) return best;
         // Fallback: a generous proximity scan (covers the tick before the
         // registry is populated, e.g. immediately after /assistant spawn).
         ServerLevel level = player.serverLevel();
@@ -64,8 +89,6 @@ public final class AssistantCommands {
             AssistantEntity.class,
             player.getBoundingBox().inflate(256.0),
             a -> a.isAlive() && a.isOwner(player));
-        AssistantEntity best = null;
-        double bestDist = Double.MAX_VALUE;
         for (AssistantEntity a : found) {
             double d = a.distanceToSqr(player);
             if (d < bestDist) { bestDist = d; best = a; }
@@ -76,15 +99,18 @@ public final class AssistantCommands {
     private static int spawn(CommandContext<CommandSourceStack> ctx) {
         ServerPlayer player = ctx.getSource().getPlayer();
         if (player == null) return 0;
-        if (findAssistant(player) != null) {
-            ctx.getSource().sendFailure(Component.literal("Your assistant is already here — /assistant come."));
+        if (AssistantEntity.allFor(player.getUUID()).size() >= AssistantEntity.MAX_PER_OWNER) {
+            ctx.getSource().sendFailure(Component.literal("You already run a full crew — dismiss one first."));
             return 0;
         }
-        return spawnFor(player) != null ? 1 : 0;
+        AssistantEntity a = spawnFor(player);
+        if (a == null) return 0;
+        a.say("Assistant online. Just talk to me (\"gather 32 logs then follow me\") or use /assistant.");
+        return 1;
     }
 
     /** Create + bind a fresh assistant next to the player. Shared by the
-     *  command and by chat/voice ("spawn"), which has no assistant to talk to. */
+     *  command and by chat/voice ("spawn a miner named bob"). Caller greets. */
     @Nullable
     public static AssistantEntity spawnFor(ServerPlayer player) {
         AssistantEntity assistant = McAssistantMod.ASSISTANT.get().create(player.serverLevel());
@@ -107,7 +133,6 @@ public final class AssistantCommands {
         assistant.moveTo(sx, player.getY(), sz, player.getYRot(), 0);
         assistant.setOwner(player);
         player.serverLevel().addFreshEntity(assistant);
-        assistant.say("Assistant online. Just talk to me (\"gather 32 logs then follow me\") or use /assistant.");
         return assistant;
     }
 
@@ -142,9 +167,88 @@ public final class AssistantCommands {
     private static int status(CommandContext<CommandSourceStack> ctx) {
         AssistantEntity a = requireAssistant(ctx);
         if (a == null) return 0;
-        a.say(String.format("HP %.0f/20, mode %s, carrying %d items, at %d %d %d.",
-            a.getHealth(), a.getMode().name().toLowerCase(),
-            a.countItems(), a.blockPosition().getX(), a.blockPosition().getY(), a.blockPosition().getZ()));
+        a.say(String.format("HP %.0f/%.0f, mode %s, role %s%s, %d items (%d food), %d jobs, %d standing orders, at %d %d %d.",
+            a.getHealth(), a.getMaxHealth(), a.getMode().name().toLowerCase(),
+            a.getRole().name().toLowerCase(), a.isAutonomous() ? " (auto)" : "",
+            a.countItems(), a.countFood(), a.jobCount(), a.standingOrders().size(),
+            a.blockPosition().getX(), a.blockPosition().getY(), a.blockPosition().getZ()));
+        return 1;
+    }
+
+    private static int farm(CommandContext<CommandSourceStack> ctx) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        a.enqueue(com.jrpetty.mcassistant.entity.Job.farm());
+        return 1;
+    }
+
+    private static int craft(CommandContext<CommandSourceStack> ctx) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        String what = StringArgumentType.getString(ctx, "what").toLowerCase();
+        String recipe = com.jrpetty.mcassistant.entity.goal.CraftGoal.matchRecipe(what);
+        if (recipe == null) {
+            ctx.getSource().sendFailure(Component.literal("I can craft: "
+                + String.join(", ", com.jrpetty.mcassistant.entity.goal.CraftGoal.RECIPES.keySet())));
+            return 0;
+        }
+        int amount = 1;
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\b(\\d+)\\b").matcher(what);
+        if (m.find()) amount = Integer.parseInt(m.group(1));
+        a.enqueue(com.jrpetty.mcassistant.entity.Job.craft(recipe, amount));
+        return 1;
+    }
+
+    private static int build(CommandContext<CommandSourceStack> ctx) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        String structure = StringArgumentType.getString(ctx, "structure").toLowerCase();
+        if (structure.equals("hut") || structure.equals("house")) structure = "shelter";
+        if (!com.jrpetty.mcassistant.entity.goal.BuildGoal.STRUCTURES.contains(structure)) {
+            ctx.getSource().sendFailure(Component.literal("I can build: "
+                + String.join(", ", com.jrpetty.mcassistant.entity.goal.BuildGoal.STRUCTURES)));
+            return 0;
+        }
+        a.enqueue(com.jrpetty.mcassistant.entity.Job.build(structure));
+        return 1;
+    }
+
+    private static int withdraw(CommandContext<CommandSourceStack> ctx, int amount) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        a.enqueue(com.jrpetty.mcassistant.entity.Job.withdraw(
+            StringArgumentType.getString(ctx, "item").toLowerCase(), amount));
+        return 1;
+    }
+
+    private static int role(CommandContext<CommandSourceStack> ctx) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        AssistantEntity.Role role = AssistantEntity.Role.fromWord(
+            StringArgumentType.getString(ctx, "role").toLowerCase());
+        if (role == null) {
+            ctx.getSource().sendFailure(Component.literal("Roles: miner, lumberjack, farmer, builder."));
+            return 0;
+        }
+        a.setRole(role);
+        a.say("I'm your " + role.name().toLowerCase() + " now.");
+        return 1;
+    }
+
+    private static int auto(CommandContext<CommandSourceStack> ctx) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        boolean on = StringArgumentType.getString(ctx, "state").equalsIgnoreCase("on");
+        a.setAutonomous(on);
+        a.say(on ? "I'll work on my own when idle." : "Taking a break — I'll wait for orders.");
+        return 1;
+    }
+
+    private static int rename(CommandContext<CommandSourceStack> ctx) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        a.rename(StringArgumentType.getString(ctx, "name"));
+        a.say("Call me " + a.displayNameCap() + ".");
         return 1;
     }
 
