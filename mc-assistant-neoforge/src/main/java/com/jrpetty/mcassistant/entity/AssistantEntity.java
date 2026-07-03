@@ -6,6 +6,7 @@ import com.jrpetty.mcassistant.entity.goal.GatherGoal;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.util.Mth;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
@@ -68,14 +69,17 @@ public class AssistantEntity extends PathfinderMob {
     private Mode mode = Mode.FOLLOW;
     private final NonNullList<ItemStack> inventory = NonNullList.withSize(INVENTORY_SIZE, ItemStack.EMPTY);
 
-    // One-shot task state, driven by GatherGoal / DepositGoal.
-    @Nullable private GatherGoal.Request gatherRequest;
-    private boolean depositRequested;
-    // A generation counter bumped by every new order (gather/deposit/cancel).
-    // A running one-shot goal captures it and aborts when it changes, so any
-    // fresh command (Stop button, !follow, a new !gather) cleanly supersedes
-    // whatever the bot is currently doing.
+    // The work queue — jobs run in order (finish one, start the next).
+    private final java.util.ArrayDeque<Job> jobs = new java.util.ArrayDeque<>();
+    // Bumped by requestStop() so a running goal aborts on the next check.
     private int taskGen;
+
+    // Health feedback.
+    private int lastDamageTick = -1000;
+    private int lastShownHealth = -1;
+
+    // Home block (an Assistant Spawner), if one summoned it.
+    @Nullable private BlockPos homePos;
 
     public AssistantEntity(EntityType<? extends PathfinderMob> type, Level level) {
         super(type, level);
@@ -203,56 +207,59 @@ public class AssistantEntity extends PathfinderMob {
         return n;
     }
 
-    // ------------------------------ task requests -----------------------------
+    // -------------------------------- job queue -------------------------------
 
-    public void requestGather(GatherGoal.Kind kind, int amount) {
-        this.taskGen++;
-        this.gatherRequest = new GatherGoal.Request(kind, Math.max(1, Math.min(64, amount)));
+    /** Add a job to the end of the queue (it runs after the current ones). */
+    public void enqueue(Job job) {
+        jobs.addLast(job);
     }
 
     @Nullable
-    public GatherGoal.Request takeGatherRequest() {
-        GatherGoal.Request r = this.gatherRequest;
-        this.gatherRequest = null;
-        return r;
+    public Job peekJob() {
+        return jobs.peekFirst();
     }
 
-    public boolean hasGatherRequest() {
-        return gatherRequest != null;
+    /** Remove and return the head — a goal calls this when it FINISHES a job. */
+    @Nullable
+    public Job pollJob() {
+        return jobs.pollFirst();
+    }
+
+    public int jobCount() {
+        return jobs.size();
+    }
+
+    public java.util.List<String> jobLabels() {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        for (Job j : jobs) out.add(j.label());
+        return out;
+    }
+
+    // Convenience for chat/command/GUI: enqueue common jobs.
+    public void requestGather(GatherGoal.Kind kind, int amount) {
+        enqueue(Job.gather(kind, amount));
     }
 
     public void requestDeposit() {
-        this.taskGen++;
-        this.gatherRequest = null; // a deposit order supersedes a running gather
-        this.depositRequested = true;
+        enqueue(Job.deposit());
     }
 
-    public boolean takeDepositRequest() {
-        boolean r = depositRequested;
-        depositRequested = false;
-        return r;
-    }
-
-    public boolean hasDepositRequest() {
-        return depositRequested;
-    }
-
-    /** Cancel the running/pending one-shot task without changing mode or
-     *  chatting — used so a new order (follow/guard/gather) supersedes a
-     *  gather that's already in progress. */
-    public void cancelTasks() {
-        this.taskGen++; // running goals see the mismatch and abort
-        this.gatherRequest = null;
-        this.depositRequested = false;
+    /** Clear the queue and abort the running job (no chat, no mode change).
+     *  Used by direct movement/mode orders so they take over immediately. */
+    public void clearQueue() {
+        this.jobs.clear();
+        this.taskGen++; // running goal sees the mismatch and aborts
         this.getNavigation().stop();
     }
 
-    /** Full stop: cancel tasks, drop the target, hold position, and say so. */
+    /** Full stop: clear the queue, abort the running job, drop the target,
+     *  hold position, and say so. */
     public void requestStop() {
-        cancelTasks();
+        int had = jobs.size();
+        clearQueue();
         this.setTarget(null);
         this.setMode(Mode.STAY);
-        say("Stopping.");
+        say(had > 0 ? "Stopping — cleared " + had + " queued job" + (had == 1 ? "" : "s") + "." : "Stopping.");
     }
 
     /** Current task generation — a one-shot goal captures this at start and
@@ -267,6 +274,7 @@ public class AssistantEntity extends PathfinderMob {
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         if (ownerId != null) tag.putUUID("Owner", ownerId);
+        if (homePos != null) tag.putLong("Home", homePos.asLong());
         tag.putString("Mode", mode.name());
         ContainerHelper.saveAllItems(tag, inventory, this.registryAccess());
     }
@@ -275,6 +283,7 @@ public class AssistantEntity extends PathfinderMob {
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
         if (tag.hasUUID("Owner")) ownerId = tag.getUUID("Owner");
+        if (tag.contains("Home")) homePos = BlockPos.of(tag.getLong("Home"));
         try {
             mode = Mode.valueOf(tag.getString("Mode"));
         } catch (IllegalArgumentException ignored) {
@@ -307,14 +316,39 @@ public class AssistantEntity extends PathfinderMob {
         return net.minecraft.world.InteractionResult.sidedSuccess(this.level().isClientSide());
     }
 
-    /** Keep the owner->assistant registry fresh (survives reloads). */
+    /** Registry upkeep, out-of-combat regen, and the always-visible HP name. */
     @Override
     public void aiStep() {
         super.aiStep();
-        if (!this.level().isClientSide && ownerId != null && BY_OWNER.get(ownerId) != this) {
+        if (this.level().isClientSide) return;
+
+        if (ownerId != null && BY_OWNER.get(ownerId) != this) {
             BY_OWNER.put(ownerId, this);
         }
+
+        // Slow regen once it's been out of combat for ~6 seconds.
+        if (isAlive() && getHealth() < getMaxHealth()
+            && tickCount - lastDamageTick > 120 && tickCount % 40 == 0) {
+            heal(1.0F);
+        }
+
+        // Keep a live HP readout floating over its head so you can see it's
+        // mortal and how it's doing.
+        int hp = Mth.ceil(getHealth());
+        if (hp != lastShownHealth) {
+            lastShownHealth = hp;
+            int max = (int) getMaxHealth();
+            net.minecraft.ChatFormatting color = hp > max * 0.6 ? net.minecraft.ChatFormatting.GREEN
+                : hp > max * 0.3 ? net.minecraft.ChatFormatting.YELLOW
+                : net.minecraft.ChatFormatting.RED;
+            setCustomName(Component.literal("Assistant ")
+                .append(Component.literal(hp + "/" + max + "❤").withStyle(color)));
+            setCustomNameVisible(true);
+        }
     }
+
+    @Nullable public BlockPos getHome() { return homePos; }
+    public void setHome(@Nullable BlockPos pos) { this.homePos = pos == null ? null : pos.immutable(); }
 
     @Override
     public void remove(net.minecraft.world.entity.Entity.RemovalReason reason) {
@@ -332,11 +366,13 @@ public class AssistantEntity extends PathfinderMob {
 
     @Override
     public boolean hurt(DamageSource source, float amount) {
-        // Don't fight the owner over friendly fire.
-        if (source.getEntity() instanceof Player p && isOwner(p)) {
-            return super.hurt(source, amount * 0.5F);
-        }
-        return super.hurt(source, amount);
+        // Owner friendly-fire is softened so you can't one-shot your companion
+        // by accident, but it is NOT invincible — mobs, lava, and falls all
+        // hurt it at full strength, and it dies at 0 HP.
+        boolean fromOwner = source.getEntity() instanceof Player p && isOwner(p);
+        boolean took = super.hurt(source, fromOwner ? amount * 0.5F : amount);
+        if (took) this.lastDamageTick = this.tickCount;
+        return took;
     }
 
     /** Drop the backpack AND worn gear on death so nothing the player gave it is lost. */

@@ -1,17 +1,26 @@
 package com.jrpetty.mcassistant;
 
+import com.jrpetty.mcassistant.block.AssistantSpawnerBlock;
 import com.jrpetty.mcassistant.entity.AssistantEntity;
 import com.jrpetty.mcassistant.menu.AssistantMenu;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.CreativeModeTabs;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.material.MapColor;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
+import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
+import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredHolder;
+import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
@@ -28,6 +37,8 @@ public final class McAssistantMod {
         DeferredRegister.create(Registries.ENTITY_TYPE, MODID);
     private static final DeferredRegister<MenuType<?>> MENU_TYPES =
         DeferredRegister.create(Registries.MENU, MODID);
+    private static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(MODID);
+    private static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(MODID);
 
     public static final DeferredHolder<EntityType<?>, EntityType<AssistantEntity>> ASSISTANT =
         ENTITY_TYPES.register("assistant", () -> EntityType.Builder
@@ -40,10 +51,26 @@ public final class McAssistantMod {
     public static final DeferredHolder<MenuType<?>, MenuType<AssistantMenu>> ASSISTANT_MENU =
         MENU_TYPES.register("assistant", () -> IMenuTypeExtension.create(AssistantMenu::new));
 
+    // The Assistant Spawner block + its item. Right-click the placed block to
+    // summon your assistant (or spawn a fresh one) at that spot.
+    public static final DeferredBlock<AssistantSpawnerBlock> ASSISTANT_SPAWNER =
+        BLOCKS.registerBlock("assistant_spawner",
+            AssistantSpawnerBlock::new,
+            BlockBehaviour.Properties.of()
+                .mapColor(MapColor.METAL)
+                .strength(3.0F, 6.0F)
+                .sound(SoundType.STONE));
+
+    public static final DeferredItem<BlockItem> ASSISTANT_SPAWNER_ITEM =
+        ITEMS.registerSimpleBlockItem(ASSISTANT_SPAWNER);
+
     public McAssistantMod(IEventBus modBus) {
         ENTITY_TYPES.register(modBus);
         MENU_TYPES.register(modBus);
+        BLOCKS.register(modBus);
+        ITEMS.register(modBus);
         modBus.addListener(this::onEntityAttributes);
+        modBus.addListener(this::onBuildCreativeTabs);
 
         NeoForge.EVENT_BUS.register(AssistantCommands.class);
         NeoForge.EVENT_BUS.register(ChatControl.class);
@@ -51,5 +78,12 @@ public final class McAssistantMod {
 
     private void onEntityAttributes(EntityAttributeCreationEvent event) {
         event.put(ASSISTANT.get(), AssistantEntity.createAttributes().build());
+    }
+
+    /** Put the spawner in the Functional Blocks creative tab. */
+    private void onBuildCreativeTabs(BuildCreativeModeTabContentsEvent event) {
+        if (event.getTabKey() == CreativeModeTabs.FUNCTIONAL_BLOCKS) {
+            event.accept(ASSISTANT_SPAWNER_ITEM);
+        }
     }
 }

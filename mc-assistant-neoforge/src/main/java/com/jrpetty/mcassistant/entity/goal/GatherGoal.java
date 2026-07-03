@@ -67,45 +67,52 @@ public class GatherGoal extends Goal {
         this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
     }
 
+    private static boolean isGather(com.jrpetty.mcassistant.entity.Job j) {
+        return j != null && j.type() == com.jrpetty.mcassistant.entity.Job.Type.GATHER;
+    }
+
     @Override
     public boolean canUse() {
-        return assistant.hasGatherRequest() && assistant.getTarget() == null;
+        return isGather(assistant.peekJob()) && assistant.getTarget() == null;
     }
 
     @Override
     public boolean canContinueToUse() {
-        // Abort if a newer order came in (taskGen changed) or combat started.
+        // Abort if a newer order/stop came in (taskGen changed) or combat started.
         return request != null && assistant.getTarget() == null && assistant.taskGen() == myGen;
     }
 
     @Override
     public void start() {
-        this.request = assistant.takeGatherRequest();
+        com.jrpetty.mcassistant.entity.Job j = assistant.peekJob(); // peek: only remove when finished
+        this.request = new Request(j.kind(), j.amount());
         this.myGen = assistant.taskGen();
         this.collected = 0;
         this.targetPos = null;
         this.workTicks = 0;
         this.stuckTicks = 0;
         this.unreachable.clear();
-        if (request != null) {
-            assistant.say("On it — gathering " + request.amount() + " " + request.kind().label + ".");
-        }
+        assistant.say("On it — gathering " + request.amount() + " " + request.kind().label + ".");
     }
 
     @Override
     public void stop() {
         if (request != null) {
-            // Interrupted (usually combat) — report and drop the task.
-            assistant.say("Gathered " + collected + " " + request.kind().label + " before I had to stop.");
+            // Interrupted (combat / stop) — leave the job at the head of the
+            // queue so it resumes after the interruption (unless the queue was
+            // cleared by !stop, in which case there's nothing to resume).
+            assistant.say("Paused gathering (" + collected + " " + request.kind().label + " so far).");
         }
         this.request = null;
         this.targetPos = null;
         assistant.getNavigation().stop();
     }
 
+    /** A job finished (or gave up) — drop it from the queue and move on. */
     private void finish(String message) {
         assistant.say(message);
-        this.request = null; // canContinueToUse turns false; stop() sees null and stays quiet
+        assistant.pollJob();
+        this.request = null;
         this.targetPos = null;
         assistant.getNavigation().stop();
     }

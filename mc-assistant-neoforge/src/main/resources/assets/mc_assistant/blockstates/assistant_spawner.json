@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "mc_assistant:block/assistant_spawner" }
+  }
+}

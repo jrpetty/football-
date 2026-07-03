@@ -47,40 +47,61 @@ public final class ChatControl {
                 return;
             }
             long amount = g.group(2) != null ? Long.parseLong(g.group(2)) : 8;
-            a.requestGather(kind, (int) Math.max(1, Math.min(64, amount)));
+            int n = (int) Math.max(1, Math.min(64, amount));
+            int before = a.jobCount();
+            a.requestGather(kind, n); // appends to the queue
+            if (before > 0) a.say("Queued: gather " + n + " " + kind.label + " (#" + a.jobCount() + " in line).");
             return;
         }
 
         if (lower.startsWith("!follow")) {
-            a.cancelTasks(); // a new order supersedes a running gather/deposit
+            a.clearQueue(); // a direct movement order takes over now
             a.setMode(AssistantEntity.Mode.FOLLOW);
             a.say("Following you.");
         } else if (lower.startsWith("!stop") || lower.startsWith("!halt") || lower.startsWith("!cancel")) {
-            a.requestStop(); // cancels the current task too, not just future movement
+            a.requestStop(); // clears the whole queue and holds
+        } else if (lower.startsWith("!jobs") || lower.startsWith("!queue") || lower.startsWith("!tasks")) {
+            reportJobs(a);
         } else if (lower.startsWith("!stay") || lower.startsWith("!wait")) {
-            a.cancelTasks();
+            a.clearQueue();
             a.setMode(AssistantEntity.Mode.STAY);
             a.say("Holding here.");
         } else if (lower.startsWith("!guard") || lower.startsWith("!protect")) {
-            a.cancelTasks();
+            a.clearQueue();
             a.setMode(AssistantEntity.Mode.GUARD);
             a.say("Guard mode on — I'll watch your back.");
         } else if (lower.startsWith("!come") || lower.startsWith("!here")) {
             // Come to me and keep following, rather than freezing on arrival.
-            a.cancelTasks();
+            a.clearQueue();
             a.setMode(AssistantEntity.Mode.FOLLOW);
             a.getNavigation().moveTo(player, 1.25D);
             a.say("Coming.");
         } else if (lower.startsWith("!deposit") || lower.startsWith("!stash")) {
-            a.requestDeposit();
+            int before = a.jobCount();
+            a.requestDeposit(); // appends to the queue
+            if (before > 0) a.say("Queued: deposit loot (#" + a.jobCount() + " in line).");
         } else if (lower.startsWith("!status")) {
-            a.say(String.format("HP %.0f/20, mode %s, carrying %d items.",
-                a.getHealth(), a.getMode().name().toLowerCase(), a.countItems()));
+            a.say(String.format("HP %.0f/%.0f, mode %s, carrying %d items, %d jobs queued.",
+                a.getHealth(), a.getMaxHealth(), a.getMode().name().toLowerCase(), a.countItems(), a.jobCount()));
         } else if (lower.startsWith("!help")) {
-            a.say("I know: !follow, !stay, !guard, !come, !stop, !gather <logs|stone|dirt> [n], !deposit, !status. Right-click me to open my inventory.");
+            a.say("I know: !follow, !stay, !guard, !come, !stop, !gather <logs|stone|dirt> [n], !deposit, !jobs, !status. Gather/deposit orders QUEUE and run in sequence. Right-click me to open my inventory.");
         } else {
             // Always acknowledge, so you can tell I'm still listening.
-            a.say("Didn't catch that — try !follow, !guard, !stop, !gather logs 16, or right-click me.");
+            a.say("Didn't catch that — try !follow, !guard, !stop, !gather logs 16, !jobs, or right-click me.");
         }
+    }
+
+    private static void reportJobs(AssistantEntity a) {
+        java.util.List<String> labels = a.jobLabels();
+        if (labels.isEmpty()) {
+            a.say("No jobs queued — I'm on " + a.getMode().name().toLowerCase() + ".");
+            return;
+        }
+        StringBuilder sb = new StringBuilder("Jobs: ");
+        for (int i = 0; i < labels.size(); i++) {
+            sb.append(i + 1).append(") ").append(labels.get(i));
+            if (i < labels.size() - 1) sb.append("  ");
+        }
+        a.say(sb.toString());
     }
 }

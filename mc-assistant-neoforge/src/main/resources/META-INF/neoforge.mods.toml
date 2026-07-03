@@ -10,9 +10,11 @@ description = '''
 An in-game AI companion: spawn it, and it follows you, guards you against
 hostiles, gathers logs and stone on command, and stashes loot in chests.
 Control it with /assistant commands or by chat: "!follow", "!guard",
-"!gather logs 16", "!deposit", "!come", "!stay", "!stop", "!status".
-Right-click it to open its inventory — manage its backpack, armor, and tools,
-with Stop / Follow / Stay / Guard / Deposit / Come buttons built in.
+"!gather logs 16", "!deposit", "!come", "!stay", "!stop", "!jobs", "!status".
+Gather/deposit orders queue and run in sequence. It's mortal — a live HP
+readout floats over its head and it regenerates out of combat. Right-click it
+to manage its backpack, armor, and tools, with Stop / Follow / Stay / Guard /
+Deposit / Come buttons. Craft an Assistant Spawner block to summon it anywhere.
 '''
 authors = "jrpetty"
 

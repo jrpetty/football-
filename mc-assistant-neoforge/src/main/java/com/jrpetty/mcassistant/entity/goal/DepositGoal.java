@@ -29,9 +29,13 @@ public class DepositGoal extends Goal {
         this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
     }
 
+    private static boolean isDeposit(com.jrpetty.mcassistant.entity.Job j) {
+        return j != null && j.type() == com.jrpetty.mcassistant.entity.Job.Type.DEPOSIT;
+    }
+
     @Override
     public boolean canUse() {
-        return assistant.hasDepositRequest() && assistant.getTarget() == null;
+        return isDeposit(assistant.peekJob()) && assistant.getTarget() == null;
     }
 
     @Override
@@ -41,7 +45,6 @@ public class DepositGoal extends Goal {
 
     @Override
     public void start() {
-        assistant.takeDepositRequest();
         this.myGen = assistant.taskGen();
         this.active = true;
         this.stuckTicks = 0;
@@ -62,8 +65,10 @@ public class DepositGoal extends Goal {
         assistant.getNavigation().stop();
     }
 
+    /** Job finished (or couldn't run) — drop it from the queue and move on. */
     private void finish(String message) {
         assistant.say(message);
+        assistant.pollJob();
         this.active = false;
         this.chestPos = null;
         assistant.getNavigation().stop();

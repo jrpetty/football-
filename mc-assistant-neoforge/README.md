@@ -40,12 +40,38 @@ client for multiplayer, since it adds an entity).
 | `!follow` / `/assistant follow` | Trails you (default mode). |
 | `!stay` | Holds position (still defends itself). |
 | `!guard` | Attacks hostiles that come near it or you. |
-| `!come` | Walks to you once. |
+| `!come` | Walks to you once, then keeps following. |
 | `!gather logs 16` | Finds and chops logs within 16 blocks into its 27-slot pack (also `stone`, `dirt`). |
 | `!deposit` | Walks to the nearest chest/barrel and unloads its pack. |
-| `!stop` | Cancels whatever it's doing right now and holds. |
-| `!status` | HP, mode, carry count, position. |
+| `!jobs` | Lists the queued jobs, in order. |
+| `!stop` | Clears the whole job queue and holds. |
+| `!status` | HP, mode, carry count, jobs queued. |
 | `/assistant dismiss` | Sends it away (it drops its pack first). |
+
+### Job queue
+
+Gather and deposit orders **queue up and run in sequence** — fire off
+`!gather logs 16`, `!gather stone 32`, `!deposit` and it works the list
+top to bottom, telling you as each one starts and finishes. `!jobs` shows
+what's lined up; `!stop` clears the list. A **movement/mode** order
+(`!follow`, `!stay`, `!guard`, `!come`, or the GUI buttons) takes over
+immediately and empties the queue — those are "do this now", not "later".
+
+### Health
+
+The assistant is **mortal**, and you can see it: its name tag shows live
+HP (`Assistant 14/20❤`) that turns yellow then red as it drops. It takes
+full damage from mobs, lava, and falls, dies at 0 (spilling its whole
+inventory and worn gear), and **slowly regenerates** once it's been out of
+combat for a few seconds. Your own hits only land at half strength, so you
+can't one-shot your companion by accident.
+
+### Assistant Spawner block
+
+Craft an **Assistant Spawner** (8 iron + 1 diamond) and place it. **Right-click
+it** to bring your assistant here — it spawns a fresh one if you don't have one,
+or teleports your existing one in — and the block becomes its home point. Find
+it in the **Functional Blocks** creative tab.
 
 **Right-click the assistant** (as its owner) to open its management screen:
 
@@ -71,11 +97,12 @@ real NeoForge release — see neoforged.net) and the two version ranges in
 names shift between majors, so 1.21.2+ may need small code fixes (e.g.
 `EntityType.Builder#build` takes a ResourceKey from 1.21.2).
 
-## Scope (v1)
+## Scope
 
 This port covers the companion core: spawn/ownership, follow/stay/guard
-modes, melee combat with creeper avoidance, gather (logs/stone/dirt),
-chest deposit, chat + command control, persistent inventory/mode. The Node
-bot's bigger systems (crafting, smelting, building blueprints, job queue,
-Claude natural-language brain, web dashboard) are not in the mod yet — they
-port incrementally on this foundation.
+modes, melee combat with creeper avoidance, gather (logs/stone/dirt), chest
+deposit, a **sequential job queue**, a **visible health/regen system**, a
+craftable **Assistant Spawner** block, chat + command control, and persistent
+inventory/mode. The Node bot's bigger systems (crafting, smelting, building
+blueprints, Claude natural-language brain, web dashboard) are not in the mod
+yet — they port incrementally on this foundation.

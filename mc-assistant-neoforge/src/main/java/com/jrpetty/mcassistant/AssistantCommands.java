@@ -35,6 +35,7 @@ public final class AssistantCommands {
             .then(Commands.literal("guard").executes(ctx -> setMode(ctx, AssistantEntity.Mode.GUARD, "Guard mode on — I'll watch your back.")))
             .then(Commands.literal("come").executes(AssistantCommands::come))
             .then(Commands.literal("stop").executes(AssistantCommands::stop))
+            .then(Commands.literal("jobs").executes(AssistantCommands::jobs))
             .then(Commands.literal("open").executes(AssistantCommands::open))
             .then(Commands.literal("status").executes(AssistantCommands::status))
             .then(Commands.literal("deposit").executes(AssistantCommands::deposit))
@@ -104,8 +105,17 @@ public final class AssistantCommands {
     private static int setMode(CommandContext<CommandSourceStack> ctx, AssistantEntity.Mode mode, String reply) {
         AssistantEntity a = requireAssistant(ctx);
         if (a == null) return 0;
+        a.clearQueue(); // a direct mode order takes over now
         a.setMode(mode);
         a.say(reply);
+        return 1;
+    }
+
+    private static int jobs(CommandContext<CommandSourceStack> ctx) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        java.util.List<String> labels = a.jobLabels();
+        a.say(labels.isEmpty() ? "No jobs queued." : "Jobs: " + String.join(", ", labels));
         return 1;
     }
 
@@ -113,7 +123,7 @@ public final class AssistantCommands {
         ServerPlayer player = ctx.getSource().getPlayer();
         AssistantEntity a = requireAssistant(ctx);
         if (a == null || player == null) return 0;
-        a.cancelTasks();
+        a.clearQueue();
         a.setMode(AssistantEntity.Mode.FOLLOW); // come over, then keep following
         a.getNavigation().moveTo(player, 1.25D);
         a.say("Coming to you.");
