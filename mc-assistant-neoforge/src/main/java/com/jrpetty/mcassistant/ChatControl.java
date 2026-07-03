@@ -76,11 +76,30 @@ public final class ChatControl {
         "^(?:give|hand|pass|toss)(?:\\s+(?:me|us))?\\s+(?:the\\s+|some\\s+|a\\s+)?(?:(\\d+)\\s+)?([a-z_ ]+?)\\s*$");
     private static final Pattern PATROL_BETWEEN = Pattern.compile(
         "^!?patrol\\s+(?:between\\s+)?(?:the\\s+)?([a-z0-9_ ]+?)\\s+and\\s+(?:the\\s+)?([a-z0-9_ ]+?)\\s*$");
-    private static final Pattern AREA_DIM = Pattern.compile("(\\d+)\\s*x\\s*(\\d+)");
+    private static final Pattern AREA_DIM = Pattern.compile("(\\d+)\\s*(?:x|by|×)\\s*(\\d+)");
     private static final Pattern REPAIR_WORD = Pattern.compile(
         "^(?:repair|fix|mend)\\b(?:\\s+(?:your|my|the))?\\s*([a-z_ ]*)$");
     private static final Pattern LOCATE_WORD = Pattern.compile(
         "^(?:find|locate)\\b.*\\b(village|mineshaft|shipwreck|stronghold|portal)\\b");
+
+    // Spoken-number words -> value. Voice recognition writes numbers as words
+    // ("gather twenty logs"), but the parser reads digits, so we convert first.
+    private static final java.util.Map<String, Integer> NUM_SMALL = java.util.Map.ofEntries(
+        java.util.Map.entry("zero", 0), java.util.Map.entry("one", 1), java.util.Map.entry("two", 2),
+        java.util.Map.entry("three", 3), java.util.Map.entry("four", 4), java.util.Map.entry("five", 5),
+        java.util.Map.entry("six", 6), java.util.Map.entry("seven", 7), java.util.Map.entry("eight", 8),
+        java.util.Map.entry("nine", 9), java.util.Map.entry("ten", 10), java.util.Map.entry("eleven", 11),
+        java.util.Map.entry("twelve", 12), java.util.Map.entry("thirteen", 13), java.util.Map.entry("fourteen", 14),
+        java.util.Map.entry("fifteen", 15), java.util.Map.entry("sixteen", 16), java.util.Map.entry("seventeen", 17),
+        java.util.Map.entry("eighteen", 18), java.util.Map.entry("nineteen", 19));
+    private static final java.util.Map<String, Integer> NUM_TENS = java.util.Map.of(
+        "twenty", 20, "thirty", 30, "forty", 40, "fifty", 50,
+        "sixty", 60, "seventy", 70, "eighty", 80, "ninety", 90);
+    // Naming cues: a number word right after one of these is a proper NAME
+    // (rename / waypoint / go-to target), not a count, so it stays a word —
+    // otherwise "your name is seven" would become "your name is 7".
+    private static final java.util.Set<String> NAME_CUES = java.util.Set.of(
+        "as", "is", "to", "you", "yourself", "rename", "named", "called", "spot", "place", "the");
 
     private ChatControl() {}
 
@@ -109,20 +128,20 @@ public final class ChatControl {
         ServerPlayer player = event.getPlayer();
 
         String lower = raw.toLowerCase();
-        boolean explicit;
-        String text;
-        if (lower.startsWith("!")) {
+        boolean explicit = false;
+        String text = lower;
+        if (text.startsWith("!")) {
             explicit = true;
-            text = lower.substring(1).trim();
-        } else {
-            Matcher addr = ADDRESSED.matcher(lower);
-            if (addr.matches()) {
-                explicit = true;
-                text = addr.group(1).trim();
-            } else {
-                explicit = false;
-                text = lower;
-            }
+            text = text.substring(1).trim();
+        }
+        // Strip a generic address word ("hey assistant, ...") in ALL cases,
+        // whether or not the message was "!"-prefixed. Voice always prefixes
+        // with "!", so "hey assistant gather stone" must still be recognized
+        // as addressed and stripped before name-routing.
+        Matcher addr = ADDRESSED.matcher(text);
+        if (addr.matches()) {
+            explicit = true;
+            text = addr.group(1).trim();
         }
         if (text.isEmpty()) return;
 
@@ -206,6 +225,10 @@ public final class ChatControl {
     }
 
     private static void dispatch(AssistantEntity a, ServerPlayer player, String text, boolean explicit) {
+        // Spoken numbers -> digits first ("gather twenty logs" -> "gather 20
+        // logs"), before any splitting, since "and" can be part of a number.
+        text = spokenNumbers(text);
+
         // "patrol between X and Y" contains "and", which the clause splitter
         // would cut in half — handle the whole sentence up front.
         Matcher patrol = PATROL_BETWEEN.matcher(text);
@@ -490,6 +513,83 @@ public final class ChatControl {
 
     private static int clamp(int n) {
         return Math.max(1, Math.min(Job.MAX_AMOUNT, n));
+    }
+
+    /**
+     * Convert spoken number words into digits so voice amounts work:
+     * "twenty" -> "20", "one hundred twenty eight" -> "128", "a hundred" ->
+     * "100". Runs before clause-splitting because "and" can be part of a
+     * number ("hundred and twenty"). Digits already in the text pass through,
+     * and "a stack" is left for the stack patterns to handle.
+     */
+    static String spokenNumbers(String text) {
+        String[] tok = text.split("\\s+");
+        StringBuilder out = new StringBuilder();
+        long[] val = new long[1];
+        int i = 0;
+        while (i < tok.length) {
+            if (out.length() > 0) out.append(' ');
+            // A number word right after a naming cue is a proper name, not a
+            // count — leave it alone ("your name is seven", "go to seven").
+            if (i > 0 && NAME_CUES.contains(tok[i - 1]) && isNumberWord(tok[i])) {
+                out.append(tok[i]);
+                i++;
+                continue;
+            }
+            int consumed = consumeNumber(tok, i, val);
+            if (consumed > 0) {
+                out.append(val[0]);
+                i += consumed;
+            } else {
+                out.append(tok[i]);
+                i++;
+            }
+        }
+        return out.toString();
+    }
+
+    /** Tokens forming a number starting at `start` (0 = none); value in val[0]. */
+    private static int consumeNumber(String[] tok, int start, long[] val) {
+        long result = 0;
+        long current = 0;
+        int i = start;
+        boolean any = false;
+        while (i < tok.length) {
+            String w = tok[i];
+            if (NUM_SMALL.containsKey(w)) {
+                current += NUM_SMALL.get(w);
+                any = true;
+                i++;
+            } else if (NUM_TENS.containsKey(w)) {
+                current += NUM_TENS.get(w);
+                any = true;
+                i++;
+            } else if (w.equals("hundred") && any) {
+                current = (current == 0 ? 1 : current) * 100;
+                i++;
+            } else if (w.equals("thousand") && any) {
+                result += (current == 0 ? 1 : current) * 1000;
+                current = 0;
+                i++;
+            } else if ((w.equals("a") || w.equals("an")) && i + 1 < tok.length
+                    && (tok[i + 1].equals("hundred") || tok[i + 1].equals("thousand"))) {
+                current += 1;
+                any = true;
+                i++;
+            } else if (w.equals("and") && any && i + 1 < tok.length && isNumberWord(tok[i + 1])) {
+                i++; // connective inside a number: "hundred and twenty"
+            } else {
+                break;
+            }
+        }
+        if (!any) return 0;
+        val[0] = result + current;
+        return i - start;
+    }
+
+    private static boolean isNumberWord(String w) {
+        return NUM_SMALL.containsKey(w) || NUM_TENS.containsKey(w)
+            || w.equals("hundred") || w.equals("thousand");
     }
 
     private static void execute(AssistantEntity a, ServerPlayer player, List<Action> actions,

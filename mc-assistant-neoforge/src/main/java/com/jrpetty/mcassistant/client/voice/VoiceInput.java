@@ -21,10 +21,11 @@ import javax.sound.sampled.TargetDataLine;
 /**
  * Push-to-talk: hold the voice key (default V, rebindable in Controls),
  * speak an order — "gather 128 logs and deposit it into the chest" — and
- * release. The recognized sentence is sent as a normal chat message, so it
- * flows through the exact same natural-language parser as typed chat: every
- * capability the assistant has (and every future one) is automatically
- * voice-controllable.
+ * release. The recognized sentence is ALWAYS treated as directed at the
+ * assistant: it's sent to chat with a leading "!" so ChatControl handles it
+ * as an explicit command (the AI always listens and replies), exactly as if
+ * you had typed "!gather logs". Same natural-language parser as typed chat,
+ * so every capability is automatically voice-controllable.
  */
 @EventBusSubscriber(modid = McAssistantMod.MODID, value = Dist.CLIENT)
 public final class VoiceInput {
@@ -118,11 +119,15 @@ public final class VoiceInput {
                     VoiceEngine.overlay("Didn't catch anything — hold the key while you speak.");
                     return;
                 }
+                // Voice is always addressed to the assistant. Prefix "!" so
+                // ChatControl reads it as an explicit command — the AI knows
+                // we're speaking to it and always responds.
+                final String command = heard.startsWith("!") ? heard : "!" + heard;
                 Minecraft mc = Minecraft.getInstance();
                 mc.execute(() -> {
                     if (mc.getConnection() != null && mc.player != null) {
-                        mc.player.displayClientMessage(Component.literal("🎤 " + heard), true);
-                        mc.getConnection().sendChat(heard);
+                        mc.player.displayClientMessage(Component.literal("🎤 " + command), true);
+                        mc.getConnection().sendChat(command);
                     }
                 });
             } catch (Throwable t) {

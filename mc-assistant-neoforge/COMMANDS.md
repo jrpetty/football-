@@ -5,6 +5,12 @@ Every phrase works **three ways**: bare chat (`gather 32 logs`), addressed
 and **all of it works by voice**: hold `V` (rebindable), speak, release.
 Orders chain with **"and" / "then"** and run as a sequential job queue.
 
+**Voice is always directed at the assistant.** Anything you speak is sent
+to chat as an explicit command (`gather twenty logs` → `!gather twenty
+logs`), so the AI always responds. **Spoken numbers are understood** —
+"twenty" = 20, "one hundred twenty eight" = 128, "a stack" = 64, "two
+stacks" = 128, "ten by ten" = 10×10.
+
 ## 1. Crew & identity
 
 | Say | Does |

@@ -75,6 +75,14 @@ words are transcribed by an offline speech engine (Vosk) and sent as chat,
 so they flow through the same natural-language parser — everything the
 assistant can do, present and future, is automatically voice-controllable.
 
+- **Everything you speak is directed at the assistant.** A spoken sentence
+  is always sent as an explicit command — say "gather twenty logs" and it
+  arrives as `!gather twenty logs`, so the AI always knows you're talking
+  to it and always replies. (Typed chat still uses smart detection so it
+  won't hijack normal multiplayer conversation.)
+- **Spoken numbers work.** Number words are understood: "gather twenty
+  logs" = 20, "one hundred twenty eight" = 128, "a stack" = 64, "two
+  stacks" = 128, "clear a ten by ten area" = 10×10.
 - First use downloads the ~40 MB English model (one time, from the official
   Vosk site into `config/mc_assistant/`); after that it's **fully offline —
   audio never leaves your machine**.
