@@ -34,6 +34,11 @@ public final class ClientSetup {
         event.register(McAssistantMod.ASSISTANT_MENU.get(), AssistantScreen::new);
     }
 
+    @SubscribeEvent
+    public static void onRegisterKeys(net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent event) {
+        event.register(com.jrpetty.mcassistant.client.voice.VoiceInput.TALK);
+    }
+
     public static class AssistantRenderer extends MobRenderer<AssistantEntity, HumanoidModel<AssistantEntity>> {
         private static final ResourceLocation TEXTURE =
             ResourceLocation.withDefaultNamespace("textures/entity/player/wide/steve.png");

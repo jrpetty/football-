@@ -53,12 +53,18 @@ public final class ChatControl {
     private static final Pattern A_STACK = Pattern.compile("\\ba\\s+stack\\b");
     private static final Pattern NUMBER = Pattern.compile("\\b(\\d+)\\b");
 
+    private static final Pattern SPAWN_WORD = Pattern.compile("^(?:spawn|summon)\\b");
+
     private ChatControl() {}
 
-    /** One parsed clause of the sentence. */
+    /** One parsed clause of the sentence.
+     *  RULE: every new capability the assistant gains MUST land here with
+     *  natural phrasings the same day it lands as a command — chat is the
+     *  voice interface, and voice must always be able to do everything. */
     private record Action(Type type, @Nullable GatherGoal.Kind gatherKind, int amount,
                           @Nullable AssistantEntity.Mode mode) {
-        enum Type { GATHER, DEPOSIT, MODE, COME, STOP, STATUS, JOBS, HELP }
+        enum Type { GATHER, DEPOSIT, MODE, COME, STOP, STATUS, JOBS, HELP,
+                    SPAWN, DISMISS, OPEN, GO_HOME, SET_HOME }
 
         static Action gather(GatherGoal.Kind k, int n) { return new Action(Type.GATHER, k, n, null); }
         static Action mode(AssistantEntity.Mode m) { return new Action(Type.MODE, null, 0, m); }
@@ -70,8 +76,6 @@ public final class ChatControl {
         String raw = event.getMessage().getString().trim();
         if (raw.isEmpty()) return;
         ServerPlayer player = event.getPlayer();
-        AssistantEntity a = AssistantCommands.findAssistant(player);
-        if (a == null) return;
 
         String lower = raw.toLowerCase();
         boolean explicit; // '!' or addressed by name => always answer, even to nonsense
@@ -89,6 +93,25 @@ public final class ChatControl {
                 text = lower;
             }
         }
+
+        AssistantEntity a = AssistantCommands.findAssistant(player);
+        if (a == null) {
+            // "spawn" is the one order that must work with nobody to talk to —
+            // it's how you get an assistant in the first place. Bare messages
+            // need to clearly mean it ("spawn" alone, or "summon the assistant").
+            boolean wantsSpawn = SPAWN_WORD.matcher(text).find()
+                && (explicit
+                    || text.matches("^(?:spawn|summon)\\s*$")
+                    || text.matches("^(?:spawn|summon)\\b.*\\b(?:assistant|bot|buddy|helper)\\b.*"));
+            if (wantsSpawn) {
+                AssistantCommands.spawnFor(player);
+            } else if (explicit) {
+                player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                    "<Assistant> (no assistant yet — say \"spawn\" or use /assistant spawn)"));
+            }
+            return;
+        }
+
         if (text.isEmpty()) {
             if (explicit) a.say("Yes? Try \"gather 128 logs and deposit it into the chest\".");
             return;
@@ -153,6 +176,24 @@ public final class ChatControl {
         if (c.matches("^(?:guard|protect|defend)\\b.*")) return Action.mode(AssistantEntity.Mode.GUARD);
         if (c.matches("^(?:come|here)\\b.*") || c.equals("to me")) return Action.of(Action.Type.COME);
 
+        // Lifecycle / GUI / home. Note: LEAD_IN already stripped "go " from
+        // the clause, so "go away" arrives as "away" and "go home" as "home".
+        if (c.matches("^(?:spawn|summon)\\b.*")) return Action.of(Action.Type.SPAWN);
+        if (c.matches("^dismiss\\b.*")
+            || (explicit && c.matches("^(?:away|leave|goodbye|bye)\\b.*"))) {
+            return Action.of(Action.Type.DISMISS);
+        }
+        if (c.matches("^(?:open|show)\\b.*\\b(?:inventory|pack|backpack|bag|gear|items|stuff)\\b.*")
+            || c.equals("open") || c.equals("open up")) {
+            return Action.of(Action.Type.OPEN);
+        }
+        if (c.matches("^(?:set|make)\\b.*\\bhome\\b.*") || c.contains("this is home")) {
+            return Action.of(Action.Type.SET_HOME);
+        }
+        if (c.matches("^(?:(?:head|return|walk)\\s+(?:back\\s+)?)?home\\b.*")) {
+            return Action.of(Action.Type.GO_HOME);
+        }
+
         // Deposit: "deposit", "stash it", "put it in the chest", "unload".
         if (DEPOSIT_VERB.matcher(c).find() || PUT_IN_CHEST.matcher(c).find()) {
             return new Action(Action.Type.DEPOSIT, null, 0, null);
@@ -204,7 +245,8 @@ public final class ChatControl {
                 case JOBS -> reportJobs(a);
                 case HELP -> a.say("Talk to me like a person: \"gather 128 logs and deposit it into the chest, then follow me\". "
                     + "I understand gather/get/mine/chop (logs, stone, dirt — plain numbers or \"2 stacks\"), deposit/stash, "
-                    + "follow, stay, guard, come, stop, jobs, status. Orders queue and run in sequence. Right-click me to manage my gear.");
+                    + "follow, stay, guard, come, stop, jobs, status, open (my inventory), go home, set home here, dismiss, spawn. "
+                    + "Orders queue and run in sequence. Hold the voice key (default V) to speak instead of type.");
                 case GATHER -> {
                     Job job = Job.gather(act.gatherKind(), act.amount());
                     a.enqueue(job);
@@ -242,6 +284,37 @@ public final class ChatControl {
                         a.enqueue(Job.mode(AssistantEntity.Mode.FOLLOW));
                         queuedLabels.add("come to you");
                     }
+                }
+                case SPAWN -> { // already alive — treat as "come here"
+                    a.clearQueue();
+                    a.setMode(AssistantEntity.Mode.FOLLOW);
+                    a.getNavigation().moveTo(player, 1.25D);
+                    a.say("Already here — coming to you.");
+                }
+                case DISMISS -> {
+                    a.say("Heading out — your gear's on the ground here.");
+                    a.dropEverything();
+                    a.discard();
+                    return; // it's gone; nothing left to confirm
+                }
+                case OPEN -> player.openMenu(
+                    new net.minecraft.world.SimpleMenuProvider(
+                        (id, inv, p) -> new com.jrpetty.mcassistant.menu.AssistantMenu(id, inv, a),
+                        net.minecraft.network.chat.Component.literal("Assistant")),
+                    buf -> buf.writeVarInt(a.getId()));
+                case GO_HOME -> {
+                    if (single) {
+                        a.clearQueue();
+                        a.goHome();
+                    } else {
+                        a.enqueue(Job.goHome());
+                        queuedLabels.add("go home");
+                    }
+                }
+                case SET_HOME -> {
+                    a.setHome(a.blockPosition());
+                    a.say("Home set — " + a.blockPosition().getX() + " "
+                        + a.blockPosition().getY() + " " + a.blockPosition().getZ() + ".");
                 }
             }
         }

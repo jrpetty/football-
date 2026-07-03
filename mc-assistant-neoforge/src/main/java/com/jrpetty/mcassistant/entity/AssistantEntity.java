@@ -326,8 +326,8 @@ public class AssistantEntity extends PathfinderMob {
             BY_OWNER.put(ownerId, this);
         }
 
-        // A queued mode switch ("gather logs THEN follow me") applies the
-        // instant it reaches the head of the queue — no goal needed.
+        // A queued mode switch ("gather logs THEN follow me") or go-home
+        // applies the instant it reaches the head of the queue — no goal needed.
         Job head = peekJob();
         if (head != null && head.type() == Job.Type.MODE && head.mode() != null) {
             pollJob();
@@ -341,6 +341,9 @@ public class AssistantEntity extends PathfinderMob {
                 case STAY -> "Holding here.";
                 case GUARD -> "Guard mode on.";
             });
+        } else if (head != null && head.type() == Job.Type.GO_HOME) {
+            pollJob();
+            goHome();
         }
 
         // Slow regen once it's been out of combat for ~6 seconds.
@@ -367,6 +370,18 @@ public class AssistantEntity extends PathfinderMob {
     @Nullable public BlockPos getHome() { return homePos; }
     public void setHome(@Nullable BlockPos pos) { this.homePos = pos == null ? null : pos.immutable(); }
 
+    /** Walk back to the home point (an Assistant Spawner, or wherever
+     *  "set home here" was said) and hold there. */
+    public void goHome() {
+        if (homePos == null) {
+            say("No home set — right-click an Assistant Spawner, or tell me \"set home here\".");
+            return;
+        }
+        setMode(Mode.STAY);
+        this.getNavigation().moveTo(homePos.getX() + 0.5, homePos.getY() + 1, homePos.getZ() + 0.5, 1.1D);
+        say("Heading home.");
+    }
+
     @Override
     public void remove(net.minecraft.world.entity.Entity.RemovalReason reason) {
         if (ownerId != null) {
@@ -392,10 +407,9 @@ public class AssistantEntity extends PathfinderMob {
         return took;
     }
 
-    /** Drop the backpack AND worn gear on death so nothing the player gave it is lost. */
-    @Override
-    protected void dropCustomDeathLoot(net.minecraft.server.level.ServerLevel level, DamageSource source, boolean hitByPlayer) {
-        super.dropCustomDeathLoot(level, source, hitByPlayer);
+    /** Drop the backpack AND worn gear on the ground — used on death and on
+     *  dismiss, so nothing the player gave it is ever lost. */
+    public void dropEverything() {
         for (int i = 0; i < inventory.size(); i++) {
             ItemStack s = inventory.get(i);
             if (!s.isEmpty()) {
@@ -410,6 +424,12 @@ public class AssistantEntity extends PathfinderMob {
                 this.setItemSlot(slot, ItemStack.EMPTY);
             }
         }
+    }
+
+    @Override
+    protected void dropCustomDeathLoot(net.minecraft.server.level.ServerLevel level, DamageSource source, boolean hitByPlayer) {
+        super.dropCustomDeathLoot(level, source, hitByPlayer);
+        dropEverything();
     }
 
     @Override

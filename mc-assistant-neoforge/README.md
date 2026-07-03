@@ -46,7 +46,11 @@ client for multiplayer, since it adds an entity).
 | `!jobs` | Lists the queued jobs, in order. |
 | `!stop` | Clears the whole job queue and holds. |
 | `!status` | HP, mode, carry count, jobs queued. |
-| `/assistant dismiss` | Sends it away (it drops its pack first). |
+| `go home` / `/assistant home` | Walks back to its home point and holds there. |
+| `set home here` / `/assistant sethome` | Makes its current spot the home point. |
+| `open your pack` / `/assistant open` | Opens the management screen from anywhere. |
+| `spawn` | Summons a fresh assistant (works by voice/chat with none around). |
+| `dismiss` / `/assistant dismiss` | Sends it away (drops its pack and gear first). |
 
 ### Natural language — just talk to it
 
@@ -64,11 +68,25 @@ math ("2 stacks" = 128, "a stack" = 64), amounts up to 1024, and carries
 the verb across clauses ("gather 64 logs and 32 stone"). A sentence that
 isn't clearly an order is left alone as normal chat.
 
-**Voice control**: since the assistant understands plain sentences, any
-speech-to-text that types into the chat box drives it hands-free — open
-chat (`T`), dictate with **Windows voice typing (Win+H)** or **macOS
-dictation (double-tap Fn)**, say "gather 128 logs and deposit it into the
-chest", hit Enter. Done.
+### Voice control — built in
+
+**Hold `V` (rebindable in Controls → MC Assistant), speak, release.** Your
+words are transcribed by an offline speech engine (Vosk) and sent as chat,
+so they flow through the same natural-language parser — everything the
+assistant can do, present and future, is automatically voice-controllable.
+
+- First use downloads the ~40 MB English model (one time, from the official
+  Vosk site into `config/mc_assistant/`); after that it's **fully offline —
+  audio never leaves your machine**.
+- Push-to-talk only: the mic is open exclusively while the key is held.
+- If the engine can't start on your platform, you'll get a chat message
+  saying so, and OS dictation into the chat box (**Win+H** / macOS
+  double-tap-Fn) still works as a fallback.
+
+**Every capability has voice phrasings** — that's a hard rule of this mod:
+spawn ("spawn"), dismiss ("dismiss" / "go away"), open its inventory ("open
+your pack"), go home / set home, follow/stay/guard/come/stop, gather,
+deposit, jobs, status.
 
 ### Job queue
 

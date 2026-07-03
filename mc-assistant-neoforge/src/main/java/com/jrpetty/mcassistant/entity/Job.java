@@ -13,7 +13,7 @@ import javax.annotation.Nullable;
  */
 public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount, @Nullable AssistantEntity.Mode mode) {
 
-    public enum Type { GATHER, DEPOSIT, MODE }
+    public enum Type { GATHER, DEPOSIT, MODE, GO_HOME }
 
     /** Biggest single gather order (well past a full backpack of one item). */
     public static final int MAX_AMOUNT = 1024;
@@ -30,11 +30,16 @@ public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount, @Nullab
         return new Job(Type.MODE, null, 0, mode);
     }
 
+    public static Job goHome() {
+        return new Job(Type.GO_HOME, null, 0, null);
+    }
+
     public String label() {
         return switch (type) {
             case GATHER -> "gather " + amount + " " + (kind != null ? kind.label : "?");
             case DEPOSIT -> "deposit loot";
             case MODE -> "switch to " + (mode != null ? mode.name().toLowerCase() : "?");
+            case GO_HOME -> "go home";
         };
     }
 }

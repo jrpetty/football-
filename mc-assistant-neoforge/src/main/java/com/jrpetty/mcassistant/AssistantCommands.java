@@ -35,6 +35,8 @@ public final class AssistantCommands {
             .then(Commands.literal("guard").executes(ctx -> setMode(ctx, AssistantEntity.Mode.GUARD, "Guard mode on — I'll watch your back.")))
             .then(Commands.literal("come").executes(AssistantCommands::come))
             .then(Commands.literal("stop").executes(AssistantCommands::stop))
+            .then(Commands.literal("home").executes(AssistantCommands::home))
+            .then(Commands.literal("sethome").executes(AssistantCommands::sethome))
             .then(Commands.literal("jobs").executes(AssistantCommands::jobs))
             .then(Commands.literal("open").executes(AssistantCommands::open))
             .then(Commands.literal("status").executes(AssistantCommands::status))
@@ -78,8 +80,15 @@ public final class AssistantCommands {
             ctx.getSource().sendFailure(Component.literal("Your assistant is already here — /assistant come."));
             return 0;
         }
+        return spawnFor(player) != null ? 1 : 0;
+    }
+
+    /** Create + bind a fresh assistant next to the player. Shared by the
+     *  command and by chat/voice ("spawn"), which has no assistant to talk to. */
+    @Nullable
+    public static AssistantEntity spawnFor(ServerPlayer player) {
         AssistantEntity assistant = McAssistantMod.ASSISTANT.get().create(player.serverLevel());
-        if (assistant == null) return 0;
+        if (assistant == null) return null;
         // Pick a collision-free spot — a hardcoded offset could embed the
         // 2-block-tall entity in a wall next to the player and suffocate it
         // (a dead assistant answers no commands, ever).
@@ -98,8 +107,8 @@ public final class AssistantCommands {
         assistant.moveTo(sx, player.getY(), sz, player.getYRot(), 0);
         assistant.setOwner(player);
         player.serverLevel().addFreshEntity(assistant);
-        assistant.say("Assistant online. Talk to me with ! commands (\"!follow\", \"!gather logs 16\", \"!status\") or /assistant.");
-        return 1;
+        assistant.say("Assistant online. Just talk to me (\"gather 32 logs then follow me\") or use /assistant.");
+        return assistant;
     }
 
     private static int setMode(CommandContext<CommandSourceStack> ctx, AssistantEntity.Mode mode, String reply) {
@@ -165,12 +174,28 @@ public final class AssistantCommands {
         return 1;
     }
 
+    private static int home(CommandContext<CommandSourceStack> ctx) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        a.clearQueue();
+        a.goHome();
+        return 1;
+    }
+
+    private static int sethome(CommandContext<CommandSourceStack> ctx) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        a.setHome(a.blockPosition());
+        a.say("Home set — " + a.blockPosition().getX() + " " + a.blockPosition().getY() + " " + a.blockPosition().getZ() + ".");
+        return 1;
+    }
+
     private static int dismiss(CommandContext<CommandSourceStack> ctx) {
         ServerPlayer player = ctx.getSource().getPlayer();
         AssistantEntity a = requireAssistant(ctx);
         if (a == null || player == null) return 0;
-        a.say("Heading out. Drop my pack here.");
-        a.requestDeposit(); // best effort; discard follows either way
+        a.say("Heading out — your gear's on the ground here.");
+        a.dropEverything(); // discard() deletes held items, so drop them first
         a.discard();
         return 1;
     }
