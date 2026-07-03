@@ -202,8 +202,8 @@ public final class AssistantCommands {
     private static int build(CommandContext<CommandSourceStack> ctx) {
         AssistantEntity a = requireAssistant(ctx);
         if (a == null) return 0;
-        String structure = StringArgumentType.getString(ctx, "structure").toLowerCase();
-        if (structure.equals("hut") || structure.equals("house")) structure = "shelter";
+        String structure = ChatControl.normalizeStructure(
+            StringArgumentType.getString(ctx, "structure").toLowerCase());
         if (!com.jrpetty.mcassistant.entity.goal.BuildGoal.STRUCTURES.contains(structure)) {
             ctx.getSource().sendFailure(Component.literal("I can build: "
                 + String.join(", ", com.jrpetty.mcassistant.entity.goal.BuildGoal.STRUCTURES)));

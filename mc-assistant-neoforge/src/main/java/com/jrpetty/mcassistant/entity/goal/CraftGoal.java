@@ -53,6 +53,10 @@ public class CraftGoal extends Goal {
             () -> new ItemStack(Items.CHEST), true));
         RECIPES.put("torches", new Recipe(List.of(new Need(COAL, 1, "coal"), new Need(STICK, 1, "stick")),
             () -> new ItemStack(Items.TORCH, 4), false));
+        RECIPES.put("furnace", new Recipe(List.of(new Need(COBBLE, 8, "cobblestone")),
+            () -> new ItemStack(Items.FURNACE), true));
+        RECIPES.put("ladders", new Recipe(List.of(new Need(STICK, 7, "sticks")),
+            () -> new ItemStack(Items.LADDER, 3), true));
         RECIPES.put("bread", new Recipe(List.of(new Need(WHEAT, 3, "wheat")),
             () -> new ItemStack(Items.BREAD), true));
         RECIPES.put("wooden pickaxe", tool(PLANK, 3, "planks", Items.WOODEN_PICKAXE));

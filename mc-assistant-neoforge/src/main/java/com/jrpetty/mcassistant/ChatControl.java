@@ -61,7 +61,8 @@ public final class ChatControl {
     private static final Pattern NAMED = Pattern.compile("\\b(?:named|called)\\s+([a-z0-9_]{2,16})\\b");
     private static final Pattern RENAME = Pattern.compile(
         "^(?:your name is|call yourself|i'?ll call you|rename(?:\\s+yourself)?(?:\\s+to)?)\\s+([a-z0-9_]{2,16})\\b");
-    private static final Pattern BUILD_WORD = Pattern.compile("\\b(wall|platform|shelter|hut|house)\\b");
+    private static final Pattern BUILD_WORD = Pattern.compile(
+        "\\b(wall|platform|shelter|hut|house|smeltery|forge|furnace|storage|warehouse|workshop|watchtower|tower)\\b");
 
     private ChatControl() {}
 
@@ -279,13 +280,11 @@ public final class ChatControl {
             return Action.of(Action.Type.FARM);
         }
 
-        // Building: "build a shelter", "construct a wall".
+        // Building: "build a shelter", "build a furnace building", "construct a wall".
         if (c.matches("^(?:build|construct)\\b.*")) {
             Matcher bw = BUILD_WORD.matcher(c);
             if (bw.find()) {
-                String s = bw.group(1);
-                if (s.equals("hut") || s.equals("house")) s = "shelter";
-                return Action.with(Action.Type.BUILD, s, 0);
+                return Action.with(Action.Type.BUILD, normalizeStructure(bw.group(1)), 0);
             }
             return explicit ? Action.with(Action.Type.BUILD, null, 0) : null;
         }
@@ -318,6 +317,17 @@ public final class ChatControl {
             return Action.gather(kind, parseAmount(c, 8));
         }
         return null;
+    }
+
+    /** Spoken structure words -> blueprint names. */
+    public static String normalizeStructure(String word) {
+        return switch (word) {
+            case "hut", "house" -> "shelter";
+            case "forge", "furnace" -> "smeltery";
+            case "warehouse" -> "storage";
+            case "tower" -> "watchtower";
+            default -> word;
+        };
     }
 
     @Nullable

@@ -166,8 +166,15 @@ blueprints, web dashboard) are not in the mod yet.
   stock when idle and restocks forever. "stop keeping" cancels.
 - **Farming** — "tend the farm": harvests mature wheat/carrots/potatoes/
   beetroot, sweeps the drops, replants from collected seeds.
-- **Building** — "build a wall / platform / shelter": places blueprints
-  block-by-block from carried blocks (planks, cobble, dirt...).
+- **Building** — "build a wall / platform / shelter", plus functional 5x5
+  buildings: **smeltery** ("build a furnace building" — 3 furnaces along
+  the back wall facing the door, 2 chests, crafting table, torch),
+  **storage** (4 chests lining the walls), **workshop** (crafting table +
+  furnace + chest), and a 3x3 **watchtower** with a real ladder shaft up
+  to a walled deck. Every part is placed from its inventory — structural
+  blocks from carried planks/cobble/dirt, and furnaces/chests/tables/
+  ladders are real items it crafts first (it tells you exactly what's
+  missing and how to say the craft order). Nothing is cheated in.
 - **A crew, not a bot** — "spawn a miner named bob" (up to 10). Address
   one by name ("bob, gather stone") or talk normally for the nearest.
   Roles: miner, lumberjack, farmer, builder ("be a farmer").
