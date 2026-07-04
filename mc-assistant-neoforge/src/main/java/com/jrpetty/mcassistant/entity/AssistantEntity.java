@@ -271,6 +271,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     private boolean shouldAutoAttack(LivingEntity target) {
         if (retreating) return false;
+        // Threat-aware: don't pick a fight we should be fleeing (low HP with no
+        // way to heal, or outnumbered and under-armored). RetreatGoal takes over.
+        if (shouldDisengage()) return false;
         // Creepers are melee suicide — but with a bow and arrows we can take
         // them from range instead of just ignoring them.
         if (target instanceof Creeper && !(hasBow() && hasArrows())) return false;
@@ -473,6 +476,40 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     public boolean hasArrows() {
         return countMatching(s -> s.is(Items.ARROW)) > 0;
+    }
+
+    /** Hostile monsters within radius (alive). */
+    public int threatCount(double radius) {
+        return level().getEntitiesOfClass(Monster.class,
+            getBoundingBox().inflate(radius), Monster::isAlive).size();
+    }
+
+    /** Nearest alive hostile within radius, or null. */
+    @Nullable
+    public Monster nearestMonster(double radius) {
+        Monster best = null;
+        double bestSq = Double.MAX_VALUE;
+        for (Monster m : level().getEntitiesOfClass(Monster.class,
+                getBoundingBox().inflate(radius), Monster::isAlive)) {
+            double d = distanceToSqr(m);
+            if (d < bestSq) { bestSq = d; best = m; }
+        }
+        return best;
+    }
+
+    /**
+     * Threat-aware judgment: is this a fight to break off rather than trade
+     * blows? Fleeing a losing fight (then healing behind cover/light) beats
+     * dying and dropping everything — the worst outcome for an autonomous agent.
+     */
+    public boolean shouldDisengage() {
+        float hp = getHealth() / getMaxHealth();
+        if (hp < 0.35F) return true;                     // critical — get out no matter what
+        int threats = threatCount(10.0);
+        if (threats == 0) return false;                  // nothing to disengage from
+        if (hp < 0.55F && countFood() == 0) return true; // can't out-heal a brawl
+        if (hp < 0.60F && threats >= 3 && getArmorValue() < 8) return true; // outnumbered & soft
+        return false;
     }
 
     private void equipBow() {

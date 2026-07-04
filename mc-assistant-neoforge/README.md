@@ -163,8 +163,14 @@ blueprints, web dashboard) are not in the mod yet.
 - **Tool intelligence** — it auto-equips the best tool in its pack for the
   block (axe→logs, pickaxe→stone), digs faster with better tools, and
   wears tools out like a player (it warns you when one breaks).
-- **Retreat instinct** — badly hurt, it breaks off, runs home (or to you),
-  eats itself back to health, then **resumes the interrupted job queue**.
+- **Threat-aware retreat** — it won't trade blows in a fight it should lose.
+  Badly hurt, or outnumbered with no way to heal (low HP + no food, or swarmed
+  while under-armored), it breaks off instead of dying and dropping everything.
+  It runs home or to you if it can; solo in the dark it runs *away from the
+  nearest monster and toward the brightest ground it can find* — light means
+  fewer mobs and a chance to heal — then **resumes the interrupted job queue**.
+  Well-armored, it stands and fights; naked, it flees — the same call a player
+  makes. This hardens the deep mining the progression drive sends it on.
 - **Crafting** — "craft a stone pickaxe", "make planks/sticks/torches/
   bread/chest". Needs a crafting table for tools — and if none is nearby
   it places its own (from 4 planks). Closes the self-maintenance loop.
