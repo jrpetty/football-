@@ -86,6 +86,9 @@ public final class ChatControl {
         "^enchant(?:\\s+(?:your|my|the))?\\s*([a-z ]*)$");
     private static final Pattern STOCK_QUERY = Pattern.compile(
         "^how\\s+(?:much|many)\\s+([a-z ]+?)\\s+(?:do|have|did|does)\\b.*");
+    private static final Pattern NETHER_WORD = Pattern.compile("\\bnether\\b");
+    private static final Pattern NETHER_TARGET = Pattern.compile(
+        "\\b(glowstone|quartz|netherrack|soul\\s*sand|magma|nether\\s*gold|gold)\\b");
 
     // Spoken-number words -> value. Voice recognition writes numbers as words
     // ("gather twenty logs"), but the parser reads digits, so we convert first.
@@ -117,7 +120,7 @@ public final class ChatControl {
                     MINE, HUNT, SHEAR, GIVE, GOTO, WAYPOINT_SET, PLACES, INVENTORY, LOOK,
                     CLEAR_AREA, TORCH_AREA, BRIDGE, BREED, HERD, FISH, CLEANUP,
                     REPAIR, LOCATE, NIGHT_ON, NIGHT_OFF,
-                    SORT, ENCHANT, STOCK,
+                    SORT, ENCHANT, STOCK, NETHER, BOAT,
                     ROLE, RENAME, AUTO_ON, AUTO_OFF, STANDING_ADD, STANDING_CLEAR }
 
         static Action gather(GatherGoal.Kind k, int n) { return new Action(Type.GATHER, k, n, null, null); }
@@ -320,6 +323,28 @@ public final class ChatControl {
         if (c.matches("^(?:be|become|act as|you're|you are)\\b.*") || c.matches("^your role is\\b.*")) {
             Matcher rw = ROLE_WORD.matcher(c);
             if (rw.find()) return Action.with(Action.Type.ROLE, rw.group(1), 0);
+        }
+
+        // Nether expedition: "go to the nether and get glowstone", "nether run for quartz".
+        // Standalone word only, so "netherite"/"netherrack" in other orders don't misfire.
+        if (NETHER_WORD.matcher(c).find()) {
+            String t = "glowstone";
+            Matcher nt = NETHER_TARGET.matcher(c);
+            if (nt.find()) {
+                t = nt.group(1).replaceAll("\\s+", " ").trim();
+                if (t.equals("nether gold")) t = "gold";
+            }
+            return Action.with(Action.Type.NETHER, t, parseAmount(c, 16));
+        }
+
+        // Boat crossing: "boat to 200 63 -400", "sail to ...", "take a boat to ...".
+        if (c.matches("^(?:boat|sail)\\b.*") || (c.matches("^take\\b.*") && c.contains("boat"))) {
+            Matcher co = COORDS.matcher(c.replaceAll("\\b(?:minus|negative)\\s+(\\d)", "-$1"));
+            if (co.find()) {
+                return Action.with(Action.Type.BOAT,
+                    co.group(1) + " " + co.group(2) + " " + co.group(3), 0);
+            }
+            return explicit ? Action.with(Action.Type.BOAT, null, 0) : null;
         }
 
         // Go to raw coordinates: "meet me at 120 64 -300", "go to 100 70 -50".
@@ -793,6 +818,20 @@ public final class ChatControl {
                     a.say(n > 0
                         ? "We have " + n + " " + word + " across my pack and the chests I know."
                         : "None that I know of — no " + word + " in my pack or any chest I've seen.");
+                }
+                case NETHER -> {
+                    Job job = Job.nether(act.arg(), act.amount());
+                    a.enqueue(job);
+                    queuedLabels.add(job.label());
+                }
+                case BOAT -> {
+                    if (act.arg() == null) {
+                        a.say("Boat to where? Give me coordinates — \"boat to 200 63 -400\".");
+                    } else {
+                        Job job = Job.boat(act.arg());
+                        a.enqueue(job);
+                        queuedLabels.add(job.label());
+                    }
                 }
                 case REPAIR -> repairItems(a, act.arg() != null ? act.arg() : "");
                 case LOCATE -> locateStructure(a, act.arg());

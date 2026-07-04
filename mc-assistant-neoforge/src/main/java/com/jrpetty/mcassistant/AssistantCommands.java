@@ -90,6 +90,14 @@ public final class AssistantCommands {
             .then(Commands.literal("stock")
                 .then(Commands.argument("item", StringArgumentType.word())
                     .executes(AssistantCommands::stock)))
+            .then(Commands.literal("nether")
+                .then(Commands.argument("target", StringArgumentType.word())
+                    .executes(ctx -> nether(ctx, 16))
+                    .then(Commands.argument("amount", IntegerArgumentType.integer(1, 256))
+                        .executes(ctx -> nether(ctx, IntegerArgumentType.getInteger(ctx, "amount"))))))
+            .then(Commands.literal("boat")
+                .then(Commands.argument("coords", StringArgumentType.greedyString())
+                    .executes(AssistantCommands::boat)))
             .then(Commands.literal("night")
                 .then(Commands.argument("state", StringArgumentType.word())
                     .executes(AssistantCommands::night)))
@@ -377,6 +385,22 @@ public final class AssistantCommands {
             com.jrpetty.mcassistant.entity.goal.WithdrawGoal.matcherFor(item));
         a.say(n > 0 ? "We have " + n + " " + item + " across my pack and known chests."
             : "No " + item + " in my pack or any chest I've seen.");
+        return 1;
+    }
+
+    private static int nether(CommandContext<CommandSourceStack> ctx, int amount) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        a.enqueue(com.jrpetty.mcassistant.entity.Job.nether(
+            StringArgumentType.getString(ctx, "target").toLowerCase(), amount));
+        return 1;
+    }
+
+    private static int boat(CommandContext<CommandSourceStack> ctx) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        a.enqueue(com.jrpetty.mcassistant.entity.Job.boat(
+            StringArgumentType.getString(ctx, "coords").trim()));
         return 1;
     }
 

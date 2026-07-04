@@ -21,7 +21,9 @@ import com.jrpetty.mcassistant.entity.goal.PatrolGoal;
 import com.jrpetty.mcassistant.entity.goal.RecoverGoal;
 import com.jrpetty.mcassistant.entity.goal.RetreatGoal;
 import com.jrpetty.mcassistant.entity.goal.ShearGoal;
+import com.jrpetty.mcassistant.entity.goal.BoatGoal;
 import com.jrpetty.mcassistant.entity.goal.EnchantGoal;
+import com.jrpetty.mcassistant.entity.goal.NetherGoal;
 import com.jrpetty.mcassistant.entity.goal.SmeltGoal;
 import com.jrpetty.mcassistant.entity.goal.SortGoal;
 import com.jrpetty.mcassistant.entity.goal.TorchAreaGoal;
@@ -190,6 +192,15 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     // pool so mobs can play by the enchant-costs-effort rule.
     private int xp;
 
+    // Nether expedition state. Persisted in NBT because a dimension change
+    // swaps the entity instance (and drops the transient job queue), so the
+    // resurrected nether/overworld entity resumes from these.
+    private boolean expeditionActive;
+    private int expeditionPhase;                 // 1 = gathering in nether, 2 = back
+    private String expeditionTarget = "glowstone";
+    private int expeditionRemaining;
+    @Nullable private BlockPos expeditionReturn; // overworld spot to come back to
+
     @Nullable private BlockPos homePos;
 
     // Named waypoints: "remember this spot as the mine" -> "go to the mine".
@@ -242,6 +253,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         this.goalSelector.addGoal(2, new RecoverGoal(this));
         this.goalSelector.addGoal(2, new SortGoal(this));
         this.goalSelector.addGoal(2, new EnchantGoal(this));
+        this.goalSelector.addGoal(2, new NetherGoal(this)); // retreat (prio 1) still preempts
+        this.goalSelector.addGoal(2, new BoatGoal(this));
         this.goalSelector.addGoal(2, new HuntGoal(this)); // flagless coordinator
         this.goalSelector.addGoal(3, new BowAttackGoal(this));
         this.goalSelector.addGoal(4, new MeleeAttackGoal(this, 1.25D, true));
@@ -685,6 +698,31 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         return true;
     }
 
+    // ---------------------------- nether expedition ---------------------------
+
+    public boolean expeditionActive() { return expeditionActive; }
+    public int expeditionPhase() { return expeditionPhase; }
+    public String expeditionTarget() { return expeditionTarget; }
+    public int expeditionRemaining() { return expeditionRemaining; }
+    @Nullable public BlockPos expeditionReturn() { return expeditionReturn; }
+
+    public void beginExpedition(String target, int amount, BlockPos returnPos) {
+        this.expeditionActive = true;
+        this.expeditionPhase = 1;
+        this.expeditionTarget = target;
+        this.expeditionRemaining = amount;
+        this.expeditionReturn = returnPos.immutable();
+    }
+
+    public void setExpeditionPhase(int phase) { this.expeditionPhase = phase; }
+    public void setExpeditionRemaining(int n) { this.expeditionRemaining = n; }
+    public void endExpedition() {
+        this.expeditionActive = false;
+        this.expeditionPhase = 0;
+        this.expeditionRemaining = 0;
+        this.expeditionReturn = null;
+    }
+
     // ------------------------------ storage totals ----------------------------
 
     /** Total count of matching items across the pack AND every remembered,
@@ -924,6 +962,13 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         tag.putBoolean("Auto", autonomous);
         tag.putBoolean("NightHome", nightHome);
         tag.putInt("Xp", xp);
+        tag.putBoolean("ExpActive", expeditionActive);
+        if (expeditionActive) {
+            tag.putInt("ExpPhase", expeditionPhase);
+            tag.putString("ExpTarget", expeditionTarget);
+            tag.putInt("ExpRemaining", expeditionRemaining);
+            if (expeditionReturn != null) tag.putLong("ExpReturn", expeditionReturn.asLong());
+        }
         ListTag orders = new ListTag();
         for (StandingOrder o : standingOrders) {
             CompoundTag ot = new CompoundTag();
@@ -963,6 +1008,13 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         autonomous = tag.getBoolean("Auto");
         nightHome = tag.getBoolean("NightHome");
         xp = tag.getInt("Xp");
+        expeditionActive = tag.getBoolean("ExpActive");
+        if (expeditionActive) {
+            expeditionPhase = tag.getInt("ExpPhase");
+            expeditionTarget = tag.contains("ExpTarget") ? tag.getString("ExpTarget") : "glowstone";
+            expeditionRemaining = tag.getInt("ExpRemaining");
+            expeditionReturn = tag.contains("ExpReturn") ? BlockPos.of(tag.getLong("ExpReturn")) : null;
+        }
         standingOrders.clear();
         for (Tag t : tag.getList("Standing", Tag.TAG_COMPOUND)) {
             CompoundTag ot = (CompoundTag) t;

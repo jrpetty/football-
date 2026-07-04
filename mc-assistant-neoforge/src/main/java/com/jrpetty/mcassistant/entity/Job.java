@@ -20,7 +20,7 @@ public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount,
     public enum Type { GATHER, DEPOSIT, MODE, GO_HOME, CRAFT, WITHDRAW, FARM, BUILD, SMELT,
                        MINE, HUNT, SHEAR, GIVE, GOTO,
                        PATROL, CLEAR, TORCH_AREA, BRIDGE, BREED, HERD, FISH, CLEANUP, RECOVER,
-                       SORT, ENCHANT }
+                       SORT, ENCHANT, NETHER, BOAT }
 
     /** Biggest single gather order (well past a full backpack of one item). */
     public static final int MAX_AMOUNT = 1024;
@@ -133,6 +133,16 @@ public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount,
         return new Job(Type.ENCHANT, null, 0, null, what);
     }
 
+    /** arg = nether resource ("glowstone", "quartz", ...); amount = how many. */
+    public static Job nether(String target, int amount) {
+        return new Job(Type.NETHER, null, Math.max(1, Math.min(256, amount)), null, target);
+    }
+
+    /** arg = "x y z" destination to boat toward. */
+    public static Job boat(String dest) {
+        return new Job(Type.BOAT, null, 0, null, dest);
+    }
+
     public String label() {
         return switch (type) {
             case GATHER -> "gather " + amount + " " + (kind != null ? kind.label : "?");
@@ -160,6 +170,8 @@ public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount,
             case RECOVER -> "recover the owner's drops";
             case SORT -> "sort the storage";
             case ENCHANT -> "enchant " + (arg != null ? arg : "gear");
+            case NETHER -> "nether run for " + amount + " " + arg;
+            case BOAT -> "boat to " + arg;
         };
     }
 }
