@@ -24,6 +24,7 @@ import com.jrpetty.mcassistant.entity.goal.ShearGoal;
 import com.jrpetty.mcassistant.entity.goal.BoatGoal;
 import com.jrpetty.mcassistant.entity.goal.EnchantGoal;
 import com.jrpetty.mcassistant.entity.goal.NetherGoal;
+import com.jrpetty.mcassistant.entity.goal.NightShelterGoal;
 import com.jrpetty.mcassistant.entity.goal.SmeltGoal;
 import com.jrpetty.mcassistant.entity.goal.SortGoal;
 import com.jrpetty.mcassistant.entity.goal.TorchAreaGoal;
@@ -230,6 +231,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(0, new CreeperDodgeGoal(this));
         this.goalSelector.addGoal(1, new RetreatGoal(this));
+        this.goalSelector.addGoal(1, new NightShelterGoal(this)); // seals in at night; yields to retreat
         this.goalSelector.addGoal(1, new OpenDoorGoal(this, true));
         this.goalSelector.addGoal(2, new GatherGoal(this));
         this.goalSelector.addGoal(2, new DepositGoal(this));
@@ -849,6 +851,14 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             && countMatching(s -> s.is(ItemTags.PLANKS)) < 4) {
             say("Low on wood — getting some.");
             enqueue(Job.gather(GatherGoal.Kind.LOGS, 12));
+            return true;
+        }
+        // 6) Shelter kit — keep full blocks on hand so it can wall up when night
+        //    falls. Grab cheap dirt during the day when it has no home to run to.
+        if (!this.level().isNight() && homePos == null
+            && countMatching(com.jrpetty.mcassistant.entity.goal.NightShelterGoal.SHELTER_BLOCK) < 8) {
+            say("Grabbing some dirt for an emergency shelter, just in case.");
+            enqueue(Job.gather(GatherGoal.Kind.DIRT, 12));
             return true;
         }
         return false;

@@ -207,6 +207,12 @@ blueprints, web dashboard) are not in the mod yet.
   none, replace a nearly-broken tool, keep wood on hand — all sourced by the
   recursive planner. This is the end-goal seed: dropped into the world with
   autonomy on, it keeps itself fed, armed, and alive without being told.
+- **Night shelter** — the "I need shelter" instinct. When night falls out in
+  the open with monsters about, an autonomous assistant drops what it's doing
+  and walls itself into a 1x1x2 pocket with whatever full blocks it carries
+  (it keeps a dirt kit on hand for exactly this), waits out the night in
+  safety, and breaks back out at dawn — reclaiming the blocks. It won't bother
+  if it's already under a roof, and it always yields to a real retreat first.
 - **Idle initiative** — with a role set, once survival needs are met it also
   does role work by itself (mine/chop/farm/stock materials + deposit) and
   backs off when an area is tapped out. "take a break" stops it. This is the
