@@ -165,6 +165,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private Mode mode = Mode.FOLLOW;
     private Role role = Role.NONE;
     private int lastTownRoleTick = -2000; // debounce town role reassignment
+    private net.minecraft.world.phys.Vec3 lastPathPos = net.minecraft.world.phys.Vec3.ZERO; // stuck detector
     private String assistantName = "assistant";
     private boolean autonomous;
     private final NonNullList<ItemStack> inventory = NonNullList.withSize(INVENTORY_SIZE, ItemStack.EMPTY);
@@ -212,11 +213,6 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         super(type, level);
         this.setPersistenceRequired();
         this.setCanPickUpLoot(false); // we manage pickups into our own inventory
-        // Doors are not walls: path through them and open them on the way.
-        if (this.getNavigation() instanceof GroundPathNavigation ground) {
-            ground.setCanOpenDoors(true);
-            ground.setCanPassDoors(true);
-        }
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -224,7 +220,23 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             .add(Attributes.MAX_HEALTH, 20.0D)
             .add(Attributes.MOVEMENT_SPEED, 0.32D)
             .add(Attributes.ATTACK_DAMAGE, 4.0D)
-            .add(Attributes.FOLLOW_RANGE, 48.0D);
+            // Step up full blocks instead of catching on 1-block ledges (the
+            // single biggest pathing improvement over vanilla mobs), a long
+            // path budget (follow range feeds the pathfinder's node limit), and
+            // a bit more reach for the follow/travel goals.
+            .add(Attributes.STEP_HEIGHT, 1.0D)
+            .add(Attributes.FOLLOW_RANGE, 64.0D);
+    }
+
+    /** A ground navigator that floats over water, opens/passes doors, and
+     *  searches a bigger area — so it stops giving up on real terrain. */
+    @Override
+    protected net.minecraft.world.entity.ai.navigation.PathNavigation createNavigation(Level level) {
+        GroundPathNavigation nav = new GroundPathNavigation(this, level);
+        nav.setCanOpenDoors(true);
+        nav.setCanPassDoors(true);
+        nav.setCanFloat(true); // don't treat water as a wall — float across it
+        return nav;
     }
 
     @Override
@@ -1605,6 +1617,18 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (ownerId != null) {
             BY_OWNER.computeIfAbsent(ownerId, k -> new ConcurrentHashMap<>())
                 .put(assistantName.toLowerCase(), this);
+        }
+
+        // Active unstuck: once a second, if we're trying to path somewhere but
+        // barely moved, hop and force a fresh path. Clears the corners, gaps,
+        // and 1-block lips the pathfinder alone gets wedged on.
+        if (tickCount % 20 == 0) {
+            if (!this.getNavigation().isDone()
+                && this.position().distanceToSqr(lastPathPos) < 0.25) { // <0.5 block in ~1s
+                this.getJumpControl().jump();
+                this.getNavigation().recomputePath();
+            }
+            this.lastPathPos = this.position();
         }
 
         // Queued mode switches apply the instant they reach the head.
