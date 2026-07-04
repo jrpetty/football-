@@ -3,6 +3,7 @@ package com.jrpetty.mcassistant.entity.goal;
 import com.jrpetty.mcassistant.entity.AssistantEntity;
 import com.jrpetty.mcassistant.entity.Job;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.item.ItemStack;
@@ -135,6 +136,9 @@ public class SmeltGoal extends Goal {
             return;
         }
         this.furnacePos = findFurnace(job.arg());
+        if (furnacePos == null && placeCarriedFurnace()) {
+            this.furnacePos = findFurnace(job.arg()); // set one down and use it
+        }
         if (furnacePos == null) {
             finish("No usable furnace within 16 blocks — \"craft a furnace\" and place it, or \"build a furnace building\".");
             return;
@@ -328,6 +332,31 @@ public class SmeltGoal extends Goal {
             }
         }
         return best;
+    }
+
+    /** No furnace nearby but we're carrying one: set it down next to us so
+     *  smelting works anywhere (surface or deep in a mine). Mirrors CraftGoal
+     *  placing its own crafting table. */
+    private boolean placeCarriedFurnace() {
+        var inv = assistant.getInventoryItems();
+        int idx = -1;
+        for (int i = 0; i < inv.size(); i++) {
+            if (inv.get(i).is(Items.FURNACE)) { idx = i; break; }
+        }
+        if (idx < 0) return false;
+        BlockPos feet = assistant.feetPos();
+        for (Direction dir : Direction.Plane.HORIZONTAL) {
+            BlockPos pos = feet.relative(dir);
+            if (assistant.level().getBlockState(pos).canBeReplaced()
+                && assistant.level().getBlockState(pos.below()).isSolid()) {
+                assistant.level().setBlockAndUpdate(pos, Blocks.FURNACE.defaultBlockState());
+                inv.get(idx).shrink(1);
+                if (inv.get(idx).isEmpty()) inv.set(idx, ItemStack.EMPTY);
+                assistant.say("Setting down a furnace here.");
+                return true;
+            }
+        }
+        return false;
     }
 
     /** A plain furnace smelts anything; a blast furnace only ores/metals; a

@@ -822,8 +822,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             return true;
         }
         // 3) No pickaxe — it can't mine stone or ore at all; make one, sourcing
-        //    the wood/stone itself via the planner.
-        if (countMatching(AssistantEntity::isPickaxe) == 0) {
+        //    the wood/stone itself via the planner. (countCarried so a pickaxe
+        //    currently in the main hand still counts.)
+        if (countCarried(AssistantEntity::isPickaxe) == 0) {
             String target = countMatching(s -> s.is(net.minecraft.world.item.Items.COBBLESTONE)
                 || s.is(net.minecraft.world.item.Items.COBBLED_DEEPSLATE)) >= 3
                 ? "stone_pickaxe" : "wooden_pickaxe";
@@ -867,6 +868,143 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private static boolean isPickaxe(ItemStack s) {
         return net.minecraft.core.registries.BuiltInRegistries.ITEM
             .getKey(s.getItem()).getPath().endsWith("_pickaxe");
+    }
+
+    /** Count matching items across the backpack AND worn/held equipment. */
+    public int countCarried(java.util.function.Predicate<ItemStack> what) {
+        int n = countMatching(what);
+        for (EquipmentSlot slot : EquipmentSlot.values()) {
+            ItemStack s = getItemBySlot(slot);
+            if (!s.isEmpty() && what.test(s)) n += s.getCount();
+        }
+        return n;
+    }
+
+    /**
+     * The 'thrive' rung. With survival covered and time to spare, it climbs the
+     * tech tree by the single highest-value next step, and only reaches for the
+     * next tier once the current one is stable:
+     *   stone-stable  — a stone pickaxe, a furnace, torches for light
+     *   iron-safe     — iron armor (auto-worn), sword, shield, iron pickaxe,
+     *                   mined + smelted + forged, piece by piece
+     *   food-secure   — tend a nearby farm / breed animals for renewable food
+     * Returns true if it took a step. This is what turns "survives" into
+     * "thrives" — the assistant materially improves itself over time.
+     */
+    private boolean decideProgress() {
+        // --- Stone-stable ---
+        if (bestPickTier() < 2) {
+            CraftPlanner.Result plan = CraftPlanner.plan(this, "stone_pickaxe", 1);
+            if (!plan.jobs().isEmpty()) { announcePlan("Upgrading to stone tools", plan); return true; }
+        }
+        if (!furnaceNearby() && countCarried(s -> s.is(Items.FURNACE)) == 0) {
+            CraftPlanner.Result plan = CraftPlanner.plan(this, "furnace", 1);
+            if (!plan.jobs().isEmpty()) { announcePlan("Setting up a furnace", plan); return true; }
+        }
+        if (bestPickTier() >= 2 && countCarried(s -> s.is(Items.TORCH)) < 8) {
+            CraftPlanner.Result plan = CraftPlanner.plan(this, "torch", 8);
+            if (!plan.jobs().isEmpty()) { announcePlan("Making torches for light", plan); return true; }
+        }
+        // --- Iron-safe: the biggest survivability jump, built piece by piece. ---
+        String piece = nextIronPiece();
+        if (piece != null && bestPickTier() >= 2) {
+            int ingots = countCarried(s -> s.is(Items.IRON_INGOT));
+            int raw = countCarried(s -> s.is(Items.RAW_IRON));
+            if (ingots >= ironCost(piece)) {
+                CraftPlanner.Result plan = CraftPlanner.plan(this, piece, 1);
+                if (!plan.jobs().isEmpty()) { announcePlan("Forging " + CraftPlanner.pretty(piece), plan); return true; }
+            } else if (raw > 0) {
+                say("Smelting raw iron for my gear.");
+                enqueue(Job.smelt("iron", raw));
+                return true;
+            } else {
+                say("Heading down to mine iron for armor and tools.");
+                enqueue(Job.mine(40));
+                return true;
+            }
+        }
+        // --- Food-secure: opportunistic renewable food. ---
+        if (cropsNearby()) { say("Tending the crops for renewable food."); enqueue(Job.farm()); return true; }
+        if (animalsNearby() && countCarried(BREEDING_FOOD) >= 4) {
+            say("Breeding the animals for a steady food supply.");
+            enqueue(Job.breed(null, 2));
+            return true;
+        }
+        return false;
+    }
+
+    private void announcePlan(String intro, CraftPlanner.Result plan) {
+        say(intro + " — " + String.join(", ", plan.narration()) + ".");
+        for (Job j : plan.jobs()) enqueue(j);
+    }
+
+    private static final java.util.function.Predicate<ItemStack> BREEDING_FOOD = s ->
+        s.is(Items.WHEAT) || s.is(Items.CARROT) || s.is(Items.WHEAT_SEEDS);
+
+    /** Highest-value iron kit piece still missing, or null when fully iron-safe. */
+    @Nullable
+    private String nextIronPiece() {
+        String[] order = {"iron_chestplate", "iron_helmet", "iron_sword",
+                          "iron_leggings", "iron_boots", "shield", "iron_pickaxe"};
+        for (String id : order) {
+            if (id.equals("iron_pickaxe") && bestPickTier() >= 3) continue; // already iron+
+            net.minecraft.world.item.Item it = RecipeBook.item(id);
+            if (it == Items.AIR) continue;
+            if (countCarried(s -> s.is(it)) == 0) return id;
+        }
+        return null;
+    }
+
+    private static int ironCost(String id) {
+        return switch (id) {
+            case "iron_chestplate" -> 8;
+            case "iron_leggings" -> 7;
+            case "iron_helmet" -> 5;
+            case "iron_boots" -> 4;
+            case "iron_pickaxe" -> 3;
+            case "iron_sword" -> 2;
+            default -> 1; // shield: 1 iron + planks
+        };
+    }
+
+    private int bestPickTier() {
+        int best = pickTier(getMainHandItem());
+        for (ItemStack s : inventory) best = Math.max(best, pickTier(s));
+        return best;
+    }
+
+    private static int pickTier(ItemStack s) {
+        if (s.isEmpty()) return 0;
+        String p = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).getPath();
+        if (!p.endsWith("_pickaxe")) return 0;
+        if (p.startsWith("netherite") || p.startsWith("diamond")) return 4;
+        if (p.startsWith("iron")) return 3;
+        if (p.startsWith("stone")) return 2;
+        return 1; // wooden / golden
+    }
+
+    private boolean furnaceNearby() {
+        BlockPos feet = feetPos();
+        for (BlockPos pos : BlockPos.betweenClosed(feet.offset(-8, -3, -8), feet.offset(8, 3, 8))) {
+            BlockState st = level().getBlockState(pos);
+            if (st.is(Blocks.FURNACE) || st.is(Blocks.BLAST_FURNACE)) return true;
+        }
+        return false;
+    }
+
+    private boolean cropsNearby() {
+        BlockPos feet = feetPos();
+        for (BlockPos pos : BlockPos.betweenClosed(feet.offset(-12, -2, -12), feet.offset(12, 2, 12))) {
+            BlockState st = level().getBlockState(pos);
+            if (st.is(Blocks.WHEAT) || st.is(Blocks.CARROTS)
+                || st.is(Blocks.POTATOES) || st.is(Blocks.BEETROOTS)) return true;
+        }
+        return false;
+    }
+
+    private boolean animalsNearby() {
+        return !level().getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class,
+            getBoundingBox().inflate(12.0), a -> a.isAlive() && !a.isBaby()).isEmpty();
     }
 
     // ------------------------------ food & health ----------------------------
@@ -1267,7 +1405,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (autonomous && jobs.isEmpty() && !retreating
             && mode != Mode.STAY && tickCount % 200 == 0 && tickCount >= idleBackoffUntil
             && !(nightHome && this.level().isNight())) {
-            if (!decideSurvival() && role != Role.NONE && tickCount % 400 == 0) {
+            if (!decideSurvival() && !decideProgress()
+                && role != Role.NONE && tickCount % 400 == 0) {
                 enqueueRoleWork();
             }
         }

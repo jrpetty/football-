@@ -213,6 +213,17 @@ blueprints, web dashboard) are not in the mod yet.
   (it keeps a dirt kit on hand for exactly this), waits out the night in
   safety, and breaks back out at dawn — reclaiming the blocks. It won't bother
   if it's already under a roof, and it always yields to a real retreat first.
+- **Progression drive** — the "thrive" rung. Once survival is covered and it has
+  time to spare, an autonomous assistant climbs the tech tree by the single
+  highest-value next step, and only reaches for the next tier once the current
+  one is stable: **stone-stable** (a stone pickaxe, a furnace it sets down
+  itself, torches for light) → **iron-safe** (mines iron, smelts it, forges iron
+  armor — which it auto-wears — plus sword, shield, and iron pickaxe, piece by
+  piece) → **food-secure** (tends a nearby farm or breeds animals for renewable
+  food). The ordering is deliberately risk-adjusted: iron *armor* (the biggest
+  survivability jump) comes before diamonds, and renewable food before luxuries.
+  When fully equipped it settles into maintenance/role work — a self-sufficient
+  agent with surplus to share (the on-ramp to multi-AI cooperation).
 - **Idle initiative** — with a role set, once survival needs are met it also
   does role work by itself (mine/chop/farm/stock materials + deposit) and
   backs off when an area is tapped out. "take a break" stops it. This is the
