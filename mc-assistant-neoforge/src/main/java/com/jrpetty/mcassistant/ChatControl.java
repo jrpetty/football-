@@ -153,7 +153,7 @@ public final class ChatControl {
                     REPAIR, LOCATE, NIGHT_ON, NIGHT_OFF,
                     SORT, ENCHANT, STOCK, NETHER, BOAT, MAKE, NEEDS, TOWN_GATHER,
                     ROLE, RENAME, AUTO_ON, AUTO_OFF, STANDING_ADD, STANDING_CLEAR,
-                    ROUTINE_ADD, ROUTINE_CLEAR, VERSION }
+                    ROUTINE_ADD, ROUTINE_CLEAR, VERSION, DIAGNOSTIC }
 
         static Action gather(GatherGoal.Kind k, int n) { return new Action(Type.GATHER, k, n, null, null); }
         static Action townGather(GatherGoal.Kind k, int n) { return new Action(Type.TOWN_GATHER, k, n, null, null); }
@@ -330,6 +330,11 @@ public final class ChatControl {
         if (c.matches("^(?:version|build)\\b.*") || c.contains("what version") || c.contains("what build")
             || c.contains("which version") || c.contains("your version")) {
             return Action.of(Action.Type.VERSION);
+        }
+        if (c.matches("^(?:run\\s+)?(?:diagnostics|diagnostic|self[\\s-]?test)\\b.*")
+            || c.contains("test yourself") || c.contains("run a self test")
+            || c.contains("check yourself over") || c.contains("do a self test")) {
+            return Action.of(Action.Type.DIAGNOSTIC);
         }
         if (c.matches("^(?:status|report)\\b.*") || c.contains("how are you")) return Action.of(Action.Type.STATUS);
         if (c.matches("^(?:jobs|queue|tasks)\\b.*") || c.contains("what are you doing")) return Action.of(Action.Type.JOBS);
@@ -810,6 +815,11 @@ public final class ChatControl {
                     a.getRole().name().toLowerCase(), a.isAutonomous() ? " (working autonomously)" : "",
                     a.countItems(), a.countFood(), a.getXp(), a.jobCount(), a.standingOrders().size(),
                     a.routines().size()));
+                case DIAGNOSTIC -> {
+                    Job job = Job.diagnostic();
+                    a.enqueue(job);
+                    queuedLabels.add(job.label());
+                }
                 case VERSION -> a.say("Build " + AssistantEntity.BUILD_TAG
                     + ". If any of those don't work in-game, an older jar is loaded — "
                     + "keep only the newest mc-assistant jar in your mods folder.");

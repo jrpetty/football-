@@ -24,6 +24,7 @@ import com.jrpetty.mcassistant.entity.goal.ShearGoal;
 import com.jrpetty.mcassistant.entity.goal.BoatGoal;
 import com.jrpetty.mcassistant.entity.goal.EnchantGoal;
 import com.jrpetty.mcassistant.entity.goal.EscapeGoal;
+import com.jrpetty.mcassistant.entity.goal.DiagnosticsGoal;
 import com.jrpetty.mcassistant.entity.goal.NetherGoal;
 import com.jrpetty.mcassistant.entity.goal.NightShelterGoal;
 import com.jrpetty.mcassistant.entity.goal.SmeltGoal;
@@ -174,7 +175,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b6 · routines, fortify, distress, quartermaster, self-rescue dig/climb, smarter pathing, place-marker item";
+        "2026-07-b7 · routines, fortify, distress, quartermaster, self-rescue dig/climb, smarter pathing, place-marker item, self-test";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -397,6 +398,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         this.goalSelector.addGoal(2, new EnchantGoal(this));
         this.goalSelector.addGoal(2, new NetherGoal(this)); // retreat (prio 1) still preempts
         this.goalSelector.addGoal(2, new BoatGoal(this));
+        this.goalSelector.addGoal(2, new DiagnosticsGoal(this)); // "run diagnostics" self-test
         this.goalSelector.addGoal(2, new HuntGoal(this)); // flagless coordinator
         this.goalSelector.addGoal(3, new BowAttackGoal(this));
         this.goalSelector.addGoal(4, new MeleeAttackGoal(this, 1.25D, true));
@@ -858,6 +860,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     public List<String> waypointNames() {
         return new ArrayList<>(waypoints.keySet());
+    }
+
+    public void removeWaypoint(String name) {
+        waypoints.remove(name.toLowerCase().trim());
     }
 
     // -------------------------------- experience ------------------------------

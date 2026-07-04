@@ -20,7 +20,7 @@ public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount,
     public enum Type { GATHER, DEPOSIT, MODE, GO_HOME, CRAFT, WITHDRAW, FARM, BUILD, SMELT,
                        MINE, HUNT, SHEAR, GIVE, GOTO,
                        PATROL, CLEAR, TORCH_AREA, BRIDGE, BREED, HERD, FISH, CLEANUP, RECOVER,
-                       SORT, ENCHANT, NETHER, BOAT }
+                       SORT, ENCHANT, NETHER, BOAT, DIAGNOSTIC }
 
     /** Biggest single gather order (well past a full backpack of one item). */
     public static final int MAX_AMOUNT = 1024;
@@ -148,6 +148,10 @@ public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount,
         return new Job(Type.BOAT, null, 0, null, dest);
     }
 
+    public static Job diagnostic() {
+        return new Job(Type.DIAGNOSTIC, null, 0, null, null);
+    }
+
     public String label() {
         return switch (type) {
             case GATHER -> "gather " + amount + " " + (kind != null ? kind.label : "?");
@@ -177,6 +181,7 @@ public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount,
             case ENCHANT -> "enchant " + (arg != null ? arg : "gear");
             case NETHER -> "nether run for " + amount + " " + arg;
             case BOAT -> "boat to " + arg;
+            case DIAGNOSTIC -> "run a self-test";
         };
     }
 }

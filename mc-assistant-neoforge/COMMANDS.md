@@ -117,6 +117,7 @@ chokepoint doorway and a torch on every corner so nothing spawns along it.
 | `head home at night` / `work nights` | Night routine on/off |
 | `status` / `how are you` | HP, mode, role, auto, items, food, jobs, standing orders, routines |
 | `version` / `what build` | Reports the build stamp — the quickest way to confirm the loaded jar is current |
+| `run diagnostics` / `self-test` / `test yourself` | Performs each core skill in front of you — places a block & mines it back, pathfinds, round-trips a waypoint, resolves a recipe — and reports pass/fail per skill. Cleans up after itself |
 | `jobs` / `what are you doing` | The queue, in order |
 | `help` / `what can you do` | In-game cheat sheet |
 
