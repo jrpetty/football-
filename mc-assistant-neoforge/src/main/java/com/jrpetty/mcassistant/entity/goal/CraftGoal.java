@@ -72,6 +72,8 @@ public class CraftGoal extends Goal {
     private int stuckTicks;
     @Nullable private BlockPos tablePos;
     private int myGen;
+    @Nullable private String lastSourced; // loop guard for auto-sourcing
+    private int lastSourcedTick = -100000;
 
     public CraftGoal(AssistantEntity assistant) {
         this.assistant = assistant;
@@ -135,13 +137,16 @@ public class CraftGoal extends Goal {
             return;
         }
 
-        // Have the materials?
+        // Have the materials? If not, SOURCE them ourselves (gather/smelt/craft
+        // the parts) instead of giving up — so ANY craft order, however it was
+        // triggered, goes and gets what it needs.
         for (Step step : plan.steps()) {
             if (assistant.countMatching(step.what()) < step.count()) {
-                assistant.postMaterialNeed(step.label()); // ask the town for it (if in one)
-                finish("I need " + step.count() + " " + step.label() + " to craft " + pretty(job.arg())
+                if (trySource()) return; // queued the parts; this craft retries after
+                assistant.postMaterialNeed(step.label()); // ask the town, if in one
+                finish("I still need " + step.count() + " " + step.label() + " for " + pretty(job.arg())
                     + (crafted > 0 ? " (made " + crafted + " so far)" : "")
-                    + " — I can gather or you can hand it to me.");
+                    + " and can't gather or find it — hand it to me or stock a chest.");
                 return;
             }
         }
@@ -187,6 +192,37 @@ public class CraftGoal extends Goal {
         ItemStack leftover = assistant.insertItem(out);
         if (!leftover.isEmpty()) assistant.spawnAtLocation(leftover);
         crafted++;
+    }
+
+    /**
+     * Missing materials: plan how to obtain them (gather wood/ore, smelt, craft
+     * the sub-parts, pull from a chest) and queue that FIRST, so this craft
+     * retries once the parts exist. This is what makes every craft order
+     * self-sourcing instead of a dead-end "I need X". Returns true if it queued
+     * a sourcing plan. A loop guard stops it re-planning the same item forever
+     * when a material genuinely can't be had.
+     */
+    private boolean trySource() {
+        if (job == null || plan == null || crafted > 0) return false;
+        String arg = job.arg();
+        if (arg == null) return false;
+        if (arg.equals(lastSourced) && assistant.tickCount - lastSourcedTick < 600) return false;
+        int yield = Math.max(1, plan.output().get().getCount());
+        int wanted = Math.max(1, (job.amount() - crafted) * yield);
+        com.jrpetty.mcassistant.entity.CraftPlanner.Result r =
+            com.jrpetty.mcassistant.entity.CraftPlanner.plan(assistant, arg, wanted);
+        if (r.jobs().isEmpty() || !r.blockers().isEmpty()) return false; // can't fully self-source
+        lastSourced = arg;
+        lastSourcedTick = assistant.tickCount;
+        assistant.pollJob(); // drop this craft — the plan re-adds a fresh craft at the end
+        List<Job> js = r.jobs();
+        for (int i = js.size() - 1; i >= 0; i--) assistant.enqueueFront(js.get(i));
+        assistant.say("Don't have the parts for " + pretty(arg) + " — getting them first: "
+            + String.join(", ", r.narration()) + ".");
+        this.job = null;
+        this.plan = null;
+        assistant.getNavigation().stop();
+        return true;
     }
 
     @Nullable
