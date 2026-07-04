@@ -121,10 +121,11 @@ public final class ChatControl {
                     MINE, HUNT, SHEAR, GIVE, GOTO, WAYPOINT_SET, PLACES, INVENTORY, LOOK,
                     CLEAR_AREA, TORCH_AREA, BRIDGE, BREED, HERD, FISH, CLEANUP,
                     REPAIR, LOCATE, NIGHT_ON, NIGHT_OFF,
-                    SORT, ENCHANT, STOCK, NETHER, BOAT, MAKE, NEEDS,
+                    SORT, ENCHANT, STOCK, NETHER, BOAT, MAKE, NEEDS, TOWN_GATHER,
                     ROLE, RENAME, AUTO_ON, AUTO_OFF, STANDING_ADD, STANDING_CLEAR }
 
         static Action gather(GatherGoal.Kind k, int n) { return new Action(Type.GATHER, k, n, null, null); }
+        static Action townGather(GatherGoal.Kind k, int n) { return new Action(Type.TOWN_GATHER, k, n, null, null); }
         static Action mode(AssistantEntity.Mode m) { return new Action(Type.MODE, null, 0, m, null); }
         static Action of(Type t) { return new Action(t, null, 0, null, null); }
         static Action with(Type t, String arg, int n) { return new Action(t, null, n, null, arg); }
@@ -332,6 +333,14 @@ public final class ChatControl {
         if (c.matches("^(?:be|become|act as|you're|you are)\\b.*") || c.matches("^your role is\\b.*")) {
             Matcher rw = ROLE_WORD.matcher(c);
             if (rw.find()) return Action.with(Action.Type.ROLE, rw.group(1), 0);
+        }
+
+        // Crew order (multi-AI): "everyone gather 128 iron", "team, get 64 logs".
+        // Splits the order across the whole crew, each hauling its share to the
+        // shared depot — divided labor toward a common goal.
+        if (c.matches("^(?:everyone|everybody|all of you|all|team|crew|squad|town|group|guys)\\b.*")) {
+            GatherGoal.Kind crewKind = kindIn(c);
+            if (crewKind != null) return Action.townGather(crewKind, parseAmount(c, 64));
         }
 
         // Problem-solving crafter: "make me an iron sword", "build me a chest",
@@ -866,6 +875,24 @@ public final class ChatControl {
                     }
                 }
                 case NEEDS -> a.say("Right now: " + String.join("; ", a.assessNeeds()) + ".");
+                case TOWN_GATHER -> {
+                    java.util.UUID owner = a.getOwnerId();
+                    java.util.List<AssistantEntity> crew = new java.util.ArrayList<>();
+                    if (owner != null) {
+                        for (AssistantEntity m : AssistantEntity.allFor(owner)) {
+                            if (m.level() == a.level()) crew.add(m);
+                        }
+                    }
+                    if (crew.isEmpty()) crew.add(a);
+                    int per = Math.max(1, act.amount() / crew.size());
+                    for (AssistantEntity m : crew) {
+                        m.enqueue(Job.gather(act.gatherKind(), per));
+                        m.enqueue(Job.deposit());
+                    }
+                    a.say("Rallying the crew — " + crew.size() + " of us on it, gathering "
+                        + act.amount() + " " + act.gatherKind().label + " (~" + per
+                        + " each) and stashing to the depot.");
+                }
                 case NETHER -> {
                     Job job = Job.nether(act.arg(), act.amount());
                     a.enqueue(job);

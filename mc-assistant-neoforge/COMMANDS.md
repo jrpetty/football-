@@ -18,6 +18,7 @@ stacks" = 128, "ten by ten" = 10×10.
 | `spawn` / `summon` | Creates your first assistant |
 | `spawn a miner named bob` | Named + role spawn (roles: miner, lumberjack, farmer, builder; up to 10 per player) |
 | `bob, <anything>` | Routes any order to that assistant by name |
+| `everyone gather 128 iron` / `team, get 64 logs` | **Crew order** — splits the job across the whole crew, each hauling its share to the shared depot (divided labor) |
 | `your name is X` / `call yourself X` | Rename |
 | `be a miner` / `you're a farmer` | Assign role |
 | `dismiss` / `go away` | Sends it away — drops all gear first |
