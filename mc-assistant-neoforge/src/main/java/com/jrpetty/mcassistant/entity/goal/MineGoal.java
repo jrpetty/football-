@@ -127,10 +127,24 @@ public class MineGoal extends Goal {
         assistant.say(message);
         assistant.noteJobOutcome(oresMined > 0 || blocksMined > 8);
         assistant.pollJob();
+        autoSmeltOres(); // turn the raw metal we dug up into ingots automatically
         this.job = null;
         this.currentDig = null;
         this.moveTarget = null;
         assistant.getNavigation().stop();
+    }
+
+    /** After a mining run, queue a smelt for any raw iron/gold/copper collected,
+     *  so "dig a mine" yields usable ingots without a separate "smelt" order. */
+    private void autoSmeltOres() {
+        queueSmelt("iron", s -> s.is(Items.RAW_IRON));
+        queueSmelt("gold", s -> s.is(Items.RAW_GOLD));
+        queueSmelt("copper", s -> s.is(Items.RAW_COPPER));
+    }
+
+    private void queueSmelt(String canonical, java.util.function.Predicate<ItemStack> raw) {
+        int n = assistant.countMatching(raw);
+        if (n > 0) assistant.enqueue(Job.smelt(canonical, n));
     }
 
     @Override

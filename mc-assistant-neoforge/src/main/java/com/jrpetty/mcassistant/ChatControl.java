@@ -66,6 +66,21 @@ public final class ChatControl {
         "\\b(wall|platform|shelter|hut|house|home|room|smeltery|forge|furnace|storage|warehouse|"
         + "workshop|watchtower|tower|pen|enclosure|barn|pasture|fence)\\b");
     private static final Pattern MINE_LEVEL = Pattern.compile("\\b(?:level|y)\\s*(-?\\d+)\\b");
+    // Anchored to the end so "mine diamonds" hits but "make a diamond sword" (an
+    // item to craft, not raw ore) does not.
+    private static final Pattern ORE_ANY = Pattern.compile("\\b(diamond|iron|gold|redstone|coal|copper|lapis)s?(?:\\s+ore)?\\s*$");
+    private static final Pattern ORE_DEEP = Pattern.compile("\\b(diamond|redstone|lapis|gold)s?(?:\\s+ore)?\\s*$");
+
+    /** Best Y level to branch-mine for an ore. */
+    private static int oreY(String ore) {
+        return switch (ore) {
+            case "diamond", "redstone", "lapis" -> -59;
+            case "gold" -> -16;
+            case "copper" -> 48;
+            case "coal" -> 50;
+            default -> 16; // iron
+        };
+    }
     private static final Pattern ANIMAL_WORD = Pattern.compile("\\b(cows?|pigs?|chickens?|sheep|rabbits?)\\b");
     private static final Pattern WAYPOINT_AS = Pattern.compile(
         "^(?:remember|save|mark)\\b.*?\\bas\\s+(?:the\\s+)?([a-z0-9_ ]{2,24})$");
@@ -341,6 +356,19 @@ public final class ChatControl {
         if (c.matches("^(?:everyone|everybody|all of you|all|team|crew|squad|town|group|guys)\\b.*")) {
             GatherGoal.Kind crewKind = kindIn(c);
             if (crewKind != null) return Action.townGather(crewKind, parseAmount(c, 64));
+        }
+
+        // Targeted ore mining: "mine for diamonds" / "dig for iron" (any ore), or
+        // "get me / find diamonds" for the deep ores you can't just gather. Digs
+        // a mine to that ore's best depth and chases the veins.
+        boolean mineVerb = c.matches("^(?:mine|dig)\\b.*") || c.contains("mine for") || c.contains("dig for");
+        Matcher oreAny = ORE_ANY.matcher(c);
+        if (mineVerb && oreAny.find()) {
+            return Action.with(Action.Type.MINE, null, oreY(oreAny.group(1)));
+        }
+        Matcher oreDeep = ORE_DEEP.matcher(c);
+        if ((c.contains("get me") || c.matches("^find\\b.*")) && oreDeep.find()) {
+            return Action.with(Action.Type.MINE, null, oreY(oreDeep.group(1)));
         }
 
         // Problem-solving crafter: "make me an iron sword", "build me a chest",

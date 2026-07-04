@@ -247,6 +247,62 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         return stuckStreak >= 4;
     }
 
+    private int firstSlot(java.util.function.Predicate<ItemStack> p) {
+        for (int i = 0; i < inventory.size(); i++) {
+            ItemStack s = inventory.get(i);
+            if (!s.isEmpty() && p.test(s)) return i;
+        }
+        return -1;
+    }
+
+    private boolean hasHarmfulEffect() {
+        for (var e : getActiveEffects()) {
+            if (e.getEffect().value().getCategory() == net.minecraft.world.effect.MobEffectCategory.HARMFUL) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Nullable
+    private BlockPos findNearestWater(int radius) {
+        BlockPos feet = blockPosition();
+        BlockPos best = null;
+        double bestDist = Double.MAX_VALUE;
+        for (BlockPos pos : BlockPos.betweenClosed(
+                feet.offset(-radius, -3, -radius), feet.offset(radius, 3, radius))) {
+            if (level().getFluidState(pos).is(net.minecraft.world.level.material.Fluids.WATER)) {
+                double d = pos.distSqr(feet);
+                if (d < bestDist) { bestDist = d; best = pos.immutable(); }
+            }
+        }
+        return best;
+    }
+
+    private boolean noTorchNear(int radius) {
+        BlockPos feet = feetPos();
+        for (BlockPos pos : BlockPos.betweenClosed(
+                feet.offset(-radius, -2, -radius), feet.offset(radius, 2, radius))) {
+            BlockState st = level().getBlockState(pos);
+            if (st.is(Blocks.TORCH) || st.is(Blocks.WALL_TORCH)) return false;
+        }
+        return true;
+    }
+
+    private void placeTorchNearby() {
+        BlockPos feet = feetPos();
+        for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+            BlockPos p = feet.relative(dir);
+            if (level().getBlockState(p).canBeReplaced()
+                && level().getBlockState(p.below()).isSolid()) {
+                if (removeMatching(s -> s.is(Items.TORCH), 1) == 1) {
+                    level().setBlockAndUpdate(p, Blocks.TORCH.defaultBlockState());
+                }
+                return;
+            }
+        }
+    }
+
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new EscapeGoal(this)); // dig/pillar out when buried or boxed in
@@ -874,10 +930,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             enqueue(Job.deposit());
             return true;
         }
-        // 2) Out of food — no food means no healing. Go hunt something to eat.
-        if (countFood() == 0) {
-            say("I'm out of food — hunting something to eat.");
-            enqueue(Job.hunt(null, 3));
+        // 2) Keep a food buffer — never let the larder run dry (it eats to heal,
+        //    and the quartermaster shares it with the owner).
+        if (countFood() < 6) {
+            say(countFood() == 0 ? "I'm out of food — hunting something to eat."
+                                 : "Food's running low — topping up the larder.");
+            enqueue(Job.hunt(null, 4));
             return true;
         }
         // 3) No pickaxe — it can't mine stone or ore at all; make one, sourcing
@@ -1643,6 +1701,22 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             this.lastPathPos = this.position();
         }
 
+        // Fireproof reflex: on fire and not already wet -> sprint to water.
+        if (this.isOnFire() && !this.isInWaterOrBubble() && tickCount % 10 == 0) {
+            BlockPos water = findNearestWater(6);
+            if (water != null) {
+                this.getNavigation().moveTo(water.getX() + 0.5, water.getY(), water.getZ() + 0.5, 1.6D);
+            }
+        }
+
+        // Proactive lighting: standing somewhere dark with torches on hand and
+        // none already nearby -> drop one to keep mobs from spawning around it.
+        if (tickCount % 60 == 0 && this.onGround() && getTarget() == null
+            && level().getBrightness(net.minecraft.world.level.LightLayer.BLOCK, blockPosition()) < 7
+            && countMatching(s -> s.is(Items.TORCH)) > 0 && noTorchNear(5)) {
+            placeTorchNearby();
+        }
+
         // Queued mode switches apply the instant they reach the head.
         // (GO_HOME and GOTO are real walking jobs now — TravelGoal runs them
         // to completion so "go to the mine THEN gather iron" works in order.)
@@ -1691,6 +1765,28 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // Night routine: idle workers head home at dusk when asked to.
         if (tickCount % 100 == 0) {
             nightRoutine();
+        }
+
+        // Emergency: at critical HP scarf a golden apple even mid-fight (regen +
+        // absorption), and drink milk to shake off poison/wither.
+        if (isAlive() && eatCooldown == 0) {
+            if (getHealth() < getMaxHealth() * 0.25F) {
+                int g = firstSlot(s -> s.is(Items.GOLDEN_APPLE) || s.is(Items.ENCHANTED_GOLDEN_APPLE));
+                if (g >= 0) {
+                    ItemStack rest = this.eat(this.level(), inventory.get(g));
+                    inventory.set(g, rest.isEmpty() ? ItemStack.EMPTY : rest);
+                    eatCooldown = 40;
+                    say("Critical — eating a golden apple!");
+                }
+            }
+            if (hasHarmfulEffect()) {
+                int m = firstSlot(s -> s.is(Items.MILK_BUCKET));
+                if (m >= 0) {
+                    removeAllEffects();
+                    inventory.set(m, new ItemStack(Items.BUCKET));
+                    eatCooldown = 20;
+                }
+            }
         }
 
         // Eat to heal (player rules: no free lunch). Slow fallback regen when

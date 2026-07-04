@@ -88,8 +88,24 @@ public class HuntGoal extends Goal {
         assistant.say(message);
         assistant.noteJobOutcome(hunted > 0);
         assistant.pollJob();
+        autoCook(); // cook the raw meat we just got
         this.job = null;
         this.victim = null;
+    }
+
+    /** After a hunt, queue a cook for any raw meat collected, so hunting yields
+     *  cooked food (more nutrition) without a separate "cook" order. */
+    private void autoCook() {
+        cook("beef", net.minecraft.world.item.Items.BEEF);
+        cook("porkchop", net.minecraft.world.item.Items.PORKCHOP);
+        cook("chicken", net.minecraft.world.item.Items.CHICKEN);
+        cook("mutton", net.minecraft.world.item.Items.MUTTON);
+        cook("rabbit", net.minecraft.world.item.Items.RABBIT);
+    }
+
+    private void cook(String canonical, net.minecraft.world.item.Item raw) {
+        int n = assistant.countMatching(s -> s.is(raw));
+        if (n > 0) assistant.enqueue(Job.smelt(canonical, n));
     }
 
     @Override
