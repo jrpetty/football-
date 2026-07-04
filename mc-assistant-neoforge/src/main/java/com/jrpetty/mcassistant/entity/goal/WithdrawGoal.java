@@ -51,10 +51,14 @@ public class WithdrawGoal extends Goal {
                     || BuiltInRegistries.ITEM.getKey(s.getItem()).getPath().equals("stone");
             case "food" -> s -> s.get(DataComponents.FOOD) != null;
             case "tool" -> ItemStack::isDamageableItem;
-            default -> s -> {
-                String path = BuiltInRegistries.ITEM.getKey(s.getItem()).getPath();
-                return path.contains(word) || path.contains(base);
-            };
+            default -> {
+                // Multi-word tokens like "iron ingot"/"raw iron" -> "iron_ingot"/"raw_iron".
+                final String underscore = word.replace(' ', '_');
+                yield s -> {
+                    String path = BuiltInRegistries.ITEM.getKey(s.getItem()).getPath();
+                    return path.contains(word) || path.contains(base) || path.contains(underscore);
+                };
+            }
         };
     }
 

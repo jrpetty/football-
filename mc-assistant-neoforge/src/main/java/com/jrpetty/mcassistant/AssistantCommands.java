@@ -98,6 +98,10 @@ public final class AssistantCommands {
             .then(Commands.literal("boat")
                 .then(Commands.argument("coords", StringArgumentType.greedyString())
                     .executes(AssistantCommands::boat)))
+            .then(Commands.literal("make")
+                .then(Commands.argument("what", StringArgumentType.greedyString())
+                    .executes(AssistantCommands::make)))
+            .then(Commands.literal("needs").executes(AssistantCommands::needs))
             .then(Commands.literal("night")
                 .then(Commands.argument("state", StringArgumentType.word())
                     .executes(AssistantCommands::night)))
@@ -385,6 +389,39 @@ public final class AssistantCommands {
             com.jrpetty.mcassistant.entity.goal.WithdrawGoal.matcherFor(item));
         a.say(n > 0 ? "We have " + n + " " + item + " across my pack and known chests."
             : "No " + item + " in my pack or any chest I've seen.");
+        return 1;
+    }
+
+    private static int make(CommandContext<CommandSourceStack> ctx) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        String clause = StringArgumentType.getString(ctx, "what").toLowerCase();
+        String tgt = com.jrpetty.mcassistant.entity.CraftPlanner.matchTarget(clause);
+        if (tgt == null) {
+            ctx.getSource().sendFailure(net.minecraft.network.chat.Component.literal(
+                "I don't know how to make that. Try a tool, sword, chest, furnace, torches, planks..."));
+            return 0;
+        }
+        var plan = com.jrpetty.mcassistant.entity.CraftPlanner.plan(a, tgt, 1);
+        if (plan.jobs().isEmpty() && plan.blockers().isEmpty()) {
+            a.say("You've already got " + tgt + ".");
+        } else if (plan.jobs().isEmpty()) {
+            a.say("To make " + tgt + " I'd need " + String.join(", ", plan.blockers())
+                + " — none nearby. Put some in a chest or hand it to me.");
+        } else {
+            for (var j : plan.jobs()) a.enqueue(j);
+            a.say("To make " + tgt + ": " + String.join(", ", plan.narration()) + ". On it.");
+            if (!plan.blockers().isEmpty()) {
+                a.say("(Still missing " + String.join(", ", plan.blockers()) + " — I'll get as far as I can.)");
+            }
+        }
+        return 1;
+    }
+
+    private static int needs(CommandContext<CommandSourceStack> ctx) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        a.say("Right now: " + String.join("; ", a.assessNeeds()) + ".");
         return 1;
     }
 

@@ -1,6 +1,7 @@
 package com.jrpetty.mcassistant;
 
 import com.jrpetty.mcassistant.entity.AssistantEntity;
+import com.jrpetty.mcassistant.entity.CraftPlanner;
 import com.jrpetty.mcassistant.entity.Job;
 import com.jrpetty.mcassistant.entity.goal.BuildGoal;
 import com.jrpetty.mcassistant.entity.goal.CraftGoal;
@@ -120,7 +121,7 @@ public final class ChatControl {
                     MINE, HUNT, SHEAR, GIVE, GOTO, WAYPOINT_SET, PLACES, INVENTORY, LOOK,
                     CLEAR_AREA, TORCH_AREA, BRIDGE, BREED, HERD, FISH, CLEANUP,
                     REPAIR, LOCATE, NIGHT_ON, NIGHT_OFF,
-                    SORT, ENCHANT, STOCK, NETHER, BOAT,
+                    SORT, ENCHANT, STOCK, NETHER, BOAT, MAKE, NEEDS,
                     ROLE, RENAME, AUTO_ON, AUTO_OFF, STANDING_ADD, STANDING_CLEAR }
 
         static Action gather(GatherGoal.Kind k, int n) { return new Action(Type.GATHER, k, n, null, null); }
@@ -305,6 +306,11 @@ public final class ChatControl {
         // Stock report: "how much iron do we have?", "how many logs have we got?"
         Matcher sq = STOCK_QUERY.matcher(c);
         if (sq.matches()) return Action.with(Action.Type.STOCK, sq.group(1).trim(), 0);
+        // Self-assessment (rung 1 of autonomy): "what do you need?"
+        if (c.contains("what do you need") || c.contains("what do you require")
+            || c.matches("^(?:assess|check)\\s+yourself\\b.*") || c.contains("how are you doing")) {
+            return Action.of(Action.Type.NEEDS);
+        }
         if (c.contains("work on your own") || c.matches("^auto\\s*on\\b.*")
             || c.contains("be autonomous") || c.contains("do your own thing")) {
             return Action.of(Action.Type.AUTO_ON);
@@ -323,6 +329,18 @@ public final class ChatControl {
         if (c.matches("^(?:be|become|act as|you're|you are)\\b.*") || c.matches("^your role is\\b.*")) {
             Matcher rw = ROLE_WORD.matcher(c);
             if (rw.find()) return Action.with(Action.Type.ROLE, rw.group(1), 0);
+        }
+
+        // Problem-solving crafter: "make me an iron sword", "build me a chest",
+        // "get me a stone pickaxe" — the planner sources every missing part.
+        // ("give me X" is handing over what it carries; "build a <structure>"
+        // stays a structure, so "build" only makes an ITEM when no structure word.)
+        boolean makeVerb = c.matches("^(?:make|craft|forge|get)\\b.*")
+            || c.contains("i need") || c.contains("i want")
+            || (c.matches("^build\\b.*") && !BUILD_WORD.matcher(c).find());
+        if (makeVerb) {
+            String tgt = CraftPlanner.matchTarget(c);
+            if (tgt != null) return Action.with(Action.Type.MAKE, tgt, parseAmount(c, 1));
         }
 
         // Nether expedition: "go to the nether and get glowstone", "nether run for quartz".
@@ -819,6 +837,23 @@ public final class ChatControl {
                         ? "We have " + n + " " + word + " across my pack and the chests I know."
                         : "None that I know of — no " + word + " in my pack or any chest I've seen.");
                 }
+                case MAKE -> {
+                    var plan = CraftPlanner.plan(a, act.arg(), act.amount());
+                    if (plan.jobs().isEmpty() && plan.blockers().isEmpty()) {
+                        a.say("You've already got " + act.arg() + " — it's in my pack or a chest here.");
+                    } else if (plan.jobs().isEmpty()) {
+                        a.say("To make " + act.arg() + " I'd need " + String.join(", ", plan.blockers())
+                            + " — I can't gather that or find it in a nearby chest. Put some in a chest or hand it to me.");
+                    } else {
+                        for (Job j : plan.jobs()) a.enqueue(j);
+                        a.say("To make " + act.arg() + ": " + String.join(", ", plan.narration()) + ". On it.");
+                        if (!plan.blockers().isEmpty()) {
+                            a.say("(Heads up — I'm still missing " + String.join(", ", plan.blockers())
+                                + "; I'll get as far as I can.)");
+                        }
+                    }
+                }
+                case NEEDS -> a.say("Right now: " + String.join("; ", a.assessNeeds()) + ".");
                 case NETHER -> {
                     Job job = Job.nether(act.arg(), act.amount());
                     a.enqueue(job);

@@ -748,6 +748,54 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         return out;
     }
 
+    /** Every container within `radius` (live scan) — for the craft planner. */
+    public java.util.List<Container> nearbyContainers(int radius) {
+        java.util.List<Container> out = new java.util.ArrayList<>();
+        BlockPos feet = blockPosition();
+        for (BlockPos pos : BlockPos.betweenClosed(
+                feet.offset(-radius, -4, -radius), feet.offset(radius, 4, radius))) {
+            if (level().getBlockEntity(pos) instanceof Container c) out.add(c);
+        }
+        return out;
+    }
+
+    // --------------------------- self-assessment ------------------------------
+
+    /** The autonomy perception layer: a prioritized read-out of what this
+     *  assistant needs right now. Foundation of the survival loop — it can
+     *  say these before deciding what to do about them. */
+    public java.util.List<String> assessNeeds() {
+        java.util.List<String> needs = new java.util.ArrayList<>();
+        if (getHealth() < getMaxHealth() * 0.4F) {
+            needs.add("I'm hurt (" + (int) getHealth() + "/" + (int) getMaxHealth() + ")");
+        }
+        if (countFood() == 0) {
+            needs.add("I'm out of food");
+        }
+        ItemStack tool = getMainHandItem();
+        if (tool.isDamageableItem() && tool.getMaxDamage() > 0
+            && tool.getDamageValue() > tool.getMaxDamage() * 0.9) {
+            needs.add("my " + tool.getHoverName().getString() + " is nearly broken");
+        }
+        if (isPackFull()) {
+            needs.add("my pack is full — I should deposit");
+        }
+        boolean hasPick = countMatching(s -> {
+            String p = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).getPath();
+            return p.endsWith("_pickaxe");
+        }) > 0 || getMainHandItem().getDestroySpeed(Blocks.STONE.defaultBlockState()) > 1.5F;
+        if (!hasPick) {
+            needs.add("I have no pickaxe — I can't mine stone or ore");
+        }
+        if (!standingOrders.isEmpty()) {
+            needs.add(standingOrders.size() + " standing order" + (standingOrders.size() == 1 ? "" : "s") + " to keep up");
+        }
+        if (needs.isEmpty()) {
+            needs.add("nothing pressing — I'm in good shape");
+        }
+        return needs;
+    }
+
     // ------------------------------ food & health ----------------------------
 
     private int findFoodSlot() {
