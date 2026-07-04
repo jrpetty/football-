@@ -63,7 +63,8 @@ public final class ChatControl {
     private static final Pattern RENAME = Pattern.compile(
         "^(?:your name is|call yourself|i'?ll call you|rename(?:\\s+yourself)?(?:\\s+to)?)\\s+([a-z0-9_]{2,16})\\b");
     private static final Pattern BUILD_WORD = Pattern.compile(
-        "\\b(wall|platform|shelter|hut|house|smeltery|forge|furnace|storage|warehouse|workshop|watchtower|tower)\\b");
+        "\\b(wall|platform|shelter|hut|house|home|room|smeltery|forge|furnace|storage|warehouse|"
+        + "workshop|watchtower|tower|pen|enclosure|barn|pasture|fence)\\b");
     private static final Pattern MINE_LEVEL = Pattern.compile("\\b(?:level|y)\\s*(-?\\d+)\\b");
     private static final Pattern ANIMAL_WORD = Pattern.compile("\\b(cows?|pigs?|chickens?|sheep|rabbits?)\\b");
     private static final Pattern WAYPOINT_AS = Pattern.compile(
@@ -567,10 +568,12 @@ public final class ChatControl {
     /** Spoken structure words -> blueprint names. */
     public static String normalizeStructure(String word) {
         return switch (word) {
-            case "hut", "house" -> "shelter";
+            case "hut" -> "shelter";
+            case "house", "home" -> "house";
             case "forge", "furnace" -> "smeltery";
             case "warehouse" -> "storage";
             case "tower" -> "watchtower";
+            case "enclosure", "barn", "pasture", "fence" -> "pen";
             default -> word;
         };
     }

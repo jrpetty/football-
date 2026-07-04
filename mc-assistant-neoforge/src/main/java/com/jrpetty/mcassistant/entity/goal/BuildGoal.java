@@ -41,10 +41,11 @@ import java.util.function.Predicate;
 public class BuildGoal extends Goal {
 
     public static final Set<String> STRUCTURES = Set.of(
-        "wall", "platform", "shelter", "smeltery", "storage", "workshop", "watchtower");
+        "wall", "platform", "shelter", "smeltery", "storage", "workshop", "watchtower",
+        "house", "room", "pen");
 
     /** What goes in a blueprint cell. */
-    public enum Part { BLOCK, FURNACE, CHEST, CRAFTING_TABLE, TORCH, LADDER }
+    public enum Part { BLOCK, FURNACE, CHEST, CRAFTING_TABLE, TORCH, LADDER, FENCE, GATE, WINDOW }
 
     private record Placement(BlockPos pos, Part part) {}
 
@@ -70,6 +71,16 @@ public class BuildGoal extends Goal {
             || s.is(Blocks.STONE.asItem()) || s.is(Blocks.DIRT.asItem());
     }
 
+    /** Parts placed from any matching item (block taken from the item itself). */
+    private static boolean isBlockPart(Part part) {
+        return part == Part.BLOCK || part == Part.FENCE || part == Part.GATE || part == Part.WINDOW;
+    }
+
+    /** Decorative parts skipped (not blocked-on) when we lack the item. */
+    private static boolean isDecorative(Part part) {
+        return part == Part.TORCH || part == Part.WINDOW;
+    }
+
     private static Predicate<ItemStack> itemFor(Part part) {
         return switch (part) {
             case BLOCK -> BuildGoal::isBuildingBlock;
@@ -78,6 +89,9 @@ public class BuildGoal extends Goal {
             case CRAFTING_TABLE -> s -> s.is(Items.CRAFTING_TABLE);
             case TORCH -> s -> s.is(Items.TORCH);
             case LADDER -> s -> s.is(Items.LADDER);
+            case FENCE -> s -> s.is(ItemTags.FENCES);
+            case GATE -> s -> s.is(ItemTags.FENCE_GATES);
+            case WINDOW -> s -> s.is(Items.GLASS) || s.is(Items.GLASS_PANE);
         };
     }
 
@@ -89,6 +103,9 @@ public class BuildGoal extends Goal {
             case LADDER -> "ladders (\"craft ladders\" — 7 sticks makes 3)";
             case TORCH -> "torches";
             case BLOCK -> "building blocks";
+            case FENCE -> "fences (\"craft fences\")";
+            case GATE -> "a fence gate (\"craft a fence gate\")";
+            case WINDOW -> "glass";
         };
     }
 
@@ -141,10 +158,12 @@ public class BuildGoal extends Goal {
         List<String> missing = new ArrayList<>();
         for (Map.Entry<Part, Integer> e : pending.entrySet()) {
             Part part = e.getKey();
-            if (part == Part.TORCH) continue; // decorative: skipped if absent
+            if (isDecorative(part)) continue; // torches/windows: skipped if absent
             int have = assistant.countMatching(itemFor(part));
             if (part == Part.BLOCK) {
                 if (have == 0) missing.add(e.getValue() + " building blocks (planks/cobble/dirt)");
+            } else if (part == Part.FENCE) {
+                if (have == 0) missing.add(e.getValue() + " " + craftHint(part));
             } else if (have < e.getValue()) {
                 missing.add((e.getValue() - have) + " " + craftHint(part));
             }
@@ -214,22 +233,21 @@ public class BuildGoal extends Goal {
         workTicks = 0;
 
         BlockState state;
-        if (target.part() == Part.BLOCK) {
-            state = takeStructureBlock();
+        Part part = target.part();
+        if (isBlockPart(part)) {
+            state = takeBlockMatching(itemFor(part));
             if (state == null) {
-                finish("Ran out of building blocks — placed " + placed + " parts so far.");
+                if (isDecorative(part)) { cursor++; return; } // no glass: skip the window
+                finish("Ran out of " + craftHint(part) + " — placed " + placed + " parts so far.");
                 return;
             }
         } else {
-            if (assistant.removeMatching(itemFor(target.part()), 1) < 1) {
-                if (target.part() == Part.TORCH) {
-                    cursor++; // no torches: skip the decoration, keep building
-                    return;
-                }
-                finish("Ran out of " + craftHint(target.part()) + " — placed " + placed + " parts so far.");
+            if (assistant.removeMatching(itemFor(part), 1) < 1) {
+                if (isDecorative(part)) { cursor++; return; } // no torches: skip, keep building
+                finish("Ran out of " + craftHint(part) + " — placed " + placed + " parts so far.");
                 return;
             }
-            state = stateFor(target.part());
+            state = stateFor(part);
         }
         assistant.level().setBlockAndUpdate(pos, state);
         assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
@@ -240,7 +258,8 @@ public class BuildGoal extends Goal {
     private BlockState stateFor(Part part) {
         Direction toDoor = facing.getOpposite(); // face the entrance = accessible
         return switch (part) {
-            case BLOCK -> Blocks.COBBLESTONE.defaultBlockState(); // unreachable (handled inline)
+            // Block-from-item parts are placed inline via takeBlockMatching, never here.
+            case BLOCK, FENCE, GATE, WINDOW -> Blocks.COBBLESTONE.defaultBlockState();
             case FURNACE -> Blocks.FURNACE.defaultBlockState().setValue(AbstractFurnaceBlock.FACING, toDoor);
             case CHEST -> Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, toDoor);
             case CRAFTING_TABLE -> Blocks.CRAFTING_TABLE.defaultBlockState();
@@ -249,18 +268,17 @@ public class BuildGoal extends Goal {
         };
     }
 
-    /** Consume one structural item from the pack; its block is what we place. */
+    /** Consume one matching BlockItem from the pack; its block is what we place. */
     @Nullable
-    private BlockState takeStructureBlock() {
+    private BlockState takeBlockMatching(Predicate<ItemStack> pred) {
         var inv = assistant.getInventoryItems();
         for (int i = 0; i < inv.size(); i++) {
             ItemStack s = inv.get(i);
-            if (isBuildingBlock(s)) {
-                BlockState state = ((BlockItem) s.getItem()).getBlock().defaultBlockState();
-                s.shrink(1);
-                if (s.isEmpty()) inv.set(i, ItemStack.EMPTY);
-                return state;
-            }
+            if (s.isEmpty() || !pred.test(s) || !(s.getItem() instanceof BlockItem bi)) continue;
+            BlockState state = bi.getBlock().defaultBlockState();
+            s.shrink(1);
+            if (s.isEmpty()) inv.set(i, ItemStack.EMPTY);
+            return state;
         }
         return null;
     }
@@ -320,6 +338,49 @@ public class BuildGoal extends Goal {
                 out.add(new Placement(cell(center, right, facing, 1, 1), Part.CHEST));
                 out.add(new Placement(cell(center, right, facing, -1, -1), Part.TORCH));
             }
+            case "room" -> {
+                BlockPos center = feet.relative(facing, 4);
+                shell(out, center, right, facing);       // walls + roof
+                floor(out, center, right, facing, 2);     // a proper floor
+                out.add(new Placement(cell(center, right, facing, 0, 0), Part.TORCH));
+            }
+            case "house" -> {
+                BlockPos center = feet.relative(facing, 4);
+                floor(out, center, right, facing, 2);
+                for (int dx = -2; dx <= 2; dx++) {
+                    for (int dz = -2; dz <= 2; dz++) {
+                        boolean edge = Math.abs(dx) == 2 || Math.abs(dz) == 2;
+                        BlockPos col = cell(center, right, facing, dx, dz);
+                        if (edge) {
+                            boolean isDoor = dx == 0 && dz == -2;
+                            boolean midWall = (dx == 0 || dz == 0) && !isDoor;
+                            for (int h = 0; h <= 3; h++) {           // 4-high walls
+                                if (isDoor && h <= 1) continue;      // doorway
+                                Part part = (h == 2 && midWall) ? Part.WINDOW : Part.BLOCK;
+                                out.add(new Placement(col.above(h), part));
+                            }
+                        }
+                        out.add(new Placement(col.above(4), Part.BLOCK)); // roof
+                    }
+                }
+                // A livable home: workbench, furnace, chest at the back; lit inside.
+                out.add(new Placement(cell(center, right, facing, -1, 1), Part.CRAFTING_TABLE));
+                out.add(new Placement(cell(center, right, facing, 0, 1), Part.FURNACE));
+                out.add(new Placement(cell(center, right, facing, 1, 1), Part.CHEST));
+                out.add(new Placement(cell(center, right, facing, -1, -1), Part.TORCH));
+                out.add(new Placement(cell(center, right, facing, 1, -1), Part.TORCH));
+            }
+            case "pen" -> {
+                BlockPos center = feet.relative(facing, 5);
+                for (int dx = -3; dx <= 3; dx++) {
+                    for (int dz = -3; dz <= 3; dz++) {
+                        if (Math.abs(dx) != 3 && Math.abs(dz) != 3) continue; // perimeter only
+                        BlockPos col = cell(center, right, facing, dx, dz);
+                        boolean isGate = dx == 0 && dz == -3;
+                        out.add(new Placement(col, isGate ? Part.GATE : Part.FENCE));
+                    }
+                }
+            }
             case "watchtower" -> {
                 BlockPos base = feet.relative(facing, 3);
                 for (int dx = -1; dx <= 1; dx++) {
@@ -363,6 +424,15 @@ public class BuildGoal extends Goal {
                     }
                 }
                 out.add(new Placement(col.above(3), Part.BLOCK)); // roof
+            }
+        }
+    }
+
+    /** A solid floor under a radius x radius footprint. */
+    private static void floor(List<Placement> out, BlockPos center, Direction right, Direction facing, int radius) {
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                out.add(new Placement(cell(center, right, facing, dx, dz).below(), Part.BLOCK));
             }
         }
     }

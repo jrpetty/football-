@@ -77,11 +77,14 @@ stacks" = 128, "ten by ten" = 10×10.
 
 ## 6. Building
 
-`build a ...` — **wall**, **platform**, **shelter** (hut/house), **smeltery**
-(furnace building: 3 furnaces facing the door, 2 chests, crafting table,
-torch), **storage** (4 chests), **workshop** (table + furnace + chest),
-**watchtower** (3x3 tower, ladder shaft, walled deck). Every part is a real
-item from its pack; missing parts are itemized with the craft order to say.
+`build a ...` — **house/home** (a real 5x5 home: floor, 4-high walls, windows,
+door, roof, and a workbench + furnace + chest inside), **room** (walled + floored
++ lit), **pen/barn/enclosure** (7x7 fence ring with a gate, for animals),
+**wall**, **platform**, **shelter** (hut), **smeltery** (3 furnaces facing the
+door, 2 chests, crafting table, torch), **storage** (4 chests), **workshop**
+(table + furnace + chest), **watchtower** (3x3 tower, ladder shaft, walled deck).
+Every part is a real item from its pack; missing parts are itemized with the
+craft order to say — so "build me a house" gathers/crafts what it lacks first.
 
 ## 7. Farming & animals
 
