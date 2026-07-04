@@ -224,15 +224,26 @@ public final class CraftPlanner {
                 jobs.add(Job.smelt("iron", qty));
                 narration.add("smelt " + qty + " iron");
             }
+            // Gold/copper can't be gathered (no ore-mining kind for them), so only
+            // smelt when the raw metal is actually on hand or in a chest; otherwise
+            // report an honest blocker instead of queuing a smelt with no input.
             case GOLD_INGOT -> {
-                obtain(a, chests, Items.RAW_GOLD, qty, jobs, narration, blockers, resPack, resChest, path, depth + 1, false);
-                jobs.add(Job.smelt("gold", qty));
-                narration.add("smelt " + qty + " gold");
+                if (a.countMatching(s -> s.is(Items.RAW_GOLD)) + countIn(chests, s -> s.is(Items.RAW_GOLD)) > 0) {
+                    obtain(a, chests, Items.RAW_GOLD, qty, jobs, narration, blockers, resPack, resChest, path, depth + 1, false);
+                    jobs.add(Job.smelt("gold", qty));
+                    narration.add("smelt " + qty + " gold");
+                } else {
+                    blockers.add(qty + " gold ingot");
+                }
             }
             case COPPER_INGOT -> {
-                obtain(a, chests, Items.RAW_COPPER, qty, jobs, narration, blockers, resPack, resChest, path, depth + 1, false);
-                jobs.add(Job.smelt("copper", qty));
-                narration.add("smelt " + qty + " copper");
+                if (a.countMatching(s -> s.is(Items.RAW_COPPER)) + countIn(chests, s -> s.is(Items.RAW_COPPER)) > 0) {
+                    obtain(a, chests, Items.RAW_COPPER, qty, jobs, narration, blockers, resPack, resChest, path, depth + 1, false);
+                    jobs.add(Job.smelt("copper", qty));
+                    narration.add("smelt " + qty + " copper");
+                } else {
+                    blockers.add(qty + " copper ingot");
+                }
             }
         }
     }

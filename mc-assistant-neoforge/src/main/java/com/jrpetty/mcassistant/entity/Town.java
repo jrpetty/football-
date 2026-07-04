@@ -37,6 +37,11 @@ public final class Town {
         return owner == null ? null : CENTER.get(owner);
     }
 
+    /** Dissolve the town (e.g. its Job Board was broken). */
+    public static void clearCenter(UUID owner) {
+        if (owner != null) CENTER.remove(owner);
+    }
+
     // ------------------------------ needs board ------------------------------
     // Per-owner demand for raw materials. A blocked member (or the foreman
     // watching the depot) posts what the town is short on; idle members whose

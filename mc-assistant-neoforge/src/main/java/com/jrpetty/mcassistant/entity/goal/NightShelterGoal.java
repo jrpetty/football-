@@ -45,7 +45,8 @@ public class NightShelterGoal extends Goal {
     };
 
     private static final int THREAT_RADIUS = 20;
-    private static final int MIN_BLOCKS = 5;
+    private static final int MIN_BLOCKS = 8; // a full 1x1x2 box is up to ~10 cells
+    private static final float BAIL_HEALTH = 0.45F; // hurt this low: drop the seal, let RetreatGoal take over
 
     private enum Phase { SEAL, OPEN }
 
@@ -53,6 +54,7 @@ public class NightShelterGoal extends Goal {
     private Phase phase = Phase.SEAL;
     @Nullable private BlockPos base;
     private boolean announced;
+    private final List<BlockPos> placed = new ArrayList<>(); // our own blocks, to reclaim at dawn
 
     public NightShelterGoal(AssistantEntity a) {
         this.a = a;
@@ -67,6 +69,8 @@ public class NightShelterGoal extends Goal {
 
     /** Night, out in the open, threatened, with blocks to build and not sealed yet. */
     private boolean nightNeed() {
+        // Already hurt? Don't try to wall up under fire — flee (RetreatGoal) instead.
+        if (a.getHealth() < a.getMaxHealth() * BAIL_HEALTH) return false;
         if (a.isNightHome() && a.getHome() != null) return false; // the go-home routine handles it
         if (!a.onGround()) return false;
         if (!a.level().canSeeSky(a.feetPos().above())) return false; // already under a roof
@@ -84,14 +88,19 @@ public class NightShelterGoal extends Goal {
     @Override
     public boolean canContinueToUse() {
         if (!a.isAutonomous() || a.isRetreating()) return false;
+        // Taking real damage means the seal isn't protecting us — release the
+        // MOVE/LOOK flags so RetreatGoal (or combat) can take over. Without this,
+        // two equal-priority goals deadlock and the bot can neither flee nor fight.
+        if (a.getHealth() < a.getMaxHealth() * BAIL_HEALTH) return false;
         if (phase == Phase.SEAL) return a.level().isNight() || enclosed(a.feetPos());
-        return enclosed(a.feetPos());
+        return !placed.isEmpty() || enclosed(a.feetPos()); // OPEN: run until reclaimed
     }
 
     @Override
     public void start() {
         this.base = a.feetPos();
         this.announced = false;
+        this.placed.clear();
         this.phase = a.level().isNight() ? Phase.SEAL : Phase.OPEN;
         a.getNavigation().stop();
     }
@@ -130,13 +139,13 @@ public class NightShelterGoal extends Goal {
             cells.add(head.relative(d));
         }
         cells.add(head.above());     // roof
-        int placed = 0;
+        int n = 0;
         for (BlockPos p : cells) {
-            if (placed >= 2) break; // a couple per tick — sealed within a second
+            if (n >= 2) break; // a couple per tick — sealed within a second
             if (!a.level().getBlockState(p).canBeReplaced()) continue;
-            if (placeBlock(p)) placed++;
+            if (placeBlock(p)) n++;
         }
-        if (placed > 0) a.swing(InteractionHand.MAIN_HAND);
+        if (n > 0) a.swing(InteractionHand.MAIN_HAND);
     }
 
     private void tickOpen(BlockPos feet) {
@@ -145,6 +154,17 @@ public class NightShelterGoal extends Goal {
             a.say("Morning — breaking back out.");
             announced = true;
         }
+        // Reclaim our own blocks (a few per tick) so the shelter kit isn't lost.
+        int broke = 0;
+        while (!placed.isEmpty() && broke < 3) {
+            breakBlock(placed.remove(placed.size() - 1));
+            broke++;
+        }
+        if (broke > 0) {
+            a.swing(InteractionHand.MAIN_HAND);
+            return;
+        }
+        // Fallback (e.g. after a restart lost the list): just open one side to exit.
         BlockPos head = feet.above();
         for (Direction d : Direction.Plane.HORIZONTAL) {
             BlockPos wf = feet.relative(d);
@@ -153,7 +173,7 @@ public class NightShelterGoal extends Goal {
                 breakBlock(wf);
                 breakBlock(wh);
                 a.swing(InteractionHand.MAIN_HAND);
-                return; // one open side is enough — canContinueToUse ends it next tick
+                return;
             }
         }
     }
@@ -167,6 +187,7 @@ public class NightShelterGoal extends Goal {
             a.level().setBlockAndUpdate(p, bi.getBlock().defaultBlockState());
             s.shrink(1);
             if (s.isEmpty()) inv.set(i, ItemStack.EMPTY);
+            placed.add(p.immutable()); // remember to reclaim it at dawn
             return true;
         }
         return false;

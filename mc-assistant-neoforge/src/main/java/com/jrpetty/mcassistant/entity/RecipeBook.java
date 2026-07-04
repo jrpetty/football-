@@ -169,12 +169,25 @@ public final class RecipeBook {
         return false;
     }
 
-    /** Word match with light plural slop ("swords"~"sword", "planks"~"plank"). */
+    /** Word match with light plural slop — matches if any singular/plural forms
+     *  agree, so "swords"~"sword", "axes"~"axe", and "torches"~"torch" all hit. */
     private static boolean wordEq(String a, String b) {
         if (a.equals(b)) return true;
-        String as = a.endsWith("s") && a.length() > 2 ? a.substring(0, a.length() - 1) : a;
-        String bs = b.endsWith("s") && b.length() > 2 ? b.substring(0, b.length() - 1) : b;
-        return as.equals(bs) || as.equals(b) || a.equals(bs);
+        for (String x : forms(a)) {
+            for (String y : forms(b)) {
+                if (x.equals(y)) return true;
+            }
+        }
+        return false;
+    }
+
+    /** The word plus its plausible de-pluralised forms ("axes" -> axe, ax). */
+    private static List<String> forms(String w) {
+        List<String> out = new ArrayList<>(3);
+        out.add(w);
+        if (w.endsWith("s") && w.length() > 2) out.add(w.substring(0, w.length() - 1));   // swords->sword, axes->axe
+        if (w.endsWith("es") && w.length() > 3) out.add(w.substring(0, w.length() - 2));  // torches->torch
+        return out;
     }
 
     /** The item for a registry path ("iron_sword"), or AIR if unknown. */

@@ -33,6 +33,11 @@ public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount,
         return new Job(Type.DEPOSIT, null, 0, null, null);
     }
 
+    /** Deposit into one specific chest (arg = "x y z") — the town depot. */
+    public static Job depositAt(net.minecraft.core.BlockPos pos) {
+        return new Job(Type.DEPOSIT, null, 0, null, pos.getX() + " " + pos.getY() + " " + pos.getZ());
+    }
+
     public static Job mode(AssistantEntity.Mode mode) {
         return new Job(Type.MODE, null, 0, mode, null);
     }

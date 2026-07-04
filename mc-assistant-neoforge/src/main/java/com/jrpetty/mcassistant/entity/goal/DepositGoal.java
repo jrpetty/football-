@@ -54,7 +54,9 @@ public class DepositGoal extends Goal {
             finish("Nothing to stash — my pack is empty.");
             return;
         }
-        this.chestPos = findChest();
+        // A town-work deposit names its depot; otherwise use the nearest chest.
+        BlockPos targeted = targetedChest();
+        this.chestPos = targeted != null ? targeted : findChest();
         if (chestPos == null) {
             // No chest here — but maybe we remember one (home base, the depot).
             this.chestPos = assistant.nearestRememberedChest(160);
@@ -147,6 +149,20 @@ public class DepositGoal extends Goal {
             }
         }
         return remaining;
+    }
+
+    /** The specific depot named by a town-work deposit job ("x y z"), or null. */
+    @Nullable
+    private BlockPos targetedChest() {
+        com.jrpetty.mcassistant.entity.Job j = assistant.peekJob();
+        if (j == null || j.arg() == null) return null;
+        String[] p = j.arg().split(" ");
+        if (p.length != 3) return null;
+        try {
+            return new BlockPos(Integer.parseInt(p[0]), Integer.parseInt(p[1]), Integer.parseInt(p[2]));
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     @Nullable

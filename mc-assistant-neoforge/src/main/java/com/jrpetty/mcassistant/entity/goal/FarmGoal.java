@@ -57,6 +57,7 @@ public class FarmGoal extends Goal {
     private int stuckTicks;
     private int emptyScans;
     private int myGen;
+    private final java.util.Set<BlockPos> skip = new java.util.HashSet<>(); // blocks we couldn't reach
 
     public FarmGoal(AssistantEntity assistant) {
         this.assistant = assistant;
@@ -85,6 +86,7 @@ public class FarmGoal extends Goal {
         this.emptyScans = 0;
         this.targetPos = null;
         this.mode = Mode.HARVEST;
+        this.skip.clear();
         assistant.say("Tending the crops.");
     }
 
@@ -129,7 +131,10 @@ public class FarmGoal extends Goal {
                 assistant.getNavigation().moveTo(
                     targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5, 1.1D);
             }
-            if (++stuckTicks > 100) targetPos = null;
+            if (++stuckTicks > 100) {
+                if (targetPos != null) skip.add(targetPos.immutable()); // don't re-pick it
+                targetPos = null;
+            }
             return;
         }
 
@@ -267,6 +272,7 @@ public class FarmGoal extends Goal {
         double bestDist = Double.MAX_VALUE;
         for (BlockPos pos : BlockPos.betweenClosed(
                 feet.offset(-RANGE, -3, -RANGE), feet.offset(RANGE, 3, RANGE))) {
+            if (skip.contains(pos)) continue; // couldn't reach it earlier
             if (!match.test(pos)) continue;
             double d = pos.distSqr(feet);
             if (d < bestDist) {

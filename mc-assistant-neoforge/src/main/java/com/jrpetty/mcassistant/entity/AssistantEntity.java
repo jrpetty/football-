@@ -164,6 +164,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     @Nullable private UUID ownerId;
     private Mode mode = Mode.FOLLOW;
     private Role role = Role.NONE;
+    private int lastTownRoleTick = -2000; // debounce town role reassignment
     private String assistantName = "assistant";
     private boolean autonomous;
     private final NonNullList<ItemStack> inventory = NonNullList.withSize(INVENTORY_SIZE, ItemStack.EMPTY);
@@ -1142,7 +1143,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         BlockPos board = Town.center(ownerId);
         if (board == null) return;
         BlockState bs = level().getBlockState(board);
-        if (!(bs.getBlock() instanceof com.jrpetty.mcassistant.block.JobBoardBlock)) return;
+        if (!(bs.getBlock() instanceof com.jrpetty.mcassistant.block.JobBoardBlock)) {
+            Town.clearCenter(ownerId); // board was broken/replaced — dissolve the town
+            return;
+        }
         com.jrpetty.mcassistant.block.JobBoardBlock.Preset preset =
             bs.getValue(com.jrpetty.mcassistant.block.JobBoardBlock.PRESET);
 
@@ -1156,8 +1160,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
         Role[] plan = rolePlan(preset, board);
         Role target = plan[idx % plan.length];
-        if (target != role) {
+        // Debounce: only actually switch (and announce) at most once a minute, so
+        // depot counts wobbling across a threshold don't thrash roles or spam chat.
+        if (target != role && tickCount - lastTownRoleTick > 1200) {
             setRole(target);
+            lastTownRoleTick = tickCount;
             say("Town duty — I'll work as the " + target.name().toLowerCase() + ".");
         }
         // The foreman keeps the town needs board in sync with the depot.
@@ -1256,7 +1263,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             say("Town needs " + kind.label + " — fetching a batch for the depot.");
             enqueue(Job.gather(kind, 16));
         }
-        enqueue(Job.deposit());
+        // Deliver to the town depot specifically, not just whatever chest is
+        // nearest when the gather ends — otherwise the depot never fills and the
+        // foreman re-posts the same need forever.
+        BlockPos board = Town.center(ownerId);
+        BlockPos depot = board != null ? findDepotNear(board) : null;
+        enqueue(depot != null ? Job.depositAt(depot) : Job.deposit());
         return true;
     }
 
