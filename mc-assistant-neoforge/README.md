@@ -254,3 +254,20 @@ blueprints, web dashboard) are not in the mod yet.
   distance + direction, saves it as a waypoint so "go to village" works.
 - **Cleanup** — "pick up the items around here": sweeps every drop within
   16 blocks into its pack.
+- **Go to coordinates** — "meet me at 120 64 -300" / "go to 100 70 -50":
+  navigates to raw coords, not just named waypoints. Chains in order.
+- **Auto-sort storage** — "sort the storage": consolidates every item type
+  into one home chest across nearby chests. Plus "how much iron do we
+  have?" — sums the pack and every remembered chest.
+- **Fair enchanting** — it banks XP from its own kills, ore, and smelting
+  (shown in status), then "enchant your gear" spends it — with lapis — at
+  a real enchanting table (efficiency/sharpness/power/protection). Earned,
+  not free.
+- **Nether expedition** (experimental) — "go to the nether and get
+  glowstone": builds and lights an obsidian portal (needs 14 obsidian +
+  flint & steel), crosses, gathers (glowstone/quartz/netherrack/soul
+  sand/magma/gold), and comes home — with fire resistance and a safe
+  landing so it survives. Blaze fortresses aren't included yet.
+- **Boat crossing** (experimental prototype) — "boat to 200 63 -400":
+  places and boards a carried boat and sails toward the coords. AI vehicle
+  control is rough, so it's best-effort — it recovers the boat if beached.

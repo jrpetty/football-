@@ -35,6 +35,9 @@ stacks" = 128, "ten by ten" = 10×10.
 | `set home here` / `this is home` | Sets home at its spot |
 | `remember this spot as the mine` / `call this place X` | Saves a named waypoint |
 | `go to the mine` | Travels there — a real queued job, chains in order |
+| `go to 120 64 -300` / `meet me at ...` | Navigates to raw coordinates |
+| `boat to 200 63 -400` | Sails a carried boat toward the coords (experimental) |
+| `go to the nether and get glowstone` | Builds a portal, crosses, gathers, returns (experimental) |
 | `places` / `where can you go` | Lists known waypoints |
 | `patrol between home and the mine` | Endless guard laps between two places; `stop` ends it |
 
@@ -60,6 +63,9 @@ stacks" = 128, "ten by ten" = 10×10.
 | `what are you carrying?` / `inventory` | Itemized pack report |
 | `open` / `show me your pack` | Opens the management GUI |
 | `keep the chest stocked with 64 logs` | Standing order — restocks forever; `stop keeping` cancels |
+| `sort the storage` | Consolidates each item type into one home chest |
+| `how much iron do we have?` | Totals across the pack + every remembered chest |
+| `enchant your gear` | Spends earned XP + lapis at an enchanting table |
 
 ## 5. Crafting, smelting & repair
 
@@ -103,10 +109,11 @@ item from its pack; missing parts are itemized with the craft order to say.
 ## 9. Slash commands
 
 `/assistant` + `spawn · follow · stay · guard · come · stop · home · sethome ·
-goto <place> · mark <place> · gather <what> [n] · mine [level] · deposit ·
+goto <place|x y z> · mark <place> · gather <what> [n] · mine [level] · deposit ·
 withdraw <item> [n] · give <item> [n] · craft <what> · smelt <what> [n] ·
 build <structure> · farm · hunt [animal] [n] · shear · breed [animal] ·
-herd <animal> [n] · fish [n] · cleanup · patrol <a> <b> · clear [size] ·
+herd <animal> [n] · fish [n] · cleanup · sort · enchant [what] · stock <item> ·
+nether <target> [n] · boat <x y z> · patrol <a> <b> · clear [size] ·
 lightup [radius] · bridge · jobs · status · open · role <role> ·
 auto <on|off> · night <on|off> · rename <name> · dismiss`
 
