@@ -92,7 +92,7 @@ craft order to say — so "build me a house" gathers/crafts what it lacks first.
 
 | Say | Does |
 |---|---|
-| `tend the farm` / `harvest the crops` | Harvests mature wheat/carrots/potatoes/beetroot, replants from seeds |
+| `tend the farm` / `harvest the crops` | Harvests mature wheat/carrots/potatoes/beetroot and replants — and if there's no farm yet, **bootstraps one**: breaks grass for seeds, tills dirt into farmland, plants a plot |
 | `hunt 3 cows` (pigs/chickens/sheep/rabbits) | Adults only, never named pets; sweeps all drops |
 | `breed the cows` | Feeds pairs their real breeding food (wheat/carrots/seeds) |
 | `bring 2 cows home` / `lead the sheep back` | Leashes with real leads (craftable) → "pen" waypoint or home, recovers leads |
@@ -105,7 +105,7 @@ craft order to say — so "build me a house" gathers/crafts what it lacks first.
 |---|---|
 | `what do you see?` / `look around` | Nearby hostiles, animals, ground loot |
 | `find the nearest village` (mineshaft/shipwreck/stronghold/portal) | Real structure locator → distance + bearing + saved waypoint (`go to village`) |
-| `survive` / `fend for yourself` / `work on your own` | Survival brain on. **Stay alive:** gets food, keeps a working pickaxe, repairs worn tools, stashes a full pack, and **walls itself in at night when monsters are near** (breaks out at dawn). **Then thrive:** climbs the tech tree by highest-value step — stone tools + a furnace + torches → mines/smelts/forges full **iron armor** (auto-worn), sword, shield, iron pickaxe → tends a farm / breeds animals for renewable food. Add a role for stockpiling too. |
+| `survive` / `fend for yourself` / `work on your own` | Survival brain on. **Stay alive:** food, a working pickaxe, tool repair, stash-when-full, **walls itself in at night when monsters are near** (out at dawn), and **won't fight a losing battle** — flees toward light when hurt or outnumbered, holds its ground once armored. **Then thrive:** climbs the tech tree by highest-value step — stone tools + furnace + torches → mines/smelts/forges full **iron armor** (auto-worn) + sword + shield + iron pickaxe → **diamond gear** → **enchants** at a table → renewable food. Near a **Job Board** it self-assigns a town role and fills the crew's needs. Add a role for stockpiling too. |
 | `take a break` / `wait for orders` | Autonomy off |
 | `head home at night` / `work nights` | Night routine on/off |
 | `status` / `how are you` | HP, mode, role, auto, items, food, jobs, standing orders |
@@ -116,9 +116,10 @@ craft order to say — so "build me a house" gathers/crafts what it lacks first.
 
 `/assistant` + `spawn · follow · stay · guard · come · stop · home · sethome ·
 goto <place|x y z> · mark <place> · gather <what> [n] · mine [level] · deposit ·
-withdraw <item> [n] · give <item> [n] · craft <what> · smelt <what> [n] ·
-build <structure> · farm · hunt [animal] [n] · shear · breed [animal] ·
-herd <animal> [n] · fish [n] · cleanup · sort · enchant [what] · stock <item> ·
+withdraw <item> [n] · give <item> [n] · make <what> · craft <what> ·
+smelt <what> [n] · build <structure> · farm · hunt [animal] [n] · shear ·
+breed [animal] · herd <animal> [n] · fish [n] · cleanup · sort · enchant [what] ·
+stock <item> · needs ·
 nether <target> [n] · boat <x y z> · patrol <a> <b> · clear [size] ·
 lightup [radius] · bridge · jobs · status · open · role <role> ·
 auto <on|off> · night <on|off> · rename <name> · dismiss`
@@ -133,8 +134,11 @@ auto <on|off> · night <on|off> · rename <name> · dismiss`
 - **Health & hunger** — visible colored HP nametag; heals by eating real
   food from its pack (nutrition = hearts); near-zero regen when starving;
   drops everything on death; owner friendly-fire halved.
-- **Retreat instinct** — at ~35% HP it disengages, runs home or to you,
-  eats back to ~70%, then resumes the paused job automatically.
+- **Threat-aware retreat** — it won't trade blows in a fight it should lose
+  (badly hurt, or outnumbered with no way to heal). It breaks off, heads home
+  or to you if it can, and solo in the dark **runs toward the brightest ground
+  it can find** (light = fewer mobs), eats back to health, then resumes the
+  paused job. Well-armored it stands and fights; naked it flees.
 - **Creeper dodge** — a hissing creeper triggers an instant sprint out of
   blast radius, overriding everything else.
 - **Totem & shield** — a carried totem of undying is auto-held in the
@@ -154,6 +158,10 @@ auto <on|off> · night <on|off> · rename <name> · dismiss`
 - **Worksite lighting & doors** — torches dark work spots; opens/closes
   doors while pathing; mines are torch-lit as dug.
 - **Idle backoff** — autonomous work pauses ~2 minutes when an area is dry.
+- **Town coordination** — with a Job Board placed, an autonomous crew
+  self-assigns roles (Auto rebalances to the depot's shortfalls) and shares a
+  needs board: a member short on iron posts it, an idle miner mines it for the
+  group and hauls it to the depot — divided labour with no micromanaging.
 - **Persistence** — name, role, home, waypoints, inventory, equipment,
   standing orders, and toggles all survive relogs.
 - **Safety rails** — never digs into lava/water, skips bedrock, handles
