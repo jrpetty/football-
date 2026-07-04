@@ -116,6 +116,58 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** A supply contract: keep ~amount of kind in the nearest chest, forever. */
     public record StandingOrder(GatherGoal.Kind kind, int amount) {}
 
+    /** A recurring chore the assistant does to itself on a timer — "tend the
+     *  farm every 20 minutes". Each kind maps to a normal job; the schedule
+     *  just re-queues it whenever it's due and the assistant is idle. */
+    public enum RoutineKind {
+        FARM("tend the farm"),
+        DEPOSIT("stash surplus in a chest"),
+        SORT("sort the storage"),
+        CLEANUP("pick up loose items"),
+        HUNT("top up the food supply"),
+        LIGHT("light up the area");
+
+        public final String label;
+        RoutineKind(String label) { this.label = label; }
+
+        @Nullable
+        public static RoutineKind fromWord(String w) {
+            return switch (w) {
+                case "farm", "farming", "crops", "field", "harvest" -> FARM;
+                case "deposit", "stash", "store", "unload", "dropoff" -> DEPOSIT;
+                case "sort", "organize", "organise", "tidy" -> SORT;
+                case "cleanup", "clean", "pickup" -> CLEANUP;
+                case "hunt", "hunting", "food" -> HUNT;
+                case "light", "torch", "lighting", "lights" -> LIGHT;
+                default -> null;
+            };
+        }
+
+        public Job toJob() {
+            return switch (this) {
+                case FARM -> Job.farm();
+                case DEPOSIT -> Job.deposit();
+                case SORT -> Job.sort();
+                case CLEANUP -> Job.cleanup();
+                case HUNT -> Job.hunt(null, 4);
+                case LIGHT -> Job.torchArea(8);
+            };
+        }
+    }
+
+    /** One scheduled chore: run `kind` every `interval` ticks. `nextTick` is the
+     *  entity-age at which it next fires (re-seeded on load, since age resets). */
+    public static final class Routine {
+        public final RoutineKind kind;
+        public int interval;
+        public int nextTick;
+        public Routine(RoutineKind kind, int interval, int nextTick) {
+            this.kind = kind;
+            this.interval = interval;
+            this.nextTick = nextTick;
+        }
+    }
+
     public static final int INVENTORY_SIZE = 27;
     public static final int MAX_PER_OWNER = 10;
 
@@ -168,6 +220,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private int lastTownRoleTick = -2000; // debounce town role reassignment
     private net.minecraft.world.phys.Vec3 lastPathPos = net.minecraft.world.phys.Vec3.ZERO; // stuck detector
     private int stuckStreak; // consecutive ~1s windows spent going nowhere while pathing
+    private int quartermasterCd; // cooldown between handing the owner supplies
     private String assistantName = "assistant";
     private boolean autonomous;
     private final NonNullList<ItemStack> inventory = NonNullList.withSize(INVENTORY_SIZE, ItemStack.EMPTY);
@@ -178,6 +231,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     // Standing supply orders, checked when idle.
     private final List<StandingOrder> standingOrders = new ArrayList<>();
+
+    // Scheduled chores that re-fire on a timer ("tend the farm every 20 min").
+    private final List<Routine> routines = new ArrayList<>();
 
     // Which chest held what, learned from every chest it touches.
     private final Map<Long, Set<String>> chestMemory = new ConcurrentHashMap<>();
@@ -1485,6 +1541,39 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         return n;
     }
 
+    // ------------------------------- routines --------------------------------
+
+    public List<Routine> routines() {
+        return routines;
+    }
+
+    /** Schedule (or re-schedule) a recurring chore. Interval is clamped to a
+     *  sane band; the first run happens one interval from now. */
+    public void addRoutine(RoutineKind kind, int intervalTicks) {
+        int interval = Math.max(1200, Math.min(72000, intervalTicks)); // 1 min .. 1 hour
+        routines.removeIf(r -> r.kind == kind);
+        routines.add(new Routine(kind, interval, tickCount + interval));
+    }
+
+    public int clearRoutines() {
+        int n = routines.size();
+        routines.clear();
+        return n;
+    }
+
+    /** When idle, fire at most one due chore, then reset its clock. Keeping it to
+     *  one per window stops a backlog of chores from stampeding the queue. */
+    private void tickRoutines() {
+        for (Routine r : routines) {
+            if (tickCount >= r.nextTick) {
+                enqueue(r.kind.toJob());
+                say("Routine: time to " + r.kind.label + ".");
+                r.nextTick = tickCount + r.interval;
+                return;
+            }
+        }
+    }
+
     // ----------------------------- storage memory ----------------------------
 
     /** Learn what a chest holds (called whenever we touch one). */
@@ -1597,6 +1686,14 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             orders.add(ot);
         }
         tag.put("Standing", orders);
+        ListTag chores = new ListTag();
+        for (Routine r : routines) {
+            CompoundTag rt = new CompoundTag();
+            rt.putString("Kind", r.kind.name());
+            rt.putInt("Interval", r.interval);
+            chores.add(rt);
+        }
+        tag.put("Routines", chores);
         ListTag points = new ListTag();
         for (Map.Entry<String, BlockPos> e : waypoints.entrySet()) {
             CompoundTag wt = new CompoundTag();
@@ -1641,6 +1738,17 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             try {
                 standingOrders.add(new StandingOrder(
                     GatherGoal.Kind.valueOf(ot.getString("Kind")), ot.getInt("Amount")));
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+        routines.clear();
+        for (Tag t : tag.getList("Routines", Tag.TAG_COMPOUND)) {
+            CompoundTag rt = (CompoundTag) t;
+            try {
+                RoutineKind kind = RoutineKind.valueOf(rt.getString("Kind"));
+                int interval = Math.max(1200, Math.min(72000, rt.getInt("Interval")));
+                // Age resets on load, so seed the next run one interval out.
+                routines.add(new Routine(kind, interval, interval));
             } catch (IllegalArgumentException ignored) {
             }
         }
@@ -1767,6 +1875,20 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             nightRoutine();
         }
 
+        // Quartermaster: a companion looks after its player. If the owner is
+        // close and running on empty while we're carrying spare food, hand some
+        // over before doing anything else.
+        if (quartermasterCd > 0) quartermasterCd--;
+        if (tickCount % 40 == 0 && quartermasterCd == 0 && !retreating && getTarget() == null) {
+            Player owner = getOwnerPlayer();
+            if (owner instanceof ServerPlayer sp && distanceToSqr(owner) < 256.0
+                && sp.getFoodData().getFoodLevel() <= 6 && countFood() >= 8) {
+                enqueueFront(Job.give("food", 4));
+                say("You're running on empty — here, take some food.");
+                quartermasterCd = 600; // ~30s before offering again
+            }
+        }
+
         // Emergency: at critical HP scarf a golden apple even mid-fight (regen +
         // absorption), and drink milk to shake off poison/wither.
         if (isAlive() && eatCooldown == 0) {
@@ -1811,6 +1933,14 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // Standing orders: when idle, check stock levels and restock.
         if (!standingOrders.isEmpty() && jobs.isEmpty() && !retreating && tickCount % 600 == 0) {
             checkStandingOrders();
+        }
+
+        // Scheduled chores: when idle, run any routine that's come due ("tend
+        // the farm every 20 minutes"). Works whether or not autonomy is on —
+        // it's an explicit standing instruction — but never interrupts a job.
+        if (!routines.isEmpty() && jobs.isEmpty() && !retreating
+            && mode != Mode.STAY && tickCount % 40 == 0) {
+            tickRoutines();
         }
 
         // Town coordination: if the crew has a Job Board, self-assign a role.

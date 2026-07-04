@@ -105,6 +105,13 @@ public final class ChatControl {
     private static final Pattern NETHER_WORD = Pattern.compile("\\bnether\\b");
     private static final Pattern NETHER_TARGET = Pattern.compile(
         "\\b(glowstone|quartz|netherrack|soul\\s*sand|magma|nether\\s*gold|gold)\\b");
+    // Scheduled chores: "every 20 minutes ...", "... every 2 hours".
+    private static final Pattern EVERY = Pattern.compile(
+        "\\bevery\\s+(\\d+)\\s*(hours?|hrs?|minutes?|mins?|seconds?|secs?|[hms])\\b");
+    private static final Pattern ROUTINE_WORD = Pattern.compile(
+        "\\b(farm|farming|crops|field|harvest|deposit|stash|store|unload|dropoff"
+        + "|sort|organize|organise|tidy|cleanup|clean|pickup|hunt|hunting|food"
+        + "|light|torch|lighting|lights)\\b");
 
     // Spoken-number words -> value. Voice recognition writes numbers as words
     // ("gather twenty logs"), but the parser reads digits, so we convert first.
@@ -137,7 +144,8 @@ public final class ChatControl {
                     CLEAR_AREA, TORCH_AREA, BRIDGE, BREED, HERD, FISH, CLEANUP,
                     REPAIR, LOCATE, NIGHT_ON, NIGHT_OFF,
                     SORT, ENCHANT, STOCK, NETHER, BOAT, MAKE, NEEDS, TOWN_GATHER,
-                    ROLE, RENAME, AUTO_ON, AUTO_OFF, STANDING_ADD, STANDING_CLEAR }
+                    ROLE, RENAME, AUTO_ON, AUTO_OFF, STANDING_ADD, STANDING_CLEAR,
+                    ROUTINE_ADD, ROUTINE_CLEAR }
 
         static Action gather(GatherGoal.Kind k, int n) { return new Action(Type.GATHER, k, n, null, null); }
         static Action townGather(GatherGoal.Kind k, int n) { return new Action(Type.TOWN_GATHER, k, n, null, null); }
@@ -300,6 +308,12 @@ public final class ChatControl {
             || c.matches("^(?:stop|cancel)\\b.*\\b(?:keeping|standing)\\b.*")) {
             return Action.of(Action.Type.STANDING_CLEAR);
         }
+        // Cancel scheduled chores — before the plain "stop" so it isn't eaten.
+        if (c.matches("^(?:stop|cancel|clear|drop|end|no\\s+more)\\b.*\\broutines?\\b.*")
+            || (c.matches("^(?:stop|cancel)\\b.*") && c.contains("every"))
+            || c.contains("stop the schedule") || c.contains("stop scheduling")) {
+            return Action.of(Action.Type.ROUTINE_CLEAR);
+        }
         if (c.contains("take a break") || c.matches("^auto\\s*off\\b.*")
             || c.matches("^stop\\b.*\\bworking\\b.*") || c.contains("wait for orders")) {
             return Action.of(Action.Type.AUTO_OFF);
@@ -333,6 +347,21 @@ public final class ChatControl {
             || c.contains("look after yourself") || c.contains("stay alive")
             || c.contains("keep yourself alive")) {
             return Action.of(Action.Type.AUTO_ON);
+        }
+
+        // Scheduled chores: "tend the farm every 20 minutes", "sort the storage
+        // every 10 min", "deposit surplus every hour". An interval word plus a
+        // chore word makes a routine; it re-fires whenever idle and due.
+        Matcher every = EVERY.matcher(c);
+        if (every.find()) {
+            Matcher rw = ROUTINE_WORD.matcher(c);
+            if (rw.find()) {
+                AssistantEntity.RoutineKind rk = AssistantEntity.RoutineKind.fromWord(rw.group(1));
+                if (rk != null) {
+                    int ticks = intervalTicks(Integer.parseInt(every.group(1)), every.group(2));
+                    return Action.with(Action.Type.ROUTINE_ADD, rk.name(), ticks);
+                }
+            }
         }
 
         // Standing supply orders: "keep the chest stocked with 64 logs".
@@ -637,6 +666,26 @@ public final class ChatControl {
         return Math.max(1, Math.min(Job.MAX_AMOUNT, n));
     }
 
+    /** "every N <unit>" -> tick interval, clamped to 1 min .. 1 hour. Units:
+     *  h/hr/hour, m/min/minute (default), s/sec/second. */
+    private static int intervalTicks(int n, String unit) {
+        int perUnit = unit.startsWith("h") ? 72000
+            : unit.startsWith("s") ? 20
+            : 1200; // minute
+        long ticks = (long) n * perUnit;
+        return (int) Math.max(1200L, Math.min(72000L, ticks));
+    }
+
+    /** Ticks -> a friendly duration for the confirmation line. */
+    private static String describeInterval(int ticks) {
+        int minutes = Math.max(1, Math.round(ticks / 1200.0F));
+        if (minutes % 60 == 0) {
+            int h = minutes / 60;
+            return h + " hour" + (h == 1 ? "" : "s");
+        }
+        return minutes + " minute" + (minutes == 1 ? "" : "s");
+    }
+
     /**
      * Convert spoken number words into digits so voice amounts work:
      * "twenty" -> "20", "one hundred twenty eight" -> "128", "a hundred" ->
@@ -724,10 +773,11 @@ public final class ChatControl {
             switch (act.type()) {
                 case STOP -> a.requestStop();
                 case STATUS -> a.say(String.format(
-                    "HP %.0f/%.0f, mode %s, role %s%s, %d items (%d food), %d xp, %d jobs queued, %d standing orders.",
+                    "HP %.0f/%.0f, mode %s, role %s%s, %d items (%d food), %d xp, %d jobs queued, %d standing orders, %d routines.",
                     a.getHealth(), a.getMaxHealth(), a.getMode().name().toLowerCase(),
                     a.getRole().name().toLowerCase(), a.isAutonomous() ? " (working autonomously)" : "",
-                    a.countItems(), a.countFood(), a.getXp(), a.jobCount(), a.standingOrders().size()));
+                    a.countItems(), a.countFood(), a.getXp(), a.jobCount(), a.standingOrders().size(),
+                    a.routines().size()));
                 case JOBS -> reportJobs(a);
                 case HELP -> a.say("Talk to me like a person — orders chain with \"and\"/\"then\" and queue up. I understand: "
                     + "gather/mine/chop (logs, stone, dirt, iron, coal), \"dig a mine (down to level 12)\", deposit, "
@@ -740,6 +790,7 @@ public final class ChatControl {
                     + "\"remember this spot as the mine\" / \"go to the mine\", \"sort the storage\", "
                     + "\"how much iron do we have?\", \"enchant your gear\" (spends earned xp + lapis), "
                     + "\"what do you see/have?\", open (my gear), \"keep the chest stocked with 64 logs\", "
+                    + "\"tend the farm every 20 minutes\" (recurring chores; \"stop routines\" cancels), "
                     + "\"be a miner/farmer/lumberjack/builder\" + \"work on your own\", \"your name is <name>\", spawn, dismiss. "
                     + "Hold the voice key (default V) to speak any of this.");
                 case GATHER -> {
@@ -1041,6 +1092,21 @@ public final class ChatControl {
                 case STANDING_CLEAR -> {
                     int n = a.clearStandingOrders();
                     a.say(n > 0 ? "Dropped " + n + " standing order" + (n == 1 ? "" : "s") + "." : "No standing orders to drop.");
+                }
+                case ROUTINE_ADD -> {
+                    AssistantEntity.RoutineKind rk = act.arg() == null ? null
+                        : AssistantEntity.RoutineKind.valueOf(act.arg());
+                    if (rk == null) {
+                        a.say("Tell me a chore and a time — e.g. \"tend the farm every 20 minutes\".");
+                    } else {
+                        a.addRoutine(rk, act.amount());
+                        a.say("Scheduled: I'll " + rk.label + " every " + describeInterval(act.amount())
+                            + " whenever I'm free. \"stop routines\" cancels it.");
+                    }
+                }
+                case ROUTINE_CLEAR -> {
+                    int n = a.clearRoutines();
+                    a.say(n > 0 ? "Cleared " + n + " routine" + (n == 1 ? "" : "s") + "." : "No routines scheduled.");
                 }
             }
         }

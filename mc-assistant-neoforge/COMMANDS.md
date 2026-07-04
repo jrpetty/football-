@@ -107,8 +107,9 @@ craft order to say — so "build me a house" gathers/crafts what it lacks first.
 | `find the nearest village` (mineshaft/shipwreck/stronghold/portal) | Real structure locator → distance + bearing + saved waypoint (`go to village`) |
 | `survive` / `fend for yourself` / `work on your own` | Survival brain on. **Stay alive:** food, a working pickaxe, tool repair, stash-when-full, **walls itself in at night when monsters are near** (out at dawn), and **won't fight a losing battle** — flees toward light when hurt or outnumbered, holds its ground once armored. **Then thrive:** climbs the tech tree by highest-value step — stone tools + furnace + torches → mines/smelts/forges full **iron armor** (auto-worn) + sword + shield + iron pickaxe → **diamond gear** → **enchants** at a table → renewable food. Near a **Job Board** it self-assigns a town role and fills the crew's needs. Add a role for stockpiling too. |
 | `take a break` / `wait for orders` | Autonomy off |
+| `tend the farm every 20 minutes` (also: `deposit` / `sort the storage` / `hunt` / `pick up items` / `light up the area` every N minutes/hours) | **Recurring chore** on a timer — re-fires whenever it's idle and the interval is due. Works with or without autonomy; never interrupts a job. `stop routines` cancels. Survives relogs. |
 | `head home at night` / `work nights` | Night routine on/off |
-| `status` / `how are you` | HP, mode, role, auto, items, food, jobs, standing orders |
+| `status` / `how are you` | HP, mode, role, auto, items, food, jobs, standing orders, routines |
 | `jobs` / `what are you doing` | The queue, in order |
 | `help` / `what can you do` | In-game cheat sheet |
 
@@ -153,6 +154,10 @@ auto <on|off> · night <on|off> · rename <name> · dismiss`
   directions; general hostile warnings near the owner.
 - **Auto-deposit when full** — stashes mid-job and resumes the remaining
   amount automatically.
+- **Quartermaster** — if the owner is nearby and running on empty while the
+  assistant carries spare food, it walks over and hands some off, unprompted.
+- **Scheduled chores** — recurring upkeep on a timer (`tend the farm every
+  20 minutes`); fires when idle and due, survives relogs, `stop routines` ends it.
 - **Storage memory** — remembers the contents of every chest it touches.
 - **Tree replanting** — a sapling goes back on every stump it makes.
 - **Worksite lighting & doors** — torches dark work spots; opens/closes
@@ -163,7 +168,7 @@ auto <on|off> · night <on|off> · rename <name> · dismiss`
   needs board: a member short on iron posts it, an idle miner mines it for the
   group and hauls it to the depot — divided labour with no micromanaging.
 - **Persistence** — name, role, home, waypoints, inventory, equipment,
-  standing orders, and toggles all survive relogs.
+  standing orders, scheduled routines, and toggles all survive relogs.
 - **Safety rails** — never digs into lava/water, skips bedrock, handles
   falling gravel, spawns collision-safe (no suffocation).
 - **Chat hygiene** — casual chat is never hijacked; addressed messages
