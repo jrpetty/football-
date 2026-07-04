@@ -23,6 +23,7 @@ import com.jrpetty.mcassistant.entity.goal.RetreatGoal;
 import com.jrpetty.mcassistant.entity.goal.ShearGoal;
 import com.jrpetty.mcassistant.entity.goal.BoatGoal;
 import com.jrpetty.mcassistant.entity.goal.EnchantGoal;
+import com.jrpetty.mcassistant.entity.goal.EscapeGoal;
 import com.jrpetty.mcassistant.entity.goal.NetherGoal;
 import com.jrpetty.mcassistant.entity.goal.NightShelterGoal;
 import com.jrpetty.mcassistant.entity.goal.SmeltGoal;
@@ -166,6 +167,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private Role role = Role.NONE;
     private int lastTownRoleTick = -2000; // debounce town role reassignment
     private net.minecraft.world.phys.Vec3 lastPathPos = net.minecraft.world.phys.Vec3.ZERO; // stuck detector
+    private int stuckStreak; // consecutive ~1s windows spent going nowhere while pathing
     private String assistantName = "assistant";
     private boolean autonomous;
     private final NonNullList<ItemStack> inventory = NonNullList.withSize(INVENTORY_SIZE, ItemStack.EMPTY);
@@ -239,8 +241,15 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         return nav;
     }
 
+    /** True once it's been going nowhere for ~4s while actively trying to path —
+     *  a signal it's genuinely wedged, so EscapeGoal can dig/pillar it free. */
+    public boolean isBadlyStuck() {
+        return stuckStreak >= 4;
+    }
+
     @Override
     protected void registerGoals() {
+        this.goalSelector.addGoal(0, new EscapeGoal(this)); // dig/pillar out when buried or boxed in
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(0, new CreeperDodgeGoal(this));
         this.goalSelector.addGoal(1, new RetreatGoal(this));
@@ -1625,8 +1634,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (tickCount % 20 == 0) {
             if (!this.getNavigation().isDone()
                 && this.position().distanceToSqr(lastPathPos) < 0.25) { // <0.5 block in ~1s
+                this.stuckStreak++;
                 this.getJumpControl().jump();
                 this.getNavigation().recomputePath();
+            } else {
+                this.stuckStreak = 0;
             }
             this.lastPathPos = this.position();
         }
