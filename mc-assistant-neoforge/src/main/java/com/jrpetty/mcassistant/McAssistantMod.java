@@ -1,6 +1,7 @@
 package com.jrpetty.mcassistant;
 
 import com.jrpetty.mcassistant.block.AssistantSpawnerBlock;
+import com.jrpetty.mcassistant.block.JobBoardBlock;
 import com.jrpetty.mcassistant.entity.AssistantEntity;
 import com.jrpetty.mcassistant.menu.AssistantMenu;
 import net.minecraft.core.registries.Registries;
@@ -64,6 +65,19 @@ public final class McAssistantMod {
     public static final DeferredItem<BlockItem> ASSISTANT_SPAWNER_ITEM =
         ITEMS.registerSimpleBlockItem(ASSISTANT_SPAWNER);
 
+    // The Job Board block: right-click to set the crew's role preset and mark it
+    // the town center, which the autonomous crew organizes its labour around.
+    public static final DeferredBlock<JobBoardBlock> JOB_BOARD =
+        BLOCKS.registerBlock("job_board",
+            JobBoardBlock::new,
+            BlockBehaviour.Properties.of()
+                .mapColor(MapColor.WOOD)
+                .strength(2.0F)
+                .sound(SoundType.WOOD));
+
+    public static final DeferredItem<BlockItem> JOB_BOARD_ITEM =
+        ITEMS.registerSimpleBlockItem(JOB_BOARD);
+
     public McAssistantMod(IEventBus modBus) {
         ENTITY_TYPES.register(modBus);
         MENU_TYPES.register(modBus);
@@ -85,6 +99,7 @@ public final class McAssistantMod {
     private void onBuildCreativeTabs(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.FUNCTIONAL_BLOCKS) {
             event.accept(ASSISTANT_SPAWNER_ITEM);
+            event.accept(JOB_BOARD_ITEM);
         }
     }
 }

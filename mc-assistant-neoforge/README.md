@@ -206,6 +206,15 @@ blueprints, web dashboard) are not in the mod yet.
 - **A crew, not a bot** — "spawn a miner named bob" (up to 10). Address
   one by name ("bob, gather stone") or talk normally for the nearest.
   Roles: miner, lumberjack, farmer, builder ("be a farmer").
+- **Town coordination (the Job Board)** — place a **Job Board** block and
+  right-click it to pick the crew's role mix, cycling **Auto → Mining →
+  Balanced → Food → Build**. It becomes your town center: every autonomous
+  assistant within 64 blocks self-assigns a role around it (slotted stably so
+  they don't all pick the same job), and **Auto** rebalances the crew to
+  whatever the depot chest beside the board is short on — an empty larder pulls
+  someone to farming, low wood to logging, low stone to mining. Divided labour,
+  decided by the town, no hand-assigning. Plus the one-shot crew order
+  "everyone gather 128 iron", which splits a haul across the whole crew.
 - **Survival brain** — "survive" / "fend for yourself": the 'decide' rung
   of autonomy. When idle it looks after itself before any busywork, picking
   the single most pressing action and announcing it: stash a full pack, hunt

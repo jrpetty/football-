@@ -1,5 +1,6 @@
 {
   "block.mc_assistant.assistant_spawner": "Assistant Spawner",
+  "block.mc_assistant.job_board": "Job Board",
   "entity.mc_assistant.assistant": "Assistant",
   "key.categories.mc_assistant": "MC Assistant",
   "key.mc_assistant.voice": "Voice Command (hold & speak)"

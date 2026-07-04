@@ -1130,6 +1130,84 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         return false;
     }
 
+    /**
+     * Town coordination: if the crew has an active Job Board, each autonomous
+     * member self-assigns a role to fill the town's plan — divided labour. AUTO
+     * balances to whatever the depot chest beside the board is short on
+     * (food/wood/stone); a fixed preset biases the whole crew toward one trade.
+     * Members are slotted by name so they don't all pick the same job or thrash.
+     */
+    private void decideTownRole() {
+        if (ownerId == null) return;
+        BlockPos board = Town.center(ownerId);
+        if (board == null) return;
+        BlockState bs = level().getBlockState(board);
+        if (!(bs.getBlock() instanceof com.jrpetty.mcassistant.block.JobBoardBlock)) return;
+        com.jrpetty.mcassistant.block.JobBoardBlock.Preset preset =
+            bs.getValue(com.jrpetty.mcassistant.block.JobBoardBlock.PRESET);
+
+        List<AssistantEntity> crew = new ArrayList<>();
+        for (AssistantEntity a : allFor(ownerId)) {
+            if (a.level() == this.level() && a.blockPosition().closerThan(board, 64.0)) crew.add(a);
+        }
+        crew.sort(java.util.Comparator.comparing(AssistantEntity::getUUID)); // stable slotting
+        int idx = crew.indexOf(this);
+        if (idx < 0) return;
+
+        Role[] plan = rolePlan(preset, board);
+        Role target = plan[idx % plan.length];
+        if (target != role) {
+            setRole(target);
+            say("Town duty — I'll work as the " + target.name().toLowerCase() + ".");
+        }
+    }
+
+    private Role[] rolePlan(com.jrpetty.mcassistant.block.JobBoardBlock.Preset preset, BlockPos board) {
+        return switch (preset) {
+            case MINING -> new Role[] {Role.MINER, Role.MINER, Role.MINER, Role.FARMER, Role.LUMBERJACK};
+            case FOOD -> new Role[] {Role.FARMER, Role.FARMER, Role.LUMBERJACK, Role.MINER};
+            case BUILD -> new Role[] {Role.BUILDER, Role.MINER, Role.LUMBERJACK, Role.BUILDER, Role.FARMER};
+            case BALANCED -> new Role[] {Role.MINER, Role.LUMBERJACK, Role.FARMER, Role.BUILDER};
+            case AUTO -> autoPlan(board);
+        };
+    }
+
+    /** Need-driven plan: assign to cover the depot's biggest shortfalls first. */
+    private Role[] autoPlan(BlockPos board) {
+        BlockPos depot = findDepotNear(board);
+        int food = depotCount(depot, s -> s.get(DataComponents.FOOD) != null);
+        int wood = depotCount(depot, s -> s.is(ItemTags.LOGS) || s.is(ItemTags.PLANKS));
+        int stone = depotCount(depot, s -> s.is(Items.COBBLESTONE) || s.is(Items.STONE));
+        List<Role> plan = new ArrayList<>();
+        if (food < 16) plan.add(Role.FARMER);
+        if (wood < 64) plan.add(Role.LUMBERJACK);
+        if (stone < 64) plan.add(Role.MINER);
+        if (plan.isEmpty()) { // depot's healthy — keep a balanced standing crew
+            plan.add(Role.MINER); plan.add(Role.LUMBERJACK); plan.add(Role.FARMER); plan.add(Role.BUILDER);
+        } else if (!plan.contains(Role.FARMER)) {
+            plan.add(Role.FARMER); // always keep the larder tended
+        }
+        return plan.toArray(new Role[0]);
+    }
+
+    @Nullable
+    private BlockPos findDepotNear(BlockPos board) {
+        for (BlockPos pos : BlockPos.betweenClosed(board.offset(-8, -3, -8), board.offset(8, 3, 8))) {
+            if (level().getBlockEntity(pos) instanceof Container) return pos.immutable();
+        }
+        return null;
+    }
+
+    private int depotCount(@Nullable BlockPos depot, java.util.function.Predicate<ItemStack> pred) {
+        if (depot == null || !(level().getBlockEntity(depot) instanceof Container c)) return 0;
+        int n = 0;
+        for (int i = 0; i < c.getContainerSize(); i++) {
+            ItemStack s = c.getItem(i);
+            if (!s.isEmpty() && pred.test(s)) n += s.getCount();
+        }
+        return n;
+    }
+
     // ------------------------------ food & health ----------------------------
 
     private int findFoodSlot() {
@@ -1522,15 +1600,25 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             checkStandingOrders();
         }
 
+        // Town coordination: if the crew has a Job Board, self-assign a role.
+        if (autonomous && ownerId != null && tickCount % 400 == 0) {
+            decideTownRole();
+        }
+
         // Idle initiative: with autonomy on and nothing to do, look after
-        // survival first (the 'decide' rung), then fall back to role busywork.
-        // (Not at night if it's supposed to be home in bed.)
+        // survival first (the 'decide' rung). Crew members on an active town
+        // then do their assigned ROLE (their town duty) before any personal
+        // advancement; solo bots advance themselves, then do role work.
         if (autonomous && jobs.isEmpty() && !retreating
             && mode != Mode.STAY && tickCount % 200 == 0 && tickCount >= idleBackoffUntil
             && !(nightHome && this.level().isNight())) {
-            if (!decideSurvival() && !decideProgress()
-                && role != Role.NONE && tickCount % 400 == 0) {
-                enqueueRoleWork();
+            boolean townMember = ownerId != null && Town.center(ownerId) != null;
+            if (!decideSurvival()) {
+                if (townMember && role != Role.NONE) {
+                    if (tickCount % 400 == 0) enqueueRoleWork();
+                } else if (!decideProgress() && role != Role.NONE && tickCount % 400 == 0) {
+                    enqueueRoleWork();
+                }
             }
         }
 

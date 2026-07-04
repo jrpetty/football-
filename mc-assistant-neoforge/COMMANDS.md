@@ -19,6 +19,7 @@ stacks" = 128, "ten by ten" = 10×10.
 | `spawn a miner named bob` | Named + role spawn (roles: miner, lumberjack, farmer, builder; up to 10 per player) |
 | `bob, <anything>` | Routes any order to that assistant by name |
 | `everyone gather 128 iron` / `team, get 64 logs` | **Crew order** — splits the job across the whole crew, each hauling its share to the shared depot (divided labor) |
+| **Job Board** block (place + right-click) | Sets the crew's role preset and marks the town center. Right-click cycles **Auto → Mining → Balanced → Food → Build**. Autonomous crew within 64 blocks self-assign roles around it — Auto balances to whatever the depot chest beside the board is short on (food/wood/stone); a fixed preset biases the whole crew. Craft: 8 planks around a book. |
 | `your name is X` / `call yourself X` | Rename |
 | `be a miner` / `you're a farmer` | Assign role |
 | `dismiss` / `go away` | Sends it away — drops all gear first |
