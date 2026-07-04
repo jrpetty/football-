@@ -74,7 +74,7 @@ stacks" = 128, "ten by ten" = 10×10.
 
 | Say | Does |
 |---|---|
-| `make me an iron sword` / `craft a piston` / `make a hopper` | **Any vanilla recipe** — read from the game's own recipe database (tools, armor, blocks, redstone, rails, doors, dyed blocks, food…). The planner sources every missing part: gathers wood/ore, smelts, crafts sub-parts, pulls from a chest within 24 blocks, and only asks you for what it truly can't get. Places its own crafting table when a recipe needs the 3×3 grid |
+| `make me an iron sword` / `craft a piston` / `make a hopper` | **Any vanilla recipe** — read from the game's own recipe database (tools, armor, blocks, redstone, rails, doors, dyed blocks, food…). The planner **sources every missing part itself**: gathers wood/stone/sand/gravel, **mines to depth for gold/copper/diamond/redstone/lapis**, **hunts animals for leather/feather/meat/wool**, smelts, crafts sub-parts, pulls from a chest within 24 blocks, and only asks you for what it truly can't get (spider/creeper drops, sugar cane). Places its own crafting table when a recipe needs the 3×3 grid |
 | `smelt 16 iron` / `smelt logs` / `cook the beef` | Runs a real furnace with pack fuel: iron/gold/copper → ingots, logs → charcoal, cobble → stone, sand → glass, raw foods → cooked |
 | `repair your pickaxe` / `fix your tools` | Combines two damaged same-type tools grindstone-style |
 

@@ -72,7 +72,33 @@ public final class CraftPlanner {
         boolean abstractPlanks = "planks".equals(target);
         obtain(a, chests, item, Math.max(1, amount), jobs, narration, blockers,
             new HashMap<>(), new HashMap<>(), new HashSet<>(), 0, abstractPlanks);
+        dedupe(jobs);
         return new Result(jobs, narration, blockers);
+    }
+
+    /** Collapse redundant sourcing trips: one mine per depth (a single shaft
+     *  finds every ore at that level), one hunt per animal (largest count wins). */
+    private static void dedupe(List<Job> jobs) {
+        Map<String, Integer> huntMax = new HashMap<>();
+        for (Job j : jobs) {
+            if (j.type() == Job.Type.HUNT && j.arg() != null) {
+                huntMax.merge(j.arg(), j.amount(), Math::max);
+            }
+        }
+        Set<Integer> seenY = new HashSet<>();
+        Set<String> seenHunt = new HashSet<>();
+        List<Job> out = new ArrayList<>();
+        for (Job j : jobs) {
+            if (j.type() == Job.Type.MINE) {
+                if (seenY.add(j.amount())) out.add(j);
+            } else if (j.type() == Job.Type.HUNT && j.arg() != null) {
+                if (seenHunt.add(j.arg())) out.add(Job.hunt(j.arg(), huntMax.get(j.arg())));
+            } else {
+                out.add(j);
+            }
+        }
+        jobs.clear();
+        jobs.addAll(out);
     }
 
     // ---- base materials: things we can make/gather from first principles ----
@@ -194,6 +220,27 @@ public final class CraftPlanner {
             narration.add("smelt " + qty + " " + smelt.canonical());
             return;
         }
+        // Last resort: go GET it from the world instead of giving up —
+        // mine ores at depth, hunt animals for their drops, or gather blocks.
+        int my = mineY(item);
+        if (my != NO_MINE) {
+            jobs.add(Job.mine(my));
+            narration.add("mine down to Y" + my + " for " + RecipeBook.words(item));
+            return;
+        }
+        String animal = huntFor(item);
+        if (animal != null) {
+            int n = Math.max(2, Math.min(16, qty));
+            jobs.add(Job.hunt(animal, n));
+            narration.add("hunt " + n + " " + animal + " for " + RecipeBook.words(item));
+            return;
+        }
+        GatherGoal.Kind gk = gatherFor(item);
+        if (gk != null) {
+            jobs.add(Job.gather(gk, qty));
+            narration.add("gather " + qty + " " + gk.label);
+            return;
+        }
         blockers.add(qty + " " + RecipeBook.words(item));
     }
 
@@ -224,26 +271,17 @@ public final class CraftPlanner {
                 jobs.add(Job.smelt("iron", qty));
                 narration.add("smelt " + qty + " iron");
             }
-            // Gold/copper can't be gathered (no ore-mining kind for them), so only
-            // smelt when the raw metal is actually on hand or in a chest; otherwise
-            // report an honest blocker instead of queuing a smelt with no input.
+            // Gold/copper: obtain the raw metal (from pack, chest, or by mining it
+            // at depth), then smelt. No more dead-end — it goes and digs for it.
             case GOLD_INGOT -> {
-                if (a.countMatching(s -> s.is(Items.RAW_GOLD)) + countIn(chests, s -> s.is(Items.RAW_GOLD)) > 0) {
-                    obtain(a, chests, Items.RAW_GOLD, qty, jobs, narration, blockers, resPack, resChest, path, depth + 1, false);
-                    jobs.add(Job.smelt("gold", qty));
-                    narration.add("smelt " + qty + " gold");
-                } else {
-                    blockers.add(qty + " gold ingot");
-                }
+                obtain(a, chests, Items.RAW_GOLD, qty, jobs, narration, blockers, resPack, resChest, path, depth + 1, false);
+                jobs.add(Job.smelt("gold", qty));
+                narration.add("smelt " + qty + " gold");
             }
             case COPPER_INGOT -> {
-                if (a.countMatching(s -> s.is(Items.RAW_COPPER)) + countIn(chests, s -> s.is(Items.RAW_COPPER)) > 0) {
-                    obtain(a, chests, Items.RAW_COPPER, qty, jobs, narration, blockers, resPack, resChest, path, depth + 1, false);
-                    jobs.add(Job.smelt("copper", qty));
-                    narration.add("smelt " + qty + " copper");
-                } else {
-                    blockers.add(qty + " copper ingot");
-                }
+                obtain(a, chests, Items.RAW_COPPER, qty, jobs, narration, blockers, resPack, resChest, path, depth + 1, false);
+                jobs.add(Job.smelt("copper", qty));
+                narration.add("smelt " + qty + " copper");
             }
         }
     }
@@ -268,6 +306,39 @@ public final class CraftPlanner {
         if (base != null) return base;
         if (oak != null) return oak;
         return items[0].getItem();
+    }
+
+    // ---- sourcing from the world (mine / hunt / gather) ----
+
+    private static final int NO_MINE = Integer.MIN_VALUE;
+
+    /** Best Y to branch-mine for an ore drop, or NO_MINE if it isn't mined. A
+     *  single shaft at this depth chases whatever veins it passes. */
+    private static int mineY(Item it) {
+        if (it == Items.DIAMOND || it == Items.REDSTONE || it == Items.LAPIS_LAZULI) return -59;
+        if (it == Items.RAW_GOLD) return -16;
+        if (it == Items.RAW_COPPER) return 48;
+        return NO_MINE;
+    }
+
+    /** Which passive animal drops this item (hunt them for it), or null. */
+    @Nullable
+    private static String huntFor(Item it) {
+        if (it == Items.LEATHER || it == Items.BEEF) return "cow";
+        if (it == Items.PORKCHOP) return "pig";
+        if (it == Items.CHICKEN || it == Items.FEATHER) return "chicken";
+        if (it == Items.MUTTON) return "sheep";
+        if (it == Items.RABBIT || it == Items.RABBIT_HIDE) return "rabbit";
+        if (new ItemStack(it).is(ItemTags.WOOL)) return "sheep";
+        return null;
+    }
+
+    /** A directly-gatherable block for this item, or null. */
+    @Nullable
+    private static GatherGoal.Kind gatherFor(Item it) {
+        if (it == Items.SAND || it == Items.RED_SAND) return GatherGoal.Kind.SAND;
+        if (it == Items.GRAVEL) return GatherGoal.Kind.GRAVEL;
+        return null;
     }
 
     // ---- helpers ----
