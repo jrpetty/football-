@@ -42,7 +42,7 @@ public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount,
     }
 
     public static Job craft(String recipeKey, int amount) {
-        return new Job(Type.CRAFT, null, Math.max(1, Math.min(64, amount)), null, recipeKey);
+        return new Job(Type.CRAFT, null, Math.max(1, Math.min(256, amount)), null, recipeKey);
     }
 
     public static Job withdraw(String itemWord, int amount) {

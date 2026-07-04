@@ -2,149 +2,71 @@ package com.jrpetty.mcassistant.entity.goal;
 
 import com.jrpetty.mcassistant.entity.AssistantEntity;
 import com.jrpetty.mcassistant.entity.Job;
+import com.jrpetty.mcassistant.entity.RecipeBook;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 /**
- * Crafting: a compact survival recipe book (planks, sticks, tools, chest,
- * torches, bread...). Recipes that need a crafting table make the assistant
- * walk to one — and if there's none around but it has planks, it crafts and
- * PLACES its own table first. Combined with tool wear, this closes the
- * self-maintenance loop: gather logs -> planks -> sticks -> new tools.
+ * Crafting, driven by the game's OWN recipe database ({@link RecipeBook}). Give
+ * it any item id — "iron_sword", "piston", "hopper", "chest" — and it looks up
+ * the real recipe, checks it has the ingredients, walks to (or places) a table
+ * when the recipe needs the 3x3 grid, and produces the item. The wood chain
+ * ("planks"/"sticks") is handled generically so gathering any log works.
+ *
+ * Combined with tool wear and the planner, this closes the self-maintenance
+ * loop and unlocks essentially the whole crafting tree.
  */
 public class CraftGoal extends Goal {
 
-    /** What a recipe consumes: n items matching a predicate. */
-    private record Need(Predicate<ItemStack> what, int count, String label) {}
+    /** One resolved requirement: N stacks matching a predicate. */
+    private record Step(Predicate<ItemStack> what, int count, String label) {}
 
-    /** A craftable: needs -> output, maybe requiring a table. */
-    public record Recipe(List<Need> needs, java.util.function.Supplier<ItemStack> output, boolean needsTable) {}
+    /** A resolved recipe ready to execute. */
+    private record Plan(List<Step> steps, Supplier<ItemStack> output, boolean needsTable) {}
 
     private static final Predicate<ItemStack> LOG = s -> s.is(ItemTags.LOGS);
     private static final Predicate<ItemStack> PLANK = s -> s.is(ItemTags.PLANKS);
-    private static final Predicate<ItemStack> STICK = s -> s.is(Items.STICK);
-    private static final Predicate<ItemStack> COBBLE = s -> s.is(Blocks.COBBLESTONE.asItem())
-        || s.is(Blocks.COBBLED_DEEPSLATE.asItem());
-    private static final Predicate<ItemStack> COAL = s -> s.is(Items.COAL) || s.is(Items.CHARCOAL);
-    private static final Predicate<ItemStack> WHEAT = s -> s.is(Items.WHEAT);
-    private static final Predicate<ItemStack> IRON = s -> s.is(Items.IRON_INGOT);
 
-    public static final Map<String, Recipe> RECIPES = new LinkedHashMap<>();
-
-    static {
-        RECIPES.put("planks", new Recipe(List.of(new Need(LOG, 1, "log")),
-            () -> new ItemStack(Items.OAK_PLANKS, 4), false));
-        RECIPES.put("sticks", new Recipe(List.of(new Need(PLANK, 2, "planks")),
-            () -> new ItemStack(Items.STICK, 4), false));
-        RECIPES.put("crafting table", new Recipe(List.of(new Need(PLANK, 4, "planks")),
-            () -> new ItemStack(Items.CRAFTING_TABLE), false));
-        RECIPES.put("chest", new Recipe(List.of(new Need(PLANK, 8, "planks")),
-            () -> new ItemStack(Items.CHEST), true));
-        RECIPES.put("torches", new Recipe(List.of(new Need(COAL, 1, "coal"), new Need(STICK, 1, "stick")),
-            () -> new ItemStack(Items.TORCH, 4), false));
-        RECIPES.put("furnace", new Recipe(List.of(new Need(COBBLE, 8, "cobblestone")),
-            () -> new ItemStack(Items.FURNACE), true));
-        RECIPES.put("ladders", new Recipe(List.of(new Need(STICK, 7, "sticks")),
-            () -> new ItemStack(Items.LADDER, 3), true));
-        RECIPES.put("bread", new Recipe(List.of(new Need(WHEAT, 3, "wheat")),
-            () -> new ItemStack(Items.BREAD), true));
-        RECIPES.put("wooden pickaxe", tool(PLANK, 3, "planks", Items.WOODEN_PICKAXE));
-        RECIPES.put("wooden axe", tool(PLANK, 3, "planks", Items.WOODEN_AXE));
-        RECIPES.put("wooden shovel", new Recipe(List.of(new Need(PLANK, 1, "plank"), new Need(STICK, 2, "sticks")),
-            () -> new ItemStack(Items.WOODEN_SHOVEL), true));
-        RECIPES.put("wooden hoe", new Recipe(List.of(new Need(PLANK, 2, "planks"), new Need(STICK, 2, "sticks")),
-            () -> new ItemStack(Items.WOODEN_HOE), true));
-        RECIPES.put("wooden sword", new Recipe(List.of(new Need(PLANK, 2, "planks"), new Need(STICK, 1, "stick")),
-            () -> new ItemStack(Items.WOODEN_SWORD), true));
-        RECIPES.put("stone pickaxe", tool(COBBLE, 3, "cobblestone", Items.STONE_PICKAXE));
-        RECIPES.put("stone axe", tool(COBBLE, 3, "cobblestone", Items.STONE_AXE));
-        RECIPES.put("stone shovel", new Recipe(List.of(new Need(COBBLE, 1, "cobblestone"), new Need(STICK, 2, "sticks")),
-            () -> new ItemStack(Items.STONE_SHOVEL), true));
-        RECIPES.put("stone hoe", new Recipe(List.of(new Need(COBBLE, 2, "cobblestone"), new Need(STICK, 2, "sticks")),
-            () -> new ItemStack(Items.STONE_HOE), true));
-        RECIPES.put("stone sword", new Recipe(List.of(new Need(COBBLE, 2, "cobblestone"), new Need(STICK, 1, "stick")),
-            () -> new ItemStack(Items.STONE_SWORD), true));
-        // The iron tier — smelt raw iron first ("smelt 8 iron"), then gear up.
-        RECIPES.put("iron pickaxe", tool(IRON, 3, "iron ingots", Items.IRON_PICKAXE));
-        RECIPES.put("iron axe", tool(IRON, 3, "iron ingots", Items.IRON_AXE));
-        RECIPES.put("iron shovel", new Recipe(List.of(new Need(IRON, 1, "iron ingot"), new Need(STICK, 2, "sticks")),
-            () -> new ItemStack(Items.IRON_SHOVEL), true));
-        RECIPES.put("iron hoe", new Recipe(List.of(new Need(IRON, 2, "iron ingots"), new Need(STICK, 2, "sticks")),
-            () -> new ItemStack(Items.IRON_HOE), true));
-        RECIPES.put("iron sword", new Recipe(List.of(new Need(IRON, 2, "iron ingots"), new Need(STICK, 1, "stick")),
-            () -> new ItemStack(Items.IRON_SWORD), true));
-        RECIPES.put("iron helmet", new Recipe(List.of(new Need(IRON, 5, "iron ingots")),
-            () -> new ItemStack(Items.IRON_HELMET), true));
-        RECIPES.put("iron chestplate", new Recipe(List.of(new Need(IRON, 8, "iron ingots")),
-            () -> new ItemStack(Items.IRON_CHESTPLATE), true));
-        RECIPES.put("iron leggings", new Recipe(List.of(new Need(IRON, 7, "iron ingots")),
-            () -> new ItemStack(Items.IRON_LEGGINGS), true));
-        RECIPES.put("iron boots", new Recipe(List.of(new Need(IRON, 4, "iron ingots")),
-            () -> new ItemStack(Items.IRON_BOOTS), true));
-        RECIPES.put("shears", new Recipe(List.of(new Need(IRON, 2, "iron ingots")),
-            () -> new ItemStack(Items.SHEARS), true));
-        RECIPES.put("bucket", new Recipe(List.of(new Need(IRON, 3, "iron ingots")),
-            () -> new ItemStack(Items.BUCKET), true));
-        // Ranged kit: string from spiders, feathers from hunting chickens.
-        RECIPES.put("bow", new Recipe(List.of(
-            new Need(STICK, 3, "sticks"),
-            new Need(s -> s.is(Items.STRING), 3, "string")),
-            () -> new ItemStack(Items.BOW), true));
-        RECIPES.put("arrows", new Recipe(List.of(
-            new Need(s -> s.is(Items.FLINT), 1, "flint"),
-            new Need(STICK, 1, "stick"),
-            new Need(s -> s.is(Items.FEATHER), 1, "feather")),
-            () -> new ItemStack(Items.ARROW, 4), true));
-        RECIPES.put("fishing rod", new Recipe(List.of(
-            new Need(STICK, 3, "sticks"),
-            new Need(s -> s.is(Items.STRING), 2, "string")),
-            () -> new ItemStack(Items.FISHING_ROD), true));
-        RECIPES.put("leads", new Recipe(List.of(
-            new Need(s -> s.is(Items.STRING), 4, "string"),
-            new Need(s -> s.is(Items.SLIME_BALL), 1, "slimeball")),
-            () -> new ItemStack(Items.LEAD, 2), true));
-    }
-
-    private static Recipe tool(Predicate<ItemStack> head, int n, String label, net.minecraft.world.item.Item out) {
-        return new Recipe(List.of(new Need(head, n, label), new Need(STICK, 2, "sticks")),
-            () -> new ItemStack(out), true);
-    }
-
-    /** Match a spoken clause to a recipe key ("make a stone pickaxe" -> "stone pickaxe"). */
+    /** Resolve a job's arg to an executable plan, or null if unknown/uncraftable. */
     @Nullable
-    public static String matchRecipe(String clause) {
-        String best = null;
-        for (String key : RECIPES.keySet()) {
-            boolean all = true;
-            for (String word : key.split(" ")) {
-                // plural/singular slop: "sticks"/"stick", "torches"/"torch"
-                String noS = word.endsWith("s") ? word.substring(0, word.length() - 1) : word;
-                String noEs = word.endsWith("es") ? word.substring(0, word.length() - 2) : noS;
-                if (!clause.contains(word) && !clause.contains(noS) && !clause.contains(noEs)) {
-                    all = false;
-                    break;
-                }
-            }
-            if (all && (best == null || key.length() > best.length())) best = key;
+    private Plan resolve(String arg) {
+        // Abstract wood-chain steps: any log -> planks, any planks -> sticks.
+        if (arg.equals("planks")) {
+            return new Plan(List.of(new Step(LOG, 1, "log")),
+                () -> new ItemStack(Items.OAK_PLANKS, 4), false);
         }
-        return best;
+        if (arg.equals("sticks")) {
+            return new Plan(List.of(new Step(PLANK, 2, "planks")),
+                () -> new ItemStack(Items.STICK, 4), false);
+        }
+        Item item = RecipeBook.item(arg);
+        if (item == Items.AIR) return null;
+        RecipeBook.Craft craft = RecipeBook.craftFor(assistant.level(), item);
+        if (craft == null) return null;
+        List<Step> steps = new ArrayList<>();
+        for (RecipeBook.Part part : craft.parts()) {
+            steps.add(new Step(s -> part.ingredient().test(s), part.count(), part.label()));
+        }
+        final int yield = craft.yield();
+        return new Plan(steps, () -> new ItemStack(item, yield), craft.needsTable());
     }
 
     private final AssistantEntity assistant;
     @Nullable private Job job;
-    @Nullable private Recipe recipe;
+    @Nullable private Plan plan;
     private int crafted;
     private int workTicks;
     private int stuckTicks;
@@ -175,16 +97,16 @@ public class CraftGoal extends Goal {
         this.workTicks = 0;
         this.stuckTicks = 0;
         this.tablePos = null;
-        this.recipe = job != null && job.arg() != null ? RECIPES.get(job.arg()) : null;
-        if (recipe == null) {
-            finish("I don't know how to craft that. I know: " + String.join(", ", RECIPES.keySet()) + ".");
+        this.plan = job != null && job.arg() != null ? resolve(job.arg()) : null;
+        if (plan == null) {
+            finish("I don't know how to craft " + (job != null ? job.arg() : "that") + ".");
         }
     }
 
     @Override
     public void stop() {
         this.job = null;
-        this.recipe = null;
+        this.plan = null;
         assistant.getNavigation().stop();
     }
 
@@ -192,36 +114,44 @@ public class CraftGoal extends Goal {
         assistant.say(message);
         assistant.pollJob();
         this.job = null;
-        this.recipe = null;
+        this.plan = null;
         assistant.getNavigation().stop();
+    }
+
+    /** Natural-language name for a job arg ("iron_sword" -> "iron sword"). */
+    private String pretty(@Nullable String arg) {
+        if (arg == null) return "that";
+        if (arg.equals("planks") || arg.equals("sticks")) return arg;
+        Item it = RecipeBook.item(arg);
+        return it == Items.AIR ? arg : RecipeBook.words(it);
     }
 
     @Override
     public void tick() {
-        if (job == null || recipe == null) return;
+        if (job == null || plan == null) return;
 
         if (crafted >= job.amount()) {
-            finish("Crafted " + crafted + " " + job.arg() + ".");
+            finish("Crafted " + crafted + " " + pretty(job.arg()) + ".");
             return;
         }
 
         // Have the materials?
-        for (Need need : recipe.needs()) {
-            if (assistant.countMatching(need.what()) < need.count()) {
-                finish("I need " + need.count() + " " + need.label() + " to craft " + job.arg()
+        for (Step step : plan.steps()) {
+            if (assistant.countMatching(step.what()) < step.count()) {
+                finish("I need " + step.count() + " " + step.label() + " to craft " + pretty(job.arg())
                     + (crafted > 0 ? " (made " + crafted + " so far)" : "")
                     + " — I can gather or you can hand it to me.");
                 return;
             }
         }
 
-        // Table logistics.
-        if (recipe.needsTable()) {
+        // Table logistics for recipes that need the 3x3 grid.
+        if (plan.needsTable()) {
             if (tablePos == null || !assistant.level().getBlockState(tablePos).is(Blocks.CRAFTING_TABLE)) {
                 tablePos = findTable();
                 stuckTicks = 0;
                 if (tablePos == null && !placeOwnTable()) {
-                    finish("I need a crafting table for " + job.arg()
+                    finish("I need a crafting table for " + pretty(job.arg())
                         + " — none nearby, and I lack 4 planks to make one.");
                     return;
                 }
@@ -249,10 +179,10 @@ public class CraftGoal extends Goal {
             return;
         }
         workTicks = 0;
-        for (Need need : recipe.needs()) {
-            assistant.removeMatching(need.what(), need.count());
+        for (Step step : plan.steps()) {
+            assistant.removeMatching(step.what(), step.count());
         }
-        ItemStack out = recipe.output().get();
+        ItemStack out = plan.output().get();
         ItemStack leftover = assistant.insertItem(out);
         if (!leftover.isEmpty()) assistant.spawnAtLocation(leftover);
         crafted++;

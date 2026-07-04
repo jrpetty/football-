@@ -4,7 +4,6 @@ import com.jrpetty.mcassistant.entity.AssistantEntity;
 import com.jrpetty.mcassistant.entity.CraftPlanner;
 import com.jrpetty.mcassistant.entity.Job;
 import com.jrpetty.mcassistant.entity.goal.BuildGoal;
-import com.jrpetty.mcassistant.entity.goal.CraftGoal;
 import com.jrpetty.mcassistant.entity.goal.GatherGoal;
 import com.jrpetty.mcassistant.entity.goal.SmeltGoal;
 import net.minecraft.network.chat.Component;
@@ -339,7 +338,10 @@ public final class ChatControl {
             || c.contains("i need") || c.contains("i want")
             || (c.matches("^build\\b.*") && !BUILD_WORD.matcher(c).find());
         if (makeVerb) {
-            String tgt = CraftPlanner.matchTarget(c);
+            // Match the item that's the OBJECT of the verb, not an incidental
+            // noun in a "... from the chest/storage" tail (that's a WITHDRAW).
+            String makeClause = c.split("\\b(?:from|out of|in the|in my|inside)\\b")[0];
+            String tgt = CraftPlanner.matchTarget(makeClause);
             if (tgt != null) return Action.with(Action.Type.MAKE, tgt, parseAmount(c, 1));
         }
 
@@ -536,10 +538,12 @@ public final class ChatControl {
             return Action.with(Action.Type.WITHDRAW, item, n);
         }
 
-        // Crafting: "craft 4 sticks", "make a stone pickaxe".
+        // Crafting fallback: "craft/make X" that the planner above didn't match
+        // (planner handles the sourcing; this only fires for a bare/unknown arg).
         if (c.matches("^(?:craft|make)\\b.*")) {
-            String recipe = CraftGoal.matchRecipe(c);
-            if (recipe != null) return Action.with(Action.Type.CRAFT, recipe, parseAmount(c, 1));
+            String recipe = CraftPlanner.matchTarget(
+                c.split("\\b(?:from|out of|in the|in my|inside)\\b")[0]);
+            if (recipe != null) return Action.with(Action.Type.MAKE, recipe, parseAmount(c, 1));
             return explicit ? Action.with(Action.Type.CRAFT, null, 0) : null;
         }
 
@@ -707,7 +711,8 @@ public final class ChatControl {
                 }
                 case CRAFT -> {
                     if (act.arg() == null) {
-                        a.say("I can craft: " + String.join(", ", CraftGoal.RECIPES.keySet()) + ".");
+                        a.say("Tell me what to craft — I can make just about anything in the game, "
+                            + "like \"make an iron sword\", \"craft a piston\", or \"make me a hopper\".");
                     } else {
                         Job job = Job.craft(act.arg(), act.amount());
                         a.enqueue(job);
@@ -838,15 +843,16 @@ public final class ChatControl {
                         : "None that I know of — no " + word + " in my pack or any chest I've seen.");
                 }
                 case MAKE -> {
+                    String what = CraftPlanner.pretty(act.arg());
                     var plan = CraftPlanner.plan(a, act.arg(), act.amount());
                     if (plan.jobs().isEmpty() && plan.blockers().isEmpty()) {
-                        a.say("You've already got " + act.arg() + " — it's in my pack or a chest here.");
+                        a.say("You've already got " + what + " — it's in my pack or a chest here.");
                     } else if (plan.jobs().isEmpty()) {
-                        a.say("To make " + act.arg() + " I'd need " + String.join(", ", plan.blockers())
+                        a.say("To make " + what + " I'd need " + String.join(", ", plan.blockers())
                             + " — I can't gather that or find it in a nearby chest. Put some in a chest or hand it to me.");
                     } else {
                         for (Job j : plan.jobs()) a.enqueue(j);
-                        a.say("To make " + act.arg() + ": " + String.join(", ", plan.narration()) + ". On it.");
+                        a.say("To make " + what + ": " + String.join(", ", plan.narration()) + ". On it.");
                         if (!plan.blockers().isEmpty()) {
                             a.say("(Heads up — I'm still missing " + String.join(", ", plan.blockers())
                                 + "; I'll get as far as I can.)");

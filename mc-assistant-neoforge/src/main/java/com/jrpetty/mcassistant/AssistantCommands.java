@@ -402,15 +402,16 @@ public final class AssistantCommands {
                 "I don't know how to make that. Try a tool, sword, chest, furnace, torches, planks..."));
             return 0;
         }
+        String what = com.jrpetty.mcassistant.entity.CraftPlanner.pretty(tgt);
         var plan = com.jrpetty.mcassistant.entity.CraftPlanner.plan(a, tgt, 1);
         if (plan.jobs().isEmpty() && plan.blockers().isEmpty()) {
-            a.say("You've already got " + tgt + ".");
+            a.say("You've already got " + what + ".");
         } else if (plan.jobs().isEmpty()) {
-            a.say("To make " + tgt + " I'd need " + String.join(", ", plan.blockers())
+            a.say("To make " + what + " I'd need " + String.join(", ", plan.blockers())
                 + " — none nearby. Put some in a chest or hand it to me.");
         } else {
             for (var j : plan.jobs()) a.enqueue(j);
-            a.say("To make " + tgt + ": " + String.join(", ", plan.narration()) + ". On it.");
+            a.say("To make " + what + ": " + String.join(", ", plan.narration()) + ". On it.");
             if (!plan.blockers().isEmpty()) {
                 a.say("(Still missing " + String.join(", ", plan.blockers()) + " — I'll get as far as I can.)");
             }
@@ -468,10 +469,10 @@ public final class AssistantCommands {
         AssistantEntity a = requireAssistant(ctx);
         if (a == null) return 0;
         String what = StringArgumentType.getString(ctx, "what").toLowerCase();
-        String recipe = com.jrpetty.mcassistant.entity.goal.CraftGoal.matchRecipe(what);
+        String recipe = com.jrpetty.mcassistant.entity.CraftPlanner.matchTarget(what);
         if (recipe == null) {
-            ctx.getSource().sendFailure(Component.literal("I can craft: "
-                + String.join(", ", com.jrpetty.mcassistant.entity.goal.CraftGoal.RECIPES.keySet())));
+            ctx.getSource().sendFailure(Component.literal(
+                "I don't know that one — name any craftable item, e.g. iron_sword, piston, hopper."));
             return 0;
         }
         int amount = 1;
