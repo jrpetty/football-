@@ -171,6 +171,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     public static final int INVENTORY_SIZE = 27;
     public static final int MAX_PER_OWNER = 10;
 
+    /** Build stamp — say "version" to hear it. Bumped whenever features land, so
+     *  you can tell at a glance whether the loaded jar is the current one. */
+    public static final String BUILD_TAG =
+        "2026-07-b5 · routines, fortify, distress, quartermaster, self-rescue dig/climb, smarter pathing";
+
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
     public static final double BLOCK_REACH = 4.5;
@@ -903,16 +908,35 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      *  still-loaded chest. Powers "how much iron do we have?" */
     public int countAcrossStorage(java.util.function.Predicate<ItemStack> what) {
         int total = countMatching(what);
+        java.util.Set<Long> counted = new java.util.HashSet<>();
+        // Every chest we remember (any distance, as long as it's loaded)...
         for (Long key : chestMemory.keySet()) {
             BlockPos pos = BlockPos.of(key);
-            if (level().getBlockEntity(pos) instanceof Container c) {
-                for (int i = 0; i < c.getContainerSize(); i++) {
-                    ItemStack s = c.getItem(i);
-                    if (!s.isEmpty() && what.test(s)) total += s.getCount();
-                }
+            if (level().getBlockEntity(pos) instanceof Container c && counted.add(key)) {
+                total += countIn(c, what);
+            }
+        }
+        // ...plus a live scan of chests physically nearby it may never have opened
+        // (so "how much iron do we have?" sees the chest right next to it).
+        BlockPos feet = blockPosition();
+        int r = 16;
+        for (BlockPos pos : BlockPos.betweenClosed(
+                feet.offset(-r, -4, -r), feet.offset(r, 4, r))) {
+            if (level().getBlockEntity(pos) instanceof Container c && counted.add(pos.asLong())) {
+                total += countIn(c, what);
+                rememberChest(pos.immutable(), c); // learn it for next time
             }
         }
         return total;
+    }
+
+    private static int countIn(Container c, java.util.function.Predicate<ItemStack> what) {
+        int n = 0;
+        for (int i = 0; i < c.getContainerSize(); i++) {
+            ItemStack s = c.getItem(i);
+            if (!s.isEmpty() && what.test(s)) n += s.getCount();
+        }
+        return n;
     }
 
     /** All remembered chest positions (for the sort goal). */
@@ -1795,12 +1819,18 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 .put(assistantName.toLowerCase(), this);
         }
 
-        // Active unstuck: once a second, if we're trying to path somewhere but
-        // barely moved, hop and force a fresh path. Clears the corners, gaps,
-        // and 1-block lips the pathfinder alone gets wedged on.
+        // Active unstuck: once a second, if we WANT to move but barely have, hop
+        // and force a fresh path. Clears the corners, gaps, and 1-block lips the
+        // pathfinder alone gets wedged on. "Want to move" also covers the case
+        // where the pathfinder gave up against a wall while following — otherwise
+        // the stuck timer would reset and self-rescue (dig/climb) would never fire.
         if (tickCount % 20 == 0) {
-            if (!this.getNavigation().isDone()
-                && this.position().distanceToSqr(lastPathPos) < 0.25) { // <0.5 block in ~1s
+            boolean wantsToMove = !this.getNavigation().isDone();
+            if (!wantsToMove && mode == Mode.FOLLOW) {
+                Player o = getOwnerPlayer();
+                if (o != null && distanceToSqr(o) > 9.0) wantsToMove = true; // trailing, but pinned
+            }
+            if (wantsToMove && this.position().distanceToSqr(lastPathPos) < 0.25) { // <0.5 block in ~1s
                 this.stuckStreak++;
                 this.getJumpControl().jump();
                 this.getNavigation().recomputePath();

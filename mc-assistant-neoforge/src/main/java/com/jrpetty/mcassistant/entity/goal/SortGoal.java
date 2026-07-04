@@ -23,7 +23,7 @@ import java.util.Map;
  */
 public class SortGoal extends Goal {
 
-    private static final int RADIUS = 14;
+    private static final int RADIUS = 20;
     private static final int MOVES_PER_TICK = 4;
 
     private final AssistantEntity assistant;
@@ -67,7 +67,8 @@ public class SortGoal extends Goal {
 
         collectChests();
         if (chests.size() < 2) {
-            finish("I need at least two chests near me to sort storage.");
+            finish("I need at least two chests to sort — stand me near your storage room "
+                + "(within ~20 blocks) with 2+ chests, then say \"sort the storage\" again.");
             return;
         }
         assignHomes();
@@ -100,9 +101,10 @@ public class SortGoal extends Goal {
     private void collectChests() {
         BlockPos feet = assistant.feetPos();
         java.util.Set<Long> seen = new java.util.HashSet<>();
+        // Every remembered chest that's still loaded — the storage room may be a
+        // few blocks past our scan radius, so don't gate remembered ones on range.
         for (BlockPos remembered : assistant.rememberedChests()) {
-            if (remembered.distSqr(feet) <= (double) RADIUS * RADIUS
-                && assistant.level().getBlockEntity(remembered) instanceof Container
+            if (assistant.level().getBlockEntity(remembered) instanceof Container
                 && seen.add(remembered.asLong())) {
                 chests.add(remembered.immutable());
             }

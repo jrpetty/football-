@@ -15,20 +15,23 @@ import javax.annotation.Nullable;
 import java.util.EnumSet;
 
 /**
- * Self-rescue. When the assistant is buried/suffocating, or boxed into a pocket
- * it's been unable to walk out of, it frees itself — whichever way out is best:
- *   - clears the blocks above so it can rise;
- *   - pillars up with building blocks it carries (jump, place under, climb);
- *   - or, with no blocks, digs a foothold in a wall to clamber out.
+ * Self-rescue. When the assistant is buried/suffocating, boxed into a pocket, or
+ * simply wedged against a wall/tall step it's been unable to get past, it frees
+ * itself — whichever way out is best:
+ *   - buried/boxed: clears the blocks above and rises (pillars up with a carried
+ *     block, or carves a foothold in the wall to clamber out);
+ *   - wedged against an obstacle ahead: carves a 2-high passage straight through
+ *     it in the direction it was trying to travel (dig-out / dig-through-and-climb).
  * Top priority, so being stuck is never permanent. It only fires when GENUINELY
- * trapped (suffocating, or badly stuck for a few seconds), so it never tears
- * down its own night shelter.
+ * trapped (suffocating, or badly stuck for a few seconds AND actually blocked),
+ * so it never tears down its own night shelter while it's just standing around.
  */
 public class EscapeGoal extends Goal {
 
     private final AssistantEntity a;
     private int work;
     @Nullable private BlockPos jumpFrom;
+    @Nullable private Direction escapeDir; // direction we were trying to travel when we got stuck
 
     public EscapeGoal(AssistantEntity a) {
         this.a = a;
@@ -37,17 +40,19 @@ public class EscapeGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        // Start only when genuinely trapped: buried, or wedged after failing to
-        // move for a few seconds (so we don't dig out of our own night shelter).
         if (suffocating()) return true;
-        return a.onGround() && a.isBadlyStuck() && boxedIn();
+        // Otherwise: on the ground, stuck for a few seconds, and actually walled
+        // in — either on all sides, or by an obstacle in our path of travel.
+        if (!a.onGround() || !a.isBadlyStuck()) return false;
+        return boxedIn() || blockedAhead(travelDir());
     }
 
     @Override
     public boolean canContinueToUse() {
-        // Keep going on the PHYSICAL state (not the stuck timer, which resets the
-        // moment we stop navigating on start) until we've actually broken free.
-        return suffocating() || boxedIn();
+        // Keep going on PHYSICAL state (not the stuck timer, which resets the moment
+        // we stop navigating on start) until we've actually broken free.
+        if (suffocating() || boxedIn()) return true;
+        return escapeDir != null && blockedAhead(escapeDir);
     }
 
     /** No head-level opening in any horizontal direction — can't just walk out. */
@@ -59,10 +64,22 @@ public class EscapeGoal extends Goal {
         return true;
     }
 
+    /** A wall or tall step in the travel direction, taller than we can step over. */
+    private boolean blockedAhead(Direction d) {
+        return solid(a.feetPos().relative(d).above());
+    }
+
+    /** The direction we're trying to travel — our body's heading, which points
+     *  the way we've been trying to walk (toward the owner/target we're chasing). */
+    private Direction travelDir() {
+        return Direction.fromYRot(a.getYRot());
+    }
+
     @Override
     public void start() {
         this.work = 0;
         this.jumpFrom = null;
+        this.escapeDir = travelDir();
         a.getNavigation().stop();
         a.say("I'm stuck — digging my way out.");
     }
@@ -70,6 +87,7 @@ public class EscapeGoal extends Goal {
     @Override
     public void stop() {
         this.jumpFrom = null;
+        this.escapeDir = null;
         a.getNavigation().stop();
     }
 
@@ -81,38 +99,51 @@ public class EscapeGoal extends Goal {
     @Override
     public void tick() {
         BlockPos feet = a.feetPos();
-        a.getLookControl().setLookAt(feet.getX() + 0.5, feet.getY() + 3.0, feet.getZ() + 0.5);
         if (++work < 6) return; // pace the actions, like mining
         work = 0;
 
         BlockPos head = feet.above();
         BlockPos aboveHead = feet.above(2);
 
-        // 1) Open the space above so we can rise.
-        if (solid(head)) { breakBlock(head); return; }
-        if (solid(aboveHead)) { breakBlock(aboveHead); return; }
-
-        // 2) Rise out. Pillar up if we have a block, else carve a foothold.
-        if (a.countMatching(NightShelterGoal.SHELTER_BLOCK) > 0) {
-            if (a.onGround()) {
-                jumpFrom = feet;
-                a.getJumpControl().jump();
-            } else if (jumpFrom != null && a.getY() - jumpFrom.getY() > 0.45
-                    && a.level().getBlockState(jumpFrom).canBeReplaced()) {
-                placeAt(jumpFrom); // fill the gap we jumped from — we land a block higher
-                jumpFrom = null;
+        // 1) Buried or boxed in: open the space above and rise out.
+        if (suffocating() || boxedIn()) {
+            a.getLookControl().setLookAt(feet.getX() + 0.5, feet.getY() + 3.0, feet.getZ() + 0.5);
+            if (solid(head)) { breakBlock(head); return; }
+            if (solid(aboveHead)) { breakBlock(aboveHead); return; }
+            // Pillar up if we have a block, else carve a foothold and hop up.
+            if (a.countMatching(NightShelterGoal.SHELTER_BLOCK) > 0) {
+                if (a.onGround()) {
+                    jumpFrom = feet;
+                    a.getJumpControl().jump();
+                } else if (jumpFrom != null && a.getY() - jumpFrom.getY() > 0.45
+                        && a.level().getBlockState(jumpFrom).canBeReplaced()) {
+                    placeAt(jumpFrom);
+                    jumpFrom = null;
+                }
+                return;
+            }
+            for (Direction d : Direction.Plane.HORIZONTAL) {
+                if (solid(head.relative(d)) || solid(aboveHead.relative(d))) {
+                    breakBlock(aboveHead.relative(d));
+                    breakBlock(head.relative(d));
+                    a.getJumpControl().jump();
+                    return;
+                }
             }
             return;
         }
-        // 3) No blocks: break an upward step in a wall and hop into it.
-        for (Direction d : Direction.Plane.HORIZONTAL) {
-            if (solid(head.relative(d)) || solid(aboveHead.relative(d))) {
-                breakBlock(aboveHead.relative(d));
-                breakBlock(head.relative(d));
-                a.getJumpControl().jump();
-                return;
-            }
-        }
+
+        // 2) Wedged against an obstacle ahead: carve a 2-high passage forward and
+        //    step through it (dig-out, and dig-and-climb a tall step).
+        Direction d = escapeDir != null ? escapeDir : Direction.fromYRot(a.getYRot());
+        BlockPos feetAhead = feet.relative(d);
+        a.getLookControl().setLookAt(feetAhead.getX() + 0.5, feetAhead.getY() + 0.5, feetAhead.getZ() + 0.5);
+        if (solid(feetAhead.above())) { breakBlock(feetAhead.above()); return; }
+        if (solid(feetAhead)) { breakBlock(feetAhead); return; }
+        // Passage is open — walk forward through it; canContinueToUse then lets go
+        // and the normal follow/travel navigation takes back over.
+        a.getNavigation().moveTo(
+            feetAhead.getX() + 0.5, feetAhead.getY(), feetAhead.getZ() + 0.5, 1.0D);
     }
 
     private boolean solid(BlockPos p) {
@@ -122,6 +153,8 @@ public class EscapeGoal extends Goal {
     private void breakBlock(BlockPos p) {
         BlockState s = a.level().getBlockState(p);
         if (!s.isSolid()) return;
+        // Don't smash chests/furnaces/spawners and the like to get free.
+        if (a.level().getBlockEntity(p) != null) return;
         if (a.level().destroyBlock(p, true, a)) {
             for (ItemEntity drop : a.level().getEntitiesOfClass(
                     ItemEntity.class, new AABB(p).inflate(2.0))) {

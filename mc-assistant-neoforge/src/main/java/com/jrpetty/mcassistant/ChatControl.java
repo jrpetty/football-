@@ -100,8 +100,16 @@ public final class ChatControl {
     private static final Pattern COORDS = Pattern.compile("(-?\\d+)\\s+(-?\\d+)\\s+(-?\\d+)");
     private static final Pattern ENCHANT_WORD = Pattern.compile(
         "^enchant(?:\\s+(?:your|my|the))?\\s*([a-z ]*)$");
-    private static final Pattern STOCK_QUERY = Pattern.compile(
-        "^how\\s+(?:much|many)\\s+([a-z ]+?)\\s+(?:do|have|did|does)\\b.*");
+    // Stock queries — the verb tail is optional so "how much iron" works, and
+    // "do we have iron" / "have we got iron" are recognized too.
+    private static final Pattern STOCK_HOW = Pattern.compile(
+        "^how\\s+(?:much|many)\\s+([a-z][a-z ]*?)(?:\\s+(?:do|have|has|did|does|is|are|got|left|remaining|in)\\b.*)?[\\s?!.]*$");
+    private static final Pattern STOCK_HAVE = Pattern.compile(
+        "^(?:do|does)\\s+(?:we|you|i)\\s+have\\s+(?:any\\s+)?([a-z][a-z ]*?)[\\s?!.]*$");
+    private static final Pattern STOCK_GOT = Pattern.compile(
+        "^have\\s+(?:we|you|i)\\s+got\\s+(?:any\\s+)?([a-z][a-z ]*?)[\\s?!.]*$");
+    private static final java.util.List<Pattern> STOCK_QUERIES =
+        java.util.List.of(STOCK_HOW, STOCK_HAVE, STOCK_GOT);
     private static final Pattern NETHER_WORD = Pattern.compile("\\bnether\\b");
     private static final Pattern NETHER_TARGET = Pattern.compile(
         "\\b(glowstone|quartz|netherrack|soul\\s*sand|magma|nether\\s*gold|gold)\\b");
@@ -145,7 +153,7 @@ public final class ChatControl {
                     REPAIR, LOCATE, NIGHT_ON, NIGHT_OFF,
                     SORT, ENCHANT, STOCK, NETHER, BOAT, MAKE, NEEDS, TOWN_GATHER,
                     ROLE, RENAME, AUTO_ON, AUTO_OFF, STANDING_ADD, STANDING_CLEAR,
-                    ROUTINE_ADD, ROUTINE_CLEAR }
+                    ROUTINE_ADD, ROUTINE_CLEAR, VERSION }
 
         static Action gather(GatherGoal.Kind k, int n) { return new Action(Type.GATHER, k, n, null, null); }
         static Action townGather(GatherGoal.Kind k, int n) { return new Action(Type.TOWN_GATHER, k, n, null, null); }
@@ -319,6 +327,10 @@ public final class ChatControl {
             return Action.of(Action.Type.AUTO_OFF);
         }
         if (c.matches("^(?:stop|halt|cancel|never\\s?mind)\\b.*")) return Action.of(Action.Type.STOP);
+        if (c.matches("^(?:version|build)\\b.*") || c.contains("what version") || c.contains("what build")
+            || c.contains("which version") || c.contains("your version")) {
+            return Action.of(Action.Type.VERSION);
+        }
         if (c.matches("^(?:status|report)\\b.*") || c.contains("how are you")) return Action.of(Action.Type.STATUS);
         if (c.matches("^(?:jobs|queue|tasks)\\b.*") || c.contains("what are you doing")) return Action.of(Action.Type.JOBS);
         if (c.matches("^help\\b.*") || c.contains("what can you do")) return Action.of(Action.Type.HELP);
@@ -333,9 +345,17 @@ public final class ChatControl {
         if (c.matches("^(?:places|waypoints)\\b.*") || c.contains("where can you go")) {
             return Action.of(Action.Type.PLACES);
         }
-        // Stock report: "how much iron do we have?", "how many logs have we got?"
-        Matcher sq = STOCK_QUERY.matcher(c);
-        if (sq.matches()) return Action.with(Action.Type.STOCK, sq.group(1).trim(), 0);
+        // Stock report: "how much iron", "how many logs do we have?",
+        // "do we have any coal?", "have we got diamonds?"
+        for (Pattern sp : STOCK_QUERIES) {
+            Matcher sq = sp.matcher(c);
+            if (sq.matches()) {
+                String item = sq.group(1).trim().replaceAll("^(?:a|an|the|some|any)\\s+", "");
+                if (!item.isEmpty() && !item.equals("of")) {
+                    return Action.with(Action.Type.STOCK, item, 0);
+                }
+            }
+        }
         // Self-assessment (rung 1 of autonomy): "what do you need?"
         if (c.contains("what do you need") || c.contains("what do you require")
             || c.matches("^(?:assess|check)\\s+yourself\\b.*") || c.contains("how are you doing")) {
@@ -489,7 +509,10 @@ public final class ChatControl {
             return Action.of(Action.Type.NIGHT_OFF);
         }
 
-        if (c.matches("^(?:set|make)\\b.*\\bhome\\b.*") || c.contains("this is home")) {
+        if (c.matches("^(?:set|make)\\b.*\\bhome\\b.*")
+            || c.contains("this is home") || c.contains("this is your home")
+            || c.contains("home is here") || c.contains("here is home")
+            || c.contains("make here home") || c.contains("set your home")) {
             return Action.of(Action.Type.SET_HOME);
         }
         if (c.matches("^(?:(?:head|return|walk)\\s+(?:back\\s+)?)?home\\b.*")) {
@@ -787,6 +810,9 @@ public final class ChatControl {
                     a.getRole().name().toLowerCase(), a.isAutonomous() ? " (working autonomously)" : "",
                     a.countItems(), a.countFood(), a.getXp(), a.jobCount(), a.standingOrders().size(),
                     a.routines().size()));
+                case VERSION -> a.say("Build " + AssistantEntity.BUILD_TAG
+                    + ". If any of those don't work in-game, an older jar is loaded — "
+                    + "keep only the newest mc-assistant jar in your mods folder.");
                 case JOBS -> reportJobs(a);
                 case HELP -> a.say("Talk to me like a person — orders chain with \"and\"/\"then\" and queue up. I understand: "
                     + "gather/mine/chop (logs, stone, dirt, iron, coal), \"dig a mine (down to level 12)\", deposit, "
@@ -800,7 +826,7 @@ public final class ChatControl {
                     + "\"how much iron do we have?\", \"enchant your gear\" (spends earned xp + lapis), "
                     + "\"what do you see/have?\", open (my gear), \"keep the chest stocked with 64 logs\", "
                     + "\"tend the farm every 20 minutes\" (recurring chores; \"stop routines\" cancels), "
-                    + "\"be a miner/farmer/lumberjack/builder\" + \"work on your own\", \"your name is <name>\", spawn, dismiss. "
+                    + "\"be a miner/farmer/lumberjack/builder\" + \"work on your own\", \"your name is <name>\", \"version\" (which build), spawn, dismiss. "
                     + "Hold the voice key (default V) to speak any of this.");
                 case GATHER -> {
                     Job job = Job.gather(act.gatherKind(), act.amount());
@@ -1063,9 +1089,11 @@ public final class ChatControl {
                     }
                 }
                 case SET_HOME -> {
-                    a.setHome(a.blockPosition());
-                    a.say("Home set — " + a.blockPosition().getX() + " "
-                        + a.blockPosition().getY() + " " + a.blockPosition().getZ() + ".");
+                    // "here" means where the commanding player is standing.
+                    net.minecraft.core.BlockPos h = player.blockPosition();
+                    a.setHome(h);
+                    a.say("Home set here — " + h.getX() + " " + h.getY() + " " + h.getZ()
+                        + ". I'll come back to this spot on \"go home\" and at night.");
                 }
                 case ROLE -> {
                     AssistantEntity.Role role = AssistantEntity.Role.fromWord(act.arg());

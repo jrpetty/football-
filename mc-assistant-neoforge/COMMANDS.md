@@ -66,7 +66,7 @@ stacks" = 128, "ten by ten" = 10×10.
 | `open` / `show me your pack` | Opens the management GUI |
 | `keep the chest stocked with 64 logs` | Standing order — restocks forever; `stop keeping` cancels |
 | `sort the storage` | Consolidates each item type into one home chest |
-| `how much iron do we have?` | Totals across the pack + every remembered chest |
+| `how much iron?` / `do we have any coal?` / `have we got diamonds?` | Totals across the pack + every remembered chest **plus a live scan of chests right next to it** (verb is optional now) |
 | `enchant your gear` | Spends earned XP + lapis at an enchanting table |
 
 ## 5. Crafting, smelting & repair
@@ -115,6 +115,7 @@ chokepoint doorway and a torch on every corner so nothing spawns along it.
 | `tend the farm every 20 minutes` (also: `deposit` / `sort the storage` / `hunt` / `pick up items` / `light up the area` every N minutes/hours) | **Recurring chore** on a timer — re-fires whenever it's idle and the interval is due. Works with or without autonomy; never interrupts a job. `stop routines` cancels. Survives relogs. |
 | `head home at night` / `work nights` | Night routine on/off |
 | `status` / `how are you` | HP, mode, role, auto, items, food, jobs, standing orders, routines |
+| `version` / `what build` | Reports the build stamp — the quickest way to confirm the loaded jar is current |
 | `jobs` / `what are you doing` | The queue, in order |
 | `help` / `what can you do` | In-game cheat sheet |
 
