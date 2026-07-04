@@ -82,6 +82,14 @@ public final class AssistantCommands {
                 .then(Commands.argument("count", IntegerArgumentType.integer(1, 32))
                     .executes(ctx -> fish(ctx, IntegerArgumentType.getInteger(ctx, "count")))))
             .then(Commands.literal("cleanup").executes(AssistantCommands::cleanup))
+            .then(Commands.literal("sort").executes(AssistantCommands::sort))
+            .then(Commands.literal("enchant")
+                .executes(ctx -> enchant(ctx, null))
+                .then(Commands.argument("what", StringArgumentType.word())
+                    .executes(ctx -> enchant(ctx, StringArgumentType.getString(ctx, "what")))))
+            .then(Commands.literal("stock")
+                .then(Commands.argument("item", StringArgumentType.word())
+                    .executes(AssistantCommands::stock)))
             .then(Commands.literal("night")
                 .then(Commands.argument("state", StringArgumentType.word())
                     .executes(AssistantCommands::night)))
@@ -225,10 +233,10 @@ public final class AssistantCommands {
     private static int status(CommandContext<CommandSourceStack> ctx) {
         AssistantEntity a = requireAssistant(ctx);
         if (a == null) return 0;
-        a.say(String.format("HP %.0f/%.0f, mode %s, role %s%s, %d items (%d food), %d jobs, %d standing orders, at %d %d %d.",
+        a.say(String.format("HP %.0f/%.0f, mode %s, role %s%s, %d items (%d food), %d xp, %d jobs, %d standing orders, at %d %d %d.",
             a.getHealth(), a.getMaxHealth(), a.getMode().name().toLowerCase(),
             a.getRole().name().toLowerCase(), a.isAutonomous() ? " (auto)" : "",
-            a.countItems(), a.countFood(), a.jobCount(), a.standingOrders().size(),
+            a.countItems(), a.countFood(), a.getXp(), a.jobCount(), a.standingOrders().size(),
             a.blockPosition().getX(), a.blockPosition().getY(), a.blockPosition().getZ()));
         return 1;
     }
@@ -344,6 +352,31 @@ public final class AssistantCommands {
         AssistantEntity a = requireAssistant(ctx);
         if (a == null) return 0;
         a.enqueue(com.jrpetty.mcassistant.entity.Job.cleanup());
+        return 1;
+    }
+
+    private static int sort(CommandContext<CommandSourceStack> ctx) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        a.enqueue(com.jrpetty.mcassistant.entity.Job.sort());
+        return 1;
+    }
+
+    private static int enchant(CommandContext<CommandSourceStack> ctx, @Nullable String what) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        a.enqueue(com.jrpetty.mcassistant.entity.Job.enchant(what));
+        return 1;
+    }
+
+    private static int stock(CommandContext<CommandSourceStack> ctx) {
+        AssistantEntity a = requireAssistant(ctx);
+        if (a == null) return 0;
+        String item = StringArgumentType.getString(ctx, "item").toLowerCase();
+        int n = a.countAcrossStorage(
+            com.jrpetty.mcassistant.entity.goal.WithdrawGoal.matcherFor(item));
+        a.say(n > 0 ? "We have " + n + " " + item + " across my pack and known chests."
+            : "No " + item + " in my pack or any chest I've seen.");
         return 1;
     }
 

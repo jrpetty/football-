@@ -214,6 +214,7 @@ public class SmeltGoal extends Goal {
                 if (out.isEmpty()) furnace.setItem(2, ItemStack.EMPTY);
                 furnace.setChanged();
                 collected += taken;
+                assistant.awardXp(taken); // fair XP toward enchanting
                 lastProgressTick = assistant.tickCount;
                 assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
             }

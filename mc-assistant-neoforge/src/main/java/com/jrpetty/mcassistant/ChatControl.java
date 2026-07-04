@@ -81,6 +81,11 @@ public final class ChatControl {
         "^(?:repair|fix|mend)\\b(?:\\s+(?:your|my|the))?\\s*([a-z_ ]*)$");
     private static final Pattern LOCATE_WORD = Pattern.compile(
         "^(?:find|locate)\\b.*\\b(village|mineshaft|shipwreck|stronghold|portal)\\b");
+    private static final Pattern COORDS = Pattern.compile("(-?\\d+)\\s+(-?\\d+)\\s+(-?\\d+)");
+    private static final Pattern ENCHANT_WORD = Pattern.compile(
+        "^enchant(?:\\s+(?:your|my|the))?\\s*([a-z ]*)$");
+    private static final Pattern STOCK_QUERY = Pattern.compile(
+        "^how\\s+(?:much|many)\\s+([a-z ]+?)\\s+(?:do|have|did|does)\\b.*");
 
     // Spoken-number words -> value. Voice recognition writes numbers as words
     // ("gather twenty logs"), but the parser reads digits, so we convert first.
@@ -112,6 +117,7 @@ public final class ChatControl {
                     MINE, HUNT, SHEAR, GIVE, GOTO, WAYPOINT_SET, PLACES, INVENTORY, LOOK,
                     CLEAR_AREA, TORCH_AREA, BRIDGE, BREED, HERD, FISH, CLEANUP,
                     REPAIR, LOCATE, NIGHT_ON, NIGHT_OFF,
+                    SORT, ENCHANT, STOCK,
                     ROLE, RENAME, AUTO_ON, AUTO_OFF, STANDING_ADD, STANDING_CLEAR }
 
         static Action gather(GatherGoal.Kind k, int n) { return new Action(Type.GATHER, k, n, null, null); }
@@ -293,6 +299,9 @@ public final class ChatControl {
         if (c.matches("^(?:places|waypoints)\\b.*") || c.contains("where can you go")) {
             return Action.of(Action.Type.PLACES);
         }
+        // Stock report: "how much iron do we have?", "how many logs have we got?"
+        Matcher sq = STOCK_QUERY.matcher(c);
+        if (sq.matches()) return Action.with(Action.Type.STOCK, sq.group(1).trim(), 0);
         if (c.contains("work on your own") || c.matches("^auto\\s*on\\b.*")
             || c.contains("be autonomous") || c.contains("do your own thing")) {
             return Action.of(Action.Type.AUTO_ON);
@@ -311,6 +320,29 @@ public final class ChatControl {
         if (c.matches("^(?:be|become|act as|you're|you are)\\b.*") || c.matches("^your role is\\b.*")) {
             Matcher rw = ROLE_WORD.matcher(c);
             if (rw.find()) return Action.with(Action.Type.ROLE, rw.group(1), 0);
+        }
+
+        // Go to raw coordinates: "meet me at 120 64 -300", "go to 100 70 -50".
+        // (LEAD_IN strips a leading "go ", leaving "to 100 ...", so accept "to"/"at" too.)
+        if (c.matches("^(?:go|come|walk|travel|head|meet|to|at)\\b.*")) {
+            Matcher co = COORDS.matcher(c.replaceAll("\\b(?:minus|negative)\\s+(\\d)", "-$1"));
+            if (co.find()) {
+                return Action.with(Action.Type.GOTO,
+                    co.group(1) + " " + co.group(2) + " " + co.group(3), 0);
+            }
+        }
+
+        // Auto-sort storage: "sort the chests", "organize the storage".
+        if (c.matches("^(?:sort|organize|organise)\\b.*")
+            && (explicit || c.contains("chest") || c.contains("storage") || c.contains("item"))) {
+            return Action.of(Action.Type.SORT);
+        }
+
+        // Enchanting: "enchant your gear/pickaxe/armor".
+        Matcher ew = ENCHANT_WORD.matcher(c);
+        if (ew.matches()) {
+            String what = ew.group(1).trim();
+            return Action.with(Action.Type.ENCHANT, what.isEmpty() ? null : what, 0);
         }
 
         // Modes / movement.
@@ -602,10 +634,10 @@ public final class ChatControl {
             switch (act.type()) {
                 case STOP -> a.requestStop();
                 case STATUS -> a.say(String.format(
-                    "HP %.0f/%.0f, mode %s, role %s%s, %d items (%d food), %d jobs queued, %d standing orders.",
+                    "HP %.0f/%.0f, mode %s, role %s%s, %d items (%d food), %d xp, %d jobs queued, %d standing orders.",
                     a.getHealth(), a.getMaxHealth(), a.getMode().name().toLowerCase(),
                     a.getRole().name().toLowerCase(), a.isAutonomous() ? " (working autonomously)" : "",
-                    a.countItems(), a.countFood(), a.jobCount(), a.standingOrders().size()));
+                    a.countItems(), a.countFood(), a.getXp(), a.jobCount(), a.standingOrders().size()));
                 case JOBS -> reportJobs(a);
                 case HELP -> a.say("Talk to me like a person — orders chain with \"and\"/\"then\" and queue up. I understand: "
                     + "gather/mine/chop (logs, stone, dirt, iron, coal), \"dig a mine (down to level 12)\", deposit, "
@@ -614,7 +646,9 @@ public final class ChatControl {
                     + "\"light up the area\", farm/harvest, \"hunt 3 cows\", \"breed the cows\", \"bring 2 cows home\", "
                     + "\"shear the sheep\", \"catch 5 fish\", \"pick up the items\", \"repair your pickaxe\", "
                     + "\"find the nearest village\", \"patrol between home and the mine\", \"head home at night\", "
-                    + "follow/stay/guard/come/stop, go home, \"remember this spot as the mine\" / \"go to the mine\", "
+                    + "follow/stay/guard/come/stop, go home, \"go to 120 64 -300\" (coordinates), "
+                    + "\"remember this spot as the mine\" / \"go to the mine\", \"sort the storage\", "
+                    + "\"how much iron do we have?\", \"enchant your gear\" (spends earned xp + lapis), "
                     + "\"what do you see/have?\", open (my gear), \"keep the chest stocked with 64 logs\", "
                     + "\"be a miner/farmer/lumberjack/builder\" + \"work on your own\", \"your name is <name>\", spawn, dismiss. "
                     + "Hold the voice key (default V) to speak any of this.");
@@ -683,9 +717,9 @@ public final class ChatControl {
                     queuedLabels.add(job.label());
                 }
                 case GOTO -> {
-                    boolean known = "home".equals(act.arg())
-                        ? a.getHome() != null
-                        : a.getWaypoint(act.arg()) != null;
+                    boolean coords = com.jrpetty.mcassistant.entity.goal.TravelGoal.parseCoords(act.arg()) != null;
+                    boolean known = coords
+                        || ("home".equals(act.arg()) ? a.getHome() != null : a.getWaypoint(act.arg()) != null);
                     if (!known && !explicit) {
                         break; // "to be honest..." is chat, not a travel order
                     }
@@ -741,6 +775,24 @@ public final class ChatControl {
                     Job job = Job.cleanup();
                     a.enqueue(job);
                     queuedLabels.add(job.label());
+                }
+                case SORT -> {
+                    Job job = Job.sort();
+                    a.enqueue(job);
+                    queuedLabels.add(job.label());
+                }
+                case ENCHANT -> {
+                    Job job = Job.enchant(act.arg());
+                    a.enqueue(job);
+                    queuedLabels.add(job.label());
+                }
+                case STOCK -> {
+                    String word = act.arg();
+                    int n = a.countAcrossStorage(
+                        com.jrpetty.mcassistant.entity.goal.WithdrawGoal.matcherFor(word));
+                    a.say(n > 0
+                        ? "We have " + n + " " + word + " across my pack and the chests I know."
+                        : "None that I know of — no " + word + " in my pack or any chest I've seen.");
                 }
                 case REPAIR -> repairItems(a, act.arg() != null ? act.arg() : "");
                 case LOCATE -> locateStructure(a, act.arg());

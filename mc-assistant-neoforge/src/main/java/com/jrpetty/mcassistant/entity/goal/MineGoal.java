@@ -277,6 +277,7 @@ public class MineGoal extends Goal {
             if (ore) {
                 oresMined++;
                 veinMined++;
+                assistant.awardXp(2); // fair XP toward enchanting
             }
             assistant.damageHeldTool();
             sweepDrops(pos);

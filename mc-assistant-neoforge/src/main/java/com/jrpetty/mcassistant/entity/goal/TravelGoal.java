@@ -58,11 +58,18 @@ public class TravelGoal extends Goal {
                 return;
             }
         } else {
-            this.destName = job != null && job.arg() != null ? job.arg() : "?";
-            this.dest = "home".equals(destName) ? assistant.getHome() : assistant.getWaypoint(destName);
+            String arg = job != null && job.arg() != null ? job.arg() : "?";
+            BlockPos coords = parseCoords(arg);
+            if (coords != null) {
+                this.dest = coords;
+                this.destName = coords.getX() + " " + coords.getY() + " " + coords.getZ();
+            } else {
+                this.destName = arg;
+                this.dest = "home".equals(arg) ? assistant.getHome() : assistant.getWaypoint(arg);
+            }
             if (dest == null) {
                 finish("I don't know a place called \"" + destName + "\" — say \"remember this spot as "
-                    + destName + "\" while I'm there. I know: " + placeList() + ".");
+                    + destName + "\" while I'm there, or give me coordinates. I know: " + placeList() + ".");
                 return;
             }
         }
@@ -73,6 +80,22 @@ public class TravelGoal extends Goal {
         var names = assistant.waypointNames();
         if (assistant.getHome() != null) names.add("home");
         return names.isEmpty() ? "nowhere yet" : String.join(", ", names);
+    }
+
+    /** "120 64 -300" -> BlockPos, else null. Y is clamped to the world. */
+    @Nullable
+    public static BlockPos parseCoords(@Nullable String arg) {
+        if (arg == null) return null;
+        java.util.regex.Matcher m = java.util.regex.Pattern
+            .compile("^(-?\\d+)\\s+(-?\\d+)\\s+(-?\\d+)$").matcher(arg.trim());
+        if (!m.matches()) return null;
+        try {
+            return new BlockPos(Integer.parseInt(m.group(1)),
+                Math.max(-64, Math.min(320, Integer.parseInt(m.group(2)))),
+                Integer.parseInt(m.group(3)));
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     @Override

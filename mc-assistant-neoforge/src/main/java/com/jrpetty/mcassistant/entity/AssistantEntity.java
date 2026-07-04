@@ -21,7 +21,9 @@ import com.jrpetty.mcassistant.entity.goal.PatrolGoal;
 import com.jrpetty.mcassistant.entity.goal.RecoverGoal;
 import com.jrpetty.mcassistant.entity.goal.RetreatGoal;
 import com.jrpetty.mcassistant.entity.goal.ShearGoal;
+import com.jrpetty.mcassistant.entity.goal.EnchantGoal;
 import com.jrpetty.mcassistant.entity.goal.SmeltGoal;
+import com.jrpetty.mcassistant.entity.goal.SortGoal;
 import com.jrpetty.mcassistant.entity.goal.TorchAreaGoal;
 import com.jrpetty.mcassistant.entity.goal.TravelGoal;
 import com.jrpetty.mcassistant.entity.goal.WithdrawGoal;
@@ -183,6 +185,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private boolean nightHome;        // "head home at night" toggle
     private boolean wentHomeTonight;  // one trip per night
 
+    // Experience points, earned fairly from its OWN kills, ore, and smelting —
+    // spent (with lapis) at an enchanting table. Not vanilla XP levels; a plain
+    // pool so mobs can play by the enchant-costs-effort rule.
+    private int xp;
+
     @Nullable private BlockPos homePos;
 
     // Named waypoints: "remember this spot as the mine" -> "go to the mine".
@@ -233,6 +240,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         this.goalSelector.addGoal(2, new FishGoal(this));
         this.goalSelector.addGoal(2, new CleanupGoal(this));
         this.goalSelector.addGoal(2, new RecoverGoal(this));
+        this.goalSelector.addGoal(2, new SortGoal(this));
+        this.goalSelector.addGoal(2, new EnchantGoal(this));
         this.goalSelector.addGoal(2, new HuntGoal(this)); // flagless coordinator
         this.goalSelector.addGoal(3, new BowAttackGoal(this));
         this.goalSelector.addGoal(4, new MeleeAttackGoal(this, 1.25D, true));
@@ -659,6 +668,48 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         return new ArrayList<>(waypoints.keySet());
     }
 
+    // -------------------------------- experience ------------------------------
+
+    public int getXp() {
+        return xp;
+    }
+
+    public void awardXp(int amount) {
+        if (amount > 0) this.xp = Math.min(100000, this.xp + amount);
+    }
+
+    /** Spend up to `amount` XP; returns true if it could be paid in full. */
+    public boolean spendXp(int amount) {
+        if (xp < amount) return false;
+        xp -= amount;
+        return true;
+    }
+
+    // ------------------------------ storage totals ----------------------------
+
+    /** Total count of matching items across the pack AND every remembered,
+     *  still-loaded chest. Powers "how much iron do we have?" */
+    public int countAcrossStorage(java.util.function.Predicate<ItemStack> what) {
+        int total = countMatching(what);
+        for (Long key : chestMemory.keySet()) {
+            BlockPos pos = BlockPos.of(key);
+            if (level().getBlockEntity(pos) instanceof Container c) {
+                for (int i = 0; i < c.getContainerSize(); i++) {
+                    ItemStack s = c.getItem(i);
+                    if (!s.isEmpty() && what.test(s)) total += s.getCount();
+                }
+            }
+        }
+        return total;
+    }
+
+    /** All remembered chest positions (for the sort goal). */
+    public java.util.List<BlockPos> rememberedChests() {
+        java.util.List<BlockPos> out = new java.util.ArrayList<>();
+        for (Long key : chestMemory.keySet()) out.add(BlockPos.of(key));
+        return out;
+    }
+
     // ------------------------------ food & health ----------------------------
 
     private int findFoodSlot() {
@@ -872,6 +923,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         tag.putString("Name", assistantName);
         tag.putBoolean("Auto", autonomous);
         tag.putBoolean("NightHome", nightHome);
+        tag.putInt("Xp", xp);
         ListTag orders = new ListTag();
         for (StandingOrder o : standingOrders) {
             CompoundTag ot = new CompoundTag();
@@ -910,6 +962,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (assistantName.isEmpty()) assistantName = "assistant";
         autonomous = tag.getBoolean("Auto");
         nightHome = tag.getBoolean("NightHome");
+        xp = tag.getInt("Xp");
         standingOrders.clear();
         for (Tag t : tag.getList("Standing", Tag.TAG_COMPOUND)) {
             CompoundTag ot = (CompoundTag) t;
