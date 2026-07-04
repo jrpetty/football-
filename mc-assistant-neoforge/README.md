@@ -215,6 +215,13 @@ blueprints, web dashboard) are not in the mod yet.
   someone to farming, low wood to logging, low stone to mining. Divided labour,
   decided by the town, no hand-assigning. Plus the one-shot crew order
   "everyone gather 128 iron", which splits a haul across the whole crew.
+- **Town needs board** — the fine-grained half of cooperation. A member blocked
+  for a material posts it (a crafter short on iron posts "iron"), and the
+  foreman continuously posts whatever the depot is short on. Idle members whose
+  *trade fits* claim the most-wanted item and haul it to the depot — a miner
+  goes and **mines iron for the group** (raw iron the crafters then smelt), a
+  logger fetches wood, and so on. That closes the loop: the town produces what
+  it needs, end-to-end, without you micromanaging.
 - **Survival brain** — "survive" / "fend for yourself": the 'decide' rung
   of autonomy. When idle it looks after itself before any busywork, picking
   the single most pressing action and announcing it: stash a full pack, hunt

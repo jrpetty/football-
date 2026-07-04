@@ -1160,6 +1160,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             setRole(target);
             say("Town duty — I'll work as the " + target.name().toLowerCase() + ".");
         }
+        // The foreman keeps the town needs board in sync with the depot.
+        if (idx == 0) postDepotDeficits(board);
     }
 
     private Role[] rolePlan(com.jrpetty.mcassistant.block.JobBoardBlock.Preset preset, BlockPos board) {
@@ -1178,10 +1180,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         int food = depotCount(depot, s -> s.get(DataComponents.FOOD) != null);
         int wood = depotCount(depot, s -> s.is(ItemTags.LOGS) || s.is(ItemTags.PLANKS));
         int stone = depotCount(depot, s -> s.is(Items.COBBLESTONE) || s.is(Items.STONE));
+        int iron = depotCount(depot, s -> s.is(Items.IRON_INGOT) || s.is(Items.RAW_IRON));
+        int coal = depotCount(depot, s -> s.is(Items.COAL) || s.is(Items.CHARCOAL));
         List<Role> plan = new ArrayList<>();
         if (food < 16) plan.add(Role.FARMER);
         if (wood < 64) plan.add(Role.LUMBERJACK);
-        if (stone < 64) plan.add(Role.MINER);
+        if (stone < 64 || iron < 16 || coal < 16) plan.add(Role.MINER);
         if (plan.isEmpty()) { // depot's healthy — keep a balanced standing crew
             plan.add(Role.MINER); plan.add(Role.LUMBERJACK); plan.add(Role.FARMER); plan.add(Role.BUILDER);
         } else if (!plan.contains(Role.FARMER)) {
@@ -1206,6 +1210,71 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             if (!s.isEmpty() && pred.test(s)) n += s.getCount();
         }
         return n;
+    }
+
+    /** The foreman (slot 0) posts the depot's material shortfalls to the town
+     *  needs board, so idle members whose trade fits go fetch them. */
+    private void postDepotDeficits(BlockPos board) {
+        BlockPos depot = findDepotNear(board);
+        if (depot == null) return;
+        int wood = depotCount(depot, s -> s.is(ItemTags.LOGS) || s.is(ItemTags.PLANKS));
+        int stone = depotCount(depot, s -> s.is(Items.COBBLESTONE) || s.is(Items.STONE));
+        int iron = depotCount(depot, s -> s.is(Items.IRON_INGOT) || s.is(Items.RAW_IRON));
+        int coal = depotCount(depot, s -> s.is(Items.COAL) || s.is(Items.CHARCOAL));
+        if (wood < 64) Town.postNeed(ownerId, GatherGoal.Kind.LOGS, 64 - wood);
+        if (stone < 64) Town.postNeed(ownerId, GatherGoal.Kind.STONE, 64 - stone);
+        if (iron < 16) Town.postNeed(ownerId, GatherGoal.Kind.IRON, 16 - iron);
+        if (coal < 16) Town.postNeed(ownerId, GatherGoal.Kind.COAL, 16 - coal);
+    }
+
+    /** Can I fetch this material given my town role and my pickaxe tier? */
+    private boolean canDoAsRole(GatherGoal.Kind kind) {
+        boolean toolOk = switch (kind) {
+            case LOGS, DIRT -> true;
+            case COAL, STONE -> bestPickTier() >= 1;
+            case IRON -> bestPickTier() >= 2;
+        };
+        if (!toolOk) return false;
+        return switch (role) {
+            case MINER -> kind == GatherGoal.Kind.STONE || kind == GatherGoal.Kind.IRON || kind == GatherGoal.Kind.COAL;
+            case LUMBERJACK -> kind == GatherGoal.Kind.LOGS;
+            case BUILDER -> kind == GatherGoal.Kind.LOGS || kind == GatherGoal.Kind.STONE;
+            case FARMER, NONE -> false; // farmers tend the larder, not the mines
+        };
+    }
+
+    /** Fulfill the town's most-wanted material my trade can supply — mining iron
+     *  for the group, chopping wood, etc. — and haul it to the depot. */
+    private boolean decideTownWork() {
+        if (ownerId == null) return false;
+        GatherGoal.Kind kind = Town.claimNeed(ownerId, this::canDoAsRole, 16);
+        if (kind == null) return false;
+        if (kind == GatherGoal.Kind.IRON) {
+            say("Town needs iron — mining a batch for the depot.");
+            enqueue(Job.mine(40)); // collects raw iron on the way down
+        } else {
+            say("Town needs " + kind.label + " — fetching a batch for the depot.");
+            enqueue(Job.gather(kind, 16));
+        }
+        enqueue(Job.deposit());
+        return true;
+    }
+
+    /** A blocked member posts what it lacks to the town board (e.g. a crafter
+     *  short on iron), so an idle miner goes and gets that specific thing. */
+    public void postMaterialNeed(String label) {
+        if (ownerId == null || Town.center(ownerId) == null || label == null) return;
+        String l = label.toLowerCase();
+        GatherGoal.Kind kind =
+            l.contains("iron") ? GatherGoal.Kind.IRON
+          : l.contains("coal") ? GatherGoal.Kind.COAL
+          : (l.contains("cobble") || l.contains("stone")) ? GatherGoal.Kind.STONE
+          : (l.contains("log") || l.contains("wood") || l.contains("plank")) ? GatherGoal.Kind.LOGS
+          : null;
+        if (kind != null) {
+            Town.postNeed(ownerId, kind, 16);
+            say("Posting to the town board — we need " + kind.label + "; someone grab it.");
+        }
     }
 
     // ------------------------------ food & health ----------------------------
@@ -1615,7 +1684,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             boolean townMember = ownerId != null && Town.center(ownerId) != null;
             if (!decideSurvival()) {
                 if (townMember && role != Role.NONE) {
-                    if (tickCount % 400 == 0) enqueueRoleWork();
+                    // Fulfill a specific town need first (e.g. mine the iron the
+                    // board is asking for), then fall back to generic role work.
+                    if (tickCount % 400 == 0 && !decideTownWork()) enqueueRoleWork();
                 } else if (!decideProgress() && role != Role.NONE && tickCount % 400 == 0) {
                     enqueueRoleWork();
                 }

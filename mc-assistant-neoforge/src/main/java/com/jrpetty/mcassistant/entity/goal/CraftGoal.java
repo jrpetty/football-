@@ -138,6 +138,7 @@ public class CraftGoal extends Goal {
         // Have the materials?
         for (Step step : plan.steps()) {
             if (assistant.countMatching(step.what()) < step.count()) {
+                assistant.postMaterialNeed(step.label()); // ask the town for it (if in one)
                 finish("I need " + step.count() + " " + step.label() + " to craft " + pretty(job.arg())
                     + (crafted > 0 ? " (made " + crafted + " so far)" : "")
                     + " — I can gather or you can hand it to me.");
