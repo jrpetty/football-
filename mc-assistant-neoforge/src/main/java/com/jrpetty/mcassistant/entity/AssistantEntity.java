@@ -221,6 +221,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private net.minecraft.world.phys.Vec3 lastPathPos = net.minecraft.world.phys.Vec3.ZERO; // stuck detector
     private int stuckStreak; // consecutive ~1s windows spent going nowhere while pathing
     private int quartermasterCd; // cooldown between handing the owner supplies
+    private int distressCd;      // cooldown between calls for crew backup
     private String assistantName = "assistant";
     private boolean autonomous;
     private final NonNullList<ItemStack> inventory = NonNullList.withSize(INVENTORY_SIZE, ItemStack.EMPTY);
@@ -1878,6 +1879,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // Quartermaster: a companion looks after its player. If the owner is
         // close and running on empty while we're carrying spare food, hand some
         // over before doing anything else.
+        if (distressCd > 0) distressCd--;
         if (quartermasterCd > 0) quartermasterCd--;
         if (tickCount % 40 == 0 && quartermasterCd == 0 && !retreating && getTarget() == null) {
             Player owner = getOwnerPlayer();
@@ -2088,7 +2090,41 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
         boolean took = super.hurt(source, fromOwner ? amount * 0.5F : amount);
         if (took) this.lastDamageTick = this.tickCount;
+        // Distress call: taking real damage from a hostile while actually in
+        // trouble rallies nearby crewmates to come fight it off.
+        if (took && !this.level().isClientSide && distressCd == 0
+            && source.getEntity() instanceof Monster foe && foe.isAlive()
+            && (getHealth() < getMaxHealth() * 0.6F || threatCount(8.0) >= 2)) {
+            callForHelp(foe);
+            distressCd = 100; // ~5s between shouts
+        }
         return took;
+    }
+
+    /** Rally the crew: idle, able crewmates within earshot drop what they're
+     *  doing and come defend against the attacker. Teamwork under fire. */
+    private void callForHelp(Monster attacker) {
+        if (ownerId == null) return;
+        int rallied = 0;
+        for (AssistantEntity mate : allFor(ownerId)) {
+            if (mate == this || !mate.isAlive()) continue;
+            if (mate.distanceToSqr(this) > 32.0 * 32.0) continue; // out of earshot
+            if (mate.respondToDistress(this, attacker)) rallied++;
+        }
+        if (rallied > 0) say("Under attack — " + rallied + " coming to help!");
+    }
+
+    /** Answer a crewmate's distress call. Returns true if we actually turned to
+     *  help (idle, healthy enough, not on hold, not already fighting). */
+    public boolean respondToDistress(AssistantEntity ally, Monster attacker) {
+        if (retreating || mode == Mode.STAY) return false;
+        if (getTarget() != null || attacker == null || !attacker.isAlive()) return false;
+        if (getHealth() < getMaxHealth() * 0.35F) return false; // too hurt to spare
+        equipBestWeapon();
+        setTarget(attacker);
+        this.getNavigation().moveTo(attacker, 1.3D);
+        say("On my way — hold on, " + ally.displayNameCap() + "!");
+        return true;
     }
 
     /** Drop the backpack AND worn gear on the ground — used on death and on

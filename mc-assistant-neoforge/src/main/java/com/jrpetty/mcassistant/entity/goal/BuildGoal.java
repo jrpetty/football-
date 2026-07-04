@@ -42,7 +42,7 @@ public class BuildGoal extends Goal {
 
     public static final Set<String> STRUCTURES = Set.of(
         "wall", "platform", "shelter", "smeltery", "storage", "workshop", "watchtower",
-        "house", "room", "pen");
+        "house", "room", "pen", "fortify");
 
     /** What goes in a blueprint cell. */
     public enum Part { BLOCK, FURNACE, CHEST, CRAFTING_TABLE, TORCH, LADDER, FENCE, GATE, WINDOW }
@@ -136,7 +136,10 @@ public class BuildGoal extends Goal {
             return;
         }
         this.facing = Direction.fromYRot(assistant.getYRot());
-        layout(structure, assistant.feetPos(), facing, plan);
+        // Fortify rings the base itself (home if set), not a spot in front of us.
+        BlockPos base = "fortify".equals(structure) && assistant.getHome() != null
+            ? assistant.getHome() : assistant.feetPos();
+        layout(structure, base, facing, plan);
         // Bottom-up so nothing floats while we work.
         this.plan.sort(java.util.Comparator
             .comparingInt((Placement p) -> p.pos().getY())
@@ -172,7 +175,9 @@ public class BuildGoal extends Goal {
             finish("Before I can build the " + structure + " I still need: " + String.join(", ", missing) + ".");
             return;
         }
-        assistant.say("Building a " + structure + " — " + totalPending + " parts to place.");
+        assistant.say("fortify".equals(structure)
+            ? "Fortifying the base — walling a perimeter, " + totalPending + " blocks to place."
+            : "Building a " + structure + " — " + totalPending + " parts to place.");
     }
 
     @Override
@@ -378,6 +383,29 @@ public class BuildGoal extends Goal {
                         BlockPos col = cell(center, right, facing, dx, dz);
                         boolean isGate = dx == 0 && dz == -3;
                         out.add(new Placement(col, isGate ? Part.GATE : Part.FENCE));
+                    }
+                }
+            }
+            case "fortify" -> {
+                // A defensive perimeter wall around the base, 3 blocks high, with
+                // a one-wide chokepoint doorway on the side we're facing and a
+                // torch on each corner so nothing spawns along it. `feet` here is
+                // the center (home if set) — the ring is built around it.
+                int r = 5;
+                for (int dx = -r; dx <= r; dx++) {
+                    for (int dz = -r; dz <= r; dz++) {
+                        if (Math.abs(dx) != r && Math.abs(dz) != r) continue; // perimeter only
+                        if (dx == 0 && dz == -r) continue; // front-center doorway (left open)
+                        BlockPos col = cell(feet, right, facing, dx, dz);
+                        for (int h = 0; h <= 2; h++) {
+                            out.add(new Placement(col.above(h), Part.BLOCK));
+                        }
+                    }
+                }
+                for (int sx = -1; sx <= 1; sx += 2) {
+                    for (int sz = -1; sz <= 1; sz += 2) {
+                        out.add(new Placement(
+                            cell(feet, right, facing, sx * r, sz * r).above(3), Part.TORCH));
                     }
                 }
             }

@@ -157,7 +157,7 @@ public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount,
             case CRAFT -> "craft " + amount + " " + arg;
             case WITHDRAW -> "withdraw " + amount + " " + arg;
             case FARM -> "tend the farm";
-            case BUILD -> "build a " + arg;
+            case BUILD -> "fortify".equals(arg) ? "fortify the base" : "build a " + arg;
             case SMELT -> "smelt " + amount + " " + arg;
             case MINE -> "dig a mine to Y" + amount;
             case HUNT -> "hunt " + amount + " " + (arg != null ? arg : "animals");

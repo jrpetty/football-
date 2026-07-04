@@ -88,6 +88,11 @@ door, 2 chests, crafting table, torch), **storage** (4 chests), **workshop**
 Every part is a real item from its pack; missing parts are itemized with the
 craft order to say — so "build me a house" gathers/crafts what it lacks first.
 
+`fortify` (also `fortify the base` / `wall off the base` / `build a wall around
+the base`) — rings the whole base with a **defensive perimeter wall**, 3 blocks
+high, centered on **home** (if set, else where it's standing), with a one-wide
+chokepoint doorway and a torch on every corner so nothing spawns along it.
+
 ## 7. Farming & animals
 
 | Say | Does |
@@ -156,6 +161,9 @@ auto <on|off> · night <on|off> · rename <name> · dismiss`
   amount automatically.
 - **Quartermaster** — if the owner is nearby and running on empty while the
   assistant carries spare food, it walks over and hands some off, unprompted.
+- **Distress call** — a crewmate taking real damage while genuinely in trouble
+  (hurt or facing 2+ mobs) rallies nearby idle, able crew: they equip their best
+  weapon, rush over, and pile onto the attacker. Teamwork under fire, no orders.
 - **Scheduled chores** — recurring upkeep on a timer (`tend the farm every
   20 minutes`); fires when idle and due, survives relogs, `stop routines` ends it.
 - **Storage memory** — remembers the contents of every chest it touches.

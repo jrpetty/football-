@@ -583,6 +583,15 @@ public final class ChatControl {
             return Action.of(Action.Type.FARM);
         }
 
+        // Fortify: ring the whole base with a defensive wall (centered on home
+        // if set). Catches "fortify (the base)", "wall off the base", and
+        // "build a wall around the base" before the plain single-wall builder.
+        if (c.contains("fortify")
+            || c.contains("wall off")
+            || (c.contains("wall") && (c.contains("around") || c.contains("perimeter")))) {
+            return Action.with(Action.Type.BUILD, "fortify", 0);
+        }
+
         // Building: "build a shelter", "build a furnace building", "construct a wall".
         if (c.matches("^(?:build|construct)\\b.*")) {
             Matcher bw = BUILD_WORD.matcher(c);
@@ -782,7 +791,7 @@ public final class ChatControl {
                 case HELP -> a.say("Talk to me like a person — orders chain with \"and\"/\"then\" and queue up. I understand: "
                     + "gather/mine/chop (logs, stone, dirt, iron, coal), \"dig a mine (down to level 12)\", deposit, "
                     + "\"grab X from the chest\", \"give me 10 torches\", smelt/cook, craft/make (tools, armor, bow, arrows...), "
-                    + "\"build a wall/shelter/smeltery/storage/workshop/watchtower\", \"bridge forward\", \"clear a 10x10 area\", "
+                    + "\"build a wall/shelter/smeltery/storage/workshop/watchtower\", \"fortify the base\", \"bridge forward\", \"clear a 10x10 area\", "
                     + "\"light up the area\", farm/harvest, \"hunt 3 cows\", \"breed the cows\", \"bring 2 cows home\", "
                     + "\"shear the sheep\", \"catch 5 fish\", \"pick up the items\", \"repair your pickaxe\", "
                     + "\"find the nearest village\", \"patrol between home and the mine\", \"head home at night\", "
