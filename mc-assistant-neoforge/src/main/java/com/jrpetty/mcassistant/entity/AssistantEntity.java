@@ -960,11 +960,37 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 return true;
             }
         }
-        // --- Food-secure: opportunistic renewable food. ---
-        if (cropsNearby()) { say("Tending the crops for renewable food."); enqueue(Job.farm()); return true; }
+        // --- Food-secure: renewable food. Harvest ripe crops; else bootstrap a
+        //     farm from scratch (FarmGoal tills + plants); else breed a herd. ---
+        if (matureCropsNearby()) { say("Harvesting the crops."); enqueue(Job.farm()); return true; }
+        if (!cropsNearby() && (hasSeeds() || grassNearby())) {
+            say("Setting up a small farm for steady food.");
+            enqueue(Job.farm());
+            return true;
+        }
         if (animalsNearby() && countCarried(BREEDING_FOOD) >= 4) {
             say("Breeding the animals for a steady food supply.");
             enqueue(Job.breed(null, 2));
+            return true;
+        }
+        // --- Diamond tier: only once fully iron-safe (deep mining is riskiest). ---
+        if (piece == null && bestPickTier() >= 3 && countFood() > 0) {
+            String gem = nextDiamondPiece();
+            if (gem != null) {
+                if (countCarried(s -> s.is(Items.DIAMOND)) >= diamondCost(gem)) {
+                    CraftPlanner.Result plan = CraftPlanner.plan(this, gem, 1);
+                    if (!plan.jobs().isEmpty()) { announcePlan("Forging " + CraftPlanner.pretty(gem), plan); return true; }
+                } else {
+                    say("Fully kitted in iron — digging deep for diamonds now.");
+                    enqueue(Job.mine(-54));
+                    return true;
+                }
+            }
+        }
+        // --- Enchanting: multiply the gear we've got (needs a table + lapis + XP). ---
+        if (enchantingReady()) {
+            say("Enchanting my gear at the table.");
+            enqueue(Job.enchant("gear"));
             return true;
         }
         return false;
@@ -1042,6 +1068,66 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private boolean animalsNearby() {
         return !level().getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class,
             getBoundingBox().inflate(12.0), a -> a.isAlive() && !a.isBaby()).isEmpty();
+    }
+
+    private boolean matureCropsNearby() {
+        BlockPos feet = feetPos();
+        for (BlockPos pos : BlockPos.betweenClosed(feet.offset(-12, -2, -12), feet.offset(12, 2, 12))) {
+            if (level().getBlockState(pos).getBlock()
+                    instanceof net.minecraft.world.level.block.CropBlock crop
+                && crop.isMaxAge(level().getBlockState(pos))) return true;
+        }
+        return false;
+    }
+
+    private boolean grassNearby() {
+        BlockPos feet = feetPos();
+        for (BlockPos pos : BlockPos.betweenClosed(feet.offset(-10, -2, -10), feet.offset(10, 2, 10))) {
+            BlockState st = level().getBlockState(pos);
+            if (st.is(Blocks.SHORT_GRASS) || st.is(Blocks.TALL_GRASS) || st.is(Blocks.FERN)) return true;
+        }
+        return false;
+    }
+
+    private boolean hasSeeds() {
+        return countMatching(s -> s.is(Items.WHEAT_SEEDS) || s.is(Items.BEETROOT_SEEDS)
+            || s.is(Items.CARROT) || s.is(Items.POTATO)) > 0;
+    }
+
+    /** Highest-value diamond kit piece still missing, or null when fully diamond. */
+    @Nullable
+    private String nextDiamondPiece() {
+        String[] order = {"diamond_pickaxe", "diamond_sword", "diamond_chestplate",
+                          "diamond_helmet", "diamond_leggings", "diamond_boots"};
+        for (String id : order) {
+            net.minecraft.world.item.Item it = RecipeBook.item(id);
+            if (it == Items.AIR) continue;
+            if (countCarried(s -> s.is(it)) == 0) return id;
+        }
+        return null;
+    }
+
+    private static int diamondCost(String id) {
+        return switch (id) {
+            case "diamond_chestplate" -> 8;
+            case "diamond_leggings" -> 7;
+            case "diamond_helmet" -> 5;
+            case "diamond_boots" -> 4;
+            case "diamond_pickaxe" -> 3;
+            case "diamond_sword" -> 2;
+            default -> 1;
+        };
+    }
+
+    /** Opportunistic enchanting: a table nearby, lapis in the pack, and a level
+     *  of banked XP to spend. EnchantGoal handles the fair XP/lapis accounting. */
+    private boolean enchantingReady() {
+        if (getXp() < 40 || countCarried(s -> s.is(Items.LAPIS_LAZULI)) == 0) return false;
+        BlockPos feet = feetPos();
+        for (BlockPos pos : BlockPos.betweenClosed(feet.offset(-8, -3, -8), feet.offset(8, 3, 8))) {
+            if (level().getBlockState(pos).is(Blocks.ENCHANTING_TABLE)) return true;
+        }
+        return false;
     }
 
     // ------------------------------ food & health ----------------------------

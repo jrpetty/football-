@@ -228,8 +228,13 @@ blueprints, web dashboard) are not in the mod yet.
   piece) → **food-secure** (tends a nearby farm or breeds animals for renewable
   food). The ordering is deliberately risk-adjusted: iron *armor* (the biggest
   survivability jump) comes before diamonds, and renewable food before luxuries.
-  When fully equipped it settles into maintenance/role work — a self-sufficient
-  agent with surplus to share (the on-ramp to multi-AI cooperation).
+  Once fully iron-safe it goes on to **diamonds** (deep-mines, forges diamond
+  gear) and, opportunistically, **enchants** its gear at a table with banked XP
+  and lapis. When fully equipped it settles into maintenance/role work — a
+  self-sufficient agent with surplus to share (the on-ramp to multi-AI work).
+- **Farming from scratch** — food security is now unconditional: with no farm to
+  tend, it bootstraps one — breaks grass for seeds, tills nearby dirt into
+  farmland, plants a plot — then tends it forever after.
 - **Idle initiative** — with a role set, once survival needs are met it also
   does role work by itself (mine/chop/farm/stock materials + deposit) and
   backs off when an area is tapped out. "take a break" stops it. This is the
