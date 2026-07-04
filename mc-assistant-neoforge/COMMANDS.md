@@ -100,7 +100,8 @@ item from its pack; missing parts are itemized with the craft order to say.
 |---|---|
 | `what do you see?` / `look around` | Nearby hostiles, animals, ground loot |
 | `find the nearest village` (mineshaft/shipwreck/stronghold/portal) | Real structure locator → distance + bearing + saved waypoint (`go to village`) |
-| `work on your own` / `take a break` | Idle initiative on/off — role work self-queues when idle |
+| `survive` / `fend for yourself` / `work on your own` | Survival brain on — self-preserves when idle: gets food, keeps a working pickaxe, repairs worn tools, stashes a full pack, keeps wood on hand. Add a role for stockpiling too. |
+| `take a break` / `wait for orders` | Autonomy off |
 | `head home at night` / `work nights` | Night routine on/off |
 | `status` / `how are you` | HP, mode, role, auto, items, food, jobs, standing orders |
 | `jobs` / `what are you doing` | The queue, in order |

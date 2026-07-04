@@ -311,7 +311,10 @@ public final class ChatControl {
             return Action.of(Action.Type.NEEDS);
         }
         if (c.contains("work on your own") || c.matches("^auto\\s*on\\b.*")
-            || c.contains("be autonomous") || c.contains("do your own thing")) {
+            || c.contains("be autonomous") || c.contains("do your own thing")
+            || c.contains("survive") || c.contains("fend for yourself")
+            || c.contains("look after yourself") || c.contains("stay alive")
+            || c.contains("keep yourself alive")) {
             return Action.of(Action.Type.AUTO_ON);
         }
 
@@ -961,8 +964,8 @@ public final class ChatControl {
                 case AUTO_ON -> {
                     a.setAutonomous(true);
                     a.say(a.getRole() == AssistantEntity.Role.NONE
-                        ? "I'll work on my own — give me a role first (\"be a miner/lumberjack/farmer/builder\")."
-                        : "On it — I'll keep doing " + a.getRole().name().toLowerCase() + " work whenever I'm idle.");
+                        ? "I'll fend for myself now — I'll keep fed, keep a working pickaxe, repair my gear, and take initiative when I'm idle. Give me a role (miner/lumberjack/farmer/builder) if you want me stockpiling too."
+                        : "On it — I'll look after myself and keep doing " + a.getRole().name().toLowerCase() + " work whenever I'm idle.");
                 }
                 case AUTO_OFF -> {
                     a.setAutonomous(false);

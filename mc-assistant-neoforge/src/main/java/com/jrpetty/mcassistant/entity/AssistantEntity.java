@@ -796,6 +796,69 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         return needs;
     }
 
+    /**
+     * The 'decide' rung of autonomy. When idle, the assistant looks after
+     * itself before doing any busywork — stash a full pack, get food, keep a
+     * working pickaxe, replace a worn-out tool, keep wood on hand. It picks the
+     * single most pressing action, announces it, and queues it; returns true if
+     * it took initiative this cycle.
+     *
+     * This is the heart of the end goal: dropped into the world with autonomy
+     * on, it keeps itself fed, armed, and alive without being told.
+     */
+    private boolean decideSurvival() {
+        // 1) Pack full — stash so it can keep working (only if a chest exists).
+        if (isPackFull() && findChestWith(s -> true, 24) != null) {
+            say("Pack's full — stashing before I carry on.");
+            enqueue(Job.deposit());
+            return true;
+        }
+        // 2) Out of food — no food means no healing. Go hunt something to eat.
+        if (countFood() == 0) {
+            say("I'm out of food — hunting something to eat.");
+            enqueue(Job.hunt(null, 3));
+            return true;
+        }
+        // 3) No pickaxe — it can't mine stone or ore at all; make one, sourcing
+        //    the wood/stone itself via the planner.
+        if (countMatching(AssistantEntity::isPickaxe) == 0) {
+            String target = countMatching(s -> s.is(net.minecraft.world.item.Items.COBBLESTONE)
+                || s.is(net.minecraft.world.item.Items.COBBLED_DEEPSLATE)) >= 3
+                ? "stone_pickaxe" : "wooden_pickaxe";
+            CraftPlanner.Result plan = CraftPlanner.plan(this, target, 1);
+            if (!plan.jobs().isEmpty()) {
+                say("I need a pickaxe — " + String.join(", ", plan.narration()) + ".");
+                for (Job j : plan.jobs()) enqueue(j);
+                return true;
+            }
+        }
+        // 4) Main tool nearly broken — replace it before it snaps.
+        ItemStack tool = getMainHandItem();
+        if (tool.isDamageableItem() && tool.getMaxDamage() > 0
+            && tool.getDamageValue() > tool.getMaxDamage() * 0.9) {
+            String id = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(tool.getItem()).getPath();
+            CraftPlanner.Result plan = CraftPlanner.plan(this, id, 1);
+            if (!plan.jobs().isEmpty()) {
+                say("My " + tool.getHoverName().getString() + " is nearly broken — making a fresh one.");
+                for (Job j : plan.jobs()) enqueue(j);
+                return true;
+            }
+        }
+        // 5) Keep wood on hand — it's the root of the tech tree and self-repair.
+        if (countMatching(s -> s.is(ItemTags.LOGS)) == 0
+            && countMatching(s -> s.is(ItemTags.PLANKS)) < 4) {
+            say("Low on wood — getting some.");
+            enqueue(Job.gather(GatherGoal.Kind.LOGS, 12));
+            return true;
+        }
+        return false;
+    }
+
+    private static boolean isPickaxe(ItemStack s) {
+        return net.minecraft.core.registries.BuiltInRegistries.ITEM
+            .getKey(s.getItem()).getPath().endsWith("_pickaxe");
+    }
+
     // ------------------------------ food & health ----------------------------
 
     private int findFoodSlot() {
@@ -1188,12 +1251,15 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             checkStandingOrders();
         }
 
-        // Idle initiative: with autonomy on and nothing to do, pick role work
-        // (but not at night if it's supposed to be home in bed).
-        if (autonomous && role != Role.NONE && jobs.isEmpty() && !retreating
-            && mode != Mode.STAY && tickCount % 400 == 0 && tickCount >= idleBackoffUntil
+        // Idle initiative: with autonomy on and nothing to do, look after
+        // survival first (the 'decide' rung), then fall back to role busywork.
+        // (Not at night if it's supposed to be home in bed.)
+        if (autonomous && jobs.isEmpty() && !retreating
+            && mode != Mode.STAY && tickCount % 200 == 0 && tickCount >= idleBackoffUntil
             && !(nightHome && this.level().isNight())) {
-            enqueueRoleWork();
+            if (!decideSurvival() && role != Role.NONE && tickCount % 400 == 0) {
+                enqueueRoleWork();
+            }
         }
 
         // Live HP nametag (name + hearts, colored by health).

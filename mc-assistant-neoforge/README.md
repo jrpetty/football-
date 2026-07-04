@@ -200,11 +200,18 @@ blueprints, web dashboard) are not in the mod yet.
 - **A crew, not a bot** — "spawn a miner named bob" (up to 10). Address
   one by name ("bob, gather stone") or talk normally for the nearest.
   Roles: miner, lumberjack, farmer, builder ("be a farmer").
-- **Idle initiative** — "work on your own": when its queue is empty it
-  does role work by itself (mine/chop/farm/stock materials + deposit),
-  eating and re-equipping as needed, and backs off when an area is
-  tapped out. "take a break" stops it. This is the town seed: a farmer,
-  a miner, a lumberjack and a builder around one chest run themselves.
+- **Survival brain** — "survive" / "fend for yourself": the 'decide' rung
+  of autonomy. When idle it looks after itself before any busywork, picking
+  the single most pressing action and announcing it: stash a full pack, hunt
+  when out of food (it eats to heal), craft a pickaxe from scratch when it has
+  none, replace a nearly-broken tool, keep wood on hand — all sourced by the
+  recursive planner. This is the end-goal seed: dropped into the world with
+  autonomy on, it keeps itself fed, armed, and alive without being told.
+- **Idle initiative** — with a role set, once survival needs are met it also
+  does role work by itself (mine/chop/farm/stock materials + deposit) and
+  backs off when an area is tapped out. "take a break" stops it. This is the
+  town seed: a farmer, a miner, a lumberjack and a builder around one chest
+  run themselves.
 - **Real mining** — "dig a mine" / "mine down to level 12": digs an
   actual torch-lit staircase to depth, opens a gallery, chases every ore
   vein it exposes, bridges cavities, and refuses to dig into lava/water.
