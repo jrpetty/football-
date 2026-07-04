@@ -36,6 +36,7 @@ stacks" = 128, "ten by ten" = 10×10.
 | `go home` | Walks to its home point and holds |
 | `set home here` / `this is home` | Sets home at its spot |
 | `remember this spot as the mine` / `call this place X` | Saves a named waypoint |
+| **Place Marker** item (rename in an anvil → right-click a spot) | Saves that spot (or where you stand, if you right-click air) as that named waypoint — the hand-held way to name a place. Craft: paper over a stick |
 | `go to the mine` | Travels there — a real queued job, chains in order |
 | `go to 120 64 -300` / `meet me at ...` | Navigates to raw coordinates |
 | `boat to 200 63 -400` | Sails a carried boat toward the coords (experimental) |
@@ -184,3 +185,7 @@ auto <on|off> · night <on|off> · rename <name> · dismiss`
   always get a reply; a bad command never breaks the listener.
 - **Assistant Spawner block** — craftable (8 iron + 1 diamond); right-click
   to summon your assistant and set its home point.
+- **Place Marker item** — craftable (paper over a stick). Rename it in an
+  anvil to a place name ("mine", "base"), then right-click a block to save
+  that spot (or right-click air to save where you stand) as that named
+  waypoint. Reusable — rename and re-use to label as many places as you like.

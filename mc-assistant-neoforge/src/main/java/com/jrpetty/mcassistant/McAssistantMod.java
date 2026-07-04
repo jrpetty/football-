@@ -3,6 +3,7 @@ package com.jrpetty.mcassistant;
 import com.jrpetty.mcassistant.block.AssistantSpawnerBlock;
 import com.jrpetty.mcassistant.block.JobBoardBlock;
 import com.jrpetty.mcassistant.entity.AssistantEntity;
+import com.jrpetty.mcassistant.item.PlaceMarkerItem;
 import com.jrpetty.mcassistant.menu.AssistantMenu;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.EntityType;
@@ -78,6 +79,11 @@ public final class McAssistantMod {
     public static final DeferredItem<BlockItem> JOB_BOARD_ITEM =
         ITEMS.registerSimpleBlockItem(JOB_BOARD);
 
+    // The Place Marker item: rename it in an anvil to a place name, then
+    // right-click a spot to save it as that named waypoint for your assistant.
+    public static final DeferredItem<PlaceMarkerItem> PLACE_MARKER =
+        ITEMS.registerItem("place_marker", PlaceMarkerItem::new);
+
     public McAssistantMod(IEventBus modBus) {
         ENTITY_TYPES.register(modBus);
         MENU_TYPES.register(modBus);
@@ -100,6 +106,9 @@ public final class McAssistantMod {
         if (event.getTabKey() == CreativeModeTabs.FUNCTIONAL_BLOCKS) {
             event.accept(ASSISTANT_SPAWNER_ITEM);
             event.accept(JOB_BOARD_ITEM);
+        }
+        if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
+            event.accept(PLACE_MARKER);
         }
     }
 }
