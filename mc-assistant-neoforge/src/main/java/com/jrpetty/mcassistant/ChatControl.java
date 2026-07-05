@@ -64,7 +64,7 @@ public final class ChatControl {
         "^(?:your name is|call yourself|i'?ll call you|rename(?:\\s+yourself)?(?:\\s+to)?)\\s+([a-z0-9_]{2,16})\\b");
     private static final Pattern BUILD_WORD = Pattern.compile(
         "\\b(wall|platform|shelter|hut|house|home|room|smeltery|forge|furnace|storage|warehouse|"
-        + "workshop|watchtower|tower|pen|enclosure|barn|pasture|fence)\\b");
+        + "workshop|watchtower|tower|lighthouse|beacon|column|pillar|marker|pen|enclosure|barn|pasture|fence)\\b");
     private static final Pattern MINE_LEVEL = Pattern.compile("\\b(?:level|y)\\s*(-?\\d+)\\b");
     // Anchored to the end so "mine diamonds" hits but "make a diamond sword" (an
     // item to craft, not raw ore) does not.
@@ -676,6 +676,8 @@ public final class ChatControl {
             case "forge", "furnace" -> "smeltery";
             case "warehouse" -> "storage";
             case "tower" -> "watchtower";
+            case "lighthouse", "beacon" -> "lighthouse";
+            case "column", "pillar", "marker" -> "column";
             case "enclosure", "barn", "pasture", "fence" -> "pen";
             default -> word;
         };

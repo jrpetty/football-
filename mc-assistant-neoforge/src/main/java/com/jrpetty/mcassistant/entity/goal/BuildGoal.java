@@ -42,7 +42,7 @@ public class BuildGoal extends Goal {
 
     public static final Set<String> STRUCTURES = Set.of(
         "wall", "platform", "shelter", "smeltery", "storage", "workshop", "watchtower",
-        "house", "room", "pen", "fortify");
+        "house", "room", "pen", "fortify", "lighthouse", "column");
 
     /** What goes in a blueprint cell. */
     public enum Part { BLOCK, FURNACE, CHEST, CRAFTING_TABLE, TORCH, LADDER, FENCE, GATE, WINDOW }
@@ -408,6 +408,42 @@ public class BuildGoal extends Goal {
                             cell(feet, right, facing, sx * r, sz * r).above(3), Part.TORCH));
                     }
                 }
+            }
+            case "lighthouse" -> {
+                // A tall lit tower: a 3x3 hollow column with a ladder up the
+                // middle, a walled deck, and a four-torch crown — a landmark you
+                // can see (and path home to) from a long way off.
+                BlockPos base = feet.relative(facing, 3);
+                int wallTop = 9, deck = 10, rim = 11, torch = 12;
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dz = -1; dz <= 1; dz++) {
+                        boolean edge = Math.abs(dx) == 1 || Math.abs(dz) == 1;
+                        BlockPos col = cell(base, right, facing, dx, dz);
+                        if (edge) {
+                            for (int h = 0; h <= wallTop; h++) {
+                                if (dx == 0 && dz == -1 && h <= 1) continue; // doorway
+                                out.add(new Placement(col.above(h), Part.BLOCK));
+                            }
+                            out.add(new Placement(col.above(rim), Part.BLOCK)); // top rail
+                        }
+                        if (!(dx == 0 && dz == 0)) {
+                            out.add(new Placement(col.above(deck), Part.BLOCK)); // deck (shaft open)
+                        }
+                    }
+                }
+                for (int h = 0; h <= deck; h++) out.add(new Placement(base.above(h), Part.LADDER));
+                for (int sx = -1; sx <= 1; sx += 2) {
+                    for (int sz = -1; sz <= 1; sz += 2) {
+                        out.add(new Placement(cell(base, right, facing, sx, sz).above(torch), Part.TORCH));
+                    }
+                }
+            }
+            case "column" -> {
+                // A simple marker pillar with a torch on top — cheap, and handy as
+                // a beacon it can build anywhere to mark a spot.
+                BlockPos base = feet.relative(facing, 2);
+                for (int h = 0; h <= 4; h++) out.add(new Placement(base.above(h), Part.BLOCK));
+                out.add(new Placement(base.above(5), Part.TORCH));
             }
             case "watchtower" -> {
                 BlockPos base = feet.relative(facing, 3);

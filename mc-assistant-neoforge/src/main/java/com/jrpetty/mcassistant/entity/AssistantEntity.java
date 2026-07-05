@@ -175,9 +175,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b12 · reaches resources it can't walk to (digs through blocks in the way, pillars up, bridges gaps) · "
-        + "autonomy overhaul (instant start, no stalls) · self-sourcing crafting · "
-        + "routines · fortify · distress · self-test · place-marker · Job Board in the recipe book";
+        "2026-07-b13 · solo self-sufficiency: auto-establishes a home base with a storage chest, then climbs the tree · "
+        + "reaches resources by digging/pillaring/bridging · autonomy overhaul (instant, no stalls) · "
+        + "self-sourcing crafting · more builds (lighthouse, column) · routines · fortify · distress · self-test";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -1148,6 +1148,29 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             CraftPlanner.Result plan = CraftPlanner.plan(this, "furnace", 1);
             if (!plan.jobs().isEmpty()) { announcePlan("Setting up a furnace", plan); return true; }
         }
+        // --- Home base: a solo bot claims one spot as home, with a storage chest,
+        //     so it has somewhere to return at night and stash surplus (which also
+        //     ends "pack full, nowhere to deposit" stalls). Done once. ---
+        boolean solo = ownerId == null || Town.center(ownerId) == null;
+        if (solo && homePos == null && onGround()) {
+            if (findAnyChest(10) != null) {
+                setHome(blockPosition());
+                setNightHome(true);
+                say("Setting up base by this chest — I'll stash here and head home at night.");
+                return true;
+            }
+            if (countCarried(s -> s.is(Items.CHEST)) > 0) {
+                if (placeChestNearby()) {
+                    setHome(blockPosition());
+                    setNightHome(true);
+                    say("Base set — dropped a storage chest here, and I'll head home at night.");
+                    return true;
+                }
+            } else {
+                CraftPlanner.Result plan = CraftPlanner.plan(this, "chest", 1);
+                if (!plan.jobs().isEmpty()) { announcePlan("Making a storage chest to set up base", plan); return true; }
+            }
+        }
         boolean coalObtainable = countCarried(s -> s.is(Items.COAL) || s.is(Items.CHARCOAL)) > 0
             || resourceNearby(GatherGoal.Kind.COAL, 16);
         if (bestPickTier() >= 2 && countCarried(s -> s.is(Items.TORCH)) < 8 && coalObtainable) {
@@ -1693,6 +1716,22 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             }
         }
         chestMemory.put(pos.asLong(), ids);
+    }
+
+    /** Put down a carried chest on solid ground beside us — the base depot. */
+    private boolean placeChestNearby() {
+        if (countMatching(s -> s.is(Items.CHEST)) == 0) return false;
+        BlockPos feet = feetPos();
+        for (net.minecraft.core.Direction d : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+            BlockPos p = feet.relative(d);
+            if (level().getBlockState(p).canBeReplaced()
+                && level().getBlockState(p.below()).isSolid()
+                && removeMatching(s -> s.is(Items.CHEST), 1) >= 1) {
+                level().setBlockAndUpdate(p, Blocks.CHEST.defaultBlockState());
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Nearest container that (per memory, then live scan) holds a match. */
