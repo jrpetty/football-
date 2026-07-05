@@ -175,7 +175,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b10 · autonomy overhaul: starts instantly on command, no more stalls (survival always runs, "
+        "2026-07-b11 · autonomy overhaul: starts instantly on command, no more stalls (survival always runs, "
         + "feasibility-gated, stop/night no longer trap it, always has fallback work) · self-sourcing crafting · "
         + "routines · fortify · distress · self-test · place-marker · Job Board in the recipe book";
 
@@ -1148,10 +1148,14 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             CraftPlanner.Result plan = CraftPlanner.plan(this, "furnace", 1);
             if (!plan.jobs().isEmpty()) { announcePlan("Setting up a furnace", plan); return true; }
         }
-        if (bestPickTier() >= 2 && countCarried(s -> s.is(Items.TORCH)) < 8) {
+        boolean coalObtainable = countCarried(s -> s.is(Items.COAL) || s.is(Items.CHARCOAL)) > 0
+            || resourceNearby(GatherGoal.Kind.COAL, 16);
+        if (bestPickTier() >= 2 && countCarried(s -> s.is(Items.TORCH)) < 8 && coalObtainable) {
             CraftPlanner.Result plan = CraftPlanner.plan(this, "torch", 8);
             if (!plan.jobs().isEmpty()) { announcePlan("Making torches for light", plan); return true; }
         }
+        // (No coal to be had here? Skip torches rather than looping on them — go
+        //  straight for iron, which matters more and lights its own mine.)
         // --- Iron-safe: the biggest survivability jump, built piece by piece. ---
         String piece = nextIronPiece();
         if (piece != null && bestPickTier() >= 2) {
@@ -2062,9 +2066,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // survival first (the 'decide' rung). Crew members on an active town
         // then do their assigned ROLE (their town duty) before any personal
         // advancement; solo bots advance themselves, then do role work.
+        boolean restingAtHome = nightHome && this.level().isNight()
+            && (parkedForNight || (homePos != null && homePos.distSqr(blockPosition()) < 24 * 24));
         if (autonomous && jobs.isEmpty() && !retreating && getTarget() == null
             && mode != Mode.STAY && (idleKick || tickCount % 200 == 0)
-            && !(nightHome && this.level().isNight())) {
+            && !restingAtHome) {
             idleKick = false;
             boolean townMember = ownerId != null && Town.center(ownerId) != null;
             // Survival ALWAYS runs — never held off by the idle-work cool-off; a
