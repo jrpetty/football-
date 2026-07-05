@@ -175,8 +175,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b11 · autonomy overhaul: starts instantly on command, no more stalls (survival always runs, "
-        + "feasibility-gated, stop/night no longer trap it, always has fallback work) · self-sourcing crafting · "
+        "2026-07-b12 · reaches resources it can't walk to (digs through blocks in the way, pillars up, bridges gaps) · "
+        + "autonomy overhaul (instant start, no stalls) · self-sourcing crafting · "
         + "routines · fortify · distress · self-test · place-marker · Job Board in the recipe book";
 
     // Player-parity reach: same as a survival player's default
