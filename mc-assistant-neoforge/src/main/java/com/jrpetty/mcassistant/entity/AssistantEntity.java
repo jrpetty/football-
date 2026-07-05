@@ -175,9 +175,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b13 · solo self-sufficiency: auto-establishes a home base with a storage chest, then climbs the tree · "
-        + "reaches resources by digging/pillaring/bridging · autonomy overhaul (instant, no stalls) · "
-        + "self-sourcing crafting · more builds (lighthouse, column) · routines · fortify · distress · self-test";
+        "2026-07-b14 · richer solo brain: picks up loot it earns, crafts a bow, builds up its base (shelter -> wall) · "
+        + "auto home base + storage · reaches resources by digging/pillaring/bridging · autonomy overhaul (instant, no stalls) · "
+        + "self-sourcing crafting · more builds · routines · fortify · distress · self-test";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -258,6 +258,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private boolean nightHome;        // "head home at night" toggle
     private boolean wentHomeTonight;  // one trip per night
     private boolean parkedForNight;   // the night routine parked it (un-park at dawn)
+    private int baseStage;            // how far it has built up its home base (0=just home+chest)
 
     // Experience points, earned fairly from its OWN kills, ore, and smelting —
     // spent (with lapis) at an enchanting table. Not vanilla XP levels; a plain
@@ -1230,6 +1231,32 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             enqueue(Job.enchant("gear"));
             return true;
         }
+        // --- Ranged kit: a bow once it has string (e.g. from spiders it fights),
+        //     then a quiver of arrows if the parts are on hand. ---
+        if (countCarried(s -> s.is(Items.BOW)) == 0 && countMatching(s -> s.is(Items.STRING)) >= 3) {
+            CraftPlanner.Result plan = CraftPlanner.plan(this, "bow", 1);
+            if (!plan.jobs().isEmpty() && plan.blockers().isEmpty()) { announcePlan("Crafting a bow for range", plan); return true; }
+        }
+        if (countCarried(s -> s.is(Items.BOW)) > 0 && countMatching(s -> s.is(Items.ARROW)) < 16) {
+            CraftPlanner.Result plan = CraftPlanner.plan(this, "arrow", 16);
+            if (!plan.jobs().isEmpty() && plan.blockers().isEmpty()) { announcePlan("Fletching arrows", plan); return true; }
+        }
+        // --- Build up the home base over time: a shelter, then a defensive wall,
+        //     once it's well-stocked with blocks. It makes base a real strongpoint. ---
+        if (solo && homePos != null && baseStage < 2) {
+            int need = baseStage == 0 ? 48 : 96;
+            if (countMatching(com.jrpetty.mcassistant.entity.goal.NightShelterGoal.SHELTER_BLOCK) >= need) {
+                if (homePos.distSqr(blockPosition()) > 100) {
+                    getNavigation().moveTo(homePos.getX() + 0.5, homePos.getY(), homePos.getZ() + 0.5, 1.1D);
+                    return true; // head to base; build once we're there
+                }
+                String s = baseStage == 0 ? "shelter" : "fortify";
+                say("Building up the base — " + s + ".");
+                enqueue(Job.build(s));
+                baseStage++;
+                return true;
+            }
+        }
         return false;
     }
 
@@ -1816,6 +1843,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         tag.putString("Name", assistantName);
         tag.putBoolean("Auto", autonomous);
         tag.putBoolean("NightHome", nightHome);
+        tag.putInt("BaseStage", baseStage);
         tag.putInt("Xp", xp);
         tag.putBoolean("ExpActive", expeditionActive);
         if (expeditionActive) {
@@ -1870,6 +1898,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (assistantName.isEmpty()) assistantName = "assistant";
         autonomous = tag.getBoolean("Auto");
         nightHome = tag.getBoolean("NightHome");
+        baseStage = tag.getInt("BaseStage");
         xp = tag.getInt("Xp");
         expeditionActive = tag.getBoolean("ExpActive");
         if (expeditionActive) {
@@ -1966,6 +1995,20 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             BlockPos water = findNearestWater(6);
             if (water != null) {
                 this.getNavigation().moveTo(water.getX() + 0.5, water.getY(), water.getZ() + 0.5, 1.6D);
+            }
+        }
+
+        // Item magnet: pick up loose drops we walk near — mob-kill loot (bone,
+        // string, gunpowder, arrows), stray resources — so nothing earned is
+        // wasted. Only when working on its own or guarding, so a following bot
+        // doesn't hoover up the player's dropped items.
+        if ((autonomous || mode == Mode.GUARD) && tickCount % 6 == 0 && !isPackFull()) {
+            for (net.minecraft.world.entity.item.ItemEntity drop
+                    : level().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                        getBoundingBox().inflate(1.4))) {
+                if (!drop.isAlive() || drop.hasPickUpDelay()) continue;
+                ItemStack left = insertItem(drop.getItem());
+                if (left.isEmpty()) drop.discard(); else drop.setItem(left);
             }
         }
 
