@@ -1403,7 +1403,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Can I fetch this material given my town role and my pickaxe tier? */
     private boolean canDoAsRole(GatherGoal.Kind kind) {
         boolean toolOk = switch (kind) {
-            case LOGS, DIRT -> true;
+            case LOGS, DIRT, SAND, GRAVEL -> true;
             case COAL, STONE -> bestPickTier() >= 1;
             case IRON -> bestPickTier() >= 2;
         };
@@ -2051,6 +2051,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case IRON -> s -> s.is(net.minecraft.world.item.Items.RAW_IRON)
                 || s.is(net.minecraft.world.item.Items.IRON_INGOT);
             case COAL -> s -> s.is(net.minecraft.world.item.Items.COAL);
+            case SAND -> s -> s.is(net.minecraft.world.item.Items.SAND)
+                || s.is(net.minecraft.world.item.Items.RED_SAND);
+            case GRAVEL -> s -> s.is(net.minecraft.world.item.Items.GRAVEL);
         };
     }
 
