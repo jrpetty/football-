@@ -175,9 +175,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b16 · watered farms: forges a bucket, fills it at water, and carves a contained source so crops stay hydrated "
-        + "(dry-farms when there's no water) · gathers sugar cane · hunts mobs at night for drops · bakes bread · picks up loot · "
-        + "crafts a bow · builds up its base · auto home + storage · reaches resources by digging/pillaring/bridging · "
+        "2026-07-b17 · smarter reach: when a resource is blocked it comes at it from another angle, digs/pillars/bridges a way in, "
+        + "or quickly gives up and goes after another of the same kind · watered farms (bucket + contained source) · gathers sugar cane · "
+        + "hunts mobs at night · bakes bread · picks up loot · crafts a bow · builds up its base · auto home + storage · "
         + "self-sourcing crafting · routines · fortify · distress · self-test";
 
     // Player-parity reach: same as a survival player's default

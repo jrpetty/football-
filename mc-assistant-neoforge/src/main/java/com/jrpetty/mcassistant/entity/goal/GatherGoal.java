@@ -92,6 +92,7 @@ public class GatherGoal extends Goal {
     @Nullable private BlockPos pillarBase; // feet spot we jumped from, to fill while pillaring up
     private int builtBlocks;               // blocks spent building a way to the target (capped)
     private int buildTicks;                // hard time cap on building so it can never loop forever
+    private boolean announcedReroute;      // say "going after another" only once per run
     private final java.util.Set<BlockPos> unreachable = new java.util.HashSet<>();
     private final java.util.Set<BlockPos> stumps = new java.util.HashSet<>(); // for replanting
 
@@ -130,6 +131,7 @@ public class GatherGoal extends Goal {
         this.pillarBase = null;
         this.builtBlocks = 0;
         this.buildTicks = 0;
+        this.announcedReroute = false;
         this.unreachable.clear();
         this.stumps.clear();
         if (assistant.isPackFull()) {
@@ -256,22 +258,32 @@ public class GatherGoal extends Goal {
             // pillar up to a higher block, or bridge a gap — instead of standing
             // there looking at it. Digging needs no blocks; pillar/bridge use
             // carried ones. Capped by time and block-count so it can't run away.
-            if (stuckTicks > 40 && buildTicks < 300 && builtBlocks < 32
+            if (stuckTicks > 30 && buildTicks < 300 && builtBlocks < 32
                 && buildToward(targetPos)) {
                 buildTicks++;
                 return; // actively making a path — don't count this as stuck time
             }
             if (assistant.getNavigation().isDone()) {
-                assistant.getNavigation().moveTo(
-                    targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5, 1.1D);
+                // Path's gone idle and we're still short. Look for a walkable cell
+                // beside the block and approach from THERE — trying another side if
+                // the nearest one is walled off, so a blocked approach isn't the end
+                // of it.
+                if (!repath(targetPos)) {
+                    // No side is reachable on foot. If we've already given building a
+                    // fair go (or it can't act), this block is a lost cause — drop it
+                    // and go find another of the same resource instead of standing here.
+                    if (stuckTicks > 30) {
+                        abandonTarget();
+                        return;
+                    }
+                    assistant.getNavigation().moveTo(
+                        targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5, 1.1D);
+                }
             }
-            // Truly can't get there even by building (no blocks, or building maxed
-            // out): blacklist it so findNearest picks something else (no infinite crawl).
+            // Hard backstop: even building couldn't get us there in time -> blacklist
+            // it so findNearest picks something else (no infinite crawl).
             if (++stuckTicks > 200) {
-                unreachable.add(targetPos);
-                targetPos = null;
-                pillarBase = null;
-                builtBlocks = 0;
+                abandonTarget();
             }
             return;
         }
@@ -434,6 +446,58 @@ public class GatherGoal extends Goal {
         int dz = to.getZ() - from.getZ();
         if (Math.abs(dx) >= Math.abs(dz)) return dx >= 0 ? Direction.EAST : Direction.WEST;
         return dz >= 0 ? Direction.SOUTH : Direction.NORTH;
+    }
+
+    /** Give up on the current block: blacklist it so findNearest won't re-pick it,
+     *  announce the reroute once, and clear build state so the next target starts
+     *  fresh. The next tick re-scans for another block of the same kind. */
+    private void abandonTarget() {
+        if (targetPos != null) unreachable.add(targetPos.immutable());
+        if (!announcedReroute && request != null) {
+            assistant.say("Can't reach that " + request.kind().label + " — going after another.");
+            announcedReroute = true;
+        }
+        targetPos = null;
+        pillarBase = null;
+        builtBlocks = 0;
+    }
+
+    /**
+     * Try to reach the target from a different angle: test the cells beside/under/
+     * atop it for one we can actually stand on AND path to, and walk to the nearest
+     * such cell. Returns true if it found a reachable approach and set course for
+     * it; false if no side of the block is reachable on foot right now.
+     */
+    private boolean repath(BlockPos target) {
+        BlockPos feet = assistant.feetPos();
+        java.util.List<BlockPos> cells = approachCells(target);
+        cells.sort(java.util.Comparator.comparingDouble(c -> c.distSqr(feet)));
+        for (BlockPos cell : cells) {
+            if (!standable(cell)) continue;
+            var path = assistant.getNavigation().createPath(cell, 0);
+            if (path != null && path.canReach()) {
+                assistant.getNavigation().moveTo(path, 1.1D);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Cells from which the block at t is within reach: beside it (same level and
+     *  one down, to mine sideways/upward) and directly on top of it (to mine down). */
+    private java.util.List<BlockPos> approachCells(BlockPos t) {
+        java.util.List<BlockPos> out = new java.util.ArrayList<>(9);
+        for (Direction d : Direction.Plane.HORIZONTAL) {
+            out.add(t.relative(d));
+            out.add(t.relative(d).below());
+        }
+        out.add(t.above());
+        return out;
+    }
+
+    /** A cell the assistant can occupy: solid floor, clear feet + head, no liquid. */
+    private boolean standable(BlockPos pos) {
+        return solid(pos.below()) && !solid(pos) && !solid(pos.above()) && !nearLiquid(pos);
     }
 
     @Nullable
