@@ -144,9 +144,10 @@ public class CraftGoal extends Goal {
             if (assistant.countMatching(step.what()) < step.count()) {
                 if (trySource()) return; // queued the parts; this craft retries after
                 assistant.postMaterialNeed(step.label()); // ask the town, if in one
-                finish("I still need " + step.count() + " " + step.label() + " for " + pretty(job.arg())
+                finish("I can't make " + pretty(job.arg()) + " — I'm missing " + step.count() + " " + step.label()
                     + (crafted > 0 ? " (made " + crafted + " so far)" : "")
-                    + " and can't gather or find it — hand it to me or stock a chest.");
+                    + ". It's not in my pack or a chest nearby, and I can't gather, mine, or hunt for it. "
+                    + "Hand it to me or stock a chest.");
                 return;
             }
         }

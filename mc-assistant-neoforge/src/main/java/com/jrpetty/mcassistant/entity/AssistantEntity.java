@@ -175,7 +175,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b8 · routines, fortify, distress, quartermaster, self-rescue dig/climb, smarter pathing, place-marker item, self-test, self-sources ores/mob-drops for crafting";
+        "2026-07-b9 · routines, fortify, distress, quartermaster, self-rescue dig/climb, smarter pathing, place-marker item, self-test, self-sources ores/mob-drops for crafting (checks chests, else says it can't make it)";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).

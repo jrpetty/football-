@@ -986,16 +986,16 @@ public final class ChatControl {
                     var plan = CraftPlanner.plan(a, act.arg(), act.amount());
                     if (plan.jobs().isEmpty() && plan.blockers().isEmpty()) {
                         a.say("You've already got " + what + " — it's in my pack or a chest here.");
-                    } else if (plan.jobs().isEmpty()) {
-                        a.say("To make " + what + " I'd need " + String.join(", ", plan.blockers())
-                            + " — I can't gather that or find it in a nearby chest. Put some in a chest or hand it to me.");
+                    } else if (!plan.blockers().isEmpty()) {
+                        // Checked my pack, the nearby chests, and everything I could
+                        // gather/mine/hunt — a part still can't be had, so say so
+                        // clearly and don't start work I can't finish.
+                        a.say("I can't make " + what + " — I'm missing " + String.join(", ", plan.blockers())
+                            + ". It's not in my pack or a chest nearby, and I can't gather, mine, or hunt for it. "
+                            + "Put some in a chest or hand it to me and I'll make it.");
                     } else {
                         for (Job j : plan.jobs()) a.enqueue(j);
                         a.say("To make " + what + ": " + String.join(", ", plan.narration()) + ". On it.");
-                        if (!plan.blockers().isEmpty()) {
-                            a.say("(Heads up — I'm still missing " + String.join(", ", plan.blockers())
-                                + "; I'll get as far as I can.)");
-                        }
                     }
                 }
                 case NEEDS -> a.say("Right now: " + String.join("; ", a.assessNeeds()) + ".");
