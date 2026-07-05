@@ -30,7 +30,8 @@ public class GatherGoal extends Goal {
         IRON("iron ore"),
         COAL("coal ore"),
         SAND("sand"),
-        GRAVEL("gravel");
+        GRAVEL("gravel"),
+        SUGAR_CANE("sugar cane");
 
         public final String label;
         Kind(String label) { this.label = label; }
@@ -45,6 +46,7 @@ public class GatherGoal extends Goal {
                 case COAL -> state.is(BlockTags.COAL_ORES);
                 case SAND -> state.is(BlockTags.SAND);
                 case GRAVEL -> state.is(net.minecraft.world.level.block.Blocks.GRAVEL);
+                case SUGAR_CANE -> state.is(net.minecraft.world.level.block.Blocks.SUGAR_CANE);
             };
         }
 
@@ -68,6 +70,7 @@ public class GatherGoal extends Goal {
             if (w.startsWith("dirt")) return DIRT;
             if (w.startsWith("sand")) return SAND;
             if (w.startsWith("gravel")) return GRAVEL;
+            if (w.startsWith("sugar") || w.startsWith("cane") || w.startsWith("reed")) return SUGAR_CANE;
             return null;
         }
     }

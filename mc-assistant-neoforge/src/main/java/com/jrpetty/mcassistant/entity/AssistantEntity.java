@@ -175,9 +175,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b14 · richer solo brain: picks up loot it earns, crafts a bow, builds up its base (shelter -> wall) · "
-        + "auto home base + storage · reaches resources by digging/pillaring/bridging · autonomy overhaul (instant, no stalls) · "
-        + "self-sourcing crafting · more builds · routines · fortify · distress · self-test";
+        "2026-07-b15 · fuller brain: gathers sugar cane (unlocks paper/books/bookshelves), hunts mobs at night for drops, "
+        + "bakes bread · picks up loot · crafts a bow · builds up its base · auto home + storage · "
+        + "reaches resources by digging/pillaring/bridging · self-sourcing crafting · routines · fortify · distress · self-test";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -1211,6 +1211,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             enqueue(Job.breed(null, 2));
             return true;
         }
+        // Bake bread from harvested wheat — better, keeps the larder up.
+        if (countMatching(s -> s.is(Items.WHEAT)) >= 3 && countFood() < 12) {
+            CraftPlanner.Result plan = CraftPlanner.plan(this, "bread", 1);
+            if (!plan.jobs().isEmpty() && plan.blockers().isEmpty()) { announcePlan("Baking bread", plan); return true; }
+        }
         // --- Diamond tier: only once fully iron-safe (deep mining is riskiest). ---
         if (piece == null && bestPickTier() >= 3 && countFood() > 0) {
             String gem = nextDiamondPiece();
@@ -1527,7 +1532,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Can I fetch this material given my town role and my pickaxe tier? */
     private boolean canDoAsRole(GatherGoal.Kind kind) {
         boolean toolOk = switch (kind) {
-            case LOGS, DIRT, SAND, GRAVEL -> true;
+            case LOGS, DIRT, SAND, GRAVEL, SUGAR_CANE -> true;
             case COAL, STONE -> bestPickTier() >= 1;
             case IRON -> bestPickTier() >= 2;
         };
@@ -2054,6 +2059,20 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             dangerCallouts();
         }
 
+        // Proactive night defense: well-armored, healthy and armed, an autonomous
+        // bot out at night seeks nearby hostiles instead of only reacting — it
+        // clears its ground and banks the drops (string, bone, gunpowder) + XP.
+        // Creepers are left to the ranged/dodge machinery, not chased into melee.
+        if (autonomous && mode != Mode.STAY && !retreating && getTarget() == null
+            && this.level().isNight() && tickCount % 40 == 0
+            && getArmorValue() >= 15 && getHealth() > getMaxHealth() * 0.75F
+            && weaponScore(getMainHandItem()) > 0 && !shouldDisengage()) {
+            Monster m = nearestMonster(18.0);
+            if (m != null && !(m instanceof Creeper)) {
+                setTarget(m);
+            }
+        }
+
         // Light the worksite: working in the dark invites mobs onto our head.
         if (tickCount % 60 == 0 && !jobs.isEmpty()) {
             torchIfDark();
@@ -2220,6 +2239,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case SAND -> s -> s.is(net.minecraft.world.item.Items.SAND)
                 || s.is(net.minecraft.world.item.Items.RED_SAND);
             case GRAVEL -> s -> s.is(net.minecraft.world.item.Items.GRAVEL);
+            case SUGAR_CANE -> s -> s.is(net.minecraft.world.item.Items.SUGAR_CANE);
         };
     }
 

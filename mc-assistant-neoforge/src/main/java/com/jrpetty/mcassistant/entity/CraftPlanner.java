@@ -338,6 +338,7 @@ public final class CraftPlanner {
     private static GatherGoal.Kind gatherFor(Item it) {
         if (it == Items.SAND || it == Items.RED_SAND) return GatherGoal.Kind.SAND;
         if (it == Items.GRAVEL) return GatherGoal.Kind.GRAVEL;
+        if (it == Items.SUGAR_CANE) return GatherGoal.Kind.SUGAR_CANE; // -> paper -> books -> shelves
         return null;
     }
 
