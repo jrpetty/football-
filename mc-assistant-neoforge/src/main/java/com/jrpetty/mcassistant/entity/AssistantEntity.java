@@ -24,6 +24,7 @@ import com.jrpetty.mcassistant.entity.goal.ShearGoal;
 import com.jrpetty.mcassistant.entity.goal.BoatGoal;
 import com.jrpetty.mcassistant.entity.goal.EnchantGoal;
 import com.jrpetty.mcassistant.entity.goal.EscapeGoal;
+import com.jrpetty.mcassistant.entity.goal.ExploreGoal;
 import com.jrpetty.mcassistant.entity.goal.DiagnosticsGoal;
 import com.jrpetty.mcassistant.entity.goal.NetherGoal;
 import com.jrpetty.mcassistant.entity.goal.NightShelterGoal;
@@ -175,10 +176,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b17 · smarter reach: when a resource is blocked it comes at it from another angle, digs/pillars/bridges a way in, "
-        + "or quickly gives up and goes after another of the same kind · watered farms (bucket + contained source) · gathers sugar cane · "
-        + "hunts mobs at night · bakes bread · picks up loot · crafts a bow · builds up its base · auto home + storage · "
-        + "self-sourcing crafting · routines · fortify · distress · self-test";
+        "2026-07-b18 · true independence: \"do your own thing\" fully detaches from the player (no trailing/teleporting) and it plays "
+        + "for itself · explores/relocates to fresh terrain when the area runs dry · smarter reach (approach from another angle) · "
+        + "watered farms · gathers sugar cane · hunts mobs at night · bakes bread · picks up loot · crafts a bow · builds up its base · "
+        + "auto home + storage · self-sourcing crafting · routines · fortify · distress · self-test";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -254,6 +255,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private int eatCooldown;
     private boolean retreating;
     private int idleBackoffUntil;
+    private float exploreHeading;      // scouting direction, kept so it spirals out rather than pacing
     private boolean idleKick;          // run the idle brain immediately once autonomy is switched on
     private int lastWarnTick = -1000;
     private boolean nightHome;        // "head home at night" toggle
@@ -405,6 +407,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         this.goalSelector.addGoal(2, new NetherGoal(this)); // retreat (prio 1) still preempts
         this.goalSelector.addGoal(2, new BoatGoal(this));
         this.goalSelector.addGoal(2, new DiagnosticsGoal(this)); // "run diagnostics" self-test
+        this.goalSelector.addGoal(2, new ExploreGoal(this)); // relocate to fresh terrain when the area's dry
         this.goalSelector.addGoal(2, new HuntGoal(this)); // flagless coordinator
         this.goalSelector.addGoal(3, new BowAttackGoal(this));
         this.goalSelector.addGoal(4, new MeleeAttackGoal(this, 1.25D, true));
@@ -495,11 +498,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         this.idleBackoffUntil = 0;
         // Start looking after itself the moment the order lands, not on the next
         // 10-second idle tick — so "work on your own" visibly kicks in right away.
-        // And un-park it: if it was told to stay (or reloaded parked), autonomy
-        // would otherwise be a silent no-op, since the idle brain skips STAY.
+        // Autonomy means self-directed and DETACHED from the player: it stops
+        // trailing/teleporting to the owner (FollowOwnerGoal yields while autonomous)
+        // and the idle brain runs regardless of mode, so it plays for itself.
         if (autonomous) {
             this.idleKick = true;
-            if (mode == Mode.STAY) this.mode = Mode.FOLLOW;
+            this.getNavigation().stop(); // drop any lingering follow path immediately
         }
     }
 
@@ -1279,6 +1283,79 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private void announcePlan(String intro, CraftPlanner.Result plan) {
         say(intro + " — " + String.join(", ", plan.narration()) + ".");
         for (Job j : plan.jobs()) enqueue(j);
+    }
+
+    /** Last resort when there's genuinely nothing to work with right here: strike
+     *  out to fresh terrain so the bot keeps progressing instead of standing idle.
+     *  Autonomy only (it's playing for itself), and only when it's safe to travel. */
+    private void decideExplore() {
+        if (!autonomous) return;                         // only when playing for itself
+        if (level().isNight() || isPackFull()) return;   // regroup / deposit first
+        if (getHealth() < getMaxHealth() * 0.6F) return; // heal up before trekking
+        if (usefulResourceNearby(20)) return;            // still stuff here — not idle yet
+
+        BlockPos dest = pickExploreTarget();
+        if (dest == null) return;
+        say("Nothing left to work with here — scouting " + compass(dest) + " for more.");
+        enqueue(Job.explore(dest));
+    }
+
+    /** Anything within r the bot can turn into progress: wood, stone, ore, cane,
+     *  water for a farm, or animals/crops for food. Public so ExploreGoal can end
+     *  a leg early the moment it walks into a fresh patch. */
+    public boolean usefulResourceNearby(int r) {
+        return resourceNearby(GatherGoal.Kind.LOGS, r)
+            || resourceNearby(GatherGoal.Kind.STONE, r)
+            || resourceNearby(GatherGoal.Kind.COAL, r)
+            || resourceNearby(GatherGoal.Kind.IRON, r)
+            || resourceNearby(GatherGoal.Kind.SUGAR_CANE, r)
+            || matureCropsNearby() || grassNearby() || animalsNearby()
+            || nearestWater(r) != null;
+    }
+
+    /** A ground-level scouting spot ~30 blocks out. Keeps a heading so it spirals
+     *  outward rather than pacing, re-rolls away from open water, and turns back
+     *  toward base once it has drifted far so it can still get home. */
+    @Nullable
+    private BlockPos pickExploreTarget() {
+        net.minecraft.util.RandomSource rnd = getRandom();
+        BlockPos here = feetPos();
+        BlockPos anchor = homePos != null ? homePos : here;
+        boolean farFromBase = anchor.distSqr(here) > 140.0 * 140.0;
+        for (int attempt = 0; attempt < 6; attempt++) {
+            float heading;
+            if (farFromBase) {
+                heading = (float) Math.atan2(anchor.getZ() - here.getZ(), anchor.getX() - here.getX());
+            } else if (attempt == 0 && exploreHeading != 0f && rnd.nextInt(3) != 0) {
+                heading = exploreHeading;                       // keep the same way (spiral out)
+            } else {
+                heading = rnd.nextFloat() * ((float) Math.PI * 2f);
+            }
+            int dist = 28 + rnd.nextInt(12);                    // 28..39 blocks per leg
+            int tx = here.getX() + Math.round((float) Math.cos(heading) * dist);
+            int tz = here.getZ() + Math.round((float) Math.sin(heading) * dist);
+            int ty = level().getHeight(
+                net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, tx, tz);
+            if (ty <= level().getMinBuildHeight() + 1) continue; // empty/unloaded column
+            BlockPos surface = new BlockPos(tx, ty, tz);
+            // Skip open water/lava columns so it doesn't march into the sea.
+            if (!level().getBlockState(surface.below()).getFluidState().isEmpty()) continue;
+            exploreHeading = heading;
+            return surface;
+        }
+        return null;
+    }
+
+    /** Rough compass word from here to dest, for a readable "scouting east" line. */
+    private String compass(BlockPos dest) {
+        BlockPos here = feetPos();
+        int dx = dest.getX() - here.getX();
+        int dz = dest.getZ() - here.getZ();
+        String ns = dz < 0 ? "north" : "south";
+        String ew = dx < 0 ? "west" : "east";
+        if (Math.abs(dx) > 2 * Math.abs(dz)) return ew;
+        if (Math.abs(dz) > 2 * Math.abs(dx)) return ns;
+        return ns + ew;
     }
 
     private static final java.util.function.Predicate<ItemStack> BREEDING_FOOD = s ->
@@ -2074,6 +2151,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         Job head = peekJob();
         if (head != null && head.type() == Job.Type.MODE && head.mode() != null) {
             pollJob();
+            setAutonomous(false); // an explicit follow/stay/guard step re-attaches it
             setMode(head.mode());
             Player owner = getOwnerPlayer();
             if (head.mode() == Mode.FOLLOW && owner != null) {
@@ -2212,24 +2290,32 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // advancement; solo bots advance themselves, then do role work.
         boolean restingAtHome = nightHome && this.level().isNight()
             && (parkedForNight || (homePos != null && homePos.distSqr(blockPosition()) < 24 * 24));
+        // Autonomy is self-direction: run the idle brain regardless of FOLLOW/STAY/
+        // GUARD (an explicit mode command turns autonomy off and re-attaches it).
         if (autonomous && jobs.isEmpty() && !retreating && getTarget() == null
-            && mode != Mode.STAY && (idleKick || tickCount % 200 == 0)
+            && (idleKick || tickCount % 200 == 0)
             && !restingAtHome) {
             idleKick = false;
             boolean townMember = ownerId != null && Town.center(ownerId) != null;
             // Survival ALWAYS runs — never held off by the idle-work cool-off; a
             // hungry / toolless / full-pack bot must be free to act. Only the
             // discretionary tiers (progress / role / town) respect the backoff.
-            if (!decideSurvival() && tickCount >= idleBackoffUntil) {
-                if (townMember && role != Role.NONE) {
-                    // Town duty first; if the board has no need and no role work,
-                    // still advance ourselves rather than idling.
-                    if (tickCount % 400 == 0 && !decideTownWork() && !decideProgress()) {
-                        enqueueRoleWork();
+            if (!decideSurvival()) {
+                if (tickCount >= idleBackoffUntil) {
+                    if (townMember && role != Role.NONE) {
+                        // Town duty first; if the board has no need and no role work,
+                        // still advance ourselves rather than idling.
+                        if (tickCount % 400 == 0 && !decideTownWork() && !decideProgress()) {
+                            enqueueRoleWork();
+                        }
+                    } else if (!decideProgress() && tickCount % 400 == 0) {
+                        enqueueRoleWork(); // role==NONE now keeps busy too (no more statue)
                     }
-                } else if (!decideProgress() && tickCount % 400 == 0) {
-                    enqueueRoleWork(); // role==NONE now keeps busy too (no more statue)
                 }
+                // Area tapped out and nothing queued? Relocate to fresh terrain and
+                // find more — even during the post-dry cool-off, since exploring is
+                // exactly the answer to a dry area. Solo bots only (town crew stay put).
+                if (peekJob() == null && !townMember) decideExplore();
             }
         }
 

@@ -20,7 +20,7 @@ public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount,
     public enum Type { GATHER, DEPOSIT, MODE, GO_HOME, CRAFT, WITHDRAW, FARM, BUILD, SMELT,
                        MINE, HUNT, SHEAR, GIVE, GOTO,
                        PATROL, CLEAR, TORCH_AREA, BRIDGE, BREED, HERD, FISH, CLEANUP, RECOVER,
-                       SORT, ENCHANT, NETHER, BOAT, DIAGNOSTIC }
+                       SORT, ENCHANT, NETHER, BOAT, DIAGNOSTIC, EXPLORE }
 
     /** Biggest single gather order (well past a full backpack of one item). */
     public static final int MAX_AMOUNT = 1024;
@@ -152,6 +152,12 @@ public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount,
         return new Job(Type.DIAGNOSTIC, null, 0, null, null);
     }
 
+    /** arg = "x y z" of a scouting destination, used when the local area is
+     *  tapped out and the bot needs to relocate to find fresh resources. */
+    public static Job explore(net.minecraft.core.BlockPos pos) {
+        return new Job(Type.EXPLORE, null, 0, null, pos.getX() + " " + pos.getY() + " " + pos.getZ());
+    }
+
     public String label() {
         return switch (type) {
             case GATHER -> "gather " + amount + " " + (kind != null ? kind.label : "?");
@@ -182,6 +188,7 @@ public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount,
             case NETHER -> "nether run for " + amount + " " + arg;
             case BOAT -> "boat to " + arg;
             case DIAGNOSTIC -> "run a self-test";
+            case EXPLORE -> "scout for resources";
         };
     }
 }

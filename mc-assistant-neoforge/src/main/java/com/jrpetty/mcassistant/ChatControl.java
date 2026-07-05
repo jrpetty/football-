@@ -1057,6 +1057,7 @@ public final class ChatControl {
                 case MODE -> {
                     if (single) {
                         a.clearQueue();
+                        a.setAutonomous(false); // an explicit mode command re-attaches it
                         a.setMode(act.mode());
                         a.say(switch (act.mode()) {
                             case FOLLOW -> "Following you.";
@@ -1072,6 +1073,7 @@ public final class ChatControl {
                 case COME -> {
                     if (single) {
                         a.clearQueue();
+                        a.setAutonomous(false); // come back under command
                         a.setMode(AssistantEntity.Mode.FOLLOW);
                         a.getNavigation().moveTo(player, 1.25D);
                         a.say("Coming.");
@@ -1122,8 +1124,8 @@ public final class ChatControl {
                 case AUTO_ON -> {
                     a.setAutonomous(true);
                     a.say(a.getRole() == AssistantEntity.Role.NONE
-                        ? "I'll fend for myself now — I'll keep fed, keep a working pickaxe, repair my gear, and take initiative when I'm idle. Give me a role (miner/lumberjack/farmer/builder) if you want me stockpiling too."
-                        : "On it — I'll look after myself and keep doing " + a.getRole().name().toLowerCase() + " work whenever I'm idle.");
+                        ? "Going off on my own now — I won't trail you. I'll keep fed, keep a working pickaxe, repair my gear, gather and build, and roam to find resources when an area runs dry. Say \"follow me\" any time to call me back."
+                        : "Going off on my own — I'll keep doing " + a.getRole().name().toLowerCase() + " work, look after myself, and roam for resources when the area's dry. Say \"follow me\" to call me back.");
                 }
                 case AUTO_OFF -> {
                     a.setAutonomous(false);
