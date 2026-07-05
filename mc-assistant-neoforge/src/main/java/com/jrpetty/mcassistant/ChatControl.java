@@ -266,6 +266,23 @@ public final class ChatControl {
             + " ready. Call me by name — \"" + name + ", gather logs\" — or just talk for the nearest of us.");
     }
 
+    /** Every one of the player's assistants within `radius` blocks of them (same
+     *  level) — the target set for a group order like "do your own thing". Always
+     *  includes `fallback` (the addressed bot) so a lone bot still responds even if
+     *  the distance check is borderline. */
+    private static java.util.List<AssistantEntity> nearbyCrew(
+            ServerPlayer player, AssistantEntity fallback, double radius) {
+        java.util.List<AssistantEntity> crew = new java.util.ArrayList<>();
+        java.util.UUID owner = player.getUUID();
+        for (AssistantEntity m : AssistantEntity.allFor(owner)) {
+            if (m.level() == player.level() && m.distanceToSqr(player) <= radius * radius) {
+                crew.add(m);
+            }
+        }
+        if (!crew.contains(fallback)) crew.add(fallback);
+        return crew;
+    }
+
     private static void dispatch(AssistantEntity a, ServerPlayer player, String text, boolean explicit) {
         // Spoken numbers -> digits first ("gather twenty logs" -> "gather 20
         // logs"), before any splitting, since "and" can be part of a number.
@@ -1122,14 +1139,27 @@ public final class ChatControl {
                     a.say("Call me " + a.displayNameCap() + ".");
                 }
                 case AUTO_ON -> {
-                    a.setAutonomous(true);
-                    a.say(a.getRole() == AssistantEntity.Role.NONE
-                        ? "Going off on my own now — I won't trail you. I'll keep fed, keep a working pickaxe, repair my gear, gather and build, and roam to find resources when an area runs dry. Say \"follow me\" any time to call me back."
-                        : "Going off on my own — I'll keep doing " + a.getRole().name().toLowerCase() + " work, look after myself, and roam for resources when the area's dry. Say \"follow me\" to call me back.");
+                    // "Do your own thing" is a GROUP order: detach every one of the
+                    // player's bots within 20 blocks, not just the nearest — so a
+                    // whole squad goes independent at once and none keep trailing.
+                    java.util.List<AssistantEntity> crew = nearbyCrew(player, a, 20.0);
+                    for (AssistantEntity m : crew) m.setAutonomous(true);
+                    if (crew.size() > 1) {
+                        a.say(crew.size() + " of us are heading off on our own now — we won't trail you."
+                            + " We'll look after ourselves, keep working, and roam for resources when an area runs dry."
+                            + " Say \"follow me\" to call us back.");
+                    } else {
+                        a.say(a.getRole() == AssistantEntity.Role.NONE
+                            ? "Going off on my own now — I won't trail you. I'll keep fed, keep a working pickaxe, repair my gear, gather and build, and roam to find resources when an area runs dry. Say \"follow me\" any time to call me back."
+                            : "Going off on my own — I'll keep doing " + a.getRole().name().toLowerCase() + " work, look after myself, and roam for resources when the area's dry. Say \"follow me\" to call me back.");
+                    }
                 }
                 case AUTO_OFF -> {
-                    a.setAutonomous(false);
-                    a.say("Taking a break — I'll wait for orders.");
+                    java.util.List<AssistantEntity> crew = nearbyCrew(player, a, 20.0);
+                    for (AssistantEntity m : crew) m.setAutonomous(false);
+                    a.say(crew.size() > 1
+                        ? crew.size() + " of us are taking a break — waiting for orders."
+                        : "Taking a break — I'll wait for orders.");
                 }
                 case STANDING_ADD -> {
                     if (act.gatherKind() == null) {

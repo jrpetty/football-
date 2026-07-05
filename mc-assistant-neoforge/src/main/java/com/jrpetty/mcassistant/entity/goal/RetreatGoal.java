@@ -79,8 +79,12 @@ public class RetreatGoal extends Goal {
             assistant.getNavigation().moveTo(home.getX() + 0.5, home.getY() + 1, home.getZ() + 0.5, 1.4D);
             return;
         }
+        // Only fall back to the player when it's NOT doing its own thing — a
+        // detached, autonomous bot fends for itself (home or bright ground), it
+        // doesn't come running to you.
         Player owner = assistant.getOwnerPlayer();
-        if (owner != null && assistant.distanceToSqr(owner) > 9.0 && assistant.distanceToSqr(owner) < 1600.0) {
+        if (!assistant.isAutonomous() && owner != null
+            && assistant.distanceToSqr(owner) > 9.0 && assistant.distanceToSqr(owner) < 1600.0) {
             assistant.getNavigation().moveTo(owner, 1.5D);
             return;
         }

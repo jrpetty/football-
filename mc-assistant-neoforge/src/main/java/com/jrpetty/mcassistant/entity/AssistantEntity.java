@@ -176,10 +176,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b18 · true independence: \"do your own thing\" fully detaches from the player (no trailing/teleporting) and it plays "
-        + "for itself · explores/relocates to fresh terrain when the area runs dry · smarter reach (approach from another angle) · "
-        + "watered farms · gathers sugar cane · hunts mobs at night · bakes bread · picks up loot · crafts a bow · builds up its base · "
-        + "auto home + storage · self-sourcing crafting · routines · fortify · distress · self-test";
+        "2026-07-b19 · \"do your own thing\" is now a GROUP order — every bot within 20 blocks of you detaches at once (no more stragglers "
+        + "still following) and a detached bot never runs back to you, even when hurt · smarter eating (saves golden apples, avoids risky "
+        + "food, least-filling first) · explores when the area runs dry · smarter reach · watered farms · hunts at night · bakes bread · "
+        + "picks up loot · crafts a bow · builds up its base · auto home + storage · self-sourcing crafting · routines · fortify · distress";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -1695,12 +1695,29 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     // ------------------------------ food & health ----------------------------
 
+    /** Pick the smartest food to heal with: reserve golden apples for the
+     *  critical-HP emergency, avoid the risky stuff (rotten flesh, spider eye,
+     *  raw chicken) unless it's all we've got, and eat the LEAST-filling safe
+     *  food first so a prime steak isn't wasted on a small heal. */
     private int findFoodSlot() {
+        int best = -1, bestNutrition = Integer.MAX_VALUE;
+        int riskyFallback = -1;
         for (int i = 0; i < inventory.size(); i++) {
             ItemStack s = inventory.get(i);
-            if (!s.isEmpty() && s.get(DataComponents.FOOD) != null) return i;
+            if (s.isEmpty()) continue;
+            FoodProperties fp = s.get(DataComponents.FOOD);
+            if (fp == null) continue;
+            if (s.is(Items.GOLDEN_APPLE) || s.is(Items.ENCHANTED_GOLDEN_APPLE)) continue; // saved for emergencies
+            if (isRiskyFood(s)) { if (riskyFallback < 0) riskyFallback = i; continue; }
+            if (fp.nutrition() < bestNutrition) { bestNutrition = fp.nutrition(); best = i; }
         }
-        return -1;
+        return best >= 0 ? best : riskyFallback;
+    }
+
+    private static boolean isRiskyFood(ItemStack s) {
+        return s.is(Items.ROTTEN_FLESH) || s.is(Items.SPIDER_EYE)
+            || s.is(Items.POISONOUS_POTATO) || s.is(Items.PUFFERFISH)
+            || s.is(Items.CHICKEN); // raw chicken can give food poisoning
     }
 
     public int countFood() {
