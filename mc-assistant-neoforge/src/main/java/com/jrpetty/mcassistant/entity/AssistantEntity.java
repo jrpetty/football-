@@ -175,9 +175,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b15 · fuller brain: gathers sugar cane (unlocks paper/books/bookshelves), hunts mobs at night for drops, "
-        + "bakes bread · picks up loot · crafts a bow · builds up its base · auto home + storage · "
-        + "reaches resources by digging/pillaring/bridging · self-sourcing crafting · routines · fortify · distress · self-test";
+        "2026-07-b16 · watered farms: forges a bucket, fills it at water, and carves a contained source so crops stay hydrated "
+        + "(dry-farms when there's no water) · gathers sugar cane · hunts mobs at night for drops · bakes bread · picks up loot · "
+        + "crafts a bow · builds up its base · auto home + storage · reaches resources by digging/pillaring/bridging · "
+        + "self-sourcing crafting · routines · fortify · distress · self-test";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -1198,6 +1199,16 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 return true;
             }
         }
+        // --- Irrigation kit: with iron to spare and a farm about to go in with no
+        //     natural water in reach, forge a bucket so the plot can be hydrated
+        //     (FarmGoal carves a contained source from it). Also a lava/fire tool. ---
+        if (piece == null && bestPickTier() >= 2
+                && countCarried(s -> s.is(Items.BUCKET) || s.is(Items.WATER_BUCKET)) == 0
+                && countCarried(s -> s.is(Items.IRON_INGOT)) >= 3
+                && (hasSeeds() || grassNearby()) && !waterNearby(10)) {
+            CraftPlanner.Result plan = CraftPlanner.plan(this, "bucket", 1);
+            if (!plan.jobs().isEmpty() && plan.blockers().isEmpty()) { announcePlan("Forging a bucket to irrigate a farm", plan); return true; }
+        }
         // --- Food-secure: renewable food. Harvest ripe crops; else bootstrap a
         //     farm from scratch (FarmGoal tills + plants); else breed a herd. ---
         if (matureCropsNearby()) { say("Harvesting the crops."); enqueue(Job.farm()); return true; }
@@ -1388,6 +1399,27 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private boolean hasSeeds() {
         return countMatching(s -> s.is(Items.WHEAT_SEEDS) || s.is(Items.BEETROOT_SEEDS)
             || s.is(Items.CARROT) || s.is(Items.POTATO)) > 0;
+    }
+
+    /** Nearest water block within the given radius, or null. Lets the bot skip
+     *  crafting an irrigation bucket when a natural source is already at hand,
+     *  and lets it top up an empty bucket from a pool it walks past. */
+    @Nullable
+    private BlockPos nearestWater(int radius) {
+        BlockPos feet = feetPos();
+        BlockPos best = null;
+        double bestDist = Double.MAX_VALUE;
+        for (BlockPos pos : BlockPos.betweenClosed(
+                feet.offset(-radius, -2, -radius), feet.offset(radius, 2, radius))) {
+            if (!level().getBlockState(pos).is(Blocks.WATER)) continue;
+            double d = pos.distSqr(feet);
+            if (d < bestDist) { bestDist = d; best = pos.immutable(); }
+        }
+        return best;
+    }
+
+    private boolean waterNearby(int radius) {
+        return nearestWater(radius) != null;
     }
 
     /** Highest-value diamond kit piece still missing, or null when fully diamond. */
@@ -2023,6 +2055,17 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             && level().getBrightness(net.minecraft.world.level.LightLayer.BLOCK, blockPosition()) < 7
             && countMatching(s -> s.is(Items.TORCH)) > 0 && noTorchNear(5)) {
             placeTorchNearby();
+        }
+
+        // Top up an empty bucket at any water we pass, so an irrigation source is
+        // always on hand for a farm (FarmGoal spends it to hydrate a plot).
+        if (autonomous && tickCount % 20 == 0 && getTarget() == null
+            && countCarried(s -> s.is(Items.WATER_BUCKET)) == 0) {
+            int slot = firstSlot(s -> s.is(Items.BUCKET));
+            if (slot >= 0 && waterNearby(2)) {
+                inventory.set(slot, new ItemStack(Items.WATER_BUCKET));
+                say("Filled my bucket at the water — ready to irrigate.");
+            }
         }
 
         // Queued mode switches apply the instant they reach the head.

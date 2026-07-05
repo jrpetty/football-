@@ -31,7 +31,7 @@ public class FarmGoal extends Goal {
     private static final int RANGE = 12;
     private static final int PLOT_TARGET = 9; // plant up to a 3x3-ish plot per run
 
-    private enum Mode { HARVEST, TILL, SEEDS }
+    private enum Mode { HARVEST, TILL, SEEDS, WATER }
 
     // Ripe crop block -> seed that replants it.
     private static final Map<Block, Item> REPLANT = Map.of(
@@ -149,15 +149,27 @@ public class FarmGoal extends Goal {
             case HARVEST -> doHarvest(pos);
             case SEEDS -> doBreakGrass(pos);
             case TILL -> doTillAndPlant(pos);
+            case WATER -> doPlaceWater(pos);
         }
     }
 
-    /** Prefer tending ripe crops; else bootstrap (plant if we have seeds, else
-     *  gather seeds from grass). */
+    /** Prefer tending ripe crops; else bootstrap a plot. When bootstrapping we
+     *  favour ground that's already within range of water so the crops stay
+     *  hydrated; failing that, if we're carrying a water bucket we carve a
+     *  contained source; otherwise we dry-farm any tillable ground. */
     private void pickTarget() {
         targetPos = findMatureCrop();
         if (targetPos != null) { mode = Mode.HARVEST; return; }
         if (planted < PLOT_TARGET && hasPlantable()) {
+            BlockPos water = findWater();
+            if (water != null) {
+                targetPos = findTillableNear(water);
+                if (targetPos != null) { mode = Mode.TILL; return; }
+            }
+            if (water == null && hasWaterBucket()) {
+                targetPos = findWaterSpot();
+                if (targetPos != null) { mode = Mode.WATER; return; }
+            }
             targetPos = findTillable();
             if (targetPos != null) { mode = Mode.TILL; return; }
         }
@@ -175,6 +187,7 @@ public class FarmGoal extends Goal {
             case HARVEST -> isMatureCrop(st);
             case SEEDS -> isGrass(st);
             case TILL -> isTillable(targetPos);
+            case WATER -> isTillable(targetPos);
         };
     }
 
@@ -211,6 +224,20 @@ public class FarmGoal extends Goal {
         }
     }
 
+    /** Carve a 1-deep basin at farmland level and set a contained water source
+     *  so the surrounding tilled plot stays hydrated; convert the bucket to empty. */
+    private void doPlaceWater(BlockPos pos) {
+        if (assistant.removeMatching(s -> s.is(Items.WATER_BUCKET), 1) != 1) return;
+        assistant.level().destroyBlock(pos, false);
+        assistant.level().setBlockAndUpdate(pos, Blocks.WATER.defaultBlockState());
+        ItemStack leftover = assistant.insertItem(new ItemStack(Items.BUCKET));
+        if (!leftover.isEmpty()) {
+            assistant.level().addFreshEntity(new ItemEntity(assistant.level(),
+                pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, leftover));
+        }
+        assistant.say("Set a water source — the plot will stay watered now.");
+    }
+
     private String summary() {
         if (harvested > 0 && planted > 0) return "Farm's tended — harvested " + harvested + ", planted " + planted + ".";
         if (harvested > 0) return "Farm's tended — harvested and replanted " + harvested + " crops.";
@@ -232,6 +259,18 @@ public class FarmGoal extends Goal {
             if (assistant.countMatching(s -> s.is(seed)) > 0) return true;
         }
         return false;
+    }
+
+    private boolean hasWaterBucket() {
+        return assistant.countMatching(s -> s.is(Items.WATER_BUCKET)) > 0;
+    }
+
+    /** Farmland is hydrated by water within 4 blocks horizontally and no more
+     *  than one level above — mirror that when choosing where to till. */
+    private boolean withinHydration(BlockPos farm, BlockPos water) {
+        return Math.abs(farm.getX() - water.getX()) <= 4
+            && Math.abs(farm.getZ() - water.getZ()) <= 4
+            && (water.getY() - farm.getY()) >= 0 && (water.getY() - farm.getY()) <= 1;
     }
 
     private static boolean isMatureCrop(BlockState state) {
@@ -263,6 +302,25 @@ public class FarmGoal extends Goal {
     @Nullable
     private BlockPos findTillable() {
         return nearest(this::isTillable);
+    }
+
+    @Nullable
+    private BlockPos findTillableNear(BlockPos water) {
+        return nearest(pos -> isTillable(pos) && withinHydration(pos, water));
+    }
+
+    @Nullable
+    private BlockPos findWater() {
+        return nearest(pos -> assistant.level().getBlockState(pos).is(Blocks.WATER));
+    }
+
+    /** A dirt block whose neighbours are also tillable — a good centre for a
+     *  hand-placed water source. */
+    @Nullable
+    private BlockPos findWaterSpot() {
+        return nearest(pos -> isTillable(pos)
+            && isTillable(pos.north()) && isTillable(pos.south())
+            && isTillable(pos.east()) && isTillable(pos.west()));
     }
 
     @Nullable
