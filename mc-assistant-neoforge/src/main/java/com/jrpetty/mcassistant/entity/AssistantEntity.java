@@ -251,6 +251,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private int eatCooldown;
     private boolean retreating;
     private int idleBackoffUntil;
+    private boolean idleKick;          // run the idle brain immediately once autonomy is switched on
     private int lastWarnTick = -1000;
     private boolean nightHome;        // "head home at night" toggle
     private boolean wentHomeTonight;  // one trip per night
@@ -487,6 +488,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     public void setAutonomous(boolean autonomous) {
         this.autonomous = autonomous;
         this.idleBackoffUntil = 0;
+        // Start looking after itself the moment the order lands, not on the next
+        // 10-second idle tick — so "work on your own" visibly kicks in right away.
+        if (autonomous) this.idleKick = true;
     }
 
     /** Say something to the owner. */
@@ -1991,8 +1995,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // then do their assigned ROLE (their town duty) before any personal
         // advancement; solo bots advance themselves, then do role work.
         if (autonomous && jobs.isEmpty() && !retreating
-            && mode != Mode.STAY && tickCount % 200 == 0 && tickCount >= idleBackoffUntil
+            && mode != Mode.STAY && (idleKick || tickCount % 200 == 0) && tickCount >= idleBackoffUntil
             && !(nightHome && this.level().isNight())) {
+            idleKick = false;
             boolean townMember = ownerId != null && Town.center(ownerId) != null;
             if (!decideSurvival()) {
                 if (townMember && role != Role.NONE) {
