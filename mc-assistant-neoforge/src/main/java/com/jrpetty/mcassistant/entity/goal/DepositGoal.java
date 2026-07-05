@@ -76,9 +76,14 @@ public class DepositGoal extends Goal {
         assistant.getNavigation().stop();
     }
 
-    /** Job finished (or couldn't run) — drop it from the queue and move on. */
-    private void finish(String message) {
+    private void finish(String message) { finish(message, false); }
+
+    /** Job finished (or couldn't run) — drop it from the queue and move on.
+     *  productive=false cools off the idle brain so a no-chest/full-chest deposit
+     *  doesn't get re-attempted every idle cycle. */
+    private void finish(String message, boolean productive) {
         assistant.say(message);
+        assistant.noteJobOutcome(productive);
         assistant.pollJob();
         this.active = false;
         this.chestPos = null;
@@ -128,7 +133,7 @@ public class DepositGoal extends Goal {
         }
         container.setChanged();
         assistant.rememberChest(chestPos, container); // storage memory: learn what's where
-        finish(moved > 0 ? "Stashed " + moved + " items." : "That chest is full.");
+        finish(moved > 0 ? "Stashed " + moved + " items." : "That chest is full.", moved > 0);
     }
 
     private static ItemStack insertInto(Container container, ItemStack stack) {

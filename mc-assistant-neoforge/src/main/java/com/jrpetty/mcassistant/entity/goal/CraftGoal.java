@@ -114,6 +114,7 @@ public class CraftGoal extends Goal {
 
     private void finish(String message) {
         assistant.say(message);
+        assistant.noteJobOutcome(crafted > 0); // clears backoff on success, cools off a dead-end
         assistant.pollJob();
         this.job = null;
         this.plan = null;
@@ -243,15 +244,18 @@ public class CraftGoal extends Goal {
         return best;
     }
 
-    /** No table around: craft one from planks and put it down next to us. */
+    /** No table around: place a crafting table beside us — prefer a ready-made
+     *  one from the pack, else build one from 4 planks. */
     private boolean placeOwnTable() {
-        if (assistant.countMatching(PLANK) < 4) return false;
+        boolean carried = assistant.countMatching(s -> s.is(Items.CRAFTING_TABLE)) > 0;
+        if (!carried && assistant.countMatching(PLANK) < 4) return false;
         BlockPos feet = assistant.feetPos();
         for (Direction dir : Direction.Plane.HORIZONTAL) {
             BlockPos pos = feet.relative(dir);
             if (assistant.level().getBlockState(pos).canBeReplaced()
                 && assistant.level().getBlockState(pos.below()).isSolid()) {
-                assistant.removeMatching(PLANK, 4);
+                if (carried) assistant.removeMatching(s -> s.is(Items.CRAFTING_TABLE), 1);
+                else assistant.removeMatching(PLANK, 4);
                 assistant.level().setBlockAndUpdate(pos, Blocks.CRAFTING_TABLE.defaultBlockState());
                 assistant.say("Setting up a crafting table here.");
                 return true;

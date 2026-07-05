@@ -32,7 +32,7 @@ public class GatherGoal extends Goal {
         public final String label;
         Kind(String label) { this.label = label; }
 
-        boolean matches(BlockState state) {
+        public boolean matches(BlockState state) {
             return switch (this) {
                 case LOGS -> state.is(BlockTags.LOGS);
                 case STONE -> state.is(BlockTags.BASE_STONE_OVERWORLD)

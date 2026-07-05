@@ -89,6 +89,7 @@ public class EnchantGoal extends Goal {
 
     private void finish(String message) {
         assistant.say(message);
+        assistant.noteJobOutcome(enchantsApplied > 0); // don't re-loop "enchant" when nothing to do
         assistant.pollJob();
         this.job = null;
         this.tablePos = null;

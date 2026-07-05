@@ -175,7 +175,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b9 · routines, fortify, distress, quartermaster, self-rescue dig/climb, smarter pathing, place-marker item, self-test, self-sources ores/mob-drops for crafting (checks chests, else says it can't make it)";
+        "2026-07-b10 · autonomy overhaul: starts instantly on command, no more stalls (survival always runs, "
+        + "feasibility-gated, stop/night no longer trap it, always has fallback work) · self-sourcing crafting · "
+        + "routines · fortify · distress · self-test · place-marker · Job Board in the recipe book";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -255,6 +257,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private int lastWarnTick = -1000;
     private boolean nightHome;        // "head home at night" toggle
     private boolean wentHomeTonight;  // one trip per night
+    private boolean parkedForNight;   // the night routine parked it (un-park at dawn)
 
     // Experience points, earned fairly from its OWN kills, ore, and smelting —
     // spent (with lapis) at an enchanting table. Not vanilla XP levels; a plain
@@ -490,7 +493,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         this.idleBackoffUntil = 0;
         // Start looking after itself the moment the order lands, not on the next
         // 10-second idle tick — so "work on your own" visibly kicks in right away.
-        if (autonomous) this.idleKick = true;
+        // And un-park it: if it was told to stay (or reloaded parked), autonomy
+        // would otherwise be a silent no-op, since the idle brain skips STAY.
+        if (autonomous) {
+            this.idleKick = true;
+            if (mode == Mode.STAY) this.mode = Mode.FOLLOW;
+        }
     }
 
     /** Say something to the owner. */
@@ -830,12 +838,22 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private void nightRoutine() {
         if (!this.level().isNight()) {
             wentHomeTonight = false;
+            // Morning: un-park a bot the routine sent home for the night, so it
+            // resumes autonomous work at dawn instead of holding at home forever.
+            if (parkedForNight) {
+                parkedForNight = false;
+                if (autonomous && mode == Mode.STAY) {
+                    mode = Mode.FOLLOW;
+                    say("Morning — back to it.");
+                }
+            }
             return;
         }
         if (!nightHome || wentHomeTonight || homePos == null || retreating) return;
         if (!jobs.isEmpty()) return; // explicit orders outrank bedtime
         if (homePos.distSqr(blockPosition()) < 16 * 16) return;
         wentHomeTonight = true;
+        parkedForNight = true;
         say("Sun's down — heading home for the night.");
         goHome();
     }
@@ -1023,11 +1041,29 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
         // 2) Keep a food buffer — never let the larder run dry (it eats to heal,
         //    and the quartermaster shares it with the owner).
-        if (countFood() < 6) {
+        if (countFood() < 6 && huntablePreyNearby()) {
             say(countFood() == 0 ? "I'm out of food — hunting something to eat."
                                  : "Food's running low — topping up the larder.");
             enqueue(Job.hunt(null, 4));
             return true;
+        }
+        // (No prey in range? Don't loop a doomed hunt — fall through so
+        //  decideProgress can farm/breed renewable food instead of freezing here.)
+
+        // 2b) A workbench — tools and the furnace all need the 3x3 grid, and a
+        //     crafting table is craftable from 4 planks with NO table (2x2). Make
+        //     sure one exists before any 3x3 craft so a from-scratch bot can
+        //     actually forge its first pickaxe.
+        boolean woodAccess = countMatching(s -> s.is(ItemTags.LOGS)) > 0
+            || countMatching(s -> s.is(ItemTags.PLANKS)) > 0
+            || resourceNearby(GatherGoal.Kind.LOGS, 16);
+        if (!craftingTableNearby() && countCarried(s -> s.is(Items.CRAFTING_TABLE)) == 0 && woodAccess) {
+            CraftPlanner.Result plan = CraftPlanner.plan(this, "crafting_table", 1);
+            if (!plan.jobs().isEmpty()) {
+                say("Making a crafting table so I can build tools.");
+                for (Job j : plan.jobs()) enqueue(j);
+                return true;
+            }
         }
         // 3) No pickaxe — it can't mine stone or ore at all; make one, sourcing
         //    the wood/stone itself via the planner. (countCarried so a pickaxe
@@ -1057,15 +1093,18 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
         // 5) Keep wood on hand — it's the root of the tech tree and self-repair.
         if (countMatching(s -> s.is(ItemTags.LOGS)) == 0
-            && countMatching(s -> s.is(ItemTags.PLANKS)) < 4) {
+            && countMatching(s -> s.is(ItemTags.PLANKS)) < 4
+            && resourceNearby(GatherGoal.Kind.LOGS, 16)) {
             say("Low on wood — getting some.");
             enqueue(Job.gather(GatherGoal.Kind.LOGS, 12));
             return true;
         }
         // 6) Shelter kit — keep full blocks on hand so it can wall up when night
-        //    falls. Grab cheap dirt during the day when it has no home to run to.
+        //    falls. Grab cheap dirt during the day when it has no home to run to
+        //    (only if there's actually dirt to dig — no spinning on bare stone).
         if (!this.level().isNight() && homePos == null
-            && countMatching(com.jrpetty.mcassistant.entity.goal.NightShelterGoal.SHELTER_BLOCK) < 8) {
+            && countMatching(com.jrpetty.mcassistant.entity.goal.NightShelterGoal.SHELTER_BLOCK) < 8
+            && resourceNearby(GatherGoal.Kind.DIRT, 16)) {
             say("Grabbing some dirt for an emergency shelter, just in case.");
             enqueue(Job.gather(GatherGoal.Kind.DIRT, 12));
             return true;
@@ -1224,6 +1263,33 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             if (st.is(Blocks.FURNACE) || st.is(Blocks.BLAST_FURNACE)) return true;
         }
         return false;
+    }
+
+    private boolean craftingTableNearby() {
+        BlockPos feet = feetPos();
+        for (BlockPos pos : BlockPos.betweenClosed(feet.offset(-8, -3, -8), feet.offset(8, 3, 8))) {
+            if (level().getBlockState(pos).is(Blocks.CRAFTING_TABLE)) return true;
+        }
+        return false;
+    }
+
+    /** Is a block this gather-kind can harvest actually within reach? Used to stop
+     *  the idle brain from looping a doomed "gather X" where none exists nearby. */
+    private boolean resourceNearby(GatherGoal.Kind kind, int radius) {
+        BlockPos feet = feetPos();
+        for (BlockPos pos : BlockPos.betweenClosed(
+                feet.offset(-radius, -5, -radius), feet.offset(radius, 5, radius))) {
+            if (kind.matches(level().getBlockState(pos))) return true;
+        }
+        return false;
+    }
+
+    /** Any adult, un-named animal within hunting range (so we don't loop a hunt
+     *  with no prey). */
+    private boolean huntablePreyNearby() {
+        return !level().getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class,
+            getBoundingBox().inflate(24.0),
+            an -> an.isAlive() && !an.isBaby() && !an.hasCustomName()).isEmpty();
     }
 
     private boolean cropsNearby() {
@@ -1554,8 +1620,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Goals report how each job went so idle initiative can back off when
      *  the area is tapped out instead of spamming doomed jobs. */
     public void noteJobOutcome(boolean productive) {
-        if (!productive) {
-            idleBackoffUntil = tickCount + 2400; // ~2 min cool-off
+        if (productive) {
+            idleBackoffUntil = 0; // good outcome — resume initiative right away
+        } else {
+            idleBackoffUntil = tickCount + 800; // ~40s cool-off on a dry attempt
         }
     }
 
@@ -1994,18 +2062,23 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // survival first (the 'decide' rung). Crew members on an active town
         // then do their assigned ROLE (their town duty) before any personal
         // advancement; solo bots advance themselves, then do role work.
-        if (autonomous && jobs.isEmpty() && !retreating
-            && mode != Mode.STAY && (idleKick || tickCount % 200 == 0) && tickCount >= idleBackoffUntil
+        if (autonomous && jobs.isEmpty() && !retreating && getTarget() == null
+            && mode != Mode.STAY && (idleKick || tickCount % 200 == 0)
             && !(nightHome && this.level().isNight())) {
             idleKick = false;
             boolean townMember = ownerId != null && Town.center(ownerId) != null;
-            if (!decideSurvival()) {
+            // Survival ALWAYS runs — never held off by the idle-work cool-off; a
+            // hungry / toolless / full-pack bot must be free to act. Only the
+            // discretionary tiers (progress / role / town) respect the backoff.
+            if (!decideSurvival() && tickCount >= idleBackoffUntil) {
                 if (townMember && role != Role.NONE) {
-                    // Fulfill a specific town need first (e.g. mine the iron the
-                    // board is asking for), then fall back to generic role work.
-                    if (tickCount % 400 == 0 && !decideTownWork()) enqueueRoleWork();
-                } else if (!decideProgress() && role != Role.NONE && tickCount % 400 == 0) {
-                    enqueueRoleWork();
+                    // Town duty first; if the board has no need and no role work,
+                    // still advance ourselves rather than idling.
+                    if (tickCount % 400 == 0 && !decideTownWork() && !decideProgress()) {
+                        enqueueRoleWork();
+                    }
+                } else if (!decideProgress() && tickCount % 400 == 0) {
+                    enqueueRoleWork(); // role==NONE now keeps busy too (no more statue)
                 }
             }
         }
@@ -2085,7 +2158,14 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 enqueue(Job.craft("planks", 8));
                 enqueue(Job.deposit());
             }
-            default -> { }
+            default -> {
+                // No role, but autonomous, idle, and fully self-sufficient: keep
+                // busy stockpiling instead of standing still like a statue.
+                say("Caught up — stockpiling a bit. (Say \"take a break\" to stop.)");
+                enqueue(Job.gather(GatherGoal.Kind.LOGS, 12));
+                if (bestPickTier() >= 1) enqueue(Job.gather(GatherGoal.Kind.STONE, 12));
+                enqueue(Job.deposit());
+            }
         }
     }
 
