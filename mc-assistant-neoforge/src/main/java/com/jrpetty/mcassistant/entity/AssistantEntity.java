@@ -191,10 +191,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b27 · veteran rebalance: levels come SLOWLY now (L10=1000 lifetime xp, L30=9000) and the perks are 10% faster work "
-        + "at L10 · +2 hearts + 20% work at L20 · 20% movement speed at L30 · 30% work at L35 (the cap) · MEMORY CORE revival "
-        + "(fallen bots come back with name, level, role, waypoints, station; gear stays where it fell) · place-to-spawn spawner "
-        + "(8 rotten flesh + diamond block) · stations never sleep · seven stations · growing homestead";
+        "2026-07-b28 · review pass: haulers now carry a traveling chunk window on delivery runs, so unattended trips never stall in "
+        + "unloaded terrain (freed on stand-down/death, survives reloads) · veteran perks: 10% work L10 · +2 hearts + 20% work L20 · "
+        + "20% movement L30 · 30% work L35, slow curve · memory core revival · place-to-spawn spawner · stations never sleep · "
+        + "seven stations · growing homestead";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -278,6 +278,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private int stationWarnTick = -9999;                // cooldown on "I need a chest here" nags
     private int stationTorchTick = -99999;              // a guard post re-lights its ground rarely
     private int stationBreedTick = -99999;              // pace breeding to the animals' love cooldown
+    @Nullable private BlockPos mobileLoadCenter;        // hauler's traveling chunk window (persisted)
     private static final int STATION_RADIUS = 16;       // how far it works from the post
     private int lastWarnTick = -1000;
     private boolean nightHome;        // "head home at night" toggle
@@ -549,10 +550,26 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
         this.stationPos = pos;
         this.stationTask = pos == null ? StationTask.NONE : task;
+        freeMobileWindow(); // a task change ends any traveling window cleanly
         if (pos != null) {
             if (homePos == null && task != StationTask.HAUL) setHome(pos);
             setAutonomous(true);
         }
+    }
+
+    /** Release the hauler's traveling chunk window, re-forcing the fixed post
+     *  window afterward in case the two overlapped (tickets are a set — one
+     *  remove would otherwise strip a shared chunk from the post's window). */
+    private void freeMobileWindow() {
+        if (mobileLoadCenter == null) return;
+        if (level() instanceof net.minecraft.server.level.ServerLevel sl) {
+            com.jrpetty.mcassistant.ChunkLoad.setLoaded(sl, getUUID(), mobileLoadCenter, 1, false);
+            if (stationPos != null && stationTask != StationTask.NONE) {
+                com.jrpetty.mcassistant.ChunkLoad.setLoaded(sl, getUUID(), stationPos,
+                    stationChunkRadius(stationTask), true);
+            }
+        }
+        mobileLoadCenter = null;
     }
 
     /** How many chunks around the post stay loaded: 3x3 normally; 5x5 for a
@@ -2450,6 +2467,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         tag.putInt("BaseStage", baseStage);
         if (stationPos != null) tag.putLong("StationPos", stationPos.asLong());
         tag.putString("StationTask", stationTask.name());
+        if (mobileLoadCenter != null) tag.putLong("MobileLoad", mobileLoadCenter.asLong());
         tag.putInt("Xp", xp);
         tag.putInt("LifeXp", lifetimeXp);
         tag.putBoolean("ExpActive", expeditionActive);
@@ -2513,6 +2531,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             stationTask = StationTask.NONE;
         }
         if (stationPos == null) stationTask = StationTask.NONE;
+        // The traveling window's tickets persist with the world; restoring the
+        // center lets the mover tick free them as usual instead of leaking.
+        mobileLoadCenter = tag.contains("MobileLoad") ? BlockPos.of(tag.getLong("MobileLoad")) : null;
         xp = tag.getInt("Xp");
         // Seed lifetime xp from banked xp for bots saved before levels existed.
         lifetimeXp = tag.contains("LifeXp") ? tag.getInt("LifeXp") : xp;
@@ -2635,6 +2656,31 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             && level().getBrightness(net.minecraft.world.level.LightLayer.BLOCK, blockPosition()) < 7
             && countMatching(s -> s.is(Items.TORCH)) > 0 && noTorchNear(5)) {
             placeTorchNearby();
+        }
+
+        // A hauler's delivery run crosses terrain its post window doesn't cover —
+        // carry a small ticking window with it so unattended trips never stall in
+        // an unloaded chunk. Moves when it crosses a chunk border; freed on
+        // stand-down/death; heals any overlap with the fixed post window.
+        if (stationTask == StationTask.HAUL && tickCount % 40 == 0
+            && level() instanceof net.minecraft.server.level.ServerLevel haulLevel) {
+            BlockPos here = blockPosition();
+            if (mobileLoadCenter == null
+                || (mobileLoadCenter.getX() >> 4) != (here.getX() >> 4)
+                || (mobileLoadCenter.getZ() >> 4) != (here.getZ() >> 4)) {
+                BlockPos old = mobileLoadCenter;
+                com.jrpetty.mcassistant.ChunkLoad.setLoaded(haulLevel, getUUID(), here, 1, true);
+                if (old != null) {
+                    com.jrpetty.mcassistant.ChunkLoad.setLoaded(haulLevel, getUUID(), old, 1, false);
+                    // Re-force windows the removal may have clipped (set semantics).
+                    com.jrpetty.mcassistant.ChunkLoad.setLoaded(haulLevel, getUUID(), here, 1, true);
+                    if (stationPos != null) {
+                        com.jrpetty.mcassistant.ChunkLoad.setLoaded(haulLevel, getUUID(), stationPos,
+                            stationChunkRadius(stationTask), true);
+                    }
+                }
+                mobileLoadCenter = here.immutable();
+            }
         }
 
         // Top up an empty bucket at any water we pass, so an irrigation source is
@@ -2941,12 +2987,18 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             Map<String, AssistantEntity> m = BY_OWNER.get(ownerId);
             if (m != null) m.remove(assistantName.toLowerCase(), this);
         }
-        // Death/dismissal frees the station's force-loaded chunks. A plain chunk
-        // unload must NOT — staying loaded while parked is the whole point.
-        if (reason.shouldDestroy() && stationPos != null
-            && level() instanceof net.minecraft.server.level.ServerLevel sl) {
-            com.jrpetty.mcassistant.ChunkLoad.setLoaded(sl, getUUID(), stationPos,
-                stationChunkRadius(stationTask), false);
+        // Death/dismissal frees the station's force-loaded chunks (fixed post
+        // window AND the hauler's traveling window). A plain chunk unload must
+        // NOT — staying loaded while parked is the whole point.
+        if (reason.shouldDestroy() && level() instanceof net.minecraft.server.level.ServerLevel sl) {
+            if (mobileLoadCenter != null) {
+                com.jrpetty.mcassistant.ChunkLoad.setLoaded(sl, getUUID(), mobileLoadCenter, 1, false);
+                mobileLoadCenter = null;
+            }
+            if (stationPos != null) {
+                com.jrpetty.mcassistant.ChunkLoad.setLoaded(sl, getUUID(), stationPos,
+                    stationChunkRadius(stationTask), false);
+            }
         }
         super.remove(reason);
     }
