@@ -191,10 +191,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b24 · survival cost: each new companion consumes ONE Assistant Spawner (new recipe: 8 rotten flesh around a DIAMOND "
-        + "BLOCK) — chat spawn, /assistant spawn, and the placed block all pay it (creative free; re-summoning your crew free) · "
-        + "stations never sleep (chunk-loaded) · seven stations: farm · forestry · ranch · guard · smeltery · hauler · mine · "
-        + "growing homestead · group detach · explores when dry · self-sourcing crafting · routines · distress";
+        "2026-07-b25 · PLACE the spawner and your companion appears on the spot (home set there, block used up — one spawner, one "
+        + "companion; full crew leaves the block to reclaim) · spawner recipe: 8 rotten flesh around a DIAMOND BLOCK · chat spawn and "
+        + "/assistant spawn consume a carried spawner · stations never sleep (chunk-loaded) · seven stations: farm · forestry · ranch · "
+        + "guard · smeltery · hauler · mine · growing homestead · group detach · explores when dry · routines · distress";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).

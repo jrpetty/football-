@@ -16,17 +16,45 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Assistant Spawner — a placeable block that acts as your assistant's home
- * point. Right-click it and:
- *   - if you already have an assistant, it teleports here (its home is reset
- *     to this block);
- *   - if you don't, a fresh one spawns on top, bound to you.
+ * Assistant Spawner — place it and your companion appears on the spot, bound
+ * to you, with home set right there; the block is used up in the act (one
+ * spawner, one companion). If your crew is already full the block just sits
+ * placed (mine it back, dismiss someone, try again). Right-clicking a placed
+ * spawner still works as before for leftover blocks: it summons your existing
+ * assistant home for free, or spawns a fresh one and consumes the block.
  * Either way the entity lands in a collision-free spot so it can't suffocate.
  */
 public class AssistantSpawnerBlock extends Block {
 
     public AssistantSpawnerBlock(Properties properties) {
         super(properties);
+    }
+
+    @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state,
+                            @javax.annotation.Nullable net.minecraft.world.entity.LivingEntity placer,
+                            net.minecraft.world.item.ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        if (level.isClientSide || !(level instanceof ServerLevel serverLevel)
+            || !(placer instanceof ServerPlayer serverPlayer)) {
+            return;
+        }
+        if (AssistantEntity.allFor(serverPlayer.getUUID()).size() >= AssistantEntity.MAX_PER_OWNER) {
+            serverPlayer.sendSystemMessage(Component.literal(
+                "<Assistant> You already run a full crew — dismiss one first (the spawner will keep)."));
+            return; // block stays placed; mine it back when you're ready
+        }
+        Vec3 spot = findSafeSpot(serverLevel, pos);
+        AssistantEntity assistant = McAssistantMod.ASSISTANT.get().create(serverLevel);
+        if (assistant == null) return;
+        assistant.moveTo(spot.x, spot.y, spot.z, serverPlayer.getYRot(), 0);
+        assistant.setOwner(serverPlayer);
+        assistant.setHome(pos);
+        serverLevel.addFreshEntity(assistant);
+        assistant.say("Assistant online — this spot is home. Just talk to me (\"follow me\", \"gather 32 logs\", \"work on your own\") or use /assistant.");
+        // The act of placing spends the spawner: one spawner, one companion.
+        serverLevel.levelEvent(2001, pos, Block.getId(state));
+        serverLevel.removeBlock(pos, false);
     }
 
     @Override
