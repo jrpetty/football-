@@ -58,6 +58,7 @@ public class BuildGoal extends Goal {
     private int workTicks;
     private int stuckTicks;
     private int myGen;
+    private int perimeterRadius = 5; // fortify ring radius (overridable for a big compound)
 
     public BuildGoal(AssistantEntity assistant) {
         this.assistant = assistant;
@@ -128,18 +129,39 @@ public class BuildGoal extends Goal {
         this.placed = 0;
         this.workTicks = 0;
         this.stuckTicks = 0;
+        this.perimeterRadius = 5;
         this.plan.clear();
 
-        String structure = job != null ? job.arg() : null;
+        // arg is "structure" or, for the anchored homestead builds, an encoded
+        // "structure|x,y,z,facing[,radius]" so the compound is placed on a fixed
+        // grid around home rather than wherever the bot happens to be standing.
+        String rawArg = job != null ? job.arg() : null;
+        String structure = rawArg;
+        BlockPos anchor = null;
+        Direction anchorFacing = null;
+        if (rawArg != null && rawArg.indexOf('|') >= 0) {
+            String[] head = rawArg.split("\\|", 2);
+            structure = head[0];
+            String[] p = head[1].split(",");
+            try {
+                anchor = new BlockPos(Integer.parseInt(p[0]), Integer.parseInt(p[1]), Integer.parseInt(p[2]));
+                anchorFacing = Direction.byName(p[3]);
+                if (p.length > 4) this.perimeterRadius = Math.max(4, Math.min(16, Integer.parseInt(p[4])));
+            } catch (Exception e) { anchor = null; anchorFacing = null; }
+        }
         if (structure == null || !STRUCTURES.contains(structure)) {
             finish("I can build: " + String.join(", ", STRUCTURES) + ".");
             return;
         }
-        this.facing = Direction.fromYRot(assistant.getYRot());
-        // Fortify rings the base itself (home if set), not a spot in front of us.
-        BlockPos base = "fortify".equals(structure) && assistant.getHome() != null
-            ? assistant.getHome() : assistant.feetPos();
-        layout(structure, base, facing, plan);
+        boolean centered = anchor != null;
+        this.facing = centered && anchorFacing != null ? anchorFacing
+            : Direction.fromYRot(assistant.getYRot());
+        // Anchored: build centered on the given spot. Otherwise fortify rings the
+        // base (home if set) and everything else builds in front of the bot.
+        BlockPos base = centered ? anchor
+            : ("fortify".equals(structure) && assistant.getHome() != null
+                ? assistant.getHome() : assistant.feetPos());
+        layout(structure, base, facing, centered, perimeterRadius, plan);
         // Bottom-up so nothing floats while we work.
         this.plan.sort(java.util.Comparator
             .comparingInt((Placement p) -> p.pos().getY())
@@ -290,11 +312,12 @@ public class BuildGoal extends Goal {
 
     // ------------------------------ blueprints ------------------------------
 
-    private static void layout(String structure, BlockPos feet, Direction facing, List<Placement> out) {
+    private static void layout(String structure, BlockPos feet, Direction facing,
+                               boolean centered, int perimeterRadius, List<Placement> out) {
         Direction right = facing.getClockWise();
         switch (structure) {
             case "platform" -> {
-                BlockPos center = feet.relative(facing, 3);
+                BlockPos center = centered ? feet : feet.relative(facing, 3);
                 for (int dx = -2; dx <= 2; dx++) {
                     for (int dz = -2; dz <= 2; dz++) {
                         out.add(new Placement(cell(center, right, facing, dx, dz).below(), Part.BLOCK));
@@ -302,7 +325,7 @@ public class BuildGoal extends Goal {
                 }
             }
             case "wall" -> {
-                BlockPos base = feet.relative(facing, 2);
+                BlockPos base = centered ? feet : feet.relative(facing, 2);
                 for (int w = -2; w <= 2; w++) {
                     for (int h = 0; h <= 2; h++) {
                         out.add(new Placement(base.relative(right, w).above(h), Part.BLOCK));
@@ -310,11 +333,11 @@ public class BuildGoal extends Goal {
                 }
             }
             case "shelter" -> {
-                BlockPos center = feet.relative(facing, 4);
+                BlockPos center = centered ? feet : feet.relative(facing, 4);
                 shell(out, center, right, facing);
             }
             case "smeltery" -> {
-                BlockPos center = feet.relative(facing, 4);
+                BlockPos center = centered ? feet : feet.relative(facing, 4);
                 shell(out, center, right, facing);
                 // Furnaces along the back interior wall, mouths toward the door.
                 for (int dx = -1; dx <= 1; dx++) {
@@ -327,7 +350,7 @@ public class BuildGoal extends Goal {
                 out.add(new Placement(cell(center, right, facing, -1, -1), Part.TORCH));
             }
             case "storage" -> {
-                BlockPos center = feet.relative(facing, 4);
+                BlockPos center = centered ? feet : feet.relative(facing, 4);
                 shell(out, center, right, facing);
                 out.add(new Placement(cell(center, right, facing, -1, 1), Part.CHEST));
                 out.add(new Placement(cell(center, right, facing, 1, 1), Part.CHEST));
@@ -336,7 +359,7 @@ public class BuildGoal extends Goal {
                 out.add(new Placement(cell(center, right, facing, 0, 1), Part.TORCH));
             }
             case "workshop" -> {
-                BlockPos center = feet.relative(facing, 4);
+                BlockPos center = centered ? feet : feet.relative(facing, 4);
                 shell(out, center, right, facing);
                 out.add(new Placement(cell(center, right, facing, -1, 1), Part.CRAFTING_TABLE));
                 out.add(new Placement(cell(center, right, facing, 0, 1), Part.FURNACE));
@@ -344,13 +367,13 @@ public class BuildGoal extends Goal {
                 out.add(new Placement(cell(center, right, facing, -1, -1), Part.TORCH));
             }
             case "room" -> {
-                BlockPos center = feet.relative(facing, 4);
+                BlockPos center = centered ? feet : feet.relative(facing, 4);
                 shell(out, center, right, facing);       // walls + roof
                 floor(out, center, right, facing, 2);     // a proper floor
                 out.add(new Placement(cell(center, right, facing, 0, 0), Part.TORCH));
             }
             case "house" -> {
-                BlockPos center = feet.relative(facing, 4);
+                BlockPos center = centered ? feet : feet.relative(facing, 4);
                 floor(out, center, right, facing, 2);
                 for (int dx = -2; dx <= 2; dx++) {
                     for (int dz = -2; dz <= 2; dz++) {
@@ -376,7 +399,7 @@ public class BuildGoal extends Goal {
                 out.add(new Placement(cell(center, right, facing, 1, -1), Part.TORCH));
             }
             case "pen" -> {
-                BlockPos center = feet.relative(facing, 5);
+                BlockPos center = centered ? feet : feet.relative(facing, 5);
                 for (int dx = -3; dx <= 3; dx++) {
                     for (int dz = -3; dz <= 3; dz++) {
                         if (Math.abs(dx) != 3 && Math.abs(dz) != 3) continue; // perimeter only
@@ -390,8 +413,9 @@ public class BuildGoal extends Goal {
                 // A defensive perimeter wall around the base, 3 blocks high, with
                 // a one-wide chokepoint doorway on the side we're facing and a
                 // torch on each corner so nothing spawns along it. `feet` here is
-                // the center (home if set) — the ring is built around it.
-                int r = 5;
+                // the center (home if set) — the ring is built around it. The
+                // radius widens for a whole compound (perimeterRadius from the job).
+                int r = perimeterRadius;
                 for (int dx = -r; dx <= r; dx++) {
                     for (int dz = -r; dz <= r; dz++) {
                         if (Math.abs(dx) != r && Math.abs(dz) != r) continue; // perimeter only
@@ -413,7 +437,7 @@ public class BuildGoal extends Goal {
                 // A tall lit tower: a 3x3 hollow column with a ladder up the
                 // middle, a walled deck, and a four-torch crown — a landmark you
                 // can see (and path home to) from a long way off.
-                BlockPos base = feet.relative(facing, 3);
+                BlockPos base = centered ? feet : feet.relative(facing, 3);
                 int wallTop = 9, deck = 10, rim = 11, torch = 12;
                 for (int dx = -1; dx <= 1; dx++) {
                     for (int dz = -1; dz <= 1; dz++) {
@@ -441,12 +465,12 @@ public class BuildGoal extends Goal {
             case "column" -> {
                 // A simple marker pillar with a torch on top — cheap, and handy as
                 // a beacon it can build anywhere to mark a spot.
-                BlockPos base = feet.relative(facing, 2);
+                BlockPos base = centered ? feet : feet.relative(facing, 2);
                 for (int h = 0; h <= 4; h++) out.add(new Placement(base.above(h), Part.BLOCK));
                 out.add(new Placement(base.above(5), Part.TORCH));
             }
             case "watchtower" -> {
-                BlockPos base = feet.relative(facing, 3);
+                BlockPos base = centered ? feet : feet.relative(facing, 3);
                 for (int dx = -1; dx <= 1; dx++) {
                     for (int dz = -1; dz <= 1; dz++) {
                         boolean edge = Math.abs(dx) == 1 || Math.abs(dz) == 1;

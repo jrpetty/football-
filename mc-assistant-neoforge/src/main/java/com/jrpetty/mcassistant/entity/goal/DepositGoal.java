@@ -124,12 +124,25 @@ public class DepositGoal extends Goal {
 
         int moved = 0;
         var items = assistant.getInventoryItems();
+        // Station reserve: a stationed farmer keeps its seed stock, a stationed
+        // lumberjack its saplings — only the surplus above the reserve is stashed.
+        java.util.Map<net.minecraft.world.item.Item, Integer> kept = new java.util.HashMap<>();
         for (int i = 0; i < items.size(); i++) {
             ItemStack stack = items.get(i);
             if (stack.isEmpty()) continue;
-            ItemStack leftover = insertInto(container, stack);
-            moved += stack.getCount() - leftover.getCount();
-            items.set(i, leftover);
+            int keep = 0;
+            int reserve = assistant.depositReserve(stack);
+            if (reserve > 0) {
+                int already = kept.getOrDefault(stack.getItem(), 0);
+                keep = Math.max(0, Math.min(stack.getCount(), reserve - already));
+                kept.put(stack.getItem(), already + keep);
+                if (keep >= stack.getCount()) continue; // whole stack is reserve
+            }
+            ItemStack toMove = stack.copyWithCount(stack.getCount() - keep);
+            ItemStack leftover = insertInto(container, toMove);
+            moved += toMove.getCount() - leftover.getCount();
+            int remain = keep + leftover.getCount();
+            items.set(i, remain == 0 ? ItemStack.EMPTY : stack.copyWithCount(remain));
         }
         container.setChanged();
         assistant.rememberChest(chestPos, container); // storage memory: learn what's where

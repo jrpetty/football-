@@ -153,7 +153,7 @@ public final class ChatControl {
                     REPAIR, LOCATE, NIGHT_ON, NIGHT_OFF,
                     SORT, ENCHANT, STOCK, NETHER, BOAT, MAKE, NEEDS, TOWN_GATHER,
                     ROLE, RENAME, AUTO_ON, AUTO_OFF, STANDING_ADD, STANDING_CLEAR,
-                    ROUTINE_ADD, ROUTINE_CLEAR, VERSION, DIAGNOSTIC }
+                    ROUTINE_ADD, ROUTINE_CLEAR, VERSION, DIAGNOSTIC, STATION }
 
         static Action gather(GatherGoal.Kind k, int n) { return new Action(Type.GATHER, k, n, null, null); }
         static Action townGather(GatherGoal.Kind k, int n) { return new Action(Type.TOWN_GATHER, k, n, null, null); }
@@ -339,6 +339,13 @@ public final class ChatControl {
             || c.contains("stop the schedule") || c.contains("stop scheduling")) {
             return Action.of(Action.Type.ROUTINE_CLEAR);
         }
+        // Release a station — before AUTO_OFF and the plain "stop" so phrases
+        // like "stop farming here" / "stand down" aren't eaten by them.
+        if (c.contains("stand down") || c.contains("leave the station") || c.contains("off duty")
+            || c.contains("clear the station") || c.contains("stop working here")
+            || c.contains("stop farming here") || c.contains("stop chopping here")) {
+            return Action.with(Action.Type.STATION, "clear", 0);
+        }
         if (c.contains("take a break") || c.matches("^auto\\s*off\\b.*")
             || c.matches("^stop\\b.*\\bworking\\b.*") || c.contains("wait for orders")) {
             return Action.of(Action.Type.AUTO_OFF);
@@ -383,6 +390,24 @@ public final class ChatControl {
             || c.matches("^(?:assess|check)\\s+yourself\\b.*") || c.contains("how are you doing")) {
             return Action.of(Action.Type.NEEDS);
         }
+        // --- Station assignments: pin this bot to the spot you're standing on as
+        //     a full-time specialist. "farm here" -> it keeps that farm planted,
+        //     watered, harvested, and stashed; "chop trees here" -> it fells,
+        //     replants every stump, and stashes the logs. "stand down" releases it
+        //     (that's parsed earlier, above the generic stop).
+        boolean farmSpot = c.contains("here") || c.contains("this farm") || c.contains("this field")
+            || c.contains("this area") || c.contains("your farm");
+        if (farmSpot && c.matches("^(?:farm|work|tend|run|man|keep|stay|station)\\b.*")
+            && c.matches(".*\\b(?:farm|farming|field|crops)\\b.*")) {
+            return Action.with(Action.Type.STATION, "farm", 0);
+        }
+        boolean woodSpot = c.contains("here") || c.contains("these trees") || c.contains("this area")
+            || c.contains("this forest") || c.contains("your forest") || c.contains("tree farm");
+        if (woodSpot && c.matches("^(?:chop|cut|work|run|man|keep|stay|station|log)\\b.*")
+            && c.matches(".*\\b(?:trees?|forest|woodlot|lumber|wood|logs?|chop(?:ping)?)\\b.*")) {
+            return Action.with(Action.Type.STATION, "wood", 0);
+        }
+
         if (c.contains("work on your own") || c.matches("^auto\\s*on\\b.*")
             || c.contains("be autonomous") || c.contains("do your own thing")
             || c.contains("survive") || c.contains("fend for yourself")
@@ -833,7 +858,10 @@ public final class ChatControl {
                     a.getHealth(), a.getMaxHealth(), a.getMode().name().toLowerCase(),
                     a.getRole().name().toLowerCase(), a.isAutonomous() ? " (working autonomously)" : "",
                     a.countItems(), a.countFood(), a.getXp(), a.jobCount(), a.standingOrders().size(),
-                    a.routines().size()));
+                    a.routines().size())
+                    + (a.stationTask() == AssistantEntity.StationTask.NONE || a.stationPos() == null ? ""
+                        : " Stationed: " + (a.stationTask() == AssistantEntity.StationTask.FARM ? "farming" : "forestry")
+                          + " at " + a.stationPos().getX() + " " + a.stationPos().getY() + " " + a.stationPos().getZ() + "."));
                 case DIAGNOSTIC -> {
                     Job job = Job.diagnostic();
                     a.enqueue(job);
@@ -1160,6 +1188,27 @@ public final class ChatControl {
                     a.say(crew.size() > 1
                         ? crew.size() + " of us are taking a break — waiting for orders."
                         : "Taking a break — I'll wait for orders.");
+                }
+                case STATION -> {
+                    switch (act.arg() == null ? "clear" : act.arg()) {
+                        case "farm" -> {
+                            a.setStation(player.blockPosition(), AssistantEntity.StationTask.FARM);
+                            a.say("This is my farm now — I'll keep it planted, watered, and harvested, "
+                                + "and stash the produce in a chest here. Say \"stand down\" to release me.");
+                        }
+                        case "wood" -> {
+                            a.setStation(player.blockPosition(), AssistantEntity.StationTask.WOOD);
+                            a.say("Working these woods now — I'll fell the trees, replant every stump, "
+                                + "and stash the logs in a chest here. Say \"stand down\" to release me.");
+                        }
+                        default -> {
+                            boolean had = a.stationTask() != AssistantEntity.StationTask.NONE;
+                            a.setStation(null, AssistantEntity.StationTask.NONE);
+                            a.setAutonomous(false);
+                            a.say(had ? "Standing down from my station — waiting for orders."
+                                      : "I wasn't stationed anywhere — waiting for orders.");
+                        }
+                    }
                 }
                 case STANDING_ADD -> {
                     if (act.gatherKind() == null) {

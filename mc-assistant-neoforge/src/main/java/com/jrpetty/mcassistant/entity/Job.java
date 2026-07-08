@@ -62,6 +62,15 @@ public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount,
         return new Job(Type.BUILD, null, 0, null, structure);
     }
 
+    /** Anchored build for the growing homestead — the structure is placed centered
+     *  on a fixed grid spot around home. arg = "structure|x,y,z,facing[,radius]". */
+    public static Job buildAt(String structure, net.minecraft.core.BlockPos anchor,
+                              net.minecraft.core.Direction facing, int radius) {
+        String enc = structure + "|" + anchor.getX() + "," + anchor.getY() + "," + anchor.getZ()
+            + "," + facing.getName() + (radius > 0 ? "," + radius : "");
+        return new Job(Type.BUILD, null, 0, null, enc);
+    }
+
     public static Job smelt(String itemWord, int amount) {
         return new Job(Type.SMELT, null, Math.max(1, Math.min(256, amount)), null, itemWord);
     }
@@ -167,7 +176,10 @@ public record Job(Type type, @Nullable GatherGoal.Kind kind, int amount,
             case CRAFT -> "craft " + amount + " " + arg;
             case WITHDRAW -> "withdraw " + amount + " " + arg;
             case FARM -> "tend the farm";
-            case BUILD -> "fortify".equals(arg) ? "fortify the base" : "build a " + arg;
+            case BUILD -> {
+                String s = arg == null ? "?" : arg.split("\\|", 2)[0];
+                yield "fortify".equals(s) ? "fortify the base" : "build a " + s;
+            }
             case SMELT -> "smelt " + amount + " " + arg;
             case MINE -> "dig a mine to Y" + amount;
             case HUNT -> "hunt " + amount + " " + (arg != null ? arg : "animals");

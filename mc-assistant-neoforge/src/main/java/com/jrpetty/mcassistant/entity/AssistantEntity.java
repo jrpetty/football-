@@ -35,6 +35,7 @@ import com.jrpetty.mcassistant.entity.goal.TravelGoal;
 import com.jrpetty.mcassistant.entity.goal.WithdrawGoal;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
@@ -99,6 +100,11 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     public enum Mode { STAY, FOLLOW, GUARD }
+
+    /** A full-time specialty the bot is pinned to at a fixed spot: FARM keeps a
+     *  plot planted/watered/harvested; WOOD fells trees, replants every stump,
+     *  and stashes the logs. Set by "farm here" / "chop trees here". */
+    public enum StationTask { NONE, FARM, WOOD }
 
     public enum Role {
         NONE, MINER, LUMBERJACK, FARMER, BUILDER;
@@ -176,10 +182,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b19 · \"do your own thing\" is now a GROUP order — every bot within 20 blocks of you detaches at once (no more stragglers "
-        + "still following) and a detached bot never runs back to you, even when hurt · smarter eating (saves golden apples, avoids risky "
-        + "food, least-filling first) · explores when the area runs dry · smarter reach · watered farms · hunts at night · bakes bread · "
-        + "picks up loot · crafts a bow · builds up its base · auto home + storage · self-sourcing crafting · routines · fortify · distress";
+        "2026-07-b21 · station specialists: \"farm here\" pins a bot to a farm it keeps planted/watered/harvested with produce stashed to "
+        + "a chest; \"chop trees here\" pins a lumberjack that fells, replants every stump, and stashes logs (\"stand down\" releases) · "
+        + "growing homestead: house, storage, smeltery, pen, farm, wall, lighthouse built out over time · group detach within 20 blocks · "
+        + "smarter eating · explores when dry · smarter reach · self-sourcing crafting · routines · distress";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -257,6 +263,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private int idleBackoffUntil;
     private float exploreHeading;      // scouting direction, kept so it spirals out rather than pacing
     private boolean idleKick;          // run the idle brain immediately once autonomy is switched on
+    @Nullable private BlockPos stationPos;              // where its full-time post is (persisted)
+    private StationTask stationTask = StationTask.NONE; // what it does there (persisted)
+    private int stationWarnTick = -9999;                // cooldown on "I need a chest here" nags
+    private static final int STATION_RADIUS = 16;       // how far it works from the post
     private int lastWarnTick = -1000;
     private boolean nightHome;        // "head home at night" toggle
     private boolean wentHomeTonight;  // one trip per night
@@ -505,6 +515,33 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             this.idleKick = true;
             this.getNavigation().stop(); // drop any lingering follow path immediately
         }
+    }
+
+    /** Pin (or release, pos=null) this bot to a full-time station. Stationing
+     *  turns autonomy on — a specialist works detached — and anchors home at the
+     *  post if none was set, so night/retreat behavior centers on its plot. */
+    public void setStation(@Nullable BlockPos pos, StationTask task) {
+        this.stationPos = pos;
+        this.stationTask = pos == null ? StationTask.NONE : task;
+        if (pos != null) {
+            if (homePos == null) setHome(pos);
+            setAutonomous(true);
+        }
+    }
+
+    @Nullable public BlockPos stationPos() { return stationPos; }
+
+    public StationTask stationTask() { return stationTask; }
+
+    /** How many of this item to KEEP BACK when depositing — a stationed farmer
+     *  holds onto seed stock, a stationed lumberjack onto saplings to replant. */
+    public int depositReserve(ItemStack s) {
+        return switch (stationTask) {
+            case FARM -> (s.is(Items.WHEAT_SEEDS) || s.is(Items.BEETROOT_SEEDS)
+                || s.is(Items.CARROT) || s.is(Items.POTATO)) ? 12 : 0;
+            case WOOD -> s.is(ItemTags.SAPLINGS) ? 16 : 0;
+            case NONE -> 0;
+        };
     }
 
     /** Say something to the owner. */
@@ -1261,23 +1298,89 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             CraftPlanner.Result plan = CraftPlanner.plan(this, "arrow", 16);
             if (!plan.jobs().isEmpty() && plan.blockers().isEmpty()) { announcePlan("Fletching arrows", plan); return true; }
         }
-        // --- Build up the home base over time: a shelter, then a defensive wall,
-        //     once it's well-stocked with blocks. It makes base a real strongpoint. ---
-        if (solo && homePos != null && baseStage < 2) {
-            int need = baseStage == 0 ? 48 : 96;
-            if (countMatching(com.jrpetty.mcassistant.entity.goal.NightShelterGoal.SHELTER_BLOCK) >= need) {
-                if (homePos.distSqr(blockPosition()) > 100) {
-                    getNavigation().moveTo(homePos.getX() + 0.5, homePos.getY(), homePos.getZ() + 0.5, 1.1D);
-                    return true; // head to base; build once we're there
-                }
-                String s = baseStage == 0 ? "shelter" : "fortify";
-                say("Building up the base — " + s + ".");
-                enqueue(Job.build(s));
+        // --- Grow a real homestead over time: house -> storage -> smeltery ->
+        //     animal pen -> farm -> perimeter wall -> lighthouse. One building per
+        //     pass, only once it has (or gathers/crafts) the materials. ---
+        if (solo && homePos != null && homesteadStep()) return true;
+        return false;
+    }
+
+    /** One step of building out the homestead around home. Returns true if it took
+     *  an action (walked home, gathered/crafted materials, or placed a building).
+     *  Advances baseStage building-by-building until the compound is complete. */
+    private boolean homesteadStep() {
+        if (homePos == null || baseStage > 6) return false;
+        // Work on the compound from home — head back if we've wandered off.
+        if (homePos.distSqr(blockPosition()) > 144) {
+            getNavigation().moveTo(homePos.getX() + 0.5, homePos.getY(), homePos.getZ() + 0.5, 1.1D);
+            return true;
+        }
+        BlockPos h = homePos;
+        Direction f = Direction.NORTH; // fixed layout so buildings tile predictably
+        // Block counts are set ABOVE each blueprint's real needs on purpose: the
+        // builder only hard-stops when it has zero blocks, so under-gating would
+        // leave a half-built structure. Over-gating just gathers a little spare.
+        //
+        // Compound plan (facing NORTH → every door opens SOUTH): house at home
+        // with storage east(6) and smeltery west(6) — all inside the radius-9
+        // wall with a one-block gap to it. The pen sits OUTSIDE the wall to the
+        // south (gate facing the compound doorway, which is also south-center),
+        // and the lighthouse rises just outside to the north. Nothing overlaps.
+        return switch (baseStage) {
+            case 0 -> buildStage("house", h, f, 0, 120, new ItemNeed[]{
+                        new ItemNeed("crafting_table", 1), new ItemNeed("furnace", 1), new ItemNeed("chest", 1) });
+            case 1 -> buildStage("storage", h.east(6), f, 0, 80, new ItemNeed[]{
+                        new ItemNeed("chest", 4) });
+            case 2 -> buildStage("smeltery", h.west(6), f, 0, 80, new ItemNeed[]{
+                        new ItemNeed("furnace", 3), new ItemNeed("chest", 2), new ItemNeed("crafting_table", 1) });
+            case 3 -> buildStage("pen", h.south(13).east(6), Direction.SOUTH, 0, 0, new ItemNeed[]{
+                        new ItemNeed("oak_fence", 24), new ItemNeed("oak_fence_gate", 1) });
+            case 4 -> {
+                say("Homestead's coming along — laying in a farm for steady food.");
+                enqueue(Job.farm());
                 baseStage++;
-                return true;
+                yield true;
+            }
+            case 5 -> buildStage("fortify", h, f, 9, 220, new ItemNeed[]{});
+            case 6 -> buildStage("lighthouse", h.north(12), f, 0, 100, new ItemNeed[]{
+                        new ItemNeed("ladder", 11) });
+            default -> false;
+        };
+    }
+
+    /** A functional item a building needs before it can go up (a recipe key + count). */
+    private record ItemNeed(String recipeKey, int count) {}
+
+    /** Make sure the functional items and building blocks for a homestead building
+     *  are on hand (crafting/gathering the shortfall first), then place it. */
+    private boolean buildStage(String structure, BlockPos anchor, Direction facing,
+                               int radius, int blocksNeeded, ItemNeed[] items) {
+        for (ItemNeed need : items) {
+            net.minecraft.world.item.Item it = RecipeBook.item(need.recipeKey());
+            int have = it == Items.AIR ? 0 : countCarried(s -> s.is(it));
+            if (have < need.count()) {
+                CraftPlanner.Result plan = CraftPlanner.plan(this, need.recipeKey(), need.count() - have);
+                if (!plan.jobs().isEmpty() && plan.blockers().isEmpty()) {
+                    announcePlan("Making " + (need.count() - have) + " "
+                        + CraftPlanner.pretty(need.recipeKey()) + " for the " + structure, plan);
+                    return true;
+                }
+                return false; // can't get it right now — retry a later cycle, don't loop-build
             }
         }
-        return false;
+        if (blocksNeeded > 0
+            && countMatching(com.jrpetty.mcassistant.entity.goal.NightShelterGoal.SHELTER_BLOCK) < blocksNeeded) {
+            GatherGoal.Kind k = resourceNearby(GatherGoal.Kind.STONE, 16)
+                ? GatherGoal.Kind.STONE : GatherGoal.Kind.DIRT;
+            if (!resourceNearby(k, 16)) return false; // nothing to mine here — explore will relocate
+            say("Gathering blocks for the " + structure + ".");
+            enqueue(Job.gather(k, Math.min(64, blocksNeeded)));
+            return true;
+        }
+        say("Expanding the homestead — building the " + structure + ".");
+        enqueue(Job.buildAt(structure, anchor, facing, radius));
+        baseStage++;
+        return true;
     }
 
     private void announcePlan(String intro, CraftPlanner.Result plan) {
@@ -1298,6 +1401,86 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (dest == null) return;
         say("Nothing left to work with here — scouting " + compass(dest) + " for more.");
         enqueue(Job.explore(dest));
+    }
+
+    /** Station duty: stay in the assigned area and run the specialty in a loop —
+     *  work what's ready, stash the output in the station chest, wait for
+     *  regrowth, repeat. Returns true if it acted this cycle. */
+    private boolean decideStation() {
+        BlockPos st = stationPos;
+        if (st == null) return false;
+        // Wandered off (a retreat, a chase)? Head back to the post first.
+        if (st.distSqr(blockPosition()) > (double) (STATION_RADIUS + 6) * (STATION_RADIUS + 6)) {
+            getNavigation().moveTo(st.getX() + 0.5, st.getY(), st.getZ() + 0.5, 1.1D);
+            return true;
+        }
+        if (stationDepositDue()) return true;
+        switch (stationTask) {
+            case FARM -> {
+                // Work only when there's something to do — ripe crops, or a plot
+                // that still needs planting. While crops grow, wait quietly.
+                if (matureCropsNearby() || (!cropsNearby() && (hasSeeds() || grassNearby()))) {
+                    enqueue(Job.farm());
+                    return true;
+                }
+            }
+            case WOOD -> {
+                // Sweep the loose drops and saplings between fellings, then chop
+                // whatever has grown back; GatherGoal replants every stump.
+                if (level().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                        getBoundingBox().inflate(8)).size() >= 3 && !isPackFull()) {
+                    enqueue(Job.cleanup());
+                    return true;
+                }
+                if (resourceNearby(GatherGoal.Kind.LOGS, STATION_RADIUS)) {
+                    enqueue(Job.gather(GatherGoal.Kind.LOGS, 16));
+                    return true;
+                }
+            }
+            case NONE -> { }
+        }
+        return false; // nothing ready — crops/saplings still growing
+    }
+
+    /** Output piling up? Stash it at the station, setting up a chest if need be.
+     *  Counts only the SURPLUS above the working reserve (seed stock, saplings) —
+     *  otherwise a bot holding exactly its reserve would loop stash-nothing runs. */
+    private boolean stationDepositDue() {
+        int surplus = switch (stationTask) {
+            case FARM -> surplusOf(Items.WHEAT, 0) + surplusOf(Items.BEETROOT, 0)
+                + surplusOf(Items.CARROT, 12) + surplusOf(Items.POTATO, 12)
+                + surplusOf(Items.WHEAT_SEEDS, 12) + surplusOf(Items.BEETROOT_SEEDS, 12);
+            case WOOD -> countMatching(s -> s.is(ItemTags.LOGS));
+            case NONE -> 0;
+        };
+        if (!isPackFull() && surplus < 32) return false;
+        if (findAnyChest(12) == null) {
+            // No chest at the post yet: place one we carry, or craft one (a
+            // lumberjack always has the planks for it).
+            if (countCarried(s -> s.is(Items.CHEST)) > 0 && placeChestNearby()) {
+                say("Set up a chest for the station's output.");
+                return true;
+            }
+            CraftPlanner.Result plan = CraftPlanner.plan(this, "chest", 1);
+            if (!plan.jobs().isEmpty() && plan.blockers().isEmpty()) {
+                announcePlan("Making a chest for the station's output", plan);
+                return true;
+            }
+            // Can't make one (a farm rarely has wood) — tell the player, not
+            // too often, instead of silently hoarding a full pack.
+            if (tickCount - stationWarnTick > 4800) {
+                stationWarnTick = tickCount;
+                say("My pack's filling up and there's no chest at my station — drop one nearby and I'll use it.");
+            }
+            return false;
+        }
+        say("Stashing the station's output.");
+        enqueue(Job.deposit());
+        return true;
+    }
+
+    private int surplusOf(net.minecraft.world.item.Item it, int reserve) {
+        return Math.max(0, countMatching(s -> s.is(it)) - reserve);
     }
 
     /** Anything within r the bot can turn into progress: wood, stone, ore, cane,
@@ -1975,6 +2158,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         tag.putBoolean("Auto", autonomous);
         tag.putBoolean("NightHome", nightHome);
         tag.putInt("BaseStage", baseStage);
+        if (stationPos != null) tag.putLong("StationPos", stationPos.asLong());
+        tag.putString("StationTask", stationTask.name());
         tag.putInt("Xp", xp);
         tag.putBoolean("ExpActive", expeditionActive);
         if (expeditionActive) {
@@ -2030,6 +2215,13 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         autonomous = tag.getBoolean("Auto");
         nightHome = tag.getBoolean("NightHome");
         baseStage = tag.getInt("BaseStage");
+        stationPos = tag.contains("StationPos") ? BlockPos.of(tag.getLong("StationPos")) : null;
+        try {
+            stationTask = StationTask.valueOf(tag.getString("StationTask"));
+        } catch (IllegalArgumentException ignored) {
+            stationTask = StationTask.NONE;
+        }
+        if (stationPos == null) stationTask = StationTask.NONE;
         xp = tag.getInt("Xp");
         expeditionActive = tag.getBoolean("ExpActive");
         if (expeditionActive) {
@@ -2318,21 +2510,27 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             // hungry / toolless / full-pack bot must be free to act. Only the
             // discretionary tiers (progress / role / town) respect the backoff.
             if (!decideSurvival()) {
-                if (tickCount >= idleBackoffUntil) {
-                    if (townMember && role != Role.NONE) {
-                        // Town duty first; if the board has no need and no role work,
-                        // still advance ourselves rather than idling.
-                        if (tickCount % 400 == 0 && !decideTownWork() && !decideProgress()) {
-                            enqueueRoleWork();
+                if (stationTask != StationTask.NONE && stationPos != null) {
+                    // A stationed specialist works its post and nothing else — no
+                    // tech-tree side quests, no exploring away from its plot.
+                    if (tickCount >= idleBackoffUntil) decideStation();
+                } else {
+                    if (tickCount >= idleBackoffUntil) {
+                        if (townMember && role != Role.NONE) {
+                            // Town duty first; if the board has no need and no role work,
+                            // still advance ourselves rather than idling.
+                            if (tickCount % 400 == 0 && !decideTownWork() && !decideProgress()) {
+                                enqueueRoleWork();
+                            }
+                        } else if (!decideProgress() && tickCount % 400 == 0) {
+                            enqueueRoleWork(); // role==NONE now keeps busy too (no more statue)
                         }
-                    } else if (!decideProgress() && tickCount % 400 == 0) {
-                        enqueueRoleWork(); // role==NONE now keeps busy too (no more statue)
                     }
+                    // Area tapped out and nothing queued? Relocate to fresh terrain and
+                    // find more — even during the post-dry cool-off, since exploring is
+                    // exactly the answer to a dry area. Solo bots only (town crew stay put).
+                    if (peekJob() == null && !townMember) decideExplore();
                 }
-                // Area tapped out and nothing queued? Relocate to fresh terrain and
-                // find more — even during the post-dry cool-off, since exploring is
-                // exactly the answer to a dry area. Solo bots only (town crew stay put).
-                if (peekJob() == null && !townMember) decideExplore();
             }
         }
 
