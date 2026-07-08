@@ -1,15 +1,15 @@
 {
   "parent": "minecraft:recipes/root",
   "criteria": {
-    "has_diamond": {
+    "has_rotten_flesh": {
       "trigger": "minecraft:inventory_changed",
-      "conditions": { "items": [ { "items": ["minecraft:diamond"] } ] }
+      "conditions": { "items": [ { "items": ["minecraft:rotten_flesh"] } ] }
     },
     "has_the_recipe": {
       "trigger": "minecraft:recipe_unlocked",
       "conditions": { "recipe": "mc_assistant:assistant_spawner" }
     }
   },
-  "requirements": [ ["has_diamond", "has_the_recipe"] ],
+  "requirements": [ ["has_rotten_flesh", "has_the_recipe"] ],
   "rewards": { "recipes": ["mc_assistant:assistant_spawner"] }
 }

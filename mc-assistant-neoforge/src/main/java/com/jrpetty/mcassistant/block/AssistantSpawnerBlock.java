@@ -64,6 +64,13 @@ public class AssistantSpawnerBlock extends Block {
         assistant.setHome(pos);
         serverLevel.addFreshEntity(assistant);
         assistant.say("Assistant online. Talk to me with ! commands (\"!follow\", \"!gather logs 16\", \"!status\") or /assistant.");
+        // One spawner, one companion: creating a FRESH assistant uses the block
+        // up (with break particles). Re-summoning your crew keeps it; so does
+        // creative mode.
+        if (!serverPlayer.isCreative()) {
+            serverLevel.levelEvent(2001, pos, Block.getId(state));
+            serverLevel.removeBlock(pos, false);
+        }
         return InteractionResult.CONSUME;
     }
 

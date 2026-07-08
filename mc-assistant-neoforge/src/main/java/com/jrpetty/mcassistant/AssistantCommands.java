@@ -181,10 +181,33 @@ public final class AssistantCommands {
             ctx.getSource().sendFailure(Component.literal("You already run a full crew — dismiss one first."));
             return 0;
         }
+        if (!takeSpawnerCost(player)) {
+            ctx.getSource().sendFailure(Component.literal(SPAWNER_COST_HINT));
+            return 0;
+        }
         AssistantEntity a = spawnFor(player);
         if (a == null) return 0;
         a.say("Assistant online. Just talk to me (\"gather 32 logs then follow me\") or use /assistant.");
         return 1;
+    }
+
+    public static final String SPAWNER_COST_HINT =
+        "You need an Assistant Spawner to bring in a new helper — craft one: 8 rotten flesh around a diamond block.";
+
+    /** Survival cost: bringing in a NEW assistant consumes one Assistant Spawner
+     *  item from the player's inventory — one spawner, one companion. Creative
+     *  spawns free. Returns true if the cost was paid (or waived). */
+    public static boolean takeSpawnerCost(ServerPlayer player) {
+        if (player.isCreative()) return true;
+        var inv = player.getInventory();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            net.minecraft.world.item.ItemStack s = inv.getItem(i);
+            if (!s.isEmpty() && s.is(McAssistantMod.ASSISTANT_SPAWNER_ITEM.get())) {
+                s.shrink(1);
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Create + bind a fresh assistant next to the player. Shared by the

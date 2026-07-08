@@ -191,10 +191,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b23 · stations NEVER SLEEP: every station keeps its chunks force-loaded, so farms grow, furnaces burn, and specialists "
-        + "keep working while you're far away (freed on stand-down/death) · NEW seventh station: \"mine here\" — a resident miner that "
-        + "digs, strips every vein, torches its tunnels, and stashes the haul at the post · farm · forestry · ranch · guard · smeltery · "
-        + "hauler · growing homestead · group detach · explores when dry · self-sourcing crafting · routines · distress";
+        "2026-07-b24 · survival cost: each new companion consumes ONE Assistant Spawner (new recipe: 8 rotten flesh around a DIAMOND "
+        + "BLOCK) — chat spawn, /assistant spawn, and the placed block all pay it (creative free; re-summoning your crew free) · "
+        + "stations never sleep (chunk-loaded) · seven stations: farm · forestry · ranch · guard · smeltery · hauler · mine · "
+        + "growing homestead · group detach · explores when dry · self-sourcing crafting · routines · distress";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).

@@ -258,6 +258,11 @@ public final class ChatControl {
             }
         }
 
+        // Survival cost: one Assistant Spawner per companion (creative is free).
+        if (!AssistantCommands.takeSpawnerCost(player)) {
+            player.sendSystemMessage(Component.literal("<Assistant> " + AssistantCommands.SPAWNER_COST_HINT));
+            return;
+        }
         AssistantEntity fresh = AssistantCommands.spawnFor(player);
         if (fresh == null) return;
         fresh.rename(name);
