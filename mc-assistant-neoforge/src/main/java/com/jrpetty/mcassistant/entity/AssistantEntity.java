@@ -109,7 +109,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      *  here", "guard here", "run the smeltery", "haul here". */
     public enum StationTask {
         NONE("none"), FARM("farming"), WOOD("forestry"), RANCH("ranching"),
-        GUARD("guard duty"), SMELT("smeltery"), HAUL("hauling");
+        GUARD("guard duty"), SMELT("smeltery"), HAUL("hauling"), MINE("mining");
 
         public final String label;
         StationTask(String label) { this.label = label; }
@@ -191,10 +191,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b22 · six station specialists: farm · forestry (\"chop trees here\") · ranch (breed/shear/cull, \"ranch here\") · "
-        + "guard post (\"guard here\": holds the area, lights it, banks drops) · smeltery keeper (\"run the smeltery\": feeds furnaces "
-        + "from the input chest) · hauler (\"haul here\": runs cargo from the post's chest home) — all persistent, all release with "
-        + "\"stand down\" · growing homestead · group detach · explores when dry · self-sourcing crafting · routines · distress";
+        "2026-07-b23 · stations NEVER SLEEP: every station keeps its chunks force-loaded, so farms grow, furnaces burn, and specialists "
+        + "keep working while you're far away (freed on stand-down/death) · NEW seventh station: \"mine here\" — a resident miner that "
+        + "digs, strips every vein, torches its tunnels, and stashes the haul at the post · farm · forestry · ranch · guard · smeltery · "
+        + "hauler · growing homestead · group detach · explores when dry · self-sourcing crafting · routines · distress";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -531,14 +531,32 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Pin (or release, pos=null) this bot to a full-time station. Stationing
      *  turns autonomy on — a specialist works detached — and anchors home at the
      *  post if none was set, so night/retreat behavior centers on its plot.
-     *  (Not for a hauler: its home is the DELIVERY end, never the pickup post.) */
+     *  (Not for a hauler: its home is the DELIVERY end, never the pickup post.)
+     *  The post's chunks are kept force-loaded so the station runs while the
+     *  player is far away; the window moves/frees as the station changes. */
     public void setStation(@Nullable BlockPos pos, StationTask task) {
+        if (level() instanceof net.minecraft.server.level.ServerLevel sl) {
+            if (stationPos != null) {
+                com.jrpetty.mcassistant.ChunkLoad.setLoaded(sl, getUUID(), stationPos,
+                    stationChunkRadius(stationTask), false);
+            }
+            if (pos != null) {
+                com.jrpetty.mcassistant.ChunkLoad.setLoaded(sl, getUUID(), pos,
+                    stationChunkRadius(task), true);
+            }
+        }
         this.stationPos = pos;
         this.stationTask = pos == null ? StationTask.NONE : task;
         if (pos != null) {
             if (homePos == null && task != StationTask.HAUL) setHome(pos);
             setAutonomous(true);
         }
+    }
+
+    /** How many chunks around the post stay loaded: 3x3 normally; 5x5 for a
+     *  mine, whose staircase runs well past the post horizontally. */
+    private static int stationChunkRadius(StationTask task) {
+        return task == StationTask.MINE ? 2 : 1;
     }
 
     @Nullable public BlockPos stationPos() { return stationPos; }
@@ -560,6 +578,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 : ((s.is(Items.COAL) || s.is(Items.CHARCOAL)) ? 32
                 : (s.get(DataComponents.FOOD) != null ? 8 : 0));
             case HAUL -> s.get(DataComponents.FOOD) != null ? 8 : 0; // rations for the road
+            case MINE -> s.is(Items.TORCH) ? 16 : (s.is(Items.COBBLESTONE) ? 16
+                : (s.get(DataComponents.FOOD) != null ? 8 : 0)); // torches, bridging blocks, rations
             case NONE -> 0;
         };
     }
@@ -1538,6 +1558,22 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 if (copper > 0) enqueue(Job.smelt("copper", copper));
                 return true;
             }
+            case MINE -> {
+                // A resident miner: each run reuses/extends the staircase, tunnels
+                // a fresh gallery grabbing every vein, torches as it goes, then the
+                // walk-back + deposit rungs bank the haul at the post chest.
+                if (countCarried(AssistantEntity::isPickaxe) == 0) return false; // survival rung crafts one
+                if (countMatching(s -> s.is(Items.TORCH)) < 8) {
+                    CraftPlanner.Result plan = CraftPlanner.plan(this, "torch", 8);
+                    if (!plan.jobs().isEmpty() && plan.blockers().isEmpty()) {
+                        announcePlan("Making torches for the mine", plan);
+                        return true;
+                    }
+                }
+                int targetY = bestPickTier() >= 3 ? -54 : 12; // iron pick unlocks the deep runs
+                enqueue(Job.mine(targetY));
+                return true;
+            }
             case HAUL -> {
                 // Delivery end must exist and be a real trip away from the pickup
                 // post — otherwise "home" IS the outpost and cargo just cycles.
@@ -1636,6 +1672,14 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 || s.is(Items.STRING) || s.is(Items.GUNPOWDER) || s.is(Items.SPIDER_EYE));
             case SMELT -> surplusOf(Items.IRON_INGOT, 0) + surplusOf(Items.GOLD_INGOT, 0)
                 + surplusOf(Items.COPPER_INGOT, 0);
+            case MINE -> surplusOf(Items.COBBLESTONE, 16) + surplusOf(Items.COBBLED_DEEPSLATE, 0)
+                + surplusOf(Items.ANDESITE, 0) + surplusOf(Items.DIORITE, 0)
+                + surplusOf(Items.GRANITE, 0) + surplusOf(Items.TUFF, 0)
+                + surplusOf(Items.DIRT, 0) + surplusOf(Items.GRAVEL, 0)
+                + surplusOf(Items.RAW_IRON, 0) + surplusOf(Items.RAW_GOLD, 0)
+                + surplusOf(Items.RAW_COPPER, 0) + surplusOf(Items.COAL, 0)
+                + surplusOf(Items.REDSTONE, 0) + surplusOf(Items.LAPIS_LAZULI, 0)
+                + surplusOf(Items.DIAMOND, 0) + surplusOf(Items.EMERALD, 0);
             case HAUL, NONE -> 0;
         };
         if (!isPackFull() && surplus < 32) return false;
@@ -2825,6 +2869,13 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (ownerId != null) {
             Map<String, AssistantEntity> m = BY_OWNER.get(ownerId);
             if (m != null) m.remove(assistantName.toLowerCase(), this);
+        }
+        // Death/dismissal frees the station's force-loaded chunks. A plain chunk
+        // unload must NOT — staying loaded while parked is the whole point.
+        if (reason.shouldDestroy() && stationPos != null
+            && level() instanceof net.minecraft.server.level.ServerLevel sl) {
+            com.jrpetty.mcassistant.ChunkLoad.setLoaded(sl, getUUID(), stationPos,
+                stationChunkRadius(stationTask), false);
         }
         super.remove(reason);
     }

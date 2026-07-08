@@ -345,7 +345,8 @@ public final class ChatControl {
             || c.contains("clear the station") || c.contains("stop working here")
             || c.contains("stop farming here") || c.contains("stop chopping here")
             || c.contains("stop hauling") || c.contains("stop guarding here")
-            || c.contains("stop ranching") || c.contains("leave the smeltery")) {
+            || c.contains("stop ranching") || c.contains("leave the smeltery")
+            || c.contains("stop mining here")) {
             return Action.with(Action.Type.STATION, "clear", 0);
         }
         if (c.contains("take a break") || c.matches("^auto\\s*off\\b.*")
@@ -435,6 +436,11 @@ public final class ChatControl {
             || c.contains("run cargo") || c.contains("courier here")
             || (c.contains("carry") && c.contains("home") && (c.contains("here") || c.contains("from")))) {
             return Action.with(Action.Type.STATION, "haul", 0);
+        }
+        if (c.matches("^mine here\\b.*") || c.contains("work this mine") || c.contains("work the mine")
+            || c.contains("this is your mine") || c.contains("miner here")
+            || c.contains("keep mining here") || (c.contains("dig a mine") && c.contains("here"))) {
+            return Action.with(Action.Type.STATION, "mine", 0);
         }
 
         if (c.contains("work on your own") || c.matches("^auto\\s*on\\b.*")
@@ -1251,6 +1257,11 @@ public final class ChatControl {
                                 + (a.getHome() == null
                                     ? " But I need a home to deliver to: stand at the base and say \"set home here\"."
                                     : " Say \"stand down\" to release me."));
+                        }
+                        case "mine" -> {
+                            a.setStation(player.blockPosition(), AssistantEntity.StationTask.MINE);
+                            a.say("This is my mine now — I'll dig down, strip every vein, torch the tunnels, "
+                                + "and stash the haul in a chest here, run after run. Say \"stand down\" to release me.");
                         }
                         default -> {
                             boolean had = a.stationTask() != AssistantEntity.StationTask.NONE;

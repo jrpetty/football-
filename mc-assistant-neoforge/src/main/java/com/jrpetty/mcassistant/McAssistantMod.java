@@ -91,6 +91,7 @@ public final class McAssistantMod {
         ITEMS.register(modBus);
         modBus.addListener(this::onEntityAttributes);
         modBus.addListener(this::onBuildCreativeTabs);
+        modBus.addListener(ChunkLoad::onRegisterControllers);
 
         NeoForge.EVENT_BUS.register(AssistantCommands.class);
         NeoForge.EVENT_BUS.register(ChatControl.class);
