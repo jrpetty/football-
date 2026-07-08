@@ -191,10 +191,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b25 · PLACE the spawner and your companion appears on the spot (home set there, block used up — one spawner, one "
-        + "companion; full crew leaves the block to reclaim) · spawner recipe: 8 rotten flesh around a DIAMOND BLOCK · chat spawn and "
-        + "/assistant spawn consume a carried spawner · stations never sleep (chunk-loaded) · seven stations: farm · forestry · ranch · "
-        + "guard · smeltery · hauler · mine · growing homestead · group detach · explores when dry · routines · distress";
+        "2026-07-b26 · VETERANS & REVIVAL: companions level up from lifetime xp (✦level on the nametag) — 10% faster work at L10, "
+        + "+2 hearts and 20% at L20, cheaper enchanting at L30, +2 more hearts at L35 · a fallen companion drops a MEMORY CORE — "
+        + "right-click the ground to bring that exact bot back (name, level, role, waypoints, station; gear stays where it fell) · "
+        + "place-to-spawn spawner (8 rotten flesh + diamond block) · stations never sleep · seven stations · growing homestead";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -267,6 +267,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     // Health / survival state.
     private int lastDamageTick = -1000;
     private int lastShownHealth = -1;
+    private int lastShownLevel = -1;   // nametag refresh trigger for level-ups
     private int eatCooldown;
     private boolean retreating;
     private int idleBackoffUntil;
@@ -288,6 +289,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     // spent (with lapis) at an enchanting table. Not vanilla XP levels; a plain
     // pool so mobs can play by the enchant-costs-effort rule.
     private int xp;
+    private int lifetimeXp;            // never decreases — drives the veteran level
 
     // Nether expedition state. Persisted in NBT because a dimension change
     // swaps the entity instance (and drops the transient job queue), so the
@@ -691,7 +693,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Ticks of work to break this block with the current tool (player-ish pacing). */
     public int workTicksFor(BlockState state) {
         float speed = Math.max(1.0F, this.getMainHandItem().getDestroySpeed(state));
-        return Math.max(5, Math.round(48.0F / speed));
+        int base = Math.max(5, Math.round(48.0F / speed));
+        // Veteran hands: 10% faster work at level 10, 20% at level 20 (capped —
+        // an edge you can feel, not a cheat).
+        int bonus = veteranLevel() >= 20 ? 20 : (veteranLevel() >= 10 ? 10 : 0);
+        return Math.max(4, base * (100 - bonus) / 100);
     }
 
     /** Wear the held tool by one use; announces when it breaks. */
@@ -978,8 +984,49 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     }
 
     public void awardXp(int amount) {
-        if (amount > 0) this.xp = Math.min(100000, this.xp + amount);
+        if (amount <= 0) return;
+        int before = veteranLevel();
+        this.xp = Math.min(100000, this.xp + amount);
+        this.lifetimeXp = Math.min(1_000_000, this.lifetimeXp + amount);
+        int after = veteranLevel();
+        if (after > before) {
+            applyLevelPerks();
+            lastShownHealth = -1; // refresh the nametag with the new star
+            if (after % 5 == 0) { // announce milestones, not every level
+                String perk = switch (after) {
+                    case 10 -> " I work 10% faster now.";
+                    case 20 -> " +2 hearts, and 20% faster work.";
+                    case 30 -> " Enchanting comes easier to me now.";
+                    case 35 -> " +2 more hearts.";
+                    default -> "";
+                };
+                say("Level " + after + "!" + perk);
+            }
+        }
     }
+
+    /** Veteran level from LIFETIME xp — spending xp at the enchanting table
+     *  never lowers it. Curve: level = sqrt(lifetimeXp / 4), capped at 50
+     *  (L10 = 400 xp, L20 = 1600, L30 = 3600). */
+    public int veteranLevel() {
+        return Math.min(50, (int) Math.floor(Math.sqrt(lifetimeXp / 4.0)));
+    }
+
+    /** Perks with teeth but a ceiling: +4 max HP at level 20 and +4 more at 35
+     *  (two hearts each); work speed is handled in workTicksFor. */
+    private void applyLevelPerks() {
+        var attr = getAttribute(Attributes.MAX_HEALTH);
+        if (attr == null) return;
+        double bonus = (veteranLevel() >= 20 ? 4.0 : 0.0) + (veteranLevel() >= 35 ? 4.0 : 0.0);
+        attr.removeModifier(VETERAN_HP_ID);
+        if (bonus > 0) {
+            attr.addPermanentModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(
+                VETERAN_HP_ID, bonus, net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE));
+        }
+    }
+
+    private static final net.minecraft.resources.ResourceLocation VETERAN_HP_ID =
+        net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mc_assistant", "veteran_hearts");
 
     /** Spend up to `amount` XP; returns true if it could be paid in full. */
     public boolean spendXp(int amount) {
@@ -2390,6 +2437,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (stationPos != null) tag.putLong("StationPos", stationPos.asLong());
         tag.putString("StationTask", stationTask.name());
         tag.putInt("Xp", xp);
+        tag.putInt("LifeXp", lifetimeXp);
         tag.putBoolean("ExpActive", expeditionActive);
         if (expeditionActive) {
             tag.putInt("ExpPhase", expeditionPhase);
@@ -2452,6 +2500,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
         if (stationPos == null) stationTask = StationTask.NONE;
         xp = tag.getInt("Xp");
+        // Seed lifetime xp from banked xp for bots saved before levels existed.
+        lifetimeXp = tag.contains("LifeXp") ? tag.getInt("LifeXp") : xp;
+        applyLevelPerks();
         expeditionActive = tag.getBoolean("ExpActive");
         if (expeditionActive) {
             expeditionPhase = tag.getInt("ExpPhase");
@@ -2763,16 +2814,22 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             }
         }
 
-        // Live HP nametag (name + hearts, colored by health).
+        // Live nametag: veteran level star + name + hearts colored by health.
         int hp = Mth.ceil(getHealth());
-        if (hp != lastShownHealth) {
+        if (hp != lastShownHealth || veteranLevel() != lastShownLevel) {
             lastShownHealth = hp;
+            lastShownLevel = veteranLevel();
             int max = (int) getMaxHealth();
             ChatFormatting color = hp > max * 0.6 ? ChatFormatting.GREEN
                 : hp > max * 0.3 ? ChatFormatting.YELLOW
                 : ChatFormatting.RED;
-            setCustomName(Component.literal(displayNameCap() + " ")
-                .append(Component.literal(hp + "/" + max + "❤").withStyle(color)));
+            var name = Component.literal("");
+            if (lastShownLevel >= 1) {
+                name.append(Component.literal("✦" + lastShownLevel + " ").withStyle(ChatFormatting.GOLD));
+            }
+            name.append(Component.literal(displayNameCap() + " "))
+                .append(Component.literal(hp + "/" + max + "❤").withStyle(color));
+            setCustomName(name);
             setCustomNameVisible(true);
         }
     }
@@ -2962,6 +3019,79 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     protected void dropCustomDeathLoot(net.minecraft.server.level.ServerLevel level, DamageSource source, boolean hitByPlayer) {
         super.dropCustomDeathLoot(level, source, hitByPlayer);
         dropEverything();
+        // The bot's SELF survives as a Memory Core: right-click the ground with
+        // it and this exact companion comes back — name, level, role, waypoints,
+        // and station. Its gear stays here where it fell.
+        ItemStack core = new ItemStack(com.jrpetty.mcassistant.McAssistantMod.MEMORY_CORE.get());
+        core.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+            net.minecraft.world.item.component.CustomData.of(writeMemoryCore()));
+        core.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,
+            Component.literal("Memory Core — " + displayNameCap()));
+        var drop = new net.minecraft.world.entity.item.ItemEntity(
+            level, getX(), getY() + 0.5, getZ(), core);
+        drop.setExtendedLifetime(); // don't let the bot's self despawn in 5 minutes
+        level.addFreshEntity(drop);
+        say("...my Memory Core is where I fell (" + blockPosition().getX() + " "
+            + blockPosition().getY() + " " + blockPosition().getZ() + ") — bring me back.");
+    }
+
+    /** Everything that makes this bot ITSELF (not its gear), for the Memory Core. */
+    private CompoundTag writeMemoryCore() {
+        CompoundTag tag = new CompoundTag();
+        tag.putString("Name", assistantName);
+        tag.putString("Role", role.name());
+        tag.putInt("Xp", xp);
+        tag.putInt("LifeXp", lifetimeXp);
+        tag.putBoolean("NightHome", nightHome);
+        tag.putBoolean("Auto", autonomous);
+        if (homePos != null) tag.putLong("Home", homePos.asLong());
+        if (stationPos != null && stationTask != StationTask.NONE) {
+            tag.putLong("StationPos", stationPos.asLong());
+            tag.putString("StationTask", stationTask.name());
+        }
+        ListTag points = new ListTag();
+        for (Map.Entry<String, BlockPos> e : waypoints.entrySet()) {
+            CompoundTag wt = new CompoundTag();
+            wt.putString("Name", e.getKey());
+            wt.putLong("Pos", e.getValue().asLong());
+            points.add(wt);
+        }
+        tag.put("Waypoints", points);
+        return tag;
+    }
+
+    /** Revival: restore the identity a Memory Core carries — the same bot,
+     *  minus the gear that died with it. */
+    public void applyMemoryCore(CompoundTag tag) {
+        rename(tag.getString("Name"));
+        try {
+            role = Role.valueOf(tag.getString("Role"));
+        } catch (IllegalArgumentException ignored) {
+            role = Role.NONE;
+        }
+        xp = tag.getInt("Xp");
+        lifetimeXp = tag.getInt("LifeXp");
+        nightHome = tag.getBoolean("NightHome");
+        if (tag.contains("Home")) setHome(BlockPos.of(tag.getLong("Home")));
+        waypoints.clear();
+        for (Tag t : tag.getList("Waypoints", Tag.TAG_COMPOUND)) {
+            CompoundTag wt = (CompoundTag) t;
+            waypoints.put(wt.getString("Name"), BlockPos.of(wt.getLong("Pos")));
+        }
+        applyLevelPerks();
+        setHealth(getMaxHealth());
+        setAutonomous(tag.getBoolean("Auto"));
+        if (tag.contains("StationPos")) {
+            StationTask st = StationTask.NONE;
+            try {
+                st = StationTask.valueOf(tag.getString("StationTask"));
+            } catch (IllegalArgumentException ignored) { }
+            if (st != StationTask.NONE) setStation(BlockPos.of(tag.getLong("StationPos")), st);
+        }
+        lastShownHealth = -1; // refresh the nametag (level star and all)
+        say("Back from the void — level " + veteranLevel() + ", and I remember everything. "
+            + "My old gear died with me, though"
+            + (stationTask != StationTask.NONE ? " — heading back to my station." : "."));
     }
 
     @Override

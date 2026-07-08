@@ -84,6 +84,11 @@ public final class McAssistantMod {
     public static final DeferredItem<PlaceMarkerItem> PLACE_MARKER =
         ITEMS.registerItem("place_marker", PlaceMarkerItem::new);
 
+    // The Memory Core: dropped when a companion dies — right-click the ground
+    // to bring that exact bot back (name, level, role, waypoints, station).
+    public static final DeferredItem<com.jrpetty.mcassistant.item.MemoryCoreItem> MEMORY_CORE =
+        ITEMS.registerItem("memory_core", com.jrpetty.mcassistant.item.MemoryCoreItem::new);
+
     public McAssistantMod(IEventBus modBus) {
         ENTITY_TYPES.register(modBus);
         MENU_TYPES.register(modBus);
@@ -110,6 +115,7 @@ public final class McAssistantMod {
         }
         if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
             event.accept(PLACE_MARKER);
+            event.accept(MEMORY_CORE);
         }
     }
 }
