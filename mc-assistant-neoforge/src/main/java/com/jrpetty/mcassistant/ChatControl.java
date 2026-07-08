@@ -343,7 +343,9 @@ public final class ChatControl {
         // like "stop farming here" / "stand down" aren't eaten by them.
         if (c.contains("stand down") || c.contains("leave the station") || c.contains("off duty")
             || c.contains("clear the station") || c.contains("stop working here")
-            || c.contains("stop farming here") || c.contains("stop chopping here")) {
+            || c.contains("stop farming here") || c.contains("stop chopping here")
+            || c.contains("stop hauling") || c.contains("stop guarding here")
+            || c.contains("stop ranching") || c.contains("leave the smeltery")) {
             return Action.with(Action.Type.STATION, "clear", 0);
         }
         if (c.contains("take a break") || c.matches("^auto\\s*off\\b.*")
@@ -406,6 +408,33 @@ public final class ChatControl {
         if (woodSpot && c.matches("^(?:chop|cut|work|run|man|keep|stay|station|log)\\b.*")
             && c.matches(".*\\b(?:trees?|forest|woodlot|lumber|wood|logs?|chop(?:ping)?)\\b.*")) {
             return Action.with(Action.Type.STATION, "wood", 0);
+        }
+        boolean ranchSpot = c.contains("here") || c.contains("this pen") || c.contains("this ranch")
+            || c.contains("this area") || c.contains("your ranch") || c.contains("the ranch")
+            || c.contains("the herd") || c.contains("the animals");
+        if (ranchSpot && c.matches("^(?:ranch|work|tend|run|man|keep|stay|station|manage)\\b.*")
+            && c.matches(".*\\b(?:ranch|animals?|herd|livestock|pen|cattle|sheep|cows)\\b.*")) {
+            return Action.with(Action.Type.STATION, "ranch", 0);
+        }
+        if (c.matches("^guard (?:right )?here\\b.*") || c.contains("stand watch")
+            || c.contains("hold this area") || c.contains("watch this area")
+            || c.contains("guard this area") || c.contains("guard this spot")
+            || c.contains("guard the base") || c.contains("watch the base")
+            || c.contains("guard post") || c.matches("^hold here\\b.*")) {
+            return Action.with(Action.Type.STATION, "guard", 0);
+        }
+        if (c.contains("run the smeltery") || c.contains("work the smeltery")
+            || c.contains("run the furnaces") || c.contains("work the furnaces")
+            || c.contains("man the furnaces") || c.contains("keep the furnaces")
+            || c.contains("smeltery here") || c.contains("furnace keeper")
+            || c.matches("^smelt here\\b.*")) {
+            return Action.with(Action.Type.STATION, "smelt", 0);
+        }
+        if ((c.contains("haul") && (c.contains("here") || c.contains("home")))
+            || c.contains("be a hauler") || c.contains("hauler here")
+            || c.contains("run cargo") || c.contains("courier here")
+            || (c.contains("carry") && c.contains("home") && (c.contains("here") || c.contains("from")))) {
+            return Action.with(Action.Type.STATION, "haul", 0);
         }
 
         if (c.contains("work on your own") || c.matches("^auto\\s*on\\b.*")
@@ -860,7 +889,7 @@ public final class ChatControl {
                     a.countItems(), a.countFood(), a.getXp(), a.jobCount(), a.standingOrders().size(),
                     a.routines().size())
                     + (a.stationTask() == AssistantEntity.StationTask.NONE || a.stationPos() == null ? ""
-                        : " Stationed: " + (a.stationTask() == AssistantEntity.StationTask.FARM ? "farming" : "forestry")
+                        : " Stationed: " + a.stationTask().label
                           + " at " + a.stationPos().getX() + " " + a.stationPos().getY() + " " + a.stationPos().getZ() + "."));
                 case DIAGNOSTIC -> {
                     Job job = Job.diagnostic();
@@ -1200,6 +1229,28 @@ public final class ChatControl {
                             a.setStation(player.blockPosition(), AssistantEntity.StationTask.WOOD);
                             a.say("Working these woods now — I'll fell the trees, replant every stump, "
                                 + "and stash the logs in a chest here. Say \"stand down\" to release me.");
+                        }
+                        case "ranch" -> {
+                            a.setStation(player.blockPosition(), AssistantEntity.StationTask.RANCH);
+                            a.say("This pen's mine now — I'll breed the herd, shear the sheep, cull the "
+                                + "surplus, and stash meat, wool, and leather in a chest here. Say \"stand down\" to release me.");
+                        }
+                        case "guard" -> {
+                            a.setStation(player.blockPosition(), AssistantEntity.StationTask.GUARD);
+                            a.say("Standing watch here — I'll cut down anything hostile that comes near, "
+                                + "keep the ground lit, and bank the drops. Say \"stand down\" to release me.");
+                        }
+                        case "smelt" -> {
+                            a.setStation(player.blockPosition(), AssistantEntity.StationTask.SMELT);
+                            a.say("I'll run this smeltery — feeding the furnaces from the input chest and "
+                                + "stashing the ingots. Keep the ore and fuel coming.");
+                        }
+                        case "haul" -> {
+                            a.setStation(player.blockPosition(), AssistantEntity.StationTask.HAUL);
+                            a.say("Hauler duty — I'll load up from the chest here and run it home, trip after trip."
+                                + (a.getHome() == null
+                                    ? " But I need a home to deliver to: stand at the base and say \"set home here\"."
+                                    : " Say \"stand down\" to release me."));
                         }
                         default -> {
                             boolean had = a.stationTask() != AssistantEntity.StationTask.NONE;

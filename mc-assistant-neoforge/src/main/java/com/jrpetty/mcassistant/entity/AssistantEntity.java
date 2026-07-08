@@ -102,9 +102,18 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     public enum Mode { STAY, FOLLOW, GUARD }
 
     /** A full-time specialty the bot is pinned to at a fixed spot: FARM keeps a
-     *  plot planted/watered/harvested; WOOD fells trees, replants every stump,
-     *  and stashes the logs. Set by "farm here" / "chop trees here". */
-    public enum StationTask { NONE, FARM, WOOD }
+     *  plot planted/watered/harvested; WOOD fells trees and replants every stump;
+     *  RANCH breeds/shears/culls the herd; GUARD holds the area and keeps it lit;
+     *  SMELT keeps the furnaces fed from the input chest; HAUL runs cargo from
+     *  the post's chest home. Set by "farm here", "chop trees here", "ranch
+     *  here", "guard here", "run the smeltery", "haul here". */
+    public enum StationTask {
+        NONE("none"), FARM("farming"), WOOD("forestry"), RANCH("ranching"),
+        GUARD("guard duty"), SMELT("smeltery"), HAUL("hauling");
+
+        public final String label;
+        StationTask(String label) { this.label = label; }
+    }
 
     public enum Role {
         NONE, MINER, LUMBERJACK, FARMER, BUILDER;
@@ -182,10 +191,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b21 · station specialists: \"farm here\" pins a bot to a farm it keeps planted/watered/harvested with produce stashed to "
-        + "a chest; \"chop trees here\" pins a lumberjack that fells, replants every stump, and stashes logs (\"stand down\" releases) · "
-        + "growing homestead: house, storage, smeltery, pen, farm, wall, lighthouse built out over time · group detach within 20 blocks · "
-        + "smarter eating · explores when dry · smarter reach · self-sourcing crafting · routines · distress";
+        "2026-07-b22 · six station specialists: farm · forestry (\"chop trees here\") · ranch (breed/shear/cull, \"ranch here\") · "
+        + "guard post (\"guard here\": holds the area, lights it, banks drops) · smeltery keeper (\"run the smeltery\": feeds furnaces "
+        + "from the input chest) · hauler (\"haul here\": runs cargo from the post's chest home) — all persistent, all release with "
+        + "\"stand down\" · growing homestead · group detach · explores when dry · self-sourcing crafting · routines · distress";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -266,6 +275,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     @Nullable private BlockPos stationPos;              // where its full-time post is (persisted)
     private StationTask stationTask = StationTask.NONE; // what it does there (persisted)
     private int stationWarnTick = -9999;                // cooldown on "I need a chest here" nags
+    private int stationTorchTick = -99999;              // a guard post re-lights its ground rarely
+    private int stationBreedTick = -99999;              // pace breeding to the animals' love cooldown
     private static final int STATION_RADIUS = 16;       // how far it works from the post
     private int lastWarnTick = -1000;
     private boolean nightHome;        // "head home at night" toggle
@@ -519,12 +530,13 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     /** Pin (or release, pos=null) this bot to a full-time station. Stationing
      *  turns autonomy on — a specialist works detached — and anchors home at the
-     *  post if none was set, so night/retreat behavior centers on its plot. */
+     *  post if none was set, so night/retreat behavior centers on its plot.
+     *  (Not for a hauler: its home is the DELIVERY end, never the pickup post.) */
     public void setStation(@Nullable BlockPos pos, StationTask task) {
         this.stationPos = pos;
         this.stationTask = pos == null ? StationTask.NONE : task;
         if (pos != null) {
-            if (homePos == null) setHome(pos);
+            if (homePos == null && task != StationTask.HAUL) setHome(pos);
             setAutonomous(true);
         }
     }
@@ -533,13 +545,21 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     public StationTask stationTask() { return stationTask; }
 
-    /** How many of this item to KEEP BACK when depositing — a stationed farmer
-     *  holds onto seed stock, a stationed lumberjack onto saplings to replant. */
+    /** How many of this item to KEEP BACK when depositing — each specialist
+     *  holds onto its working kit: seed stock, saplings, breeding food and
+     *  shears, torches and arrows, ore and fuel, or travel rations. */
     public int depositReserve(ItemStack s) {
         return switch (stationTask) {
             case FARM -> (s.is(Items.WHEAT_SEEDS) || s.is(Items.BEETROOT_SEEDS)
                 || s.is(Items.CARROT) || s.is(Items.POTATO)) ? 12 : 0;
             case WOOD -> s.is(ItemTags.SAPLINGS) ? 16 : 0;
+            case RANCH -> BREEDING_FOOD.test(s) ? 16 : (s.is(Items.SHEARS) ? 1 : 0);
+            case GUARD -> s.is(Items.TORCH) ? 16 : (s.is(Items.ARROW) ? 32
+                : (s.get(DataComponents.FOOD) != null ? 8 : 0));
+            case SMELT -> (s.is(Items.RAW_IRON) || s.is(Items.RAW_GOLD) || s.is(Items.RAW_COPPER)) ? 64
+                : ((s.is(Items.COAL) || s.is(Items.CHARCOAL)) ? 32
+                : (s.get(DataComponents.FOOD) != null ? 8 : 0));
+            case HAUL -> s.get(DataComponents.FOOD) != null ? 8 : 0; // rations for the road
             case NONE -> 0;
         };
     }
@@ -1427,8 +1447,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case WOOD -> {
                 // Sweep the loose drops and saplings between fellings, then chop
                 // whatever has grown back; GatherGoal replants every stump.
-                if (level().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
-                        getBoundingBox().inflate(8)).size() >= 3 && !isPackFull()) {
+                if (looseDropCount(8) >= 3 && !isPackFull()) {
                     enqueue(Job.cleanup());
                     return true;
                 }
@@ -1437,21 +1456,187 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     return true;
                 }
             }
+            case RANCH -> {
+                // Shear what's woolly, cull when the herd is big, breed it back
+                // up when it's small — a rotating husbandry cycle at the pen.
+                if (shearableSheepNearby()) {
+                    if (countCarried(s -> s.is(Items.SHEARS)) > 0) {
+                        enqueue(Job.shear(4));
+                        return true;
+                    }
+                    if (countCarried(s -> s.is(Items.IRON_INGOT)) >= 2) {
+                        CraftPlanner.Result plan = CraftPlanner.plan(this, "shears", 1);
+                        if (!plan.jobs().isEmpty() && plan.blockers().isEmpty()) {
+                            announcePlan("Making shears for the wool", plan);
+                            return true;
+                        }
+                    }
+                }
+                int adults = adultAnimalsNearby(STATION_RADIUS);
+                if (adults > 10) {
+                    say("Herd's getting big — culling a couple for the larder.");
+                    enqueue(Job.hunt(null, 2));
+                    return true;
+                }
+                // Pace breeding to the animals' ~5-minute love cooldown so the
+                // rancher isn't re-running empty breed jobs between litters.
+                if (adults >= 2 && tickCount - stationBreedTick > 6000) {
+                    if (countCarried(BREEDING_FOOD) < 4) {
+                        scoopFromChests(BREEDING_FOOD, 16, 8); // the farm's produce feeds the ranch
+                    }
+                    if (countCarried(BREEDING_FOOD) >= 4) {
+                        stationBreedTick = tickCount;
+                        enqueue(Job.breed(null, 2));
+                        return true;
+                    }
+                }
+            }
+            case GUARD -> {
+                // Hold the ground: engage hostiles in the watch radius (creepers
+                // only from range), sweep the drops, and keep the area lit.
+                Monster m = nearestMonster(STATION_RADIUS);
+                if (m != null && !shouldDisengage()
+                    && (!(m instanceof Creeper) || (hasBow() && hasArrows()))) {
+                    setTarget(m);
+                    return true;
+                }
+                if (looseDropCount(8) >= 3 && !isPackFull()) {
+                    enqueue(Job.cleanup());
+                    return true;
+                }
+                if (countMatching(s -> s.is(Items.TORCH)) >= 4
+                    && tickCount - stationTorchTick > 12000) { // ~10 min between lighting passes
+                    stationTorchTick = tickCount;
+                    enqueue(Job.torchArea(10));
+                    return true;
+                }
+            }
+            case SMELT -> {
+                // Keep the furnaces fed: pull ore (and fuel) from the input
+                // chests, run the smelts, and the ingot surplus gets stashed by
+                // the deposit rung above.
+                if (!furnaceNearby()) return false;
+                if (countMatching(SMELTABLE_ORE) == 0) {
+                    scoopFromChests(SMELTABLE_ORE, 64, 8);
+                }
+                boolean hasFuel = countMatching(s -> s.is(Items.COAL) || s.is(Items.CHARCOAL)) > 0
+                    || countMatching(s -> s.is(ItemTags.PLANKS) || s.is(ItemTags.LOGS)) > 0
+                    || scoopFromChests(s -> s.is(Items.COAL) || s.is(Items.CHARCOAL), 16, 8) > 0;
+                int iron = countMatching(s -> s.is(Items.RAW_IRON) || s.is(Items.IRON_ORE) || s.is(Items.DEEPSLATE_IRON_ORE));
+                int gold = countMatching(s -> s.is(Items.RAW_GOLD) || s.is(Items.GOLD_ORE) || s.is(Items.DEEPSLATE_GOLD_ORE));
+                int copper = countMatching(s -> s.is(Items.RAW_COPPER) || s.is(Items.COPPER_ORE) || s.is(Items.DEEPSLATE_COPPER_ORE));
+                if (iron + gold + copper == 0) return false; // input chest is empty — wait
+                if (!hasFuel) {
+                    if (tickCount - stationWarnTick > 4800) {
+                        stationWarnTick = tickCount;
+                        say("The smeltery's out of fuel — drop coal (or logs) in the input chest.");
+                    }
+                    return false;
+                }
+                if (iron > 0) enqueue(Job.smelt("iron", iron));
+                if (gold > 0) enqueue(Job.smelt("gold", gold));
+                if (copper > 0) enqueue(Job.smelt("copper", copper));
+                return true;
+            }
+            case HAUL -> {
+                // Delivery end must exist and be a real trip away from the pickup
+                // post — otherwise "home" IS the outpost and cargo just cycles.
+                if (homePos == null || homePos.distSqr(st) < 24 * 24) {
+                    if (tickCount - stationWarnTick > 4800) {
+                        stationWarnTick = tickCount;
+                        say(homePos == null
+                            ? "I need a home to deliver to — stand at the base and say \"set home here\"."
+                            : "My home is right next to this post — set home at the base I should deliver to.");
+                    }
+                    return false;
+                }
+                // Loaded? Run it home; the walk-back rung returns us afterward.
+                if (isPackFull() || countItems() >= 24) {
+                    say("Hauling a load home.");
+                    enqueue(Job.goHome());
+                    enqueue(Job.deposit());
+                    return true;
+                }
+                // Empty-handed at the post: load cargo from the outpost chest.
+                return scoopFromChests(s -> true, 512, 8) > 0;
+            }
             case NONE -> { }
         }
-        return false; // nothing ready — crops/saplings still growing
+        return false; // nothing ready — crops/saplings still growing, herd resting
+    }
+
+    /** Raw or block-form ore the smeltery keeper takes as input. */
+    private static final java.util.function.Predicate<ItemStack> SMELTABLE_ORE = s ->
+        s.is(Items.RAW_IRON) || s.is(Items.IRON_ORE) || s.is(Items.DEEPSLATE_IRON_ORE)
+        || s.is(Items.RAW_GOLD) || s.is(Items.GOLD_ORE) || s.is(Items.DEEPSLATE_GOLD_ORE)
+        || s.is(Items.RAW_COPPER) || s.is(Items.COPPER_ORE) || s.is(Items.DEEPSLATE_COPPER_ORE);
+
+    private int looseDropCount(int radius) {
+        return level().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+            getBoundingBox().inflate(radius)).size();
+    }
+
+    private int adultAnimalsNearby(int radius) {
+        return level().getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class,
+            getBoundingBox().inflate(radius), a -> a.isAlive() && !a.isBaby()).size();
+    }
+
+    private boolean shearableSheepNearby() {
+        return !level().getEntitiesOfClass(net.minecraft.world.entity.animal.Sheep.class,
+            getBoundingBox().inflate(STATION_RADIUS),
+            sh -> sh.isAlive() && !sh.isBaby() && sh.readyForShearing()).isEmpty();
+    }
+
+    /** Pull matching items out of chests near the bot into its pack — station
+     *  keepers feeding themselves work: the hauler loading cargo, the smeltery
+     *  keeper taking ore and fuel, the rancher grabbing breeding food. */
+    private int scoopFromChests(java.util.function.Predicate<ItemStack> what, int max, int radius) {
+        int moved = 0;
+        BlockPos feet = feetPos();
+        for (BlockPos pos : BlockPos.betweenClosed(
+                feet.offset(-radius, -3, -radius), feet.offset(radius, 3, radius))) {
+            if (!(level().getBlockEntity(pos) instanceof Container c)) continue;
+            for (int i = 0; i < c.getContainerSize() && moved < max; i++) {
+                ItemStack s = c.getItem(i);
+                if (s.isEmpty() || !what.test(s)) continue;
+                int take = Math.min(s.getCount(), max - moved);
+                ItemStack leftover = insertItem(s.copyWithCount(take));
+                int taken = take - leftover.getCount();
+                if (taken <= 0) { c.setChanged(); return moved; } // pack is full
+                s.shrink(taken);
+                if (s.isEmpty()) c.setItem(i, ItemStack.EMPTY);
+                moved += taken;
+            }
+            c.setChanged();
+            rememberChest(pos.immutable(), c);
+        }
+        return moved;
     }
 
     /** Output piling up? Stash it at the station, setting up a chest if need be.
      *  Counts only the SURPLUS above the working reserve (seed stock, saplings) —
      *  otherwise a bot holding exactly its reserve would loop stash-nothing runs. */
     private boolean stationDepositDue() {
+        // A hauler's whole job is delivering ELSEWHERE — stashing into the pickup
+        // chest here would just cycle its own cargo forever.
+        if (stationTask == StationTask.HAUL) return false;
         int surplus = switch (stationTask) {
             case FARM -> surplusOf(Items.WHEAT, 0) + surplusOf(Items.BEETROOT, 0)
                 + surplusOf(Items.CARROT, 12) + surplusOf(Items.POTATO, 12)
                 + surplusOf(Items.WHEAT_SEEDS, 12) + surplusOf(Items.BEETROOT_SEEDS, 12);
             case WOOD -> countMatching(s -> s.is(ItemTags.LOGS));
-            case NONE -> 0;
+            case RANCH -> countMatching(s -> s.is(ItemTags.WOOL) || s.is(Items.LEATHER)
+                || s.is(Items.FEATHER) || s.is(Items.EGG)
+                || s.is(Items.BEEF) || s.is(Items.COOKED_BEEF)
+                || s.is(Items.PORKCHOP) || s.is(Items.COOKED_PORKCHOP)
+                || s.is(Items.MUTTON) || s.is(Items.COOKED_MUTTON)
+                || s.is(Items.CHICKEN) || s.is(Items.COOKED_CHICKEN)
+                || s.is(Items.RABBIT) || s.is(Items.COOKED_RABBIT));
+            case GUARD -> countMatching(s -> s.is(Items.ROTTEN_FLESH) || s.is(Items.BONE)
+                || s.is(Items.STRING) || s.is(Items.GUNPOWDER) || s.is(Items.SPIDER_EYE));
+            case SMELT -> surplusOf(Items.IRON_INGOT, 0) + surplusOf(Items.GOLD_INGOT, 0)
+                + surplusOf(Items.COPPER_INGOT, 0);
+            case HAUL, NONE -> 0;
         };
         if (!isPackFull() && surplus < 32) return false;
         if (findAnyChest(12) == null) {
