@@ -191,10 +191,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b26 · VETERANS & REVIVAL: companions level up from lifetime xp (✦level on the nametag) — 10% faster work at L10, "
-        + "+2 hearts and 20% at L20, cheaper enchanting at L30, +2 more hearts at L35 · a fallen companion drops a MEMORY CORE — "
-        + "right-click the ground to bring that exact bot back (name, level, role, waypoints, station; gear stays where it fell) · "
-        + "place-to-spawn spawner (8 rotten flesh + diamond block) · stations never sleep · seven stations · growing homestead";
+        "2026-07-b27 · veteran rebalance: levels come SLOWLY now (L10=1000 lifetime xp, L30=9000) and the perks are 10% faster work "
+        + "at L10 · +2 hearts + 20% work at L20 · 20% movement speed at L30 · 30% work at L35 (the cap) · MEMORY CORE revival "
+        + "(fallen bots come back with name, level, role, waypoints, station; gear stays where it fell) · place-to-spawn spawner "
+        + "(8 rotten flesh + diamond block) · stations never sleep · seven stations · growing homestead";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -694,9 +694,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     public int workTicksFor(BlockState state) {
         float speed = Math.max(1.0F, this.getMainHandItem().getDestroySpeed(state));
         int base = Math.max(5, Math.round(48.0F / speed));
-        // Veteran hands: 10% faster work at level 10, 20% at level 20 (capped —
-        // an edge you can feel, not a cheat).
-        int bonus = veteranLevel() >= 20 ? 20 : (veteranLevel() >= 10 ? 10 : 0);
+        // Veteran hands: 10% faster work at level 10, 20% at 20, 30% at 35 —
+        // the cap. An edge you can feel, not a cheat.
+        int bonus = veteranLevel() >= 35 ? 30 : (veteranLevel() >= 20 ? 20 : (veteranLevel() >= 10 ? 10 : 0));
         return Math.max(4, base * (100 - bonus) / 100);
     }
 
@@ -996,8 +996,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 String perk = switch (after) {
                     case 10 -> " I work 10% faster now.";
                     case 20 -> " +2 hearts, and 20% faster work.";
-                    case 30 -> " Enchanting comes easier to me now.";
-                    case 35 -> " +2 more hearts.";
+                    case 30 -> " 20% quicker on my feet now.";
+                    case 35 -> " 30% faster work — as good as I'll get.";
                     default -> "";
                 };
                 say("Level " + after + "!" + perk);
@@ -1006,27 +1006,41 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     }
 
     /** Veteran level from LIFETIME xp — spending xp at the enchanting table
-     *  never lowers it. Curve: level = sqrt(lifetimeXp / 4), capped at 50
-     *  (L10 = 400 xp, L20 = 1600, L30 = 3600). */
+     *  never lowers it. Deliberately SLOW: level = sqrt(lifetimeXp / 10),
+     *  capped at 50 (L10 = 1000 xp, L20 = 4000, L30 = 9000, L35 = 12250) —
+     *  a true veteran is weeks of work, not an afternoon. */
     public int veteranLevel() {
-        return Math.min(50, (int) Math.floor(Math.sqrt(lifetimeXp / 4.0)));
+        return Math.min(50, (int) Math.floor(Math.sqrt(lifetimeXp / 10.0)));
     }
 
-    /** Perks with teeth but a ceiling: +4 max HP at level 20 and +4 more at 35
-     *  (two hearts each); work speed is handled in workTicksFor. */
+    /** Perks with teeth but a ceiling: +2 hearts at level 20 and 20% faster
+     *  movement at 30 (attribute modifiers, re-applied idempotently); the
+     *  work-speed rungs (10/20/30%) live in workTicksFor. */
     private void applyLevelPerks() {
-        var attr = getAttribute(Attributes.MAX_HEALTH);
-        if (attr == null) return;
-        double bonus = (veteranLevel() >= 20 ? 4.0 : 0.0) + (veteranLevel() >= 35 ? 4.0 : 0.0);
-        attr.removeModifier(VETERAN_HP_ID);
-        if (bonus > 0) {
-            attr.addPermanentModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(
-                VETERAN_HP_ID, bonus, net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE));
+        var hp = getAttribute(Attributes.MAX_HEALTH);
+        if (hp != null) {
+            hp.removeModifier(VETERAN_HP_ID);
+            if (veteranLevel() >= 20) {
+                hp.addPermanentModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(
+                    VETERAN_HP_ID, 4.0,
+                    net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE));
+            }
+        }
+        var speed = getAttribute(Attributes.MOVEMENT_SPEED);
+        if (speed != null) {
+            speed.removeModifier(VETERAN_SPEED_ID);
+            if (veteranLevel() >= 30) {
+                speed.addPermanentModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(
+                    VETERAN_SPEED_ID, 0.20,
+                    net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+            }
         }
     }
 
     private static final net.minecraft.resources.ResourceLocation VETERAN_HP_ID =
         net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mc_assistant", "veteran_hearts");
+    private static final net.minecraft.resources.ResourceLocation VETERAN_SPEED_ID =
+        net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mc_assistant", "veteran_speed");
 
     /** Spend up to `amount` XP; returns true if it could be paid in full. */
     public boolean spendXp(int amount) {

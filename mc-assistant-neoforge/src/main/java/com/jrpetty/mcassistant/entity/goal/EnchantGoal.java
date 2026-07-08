@@ -137,14 +137,11 @@ public class EnchantGoal extends Goal {
             if (holder == null || EnchantmentHelper.getItemEnchantmentLevel(holder, stack) > 0) continue;
 
             int lapis = assistant.countMatching(s -> s.is(Items.LAPIS_LAZULI));
-            // Veteran perk (level 30+): enchanting comes easier — each enchant
-            // level costs 25% less xp, so max-level enchants land more often.
-            int perLevel = assistant.veteranLevel() >= 30 ? XP_PER_LEVEL * 3 / 4 : XP_PER_LEVEL;
-            int maxByXp = assistant.getXp() / perLevel;
+            int maxByXp = assistant.getXp() / XP_PER_LEVEL;
             int level = Math.min(Math.min(maxLevel(ench), maxByXp), lapis / LAPIS_PER_LEVEL);
             if (level < 1) return false; // can't afford any more
 
-            assistant.spendXp(level * perLevel);
+            assistant.spendXp(level * XP_PER_LEVEL);
             assistant.removeMatching(s -> s.is(Items.LAPIS_LAZULI), level * LAPIS_PER_LEVEL);
             stack.enchant(holder, level);
             assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
