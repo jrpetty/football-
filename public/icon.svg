@@ -1,11 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Gaffer">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#38bdf8"/>
-      <stop offset="1" stop-color="#8b5cf6"/>
-    </linearGradient>
-  </defs>
-  <rect width="512" height="512" fill="#0b1220"/>
-  <rect x="96" y="96" width="320" height="320" rx="76" fill="url(#g)"/>
-  <text x="256" y="270" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="200" font-weight="800" fill="#04121d" text-anchor="middle" dominant-baseline="central">G</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Open Pitch">
+  <rect width="512" height="512" fill="#071009"/>
+  <rect x="40" y="40" width="432" height="432" rx="64" fill="#1f7a3d"/>
+  <circle cx="256" cy="256" r="150" fill="#f4f6fa" stroke="#0b2d63" stroke-width="10"/>
+  <g fill="#12331f">
+    <path d="M256 150l58 42-22 68h-72l-22-68z"/>
+    <circle cx="256" cy="150" r="16"/>
+    <circle cx="150" cy="300" r="16"/>
+    <circle cx="362" cy="300" r="16"/>
+    <circle cx="205" cy="392" r="16"/>
+    <circle cx="307" cy="392" r="16"/>
+  </g>
 </svg>

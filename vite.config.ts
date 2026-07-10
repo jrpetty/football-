@@ -1,9 +1,8 @@
 import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
 
-// https://vitejs.dev/config/
+// Plain Vite — the game is dependency-free vanilla TypeScript + Canvas.
+// `base: './'` keeps asset paths relative so it works on GitHub Pages subpaths.
 export default defineConfig({
-  plugins: [react()],
   base: './',
   server: {
     port: 5173,
