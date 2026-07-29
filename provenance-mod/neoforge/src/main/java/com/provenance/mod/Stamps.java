@@ -101,6 +101,7 @@ public final class Stamps {
         switch (claim.status()) {
             case VALID, DUPLICATE -> {
                 writeStamp(stack, claim.stamp());
+                noteUpgrade(claim.record(), itemId, registry);
                 syncCustomName(stack, claim.record());
                 return claim.record();
             }
@@ -119,6 +120,35 @@ public final class Stamps {
                 return null;
             }
         }
+    }
+
+    /**
+     * Detects a legitimate upgrade — diamond equipment becoming netherite, or
+     * any modded equivalent — and moves the record's current type to match.
+     *
+     * <p>Deliberately not driven by a smithing event. An upgrade is directly
+     * observable: the stack still carries its original stamp, and its registry
+     * id no longer matches the one on record. That is only possible when the
+     * same physical item legitimately changed type, because vanilla builds a
+     * smithing result by copying the base stack's data components — the same
+     * mechanism that keeps enchantments and custom names across a netherite
+     * upgrade.
+     *
+     * <p>Reading it from the stack rather than an event means this works for
+     * any recipe or mod that preserves components, and cannot break when an
+     * event class is renamed between versions.
+     *
+     * <p>The original type stays on the record permanently, so a netherite
+     * pickaxe still shows it was born diamond. Identity, creation facts,
+     * statistics, contributors and milestones are untouched.
+     */
+    private static void noteUpgrade(ItemRecord record, String currentItemId, RecordRegistry registry) {
+        if (record == null || currentItemId == null || currentItemId.equals(record.currentItemId())) {
+            return;
+        }
+        Provenance.LOGGER.info("Provenance {} upgraded: {} -> {} (history preserved)",
+                record.recordId(), record.currentItemId(), currentItemId);
+        registry.applyUpgrade(record, currentItemId);
     }
 
     /**
