@@ -1,0 +1,50 @@
+name: Build Provenance mod
+
+on:
+  push:
+    branches:
+      - claude/new-session-1ox9lf
+    paths:
+      - 'provenance-mod/**'
+      - '.github/workflows/build-provenance-mod.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Rules engine tests
+        working-directory: provenance-mod
+        run: ./gradlew --no-daemon :core:test
+
+      - name: Build mod jar
+        working-directory: provenance-mod
+        run: ./gradlew --no-daemon build
+
+      - name: Upload jar artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: provenance-jar
+          path: provenance-mod/neoforge/build/libs/*.jar
+
+      - name: Publish jar as release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG=provenance-latest
+          gh release delete "$TAG" --yes || true
+          git push origin ":refs/tags/$TAG" || true
+          gh release create "$TAG" provenance-mod/neoforge/build/libs/provenance-*.jar \
+            --target "$GITHUB_SHA" \
+            --title "Provenance, Antique and Item Legacy (latest build)" \
+            --notes "NeoForge 21.1.x / Minecraft 1.21.1. Drop the jar into your mods/ folder."

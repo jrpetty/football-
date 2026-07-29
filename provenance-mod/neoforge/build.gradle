@@ -1,6 +1,6 @@
 plugins {
     id 'java-library'
-    id 'net.neoforged.moddev' version '2.0.78'
+    id 'net.neoforged.moddev' version '2.0.141'
 }
 
 repositories {
@@ -21,9 +21,6 @@ neoForge {
         server {
             server()
         }
-        data {
-            clientData()
-        }
     }
 
     mods {
@@ -34,10 +31,10 @@ neoForge {
 }
 
 dependencies {
-    // The rules engine. Bundled into the shipped jar via jarJar below so the
-    // mod is a single self-contained file.
+    // The rules engine. Its classes are copied into the mod jar below, so the
+    // shipped file is self-contained. Gson is already on the Minecraft runtime
+    // classpath, so it is not bundled.
     implementation project(':core')
-    jarJar project(':core')
 }
 
 // Expand the mod metadata from gradle.properties so the version is declared once.
@@ -58,7 +55,14 @@ tasks.named('processResources', ProcessResources).configure {
     }
 }
 
+base {
+    archivesName = project.property('mod_id')
+}
+
 jar {
+    // Embed the rules engine so the mod is one file in the mods/ folder.
+    from project(':core').sourceSets.main.output
+
     manifest {
         attributes([
                 'Specification-Title'   : project.property('mod_id'),
