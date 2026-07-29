@@ -1,6 +1,7 @@
 package com.provenance.mod.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import com.mojang.datafixers.util.Either;
 import com.provenance.core.ItemStamp;
 import com.provenance.mod.Network;
 import com.provenance.mod.Provenance;
@@ -104,7 +105,8 @@ public final class ClientEvents {
         if (stamp == null) {
             return;
         }
-        event.getTooltipElements().add(net.minecraft.util.Either.left(
+        // Either comes from Mojang's DataFixerUpper, not from Minecraft itself.
+        event.getTooltipElements().add(Either.left(
                 Component.translatable("tooltip.provenance.inspect",
                                 INSPECT_KEY.getTranslatedKeyMessage())
                         .withStyle(net.minecraft.ChatFormatting.DARK_GRAY)));
