@@ -377,22 +377,54 @@ class HardeningTest {
     // Record volume
     // ------------------------------------------------------------------
 
+    /**
+     * Every material tier earns a history, armour included. A stone pickaxe
+     * that mines a hundred thousand blocks is as much an antique as a netherite
+     * one, and a starter leather chestplate kept for a year is the whole point.
+     */
     @Test
-    void throwawayTiersAreNotTrackedByDefault() {
+    void everyMaterialTierIsTrackedIncludingArmour() {
         ProvenanceConfig config = ProvenanceConfig.withDefaults();
 
-        assertNull(config.resolveCategory("minecraft:wooden_pickaxe", java.util.List.of("minecraft:pickaxes")));
-        assertNull(config.resolveCategory("minecraft:stone_sword", java.util.List.of("minecraft:swords")));
-        assertNull(config.resolveCategory("minecraft:leather_boots", java.util.List.of("minecraft:foot_armor")));
+        assertEquals(ItemCategory.PICKAXE,
+                config.resolveCategory("minecraft:stone_pickaxe", java.util.List.of("minecraft:pickaxes")));
+        assertEquals(ItemCategory.MELEE_WEAPON,
+                config.resolveCategory("minecraft:golden_sword", java.util.List.of("minecraft:swords")));
+        assertEquals(ItemCategory.SHOVEL,
+                config.resolveCategory("minecraft:stone_shovel", java.util.List.of("minecraft:shovels")));
+
+        // Armour, across every material.
+        assertEquals(ItemCategory.ARMOUR,
+                config.resolveCategory("minecraft:leather_boots", java.util.List.of("minecraft:foot_armor")));
+        assertEquals(ItemCategory.ARMOUR,
+                config.resolveCategory("minecraft:leather_chestplate", java.util.List.of("minecraft:chest_armor")));
+        assertEquals(ItemCategory.ARMOUR,
+                config.resolveCategory("minecraft:golden_helmet", java.util.List.of("minecraft:head_armor")));
+        assertEquals(ItemCategory.ARMOUR,
+                config.resolveCategory("minecraft:chainmail_leggings", java.util.List.of("minecraft:leg_armor")));
+        assertEquals(ItemCategory.ARMOUR,
+                config.resolveCategory("minecraft:iron_chestplate", java.util.List.of("minecraft:chest_armor")));
+        assertEquals(ItemCategory.ARMOUR,
+                config.resolveCategory("minecraft:netherite_chestplate", java.util.List.of("minecraft:chest_armor")));
 
         assertNotEquals(null, config.resolveCategory("minecraft:iron_pickaxe", java.util.List.of("minecraft:pickaxes")));
         assertNotEquals(null, config.resolveCategory("minecraft:diamond_sword", java.util.List.of("minecraft:swords")));
-        assertNotEquals(null, config.resolveCategory("minecraft:netherite_chestplate",
-                java.util.List.of("minecraft:chest_armor")));
+    }
+
+    /** Wooden tools are the one exclusion: made by the dozen to reach stone. */
+    @Test
+    void onlyWoodenToolsAreExcludedByDefault() {
+        ProvenanceConfig config = ProvenanceConfig.withDefaults();
+
+        assertNull(config.resolveCategory("minecraft:wooden_pickaxe", java.util.List.of("minecraft:pickaxes")));
+        assertEquals(5, config.excludedItems().size(), "only the five wooden tools are excluded");
+        for (String excluded : config.excludedItems()) {
+            assertTrue(excluded.startsWith("minecraft:wooden_"), "unexpected default exclusion: " + excluded);
+        }
     }
 
     @Test
-    void aServerCanTrackThrowawayTiersIfItWantsTo() {
+    void aServerCanTrackWoodenToolsToo() {
         ProvenanceConfig config = ProvenanceConfig.withDefaults();
         config.excludedItems().clear();
 

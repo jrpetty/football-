@@ -117,18 +117,17 @@ public final class ProvenanceConfig {
         tagCategories.put("minecraft:foot_armor", ItemCategory.ARMOUR);
         tagCategories.put("c:armors", ItemCategory.ARMOUR);
 
-        // Throwaway tiers are excluded by default. A wooden pickaxe made to get
-        // to stone is not an heirloom, and giving every one of them a permanent
-        // record file costs real disk on a long-lived server for history nobody
-        // will ever read. Servers that want them can clear this list.
-        for (String material : new String[]{"wooden", "stone", "golden"}) {
-            for (String kind : new String[]{"sword", "pickaxe", "axe", "shovel", "hoe"}) {
-                excludedItems.add("minecraft:" + material + "_" + kind);
-            }
-        }
-        for (String piece : new String[]{"helmet", "chestplate", "leggings", "boots"}) {
-            excludedItems.add("minecraft:leather_" + piece);
-            excludedItems.add("minecraft:golden_" + piece);
+        // Stone, gold, leather, chainmail and iron gear are all tracked,
+        // armour included. A stone pickaxe that mines a hundred thousand blocks
+        // has earned its history as much as a netherite one, and a starter
+        // leather chestplate somebody kept for a year is exactly the kind of
+        // antique this system exists to make interesting.
+        //
+        // Only wooden tools are excluded, and only because they are made by the
+        // dozen purely to reach stone. Delete these five lines, or clear
+        // "excludedItems" in the config file, to track those too.
+        for (String kind : new String[]{"sword", "pickaxe", "axe", "shovel", "hoe"}) {
+            excludedItems.add("minecraft:wooden_" + kind);
         }
 
         // Vanilla items whose tags do not cover them.
