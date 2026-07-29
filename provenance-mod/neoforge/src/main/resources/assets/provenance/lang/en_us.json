@@ -1,0 +1,31 @@
+{
+  "key.categories.provenance": "Provenance",
+  "key.provenance.inspect": "Inspect Item History",
+
+  "tooltip.provenance.inspect": "Press %s to inspect history",
+  "tooltip.provenance.crafted_by": "Crafted by %s",
+  "tooltip.provenance.manufactured_by": "Manufactured by %s",
+
+  "screen.provenance.title": "Item History",
+  "screen.provenance.tab.overview": "Overview",
+  "screen.provenance.tab.statistics": "Statistics",
+  "screen.provenance.tab.milestones": "Milestones",
+  "screen.provenance.tab.contributors": "Contributors",
+
+  "screen.provenance.overall": "Overall Item",
+  "screen.provenance.current_owner": "Current Owner",
+  "screen.provenance.unregistered": "Unregistered",
+  "screen.provenance.independent": "Independent",
+  "screen.provenance.unknown": "Unknown",
+
+  "milestone.provenance.initiated": "Initiated",
+  "milestone.provenance.proven": "Proven",
+  "milestone.provenance.seasoned": "Seasoned",
+  "milestone.provenance.veteran": "Veteran",
+  "milestone.provenance.master": "Master",
+  "milestone.provenance.legendary": "Legendary",
+  "milestone.provenance.server_relic": "Server Relic",
+
+  "command.provenance.transfer_sent": "Offer sent.",
+  "command.provenance.transferred": "Ownership transferred. The item's history is unchanged."
+}

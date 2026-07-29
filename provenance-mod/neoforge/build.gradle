@@ -1,0 +1,72 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.78'
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        name = 'NeoForged'
+        url = 'https://maven.neoforged.net/releases'
+    }
+}
+
+neoForge {
+    version = project.property('neoforge_version')
+
+    runs {
+        client {
+            client()
+        }
+        server {
+            server()
+        }
+        data {
+            clientData()
+        }
+    }
+
+    mods {
+        "${project.property('mod_id')}" {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+dependencies {
+    // The rules engine. Bundled into the shipped jar via jarJar below so the
+    // mod is a single self-contained file.
+    implementation project(':core')
+    jarJar project(':core')
+}
+
+// Expand the mod metadata from gradle.properties so the version is declared once.
+tasks.named('processResources', ProcessResources).configure {
+    def replacements = [
+            mod_id         : project.property('mod_id'),
+            mod_name       : project.property('mod_name'),
+            mod_version    : project.property('mod_version'),
+            mod_license    : project.property('mod_license'),
+            mod_authors    : project.property('mod_authors'),
+            mod_description: project.property('mod_description'),
+            minecraft_version: project.property('minecraft_version'),
+            neoforge_version : project.property('neoforge_version')
+    ]
+    inputs.properties replacements
+    filesMatching(['META-INF/neoforge.mods.toml', 'pack.mcmeta']) {
+        expand replacements
+    }
+}
+
+jar {
+    manifest {
+        attributes([
+                'Specification-Title'   : project.property('mod_id'),
+                'Specification-Vendor'  : project.property('mod_authors'),
+                'Specification-Version' : '1',
+                'Implementation-Title'  : project.property('mod_name'),
+                'Implementation-Version': project.property('mod_version'),
+                'Implementation-Vendor' : project.property('mod_authors')
+        ])
+    }
+}

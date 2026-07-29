@@ -1,0 +1,21 @@
+plugins {
+    id 'java'
+}
+
+subprojects {
+    apply plugin: 'java'
+
+    group = project.property('mod_group')
+    version = project.property('mod_version')
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(project.property('java_version') as int)
+        }
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+        options.release = project.property('java_version') as int
+    }
+}
