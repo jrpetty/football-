@@ -3,7 +3,6 @@ package com.provenance.mod;
 import com.provenance.core.ContributorQuery;
 import com.provenance.core.ItemRecord;
 import com.provenance.core.StatKey;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -13,6 +12,8 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+
+import java.util.function.Consumer;
 
 /**
  * Client/server messaging for the Item History screen.
@@ -68,12 +69,28 @@ public final class Network {
         }
     }
 
+    /**
+     * Where an arriving snapshot goes on the client.
+     *
+     * <p>An indirection on purpose. Naming a client-only class from this
+     * common-side registration would put it in the dedicated server's bytecode,
+     * and the client setup installs the real handler instead.
+     */
+    private static volatile Consumer<HistorySnapshot> clientReceiver = snapshot -> {
+    };
+
+    /** Called from client setup only. */
+    public static void setClientReceiver(Consumer<HistorySnapshot> receiver) {
+        clientReceiver = receiver == null ? snapshot -> {
+        } : receiver;
+    }
+
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(VERSION);
         registrar.playToServer(InspectRequest.TYPE, InspectRequest.CODEC, Network::handleInspect);
         registrar.playToClient(HistoryResponse.TYPE, HistoryResponse.CODEC,
                 (payload, context) -> context.enqueueWork(
-                        () -> com.provenance.mod.client.ClientHistoryCache.accept(payload.snapshot())));
+                        () -> clientReceiver.accept(payload.snapshot())));
     }
 
     /**
@@ -132,10 +149,5 @@ public final class Network {
             return null;
         }
         return player.getInventory().getItem(slot);
-    }
-
-    /** Convenience for the tooltip path, which reads the same snapshot shape. */
-    static void writeSnapshot(FriendlyByteBuf buf, HistorySnapshot snapshot) {
-        HistorySnapshot.write(buf, snapshot);
     }
 }

@@ -124,8 +124,9 @@ public final class ItemHistoryScreen extends Screen {
     }
 
     private void rebuild() {
-        clearWidgets();
-        init();
+        // Screen's own re-init path: clears widgets and calls init() with the
+        // current size, rather than reimplementing that by hand.
+        rebuildWidgets();
     }
 
     @Override

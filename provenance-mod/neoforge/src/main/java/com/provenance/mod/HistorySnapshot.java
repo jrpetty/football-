@@ -7,6 +7,7 @@ import com.provenance.core.ItemRecord;
 import com.provenance.core.MilestoneAward;
 import com.provenance.core.MilestoneTier;
 import com.provenance.core.MilestoneTrack;
+import com.provenance.core.StatBucket;
 import com.provenance.core.StatKey;
 import net.minecraft.network.FriendlyByteBuf;
 
@@ -111,8 +112,10 @@ public record HistorySnapshot(
                 primaryValue,
                 nextThreshold == null ? -1L : nextThreshold,
                 currentThreshold == null ? 0L : currentThreshold,
-                statMap(record, null),
-                ownerContribution == null ? Map.of() : statMap(null, ownerContribution),
+                statMap(record.category(), record.overall()),
+                ownerContribution == null
+                        ? Map.of()
+                        : statMap(record.category(), ownerContribution.stats()),
                 record.currentOwnerDisplayName(),
                 tiers,
                 rows,
@@ -122,10 +125,15 @@ public record HistorySnapshot(
                 mostFrequentFor(record));
     }
 
-    /** Only the statistics relevant to the item's category are sent. */
-    private static Map<String, Long> statMap(ItemRecord record, Contribution contribution) {
-        var source = record != null ? record.overall() : contribution.stats();
-        ItemCategory category = record != null ? record.category() : null;
+    /**
+     * Only the statistics relevant to the item's category are sent.
+     *
+     * <p>Both views use the item's own category, so the Overall and Current
+     * Owner tabs show the same rows in the same order and can be compared
+     * directly — an owner view listing fishing statistics on a pickaxe would be
+     * noise.
+     */
+    private static Map<String, Long> statMap(ItemCategory category, StatBucket source) {
         Map<String, Long> out = new java.util.LinkedHashMap<>();
         for (StatKey key : relevantStats(category)) {
             if (source.has(key) || key.aggregation() == StatKey.Aggregation.SUM) {
@@ -165,17 +173,6 @@ public record HistorySnapshot(
     }
 
     private static List<StatKey> relevantStats(ItemCategory category) {
-        if (category == null) {
-            // Owner view: mirror the overall view's key set by using the widest
-            // list, then let the screen show only what the item's category has.
-            List<StatKey> all = new ArrayList<>();
-            RELEVANT.values().forEach(list -> list.forEach(key -> {
-                if (!all.contains(key)) {
-                    all.add(key);
-                }
-            }));
-            return all;
-        }
         return RELEVANT.getOrDefault(category, RELEVANT.get(ItemCategory.OTHER));
     }
 

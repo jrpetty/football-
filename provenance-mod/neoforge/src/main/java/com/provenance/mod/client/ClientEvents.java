@@ -47,6 +47,16 @@ public final class ClientEvents {
         public static void registerKeys(RegisterKeyMappingsEvent event) {
             event.register(INSPECT_KEY);
         }
+
+        /**
+         * Installs the client-side snapshot handler. Done here rather than in
+         * {@link Network} so no client-only class is named from common code and
+         * a dedicated server never sees it.
+         */
+        @SubscribeEvent
+        public static void onClientSetup(net.neoforged.fml.event.lifecycle.FMLClientSetupEvent event) {
+            event.enqueueWork(() -> Network.setClientReceiver(ClientHistoryCache::accept));
+        }
     }
 
     /**

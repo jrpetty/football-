@@ -9,12 +9,16 @@ import com.provenance.core.RecordRegistry;
 import com.provenance.core.RepairSessionTracker;
 import com.provenance.core.StatKey;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -161,15 +165,25 @@ public final class GameplayEvents {
         return id == null ? "unknown" : id.toString();
     }
 
+    /**
+     * Ore tags, resolved once at class load.
+     *
+     * <p>{@code BlockTags.create} is not public API, and building a tag key per
+     * event would allocate on every block a player breaks — the single hottest
+     * path in this mod. Both namespaces are checked because packs vary in which
+     * convention they use.
+     */
+    private static final TagKey<Block> ORES_COMMON =
+            TagKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath("c", "ores"));
+    private static final TagKey<Block> ORES_LEGACY =
+            TagKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath("forge", "ores"));
+
     private static boolean isOre(BlockState state) {
-        return state.is(net.minecraft.tags.BlockTags.create(
-                ResourceLocation.fromNamespaceAndPath("c", "ores")))
-                || state.is(net.minecraft.tags.BlockTags.create(
-                ResourceLocation.fromNamespaceAndPath("forge", "ores")));
+        return state.is(ORES_COMMON) || state.is(ORES_LEGACY);
     }
 
     private static boolean isLog(BlockState state) {
-        return state.is(net.minecraft.tags.BlockTags.LOGS);
+        return state.is(BlockTags.LOGS);
     }
 
     // ------------------------------------------------------------------
