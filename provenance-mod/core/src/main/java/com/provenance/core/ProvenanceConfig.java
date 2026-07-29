@@ -36,6 +36,10 @@ public final class ProvenanceConfig {
     private int contributorPageSize = 25;
     /** Below this, a movement sample is treated as jitter and dropped. */
     private int minimumDistanceSampleCm = 50;
+    /** How often carried items are sampled for time. 20 ticks is one second. */
+    private int timeSampleIntervalTicks = 20;
+    /** How often buffered time and distance are written into records. */
+    private int usageFlushIntervalSeconds = 60;
 
     public static ProvenanceConfig withDefaults() {
         ProvenanceConfig config = new ProvenanceConfig();
@@ -112,6 +116,20 @@ public final class ProvenanceConfig {
         tagCategories.put("minecraft:leg_armor", ItemCategory.ARMOUR);
         tagCategories.put("minecraft:foot_armor", ItemCategory.ARMOUR);
         tagCategories.put("c:armors", ItemCategory.ARMOUR);
+
+        // Throwaway tiers are excluded by default. A wooden pickaxe made to get
+        // to stone is not an heirloom, and giving every one of them a permanent
+        // record file costs real disk on a long-lived server for history nobody
+        // will ever read. Servers that want them can clear this list.
+        for (String material : new String[]{"wooden", "stone", "golden"}) {
+            for (String kind : new String[]{"sword", "pickaxe", "axe", "shovel", "hoe"}) {
+                excludedItems.add("minecraft:" + material + "_" + kind);
+            }
+        }
+        for (String piece : new String[]{"helmet", "chestplate", "leggings", "boots"}) {
+            excludedItems.add("minecraft:leather_" + piece);
+            excludedItems.add("minecraft:golden_" + piece);
+        }
 
         // Vanilla items whose tags do not cover them.
         itemCategories.put("minecraft:trident", ItemCategory.TRIDENT);
@@ -241,6 +259,22 @@ public final class ProvenanceConfig {
 
     public void setContributorPageSize(int v) {
         this.contributorPageSize = Math.max(1, v);
+    }
+
+    public int timeSampleIntervalTicks() {
+        return timeSampleIntervalTicks;
+    }
+
+    public void setTimeSampleIntervalTicks(int v) {
+        this.timeSampleIntervalTicks = Math.max(1, v);
+    }
+
+    public int usageFlushIntervalSeconds() {
+        return usageFlushIntervalSeconds;
+    }
+
+    public void setUsageFlushIntervalSeconds(int v) {
+        this.usageFlushIntervalSeconds = Math.max(1, v);
     }
 
     public int minimumDistanceSampleCm() {

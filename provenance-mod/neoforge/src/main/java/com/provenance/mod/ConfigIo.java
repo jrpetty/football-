@@ -80,6 +80,12 @@ public final class ConfigIo {
         if (root.has("minimumDistanceSampleCm")) {
             config.setMinimumDistanceSampleCm(root.get("minimumDistanceSampleCm").getAsInt());
         }
+        if (root.has("timeSampleIntervalTicks")) {
+            config.setTimeSampleIntervalTicks(root.get("timeSampleIntervalTicks").getAsInt());
+        }
+        if (root.has("usageFlushIntervalSeconds")) {
+            config.setUsageFlushIntervalSeconds(root.get("usageFlushIntervalSeconds").getAsInt());
+        }
 
         if (root.has("excludedItems")) {
             root.getAsJsonArray("excludedItems").forEach(e -> config.exclude(e.getAsString()));
@@ -131,6 +137,8 @@ public final class ConfigIo {
         root.addProperty("reducedAnimations", config.reducedAnimations());
         root.addProperty("contributorPageSize", config.contributorPageSize());
         root.addProperty("minimumDistanceSampleCm", config.minimumDistanceSampleCm());
+        root.addProperty("timeSampleIntervalTicks", config.timeSampleIntervalTicks());
+        root.addProperty("usageFlushIntervalSeconds", config.usageFlushIntervalSeconds());
 
         var excluded = new com.google.gson.JsonArray();
         config.excludedItems().forEach(excluded::add);

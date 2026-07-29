@@ -23,6 +23,18 @@ public interface RecordStore extends AutoCloseable {
     /** True when the id exists on disk or in cache, destroyed or not. */
     boolean exists(UUID recordId);
 
+    /**
+     * Removes a record permanently.
+     *
+     * <p>For items that have genuinely ceased to exist — a dropped item that
+     * despawned, say. The id is random, so nothing can ever be handed it again;
+     * deleting the file simply stops the server carrying history for something
+     * no player can ever hold.
+     *
+     * @return true if a record was removed
+     */
+    boolean delete(UUID recordId);
+
     /** Writes every dirty record. Called off the main server thread. */
     void flush();
 

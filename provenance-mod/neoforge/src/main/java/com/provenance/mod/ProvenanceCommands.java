@@ -68,6 +68,25 @@ public final class ProvenanceCommands {
                                             ? "Ownership assigned to " + target.getGameProfile().getName() + "."
                                             : "Refused: that item already has a registered owner.");
                                 })))
+                .then(Commands.literal("restore")
+                        .executes(context -> {
+                            ServerPlayer operator = context.getSource().getPlayerOrException();
+                            ItemStack held = operator.getMainHandItem();
+                            ItemRecord record = held.isEmpty() ? null : Stamps.peek(held);
+                            if (record == null) {
+                                return feedback(operator, "Hold the item you want to restore.");
+                            }
+                            if (record.forkedFromRecordId() == null) {
+                                return feedback(operator,
+                                        "That item was not split off another record, so there is nothing to restore.");
+                            }
+                            var restored = ProvenanceState.get().registry().restoreFork(record);
+                            if (restored == null) {
+                                return feedback(operator, "The original record is gone; cannot restore.");
+                            }
+                            Stamps.writeStamp(held, restored);
+                            return feedback(operator, "Restored. The item's original history is back.");
+                        }))
                 .then(Commands.literal("flush")
                         .executes(context -> {
                             ProvenanceState state = ProvenanceState.get();

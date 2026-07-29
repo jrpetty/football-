@@ -113,7 +113,7 @@ public final class GameplayEvents {
         // The tool actually in hand. A block broken while a different tool is
         // held is that tool's work, not the pickaxe sitting in the backpack.
         ItemStack tool = player.getMainHandItem();
-        ItemRecord record = Stamps.resolve(tool, player);
+        ItemRecord record = Stamps.track(tool, player);
         if (record == null) {
             return;
         }
@@ -213,7 +213,7 @@ public final class GameplayEvents {
         }
 
         ItemStack weapon = attacker.getMainHandItem();
-        ItemRecord record = Stamps.resolve(weapon, attacker);
+        ItemRecord record = Stamps.track(weapon, attacker);
         if (record == null) {
             return;
         }
@@ -258,7 +258,7 @@ public final class GameplayEvents {
             if (piece.isEmpty()) {
                 continue;
             }
-            ItemRecord record = Stamps.resolve(piece, victim);
+            ItemRecord record = Stamps.track(piece, victim);
             if (record == null || record.category() != ItemCategory.ARMOUR) {
                 continue;
             }
@@ -317,7 +317,7 @@ public final class GameplayEvents {
         }
 
         ItemStack weapon = killer.getMainHandItem();
-        ItemRecord record = Stamps.resolve(weapon, killer);
+        ItemRecord record = Stamps.track(weapon, killer);
         if (record == null) {
             return;
         }
@@ -353,7 +353,7 @@ public final class GameplayEvents {
         }
 
         ItemStack rod = player.getMainHandItem();
-        ItemRecord record = Stamps.resolve(rod, player);
+        ItemRecord record = Stamps.track(rod, player);
         if (record == null || record.category() != ItemCategory.FISHING_ROD) {
             return;
         }
@@ -407,8 +407,10 @@ public final class GameplayEvents {
             return;
         }
 
+        // A repair is a custody moment, so this is one of the few places a
+        // token legitimately rotates.
         ItemStack output = event.getOutput();
-        ItemRecord record = Stamps.resolve(output, player);
+        ItemRecord record = Stamps.claimCustody(output, player);
         if (record == null) {
             return;
         }

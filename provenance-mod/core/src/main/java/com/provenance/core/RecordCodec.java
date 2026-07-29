@@ -35,6 +35,9 @@ public final class RecordCodec {
         root.addProperty("bindingToken", record.bindingToken());
         root.addProperty("destroyed", record.isDestroyed());
 
+        if (record.forkedFromRecordId() != null) {
+            root.addProperty("forkedFrom", record.forkedFromRecordId().toString());
+        }
         if (record.crafterId() != null) {
             root.addProperty("crafterId", record.crafterId().toString());
         }
@@ -125,7 +128,10 @@ public final class RecordCodec {
                 .origin(Origin.byId(getString(root, "origin", Origin.FOUND.id())))
                 .created(getLong(root, "createdEpochMilli", 0L), getBool(root, "creationDateApproximate", false))
                 .bindingToken(getLong(root, "bindingToken", 0L))
-                .customName(getString(root, "customName", null));
+                .customName(getString(root, "customName", null))
+                .forkedFrom(root.has("forkedFrom")
+                        ? UUID.fromString(root.get("forkedFrom").getAsString())
+                        : null);
 
         if (root.has("crafterId")) {
             builder.crafter(UUID.fromString(root.get("crafterId").getAsString()),

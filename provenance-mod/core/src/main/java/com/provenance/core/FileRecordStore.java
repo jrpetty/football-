@@ -139,6 +139,26 @@ public final class FileRecordStore implements RecordStore {
     }
 
     @Override
+    public boolean delete(UUID recordId) {
+        if (recordId == null) {
+            return false;
+        }
+        synchronized (cache) {
+            ItemRecord cached = cache.remove(recordId);
+            if (cached != null) {
+                // Drop any unwritten changes: the item is gone, so persisting
+                // its last few blocks mined would only recreate the file.
+                cached.clearDirty();
+            }
+        }
+        try {
+            return Files.deleteIfExists(pathFor(recordId));
+        } catch (IOException e) {
+            throw new IllegalStateException("Could not delete provenance record " + recordId, e);
+        }
+    }
+
+    @Override
     public void flush() {
         List<ItemRecord> pending = new ArrayList<>();
         synchronized (cache) {
@@ -217,6 +237,74 @@ public final class FileRecordStore implements RecordStore {
             Files.move(tmp, path, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         } catch (AtomicMoveNotSupportedException e) {
             Files.move(tmp, path, StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
+    /**
+     * Deletes records for items that no longer exist and whose retention period
+     * has elapsed.
+     *
+     * <p>Without this, every tool that ever broke leaves a file behind forever.
+     * Only records explicitly marked destroyed are eligible — a live item is
+     * never removed however old it is, because age is the whole point of the
+     * feature.
+     *
+     * <p>Uses the file's last-modified time as the destruction time. A record is
+     * written once when it is marked destroyed and never touched again, so the
+     * two coincide, and it avoids reading files that are obviously too recent.
+     *
+     * <p>Expensive enough to belong on the background thread at startup, not on
+     * the server thread.
+     *
+     * @param retentionDays days to keep destroyed records; negative keeps forever
+     * @return how many records were removed
+     */
+    public int pruneDestroyed(int retentionDays) {
+        if (retentionDays < 0) {
+            return 0;
+        }
+        long cutoff = System.currentTimeMillis() - (retentionDays * 86_400_000L);
+        int removed = 0;
+
+        try (var shards = Files.list(root)) {
+            for (Path shard : shards.filter(Files::isDirectory).toList()) {
+                try (var files = Files.list(shard)) {
+                    for (Path file : files.filter(p -> p.toString().endsWith(".json")).toList()) {
+                        if (Files.getLastModifiedTime(file).toMillis() >= cutoff) {
+                            continue;
+                        }
+                        UUID id = idOf(file);
+                        if (id == null) {
+                            continue;
+                        }
+                        synchronized (cache) {
+                            if (cache.containsKey(id)) {
+                                continue;
+                            }
+                        }
+                        ItemRecord record = readFromDisk(id);
+                        if (record != null && record.isDestroyed()) {
+                            Files.deleteIfExists(file);
+                            removed++;
+                        }
+                    }
+                }
+            }
+        } catch (IOException | RuntimeException e) {
+            throw new IllegalStateException("Provenance retention sweep failed under " + root, e);
+        }
+        return removed;
+    }
+
+    private static UUID idOf(Path file) {
+        String name = file.getFileName().toString();
+        if (!name.endsWith(".json")) {
+            return null;
+        }
+        try {
+            return UUID.fromString(name.substring(0, name.length() - ".json".length()));
+        } catch (IllegalArgumentException e) {
+            return null;
         }
     }
 

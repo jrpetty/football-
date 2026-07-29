@@ -120,11 +120,16 @@ public final class Network {
             if (record == null) {
                 // Never inspected before. Register it now so the player sees a
                 // real record rather than an empty screen.
-                record = Stamps.resolve(stack, player);
+                record = Stamps.track(stack, player);
                 if (record == null) {
                     return;
                 }
             }
+
+            // Fold in whatever this item has accrued since the last flush, so
+            // the screen shows totals current to the second even though records
+            // are only written once a minute.
+            state.flushUsage(record.recordId());
 
             var track = state.registry().trackFor(record);
             StatKey secondary = ContributorQuery.secondaryFor(record.category());

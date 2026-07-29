@@ -16,6 +16,19 @@ import java.util.List;
 /**
  * Bridges a physical {@link ItemStack} to its server-side record.
  *
+ * <p>There are two deliberately separate paths.
+ *
+ * <p>{@link #track} is what gameplay uses — every mined block, every kill,
+ * every sampling tick. It never rewrites the stack and never rotates the
+ * anti-duplication token. That matters twice over: rewriting an item's
+ * component dirties its inventory slot and forces a client sync, and rotating
+ * the token on every action makes ordinary hiccups look like duplication.
+ *
+ * <p>{@link #claimCustody} is the rotating path, reserved for the handful of
+ * moments when an item genuinely changes hands: logging in, a completed
+ * transfer, a repair. Duplicates are caught at those checkpoints instead of
+ * continuously, which is where they actually enter circulation anyway.
+ *
  * <p>Everything here is server-only. The client is never trusted to say which
  * record a stack belongs to; it merely carries the stamp it was given.
  */
@@ -36,11 +49,53 @@ public final class Stamps {
         return tags;
     }
 
+    /**
+     * Eligibility per item type, resolved once.
+     *
+     * <p>Resolving a category means building the stack's tag list and walking
+     * configuration, which allocates. Eligibility depends only on the item
+     * type, never on the individual stack, so it is cached — otherwise the
+     * once-a-second sampler would redo that work six times per player per
+     * second forever.
+     */
+    private static final java.util.Map<net.minecraft.world.item.Item, java.util.Optional<ItemCategory>>
+            CATEGORY_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Called when the server starts, so a config change is picked up. */
+    public static void clearCategoryCache() {
+        CATEGORY_CACHE.clear();
+    }
+
     public static ItemCategory categoryOf(ProvenanceConfig config, ItemStack stack) {
         if (stack.isEmpty()) {
             return null;
         }
-        return config.resolveCategory(itemId(stack), tagsOf(stack));
+        return CATEGORY_CACHE
+                .computeIfAbsent(stack.getItem(),
+                        item -> java.util.Optional.ofNullable(config.resolveCategory(itemId(stack), tagsOf(stack))))
+                .orElse(null);
+    }
+
+    /**
+     * The cheapest possible lookup, for the per-second sampler.
+     *
+     * <p>A component read and a cached map lookup. Deliberately does not adopt
+     * unregistered items, sync names, detect upgrades or rotate tokens: a
+     * sampling tick is not a gameplay event and must not mutate anything.
+     *
+     * @return the record, or null if the stack is untracked or unregistered
+     */
+    public static ItemRecord sampled(ItemStack stack) {
+        ProvenanceState state = ProvenanceState.get();
+        if (state == null) {
+            return null;
+        }
+        ItemStamp stamp = readStamp(stack);
+        if (stamp == null) {
+            return null;
+        }
+        RecordRegistry.Claim claim = state.registry().verify(stamp);
+        return claim.status() == RecordRegistry.Status.VALID ? claim.record() : null;
     }
 
     public static ItemStamp readStamp(ItemStack stack) {
@@ -52,25 +107,16 @@ public final class Stamps {
     }
 
     /**
-     * Returns the authoritative record for a stack, registering one if the item
-     * is eligible and has never been seen.
+     * The gameplay path: returns the record for a stack without touching the
+     * stack or the token.
      *
-     * <p>This is the single funnel every gameplay handler goes through, which
-     * is what makes the guarantees hold uniformly:
+     * <p>An eligible item with no stamp is adopted once, here, as a Legacy item
+     * — a new id, an honest migration date, no invented maker, counters at
+     * zero. That is the only case in which this method writes to the stack.
      *
-     * <ul>
-     *   <li>An ineligible item yields null and is never tracked.</li>
-     *   <li>An unstamped eligible item is adopted as a Legacy Item — a new id,
-     *       an honest migration date, no invented maker, counters at zero.</li>
-     *   <li>A stamped item is validated. A stale token means this stack is a
-     *       copy, so it is given a fresh empty identity rather than the
-     *       original's history.</li>
-     * </ul>
-     *
-     * @param player the player acting on the stack, used for ownership context
-     *               on first registration; may be null for world interactions
+     * @return the record, or null when the item is not tracked
      */
-    public static ItemRecord resolve(ItemStack stack, ServerPlayer player) {
+    public static ItemRecord track(ItemStack stack, ServerPlayer player) {
         ProvenanceState state = ProvenanceState.get();
         if (state == null || stack.isEmpty()) {
             return null;
@@ -86,12 +132,64 @@ public final class Stamps {
         ItemStamp stamp = readStamp(stack);
 
         if (stamp == null) {
-            ItemRecord record = registry.registerLegacy(itemId, category,
-                    player == null ? null : player.getUUID(),
-                    player == null ? null : player.getGameProfile().getName());
-            writeStamp(stack, ItemStamp.of(record));
-            syncCustomName(stack, record);
-            return record;
+            return adopt(stack, itemId, category, player, registry);
+        }
+
+        RecordRegistry.Claim claim = registry.verify(stamp);
+        switch (claim.status()) {
+            case VALID -> {
+                noteUpgrade(claim.record(), itemId, registry);
+                syncCustomName(stack, claim.record());
+                return claim.record();
+            }
+            case DUPLICATE -> {
+                // Reported, not acted on. Forking an identity is a custody-time
+                // decision, so that a rollback or an odd mod interaction cannot
+                // silently erase a relic's history mid-swing.
+                return claim.record();
+            }
+            default -> {
+                // A stamp referencing an id this server never issued: a
+                // hand-edited stack, or data from another world's store.
+                return adopt(stack, itemId, category, player, registry);
+            }
+        }
+    }
+
+    private static ItemRecord adopt(ItemStack stack, String itemId, ItemCategory category,
+                                    ServerPlayer player, RecordRegistry registry) {
+        ItemRecord record = registry.registerLegacy(itemId, category,
+                player == null ? null : player.getUUID(),
+                player == null ? null : player.getGameProfile().getName());
+        writeStamp(stack, ItemStamp.of(record));
+        syncCustomName(stack, record);
+        return record;
+    }
+
+    /**
+     * The custody path: validates a stack and rotates its token.
+     *
+     * <p>Called only when an item genuinely changes hands. A stale token here
+     * means the stack is a copy, and it is given a fresh empty identity that
+     * records what it was forked from, so an operator can undo a false positive
+     * with {@code /provenance admin restore}.
+     */
+    public static ItemRecord claimCustody(ItemStack stack, ServerPlayer player) {
+        ProvenanceState state = ProvenanceState.get();
+        if (state == null || stack.isEmpty()) {
+            return null;
+        }
+
+        ItemCategory category = categoryOf(state.config(), stack);
+        if (category == null) {
+            return null;
+        }
+
+        RecordRegistry registry = state.registry();
+        String itemId = itemId(stack);
+        ItemStamp stamp = readStamp(stack);
+        if (stamp == null) {
+            return adopt(stack, itemId, category, player, registry);
         }
 
         RecordRegistry.Claim claim = registry.claim(stamp, itemId, category,
@@ -99,25 +197,23 @@ public final class Stamps {
                 player == null ? null : player.getGameProfile().getName());
 
         switch (claim.status()) {
-            case VALID, DUPLICATE -> {
+            case VALID -> {
                 writeStamp(stack, claim.stamp());
                 noteUpgrade(claim.record(), itemId, registry);
                 syncCustomName(stack, claim.record());
                 return claim.record();
             }
-            case UNKNOWN -> {
-                // The stamp references an id the server has never issued: a
-                // hand-edited stack, or data from a world this record store
-                // does not belong to. Re-register rather than trust it.
-                ItemRecord record = registry.registerLegacy(itemId, category,
-                        player == null ? null : player.getUUID(),
-                        player == null ? null : player.getGameProfile().getName());
-                writeStamp(stack, ItemStamp.of(record));
-                syncCustomName(stack, record);
-                return record;
+            case DUPLICATE -> {
+                writeStamp(stack, claim.stamp());
+                Provenance.LOGGER.warn(
+                        "Provenance: {} presented a stale token for {}; issued fresh record {} forked from {}. "
+                                + "If this was a rollback rather than duplication, use /provenance admin restore.",
+                        player == null ? "an unknown holder" : player.getGameProfile().getName(),
+                        itemId, claim.record().recordId(), claim.record().forkedFromRecordId());
+                return claim.record();
             }
             default -> {
-                return null;
+                return adopt(stack, itemId, category, player, registry);
             }
         }
     }
@@ -134,13 +230,8 @@ public final class Stamps {
      * mechanism that keeps enchantments and custom names across a netherite
      * upgrade.
      *
-     * <p>Reading it from the stack rather than an event means this works for
-     * any recipe or mod that preserves components, and cannot break when an
-     * event class is renamed between versions.
-     *
      * <p>The original type stays on the record permanently, so a netherite
-     * pickaxe still shows it was born diamond. Identity, creation facts,
-     * statistics, contributors and milestones are untouched.
+     * pickaxe still shows it was born diamond.
      */
     private static void noteUpgrade(ItemRecord record, String currentItemId, RecordRegistry registry) {
         if (record == null || currentItemId == null || currentItemId.equals(record.currentItemId())) {
@@ -156,7 +247,7 @@ public final class Stamps {
      *
      * <p>Purely cosmetic, and deliberately separate from the earned milestone
      * title: a pickaxe renamed "Steelbreaker" still shows "Veteran" as its
-     * authenticated tier, and no amount of renaming touches provenance.
+     * authenticated tier.
      */
     private static void syncCustomName(ItemStack stack, ItemRecord record) {
         if (record == null) {

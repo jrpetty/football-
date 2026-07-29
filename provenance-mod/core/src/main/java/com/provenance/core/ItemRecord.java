@@ -49,6 +49,17 @@ public final class ItemRecord {
     private String currentOwnerName;
 
     /**
+     * For a record created because a stack failed token validation: the record
+     * it was forked from.
+     *
+     * <p>Kept so a false positive is recoverable. Duplication detection cannot
+     * be perfect, and the cost of getting it wrong — silently erasing a relic's
+     * entire history — is far worse than the cost of a duplicate existing for a
+     * while. This pointer lets an operator put a wrongly-forked item back.
+     */
+    private UUID forkedFromRecordId;
+
+    /**
      * Rolling anti-duplication token. The stack carries a copy; the server
      * re-stamps it on validation. A cloned stack presents a stale token and is
      * refused the identity. See {@link RecordRegistry}.
@@ -79,6 +90,12 @@ public final class ItemRecord {
         this.currentOwnerName = b.currentOwnerName;
         this.customName = b.customName;
         this.bindingToken = b.bindingToken;
+        this.forkedFromRecordId = b.forkedFromRecordId;
+    }
+
+    /** The record this one was forked from, or null for an ordinary record. */
+    public synchronized UUID forkedFromRecordId() {
+        return forkedFromRecordId;
     }
 
     public static Builder builder(UUID recordId, String originalItemId, ItemCategory category) {
@@ -395,6 +412,7 @@ public final class ItemRecord {
         private String currentOwnerName;
         private String customName;
         private long bindingToken;
+        private UUID forkedFromRecordId;
 
         private Builder(UUID recordId, String originalItemId, ItemCategory category) {
             this.recordId = recordId;
@@ -443,6 +461,11 @@ public final class ItemRecord {
 
         public Builder bindingToken(long v) {
             this.bindingToken = v;
+            return this;
+        }
+
+        public Builder forkedFrom(UUID v) {
+            this.forkedFromRecordId = v;
             return this;
         }
 

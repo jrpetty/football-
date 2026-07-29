@@ -134,12 +134,14 @@ public final class RecordRegistry {
         return record;
     }
 
-    private ItemRecord registerDuplicate(String itemId, ItemCategory category, UUID holderId, String holderName) {
+    private ItemRecord registerDuplicate(String itemId, ItemCategory category, UUID holderId, String holderName,
+                                         UUID forkedFrom) {
         ItemRecord record = ItemRecord.builder(newRecordId(), itemId, category)
                 .origin(Origin.DUPLICATE)
                 .created(now(), true)
                 .owner(holderId, holderName)
                 .bindingToken(newToken())
+                .forkedFrom(forkedFrom)
                 .build();
         store.insert(record);
         return record;
@@ -173,8 +175,41 @@ public final class RecordRegistry {
     }
 
     /**
-     * Validates a stack and rotates its token. Use whenever the stack can be
-     * written back — on pickup, on equip, before recording a statistic.
+     * Looks a stack up without rotating its token, reporting whether the token
+     * matched.
+     *
+     * <p>This is the path gameplay uses. Recording a kill or a mined block must
+     * not rewrite the item's component: doing so dirties the inventory slot and
+     * forces a client sync every time, and it burns through tokens so fast that
+     * any hiccup looks like duplication.
+     *
+     * <p>A mismatch here is reported, never acted on. Forking an identity is a
+     * custody-time decision — see {@link #claim}.
+     */
+    public Claim verify(ItemStamp stamp) {
+        if (stamp == null) {
+            return new Claim(Status.UNKNOWN, null, null);
+        }
+        ItemRecord record = store.load(stamp.recordId());
+        if (record == null) {
+            return new Claim(Status.UNKNOWN, null, null);
+        }
+        if (record.bindingToken() != stamp.bindingToken()) {
+            return new Claim(Status.DUPLICATE, record, null);
+        }
+        return new Claim(Status.VALID, record, stamp);
+    }
+
+    /**
+     * Validates a stack and rotates its token. Reserved for genuine custody
+     * changes — login, a completed transfer, a repair — rather than for every
+     * recorded action.
+     *
+     * <p>On a stale token the stack is given a fresh, empty identity that
+     * records what it was forked from. Duplication detection cannot be perfect,
+     * and quietly erasing a relic's history because of a rollback or an odd mod
+     * interaction is far worse than a duplicate existing for a while, so the
+     * fork is recoverable rather than final.
      *
      * @param itemId   current registry id, used if a replacement record is needed
      * @param category resolved category, used if a replacement record is needed
@@ -189,8 +224,9 @@ public final class RecordRegistry {
         }
         if (record.bindingToken() != stamp.bindingToken()) {
             // Stale token: the original was already claimed elsewhere, so this
-            // stack is the copy. Give it an empty identity of its own.
-            ItemRecord replacement = registerDuplicate(itemId, category, holderId, holderName);
+            // stack is the copy. Give it an empty identity of its own, marked
+            // with where it came from so a false positive can be undone.
+            ItemRecord replacement = registerDuplicate(itemId, category, holderId, holderName, record.recordId());
             return new Claim(Status.DUPLICATE, replacement, ItemStamp.of(replacement));
         }
         record.setBindingToken(newToken());
@@ -249,10 +285,56 @@ public final class RecordRegistry {
     /**
      * Flags a record as belonging to an item that no longer exists. The id is
      * retained, never recycled, so a future item cannot inherit this history.
+     *
+     * <p>Used when an item breaks. The record survives for the configured
+     * retention period so an operator can still answer "what happened to it?",
+     * then the retention sweep removes it.
      */
     public void markDestroyed(ItemRecord record) {
         record.markDestroyed();
         store.save(record);
+    }
+
+    /**
+     * Deletes a record outright, for an item that is unambiguously gone — a
+     * dropped stack that despawned.
+     *
+     * <p>There is nothing left to attribute and nobody left to ask, so keeping
+     * the history would just be the server tracking an item no player can ever
+     * hold again. Record ids are random, so the deleted id can never be handed
+     * to a different item.
+     *
+     * @return true if a record was removed
+     */
+    public boolean purge(ItemRecord record) {
+        return record != null && store.delete(record.recordId());
+    }
+
+    /**
+     * Re-issues the parent's identity to a stack that was wrongly forked,
+     * undoing a false-positive duplication call.
+     *
+     * <p>Operator-driven on purpose: the server cannot tell a rollback from an
+     * exploit, but a human looking at the two items usually can.
+     *
+     * @return the stamp to write back to the stack, or null when the record was
+     *         not a fork or the parent is gone
+     */
+    public ItemStamp restoreFork(ItemRecord forked) {
+        if (forked == null || forked.forkedFromRecordId() == null) {
+            return null;
+        }
+        ItemRecord parent = store.load(forked.forkedFromRecordId());
+        if (parent == null) {
+            return null;
+        }
+        parent.setBindingToken(newToken());
+        store.save(parent);
+        // The fork itself is left in place, destroyed, so its id is never
+        // reissued and the incident stays auditable.
+        forked.markDestroyed();
+        store.save(forked);
+        return ItemStamp.of(parent);
     }
 
     public RecordStore store() {
