@@ -90,6 +90,7 @@ public final class Stamps {
                     player == null ? null : player.getUUID(),
                     player == null ? null : player.getGameProfile().getName());
             writeStamp(stack, ItemStamp.of(record));
+            syncCustomName(stack, record);
             return record;
         }
 
@@ -100,6 +101,7 @@ public final class Stamps {
         switch (claim.status()) {
             case VALID, DUPLICATE -> {
                 writeStamp(stack, claim.stamp());
+                syncCustomName(stack, claim.record());
                 return claim.record();
             }
             case UNKNOWN -> {
@@ -110,11 +112,31 @@ public final class Stamps {
                         player == null ? null : player.getUUID(),
                         player == null ? null : player.getGameProfile().getName());
                 writeStamp(stack, ItemStamp.of(record));
+                syncCustomName(stack, record);
                 return record;
             }
             default -> {
                 return null;
             }
+        }
+    }
+
+    /**
+     * Keeps the record's display name in step with the anvil.
+     *
+     * <p>Purely cosmetic, and deliberately separate from the earned milestone
+     * title: a pickaxe renamed "Steelbreaker" still shows "Veteran" as its
+     * authenticated tier, and no amount of renaming touches provenance.
+     */
+    private static void syncCustomName(ItemStack stack, ItemRecord record) {
+        if (record == null) {
+            return;
+        }
+        net.minecraft.network.chat.Component custom =
+                stack.get(net.minecraft.core.component.DataComponents.CUSTOM_NAME);
+        String name = custom == null ? null : custom.getString();
+        if (!java.util.Objects.equals(name, record.customName())) {
+            record.setCustomName(name);
         }
     }
 

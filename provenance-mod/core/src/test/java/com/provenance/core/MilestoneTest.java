@@ -217,9 +217,22 @@ class MilestoneTest {
         MilestoneTrack rod = config.track(ItemCategory.FISHING_ROD);
         assertEquals(25L, rod.threshold(MilestoneTier.INITIATED));
         assertEquals(500_000L, rod.threshold(MilestoneTier.SERVER_RELIC));
+    }
 
-        MilestoneTrack shield = config.track(ItemCategory.SHIELD);
-        assertEquals(25L, shield.threshold(MilestoneTier.INITIATED));
-        assertEquals(1_000_000L, shield.threshold(MilestoneTier.SERVER_RELIC));
+    /**
+     * Every displayed statistic must have a handler behind it. A key with no
+     * writer renders as a permanent zero, which reads as a broken feature.
+     */
+    @Test
+    void noStatisticIsDeclaredWithoutAWriter() {
+        for (StatKey key : StatKey.values()) {
+            assertFalse(key.id().startsWith("attacks_blocked")
+                            || key.id().equals("projectiles_fired")
+                            || key.id().equals("farmland_created")
+                            || key.id().equals("entities_sheared")
+                            || key.id().equals("honeycomb_harvested")
+                            || key.id().equals("paths_created"),
+                    "unwritten statistic reintroduced without a handler: " + key.id());
+        }
     }
 }

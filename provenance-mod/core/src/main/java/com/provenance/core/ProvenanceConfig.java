@@ -63,9 +63,6 @@ public final class ProvenanceConfig {
         tracks.put(ItemCategory.HOE, new MilestoneTrack(StatKey.BLOCKS_WORKED,
                 ladder(50, 500, 5_000, 25_000, 100_000, 500_000, 2_000_000)));
 
-        tracks.put(ItemCategory.SHIELD, new MilestoneTrack(StatKey.ATTACKS_BLOCKED,
-                ladder(25, 250, 2_500, 10_000, 50_000, 250_000, 1_000_000)));
-
         tracks.put(ItemCategory.ARMOUR, new MilestoneTrack(StatKey.DAMAGE_ABSORBED,
                 ladder(100, 1_000, 5_000, 25_000, 100_000, 500_000, 2_000_000)));
 
@@ -110,7 +107,6 @@ public final class ProvenanceConfig {
         tagCategories.put("c:tools/hoe", ItemCategory.HOE);
         tagCategories.put("c:tools/shear", ItemCategory.SHEARS);
         tagCategories.put("c:tools/fishing_rod", ItemCategory.FISHING_ROD);
-        tagCategories.put("c:tools/shield", ItemCategory.SHIELD);
         tagCategories.put("minecraft:head_armor", ItemCategory.ARMOUR);
         tagCategories.put("minecraft:chest_armor", ItemCategory.ARMOUR);
         tagCategories.put("minecraft:leg_armor", ItemCategory.ARMOUR);
@@ -121,7 +117,6 @@ public final class ProvenanceConfig {
         itemCategories.put("minecraft:trident", ItemCategory.TRIDENT);
         itemCategories.put("minecraft:bow", ItemCategory.RANGED_WEAPON);
         itemCategories.put("minecraft:crossbow", ItemCategory.RANGED_WEAPON);
-        itemCategories.put("minecraft:shield", ItemCategory.SHIELD);
         itemCategories.put("minecraft:shears", ItemCategory.SHEARS);
         itemCategories.put("minecraft:fishing_rod", ItemCategory.FISHING_ROD);
     }

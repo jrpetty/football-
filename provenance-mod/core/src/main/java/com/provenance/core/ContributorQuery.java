@@ -90,9 +90,10 @@ public final class ContributorQuery {
             case PICKAXE -> StatKey.ORES_MINED;
             case MELEE_WEAPON, RANGED_WEAPON, TRIDENT -> StatKey.DAMAGE_DEALT;
             case ARMOUR -> StatKey.HITS_RECEIVED;
-            case SHIELD -> StatKey.DAMAGE_PREVENTED;
             case AXE -> StatKey.BLOCKS_CHOPPED;
-            case SHOVEL -> StatKey.PATHS_CREATED;
+            // A shovel has no natural second measure, so fall back to a
+            // universally recorded one rather than a column of zeroes.
+            case SHOVEL -> StatKey.DURABILITY_RESTORED;
             case HOE -> StatKey.CROPS_HARVESTED;
             case FISHING_ROD -> StatKey.TREASURE_CAUGHT;
             case SHEARS, OTHER -> StatKey.DURABILITY_RESTORED;

@@ -9,6 +9,12 @@ package com.provenance.core;
  * and explicit id overrides) so that modded equipment can join without code
  * changes. It is stored on the record rather than re-derived, so that an item
  * which is later re-tagged keeps a stable history.
+ *
+ * <p>Shields are intentionally not a category. Tracking them means counting
+ * blocked attacks and prevented damage, which needs a damage-pipeline hook that
+ * does not exist here yet; carrying a shield category without it would give
+ * every shield a milestone track it could never advance along. Adding shields
+ * back means adding that handler at the same time.
  */
 public enum ItemCategory {
     MELEE_WEAPON("melee_weapon", StatKey.KILLS),
@@ -20,7 +26,6 @@ public enum ItemCategory {
     HOE("hoe", StatKey.BLOCKS_WORKED),
     SHEARS("shears", StatKey.UTILITY_USES),
     FISHING_ROD("fishing_rod", StatKey.CATCHES_TOTAL),
-    SHIELD("shield", StatKey.ATTACKS_BLOCKED),
     ARMOUR("armour", StatKey.DAMAGE_ABSORBED),
     /** Eligible, tracked, but with no meaningful milestone driver of its own. */
     OTHER("other", StatKey.UTILITY_USES);

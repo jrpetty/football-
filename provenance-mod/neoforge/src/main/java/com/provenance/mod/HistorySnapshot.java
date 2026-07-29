@@ -148,25 +148,23 @@ public record HistorySnapshot(
     static {
         RELEVANT.put(ItemCategory.MELEE_WEAPON, List.of(StatKey.KILLS, StatKey.DAMAGE_DEALT,
                 StatKey.HITS_LANDED, StatKey.REPAIRS, StatKey.DISTANCE_CM, StatKey.TIME_USED_TICKS));
-        RELEVANT.put(ItemCategory.RANGED_WEAPON, List.of(StatKey.KILLS, StatKey.PROJECTILES_FIRED,
+        RELEVANT.put(ItemCategory.RANGED_WEAPON, List.of(StatKey.KILLS,
                 StatKey.PROJECTILE_HITS, StatKey.DAMAGE_DEALT, StatKey.LONGEST_KILL_CM,
                 StatKey.REPAIRS, StatKey.DISTANCE_CM));
         RELEVANT.put(ItemCategory.TRIDENT, List.of(StatKey.KILLS, StatKey.DAMAGE_DEALT, StatKey.HITS_LANDED,
-                StatKey.PROJECTILES_FIRED, StatKey.PROJECTILE_HITS, StatKey.LONGEST_KILL_CM, StatKey.REPAIRS));
+                StatKey.PROJECTILE_HITS, StatKey.LONGEST_KILL_CM, StatKey.REPAIRS));
         RELEVANT.put(ItemCategory.PICKAXE, List.of(StatKey.BLOCKS_MINED, StatKey.ORES_MINED,
                 StatKey.DEEPEST_BLOCK_Y, StatKey.REPAIRS, StatKey.DISTANCE_CM, StatKey.TIME_USED_TICKS));
         RELEVANT.put(ItemCategory.AXE, List.of(StatKey.LOGS_CHOPPED, StatKey.BLOCKS_CHOPPED,
                 StatKey.KILLS, StatKey.DAMAGE_DEALT, StatKey.REPAIRS, StatKey.DISTANCE_CM));
-        RELEVANT.put(ItemCategory.SHOVEL, List.of(StatKey.BLOCKS_DUG, StatKey.PATHS_CREATED,
+        RELEVANT.put(ItemCategory.SHOVEL, List.of(StatKey.BLOCKS_DUG,
                 StatKey.REPAIRS, StatKey.DISTANCE_CM));
-        RELEVANT.put(ItemCategory.HOE, List.of(StatKey.BLOCKS_WORKED, StatKey.FARMLAND_CREATED,
+        RELEVANT.put(ItemCategory.HOE, List.of(StatKey.BLOCKS_WORKED,
                 StatKey.CROPS_HARVESTED, StatKey.REPAIRS, StatKey.DISTANCE_CM));
-        RELEVANT.put(ItemCategory.SHEARS, List.of(StatKey.UTILITY_USES, StatKey.ENTITIES_SHEARED,
-                StatKey.BLOCKS_CUT, StatKey.HONEYCOMB_HARVESTED, StatKey.REPAIRS, StatKey.DISTANCE_CM));
+        RELEVANT.put(ItemCategory.SHEARS, List.of(StatKey.UTILITY_USES,
+                StatKey.BLOCKS_CUT, StatKey.REPAIRS, StatKey.DISTANCE_CM));
         RELEVANT.put(ItemCategory.FISHING_ROD, List.of(StatKey.CATCHES_TOTAL, StatKey.FISH_CAUGHT,
                 StatKey.TREASURE_CAUGHT, StatKey.JUNK_CAUGHT, StatKey.REPAIRS, StatKey.DISTANCE_CM));
-        RELEVANT.put(ItemCategory.SHIELD, List.of(StatKey.ATTACKS_BLOCKED, StatKey.DAMAGE_PREVENTED,
-                StatKey.PROJECTILES_BLOCKED, StatKey.BLOCKING_TIME_TICKS, StatKey.REPAIRS, StatKey.DISTANCE_CM));
         RELEVANT.put(ItemCategory.ARMOUR, List.of(StatKey.DAMAGE_ABSORBED, StatKey.HITS_RECEIVED,
                 StatKey.TIME_WORN_TICKS, StatKey.DISTANCE_CM, StatKey.REPAIRS, StatKey.DURABILITY_RESTORED));
         RELEVANT.put(ItemCategory.OTHER, List.of(StatKey.UTILITY_USES, StatKey.REPAIRS, StatKey.DISTANCE_CM));

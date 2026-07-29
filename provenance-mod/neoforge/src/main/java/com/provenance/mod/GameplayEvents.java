@@ -89,6 +89,61 @@ public final class GameplayEvents {
         Stamps.writeStamp(stack, com.provenance.core.ItemStamp.of(record));
     }
 
+    /**
+     * Smithing upgrades, e.g. diamond to netherite.
+     *
+     * <p>An upgrade is the same physical item continuing its life, so identity,
+     * creation facts, statistics, contributors and milestones must all carry
+     * over, with only the current item type changing.
+     *
+     * <p>Vanilla builds the result by copying the base stack's data components
+     * — which is why a netherite upgrade keeps its enchantments and custom name
+     * — so the provenance stamp normally rides along and the record simply
+     * needs its current type updated. This handler does not assume that: if the
+     * stamp did not survive, it says so loudly rather than letting a Veteran
+     * pickaxe quietly become a blank Legacy item.
+     */
+    @SubscribeEvent
+    public static void onItemSmithed(PlayerEvent.ItemSmithedEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) {
+            return;
+        }
+        ProvenanceState state = ProvenanceState.get();
+        if (state == null) {
+            return;
+        }
+
+        ItemStack output = event.getCrafting();
+        if (Stamps.categoryOf(state.config(), output) == null) {
+            return;
+        }
+
+        com.provenance.core.ItemStamp stamp = Stamps.readStamp(output);
+        if (stamp == null) {
+            // The base's identity did not survive the recipe. The base is
+            // already consumed, so it cannot be recovered from here; the item
+            // will be adopted as a Legacy item on next use.
+            Provenance.LOGGER.warn(
+                    "Smithing produced {} with no provenance stamp for {}: the base item's history was not carried "
+                            + "across. Configure this recipe as an upgrade, or report it.",
+                    Stamps.itemId(output), player.getGameProfile().getName());
+            return;
+        }
+
+        ItemRecord record = state.registry().peek(stamp);
+        if (record == null) {
+            return;
+        }
+
+        String newItemId = Stamps.itemId(output);
+        if (newItemId != null && !newItemId.equals(record.currentItemId())) {
+            // Original type stays on the record; only the present type moves.
+            state.registry().applyUpgrade(record, newItemId);
+            Provenance.LOGGER.debug("Provenance {} upgraded {} -> {}",
+                    record.recordId(), record.originalItemId(), newItemId);
+        }
+    }
+
     // ------------------------------------------------------------------
     // Mining, digging and chopping
     // ------------------------------------------------------------------

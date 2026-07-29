@@ -12,13 +12,19 @@ package com.provenance.core;
  * <p>Deliberately absent, per the specification: any Hunter, Arena, Survival
  * Arena, server-event or historical-event counter. There is no key for them,
  * so no part of the system can record one.
+ *
+ * <p>Equally deliberate: every key here is written by a real event handler. A
+ * counter with no handler behind it renders as a permanent zero and reads as a
+ * broken feature rather than an unused one, so shield blocking, projectiles
+ * fired, farmland tilled, entities sheared, honeycomb harvested and paths
+ * created were removed rather than displayed empty. Re-add a key only together
+ * with the handler that writes it.
  */
 public enum StatKey {
     // --- Combat ---
     KILLS("kills", Aggregation.SUM),
     DAMAGE_DEALT("damage_dealt", Aggregation.SUM),
     HITS_LANDED("hits_landed", Aggregation.SUM),
-    PROJECTILES_FIRED("projectiles_fired", Aggregation.SUM),
     PROJECTILE_HITS("projectile_hits", Aggregation.SUM),
     /** Centimetres, so the record stays integral. */
     LONGEST_KILL_CM("longest_kill_cm", Aggregation.MAX),
@@ -31,17 +37,13 @@ public enum StatKey {
     LOGS_CHOPPED("logs_chopped", Aggregation.SUM),
     BLOCKS_CHOPPED("blocks_chopped", Aggregation.SUM),
     BLOCKS_DUG("blocks_dug", Aggregation.SUM),
-    PATHS_CREATED("paths_created", Aggregation.SUM),
 
     // --- Farming ---
-    FARMLAND_CREATED("farmland_created", Aggregation.SUM),
     CROPS_HARVESTED("crops_harvested", Aggregation.SUM),
     BLOCKS_WORKED("blocks_worked", Aggregation.SUM),
 
     // --- Utility ---
-    ENTITIES_SHEARED("entities_sheared", Aggregation.SUM),
     BLOCKS_CUT("blocks_cut", Aggregation.SUM),
-    HONEYCOMB_HARVESTED("honeycomb_harvested", Aggregation.SUM),
     UTILITY_USES("utility_uses", Aggregation.SUM),
 
     // --- Fishing ---
@@ -49,12 +51,6 @@ public enum StatKey {
     FISH_CAUGHT("fish_caught", Aggregation.SUM),
     TREASURE_CAUGHT("treasure_caught", Aggregation.SUM),
     JUNK_CAUGHT("junk_caught", Aggregation.SUM),
-
-    // --- Shields ---
-    ATTACKS_BLOCKED("attacks_blocked", Aggregation.SUM),
-    DAMAGE_PREVENTED("damage_prevented", Aggregation.SUM),
-    PROJECTILES_BLOCKED("projectiles_blocked", Aggregation.SUM),
-    BLOCKING_TIME_TICKS("blocking_time_ticks", Aggregation.SUM),
 
     // --- Armour ---
     DAMAGE_ABSORBED("damage_absorbed", Aggregation.SUM),
