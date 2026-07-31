@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import com.jrpetty.mazerunner.config.MazeClock;
 import com.jrpetty.mazerunner.config.MazeConfigData;
 import com.jrpetty.mazerunner.config.MazeConfigData.StateBox;
 import com.jrpetty.mazerunner.config.MazeConfigs;
@@ -62,11 +63,10 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
  */
 public final class MazeRuntime {
 
-    private static final int DOORS_OPEN_AT = 1000;
-    private static final int DOORS_WARN_AT = 11500; // "get back to the Glade" warning
-    private static final int DOORS_CLOSE_AT = 12500;
-    private static final int SHIFT_AT = 18000;
-    private static final int DAY_TICKS = 24000;
+    // Clock constants and event scheduling live in MazeClock (pure, unit-tested).
+    private static final int DOORS_OPEN_AT = MazeClock.DOORS_OPEN_AT;
+    private static final int DOORS_CLOSE_AT = MazeClock.DOORS_CLOSE_AT;
+    private static final int DAY_TICKS = MazeClock.DAY_TICKS;
 
     // ---- Grievers: the maze's nocturnal hunters -----------------------------
     /** How often (game ticks) we try to top up the Griever population at night. */
@@ -357,19 +357,6 @@ public final class MazeRuntime {
         return trySpawnNear(level, player.getBlockX(), player.getBlockZ(), level.random);
     }
 
-    /** Real seconds until a future day-time tick, accounting for the 1/6 day and 1/3 night rates. */
-    private static int realSecondsUntil(int t, int target) {
-        long realTicks = 0;
-        if (t < 12000) {
-            int dayTicks = Math.min(target, 12000) - t;
-            realTicks += Math.max(0, dayTicks) * 6L;
-            if (target > 12000) realTicks += (target - 12000) * 3L;
-        } else {
-            realTicks += (target - t) * 3L;
-        }
-        return (int) (realTicks / 20);
-    }
-
     private static String mmss(int seconds) {
         return String.format("%d:%02d", seconds / 60, seconds % 60);
     }
@@ -380,7 +367,7 @@ public final class MazeRuntime {
         }
         int t = (int) ((state.virtualSixths() / 6) % DAY_TICKS);
         if (t < DOORS_CLOSE_AT) {
-            int remain = realSecondsUntil(t, DOORS_CLOSE_AT);
+            int remain = MazeClock.realSecondsUntil(t, DOORS_CLOSE_AT);
             CLOCK_BAR.setName(Component.literal(
                 "☀ Day " + state.dayNumber() + " — doors seal in " + mmss(remain))
                 .withStyle(ChatFormatting.GOLD));
@@ -388,7 +375,7 @@ public final class MazeRuntime {
             CLOCK_BAR.setProgress(Math.max(0.0F, Math.min(1.0F,
                 (DOORS_CLOSE_AT - t) / (float) DOORS_CLOSE_AT)));
         } else {
-            int remain = realSecondsUntil(t, DAY_TICKS);
+            int remain = MazeClock.realSecondsUntil(t, DAY_TICKS);
             CLOCK_BAR.setName(Component.literal(
                 "☾ Night " + state.dayNumber() + " — the Maze shifts. Dawn in " + mmss(remain))
                 .withStyle(ChatFormatting.DARK_PURPLE));
@@ -417,31 +404,28 @@ public final class MazeRuntime {
     private static void advanceClock(ServerLevel level, MazeWorldState state) {
         long from = state.virtualSixths();
         int t = (int) ((from / 6) % DAY_TICKS);
-        long to = from + (t < 12000 ? 1 : 2); // day at 1/6 tick, night at 1/3
-        applyTimeAdvance(level, state, from, to);
+        applyTimeAdvance(level, state, from, from + MazeClock.sixthsPerTick(t));
     }
 
     /**
      * Advances the clock to {@code toSixths}, firing every day-event crossed on
      * the way (dawn, doors open, dusk warning, doors seal, maze shift). Because
-     * it iterates each whole tick, a big jump from a command triggers all the
-     * events it passes — so skipping to night actually seals the doors and
-     * skipping to morning actually reshapes the maze.
+     * {@link MazeClock#eventsCrossed} enumerates every whole tick passed, a big
+     * jump from a command triggers all the events it passes — so skipping to
+     * night actually seals the doors and skipping to morning actually reshapes
+     * the maze.
      */
     static void applyTimeAdvance(ServerLevel level, MazeWorldState state, long fromSixths, long toSixths) {
-        long fromTick = fromSixths / 6;
-        long toTick = toSixths / 6;
         state.setVirtualSixths(toSixths);
-        for (long tk = fromTick + 1; tk <= toTick; tk++) {
-            switch ((int) (tk % DAY_TICKS)) {
-                case 0 -> onDawn(level, state);
-                case DOORS_OPEN_AT -> onDoorsOpen(level, state);
-                case DOORS_WARN_AT -> broadcast(level, Component.literal(
+        for (MazeClock.Event event : MazeClock.eventsCrossed(fromSixths / 6, toSixths / 6)) {
+            switch (event) {
+                case DAWN -> onDawn(level, state);
+                case DOORS_OPEN -> onDoorsOpen(level, state);
+                case DUSK_WARNING -> broadcast(level, Component.literal(
                     "⚠ The sun is setting — the Glade doors seal soon. Get back.")
                     .withStyle(ChatFormatting.RED));
-                case DOORS_CLOSE_AT -> onDoorsClose(level, state);
-                case SHIFT_AT -> onMazeShift(level, state);
-                default -> { }
+                case DOORS_CLOSE -> onDoorsClose(level, state);
+                case MAZE_SHIFT -> onMazeShift(level, state);
             }
         }
         int nowT = (int) ((toSixths / 6) % DAY_TICKS);
@@ -450,10 +434,8 @@ public final class MazeRuntime {
 
     /** Jumps forward to the next occurrence of a day-tick, firing events crossed. */
     static void jumpToDayTick(ServerLevel level, MazeWorldState state, int targetTick) {
-        long abs = state.virtualSixths() / 6;
-        long base = abs - Math.floorMod(abs, (long) DAY_TICKS) + targetTick;
-        if (base <= abs) base += DAY_TICKS;
-        applyTimeAdvance(level, state, state.virtualSixths(), base * 6);
+        long target = MazeClock.nextOccurrence(state.virtualSixths() / 6, targetTick);
+        applyTimeAdvance(level, state, state.virtualSixths(), target * 6);
     }
 
     // ------------------------------------------------------------- day events
@@ -556,12 +538,11 @@ public final class MazeRuntime {
             setPortalActive(level, fixed, true);
         }
 
-        for (int[] cell : cfg.chestCells) {
-            if (cell[0] == cx && cell[1] == cz
-                && MazeStructures.plazaAtCell(cfg, cell[0], cell[1]) == null) {
-                ensureChestAt(level, state,
-                    new BlockPos(cell[0] * cfg.cellSize + cfg.cellSize / 2, cfg.floorY + 1, cell[1] * cfg.cellSize + cfg.cellSize / 2));
-            }
+        // Chest sites are indexed by the chunk that CONTAINS them — at a 6-block
+        // cell a cell index is not a chunk index.
+        for (int[] c : cfg.chestSitesIn(cx, cz)) {
+            if (MazeStructures.plazaAtCell(cfg, c[3], c[4]) != null) continue;
+            ensureChestAt(level, state, new BlockPos(c[0], c[1], c[2]));
         }
         for (int[] c : MazeStructures.chestsIn(cfg, cx, cz)) {
             ensureChestAt(level, state, new BlockPos(c[0], c[1], c[2]));
@@ -633,11 +614,10 @@ public final class MazeRuntime {
     private static int rerollLoadedChests(ServerLevel level, MazeWorldState state) {
         MazeConfigData cfg = MazeConfigs.get();
         int count = 0;
-        for (int[] cell : cfg.chestCells) {
-            if (MazeStructures.plazaAtCell(cfg, cell[0], cell[1]) != null) continue;
-            if (loadedChunks.contains(ChunkPos.asLong(cell[0], cell[1]))) {
-                ensureChestAt(level, state,
-                    new BlockPos(cell[0] * cfg.cellSize + cfg.cellSize / 2, cfg.floorY + 1, cell[1] * cfg.cellSize + cfg.cellSize / 2));
+        for (int[] c : cfg.chestSites()) {
+            if (MazeStructures.plazaAtCell(cfg, c[3], c[4]) != null) continue;
+            if (loadedChunks.contains(ChunkPos.asLong(c[0] >> 4, c[2] >> 4))) {
+                ensureChestAt(level, state, new BlockPos(c[0], c[1], c[2]));
                 count++;
             }
         }

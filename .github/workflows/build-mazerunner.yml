@@ -45,8 +45,42 @@ jobs:
             echo "Metadata fetch failed — using pinned $(grep neoforge_version gradle.properties)"
           fi
 
-      - name: Build
+      - name: Build and run unit tests
         run: ./gradlew --no-daemon build
+
+      - name: Summarise unit tests
+        if: always()
+        run: |
+          set -e
+          shopt -s nullglob
+          results=(build/test-results/test/TEST-*.xml)
+          if [ ${#results[@]} -eq 0 ]; then
+            echo "::error::No unit test results were produced — the test suite did not run."
+            exit 1
+          fi
+          total=0; failed=0; errored=0; skipped=0
+          for f in "${results[@]}"; do
+            t=$(sed -n 's/.*<testsuite[^>]* tests="\([0-9]*\)".*/\1/p' "$f" | head -1)
+            fl=$(sed -n 's/.*<testsuite[^>]* failures="\([0-9]*\)".*/\1/p' "$f" | head -1)
+            er=$(sed -n 's/.*<testsuite[^>]* errors="\([0-9]*\)".*/\1/p' "$f" | head -1)
+            sk=$(sed -n 's/.*<testsuite[^>]* skipped="\([0-9]*\)".*/\1/p' "$f" | head -1)
+            total=$((total + ${t:-0})); failed=$((failed + ${fl:-0}))
+            errored=$((errored + ${er:-0})); skipped=$((skipped + ${sk:-0}))
+          done
+          echo "### Unit tests: $total run, $failed failed, $errored errored, $skipped skipped" >> "$GITHUB_STEP_SUMMARY"
+          echo "Unit tests: $total run, $failed failed, $errored errored, $skipped skipped"
+          if [ "$total" -lt 30 ]; then
+            echo "::error::Only $total tests ran — expected the full suite."
+            exit 1
+          fi
+          [ "$failed" -eq 0 ] && [ "$errored" -eq 0 ]
+
+      - name: Upload test report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: mazerunner-neoforge/build/reports/tests/test
 
       - name: Verify jar contents
         run: |
@@ -54,9 +88,13 @@ jobs:
           grep -q 'com/jrpetty/mazerunner/MazeRunnerMod.class' /tmp/contents.txt
           grep -q 'com/jrpetty/mazerunner/GrieverEntity.class' /tmp/contents.txt
           grep -q 'com/jrpetty/mazerunner/ModEntities.class' /tmp/contents.txt
+          grep -q 'com/jrpetty/mazerunner/config/MazeClock.class' /tmp/contents.txt
+          grep -q 'com/jrpetty/mazerunner/config/TreeShape.class' /tmp/contents.txt
           grep -q 'META-INF/neoforge.mods.toml' /tmp/contents.txt
           grep -q 'data/mazerunner/maze/maze_config_v2.json' /tmp/contents.txt
           grep -q 'data/mazerunner/worldgen/world_preset/maze_runner.json' /tmp/contents.txt
+          # the jar must ship mod code only — no test classes
+          ! grep -q 'Test.class' /tmp/contents.txt
 
       - uses: actions/upload-artifact@v4
         with:

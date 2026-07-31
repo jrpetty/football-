@@ -91,6 +91,14 @@ public final class MazeConfigData {
     public final Map<Long, List<StateBox>> boxesByChunk = new HashMap<>();
     /** Deterministically chosen dead-end cells that hold a supply chest. */
     public final List<int[]> chestCells = new ArrayList<>();
+    /**
+     * Supply-chest sites as {@code {blockX, blockY, blockZ, cellX, cellZ}}, and
+     * the same list indexed by the CHUNK that actually contains each block. At
+     * a cell size below 16 a cell index is not a chunk index, so the runtime
+     * must look chests up by chunk or it places them in the wrong place.
+     */
+    private final List<int[]> chestSites = new ArrayList<>();
+    private final Map<Long, List<int[]>> chestsByChunk = new HashMap<>();
 
     /** The single fixed exit used every day; only the walls change the route. */
     public String fixedExitId;
@@ -505,8 +513,25 @@ public final class MazeConfigData {
         deadEnds.sort((a, b) -> Long.compare(a[0], b[0]));
         int step = Math.max(1, deadEnds.size() / 100); // ~100 chests
         for (int i = 0; i < deadEnds.size(); i += step) {
-            chestCells.add(new int[] { (int) deadEnds.get(i)[1], (int) deadEnds.get(i)[2] });
+            int cx = (int) deadEnds.get(i)[1];
+            int cz = (int) deadEnds.get(i)[2];
+            chestCells.add(new int[] { cx, cz });
+            int bx = cx * cellSize + cellSize / 2;
+            int bz = cz * cellSize + cellSize / 2;
+            int[] site = new int[] { bx, floorY + 1, bz, cx, cz };
+            chestSites.add(site);
+            chestsByChunk.computeIfAbsent(chunkKey(bx >> 4, bz >> 4), k -> new ArrayList<>()).add(site);
         }
+    }
+
+    /** All supply-chest sites: {@code {blockX, blockY, blockZ, cellX, cellZ}}. */
+    public List<int[]> chestSites() {
+        return Collections.unmodifiableList(chestSites);
+    }
+
+    /** Supply-chest sites whose block position lies in the given CHUNK. */
+    public List<int[]> chestSitesIn(int chunkX, int chunkZ) {
+        return chestsByChunk.getOrDefault(chunkKey(chunkX, chunkZ), List.of());
     }
 
     // ------------------------------------------------------------- validate

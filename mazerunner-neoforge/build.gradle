@@ -11,6 +11,28 @@ java {
     toolchain.languageVersion = JavaLanguageVersion.of(21)
 }
 
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Unit tests cover the pure-logic classes only (config package: maze graph,
+    // geometry, clock, terrain, tree shape) — no Minecraft bootstrap needed.
+    testImplementation platform('org.junit:junit-bom:5.10.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation 'com.google.code.gson:gson:2.10.1'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    testLogging {
+        events 'passed', 'failed', 'skipped'
+        showStandardStreams = true
+        exceptionFormat = 'full'
+    }
+}
+
 neoForge {
     version = project.neoforge_version
 

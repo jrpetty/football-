@@ -37,6 +37,27 @@ which is also world spawn and death respawn (768, 61, 768). Vines and
 mangrove-moss climb the Glade-facing walls. Hostile mobs are automatically
 purged inside the Glade — it is safe ground; the maze is not.
 
+**v1.9 changes (correctness + a real test suite)** — a full back-to-front audit
+with automated tests that now run on **every build**.
+
+- **Fixed: 104 of the 105 supply caches never appeared.** Since the v1.6
+  downscale a cell (6 blocks) is no longer a chunk (16 blocks), but the runtime
+  was still looking chests up by *cell* index while snapping *chunks* — so a
+  chest was attempted for the wrong chunk and written at a block position in a
+  different, often unloaded, chunk. Chest sites are now indexed by the chunk
+  that actually contains them, with a regression test pinning the mapping.
+- **The clock is now a pure, tested unit** (`MazeClock`): the day/night rates,
+  the five daily events and the "skipping time fires everything you pass"
+  behaviour are all covered by tests, including the exact time-skip case that
+  broke in v1.4.
+- **Tree geometry is a pure, tested unit** (`TreeShape`), shared by the
+  generator instead of duplicated — so crown sizes can't silently drift out of
+  the wall clamp.
+- **40 unit tests** (JUnit 5) cover the maze graph and solvability, chunk
+  indexing, the clock, the Glade terrain, the lake, and the forest. `./gradlew
+  build` runs them, and CI fails the build if the suite doesn't run or a single
+  test fails.
+
 **v1.8 changes (trees)** — the Glade forest is now **plain base-game trees at a
 natural mix of sizes**. Dynamic Trees support has been removed entirely: every
 tree is a vanilla oak, birch or dark oak generated **full-grown at worldgen** as
@@ -160,9 +181,16 @@ Java 21. First build needs `maven.neoforged.net`, `piston-meta.mojang.com`,
 
 ```bash
 cd mazerunner-neoforge
-./gradlew build          # → build/libs/mazerunner-1.0.0.jar
+./gradlew build          # compiles, runs the unit tests → build/libs/mazerunner-*.jar
+./gradlew test           # unit tests only (no Minecraft needed)
 ./gradlew runClient      # dev client
 ```
+
+The test suite (`src/test/java`) covers the pure-logic half of the mod — the
+maze graph and per-day solvability, chunk indexing, the day/night clock, and
+the Glade terrain and forest — so it runs in seconds without bootstrapping
+Minecraft. CI runs it on every push and fails the build if the suite doesn't
+run or any test fails.
 
 Maze dataset: regenerate with `generate_maze.py` (attached to the project
 spec) and replace `src/main/resources/data/mazerunner/maze/maze_config_v2.json`.
