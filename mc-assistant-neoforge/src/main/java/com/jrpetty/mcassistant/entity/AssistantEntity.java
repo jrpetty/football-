@@ -205,7 +205,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b37 · ASSISTANT HANDBOOK: a real written book comes with your first specialist, so the system teaches itself in-game (nine short pages: the loop, the screen, every job and what it needs, zones, running costs, the roster, levels and revival) · CREW ROSTER: right-click a Job Board to see every specialist at once — name, level, job, distance/bearing, live status, and what it produced today, with anyone stuck flagged in red (sneak-click still cycles the colony preset) · DAILY PRODUCTION REPORT: each specialist reports at dawn what it actually stashed, so a night of unattended work leaves a trace · every job is set up entirely by clicking the bot — the hauler's drop-off point was the last thing that needed a chat command, and it is a button now (shown only for haulers, as dig depth is only shown for miners) · every specialist holds its own upkeep back instead of stashing the rations/redstone it is about to need · a guard no longer nags for a chest nobody asked it to have · chests a job can SEE are now chests it can REACH (a chest that passed the checklist could sit out of range) · only roaming jobs drift across a big zone — smelter/fisher/storekeeper/hauler stay by their furnace, pond and chest · the farmer really uses (and wears out) the hoe it asks for · job-loop fixes: stationed bots no longer narrate every cycle (repeats hushed for ~5 min, new problems always get through) · Follow/Stay now actually take a specialist off the job · fisher searches wider for its water · storekeeper sorts on a cooldown · upkeep is clock-based so rations/charges really are spent · usability pass: picking a job is now ALL you do — the bot claims the ground around it and starts "
+        "2026-07-b38 · SELF-RESUPPLY: a specialist whose tool wears out (or torches run low) now takes a replacement from its own station chest instead of downing tools until you notice — stock spares and walk away for hours · ASSISTANT HANDBOOK: a real written book comes with your first specialist, so the system teaches itself in-game (nine short pages: the loop, the screen, every job and what it needs, zones, running costs, the roster, levels and revival) · CREW ROSTER: right-click a Job Board to see every specialist at once — name, level, job, distance/bearing, live status, and what it produced today, with anyone stuck flagged in red (sneak-click still cycles the colony preset) · DAILY PRODUCTION REPORT: each specialist reports at dawn what it actually stashed, so a night of unattended work leaves a trace · every job is set up entirely by clicking the bot — the hauler's drop-off point was the last thing that needed a chat command, and it is a button now (shown only for haulers, as dig depth is only shown for miners) · every specialist holds its own upkeep back instead of stashing the rations/redstone it is about to need · a guard no longer nags for a chest nobody asked it to have · chests a job can SEE are now chests it can REACH (a chest that passed the checklist could sit out of range) · only roaming jobs drift across a big zone — smelter/fisher/storekeeper/hauler stay by their furnace, pond and chest · the farmer really uses (and wears out) the hoe it asks for · job-loop fixes: stationed bots no longer narrate every cycle (repeats hushed for ~5 min, new problems always get through) · Follow/Stay now actually take a specialist off the job · fisher searches wider for its water · storekeeper sorts on a cooldown · upkeep is clock-based so rations/charges really are spent · usability pass: picking a job is now ALL you do — the bot claims the ground around it and starts "
         + "working the moment it has its tools (Zone Marker only if you want a different patch) · zones are drawn in particles "
         + "while you hold a marker · the job button names the job · Follow/Stay back on the screen · ⚠/⚒ on the nametag "
         + "shows who is stuck at a glance · nine jobs · running costs (rations + a redstone core charge) · veteran levels · "
@@ -441,6 +441,28 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
         upkeepStalled = !ok;
         return ok;
+    }
+
+    /** Restock the kit this job needs from the chests at the station — the
+     *  tools that wear out, and the torches that get used up. Returns true if
+     *  anything was actually pulled. */
+    private boolean resupplyFromChests() {
+        java.util.function.Predicate<ItemStack> kit = switch (stationTask) {
+            case FARM -> s -> isToolNamed(s, "_hoe");
+            case WOOD -> s -> isToolNamed(s, "_axe");
+            case MINE -> s -> isToolNamed(s, "_pickaxe") || s.is(Items.TORCH);
+            case RANCH -> s -> s.is(Items.SHEARS);
+            case GUARD -> s -> isToolNamed(s, "_sword") || s.is(Items.TORCH);
+            case FISH -> s -> s.is(Items.FISHING_ROD);
+            case SMELT -> s -> s.is(Items.COAL) || s.is(Items.CHARCOAL);
+            case STORE, HAUL, NONE -> null;
+        };
+        return kit != null && scoopFromChests(kit, 16, CHEST_RANGE) > 0;
+    }
+
+    private static boolean isToolNamed(ItemStack s, String suffix) {
+        return !s.isEmpty() && net.minecraft.core.registries.BuiltInRegistries.ITEM
+            .getKey(s.getItem()).getPath().endsWith(suffix);
     }
 
     /** Spend one upkeep item from the pack, else from a chest in the zone. */
@@ -1793,10 +1815,22 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             refreshJobState();
         }
         if (!missingEssentials.isEmpty()) {
+            // Help itself from its own chests before bothering anyone. A player
+            // who stocked spare hoes, pickaxes or torches at the station should
+            // be able to walk away for hours — a worn-out tool shouldn't idle a
+            // specialist until they happen to come back and notice.
+            if (resupplyFromChests()) {
+                refreshJobState();
+                if (missingEssentials.isEmpty()) {
+                    say("Grabbed a replacement from the chest — back to work.");
+                    return true;
+                }
+            }
             if (tickCount - stationWarnTick > 2400) {
                 stationWarnTick = tickCount;
                 say("I can't work as a " + stationTask.title.toLowerCase()
-                    + " yet — I need " + String.join(", ", missingEssentials) + ".");
+                    + " yet — I need " + String.join(", ", missingEssentials)
+                    + ". Leave spares in my chest and I'll help myself next time.");
             }
             return false;
         }
