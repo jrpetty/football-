@@ -51,7 +51,9 @@ public class AssistantSpawnerBlock extends Block {
         assistant.setOwner(serverPlayer);
         assistant.setHome(pos);
         serverLevel.addFreshEntity(assistant);
-        assistant.say("Assistant online — this spot is home. Just talk to me (\"follow me\", \"gather 32 logs\", \"work on your own\") or use /assistant.");
+        assistant.say("Reporting in — this spot is home. RIGHT-CLICK me to open my screen, "
+            + "use the arrows to pick what I specialise in, and put the tools I ask for in my pack. "
+            + "I'll work the ground around me unless you mark me a patch with a Work Zone Marker.");
         // The act of placing spends the spawner: one spawner, one companion.
         serverLevel.levelEvent(2001, pos, Block.getId(state));
         serverLevel.removeBlock(pos, false);

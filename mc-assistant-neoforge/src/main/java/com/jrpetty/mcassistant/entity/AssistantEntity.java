@@ -205,8 +205,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b29 · SPECIALISTS: right-click a bot to pick its job (farmer, lumberjack, miner, rancher, guard, smelter, fisher, "
-        + "storekeeper, hauler), mark its patch with the new Work Zone Marker (two corners, click more to extend; miner depth in the "
+        "2026-07-b30 · usability pass: picking a job is now ALL you do — the bot claims the ground around it and starts "
+        + "working the moment it has its tools (Zone Marker only if you want a different patch) · zones are drawn in particles "
+        + "while you hold a marker · the job button names the job · Follow/Stay back on the screen · ⚠/⚒ on the nametag "
+        + "shows who is stuck at a glance · nine jobs · running costs · veteran levels · memory core revival"; miner depth in the "
         + "screen), hand it the tools it asks for — then it runs that job unattended · running costs: rations every ~2.5 min and a "
         + "redstone core charge every ~10 min · manual chat/slash/voice commands parked · veteran levels · memory core revival";
 
@@ -282,6 +284,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private int lastDamageTick = -1000;
     private int lastShownHealth = -1;
     private int lastShownLevel = -1;   // nametag refresh trigger for level-ups
+    private char lastShownGlyph = ' '; // nametag refresh trigger for job status
     private int eatCooldown;
     private boolean retreating;
     private int idleBackoffUntil;
@@ -367,16 +370,23 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         refreshJobState();
     }
 
-    /** Set the specialisation, keeping any zone already marked out. */
+    /**
+     * Set the specialisation. If no zone has been marked, the bot claims a
+     * sensible patch around where it's standing — so picking a job is all you
+     * have to do to get someone working. The Zone Marker is then a refinement
+     * ("actually, work THAT field"), not a hoop to jump through first.
+     */
     public void setJob(StationTask task) {
         StationTask old = stationTask;
         if (task == StationTask.NONE) {
             setStation(null, StationTask.NONE);
-        } else if (workZone != null) {
-            setStation(workZone.center(), task);
         } else {
-            this.stationTask = task;                 // job chosen, zone still to come
-            if (stationPos != null) setStation(stationPos, task);
+            if (workZone == null) {
+                BlockPos here = feetPos();
+                int r = DEFAULT_ZONE_RADIUS;
+                workZone = WorkZone.of(here.offset(-r, -4, -r), here.offset(r, 4, r), WorkZone.DEFAULT_DEPTH);
+            }
+            setStation(workZone.center(), task);
         }
         if (old != task) {
             upkeepStalled = false;
@@ -384,6 +394,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
         refreshJobState();
     }
+
+    private static final int DEFAULT_ZONE_RADIUS = 12; // 25x25 patch claimed on the spot
 
     /** Inside the assigned patch? Without a zone every position counts, so an
      *  unzoned specialist behaves the way stations did before zones existed. */
@@ -2872,6 +2884,20 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             }
         }
 
+        // Show me my patch: while the owner is holding a Zone Marker nearby, this
+        // bot outlines its own work zone in particles, so zones are something you
+        // can SEE and compare rather than guess at.
+        if (workZone != null && tickCount % 10 == 0
+            && level() instanceof net.minecraft.server.level.ServerLevel zl) {
+            Player owner = getOwnerPlayer();
+            if (owner != null && owner.distanceToSqr(this) < 48 * 48
+                && (owner.getMainHandItem().is(com.jrpetty.mcassistant.McAssistantMod.ZONE_MARKER.get())
+                    || owner.getOffhandItem().is(com.jrpetty.mcassistant.McAssistantMod.ZONE_MARKER.get()))) {
+                com.jrpetty.mcassistant.item.ZoneMarkerItem.outline(zl, workZone,
+                    net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER);
+            }
+        }
+
         // Top up an empty bucket at any water we pass, so an irrigation source is
         // always on hand for a farm (FarmGoal spends it to hydrate a plot).
         if (autonomous && tickCount % 20 == 0 && getTarget() == null
@@ -3063,16 +3089,24 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             }
         }
 
-        // Live nametag: veteran level star + name + hearts colored by health.
+        // Live nametag: a job glyph you can read across the base — ⚠ means that
+        // one is stuck and wants something — then the veteran star, name, hearts.
         int hp = Mth.ceil(getHealth());
-        if (hp != lastShownHealth || veteranLevel() != lastShownLevel) {
+        char glyph = stationTask == StationTask.NONE ? ' '
+            : (!missingEssentials.isEmpty() || upkeepStalled) ? '⚠' : '⚒';
+        if (hp != lastShownHealth || veteranLevel() != lastShownLevel || glyph != lastShownGlyph) {
             lastShownHealth = hp;
             lastShownLevel = veteranLevel();
+            lastShownGlyph = glyph;
             int max = (int) getMaxHealth();
             ChatFormatting color = hp > max * 0.6 ? ChatFormatting.GREEN
                 : hp > max * 0.3 ? ChatFormatting.YELLOW
                 : ChatFormatting.RED;
             var name = Component.literal("");
+            if (glyph != ' ') {
+                name.append(Component.literal(glyph + " ").withStyle(
+                    glyph == '⚠' ? ChatFormatting.RED : ChatFormatting.AQUA));
+            }
             if (lastShownLevel >= 1) {
                 name.append(Component.literal("✦" + lastShownLevel + " ").withStyle(ChatFormatting.GOLD));
             }

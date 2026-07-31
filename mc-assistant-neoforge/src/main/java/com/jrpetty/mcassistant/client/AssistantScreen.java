@@ -23,6 +23,9 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
     private static final int SLOT_BG = 0xFF8B8B8B;
     private static final int SLOT_HI = 0xFF373737;
 
+    private Button jobButton;   // its label is the current job, kept live
+    private int shownJob = -1;
+
     public AssistantScreen(AssistantMenu menu, Inventory playerInv, Component title) {
         super(menu, playerInv, title);
         this.imageWidth = 176;
@@ -36,25 +39,44 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
         int x = this.leftPos;
         int y = this.topPos;
 
-        // Specialisation row: step through the jobs, then put it to work.
+        // Job row: the middle button NAMES the current job (so you always see
+        // what you're choosing) and clicking it starts or pauses that work.
         int bh = 18;
-        addButton(x + 8, y + 96, 20, bh, "<", AssistantMenu.BTN_JOB_PREV);
-        addButton(x + 30, y + 96, 56, bh, "Work", AssistantMenu.BTN_WORK);
-        addButton(x + 88, y + 96, 56, bh, "Stay", AssistantMenu.BTN_STAY);
-        addButton(x + 146, y + 96, 20, bh, ">", AssistantMenu.BTN_JOB_NEXT);
+        AssistantEntity a = this.menu.getAssistant();
+        String jobName = a == null ? "..."
+            : AssistantEntity.StationTask.byOrdinal(a.clientJobOrdinal()).title;
+        addButton(x + 8, y + 96, 18, bh, "<", AssistantMenu.BTN_JOB_PREV);
+        this.jobButton = addButton(x + 28, y + 96, 120, bh, jobName, AssistantMenu.BTN_WORK);
+        this.shownJob = a == null ? -1 : a.clientJobOrdinal();
+        addButton(x + 150, y + 96, 18, bh, ">", AssistantMenu.BTN_JOB_NEXT);
 
-        // Second row: stash on demand, and the miner's dig depth.
-        addButton(x + 8, y + 114, 56, bh, "Deposit", AssistantMenu.BTN_DEPOSIT);
-        addButton(x + 66, y + 114, 44, bh, "Depth -", AssistantMenu.BTN_DEPTH_DOWN);
-        addButton(x + 112, y + 114, 54, bh, "Depth +", AssistantMenu.BTN_DEPTH_UP);
+        // Handling row: call it over, park it, stash its pack, set dig depth.
+        addButton(x + 8, y + 114, 40, bh, "Follow", AssistantMenu.BTN_FOLLOW);
+        addButton(x + 50, y + 114, 32, bh, "Stay", AssistantMenu.BTN_STAY);
+        addButton(x + 84, y + 114, 44, bh, "Stash", AssistantMenu.BTN_DEPOSIT);
+        addButton(x + 130, y + 114, 18, bh, "-", AssistantMenu.BTN_DEPTH_DOWN);
+        addButton(x + 150, y + 114, 18, bh, "+", AssistantMenu.BTN_DEPTH_UP);
     }
 
-    private void addButton(int x, int y, int w, int h, String label, int buttonId) {
-        this.addRenderableWidget(Button.builder(Component.literal(label), b -> {
+    private Button addButton(int x, int y, int w, int h, String label, int buttonId) {
+        return this.addRenderableWidget(Button.builder(Component.literal(label), b -> {
             if (this.minecraft != null && this.minecraft.gameMode != null) {
                 this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, buttonId);
             }
         }).bounds(x, y, w, h).build());
+    }
+
+    /** Keep the job button's label in step with the entity as it's cycled. */
+    @Override
+    protected void containerTick() {
+        super.containerTick();
+        AssistantEntity a = this.menu.getAssistant();
+        if (a == null || jobButton == null) return;
+        int job = a.clientJobOrdinal();
+        if (job != shownJob) {
+            shownJob = job;
+            jobButton.setMessage(Component.literal(AssistantEntity.StationTask.byOrdinal(job).title));
+        }
     }
 
     @Override

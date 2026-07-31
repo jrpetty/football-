@@ -4,6 +4,8 @@ import com.jrpetty.mcassistant.entity.AssistantEntity;
 import com.jrpetty.mcassistant.entity.WorkZone;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
@@ -95,6 +97,52 @@ public class ZoneMarkerItem extends Item {
                     ? "Everything I need is here — getting to work."
                     : "I still need " + String.join(", ", bot.missingEssentials()) + ".")));
         return InteractionResult.CONSUME;
+    }
+
+    /** While it's in hand, keep drawing what's currently selected: the pending
+     *  corner as a pillar of sparks, or the whole box as an outline. Seeing the
+     *  selection is the difference between guessing and knowing. */
+    @Override
+    public void inventoryTick(ItemStack stack, net.minecraft.world.level.Level level,
+                              net.minecraft.world.entity.Entity holder, int slot, boolean selected) {
+        if (!selected || level.isClientSide || !(level instanceof ServerLevel sl)) return;
+        if (holder.tickCount % 10 != 0) return;
+        CompoundTag data = read(stack);
+        WorkZone zone = WorkZone.load(data.contains("Zone") ? data.getCompound("Zone") : null);
+        if (zone != null) {
+            outline(sl, zone, ParticleTypes.WAX_ON);
+        } else if (data.contains("Corner")) {
+            BlockPos c = BlockPos.of(data.getLong("Corner"));
+            for (int dy = 0; dy < 3; dy++) {
+                sl.sendParticles(ParticleTypes.WAX_ON, c.getX() + 0.5, c.getY() + 1.0 + dy, c.getZ() + 0.5,
+                    2, 0.05, 0.05, 0.05, 0.0);
+            }
+        }
+    }
+
+    /**
+     * Trace a zone's footprint in particles — the four edges at the marked
+     * height, spaced out so a big zone stays cheap to draw.
+     */
+    public static void outline(ServerLevel level, WorkZone zone, net.minecraft.core.particles.SimpleParticleType particle) {
+        int y = zone.min().getY() + 1;
+        int step = Math.max(1, Math.max(zone.sizeX(), zone.sizeZ()) / 24); // ~48 marks per box
+        for (int x = zone.min().getX(); x <= zone.max().getX(); x += step) {
+            spark(level, particle, x, y, zone.min().getZ());
+            spark(level, particle, x, y, zone.max().getZ());
+        }
+        for (int z = zone.min().getZ(); z <= zone.max().getZ(); z += step) {
+            spark(level, particle, zone.min().getX(), y, z);
+            spark(level, particle, zone.max().getX(), y, z);
+        }
+    }
+
+    private static void spark(ServerLevel level, net.minecraft.core.particles.SimpleParticleType particle, int x, int y, int z) {
+        // Sit the mark on whatever the ground actually is, so an outline drapes
+        // over hills instead of hanging in the air or buried in a slope.
+        int surface = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+        double drawY = Math.abs(surface - y) <= 12 ? surface + 0.6 : y + 0.6;
+        level.sendParticles(particle, x + 0.5, drawY, z + 0.5, 1, 0.0, 0.0, 0.0, 0.0);
     }
 
     private static void tell(Player player, String message) {

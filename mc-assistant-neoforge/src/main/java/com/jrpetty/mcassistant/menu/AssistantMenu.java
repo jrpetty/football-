@@ -115,33 +115,43 @@ public class AssistantMenu extends AbstractContainerMenu {
         return container.stillValid(player);
     }
 
-    /** Step through the specialisations and report the new job's checklist. */
+    /**
+     * Step through the specialisations. Picking a job claims the ground around
+     * the bot and starts it immediately when it already has what it needs — so
+     * in the common case choosing a job is the ONLY thing the player does.
+     */
     private void cycleJob(int step) {
         if (assistant == null) return;
         AssistantEntity.StationTask next =
             AssistantEntity.StationTask.byOrdinal(assistant.stationTask().ordinal() + step);
         assistant.setJob(next);
         if (next == AssistantEntity.StationTask.NONE) {
-            assistant.say("Off the roster — give me a job when you're ready.");
+            assistant.setAutonomous(false);
+            assistant.say("Off the roster — pick me a job when you're ready.");
             return;
         }
         java.util.List<String> gaps = assistant.missingEssentials();
-        assistant.say("I can be your " + next.title.toLowerCase() + ". "
-            + (assistant.workZone() == null
-                ? "Mark me a work zone with the Zone Marker."
-                : gaps.isEmpty() ? "I've got everything I need — say the word."
-                                 : "I still need " + String.join(", ", gaps) + "."));
+        if (gaps.isEmpty()) {
+            assistant.setAutonomous(true);
+            assistant.say("I'm your " + next.title.toLowerCase() + " — working this patch now. "
+                + "Hand me a Zone Marker's area if you'd rather I worked somewhere else.");
+        } else {
+            assistant.say("I'm your " + next.title.toLowerCase() + ", but I need "
+                + String.join(", ", gaps) + " — put them in my pack and I'll start.");
+        }
     }
 
-    /** Send the specialist to work, or explain exactly what's stopping it. */
+    /** Toggle between working and standing by; explains what's blocking it. */
     private void startWork() {
         if (assistant == null) return;
         if (assistant.stationTask() == AssistantEntity.StationTask.NONE) {
-            assistant.say("Pick what I should specialise in first.");
+            assistant.say("Pick what I should specialise in first — the arrows either side.");
             return;
         }
-        if (assistant.workZone() == null) {
-            assistant.say("I need a work zone — mark one out and hand it to me.");
+        if (assistant.isAutonomous()) {
+            assistant.setAutonomous(false);
+            assistant.clearQueue();
+            assistant.say("Taking a break — press it again to put me back to work.");
             return;
         }
         java.util.List<String> gaps = assistant.missingEssentials();
@@ -151,7 +161,7 @@ public class AssistantMenu extends AbstractContainerMenu {
         }
         assistant.clearQueue();
         assistant.setAutonomous(true);
-        assistant.say("On it — working my zone as your " + assistant.stationTask().title.toLowerCase() + ".");
+        assistant.say("On it — working my patch as your " + assistant.stationTask().title.toLowerCase() + ".");
     }
 
     /** Miner only: how deep the shaft goes. */
