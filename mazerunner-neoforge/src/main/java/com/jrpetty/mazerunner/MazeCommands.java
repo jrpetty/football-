@@ -41,6 +41,7 @@ public final class MazeCommands {
                 .then(Commands.literal("morning").executes(ctx -> skip(ctx.getSource())))
                 .then(Commands.literal("night").executes(ctx -> night(ctx.getSource())))
                 .then(Commands.literal("shift").executes(ctx -> forceShift(ctx.getSource())))
+                .then(Commands.literal("griever").executes(ctx -> spawnGriever(ctx.getSource())))
                 .then(Commands.literal("validate")
                     .then(Commands.argument("layout", IntegerArgumentType.integer(1, 7))
                         .executes(ctx -> validate(ctx.getSource(),
@@ -114,6 +115,7 @@ public final class MazeCommands {
             "Clock: " + t + "/24000 (" + (t < 12000 ? "day" : "night") + ") · doors "
                 + (state.doorsOpen() ? "OPEN" : "sealed") + " · wall animations queued: "
                 + WallAnimator.queuedCount(),
+            "Grievers loaded: " + MazeRuntime.countGrievers(level),
             "Timer: " + timer,
             "Week schedule: " + schedule)).withStyle(ChatFormatting.AQUA), false);
         return 1;
@@ -186,6 +188,23 @@ public final class MazeCommands {
         MazeRuntime.jumpToDayTick(level, state, 12600); // just past dusk — doors seal
         source.sendSuccess(() -> Component.literal(
             "Skipped to nightfall — the Glade doors are sealing. The maze reshapes at deep night.")
+            .withStyle(ChatFormatting.DARK_PURPLE), true);
+        return 1;
+    }
+
+    private static int spawnGriever(CommandSourceStack source) {
+        ServerLevel level = maze(source);
+        if (level == null) return 0;
+        if (!(source.getEntity() instanceof net.minecraft.server.level.ServerPlayer player)) {
+            source.sendFailure(Component.literal("Only a player can summon a Griever nearby."));
+            return 0;
+        }
+        if (!MazeRuntime.spawnGrieverNear(level, player)) {
+            source.sendFailure(Component.literal(
+                "No open corridor nearby to spawn a Griever — try deeper in the Maze."));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.literal("A Griever stirs in the corridors nearby…")
             .withStyle(ChatFormatting.DARK_PURPLE), true);
         return 1;
     }

@@ -25,8 +25,8 @@ the maze but the seven exit pads.
 - **Supply caches:** ~100 chests in dead-end cells with helpful-but-optional
   loot, rerolled at the start of each 7-day cycle.
 - Standard survival everywhere — but the walls are bedrock-grade, so the maze
-  cannot be mined through or blown up. Hostile mobs roam the corridors at
-  night. (Custom Grievers are a later phase.)
+  cannot be mined through or blown up. **Grievers** — the maze's nocturnal
+  hunters — stalk the corridors after the doors seal (see below).
 
 **The Glade (v1.1)** — natural rolling terrain (up to +5 blocks, feathered
 flat at the walls and doors), a sandy-bedded lake in the southwest, an
@@ -36,6 +36,18 @@ elevator** (decorative iron cage, grate and cable) at the exact centre —
 which is also world spawn and death respawn (768, 61, 768). Vines and
 mangrove-moss climb the Glade-facing walls. Hostile mobs are automatically
 purged inside the Glade — it is safe ground; the maze is not.
+
+**v1.7 changes (Grievers)** — the maze now has its signature threat. When the
+Glade doors seal at dusk, **Grievers** begin to spawn in the corridors around
+each runner and hunt them through the night. They are big, fast, tough
+spider-kin (60 HP, quick, wall-climbing) whose sting inflicts **the "Changing"**
+— poison, weakness and nausea — and they **glow** so you can read them coming
+around a corner. Kill one and it drops a **Griever Serum**. They only roam at
+night: any that survive to daybreak **retreat into the walls** when the doors
+open, and none can enter the safe Glade. The nightly pressure **escalates each
+week** (one more Griever per runner per completed 7-day cycle, up to a cap). New
+debug command **`/maze griever`** spawns one near you, and **`/maze status`**
+now reports how many are loaded.
 
 **v1.6 changes (minigame scale)** — everything is downscaled to a **6-block
 cell (~63% smaller footprint)**: the map is now 576×576 blocks (was 1536), the
@@ -129,7 +141,9 @@ Quality-of-life on top of the spec:
 | `/maze validate <1-7>` | BFS-verify a layout is solvable (debug) |
 | `/maze section` | Which of the 8 maze sections you're standing in |
 | `/maze tp` | Teleport to the day's active exit portal (debug) |
-| `/maze skip` | Jump to next dawn — fires dusk/shift/portal swap on the way (debug) |
+| `/maze skip` / `endday` / `morning` | Jump to next dawn — fires dusk/shift/portal swap on the way (debug) |
+| `/maze night` / `shift` | Skip to nightfall (doors seal) / deep night (walls move now) |
+| `/maze griever` | Spawn a Griever in a corridor near you (debug) |
 
 ## Build from source
 

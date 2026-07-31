@@ -5,7 +5,7 @@ issueTrackerURL = "https://github.com/jrpetty/football-/issues"
 
 [[mods]]
 modId = "mazerunner"
-version = "1.6.0"
+version = "1.7.0"
 displayName = "Maze Runner"
 authors = "jrpetty"
 description = '''

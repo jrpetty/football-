@@ -27,7 +27,10 @@ public class MazeRunnerMod {
     public MazeRunnerMod(IEventBus modEventBus) {
         ModBlocks.BLOCKS.register(modEventBus);
         ModBlocks.ITEMS.register(modEventBus);
+        ModEntities.ENTITIES.register(modEventBus);
         ModWorldgen.CHUNK_GENERATORS.register(modEventBus);
+
+        modEventBus.addListener(ModEntities::onAttributeCreation);
 
         NeoForge.EVENT_BUS.register(MazeRuntime.class);
         NeoForge.EVENT_BUS.register(MazeCommands.class);
@@ -36,6 +39,7 @@ public class MazeRunnerMod {
             // client-only classes are never loaded on a dedicated server
             NeoForge.EVENT_BUS.register(com.jrpetty.mazerunner.client.MazeClientEvents.class);
             modEventBus.register(com.jrpetty.mazerunner.client.MazeClientColors.class);
+            modEventBus.register(com.jrpetty.mazerunner.client.MazeClientRenderers.class);
         }
 
         var cfg = MazeConfigs.get(); // fail fast if the bundled maze data is broken

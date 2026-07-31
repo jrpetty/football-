@@ -52,6 +52,8 @@ jobs:
         run: |
           jar tf build/libs/mazerunner-*.jar | tee /tmp/contents.txt
           grep -q 'com/jrpetty/mazerunner/MazeRunnerMod.class' /tmp/contents.txt
+          grep -q 'com/jrpetty/mazerunner/GrieverEntity.class' /tmp/contents.txt
+          grep -q 'com/jrpetty/mazerunner/ModEntities.class' /tmp/contents.txt
           grep -q 'META-INF/neoforge.mods.toml' /tmp/contents.txt
           grep -q 'data/mazerunner/maze/maze_config_v2.json' /tmp/contents.txt
           grep -q 'data/mazerunner/worldgen/world_preset/maze_runner.json' /tmp/contents.txt

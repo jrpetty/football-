@@ -2,6 +2,7 @@ package com.jrpetty.mazerunner;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -26,6 +27,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.BossEvent;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.level.ChunkPos;
@@ -64,6 +68,20 @@ public final class MazeRuntime {
     private static final int DOORS_CLOSE_AT = 12500;
     private static final int SHIFT_AT = 18000;
     private static final int DAY_TICKS = 24000;
+
+    // ---- Grievers: the maze's nocturnal hunters -----------------------------
+    /** How often (game ticks) we try to top up the Griever population at night. */
+    private static final int GRIEVER_SPAWN_INTERVAL = 100;
+    /** Closest a Griever spawns to a player (blocks) — out of immediate reach. */
+    private static final int GRIEVER_MIN_DIST = 14;
+    /** Farthest a Griever spawns from a player (blocks). */
+    private static final int GRIEVER_MAX_DIST = 40;
+    /** Grievers this far from every player (blocks) are culled. */
+    private static final int GRIEVER_DESPAWN_DIST = 72;
+    /** Base per-player Griever cap in week 1; grows by one each week. */
+    private static final int GRIEVER_BASE_CAP = 2;
+    /** Hard per-player Griever cap however many weeks pass. */
+    private static final int GRIEVER_MAX_CAP = 7;
 
     public static final ResourceKey<LootTable> MAZE_CACHE_LOOT = ResourceKey.create(
         Registries.LOOT_TABLE, ResourceLocation.fromNamespaceAndPath(MazeRunnerMod.MODID, "chests/maze_cache"));
@@ -214,6 +232,8 @@ public final class MazeRuntime {
         long gameTime = level.getGameTime();
         if (gameTime % 20 == 0) updateClockBar(level, state);
         if (gameTime % 100 == 0) sweepGlade(level);
+        if (gameTime % 20 == 0) manageGrievers(level, state);
+        if (gameTime % GRIEVER_SPAWN_INTERVAL == 0) spawnGrievers(level, state);
     }
 
     /** The Glade is safe ground — hostile mobs never survive inside it. */
@@ -222,10 +242,123 @@ public final class MazeRuntime {
         AABB glade = new AABB(cfg.gladeBlockMin, cfg.floorY - 4, cfg.gladeBlockMin,
             cfg.gladeBlockMax + 1, cfg.wallTopY + 2, cfg.gladeBlockMax + 1);
         for (Monster monster : level.getEntitiesOfClass(Monster.class, glade)) {
-            if (!monster.isPersistenceRequired() && !monster.hasCustomName()) {
+            // Grievers never belong in the Glade; ordinary naturally-spawned mobs
+            // are cleared too (named/persistent set-pieces are left alone).
+            if (monster instanceof GrieverEntity
+                || (!monster.isPersistenceRequired() && !monster.hasCustomName())) {
                 monster.discard();
             }
         }
+    }
+
+    // ------------------------------------------------------------- Grievers
+
+    /** A box loosely covering the whole maze, for level-wide Griever queries. */
+    private static AABB mazeBounds(MazeConfigData cfg) {
+        int span = cfg.gridCells * cfg.cellSize;
+        return new AABB(-4, cfg.bedrockY - 2, -4, span + 4, cfg.wallTopY + 8, span + 4);
+    }
+
+    /** Per-player Griever cap for the current week (grows one per completed cycle). */
+    private static int grieverCap(MazeWorldState state) {
+        int week = (int) ((state.dayNumber() - 1) / MazeWorldState.LAYOUT_COUNT);
+        return Math.min(GRIEVER_BASE_CAP + week, GRIEVER_MAX_CAP);
+    }
+
+    /**
+     * Housekeeping run once a second: purge Grievers caught in daylight, wandered
+     * into the Glade, or stranded far from every runner, and keep the survivors'
+     * eerie glow topped up so they read as a moving threat in the dark corridors.
+     */
+    private static void manageGrievers(ServerLevel level, MazeWorldState state) {
+        MazeConfigData cfg = MazeConfigs.get();
+        List<GrieverEntity> grievers = level.getEntitiesOfClass(GrieverEntity.class, mazeBounds(cfg));
+        if (grievers.isEmpty()) return;
+        boolean day = state.doorsOpen();
+        for (GrieverEntity g : grievers) {
+            if (day) { g.discard(); continue; } // the Grievers retreat by daylight
+            int gcx = Math.floorDiv(g.getBlockX(), cfg.cellSize);
+            int gcz = Math.floorDiv(g.getBlockZ(), cfg.cellSize);
+            if (cfg.inGlade(gcx, gcz)) { g.discard(); continue; }
+            if (level.getNearestPlayer(g, GRIEVER_DESPAWN_DIST) == null) { g.discard(); continue; }
+            g.addEffect(new MobEffectInstance(MobEffects.GLOWING,
+                MobEffectInstance.INFINITE_DURATION, 0, false, false));
+        }
+    }
+
+    /** At night, top each nearby runner's corridors up to the weekly Griever cap. */
+    private static void spawnGrievers(ServerLevel level, MazeWorldState state) {
+        if (state.doorsOpen()) return; // Grievers only roam once the doors seal
+        MazeConfigData cfg = MazeConfigs.get();
+        int cap = grieverCap(state);
+        var rng = level.random;
+        for (ServerPlayer player : level.players()) {
+            if (player.isCreative() || player.isSpectator()) continue;
+            int pcx = Math.floorDiv(player.getBlockX(), cfg.cellSize);
+            int pcz = Math.floorDiv(player.getBlockZ(), cfg.cellSize);
+            if (!cfg.inGrid(pcx, pcz) || cfg.inGlade(pcx, pcz)) continue; // safe in the Glade
+            AABB near = player.getBoundingBox().inflate(GRIEVER_MAX_DIST);
+            if (level.getEntitiesOfClass(GrieverEntity.class, near).size() >= cap) continue;
+            trySpawnNear(level, player.getBlockX(), player.getBlockZ(), rng);
+        }
+    }
+
+    /** Attempts (a few times) to place one Griever in an open corridor around a point. */
+    private static boolean trySpawnNear(ServerLevel level, int ox, int oz,
+            net.minecraft.util.RandomSource rng) {
+        MazeConfigData cfg = MazeConfigs.get();
+        for (int attempt = 0; attempt < 10; attempt++) {
+            double ang = rng.nextDouble() * Math.PI * 2;
+            int dist = GRIEVER_MIN_DIST + rng.nextInt(GRIEVER_MAX_DIST - GRIEVER_MIN_DIST + 1);
+            int wx = ox + (int) Math.round(Math.cos(ang) * dist);
+            int wz = oz + (int) Math.round(Math.sin(ang) * dist);
+            int ccx = Math.floorDiv(wx, cfg.cellSize);
+            int ccz = Math.floorDiv(wz, cfg.cellSize);
+            if (!cfg.inGrid(ccx, ccz) || cfg.inGlade(ccx, ccz)) continue;
+            // Cell centres are always open corridor space in every layout.
+            int bx = ccx * cfg.cellSize + cfg.cellSize / 2;
+            int bz = ccz * cfg.cellSize + cfg.cellSize / 2;
+            if (!cfg.isBaseOpen(bx, bz)) continue;
+            if (!level.hasChunk(bx >> 4, bz >> 4)) continue;
+            BlockPos feet = new BlockPos(bx, cfg.floorY + 1, bz);
+            if (!level.getBlockState(feet.below()).blocksMotion()) continue;
+            if (!level.getBlockState(feet).isAir() || !level.getBlockState(feet.above()).isAir()) continue;
+            spawnGrieverAt(level, feet, rng);
+            return true;
+        }
+        return false;
+    }
+
+    private static void spawnGrieverAt(ServerLevel level, BlockPos feet,
+            net.minecraft.util.RandomSource rng) {
+        GrieverEntity griever = ModEntities.GRIEVER.get().create(level);
+        if (griever == null) return;
+        griever.moveTo(feet.getX() + 0.5, feet.getY(), feet.getZ() + 0.5, rng.nextFloat() * 360.0F, 0.0F);
+        griever.finalizeSpawn(level, level.getCurrentDifficultyAt(feet), MobSpawnType.EVENT, null);
+        griever.addEffect(new MobEffectInstance(MobEffects.GLOWING,
+            MobEffectInstance.INFINITE_DURATION, 0, false, false));
+        level.addFreshEntity(griever);
+    }
+
+    /** Removes every loaded Griever from the maze; returns how many. */
+    private static int despawnGrievers(ServerLevel level) {
+        MazeConfigData cfg = MazeConfigs.get();
+        int count = 0;
+        for (GrieverEntity g : level.getEntitiesOfClass(GrieverEntity.class, mazeBounds(cfg))) {
+            g.discard();
+            count++;
+        }
+        return count;
+    }
+
+    /** Loaded Griever count, for the status command. */
+    public static int countGrievers(ServerLevel level) {
+        return level.getEntitiesOfClass(GrieverEntity.class, mazeBounds(MazeConfigs.get())).size();
+    }
+
+    /** Debug helper: force one Griever to spawn near a player. */
+    public static boolean spawnGrieverNear(ServerLevel level, ServerPlayer player) {
+        return trySpawnNear(level, player.getBlockX(), player.getBlockZ(), level.random);
     }
 
     /** Real seconds until a future day-time tick, accounting for the 1/6 day and 1/3 night rates. */
@@ -384,6 +517,13 @@ public final class MazeRuntime {
             "☀ Day " + state.dayNumber() + " — the Glade doors are opening. Today's exit is out there ("
                 + layout.name() + ").").withStyle(ChatFormatting.GOLD));
         rumble(level, 0.7F);
+
+        int retreated = despawnGrievers(level);
+        if (retreated > 0) {
+            broadcast(level, Component.literal(
+                "The Grievers slink back into the walls as the sun rises.")
+                .withStyle(ChatFormatting.GRAY));
+        }
     }
 
     private static void onDoorsClose(ServerLevel level, MazeWorldState state) {
@@ -393,7 +533,7 @@ public final class MazeRuntime {
             WallAnimator.enqueue(door.box(), true);
         }
         broadcast(level, Component.literal(
-            "☾ Dusk — the Glade doors are sealing. Nobody survives a night in the Maze…")
+            "☾ Dusk — the Glade doors are sealing. The Grievers are waking in the Maze…")
             .withStyle(ChatFormatting.DARK_PURPLE));
         rumble(level, 0.5F);
     }

@@ -9,5 +9,6 @@
   "block.mazerunner.maze_wall_bricks": "Maze Wall (Bricks)",
   "block.mazerunner.maze_wall_andesite": "Maze Wall (Andesite)",
   "block.mazerunner.maze_vine": "Maze Ivy",
-  "block.mazerunner.exit_portal": "Exit Portal"
+  "block.mazerunner.exit_portal": "Exit Portal",
+  "entity.mazerunner.griever": "Griever"
 }
