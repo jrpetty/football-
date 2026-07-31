@@ -79,10 +79,6 @@ public final class MazeRuntime {
     private static final int GRIEVER_MAX_DIST = 40;
     /** Grievers this far from every player (blocks) are culled. */
     private static final int GRIEVER_DESPAWN_DIST = 72;
-    /** Base per-player Griever cap in week 1; grows by one each week. */
-    private static final int GRIEVER_BASE_CAP = 2;
-    /** Hard per-player Griever cap however many weeks pass. */
-    private static final int GRIEVER_MAX_CAP = 7;
 
     public static final ResourceKey<LootTable> MAZE_CACHE_LOOT = ResourceKey.create(
         Registries.LOOT_TABLE, ResourceLocation.fromNamespaceAndPath(MazeRunnerMod.MODID, "chests/maze_cache"));
@@ -219,17 +215,38 @@ public final class MazeRuntime {
 
         int deaths = state.addDeath(player.getUUID());
         player.displayClientMessage(Component.literal(
-            "Death " + deaths + " — " + RunScoring.format(RunScoring.penaltyMillis(deaths))
+            "Death " + deaths + " — " + RunScoring.format(
+                RunScoring.penaltyMillis(deaths, MazeConfig.deathPenaltyMillis()))
                 + " added to your run. The clock is still going.")
             .withStyle(ChatFormatting.RED), false);
     }
 
     @SubscribeEvent
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player
-            && player.serverLevel() != null && isMazeLevel(player.serverLevel())) {
-            MazeAdvancements.award(player, MazeAdvancements.GREENIE);
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        if (player.serverLevel() == null || !isMazeLevel(player.serverLevel())) return;
+
+        // award() reports whether this was the first time — which is exactly
+        // when a newcomer should be told the rules.
+        boolean firstTime = MazeAdvancements.award(player, MazeAdvancements.GREENIE);
+        if (firstTime && MazeConfig.showBriefing()) {
+            sendBriefing(player);
         }
+    }
+
+    /** What a Greenie needs to know, once, on their first morning in the Glade. */
+    private static void sendBriefing(ServerPlayer player) {
+        player.sendSystemMessage(Component.literal(
+            "\n§6§lWELCOME TO THE GLADE§r\n"
+                + "§7You woke up in the Box with no memory but your name.§r\n\n"
+                + "§e· The Maze§r surrounds you. The doors open at dawn and §cseal at dusk§r.\n"
+                + "§e· Every night§r the walls move and the route changes. Seven layouts,\n"
+                + "  one a day, repeating weekly — the §aexit never moves§r, only the way to it.\n"
+                + "§e· Grievers§r hunt the corridors after dark. You will hear one long before\n"
+                + "  you see it. Their sting is the §2Changing§r; their serum is the cure.\n"
+                + "§e· Your run§r starts the moment you leave the Glade and stops at the exit.\n"
+                + "  Dying costs you §c" + RunScoring.format(MazeConfig.deathPenaltyMillis()) + "§r, not your progress.\n\n"
+                + "§8The Glade is safe ground. The Maze is not. Try /maze status.§r\n"));
     }
 
     // ------------------------------------------------------------- main tick
@@ -307,7 +324,7 @@ public final class MazeRuntime {
     /** Per-player Griever cap for the current week (grows one per completed cycle). */
     private static int grieverCap(MazeWorldState state) {
         int week = (int) ((state.dayNumber() - 1) / MazeWorldState.LAYOUT_COUNT);
-        return Math.min(GRIEVER_BASE_CAP + week, GRIEVER_MAX_CAP);
+        return Math.min(MazeConfig.grieverBaseCap() + week, MazeConfig.grieverMaxCap());
     }
 
     /**
@@ -380,6 +397,7 @@ public final class MazeRuntime {
     /** At night, top each nearby runner's corridors up to the weekly Griever cap. */
     private static void spawnGrievers(ServerLevel level, MazeWorldState state) {
         if (state.doorsOpen()) return; // Grievers only roam once the doors seal
+        if (!MazeConfig.grieversEnabled()) return;
         MazeConfigData cfg = MazeConfigs.get();
         int cap = grieverCap(state);
         var rng = level.random;
@@ -426,9 +444,27 @@ public final class MazeRuntime {
         if (griever == null) return;
         griever.moveTo(feet.getX() + 0.5, feet.getY(), feet.getZ() + 0.5, rng.nextFloat() * 360.0F, 0.0F);
         griever.finalizeSpawn(level, level.getCurrentDifficultyAt(feet), MobSpawnType.EVENT, null);
+        applyConfiguredStats(griever);
         griever.addEffect(new MobEffectInstance(MobEffects.GLOWING,
             MobEffectInstance.INFINITE_DURATION, 0, false, false));
         level.addFreshEntity(griever);
+    }
+
+    /**
+     * Applies the configured Griever stats to a fresh spawn. This happens here
+     * rather than in the attribute supplier because attributes are registered
+     * during mod loading, long before the server config exists.
+     */
+    private static void applyConfiguredStats(GrieverEntity griever) {
+        var health = griever.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
+        if (health != null) {
+            health.setBaseValue(MazeConfig.grieverHealth());
+            griever.setHealth(griever.getMaxHealth());
+        }
+        var speed = griever.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
+        if (speed != null) speed.setBaseValue(MazeConfig.grieverSpeed());
+        var damage = griever.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
+        if (damage != null) damage.setBaseValue(MazeConfig.grieverDamage());
     }
 
     /** Removes every loaded Griever from the maze; returns how many. */
@@ -744,7 +780,8 @@ public final class MazeRuntime {
         MazeAdvancements.award(player, MazeAdvancements.ESCAPED);
 
         MazeWorldState.RunResult result = state.finishRun(
-            player.getUUID(), player.getName().getString(), System.currentTimeMillis());
+            player.getUUID(), player.getName().getString(), System.currentTimeMillis(),
+            MazeConfig.deathPenaltyMillis());
         if (result == null) {
             player.displayClientMessage(Component.literal(
                 "You found the exit — but you were never on the clock. Leave the Glade to start a run.")
@@ -761,7 +798,9 @@ public final class MazeRuntime {
         if (result.deaths() > 0) {
             broadcast(level, Component.literal("   " + RunScoring.format(result.elapsedMillis())
                 + " on the clock + " + result.deaths() + " death" + (result.deaths() == 1 ? "" : "s")
-                + " (" + RunScoring.format(RunScoring.penaltyMillis(result.deaths())) + " penalty)")
+                + " (" + RunScoring.format(
+                    RunScoring.penaltyMillis(result.deaths(), MazeConfig.deathPenaltyMillis()))
+                + " penalty)")
                 .withStyle(ChatFormatting.GRAY));
         }
         // If a synchronised race is on, the first runner out takes it.
@@ -805,7 +844,7 @@ public final class MazeRuntime {
             MazeAdvancements.award(player, MazeAdvancements.RUNNER);
             player.displayClientMessage(Component.literal(
                 "⏱ Your run has begun — find the exit. Every death costs "
-                    + RunScoring.format(RunScoring.DEATH_PENALTY_MS) + ".")
+                    + RunScoring.format(MazeConfig.deathPenaltyMillis()) + ".")
                 .withStyle(ChatFormatting.YELLOW), false);
         }
     }

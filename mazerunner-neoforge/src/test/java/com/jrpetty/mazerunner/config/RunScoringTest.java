@@ -47,6 +47,24 @@ class RunScoringTest {
         assertEquals(0, RunScoring.finalMillis(-5_000, 0));
         assertEquals(0, RunScoring.penaltyMillis(-3), "negative deaths must not refund time");
         assertEquals(0, RunScoring.finalMillis(-1, -1));
+        assertEquals(0, RunScoring.penaltyMillis(2, -1_000), "a negative configured penalty is ignored");
+    }
+
+    @Test
+    @DisplayName("the penalty rate is configurable, and zero disables it")
+    void penaltyRateIsConfigurable() {
+        assertEquals(60_000 + 2 * 5_000, RunScoring.finalMillis(60_000, 2, 5_000));
+        assertEquals(60_000, RunScoring.finalMillis(60_000, 4, 0), "zero penalty means deaths are free");
+        assertEquals(10_000, RunScoring.penaltyMillis(2, 5_000));
+    }
+
+    @Test
+    @DisplayName("the default overload matches the documented default rate")
+    void defaultOverloadUsesTheDefaultRate() {
+        assertEquals(RunScoring.finalMillis(60_000, 3, RunScoring.DEATH_PENALTY_MS),
+            RunScoring.finalMillis(60_000, 3));
+        assertEquals(RunScoring.penaltyMillis(3, RunScoring.DEATH_PENALTY_MS),
+            RunScoring.penaltyMillis(3));
     }
 
     @Test

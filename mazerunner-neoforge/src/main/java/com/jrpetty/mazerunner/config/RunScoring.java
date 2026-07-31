@@ -15,7 +15,7 @@ import java.util.List;
  */
 public final class RunScoring {
 
-    /** Time added to a run for each death. */
+    /** Default time added to a run for each death; server config may override it. */
     public static final long DEATH_PENALTY_MS = 30_000L;
 
     /** One finished run, as it appears on the leaderboard. */
@@ -24,15 +24,23 @@ public final class RunScoring {
     private RunScoring() {}
 
     /** Final time = time on the clock plus the penalty for every death. */
+    public static long finalMillis(long elapsedMillis, int deaths, long penaltyPerDeathMs) {
+        return Math.max(0, elapsedMillis) + penaltyMillis(deaths, penaltyPerDeathMs);
+    }
+
+    /** Final time at the default penalty. */
     public static long finalMillis(long elapsedMillis, int deaths) {
-        long elapsed = Math.max(0, elapsedMillis);
-        long penalty = Math.max(0, deaths) * DEATH_PENALTY_MS;
-        return elapsed + penalty;
+        return finalMillis(elapsedMillis, deaths, DEATH_PENALTY_MS);
     }
 
     /** Total penalty carried by a run, for reporting it separately. */
+    public static long penaltyMillis(int deaths, long penaltyPerDeathMs) {
+        return Math.max(0, deaths) * Math.max(0, penaltyPerDeathMs);
+    }
+
+    /** Total penalty at the default rate. */
     public static long penaltyMillis(int deaths) {
-        return Math.max(0, deaths) * DEATH_PENALTY_MS;
+        return penaltyMillis(deaths, DEATH_PENALTY_MS);
     }
 
     /** True if {@code candidate} beats {@code incumbent} (a negative incumbent means "none yet"). */

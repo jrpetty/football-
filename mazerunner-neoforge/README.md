@@ -38,6 +38,22 @@ which is also world spawn and death respawn (768, 61, 768). Vines and
 mangrove-moss climb the Glade-facing walls. Hostile mobs are automatically
 purged inside the Glade — it is safe ground; the maze is not.
 
+**v1.15 changes (tunable, and it explains itself)** —
+
+- **A server config file**, written to `serverconfig/mazerunner-server.toml` in
+  the world folder. Griever difficulty was pure guesswork until someone played
+  it, so all of it is exposed: **turn Grievers off entirely**, thin them out
+  (`baseCapPerPlayer`, `maxCapPerPlayer`), or make them survivable
+  (`health`, `speed`, `attackDamage` — vanilla spider is 16 HP at speed 0.3).
+  The **death penalty** is configurable too, and `0` disables it.
+- **Newcomers get briefed.** The first time a player joins, they get a short
+  rundown of the Glade: what the doors do, that the walls move nightly, that
+  the exit never moves, what a Griever is, and how their run is timed. It fires
+  exactly once per player (off the *Greenie* advancement) and can be turned off.
+
+Griever stats are applied **when each one spawns** rather than at registration,
+so editing the config takes effect on the next night without a restart.
+
 **v1.14 changes (the corridors have landmarks)** — at minigame scale every
 corridor was identical stone, which left runners nothing to recognise and
 nothing to map. Now roughly one cell in twelve carries a small feature:

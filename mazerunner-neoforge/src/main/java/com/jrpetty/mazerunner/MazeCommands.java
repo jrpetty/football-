@@ -180,7 +180,8 @@ public final class MazeCommands {
             int deaths = state.runDeaths(player.getUUID());
             own = RunScoring.format(elapsed) + " on the clock, " + deaths + " death"
                 + (deaths == 1 ? "" : "s")
-                + " (final would be " + RunScoring.format(RunScoring.finalMillis(elapsed, deaths)) + ")";
+                + " (final would be " + RunScoring.format(
+                    RunScoring.finalMillis(elapsed, deaths, MazeConfig.deathPenaltyMillis())) + ")";
         }
         long worldBest = state.worldBestMillis();
         String timer = own + (worldBest >= 0

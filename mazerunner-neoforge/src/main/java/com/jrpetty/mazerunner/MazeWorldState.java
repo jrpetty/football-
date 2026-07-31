@@ -184,13 +184,13 @@ public class MazeWorldState extends SavedData {
      * Completes a run: scores it, updates the leaderboard, and clears the
      * in-progress state. Returns null if the player had no run going.
      */
-    public RunResult finishRun(UUID player, String name, long nowMs) {
+    public RunResult finishRun(UUID player, String name, long nowMs, long penaltyPerDeathMs) {
         Long start = runStart.remove(player);
         if (start == null) return null;
         Integer recorded = runDeaths.remove(player);
         int deaths = recorded == null ? 0 : recorded;
         long elapsed = Math.max(0, nowMs - start);
-        long finalMs = RunScoring.finalMillis(elapsed, deaths);
+        long finalMs = RunScoring.finalMillis(elapsed, deaths, penaltyPerDeathMs);
 
         long previousWorldBest = best.values().stream()
             .mapToLong(RunScoring.Entry::finalMillis).min().orElse(-1);

@@ -24,18 +24,24 @@ public final class MazeAdvancements {
 
     private MazeAdvancements() {}
 
-    /** Grants an advancement; silently does nothing if it can't be resolved. */
-    public static void award(ServerPlayer player, String path) {
+    /**
+     * Grants an advancement; silently does nothing if it can't be resolved.
+     *
+     * @return true only if this granted it for the first time — useful for
+     *         doing something once per player, like the newcomer briefing.
+     */
+    public static boolean award(ServerPlayer player, String path) {
         MinecraftServer server = player.getServer();
-        if (server == null) return;
+        if (server == null) return false;
         try {
             AdvancementHolder holder = server.getAdvancements()
                 .get(ResourceLocation.fromNamespaceAndPath(MazeRunnerMod.MODID, path));
             if (holder != null) {
-                player.getAdvancements().award(holder, CRITERION);
+                return player.getAdvancements().award(holder, CRITERION);
             }
         } catch (Throwable t) {
             MazeRunnerMod.LOGGER.warn("Maze Runner: could not award advancement {}: {}", path, t.toString());
         }
+        return false;
     }
 }

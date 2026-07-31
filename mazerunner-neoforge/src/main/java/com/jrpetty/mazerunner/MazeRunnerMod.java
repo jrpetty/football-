@@ -24,7 +24,9 @@ public class MazeRunnerMod {
     public static final String MODID = "mazerunner";
     public static final Logger LOGGER = LoggerFactory.getLogger("mazerunner");
 
-    public MazeRunnerMod(IEventBus modEventBus) {
+    public MazeRunnerMod(IEventBus modEventBus, net.neoforged.fml.ModContainer modContainer) {
+        modContainer.registerConfig(net.neoforged.fml.config.ModConfig.Type.SERVER, MazeConfig.SPEC);
+
         ModBlocks.BLOCKS.register(modEventBus);
         ModBlocks.ITEMS.register(modEventBus);
         ModItems.ITEMS.register(modEventBus);
