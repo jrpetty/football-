@@ -79,6 +79,25 @@ public final class Stamps {
         ID_CACHE.clear();
     }
 
+    /**
+     * Writes the tooltip summary onto the stack, but only when it changed.
+     *
+     * <p>Called on the slow flush tick, at custody moments, and immediately
+     * when a milestone is earned so the new tier shows up at once. Never per
+     * action: a stack write dirties the inventory slot and forces a sync.
+     */
+    public static void refreshSummary(ItemStack stack, ItemRecord record) {
+        ProvenanceState state = ProvenanceState.get();
+        if (state == null || record == null || stack.isEmpty()) {
+            return;
+        }
+        com.provenance.core.ItemSummary next =
+                com.provenance.core.ItemSummary.of(record, state.registry().trackFor(record));
+        if (next.differsFrom(stack.get(ProvenanceComponents.SUMMARY.get()))) {
+            stack.set(ProvenanceComponents.SUMMARY.get(), next);
+        }
+    }
+
     /** Refreshes the record's display name. Called only off the hot path. */
     public static void refreshCustomName(ItemStack stack, ItemRecord record) {
         syncCustomName(stack, record);
@@ -184,6 +203,7 @@ public final class Stamps {
                 player == null ? null : player.getGameProfile().getName());
         writeStamp(stack, ItemStamp.of(record));
         syncCustomName(stack, record);
+        refreshSummary(stack, record);
         return record;
     }
 
@@ -222,6 +242,7 @@ public final class Stamps {
                 writeStamp(stack, claim.stamp());
                 noteUpgrade(claim.record(), itemId, registry);
                 syncCustomName(stack, claim.record());
+                refreshSummary(stack, claim.record());
                 return claim.record();
             }
             case DUPLICATE -> {

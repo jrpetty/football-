@@ -69,9 +69,29 @@ public final class TickEvents {
             flushTicks = 0;
             state.flushUsage();
 
+            // Refresh tooltips after the flush, so they show the totals that
+            // were just written. Only slots whose summary actually changed are
+            // rewritten, so a player standing still costs nothing.
+            for (ServerPlayer player : event.getServer().getPlayerList().getPlayers()) {
+                refreshSummaries(player);
+            }
+
             long now = System.currentTimeMillis();
             state.repairs().pruneExpired(now);
             state.transfers().pruneExpired(now);
+        }
+    }
+
+    private static void refreshSummaries(ServerPlayer player) {
+        for (EquipmentSlot slot : SAMPLED_SLOTS) {
+            ItemStack stack = player.getItemBySlot(slot);
+            if (stack.isEmpty()) {
+                continue;
+            }
+            ItemRecord record = Stamps.sampled(stack);
+            if (record != null) {
+                Stamps.refreshSummary(stack, record);
+            }
         }
     }
 

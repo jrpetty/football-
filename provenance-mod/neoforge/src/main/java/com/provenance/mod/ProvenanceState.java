@@ -67,6 +67,24 @@ public final class ProvenanceState {
     }
 
     /**
+     * Counts record files without blocking the server thread.
+     *
+     * <p>The sweep walks 256 shard directories, which is fine on the writer
+     * thread and would be a visible stall on the tick loop. The callback is
+     * invoked from that thread; command feedback is safe to send from there.
+     */
+    public void countOnDiskAsync(java.util.function.LongConsumer callback) {
+        writer.execute(() -> {
+            try {
+                callback.accept(store.countOnDisk());
+            } catch (RuntimeException e) {
+                Provenance.LOGGER.error("Provenance disk count failed", e);
+                callback.accept(-1L);
+            }
+        });
+    }
+
+    /**
      * Writes buffered time and distance into records.
      *
      * <p>The per-second sampler only touches memory; this is where those totals

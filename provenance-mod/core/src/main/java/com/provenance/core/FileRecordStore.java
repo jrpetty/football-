@@ -148,8 +148,59 @@ public final class FileRecordStore implements RecordStore {
         }
     }
 
+    /**
+     * Flush metrics, so an operator can see what this costs rather than guess.
+     * Plain longs written only by the single writer thread and read for display.
+     */
+    private volatile long lastFlushDurationMillis;
+    private volatile int lastFlushWritten;
+    private final java.util.concurrent.atomic.AtomicLong totalWritten =
+            new java.util.concurrent.atomic.AtomicLong();
+
+    public long lastFlushDurationMillis() {
+        return lastFlushDurationMillis;
+    }
+
+    public int lastFlushWritten() {
+        return lastFlushWritten;
+    }
+
+    public long totalWritten() {
+        return totalWritten.get();
+    }
+
+    public int dirtyCount() {
+        int dirty = 0;
+        for (ItemRecord record : cache.values()) {
+            if (record.isDirty()) {
+                dirty++;
+            }
+        }
+        return dirty;
+    }
+
+    public int maxCachedRecords() {
+        return maxCachedRecords;
+    }
+
+    /** Counts record files on disk. Walks the shards, so call it off the server thread. */
+    public long countOnDisk() {
+        long count = 0;
+        try (var shards = Files.list(root)) {
+            for (Path shard : shards.filter(Files::isDirectory).toList()) {
+                try (var files = Files.list(shard)) {
+                    count += files.filter(p -> p.toString().endsWith(".json")).count();
+                }
+            }
+        } catch (IOException e) {
+            return -1;
+        }
+        return count;
+    }
+
     @Override
     public void flush() {
+        long startedAt = System.currentTimeMillis();
         List<ItemRecord> pending = new ArrayList<>();
         for (ItemRecord record : cache.values()) {
             if (record.isDirty()) {
@@ -171,6 +222,10 @@ public final class FileRecordStore implements RecordStore {
             }
         }
         evictIfNeeded();
+
+        lastFlushWritten = pending.size();
+        totalWritten.addAndGet(pending.size());
+        lastFlushDurationMillis = System.currentTimeMillis() - startedAt;
     }
 
     @Override

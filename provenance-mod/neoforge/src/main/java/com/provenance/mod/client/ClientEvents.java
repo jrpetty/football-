@@ -3,6 +3,9 @@ package com.provenance.mod.client;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.datafixers.util.Either;
 import com.provenance.core.ItemStamp;
+import com.provenance.core.ItemSummary;
+import com.provenance.core.MilestoneTier;
+import net.minecraft.ChatFormatting;
 import com.provenance.mod.Network;
 import com.provenance.mod.Provenance;
 import com.provenance.mod.ProvenanceComponents;
@@ -105,10 +108,40 @@ public final class ClientEvents {
         if (stamp == null) {
             return;
         }
+
+        var elements = event.getTooltipElements();
+        ItemSummary summary = stack.get(ProvenanceComponents.SUMMARY.get());
+
+        if (summary != null) {
+            // Earned tier, with its emblem. Deliberately separate from the
+            // item's custom name: renaming a pickaxe "Steelbreaker" cannot
+            // produce this line.
+            if (summary.tierIndex() >= 0) {
+                MilestoneTier tier = MilestoneTier.byIndex(summary.tierIndex());
+                elements.add(Either.left(Component.literal(
+                                Emblems.glyph(tier) + " " + tier.displayName())
+                        .withStyle(Emblems.style(tier))));
+            }
+
+            if (!summary.crafterName().isEmpty()) {
+                elements.add(Either.left(Component.translatable(
+                                "tooltip.provenance.crafted_by", summary.crafterName())
+                        .withStyle(ChatFormatting.GRAY)));
+            }
+
+            if (!summary.primaryStatId().isEmpty()) {
+                elements.add(Either.left(Component.literal(
+                                Labels.of(summary.primaryStatId()) + ": "
+                                        + String.format(java.util.Locale.ENGLISH, "%,d",
+                                        summary.primaryStatValue()))
+                        .withStyle(ChatFormatting.GRAY)));
+            }
+        }
+
         // Either comes from Mojang's DataFixerUpper, not from Minecraft itself.
-        event.getTooltipElements().add(Either.left(
+        elements.add(Either.left(
                 Component.translatable("tooltip.provenance.inspect",
                                 INSPECT_KEY.getTranslatedKeyMessage())
-                        .withStyle(net.minecraft.ChatFormatting.DARK_GRAY)));
+                        .withStyle(ChatFormatting.DARK_GRAY)));
     }
 }

@@ -144,7 +144,8 @@ public final class Network {
                     request.contributorPage(),
                     state.config().contributorPageSize());
 
-            HistorySnapshot snapshot = HistorySnapshot.of(record, track, page, secondary);
+            HistorySnapshot snapshot = HistorySnapshot.of(record, track, page, secondary,
+                    state.config().reducedAnimations());
             context.reply(new HistoryResponse(snapshot));
         });
     }

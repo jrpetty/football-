@@ -19,6 +19,8 @@ public final class ClientHistoryCache {
 
     public static void accept(HistorySnapshot snapshot) {
         latest = snapshot;
+        // The server owns the accessibility setting; mirror it before drawing.
+        Emblems.setReducedAnimations(snapshot.reducedAnimations());
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.screen instanceof ItemHistoryScreen screen) {
             screen.refresh(snapshot);

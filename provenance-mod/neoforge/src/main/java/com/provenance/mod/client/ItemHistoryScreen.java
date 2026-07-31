@@ -157,7 +157,7 @@ public final class ItemHistoryScreen extends Screen {
         y += 11;
 
         // The earned title is separate from whatever the owner renamed it to.
-        graphics.drawString(font, Component.literal("Milestone: " + tierName())
+        graphics.drawString(font, Component.literal(tierEmblem() + "Milestone: " + tierName())
                 .withStyle(ChatFormatting.GOLD), left + 10, y, 0xFFD700);
         y += 14;
 
@@ -213,7 +213,7 @@ public final class ItemHistoryScreen extends Screen {
     private void renderMilestones(GuiGraphics graphics, int y) {
         for (HistorySnapshot.TierEntry tier : snapshot.tiers()) {
             MilestoneTier value = MilestoneTier.byIndex(tier.tierIndex());
-            String mark = tier.achieved() ? "✓ " : "○ ";
+            String mark = tier.achieved() ? "✓ " + Emblems.glyph(value) + " " : "○ ";
             String text = mark + value.displayName() + " — " + format(tier.threshold());
 
             int colour = tier.achieved() ? 0x55FF55 : 0x707070;
@@ -296,22 +296,18 @@ public final class ItemHistoryScreen extends Screen {
         graphics.drawString(font, value, left + 130, y, 0xFFFFFF);
     }
 
+    private String tierEmblem() {
+        int index = snapshot.currentTierIndex();
+        return index < 0 ? "" : Emblems.glyph(MilestoneTier.byIndex(index)) + " ";
+    }
+
     private String tierName() {
         int index = snapshot.currentTierIndex();
         return index < 0 ? "Unproven" : MilestoneTier.byIndex(index).displayName();
     }
 
     private int tierColour() {
-        return switch (snapshot.currentTierIndex()) {
-            case 0 -> 0xFF8B5A2B;
-            case 1 -> 0xFFC0C0C0;
-            case 2 -> 0xFFB87333;
-            case 3 -> 0xFFFFD700;
-            case 4 -> 0xFF4EE2EC;
-            case 5 -> 0xFFDA70D6;
-            case 6 -> 0xFFFF4500;
-            default -> 0xFF404040;
-        };
+        return Emblems.borderColour(snapshot.currentTierIndex());
     }
 
     private String originLabel() {
@@ -382,20 +378,11 @@ public final class ItemHistoryScreen extends Screen {
     }
 
     private static String labelFor(String statId) {
-        String spaced = statId.replace('_', ' ');
-        if (spaced.endsWith(" cm")) {
-            spaced = spaced.substring(0, spaced.length() - 3);
-        }
-        if (spaced.endsWith(" ticks")) {
-            spaced = spaced.substring(0, spaced.length() - 6);
-        }
-        return Character.toUpperCase(spaced.charAt(0)) + spaced.substring(1);
+        return Labels.of(statId);
     }
 
     private static String prettyId(String id) {
-        String path = id.contains(":") ? id.substring(id.indexOf(':') + 1) : id;
-        String spaced = path.replace('_', ' ');
-        return Character.toUpperCase(spaced.charAt(0)) + spaced.substring(1);
+        return Labels.prettyId(id);
     }
 
     @Override

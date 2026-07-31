@@ -1,0 +1,9 @@
+-Xmaxerrs
+9999
+-proc:none
+-nowarn
+-d
+/tmp/claude-0/-home-user-football-/835be29b-5dca-5a02-ac02-51d13a089406/scratchpad/o6
+-cp
+core/build/libs/core-1.0.0.jar:/root/.gradle/caches/modules-2/files-2.1/com.google.code.gson/gson/2.10.1/b3add478d4382b78ea20b1671390a858002feb6c/gson-2.10.1.jar
+@/tmp/claude-0/-home-user-football-/835be29b-5dca-5a02-ac02-51d13a089406/scratchpad/s.txt

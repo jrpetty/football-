@@ -48,7 +48,9 @@ public record HistorySnapshot(
         int contributorPageIndex,
         int contributorPageCount,
         int contributorTotal,
-        String mostFrequentPrimary
+        String mostFrequentPrimary,
+        /** Server's accessibility setting, so the client can flatten animations. */
+        boolean reducedAnimations
 ) {
 
     /** One rung of the milestone ladder as the Milestones tab shows it. */
@@ -66,7 +68,8 @@ public record HistorySnapshot(
     // ------------------------------------------------------------------
 
     public static HistorySnapshot of(ItemRecord record, MilestoneTrack track,
-                                     ContributorQuery.Page page, StatKey secondary) {
+                                     ContributorQuery.Page page, StatKey secondary,
+                                     boolean reducedAnimations) {
         MilestoneTier current = record.currentTier();
         StatKey primary = track.primaryStat();
         long primaryValue = record.overall().getOrZero(primary);
@@ -122,7 +125,8 @@ public record HistorySnapshot(
                 page.pageIndex(),
                 page.pageCount(),
                 page.totalRows(),
-                mostFrequentFor(record));
+                mostFrequentFor(record),
+                reducedAnimations);
     }
 
     /**
@@ -236,6 +240,7 @@ public record HistorySnapshot(
         buf.writeVarInt(s.contributorPageCount());
         buf.writeVarInt(s.contributorTotal());
         buf.writeUtf(s.mostFrequentPrimary());
+        buf.writeBoolean(s.reducedAnimations());
     }
 
     public static HistorySnapshot read(FriendlyByteBuf buf) {
@@ -277,7 +282,7 @@ public record HistorySnapshot(
                 crafterName, manufacturerName, created, approximate, ownerName, originId,
                 tierIndex, primaryStatId, primaryValue, nextThreshold, currentThreshold,
                 overall, owner, ownerDisplay, tiers, rows,
-                buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readUtf());
+                buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readUtf(), buf.readBoolean());
     }
 
     private static void writeStats(FriendlyByteBuf buf, Map<String, Long> stats) {

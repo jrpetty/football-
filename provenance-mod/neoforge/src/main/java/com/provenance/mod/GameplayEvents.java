@@ -87,6 +87,7 @@ public final class GameplayEvents {
                 company == null ? null : company.name());
 
         Stamps.writeStamp(stack, com.provenance.core.ItemStamp.of(record));
+        Stamps.refreshSummary(stack, record);
     }
 
     // ------------------------------------------------------------------
@@ -126,7 +127,7 @@ public final class GameplayEvents {
 
         switch (record.category()) {
             case PICKAXE -> {
-                notify(player, registry.record(record, id, name, StatKey.BLOCKS_MINED, 1), record);
+                notify(player, registry.record(record, id, name, StatKey.BLOCKS_MINED, 1), record, tool);
                 registry.recordBreakdown(record, id, name, BreakdownKind.BLOCK_MINED, blockId, 1);
                 if (isOre(blockState)) {
                     registry.record(record, id, name, StatKey.ORES_MINED, 1);
@@ -136,20 +137,20 @@ public final class GameplayEvents {
             case AXE -> {
                 registry.record(record, id, name, StatKey.BLOCKS_CHOPPED, 1);
                 if (isLog(blockState)) {
-                    notify(player, registry.record(record, id, name, StatKey.LOGS_CHOPPED, 1), record);
+                    notify(player, registry.record(record, id, name, StatKey.LOGS_CHOPPED, 1), record, tool);
                     registry.recordBreakdown(record, id, name, BreakdownKind.WOOD_CHOPPED, blockId, 1);
                 }
             }
             case SHOVEL -> {
-                notify(player, registry.record(record, id, name, StatKey.BLOCKS_DUG, 1), record);
+                notify(player, registry.record(record, id, name, StatKey.BLOCKS_DUG, 1), record, tool);
                 registry.recordBreakdown(record, id, name, BreakdownKind.BLOCK_DUG, blockId, 1);
             }
             case SHEARS -> {
-                notify(player, registry.record(record, id, name, StatKey.UTILITY_USES, 1), record);
+                notify(player, registry.record(record, id, name, StatKey.UTILITY_USES, 1), record, tool);
                 registry.record(record, id, name, StatKey.BLOCKS_CUT, 1);
             }
             case HOE -> {
-                notify(player, registry.record(record, id, name, StatKey.BLOCKS_WORKED, 1), record);
+                notify(player, registry.record(record, id, name, StatKey.BLOCKS_WORKED, 1), record, tool);
                 registry.recordBreakdown(record, id, name, BreakdownKind.CROP_WORKED, blockId, 1);
                 registry.record(record, id, name, StatKey.CROPS_HARVESTED, 1);
             }
@@ -289,7 +290,7 @@ public final class GameplayEvents {
 
         for (ArmourDamageAllocator.Allocation allocation : ArmourDamageAllocator.allocate(pieces, prevented)) {
             notify(victim, registry.record(allocation.record(), id, name,
-                    StatKey.DAMAGE_ABSORBED, allocation.amount()), allocation.record());
+                    StatKey.DAMAGE_ABSORBED, allocation.amount()), allocation.record(), null);
             registry.record(allocation.record(), id, name, StatKey.HITS_RECEIVED, 1);
         }
     }
@@ -349,7 +350,7 @@ public final class GameplayEvents {
         String name = killer.getGameProfile().getName();
         RecordRegistry registry = state.registry();
 
-        notify(killer, registry.record(record, id, name, StatKey.KILLS, 1), record);
+        notify(killer, registry.record(record, id, name, StatKey.KILLS, 1), record, weapon);
 
         String mobId = ENTITY_IDS.computeIfAbsent(victim.getType(), type -> {
             ResourceLocation key = BuiltInRegistries.ENTITY_TYPE.getKey(type);
@@ -387,7 +388,7 @@ public final class GameplayEvents {
         String name = player.getGameProfile().getName();
         RecordRegistry registry = state.registry();
 
-        notify(player, registry.record(record, id, name, StatKey.CATCHES_TOTAL, 1), record);
+        notify(player, registry.record(record, id, name, StatKey.CATCHES_TOTAL, 1), record, rod);
 
         for (ItemStack caught : event.getDrops()) {
             String caughtId = Stamps.itemId(caught);
@@ -458,10 +459,18 @@ public final class GameplayEvents {
     // Shared
     // ------------------------------------------------------------------
 
-    /** Announces newly earned tiers. Cosmetic only — nothing is granted. */
-    private static void notify(ServerPlayer player, List<MilestoneAward> awards, ItemRecord record) {
+    /**
+     * Announces newly earned tiers and refreshes the item's tooltip summary so
+     * a new tier appears immediately rather than at the next flush.
+     * Cosmetic only — nothing is granted.
+     */
+    private static void notify(ServerPlayer player, List<MilestoneAward> awards, ItemRecord record,
+                               ItemStack stack) {
         if (awards.isEmpty() || player == null) {
             return;
+        }
+        if (stack != null) {
+            Stamps.refreshSummary(stack, record);
         }
         for (MilestoneAward award : awards) {
             player.sendSystemMessage(net.minecraft.network.chat.Component.literal(

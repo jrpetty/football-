@@ -87,6 +87,41 @@ public final class ProvenanceCommands {
                             Stamps.writeStamp(held, restored);
                             return feedback(operator, "Restored. The item's original history is back.");
                         }))
+                .then(Commands.literal("stats")
+                        .executes(context -> {
+                            ProvenanceState state = ProvenanceState.get();
+                            if (state == null) {
+                                return 0;
+                            }
+                            var source = context.getSource();
+                            var store = state.store();
+                            var config = state.config();
+
+                            source.sendSuccess(() -> Component.literal(
+                                    "§6Provenance — store"
+                                            + "\n§7 resident records: §f" + store.cachedCount()
+                                            + " §7/ " + store.maxCachedRecords()
+                                            + "\n§7 awaiting write:  §f" + store.dirtyCount()
+                                            + "\n§7 last flush:      §f" + store.lastFlushWritten()
+                                            + " record(s) in " + store.lastFlushDurationMillis() + " ms"
+                                            + "\n§7 written total:   §f" + store.totalWritten()
+                                            + "\n§6Provenance — buffers"
+                                            + "\n§7 usage entries:   §f" + state.usage().pendingEntries()
+                                            + "\n§7 open repairs:   §f" + state.repairs().openSessionCount()
+                                            + "\n§7 pending trades: §f" + state.transfers().pendingCount()
+                                            + "\n§7 tracked movers: §f" + state.distances().trackedPlayerCount()
+                                            + "\n§6Provenance — tuning"
+                                            + "\n§7 sample interval: §f" + config.distanceIntervalTicks() + " ticks"
+                                            + "\n§7 flush interval:  §f" + config.usageFlushIntervalSeconds() + " s"
+                                            + "\n§7 retention:       §f" + config.destroyedRecordRetentionDays()
+                                            + " days"), false);
+
+                            // Counting files walks every shard, so it happens
+                            // off-thread and reports back when it is done.
+                            state.countOnDiskAsync(count -> source.sendSuccess(() -> Component.literal(
+                                    "§7 records on disk: §f" + (count < 0 ? "unavailable" : count)), false));
+                            return 1;
+                        }))
                 .then(Commands.literal("flush")
                         .executes(context -> {
                             ProvenanceState state = ProvenanceState.get();
