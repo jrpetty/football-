@@ -205,7 +205,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b35 · every job is now set up entirely by clicking the bot — the hauler's drop-off point was the last thing that needed a chat command, and it is a button now (shown only for haulers, as dig depth is only shown for miners) · every specialist holds its own upkeep back instead of stashing the rations/redstone it is about to need · a guard no longer nags for a chest nobody asked it to have · chests a job can SEE are now chests it can REACH (a chest that passed the checklist could sit out of range) · only roaming jobs drift across a big zone — smelter/fisher/storekeeper/hauler stay by their furnace, pond and chest · the farmer really uses (and wears out) the hoe it asks for · job-loop fixes: stationed bots no longer narrate every cycle (repeats hushed for ~5 min, new problems always get through) · Follow/Stay now actually take a specialist off the job · fisher searches wider for its water · storekeeper sorts on a cooldown · upkeep is clock-based so rations/charges really are spent · usability pass: picking a job is now ALL you do — the bot claims the ground around it and starts "
+        "2026-07-b36 · CREW ROSTER: right-click a Job Board to see every specialist at once — name, level, job, distance/bearing, live status, and what it produced today, with anyone stuck flagged in red (sneak-click still cycles the colony preset) · DAILY PRODUCTION REPORT: each specialist reports at dawn what it actually stashed, so a night of unattended work leaves a trace · every job is set up entirely by clicking the bot — the hauler's drop-off point was the last thing that needed a chat command, and it is a button now (shown only for haulers, as dig depth is only shown for miners) · every specialist holds its own upkeep back instead of stashing the rations/redstone it is about to need · a guard no longer nags for a chest nobody asked it to have · chests a job can SEE are now chests it can REACH (a chest that passed the checklist could sit out of range) · only roaming jobs drift across a big zone — smelter/fisher/storekeeper/hauler stay by their furnace, pond and chest · the farmer really uses (and wears out) the hoe it asks for · job-loop fixes: stationed bots no longer narrate every cycle (repeats hushed for ~5 min, new problems always get through) · Follow/Stay now actually take a specialist off the job · fisher searches wider for its water · storekeeper sorts on a cooldown · upkeep is clock-based so rations/charges really are spent · usability pass: picking a job is now ALL you do — the bot claims the ground around it and starts "
         + "working the moment it has its tools (Zone Marker only if you want a different patch) · zones are drawn in particles "
         + "while you hold a marker · the job button names the job · Follow/Stay back on the screen · ⚠/⚒ on the nametag "
         + "shows who is stuck at a glance · nine jobs · running costs (rations + a redstone core charge) · veteran levels · "
@@ -811,6 +811,42 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     }
 
     private final Map<String, Integer> recentlySaid = new java.util.HashMap<>();
+
+    // --- What this specialist has actually produced, so hours of unattended
+    //     work are legible instead of invisible. Counted as it stashes. ---
+    private final Map<net.minecraft.world.item.Item, Integer> produced = new java.util.LinkedHashMap<>();
+    private long lastReportDay = -1;
+
+    /** Called as a job stashes its output — the raw material of the day's report. */
+    public void noteProduced(net.minecraft.world.item.Item item, int count) {
+        if (count <= 0 || stationTask == StationTask.NONE) return;
+        if (produced.size() > 24 && !produced.containsKey(item)) return; // keep it bounded
+        produced.merge(item, count, Integer::sum);
+    }
+
+    /** "64 wheat, 18 raw iron, 3 diamond" — the biggest hauls first, or null. */
+    @Nullable
+    public String productionSummary(int topN) {
+        if (produced.isEmpty()) return null;
+        return produced.entrySet().stream()
+            .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
+            .limit(topN)
+            .map(e -> e.getValue() + " " + net.minecraft.core.registries.BuiltInRegistries.ITEM
+                .getKey(e.getKey()).getPath().replace('_', ' '))
+            .collect(java.util.stream.Collectors.joining(", "));
+    }
+
+    /** At each dawn, report the night's work and start a fresh tally. */
+    private void dailyProductionReport() {
+        long day = level().getDayTime() / 24000L;
+        if (day == lastReportDay) return;
+        if (lastReportDay >= 0) {
+            String summary = productionSummary(4);
+            if (summary != null) say("Yesterday's work: " + summary + ".");
+        }
+        lastReportDay = day;
+        produced.clear();
+    }
 
     // --------------------------------- modes ---------------------------------
 
@@ -2984,6 +3020,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 }
                 mobileLoadCenter = here.immutable();
             }
+        }
+
+        // One line a day, at dawn, on what this specialist actually produced —
+        // otherwise a night of chunk-loaded work leaves no trace at all.
+        if (stationTask != StationTask.NONE && tickCount % 200 == 0) {
+            dailyProductionReport();
         }
 
         // Keep the screen and the nametag honest. Re-check the checklist often

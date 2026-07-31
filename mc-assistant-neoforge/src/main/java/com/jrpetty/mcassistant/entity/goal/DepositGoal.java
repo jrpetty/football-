@@ -140,7 +140,10 @@ public class DepositGoal extends Goal {
             }
             ItemStack toMove = stack.copyWithCount(stack.getCount() - keep);
             ItemStack leftover = insertInto(container, toMove);
-            moved += toMove.getCount() - leftover.getCount();
+            int stashed = toMove.getCount() - leftover.getCount();
+            moved += stashed;
+            // Tally it for the daily production report / crew roster.
+            assistant.noteProduced(stack.getItem(), stashed);
             int remain = keep + leftover.getCount();
             items.set(i, remain == 0 ? ItemStack.EMPTY : stack.copyWithCount(remain));
         }
