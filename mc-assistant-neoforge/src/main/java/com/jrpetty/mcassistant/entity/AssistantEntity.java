@@ -208,9 +208,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         "2026-07-b30 · usability pass: picking a job is now ALL you do — the bot claims the ground around it and starts "
         + "working the moment it has its tools (Zone Marker only if you want a different patch) · zones are drawn in particles "
         + "while you hold a marker · the job button names the job · Follow/Stay back on the screen · ⚠/⚒ on the nametag "
-        + "shows who is stuck at a glance · nine jobs · running costs · veteran levels · memory core revival"; miner depth in the "
-        + "screen), hand it the tools it asks for — then it runs that job unattended · running costs: rations every ~2.5 min and a "
-        + "redstone core charge every ~10 min · manual chat/slash/voice commands parked · veteran levels · memory core revival";
+        + "shows who is stuck at a glance · nine jobs · running costs (rations + a redstone core charge) · veteran levels · "
+        + "memory core revival · manual chat/slash/voice commands parked";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -295,6 +294,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private int stationWarnTick = -9999;                // cooldown on "I need a chest here" nags
     private int stationTorchTick = -99999;              // a guard post re-lights its ground rarely
     private int stationBreedTick = -99999;              // pace breeding to the animals' love cooldown
+    private int stationSortTick = -99999;               // a storeroom only needs tidying now and then
     @Nullable private BlockPos mobileLoadCenter;        // hauler's traveling chunk window (persisted)
     @Nullable private WorkZone workZone;                // the patch it's assigned to (persisted)
     private int upkeepFoodTick;                         // work-ticks banked toward the next meal
@@ -412,9 +412,14 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private boolean payUpkeep() {
         if (stationTask == StationTask.NONE) return true;
         boolean ok = true;
-        if (++upkeepFoodTick >= 3000) {                       // ~2.5 minutes of work
+        // Measured against the world clock, NOT the number of times this runs —
+        // the work brain only ticks every ~10s, so counting calls would stretch
+        // "every 2.5 minutes" into most of a day.
+        if (upkeepFoodTick == 0) upkeepFoodTick = tickCount;
+        if (upkeepChargeTick == 0) upkeepChargeTick = tickCount;
+        if (tickCount - upkeepFoodTick >= 3000) {             // ~2.5 minutes of work
             if (consumeUpkeep(s -> s.get(DataComponents.FOOD) != null)) {
-                upkeepFoodTick = 0;
+                upkeepFoodTick = tickCount;
             } else {
                 ok = false;
                 if (tickCount - stationWarnTick > 2400) {
@@ -423,9 +428,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 }
             }
         }
-        if (++upkeepChargeTick >= 12000) {                    // ~10 minutes of work
+        if (tickCount - upkeepChargeTick >= 12000) {          // ~10 minutes of work
             if (consumeUpkeep(s -> s.is(Items.REDSTONE))) {
-                upkeepChargeTick = 0;
+                upkeepChargeTick = tickCount;
             } else {
                 ok = false;
                 if (tickCount - stationWarnTick > 2400) {
@@ -1843,8 +1848,13 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     enqueue(Job.cleanup());
                     return true;
                 }
-                enqueue(Job.sort());
-                return true;
+                // A tidy storeroom needs tidying rarely — without this it would
+                // re-sort (and announce it) every single work cycle.
+                if (tickCount - stationSortTick > 1200) {
+                    stationSortTick = tickCount;
+                    enqueue(Job.sort());
+                    return true;
+                }
             }
             case HAUL -> {
                 // Delivery end must exist and be a real trip away from the pickup
@@ -2882,6 +2892,16 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 }
                 mobileLoadCenter = here.immutable();
             }
+        }
+
+        // Keep the screen and the nametag honest. Re-check the checklist often
+        // while someone is stood next to this bot — that's exactly when they're
+        // handing over the tool it just asked for and watching for the message to
+        // clear — and occasionally regardless, so the ⚒/⚠ glyph stays truthful.
+        // (Unassigned bots cost nothing here: the check returns immediately.)
+        if (tickCount % 40 == 0
+            && (tickCount % 200 == 0 || level().getNearestPlayer(this, 12.0) != null)) {
+            refreshJobState();
         }
 
         // Show me my patch: while the owner is holding a Zone Marker nearby, this
