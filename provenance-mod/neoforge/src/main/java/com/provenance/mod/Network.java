@@ -126,6 +126,10 @@ public final class Network {
                 }
             }
 
+            // Inspection is off the hot path, so this is where a rename is
+            // picked up.
+            Stamps.refreshCustomName(stack, record);
+
             // Fold in whatever this item has accrued since the last flush, so
             // the screen shows totals current to the second even though records
             // are only written once a minute.

@@ -61,6 +61,44 @@ class MilestoneTest {
                 "the original achievement date must not be rewritten");
     }
 
+    /**
+     * The cached next-threshold that keeps ordinary actions cheap must not cause
+     * a tier to be missed when the value creeps up one at a time, which is how
+     * every real item advances.
+     */
+    @Test
+    void tiersAreStillAwardedWhenTheValueCreepsUpOneAtATime(@TempDir Path dir) {
+        RecordRegistry registry = registry(dir, ProvenanceConfig.withDefaults());
+        UUID player = UUID.randomUUID();
+        ItemRecord sword = registry.registerCrafted(
+                "minecraft:iron_sword", ItemCategory.MELEE_WEAPON, player, "A", null, null);
+
+        List<MilestoneTier> awarded = new java.util.ArrayList<>();
+        for (int kill = 1; kill <= 260; kill++) {
+            clock = 1_000L + kill;
+            registry.record(sword, player, "A", StatKey.KILLS, 1)
+                    .forEach(a -> awarded.add(a.tier()));
+        }
+
+        assertEquals(List.of(MilestoneTier.INITIATED, MilestoneTier.PROVEN, MilestoneTier.SEASONED), awarded,
+                "one kill at a time must still cross 10, 50 and 250 exactly once each");
+        assertEquals(MilestoneTier.SEASONED, sword.currentTier());
+        assertEquals(1_010L, sword.award(MilestoneTier.INITIATED).achievedEpochMilli());
+        assertEquals(1_250L, sword.award(MilestoneTier.SEASONED).achievedEpochMilli());
+    }
+
+    /** A statistic that does not drive the ladder must never award a tier. */
+    @Test
+    void aNonPrimaryStatisticCannotAdvanceTheLadder(@TempDir Path dir) {
+        RecordRegistry registry = registry(dir, ProvenanceConfig.withDefaults());
+        UUID player = UUID.randomUUID();
+        ItemRecord sword = registry.registerCrafted(
+                "minecraft:iron_sword", ItemCategory.MELEE_WEAPON, player, "A", null, null);
+
+        assertTrue(registry.record(sword, player, "A", StatKey.DAMAGE_DEALT, 500_000).isEmpty());
+        assertNull(sword.currentTier(), "damage dealt does not drive a kill-based ladder");
+    }
+
     @Test
     void crossingSeveralThresholdsAtOnceAwardsEveryTierInOrder(@TempDir Path dir) {
         RecordRegistry registry = registry(dir, ProvenanceConfig.withDefaults());

@@ -55,7 +55,9 @@ public final class ContributorQuery {
                     secondary == null ? 0L : c.stats().getOrZero(secondary),
                     c.stats().getOrZero(StatKey.REPAIRS),
                     c.stats().getOrZero(StatKey.DISTANCE_CM),
-                    c.stats().getOrZero(timeKeyFor(record.category())),
+                    timeKeyFor(record.category()) == null
+                            ? 0L
+                            : c.stats().getOrZero(timeKeyFor(record.category())),
                     c.playerId().equals(owner),
                     c.playerId().equals(crafter)));
         }
@@ -79,9 +81,15 @@ public final class ContributorQuery {
         return new Page(slice, clampedIndex, pageCount, totalRows);
     }
 
-    /** Armour is worn, everything else is used. */
+    /**
+     * Armour records time worn. Nothing else records time at all — a held tool
+     * accrued "time used" merely for being in a hand, which measured holding
+     * rather than using and cost a per-second server pass to collect.
+     *
+     * @return the time counter for this category, or null if it has none
+     */
     public static StatKey timeKeyFor(ItemCategory category) {
-        return category == ItemCategory.ARMOUR ? StatKey.TIME_WORN_TICKS : StatKey.TIME_USED_TICKS;
+        return category == ItemCategory.ARMOUR ? StatKey.TIME_WORN_TICKS : null;
     }
 
     /** The secondary column each category shows beside its primary statistic. */

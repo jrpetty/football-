@@ -14,10 +14,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
+
+
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -50,8 +51,17 @@ public final class FileRecordStore implements RecordStore {
     private final Path root;
     private final int maxCachedRecords;
 
-    /** Access-ordered so the eldest entries are the least recently touched. */
-    private final LinkedHashMap<UUID, ItemRecord> cache;
+    /**
+     * Resident records.
+     *
+     * <p>A concurrent map rather than a lock-guarded {@code LinkedHashMap}.
+     * Every recorded action looks a record up here, so an exclusive lock on
+     * this map serialised every player's mining and combat against every
+     * other's. Lookups and inserts are now lock-free; recency is tracked with a
+     * plain timestamp on the record and only consulted during the background
+     * flush, where a little imprecision costs nothing.
+     */
+    private final ConcurrentHashMap<UUID, ItemRecord> cache;
 
     public FileRecordStore(Path root) {
         this(root, 4096);
@@ -60,7 +70,7 @@ public final class FileRecordStore implements RecordStore {
     public FileRecordStore(Path root, int maxCachedRecords) {
         this.root = Objects.requireNonNull(root, "root");
         this.maxCachedRecords = Math.max(16, maxCachedRecords);
-        this.cache = new LinkedHashMap<>(256, 0.75f, true);
+        this.cache = new ConcurrentHashMap<>(256);
         try {
             Files.createDirectories(root);
         } catch (IOException e) {
@@ -73,11 +83,10 @@ public final class FileRecordStore implements RecordStore {
         if (recordId == null) {
             return null;
         }
-        synchronized (cache) {
-            ItemRecord cached = cache.get(recordId);
-            if (cached != null) {
-                return cached;
-            }
+        ItemRecord cached = cache.get(recordId);
+        if (cached != null) {
+            cached.touchForCache(System.currentTimeMillis());
+            return cached;
         }
 
         ItemRecord loaded = readFromDisk(recordId);
@@ -85,33 +94,23 @@ public final class FileRecordStore implements RecordStore {
             return null;
         }
 
-        synchronized (cache) {
-            // Another thread may have loaded the same record while this one was
-            // reading. Keep whichever instance won, so a record is never
-            // represented by two live objects with diverging statistics.
-            ItemRecord raced = cache.get(recordId);
-            if (raced != null) {
-                return raced;
-            }
-            cache.put(recordId, loaded);
-            evictIfNeeded();
-            return loaded;
-        }
+        // Another thread may have loaded the same record concurrently. Keep
+        // whichever instance won, so a record is never represented by two live
+        // objects with diverging statistics.
+        ItemRecord winner = cache.putIfAbsent(recordId, loaded);
+        return winner != null ? winner : loaded;
     }
 
     @Override
     public void insert(ItemRecord record) {
         Objects.requireNonNull(record, "record");
-        synchronized (cache) {
-            if (cache.containsKey(record.recordId())) {
-                throw new IllegalStateException("Duplicate Item Record ID in cache: " + record.recordId());
-            }
-            if (Files.exists(pathFor(record.recordId()))) {
-                throw new IllegalStateException("Duplicate Item Record ID on disk: " + record.recordId());
-            }
-            record.markDirty();
-            cache.put(record.recordId(), record);
-            evictIfNeeded();
+        record.markDirty();
+        if (cache.putIfAbsent(record.recordId(), record) != null) {
+            throw new IllegalStateException("Duplicate Item Record ID in cache: " + record.recordId());
+        }
+        if (Files.exists(pathFor(record.recordId()))) {
+            cache.remove(record.recordId(), record);
+            throw new IllegalStateException("Duplicate Item Record ID on disk: " + record.recordId());
         }
     }
 
@@ -119,9 +118,7 @@ public final class FileRecordStore implements RecordStore {
     public void save(ItemRecord record) {
         if (record != null) {
             record.markDirty();
-            synchronized (cache) {
-                cache.putIfAbsent(record.recordId(), record);
-            }
+            cache.putIfAbsent(record.recordId(), record);
         }
     }
 
@@ -130,12 +127,7 @@ public final class FileRecordStore implements RecordStore {
         if (recordId == null) {
             return false;
         }
-        synchronized (cache) {
-            if (cache.containsKey(recordId)) {
-                return true;
-            }
-        }
-        return Files.exists(pathFor(recordId));
+        return cache.containsKey(recordId) || Files.exists(pathFor(recordId));
     }
 
     @Override
@@ -143,13 +135,11 @@ public final class FileRecordStore implements RecordStore {
         if (recordId == null) {
             return false;
         }
-        synchronized (cache) {
-            ItemRecord cached = cache.remove(recordId);
-            if (cached != null) {
-                // Drop any unwritten changes: the item is gone, so persisting
-                // its last few blocks mined would only recreate the file.
-                cached.clearDirty();
-            }
+        ItemRecord cached = cache.remove(recordId);
+        if (cached != null) {
+            // Drop any unwritten changes: the item is gone, so persisting its
+            // last few blocks mined would only recreate the file.
+            cached.clearDirty();
         }
         try {
             return Files.deleteIfExists(pathFor(recordId));
@@ -161,11 +151,9 @@ public final class FileRecordStore implements RecordStore {
     @Override
     public void flush() {
         List<ItemRecord> pending = new ArrayList<>();
-        synchronized (cache) {
-            for (ItemRecord record : cache.values()) {
-                if (record.isDirty()) {
-                    pending.add(record);
-                }
+        for (ItemRecord record : cache.values()) {
+            if (record.isDirty()) {
+                pending.add(record);
             }
         }
         for (ItemRecord record : pending) {
@@ -182,33 +170,40 @@ public final class FileRecordStore implements RecordStore {
                 throw new IllegalStateException("Failed to persist record " + record.recordId(), e);
             }
         }
-        synchronized (cache) {
-            evictIfNeeded();
-        }
+        evictIfNeeded();
     }
 
     @Override
     public void close() {
         flush();
-        synchronized (cache) {
-            cache.clear();
-        }
+        cache.clear();
     }
 
     /**
      * Drops the least recently used clean records once the cache is over
-     * budget. Dirty records are skipped: losing one would lose statistics that
-     * have not reached disk.
+     * budget.
+     *
+     * <p>Only ever called from the background flush, never from gameplay, so it
+     * can afford to sort. Dirty records are skipped: evicting one would lose
+     * statistics that have not reached disk.
      */
     private void evictIfNeeded() {
-        if (cache.size() <= maxCachedRecords) {
+        int over = cache.size() - maxCachedRecords;
+        if (over <= 0) {
             return;
         }
-        Iterator<Map.Entry<UUID, ItemRecord>> it = cache.entrySet().iterator();
-        while (it.hasNext() && cache.size() > maxCachedRecords) {
-            Map.Entry<UUID, ItemRecord> entry = it.next();
-            if (!entry.getValue().isDirty()) {
-                it.remove();
+        List<ItemRecord> clean = new ArrayList<>();
+        for (ItemRecord record : cache.values()) {
+            if (!record.isDirty()) {
+                clean.add(record);
+            }
+        }
+        clean.sort(java.util.Comparator.comparingLong(ItemRecord::lastTouchedMillis));
+        for (int i = 0; i < clean.size() && i < over; i++) {
+            ItemRecord victim = clean.get(i);
+            // Re-check: it may have been dirtied since the scan began.
+            if (!victim.isDirty()) {
+                cache.remove(victim.recordId(), victim);
             }
         }
     }

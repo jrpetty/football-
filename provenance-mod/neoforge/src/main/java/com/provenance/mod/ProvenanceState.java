@@ -84,8 +84,9 @@ public final class ProvenanceState {
             }
             String name = nameOf(playerId);
             long now = registry.now();
-            if (ticks > 0) {
-                record.record(playerId, name, UsageAccumulator.timeKeyFor(record.category()), ticks, now);
+            com.provenance.core.StatKey timeKey = UsageAccumulator.timeKeyFor(record.category());
+            if (ticks > 0 && timeKey != null) {
+                record.record(playerId, name, timeKey, ticks, now);
             }
             if (distanceCm > 0) {
                 record.record(playerId, name, com.provenance.core.StatKey.DISTANCE_CM, distanceCm, now);
@@ -103,8 +104,9 @@ public final class ProvenanceState {
             }
             String name = nameOf(playerId);
             long now = registry.now();
-            if (ticks > 0) {
-                record.record(playerId, name, UsageAccumulator.timeKeyFor(record.category()), ticks, now);
+            com.provenance.core.StatKey timeKey = UsageAccumulator.timeKeyFor(record.category());
+            if (ticks > 0 && timeKey != null) {
+                record.record(playerId, name, timeKey, ticks, now);
             }
             if (distanceCm > 0) {
                 record.record(playerId, name, com.provenance.core.StatKey.DISTANCE_CM, distanceCm, now);

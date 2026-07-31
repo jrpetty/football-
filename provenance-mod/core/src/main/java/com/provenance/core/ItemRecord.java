@@ -74,6 +74,21 @@ public final class ItemRecord {
 
     private transient boolean dirty;
 
+    /** Cached value at which the next milestone tier becomes reachable. */
+    private transient long nextThreshold;
+    private transient boolean nextThresholdKnown;
+
+    /** Approximate last-use time, for cache eviction. Deliberately unsynchronised. */
+    private transient volatile long lastTouchedMillis = System.currentTimeMillis();
+
+    void touchForCache(long nowMillis) {
+        this.lastTouchedMillis = nowMillis;
+    }
+
+    long lastTouchedMillis() {
+        return lastTouchedMillis;
+    }
+
     private ItemRecord(Builder b) {
         this.recordId = Objects.requireNonNull(b.recordId, "recordId");
         this.originalItemId = Objects.requireNonNull(b.originalItemId, "originalItemId");
@@ -331,10 +346,33 @@ public final class ItemRecord {
      * achievement date, so lowering a threshold later cannot rewrite history,
      * and re-evaluating on every action cannot double-award.
      */
+    /**
+     * Re-evaluates from scratch, ignoring the cached next threshold.
+     *
+     * <p>For the explicit path only: an operator command, or a re-check after
+     * the milestone table itself changed. The fast path in
+     * {@link #evaluateMilestones} assumes thresholds are stable, which they are
+     * during play but not across a configuration change.
+     */
+    public synchronized List<MilestoneAward> reevaluateMilestones(MilestoneTrack track, long nowEpochMilli) {
+        nextThresholdKnown = false;
+        return evaluateMilestones(track, nowEpochMilli);
+    }
+
     public synchronized List<MilestoneAward> evaluateMilestones(MilestoneTrack track, long nowEpochMilli) {
         long value = overall.getOrZero(track.primaryStat());
+
+        // Fast path. Almost every call lands here: an item mines one more block
+        // and is nowhere near its next tier. Without this the method walks all
+        // seven tiers and allocates a list on every recorded action, on the
+        // hottest path in the mod.
+        if (nextThresholdKnown && value < nextThreshold) {
+            return List.of();
+        }
+
         MilestoneTier earned = track.tierFor(value);
         if (earned == null) {
+            cacheNextThreshold(track);
             return List.of();
         }
         List<MilestoneAward> newly = new ArrayList<>();
@@ -349,7 +387,34 @@ public final class ItemRecord {
                 markDirty();
             }
         }
+        cacheNextThreshold(track);
         return newly;
+    }
+
+    /**
+     * Remembers the value at which the next tier becomes reachable, so ordinary
+     * actions can be dismissed with a single comparison.
+     *
+     * <p>Thresholds only change when the server restarts with a new config, and
+     * this cache lives no longer than the record's residency in memory, so it
+     * cannot go stale in a way that matters.
+     */
+    private void cacheNextThreshold(MilestoneTrack track) {
+        MilestoneTier next = track.nextTier(currentTierUnsynchronized());
+        Long threshold = next == null ? null : track.threshold(next);
+        this.nextThreshold = threshold == null ? Long.MAX_VALUE : threshold;
+        this.nextThresholdKnown = true;
+    }
+
+    /** Caller already holds this record's monitor. */
+    private MilestoneTier currentTierUnsynchronized() {
+        MilestoneTier best = null;
+        for (MilestoneTier tier : milestones.keySet()) {
+            if (best == null || tier.index() > best.index()) {
+                best = tier;
+            }
+        }
+        return best;
     }
 
     /** The highest tier actually awarded, or null for an item still unproven. */

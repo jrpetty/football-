@@ -11,19 +11,17 @@ import java.util.UUID;
  * Buffers time-carried and distance-carried in memory, then writes them to
  * records in batches.
  *
- * <p>Time is counted continuously: an item accrues every second it is held or
- * worn, with no activity gate. That is the behaviour players expect — an hour
- * spent mining one spot, fishing, or standing guard in full armour is an hour
- * the item was in service — and the earlier movement-gated version recorded
- * nothing for exactly those cases.
+ * <p>Only armour records time, as time worn. Held tools no longer do: "time
+ * used" counted a tool merely for being in a hand, which measured holding
+ * rather than using, and collecting it required a per-second pass over every
+ * player's equipment.
  *
- * <p>Counting every second does not mean <em>writing</em> every second. Sampling
- * six equipment slots per player per second and pushing each straight into a
- * record would keep every record permanently dirty, so the persistence layer
- * could never evict anything and would rewrite unchanged files forever. Instead
- * the deltas land in this map — two long additions per slot, no allocation, no
- * locks on records — and are drained into records on an interval, on logout,
- * before an inspection, and at shutdown.
+ * <p>Sampling still does not mean <em>writing</em>. Pushing each sample straight
+ * into a record would keep every record permanently dirty, so the persistence
+ * layer could never evict anything and would rewrite unchanged files forever.
+ * Instead the deltas land in this map — two long additions per slot, no
+ * allocation, no locks on records — and are drained into records on an
+ * interval, on logout, before an inspection, and at shutdown.
  *
  * <p>The player-visible result is identical, because every path that displays a
  * record drains first. The server-visible result is roughly a hundredfold fewer
@@ -130,8 +128,12 @@ public final class UsageAccumulator {
         return pending.size();
     }
 
-    /** The counter this category records time against. */
+    /**
+     * The counter this category records time against, or null if it records
+     * none. Only armour tracks time; a held tool accrued "time used" merely for
+     * sitting in a hand, which measured holding rather than using.
+     */
     public static StatKey timeKeyFor(ItemCategory category) {
-        return category == ItemCategory.ARMOUR ? StatKey.TIME_WORN_TICKS : StatKey.TIME_USED_TICKS;
+        return category == ItemCategory.ARMOUR ? StatKey.TIME_WORN_TICKS : null;
     }
 }

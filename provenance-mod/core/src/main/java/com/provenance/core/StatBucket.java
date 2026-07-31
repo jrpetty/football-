@@ -47,7 +47,12 @@ public final class StatBucket {
      * for totals, kept if larger for MAX counters, kept if smaller for MIN.
      */
     public void record(StatKey key, long amount) {
-        stats.merge(key, amount, key::combine);
+        // Written out rather than using Map.merge with a method reference.
+        // `key::combine` captures `key`, so it allocates a new object on every
+        // call — and this is the single hottest line in the mod, running
+        // several times per block broken and per hit landed.
+        Long existing = stats.get(key);
+        stats.put(key, existing == null ? amount : key.combine(existing, amount));
     }
 
     public void recordBreakdown(BreakdownKind kind, String id, long amount) {

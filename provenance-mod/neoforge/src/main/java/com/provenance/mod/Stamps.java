@@ -37,9 +37,21 @@ public final class Stamps {
     private Stamps() {
     }
 
+    /**
+     * Registry ids, resolved once per item type.
+     *
+     * <p>{@code ResourceLocation.toString()} builds a new string every call, and
+     * this runs on every block broken and every hit landed. The id of an item
+     * type never changes, so it is cached.
+     */
+    private static final java.util.Map<net.minecraft.world.item.Item, String> ID_CACHE =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
     public static String itemId(ItemStack stack) {
-        ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
-        return id == null ? null : id.toString();
+        return ID_CACHE.computeIfAbsent(stack.getItem(), item -> {
+            ResourceLocation id = BuiltInRegistries.ITEM.getKey(item);
+            return id == null ? "" : id.toString();
+        });
     }
 
     /** The stack's tag ids, in the form the configuration matches against. */
@@ -64,6 +76,12 @@ public final class Stamps {
     /** Called when the server starts, so a config change is picked up. */
     public static void clearCategoryCache() {
         CATEGORY_CACHE.clear();
+        ID_CACHE.clear();
+    }
+
+    /** Refreshes the record's display name. Called only off the hot path. */
+    public static void refreshCustomName(ItemStack stack, ItemRecord record) {
+        syncCustomName(stack, record);
     }
 
     public static ItemCategory categoryOf(ProvenanceConfig config, ItemStack stack) {
@@ -138,8 +156,11 @@ public final class Stamps {
         RecordRegistry.Claim claim = registry.verify(stamp);
         switch (claim.status()) {
             case VALID -> {
+                // No name sync here: reading a custom name allocates a string,
+                // and this path runs on every recorded action. Renames are
+                // picked up at custody moments and whenever the item is
+                // inspected, which is soon enough for a cosmetic field.
                 noteUpgrade(claim.record(), itemId, registry);
-                syncCustomName(stack, claim.record());
                 return claim.record();
             }
             case DUPLICATE -> {

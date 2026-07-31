@@ -353,7 +353,7 @@ public final class ItemHistoryScreen extends Screen {
             case "longest_kill_cm" -> String.format(Locale.ENGLISH, "%.1f m", value / 100.0d);
             case "damage_dealt", "damage_absorbed", "damage_prevented" ->
                     String.format(Locale.ENGLISH, "%.1f", value / 100.0d);
-            case "time_used_ticks", "time_worn_ticks", "blocking_time_ticks" -> formatTicks(value);
+            case "time_worn_ticks" -> formatTicks(value);
             case "deepest_block_y" -> "Y " + value;
             default -> format(value);
         };

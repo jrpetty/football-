@@ -249,7 +249,16 @@ public final class RecordRegistry {
         long now = now();
         record.record(playerId, playerName, key, amount, now);
         store.save(record);
-        return evaluate(record, now);
+
+        // Only the statistic that drives this category's ladder can advance it.
+        // Recording damage dealt or ores mined cannot earn a tier on a track
+        // measured in kills or blocks, so there is nothing to evaluate — and
+        // this skips roughly two thirds of evaluations on a block break.
+        MilestoneTrack track = config.track(record.category());
+        if (key != track.primaryStat()) {
+            return List.of();
+        }
+        return record.evaluateMilestones(track, now);
     }
 
     public void recordBreakdown(ItemRecord record, UUID playerId, String playerName,
@@ -258,10 +267,14 @@ public final class RecordRegistry {
         store.save(record);
     }
 
-    /** Re-evaluates the milestone ladder against current overall statistics. */
+    /**
+     * Re-evaluates the milestone ladder from scratch against current overall
+     * statistics. Used after a configuration change or by an operator command,
+     * never on the recording hot path.
+     */
     public List<MilestoneAward> evaluate(ItemRecord record, long now) {
         MilestoneTrack track = config.track(record.category());
-        return record.evaluateMilestones(track, now);
+        return record.reevaluateMilestones(track, now);
     }
 
     public MilestoneTrack trackFor(ItemRecord record) {

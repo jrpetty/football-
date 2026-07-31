@@ -160,9 +160,23 @@ public final class GameplayEvents {
         }
     }
 
+    /**
+     * Block and entity ids, resolved once per type.
+     *
+     * <p>These feed the per-type breakdowns, so they run on every block broken
+     * and every mob killed. Building the string each time allocated on the
+     * hottest path in the mod for a value that never changes.
+     */
+    private static final java.util.Map<Block, String> BLOCK_IDS =
+            new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.util.Map<net.minecraft.world.entity.EntityType<?>, String> ENTITY_IDS =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
     private static String blockIdOf(BlockState state) {
-        ResourceLocation id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
-        return id == null ? "unknown" : id.toString();
+        return BLOCK_IDS.computeIfAbsent(state.getBlock(), block -> {
+            ResourceLocation id = BuiltInRegistries.BLOCK.getKey(block);
+            return id == null ? "unknown" : id.toString();
+        });
     }
 
     /**
@@ -285,18 +299,27 @@ public final class GameplayEvents {
      * piece's own armour attribute where available so the split reflects the
      * real protection logic rather than an assumption.
      */
+    private static final java.util.Map<net.minecraft.world.item.Item, Double> ARMOUR_WEIGHTS =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
     private static double protectionWeight(ItemStack stack, EquipmentSlot slot) {
-        double weight = 0.0d;
-        var modifiers = stack.getAttributeModifiers();
-        for (var entry : modifiers.modifiers()) {
-            if (entry.slot().test(slot)
-                    && entry.attribute().equals(net.minecraft.world.entity.ai.attributes.Attributes.ARMOR)) {
-                weight += entry.modifier().amount();
+        // Cached per item type. Walking the attribute modifiers allocates, and
+        // this runs once per worn piece on every hit a player takes — four
+        // times per hit in a full set, which in a mob farm is constant.
+        return ARMOUR_WEIGHTS.computeIfAbsent(stack.getItem(), item -> {
+            double weight = 0.0d;
+            var modifiers = stack.getAttributeModifiers();
+            for (var entry : modifiers.modifiers()) {
+                if (entry.slot().test(slot)
+                        && entry.attribute().equals(net.minecraft.world.entity.ai.attributes.Attributes.ARMOR)) {
+                    weight += entry.modifier().amount();
+                }
             }
-        }
-        // A piece with no armour attribute still absorbed something (enchantments,
-        // for instance), so give it a floor rather than dropping it entirely.
-        return weight > 0.0d ? weight : 0.5d;
+            // A piece with no armour attribute still absorbed something
+            // (enchantments, for instance), so give it a floor rather than
+            // dropping it entirely.
+            return weight > 0.0d ? weight : 0.5d;
+        });
     }
 
     @SubscribeEvent
@@ -328,9 +351,11 @@ public final class GameplayEvents {
 
         notify(killer, registry.record(record, id, name, StatKey.KILLS, 1), record);
 
-        ResourceLocation mobId = BuiltInRegistries.ENTITY_TYPE.getKey(victim.getType());
-        registry.recordBreakdown(record, id, name, BreakdownKind.MOB_KILLED,
-                mobId == null ? "unknown" : mobId.toString(), 1);
+        String mobId = ENTITY_IDS.computeIfAbsent(victim.getType(), type -> {
+            ResourceLocation key = BuiltInRegistries.ENTITY_TYPE.getKey(type);
+            return key == null ? "unknown" : key.toString();
+        });
+        registry.recordBreakdown(record, id, name, BreakdownKind.MOB_KILLED, mobId, 1);
 
         if (record.category() == ItemCategory.RANGED_WEAPON || record.category() == ItemCategory.TRIDENT) {
             long distanceCm = Math.round(killer.distanceTo(victim) * 100.0d);

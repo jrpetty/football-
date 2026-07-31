@@ -12,6 +12,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Acceptance tests 14 and 28: the Contributors tab. */
@@ -167,6 +168,7 @@ class ContributorQueryTest {
         assertEquals(StatKey.DAMAGE_DEALT, ContributorQuery.secondaryFor(ItemCategory.MELEE_WEAPON));
         assertEquals(StatKey.HITS_RECEIVED, ContributorQuery.secondaryFor(ItemCategory.ARMOUR));
         assertEquals(StatKey.TIME_WORN_TICKS, ContributorQuery.timeKeyFor(ItemCategory.ARMOUR));
-        assertEquals(StatKey.TIME_USED_TICKS, ContributorQuery.timeKeyFor(ItemCategory.PICKAXE));
+        assertNull(ContributorQuery.timeKeyFor(ItemCategory.PICKAXE),
+                "only armour records time; a held tool no longer accrues it");
     }
 }

@@ -320,7 +320,8 @@ class HardeningTest {
     @Test
     void armourAndToolsRecordAgainstDifferentCounters() {
         assertEquals(StatKey.TIME_WORN_TICKS, UsageAccumulator.timeKeyFor(ItemCategory.ARMOUR));
-        assertEquals(StatKey.TIME_USED_TICKS, UsageAccumulator.timeKeyFor(ItemCategory.PICKAXE));
+        assertNull(UsageAccumulator.timeKeyFor(ItemCategory.PICKAXE),
+                "only armour records time");
     }
 
     // ------------------------------------------------------------------
@@ -411,24 +412,23 @@ class HardeningTest {
         assertNotEquals(null, config.resolveCategory("minecraft:diamond_sword", java.util.List.of("minecraft:swords")));
     }
 
-    /** Wooden tools are the one exclusion: made by the dozen to reach stone. */
+    /** Nothing is excluded: a wooden pickaxe kept for a year is an antique too. */
     @Test
-    void onlyWoodenToolsAreExcludedByDefault() {
+    void nothingIsExcludedByDefaultIncludingWood() {
         ProvenanceConfig config = ProvenanceConfig.withDefaults();
-
-        assertNull(config.resolveCategory("minecraft:wooden_pickaxe", java.util.List.of("minecraft:pickaxes")));
-        assertEquals(5, config.excludedItems().size(), "only the five wooden tools are excluded");
-        for (String excluded : config.excludedItems()) {
-            assertTrue(excluded.startsWith("minecraft:wooden_"), "unexpected default exclusion: " + excluded);
-        }
-    }
-
-    @Test
-    void aServerCanTrackWoodenToolsToo() {
-        ProvenanceConfig config = ProvenanceConfig.withDefaults();
-        config.excludedItems().clear();
 
         assertEquals(ItemCategory.PICKAXE,
                 config.resolveCategory("minecraft:wooden_pickaxe", java.util.List.of("minecraft:pickaxes")));
+        assertEquals(ItemCategory.MELEE_WEAPON,
+                config.resolveCategory("minecraft:wooden_sword", java.util.List.of("minecraft:swords")));
+        assertTrue(config.excludedItems().isEmpty(), "no item is excluded out of the box");
+    }
+
+    @Test
+    void aServerCanStillExcludeWhateverItWants() {
+        ProvenanceConfig config = ProvenanceConfig.withDefaults();
+        config.exclude("minecraft:wooden_pickaxe");
+
+        assertNull(config.resolveCategory("minecraft:wooden_pickaxe", java.util.List.of("minecraft:pickaxes")));
     }
 }

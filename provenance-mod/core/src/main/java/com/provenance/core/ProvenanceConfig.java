@@ -36,8 +36,6 @@ public final class ProvenanceConfig {
     private int contributorPageSize = 25;
     /** Below this, a movement sample is treated as jitter and dropped. */
     private int minimumDistanceSampleCm = 50;
-    /** How often carried items are sampled for time. 20 ticks is one second. */
-    private int timeSampleIntervalTicks = 20;
     /** How often buffered time and distance are written into records. */
     private int usageFlushIntervalSeconds = 60;
 
@@ -117,18 +115,10 @@ public final class ProvenanceConfig {
         tagCategories.put("minecraft:foot_armor", ItemCategory.ARMOUR);
         tagCategories.put("c:armors", ItemCategory.ARMOUR);
 
-        // Stone, gold, leather, chainmail and iron gear are all tracked,
-        // armour included. A stone pickaxe that mines a hundred thousand blocks
-        // has earned its history as much as a netherite one, and a starter
-        // leather chestplate somebody kept for a year is exactly the kind of
-        // antique this system exists to make interesting.
-        //
-        // Only wooden tools are excluded, and only because they are made by the
-        // dozen purely to reach stone. Delete these five lines, or clear
-        // "excludedItems" in the config file, to track those too.
-        for (String kind : new String[]{"sword", "pickaxe", "axe", "shovel", "hoe"}) {
-            excludedItems.add("minecraft:wooden_" + kind);
-        }
+        // Nothing is excluded by default. Every material tier earns a history,
+        // wood through netherite, armour included: a wooden pickaxe somebody
+        // kept and repaired for a year is a better antique than a netherite one
+        // crafted yesterday. Servers can still add exclusions in the config.
 
         // Vanilla items whose tags do not cover them.
         itemCategories.put("minecraft:trident", ItemCategory.TRIDENT);
@@ -258,14 +248,6 @@ public final class ProvenanceConfig {
 
     public void setContributorPageSize(int v) {
         this.contributorPageSize = Math.max(1, v);
-    }
-
-    public int timeSampleIntervalTicks() {
-        return timeSampleIntervalTicks;
-    }
-
-    public void setTimeSampleIntervalTicks(int v) {
-        this.timeSampleIntervalTicks = Math.max(1, v);
     }
 
     public int usageFlushIntervalSeconds() {

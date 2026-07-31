@@ -58,7 +58,6 @@ public enum StatKey {
     TIME_WORN_TICKS("time_worn_ticks", Aggregation.SUM),
 
     // --- Common to everything ---
-    TIME_USED_TICKS("time_used_ticks", Aggregation.SUM),
     /** Centimetres travelled while carried or equipped. */
     DISTANCE_CM("distance_cm", Aggregation.SUM),
     REPAIRS("repairs", Aggregation.SUM),
