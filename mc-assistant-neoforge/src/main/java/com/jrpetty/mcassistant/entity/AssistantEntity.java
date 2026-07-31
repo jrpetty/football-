@@ -205,7 +205,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b32 · the farmer now really uses (and wears out) the hoe it asks for · job-loop fixes: stationed bots no longer narrate every cycle (repeats hushed for ~5 min, new problems always get through) · Follow/Stay now actually take a specialist off the job · fisher searches wider for its water · storekeeper sorts on a cooldown · upkeep is clock-based so rations/charges really are spent · usability pass: picking a job is now ALL you do — the bot claims the ground around it and starts "
+        "2026-07-b33 · chests a job can SEE are now chests it can REACH (a chest that passed the checklist could sit out of range) · only roaming jobs drift across a big zone — smelter/fisher/storekeeper/hauler stay by their furnace, pond and chest · the farmer really uses (and wears out) the hoe it asks for · job-loop fixes: stationed bots no longer narrate every cycle (repeats hushed for ~5 min, new problems always get through) · Follow/Stay now actually take a specialist off the job · fisher searches wider for its water · storekeeper sorts on a cooldown · upkeep is clock-based so rations/charges really are spent · usability pass: picking a job is now ALL you do — the bot claims the ground around it and starts "
         + "working the moment it has its tools (Zone Marker only if you want a different patch) · zones are drawn in particles "
         + "while you hold a marker · the job button names the job · Follow/Stay back on the screen · ⚠/⚒ on the nametag "
         + "shows who is stuck at a glance · nine jobs · running costs (rations + a redstone core charge) · veteran levels · "
@@ -446,8 +446,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Spend one upkeep item from the pack, else from a chest in the zone. */
     private boolean consumeUpkeep(java.util.function.Predicate<ItemStack> what) {
         if (removeMatching(what, 1) == 1) return true;
-        return scoopFromChests(what, 8, 8) > 0 && removeMatching(what, 1) == 1;
+        return scoopFromChests(what, 8, CHEST_RANGE) > 0 && removeMatching(what, 1) == 1;
     }
+    /** Chests a specialist can use, matching the range its checklist accepts
+     *  one at — otherwise a chest could pass the requirement check and still
+     *  be out of reach, leaving the bot silently unable to work. */
+    private static final int CHEST_RANGE = 12;
     private static final int STATION_RADIUS = 16;       // how far it works from the post
     private int lastWarnTick = -1000;
     private boolean nightHome;        // "head home at night" toggle
@@ -1805,7 +1809,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 // rancher isn't re-running empty breed jobs between litters.
                 if (adults >= 2 && tickCount - stationBreedTick > 6000) {
                     if (countCarried(BREEDING_FOOD) < 4) {
-                        scoopFromChests(BREEDING_FOOD, 16, 8); // the farm's produce feeds the ranch
+                        scoopFromChests(BREEDING_FOOD, 16, CHEST_RANGE); // the farm's produce feeds the ranch
                     }
                     if (countCarried(BREEDING_FOOD) >= 4) {
                         stationBreedTick = tickCount;
@@ -1843,11 +1847,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 // the deposit rung above.
                 if (!furnaceNearby()) return false;
                 if (countMatching(SMELTABLE_ORE) == 0) {
-                    scoopFromChests(SMELTABLE_ORE, 64, 8);
+                    scoopFromChests(SMELTABLE_ORE, 64, CHEST_RANGE);
                 }
                 boolean hasFuel = countMatching(s -> s.is(Items.COAL) || s.is(Items.CHARCOAL)) > 0
                     || countMatching(s -> s.is(ItemTags.PLANKS) || s.is(ItemTags.LOGS)) > 0
-                    || scoopFromChests(s -> s.is(Items.COAL) || s.is(Items.CHARCOAL), 16, 8) > 0;
+                    || scoopFromChests(s -> s.is(Items.COAL) || s.is(Items.CHARCOAL), 16, CHEST_RANGE) > 0;
                 int iron = countMatching(s -> s.is(Items.RAW_IRON) || s.is(Items.IRON_ORE) || s.is(Items.DEEPSLATE_IRON_ORE));
                 int gold = countMatching(s -> s.is(Items.RAW_GOLD) || s.is(Items.GOLD_ORE) || s.is(Items.DEEPSLATE_GOLD_ORE));
                 int copper = countMatching(s -> s.is(Items.RAW_COPPER) || s.is(Items.COPPER_ORE) || s.is(Items.DEEPSLATE_COPPER_ORE));
@@ -1915,15 +1919,20 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     return true;
                 }
                 // Empty-handed at the post: load cargo from the outpost chest.
-                return scoopFromChests(s -> true, 512, 8) > 0;
+                return scoopFromChests(s -> true, 512, CHEST_RANGE) > 0;
             }
             case NONE -> { }
         }
         // Nothing to do right where it's stood. On a zone bigger than its own
         // search radius that doesn't mean the zone is finished — it means this
-        // corner is. Drift to another part of the patch so a big farm or forest
-        // gets worked end to end instead of hollowed out in the middle.
-        if (workZone != null && workZone.workRadius() > 16 && getNavigation().isDone()) {
+        // corner is. Drift to another part of the patch so a big farm, forest or
+        // pasture gets worked end to end instead of hollowed out in the middle.
+        // Only for jobs that roam: a smelter, fisher, storekeeper and hauler are
+        // each tied to a fixed furnace, pond or chest and must stay by it, and a
+        // miner belongs at its shaft head.
+        boolean roams = stationTask == StationTask.FARM || stationTask == StationTask.WOOD
+            || stationTask == StationTask.RANCH || stationTask == StationTask.GUARD;
+        if (roams && workZone != null && workZone.workRadius() > 16 && getNavigation().isDone()) {
             BlockPos spot = randomSpotInZone();
             if (spot != null && spot.distSqr(blockPosition()) > 64) {
                 getNavigation().moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 1.0D);
