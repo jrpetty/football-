@@ -38,6 +38,24 @@ which is also world spawn and death respawn (768, 61, 768). Vines and
 mangrove-moss climb the Glade-facing walls. Hostile mobs are automatically
 purged inside the Glade — it is safe ground; the maze is not.
 
+**v1.14 changes (the corridors have landmarks)** — at minigame scale every
+corridor was identical stone, which left runners nothing to recognise and
+nothing to map. Now roughly one cell in twelve carries a small feature:
+
+- **Bones** — a runner who didn't make it back.
+- **Cobwebs** — something has been sitting here a long time (and they slow you).
+- **A lantern** — a light left burning by whoever came before.
+- **Rubble** — the Maze grinding itself apart.
+- **A cairn** — a torch-topped marker, the tallest and most visible of them.
+
+Each landmark is tinted with its **section's accent colour**, so all eight
+eighths of the maze read differently and you can tell roughly where you are by
+eye. Two invariants are enforced by tests: a landmark occupies **exactly one of
+the four columns** at a cell's open centre — so a corridor can never be blocked
+— and never the middle square, where a dead-end supply chest stands. Landmarks
+sit on the floor only and never touch walls, so they cannot change whether a
+layout is solvable. The Glade, its door ring and the exit cell stay bare.
+
 **v1.13 changes (races are back, alongside personal runs)** — the server-wide
 timer returns as a proper **race**, sitting next to the per-player runs rather
 than replacing them.

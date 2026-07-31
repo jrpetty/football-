@@ -113,6 +113,9 @@ public class MazeChunkGenerator extends ChunkGenerator {
                 }
                 boolean floorOpen = MazeStructures.isOpen(cfg, wx, wz);
                 chunk.setBlockState(pos.set(wx, floorY, wz), floorOpen ? grass : dirt, false);
+                if (floorOpen) {
+                    LandmarkBuilder.emit(cfg, chunk, pos, wx, wz, floorY);
+                }
                 for (int y = cfg.wallBaseY; y <= cfg.wallTopY; y++) {
                     if (MazeWalls.solid(cfg, wx, y, wz)) {
                         chunk.setBlockState(pos.set(wx, y, wz), WallPalette.stateAt(cfg, wx, y, wz), false);

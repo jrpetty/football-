@@ -94,6 +94,8 @@ jobs:
           grep -q 'com/jrpetty/mazerunner/ModItems.class' /tmp/contents.txt
           grep -q 'com/jrpetty/mazerunner/config/GrieverAudio.class' /tmp/contents.txt
           grep -q 'com/jrpetty/mazerunner/config/RunScoring.class' /tmp/contents.txt
+          grep -q 'com/jrpetty/mazerunner/config/MazeLandmarks.class' /tmp/contents.txt
+          grep -q 'com/jrpetty/mazerunner/gen/LandmarkBuilder.class' /tmp/contents.txt
           grep -q 'com/jrpetty/mazerunner/MazeAdvancements.class' /tmp/contents.txt
           test "$(jar tf build/libs/mazerunner-*.jar | grep -c 'data/mazerunner/advancement/.*\.json')" -eq 6
           grep -q 'assets/mazerunner/models/item/griever_serum.json' /tmp/contents.txt
