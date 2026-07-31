@@ -205,7 +205,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b38 · SELF-RESUPPLY: a specialist whose tool wears out (or torches run low) now takes a replacement from its own station chest instead of downing tools until you notice — stock spares and walk away for hours · ASSISTANT HANDBOOK: a real written book comes with your first specialist, so the system teaches itself in-game (nine short pages: the loop, the screen, every job and what it needs, zones, running costs, the roster, levels and revival) · CREW ROSTER: right-click a Job Board to see every specialist at once — name, level, job, distance/bearing, live status, and what it produced today, with anyone stuck flagged in red (sneak-click still cycles the colony preset) · DAILY PRODUCTION REPORT: each specialist reports at dawn what it actually stashed, so a night of unattended work leaves a trace · every job is set up entirely by clicking the bot — the hauler's drop-off point was the last thing that needed a chat command, and it is a button now (shown only for haulers, as dig depth is only shown for miners) · every specialist holds its own upkeep back instead of stashing the rations/redstone it is about to need · a guard no longer nags for a chest nobody asked it to have · chests a job can SEE are now chests it can REACH (a chest that passed the checklist could sit out of range) · only roaming jobs drift across a big zone — smelter/fisher/storekeeper/hauler stay by their furnace, pond and chest · the farmer really uses (and wears out) the hoe it asks for · job-loop fixes: stationed bots no longer narrate every cycle (repeats hushed for ~5 min, new problems always get through) · Follow/Stay now actually take a specialist off the job · fisher searches wider for its water · storekeeper sorts on a cooldown · upkeep is clock-based so rations/charges really are spent · usability pass: picking a job is now ALL you do — the bot claims the ground around it and starts "
+        "2026-07-b39 · name tags work properly now (the bot used to overwrite its own nametag and lose the rename) and spaces become underscores · overlapping work zones are called out the moment two specialists are given the same ground · SELF-RESUPPLY: a specialist whose tool wears out (or torches run low) now takes a replacement from its own station chest instead of downing tools until you notice — stock spares and walk away for hours · ASSISTANT HANDBOOK: a real written book comes with your first specialist, so the system teaches itself in-game (nine short pages: the loop, the screen, every job and what it needs, zones, running costs, the roster, levels and revival) · CREW ROSTER: right-click a Job Board to see every specialist at once — name, level, job, distance/bearing, live status, and what it produced today, with anyone stuck flagged in red (sneak-click still cycles the colony preset) · DAILY PRODUCTION REPORT: each specialist reports at dawn what it actually stashed, so a night of unattended work leaves a trace · every job is set up entirely by clicking the bot — the hauler's drop-off point was the last thing that needed a chat command, and it is a button now (shown only for haulers, as dig depth is only shown for miners) · every specialist holds its own upkeep back instead of stashing the rations/redstone it is about to need · a guard no longer nags for a chest nobody asked it to have · chests a job can SEE are now chests it can REACH (a chest that passed the checklist could sit out of range) · only roaming jobs drift across a big zone — smelter/fisher/storekeeper/hauler stay by their furnace, pond and chest · the farmer really uses (and wears out) the hoe it asks for · job-loop fixes: stationed bots no longer narrate every cycle (repeats hushed for ~5 min, new problems always get through) · Follow/Stay now actually take a specialist off the job · fisher searches wider for its water · storekeeper sorts on a cooldown · upkeep is clock-based so rations/charges really are spent · usability pass: picking a job is now ALL you do — the bot claims the ground around it and starts "
         + "working the moment it has its tools (Zone Marker only if you want a different patch) · zones are drawn in particles "
         + "while you hold a marker · the job button names the job · Follow/Stay back on the screen · ⚠/⚒ on the nametag "
         + "shows who is stuck at a glance · nine jobs · running costs (rations + a redstone core charge) · veteran levels · "
@@ -368,6 +368,24 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             setStation(null, StationTask.NONE);
         }
         refreshJobState();
+        warnIfZoneClashes();
+    }
+
+    /** Two specialists working the same ground will trip over each other —
+     *  harvesting each other's crops, felling the same trees. Say so once, when
+     *  the patch is handed over, rather than leaving it to be discovered. */
+    private void warnIfZoneClashes() {
+        if (workZone == null || ownerId == null || stationTask == StationTask.NONE) return;
+        for (AssistantEntity other : allFor(ownerId)) {
+            if (other == this || other.level() != level()) continue;
+            WorkZone theirs = other.workZone();
+            if (theirs == null || other.stationTask() == StationTask.NONE) continue;
+            if (!workZone.overlaps(theirs)) continue;
+            say("Careful — my patch overlaps " + other.displayNameCap() + "'s ("
+                + other.stationTask().label + "). We'll get in each other's way; "
+                + "mark one of us somewhere else.");
+            return;
+        }
     }
 
     /**
@@ -393,6 +411,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             clearQueue();
         }
         refreshJobState();
+        // Hiring a second bot next to the first is the usual way patches end up
+        // on top of each other, since an unzoned job claims the ground it stands on.
+        if (task != StationTask.NONE) warnIfZoneClashes();
     }
 
     private static final int DEFAULT_ZONE_RADIUS = 12; // 25x25 patch claimed on the spot
@@ -690,7 +711,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     }
 
     public void rename(String newName) {
-        String clean = newName.toLowerCase().replaceAll("[^a-z0-9_]", "");
+        // Names stay simple enough to be a lookup key, but a tag reading
+        // "Old Bill" should give Old_bill rather than Oldbill.
+        String clean = newName.toLowerCase().trim()
+            .replaceAll("\\s+", "_")
+            .replaceAll("[^a-z0-9_]", "");
         if (clean.isEmpty()) return;
         if (ownerId != null) {
             Map<String, AssistantEntity> m = BY_OWNER.get(ownerId);
@@ -2952,7 +2977,24 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     @Override
     protected net.minecraft.world.InteractionResult mobInteract(Player player, InteractionHand hand) {
         ItemStack held = player.getItemInHand(hand);
-        if (held.is(net.minecraft.world.item.Items.LEAD) || held.is(net.minecraft.world.item.Items.NAME_TAG)) {
+        // Name tags: vanilla would set a custom name, but this entity rebuilds
+        // its own nametag (glyph + level + name + hearts) whenever any of those
+        // change, which silently wiped the rename moments later. Take the name
+        // properly instead, so tagging a bot actually renames it for good.
+        if (held.is(net.minecraft.world.item.Items.NAME_TAG)) {
+            Component tagName = held.get(DataComponents.CUSTOM_NAME);
+            if (tagName != null && isOwner(player)) {
+                if (!this.level().isClientSide) {
+                    rename(tagName.getString());
+                    lastShownHealth = -1; // force the nametag to rebuild with it
+                    say("Call me " + displayNameCap() + " from now on.");
+                    if (!player.getAbilities().instabuild) held.shrink(1);
+                }
+                return net.minecraft.world.InteractionResult.sidedSuccess(this.level().isClientSide());
+            }
+            return super.mobInteract(player, hand);
+        }
+        if (held.is(net.minecraft.world.item.Items.LEAD)) {
             return super.mobInteract(player, hand);
         }
         if (!isOwner(player)) {

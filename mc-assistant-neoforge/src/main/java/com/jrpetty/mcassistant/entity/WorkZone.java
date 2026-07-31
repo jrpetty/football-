@@ -46,6 +46,13 @@ public record WorkZone(BlockPos min, BlockPos max, int depth) {
             && pos.getY() >= min.getY() - 16 && pos.getY() <= max.getY() + 16;
     }
 
+    /** Do these two patches share ground? Compared on the footprint only —
+     *  two bots at different heights over the same field still collide. */
+    public boolean overlaps(WorkZone other) {
+        return min.getX() <= other.max.getX() && max.getX() >= other.min.getX()
+            && min.getZ() <= other.max.getZ() && max.getZ() >= other.min.getZ();
+    }
+
     public BlockPos center() {
         return new BlockPos((min.getX() + max.getX()) / 2, (min.getY() + max.getY()) / 2, (min.getZ() + max.getZ()) / 2);
     }
