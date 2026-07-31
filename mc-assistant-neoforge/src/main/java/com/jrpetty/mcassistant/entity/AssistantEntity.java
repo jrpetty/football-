@@ -205,7 +205,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b39 · name tags work properly now (the bot used to overwrite its own nametag and lose the rename) and spaces become underscores · overlapping work zones are called out the moment two specialists are given the same ground · SELF-RESUPPLY: a specialist whose tool wears out (or torches run low) now takes a replacement from its own station chest instead of downing tools until you notice — stock spares and walk away for hours · ASSISTANT HANDBOOK: a real written book comes with your first specialist, so the system teaches itself in-game (nine short pages: the loop, the screen, every job and what it needs, zones, running costs, the roster, levels and revival) · CREW ROSTER: right-click a Job Board to see every specialist at once — name, level, job, distance/bearing, live status, and what it produced today, with anyone stuck flagged in red (sneak-click still cycles the colony preset) · DAILY PRODUCTION REPORT: each specialist reports at dawn what it actually stashed, so a night of unattended work leaves a trace · every job is set up entirely by clicking the bot — the hauler's drop-off point was the last thing that needed a chat command, and it is a button now (shown only for haulers, as dig depth is only shown for miners) · every specialist holds its own upkeep back instead of stashing the rations/redstone it is about to need · a guard no longer nags for a chest nobody asked it to have · chests a job can SEE are now chests it can REACH (a chest that passed the checklist could sit out of range) · only roaming jobs drift across a big zone — smelter/fisher/storekeeper/hauler stay by their furnace, pond and chest · the farmer really uses (and wears out) the hoe it asks for · job-loop fixes: stationed bots no longer narrate every cycle (repeats hushed for ~5 min, new problems always get through) · Follow/Stay now actually take a specialist off the job · fisher searches wider for its water · storekeeper sorts on a cooldown · upkeep is clock-based so rations/charges really are spent · usability pass: picking a job is now ALL you do — the bot claims the ground around it and starts "
+        "2026-07-b40 · SET AREA from the screen (stand in the middle, click; -/+ resizes, Show outlines it) and specialists are now held to that footprint — step outside and the next thing they do is walk back, and a miner stops its gallery at the edge rather than tunnelling under a neighbour · GUI fixes: the mode label no longer sits on top of the backpack and the gear caption no longer runs off the panel · name tags work properly now (the bot used to overwrite its own nametag and lose the rename) and spaces become underscores · overlapping work zones are called out the moment two specialists are given the same ground · SELF-RESUPPLY: a specialist whose tool wears out (or torches run low) now takes a replacement from its own station chest instead of downing tools until you notice — stock spares and walk away for hours · ASSISTANT HANDBOOK: a real written book comes with your first specialist, so the system teaches itself in-game (nine short pages: the loop, the screen, every job and what it needs, zones, running costs, the roster, levels and revival) · CREW ROSTER: right-click a Job Board to see every specialist at once — name, level, job, distance/bearing, live status, and what it produced today, with anyone stuck flagged in red (sneak-click still cycles the colony preset) · DAILY PRODUCTION REPORT: each specialist reports at dawn what it actually stashed, so a night of unattended work leaves a trace · every job is set up entirely by clicking the bot — the hauler's drop-off point was the last thing that needed a chat command, and it is a button now (shown only for haulers, as dig depth is only shown for miners) · every specialist holds its own upkeep back instead of stashing the rations/redstone it is about to need · a guard no longer nags for a chest nobody asked it to have · chests a job can SEE are now chests it can REACH (a chest that passed the checklist could sit out of range) · only roaming jobs drift across a big zone — smelter/fisher/storekeeper/hauler stay by their furnace, pond and chest · the farmer really uses (and wears out) the hoe it asks for · job-loop fixes: stationed bots no longer narrate every cycle (repeats hushed for ~5 min, new problems always get through) · Follow/Stay now actually take a specialist off the job · fisher searches wider for its water · storekeeper sorts on a cooldown · upkeep is clock-based so rations/charges really are spent · usability pass: picking a job is now ALL you do — the bot claims the ground around it and starts "
         + "working the moment it has its tools (Zone Marker only if you want a different patch) · zones are drawn in particles "
         + "while you hold a marker · the job button names the job · Follow/Stay back on the screen · ⚠/⚒ on the nametag "
         + "shows who is stuck at a glance · nine jobs · running costs (rations + a redstone core charge) · veteran levels · "
@@ -422,6 +422,21 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      *  unzoned specialist behaves the way stations did before zones existed. */
     public boolean inZone(BlockPos pos) {
         return workZone == null || workZone.contains(pos);
+    }
+
+    /** Inside the patch's footprint, ignoring height — what a digging job needs. */
+    public boolean inZoneColumn(BlockPos pos) {
+        return workZone == null || workZone.containsColumn(pos);
+    }
+
+    /** Draw the patch's outline for a player, so "where does it work?" is
+     *  answerable at any time rather than only while holding a marker. */
+    public void showZoneTo(Player player) {
+        if (workZone == null || !(level() instanceof net.minecraft.server.level.ServerLevel sl)) return;
+        for (int i = 0; i < 3; i++) { // a few passes so it reads as a solid border
+            com.jrpetty.mcassistant.item.ZoneMarkerItem.outline(sl, workZone,
+                net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER);
+        }
     }
 
     /**
@@ -1861,11 +1876,22 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
         // Running costs — rations and a core charge. Dry means downing tools.
         if (!payUpkeep()) return false;
-        // Wandered off (a retreat, a chase)? Head back to the zone first.
-        int leash = (workZone != null ? workZone.workRadius() : STATION_RADIUS) + 6;
-        if (st.distSqr(blockPosition()) > (double) leash * leash) {
-            getNavigation().moveTo(st.getX() + 0.5, st.getY(), st.getZ() + 0.5, 1.1D);
-            return true;
+        // Stay on the patch. With a zone the boundary is the zone itself — step
+        // outside the box (a chase, a retreat, a vein that ran on) and the next
+        // thing this bot does is walk back in. Without one, fall back to a
+        // radius around the post.
+        if (workZone != null) {
+            if (!workZone.containsColumn(blockPosition())) {
+                BlockPos back = workZone.center();
+                getNavigation().moveTo(back.getX() + 0.5, back.getY(), back.getZ() + 0.5, 1.1D);
+                return true;
+            }
+        } else {
+            int leash = STATION_RADIUS + 6;
+            if (st.distSqr(blockPosition()) > (double) leash * leash) {
+                getNavigation().moveTo(st.getX() + 0.5, st.getY(), st.getZ() + 0.5, 1.1D);
+                return true;
+            }
         }
         if (stationDepositDue()) return true;
         switch (stationTask) {

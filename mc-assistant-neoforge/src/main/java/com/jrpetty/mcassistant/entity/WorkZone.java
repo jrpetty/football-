@@ -27,6 +27,17 @@ public record WorkZone(BlockPos min, BlockPos max, int depth) {
         return new WorkZone(min, max, Math.max(-60, Math.min(200, depth)));
     }
 
+    /** A square patch centred on a point — how the management screen sets one. */
+    public static WorkZone around(BlockPos center, int radius, int depth) {
+        int r = Math.max(4, Math.min(MAX_SIDE / 2, radius));
+        return of(center.offset(-r, -4, -r), center.offset(r, 4, r), depth);
+    }
+
+    /** Half the shorter side — the radius the screen's -/+ buttons adjust. */
+    public int radius() {
+        return Math.max(1, Math.min(sizeX(), sizeZ()) / 2);
+    }
+
     /** Grow the box so it also covers `pos` — how the marker extends a zone. */
     public WorkZone including(BlockPos pos) {
         return of(new BlockPos(Math.min(min.getX(), pos.getX()), Math.min(min.getY(), pos.getY()), Math.min(min.getZ(), pos.getZ())),
@@ -51,6 +62,15 @@ public record WorkZone(BlockPos min, BlockPos max, int depth) {
     public boolean overlaps(WorkZone other) {
         return min.getX() <= other.max.getX() && max.getX() >= other.min.getX()
             && min.getZ() <= other.max.getZ() && max.getZ() >= other.min.getZ();
+    }
+
+    /** Inside the footprint, at ANY height — the boundary a working bot is held
+     *  to. Deliberately ignores Y: a miner sinking a shaft to bedrock is still
+     *  on its own patch, and checking the full box would drag it back up its
+     *  own staircase forever. */
+    public boolean containsColumn(BlockPos pos) {
+        return pos.getX() >= min.getX() && pos.getX() <= max.getX()
+            && pos.getZ() >= min.getZ() && pos.getZ() <= max.getZ();
     }
 
     public BlockPos center() {

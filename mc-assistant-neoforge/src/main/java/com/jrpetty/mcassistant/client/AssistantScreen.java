@@ -30,7 +30,7 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
     public AssistantScreen(AssistantMenu menu, Inventory playerInv, Component title) {
         super(menu, playerInv, title);
         this.imageWidth = 176;
-        this.imageHeight = 242;
+        this.imageHeight = 260;
         this.inventoryLabelY = this.imageHeight - 94; // unused label, kept sane
     }
 
@@ -60,6 +60,14 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
         this.depthDown = addButton(x + 130, y + 114, 18, bh, "-", AssistantMenu.BTN_DEPTH_DOWN);
         this.depthUp = addButton(x + 150, y + 114, 18, bh, "+", AssistantMenu.BTN_DEPTH_UP);
         this.setHome = addButton(x + 130, y + 114, 38, bh, "Drop", AssistantMenu.BTN_SET_HOME);
+
+        // Area row: set and size the patch without crafting anything. "Area"
+        // claims a zone centred on where YOU are standing — walk to the middle
+        // of the field, click, done — and -/+ resize it in place.
+        addButton(x + 8, y + 132, 62, bh, "Set Area", AssistantMenu.BTN_ZONE_HERE);
+        addButton(x + 72, y + 132, 30, bh, "-", AssistantMenu.BTN_ZONE_SHRINK);
+        addButton(x + 104, y + 132, 30, bh, "+", AssistantMenu.BTN_ZONE_GROW);
+        addButton(x + 136, y + 132, 32, bh, "Show", AssistantMenu.BTN_ZONE_SHOW);
         refreshJobButtons(a == null ? 0 : a.clientJobOrdinal());
     }
 
@@ -115,7 +123,7 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
         for (int i = 0; i < AssistantInventoryContainer.EQUIP; i++) {
             drawSlot(g, x + 8 + i * 18, y + 78);
         }
-        int invY = 160;
+        int invY = 178;
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) drawSlot(g, x + 8 + col * 18, y + invY + row * 18);
         }
@@ -133,21 +141,37 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
     protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
         g.drawString(this.font, this.title, 8, 6, 0x404040, false);
         AssistantEntity a = this.menu.getAssistant();
+
+        // Mode sits on the title line, right-aligned. It used to be drawn at
+        // y=68 — on top of the third row of backpack slots — and the equipment
+        // caption ran off the right-hand edge of the panel entirely.
         String mode = a != null ? a.getMode().name() : "?";
-        g.drawString(this.font, Component.literal("Mode: " + mode), 8, 68, 0x404040, false);
-        g.drawString(this.font, Component.literal("armor + hands →"), 8 + 6 * 18 + 2, 82, 0x606060, false);
+        g.drawString(this.font, Component.literal(mode),
+            imageWidth - 8 - this.font.width(mode), 6, 0x707070, false);
+        g.drawString(this.font, Component.literal("gear"), 8 + 6 * 18 + 4, 82, 0x606060, false);
 
         // --- Specialisation readout (synced from the entity, so it's live) ---
         if (a == null) return;
         AssistantEntity.StationTask job = AssistantEntity.StationTask.byOrdinal(a.clientJobOrdinal());
-        g.drawString(this.font, Component.literal(job.title + " · " + a.clientZone()),
-            8, 136, 0x303030, false);
+        g.drawString(this.font, Component.literal(trim(job.title + " · " + a.clientZone())),
+            8, 154, 0x303030, false);
 
         String status = a.clientStatus();
         int colour = status.startsWith("Working") ? 0x1F7A34   // green: earning its keep
             : status.startsWith("Needs") || status.startsWith("Out of") ? 0x9C2B18  // red: blocked
             : 0x7A5A10;                                                            // amber: still setting up
-        g.drawString(this.font, Component.literal(status), 8, 148, colour, false);
+        g.drawString(this.font, Component.literal(trim(status)), 8, 165, colour, false);
+    }
+
+    /** Clip a readout to the panel so nothing spills onto the world behind it. */
+    private String trim(String text) {
+        int max = imageWidth - 16;
+        if (this.font.width(text) <= max) return text;
+        String cut = text;
+        while (cut.length() > 3 && this.font.width(cut + "...") > max) {
+            cut = cut.substring(0, cut.length() - 1);
+        }
+        return cut + "...";
     }
 
     @Override

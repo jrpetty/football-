@@ -35,6 +35,11 @@ public class AssistantMenu extends AbstractContainerMenu {
     public static final int BTN_DEPTH_DOWN = 9;
     public static final int BTN_DEPTH_UP = 10;
     public static final int BTN_SET_HOME = 11;
+    // Work area, set from the screen — no crafting required.
+    public static final int BTN_ZONE_HERE = 12;
+    public static final int BTN_ZONE_SHRINK = 13;
+    public static final int BTN_ZONE_GROW = 14;
+    public static final int BTN_ZONE_SHOW = 15;
 
     private final Container container;
     @Nullable private final AssistantEntity assistant;
@@ -79,7 +84,7 @@ public class AssistantMenu extends AbstractContainerMenu {
         }
 
         // Player inventory (3 rows) + hotbar. Left low enough for two button rows.
-        int invY = 160; // leaves room for the specialisation panel above
+        int invY = 178; // leaves room for the specialisation + area rows above
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
                 this.addSlot(new Slot(playerInv, col + row * 9 + 9, 8 + col * 18, invY + row * 18));
@@ -167,6 +172,21 @@ public class AssistantMenu extends AbstractContainerMenu {
         assistant.say("On it — working my patch as your " + assistant.stationTask().title.toLowerCase() + ".");
     }
 
+    /** Grow or shrink the patch in place, keeping its centre. */
+    private void resizeZone(Player player, int delta) {
+        if (assistant == null) return;
+        com.jrpetty.mcassistant.entity.WorkZone zone = assistant.workZone();
+        if (zone == null) {
+            assistant.say("No patch yet — stand in the middle of the ground you want and press Set Area.");
+            return;
+        }
+        int r = Math.max(4, Math.min(60, zone.radius() + delta));
+        assistant.setWorkZone(com.jrpetty.mcassistant.entity.WorkZone.around(
+            zone.center(), r, zone.depth()));
+        assistant.showZoneTo(player);
+        assistant.say("Patch is now " + assistant.workZone().describe() + ".");
+    }
+
     /** Miner only: how deep the shaft goes. */
     private void adjustDepth(int delta) {
         if (assistant == null) return;
@@ -219,6 +239,27 @@ public class AssistantMenu extends AbstractContainerMenu {
             case BTN_SET_HOME -> {
                 assistant.setHome(player.blockPosition());
                 assistant.say("Drop-off set here — I'll bring every load to this spot.");
+            }
+            // --- work area, straight from the screen ---
+            case BTN_ZONE_HERE -> {
+                int r = assistant.workZone() != null ? assistant.workZone().radius() : 12;
+                assistant.setWorkZone(com.jrpetty.mcassistant.entity.WorkZone.around(
+                    player.blockPosition(), r, assistant.workZone() != null
+                        ? assistant.workZone().depth()
+                        : com.jrpetty.mcassistant.entity.WorkZone.DEFAULT_DEPTH));
+                assistant.showZoneTo(player);
+                assistant.say("This is my patch now — " + assistant.workZone().describe()
+                    + ". I'll stay inside it.");
+            }
+            case BTN_ZONE_SHRINK -> resizeZone(player, -4);
+            case BTN_ZONE_GROW -> resizeZone(player, 4);
+            case BTN_ZONE_SHOW -> {
+                if (assistant.workZone() == null) {
+                    assistant.say("No patch set yet — stand where you want the middle and press Set Area.");
+                } else {
+                    assistant.showZoneTo(player);
+                    assistant.say("That's my patch — " + assistant.workZone().describe() + ".");
+                }
             }
             default -> { return false; }
         }

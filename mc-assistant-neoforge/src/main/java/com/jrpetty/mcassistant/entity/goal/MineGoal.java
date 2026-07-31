@@ -190,9 +190,14 @@ public class MineGoal extends Goal {
             }
             planStep(cursor.relative(dir).below());
         } else {
-            if (tunnelSteps >= TUNNEL_LENGTH) {
+            // Stop at the edge of the assigned patch as well as at length — a
+            // stationed miner's gallery must not tunnel out from under a
+            // neighbour's farm.
+            boolean leavingZone = !assistant.inZoneColumn(cursor.relative(dir));
+            if (tunnelSteps >= TUNNEL_LENGTH || leavingZone) {
                 finish("Mine's done — " + blocksMined + " blocks dug, " + oresMined
-                    + " ore collected. Say \"go home\" or \"deposit\" when you want it stashed.");
+                    + " ore collected"
+                    + (leavingZone ? " (that's the edge of my patch)." : "."));
                 return;
             }
             planStep(cursor.relative(dir));
