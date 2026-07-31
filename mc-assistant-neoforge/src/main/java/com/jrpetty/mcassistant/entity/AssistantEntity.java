@@ -205,7 +205,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b31 · job-loop fixes: stationed bots no longer narrate every cycle (repeats hushed for ~5 min, new problems always get through) · Follow/Stay now actually take a specialist off the job · fisher searches wider for its water · storekeeper sorts on a cooldown · upkeep is clock-based so rations/charges really are spent · usability pass: picking a job is now ALL you do — the bot claims the ground around it and starts "
+        "2026-07-b32 · the farmer now really uses (and wears out) the hoe it asks for · job-loop fixes: stationed bots no longer narrate every cycle (repeats hushed for ~5 min, new problems always get through) · Follow/Stay now actually take a specialist off the job · fisher searches wider for its water · storekeeper sorts on a cooldown · upkeep is clock-based so rations/charges really are spent · usability pass: picking a job is now ALL you do — the bot claims the ground around it and starts "
         + "working the moment it has its tools (Zone Marker only if you want a different patch) · zones are drawn in particles "
         + "while you hold a marker · the job button names the job · Follow/Stay back on the screen · ⚠/⚒ on the nametag "
         + "shows who is stuck at a glance · nine jobs · running costs (rations + a redstone core charge) · veteran levels · "
@@ -891,6 +891,27 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             this.setItemSlot(EquipmentSlot.MAINHAND, inventory.get(bestIdx));
             inventory.set(bestIdx, old);
         }
+    }
+
+    /** Put a specific kind of tool in hand by item-id suffix ("_hoe", "_axe").
+     *  Lets a job use — and wear out — the exact tool it asked the player for,
+     *  even when that tool isn't the fastest thing in the pack. */
+    public boolean equipToolNamed(String suffix) {
+        if (net.minecraft.core.registries.BuiltInRegistries.ITEM
+                .getKey(getMainHandItem().getItem()).getPath().endsWith(suffix)) {
+            return true; // already holding one
+        }
+        for (int i = 0; i < inventory.size(); i++) {
+            ItemStack s = inventory.get(i);
+            if (s.isEmpty()) continue;
+            if (!net.minecraft.core.registries.BuiltInRegistries.ITEM
+                    .getKey(s.getItem()).getPath().endsWith(suffix)) continue;
+            ItemStack old = this.getMainHandItem();
+            this.setItemSlot(EquipmentSlot.MAINHAND, s);
+            inventory.set(i, old);
+            return true;
+        }
+        return false;
     }
 
     /** Ticks of work to break this block with the current tool (player-ish pacing). */
@@ -1796,7 +1817,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case GUARD -> {
                 // Hold the ground: engage hostiles in the watch radius (creepers
                 // only from range), sweep the drops, and keep the area lit.
-                Monster m = nearestMonster(STATION_RADIUS);
+                // A guard denies its whole patch, not just arm's reach — watch
+                // out to the zone's edge (capped so a huge claim stays sane).
+                Monster m = nearestMonster(workZone != null
+                    ? Math.min(32, Math.max(STATION_RADIUS, workZone.workRadius())) : STATION_RADIUS);
                 if (m != null && !shouldDisengage()
                     && (!(m instanceof Creeper) || (hasBow() && hasArrows()))) {
                     setTarget(m);
@@ -1895,7 +1919,33 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             }
             case NONE -> { }
         }
+        // Nothing to do right where it's stood. On a zone bigger than its own
+        // search radius that doesn't mean the zone is finished — it means this
+        // corner is. Drift to another part of the patch so a big farm or forest
+        // gets worked end to end instead of hollowed out in the middle.
+        if (workZone != null && workZone.workRadius() > 16 && getNavigation().isDone()) {
+            BlockPos spot = randomSpotInZone();
+            if (spot != null && spot.distSqr(blockPosition()) > 64) {
+                getNavigation().moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 1.0D);
+                return true;
+            }
+        }
         return false; // nothing ready — crops/saplings still growing, herd resting
+    }
+
+    /** A random walkable-ish spot inside the work zone, for patrolling a big patch. */
+    @Nullable
+    private BlockPos randomSpotInZone() {
+        if (workZone == null) return null;
+        net.minecraft.util.RandomSource rnd = getRandom();
+        for (int attempt = 0; attempt < 6; attempt++) {
+            int x = workZone.min().getX() + rnd.nextInt(Math.max(1, workZone.sizeX()));
+            int z = workZone.min().getZ() + rnd.nextInt(Math.max(1, workZone.sizeZ()));
+            int y = level().getHeight(
+                net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+            if (y > level().getMinBuildHeight() + 1) return new BlockPos(x, y, z);
+        }
+        return null;
     }
 
     /** Raw or block-form ore the smeltery keeper takes as input. */
@@ -3099,12 +3149,17 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             // Survival ALWAYS runs — never held off by the idle-work cool-off; a
             // hungry / toolless / full-pack bot must be free to act. Only the
             // discretionary tiers (progress / role / town) respect the backoff.
-            if (!decideSurvival()) {
-                if (stationTask != StationTask.NONE && stationPos != null) {
-                    // A stationed specialist works its post and nothing else — no
-                    // tech-tree side quests, no exploring away from its plot.
-                    if (tickCount >= idleBackoffUntil) decideStation();
-                } else {
+            // A stationed specialist works its post and NOTHING else. Crucially
+            // it skips the survival brain: those rungs would send a farmer off
+            // hunting for a food stockpile, a fisher off chopping wood, or any
+            // of them off crafting a pickaxe they don't need — abandoning the
+            // zone the player fenced off. A specialist's kit and upkeep are the
+            // player's job, which is exactly what the checklist is for; it still
+            // eats to heal, stashes when full, and defends itself.
+            if (stationTask != StationTask.NONE && stationPos != null) {
+                if (tickCount >= idleBackoffUntil) decideStation();
+            } else if (!decideSurvival()) {
+                {
                     if (tickCount >= idleBackoffUntil) {
                         if (townMember && role != Role.NONE) {
                             // Town duty first; if the board has no need and no role work,

@@ -213,6 +213,12 @@ public class FarmGoal extends Goal {
 
     private void doTillAndPlant(BlockPos pos) {
         // Till the ground into farmland, then plant the first seed we carry.
+        // Tilling wears a hoe, like a player's would — so the hoe a stationed
+        // farmer asks for is a real, consumable part of running the farm rather
+        // than a token in its pack.
+        if (assistant.equipToolNamed("_hoe")) {
+            assistant.damageHeldTool();
+        }
         assistant.level().setBlockAndUpdate(pos, Blocks.FARMLAND.defaultBlockState());
         for (Map.Entry<Item, Block> e : PLANT.entrySet()) {
             if (assistant.removeMatching(s -> s.is(e.getKey()), 1) == 1) {
