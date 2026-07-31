@@ -60,9 +60,12 @@ public final class ItemHistoryScreen extends Screen {
     private static final int HEADER_HEIGHT = 40;
     private static final int TAB_HEIGHT = 18;
     private static final int FOOTER_HEIGHT = 26;
+    /** Gap between the two overview columns. */
+    private static final int GUTTER = 22;
 
     // Surfaces dark enough that the accent colours carry.
-    private static final int SURFACE = 0xF2101216;
+    private static final int SURFACE = 0xFF0E1014;
+    private static final int SURFACE_HEADER = 0xFF15181D;
     private static final int ROW_ALT = 0x0CFFFFFF;
     private static final int DIVIDER = 0x1AFFFFFF;
     private static final int TEXT = 0xFFE8E8E8;
@@ -179,15 +182,20 @@ public final class ItemHistoryScreen extends Screen {
         int accent = Emblems.borderColour(snapshot.currentTierIndex());
 
         graphics.fill(left, top, left + PANEL_WIDTH, top + PANEL_HEIGHT, SURFACE);
+        // Header sits on its own slightly lighter band so the title reads as a
+        // title rather than as the first line of content.
+        graphics.fill(left, top, left + PANEL_WIDTH, top + HEADER_HEIGHT, SURFACE_HEADER);
         // A tier-coloured rule along the top: the one place the tier colours the
         // whole frame, rather than tinting every value on the screen.
         graphics.fill(left, top, left + PANEL_WIDTH, top + 2, accent);
         graphics.renderOutline(left, top, PANEL_WIDTH, PANEL_HEIGHT, 0x33FFFFFF);
 
+        // Widgets first. Everything of ours is drawn after, so a button can
+        // neither wash out the header nor bury the active-tab underline.
+        super.render(graphics, mouseX, mouseY, partialTick);
+
         renderHeader(graphics, accent);
         renderTabIndicator(graphics, accent);
-
-        super.render(graphics, mouseX, mouseY, partialTick);
 
         switch (tab) {
             case OVERVIEW -> renderOverview(graphics);
@@ -198,32 +206,44 @@ public final class ItemHistoryScreen extends Screen {
     }
 
     private void renderHeader(GuiGraphics graphics, int accent) {
-        String title = snapshot.customName().isEmpty()
-                ? Labels.prettyId(snapshot.itemTypeId())
-                : snapshot.customName();
+        boolean named = !snapshot.customName().isEmpty();
+        String title = named ? snapshot.customName() : Labels.prettyId(snapshot.itemTypeId());
 
         graphics.pose().pushPose();
-        graphics.pose().translate(left + 12, top + 8, 0);
-        graphics.pose().scale(1.25f, 1.25f, 1.0f);
-        graphics.drawString(font, trim(title, 230), 0, 0, TEXT, false);
+        graphics.pose().translate(left + 12, top + 7, 0);
+        graphics.pose().scale(1.3f, 1.3f, 1.0f);
+        graphics.drawString(font, trim(title, 200), 0, 0, TEXT);
         graphics.pose().popPose();
 
-        graphics.drawString(font, Labels.prettyId(snapshot.itemTypeId()), left + 12, top + 24, TEXT_DIM, false);
+        // Only worth a second line when it says something the title does not:
+        // the item type under a custom name, or the upgrade path, or how it
+        // came to be tracked.
+        String subtitle;
+        if (named) {
+            subtitle = Labels.prettyId(snapshot.itemTypeId());
+        } else if (!snapshot.originalItemTypeId().equals(snapshot.itemTypeId())) {
+            subtitle = "Originally " + Labels.prettyId(snapshot.originalItemTypeId());
+        } else {
+            subtitle = originLabel();
+        }
+        graphics.drawString(font, subtitle, left + 12, top + 25, TEXT_DIM);
 
         // Tier badge, right-aligned and boxed so it reads as a label rather
         // than more body text.
         if (snapshot.currentTierIndex() >= 0) {
             MilestoneTier tier = MilestoneTier.byIndex(snapshot.currentTierIndex());
             String badge = Emblems.glyph(tier) + " " + tier.displayName().toUpperCase(Locale.ENGLISH);
-            int badgeWidth = font.width(badge) + 14;
+            int badgeWidth = font.width(badge) + 16;
             int badgeX = left + PANEL_WIDTH - badgeWidth - 12;
-            graphics.fill(badgeX, top + 12, badgeX + badgeWidth, top + 27, 0x33000000);
-            graphics.fill(badgeX, top + 12, badgeX + 2, top + 27, accent);
-            graphics.drawString(font, badge, badgeX + 8, top + 16, accent, false);
+            graphics.fill(badgeX, top + 11, badgeX + badgeWidth, top + 28, 0xFF23272E);
+            graphics.fill(badgeX, top + 11, badgeX + 3, top + 28, accent);
+            graphics.drawString(font, badge, badgeX + 9, top + 16, accent);
         } else {
             String badge = "UNPROVEN";
-            graphics.drawString(font, badge, left + PANEL_WIDTH - font.width(badge) - 14, top + 16,
-                    TEXT_FAINT, false);
+            int badgeWidth = font.width(badge) + 16;
+            int badgeX = left + PANEL_WIDTH - badgeWidth - 12;
+            graphics.fill(badgeX, top + 11, badgeX + badgeWidth, top + 28, 0xFF1C1F24);
+            graphics.drawString(font, badge, badgeX + 8, top + 16, TEXT_DIM);
         }
 
         graphics.fill(left + 1, top + HEADER_HEIGHT - 1, left + PANEL_WIDTH - 1, top + HEADER_HEIGHT, DIVIDER);
@@ -242,8 +262,8 @@ public final class ItemHistoryScreen extends Screen {
     // ------------------------------------------------------------------
 
     private void renderOverview(GuiGraphics graphics) {
-        int columnWidth = (PANEL_WIDTH - 28) / 2;
-        int rightX = left + 16 + columnWidth;
+        int columnWidth = (PANEL_WIDTH - 24 - GUTTER) / 2;
+        int rightX = left + 12 + columnWidth + GUTTER;
 
         int y = sectionHeading(graphics, "Provenance", left + 12, contentTop());
         y = detailRow(graphics, left + 12, y, columnWidth, "Crafted by", snapshot.crafterName());
@@ -275,22 +295,22 @@ public final class ItemHistoryScreen extends Screen {
         graphics.pose().pushPose();
         graphics.pose().translate(left + 22, belowY + 6, 0);
         graphics.pose().scale(1.6f, 1.6f, 1.0f);
-        graphics.drawString(font, value, 0, 0, TEXT, false);
+        graphics.drawString(font, value, 0, 0, TEXT);
         graphics.pose().popPose();
 
         int valueWidth = (int) (font.width(value) * 1.6f);
-        graphics.drawString(font, label, left + 22 + valueWidth + 10, belowY + 11, TEXT_DIM, false);
+        graphics.drawString(font, label, left + 22 + valueWidth + 10, belowY + 11, TEXT_DIM);
     }
 
     private int sectionHeading(GuiGraphics graphics, String text, int x, int y) {
-        graphics.drawString(font, text.toUpperCase(Locale.ENGLISH), x, y, TEXT_FAINT, false);
+        graphics.drawString(font, text.toUpperCase(Locale.ENGLISH), x, y, TEXT_FAINT);
         return y + 12;
     }
 
     private int detailRow(GuiGraphics graphics, int x, int y, int width, String label, String value) {
-        graphics.drawString(font, label, x, y, TEXT_DIM, false);
+        graphics.drawString(font, label, x, y, TEXT_DIM);
         String shown = trim(value, width - font.width(label) - 14);
-        graphics.drawString(font, shown, x + width - font.width(shown), y, TEXT, false);
+        graphics.drawString(font, shown, x + width - font.width(shown), y, TEXT);
         return y + 12;
     }
 
@@ -305,11 +325,11 @@ public final class ItemHistoryScreen extends Screen {
         String heading = showOwnerView
                 ? "Current owner — " + snapshot.ownerDisplayName()
                 : "Overall item — every contributor combined";
-        graphics.drawString(font, heading, left + 12, y, showOwnerView ? OWNER_GREEN : TEXT, false);
+        graphics.drawString(font, heading, left + 12, y, showOwnerView ? OWNER_GREEN : TEXT);
         y += 14;
 
         if (stats.isEmpty()) {
-            graphics.drawString(font, "Nothing recorded yet.", left + 12, y, TEXT_FAINT, false);
+            graphics.drawString(font, "Nothing recorded yet.", left + 12, y, TEXT_FAINT);
             return;
         }
 
@@ -345,7 +365,7 @@ public final class ItemHistoryScreen extends Screen {
                 }
                 break;
             }
-            drawStatCard(graphics, cardX, cardY, columnWidth - columnGap, 16, id, value, false);
+            drawStatCard(graphics, cardX, cardY, columnWidth - columnGap, 16, id, value);
             if (nextIsLeft) {
                 leftY = cardY + 18;
             } else {
@@ -358,7 +378,7 @@ public final class ItemHistoryScreen extends Screen {
             int footerY = Math.max(leftY, rightY) + 2;
             if (footerY + 10 <= contentBottom()) {
                 graphics.drawString(font, "Most common: " + Labels.prettyId(snapshot.mostFrequentPrimary()),
-                        left + 12, footerY, TEXT_FAINT, false);
+                        left + 12, footerY, TEXT_FAINT);
             }
         }
     }
@@ -377,18 +397,18 @@ public final class ItemHistoryScreen extends Screen {
         String label = Labels.of(statId);
 
         if (headline) {
-            graphics.drawString(font, label, x + 10, y + 7, TEXT_DIM, false);
+            graphics.drawString(font, label, x + 10, y + 7, TEXT_DIM);
             float scale = 1.35f;
             int valueWidth = (int) (font.width(value) * scale);
             graphics.pose().pushPose();
             graphics.pose().translate(x + width - valueWidth - 8, y + 5, 0);
             graphics.pose().scale(scale, scale, 1.0f);
-            graphics.drawString(font, value, 0, 0, TEXT, false);
+            graphics.drawString(font, value, 0, 0, TEXT);
             graphics.pose().popPose();
         } else {
             int textY = y + (height - 8) / 2;
-            graphics.drawString(font, trim(label, width - font.width(value) - 26), x + 10, textY, TEXT_DIM, false);
-            graphics.drawString(font, value, x + width - font.width(value) - 7, textY, TEXT, false);
+            graphics.drawString(font, trim(label, width - font.width(value) - 26), x + 10, textY, TEXT_DIM);
+            graphics.drawString(font, value, x + width - font.width(value) - 7, textY, TEXT);
         }
     }
 
@@ -399,6 +419,7 @@ public final class ItemHistoryScreen extends Screen {
     private void renderMilestones(GuiGraphics graphics) {
         int y = contentTop();
         int railX = left + 20;
+        int thresholdRight = left + 230;
 
         // A rail joining the tiers, so the ladder reads as a path rather than a
         // list of unrelated lines.
@@ -415,15 +436,17 @@ public final class ItemHistoryScreen extends Screen {
                 graphics.fill(railX - 2, y + 2, railX + 3, y + 7, SURFACE);
             }
 
-            graphics.drawString(font, tier.displayName(), railX + 12, y, done ? TEXT : TEXT_FAINT, false);
+            graphics.drawString(font, tier.displayName(), railX + 12, y, done ? TEXT : TEXT_FAINT);
 
+            // Right-aligned in a column of its own, well clear of the longest
+            // tier name.
             String requirement = Labels.number(entry.threshold());
-            graphics.drawString(font, requirement, railX + 110 - font.width(requirement), y,
-                    done ? TEXT_DIM : TEXT_FAINT, false);
+            graphics.drawString(font, requirement, thresholdRight - font.width(requirement), y,
+                    done ? TEXT_DIM : TEXT_FAINT);
 
             if (done && entry.achievedEpochMilli() > 0) {
                 String date = DATE_FORMAT.format(Instant.ofEpochMilli(entry.achievedEpochMilli()));
-                graphics.drawString(font, date, left + PANEL_WIDTH - font.width(date) - 14, y, TEXT_FAINT, false);
+                graphics.drawString(font, date, left + PANEL_WIDTH - font.width(date) - 14, y, TEXT_FAINT);
             }
             y += 14;
         }
@@ -437,7 +460,7 @@ public final class ItemHistoryScreen extends Screen {
 
         if (next < 0) {
             graphics.drawString(font, "This item is a Server Relic. The ladder ends here.",
-                    left + 12, y, Emblems.borderColour(snapshot.currentTierIndex()), false);
+                    left + 12, y, Emblems.borderColour(snapshot.currentTierIndex()));
             return;
         }
 
@@ -446,8 +469,8 @@ public final class ItemHistoryScreen extends Screen {
         fraction = Math.max(0.0d, Math.min(1.0d, fraction));
 
         String progress = Labels.number(value) + " / " + Labels.number(next);
-        graphics.drawString(font, "Next: " + Labels.of(snapshot.primaryStatId()), left + 12, y, TEXT_DIM, false);
-        graphics.drawString(font, progress, left + PANEL_WIDTH - font.width(progress) - 14, y, TEXT, false);
+        graphics.drawString(font, "Next: " + Labels.of(snapshot.primaryStatId()), left + 12, y, TEXT_DIM);
+        graphics.drawString(font, progress, left + PANEL_WIDTH - font.width(progress) - 14, y, TEXT);
         y += 12;
 
         int barWidth = PANEL_WIDTH - 26;
@@ -460,7 +483,7 @@ public final class ItemHistoryScreen extends Screen {
 
         graphics.drawString(font, String.format(Locale.ENGLISH, "%.1f%% of the way to %s",
                         fraction * 100.0d, MilestoneTier.byIndex(nextTierIndex).displayName()),
-                left + 13, y, TEXT_FAINT, false);
+                left + 13, y, TEXT_FAINT);
     }
 
     // ------------------------------------------------------------------
@@ -476,10 +499,10 @@ public final class ItemHistoryScreen extends Screen {
         int distanceRight = left + PANEL_WIDTH - 14;
 
         String primaryHeader = Labels.of(snapshot.primaryStatId()).toUpperCase(Locale.ENGLISH);
-        graphics.drawString(font, "PLAYER", nameX, y, TEXT_FAINT, false);
-        graphics.drawString(font, primaryHeader, primaryRight - font.width(primaryHeader), y, TEXT_FAINT, false);
-        graphics.drawString(font, "REPAIRS", repairsRight - font.width("REPAIRS"), y, TEXT_FAINT, false);
-        graphics.drawString(font, "DISTANCE", distanceRight - font.width("DISTANCE"), y, TEXT_FAINT, false);
+        graphics.drawString(font, "PLAYER", nameX, y, TEXT_FAINT);
+        graphics.drawString(font, primaryHeader, primaryRight - font.width(primaryHeader), y, TEXT_FAINT);
+        graphics.drawString(font, "REPAIRS", repairsRight - font.width("REPAIRS"), y, TEXT_FAINT);
+        graphics.drawString(font, "DISTANCE", distanceRight - font.width("DISTANCE"), y, TEXT_FAINT);
         y += 11;
         graphics.fill(left + 12, y, left + PANEL_WIDTH - 12, y + 1, DIVIDER);
         y += 5;
@@ -501,20 +524,20 @@ public final class ItemHistoryScreen extends Screen {
                 graphics.fill(left + 12, y - 2, left + 14, y + 10, 0xFF7FD07F);
             }
 
-            graphics.drawString(font, String.valueOf(rank++), left + 17, y, TEXT_FAINT, false);
+            graphics.drawString(font, String.valueOf(rank++), left + 17, y, TEXT_FAINT);
 
             String suffix = row.isOwner() ? " (owner)" : row.isCrafter() ? " (maker)" : "";
             String name = trim(row.name() + suffix, 150);
-            graphics.drawString(font, name, nameX, y, row.isOwner() ? OWNER_GREEN : TEXT, false);
+            graphics.drawString(font, name, nameX, y, row.isOwner() ? OWNER_GREEN : TEXT);
 
             String primary = Labels.number(row.primary());
-            graphics.drawString(font, primary, primaryRight - font.width(primary), y, TEXT, false);
+            graphics.drawString(font, primary, primaryRight - font.width(primary), y, TEXT);
 
             String repairs = Labels.number(row.repairs());
-            graphics.drawString(font, repairs, repairsRight - font.width(repairs), y, TEXT_DIM, false);
+            graphics.drawString(font, repairs, repairsRight - font.width(repairs), y, TEXT_DIM);
 
             String distance = formatDistance(row.distanceCm());
-            graphics.drawString(font, distance, distanceRight - font.width(distance), y, TEXT_DIM, false);
+            graphics.drawString(font, distance, distanceRight - font.width(distance), y, TEXT_DIM);
 
             y += 12;
         }
@@ -523,7 +546,7 @@ public final class ItemHistoryScreen extends Screen {
                 + (snapshot.contributorTotal() == 1 ? "" : "s")
                 + "   ·   page " + (snapshot.contributorPageIndex() + 1)
                 + " of " + snapshot.contributorPageCount();
-        graphics.drawString(font, footer, left + 12, contentBottom() + 6, TEXT_FAINT, false);
+        graphics.drawString(font, footer, left + 12, contentBottom() + 6, TEXT_FAINT);
     }
 
     // ------------------------------------------------------------------
