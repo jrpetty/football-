@@ -46,6 +46,9 @@ public final class MazeCommands {
                 .then(Commands.literal("griever").executes(ctx -> spawnGriever(ctx.getSource())))
                 .then(Commands.literal("leaderboard").executes(ctx -> leaderboard(ctx.getSource())))
                 .then(Commands.literal("top").executes(ctx -> leaderboard(ctx.getSource())))
+                .then(Commands.literal("race")
+                    .then(Commands.literal("start").executes(ctx -> raceStart(ctx.getSource())))
+                    .then(Commands.literal("stop").executes(ctx -> raceStop(ctx.getSource()))))
                 .then(Commands.literal("validate")
                     .then(Commands.argument("layout", IntegerArgumentType.integer(1, 7))
                         .executes(ctx -> validate(ctx.getSource(),
@@ -96,6 +99,37 @@ public final class MazeCommands {
         return 1;
     }
 
+    /** Starts a synchronised race for everyone online. */
+    private static int raceStart(CommandSourceStack source) {
+        ServerLevel level = maze(source);
+        if (level == null) return 0;
+        MazeWorldState state = MazeWorldState.get(level);
+        if (state.raceRunning()) {
+            source.sendFailure(Component.literal(
+                "A race is already running — /maze race stop to cancel it."));
+            return 0;
+        }
+        int racers = MazeRuntime.beginRace(level);
+        source.sendSuccess(() -> Component.literal(
+            "Race started with " + racers + " runner" + (racers == 1 ? "" : "s") + ".")
+            .withStyle(ChatFormatting.GOLD), true);
+        return racers;
+    }
+
+    private static int raceStop(CommandSourceStack source) {
+        ServerLevel level = maze(source);
+        if (level == null) return 0;
+        MazeWorldState state = MazeWorldState.get(level);
+        if (!state.raceRunning()) {
+            source.sendFailure(Component.literal("No race is running."));
+            return 0;
+        }
+        state.cancelRace();
+        source.sendSuccess(() -> Component.literal("Race cancelled — nothing recorded.")
+            .withStyle(ChatFormatting.YELLOW), true);
+        return 1;
+    }
+
     private static int leaderboard(CommandSourceStack source) {
         ServerLevel level = maze(source);
         if (level == null) return 0;
@@ -106,6 +140,11 @@ public final class MazeCommands {
             return 0;
         }
         StringBuilder sb = new StringBuilder("🏆 Fastest escapes");
+        MazeWorldState st = MazeWorldState.get(level);
+        if (st.raceBestMillis() >= 0) {
+            sb.append("\n Race record: ").append(RunScoring.format(st.raceBestMillis()))
+                .append(" by ").append(st.raceBestHolder());
+        }
         int rank = 1;
         for (var entry : board) {
             sb.append("\n ").append(rank++).append(". ").append(entry.name())
@@ -147,6 +186,16 @@ public final class MazeCommands {
         String timer = own + (worldBest >= 0
             ? " · world best " + RunScoring.format(worldBest) : " · no escapes yet");
 
+        long raceElapsed = state.raceElapsed(System.currentTimeMillis());
+        String race = raceElapsed >= 0
+            ? "RUNNING — " + RunScoring.format(raceElapsed) + " elapsed"
+            : "none";
+        if (state.raceBestMillis() >= 0) {
+            race += " · record " + RunScoring.format(state.raceBestMillis())
+                + " by " + state.raceBestHolder();
+        }
+        String raceLine = race;
+
         source.sendSuccess(() -> Component.literal(String.join("\n",
             "Maze — day " + state.dayNumber() + ", layout " + layout.name()
                 + " · fixed exit " + cfg.fixedExitId + " (only walls change)",
@@ -155,6 +204,7 @@ public final class MazeCommands {
                 + WallAnimator.queuedCount(),
             "Grievers loaded: " + MazeRuntime.countGrievers(level),
             "Your run: " + timer,
+            "Race: " + raceLine,
             "Week schedule: " + schedule)).withStyle(ChatFormatting.AQUA), false);
         return 1;
     }

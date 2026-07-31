@@ -764,6 +764,17 @@ public final class MazeRuntime {
                 + " (" + RunScoring.format(RunScoring.penaltyMillis(result.deaths())) + " penalty)")
                 .withStyle(ChatFormatting.GRAY));
         }
+        // If a synchronised race is on, the first runner out takes it.
+        if (state.raceRunning()) {
+            long now = System.currentTimeMillis();
+            boolean record = state.isRaceRecord(state.raceElapsed(now));
+            long winning = state.finishRace(player.getName().getString(), now);
+            broadcast(level, Component.literal(
+                "🏆 RACE OVER — " + player.getName().getString() + " is out first in "
+                    + RunScoring.format(winning) + (record ? " — a new race record!" : "!"))
+                .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+        }
+
         for (ServerPlayer p : level.players()) {
             p.playNotifySound(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.MASTER, 1.0F, 1.0F);
         }
@@ -797,6 +808,42 @@ public final class MazeRuntime {
                     + RunScoring.format(RunScoring.DEATH_PENALTY_MS) + ".")
                 .withStyle(ChatFormatting.YELLOW), false);
         }
+    }
+
+    /**
+     * Starts a synchronised race: every online runner's clock is reset and
+     * started together, so the times are directly comparable and the first one
+     * out of the Maze wins.
+     */
+    public static int beginRace(ServerLevel level) {
+        MazeWorldState state = MazeWorldState.get(level);
+        long now = System.currentTimeMillis();
+        state.startRace(now);
+
+        int racers = 0;
+        BlockPos home = gladeSpawn();
+        for (ServerPlayer player : level.players()) {
+            if (player.isSpectator()) continue;
+            player.teleportTo(home.getX() + 0.5, home.getY(), home.getZ() + 0.5);
+            player.resetFallDistance();
+            state.abandonRun(player.getUUID());
+            state.startRun(player.getUUID(), now);
+            racers++;
+        }
+
+        broadcast(level, Component.literal(
+            "🏁 RACE — everyone back to the Box, clocks start NOW. First runner out of the Maze wins.")
+            .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+        long best = state.raceBestMillis();
+        if (best >= 0) {
+            broadcast(level, Component.literal("   Record to beat: "
+                + RunScoring.format(best) + " by " + state.raceBestHolder())
+                .withStyle(ChatFormatting.GRAY));
+        }
+        for (ServerPlayer p : level.players()) {
+            p.playNotifySound(SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.MASTER, 1.0F, 1.5F);
+        }
+        return racers;
     }
 
     /** Dawn: anyone still out in the Maze lived through a night. */

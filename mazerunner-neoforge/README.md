@@ -38,6 +38,19 @@ which is also world spawn and death respawn (768, 61, 768). Vines and
 mangrove-moss climb the Glade-facing walls. Hostile mobs are automatically
 purged inside the Glade — it is safe ground; the maze is not.
 
+**v1.13 changes (races are back, alongside personal runs)** — the server-wide
+timer returns as a proper **race**, sitting next to the per-player runs rather
+than replacing them.
+
+- **`/maze race start`** pulls everyone back to the Box and starts every
+  runner's clock together, so the times are directly comparable. The **first
+  runner out of the Maze wins**; the winning time is announced and kept as the
+  standing **race record** (shown when the next race starts, in `/maze status`
+  and at the top of `/maze leaderboard`).
+- **`/maze race stop`** cancels a race without recording anything.
+- Personal runs, death penalties and the per-player leaderboard all keep
+  working exactly as they did — a race just synchronises everyone's start.
+
 **v1.12 changes (it's a game now)** — the minigame loop, death stakes and
 advancements.
 
@@ -218,7 +231,8 @@ Quality-of-life on top of the spec:
 | Command | Effect |
 | --- | --- |
 | `/maze start` / `/maze stop` | Restart / abandon your own run |
-| `/maze leaderboard` / `top` | The ten fastest escapes |
+| `/maze leaderboard` / `top` | The ten fastest escapes + the race record |
+| `/maze race start` / `stop` | Start a synchronised race for everyone / cancel it |
 | `/maze status` | Day, layout, doors, clock, timer, week schedule |
 | `/maze validate <1-7>` | BFS-verify a layout is solvable (debug) |
 | `/maze section` | Which of the 8 maze sections you're standing in |

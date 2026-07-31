@@ -45,6 +45,13 @@ public class MazeWorldState extends SavedData {
     public record RunResult(long finalMillis, long elapsedMillis, int deaths,
                             boolean personalBest, boolean worldBest) {}
 
+    // ---- server-wide race ------------------------------------------------
+    /** A race is one synchronised sprint: everyone starts together, first out wins. */
+    private boolean raceRunning = false;
+    private long raceStartMs = 0;
+    private long raceBestMs = -1;
+    private String raceBestHolder = "";
+
     public static MazeWorldState get(ServerLevel level) {
         return level.getDataStorage().computeIfAbsent(
             new SavedData.Factory<>(MazeWorldState::new, MazeWorldState::load, null), ID);
@@ -71,6 +78,11 @@ public class MazeWorldState extends SavedData {
             state.runStart.put(id, t.getLong("startMs"));
             state.runDeaths.put(id, t.getInt("deaths"));
         }
+        state.raceRunning = tag.getBoolean("raceRunning");
+        state.raceStartMs = tag.getLong("raceStartMs");
+        state.raceBestMs = tag.contains("raceBestMs") ? tag.getLong("raceBestMs") : -1;
+        state.raceBestHolder = tag.getString("raceBestHolder");
+
         ListTag board = tag.getList("leaderboard", Tag.TAG_COMPOUND);
         for (int i = 0; i < board.size(); i++) {
             CompoundTag t = board.getCompound(i);
@@ -109,6 +121,11 @@ public class MazeWorldState extends SavedData {
             runs.add(t);
         }
         tag.put("runs", runs);
+
+        tag.putBoolean("raceRunning", raceRunning);
+        tag.putLong("raceStartMs", raceStartMs);
+        tag.putLong("raceBestMs", raceBestMs);
+        tag.putString("raceBestHolder", raceBestHolder);
 
         ListTag board = new ListTag();
         for (Map.Entry<UUID, RunScoring.Entry> e : best.entrySet()) {
@@ -185,6 +202,58 @@ public class MazeWorldState extends SavedData {
         boolean worldBest = RunScoring.isBetter(finalMs, previousWorldBest);
         setDirty();
         return new RunResult(finalMs, elapsed, deaths, personalBest, worldBest);
+    }
+
+    // ------------------------------------------------------------- race
+
+    public boolean raceRunning() {
+        return raceRunning;
+    }
+
+    public void startRace(long nowMs) {
+        this.raceRunning = true;
+        this.raceStartMs = nowMs;
+        setDirty();
+    }
+
+    /** Ends the race without recording anything. */
+    public void cancelRace() {
+        this.raceRunning = false;
+        setDirty();
+    }
+
+    /** Elapsed race time, or -1 if no race is running. */
+    public long raceElapsed(long nowMs) {
+        return raceRunning ? Math.max(0, nowMs - raceStartMs) : -1;
+    }
+
+    /**
+     * Ends the race with a winner. Returns the winning time, or -1 if no race
+     * was running; check {@link #raceBestHolder()} afterwards for the record.
+     */
+    public long finishRace(String winner, long nowMs) {
+        if (!raceRunning) return -1;
+        long elapsed = Math.max(0, nowMs - raceStartMs);
+        raceRunning = false;
+        if (RunScoring.isBetter(elapsed, raceBestMs)) {
+            raceBestMs = elapsed;
+            raceBestHolder = winner;
+        }
+        setDirty();
+        return elapsed;
+    }
+
+    /** True if that time would beat the standing race record. */
+    public boolean isRaceRecord(long millis) {
+        return RunScoring.isBetter(millis, raceBestMs);
+    }
+
+    public long raceBestMillis() {
+        return raceBestMs;
+    }
+
+    public String raceBestHolder() {
+        return raceBestHolder;
     }
 
     /** Snapshot of the persistent leaderboard, best first. */
