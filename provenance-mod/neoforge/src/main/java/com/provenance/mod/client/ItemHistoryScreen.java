@@ -365,7 +365,7 @@ public final class ItemHistoryScreen extends Screen {
                 }
                 break;
             }
-            drawStatCard(graphics, cardX, cardY, columnWidth - columnGap, 16, id, value);
+            drawStatCard(graphics, cardX, cardY, columnWidth - columnGap, 16, id, value, false);
             if (nextIsLeft) {
                 leftY = cardY + 18;
             } else {
