@@ -37,6 +37,20 @@ which is also world spawn and death respawn (768, 61, 768). Vines and
 mangrove-moss climb the Glade-facing walls. Hostile mobs are automatically
 purged inside the Glade — it is safe ground; the maze is not.
 
+**v1.11 changes (the Grievers have a voice)** — you now hear one long before
+you see it, and what you hear tells you how much trouble you are in:
+
+- **Distant** (up to 48 blocks) — grinding machinery somewhere in the corridors.
+- **Stalking** (within 28) — heavy metallic footfalls, positional, so you can
+  take a bearing and run the other way.
+- **Hunting** (within 14, or 28 once it has your scent) — your own heartbeat.
+
+A Griever **roars once when it first locks on**, so you know the moment you've
+been found, and again on every sting. Its whole voice is re-pitched well below
+vanilla — deep ravager growls, iron-golem footfalls — so it reads as something
+big, slow and mechanical rather than a spider. When the doors seal at dusk, a
+distant roar rolls across the Glade.
+
 **v1.10 changes (the maze can no longer be cheated)** —
 
 - **Fixed a game-breaking exploit: you could climb out and walk over the maze.**

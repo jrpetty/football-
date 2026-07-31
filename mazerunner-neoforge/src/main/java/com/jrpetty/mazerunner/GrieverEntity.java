@@ -1,6 +1,10 @@
 package com.jrpetty.mazerunner;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -13,6 +17,7 @@ import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.monster.Spider;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * The Griever — the Maze's nocturnal hunter. A big, fast, tough spider-kin that
@@ -45,8 +50,62 @@ public class GrieverEntity extends Spider {
             victim.addEffect(new MobEffectInstance(MobEffects.POISON, 200, 0));
             victim.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 200, 0));
             victim.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 140, 0));
+            level().playSound(null, this, SoundEvents.RAVAGER_ATTACK, SoundSource.HOSTILE, 1.6F, 0.6F);
         }
         return hit;
+    }
+
+    // ------------------------------------------------------------- voice
+
+    /**
+     * Roars once when it first locks onto a runner — the moment you learn you
+     * have been found. Resets when it loses the scent so it can roar again.
+     */
+    @Override
+    protected void customServerAiStep() {
+        super.customServerAiStep();
+        if (getTarget() != null) {
+            if (!roaring) {
+                roaring = true;
+                // volume 3 → audible ~48 blocks, so it carries down the corridors
+                level().playSound(null, this, SoundEvents.RAVAGER_ROAR, SoundSource.HOSTILE, 3.0F, 0.65F);
+            }
+        } else {
+            roaring = false;
+        }
+    }
+
+    private boolean roaring;
+
+    @Override
+    protected SoundEvent getAmbientSound() {
+        return SoundEvents.RAVAGER_AMBIENT;
+    }
+
+    @Override
+    protected SoundEvent getHurtSound(DamageSource source) {
+        return SoundEvents.RAVAGER_HURT;
+    }
+
+    @Override
+    protected SoundEvent getDeathSound() {
+        return SoundEvents.RAVAGER_DEATH;
+    }
+
+    /** Heavy metallic footfalls — you can hear one coming round a corner. */
+    @Override
+    protected void playStepSound(BlockPos pos, BlockState state) {
+        playSound(SoundEvents.IRON_GOLEM_STEP, 0.7F, 0.75F);
+    }
+
+    @Override
+    protected float getSoundVolume() {
+        return 1.4F;
+    }
+
+    @Override
+    public float getVoicePitch() {
+        return 0.62F; // well below the vanilla source — bigger, slower, wrong
     }
 
     @Override

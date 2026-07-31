@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import com.jrpetty.mazerunner.config.GrieverAudio;
 import com.jrpetty.mazerunner.config.MazeClock;
 import com.jrpetty.mazerunner.config.MazeConfigData;
 import com.jrpetty.mazerunner.config.MazeConfigData.StateBox;
@@ -230,6 +231,7 @@ public final class MazeRuntime {
         if (gameTime % 100 == 0) sweepGlade(level);
         if (gameTime % 20 == 0) manageGrievers(level, state);
         if (gameTime % 20 == 0) enforceWallTops(level);
+        if (gameTime % 20 == 0) grieverAudio(level, state);
         if (gameTime % GRIEVER_SPAWN_INTERVAL == 0) spawnGrievers(level, state);
     }
 
@@ -307,6 +309,52 @@ public final class MazeRuntime {
             if (level.getNearestPlayer(g, GRIEVER_DESPAWN_DIST) == null) { g.discard(); continue; }
             g.addEffect(new MobEffectInstance(MobEffects.GLOWING,
                 MobEffectInstance.INFINITE_DURATION, 0, false, false));
+        }
+    }
+
+    /**
+     * The Maze's soundtrack. Each second every runner hears the nearest Griever
+     * at a volume and cadence set by how close it is and whether it has their
+     * scent: distant grinding somewhere in the corridors, heavy footfalls you
+     * can take a bearing from, or — once it is hunting you — your own heartbeat.
+     */
+    private static void grieverAudio(ServerLevel level, MazeWorldState state) {
+        if (state.doorsOpen()) return;
+        List<? extends GrieverEntity> grievers = allGrievers(level);
+        if (grievers.isEmpty()) return;
+        long second = level.getGameTime() / 20;
+
+        for (ServerPlayer player : level.players()) {
+            if (player.isCreative() || player.isSpectator()) continue;
+            GrieverEntity nearest = null;
+            double bestSqr = Double.MAX_VALUE;
+            for (GrieverEntity g : grievers) {
+                double d = g.distanceToSqr(player);
+                if (d < bestSqr) {
+                    bestSqr = d;
+                    nearest = g;
+                }
+            }
+            if (nearest == null) continue;
+
+            boolean hunting = nearest.getTarget() == player;
+            GrieverAudio.Cue cue = GrieverAudio.cueFor(Math.sqrt(bestSqr), hunting);
+            if (cue == GrieverAudio.Cue.SILENT) continue;
+            if (second % GrieverAudio.intervalSeconds(cue) != 0) continue;
+
+            float volume = GrieverAudio.volumeFor(cue);
+            float pitch = GrieverAudio.pitchFor(cue);
+            switch (cue) {
+                // Heard by the hunted runner alone — it is their pulse, not a place.
+                case HUNTING -> player.playNotifySound(
+                    SoundEvents.WARDEN_HEARTBEAT, SoundSource.HOSTILE, volume, pitch);
+                // Positional, so you can work out which way to run.
+                case STALKING -> level.playSound(null, nearest.getX(), nearest.getY(), nearest.getZ(),
+                    SoundEvents.IRON_GOLEM_STEP, SoundSource.HOSTILE, volume, pitch);
+                case DISTANT -> level.playSound(null, nearest.getX(), nearest.getY(), nearest.getZ(),
+                    SoundEvents.GRINDSTONE_USE, SoundSource.HOSTILE, volume, pitch);
+                default -> { }
+            }
         }
     }
 
@@ -497,6 +545,11 @@ public final class MazeRuntime {
             "☾ Dusk — the Glade doors are sealing. The Grievers are waking in the Maze…")
             .withStyle(ChatFormatting.DARK_PURPLE));
         rumble(level, 0.5F);
+
+        // Somewhere out in the corridors, something wakes up.
+        for (ServerPlayer player : level.players()) {
+            player.playNotifySound(SoundEvents.RAVAGER_ROAR, SoundSource.HOSTILE, 0.7F, 0.5F);
+        }
     }
 
     /** Overnight: diff the walls to the NEXT day's layout, swap gates and portals. */
