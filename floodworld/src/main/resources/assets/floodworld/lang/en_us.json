@@ -1,0 +1,7 @@
+{
+    "commands.floodworld.status": "FloodWorld — rain: %s, active flood cells: %s, saturating columns: %s, paused: %s",
+    "commands.floodworld.paused": "FloodWorld simulation paused.",
+    "commands.floodworld.resumed": "FloodWorld simulation resumed.",
+    "commands.floodworld.cleared": "FloodWorld removed %s mod-placed flood cell(s) in loaded chunks.",
+    "commands.floodworld.disabled": "FloodWorld is inactive: Flowing Fluids is not present or not modifying water."
+}

@@ -1,0 +1,53 @@
+plugins {
+    id 'java'
+    id 'net.neoforged.moddev' version '2.0.78'
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+neoForge {
+    version = project.neoforge_version
+
+    runs {
+        server { server() }
+    }
+
+    mods {
+        floodworld {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+repositories {
+    // Flowing Fluids (traben) is published on Modrinth.
+    maven {
+        url = 'https://api.modrinth.com/maven'
+        content { includeGroup 'maven.modrinth' }
+    }
+}
+
+dependencies {
+    if (project.flowing_fluids_version) {
+        // compileOnly: FloodWorld guards every call behind ModList.isLoaded + an API null check,
+        // so it must still load (dormant) when Flowing Fluids is absent.
+        compileOnly "maven.modrinth:flowing-fluids:${project.flowing_fluids_version}"
+    }
+}
+
+version = project.mod_version
+group = 'com.jrp'
+
+tasks.named('jar') {
+    archiveBaseName = project.mod_id
+    manifest { attributes([:]) }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}
+
+processResources {
+    inputs.property 'version', project.mod_version
+}

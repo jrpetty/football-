@@ -1,0 +1,38 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "All Rights Reserved"
+issueTrackerURL = "https://github.com/jrp/floodworld/issues"
+
+[[mods]]
+modId = "floodworld"
+version = "1.0.0"
+displayName = "FloodWorld"
+authors = "jrp"
+description = '''
+Rain-driven flooding simulation. A companion to the Flowing Fluids mod: when it rains,
+nearby rivers and lakes rise and overflow their banks, puddles form on low ground and flow
+toward the lowest nearby elevation, and water recedes once the rain stops.
+'''
+
+# Flowing Fluids is required for anything to happen, but we depend on it softly so that
+# FloodWorld still loads (and disables itself with a log warning) when it is absent.
+[[dependencies.floodworld]]
+modId = "flowing_fluids"
+type = "optional"
+versionRange = "[1.0,)"
+ordering = "AFTER"
+side = "SERVER"
+
+[[dependencies.floodworld]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.floodworld]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21.1,1.22)"
+ordering = "NONE"
+side = "BOTH"
