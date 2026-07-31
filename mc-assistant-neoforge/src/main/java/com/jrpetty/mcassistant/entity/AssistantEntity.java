@@ -108,11 +108,25 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      *  the post's chest home. Set by "farm here", "chop trees here", "ranch
      *  here", "guard here", "run the smeltery", "haul here". */
     public enum StationTask {
-        NONE("none"), FARM("farming"), WOOD("forestry"), RANCH("ranching"),
-        GUARD("guard duty"), SMELT("smeltery"), HAUL("hauling"), MINE("mining");
+        NONE("none", "Unassigned"),
+        FARM("farming", "Farmer"),
+        WOOD("forestry", "Lumberjack"),
+        MINE("mining", "Miner"),
+        RANCH("ranching", "Rancher"),
+        GUARD("guard duty", "Guard"),
+        SMELT("smeltery", "Smelter"),
+        FISH("fishing", "Fisher"),
+        STORE("storekeeping", "Storekeeper"),
+        HAUL("hauling", "Hauler");
 
-        public final String label;
-        StationTask(String label) { this.label = label; }
+        public final String label;   // lower-case, for sentences
+        public final String title;   // display name, for the management screen
+        StationTask(String label, String title) { this.label = label; this.title = title; }
+
+        public static StationTask byOrdinal(int i) {
+            StationTask[] all = values();
+            return all[Math.floorMod(i, all.length)];
+        }
     }
 
     public enum Role {
@@ -191,10 +205,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b28 · review pass: haulers now carry a traveling chunk window on delivery runs, so unattended trips never stall in "
-        + "unloaded terrain (freed on stand-down/death, survives reloads) · veteran perks: 10% work L10 · +2 hearts + 20% work L20 · "
-        + "20% movement L30 · 30% work L35, slow curve · memory core revival · place-to-spawn spawner · stations never sleep · "
-        + "seven stations · growing homestead";
+        "2026-07-b29 · SPECIALISTS: right-click a bot to pick its job (farmer, lumberjack, miner, rancher, guard, smelter, fisher, "
+        + "storekeeper, hauler), mark its patch with the new Work Zone Marker (two corners, click more to extend; miner depth in the "
+        + "screen), hand it the tools it asks for — then it runs that job unattended · running costs: rations every ~2.5 min and a "
+        + "redstone core charge every ~10 min · manual chat/slash/voice commands parked · veteran levels · memory core revival";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -279,6 +293,144 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private int stationTorchTick = -99999;              // a guard post re-lights its ground rarely
     private int stationBreedTick = -99999;              // pace breeding to the animals' love cooldown
     @Nullable private BlockPos mobileLoadCenter;        // hauler's traveling chunk window (persisted)
+    @Nullable private WorkZone workZone;                // the patch it's assigned to (persisted)
+    private int upkeepFoodTick;                         // work-ticks banked toward the next meal
+    private int upkeepChargeTick;                       // work-ticks banked toward the next core charge
+    private boolean upkeepStalled;                      // out of rations/charge -> not working
+    private int readyCheckTick = -9999;                 // throttle for the requirements scan
+    private java.util.List<String> missingEssentials = java.util.List.of();
+
+    // --- Client-visible job state, so the management screen can show the job,
+    //     its work zone, and what's still missing without any custom packets. ---
+    private static final net.minecraft.network.syncher.EntityDataAccessor<Integer> DATA_JOB =
+        net.minecraft.network.syncher.SynchedEntityData.defineId(
+            AssistantEntity.class, net.minecraft.network.syncher.EntityDataSerializers.INT);
+    private static final net.minecraft.network.syncher.EntityDataAccessor<String> DATA_STATUS =
+        net.minecraft.network.syncher.SynchedEntityData.defineId(
+            AssistantEntity.class, net.minecraft.network.syncher.EntityDataSerializers.STRING);
+    private static final net.minecraft.network.syncher.EntityDataAccessor<String> DATA_ZONE =
+        net.minecraft.network.syncher.SynchedEntityData.defineId(
+            AssistantEntity.class, net.minecraft.network.syncher.EntityDataSerializers.STRING);
+
+    @Override
+    protected void defineSynchedData(net.minecraft.network.syncher.SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(DATA_JOB, 0);
+        builder.define(DATA_STATUS, "");
+        builder.define(DATA_ZONE, "");
+    }
+
+    public int clientJobOrdinal() { return this.entityData.get(DATA_JOB); }
+    public String clientStatus() { return this.entityData.get(DATA_STATUS); }
+    public String clientZone() { return this.entityData.get(DATA_ZONE); }
+
+    /** Re-check the job's requirements (scans the zone) and publish the result. */
+    private void refreshJobState() {
+        missingEssentials = JobSpec.missing(this);
+        publishJobState();
+    }
+
+    /** Publish the cached job/zone/status to watching clients. Scans nothing —
+     *  safe to call while the entity is still loading in. */
+    private void publishJobState() {
+        this.entityData.set(DATA_JOB, stationTask.ordinal());
+        this.entityData.set(DATA_ZONE, workZone == null ? "No work zone set"
+            : workZone.describe() + (stationTask == StationTask.MINE ? "  depth Y" + workZone.depth() : ""));
+        String status;
+        if (stationTask == StationTask.NONE) {
+            status = "Pick a job, then mark a zone";
+        } else if (!missingEssentials.isEmpty()) {
+            status = "Needs " + String.join(", ", missingEssentials);
+        } else if (workZone == null && stationPos == null) {
+            status = "Needs a work zone";
+        } else if (upkeepStalled) {
+            status = "Out of upkeep — food + redstone";
+        } else {
+            status = "Working";
+        }
+        this.entityData.set(DATA_STATUS, status);
+    }
+
+    public java.util.List<String> missingEssentials() { return missingEssentials; }
+
+    @Nullable public WorkZone workZone() { return workZone; }
+
+    /** Assign (or clear) the patch this bot works. The zone doubles as its post,
+     *  so the station machinery keeps it there and keeps the ground loaded. */
+    public void setWorkZone(@Nullable WorkZone zone) {
+        this.workZone = zone;
+        if (zone != null) {
+            setStation(zone.center(), stationTask);
+        } else if (stationPos != null) {
+            setStation(null, StationTask.NONE);
+        }
+        refreshJobState();
+    }
+
+    /** Set the specialisation, keeping any zone already marked out. */
+    public void setJob(StationTask task) {
+        StationTask old = stationTask;
+        if (task == StationTask.NONE) {
+            setStation(null, StationTask.NONE);
+        } else if (workZone != null) {
+            setStation(workZone.center(), task);
+        } else {
+            this.stationTask = task;                 // job chosen, zone still to come
+            if (stationPos != null) setStation(stationPos, task);
+        }
+        if (old != task) {
+            upkeepStalled = false;
+            clearQueue();
+        }
+        refreshJobState();
+    }
+
+    /** Inside the assigned patch? Without a zone every position counts, so an
+     *  unzoned specialist behaves the way stations did before zones existed. */
+    public boolean inZone(BlockPos pos) {
+        return workZone == null || workZone.contains(pos);
+    }
+
+    /**
+     * Running cost. A working specialist is hungry work: it eats a ration every
+     * ~2.5 min of labour and burns a redstone "core charge" every ~10 min,
+     * taking both from its own pack or the chests in its zone. Run dry and it
+     * downs tools and says so — a crew is an ongoing commitment, not free labour.
+     */
+    private boolean payUpkeep() {
+        if (stationTask == StationTask.NONE) return true;
+        boolean ok = true;
+        if (++upkeepFoodTick >= 3000) {                       // ~2.5 minutes of work
+            if (consumeUpkeep(s -> s.get(DataComponents.FOOD) != null)) {
+                upkeepFoodTick = 0;
+            } else {
+                ok = false;
+                if (tickCount - stationWarnTick > 2400) {
+                    stationWarnTick = tickCount;
+                    say("I'm out of rations — put food in my chest and I'll get back to work.");
+                }
+            }
+        }
+        if (++upkeepChargeTick >= 12000) {                    // ~10 minutes of work
+            if (consumeUpkeep(s -> s.is(Items.REDSTONE))) {
+                upkeepChargeTick = 0;
+            } else {
+                ok = false;
+                if (tickCount - stationWarnTick > 2400) {
+                    stationWarnTick = tickCount;
+                    say("My core needs a charge — I need redstone to keep running.");
+                }
+            }
+        }
+        upkeepStalled = !ok;
+        return ok;
+    }
+
+    /** Spend one upkeep item from the pack, else from a chest in the zone. */
+    private boolean consumeUpkeep(java.util.function.Predicate<ItemStack> what) {
+        if (removeMatching(what, 1) == 1) return true;
+        return scoopFromChests(what, 8, 8) > 0 && removeMatching(what, 1) == 1;
+    }
     private static final int STATION_RADIUS = 16;       // how far it works from the post
     private int lastWarnTick = -1000;
     private boolean nightHome;        // "head home at night" toggle
@@ -599,6 +751,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case HAUL -> s.get(DataComponents.FOOD) != null ? 8 : 0; // rations for the road
             case MINE -> s.is(Items.TORCH) ? 16 : (s.is(Items.COBBLESTONE) ? 16
                 : (s.get(DataComponents.FOOD) != null ? 8 : 0)); // torches, bridging blocks, rations
+            case FISH -> s.is(Items.FISHING_ROD) ? 1 : (s.get(DataComponents.FOOD) != null ? 8 : 0);
+            case STORE -> s.get(DataComponents.FOOD) != null ? 8 : 0;
             case NONE -> 0;
         };
     }
@@ -1527,8 +1681,26 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private boolean decideStation() {
         BlockPos st = stationPos;
         if (st == null) return false;
-        // Wandered off (a retreat, a chase)? Head back to the post first.
-        if (st.distSqr(blockPosition()) > (double) (STATION_RADIUS + 6) * (STATION_RADIUS + 6)) {
+        // Essentials gate: no tools, no chest, no work. Re-checked a few times a
+        // minute (the scan reads the world), and reported by name — once — so the
+        // player knows exactly what to hand over.
+        if (tickCount - readyCheckTick > 60) {
+            readyCheckTick = tickCount;
+            refreshJobState();
+        }
+        if (!missingEssentials.isEmpty()) {
+            if (tickCount - stationWarnTick > 2400) {
+                stationWarnTick = tickCount;
+                say("I can't work as a " + stationTask.title.toLowerCase()
+                    + " yet — I need " + String.join(", ", missingEssentials) + ".");
+            }
+            return false;
+        }
+        // Running costs — rations and a core charge. Dry means downing tools.
+        if (!payUpkeep()) return false;
+        // Wandered off (a retreat, a chase)? Head back to the zone first.
+        int leash = (workZone != null ? workZone.workRadius() : STATION_RADIUS) + 6;
+        if (st.distSqr(blockPosition()) > (double) leash * leash) {
             getNavigation().moveTo(st.getX() + 0.5, st.getY(), st.getZ() + 0.5, 1.1D);
             return true;
         }
@@ -1639,17 +1811,27 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case MINE -> {
                 // A resident miner: each run reuses/extends the staircase, tunnels
                 // a fresh gallery grabbing every vein, torches as it goes, then the
-                // walk-back + deposit rungs bank the haul at the post chest.
-                if (countCarried(AssistantEntity::isPickaxe) == 0) return false; // survival rung crafts one
-                if (countMatching(s -> s.is(Items.TORCH)) < 8) {
-                    CraftPlanner.Result plan = CraftPlanner.plan(this, "torch", 8);
-                    if (!plan.jobs().isEmpty() && plan.blockers().isEmpty()) {
-                        announcePlan("Making torches for the mine", plan);
-                        return true;
-                    }
-                }
-                int targetY = bestPickTier() >= 3 ? -54 : 12; // iron pick unlocks the deep runs
+                // walk-back + deposit rungs bank the haul at the post chest. The
+                // zone's depth setting is the floor it digs down to.
+                int targetY = workZone != null ? workZone.depth()
+                    : (bestPickTier() >= 3 ? -54 : 12);
                 enqueue(Job.mine(targetY));
+                return true;
+            }
+            case FISH -> {
+                // A resident angler: fishes the zone's water, cooks nothing, and
+                // the deposit rung banks the catch (plus whatever junk treasure).
+                enqueue(Job.fish(8));
+                return true;
+            }
+            case STORE -> {
+                // A storekeeper: keeps the zone's chests consolidated and sweeps
+                // up anything left lying around the storeroom.
+                if (looseDropCount(8) >= 3 && !isPackFull()) {
+                    enqueue(Job.cleanup());
+                    return true;
+                }
+                enqueue(Job.sort());
                 return true;
             }
             case HAUL -> {
@@ -1758,7 +1940,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 + surplusOf(Items.RAW_COPPER, 0) + surplusOf(Items.COAL, 0)
                 + surplusOf(Items.REDSTONE, 0) + surplusOf(Items.LAPIS_LAZULI, 0)
                 + surplusOf(Items.DIAMOND, 0) + surplusOf(Items.EMERALD, 0);
-            case HAUL, NONE -> 0;
+            case FISH -> countMatching(s -> s.is(Items.COD) || s.is(Items.SALMON)
+                || s.is(Items.TROPICAL_FISH) || s.is(Items.PUFFERFISH)
+                || s.is(Items.COOKED_COD) || s.is(Items.COOKED_SALMON));
+            // A storekeeper works the chests directly — nothing to haul back.
+            case STORE, HAUL, NONE -> 0;
         };
         if (!isPackFull() && surplus < 32) return false;
         if (findAnyChest(12) == null) {
@@ -2468,6 +2654,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (stationPos != null) tag.putLong("StationPos", stationPos.asLong());
         tag.putString("StationTask", stationTask.name());
         if (mobileLoadCenter != null) tag.putLong("MobileLoad", mobileLoadCenter.asLong());
+        if (workZone != null) tag.put("WorkZone", workZone.save());
         tag.putInt("Xp", xp);
         tag.putInt("LifeXp", lifetimeXp);
         tag.putBoolean("ExpActive", expeditionActive);
@@ -2534,6 +2721,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // The traveling window's tickets persist with the world; restoring the
         // center lets the mover tick free them as usual instead of leaking.
         mobileLoadCenter = tag.contains("MobileLoad") ? BlockPos.of(tag.getLong("MobileLoad")) : null;
+        workZone = tag.contains("WorkZone") ? WorkZone.load(tag.getCompound("WorkZone")) : null;
+        publishJobState(); // the real requirement scan happens on the first work tick
         xp = tag.getInt("Xp");
         // Seed lifetime xp from banked xp for bots saved before levels existed.
         lifetimeXp = tag.contains("LifeXp") ? tag.getInt("LifeXp") : xp;
@@ -3115,6 +3304,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             tag.putLong("StationPos", stationPos.asLong());
             tag.putString("StationTask", stationTask.name());
         }
+        if (workZone != null) tag.put("WorkZone", workZone.save());
         ListTag points = new ListTag();
         for (Map.Entry<String, BlockPos> e : waypoints.entrySet()) {
             CompoundTag wt = new CompoundTag();
@@ -3147,6 +3337,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         applyLevelPerks();
         setHealth(getMaxHealth());
         setAutonomous(tag.getBoolean("Auto"));
+        workZone = tag.contains("WorkZone") ? WorkZone.load(tag.getCompound("WorkZone")) : null;
         if (tag.contains("StationPos")) {
             StationTask st = StationTask.NONE;
             try {
@@ -3155,6 +3346,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             if (st != StationTask.NONE) setStation(BlockPos.of(tag.getLong("StationPos")), st);
         }
         lastShownHealth = -1; // refresh the nametag (level star and all)
+        refreshJobState();
         say("Back from the void — level " + veteranLevel() + ", and I remember everything. "
             + "My old gear died with me, though"
             + (stationTask != StationTask.NONE ? " — heading back to my station." : "."));

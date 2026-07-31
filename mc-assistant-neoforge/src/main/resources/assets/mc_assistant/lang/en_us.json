@@ -3,6 +3,7 @@
   "block.mc_assistant.job_board": "Job Board",
   "item.mc_assistant.place_marker": "Place Marker",
   "item.mc_assistant.memory_core": "Memory Core",
+  "item.mc_assistant.zone_marker": "Work Zone Marker",
   "entity.mc_assistant.assistant": "Assistant",
   "key.categories.mc_assistant": "MC Assistant",
   "key.mc_assistant.voice": "Voice Command (hold & speak)"

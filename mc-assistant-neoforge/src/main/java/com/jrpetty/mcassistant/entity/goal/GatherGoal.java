@@ -509,6 +509,7 @@ public class GatherGoal extends Goal {
                 feet.offset(-SEARCH_RADIUS, -6, -SEARCH_RADIUS),
                 feet.offset(SEARCH_RADIUS, 8, SEARCH_RADIUS))) {
             if (unreachable.contains(pos)) continue; // don't re-target blocks we couldn't reach
+            if (!assistant.inZone(pos)) continue;    // stay inside the marked work zone
             if (!request.kind().matches(assistant.level().getBlockState(pos))) continue;
             double d = pos.distSqr(feet);
             if (d < bestDist) {

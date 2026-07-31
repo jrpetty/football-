@@ -28,6 +28,9 @@ public final class AssistantCommands {
 
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
+        // Parked alongside chat commands — the management screen and the Work
+        // Zone Marker are the way a crew is run for now.
+        if (!McAssistantMod.MANUAL_COMMANDS_ENABLED) return;
         event.getDispatcher().register(Commands.literal("assistant")
             .then(Commands.literal("spawn").executes(ctx -> spawn(ctx)))
             .then(Commands.literal("follow").executes(ctx -> setMode(ctx, AssistantEntity.Mode.FOLLOW, "Following you.")))

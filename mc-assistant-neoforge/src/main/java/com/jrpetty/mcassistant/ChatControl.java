@@ -165,6 +165,10 @@ public final class ChatControl {
 
     @SubscribeEvent
     public static void onChat(ServerChatEvent event) {
+        // Manual commands are parked: crews are run from the management screen
+        // and the Work Zone Marker. The whole parser below stays built and
+        // ready — flip McAssistantMod.MANUAL_COMMANDS_ENABLED to wake it.
+        if (!com.jrpetty.mcassistant.McAssistantMod.MANUAL_COMMANDS_ENABLED) return;
         String raw = event.getMessage().getString().trim();
         if (raw.isEmpty()) return;
         ServerPlayer player = event.getPlayer();

@@ -89,6 +89,16 @@ public final class McAssistantMod {
     public static final DeferredItem<com.jrpetty.mcassistant.item.MemoryCoreItem> MEMORY_CORE =
         ITEMS.registerItem("memory_core", com.jrpetty.mcassistant.item.MemoryCoreItem::new);
 
+    // The Work Zone Marker: click two corners to fence off a patch of world,
+    // click more blocks to extend it, then right-click an assistant to assign it.
+    public static final DeferredItem<com.jrpetty.mcassistant.item.ZoneMarkerItem> ZONE_MARKER =
+        ITEMS.registerItem("zone_marker", com.jrpetty.mcassistant.item.ZoneMarkerItem::new);
+
+    /** Master switch for the chat / slash / voice command layer. Off while the
+     *  specialisation flow (spawner -> management screen -> zone marker) is the
+     *  way you run a crew; the parser and voice engine stay built, just idle. */
+    public static final boolean MANUAL_COMMANDS_ENABLED = false;
+
     public McAssistantMod(IEventBus modBus) {
         ENTITY_TYPES.register(modBus);
         MENU_TYPES.register(modBus);
@@ -116,6 +126,7 @@ public final class McAssistantMod {
         if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
             event.accept(PLACE_MARKER);
             event.accept(MEMORY_CORE);
+            event.accept(ZONE_MARKER);
         }
     }
 }

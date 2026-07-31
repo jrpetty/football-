@@ -28,6 +28,12 @@ public class AssistantMenu extends AbstractContainerMenu {
     public static final int BTN_GUARD = 3;
     public static final int BTN_DEPOSIT = 4;
     public static final int BTN_COME = 5;
+    // Specialisation panel.
+    public static final int BTN_JOB_PREV = 6;
+    public static final int BTN_JOB_NEXT = 7;
+    public static final int BTN_WORK = 8;
+    public static final int BTN_DEPTH_DOWN = 9;
+    public static final int BTN_DEPTH_UP = 10;
 
     private final Container container;
     @Nullable private final AssistantEntity assistant;
@@ -72,7 +78,7 @@ public class AssistantMenu extends AbstractContainerMenu {
         }
 
         // Player inventory (3 rows) + hotbar. Left low enough for two button rows.
-        int invY = 140;
+        int invY = 160; // leaves room for the specialisation panel above
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
                 this.addSlot(new Slot(playerInv, col + row * 9 + 9, 8 + col * 18, invY + row * 18));
@@ -109,6 +115,57 @@ public class AssistantMenu extends AbstractContainerMenu {
         return container.stillValid(player);
     }
 
+    /** Step through the specialisations and report the new job's checklist. */
+    private void cycleJob(int step) {
+        if (assistant == null) return;
+        AssistantEntity.StationTask next =
+            AssistantEntity.StationTask.byOrdinal(assistant.stationTask().ordinal() + step);
+        assistant.setJob(next);
+        if (next == AssistantEntity.StationTask.NONE) {
+            assistant.say("Off the roster — give me a job when you're ready.");
+            return;
+        }
+        java.util.List<String> gaps = assistant.missingEssentials();
+        assistant.say("I can be your " + next.title.toLowerCase() + ". "
+            + (assistant.workZone() == null
+                ? "Mark me a work zone with the Zone Marker."
+                : gaps.isEmpty() ? "I've got everything I need — say the word."
+                                 : "I still need " + String.join(", ", gaps) + "."));
+    }
+
+    /** Send the specialist to work, or explain exactly what's stopping it. */
+    private void startWork() {
+        if (assistant == null) return;
+        if (assistant.stationTask() == AssistantEntity.StationTask.NONE) {
+            assistant.say("Pick what I should specialise in first.");
+            return;
+        }
+        if (assistant.workZone() == null) {
+            assistant.say("I need a work zone — mark one out and hand it to me.");
+            return;
+        }
+        java.util.List<String> gaps = assistant.missingEssentials();
+        if (!gaps.isEmpty()) {
+            assistant.say("Not yet — I need " + String.join(", ", gaps) + ".");
+            return;
+        }
+        assistant.clearQueue();
+        assistant.setAutonomous(true);
+        assistant.say("On it — working my zone as your " + assistant.stationTask().title.toLowerCase() + ".");
+    }
+
+    /** Miner only: how deep the shaft goes. */
+    private void adjustDepth(int delta) {
+        if (assistant == null) return;
+        com.jrpetty.mcassistant.entity.WorkZone zone = assistant.workZone();
+        if (zone == null) {
+            assistant.say("Mark me a zone first, then I'll know where to dig.");
+            return;
+        }
+        assistant.setWorkZone(zone.withDepth(zone.depth() + delta));
+        assistant.say("I'll dig down to Y" + assistant.workZone().depth() + ".");
+    }
+
     @Override
     public boolean clickMenuButton(Player player, int id) {
         if (assistant == null || !assistant.isOwner(player)) return false;
@@ -124,6 +181,11 @@ public class AssistantMenu extends AbstractContainerMenu {
                 assistant.getNavigation().moveTo(player, 1.25D);
                 assistant.say("Coming.");
             }
+            case BTN_JOB_PREV -> cycleJob(-1);
+            case BTN_JOB_NEXT -> cycleJob(1);
+            case BTN_WORK -> startWork();
+            case BTN_DEPTH_DOWN -> adjustDepth(-8);
+            case BTN_DEPTH_UP -> adjustDepth(8);
             default -> { return false; }
         }
         return true;

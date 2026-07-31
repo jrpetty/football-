@@ -26,7 +26,7 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
     public AssistantScreen(AssistantMenu menu, Inventory playerInv, Component title) {
         super(menu, playerInv, title);
         this.imageWidth = 176;
-        this.imageHeight = 222;
+        this.imageHeight = 242;
         this.inventoryLabelY = this.imageHeight - 94; // unused label, kept sane
     }
 
@@ -36,17 +36,17 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
         int x = this.leftPos;
         int y = this.topPos;
 
-        // Two rows of three control buttons, between equipment and inventory.
-        int bw = 48, bh = 18;
-        int[] cols = { x + 8, x + 62, x + 116 };
-        int row1 = y + 98, row2 = y + 118;
+        // Specialisation row: step through the jobs, then put it to work.
+        int bh = 18;
+        addButton(x + 8, y + 96, 20, bh, "<", AssistantMenu.BTN_JOB_PREV);
+        addButton(x + 30, y + 96, 56, bh, "Work", AssistantMenu.BTN_WORK);
+        addButton(x + 88, y + 96, 56, bh, "Stay", AssistantMenu.BTN_STAY);
+        addButton(x + 146, y + 96, 20, bh, ">", AssistantMenu.BTN_JOB_NEXT);
 
-        addButton(cols[0], row1, bw, bh, "Stop", AssistantMenu.BTN_STOP);
-        addButton(cols[1], row1, bw, bh, "Follow", AssistantMenu.BTN_FOLLOW);
-        addButton(cols[2], row1, bw, bh, "Stay", AssistantMenu.BTN_STAY);
-        addButton(cols[0], row2, bw, bh, "Guard", AssistantMenu.BTN_GUARD);
-        addButton(cols[1], row2, bw, bh, "Deposit", AssistantMenu.BTN_DEPOSIT);
-        addButton(cols[2], row2, bw, bh, "Come", AssistantMenu.BTN_COME);
+        // Second row: stash on demand, and the miner's dig depth.
+        addButton(x + 8, y + 114, 56, bh, "Deposit", AssistantMenu.BTN_DEPOSIT);
+        addButton(x + 66, y + 114, 44, bh, "Depth -", AssistantMenu.BTN_DEPTH_DOWN);
+        addButton(x + 112, y + 114, 54, bh, "Depth +", AssistantMenu.BTN_DEPTH_UP);
     }
 
     private void addButton(int x, int y, int w, int h, String label, int buttonId) {
@@ -76,7 +76,7 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
         for (int i = 0; i < AssistantInventoryContainer.EQUIP; i++) {
             drawSlot(g, x + 8 + i * 18, y + 78);
         }
-        int invY = 140;
+        int invY = 160;
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) drawSlot(g, x + 8 + col * 18, y + invY + row * 18);
         }
@@ -97,6 +97,18 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
         String mode = a != null ? a.getMode().name() : "?";
         g.drawString(this.font, Component.literal("Mode: " + mode), 8, 68, 0x404040, false);
         g.drawString(this.font, Component.literal("armor + hands →"), 8 + 6 * 18 + 2, 82, 0x606060, false);
+
+        // --- Specialisation readout (synced from the entity, so it's live) ---
+        if (a == null) return;
+        AssistantEntity.StationTask job = AssistantEntity.StationTask.byOrdinal(a.clientJobOrdinal());
+        g.drawString(this.font, Component.literal(job.title + " · " + a.clientZone()),
+            8, 136, 0x303030, false);
+
+        String status = a.clientStatus();
+        int colour = status.startsWith("Working") ? 0x1F7A34   // green: earning its keep
+            : status.startsWith("Needs") || status.startsWith("Out of") ? 0x9C2B18  // red: blocked
+            : 0x7A5A10;                                                            // amber: still setting up
+        g.drawString(this.font, Component.literal(status), 8, 148, colour, false);
     }
 
     @Override

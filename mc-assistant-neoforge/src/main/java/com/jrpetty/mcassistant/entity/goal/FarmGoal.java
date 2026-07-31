@@ -330,7 +330,8 @@ public class FarmGoal extends Goal {
         double bestDist = Double.MAX_VALUE;
         for (BlockPos pos : BlockPos.betweenClosed(
                 feet.offset(-RANGE, -3, -RANGE), feet.offset(RANGE, 3, RANGE))) {
-            if (skip.contains(pos)) continue; // couldn't reach it earlier
+            if (skip.contains(pos)) continue;     // couldn't reach it earlier
+            if (!assistant.inZone(pos)) continue; // stay inside the marked work zone
             if (!match.test(pos)) continue;
             double d = pos.distSqr(feet);
             if (d < bestDist) {

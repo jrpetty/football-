@@ -59,6 +59,12 @@ public final class VoiceInput {
     }
 
     private static void press() {
+        // Voice rides on the chat-command parser, so it stays dormant while that
+        // layer is parked. Keybind, engine and model plumbing are all still here.
+        if (!com.jrpetty.mcassistant.McAssistantMod.MANUAL_COMMANDS_ENABLED) {
+            VoiceEngine.overlay("Voice commands are switched off in this build.");
+            return;
+        }
         switch (VoiceEngine.state()) {
             case READY -> {
                 capture = new Capture();
