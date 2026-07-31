@@ -34,6 +34,7 @@ public class AssistantMenu extends AbstractContainerMenu {
     public static final int BTN_WORK = 8;
     public static final int BTN_DEPTH_DOWN = 9;
     public static final int BTN_DEPTH_UP = 10;
+    public static final int BTN_SET_HOME = 11;
 
     private final Container container;
     @Nullable private final AssistantEntity assistant;
@@ -211,6 +212,14 @@ public class AssistantMenu extends AbstractContainerMenu {
             case BTN_WORK -> startWork();
             case BTN_DEPTH_DOWN -> adjustDepth(-8);
             case BTN_DEPTH_UP -> adjustDepth(8);
+            // A hauler's delivery point. Without this the drop-off is stuck
+            // wherever the spawner happened to be placed, and a hauler spawned
+            // at its own outpost could never be given a destination at all —
+            // the one job setting that used to need a chat command.
+            case BTN_SET_HOME -> {
+                assistant.setHome(player.blockPosition());
+                assistant.say("Drop-off set here — I'll bring every load to this spot.");
+            }
             default -> { return false; }
         }
         return true;

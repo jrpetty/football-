@@ -24,6 +24,7 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
     private static final int SLOT_HI = 0xFF373737;
 
     private Button jobButton;   // its label is the current job, kept live
+    private Button depthDown, depthUp, setHome; // job-specific controls
     private int shownJob = -1;
 
     public AssistantScreen(AssistantMenu menu, Inventory playerInv, Component title) {
@@ -54,8 +55,12 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
         addButton(x + 8, y + 114, 40, bh, "Follow", AssistantMenu.BTN_FOLLOW);
         addButton(x + 50, y + 114, 32, bh, "Stay", AssistantMenu.BTN_STAY);
         addButton(x + 84, y + 114, 44, bh, "Stash", AssistantMenu.BTN_DEPOSIT);
-        addButton(x + 130, y + 114, 18, bh, "-", AssistantMenu.BTN_DEPTH_DOWN);
-        addButton(x + 150, y + 114, 18, bh, "+", AssistantMenu.BTN_DEPTH_UP);
+        // The last slot on this row is job-specific: dig depth for a miner, the
+        // drop-off point for a hauler, nothing for everyone else.
+        this.depthDown = addButton(x + 130, y + 114, 18, bh, "-", AssistantMenu.BTN_DEPTH_DOWN);
+        this.depthUp = addButton(x + 150, y + 114, 18, bh, "+", AssistantMenu.BTN_DEPTH_UP);
+        this.setHome = addButton(x + 130, y + 114, 38, bh, "Drop", AssistantMenu.BTN_SET_HOME);
+        refreshJobButtons(a == null ? 0 : a.clientJobOrdinal());
     }
 
     private Button addButton(int x, int y, int w, int h, String label, int buttonId) {
@@ -76,7 +81,19 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
         if (job != shownJob) {
             shownJob = job;
             jobButton.setMessage(Component.literal(AssistantEntity.StationTask.byOrdinal(job).title));
+            refreshJobButtons(job);
         }
+    }
+
+    /** Show only the controls that mean anything for the current job. */
+    private void refreshJobButtons(int jobOrdinal) {
+        if (depthDown == null || depthUp == null || setHome == null) return;
+        AssistantEntity.StationTask job = AssistantEntity.StationTask.byOrdinal(jobOrdinal);
+        boolean miner = job == AssistantEntity.StationTask.MINE;
+        boolean hauler = job == AssistantEntity.StationTask.HAUL;
+        depthDown.visible = miner;
+        depthUp.visible = miner;
+        setHome.visible = hauler;
     }
 
     @Override
