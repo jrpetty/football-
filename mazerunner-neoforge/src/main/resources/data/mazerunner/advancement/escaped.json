@@ -1,0 +1,29 @@
+{
+  "display": {
+    "icon": {
+      "id": "mazerunner:exit_portal"
+    },
+    "title": {
+      "text": "Free"
+    },
+    "description": {
+      "text": "Run the Maze all the way out."
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "earned": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "earned"
+    ]
+  ],
+  "sends_telemetry_event": false,
+  "parent": "mazerunner:runner"
+}

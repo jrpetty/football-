@@ -19,9 +19,10 @@ the maze but the seven exit pads.
 - **7 fixed layouts** (all pre-validated solvable) rotate on a schedule that is
   **shuffled once per world from the world seed** — every world plays the same
   7 mazes in a different fixed order, repeating weekly.
-- **Escape:** `/maze start` starts a single server-wide timer; the first player
-  to run into the **active exit portal** stops it and the time is announced.
-  Deaths respawn at the Box in the Glade; the timer never pauses.
+- **Escape:** your run starts by itself the moment you first leave the Glade,
+  and stops when you reach the **exit portal**. Each death adds 30s to your
+  final time and respawns you at the Box; the clock never pauses. Best times
+  persist per player — see `/maze leaderboard`.
 - **Supply caches:** ~100 chests in dead-end cells with helpful-but-optional
   loot, rerolled at the start of each 7-day cycle.
 - Standard survival everywhere — but the walls are bedrock-grade, so the maze
@@ -36,6 +37,27 @@ elevator** (decorative iron cage, grate and cable) at the exact centre —
 which is also world spawn and death respawn (768, 61, 768). Vines and
 mangrove-moss climb the Glade-facing walls. Hostile mobs are automatically
 purged inside the Glade — it is safe ground; the maze is not.
+
+**v1.12 changes (it's a game now)** — the minigame loop, death stakes and
+advancements.
+
+- **Runs start by themselves.** The moment you first step out of the Glade your
+  personal clock starts — no command, no lobby. Reaching the exit portal stops
+  it, announces your time, and returns you to the Glade so the world keeps
+  playing instead of stranding you on the pad.
+- **Per-player timing and a persistent leaderboard.** Every runner has their own
+  run and their own best; `/maze leaderboard` (or `/maze top`) lists the ten
+  fastest escapes with death counts. `/maze status` now shows your own run.
+- **Dying costs you.** Death no longer ends a run — it adds **30 seconds** to
+  your final time and is recorded against it. A fast reckless run can lose to a
+  slower clean one, which is the point.
+- **Six advancements**: *Greenie* (wake up in the Box), *Runner* (leave the
+  Glade), *Nobody Survives a Night* (still be out there at dawn), *Griever
+  Killer*, *The Cure* (burn out the Changing with a serum) and *Free* (escape).
+
+Note: `/maze start` and `/maze stop` now act on **your own** run — restart it
+from zero, or abandon it without recording — rather than a single server-wide
+timer.
 
 **v1.11 changes (the Grievers have a voice)** — you now hear one long before
 you see it, and what you hear tells you how much trouble you are in:
@@ -195,7 +217,8 @@ Quality-of-life on top of the spec:
 
 | Command | Effect |
 | --- | --- |
-| `/maze start` / `/maze stop` | Start / manually stop the escape timer |
+| `/maze start` / `/maze stop` | Restart / abandon your own run |
+| `/maze leaderboard` / `top` | The ten fastest escapes |
 | `/maze status` | Day, layout, doors, clock, timer, week schedule |
 | `/maze validate <1-7>` | BFS-verify a layout is solvable (debug) |
 | `/maze section` | Which of the 8 maze sections you're standing in |

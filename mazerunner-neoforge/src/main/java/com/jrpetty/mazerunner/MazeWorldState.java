@@ -1,11 +1,17 @@
 package com.jrpetty.mazerunner;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.UUID;
+
+import com.jrpetty.mazerunner.config.RunScoring;
 
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
 
@@ -24,12 +30,20 @@ public class MazeWorldState extends SavedData {
     private long virtualSixths = 0;      // custom clock; dayTime = virtualSixths / 6
     private int physicalLayout = 0;      // layout index currently built into the world
     private boolean doorsOpen = false;
-    private boolean timerRunning = false;
-    private long timerStartMs = 0;
-    private long lastRunMs = -1;
-    private long bestRunMs = -1;
     private int chestCycle = 0;
     private final Map<Long, Integer> chestRolled = new HashMap<>(); // BlockPos.asLong → cycle
+
+    // ---- per-player runs -------------------------------------------------
+    /** Runs in progress: player → wall-clock millis when they left the Glade. */
+    private final Map<UUID, Long> runStart = new HashMap<>();
+    /** Deaths accrued during the run in progress. */
+    private final Map<UUID, Integer> runDeaths = new HashMap<>();
+    /** Best finished run per player — the persistent leaderboard. */
+    private final Map<UUID, RunScoring.Entry> best = new HashMap<>();
+
+    /** Outcome of a finished run. */
+    public record RunResult(long finalMillis, long elapsedMillis, int deaths,
+                            boolean personalBest, boolean worldBest) {}
 
     public static MazeWorldState get(ServerLevel level) {
         return level.getDataStorage().computeIfAbsent(
@@ -43,15 +57,26 @@ public class MazeWorldState extends SavedData {
         state.virtualSixths = tag.getLong("virtualSixths");
         state.physicalLayout = tag.getInt("physicalLayout");
         state.doorsOpen = tag.getBoolean("doorsOpen");
-        state.timerRunning = tag.getBoolean("timerRunning");
-        state.timerStartMs = tag.getLong("timerStartMs");
-        state.lastRunMs = tag.contains("lastRunMs") ? tag.getLong("lastRunMs") : -1;
-        state.bestRunMs = tag.contains("bestRunMs") ? tag.getLong("bestRunMs") : -1;
         state.chestCycle = tag.getInt("chestCycle");
         long[] keys = tag.getLongArray("chestKeys");
         int[] cycles = tag.getIntArray("chestCycles");
         for (int i = 0; i < keys.length && i < cycles.length; i++) {
             state.chestRolled.put(keys[i], cycles[i]);
+        }
+
+        ListTag runs = tag.getList("runs", Tag.TAG_COMPOUND);
+        for (int i = 0; i < runs.size(); i++) {
+            CompoundTag t = runs.getCompound(i);
+            UUID id = t.getUUID("id");
+            state.runStart.put(id, t.getLong("startMs"));
+            state.runDeaths.put(id, t.getInt("deaths"));
+        }
+        ListTag board = tag.getList("leaderboard", Tag.TAG_COMPOUND);
+        for (int i = 0; i < board.size(); i++) {
+            CompoundTag t = board.getCompound(i);
+            UUID id = t.getUUID("id");
+            state.best.put(id, new RunScoring.Entry(id.toString(), t.getString("name"),
+                t.getLong("finalMs"), t.getInt("deaths")));
         }
         return state;
     }
@@ -63,10 +88,6 @@ public class MazeWorldState extends SavedData {
         tag.putLong("virtualSixths", virtualSixths);
         tag.putInt("physicalLayout", physicalLayout);
         tag.putBoolean("doorsOpen", doorsOpen);
-        tag.putBoolean("timerRunning", timerRunning);
-        tag.putLong("timerStartMs", timerStartMs);
-        tag.putLong("lastRunMs", lastRunMs);
-        tag.putLong("bestRunMs", bestRunMs);
         tag.putInt("chestCycle", chestCycle);
         long[] keys = new long[chestRolled.size()];
         int[] cycles = new int[chestRolled.size()];
@@ -78,7 +99,102 @@ public class MazeWorldState extends SavedData {
         }
         tag.putLongArray("chestKeys", keys);
         tag.putIntArray("chestCycles", cycles);
+
+        ListTag runs = new ListTag();
+        for (Map.Entry<UUID, Long> e : runStart.entrySet()) {
+            CompoundTag t = new CompoundTag();
+            t.putUUID("id", e.getKey());
+            t.putLong("startMs", e.getValue());
+            t.putInt("deaths", runDeaths.getOrDefault(e.getKey(), 0));
+            runs.add(t);
+        }
+        tag.put("runs", runs);
+
+        ListTag board = new ListTag();
+        for (Map.Entry<UUID, RunScoring.Entry> e : best.entrySet()) {
+            CompoundTag t = new CompoundTag();
+            t.putUUID("id", e.getKey());
+            t.putString("name", e.getValue().name());
+            t.putLong("finalMs", e.getValue().finalMillis());
+            t.putInt("deaths", e.getValue().deaths());
+            board.add(t);
+        }
+        tag.put("leaderboard", board);
         return tag;
+    }
+
+    // ------------------------------------------------------------- runs
+
+    public boolean isRunning(UUID player) {
+        return runStart.containsKey(player);
+    }
+
+    /** Begins a run; ignored if one is already in progress. */
+    public void startRun(UUID player, long nowMs) {
+        if (runStart.containsKey(player)) return;
+        runStart.put(player, nowMs);
+        runDeaths.put(player, 0);
+        setDirty();
+    }
+
+    /** Abandons a run without recording it. */
+    public void abandonRun(UUID player) {
+        if (runStart.remove(player) != null) {
+            runDeaths.remove(player);
+            setDirty();
+        }
+    }
+
+    /** Elapsed clock time so far, excluding death penalties; -1 if not running. */
+    public long runElapsed(UUID player, long nowMs) {
+        Long start = runStart.get(player);
+        return start == null ? -1 : Math.max(0, nowMs - start);
+    }
+
+    public int runDeaths(UUID player) {
+        return runDeaths.getOrDefault(player, 0);
+    }
+
+    /** Records a death against the run in progress; returns the new death count. */
+    public int addDeath(UUID player) {
+        if (!runStart.containsKey(player)) return 0;
+        int deaths = runDeaths.merge(player, 1, Integer::sum);
+        setDirty();
+        return deaths;
+    }
+
+    /**
+     * Completes a run: scores it, updates the leaderboard, and clears the
+     * in-progress state. Returns null if the player had no run going.
+     */
+    public RunResult finishRun(UUID player, String name, long nowMs) {
+        Long start = runStart.remove(player);
+        if (start == null) return null;
+        Integer recorded = runDeaths.remove(player);
+        int deaths = recorded == null ? 0 : recorded;
+        long elapsed = Math.max(0, nowMs - start);
+        long finalMs = RunScoring.finalMillis(elapsed, deaths);
+
+        long previousWorldBest = best.values().stream()
+            .mapToLong(RunScoring.Entry::finalMillis).min().orElse(-1);
+        RunScoring.Entry previous = best.get(player);
+        boolean personalBest = previous == null || RunScoring.isBetter(finalMs, previous.finalMillis());
+        if (personalBest) {
+            best.put(player, new RunScoring.Entry(player.toString(), name, finalMs, deaths));
+        }
+        boolean worldBest = RunScoring.isBetter(finalMs, previousWorldBest);
+        setDirty();
+        return new RunResult(finalMs, elapsed, deaths, personalBest, worldBest);
+    }
+
+    /** Snapshot of the persistent leaderboard, best first. */
+    public List<RunScoring.Entry> leaderboard(int limit) {
+        return RunScoring.ranked(best.values(), limit);
+    }
+
+    /** Best final time recorded in this world, or -1. */
+    public long worldBestMillis() {
+        return best.values().stream().mapToLong(RunScoring.Entry::finalMillis).min().orElse(-1);
     }
 
     // ------------------------------------------------------------- schedule
@@ -130,37 +246,6 @@ public class MazeWorldState extends SavedData {
     public boolean doorsOpen() { return doorsOpen; }
 
     public void setDoorsOpen(boolean open) { this.doorsOpen = open; setDirty(); }
-
-    public boolean timerRunning() { return timerRunning; }
-
-    public long timerStartMs() { return timerStartMs; }
-
-    public long lastRunMs() { return lastRunMs; }
-
-    public long bestRunMs() { return bestRunMs; }
-
-    /** Records a finished run; returns true if it's a new world record. */
-    public boolean recordRun(long elapsedMs) {
-        boolean record = bestRunMs < 0 || elapsedMs < bestRunMs;
-        if (record) bestRunMs = elapsedMs;
-        setDirty();
-        return record;
-    }
-
-    public void startTimer(long nowMs) {
-        this.timerRunning = true;
-        this.timerStartMs = nowMs;
-        setDirty();
-    }
-
-    /** Stops the timer and returns the elapsed milliseconds. */
-    public long stopTimer(long nowMs) {
-        long elapsed = timerRunning ? nowMs - timerStartMs : -1;
-        this.timerRunning = false;
-        if (elapsed >= 0) this.lastRunMs = elapsed;
-        setDirty();
-        return elapsed;
-    }
 
     public int chestCycle() { return chestCycle; }
 

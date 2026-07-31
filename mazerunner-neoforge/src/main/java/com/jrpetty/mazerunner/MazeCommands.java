@@ -2,6 +2,7 @@ package com.jrpetty.mazerunner;
 
 import com.jrpetty.mazerunner.config.MazeConfigData;
 import com.jrpetty.mazerunner.config.MazeConfigs;
+import com.jrpetty.mazerunner.config.RunScoring;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 
 import net.minecraft.ChatFormatting;
@@ -10,6 +11,7 @@ import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
@@ -42,6 +44,8 @@ public final class MazeCommands {
                 .then(Commands.literal("night").executes(ctx -> night(ctx.getSource())))
                 .then(Commands.literal("shift").executes(ctx -> forceShift(ctx.getSource())))
                 .then(Commands.literal("griever").executes(ctx -> spawnGriever(ctx.getSource())))
+                .then(Commands.literal("leaderboard").executes(ctx -> leaderboard(ctx.getSource())))
+                .then(Commands.literal("top").executes(ctx -> leaderboard(ctx.getSource())))
                 .then(Commands.literal("validate")
                     .then(Commands.argument("layout", IntegerArgumentType.integer(1, 7))
                         .executes(ctx -> validate(ctx.getSource(),
@@ -58,34 +62,62 @@ public final class MazeCommands {
         return level;
     }
 
+    /** Runs start by themselves when you leave the Glade; this restarts yours. */
     private static int start(CommandSourceStack source) {
         ServerLevel level = maze(source);
         if (level == null) return 0;
-        MazeWorldState state = MazeWorldState.get(level);
-        if (state.timerRunning()) {
-            source.sendFailure(Component.literal("The escape timer is already running."));
+        if (!(source.getEntity() instanceof ServerPlayer player)) {
+            source.sendFailure(Component.literal("Only a player has a run."));
             return 0;
         }
-        state.startTimer(System.currentTimeMillis());
-        source.sendSuccess(() -> Component.literal(
-            "⏱ Escape timer started — first runner through the active exit portal stops it.")
-            .withStyle(ChatFormatting.GREEN), true);
+        MazeWorldState state = MazeWorldState.get(level);
+        state.abandonRun(player.getUUID());
+        state.startRun(player.getUUID(), System.currentTimeMillis());
+        source.sendSuccess(() -> Component.literal("⏱ Your run has been restarted from zero.")
+            .withStyle(ChatFormatting.GREEN), false);
         return 1;
     }
 
     private static int stop(CommandSourceStack source) {
         ServerLevel level = maze(source);
         if (level == null) return 0;
-        MazeWorldState state = MazeWorldState.get(level);
-        if (!state.timerRunning()) {
-            source.sendFailure(Component.literal("No escape timer is running."));
+        if (!(source.getEntity() instanceof ServerPlayer player)) {
+            source.sendFailure(Component.literal("Only a player has a run."));
             return 0;
         }
-        long elapsed = state.stopTimer(System.currentTimeMillis());
-        source.sendSuccess(() -> Component.literal(
-            "⏱ Escape timer stopped at " + MazeRuntime.formatMs(elapsed) + ".")
-            .withStyle(ChatFormatting.YELLOW), true);
+        MazeWorldState state = MazeWorldState.get(level);
+        if (!state.isRunning(player.getUUID())) {
+            source.sendFailure(Component.literal("You have no run in progress."));
+            return 0;
+        }
+        state.abandonRun(player.getUUID());
+        source.sendSuccess(() -> Component.literal("⏱ Run abandoned — nothing recorded.")
+            .withStyle(ChatFormatting.YELLOW), false);
         return 1;
+    }
+
+    private static int leaderboard(CommandSourceStack source) {
+        ServerLevel level = maze(source);
+        if (level == null) return 0;
+        var board = MazeWorldState.get(level).leaderboard(10);
+        if (board.isEmpty()) {
+            source.sendSuccess(() -> Component.literal(
+                "Nobody has escaped the Maze yet.").withStyle(ChatFormatting.GRAY), false);
+            return 0;
+        }
+        StringBuilder sb = new StringBuilder("🏆 Fastest escapes");
+        int rank = 1;
+        for (var entry : board) {
+            sb.append("\n ").append(rank++).append(". ").append(entry.name())
+                .append(" — ").append(RunScoring.format(entry.finalMillis()));
+            if (entry.deaths() > 0) {
+                sb.append(" (").append(entry.deaths()).append(" death")
+                    .append(entry.deaths() == 1 ? "" : "s").append(")");
+            }
+        }
+        String text = sb.toString();
+        source.sendSuccess(() -> Component.literal(text).withStyle(ChatFormatting.GOLD), false);
+        return board.size();
     }
 
     private static int status(CommandSourceStack source) {
@@ -102,12 +134,18 @@ public final class MazeCommands {
             if (i > 0) schedule.append(" → ");
             schedule.append(cfg.layout(order[i]).name());
         }
-        String timerBase = state.timerRunning()
-            ? "running (" + MazeRuntime.formatMs(System.currentTimeMillis() - state.timerStartMs()) + ")"
-            : state.lastRunMs() >= 0 ? "stopped — last run " + MazeRuntime.formatMs(state.lastRunMs()) : "stopped";
-        String timer = state.bestRunMs() >= 0
-            ? timerBase + " · best " + MazeRuntime.formatMs(state.bestRunMs())
-            : timerBase; // effectively final for the lambda below
+        String own = "not running — leave the Glade to start one";
+        if (source.getEntity() instanceof ServerPlayer player
+            && state.isRunning(player.getUUID())) {
+            long elapsed = state.runElapsed(player.getUUID(), System.currentTimeMillis());
+            int deaths = state.runDeaths(player.getUUID());
+            own = RunScoring.format(elapsed) + " on the clock, " + deaths + " death"
+                + (deaths == 1 ? "" : "s")
+                + " (final would be " + RunScoring.format(RunScoring.finalMillis(elapsed, deaths)) + ")";
+        }
+        long worldBest = state.worldBestMillis();
+        String timer = own + (worldBest >= 0
+            ? " · world best " + RunScoring.format(worldBest) : " · no escapes yet");
 
         source.sendSuccess(() -> Component.literal(String.join("\n",
             "Maze — day " + state.dayNumber() + ", layout " + layout.name()
@@ -116,7 +154,7 @@ public final class MazeCommands {
                 + (state.doorsOpen() ? "OPEN" : "sealed") + " · wall animations queued: "
                 + WallAnimator.queuedCount(),
             "Grievers loaded: " + MazeRuntime.countGrievers(level),
-            "Timer: " + timer,
+            "Your run: " + timer,
             "Week schedule: " + schedule)).withStyle(ChatFormatting.AQUA), false);
         return 1;
     }
@@ -155,7 +193,7 @@ public final class MazeCommands {
     private static int tpExit(CommandSourceStack source) {
         ServerLevel level = maze(source);
         if (level == null) return 0;
-        if (!(source.getEntity() instanceof net.minecraft.server.level.ServerPlayer player)) {
+        if (!(source.getEntity() instanceof ServerPlayer player)) {
             source.sendFailure(Component.literal("Only a player can teleport."));
             return 0;
         }
@@ -195,7 +233,7 @@ public final class MazeCommands {
     private static int spawnGriever(CommandSourceStack source) {
         ServerLevel level = maze(source);
         if (level == null) return 0;
-        if (!(source.getEntity() instanceof net.minecraft.server.level.ServerPlayer player)) {
+        if (!(source.getEntity() instanceof ServerPlayer player)) {
             source.sendFailure(Component.literal("Only a player can summon a Griever nearby."));
             return 0;
         }

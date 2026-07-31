@@ -112,5 +112,8 @@ public class GrieverEntity extends Spider {
     protected void dropCustomDeathLoot(ServerLevel level, DamageSource source, boolean recentlyHit) {
         super.dropCustomDeathLoot(level, source, recentlyHit);
         spawnAtLocation(new ItemStack(ModItems.GRIEVER_SERUM.get()));
+        if (source.getEntity() instanceof net.minecraft.server.level.ServerPlayer killer) {
+            MazeAdvancements.award(killer, MazeAdvancements.GRIEVER_SLAYER);
+        }
     }
 }

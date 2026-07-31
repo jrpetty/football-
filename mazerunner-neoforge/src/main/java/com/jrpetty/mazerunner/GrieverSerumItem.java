@@ -47,6 +47,10 @@ public class GrieverSerumItem extends Item {
                     ? "The Changing recedes — the serum burns it out of you."
                     : "The serum steadies you.")
                 .withStyle(ChatFormatting.GREEN), true);
+
+            if (wasChanging && player instanceof net.minecraft.server.level.ServerPlayer served) {
+                MazeAdvancements.award(served, MazeAdvancements.CURED);
+            }
         }
 
         level.playSound(null, player.blockPosition(), SoundEvents.HONEY_DRINK,

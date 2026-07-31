@@ -13,6 +13,7 @@ import com.jrpetty.mazerunner.config.MazeClock;
 import com.jrpetty.mazerunner.config.MazeConfigData;
 import com.jrpetty.mazerunner.config.MazeConfigData.StateBox;
 import com.jrpetty.mazerunner.config.MazeConfigs;
+import com.jrpetty.mazerunner.config.RunScoring;
 import com.jrpetty.mazerunner.config.MazeStructures;
 import com.jrpetty.mazerunner.gen.MazeChunkGenerator;
 
@@ -116,13 +117,6 @@ public final class MazeRuntime {
         return overworld != null && isMazeLevel(overworld) ? overworld : null;
     }
 
-    public static String formatMs(long ms) {
-        long tenths = (ms / 100) % 10;
-        long secs = (ms / 1000) % 60;
-        long mins = ms / 60000;
-        return String.format("%d:%02d.%d", mins, secs, tenths);
-    }
-
     private static void broadcast(ServerLevel level, Component msg) {
         for (ServerPlayer player : level.players()) {
             player.displayClientMessage(msg, false);
@@ -214,6 +208,30 @@ public final class MazeRuntime {
         }
     }
 
+    /** Dying doesn't end your run — it just costs you. */
+    @SubscribeEvent
+    public static void onPlayerDeath(net.neoforged.neoforge.event.entity.living.LivingDeathEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        ServerLevel level = player.serverLevel();
+        if (level == null || !isMazeLevel(level)) return;
+        MazeWorldState state = MazeWorldState.get(level);
+        if (!state.isRunning(player.getUUID())) return;
+
+        int deaths = state.addDeath(player.getUUID());
+        player.displayClientMessage(Component.literal(
+            "Death " + deaths + " — " + RunScoring.format(RunScoring.penaltyMillis(deaths))
+                + " added to your run. The clock is still going.")
+            .withStyle(ChatFormatting.RED), false);
+    }
+
+    @SubscribeEvent
+    public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player
+            && player.serverLevel() != null && isMazeLevel(player.serverLevel())) {
+            MazeAdvancements.award(player, MazeAdvancements.GREENIE);
+        }
+    }
+
     // ------------------------------------------------------------- main tick
 
     @SubscribeEvent
@@ -232,6 +250,7 @@ public final class MazeRuntime {
         if (gameTime % 20 == 0) manageGrievers(level, state);
         if (gameTime % 20 == 0) enforceWallTops(level);
         if (gameTime % 20 == 0) grieverAudio(level, state);
+        if (gameTime % 20 == 0) updateRuns(level, state);
         if (gameTime % GRIEVER_SPAWN_INTERVAL == 0) spawnGrievers(level, state);
     }
 
@@ -527,6 +546,8 @@ public final class MazeRuntime {
                 + layout.name() + ").").withStyle(ChatFormatting.GOLD));
         rumble(level, 0.7F);
 
+        awardNightSurvivors(level);
+
         int retreated = despawnGrievers(level);
         if (retreated > 0) {
             broadcast(level, Component.literal(
@@ -720,20 +741,77 @@ public final class MazeRuntime {
         portalCooldown.put(player.getUUID(), now);
 
         MazeWorldState state = MazeWorldState.get(level);
-        if (state.timerRunning()) {
-            long elapsed = state.stopTimer(System.currentTimeMillis());
-            boolean record = state.recordRun(elapsed);
-            broadcast(level, Component.literal(
-                "🏁 " + player.getName().getString() + " reached the exit — the Maze is beaten in "
-                    + formatMs(elapsed) + (record ? " — NEW WORLD RECORD!" : "!"))
-                .withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD));
-            for (ServerPlayer p : level.players()) {
-                p.playNotifySound(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.MASTER, 1.0F, 1.0F);
-            }
-        } else {
+        MazeAdvancements.award(player, MazeAdvancements.ESCAPED);
+
+        MazeWorldState.RunResult result = state.finishRun(
+            player.getUUID(), player.getName().getString(), System.currentTimeMillis());
+        if (result == null) {
             player.displayClientMessage(Component.literal(
-                "You found the exit! Start a timed run with /maze start.")
+                "You found the exit — but you were never on the clock. Leave the Glade to start a run.")
                 .withStyle(ChatFormatting.GREEN), true);
+            return;
+        }
+
+        String tail = result.worldBest() ? " — NEW WORLD RECORD!"
+            : result.personalBest() ? " — a personal best!" : "!";
+        broadcast(level, Component.literal(
+            "🏁 " + player.getName().getString() + " ran the Maze in "
+                + RunScoring.format(result.finalMillis()) + tail)
+            .withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD));
+        if (result.deaths() > 0) {
+            broadcast(level, Component.literal("   " + RunScoring.format(result.elapsedMillis())
+                + " on the clock + " + result.deaths() + " death" + (result.deaths() == 1 ? "" : "s")
+                + " (" + RunScoring.format(RunScoring.penaltyMillis(result.deaths())) + " penalty)")
+                .withStyle(ChatFormatting.GRAY));
+        }
+        for (ServerPlayer p : level.players()) {
+            p.playNotifySound(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.MASTER, 1.0F, 1.0F);
+        }
+
+        // Back to the Glade, so the world keeps playing instead of stranding
+        // the winner on the exit pad.
+        BlockPos home = gladeSpawn();
+        player.teleportTo(home.getX() + 0.5, home.getY(), home.getZ() + 0.5);
+        player.resetFallDistance();
+    }
+
+    // ------------------------------------------------------------- the run
+
+    /**
+     * A run starts by itself the moment a runner first steps out of the Glade —
+     * no command, no lobby. Also grants the "Runner" advancement.
+     */
+    private static void updateRuns(ServerLevel level, MazeWorldState state) {
+        MazeConfigData cfg = MazeConfigs.get();
+        for (ServerPlayer player : level.players()) {
+            if (player.isSpectator()) continue;
+            int cellX = Math.floorDiv(player.getBlockX(), cfg.cellSize);
+            int cellZ = Math.floorDiv(player.getBlockZ(), cfg.cellSize);
+            boolean inMaze = cfg.inGrid(cellX, cellZ) && !cfg.inGlade(cellX, cellZ);
+            if (!inMaze || state.isRunning(player.getUUID())) continue;
+
+            state.startRun(player.getUUID(), System.currentTimeMillis());
+            MazeAdvancements.award(player, MazeAdvancements.RUNNER);
+            player.displayClientMessage(Component.literal(
+                "⏱ Your run has begun — find the exit. Every death costs "
+                    + RunScoring.format(RunScoring.DEATH_PENALTY_MS) + ".")
+                .withStyle(ChatFormatting.YELLOW), false);
+        }
+    }
+
+    /** Dawn: anyone still out in the Maze lived through a night. */
+    private static void awardNightSurvivors(ServerLevel level) {
+        MazeConfigData cfg = MazeConfigs.get();
+        for (ServerPlayer player : level.players()) {
+            if (player.isSpectator() || !player.isAlive()) continue;
+            int cellX = Math.floorDiv(player.getBlockX(), cfg.cellSize);
+            int cellZ = Math.floorDiv(player.getBlockZ(), cfg.cellSize);
+            if (cfg.inGrid(cellX, cellZ) && !cfg.inGlade(cellX, cellZ)) {
+                MazeAdvancements.award(player, MazeAdvancements.NIGHT_SURVIVOR);
+                player.displayClientMessage(Component.literal(
+                    "You survived a night in the Maze. Nobody does that.")
+                    .withStyle(ChatFormatting.GOLD), false);
+            }
         }
     }
 }
