@@ -766,9 +766,9 @@ public final class MazeRuntime {
         }
         // If a synchronised race is on, the first runner out takes it.
         if (state.raceRunning()) {
-            long now = System.currentTimeMillis();
-            boolean record = state.isRaceRecord(state.raceElapsed(now));
-            long winning = state.finishRace(player.getName().getString(), now);
+            long nowMs = System.currentTimeMillis();
+            boolean record = state.isRaceRecord(state.raceElapsed(nowMs));
+            long winning = state.finishRace(player.getName().getString(), nowMs);
             broadcast(level, Component.literal(
                 "🏆 RACE OVER — " + player.getName().getString() + " is out first in "
                     + RunScoring.format(winning) + (record ? " — a new race record!" : "!"))
