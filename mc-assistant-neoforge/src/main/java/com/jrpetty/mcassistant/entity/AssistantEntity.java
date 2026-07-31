@@ -205,7 +205,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b30 · usability pass: picking a job is now ALL you do — the bot claims the ground around it and starts "
+        "2026-07-b31 · job-loop fixes: stationed bots no longer narrate every cycle (repeats hushed for ~5 min, new problems always get through) · Follow/Stay now actually take a specialist off the job · fisher searches wider for its water · storekeeper sorts on a cooldown · upkeep is clock-based so rations/charges really are spent · usability pass: picking a job is now ALL you do — the bot claims the ground around it and starts "
         + "working the moment it has its tools (Zone Marker only if you want a different patch) · zones are drawn in particles "
         + "while you hold a marker · the job button names the job · Follow/Stay back on the screen · ⚠/⚒ on the nametag "
         + "shows who is stuck at a glance · nine jobs · running costs (rations + a redstone core charge) · veteran levels · "
@@ -776,11 +776,26 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     /** Say something to the owner. */
     public void say(String message) {
+        // A stationed specialist runs the same loop for hours — narrating every
+        // cycle ("Dropping a line." … "Caught 8 — good haul." … forever) would
+        // bury the chat. While one is quietly working its job, a line it has
+        // already said recently is dropped; anything NEW still comes straight
+        // through, so problems are never silenced. Counts are normalised, so
+        // "Stashed 12 items" and "Stashed 37 items" count as the same line.
+        if (stationTask != StationTask.NONE && autonomous) {
+            String key = message.replaceAll("\\d+", "#");
+            Integer last = recentlySaid.get(key);
+            if (last != null && tickCount - last < 6000) return; // ~5 minutes
+            if (recentlySaid.size() > 32) recentlySaid.clear();
+            recentlySaid.put(key, tickCount);
+        }
         Player owner = getOwnerPlayer();
         if (owner instanceof ServerPlayer sp) {
             sp.sendSystemMessage(Component.literal("<" + displayNameCap() + "> " + message));
         }
     }
+
+    private final Map<String, Integer> recentlySaid = new java.util.HashMap<>();
 
     // --------------------------------- modes ---------------------------------
 

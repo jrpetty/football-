@@ -160,8 +160,11 @@ public class FishGoal extends Goal {
         BlockPos feet = assistant.feetPos();
         BlockPos best = null;
         double bestDist = Double.MAX_VALUE;
+        // Reach a little further than the stationed fisher's requirement check
+        // (water within 12 of its zone centre) so a bot standing off-centre in
+        // its zone still finds the pond it was posted to.
         for (BlockPos pos : BlockPos.betweenClosed(
-                feet.offset(-12, -3, -12), feet.offset(12, 2, 12))) {
+                feet.offset(-18, -4, -18), feet.offset(18, 3, 18))) {
             if (!assistant.level().getFluidState(pos).is(FluidTags.WATER)) continue;
             if (!assistant.level().getBlockState(pos.above()).canBeReplaced()) continue;
             double d = pos.distSqr(feet);

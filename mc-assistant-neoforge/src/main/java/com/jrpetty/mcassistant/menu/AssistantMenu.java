@@ -132,6 +132,7 @@ public class AssistantMenu extends AbstractContainerMenu {
         }
         java.util.List<String> gaps = assistant.missingEssentials();
         if (gaps.isEmpty()) {
+            assistant.setMode(AssistantEntity.Mode.FOLLOW); // clear any parking mode
             assistant.setAutonomous(true);
             assistant.say("I'm your " + next.title.toLowerCase() + " — working this patch now. "
                 + "Hand me a Zone Marker's area if you'd rather I worked somewhere else.");
@@ -160,6 +161,7 @@ public class AssistantMenu extends AbstractContainerMenu {
             return;
         }
         assistant.clearQueue();
+        assistant.setMode(AssistantEntity.Mode.FOLLOW); // clear any parking mode
         assistant.setAutonomous(true);
         assistant.say("On it — working my patch as your " + assistant.stationTask().title.toLowerCase() + ".");
     }
@@ -181,8 +183,21 @@ public class AssistantMenu extends AbstractContainerMenu {
         if (assistant == null || !assistant.isOwner(player)) return false;
         switch (id) {
             case BTN_STOP -> assistant.requestStop();
-            case BTN_FOLLOW -> { assistant.clearQueue(); assistant.setMode(AssistantEntity.Mode.FOLLOW); assistant.say("Following you."); }
-            case BTN_STAY -> { assistant.clearQueue(); assistant.setMode(AssistantEntity.Mode.STAY); assistant.say("Holding here."); }
+            // Calling a specialist over (or parking it) has to take it OFF the
+            // job — otherwise the work brain simply re-queues the same task a
+            // few seconds later and it walks straight back to its zone.
+            case BTN_FOLLOW -> {
+                assistant.clearQueue();
+                assistant.setAutonomous(false);
+                assistant.setMode(AssistantEntity.Mode.FOLLOW);
+                assistant.say("Following you — press my job button to send me back to work.");
+            }
+            case BTN_STAY -> {
+                assistant.clearQueue();
+                assistant.setAutonomous(false);
+                assistant.setMode(AssistantEntity.Mode.STAY);
+                assistant.say("Holding here — press my job button to send me back to work.");
+            }
             case BTN_GUARD -> { assistant.clearQueue(); assistant.setMode(AssistantEntity.Mode.GUARD); assistant.say("Guard mode on."); }
             case BTN_DEPOSIT -> assistant.requestDeposit();
             case BTN_COME -> {
