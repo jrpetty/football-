@@ -37,6 +37,14 @@ which is also world spawn and death respawn (768, 61, 768). Vines and
 mangrove-moss climb the Glade-facing walls. Hostile mobs are automatically
 purged inside the Glade — it is safe ground; the maze is not.
 
+**v1.8 changes (trees)** — the Glade forest is now **plain base-game trees at a
+natural mix of sizes**. Dynamic Trees support has been removed entirely: every
+tree is a vanilla oak, birch or dark oak generated **full-grown at worldgen** as
+an ellipsoidal crown on a log trunk — **birches tall and slim, dark oaks broad
+and low, oaks in between** — rolled small / medium / large per tree with a gentle
+regional lean so the woods have real height variation instead of one uniform
+stand. No mod dependency, no sapling pop-in.
+
 **v1.7 changes (Grievers)** — the maze now has its signature threat. When the
 Glade doors seal at dusk, **Grievers** begin to spawn in the corridors around
 each runner and hunt them through the night. They are big, fast, tough
@@ -159,9 +167,10 @@ cd mazerunner-neoforge
 Maze dataset: regenerate with `generate_maze.py` (attached to the project
 spec) and replace `src/main/resources/data/mazerunner/maze/maze_config_v2.json`.
 
-### Dynamic Trees
+### Trees
 
-The Glade forest ships with built-in oak/birch/dark-oak/apple-oak trees so it
-always populates. True Dynamic Trees integration (growing DT species) requires
-compiling against the Dynamic Trees API — tell me the DT version you run and
-I'll wire it as a compile-time dependency so the forest uses real DT trees.
+The Glade forest is plain base-game oak, birch and dark oak, generated
+full-grown at worldgen at a natural mix of small/medium/large sizes (see the
+v1.8 note above). There is no mod dependency and nothing to install for the
+forest — it populates itself. Tune the look in `GladeTerrain.treeSize` /
+`trunkHeight` and `TreePlacer` (crown radii per species and size).

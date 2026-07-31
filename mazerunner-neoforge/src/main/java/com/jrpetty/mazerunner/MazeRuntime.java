@@ -13,7 +13,6 @@ import com.jrpetty.mazerunner.config.MazeConfigData.StateBox;
 import com.jrpetty.mazerunner.config.MazeConfigs;
 import com.jrpetty.mazerunner.config.MazeStructures;
 import com.jrpetty.mazerunner.gen.MazeChunkGenerator;
-import com.jrpetty.mazerunner.gen.MazeCompat;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -98,8 +97,6 @@ public final class MazeRuntime {
     private static final ConcurrentLinkedQueue<Long> pendingUnloads = new ConcurrentLinkedQueue<>();
     private static final Set<Long> loadedChunks = new HashSet<>();
     private static final Map<UUID, Long> portalCooldown = new HashMap<>();
-    // Glade chunks whose Dynamic Trees saplings still need maturing.
-    private static final ConcurrentLinkedQueue<Long> pendingGladeGrow = new ConcurrentLinkedQueue<>();
 
     /** Always-visible clock: day number + real time until the doors seal / dawn. */
     private static final ServerBossEvent CLOCK_BAR = new ServerBossEvent(
@@ -166,7 +163,6 @@ public final class MazeRuntime {
         pendingUnloads.clear();
         loadedChunks.clear();
         portalCooldown.clear();
-        pendingGladeGrow.clear();
         WallAnimator.clear();
         CLOCK_BAR.removeAllPlayers();
     }
@@ -411,50 +407,6 @@ public final class MazeRuntime {
             loadedChunks.add(key);
             ChunkPos pos = new ChunkPos(key);
             snapChunk(level, state, pos.x, pos.z);
-            if (cfg().inGlade(pos.x, pos.z) && MazeCompat.dynamicTrees()) {
-                pendingGladeGrow.add(key);
-            }
-        }
-
-        // Mature a Glade chunk's Dynamic Trees saplings (one chunk per tick).
-        Long grow = pendingGladeGrow.poll();
-        if (grow != null) {
-            ChunkPos p = new ChunkPos(grow);
-            growDynamicTrees(level, p.x, p.z);
-        }
-    }
-
-    private static com.jrpetty.mazerunner.config.MazeConfigData cfg() {
-        return MazeConfigs.get();
-    }
-
-    /**
-     * Bonemeals any Dynamic Trees saplings in a Glade chunk to full growth, so
-     * the forest is mature at first sight rather than tiny saplings. Uses the
-     * vanilla BonemealableBlock interface (DT saplings implement it), so no DT
-     * API is needed. Fully guarded — a failure just leaves the saplings.
-     */
-    private static void growDynamicTrees(ServerLevel level, int cx, int cz) {
-        try {
-            var cfg = cfg();
-            for (int lx = 0; lx < 16; lx++) {
-                for (int lz = 0; lz < 16; lz++) {
-                    int wx = (cx << 4) + lx;
-                    int wz = (cz << 4) + lz;
-                    if (!com.jrpetty.mazerunner.config.GladeTerrain.isTrunkSite(wx, wz)) continue;
-                    int ground = cfg.floorY + com.jrpetty.mazerunner.config.GladeTerrain.heightAt(wx, wz);
-                    BlockPos p = new BlockPos(wx, ground + 1, wz);
-                    for (int i = 0; i < 24; i++) {
-                        BlockState st = level.getBlockState(p);
-                        if (!(st.getBlock() instanceof net.minecraft.world.level.block.BonemealableBlock bm)) break;
-                        if (!bm.isValidBonemealTarget(level, p, st)) break;
-                        bm.performBonemeal(level, level.random, p, st);
-                    }
-                }
-            }
-        } catch (Throwable t) {
-            MazeRunnerMod.LOGGER.warn("Maze Runner: Dynamic Trees growth failed in chunk {},{}: {}",
-                cx, cz, t.toString());
         }
     }
 

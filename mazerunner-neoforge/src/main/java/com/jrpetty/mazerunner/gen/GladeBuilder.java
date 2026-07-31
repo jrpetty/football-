@@ -59,7 +59,7 @@ final class GladeBuilder {
         if (elevatorColumn(chunk, pos, wx, wz, floorY)) return;
 
         boolean forest = GladeTerrain.inForest(wx, wz);
-        if (forest && TreePlacer.emit(chunk, pos, wx, wz, floorY)) return;
+        if (forest && TreePlacer.emit(chunk, pos, wx, wz, floorY, cfg.wallTopY - 1)) return;
 
         if (sandyShore) return;
         int flower = GladeTerrain.flowerAt(wx, wz);

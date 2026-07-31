@@ -163,12 +163,31 @@ public final class GladeTerrain {
         return APPLE_OAK;
     }
 
-    /** Small trees for the compact Glade. */
+    public static final int SIZE_SMALL = 0, SIZE_MEDIUM = 1, SIZE_LARGE = 2;
+
+    /**
+     * Tree size tier (small / medium / large). A per-tree roll blended with a
+     * gentle regional lean, so heights vary tree-to-tree but still cluster into
+     * natural stands of taller and shorter woods rather than one uniform size.
+     */
+    public static int treeSize(int x, int z) {
+        double perTree = Noise.hash2(x + 5, z - 7, 0x51AB);
+        double lean = (Noise.value2(x, z, Math.max(6, span() * 0.10), 0x51EE) - 0.5) * 0.30;
+        double v = perTree + lean;
+        if (v < 0.46) return SIZE_SMALL;
+        if (v < 0.80) return SIZE_MEDIUM;
+        return SIZE_LARGE;
+    }
+
+    /** Trunk height by species and size tier, plus a little per-tree jitter. */
     public static int trunkHeight(int x, int z) {
         int base = switch (speciesAt(x, z)) {
-            case BIRCH, DARK_OAK -> 4;
-            default -> 3;
+            case BIRCH -> 5;      // birches run tall and slim
+            case APPLE_OAK -> 5;
+            case DARK_OAK -> 4;   // dark oaks stay stout under a broad crown
+            default -> 4;         // OAK
         };
-        return base + (int) (Noise.hash2(x, z * 3 + 1, 0x71EE) * 2); // +0..1
+        int jitter = (int) (Noise.hash2(x, z * 3 + 1, 0x71EE) * 2); // +0..1
+        return base + treeSize(x, z) + jitter; // small→large adds another 0..2
     }
 }
