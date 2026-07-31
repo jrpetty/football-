@@ -56,12 +56,19 @@ public final class MazeConfigData {
 
     // ------------------------------------------------------------- fields
 
-    /** Walls generate up to here… */
-    public static final int WALL_TOP_Y = 110;
+    /** Authoring scale of the JSON (blocks per cell as generated). */
+    public static final int SRC_CELL = 16;
+    /** Minigame play scale: cell = 6 blocks (~62% smaller than the 16-block original). */
+    public static final int CELL_SIZE = 6;
+    /** Wall thickness each side of a cell; must stay ≥2 so relief niches never hole through. */
+    public static final int WALL_BAND = 2;
+
+    /** Walls generate up to here (scaled down for the minigame)… */
+    public static final int WALL_TOP_Y = 78;
     /** …but players may not place blocks above here. */
-    public static final int BUILD_LIMIT_Y = 86;
-    /** Bedrock sits this far below the maze floor (room for a deep lake). */
-    public static final int BEDROCK_DEPTH = 13;
+    public static final int BUILD_LIMIT_Y = 72;
+    /** Bedrock sits this far below the maze floor (room for the lake). */
+    public static final int BEDROCK_DEPTH = 7;
 
     public final int gridCells;
     public final int cellSize;
@@ -99,17 +106,18 @@ public final class MazeConfigData {
     private MazeConfigData(JsonObject root) {
         JsonObject meta = root.getAsJsonObject("meta");
         this.gridCells = meta.get("gridCells").getAsInt();
-        this.cellSize = meta.get("cellSize").getAsInt();
+        this.cellSize = CELL_SIZE; // play scale (JSON authored at SRC_CELL)
         this.floorY = meta.get("floorY").getAsInt();
         this.wallBaseY = meta.get("wallBaseY").getAsInt();
-        this.wallTopY = WALL_TOP_Y; // tall movie walls, above the build limit
+        this.wallTopY = WALL_TOP_Y;
         this.bedrockY = floorY - BEDROCK_DEPTH;
 
+        // Glade cell range comes from the authoring scale; block bounds re-derive at play scale.
         JsonArray glade = meta.getAsJsonArray("gladeBlocks");
-        this.gladeBlockMin = glade.get(0).getAsInt();
-        this.gladeBlockMax = glade.get(2).getAsInt();
-        this.gladeCellMin = gladeBlockMin / cellSize;
-        this.gladeCellMax = gladeBlockMax / cellSize;
+        this.gladeCellMin = glade.get(0).getAsInt() / SRC_CELL;
+        this.gladeCellMax = glade.get(2).getAsInt() / SRC_CELL;
+        this.gladeBlockMin = gladeCellMin * cellSize;
+        this.gladeBlockMax = (gladeCellMax + 1) * cellSize - 1;
 
         for (JsonElement e : root.getAsJsonArray("baseOpenEdges")) {
             int[] c = parseEdgeKey(e.getAsString());
@@ -119,12 +127,8 @@ public final class MazeConfigData {
         for (Map.Entry<String, JsonElement> entry : root.getAsJsonObject("togglePoints").entrySet()) {
             JsonObject tp = entry.getValue().getAsJsonObject();
             int[] c = parseEdgeKey(tp.get("edge").getAsString());
-            JsonArray f = tp.getAsJsonArray("from");
-            JsonArray t = tp.getAsJsonArray("to");
-            // Movable segments keep their authored height (61..100); the tall
-            // permanent walls above them (to y110) form the lintels.
-            Box box = new Box(f.get(0).getAsInt(), f.get(1).getAsInt(), f.get(2).getAsInt(),
-                t.get(0).getAsInt(), t.get(1).getAsInt(), t.get(2).getAsInt());
+            // Box re-derived at play scale from the cell pair (JSON from/to ignored).
+            Box box = edgeBox(c[0], c[1], c[2], c[3]);
             togglePoints.put(entry.getKey(),
                 new TogglePoint(entry.getKey(), tp.get("kind").getAsString(), c[0], c[1], c[2], c[3], box));
         }
@@ -132,13 +136,12 @@ public final class MazeConfigData {
         for (Map.Entry<String, JsonElement> entry : root.getAsJsonObject("exits").entrySet()) {
             JsonObject ex = entry.getValue().getAsJsonObject();
             JsonArray cell = ex.getAsJsonArray("cell");
-            JsonArray portal = ex.getAsJsonArray("portal");
             int cx = cell.get(0).getAsInt();
             int cz = cell.get(1).getAsInt();
             String facing = ex.get("facing").getAsString();
+            int[] p = portalPos(cx, cz, facing); // re-derived at play scale
             exits.put(entry.getKey(), new ExitDef(entry.getKey(), cx, cz,
-                portal.get(0).getAsInt(), portal.get(1).getAsInt(), portal.get(2).getAsInt(),
-                facing, exitGapBox(cx, cz, facing)));
+                p[0], p[1], p[2], facing, exitGapBox(cx, cz, facing)));
         }
 
         int li = 0;
@@ -372,24 +375,33 @@ public final class MazeConfigData {
         if (inGlade(cx, cz)) return true;
         int lx = Math.floorMod(blockX, cellSize);
         int lz = Math.floorMod(blockZ, cellSize);
-        boolean midX = lx >= 4 && lx <= 11;
-        boolean midZ = lz >= 4 && lz <= 11;
+        int lo = WALL_BAND;             // corridor starts here
+        int hi = cellSize - 1 - WALL_BAND; // …and ends here
+        boolean midX = lx >= lo && lx <= hi;
+        boolean midZ = lz >= lo && lz <= hi;
         if (midX && midZ) return true; // open cell centre
-        if (midZ && lx >= 12) return isBaseOpenEdge(cx, cz, cx + 1, cz);
-        if (midZ && lx <= 3) return isBaseOpenEdge(cx - 1, cz, cx, cz);
-        if (midX && lz >= 12) return isBaseOpenEdge(cx, cz, cx, cz + 1);
-        if (midX && lz <= 3) return isBaseOpenEdge(cx, cz - 1, cx, cz);
+        if (midZ && lx >= cellSize - WALL_BAND) return isBaseOpenEdge(cx, cz, cx + 1, cz);
+        if (midZ && lx < WALL_BAND) return isBaseOpenEdge(cx - 1, cz, cx, cz);
+        if (midX && lz >= cellSize - WALL_BAND) return isBaseOpenEdge(cx, cz, cx, cz + 1);
+        if (midX && lz < WALL_BAND) return isBaseOpenEdge(cx, cz - 1, cx, cz);
         return false; // corner blocks are always wall
     }
 
-    /** Box across the shared edge of two adjacent cells (matches the generator script). */
+    /** Corridor width in blocks (cellSize minus a wall band on each side). */
+    public int corridorWidth() {
+        return cellSize - 2 * WALL_BAND;
+    }
+
+    /** Box across the shared edge of two adjacent cells (the connecting strip). */
     public Box edgeBox(int ax, int az, int bx, int bz) {
-        if (bx == ax + 1) {
-            return new Box(ax * cellSize + 12, wallBaseY, az * cellSize + 4,
-                ax * cellSize + 19, wallTopY, az * cellSize + 11);
+        int lo = WALL_BAND;
+        int hi = cellSize - 1 - WALL_BAND;
+        if (bx == ax + 1) { // +X edge: 2·WALL_BAND-wide strip straddling the boundary
+            return new Box(ax * cellSize + (cellSize - WALL_BAND), wallBaseY, az * cellSize + lo,
+                ax * cellSize + (cellSize + WALL_BAND - 1), wallTopY, az * cellSize + hi);
         }
-        return new Box(ax * cellSize + 4, wallBaseY, az * cellSize + 12,
-            ax * cellSize + 11, wallTopY, az * cellSize + 19);
+        return new Box(ax * cellSize + lo, wallBaseY, az * cellSize + (cellSize - WALL_BAND),
+            ax * cellSize + hi, wallTopY, az * cellSize + (cellSize + WALL_BAND - 1));
     }
 
     /** A Glade door: the edge box between the ring cell and its adjacent Glade cell. */
@@ -408,11 +420,26 @@ public final class MazeConfigData {
     private Box exitGapBox(int cellX, int cellZ, String facing) {
         int bx = cellX * cellSize;
         int bz = cellZ * cellSize;
+        int lo = WALL_BAND;
+        int hi = cellSize - 1 - WALL_BAND;
+        int band = WALL_BAND - 1;
         return switch (facing) {
-            case "north" -> new Box(bx + 4, wallBaseY, bz, bx + 11, wallTopY, bz + 3);
-            case "south" -> new Box(bx + 4, wallBaseY, bz + 12, bx + 11, wallTopY, bz + 15);
-            case "west" -> new Box(bx, wallBaseY, bz + 4, bx + 3, wallTopY, bz + 11);
-            default -> new Box(bx + 12, wallBaseY, bz + 4, bx + 15, wallTopY, bz + 11);
+            case "north" -> new Box(bx + lo, wallBaseY, bz, bx + hi, wallTopY, bz + band);
+            case "south" -> new Box(bx + lo, wallBaseY, bz + (cellSize - WALL_BAND), bx + hi, wallTopY, bz + cellSize - 1);
+            case "west" -> new Box(bx, wallBaseY, bz + lo, bx + band, wallTopY, bz + hi);
+            default -> new Box(bx + (cellSize - WALL_BAND), wallBaseY, bz + lo, bx + cellSize - 1, wallTopY, bz + hi);
+        };
+    }
+
+    /** Exit portal position just outside the border, centred on the exit cell. */
+    private int[] portalPos(int cellX, int cellZ, String facing) {
+        int mid = cellSize / 2;
+        int max = gridCells * cellSize;
+        return switch (facing) {
+            case "north" -> new int[] { cellX * cellSize + mid, floorY + 1, -2 };
+            case "south" -> new int[] { cellX * cellSize + mid, floorY + 1, max + 1 };
+            case "west" -> new int[] { -2, floorY + 1, cellZ * cellSize + mid };
+            default -> new int[] { max + 1, floorY + 1, cellZ * cellSize + mid };
         };
     }
 

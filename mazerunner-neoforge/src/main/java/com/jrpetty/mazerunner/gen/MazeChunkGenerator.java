@@ -82,59 +82,53 @@ public class MazeChunkGenerator extends ChunkGenerator {
         BlockState dirt = Blocks.DIRT.defaultBlockState();
         BlockState grass = Blocks.GRASS_BLOCK.defaultBlockState();
 
-        boolean inGrid = cfg.inGrid(cp.x, cp.z);
+        int floorY = cfg.floorY;
+        // A 16-block chunk can span several small cells, so decide per block.
+        for (int lx = 0; lx < 16; lx++) {
+            for (int lz = 0; lz < 16; lz++) {
+                int wx = cp.getMinBlockX() + lx;
+                int wz = cp.getMinBlockZ() + lz;
+                int cx = Math.floorDiv(wx, cfg.cellSize);
+                int cz = Math.floorDiv(wz, cfg.cellSize);
+                if (!cfg.inGrid(cx, cz)) continue; // void outside the maze square
 
-        if (inGrid) {
-            int floorY = cfg.floorY;
-            boolean glade = cfg.inGlade(cp.x, cp.z);
-            for (int lx = 0; lx < 16; lx++) {
-                for (int lz = 0; lz < 16; lz++) {
-                    int wx = cp.getMinBlockX() + lx;
-                    int wz = cp.getMinBlockZ() + lz;
-                    chunk.setBlockState(pos.set(wx, cfg.bedrockY, wz), bedrock, false);
+                chunk.setBlockState(pos.set(wx, cfg.bedrockY, wz), bedrock, false);
 
-                    if (glade) {
-                        if (MazeWalls.gladeProtrusion(cfg, wx, wz)) {
-                            // A wall panel pushed out into the Glade edge.
-                            for (int y = cfg.bedrockY + 1; y < floorY; y++) {
-                                chunk.setBlockState(pos.set(wx, y, wz), dirt, false);
-                            }
-                            chunk.setBlockState(pos.set(wx, floorY, wz), dirt, false);
-                            for (int y = cfg.wallBaseY; y <= cfg.wallTopY; y++) {
-                                chunk.setBlockState(pos.set(wx, y, wz), WallPalette.stateAt(cfg, wx, y, wz), false);
-                            }
-                        } else {
-                            GladeBuilder.column(cfg, chunk, pos, wx, wz);
+                if (cfg.inGlade(cx, cz)) {
+                    if (MazeWalls.gladeProtrusion(cfg, wx, wz)) {
+                        for (int y = cfg.bedrockY + 1; y <= floorY; y++) {
+                            chunk.setBlockState(pos.set(wx, y, wz), dirt, false);
                         }
-                        continue;
-                    }
-                    for (int y = cfg.bedrockY + 1; y < floorY; y++) {
-                        chunk.setBlockState(pos.set(wx, y, wz), dirt, false);
-                    }
-                    boolean floorOpen = MazeStructures.isOpen(cfg, wx, wz);
-                    chunk.setBlockState(pos.set(wx, floorY, wz), floorOpen ? grass : dirt, false);
-                    // Walls with movie-panel relief (may push into corridor edges).
-                    for (int y = cfg.wallBaseY; y <= cfg.wallTopY; y++) {
-                        if (MazeWalls.solid(cfg, wx, y, wz)) {
+                        for (int y = cfg.wallBaseY; y <= cfg.wallTopY; y++) {
                             chunk.setBlockState(pos.set(wx, y, wz), WallPalette.stateAt(cfg, wx, y, wz), false);
                         }
+                    } else {
+                        GladeBuilder.column(cfg, chunk, pos, wx, wz);
+                    }
+                    continue;
+                }
+
+                for (int y = cfg.bedrockY + 1; y < floorY; y++) {
+                    chunk.setBlockState(pos.set(wx, y, wz), dirt, false);
+                }
+                boolean floorOpen = MazeStructures.isOpen(cfg, wx, wz);
+                chunk.setBlockState(pos.set(wx, floorY, wz), floorOpen ? grass : dirt, false);
+                for (int y = cfg.wallBaseY; y <= cfg.wallTopY; y++) {
+                    if (MazeWalls.solid(cfg, wx, y, wz)) {
+                        chunk.setBlockState(pos.set(wx, y, wz), WallPalette.stateAt(cfg, wx, y, wz), false);
                     }
                 }
             }
+        }
 
-            // Greenery pass — after all walls in the chunk exist.
-            for (int lx = 0; lx < 16; lx++) {
-                for (int lz = 0; lz < 16; lz++) {
-                    int wx = cp.getMinBlockX() + lx;
-                    int wz = cp.getMinBlockZ() + lz;
-                    if (glade) gladeWallCoat(chunk, pos, wx, wz);
-                    else ivy(chunk, pos, wx, wz);
-                }
+        // Greenery pass — after all walls in the chunk exist (methods self-guard).
+        for (int lx = 0; lx < 16; lx++) {
+            for (int lz = 0; lz < 16; lz++) {
+                int wx = cp.getMinBlockX() + lx;
+                int wz = cp.getMinBlockZ() + lz;
+                gladeWallCoat(chunk, pos, wx, wz);
+                ivy(chunk, pos, wx, wz);
             }
-
-            // A plaza ruin overlapping this chunk renders its slice here.
-            MazeStructures.Plaza plaza = MazeStructures.plazaAtCell(cfg, cp.x, cp.z);
-            if (plaza != null) RuinBuilder.render(cfg, plaza, chunk);
         }
 
         for (ExitPad pad : pads) {
@@ -312,20 +306,22 @@ public class MazeChunkGenerator extends ChunkGenerator {
 
     private static List<ExitPad> buildPads(MazeConfigData cfg) {
         List<ExitPad> pads = new ArrayList<>();
-        int max = cfg.gridCells * cfg.cellSize; // 1536
+        int max = cfg.gridCells * cfg.cellSize;
+        int half = cfg.corridorWidth() / 2 + 1; // pad half-width around the corridor
+        int depth = cfg.cellSize + 2;           // how far the platform reaches outward
         // Only the single fixed exit gets a pad and a portal.
         for (MazeConfigData.ExitDef exit : List.of(cfg.fixedExit())) {
-            int stripX0 = exit.cellX() * cfg.cellSize + 4;
-            int stripZ0 = exit.cellZ() * cfg.cellSize + 4;
+            int midX = exit.cellX() * cfg.cellSize + cfg.cellSize / 2;
+            int midZ = exit.cellZ() * cfg.cellSize + cfg.cellSize / 2;
             switch (exit.facing()) {
                 case "north" -> pads.add(new ExitPad(exit.id(),
-                    stripX0 - 3, -10, stripX0 + 10, -1, exit.portalX(), exit.portalZ()));
+                    midX - half, -depth, midX + half, -1, exit.portalX(), exit.portalZ()));
                 case "south" -> pads.add(new ExitPad(exit.id(),
-                    stripX0 - 3, max, stripX0 + 10, max + 9, exit.portalX(), exit.portalZ()));
+                    midX - half, max, midX + half, max + depth - 1, exit.portalX(), exit.portalZ()));
                 case "west" -> pads.add(new ExitPad(exit.id(),
-                    -10, stripZ0 - 3, -1, stripZ0 + 10, exit.portalX(), exit.portalZ()));
+                    -depth, midZ - half, -1, midZ + half, exit.portalX(), exit.portalZ()));
                 default -> pads.add(new ExitPad(exit.id(),
-                    max, stripZ0 - 3, max + 9, stripZ0 + 10, exit.portalX(), exit.portalZ()));
+                    max, midZ - half, max + depth - 1, midZ + half, exit.portalX(), exit.portalZ()));
             }
         }
         return pads;
@@ -353,7 +349,7 @@ public class MazeChunkGenerator extends ChunkGenerator {
 
     @Override
     public int getGenDepth() {
-        return 128; // matches the mazerunner:maze dimension type (min_y 0, height 128)
+        return 80; // matches the mazerunner:maze dimension type (min_y 0, height 80)
     }
 
     @Override

@@ -27,7 +27,9 @@ public final class MazeStructures {
     public static final int TYPE_DUNGEON = 2;
     public static final int TYPE_TOWER = 3;
 
-    public static final int PLAZA_COUNT = 10;
+    // Ruin plazas are disabled at the minigame scale — 2×2 tiny cells can't hold
+    // the ruins/dungeons cleanly. Dead-end supply chests (below) remain.
+    public static final int PLAZA_COUNT = 0;
     private static final int SPACING_CELLS = 14;
     private static final long SEED = 0x6D617A65C0FFEEL;
 
@@ -165,19 +167,21 @@ public final class MazeStructures {
         if (cfg.inGlade(cx, cz)) return true;
         plazas(cfg);
 
-        int lx = Math.floorMod(blockX, cfg.cellSize);
-        int lz = Math.floorMod(blockZ, cfg.cellSize);
-        boolean midX = lx >= 4 && lx <= 11;
-        boolean midZ = lz >= 4 && lz <= 11;
+        int C = cfg.cellSize;
+        int W = MazeConfigData.WALL_BAND;
+        int lx = Math.floorMod(blockX, C);
+        int lz = Math.floorMod(blockZ, C);
+        boolean midX = lx >= W && lx <= C - 1 - W;
+        boolean midZ = lz >= W && lz <= C - 1 - W;
         if (midX && midZ) return true;
-        if (midZ && lx >= 12) return edgeOpen(cfg, cx, cz, cx + 1, cz);
-        if (midZ && lx <= 3) return edgeOpen(cfg, cx - 1, cz, cx, cz);
-        if (midX && lz >= 12) return edgeOpen(cfg, cx, cz, cx, cz + 1);
-        if (midX && lz <= 3) return edgeOpen(cfg, cx, cz - 1, cx, cz);
+        if (midZ && lx >= C - W) return edgeOpen(cfg, cx, cz, cx + 1, cz);
+        if (midZ && lx < W) return edgeOpen(cfg, cx - 1, cz, cx, cz);
+        if (midX && lz >= C - W) return edgeOpen(cfg, cx, cz, cx, cz + 1);
+        if (midX && lz < W) return edgeOpen(cfg, cx, cz - 1, cx, cz);
 
         // corner post: open only when all four meeting cells share one plaza
-        int nx = lx >= 12 ? cx + 1 : cx - 1;
-        int nz = lz >= 12 ? cz + 1 : cz - 1;
+        int nx = lx >= C - W ? cx + 1 : cx - 1;
+        int nz = lz >= C - W ? cz + 1 : cz - 1;
         Plaza p = byCell.get(MazeConfigData.chunkKey(cx, cz));
         return p != null && p.containsCell(nx, cz) && p.containsCell(cx, nz) && p.containsCell(nx, nz);
     }

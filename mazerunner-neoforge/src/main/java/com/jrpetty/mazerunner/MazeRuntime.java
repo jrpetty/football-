@@ -69,7 +69,11 @@ public final class MazeRuntime {
         Registries.LOOT_TABLE, ResourceLocation.fromNamespaceAndPath(MazeRunnerMod.MODID, "chests/maze_cache"));
 
     /** Spawn point on the grate inside the Box elevator at the Glade centre. */
-    public static final BlockPos GLADE_SPAWN = new BlockPos(768, 62, 768);
+    public static BlockPos gladeSpawn() {
+        MazeConfigData cfg = MazeConfigs.get();
+        int c = (cfg.gladeBlockMin + cfg.gladeBlockMax) / 2;
+        return new BlockPos(c, cfg.floorY + 2, c);
+    }
 
     // Chunk events can fire off-thread during generation; buffer, drain on tick.
     private static final ConcurrentLinkedQueue<Long> pendingLoads = new ConcurrentLinkedQueue<>();
@@ -133,7 +137,7 @@ public final class MazeRuntime {
             for (int idx : state.schedule()) order.append(cfg.layout(idx).name()).append(' ');
             MazeRunnerMod.LOGGER.info("Maze Runner: world schedule rolled: {}", order.toString().trim());
         }
-        level.setDefaultSpawnPos(GLADE_SPAWN, 0.0F);
+        level.setDefaultSpawnPos(gladeSpawn(), 0.0F);
         MazeRunnerMod.LOGGER.info("Maze Runner world active — day {}, layout {}, fixed exit {}",
             state.dayNumber(), cfg.layout(state.physicalLayout()).name(), cfg.fixedExitId);
     }
@@ -190,7 +194,8 @@ public final class MazeRuntime {
         // Death sends runners back to the Box, always.
         if (event.getEntity() instanceof ServerPlayer player
             && player.serverLevel() != null && isMazeLevel(player.serverLevel())) {
-            player.teleportTo(GLADE_SPAWN.getX() + 0.5, GLADE_SPAWN.getY(), GLADE_SPAWN.getZ() + 0.5);
+            BlockPos s = gladeSpawn();
+            player.teleportTo(s.getX() + 0.5, s.getY(), s.getZ() + 0.5);
         }
     }
 
@@ -463,7 +468,7 @@ public final class MazeRuntime {
             if (cell[0] == cx && cell[1] == cz
                 && MazeStructures.plazaAtCell(cfg, cell[0], cell[1]) == null) {
                 ensureChestAt(level, state,
-                    new BlockPos(cell[0] * cfg.cellSize + 7, cfg.floorY + 1, cell[1] * cfg.cellSize + 7));
+                    new BlockPos(cell[0] * cfg.cellSize + cfg.cellSize / 2, cfg.floorY + 1, cell[1] * cfg.cellSize + cfg.cellSize / 2));
             }
         }
         for (int[] c : MazeStructures.chestsIn(cfg, cx, cz)) {
@@ -540,7 +545,7 @@ public final class MazeRuntime {
             if (MazeStructures.plazaAtCell(cfg, cell[0], cell[1]) != null) continue;
             if (loadedChunks.contains(ChunkPos.asLong(cell[0], cell[1]))) {
                 ensureChestAt(level, state,
-                    new BlockPos(cell[0] * cfg.cellSize + 7, cfg.floorY + 1, cell[1] * cfg.cellSize + 7));
+                    new BlockPos(cell[0] * cfg.cellSize + cfg.cellSize / 2, cfg.floorY + 1, cell[1] * cfg.cellSize + cfg.cellSize / 2));
                 count++;
             }
         }

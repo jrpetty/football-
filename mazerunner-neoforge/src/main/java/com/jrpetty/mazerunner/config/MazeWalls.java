@@ -84,7 +84,10 @@ public final class MazeWalls {
             return true;
         }
 
-        // An open corridor-edge block can be pushed into by a neighbouring panel.
+        // An open corridor-edge block can be pushed into by a neighbouring panel —
+        // but only when corridors are wide enough (≥3) that a 1-block push can't
+        // seal them. At the minigame scale relief is recess-only.
+        if (cfg.corridorWidth() < 3) return false;
         if (!MazeStructures.isOpen(cfg, x, z)) return false; // plaza/void handled above
         if (nearMovable(cfg, x, z)) return false;
         if (protrudesFrom(cfg, x - 1, z, z)) return true;
@@ -110,6 +113,7 @@ public final class MazeWalls {
 
     /** A Glade-edge block that a neighbouring wall panel pushes out into. */
     public static boolean gladeProtrusion(MazeConfigData cfg, int gx, int gz) {
+        if (cfg.corridorWidth() < 3) return false; // recess-only at small scale
         int cx = cell(gx, cfg.cellSize);
         int cz = cell(gz, cfg.cellSize);
         if (!cfg.inGrid(cx, cz) || !cfg.inGlade(cx, cz)) return false;
@@ -144,6 +148,7 @@ public final class MazeWalls {
      * clear central gap so the door is always passable.
      */
     private static boolean doorPost(MazeConfigData cfg, int x, int z) {
+        if (cfg.corridorWidth() < 4) return false; // posts would seal a narrow door
         for (MazeConfigData.DoorDef door : cfg.doors) {
             MazeConfigData.Box b = door.box();
             boolean approachZ = door.name().equals("north") || door.name().equals("south");

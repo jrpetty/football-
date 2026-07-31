@@ -37,6 +37,16 @@ which is also world spawn and death respawn (768, 61, 768). Vines and
 mangrove-moss climb the Glade-facing walls. Hostile mobs are automatically
 purged inside the Glade — it is safe ground; the maze is not.
 
+**v1.6 changes (minigame scale)** — everything is downscaled to a **6-block
+cell (~63% smaller footprint)**: the map is now 576×576 blocks (was 1536), the
+Glade 96×96, walls 18 tall, hills to +3, lake depth 4. The same authored maze
+topology, fixed exit, per-door divergence, day/night cycle and features are all
+preserved. Two scale tradeoffs: corridors are 2 wide so wall relief is
+**recessed-niches only** (outward pushes would seal a 2-wide corridor), and the
+big **ruin/dungeon structures are off** (they don't fit tiny cells) — dead-end
+supply chests remain. Toggle to a larger scale by raising `CELL_SIZE` in the
+config if you want the full in/out relief and ruins back.
+
 **v1.5 changes** — the permanent **ring corridor around the Glade is cut at its
 four corners**, so each door now leads into its own separate part of the maze
 instead of all four sharing one loop (some doors dead-end or miss the exit on a

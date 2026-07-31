@@ -95,7 +95,7 @@ final class GladeBuilder {
      */
     private static boolean elevatorColumn(ChunkAccess chunk, BlockPos.MutableBlockPos pos,
             int wx, int wz, int floorY) {
-        int c = GladeTerrain.CENTER;
+        int c = GladeTerrain.center();
         int dx = wx - c;
         int dz = wz - c;
         int ad = Math.max(Math.abs(dx), Math.abs(dz));
