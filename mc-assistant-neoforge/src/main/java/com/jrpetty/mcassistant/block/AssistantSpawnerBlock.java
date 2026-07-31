@@ -54,6 +54,13 @@ public class AssistantSpawnerBlock extends Block {
         assistant.say("Reporting in — this spot is home. RIGHT-CLICK me to open my screen, "
             + "use the arrows to pick what I specialise in, and put the tools I ask for in my pack. "
             + "I'll work the ground around me unless you mark me a patch with a Work Zone Marker.");
+        // Hand over the handbook so the whole system explains itself in-game.
+        // Only if they haven't got one, so a second bot doesn't mean a second book
+        // — but a player who lost theirs gets a replacement with their next hire.
+        if (!com.jrpetty.mcassistant.item.AssistantHandbook.carriedBy(serverPlayer)) {
+            com.jrpetty.mcassistant.item.AssistantHandbook.giveTo(serverPlayer);
+            assistant.say("Put a handbook in your pack too — everything I can do is in there.");
+        }
         // The act of placing spends the spawner: one spawner, one companion.
         serverLevel.levelEvent(2001, pos, Block.getId(state));
         serverLevel.removeBlock(pos, false);
@@ -93,7 +100,11 @@ public class AssistantSpawnerBlock extends Block {
         assistant.setOwner(serverPlayer);
         assistant.setHome(pos);
         serverLevel.addFreshEntity(assistant);
-        assistant.say("Assistant online. Talk to me with ! commands (\"!follow\", \"!gather logs 16\", \"!status\") or /assistant.");
+        assistant.say("Reporting in. RIGHT-CLICK me to pick what I specialise in — "
+            + "the handbook covers the rest.");
+        if (!com.jrpetty.mcassistant.item.AssistantHandbook.carriedBy(serverPlayer)) {
+            com.jrpetty.mcassistant.item.AssistantHandbook.giveTo(serverPlayer);
+        }
         // One spawner, one companion: creating a FRESH assistant uses the block
         // up (with break particles). Re-summoning your crew keeps it; so does
         // creative mode.
