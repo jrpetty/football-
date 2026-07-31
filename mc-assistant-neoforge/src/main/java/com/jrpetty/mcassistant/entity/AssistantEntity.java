@@ -205,7 +205,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b33 · chests a job can SEE are now chests it can REACH (a chest that passed the checklist could sit out of range) · only roaming jobs drift across a big zone — smelter/fisher/storekeeper/hauler stay by their furnace, pond and chest · the farmer really uses (and wears out) the hoe it asks for · job-loop fixes: stationed bots no longer narrate every cycle (repeats hushed for ~5 min, new problems always get through) · Follow/Stay now actually take a specialist off the job · fisher searches wider for its water · storekeeper sorts on a cooldown · upkeep is clock-based so rations/charges really are spent · usability pass: picking a job is now ALL you do — the bot claims the ground around it and starts "
+        "2026-07-b34 · every specialist holds its own upkeep back instead of stashing the rations/redstone it is about to need · a guard no longer nags for a chest nobody asked it to have · chests a job can SEE are now chests it can REACH (a chest that passed the checklist could sit out of range) · only roaming jobs drift across a big zone — smelter/fisher/storekeeper/hauler stay by their furnace, pond and chest · the farmer really uses (and wears out) the hoe it asks for · job-loop fixes: stationed bots no longer narrate every cycle (repeats hushed for ~5 min, new problems always get through) · Follow/Stay now actually take a specialist off the job · fisher searches wider for its water · storekeeper sorts on a cooldown · upkeep is clock-based so rations/charges really are spent · usability pass: picking a job is now ALL you do — the bot claims the ground around it and starts "
         + "working the moment it has its tools (Zone Marker only if you want a different patch) · zones are drawn in particles "
         + "while you hold a marker · the job button names the job · Follow/Stay back on the screen · ⚠/⚒ on the nametag "
         + "shows who is stuck at a glance · nine jobs · running costs (rations + a redstone core charge) · veteran levels · "
@@ -759,6 +759,17 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      *  holds onto its working kit: seed stock, saplings, breeding food and
      *  shears, torches and arrows, ore and fuel, or travel rations. */
     public int depositReserve(ItemStack s) {
+        int job = jobDepositReserve(s);
+        if (stationTask == StationTask.NONE) return job;
+        // Every working specialist holds its own upkeep back, whatever its job.
+        // Without this a miner stashes the very redstone its core charge is
+        // about to need — and a farmer the food it eats — then immediately digs
+        // it back out of the chest again.
+        int upkeep = s.is(Items.REDSTONE) ? 4 : (s.get(DataComponents.FOOD) != null ? 8 : 0);
+        return Math.max(job, upkeep);
+    }
+
+    private int jobDepositReserve(ItemStack s) {
         return switch (stationTask) {
             case FARM -> (s.is(Items.WHEAT_SEEDS) || s.is(Items.BEETROOT_SEEDS)
                 || s.is(Items.CARROT) || s.is(Items.POTATO)) ? 12 : 0;
@@ -2055,6 +2066,13 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 announcePlan("Making a chest for the station's output", plan);
                 return true;
             }
+            // Only nag about a chest for jobs whose checklist actually asked for
+            // one. A guard was never told it needed storage — it should keep
+            // guarding and simply hold its drops, not complain about a chest the
+            // player was never asked to provide.
+            boolean chestWasAskedFor = JobSpec.checklist(stationTask).stream()
+                .anyMatch(need -> need.contains("chest"));
+            if (!chestWasAskedFor) return false;
             // Can't make one (a farm rarely has wood) — tell the player, not
             // too often, instead of silently hoarding a full pack.
             if (tickCount - stationWarnTick > 4800) {
