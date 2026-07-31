@@ -1,8 +1,5 @@
 package com.jrpetty.mazerunner;
 
-import net.minecraft.ChatFormatting;
-import net.minecraft.core.component.DataComponents;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -15,7 +12,6 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.monster.Spider;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 
 /**
@@ -56,9 +52,6 @@ public class GrieverEntity extends Spider {
     @Override
     protected void dropCustomDeathLoot(ServerLevel level, DamageSource source, boolean recentlyHit) {
         super.dropCustomDeathLoot(level, source, recentlyHit);
-        ItemStack serum = new ItemStack(Items.GOLDEN_APPLE);
-        serum.set(DataComponents.CUSTOM_NAME,
-            Component.literal("Griever Serum").withStyle(ChatFormatting.GREEN));
-        spawnAtLocation(serum);
+        spawnAtLocation(new ItemStack(ModItems.GRIEVER_SERUM.get()));
     }
 }

@@ -10,5 +10,6 @@
   "block.mazerunner.maze_wall_andesite": "Maze Wall (Andesite)",
   "block.mazerunner.maze_vine": "Maze Ivy",
   "block.mazerunner.exit_portal": "Exit Portal",
-  "entity.mazerunner.griever": "Griever"
+  "entity.mazerunner.griever": "Griever",
+  "item.mazerunner.griever_serum": "Griever Serum"
 }

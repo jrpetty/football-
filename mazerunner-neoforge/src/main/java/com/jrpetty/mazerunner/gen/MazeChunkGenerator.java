@@ -172,7 +172,8 @@ public class MazeChunkGenerator extends ChunkGenerator {
         if (flags == 0) return;
 
         BlockState vine = vineState(flags);
-        for (int y = Math.max(cfg.wallBaseY, start); y <= Math.min(cfg.wallTopY, end); y++) {
+        int cap = WallStyle.greeneryTopY(cfg.wallTopY); // leave the crest bare — no climbing out
+        for (int y = Math.max(cfg.wallBaseY, start); y <= Math.min(cap, end); y++) {
             if (chunk.getBlockState(pos.set(wx, y, wz)).isAir()) {
                 chunk.setBlockState(pos, vine, false);
             }
@@ -208,7 +209,9 @@ public class MazeChunkGenerator extends ChunkGenerator {
         double cover = Noise.fbm2(run, line * 7 + 11, 14, 0x9E15);
         if (cover < 0.12) return; // an occasional bare stretch of wall
 
-        int topJ = cfg.wallTopY - (int) (Noise.hash2(run, line, 0x3131) * 8);
+        // Leaf clumps have full collision, so they stop below the crest too —
+        // otherwise they'd form a staircase up the Glade wall.
+        int topJ = WallStyle.greeneryTopY(cfg.wallTopY) - (int) (Noise.hash2(run, line, 0x3131) * 8);
         BlockState leaves = Blocks.MANGROVE_LEAVES.defaultBlockState()
             .setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true);
         BlockState vine = vineState(flags);

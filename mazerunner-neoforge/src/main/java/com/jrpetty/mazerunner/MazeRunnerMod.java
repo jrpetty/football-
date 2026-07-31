@@ -27,6 +27,7 @@ public class MazeRunnerMod {
     public MazeRunnerMod(IEventBus modEventBus) {
         ModBlocks.BLOCKS.register(modEventBus);
         ModBlocks.ITEMS.register(modEventBus);
+        ModItems.ITEMS.register(modEventBus);
         ModEntities.ENTITIES.register(modEventBus);
         ModWorldgen.CHUNK_GENERATORS.register(modEventBus);
 

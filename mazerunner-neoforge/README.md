@@ -37,6 +37,22 @@ which is also world spawn and death respawn (768, 61, 768). Vines and
 mangrove-moss climb the Glade-facing walls. Hostile mobs are automatically
 purged inside the Glade — it is safe ground; the maze is not.
 
+**v1.10 changes (the maze can no longer be cheated)** —
+
+- **Fixed a game-breaking exploit: you could climb out and walk over the maze.**
+  The ivy hung from y76–78 on walls topping out at y78, and vines are
+  climbable; the Glade wall coat stacked *mangrove leaves* (full collision) just
+  as high. A runner could climb the greenery onto the wall crest and stroll
+  across the roof straight to the exit, skipping the maze entirely. Greenery now
+  stops **4 blocks below the crest** — too far to jump, and above the build
+  limit so it can't be pillared to either. A runtime backstop drops anyone who
+  still ends up above the walls back into the corridor below. Pinned by tests.
+- **The Griever Serum is now a real item that actually cures the Changing** —
+  drink it to purge the venom (poison, weakness, nausea) and get a few seconds
+  of regeneration and resistance. Grievers drop one; caches stock it rarely.
+- **Performance:** the nightly Griever housekeeping used to sweep a
+  576×576-block box every second. It now uses the level's entity type index.
+
 **v1.9 changes (correctness + a real test suite)** — a full back-to-front audit
 with automated tests that now run on **every build**.
 

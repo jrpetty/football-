@@ -90,6 +90,11 @@
           "type": "minecraft:item",
           "name": "minecraft:golden_apple",
           "weight": 2
+        },
+        {
+          "type": "minecraft:item",
+          "name": "mazerunner:griever_serum",
+          "weight": 3
         }
       ]
     }

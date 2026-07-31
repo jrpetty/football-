@@ -12,7 +12,21 @@ public final class WallStyle {
 
     public static final int BANDS = 6;
 
+    /**
+     * Bare stone left below the wall crest, in blocks. Vines are climbable and
+     * leaf clumps have full collision, so greenery that reached the top would
+     * let a runner climb out and walk across the maze to the exit. Nothing
+     * climbable is ever placed within this margin of the crest, which — with
+     * the build limit sitting below it too — makes the wall tops unreachable.
+     */
+    public static final int CLIMB_MARGIN = 4;
+
     private WallStyle() {}
+
+    /** Highest Y any greenery may occupy on a wall face. */
+    public static int greeneryTopY(int wallTopY) {
+        return wallTopY - CLIMB_MARGIN;
+    }
 
     /** Palette band for a wall block, 0 (dark, base) .. 5 (light, top). */
     public static int bandAt(int x, int y, int z, int baseY, int topY) {
@@ -38,11 +52,14 @@ public final class WallStyle {
         double patch = Noise.fbm2(run, line, 12, 0x1B9E);
         if (patch < 0.62) return null;
 
-        int height = topY - baseY;
+        // Ivy hangs below the bare crest band — never within reach of the top.
+        int crest = greeneryTopY(topY);
+        if (crest <= baseY) return null;
+        int height = crest - baseY;
         double intensity = (patch - 0.62) / 0.38; // 0 at patch edge → 1 at core
 
-        // Hangs from near the top, with the top edge slightly ragged.
-        int top = topY - (int) (Noise.hash2(run, line + 7, 0x77E1) * 3);
+        // Hangs from near the crest band, with the top edge slightly ragged.
+        int top = crest - (int) (Noise.hash2(run, line + 7, 0x77E1) * 3);
         // Length grows toward the patch core and jitters per column for taper.
         int len = 2 + (int) (intensity * height * 0.85)
             + (int) ((Noise.hash2(run * 3 + 1, line, 0xC3D4) - 0.5) * 6);
@@ -50,6 +67,6 @@ public final class WallStyle {
 
         int start = Math.max(baseY, top - len);
         if (top < start) return null;
-        return new int[] { start, top };
+        return new int[] { start, Math.min(top, crest) };
     }
 }

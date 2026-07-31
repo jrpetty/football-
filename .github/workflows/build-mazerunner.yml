@@ -90,6 +90,9 @@ jobs:
           grep -q 'com/jrpetty/mazerunner/ModEntities.class' /tmp/contents.txt
           grep -q 'com/jrpetty/mazerunner/config/MazeClock.class' /tmp/contents.txt
           grep -q 'com/jrpetty/mazerunner/config/TreeShape.class' /tmp/contents.txt
+          grep -q 'com/jrpetty/mazerunner/GrieverSerumItem.class' /tmp/contents.txt
+          grep -q 'com/jrpetty/mazerunner/ModItems.class' /tmp/contents.txt
+          grep -q 'assets/mazerunner/models/item/griever_serum.json' /tmp/contents.txt
           grep -q 'META-INF/neoforge.mods.toml' /tmp/contents.txt
           grep -q 'data/mazerunner/maze/maze_config_v2.json' /tmp/contents.txt
           grep -q 'data/mazerunner/worldgen/world_preset/maze_runner.json' /tmp/contents.txt

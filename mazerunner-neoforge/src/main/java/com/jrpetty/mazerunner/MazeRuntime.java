@@ -229,6 +229,7 @@ public final class MazeRuntime {
         if (gameTime % 20 == 0) updateClockBar(level, state);
         if (gameTime % 100 == 0) sweepGlade(level);
         if (gameTime % 20 == 0) manageGrievers(level, state);
+        if (gameTime % 20 == 0) enforceWallTops(level);
         if (gameTime % GRIEVER_SPAWN_INTERVAL == 0) spawnGrievers(level, state);
     }
 
@@ -247,12 +248,39 @@ public final class MazeRuntime {
         }
     }
 
+    /**
+     * Nobody runs the maze along the roof. Greenery already stops well below
+     * the crest and the build limit sits under it, so this is a backstop: any
+     * survival player who ends up above the wall tops inside the maze is
+     * dropped back into the corridor beneath them.
+     */
+    private static void enforceWallTops(ServerLevel level) {
+        MazeConfigData cfg = MazeConfigs.get();
+        for (ServerPlayer player : level.players()) {
+            if (player.isCreative() || player.isSpectator()) continue;
+            if (player.getBlockY() <= cfg.wallTopY) continue;
+            int cellX = Math.floorDiv(player.getBlockX(), cfg.cellSize);
+            int cellZ = Math.floorDiv(player.getBlockZ(), cfg.cellSize);
+            if (!cfg.inGrid(cellX, cellZ)) continue; // exit pad / outside the maze
+            int bx = cellX * cfg.cellSize + cfg.cellSize / 2;
+            int bz = cellZ * cfg.cellSize + cfg.cellSize / 2;
+            player.teleportTo(bx + 0.5, cfg.floorY + 1, bz + 0.5);
+            player.resetFallDistance();
+            player.displayClientMessage(Component.literal(
+                "The walls are not a road — you slip back into the Maze.")
+                .withStyle(ChatFormatting.RED), true);
+        }
+    }
+
     // ------------------------------------------------------------- Grievers
 
-    /** A box loosely covering the whole maze, for level-wide Griever queries. */
-    private static AABB mazeBounds(MazeConfigData cfg) {
-        int span = cfg.gridCells * cfg.cellSize;
-        return new AABB(-4, cfg.bedrockY - 2, -4, span + 4, cfg.wallTopY + 8, span + 4);
+    /**
+     * Every loaded Griever. Uses the level's type index rather than a
+     * maze-sized AABB — scanning a 576×576 box every second would walk
+     * thousands of empty entity sections for nothing.
+     */
+    private static List<? extends GrieverEntity> allGrievers(ServerLevel level) {
+        return level.getEntities(ModEntities.GRIEVER.get(), g -> true);
     }
 
     /** Per-player Griever cap for the current week (grows one per completed cycle). */
@@ -268,7 +296,7 @@ public final class MazeRuntime {
      */
     private static void manageGrievers(ServerLevel level, MazeWorldState state) {
         MazeConfigData cfg = MazeConfigs.get();
-        List<GrieverEntity> grievers = level.getEntitiesOfClass(GrieverEntity.class, mazeBounds(cfg));
+        List<? extends GrieverEntity> grievers = allGrievers(level);
         if (grievers.isEmpty()) return;
         boolean day = state.doorsOpen();
         for (GrieverEntity g : grievers) {
@@ -338,9 +366,8 @@ public final class MazeRuntime {
 
     /** Removes every loaded Griever from the maze; returns how many. */
     private static int despawnGrievers(ServerLevel level) {
-        MazeConfigData cfg = MazeConfigs.get();
         int count = 0;
-        for (GrieverEntity g : level.getEntitiesOfClass(GrieverEntity.class, mazeBounds(cfg))) {
+        for (GrieverEntity g : allGrievers(level)) {
             g.discard();
             count++;
         }
@@ -349,7 +376,7 @@ public final class MazeRuntime {
 
     /** Loaded Griever count, for the status command. */
     public static int countGrievers(ServerLevel level) {
-        return level.getEntitiesOfClass(GrieverEntity.class, mazeBounds(MazeConfigs.get())).size();
+        return allGrievers(level).size();
     }
 
     /** Debug helper: force one Griever to spawn near a player. */
