@@ -76,7 +76,12 @@ public final class ClientEvents {
         while (INSPECT_KEY.consumeClick()) {
             if (minecraft.screen instanceof AbstractContainerScreen<?> container) {
                 var hovered = container.getSlotUnderMouse();
-                if (hovered != null && !hovered.getItem().isEmpty()) {
+                // Only slots backed by the player's own inventory. A slot's
+                // index is relative to its own container, so a chest slot's
+                // index would be resolved server-side against the player's
+                // inventory and show the wrong item's history.
+                if (hovered != null && !hovered.getItem().isEmpty()
+                        && hovered.container == minecraft.player.getInventory()) {
                     requestInspection(hovered.getSlotIndex());
                     continue;
                 }
