@@ -1,0 +1,15 @@
+{
+  "itemGroup.structint": "Integrità Strutturale",
+  "block.structint.foundation_anchor": "Ancoraggio di Fondazione",
+  "block.structint.reinforced_beam": "Trave Rinforzata",
+  "block.structint.heavy_girder": "Trave Pesante",
+  "tooltip.structint.foundation": "Fondazione — ancoraggio sempre stabile",
+  "tooltip.structint.strength": "Resistenza strutturale: %s",
+  "tooltip.structint.span": "Campata massima senza supporto: %s blocchi",
+  "tooltip.structint.tier.very_weak": "Molto debole",
+  "tooltip.structint.tier.weak": "Debole",
+  "tooltip.structint.tier.medium": "Media",
+  "tooltip.structint.tier.strong": "Forte",
+  "tooltip.structint.tier.very_strong": "Molto forte",
+  "tooltip.structint.tier.extreme": "Estrema"
+}

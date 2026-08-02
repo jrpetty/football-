@@ -1,0 +1,15 @@
+{
+  "itemGroup.structint": "구조적 무결성",
+  "block.structint.foundation_anchor": "기초 앵커",
+  "block.structint.reinforced_beam": "보강 보",
+  "block.structint.heavy_girder": "중량 거더",
+  "tooltip.structint.foundation": "기초 — 항상 안정적인 앵커",
+  "tooltip.structint.strength": "구조 강도: %s",
+  "tooltip.structint.span": "최대 무지지 경간: %s 블록",
+  "tooltip.structint.tier.very_weak": "매우 약함",
+  "tooltip.structint.tier.weak": "약함",
+  "tooltip.structint.tier.medium": "보통",
+  "tooltip.structint.tier.strong": "강함",
+  "tooltip.structint.tier.very_strong": "매우 강함",
+  "tooltip.structint.tier.extreme": "극강"
+}

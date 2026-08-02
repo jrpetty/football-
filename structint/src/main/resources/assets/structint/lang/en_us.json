@@ -1,0 +1,16 @@
+{
+  "itemGroup.structint": "Structural Integrity",
+  "block.structint.foundation_anchor": "Foundation Anchor",
+  "block.structint.reinforced_beam": "Reinforced Beam",
+  "block.structint.heavy_girder": "Heavy Girder",
+
+  "tooltip.structint.foundation": "Foundation — always-stable anchor",
+  "tooltip.structint.strength": "Structural strength: %s",
+  "tooltip.structint.span": "Max unsupported span: %s blocks",
+  "tooltip.structint.tier.very_weak": "Very weak",
+  "tooltip.structint.tier.weak": "Weak",
+  "tooltip.structint.tier.medium": "Medium",
+  "tooltip.structint.tier.strong": "Strong",
+  "tooltip.structint.tier.very_strong": "Very strong",
+  "tooltip.structint.tier.extreme": "Extreme"
+}

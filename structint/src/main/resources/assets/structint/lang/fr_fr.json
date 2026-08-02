@@ -1,0 +1,15 @@
+{
+  "itemGroup.structint": "Intégrité Structurelle",
+  "block.structint.foundation_anchor": "Ancrage de Fondation",
+  "block.structint.reinforced_beam": "Poutre Renforcée",
+  "block.structint.heavy_girder": "Poutrelle Lourde",
+  "tooltip.structint.foundation": "Fondation — ancrage toujours stable",
+  "tooltip.structint.strength": "Résistance structurelle : %s",
+  "tooltip.structint.span": "Portée maximale sans support : %s blocs",
+  "tooltip.structint.tier.very_weak": "Très faible",
+  "tooltip.structint.tier.weak": "Faible",
+  "tooltip.structint.tier.medium": "Moyenne",
+  "tooltip.structint.tier.strong": "Solide",
+  "tooltip.structint.tier.very_strong": "Très solide",
+  "tooltip.structint.tier.extreme": "Extrême"
+}

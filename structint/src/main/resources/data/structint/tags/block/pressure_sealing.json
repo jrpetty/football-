@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    { "id": "structint:reinforced_beam", "required": false },
+    { "id": "structint:heavy_girder", "required": false },
+    { "id": "minecraft:obsidian", "required": false },
+    { "id": "minecraft:crying_obsidian", "required": false }
+  ]
+}

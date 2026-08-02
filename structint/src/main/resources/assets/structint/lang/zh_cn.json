@@ -1,0 +1,15 @@
+{
+  "itemGroup.structint": "结构完整性",
+  "block.structint.foundation_anchor": "地基锚点",
+  "block.structint.reinforced_beam": "加固梁",
+  "block.structint.heavy_girder": "重型钢梁",
+  "tooltip.structint.foundation": "地基 — 始终稳定的锚点",
+  "tooltip.structint.strength": "结构强度：%s",
+  "tooltip.structint.span": "最大无支撑跨度：%s 格",
+  "tooltip.structint.tier.very_weak": "极弱",
+  "tooltip.structint.tier.weak": "弱",
+  "tooltip.structint.tier.medium": "中等",
+  "tooltip.structint.tier.strong": "强",
+  "tooltip.structint.tier.very_strong": "很强",
+  "tooltip.structint.tier.extreme": "极强"
+}

@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "III",
+    "IBI",
+    "III"
+  ],
+  "key": {
+    "I": { "item": "minecraft:iron_ingot" },
+    "B": { "item": "structint:reinforced_beam" }
+  },
+  "result": {
+    "id": "structint:heavy_girder",
+    "count": 2
+  }
+}

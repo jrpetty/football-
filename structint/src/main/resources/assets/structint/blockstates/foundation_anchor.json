@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "structint:block/foundation_anchor" }
+  }
+}

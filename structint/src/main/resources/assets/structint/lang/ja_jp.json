@@ -1,0 +1,15 @@
+{
+  "itemGroup.structint": "構造的整合性",
+  "block.structint.foundation_anchor": "基礎アンカー",
+  "block.structint.reinforced_beam": "補強梁",
+  "block.structint.heavy_girder": "重量鉄骨",
+  "tooltip.structint.foundation": "基礎 — 常に安定したアンカー",
+  "tooltip.structint.strength": "構造強度: %s",
+  "tooltip.structint.span": "最大無支持スパン: %s ブロック",
+  "tooltip.structint.tier.very_weak": "非常に弱い",
+  "tooltip.structint.tier.weak": "弱い",
+  "tooltip.structint.tier.medium": "普通",
+  "tooltip.structint.tier.strong": "強い",
+  "tooltip.structint.tier.very_strong": "非常に強い",
+  "tooltip.structint.tier.extreme": "極めて強い"
+}

@@ -1,0 +1,10 @@
+{
+  "replace": false,
+  "values": [
+    { "id": "#minecraft:impermeable", "required": false },
+    { "id": "minecraft:glass_pane", "required": false },
+    { "id": "#minecraft:stained_glass_panes", "required": false },
+    { "id": "minecraft:iron_bars", "required": false },
+    { "id": "minecraft:tinted_glass", "required": false }
+  ]
+}

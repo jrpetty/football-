@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    { "id": "#minecraft:planks", "required": false },
+    { "id": "#minecraft:logs", "required": false },
+    { "id": "minecraft:bookshelf", "required": false }
+  ]
+}

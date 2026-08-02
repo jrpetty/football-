@@ -1,0 +1,15 @@
+{
+  "itemGroup.structint": "Strukturelle Integrität",
+  "block.structint.foundation_anchor": "Fundamentanker",
+  "block.structint.reinforced_beam": "Verstärkter Träger",
+  "block.structint.heavy_girder": "Schwerer Träger",
+  "tooltip.structint.foundation": "Fundament — immer stabiler Anker",
+  "tooltip.structint.strength": "Strukturelle Festigkeit: %s",
+  "tooltip.structint.span": "Maximale ungestützte Spannweite: %s Blöcke",
+  "tooltip.structint.tier.very_weak": "Sehr schwach",
+  "tooltip.structint.tier.weak": "Schwach",
+  "tooltip.structint.tier.medium": "Mittel",
+  "tooltip.structint.tier.strong": "Stark",
+  "tooltip.structint.tier.very_strong": "Sehr stark",
+  "tooltip.structint.tier.extreme": "Extrem"
+}

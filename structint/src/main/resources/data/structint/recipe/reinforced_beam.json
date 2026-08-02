@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "SSS",
+    "III",
+    "SSS"
+  ],
+  "key": {
+    "S": { "item": "minecraft:stone_bricks" },
+    "I": { "item": "minecraft:iron_ingot" }
+  },
+  "result": {
+    "id": "structint:reinforced_beam",
+    "count": 3
+  }
+}

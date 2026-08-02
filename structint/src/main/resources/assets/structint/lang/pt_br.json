@@ -1,0 +1,15 @@
+{
+  "itemGroup.structint": "Integridade Estrutural",
+  "block.structint.foundation_anchor": "Âncora de Fundação",
+  "block.structint.reinforced_beam": "Viga Reforçada",
+  "block.structint.heavy_girder": "Viga Pesada",
+  "tooltip.structint.foundation": "Fundação — âncora sempre estável",
+  "tooltip.structint.strength": "Resistência estrutural: %s",
+  "tooltip.structint.span": "Vão máximo sem suporte: %s blocos",
+  "tooltip.structint.tier.very_weak": "Muito fraca",
+  "tooltip.structint.tier.weak": "Fraca",
+  "tooltip.structint.tier.medium": "Média",
+  "tooltip.structint.tier.strong": "Forte",
+  "tooltip.structint.tier.very_strong": "Muito forte",
+  "tooltip.structint.tier.extreme": "Extrema"
+}

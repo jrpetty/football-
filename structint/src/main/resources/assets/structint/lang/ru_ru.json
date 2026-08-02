@@ -1,0 +1,15 @@
+{
+  "itemGroup.structint": "Структурная целостность",
+  "block.structint.foundation_anchor": "Фундаментный якорь",
+  "block.structint.reinforced_beam": "Усиленная балка",
+  "block.structint.heavy_girder": "Тяжёлая балка",
+  "tooltip.structint.foundation": "Фундамент — всегда устойчивая опора",
+  "tooltip.structint.strength": "Структурная прочность: %s",
+  "tooltip.structint.span": "Макс. пролёт без опоры: %s блоков",
+  "tooltip.structint.tier.very_weak": "Очень слабая",
+  "tooltip.structint.tier.weak": "Слабая",
+  "tooltip.structint.tier.medium": "Средняя",
+  "tooltip.structint.tier.strong": "Прочная",
+  "tooltip.structint.tier.very_strong": "Очень прочная",
+  "tooltip.structint.tier.extreme": "Экстремальная"
+}

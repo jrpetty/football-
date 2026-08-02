@@ -1,0 +1,15 @@
+{
+  "itemGroup.structint": "Integralność Konstrukcyjna",
+  "block.structint.foundation_anchor": "Kotwa Fundamentowa",
+  "block.structint.reinforced_beam": "Wzmocniona Belka",
+  "block.structint.heavy_girder": "Ciężki Dźwigar",
+  "tooltip.structint.foundation": "Fundament — zawsze stabilna kotwa",
+  "tooltip.structint.strength": "Wytrzymałość konstrukcyjna: %s",
+  "tooltip.structint.span": "Maks. rozpiętość bez podpory: %s bloków",
+  "tooltip.structint.tier.very_weak": "Bardzo słaba",
+  "tooltip.structint.tier.weak": "Słaba",
+  "tooltip.structint.tier.medium": "Średnia",
+  "tooltip.structint.tier.strong": "Mocna",
+  "tooltip.structint.tier.very_strong": "Bardzo mocna",
+  "tooltip.structint.tier.extreme": "Ekstremalna"
+}

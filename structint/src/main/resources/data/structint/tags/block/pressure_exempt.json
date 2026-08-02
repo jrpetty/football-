@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    { "id": "minecraft:barrier", "required": false },
+    { "id": "minecraft:bedrock", "required": false },
+    { "id": "minecraft:reinforced_deepslate", "required": false }
+  ]
+}

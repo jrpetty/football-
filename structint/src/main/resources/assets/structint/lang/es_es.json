@@ -1,0 +1,15 @@
+{
+  "itemGroup.structint": "Integridad Estructural",
+  "block.structint.foundation_anchor": "Anclaje de Cimentación",
+  "block.structint.reinforced_beam": "Viga Reforzada",
+  "block.structint.heavy_girder": "Viga Pesada",
+  "tooltip.structint.foundation": "Cimiento — anclaje siempre estable",
+  "tooltip.structint.strength": "Resistencia estructural: %s",
+  "tooltip.structint.span": "Vano máximo sin soporte: %s bloques",
+  "tooltip.structint.tier.very_weak": "Muy débil",
+  "tooltip.structint.tier.weak": "Débil",
+  "tooltip.structint.tier.medium": "Media",
+  "tooltip.structint.tier.strong": "Fuerte",
+  "tooltip.structint.tier.very_strong": "Muy fuerte",
+  "tooltip.structint.tier.extreme": "Extrema"
+}
