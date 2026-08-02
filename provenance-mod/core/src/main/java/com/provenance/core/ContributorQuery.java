@@ -97,6 +97,7 @@ public final class ContributorQuery {
         return switch (category) {
             case PICKAXE -> StatKey.ORES_MINED;
             case MELEE_WEAPON, RANGED_WEAPON, TRIDENT -> StatKey.DAMAGE_DEALT;
+            case GUN -> StatKey.HEADSHOTS;
             case ARMOUR -> StatKey.HITS_RECEIVED;
             case AXE -> StatKey.BLOCKS_CHOPPED;
             // A shovel has no natural second measure, so fall back to a

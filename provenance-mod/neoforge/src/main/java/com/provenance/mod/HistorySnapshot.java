@@ -155,6 +155,9 @@ public record HistorySnapshot(
         RELEVANT.put(ItemCategory.RANGED_WEAPON, List.of(StatKey.KILLS,
                 StatKey.PROJECTILE_HITS, StatKey.DAMAGE_DEALT, StatKey.LONGEST_KILL_CM,
                 StatKey.REPAIRS, StatKey.DISTANCE_CM));
+        RELEVANT.put(ItemCategory.GUN, List.of(StatKey.KILLS, StatKey.HEADSHOTS, StatKey.SHOTS_FIRED,
+                StatKey.PROJECTILE_HITS, StatKey.DAMAGE_DEALT, StatKey.LONGEST_KILL_CM,
+                StatKey.HITS_LANDED, StatKey.REPAIRS, StatKey.DISTANCE_CM));
         RELEVANT.put(ItemCategory.TRIDENT, List.of(StatKey.KILLS, StatKey.DAMAGE_DEALT, StatKey.HITS_LANDED,
                 StatKey.PROJECTILE_HITS, StatKey.LONGEST_KILL_CM, StatKey.REPAIRS));
         RELEVANT.put(ItemCategory.PICKAXE, List.of(StatKey.BLOCKS_MINED, StatKey.ORES_MINED,

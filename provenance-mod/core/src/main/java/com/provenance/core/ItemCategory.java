@@ -19,6 +19,12 @@ package com.provenance.core;
 public enum ItemCategory {
     MELEE_WEAPON("melee_weapon", StatKey.KILLS),
     RANGED_WEAPON("ranged_weapon", StatKey.KILLS),
+    /**
+     * Firearms from a gun mod. Kept separate from bows because a gun records
+     * things a bow cannot — shots fired, and headshots — and because a modpack
+     * may want firearms on their own milestone ladder.
+     */
+    GUN("gun", StatKey.KILLS),
     TRIDENT("trident", StatKey.KILLS),
     PICKAXE("pickaxe", StatKey.BLOCKS_MINED),
     AXE("axe", StatKey.LOGS_CHOPPED),

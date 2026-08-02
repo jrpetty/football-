@@ -56,7 +56,8 @@ public final class StatStyle {
 
     public static Family familyOf(String statId) {
         return switch (statId) {
-            case "kills", "damage_dealt", "hits_landed", "projectile_hits", "longest_kill_cm" -> Family.COMBAT;
+            case "kills", "damage_dealt", "hits_landed", "projectile_hits", "longest_kill_cm",
+                 "shots_fired", "headshots" -> Family.COMBAT;
             case "blocks_mined", "ores_mined", "deepest_block_y" -> Family.MINING;
             case "logs_chopped", "blocks_chopped" -> Family.WOODCUTTING;
             case "blocks_dug" -> Family.DIGGING;

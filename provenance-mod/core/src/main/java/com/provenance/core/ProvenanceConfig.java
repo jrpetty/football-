@@ -52,6 +52,7 @@ public final class ProvenanceConfig {
         tracks.put(ItemCategory.MELEE_WEAPON, new MilestoneTrack(StatKey.KILLS, combat));
         tracks.put(ItemCategory.RANGED_WEAPON, new MilestoneTrack(StatKey.KILLS, combat));
         tracks.put(ItemCategory.TRIDENT, new MilestoneTrack(StatKey.KILLS, combat));
+        tracks.put(ItemCategory.GUN, new MilestoneTrack(StatKey.KILLS, combat));
 
         tracks.put(ItemCategory.PICKAXE, new MilestoneTrack(StatKey.BLOCKS_MINED,
                 ladder(100, 1_000, 10_000, 100_000, 500_000, 1_000_000, 5_000_000)));
@@ -119,6 +120,11 @@ public final class ProvenanceConfig {
         // wood through netherite, armour included: a wooden pickaxe somebody
         // kept and repaired for a year is a better antique than a netherite one
         // crafted yesterday. Servers can still add exclusions in the config.
+
+        // Timeless and Classics Zero. Every firearm in that mod is the single
+        // item "modern_kinetic_gun"; which gun it actually is lives in the
+        // stack, and the integration resolves it per item rather than per type.
+        itemCategories.put("tacz:modern_kinetic_gun", ItemCategory.GUN);
 
         // Vanilla items whose tags do not cover them.
         itemCategories.put("minecraft:trident", ItemCategory.TRIDENT);

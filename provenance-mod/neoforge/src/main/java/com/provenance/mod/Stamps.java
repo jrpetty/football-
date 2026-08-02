@@ -48,6 +48,14 @@ public final class Stamps {
             new java.util.concurrent.ConcurrentHashMap<>();
 
     public static String itemId(ItemStack stack) {
+        // Firearms break the per-type assumption: a gun mod may register every
+        // gun as one item and keep the actual model inside the stack. Ask the
+        // integration first, so a record says "Ak47" rather than the shared
+        // registry name every gun would otherwise share.
+        String gunId = TaczIntegration.gunIdOf(stack);
+        if (gunId != null) {
+            return gunId;
+        }
         return ID_CACHE.computeIfAbsent(stack.getItem(), item -> {
             ResourceLocation id = BuiltInRegistries.ITEM.getKey(item);
             return id == null ? "" : id.toString();
@@ -108,8 +116,14 @@ public final class Stamps {
             return null;
         }
         return CATEGORY_CACHE
-                .computeIfAbsent(stack.getItem(),
-                        item -> java.util.Optional.ofNullable(config.resolveCategory(itemId(stack), tagsOf(stack))))
+                .computeIfAbsent(stack.getItem(), item -> {
+                    // Deliberately the registry id, not the per-stack gun id:
+                    // eligibility is a property of the item type, and every
+                    // firearm shares one entry in the config.
+                    ResourceLocation key = BuiltInRegistries.ITEM.getKey(item);
+                    String registryId = key == null ? "" : key.toString();
+                    return java.util.Optional.ofNullable(config.resolveCategory(registryId, tagsOf(stack)));
+                })
                 .orElse(null);
     }
 

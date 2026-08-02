@@ -29,5 +29,8 @@ public final class Provenance {
         NeoForge.EVENT_BUS.register(ItemLifecycleEvents.class);
         NeoForge.EVENT_BUS.register(TickEvents.class);
         NeoForge.EVENT_BUS.register(ProvenanceCommands.class);
+
+        // Optional: only does anything if a supported gun mod is installed.
+        TaczIntegration.install(NeoForge.EVENT_BUS);
     }
 }

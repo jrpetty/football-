@@ -173,6 +173,14 @@ public final class GameplayEvents {
     private static final java.util.Map<net.minecraft.world.entity.EntityType<?>, String> ENTITY_IDS =
             new java.util.concurrent.ConcurrentHashMap<>();
 
+    /** Cached registry id for an entity type. Shared with the gun integration. */
+    static String entityId(LivingEntity entity) {
+        return ENTITY_IDS.computeIfAbsent(entity.getType(), type -> {
+            ResourceLocation key = BuiltInRegistries.ENTITY_TYPE.getKey(type);
+            return key == null ? "unknown" : key.toString();
+        });
+    }
+
     private static String blockIdOf(BlockState state) {
         return BLOCK_IDS.computeIfAbsent(state.getBlock(), block -> {
             ResourceLocation id = BuiltInRegistries.BLOCK.getKey(block);
@@ -352,11 +360,7 @@ public final class GameplayEvents {
 
         notify(killer, registry.record(record, id, name, StatKey.KILLS, 1), record, weapon);
 
-        String mobId = ENTITY_IDS.computeIfAbsent(victim.getType(), type -> {
-            ResourceLocation key = BuiltInRegistries.ENTITY_TYPE.getKey(type);
-            return key == null ? "unknown" : key.toString();
-        });
-        registry.recordBreakdown(record, id, name, BreakdownKind.MOB_KILLED, mobId, 1);
+        registry.recordBreakdown(record, id, name, BreakdownKind.MOB_KILLED, entityId(victim), 1);
 
         if (record.category() == ItemCategory.RANGED_WEAPON || record.category() == ItemCategory.TRIDENT) {
             long distanceCm = Math.round(killer.distanceTo(victim) * 100.0d);
@@ -464,6 +468,10 @@ public final class GameplayEvents {
      * a new tier appears immediately rather than at the next flush.
      * Cosmetic only — nothing is granted.
      */
+    static void announce(ServerPlayer player, List<MilestoneAward> awards, ItemRecord record, ItemStack stack) {
+        notify(player, awards, record, stack);
+    }
+
     private static void notify(ServerPlayer player, List<MilestoneAward> awards, ItemRecord record,
                                ItemStack stack) {
         if (awards.isEmpty() || player == null) {

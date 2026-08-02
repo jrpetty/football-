@@ -424,6 +424,66 @@ class HardeningTest {
         assertTrue(config.excludedItems().isEmpty(), "no item is excluded out of the box");
     }
 
+    /**
+     * Firearms from Timeless and Classics Zero. Every gun in that mod shares
+     * one registry entry, so eligibility keys off that entry while the record's
+     * displayed identity comes from the individual stack.
+     */
+    @Test
+    void firearmsAreTrackedAsTheirOwnCategory() {
+        ProvenanceConfig config = ProvenanceConfig.withDefaults();
+
+        assertEquals(ItemCategory.GUN,
+                config.resolveCategory("tacz:modern_kinetic_gun", java.util.List.of()));
+
+        MilestoneTrack track = config.track(ItemCategory.GUN);
+        assertEquals(StatKey.KILLS, track.primaryStat(), "a gun's ladder is measured in kills");
+        assertEquals(10L, track.threshold(MilestoneTier.INITIATED));
+        assertEquals(100_000L, track.threshold(MilestoneTier.SERVER_RELIC));
+    }
+
+    /**
+     * Accuracy is only meaningful because a gun mod reports every shot. The
+     * counters must therefore stay independent: hits cannot exceed shots by
+     * accident, and both aggregate as plain sums across contributors.
+     */
+    @Test
+    void gunsRecordShotsHitsAndHeadshotsSeparately(@TempDir Path dir) {
+        RecordRegistry registry = registry(dir);
+        UUID gunner = UUID.randomUUID();
+        UUID second = UUID.randomUUID();
+
+        ItemRecord rifle = registry.registerCrafted(
+                "tacz:ak47", ItemCategory.GUN, gunner, "Gunner", null, null);
+
+        registry.record(rifle, gunner, "Gunner", StatKey.SHOTS_FIRED, 120);
+        registry.record(rifle, gunner, "Gunner", StatKey.PROJECTILE_HITS, 74);
+        registry.record(rifle, gunner, "Gunner", StatKey.HEADSHOTS, 11);
+        registry.record(rifle, second, "Second", StatKey.SHOTS_FIRED, 30);
+        registry.record(rifle, second, "Second", StatKey.PROJECTILE_HITS, 9);
+
+        assertEquals(150, rifle.overall().getOrZero(StatKey.SHOTS_FIRED));
+        assertEquals(83, rifle.overall().getOrZero(StatKey.PROJECTILE_HITS));
+        assertEquals(11, rifle.overall().getOrZero(StatKey.HEADSHOTS));
+        assertEquals(74, rifle.contribution(gunner).stats().getOrZero(StatKey.PROJECTILE_HITS));
+        assertTrue(rifle.verifyOverallMatchesContributors());
+    }
+
+    @Test
+    void aGunEarnsTiersOnKillsLikeAnyOtherWeapon(@TempDir Path dir) {
+        RecordRegistry registry = registry(dir);
+        UUID gunner = UUID.randomUUID();
+        ItemRecord rifle = registry.registerCrafted(
+                "tacz:ak47", ItemCategory.GUN, gunner, "Gunner", null, null);
+
+        registry.record(rifle, gunner, "Gunner", StatKey.KILLS, 250);
+
+        assertEquals(MilestoneTier.SEASONED, rifle.currentTier());
+        // Firing a lot without killing anything must not advance the ladder.
+        assertTrue(registry.record(rifle, gunner, "Gunner", StatKey.SHOTS_FIRED, 50_000).isEmpty());
+        assertEquals(MilestoneTier.SEASONED, rifle.currentTier());
+    }
+
     @Test
     void aServerCanStillExcludeWhateverItWants() {
         ProvenanceConfig config = ProvenanceConfig.withDefaults();

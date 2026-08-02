@@ -22,3 +22,11 @@ type = "required"
 versionRange = "[${minecraft_version},1.22)"
 ordering = "NONE"
 side = "BOTH"
+
+# Optional. Provenance runs normally without it; when present, every firearm
+# gets a lifetime record like any other weapon.
+[[dependencies.${mod_id}]]
+modId = "tacz"
+type = "optional"
+ordering = "AFTER"
+side = "BOTH"

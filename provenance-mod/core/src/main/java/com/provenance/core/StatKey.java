@@ -26,6 +26,13 @@ public enum StatKey {
     DAMAGE_DEALT("damage_dealt", Aggregation.SUM),
     HITS_LANDED("hits_landed", Aggregation.SUM),
     PROJECTILE_HITS("projectile_hits", Aggregation.SUM),
+    /**
+     * Rounds fired. A gun mod reports every shot, so unlike a vanilla bow this
+     * can be counted honestly — which makes accuracy a real figure rather than
+     * a division by zero.
+     */
+    SHOTS_FIRED("shots_fired", Aggregation.SUM),
+    HEADSHOTS("headshots", Aggregation.SUM),
     /** Centimetres, so the record stays integral. */
     LONGEST_KILL_CM("longest_kill_cm", Aggregation.MAX),
 
