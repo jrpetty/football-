@@ -15,7 +15,6 @@ import net.neoforged.fml.ModList;
 
 import java.lang.reflect.Method;
 import java.util.UUID;
-import java.util.function.Consumer;
 
 /**
  * Gives every firearm from Timeless and Classics Zero a lifetime record.
@@ -134,11 +133,20 @@ public final class TaczIntegration {
         }
     }
 
+    /**
+     * A handler that may throw while reflecting. {@link java.util.function.Consumer}
+     * cannot, and every method here reads the event by reflection.
+     */
+    @FunctionalInterface
+    private interface ReflectiveHandler {
+        void handle(Event event) throws ReflectiveOperationException;
+    }
+
     @SuppressWarnings("unchecked")
-    private static void listen(IEventBus bus, Class<?> type, Consumer<Event> handler) {
+    private static void listen(IEventBus bus, Class<?> type, ReflectiveHandler handler) {
         bus.addListener((Class<Event>) type, event -> {
             try {
-                handler.accept(event);
+                handler.handle(event);
             } catch (ReflectiveOperationException | RuntimeException e) {
                 // One malformed event must not spam the log or break the shot.
                 Provenance.LOGGER.debug("Provenance: TACZ event handling failed", e);
