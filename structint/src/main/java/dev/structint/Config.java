@@ -45,6 +45,7 @@ public final class Config {
     public static final ModConfigSpec.DoubleValue HYDRO_ARCH_GAIN;
     public static final ModConfigSpec.IntValue HYDRO_ARCH_MAX_SETBACK;
     public static final ModConfigSpec.IntValue HYDRO_ARCH_SCAN_RANGE;
+    public static final ModConfigSpec.IntValue HYDRO_ARCH_BASELINE;
 
     public static final ModConfigSpec.IntValue HYDRO_RES_DIRT;
     public static final ModConfigSpec.IntValue HYDRO_RES_GENERIC;
@@ -227,8 +228,15 @@ public final class Config {
                 .defineInRange("gainPerBlockOfCurve", 0.25, 0.0, 2.0);
         HYDRO_ARCH_MAX_SETBACK = b.comment("Curvature beyond this stops helping, so a deep V is not a free win.")
                 .defineInRange("maxCurve", 4, 1, 32);
-        HYDRO_ARCH_SCAN_RANGE = b.comment("How far along the water axis the flanking wall face is looked for.")
-                .defineInRange("scanRange", 6, 1, 32);
+        HYDRO_ARCH_BASELINE = b.comment(
+                "How far along the wall, each way, the curvature is measured over. A real arch is",
+                "almost flat from one block to the next, so a short baseline scores every genuine",
+                "curve as straight. 8 rewards an arch you would actually build.")
+                .defineInRange("curveBaseline", 8, 1, 32);
+        HYDRO_ARCH_SCAN_RANGE = b.comment(
+                "How far along the water axis the flanking wall face is looked for. Must exceed the",
+                "setback you expect at the baseline, or a deep curve reads as no wall at all.")
+                .defineInRange("scanRange", 12, 1, 48);
         b.pop();
 
         b.comment(

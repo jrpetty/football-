@@ -56,6 +56,8 @@ public final class FloodEngine {
     private static boolean paused = false;
     private static long tickCounter = 0L;
     private static boolean warnedCap = false;
+    /** Set if the Minecraft API turns out not to match what this was built against. */
+    private static boolean linkageBroken = false;
 
     private static final Map<ResourceKey<Level>, Snapshot> RECESSION_SNAPSHOT = new HashMap<>();
     private static final Ctx CTX = new Ctx();
@@ -65,6 +67,19 @@ public final class FloodEngine {
 
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
+        if (linkageBroken) return;
+        try {
+            tick(event);
+        } catch (LinkageError e) {
+            // A method or field this was compiled against is missing or has a different shape.
+            // Stand down rather than throwing every tick and taking the server with us.
+            linkageBroken = true;
+            FloodWorld.LOGGER.error(
+                    "FloodWorld: incompatible Minecraft API - flood simulation disabled for this session", e);
+        }
+    }
+
+    private static void tick(ServerTickEvent.Post event) {
         if (paused) return;
         if (!Config.ENABLE_MOD.get()) return;
         if (!FloodWorld.flowingFluidsLoaded()) return;
@@ -265,7 +280,7 @@ public final class FloodEngine {
 
         int target = Math.min(8, cur + rate);
         // The Flowing Fluids API is external: never hand it a mutable position.
-        boolean changed = FloodWorldFluids.setWaterAmount(level, pos.immutable(), target);
+        boolean changed = FloodWorldFluids.setWaterAmount(level, frozen(pos), target);
         if (changed || cur > 0) {
             track(data, flood, baseMap, k, colKey, base, baseKnown, tracked, cur);
         }
@@ -324,7 +339,7 @@ public final class FloodEngine {
                 continue;
             }
             int target = cur - 1;
-            FloodWorldFluids.setWaterAmount(level, pos.immutable(), target);
+            FloodWorldFluids.setWaterAmount(level, frozen(pos), target);
             if (target <= original) flood.remove(k);
         }
 
@@ -368,6 +383,14 @@ public final class FloodEngine {
         data.setDirty();
     }
 
+    /**
+     * An immutable copy for handing to the Flowing Fluids API. Built with the constructor rather
+     * than {@code immutable()} so this mod depends on one fewer Minecraft method.
+     */
+    private static BlockPos frozen(BlockPos pos) {
+        return new BlockPos(pos.getX(), pos.getY(), pos.getZ());
+    }
+
     private static long columnKey(int x, int z) {
         return BlockPos.asLong(x, 0, z);
     }
@@ -409,7 +432,7 @@ public final class FloodEngine {
             for (long k : flood.keySet().toLongArray()) {
                 pos.set(BlockPos.getX(k), BlockPos.getY(k), BlockPos.getZ(k));
                 if (!level.isLoaded(pos)) continue;
-                FloodWorldFluids.setWaterAmount(level, pos.immutable(), flood.get(k));
+                FloodWorldFluids.setWaterAmount(level, frozen(pos), flood.get(k));
                 flood.remove(k);
                 removed++;
             }

@@ -1,0 +1,37 @@
+package dev.structint;
+import net.neoforged.neoforge.common.ModConfigSpec.*;
+public final class Config {
+    public static final BooleanValue ENABLE_COLLAPSE=new BooleanValue(true);
+    public static final BooleanValue HYDRO_ENABLE=new BooleanValue(true);
+    public static final BooleanValue HYDRO_ENABLE_BREAK=new BooleanValue(true);
+    public static final BooleanValue HYDRO_EFFECTS=new BooleanValue(true);
+    public static final DoubleValue HYDRO_PRESSURE_PER_BLOCK=new DoubleValue(1.0);
+    public static final DoubleValue HYDRO_WEEP_THRESHOLD=new DoubleValue(0.75);
+    public static final IntValue HYDRO_MAX_HEAD=new IntValue(64);
+    public static final IntValue HYDRO_MAX_THICKNESS=new IntValue(12);
+    public static final IntValue HYDRO_FAILURES_PER_SWEEP=new IntValue(24);
+    public static final IntValue HYDRO_SCAN_INTERVAL_TICKS=new IntValue(1);
+    public static final IntValue HYDRO_SCAN_BUDGET=new IntValue(20000);
+    public static final IntValue HYDRO_SCAN_RADIUS_CHUNKS=new IntValue(6);
+    public static final IntValue HYDRO_SURVEY_RADIUS=new IntValue(32);
+    public static final IntValue HYDRO_SURVEY_SECONDS=new IntValue(20);
+    public static final IntValue HYDRO_BODY_SAMPLE_CAP=new IntValue(4096);
+    public static final IntValue HYDRO_BODY_REFERENCE=new IntValue(256);
+    public static final DoubleValue HYDRO_BODY_INFLUENCE=new DoubleValue(0.25);
+    public static final DoubleValue HYDRO_BODY_MAX_FACTOR=new DoubleValue(2.0);
+    public static final DoubleValue HYDRO_BRACING_SHARE=new DoubleValue(0.5);
+    public static final IntValue HYDRO_BRACING_REACH=new IntValue(3);
+    public static final IntValue HYDRO_BRACING_MAX_BONUS=new IntValue(64);
+    public static final DoubleValue HYDRO_ARCH_GAIN=new DoubleValue(0.25);
+    public static final IntValue HYDRO_ARCH_MAX_SETBACK=new IntValue(4);
+    public static final IntValue HYDRO_ARCH_SCAN_RANGE=new IntValue(12);
+    public static final IntValue HYDRO_ARCH_BASELINE=new IntValue(8);
+    public static final IntValue HYDRO_RES_DIRT=new IntValue(2);
+    public static final IntValue HYDRO_RES_GENERIC=new IntValue(3);
+    public static final IntValue HYDRO_RES_WOOD=new IntValue(4);
+    public static final IntValue HYDRO_RES_STONE=new IntValue(8);
+    public static final IntValue HYDRO_RES_REINFORCED=new IntValue(16);
+    public static final IntValue HYDRO_RES_METAL=new IntValue(24);
+    public static final IntValue HYDRO_RES_SEALING=new IntValue(32);
+    public static final IntValue HYDRO_RES_BRITTLE=new IntValue(2);
+}

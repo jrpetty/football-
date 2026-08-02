@@ -374,10 +374,13 @@ public final class WaterPressureScanner {
     private static int archSetback(WaterPressure.Probe probe, int x, int y, int z, int[] waterDir) {
         if (waterDir[1] != 0) return 0;
         if (Config.HYDRO_ARCH_GAIN.get() <= 0.0) return 0;
+        // Measured over a baseline, not against the immediate neighbours: a real arch is almost
+        // flat block to block, so sampling +/-1 would score every genuine curve as straight.
+        int baseline = Config.HYDRO_ARCH_BASELINE.get();
         int[][] flanks = horizontalPerpendicular(waterDir);
-        int a = faceOffset(probe, x + flanks[0][0], y, z + flanks[0][2], waterDir);
+        int a = faceOffset(probe, x + flanks[0][0] * baseline, y, z + flanks[0][2] * baseline, waterDir);
         if (a == Integer.MIN_VALUE) return 0;
-        int b = faceOffset(probe, x + flanks[1][0], y, z + flanks[1][2], waterDir);
+        int b = faceOffset(probe, x + flanks[1][0] * baseline, y, z + flanks[1][2] * baseline, waterDir);
         if (b == Integer.MIN_VALUE) return 0;
         return Math.min(a, b);
     }
