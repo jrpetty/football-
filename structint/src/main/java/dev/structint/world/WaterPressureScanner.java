@@ -15,6 +15,7 @@ import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
@@ -50,6 +51,7 @@ public final class WaterPressureScanner {
 
     /** Last reported stress tier per position, so a groaning dam does not re-warn every sweep. */
     private final Long2ByteOpenHashMap tiers = new Long2ByteOpenHashMap();
+    private final List<Survey> surveys = new ArrayList<>();
     private int ticksSinceSweep;
     private int chunkCursor;
 
@@ -95,6 +97,7 @@ public final class WaterPressureScanner {
             budget -= scanChunk(level, probe, chunks.getLong(index), budget, stressed);
         }
 
+        repaintSurveys(level, probe);
         probe.clear();
         if (!stressed.isEmpty()) resolve(level, stressed);
     }
@@ -127,8 +130,8 @@ public final class WaterPressureScanner {
         while (it.hasNext() && examined < budget) {
             long packed = it.nextLong();
             examined++;
-            double stress = evaluate(probe, BlockPos.getX(packed), BlockPos.getY(packed), BlockPos.getZ(packed));
-            if (stress > 0.0) stressed.add(new Candidate(packed, stress));
+            WaterPressure.Reading r = evaluate(probe, BlockPos.getX(packed), BlockPos.getY(packed), BlockPos.getZ(packed));
+            if (r.stress() > 0.0) stressed.add(new Candidate(packed, r.stress()));
         }
         return examined;
     }
@@ -139,13 +142,13 @@ public final class WaterPressureScanner {
      * Fraction of its capacity this block is using, or 0 if no water bears on it. Greater than or
      * equal to 1 means it fails.
      */
-    private static double evaluate(WaterPressure.Probe probe, int x, int y, int z) {
+    static WaterPressure.Reading evaluate(WaterPressure.Probe probe, int x, int y, int z) {
         BlockState self = probe.stateAt(x, y, z);
-        if (WaterPressure.isExempt(self)) return 0.0;
-        if (WaterPressure.isWater(self) || self.isAir()) return 0.0;
+        if (WaterPressure.isExempt(self)) return WaterPressure.Reading.NONE;
+        if (WaterPressure.isWater(self) || self.isAir()) return WaterPressure.Reading.NONE;
 
         double pressurePerBlock = Config.HYDRO_PRESSURE_PER_BLOCK.get();
-        double worst = 0.0;
+        WaterPressure.Reading worst = WaterPressure.Reading.NONE;
 
         for (int[] d : WaterPressure.DIRECTIONS) {
             int wx = x + d[0];
@@ -171,15 +174,122 @@ public final class WaterPressureScanner {
             }
             if (load <= 0.0) continue;
 
-            double capacity = run.capacity;
-            capacity += bracing(probe, x, y, z, d, run.capacity);
-            capacity *= HydroLoad.archMultiplier(archSetback(probe, x, y, z, d),
+            double brace = bracing(probe, x, y, z, d, run.capacity);
+            int curve = archSetback(probe, x, y, z, d);
+            double arch = HydroLoad.archMultiplier(curve,
                     Config.HYDRO_ARCH_GAIN.get(), Config.HYDRO_ARCH_MAX_SETBACK.get());
+            double capacity = (run.capacity + brace) * arch;
 
             double stress = HydroLoad.stress(load, capacity);
-            if (stress > worst) worst = stress;
+            if (stress > worst.stress()) {
+                worst = new WaterPressure.Reading(stress, head, probe.bodyVolume(wx, wy, wz), body,
+                        load, run.capacity, brace, arch, curve, capacity);
+            }
         }
         return worst;
+    }
+
+    /** One-off reading for a single block, for the inspection command. */
+    public static WaterPressure.Reading inspect(ServerLevel level, BlockPos pos) {
+        WaterPressure.Probe probe = new WaterPressure.Probe(level);
+        WaterPressure.Reading r = evaluate(probe, pos.getX(), pos.getY(), pos.getZ());
+        probe.clear();
+        return r;
+    }
+
+    // ------------------------------------------------------------------ survey
+
+    /** A temporary request to paint every straining block in a box so a player can see it. */
+    private record Survey(int x, int y, int z, int radius, long expiresAt) {
+    }
+
+    /** What one survey pass found: how many blocks sit in each tier, and the worst one. */
+    public record SurveyResult(int examined, int comfortable, int loaded, int straining, int failing,
+                               double worstStress, int worstX, int worstY, int worstZ) {
+
+        public boolean anyLoad() {
+            return comfortable + loaded + straining + failing > 0;
+        }
+    }
+
+    /**
+     * Paint and count every water-loaded player-placed block in range, and keep repainting it for
+     * {@code ticks} so the picture stays up while you walk the dam.
+     */
+    public static SurveyResult survey(ServerLevel level, BlockPos centre, int radius, int ticks) {
+        WaterPressureScanner scanner = SCANNERS.computeIfAbsent(level, l -> new WaterPressureScanner());
+        if (ticks > 0) {
+            scanner.surveys.add(new Survey(centre.getX(), centre.getY(), centre.getZ(), radius,
+                    level.getGameTime() + ticks));
+        }
+        WaterPressure.Probe probe = new WaterPressure.Probe(level);
+        int[] tally = new int[5];
+        double[] worst = {0.0};
+        long[] worstPos = {centre.asLong()};
+        int examined = paint(level, probe, centre.getX(), centre.getY(), centre.getZ(), radius, tally, worst, worstPos);
+        probe.clear();
+        return new SurveyResult(examined, tally[1], tally[2], tally[3], tally[4], worst[0],
+                BlockPos.getX(worstPos[0]), BlockPos.getY(worstPos[0]), BlockPos.getZ(worstPos[0]));
+    }
+
+    private void repaintSurveys(ServerLevel level, WaterPressure.Probe probe) {
+        if (surveys.isEmpty()) return;
+        long now = level.getGameTime();
+        surveys.removeIf(s -> s.expiresAt() < now);
+        for (Survey s : surveys) {
+            paint(level, probe, s.x(), s.y(), s.z(), s.radius(), null, null, null);
+        }
+    }
+
+    /** Walk the managed blocks in a box, mark each by tier, and optionally tally what was seen. */
+    private static int paint(ServerLevel level, WaterPressure.Probe probe, int cx, int cy, int cz,
+                             int radius, int[] tally, double[] worst, long[] worstPos) {
+        double weepAt = Config.HYDRO_WEEP_THRESHOLD.get();
+        int budget = Config.HYDRO_SCAN_BUDGET.get();
+        int chunkRadius = Math.max(1, (radius >> 4) + 1);
+        int examined = 0;
+
+        for (int dx = -chunkRadius; dx <= chunkRadius && budget > 0; dx++) {
+            for (int dz = -chunkRadius; dz <= chunkRadius && budget > 0; dz++) {
+                LevelChunk chunk = StructuralData.loadedChunk(level, (cx >> 4) + dx, (cz >> 4) + dz);
+                if (chunk == null) continue;
+                ManagedBlocks managed = StructuralData.managed(chunk);
+                if (managed.isEmpty()) continue;
+                LongIterator it = managed.view().iterator();
+                while (it.hasNext() && budget > 0) {
+                    long packed = it.nextLong();
+                    int bx = BlockPos.getX(packed);
+                    int by = BlockPos.getY(packed);
+                    int bz = BlockPos.getZ(packed);
+                    if (Math.abs(bx - cx) > radius || Math.abs(by - cy) > radius || Math.abs(bz - cz) > radius) continue;
+                    budget--;
+                    examined++;
+                    WaterPressure.Reading r = evaluate(probe, bx, by, bz);
+                    int tier = r.tier(weepAt);
+                    if (tier == 0) continue;
+                    mark(level, bx, by, bz, tier);
+                    if (tally != null) {
+                        tally[tier]++;
+                        if (r.stress() > worst[0]) {
+                            worst[0] = r.stress();
+                            worstPos[0] = BlockPos.asLong(bx, by, bz);
+                        }
+                    }
+                }
+            }
+        }
+        return examined;
+    }
+
+    /** Green means it is fine, blue means it is working, orange means it is straining, red goes. */
+    private static void mark(ServerLevel level, int x, int y, int z, int tier) {
+        SimpleParticleType type = switch (tier) {
+            case 4 -> ParticleTypes.LAVA;
+            case 3 -> ParticleTypes.FLAME;
+            case 2 -> ParticleTypes.DRIPPING_WATER;
+            default -> ParticleTypes.HAPPY_VILLAGER;
+        };
+        level.sendParticles(type, x + 0.5, y + 0.5, z + 0.5, tier >= 3 ? 4 : 2, 0.25, 0.25, 0.25, 0.0);
     }
 
     /** Result of walking a wall away from the water. */

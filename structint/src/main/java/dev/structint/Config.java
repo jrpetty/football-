@@ -30,6 +30,8 @@ public final class Config {
     public static final ModConfigSpec.IntValue HYDRO_SCAN_INTERVAL_TICKS;
     public static final ModConfigSpec.IntValue HYDRO_SCAN_BUDGET;
     public static final ModConfigSpec.IntValue HYDRO_SCAN_RADIUS_CHUNKS;
+    public static final ModConfigSpec.IntValue HYDRO_SURVEY_RADIUS;
+    public static final ModConfigSpec.IntValue HYDRO_SURVEY_SECONDS;
 
     public static final ModConfigSpec.IntValue HYDRO_BODY_SAMPLE_CAP;
     public static final ModConfigSpec.IntValue HYDRO_BODY_REFERENCE;
@@ -177,6 +179,10 @@ public final class Config {
                 .defineInRange("scanBudget", 2048, 64, 262144);
         HYDRO_SCAN_RADIUS_CHUNKS = b.comment("Chunk radius around each player that the sweep considers.")
                 .defineInRange("scanRadiusChunks", 6, 1, 32);
+        HYDRO_SURVEY_RADIUS = b.comment("Block radius that /structint pressure survey covers.")
+                .defineInRange("surveyRadius", 32, 4, 128);
+        HYDRO_SURVEY_SECONDS = b.comment("How long a survey keeps repainting before it fades.")
+                .defineInRange("surveySeconds", 20, 1, 600);
 
         b.comment(
                 "How much water is behind the wall. Strictly speaking a pond and an ocean of the",

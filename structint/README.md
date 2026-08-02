@@ -127,6 +127,43 @@ stone, or a 2-thick concrete arch with room to spare.
 An air-filled base at ocean depth 20 (load 40) needs 5 thick stone, 3 thick concrete, or 2 of
 obsidian. Flood a room and its walls stop caring.
 
+## Seeing whether it will hold, before it doesn't
+
+Three ways, in increasing order of effort.
+
+**It tells you on its own.** At 75% of capacity a block starts visibly seeping water and keeps
+doing it. A dam that is about to go looks wet before it goes. Turn this off with `effects = false`.
+
+**`/structint pressure`** — look at any block and get the whole sum:
+
+```
+Water pressure at -412, 63, 208 — OVER CAPACITY, this will burst (750.0% of capacity)
+  push   60.0  =  30 deep x 2.0 body  (sampled 4096 water blocks behind it)
+  hold   8.0   =  thickness 8
+  Short by 52.0. Add thickness behind it, put a buttress within 3 blocks, bow the wall
+  into the water, or use a stronger material — stone holds 8 per block, concrete 16, metal 24.
+```
+
+If nothing bears on it, it says so and tells you which of the three reasons applies — nothing
+touching it, water on both sides cancelling, or the run behind it anchored into natural ground.
+
+**`/structint pressure survey`** — paints every player-placed block within 32 blocks by how hard it
+is working and keeps repainting for 20 seconds so you can walk the dam and watch:
+
+| particle | meaning |
+|---|---|
+| green sparkle | comfortable |
+| water drip | working |
+| orange flame | straining, will seep |
+| red lava | over capacity, will burst |
+
+and reports the tally plus the worst block's coordinates. Both are permission level 2, and the
+survey radius and duration are config keys. Everything is server-side particles, so nobody needs a
+client mod.
+
+The one thing missing is a strength number on the item tooltip — the mod's existing
+`TooltipHandler` shows span, and water resistance belongs next to it. Say the word and I'll add it.
+
 ## How it is measured, and what it costs
 
 A budgeted sweep near players, cloned from `SnowLoadScanner` — water level changes fire no block
@@ -140,6 +177,7 @@ event we can rely on, and a reservoir filling up changes the load without anyone
 - depth probes are memoised per column and body fills per body **for the whole sweep**, so a
   100-column dam face costs 100 column walks and *one* bounded flood fill, not one per block
 - `failuresPerSweep` (24) staggers a breach into something you can watch — and run from
+- a survey is bounded by the same `scanBudget` and stops painting when it runs out
 
 Fail-safes match the existing style: every walk is bounded (`maxThickness` 12, `maxHead` 64,
 `sampleCap` 4096, `arch.scanRange` 6), unloaded chunks stop a fill rather than dragging chunks in,

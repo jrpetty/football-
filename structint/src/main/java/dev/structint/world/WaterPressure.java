@@ -31,6 +31,40 @@ public final class WaterPressure {
     private WaterPressure() {
     }
 
+    /**
+     * A full account of what the water is doing to one block, so the same numbers that decide
+     * whether it bursts can be shown to a player.
+     *
+     * @param stress    fraction of capacity in use; >= 1 fails
+     * @param head      blocks of water standing on the wet face
+     * @param volume    sampled size of the body behind it
+     * @param body      the multiplier that volume earned
+     * @param load      total push on the block
+     * @param run       capacity from wall thickness alone
+     * @param bracing   capacity borrowed from buttresses
+     * @param arch      multiplier earned by curvature
+     * @param curve     blocks of curvature measured
+     * @param capacity  the total the block actually resists with
+     */
+    public record Reading(double stress, int head, int volume, double body, double load,
+                          int run, double bracing, double arch, int curve, double capacity) {
+
+        public static final Reading NONE = new Reading(0, 0, 0, 1, 0, 0, 0, 1, 0, 0);
+
+        public boolean dry() {
+            return load <= 0.0;
+        }
+
+        /** 0 dry, 1 comfortable, 2 loaded, 3 straining, 4 failing. */
+        public int tier(double weepAt) {
+            if (dry()) return 0;
+            if (stress >= 1.0) return 4;
+            if (stress >= weepAt) return 3;
+            if (stress >= weepAt * 0.66) return 2;
+            return 1;
+        }
+    }
+
     // ------------------------------------------------------------------ material
 
     /** Blocks of head a single block of this material holds back unbraced. */
