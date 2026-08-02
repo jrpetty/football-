@@ -4,6 +4,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 
 import dev.structint.Config;
+import dev.structint.StructuralIntegrityMod;
 import dev.structint.world.WaterPressure;
 import dev.structint.world.WaterPressureScanner;
 
@@ -34,16 +35,35 @@ public final class PressureCommand {
 
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
-        event.getDispatcher().register(Commands.literal("structint")
-                .requires(source -> source.hasPermission(2))
-                .then(Commands.literal("pressure")
-                        .executes(PressureCommand::inspect)
-                        .then(Commands.literal("survey").executes(PressureCommand::survey))));
+        // Registration must never take the game down with it: an inspection command is a
+        // convenience, and the simulation works without it.
+        try {
+            event.getDispatcher().register(Commands.literal("structint")
+                    .requires(source -> source.hasPermission(2))
+                    .then(Commands.literal("pressure")
+                            .executes(PressureCommand::inspect)
+                            .then(Commands.literal("survey").executes(PressureCommand::survey))));
+        } catch (Throwable t) {
+            StructuralIntegrityMod.LOGGER.error(
+                    "structint: could not register /structint pressure; the simulation is unaffected", t);
+        }
     }
 
     // ------------------------------------------------------------------ inspect
 
     private static int inspect(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        try {
+            return inspect0(ctx);
+        } catch (CommandSyntaxException e) {
+            throw e;
+        } catch (Throwable t) {
+            StructuralIntegrityMod.LOGGER.error("structint: /structint pressure failed", t);
+            ctx.getSource().sendFailure(Component.literal("Could not read the pressure here; see the log."));
+            return 0;
+        }
+    }
+
+    private static int inspect0(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
         BlockPos pos = lookingAt(player);
         if (pos == null) {
@@ -104,6 +124,18 @@ public final class PressureCommand {
     // ------------------------------------------------------------------- survey
 
     private static int survey(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        try {
+            return survey0(ctx);
+        } catch (CommandSyntaxException e) {
+            throw e;
+        } catch (Throwable t) {
+            StructuralIntegrityMod.LOGGER.error("structint: /structint pressure survey failed", t);
+            ctx.getSource().sendFailure(Component.literal("Could not run the survey; see the log."));
+            return 0;
+        }
+    }
+
+    private static int survey0(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
         if (!Config.HYDRO_ENABLE.get()) {
             ctx.getSource().sendFailure(Component.literal("Water pressure is disabled in the server config."));
@@ -138,9 +170,14 @@ public final class PressureCommand {
     // -------------------------------------------------------------------- utils
 
     private static BlockPos lookingAt(ServerPlayer player) {
-        HitResult hit = player.pick(12.0, 0.0F, false);
-        if (hit.getType() != HitResult.Type.BLOCK) return null;
-        return ((BlockHitResult) hit).getBlockPos();
+        try {
+            HitResult hit = player.pick(12.0, 0.0F, false);
+            if (hit.getType() != HitResult.Type.BLOCK) return null;
+            return ((BlockHitResult) hit).getBlockPos();
+        } catch (Throwable t) {
+            StructuralIntegrityMod.LOGGER.error("structint: could not ray-trace for /structint pressure", t);
+            return null;
+        }
     }
 
     private static ChatFormatting colourFor(WaterPressure.Reading r) {

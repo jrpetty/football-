@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import dev.structint.Config;
+import dev.structint.StructuralIntegrityMod;
 import dev.structint.core.HydroLoad;
 
 import it.unimi.dsi.fastutil.longs.Long2ByteOpenHashMap;
@@ -145,7 +146,7 @@ public final class WaterPressureScanner {
     static WaterPressure.Reading evaluate(WaterPressure.Probe probe, int x, int y, int z) {
         BlockState self = probe.stateAt(x, y, z);
         if (WaterPressure.isExempt(self)) return WaterPressure.Reading.NONE;
-        if (WaterPressure.isWater(self) || self.isAir()) return WaterPressure.Reading.NONE;
+        if (self.isAir() || probe.isWaterAt(x, y, z)) return WaterPressure.Reading.NONE;
 
         double pressurePerBlock = Config.HYDRO_PRESSURE_PER_BLOCK.get();
         WaterPressure.Reading worst = WaterPressure.Reading.NONE;
@@ -155,7 +156,7 @@ public final class WaterPressureScanner {
             int wy = y + d[1];
             int wz = z + d[2];
             if (!probe.isLoadedAt(wx, wy, wz)) continue;
-            if (!WaterPressure.isWater(probe.stateAt(wx, wy, wz))) continue;
+            if (!probe.isWaterAt(wx, wy, wz)) continue;
 
             int head = probe.headAbove(wx, wy, wz);
             if (head <= 0) continue;
@@ -283,13 +284,18 @@ public final class WaterPressureScanner {
 
     /** Green means it is fine, blue means it is working, orange means it is straining, red goes. */
     private static void mark(ServerLevel level, int x, int y, int z, int tier) {
+        if (effectsBroken) return;
         SimpleParticleType type = switch (tier) {
             case 4 -> ParticleTypes.LAVA;
             case 3 -> ParticleTypes.FLAME;
             case 2 -> ParticleTypes.DRIPPING_WATER;
             default -> ParticleTypes.HAPPY_VILLAGER;
         };
-        level.sendParticles(type, x + 0.5, y + 0.5, z + 0.5, tier >= 3 ? 4 : 2, 0.25, 0.25, 0.25, 0.0);
+        try {
+            level.sendParticles(type, x + 0.5, y + 0.5, z + 0.5, tier >= 3 ? 4 : 2, 0.25, 0.25, 0.25, 0.0);
+        } catch (Throwable t) {
+            noteEffectsBroken(t);
+        }
     }
 
     /** Result of walking a wall away from the water. */
@@ -314,11 +320,11 @@ public final class WaterPressureScanner {
                 run.anchored = true;
                 return run;
             }
-            BlockState state = probe.stateAt(cx, cy, cz);
-            if (WaterPressure.isWater(state)) {
+            if (probe.isWaterAt(cx, cy, cz)) {
                 run.reliefHead = probe.headAbove(cx, cy, cz);
                 return run;
             }
+            BlockState state = probe.stateAt(cx, cy, cz);
             if (WaterPressure.isExempt(state)) {
                 run.anchored = true;
                 return run;
@@ -392,7 +398,7 @@ public final class WaterPressureScanner {
             BlockState state = probe.stateAt(cx, cy, cz);
             if (!probe.isWall(state, cx, cy, cz)) continue;
             if (!probe.isManagedAt(cx, cy, cz)) continue;
-            if (!WaterPressure.isWater(probe.stateAt(cx + waterDir[0], cy + waterDir[1], cz + waterDir[2]))) continue;
+            if (!probe.isWaterAt(cx + waterDir[0], cy + waterDir[1], cz + waterDir[2])) continue;
             return k;
         }
         return Integer.MIN_VALUE;
@@ -440,16 +446,21 @@ public final class WaterPressureScanner {
         }
     }
 
+    /** Cosmetics are optional; if a particle or sound is unavailable, drop them rather than crash. */
+    private static boolean effectsBroken = false;
+
     /** A block gives way: it is washed out rather than toppling, and the water follows it in. */
     private static void burst(ServerLevel level, BlockPos pos, boolean effects) {
         BlockState state = level.getBlockState(pos);
         if (state.isAir()) return;
-        if (effects) {
+        if (effects && !effectsBroken) try {
             SoundType sound = state.getSoundType();
-            level.playSound(null, pos, sound.getBreakSound(), SoundSource.BLOCKS,
+            level.playSound(null, pos, sound.getHitSound(), SoundSource.BLOCKS,
                     Math.max(0.5F, sound.getVolume()), sound.getPitch() * 0.6F);
             level.sendParticles(ParticleTypes.SPLASH,
                     pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 24, 0.4, 0.4, 0.4, 0.35);
+        } catch (Throwable t) {
+            noteEffectsBroken(t);
         }
         StructuralData.setManaged(level, pos, false);
         level.destroyBlock(pos, true);
@@ -459,7 +470,18 @@ public final class WaterPressureScanner {
 
     /** Under load but holding: seeping water, so a dam tells you before it goes. */
     private static void weep(ServerLevel level, BlockPos pos) {
-        level.sendParticles(ParticleTypes.DRIPPING_WATER,
-                pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 4, 0.35, 0.35, 0.35, 0.0);
+        if (effectsBroken) return;
+        try {
+            level.sendParticles(ParticleTypes.DRIPPING_WATER,
+                    pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 4, 0.35, 0.35, 0.35, 0.0);
+        } catch (Throwable t) {
+            noteEffectsBroken(t);
+        }
+    }
+
+    private static void noteEffectsBroken(Throwable t) {
+        effectsBroken = true;
+        StructuralIntegrityMod.LOGGER.warn(
+                "structint: water pressure effects unavailable, continuing without them", t);
     }
 }

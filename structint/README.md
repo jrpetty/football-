@@ -188,6 +188,12 @@ feature off entirely.
 
 ## What it will not do
 
+- **Residual unverified API surface.** Every call the new code makes is diffed against the set of
+  descriptors the two original jars (built against real Minecraft) already prove. Twelve are not
+  covered by that set: the five `ParticleTypes` fields, `Blocks.AIR`, and six used only by the
+  command. All twelve are now wrapped so a wrong one degrades instead of crashing — effects switch
+  themselves off and log once, and command registration and execution are caught whole. The
+  simulation itself uses only proven descriptors.
 - **It has never been run on an actual Minecraft server.** No Minecraft artifacts were reachable
   from the build environment, so this is verified by compiling against signature-exact stubs and
   diffing the emitted method descriptors against the original jar — not by playing it. Test on a

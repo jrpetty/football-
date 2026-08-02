@@ -8,8 +8,8 @@ import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.tags.FluidTags;
-import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
 
@@ -83,18 +83,6 @@ public final class WaterPressure {
         return state.is(HydroTags.PRESSURE_EXEMPT);
     }
 
-    public static boolean isWater(BlockState state) {
-        FluidState fluid = state.getFluidState();
-        return !fluid.isEmpty() && fluid.is(FluidTags.WATER);
-    }
-
-    /**
-     * True if this block forms part of a wall the water has to get through. Deliberately the same
-     * notion of "load bearing" the span system uses, so the two agree about what a wall is.
-     */
-    public static boolean isWall(BlockState state, BlockGetter level, BlockPos pos) {
-        return !isWater(state) && BlockClassifier.isLoadBearing(state, level, pos);
-    }
 
     // ------------------------------------------------------------------ probing
 
@@ -123,9 +111,20 @@ public final class WaterPressure {
             return level.getBlockState(cursor.set(x, y, z));
         }
 
+        /**
+         * Water at this position. Read through the level's fluid state rather than off a block
+         * state, so waterlogged blocks and partial Flowing Fluids levels both answer correctly.
+         */
+        public boolean isWaterAt(int x, int y, int z) {
+            if (level.isOutsideBuildHeight(y)) return false;
+            FluidState fluid = ((LevelAccessor) level).getFluidState(cursor.set(x, y, z));
+            return fluid.is(FluidTags.WATER) && fluid.getAmount() > 0;
+        }
+
         /** Part of a wall the water has to get through, tested without allocating a position. */
         public boolean isWall(BlockState state, int x, int y, int z) {
-            return !isWater(state) && BlockClassifier.isLoadBearing(state, level, cursor.set(x, y, z));
+            if (isWaterAt(x, y, z)) return false;
+            return BlockClassifier.isLoadBearing(state, level, cursor.set(x, y, z));
         }
 
         public boolean isManagedAt(int x, int y, int z) {
@@ -148,7 +147,7 @@ public final class WaterPressure {
 
             int cap = Config.HYDRO_MAX_HEAD.get();
             int top = y;
-            while (top - y < cap && isWater(stateAt(x, top + 1, z))) {
+            while (top - y < cap && isWaterAt(x, top + 1, z)) {
                 top++;
             }
             // Walk back down filling the cache, so every block of this dam face is now free.
@@ -191,7 +190,7 @@ public final class WaterPressure {
                     if (seen.contains(nk)) continue;
                     // Unloaded chunks stop the fill rather than dragging them in.
                     if (!isLoadedAt(nx, ny, nz)) continue;
-                    if (!isWater(stateAt(nx, ny, nz))) continue;
+                    if (!isWaterAt(nx, ny, nz)) continue;
                     seen.add(nk);
                     if (seen.size() >= cap) break;
                     queue.enqueue(nk);
