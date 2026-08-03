@@ -161,9 +161,9 @@ public final class Stamps {
      * The gameplay path: returns the record for a stack without touching the
      * stack or the token.
      *
-     * <p>An eligible item with no stamp is adopted once, here, as a Legacy item
-     * — a new id, an honest migration date, no invented maker, counters at
-     * zero. That is the only case in which this method writes to the stack.
+     * <p>An eligible item with no stamp is adopted once, here, as Found — a new
+     * id, today's date, no invented crafter, counters at zero. That is the only
+     * case in which this method writes to the stack.
      *
      * @return the record, or null when the item is not tracked
      */
@@ -183,7 +183,7 @@ public final class Stamps {
         ItemStamp stamp = readStamp(stack);
 
         if (stamp == null) {
-            return adopt(stack, itemId, category, player, registry);
+            return adopt(stack, itemId, category, player, registry, false);
         }
 
         RecordRegistry.Claim claim = registry.verify(stamp);
@@ -205,16 +205,35 @@ public final class Stamps {
             default -> {
                 // A stamp referencing an id this server never issued: a
                 // hand-edited stack, or data from another world's store.
-                return adopt(stack, itemId, category, player, registry);
+                return adopt(stack, itemId, category, player, registry, false);
             }
         }
     }
 
+    /**
+     * Registers an item this system has not seen before.
+     *
+     * <p>The two callers mean different things and must not be conflated.
+     *
+     * <p>The login sweep is a <em>migration</em>: that equipment was already in
+     * the world before this mod could see it, so it is honestly Legacy, with no
+     * maker and an approximate date.
+     *
+     * <p>An item first seen mid-session is an <em>acquisition</em>: it arrived
+     * in someone's hands while the mod was already running — looted, issued,
+     * bought, or made at a workbench this mod cannot hook. That is Found. Both
+     * refuse to invent a maker, but calling a gun handed out this morning a
+     * "legacy item" would be simply untrue.
+     */
     private static ItemRecord adopt(ItemStack stack, String itemId, ItemCategory category,
-                                    ServerPlayer player, RecordRegistry registry) {
-        ItemRecord record = registry.registerLegacy(itemId, category,
-                player == null ? null : player.getUUID(),
-                player == null ? null : player.getGameProfile().getName());
+                                    ServerPlayer player, RecordRegistry registry, boolean migration) {
+        ItemRecord record = migration
+                ? registry.registerLegacy(itemId, category,
+                        player == null ? null : player.getUUID(),
+                        player == null ? null : player.getGameProfile().getName())
+                : registry.registerFound(itemId, category,
+                        player == null ? null : player.getUUID(),
+                        player == null ? null : player.getGameProfile().getName());
         writeStamp(stack, ItemStamp.of(record));
         syncCustomName(stack, record);
         refreshSummary(stack, record);
@@ -230,6 +249,16 @@ public final class Stamps {
      * with {@code /provenance admin restore}.
      */
     public static ItemRecord claimCustody(ItemStack stack, ServerPlayer player) {
+        return claimCustody(stack, player, false);
+    }
+
+    /**
+     * As above, but says whether an unstamped stack found here is being
+     * migrated in or acquired now. Only the login sweep is a migration; an
+     * untracked item that turns up at an anvil mid-session arrived in this
+     * session and is Found, not Legacy.
+     */
+    public static ItemRecord claimCustody(ItemStack stack, ServerPlayer player, boolean migration) {
         ProvenanceState state = ProvenanceState.get();
         if (state == null || stack.isEmpty()) {
             return null;
@@ -244,7 +273,7 @@ public final class Stamps {
         String itemId = itemId(stack);
         ItemStamp stamp = readStamp(stack);
         if (stamp == null) {
-            return adopt(stack, itemId, category, player, registry);
+            return adopt(stack, itemId, category, player, registry, migration);
         }
 
         RecordRegistry.Claim claim = registry.claim(stamp, itemId, category,
@@ -269,7 +298,7 @@ public final class Stamps {
                 return claim.record();
             }
             default -> {
-                return adopt(stack, itemId, category, player, registry);
+                return adopt(stack, itemId, category, player, registry, migration);
             }
         }
     }

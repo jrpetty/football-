@@ -106,11 +106,11 @@ public final class RecordRegistry {
      * invented.
      */
     public ItemRecord registerFound(String itemId, ItemCategory category, UUID holderId, String holderName) {
-        ItemRecord record = ItemRecord.builder(newRecordId(), itemId, category)
+        ItemRecord record = withDeclaredMaker(ItemRecord.builder(newRecordId(), itemId, category)
                 .origin(Origin.FOUND)
                 .created(now(), true)
                 .owner(holderId, holderName)
-                .bindingToken(newToken())
+                .bindingToken(newToken()), itemId)
                 .build();
         store.insert(record);
         return record;
@@ -124,14 +124,35 @@ public final class RecordRegistry {
      * worse than an honest gap. Counters start at zero.
      */
     public ItemRecord registerLegacy(String itemId, ItemCategory category, UUID holderId, String holderName) {
-        ItemRecord record = ItemRecord.builder(newRecordId(), itemId, category)
+        ItemRecord record = withDeclaredMaker(ItemRecord.builder(newRecordId(), itemId, category)
                 .origin(Origin.LEGACY)
                 .created(now(), true)
                 .owner(holderId, holderName)
-                .bindingToken(newToken())
+                .bindingToken(newToken()), itemId)
                 .build();
         store.insert(record);
         return record;
+    }
+
+    /**
+     * Fills in the manufacturer for equipment that arrives already made.
+     *
+     * <p>Only ever sets the company line, never the crafter: the configuration
+     * knows what model an item is, not who assembled this one. An item with no
+     * declared maker is left exactly as it was.
+     */
+    private ItemRecord.Builder withDeclaredMaker(ItemRecord.Builder builder, String itemId) {
+        String name = config.manufacturerFor(itemId);
+        if (name == null || name.isBlank()) {
+            return builder;
+        }
+        return builder.company(slug(name), name);
+    }
+
+    /** A stable key for a display name, so the same company groups together. */
+    public static String slug(String name) {
+        return name.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9]+", "_")
+                .replaceAll("^_+|_+$", "");
     }
 
     private ItemRecord registerDuplicate(String itemId, ItemCategory category, UUID holderId, String holderName,

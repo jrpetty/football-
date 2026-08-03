@@ -156,10 +156,16 @@ public final class ItemRecord {
      * never inferred from the crafter's current membership.
      */
     public String manufacturerDisplayName() {
+        // A declared maker wins even for equipment nobody here crafted: a gun
+        // issued from a crate has no crafter this server can name, but its
+        // manufacturer is a fact about the model, not a guess.
+        if (companyName != null && !companyName.isEmpty()) {
+            return companyName;
+        }
         if (origin == Origin.LEGACY || origin == Origin.FOUND) {
             return "Unknown";
         }
-        return companyName == null || companyName.isEmpty() ? "Independent" : companyName;
+        return "Independent";
     }
 
     public long createdEpochMilli() {

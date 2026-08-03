@@ -95,6 +95,13 @@ public final class ConfigIo {
             root.getAsJsonObject("tagCategories").entrySet().forEach(e ->
                     config.mapTag(e.getKey(), ItemCategory.byId(e.getValue().getAsString())));
         }
+        if (root.has("manufacturers")) {
+            root.getAsJsonObject("manufacturers").entrySet().forEach(e -> {
+                if (!e.getKey().startsWith("_")) {
+                    config.mapManufacturer(e.getKey(), e.getValue().getAsString());
+                }
+            });
+        }
 
         if (root.has("milestones")) {
             JsonObject milestones = root.getAsJsonObject("milestones");
@@ -147,6 +154,15 @@ public final class ConfigIo {
         JsonObject tags = new JsonObject();
         config.tagCategories().forEach((id, category) -> tags.addProperty(id, category.id()));
         root.add("tagCategories", tags);
+
+        JsonObject makers = new JsonObject();
+        makers.addProperty("_comment", "Who makes equipment that arrives already built — guns from a kit, a shop "
+                + "or a crate. Keys are item ids, and for this mod's firearms the id is the specific gun "
+                + "(\"tacz:ak47\"), not \"tacz:modern_kinetic_gun\". \"tacz:*\" covers every gun at once. This "
+                + "fills the Manufactured by line only; the crafter stays Unknown, because knowing the model "
+                + "is not knowing who assembled it. Example: \"tacz:ak47\": \"Kalashnikov Concern\".");
+        config.manufacturers().forEach(makers::addProperty);
+        root.add("manufacturers", makers);
 
         JsonObject milestones = new JsonObject();
         for (ItemCategory category : ItemCategory.values()) {

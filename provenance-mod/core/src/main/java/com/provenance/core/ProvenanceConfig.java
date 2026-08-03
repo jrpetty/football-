@@ -27,6 +27,12 @@ public final class ProvenanceConfig {
     /** Item ids that are never tracked, whatever their tags say. */
     private final Set<String> excludedItems = new LinkedHashSet<>();
 
+    /**
+     * Item id to the body that made it, for equipment nobody at this server
+     * crafted. Supports a {@code namespace:*} wildcard.
+     */
+    private final Map<String, String> manufacturers = new LinkedHashMap<>();
+
     private boolean creativeActionsCount = false;
     private boolean teleportDistanceCounts = false;
     private int distanceIntervalTicks = 100;
@@ -186,6 +192,39 @@ public final class ProvenanceConfig {
 
     public void exclude(String itemId) {
         excludedItems.add(itemId);
+    }
+
+    /**
+     * Declares who makes a piece of equipment that arrives already built.
+     *
+     * <p>Guns are the case this exists for. A firearm handed out by a kit, a
+     * shop or a crate has no crafter this server can honestly name, but it does
+     * have a maker in the fiction — the manufacturer stamped on the receiver.
+     * Recording that is a statement about the item's model, not a guess about
+     * who assembled this particular one, so the crafter line stays Unknown.
+     *
+     * @param itemId an exact id, or {@code namespace:*} for a whole mod
+     * @param name   the display name, e.g. {@code Kalashnikov Concern}
+     */
+    public void mapManufacturer(String itemId, String name) {
+        manufacturers.put(itemId, name);
+    }
+
+    /** The maker declared for an item id, or null. Exact ids beat wildcards. */
+    public String manufacturerFor(String itemId) {
+        if (itemId == null) {
+            return null;
+        }
+        String exact = manufacturers.get(itemId);
+        if (exact != null) {
+            return exact;
+        }
+        int colon = itemId.indexOf(':');
+        return colon < 0 ? null : manufacturers.get(itemId.substring(0, colon) + ":*");
+    }
+
+    public Map<String, String> manufacturers() {
+        return manufacturers;
     }
 
     public Set<String> excludedItems() {

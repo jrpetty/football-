@@ -90,6 +90,45 @@ class CreationRecordTest {
         assertEquals(0L, record.overall().getOrZero(StatKey.KILLS), "counters start at zero");
     }
 
+    @Test
+    void aDeclaredManufacturerFillsTheCompanyLineWithoutInventingACrafter(@TempDir Path dir) {
+        ProvenanceConfig config = ProvenanceConfig.withDefaults();
+        config.mapManufacturer("tacz:ak47", "Kalashnikov Concern");
+        RecordRegistry registry = new RecordRegistry(new FileRecordStore(dir), config);
+
+        ItemRecord record = registry.registerFound(
+                "tacz:ak47", ItemCategory.GUN, UUID.randomUUID(), "Steve");
+
+        assertEquals("Kalashnikov Concern", record.manufacturerDisplayName());
+        assertEquals("kalashnikov_concern", record.companyId());
+        assertEquals("Unknown", record.crafterDisplayName(), "a known model is not a known assembler");
+        assertNull(record.crafterId());
+    }
+
+    @Test
+    void aWildcardCoversAWholeModAndAnExactIdStillWins(@TempDir Path dir) {
+        ProvenanceConfig config = ProvenanceConfig.withDefaults();
+        config.mapManufacturer("tacz:*", "Armoury Issue");
+        config.mapManufacturer("tacz:ak47", "Kalashnikov Concern");
+        RecordRegistry registry = new RecordRegistry(new FileRecordStore(dir), config);
+
+        assertEquals("Armoury Issue", registry.registerFound(
+                "tacz:m4a1", ItemCategory.GUN, UUID.randomUUID(), "Steve").manufacturerDisplayName());
+        assertEquals("Kalashnikov Concern", registry.registerFound(
+                "tacz:ak47", ItemCategory.GUN, UUID.randomUUID(), "Steve").manufacturerDisplayName());
+        assertEquals("Unknown", registry.registerFound(
+                "minecraft:iron_sword", ItemCategory.MELEE_WEAPON, UUID.randomUUID(), "Steve")
+                .manufacturerDisplayName(), "the wildcard must not leak into other mods");
+    }
+
+    @Test
+    void anUndeclaredItemKeepsAnHonestlyEmptyMakerLine(@TempDir Path dir) {
+        RecordRegistry registry = registry(dir);
+
+        assertEquals("Unknown", registry.registerLegacy(
+                "tacz:ak47", ItemCategory.GUN, UUID.randomUUID(), "Steve").manufacturerDisplayName());
+    }
+
     /** Acceptance test 20: renaming is cosmetic and cannot touch provenance. */
     @Test
     void renamingDoesNotAlterAuthenticatedProvenance(@TempDir Path dir) {

@@ -47,7 +47,7 @@ public final class ServerLifecycle {
             if (stack.isEmpty()) {
                 continue;
             }
-            if (Stamps.claimCustody(stack, player) != null) {
+            if (Stamps.claimCustody(stack, player, true) != null) {
                 checked++;
             }
         }

@@ -1,5 +1,6 @@
 package com.provenance.mod;
 
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.provenance.core.ItemRecord;
 import com.provenance.core.TransferService;
@@ -87,6 +88,16 @@ public final class ProvenanceCommands {
                             Stamps.writeStamp(held, restored);
                             return feedback(operator, "Restored. The item's original history is back.");
                         }))
+                .then(Commands.literal("register")
+                        .then(Commands.argument("maker", StringArgumentType.string())
+                                .executes(context -> registerHeld(
+                                        context.getSource().getPlayerOrException(),
+                                        StringArgumentType.getString(context, "maker"), null))
+                                .then(Commands.argument("manufacturer", StringArgumentType.greedyString())
+                                        .executes(context -> registerHeld(
+                                                context.getSource().getPlayerOrException(),
+                                                StringArgumentType.getString(context, "maker"),
+                                                StringArgumentType.getString(context, "manufacturer"))))))
                 .then(Commands.literal("stats")
                         .executes(context -> {
                             ProvenanceState state = ProvenanceState.get();
@@ -190,6 +201,57 @@ public final class ProvenanceCommands {
             case NOT_THE_OWNER -> feedback(receiver, "The sender no longer owns that item.");
             case NO_PENDING_TRANSFER -> feedback(receiver, "There is no pending offer for that item.");
         };
+    }
+
+    /**
+     * Gives a held, not-yet-tracked item a proper creation record.
+     *
+     * <p>For equipment that enters the world by a route this mod cannot hook:
+     * a kit, a shop, a command, or a workbench belonging to another mod that
+     * fires no craft event. Without this, such an item is adopted on first use
+     * with an honest but bleak "maker unknown".
+     *
+     * <p>Deliberately refuses an item that already has a record. Creation facts
+     * are immutable, and an operator being able to rewrite who forged a relic
+     * would undo the guarantee the whole system rests on. Attribution happens
+     * once, before first use, or not at all.
+     *
+     * @param maker        a player name, or any maker name for issued equipment
+     * @param manufacturer optional company shown on the Manufactured by line
+     */
+    private static int registerHeld(ServerPlayer operator, String maker, String manufacturer) {
+        ProvenanceState state = ProvenanceState.get();
+        ItemStack held = operator.getMainHandItem();
+        if (state == null || held.isEmpty()) {
+            return feedback(operator, "Hold the item you want to register.");
+        }
+
+        var category = Stamps.categoryOf(state.config(), held);
+        if (category == null) {
+            return feedback(operator, "That item is not tracked by Provenance.");
+        }
+        if (Stamps.readStamp(held) != null) {
+            return feedback(operator, "That item already has a history, and creation facts cannot be rewritten. "
+                    + "Register an item before it is first used.");
+        }
+
+        // A named player becomes a real UUID-keyed maker; anything else is
+        // recorded as a name only, which is what an issuing body should be.
+        String itemId = Stamps.itemId(held);
+        ServerPlayer namedPlayer = operator.server.getPlayerList().getPlayerByName(maker);
+        String company = manufacturer != null ? manufacturer : state.config().manufacturerFor(itemId);
+
+        ItemRecord record = state.registry().registerCrafted(
+                itemId, category,
+                namedPlayer == null ? null : namedPlayer.getUUID(), maker,
+                company == null ? null : com.provenance.core.RecordRegistry.slug(company), company);
+
+        Stamps.writeStamp(held, com.provenance.core.ItemStamp.of(record));
+        Stamps.refreshSummary(held, record);
+
+        return feedback(operator, company == null
+                ? "Registered as made by " + maker + "."
+                : "Registered as made by " + maker + " of " + company + ".");
     }
 
     private static ItemRecord heldRecord(ServerPlayer player) {

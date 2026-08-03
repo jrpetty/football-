@@ -115,6 +115,7 @@ filled in. No recompile is needed for any of it.
   "excludedItems": [],
   "itemCategories": { "tinkers:mattock": "pickaxe" },
   "tagCategories": { "c:tools/pickaxe": "pickaxe" },
+  "manufacturers": { "tacz:ak47": "Kalashnikov Concern", "tacz:*": "Armoury Issue" },
   "milestones": {
     "pickaxe": {
       "primaryStat": "blocks_mined",
@@ -129,6 +130,23 @@ filled in. No recompile is needed for any of it.
 ```
 
 Modded equipment joins by tag or explicit id — the mod never needs to know it exists.
+
+### Equipment that arrives already made
+
+Not everything is crafted where this mod can see it. A gun handed out by a kit, bought from
+a shop, pulled from a crate or given by command has no crafter this server can honestly
+name, so the crafter line stays **Unknown** — inventing one would break the only guarantee
+the system has.
+
+`manufacturers` fills in the half that *is* knowable. It maps an item id to the body that
+makes that model, and populates the **Manufactured by** line only. Keys are exact ids, or
+`namespace:*` for a whole mod; an exact id wins over a wildcard. For firearms the key is
+the specific gun — `tacz:ak47`, not `tacz:modern_kinetic_gun`, because every gun in that
+mod shares the one registry entry.
+
+For a one-off — a founder's rifle, a tournament prize — `/provenance admin register` stamps
+a real maker onto the item before it is first used. It refuses an item that already has a
+record, because creation facts are written once.
 
 ---
 
@@ -164,6 +182,7 @@ CompanyBridge.Holder.set((player, workstationHint) -> {
 | `/provenance admin flush` | Operator | Forces a write pass. |
 | `/provenance admin verify` | Operator | Checks the held item's overall totals against its contributors. |
 | `/provenance admin restore` | Operator, holding the item | Undoes a false-positive duplication fork, giving the item its original history back. |
+| `/provenance admin register <maker> [manufacturer]` | Operator, holding the item | Gives a not-yet-tracked item a real creation record. Refuses anything that already has one. |
 | `/provenance admin stats` | Operator | Store, buffer and tuning numbers: resident/dirty records, flush size and duration, records on disk. |
 
 Marketplace and Auction Block sales should call
