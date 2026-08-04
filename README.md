@@ -7,13 +7,16 @@ real-time physics calculation: the ball has **spin, curve, height, bounce and
 momentum**, and players carry momentum too.
 
 It runs entirely in the browser — no install, no account, no server. Play a
-match against the AI, or drop into free-play training.
+match against the AI, or drop into free-play training, in either a **3D
+first/third-person view** or a **2D top-down view**.
 
-> **Note on scope.** The original design targets Unreal Engine 5 with 3D first/third-
-> person cameras. That can't run or be verified in a browser sandbox, so this is a
-> complete, genuinely playable **2D top-down** realisation of the same *philosophy*
-> and *mechanics* — a real ball-physics engine and input-driven control — built to
-> run and deploy anywhere. The 3D/Unreal target remains the long-term roadmap.
+> **Note on scope.** The original design targets Unreal Engine 5. That can't run
+> or be verified in a browser sandbox, so this is a complete, genuinely playable
+> web realisation of the same *philosophy* and *mechanics* — a real ball-physics
+> engine and input-driven control. Crucially the simulation is **view-agnostic**:
+> the same physics/AI/rules `World` drives both a WebGL 3D presentation
+> (first/third-person, à la Pro Soccer Online) and a top-down 2D one. You choose
+> the view in the menu; toggle first/third-person in-game with **V**.
 
 ---
 
@@ -31,8 +34,8 @@ npm run build      # type-checks then bundles to ./dist
 npm run preview
 ```
 
-The game is a self-contained, dependency-free bundle (~48 KB) — vanilla
-TypeScript + HTML5 Canvas, no game engine or UI framework.
+Vanilla TypeScript, no UI framework. The simulation, 2D renderer and HUD are
+dependency-free; the 3D view uses **Three.js** for WebGL rendering.
 
 ---
 
@@ -40,22 +43,23 @@ TypeScript + HTML5 Canvas, no game engine or UI framework.
 
 | Action | Input |
 | --- | --- |
-| Move | **W A S D** (or arrows) |
+| Move | **W A S D** (or arrows) — camera-relative in 3D |
 | Sprint | hold **Shift** (drains stamina) |
-| Aim | **Mouse** (the cursor is your kick direction) |
+| Aim / Look | **Mouse** — the direction you look/point is where the ball goes |
 | Pass | **Left click** — tap = short, hold = long (power meter) |
 | Shoot | **Right click** — hold to charge power, release to fire |
 | Lofted / chip | hold **Space** while passing or shooting |
 | Through ball | **E** (weighted pass into space) |
 | Tackle · Slide | **F** · **C** |
 | Switch player | **Q** |
-| Camera zoom | **V** (TV → follow → close) |
+| View | **V** — 3D: first ⇄ third person · 2D: zoom TV → follow → close |
 | Pause | **Esc** / **P** |
-| Spawn a ball (free play) | **B** (at the cursor) |
+| Spawn a ball (free play) | **B** |
 
-Your player **auto-switches** to whoever is nearest the ball, so you're always
-controlling the most relevant player. Curve comes from *how you strike it* — aim
-across your run to bend it (Magnus effect).
+In 3D, **click the pitch** to capture the mouse for looking around; **Esc**
+releases it and pauses. Your player **auto-switches** to whoever is nearest the
+ball. Curve comes from *how you strike it* — aim across your run to bend the
+ball (Magnus effect).
 
 ---
 
@@ -104,21 +108,25 @@ at goal. Verified balanced in headless AI-vs-AI runs (add `?ai` to the URL).
 
 ```
 src/game/
-  core/      vec, math (+ seeded RNG), input manager, timing
+  core/      vec, math (+ seeded RNG), input manager (+ pointer lock), timing
   physics/   the ball (3D + spin) integrator
   entities/  the player (momentum, stamina, tackling)
   ai/        team director: goalkeeper, carrier, presser, off-ball
   match/     field geometry, formations, the World simulation + rules
-  control/   maps raw input → a Command (charge, aim, loft modifier)
-  render/    camera (world↔screen, follow/zoom) + canvas renderer
+  control/   input → Command: human.ts (2D, mouse-aim) · human3d.ts (mouse-look)
+  render/    2D top-down: camera (world↔screen, follow/zoom) + canvas renderer
+  render3d/  3D: Three.js scene builder + first/third-person camera
   ui/        HUD (scoreboard, stamina, power meter, minimap) + DOM screens
   config.ts  every tunable number
-  main.ts    bootstrap + fixed-step game loop
+  main.ts    bootstrap; picks the 2D Game or the 3D Game3D by the chosen view
+  game3d.ts  the 3D game loop (WebGL scene + HUD overlay + pointer lock)
 ```
 
 The simulation is **fixed-step** (120 Hz) with a phase state machine
-(kickoff → playing → goal → half-time → full-time) layered on top, decoupled
-from the render frame rate.
+(kickoff → playing → goal → half-time → full-time), fully decoupled from
+presentation. Because both views feed the identical `Command` into the same
+`World`, choosing 2D or 3D only swaps the renderer, camera and controller —
+the game itself is one codebase.
 
 ---
 
@@ -127,12 +135,14 @@ from the render frame rate.
 The design document's later phases map onto this foundation:
 
 - **Playable now** — core physics engine, match vs AI, free-play/training,
-  goalkeeper mechanics, camera zoom modes, a live stats HUD, and custom match
-  settings (team size 3–6, half length, single-keeper mode).
-- **Next** — replay capture, more set-piece detail (free-kick walls), weather &
-  surface effects on ball physics, cosmetic customization, day/night pitches.
+  goalkeeper mechanics, **both a 3D (first/third-person) and a 2D top-down
+  view**, a live stats HUD, and custom match settings (team size 3–6, half
+  length, single-keeper mode).
+- **Next** — nicer 3D player models & animation, replay capture, more set-piece
+  detail (free-kick walls), weather & surface effects on ball physics, cosmetic
+  customization, day/night pitches.
 - **Later** — online play (rollback netcode), ranked matchmaking & seasons,
-  tournaments, and the 3D / first-person target.
+  tournaments.
 
 Competitive integrity is baked in from day one: **identical attributes for every
 player** — skill decides, not stats. No loot boxes, no power creep.
