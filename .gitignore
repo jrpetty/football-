@@ -24,3 +24,7 @@ dist-ssr
 
 # Build info
 node_modules/.tmp
+
+# One-file build output
+open-pitch.html
+dist-single

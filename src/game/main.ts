@@ -248,4 +248,11 @@ function boot() {
   screens.showMenu()
 }
 
-boot()
+// Wait for the document to be parsed before looking for the canvas. Vite's
+// module build defers automatically, but the single-file build inlines a classic
+// script that would otherwise run before <body> exists.
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', boot, { once: true })
+} else {
+  boot()
+}
