@@ -183,6 +183,38 @@ body {
   background: transparent;
 }
 
+.slider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.slider input[type='range'] {
+  flex: 1;
+  accent-color: var(--accent);
+  height: 4px;
+}
+.slider output {
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  color: var(--text);
+  min-width: 42px;
+  text-align: right;
+}
+
+.flickhint {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(53, 208, 127, 0.09);
+  border: 1px solid rgba(53, 208, 127, 0.22);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #cfe6d8;
+}
+.flickhint b {
+  color: var(--text);
+}
+
 .controls {
   border-top: 1px solid var(--panel-line);
   padding-top: 16px;

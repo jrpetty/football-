@@ -1,3 +1,4 @@
+import { CONTROL } from '../config'
 import type { MatchConfig } from '../types'
 
 // DOM overlays: main menu, pause, and full-time screens. Kept out of the canvas
@@ -10,6 +11,8 @@ export class Screens {
     mode: 'match',
     singleKeeper: false,
     view: '3d',
+    heightSens: CONTROL.heightSensitivity,
+    curveSens: CONTROL.curveSensitivity,
   }
 
   onStart: (config: MatchConfig) => void = () => {}
@@ -75,6 +78,20 @@ export class Screens {
               ${this.seg('singleKeeper', 1, this.config.singleKeeper, 'Home only')}
             </div>
           </div>
+          <div class="field">
+            <label>Kick height sensitivity <span class="hint">how much an up-flick lifts it</span></label>
+            <div class="slider">
+              <input type="range" min="0.4" max="5" step="0.05" value="${this.config.heightSens}" data-sens="height" />
+              <output>${this.config.heightSens.toFixed(2)}</output>
+            </div>
+          </div>
+          <div class="field">
+            <label>Kick curve sensitivity <span class="hint">how much a side-flick bends it</span></label>
+            <div class="slider">
+              <input type="range" min="0.2" max="3" step="0.05" value="${this.config.curveSens}" data-sens="curve" />
+              <output>${this.config.curveSens.toFixed(2)}</output>
+            </div>
+          </div>
         </div>
 
         <div class="actions">
@@ -100,10 +117,9 @@ export class Screens {
     const rows: [string, string][] = [
       ['Move / Sprint', 'WASD · hold Shift'],
       ['Aim / Look', 'Mouse'],
-      ['Pass (hold = longer)', 'Left click'],
-      ['Shoot (hold = power)', 'Right click'],
-      ['Lofted / chip', 'hold Space'],
-      ['Through ball', 'E'],
+      ['<b>Touch</b> — close control', '<b>Right click</b> · tap or hold'],
+      ['Touch to the side / back', 'A D S + right click'],
+      ['<b>Strike</b> — pass or shot', '<b>Left click</b> · hold = power'],
       ['Tackle / Slide', 'F · C'],
       ['Switch player', 'Q'],
       ['View: zoom (2D) · 1st/3rd (3D)', 'V'],
@@ -114,6 +130,12 @@ export class Screens {
       <h3>Controls</h3>
       <div class="grid">
         ${rows.map(([a, b]) => `<div class="k">${a}</div><div class="v">${b}</div>`).join('')}
+      </div>
+      <div class="flickhint">
+        <b>Height &amp; curve come from your mouse.</b> As your strike is charging,
+        <b>flick the mouse up</b> to lift the ball, <b>flick down</b> to drive it low,
+        and <b>flick sideways</b> to bend it — the ball curves the way you drag.
+        Flick diagonally to do both. Over-flick and you'll skin it.
       </div>
     </div>`
   }
@@ -129,6 +151,15 @@ export class Screens {
         else if (group === 'teamSize') this.config.teamSize = Number(raw)
         else if (group === 'halfLength') this.config.halfLength = Number(raw)
         else if (group === 'singleKeeper') this.config.singleKeeper = Number(raw) === 1
+      })
+    })
+    this.root.querySelectorAll<HTMLInputElement>('input[data-sens]').forEach((el) => {
+      el.addEventListener('input', () => {
+        const v = Number(el.value)
+        if (el.dataset.sens === 'height') this.config.heightSens = v
+        else this.config.curveSens = v
+        const out = el.parentElement?.querySelector('output')
+        if (out) out.textContent = v.toFixed(2)
       })
     })
     this.root.querySelector<HTMLButtonElement>('[data-act="match"]')?.addEventListener('click', () => {

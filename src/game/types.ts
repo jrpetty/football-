@@ -3,15 +3,21 @@ import type { Vec2 } from './core/vec'
 export type Team = 'home' | 'away'
 export type Role = 'GK' | 'DEF' | 'MID' | 'FWD'
 
-export type KickType = 'pass' | 'through' | 'shot' | 'clear'
+// 'touch' is the soft close-control nudge; 'strike' is the human's single
+// continuous kick (a tap rolls a pass, a full charge is a shot) which the
+// simulation classifies afterwards for the stat sheet. The rest are what the AI
+// asks for, where intent is already known.
+export type KickType = 'touch' | 'strike' | 'pass' | 'through' | 'shot' | 'clear'
 
 // A request to release the ball, produced the moment a player kicks it.
 export interface KickRequest {
   type: KickType
   power: number // 0..1, scaled by the kick model
   aim: Vec2 // unit direction on the pitch plane
-  lofted: boolean // add vertical launch (lofted pass / chip / shot)
-  chip: boolean // steeper, softer loft (chip over a keeper)
+  // Vertical shaping from the mouse flick: +1 is a full lift (chip/lofted
+  // ball), 0 is a natural strike, −1 is driven hard into the turf with dip.
+  loft: number
+  spin: number // signed side-spin from a sideways flick — bends the flight
 }
 
 // The per-tick control signal for a single player. Human input and every AI
@@ -55,6 +61,8 @@ export interface MatchConfig {
   mode: 'match' | 'freeplay'
   singleKeeper: boolean
   view: '2d' | '3d' // presentation: top-down 2D or first/third-person 3D
+  heightSens: number // Kick Height Sensitivity — flick-up → loft
+  curveSens: number // Kick Curve Sensitivity — sideways flick → spin
   humanControlled?: boolean // false = both teams fully AI (testing / attract mode)
 }
 

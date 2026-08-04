@@ -3,9 +3,10 @@ import { clamp01 } from '../core/math'
 import type { World } from '../match/world'
 
 export interface HudInfo {
-  chargeType: 'pass' | 'shot' | 'through' | null
+  chargeType: 'touch' | 'strike' | null
   charge: number // 0..1
-  lofted: boolean
+  loft: number // −1..1, live from the mouse flick
+  spin: number // signed, live from the mouse flick
   fps: number
   mode: 'match' | 'freeplay'
   zoomLabel: string
@@ -92,28 +93,45 @@ export class Hud {
     ctx.fill()
   }
 
+  // The power bar, plus live readouts of the shaping the mouse flick is applying
+  // right now — so you can see the ball being lifted, driven or bent before you
+  // let go, rather than guessing.
   private drawPowerMeter(ctx: CanvasRenderingContext2D, info: HudInfo, w: number, h: number) {
-    const barW = 220
+    const barW = 240
     const x = w / 2 - barW / 2
-    const y = h - 40
-    ctx.fillStyle = 'rgba(10,16,28,0.75)'
-    roundRect(ctx, x - 10, y - 22, barW + 20, 40, 8)
+    const y = h - 44
+    ctx.fillStyle = 'rgba(10,16,28,0.78)'
+    roundRect(ctx, x - 12, y - 26, barW + 24, 50, 9)
     ctx.fill()
 
+    const isTouch = info.chargeType === 'touch'
     ctx.fillStyle = '#cdd8ec'
     ctx.font = '600 11px system-ui, sans-serif'
     ctx.textAlign = 'center'
-    const kind = info.chargeType === 'shot' ? 'SHOT' : info.chargeType === 'through' ? 'THROUGH' : 'PASS'
-    ctx.fillText(`${kind}${info.lofted ? ' · LOFTED' : ''}`, w / 2, y - 8)
+    ctx.textBaseline = 'alphabetic'
+    const shape =
+      info.loft > 0.12 ? ' · LIFTED' : info.loft < -0.12 ? ' · DRIVEN' : ''
+    const bend = Math.abs(info.spin) > 0.15 ? (info.spin > 0 ? ' · CURVE →' : ' · CURVE ←') : ''
+    ctx.fillText(`${isTouch ? 'TOUCH' : 'STRIKE'}${shape}${bend}`, w / 2, y - 12)
 
     ctx.fillStyle = 'rgba(255,255,255,0.12)'
-    roundRect(ctx, x, y, barW, 10, 5)
+    roundRect(ctx, x, y, barW, 11, 5)
     ctx.fill()
     const c = clamp01(info.charge)
-    const col = info.chargeType === 'shot' ? '#ff6b6b' : '#6bb8ff'
+    // Power ramps blue → amber → red as the strike gets heavier.
+    const col = isTouch ? '#59d8b0' : c > 0.8 ? '#ff5f5f' : c > 0.5 ? '#ffb03a' : '#6bb8ff'
     ctx.fillStyle = col
-    roundRect(ctx, x, y, barW * c, 10, 5)
+    roundRect(ctx, x, y, barW * c, 11, 5)
     ctx.fill()
+
+    // Loft indicator: a marker riding above/below the bar with the flick.
+    if (Math.abs(info.loft) > 0.05) {
+      const ly = y + 5.5 - clamp01(Math.abs(info.loft)) * 13 * Math.sign(info.loft)
+      ctx.fillStyle = info.loft > 0 ? '#ffe28a' : '#8ad0ff'
+      ctx.beginPath()
+      ctx.arc(x + barW * c, ly, 3.5, 0, Math.PI * 2)
+      ctx.fill()
+    }
   }
 
   private drawMinimap(ctx: CanvasRenderingContext2D, world: World, w: number, h: number) {

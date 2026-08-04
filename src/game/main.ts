@@ -25,7 +25,7 @@ class Game {
   private cam = new Camera()
   private renderer: Renderer
   private hud = new Hud()
-  private human = new HumanController()
+  private human: HumanController
   private running = false
   private paused = false
   private last = 0
@@ -45,6 +45,7 @@ class Game {
     if (!ctx) throw new Error('2D canvas unsupported')
     this.ctx = ctx
     this.renderer = new Renderer(ctx)
+    this.human = new HumanController({ height: config.heightSens, curve: config.curveSens })
     this.world = new World(config)
     this.resize()
     this.cam.mode = 'follow'
@@ -91,6 +92,10 @@ class Game {
       ballSpeed: this.world.ball.speed,
       ballZ: this.world.ball.z,
       possessor: this.world.possessorId,
+      controlled: this.world.controlledId,
+      chargeType: this.human.chargeType,
+      charge: this.human.charge,
+      loft: this.human.liveLoft,
       fps: this.fps,
       zoom: this.cam.mode,
     }
@@ -177,7 +182,8 @@ class Game {
       {
         chargeType: this.human.chargeType,
         charge: this.human.charge,
-        lofted: this.human.lofted,
+        loft: this.human.liveLoft,
+        spin: this.human.liveSpin,
         fps: this.fps,
         mode: this.config.mode,
         zoomLabel: this.cam.mode,

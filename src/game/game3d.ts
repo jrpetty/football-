@@ -22,7 +22,7 @@ export class Game3D {
   private scene: Scene3D
   private cam3: Camera3D
   private hud = new Hud()
-  private human = new Human3DController()
+  private human: Human3DController
   private ctx: CanvasRenderingContext2D
   private running = false
   private paused = false
@@ -44,6 +44,7 @@ export class Game3D {
     if (!ctx) throw new Error('2D canvas unsupported')
     this.ctx = ctx
     canvas.classList.add('hud-only', 'unlocked')
+    this.human = new Human3DController({ height: config.heightSens, curve: config.curveSens })
     this.scene = new Scene3D(container)
     this.cam3 = new Camera3D(1)
     this.world = new World(config)
@@ -191,7 +192,8 @@ export class Game3D {
       {
         chargeType: this.human.chargeType,
         charge: this.human.charge,
-        lofted: this.human.lofted,
+        loft: this.human.liveLoft,
+        spin: this.human.liveSpin,
         fps: this.fps,
         mode: this.config.mode,
         zoomLabel: this.cam3.mode === 'first' ? '1st person' : '3rd person',

@@ -1,4 +1,4 @@
-import { BALL, DEFEND, FIELD, GK, KICK, MATCH, PLAYER, SIM } from '../config'
+import { BALL, CONTROL, DEFEND, FIELD, GK, KICK, MATCH, PLAYER, SIM } from '../config'
 import { clamp } from '../core/math'
 import * as V from '../core/vec'
 import type { Vec2 } from '../core/vec'
@@ -235,10 +235,13 @@ export class World {
       }
     }
 
-    // 5. Dribble: glue the ball to the possessor's feet with a real touch ahead.
+    // 5. Dribbling. The AI shepherds the ball automatically, but the human's
+    // close control is entirely manual — you push the ball with touches and run
+    // onto it. Nothing is glued to your feet, which is the whole point of having
+    // a dedicated touch button.
     if (this.possessorId != null) {
       const owner = this.player(this.possessorId)
-      if (owner && owner.kickCooldown <= 0) this.dribble(owner)
+      if (owner && owner.kickCooldown <= 0 && !this.isHumanDriven(owner)) this.dribble(owner)
     }
 
     // 6. Integrate bodies and ball.
@@ -374,20 +377,24 @@ export class World {
     return d < p.radius + BALL.radius + PLAYER.reach * 1.25
   }
 
+  // Last kick the simulation actually received — surfaced for debugging/tuning.
+  lastKickDebug: { type: string; power: number; loft: number; spin: number } | null = null
+
   private executeKick(p: Player, cmd: Command) {
     const kick = cmd.kick!
+    this.lastKickDebug = { type: kick.type, power: kick.power, loft: kick.loft, spin: kick.spin }
     let aim = V.len(kick.aim) > 0.01 ? V.normalize(kick.aim) : p.facing
     const power = clamp(kick.power, 0, 1)
-
-    // Accuracy spread: harder kicks and shots scatter more; fatigue adds to it.
-    // Nothing is pixel-perfect, and it makes close-range finishing a real skill.
-    const baseSpread =
-      kick.type === 'shot' ? 2.5 + power * 4 : kick.type === 'through' ? 2 : 1
-    const spreadRad = ((baseSpread + (1 - p.energy) * 2) * Math.PI) / 180
-    aim = V.rotate(aim, (Math.random() * 2 - 1) * spreadRad)
+    const loft = clamp(kick.loft, -1, 1)
 
     let speed: number
     switch (kick.type) {
+      case 'touch':
+        speed = KICK.touchMin + (KICK.touchMax - KICK.touchMin) * power
+        break
+      case 'strike':
+        speed = KICK.strikeMin + (KICK.strikeMax - KICK.strikeMin) * power
+        break
       case 'shot':
         speed = KICK.shotMin + (KICK.shotMax - KICK.shotMin) * power
         break
@@ -401,20 +408,29 @@ export class World {
         speed = KICK.passMin + (KICK.passMax - KICK.passMin) * power
     }
 
-    // Curve: hitting across the body (velocity vs aim mismatch) generates spin.
-    const velDir = p.speed > 1 ? V.normalize(p.vel) : p.facing
-    let spin = V.cross(velDir, aim) * KICK.maxSpinFromAim * (0.4 + 0.6 * power)
-    spin += (Math.random() * 2 - 1) * 0.6 // tiny natural imperfection
+    // Accuracy spread: harder strikes scatter more, and fatigue adds to it. A
+    // touch is close control, so it stays tight.
+    const baseSpread = kick.type === 'touch' ? 0.6 : 1.2 + power * 3.4
+    const spreadRad = ((baseSpread + (1 - p.energy) * 2) * Math.PI) / 180
+    aim = V.rotate(aim, (Math.random() * 2 - 1) * spreadRad)
 
-    // Loft.
+    // Curve: mostly the player's deliberate sideways flick, plus a little from
+    // striking across the body, plus a touch of natural imperfection.
+    const velDir = p.speed > 1 ? V.normalize(p.vel) : p.facing
+    let spin = kick.spin * KICK.maxSpinFromAim
+    spin += V.cross(velDir, aim) * KICK.maxSpinFromAim * 0.35 * (0.4 + 0.6 * power)
+    spin += (Math.random() * 2 - 1) * 0.4
+
+    // Loft: a positive flick lifts the ball, a negative one drives it low with
+    // topspin so it dips rather than climbing.
     let horiz = speed
     let vz = 0
-    if (kick.chip) {
-      vz = Math.sin(KICK.chipAngle) * speed
-      horiz = Math.cos(KICK.chipAngle) * speed
-    } else if (kick.lofted) {
-      vz = Math.sin(KICK.loftAngle) * speed
-      horiz = Math.cos(KICK.loftAngle) * speed
+    if (loft > 0) {
+      const angle = loft * CONTROL.maxLoftAngle
+      vz = Math.sin(angle) * speed
+      horiz = Math.cos(angle) * speed
+    } else if (loft < 0) {
+      vz = loft * CONTROL.driveDip * speed * 0.12 // slight downward bite
     }
 
     // Place the ball just ahead so it doesn't instantly re-collide with the kicker.
@@ -423,7 +439,9 @@ export class World {
     this.ball.z = vz > 0 ? 0.15 : 0
     this.ball.launch(aim.x * horiz, aim.y * horiz, vz, spin, p.team, p.id)
 
-    p.kickCooldown = 0.26
+    // A touch keeps the ball yours: no release cooldown beyond a beat, so you can
+    // keep knocking it forward and running onto it.
+    p.kickCooldown = kick.type === 'touch' ? 0.1 : 0.26
     this.possessorId = null
     if (p.id === this.keeperHoldId) {
       this.keeperHold = 0
@@ -431,12 +449,22 @@ export class World {
     }
     this.pushEffect('kick', this.ball.x, this.ball.y)
 
-    // Stats & pass tracking.
-    if (kick.type === 'shot') {
+    // Stats. A human 'strike' has no declared intent, so classify it: a firm
+    // ball aimed at the opponent's goal from range counts as a shot.
+    let kind: 'shot' | 'pass' | 'none' = 'none'
+    if (kick.type === 'shot') kind = 'shot'
+    else if (kick.type === 'pass' || kick.type === 'through') kind = 'pass'
+    else if (kick.type === 'strike') {
+      const goal = F.targetGoalCenter(p.team)
+      const toGoal = V.dir(p.pos, goal)
+      const aimedAtGoal = V.dot(toGoal, aim) > 0.8
+      kind = aimedAtGoal && power > 0.45 && V.dist(p.pos, goal) < 30 ? 'shot' : 'pass'
+    }
+    if (kind === 'shot') {
       this.stats[p.team].shots++
       if (this.shotOnTarget(p, aim, speed, vz)) this.stats[p.team].onTarget++
       this.lastPass = null
-    } else if (kick.type === 'pass' || kick.type === 'through') {
+    } else if (kind === 'pass') {
       this.stats[p.team].passes++
       this.lastPass = { team: p.team, fromId: p.id }
     }
@@ -720,6 +748,11 @@ export class World {
 
   getControlledPlayer(): Player | null {
     return this.player(this.controlledId)
+  }
+
+  // Is this the player a human is actually steering right now?
+  isHumanDriven(p: Player): boolean {
+    return this.config.humanControlled !== false && p.id === this.controlledId
   }
 
   // Which team's keeper (if any) is currently shielding a gathered ball.

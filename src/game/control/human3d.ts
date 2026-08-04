@@ -1,70 +1,123 @@
-import { clamp01 } from '../core/math'
+import { CONTROL } from '../config'
 import type { InputManager } from '../core/input'
 import type { Camera3D } from '../render3d/camera3d'
 import type { World } from '../match/world'
 import { emptyCommand } from '../types'
 import type { Command } from '../types'
+import type { Vec2 } from '../core/vec'
+import { AimTracker, ChargeButton, FlickTracker, makeKick, shapeFromFlick } from './strike'
 
-const CHARGE_TIME = 0.85
+export interface Sensitivity {
+  height: number
+  curve: number
+}
 
-// Input → Command for the 3D views. Movement is camera-relative (W is "where I'm
-// looking"), and the kick aim is the camera's horizontal look direction, so what
-// you see is where it goes. Same charge/loft model as the 2D controller.
+// Input → Command for the 3D views, built around the Pro Soccer Online striking
+// model:
+//   RIGHT mouse — the soft touch. Tap for a close-control nudge, hold for a
+//     heavier push into space. A/D while touching knocks the ball to that side.
+//   LEFT mouse  — the strike. One continuous scale: a tap rolls a short pass, a
+//     full bar is a shot. Height and curve come from flicking the mouse in the
+//     last moments before you release — up to lift it, down to drive it low,
+//     sideways to bend it.
+// Movement is camera-relative, and the strike direction is where you were
+// pointing as the flick began, so a curve bends the ball without re-aiming it.
 export class Human3DController {
-  private passCharge = 0
-  private shotCharge = 0
+  private strike = new ChargeButton()
+  private touch = new ChargeButton()
+  private flick = new FlickTracker()
+  private aim = new AimTracker()
 
-  chargeType: 'pass' | 'shot' | 'through' | null = null
+  // Read by the HUD.
+  chargeType: 'touch' | 'strike' | null = null
   charge = 0
-  lofted = false
+  liveLoft = 0
+  liveSpin = 0
+
+  constructor(public sens: Sensitivity = { height: CONTROL.heightSensitivity, curve: CONTROL.curveSensitivity }) {}
 
   buildCommand(world: World, cam: Camera3D, input: InputManager, dt: number): Command {
     const cmd = emptyCommand()
     const p = world.getControlledPlayer()
     if (!p) return cmd
 
-    const aim = cam.aimSim() // unit, horizontal look direction
-    const right = { x: aim.y, y: -aim.x } // aim rotated −90° on the pitch plane
+    const look = cam.aimSim() // unit, horizontal look direction
+    const right = { x: look.y, y: -look.x } // look rotated −90° on the pitch plane
+    this.flick.push(input.movementX, input.movementY, dt)
+    this.aim.push(look, dt)
 
+    // --- movement (camera-relative) ---
     let f = 0
     let s = 0
     if (input.anyDown('KeyW', 'ArrowUp')) f += 1
     if (input.anyDown('KeyS', 'ArrowDown')) f -= 1
     if (input.anyDown('KeyD', 'ArrowRight')) s += 1
     if (input.anyDown('KeyA', 'ArrowLeft')) s -= 1
-    cmd.move = { x: aim.x * f + right.x * s, y: aim.y * f + right.y * s }
+    cmd.move = { x: look.x * f + right.x * s, y: look.y * f + right.y * s }
     cmd.sprint = input.anyDown('ShiftLeft', 'ShiftRight')
-    cmd.aim = aim
+    cmd.aim = look
 
-    const loft = input.isDown('Space')
-    this.lofted = loft
+    // --- charging ---
+    if (input.mousePressed.left) {
+      this.strike.press()
+      this.flick.reset()
+    }
+    if (input.mousePressed.right) {
+      this.touch.press()
+      this.flick.reset()
+    }
+    this.strike.update(input.mouseButtons.left, CONTROL.strikeCharge)
+    this.touch.update(input.mouseButtons.right, CONTROL.touchCharge)
 
-    if (input.mouseButtons.left) this.passCharge = Math.min(CHARGE_TIME, this.passCharge + dt)
+    // Live shaping preview while a strike is charging.
+    if (this.strike.held) {
+      const shape = shapeFromFlick(this.flick.flick(), this.sens.height, this.sens.curve)
+      this.liveLoft = shape.loft
+      this.liveSpin = shape.spin
+    } else if (!this.touch.held) {
+      this.liveLoft = 0
+      this.liveSpin = 0
+    }
+
+    // --- release: the strike (pass / shot, decided by power) ---
     if (input.mouseReleased.left) {
-      cmd.kick = { type: 'pass', power: Math.max(clamp01(this.passCharge / CHARGE_TIME), 0.12), aim, lofted: loft, chip: false }
-      this.passCharge = 0
+      const power = this.strike.release(CONTROL.strikeCharge)
+      const shape = shapeFromFlick(this.flick.flick(), this.sens.height, this.sens.curve)
+      cmd.kick = makeKick('strike', Math.max(power, 0.08), this.aim.settled(look), shape)
     }
 
-    if (input.mouseButtons.right) this.shotCharge = Math.min(CHARGE_TIME, this.shotCharge + dt)
+    // --- release: the touch (close control) ---
     if (input.mouseReleased.right) {
-      cmd.kick = { type: 'shot', power: Math.max(clamp01(this.shotCharge / CHARGE_TIME), 0.35), aim, lofted: false, chip: loft }
-      this.shotCharge = 0
+      const power = this.touch.release(CONTROL.touchCharge)
+      const shape = shapeFromFlick(this.flick.flick(), this.sens.height, this.sens.curve)
+      // A/D during a touch knocks the ball out to that side rather than straight on.
+      let dirv: Vec2 = look
+      if (s !== 0) {
+        dirv = {
+          x: look.x * 0.55 + right.x * s * 1.0,
+          y: look.y * 0.55 + right.y * s * 1.0,
+        }
+      } else if (f < 0) {
+        dirv = { x: -look.x, y: -look.y } // pull it back
+      }
+      cmd.kick = makeKick('touch', Math.max(power, 0.12), dirv, {
+        loft: Math.max(0, shape.loft), // touches can be lifted, never driven down
+        spin: shape.spin * 0.4,
+      })
     }
 
-    if (input.justPressed('KeyE') && !cmd.kick) {
-      cmd.kick = { type: 'through', power: 0.7, aim, lofted: loft, chip: false }
-    }
-
+    // --- defending ---
     if (input.isDown('KeyF')) cmd.tackle = true
     if (input.justPressed('KeyC')) cmd.slide = true
     if (input.justPressed('KeyQ') && world.config.mode === 'match') cmd.requestSwitch = true
 
-    if (input.mouseButtons.right) {
-      this.chargeType = 'shot'
-      this.charge = this.shotCharge / CHARGE_TIME
-    } else if (input.mouseButtons.left) {
-      this.chargeType = 'pass'
-      this.charge = this.passCharge / CHARGE_TIME
+    // --- HUD feedback ---
+    if (this.strike.held) {
+      this.chargeType = 'strike'
+      this.charge = this.strike.fraction(CONTROL.strikeCharge)
+    } else if (this.touch.held) {
+      this.chargeType = 'touch'
+      this.charge = this.touch.fraction(CONTROL.touchCharge)
     } else {
       this.chargeType = null
       this.charge = 0

@@ -78,7 +78,8 @@ export class Ball {
       // Magnus: side-spin pushes the ball perpendicular to its horizontal travel.
       this.applyMagnus(dt, 1)
     } else {
-      // Rolling on the turf: friction bleeds speed; spin still bends it, weaker.
+      // Rolling on the turf: friction bleeds speed; spin still bends it, though
+      // the ground scrubs some of the effect compared with a ball in flight.
       const hs = this.horizontalSpeed
       if (hs > 0) {
         const decel = BALL.groundFriction * dt
@@ -86,7 +87,7 @@ export class Ball {
         this.vx *= factor
         this.vy *= factor
       }
-      this.applyMagnus(dt, 0.35)
+      this.applyMagnus(dt, 0.62)
       this.z = 0
       this.vz = 0
     }

@@ -29,7 +29,8 @@ export const BALL = {
   airDrag: 0.14, // per-second velocity damping while airborne
   restitution: 0.62, // vertical bounciness off the turf
   spinDecay: 1.3, // how fast spin bleeds off per second
-  magnus: 0.9, // strength of the sideways curve force from spin
+  magnus: 2.1, // strength of the sideways curve force from spin — bend is meant
+  // to be a visible, usable weapon, not a subtle drift
   maxSpeed: 46, // hard cap so a mishit can't launch to the moon
   settleSpeed: 0.35, // below this it's treated as "at rest"
 }
@@ -51,6 +52,21 @@ export const PLAYER = {
   tiredFactor: 0.72, // speed multiplier when fully gassed
 }
 
+// Mouse-driven striking, modelled on Pro Soccer Online: power comes from how
+// long you hold the button, and the *flick* of the mouse in the final moments of
+// the charge decides height and curve. Flick up to lift it, down to drive it
+// along the ground, sideways to bend it. Over-flick and you'll skin it.
+export const CONTROL = {
+  strikeCharge: 0.95, // seconds for the strike (left) bar to fill
+  touchCharge: 0.5, // seconds for the touch (right) bar to fill — deliberately quicker
+  flickWindow: 0.18, // only mouse motion in this final slice of the charge counts
+  flickRef: 190, // pixels of flick that equal a "full" input before sensitivity
+  heightSensitivity: 1.6, // Kick Height Sensitivity — scales upward flick → loft
+  curveSensitivity: 1.15, // Kick Curve Sensitivity — scales sideways flick → spin
+  maxLoftAngle: 1.0, // rad launch angle at full upward flick
+  driveDip: 0.5, // downward flick adds topspin/dip instead of lift
+}
+
 // Kick model. Power (0..1) scales between min and max release speed. Passing,
 // shooting and clearances share the model but differ in ceilings and loft.
 export const KICK = {
@@ -58,6 +74,13 @@ export const KICK = {
   passMax: 26,
   shotMin: 16,
   shotMax: 34,
+  // A human "strike" is one continuous scale from a rolled pass to a rocket —
+  // there is no separate pass/shoot button, exactly as in PSO.
+  strikeMin: 7.5,
+  strikeMax: 34,
+  // A close-control touch: nudge the ball ahead/aside to keep it under control.
+  touchMin: 3.5,
+  touchMax: 13,
   throughBias: 1.06, // through balls carry a touch more weight
   loftAngle: 0.62, // launch pitch (rad) for a full lofted ball
   chipAngle: 0.9, // steeper, softer chip over a keeper

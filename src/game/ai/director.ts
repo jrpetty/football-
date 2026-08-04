@@ -78,8 +78,8 @@ function goalkeeper(world: World, p: Player, cmd: Command, owner: Player | null,
         type: mate ? 'pass' : 'clear',
         power: clamp01(dist / 30 + 0.35),
         aim,
-        lofted: dist > 16 || !mate,
-        chip: false,
+        loft: dist > 16 || !mate ? 0.75 : 0.15,
+        spin: 0,
       }
     }
     return
@@ -161,8 +161,9 @@ function carrier(
         type: 'shot',
         power: clamp01(0.5 + distGoal / 34),
         aim: cmd.aim,
-        lofted: false,
-        chip: keeper != null && Math.abs(keeper.x - goalX) > 4.5 && distGoal > 8,
+        // Chip the keeper if it has rushed off its line; otherwise keep it down.
+        loft: keeper != null && Math.abs(keeper.x - goalX) > 4.5 && distGoal > 8 ? 0.9 : -0.2,
+        spin: (p.aiSeed - 0.5) * 0.5,
       }
       return
     }
@@ -179,8 +180,8 @@ function carrier(
       type: option.through ? 'through' : 'pass',
       power: clamp01(dd / 27 + 0.22),
       aim: cmd.aim,
-      lofted: option.lofted,
-      chip: false,
+      loft: option.lofted ? 0.7 : 0,
+      spin: 0,
     }
     p.aiDecide = 0.45
     return

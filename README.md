@@ -41,25 +41,46 @@ dependency-free; the 3D view uses **Three.js** for WebGL rendering.
 
 ## Controls
 
+Two mouse buttons do all the ball work, in the style of *Pro Soccer Online*:
+
 | Action | Input |
 | --- | --- |
 | Move | **W A S D** (or arrows) — camera-relative in 3D |
 | Sprint | hold **Shift** (drains stamina) |
-| Aim / Look | **Mouse** — the direction you look/point is where the ball goes |
-| Pass | **Left click** — tap = short, hold = long (power meter) |
-| Shoot | **Right click** — hold to charge power, release to fire |
-| Lofted / chip | hold **Space** while passing or shooting |
-| Through ball | **E** (weighted pass into space) |
+| Aim / Look | **Mouse** — the direction you point is where the ball goes |
+| **Touch** — close control | **Right click**: tap for a small nudge, hold to push it further |
+| Touch to the side / back | **A D S** + right click |
+| **Strike** — pass or shot | **Left click**: hold longer for more power |
 | Tackle · Slide | **F** · **C** |
 | Switch player | **Q** |
 | View | **V** — 3D: first ⇄ third person · 2D: zoom TV → follow → close |
 | Pause | **Esc** / **P** |
 | Spawn a ball (free play) | **B** |
 
+### Height and curve come from your mouse
+
+There is no loft button. While a strike is charging, **flick the mouse** in the
+final moments before you release:
+
+- **Flick up** → the ball lifts. A full flick launches a genuine lofted ball
+  (~14 m at the apex); a small one clips it just off the deck.
+- **Flick down** → you drive it, keeping it low and hard along the ground.
+- **Flick sideways** → the ball bends the way you dragged, several metres across
+  its flight.
+- **Flick diagonally** → curve *and* lift together.
+
+Two settings on the menu scale this, mirroring the ones PSO exposes: **Kick
+height sensitivity** and **Kick curve sensitivity**. Over-flick and you'll skin
+it — that risk is the point.
+
+**Dribbling is manual.** The ball is never glued to your feet: you knock it
+forward with touches and run onto it, so close control is a skill rather than a
+state. The power bar and a live LIFTED / DRIVEN / CURVE readout show what your
+flick is about to do before you commit.
+
 In 3D, **click the pitch** to capture the mouse for looking around; **Esc**
 releases it and pauses. Your player **auto-switches** to whoever is nearest the
-ball. Curve comes from *how you strike it* — aim across your run to bend the
-ball (Magnus effect).
+ball.
 
 ---
 
@@ -80,9 +101,11 @@ one place, not a scavenger hunt.
   magnet. Dribbling pushes the ball a **touch ahead** in your direction of
   travel; sprinting pushes it *further* (riskier, keepable). First touch traps a
   moving ball to your feet with an error that scales with pace and effort.
-- **Kicking** — passes, through balls, lofted balls, chips and shots share one
-  model. Power scales release speed; striking across your body adds spin;
-  accuracy scatters with power and fatigue, so close-range finishing is a skill.
+- **Kicking** (`control/strike.ts`) — one continuous model: hold time sets
+  power, the late mouse flick sets loft and spin. Accuracy scatters with power
+  and fatigue, so a full-blooded strike is genuinely harder to place than a
+  measured one. The strike direction is sampled from *before* the flick, so
+  bending a ball doesn't also throw your aim off.
 - **Goalkeepers** (`ai/director.ts`) — position on the ball–goal bisector to
   narrow the angle, rush out to smother a one-on-one, dive to a predicted
   interception point, then **catch** (slow shots) or **parry** (fast ones) and
