@@ -9,6 +9,7 @@ export class Screens {
     halfLength: 120,
     mode: 'match',
     singleKeeper: false,
+    view: '3d',
   }
 
   onStart: (config: MatchConfig) => void = () => {}
@@ -42,6 +43,13 @@ export class Screens {
         </div>
 
         <div class="settings">
+          <div class="field">
+            <label>View</label>
+            <div class="segmented" data-group="view">
+              ${this.segStr('view', '3d', this.config.view === '3d', '🎮 Immersive 3D')}
+              ${this.segStr('view', '2d', this.config.view === '2d', '🗺️ Classic 2D')}
+            </div>
+          </div>
           <div class="field">
             <label>Team size <span class="hint">(per side, incl. keeper)</span></label>
             <div class="segmented" data-group="teamSize">
@@ -84,17 +92,22 @@ export class Screens {
     return `<button class="seg ${active ? 'active' : ''}" data-seg="${group}" data-val="${value}">${label}</button>`
   }
 
+  private segStr(group: string, value: string, active: boolean, label: string): string {
+    return `<button class="seg ${active ? 'active' : ''}" data-seg="${group}" data-val="${value}">${label}</button>`
+  }
+
   private controlsHtml(): string {
     const rows: [string, string][] = [
       ['Move / Sprint', 'WASD · hold Shift'],
-      ['Aim', 'Mouse'],
+      ['Aim / Look', 'Mouse'],
       ['Pass (hold = longer)', 'Left click'],
       ['Shoot (hold = power)', 'Right click'],
       ['Lofted / chip', 'hold Space'],
       ['Through ball', 'E'],
       ['Tackle / Slide', 'F · C'],
       ['Switch player', 'Q'],
-      ['Camera · Pause', 'V · Esc'],
+      ['View: zoom (2D) · 1st/3rd (3D)', 'V'],
+      ['Pause', 'Esc / P'],
       ['Spawn ball (free play)', 'B'],
     ]
     return `<div class="controls">
@@ -108,13 +121,14 @@ export class Screens {
   private wireMenu() {
     this.root.querySelectorAll<HTMLButtonElement>('.seg').forEach((el) => {
       el.addEventListener('click', () => {
-        const group = el.dataset.seg as keyof MatchConfig | 'singleKeeper'
-        const val = Number(el.dataset.val)
+        const group = el.dataset.seg as string
+        const raw = el.dataset.val ?? ''
         el.parentElement?.querySelectorAll('.seg').forEach((s) => s.classList.remove('active'))
         el.classList.add('active')
-        if (group === 'teamSize') this.config.teamSize = val
-        else if (group === 'halfLength') this.config.halfLength = val
-        else if (group === 'singleKeeper') this.config.singleKeeper = val === 1
+        if (group === 'view') this.config.view = raw === '2d' ? '2d' : '3d'
+        else if (group === 'teamSize') this.config.teamSize = Number(raw)
+        else if (group === 'halfLength') this.config.halfLength = Number(raw)
+        else if (group === 'singleKeeper') this.config.singleKeeper = Number(raw) === 1
       })
     })
     this.root.querySelector<HTMLButtonElement>('[data-act="match"]')?.addEventListener('click', () => {

@@ -6,11 +6,15 @@ import { Camera } from './render/camera'
 import { Renderer } from './render/renderer'
 import { Hud } from './ui/hud'
 import { Screens } from './ui/screens'
+import { Game3D } from './game3d'
+import type { Hooks } from './game3d'
 import type { MatchConfig } from './types'
 
-interface Hooks {
-  toMenu: () => void
-  restart: () => void
+// Anything boot() can drive, regardless of 2D/3D presentation.
+interface RunningGame {
+  start(): void
+  stop(): void
+  readonly world: World
 }
 
 // One running match. Owns the fixed-step world plus everything needed to draw
@@ -189,23 +193,31 @@ class Game {
 function boot() {
   const canvasEl = document.getElementById('pitch') as HTMLCanvasElement | null
   const overlay = document.getElementById('overlay')
-  if (!canvasEl || !overlay) throw new Error('missing #pitch / #overlay')
+  const containerEl = document.getElementById('scene3d')
+  if (!canvasEl || !overlay || !containerEl) throw new Error('missing #pitch / #overlay / #scene3d')
   const canvas: HTMLCanvasElement = canvasEl
+  const container: HTMLElement = containerEl
 
   const input = new InputManager(canvas)
   const screens = new Screens(overlay)
-  let game: Game | null = null
+  let game: RunningGame | null = null
   let lastConfig: MatchConfig | null = null
 
   const hooks: Hooks = {
     toMenu: () => {
       game?.stop()
       game = null
+      resetStage()
       screens.showMenu()
     },
     restart: () => {
       if (lastConfig) startGame(lastConfig)
     },
+  }
+
+  function resetStage() {
+    canvas.classList.remove('hud-only', 'unlocked')
+    container.innerHTML = ''
   }
 
   function startGame(config: MatchConfig) {
@@ -214,7 +226,11 @@ function boot() {
     if (location.search.includes('ai')) config = { ...config, humanControlled: false }
     lastConfig = config
     screens.hide()
-    game = new Game(canvas, config, input, screens, hooks)
+    resetStage()
+    game =
+      config.view === '3d'
+        ? new Game3D(canvas, container, config, input, screens, hooks)
+        : new Game(canvas, config, input, screens, hooks)
     game.start()
     // Opt-in inspection hook for automated tests (?debug in the URL).
     if (location.search.includes('debug')) {

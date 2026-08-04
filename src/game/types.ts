@@ -54,6 +54,7 @@ export interface MatchConfig {
   halfLength: number // seconds
   mode: 'match' | 'freeplay'
   singleKeeper: boolean
+  view: '2d' | '3d' // presentation: top-down 2D or first/third-person 3D
   humanControlled?: boolean // false = both teams fully AI (testing / attract mode)
 }
 

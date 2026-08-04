@@ -13,6 +13,9 @@ export class InputManager {
   mousePressed = { left: false, right: false }
   mouseReleased = { left: false, right: false }
   wheel = 0
+  // Relative motion this frame (used by the pointer-locked 3D camera).
+  movementX = 0
+  movementY = 0
 
   private el: HTMLElement
 
@@ -51,6 +54,18 @@ export class InputManager {
     this.mouse.x = e.clientX - r.left
     this.mouse.y = e.clientY - r.top
     this.mouseInside = true
+    this.movementX += e.movementX || 0
+    this.movementY += e.movementY || 0
+  }
+
+  requestPointerLock() {
+    if (document.pointerLockElement !== this.el) this.el.requestPointerLock?.()
+  }
+  exitPointerLock() {
+    if (document.pointerLockElement === this.el) document.exitPointerLock?.()
+  }
+  get pointerLocked(): boolean {
+    return document.pointerLockElement === this.el
   }
   private onMouseDown = (e: MouseEvent) => {
     if (e.button === 0) {
@@ -97,6 +112,8 @@ export class InputManager {
     this.mousePressed.left = this.mousePressed.right = false
     this.mouseReleased.left = this.mouseReleased.right = false
     this.wheel = 0
+    this.movementX = 0
+    this.movementY = 0
   }
 
   clear() {

@@ -24,6 +24,15 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+#scene3d {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+#scene3d canvas {
+  display: block;
+}
+
 #pitch {
   position: fixed;
   inset: 0;
@@ -32,6 +41,15 @@ body {
   display: block;
   cursor: crosshair;
   touch-action: none;
+  z-index: 1;
+}
+/* In 3D the WebGL scene renders behind; #pitch only carries the HUD. */
+#pitch.hud-only {
+  background: transparent;
+  cursor: none;
+}
+#pitch.hud-only.unlocked {
+  cursor: pointer;
 }
 
 #overlay {
