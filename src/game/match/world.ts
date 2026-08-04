@@ -6,7 +6,7 @@ import { Ball } from '../physics/ball'
 import { Player } from '../entities/player'
 import { computeAiCommands } from '../ai/director'
 import { emptyCommand, emptyStats } from '../types'
-import type { Command, MatchConfig, Restart, Stats, Team } from '../types'
+import type { Command, MatchConfig, Restart, Role, Stats, Team } from '../types'
 import { formation } from './formation'
 import * as F from './field'
 
@@ -87,9 +87,36 @@ export class World {
         this.players.push(p)
       })
     }
-    // Default control: home's most advanced outfielder.
-    const outfield = this.players.filter((p) => p.team === 'home' && p.role !== 'GK')
-    this.controlledId = outfield.length ? outfield[outfield.length - 1].id : this.players[0].id
+    this.controlledId = this.pickHumanPlayer(this.config.position)
+  }
+
+  // You are one player for the whole match — the same footballer every minute,
+  // as in Pro Soccer Online. Pick whoever fills the chosen position; if this
+  // team size doesn't field that role, take the closest thing to it.
+  private pickHumanPlayer(position: Role): number {
+    const home = this.players.filter((p) => p.team === 'home')
+    const exact = home.filter((p) => p.role === position)
+    if (exact.length) return exact[Math.floor(exact.length / 2)].id
+
+    if (position === 'GK') {
+      const gk = home.find((p) => p.role === 'GK')
+      if (gk) return gk.id
+    }
+    // Fall back by how far up the pitch the role sits, nearest first.
+    const order: Role[] = ['GK', 'DEF', 'MID', 'FWD']
+    const want = order.indexOf(position)
+    const outfield = home.filter((p) => p.role !== 'GK')
+    const pool = outfield.length ? outfield : home
+    let best = pool[0]
+    let bestGap = Infinity
+    for (const p of pool) {
+      const gap = Math.abs(order.indexOf(p.role) - want)
+      if (gap < bestGap) {
+        bestGap = gap
+        best = p
+      }
+    }
+    return best.id
   }
 
   private placeForKickoff(kickTeam: Team) {
@@ -124,15 +151,17 @@ export class World {
   // ---- main tick ---------------------------------------------------------
 
   update(frameDt: number, humanCmd: Command) {
-    const dt = Math.min(frameDt, 0.05)
+    // Cap the frame delta so a stall can't make the physics explode, but keep the
+    // cap generous: anything above ~10 fps should still run at true speed rather
+    // than sliding into slow motion.
+    const dt = Math.min(frameDt, SIM.maxFrameDt)
     this.updateEffects(dt)
     this.updateAnnounce(dt)
-    this.updateControlledSelection(humanCmd)
     const commands = this.buildCommands(humanCmd, dt)
 
     this.accumulator += dt
     let steps = 0
-    while (this.accumulator >= SIM.dt && steps < 8) {
+    while (this.accumulator >= SIM.dt && steps < SIM.maxStepsPerFrame) {
       this.step(commands)
       this.accumulator -= SIM.dt
       steps++
@@ -723,28 +752,6 @@ export class World {
   }
 
   // ---- helpers -----------------------------------------------------------
-
-  private updateControlledSelection(humanCmd: Command) {
-    if (this.config.mode === 'freeplay') {
-      // Follow whoever is nearest the ball among home players.
-      const near = this.nearestPlayer(this.ball.pos, (p) => p.team === 'home')
-      if (near) this.controlledId = near.id
-      return
-    }
-    const owner = this.possessorId != null ? this.player(this.possessorId) : null
-    if (owner && owner.team === 'home' && owner.role !== 'GK') {
-      this.controlledId = owner.id
-    } else if (!owner || owner.team === 'away') {
-      const near = this.nearestPlayer(this.ball.pos, (p) => p.team === 'home' && p.role !== 'GK')
-      if (near) this.controlledId = near.id
-    }
-    if (humanCmd.requestSwitch) {
-      const candidates = this.players
-        .filter((p) => p.team === 'home' && p.role !== 'GK' && p.id !== this.controlledId)
-        .sort((a, b) => V.dist2(a.pos, this.ball.pos) - V.dist2(b.pos, this.ball.pos))
-      if (candidates.length) this.controlledId = candidates[0].id
-    }
-  }
 
   getControlledPlayer(): Player | null {
     return this.player(this.controlledId)

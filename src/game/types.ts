@@ -32,7 +32,6 @@ export interface Command {
   kick: KickRequest | null // set on the tick a charged kick is released
   tackle: boolean // standing tackle attempt
   slide: boolean // slide tackle attempt
-  requestSwitch: boolean // player-switch request (defence)
 }
 
 export const emptyCommand = (): Command => ({
@@ -44,7 +43,6 @@ export const emptyCommand = (): Command => ({
   kick: null,
   tackle: false,
   slide: false,
-  requestSwitch: false,
 })
 
 export type Restart =
@@ -61,6 +59,7 @@ export interface MatchConfig {
   mode: 'match' | 'freeplay'
   singleKeeper: boolean
   view: '2d' | '3d' // presentation: top-down 2D or first/third-person 3D
+  position: Role // the one player you are for the whole match
   heightSens: number // Kick Height Sensitivity — flick-up → loft
   curveSens: number // Kick Curve Sensitivity — sideways flick → spin
   humanControlled?: boolean // false = both teams fully AI (testing / attract mode)

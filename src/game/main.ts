@@ -1,4 +1,5 @@
 import './style.css'
+import { SIM } from './config'
 import { InputManager } from './core/input'
 import { HumanController } from './control/human'
 import { World } from './match/world'
@@ -66,11 +67,13 @@ class Game {
 
   private tick = (now: number) => {
     if (!this.running) return
-    let dt = (now - this.last) / 1000
+    const raw = Math.max(0, (now - this.last) / 1000)
     this.last = now
-    if (dt > 0.05) dt = 0.05
-    if (dt < 0) dt = 0
-    this.fps += (1 / Math.max(dt, 1e-4) - this.fps) * 0.1
+    // Report the true frame rate, but hand the simulation a bounded delta so a
+    // stall can't destabilise the physics. The bound lives in SIM so the loop and
+    // the world agree — clamping tighter here would quietly run the match slow.
+    this.fps += (1 / Math.max(raw, 1e-4) - this.fps) * 0.1
+    const dt = Math.min(raw, SIM.maxFrameDt)
 
     this.resize()
     this.handleGlobalKeys()
@@ -240,7 +243,9 @@ function boot() {
     game.start()
     // Opt-in inspection hook for automated tests (?debug in the URL).
     if (location.search.includes('debug')) {
-      ;(window as unknown as { __world?: unknown }).__world = game.world
+      const w = window as unknown as { __world?: unknown; __game?: unknown }
+      w.__world = game.world
+      w.__game = game
     }
   }
 

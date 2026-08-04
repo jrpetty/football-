@@ -11,6 +11,7 @@ export class Screens {
     mode: 'match',
     singleKeeper: false,
     view: '3d',
+    position: 'FWD',
     heightSens: CONTROL.heightSensitivity,
     curveSens: CONTROL.curveSensitivity,
   }
@@ -51,6 +52,15 @@ export class Screens {
             <div class="segmented" data-group="view">
               ${this.segStr('view', '3d', this.config.view === '3d', '🎮 Immersive 3D')}
               ${this.segStr('view', '2d', this.config.view === '2d', '🗺️ Classic 2D')}
+            </div>
+          </div>
+          <div class="field">
+            <label>Your position <span class="hint">you play this one player all match</span></label>
+            <div class="segmented" data-group="position">
+              ${this.segStr('position', 'FWD', this.config.position === 'FWD', 'Striker')}
+              ${this.segStr('position', 'MID', this.config.position === 'MID', 'Midfield')}
+              ${this.segStr('position', 'DEF', this.config.position === 'DEF', 'Defender')}
+              ${this.segStr('position', 'GK', this.config.position === 'GK', 'Keeper')}
             </div>
           </div>
           <div class="field">
@@ -121,7 +131,6 @@ export class Screens {
       ['Touch to the side / back', 'A D S + right click'],
       ['<b>Strike</b> — pass or shot', '<b>Left click</b> · hold = power'],
       ['Tackle / Slide', 'F · C'],
-      ['Switch player', 'Q'],
       ['View: zoom (2D) · 1st/3rd (3D)', 'V'],
       ['Pause', 'Esc / P'],
       ['Spawn ball (free play)', 'B'],
@@ -148,6 +157,7 @@ export class Screens {
         el.parentElement?.querySelectorAll('.seg').forEach((s) => s.classList.remove('active'))
         el.classList.add('active')
         if (group === 'view') this.config.view = raw === '2d' ? '2d' : '3d'
+        else if (group === 'position') this.config.position = raw as MatchConfig['position']
         else if (group === 'teamSize') this.config.teamSize = Number(raw)
         else if (group === 'halfLength') this.config.halfLength = Number(raw)
         else if (group === 'singleKeeper') this.config.singleKeeper = Number(raw) === 1

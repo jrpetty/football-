@@ -42,7 +42,10 @@ export class Human3DController {
     if (!p) return cmd
 
     const look = cam.aimSim() // unit, horizontal look direction
-    const right = { x: look.y, y: -look.x } // look rotated −90° on the pitch plane
+    // Camera-right on the pitch plane. The sim's (x, y) maps to world (X, Z)
+    // with Y up, so right = forward × up = (−look.y, look.x). Getting this
+    // backwards silently swaps the A and D strafe keys.
+    const right = { x: -look.y, y: look.x }
     this.flick.push(input.movementX, input.movementY, dt)
     this.aim.push(look, dt)
 
@@ -109,7 +112,6 @@ export class Human3DController {
     // --- defending ---
     if (input.isDown('KeyF')) cmd.tackle = true
     if (input.justPressed('KeyC')) cmd.slide = true
-    if (input.justPressed('KeyQ') && world.config.mode === 'match') cmd.requestSwitch = true
 
     // --- HUD feedback ---
     if (this.strike.held) {

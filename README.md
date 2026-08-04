@@ -52,7 +52,6 @@ Two mouse buttons do all the ball work, in the style of *Pro Soccer Online*:
 | Touch to the side / back | **A D S** + right click |
 | **Strike** — pass or shot | **Left click**: hold longer for more power |
 | Tackle · Slide | **F** · **C** |
-| Switch player | **Q** |
 | View | **V** — 3D: first ⇄ third person · 2D: zoom TV → follow → close |
 | Pause | **Esc** / **P** |
 | Spawn a ball (free play) | **B** |
@@ -78,9 +77,16 @@ forward with touches and run onto it, so close control is a skill rather than a
 state. The power bar and a live LIFTED / DRIVEN / CURVE readout show what your
 flick is about to do before you commit.
 
+### You are one player
+
+You pick a position on the menu — **striker, midfielder, defender or keeper** —
+and you are that single footballer for the whole match. Control never jumps to
+whoever happens to be nearest the ball: if you're out of position, your team is
+out a player, so positioning and off-ball movement matter as much as anything
+you do on it. Your team-mates and both keepers are AI.
+
 In 3D, **click the pitch** to capture the mouse for looking around; **Esc**
-releases it and pauses. Your player **auto-switches** to whoever is nearest the
-ball.
+releases it and pauses.
 
 ---
 

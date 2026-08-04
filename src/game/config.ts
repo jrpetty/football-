@@ -5,6 +5,12 @@
 export const SIM = {
   dt: 1 / 120, // fixed physics step (s). We integrate at 120Hz for stable bounces.
   gravity: 12.5, // m/s² — slightly punchier than real gravity so lofted play reads well
+  // Largest frame delta we'll simulate. Anything longer is treated as a stall and
+  // the excess is dropped, so the physics can't explode after a hitch — but keep
+  // it generous enough that even a machine struggling at ~4 fps still plays at
+  // true speed instead of sliding into slow motion.
+  maxFrameDt: 0.26,
+  maxStepsPerFrame: 32, // catch-up ceiling (32 x 1/120s ≈ 266ms), so a hitch can't spiral
 }
 
 // Pitch is a compact, arena-style small-sided field (think 3v3/6v6), which keeps

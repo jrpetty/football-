@@ -102,7 +102,6 @@ export class HumanController {
     // --- defending ---
     if (input.isDown('KeyF')) cmd.tackle = true
     if (input.justPressed('KeyC')) cmd.slide = true
-    if (input.justPressed('KeyQ') && world.config.mode === 'match') cmd.requestSwitch = true
 
     // --- HUD feedback ---
     if (this.strike.held) {

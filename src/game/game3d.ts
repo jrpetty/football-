@@ -1,3 +1,4 @@
+import { SIM } from './config'
 import { InputManager } from './core/input'
 import { Human3DController } from './control/human3d'
 import { World } from './match/world'
@@ -20,7 +21,7 @@ export interface Hooks {
 export class Game3D {
   readonly world: World
   private scene: Scene3D
-  private cam3: Camera3D
+  readonly cam3: Camera3D
   private hud = new Hud()
   private human: Human3DController
   private ctx: CanvasRenderingContext2D
@@ -82,11 +83,13 @@ export class Game3D {
 
   private tick = (now: number) => {
     if (!this.running) return
-    let dt = (now - this.last) / 1000
+    const raw = Math.max(0, (now - this.last) / 1000)
     this.last = now
-    if (dt > 0.05) dt = 0.05
-    if (dt < 0) dt = 0
-    this.fps += (1 / Math.max(dt, 1e-4) - this.fps) * 0.1
+    // Report the true frame rate, but hand the simulation a bounded delta so a
+    // stall can't destabilise the physics. The bound lives in SIM so the loop and
+    // the world agree — clamping tighter here would quietly run the match slow.
+    this.fps += (1 / Math.max(raw, 1e-4) - this.fps) * 0.1
+    const dt = Math.min(raw, SIM.maxFrameDt)
 
     this.resize()
     this.handleGlobalKeys()

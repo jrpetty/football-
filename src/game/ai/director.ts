@@ -30,7 +30,10 @@ export function computeAiCommands(world: World, dt = 1 / 60): Map<number, Comman
     const mates = world.teammates(team)
     const opponents = world.teammates(world.otherTeam(team))
     const attacking = ownerTeam === team
-    const outfield = mates.filter((p) => p.role !== 'GK')
+    // The human's player is never assigned an AI job — including chasing the
+    // ball — so a team-mate always steps up to press instead of the team
+    // standing around waiting for a player the AI doesn't control.
+    const outfield = mates.filter((p) => p.role !== 'GK' && !world.isHumanDriven(p))
     const chaser = nearest(outfield, world.ball.pos)
 
     for (const p of mates) {
