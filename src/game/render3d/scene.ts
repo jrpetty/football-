@@ -3,6 +3,16 @@ import { Sky } from 'three/examples/jsm/objects/Sky.js'
 import { BALL, FIELD, KITS, PLAYER } from '../config'
 import * as F from '../match/field'
 import type { World } from '../match/world'
+import {
+  adTexture,
+  ballTexture,
+  crowdTexture,
+  grassTexture,
+  kitTexture,
+  normalFromCanvas,
+  numberTexture,
+  pitchOverlayTexture,
+} from './textures'
 
 // Simulation → Three.js coordinate map: the pitch plane (sim x, y) becomes the
 // ground plane (X, Z); ball height (sim z) becomes world Y (up).
@@ -26,9 +36,9 @@ interface TeamMats {
 }
 
 // Builds and owns the WebGL scene and syncs every mesh from World each frame.
-// Reads the simulation only — never writes it. Aims for a clean "stadium" look:
-// filmic tone-mapping, an atmospheric sky, real shadows, humanoid players with a
-// procedural run cycle, and surrounding stands / ad-boards / floodlights.
+// Reads the simulation only — never writes it. All surfaces are textured from
+// procedurally generated canvases (see ./textures) so the bundle stays
+// self-contained while still looking like a real stadium.
 export class Scene3D {
   readonly scene = new THREE.Scene()
   readonly renderer: THREE.WebGLRenderer
@@ -36,8 +46,9 @@ export class Scene3D {
   private players = new Map<number, PlayerNodes>()
   private teamMats: Record<'home' | 'away', TeamMats>
   private skinMat = new THREE.MeshStandardMaterial({ color: '#e5b08a', roughness: 0.85 })
-  private hairMat = new THREE.MeshStandardMaterial({ color: '#2c211b', roughness: 0.9 })
-  private bootMat = new THREE.MeshStandardMaterial({ color: '#14161c', roughness: 0.5 })
+  private hairMat = new THREE.MeshStandardMaterial({ color: '#2c211b', roughness: 0.95 })
+  private bootMat = new THREE.MeshStandardMaterial({ color: '#14161c', roughness: 0.35, metalness: 0.1 })
+  private maxAniso = 4
 
   constructor(container: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' })
@@ -49,13 +60,11 @@ export class Scene3D {
     this.renderer.domElement.style.position = 'fixed'
     this.renderer.domElement.style.inset = '0'
     container.appendChild(this.renderer.domElement)
+    this.maxAniso = this.renderer.capabilities.getMaxAnisotropy()
 
     this.scene.fog = new THREE.Fog('#b7d2e6', 95, 240)
 
-    this.teamMats = {
-      home: this.makeTeamMats('home'),
-      away: this.makeTeamMats('away'),
-    }
+    this.teamMats = { home: this.makeTeamMats('home'), away: this.makeTeamMats('away') }
 
     this.buildSkyAndLights()
     this.buildPitch()
@@ -77,6 +86,18 @@ export class Scene3D {
     this.renderer.render(this.scene, camera)
   }
 
+  // Wrap a generated canvas as a colour texture.
+  private tex(c: HTMLCanvasElement, repeatX = 1, repeatY = 1): THREE.CanvasTexture {
+    const t = new THREE.CanvasTexture(c)
+    t.colorSpace = THREE.SRGBColorSpace
+    t.anisotropy = this.maxAniso
+    if (repeatX !== 1 || repeatY !== 1) {
+      t.wrapS = t.wrapT = THREE.RepeatWrapping
+      t.repeat.set(repeatX, repeatY)
+    }
+    return t
+  }
+
   // ---- sky, sun, lighting ----
 
   private buildSkyAndLights() {
@@ -87,10 +108,8 @@ export class Scene3D {
     u.rayleigh.value = 1.4
     u.mieCoefficient.value = 0.006
     u.mieDirectionalG.value = 0.8
-    const elevation = 32
-    const azimuth = 150
-    const phi = THREE.MathUtils.degToRad(90 - elevation)
-    const theta = THREE.MathUtils.degToRad(azimuth)
+    const phi = THREE.MathUtils.degToRad(90 - 32)
+    const theta = THREE.MathUtils.degToRad(150)
     const sun = new THREE.Vector3().setFromSphericalCoords(1, phi, theta)
     u.sunPosition.value.copy(sun)
     this.scene.add(sky)
@@ -116,79 +135,72 @@ export class Scene3D {
     this.scene.add(dir.target)
   }
 
-  // ---- pitch ----
+  // ---- pitch: tiled turf + a crisp markings decal on top ----
 
   private buildPitch() {
     const L = FIELD.length
     const W = FIELD.width
+    const grass = grassTexture()
+    const grassNormal = normalFromCanvas(grass)
+
+    const mkNormal = (rx: number, ry: number) => {
+      const n = new THREE.CanvasTexture(grassNormal)
+      n.wrapS = n.wrapT = THREE.RepeatWrapping
+      n.repeat.set(rx, ry)
+      n.anisotropy = this.maxAniso
+      return n
+    }
+
+    // Surrounding run-off, duller and darker than the playing surface.
+    const outR = 26
     const under = new THREE.Mesh(
-      new THREE.PlaneGeometry(L + 120, W + 120),
-      new THREE.MeshStandardMaterial({ color: '#20361f', roughness: 1 }),
+      new THREE.PlaneGeometry(L + 130, W + 130),
+      new THREE.MeshStandardMaterial({
+        map: this.tex(grass, outR, outR),
+        normalMap: mkNormal(outR, outR),
+        normalScale: new THREE.Vector2(0.5, 0.5),
+        color: '#7d8f7a',
+        roughness: 1,
+      }),
     )
     under.rotation.x = -Math.PI / 2
     under.position.set(L / 2, -0.03, W / 2)
     under.receiveShadow = true
     this.scene.add(under)
 
-    const tex = new THREE.CanvasTexture(this.pitchTexture())
-    tex.anisotropy = 8
-    tex.colorSpace = THREE.SRGBColorSpace
+    const rx = L / 3.6
+    const ry = W / 3.6
     const pitch = new THREE.Mesh(
       new THREE.PlaneGeometry(L, W),
-      new THREE.MeshStandardMaterial({ map: tex, roughness: 0.92 }),
+      new THREE.MeshStandardMaterial({
+        map: this.tex(grass, rx, ry),
+        normalMap: mkNormal(rx, ry),
+        normalScale: new THREE.Vector2(0.85, 0.85),
+        roughness: 0.95,
+      }),
     )
     pitch.rotation.x = -Math.PI / 2
     pitch.position.set(L / 2, 0, W / 2)
     pitch.receiveShadow = true
     this.scene.add(pitch)
-  }
 
-  private pitchTexture(): HTMLCanvasElement {
-    const L = FIELD.length
-    const W = FIELD.width
-    const s = 26
-    const c = document.createElement('canvas')
-    c.width = L * s
-    c.height = W * s
-    const ctx = c.getContext('2d')!
-    const mx = (x: number) => x * s
-    const my = (y: number) => y * s
-
-    const stripes = 14
-    for (let i = 0; i < stripes; i++) {
-      const g = ctx.createLinearGradient(0, 0, 0, c.height)
-      const base = i % 2 === 0 ? [46, 138, 72] : [38, 122, 63]
-      g.addColorStop(0, `rgb(${base[0] + 8},${base[1] + 10},${base[2] + 6})`)
-      g.addColorStop(1, `rgb(${base[0]},${base[1]},${base[2]})`)
-      ctx.fillStyle = g
-      ctx.fillRect((i / stripes) * c.width, 0, c.width / stripes + 1, c.height)
-    }
-
-    ctx.strokeStyle = 'rgba(255,255,255,0.9)'
-    ctx.lineWidth = 0.16 * s
-    ctx.lineCap = 'round'
-    ctx.strokeRect(mx(0.2), my(0.2), mx(L - 0.4), my(W - 0.4))
-    ctx.beginPath()
-    ctx.moveTo(mx(L / 2), my(0.2))
-    ctx.lineTo(mx(L / 2), my(W - 0.2))
-    ctx.stroke()
-    ctx.beginPath()
-    ctx.arc(mx(L / 2), my(W / 2), FIELD.centerRadius * s, 0, Math.PI * 2)
-    ctx.stroke()
-    ctx.fillStyle = 'rgba(255,255,255,0.9)'
-    ctx.beginPath()
-    ctx.arc(mx(L / 2), my(W / 2), 0.28 * s, 0, Math.PI * 2)
-    ctx.fill()
-    const yMin = (W - FIELD.boxWidth) / 2
-    ctx.strokeRect(mx(0.2), my(yMin), mx(FIELD.boxDepth), FIELD.boxWidth * s)
-    ctx.strokeRect(mx(L - FIELD.boxDepth - 0.2), my(yMin), FIELD.boxDepth * s, FIELD.boxWidth * s)
-    // penalty spots
-    for (const px of [FIELD.boxDepth * 0.65, L - FIELD.boxDepth * 0.65]) {
-      ctx.beginPath()
-      ctx.arc(mx(px), my(W / 2), 0.22 * s, 0, Math.PI * 2)
-      ctx.fill()
-    }
-    return c
+    // Markings + mowing stripes as a transparent decal, so the lines stay sharp
+    // regardless of how densely the turf beneath is tiled.
+    const overlay = new THREE.Mesh(
+      new THREE.PlaneGeometry(L, W),
+      new THREE.MeshStandardMaterial({
+        map: this.tex(pitchOverlayTexture()),
+        transparent: true,
+        depthWrite: false,
+        roughness: 0.9,
+        polygonOffset: true,
+        polygonOffsetFactor: -2,
+      }),
+    )
+    overlay.rotation.x = -Math.PI / 2
+    overlay.position.set(L / 2, 0.012, W / 2)
+    overlay.receiveShadow = true
+    this.scene.add(overlay)
   }
 
   // ---- stadium (boards, stands, floodlights) ----
@@ -200,42 +212,57 @@ export class Scene3D {
     const cz = W / 2
     const m = FIELD.margin
 
-    // Advertising boards ringing the pitch.
-    const adTex = new THREE.CanvasTexture(this.adTexture())
-    adTex.wrapS = THREE.RepeatWrapping
-    adTex.colorSpace = THREE.SRGBColorSpace
-    const boardMat = new THREE.MeshStandardMaterial({ map: adTex, roughness: 0.5 })
-    const bh = 1.1
-    const long = new THREE.BoxGeometry(L + m * 2, bh, 0.3)
-    const short = new THREE.BoxGeometry(0.3, bh, W + m * 2)
-    const mkBoard = (geo: THREE.BufferGeometry, x: number, z: number) => {
-      const b = new THREE.Mesh(geo, boardMat)
+    const adCanvas = adTexture()
+    const bh = 1.15
+    const mkBoard = (w: number, x: number, z: number, rotY: number) => {
+      // One texture pass per ~34m keeps the sponsor lettering legible.
+      const t = this.tex(adCanvas, Math.max(1, Math.round(w / 34)), 1)
+      const b = new THREE.Mesh(
+        new THREE.BoxGeometry(w, bh, 0.28),
+        [
+          new THREE.MeshStandardMaterial({ color: '#0d1117', roughness: 0.8 }),
+          new THREE.MeshStandardMaterial({ color: '#0d1117', roughness: 0.8 }),
+          new THREE.MeshStandardMaterial({ color: '#20262f', roughness: 0.8 }),
+          new THREE.MeshStandardMaterial({ color: '#0d1117', roughness: 0.8 }),
+          new THREE.MeshStandardMaterial({ map: t, roughness: 0.45 }),
+          new THREE.MeshStandardMaterial({ color: '#0d1117', roughness: 0.8 }),
+        ],
+      )
       b.position.set(x, bh / 2, z)
+      b.rotation.y = rotY
       b.castShadow = true
       b.receiveShadow = true
       this.scene.add(b)
     }
-    mkBoard(long, cx, -m)
-    mkBoard(long, cx, W + m)
-    mkBoard(short, -m, cz)
-    mkBoard(short, L + m, cz)
+    mkBoard(L + m * 2, cx, -m, Math.PI)
+    mkBoard(L + m * 2, cx, W + m, 0)
+    mkBoard(W + m * 2, -m, cz, Math.PI / 2)
+    mkBoard(W + m * 2, L + m, cz, -Math.PI / 2)
 
     // Raked crowd stands forming a shallow bowl.
-    const crowdTex = new THREE.CanvasTexture(this.crowdTexture())
-    crowdTex.wrapS = crowdTex.wrapT = THREE.RepeatWrapping
-    crowdTex.colorSpace = THREE.SRGBColorSpace
-    const standMat = new THREE.MeshStandardMaterial({ map: crowdTex, roughness: 1 })
-    const standDepth = 26
-    const standH = 15
-    const gap = m + 2
-    const addStand = (w: number, cxp: number, czp: number, rotY: number) => {
-      crowdTex.repeat.set(w / 6, standDepth / 6)
-      const geo = new THREE.PlaneGeometry(w, standDepth)
-      const s = new THREE.Mesh(geo, standMat)
-      s.position.set(cxp, standH / 2, czp)
+    const crowdCanvas = crowdTexture()
+    const standDepth = 28
+    const standH = 16
+    const gap = m + 2.5
+    const addStand = (w: number, x: number, z: number, rotY: number) => {
+      const t = this.tex(crowdCanvas, Math.max(1, Math.round(w / 14)), 1)
+      const s = new THREE.Mesh(
+        new THREE.PlaneGeometry(w, standDepth),
+        // The stands face away from the sun, so a little self-illumination keeps
+        // the crowd readable instead of a black wall.
+        new THREE.MeshStandardMaterial({
+          map: t,
+          emissiveMap: t,
+          emissive: '#ffffff',
+          emissiveIntensity: 0.75,
+          roughness: 1,
+          side: THREE.DoubleSide,
+        }),
+      )
+      s.position.set(x, standH / 2, z)
       s.rotation.order = 'YXZ'
       s.rotation.y = rotY
-      s.rotation.x = -Math.PI / 2 + 0.62 // rake angle
+      s.rotation.x = -Math.PI / 2 + 0.62
       s.receiveShadow = true
       this.scene.add(s)
     }
@@ -245,70 +272,38 @@ export class Scene3D {
     addStand(W + m * 2 + standDepth, L + gap + standDepth * 0.32, cz, -Math.PI / 2)
 
     // Floodlight pylons at the four corners.
-    const poleMat = new THREE.MeshStandardMaterial({ color: '#7c8794', metalness: 0.6, roughness: 0.5 })
-    const lampMat = new THREE.MeshStandardMaterial({ color: '#fdfbe6', emissive: '#fff6c8', emissiveIntensity: 1.4 })
+    const poleMat = new THREE.MeshStandardMaterial({ color: '#7c8794', metalness: 0.6, roughness: 0.45 })
+    const lampMat = new THREE.MeshStandardMaterial({
+      color: '#fdfbe6',
+      emissive: '#fff6c8',
+      emissiveIntensity: 1.5,
+      roughness: 0.3,
+    })
     for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
       const px = cx + sx * (L / 2 + m + 5)
       const pz = cz + sz * (W / 2 + m + 5)
-      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.5, 26, 8), poleMat)
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.5, 26, 10), poleMat)
       pole.position.set(px, 13, pz)
       pole.castShadow = true
       this.scene.add(pole)
-      const rig = new THREE.Mesh(new THREE.BoxGeometry(4, 1.6, 0.6), lampMat)
-      rig.position.set(px, 25.5, pz)
+      const rig = new THREE.Mesh(new THREE.BoxGeometry(4.4, 1.7, 0.5), lampMat)
+      rig.position.set(px, 25.6, pz)
       rig.lookAt(v3(cx, W / 2, 2))
       this.scene.add(rig)
     }
   }
 
-  private adTexture(): HTMLCanvasElement {
-    const c = document.createElement('canvas')
-    c.width = 1024
-    c.height = 128
-    const ctx = c.getContext('2d')!
-    const cols = ['#12331f', '#2f7df6', '#0b2d63', '#ec4d4d', '#1f7a3d', '#22303f']
-    const panel = 170
-    for (let x = 0, i = 0; x < c.width; x += panel, i++) {
-      ctx.fillStyle = cols[i % cols.length]
-      ctx.fillRect(x, 0, panel - 6, c.height)
-      ctx.fillStyle = 'rgba(255,255,255,0.92)'
-      ctx.font = '800 46px system-ui, sans-serif'
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
-      ctx.fillText('OPEN PITCH', x + panel / 2 - 3, c.height / 2)
-    }
-    return c
-  }
-
-  private crowdTexture(): HTMLCanvasElement {
-    const c = document.createElement('canvas')
-    c.width = 256
-    c.height = 256
-    const ctx = c.getContext('2d')!
-    ctx.fillStyle = '#1a2230'
-    ctx.fillRect(0, 0, c.width, c.height)
-    const cols = ['#e8e8ee', '#c94f4f', '#4f7fe0', '#e0b84f', '#5fae6a', '#b48ad0', '#e2915a']
-    // Deterministic scatter so it doesn't shimmer between builds.
-    let seed = 1234567
-    const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff)
-    for (let i = 0; i < 2600; i++) {
-      ctx.fillStyle = cols[(rnd() * cols.length) | 0]
-      ctx.globalAlpha = 0.55 + rnd() * 0.45
-      const x = rnd() * c.width
-      const y = rnd() * c.height
-      ctx.beginPath()
-      ctx.arc(x, y, 1.6 + rnd() * 1.4, 0, Math.PI * 2)
-      ctx.fill()
-    }
-    ctx.globalAlpha = 1
-    return c
-  }
-
   // ---- goals ----
 
   private buildGoals() {
-    const white = new THREE.MeshStandardMaterial({ color: '#f4f6fa', metalness: 0.2, roughness: 0.5 })
-    const netMat = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.14, side: THREE.DoubleSide, depthWrite: false })
+    const white = new THREE.MeshStandardMaterial({ color: '#f4f6fa', metalness: 0.25, roughness: 0.4 })
+    const netMat = new THREE.MeshBasicMaterial({
+      color: '#ffffff',
+      transparent: true,
+      opacity: 0.15,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    })
     for (const team of ['home', 'away'] as const) {
       const goalX = F.ownGoalLineX(team)
       const [a, b] = F.goalPostYs()
@@ -336,54 +331,36 @@ export class Scene3D {
   // ---- ball ----
 
   private buildBall() {
-    const tex = new THREE.CanvasTexture(this.ballTexture())
+    const map = this.tex(ballTexture())
     this.ball = new THREE.Mesh(
-      new THREE.SphereGeometry(BALL.radius, 24, 18),
-      new THREE.MeshStandardMaterial({ map: tex, roughness: 0.4, metalness: 0.02 }),
+      new THREE.SphereGeometry(BALL.radius, 32, 24),
+      new THREE.MeshStandardMaterial({ map, roughness: 0.38, metalness: 0.03 }),
     )
     this.ball.castShadow = true
     this.scene.add(this.ball)
-  }
-
-  private ballTexture(): HTMLCanvasElement {
-    const c = document.createElement('canvas')
-    c.width = c.height = 128
-    const ctx = c.getContext('2d')!
-    ctx.fillStyle = '#fbfcfe'
-    ctx.fillRect(0, 0, 128, 128)
-    ctx.fillStyle = '#20242c'
-    for (let i = 0; i < 6; i++) {
-      const x = 20 + (i % 3) * 44 + (Math.floor(i / 3) % 2) * 22
-      const y = 26 + Math.floor(i / 3) * 60
-      ctx.beginPath()
-      for (let k = 0; k < 5; k++) {
-        const ang = (k / 5) * Math.PI * 2 - Math.PI / 2
-        const px = x + Math.cos(ang) * 10
-        const py = y + Math.sin(ang) * 10
-        k === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)
-      }
-      ctx.closePath()
-      ctx.fill()
-    }
-    return c
   }
 
   // ---- players (humanoid + run cycle) ----
 
   private makeTeamMats(team: 'home' | 'away'): TeamMats {
     const kit = KITS[team]
+    const style = team === 'home' ? 'stripes' : 'hoops'
+    const jerseyMap = new THREE.CanvasTexture(kitTexture(kit.primary, kit.secondary, kit.accent, style))
+    jerseyMap.colorSpace = THREE.SRGBColorSpace
+    const gkMap = new THREE.CanvasTexture(kitTexture(kit.gk, '#1a1d24', '#0f1116', 'hoops'))
+    gkMap.colorSpace = THREE.SRGBColorSpace
     return {
-      jersey: new THREE.MeshStandardMaterial({ color: kit.primary, roughness: 0.65 }),
-      gk: new THREE.MeshStandardMaterial({ color: kit.gk, roughness: 0.6 }),
-      shorts: new THREE.MeshStandardMaterial({ color: kit.accent, roughness: 0.7 }),
-      socks: new THREE.MeshStandardMaterial({ color: kit.secondary, roughness: 0.8 }),
+      jersey: new THREE.MeshStandardMaterial({ map: jerseyMap, roughness: 0.68 }),
+      gk: new THREE.MeshStandardMaterial({ map: gkMap, roughness: 0.62 }),
+      shorts: new THREE.MeshStandardMaterial({ color: kit.accent, roughness: 0.72 }),
+      socks: new THREE.MeshStandardMaterial({ color: kit.secondary, roughness: 0.82 }),
     }
   }
 
   private makeLimb(mat: THREE.Material, footMat: THREE.Material | null, w: number, len: number): THREE.Group {
     // Pivot at the top; the limb hangs down −Y so rotation.x swings it.
     const g = new THREE.Group()
-    const seg = new THREE.Mesh(new THREE.CapsuleGeometry(w, len - w * 2, 4, 8), mat)
+    const seg = new THREE.Mesh(new THREE.CapsuleGeometry(w, len - w * 2, 4, 10), mat)
     seg.position.y = -len / 2
     seg.castShadow = true
     g.add(seg)
@@ -400,6 +377,7 @@ export class Scene3D {
     const existing = this.players.get(id)
     if (existing) return existing
     const mats = this.teamMats[team]
+    const kit = KITS[team]
     const jersey = role === 'GK' ? mats.gk : mats.jersey
     const group = new THREE.Group()
 
@@ -408,7 +386,7 @@ export class Scene3D {
     hips.castShadow = true
     group.add(hips)
 
-    const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.24, 0.44, 4, 10), jersey)
+    const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.24, 0.44, 4, 14), jersey)
     torso.scale.set(1.15, 1, 0.72)
     torso.position.y = 1.28
     torso.castShadow = true
@@ -417,32 +395,35 @@ export class Scene3D {
     const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.12, 8), this.skinMat)
     neck.position.y = 1.6
     group.add(neck)
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 14), this.skinMat)
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 18, 16), this.skinMat)
     head.position.y = 1.75
     head.castShadow = true
     group.add(head)
-    const hair = new THREE.Mesh(new THREE.SphereGeometry(0.155, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.62), this.hairMat)
+    const hair = new THREE.Mesh(
+      new THREE.SphereGeometry(0.156, 18, 14, 0, Math.PI * 2, 0, Math.PI * 0.62),
+      this.hairMat,
+    )
     hair.position.y = 1.77
     group.add(hair)
 
-    // Number on the back.
-    const numTex = new THREE.CanvasTexture(this.numberTexture(num, KITS[team].secondary, role === 'GK' ? KITS[team].gk : KITS[team].primary))
-    numTex.colorSpace = THREE.SRGBColorSpace
+    // Squad number on the back.
+    const numMap = new THREE.CanvasTexture(numberTexture(num, kit.secondary))
+    numMap.colorSpace = THREE.SRGBColorSpace
     const back = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.34, 0.34),
-      new THREE.MeshStandardMaterial({ map: numTex, transparent: true, roughness: 0.7 }),
+      new THREE.PlaneGeometry(0.32, 0.32),
+      new THREE.MeshStandardMaterial({ map: numMap, transparent: true, roughness: 0.7 }),
     )
-    back.position.set(0, 1.32, -0.2)
+    back.position.set(0, 1.34, -0.205)
     back.rotation.y = Math.PI
     group.add(back)
 
-    const armL = this.makeLimb(role === 'GK' ? mats.gk : this.skinMat, null, 0.075, 0.62)
+    const armMat = role === 'GK' ? mats.gk : this.skinMat
+    const armL = this.makeLimb(armMat, null, 0.075, 0.62)
     armL.position.set(0.3, 1.5, 0)
-    const armR = this.makeLimb(role === 'GK' ? mats.gk : this.skinMat, null, 0.075, 0.62)
+    const armR = this.makeLimb(armMat, null, 0.075, 0.62)
     armR.position.set(-0.3, 1.5, 0)
-    // Short-sleeve jersey stub on the shoulder.
     for (const [arm, sx] of [[armL, 0.3], [armR, -0.3]] as const) {
-      const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.09, 0.16, 8), jersey)
+      const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.09, 0.16, 10), jersey)
       sleeve.position.set(sx, 1.46, 0)
       sleeve.castShadow = true
       group.add(sleeve)
@@ -453,9 +434,8 @@ export class Scene3D {
     legL.position.set(0.13, 0.9, 0)
     const legR = this.makeLimb(mats.socks, this.bootMat, 0.09, 0.9)
     legR.position.set(-0.13, 0.9, 0)
-    // Shorts overlay on the thighs.
     for (const [sx] of [[0.13], [-0.13]] as const) {
-      const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.1, 0.34, 8), mats.shorts)
+      const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.1, 0.34, 10), mats.shorts)
       thigh.position.set(sx, 0.72, 0)
       thigh.castShadow = true
       group.add(thigh)
@@ -473,27 +453,9 @@ export class Scene3D {
     group.add(ring)
 
     this.scene.add(group)
-    const nodes: PlayerNodes = { group, ring, legL, legR, armL, armR, phase: Math.random() * 6 }
+    const nodes: PlayerNodes = { group, ring, legL, legR, armL, armR, phase: (id * 1.7) % 6 }
     this.players.set(id, nodes)
     return nodes
-  }
-
-  private numCache = new Map<string, HTMLCanvasElement>()
-  private numberTexture(num: number, color: string, bg: string): HTMLCanvasElement {
-    const key = `${num}|${color}|${bg}`
-    const cached = this.numCache.get(key)
-    if (cached) return cached
-    const c = document.createElement('canvas')
-    c.width = c.height = 128
-    const ctx = c.getContext('2d')!
-    ctx.clearRect(0, 0, 128, 128)
-    ctx.fillStyle = color
-    ctx.font = '800 92px system-ui, sans-serif'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillText(String(num), 64, 70)
-    this.numCache.set(key, c)
-    return c
   }
 
   // ---- per-frame sync ----
