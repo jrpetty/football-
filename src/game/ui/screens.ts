@@ -106,11 +106,11 @@ export class Screens {
 
         <div class="actions">
           <button class="btn primary" data-act="match">▶  Play Match</button>
-          <button class="btn" data-act="freeplay">Free Play / Training</button>
+          <button class="btn" data-act="training">🎯  Training <span class="sub">(solo, no AI)</span></button>
         </div>
 
         ${this.controlsHtml()}
-        <p class="foot">Tip: your player auto-switches to whoever's nearest the ball. Aim with the mouse.</p>
+        <p class="foot">Training is solo — just you, a ball and two empty goals, with nothing else on the pitch. Press <b>B</b> to put the ball back in front of you.</p>
       </div>`
     this.wireMenu()
   }
@@ -133,7 +133,7 @@ export class Screens {
       ['Tackle / Slide', 'F · C'],
       ['View: zoom (2D) · 1st/3rd (3D)', 'V'],
       ['Pause', 'Esc / P'],
-      ['Spawn ball (free play)', 'B'],
+      ['Spawn ball (training)', 'B'],
     ]
     return `<div class="controls">
       <h3>Controls</h3>
@@ -175,8 +175,8 @@ export class Screens {
     this.root.querySelector<HTMLButtonElement>('[data-act="match"]')?.addEventListener('click', () => {
       this.onStart({ ...this.config, mode: 'match' })
     })
-    this.root.querySelector<HTMLButtonElement>('[data-act="freeplay"]')?.addEventListener('click', () => {
-      this.onStart({ ...this.config, mode: 'freeplay' })
+    this.root.querySelector<HTMLButtonElement>('[data-act="training"]')?.addEventListener('click', () => {
+      this.onStart({ ...this.config, mode: 'training' })
     })
   }
 

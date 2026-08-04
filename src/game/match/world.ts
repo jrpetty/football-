@@ -67,9 +67,9 @@ export class World {
     this.setupTeams()
     this.kickoffTeam = 'home'
     this.placeForKickoff('home')
-    if (config.mode === 'freeplay') {
+    if (config.mode === 'training') {
       this.phase = 'playing'
-      this.ball.setPos(F.centerSpot().x, F.centerSpot().y, 0)
+      this.resetTrainingBall()
     }
   }
 
@@ -77,6 +77,21 @@ export class World {
 
   private setupTeams() {
     this.players = []
+
+    // Training is a solo sandbox: just you, a ball and two empty goals. No
+    // team-mates, no opponents, no keepers — nothing on the pitch is simulated
+    // by an AI, so you can drill touches, strikes and flicks without
+    // interference.
+    if (this.config.mode === 'training') {
+      const you = new Player(this.idCounter++, 'home', this.config.position, 10, {
+        x: FIELD.length * 0.35,
+        y: FIELD.width / 2,
+      })
+      this.players.push(you)
+      this.controlledId = you.id
+      return
+    }
+
     const teams: Team[] = ['home', 'away']
     for (const team of teams) {
       const slots = formation(team, this.config.teamSize)
@@ -696,6 +711,10 @@ export class World {
     }
     // Touchlines.
     if (b.y <= 0 || b.y >= FIELD.width) {
+      if (this.config.mode === 'training') {
+        this.resetTrainingBall()
+        return
+      }
       const team = this.otherTeam(b.lastTouchTeam ?? 'home')
       const spot = { x: clamp(b.x, 2, FIELD.length - 2), y: b.y <= 0 ? 0.3 : FIELD.width - 0.3 }
       this.doRestart('throwin', team, spot, 'Throw-in')
@@ -703,10 +722,8 @@ export class World {
   }
 
   private behindLine(defending: Team) {
-    if (this.config.mode === 'freeplay') {
-      // In free play just bring the ball back rather than award restarts.
-      this.ball.setPos(F.centerSpot().x, F.centerSpot().y, 0)
-      this.ball.stop()
+    if (this.config.mode === 'training') {
+      this.resetTrainingBall()
       return
     }
     const lastTouch = this.ball.lastTouchTeam
@@ -738,8 +755,24 @@ export class World {
     this.pushEffect('whistle', this.ball.x, this.ball.y)
   }
 
+  // Put the ball back on the centre spot for another rep, leaving you wherever
+  // you are — a practice session shouldn't teleport you back to a formation.
+  private resetTrainingBall() {
+    this.ball.setPos(F.centerSpot().x, F.centerSpot().y, 0)
+    this.ball.stop()
+    this.ball.lastTouchTeam = null
+    this.possessorId = null
+  }
+
   private scoreGoal(scorer: Team) {
     this.score[scorer]++
+    if (this.config.mode === 'training') {
+      this.stats[scorer].goals++
+      this.setAnnounce('GOAL!', undefined, 1.2)
+      this.pushEffect('goal', this.ball.x, this.ball.y)
+      this.resetTrainingBall()
+      return
+    }
     this.stats[scorer].goals++
     this.lastGoalTeam = scorer
     this.kickoffTeam = this.otherTeam(scorer)

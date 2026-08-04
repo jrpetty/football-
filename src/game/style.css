@@ -271,3 +271,9 @@ body {
 .pause .controls {
   width: 100%;
 }
+
+.btn .sub {
+  font-weight: 500;
+  opacity: 0.65;
+  font-size: 13px;
+}

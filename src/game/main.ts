@@ -125,7 +125,7 @@ class Game {
     }
 
     if (
-      this.config.mode === 'freeplay' &&
+      this.config.mode === 'training' &&
       this.input.justPressed('KeyB') &&
       !this.paused
     ) {
@@ -137,7 +137,7 @@ class Game {
   }
 
   private pause() {
-    if (this.config.mode === 'freeplay' ? false : this.world.phase === 'fulltime') return
+    if (this.config.mode === 'training' ? false : this.world.phase === 'fulltime') return
     this.paused = true
     this.screens.onResume = () => this.resume()
     this.screens.onRestart = () => this.hooks.restart()

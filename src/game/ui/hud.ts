@@ -8,7 +8,7 @@ export interface HudInfo {
   loft: number // −1..1, live from the mouse flick
   spin: number // signed, live from the mouse flick
   fps: number
-  mode: 'match' | 'freeplay'
+  mode: 'match' | 'training'
   zoomLabel: string
 }
 
@@ -60,8 +60,8 @@ export class Hud {
     ctx.font = '600 12px ui-monospace, monospace'
     ctx.fillStyle = '#9fb2d0'
     const label =
-      world.config.mode === 'freeplay'
-        ? 'FREE PLAY'
+      world.config.mode === 'training'
+        ? 'TRAINING'
         : world.phase === 'fulltime'
           ? 'FULL TIME'
           : `${world.half === 1 ? '1st' : '2nd'}  ${fmtClock(world.clock)}`

@@ -130,7 +130,7 @@ export class Game3D {
   private handleGlobalKeys() {
     if (this.input.justPressed('KeyV')) this.cam3.toggle()
     if (this.input.justPressed('KeyP')) this.paused ? this.resume() : this.pause()
-    if (this.config.mode === 'freeplay' && this.input.justPressed('KeyB') && !this.paused) {
+    if (this.config.mode === 'training' && this.input.justPressed('KeyB') && !this.paused) {
       const cp = this.world.getControlledPlayer()
       const aim = this.cam3.aimSim()
       const pos = cp ? { x: cp.x + aim.x * 4, y: cp.y + aim.y * 4 } : { x: 29, y: 19 }

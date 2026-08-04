@@ -56,7 +56,7 @@ export type Restart =
 export interface MatchConfig {
   teamSize: number // outfield + GK per side
   halfLength: number // seconds
-  mode: 'match' | 'freeplay'
+  mode: 'match' | 'training'
   singleKeeper: boolean
   view: '2d' | '3d' // presentation: top-down 2D or first/third-person 3D
   position: Role // the one player you are for the whole match
