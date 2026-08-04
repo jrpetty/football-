@@ -107,7 +107,7 @@ export class Game3D {
       this.maybeEnd()
     }
 
-    this.render(locked)
+    this.render(locked, dt)
     this.canvas.classList.toggle('unlocked', !locked)
     this.input.endFrame()
     ;(window as unknown as { __pitch?: unknown }).__pitch = {
@@ -178,10 +178,10 @@ export class Game3D {
     this.cam3.setAspect(w / h)
   }
 
-  private render(locked: boolean) {
+  private render(locked: boolean, dt: number) {
     const controlledId = this.world.getControlledPlayer()?.id ?? -1
     const first = this.cam3.mode === 'first'
-    this.scene.sync(this.world, controlledId, !first, first ? controlledId : -1)
+    this.scene.sync(this.world, controlledId, !first, first ? controlledId : -1, dt)
     this.scene.render(this.cam3.cam)
 
     this.ctx.clearRect(0, 0, this.cssW, this.cssH)
