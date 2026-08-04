@@ -67,6 +67,89 @@ precision matters.
 
 - [Connection refused diagnosis — ServerMiner](https://serverminer.com/article/io-netty-channel-abstractchannel-annotatedconnectexception-connection-refused-no-further-information/)
 
+## Platform — Pterodactyl
+
+- [Complete Pterodactyl guide — panel, Wings, eggs, commands](https://websitehosts.uk/blog/complete-pterodactyl-game-server-panel-guide)
+- [Pterodactyl self-hosted management guide](https://www.pistack.xyz/posts/pterodactyl-self-hosted-game-server-management-guide/)
+- [Pterodactyl official docs](https://pterodactyl.io/)
+
+## Plugins and permissions
+
+- [LuckPerms wiki](https://luckperms.net/wiki)
+- [LuckPerms installation and setup — Nodecraft](https://nodecraft.com/support/games/minecraft/plugins/luckperms-installation-setup-configuration)
+- [CoreProtect setup — GGServers](https://help.ggservers.com/en-us/article/how-to-set-up-and-use-coreprotect-plugin-1o71ncd/)
+- [MySQL on a Minecraft server — Shockbyte](https://shockbyte.com/billing/knowledgebase/104/How-to-Use-a-MySQL-Database-on-Your-Minecraft-Server.html)
+- [Essential plugins 2026 — Teramont](https://teramont.net/blog/best-minecraft-server-plugins-2026)
+- [Essential plugins — Wabbanode](https://wabbanode.com/blog/minecraft/essential-minecraft-server-plugins)
+
+## Proxies and networks
+
+- [Velocity docs](https://docs.papermc.io/velocity/)
+- [BungeeCord vs Velocity — XGamingServer](https://xgamingserver.com/blog/bungeecord-vs-velocity/)
+- [IP forwarding for BungeeCord and Velocity](https://xgamingserver.com/docs/minecraft/bungeecord-ip-forwarding)
+- [Proxy hosting guide — EUGameHost](https://www.eugamehost.com/blog/bungeecord-waterfall-velocity-minecraft-proxy-hosting-guide/)
+
+## Crossplay
+
+- [GeyserMC](https://geysermc.org/)
+- [Geyser and Floodgate setup — Nodecraft](https://nodecraft.com/support/games/minecraft/setup/setting-up-geyser-and-floodgate-for-java-bedrock-crossplay)
+- [Geyser setup — Aternos](https://support.aternos.org/hc/en-us/articles/360051047631-Allow-Bedrock-players-on-your-Java-server-with-Geyser)
+- [ViaVersion](https://viaversion.com/)
+
+## Security
+
+- [Minecraft server security guide — Host Havoc](https://hosthavoc.com/blog/secure-your-minecraft-server)
+- [Security checklist 2026 — MineGuard](https://mineguard.pro/en/blog/minecraft-server-security-checklist-2026)
+- [Log4j vulnerability — official Minecraft advisory](https://www.minecraft.net/en-us/article/important-message--security-vulnerability-java-edition)
+- [Minecraft servers as a breach vector — Censys](https://censys.com/blog/is-your-next-breach-coming-from-a-minecraft-server/)
+- [GrimAC](https://github.com/GrimAnticheat/Grim)
+
+## Modpacks
+
+- [Best modpacks 2026 and RAM needs — Prism Nodes](https://prismnodes.com/blog/best-minecraft-modpacks-2026)
+- [RAM requirements for modded — Wisehosting](https://wisehosting.com/blog/how-much-ram-for-modded-minecraft-server)
+- [Modpack server requirements 2026 — Space Node](https://space-node.net/blog/best-minecraft-modpacks-server-requirements-2026)
+- [BisectHosting CurseForge partnership](https://www.bisecthosting.com/curseforge)
+
+## DNS
+
+- [SRV records for Minecraft — Porkbun](https://kb.porkbun.com/article/148-how-to-connect-your-domain-to-minecraft-using-srv-records)
+- [DNS setup for Minecraft — Name.com](https://www.name.com/support/articles/205188518-setting-up-dns-for-a-minecraft-server)
+- [A note on Minecraft SRV records](https://www.laforce.dev/posts/2024-11-08-minecraft-srv-records/)
+
+## Commands and config tuning
+
+- [Minecraft server commands — Hostinger](https://www.hostinger.com/tutorials/minecraft-server-commands/)
+- [Commands — Minecraft Wiki](https://minecraft.wiki/w/Commands)
+- [Paper world configuration reference](https://docs.papermc.io/paper/reference/world-configuration/)
+- [Paper Chan's optimization guide](https://paper-chan.moe/paper-optimization/)
+- [Paper config optimization — DedicatedMC](https://docs.dedicatedmc.io/server-optimization/paper-config-optimization-guide/)
+
+## Migration
+
+- [Moving over existing server files — BisectHosting](https://www.bisecthosting.com/clients/knowledgebase/41/Moving-over-existing-server-files.html)
+- [How to migrate a Minecraft server — 1Gbits](https://1gbits.com/blog/how-to-migrate-a-minecraft-server/)
+
+## Development
+
+- [PaperMC developer docs](https://docs.papermc.io/paper/dev/)
+- [paperweight-userdev](https://docs.papermc.io/paper/dev/userdev/)
+- [NeoForged getting started](https://docs.neoforged.net/docs/gettingstarted/)
+- [NeoForge MDK](https://github.com/neoforged/MDK)
+- [Velocity plugin development](https://docs.papermc.io/velocity/dev/creating-your-first-plugin/)
+
+## Content packs
+
+- [Resource pack hosting and SHA-1 — MineGuard](https://mineguard.pro/en/blog/host-resource-pack-minecraft-server-guide)
+- [Adding a resource pack — Nodecraft](https://nodecraft.com/support/games/minecraft/setup/adding-a-resource-pack-to-a-minecraft-server)
+- [Vanilla Tweaks](https://vanillatweaks.net) — datapacks and resource packs
+
+## Monitoring
+
+- [DiscordSRV](https://modrinth.com/plugin/discordsrv)
+- [UptimeRobot Discord integration](https://uptimerobot.com/integrations/discord-integration/)
+- [Best Discord bots for Minecraft servers 2026](https://peakbot.pro/blog/best-discord-bots-for-minecraft-servers-2026)
+
 ## Tools referenced
 
 | Tool | Use |
