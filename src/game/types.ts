@@ -26,6 +26,7 @@ export interface KickRequest {
 export interface Command {
   move: Vec2 // desired heading * throttle (magnitude 0..1)
   sprint: boolean
+  walk: boolean // deliberate slow pace, for precise positioning
   aim: Vec2 // unit aim direction (where a kick would go)
   chargePass: boolean // holding the pass button (fills power meter)
   chargeShot: boolean // holding the shoot button
@@ -37,6 +38,7 @@ export interface Command {
 export const emptyCommand = (): Command => ({
   move: { x: 0, y: 0 },
   sprint: false,
+  walk: false,
   aim: { x: 1, y: 0 },
   chargePass: false,
   chargeShot: false,

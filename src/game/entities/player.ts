@@ -22,6 +22,10 @@ export class Player {
   slideVel: Vec2 = { x: 0, y: 0 } // carried momentum during a slide
   sprinting = false // set each tick by steer(); read by the dribble/first-touch model
 
+  // Kick animation state: counts down while the striking leg swings through.
+  kickTimer = 0
+  kickLeg = 0 // which leg is striking (0 or 1)
+
   // Previous-step position, so the renderer can interpolate between physics
   // steps instead of snapping once per step.
   px = 0
@@ -71,9 +75,15 @@ export class Player {
     return clamp01(this.stamina / PLAYER.staminaMax)
   }
 
-  // Current speed ceiling given tier + fatigue.
-  topSpeed(sprint: boolean): number {
-    const base = sprint && this.stamina > 1 ? PLAYER.sprintSpeed : PLAYER.runSpeed
+  // Current speed ceiling given tier + fatigue. Three gears: a controlled walk
+  // for setting your feet, a default running pace, and a sprint that costs you.
+  topSpeed(sprint: boolean, walk = false): number {
+    const base =
+      sprint && this.stamina > 1
+        ? PLAYER.sprintSpeed
+        : walk
+          ? PLAYER.walkSpeed
+          : PLAYER.runSpeed
     const fatigue = clamp(this.energy, 0, 1)
     const mult = PLAYER.tiredFactor + (1 - PLAYER.tiredFactor) * fatigue
     return base * mult
@@ -81,10 +91,11 @@ export class Player {
 
   // Steer toward a desired velocity. `moveDir` is a heading (need not be unit);
   // `throttle` 0..1 scales effort. Handles accel/decel, turning momentum, stamina.
-  steer(moveDir: Vec2, throttle: number, sprint: boolean, dt: number) {
+  steer(moveDir: Vec2, throttle: number, sprint: boolean, dt: number, walk = false) {
     this.tackleCooldown = Math.max(0, this.tackleCooldown - dt)
     this.kickCooldown = Math.max(0, this.kickCooldown - dt)
     this.saveCooldown = Math.max(0, this.saveCooldown - dt)
+    this.kickTimer = Math.max(0, this.kickTimer - dt)
 
     if (this.sliding) {
       // While sliding the player is committed: coast on carried momentum and decay.
@@ -101,7 +112,7 @@ export class Player {
     const wantsMove = dirLen > 0.01 && throttle > 0.01
     const canSprint = sprint && this.stamina > 1 && wantsMove
     this.sprinting = canSprint
-    const top = this.topSpeed(canSprint)
+    const top = this.topSpeed(canSprint, walk)
     const target: Vec2 = wantsMove
       ? V.scale(V.normalize(moveDir), top * clamp01(throttle))
       : { x: 0, y: 0 }

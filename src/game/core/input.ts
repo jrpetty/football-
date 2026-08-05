@@ -127,5 +127,6 @@ const GAME_KEYS = new Set([
   'KeyW', 'KeyA', 'KeyS', 'KeyD',
   'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
   'Space', 'ShiftLeft', 'ShiftRight',
-  'KeyE', 'KeyF', 'KeyC', 'KeyQ', 'KeyB', 'KeyV', 'KeyR',
+  'KeyE', 'KeyF', 'KeyC', 'KeyQ', 'KeyB', 'KeyV', 'KeyR', 'KeyM',
+  'AltLeft', 'AltRight',
 ])

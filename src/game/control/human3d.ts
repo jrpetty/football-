@@ -58,6 +58,8 @@ export class Human3DController {
     if (input.anyDown('KeyA', 'ArrowLeft')) s -= 1
     cmd.move = { x: look.x * f + right.x * s, y: look.y * f + right.y * s }
     cmd.sprint = input.anyDown('ShiftLeft', 'ShiftRight')
+    // Hold Alt to walk — useful for setting your feet before a strike.
+    cmd.walk = input.anyDown('AltLeft', 'AltRight')
     cmd.aim = look
 
     // --- charging ---

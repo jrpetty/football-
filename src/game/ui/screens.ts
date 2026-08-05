@@ -126,7 +126,7 @@ export class Screens {
 
   private controlsHtml(): string {
     const rows: [string, string][] = [
-      ['Move / Sprint', 'WASD · hold Shift'],
+      ['Move / Sprint / Walk', 'WASD · Shift · Alt'],
       ['Aim / Look', 'Mouse'],
       ['<b>Touch</b> — close control', '<b>Right click</b> · tap or hold'],
       ['Touch to the side / back', 'A D S + right click'],

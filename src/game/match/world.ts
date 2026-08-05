@@ -274,7 +274,7 @@ export class World {
     // rate-limited so direction changes read as a pivot, not a snap.
     for (const p of this.players) {
       const cmd = commands.get(p.id) ?? emptyCommand()
-      p.steer(cmd.move, V.len(cmd.move), cmd.sprint, dt)
+      p.steer(cmd.move, V.len(cmd.move), cmd.sprint, dt, cmd.walk)
       p.faceDirection(V.len(cmd.move) > 0.05 ? cmd.move : cmd.aim, dt)
     }
 
@@ -522,6 +522,10 @@ export class World {
     // A touch keeps the ball yours: no release cooldown beyond a beat, so you can
     // keep knocking it forward and running onto it.
     p.kickCooldown = kick.type === 'touch' ? 0.1 : 0.26
+    // Swing the leg nearest the ball, so the strike reads as coming off the
+    // right boot rather than always the same one.
+    p.kickTimer = kick.type === 'touch' ? PLAYER.kickAnimTime * 0.55 : PLAYER.kickAnimTime
+    p.kickLeg = V.cross(p.facing, V.sub(this.ball.pos, p.pos)) > 0 ? 0 : 1
     this.possessorId = null
     if (p.id === this.keeperHoldId) {
       this.keeperHold = 0

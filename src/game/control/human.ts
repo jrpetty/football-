@@ -44,6 +44,8 @@ export class HumanController {
     if (input.anyDown('KeyD', 'ArrowRight')) mx += 1
     cmd.move = { x: mx, y: my }
     cmd.sprint = input.anyDown('ShiftLeft', 'ShiftRight')
+    // Hold Alt to walk — useful for setting your feet before a strike.
+    cmd.walk = input.anyDown('AltLeft', 'AltRight')
 
     // --- aim: the cursor, falling back to the way the player is running ---
     const moving = mx !== 0 || my !== 0

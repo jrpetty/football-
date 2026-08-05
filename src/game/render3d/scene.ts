@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { Sky } from 'three/examples/jsm/objects/Sky.js'
-import { BALL, FIELD, KITS, PLAYER, WALL } from '../config'
+import { BALL, FIELD, WALL } from '../config'
 import * as F from '../match/field'
 import type { World } from '../match/world'
 import {
@@ -8,32 +8,14 @@ import {
   ballTexture,
   crowdTexture,
   grassTexture,
-  kitTexture,
   normalFromCanvas,
-  numberTexture,
   pitchOverlayTexture,
 } from './textures'
+import { PlayerRig, makeKitMaterials } from './rig'
 
 // Simulation → Three.js coordinate map: the pitch plane (sim x, y) becomes the
 // ground plane (X, Z); ball height (sim z) becomes world Y (up).
 const v3 = (x: number, y: number, z = 0) => new THREE.Vector3(x, z, y)
-
-interface PlayerNodes {
-  group: THREE.Group
-  ring: THREE.Mesh
-  legL: THREE.Group
-  legR: THREE.Group
-  armL: THREE.Group
-  armR: THREE.Group
-  phase: number
-}
-
-interface TeamMats {
-  jersey: THREE.Material
-  gk: THREE.Material
-  shorts: THREE.Material
-  socks: THREE.Material
-}
 
 // Builds and owns the WebGL scene and syncs every mesh from World each frame.
 // Reads the simulation only — never writes it. All surfaces are textured from
@@ -43,11 +25,8 @@ export class Scene3D {
   readonly scene = new THREE.Scene()
   readonly renderer: THREE.WebGLRenderer
   private ball!: THREE.Mesh
-  private players = new Map<number, PlayerNodes>()
-  private teamMats: Record<'home' | 'away', TeamMats>
-  private skinMat = new THREE.MeshStandardMaterial({ color: '#e5b08a', roughness: 0.85 })
-  private hairMat = new THREE.MeshStandardMaterial({ color: '#2c211b', roughness: 0.95 })
-  private bootMat = new THREE.MeshStandardMaterial({ color: '#14161c', roughness: 0.35, metalness: 0.1 })
+  private players = new Map<number, PlayerRig>()
+  private kitMats = new Map<string, ReturnType<typeof makeKitMaterials>>()
   private maxAniso = 4
   private targetRings: THREE.Mesh[] = []
   private trailLine: THREE.Line | null = null
@@ -65,8 +44,6 @@ export class Scene3D {
     this.maxAniso = this.renderer.capabilities.getMaxAnisotropy()
 
     this.scene.fog = new THREE.Fog('#b7d2e6', 95, 240)
-
-    this.teamMats = { home: this.makeTeamMats('home'), away: this.makeTeamMats('away') }
 
     this.buildSkyAndLights()
     this.buildPitch()
@@ -400,134 +377,21 @@ export class Scene3D {
     this.scene.add(this.ball)
   }
 
-  // ---- players (humanoid + run cycle) ----
+  // ---- players ----
 
-  private makeTeamMats(team: 'home' | 'away'): TeamMats {
-    const kit = KITS[team]
-    const style = team === 'home' ? 'stripes' : 'hoops'
-    const jerseyMap = new THREE.CanvasTexture(kitTexture(kit.primary, kit.secondary, kit.accent, style))
-    jerseyMap.colorSpace = THREE.SRGBColorSpace
-    const gkMap = new THREE.CanvasTexture(kitTexture(kit.gk, '#1a1d24', '#0f1116', 'hoops'))
-    gkMap.colorSpace = THREE.SRGBColorSpace
-    return {
-      jersey: new THREE.MeshStandardMaterial({ map: jerseyMap, roughness: 0.68 }),
-      gk: new THREE.MeshStandardMaterial({ map: gkMap, roughness: 0.62 }),
-      shorts: new THREE.MeshStandardMaterial({ color: kit.accent, roughness: 0.72 }),
-      socks: new THREE.MeshStandardMaterial({ color: kit.secondary, roughness: 0.82 }),
-    }
-  }
-
-  private makeLimb(mat: THREE.Material, footMat: THREE.Material | null, w: number, len: number): THREE.Group {
-    // Pivot at the top; the limb hangs down −Y so rotation.x swings it.
-    const g = new THREE.Group()
-    const seg = new THREE.Mesh(new THREE.CapsuleGeometry(w, len - w * 2, 4, 10), mat)
-    seg.position.y = -len / 2
-    seg.castShadow = true
-    g.add(seg)
-    if (footMat) {
-      const foot = new THREE.Mesh(new THREE.BoxGeometry(w * 2.1, w * 1.3, w * 3.4), footMat)
-      foot.position.set(0, -len + w * 0.4, w * 0.9)
-      foot.castShadow = true
-      g.add(foot)
-    }
-    return g
-  }
-
-  private ensurePlayer(id: number, team: 'home' | 'away', role: string, num: number): PlayerNodes {
+  private ensurePlayer(id: number, team: 'home' | 'away', role: string, num: number): PlayerRig {
     const existing = this.players.get(id)
     if (existing) return existing
-    const mats = this.teamMats[team]
-    const kit = KITS[team]
-    const jersey = role === 'GK' ? mats.gk : mats.jersey
-    const group = new THREE.Group()
-    // The body is modelled ~1.90m tall, then scaled to a real footballer's
-    // height. Keeping it in its own group means the ground ring stays at true
-    // pitch scale and only the person is resized.
-    const body = new THREE.Group()
-    group.add(body)
-
-    const hips = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.26, 0.28), mats.shorts)
-    hips.position.y = 0.9
-    hips.castShadow = true
-    body.add(hips)
-
-    const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.24, 0.44, 4, 14), jersey)
-    torso.scale.set(1.15, 1, 0.72)
-    torso.position.y = 1.28
-    torso.castShadow = true
-    body.add(torso)
-
-    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.12, 8), this.skinMat)
-    neck.position.y = 1.6
-    body.add(neck)
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 18, 16), this.skinMat)
-    head.position.y = 1.75
-    head.castShadow = true
-    body.add(head)
-    const hair = new THREE.Mesh(
-      new THREE.SphereGeometry(0.156, 18, 14, 0, Math.PI * 2, 0, Math.PI * 0.62),
-      this.hairMat,
-    )
-    hair.position.y = 1.77
-    body.add(hair)
-
-    // Squad number on the back.
-    const numMap = new THREE.CanvasTexture(numberTexture(num, kit.secondary))
-    numMap.colorSpace = THREE.SRGBColorSpace
-    const back = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.32, 0.32),
-      new THREE.MeshStandardMaterial({ map: numMap, transparent: true, roughness: 0.7 }),
-    )
-    back.position.set(0, 1.34, -0.205)
-    back.rotation.y = Math.PI
-    body.add(back)
-
-    const armMat = role === 'GK' ? mats.gk : this.skinMat
-    const armL = this.makeLimb(armMat, null, 0.075, 0.62)
-    armL.position.set(0.3, 1.5, 0)
-    const armR = this.makeLimb(armMat, null, 0.075, 0.62)
-    armR.position.set(-0.3, 1.5, 0)
-    for (const [arm, sx] of [[armL, 0.3], [armR, -0.3]] as const) {
-      const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.09, 0.16, 10), jersey)
-      sleeve.position.set(sx, 1.46, 0)
-      sleeve.castShadow = true
-      body.add(sleeve)
-      group.add(arm)
+    const key = `${team}:${role === 'GK' ? 'GK' : 'OUT'}`
+    let mats = this.kitMats.get(key)
+    if (!mats) {
+      mats = makeKitMaterials(team, role)
+      this.kitMats.set(key, mats)
     }
-
-    const legL = this.makeLimb(mats.socks, this.bootMat, 0.09, 0.9)
-    legL.position.set(0.13, 0.9, 0)
-    const legR = this.makeLimb(mats.socks, this.bootMat, 0.09, 0.9)
-    legR.position.set(-0.13, 0.9, 0)
-    for (const [sx] of [[0.13], [-0.13]] as const) {
-      const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.1, 0.34, 10), mats.shorts)
-      thigh.position.set(sx, 0.72, 0)
-      thigh.castShadow = true
-      body.add(thigh)
-    }
-    body.add(legL)
-    body.add(legR)
-
-    const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(PLAYER.radius + 0.16, 0.05, 8, 32),
-      new THREE.MeshStandardMaterial({ color: '#eafff0', emissive: '#7dff9a', emissiveIntensity: 0.6 }),
-    )
-    ring.rotation.x = -Math.PI / 2
-    ring.position.y = 0.05
-    ring.visible = false
-    group.add(ring)
-
-    // Scale the assembled body to a real footballer's height. Measuring the
-    // model rather than assuming its size means the proportions stay honest
-    // even if a limb is adjusted later.
-    const bounds = new THREE.Box3().setFromObject(body)
-    const built = bounds.max.y - bounds.min.y
-    if (built > 0.1) body.scale.setScalar(PLAYER.height / built)
-
-    this.scene.add(group)
-    const nodes: PlayerNodes = { group, ring, legL, legR, armL, armR, phase: (id * 1.7) % 6 }
-    this.players.set(id, nodes)
-    return nodes
+    const rig = new PlayerRig(mats, team, role, num)
+    this.scene.add(rig.group)
+    this.players.set(id, rig)
+    return rig
   }
 
   // ---- training apparatus ----
@@ -610,34 +474,11 @@ export class Scene3D {
     this.syncDrills(world)
 
     for (const p of world.players) {
-      const n = this.ensurePlayer(p.id, p.team, p.role, p.number)
+      const rig = this.ensurePlayer(p.id, p.team, p.role, p.number)
       const rp = p.renderPos(a)
-      n.group.position.set(rp.x, 0, rp.y)
-      // The model is built facing +Z (feet and chest forward, number on its
-      // back), while a heading of 0 means +X in the simulation — hence the
-      // quarter turn. Without it every player stands side-on to where they face.
-      n.group.rotation.y = Math.PI / 2 - p.heading
-      n.group.visible = p.id !== hideId
-      n.ring.visible = p.id === controlledId && showControlledRing
-
-      // Procedural run cycle: stride frequency & amplitude scale with speed.
-      const spd = p.speed
-      n.phase += (1.2 + spd * 1.15) * dt
-      if (p.sliding) {
-        n.group.position.y = -0.25
-        n.legL.rotation.x = 1.2
-        n.legR.rotation.x = 0.6
-        n.armL.rotation.x = -0.7
-        n.armR.rotation.x = -0.9
-      } else {
-        n.group.position.y = 0
-        const swing = Math.min(0.95, 0.12 + spd * 0.11)
-        const sw = Math.sin(n.phase) * swing
-        n.legL.rotation.x = sw
-        n.legR.rotation.x = -sw
-        n.armL.rotation.x = -sw * 0.75
-        n.armR.rotation.x = sw * 0.75
-      }
+      rig.pose(p, rp.x, rp.y, dt)
+      rig.setVisible(p.id !== hideId)
+      rig.ring.visible = p.id === controlledId && showControlledRing
     }
   }
 }

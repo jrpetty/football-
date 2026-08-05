@@ -84,6 +84,7 @@ export const PLAYER = {
   slideDrain: 20, // one-off cost of a slide tackle
   staminaRegen: 8, // stamina/s recovered when not sprinting
   tiredFactor: 0.72, // speed multiplier when fully gassed
+  kickAnimTime: 0.34, // seconds a strike's leg swing takes to play out
 }
 
 // Mouse-driven striking, modelled on Pro Soccer Online: power comes from how
