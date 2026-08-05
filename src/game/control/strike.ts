@@ -2,7 +2,7 @@ import { CONTROL, KICK } from '../config'
 import { clamp } from '../core/math'
 import * as V from '../core/vec'
 import type { Vec2 } from '../core/vec'
-import type { KickRequest, KickType } from '../types'
+import type { KickRequest, KickType, Skill } from '../types'
 
 // The striking model, shared by the 2D and 3D controllers.
 //
@@ -124,12 +124,27 @@ export function shapeFromFlick(
   return { loft, spin }
 }
 
+// Read a close-control move out of the flick made during a touch. The same
+// wrist vocabulary that shapes a strike shapes your feet: drag it back, roll it
+// across your body, or lift it over a leg. Only a decisive flick counts, so an
+// ordinary touch is unaffected by small aiming drift.
+export function skillFromFlick(flick: Vec2): Skill | null {
+  const mag = Math.hypot(flick.x, flick.y)
+  if (mag < CONTROL.skillFlickMin) return null
+  // Whichever axis dominates decides the move.
+  if (Math.abs(flick.y) > Math.abs(flick.x)) {
+    return flick.y > 0 ? 'drag' : 'lift' // down = drag back, up = lift over
+  }
+  return 'roll' // sideways = roll it across you
+}
+
 // Assemble the request the simulation consumes.
 export function makeKick(
   type: KickType,
   power: number,
   aim: Vec2,
   shape: { loft: number; spin: number },
+  skill: Skill | null = null,
 ): KickRequest {
   return {
     type,
@@ -137,6 +152,7 @@ export function makeKick(
     aim: V.len(aim) > 0.01 ? V.normalize(aim) : { x: 1, y: 0 },
     loft: shape.loft,
     spin: shape.spin,
+    skill: skill ?? undefined,
   }
 }
 

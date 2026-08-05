@@ -18,7 +18,13 @@ export interface KickRequest {
   // ball), 0 is a natural strike, −1 is driven hard into the turf with dip.
   loft: number
   spin: number // signed side-spin from a sideways flick — bends the flight
+  // A close-control move, when the flick during a touch was decisive enough to
+  // mean one. The same wrist vocabulary that shapes a strike shapes your feet.
+  skill?: Skill
 }
+
+// Close-control moves, selected by which way you flicked during a touch.
+export type Skill = 'drag' | 'roll' | 'lift'
 
 // The per-tick control signal for a single player. Human input and every AI
 // brain funnel into this identical shape, so the simulation never needs to know

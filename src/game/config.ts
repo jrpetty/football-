@@ -85,6 +85,13 @@ export const PLAYER = {
   staminaRegen: 8, // stamina/s recovered when not sprinting
   tiredFactor: 0.72, // speed multiplier when fully gassed
   kickAnimTime: 0.34, // seconds a strike's leg swing takes to play out
+  // The ball is only "at your feet" below this height; above it you are playing
+  // it out of the air instead of dribbling it.
+  controlHeight: 0.62,
+  // How high you can still reach the ball — knee, thigh, chest, and finally a
+  // header at full stretch. Beyond this it sails over you.
+  aerialReach: 2.25,
+  headerHeight: 1.5, // above this you're heading it rather than using a foot
 }
 
 // Mouse-driven striking, modelled on Pro Soccer Online: power comes from how
@@ -112,6 +119,9 @@ export const CONTROL = {
   // ball drives it down with topspin, getting under it lifts it with backspin.
   // So a down-flick genuinely dips and an up-flick genuinely floats.
   spinFromLoft: 9,
+  // How hard you must flick during a touch before it counts as a skill move
+  // rather than ordinary aiming drift (pixels).
+  skillFlickMin: 105,
 }
 
 // Kick model. Power (0..1) scales between min and max release speed. Passing,
@@ -149,6 +159,27 @@ export const WALL = {
   restitution: 0.66, // how much pace survives a rebound
   friction: 0.94, // pace kept along the wall
   height: 6, // how tall the barrier is drawn; physically it always rebounds
+}
+
+// Playing the ball out of the air. Cushioning kills the pace and drops it dead;
+// volleying and heading trade control for power, which is the whole bargain.
+export const AERIAL = {
+  cushionKeep: 0.14, // fraction of incoming pace a cushioned touch leaves on
+  cushionError: 0.34, // metres of scatter, scaled by how hard it arrived
+  // Volleys come off harder than a grounded strike — you're adding the ball's
+  // own pace to your own. Kept just under a real-world rocket (~38 m/s) so the
+  // hardest contact in the game is still a football rather than a bullet.
+  volleyBonus: 1.12,
+  volleySpread: 3.4, // ...and far less accurately (degrees at full power)
+  headerPower: 13, // base speed off the head
+  headerRunBonus: 0.85, // how much of your run speed carries into a header
+  headerSpread: 4.5, // headers are the least precise contact of all
+  // Headers get their own launch angle rather than borrowing the strike's,
+  // because nodding a ball is a different act from kicking one. Neutral is a
+  // looping 17°; flick up and you can loop it right over a keeper, flick down
+  // and you steer it into the turf — the header everyone actually wants.
+  headerAngle: 0.3,
+  headerAngleRange: 0.45, // how far the flick swings that angle either way
 }
 
 export const DEFEND = {

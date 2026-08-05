@@ -1,4 +1,4 @@
-import { FIELD, KITS } from '../config'
+import { BALL, FIELD, KITS, PLAYER } from '../config'
 import { clamp01 } from '../core/math'
 import type { World } from '../match/world'
 
@@ -17,6 +17,7 @@ export class Hud {
   draw(ctx: CanvasRenderingContext2D, world: World, info: HudInfo, w: number, h: number) {
     this.drawScoreboard(ctx, world, w)
     this.drawStamina(ctx, world, h)
+    this.drawContactCue(ctx, world, w, h)
     if (info.chargeType) this.drawPowerMeter(ctx, info, w, h)
     this.drawDrills(ctx, world, w)
     this.drawMinimap(ctx, world, w, h)
@@ -92,6 +93,36 @@ export class Hud {
     ctx.fillStyle = frac > 0.35 ? '#57d764' : '#f5a742'
     roundRect(ctx, x, y, barW * frac, 10, 5)
     ctx.fill()
+  }
+
+  // When the ball is dropping into your area, say what a click would do with it
+  // right now. Playing a ball out of the air is a snap decision and the height
+  // is hard to read off a 3D scene, so this is the one piece of coaching the HUD
+  // offers — it tells you what's available, never when to take it.
+  private drawContactCue(ctx: CanvasRenderingContext2D, world: World, w: number, h: number) {
+    const p = world.getControlledPlayer()
+    if (!p) return
+    const b = world.ball
+    if (b.z <= PLAYER.controlHeight) return
+    const d = Math.hypot(b.x - p.x, b.y - p.y)
+    if (d > p.radius + BALL.radius + PLAYER.reach * 1.25) return
+    if (b.z > PLAYER.aerialReach) return
+
+    const header = b.z > PLAYER.headerHeight
+    const label = header ? 'HEADER' : 'VOLLEY'
+    const y = h - 92
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.font = '600 11px system-ui, sans-serif'
+    const text = `CUSHION  ·  ${label}`
+    const bw = ctx.measureText(text).width + 30
+    ctx.fillStyle = 'rgba(10,16,28,0.72)'
+    roundRect(ctx, w / 2 - bw / 2, y - 12, bw, 24, 12)
+    ctx.fill()
+    // Fade in as the ball drops into range, so it reads as a window opening.
+    const near = clamp01((PLAYER.aerialReach - b.z) / 0.7)
+    ctx.fillStyle = `rgba(255,226,138,${0.45 + near * 0.55})`
+    ctx.fillText(text, w / 2, y)
   }
 
   // The power bar, plus live readouts of the shaping the mouse flick is applying

@@ -25,6 +25,9 @@ export class Player {
   // Kick animation state: counts down while the striking leg swings through.
   kickTimer = 0
   kickLeg = 0 // which leg is striking (0 or 1)
+  // What the contact was, so the renderer swings a leg for a kick but arches the
+  // back for a header and reaches up for a cushion off the chest.
+  kickKind: 'kick' | 'header' | 'cushion' = 'kick'
 
   // Previous-step position, so the renderer can interpolate between physics
   // steps instead of snapping once per step.

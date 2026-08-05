@@ -6,7 +6,7 @@ import type { Camera } from '../render/camera'
 import type { World } from '../match/world'
 import { emptyCommand } from '../types'
 import type { Command } from '../types'
-import { AimTracker, ChargeButton, FlickTracker, makeKick, shapeFromFlick } from './strike'
+import { AimTracker, ChargeButton, FlickTracker, makeKick, shapeFromFlick, skillFromFlick } from './strike'
 import type { Sensitivity } from './human3d'
 
 // Input → Command for the 2D top-down view. Same striking model as the 3D
@@ -87,7 +87,8 @@ export class HumanController {
 
     if (input.mouseReleased.right) {
       const power = this.touch.release(CONTROL.touchCharge)
-      const shape = shapeFromFlick(this.flick.flick(), this.sens.height, this.sens.curve)
+      const raw = this.flick.flick()
+      const shape = shapeFromFlick(raw, this.sens.height, this.sens.curve)
       // Holding a direction pushes the touch that way: sideways to knock it wide,
       // back into yourself to pull it out of a defender's reach.
       let dirv: Vec2 = look
@@ -95,10 +96,15 @@ export class HumanController {
         const wish = V.normalize({ x: mx, y: my })
         dirv = V.normalize({ x: look.x * 0.45 + wish.x, y: look.y * 0.45 + wish.y })
       }
-      cmd.kick = makeKick('touch', Math.max(power, 0.12), dirv, {
-        loft: Math.max(0, shape.loft), // touches can be lifted, never driven down
-        spin: shape.spin * 0.4,
-      })
+      // A decisive flick during the touch turns it into a close-control move.
+      const skill = skillFromFlick(raw)
+      cmd.kick = makeKick(
+        'touch',
+        Math.max(power, 0.12),
+        dirv,
+        { loft: Math.max(0, shape.loft), spin: shape.spin * 0.4 },
+        skill,
+      )
     }
 
     // --- defending ---

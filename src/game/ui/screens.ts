@@ -130,7 +130,10 @@ export class Screens {
       ['Aim / Look', 'Mouse'],
       ['<b>Touch</b> — close control', '<b>Right click</b> · tap or hold'],
       ['Touch to the side / back', 'A D S + right click'],
+      ['<b>Skill move</b> — drag / roll / lift', 'Right click + <b>hard flick</b>'],
       ['<b>Strike</b> — pass or shot', '<b>Left click</b> · hold = power'],
+      ['<b>Cushion</b> a ball out of the air', 'Right click while it drops'],
+      ['<b>Volley / header</b>', 'Left click while it drops'],
       ['Tackle / Slide', 'F · C'],
       ['View: zoom (2D) · 1st/3rd (3D)', 'V'],
       ['Mute sound', 'M'],
@@ -147,6 +150,13 @@ export class Screens {
         <b>flick the mouse up</b> to lift the ball, <b>flick down</b> to drive it low,
         and <b>flick sideways</b> to bend it — the ball curves the way you drag.
         Flick diagonally to do both. Over-flick and you'll skin it.
+      </div>
+      <div class="flickhint">
+        <b>The same wrist works on the ball at your feet.</b> Flick hard during a
+        <b>touch</b> to drag it back, roll it across your body, or lift it over a
+        leg. And the ball doesn't have to be on the floor: <b>right click</b> a
+        dropping ball to cushion it dead (flick up to keep it in the air),
+        <b>left click</b> to volley it — or, above head height, to head it.
       </div>
     </div>`
   }

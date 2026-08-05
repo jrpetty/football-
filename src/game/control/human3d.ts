@@ -5,7 +5,7 @@ import type { World } from '../match/world'
 import { emptyCommand } from '../types'
 import type { Command } from '../types'
 import type { Vec2 } from '../core/vec'
-import { AimTracker, ChargeButton, FlickTracker, makeKick, shapeFromFlick } from './strike'
+import { AimTracker, ChargeButton, FlickTracker, makeKick, shapeFromFlick, skillFromFlick } from './strike'
 
 export interface Sensitivity {
   height: number
@@ -94,7 +94,8 @@ export class Human3DController {
     // --- release: the touch (close control) ---
     if (input.mouseReleased.right) {
       const power = this.touch.release(CONTROL.touchCharge)
-      const shape = shapeFromFlick(this.flick.flick(), this.sens.height, this.sens.curve)
+      const raw = this.flick.flick()
+      const shape = shapeFromFlick(raw, this.sens.height, this.sens.curve)
       // A/D during a touch knocks the ball out to that side rather than straight on.
       let dirv: Vec2 = look
       if (s !== 0) {
@@ -105,10 +106,15 @@ export class Human3DController {
       } else if (f < 0) {
         dirv = { x: -look.x, y: -look.y } // pull it back
       }
-      cmd.kick = makeKick('touch', Math.max(power, 0.12), dirv, {
-        loft: Math.max(0, shape.loft), // touches can be lifted, never driven down
-        spin: shape.spin * 0.4,
-      })
+      // A decisive flick during the touch turns it into a close-control move.
+      const skill = skillFromFlick(raw)
+      cmd.kick = makeKick(
+        'touch',
+        Math.max(power, 0.12),
+        dirv,
+        { loft: Math.max(0, shape.loft), spin: shape.spin * 0.4 },
+        skill,
+      )
     }
 
     // --- defending ---

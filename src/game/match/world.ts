@@ -1,4 +1,4 @@
-import { BALL, CONTROL, DEFEND, FIELD, GK, KICK, MATCH, PLAYER, SIM, WALL } from '../config'
+import { AERIAL, BALL, CONTROL, DEFEND, FIELD, GK, KICK, MATCH, PLAYER, SIM, WALL } from '../config'
 import { clamp } from '../core/math'
 import * as V from '../core/vec'
 import type { Vec2 } from '../core/vec'
@@ -6,7 +6,7 @@ import { Ball } from '../physics/ball'
 import { Player } from '../entities/player'
 import { computeAiCommands } from '../ai/director'
 import { emptyCommand, emptyStats } from '../types'
-import type { Command, MatchConfig, Restart, Role, Stats, Team } from '../types'
+import type { Command, KickRequest, MatchConfig, Restart, Role, Skill, Stats, Team } from '../types'
 import { sfx } from '../audio/sfx'
 import { Drills } from './drills'
 import { formation } from './formation'
@@ -30,8 +30,12 @@ export interface Announce {
   life: number
 }
 
-const CONTROL_HEIGHT: Record<string, number> = { GK: 2.7 }
-const controlHeight = (role: string): number => CONTROL_HEIGHT[role] ?? 1.8
+// A ball is only "at your feet" — dribbleable — below this. Keepers can gather
+// it from higher because they use their hands.
+const controlHeight = (role: string): number =>
+  role === 'GK' ? 2.2 : PLAYER.controlHeight
+// How high a player can still *reach* the ball to play it out of the air.
+const aerialReach = (role: string): number => (role === 'GK' ? 2.6 : PLAYER.aerialReach)
 
 // The authoritative simulation. Fixed-step (SIM.dt) physics with a phase state
 // machine on top for kickoffs, goals and half-time. Human and AI both feed it
@@ -442,7 +446,9 @@ export class World {
 
   private canKick(p: Player): boolean {
     if (p.sliding || p.kickCooldown > 0) return false
-    if (this.ball.z > controlHeight(p.role)) return false
+    // You can play a ball anywhere within reach — at your feet, off your thigh,
+    // or with a header at full stretch.
+    if (this.ball.z > aerialReach(p.role)) return false
     const d = V.dist(p.pos, this.ball.pos)
     return d < p.radius + BALL.radius + PLAYER.reach * 1.25
   }
@@ -456,6 +462,23 @@ export class World {
     let aim = V.len(kick.aim) > 0.01 ? V.normalize(kick.aim) : p.facing
     const power = clamp(kick.power, 0, 1)
     const loft = clamp(kick.loft, -1, 1)
+
+    // Playing the ball out of the air is a different act from playing it off the
+    // turf. A soft touch *cushions* it — kills the pace and drops it dead at your
+    // feet — while a strike becomes a volley or, higher still, a header: more
+    // power, far less control. This is the half of football the ground-only
+    // model was missing.
+    const airborne = this.ball.z > PLAYER.controlHeight
+    if (airborne && p.role !== 'GK') {
+      if (kick.type === 'touch') {
+        this.cushion(p, kick, power)
+        return
+      }
+      if (kick.type === 'strike') {
+        this.aerialStrike(p, kick, aim, power)
+        return
+      }
+    }
 
     let speed: number
     switch (kick.type) {
@@ -513,6 +536,14 @@ export class World {
         ? -loft * CONTROL.spinFromLoft * 0.6 * (1 - 0.6 * power)
         : -loft * CONTROL.spinFromLoft * (0.45 + 0.55 * power)
 
+    // A close-control move reshapes where the touch goes.
+    if (kick.type === 'touch' && kick.skill) {
+      // kick.spin carries the sign of the sideways flick, which is what tells a
+      // roll which way to go.
+      this.applySkill(p, kick.skill, aim, power, Math.sign(kick.spin))
+      return
+    }
+
     // Place the ball just ahead so it doesn't instantly re-collide with the kicker.
     this.ball.x = p.x + aim.x * (p.radius + BALL.radius + 0.05)
     this.ball.y = p.y + aim.y * (p.radius + BALL.radius + 0.05)
@@ -525,6 +556,7 @@ export class World {
     // Swing the leg nearest the ball, so the strike reads as coming off the
     // right boot rather than always the same one.
     p.kickTimer = kick.type === 'touch' ? PLAYER.kickAnimTime * 0.55 : PLAYER.kickAnimTime
+    p.kickKind = 'kick'
     p.kickLeg = V.cross(p.facing, V.sub(this.ball.pos, p.pos)) > 0 ? 0 : 1
     this.possessorId = null
     if (p.id === this.keeperHoldId) {
@@ -554,6 +586,138 @@ export class World {
       this.stats[p.team].passes++
       this.lastPass = { team: p.team, fromId: p.id }
     }
+  }
+
+  // Take the ball out of the air and kill it dead at your feet. The harder it
+  // arrived, the more it squirms away from you — a well-weighted cushion on a
+  // dropping ball is the most satisfying piece of control in football, and it
+  // should be a skill rather than a guarantee.
+  private cushion(p: Player, kick: KickRequest, power: number) {
+    const incoming = this.ball.speed
+    const f = p.facing
+    // Flick up as you take it and you cushion it *upward* instead — the ball
+    // stays in the air off your thigh or chest, ready to be volleyed. Flick
+    // down and you kill it stone dead under you.
+    const pop = kick.loft > 0.25 ? 2.6 + kick.loft * 2.4 : 0
+    // A firmer press of the button pushes it a little further out in front;
+    // a tap deadens it right under you.
+    const set = 0.35 + power * 0.75
+    const err = AERIAL.cushionError * (0.25 + incoming * 0.055) * (p.sprinting ? 1.5 : 1)
+    this.ball.setPos(
+      p.x + f.x * set + (Math.random() * 2 - 1) * err,
+      p.y + f.y * set + (Math.random() * 2 - 1) * err,
+      pop > 0 ? Math.max(this.ball.z * 0.5, 0.3) : 0,
+    )
+    // Most of the pace is absorbed; what's left carries your own momentum.
+    this.ball.vx = this.ball.vx * AERIAL.cushionKeep + p.vx * 0.35
+    this.ball.vy = this.ball.vy * AERIAL.cushionKeep + p.vy * 0.35
+    this.ball.vz = pop
+    this.ball.spin *= 0.2
+    this.ball.vSpin = 0
+    this.ball.lastTouchTeam = p.team
+    this.ball.lastTouchId = p.id
+    p.kickCooldown = 0.12
+    p.kickTimer = PLAYER.kickAnimTime * 0.9
+    p.kickKind = 'cushion'
+    this.possessorId = null
+    sfx.touch(0.35)
+    this.pushEffect('kick', this.ball.x, this.ball.y)
+  }
+
+  // Strike a ball that hasn't landed. Off the boot it's a volley; above head
+  // height it's a header, powered by your run rather than your leg.
+  private aerialStrike(p: Player, kick: KickRequest, aim: Vec2, power: number) {
+    const header = this.ball.z > PLAYER.headerHeight
+    let speed: number
+    let spreadDeg: number
+    let angle: number // launch pitch, radians — negative aims it into the turf
+
+    if (header) {
+      // A header takes its pace from how hard you attacked the ball, and its
+      // angle entirely from the flick: down to bury it, up to loop it.
+      speed = AERIAL.headerPower + p.speed * AERIAL.headerRunBonus + power * 4
+      spreadDeg = AERIAL.headerSpread
+      angle = AERIAL.headerAngle + kick.loft * AERIAL.headerAngleRange
+    } else {
+      speed =
+        (KICK.strikeMin + (KICK.strikeMax - KICK.strikeMin) * power) * AERIAL.volleyBonus
+      spreadDeg = AERIAL.volleySpread * (0.4 + power * 0.6)
+      angle = (kick.loft * 0.7 + 0.1) * CONTROL.maxLoftAngle
+    }
+
+    // Meeting a moving ball cleanly is hard; that's the trade for the power.
+    const rad = ((spreadDeg + (1 - p.energy) * 1.5) * Math.PI) / 180
+    const dir = V.rotate(aim, (Math.random() * 2 - 1) * rad)
+    angle = clamp(angle, -0.35, 0.85)
+    const horiz = Math.cos(angle) * speed
+    // A downward contact only has somewhere to go if the ball is off the deck.
+    const vz = this.ball.z > 0.3 ? Math.sin(angle) * speed : Math.max(0, Math.sin(angle) * speed)
+
+    this.ball.setPos(
+      p.x + dir.x * (p.radius + BALL.radius + 0.08),
+      p.y + dir.y * (p.radius + BALL.radius + 0.08),
+      Math.max(this.ball.z, 0.2),
+    )
+    this.ball.launch(
+      dir.x * horiz,
+      dir.y * horiz,
+      vz,
+      kick.spin * KICK.maxSpinFromAim * 0.7,
+      p.team,
+      p.id,
+      -kick.loft * CONTROL.spinFromLoft * 0.4,
+    )
+    p.kickCooldown = 0.26
+    p.kickTimer = PLAYER.kickAnimTime
+    p.kickKind = header ? 'header' : 'kick'
+    p.kickLeg = V.cross(p.facing, V.sub(this.ball.pos, p.pos)) > 0 ? 0 : 1
+    this.possessorId = null
+    sfx.strike(header ? 0.5 : Math.max(0.5, power))
+    this.pushEffect('kick', this.ball.x, this.ball.y)
+    this.stats[p.team].shots++
+    if (this.shotOnTarget(p, dir, speed, vz)) this.stats[p.team].onTarget++
+  }
+
+  // Close control shaped by the flick: drag it back out of a challenge, roll it
+  // across your body, or lift it over a defender's leg.
+  private applySkill(p: Player, skill: Skill, aim: Vec2, power: number, flickSide: number) {
+    const f = p.facing
+    const right = { x: -f.y, y: f.x }
+    let dir: Vec2 = aim
+    let speed = KICK.touchMin + (KICK.touchMax - KICK.touchMin) * power * 0.55
+    let vz = 0
+
+    if (skill === 'drag') {
+      // Pull it back behind you and turn out — the classic escape.
+      dir = { x: -f.x, y: -f.y }
+      speed *= 0.7
+    } else if (skill === 'roll') {
+      // Across the body, to whichever side you flicked. The side has to come
+      // from the flick itself: when you're aiming straight ahead your aim and
+      // your facing are the same vector, so asking which side the aim is on
+      // would be a coin toss.
+      const side = flickSide || 1
+      dir = V.normalize({ x: f.x * 0.35 + right.x * side, y: f.y * 0.35 + right.y * side })
+    } else {
+      // Lift it up and over a leg, landing just beyond.
+      dir = aim
+      speed *= 0.85
+      vz = 4.2 + power * 2.2
+    }
+
+    this.ball.setPos(
+      p.x + dir.x * (p.radius + BALL.radius + 0.06),
+      p.y + dir.y * (p.radius + BALL.radius + 0.06),
+      vz > 0 ? 0.15 : 0,
+    )
+    this.ball.launch(dir.x * speed, dir.y * speed, vz, 0, p.team, p.id, vz > 0 ? -2 : 0)
+    p.kickCooldown = 0.12
+    p.kickTimer = PLAYER.kickAnimTime * 0.55
+    p.kickKind = 'kick'
+    p.kickLeg = skill === 'roll' && flickSide > 0 ? 0 : 1
+    this.possessorId = null
+    sfx.touch(0.5)
+    this.pushEffect('kick', this.ball.x, this.ball.y)
   }
 
   // Rough check: would this shot cross the goal mouth if nobody intervened?

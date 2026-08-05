@@ -274,8 +274,12 @@ export class PlayerRig {
       this.torso.rotation.x += (0 - this.torso.rotation.x) * clamp01(dt * 8)
     }
 
-    // A kick overrides the striking leg for the duration of the swing.
-    if (p.kickTimer > 0) this.poseKick(p)
+    // A contact overrides the limbs involved for the duration of the movement.
+    if (p.kickTimer > 0) {
+      if (p.kickKind === 'header') this.poseHeader(p)
+      else if (p.kickKind === 'cushion') this.poseCushion(p)
+      else this.poseKick(p)
+    }
 
     // Hold the head level and looking ahead, whatever the body is doing.
     this.head.rotation.x = -this.root.rotation.x * 0.8 - this.torso.rotation.x
@@ -313,6 +317,52 @@ export class PlayerRig {
     arm.hip.rotation.x = -hip * 0.45
     this.torso.rotation.y = hip * 0.22
     this.root.rotation.x = this.lean + Math.max(0, -hip) * 0.12
+  }
+
+  // A header: coil back away from the ball, then snap the whole torso through
+  // it. The power comes from the trunk, not the neck, so the back is what moves.
+  private poseHeader(p: Player) {
+    const t = 1 - clamp01(p.kickTimer / PLAYER.kickAnimTime)
+    let arch: number
+    if (t < 0.4) {
+      arch = -(t / 0.4) * 0.55 // lean back and load
+    } else {
+      const k = (t - 0.4) / 0.6
+      arch = -0.55 + (1 - Math.pow(1 - k, 3)) * 1.0 // snap through
+    }
+    this.root.rotation.x = this.lean + arch
+    this.torso.rotation.x = arch * 0.45
+    // Arms come out for balance, the way they always do when you jump to head one.
+    for (let i = 0; i < this.arms.length; i++) {
+      this.arms[i].hip.rotation.x = -0.5 - arch * 0.3
+      this.arms[i].hip.rotation.z = (i === 0 ? 1 : -1) * 0.55
+      this.arms[i].knee.rotation.x = 0.5
+    }
+    // Both legs trail slightly, as if you've come off the ground for it.
+    for (const leg of this.legs) {
+      leg.hip.rotation.x = -0.2
+      leg.knee.rotation.x = 0.45
+    }
+  }
+
+  // Cushioning a dropping ball: get side-on, lift the foot or thigh to meet it
+  // and withdraw as it arrives — the whole trick is taking the pace off.
+  private poseCushion(p: Player) {
+    const t = 1 - clamp01(p.kickTimer / (PLAYER.kickAnimTime * 0.9))
+    // Up to meet it, then down and away with the ball.
+    const raise = Math.sin(clamp01(t) * Math.PI) * 0.9
+    const leg = this.legs[p.kickLeg]
+    const other = this.legs[1 - p.kickLeg]
+    leg.hip.rotation.x = -raise
+    leg.knee.rotation.x = 0.25 + raise * 0.8
+    if (leg.foot) leg.foot.rotation.x = -0.3 - raise * 0.3
+    other.hip.rotation.x = 0.1
+    other.knee.rotation.x = 0.2
+    // Open the body up and drop the near shoulder into it.
+    this.torso.rotation.y = raise * 0.35
+    this.arms[p.kickLeg].hip.rotation.z = (p.kickLeg === 0 ? 1 : -1) * (0.35 + raise * 0.5)
+    this.arms[1 - p.kickLeg].hip.rotation.x = -raise * 0.4
+    this.root.rotation.x = this.lean - raise * 0.18
   }
 
   private poseSlide() {
