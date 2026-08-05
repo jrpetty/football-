@@ -8,10 +8,14 @@ import type { Camera } from './camera'
 // All the pixels. Pure function of world + camera state — it reads, never writes
 // the simulation. Top-down pitch with a faux-3D ball (shadow + height offset).
 export class Renderer {
+  // Interpolation factor between the last two physics steps, refreshed each draw.
+  private alpha = 0
+
   constructor(private ctx: CanvasRenderingContext2D) {}
 
   draw(world: World, cam: Camera) {
     const ctx = this.ctx
+    this.alpha = world.renderAlpha
     ctx.save()
     this.drawSurround(cam)
     this.drawPitch(cam)
@@ -103,12 +107,20 @@ export class Renderer {
     }
   }
 
+  // A real football is only 22cm across, which is a couple of pixels from a
+  // top-down camera. Draw it a little larger than life so it stays readable —
+  // purely a rendering concession; the simulation still uses the true size.
+  private ballScreenRadius(cam: Camera): number {
+    return Math.max(4, cam.ppm * BALL.radius * 1.8)
+  }
+
   private drawBallShadow(world: World, cam: Camera) {
     const ctx = this.ctx
     const b = world.ball
-    const s = cam.worldToScreen(b.x, b.y, 0)
-    const lift = clamp01(b.z / 6)
-    const r = cam.ppm * BALL.radius * (1 + lift * 0.6)
+    const bp = b.renderPos(this.alpha)
+    const s = cam.worldToScreen(bp.x, bp.y, 0)
+    const lift = clamp01(bp.z / 6)
+    const r = this.ballScreenRadius(cam) * (1 + lift * 0.6)
     ctx.fillStyle = `rgba(0,0,0,${0.28 * (1 - lift * 0.5)})`
     ctx.beginPath()
     ctx.ellipse(s.x, s.y, r, r * 0.6, 0, 0, Math.PI * 2)
@@ -118,13 +130,14 @@ export class Renderer {
   private drawBall(world: World, cam: Camera) {
     const ctx = this.ctx
     const b = world.ball
-    const s = cam.worldToScreen(b.x, b.y, b.z)
-    const r = cam.ppm * BALL.radius * (1 + clamp01(b.z / 8) * 0.35)
+    const bp = b.renderPos(this.alpha)
+    const s = cam.worldToScreen(bp.x, bp.y, bp.z)
+    const r = this.ballScreenRadius(cam) * (1 + clamp01(bp.z / 8) * 0.35)
 
     // Motion streak for fast shots.
     const spd = b.horizontalSpeed
     if (spd > 12) {
-      const back = cam.worldToScreen(b.x - b.vx * 0.03, b.y - b.vy * 0.03, b.z)
+      const back = cam.worldToScreen(bp.x - b.vx * 0.03, bp.y - b.vy * 0.03, bp.z)
       ctx.strokeStyle = 'rgba(255,255,255,0.35)'
       ctx.lineWidth = r * 1.2
       ctx.lineCap = 'round'
@@ -154,7 +167,8 @@ export class Renderer {
   private drawPlayer(p: Player, world: World, cam: Camera) {
     const ctx = this.ctx
     const kit = KITS[p.team]
-    const s = cam.worldToScreen(p.x, p.y, 0)
+    const rp = p.renderPos(this.alpha)
+    const s = cam.worldToScreen(rp.x, rp.y, 0)
     const r = cam.ppm * PLAYER.radius
     const controlled = world.getControlledPlayer()?.id === p.id
     const isGk = p.role === 'GK'

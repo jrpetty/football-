@@ -461,14 +461,19 @@ export class Scene3D {
   // ---- per-frame sync ----
 
   sync(world: World, controlledId: number, showControlledRing: boolean, hideId = -1, dt = 0.016) {
+    // Draw where the ball *is* between physics steps, not where it was at the
+    // last one — this is what removes the stepped, laggy look at low frame rates.
+    const a = world.renderAlpha
     const b = world.ball
-    this.ball.position.copy(v3(b.x, b.y, b.z + BALL.radius))
+    const bp = b.renderPos(a)
+    this.ball.position.copy(v3(bp.x, bp.y, bp.z + BALL.radius))
     this.ball.rotation.x += b.vx * 0.05
     this.ball.rotation.z -= b.vy * 0.05
 
     for (const p of world.players) {
       const n = this.ensurePlayer(p.id, p.team, p.role, p.number)
-      n.group.position.set(p.x, 0, p.y)
+      const rp = p.renderPos(a)
+      n.group.position.set(rp.x, 0, rp.y)
       n.group.rotation.y = -p.heading
       n.group.visible = p.id !== hideId
       n.ring.visible = p.id === controlledId && showControlledRing

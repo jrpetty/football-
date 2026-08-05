@@ -58,6 +58,11 @@ export class World {
   announce: Announce | null = null
   lastGoalTeam: Team | null = null
 
+  // How far we are between the last physics step and the next, 0..1. Renderers
+  // interpolate with this so motion looks smooth at any frame rate rather than
+  // stepping once per tick — which is what reads as a "laggy" ball.
+  renderAlpha = 0
+
   private accumulator = 0
   private idCounter = 0
   private lastPass: { team: Team; fromId: number } | null = null
@@ -181,6 +186,7 @@ export class World {
       this.accumulator -= SIM.dt
       steps++
     }
+    this.renderAlpha = this.accumulator / SIM.dt
   }
 
   private buildCommands(humanCmd: Command, dt: number): Map<number, Command> {
@@ -452,10 +458,12 @@ export class World {
         speed = KICK.passMin + (KICK.passMax - KICK.passMin) * power
     }
 
-    // Accuracy spread: harder strikes scatter more, and fatigue adds to it. A
-    // touch is close control, so it stays tight.
-    const baseSpread = kick.type === 'touch' ? 0.6 : 1.2 + power * 3.4
-    const spreadRad = ((baseSpread + (1 - p.energy) * 2) * Math.PI) / 180
+    // Striking is meant to be deterministic — where the ball goes is your aim and
+    // your flick, not a dice roll. Only a whisper of scatter remains, growing
+    // with power and fatigue, so a full-blooded strike is marginally less
+    // precise than a measured one.
+    const baseSpread = kick.type === 'touch' ? 0.15 : 0.3 + power * 0.9
+    const spreadRad = ((baseSpread + (1 - p.energy) * 0.6) * Math.PI) / 180
     aim = V.rotate(aim, (Math.random() * 2 - 1) * spreadRad)
 
     // Curve: mostly the player's deliberate sideways flick, plus a little from
@@ -463,7 +471,7 @@ export class World {
     const velDir = p.speed > 1 ? V.normalize(p.vel) : p.facing
     let spin = kick.spin * KICK.maxSpinFromAim
     spin += V.cross(velDir, aim) * KICK.maxSpinFromAim * 0.35 * (0.4 + 0.6 * power)
-    spin += (Math.random() * 2 - 1) * 0.4
+    spin += (Math.random() * 2 - 1) * 0.12
 
     // Loft: a positive flick lifts the ball, a negative one drives it low with
     // topspin so it dips rather than climbing.

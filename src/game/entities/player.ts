@@ -22,6 +22,11 @@ export class Player {
   slideVel: Vec2 = { x: 0, y: 0 } // carried momentum during a slide
   sprinting = false // set each tick by steer(); read by the dribble/first-touch model
 
+  // Previous-step position, so the renderer can interpolate between physics
+  // steps instead of snapping once per step.
+  px = 0
+  py = 0
+
   // AI scratch state (ignored for human-controlled players).
   aiDecide = 0 // countdown before a ball-carrier reconsiders pass/shoot
   aiSeed = Math.random() // per-player variation so runs/decisions aren't identical
@@ -36,8 +41,8 @@ export class Player {
     public homePos: Vec2,
     public isHuman = false,
   ) {
-    this.x = homePos.x
-    this.y = homePos.y
+    this.x = this.px = homePos.x
+    this.y = this.py = homePos.y
     this.heading = team === 'home' ? 0 : Math.PI
   }
 
@@ -134,8 +139,16 @@ export class Player {
   }
 
   integrate(dt: number) {
+    this.px = this.x
+    this.py = this.y
     this.x += this.vx * dt
     this.y += this.vy * dt
+  }
+
+  // Position to draw at, interpolated between the last two physics steps.
+  renderPos(alpha: number): Vec2 {
+    const a = alpha < 0 ? 0 : alpha > 1 ? 1 : alpha
+    return { x: this.px + (this.x - this.px) * a, y: this.py + (this.y - this.py) * a }
   }
 
   startSlide(dir: Vec2, speed: number) {

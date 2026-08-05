@@ -3,11 +3,18 @@ import { clamp } from '../core/math'
 import type { Vec2 } from '../core/vec'
 import type { Team } from '../types'
 
-// The ball is the star of the show. It lives in 3D: (x, y) on the pitch plane
-// plus a height z. Velocity is likewise 3D. `spin` is scalar side-spin that the
-// Magnus term turns into a curved flight path — positive and negative spin bend
-// opposite ways. Everything else (gravity, drag, rolling friction, bounces) is
-// standard integration tuned in config.ts to feel right rather than be exact.
+// The ball. It lives in 3D: (x, y) on the pitch plane plus a height z, with a
+// matching 3D velocity and a scalar side-spin that bends the flight.
+//
+// The model is deliberately grounded in real numbers rather than arbitrary
+// damping: a size-5 ball (0.11 m radius, 0.43 kg), real gravity, and *quadratic*
+// aerodynamic drag — force proportional to v², which is what actually governs a
+// football. That's what makes a driven ball hold its line and a floated one die
+// into its landing, instead of everything decaying at the same rate.
+//
+// Positions from the previous physics step are kept so the renderer can
+// interpolate between steps. Without that the ball visibly jumps at low frame
+// rates even though the simulation is perfectly smooth.
 export class Ball {
   x = 0
   y = 0
@@ -17,11 +24,15 @@ export class Ball {
   vz = 0
   spin = 0
 
-  // Who last touched it — drives throw-in / corner / goal-kick awards and stats.
+  // Previous-step position, for render interpolation.
+  px = 0
+  py = 0
+  pz = 0
+
+  // Who last touched it — drives restarts and stats.
   lastTouchTeam: Team | null = null
   lastTouchId: number | null = null
 
-  // Bookkeeping the sim reads each tick.
   justBounced = false
   airborne = false
 
@@ -38,19 +49,18 @@ export class Ball {
   }
 
   setPos(x: number, y: number, z = 0) {
-    this.x = x
-    this.y = y
-    this.z = z
+    this.x = this.px = x
+    this.y = this.py = y
+    this.z = this.pz = z
   }
 
   stop() {
     this.vx = this.vy = this.vz = 0
     this.spin = 0
     this.z = 0
+    this.pz = 0
   }
 
-  // Launch the ball. `vel` is the horizontal release velocity; `vz` the vertical
-  // component (0 for a ground ball). `spin` bends the flight.
   launch(vx: number, vy: number, vz: number, spin: number, team: Team, id: number) {
     this.vx = vx
     this.vy = vy
@@ -60,61 +70,75 @@ export class Ball {
     this.lastTouchId = id
   }
 
+  // Render position, interpolated between the last two physics steps.
+  renderPos(alpha: number): { x: number; y: number; z: number } {
+    const a = clamp(alpha, 0, 1)
+    return {
+      x: this.px + (this.x - this.px) * a,
+      y: this.py + (this.y - this.py) * a,
+      z: this.pz + (this.z - this.pz) * a,
+    }
+  }
+
   integrate() {
     const dt = SIM.dt
+    this.px = this.x
+    this.py = this.y
+    this.pz = this.z
     this.justBounced = false
-    this.airborne = this.z > 0.02 || this.vz > 0.02
+    this.airborne = this.z > 0.015 || this.vz > 0.02
+
+    const speed = this.speed
+    if (speed > 0.01) {
+      // Quadratic aerodynamic drag: a = -k |v| v, acting on the full 3D
+      // velocity. k folds together air density, drag coefficient, frontal area
+      // and mass, so it is a single tunable with real physical meaning.
+      const decel = BALL.dragK * speed * dt
+      const f = Math.max(0, 1 - decel)
+      this.vx *= f
+      this.vy *= f
+      this.vz *= f
+    }
 
     if (this.airborne) {
-      // Gravity.
       this.vz -= SIM.gravity * dt
-
-      // Air drag on the full 3D velocity (linear damping — stable and cheap).
-      const drag = 1 - BALL.airDrag * dt
-      this.vx *= drag
-      this.vy *= drag
-      this.vz *= drag
-
-      // Magnus: side-spin pushes the ball perpendicular to its horizontal travel.
       this.applyMagnus(dt, 1)
     } else {
-      // Rolling on the turf: friction bleeds speed; spin still bends it, though
-      // the ground scrubs some of the effect compared with a ball in flight.
+      // Rolling on turf: rolling resistance is a near-constant deceleration,
+      // independent of speed, which is why a rolled pass carries a long way and
+      // then dies quickly at the end.
       const hs = this.horizontalSpeed
       if (hs > 0) {
-        const decel = BALL.groundFriction * dt
-        const factor = Math.max(0, 1 - decel / Math.max(hs, 0.001))
-        this.vx *= factor
-        this.vy *= factor
+        const drop = BALL.rollFriction * dt
+        const f = Math.max(0, 1 - drop / Math.max(hs, 1e-4))
+        this.vx *= f
+        this.vy *= f
       }
-      this.applyMagnus(dt, 0.62)
+      // A rolling ball still bends, but the turf scrubs much of the effect.
+      this.applyMagnus(dt, BALL.groundMagnus)
       this.z = 0
       this.vz = 0
     }
 
-    // Spin bleeds off over time regardless.
     this.spin -= this.spin * BALL.spinDecay * dt
 
-    // Integrate position.
     this.x += this.vx * dt
     this.y += this.vy * dt
     this.z += this.vz * dt
 
-    // Ground contact → bounce.
     if (this.z < 0) {
       this.z = 0
       if (this.vz < 0) {
         this.vz = -this.vz * BALL.restitution
-        // Each bounce scrubs a little horizontal pace and spin.
-        this.vx *= 0.86
-        this.vy *= 0.86
-        this.spin *= 0.7
-        this.justBounced = Math.abs(this.vz) > 1.2
-        if (this.vz < 1.0) this.vz = 0 // settle low bounces into a roll
+        // A bounce scrubs pace off the ground and bleeds spin.
+        this.vx *= BALL.bounceGrip
+        this.vy *= BALL.bounceGrip
+        this.spin *= 0.72
+        this.justBounced = Math.abs(this.vz) > 1.0
+        if (this.vz < BALL.settleBounce) this.vz = 0 // settle into a roll
       }
     }
 
-    // Speed cap keeps mishits sane.
     const sp = this.speed
     if (sp > BALL.maxSpeed) {
       const s = BALL.maxSpeed / sp
@@ -123,29 +147,30 @@ export class Ball {
       this.vz *= s
     }
 
-    // Kill microscopic rolling so the ball can actually come to rest.
     if (!this.airborne && this.horizontalSpeed < BALL.settleSpeed) {
-      this.vx *= 0.9
-      this.vy *= 0.9
-      if (this.horizontalSpeed < 0.06) {
+      this.vx *= 0.86
+      this.vy *= 0.86
+      if (this.horizontalSpeed < 0.05) {
         this.vx = 0
         this.vy = 0
       }
     }
   }
 
+  // Side-spin pushes the ball perpendicular to its horizontal travel. The force
+  // scales with speed, so a firmly struck ball bends hard and a dying one
+  // straightens out — the same way a real cross does.
   private applyMagnus(dt: number, gain: number) {
     const hs = this.horizontalSpeed
-    if (hs < 0.2 || Math.abs(this.spin) < 0.01) return
-    // Left-hand perpendicular to travel direction.
+    if (hs < 0.3 || Math.abs(this.spin) < 0.01) return
     const px = -this.vy / hs
     const py = this.vx / hs
-    const acc = BALL.magnus * this.spin * gain
+    const acc = BALL.magnus * this.spin * hs * gain
     this.vx += px * acc * dt
     this.vy += py * acc * dt
   }
 
-  // Reflect off a vertical surface (goal post / wall) given a surface normal.
+  // Reflect off a vertical surface (post / body) given a surface normal.
   reflect(nx: number, ny: number, restitution: number) {
     const d = this.vx * nx + this.vy * ny
     if (d >= 0) return
@@ -155,6 +180,6 @@ export class Ball {
   }
 
   clampSpin() {
-    this.spin = clamp(this.spin, -BALL.maxSpeed, BALL.maxSpeed)
+    this.spin = clamp(this.spin, -BALL.maxSpin, BALL.maxSpin)
   }
 }
