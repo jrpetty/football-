@@ -18,6 +18,7 @@ export class Hud {
     this.drawScoreboard(ctx, world, w)
     this.drawStamina(ctx, world, h)
     if (info.chargeType) this.drawPowerMeter(ctx, info, w, h)
+    this.drawDrills(ctx, world, w)
     this.drawMinimap(ctx, world, w, h)
     this.drawAnnounce(ctx, world, w, h)
     this.drawZoomFps(ctx, info, w)
@@ -134,6 +135,42 @@ export class Hud {
     }
   }
 
+  // Training scoreboard: how many of your strikes found a target.
+  private drawDrills(ctx: CanvasRenderingContext2D, world: World, w: number) {
+    const d = world.drills
+    if (!d) return
+    const bw = 190
+    const x = w - bw - 16
+    const y = 44
+    ctx.fillStyle = 'rgba(10,16,28,0.78)'
+    roundRect(ctx, x, y, bw, 62, 9)
+    ctx.fill()
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)'
+    ctx.lineWidth = 1
+    ctx.stroke()
+
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'alphabetic'
+    ctx.fillStyle = '#9fb2d0'
+    ctx.font = '600 10px system-ui, sans-serif'
+    ctx.fillText('TARGET PRACTICE', x + 12, y + 17)
+
+    ctx.fillStyle = '#eef3ff'
+    ctx.font = '700 20px system-ui, sans-serif'
+    ctx.fillText(`${d.hits}`, x + 12, y + 42)
+    ctx.fillStyle = '#8fa1bb'
+    ctx.font = '600 12px system-ui, sans-serif'
+    ctx.fillText(`/ ${d.shots} shots`, x + 12 + ctx.measureText(`${d.hits}`).width + 12, y + 42)
+
+    ctx.textAlign = 'right'
+    ctx.fillStyle = d.streak > 0 ? '#57d764' : '#8fa1bb'
+    ctx.font = '700 15px system-ui, sans-serif'
+    ctx.fillText(`${d.streak}`, x + bw - 12, y + 42)
+    ctx.fillStyle = '#7d8ca3'
+    ctx.font = '600 9px system-ui, sans-serif'
+    ctx.fillText(`STREAK · BEST ${d.best}`, x + bw - 12, y + 54)
+  }
+
   private drawMinimap(ctx: CanvasRenderingContext2D, world: World, w: number, h: number) {
     const mw = 168
     const mh = mw * (FIELD.width / FIELD.length)
@@ -195,7 +232,7 @@ export class Hud {
     ctx.font = '600 11px ui-monospace, monospace'
     ctx.textAlign = 'right'
     ctx.textBaseline = 'top'
-    ctx.fillText(`${info.zoomLabel.toUpperCase()} · ${Math.round(info.fps)} FPS`, w - 16, 14)
+    ctx.fillText(`${info.zoomLabel.toUpperCase()} · ${Math.round(info.fps)} FPS`, w - 16, 16)
   }
 }
 

@@ -22,7 +22,12 @@ export class Ball {
   vx = 0
   vy = 0
   vz = 0
+  // Side-spin, which bends the flight left or right.
   spin = 0
+  // Spin in the vertical plane: positive is topspin, which presses the ball
+  // down and makes it skid on off the turf; negative is backspin, which holds
+  // it up in the air and checks it on landing.
+  vSpin = 0
 
   // Previous-step position, for render interpolation.
   px = 0
@@ -57,15 +62,17 @@ export class Ball {
   stop() {
     this.vx = this.vy = this.vz = 0
     this.spin = 0
+    this.vSpin = 0
     this.z = 0
     this.pz = 0
   }
 
-  launch(vx: number, vy: number, vz: number, spin: number, team: Team, id: number) {
+  launch(vx: number, vy: number, vz: number, spin: number, team: Team, id: number, vSpin = 0) {
     this.vx = vx
     this.vy = vy
     this.vz = vz
     this.spin = spin
+    this.vSpin = vSpin
     this.lastTouchTeam = team
     this.lastTouchId = id
   }
@@ -103,6 +110,12 @@ export class Ball {
     if (this.airborne) {
       this.vz -= SIM.gravity * dt
       this.applyMagnus(dt, 1)
+      // Vertical-plane spin. Topspin presses the ball down so a driven shot dips
+      // under the bar; backspin holds it up so a chip floats and hangs.
+      const hs = this.horizontalSpeed
+      if (hs > 0.3 && Math.abs(this.vSpin) > 0.01) {
+        this.vz -= BALL.magnusVertical * this.vSpin * hs * dt
+      }
     } else {
       // Rolling on turf: rolling resistance is a near-constant deceleration,
       // independent of speed, which is why a rolled pass carries a long way and
@@ -121,6 +134,7 @@ export class Ball {
     }
 
     this.spin -= this.spin * BALL.spinDecay * dt
+    this.vSpin -= this.vSpin * BALL.spinDecay * dt
 
     this.x += this.vx * dt
     this.y += this.vy * dt
@@ -133,7 +147,16 @@ export class Ball {
         // A bounce scrubs pace off the ground and bleeds spin.
         this.vx *= BALL.bounceGrip
         this.vy *= BALL.bounceGrip
+        // The turf bites on the spin: topspin kicks the ball forward off the
+        // surface, backspin checks it and can even hold it up.
+        const hs2 = this.horizontalSpeed
+        if (hs2 > 0.1) {
+          const bite = this.vSpin * BALL.bounceSpinBite
+          this.vx += (this.vx / hs2) * bite
+          this.vy += (this.vy / hs2) * bite
+        }
         this.spin *= 0.72
+        this.vSpin *= 0.45
         this.justBounced = Math.abs(this.vz) > 1.0
         if (this.vz < BALL.settleBounce) this.vz = 0 // settle into a roll
       }

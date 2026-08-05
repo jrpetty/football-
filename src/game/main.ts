@@ -1,5 +1,6 @@
 import './style.css'
 import { SIM } from './config'
+import { sfx } from './audio/sfx'
 import { InputManager } from './core/input'
 import { HumanController } from './control/human'
 import { World } from './match/world'
@@ -117,6 +118,8 @@ class Game {
   }
 
   private handleGlobalKeys() {
+    if (this.input.mousePressed.left || this.input.mousePressed.right) sfx.unlock()
+    if (this.input.justPressed('KeyM')) sfx.toggleMute()
     if (this.input.justPressed('KeyV')) this.cam.cycleZoom()
     if (this.input.wheel !== 0 && this.input.wheel < 0) this.cam.cycleZoom()
 

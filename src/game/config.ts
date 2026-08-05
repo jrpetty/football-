@@ -53,6 +53,12 @@ export const BALL = {
   // across the pitch — while a short driven pass stays honest.
   magnus: 0.021,
   groundMagnus: 0.55, // fraction of the bend that survives while rolling
+  // Vertical-plane Magnus: topspin pushes the ball down, backspin holds it up.
+  // Same speed-scaled form as the sideways bend.
+  magnusVertical: 0.042,
+  // How much vertical spin the turf converts into pace on a bounce — topspin
+  // skids the ball on, backspin checks it back.
+  bounceSpinBite: 0.42,
   maxSpin: 26,
   maxSpeed: 42, // hard cap so a mishit can't launch to the moon
   settleSpeed: 0.25, // below this it's treated as coming to rest
@@ -97,11 +103,14 @@ export const CONTROL = {
   // Launch angle at a full upward flick. Tuned so a full-power full-flick ball
   // travels the length of the pitch and arrives around crossbar height at the
   // far goal — a proper long ball, not a punt into orbit.
-  // 26°. Measured end-to-end: struck at full power from your own goal line, the
-  // ball crosses the far goal line right around the top of the cage (~2.6m) —
-  // a proper raking long ball, and nowhere near a punt into orbit.
-  maxLoftAngle: 0.454,
-  driveDip: 0.5, // downward flick adds topspin/dip instead of lift
+  // 22°. Measured end-to-end, and re-tuned once lofted balls started carrying
+  // real backspin: struck at full power from your own goal line the ball crosses
+  // the far goal line right around the top of the cage, with an ~8m apex.
+  maxLoftAngle: 0.386,
+  // Striking technique follows from the same flick: coming over the top of the
+  // ball drives it down with topspin, getting under it lifts it with backspin.
+  // So a down-flick genuinely dips and an up-flick genuinely floats.
+  spinFromLoft: 9,
 }
 
 // Kick model. Power (0..1) scales between min and max release speed. Passing,

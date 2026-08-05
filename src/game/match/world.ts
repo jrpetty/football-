@@ -7,6 +7,8 @@ import { Player } from '../entities/player'
 import { computeAiCommands } from '../ai/director'
 import { emptyCommand, emptyStats } from '../types'
 import type { Command, MatchConfig, Restart, Role, Stats, Team } from '../types'
+import { sfx } from '../audio/sfx'
+import { Drills } from './drills'
 import { formation } from './formation'
 import * as F from './field'
 
@@ -54,6 +56,8 @@ export class World {
   // off and can't nick it, giving the keeper time to distribute.
   keeperHold = 0
   keeperHoldId = -1
+  // Practice apparatus — only present in training.
+  drills: Drills | null = null
   effects: Effect[] = []
   announce: Announce | null = null
   lastGoalTeam: Team | null = null
@@ -74,6 +78,7 @@ export class World {
     this.placeForKickoff('home')
     if (config.mode === 'training') {
       this.phase = 'playing'
+      this.drills = new Drills()
       this.resetTrainingBall()
     }
   }
@@ -177,6 +182,7 @@ export class World {
     const dt = Math.min(frameDt, SIM.maxFrameDt)
     this.updateEffects(dt)
     this.updateAnnounce(dt)
+    this.drills?.update(this, dt)
     const commands = this.buildCommands(humanCmd, dt)
 
     this.accumulator += dt
@@ -207,6 +213,7 @@ export class World {
         if (this.phaseTimer <= 0) {
           this.phase = 'playing'
           this.setAnnounce('KICK OFF', undefined, 1.4)
+          sfx.whistle()
         }
         return
       case 'goal':
@@ -301,8 +308,13 @@ export class World {
     for (const p of this.players) p.integrate(dt)
     this.separatePlayers()
     this.keepPlayersInBounds()
+    const preBounceVz = this.ball.vz
     this.ball.integrate()
     this.ball.clampSpin()
+    if (this.ball.justBounced) sfx.bounce(Math.min(1, Math.abs(preBounceVz) / 12))
+    // Training targets are tested here, on the step the ball actually moves —
+    // after this the goal logic may reposition it and the crossing would be lost.
+    this.drills?.step(this)
 
     // 7. Collisions & saves.
     this.resolveGkSaves(live)
@@ -312,7 +324,7 @@ export class World {
     // 8. Ball leaving play.
     this.resolveWallsAndGoals(live)
 
-    // 9. Possession stat.
+    // 10. Possession stat.
     if (this.possessorId != null && live) {
       const owner = this.player(this.possessorId)
       if (owner) this.stats[owner.team].possessionTicks++
@@ -481,23 +493,31 @@ export class World {
     spin += V.cross(velDir, aim) * KICK.maxSpinFromAim * 0.35 * (0.4 + 0.6 * power)
     spin += (Math.random() * 2 - 1) * 0.12
 
-    // Loft: a positive flick lifts the ball, a negative one drives it low with
-    // topspin so it dips rather than climbing.
+    // Loft, and the spin that comes with the technique. Getting under the ball
+    // lifts it and leaves backspin on it, so a chip floats and hangs; coming
+    // over the top drives it flat with topspin, so it dips and then skids on.
     let horiz = speed
     let vz = 0
     if (loft > 0) {
       const angle = loft * CONTROL.maxLoftAngle
       vz = Math.sin(angle) * speed
       horiz = Math.cos(angle) * speed
-    } else if (loft < 0) {
-      vz = loft * CONTROL.driveDip * speed * 0.12 // slight downward bite
     }
+    // How much spin the technique leaves on the ball. Coming over the top puts
+    // topspin on, and the harder you hit through it the more it dips. Getting
+    // under the ball leaves backspin — but that is a scooping motion, so a
+    // delicate chip floats and hangs while a full-blooded long ball is struck
+    // through and carries far less of it.
+    const vSpin =
+      loft > 0
+        ? -loft * CONTROL.spinFromLoft * 0.6 * (1 - 0.6 * power)
+        : -loft * CONTROL.spinFromLoft * (0.45 + 0.55 * power)
 
     // Place the ball just ahead so it doesn't instantly re-collide with the kicker.
     this.ball.x = p.x + aim.x * (p.radius + BALL.radius + 0.05)
     this.ball.y = p.y + aim.y * (p.radius + BALL.radius + 0.05)
     this.ball.z = vz > 0 ? 0.15 : 0
-    this.ball.launch(aim.x * horiz, aim.y * horiz, vz, spin, p.team, p.id)
+    this.ball.launch(aim.x * horiz, aim.y * horiz, vz, spin, p.team, p.id, vSpin)
 
     // A touch keeps the ball yours: no release cooldown beyond a beat, so you can
     // keep knocking it forward and running onto it.
@@ -508,6 +528,8 @@ export class World {
       this.keeperHoldId = -1
     }
     this.pushEffect('kick', this.ball.x, this.ball.y)
+    if (kick.type === 'touch') sfx.touch(power)
+    else sfx.strike(power)
 
     // Stats. A human 'strike' has no declared intent, so classify it: a firm
     // ball aimed at the opponent's goal from range counts as a shot.
@@ -590,6 +612,7 @@ export class World {
     this.ball.launch(fwd.x * 3, fwd.y * 3, 0, 0, tackler.team, tackler.id)
     this.possessorId = null
     this.lastPass = null
+    sfx.tackle()
     this.pushEffect('tackle', this.ball.x, this.ball.y)
   }
 
@@ -623,6 +646,7 @@ export class World {
         if (countSave) {
           this.stats[gk.team].saves++
           this.setAnnounce('SAVE!', undefined, 1.1)
+          sfx.save()
           this.pushEffect('save', gk.x, gk.y)
           gk.saveCooldown = 0.7
         }
@@ -637,6 +661,7 @@ export class World {
         if (countSave) {
           this.stats[gk.team].saves++
           this.setAnnounce('SAVE!', undefined, 1.0)
+          sfx.save()
           this.pushEffect('save', gk.x, gk.y)
           gk.saveCooldown = 0.7
         }
@@ -685,6 +710,7 @@ export class World {
           this.ball.x = goalX + nx * (postR + BALL.radius)
           this.ball.y = py + ny * (postR + BALL.radius)
           this.ball.reflect(nx, ny, 0.55)
+          sfx.post()
           this.pushEffect('post', this.ball.x, this.ball.y)
         }
       }
@@ -750,6 +776,7 @@ export class World {
     b.vx -= loss * tx
     b.vy -= loss * ty
     b.spin *= 0.6
+    sfx.wall(Math.min(1, Math.abs(vn) / 22))
     this.pushEffect('post', b.x, b.y)
   }
 
@@ -767,6 +794,7 @@ export class World {
     if (this.config.mode === 'training') {
       this.stats[scorer].goals++
       this.setAnnounce('GOAL!', undefined, 1.2)
+      sfx.goal()
       this.pushEffect('goal', this.ball.x, this.ball.y)
       this.resetTrainingBall()
       return
@@ -779,6 +807,7 @@ export class World {
     this.possessorId = null
     this.ball.stop()
     this.setAnnounce('GOAL!', `${this.kitName('home')} ${this.score.home} – ${this.score.away} ${this.kitName('away')}`, MATCH.afterGoalDelay)
+    sfx.goal()
     this.pushEffect('goal', this.ball.x, this.ball.y)
   }
 

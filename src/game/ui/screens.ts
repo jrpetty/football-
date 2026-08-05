@@ -1,4 +1,5 @@
 import { CONTROL } from '../config'
+import { sfx } from '../audio/sfx'
 import type { MatchConfig } from '../types'
 
 // DOM overlays: main menu, pause, and full-time screens. Kept out of the canvas
@@ -132,6 +133,7 @@ export class Screens {
       ['<b>Strike</b> — pass or shot', '<b>Left click</b> · hold = power'],
       ['Tackle / Slide', 'F · C'],
       ['View: zoom (2D) · 1st/3rd (3D)', 'V'],
+      ['Mute sound', 'M'],
       ['Pause', 'Esc / P'],
       ['Spawn ball (training)', 'B'],
     ]
@@ -173,9 +175,11 @@ export class Screens {
       })
     })
     this.root.querySelector<HTMLButtonElement>('[data-act="match"]')?.addEventListener('click', () => {
+      sfx.unlock()
       this.onStart({ ...this.config, mode: 'match' })
     })
     this.root.querySelector<HTMLButtonElement>('[data-act="training"]')?.addEventListener('click', () => {
+      sfx.unlock()
       this.onStart({ ...this.config, mode: 'training' })
     })
   }

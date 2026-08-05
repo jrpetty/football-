@@ -1,4 +1,5 @@
 import { SIM } from './config'
+import { sfx } from './audio/sfx'
 import { InputManager } from './core/input'
 import { Human3DController } from './control/human3d'
 import { World } from './match/world'
@@ -72,6 +73,9 @@ export class Game3D {
   }
 
   private onCanvasDown = () => {
+    // Browsers only allow audio to start from a gesture, so the same click that
+    // grabs the pointer is what brings the stadium to life.
+    sfx.unlock()
     if (!this.paused && !this.input.pointerLocked) this.input.requestPointerLock()
   }
 
@@ -127,6 +131,7 @@ export class Game3D {
 
   private handleGlobalKeys() {
     if (this.input.justPressed('KeyV')) this.cam3.toggle()
+    if (this.input.justPressed('KeyM')) sfx.toggleMute()
     if (this.input.justPressed('KeyP')) this.paused ? this.resume() : this.pause()
     if (this.config.mode === 'training' && this.input.justPressed('KeyB') && !this.paused) {
       const cp = this.world.getControlledPlayer()

@@ -49,6 +49,8 @@ export class Scene3D {
   private hairMat = new THREE.MeshStandardMaterial({ color: '#2c211b', roughness: 0.95 })
   private bootMat = new THREE.MeshStandardMaterial({ color: '#14161c', roughness: 0.35, metalness: 0.1 })
   private maxAniso = 4
+  private targetRings: THREE.Mesh[] = []
+  private trailLine: THREE.Line | null = null
 
   constructor(container: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' })
@@ -528,6 +530,71 @@ export class Scene3D {
     return nodes
   }
 
+  // ---- training apparatus ----
+
+  // Hoops hung in the goal to aim at, and a line tracing the flight of the last
+  // strike. Seeing the shape of the ball you just hit is what makes the flick
+  // learnable — otherwise you're guessing at what a given wrist movement did.
+  private syncDrills(world: World) {
+    const d = world.drills
+    if (!d) return
+
+    while (this.targetRings.length < d.targets.length) {
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(0.55, 0.07, 10, 28),
+        new THREE.MeshStandardMaterial({
+          color: '#ffd85e',
+          emissive: '#ffb020',
+          emissiveIntensity: 0.7,
+          roughness: 0.4,
+        }),
+      )
+      this.scene.add(ring)
+      this.targetRings.push(ring)
+    }
+    d.targets.forEach((t, i) => {
+      const ring = this.targetRings[i]
+      ring.position.set(t.x, t.z, t.y)
+      ring.rotation.y = Math.PI / 2
+      const mat = ring.material as THREE.MeshStandardMaterial
+      if (t.hit) {
+        const k = 1 - t.hitAt / 1.2
+        mat.color.set('#8dffa8')
+        mat.emissive.set('#42ff77')
+        mat.emissiveIntensity = 0.5 + k * 2.5
+        ring.scale.setScalar(1 + (1 - k) * 0.9)
+      } else {
+        mat.color.set('#ffd85e')
+        mat.emissive.set('#ffb020')
+        mat.emissiveIntensity = 0.7
+        ring.scale.setScalar(1)
+      }
+    })
+
+    // The flight path of the last strike, fading out over a few seconds.
+    if (!this.trailLine) {
+      const geo = new THREE.BufferGeometry()
+      geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(400 * 3), 3))
+      this.trailLine = new THREE.Line(
+        geo,
+        new THREE.LineBasicMaterial({ color: '#7fe7ff', transparent: true, opacity: 0.85 }),
+      )
+      this.trailLine.frustumCulled = false
+      this.scene.add(this.trailLine)
+    }
+    const line = this.trailLine
+    const pos = line.geometry.getAttribute('position') as THREE.BufferAttribute
+    const n = Math.min(d.trail.length, 400)
+    for (let i = 0; i < n; i++) {
+      const p = d.trail[i]
+      pos.setXYZ(i, p.x, p.z + BALL.radius, p.y)
+    }
+    pos.needsUpdate = true
+    line.geometry.setDrawRange(0, n)
+    line.visible = n > 1
+    ;(line.material as THREE.LineBasicMaterial).opacity = 0.85 * Math.max(0, 1 - d.trailAge / 6)
+  }
+
   // ---- per-frame sync ----
 
   sync(world: World, controlledId: number, showControlledRing: boolean, hideId = -1, dt = 0.016) {
@@ -539,6 +606,8 @@ export class Scene3D {
     this.ball.position.copy(v3(bp.x, bp.y, bp.z + BALL.radius))
     this.ball.rotation.x += b.vx * 0.05
     this.ball.rotation.z -= b.vy * 0.05
+
+    this.syncDrills(world)
 
     for (const p of world.players) {
       const n = this.ensurePlayer(p.id, p.team, p.role, p.number)
