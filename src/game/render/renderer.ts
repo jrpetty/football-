@@ -107,11 +107,11 @@ export class Renderer {
     }
   }
 
-  // A real football is only 22cm across, which is a couple of pixels from a
-  // top-down camera. Draw it a little larger than life so it stays readable —
-  // purely a rendering concession; the simulation still uses the true size.
+  // A real football is only 22cm across, which is barely a pixel or two from a
+  // top-down camera. Nudge it up just enough to stay visible while keeping it
+  // honestly small next to a player — the simulation always uses the true size.
   private ballScreenRadius(cam: Camera): number {
-    return Math.max(4, cam.ppm * BALL.radius * 1.8)
+    return Math.max(2.6, cam.ppm * BALL.radius * 1.25)
   }
 
   private drawBallShadow(world: World, cam: Camera) {

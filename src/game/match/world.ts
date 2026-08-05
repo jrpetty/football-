@@ -378,7 +378,12 @@ export class World {
     void prevId
   }
 
+  // Taking a ball down out of play. This is for *receiving* — a pass, a clearance,
+  // a loose ball. It must never fire on a ball you just played yourself, or every
+  // deliberate touch would be snapped straight back to your feet and close
+  // control would be impossible.
   private firstTouch(p: Player) {
+    if (this.ball.lastTouchId === p.id) return
     const incoming = this.ball.horizontalSpeed
     if (incoming < 3) return
     // Trap the ball to the feet with an error that grows with pace and effort.

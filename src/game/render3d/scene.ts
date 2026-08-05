@@ -380,31 +380,36 @@ export class Scene3D {
     const kit = KITS[team]
     const jersey = role === 'GK' ? mats.gk : mats.jersey
     const group = new THREE.Group()
+    // The body is modelled ~1.90m tall, then scaled to a real footballer's
+    // height. Keeping it in its own group means the ground ring stays at true
+    // pitch scale and only the person is resized.
+    const body = new THREE.Group()
+    group.add(body)
 
     const hips = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.26, 0.28), mats.shorts)
     hips.position.y = 0.9
     hips.castShadow = true
-    group.add(hips)
+    body.add(hips)
 
     const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.24, 0.44, 4, 14), jersey)
     torso.scale.set(1.15, 1, 0.72)
     torso.position.y = 1.28
     torso.castShadow = true
-    group.add(torso)
+    body.add(torso)
 
     const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.12, 8), this.skinMat)
     neck.position.y = 1.6
-    group.add(neck)
+    body.add(neck)
     const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 18, 16), this.skinMat)
     head.position.y = 1.75
     head.castShadow = true
-    group.add(head)
+    body.add(head)
     const hair = new THREE.Mesh(
       new THREE.SphereGeometry(0.156, 18, 14, 0, Math.PI * 2, 0, Math.PI * 0.62),
       this.hairMat,
     )
     hair.position.y = 1.77
-    group.add(hair)
+    body.add(hair)
 
     // Squad number on the back.
     const numMap = new THREE.CanvasTexture(numberTexture(num, kit.secondary))
@@ -415,7 +420,7 @@ export class Scene3D {
     )
     back.position.set(0, 1.34, -0.205)
     back.rotation.y = Math.PI
-    group.add(back)
+    body.add(back)
 
     const armMat = role === 'GK' ? mats.gk : this.skinMat
     const armL = this.makeLimb(armMat, null, 0.075, 0.62)
@@ -426,7 +431,7 @@ export class Scene3D {
       const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.09, 0.16, 10), jersey)
       sleeve.position.set(sx, 1.46, 0)
       sleeve.castShadow = true
-      group.add(sleeve)
+      body.add(sleeve)
       group.add(arm)
     }
 
@@ -438,19 +443,26 @@ export class Scene3D {
       const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.1, 0.34, 10), mats.shorts)
       thigh.position.set(sx, 0.72, 0)
       thigh.castShadow = true
-      group.add(thigh)
+      body.add(thigh)
     }
-    group.add(legL)
-    group.add(legR)
+    body.add(legL)
+    body.add(legR)
 
     const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(PLAYER.radius + 0.2, 0.06, 8, 32),
+      new THREE.TorusGeometry(PLAYER.radius + 0.16, 0.05, 8, 32),
       new THREE.MeshStandardMaterial({ color: '#eafff0', emissive: '#7dff9a', emissiveIntensity: 0.6 }),
     )
     ring.rotation.x = -Math.PI / 2
     ring.position.y = 0.05
     ring.visible = false
     group.add(ring)
+
+    // Scale the assembled body to a real footballer's height. Measuring the
+    // model rather than assuming its size means the proportions stay honest
+    // even if a limb is adjusted later.
+    const bounds = new THREE.Box3().setFromObject(body)
+    const built = bounds.max.y - bounds.min.y
+    if (built > 0.1) body.scale.setScalar(PLAYER.height / built)
 
     this.scene.add(group)
     const nodes: PlayerNodes = { group, ring, legL, legR, armL, armR, phase: (id * 1.7) % 6 }

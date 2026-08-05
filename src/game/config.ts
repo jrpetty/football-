@@ -48,10 +48,10 @@ export const BALL = {
   spinDecay: 0.85, // how fast spin bleeds off per second
   // Magnus: sideways acceleration = magnus * spin * speed. Speed-scaled, so a
   // firm strike bends hard and a dying ball straightens out.
-  // Sideways acceleration = magnus * spin * speed. Deliberately restrained: a
-  // full sideways flick bends a driven ball ~3m over the length of the pitch,
-  // which is a usable weapon without being silly.
-  magnus: 0.017,
+  // Sideways acceleration = magnus * spin * speed. Speed- and time-scaled, so
+  // the bend really shows on the big stuff — a full-flick long ball swings ~5m
+  // across the pitch — while a short driven pass stays honest.
+  magnus: 0.021,
   groundMagnus: 0.55, // fraction of the bend that survives while rolling
   maxSpin: 26,
   maxSpeed: 42, // hard cap so a mishit can't launch to the moon
@@ -59,7 +59,12 @@ export const BALL = {
 }
 
 export const PLAYER = {
-  radius: 0.62,
+  // Real human scale. A footballer is ~1.8m tall and roughly 0.45m across the
+  // shoulders; the body radius is a little wider than that for comfortable
+  // personal space, but nothing like the 0.62 (a 1.24m-wide person) it was —
+  // that is what made the ball look small and everything else chunky.
+  height: 1.8,
+  radius: 0.4,
   reach: 1.5, // how far in front the ball can be while still "controlled"
   walkSpeed: 3.4,
   runSpeed: 6.0,
