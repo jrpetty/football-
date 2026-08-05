@@ -116,13 +116,6 @@ export class Player {
       this.vy += (dvy / dl) * step
     }
 
-    // Heading eases toward travel direction (or holds when nearly stopped).
-    if (this.speed > 0.4) {
-      const targetAngle = Math.atan2(this.vy, this.vx)
-      const d = angleDelta(this.heading, targetAngle)
-      this.heading += clamp(d, -PLAYER.turnRate * dt, PLAYER.turnRate * dt)
-    }
-
     // Stamina: drains sprinting, recovers otherwise.
     if (canSprint) {
       this.stamina = clamp(this.stamina - PLAYER.sprintDrain * dt, 0, PLAYER.staminaMax)
@@ -131,7 +124,19 @@ export class Player {
     }
   }
 
-  // Point the body toward a target instantly-ish (used when aiming a kick).
+  // Turn the body toward a direction, at a limited rate so a change of mind
+  // reads as a turn rather than an instant snap. A player pivots faster on the
+  // spot than at a sprint, which is both true and stops fast runs looking twitchy.
+  faceDirection(dir: Vec2, dt: number) {
+    if (V.len(dir) < 0.01) return
+    const target = Math.atan2(dir.y, dir.x)
+    const d = angleDelta(this.heading, target)
+    const pace = 1 - clamp01(this.speed / PLAYER.sprintSpeed) * 0.45
+    const rate = PLAYER.turnRate * pace * dt
+    this.heading += clamp(d, -rate, rate)
+  }
+
+  // Point the body toward a world position (used when aiming a kick).
   faceToward(target: Vec2, dt: number, rate = PLAYER.turnRate * 1.5) {
     const a = Math.atan2(target.y - this.y, target.x - this.x)
     const d = angleDelta(this.heading, a)

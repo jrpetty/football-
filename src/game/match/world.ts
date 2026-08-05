@@ -1,4 +1,4 @@
-import { BALL, CONTROL, DEFEND, FIELD, GK, KICK, MATCH, PLAYER, SIM } from '../config'
+import { BALL, CONTROL, DEFEND, FIELD, GK, KICK, MATCH, PLAYER, SIM, WALL } from '../config'
 import { clamp } from '../core/math'
 import * as V from '../core/vec'
 import type { Vec2 } from '../core/vec'
@@ -262,10 +262,13 @@ export class World {
   // ---- the simulation ----------------------------------------------------
 
   private simulate(commands: Map<number, Command>, dt: number, live: boolean) {
-    // 1. Movement.
+    // 1. Movement, and where each player is looking. You face the way you're
+    // running; standing still, you face where you're aiming. Turning is
+    // rate-limited so direction changes read as a pivot, not a snap.
     for (const p of this.players) {
       const cmd = commands.get(p.id) ?? emptyCommand()
       p.steer(cmd.move, V.len(cmd.move), cmd.sprint, dt)
+      p.faceDirection(V.len(cmd.move) > 0.05 ? cmd.move : cmd.aim, dt)
     }
 
     // 2. Tackles / slides (only when the ball is live).
@@ -307,7 +310,7 @@ export class World {
     this.resolvePosts()
 
     // 8. Ball leaving play.
-    if (live) this.detectGoalAndBounds()
+    this.resolveWallsAndGoals(live)
 
     // 9. Possession stat.
     if (this.possessorId != null && live) {
@@ -703,69 +706,51 @@ export class World {
 
   // ---- ball leaving play -------------------------------------------------
 
-  private detectGoalAndBounds() {
+  // The pitch is enclosed. A ball that isn't going in the goal rebounds off the
+  // boards and stays live — no throw-ins, corners or goal kicks to break up play.
+  private resolveWallsAndGoals(live: boolean) {
     const b = this.ball
-    // Behind a goal line.
-    if (b.x <= 0) {
-      if (F.inGoalMouthY(b.y) && b.z < FIELD.goalHeight) {
-        this.scoreGoal('away') // home conceded
-      } else {
-        this.behindLine('home')
-      }
-      return
-    }
-    if (b.x >= FIELD.length) {
-      if (F.inGoalMouthY(b.y) && b.z < FIELD.goalHeight) {
-        this.scoreGoal('home')
-      } else {
-        this.behindLine('away')
-      }
-      return
-    }
+    const r = BALL.radius
+
     // Touchlines.
-    if (b.y <= 0 || b.y >= FIELD.width) {
-      if (this.config.mode === 'training') {
-        this.resetTrainingBall()
-        return
-      }
-      const team = this.otherTeam(b.lastTouchTeam ?? 'home')
-      const spot = { x: clamp(b.x, 2, FIELD.length - 2), y: b.y <= 0 ? 0.3 : FIELD.width - 0.3 }
-      this.doRestart('throwin', team, spot, 'Throw-in')
+    if (b.y - r < 0 && b.vy < 0) this.bounceOffWall(0, 1, r - b.y)
+    else if (b.y + r > FIELD.width && b.vy > 0) this.bounceOffWall(0, -1, b.y + r - FIELD.width)
+
+    // Goal lines. The mouth is an opening; everything else is a solid end wall.
+    const throughMouth = F.inGoalMouthY(b.y) && b.z < FIELD.goalHeight
+    if (!throughMouth) {
+      if (b.x - r < 0 && b.vx < 0) this.bounceOffWall(1, 0, r - b.x)
+      else if (b.x + r > FIELD.length && b.vx > 0) this.bounceOffWall(-1, 0, b.x + r - FIELD.length)
+    } else if (live) {
+      // Fully over the line inside the mouth — that's a goal.
+      if (b.x < 0) this.scoreGoal('away')
+      else if (b.x > FIELD.length) this.scoreGoal('home')
     }
+
+    // A ball that somehow gets behind the goal is stopped by the back of the net.
+    const back = FIELD.goalDepth
+    if (b.x < -back) { b.x = -back; b.vx = Math.abs(b.vx) * 0.2 }
+    if (b.x > FIELD.length + back) { b.x = FIELD.length + back; b.vx = -Math.abs(b.vx) * 0.2 }
   }
 
-  private behindLine(defending: Team) {
-    if (this.config.mode === 'training') {
-      this.resetTrainingBall()
-      return
-    }
-    const lastTouch = this.ball.lastTouchTeam
-    const goalX = F.ownGoalLineX(defending)
-    const y = clamp(this.ball.y, 1, FIELD.width - 1)
-    if (lastTouch === defending) {
-      // Corner to the attackers.
-      const cornerY = this.ball.y < FIELD.width / 2 ? 0.6 : FIELD.width - 0.6
-      const cornerX = defending === 'home' ? 0.6 : FIELD.length - 0.6
-      this.doRestart('corner', this.otherTeam(defending), { x: cornerX, y: cornerY }, 'Corner')
-    } else {
-      // Goal kick to the defenders.
-      const kx = defending === 'home' ? FIELD.boxDepth - 2 : FIELD.length - FIELD.boxDepth + 2
-      this.doRestart('goalkick', defending, { x: kx, y }, 'Goal kick')
-      void goalX
-    }
-  }
-
-  private doRestart(kind: Restart, team: Team, spot: Vec2, label: string) {
-    this.ball.setPos(clamp(spot.x, 1, FIELD.length - 1), clamp(spot.y, 0.4, FIELD.width - 0.4), 0)
-    this.ball.stop()
-    this.ball.lastTouchTeam = null
-    this.possessorId = null
-    this.restartTeam = team
-    this.restartKind = kind
-    this.restartProtect = 1.1
-    this.lastPass = null
-    this.setAnnounce(label, undefined, 1.3)
-    this.pushEffect('whistle', this.ball.x, this.ball.y)
+  // Rebound off a barrier with the given inward normal, pushing the ball clear
+  // of the surface so it can't get stuck inside it.
+  private bounceOffWall(nx: number, ny: number, overlap: number) {
+    const b = this.ball
+    b.x += nx * overlap
+    b.y += ny * overlap
+    const vn = b.vx * nx + b.vy * ny
+    b.vx -= (1 + WALL.restitution) * vn * nx
+    b.vy -= (1 + WALL.restitution) * vn * ny
+    // Scrub a little pace along the wall, and knock the spin down.
+    const tx = -ny
+    const ty = nx
+    const vt = b.vx * tx + b.vy * ty
+    const loss = vt * (1 - WALL.friction)
+    b.vx -= loss * tx
+    b.vy -= loss * ty
+    b.spin *= 0.6
+    this.pushEffect('post', b.x, b.y)
   }
 
   // Put the ball back on the centre spot for another rep, leaving you wherever

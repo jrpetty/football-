@@ -133,6 +133,14 @@ export const KICK = {
   chargeRate: 1.35, // how fast the power meter fills per second held
 }
 
+// The pitch is enclosed, arena-style: no throw-ins, no corners, no goal kicks.
+// The ball simply rebounds off the boards and stays live, so play never stops.
+export const WALL = {
+  restitution: 0.66, // how much pace survives a rebound
+  friction: 0.94, // pace kept along the wall
+  height: 6, // how tall the barrier is drawn; physically it always rebounds
+}
+
 export const DEFEND = {
   tackleRange: 1.7,
   tackleWindow: 0.28, // timing window (s) where a standing tackle wins cleanly

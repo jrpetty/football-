@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { Sky } from 'three/examples/jsm/objects/Sky.js'
-import { BALL, FIELD, KITS, PLAYER } from '../config'
+import { BALL, FIELD, KITS, PLAYER, WALL } from '../config'
 import * as F from '../match/field'
 import type { World } from '../match/world'
 import {
@@ -69,6 +69,7 @@ export class Scene3D {
     this.buildSkyAndLights()
     this.buildPitch()
     this.buildStadium()
+    this.buildWalls()
     this.buildGoals()
     this.buildBall()
   }
@@ -293,6 +294,63 @@ export class Scene3D {
     }
   }
 
+  // ---- the enclosing barrier ----
+
+  // A glass cage around the pitch. The ball rebounds off it rather than going
+  // out for a throw-in, so the boundary needs to be visible without hiding play:
+  // a faint pane that fades out with height, plus a bright rail along the top.
+  private buildWalls() {
+    const L = FIELD.length
+    const W = FIELD.width
+    const h = WALL.height
+    const [postA, postB] = F.goalPostYs()
+
+    const paneMat = new THREE.MeshPhysicalMaterial({
+      color: '#cfe8ff',
+      transparent: true,
+      opacity: 0.1,
+      roughness: 0.06,
+      metalness: 0,
+      transmission: 0.6,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    })
+    const railMat = new THREE.MeshStandardMaterial({
+      color: '#dbe7f5',
+      emissive: '#7fb2ff',
+      emissiveIntensity: 0.35,
+      roughness: 0.35,
+      metalness: 0.4,
+    })
+
+    const pane = (w: number, cx: number, cz: number, rotY: number) => {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), paneMat)
+      m.position.set(cx, h / 2, cz)
+      m.rotation.y = rotY
+      this.scene.add(m)
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(w, 0.12, 0.12), railMat)
+      rail.position.set(cx, h, cz)
+      rail.rotation.y = rotY
+      this.scene.add(rail)
+    }
+
+    // Touchlines run the full length.
+    pane(L, L / 2, 0, 0)
+    pane(L, L / 2, W, 0)
+    // Goal lines are walled either side of the mouth, and above the crossbar.
+    for (const gx of [0, L]) {
+      pane(postA, gx, postA / 2, Math.PI / 2)
+      pane(W - postB, gx, (postB + W) / 2, Math.PI / 2)
+      const over = new THREE.Mesh(
+        new THREE.PlaneGeometry(postB - postA, h - FIELD.goalHeight),
+        paneMat,
+      )
+      over.position.set(gx, FIELD.goalHeight + (h - FIELD.goalHeight) / 2, (postA + postB) / 2)
+      over.rotation.y = Math.PI / 2
+      this.scene.add(over)
+    }
+  }
+
   // ---- goals ----
 
   private buildGoals() {
@@ -486,7 +544,10 @@ export class Scene3D {
       const n = this.ensurePlayer(p.id, p.team, p.role, p.number)
       const rp = p.renderPos(a)
       n.group.position.set(rp.x, 0, rp.y)
-      n.group.rotation.y = -p.heading
+      // The model is built facing +Z (feet and chest forward, number on its
+      // back), while a heading of 0 means +X in the simulation — hence the
+      // quarter turn. Without it every player stands side-on to where they face.
+      n.group.rotation.y = Math.PI / 2 - p.heading
       n.group.visible = p.id !== hideId
       n.ring.visible = p.id === controlledId && showControlledRing
 

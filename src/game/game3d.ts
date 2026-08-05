@@ -101,8 +101,6 @@ export class Game3D {
         this.cam3.look(this.input.movementX, this.input.movementY)
         const cmd = this.human.buildCommand(this.world, this.cam3, this.input, dt)
         this.world.update(dt, cmd)
-        const c = this.world.getControlledPlayer()
-        if (c) c.heading = this.cam3.yaw // face where you look
       } else {
         // AI keeps playing; the human's player idles until they click to lock.
         this.world.update(dt, emptyCommand())

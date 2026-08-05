@@ -45,13 +45,9 @@ export const emptyCommand = (): Command => ({
   slide: false,
 })
 
-export type Restart =
-  | 'kickoff'
-  | 'throwin'
-  | 'goalkick'
-  | 'corner'
-  | 'freekick'
-  | 'none'
+// The pitch is enclosed and the ball rebounds off the boards, so the only stoppage
+// left is the kickoff after a goal or at the start of a half.
+export type Restart = 'kickoff' | 'none'
 
 export interface MatchConfig {
   teamSize: number // outfield + GK per side
