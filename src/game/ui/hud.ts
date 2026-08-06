@@ -3,6 +3,17 @@ import { clamp01 } from '../core/math'
 import { DRILL_INFO } from '../match/drills'
 import type { World } from '../match/world'
 
+// What the online half of the game wants shown. Absent entirely when playing
+// on your own, which is why every field is optional in practice.
+export interface NetInfo {
+  role: 'host' | 'guest'
+  ping: number // ms, round trip
+  reconnecting: boolean
+  spectating: boolean
+  // Host only: everyone connected. A guest is only told its own ping.
+  peers?: { name: string; ping: number; away: boolean; spectator: boolean }[]
+}
+
 export interface HudInfo {
   chargeType: 'touch' | 'strike' | null
   charge: number // 0..1
@@ -11,19 +22,87 @@ export interface HudInfo {
   fps: number
   mode: 'match' | 'training'
   zoomLabel: string
+  net?: NetInfo | null
 }
 
 // On-screen furniture drawn on top of the rendered pitch. Reads world state only.
 export class Hud {
   draw(ctx: CanvasRenderingContext2D, world: World, info: HudInfo, w: number, h: number) {
     this.drawScoreboard(ctx, world, w)
-    this.drawStamina(ctx, world, h)
+    if (!info.net?.spectating) this.drawStamina(ctx, world, h)
     this.drawContactCue(ctx, world, w, h)
     if (info.chargeType) this.drawPowerMeter(ctx, info, w, h)
     this.drawDrills(ctx, world, w)
     this.drawMinimap(ctx, world, w, h)
     this.drawAnnounce(ctx, world, w, h)
     this.drawZoomFps(ctx, info, w)
+    if (info.net) this.drawNet(ctx, info.net, w, h)
+  }
+
+  // Connection state, bottom-right above the minimap. A number nobody looks at
+  // until the game feels wrong, and then the first thing they look for.
+  private drawNet(ctx: CanvasRenderingContext2D, net: NetInfo, w: number, h: number) {
+    const rows: [string, string, string][] = []
+    const grade = (ms: number) => (ms < 60 ? '#8ef58a' : ms < 130 ? '#ffd85e' : '#ff8a7a')
+
+    if (net.peers) {
+      for (const p of net.peers) {
+        rows.push([
+          p.spectator ? `${p.name} (watching)` : p.name,
+          p.away ? 'dropped' : `${p.ping}ms`,
+          p.away ? '#ff8a7a' : grade(p.ping),
+        ])
+      }
+      if (!rows.length) rows.push(['waiting for players', '', '#9fb0c8'])
+    } else {
+      rows.push(['ping', `${net.ping}ms`, grade(net.ping)])
+    }
+
+    const pad = 8
+    const lh = 15
+    const boxW = 172
+    const boxH = pad * 2 + rows.length * lh + 16
+    const x = w - boxW - 16
+    // Sit above the minimap rather than on top of it.
+    const y = h - boxH - 16 - Math.min(160, h * 0.26) - 12
+
+    ctx.fillStyle = 'rgba(8,12,20,0.62)'
+    roundRect(ctx, x, y, boxW, boxH, 6)
+    ctx.fill()
+
+    ctx.textBaseline = 'middle'
+    ctx.textAlign = 'left'
+    ctx.font = '600 10px system-ui, sans-serif'
+    ctx.fillStyle = '#9fb0c8'
+    ctx.fillText(net.role === 'host' ? 'HOSTING' : net.spectating ? 'SPECTATING' : 'CONNECTED', x + pad, y + pad + 5)
+
+    ctx.font = '600 11px system-ui, sans-serif'
+    rows.forEach(([label, value, colour], i) => {
+      const ry = y + pad + 18 + i * lh + 5
+      ctx.fillStyle = '#dbe6f5'
+      ctx.textAlign = 'left'
+      ctx.fillText(label.length > 18 ? `${label.slice(0, 17)}…` : label, x + pad, ry)
+      ctx.fillStyle = colour
+      ctx.textAlign = 'right'
+      ctx.fillText(value, x + boxW - pad, ry)
+    })
+    ctx.textAlign = 'left'
+
+    // A drop is loud, because you need to know the last few seconds of play
+    // were yours alone and are about to be overwritten.
+    if (net.reconnecting) {
+      const bw = 260
+      const bx = w / 2 - bw / 2
+      const by = h * 0.18
+      ctx.fillStyle = 'rgba(90,20,20,0.82)'
+      roundRect(ctx, bx, by, bw, 34, 6)
+      ctx.fill()
+      ctx.fillStyle = '#ffd0c8'
+      ctx.font = '700 13px system-ui, sans-serif'
+      ctx.textAlign = 'center'
+      ctx.fillText('RECONNECTING…  your shirt is being held', w / 2, by + 18)
+      ctx.textAlign = 'left'
+    }
   }
 
   private drawScoreboard(ctx: CanvasRenderingContext2D, world: World, w: number) {
@@ -212,11 +291,13 @@ export class Hud {
     if (!d) return
     const info = DRILL_INFO[d.current]
     const s = d.score
+    const best = d.best()
     const bw = 226
     const x = w - bw - 16
     const y = 44
+    const bh = best ? 102 : 86
     ctx.fillStyle = 'rgba(10,16,28,0.8)'
-    roundRect(ctx, x, y, bw, 86, 9)
+    roundRect(ctx, x, y, bw, bh, 9)
     ctx.fill()
     ctx.strokeStyle = 'rgba(255,255,255,0.1)'
     ctx.lineWidth = 1
@@ -268,6 +349,28 @@ export class Hud {
         ctx.fillStyle = '#5d6b82'
         ctx.fillText(`next ball in ${Math.max(0, d.serveTimer).toFixed(1)}s`, x + 12, y + 86 - 2)
       }
+    }
+
+    // The number you came back to beat. It survives a refresh, which is the
+    // only thing that makes a scored drill worth doing twice.
+    if (best) {
+      ctx.fillStyle = 'rgba(255,255,255,0.08)'
+      ctx.fillRect(x + 12, y + bh - 22, bw - 24, 1)
+      ctx.textAlign = 'left'
+      if (d.newBest > 0) {
+        ctx.fillStyle = '#ffd85e'
+        ctx.font = '700 10px system-ui, sans-serif'
+        ctx.fillText('NEW BEST', x + 12, y + bh - 8)
+      } else {
+        ctx.fillStyle = '#7d8ca3'
+        ctx.font = '600 10px system-ui, sans-serif'
+        ctx.fillText(`best ${best.score} pts`, x + 12, y + bh - 8)
+      }
+      ctx.textAlign = 'right'
+      ctx.fillStyle = '#5d6b82'
+      ctx.font = '600 9px system-ui, sans-serif'
+      ctx.fillText(best.detail, x + bw - 12, y + bh - 8)
+      ctx.textAlign = 'left'
     }
   }
 

@@ -9,6 +9,8 @@
 // Browsers refuse to start audio without a gesture, so the context stays
 // suspended until the first click and everything is a no-op until then.
 
+import { store } from '../core/store'
+
 type Ctx = AudioContext & { _noise?: AudioBuffer }
 
 export class Sfx {
@@ -18,7 +20,10 @@ export class Sfx {
   private noiseBuf: AudioBuffer | null = null
   private started = false
 
-  muted = false
+  // Whether you had the sound off is remembered: turning it back on every
+  // single time you load the page is exactly the kind of thing that makes
+  // people stop turning it on at all.
+  muted = store.get('muted')
   volume = 0.75
 
   // Called on the first user gesture. Safe to call repeatedly.
@@ -51,6 +56,7 @@ export class Sfx {
 
   setMuted(m: boolean) {
     this.muted = m
+    store.set('muted', m)
     if (this.master && this.ctx) {
       this.master.gain.setTargetAtTime(m ? 0 : this.volume, this.ctx.currentTime, 0.05)
     }
@@ -167,6 +173,48 @@ export class Sfx {
 
   tackle() {
     this.noise(0.16, 0.24, 'low', 480)
+  }
+
+  // A ball off the forehead. Not a boot: bone rather than leather, so it is a
+  // duller and shorter knock with none of the crack a strike has, and no low
+  // end to speak of because there is no swing behind it.
+  header(power: number) {
+    const p = Math.max(0, Math.min(1, power))
+    this.tone(240 - p * 50, 0.07, 0.14 + p * 0.16, 'sine', 110)
+    this.noise(0.045, 0.08 + p * 0.14, 'low', 1100)
+  }
+
+  // A ball struck before it lands. Everything a grounded strike has, but the
+  // contact is cleaner and shorter — nothing is scuffing along the turf — so
+  // it's brighter on top and quicker to decay.
+  volley(power: number) {
+    const p = Math.max(0, Math.min(1, power))
+    this.tone(210 - p * 70, 0.1 + p * 0.07, 0.24 + p * 0.34, 'sine', 60 - p * 12)
+    this.noise(0.04 + p * 0.03, 0.16 + p * 0.32, 'band', 2000 + p * 1800, 0.7)
+  }
+
+  // Taking the pace off one out of the air. The sound of a cushion is mostly
+  // the sound of pace *not* happening: a soft thud whose weight comes from how
+  // fast the ball was travelling before you killed it.
+  cushion(impact: number) {
+    const i = Math.max(0, Math.min(1, impact))
+    this.tone(150, 0.09, 0.04 + i * 0.1, 'sine', 70)
+    this.noise(0.07, 0.04 + i * 0.09, 'low', 520)
+  }
+
+  // Boots leaving the turf: a scuff of grass and a short breath.
+  jump() {
+    this.noise(0.09, 0.07, 'band', 1700, 0.8)
+    this.tone(190, 0.07, 0.03, 'sine', 130)
+  }
+
+  // Coming back down, scaled by how far you fell — a hop off the floor barely
+  // registers, coming down off a full leap thumps.
+  land(impact: number) {
+    const i = Math.max(0, Math.min(1, impact))
+    if (i < 0.06) return
+    this.tone(95, 0.1, 0.05 + i * 0.18, 'sine', 48)
+    this.noise(0.08, 0.05 + i * 0.14, 'low', 420)
   }
 
   whistle() {

@@ -1,6 +1,13 @@
+import { binds } from './bindings'
+import type { Action } from './bindings'
+
 // Raw keyboard + mouse state with edge detection. Nothing game-specific lives
 // here — controllers read this and build a Command. Uses KeyboardEvent.code so
 // bindings are layout-independent (WASD stays WASD on AZERTY).
+//
+// Readers ask by action rather than by key: `did('shield')`, not
+// `isDown('KeyQ')`. The raw-code methods are still here because the rebinding
+// screen needs to listen for a keypress as a keypress.
 
 export class InputManager {
   private down = new Set<string>()
@@ -39,9 +46,21 @@ export class InputManager {
     window.removeEventListener('mouseup', this.onMouseUp)
   }
 
+  // Set while the rebinding screen is open: it wants the next keypress as a
+  // key, not as whatever action that key currently performs.
+  capture: ((code: string) => void) | null = null
+
   private onKeyDown = (e: KeyboardEvent) => {
-    // Keep the page from scrolling on the keys we use to play.
-    if (GAME_KEYS.has(e.code)) e.preventDefault()
+    if (this.capture) {
+      e.preventDefault()
+      const fn = this.capture
+      this.capture = null
+      fn(e.code)
+      return
+    }
+    // Keep the page from scrolling on the keys we use to play. Which keys those
+    // are is now up to the player, so it is asked rather than listed.
+    if (binds.gameKeys().has(e.code)) e.preventDefault()
     if (!this.down.has(e.code)) this.pressedEdge.add(e.code)
     this.down.add(e.code)
   }
@@ -105,6 +124,16 @@ export class InputManager {
     return codes.some((c) => this.down.has(c))
   }
 
+  // ---- by action ----
+  // What everything outside the settings screen should use.
+
+  held(a: Action): boolean {
+    return binds.keys(a).some((c) => c && this.down.has(c))
+  }
+  did(a: Action): boolean {
+    return binds.keys(a).some((c) => c && this.pressedEdge.has(c))
+  }
+
   // Call once per rendered frame, AFTER controllers have read edges.
   endFrame() {
     this.pressedEdge.clear()
@@ -123,10 +152,3 @@ export class InputManager {
   }
 }
 
-const GAME_KEYS = new Set([
-  'KeyW', 'KeyA', 'KeyS', 'KeyD',
-  'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
-  'Space', 'ShiftLeft', 'ShiftRight',
-  'KeyE', 'KeyF', 'KeyC', 'KeyQ', 'KeyB', 'KeyV', 'KeyR', 'KeyM',
-  'AltLeft', 'AltRight',
-])

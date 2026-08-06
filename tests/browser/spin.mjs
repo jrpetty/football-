@@ -11,7 +11,7 @@ pg.on('pageerror', e => console.log('pageerror:', e.message))
 await pg.goto(`file://${process.cwd()}/open-pitch.html?debug`)
 await pg.waitForTimeout(900)
 await pg.click('text=🎮 Immersive 3D')
-await pg.click('text=🎯  Training (solo, no AI)')
+await pg.click('text=🎯  Training')
 await pg.waitForTimeout(2200)
 const out = await pg.evaluate(() => {
   const game = window.__game, w = window.__world

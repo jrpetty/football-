@@ -54,6 +54,28 @@ export class Camera3D {
     this.cam.updateMatrixWorld(true)
   }
 
+  // How far a spectator is sitting from whatever they're watching.
+  spectateDist = 14
+
+  // The same orbit, but you are steering it. Yaw and pitch come from the mouse
+  // exactly as they do when you're playing, so a spectator is flying the
+  // replay camera live — which is all a spectator ever wanted to be.
+  spectate(px: number, py: number, pz: number, dt: number) {
+    const d = this.spectateDist
+    const cp = Math.cos(this.pitch)
+    this.tmpPos.set(
+      px - Math.cos(this.yaw) * d * cp,
+      Math.max(1.2, pz + 2.2 - this.pitch * d),
+      py - Math.sin(this.yaw) * d * cp,
+    )
+    this.tmpLook.set(px, pz + 0.9, py)
+    const k = 1 - Math.exp(-9 * dt)
+    this.curPos.lerp(this.tmpPos, k)
+    this.curLook.lerp(this.tmpLook, k)
+    this.cam.position.copy(this.curPos)
+    this.cam.lookAt(this.curLook)
+  }
+
   // Follow the controlled player. px,py are the player's SIM position.
   update(px: number, py: number, dt: number) {
     const fx = Math.cos(this.yaw)

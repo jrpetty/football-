@@ -1,4 +1,6 @@
 import { RtcTransport, WsTransport } from './transport'
+import { store } from '../core/store'
+import { playerName, setPlayerName } from './identity'
 import type { Transport } from './transport'
 
 // The online lobby.
@@ -12,6 +14,9 @@ export interface NetHandoff {
   role: NetRole
   transport: Transport
   label: string
+  // Join to watch rather than to play. Takes no shirt, so it works on a pitch
+  // that is already full.
+  spectate?: boolean
 }
 
 export class Lobby {
@@ -41,6 +46,15 @@ export class Lobby {
           <p class="tag">The host runs the match. Everyone else plays a shirt in it.</p>
         </div></div>
 
+        <div class="field">
+          <label>Your name <span class="hint">what everyone else sees over your head</span></label>
+          <input class="netinput" data-f="name" maxlength="14" spellcheck="false" value="${escapeAttr(playerName())}" />
+        </div>
+        <label class="checkline">
+          <input type="checkbox" data-f="spectate" />
+          <span>Join to <b>watch</b> — no shirt, free camera, works on a full pitch</span>
+        </label>
+
         <div class="netcols">
           <div class="netcol">
             <h3>Direct — no server</h3>
@@ -63,9 +77,9 @@ export class Lobby {
               can play.
             </p>
             <label>Relay address</label>
-            <input class="netinput" data-f="url" value="ws://localhost:8787" spellcheck="false" />
+            <input class="netinput" data-f="url" value="${escapeAttr(store.get('relayUrl'))}" spellcheck="false" />
             <label>Room code</label>
-            <input class="netinput" data-f="room" value="PITCH" spellcheck="false" />
+            <input class="netinput" data-f="room" value="${escapeAttr(store.get('relayRoom'))}" spellcheck="false" />
             <div class="actions">
               <button class="btn primary" data-net="ws-host">Host here</button>
               <button class="btn" data-net="ws-join">Join here</button>
@@ -84,14 +98,24 @@ export class Lobby {
     const step = root.querySelector<HTMLElement>('[data-step="rtc"]')!
     const val = (f: string) => root.querySelector<HTMLInputElement>(`[data-f="${f}"]`)?.value.trim() ?? ''
     const say = (t: string) => (status.textContent = t)
+    // Only a guest can spectate: somebody has to run the match.
+    const watching = () => !!root.querySelector<HTMLInputElement>('[data-f="spectate"]')?.checked
+
+    // The name is saved as you type, so it is already right the next time.
+    root.querySelector<HTMLInputElement>('[data-f="name"]')?.addEventListener('input', (e) => {
+      setPlayerName((e.target as HTMLInputElement).value)
+    })
 
     const ws = (role: NetRole) => {
       const url = val('url')
       const room = val('room').toUpperCase()
       if (!url || !room) return say('A relay address and a room code, please.')
-      say(`Connecting to ${url} as ${role}…`)
+      store.set('relayUrl', url)
+      store.set('relayRoom', room)
+      const spectate = role === 'guest' && watching()
+      say(`Connecting to ${url} as ${spectate ? 'a spectator' : role}…`)
       const t = new WsTransport(url, room, role, role === 'host' ? 'host' : 'guest')
-      t.onOpen = () => this.handOver({ role, transport: t, label: `relay ${room}` })
+      t.onOpen = () => this.handOver({ role, transport: t, label: `relay ${room}`, spectate })
       t.onClose = (why) => say(`Couldn't connect: ${why}`)
     }
 
@@ -148,7 +172,7 @@ export class Lobby {
                 <textarea class="netblob" readonly>${answer}</textarea>`
               step.querySelectorAll<HTMLTextAreaElement>('.netblob')[1]?.select()
               say('Sent? Then wait — the match starts the moment they accept it.')
-              t.onOpen = () => this.handOver({ role: 'guest', transport: t, label: 'direct' })
+              t.onOpen = () => this.handOver({ role: 'guest', transport: t, label: 'direct', spectate: watching() })
             } catch {
               say("That invite didn't parse — copy the whole thing.")
             }
@@ -163,4 +187,10 @@ export class Lobby {
     this.rtc = null
     this.handedOver = false
   }
+}
+
+// The name goes straight into an attribute, and a name is whatever somebody
+// typed. Nothing here is trusted enough to be markup.
+function escapeAttr(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }

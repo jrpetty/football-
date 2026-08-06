@@ -7,15 +7,18 @@ import { World } from './match/world'
 import { Camera } from './render/camera'
 import { Renderer } from './render/renderer'
 import { Hud } from './ui/hud'
+import type { NetInfo } from './ui/hud'
 import { DRILL_INFO } from './match/drills'
 import { Replay } from './match/replay'
 import { HostSession, ClientSession } from './net/session'
 import { Lobby } from './net/lobby'
 import type { NetHandoff } from './net/lobby'
+import { playerName, clientToken } from './net/identity'
 import { Screens } from './ui/screens'
 import { drawReplayOverlay } from './ui/replayOverlay'
 import { Game3D } from './game3d'
 import type { Hooks } from './game3d'
+import { emptyCommand } from './types'
 import type { Command, MatchConfig } from './types'
 
 // Anything boot() can drive, regardless of 2D/3D presentation.
@@ -56,6 +59,9 @@ class Game {
     this.renderer = new Renderer(ctx)
     this.human = new HumanController({ height: config.heightSens, curve: config.curveSens })
     this.world = new World(config)
+    // Your own shirt carries your name from the start, not just once you go
+    // online — in training it is the only tag on the pitch.
+    this.world.setName(this.world.controlledId, playerName())
     this.resize()
     this.cam.mode = 'follow'
     const b = this.world.ball
@@ -81,8 +87,30 @@ class Game {
   private client: ClientSession | null = null
 
   connect(h: NetHandoff) {
-    if (h.role === 'host') this.host = new HostSession(this.world, h.transport)
-    else this.client = new ClientSession(this.world, h.transport, 'player')
+    if (h.role === 'host') {
+      this.host = new HostSession(this.world, h.transport)
+    } else {
+      this.client = new ClientSession(this.world, h.transport, playerName(), clientToken(), h.spectate)
+    }
+  }
+
+  get spectating(): boolean {
+    return !!this.client?.spectator
+  }
+
+  private netInfo(): NetInfo | null {
+    if (this.host) {
+      return { role: 'host', ping: 0, reconnecting: false, spectating: false, peers: this.host.roster() }
+    }
+    if (this.client) {
+      return {
+        role: 'guest',
+        ping: this.client.ping,
+        reconnecting: this.client.reconnecting,
+        spectating: this.client.spectator,
+      }
+    }
+    return null
   }
 
   private netUpdate(dt: number, cmd: Command) {
@@ -102,7 +130,7 @@ class Game {
 
   private replayUpdate(dt: number): boolean {
     if (this.replay.playing) {
-      if (!this.replay.update(this.world, dt) || this.input.justPressed('KeyR') ||
+      if (!this.replay.update(this.world, dt) || this.input.did('replay') ||
           this.input.justPressed('Escape')) {
         this.replay.stop(this.world)
       }
@@ -113,7 +141,7 @@ class Game {
     if (goals !== this.lastGoals) {
       this.lastGoals = goals
       this.replay.start(this.world, 'GOAL')
-    } else if (this.input.justPressed('KeyR')) {
+    } else if (this.input.did('replay')) {
       this.replay.start(this.world, 'REPLAY')
     }
     return this.replay.playing
@@ -137,7 +165,11 @@ class Game {
     this.handleGlobalKeys()
 
     if (!this.paused) {
-      const cmd = this.human.buildCommand(this.world, this.cam, this.input, dt)
+      // A spectator holds no shirt: it steps the world like everyone else and
+      // watches, so it never builds a command at all.
+      const cmd = this.spectating
+        ? emptyCommand()
+        : this.human.buildCommand(this.world, this.cam, this.input, dt)
       if (this.replayUpdate(dt)) {
         // The world is being played back rather than simulated, so nothing is
         // stepped and no input is read — just drawn.
@@ -184,17 +216,17 @@ class Game {
 
   private handleGlobalKeys() {
     if (this.input.mousePressed.left || this.input.mousePressed.right) sfx.unlock()
-    if (this.input.justPressed('KeyM')) sfx.toggleMute()
-    if (this.input.justPressed('KeyV')) this.cam.cycleZoom()
+    if (this.input.did('mute')) sfx.toggleMute()
+    if (this.input.did('view')) this.cam.cycleZoom()
     if (this.input.wheel !== 0 && this.input.wheel < 0) this.cam.cycleZoom()
 
-    if (this.input.justPressed('Escape') || this.input.justPressed('KeyP')) {
+    if (this.input.justPressed('Escape') || this.input.did('pause')) {
       this.paused ? this.resume() : this.pause()
     }
 
     if (
       this.config.mode === 'training' &&
-      this.input.justPressed('KeyB') &&
+      this.input.did('spawnBall') &&
       !this.paused
     ) {
       const pos = this.input.mouseInside
@@ -204,7 +236,7 @@ class Game {
     }
     // Cycle through the gauntlet. Each drill keeps its own score, so you can go
     // back to one and pick up where you left off.
-    if (this.config.mode === 'training' && this.input.justPressed('KeyN') && !this.paused) {
+    if (this.config.mode === 'training' && this.input.did('nextDrill') && !this.paused) {
       const id = this.world.drills?.next()
       if (id) this.world.setAnnounce(DRILL_INFO[id].name, DRILL_INFO[id].brief, 2.2)
     }
@@ -270,7 +302,8 @@ class Game {
         spin: this.human.liveSpin,
         fps: this.fps,
         mode: this.config.mode,
-        zoomLabel: this.cam.mode,
+        zoomLabel: this.spectating ? 'spectating' : this.cam.mode,
+        net: this.netInfo(),
       },
       this.cssW,
       this.cssH,
@@ -290,6 +323,8 @@ function boot() {
 
   const input = new InputManager(canvas)
   const screens = new Screens(overlay)
+  // The controls list rebinds keys, which means it has to hear a raw keypress.
+  screens.input = input
   let game: RunningGame | null = null
   let lastConfig: MatchConfig | null = null
 
@@ -327,9 +362,10 @@ function boot() {
     if (net) game.connect(net)
     // Opt-in inspection hook for automated tests (?debug in the URL).
     if (location.search.includes('debug')) {
-      const w = window as unknown as { __world?: unknown; __game?: unknown }
+      const w = window as unknown as { __world?: unknown; __game?: unknown; __sfx?: unknown }
       w.__world = game.world
       w.__game = game
+      w.__sfx = sfx
     }
   }
 

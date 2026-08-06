@@ -46,7 +46,12 @@ export const emptyCommand = (): Command => ({
   move: { x: 0, y: 0 },
   sprint: false,
   walk: false,
-  aim: { x: 1, y: 0 },
+  // No aim at all, rather than "aim down the pitch". An empty command is what
+  // an unclaimed shirt, a dropped player and a spectator's tick all get, and
+  // {1,0} is not neutral — it is a real instruction to face +x. Every away
+  // player fed one slowly turned 180° to stand facing their own goal. Readers
+  // all treat a zero-length aim as "keep facing where you are".
+  aim: { x: 0, y: 0 },
   chargePass: false,
   chargeShot: false,
   kick: null,

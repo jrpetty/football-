@@ -1,6 +1,7 @@
 import { BALL, FIELD, PLAYER, SIM } from '../config'
 import type { World } from './world'
 import * as F from './field'
+import { store } from '../core/store'
 
 // The training gauntlet.
 //
@@ -262,6 +263,22 @@ export class Drills {
     this.score.attempts++
   }
 
+  // A drill best that survives a refresh. Without this the whole gauntlet was
+  // an exercise you could never see yourself improve at — the point of scoring
+  // a drill is the number you had last time.
+  private saveBest() {
+    const s = this.score
+    if (store.recordBest(this.current, s.points, `${s.scored}/${s.attempts} · streak ${s.best}`)) {
+      this.newBest = 1.6
+    }
+  }
+  // Counts down while "NEW BEST" is on screen.
+  newBest = 0
+
+  best(id: DrillId = this.current) {
+    return store.best(id)
+  }
+
   private say(text: string, sub: string, good: boolean, points = 0) {
     this.verdict = { text, sub, good, t: 0 }
     if (good) {
@@ -269,6 +286,7 @@ export class Drills {
       this.score.streak++
       this.score.best = Math.max(this.score.best, this.score.streak)
       this.score.points += points
+      this.saveBest()
     } else {
       this.score.streak = 0
     }
@@ -487,6 +505,7 @@ export class Drills {
     for (const g of this.gates) {
       if (g.passed) g.passedAt += dt
     }
+    if (this.newBest > 0) this.newBest -= dt
     if (this.verdict) {
       this.verdict.t += dt
       if (this.verdict.t > 2.4) this.verdict = null

@@ -124,10 +124,18 @@ export class Player {
     return this.landTimer <= 0 && this.jumpCooldown <= 0
   }
 
+  // Set on the step a player leaves or meets the ground, and cleared by the
+  // world once it has made a noise about them. The entity doesn't own the
+  // audio — everything else that makes a sound is triggered from the
+  // simulation, and a replay re-applying old positions shouldn't retrigger it.
+  justJumped = false
+  landImpact = 0
+
   jump() {
     this.vz = PLAYER.jumpSpeed + this.speed * PLAYER.jumpRunBonus
     this.jumpCooldown = PLAYER.jumpCooldown
     this.stamina = clamp(this.stamina - 3, 0, PLAYER.staminaMax)
+    this.justJumped = true
   }
 
   get diving(): boolean {
@@ -302,6 +310,9 @@ export class Player {
       this.z += this.vz * dt
       if (this.z <= 0) {
         this.z = 0
+        // How hard you came down, before it is thrown away. A hop off the
+        // floor and a landing from a full leap are not the same noise.
+        this.landImpact = Math.min(1, Math.abs(this.vz) / 5)
         this.vz = 0
         this.landTimer = PLAYER.landRecovery
       }

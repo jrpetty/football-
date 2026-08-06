@@ -452,6 +452,80 @@ export class Scene3D {
     this.ball.quaternion.premultiply(this.ballSpinQ)
   }
 
+  // ---- name tags ----
+  //
+  // You could not tell who anybody was. Every shirt is a seat somebody may or
+  // may not be sitting in, so "who is that" is not a cosmetic question here —
+  // it is the difference between a defender you have to beat and a mannequin.
+  //
+  // Sprites rather than anything parented to the rig: a sprite always faces the
+  // camera, and the rig's group is rotated by the player's heading and scaled
+  // to a footballer's height, both of which a tag has to ignore.
+  private tags = new Map<number, { sprite: THREE.Sprite; text: string; claimed: boolean }>()
+
+  private tagTexture(text: string, claimed: boolean, team: 'home' | 'away'): HTMLCanvasElement {
+    const c = document.createElement('canvas')
+    c.width = 256
+    c.height = 64
+    const g = c.getContext('2d')!
+    g.font = '600 34px system-ui, sans-serif'
+    g.textAlign = 'center'
+    g.textBaseline = 'middle'
+    // An empty shirt is drawn faintly and in outline: present, but plainly not
+    // a person.
+    if (claimed) {
+      g.fillStyle = 'rgba(8,12,20,0.55)'
+      roundRectPath(g, 8, 12, 240, 40, 10)
+      g.fill()
+      g.fillStyle = team === 'home' ? '#bfe0ff' : '#ffd2d2'
+      g.fillText(text, 128, 33)
+    } else {
+      g.strokeStyle = 'rgba(255,255,255,0.35)'
+      g.lineWidth = 2
+      g.font = '500 28px system-ui, sans-serif'
+      g.fillStyle = 'rgba(255,255,255,0.42)'
+      g.fillText(text, 128, 33)
+    }
+    return c
+  }
+
+  private syncTags(world: World, hideId: number, replaying: boolean) {
+    for (const p of world.players) {
+      const text = world.nameFor(p)
+      const claimed = world.isClaimed(p)
+      let tag = this.tags.get(p.id)
+      if (!tag || tag.text !== text || tag.claimed !== claimed) {
+        tag?.sprite.material.map?.dispose()
+        tag?.sprite.material.dispose()
+        if (!tag) {
+          const sprite = new THREE.Sprite()
+          sprite.scale.set(2.2, 0.55, 1)
+          this.scene.add(sprite)
+          tag = { sprite, text, claimed }
+          this.tags.set(p.id, tag)
+        }
+        tag.text = text
+        tag.claimed = claimed
+        tag.sprite.material = new THREE.SpriteMaterial({
+          map: this.tex(this.tagTexture(text, claimed, p.team)),
+          transparent: true,
+          depthTest: false,
+          depthWrite: false,
+          // Exempt from the filmic tone mapping the stadium goes through. A
+          // label is not lit by the sun and shouldn't be graded like it is —
+          // run through ACES it comes out grey and barely readable.
+          toneMapped: false,
+        })
+      }
+      const rp = p.renderPos(world.renderAlpha)
+      // Above the head, and it rises with a jump because the head does.
+      tag.sprite.position.copy(v3(rp.x, rp.y, rp.z + 2.35))
+      // Your own tag is hidden in first person for the same reason your body
+      // is: you are looking out of it.
+      tag.sprite.visible = p.id !== hideId && !replaying
+    }
+  }
+
   // ---- players ----
 
   private ensurePlayer(id: number, team: 'home' | 'away', role: string, num: number): PlayerRig {
@@ -621,7 +695,16 @@ export class Scene3D {
 
   // ---- per-frame sync ----
 
-  sync(world: World, controlledId: number, showControlledRing: boolean, hideId = -1, dt = 0.016) {
+  sync(
+    world: World,
+    controlledId: number,
+    showControlledRing: boolean,
+    hideId = -1,
+    dt = 0.016,
+    // Tags are off during a replay: it is a broadcast cutaway, and the same
+    // reason the HUD goes away applies to the labels.
+    hideTags = false,
+  ) {
     // Draw where the ball *is* between physics steps, not where it was at the
     // last one — this is what removes the stepped, laggy look at low frame rates.
     const a = world.renderAlpha
@@ -640,5 +723,17 @@ export class Scene3D {
       rig.setVisible(p.id !== hideId)
       rig.ring.visible = p.id === controlledId && showControlledRing
     }
+    this.syncTags(world, hideId, hideTags)
   }
+}
+
+// Local to the tag canvas; the HUD has its own.
+function roundRectPath(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  g.beginPath()
+  g.moveTo(x + r, y)
+  g.arcTo(x + w, y, x + w, y + h, r)
+  g.arcTo(x + w, y + h, x, y + h, r)
+  g.arcTo(x, y + h, x, y, r)
+  g.arcTo(x, y, x + w, y, r)
+  g.closePath()
 }

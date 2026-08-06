@@ -298,6 +298,29 @@ export class Renderer {
       ctx.arc(s.x, s.y, r + 8, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * frac)
       ctx.stroke()
     }
+
+    // Who that is. From above a shirt number tells you nothing about whether
+    // anybody is behind it, and in a game where unclaimed shirts just stand
+    // there that is the thing you most need to know. Skipped when zoomed far
+    // enough out that the labels would be a wall of text.
+    if (r > 5) {
+      const name = world.nameFor(p)
+      const claimed = world.isClaimed(p)
+      ctx.font = `${Math.max(9, r * 0.85)}px system-ui, sans-serif`
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'bottom'
+      const ty = s.y - r - 5
+      if (claimed) {
+        const w = ctx.measureText(name).width + 8
+        ctx.fillStyle = 'rgba(8,12,20,0.55)'
+        roundRect(ctx, s.x - w / 2, ty - r * 0.95, w, r * 1.05, 3)
+        ctx.fill()
+        ctx.fillStyle = p.team === 'home' ? '#bfe0ff' : '#ffd2d2'
+      } else {
+        ctx.fillStyle = 'rgba(255,255,255,0.42)'
+      }
+      ctx.fillText(name, s.x, ty)
+    }
   }
 
   private drawEffectsUnder(world: World, cam: Camera) {
@@ -384,4 +407,15 @@ export class Renderer {
     const b = Math.min(255, (n & 255) + amt * 255)
     return `rgb(${r | 0},${g | 0},${b | 0})`
   }
+}
+
+// A rounded rectangle path, for the plate behind a name tag.
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath()
+  ctx.moveTo(x + r, y)
+  ctx.arcTo(x + w, y, x + w, y + h, r)
+  ctx.arcTo(x + w, y + h, x, y + h, r)
+  ctx.arcTo(x, y + h, x, y, r)
+  ctx.arcTo(x, y, x + w, y, r)
+  ctx.closePath()
 }

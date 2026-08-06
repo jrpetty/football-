@@ -52,14 +52,14 @@ export class Human3DController {
     // --- movement (camera-relative) ---
     let f = 0
     let s = 0
-    if (input.anyDown('KeyW', 'ArrowUp')) f += 1
-    if (input.anyDown('KeyS', 'ArrowDown')) f -= 1
-    if (input.anyDown('KeyD', 'ArrowRight')) s += 1
-    if (input.anyDown('KeyA', 'ArrowLeft')) s -= 1
+    if (input.held('up')) f += 1
+    if (input.held('down')) f -= 1
+    if (input.held('right')) s += 1
+    if (input.held('left')) s -= 1
     cmd.move = { x: look.x * f + right.x * s, y: look.y * f + right.y * s }
-    cmd.sprint = input.anyDown('ShiftLeft', 'ShiftRight')
+    cmd.sprint = input.held('sprint')
     // Hold Alt to walk — useful for setting your feet before a strike.
-    cmd.walk = input.anyDown('AltLeft', 'AltRight')
+    cmd.walk = input.held('walk')
     cmd.aim = look
 
     // --- charging ---
@@ -123,12 +123,12 @@ export class Human3DController {
     // --- defending ---
     // There is no tackle button: you win the ball with the same two clicks you
     // use for everything else. The slide is the one dedicated defensive move.
-    if (input.justPressed('KeyC')) cmd.slide = true
+    if (input.did('slide')) cmd.slide = true
     // Space jumps. Everything you can play rises with you, so this is how you
     // attack a ball that would otherwise sail over your head.
-    if (input.justPressed('Space')) cmd.jump = true
+    if (input.did('jump')) cmd.jump = true
     // Hold Q to shield: side-on, slow, ball behind your body, no strike.
-    cmd.shield = input.isDown('KeyQ')
+    cmd.shield = input.held('shield')
 
     // --- HUD feedback ---
     if (this.strike.held) {

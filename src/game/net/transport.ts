@@ -23,6 +23,12 @@ export interface Transport {
   onClose: (why: string) => void
   close(): void
   readonly open: boolean
+  // Whether a drop is worth waiting out. A relay socket can be redialled and
+  // will call onOpen again; a copy-paste WebRTC link cannot be rebuilt without
+  // the two players exchanging text again, so a session on one has to treat a
+  // close as final rather than leave someone staring at "reconnecting…"
+  // forever. The distinction is the whole reason this flag exists.
+  readonly canReconnect: boolean
 }
 
 // ---------------------------------------------------------------- WebRTC ----
@@ -32,6 +38,7 @@ export interface Transport {
 // the host pastes that back. Ugly, and completely free of infrastructure.
 export class RtcTransport implements Transport {
   readonly kind = 'rtc' as const
+  readonly canReconnect = false
   onMessage: (m: Msg, from: string) => void = () => {}
   onOpen: () => void = () => {}
   onClose: (why: string) => void = () => {}
@@ -49,7 +56,11 @@ export class RtcTransport implements Transport {
     })
     this.pc.onconnectionstatechange = () => {
       const st = this.pc.connectionState
-      if (st === 'failed' || st === 'disconnected' || st === 'closed') this.onClose(st)
+      // 'disconnected' is not 'gone'. ICE reports it for a link that has simply
+      // stopped hearing back — a wifi handover, a phone changing cell — and it
+      // very often returns to 'connected' on its own within a few seconds.
+      // Ending the match on it threw away every recoverable blip.
+      if (st === 'failed' || st === 'closed') this.onClose(st)
     }
   }
 
@@ -142,24 +153,41 @@ const decode = (blob: string): RTCSessionDescriptionInit => {
 // about football — it is a postbox, so the host is still the only authority.
 export class WsTransport implements Transport {
   readonly kind = 'ws' as const
+  readonly canReconnect = true
   onMessage: (m: Msg, from: string) => void = () => {}
   onOpen: () => void = () => {}
   onClose: (why: string) => void = () => {}
 
-  private ws: WebSocket
+  private ws: WebSocket | null = null
   private ready = false
+  private retries = 0
+  private timer = 0
+  // Set by close(): a deliberate exit must not trigger the redial.
+  private done = false
 
   constructor(
-    url: string,
+    private url: string,
     private room: string,
     private role: 'host' | 'guest',
     private name: string,
   ) {
-    this.ws = new WebSocket(url)
-    this.ws.onopen = () => {
-      this.ws.send(JSON.stringify({ rtype: 'join', room: this.room, role: this.role, name: this.name }))
+    this.dial()
+  }
+
+  private dial() {
+    if (this.done) return
+    let ws: WebSocket
+    try {
+      ws = new WebSocket(this.url)
+    } catch {
+      this.retry('could not reach the relay')
+      return
     }
-    this.ws.onmessage = (e) => {
+    this.ws = ws
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ rtype: 'join', room: this.room, role: this.role, name: this.name }))
+    }
+    ws.onmessage = (e) => {
       let o: { rtype?: string; from?: string; body?: Msg; why?: string }
       try {
         o = JSON.parse(e.data as string)
@@ -168,8 +196,12 @@ export class WsTransport implements Transport {
       }
       if (o.rtype === 'joined') {
         this.ready = true
+        this.retries = 0
         this.onOpen()
       } else if (o.rtype === 'error') {
+        // The relay turned us away — a taken room, a bad name. Redialling would
+        // be turned away again, so this one is final.
+        this.done = true
         this.onClose(o.why ?? 'relay refused the room')
       } else if (o.rtype === 'peer-left') {
         this.onClose('the other player left')
@@ -177,21 +209,42 @@ export class WsTransport implements Transport {
         this.onMessage(o.body, o.from ?? 'peer')
       }
     }
-    this.ws.onclose = () => this.onClose('relay disconnected')
-    this.ws.onerror = () => this.onClose('could not reach the relay')
+    ws.onclose = () => this.retry('relay disconnected')
+    ws.onerror = () => {
+      // onerror is always followed by onclose; leave the retry to that so a
+      // failed dial doesn't schedule two.
+    }
+  }
+
+  // Back off so a relay that is down doesn't get hammered, but stay quick for
+  // the first few tries — most drops are a second of nothing.
+  private retry(why: string) {
+    this.ready = false
+    this.ws = null
+    this.onClose(why)
+    if (this.done || this.timer) return
+    const wait = Math.min(8000, 400 * 2 ** this.retries)
+    this.retries++
+    this.timer = setTimeout(() => {
+      this.timer = 0
+      this.dial()
+    }, wait) as unknown as number
   }
 
   get open(): boolean {
-    return this.ready && this.ws.readyState === WebSocket.OPEN
+    return this.ready && this.ws?.readyState === WebSocket.OPEN
   }
 
   send(m: Msg) {
-    if (this.open) this.ws.send(JSON.stringify({ rtype: 'msg', body: m }))
+    if (this.open) this.ws!.send(JSON.stringify({ rtype: 'msg', body: m }))
   }
 
   close() {
+    this.done = true
+    if (this.timer) clearTimeout(this.timer)
+    this.timer = 0
     try {
-      this.ws.close()
+      this.ws?.close()
     } catch {
       /* already gone */
     }

@@ -13,23 +13,44 @@ import type { Command } from '../types'
 // instant. Nobody has to trust anybody's physics but the host's.
 
 export const NET = {
-  protocol: 3, // bumped whenever the wire format changes
+  protocol: 4, // bumped whenever the wire format changes
   snapshotHz: 20, // how often the host broadcasts the world
   inputHz: 60, // how often a client sends its Command
   // How far behind the newest snapshot a client renders remote players. One
   // snapshot interval plus a little: enough to always have two snapshots to
   // interpolate between, so other players move smoothly instead of stepping.
   interpDelay: 0.085,
-  // If the host hasn't been heard from in this long, the connection is gone.
+  // If nothing has been heard in this long, treat the link as gone — but see
+  // `grace`: gone is not the same as over.
   timeout: 8,
+  // How long a dropped player keeps their shirt. Long enough to walk through a
+  // dead tunnel or for a router to sort itself out; short enough that a seat
+  // isn't held all match by somebody who closed the tab.
+  grace: 45,
+  // A full world state, sent often enough that a client which joined or missed
+  // one is never stranded, and rarely enough that it isn't the bulk of the
+  // traffic. Everything between these is a delta.
+  keyframeEvery: 40, // in snapshots — 2 s at 20 Hz
 }
 
 export type Msg =
-  | { t: 'hello'; name: string; protocol: number }
-  | { t: 'welcome'; seat: number; playerId: number; config: unknown; protocol: number }
+  | { t: 'hello'; name: string; protocol: number; token?: string; spectate?: boolean }
+  | {
+      t: 'welcome'
+      seat: number
+      playerId: number // −1 for a spectator: connected, watching, holding no shirt
+      config: unknown
+      protocol: number
+      resumed?: boolean // you got your old shirt back rather than a new one
+    }
   | { t: 'reject'; why: string }
-  | { t: 'input'; seq: number; cmd: WireCommand }
-  | { t: 'snap'; tick: number; time: number; ack: number; s: Snapshot }
+  // `ack` is the newest snapshot tick this client has seen. It costs one number
+  // and gives the host a round-trip time without a single extra packet.
+  | { t: 'input'; seq: number; ack: number; cmd: WireCommand }
+  | { t: 'snap'; tick: number; time: number; ack: number; s?: Snapshot; d?: SnapDelta }
+  // Who is who. Sent only when it changes, which is why names are not in every
+  // snapshot twenty times a second.
+  | { t: 'roster'; who: [number, string][]; pings?: [number, number][] }
   | { t: 'bye' }
 
 // A Command, minus the things that never cross the wire.
@@ -73,6 +94,20 @@ export interface Snapshot {
   ph: string
   cl: number
   pos: number | null // possessor id
+}
+
+// A snapshot as the difference from the one before it. See delta.ts — the
+// shape lives there, but the message type needs to name it.
+export interface SnapDelta {
+  f: number // the tick this is a difference from
+  b: number[] // [mask, ...changed ball fields]
+  p: number[][] // [[id, mask, ...changed fields], ...] — unchanged players absent
+  g: number // mask for the match-level fields below
+  sc?: [number, number]
+  ph?: string
+  cl?: number
+  pos?: number | null
+  gone?: number[] // ids that have left
 }
 
 const F_SPRINT = 1

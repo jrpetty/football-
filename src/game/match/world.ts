@@ -261,6 +261,28 @@ export class World {
     this.remoteCommands.delete(id)
   }
 
+  // Who is wearing which shirt. Empty means nobody has taken it, which is a
+  // different thing from an empty string somebody chose — the setter trims, so
+  // a player called "   " gets their shirt number instead.
+  names = new Map<number, string>()
+
+  setName(id: number, name: string) {
+    const n = name.trim().slice(0, 14)
+    if (n) this.names.set(id, n)
+    else this.names.delete(id)
+  }
+
+  // What to draw over a player's head. A claimed shirt shows the person; an
+  // unclaimed one shows what it is, because "nobody is playing left back" is
+  // worth seeing at a glance in a game where empty shirts just stand there.
+  nameFor(p: Player): string {
+    return this.names.get(p.id) ?? `${p.role} ${p.number}`
+  }
+
+  isClaimed(p: Player): boolean {
+    return p.id === this.controlledId || this.netSeats.has(p.id)
+  }
+
   setRemoteCommand(id: number, cmd: Command) {
     if (this.netSeats.has(id)) this.remoteCommands.set(id, cmd)
   }
@@ -400,7 +422,19 @@ export class World {
 
 
     // 6. Integrate bodies and ball.
-    for (const p of this.players) p.integrate(dt)
+    for (const p of this.players) {
+      p.integrate(dt)
+      // Boots leaving and meeting the turf. Read after the step so a landing
+      // that happened during it is caught on the frame it happened.
+      if (p.justJumped) {
+        p.justJumped = false
+        sfx.jump()
+      }
+      if (p.landImpact > 0) {
+        sfx.land(p.landImpact)
+        p.landImpact = 0
+      }
+    }
     this.separatePlayers()
     this.keepPlayersInBounds()
     const preBounceVz = this.ball.vz
@@ -755,7 +789,9 @@ export class World {
     p.kickCooldown = 0.12
     p.startKick('cushion', power)
     this.possessorId = null
-    sfx.touch(0.35)
+    // The weight of a cushion is the pace you just took off it, not the
+    // button — a dead touch on a rocket is a louder thing than one on a lob.
+    sfx.cushion(Math.min(1, incoming / 18))
     this.pushEffect('kick', this.ball.x, this.ball.y)
   }
 
@@ -812,7 +848,11 @@ export class World {
     p.startKick(header ? 'header' : 'strike', Math.max(power, 0.7))
     p.kickLeg = V.cross(p.facing, V.sub(this.ball.pos, p.pos)) > 0 ? 0 : 1
     this.possessorId = null
-    sfx.strike(header ? 0.5 : Math.max(0.5, power))
+    // A header, a volley and a ball off the floor are three different contacts
+    // and now three different noises. The header is scaled by the run behind
+    // it rather than by a button, because that is what powers it.
+    if (header) sfx.header(Math.min(1, 0.35 + p.speed / 9))
+    else sfx.volley(Math.max(0.5, power))
     this.pushEffect('kick', this.ball.x, this.ball.y)
     this.stats[p.team].shots++
     if (this.shotOnTarget(p, dir, speed, vz)) this.stats[p.team].onTarget++
