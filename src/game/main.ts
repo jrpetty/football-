@@ -13,6 +13,7 @@ import { HostSession, ClientSession } from './net/session'
 import { Lobby } from './net/lobby'
 import type { NetHandoff } from './net/lobby'
 import { Screens } from './ui/screens'
+import { drawReplayOverlay } from './ui/replayOverlay'
 import { Game3D } from './game3d'
 import type { Hooks } from './game3d'
 import type { Command, MatchConfig } from './types'
@@ -144,7 +145,9 @@ class Game {
         this.world.update(dt, cmd)
         this.netUpdate(dt, cmd)
       }
-      this.cam.follow(this.cameraFocus(), dt)
+      // A replay is about the ball, not about whoever you happen to be
+      // playing, so the camera drops the player half of its focus for it.
+      this.cam.follow(this.replay.playing ? this.replay.focus(this.world) : this.cameraFocus(), dt)
       this.maybeEnd()
     }
 
@@ -250,6 +253,13 @@ class Game {
 
   private render() {
     this.renderer.draw(this.world, this.cam)
+    // A replay is a cutaway, so the live furniture goes with it — no charge
+    // meter for a shot you already took, no stamina bar for a run that's over.
+    // The 3D view does the same.
+    if (this.replay.playing) {
+      drawReplayOverlay(this.ctx, this.cssW, this.cssH, this.replay.label, this.replay.progress)
+      return
+    }
     this.hud.draw(
       this.ctx,
       this.world,

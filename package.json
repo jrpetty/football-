@@ -14,7 +14,8 @@
     "test:anim": "node tests/browser/anim.mjs",
     "test:spin": "node tests/browser/spin.mjs",
     "relay": "node scripts/relay.mjs",
-    "test:net": "node tests/browser/net.mjs"
+    "test:net": "node tests/browser/net.mjs",
+    "test:replay": "node tests/browser/replay2d.mjs"
   },
   "devDependencies": {
     "typescript": "^5.5.4",

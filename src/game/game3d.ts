@@ -8,6 +8,7 @@ import { Scene3D } from './render3d/scene'
 import { Hud } from './ui/hud'
 import { DRILL_INFO } from './match/drills'
 import { Screens } from './ui/screens'
+import { drawReplayOverlay } from './ui/replayOverlay'
 import { Replay } from './match/replay'
 import { HostSession, ClientSession } from './net/session'
 import type { NetHandoff } from './net/lobby'
@@ -185,7 +186,9 @@ export class Game3D {
         this.world.update(dt, cmd)
         this.netUpdate(dt, cmd)
       } else {
-        // AI keeps playing; the human's player idles until they click to lock.
+        // Nobody is driving: the world still steps — the ball keeps rolling and
+        // anyone else on the pitch is a person on their own machine — but your
+        // player stands still until you click to take the pointer.
         this.world.update(dt, emptyCommand())
         this.netUpdate(dt, emptyCommand())
       }
@@ -271,27 +274,10 @@ export class Game3D {
     this.cam3.setAspect(w / h)
   }
 
-  // A band top and bottom, the label, and how far through we are.
   private drawReplayOverlay() {
-    const c = this.ctx
     const { label, progress } = this.replayInfo
-    c.clearRect(0, 0, this.cssW, this.cssH)
-    const bar = Math.max(38, this.cssH * 0.07)
-    c.fillStyle = 'rgba(6,10,18,0.82)'
-    c.fillRect(0, 0, this.cssW, bar)
-    c.fillRect(0, this.cssH - bar, this.cssW, bar)
-    c.fillStyle = '#ffe28a'
-    c.font = '700 16px system-ui, sans-serif'
-    c.textAlign = 'center'
-    c.textBaseline = 'middle'
-    c.fillText(label, this.cssW / 2, bar / 2)
-    c.fillStyle = 'rgba(255,255,255,0.5)'
-    c.font = '600 11px system-ui, sans-serif'
-    c.fillText('R or ESC to skip', this.cssW / 2, this.cssH - bar / 2)
-    c.fillStyle = 'rgba(255,255,255,0.15)'
-    c.fillRect(0, bar - 3, this.cssW, 3)
-    c.fillStyle = '#ffe28a'
-    c.fillRect(0, bar - 3, this.cssW * progress, 3)
+    this.ctx.clearRect(0, 0, this.cssW, this.cssH)
+    drawReplayOverlay(this.ctx, this.cssW, this.cssH, label, progress)
   }
 
   private render(locked: boolean, dt: number) {
