@@ -282,6 +282,35 @@ export const WALL = {
   height: 6, // how tall the barrier is drawn; physically it always rebounds
 }
 
+// Graphics quality.
+//
+// Geometry and draw calls were worth cutting and have been, but on any real
+// machine the dominant cost is how many pixels get shaded, and nothing in the
+// scene changes that — only this does. A 4K display at devicePixelRatio 2 is
+// four times the work of rendering at 1, for a game whose readability comes
+// from clean shapes rather than fine detail.
+//
+// The default is deliberately not 'high'. Sixty frames a second matters more
+// here than a crisp advertising hoarding: this is a game about judging a
+// bouncing ball, and judging it is harder when the frame rate is uneven.
+export type Quality = 'low' | 'medium' | 'high'
+
+export const QUALITY: Record<Quality, {
+  pixelRatio: number
+  antialias: boolean
+  shadows: boolean
+  shadowMap: number
+  aniso: number
+  label: string
+}> = {
+  // Everything that costs a full screen of fill, off. Still a lit 3D pitch.
+  low: { pixelRatio: 1, antialias: false, shadows: false, shadowMap: 0, aniso: 1, label: 'Low' },
+  // The default. Shadows kept — they are most of what tells you where a ball
+  // is in the air — but rendered at a resolution a laptop can hold 60 at.
+  medium: { pixelRatio: 1.25, antialias: false, shadows: true, shadowMap: 1024, aniso: 4, label: 'Medium' },
+  high: { pixelRatio: 2, antialias: true, shadows: true, shadowMap: 2048, aniso: 16, label: 'High' },
+}
+
 // Training apparatus you can hit: slalom mannequins to dribble through and a
 // free-kick wall standing where a real one would.
 //

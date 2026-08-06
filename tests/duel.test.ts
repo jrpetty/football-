@@ -10,7 +10,8 @@ import { SIM, FIELD } from '../src/game/config'
 
 const cfg = {
   teamSize: 3, halfLength: 6000, mode: 'match' as const, singleKeeper: false,
-  view: '3d' as const, position: 'MID' as const, heightSens: 1.6, curveSens: 1.15,
+  view: '3d' as const,
+  quality: 'medium' as const, position: 'MID' as const, heightSens: 1.6, curveSens: 1.15,
   humanControlled: true,
 }
 const results: string[] = []

@@ -84,7 +84,8 @@ function offPost(spin: number, vx = 20, vy = 0) {
 {
   const cfg = {
     teamSize: 1, halfLength: 6000, mode: 'training' as const, singleKeeper: false,
-    view: '3d' as const, position: 'MID' as const, heightSens: 1.6, curveSens: 1.15,
+    view: '3d' as const,
+  quality: 'medium' as const, position: 'MID' as const, heightSens: 1.6, curveSens: 1.15,
     humanControlled: true,
   }
   const hitPost = (spin: number) => {

@@ -22,6 +22,7 @@ export interface Saved {
   v: number
   name: string
   view: '2d' | '3d'
+  quality: 'low' | 'medium' | 'high'
   position: string
   teamSize: number
   halfLength: number
@@ -39,6 +40,7 @@ const DEFAULTS: Saved = {
   v: VERSION,
   name: '',
   view: '3d',
+  quality: 'medium',
   position: 'FWD',
   teamSize: 4,
   halfLength: 120,
@@ -81,6 +83,7 @@ function sane(s: Saved): Saved {
     ...s,
     name: typeof s.name === 'string' ? s.name.slice(0, 14) : '',
     view: oneOf(s.view, ['2d', '3d'] as const, DEFAULTS.view),
+    quality: oneOf(s.quality, ['low', 'medium', 'high'] as const, DEFAULTS.quality),
     position: oneOf(s.position, ['GK', 'DEF', 'MID', 'FWD'] as const, DEFAULTS.position),
     teamSize: oneOf(s.teamSize, [3, 4, 5, 6] as const, DEFAULTS.teamSize),
     halfLength: oneOf(s.halfLength, [60, 120, 180] as const, DEFAULTS.halfLength),

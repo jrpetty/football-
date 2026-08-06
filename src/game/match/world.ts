@@ -285,8 +285,19 @@ export class World {
   // unclaimed one shows what it is, because "nobody is playing left back" is
   // worth seeing at a glance in a game where empty shirts just stand there.
   nameFor(p: Player): string {
-    return this.names.get(p.id) ?? `${p.role} ${p.number}`
+    const n = this.names.get(p.id)
+    if (n) return n
+    // Cached, because this runs once per player per frame to label them and
+    // building the same string sixty times a second for eight players is eight
+    // pieces of garbage a frame for a value that never changes.
+    let fallback = this.shirtLabels.get(p.id)
+    if (!fallback) {
+      fallback = `${p.role} ${p.number}`
+      this.shirtLabels.set(p.id, fallback)
+    }
+    return fallback
   }
+  private shirtLabels = new Map<number, string>()
 
   isClaimed(p: Player): boolean {
     return p.id === this.controlledId || this.netSeats.has(p.id)

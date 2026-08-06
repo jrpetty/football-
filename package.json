@@ -16,7 +16,9 @@
     "relay": "node scripts/relay.mjs",
     "test:net": "node tests/browser/net.mjs",
     "test:replay": "node tests/browser/replay2d.mjs",
-    "test:settings": "node tests/browser/settings.mjs"
+    "test:settings": "node tests/browser/settings.mjs",
+    "test:perf": "node tests/browser/perf.mjs",
+    "test:quality": "node tests/browser/quality.mjs"
   },
   "devDependencies": {
     "typescript": "^5.5.4",

@@ -54,7 +54,7 @@ export class Game3D {
     this.ctx = ctx
     canvas.classList.add('hud-only', 'unlocked')
     this.human = new Human3DController({ height: config.heightSens, curve: config.curveSens })
-    this.scene = new Scene3D(container)
+    this.scene = new Scene3D(container, config.quality)
     this.cam3 = new Camera3D(1)
     this.world = new World(config)
     // Your own shirt carries your name from the start, not just once you go

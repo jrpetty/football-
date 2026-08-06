@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { DEFEND, GK, PLAYER } from '../config'
 import { clamp, clamp01, angleDelta } from '../core/math'
 import type { Player } from '../entities/player'
@@ -73,25 +74,23 @@ export class PlayerRig {
     // Torso in two parts so the silhouette tapers. A single capsule read as a
     // slab: same width at the shoulders as at the belt, which is what made the
     // body look like a sign rather than a person.
-    const chest = new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 0.26, 5, 14), mats.jersey)
+    const chest = new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 0.26, 3, 10), mats.jersey)
     chest.scale.set(1.24, 1, 0.78)
     chest.position.y = 0.46
     chest.castShadow = true
     this.torso.add(chest)
 
-    const waist = new THREE.Mesh(new THREE.CapsuleGeometry(0.19, 0.14, 4, 12), mats.jersey)
+    const waist = new THREE.Mesh(new THREE.CapsuleGeometry(0.19, 0.14, 3, 8), mats.jersey)
     waist.scale.set(1.05, 1, 0.72)
     waist.position.y = 0.18
-    waist.castShadow = true
     this.torso.add(waist)
 
     // Deltoid caps, so the arms grow out of the shoulders instead of being
     // stuck onto the side of a box.
     for (const side of [-1, 1]) {
-      const delt = new THREE.Mesh(new THREE.SphereGeometry(0.105, 12, 10), mats.jersey)
+      const delt = new THREE.Mesh(new THREE.SphereGeometry(0.105, 8, 6), mats.jersey)
       delt.scale.set(1, 0.9, 0.85)
       delt.position.set(0.245 * side, 0.55, 0)
-      delt.castShadow = true
       this.torso.add(delt)
     }
 
@@ -109,53 +108,66 @@ export class PlayerRig {
     // ---- head, on its own group so it can be held level while the body works ----
     this.torso.add(this.head)
     this.head.position.y = 0.62
-    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.08, 0.12, 8), mats.skin)
-    neck.position.y = 0.03
-    this.head.add(neck)
-    const skull = new THREE.Mesh(new THREE.SphereGeometry(0.145, 18, 16), mats.skin)
-    skull.scale.set(1, 1.06, 1.04)
-    skull.position.y = 0.19
-    skull.castShadow = true
-    this.head.add(skull)
+    // The head is eleven pieces that never move relative to each other — neck,
+    // skull, hair, nape, two eyes, two brows, two ears and a nose — and they
+    // use two materials between them. Built as eleven meshes that was eleven
+    // draw calls per player per frame, times eight players in a match, for a
+    // cluster of geometry the size of a fist.
+    //
+    // So they are merged into one mesh per material. Nothing about how it looks
+    // changes; the head is still the difference between a person and a
+    // mannequin when the camera comes in close. It is just two calls instead of
+    // eleven.
+    const skinParts: THREE.BufferGeometry[] = []
+    const hairParts: THREE.BufferGeometry[] = []
+
+    const neck = new THREE.CylinderGeometry(0.065, 0.08, 0.12, 6)
+    neck.translate(0, 0.03, 0)
+    skinParts.push(neck)
+
+    const skull = new THREE.SphereGeometry(0.145, 12, 10)
+    skull.scale(1, 1.06, 1.04)
+    skull.translate(0, 0.19, 0)
+    skinParts.push(skull)
+
     // Hair used to sweep 0.6π down from the crown, which is most of the sphere —
     // dark material over nearly the whole head, so close up it read as a blank
     // helmet. A cap over the top third leaves a face below it.
-    const hair = new THREE.Mesh(
-      new THREE.SphereGeometry(0.152, 18, 14, 0, Math.PI * 2, 0, Math.PI * 0.38),
-      mats.hair,
-    )
-    hair.position.y = 0.2
-    this.head.add(hair)
+    const hair = new THREE.SphereGeometry(0.152, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.38)
+    hair.translate(0, 0.2, 0)
+    hairParts.push(hair)
+
     // The back of the head keeps its hair all the way down to the nape.
-    const nape = new THREE.Mesh(
-      new THREE.SphereGeometry(0.15, 16, 12, Math.PI * 0.62, Math.PI * 0.76, Math.PI * 0.2, Math.PI * 0.5),
-      mats.hair,
-    )
-    nape.position.y = 0.19
-    this.head.add(nape)
+    const nape = new THREE.SphereGeometry(0.15, 10, 8, Math.PI * 0.62, Math.PI * 0.76, Math.PI * 0.2, Math.PI * 0.5)
+    nape.translate(0, 0.19, 0)
+    hairParts.push(nape)
 
     // A face, at the smallest scale that still reads: two eyes, a brow, ears.
-    // None of it is visible at playing distance, and all of it is the difference
-    // between a person and a mannequin when the camera comes in close.
-    const eyeGeo = new THREE.SphereGeometry(0.021, 8, 8)
-    const browGeo = new THREE.BoxGeometry(0.052, 0.014, 0.02)
     for (const side of [-1, 1]) {
-      const eye = new THREE.Mesh(eyeGeo, mats.hair)
-      eye.position.set(0.052 * side, 0.205, 0.126)
-      this.head.add(eye)
-      const brow = new THREE.Mesh(browGeo, mats.hair)
-      brow.position.set(0.055 * side, 0.238, 0.125)
-      brow.rotation.z = -0.12 * side
-      this.head.add(brow)
-      const ear = new THREE.Mesh(new THREE.SphereGeometry(0.032, 8, 8), mats.skin)
-      ear.scale.set(0.45, 1, 0.75)
-      ear.position.set(0.142 * side, 0.19, 0.005)
-      this.head.add(ear)
+      const eye = new THREE.SphereGeometry(0.021, 6, 4)
+      eye.translate(0.052 * side, 0.205, 0.126)
+      hairParts.push(eye)
+
+      const brow = new THREE.BoxGeometry(0.052, 0.014, 0.02)
+      brow.rotateZ(-0.12 * side)
+      brow.translate(0.055 * side, 0.238, 0.125)
+      hairParts.push(brow)
+
+      const ear = new THREE.SphereGeometry(0.032, 6, 4)
+      ear.scale(0.45, 1, 0.75)
+      ear.translate(0.142 * side, 0.19, 0.005)
+      skinParts.push(ear)
     }
-    const nose = new THREE.Mesh(new THREE.ConeGeometry(0.028, 0.055, 8), mats.skin)
-    nose.rotation.x = Math.PI / 2
-    nose.position.set(0, 0.182, 0.142)
-    this.head.add(nose)
+
+    const nose = new THREE.ConeGeometry(0.028, 0.055, 6)
+    nose.rotateX(Math.PI / 2)
+    nose.translate(0, 0.182, 0.142)
+    skinParts.push(nose)
+
+    const skinMesh = new THREE.Mesh(mergeGeometries(skinParts)!, mats.skin)
+    skinMesh.castShadow = true
+    this.head.add(skinMesh)
+    this.head.add(new THREE.Mesh(mergeGeometries(hairParts)!, mats.hair))
 
     // ---- legs: hip → thigh → knee → shin → foot ----
     for (const side of [-1, 1]) {
@@ -166,12 +178,11 @@ export class PlayerRig {
       // The leg was shorts to the knee and socks below it — no skin anywhere,
       // which is what made the players look like they were wearing tights.
       // A real kit shows bare leg from mid-thigh to just below the knee.
-      const shortLeg = new THREE.Mesh(new THREE.CapsuleGeometry(0.1, 0.09, 4, 10), mats.shorts)
+      const shortLeg = new THREE.Mesh(new THREE.CapsuleGeometry(0.1, 0.09, 3, 8), mats.shorts)
       shortLeg.position.y = -0.13
-      shortLeg.castShadow = true
       hip.add(shortLeg)
 
-      const thigh = new THREE.Mesh(new THREE.CapsuleGeometry(0.088, 0.16, 4, 10), mats.skin)
+      const thigh = new THREE.Mesh(new THREE.CapsuleGeometry(0.088, 0.16, 3, 8), mats.skin)
       thigh.position.y = -0.29
       thigh.castShadow = true
       hip.add(thigh)
@@ -181,14 +192,13 @@ export class PlayerRig {
       hip.add(knee)
 
       // Bare shin down to where the sock starts, then the sock to the ankle.
-      const shin = new THREE.Mesh(new THREE.CapsuleGeometry(0.07, 0.08, 4, 10), mats.skin)
+      const shin = new THREE.Mesh(new THREE.CapsuleGeometry(0.07, 0.08, 3, 8), mats.skin)
       shin.position.y = -0.08
       shin.castShadow = true
       knee.add(shin)
 
-      const sock = new THREE.Mesh(new THREE.CapsuleGeometry(0.072, 0.16, 4, 10), mats.socks)
+      const sock = new THREE.Mesh(new THREE.CapsuleGeometry(0.072, 0.16, 3, 8), mats.socks)
       sock.position.y = -0.27
-      sock.castShadow = true
       knee.add(sock)
 
       const foot = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.085, 0.27), mats.boot)
@@ -206,12 +216,11 @@ export class PlayerRig {
       shoulder.position.set(0.265 * side, 0.55, 0)
       this.torso.add(shoulder)
 
-      const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.088, 0.08, 0.15, 10), sleeveMat)
+      const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.088, 0.08, 0.15, 6), sleeveMat)
       sleeve.position.y = -0.06
-      sleeve.castShadow = true
       shoulder.add(sleeve)
 
-      const upper = new THREE.Mesh(new THREE.CapsuleGeometry(0.062, 0.16, 4, 8), mats.skin)
+      const upper = new THREE.Mesh(new THREE.CapsuleGeometry(0.062, 0.16, 3, 6), mats.skin)
       upper.position.y = -0.17
       upper.castShadow = true
       shoulder.add(upper)
@@ -220,9 +229,8 @@ export class PlayerRig {
       elbow.position.y = -0.29
       shoulder.add(elbow)
 
-      const fore = new THREE.Mesh(new THREE.CapsuleGeometry(0.055, 0.16, 4, 8), mats.skin)
+      const fore = new THREE.Mesh(new THREE.CapsuleGeometry(0.055, 0.16, 3, 6), mats.skin)
       fore.position.y = -0.14
-      fore.castShadow = true
       elbow.add(fore)
 
       this.arms.push({ hip: shoulder, knee: elbow })
@@ -230,7 +238,7 @@ export class PlayerRig {
 
     // Ground marker for whoever you're controlling.
     this.ring = new THREE.Mesh(
-      new THREE.TorusGeometry(PLAYER.radius + 0.16, 0.05, 8, 32),
+      new THREE.TorusGeometry(PLAYER.radius + 0.16, 0.05, 5, 20),
       new THREE.MeshStandardMaterial({
         color: '#eafff0',
         emissive: '#7dff9a',

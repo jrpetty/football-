@@ -19,6 +19,7 @@ export class Screens {
     mode: 'match',
     singleKeeper: store.get('singleKeeper'),
     view: store.get('view'),
+    quality: store.get('quality'),
     position: store.get('position') as Role,
     heightSens: store.get('heightSens'),
     curveSens: store.get('curveSens'),
@@ -79,6 +80,14 @@ export class Screens {
             <div class="segmented" data-group="view">
               ${this.segStr('view', '3d', this.config.view === '3d', '🎮 Immersive 3D')}
               ${this.segStr('view', '2d', this.config.view === '2d', '🗺️ Classic 2D')}
+            </div>
+          </div>
+          <div class="field">
+            <label>Graphics <span class="hint">3D only — pixels are what costs you frames</span></label>
+            <div class="segmented" data-group="quality">
+              ${this.segStr('quality', 'low', this.config.quality === 'low', 'Low')}
+              ${this.segStr('quality', 'medium', this.config.quality === 'medium', 'Medium')}
+              ${this.segStr('quality', 'high', this.config.quality === 'high', 'High')}
             </div>
           </div>
           <div class="field">
@@ -309,6 +318,7 @@ export class Screens {
         el.parentElement?.querySelectorAll('.seg').forEach((s) => s.classList.remove('active'))
         el.classList.add('active')
         if (group === 'view') store.set('view', (this.config.view = raw === '2d' ? '2d' : '3d'))
+        else if (group === 'quality') store.set('quality', (this.config.quality = raw as MatchConfig['quality']))
         else if (group === 'position') store.set('position', (this.config.position = raw as MatchConfig['position']))
         else if (group === 'teamSize') store.set('teamSize', (this.config.teamSize = Number(raw)))
         else if (group === 'halfLength') store.set('halfLength', (this.config.halfLength = Number(raw)))

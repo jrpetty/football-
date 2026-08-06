@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { Sky } from 'three/examples/jsm/objects/Sky.js'
-import { BALL, FIELD, NET, WALL } from '../config'
+import { BALL, FIELD, NET, QUALITY, WALL } from '../config'
+import type { Quality } from '../config'
 import * as F from '../match/field'
 import type { World } from '../match/world'
 import {
@@ -11,6 +12,7 @@ import {
   normalFromCanvas,
   pitchOverlayTexture,
 } from './textures'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { PlayerRig, makeKitMaterials } from './rig'
 
 // Simulation → Three.js coordinate map: the pitch plane (sim x, y) becomes the
@@ -39,17 +41,29 @@ export class Scene3D {
   }> = {}
   private trailLine: THREE.Line | null = null
 
-  constructor(container: HTMLElement) {
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' })
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
-    this.renderer.shadowMap.enabled = true
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
+  private q: (typeof QUALITY)[Quality]
+
+  constructor(container: HTMLElement, quality: Quality = 'medium') {
+    const q = QUALITY[quality]
+    this.q = q
+    // Antialiasing is fixed at construction — WebGL cannot turn MSAA on and off
+    // on a live context — so the setting takes effect on the next match rather
+    // than instantly. Everything else here could change live; keeping them
+    // together is worth more than the one that can't.
+    this.renderer = new THREE.WebGLRenderer({ antialias: q.antialias, powerPreference: 'high-performance' })
+    // The single biggest lever there is. A 4K display at devicePixelRatio 2 is
+    // four times the pixels of 1, and no amount of geometry work touches that.
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, q.pixelRatio))
+    this.renderer.shadowMap.enabled = q.shadows
+    // Soft shadows are several taps per pixel. Worth it when there is fill to
+    // spare, and the first thing to go when there isn't.
+    this.renderer.shadowMap.type = quality === 'high' ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
     this.renderer.toneMappingExposure = 0.62
     this.renderer.domElement.style.position = 'fixed'
     this.renderer.domElement.style.inset = '0'
     container.appendChild(this.renderer.domElement)
-    this.maxAniso = this.renderer.capabilities.getMaxAnisotropy()
+    this.maxAniso = Math.min(this.renderer.capabilities.getMaxAnisotropy(), q.aniso)
 
     this.scene.fog = new THREE.Fog('#b7d2e6', 95, 240)
 
@@ -59,6 +73,7 @@ export class Scene3D {
     this.buildWalls()
     this.buildGoals()
     this.buildBall()
+    this.buildBallBlob()
   }
 
   dispose() {
@@ -89,6 +104,18 @@ export class Scene3D {
   // ---- sky, sun, lighting ----
 
   private buildSkyAndLights() {
+    const phi = THREE.MathUtils.degToRad(90 - 32)
+    const theta = THREE.MathUtils.degToRad(150)
+    const sun = new THREE.Vector3().setFromSphericalCoords(1, phi, theta)
+
+    // The sky is baked once into a cube map and used as the scene background.
+    //
+    // It used to be a 4000-unit sphere carrying the atmospheric-scattering
+    // shader, which meant every visible sky pixel re-solved Rayleigh and Mie
+    // scattering sixty times a second for a result that is identical every
+    // frame — the sun never moves. Rendering it once into a cube map and
+    // throwing the sphere away costs one texture and turns the most expensive
+    // fragment shader in the scene into a background blit.
     const sky = new Sky()
     sky.scale.setScalar(4000)
     const u = sky.material.uniforms
@@ -96,11 +123,16 @@ export class Scene3D {
     u.rayleigh.value = 1.4
     u.mieCoefficient.value = 0.006
     u.mieDirectionalG.value = 0.8
-    const phi = THREE.MathUtils.degToRad(90 - 32)
-    const theta = THREE.MathUtils.degToRad(150)
-    const sun = new THREE.Vector3().setFromSphericalCoords(1, phi, theta)
     u.sunPosition.value.copy(sun)
-    this.scene.add(sky)
+
+    const bakeScene = new THREE.Scene()
+    bakeScene.add(sky)
+    const cube = new THREE.WebGLCubeRenderTarget(256, { generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter })
+    const cubeCam = new THREE.CubeCamera(1, 10000, cube)
+    cubeCam.update(this.renderer, bakeScene)
+    this.scene.background = cube.texture
+    sky.geometry.dispose()
+    sky.material.dispose()
 
     this.scene.add(new THREE.HemisphereLight('#dcecff', '#3a5a3f', 0.7))
     this.scene.add(new THREE.AmbientLight('#ffffff', 0.18))
@@ -108,15 +140,24 @@ export class Scene3D {
     const dir = new THREE.DirectionalLight('#fff4de', 2.4)
     dir.position.copy(sun.clone().multiplyScalar(80)).add(v3(FIELD.length / 2, FIELD.width / 2, 0))
     dir.target.position.copy(v3(FIELD.length / 2, FIELD.width / 2))
-    dir.castShadow = true
-    dir.shadow.mapSize.set(2048, 2048)
+    dir.castShadow = this.q.shadows
+    // The shadow frustum only has to cover the things that cast — the players,
+    // the ball, the goals and the training apparatus, all of which are on the
+    // pitch. It was ±45 m, a 90 m box swallowing the whole stadium, at 2048².
+    // Fitting it to the pitch instead means each texel covers a third of the
+    // ground it used to, so 1024² is now *sharper* than the old 2048² as well
+    // as being a quarter of the fill.
+    const pad = 6
+    dir.shadow.mapSize.set(this.q.shadowMap || 1024, this.q.shadowMap || 1024)
     const cam = dir.shadow.camera as THREE.OrthographicCamera
+    const half = Math.max(FIELD.length, FIELD.width) / 2 + pad
     cam.near = 1
     cam.far = 220
-    cam.left = -45
-    cam.right = 45
-    cam.top = 45
-    cam.bottom = -45
+    cam.left = -half
+    cam.right = half
+    cam.top = half
+    cam.bottom = -half
+    cam.updateProjectionMatrix()
     dir.shadow.bias = -0.0004
     dir.shadow.normalBias = 0.02
     this.scene.add(dir)
@@ -200,32 +241,62 @@ export class Scene3D {
     const cz = W / 2
     const m = FIELD.margin
 
+    // The four advertising hoardings.
+    //
+    // These were a box with a six-material array each — one material per face,
+    // which three.js draws as one call per face. Four boards were twenty-four
+    // draw calls to put a hundred and ninety triangles on screen, and they
+    // never move.
+    //
+    // So: every board's carcass merges into one geometry with one dark
+    // material, and every board's front face merges into another with the ad
+    // texture, its repeat baked into the UVs rather than carried on a
+    // per-board texture. Twenty-four calls become two.
     const adCanvas = adTexture()
     const bh = 1.15
+    const carcasses: THREE.BufferGeometry[] = []
+    const faces: THREE.BufferGeometry[] = []
     const mkBoard = (w: number, x: number, z: number, rotY: number) => {
-      // One texture pass per ~34m keeps the sponsor lettering legible.
-      const t = this.tex(adCanvas, Math.max(1, Math.round(w / 34)), 1)
-      const b = new THREE.Mesh(
-        new THREE.BoxGeometry(w, bh, 0.28),
-        [
-          new THREE.MeshStandardMaterial({ color: '#0d1117', roughness: 0.8 }),
-          new THREE.MeshStandardMaterial({ color: '#0d1117', roughness: 0.8 }),
-          new THREE.MeshStandardMaterial({ color: '#20262f', roughness: 0.8 }),
-          new THREE.MeshStandardMaterial({ color: '#0d1117', roughness: 0.8 }),
-          new THREE.MeshStandardMaterial({ map: t, roughness: 0.45 }),
-          new THREE.MeshStandardMaterial({ color: '#0d1117', roughness: 0.8 }),
-        ],
-      )
-      b.position.set(x, bh / 2, z)
-      b.rotation.y = rotY
-      b.castShadow = true
-      b.receiveShadow = true
-      this.scene.add(b)
+      const box = new THREE.BoxGeometry(w, bh, 0.28)
+      box.rotateY(rotY)
+      box.translate(x, bh / 2, z)
+      carcasses.push(box)
+
+      // The face that carries the advert, a whisker proud of the carcass.
+      const face = new THREE.PlaneGeometry(w, bh)
+      // One texture pass per ~34 m keeps the sponsor lettering legible. With a
+      // shared texture that has to live in the UVs.
+      const repeat = Math.max(1, Math.round(w / 34))
+      const uv = face.getAttribute('uv') as THREE.BufferAttribute
+      for (let i = 0; i < uv.count; i++) uv.setX(i, uv.getX(i) * repeat)
+      uv.needsUpdate = true
+      face.rotateY(rotY)
+      face.translate(x + Math.sin(rotY) * 0.145, bh / 2, z + Math.cos(rotY) * 0.145)
+      faces.push(face)
     }
     mkBoard(L + m * 2, cx, -m, Math.PI)
     mkBoard(L + m * 2, cx, W + m, 0)
     mkBoard(W + m * 2, -m, cz, Math.PI / 2)
     mkBoard(W + m * 2, L + m, cz, -Math.PI / 2)
+
+    const carcass = new THREE.Mesh(
+      mergeGeometries(carcasses)!,
+      new THREE.MeshStandardMaterial({ color: '#0d1117', roughness: 0.8 }),
+    )
+    // Not a caster. The boards ring the pitch outside the shadow frustum, so
+    // every one of them was drawn into the depth map each frame to produce a
+    // shadow that lands on nothing anyone can see.
+    carcass.receiveShadow = true
+    this.scene.add(carcass)
+
+    const adTex = this.tex(adCanvas)
+    adTex.wrapS = adTex.wrapT = THREE.RepeatWrapping
+    const adBoards = new THREE.Mesh(
+      mergeGeometries(faces)!,
+      new THREE.MeshStandardMaterial({ map: adTex, roughness: 0.45 }),
+    )
+    adBoards.receiveShadow = true
+    this.scene.add(adBoards)
 
     // Raked crowd stands forming a shallow bowl.
     const crowdCanvas = crowdTexture()
@@ -270,9 +341,8 @@ export class Scene3D {
     for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
       const px = cx + sx * (L / 2 + m + 5)
       const pz = cz + sz * (W / 2 + m + 5)
-      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.5, 26, 10), poleMat)
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.5, 26, 6), poleMat)
       pole.position.set(px, 13, pz)
-      pole.castShadow = true
       this.scene.add(pole)
       const rig = new THREE.Mesh(new THREE.BoxGeometry(4.4, 1.7, 0.5), lampMat)
       rig.position.set(px, 25.6, pz)
@@ -360,7 +430,7 @@ export class Scene3D {
         post.castShadow = true
         this.scene.add(post)
       }
-      const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, b - a, 12), white)
+      const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, b - a, 8), white)
       bar.position.copy(v3(goalX, (a + b) / 2, h))
       bar.rotation.x = Math.PI / 2
       bar.castShadow = true
@@ -401,10 +471,41 @@ export class Scene3D {
 
   // ---- ball ----
 
+  // A painted circle under the ball, for when there is no shadow map to cast a
+  // real one.
+  //
+  // Turning shadows off is the cheapest way to buy frames, but the ball's
+  // shadow is not decoration here — it is the only thing that tells you where a
+  // ball in flight is going to land, and this is a game about judging exactly
+  // that. So Low keeps the one shadow that is load-bearing and pays a single
+  // draw call for it.
+  private ballBlob: THREE.Mesh | null = null
+
+  private buildBallBlob() {
+    if (this.q.shadows) return
+    const geo = new THREE.CircleGeometry(BALL.radius * 1.6, 16)
+    geo.rotateX(-Math.PI / 2)
+    this.ballBlob = new THREE.Mesh(
+      geo,
+      new THREE.MeshBasicMaterial({ color: '#000000', transparent: true, opacity: 0.34, depthWrite: false }),
+    )
+    this.scene.add(this.ballBlob)
+  }
+
+  private syncBallBlob(x: number, y: number, z: number) {
+    const b = this.ballBlob
+    if (!b) return
+    // Wider and fainter the higher it is, the way a real one goes.
+    const lift = Math.min(1, z / 6)
+    b.position.set(x, 0.02, y)
+    b.scale.setScalar(1 + lift * 0.8)
+    ;(b.material as THREE.MeshBasicMaterial).opacity = 0.34 * (1 - lift * 0.55)
+  }
+
   private buildBall() {
     const map = this.tex(ballTexture())
     this.ball = new THREE.Mesh(
-      new THREE.SphereGeometry(BALL.radius, 32, 24),
+      new THREE.SphereGeometry(BALL.radius, 20, 14),
       new THREE.MeshStandardMaterial({ map, roughness: 0.38, metalness: 0.03 }),
     )
     this.ball.castShadow = true
@@ -519,7 +620,7 @@ export class Scene3D {
       }
       const rp = p.renderPos(world.renderAlpha)
       // Above the head, and it rises with a jump because the head does.
-      tag.sprite.position.copy(v3(rp.x, rp.y, rp.z + 2.35))
+      tag.sprite.position.set(rp.x, rp.z + 2.35, rp.y)
       // Your own tag is hidden in first person for the same reason your body
       // is: you are looking out of it.
       tag.sprite.visible = p.id !== hideId && !replaying
@@ -556,10 +657,9 @@ export class Scene3D {
     const need = gates.length * 2
     while (this.gateCones.length < need) {
       const cone = new THREE.Mesh(
-        new THREE.ConeGeometry(0.16, 0.44, 12),
+        new THREE.ConeGeometry(0.16, 0.44, 8),
         new THREE.MeshStandardMaterial({ color: '#ff9d3d', emissive: '#c25c00', emissiveIntensity: 0.35, roughness: 0.6 }),
       )
-      cone.castShadow = true
       this.scene.add(cone)
       this.gateCones.push(cone)
     }
@@ -581,7 +681,7 @@ export class Scene3D {
   private syncWall(wall: { x: number; y: number }[]) {
     while (this.wallMen.length < wall.length) {
       const m = new THREE.Mesh(
-        new THREE.CapsuleGeometry(0.32, 1.15, 6, 14),
+        new THREE.CapsuleGeometry(0.32, 1.15, 3, 10),
         new THREE.MeshStandardMaterial({ color: '#2a3340', roughness: 0.85 }),
       )
       m.castShadow = true
@@ -628,98 +728,118 @@ export class Scene3D {
     }
   }
 
-  // The permanent training apparatus. Built once, because unlike the drill
-  // apparatus it never changes — only its lean does.
-  private dummies: THREE.Group[] = []
+  // The permanent training apparatus.
+  //
+  // Built as instanced meshes rather than a group of meshes per dummy. Eleven
+  // dummies made of five parts each was sixty-six draw calls and twenty-three
+  // thousand triangles a frame — forty per cent of the entire scene's geometry,
+  // spent on training furniture standing still at the side of the pitch, and
+  // doubled again by the shadow pass.
+  //
+  // Every dummy of a kind is identical, so each material becomes one
+  // InstancedMesh and the per-dummy transform — position, and the lean when
+  // something knocks it — goes in the instance matrix. Sixty-six calls become
+  // seven, and the triangle count falls with the segment counts, which were
+  // generous for objects nobody gets closer than a couple of metres to.
+  private dummyParts: { mesh: THREE.InstancedMesh; leans: boolean }[] = []
+  private dummyCount = 0
+  // Scratch, so a per-frame matrix rebuild doesn't allocate.
+  private mTmp = new THREE.Matrix4()
+  private mLean = new THREE.Matrix4()
+  private vAxis = new THREE.Vector3()
 
-  private makeDummy(kind: 'slalom' | 'wall'): THREE.Group {
-    const g = new THREE.Group()
-    // A weighted base that stays put while the body above it rocks. Everything
-    // else is parented to `body`, so leaning the body leaves the base flat on
-    // the turf the way a real sprung mannequin does.
-    const base = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.26, 0.32, 0.07, 16),
-      new THREE.MeshStandardMaterial({ color: '#22262c', roughness: 0.9 }),
-    )
-    base.position.y = 0.035
-    base.receiveShadow = true
-    g.add(base)
+  private buildDummies(list: { kind: 'slalom' | 'wall' }[]) {
+    const slalom: number[] = []
+    const wall: number[] = []
+    list.forEach((d, i) => (d.kind === 'slalom' ? slalom : wall).push(i))
+    this.dummyCount = list.length
 
-    const body = new THREE.Group()
-    body.name = 'body'
-    g.add(body)
-
-    if (kind === 'slalom') {
-      // A pole mannequin: the kind you weave through. Banded so the spacing
-      // reads at a glance from a player's eye height.
-      const pole = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.055, 0.065, 1.75, 10),
-        new THREE.MeshStandardMaterial({ color: '#ff9d3d', roughness: 0.6 }),
-      )
-      pole.position.y = 0.9
-      pole.castShadow = true
-      body.add(pole)
-      for (let i = 0; i < 3; i++) {
-        const band = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.075, 0.075, 0.16, 10),
-          new THREE.MeshStandardMaterial({ color: '#f2f5ff', roughness: 0.7 }),
-        )
-        band.position.y = 0.45 + i * 0.5
-        body.add(band)
-      }
-    } else {
-      // A wall mannequin: a body-shaped dummy with a head and its arms across
-      // the obvious place, standing the way the wall it stands in for would.
-      //
-      // Deliberately not in anybody's kit. It is a training aid, so it wears a
-      // high-vis bib — which also keeps it from reading as an opponent at a
-      // glance, and keeps it visible: the stadium is graded through filmic tone
-      // mapping and anything this dark simply disappeared into its own shadow.
-      const kit = new THREE.MeshStandardMaterial({ color: '#5b6779', roughness: 0.85 })
-      const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 1.0, 6, 14), kit)
-      torso.position.y = 0.95
-      torso.castShadow = true
-      body.add(torso)
-      const bib = new THREE.Mesh(
-        new THREE.CapsuleGeometry(0.315, 0.5, 6, 14),
-        new THREE.MeshStandardMaterial({ color: '#e8d43a', roughness: 0.7 }),
-      )
-      bib.position.y = 1.12
-      body.add(bib)
-      const head = new THREE.Mesh(
-        new THREE.SphereGeometry(0.16, 14, 12),
-        new THREE.MeshStandardMaterial({ color: '#c8a284', roughness: 0.8 }),
-      )
-      head.position.y = 1.66
-      head.castShadow = true
-      body.add(head)
-      // Arms folded in front, the way a wall stands.
-      const guard = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.15, 0.16), kit)
-      guard.position.set(0, 0.66, 0.25)
-      body.add(guard)
+    // One instanced mesh per (part, kind). `index` maps instance slot → dummy.
+    const add = (
+      geo: THREE.BufferGeometry,
+      mat: THREE.Material,
+      idx: number[],
+      leans: boolean,
+      shadow: boolean,
+    ) => {
+      if (!idx.length) return
+      const mesh = new THREE.InstancedMesh(geo, mat, idx.length)
+      mesh.castShadow = shadow
+      mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
+      mesh.frustumCulled = false
+      mesh.userData.idx = idx
+      this.scene.add(mesh)
+      this.dummyParts.push({ mesh, leans })
     }
-    this.scene.add(g)
-    return g
+
+    const baseMat = new THREE.MeshStandardMaterial({ color: '#22262c', roughness: 0.9 })
+    const baseGeo = new THREE.CylinderGeometry(0.26, 0.32, 0.07, 10)
+    baseGeo.translate(0, 0.035, 0)
+    // The base sits flat however hard the body above it is knocked, so it is a
+    // separate instanced mesh that never takes the lean.
+    add(baseGeo, baseMat, [...slalom, ...wall], false, false)
+
+    // ---- slalom: a banded pole ----
+    // The three bands merge into one geometry: they share a material and never
+    // move relative to each other, so there is no reason for them to be three
+    // draws.
+    const pole = new THREE.CylinderGeometry(0.055, 0.065, 1.75, 8)
+    pole.translate(0, 0.9, 0)
+    add(pole, new THREE.MeshStandardMaterial({ color: '#ff9d3d', roughness: 0.6 }), slalom, true, true)
+    const bands: THREE.BufferGeometry[] = []
+    for (let i = 0; i < 3; i++) {
+      const band = new THREE.CylinderGeometry(0.075, 0.075, 0.16, 8)
+      band.translate(0, 0.45 + i * 0.5, 0)
+      bands.push(band)
+    }
+    add(
+      mergeGeometries(bands)!,
+      new THREE.MeshStandardMaterial({ color: '#f2f5ff', roughness: 0.7 }),
+      slalom,
+      true,
+      false,
+    )
+
+    // ---- wall: a bibbed mannequin ----
+    const kitMat = new THREE.MeshStandardMaterial({ color: '#5b6779', roughness: 0.85 })
+    const torso = new THREE.CapsuleGeometry(0.3, 1.0, 3, 10)
+    torso.translate(0, 0.95, 0)
+    const guard = new THREE.BoxGeometry(0.52, 0.15, 0.16)
+    guard.translate(0, 0.66, 0.25)
+    add(mergeGeometries([torso, guard])!, kitMat, wall, true, true)
+
+    const bib = new THREE.CapsuleGeometry(0.315, 0.5, 3, 10)
+    bib.translate(0, 1.12, 0)
+    // No shadow: it is a skin over the torso, which is already casting one.
+    add(bib, new THREE.MeshStandardMaterial({ color: '#e8d43a', roughness: 0.7 }), wall, true, false)
+
+    const head = new THREE.SphereGeometry(0.16, 8, 6)
+    head.translate(0, 1.66, 0)
+    add(head, new THREE.MeshStandardMaterial({ color: '#c8a284', roughness: 0.8 }), wall, true, false)
   }
 
   private syncDummies(world: World) {
     const list = world.drills?.dummies
     if (!list || !list.length) return
-    while (this.dummies.length < list.length) {
-      this.dummies.push(this.makeDummy(list[this.dummies.length].kind))
+    if (!this.dummyParts.length || this.dummyCount !== list.length) {
+      if (this.dummyParts.length) return // shape changed mid-match; nothing does this
+      this.buildDummies(list)
     }
-    list.forEach((m, i) => {
-      const g = this.dummies[i]
-      g.position.set(m.x, 0, m.y)
-      const body = g.getObjectByName('body')
-      if (!body) return
-      // Lean away from whatever hit it. The lean is a world-space direction, so
-      // it becomes a rotation about the axis perpendicular to it.
-      body.rotation.set(0, 0, 0)
-      if (m.lean > 1e-4) {
-        body.rotateOnAxis(new THREE.Vector3(m.ly, 0, -m.lx).normalize(), -m.lean)
+    for (const part of this.dummyParts) {
+      const idx = part.mesh.userData.idx as number[]
+      for (let slot = 0; slot < idx.length; slot++) {
+        const m = list[idx[slot]]
+        this.mTmp.makeTranslation(m.x, 0, m.y)
+        if (part.leans && m.lean > 1e-4) {
+          // Lean away from whatever hit it, about the axis across that direction.
+          this.vAxis.set(m.ly, 0, -m.lx).normalize()
+          this.mLean.makeRotationAxis(this.vAxis, -m.lean)
+          this.mTmp.multiply(this.mLean)
+        }
+        part.mesh.setMatrixAt(slot, this.mTmp)
       }
-    })
+      part.mesh.instanceMatrix.needsUpdate = true
+    }
   }
 
   private syncDrills(world: World) {
@@ -728,7 +848,7 @@ export class Scene3D {
 
     while (this.targetRings.length < d.targets.length) {
       const ring = new THREE.Mesh(
-        new THREE.TorusGeometry(0.55, 0.07, 10, 28),
+        new THREE.TorusGeometry(0.55, 0.07, 6, 20),
         new THREE.MeshStandardMaterial({
           color: '#ffd85e',
           emissive: '#ffb020',
@@ -804,7 +924,8 @@ export class Scene3D {
     const a = world.renderAlpha
     const b = world.ball
     const bp = b.renderPos(a)
-    this.ball.position.copy(v3(bp.x, bp.y, bp.z + BALL.radius))
+    this.ball.position.set(bp.x, bp.z + BALL.radius, bp.y)
+    this.syncBallBlob(bp.x, bp.y, bp.z)
     this.spinBall(b, dt)
 
     this.syncNets(world, dt)

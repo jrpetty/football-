@@ -24,6 +24,7 @@ const training = () =>
     mode: 'training',
     singleKeeper: false,
     view: '3d',
+  quality: 'medium' as const,
     position: 'MID',
     heightSens: 1.6,
     curveSens: 1.15,
@@ -45,7 +46,8 @@ const training = () =>
 {
   const w = new World({
     teamSize: 4, halfLength: 120, mode: 'match', singleKeeper: false,
-    view: '3d', position: 'MID', heightSens: 1.6, curveSens: 1.15, humanControlled: true,
+    view: '3d',
+  quality: 'medium' as const, position: 'MID', heightSens: 1.6, curveSens: 1.15, humanControlled: true,
   })
   ok(
     'and only in training',

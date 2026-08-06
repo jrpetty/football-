@@ -70,6 +70,7 @@ export interface MatchConfig {
   mode: 'match' | 'training'
   singleKeeper: boolean
   view: '2d' | '3d' // presentation: top-down 2D or first/third-person 3D
+  quality: 'low' | 'medium' | 'high' // how many pixels the 3D view is willing to shade
   position: Role // the one player you are for the whole match
   heightSens: number // Kick Height Sensitivity — flick-up → loft
   curveSens: number // Kick Curve Sensitivity — sideways flick → spin

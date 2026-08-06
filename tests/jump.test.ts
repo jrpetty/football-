@@ -13,6 +13,7 @@ const cfg = {
   mode: 'training' as const,
   singleKeeper: false,
   view: '3d' as const,
+  quality: 'medium' as const,
   position: 'MID' as const,
   heightSens: 1.6,
   curveSens: 1.15,
