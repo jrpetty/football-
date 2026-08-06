@@ -137,6 +137,7 @@ export class Screens {
       ['<b>Touch</b> — close control', '<b>Right click</b> · tap or hold'],
       ['Touch to the side / back', 'A D S + right click'],
       ['<b>Skill move</b> — drag / roll / lift', 'Right click + <b>hard flick</b>'],
+      ['<b>Backheel</b>', 'Right click + flick down while backing away'],
       ['<b>Strike</b> — pass or shot', '<b>Left click</b> · hold = power'],
       ['<b>Cushion</b> a ball out of the air', 'Right click while it drops'],
       ['<b>Volley / header</b>', 'Left click while it drops'],
@@ -190,7 +191,8 @@ export class Screens {
       <div class="flickhint">
         <b>The same wrist works on the ball at your feet.</b> Flick hard during a
         <b>touch</b> to drag it back, roll it across your body, or lift it over a
-        leg. And the ball doesn't have to be on the floor: <b>right click</b> a
+        leg — and flick down while you're already backing away and it's a
+        backheel instead, struck past you rather than pulled under you. And the ball doesn't have to be on the floor: <b>right click</b> a
         dropping ball to cushion it dead (flick up to keep it in the air),
         <b>left click</b> to volley it — or, above head height, to head it.
       </div>

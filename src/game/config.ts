@@ -55,6 +55,10 @@ export const BALL = {
   // Coulomb friction between ball and turf, which is what converts sliding into
   // rolling and what lets spin change where a bounce goes. Real grass is ~0.4-0.6.
   turfFriction: 0.5,
+  // Grip on the upright surfaces the ball can hit. A post is a hard painted
+  // cylinder and bites well; a body in a shirt gives instead of gripping.
+  postGrip: 0.55,
+  bodyGrip: 0.2,
   // How much side-spin drags the ball sideways as it lands. Bounded by the same
   // friction budget as everything else at the contact patch.
   bounceSideKick: 0.09,
@@ -142,6 +146,14 @@ export const PLAYER = {
   // header at full stretch. Beyond this it sails over you.
   aerialReach: 2.25,
   headerHeight: 1.5, // above this you're heading it rather than using a foot
+  // Your weak foot. Which boot the ball comes off is already decided by which
+  // side of you it's on, and until now that cost nothing — so a shot from your
+  // wrong side was identical to one from your good one. Everyone is one-footed
+  // to some degree, and shifting the ball onto your stronger foot before you
+  // hit it is one of the oldest decisions in the game.
+  weakFootPower: 0.86, // pace off the wrong boot
+  weakFootSpread: 2.6, // ...and how much less accurately it goes
+  weakFootSpin: 0.7, // you can bend it, just not as well
   // Jumping. A footballer gets maybe two thirds of a metre off the ground and
   // hangs there for the better part of a second, and what that buys is reach:
   // everything you can play — control height, aerial reach, the height at which
@@ -248,6 +260,22 @@ export const KICK = {
 
 // The pitch is enclosed, arena-style: no throw-ins, no corners, no goal kicks.
 // The ball simply rebounds off the boards and stays live, so play never stops.
+// The net. A goal used to be an instant: the ball crossed the line and stopped
+// existing. It should be the best half-second in the game — the ball dragging
+// into the mesh, the mesh taking the shape of the shot, and the whole thing
+// settling. So the ball is caught rather than teleported, and how hard it went
+// in is what the net has to absorb.
+export const NET = {
+  drag: 9, // deceleration once it's in the mesh (m/s²) — soft, but it does catch
+  restitution: 0.12, // what comes back off the back of the net
+  grab: 0.55, // how quickly the ball's spin is killed by the mesh
+  // Visual: how far the mesh gives, and how quickly it comes back.
+  give: 0.055, // metres of bulge per m/s of impact
+  maxGive: 0.85,
+  spread: 1.35, // how far across the mesh the impact is felt
+  settle: 2.6, // how fast it springs back
+}
+
 export const WALL = {
   restitution: 0.66, // how much pace survives a rebound
   friction: 0.94, // pace kept along the wall

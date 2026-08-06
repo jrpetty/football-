@@ -107,7 +107,10 @@ export class Human3DController {
         dirv = { x: -look.x, y: -look.y } // pull it back
       }
       // A decisive flick during the touch turns it into a close-control move.
-      const skill = skillFromFlick(raw)
+      // Flicking down while you're already backing away is a backheel rather
+      // than a drag-back — your body is going that way, so the ball goes past
+      // you instead of under you.
+      const skill = skillFromFlick(raw, f < 0)
       cmd.kick = makeKick(
         'touch',
         Math.max(power, 0.12),

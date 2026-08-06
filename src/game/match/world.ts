@@ -1,4 +1,4 @@
-import { AERIAL, BALL, CONTROL, DEFEND, DUEL, FIELD, GK, KICK, MATCH, PLAYER, SHIELD, SIM, WALL } from '../config'
+import { AERIAL, BALL, CONTROL, DEFEND, DUEL, FIELD, GK, KICK, MATCH, NET, PLAYER, SHIELD, SIM, WALL } from '../config'
 import { clamp } from '../core/math'
 import * as V from '../core/vec'
 import type { Vec2 } from '../core/vec'
@@ -66,6 +66,9 @@ export class World {
   effects: Effect[] = []
   announce: Announce | null = null
   lastGoalTeam: Team | null = null
+  // Where and how hard the net was last struck, for the mesh to react to.
+  netHit: { team: Team; y: number; z: number; power: number; age: number } | null = null
+  private trainingResetIn = 0
 
   // How far we are between the last physics step and the next, 0..1. Renderers
   // interpolate with this so motion looks smooth at any frame rate rather than
@@ -194,6 +197,20 @@ export class World {
     const dt = Math.min(frameDt, SIM.maxFrameDt)
     this.updateEffects(dt)
     this.updateAnnounce(dt)
+    if (this.netHit) {
+      this.netHit.age += dt
+      if (this.netHit.age > 2.5) this.netHit = null
+    }
+    if (this.trainingResetIn > 0) {
+      this.trainingResetIn -= dt
+      if (this.trainingResetIn <= 0) {
+        if (!this.drills?.servesBalls()) this.resetTrainingBall()
+        else {
+          this.ball.setPos(FIELD.length / 2, FIELD.width / 2, 0)
+          this.ball.stop()
+        }
+      }
+    }
     this.drills?.update(this, dt)
     const commands = this.buildCommands(humanCmd, dt)
 
@@ -272,6 +289,10 @@ export class World {
         }
         return
       case 'goal':
+        // Keep simulating, just not live: the ball is still flying into the net
+        // and that is the half-second worth watching. Nothing can be scored or
+        // saved during it, so `live` is false.
+        this.simulate(commands, dt, false)
         this.phaseTimer -= dt
         if (this.phaseTimer <= 0) {
           this.placeForKickoff(this.kickoffTeam)
@@ -594,7 +615,16 @@ export class World {
     // your flick, not a dice roll. Only a whisper of scatter remains, growing
     // with power and fatigue, so a full-blooded strike is marginally less
     // precise than a measured one.
-    const baseSpread = kick.type === 'touch' ? 0.15 : 0.3 + power * 0.9
+    // Which boot this comes off, and whether it's the good one. Decided by
+    // which side of you the ball is on, exactly as it is for the animation —
+    // so shifting the ball onto your stronger foot before you hit it is a real
+    // decision with a real payoff.
+    const foot: 0 | 1 = V.cross(p.facing, V.sub(this.ball.pos, p.pos)) > 0 ? 0 : 1
+    const weak = foot !== p.strongFoot && kick.type !== 'touch'
+    if (weak) speed *= PLAYER.weakFootPower
+
+    const baseSpread =
+      (kick.type === 'touch' ? 0.15 : 0.3 + power * 0.9) + (weak ? PLAYER.weakFootSpread * power : 0)
     const spreadRad = ((baseSpread + (1 - p.energy) * 0.6) * Math.PI) / 180
     aim = V.rotate(aim, (Math.random() * 2 - 1) * spreadRad)
 
@@ -614,6 +644,7 @@ export class World {
       (0.4 + 0.6 * power) *
       speed
     spin += (Math.random() * 2 - 1) * 0.12
+    if (weak) spin *= PLAYER.weakFootSpin
 
     // Loft, and the spin that comes with the technique. Getting under the ball
     // lifts it and leaves backspin on it, so a chip floats and hangs; coming
@@ -662,7 +693,7 @@ export class World {
     // Swing the leg nearest the ball, so the strike reads as coming off the
     // right boot rather than always the same one.
     p.startKick(kick.type === 'touch' ? 'touch' : 'strike', power)
-    p.kickLeg = V.cross(p.facing, V.sub(this.ball.pos, p.pos)) > 0 ? 0 : 1
+    p.kickLeg = foot
     this.possessorId = null
     if (p.id === this.keeperHoldId) {
       this.keeperHold = 0
@@ -796,7 +827,13 @@ export class World {
     let speed = KICK.touchMin + (KICK.touchMax - KICK.touchMin) * power * 0.55
     let vz = 0
 
-    if (skill === 'drag') {
+    if (skill === 'backheel') {
+      // Struck with the heel, straight back past you. Unlike a drag — which
+      // pulls the ball under you so you can turn out with it — this sends it
+      // behind you with pace, so it's a pass or a shot rather than an escape.
+      dir = { x: -f.x, y: -f.y }
+      speed *= 1.45
+    } else if (skill === 'drag') {
       // Pull it back behind you and turn out — the classic escape.
       dir = { x: -f.x, y: -f.y }
       speed *= 0.7
@@ -1009,7 +1046,7 @@ export class World {
         this.ball.x = p.x + nx * min
         this.ball.y = p.y + ny * min
         // Reflect + inherit a little of the body's momentum.
-        this.ball.reflect(nx, ny, shield ? SHIELD.keep : 0.45)
+        this.ball.reflect(nx, ny, shield ? SHIELD.keep : 0.45, BALL.bodyGrip)
         const carry = shield ? SHIELD.carry : 0.35
         this.ball.vx += p.vx * carry
         this.ball.vy += p.vy * carry
@@ -1088,13 +1125,32 @@ export class World {
     if (b.y - r < 0 && b.vy < 0) this.bounceOffWall(0, 1, r - b.y)
     else if (b.y + r > FIELD.width && b.vy > 0) this.bounceOffWall(0, -1, b.y + r - FIELD.width)
 
+    // Inside the net. The ball is caught by the mesh rather than teleported out
+    // of existence: it drags to a stop, drops, and the net is told where and how
+    // hard it was hit so it can take the shape of the shot.
+    const inNet = b.x < 0 ? 'away' : b.x > FIELD.length ? 'home' : null
+    if (inNet && F.inGoalMouthY(b.y)) {
+      const hs = b.horizontalSpeed
+      if (hs > 0.05) {
+        const drop = Math.min(hs, NET.drag * SIM.dt)
+        b.vx -= (b.vx / hs) * drop
+        b.vy -= (b.vy / hs) * drop
+      }
+      b.spin *= 1 - NET.grab * SIM.dt * 10
+      if (!this.netHit || this.netHit.age > 0.4) {
+        this.netHit = { team: inNet, y: b.y, z: b.z, power: Math.min(1, b.speed / 26), age: 0 }
+      }
+    }
+
     // Goal lines. The mouth is an opening; everything else is a solid end wall.
     const throughMouth = F.inGoalMouthY(b.y) && b.z < FIELD.goalHeight
     if (!throughMouth) {
       if (b.x - r < 0 && b.vx < 0) this.bounceOffWall(1, 0, r - b.x)
       else if (b.x + r > FIELD.length && b.vx > 0) this.bounceOffWall(-1, 0, b.x + r - FIELD.length)
-    } else if (live) {
-      // Fully over the line inside the mouth — that's a goal.
+    } else if (live && this.trainingResetIn <= 0) {
+      // Fully over the line inside the mouth — that's a goal. The ball is no
+      // longer teleported away the instant it crosses, so this has to be latched
+      // or it scores again on every frame it spends sitting in the net.
       if (b.x < 0) this.scoreGoal('away')
       else if (b.x > FIELD.length) this.scoreGoal('home')
     }
@@ -1148,10 +1204,9 @@ export class World {
       this.setAnnounce('GOAL!', undefined, 1.2)
       sfx.goal()
       this.pushEffect('goal', this.ball.x, this.ball.y)
-      // A drill that serves you the next ball puts it where it wants it.
-      if (!this.drills?.servesBalls()) this.resetTrainingBall()
-      else this.ball.setPos(FIELD.length / 2, FIELD.width / 2, 0)
-      this.ball.stop()
+      // Let it fly into the net first — putting the ball back the instant it
+      // crosses the line throws away the best half-second in the game.
+      this.trainingResetIn = 1.1
       return
     }
     this.stats[scorer].goals++
@@ -1160,7 +1215,8 @@ export class World {
     this.phase = 'goal'
     this.phaseTimer = MATCH.afterGoalDelay
     this.possessorId = null
-    this.ball.stop()
+    // Deliberately not stopped: it carries on into the net, which is the bit
+    // worth watching. The kickoff is placed when the phase timer runs out.
     this.setAnnounce('GOAL!', `${this.kitName('home')} ${this.score.home} – ${this.score.away} ${this.kitName('away')}`, MATCH.afterGoalDelay)
     sfx.goal()
     this.pushEffect('goal', this.ball.x, this.ball.y)

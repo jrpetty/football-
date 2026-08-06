@@ -97,7 +97,13 @@ export class HumanController {
         dirv = V.normalize({ x: look.x * 0.45 + wish.x, y: look.y * 0.45 + wish.y })
       }
       // A decisive flick during the touch turns it into a close-control move.
-      const skill = skillFromFlick(raw)
+      // Flicking down while you're already backing away is a backheel rather
+      // than a drag-back — your body is going that way, so the ball goes past
+      // you instead of under you.
+      // In the top-down view "backing away" is moving against where you're
+      // pointing, since there is no camera-relative forward key.
+      const backing = moving && mx * look.x + my * look.y < -0.2
+      const skill = skillFromFlick(raw, backing)
       cmd.kick = makeKick(
         'touch',
         Math.max(power, 0.12),

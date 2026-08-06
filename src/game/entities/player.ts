@@ -51,6 +51,9 @@ export class Player {
   // Kick animation state: counts down while the contact plays out.
   kickTimer = 0
   kickLeg = 0 // which leg is striking (0 or 1)
+  // Which of those two is the good one. Nothing else about a player differs, so
+  // this is the only asymmetry any footballer here has.
+  strongFoot: 0 | 1 = 1
   // What the contact was, so the renderer prods with the instep for a touch,
   // swings through for a strike, arches the back for a header, and reaches up
   // to take the pace off for a cushion.

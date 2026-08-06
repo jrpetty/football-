@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { Sky } from 'three/examples/jsm/objects/Sky.js'
-import { BALL, FIELD, WALL } from '../config'
+import { BALL, FIELD, NET, WALL } from '../config'
 import * as F from '../match/field'
 import type { World } from '../match/world'
 import {
@@ -29,6 +29,14 @@ export class Scene3D {
   private kitMats = new Map<string, ReturnType<typeof makeKitMaterials>>()
   private maxAniso = 4
   private targetRings: THREE.Mesh[] = []
+  // The back of each net, and how far it is currently pushed out.
+  private nets: Record<string, {
+    mesh: THREE.Mesh
+    rest: Float32Array
+    dir: number
+    bulge: number
+    at: { y: number; z: number }
+  }> = {}
   private trailLine: THREE.Line | null = null
 
   constructor(container: HTMLElement) {
@@ -359,9 +367,35 @@ export class Scene3D {
       this.scene.add(bar)
       const depth = FIELD.goalDepth
       const dir = team === 'home' ? -1 : 1
-      const net = new THREE.Mesh(new THREE.BoxGeometry(depth, h, b - a), netMat)
-      net.position.copy(v3(goalX + (dir * depth) / 2, (a + b) / 2, h / 2))
-      this.scene.add(net)
+      // Roof and sides stay a simple shell — nothing hits them hard enough to
+      // be worth simulating.
+      const shell = new THREE.Mesh(new THREE.BoxGeometry(depth, h, b - a), netMat)
+      shell.position.copy(v3(goalX + (dir * depth) / 2, (a + b) / 2, h / 2))
+      this.scene.add(shell)
+
+      // The back of the net is the one you actually hit, so it gets enough
+      // vertices to take the shape of a shot.
+      const back = new THREE.Mesh(
+        new THREE.PlaneGeometry(b - a, h, 22, 14),
+        new THREE.MeshBasicMaterial({
+          color: '#ffffff',
+          transparent: true,
+          opacity: 0.3,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+          wireframe: true,
+        }),
+      )
+      back.position.copy(v3(goalX + dir * depth, (a + b) / 2, h / 2))
+      back.rotation.y = Math.PI / 2
+      this.scene.add(back)
+      this.nets[team] = {
+        mesh: back,
+        rest: Float32Array.from(back.geometry.getAttribute('position').array as Float32Array),
+        dir,
+        bulge: 0,
+        at: { y: 0, z: 0 },
+      }
     }
   }
 
@@ -484,6 +518,42 @@ export class Scene3D {
     wall.forEach((m, i) => this.wallMen[i].position.set(m.x, 0.9, m.y))
   }
 
+  // Push the mesh out where the ball went in, then let it spring back.
+  //
+  // The displacement falls off with distance from the impact, so a shot into
+  // the top corner bulges the top corner and the rest of the net barely moves —
+  // which is what makes it read as the net taking the shape of *that* shot
+  // rather than a generic wobble.
+  private syncNets(world: World, dt: number) {
+    const hit = world.netHit
+    for (const team of ['home', 'away'] as const) {
+      const n = this.nets[team]
+      if (!n) continue
+      if (hit && hit.team === team && hit.age < 0.05 && n.bulge < hit.power * NET.give * 26) {
+        n.bulge = Math.min(NET.maxGive, hit.power * NET.give * 26)
+        n.at = { y: hit.y, z: hit.z }
+      }
+      if (n.bulge <= 1e-4) continue
+      n.bulge = Math.max(0, n.bulge - n.bulge * NET.settle * dt - 0.02 * dt)
+
+      const attr = n.mesh.geometry.getAttribute('position') as THREE.BufferAttribute
+      const arr = attr.array as Float32Array
+      const [pa, pb] = F.goalPostYs()
+      const cy = (pa + pb) / 2
+      for (let i = 0; i < arr.length; i += 3) {
+        // Plane local x runs along the goal mouth, local y is height.
+        const wy = cy + n.rest[i]
+        const wz = FIELD.goalHeight / 2 + n.rest[i + 1]
+        const d = Math.hypot(wy - n.at.y, wz - n.at.z)
+        const fall = Math.exp(-(d * d) / (NET.spread * NET.spread))
+        // Local z is the plane's own normal, which after the quarter turn points
+        // out through the back of the goal.
+        arr[i + 2] = n.rest[i + 2] + n.bulge * fall * n.dir * -1
+      }
+      attr.needsUpdate = true
+    }
+  }
+
   private syncDrills(world: World) {
     const d = world.drills
     if (!d) return
@@ -560,6 +630,7 @@ export class Scene3D {
     this.ball.position.copy(v3(bp.x, bp.y, bp.z + BALL.radius))
     this.spinBall(b, dt)
 
+    this.syncNets(world, dt)
     this.syncDrills(world)
 
     for (const p of world.players) {

@@ -209,6 +209,52 @@ for (const f of flicks) {
   )
 }
 
+
+// ---- 13. the backheel, and the weak foot ------------------------------------
+{
+  // Same downward flick. Standing still it drags the ball under you; already
+  // backing away it becomes a backheel struck past you.
+  const play = (movingBack: boolean) => {
+    const skill = skillFromFlick({ x: 0, y: 160 }, movingBack)
+    const { w } = setup(0, 0, 0)
+    const cmd = emptyCommand()
+    cmd.aim = { x: 1, y: 0 }
+    cmd.kick = makeKick('touch', 0.6, { x: 1, y: 0 }, { loft: 0, spin: 0 }, skill)
+    tick(w, cmd)
+    return { skill, speed: Math.abs(w.ball.vx) }
+  }
+  const drag = play(false)
+  const heel = play(true)
+  ok(
+    'flicking down while backing away is a backheel',
+    drag.skill === 'drag' && heel.skill === 'backheel' && heel.speed > drag.speed * 1.6,
+    `drag ${drag.speed.toFixed(1)} m/s under you · backheel ${heel.speed.toFixed(1)} m/s past you`,
+  )
+}
+
+{
+  // The same strike off each foot. Which boot it comes off is decided by which
+  // side of you the ball is on, so putting it on the other side is the test.
+  const strike = (side: number) => {
+    const { w, p } = setup(0, 0, 0)
+    p.strongFoot = 1
+    w.ball.setPos(p.x + 0.35, p.y + side * 0.35, 0)
+    w.ball.lastTouchId = 99
+    const cmd = emptyCommand()
+    cmd.aim = { x: 1, y: 0 }
+    cmd.kick = makeKick('strike', 1, { x: 1, y: 0 }, { loft: 0, spin: 0 })
+    tick(w, cmd)
+    return Math.hypot(w.ball.vx, w.ball.vy)
+  }
+  const strong = strike(-1)
+  const weak = strike(1)
+  ok(
+    'the weak foot costs you pace',
+    weak < strong * 0.95,
+    `${strong.toFixed(1)} m/s off the good one, ${weak.toFixed(1)} off the other`,
+  )
+}
+
 console.log(results.join('\n'))
 const failed = results.filter((r) => r.startsWith('FAIL')).length
 console.log(`\n${results.length - failed}/${results.length} passed`)

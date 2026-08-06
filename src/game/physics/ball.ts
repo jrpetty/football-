@@ -270,12 +270,42 @@ export class Ball {
   }
 
   // Reflect off a vertical surface (post / body) given a surface normal.
-  reflect(nx: number, ny: number, restitution: number) {
+  // Reflect off a vertical surface — a post, a board, a body.
+  //
+  // Solved the same way as the turf: a normal impulse, and a tangential one
+  // acting on how fast the contact patch is sliding across the surface. Which
+  // means side-spin decides where a ball comes off a post, exactly as it should
+  // — a curler that clips the inside of the upright squirts back across the
+  // goal, and the same ball with the spin the other way spits out for a corner.
+  // It used to reflect like a billiard ball and scrub the spin to 60%, so the
+  // most dramatic thing that can happen to a struck ball was pure geometry.
+  //
+  // `grip` is how much the surface bites: a post is hard and grabby, a body in a
+  // shirt much less so.
+  reflect(nx: number, ny: number, restitution: number, grip = BALL.postGrip) {
     const d = this.vx * nx + this.vy * ny
     if (d >= 0) return
+    // Normal: straight back out, keeping a fraction of the approach.
     this.vx -= (1 + restitution) * d * nx
     this.vy -= (1 + restitution) * d * ny
-    this.spin *= 0.6
+
+    // Tangential. The surface of a ball with side-spin is moving along this
+    // tangent at −spin, so the slip is the difference between how fast the ball
+    // is sliding across the surface and how fast its own skin already is.
+    const tx = -ny
+    const ty = nx
+    const along = this.vx * tx + this.vy * ty
+    const slip = along + this.spin
+    if (Math.abs(slip) > 1e-4) {
+      const budget = grip * (1 + restitution) * Math.abs(d)
+      const needed = Math.abs(slip) * 0.4 // 2/5 of the slip, from I = 2/3 mR²
+      const j = Math.min(needed, budget) * Math.sign(slip)
+      this.vx -= tx * j
+      this.vy -= ty * j
+      // ...and the rest of the exchange goes into the spin, which is why the
+      // ball comes off a post turning differently from how it arrived.
+      this.spin -= (j / 0.4) * 0.6
+    }
   }
 
   clampSpin() {

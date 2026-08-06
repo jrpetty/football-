@@ -24,7 +24,7 @@ export interface KickRequest {
 }
 
 // Close-control moves, selected by which way you flicked during a touch.
-export type Skill = 'drag' | 'roll' | 'lift'
+export type Skill = 'drag' | 'roll' | 'lift' | 'backheel'
 
 // The per-tick control signal for a single player. Human input and every AI
 // brain funnel into this identical shape, so the simulation never needs to know

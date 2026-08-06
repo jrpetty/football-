@@ -128,12 +128,16 @@ export function shapeFromFlick(
 // wrist vocabulary that shapes a strike shapes your feet: drag it back, roll it
 // across your body, or lift it over a leg. Only a decisive flick counts, so an
 // ordinary touch is unaffected by small aiming drift.
-export function skillFromFlick(flick: Vec2): Skill | null {
+export function skillFromFlick(flick: Vec2, movingBack = false): Skill | null {
   const mag = Math.hypot(flick.x, flick.y)
   if (mag < CONTROL.skillFlickMin) return null
   // Whichever axis dominates decides the move.
   if (Math.abs(flick.y) > Math.abs(flick.x)) {
-    return flick.y > 0 ? 'drag' : 'lift' // down = drag back, up = lift over
+    if (flick.y <= 0) return 'lift' // up = lift it over a leg
+    // Down. Pulling it back where you stand is a drag; doing it while already
+    // going backwards is a backheel — the same wrist, and the difference is
+    // whether your body was going that way too.
+    return movingBack ? 'backheel' : 'drag'
   }
   return 'roll' // sideways = roll it across you
 }
