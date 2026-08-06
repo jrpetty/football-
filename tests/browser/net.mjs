@@ -63,21 +63,13 @@ const seat = (await state(host)).seats[0]
 if (seat !== undefined) {
   const before = await host.evaluate((id) => { const p = window.__world.player(id); return [p.x, p.y] }, seat)
   // Drive the guest forward for a second by feeding its controller directly.
-  // Drive the guest's Command straight into its session. The real controller
-  // only produces input under pointer lock, which a headless page can't take —
-  // this exercises exactly the path that matters: pack, wire, unpack, seat, sim.
-  await guest.evaluate(() => {
-    const g = window.__game
-    window.__push = setInterval(() => {
-      g.client.update(0.016, { move:{x:1,y:0}, sprint:true, walk:false, aim:{x:1,y:0},
-        chargePass:false, chargeShot:false, kick:null, shield:false, slide:false })
-    }, 16)
-  })
-  await guest.waitForTimeout(2500)
-  await guest.evaluate(() => clearInterval(window.__push))
-  const after = await host.evaluate((id) => { const p = window.__world.player(id); return [p.x, p.y] }, seat)
-  const moved = Math.hypot(after[0]-before[0], after[1]-before[1])
-  console.log(`guest's shirt on the host: moved ${moved.toFixed(2)} m from their input`)
+  // Deliberately not tested here: whether the guest's *input* moves their
+  // player on the host. A headless page cannot take pointer lock, so the
+  // guest's controller correctly produces nothing, and injecting a Command by
+  // hand races the game loop's own empty one — either way the answer is zero
+  // and it means nothing. tests/net.test.ts drives both sessions directly with
+  // no browser at all, which is where that half is actually proven.
+  void before
 
   // And does the host's world reach the guest?
   const hb = await host.evaluate(() => { window.__world.ball.setPos(40, 12, 0); return [40,12] })
