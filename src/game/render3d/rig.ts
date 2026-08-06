@@ -371,6 +371,10 @@ export class PlayerRig {
       this.torso.rotation.x = this.spine.torsoX
     }
 
+    // Shielding: side-on already (the sim turned the body), so what the pose
+    // adds is the arm across and the weight settled back over the ball.
+    if (p.shielding) this.poseShield()
+
     // A contact overrides the limbs involved for the duration of the movement.
     if (p.kickTimer > 0) {
       if (p.kickKind === 'header') this.poseHeader(p)
@@ -521,6 +525,22 @@ export class PlayerRig {
     this.arms[p.kickLeg].hip.rotation.z = (p.kickLeg === 0 ? 1 : -1) * (0.35 + raise * 0.5)
     this.arms[1 - p.kickLeg].hip.rotation.x = -raise * 0.4
     this.root.rotation.x = this.lean - raise * 0.18
+  }
+
+  // Holding someone off: near arm across their run, far shoulder dropped, knees
+  // bent and the weight sat back over the ball.
+  private poseShield() {
+    this.arms[0].hip.rotation.z = 1.15
+    this.arms[0].hip.rotation.x = -0.35
+    this.arms[0].knee.rotation.x = 0.9
+    this.arms[1].hip.rotation.z = -0.45
+    this.arms[1].hip.rotation.x = 0.25
+    this.legs[0].hip.rotation.x = Math.min(this.legs[0].hip.rotation.x, -0.1) - 0.1
+    this.legs[0].knee.rotation.x = Math.max(this.legs[0].knee.rotation.x, 0.35)
+    this.legs[1].knee.rotation.x = Math.max(this.legs[1].knee.rotation.x, 0.3)
+    this.root.rotation.z = this.spine.rootZ - 0.18
+    this.torso.rotation.y = this.spine.torsoY + 0.3
+    this.root.position.y -= 0.02
   }
 
   // Committed and grounded: one leg extended through the ball, body low. `down`

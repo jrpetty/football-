@@ -269,6 +269,27 @@ export const AERIAL = {
 // clicks you use for everything else — right click to take it off someone and
 // keep it, left click to hammer it clear. The only dedicated defensive move is
 // the slide, and that one is all precision.
+// Shielding. Hold it and you turn side-on with the ball behind you: the oldest
+// piece of close control there is, and the one thing a game with nothing glued
+// to anybody genuinely needs. There is no magnet here and nothing is attached —
+// what changes is your *body*. You go side-on, you slow to a shuffle, you can't
+// strike, and your body becomes a soft, wide surface the ball dies against
+// instead of the hard one it pings off. Keeping it is then purely a matter of
+// where you stand.
+export const SHIELD = {
+  speed: 2.4, // you are shuffling, not running
+  // Side-on with an arm across, so you cover more ground than usual. This is
+  // the whole mechanic: a bigger body, in the right place.
+  bodyRadius: 0.66,
+  keep: 0.12, // pace the ball retains off a shielding body — it deadens
+  carry: 0.85, // ...and takes your movement with it instead
+  turnRate: 5.5, // rad/s you can pivot while shielding — deliberately slow
+  // An opponent cannot play a ball your body is in front of. Measured as how
+  // far their line to the ball passes from your centre, so it is geometry and
+  // nothing else: step aside and they have it.
+  block: 0.62,
+}
+
 export const DEFEND = {
   // The sliding body is the hitbox and nothing more — no magnet, no assist. It's
   // a capsule the width of the player, as long as a person lying down, swept

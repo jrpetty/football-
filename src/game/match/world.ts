@@ -1,4 +1,4 @@
-import { AERIAL, BALL, CONTROL, DEFEND, FIELD, GK, KICK, MATCH, PLAYER, SIM, WALL } from '../config'
+import { AERIAL, BALL, CONTROL, DEFEND, FIELD, GK, KICK, MATCH, PLAYER, SHIELD, SIM, WALL } from '../config'
 import { clamp } from '../core/math'
 import * as V from '../core/vec'
 import type { Vec2 } from '../core/vec'
@@ -6,7 +6,7 @@ import { Ball } from '../physics/ball'
 import { Player } from '../entities/player'
 import { computeAiCommands } from '../ai/director'
 import { emptyCommand, emptyStats } from '../types'
-import type { Command, KickRequest, MatchConfig, Restart, Role, Skill, Stats, Team } from '../types'
+import type { Command, KickRequest, KickType, MatchConfig, Restart, Role, Skill, Stats, Team } from '../types'
 import { sfx } from '../audio/sfx'
 import { Drills } from './drills'
 import { formation } from './formation'
@@ -278,8 +278,11 @@ export class World {
     // rate-limited so direction changes read as a pivot, not a snap.
     for (const p of this.players) {
       const cmd = commands.get(p.id) ?? emptyCommand()
+      // Shielding only means anything when the ball is actually yours to shield.
+      p.shielding = cmd.shield && !p.sliding && this.ballWithinReach(p)
       p.steer(cmd.move, V.len(cmd.move), cmd.sprint, dt, cmd.walk)
-      p.faceDirection(V.len(cmd.move) > 0.05 ? cmd.move : cmd.aim, dt)
+      if (p.shielding) this.faceSideOn(p, cmd, dt)
+      else p.faceDirection(V.len(cmd.move) > 0.05 ? cmd.move : cmd.aim, dt)
     }
 
     // 2. Tackles / slides (only when the ball is live).
@@ -292,7 +295,7 @@ export class World {
     if (live) {
       for (const p of this.players) {
         const cmd = commands.get(p.id)
-        if (cmd?.kick && this.canKick(p)) {
+        if (cmd?.kick && this.canKick(p, cmd.kick.type)) {
           this.executeKick(p, cmd)
           cmd.kick = null // fire once
         }
@@ -386,6 +389,25 @@ export class World {
     }
   }
 
+  // Is the ball close enough to be worth shielding?
+  private ballWithinReach(p: Player): boolean {
+    if (this.ball.z > PLAYER.controlHeight * 1.6) return false
+    return V.dist(p.pos, this.ball.pos) < p.radius + BALL.radius + PLAYER.reach * 1.3
+  }
+
+  // Turn side-on. You point your shoulder where you're aiming — at the defender
+  // — so your body ends up across the line between them and the ball. Which of
+  // the two perpendiculars you take is decided by where the ball actually is, so
+  // the body always turns the way that puts it behind you rather than in front.
+  private faceSideOn(p: Player, cmd: Command, dt: number) {
+    const aim = V.len(cmd.aim) > 0.01 ? V.normalize(cmd.aim) : p.facing
+    const toBall = V.sub(this.ball.pos, p.pos)
+    const side = Math.sign(V.cross(aim, toBall)) || 1
+    // aim rotated a quarter turn toward the ball's side.
+    const want = { x: -aim.y * side, y: aim.x * side }
+    p.faceDirection(want, dt * (SHIELD.turnRate / PLAYER.turnRate))
+  }
+
   private onPossessionGain(gainer: Player, prevId: number | null) {
     // Pass completion / turnover accounting.
     if (this.lastPass) {
@@ -451,15 +473,41 @@ export class World {
 
   // ---- kicking -----------------------------------------------------------
 
-  private canKick(p: Player): boolean {
+  private canKick(p: Player, kind?: KickType): boolean {
     // You cannot play the ball off the floor. A slide is a commitment, and being
     // out of the play until you're upright again is what it costs.
     if (p.sliding || p.slideRecover > 0 || p.kickCooldown > 0) return false
+    // Shielding is a trade: the ball is safe behind your body, and while it's
+    // back there you have no way to hit it. Touches still work, so you can knock
+    // it out of the shield and go — that release is the whole point.
+    if (p.shielding && kind !== 'touch') return false
+    // ...and you cannot play a ball someone has their body in front of. This is
+    // geometry, not a rule: their shoulder is between your boot and the ball.
+    if (this.shieldedFrom(p)) return false
     // You can play a ball anywhere within reach — at your feet, off your thigh,
     // or with a header at full stretch.
     if (this.ball.z > aerialReach(p.role)) return false
     const d = V.dist(p.pos, this.ball.pos)
     return d < p.radius + BALL.radius + PLAYER.reach * 1.25
+  }
+
+  // Is an opponent's body between this player and the ball? Measured as how far
+  // the shielder's centre sits from the straight line from you to the ball, and
+  // only counting them when they are genuinely in between rather than behind it.
+  private shieldedFrom(p: Player): boolean {
+    for (const s of this.players) {
+      if (!s.shielding || s.team === p.team || s.id === p.id) continue
+      const ax = this.ball.x - p.x
+      const ay = this.ball.y - p.y
+      const len = Math.hypot(ax, ay)
+      if (len < 1e-3) continue
+      const t = ((s.x - p.x) * ax + (s.y - p.y) * ay) / (len * len)
+      if (t <= 0 || t >= 1) continue // beside or beyond, not in the way
+      const cx = p.x + ax * t
+      const cy = p.y + ay * t
+      if (Math.hypot(s.x - cx, s.y - cy) < SHIELD.block) return true
+    }
+    return false
   }
 
   // Last kick the simulation actually received — surfaced for debugging/tuning.
@@ -887,7 +935,11 @@ export class World {
       const dx = this.ball.x - p.x
       const dy = this.ball.y - p.y
       const dist = Math.hypot(dx, dy)
-      const min = p.radius + BALL.radius
+      // Shielding turns your body from the hard surface a ball pings off into a
+      // wide soft one it dies against, and takes your movement with it. That is
+      // the entire mechanic — no attachment, no assist, just a different body.
+      const shield = p.shielding
+      const min = (shield ? SHIELD.bodyRadius : p.radius) + BALL.radius
       if (dist < min && dist > 1e-4) {
         const nx = dx / dist
         const ny = dy / dist
@@ -895,9 +947,10 @@ export class World {
         this.ball.x = p.x + nx * min
         this.ball.y = p.y + ny * min
         // Reflect + inherit a little of the body's momentum.
-        this.ball.reflect(nx, ny, 0.45)
-        this.ball.vx += p.vx * 0.35
-        this.ball.vy += p.vy * 0.35
+        this.ball.reflect(nx, ny, shield ? SHIELD.keep : 0.45)
+        const carry = shield ? SHIELD.carry : 0.35
+        this.ball.vx += p.vx * carry
+        this.ball.vy += p.vy * carry
         this.ball.lastTouchTeam = p.team
         this.ball.lastTouchId = p.id
       }

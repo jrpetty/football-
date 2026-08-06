@@ -103,6 +103,22 @@ export class Hud {
     const p = world.getControlledPlayer()
     if (!p) return
     const b = world.ball
+
+    // Shielding is a mode you're holding, and its whole cost is invisible from
+    // behind the player, so say so.
+    if (p.shielding) {
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.font = '600 11px system-ui, sans-serif'
+      const text = 'SHIELDING  ·  no strike'
+      const bw = ctx.measureText(text).width + 30
+      ctx.fillStyle = 'rgba(10,16,28,0.72)'
+      roundRect(ctx, w / 2 - bw / 2, h - 104, bw, 24, 12)
+      ctx.fill()
+      ctx.fillStyle = 'rgba(140,220,255,0.95)'
+      ctx.fillText(text, w / 2, h - 92)
+      return
+    }
     if (b.z <= PLAYER.controlHeight) return
     const d = Math.hypot(b.x - p.x, b.y - p.y)
     if (d > p.radius + BALL.radius + PLAYER.reach * 1.25) return

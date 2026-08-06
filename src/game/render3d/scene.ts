@@ -377,6 +377,47 @@ export class Scene3D {
     this.scene.add(this.ball)
   }
 
+  // Turn the ball at the rate the simulation says it is actually turning.
+  //
+  // This used to be a tumble faked from the ball's velocity, which meant none of
+  // the spin the physics works so hard on was ever on screen: a back-spun chip
+  // and a driven ball looked identical in the air. Both spins are carried as the
+  // speed of the ball's surface in m/s, so the angular rate is simply that
+  // divided by the radius, and the two combine into one axis:
+  //
+  //   vSpin — about the horizontal axis across the direction of travel, so
+  //     topspin rolls the ball forwards over itself and backspin visibly winds
+  //     it backwards under itself on the way down.
+  //   spin  — about the vertical axis, the rotation that bends the flight.
+  //
+  // Nothing is scaled for looks. At 30 m/s the ball is turning ~40 times a
+  // second and will strobe, exactly as a real one does on camera.
+  private ballSpinAxis = new THREE.Vector3()
+  private ballSpinQ = new THREE.Quaternion()
+
+  private spinBall(b: World['ball'], dt: number) {
+    const hs = Math.hypot(b.vx, b.vy)
+    const w = this.ballSpinAxis.set(0, -b.spin / BALL.radius, 0)
+    if (hs > 1e-3) {
+      // up × d, where d is the horizontal travel direction. Getting this the
+      // way round matters and is easy to talk yourself into backwards: a ball
+      // rolling forwards has its *top* moving at twice the ball's speed and its
+      // contact point standing still, and the opposite axis gives you exactly
+      // the opposite — a ball that looks like it's spinning back at you while
+      // running away.
+      const dx = b.vx / hs
+      const dz = b.vy / hs
+      const rate = b.vSpin / BALL.radius
+      w.x += dz * rate
+      w.z += -dx * rate
+    }
+    const mag = w.length()
+    if (mag < 1e-4) return
+    w.divideScalar(mag)
+    this.ballSpinQ.setFromAxisAngle(w, mag * dt)
+    this.ball.quaternion.premultiply(this.ballSpinQ)
+  }
+
   // ---- players ----
 
   private ensurePlayer(id: number, team: 'home' | 'away', role: string, num: number): PlayerRig {
@@ -468,8 +509,7 @@ export class Scene3D {
     const b = world.ball
     const bp = b.renderPos(a)
     this.ball.position.copy(v3(bp.x, bp.y, bp.z + BALL.radius))
-    this.ball.rotation.x += b.vx * 0.05
-    this.ball.rotation.z -= b.vy * 0.05
+    this.spinBall(b, dt)
 
     this.syncDrills(world)
 

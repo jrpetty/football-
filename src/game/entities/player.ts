@@ -1,4 +1,4 @@
-import { DEFEND, PLAYER } from '../config'
+import { DEFEND, PLAYER, SHIELD } from '../config'
 import { clamp, clamp01, angleDelta } from '../core/math'
 import * as V from '../core/vec'
 import type { Vec2 } from '../core/vec'
@@ -32,6 +32,7 @@ export class Player {
   saveCooldown = 0 // keeper: debounce so one stop counts as one save
   slideVel: Vec2 = { x: 0, y: 0 } // carried momentum during a slide
   sprinting = false // set each tick by steer(); read by the dribble/first-touch model
+  shielding = false // holding the ball off with your body: side-on, slow, no strike
 
   // Kick animation state: counts down while the contact plays out.
   kickTimer = 0
@@ -99,8 +100,9 @@ export class Player {
   // Current speed ceiling given tier + fatigue. Three gears: a controlled walk
   // for setting your feet, a default running pace, and a sprint that costs you.
   topSpeed(sprint: boolean, walk = false): number {
-    const base =
-      sprint && this.stamina > 1
+    const base = this.shielding
+      ? SHIELD.speed
+      : sprint && this.stamina > 1
         ? PLAYER.sprintSpeed
         : walk
           ? PLAYER.walkSpeed
@@ -135,7 +137,7 @@ export class Player {
 
     const dirLen = V.len(moveDir)
     const wantsMove = dirLen > 0.01 && throttle > 0.01
-    const canSprint = sprint && this.stamina > 1 && wantsMove
+    const canSprint = sprint && this.stamina > 1 && wantsMove && !this.shielding
     this.sprinting = canSprint
     const top = this.topSpeed(canSprint, walk)
     const target: Vec2 = wantsMove

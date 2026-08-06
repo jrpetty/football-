@@ -134,6 +134,7 @@ export class Screens {
       ['<b>Strike</b> — pass or shot', '<b>Left click</b> · hold = power'],
       ['<b>Cushion</b> a ball out of the air', 'Right click while it drops'],
       ['<b>Volley / header</b>', 'Left click while it drops'],
+      ['<b>Shield</b> — hold it off with your body', '<b>Space</b> · hold'],
       ['<b>Win the ball back</b>', 'Just right / left click it'],
       ['<b>Slide tackle</b>', 'C · body-sized, no assist'],
       ['View: zoom (2D) · 1st/3rd (3D)', 'V'],
@@ -161,6 +162,13 @@ export class Screens {
         <b>right click</b> to take it off them and keep it, <b>left click</b> to
         hammer it clear. <b>C</b> slides: the hitbox is your own body and nothing
         more, so it's all timing.
+      </div>
+      <div class="flickhint">
+        <b>Hold Space to shield.</b> You turn side-on, drop to a shuffle and lose
+        the ability to strike — but your body goes wide and soft, so the ball
+        dies against you instead of pinging away, and nobody can play a ball your
+        shoulder is in front of. Nothing is attached to you: keeping it is purely
+        a question of where you stand. Right click to knock it out and go again.
       </div>
       <div class="flickhint">
         <b>The same wrist works on the ball at your feet.</b> Flick hard during a
