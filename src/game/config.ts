@@ -142,6 +142,16 @@ export const PLAYER = {
   // header at full stretch. Beyond this it sails over you.
   aerialReach: 2.25,
   headerHeight: 1.5, // above this you're heading it rather than using a foot
+  // Jumping. A footballer gets maybe two thirds of a metre off the ground and
+  // hangs there for the better part of a second, and what that buys is reach:
+  // everything you can play — control height, aerial reach, the height at which
+  // a contact becomes a header — rises with you, so a ball that would sail over
+  // your head becomes one you can attack.
+  jumpSpeed: 3.6, // m/s off the ground: ~0.66 m up, ~0.73 s of hang
+  jumpRunBonus: 0.18, // how much of a run carries into the jump
+  landRecovery: 0.22, // a beat on landing before you can go again
+  jumpCooldown: 0.12,
+  gravity: 9.81, // the same gravity the ball gets
 }
 
 // Mouse-driven striking, modelled on Pro Soccer Online: power comes from how

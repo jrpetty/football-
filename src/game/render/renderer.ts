@@ -231,15 +231,21 @@ export class Renderer {
     const ctx = this.ctx
     const kit = KITS[p.team]
     const rp = p.renderPos(this.alpha)
-    const s = cam.worldToScreen(rp.x, rp.y, 0)
+    // The shadow stays on the turf; the body lifts off it. From directly above
+    // a jump would be invisible otherwise.
+    const ground = cam.worldToScreen(rp.x, rp.y, 0)
+    const s = cam.worldToScreen(rp.x, rp.y, rp.z)
     const r = cam.ppm * PLAYER.radius
     const controlled = world.getControlledPlayer()?.id === p.id
     const isGk = p.role === 'GK'
 
-    // Shadow (offset if sliding, to sell the lunge).
-    ctx.fillStyle = 'rgba(0,0,0,0.30)'
+    // Shadow (offset if sliding, to sell the lunge). It shrinks and fades as
+    // you rise, which is what reads as height from above.
+    const lift = Math.max(0, rp.z)
+    const k = 1 / (1 + lift * 0.8)
+    ctx.fillStyle = `rgba(0,0,0,${(0.3 * k).toFixed(3)})`
     ctx.beginPath()
-    ctx.ellipse(s.x, s.y + r * 0.15, r * 1.05, r * 0.6, 0, 0, Math.PI * 2)
+    ctx.ellipse(ground.x, ground.y + r * 0.15, r * 1.05 * k, r * 0.6 * k, 0, 0, Math.PI * 2)
     ctx.fill()
 
     // Controlled highlight ring.

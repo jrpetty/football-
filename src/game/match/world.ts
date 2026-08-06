@@ -32,10 +32,12 @@ export interface Announce {
 
 // A ball is only "at your feet" — dribbleable — below this. Keepers can gather
 // it from higher because they use their hands.
-const controlHeight = (role: string): number =>
-  role === 'GK' ? 2.2 : PLAYER.controlHeight
-// How high a player can still *reach* the ball to play it out of the air.
-const aerialReach = (role: string): number => (role === 'GK' ? 2.6 : PLAYER.aerialReach)
+// Everything a player can reach is measured from their feet, so it all rises
+// with them when they leave the ground. That is the whole point of jumping: a
+// ball that sails over you standing is one you can attack in the air.
+const controlHeight = (p: Player): number => (p.role === 'GK' ? 2.2 : PLAYER.controlHeight) + p.z
+const aerialReach = (p: Player): number => (p.role === 'GK' ? 2.6 : PLAYER.aerialReach) + p.z
+const headerHeight = (p: Player): number => PLAYER.headerHeight + p.z
 
 // The authoritative simulation. Fixed-step (SIM.dt) physics with a phase state
 // machine on top for kickoffs, goals and half-time. Human and AI both feed it
@@ -325,7 +327,9 @@ export class World {
     for (const p of this.players) {
       const cmd = commands.get(p.id) ?? emptyCommand()
       // Shielding only means anything when the ball is actually yours to shield.
-      p.shielding = cmd.shield && !p.sliding && this.ballWithinReach(p)
+      if (cmd.jump && p.canJump) p.jump()
+      // You cannot shield in mid-air; there is nothing to hold anyone off with.
+      p.shielding = cmd.shield && !p.sliding && !p.airborne && this.ballWithinReach(p)
       p.steer(cmd.move, V.len(cmd.move), cmd.sprint, dt, cmd.walk)
       if (p.shielding) this.faceSideOn(p, cmd, dt)
       else p.faceDirection(V.len(cmd.move) > 0.05 ? cmd.move : cmd.aim, dt)
@@ -436,7 +440,7 @@ export class World {
       // whole role collapses back into the automatic saving it replaced.
       // ...but once it's in their hands it stays there until they play it.
       if (p.role === 'GK' && this.isHumanDriven(p) && this.possessorId !== p.id) continue
-      if (this.ball.z > controlHeight(p.role)) continue
+      if (this.ball.z > controlHeight(p)) continue
       const cp = this.controlPoint(p)
       const d = V.dist(cp, this.ball.pos)
       const reach = p.radius + BALL.radius + PLAYER.reach
@@ -465,7 +469,7 @@ export class World {
 
   // Is the ball close enough to be worth shielding?
   private ballWithinReach(p: Player): boolean {
-    if (this.ball.z > PLAYER.controlHeight * 1.6) return false
+    if (this.ball.z > PLAYER.controlHeight * 1.6 + p.z) return false
     return V.dist(p.pos, this.ball.pos) < p.radius + BALL.radius + PLAYER.reach * 1.3
   }
 
@@ -561,7 +565,7 @@ export class World {
     if (this.shieldedFrom(p)) return false
     // You can play a ball anywhere within reach — at your feet, off your thigh,
     // or with a header at full stretch.
-    if (this.ball.z > aerialReach(p.role)) return false
+    if (this.ball.z > aerialReach(p)) return false
     const d = V.dist(p.pos, this.ball.pos)
     return d < p.radius + BALL.radius + PLAYER.reach * 1.25
   }
@@ -608,7 +612,7 @@ export class World {
     // feet — while a strike becomes a volley or, higher still, a header: more
     // power, far less control. This is the half of football the ground-only
     // model was missing.
-    const airborne = this.ball.z > PLAYER.controlHeight
+    const airborne = this.ball.z > PLAYER.controlHeight + p.z
     if (airborne && p.role !== 'GK') {
       if (kick.type === 'touch') {
         this.cushion(p, kick, power)
@@ -782,7 +786,7 @@ export class World {
   // Strike a ball that hasn't landed. Off the boot it's a volley; above head
   // height it's a header, powered by your run rather than your leg.
   private aerialStrike(p: Player, kick: KickRequest, aim: Vec2, power: number) {
-    const header = this.ball.z > PLAYER.headerHeight
+    const header = this.ball.z > headerHeight(p)
     let speed: number
     let spreadDeg: number
     let angle: number // launch pitch, radians — negative aims it into the turf
@@ -903,7 +907,7 @@ export class World {
   private resolveSlides(commands: Map<number, Command>, dt: number) {
     for (const p of this.players) {
       const cmd = commands.get(p.id)
-      if (cmd?.slide && !p.sliding && p.tackleCooldown <= 0 && p.slideRecover <= 0) {
+      if (cmd?.slide && !p.sliding && !p.airborne && p.tackleCooldown <= 0 && p.slideRecover <= 0) {
         const dir = V.len(cmd.move) > 0.05 ? cmd.move : V.len(cmd.aim) > 0.01 ? cmd.aim : p.facing
         p.startSlide(dir, p.speed + DEFEND.slideBoost)
         this.pushEffect('tackle', p.x, p.y)
@@ -1045,7 +1049,9 @@ export class World {
       if (p.id === this.possessorId && !this.isHumanDriven(p)) continue
       if (p.role === 'GK') continue // handled by saves
       if (p.kickCooldown > 0) continue
-      if (this.ball.z > 1.9) continue
+      if (this.ball.z > 1.9 + p.z) continue
+      // Feet off the ground: the ball passes under you.
+      if (p.z > BALL.radius * 2 && this.ball.z < p.z - BALL.radius) continue
       const dx = this.ball.x - p.x
       const dy = this.ball.y - p.y
       const dist = Math.hypot(dx, dy)

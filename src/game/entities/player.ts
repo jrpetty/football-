@@ -17,8 +17,13 @@ export const KICK_ANIMS: KickAnim[] = ['touch', 'strike', 'header', 'cushion']
 export class Player {
   x = 0
   y = 0
+  // Height off the turf. Zero almost all the time — a footballer is a
+  // two-dimensional problem until the moment they leave the ground, and then
+  // everything they can reach moves up with them.
+  z = 0
   vx = 0
   vy = 0
+  vz = 0
   heading = 0 // facing angle (rad); slews toward travel/aim
   stamina = PLAYER.staminaMax
 
@@ -61,6 +66,9 @@ export class Player {
   // steps instead of snapping once per step.
   px = 0
   py = 0
+  pz = 0
+  landTimer = 0 // >0 just after landing: gathering yourself before the next one
+  jumpCooldown = 0
 
   // AI scratch state (ignored for human-controlled players).
   aiDecide = 0 // countdown before a ball-carrier reconsiders pass/shoot
@@ -95,6 +103,28 @@ export class Player {
 
   get sliding(): boolean {
     return this.slideTimer > 0
+  }
+
+  get airborne(): boolean {
+    // Any vertical motion counts, not just upward. Testing `vz > 0` would call
+    // a player who is falling and within the last two centimetres "grounded" —
+    // so they would never run the landing branch and would simply stop, hanging
+    // there. Exactly the bug the ball had at the bottom of a bounce.
+    return this.z > 0.02 || Math.abs(this.vz) > 0.02
+  }
+
+  // Can you leave the ground right now? Not mid-air, not off the floor, and not
+  // in the instant after landing.
+  get canJump(): boolean {
+    if (this.airborne || this.sliding || this.diving) return false
+    if (this.slideRecover > 0 || this.diveRecover > 0) return false
+    return this.landTimer <= 0 && this.jumpCooldown <= 0
+  }
+
+  jump() {
+    this.vz = PLAYER.jumpSpeed + this.speed * PLAYER.jumpRunBonus
+    this.jumpCooldown = PLAYER.jumpCooldown
+    this.stamina = clamp(this.stamina - 3, 0, PLAYER.staminaMax)
   }
 
   get diving(): boolean {
@@ -136,6 +166,8 @@ export class Player {
     this.kickCooldown = Math.max(0, this.kickCooldown - dt)
     this.saveCooldown = Math.max(0, this.saveCooldown - dt)
     this.kickTimer = Math.max(0, this.kickTimer - dt)
+    this.landTimer = Math.max(0, this.landTimer - dt)
+    this.jumpCooldown = Math.max(0, this.jumpCooldown - dt)
 
     if (this.diving) {
       // A dive is fully committed: you go where you launched yourself and
@@ -156,6 +188,13 @@ export class Player {
       const decay = Math.max(0, 1 - 6 * dt)
       this.slideVel = V.scale(this.slideVel, decay)
       this.stamina = clamp(this.stamina - 2 * dt, 0, PLAYER.staminaMax)
+      return
+    }
+
+    if (this.airborne) {
+      // Nothing to push against. Whatever you left the ground with is what you
+      // land with, which is why a jump is a commitment rather than a dodge.
+      this.stamina = clamp(this.stamina + PLAYER.staminaRegen * 0.5 * dt, 0, PLAYER.staminaMax)
       return
     }
 
@@ -252,14 +291,28 @@ export class Player {
   integrate(dt: number) {
     this.px = this.x
     this.py = this.y
+    this.pz = this.z
     this.x += this.vx * dt
     this.y += this.vy * dt
+    if (this.airborne) {
+      this.vz -= PLAYER.gravity * dt
+      this.z += this.vz * dt
+      if (this.z <= 0) {
+        this.z = 0
+        this.vz = 0
+        this.landTimer = PLAYER.landRecovery
+      }
+    }
   }
 
   // Position to draw at, interpolated between the last two physics steps.
-  renderPos(alpha: number): Vec2 {
+  renderPos(alpha: number): { x: number; y: number; z: number } {
     const a = alpha < 0 ? 0 : alpha > 1 ? 1 : alpha
-    return { x: this.px + (this.x - this.px) * a, y: this.py + (this.y - this.py) * a }
+    return {
+      x: this.px + (this.x - this.px) * a,
+      y: this.py + (this.y - this.py) * a,
+      z: this.pz + (this.z - this.pz) * a,
+    }
   }
 
   // Begin a contact animation. The length is part of the read: a tap is over in

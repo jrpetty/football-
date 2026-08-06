@@ -79,6 +79,7 @@ const F_SPRINT = 1
 const F_WALK = 2
 const F_SHIELD = 4
 const F_SLIDE = 8
+const F_JUMP = 16
 
 export function packCommand(c: Command): WireCommand {
   let f = 0
@@ -86,6 +87,7 @@ export function packCommand(c: Command): WireCommand {
   if (c.walk) f |= F_WALK
   if (c.shield) f |= F_SHIELD
   if (c.slide) f |= F_SLIDE
+  if (c.jump) f |= F_JUMP
   return {
     mx: r3(c.move.x),
     my: r3(c.move.y),
@@ -114,6 +116,7 @@ export function unpackCommand(w: WireCommand): Command {
     walk: !!(w.f & F_WALK),
     shield: !!(w.f & F_SHIELD),
     slide: !!(w.f & F_SLIDE),
+    jump: !!(w.f & F_JUMP),
     chargePass: false,
     chargeShot: false,
     kick: w.k

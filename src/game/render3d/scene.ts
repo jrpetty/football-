@@ -565,7 +565,7 @@ export class Scene3D {
     for (const p of world.players) {
       const rig = this.ensurePlayer(p.id, p.team, p.role, p.number)
       const rp = p.renderPos(a)
-      rig.pose(p, rp.x, rp.y, dt)
+      rig.pose(p, rp.x, rp.y, dt, rp.z)
       rig.setVisible(p.id !== hideId)
       rig.ring.visible = p.id === controlledId && showControlledRing
     }

@@ -111,8 +111,11 @@ export class HumanController {
     // There is no tackle button: you win the ball with the same two clicks you
     // use for everything else. The slide is the one dedicated defensive move.
     if (input.justPressed('KeyC')) cmd.slide = true
-    // Hold to shield: side-on, slow, ball behind your body, no strike.
-    cmd.shield = input.isDown('Space')
+    // Space jumps. Everything you can play rises with you, so this is how you
+    // attack a ball that would otherwise sail over your head.
+    if (input.justPressed('Space')) cmd.jump = true
+    // Hold Q to shield: side-on, slow, ball behind your body, no strike.
+    cmd.shield = input.isDown('KeyQ')
 
     // --- HUD feedback ---
     if (this.strike.held) {

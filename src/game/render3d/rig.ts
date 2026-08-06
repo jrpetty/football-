@@ -252,8 +252,8 @@ export class PlayerRig {
   }
 
   // Pose the skeleton for this frame.
-  pose(p: Player, x: number, y: number, dt: number) {
-    this.group.position.set(x, 0, y)
+  pose(p: Player, x: number, y: number, dt: number, z = 0) {
+    this.group.position.set(x, z, y)
     // The model faces +Z while a heading of 0 means +X, hence the quarter turn.
     this.group.rotation.y = Math.PI / 2 - p.heading
 
@@ -380,6 +380,10 @@ export class PlayerRig {
     // Shielding: side-on already (the sim turned the body), so what the pose
     // adds is the arm across and the weight settled back over the ball.
     if (p.shielding) this.poseShield()
+
+    // Off the ground: legs tucked under, arms up for balance and to make
+    // yourself bigger. Sits underneath a contact, so you can still head it.
+    if (p.airborne) this.poseAirborne(p)
 
     // A contact overrides the limbs involved for the duration of the movement.
     if (p.kickTimer > 0) {
@@ -531,6 +535,24 @@ export class PlayerRig {
     this.arms[p.kickLeg].hip.rotation.z = (p.kickLeg === 0 ? 1 : -1) * (0.35 + raise * 0.5)
     this.arms[1 - p.kickLeg].hip.rotation.x = -raise * 0.4
     this.root.rotation.x = this.lean - raise * 0.18
+  }
+
+  // A jump. The rise is handled by the world position; this is what the body
+  // does while it's up there.
+  private poseAirborne(p: Player) {
+    const rise = clamp01(p.vz / PLAYER.jumpSpeed) // 1 going up, 0 at the top
+    this.legs.forEach((leg, i) => {
+      leg.hip.rotation.x = -0.25 - (i === 0 ? 0.35 : 0) * (0.4 + rise * 0.6)
+      leg.knee.rotation.x = 0.5 + (i === 0 ? 0.55 : 0.15)
+      leg.hip.rotation.z = (i === 0 ? 1 : -1) * 0.04
+      if (leg.foot) leg.foot.rotation.x = -0.25
+    })
+    this.arms.forEach((arm, i) => {
+      arm.hip.rotation.x = -0.85 - rise * 0.5
+      arm.hip.rotation.z = (i === 0 ? 1 : -1) * 0.3
+      arm.knee.rotation.x = 0.35
+    })
+    this.root.rotation.x = this.spine.rootX - 0.08
   }
 
   // Holding someone off: near arm across their run, far shoulder dropped, knees

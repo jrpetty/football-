@@ -136,7 +136,8 @@ export class Screens {
       ['<b>Strike</b> — pass or shot', '<b>Left click</b> · hold = power'],
       ['<b>Cushion</b> a ball out of the air', 'Right click while it drops'],
       ['<b>Volley / header</b>', 'Left click while it drops'],
-      ['<b>Shield</b> — hold it off with your body', '<b>Space</b> · hold'],
+      ['<b>Jump</b> — head it, or reach higher', '<b>Space</b>'],
+      ['<b>Shield</b> — hold it off with your body', '<b>Q</b> · hold'],
       ['<b>Win the ball back</b>', 'Just right / left click it'],
       ['<b>Slide tackle</b>', 'C · body-sized, no assist'],
       ['<b>Keeper: dive</b>', '<b>Left click</b> · hold = distance, flick = height'],
@@ -168,7 +169,14 @@ export class Screens {
         more, so it's all timing.
       </div>
       <div class="flickhint">
-        <b>Hold Space to shield.</b> You turn side-on, drop to a shuffle and lose
+        <b>Space jumps.</b> Everything you can reach goes up with you — control
+        height, aerial reach, the height at which a contact becomes a header —
+        so a ball that would sail over your head is one you can attack. In the
+        air you have nothing to push against, so whatever you left the ground
+        with is what you land with: it's a commitment, not a dodge.
+      </div>
+      <div class="flickhint">
+        <b>Hold Q to shield.</b> You turn side-on, drop to a shuffle and lose
         the ability to strike — but your body goes wide and soft, so the ball
         dies against you instead of pinging away, and nobody can play a ball your
         shoulder is in front of. Nothing is attached to you: keeping it is purely
