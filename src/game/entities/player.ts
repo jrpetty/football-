@@ -1,4 +1,4 @@
-import { DEFEND, PLAYER, SHIELD } from '../config'
+import { DEFEND, GK, PLAYER, SHIELD } from '../config'
 import { clamp, clamp01, angleDelta } from '../core/math'
 import * as V from '../core/vec'
 import type { Vec2 } from '../core/vec'
@@ -31,6 +31,13 @@ export class Player {
   kickCooldown = 0 // brief lockout after releasing the ball
   saveCooldown = 0 // keeper: debounce so one stop counts as one save
   slideVel: Vec2 = { x: 0, y: 0 } // carried momentum during a slide
+  // Keeper dive: the same commitment as a slide, but with hands and a height.
+  diveTimer = 0
+  diveRecover = 0
+  diveWon = false
+  diveVel: Vec2 = { x: 0, y: 0 }
+  diveHeight = 1.2 // how high this particular dive reaches
+  diveFrom: Vec2 = { x: 0, y: 0 } // where it launched, so the body is a swept line
   sprinting = false // set each tick by steer(); read by the dribble/first-touch model
   shielding = false // holding the ball off with your body: side-on, slow, no strike
 
@@ -88,6 +95,10 @@ export class Player {
     return this.slideTimer > 0
   }
 
+  get diving(): boolean {
+    return this.diveTimer > 0
+  }
+
   get facing(): Vec2 {
     return { x: Math.cos(this.heading), y: Math.sin(this.heading) }
   }
@@ -123,6 +134,17 @@ export class Player {
     this.kickCooldown = Math.max(0, this.kickCooldown - dt)
     this.saveCooldown = Math.max(0, this.saveCooldown - dt)
     this.kickTimer = Math.max(0, this.kickTimer - dt)
+
+    if (this.diving) {
+      // A dive is fully committed: you go where you launched yourself and
+      // nothing you press changes it until you land.
+      this.diveTimer -= dt
+      this.vx = this.diveVel.x
+      this.vy = this.diveVel.y
+      this.diveVel = V.scale(this.diveVel, Math.max(0, 1 - 3.5 * dt))
+      return
+    }
+    this.diveRecover = Math.max(0, this.diveRecover - dt)
 
     if (this.sliding) {
       // While sliding the player is committed: coast on carried momentum and decay.
@@ -254,6 +276,20 @@ export class Player {
             : PLAYER.strikeAnimMin +
               (PLAYER.strikeAnimMax - PLAYER.strikeAnimMin) * this.kickPower
     this.kickTimer = this.kickAnimLen
+  }
+
+  // Launch a dive. `power` 0..1 is how far you commit; `height` -1..1 comes
+  // from the flick and picks a low dive at your feet or a full stretch.
+  startDive(dir: Vec2, power: number, height: number) {
+    const p = clamp01(power)
+    this.diveTimer = GK.diveTimeMin + (GK.diveTimeMax - GK.diveTimeMin) * p
+    this.diveRecover = GK.diveRecovery * (0.5 + 0.5 * p)
+    this.diveWon = false
+    this.diveVel = V.scale(V.normalize(dir), GK.diveSpeedMin + (GK.diveSpeedMax - GK.diveSpeedMin) * p)
+    const h = clamp(height, -1, 1)
+    this.diveHeight = GK.diveHeightLow + ((h + 1) / 2) * (GK.diveHeightHigh - GK.diveHeightLow)
+    this.diveFrom = { x: this.x, y: this.y }
+    this.stamina = clamp(this.stamina - 6, 0, PLAYER.staminaMax)
   }
 
   startSlide(dir: Vec2, speed: number) {

@@ -306,14 +306,38 @@ export const DEFEND = {
   interceptRadius: 1.1, // AI: moving into this radius of a loose ball claims it
 }
 
+// Keeping, as a role you actually play. The AI keeper still saves by being near
+// the ball, because it has no hands on a mouse; a human keeper has to dive, and
+// dives in the same language as everything else — LEFT click to go, held for how
+// far you commit, flicked up or down for how high you go. RIGHT click gathers.
 export const GK = {
-  reach: 2.6, // dive reach beyond the keeper's body
-  diveSpeed: 13,
+  reach: 2.6, // AI dive reach beyond the keeper's body
   speed: 6.5,
   rushSpeed: 7.4,
   lineDepth: 1.4, // resting distance off the goal line
   catchPower: 24, // shots slower than this can be caught cleanly (else parried)
-  reactionError: 0.18, // fraction of shots that beat a well-positioned keeper
+  reactionError: 0.18, // fraction of shots that beat a well-positioned AI keeper
+
+  // --- the human dive ---
+  // How fast you launch, and how far the body travels. A tap is a step and a
+  // block; a full commit is a full-length dive that leaves you on the floor.
+  diveSpeedMin: 5,
+  diveSpeedMax: 12.5,
+  diveTimeMin: 0.22,
+  diveTimeMax: 0.5,
+  diveRecovery: 0.8, // seconds getting back to your feet afterwards
+  diveCooldown: 0.55,
+  // Arm span. The dive is a capsule from where you launched to where you are,
+  // this wide, so the save comes from your body being in the right place — not
+  // from a radius that quietly grows when a shot is on target.
+  diveArm: 0.62,
+  // How high the dive reaches, from a low dive at your feet to a full-stretch
+  // one over the bar. Flicking up or down during the charge chooses it, exactly
+  // as it chooses the height of a strike.
+  diveHeightLow: 0.55,
+  diveHeightHigh: 2.5,
+  // Anything faster than this can only be parried, not held.
+  handlePower: 21,
 }
 
 export const MATCH = {

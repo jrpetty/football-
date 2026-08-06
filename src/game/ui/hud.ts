@@ -105,6 +105,26 @@ export class Hud {
     if (!p) return
     const b = world.ball
 
+    // A keeper's buttons mean something different, and there is nothing on
+    // screen that would tell you so.
+    if (p.role === 'GK' && world.possessorId !== p.id) {
+      const text = p.diving
+        ? 'DIVING'
+        : p.diveRecover > 0
+          ? 'GETTING UP'
+          : 'LEFT — DIVE (hold = distance, flick = height)  ·  RIGHT — GATHER'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.font = '600 11px system-ui, sans-serif'
+      const bw = ctx.measureText(text).width + 30
+      ctx.fillStyle = 'rgba(10,16,28,0.72)'
+      roundRect(ctx, w / 2 - bw / 2, h - 104, bw, 24, 12)
+      ctx.fill()
+      ctx.fillStyle = p.diving ? 'rgba(255,226,138,0.95)' : 'rgba(150,200,255,0.9)'
+      ctx.fillText(text, w / 2, h - 92)
+      return
+    }
+
     // Shielding is a mode you're holding, and its whole cost is invisible from
     // behind the player, so say so.
     if (p.shielding) {

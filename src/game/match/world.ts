@@ -295,6 +295,28 @@ export class World {
     if (live) {
       for (const p of this.players) {
         const cmd = commands.get(p.id)
+        // A human keeper's left click launches a dive rather than a strike —
+        // unless they already have the ball, in which case it's distribution.
+        if (
+          cmd?.kick &&
+          cmd.kick.type === 'strike' &&
+          p.role === 'GK' &&
+          this.isHumanDriven(p) &&
+          this.possessorId !== p.id &&
+          !p.diving &&
+          p.diveRecover <= 0 &&
+          p.tackleCooldown <= 0
+        ) {
+          const k = cmd.kick
+          const dir = V.len(k.aim) > 0.01 ? V.normalize(k.aim) : p.facing
+          p.startDive(dir, k.power, k.loft)
+          p.tackleCooldown = GK.diveCooldown
+          p.kickKind = 'strike'
+          this.pushEffect('save', p.x, p.y)
+          sfx.tackle()
+          cmd.kick = null
+          continue
+        }
         if (cmd?.kick && this.canKick(p, cmd.kick.type)) {
           this.executeKick(p, cmd)
           cmd.kick = null // fire once
@@ -363,6 +385,11 @@ export class World {
     let bestScore = Infinity
     for (const p of this.players) {
       if (p.kickCooldown > 0 || p.sliding) continue
+      // A human keeper does not gain the ball by standing near it. Everything a
+      // keeper gets, they get by diving for it or gathering it — otherwise the
+      // whole role collapses back into the automatic saving it replaced.
+      // ...but once it's in their hands it stays there until they play it.
+      if (p.role === 'GK' && this.isHumanDriven(p) && this.possessorId !== p.id) continue
       if (this.ball.z > controlHeight(p.role)) continue
       const cp = this.controlPoint(p)
       const d = V.dist(cp, this.ball.pos)
@@ -478,6 +505,7 @@ export class World {
     // You cannot play the ball off the floor. A slide is a commitment, and being
     // out of the play until you're upright again is what it costs.
     if (p.sliding || p.slideRecover > 0 || p.kickCooldown > 0) return false
+    if (p.diving || p.diveRecover > 0) return false
     // Shielding is a trade: the ball is safe behind your body, and while it's
     // back there you have no way to hit it. Touches still work, so you can knock
     // it out of the shield and go — that release is the whole point.
@@ -878,10 +906,48 @@ export class World {
       if (gk.role !== 'GK') continue
       // Don't let the keeper re-gather the ball it just distributed.
       if (gk.kickCooldown > 0) continue
-      const d = V.dist(gk.pos, this.ball.pos)
-      const contact = gk.radius + BALL.radius + 0.35
-      if (d > contact || this.ball.z > 2.6) continue
       if (this.possessorId === gk.id) continue
+
+      // How far this keeper can actually reach the ball, and how high.
+      //
+      // An AI keeper keeps the old generous body radius: it has no hands on a
+      // mouse and cannot be asked to time a dive. A human keeper gets nothing
+      // for free — their reach is their body, or the swept line of a dive they
+      // committed to, and if the ball isn't inside that it goes in.
+      const human = this.isHumanDriven(gk)
+      let reach: number
+      let maxZ: number
+      let cx = gk.x
+      let cy = gk.y
+      if (human) {
+        if (gk.diving) {
+          if (gk.diveWon) continue
+          // Nearest point on the line from where the dive launched to here.
+          const ax = gk.x - gk.diveFrom.x
+          const ay = gk.y - gk.diveFrom.y
+          const len2 = ax * ax + ay * ay
+          const t =
+            len2 < 1e-6
+              ? 0
+              : clamp(((this.ball.x - gk.diveFrom.x) * ax + (this.ball.y - gk.diveFrom.y) * ay) / len2, 0, 1)
+          cx = gk.diveFrom.x + ax * t
+          cy = gk.diveFrom.y + ay * t
+          reach = GK.diveArm + BALL.radius
+          maxZ = gk.diveHeight
+        } else if (gk.diveRecover > 0) {
+          continue // on the floor
+        } else {
+          // Standing: your body, and your hands as high as you can hold them.
+          reach = gk.radius + BALL.radius + 0.2
+          maxZ = 2.0
+        }
+      } else {
+        reach = gk.radius + BALL.radius + 0.35
+        maxZ = 2.6
+      }
+      const d = Math.hypot(this.ball.x - cx, this.ball.y - cy)
+      if (d > reach || this.ball.z > maxZ) continue
+      if (human && gk.diving) gk.diveWon = true
 
       const power = this.ball.horizontalSpeed
       const towardOwnGoal =
@@ -889,7 +955,8 @@ export class World {
       const wasShot = this.ball.lastTouchTeam != null && this.ball.lastTouchTeam !== gk.team && power > 7
       const countSave = live && gk.saveCooldown <= 0 && (wasShot || towardOwnGoal)
 
-      if (power < GK.catchPower && this.ball.z < 2.2) {
+      const holdLimit = human ? GK.handlePower : GK.catchPower
+      if (power < holdLimit && this.ball.z < 2.2) {
         // Clean catch → keeper gathers and holds the ball.
         this.ball.stop()
         this.ball.setPos(gk.x, gk.y, 0)

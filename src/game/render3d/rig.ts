@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { DEFEND, PLAYER } from '../config'
+import { DEFEND, GK, PLAYER } from '../config'
 import { clamp, clamp01, angleDelta } from '../core/math'
 import type { Player } from '../entities/player'
 import { kitTexture, numberTexture } from './textures'
@@ -261,6 +261,12 @@ export class PlayerRig {
     const fast = clamp01(speed / PLAYER.sprintSpeed)
     const moving = speed > 0.35
 
+    // A keeper full stretch: body off the ground, arms reaching for the ball,
+    // held at whatever height the dive was aimed at.
+    if (p.diving || p.diveRecover > 0) {
+      this.poseDive(p)
+      return
+    }
     if (p.sliding) {
       this.poseSlide(1)
       return
@@ -541,6 +547,40 @@ export class PlayerRig {
     this.root.rotation.z = this.spine.rootZ - 0.18
     this.torso.rotation.y = this.spine.torsoY + 0.3
     this.root.position.y -= 0.02
+  }
+
+  // A dive. The body goes over sideways and the arms stretch toward wherever
+  // the dive was aimed — a low dive at the feet and a full-stretch one over the
+  // bar are the same movement at different angles, which is what they are.
+  private poseDive(p: Player) {
+    const airborne = p.diving
+    const high = clamp01((p.diveHeight - GK.diveHeightLow) / (GK.diveHeightHigh - GK.diveHeightLow))
+    // Getting back up once the dive is over.
+    const down = airborne ? 1 : clamp01(p.diveRecover / GK.diveRecovery)
+    const stand = (PLAYER.height / MODEL_HEIGHT) * 0.88
+    const flat = (PLAYER.height / MODEL_HEIGHT) * (0.35 + high * 0.55)
+    this.root.position.y = flat + (stand - flat) * (1 - down)
+    // Rolled onto your side, tipped back for a high dive and forward for a low one.
+    this.root.rotation.z = (Math.PI / 2) * 0.82 * down
+    this.root.rotation.x = (-0.5 + high * 0.85) * down
+    // Both arms reaching the same way.
+    for (let i = 0; i < this.arms.length; i++) {
+      this.arms[i].hip.rotation.x = (-1.9 - high * 0.5) * down
+      this.arms[i].hip.rotation.z = (i === 0 ? 0.22 : -0.22) * down
+      this.arms[i].knee.rotation.x = 0.12
+    }
+    // Legs trail, straighter the higher you have gone.
+    for (const leg of this.legs) {
+      leg.hip.rotation.x = (0.35 - high * 0.5) * down
+      leg.knee.rotation.x = 0.15 + (1 - high) * 0.5
+      leg.hip.rotation.z = 0
+    }
+    this.torso.rotation.y = 0
+    this.torso.rotation.x = 0
+    this.head.rotation.x = 0
+    this.spine.rootX = this.root.rotation.x
+    this.spine.rootZ = this.root.rotation.z
+    this.spine.torsoY = 0
   }
 
   // Committed and grounded: one leg extended through the ball, body low. `down`

@@ -137,6 +137,8 @@ export class Screens {
       ['<b>Shield</b> — hold it off with your body', '<b>Space</b> · hold'],
       ['<b>Win the ball back</b>', 'Just right / left click it'],
       ['<b>Slide tackle</b>', 'C · body-sized, no assist'],
+      ['<b>Keeper: dive</b>', '<b>Left click</b> · hold = distance, flick = height'],
+      ['<b>Keeper: gather</b>', '<b>Right click</b>'],
       ['View: zoom (2D) · 1st/3rd (3D)', 'V'],
       ['Mute sound', 'M'],
       ['Pause', 'Esc / P'],
