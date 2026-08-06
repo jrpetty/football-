@@ -8,6 +8,7 @@ import { Scene3D } from './render3d/scene'
 import { Hud } from './ui/hud'
 import { DRILL_INFO } from './match/drills'
 import { Screens } from './ui/screens'
+import { Replay } from './match/replay'
 import { HostSession, ClientSession } from './net/session'
 import type { NetHandoff } from './net/lobby'
 import { emptyCommand } from './types'
@@ -91,6 +92,45 @@ export class Game3D {
     return !!(this.host || this.client)
   }
 
+
+  // ---- replay ----------------------------------------------------------
+  //
+  // Always recording, because you cannot know a shot was worth watching until
+  // it has already gone in. A goal starts one automatically; R plays back the
+  // last few seconds whenever you like.
+  private replay = new Replay()
+  private replayAngle = 0
+  private lastGoals = 0
+
+  private replayUpdate(dt: number): boolean {
+    if (this.replay.playing) {
+      this.replayAngle += dt * 0.55
+      if (!this.replay.update(this.world, dt) || this.input.justPressed('KeyR') ||
+          this.input.justPressed('Escape')) {
+        this.replay.stop(this.world)
+      }
+      return true
+    }
+    this.replay.record(this.world, dt)
+    const goals = this.world.score.home + this.world.score.away
+    if (goals !== this.lastGoals) {
+      this.lastGoals = goals
+      this.replayAngle = 0
+      this.replay.start(this.world, 'GOAL')
+    } else if (this.input.justPressed('KeyR')) {
+      this.replayAngle = 0
+      this.replay.start(this.world, 'REPLAY')
+    }
+    return this.replay.playing
+  }
+
+  get replaying(): boolean {
+    return this.replay.playing
+  }
+  get replayInfo() {
+    return { label: this.replay.label, progress: this.replay.progress }
+  }
+
   stop() {
     this.running = false
     document.removeEventListener('pointerlockchange', this.onLockChange)
@@ -127,6 +167,16 @@ export class Game3D {
     this.handleGlobalKeys()
 
     const locked = this.input.pointerLocked
+    if (!this.paused && this.replayUpdate(dt)) {
+      // Orbit the ball while the replay runs: the whole reason it exists is
+      // that from behind your own player you never see the thing you just did.
+      const f = this.replay.focus(this.world)
+      this.cam3.orbit(f.x, f.y, f.z, this.replayAngle)
+      this.scene.sync(this.world, -1, false, -1, dt)
+      this.scene.render(this.cam3.cam)
+      this.drawReplayOverlay()
+      return
+    }
     if (!this.paused) {
       const cp = this.world.getControlledPlayer()
       if (locked) {
@@ -219,6 +269,29 @@ export class Game3D {
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     this.scene.resize(w, h)
     this.cam3.setAspect(w / h)
+  }
+
+  // A band top and bottom, the label, and how far through we are.
+  private drawReplayOverlay() {
+    const c = this.ctx
+    const { label, progress } = this.replayInfo
+    c.clearRect(0, 0, this.cssW, this.cssH)
+    const bar = Math.max(38, this.cssH * 0.07)
+    c.fillStyle = 'rgba(6,10,18,0.82)'
+    c.fillRect(0, 0, this.cssW, bar)
+    c.fillRect(0, this.cssH - bar, this.cssW, bar)
+    c.fillStyle = '#ffe28a'
+    c.font = '700 16px system-ui, sans-serif'
+    c.textAlign = 'center'
+    c.textBaseline = 'middle'
+    c.fillText(label, this.cssW / 2, bar / 2)
+    c.fillStyle = 'rgba(255,255,255,0.5)'
+    c.font = '600 11px system-ui, sans-serif'
+    c.fillText('R or ESC to skip', this.cssW / 2, this.cssH - bar / 2)
+    c.fillStyle = 'rgba(255,255,255,0.15)'
+    c.fillRect(0, bar - 3, this.cssW, 3)
+    c.fillStyle = '#ffe28a'
+    c.fillRect(0, bar - 3, this.cssW * progress, 3)
   }
 
   private render(locked: boolean, dt: number) {

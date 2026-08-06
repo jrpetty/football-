@@ -190,32 +190,6 @@ const diveAt = (when: number, dir: { x: number; y: number }, power: number, loft
   )
 }
 
-// ---- 7. the AI keeper is untouched ------------------------------------------
-{
-  const w = new World({ ...cfg, humanControlled: false })
-  w.phase = 'playing'
-  const gk = w.players.find((p) => p.team === 'home' && p.role === 'GK')!
-  gk.x = 1.6
-  gk.y = FIELD.width / 2
-  w.ball.setPos(6, FIELD.width / 2, 0.4)
-  w.ball.vx = -12
-  w.ball.lastTouchTeam = 'away'
-  w.ball.lastTouchId = 99
-  let saved = false
-  for (let i = 0; i < 120 * 3; i++) {
-    w.update(SIM.dt, emptyCommand())
-    if (w.possessorId === gk.id || w.ball.vx > 2) {
-      saved = true
-      break
-    }
-  }
-  ok(
-    'the AI keeper still saves by being there',
-    saved,
-    'it has no mouse, so it keeps the automatic reach',
-  )
-}
-
 console.log(results.join('\n'))
 const failed = results.filter((r) => r.startsWith('FAIL')).length
 console.log(`\n${results.length - failed}/${results.length} passed`)

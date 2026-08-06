@@ -300,6 +300,34 @@ export const SHIELD = {
   block: 0.62,
 }
 
+// Two bodies meeting. Until now players simply pushed apart by geometry, which
+// meant a shoulder-to-shoulder race was decided by nothing at all — you passed
+// through each other's personal space and whoever was faster won.
+//
+// A duel is really about three things, and none of them is a button: how hard
+// you are travelling into the contact, whether you met it side-on or got done
+// from behind, and whether you had braced for it. So the impulse is the closing
+// speed along the line between you, split by those, and the loser is moved off
+// their line and loses a fraction of their pace.
+export const DUEL = {
+  // Below this closing speed it's a nudge, not a challenge.
+  minClosing: 1.2,
+  // How much of the closing speed becomes a shove. Kept low: this is a body
+  // check, not a car crash, and it has to leave the ball as the main event.
+  push: 0.55,
+  // Meeting someone shoulder to shoulder is a fair contest; arriving into their
+  // back is not, and gets you far more of the argument.
+  behindBonus: 1.7,
+  // Bracing. A shielding player is set and side-on, so they win the exchange;
+  // a sprinting one is committed and easy to knock off.
+  shieldResist: 2.4,
+  sprintResist: 0.7,
+  // Pace the loser drops out of the contact.
+  paceLoss: 0.35,
+  // Airborne players have nothing to push against, so they take it all.
+  airborneResist: 0.35,
+}
+
 export const DEFEND = {
   // The sliding body is the hitbox and nothing more — no magnet, no assist. It's
   // a capsule the width of the player, as long as a person lying down, swept

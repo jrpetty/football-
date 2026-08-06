@@ -96,7 +96,7 @@ export class HostSession {
     if (this.acc < step) return
     this.acc = 0
     this.tick++
-    const snap = capture(this.world)
+    const snap = captureSnapshot(this.world)
     for (const [, p] of this.peers) {
       this.transport.send({ t: 'snap', tick: this.tick, time: performance.now() / 1000, ack: p.lastSeq, s: snap })
     }
@@ -209,7 +209,7 @@ export class ClientSession {
     }
     const span = b.time - a.time
     const f = span > 1e-4 ? Math.min(1, Math.max(0, (target - a.time) / span)) : 1
-    apply(this.world, a.s, b.s, f, this.playerId)
+    applySnapshot(this.world, a.s, b.s, f, this.playerId)
   }
 
   close() {
@@ -220,7 +220,9 @@ export class ClientSession {
 
 // ---- snapshot capture / apply ----------------------------------------------
 
-function capture(w: World): Snapshot {
+// Exported so replays can use them: a replay is these same two functions
+// pointed at a ring buffer instead of a socket.
+export function captureSnapshot(w: World): Snapshot {
   const b = w.ball
   return {
     b: {
@@ -259,7 +261,7 @@ function capture(w: World): Snapshot {
   }
 }
 
-function apply(w: World, a: Snapshot, b: Snapshot, f: number, ownId: number) {
+export function applySnapshot(w: World, a: Snapshot, b: Snapshot, f: number, ownId: number) {
   const lerp = (x: number, y: number) => x + (y - x) * f
   // The ball is the one thing everybody has to agree on exactly, so it is taken
   // from the host verbatim — interpolated in position, but never predicted.

@@ -8,6 +8,7 @@ import { Camera } from './render/camera'
 import { Renderer } from './render/renderer'
 import { Hud } from './ui/hud'
 import { DRILL_INFO } from './match/drills'
+import { Replay } from './match/replay'
 import { HostSession, ClientSession } from './net/session'
 import { Lobby } from './net/lobby'
 import type { NetHandoff } from './net/lobby'
@@ -92,6 +93,31 @@ class Game {
     return !!(this.host || this.client)
   }
 
+
+  // ---- replay ----------------------------------------------------------
+  // Always recording; a goal starts one, R plays back the last few seconds.
+  private replay = new Replay()
+  private lastGoals = 0
+
+  private replayUpdate(dt: number): boolean {
+    if (this.replay.playing) {
+      if (!this.replay.update(this.world, dt) || this.input.justPressed('KeyR') ||
+          this.input.justPressed('Escape')) {
+        this.replay.stop(this.world)
+      }
+      return this.replay.playing
+    }
+    this.replay.record(this.world, dt)
+    const goals = this.world.score.home + this.world.score.away
+    if (goals !== this.lastGoals) {
+      this.lastGoals = goals
+      this.replay.start(this.world, 'GOAL')
+    } else if (this.input.justPressed('KeyR')) {
+      this.replay.start(this.world, 'REPLAY')
+    }
+    return this.replay.playing
+  }
+
   stop() {
     this.running = false
   }
@@ -111,8 +137,13 @@ class Game {
 
     if (!this.paused) {
       const cmd = this.human.buildCommand(this.world, this.cam, this.input, dt)
-      this.world.update(dt, cmd)
-      this.netUpdate(dt, cmd)
+      if (this.replayUpdate(dt)) {
+        // The world is being played back rather than simulated, so nothing is
+        // stepped and no input is read — just drawn.
+      } else {
+        this.world.update(dt, cmd)
+        this.netUpdate(dt, cmd)
+      }
       this.cam.follow(this.cameraFocus(), dt)
       this.maybeEnd()
     }

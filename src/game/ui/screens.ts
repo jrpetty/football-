@@ -107,13 +107,17 @@ export class Screens {
         </div>
 
         <div class="actions">
-          <button class="btn primary" data-act="match">▶  Play Match</button>
-          <button class="btn" data-act="training">🎯  Training <span class="sub">(solo, no AI)</span></button>
-          <button class="btn" data-act="online">🌐  Play Online <span class="sub">(host or join)</span></button>
+          <button class="btn primary" data-act="online">🌐  Play Online <span class="sub">(host or join)</span></button>
+          <button class="btn" data-act="training">🎯  Training <span class="sub">(solo drills)</span></button>
         </div>
 
         ${this.controlsHtml()}
-        <p class="foot">Training is solo — just you, a ball and two empty goals, with nothing else on the pitch. Press <b>B</b> to put the ball back in front of you.</p>
+        <p class="foot">
+          Nothing on this pitch plays itself. Training is you, a ball and two
+          empty goals — press <b>B</b> to put the ball back in front of you,
+          <b>N</b> for the next drill. A match is other people: every shirt is a
+          seat, and the ones nobody has taken just stand there.
+        </p>
       </div>`
     this.wireMenu()
   }
@@ -144,6 +148,7 @@ export class Screens {
       ['<b>Keeper: gather</b>', '<b>Right click</b>'],
       ['View: zoom (2D) · 1st/3rd (3D)', 'V'],
       ['Mute sound', 'M'],
+      ['<b>Replay</b> — the last few seconds', '<b>R</b> · goals play one for you'],
       ['Pause', 'Esc / P'],
       ['Spawn ball (training)', 'B'],
     ]
@@ -215,7 +220,7 @@ export class Screens {
         if (out) out.textContent = v.toFixed(2)
       })
     })
-    this.root.querySelector<HTMLButtonElement>('[data-act="match"]')?.addEventListener('click', () => {
+    this.root.querySelector<HTMLButtonElement>('[data-act="__gone"]')?.addEventListener('click', () => {
       sfx.unlock()
       this.onStart({ ...this.config, mode: 'match' })
     })

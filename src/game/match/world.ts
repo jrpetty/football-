@@ -1,10 +1,9 @@
-import { AERIAL, BALL, CONTROL, DEFEND, FIELD, GK, KICK, MATCH, PLAYER, SHIELD, SIM, WALL } from '../config'
+import { AERIAL, BALL, CONTROL, DEFEND, DUEL, FIELD, GK, KICK, MATCH, PLAYER, SHIELD, SIM, WALL } from '../config'
 import { clamp } from '../core/math'
 import * as V from '../core/vec'
 import type { Vec2 } from '../core/vec'
 import { Ball } from '../physics/ball'
 import { Player } from '../entities/player'
-import { computeAiCommands } from '../ai/director'
 import { emptyCommand, emptyStats } from '../types'
 import type { Command, KickRequest, KickType, MatchConfig, Restart, Role, Skill, Stats, Team } from '../types'
 import { sfx } from '../audio/sfx'
@@ -209,7 +208,11 @@ export class World {
   }
 
   private buildCommands(humanCmd: Command, dt: number): Map<number, Command> {
-    const commands = computeAiCommands(this, dt)
+    void dt
+    // No AI. Every player on this pitch is driven by a person or by nobody at
+    // all — an unclaimed shirt is a seat waiting for someone to take it, and
+    // until they do it stands still. Nothing on the pitch plays itself.
+    const commands = new Map<number, Command>()
     if (this.config.humanControlled !== false) {
       const controlled = this.players.find((p) => p.id === this.controlledId)
       if (controlled) commands.set(controlled.id, humanCmd)
@@ -374,14 +377,6 @@ export class World {
       }
     }
 
-    // 5. Dribbling. The AI shepherds the ball automatically, but the human's
-    // close control is entirely manual — you push the ball with touches and run
-    // onto it. Nothing is glued to your feet, which is the whole point of having
-    // a dedicated touch button.
-    if (this.possessorId != null) {
-      const owner = this.player(this.possessorId)
-      if (owner && owner.kickCooldown <= 0 && !this.isHumanDriven(owner)) this.dribble(owner)
-    }
 
     // 6. Integrate bodies and ball.
     for (const p of this.players) p.integrate(dt)
@@ -438,8 +433,11 @@ export class World {
       // A human keeper does not gain the ball by standing near it. Everything a
       // keeper gets, they get by diving for it or gathering it — otherwise the
       // whole role collapses back into the automatic saving it replaced.
-      // ...but once it's in their hands it stays there until they play it.
-      if (p.role === 'GK' && this.isHumanDriven(p) && this.possessorId !== p.id) continue
+      // An unclaimed shirt is a seat, not a footballer — it can't take the ball.
+      if (!this.isHumanDriven(p)) continue
+      // A keeper doesn't gain the ball by standing near it either; they dive for
+      // it or gather it. But once it's in their hands it stays there.
+      if (p.role === 'GK' && this.possessorId !== p.id) continue
       if (this.ball.z > controlHeight(p)) continue
       const cp = this.controlPoint(p)
       const d = V.dist(cp, this.ball.pos)
@@ -457,10 +455,7 @@ export class World {
 
     const prev = this.possessorId
     if (best) {
-      if (best.id !== prev) {
-        this.onPossessionGain(best, prev)
-        this.firstTouch(best)
-      }
+      if (best.id !== prev) this.onPossessionGain(best, prev)
       this.possessorId = best.id
     } else {
       this.possessorId = null
@@ -497,57 +492,7 @@ export class World {
     void prevId
   }
 
-  // Taking a ball down out of play. This is for *receiving* — a pass, a clearance,
-  // a loose ball. It must never fire on a ball you just played yourself, or every
-  // deliberate touch would be snapped straight back to your feet and close
-  // control would be impossible.
-  private firstTouch(p: Player) {
-    // Nothing is ever glued to a human's feet. A ball arriving at you is just a
-    // ball arriving at you: it bounces off your body unless you actually play
-    // it, which means a right click to take the pace off or a left click to hit
-    // it. That is the whole game — the ball only ever goes where you tell it to,
-    // and never where the simulation decided it should. The AI still gets an
-    // automatic trap, because it has no hands on a mouse to do it with.
-    if (this.isHumanDriven(p)) return
-    if (this.ball.lastTouchId === p.id) return
-    const incoming = this.ball.horizontalSpeed
-    if (incoming < 3) return
-    // Trap the ball to the feet with an error that grows with pace and effort.
-    const err = KICK.firstTouchError * (1 + incoming * 0.05) * (p.sprinting ? 1.5 : 1)
-    const f = p.facing
-    this.ball.z = 0
-    this.ball.vz = 0
-    this.ball.spin *= 0.3
-    this.ball.x = p.x + f.x * (p.radius + BALL.radius) + (Math.random() * 2 - 1) * err
-    this.ball.y = p.y + f.y * (p.radius + BALL.radius) + (Math.random() * 2 - 1) * err
-    this.ball.vx = p.vx * 0.5
-    this.ball.vy = p.vy * 0.5
-  }
 
-  private dribble(p: Player) {
-    const moving = p.speed > 0.5
-    const dirv = moving ? V.normalize(p.vel) : p.facing
-    const touch =
-      KICK.dribbleTouch + (p.sprinting ? KICK.sprintTouchBonus : 0) + p.speed * 0.04
-    const reach = p.radius + BALL.radius + touch
-    const target = { x: p.x + dirv.x * reach, y: p.y + dirv.y * reach }
-    const k = 11
-    let vx = (target.x - this.ball.x) * k
-    let vy = (target.y - this.ball.y) * k
-    const maxv = p.topSpeed(true) * 1.7 + 4
-    const s = Math.hypot(vx, vy)
-    if (s > maxv) {
-      vx = (vx / s) * maxv
-      vy = (vy / s) * maxv
-    }
-    this.ball.vx = vx
-    this.ball.vy = vy
-    this.ball.z = 0
-    this.ball.vz = 0
-    this.ball.spin *= 0.85
-    this.ball.lastTouchTeam = p.team
-    this.ball.lastTouchId = p.id
-  }
 
   // ---- kicking -----------------------------------------------------------
 
@@ -964,12 +909,14 @@ export class World {
       // mouse and cannot be asked to time a dive. A human keeper gets nothing
       // for free — their reach is their body, or the swept line of a dive they
       // committed to, and if the ball isn't inside that it goes in.
-      const human = this.isHumanDriven(gk)
+      // Only a person keeps goal. An unclaimed keeper's shirt is a seat, not a
+      // goalkeeper, and it saves exactly nothing.
+      if (!this.isHumanDriven(gk)) continue
       let reach: number
       let maxZ: number
       let cx = gk.x
       let cy = gk.y
-      if (human) {
+      {
         if (gk.diving) {
           if (gk.diveWon) continue
           // Nearest point on the line from where the dive launched to here.
@@ -991,13 +938,10 @@ export class World {
           reach = gk.radius + BALL.radius + 0.2
           maxZ = 2.0
         }
-      } else {
-        reach = gk.radius + BALL.radius + 0.35
-        maxZ = 2.6
       }
       const d = Math.hypot(this.ball.x - cx, this.ball.y - cy)
       if (d > reach || this.ball.z > maxZ) continue
-      if (human && gk.diving) gk.diveWon = true
+      if (gk.diving) gk.diveWon = true
 
       const power = this.ball.horizontalSpeed
       const towardOwnGoal =
@@ -1005,7 +949,7 @@ export class World {
       const wasShot = this.ball.lastTouchTeam != null && this.ball.lastTouchTeam !== gk.team && power > 7
       const countSave = live && gk.saveCooldown <= 0 && (wasShot || towardOwnGoal)
 
-      const holdLimit = human ? GK.handlePower : GK.catchPower
+      const holdLimit = GK.handlePower
       if (power < holdLimit && this.ball.z < 2.2) {
         // Clean catch → keeper gathers and holds the ball.
         this.ball.stop()
@@ -1043,10 +987,8 @@ export class World {
 
   private resolveBodyCollisions() {
     for (const p of this.players) {
-      // An AI dribbler is placing the ball deliberately, so it passes through
-      // them. A human's isn't attached to anything, so their body is solid — the
-      // ball rebounds off their shins exactly like it rebounds off the boards.
-      if (p.id === this.possessorId && !this.isHumanDriven(p)) continue
+      // Nothing is attached to anybody, so every body is solid: the ball
+      // rebounds off a player's shins exactly like it rebounds off the boards.
       if (p.role === 'GK') continue // handled by saves
       if (p.kickCooldown > 0) continue
       if (this.ball.z > 1.9 + p.z) continue
@@ -1281,18 +1223,51 @@ export class World {
         const dy = b.y - a.y
         const d = Math.hypot(dx, dy)
         const min = a.radius + b.radius
-        if (d < min && d > 1e-4) {
-          const overlap = (min - d) / 2
-          const nx = dx / d
-          const ny = dy / d
-          // Sliding players barge through less; keepers hold their ground.
-          const aw = a.role === 'GK' ? 0.2 : 1
-          const bw = b.role === 'GK' ? 0.2 : 1
-          const tot = aw + bw
-          a.x -= nx * overlap * (bw / tot) * 2
-          a.y -= ny * overlap * (bw / tot) * 2
-          b.x += nx * overlap * (aw / tot) * 2
-          b.y += ny * overlap * (aw / tot) * 2
+        if (d >= min || d <= 1e-4) continue
+        const nx = dx / d
+        const ny = dy / d
+
+        // How strongly each of them is set against being moved. This is the
+        // whole contest: it is decided by what your body is doing, not by a
+        // button you pressed.
+        const brace = (p: Player, into: number) => {
+          if (p.airborne) return DUEL.airborneResist // nothing to push against
+          if (p.sliding || p.slideRecover > 0 || p.diveRecover > 0) return 0.3
+          if (p.role === 'GK') return 4 // a keeper holds their ground
+          let r = 1
+          if (p.shielding) r *= DUEL.shieldResist // set and side-on
+          if (p.sprinting) r *= DUEL.sprintResist // committed, easy to unbalance
+          // Done from your blind side: you never saw it and can't set yourself.
+          if (into < -0.35) r /= DUEL.behindBonus
+          return r
+        }
+        const facingInto = (p: Player, tx: number, ty: number) => p.facing.x * tx + p.facing.y * ty
+        const aw = brace(a, facingInto(a, nx, ny))
+        const bw = brace(b, facingInto(b, -nx, -ny))
+        const tot = aw + bw
+
+        // Geometric separation, weighted by who is the more immovable.
+        const overlap = min - d
+        a.x -= nx * overlap * (bw / tot)
+        a.y -= ny * overlap * (bw / tot)
+        b.x += nx * overlap * (aw / tot)
+        b.y += ny * overlap * (aw / tot)
+
+        // The contest itself: how fast are they closing on each other?
+        const closing = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny
+        if (closing <= DUEL.minClosing) continue
+        const j2 = closing * DUEL.push
+        a.vx -= nx * j2 * (bw / tot)
+        a.vy -= ny * j2 * (bw / tot)
+        b.vx += nx * j2 * (aw / tot)
+        b.vy += ny * j2 * (aw / tot)
+        // Whoever came off worse is knocked out of their stride.
+        const loser = aw < bw ? a : b
+        loser.vx *= 1 - DUEL.paceLoss
+        loser.vy *= 1 - DUEL.paceLoss
+        if (closing > 4) {
+          this.pushEffect('tackle', (a.x + b.x) / 2, (a.y + b.y) / 2)
+          if (loser.landTimer <= 0) loser.landTimer = 0.12
         }
       }
     }

@@ -45,6 +45,15 @@ export class Camera3D {
     return { x: Math.cos(this.yaw), y: Math.sin(this.yaw) }
   }
 
+  // Circle a point, looking in at it. Used for replays: the whole reason a
+  // replay exists is that from behind your own player you never actually see
+  // the thing you just did, so the camera has to go somewhere you can't.
+  orbit(px: number, py: number, pz: number, angle: number, dist = 11, height = 4.5) {
+    this.cam.position.set(px + Math.cos(angle) * dist, height + pz * 0.5, py + Math.sin(angle) * dist)
+    this.cam.lookAt(px, pz + 0.8, py)
+    this.cam.updateMatrixWorld(true)
+  }
+
   // Follow the controlled player. px,py are the player's SIM position.
   update(px: number, py: number, dt: number) {
     const fx = Math.cos(this.yaw)
