@@ -1,4 +1,4 @@
-import { BALL, FIELD, KITS, PLAYER } from '../config'
+import { BALL, DUMMY, FIELD, KITS, PLAYER } from '../config'
 import { clamp01 } from '../core/math'
 import type { Player } from '../entities/player'
 import type { World } from '../match/world'
@@ -68,6 +68,50 @@ export class Renderer {
         ctx.arc(c.x, c.y, Math.max(3, cam.ppm * 0.16), 0, Math.PI * 2)
         ctx.fill()
       }
+    }
+
+    // The permanent apparatus: the slalom down the touchline and the free-kick
+    // wall standing off to one side of it.
+    for (const m of d.dummies) {
+      const s = cam.worldToScreen(m.x, m.y)
+      const r = Math.max(2.5, cam.ppm * DUMMY.radius)
+      if (m.kind === 'slalom') {
+        ctx.strokeStyle = '#ff9d3d'
+        ctx.lineWidth = Math.max(2, r * 0.7)
+        ctx.beginPath()
+        ctx.arc(s.x, s.y, r * 0.55, 0, Math.PI * 2)
+        ctx.stroke()
+      } else {
+        ctx.fillStyle = '#39424f'
+        ctx.beginPath()
+        ctx.arc(s.x, s.y, r, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.strokeStyle = 'rgba(255,255,255,0.25)'
+        ctx.lineWidth = 1
+        ctx.stroke()
+      }
+      // A knocked dummy leans, and from above that reads as a shift off its
+      // base — so the base stays put and the body slides.
+      if (m.lean > 0.01) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.35)'
+        ctx.lineWidth = 1
+        ctx.beginPath()
+        ctx.moveTo(s.x, s.y)
+        ctx.lineTo(s.x + m.lx * m.lean * cam.ppm * 2, s.y + m.ly * m.lean * cam.ppm * 2)
+        ctx.stroke()
+      }
+    }
+
+    // The spot the free-kick wall is standing ten yards from.
+    if (d.wallSpot) {
+      const s = cam.worldToScreen(d.wallSpot.x, d.wallSpot.y)
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)'
+      ctx.setLineDash([3, 3])
+      ctx.lineWidth = 1.5
+      ctx.beginPath()
+      ctx.arc(s.x, s.y, cam.ppm * 0.5, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.setLineDash([])
     }
 
     // The wall.

@@ -1,4 +1,4 @@
-import { AERIAL, BALL, CONTROL, DEFEND, DUEL, FIELD, GK, KICK, MATCH, NET, PLAYER, SHIELD, SIM, WALL } from '../config'
+import { AERIAL, BALL, CONTROL, DEFEND, DUEL, DUMMY, FIELD, GK, KICK, MATCH, NET, PLAYER, SHIELD, SIM, WALL } from '../config'
 import { clamp } from '../core/math'
 import * as V from '../core/vec'
 import type { Vec2 } from '../core/vec'
@@ -478,6 +478,7 @@ export class World {
     this.resolveGkSaves(live)
     this.resolveBodyCollisions()
     this.resolveDrillWall()
+    this.resolveDummies()
     this.resolvePosts()
 
     // 8. Ball leaving play.
@@ -1151,6 +1152,62 @@ export class World {
       this.ball.y = m.y + ny * min
       this.ball.reflect(nx, ny, 0.4)
       this.pushEffect('post', this.ball.x, this.ball.y)
+    }
+  }
+
+  // The permanent training apparatus: the slalom and the free-kick wall.
+  //
+  // Solid to the ball, and unlike the drill wall they are solid to a body too.
+  // That is the whole point of a dummy: a slalom you can run straight through
+  // teaches nothing, so the ball has to go round it and so do you.
+  private resolveDummies() {
+    const dummies = this.drills?.dummies
+    if (!dummies || !dummies.length) return
+    for (const m of dummies) {
+      // --- ball ---
+      if (this.ball.z <= DUMMY.height) {
+        const dx = this.ball.x - m.x
+        const dy = this.ball.y - m.y
+        const d = Math.hypot(dx, dy)
+        const min = DUMMY.radius + BALL.radius
+        if (d < min && d > 1e-4) {
+          const nx = dx / d
+          const ny = dy / d
+          const closing = -(this.ball.vx * nx + this.ball.vy * ny)
+          this.ball.x = m.x + nx * min
+          this.ball.y = m.y + ny * min
+          this.ball.reflect(nx, ny, DUMMY.restitution)
+          if (closing > 0.5) {
+            this.drills?.rock(m, -nx, -ny, closing)
+            sfx.tackle()
+            this.pushEffect('post', this.ball.x, this.ball.y)
+          }
+        }
+      }
+
+      // --- bodies ---
+      for (const p of this.players) {
+        // Jump over one and you're past it, the same rule the ball gets.
+        if (p.z > DUMMY.height - PLAYER.height * 0.5) continue
+        const dx = p.x - m.x
+        const dy = p.y - m.y
+        const d = Math.hypot(dx, dy)
+        const min = DUMMY.radius + p.radius
+        if (d >= min || d < 1e-4) continue
+        const nx = dx / d
+        const ny = dy / d
+        const push = (min - d) * DUMMY.bodyPush
+        p.x += nx * push
+        p.y += ny * push
+        // Kill the part of your run that was going into it, so you're turned
+        // aside rather than stopped dead or squeezed through.
+        const into = p.vx * nx + p.vy * ny
+        if (into < 0) {
+          p.vx -= nx * into
+          p.vy -= ny * into
+          this.drills?.rock(m, -nx, -ny, Math.abs(into) * 0.6)
+        }
+      }
     }
   }
 

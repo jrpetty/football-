@@ -141,8 +141,11 @@ export class Screens {
           Nothing on this pitch plays itself. Training is you, a ball and two
           empty goals — press <b>${keyLabel(binds.get('spawnBall'))}</b> to put the ball
           back in front of you, <b>${keyLabel(binds.get('nextDrill'))}</b> for the
-          next drill. A match is other people: every shirt is a
-          seat, and the ones nobody has taken just stand there.
+          next drill. Down one touchline there is a slalom of mannequins to
+          dribble and a five-man wall standing ten yards off a spot, both solid
+          to you and to the ball, there whichever drill you are on. A match is
+          other people: every shirt is a seat, and the ones nobody has taken
+          just stand there.
         </p>
       </div>`
     this.wireMenu()

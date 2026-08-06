@@ -282,6 +282,28 @@ export const WALL = {
   height: 6, // how tall the barrier is drawn; physically it always rebounds
 }
 
+// Training apparatus you can hit: slalom mannequins to dribble through and a
+// free-kick wall standing where a real one would.
+//
+// Solid to the ball and to a body, because the whole value of a dummy is that
+// going through it isn't available — a slalom you can walk over teaches
+// nothing, and a wall you can shoot through makes bending it pointless. They
+// are lighter than a person and bolted to a sprung base, so a contact rocks
+// them and they come back up.
+export const DUMMY = {
+  radius: 0.3,
+  height: 1.85, // clear it and the ball is past — the same rule as the drill wall
+  restitution: 0.42, // softer than a post: it's foam on a spring, not aluminium
+  bodyPush: 0.55, // how firmly a player is turned aside by one
+  // Visual: how far a hit rocks it and how quickly it rights itself.
+  rock: 0.05, // radians of lean per m/s of impact
+  maxRock: 0.5,
+  settle: 4.2,
+  wallSpacing: 0.58, // shoulder to shoulder, same as the curling drill's wall
+  wallMen: 5,
+  wallDistance: 9.15, // the regulation ten yards
+}
+
 // Playing the ball out of the air. Cushioning kills the pace and drops it dead;
 // volleying and heading trade control for power, which is the whole bargain.
 export const AERIAL = {

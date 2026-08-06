@@ -628,6 +628,100 @@ export class Scene3D {
     }
   }
 
+  // The permanent training apparatus. Built once, because unlike the drill
+  // apparatus it never changes — only its lean does.
+  private dummies: THREE.Group[] = []
+
+  private makeDummy(kind: 'slalom' | 'wall'): THREE.Group {
+    const g = new THREE.Group()
+    // A weighted base that stays put while the body above it rocks. Everything
+    // else is parented to `body`, so leaning the body leaves the base flat on
+    // the turf the way a real sprung mannequin does.
+    const base = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.26, 0.32, 0.07, 16),
+      new THREE.MeshStandardMaterial({ color: '#22262c', roughness: 0.9 }),
+    )
+    base.position.y = 0.035
+    base.receiveShadow = true
+    g.add(base)
+
+    const body = new THREE.Group()
+    body.name = 'body'
+    g.add(body)
+
+    if (kind === 'slalom') {
+      // A pole mannequin: the kind you weave through. Banded so the spacing
+      // reads at a glance from a player's eye height.
+      const pole = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.055, 0.065, 1.75, 10),
+        new THREE.MeshStandardMaterial({ color: '#ff9d3d', roughness: 0.6 }),
+      )
+      pole.position.y = 0.9
+      pole.castShadow = true
+      body.add(pole)
+      for (let i = 0; i < 3; i++) {
+        const band = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.075, 0.075, 0.16, 10),
+          new THREE.MeshStandardMaterial({ color: '#f2f5ff', roughness: 0.7 }),
+        )
+        band.position.y = 0.45 + i * 0.5
+        body.add(band)
+      }
+    } else {
+      // A wall mannequin: a body-shaped dummy with a head and its arms across
+      // the obvious place, standing the way the wall it stands in for would.
+      //
+      // Deliberately not in anybody's kit. It is a training aid, so it wears a
+      // high-vis bib — which also keeps it from reading as an opponent at a
+      // glance, and keeps it visible: the stadium is graded through filmic tone
+      // mapping and anything this dark simply disappeared into its own shadow.
+      const kit = new THREE.MeshStandardMaterial({ color: '#5b6779', roughness: 0.85 })
+      const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 1.0, 6, 14), kit)
+      torso.position.y = 0.95
+      torso.castShadow = true
+      body.add(torso)
+      const bib = new THREE.Mesh(
+        new THREE.CapsuleGeometry(0.315, 0.5, 6, 14),
+        new THREE.MeshStandardMaterial({ color: '#e8d43a', roughness: 0.7 }),
+      )
+      bib.position.y = 1.12
+      body.add(bib)
+      const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.16, 14, 12),
+        new THREE.MeshStandardMaterial({ color: '#c8a284', roughness: 0.8 }),
+      )
+      head.position.y = 1.66
+      head.castShadow = true
+      body.add(head)
+      // Arms folded in front, the way a wall stands.
+      const guard = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.15, 0.16), kit)
+      guard.position.set(0, 0.66, 0.25)
+      body.add(guard)
+    }
+    this.scene.add(g)
+    return g
+  }
+
+  private syncDummies(world: World) {
+    const list = world.drills?.dummies
+    if (!list || !list.length) return
+    while (this.dummies.length < list.length) {
+      this.dummies.push(this.makeDummy(list[this.dummies.length].kind))
+    }
+    list.forEach((m, i) => {
+      const g = this.dummies[i]
+      g.position.set(m.x, 0, m.y)
+      const body = g.getObjectByName('body')
+      if (!body) return
+      // Lean away from whatever hit it. The lean is a world-space direction, so
+      // it becomes a rotation about the axis perpendicular to it.
+      body.rotation.set(0, 0, 0)
+      if (m.lean > 1e-4) {
+        body.rotateOnAxis(new THREE.Vector3(m.ly, 0, -m.lx).normalize(), -m.lean)
+      }
+    })
+  }
+
   private syncDrills(world: World) {
     const d = world.drills
     if (!d) return
@@ -715,6 +809,7 @@ export class Scene3D {
 
     this.syncNets(world, dt)
     this.syncDrills(world)
+    this.syncDummies(world)
 
     for (const p of world.players) {
       const rig = this.ensurePlayer(p.id, p.team, p.role, p.number)

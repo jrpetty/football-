@@ -1,4 +1,4 @@
-import { BALL, FIELD, PLAYER, SIM } from '../config'
+import { BALL, DUMMY, FIELD, PLAYER, SIM } from '../config'
 import type { World } from './world'
 import * as F from './field'
 import { store } from '../core/store'
@@ -55,6 +55,28 @@ export interface WallMan {
   y: number
 }
 
+// Apparatus that lives on the training pitch permanently, rather than being set
+// out for one drill and cleared away after it. Two kinds, because they teach
+// different things and want to look different:
+//
+//   'slalom' — a line of mannequins along the touchline to dribble through.
+//     Close control against something that doesn't move but doesn't give way
+//     either, which is the one thing an empty pitch can't offer.
+//
+//   'wall'   — a free-kick wall standing the regulation ten yards from a spot,
+//     on the line to the goal, so the straight ball is genuinely unavailable.
+//     The curling drill sets one out too; this one is simply always there.
+export interface Dummy {
+  x: number
+  y: number
+  kind: 'slalom' | 'wall'
+  // How far it is currently rocked back, and which way. A dummy is foam on a
+  // sprung base: hit it and it leans away, then rights itself.
+  lean: number
+  lx: number
+  ly: number
+}
+
 const MAX_TRAIL = 400
 
 export interface TrailPoint {
@@ -84,6 +106,15 @@ export class Drills {
   spot: { x: number; y: number } | null = null
   trail: TrailPoint[] = []
   trailAge = 0
+
+  // Permanent furniture, set out once and never cleared by select(). It lives
+  // down one touchline so it is out of the way of every drill's own apparatus,
+  // which all works through the middle of the pitch toward a goal.
+  dummies: Dummy[] = []
+  // The spot the free-kick wall is standing ten yards from, so you can put a
+  // ball down and bend one whenever you like rather than only in the drill
+  // that sets a wall out for you.
+  wallSpot: { x: number; y: number } | null = null
 
   // Scoring, per drill, so switching away and back doesn't wipe your record.
   scores: Record<DrillId, { attempts: number; scored: number; points: number; best: number; streak: number }> =
@@ -115,7 +146,59 @@ export class Drills {
   private seed = 1
 
   constructor() {
+    this.buildGround()
     this.select('targets')
+  }
+
+  // Lay out the permanent apparatus. Everything sits between the touchline and
+  // a third of the way across, so it is plainly a training area off to one side
+  // rather than obstacles scattered across the middle of a pitch you are also
+  // trying to shoot on.
+  private buildGround() {
+    const lane = 6.5 // metres in from the touchline
+    const d = (x: number, y: number, kind: Dummy['kind']): Dummy => ({ x, y, kind, lean: 0, lx: 0, ly: 0 })
+
+    // A slalom to dribble. Spacing tightens as you go, so the first gate is
+    // generous and the last one asks for a proper touch.
+    const slalom: Dummy[] = []
+    let x = 12
+    for (let i = 0; i < 6; i++) {
+      slalom.push(d(x, lane + (i % 2 === 0 ? -0.9 : 0.9), 'slalom'))
+      x += 4.2 - i * 0.35
+    }
+
+    // A free-kick wall, standing where a real one would: ten yards from the
+    // spot, square across the line between the spot and the middle of the goal.
+    // Put anywhere else it is scenery — the only thing that makes a wall worth
+    // bending round is that it is genuinely in the way.
+    const spot = { x: 33, y: lane + 1 }
+    const goal = { x: FIELD.length, y: FIELD.width / 2 }
+    const dx = goal.x - spot.x
+    const dy = goal.y - spot.y
+    const len = Math.hypot(dx, dy) || 1
+    const ux = dx / len
+    const uy = dy / len
+    const cx = spot.x + ux * DUMMY.wallDistance
+    const cy = spot.y + uy * DUMMY.wallDistance
+    const wall: Dummy[] = []
+    for (let i = 0; i < DUMMY.wallMen; i++) {
+      const off = (i - (DUMMY.wallMen - 1) / 2) * DUMMY.wallSpacing
+      // Perpendicular to the line of the shot, so the wall faces the kicker.
+      wall.push(d(cx - uy * off, cy + ux * off, 'wall'))
+    }
+
+    this.dummies = [...slalom, ...wall]
+    this.wallSpot = spot
+  }
+
+  // Called when the ball or a body knocks one. The lean is a direction and a
+  // magnitude; update() rights it again.
+  rock(dummy: Dummy, nx: number, ny: number, impact: number) {
+    const lean = Math.min(DUMMY.maxRock, impact * DUMMY.rock)
+    if (lean <= dummy.lean) return
+    dummy.lean = lean
+    dummy.lx = nx
+    dummy.ly = ny
   }
 
   get score() {
@@ -506,6 +589,10 @@ export class Drills {
       if (g.passed) g.passedAt += dt
     }
     if (this.newBest > 0) this.newBest -= dt
+    // Rocked dummies right themselves.
+    for (const m of this.dummies) {
+      if (m.lean > 1e-4) m.lean = Math.max(0, m.lean - m.lean * DUMMY.settle * dt - 0.02 * dt)
+    }
     if (this.verdict) {
       this.verdict.t += dt
       if (this.verdict.t > 2.4) this.verdict = null
