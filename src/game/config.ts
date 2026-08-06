@@ -42,7 +42,9 @@ export const BALL = {
   // arena pitch: a firm 22 m/s pass dies after ~50m rather than rolling forever,
   // which is what made the ball feel floaty and unresponsive.
   rollFriction: 3.0,
-  restitution: 0.56, // vertical bounciness off turf
+  // Vertical bounciness off turf. Measured: from a 2 m drop, 0.56 rebounded to
+  // 0.60 m, which thuds. A real ball on grass comes back to 0.9-1.2 m.
+  restitution: 0.7,
   bounceGrip: 0.78, // horizontal pace retained through a bounce
   settleBounce: 0.9, // below this vertical rebound, settle into a roll
   spinDecay: 0.85, // how fast spin bleeds off per second
@@ -75,16 +77,39 @@ export const PLAYER = {
   walkSpeed: 3.4,
   runSpeed: 6.0,
   sprintSpeed: 8.4,
-  accel: 34, // m/s² — responsive but momentum still matters
-  decel: 28,
-  turnRate: 11, // rad/s the heading can slew (momentum on direction changes)
+  // Momentum, and the whole feel of the game. These were arcade numbers (34
+  // m/s², full sprint in a fifth of a second, stopping inside a metre); a real
+  // footballer needs a second and a half to wind up and three or four metres to
+  // pull up. Three separate budgets, because a body doesn't change velocity
+  // equally in every direction:
+  //   accel   — driving forward. Falls away as you approach your top speed,
+  //             since most of your effort goes into holding the pace you have.
+  //   brake   — planting to slow down, which you can do harder than you can
+  //             accelerate: two feet against the ground instead of one.
+  //   lateral — pushing sideways out of a stride. This is what stops a run at
+  //             pace from turning on a pin; you arc instead.
+  accel: 8.2,
+  brake: 9.5,
+  lateral: 11,
+  turnRate: 8, // rad/s the heading can slew (momentum on direction changes)
   staminaMax: 100,
-  sprintDrain: 14, // stamina/s while sprinting
-  pressDrain: 9, // extra stamina/s while actively pressing
-  slideDrain: 20, // one-off cost of a slide tackle
-  staminaRegen: 8, // stamina/s recovered when not sprinting
+  // Stamina. Flat-out sprinting used to empty the tank in seven seconds, which
+  // meant the sprint key was a trap rather than a decision. A footballer can
+  // repeat hard sprints for the better part of half a minute before it really
+  // tells, and takes a good while jogging to get it back.
+  sprintDrain: 5.5, // stamina/s while sprinting
+  pressDrain: 6, // extra stamina/s while actively pressing
+  slideDrain: 14, // one-off cost of a slide tackle
+  staminaRegen: 5.5, // stamina/s recovered when not sprinting
   tiredFactor: 0.72, // speed multiplier when fully gassed
-  kickAnimTime: 0.34, // seconds a strike's leg swing takes to play out
+  // How long each contact takes to play out. A prod with the instep is over
+  // almost before you see it; a full-blooded strike is a wind-up, a plant and a
+  // long follow-through, and it should read as taking real time to deliver.
+  touchAnimTime: 0.2,
+  strikeAnimMin: 0.26, // a rolled short pass
+  strikeAnimMax: 0.46, // everything you have
+  headerAnimTime: 0.36,
+  cushionAnimTime: 0.32,
   // The ball is only "at your feet" below this height; above it you are playing
   // it out of the air instead of dribbling it.
   controlHeight: 0.62,
@@ -115,6 +140,14 @@ export const CONTROL = {
   // real backspin: struck at full power from your own goal line the ball crosses
   // the far goal line right around the top of the cage, with an ~8m apex.
   maxLoftAngle: 0.386,
+  // A struck ball rides up the boot: even a "flat" shot leaves the ground for a
+  // while. Without this the neutral strike was a pure grubber, which made the
+  // whole downward half of the flick range do literally nothing — the HUD said
+  // DRIVEN and the trajectory was byte-identical. Now a full down-flick takes
+  // this away and puts topspin on instead, so keeping a hard ball on the deck
+  // is a thing you do rather than the default. Scaled by power, so a rolled
+  // pass still rolls. 5° at full power.
+  naturalLoft: 0.088,
   // Striking technique follows from the same flick: coming over the top of the
   // ball drives it down with topspin, getting under it lifts it with backspin.
   // So a down-flick genuinely dips and an up-flick genuinely floats.

@@ -519,13 +519,16 @@ export class World {
     // Loft, and the spin that comes with the technique. Getting under the ball
     // lifts it and leaves backspin on it, so a chip floats and hangs; coming
     // over the top drives it flat with topspin, so it dips and then skids on.
-    let horiz = speed
-    let vz = 0
-    if (loft > 0) {
-      const angle = loft * CONTROL.maxLoftAngle
-      vz = Math.sin(angle) * speed
-      horiz = Math.cos(angle) * speed
-    }
+    // Launch angle. A neutral strike gets the natural lift of a ball coming off
+    // the laces; flicking up climbs from there toward a full lofted ball, and
+    // flicking down takes it away until the ball is driven flat along the turf.
+    const natural = CONTROL.naturalLoft * power
+    const angle =
+      loft >= 0
+        ? natural + loft * (CONTROL.maxLoftAngle - natural)
+        : natural * (1 + loft)
+    const vz = Math.sin(angle) * speed
+    const horiz = Math.cos(angle) * speed
     // How much spin the technique leaves on the ball. Coming over the top puts
     // topspin on, and the harder you hit through it the more it dips. Getting
     // under the ball leaves backspin — but that is a scooping motion, so a
@@ -555,8 +558,7 @@ export class World {
     p.kickCooldown = kick.type === 'touch' ? 0.1 : 0.26
     // Swing the leg nearest the ball, so the strike reads as coming off the
     // right boot rather than always the same one.
-    p.kickTimer = kick.type === 'touch' ? PLAYER.kickAnimTime * 0.55 : PLAYER.kickAnimTime
-    p.kickKind = 'kick'
+    p.startKick(kick.type === 'touch' ? 'touch' : 'strike', power)
     p.kickLeg = V.cross(p.facing, V.sub(this.ball.pos, p.pos)) > 0 ? 0 : 1
     this.possessorId = null
     if (p.id === this.keeperHoldId) {
@@ -617,8 +619,7 @@ export class World {
     this.ball.lastTouchTeam = p.team
     this.ball.lastTouchId = p.id
     p.kickCooldown = 0.12
-    p.kickTimer = PLAYER.kickAnimTime * 0.9
-    p.kickKind = 'cushion'
+    p.startKick('cushion', power)
     this.possessorId = null
     sfx.touch(0.35)
     this.pushEffect('kick', this.ball.x, this.ball.y)
@@ -668,8 +669,7 @@ export class World {
       -kick.loft * CONTROL.spinFromLoft * 0.4,
     )
     p.kickCooldown = 0.26
-    p.kickTimer = PLAYER.kickAnimTime
-    p.kickKind = header ? 'header' : 'kick'
+    p.startKick(header ? 'header' : 'strike', Math.max(power, 0.7))
     p.kickLeg = V.cross(p.facing, V.sub(this.ball.pos, p.pos)) > 0 ? 0 : 1
     this.possessorId = null
     sfx.strike(header ? 0.5 : Math.max(0.5, power))
@@ -712,8 +712,7 @@ export class World {
     )
     this.ball.launch(dir.x * speed, dir.y * speed, vz, 0, p.team, p.id, vz > 0 ? -2 : 0)
     p.kickCooldown = 0.12
-    p.kickTimer = PLAYER.kickAnimTime * 0.55
-    p.kickKind = 'kick'
+    p.startKick('touch', power)
     p.kickLeg = skill === 'roll' && flickSide > 0 ? 0 : 1
     this.possessorId = null
     sfx.touch(0.5)

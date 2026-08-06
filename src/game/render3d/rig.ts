@@ -52,6 +52,9 @@ export class PlayerRig {
   private bank = 0
   private prevHeading = 0
   private idle = 0
+  // The gait's own idea of where the spine is, kept apart from the bones so a
+  // contact pose can write them freely without corrupting the run cycle.
+  private spine = { rootX: 0, rootZ: 0, hipsY: 0, torsoY: 0, torsoX: 0 }
 
   constructor(mats: Mats, team: 'home' | 'away', role: string, num: number) {
     this.group.add(this.body)
@@ -67,11 +70,30 @@ export class PlayerRig {
     pelvis.castShadow = true
     this.hips.add(pelvis)
 
-    const chest = new THREE.Mesh(new THREE.CapsuleGeometry(0.23, 0.42, 5, 14), mats.jersey)
-    chest.scale.set(1.18, 1, 0.7)
-    chest.position.y = 0.36
+    // Torso in two parts so the silhouette tapers. A single capsule read as a
+    // slab: same width at the shoulders as at the belt, which is what made the
+    // body look like a sign rather than a person.
+    const chest = new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 0.26, 5, 14), mats.jersey)
+    chest.scale.set(1.24, 1, 0.78)
+    chest.position.y = 0.46
     chest.castShadow = true
     this.torso.add(chest)
+
+    const waist = new THREE.Mesh(new THREE.CapsuleGeometry(0.19, 0.14, 4, 12), mats.jersey)
+    waist.scale.set(1.05, 1, 0.72)
+    waist.position.y = 0.18
+    waist.castShadow = true
+    this.torso.add(waist)
+
+    // Deltoid caps, so the arms grow out of the shoulders instead of being
+    // stuck onto the side of a box.
+    for (const side of [-1, 1]) {
+      const delt = new THREE.Mesh(new THREE.SphereGeometry(0.105, 12, 10), mats.jersey)
+      delt.scale.set(1, 0.9, 0.85)
+      delt.position.set(0.245 * side, 0.55, 0)
+      delt.castShadow = true
+      this.torso.add(delt)
+    }
 
     // Squad number across the shoulders.
     const numTex = new THREE.CanvasTexture(numberTexture(num, kit.secondary))
@@ -91,15 +113,49 @@ export class PlayerRig {
     neck.position.y = 0.03
     this.head.add(neck)
     const skull = new THREE.Mesh(new THREE.SphereGeometry(0.145, 18, 16), mats.skin)
+    skull.scale.set(1, 1.06, 1.04)
     skull.position.y = 0.19
     skull.castShadow = true
     this.head.add(skull)
+    // Hair used to sweep 0.6π down from the crown, which is most of the sphere —
+    // dark material over nearly the whole head, so close up it read as a blank
+    // helmet. A cap over the top third leaves a face below it.
     const hair = new THREE.Mesh(
-      new THREE.SphereGeometry(0.152, 18, 14, 0, Math.PI * 2, 0, Math.PI * 0.6),
+      new THREE.SphereGeometry(0.152, 18, 14, 0, Math.PI * 2, 0, Math.PI * 0.38),
       mats.hair,
     )
-    hair.position.y = 0.205
+    hair.position.y = 0.2
     this.head.add(hair)
+    // The back of the head keeps its hair all the way down to the nape.
+    const nape = new THREE.Mesh(
+      new THREE.SphereGeometry(0.15, 16, 12, Math.PI * 0.62, Math.PI * 0.76, Math.PI * 0.2, Math.PI * 0.5),
+      mats.hair,
+    )
+    nape.position.y = 0.19
+    this.head.add(nape)
+
+    // A face, at the smallest scale that still reads: two eyes, a brow, ears.
+    // None of it is visible at playing distance, and all of it is the difference
+    // between a person and a mannequin when the camera comes in close.
+    const eyeGeo = new THREE.SphereGeometry(0.021, 8, 8)
+    const browGeo = new THREE.BoxGeometry(0.052, 0.014, 0.02)
+    for (const side of [-1, 1]) {
+      const eye = new THREE.Mesh(eyeGeo, mats.hair)
+      eye.position.set(0.052 * side, 0.205, 0.126)
+      this.head.add(eye)
+      const brow = new THREE.Mesh(browGeo, mats.hair)
+      brow.position.set(0.055 * side, 0.238, 0.125)
+      brow.rotation.z = -0.12 * side
+      this.head.add(brow)
+      const ear = new THREE.Mesh(new THREE.SphereGeometry(0.032, 8, 8), mats.skin)
+      ear.scale.set(0.45, 1, 0.75)
+      ear.position.set(0.142 * side, 0.19, 0.005)
+      this.head.add(ear)
+    }
+    const nose = new THREE.Mesh(new THREE.ConeGeometry(0.028, 0.055, 8), mats.skin)
+    nose.rotation.x = Math.PI / 2
+    nose.position.set(0, 0.182, 0.142)
+    this.head.add(nose)
 
     // ---- legs: hip → thigh → knee → shin → foot ----
     for (const side of [-1, 1]) {
@@ -107,8 +163,16 @@ export class PlayerRig {
       hip.position.set(0.115 * side, 0.0, 0)
       this.hips.add(hip)
 
-      const thigh = new THREE.Mesh(new THREE.CapsuleGeometry(0.098, 0.24, 4, 10), mats.shorts)
-      thigh.position.y = -0.21
+      // The leg was shorts to the knee and socks below it — no skin anywhere,
+      // which is what made the players look like they were wearing tights.
+      // A real kit shows bare leg from mid-thigh to just below the knee.
+      const shortLeg = new THREE.Mesh(new THREE.CapsuleGeometry(0.1, 0.09, 4, 10), mats.shorts)
+      shortLeg.position.y = -0.13
+      shortLeg.castShadow = true
+      hip.add(shortLeg)
+
+      const thigh = new THREE.Mesh(new THREE.CapsuleGeometry(0.088, 0.16, 4, 10), mats.skin)
+      thigh.position.y = -0.29
       thigh.castShadow = true
       hip.add(thigh)
 
@@ -116,10 +180,16 @@ export class PlayerRig {
       knee.position.y = -0.44
       hip.add(knee)
 
-      const shin = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.26, 4, 10), mats.socks)
-      shin.position.y = -0.21
+      // Bare shin down to where the sock starts, then the sock to the ankle.
+      const shin = new THREE.Mesh(new THREE.CapsuleGeometry(0.07, 0.08, 4, 10), mats.skin)
+      shin.position.y = -0.08
       shin.castShadow = true
       knee.add(shin)
+
+      const sock = new THREE.Mesh(new THREE.CapsuleGeometry(0.072, 0.16, 4, 10), mats.socks)
+      sock.position.y = -0.27
+      sock.castShadow = true
+      knee.add(sock)
 
       const foot = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.085, 0.27), mats.boot)
       foot.position.set(0, -0.42, 0.055)
@@ -231,6 +301,10 @@ export class PlayerRig {
         leg.knee.rotation.x = kneeAmp * Math.pow(swing, 1.3) + 0.1
         // Keep the foot roughly level rather than pointing wherever the shin does.
         if (leg.foot) leg.foot.rotation.x = -leg.knee.rotation.x * 0.55
+        // The gait owns every axis it can be left in. A strike steps the plant
+        // foot out sideways, and nothing here reset that, so a player who took
+        // one shot ran bow-legged for the rest of the match.
+        leg.hip.rotation.z = (i === 0 ? 1 : -1) * 0.02
       })
 
       // Arms drive opposite the legs, and tuck in tighter the faster you go.
@@ -244,13 +318,18 @@ export class PlayerRig {
       // The body rises and falls twice per cycle, once for each footfall.
       const bob = -bobAmp * (0.5 - 0.5 * Math.cos(p1 * 2))
       this.root.position.y = (PLAYER.height / MODEL_HEIGHT) * 0.88 + bob
-      this.root.rotation.x = this.lean
-      this.root.rotation.z = this.bank
-
+      this.spine.rootX = this.lean
+      this.spine.rootZ = this.bank
       // Hips and shoulders wind against each other, as they do when you run.
-      this.hips.rotation.y = Math.sin(p1) * 0.1 * fast
-      this.torso.rotation.y = -Math.sin(p1) * 0.16 * fast
-      this.torso.rotation.x = fast * 0.06 * Math.cos(p1 * 2)
+      this.spine.hipsY = Math.sin(p1) * 0.1 * fast
+      this.spine.torsoY = -Math.sin(p1) * 0.16 * fast
+      this.spine.torsoX = fast * 0.06 * Math.cos(p1 * 2)
+
+      this.root.rotation.x = this.spine.rootX
+      this.root.rotation.z = this.spine.rootZ
+      this.hips.rotation.y = this.spine.hipsY
+      this.torso.rotation.y = this.spine.torsoY
+      this.torso.rotation.x = this.spine.torsoX
     } else {
       // Idle: settle upright with a slow breath and a little weight shift.
       const breathe = Math.sin(this.idle * 1.6) * 0.012
@@ -266,19 +345,31 @@ export class PlayerRig {
         arm.hip.rotation.z = (i === 0 ? 1 : -1) * (0.1 + sway * 0.5)
         arm.knee.rotation.x += (0.22 - arm.knee.rotation.x) * clamp01(dt * 8)
       })
+      // The spine settles through the rig's own state rather than by reading
+      // back off the bones. A contact pose writes those bones directly, so a
+      // lerp that starts from "wherever the bone is now" would be easing from a
+      // value the kick put there — and any pose that adds an offset would then
+      // compound it every single frame.
+      this.spine.rootX += (0 - this.spine.rootX) * clamp01(dt * 8)
+      this.spine.rootZ += (sway * 0.3 - this.spine.rootZ) * clamp01(dt * 5)
+      this.spine.hipsY += (sway - this.spine.hipsY) * clamp01(dt * 5)
+      this.spine.torsoY += (-sway * 0.6 - this.spine.torsoY) * clamp01(dt * 5)
+      this.spine.torsoX += (0 - this.spine.torsoX) * clamp01(dt * 8)
+
       this.root.position.y = (PLAYER.height / MODEL_HEIGHT) * 0.88 + breathe
-      this.root.rotation.x += (0 - this.root.rotation.x) * clamp01(dt * 8)
-      this.root.rotation.z += (sway * 0.3 - this.root.rotation.z) * clamp01(dt * 5)
-      this.hips.rotation.y += (sway - this.hips.rotation.y) * clamp01(dt * 5)
-      this.torso.rotation.y += (-sway * 0.6 - this.torso.rotation.y) * clamp01(dt * 5)
-      this.torso.rotation.x += (0 - this.torso.rotation.x) * clamp01(dt * 8)
+      this.root.rotation.x = this.spine.rootX
+      this.root.rotation.z = this.spine.rootZ
+      this.hips.rotation.y = this.spine.hipsY
+      this.torso.rotation.y = this.spine.torsoY
+      this.torso.rotation.x = this.spine.torsoX
     }
 
     // A contact overrides the limbs involved for the duration of the movement.
     if (p.kickTimer > 0) {
       if (p.kickKind === 'header') this.poseHeader(p)
       else if (p.kickKind === 'cushion') this.poseCushion(p)
-      else this.poseKick(p)
+      else if (p.kickKind === 'touch') this.poseTouch(p)
+      else this.poseStrike(p)
     }
 
     // Hold the head level and looking ahead, whatever the body is doing.
@@ -287,42 +378,102 @@ export class PlayerRig {
     this.head.rotation.z = -this.bank * 0.5
   }
 
-  // A short, sharp strike: plant, draw the leg back, then whip it through.
-  private poseKick(p: Player) {
-    const t = 1 - clamp01(p.kickTimer / PLAYER.kickAnimTime)
+  // Progress through the current contact, 0 at the start and 1 at the end.
+  private phaseOf(p: Player): number {
+    return 1 - clamp01(p.kickTimer / Math.max(p.kickAnimLen, 1e-3))
+  }
+
+  // The right-click touch: a short prod with the instep to move the ball on.
+  // No wind-up worth the name and no follow-through — the foot goes out, meets
+  // the ball and comes straight back under you, because the whole point of the
+  // touch button is that you stay balanced and ready to go again.
+  private poseTouch(p: Player) {
+    const t = this.phaseOf(p)
     const leg = this.legs[p.kickLeg]
     const other = this.legs[1 - p.kickLeg]
-    const arm = this.arms[1 - p.kickLeg]
+    // Out and back inside the same movement.
+    const reach = Math.sin(clamp01(t) * Math.PI) * (0.34 + p.kickPower * 0.3)
+
+    leg.hip.rotation.x = -reach
+    leg.knee.rotation.x = 0.12 + reach * 0.35
+    if (leg.foot) leg.foot.rotation.x = -0.12 - reach * 0.25
+    // The standing leg stays under you; a touch shouldn't cost you your balance.
+    other.hip.rotation.x = 0.05
+    other.knee.rotation.x = 0.16
+    // Barely any body in it — a hint of shoulder rotation and nothing else.
+    this.torso.rotation.y = this.spine.torsoY + reach * 0.12
+    this.arms[1 - p.kickLeg].hip.rotation.x = -reach * 0.2
+  }
+
+  // The left-click strike, on one continuous scale from a pushed pass to
+  // everything you have. Power decides how far the leg goes back, how much the
+  // trunk gets into it, how wide the plant foot goes and how long the
+  // follow-through runs — so you can read the weight of a ball off the swing
+  // before you see where it went.
+  private poseStrike(p: Player) {
+    const t = this.phaseOf(p)
+    const pw = p.kickPower
+    const leg = this.legs[p.kickLeg]
+    const other = this.legs[1 - p.kickLeg]
+    const swingArm = this.arms[1 - p.kickLeg] // opposite arm counterweights
+    const freeArm = this.arms[p.kickLeg]
+    const side = p.kickLeg === 0 ? 1 : -1
+
+    // A hard strike loads for longer before it comes through.
+    const load = 0.28 + pw * 0.1
+    // How far back the leg is drawn, and how far past the ball it carries.
+    const back = 0.3 + pw * 0.95
+    const through = 0.55 + pw * 1.15
+    const cock = 0.45 + pw * 1.0 // knee fold at the top of the backswing
 
     let hip: number
     let knee: number
-    if (t < 0.32) {
-      // Backswing.
-      const k = t / 0.32
-      hip = k * 0.85
-      knee = k * 1.15
+    let e = 0
+    if (t < load) {
+      const k = t / load
+      const ease = k * k * (3 - 2 * k) // smooth into the top of the backswing
+      hip = ease * back
+      knee = ease * cock
     } else {
-      // Contact and follow-through.
-      const k = (t - 0.32) / 0.68
-      const e = 1 - Math.pow(1 - k, 3)
-      hip = 0.85 - e * 1.75
-      knee = 1.15 * (1 - e) + 0.05
+      const k = (t - load) / (1 - load)
+      e = 1 - Math.pow(1 - k, 3) // fast off the top, decaying through the follow
+      hip = back - e * (back + through)
+      // The knee snaps straight through the ball, then folds again as the leg
+      // carries up — which is what makes a full strike read as a whip.
+      knee = cock * (1 - e) + 0.05 + Math.max(0, e - 0.55) * pw * 1.1
     }
+
     leg.hip.rotation.x = hip
     leg.knee.rotation.x = Math.max(0.03, knee)
-    if (leg.foot) leg.foot.rotation.x = -knee * 0.5
-    // The standing leg braces, and the opposite arm counterweights the swing.
-    other.hip.rotation.x = 0.12
-    other.knee.rotation.x = 0.22
-    arm.hip.rotation.x = -hip * 0.45
-    this.torso.rotation.y = hip * 0.22
-    this.root.rotation.x = this.lean + Math.max(0, -hip) * 0.12
+    if (leg.foot) leg.foot.rotation.x = -knee * 0.5 - 0.1
+
+    // The plant leg: braced and, on a heavy strike, stepped out to the side to
+    // open the hips up. You cannot hit through a ball with your feet together.
+    const plant = pw * 0.34
+    other.hip.rotation.x = 0.08 + pw * 0.22
+    other.knee.rotation.x = 0.18 + pw * 0.3
+    other.hip.rotation.z = -side * plant
+
+    // Trunk: rotate away on the backswing, whip through on contact, and lean
+    // back a touch as the leg comes up.
+    const trunk = hip * (0.18 + pw * 0.22)
+    this.torso.rotation.y = trunk
+    this.hips.rotation.y = -trunk * 0.45
+    this.root.rotation.x = this.lean + Math.max(0, -hip) * (0.08 + pw * 0.12)
+    this.root.rotation.z = side * pw * 0.16 * e
+
+    // Arms: the opposite one flies out for balance, harder the bigger the hit.
+    swingArm.hip.rotation.x = -hip * (0.4 + pw * 0.3)
+    swingArm.hip.rotation.z = -side * (0.12 + pw * 0.75)
+    swingArm.knee.rotation.x = 0.35 + pw * 0.5
+    freeArm.hip.rotation.z = side * (0.1 + pw * 0.35)
+    freeArm.hip.rotation.x = hip * 0.25
   }
 
   // A header: coil back away from the ball, then snap the whole torso through
   // it. The power comes from the trunk, not the neck, so the back is what moves.
   private poseHeader(p: Player) {
-    const t = 1 - clamp01(p.kickTimer / PLAYER.kickAnimTime)
+    const t = this.phaseOf(p)
     let arch: number
     if (t < 0.4) {
       arch = -(t / 0.4) * 0.55 // lean back and load
@@ -348,7 +499,7 @@ export class PlayerRig {
   // Cushioning a dropping ball: get side-on, lift the foot or thigh to meet it
   // and withdraw as it arrives — the whole trick is taking the pace off.
   private poseCushion(p: Player) {
-    const t = 1 - clamp01(p.kickTimer / (PLAYER.kickAnimTime * 0.9))
+    const t = this.phaseOf(p)
     // Up to meet it, then down and away with the ball.
     const raise = Math.sin(clamp01(t) * Math.PI) * 0.9
     const leg = this.legs[p.kickLeg]
