@@ -37,8 +37,7 @@ export interface Command {
   chargePass: boolean // holding the pass button (fills power meter)
   chargeShot: boolean // holding the shoot button
   kick: KickRequest | null // set on the tick a charged kick is released
-  tackle: boolean // standing tackle attempt
-  slide: boolean // slide tackle attempt
+  slide: boolean // commit to a slide tackle
 }
 
 export const emptyCommand = (): Command => ({
@@ -49,7 +48,6 @@ export const emptyCommand = (): Command => ({
   chargePass: false,
   chargeShot: false,
   kick: null,
-  tackle: false,
   slide: false,
 })
 

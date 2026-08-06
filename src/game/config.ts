@@ -42,12 +42,24 @@ export const BALL = {
   // arena pitch: a firm 22 m/s pass dies after ~50m rather than rolling forever,
   // which is what made the ball feel floaty and unresponsive.
   rollFriction: 3.0,
-  // Vertical bounciness off turf. Measured: from a 2 m drop, 0.56 rebounded to
-  // 0.60 m, which thuds. A real ball on grass comes back to 0.9-1.2 m.
-  restitution: 0.7,
-  bounceGrip: 0.78, // horizontal pace retained through a bounce
+  // Bounce. Restitution is not a constant in a real ball: the harder it hits,
+  // the further it deforms and the more it loses, which is exactly why a driven
+  // shot skids off the turf while the same ball dropped gently sits up. So it's
+  // a line falling with impact speed rather than one number.
+  //   e(v) = restitution − restitutionFalloff·v, floored at restitutionMin
+  // At a 2 m drop (6.3 m/s) that gives ~0.69, a 0.94 m rebound — the real figure
+  // for grass. At 20 m/s it gives 0.44, so hard balls stay down.
+  restitution: 0.8,
+  restitutionFalloff: 0.018,
+  restitutionMin: 0.38,
+  // Coulomb friction between ball and turf, which is what converts sliding into
+  // rolling and what lets spin change where a bounce goes. Real grass is ~0.4-0.6.
+  turfFriction: 0.5,
+  // How much side-spin drags the ball sideways as it lands. Bounded by the same
+  // friction budget as everything else at the contact patch.
+  bounceSideKick: 0.09,
   settleBounce: 0.9, // below this vertical rebound, settle into a roll
-  spinDecay: 0.85, // how fast spin bleeds off per second
+  spinDecay: 0.85, // how fast side-spin bleeds off per second
   // Magnus: sideways acceleration = magnus * spin * speed. Speed-scaled, so a
   // firm strike bends hard and a dying ball straightens out.
   // Sideways acceleration = magnus * spin * speed. Speed- and time-scaled, so
@@ -57,11 +69,16 @@ export const BALL = {
   groundMagnus: 0.55, // fraction of the bend that survives while rolling
   // Vertical-plane Magnus: topspin pushes the ball down, backspin holds it up.
   // Same speed-scaled form as the sideways bend.
-  magnusVertical: 0.042,
-  // How much vertical spin the turf converts into pace on a bounce — topspin
-  // skids the ball on, backspin checks it back.
-  bounceSpinBite: 0.42,
+  // Derived rather than guessed: a = ½ρA·Cl·v²/m with Cl ≈ 0.9·S, where S is the
+  // spin ratio (surface speed ÷ travel speed). Since vSpin is carried as that
+  // surface speed, the whole thing collapses to magnusVertical · vSpin · v.
+  magnusVertical: 0.045,
   maxSpin: 26,
+  // vSpin is carried as the speed of the ball's own surface at the contact
+  // patch, in m/s, signed so positive is topspin. Keeping it in the same unit as
+  // the ball's travel is what makes the bounce a subtraction rather than a fudge
+  // factor: a ball rolling at 8 m/s has vSpin 8 and no slip at all.
+  maxVSpin: 45,
   maxSpeed: 42, // hard cap so a mishit can't launch to the moon
   settleSpeed: 0.25, // below this it's treated as coming to rest
 }
@@ -139,7 +156,15 @@ export const CONTROL = {
   // 22°. Measured end-to-end, and re-tuned once lofted balls started carrying
   // real backspin: struck at full power from your own goal line the ball crosses
   // the far goal line right around the top of the cage, with an ~8m apex.
-  maxLoftAngle: 0.386,
+  // How steep a full upward flick gets, which depends on how hard you hit it —
+  // because it does in life. Height comes from getting under the ball, and you
+  // cannot scoop something and hammer it at the same time: a delicate chip lifts
+  // steeply (41°) and a full-blooded long ball is struck through and stays flat
+  // (13°). Tuned at the top end so full power with a full flick, struck from
+  // your own goal line, crosses the far goal line right around the top of the
+  // cage — the brief for the biggest ball in the game.
+  loftAngleSoft: 0.72,
+  loftAngleHard: 0.233,
   // A struck ball rides up the boot: even a "flat" shot leaves the ground for a
   // while. Without this the neutral strike was a pure grubber, which made the
   // whole downward half of the flick range do literally nothing — the HUD said
@@ -150,8 +175,20 @@ export const CONTROL = {
   naturalLoft: 0.088,
   // Striking technique follows from the same flick: coming over the top of the
   // ball drives it down with topspin, getting under it lifts it with backspin.
-  // So a down-flick genuinely dips and an up-flick genuinely floats.
-  spinFromLoft: 9,
+  // Both are expressed as a fraction of the ball's own speed, because that's
+  // what spin physically is once it reaches the turf — the speed of the surface
+  // against the speed of travel. Hit a ball harder and you put proportionally
+  // more on it, and a driven ball arrives already near rolling, so it skids on
+  // instead of pulling up.
+  topspinFromLoft: 0.8, // full down-flick: surface at 80% of travel
+  backspinFromLoft: 0.32, // full up-flick, before the power taper below
+  // Below which loft the ball is simply driven along the floor. A flick doesn't
+  // have to be perfect to keep the ball down — this is a pass you should be able
+  // to play at pace, not a trick shot.
+  driveLoft: -0.4,
+  // A driven ball is struck through the middle rather than under it, so more of
+  // the same effort ends up as pace.
+  driveBonus: 0.06,
   // How hard you must flick during a touch before it counts as a skill move
   // rather than ordinary aiming drift (pixels).
   skillFlickMin: 105,
@@ -215,13 +252,24 @@ export const AERIAL = {
   headerAngleRange: 0.45, // how far the flick swings that angle either way
 }
 
+// Defending. There is no tackle button: you win the ball with the same two
+// clicks you use for everything else — right click to take it off someone and
+// keep it, left click to hammer it clear. The only dedicated defensive move is
+// the slide, and that one is all precision.
 export const DEFEND = {
-  tackleRange: 1.7,
-  tackleWindow: 0.28, // timing window (s) where a standing tackle wins cleanly
-  slideRange: 3.0,
-  slideRecovery: 0.9, // seconds the slider is grounded/exposed after a slide
-  interceptRadius: 1.1, // moving into this radius of a loose/passed ball claims it
-  foulChance: 0.28, // mistimed challenges can concede a free kick
+  // The sliding body is the hitbox and nothing more — no magnet, no assist. It's
+  // a capsule the width of the player, as long as a person lying down, swept
+  // along the ground. Get it right and you take the ball; get it wrong and
+  // you're on the floor while they go past you.
+  slideBodyLength: 1.35,
+  slideBallHeight: 0.7, // you can't slide-tackle a ball above your grounded body
+  slideBoost: 3.2, // extra pace the launch gives you over your running speed
+  slideTime: 0.55, // how long you're actually sliding
+  slideRecovery: 0.85, // seconds grounded and beaten after the slide ends
+  slideWonRecovery: 0.55, // ...cut to this fraction if you actually won the ball
+  slideClear: 15, // how hard a won slide knocks the ball away
+  slideCooldown: 1.1, // you can't spam it
+  interceptRadius: 1.1, // AI: moving into this radius of a loose ball claims it
 }
 
 export const GK = {

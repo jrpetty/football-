@@ -93,7 +93,12 @@ export class Ball {
     this.py = this.y
     this.pz = this.z
     this.justBounced = false
-    this.airborne = this.z > 0.015 || this.vz > 0.02
+    // "Rolling" means no vertical motion, not merely low. Testing height alone
+    // meant a ball dropping at 20 m/s that happened to be inside the last
+    // centimetre at the top of a step was treated as already rolling — and its
+    // whole bounce was quietly thrown away. At 120 Hz a fast ball covers 17 cm
+    // per step, so this fired constantly on exactly the hardest, flattest balls.
+    this.airborne = this.z > 0.015 || Math.abs(this.vz) > 0.02
 
     const speed = this.speed
     if (speed > 0.01) {
@@ -131,10 +136,27 @@ export class Ball {
       this.applyMagnus(dt, BALL.groundMagnus)
       this.z = 0
       this.vz = 0
+      // On the deck the ball is rolling, so its surface speed is its travel
+      // speed by definition. A ball still slipping — one that's just been driven
+      // with topspin, or checked with backspin — is dragged toward that rolling
+      // condition by friction rather than snapping to it, which is what lets a
+      // back-spun ball stop dead and screw back at you.
+      const slip = hs - this.vSpin
+      if (Math.abs(slip) > 0.01) {
+        const pull = Math.min(Math.abs(slip), BALL.turfFriction * SIM.gravity * 2.5 * dt)
+        const s = Math.sign(slip)
+        this.vx -= (hs > 1e-4 ? this.vx / hs : 0) * pull * 0.4 * s
+        this.vy -= (hs > 1e-4 ? this.vy / hs : 0) * pull * 0.4 * s
+        this.vSpin += pull * 0.6 * s
+      } else {
+        this.vSpin = hs
+      }
     }
 
+    // Side-spin bleeds off through the air; vertical spin doesn't decay on its
+    // own — it's traded with the ball's travel at every contact instead.
     this.spin -= this.spin * BALL.spinDecay * dt
-    this.vSpin -= this.vSpin * BALL.spinDecay * dt
+    if (this.airborne) this.vSpin -= this.vSpin * BALL.spinDecay * 0.35 * dt
 
     this.x += this.vx * dt
     this.y += this.vy * dt
@@ -142,24 +164,7 @@ export class Ball {
 
     if (this.z < 0) {
       this.z = 0
-      if (this.vz < 0) {
-        this.vz = -this.vz * BALL.restitution
-        // A bounce scrubs pace off the ground and bleeds spin.
-        this.vx *= BALL.bounceGrip
-        this.vy *= BALL.bounceGrip
-        // The turf bites on the spin: topspin kicks the ball forward off the
-        // surface, backspin checks it and can even hold it up.
-        const hs2 = this.horizontalSpeed
-        if (hs2 > 0.1) {
-          const bite = this.vSpin * BALL.bounceSpinBite
-          this.vx += (this.vx / hs2) * bite
-          this.vy += (this.vy / hs2) * bite
-        }
-        this.spin *= 0.72
-        this.vSpin *= 0.45
-        this.justBounced = Math.abs(this.vz) > 1.0
-        if (this.vz < BALL.settleBounce) this.vz = 0 // settle into a roll
-      }
+      if (this.vz < 0) this.bounce()
     }
 
     const sp = this.speed
@@ -177,6 +182,77 @@ export class Ball {
         this.vx = 0
         this.vy = 0
       }
+    }
+  }
+
+  // A bounce off the turf, solved as a real impact rather than a pair of damping
+  // multipliers. Two impulses act at the contact patch:
+  //
+  //   Normal — the ball squashes and springs back, keeping a fraction e of its
+  //     downward speed. e is not a constant: a ball hit hard deforms further and
+  //     loses proportionally more, which is why a driven shot skids off the turf
+  //     while a gently dropped ball sits up.
+  //
+  //   Tangential — friction acting on how fast the contact patch is *sliding*.
+  //     That slip is the ball's forward speed minus the speed its own surface is
+  //     already turning at, so spin is not a modifier bolted onto the bounce; it
+  //     is half of what decides the bounce. A back-spun ball's surface is
+  //     turning backwards, so the patch slips hard forwards, friction bites hard
+  //     and the ball checks — sometimes back towards you. A top-spun ball's
+  //     surface is already going with the slide, so there is little to scrub and
+  //     it kicks on low and fast.
+  //
+  // When friction can kill the slip outright the ball comes out *rolling*, and
+  // the split between what the ball keeps and what goes into spin is set by a
+  // football's moment of inertia — near enough a hollow sphere, I = ⅔mR², which
+  // works out at losing two fifths of the slip and putting three fifths into
+  // rotation. When it can't, the ball skids on and keeps sliding.
+  private bounce() {
+    const impact = -this.vz
+
+    // Restitution falls off with impact speed.
+    const e = clamp(BALL.restitution - BALL.restitutionFalloff * impact, BALL.restitutionMin, 1)
+    this.vz = impact * e
+
+    // Coulomb limit: friction can only deliver so much for a given impact.
+    const grip = BALL.turfFriction * (1 + e) * impact
+    const hs = this.horizontalSpeed
+    if (hs > 1e-4) {
+      const dx = this.vx / hs
+      const dy = this.vy / hs
+      // Slip at the contact patch: how fast the ball is travelling minus how
+      // fast its surface is already turning underneath it. vSpin is carried as
+      // that surface speed in m/s, so this is a straight subtraction.
+      const slip = hs - this.vSpin
+      const needed = Math.abs(slip) * 0.4 // 2/5 of the slip, from I = 2/3 mR²
+
+      let nhs: number
+      if (needed <= grip) {
+        // Enough grip to stop the slide: the ball leaves the turf rolling.
+        nhs = hs - slip * 0.4
+        this.vSpin = nhs // rolling, so surface speed matches travel
+      } else {
+        // Not enough: it skids on, shedding what friction it can.
+        const j = grip * Math.sign(slip)
+        nhs = hs - j
+        this.vSpin += j * 1.5
+      }
+      // Side-spin works against the turf too, dragging the ball sideways as it
+      // lands — why a heavily curled ball kicks away off the bounce. Same
+      // friction budget, so it can't conjure pace out of nothing.
+      const side = clamp(this.spin * BALL.bounceSideKick, -grip, grip)
+      this.vx = dx * nhs - dy * side
+      this.vy = dy * nhs + dx * side
+      this.spin *= 0.62
+    } else {
+      this.vSpin *= 0.5
+      this.spin *= 0.62
+    }
+
+    this.justBounced = impact > 1.0
+    if (this.vz < BALL.settleBounce) {
+      this.vz = 0 // too little left to leave the ground: settle into a roll
+      this.vSpin = this.horizontalSpeed
     }
   }
 
@@ -204,5 +280,6 @@ export class Ball {
 
   clampSpin() {
     this.spin = clamp(this.spin, -BALL.maxSpin, BALL.maxSpin)
+    this.vSpin = clamp(this.vSpin, -BALL.maxVSpin, BALL.maxVSpin)
   }
 }

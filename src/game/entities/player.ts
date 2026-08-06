@@ -1,4 +1,4 @@
-import { PLAYER } from '../config'
+import { DEFEND, PLAYER } from '../config'
 import { clamp, clamp01, angleDelta } from '../core/math'
 import * as V from '../core/vec'
 import type { Vec2 } from '../core/vec'
@@ -20,8 +20,14 @@ export class Player {
   heading = 0 // facing angle (rad); slews toward travel/aim
   stamina = PLAYER.staminaMax
 
-  slideTimer = 0 // >0 while grounded & exposed after a slide tackle
-  tackleCooldown = 0 // debounce so one tap = one challenge
+  slideTimer = 0 // >0 while actually sliding along the ground
+  slideRecover = 0 // >0 while getting back up: beaten, and out of the play
+  slideWon = false // this slide has already made contact with the ball
+  tackleCooldown = 0 // debounce so one tap = one slide
+  // Debounce for the tackles stat only. Winning the ball is now just touching it
+  // while someone else had it, and a contested ball gets touched many times a
+  // second — without this, one scramble reads as forty tackles.
+  tackleCredit = 0
   kickCooldown = 0 // brief lockout after releasing the ball
   saveCooldown = 0 // keeper: debounce so one stop counts as one save
   slideVel: Vec2 = { x: 0, y: 0 } // carried momentum during a slide
@@ -101,13 +107,17 @@ export class Player {
           : PLAYER.runSpeed
     const fatigue = clamp(this.energy, 0, 1)
     const mult = PLAYER.tiredFactor + (1 - PLAYER.tiredFactor) * fatigue
-    return base * mult
+    // Getting back up off the floor. This is the whole cost of a slide: commit
+    // and miss, and the player you dived at is gone before you're upright.
+    const up = this.slideRecover > 0 ? clamp01(1 - this.slideRecover / DEFEND.slideRecovery) : 1
+    return base * mult * (0.25 + 0.75 * up)
   }
 
   // Steer toward a desired velocity. `moveDir` is a heading (need not be unit);
   // `throttle` 0..1 scales effort. Handles accel/decel, turning momentum, stamina.
   steer(moveDir: Vec2, throttle: number, sprint: boolean, dt: number, walk = false) {
     this.tackleCooldown = Math.max(0, this.tackleCooldown - dt)
+    this.tackleCredit = Math.max(0, this.tackleCredit - dt)
     this.kickCooldown = Math.max(0, this.kickCooldown - dt)
     this.saveCooldown = Math.max(0, this.saveCooldown - dt)
     this.kickTimer = Math.max(0, this.kickTimer - dt)
@@ -245,7 +255,9 @@ export class Player {
   }
 
   startSlide(dir: Vec2, speed: number) {
-    this.slideTimer = 0.55
+    this.slideTimer = DEFEND.slideTime
+    this.slideRecover = DEFEND.slideRecovery
+    this.slideWon = false
     this.slideVel = V.scale(V.normalize(dir), speed)
     this.stamina = clamp(this.stamina - PLAYER.slideDrain, 0, PLAYER.staminaMax)
   }

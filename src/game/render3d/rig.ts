@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { PLAYER } from '../config'
+import { DEFEND, PLAYER } from '../config'
 import { clamp, clamp01, angleDelta } from '../core/math'
 import type { Player } from '../entities/player'
 import { kitTexture, numberTexture } from './textures'
@@ -262,7 +262,14 @@ export class PlayerRig {
     const moving = speed > 0.35
 
     if (p.sliding) {
-      this.poseSlide()
+      this.poseSlide(1)
+      return
+    }
+    // Still on the floor after the slide, hauling yourself back upright. This is
+    // the cost of the move made visible: the player you dived at is already
+    // past you and you are watching it happen from the grass.
+    if (p.slideRecover > 0) {
+      this.poseSlide(clamp01(p.slideRecover / DEFEND.slideRecovery))
       return
     }
 
@@ -516,21 +523,30 @@ export class PlayerRig {
     this.root.rotation.x = this.lean - raise * 0.18
   }
 
-  private poseSlide() {
-    // Committed and grounded: one leg extended through the ball, body low.
-    this.root.position.y = (PLAYER.height / MODEL_HEIGHT) * 0.34
-    this.root.rotation.x = -0.95
-    this.root.rotation.z = 0.35
-    this.legs[0].hip.rotation.x = -1.25
-    this.legs[0].knee.rotation.x = 0.08
-    this.legs[1].hip.rotation.x = 0.55
-    this.legs[1].knee.rotation.x = 1.15
-    this.arms[0].hip.rotation.x = 0.9
-    this.arms[1].hip.rotation.x = -0.7
+  // Committed and grounded: one leg extended through the ball, body low. `down`
+  // is 1 while the slide is live and eases to 0 as the player climbs back to
+  // their feet, so the same pose covers both the tackle and the price of it.
+  private poseSlide(down: number) {
+    const d = clamp01(down)
+    const stand = (PLAYER.height / MODEL_HEIGHT) * 0.88
+    const floor = (PLAYER.height / MODEL_HEIGHT) * 0.34
+    this.root.position.y = floor + (stand - floor) * (1 - d)
+    this.root.rotation.x = -0.95 * d
+    this.root.rotation.z = 0.35 * d
+    this.legs[0].hip.rotation.x = -1.25 * d
+    this.legs[0].knee.rotation.x = 0.08 + 0.5 * (1 - d)
+    this.legs[1].hip.rotation.x = 0.55 * d
+    this.legs[1].knee.rotation.x = 1.15 * d + 0.1
+    this.arms[0].hip.rotation.x = 0.9 * d
+    this.arms[1].hip.rotation.x = -0.7 * d
     this.arms[0].knee.rotation.x = 0.4
     this.arms[1].knee.rotation.x = 0.5
-    this.torso.rotation.y = 0.2
-    this.head.rotation.x = 0.6
+    this.torso.rotation.y = 0.2 * d
+    this.head.rotation.x = 0.6 * d
+    // Keep the gait's spine state in step, so standing up doesn't snap.
+    this.spine.rootX = this.root.rotation.x
+    this.spine.rootZ = this.root.rotation.z
+    this.spine.torsoY = this.torso.rotation.y
   }
 
   setVisible(v: boolean) {

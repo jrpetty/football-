@@ -108,7 +108,8 @@ export class HumanController {
     }
 
     // --- defending ---
-    if (input.isDown('KeyF')) cmd.tackle = true
+    // There is no tackle button: you win the ball with the same two clicks you
+    // use for everything else. The slide is the one dedicated defensive move.
     if (input.justPressed('KeyC')) cmd.slide = true
 
     // --- HUD feedback ---

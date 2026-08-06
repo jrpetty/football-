@@ -134,7 +134,8 @@ export class Screens {
       ['<b>Strike</b> — pass or shot', '<b>Left click</b> · hold = power'],
       ['<b>Cushion</b> a ball out of the air', 'Right click while it drops'],
       ['<b>Volley / header</b>', 'Left click while it drops'],
-      ['Tackle / Slide', 'F · C'],
+      ['<b>Win the ball back</b>', 'Just right / left click it'],
+      ['<b>Slide tackle</b>', 'C · body-sized, no assist'],
       ['View: zoom (2D) · 1st/3rd (3D)', 'V'],
       ['Mute sound', 'M'],
       ['Pause', 'Esc / P'],
@@ -150,6 +151,16 @@ export class Screens {
         <b>flick the mouse up</b> to lift the ball, <b>flick down</b> to drive it low,
         and <b>flick sideways</b> to bend it — the ball curves the way you drag.
         Flick diagonally to do both. Over-flick and you'll skin it.
+      </div>
+      <div class="flickhint">
+        <b>Nothing is glued to anybody.</b> The ball is never attached to a
+        player — it bounces off bodies and runs free unless someone is actually
+        playing it. That cuts both ways: your own touches have to be judged, and
+        an opponent's ball is always takeable. There is no tackle button, so you
+        win it back with the same two clicks you use for everything else —
+        <b>right click</b> to take it off them and keep it, <b>left click</b> to
+        hammer it clear. <b>C</b> slides: the hitbox is your own body and nothing
+        more, so it's all timing.
       </div>
       <div class="flickhint">
         <b>The same wrist works on the ball at your feet.</b> Flick hard during a

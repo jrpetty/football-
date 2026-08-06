@@ -4,6 +4,7 @@ import * as V from '../core/vec'
 import type { Vec2 } from '../core/vec'
 import type { Player } from '../entities/player'
 import type { World } from '../match/world'
+import { makeKick } from '../control/strike'
 import { emptyCommand } from '../types'
 import type { Command, Team } from '../types'
 import * as F from '../match/field'
@@ -270,8 +271,10 @@ function presser(world: World, p: Player, cmd: Command, owner: Player | null, st
   cmd.sprint = d > 2 && p.stamina > 6
 
   const ballDist = V.dist(p.pos, b.pos)
-  if (owner && owner.team !== p.team && ballDist < DEFEND.tackleRange * 0.95) {
-    cmd.tackle = true
+  // Nobody has a tackle button. Close enough to the ball and it's theirs to
+  // take with an ordinary touch, same as the human.
+  if (owner && owner.team !== p.team && ballDist < DEFEND.interceptRadius * 1.5) {
+    cmd.kick = makeKick('touch', 0.4, V.dir(p.pos, F.targetGoalCenter(p.team)), { loft: 0, spin: 0 })
   }
 }
 

@@ -166,6 +166,10 @@ console.log('\nrolling and bouncing:')
     w.ball.vx = v
     w.ball.vy = 0
     w.ball.vz = 0
+    // A ball that has been *rolled* is already turning at its travel speed.
+    // Leaving vSpin at zero describes a ball skidding across the grass without
+    // rotating, which is a different thing and loses pace it shouldn't.
+    w.ball.vSpin = v
     w.ball.lastTouchId = 99
     const x0 = w.ball.x
     let t = 0

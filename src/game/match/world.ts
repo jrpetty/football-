@@ -283,7 +283,7 @@ export class World {
     }
 
     // 2. Tackles / slides (only when the ball is live).
-    if (live) this.resolveTackles(commands, dt)
+    if (live) this.resolveSlides(commands, dt)
 
     // 3. Possession & first touch.
     this.resolvePossession(dt)
@@ -402,6 +402,13 @@ export class World {
   // deliberate touch would be snapped straight back to your feet and close
   // control would be impossible.
   private firstTouch(p: Player) {
+    // Nothing is ever glued to a human's feet. A ball arriving at you is just a
+    // ball arriving at you: it bounces off your body unless you actually play
+    // it, which means a right click to take the pace off or a left click to hit
+    // it. That is the whole game — the ball only ever goes where you tell it to,
+    // and never where the simulation decided it should. The AI still gets an
+    // automatic trap, because it has no hands on a mouse to do it with.
+    if (this.isHumanDriven(p)) return
     if (this.ball.lastTouchId === p.id) return
     const incoming = this.ball.horizontalSpeed
     if (incoming < 3) return
@@ -445,7 +452,9 @@ export class World {
   // ---- kicking -----------------------------------------------------------
 
   private canKick(p: Player): boolean {
-    if (p.sliding || p.kickCooldown > 0) return false
+    // You cannot play the ball off the floor. A slide is a commitment, and being
+    // out of the play until you're upright again is what it costs.
+    if (p.sliding || p.slideRecover > 0 || p.kickCooldown > 0) return false
     // You can play a ball anywhere within reach — at your feet, off your thigh,
     // or with a header at full stretch.
     if (this.ball.z > aerialReach(p.role)) return false
@@ -458,6 +467,14 @@ export class World {
 
   private executeKick(p: Player, cmd: Command) {
     const kick = cmd.kick!
+    // Taking the ball off someone is now just playing it while they had it —
+    // there is no tackle button to count instead, so the stat is measured from
+    // what actually happened.
+    const held = this.possessorId != null ? this.player(this.possessorId) : null
+    if (held && held.team !== p.team && held.id !== p.id && p.tackleCredit <= 0) {
+      this.stats[p.team].tackles++
+      p.tackleCredit = 1.2
+    }
     this.lastKickDebug = { type: kick.type, power: kick.power, loft: kick.loft, spin: kick.spin }
     let aim = V.len(kick.aim) > 0.01 ? V.normalize(kick.aim) : p.facing
     const power = clamp(kick.power, 0, 1)
@@ -521,23 +538,27 @@ export class World {
     // over the top drives it flat with topspin, so it dips and then skids on.
     // Launch angle. A neutral strike gets the natural lift of a ball coming off
     // the laces; flicking up climbs from there toward a full lofted ball, and
-    // flicking down takes it away until the ball is driven flat along the turf.
+    // flicking down takes it away — reaching the floor well before the flick is
+    // maxed out, so a low driven pass is a normal thing to play rather than a
+    // perfectly executed one.
     const natural = CONTROL.naturalLoft * power
-    const angle =
-      loft >= 0
-        ? natural + loft * (CONTROL.maxLoftAngle - natural)
-        : natural * (1 + loft)
+    const driven = loft < 0 ? clamp(loft / CONTROL.driveLoft, 0, 1) : 0
+    const maxLoft =
+      CONTROL.loftAngleSoft - (CONTROL.loftAngleSoft - CONTROL.loftAngleHard) * power
+    const angle = loft >= 0 ? natural + loft * (maxLoft - natural) : natural * (1 - driven)
+    // Struck through the middle rather than under it, so more of it is pace.
+    speed *= 1 + CONTROL.driveBonus * driven
     const vz = Math.sin(angle) * speed
     const horiz = Math.cos(angle) * speed
-    // How much spin the technique leaves on the ball. Coming over the top puts
-    // topspin on, and the harder you hit through it the more it dips. Getting
-    // under the ball leaves backspin — but that is a scooping motion, so a
-    // delicate chip floats and hangs while a full-blooded long ball is struck
-    // through and carries far less of it.
+    // How much spin the technique leaves on the ball, as the speed of its own
+    // surface. Coming over the top puts topspin on, so the ball arrives at the
+    // turf already close to rolling and skids on. Getting under it leaves
+    // backspin — but that's a scooping motion, so a delicate chip floats and
+    // checks while a full-blooded long ball is struck through and carries less.
     const vSpin =
       loft > 0
-        ? -loft * CONTROL.spinFromLoft * 0.6 * (1 - 0.6 * power)
-        : -loft * CONTROL.spinFromLoft * (0.45 + 0.55 * power)
+        ? -loft * CONTROL.backspinFromLoft * (1 - 0.55 * power) * speed
+        : driven * CONTROL.topspinFromLoft * speed
 
     // A close-control move reshapes where the touch goes.
     if (kick.type === 'touch' && kick.skill) {
@@ -643,7 +664,11 @@ export class World {
       speed =
         (KICK.strikeMin + (KICK.strikeMax - KICK.strikeMin) * power) * AERIAL.volleyBonus
       spreadDeg = AERIAL.volleySpread * (0.4 + power * 0.6)
-      angle = (kick.loft * 0.7 + 0.1) * CONTROL.maxLoftAngle
+      // A volley is struck out of the air, so the same rule applies: the harder
+      // you go through it, the flatter it comes off.
+      angle =
+        (kick.loft * 0.7 + 0.1) *
+        (CONTROL.loftAngleSoft - (CONTROL.loftAngleSoft - CONTROL.loftAngleHard) * power)
     }
 
     // Meeting a moving ball cleanly is hard; that's the trade for the power.
@@ -666,7 +691,9 @@ export class World {
       kick.spin * KICK.maxSpinFromAim * 0.7,
       p.team,
       p.id,
-      -kick.loft * CONTROL.spinFromLoft * 0.4,
+      // Same technique spin as a grounded strike, in the same unit: a fraction
+      // of the ball's own speed off the boot or the head.
+      -kick.loft * CONTROL.backspinFromLoft * 0.7 * speed,
     )
     p.kickCooldown = 0.26
     p.startKick(header ? 'header' : 'strike', Math.max(power, 0.7))
@@ -738,45 +765,47 @@ export class World {
 
   // ---- tackling ----------------------------------------------------------
 
-  private resolveTackles(commands: Map<number, Command>, dt: number) {
-    void dt
+  // Sliding. There is no tackle button and no challenge roll: you commit your
+  // body along the ground and either it is where the ball is or it isn't.
+  private resolveSlides(commands: Map<number, Command>, dt: number) {
     for (const p of this.players) {
       const cmd = commands.get(p.id)
-      if (!cmd) continue
-      if (p.sliding || p.tackleCooldown > 0) continue
-
-      if (cmd.slide) {
-        const dir = V.len(cmd.aim) > 0.01 ? cmd.aim : p.facing
-        p.startSlide(dir, Math.max(p.speed, PLAYER.runSpeed) + 3)
+      if (cmd?.slide && !p.sliding && p.tackleCooldown <= 0 && p.slideRecover <= 0) {
+        const dir = V.len(cmd.move) > 0.05 ? cmd.move : V.len(cmd.aim) > 0.01 ? cmd.aim : p.facing
+        p.startSlide(dir, p.speed + DEFEND.slideBoost)
         this.pushEffect('tackle', p.x, p.y)
-        p.tackleCooldown = 0.6
-        continue
+        p.tackleCooldown = DEFEND.slideCooldown
+        sfx.tackle()
       }
-
-      if (cmd.tackle) {
-        p.tackleCooldown = 0.4
-        const d = V.dist(p.pos, this.ball.pos)
-        if (d < DEFEND.tackleRange && this.ball.z < 1.6) {
-          const owner = this.possessorId != null ? this.player(this.possessorId) : null
-          if (!owner || owner.team !== p.team) {
-            this.winBall(p)
-          }
-        }
-      }
+      if (p.sliding) this.slideContact(p)
+      else p.slideRecover = Math.max(0, p.slideRecover - dt)
     }
   }
 
-  // A successful challenge pokes the ball to the tackler's feet, pointed upfield,
-  // so possession changes cleanly instead of the ball squirting away loose.
-  private winBall(tackler: Player) {
-    this.stats[tackler.team].tackles++
-    const fwd = tackler.facing
-    this.ball.setPos(
-      tackler.x + fwd.x * (tackler.radius + BALL.radius + 0.25),
-      tackler.y + fwd.y * (tackler.radius + BALL.radius + 0.25),
-      0,
-    )
-    this.ball.launch(fwd.x * 3, fwd.y * 3, 0, 0, tackler.team, tackler.id)
+  // Does this sliding body actually reach the ball? The body is a capsule lying
+  // on the turf: from where the player is, back along the way they came, the
+  // length of a person. Nothing here searches for the ball or bends toward it —
+  // the only question asked is whether the ball is inside that shape.
+  private slideContact(p: Player) {
+    if (p.slideWon || this.ball.z > DEFEND.slideBallHeight) return
+    const dir = V.len(p.slideVel) > 0.01 ? V.normalize(p.slideVel) : p.facing
+    // Nearest point on the body segment to the ball.
+    const bx = this.ball.x - p.x
+    const by = this.ball.y - p.y
+    const along = clamp(bx * dir.x + by * dir.y, -DEFEND.slideBodyLength, 0.35)
+    const cx = p.x + dir.x * along
+    const cy = p.y + dir.y * along
+    if (Math.hypot(this.ball.x - cx, this.ball.y - cy) > p.radius + BALL.radius) return
+
+    // Contact. The ball is swept away along the slide, not gifted to anyone —
+    // you've won it, you haven't gained possession of it.
+    p.slideWon = true
+    // Timed it right, so you're back up faster than someone who dived at air.
+    p.slideRecover *= DEFEND.slideWonRecovery
+    this.stats[p.team].tackles++
+    const pace = DEFEND.slideClear * (0.6 + 0.4 * clamp(p.speed / PLAYER.sprintSpeed, 0, 1))
+    this.ball.setPos(cx + dir.x * 0.3, cy + dir.y * 0.3, 0.05)
+    this.ball.launch(dir.x * pace, dir.y * pace, pace * 0.12, 0, p.team, p.id, 0)
     this.possessorId = null
     this.lastPass = null
     sfx.tackle()
@@ -838,7 +867,10 @@ export class World {
 
   private resolveBodyCollisions() {
     for (const p of this.players) {
-      if (p.id === this.possessorId) continue
+      // An AI dribbler is placing the ball deliberately, so it passes through
+      // them. A human's isn't attached to anything, so their body is solid — the
+      // ball rebounds off their shins exactly like it rebounds off the boards.
+      if (p.id === this.possessorId && !this.isHumanDriven(p)) continue
       if (p.role === 'GK') continue // handled by saves
       if (p.kickCooldown > 0) continue
       if (this.ball.z > 1.9) continue
