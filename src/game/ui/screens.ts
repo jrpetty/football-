@@ -18,6 +18,7 @@ export class Screens {
   }
 
   onStart: (config: MatchConfig) => void = () => {}
+  onOnline: (config: MatchConfig) => void = () => {}
   onResume: () => void = () => {}
   onRestart: () => void = () => {}
   onMenu: () => void = () => {}
@@ -31,7 +32,7 @@ export class Screens {
     this.root.style.display = 'none'
   }
 
-  private show() {
+  show() {
     this.root.style.display = 'flex'
   }
 
@@ -108,6 +109,7 @@ export class Screens {
         <div class="actions">
           <button class="btn primary" data-act="match">▶  Play Match</button>
           <button class="btn" data-act="training">🎯  Training <span class="sub">(solo, no AI)</span></button>
+          <button class="btn" data-act="online">🌐  Play Online <span class="sub">(host or join)</span></button>
         </div>
 
         ${this.controlsHtml()}
@@ -208,6 +210,10 @@ export class Screens {
     this.root.querySelector<HTMLButtonElement>('[data-act="match"]')?.addEventListener('click', () => {
       sfx.unlock()
       this.onStart({ ...this.config, mode: 'match' })
+    })
+    this.root.querySelector<HTMLButtonElement>('[data-act="online"]')?.addEventListener('click', () => {
+      sfx.unlock()
+      this.onOnline({ ...this.config, mode: 'match' })
     })
     this.root.querySelector<HTMLButtonElement>('[data-act="training"]')?.addEventListener('click', () => {
       sfx.unlock()

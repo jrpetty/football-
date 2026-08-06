@@ -12,11 +12,14 @@
     "typecheck": "tsc -p tsconfig.game.json --noEmit",
     "test": "node tests/run.mjs",
     "test:anim": "node tests/browser/anim.mjs",
-    "test:spin": "node tests/browser/spin.mjs"
+    "test:spin": "node tests/browser/spin.mjs",
+    "relay": "node scripts/relay.mjs",
+    "test:net": "node tests/browser/net.mjs"
   },
   "devDependencies": {
     "typescript": "^5.5.4",
-    "vite": "^5.4.6"
+    "vite": "^5.4.6",
+    "ws": "^8.18.0"
   },
   "dependencies": {
     "@types/three": "^0.160.0",

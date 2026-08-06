@@ -8,6 +8,8 @@ import type { Role, Team } from '../types'
 // map one-to-one onto the two mouse buttons, which is the whole point: what you
 // see should tell you which button was pressed and how hard.
 export type KickAnim = 'touch' | 'strike' | 'header' | 'cushion'
+// Index order for the wire — a contact travels as one byte, not a string.
+export const KICK_ANIMS: KickAnim[] = ['touch', 'strike', 'header', 'cushion']
 
 // A single footballer. Movement is momentum-based: you steer a target velocity
 // and the body accelerates/decelerates toward it, so sharp reversals cost you a

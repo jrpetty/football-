@@ -71,6 +71,13 @@ export class World {
   // stepping once per tick — which is what reads as a "laggy" ball.
   renderAlpha = 0
 
+  // Players driven by somebody else's mouse. A networked player is not a
+  // special case in the simulation — it is a Command that arrived from the
+  // network instead of from an input device, which is exactly why the game
+  // could be made multiplayer without touching the physics.
+  remoteCommands = new Map<number, Command>()
+  netSeats = new Set<number>()
+
   private accumulator = 0
   private idCounter = 0
   private lastPass: { team: Team; fromId: number } | null = null
@@ -205,7 +212,46 @@ export class World {
       const controlled = this.players.find((p) => p.id === this.controlledId)
       if (controlled) commands.set(controlled.id, humanCmd)
     }
+    // Remote players last, so a network Command always wins over the AI one
+    // that was generated for the same shirt.
+    for (const [id, cmd] of this.remoteCommands) commands.set(id, cmd)
     return commands
+  }
+
+  // ---- networking seats ---------------------------------------------------
+
+  // Hand a joining player a shirt: an outfielder on the away side first, since
+  // the host is on the home side, then anyone else who is still AI-driven.
+  claimSeat(): number {
+    const free = (p: Player) => p.id !== this.controlledId && !this.netSeats.has(p.id)
+    const pick =
+      this.players.find((p) => p.team === 'away' && p.role !== 'GK' && free(p)) ??
+      this.players.find((p) => p.role !== 'GK' && free(p)) ??
+      this.players.find(free)
+    if (!pick) return -1
+    this.netSeats.add(pick.id)
+    this.remoteCommands.set(pick.id, emptyCommand())
+    return pick.id
+  }
+
+  releaseSeat(id: number) {
+    this.netSeats.delete(id)
+    this.remoteCommands.delete(id)
+  }
+
+  setRemoteCommand(id: number, cmd: Command) {
+    if (this.netSeats.has(id)) this.remoteCommands.set(id, cmd)
+  }
+
+  // A client is told which shirt is theirs and takes it over locally, so its
+  // own prediction drives the player it is actually holding the mouse for.
+  takeControl(id: number) {
+    if (this.player(id)) this.controlledId = id
+  }
+
+  // A networked player is somebody else's, so the AI must leave them alone.
+  isNetworked(p: Player): boolean {
+    return this.netSeats.has(p.id)
   }
 
   private step(commands: Map<number, Command>) {
@@ -1180,6 +1226,7 @@ export class World {
 
   // Is this the player a human is actually steering right now?
   isHumanDriven(p: Player): boolean {
+    if (this.netSeats.has(p.id)) return true
     return this.config.humanControlled !== false && p.id === this.controlledId
   }
 

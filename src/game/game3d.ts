@@ -8,8 +8,10 @@ import { Scene3D } from './render3d/scene'
 import { Hud } from './ui/hud'
 import { DRILL_INFO } from './match/drills'
 import { Screens } from './ui/screens'
+import { HostSession, ClientSession } from './net/session'
+import type { NetHandoff } from './net/lobby'
 import { emptyCommand } from './types'
-import type { MatchConfig } from './types'
+import type { Command, MatchConfig } from './types'
 
 export interface Hooks {
   toMenu: () => void
@@ -64,6 +66,31 @@ export class Game3D {
     requestAnimationFrame(this.tick)
   }
 
+
+  // ---- online ----------------------------------------------------------
+  //
+  // The host runs the simulation exactly as it always did and broadcasts it.
+  // A client runs the same simulation locally, predicting its own player from
+  // its own input, and is pulled onto the host's version as snapshots arrive —
+  // so its own movement never waits for a round trip, and everyone else's is
+  // smooth because it's drawn a fraction of a second in the past.
+  private host: HostSession | null = null
+  private client: ClientSession | null = null
+
+  connect(h: NetHandoff) {
+    if (h.role === 'host') this.host = new HostSession(this.world, h.transport)
+    else this.client = new ClientSession(this.world, h.transport, 'player')
+  }
+
+  private netUpdate(dt: number, cmd: Command) {
+    this.host?.update(dt)
+    this.client?.update(dt, cmd)
+  }
+
+  get online(): boolean {
+    return !!(this.host || this.client)
+  }
+
   stop() {
     this.running = false
     document.removeEventListener('pointerlockchange', this.onLockChange)
@@ -106,9 +133,11 @@ export class Game3D {
         this.cam3.look(this.input.movementX, this.input.movementY)
         const cmd = this.human.buildCommand(this.world, this.cam3, this.input, dt)
         this.world.update(dt, cmd)
+        this.netUpdate(dt, cmd)
       } else {
         // AI keeps playing; the human's player idles until they click to lock.
         this.world.update(dt, emptyCommand())
+        this.netUpdate(dt, emptyCommand())
       }
       if (cp) this.cam3.update(cp.x, cp.y, dt)
       this.maybeEnd()

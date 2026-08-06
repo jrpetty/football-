@@ -8,14 +8,18 @@ import { Camera } from './render/camera'
 import { Renderer } from './render/renderer'
 import { Hud } from './ui/hud'
 import { DRILL_INFO } from './match/drills'
+import { HostSession, ClientSession } from './net/session'
+import { Lobby } from './net/lobby'
+import type { NetHandoff } from './net/lobby'
 import { Screens } from './ui/screens'
 import { Game3D } from './game3d'
 import type { Hooks } from './game3d'
-import type { MatchConfig } from './types'
+import type { Command, MatchConfig } from './types'
 
 // Anything boot() can drive, regardless of 2D/3D presentation.
 interface RunningGame {
   start(): void
+  connect(h: NetHandoff): void
   stop(): void
   readonly world: World
 }
@@ -63,6 +67,31 @@ class Game {
     requestAnimationFrame(this.tick)
   }
 
+
+  // ---- online ----------------------------------------------------------
+  //
+  // The host runs the simulation exactly as it always did and broadcasts it.
+  // A client runs the same simulation locally, predicting its own player from
+  // its own input, and is pulled onto the host's version as snapshots arrive —
+  // so its own movement never waits for a round trip, and everyone else's is
+  // smooth because it's drawn a fraction of a second in the past.
+  private host: HostSession | null = null
+  private client: ClientSession | null = null
+
+  connect(h: NetHandoff) {
+    if (h.role === 'host') this.host = new HostSession(this.world, h.transport)
+    else this.client = new ClientSession(this.world, h.transport, 'player')
+  }
+
+  private netUpdate(dt: number, cmd: Command) {
+    this.host?.update(dt)
+    this.client?.update(dt, cmd)
+  }
+
+  get online(): boolean {
+    return !!(this.host || this.client)
+  }
+
   stop() {
     this.running = false
   }
@@ -83,6 +112,7 @@ class Game {
     if (!this.paused) {
       const cmd = this.human.buildCommand(this.world, this.cam, this.input, dt)
       this.world.update(dt, cmd)
+      this.netUpdate(dt, cmd)
       this.cam.follow(this.cameraFocus(), dt)
       this.maybeEnd()
     }
@@ -239,6 +269,8 @@ function boot() {
     container.innerHTML = ''
   }
 
+  let net: NetHandoff | null = null
+
   function startGame(config: MatchConfig) {
     game?.stop()
     // ?ai in the URL runs both teams on AI (used to measure balance in tests).
@@ -251,6 +283,7 @@ function boot() {
         ? new Game3D(canvas, container, config, input, screens, hooks)
         : new Game(canvas, config, input, screens, hooks)
     game.start()
+    if (net) game.connect(net)
     // Opt-in inspection hook for automated tests (?debug in the URL).
     if (location.search.includes('debug')) {
       const w = window as unknown as { __world?: unknown; __game?: unknown }
@@ -259,7 +292,27 @@ function boot() {
     }
   }
 
-  screens.onStart = (config) => startGame(config)
+  // Online. The lobby produces a Transport and a role; everything after that is
+  // the ordinary game with some Commands arriving over the wire.
+  const lobby = new Lobby()
+  lobby.onCancel = () => {
+    lobby.dispose()
+    screens.showMenu()
+  }
+  lobby.onReady = (h) => {
+    net = h
+    startGame({ ...lastConfig, mode: 'match', humanControlled: true } as MatchConfig)
+  }
+  screens.onOnline = (config) => {
+    lastConfig = config
+    screens.show()
+    lobby.render(screens.root)
+  }
+
+  screens.onStart = (config) => {
+    net = null
+    startGame(config)
+  }
   screens.showMenu()
 }
 
