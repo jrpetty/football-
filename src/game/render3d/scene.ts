@@ -440,6 +440,50 @@ export class Scene3D {
   // Hoops hung in the goal to aim at, and a line tracing the flight of the last
   // strike. Seeing the shape of the ball you just hit is what makes the flick
   // learnable — otherwise you're guessing at what a given wrist movement did.
+  // Gates on the floor: a pair of cones you have to drive the ball between. Kept
+  // deliberately short, because the drill is about keeping the ball down and a
+  // tall marker would let you cheat it by eye.
+  private gateCones: THREE.Mesh[] = []
+  private syncGates(gates: World['drills'] extends null ? never : { x: number; y: number; width: number; passed: boolean }[]) {
+    const need = gates.length * 2
+    while (this.gateCones.length < need) {
+      const cone = new THREE.Mesh(
+        new THREE.ConeGeometry(0.16, 0.44, 12),
+        new THREE.MeshStandardMaterial({ color: '#ff9d3d', emissive: '#c25c00', emissiveIntensity: 0.35, roughness: 0.6 }),
+      )
+      cone.castShadow = true
+      this.scene.add(cone)
+      this.gateCones.push(cone)
+    }
+    for (let i = 0; i < this.gateCones.length; i++) this.gateCones[i].visible = i < need
+    gates.forEach((g, i) => {
+      for (const side of [0, 1]) {
+        const c = this.gateCones[i * 2 + side]
+        c.position.set(g.x, 0.22, g.y + (side ? g.width / 2 : -g.width / 2))
+        const mat = c.material as THREE.MeshStandardMaterial
+        mat.color.set(g.passed ? '#8dffa8' : '#ff9d3d')
+        mat.emissive.set(g.passed ? '#42ff77' : '#c25c00')
+      }
+    })
+  }
+
+  // The defensive wall for the curling drill — real bodies, standing where the
+  // ball cannot go through them.
+  private wallMen: THREE.Mesh[] = []
+  private syncWall(wall: { x: number; y: number }[]) {
+    while (this.wallMen.length < wall.length) {
+      const m = new THREE.Mesh(
+        new THREE.CapsuleGeometry(0.32, 1.15, 6, 14),
+        new THREE.MeshStandardMaterial({ color: '#2a3340', roughness: 0.85 }),
+      )
+      m.castShadow = true
+      this.scene.add(m)
+      this.wallMen.push(m)
+    }
+    for (let i = 0; i < this.wallMen.length; i++) this.wallMen[i].visible = i < wall.length
+    wall.forEach((m, i) => this.wallMen[i].position.set(m.x, 0.9, m.y))
+  }
+
   private syncDrills(world: World) {
     const d = world.drills
     if (!d) return
@@ -457,7 +501,9 @@ export class Scene3D {
       this.scene.add(ring)
       this.targetRings.push(ring)
     }
+    for (let i = d.targets.length; i < this.targetRings.length; i++) this.targetRings[i].visible = false
     d.targets.forEach((t, i) => {
+      this.targetRings[i].visible = true
       const ring = this.targetRings[i]
       ring.position.set(t.x, t.z, t.y)
       ring.rotation.y = Math.PI / 2
@@ -475,6 +521,9 @@ export class Scene3D {
         ring.scale.setScalar(1)
       }
     })
+
+    this.syncGates(d.gates)
+    this.syncWall(d.wall)
 
     // The flight path of the last strike, fading out over a few seconds.
     if (!this.trailLine) {

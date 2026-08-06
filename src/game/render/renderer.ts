@@ -19,6 +19,7 @@ export class Renderer {
     ctx.save()
     this.drawSurround(cam)
     this.drawPitch(cam)
+    this.drawDrills(world, cam)
     this.drawEffectsUnder(world, cam)
     // Ball shadow first so players can overlap it.
     this.drawBallShadow(world, cam)
@@ -28,6 +29,68 @@ export class Renderer {
     this.drawBall(world, cam)
     this.drawEffectsOver(world, cam)
     ctx.restore()
+  }
+
+  // Training apparatus. The 2D view never drew any of this, which meant anyone
+  // playing the gauntlet from up here was aiming at gates and a wall they could
+  // not see.
+  private drawDrills(world: World, cam: Camera) {
+    const d = world.drills
+    if (!d) return
+    const ctx = this.ctx
+
+    // The spot a set-piece drill is struck from.
+    if (d.spot) {
+      const s = cam.worldToScreen(d.spot.x, d.spot.y)
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)'
+      ctx.setLineDash([4, 4])
+      ctx.lineWidth = 1.5
+      ctx.beginPath()
+      ctx.arc(s.x, s.y, cam.ppm * 0.6, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.setLineDash([])
+    }
+
+    // Gates: a pair of cones with the lane between them shaded, so it's obvious
+    // where the ball has to go.
+    for (const g of d.gates) {
+      const a = cam.worldToScreen(g.x, g.y - g.width / 2)
+      const b = cam.worldToScreen(g.x, g.y + g.width / 2)
+      ctx.strokeStyle = g.passed ? 'rgba(141,255,168,0.85)' : 'rgba(255,157,61,0.55)'
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.moveTo(a.x, a.y)
+      ctx.lineTo(b.x, b.y)
+      ctx.stroke()
+      ctx.fillStyle = g.passed ? '#8dffa8' : '#ff9d3d'
+      for (const c of [a, b]) {
+        ctx.beginPath()
+        ctx.arc(c.x, c.y, Math.max(3, cam.ppm * 0.16), 0, Math.PI * 2)
+        ctx.fill()
+      }
+    }
+
+    // The wall.
+    for (const m of d.wall) {
+      const s = cam.worldToScreen(m.x, m.y)
+      ctx.fillStyle = '#2a3340'
+      ctx.beginPath()
+      ctx.arc(s.x, s.y, Math.max(4, cam.ppm * 0.34), 0, Math.PI * 2)
+      ctx.fill()
+      ctx.strokeStyle = 'rgba(255,255,255,0.18)'
+      ctx.lineWidth = 1
+      ctx.stroke()
+    }
+
+    // Hoops in the goal, drawn from above as marks on the line.
+    for (const t of d.targets) {
+      const s = cam.worldToScreen(t.x, t.y)
+      ctx.strokeStyle = t.hit ? 'rgba(141,255,168,0.95)' : 'rgba(255,216,94,0.7)'
+      ctx.lineWidth = 3
+      ctx.beginPath()
+      ctx.arc(s.x, s.y, Math.max(3, cam.ppm * t.radius * 0.6), 0, Math.PI * 2)
+      ctx.stroke()
+    }
   }
 
   private drawSurround(cam: Camera) {

@@ -6,6 +6,7 @@ import { World } from './match/world'
 import { Camera3D } from './render3d/camera3d'
 import { Scene3D } from './render3d/scene'
 import { Hud } from './ui/hud'
+import { DRILL_INFO } from './match/drills'
 import { Screens } from './ui/screens'
 import { emptyCommand } from './types'
 import type { MatchConfig } from './types'
@@ -138,6 +139,12 @@ export class Game3D {
       const aim = this.cam3.aimSim()
       const pos = cp ? { x: cp.x + aim.x * 4, y: cp.y + aim.y * 4 } : { x: 29, y: 19 }
       this.world.spawnBallAt(pos)
+    }
+    // Cycle through the gauntlet. Each drill keeps its own score, so you can go
+    // back to one and pick up where you left off.
+    if (this.config.mode === 'training' && this.input.justPressed('KeyN') && !this.paused) {
+      const id = this.world.drills?.next()
+      if (id) this.world.setAnnounce(DRILL_INFO[id].name, DRILL_INFO[id].brief, 2.2)
     }
   }
 

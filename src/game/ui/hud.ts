@@ -1,5 +1,6 @@
 import { BALL, FIELD, KITS, PLAYER } from '../config'
 import { clamp01 } from '../core/math'
+import { DRILL_INFO } from '../match/drills'
 import type { World } from '../match/world'
 
 export interface HudInfo {
@@ -182,15 +183,20 @@ export class Hud {
     }
   }
 
-  // Training scoreboard: how many of your strikes found a target.
+  // The drill panel. A drill you can't see yourself getting better at isn't
+  // teaching you anything, so this shows the score, the streak, what the drill
+  // is asking of you, and — the important part — a verdict on the touch you
+  // just played.
   private drawDrills(ctx: CanvasRenderingContext2D, world: World, w: number) {
     const d = world.drills
     if (!d) return
-    const bw = 190
+    const info = DRILL_INFO[d.current]
+    const s = d.score
+    const bw = 226
     const x = w - bw - 16
     const y = 44
-    ctx.fillStyle = 'rgba(10,16,28,0.78)'
-    roundRect(ctx, x, y, bw, 62, 9)
+    ctx.fillStyle = 'rgba(10,16,28,0.8)'
+    roundRect(ctx, x, y, bw, 86, 9)
     ctx.fill()
     ctx.strokeStyle = 'rgba(255,255,255,0.1)'
     ctx.lineWidth = 1
@@ -200,22 +206,49 @@ export class Hud {
     ctx.textBaseline = 'alphabetic'
     ctx.fillStyle = '#9fb2d0'
     ctx.font = '600 10px system-ui, sans-serif'
-    ctx.fillText('TARGET PRACTICE', x + 12, y + 17)
+    ctx.fillText(info.name, x + 12, y + 17)
+    ctx.textAlign = 'right'
+    ctx.fillStyle = '#5d6b82'
+    ctx.font = '600 9px system-ui, sans-serif'
+    ctx.fillText('N ·  NEXT DRILL', x + bw - 12, y + 17)
 
+    ctx.textAlign = 'left'
     ctx.fillStyle = '#eef3ff'
     ctx.font = '700 20px system-ui, sans-serif'
-    ctx.fillText(`${d.hits}`, x + 12, y + 42)
+    ctx.fillText(`${s.points}`, x + 12, y + 42)
     ctx.fillStyle = '#8fa1bb'
-    ctx.font = '600 12px system-ui, sans-serif'
-    ctx.fillText(`/ ${d.shots} shots`, x + 12 + ctx.measureText(`${d.hits}`).width + 12, y + 42)
+    ctx.font = '600 11px system-ui, sans-serif'
+    const pw = ctx.measureText(`${s.points}`).width
+    ctx.fillText(`pts · ${s.scored}/${s.attempts}`, x + 16 + pw, y + 42)
 
     ctx.textAlign = 'right'
-    ctx.fillStyle = d.streak > 0 ? '#57d764' : '#8fa1bb'
+    ctx.fillStyle = s.streak > 0 ? '#57d764' : '#8fa1bb'
     ctx.font = '700 15px system-ui, sans-serif'
-    ctx.fillText(`${d.streak}`, x + bw - 12, y + 42)
+    ctx.fillText(`${s.streak}`, x + bw - 12, y + 42)
     ctx.fillStyle = '#7d8ca3'
     ctx.font = '600 9px system-ui, sans-serif'
-    ctx.fillText(`STREAK · BEST ${d.best}`, x + bw - 12, y + 54)
+    ctx.fillText(`STREAK · BEST ${s.best}`, x + bw - 12, y + 54)
+
+    // What the drill wants, or what you just did about it.
+    ctx.textAlign = 'left'
+    const v = d.verdict
+    if (v) {
+      const fade = clamp01(1 - (v.t - 1.6) / 0.8)
+      ctx.fillStyle = v.good ? `rgba(87,215,100,${fade})` : `rgba(255,140,120,${fade})`
+      ctx.font = '700 13px system-ui, sans-serif'
+      ctx.fillText(v.text, x + 12, y + 70)
+      ctx.fillStyle = `rgba(159,178,208,${fade * 0.85})`
+      ctx.font = '600 10px system-ui, sans-serif'
+      ctx.fillText(v.sub, x + 12, y + 82)
+    } else {
+      ctx.fillStyle = '#7d8ca3'
+      ctx.font = '600 10px system-ui, sans-serif'
+      ctx.fillText(info.brief, x + 12, y + 74)
+      if (d.servesBalls() && !d.serveLive) {
+        ctx.fillStyle = '#5d6b82'
+        ctx.fillText(`next ball in ${Math.max(0, d.serveTimer).toFixed(1)}s`, x + 12, y + 86 - 2)
+      }
+    }
   }
 
   private drawMinimap(ctx: CanvasRenderingContext2D, world: World, w: number, h: number) {

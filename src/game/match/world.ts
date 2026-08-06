@@ -326,6 +326,7 @@ export class World {
     // 7. Collisions & saves.
     this.resolveGkSaves(live)
     this.resolveBodyCollisions()
+    this.resolveDrillWall()
     this.resolvePosts()
 
     // 8. Ball leaving play.
@@ -957,6 +958,28 @@ export class World {
     }
   }
 
+  // The wall in the curling drill is made of real obstacles. Going through it is
+  // not an option, which is what makes bending it round the only way.
+  private resolveDrillWall() {
+    const wall = this.drills?.wall
+    if (!wall || !wall.length) return
+    const r = 0.34
+    for (const m of wall) {
+      const dx = this.ball.x - m.x
+      const dy = this.ball.y - m.y
+      const d = Math.hypot(dx, dy)
+      const min = r + BALL.radius
+      if (d >= min || d < 1e-4) continue
+      if (this.ball.z > 1.85) continue // over their heads is fair
+      const nx = dx / d
+      const ny = dy / d
+      this.ball.x = m.x + nx * min
+      this.ball.y = m.y + ny * min
+      this.ball.reflect(nx, ny, 0.4)
+      this.pushEffect('post', this.ball.x, this.ball.y)
+    }
+  }
+
   private resolvePosts() {
     const postR = 0.11
     for (const team of ['home', 'away'] as Team[]) {
@@ -1045,7 +1068,10 @@ export class World {
   // Put the ball back on the centre spot for another rep, leaving you wherever
   // you are — a practice session shouldn't teleport you back to a formation.
   private resetTrainingBall() {
-    this.ball.setPos(F.centerSpot().x, F.centerSpot().y, 0)
+    // Drills struck from a set position put the ball back on their own spot, so
+    // the apparatus stays meaningful shot after shot.
+    const spot = this.drills?.spot ?? F.centerSpot()
+    this.ball.setPos(spot.x, spot.y, 0)
     this.ball.stop()
     this.ball.lastTouchTeam = null
     this.possessorId = null
@@ -1055,10 +1081,16 @@ export class World {
     this.score[scorer]++
     if (this.config.mode === 'training') {
       this.stats[scorer].goals++
+      // The drill needs to see the ball as it went in — spin, position and all —
+      // so it is told before anything gets repositioned.
+      this.drills?.goal(this)
       this.setAnnounce('GOAL!', undefined, 1.2)
       sfx.goal()
       this.pushEffect('goal', this.ball.x, this.ball.y)
-      this.resetTrainingBall()
+      // A drill that serves you the next ball puts it where it wants it.
+      if (!this.drills?.servesBalls()) this.resetTrainingBall()
+      else this.ball.setPos(FIELD.length / 2, FIELD.width / 2, 0)
+      this.ball.stop()
       return
     }
     this.stats[scorer].goals++
@@ -1176,7 +1208,7 @@ export class World {
     this.effects = this.effects.filter((e) => e.t < e.life)
   }
 
-  private setAnnounce(text: string, sub: string | undefined, life: number) {
+  setAnnounce(text: string, sub: string | undefined, life: number) {
     this.announce = { text, sub, t: 0, life }
   }
 
