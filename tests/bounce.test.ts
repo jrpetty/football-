@@ -262,6 +262,71 @@ function dropFrom(z: number) {
   )
 }
 
+// ---- 9. curve, against the real free-kick figure --------------------------
+{
+  // How far a curled ball has deviated by the time it has run 25 m downfield,
+  // which is how the real number is quoted. Measured against a spinless twin so
+  // it isolates the spin, and averaged because the strike carries scatter.
+  const bendAt25 = (power: number, loft: number, spin: number) => {
+    const run = (sp: number) => {
+      const w = pitch()
+      const p = w.getControlledPlayer()!
+      p.x = 4
+      p.y = FIELD.width / 2
+      p.heading = 0
+      p.kickCooldown = 0
+      w.ball.setPos(4.55, FIELD.width / 2, 0)
+      w.ball.lastTouchId = -1
+      const c = emptyCommand()
+      c.aim = { x: 1, y: 0 }
+      c.kick = makeKick('strike', power, { x: 1, y: 0 }, { loft, spin: sp })
+      w.update(SIM.dt, c)
+      const x0 = w.ball.x
+      const y0 = w.ball.y
+      for (let i = 0; i < 120 * 20; i++) {
+        w.update(SIM.dt, emptyCommand())
+        if (w.phase !== 'playing' || w.ball.x - x0 >= 25) break
+      }
+      return w.ball.y - y0
+    }
+    let total = 0
+    for (let i = 0; i < 10; i++) total += Math.abs(run(spin) - run(0))
+    return total / 10
+  }
+  const curler = bendAt25(1, 0.35, 1.6)
+  const cross = bendAt25(0.75, 0.55, 1.3)
+  ok(
+    'a curled ball bends a realistic amount',
+    curler > 2.5 && curler < 5.5 && cross > 1.8 && cross < 4.5,
+    `curler ${curler.toFixed(2)} m, cross ${cross.toFixed(2)} m over 25 m   (real free kick: 3-5 m)`,
+  )
+}
+
+// ---- 10. spin survives the flight ------------------------------------------
+{
+  const w = pitch()
+  w.ball.setPos(5, FIELD.width / 2, 1.5)
+  w.ball.vx = 25
+  w.ball.vy = 0
+  w.ball.vz = 4
+  w.ball.spin = 8
+  w.ball.lastTouchId = 99
+  const spin0 = w.ball.spin
+  let t = 0
+  for (let i = 0; i < 120 * 2; i++) {
+    w.update(SIM.dt, emptyCommand())
+    t += SIM.dt
+    if (w.ball.z <= 0.02 && t > 0.1) break
+  }
+  const kept = w.ball.spin / spin0
+  ok(
+    'a ball keeps spinning through its flight',
+    kept > 0.7,
+    `${(kept * 100).toFixed(0)}% of the spin left after ${t.toFixed(2)}s in the air ` +
+      `(it used to shed three quarters, so curlers stopped curling)`,
+  )
+}
+
 console.log(results.join('\n'))
 const failed = results.filter((r) => r.startsWith('FAIL')).length
 console.log(`\n${results.length - failed}/${results.length} passed`)

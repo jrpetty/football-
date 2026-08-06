@@ -59,13 +59,18 @@ export const BALL = {
   // friction budget as everything else at the contact patch.
   bounceSideKick: 0.09,
   settleBounce: 0.9, // below this vertical rebound, settle into a roll
-  spinDecay: 0.85, // how fast side-spin bleeds off per second
-  // Magnus: sideways acceleration = magnus * spin * speed. Speed-scaled, so a
-  // firm strike bends hard and a dying ball straightens out.
-  // Sideways acceleration = magnus * spin * speed. Speed- and time-scaled, so
-  // the bend really shows on the big stuff — a full-flick long ball swings ~5m
-  // across the pitch — while a short driven pass stays honest.
-  magnus: 0.021,
+  // How fast spin bleeds off in flight. This was 0.85/s, which took three
+  // quarters of the spin off a ball during a 1.6 s flight — so a curler stopped
+  // curling right when a real one is biting hardest. A real football sheds very
+  // little over the couple of seconds it is in the air.
+  spinDecay: 0.12,
+  // Magnus, sideways. Identical physics to the vertical case below — the air
+  // does not care which axis a ball is spinning about — so it is the same
+  // constant applied to the side-spin, and `spin` is carried in the same unit:
+  // the speed of the ball's surface at its equator, in m/s. This used to be an
+  // arbitrary number against an arbitrary spin scale, which is how the curve
+  // ended up bending a whipped cross about half as far again as a real one.
+  magnus: 0.045,
   groundMagnus: 0.55, // fraction of the bend that survives while rolling
   // Vertical-plane Magnus: topspin pushes the ball down, backspin holds it up.
   // Same speed-scaled form as the sideways bend.
@@ -73,7 +78,10 @@ export const BALL = {
   // spin ratio (surface speed ÷ travel speed). Since vSpin is carried as that
   // surface speed, the whole thing collapses to magnusVertical · vSpin · v.
   magnusVertical: 0.045,
-  maxSpin: 26,
+  // Cap on side-spin, as surface speed. 12 m/s against a 34 m/s ball is a spin
+  // ratio of 0.35 — beyond anything a human has actually hit, which is the
+  // point: it's a ceiling, not a target.
+  maxSpin: 12,
   // vSpin is carried as the speed of the ball's own surface at the contact
   // patch, in m/s, signed so positive is topspin. Keeping it in the same unit as
   // the ball's travel is what makes the bounce a subtraction rather than a fudge
@@ -164,7 +172,7 @@ export const CONTROL = {
   // your own goal line, crosses the far goal line right around the top of the
   // cage — the brief for the biggest ball in the game.
   loftAngleSoft: 0.72,
-  loftAngleHard: 0.233,
+  loftAngleHard: 0.195,
   // A struck ball rides up the boot: even a "flat" shot leaves the ground for a
   // while. Without this the neutral strike was a pure grubber, which made the
   // whole downward half of the flick range do literally nothing — the HUD said
@@ -211,10 +219,15 @@ export const KICK = {
   throughBias: 1.06, // through balls carry a touch more weight
   loftAngle: 0.62, // launch pitch (rad) for a full lofted ball
   chipAngle: 0.9, // steeper, softer chip over a keeper
-  // Spin imparted at a full sideways flick. Kept modest: with the speed-scaled
-  // Magnus term this still bends a firm strike a few metres, which is about what
-  // a real curled ball does over this distance.
-  maxSpinFromAim: 7,
+  // Side-spin from a full sideways flick, as a fraction of the ball's own speed
+  // — the same way technique spin works vertically, and the same way spin
+  // actually behaves. Tuned against the real benchmark rather than by feel: a
+  // curled strike should deviate 3-5 m over the first 25 m of flight, which is
+  // what a free kick from the edge of the box does.
+  sideSpin: 0.15,
+  // Striking across your own body puts a little on it whether you asked for it
+  // or not, as a fraction of the deliberate amount.
+  sideSpinAcrossBody: 0.35,
   firstTouchError: 0.12, // base positional error on a first touch (m), scaled by pace
   // Touch distances are tuned to stay INSIDE the control reach — a sprinting
   // touch pushes the ball near the edge (riskier) but keepable, not lost.

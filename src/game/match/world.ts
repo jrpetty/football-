@@ -529,8 +529,18 @@ export class World {
     // Curve: mostly the player's deliberate sideways flick, plus a little from
     // striking across the body, plus a touch of natural imperfection.
     const velDir = p.speed > 1 ? V.normalize(p.vel) : p.facing
-    let spin = kick.spin * KICK.maxSpinFromAim
-    spin += V.cross(velDir, aim) * KICK.maxSpinFromAim * 0.35 * (0.4 + 0.6 * power)
+    // Side-spin, as the speed of the ball's surface: mostly the player's
+    // deliberate sideways flick, plus a little from striking across the body,
+    // plus a touch of natural imperfection. Scaled by the ball's own pace,
+    // because that is what spin is — you cannot put 8 m/s of surface on a ball
+    // you have rolled 4 m.
+    let spin = kick.spin * KICK.sideSpin * speed
+    spin +=
+      V.cross(velDir, aim) *
+      KICK.sideSpin *
+      KICK.sideSpinAcrossBody *
+      (0.4 + 0.6 * power) *
+      speed
     spin += (Math.random() * 2 - 1) * 0.12
 
     // Loft, and the spin that comes with the technique. Getting under the ball
@@ -688,7 +698,7 @@ export class World {
       dir.x * horiz,
       dir.y * horiz,
       vz,
-      kick.spin * KICK.maxSpinFromAim * 0.7,
+      kick.spin * KICK.sideSpin * 0.7 * speed,
       p.team,
       p.id,
       // Same technique spin as a grounded strike, in the same unit: a fraction

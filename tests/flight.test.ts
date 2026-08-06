@@ -92,31 +92,7 @@ function strike(power: number, loft: number, spin: number, fromX = 4): Flight {
     carry = range
   }
 
-  // Bend: the same ball with the spin removed, so the number is deviation
-  // caused by the spin rather than by the aim.
-  let bend = 0
-  if (spin !== 0) {
-    const twin = strike(power, loft, 0, fromX)
-    void twin
-    const w2 = new World(cfg)
-    const q = w2.getControlledPlayer()!
-    q.x = fromX
-    q.y = FIELD.width / 2
-    q.heading = 0
-    q.kickCooldown = 0
-    w2.ball.setPos(fromX + 0.55, FIELD.width / 2, 0)
-    w2.ball.lastTouchId = -1
-    const c2: Command = emptyCommand()
-    c2.aim = { x: 1, y: 0 }
-    c2.kick = makeKick('strike', power, { x: 1, y: 0 }, { loft, spin: 0 })
-    w2.update(SIM.dt, c2)
-    for (let i = 0; i < 120 * 20; i++) {
-      w2.update(SIM.dt, emptyCommand())
-      if (w2.ball.x >= w.ball.x) break
-    }
-    bend = Math.abs(w.ball.y - w2.ball.y)
-  }
-  return { release, apex, carry, hang, range, bend }
+  return { release, apex, carry, hang, range, bend: 0 }
 }
 
 const f = (n: number, d = 1) => n.toFixed(d).padStart(6)
@@ -138,16 +114,52 @@ line('half-lofted (70%, half flick)', strike(0.7, 0.5, 0), '')
 line('LONG BALL (100%, full flick)', strike(1, 1, 0), '50-70 m carry, 3-4 s hang, 12-20 m apex')
 line('chip (35%, full flick)', strike(0.35, 1, 0), 'soft, floats, ~15 m')
 
-console.log('\ncurve (lateral deviation vs the same ball with no spin):')
+// Curve, measured the way the real-world figure is quoted: how far the ball has
+// deviated by the time it has travelled a fixed distance downfield. Comparing
+// total bend over the whole flight is meaningless — deviation grows with the
+// square of time, so a longer ball always looks like it curves more.
+function bendAt(power: number, loft: number, spin: number, at = 25) {
+  const run = (sp: number) => {
+    const w = new World(cfg)
+    const p = w.getControlledPlayer()!
+    p.x = 4
+    p.y = FIELD.width / 2
+    p.heading = 0
+    p.kickCooldown = 0
+    w.ball.setPos(4.55, FIELD.width / 2, 0)
+    w.ball.lastTouchId = -1
+    const c: Command = emptyCommand()
+    c.aim = { x: 1, y: 0 }
+    c.kick = makeKick('strike', power, { x: 1, y: 0 }, { loft, spin: sp })
+    w.update(SIM.dt, c)
+    const x0 = w.ball.x
+    const y0 = w.ball.y
+    let t = 0
+    for (let i = 0; i < 120 * 20; i++) {
+      w.update(SIM.dt, emptyCommand())
+      t += SIM.dt
+      if (w.phase !== 'playing') break
+      if (w.ball.x - x0 >= at) break
+    }
+    return { dy: w.ball.y - y0, t }
+  }
+  // Against a spinless twin, so the number is deviation caused by spin and not
+  // by the aim or by the random strike scatter.
+  const curled = run(spin)
+  const straight = run(0)
+  return { bend: Math.abs(curled.dy - straight.dy), t: curled.t }
+}
+
+console.log('\ncurve (sideways deviation by the time it has run 25 m):')
 for (const [label, power, loft, spin] of [
   ['bent pass (50%)', 0.5, 0, 1],
   ['whipped cross (75%)', 0.75, 0.55, 1.3],
   ['full curler (100%)', 1, 0.35, 1.6],
 ] as const) {
-  const fl = strike(power, loft, spin)
+  const r = bendAt(power, loft, spin)
   console.log(
-    `  ${label.padEnd(28)} bend ${fl.bend.toFixed(2)} m over ${fl.carry.toFixed(1)} m` +
-      `   (a real free kick bends 3-5 m over 20-25 m)`,
+    `  ${label.padEnd(28)} ${r.bend.toFixed(2)} m after ${r.t.toFixed(2)}s of flight` +
+      `   (a free kick from the box bends 3-5 m over 20-25 m)`,
   )
 }
 
