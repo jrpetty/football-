@@ -25,6 +25,10 @@ export interface HudInfo {
   net?: NetInfo | null
 }
 
+// The minimap's width. Shared, because the connection panel has to sit above
+// the minimap and needs to know how tall it is.
+const MINIMAP_W = 168
+
 // On-screen furniture drawn on top of the rendered pitch. Reads world state only.
 export class Hud {
   draw(ctx: CanvasRenderingContext2D, world: World, info: HudInfo, w: number, h: number) {
@@ -63,8 +67,10 @@ export class Hud {
     const boxW = 172
     const boxH = pad * 2 + rows.length * lh + 16
     const x = w - boxW - 16
-    // Sit above the minimap rather than on top of it.
-    const y = h - boxH - 16 - Math.min(160, h * 0.26) - 12
+    // Sit above the minimap. Its height is derived from the pitch's aspect, so
+    // it is taken from the same expression rather than guessed at — a constant
+    // here would overlap the moment the pitch or the map changed shape.
+    const y = h - MINIMAP_W * (FIELD.width / FIELD.length) - 16 - 6 - boxH - 10
 
     ctx.fillStyle = 'rgba(8,12,20,0.62)'
     roundRect(ctx, x, y, boxW, boxH, 6)
@@ -375,7 +381,7 @@ export class Hud {
   }
 
   private drawMinimap(ctx: CanvasRenderingContext2D, world: World, w: number, h: number) {
-    const mw = 168
+    const mw = MINIMAP_W
     const mh = mw * (FIELD.width / FIELD.length)
     const x = w - mw - 16
     const y = h - mh - 16

@@ -272,6 +272,15 @@ export class World {
     else this.names.delete(id)
   }
 
+  // Replace the lot. The host is the authority on who is wearing what, so a
+  // client takes its whole picture from the roster rather than merging into
+  // whatever it had — merging is how a name ends up on a shirt its owner left,
+  // and a stale label on somebody else's back is worse than no label at all.
+  setRoster(list: [number, string][]) {
+    this.names.clear()
+    for (const [id, n] of list) this.setName(id, n)
+  }
+
   // What to draw over a player's head. A claimed shirt shows the person; an
   // unclaimed one shows what it is, because "nobody is playing left back" is
   // worth seeing at a glance in a game where empty shirts just stand there.
@@ -289,8 +298,28 @@ export class World {
 
   // A client is told which shirt is theirs and takes it over locally, so its
   // own prediction drives the player it is actually holding the mouse for.
+  //
+  // Your name comes with you. You were put on a shirt of your own choosing
+  // before you ever connected, and the host may well seat you somewhere else —
+  // leaving your name behind on a shirt that is about to be somebody else's.
   takeControl(id: number) {
-    if (this.player(id)) this.controlledId = id
+    if (!this.player(id) || id === this.controlledId) return
+    const mine = this.names.get(this.controlledId)
+    if (mine) {
+      this.names.delete(this.controlledId)
+      this.names.set(id, mine)
+    }
+    this.controlledId = id
+  }
+
+  // Hold no shirt at all. A spectator picked a position on the menu like
+  // everyone else and was put on a player accordingly, and then joined without
+  // taking a seat — so it went on owning that shirt locally: the camera
+  // followed it, the controlled-player ring sat under it, and it counted as
+  // claimed by somebody who is only watching.
+  releaseControl() {
+    this.names.delete(this.controlledId)
+    this.controlledId = -1
   }
 
   // A networked player is somebody else's, so the AI must leave them alone.

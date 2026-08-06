@@ -39,12 +39,22 @@ export class Screens {
   }
 
   hide() {
+    this.cancelCapture()
     this.root.innerHTML = ''
     this.root.style.display = 'none'
   }
 
   show() {
+    this.cancelCapture()
     this.root.style.display = 'flex'
+  }
+
+  // Stop waiting for a key. A rebind row arms itself and then waits for a
+  // keypress that may never come: click "Jump", change your mind, hit Resume,
+  // and the very next key you pressed in the match was swallowed and bound to
+  // jump instead of doing what you asked. Leaving a screen abandons the rebind.
+  private cancelCapture() {
+    if (this.input) this.input.capture = null
   }
 
   showMenu() {

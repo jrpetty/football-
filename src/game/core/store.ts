@@ -61,9 +61,43 @@ function read(): Saved {
     if (!raw) return { ...DEFAULTS }
     const o = JSON.parse(raw) as Partial<Saved>
     if (o.v !== VERSION) return { ...DEFAULTS }
-    return { ...DEFAULTS, ...o, binds: { ...o.binds }, bests: { ...o.bests } }
+    return sane({ ...DEFAULTS, ...o, binds: { ...o.binds }, bests: { ...o.bests } })
   } catch {
     return { ...DEFAULTS }
+  }
+}
+
+// The blob is user-writable — it is a string in their own browser — and it is
+// also whatever an older half-finished write left behind. A field that came
+// back the wrong shape used to go straight into the menu: `view: "flat"` picks
+// neither button, and a sensitivity of NaN silently kills every kick's shape.
+// Anything that fails to be what it claims falls back to the default.
+function sane(s: Saved): Saved {
+  const num = (v: unknown, lo: number, hi: number, def: number) =>
+    typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : def
+  const oneOf = <T extends string | number>(v: unknown, allowed: readonly T[], def: T): T =>
+    allowed.includes(v as T) ? (v as T) : def
+  return {
+    ...s,
+    name: typeof s.name === 'string' ? s.name.slice(0, 14) : '',
+    view: oneOf(s.view, ['2d', '3d'] as const, DEFAULTS.view),
+    position: oneOf(s.position, ['GK', 'DEF', 'MID', 'FWD'] as const, DEFAULTS.position),
+    teamSize: oneOf(s.teamSize, [3, 4, 5, 6] as const, DEFAULTS.teamSize),
+    halfLength: oneOf(s.halfLength, [60, 120, 180] as const, DEFAULTS.halfLength),
+    singleKeeper: s.singleKeeper === true,
+    muted: s.muted === true,
+    heightSens: num(s.heightSens, 0.4, 5, DEFAULTS.heightSens),
+    curveSens: num(s.curveSens, 0.2, 3, DEFAULTS.curveSens),
+    relayUrl: typeof s.relayUrl === 'string' ? s.relayUrl.slice(0, 200) : DEFAULTS.relayUrl,
+    relayRoom: typeof s.relayRoom === 'string' ? s.relayRoom.slice(0, 24) : DEFAULTS.relayRoom,
+    binds: Object.fromEntries(
+      Object.entries(s.binds ?? {}).filter(([, v]) => typeof v === 'string'),
+    ) as Record<string, string>,
+    bests: Object.fromEntries(
+      Object.entries(s.bests ?? {}).filter(
+        ([, v]) => v && typeof (v as DrillBest).score === 'number' && Number.isFinite((v as DrillBest).score),
+      ),
+    ) as Record<string, DrillBest>,
   }
 }
 

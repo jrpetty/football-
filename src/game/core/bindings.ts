@@ -106,10 +106,25 @@ class Bindings {
     return null
   }
 
+  // The fixed alternates — the arrow keys, the right-hand modifiers. These
+  // aren't in the editable map, so actionFor() can't see them, and binding on
+  // top of one produced a key that quietly did two things at once: bind jump to
+  // ArrowUp and every press ran forward *and* jumped, with nothing on the
+  // screen to say why.
+  private alternateFor(code: string): Action | null {
+    for (const { action, also } of ACTIONS) if (also?.includes(code)) return action
+    return null
+  }
+
   // Binding a key that is already in use clears it from the other action rather
   // than silently giving one key two jobs.
   bind(a: Action, code: string): { ok: boolean; why?: string; displaced?: Action } {
     if (RESERVED.has(code)) return { ok: false, why: `${label(code)} is reserved` }
+    const alt = this.alternateFor(code)
+    if (alt) {
+      const name = ACTIONS.find((i) => i.action === alt)?.label ?? alt
+      return { ok: false, why: `${label(code)} is already fixed to ${name}` }
+    }
     const clash = this.actionFor(code)
     if (clash === a) return { ok: true }
     if (clash) this.map[clash] = ''

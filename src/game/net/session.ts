@@ -179,10 +179,16 @@ export class HostSession {
     if (this.peers.size && (this.rosterDirty || this.sinceRoster > 1)) {
       this.rosterDirty = false
       this.sinceRoster = 0
+      // Every named shirt the host knows about, which includes the host's own.
+      // Sending only the peers left the person running the match anonymous to
+      // everybody in it — they are a player too, and the one you are most
+      // likely to be standing next to.
       this.transport.send({
         t: 'roster',
-        who: [...this.peers.values()].filter((p) => p.playerId >= 0).map((p) => [p.playerId, p.name] as [number, string]),
-        pings: [...this.peers.values()].filter((p) => p.playerId >= 0).map((p) => [p.playerId, Math.round(p.ping)] as [number, number]),
+        who: [...this.world.names.entries()],
+        pings: [...this.peers.values()]
+          .filter((p) => p.playerId >= 0)
+          .map((p) => [p.playerId, Math.round(p.ping)] as [number, number]),
       })
     }
 
@@ -297,10 +303,11 @@ export class ClientSession {
       this.joined = true
       this.reconnecting = false
       if (m.playerId >= 0) this.world.takeControl(m.playerId)
+      else this.world.releaseControl()
     } else if (m.t === 'reject') {
       this.error = m.why
     } else if (m.t === 'roster') {
-      for (const [id, name] of m.who) this.world.setName(id, name)
+      this.world.setRoster(m.who)
       // Our own ping, as the host measured it. It knows better than we do —
       // it is the one timing the round trip against its own clock.
       for (const [id, ping] of m.pings ?? []) if (id === this.playerId) this.ping = ping
@@ -432,6 +439,7 @@ export function captureSnapshot(w: World): Snapshot {
       id: p.id,
       x: round3(p.x),
       y: round3(p.y),
+      z: round3(p.z),
       h: round3(p.heading),
       st:
         (p.sprinting ? 1 : 0) |
@@ -489,8 +497,21 @@ export function applySnapshot(w: World, a: Snapshot, b: Snapshot, f: number, own
     }
     p.px = p.x
     p.py = p.y
+    p.pz = p.z
     p.x = lerp(sa.x, sb.x)
     p.y = lerp(sa.y, sb.y)
+    // Without this a remote player's jump was invisible: they headed the ball
+    // with both feet on the floor, and the name tag that rides above them
+    // never rose either.
+    //
+    // Their vertical speed is zeroed along with it, because their height is the
+    // host's to decide and integrating it locally as well is a fight the
+    // snapshot has to win twenty times a second. Left alone, the local gravity
+    // ran vz away to −6 m/s against a height that kept being reset — a tenth of
+    // a metre of disagreement mid-jump, and an `airborne` flag that could never
+    // clear because it also tests vz.
+    p.z = lerp(sa.z, sb.z)
+    p.vz = 0
     p.heading = lerpAngle(sa.h, sb.h, f)
     p.sprinting = !!(sb.st & 1)
     p.slideTimer = sb.st & 2 ? 0.1 : 0

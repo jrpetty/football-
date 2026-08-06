@@ -76,6 +76,43 @@ if (seat !== undefined) {
   await guest.waitForTimeout(700)
   const gb = await guest.evaluate(() => [ +window.__world.ball.x.toFixed(1), +window.__world.ball.y.toFixed(1) ])
   console.log(`host moved the ball to ${hb} — guest sees ${gb}`)
+
+  // The connection panel: names over heads and a ping in the corner. Both are
+  // drawn only when a session exists, so this is the only place they can be
+  // seen at all.
+  const names = async (pg) => pg.evaluate(() => {
+    const w = window.__world
+    return w.players.map((p) => w.nameFor(p))
+  })
+  // Raw round-trip samples, straight off the host's peer record, so a bad ping
+  // can be told apart from a bad measurement.
+  // Ping, with a caveat worth writing down: two headless pages share one CPU
+  // and Chromium throttles whichever is not in front to about 1 Hz. A page
+  // stepping once a second cannot acknowledge anything faster than that, so
+  // the round trip here reads well over a second and that number is correct —
+  // the loop really is that slow. It says nothing about the measurement, which
+  // tests/online.test.ts pins down exactly against a controlled clock: 80 ms
+  // of injected latency reads as 83 ms.
+  const probe = await host.evaluate(() => {
+    const p = [...window.__game.host.peers.values()][0]
+    return { ping: Math.round(p.ping), unacked: p.sentAt.size }
+  })
+  const guestFps = await guest.evaluate(async () => {
+    const t0 = performance.now()
+    let frames = 0
+    await new Promise((r) => {
+      const step = () => { frames++; performance.now() - t0 < 1500 ? requestAnimationFrame(step) : r() }
+      requestAnimationFrame(step)
+    })
+    return +(frames / ((performance.now() - t0) / 1000)).toFixed(1)
+  })
+  console.log(`ping ${probe.ping}ms with the guest page running at ${guestFps} FPS — a throttled tab, not a slow link`)
+  console.log('host  roster on screen:', JSON.stringify(await names(host)))
+  console.log('guest roster on screen:', JSON.stringify(await names(guest)))
+  if (process.env.SHOT) {
+    await host.screenshot({ path: `${process.env.SHOT}/net-host.png` })
+    await guest.screenshot({ path: `${process.env.SHOT}/net-guest.png` })
+  }
 }
 await b.close()
 console.log('\n' + (errs.length ? 'ERRORS:\n'+errs.slice(0,8).join('\n') : 'no runtime errors'))

@@ -31,7 +31,7 @@ import type { Snapshot, SnapDelta, SnapPlayer } from './protocol'
 // The flat, quantised form. Index order is fixed and shared by both sides — it
 // is the wire format, so it doesn't change without a protocol bump.
 export const BALL_FIELDS = 8 // x y z vx vy vz spin vSpin
-export const PLAYER_FIELDS = 10 // x y h st kt kk kp kl leg en
+export const PLAYER_FIELDS = 11 // x y z h st kt kk kp kl leg en
 
 export interface Frame {
   b: number[]
@@ -46,7 +46,7 @@ export interface Frame {
 // for anything in metres, milliradians for the heading, thousandths for the
 // timers and stamina, and 1 for the things that are already whole numbers.
 const BALL_SCALE = [100, 100, 100, 100, 100, 100, 100, 100]
-const PLAYER_SCALE = [100, 100, 1000, 1, 1000, 1, 1000, 1000, 1, 1000]
+const PLAYER_SCALE = [100, 100, 100, 1000, 1, 1000, 1, 1000, 1000, 1, 1000]
 
 const G_SCORE = 1
 const G_PHASE = 2
@@ -61,7 +61,7 @@ export function toFrame(s: Snapshot): Frame {
   for (const q of s.p) {
     p.set(
       q.id,
-      [q.x, q.y, q.h, q.st, q.kt, q.kk, q.kp, q.kl, q.leg, q.en].map((v, i) =>
+      [q.x, q.y, q.z, q.h, q.st, q.kt, q.kk, q.kp, q.kl, q.leg, q.en].map((v, i) =>
         Math.round(v * PLAYER_SCALE[i]),
       ),
     )
@@ -76,8 +76,8 @@ export function fromFrame(f: Frame): Snapshot {
     const v = q.map((n, i) => n / PLAYER_SCALE[i])
     p.push({
       id,
-      x: v[0], y: v[1], h: v[2],
-      st: v[3], kt: v[4], kk: v[5], kp: v[6], kl: v[7], leg: v[8], en: v[9],
+      x: v[0], y: v[1], z: v[2], h: v[3],
+      st: v[4], kt: v[5], kk: v[6], kp: v[7], kl: v[8], leg: v[9], en: v[10],
     })
   }
   return {

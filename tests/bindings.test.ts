@@ -89,6 +89,20 @@ const ok = (name: string, pass: boolean, detail: string) =>
   )
 }
 
+{
+  binds.reset()
+  // The arrow keys and the right-hand modifiers are fixed alternates: they are
+  // not in the editable map, so a clash check that only looks at primaries
+  // cannot see them. Binding on top of one produced a key that quietly did two
+  // things — ArrowUp would run forward AND jump, with nothing saying why.
+  const r = binds.bind('jump', 'ArrowUp')
+  ok(
+    'a fixed alternate cannot be taken either',
+    !r.ok && binds.get('jump') === DEFAULT_BINDS.jump,
+    `refused: "${r.why}"`,
+  )
+}
+
 // ---- 4. what the page must not scroll on ------------------------------------
 {
   binds.reset()
@@ -155,7 +169,44 @@ const ok = (name: string, pass: boolean, detail: string) =>
   fake.failWrites = false
 }
 
-// ---- 9. a blob from another version is discarded, not misread ---------------
+// ---- 9. a blob that is the right version but the wrong shape ---------------
+{
+  // The blob is a string in the user's own browser, and it is also whatever a
+  // half-finished write left behind. A field that came back the wrong shape
+  // used to go straight into the menu: view "flat" selects neither button, and
+  // a NaN sensitivity silently flattens every kick you shape.
+  fake.raw.set(
+    'open-pitch',
+    JSON.stringify({
+      v: 1,
+      view: 'flat',
+      position: 'CHEF',
+      teamSize: 99,
+      halfLength: 'soon',
+      heightSens: null,
+      curveSens: 'lots',
+      name: 12345,
+      bests: { curl: { score: 'high' } },
+    }),
+  )
+  // read() runs at construction, so this reaches in the same way the real one
+  // does — by making a second store over the same poisoned blob.
+  const fresh = new (store.constructor as new () => typeof store)()
+  ok(
+    'nonsense in storage falls back to the defaults',
+    fresh.get('view') === '3d' &&
+      fresh.get('position') === 'FWD' &&
+      fresh.get('teamSize') === 4 &&
+      fresh.get('halfLength') === 120 &&
+      Number.isFinite(fresh.get('heightSens')) &&
+      Number.isFinite(fresh.get('curveSens')) &&
+      fresh.get('name') === '' &&
+      fresh.best('curl') === null,
+    `view "${fresh.get('view')}", position ${fresh.get('position')}, ${fresh.get('teamSize')}v${fresh.get('teamSize')}, sensitivity ${fresh.get('heightSens')}, a bad best dropped`,
+  )
+}
+
+// ---- 10. a blob from another version is discarded, not misread --------------
 {
   fake.raw.set('open-pitch', JSON.stringify({ v: 999, name: 'GHOST', binds: { shield: 'KeyZ' } }))
   // The store reads at construction, so this proves the guard rather than the

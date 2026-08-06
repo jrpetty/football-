@@ -120,7 +120,32 @@ await pg.waitForTimeout(600)
   await pg.waitForTimeout(200)
 }
 
-// ---- 7. name tags ------------------------------------------------------------
+// ---- 7. an abandoned rebind does not eat your next key ----------------------
+{
+  // Arm a rebind, change your mind, and leave the screen without pressing
+  // anything. The row was still listening: the first key you pressed in the
+  // match got swallowed and bound to whatever you had clicked.
+  await pg.click('[data-bind="shield"]')
+  await pg.click('text=🎮 Immersive 3D')
+  await pg.click('text=🎯  Training')
+  await pg.waitForTimeout(1600)
+  await pg.keyboard.press('KeyW')
+  await pg.waitForTimeout(200)
+  // P is the pause binding. Escape only pauses 3D by dropping pointer lock,
+  // which a headless page never had.
+  await pg.keyboard.press('KeyP')
+  await pg.waitForTimeout(500)
+  const shield = (await pg.textContent('[data-bind="shield"]')).trim()
+  ok(
+    'walking away from a rebind does not steal the next key',
+    shield === 'Q',
+    `armed shield, left for the pitch, pressed W — shield is still ${shield}`,
+  )
+  await pg.click('[data-act="menu"]')
+  await pg.waitForTimeout(600)
+}
+
+// ---- 8. name tags ------------------------------------------------------------
 {
   await pg.click('text=🎮 Immersive 3D')
   await pg.click('text=🎯  Training')
@@ -163,7 +188,7 @@ await pg.waitForTimeout(600)
   )
 }
 
-// ---- 8. the new contact sounds exist and are wired ---------------------------
+// ---- 9. the new contact sounds exist and are wired ---------------------------
 {
   const sound = await pg.evaluate(() => {
     const s = window.__sfx

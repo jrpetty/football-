@@ -13,7 +13,7 @@ import type { Command } from '../types'
 // instant. Nobody has to trust anybody's physics but the host's.
 
 export const NET = {
-  protocol: 4, // bumped whenever the wire format changes
+  protocol: 5, // bumped whenever the wire format changes
   snapshotHz: 20, // how often the host broadcasts the world
   inputHz: 60, // how often a client sends its Command
   // How far behind the newest snapshot a client renders remote players. One
@@ -77,6 +77,10 @@ export interface SnapPlayer {
   id: number
   x: number
   y: number
+  // Height off the turf. Almost always zero, which is exactly why it is cheap
+  // to send: the delta encoder omits any field that hasn't changed, so this
+  // costs nothing at all until somebody actually leaves the ground.
+  z: number
   h: number // heading
   st: number // state flags: sprinting | sliding | diving | shielding | recovering
   kt: number // kick timer
