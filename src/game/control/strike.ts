@@ -143,6 +143,19 @@ export function skillFromFlick(flick: Vec2, movingBack = false): Skill | null {
 }
 
 // Assemble the request the simulation consumes.
+//
+// A close-control move is a right-click thing and only a right-click thing.
+// That was already true of every call site, but only because all three of them
+// happened to do it — nothing said so, and a skill riding in on a strike would
+// have been quietly dropped further down rather than refused. It is refused
+// here, at the one place a kick is built, so the rule holds for anything that
+// ever builds one: a controller, a replay, or a packet off the wire.
+//
+// The rule matters because it is what bounds the move. A backheel is struck
+// with your heel while your body is going the other way; you cannot get a shot
+// on it, and the touch's power ceiling is what says so. Routing it through the
+// left button would hand it the strike's ceiling and turn an escape into a
+// finish.
 export function makeKick(
   type: KickType,
   power: number,
@@ -156,7 +169,7 @@ export function makeKick(
     aim: V.len(aim) > 0.01 ? V.normalize(aim) : { x: 1, y: 0 },
     loft: shape.loft,
     spin: shape.spin,
-    skill: skill ?? undefined,
+    skill: type === 'touch' ? (skill ?? undefined) : undefined,
   }
 }
 

@@ -870,9 +870,16 @@ export class World {
     if (skill === 'backheel') {
       // Struck with the heel, straight back past you. Unlike a drag — which
       // pulls the ball under you so you can turn out with it — this sends it
-      // behind you with pace, so it's a pass or a shot rather than an escape.
+      // behind you with pace, so it's a pass rather than an escape.
+      //
+      // The most a touch can generate, and no more. It is the hardest thing
+      // you can do with the right button and it is still nowhere near a strike,
+      // which is the point: you cannot get a shot on a backheel, because you
+      // cannot get a swing on one. The ceiling is stated rather than arrived
+      // at, so changing the multiplier below can't quietly hand a heel the
+      // power of a boot.
       dir = { x: -f.x, y: -f.y }
-      speed *= 1.45
+      speed = Math.min(speed * 1.45, KICK.touchMax)
     } else if (skill === 'drag') {
       // Pull it back behind you and turn out — the classic escape.
       dir = { x: -f.x, y: -f.y }
