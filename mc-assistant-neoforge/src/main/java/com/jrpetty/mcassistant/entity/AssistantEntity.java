@@ -206,7 +206,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b53 · NAMES: every hire arrives with a name of its own instead of ten of them called assistant, and the Name button gives you a page of unused names to click — no anvil, no typing · PLOTS FIRST: mark a field with the wand before you own anyone, then right-click each assistant to put them on it. One field, marked once, worked by as many hands as you like, and widening it afterwards moves everyone already on it · SERVER COST: a requirement check used to probe every one of 6,875 positions in a zone, up to seven times a scan — about 48,000 block-entity lookups every three seconds per specialist. It now reads the block-entity map the chunk already keeps, which is at most nine maps of a handful of entries each. Same chests, same answers · LINKED CHESTS: everything a job needs counts as held whether it is in the pack or in a chest in the zone, and the bot fetches it itself — stock the chest once and it stops asking you · Hatted trades (farmer, miner, rancher, guard, fisher) had the whole head covered by the hat layer and no face at all — the overlay is now a crown and a brow band, so they look like people in hats · SAVED PATCHES: set a field up once, press Save Patch, and every future hire drops straight onto it — same trade, same ground, same shift. Put a second bot on the same patch and they crew it together · LAYOUT FIX: the orders sheet was drawing its career and perk lines underneath the duty buttons, so nobody ever saw them · JOB UNIFORMS: every trade wears its own kit — straw hat and wheat gold for the farmer, denim and a hard hat for the miner, hi-vis for the hauler — so you can read a crew of ten across a field · WORKING ICON: the tool of its trade floats over its head while it works, and turns into a barrier the moment it's stuck · MAP SCREEN: every patch and every specialist from above, click one to open its orders · WORK RECORD: the full career tally on its own page · CONFIG FILE: every number is yours now — upkeep rates, crew size, patch sizes, the XP curve, chunk loading — in config/mc_assistant-common.toml · LOYALTY: a specialist earns a permanent heart per week of service, up to four, so an old hand outlives a fresh hire · BRANCHES: at level 20 a specialist picks a branch (irrigation, husbandry, prospecting, forestry, sentinel, porterage) that deepens the job it already does · DEATH LOG: it tells you what killed it and where, and remembers when revived · danger sense · useful idling · work record · beds + shifts";
+        "2026-07-b54 · WAGES: a specialist draws a wage in metal on top of its rations, and a wage is SPENT, not carried — hand one a diamond and it is gone, so you cannot kill it to get the diamond back. Iron covers a day, gold two, a diamond four · HIRING COST: the first three are free, then each hire wants one more diamond than the last · LEDGER: what the crew has cost you, on the crew screen and per bot on its record · DEATH MEMORY: a bot that died somewhere keeps a wider margin there next life · NAMES: every hire arrives with a name of its own instead of ten of them called assistant, and the Name button gives you a page of unused names to click — no anvil, no typing · PLOTS FIRST: mark a field with the wand before you own anyone, then right-click each assistant to put them on it. One field, marked once, worked by as many hands as you like, and widening it afterwards moves everyone already on it · SERVER COST: a requirement check used to probe every one of 6,875 positions in a zone, up to seven times a scan — about 48,000 block-entity lookups every three seconds per specialist. It now reads the block-entity map the chunk already keeps, which is at most nine maps of a handful of entries each. Same chests, same answers · LINKED CHESTS: everything a job needs counts as held whether it is in the pack or in a chest in the zone, and the bot fetches it itself — stock the chest once and it stops asking you · Hatted trades (farmer, miner, rancher, guard, fisher) had the whole head covered by the hat layer and no face at all — the overlay is now a crown and a brow band, so they look like people in hats · SAVED PATCHES: set a field up once, press Save Patch, and every future hire drops straight onto it — same trade, same ground, same shift. Put a second bot on the same patch and they crew it together · LAYOUT FIX: the orders sheet was drawing its career and perk lines underneath the duty buttons, so nobody ever saw them · JOB UNIFORMS: every trade wears its own kit — straw hat and wheat gold for the farmer, denim and a hard hat for the miner, hi-vis for the hauler — so you can read a crew of ten across a field · WORKING ICON: the tool of its trade floats over its head while it works, and turns into a barrier the moment it's stuck · MAP SCREEN: every patch and every specialist from above, click one to open its orders · WORK RECORD: the full career tally on its own page · CONFIG FILE: every number is yours now — upkeep rates, crew size, patch sizes, the XP curve, chunk loading — in config/mc_assistant-common.toml · LOYALTY: a specialist earns a permanent heart per week of service, up to four, so an old hand outlives a fresh hire · BRANCHES: at level 20 a specialist picks a branch (irrigation, husbandry, prospecting, forestry, sentinel, porterage) that deepens the job it already does · DEATH LOG: it tells you what killed it and where, and remembers when revived · danger sense · useful idling · work record · beds + shifts";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -384,11 +384,13 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // does something, so stamp a cheap signature and rebuild the string on a
         // miss. Publishing runs several times a minute per bot; the strings it
         // produces are nearly always byte-identical to the ones already sent.
-        long stamp = deedStamp * 31L + branch.ordinal() * 7L + daysServed();
+        long stamp = deedStamp * 31L + branch.ordinal() * 7L + daysServed()
+            + wagesPaid * 1009L + (wageDue() / 200L);
         if (stamp != lastExtraStamp || lastExtraZone != zoneStamp()) {
             java.util.List<String> top = workRecord(1);
             this.entityData.set(DATA_EXTRA, branch.label + "|" + daysServed() + "|"
-                + (top.isEmpty() ? "" : top.get(0)) + "|" + deedCsv() + "|" + zoneCsv());
+                + (top.isEmpty() ? "" : top.get(0)) + "|" + deedCsv() + "|" + zoneCsv()
+                + "|" + ironPaid + "," + goldPaid + "," + diamondPaid + "," + wageDue());
             lastExtraStamp = stamp;
             lastExtraZone = zoneStamp();
         }
@@ -561,6 +563,23 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 }
             }
         }
+        // Wages. Food and redstone are consumed like fuel; a wage is different —
+        // the metal is SPENT. Hand a specialist a diamond and it is gone: you
+        // cannot kill it to get the diamond back, because it was never carried.
+        // That is what makes paying one a decision rather than a loan.
+        if (com.jrpetty.mcassistant.AssistantConfig.upkeepEnabled()
+            && com.jrpetty.mcassistant.AssistantConfig.wagesEnabled()) {
+            if (wagePaidUntil == 0) wagePaidUntil = tickCount
+                + com.jrpetty.mcassistant.AssistantConfig.wageInterval();
+            if (tickCount >= wagePaidUntil && !drawWage()) {
+                if (tickCount - lastWarnTick > 2400) {
+                    lastWarnTick = tickCount;
+                    say("I'm owed a wage — an iron ingot, or gold, or a diamond. "
+                        + "Leave it in my chest and I'll take it from there.");
+                }
+                ok = false;
+            }
+        }
         upkeepStalled = !ok;
         return ok;
     }
@@ -633,6 +652,68 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (removeMatching(spare, 1) == 1) return true;
         if (scoopFromChests(what, 8, CHEST_RANGE) > 0 && removeMatching(spare, 1) == 1) return true;
         return removeMatching(what, 1) == 1;
+    }
+
+    private int wagePaidUntil;      // work-tick the current wage runs out on
+    private int wagesPaid;          // how many have been drawn, for the ledger
+    private int ironPaid, goldPaid, diamondPaid;   // what they were paid in
+
+    /**
+     * Take one wage in metal and destroy it. Better metal buys a longer stretch,
+     * so a diamond is worth handing over rather than just expensive: iron covers
+     * one interval, gold two, a diamond four.
+     */
+    private boolean drawWage() {
+        int interval = com.jrpetty.mcassistant.AssistantConfig.wageInterval();
+        if (spend(s -> s.is(Items.DIAMOND))) {
+            wagePaidUntil = tickCount + interval * 4;
+            diamondPaid++;
+            wagesPaid++;
+            sayRoutine("Paid in diamond — I'm settled for a good while.");
+            return true;
+        }
+        if (spend(s -> s.is(Items.GOLD_INGOT))) {
+            wagePaidUntil = tickCount + interval * 2;
+            goldPaid++;
+            wagesPaid++;
+            return true;
+        }
+        if (spend(s -> s.is(Items.IRON_INGOT))) {
+            wagePaidUntil = tickCount + interval;
+            ironPaid++;
+            wagesPaid++;
+            return true;
+        }
+        return false;
+    }
+
+    /** Destroy one matching item from the pack, or from the linked chests.
+     *  Nothing is stored — this is the difference between a wage and a supply. */
+    private boolean spend(java.util.function.Predicate<ItemStack> what) {
+        if (removeMatching(what, 1) == 1) return true;
+        for (ZoneChests.Found f : linkedChests()) {
+            if (!f.stillThere()) continue;
+            Container c = f.container();
+            for (int i = 0; i < c.getContainerSize(); i++) {
+                ItemStack st = c.getItem(i);
+                if (st.isEmpty() || !what.test(st)) continue;
+                st.shrink(1);
+                if (st.isEmpty()) c.setItem(i, ItemStack.EMPTY);
+                c.setChanged();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** What this one has cost you so far: iron, gold, diamonds. For the ledger. */
+    public int[] wageLedger() {
+        return new int[]{ ironPaid, goldPaid, diamondPaid, wagesPaid };
+    }
+
+    /** How long until its next payday, in ticks (negative when overdue). */
+    public int wageDue() {
+        return wagePaidUntil - tickCount;
     }
 
     /** Items this job needs to keep in order to keep producing. */
@@ -1575,8 +1656,21 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (threats == 0) return false;                  // nothing to disengage from
         if (hp < 0.55F && countFood() == 0) return true; // can't out-heal a brawl
         if (hp < 0.60F && threats >= 3 && getArmorValue() < 8) return true; // outnumbered & soft
+        // It died here once. Whatever the reason, it is worth a wider margin the
+        // second time round rather than walking into it again at half health.
+        if (nearDeathSite() && hp < 0.75F) return true;
         return false;
     }
+
+    @Nullable private BlockPos deathSite;   // where the last life ended
+
+    /** Standing where it died before. */
+    public boolean nearDeathSite() {
+        return deathSite != null && deathSite.distSqr(blockPosition()) < 20.0 * 20.0;
+    }
+
+    /** The place it remembers dying, if it has one. */
+    @Nullable public BlockPos deathSite() { return deathSite; }
 
     private void equipBow() {
         if (getMainHandItem().is(Items.BOW)) return;
@@ -3504,6 +3598,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         tag.putString("Branch", branch.name());
         if (deathNote != null) tag.putString("DeathNote", deathNote);
         if (presetName != null) tag.putString("Preset", presetName);
+        if (deathSite != null) tag.putLong("DeathSite", deathSite.asLong());
+        tag.putInt("WageIron", ironPaid);
+        tag.putInt("WageGold", goldPaid);
+        tag.putInt("WageDiamond", diamondPaid);
+        tag.putInt("WagesPaid", wagesPaid);
         tag.putLong("FirstDay", firstServedDay);
         if (bedPos != null) tag.putLong("Bed", bedPos.asLong());
         tag.putInt("BaseStage", baseStage);
@@ -3580,6 +3679,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         firstServedDay = tag.contains("FirstDay") ? tag.getLong("FirstDay") : -1;
         deathNote = tag.contains("DeathNote") ? tag.getString("DeathNote") : null;
         presetName = tag.contains("Preset") ? tag.getString("Preset") : null;
+        deathSite = tag.contains("DeathSite") ? BlockPos.of(tag.getLong("DeathSite")) : null;
+        ironPaid = tag.getInt("WageIron");
+        goldPaid = tag.getInt("WageGold");
+        diamondPaid = tag.getInt("WageDiamond");
+        wagesPaid = tag.getInt("WagesPaid");
         deeds.clear();
         CompoundTag deedTag = tag.getCompound("Deeds");
         for (Deed d : Deed.values()) {
@@ -4258,6 +4362,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         String where = blockPosition().getX() + " " + blockPosition().getY() + " " + blockPosition().getZ();
         deathNote = "Fell to " + killer + " at " + where
             + " on day " + (level().getDayTime() / 24000L);
+        deathSite = blockPosition().immutable();
         Player owner = getOwnerPlayer();
         if (owner != null) {
             owner.sendSystemMessage(Component.literal("<" + displayNameCap() + "> " + deathNote
@@ -4289,6 +4394,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (deathNote != null) tag.putString("DeathNote", deathNote);
         tag.putString("Branch", branch.name());
         if (presetName != null) tag.putString("Preset", presetName);
+        if (deathSite != null) tag.putLong("DeathSite", deathSite.asLong());
+        tag.putInt("WageIron", ironPaid);
+        tag.putInt("WageGold", goldPaid);
+        tag.putInt("WageDiamond", diamondPaid);
+        tag.putInt("WagesPaid", wagesPaid);
         tag.putLong("FirstDay", firstServedDay);
         if (homePos != null) tag.putLong("Home", homePos.asLong());
         if (stationPos != null && stationTask != StationTask.NONE) {
@@ -4333,6 +4443,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         firstServedDay = tag.contains("FirstDay") ? tag.getLong("FirstDay") : -1;
         deathNote = tag.contains("DeathNote") ? tag.getString("DeathNote") : null;
         presetName = tag.contains("Preset") ? tag.getString("Preset") : null;
+        deathSite = tag.contains("DeathSite") ? BlockPos.of(tag.getLong("DeathSite")) : null;
+        ironPaid = tag.getInt("WageIron");
+        goldPaid = tag.getInt("WageGold");
+        diamondPaid = tag.getInt("WageDiamond");
+        wagesPaid = tag.getInt("WagesPaid");
         deeds.clear();
         CompoundTag deedTag = tag.getCompound("Deeds");
         for (Deed d : Deed.values()) {

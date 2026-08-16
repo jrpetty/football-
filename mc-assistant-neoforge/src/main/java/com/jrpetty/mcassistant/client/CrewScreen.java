@@ -23,7 +23,7 @@ public class CrewScreen extends Screen {
     private static final int W = 300, H = 236;
     private static final int PAD = 10;
     private static final int ROW_H = 16;
-    private static final int MAX_ROWS = 5;
+    private static final int MAX_ROWS = 4;
 
     private final List<AssistantEntity> crew = new ArrayList<>();
     private int picked = -1;
@@ -37,7 +37,7 @@ public class CrewScreen extends Screen {
     protected void init() {
         this.left = (this.width - W) / 2;
         this.top = (this.height - H) / 2;
-        this.listTop = top + 34;
+        this.listTop = top + 42;
 
         crew.clear();
         if (this.minecraft != null && this.minecraft.player != null) {
@@ -122,8 +122,23 @@ public class CrewScreen extends Screen {
         int inner = W - PAD * 2;
 
         g.drawString(this.font, "Your crew", x, top + 8, Ui.INK, false);
-        Ui.right(g, this.font, crew.size() + (crew.size() == 1 ? " assistant" : " assistants"),
-            left + W - PAD, top + 8, Ui.MUTED);
+        // The bill, not the headcount: a crew you cannot pay is a crew that
+        // stops working, and that is worth seeing before it happens.
+        int iron = 0, gold = 0, diamond = 0, owed = 0;
+        for (AssistantEntity a : crew) {
+            BotInfo bi = BotInfo.of(a);
+            iron += bi.ironPaid();
+            gold += bi.goldPaid();
+            diamond += bi.diamondPaid();
+            if (bi.wageDueTicks() <= 0) owed++;
+        }
+        Ui.right(g, this.font,
+            crew.size() + (crew.size() == 1 ? " assistant" : " assistants")
+            + (owed > 0 ? "  ·  " + owed + " unpaid" : ""),
+            left + W - PAD, top + 8, owed > 0 ? Ui.BAD : Ui.MUTED);
+        g.drawString(this.font, Ui.clip(this.font,
+            "wages so far: " + iron + " iron  ·  " + gold + " gold  ·  " + diamond + " diamond",
+            inner), x, top + 30, Ui.FAINT, false);
 
         if (crew.isEmpty()) {
             g.drawString(this.font, "Nobody here yet.", x, listTop + 6, Ui.MUTED, false);
@@ -169,7 +184,7 @@ public class CrewScreen extends Screen {
         // Detail for the selected one, just above the buttons.
         if (picked >= 0 && picked < crew.size()) {
             AssistantEntity a = crew.get(picked);
-            int dy = top + H - PAD - 18 * 3 - 4 * 2 - 22;
+            int dy = top + H - PAD - 18 * 3 - 4 * 2 - 30;
             Ui.section(g, this.font, a.clientName(), x, dy - 12, inner);
             String status = a.clientStatus();
             g.drawString(this.font, Ui.clip(this.font, status, inner), x, dy, Ui.statusColour(status), false);

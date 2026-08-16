@@ -75,9 +75,18 @@ public class RecordScreen extends Screen {
             + "  ·  works " + bot.clientShift().label,
             x, top + 18, Ui.FAINT, false);
 
+        // What it has cost you. Wages are spent, not carried — this is the only
+        // place the metal you handed over is ever accounted for.
+        String wages = info.hasWages()
+            ? info.ironPaid() + " iron, " + info.goldPaid() + " gold, "
+              + info.diamondPaid() + " diamond  ·  " + info.wageStatus()
+            : "no wages drawn yet  ·  " + info.wageStatus();
+        g.drawString(this.font, Ui.clip(this.font, wages, inner), x, top + 28,
+            info.wageDueTicks() <= 0 ? Ui.BAD : Ui.MUTED, false);
+
         // The career itself, biggest tally first, each with a bar for scale.
-        Ui.section(g, this.font, "Career", x, top + 40, inner);
-        int y = top + 52;
+        Ui.section(g, this.font, "Career", x, top + 44, inner);
+        int y = top + 56;
         int rowH = 12;
         int busiest = Math.max(1, info.busiest());
 

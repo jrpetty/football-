@@ -44,6 +44,7 @@ public class AssistantSpawnerBlock extends Block {
                 "<Assistant> You already run a full crew — dismiss one first (the spawner will keep)."));
             return; // block stays placed; mine it back when you're ready
         }
+        if (!payHiringFee(serverPlayer)) return;
         Vec3 spot = findSafeSpot(serverLevel, pos);
         AssistantEntity assistant = McAssistantMod.ASSISTANT.get().create(serverLevel);
         if (assistant == null) return;
@@ -93,6 +94,7 @@ public class AssistantSpawnerBlock extends Block {
             return InteractionResult.CONSUME;
         }
 
+        if (!payHiringFee(serverPlayer)) return InteractionResult.CONSUME;
         AssistantEntity assistant = McAssistantMod.ASSISTANT.get().create(serverLevel);
         if (assistant == null) {
             return InteractionResult.CONSUME;
@@ -133,5 +135,41 @@ public class AssistantSpawnerBlock extends Block {
             }
         }
         return new Vec3(pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5);
+    }
+
+    /**
+     * What the next pair of hands costs. The first few are free; past that each
+     * hire wants one more diamond than the last, so a big crew is a decision
+     * rather than a formality. The diamonds are spent, not carried by the bot.
+     */
+    private static boolean payHiringFee(ServerPlayer player) {
+        int crew = AssistantEntity.allFor(player.getUUID()).size();
+        int free = com.jrpetty.mcassistant.AssistantConfig.freeHires();
+        int owed = Math.max(0, crew - free + 1);
+        if (owed == 0 || player.isCreative()) return true;
+
+        int have = 0;
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            if (player.getInventory().getItem(i).is(net.minecraft.world.item.Items.DIAMOND)) {
+                have += player.getInventory().getItem(i).getCount();
+            }
+        }
+        if (have < owed) {
+            player.sendSystemMessage(Component.literal(
+                "<Assistant> Number " + (crew + 1) + " wants " + owed
+                + (owed == 1 ? " diamond" : " diamonds") + " up front — you have " + have + "."));
+            return false;
+        }
+        int left = owed;
+        for (int i = 0; i < player.getInventory().getContainerSize() && left > 0; i++) {
+            net.minecraft.world.item.ItemStack st = player.getInventory().getItem(i);
+            if (!st.is(net.minecraft.world.item.Items.DIAMOND)) continue;
+            int take = Math.min(left, st.getCount());
+            st.shrink(take);
+            left -= take;
+        }
+        player.sendSystemMessage(Component.literal(
+            "<Assistant> Signed on for " + owed + (owed == 1 ? " diamond." : " diamonds.")));
+        return true;
     }
 }

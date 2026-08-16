@@ -11,7 +11,7 @@ import javax.annotation.Nullable;
  * footprint — parsed once, in one place, rather than in each screen.
  */
 public record BotInfo(String branch, int daysServed, String topDeed,
-                      int[] deeds, @Nullable int[] zone) {
+                      int[] deeds, @Nullable int[] zone, int[] wages) {
 
     /** "branch|days|topDeed|deedCsv|zoneCsv", written by publishJobState. */
     public static BotInfo of(AssistantEntity bot) {
@@ -37,7 +37,31 @@ public record BotInfo(String branch, int daysServed, String topDeed,
                 zone = new int[]{ parse(c[0]), parse(c[1]), parse(c[2]), parse(c[3]) };
             }
         }
-        return new BotInfo(branch, days, top, deeds, zone);
+        // iron, gold, diamonds paid, then ticks until the next payday.
+        int[] wages = new int[]{ 0, 0, 0, 0 };
+        if (f.length > 5 && !f[5].isEmpty()) {
+            String[] w = f[5].split(",");
+            for (int i = 0; i < 4 && i < w.length; i++) wages[i] = parse(w[i]);
+        }
+        return new BotInfo(branch, days, top, deeds, zone, wages);
+    }
+
+    public int ironPaid()    { return wages[0]; }
+    public int goldPaid()    { return wages[1]; }
+    public int diamondPaid() { return wages[2]; }
+    public int wageDueTicks() { return wages[3]; }
+
+    /** Has it been paid anything at all? */
+    public boolean hasWages() {
+        return wages[0] > 0 || wages[1] > 0 || wages[2] > 0;
+    }
+
+    /** What it is owed, in words. */
+    public String wageStatus() {
+        int due = wages[3];
+        if (due <= 0) return "wage overdue";
+        int mins = due / 1200;
+        return mins <= 0 ? "payday now" : "paid for " + mins + " min";
     }
 
     /** True once it has picked a trade to deepen. */

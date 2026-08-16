@@ -18,6 +18,9 @@ public final class AssistantConfig {
     public static final ModConfigSpec.IntValue FOOD_INTERVAL;
     public static final ModConfigSpec.IntValue CHARGE_INTERVAL;
     public static final ModConfigSpec.BooleanValue UPKEEP_ENABLED;
+    public static final ModConfigSpec.BooleanValue WAGES_ENABLED;
+    public static final ModConfigSpec.IntValue WAGE_INTERVAL;
+    public static final ModConfigSpec.IntValue FREE_HIRES;
 
     // --- crew and patches ---
     public static final ModConfigSpec.IntValue MAX_CREW;
@@ -44,6 +47,12 @@ public final class AssistantConfig {
             .defineInRange("foodIntervalTicks", 3000, 200, 200000);
         CHARGE_INTERVAL = b.comment("Ticks of work per redstone core charge (12000 = 10 minutes).")
             .defineInRange("chargeIntervalTicks", 12000, 200, 400000);
+        WAGES_ENABLED = b.comment("Do specialists draw a wage in metal on top of food and redstone?",
+                                  "A wage is SPENT, not carried: hand over a diamond and it is gone.")
+            .define("wagesEnabled", true);
+        WAGE_INTERVAL = b.comment("Ticks of work per wage (24000 = one Minecraft day).",
+                                  "Iron covers one, gold two, a diamond four.")
+            .defineInRange("wageIntervalTicks", 24000, 1200, 1000000);
         b.pop();
 
         b.comment("How many specialists you may run, and how much ground they claim.")
@@ -54,6 +63,9 @@ public final class AssistantConfig {
             .defineInRange("defaultZoneRadius", 12, 4, 60);
         MAX_ZONE_RADIUS = b.comment("Largest patch the -/+ buttons and the wand will allow.")
             .defineInRange("maxZoneRadius", 60, 8, 64);
+        FREE_HIRES = b.comment("How many assistants you may hire before they start costing",
+                               "diamonds. Past this, the Nth hire wants (N - this) diamonds in hand.")
+            .defineInRange("freeHires", 3, 0, 64);
         b.pop();
 
         b.comment("Veteran levels. Level = sqrt(lifetimeXp / factor), so a bigger",
@@ -83,6 +95,9 @@ public final class AssistantConfig {
     public static int foodInterval() { return read(FOOD_INTERVAL, 3000); }
     public static int chargeInterval() { return read(CHARGE_INTERVAL, 12000); }
     public static boolean upkeepEnabled() { return read(UPKEEP_ENABLED, true); }
+    public static boolean wagesEnabled() { return read(WAGES_ENABLED, true); }
+    public static int wageInterval() { return read(WAGE_INTERVAL, 24000); }
+    public static int freeHires() { return read(FREE_HIRES, 3); }
     public static int maxCrew() { return read(MAX_CREW, 10); }
     public static int defaultZoneRadius() { return read(DEFAULT_ZONE_RADIUS, 12); }
     public static int maxZoneRadius() { return read(MAX_ZONE_RADIUS, 60); }
