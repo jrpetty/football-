@@ -205,7 +205,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b42 · NINE-ROLE AUDIT: every role was provably unable to run unattended; 29 confirmed defects fixed. Smelter no longer stashes ingots back INTO its own furnace · rancher no longer freezes forever on one unreachable animal, and now asks for the livestock and feed it always silently needed · guard keeps defending after its torches run out · fisher searches the water the checklist verified · miner keeps its staircase on its own patch · storekeeper sorts real chests only, not furnaces · hauler requires a drop-off that is genuinely elsewhere and has a chest · upkeep is on every checklist instead of silently stalling every job ~10 min in · one chest origin everywhere · zone-aware dispatch · farmland planting · sapling restock · full-chest recovery · ORDERS KEY (R) and crew key (G), never chat";
+        "2026-07-b43 · THE RECIPES NOW EXIST: the mod shipped with no pack.mcmeta, so its whole datapack — every recipe, loot table and advancement — was never loaded. That is why the Assistant Spawner could not be crafted at all · the orders/crew keys now work (ownership is server-side, so the client filtered out every bot and the key looked dead) · NEW crew screen on ; — your assistants by name and job, click one and order it about (no inventory) · bots no longer hop on the spot when idle, which was also trampling a farmer's own crops back into dirt · stationed bots decide 5x more often, so they visibly get on with it · everyone stashes trickling output instead of hoarding it (the rancher never touched its chest)";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -292,6 +292,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private int stationBreedTick = -99999;              // pace breeding to the animals' love cooldown
     private int stationSortTick = -99999;               // a storeroom only needs tidying now and then
     private int depositBlockedTick = -99999;            // last time the output chest was full
+    private int lastStashTick = -99999;                 // last successful stash, to bank trickling output
     @Nullable private BlockPos mobileLoadCenter;        // hauler's traveling chunk window (persisted)
     @Nullable private WorkZone workZone;                // the patch it's assigned to (persisted)
     private int upkeepFoodTick;                         // work-ticks banked toward the next meal
@@ -316,8 +317,18 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     protected void defineSynchedData(net.minecraft.network.syncher.SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
         builder.define(DATA_JOB, 0);
+        builder.define(DATA_NAME, "");
         builder.define(DATA_STATUS, "");
         builder.define(DATA_ZONE, "");
+    }
+
+    private static final net.minecraft.network.syncher.EntityDataAccessor<String> DATA_NAME =
+        net.minecraft.network.syncher.SynchedEntityData.defineId(
+            AssistantEntity.class, net.minecraft.network.syncher.EntityDataSerializers.STRING);
+
+    public String clientName() {
+        String n = this.entityData.get(DATA_NAME);
+        return n.isEmpty() ? "assistant" : n;
     }
 
     public int clientJobOrdinal() { return this.entityData.get(DATA_JOB); }
@@ -334,6 +345,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      *  safe to call while the entity is still loading in. */
     private void publishJobState() {
         this.entityData.set(DATA_JOB, stationTask.ordinal());
+        this.entityData.set(DATA_NAME, displayNameCap());
         this.entityData.set(DATA_ZONE, workZone == null ? "No work zone set"
             : workZone.describe() + (stationTask == StationTask.MINE ? "  depth Y" + workZone.depth() : ""));
         String status;
@@ -355,6 +367,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     /** DepositGoal calls this when it reached a chest and could not fit anything
      *  in. Backs the deposit rung off so productive work resumes meanwhile. */
+    /** DepositGoal reports a successful stash so the "lingering output" timer resets. */
+    public void noteStashed() { lastStashTick = tickCount; }
+
     public void noteDepositBlocked() {
         depositBlockedTick = tickCount;
         say("My output chest is full — I'll keep working, but it needs emptying.");
@@ -2214,7 +2229,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             // A storekeeper works the chests directly — nothing to haul back.
             case STORE, HAUL, NONE -> 0;
         };
-        if (!isPackFull() && surplus < 32) return false;
+        // Stash sooner than a third of a pack: a rancher trickling in 1-3 wool
+        // at a time looked like it never used its chest at all. Any output at
+        // all gets banked once the bot has been holding it a while.
+        boolean lingering = surplus > 0 && tickCount - lastStashTick > 3600;
+        if (!isPackFull() && surplus < 12 && !lingering) return false;
         // A station chest that has filled up must not deadlock the whole job.
         // This rung returns true (meaning "I acted") before the per-job switch,
         // so without a cool-off a full chest meant the bot walked to it, moved
@@ -3104,6 +3123,17 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     }
 
     @Override
+    protected void checkFallDamage(double yDist, boolean onGround, BlockState state, BlockPos pos) {
+        // A farmer that ruins the field it is tending is worse than useless:
+        // vanilla turns farmland back to dirt when a mob lands on it, so a bot
+        // hopping around its own plot was quietly destroying the crops.
+        if (onGround && state.is(Blocks.FARMLAND)) {
+            this.resetFallDistance();
+        }
+        super.checkFallDamage(yDist, onGround, state, pos);
+    }
+
+    @Override
     public void aiStep() {
         super.aiStep();
         if (this.level().isClientSide) return;
@@ -3188,6 +3218,13 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 }
                 mobileLoadCenter = here.immutable();
             }
+        }
+
+        // Stand still when there is nothing to do. Bouncing on the spot looks
+        // broken, and on a farm it was destroying the very crops the bot is
+        // there to grow (landing on farmland reverts it to dirt).
+        if (peekJob() == null && getNavigation().isDone()) {
+            setJumping(false);
         }
 
         // One line a day, at dawn, on what this specialist actually produced —
@@ -3379,7 +3416,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // Autonomy is self-direction: run the idle brain regardless of FOLLOW/STAY/
         // GUARD (an explicit mode command turns autonomy off and re-attaches it).
         if (autonomous && jobs.isEmpty() && !retreating && getTarget() == null
-            && (idleKick || tickCount % 200 == 0)
+            && (idleKick || tickCount % (stationTask != StationTask.NONE ? 40 : 200) == 0)
             && !restingAtHome) {
             idleKick = false;
             boolean townMember = ownerId != null && Town.center(ownerId) != null;

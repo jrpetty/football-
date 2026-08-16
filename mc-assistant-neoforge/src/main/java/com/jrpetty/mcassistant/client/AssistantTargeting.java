@@ -44,6 +44,11 @@ public final class AssistantTargeting {
         "key.mc_assistant.roster", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_G,
         "key.categories.mc_assistant");
 
+    /** Manage the whole crew from anywhere: names, jobs, and orders. */
+    public static final KeyMapping CREW = new KeyMapping(
+        "key.mc_assistant.crew", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_SEMICOLON,
+        "key.categories.mc_assistant");
+
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
@@ -57,6 +62,9 @@ public final class AssistantTargeting {
             } else {
                 mc.setScreen(new OrdersScreen(target));
             }
+        }
+        while (CREW.consumeClick()) {
+            mc.setScreen(new CrewScreen());
         }
         while (ROSTER.consumeClick()) {
             // Whole-crew readout without walking to a Job Board.
@@ -74,7 +82,7 @@ public final class AssistantTargeting {
         AABB sweep = player.getBoundingBox().expandTowards(look.scale(PICK_RANGE)).inflate(1.0D);
         EntityHitResult hit = ProjectileUtil.getEntityHitResult(
             player, eye, end, sweep,
-            e -> e instanceof AssistantEntity a && a.isOwner(player),
+            e -> e instanceof AssistantEntity,
             PICK_RANGE * PICK_RANGE);
         if (hit != null && hit.getEntity() instanceof AssistantEntity looked) return looked;
         return nearestOwned(player, NEAREST_RANGE);
@@ -82,9 +90,13 @@ public final class AssistantTargeting {
 
     @Nullable
     public static AssistantEntity nearestOwned(LocalPlayer player, double range) {
+        // NB: no owner filter here. Ownership lives on the server, so on the
+        // client isOwner() is always false and this returned nothing at all -
+        // which is exactly why the orders key appeared to do nothing. The
+        // server re-checks ownership before acting on any order.
         List<AssistantEntity> near = player.level().getEntitiesOfClass(
             AssistantEntity.class, player.getBoundingBox().inflate(range),
-            a -> a.isOwner(player));
+            a -> a.isAlive());
         AssistantEntity best = null;
         double bestDist = Double.MAX_VALUE;
         for (AssistantEntity a : near) {

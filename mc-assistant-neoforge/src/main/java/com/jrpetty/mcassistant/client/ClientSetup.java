@@ -39,6 +39,7 @@ public final class ClientSetup {
         event.register(com.jrpetty.mcassistant.client.voice.VoiceInput.TALK);
         event.register(AssistantTargeting.ORDERS);
         event.register(AssistantTargeting.ROSTER);
+        event.register(AssistantTargeting.CREW);
     }
 
     public static class AssistantRenderer extends MobRenderer<AssistantEntity, HumanoidModel<AssistantEntity>> {
