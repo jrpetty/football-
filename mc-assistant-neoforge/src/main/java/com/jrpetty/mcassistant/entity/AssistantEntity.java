@@ -206,7 +206,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b51 · Hatted trades (farmer, miner, rancher, guard, fisher) had the whole head covered by the hat layer and no face at all — the overlay is now a crown and a brow band, so they look like people in hats · SAVED PATCHES: set a field up once, press Save Patch, and every future hire drops straight onto it — same trade, same ground, same shift. Put a second bot on the same patch and they crew it together · LAYOUT FIX: the orders sheet was drawing its career and perk lines underneath the duty buttons, so nobody ever saw them · JOB UNIFORMS: every trade wears its own kit — straw hat and wheat gold for the farmer, denim and a hard hat for the miner, hi-vis for the hauler — so you can read a crew of ten across a field · WORKING ICON: the tool of its trade floats over its head while it works, and turns into a barrier the moment it's stuck · MAP SCREEN: every patch and every specialist from above, click one to open its orders · WORK RECORD: the full career tally on its own page · CONFIG FILE: every number is yours now — upkeep rates, crew size, patch sizes, the XP curve, chunk loading — in config/mc_assistant-common.toml · LOYALTY: a specialist earns a permanent heart per week of service, up to four, so an old hand outlives a fresh hire · BRANCHES: at level 20 a specialist picks a branch (irrigation, husbandry, prospecting, forestry, sentinel, porterage) that deepens the job it already does · DEATH LOG: it tells you what killed it and where, and remembers when revived · danger sense · useful idling · work record · beds + shifts";
+        "2026-07-b52 · SERVER COST: a requirement check used to probe every one of 6,875 positions in a zone, up to seven times a scan — about 48,000 block-entity lookups every three seconds per specialist. It now reads the block-entity map the chunk already keeps, which is at most nine maps of a handful of entries each. Same chests, same answers · LINKED CHESTS: everything a job needs counts as held whether it is in the pack or in a chest in the zone, and the bot fetches it itself — stock the chest once and it stops asking you · Hatted trades (farmer, miner, rancher, guard, fisher) had the whole head covered by the hat layer and no face at all — the overlay is now a crown and a brow band, so they look like people in hats · SAVED PATCHES: set a field up once, press Save Patch, and every future hire drops straight onto it — same trade, same ground, same shift. Put a second bot on the same patch and they crew it together · LAYOUT FIX: the orders sheet was drawing its career and perk lines underneath the duty buttons, so nobody ever saw them · JOB UNIFORMS: every trade wears its own kit — straw hat and wheat gold for the farmer, denim and a hard hat for the miner, hi-vis for the hauler — so you can read a crew of ten across a field · WORKING ICON: the tool of its trade floats over its head while it works, and turns into a barrier the moment it's stuck · MAP SCREEN: every patch and every specialist from above, click one to open its orders · WORK RECORD: the full career tally on its own page · CONFIG FILE: every number is yours now — upkeep rates, crew size, patch sizes, the XP curve, chunk loading — in config/mc_assistant-common.toml · LOYALTY: a specialist earns a permanent heart per week of service, up to four, so an old hand outlives a fresh hire · BRANCHES: at level 20 a specialist picks a branch (irrigation, husbandry, prospecting, forestry, sentinel, porterage) that deepens the job it already does · DEATH LOG: it tells you what killed it and where, and remembers when revived · danger sense · useful idling · work record · beds + shifts";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -216,6 +216,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     // Owner UUID -> (lowercase name -> live assistant). One owner can run a
     // whole crew; commands route by name or to the nearest one.
     private static final Map<UUID, ConcurrentHashMap<String, AssistantEntity>> BY_OWNER = new ConcurrentHashMap<>();
+
+    // What this bot is currently filed under, so the tick can tell at a glance
+    // whether the registry needs touching at all.
+    @Nullable private UUID registeredOwner;
+    @Nullable private String registeredName;
 
     @Nullable
     public static AssistantEntity byOwner(UUID ownerId) {
@@ -375,9 +380,18 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         this.entityData.set(DATA_LEVEL, veteranLevel());
         this.entityData.set(DATA_SHIFT, shift.ordinal());
         this.entityData.set(DATA_XP, lifetimeXp);
-        java.util.List<String> top = workRecord(1);
-        this.entityData.set(DATA_EXTRA, branch.label + "|" + daysServed() + "|"
-            + (top.isEmpty() ? "" : top.get(0)) + "|" + deedCsv() + "|" + zoneCsv());
+        // The career line and the deed table only change when the bot actually
+        // does something, so stamp a cheap signature and rebuild the string on a
+        // miss. Publishing runs several times a minute per bot; the strings it
+        // produces are nearly always byte-identical to the ones already sent.
+        long stamp = deedStamp * 31L + branch.ordinal() * 7L + daysServed();
+        if (stamp != lastExtraStamp || lastExtraZone != zoneStamp()) {
+            java.util.List<String> top = workRecord(1);
+            this.entityData.set(DATA_EXTRA, branch.label + "|" + daysServed() + "|"
+                + (top.isEmpty() ? "" : top.get(0)) + "|" + deedCsv() + "|" + zoneCsv());
+            lastExtraStamp = stamp;
+            lastExtraZone = zoneStamp();
+        }
         this.entityData.set(DATA_ZONE, workZone == null ? "No work zone set"
             : workZone.describe() + (stationTask == StationTask.MINE ? "  depth Y" + workZone.depth() : ""));
         String status;
@@ -413,6 +427,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      *  so the station machinery keeps it there and keeps the ground loaded. */
     public void setWorkZone(@Nullable WorkZone zone) {
         this.workZone = zone;
+        forgetChestIndex();   // new ground, new stores
         if (zone != null) {
             setStation(zone.center(), stationTask);
         } else if (stationPos != null) {
@@ -577,6 +592,32 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         return got;
     }
 
+    private int kitTopUpTick = -1000;
+
+    /** Is this specialist short of the kit it works with, in its own hands?
+     *  Reads only the pack — no world access — so it is safe to ask often. */
+    private boolean kitShortInHand() {
+        if (countCarried(s -> s.get(DataComponents.FOOD) != null) == 0
+            || countCarried(s -> s.is(Items.REDSTONE)) == 0) {
+            return true;
+        }
+        return switch (stationTask) {
+            case FARM -> countCarried(s -> isToolNamed(s, "_hoe")) == 0
+                || countCarried(s -> s.is(Items.WHEAT_SEEDS) || s.is(Items.BEETROOT_SEEDS)
+                    || s.is(Items.CARROT) || s.is(Items.POTATO)) == 0;
+            case WOOD -> countCarried(s -> isToolNamed(s, "_axe")) == 0
+                || countCarried(s -> s.is(ItemTags.SAPLINGS)) == 0;
+            case MINE -> countCarried(s -> isToolNamed(s, "_pickaxe")) == 0
+                || countCarried(s -> s.is(Items.TORCH)) < 8;
+            case RANCH -> countCarried(s -> s.is(Items.SHEARS)) == 0
+                || countCarried(BREEDING_FOOD) < 2;
+            case GUARD -> countCarried(s -> isToolNamed(s, "_sword")) == 0;
+            case FISH -> countCarried(s -> s.is(Items.FISHING_ROD)) == 0;
+            case SMELT -> countCarried(s -> s.is(Items.COAL) || s.is(Items.CHARCOAL)) == 0;
+            case STORE, HAUL, NONE -> false;
+        };
+    }
+
     private static boolean isToolNamed(ItemStack s, String suffix) {
         return !s.isEmpty() && net.minecraft.core.registries.BuiltInRegistries.ITEM
             .getKey(s.getItem()).getPath().endsWith(suffix);
@@ -608,6 +649,68 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      *  be out of reach, leaving the bot silently unable to work. */
     private static final int CHEST_RANGE = 12;
     private static final int STATION_RADIUS = 16;       // how far it works from the post
+
+    // --- the chests linked to this specialist -------------------------------
+    // Its stores: what it checks before asking the player for anything, and
+    // what it helps itself from. Re-read at most a few times a second, and only
+    // ever from the same origin its checklist uses, so a requirement scan and
+    // the resupply that follows it share one look at the world instead of
+    // walking the same 6,875 positions half a dozen times over.
+    @Nullable private java.util.List<ZoneChests.Found> chestIndex;
+    private int chestIndexTick = -1000;
+    @Nullable private BlockPos chestIndexOrigin;
+
+    /** The chests this specialist is linked to, at the range its checklist
+     *  accepts one at. Cached for less than the interval anything re-checks on,
+     *  so nothing is ever answered from a look older than its own cadence. */
+    public java.util.List<ZoneChests.Found> linkedChests() {
+        BlockPos origin = chestSearchOrigin();
+        if (chestIndex != null && chestIndexOrigin != null && chestIndexOrigin.equals(origin)
+            && tickCount - chestIndexTick < 30 && tickCount >= chestIndexTick) {
+            return chestIndex;
+        }
+        chestIndex = ZoneChests.around(level(), origin, CHEST_RANGE, 5);
+        chestIndexOrigin = origin;
+        chestIndexTick = tickCount;
+        return chestIndex;
+    }
+
+    /** Drop the cached look at the stores — when the patch moves. Contents
+     *  are read live through the block entities, so taking from a chest needs
+     *  no invalidation; only chests appearing or going away do. */
+    public void forgetChestIndex() {
+        chestIndex = null;
+        knownWater = null;
+    }
+
+    @Nullable private BlockPos knownWater;
+
+    /** Water in the patch, for a fisher. Checks the last place it found some
+     *  first: a pond does not move, and the alternative is reading every block
+     *  state in a 25x11x25 box each time the checklist is re-run. */
+    public boolean waterInZone() {
+        BlockPos origin = chestSearchOrigin();
+        // Both halves matter: still water, and still inside the box the
+        // checklist asks about. Checking only the block would keep answering
+        // "yes" from a pond the patch has since been moved away from.
+        if (knownWater != null
+            && Math.abs(knownWater.getX() - origin.getX()) <= CHEST_RANGE
+            && Math.abs(knownWater.getZ() - origin.getZ()) <= CHEST_RANGE
+            && Math.abs(knownWater.getY() - origin.getY()) <= 5
+            && level().getBlockState(knownWater).is(Blocks.WATER)) {
+            return true;
+        }
+        for (BlockPos pos : BlockPos.betweenClosed(
+                origin.offset(-CHEST_RANGE, -5, -CHEST_RANGE),
+                origin.offset(CHEST_RANGE, 5, CHEST_RANGE))) {
+            if (level().getBlockState(pos).is(Blocks.WATER)) {
+                knownWater = pos.immutable();
+                return true;
+            }
+        }
+        knownWater = null;
+        return false;
+    }
     private int lastWarnTick = -1000;
     private boolean nightHome;        // "head home at night" toggle
     @Nullable private BlockPos bedPos;  // the bed this one sleeps in (persisted)
@@ -1214,6 +1317,19 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     public void note(Deed deed, int count) {
         if (count <= 0) return;
         deeds.merge(deed, count, Integer::sum);
+        deedStamp++;
+    }
+
+    /** Bumped whenever the career tally changes, so the published career string
+     *  can be rebuilt on change rather than on every publish. */
+    private long deedStamp;
+    private long lastExtraStamp = Long.MIN_VALUE;
+    private long lastExtraZone = Long.MIN_VALUE;
+
+    /** Cheap identity for the current patch, for the same reason. */
+    private long zoneStamp() {
+        return workZone == null ? 0L
+            : workZone.min().asLong() * 31L + workZone.max().asLong() + workZone.depth();
     }
 
     public int deedCount(Deed deed) { return deeds.getOrDefault(deed, 0); }
@@ -1884,14 +2000,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
         // ...plus a live scan of chests physically nearby it may never have opened
         // (so "how much iron do we have?" sees the chest right next to it).
-        BlockPos feet = blockPosition();
-        int r = 16;
-        for (BlockPos pos : BlockPos.betweenClosed(
-                feet.offset(-r, -4, -r), feet.offset(r, 4, r))) {
-            if (level().getBlockEntity(pos) instanceof Container c && counted.add(pos.asLong())) {
-                total += countIn(c, what);
-                rememberChest(pos.immutable(), c); // learn it for next time
-            }
+        for (ZoneChests.Found found : ZoneChests.around(level(), blockPosition(), 16, 4)) {
+            if (!found.stillThere() || !counted.add(found.pos().asLong())) continue;
+            Container c = found.container();
+            total += countIn(c, what);
+            rememberChest(found.pos(), c); // learn it for next time
         }
         return total;
     }
@@ -1915,10 +2028,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Every container within `radius` (live scan) — for the craft planner. */
     public java.util.List<Container> nearbyContainers(int radius) {
         java.util.List<Container> out = new java.util.ArrayList<>();
-        BlockPos feet = blockPosition();
-        for (BlockPos pos : BlockPos.betweenClosed(
-                feet.offset(-radius, -4, -radius), feet.offset(radius, 4, radius))) {
-            if (level().getBlockEntity(pos) instanceof Container c) out.add(c);
+        for (ZoneChests.Found found : ZoneChests.around(level(), blockPosition(), radius, 4)) {
+            if (found.stillThere()) out.add(found.container());
         }
         return out;
     }
@@ -2311,6 +2422,14 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             readyCheckTick = tickCount;
             refreshJobState();
         }
+        // Draw its kit from its own stores first. The checklist counts a tool
+        // sat in the zone chest as held — which is the point, a stocked chest
+        // should never make a bot nag — so the bot has to actually go and get
+        // the thing, or it would work empty-handed under a green "Working".
+        if (tickCount - kitTopUpTick > 100 && kitShortInHand()) {
+            kitTopUpTick = tickCount;
+            resupplyFromChests();
+        }
         if (!missingEssentials.isEmpty()) {
             // Help itself from its own chests before bothering anyone. A player
             // who stocked spare hoes, pickaxes or torches at the station should
@@ -2585,9 +2704,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // chest could pass the requirement check and still be permanently out
         // of reach once the bot roamed to the far side of its own patch.
         BlockPos origin = chestSearchOrigin();
-        for (BlockPos pos : BlockPos.betweenClosed(
-                origin.offset(-radius, -5, -radius), origin.offset(radius, 5, radius))) {
-            if (!(level().getBlockEntity(pos) instanceof Container c)) continue;
+        java.util.List<ZoneChests.Found> stores = radius == CHEST_RANGE
+            ? linkedChests() : ZoneChests.around(level(), origin, radius, 5);
+        for (ZoneChests.Found found : stores) {
+            if (!found.stillThere()) continue;
+            Container c = found.container();
             for (int i = 0; i < c.getContainerSize() && moved < max; i++) {
                 ItemStack s = c.getItem(i);
                 if (s.isEmpty() || !what.test(s)) continue;
@@ -2600,7 +2721,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 moved += taken;
             }
             c.setChanged();
-            rememberChest(pos.immutable(), c);
+            rememberChest(found.pos(), c);
         }
         return moved;
     }
@@ -3000,8 +3121,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     @Nullable
     private BlockPos findDepotNear(BlockPos board) {
-        for (BlockPos pos : BlockPos.betweenClosed(board.offset(-8, -3, -8), board.offset(8, 3, 8))) {
-            if (level().getBlockEntity(pos) instanceof Container) return pos.immutable();
+        for (ZoneChests.Found found : ZoneChests.around(level(), board, 8, 3)) {
+            if (found.stillThere()) return found.pos();
         }
         return null;
     }
@@ -3300,14 +3421,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             }
         }
         if (best != null) return best;
-        // Fall back to a live scan.
+        // Fall back to a live look at the containers that are actually there.
         BlockPos feet = blockPosition();
-        for (BlockPos pos : BlockPos.betweenClosed(
-                feet.offset(-radius, -4, -radius), feet.offset(radius, 4, radius))) {
-            if (containerHas(pos, what)) {
-                double d = pos.distSqr(feet);
-                if (d < bestDist) { bestDist = d; best = pos.immutable(); }
-            }
+        for (ZoneChests.Found found : ZoneChests.around(level(), feet, radius, 4)) {
+            if (!found.holds(what)) continue;
+            double d = found.pos().distSqr(feet);
+            if (d < bestDist) { bestDist = d; best = found.pos(); }
         }
         return best;
     }
@@ -3355,12 +3474,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         BlockPos feet = chestSearchOrigin();
         BlockPos best = null;
         double bestDist = Double.MAX_VALUE;
-        for (BlockPos pos : BlockPos.betweenClosed(
-                feet.offset(-radius, -5, -radius), feet.offset(radius, 5, radius))) {
-            if (level().getBlockEntity(pos) instanceof Container) {
-                double d = pos.distSqr(feet);
-                if (d < bestDist) { bestDist = d; best = pos.immutable(); }
-            }
+        for (ZoneChests.Found found : radius == CHEST_RANGE
+                ? linkedChests() : ZoneChests.around(level(), feet, radius, 5)) {
+            if (!found.stillThere()) continue;
+            double d = found.pos().distSqr(feet);
+            if (d < bestDist) { bestDist = d; best = found.pos(); }
         }
         return best;
     }
@@ -3581,10 +3699,19 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         super.aiStep();
         if (this.level().isClientSide) return;
 
-        // Registry upkeep (owner -> name -> entity).
-        if (ownerId != null) {
+        // Registry upkeep (owner -> name -> entity). Only when something it is
+        // keyed on actually changed — re-writing the same entry twenty times a
+        // second allocated a lower-cased name per tick for no reason.
+        if (ownerId != null && (!ownerId.equals(registeredOwner)
+                || !assistantName.equals(registeredName))) {
+            if (registeredOwner != null && registeredName != null) {
+                Map<String, AssistantEntity> old = BY_OWNER.get(registeredOwner);
+                if (old != null) old.remove(registeredName.toLowerCase(), this);
+            }
             BY_OWNER.computeIfAbsent(ownerId, k -> new ConcurrentHashMap<>())
                 .put(assistantName.toLowerCase(), this);
+            registeredOwner = ownerId;
+            registeredName = assistantName;
         }
 
         // Active unstuck: once a second, if we WANT to move but barely have, hop
@@ -4021,6 +4148,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             Map<String, AssistantEntity> m = BY_OWNER.get(ownerId);
             if (m != null) m.remove(assistantName.toLowerCase(), this);
         }
+        registeredOwner = null;   // so a re-added entity files itself again
+        registeredName = null;
         // Death/dismissal frees the station's force-loaded chunks (fixed post
         // window AND the hauler's traveling window). A plain chunk unload must
         // NOT — staying loaded while parked is the whole point.

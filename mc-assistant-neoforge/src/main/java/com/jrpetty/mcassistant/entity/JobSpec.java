@@ -3,7 +3,6 @@ package com.jrpetty.mcassistant.entity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.tags.ItemTags;
-import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
@@ -19,6 +18,11 @@ import java.util.function.Predicate;
  * every job wants a chest to stash its output in). A job whose needs are all
  * met runs unattended; anything missing is reported by name, in the management
  * screen and by the bot itself.
+ *
+ * <p>A specialist is linked to the chests in its zone, so anything it needs
+ * counts as present whether it is in its own pack or sat in one of those
+ * chests. Stock the chest and the bot supplies itself; it only asks the player
+ * for something that is genuinely nowhere.
  */
 public final class JobSpec {
 
@@ -56,16 +60,18 @@ public final class JobSpec {
         List<String> gaps = new ArrayList<>(3);
         if (task == AssistantEntity.StationTask.NONE) return gaps;
 
+        // One look at the stores answers every question below. Everything a job
+        // needs counts as held whether it's in the pack or in one of these.
+        List<ZoneChests.Found> stores = a.linkedChests();
+
         // Upkeep is not optional: every job is gated on it, so it belongs on
         // every checklist. Silently stalling ten minutes after the player walks
         // away — with a green "Working" status — is the worst failure this mod
         // can have. Carried or stocked at the station both count.
-        if (a.countCarried(s -> s.get(net.minecraft.core.component.DataComponents.FOOD) != null) == 0
-            && !stockedNearby(a, s -> s.get(net.minecraft.core.component.DataComponents.FOOD) != null)) {
+        if (!held(a, stores, s -> s.get(net.minecraft.core.component.DataComponents.FOOD) != null)) {
             gaps.add("food (its rations)");
         }
-        if (a.countCarried(s -> s.is(Items.REDSTONE)) == 0
-            && !stockedNearby(a, s -> s.is(Items.REDSTONE))) {
+        if (!held(a, stores, s -> s.is(Items.REDSTONE))) {
             gaps.add("redstone (its core charge)");
         }
 
@@ -74,47 +80,49 @@ public final class JobSpec {
                 // A hoe only speeds up breaking new ground; the steady harvest
                 // and replant loop never uses one, so a worn-out hoe must not
                 // stop the whole farm.
-                needChest(a, gaps, 1);
+                needChest(a, stores, gaps, 1);
             }
             case WOOD -> {
-                if (!hasTool(a, "_axe")) gaps.add("an axe");
-                needChest(a, gaps, 1);
+                if (!heldTool(a, stores, "_axe")) gaps.add("an axe");
+                needChest(a, stores, gaps, 1);
             }
             case MINE -> {
-                if (!hasTool(a, "_pickaxe")) gaps.add("a pickaxe");
-                if (a.countCarried(s -> s.is(Items.TORCH)) < 8) gaps.add("8 torches");
-                needChest(a, gaps, 1);
+                if (!heldTool(a, stores, "_pickaxe")) gaps.add("a pickaxe");
+                if (a.countCarried(s -> s.is(Items.TORCH))
+                    + ZoneChests.countIn(stores, s -> s.is(Items.TORCH)) < 8) {
+                    gaps.add("8 torches");
+                }
+                needChest(a, stores, gaps, 1);
             }
             case RANCH -> {
-                if (a.countCarried(s -> s.is(Items.SHEARS)) == 0) gaps.add("shears");
+                if (!held(a, stores, s -> s.is(Items.SHEARS))) gaps.add("shears");
                 // Without livestock a rancher is a permanent silent no-op, and
                 // it cannot obtain animals itself; without feed every breed job
                 // aborts the moment it starts.
                 if (a.adultAnimalsNearby(16) < 2) gaps.add("at least 2 adult animals in the zone");
                 boolean feed = a.countCarried(AssistantEntity.BREEDING_FOOD) >= 2
-                    || stockedNearby(a, AssistantEntity.BREEDING_FOOD);
+                    || ZoneChests.anyHolds(stores, AssistantEntity.BREEDING_FOOD);
                 if (!feed) gaps.add("breeding food (wheat, carrots or seeds)");
-                needChest(a, gaps, 1);
+                needChest(a, stores, gaps, 1);
             }
             case GUARD -> {
                 // Torches are what a guard SPENDS lighting its patch, so they
                 // are not a precondition — gating on them stopped a guard
                 // defending at all once it had used them up.
-                if (!hasTool(a, "_sword")) gaps.add("a sword");
+                if (!heldTool(a, stores, "_sword")) gaps.add("a sword");
             }
             case SMELT -> {
-                if (!fixtureNearby(a, FixtureKind.FURNACE)) gaps.add("a furnace in the zone");
-                boolean fuel = a.countCarried(s -> s.is(Items.COAL) || s.is(Items.CHARCOAL)) > 0
-                    || a.countCarried(s -> s.is(ItemTags.LOGS) || s.is(ItemTags.PLANKS)) > 0
-                    || stockedNearby(a, s -> s.is(Items.COAL) || s.is(Items.CHARCOAL));
+                if (!furnaceIn(stores)) gaps.add("a furnace in the zone");
+                boolean fuel = held(a, stores, s -> s.is(Items.COAL) || s.is(Items.CHARCOAL))
+                    || a.countCarried(s -> s.is(ItemTags.LOGS) || s.is(ItemTags.PLANKS)) > 0;
                 if (!fuel) gaps.add("fuel (coal or logs)");
-                boolean ore = a.countCarried(AssistantEntity.SMELTABLE_ORE) > 0
-                    || stockedNearby(a, AssistantEntity.SMELTABLE_ORE);
-                if (!ore) gaps.add("raw ore in the input chest");
-                needChest(a, gaps, 1);
+                if (!held(a, stores, AssistantEntity.SMELTABLE_ORE)) {
+                    gaps.add("raw ore in the input chest");
+                }
+                needChest(a, stores, gaps, 1);
             }
             case HAUL -> {
-                needChest(a, gaps, 1);
+                needChest(a, stores, gaps, 1);
                 // The run only makes sense if the drop-off is somewhere else,
                 // and only works if there is something to unload into there.
                 if (a.getHome() == null) {
@@ -127,77 +135,55 @@ public final class JobSpec {
                 }
             }
             case FISH -> {
-                if (a.countCarried(s -> s.is(Items.FISHING_ROD)) == 0) gaps.add("a fishing rod");
-                if (!fixtureNearby(a, FixtureKind.WATER)) gaps.add("water in the zone");
-                needChest(a, gaps, 1);
+                if (!held(a, stores, s -> s.is(Items.FISHING_ROD))) gaps.add("a fishing rod");
+                if (!a.waterInZone()) gaps.add("water in the zone");
+                needChest(a, stores, gaps, 1);
             }
-            case STORE -> needChest(a, gaps, 2);
+            case STORE -> needChest(a, stores, gaps, 2);
             case NONE -> { }
         }
         return gaps;
     }
 
+    /** In its pack, or in one of the chests it's linked to. Either counts:
+     *  a specialist that can fetch a thing for itself should never ask for it. */
+    private static boolean held(AssistantEntity a, List<ZoneChests.Found> stores,
+                                Predicate<ItemStack> what) {
+        return a.countCarried(what) > 0 || ZoneChests.anyHolds(stores, what);
+    }
+
+    /** Tool check by item id suffix — matches any material (wood..netherite). */
+    private static boolean heldTool(AssistantEntity a, List<ZoneChests.Found> stores, String suffix) {
+        return held(a, stores, s -> !s.isEmpty()
+            && BuiltInRegistries.ITEM.getKey(s.getItem()).getPath().endsWith(suffix));
+    }
+
     /** Is there somewhere to unload at this spot? Used for a hauler's drop-off. */
     private static boolean chestNear(AssistantEntity a, BlockPos where) {
-        for (BlockPos pos : BlockPos.betweenClosed(
-                where.offset(-FIXTURE_RANGE, -5, -FIXTURE_RANGE),
-                where.offset(FIXTURE_RANGE, 5, FIXTURE_RANGE))) {
-            if (a.level().getBlockEntity(pos) instanceof Container
-                && !(a.level().getBlockEntity(pos) instanceof AbstractFurnaceBlockEntity)) return true;
+        for (ZoneChests.Found f : ZoneChests.around(a.level(), where, FIXTURE_RANGE, 5)) {
+            if (isStorage(f)) return true;
         }
         return false;
     }
 
-    private static void needChest(AssistantEntity a, List<String> gaps, int count) {
-        if (countFixtures(a, FixtureKind.CHEST, count) < count) {
-            gaps.add(count > 1 ? count + " chests in the zone" : "a chest in the zone");
-        }
-    }
-
-    /** Tool check by item id suffix — matches any material (wood..netherite). */
-    private static boolean hasTool(AssistantEntity a, String suffix) {
-        return a.countCarried(s -> !s.isEmpty()
-            && BuiltInRegistries.ITEM.getKey(s.getItem()).getPath().endsWith(suffix)) > 0;
-    }
-
-    private enum FixtureKind { CHEST, FURNACE, WATER }
-
-    private static boolean fixtureNearby(AssistantEntity a, FixtureKind kind) {
-        return countFixtures(a, kind, 1) >= 1;
-    }
-
-    /** Scan the zone centre (or the bot itself) for up to `want` matching fixtures. */
-    private static int countFixtures(AssistantEntity a, FixtureKind kind, int want) {
-        WorkZone zone = a.workZone();
-        BlockPos origin = zone != null ? zone.center() : (a.stationPos() != null ? a.stationPos() : a.feetPos());
+    private static void needChest(AssistantEntity a, List<ZoneChests.Found> stores,
+                                  List<String> gaps, int count) {
         int found = 0;
-        for (BlockPos pos : BlockPos.betweenClosed(
-                origin.offset(-FIXTURE_RANGE, -5, -FIXTURE_RANGE),
-                origin.offset(FIXTURE_RANGE, 5, FIXTURE_RANGE))) {
-            boolean hit = switch (kind) {
-                case CHEST -> a.level().getBlockEntity(pos) instanceof Container
-                    && !(a.level().getBlockEntity(pos) instanceof AbstractFurnaceBlockEntity);
-                case FURNACE -> a.level().getBlockEntity(pos) instanceof AbstractFurnaceBlockEntity
-                    || a.level().getBlockState(pos).is(Blocks.FURNACE);
-                case WATER -> a.level().getBlockState(pos).is(Blocks.WATER);
-            };
-            if (hit && ++found >= want) return found;
+        for (ZoneChests.Found f : stores) {
+            if (isStorage(f) && ++found >= count) return;
         }
-        return found;
+        gaps.add(count > 1 ? count + " chests in the zone" : "a chest in the zone");
     }
 
-    /** Is a nearby chest already stocked with this? (fuel deliveries, seed stock) */
-    private static boolean stockedNearby(AssistantEntity a, Predicate<ItemStack> what) {
-        WorkZone zone = a.workZone();
-        BlockPos origin = zone != null ? zone.center() : (a.stationPos() != null ? a.stationPos() : a.feetPos());
-        for (BlockPos pos : BlockPos.betweenClosed(
-                origin.offset(-FIXTURE_RANGE, -5, -FIXTURE_RANGE),
-                origin.offset(FIXTURE_RANGE, 5, FIXTURE_RANGE))) {
-            if (!(a.level().getBlockEntity(pos) instanceof Container c)) continue;
-            for (int i = 0; i < c.getContainerSize(); i++) {
-                ItemStack s = c.getItem(i);
-                if (!s.isEmpty() && what.test(s)) return true;
-            }
+    /** A chest, not a furnace — a smelter's furnace must not pass for its output chest. */
+    private static boolean isStorage(ZoneChests.Found f) {
+        return f.stillThere() && !(f.blockEntity() instanceof AbstractFurnaceBlockEntity);
+    }
+
+    private static boolean furnaceIn(List<ZoneChests.Found> stores) {
+        for (ZoneChests.Found f : stores) {
+            if (f.stillThere() && f.blockEntity() instanceof AbstractFurnaceBlockEntity) return true;
+            if (f.stillThere() && f.blockEntity().getBlockState().is(Blocks.FURNACE)) return true;
         }
         return false;
     }
