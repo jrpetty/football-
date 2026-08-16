@@ -224,6 +224,13 @@ public class FarmGoal extends Goal {
         // Tilling wears a hoe, like a player's would — so the hoe a stationed
         // farmer asks for is a real, consumable part of running the farm rather
         // than a token in its pack.
+        // Never work a square whose space is water. canBeReplaced() says yes to
+        // a fluid, so without this a farmer would till the bank of its own pond
+        // and plant wheat straight into the source block — destroying the water
+        // that was hydrating the field, which is the one block on a farm it must
+        // not touch.
+        if (!isPlantableSpace(pos.above())) return;
+
         boolean alreadyTilled = assistant.level().getBlockState(pos).is(Blocks.FARMLAND);
         if (!alreadyTilled) {
             // Only breaking new ground costs a hoe and a till. Re-setting existing
@@ -307,11 +314,22 @@ public class FarmGoal extends Goal {
      *  bot handed a real, finished player farm found "nothing plantable" and
      *  idled forever, and any square harvested while the seed stock happened to
      *  be empty became dead ground nothing could ever re-seed. */
+    /**
+     * Somewhere a crop can actually go: air, or something a plant may replace —
+     * but never a fluid. Vanilla's canBeReplaced() returns TRUE for water, so
+     * every "is this space free?" test in a farm goal reads a pond as free
+     * ground unless it is told otherwise.
+     */
+    private boolean isPlantableSpace(BlockPos pos) {
+        BlockState st = assistant.level().getBlockState(pos);
+        return st.canBeReplaced() && st.getFluidState().isEmpty();
+    }
+
     private boolean isTillable(BlockPos pos) {
         BlockState g = assistant.level().getBlockState(pos);
         if (!(g.is(Blocks.DIRT) || g.is(Blocks.GRASS_BLOCK) || g.is(Blocks.COARSE_DIRT)
               || g.is(Blocks.FARMLAND))) return false;
-        return assistant.level().getBlockState(pos.above()).canBeReplaced();
+        return isPlantableSpace(pos.above());
     }
 
     @Nullable
