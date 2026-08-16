@@ -4,6 +4,7 @@ import com.jrpetty.mcassistant.AssistantActions;
 import com.jrpetty.mcassistant.entity.AssistantEntity;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -11,31 +12,22 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The crew list: every assistant you have, by name and job, with its live
- * status. Pick one and you get its orders — work, stop, follow, stay, come,
- * stash, go home, set its area.
+ * The crew list: every assistant, by level, name, job and duty, with a live
+ * status light down the side. Pick one and the buttons below order it about.
  *
- * Deliberately NOT an inventory screen: this is for telling a specialist what
- * to do, not for rummaging in its pack. Its pack lives behind right-clicking
- * the bot itself.
+ * Deliberately NOT an inventory screen — this tells specialists what to do; a
+ * bot's pack stays behind right-clicking the bot itself.
  */
 public class CrewScreen extends Screen {
 
-    private static final int W = 300, H = 216;
-    private static final int PANEL      = 0xE8181A14;
-    private static final int PANEL_EDGE = 0xFF3A4029;
-    private static final int HEADER     = 0xFF232A1B;
-    private static final int ROW        = 0xFF1F2318;
-    private static final int ROW_PICKED = 0xFF2C3A24;
-    private static final int INK        = 0xFFEAEDE0;
-    private static final int MUTED      = 0xFF9AA087;
-    private static final int GOOD       = 0xFF78C78C;
-    private static final int WARN       = 0xFFE0A83A;
-    private static final int BAD        = 0xFFDE6C51;
+    private static final int W = 300, H = 226;
+    private static final int PAD = 10;
+    private static final int ROW_H = 16;
+    private static final int MAX_ROWS = 7;
 
     private final List<AssistantEntity> crew = new ArrayList<>();
     private int picked = -1;
-    private int left, top;
+    private int left, top, listTop;
 
     public CrewScreen() {
         super(Component.literal("Crew"));
@@ -45,6 +37,7 @@ public class CrewScreen extends Screen {
     protected void init() {
         this.left = (this.width - W) / 2;
         this.top = (this.height - H) / 2;
+        this.listTop = top + 34;
 
         crew.clear();
         if (this.minecraft != null && this.minecraft.player != null) {
@@ -57,91 +50,112 @@ public class CrewScreen extends Screen {
         if (picked >= crew.size()) picked = crew.isEmpty() ? -1 : 0;
         if (picked < 0 && !crew.isEmpty()) picked = 0;
 
-        // One clickable row per assistant.
-        int rowY = top + 32;
-        for (int i = 0; i < crew.size() && i < 6; i++) {
-            final int index = i;
-            this.addRenderableWidget(Button.builder(Component.literal(rowLabel(crew.get(i))),
-                b -> { picked = index; rebuild(); })
-                .bounds(left + 10, rowY, W - 20, 18).build());
-            rowY += 20;
-        }
+        // Rows are drawn by hand and clicked through mouseClicked — a stack of
+        // vanilla buttons looked like a toolbar, not a list.
+        int x = left + PAD;
+        int inner = W - PAD * 2;
+        int h = 18, gap = 4;
+        int w4 = (inner - gap * 3) / 4;
+        int by = top + H - PAD - h * 2 - gap;
 
-        // Orders for whoever is selected. No pack button: this screen gives
-        // instructions, it does not manage anybody's inventory.
-        int by = top + H - 66, bw = (W - 20 - 12) / 4, bh = 18, gap = 4;
-        order(left + 10, by, bw, bh, "Work/Pause", AssistantActions.WORK);
-        order(left + 10 + (bw + gap), by, bw, bh, "Job >", AssistantActions.JOB_NEXT);
-        order(left + 10 + 2 * (bw + gap), by, bw, bh, "Stash", AssistantActions.STASH);
-        order(left + 10 + 3 * (bw + gap), by, bw, bh, "Report", AssistantActions.REPORT);
-        by += bh + gap;
-        order(left + 10, by, bw, bh, "Follow", AssistantActions.FOLLOW);
-        order(left + 10 + (bw + gap), by, bw, bh, "Stay", AssistantActions.STAY);
-        order(left + 10 + 2 * (bw + gap), by, bw, bh, "Come", AssistantActions.COME);
-        order(left + 10 + 3 * (bw + gap), by, bw, bh, "Claim Bed", AssistantActions.CLAIM_BED);
-        by += bh + gap;
-        order(left + 10, by, bw, bh, "Set Area", AssistantActions.ZONE_HERE);
-        order(left + 10 + (bw + gap), by, bw, bh, "Show Area", AssistantActions.ZONE_SHOW);
-        order(left + 10 + 2 * (bw + gap), by, bw, bh, "Duty", AssistantActions.CYCLE_SHIFT);
+        order(x, by, w4, h, "Work", AssistantActions.WORK, "Start or pause its job");
+        order(x + (w4 + gap), by, w4, h, "Job ›", AssistantActions.JOB_NEXT, "Change what it specialises in");
+        order(x + 2 * (w4 + gap), by, w4, h, "Duty", AssistantActions.CYCLE_SHIFT, "Days / nights / both");
+        order(x + 3 * (w4 + gap), by, w4, h, "Stash", AssistantActions.STASH, "Empty its pack into a chest");
+
+        by += h + gap;
+        order(x, by, w4, h, "Come", AssistantActions.COME, "Walk to me now");
+        order(x + (w4 + gap), by, w4, h, "Stay", AssistantActions.STAY, "Wait there (stops work)");
+        order(x + 2 * (w4 + gap), by, w4, h, "Bed", AssistantActions.CLAIM_BED, "Give it the nearest bed to you");
         this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
-            .bounds(left + 10 + 3 * (bw + gap), by, bw, bh).build());
+            .bounds(x + 3 * (w4 + gap), by, w4, h).build());
     }
 
-    private void rebuild() {
-        this.clearWidgets();
-        this.init();
-    }
-
-    private void order(int x, int y, int w, int h, String label, int action) {
+    private void order(int x, int y, int w, int h, String label, int action, String tip) {
         this.addRenderableWidget(Button.builder(Component.literal(label), b -> {
-            if (picked >= 0 && picked < crew.size()) {
-                OrdersScreen.sendOrder(crew.get(picked), action);
-            }
-        }).bounds(x, y, w, h).build());
+            if (picked >= 0 && picked < crew.size()) OrdersScreen.sendOrder(crew.get(picked), action);
+        }).bounds(x, y, w, h).tooltip(Tooltip.create(Component.literal(tip))).build());
     }
 
-    private String rowLabel(AssistantEntity a) {
-        String job = AssistantEntity.StationTask.byOrdinal(a.clientJobOrdinal()).title;
-        String lvl = a.clientLevel() >= 1 ? "✦" + a.clientLevel() + " " : "";
-        return lvl + a.clientName() + "  —  " + job + "  (" + a.clientShift().label + ")";
+    @Override
+    public boolean mouseClicked(double mx, double my, int button) {
+        int rows = Math.min(crew.size(), MAX_ROWS);
+        if (mx >= left + PAD && mx <= left + W - PAD) {
+            for (int i = 0; i < rows; i++) {
+                int ry = listTop + i * ROW_H;
+                if (my >= ry && my < ry + ROW_H) {
+                    picked = i;
+                    return true;
+                }
+            }
+        }
+        return super.mouseClicked(mx, my, button);
     }
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(g, mouseX, mouseY, partialTick);
-        g.fill(left, top, left + W, top + H, PANEL);
-        g.fill(left, top, left + W, top + 26, HEADER);
-        g.renderOutline(left, top, W, H, PANEL_EDGE);
+        Ui.panel(g, left, top, W, H, 26);
 
-        g.drawString(this.font, "Your crew (" + crew.size() + ")", left + 10, top + 9, INK, false);
-        g.drawString(this.font, "; to open", left + W - 10 - this.font.width("; to open"),
-            top + 9, MUTED, false);
+        int x = left + PAD;
+        int inner = W - PAD * 2;
+
+        g.drawString(this.font, "Your crew", x, top + 8, Ui.INK, false);
+        Ui.right(g, this.font, crew.size() + (crew.size() == 1 ? " assistant" : " assistants"),
+            left + W - PAD, top + 8, Ui.MUTED);
 
         if (crew.isEmpty()) {
-            g.drawString(this.font, "No assistants nearby.", left + 10, top + 40, MUTED, false);
+            g.drawString(this.font, "Nobody here yet.", x, listTop + 6, Ui.MUTED, false);
             g.drawString(this.font, "Place an Assistant Spawner to hire one.",
-                left + 10, top + 52, MUTED, false);
+                x, listTop + 18, Ui.FAINT, false);
+            super.render(g, mouseX, mouseY, partialTick);
+            return;
+        }
+
+        // The list: banded rows, a status light, level, name, job and duty.
+        int rows = Math.min(crew.size(), MAX_ROWS);
+        for (int i = 0; i < rows; i++) {
+            AssistantEntity a = crew.get(i);
+            int ry = listTop + i * ROW_H;
+            boolean sel = i == picked;
+            boolean hover = mouseX >= x && mouseX <= left + W - PAD && mouseY >= ry && mouseY < ry + ROW_H;
+            g.fill(x, ry, left + W - PAD, ry + ROW_H - 1,
+                sel ? Ui.ROW_PICK : (hover ? Ui.ROW_ALT : (i % 2 == 0 ? Ui.ROW : Ui.ROW_ALT)));
+
+            int light = Ui.statusColour(a.clientStatus());
+            g.fill(x, ry, x + 2, ry + ROW_H - 1, light);           // status spine
+            if (sel) g.renderOutline(x, ry, inner, ROW_H - 1, Ui.ACCENT);
+
+            int tx = x + 8;
+            int lvl = a.clientLevel();
+            if (lvl >= 1) {
+                String star = "✦" + lvl;
+                g.drawString(this.font, star, tx, ry + 4, Ui.ACCENT, false);
+                tx += this.font.width(star) + 5;
+            }
+            g.drawString(this.font, a.clientName(), tx, ry + 4, sel ? Ui.INK : Ui.MUTED, false);
+
+            String job = AssistantEntity.StationTask.byOrdinal(a.clientJobOrdinal()).title;
+            String duty = a.clientShift().label;
+            Ui.right(g, this.font, job + "  ·  " + duty, left + W - PAD - 6, ry + 4,
+                sel ? Ui.MUTED : Ui.FAINT);
+        }
+        if (crew.size() > MAX_ROWS) {
+            g.drawString(this.font, "+" + (crew.size() - MAX_ROWS) + " more nearby",
+                x, listTop + rows * ROW_H + 2, Ui.FAINT, false);
+        }
+
+        // Detail for the selected one, just above the buttons.
+        if (picked >= 0 && picked < crew.size()) {
+            AssistantEntity a = crew.get(picked);
+            int dy = top + H - PAD - 18 * 2 - 4 - 26;
+            Ui.section(g, this.font, a.clientName(), x, dy - 12, inner);
+            String status = a.clientStatus();
+            g.drawString(this.font, Ui.clip(this.font, status, inner), x, dy, Ui.statusColour(status), false);
+            g.drawString(this.font, Ui.clip(this.font, a.clientZone(), inner), x, dy + 10, Ui.FAINT, false);
         }
 
         super.render(g, mouseX, mouseY, partialTick);
-
-        // Highlight the selected one and show its live status underneath.
-        if (picked >= 0 && picked < crew.size()) {
-            AssistantEntity a = crew.get(picked);
-            int y = top + H - 88;
-            String status = a.clientStatus();
-            int colour = status.startsWith("Working") ? GOOD
-                : status.startsWith("Needs") || status.startsWith("Out of") ? BAD : WARN;
-            g.drawString(this.font, a.clientName() + ": " + status, left + 10, y, colour, false);
-            g.drawString(this.font, a.clientZone(), left + 10, y + 11, MUTED, false);
-            int lvl = a.clientLevel();
-            String perk = lvl < 10 ? "Lv " + lvl + " — next at 10: +10% work"
-                : lvl < 20 ? "Lv " + lvl + " — +10% work · next at 20: +2 hearts, +20% work"
-                : lvl < 30 ? "Lv " + lvl + " — +2 hearts, +20% work · next at 30: +20% speed"
-                : lvl < 35 ? "Lv " + lvl + " — +20% speed · next at 35: +30% work"
-                : "Lv " + lvl + " — fully trained (+2 hearts, +30% work, +20% speed)";
-            g.drawString(this.font, perk, left + 10, y + 22, lvl >= 10 ? GOOD : MUTED, false);
-        }
     }
 
     @Override

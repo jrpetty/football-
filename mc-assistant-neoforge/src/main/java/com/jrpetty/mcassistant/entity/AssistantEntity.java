@@ -205,7 +205,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b45 · ZONE WAND reworked: right-click an assistant to take charge of ITS patch, then click two blocks to lay the perimeter (further clicks widen it). The outline draws while you map it and for a few seconds after each change, then stops — right-click the bot again to see it any time · beds + day/night/both shifts · crew screen on ; · visible perks · much quieter bots · recipes exist again (the datapack had no pack.mcmeta) · orders key R, crew key ;, roster key G";
+        "2026-07-b46 · UI OVERHAUL: one shared style for every screen — labelled sections instead of a wall of buttons, a coloured status badge you read first, a level progress bar with what you have earned and what is next, a proper crew list with banded rows, hover and a selection outline, and tooltips on every button · zone wand binds to a bot and shows its patch only while you map it · beds + day/night/both shifts · crew screen on ; · orders on R · recipes fixed (missing pack.mcmeta)";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
