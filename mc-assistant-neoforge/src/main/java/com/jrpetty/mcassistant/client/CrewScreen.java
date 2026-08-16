@@ -20,10 +20,10 @@ import java.util.List;
  */
 public class CrewScreen extends Screen {
 
-    private static final int W = 300, H = 226;
+    private static final int W = 300, H = 252;
     private static final int PAD = 10;
     private static final int ROW_H = 16;
-    private static final int MAX_ROWS = 7;
+    private static final int MAX_ROWS = 6;
 
     private final List<AssistantEntity> crew = new ArrayList<>();
     private int picked = -1;
@@ -56,7 +56,7 @@ public class CrewScreen extends Screen {
         int inner = W - PAD * 2;
         int h = 18, gap = 4;
         int w4 = (inner - gap * 3) / 4;
-        int by = top + H - PAD - h * 2 - gap;
+        int by = top + H - PAD - h * 3 - gap * 2;
 
         order(x, by, w4, h, "Work", AssistantActions.WORK, "Start or pause its job");
         order(x + (w4 + gap), by, w4, h, "Job ›", AssistantActions.JOB_NEXT, "Change what it specialises in");
@@ -67,8 +67,24 @@ public class CrewScreen extends Screen {
         order(x, by, w4, h, "Come", AssistantActions.COME, "Walk to me now");
         order(x + (w4 + gap), by, w4, h, "Stay", AssistantActions.STAY, "Wait there (stops work)");
         order(x + 2 * (w4 + gap), by, w4, h, "Bed", AssistantActions.CLAIM_BED, "Give it the nearest bed to you");
+        this.addRenderableWidget(Button.builder(Component.literal("Orders"), b -> {
+                if (picked >= 0 && picked < crew.size() && this.minecraft != null) {
+                    this.minecraft.setScreen(new OrdersScreen(crew.get(picked)));
+                }
+            })
+            .bounds(x + 3 * (w4 + gap), by, w4, h)
+            .tooltip(Tooltip.create(Component.literal("Everything you can tell this one to do")))
+            .build());
+
+        by += h + gap;
+        this.addRenderableWidget(Button.builder(Component.literal("Map"),
+                b -> this.minecraft.setScreen(new MapScreen()))
+            .bounds(x, by, w4 * 2 + gap, h)
+            .tooltip(Tooltip.create(Component.literal(
+                "Every patch and every specialist, seen from above")))
+            .build());
         this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
-            .bounds(x + 3 * (w4 + gap), by, w4, h).build());
+            .bounds(x + 2 * (w4 + gap), by, w4 * 2 + gap, h).build());
     }
 
     private void order(int x, int y, int w, int h, String label, int action, String tip) {
@@ -148,7 +164,7 @@ public class CrewScreen extends Screen {
         // Detail for the selected one, just above the buttons.
         if (picked >= 0 && picked < crew.size()) {
             AssistantEntity a = crew.get(picked);
-            int dy = top + H - PAD - 18 * 2 - 4 - 26;
+            int dy = top + H - PAD - 18 * 3 - 4 * 2 - 22;
             Ui.section(g, this.font, a.clientName(), x, dy - 12, inner);
             String status = a.clientStatus();
             g.drawString(this.font, Ui.clip(this.font, status, inner), x, dy, Ui.statusColour(status), false);

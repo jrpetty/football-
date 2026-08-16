@@ -91,10 +91,14 @@ public final class Ui {
         return WARN;
     }
 
-    /** Fraction of the way to the next veteran level (level = sqrt(xp/10)). */
+    /** Fraction of the way to the next veteran level (level = sqrt(xp/factor)).
+     *  Reads the local common config: on a server tuned differently from the
+     *  client the bar is a shade off, which is a cosmetic price worth paying
+     *  over synching a number for one progress bar. */
     public static float levelProgress(int level, int lifetimeXp) {
-        int here = 10 * level * level;
-        int next = 10 * (level + 1) * (level + 1);
+        int f = Math.max(1, com.jrpetty.mcassistant.AssistantConfig.levelCurveFactor());
+        int here = f * level * level;
+        int next = f * (level + 1) * (level + 1);
         if (next <= here) return 1F;
         return (float) (lifetimeXp - here) / (float) (next - here);
     }

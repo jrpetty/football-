@@ -206,7 +206,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b48 · CONFIG FILE: every number is yours now — upkeep rates, crew size, patch sizes, the XP curve, chunk loading — in config/mc_assistant-common.toml · LOYALTY: a specialist earns a permanent heart per week of service, up to four, so an old hand outlives a fresh hire · BRANCHES: at level 20 a specialist picks a branch (irrigation, husbandry, prospecting, forestry, sentinel, porterage) that deepens the job it already does · DEATH LOG: it tells you what killed it and where, and remembers when revived · danger sense · useful idling · work record · beds + shifts";
+        "2026-07-b49 · JOB UNIFORMS: every trade wears its own kit — straw hat and wheat gold for the farmer, denim and a hard hat for the miner, hi-vis for the hauler — so you can read a crew of ten across a field · WORKING ICON: the tool of its trade floats over its head while it works, and turns into a barrier the moment it's stuck · MAP SCREEN: every patch and every specialist from above, click one to open its orders · WORK RECORD: the full career tally on its own page · CONFIG FILE: every number is yours now — upkeep rates, crew size, patch sizes, the XP curve, chunk loading — in config/mc_assistant-common.toml · LOYALTY: a specialist earns a permanent heart per week of service, up to four, so an old hand outlives a fresh hire · BRANCHES: at level 20 a specialist picks a branch (irrigation, husbandry, prospecting, forestry, sentinel, porterage) that deepens the job it already does · DEATH LOG: it tells you what killed it and where, and remembers when revived · danger sense · useful idling · work record · beds + shifts";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -377,7 +377,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         this.entityData.set(DATA_XP, lifetimeXp);
         java.util.List<String> top = workRecord(1);
         this.entityData.set(DATA_EXTRA, branch.label + "|" + daysServed() + "|"
-            + (top.isEmpty() ? "" : top.get(0)));
+            + (top.isEmpty() ? "" : top.get(0)) + "|" + deedCsv() + "|" + zoneCsv());
         this.entityData.set(DATA_ZONE, workZone == null ? "No work zone set"
             : workZone.describe() + (stationTask == StationTask.MINE ? "  depth Y" + workZone.depth() : ""));
         String status;
@@ -1218,6 +1218,26 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             .limit(topN)
             .map(e -> e.getValue() + " " + e.getKey().label)
             .toList();
+    }
+
+    /** The whole career tally as "ordinal:count,..." for the record screen.
+     *  Sent as one string rather than a tracked field per deed — fourteen
+     *  synched ints for a page you open now and then would be absurd. */
+    private String deedCsv() {
+        StringBuilder sb = new StringBuilder();
+        for (java.util.Map.Entry<Deed, Integer> e : deeds.entrySet()) {
+            if (e.getValue() <= 0) continue;
+            if (sb.length() > 0) sb.append(',');
+            sb.append(e.getKey().ordinal()).append(':').append(e.getValue());
+        }
+        return sb.toString();
+    }
+
+    /** The patch's footprint as "minX,minZ,maxX,maxZ", for drawing it on a map. */
+    private String zoneCsv() {
+        if (workZone == null) return "";
+        return workZone.min().getX() + "," + workZone.min().getZ() + ","
+             + workZone.max().getX() + "," + workZone.max().getZ();
     }
 
     public void noteProduced(net.minecraft.world.item.Item item, int count) {

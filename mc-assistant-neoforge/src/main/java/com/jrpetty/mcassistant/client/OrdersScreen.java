@@ -44,7 +44,6 @@ public class OrdersScreen extends Screen {
         int inner = W - PAD * 2;
         int h = 18, gap = 4;
         int w4 = (inner - gap * 3) / 4;
-        int w3 = (inner - gap * 2) / 3;
 
         // ---- the job itself: arrows either side of a work/pause toggle ----
         int y = top + 60;
@@ -90,11 +89,17 @@ public class OrdersScreen extends Screen {
 
         // ---- footer ----
         y = top + H - PAD - h;
-        add(x, y, w3, h, "Whole Crew", AssistantActions.ROSTER, "Report on every assistant");
-        add(x + (w3 + gap), y, w3, h, "Specialise", AssistantActions.CYCLE_BRANCH,
+        add(x, y, w4, h, "Crew", AssistantActions.ROSTER, "Report on every assistant");
+        this.addRenderableWidget(Button.builder(Component.literal("Record"),
+                b -> this.minecraft.setScreen(new RecordScreen(bot)))
+            .bounds(x + (w4 + gap), y, w4, h)
+            .tooltip(Tooltip.create(Component.literal(
+                "Everything it has done in its career, counted")))
+            .build());
+        add(x + 2 * (w4 + gap), y, w4, h, "Specialise", AssistantActions.CYCLE_BRANCH,
             "At level 20 a specialist can pick a branch to deepen its trade");
         this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
-            .bounds(x + 2 * (w3 + gap), y, w3, h).build());
+            .bounds(x + 3 * (w4 + gap), y, w4, h).build());
 
         refreshJobButtons();
     }
@@ -183,14 +188,11 @@ public class OrdersScreen extends Screen {
 
         // Patch and perks, above the footer.
         int infoY = top + H - PAD - 18 - 24;
-        String[] extra = bot.clientExtra().split("\\|", -1);
-        String branch = extra.length > 0 ? extra[0] : "";
-        String days = extra.length > 1 ? extra[1] : "0";
-        String deed = extra.length > 2 ? extra[2] : "";
+        BotInfo info = BotInfo.of(bot);
         String career = Ui.clip(this.font,
-            bot.clientZone() + "  ·  " + days + "d served"
-            + (branch.isEmpty() || branch.equals("no speciality") ? "" : "  ·  " + branch)
-            + (deed.isEmpty() ? "" : "  ·  " + deed), inner);
+            bot.clientZone() + "  ·  " + info.daysServed() + "d served"
+            + (info.hasBranch() ? "  ·  " + info.branch() : "")
+            + (info.topDeed().isEmpty() ? "" : "  ·  " + info.topDeed()), inner);
         g.drawString(this.font, career, x, infoY, Ui.MUTED, false);
         g.drawString(this.font, Ui.clip(this.font, perkLine(lvl), inner), x, infoY + 11,
             lvl >= 10 ? Ui.GOOD : Ui.FAINT, false);
