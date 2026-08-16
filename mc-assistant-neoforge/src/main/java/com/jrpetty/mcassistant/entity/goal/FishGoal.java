@@ -149,6 +149,7 @@ public class FishGoal extends Goal {
             return;
         }
         caught++;
+        assistant.note(AssistantEntity.Deed.FISH_CAUGHT, 1);
         ItemStack rod = assistant.getMainHandItem();
         if (rod.is(Items.FISHING_ROD)) {
             rod.hurtAndBreak(1, assistant, EquipmentSlot.MAINHAND);

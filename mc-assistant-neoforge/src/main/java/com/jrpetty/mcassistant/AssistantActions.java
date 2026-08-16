@@ -216,6 +216,8 @@ public final class AssistantActions {
         if (a.veteranLevel() >= 1) s.append(" Level ").append(a.veteranLevel()).append('.');
         String made = a.productionSummary(4);
         if (made != null) s.append(" Today: ").append(made).append('.');
+        java.util.List<String> career = a.workRecord(3);
+        if (!career.isEmpty()) s.append(" All told: ").append(String.join(", ", career)).append('.');
         a.say(s.toString());
     }
 

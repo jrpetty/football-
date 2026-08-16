@@ -196,6 +196,7 @@ public class FarmGoal extends Goal {
         Block cropBlock = state.getBlock();
         if (assistant.level().destroyBlock(pos, true, assistant)) {
             harvested++;
+            assistant.note(AssistantEntity.Deed.CROPS_HARVESTED, 1);
             sweepDrops(pos);
             Item seed = REPLANT.get(cropBlock);
             if (seed != null && assistant.level().getBlockState(pos.below()).is(Blocks.FARMLAND)
@@ -229,6 +230,7 @@ public class FarmGoal extends Goal {
             if (assistant.removeMatching(s -> s.is(e.getKey()), 1) == 1) {
                 assistant.level().setBlockAndUpdate(pos.above(), e.getValue().defaultBlockState());
                 planted++;
+                assistant.note(AssistantEntity.Deed.CROPS_PLANTED, 1);
                 if (planted == 1 && !alreadyTilled) assistant.sayRoutine("No farm here — starting one from scratch.");
                 return;
             }

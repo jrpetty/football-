@@ -205,7 +205,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b46 · UI OVERHAUL: one shared style for every screen — labelled sections instead of a wall of buttons, a coloured status badge you read first, a level progress bar with what you have earned and what is next, a proper crew list with banded rows, hover and a selection outline, and tooltips on every button · zone wand binds to a bot and shows its patch only while you map it · beds + day/night/both shifts · crew screen on ; · orders on R · recipes fixed (missing pack.mcmeta)";
+        "2026-07-b47 · DANGER SENSE: the pathfinder now refuses lava, fire and hazards outright, and bots actively flee fire, surface before drowning and stop at ledges — most deaths were stupid ones · USEFUL IDLING: between jobs they sweep loose drops and light dark corners of their own patch instead of standing still · WORK RECORD: every bot keeps a career tally (blocks mined, crops harvested, saplings planted, fish caught, animals bred...) shown in its report · UI overhaul · beds + shifts · crew screen on ;";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -719,7 +719,90 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         nav.setCanOpenDoors(true);
         nav.setCanPassDoors(true);
         nav.setCanFloat(true); // don't treat water as a wall — float across it
+        // Most assistant deaths were stupid ones: walking into lava, strolling
+        // off a ledge, wading into a fire. Make the pathfinder refuse those
+        // routes outright rather than costing them slightly.
+        this.setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.LAVA, -1.0F);
+        this.setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.DAMAGE_FIRE, -1.0F);
+        this.setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.DANGER_FIRE, -1.0F);
+        this.setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.DANGER_OTHER, -1.0F);
+        this.setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.DAMAGE_OTHER, -1.0F);
+        this.setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.WATER_BORDER, 8.0F);
         return nav;
+    }
+
+    /**
+     * The deaths that made assistants look daft: standing in fire, wading into
+     * lava, drowning in their own irrigation, and stepping off a drop that was
+     * never on the path. The pathfinder handles routes; this handles the moment.
+     */
+    private void avoidStupidDeaths() {
+        if (level().isClientSide) return;
+
+        // On fire or in lava: get out, and stop whatever we were walking to.
+        if (this.isInLava() || (this.isOnFire() && this.getRemainingFireTicks() > 20)) {
+            BlockPos safe = nearestSafeGround(6);
+            if (safe != null) {
+                getNavigation().moveTo(safe.getX() + 0.5, safe.getY(), safe.getZ() + 0.5, 1.4D);
+            }
+            return;
+        }
+        // Running out of air: head for the surface instead of quietly drowning.
+        if (this.isEyeInFluid(net.minecraft.tags.FluidTags.WATER) && this.getAirSupply() < 120) {
+            BlockPos surface = surfaceAbove();
+            if (surface != null) {
+                getNavigation().moveTo(surface.getX() + 0.5, surface.getY(), surface.getZ() + 0.5, 1.3D);
+            }
+            return;
+        }
+        // About to walk off something that will hurt: stop and re-route.
+        if (!onGround() || getNavigation().isDone()) return;
+        BlockPos ahead = blockPosition().relative(getDirection());
+        if (dropBelow(ahead) > 4 || level().getBlockState(ahead.below()).is(Blocks.LAVA)) {
+            getNavigation().stop();
+            setDeltaMovement(getDeltaMovement().multiply(0.2, 1.0, 0.2));
+        }
+    }
+
+    /** How far it is down from a block before something solid catches you. */
+    private int dropBelow(BlockPos pos) {
+        int drop = 0;
+        BlockPos.MutableBlockPos cur = pos.mutable().move(net.minecraft.core.Direction.DOWN);
+        while (drop < 24 && level().getBlockState(cur).isAir()) {
+            drop++;
+            cur.move(net.minecraft.core.Direction.DOWN);
+        }
+        return drop;
+    }
+
+    @Nullable
+    private BlockPos nearestSafeGround(int radius) {
+        BlockPos feet = blockPosition();
+        BlockPos best = null;
+        double bestDist = Double.MAX_VALUE;
+        for (BlockPos pos : BlockPos.betweenClosed(
+                feet.offset(-radius, -2, -radius), feet.offset(radius, 2, radius))) {
+            if (!level().getBlockState(pos).isAir()) continue;
+            if (level().getBlockState(pos.below()).isAir()) continue;
+            if (level().getBlockState(pos.below()).is(Blocks.LAVA)) continue;
+            if (level().getBlockState(pos).is(Blocks.FIRE)) continue;
+            if (!level().getFluidState(pos).isEmpty()) continue;
+            double d = pos.distSqr(feet);
+            if (d < bestDist) { bestDist = d; best = pos.immutable(); }
+        }
+        return best;
+    }
+
+    @Nullable
+    private BlockPos surfaceAbove() {
+        BlockPos.MutableBlockPos cur = blockPosition().mutable();
+        for (int i = 0; i < 24; i++) {
+            cur.move(net.minecraft.core.Direction.UP);
+            if (level().getFluidState(cur).isEmpty() && level().getBlockState(cur).isAir()) {
+                return cur.immutable();
+            }
+        }
+        return null;
     }
 
     /** True once it's been going nowhere for ~4s while actively trying to path —
@@ -947,6 +1030,31 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
     }
 
+    /**
+     * Small change between jobs: sweep up loose drops in reach, and put a torch
+     * down if it's standing somewhere dark. Costs nothing, stops a specialist
+     * looking idle, and quietly keeps its patch tidy and mob-free.
+     */
+    private void doIdleChores() {
+        // Sweep anything within arm's reach into the pack.
+        if (!isPackFull()) {
+            for (net.minecraft.world.entity.item.ItemEntity drop : level().getEntitiesOfClass(
+                    net.minecraft.world.entity.item.ItemEntity.class,
+                    getBoundingBox().inflate(6.0))) {
+                if (!drop.isAlive() || !inZone(drop.blockPosition())) continue;
+                ItemStack left = insertItem(drop.getItem());
+                if (left.isEmpty()) drop.discard(); else drop.setItem(left);
+                return;
+            }
+        }
+        // A dark spot on its own ground is where the next creeper comes from.
+        if (countCarried(s -> s.is(Items.TORCH)) > 0
+            && level().getMaxLocalRawBrightness(blockPosition()) < 6
+            && inZone(blockPosition())) {
+            placeTorchNearby();
+        }
+    }
+
     /** Release the hauler's traveling chunk window, re-forcing the fixed post
      *  window afterward in case the two overlapped (tickets are a set — one
      *  remove would otherwise strip a shared chunk from the post's window). */
@@ -1045,6 +1153,41 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private long lastReportDay = -1;
 
     /** Called as a job stashes its output — the raw material of the day's report. */
+    /** What this one has actually done, for life. Kept separate from the daily
+     *  production tally: that resets at dawn, this is its career. */
+    public enum Deed {
+        BLOCKS_MINED("blocks mined"), ORE_FOUND("ore veins dug"), TREES_FELLED("trees felled"),
+        SAPLINGS_PLANTED("saplings planted"), CROPS_HARVESTED("crops harvested"),
+        CROPS_PLANTED("crops planted"), ANIMALS_BRED("animals bred"),
+        ANIMALS_SHEARED("sheep sheared"), FISH_CAUGHT("fish caught"),
+        ITEMS_SMELTED("items smelted"), MOBS_KILLED("hostiles killed"),
+        LOADS_HAULED("loads delivered"), CHESTS_SORTED("chests tidied"),
+        ITEMS_STASHED("items stashed");
+
+        public final String label;
+        Deed(String label) { this.label = label; }
+    }
+
+    private final java.util.EnumMap<Deed, Integer> deeds = new java.util.EnumMap<>(Deed.class);
+
+    /** Record a unit of work. Cheap enough to call from the goals directly. */
+    public void note(Deed deed, int count) {
+        if (count <= 0) return;
+        deeds.merge(deed, count, Integer::sum);
+    }
+
+    public int deedCount(Deed deed) { return deeds.getOrDefault(deed, 0); }
+
+    /** The two or three things this job is actually judged on, biggest first. */
+    public java.util.List<String> workRecord(int topN) {
+        return deeds.entrySet().stream()
+            .filter(e -> e.getValue() > 0)
+            .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
+            .limit(topN)
+            .map(e -> e.getValue() + " " + e.getKey().label)
+            .toList();
+    }
+
     public void noteProduced(net.minecraft.world.item.Item item, int count) {
         if (count <= 0 || stationTask == StationTask.NONE) return;
         if (produced.size() > 24 && !produced.containsKey(item)) return; // keep it bounded
@@ -3085,6 +3228,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         tag.putBoolean("Auto", autonomous);
         tag.putBoolean("NightHome", nightHome);
         tag.putString("Shift", shift.name());
+        CompoundTag deedTag = new CompoundTag();
+        for (java.util.Map.Entry<Deed, Integer> e : deeds.entrySet()) {
+            deedTag.putInt(e.getKey().name(), e.getValue());
+        }
+        tag.put("Deeds", deedTag);
         if (bedPos != null) tag.putLong("Bed", bedPos.asLong());
         tag.putInt("BaseStage", baseStage);
         if (stationPos != null) tag.putLong("StationPos", stationPos.asLong());
@@ -3152,6 +3300,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             shift = Shift.DAY;
         }
         bedPos = tag.contains("Bed") ? BlockPos.of(tag.getLong("Bed")) : null;
+        deeds.clear();
+        CompoundTag deedTag = tag.getCompound("Deeds");
+        for (Deed d : Deed.values()) {
+            if (deedTag.contains(d.name())) deeds.put(d, deedTag.getInt(d.name()));
+        }
         baseStage = tag.getInt("BaseStage");
         stationPos = tag.contains("StationPos") ? BlockPos.of(tag.getLong("StationPos")) : null;
         try {
@@ -3352,11 +3505,18 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             stopSleeping();
         }
 
+        if (tickCount % 5 == 0) avoidStupidDeaths();
+
         // Stand still when there is nothing to do. Bouncing on the spot looks
         // broken, and on a farm it was destroying the very crops the bot is
         // there to grow (landing on farmland reverts it to dirt).
         if (peekJob() == null && getNavigation().isDone()) {
             setJumping(false);
+            // Nothing queued? Do the small useful things a worker would: pick up
+            // what's lying about, and light a dark corner of its own patch.
+            if (stationTask != StationTask.NONE && autonomous && tickCount % 60 == 0) {
+                doIdleChores();
+            }
         }
 
         // One line a day, at dawn, on what this specialist actually produced —
@@ -3856,6 +4016,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             shift = Shift.DAY;
         }
         bedPos = tag.contains("Bed") ? BlockPos.of(tag.getLong("Bed")) : null;
+        deeds.clear();
+        CompoundTag deedTag = tag.getCompound("Deeds");
+        for (Deed d : Deed.values()) {
+            if (deedTag.contains(d.name())) deeds.put(d, deedTag.getInt(d.name()));
+        }
         if (tag.contains("Home")) setHome(BlockPos.of(tag.getLong("Home")));
         waypoints.clear();
         for (Tag t : tag.getList("Waypoints", Tag.TAG_COMPOUND)) {

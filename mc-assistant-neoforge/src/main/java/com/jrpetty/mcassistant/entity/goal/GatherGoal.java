@@ -189,6 +189,7 @@ public class GatherGoal extends Goal {
                     s.shrink(1);
                     if (s.isEmpty()) inv.set(i, ItemStack.EMPTY);
                     planted++;
+                    assistant.note(AssistantEntity.Deed.SAPLINGS_PLANTED, 1);
                     done = true;
                     plantedHere = true;
                 }

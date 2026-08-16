@@ -302,8 +302,10 @@ public class MineGoal extends Goal {
         boolean ore = isOre(state);
         if (assistant.level().destroyBlock(pos, true, assistant)) {
             blocksMined++;
+        assistant.note(AssistantEntity.Deed.BLOCKS_MINED, 1);
             if (ore) {
                 oresMined++;
+            assistant.note(AssistantEntity.Deed.ORE_FOUND, 1);
                 veinMined++;
                 assistant.awardXp(2); // fair XP toward enchanting
             }
