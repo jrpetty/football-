@@ -22,6 +22,7 @@ public class DepositGoal extends Goal {
     private boolean active;
     @Nullable private BlockPos chestPos;
     private int stuckTicks;
+    private int stashStartTick = -1;   // when it started loading this chest
     private double bestDistSq = Double.MAX_VALUE;
     private int myGen;
 
@@ -82,6 +83,7 @@ public class DepositGoal extends Goal {
     public void stop() {
         this.active = false;
         this.chestPos = null;
+        this.stashStartTick = -1;
         assistant.getNavigation().stop();
     }
 
@@ -93,6 +95,7 @@ public class DepositGoal extends Goal {
         assistant.pollJob();
         this.active = false;
         this.chestPos = null;
+        this.stashStartTick = -1;
         assistant.getNavigation().stop();
     }
 
@@ -105,6 +108,7 @@ public class DepositGoal extends Goal {
         assistant.pollJob();
         this.active = false;
         this.chestPos = null;
+        this.stashStartTick = -1;
         assistant.getNavigation().stop();
     }
 
@@ -137,6 +141,20 @@ public class DepositGoal extends Goal {
         BlockEntity be = assistant.level().getBlockEntity(chestPos);
         if (!(be instanceof Container container)) {
             finish("The chest is gone.");
+            return;
+        }
+
+        // Loading a chest takes a moment, like it would for anyone. The bot has
+        // arrived and is stood at it; this is the pause where the work visibly
+        // happens, instead of a pack emptying itself in a single tick. Timed
+        // from arrival rather than off a shared cooldown, so the FIRST stash
+        // takes its two seconds too and not just the ones after it.
+        if (stashStartTick < 0) stashStartTick = assistant.tickCount;
+        assistant.getLookControl().setLookAt(
+            chestPos.getX() + 0.5, chestPos.getY() + 0.5, chestPos.getZ() + 0.5);
+        int spent = assistant.tickCount - stashStartTick;
+        if (spent < 40) {
+            if (spent % 10 == 0) assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
             return;
         }
 

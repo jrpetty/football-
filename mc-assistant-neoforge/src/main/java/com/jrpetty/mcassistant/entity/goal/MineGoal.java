@@ -213,6 +213,21 @@ public class MineGoal extends Goal {
         }
     }
 
+    /**
+     * May this block be broken at all? The patch's footprint in X/Z, and
+     * between the ground it was marked from and the depth the player set —
+     * so "dig down to Y-24 in this square" means exactly that, and a cellar or
+     * a floor above the plot is not something the miner is entitled to.
+     */
+    private boolean mayDig(BlockPos pos) {
+        if (!assistant.inZoneColumn(pos)) return false;
+        com.jrpetty.mcassistant.entity.WorkZone zone = assistant.workZone();
+        if (zone == null) return true;               // unzoned: old behaviour
+        int floor = Math.min(zone.depth(), zone.min().getY());
+        int ceiling = zone.max().getY() + 4;         // headroom to stand and swing
+        return pos.getY() >= floor && pos.getY() <= ceiling;
+    }
+
     /** Queue the digs for one step of shaft/gallery ending at newFeet. */
     private void planStep(BlockPos newFeet) {
         // Never dig into fluids — check every cell we'll open plus what's
@@ -275,6 +290,7 @@ public class MineGoal extends Goal {
     }
 
     private void beginDig(BlockPos pos) {
+        if (!mayDig(pos)) return;          // never off the marked patch
         BlockState state = assistant.level().getBlockState(pos);
         if (state.canBeReplaced()) return; // already open
         assistant.equipBestTool(state);
@@ -296,6 +312,18 @@ public class MineGoal extends Goal {
             if (workTicks % 8 == 0) {
                 assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
             }
+            return;
+        }
+
+        // Last line of defence, at the only place this goal breaks anything.
+        // The planning checks look one step ahead and only at X/Z, because
+        // inZoneColumn deliberately ignores Y so a miner can go down its own
+        // shaft — which also means a base built above or below the patch was
+        // fair game. Vein-chasing then dug sideways off the plan entirely.
+        // Nothing outside the marked patch gets broken, however we got here.
+        if (!mayDig(pos)) {
+            currentDig = null;      // drop it and take the next queued cell
+            workTicks = 0;
             return;
         }
 
@@ -324,7 +352,10 @@ public class MineGoal extends Goal {
             if (veinMined < MAX_VEIN_BLOCKS) {
                 for (Direction d : Direction.values()) {
                     BlockPos n = pos.relative(d);
-                    if (isOre(assistant.level().getBlockState(n)) && !veinQueue.contains(n)) {
+                    // Vein-chasing is the one thing that leaves the plan, so it
+                    // is the one that walked a miner through a wall into a base.
+                    if (isOre(assistant.level().getBlockState(n)) && mayDig(n)
+                            && !veinQueue.contains(n)) {
                         veinQueue.addLast(n);
                     }
                 }

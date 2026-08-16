@@ -75,12 +75,19 @@ public class SmeltGoal extends Goal {
         return null;
     }
 
-    // Fuels we'll burn, in preference order — never tools, never the good stuff.
+    // Fuels we'll burn, best first — never tools, never the good stuff. Ordered
+    // by how long one item actually burns, because that is what keeps a bank of
+    // furnaces lit while nobody is watching: a coal block is 16000 ticks, a
+    // stick is 100. Feeding sticks first means walking the row again in eight
+    // seconds; feeding coal blocks first means it runs for thirteen minutes.
     private static final java.util.List<Predicate<ItemStack>> FUEL_PRIORITY = java.util.List.of(
-        s -> s.is(Items.COAL) || s.is(Items.CHARCOAL),
-        s -> s.is(ItemTags.PLANKS),
-        s -> s.is(Items.STICK),
-        s -> s.is(ItemTags.LOGS));
+        s -> s.is(Items.COAL_BLOCK),            // 16000 ticks
+        s -> s.is(Items.DRIED_KELP_BLOCK),      //  4000
+        s -> s.is(Items.BLAZE_ROD),             //  2400
+        s -> s.is(Items.COAL) || s.is(Items.CHARCOAL),   // 1600
+        s -> s.is(ItemTags.LOGS),               //   300
+        s -> s.is(ItemTags.PLANKS),             //   300
+        s -> s.is(Items.STICK));                //   100
 
     // Foods cook in a furnace or smoker; ores in a furnace or blast furnace;
     // stone/sand/logs only in a plain furnace.
@@ -95,6 +102,12 @@ public class SmeltGoal extends Goal {
     @Nullable private Job job;
     @Nullable private Predicate<ItemStack> input;
     @Nullable private BlockPos furnacePos;
+    // Every furnace it can reach, and which one it is currently at. A smelter
+    // with ten furnaces and 200 ore should run all ten with 20 apiece, not fill
+    // one and leave nine cold.
+    private final java.util.List<BlockPos> furnaces = new java.util.ArrayList<>();
+    private int furnaceIndex;
+    private int sharePerFurnace = 64;
     private int remainingToLoad;
     private int collected;
     private int stuckTicks;
@@ -135,10 +148,17 @@ public class SmeltGoal extends Goal {
             finish("I don't have any " + job.arg() + " to smelt — \"gather iron\" or \"grab " + job.arg() + " from the chest\" first.");
             return;
         }
-        this.furnacePos = findFurnace(job.arg());
-        if (furnacePos == null && placeCarriedFurnace()) {
-            this.furnacePos = findFurnace(job.arg()); // set one down and use it
+        findFurnaces(job.arg());
+        if (furnaces.isEmpty() && placeCarriedFurnace()) {
+            findFurnaces(job.arg()); // set one down and use it
         }
+        this.furnaceIndex = 0;
+        this.furnacePos = furnaces.isEmpty() ? null : furnaces.get(0);
+        // Divide the load across the whole bank. Ten furnaces and 200 ore is 20
+        // apiece — every one of them lit and cooking at once, instead of one
+        // furnace holding a stack while nine sit cold.
+        this.sharePerFurnace = furnaces.isEmpty() ? 64
+            : Math.max(1, Math.min(64, Math.min(job.amount(), have) / furnaces.size()));
         if (furnacePos == null) {
             finish("No usable furnace within 16 blocks — \"craft a furnace\" and place it, or \"build a furnace building\".");
             return;
@@ -233,7 +253,10 @@ public class SmeltGoal extends Goal {
                 if (s.isEmpty() || !input.test(s)) continue;
                 if (!slot0.isEmpty() && !ItemStack.isSameItemSameComponents(slot0, s)) continue;
                 int room = slot0.isEmpty() ? s.getMaxStackSize() : slot0.getMaxStackSize() - slot0.getCount();
-                int mv = Math.min(Math.min(room, s.getCount()), remainingToLoad);
+                int already = slot0.isEmpty() ? 0 : slot0.getCount();
+                int shareRoom = Math.max(0, sharePerFurnace - already);
+                int mv = Math.min(Math.min(room, s.getCount()),
+                    Math.min(remainingToLoad, shareRoom));
                 if (mv <= 0) continue;
                 if (slot0.isEmpty()) {
                     furnace.setItem(0, s.copyWithCount(mv));
@@ -280,8 +303,23 @@ public class SmeltGoal extends Goal {
             }
         }
 
-        // 4) Done? Nothing left to load, cook, or collect.
-        if (remainingToLoad <= 0 && furnace.getItem(0).isEmpty() && furnace.getItem(2).isEmpty()) {
+        // 4) This one is served — move down the row. A smelter that plants
+        //    itself at one furnace leaves the rest to burn out unattended; the
+        //    job is keeping the whole bank lit, which means walking it.
+        if (furnaces.size() > 1) {
+            boolean servedThisOne = furnace.getItem(2).isEmpty()          // nothing to collect
+                && (!furnace.getItem(0).isEmpty() || remainingToLoad <= 0) // it has work, or we have none
+                && (isLit(furnacePos) || !furnace.getItem(1).isEmpty());   // and it is burning
+            if (servedThisOne) {
+                furnaceIndex = (furnaceIndex + 1) % furnaces.size();
+                furnacePos = furnaces.get(furnaceIndex);
+                return;
+            }
+        }
+
+        // 5) Done? Nothing left anywhere in the bank to load, cook or collect.
+        if (remainingToLoad <= 0 && furnace.getItem(0).isEmpty() && furnace.getItem(2).isEmpty()
+            && bankIsIdle()) {
             finish("Smelting done — collected " + collected + " " + (job != null ? resultName(job.arg()) : "items") + ".");
             return;
         }
@@ -318,20 +356,37 @@ public class SmeltGoal extends Goal {
 
     /** Nearest furnace-type block that can smelt the given item. */
     @Nullable
-    private BlockPos findFurnace(String canonical) {
+    /** Every furnace this smelter can use, nearest first. Read out of the
+     *  chunks' block-entity maps rather than by probing 9,801 positions — a
+     *  furnace is a block entity, so the world already knows where they are. */
+    private void findFurnaces(String canonical) {
+        furnaces.clear();
         BlockPos feet = assistant.feetPos();
-        BlockPos best = null;
-        double bestDist = Double.MAX_VALUE;
-        for (BlockPos pos : BlockPos.betweenClosed(
-                feet.offset(-16, -4, -16), feet.offset(16, 4, 16))) {
-            if (!furnaceAccepts(assistant.level().getBlockState(pos), canonical)) continue;
-            double d = pos.distSqr(feet);
-            if (d < bestDist) {
-                bestDist = d;
-                best = pos.immutable();
+        for (com.jrpetty.mcassistant.entity.ZoneChests.Found f
+                : com.jrpetty.mcassistant.entity.ZoneChests.around(assistant.level(), feet, 16, 4)) {
+            if (!f.stillThere()) continue;
+            if (!furnaceAccepts(assistant.level().getBlockState(f.pos()), canonical)) continue;
+            if (!assistant.inZone(f.pos())) continue;   // its own patch only
+            furnaces.add(f.pos());
+        }
+        furnaces.sort((a, b) -> Double.compare(a.distSqr(feet), b.distSqr(feet)));
+    }
+
+    /** Is there nothing left cooking or waiting anywhere in the bank? Finishing
+     *  on the state of one furnace would abandon nine still full of ore. */
+    private boolean bankIsIdle() {
+        for (BlockPos pos : furnaces) {
+            if (assistant.level().getBlockEntity(pos) instanceof AbstractFurnaceBlockEntity f) {
+                if (!f.getItem(0).isEmpty() || !f.getItem(2).isEmpty()) return false;
             }
         }
-        return best;
+        return true;
+    }
+
+    @Nullable
+    private BlockPos findFurnace(String canonical) {
+        findFurnaces(canonical);
+        return furnaces.isEmpty() ? null : furnaces.get(0);
     }
 
     /** No furnace nearby but we're carrying one: set it down next to us so
