@@ -136,9 +136,22 @@ public class CrewScreen extends Screen {
             crew.size() + (crew.size() == 1 ? " assistant" : " assistants")
             + (owed > 0 ? "  ·  " + owed + " unpaid" : ""),
             left + W - PAD, top + 8, owed > 0 ? Ui.BAD : Ui.MUTED);
-        g.drawString(this.font, Ui.clip(this.font,
-            "wages so far: " + iron + " iron  ·  " + gold + " gold  ·  " + diamond + " diamond",
-            inner), x, top + 30, Ui.FAINT, false);
+        // What the crew is short of, in its own words. A shortage someone else
+        // can carry over is worth seeing before it stops anybody working.
+        java.util.List<String> asking = new java.util.ArrayList<>();
+        for (AssistantEntity a : crew) {
+            String st = a.clientStatus();
+            if (st.startsWith("Needs")) asking.add(a.clientName() + ": " + st.substring(6));
+        }
+        if (asking.isEmpty()) {
+            g.drawString(this.font, Ui.clip(this.font,
+                "wages so far: " + iron + " iron  ·  " + gold + " gold  ·  " + diamond + " diamond",
+                inner), x, top + 30, Ui.FAINT, false);
+        } else {
+            g.drawString(this.font, Ui.clip(this.font,
+                "asking for — " + String.join("  ·  ", asking), inner),
+                x, top + 30, Ui.WARN, false);
+        }
 
         if (crew.isEmpty()) {
             g.drawString(this.font, "Nobody here yet.", x, listTop + 6, Ui.MUTED, false);

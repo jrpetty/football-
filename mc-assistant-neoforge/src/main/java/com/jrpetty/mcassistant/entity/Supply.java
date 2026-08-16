@@ -48,6 +48,20 @@ public final class Supply {
         if (carrier.getOwnerId() == null) return null;
         if (carrier.stationTask() == AssistantEntity.StationTask.HAUL) return null; // has its own run
 
+        // Somebody asked out loud, and we are holding it. That beats any
+        // standing chain: a posted need is a specialist that has actually
+        // stopped working, not just a chest that would like to be fuller.
+        Requests.Request asked = Requests.matching(carrier.getOwnerId(), carrier, carrier.tickCount);
+        if (asked != null) {
+            for (AssistantEntity mate : AssistantEntity.allFor(carrier.getOwnerId())) {
+                if (!mate.getUUID().equals(asked.asker()) || !mate.isAlive()) continue;
+                if (mate.distanceToSqr(carrier) > REACH * REACH) break;
+                BlockPos chest = roomIn(mate);
+                if (chest != null) return chest;
+                break;
+            }
+        }
+
         BlockPos best = null;
         double bestDist = Double.MAX_VALUE;
 
