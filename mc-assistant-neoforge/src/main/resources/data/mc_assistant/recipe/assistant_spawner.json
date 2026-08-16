@@ -3,7 +3,7 @@
   "category": "misc",
   "key": {
     "R": "minecraft:rotten_flesh",
-    "D": "minecraft:diamond_block"
+    "D": "minecraft:diamond"
   },
   "pattern": [
     "RRR",
