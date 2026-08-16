@@ -84,9 +84,18 @@ public class RecordScreen extends Screen {
         g.drawString(this.font, Ui.clip(this.font, wages, inner), x, top + 28,
             info.wageDueTicks() <= 0 ? Ui.BAD : Ui.MUTED, false);
 
+        // Who it is, as opposed to what it does: the quirk it arrived with, and
+        // how long it has worked alongside the rest of the crew.
+        if (!info.trait().isEmpty()) {
+            g.drawString(this.font, Ui.clip(this.font,
+                info.trait() + " — " + info.traitBlurb()
+                + (info.teamwork() > 0 ? "  ·  +" + info.teamwork() + "% crew rhythm" : ""),
+                inner), x, top + 38, Ui.GOOD, false);
+        }
+
         // The career itself, biggest tally first, each with a bar for scale.
-        Ui.section(g, this.font, "Career", x, top + 44, inner);
-        int y = top + 56;
+        Ui.section(g, this.font, "Career", x, top + 54, inner);
+        int y = top + 66;
         int rowH = 12;
         int busiest = Math.max(1, info.busiest());
 

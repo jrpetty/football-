@@ -11,7 +11,8 @@ import javax.annotation.Nullable;
  * footprint — parsed once, in one place, rather than in each screen.
  */
 public record BotInfo(String branch, int daysServed, String topDeed,
-                      int[] deeds, @Nullable int[] zone, int[] wages) {
+                      int[] deeds, @Nullable int[] zone, int[] wages,
+                      String trait, String traitBlurb, int teamwork) {
 
     /** "branch|days|topDeed|deedCsv|zoneCsv", written by publishJobState. */
     public static BotInfo of(AssistantEntity bot) {
@@ -43,7 +44,17 @@ public record BotInfo(String branch, int daysServed, String topDeed,
             String[] w = f[5].split(",");
             for (int i = 0; i < 4 && i < w.length; i++) wages[i] = parse(w[i]);
         }
-        return new BotInfo(branch, days, top, deeds, zone, wages);
+        // The quirk it turned up with, and how well it knows its crewmates.
+        String trait = "", blurb = "";
+        int teamwork = 0;
+        if (f.length > 6 && !f[6].isEmpty()) {
+            // Limit of 3: the blurb is last precisely because it contains commas.
+            String[] t = f[6].split(",", 3);
+            if (t.length > 0) trait = t[0];
+            if (t.length > 1) teamwork = parse(t[1]);
+            if (t.length > 2) blurb = t[2];
+        }
+        return new BotInfo(branch, days, top, deeds, zone, wages, trait, blurb, teamwork);
     }
 
     public int ironPaid()    { return wages[0]; }

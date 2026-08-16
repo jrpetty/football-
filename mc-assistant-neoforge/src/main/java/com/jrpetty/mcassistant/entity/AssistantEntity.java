@@ -206,7 +206,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b56 · TOOL SENSE: among tools that dig a block at much the same rate the enchantment now decides — Fortune on ore for the extra yield, Silk Touch on the few blocks that shatter without it, and never Silk Touch on ore, which costs a miner drops · TEAMWORK: hands that have worked the same ground for weeks get up to 10% quicker at it · MILESTONES: a nametag earns a chevron at a thousand of whatever its trade is judged on, three at twenty thousand · SUPPLY CHAINS: a load now goes where it is wanted rather than into whichever chest is nearest — ore and fuel to the smelter, wheat and carrots to the rancher, spare food to whoever has an empty larder and is about to stall. Three chains, each obvious, no general routing to surprise you · WAGES: a specialist draws a wage in metal on top of its rations, and a wage is SPENT, not carried — hand one a diamond and it is gone, so you cannot kill it to get the diamond back. Iron covers a day, gold two, a diamond four · HIRING COST: the first three are free, then each hire wants one more diamond than the last · LEDGER: what the crew has cost you, on the crew screen and per bot on its record · DEATH MEMORY: a bot that died somewhere keeps a wider margin there next life · NAMES: every hire arrives with a name of its own instead of ten of them called assistant, and the Name button gives you a page of unused names to click — no anvil, no typing · PLOTS FIRST: mark a field with the wand before you own anyone, then right-click each assistant to put them on it. One field, marked once, worked by as many hands as you like, and widening it afterwards moves everyone already on it · SERVER COST: a requirement check used to probe every one of 6,875 positions in a zone, up to seven times a scan — about 48,000 block-entity lookups every three seconds per specialist. It now reads the block-entity map the chunk already keeps, which is at most nine maps of a handful of entries each. Same chests, same answers · LINKED CHESTS: everything a job needs counts as held whether it is in the pack or in a chest in the zone, and the bot fetches it itself — stock the chest once and it stops asking you · Hatted trades (farmer, miner, rancher, guard, fisher) had the whole head covered by the hat layer and no face at all — the overlay is now a crown and a brow band, so they look like people in hats · SAVED PATCHES: set a field up once, press Save Patch, and every future hire drops straight onto it — same trade, same ground, same shift. Put a second bot on the same patch and they crew it together · LAYOUT FIX: the orders sheet was drawing its career and perk lines underneath the duty buttons, so nobody ever saw them · JOB UNIFORMS: every trade wears its own kit — straw hat and wheat gold for the farmer, denim and a hard hat for the miner, hi-vis for the hauler — so you can read a crew of ten across a field · WORKING ICON: the tool of its trade floats over its head while it works, and turns into a barrier the moment it's stuck · MAP SCREEN: every patch and every specialist from above, click one to open its orders · WORK RECORD: the full career tally on its own page · CONFIG FILE: every number is yours now — upkeep rates, crew size, patch sizes, the XP curve, chunk loading — in config/mc_assistant-common.toml · LOYALTY: a specialist earns a permanent heart per week of service, up to four, so an old hand outlives a fresh hire · BRANCHES: at level 20 a specialist picks a branch (irrigation, husbandry, prospecting, forestry, sentinel, porterage) that deepens the job it already does · DEATH LOG: it tells you what killed it and where, and remembers when revived · danger sense · useful idling · work record · beds + shifts";
+        "2026-07-b57 · TRAITS: every hire turns up with a quirk of its own — quick, sturdy, cave-shy, a night owl, or thrifty — rolled from its own id so it is settled the moment you meet it and never rerolls · SHIFT HANDOVER: a specialist clocking off passes its load to whoever is coming on to the same plot, keeping its own tools and rations · TOOL SENSE: among tools that dig a block at much the same rate the enchantment now decides — Fortune on ore for the extra yield, Silk Touch on the few blocks that shatter without it, and never Silk Touch on ore, which costs a miner drops · TEAMWORK: hands that have worked the same ground for weeks get up to 10% quicker at it · MILESTONES: a nametag earns a chevron at a thousand of whatever its trade is judged on, three at twenty thousand · SUPPLY CHAINS: a load now goes where it is wanted rather than into whichever chest is nearest — ore and fuel to the smelter, wheat and carrots to the rancher, spare food to whoever has an empty larder and is about to stall. Three chains, each obvious, no general routing to surprise you · WAGES: a specialist draws a wage in metal on top of its rations, and a wage is SPENT, not carried — hand one a diamond and it is gone, so you cannot kill it to get the diamond back. Iron covers a day, gold two, a diamond four · HIRING COST: the first three are free, then each hire wants one more diamond than the last · LEDGER: what the crew has cost you, on the crew screen and per bot on its record · DEATH MEMORY: a bot that died somewhere keeps a wider margin there next life · NAMES: every hire arrives with a name of its own instead of ten of them called assistant, and the Name button gives you a page of unused names to click — no anvil, no typing · PLOTS FIRST: mark a field with the wand before you own anyone, then right-click each assistant to put them on it. One field, marked once, worked by as many hands as you like, and widening it afterwards moves everyone already on it · SERVER COST: a requirement check used to probe every one of 6,875 positions in a zone, up to seven times a scan — about 48,000 block-entity lookups every three seconds per specialist. It now reads the block-entity map the chunk already keeps, which is at most nine maps of a handful of entries each. Same chests, same answers · LINKED CHESTS: everything a job needs counts as held whether it is in the pack or in a chest in the zone, and the bot fetches it itself — stock the chest once and it stops asking you · Hatted trades (farmer, miner, rancher, guard, fisher) had the whole head covered by the hat layer and no face at all — the overlay is now a crown and a brow band, so they look like people in hats · SAVED PATCHES: set a field up once, press Save Patch, and every future hire drops straight onto it — same trade, same ground, same shift. Put a second bot on the same patch and they crew it together · LAYOUT FIX: the orders sheet was drawing its career and perk lines underneath the duty buttons, so nobody ever saw them · JOB UNIFORMS: every trade wears its own kit — straw hat and wheat gold for the farmer, denim and a hard hat for the miner, hi-vis for the hauler — so you can read a crew of ten across a field · WORKING ICON: the tool of its trade floats over its head while it works, and turns into a barrier the moment it's stuck · MAP SCREEN: every patch and every specialist from above, click one to open its orders · WORK RECORD: the full career tally on its own page · CONFIG FILE: every number is yours now — upkeep rates, crew size, patch sizes, the XP curve, chunk loading — in config/mc_assistant-common.toml · LOYALTY: a specialist earns a permanent heart per week of service, up to four, so an old hand outlives a fresh hire · BRANCHES: at level 20 a specialist picks a branch (irrigation, husbandry, prospecting, forestry, sentinel, porterage) that deepens the job it already does · DEATH LOG: it tells you what killed it and where, and remembers when revived · danger sense · useful idling · work record · beds + shifts";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -385,12 +385,16 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // miss. Publishing runs several times a minute per bot; the strings it
         // produces are nearly always byte-identical to the ones already sent.
         long stamp = deedStamp * 31L + branch.ordinal() * 7L + daysServed()
-            + wagesPaid * 1009L + (wageDue() / 200L);
+            + wagesPaid * 1009L + (wageDue() / 200L)
+            + trait.ordinal() * 65537L + teamworkPercent() * 131L;
         if (stamp != lastExtraStamp || lastExtraZone != zoneStamp()) {
             java.util.List<String> top = workRecord(1);
             this.entityData.set(DATA_EXTRA, branch.label + "|" + daysServed() + "|"
                 + (top.isEmpty() ? "" : top.get(0)) + "|" + deedCsv() + "|" + zoneCsv()
-                + "|" + ironPaid + "," + goldPaid + "," + diamondPaid + "," + wageDue());
+                + "|" + ironPaid + "," + goldPaid + "," + diamondPaid + "," + wageDue()
+                // blurb LAST: it contains commas of its own, so it has to be
+                // the field the reader stops splitting at.
+                + "|" + trait.label + "," + teamworkPercent() + "," + trait.blurb);
             lastExtraStamp = stamp;
             lastExtraZone = zoneStamp();
         }
@@ -515,6 +519,45 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         return workZone == null || workZone.containsColumn(pos);
     }
 
+    private int handoverTick = -1000;
+
+    /**
+     * Pass the pack to the crewmate coming on shift on this same plot. Only the
+     * output — its tools and its rations stay with it, or the relief would
+     * arrive holding two hoes and the one going to bed would starve.
+     */
+    private void handOver() {
+        if (workZone == null || ownerId == null || countItems() == 0) return;
+        if (tickCount - handoverTick < 600) return;
+        for (AssistantEntity relief : allFor(ownerId)) {
+            if (relief == this || !relief.isAlive()) continue;
+            if (!workZone.equals(relief.workZone())) continue;
+            if (!relief.onShift() || relief.stationTask() == StationTask.NONE) continue;
+            if (relief.distanceToSqr(this) > 24.0 * 24.0) continue;
+
+            handoverTick = tickCount;
+            int passed = 0;
+            for (int i = 0; i < inventory.size(); i++) {
+                ItemStack st = inventory.get(i);
+                if (st.isEmpty() || isKit(st)) continue;
+                ItemStack left = relief.insertItem(st);
+                passed += st.getCount() - left.getCount();
+                inventory.set(i, left);
+            }
+            if (passed > 0) {
+                say("Clocking off — handing " + passed + " over to "
+                    + relief.displayNameCap() + ".");
+            }
+            return;
+        }
+    }
+
+    /** Things a specialist keeps through a handover: its tools and its upkeep. */
+    private boolean isKit(ItemStack s) {
+        return s.get(DataComponents.FOOD) != null || s.is(Items.REDSTONE)
+            || s.isDamageableItem() || s.is(Items.TORCH) || isWorkingStock(s);
+    }
+
     /** Draw the patch's outline for a player, so "where does it work?" is
      *  answerable at any time rather than only while holding a marker. */
     public void showZoneTo(Player player) {
@@ -540,7 +583,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (upkeepFoodTick == 0) upkeepFoodTick = tickCount;
         if (upkeepChargeTick == 0) upkeepChargeTick = tickCount;
         if (com.jrpetty.mcassistant.AssistantConfig.upkeepEnabled()
-            && tickCount - upkeepFoodTick >= com.jrpetty.mcassistant.AssistantConfig.foodInterval()) {             // ~2.5 minutes of work
+            && tickCount - upkeepFoodTick
+                >= com.jrpetty.mcassistant.AssistantConfig.foodInterval() * traitUpkeepPercent() / 100) {             // ~2.5 minutes of work
             if (consumeUpkeep(s -> s.get(DataComponents.FOOD) != null)) {
                 upkeepFoodTick = tickCount;
             } else {
@@ -552,7 +596,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             }
         }
         if (com.jrpetty.mcassistant.AssistantConfig.upkeepEnabled()
-            && tickCount - upkeepChargeTick >= com.jrpetty.mcassistant.AssistantConfig.chargeInterval()) {          // ~10 minutes of work
+            && tickCount - upkeepChargeTick
+                >= com.jrpetty.mcassistant.AssistantConfig.chargeInterval() * traitUpkeepPercent() / 100) {          // ~10 minutes of work
             if (consumeUpkeep(s -> s.is(Items.REDSTONE))) {
                 upkeepChargeTick = tickCount;
             } else {
@@ -609,6 +654,52 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         boolean got = scoopFromChests(upkeep, 12, CHEST_RANGE) > 0;
         if (kit != null) got |= scoopFromChests(kit, 16, CHEST_RANGE) > 0;
         return got;
+    }
+
+    /**
+     * The quirk a specialist turns up with. Rolled from its own id at hire, so
+     * it is settled the moment you meet it and never rerolls; small enough that
+     * no trait makes a bot a mistake to hire, big enough that you notice which
+     * one you got.
+     */
+    public enum Trait {
+        NONE("steady", "nothing remarkable"),
+        QUICK("quick", "works 8% faster"),
+        STURDY("sturdy", "one extra heart"),
+        CAVE_SHY("cave-shy", "10% faster above ground, 15% slower below Y40"),
+        NIGHT_OWL("night owl", "10% faster after dark, 5% slower by day"),
+        THRIFTY("thrifty", "eats and charges a quarter less often");
+
+        public final String label, blurb;
+        Trait(String label, String blurb) { this.label = label; this.blurb = blurb; }
+    }
+
+    private Trait trait = Trait.NONE;
+
+    public Trait trait() { return trait; }
+
+    /** Settle this one's quirk. Derived from its id so it is stable across a
+     *  reload and identical on any machine that asks. */
+    private void rollTrait() {
+        if (trait != Trait.NONE) return;
+        Trait[] options = Trait.values();
+        int pick = Math.floorMod(getUUID().hashCode(), options.length - 1) + 1;
+        trait = options[pick];
+    }
+
+    /** Work-speed swing from the trait, as a percentage bonus. */
+    private int traitWorkPercent() {
+        return switch (trait) {
+            case QUICK -> 8;
+            case CAVE_SHY -> blockPosition().getY() < 40 ? -15 : 10;
+            case NIGHT_OWL -> level().isNight() ? 10 : -5;
+            default -> 0;
+        };
+    }
+
+    /** How much longer this one goes between meals and charges. */
+    public int traitUpkeepPercent() {
+        return trait == Trait.THRIFTY ? 125 : 100;
     }
 
     private int kitTopUpTick = -1000;
@@ -891,6 +982,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             if (isSleeping()) stopSleeping();
             return false;
         }
+        // Clocking off. Hand the load to whoever is taking over this ground, so
+        // a day/night pair on one plot is a shift with a handover rather than
+        // two bots that happen to share a field.
+        handOver();
         if (getTarget() != null || retreating) {
             if (isSleeping()) stopSleeping(); // defend yourself first
             return false;
@@ -1191,6 +1286,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     public void setOwner(@Nullable Player player) {
         this.ownerId = player == null ? null : player.getUUID();
+        if (this.ownerId != null) {
+            rollTrait();
+            applyLevelPerks();   // a sturdy one starts with its extra heart
+        }
     }
 
     @Nullable
@@ -1704,7 +1803,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         int bonus = veteranLevel() >= 35 ? 30 : (veteranLevel() >= 20 ? 20 : (veteranLevel() >= 10 ? 10 : 0));
         // A forester's axe work (and a husbandman's shears) come off the same
         // clock, so the branch discount lands here alongside the veteran rungs.
-        bonus = Math.min(45, bonus + teamworkPercent());
+        bonus = Math.min(45, bonus + teamworkPercent() + traitWorkPercent());
         return Math.max(4, base * (100 - bonus) / 100 * branchCooldownPercent() / 100);
     }
 
@@ -2127,7 +2226,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         var hp = getAttribute(Attributes.MAX_HEALTH);
         if (hp != null) {
             hp.removeModifier(VETERAN_HP_ID);
-            double hearts = (veteranLevel() >= 20 ? 4.0 : 0.0) + loyaltyHearts() * 2.0;
+            double hearts = (veteranLevel() >= 20 ? 4.0 : 0.0) + loyaltyHearts() * 2.0
+                + (trait == Trait.STURDY ? 2.0 : 0.0);
             if (hearts > 0) {
                 hp.addPermanentModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(
                     VETERAN_HP_ID, hearts,
@@ -3708,6 +3808,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         tag.putInt("WageDiamond", diamondPaid);
         tag.putInt("WagesPaid", wagesPaid);
         tag.putInt("Shoulder", shoulderTicks);
+        tag.putString("Trait", trait.name());
         tag.putLong("FirstDay", firstServedDay);
         if (bedPos != null) tag.putLong("Bed", bedPos.asLong());
         tag.putInt("BaseStage", baseStage);
@@ -3790,6 +3891,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         diamondPaid = tag.getInt("WageDiamond");
         wagesPaid = tag.getInt("WagesPaid");
         shoulderTicks = tag.getInt("Shoulder");
+        try {
+            trait = tag.contains("Trait") ? Trait.valueOf(tag.getString("Trait")) : Trait.NONE;
+        } catch (IllegalArgumentException ignored) {
+            trait = Trait.NONE;
+        }
         deeds.clear();
         CompoundTag deedTag = tag.getCompound("Deeds");
         for (Deed d : Deed.values()) {
@@ -4513,6 +4619,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         tag.putInt("WageDiamond", diamondPaid);
         tag.putInt("WagesPaid", wagesPaid);
         tag.putInt("Shoulder", shoulderTicks);
+        tag.putString("Trait", trait.name());
         tag.putLong("FirstDay", firstServedDay);
         if (homePos != null) tag.putLong("Home", homePos.asLong());
         if (stationPos != null && stationTask != StationTask.NONE) {
@@ -4563,6 +4670,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         diamondPaid = tag.getInt("WageDiamond");
         wagesPaid = tag.getInt("WagesPaid");
         shoulderTicks = tag.getInt("Shoulder");
+        try {
+            trait = tag.contains("Trait") ? Trait.valueOf(tag.getString("Trait")) : Trait.NONE;
+        } catch (IllegalArgumentException ignored) {
+            trait = Trait.NONE;
+        }
         deeds.clear();
         CompoundTag deedTag = tag.getCompound("Deeds");
         for (Deed d : Deed.values()) {
