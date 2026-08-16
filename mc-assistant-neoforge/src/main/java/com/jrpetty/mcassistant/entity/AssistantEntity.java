@@ -206,7 +206,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b57 · TRAITS: every hire turns up with a quirk of its own — quick, sturdy, cave-shy, a night owl, or thrifty — rolled from its own id so it is settled the moment you meet it and never rerolls · SHIFT HANDOVER: a specialist clocking off passes its load to whoever is coming on to the same plot, keeping its own tools and rations · TOOL SENSE: among tools that dig a block at much the same rate the enchantment now decides — Fortune on ore for the extra yield, Silk Touch on the few blocks that shatter without it, and never Silk Touch on ore, which costs a miner drops · TEAMWORK: hands that have worked the same ground for weeks get up to 10% quicker at it · MILESTONES: a nametag earns a chevron at a thousand of whatever its trade is judged on, three at twenty thousand · SUPPLY CHAINS: a load now goes where it is wanted rather than into whichever chest is nearest — ore and fuel to the smelter, wheat and carrots to the rancher, spare food to whoever has an empty larder and is about to stall. Three chains, each obvious, no general routing to surprise you · WAGES: a specialist draws a wage in metal on top of its rations, and a wage is SPENT, not carried — hand one a diamond and it is gone, so you cannot kill it to get the diamond back. Iron covers a day, gold two, a diamond four · HIRING COST: the first three are free, then each hire wants one more diamond than the last · LEDGER: what the crew has cost you, on the crew screen and per bot on its record · DEATH MEMORY: a bot that died somewhere keeps a wider margin there next life · NAMES: every hire arrives with a name of its own instead of ten of them called assistant, and the Name button gives you a page of unused names to click — no anvil, no typing · PLOTS FIRST: mark a field with the wand before you own anyone, then right-click each assistant to put them on it. One field, marked once, worked by as many hands as you like, and widening it afterwards moves everyone already on it · SERVER COST: a requirement check used to probe every one of 6,875 positions in a zone, up to seven times a scan — about 48,000 block-entity lookups every three seconds per specialist. It now reads the block-entity map the chunk already keeps, which is at most nine maps of a handful of entries each. Same chests, same answers · LINKED CHESTS: everything a job needs counts as held whether it is in the pack or in a chest in the zone, and the bot fetches it itself — stock the chest once and it stops asking you · Hatted trades (farmer, miner, rancher, guard, fisher) had the whole head covered by the hat layer and no face at all — the overlay is now a crown and a brow band, so they look like people in hats · SAVED PATCHES: set a field up once, press Save Patch, and every future hire drops straight onto it — same trade, same ground, same shift. Put a second bot on the same patch and they crew it together · LAYOUT FIX: the orders sheet was drawing its career and perk lines underneath the duty buttons, so nobody ever saw them · JOB UNIFORMS: every trade wears its own kit — straw hat and wheat gold for the farmer, denim and a hard hat for the miner, hi-vis for the hauler — so you can read a crew of ten across a field · WORKING ICON: the tool of its trade floats over its head while it works, and turns into a barrier the moment it's stuck · MAP SCREEN: every patch and every specialist from above, click one to open its orders · WORK RECORD: the full career tally on its own page · CONFIG FILE: every number is yours now — upkeep rates, crew size, patch sizes, the XP curve, chunk loading — in config/mc_assistant-common.toml · LOYALTY: a specialist earns a permanent heart per week of service, up to four, so an old hand outlives a fresh hire · BRANCHES: at level 20 a specialist picks a branch (irrigation, husbandry, prospecting, forestry, sentinel, porterage) that deepens the job it already does · DEATH LOG: it tells you what killed it and where, and remembers when revived · danger sense · useful idling · work record · beds + shifts";
+        "2026-07-b58 · GOOD GROUND: a miner remembers where the veins were and a lumberjack where it replanted, and both go back rather than wandering off in a straight line away from the ore they just found · THE BEAT: a guard with a patch now walks its perimeter corner to corner instead of standing in the middle — it meets things at the boundary, which is what a boundary is for · TRAITS: every hire turns up with a quirk of its own — quick, sturdy, cave-shy, a night owl, or thrifty — rolled from its own id so it is settled the moment you meet it and never rerolls · SHIFT HANDOVER: a specialist clocking off passes its load to whoever is coming on to the same plot, keeping its own tools and rations · TOOL SENSE: among tools that dig a block at much the same rate the enchantment now decides — Fortune on ore for the extra yield, Silk Touch on the few blocks that shatter without it, and never Silk Touch on ore, which costs a miner drops · TEAMWORK: hands that have worked the same ground for weeks get up to 10% quicker at it · MILESTONES: a nametag earns a chevron at a thousand of whatever its trade is judged on, three at twenty thousand · SUPPLY CHAINS: a load now goes where it is wanted rather than into whichever chest is nearest — ore and fuel to the smelter, wheat and carrots to the rancher, spare food to whoever has an empty larder and is about to stall. Three chains, each obvious, no general routing to surprise you · WAGES: a specialist draws a wage in metal on top of its rations, and a wage is SPENT, not carried — hand one a diamond and it is gone, so you cannot kill it to get the diamond back. Iron covers a day, gold two, a diamond four · HIRING COST: the first three are free, then each hire wants one more diamond than the last · LEDGER: what the crew has cost you, on the crew screen and per bot on its record · DEATH MEMORY: a bot that died somewhere keeps a wider margin there next life · NAMES: every hire arrives with a name of its own instead of ten of them called assistant, and the Name button gives you a page of unused names to click — no anvil, no typing · PLOTS FIRST: mark a field with the wand before you own anyone, then right-click each assistant to put them on it. One field, marked once, worked by as many hands as you like, and widening it afterwards moves everyone already on it · SERVER COST: a requirement check used to probe every one of 6,875 positions in a zone, up to seven times a scan — about 48,000 block-entity lookups every three seconds per specialist. It now reads the block-entity map the chunk already keeps, which is at most nine maps of a handful of entries each. Same chests, same answers · LINKED CHESTS: everything a job needs counts as held whether it is in the pack or in a chest in the zone, and the bot fetches it itself — stock the chest once and it stops asking you · Hatted trades (farmer, miner, rancher, guard, fisher) had the whole head covered by the hat layer and no face at all — the overlay is now a crown and a brow band, so they look like people in hats · SAVED PATCHES: set a field up once, press Save Patch, and every future hire drops straight onto it — same trade, same ground, same shift. Put a second bot on the same patch and they crew it together · LAYOUT FIX: the orders sheet was drawing its career and perk lines underneath the duty buttons, so nobody ever saw them · JOB UNIFORMS: every trade wears its own kit — straw hat and wheat gold for the farmer, denim and a hard hat for the miner, hi-vis for the hauler — so you can read a crew of ten across a field · WORKING ICON: the tool of its trade floats over its head while it works, and turns into a barrier the moment it's stuck · MAP SCREEN: every patch and every specialist from above, click one to open its orders · WORK RECORD: the full career tally on its own page · CONFIG FILE: every number is yours now — upkeep rates, crew size, patch sizes, the XP curve, chunk loading — in config/mc_assistant-common.toml · LOYALTY: a specialist earns a permanent heart per week of service, up to four, so an old hand outlives a fresh hire · BRANCHES: at level 20 a specialist picks a branch (irrigation, husbandry, prospecting, forestry, sentinel, porterage) that deepens the job it already does · DEATH LOG: it tells you what killed it and where, and remembers when revived · danger sense · useful idling · work record · beds + shifts";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -517,6 +517,83 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Inside the patch's footprint, ignoring height — what a digging job needs. */
     public boolean inZoneColumn(BlockPos pos) {
         return workZone == null || workZone.containsColumn(pos);
+    }
+
+    // --- places worth going back to ------------------------------------------
+    // A vein rarely comes alone and a felled grove regrows. Remembering where
+    // the good ground was turns a miner that wanders off in a straight line
+    // into one that works a seam out, and gives a lumberjack somewhere to
+    // return to once the saplings it planted have come up.
+
+    private final java.util.List<Long> richSpots = new java.util.ArrayList<>();
+    private static final int SPOT_MEMORY = 12;
+
+    /** Remember this as ground that paid off. */
+    public void noteRichSpot(BlockPos pos) {
+        long key = pos.asLong();
+        // Anything within a few blocks of a spot we already know is the same
+        // find, not a new one — otherwise one seam fills the whole memory.
+        for (long known : richSpots) {
+            if (BlockPos.of(known).distSqr(pos) < 64.0) return;
+        }
+        richSpots.add(0, key);
+        while (richSpots.size() > SPOT_MEMORY) richSpots.remove(richSpots.size() - 1);
+    }
+
+    /** The nearest remembered spot inside the patch, or null. Skips anywhere it
+     *  is already standing, so it does not keep re-walking to its own feet. */
+    @Nullable
+    public BlockPos richSpotToRevisit() {
+        BlockPos best = null;
+        double bestDist = Double.MAX_VALUE;
+        for (long key : richSpots) {
+            BlockPos pos = BlockPos.of(key);
+            if (!inZoneColumn(pos)) continue;
+            double d = pos.distSqr(blockPosition());
+            if (d < 100.0 || d > 96.0 * 96.0 || d >= bestDist) continue;
+            bestDist = d;
+            best = pos;
+        }
+        return best;
+    }
+
+    /** Forget a spot that has been worked out. */
+    public void forgetRichSpot(BlockPos pos) {
+        richSpots.removeIf(k -> BlockPos.of(k).distSqr(pos) < 64.0);
+    }
+
+    private int revisitTick = -1000;
+    private int beatCorner;          // which corner of the patch it is heading for
+    private int beatTick = -1000;
+
+    /**
+     * A guard's patrol: the four corners of its own plot, in order, pausing at
+     * each. The route needs no marking of its own — you already drew it when
+     * you marked the patch, and a beat that follows the boundary is what the
+     * boundary is for.
+     */
+    private boolean walkTheBeat() {
+        if (workZone == null) return false;
+        if (!getNavigation().isDone()) return false;
+        if (tickCount - beatTick < 200) return false;   // a pause at each post
+        beatTick = tickCount;
+
+        BlockPos min = workZone.min(), max = workZone.max();
+        BlockPos[] corners = {
+            new BlockPos(min.getX() + 1, min.getY(), min.getZ() + 1),
+            new BlockPos(max.getX() - 1, min.getY(), min.getZ() + 1),
+            new BlockPos(max.getX() - 1, min.getY(), max.getZ() - 1),
+            new BlockPos(min.getX() + 1, min.getY(), max.getZ() - 1),
+        };
+        BlockPos target = corners[Math.floorMod(beatCorner, corners.length)];
+        beatCorner++;
+        // Walk to the surface at that corner, not into the ground at the
+        // zone's floor — a patch marked from a hilltop has a low min Y.
+        int y = level().getHeight(
+            net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+            target.getX(), target.getZ());
+        getNavigation().moveTo(target.getX() + 0.5, y, target.getZ() + 0.5, 1.0D);
+        return true;
     }
 
     private int handoverTick = -1000;
@@ -2853,6 +2930,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     enqueue(Job.torchArea(10));
                     return true;
                 }
+                // Nothing to fight and nothing to tidy: walk the beat. A guard
+                // standing in the middle of its plot only ever meets what comes
+                // to it; one walking the perimeter meets it at the edge, which
+                // is the whole point of posting a guard on a boundary.
+                if (walkTheBeat()) return true;
             }
             case SMELT -> {
                 // Keep the furnaces fed: pull ore (and fuel) from the input
@@ -2943,6 +3025,21 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // Only for jobs that roam: a smelter, fisher, storekeeper and hauler are
         // each tied to a fixed furnace, pond or chest and must stay by it, and a
         // miner belongs at its shaft head.
+        // Before drifting at random: is there ground here that paid off before?
+        // A worked seam usually has more in it, and a grove replanted an hour
+        // ago is standing timber by now. This is what stops a miner wandering
+        // off in a straight line away from the ore it just found.
+        if ((stationTask == StationTask.MINE || stationTask == StationTask.WOOD)
+            && getNavigation().isDone() && tickCount - revisitTick > 600) {
+            BlockPos spot = richSpotToRevisit();
+            if (spot != null) {
+                revisitTick = tickCount;
+                getNavigation().moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 1.0D);
+                sayRoutine("Back to the good ground.");
+                return true;
+            }
+        }
+
         boolean roams = stationTask == StationTask.FARM || stationTask == StationTask.WOOD
             || stationTask == StationTask.RANCH || stationTask == StationTask.GUARD;
         if (roams && workZone != null && workZone.workRadius() > 16 && getNavigation().isDone()) {
@@ -3809,6 +3906,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         tag.putInt("WagesPaid", wagesPaid);
         tag.putInt("Shoulder", shoulderTicks);
         tag.putString("Trait", trait.name());
+        net.minecraft.nbt.ListTag spots = new net.minecraft.nbt.ListTag();
+        for (long k : richSpots) spots.add(net.minecraft.nbt.LongTag.valueOf(k));
+        tag.put("RichSpots", spots);
         tag.putLong("FirstDay", firstServedDay);
         if (bedPos != null) tag.putLong("Bed", bedPos.asLong());
         tag.putInt("BaseStage", baseStage);
@@ -3895,6 +3995,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             trait = tag.contains("Trait") ? Trait.valueOf(tag.getString("Trait")) : Trait.NONE;
         } catch (IllegalArgumentException ignored) {
             trait = Trait.NONE;
+        }
+        richSpots.clear();
+        net.minecraft.nbt.ListTag spots = tag.getList("RichSpots", net.minecraft.nbt.Tag.TAG_LONG);
+        for (int i = 0; i < spots.size() && i < SPOT_MEMORY; i++) {
+            if (spots.get(i) instanceof net.minecraft.nbt.LongTag lt) richSpots.add(lt.getAsLong());
         }
         deeds.clear();
         CompoundTag deedTag = tag.getCompound("Deeds");
@@ -4620,6 +4725,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         tag.putInt("WagesPaid", wagesPaid);
         tag.putInt("Shoulder", shoulderTicks);
         tag.putString("Trait", trait.name());
+        net.minecraft.nbt.ListTag spots = new net.minecraft.nbt.ListTag();
+        for (long k : richSpots) spots.add(net.minecraft.nbt.LongTag.valueOf(k));
+        tag.put("RichSpots", spots);
         tag.putLong("FirstDay", firstServedDay);
         if (homePos != null) tag.putLong("Home", homePos.asLong());
         if (stationPos != null && stationTask != StationTask.NONE) {
@@ -4674,6 +4782,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             trait = tag.contains("Trait") ? Trait.valueOf(tag.getString("Trait")) : Trait.NONE;
         } catch (IllegalArgumentException ignored) {
             trait = Trait.NONE;
+        }
+        richSpots.clear();
+        net.minecraft.nbt.ListTag spots = tag.getList("RichSpots", net.minecraft.nbt.Tag.TAG_LONG);
+        for (int i = 0; i < spots.size() && i < SPOT_MEMORY; i++) {
+            if (spots.get(i) instanceof net.minecraft.nbt.LongTag lt) richSpots.add(lt.getAsLong());
         }
         deeds.clear();
         CompoundTag deedTag = tag.getCompound("Deeds");

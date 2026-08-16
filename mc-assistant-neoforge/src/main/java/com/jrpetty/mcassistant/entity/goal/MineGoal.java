@@ -306,6 +306,8 @@ public class MineGoal extends Goal {
             if (ore) {
                 oresMined++;
             assistant.note(AssistantEntity.Deed.ORE_FOUND, 1);
+                assistant.noteRichSpot(pos);   // a vein rarely comes alone
+
                 veinMined++;
                 assistant.awardXp(2); // fair XP toward enchanting
             }

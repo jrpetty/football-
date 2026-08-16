@@ -190,6 +190,7 @@ public class GatherGoal extends Goal {
                     if (s.isEmpty()) inv.set(i, ItemStack.EMPTY);
                     planted++;
                     assistant.note(AssistantEntity.Deed.SAPLINGS_PLANTED, 1);
+                    assistant.noteRichSpot(stump);   // come back when it has grown
                     done = true;
                     plantedHere = true;
                 }
