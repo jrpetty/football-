@@ -156,25 +156,23 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
         g.drawString(this.font, Component.literal(trim(job.title + " · " + a.clientZone())),
             8, 154, 0x303030, false);
 
-        String status = a.clientStatus();
-        int colour = status.startsWith("Working") ? 0x1F7A34   // green: earning its keep
-            : status.startsWith("Needs") || status.startsWith("Out of") ? 0x9C2B18  // red: blocked
-            : 0x7A5A10;                                                            // amber: still setting up
-        g.drawString(this.font, Component.literal(
-            clipTo(status, imageWidth - 16 - this.font.width(
-                AssistantEntity.foodLabel(diet) + " " + diet + "%") - 6)),
-            8, 165, colour, false);
-
-        // What it is running on. This is the line that explains a bot that is
-        // working but slow, so it gets a bar as well as a number — you should
-        // be able to see the difference between steak and rotten flesh without
-        // reading anything.
+        // What it is running on. Worked out first because the status line below
+        // shares its row and has to be clipped to whatever space this leaves.
         BotInfo info = BotInfo.of(a);
         int diet = info.diet();
         int barW = imageWidth - 16;
         int fill = Math.max(1, barW * Math.max(0, Math.min(100, diet)) / 100);
         int dietColour = diet >= 95 ? 0x1F7A34 : diet >= 70 ? 0x4A6A20
             : diet >= 45 ? 0x7A5A10 : 0x9C2B18;
+        String pace = AssistantEntity.foodLabel(diet) + " " + diet + "%";
+
+        String status = a.clientStatus();
+        int colour = status.startsWith("Working") ? 0x1F7A34   // green: earning its keep
+            : status.startsWith("Needs") || status.startsWith("Out of") ? 0x9C2B18  // red: blocked
+            : 0x7A5A10;                                                            // amber: still setting up
+        g.drawString(this.font, Component.literal(
+            clipTo(status, imageWidth - 16 - this.font.width(pace) - 6)),
+            8, 165, colour, false);
         // This screen is packed: slots 18-96, three button rows 96-150, and the
         // player's own inventory from 178. The only free band is 150-178, which
         // already carries the job line and the status line. So the diet shares
@@ -184,7 +182,6 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
         // The b61 version put this at y=132 and y=143, which is squarely on top
         // of the Set Area / - / + / Show row. That is what was drawn through
         // the buttons.
-        String pace = AssistantEntity.foodLabel(diet) + " " + diet + "%";
         g.drawString(this.font, Component.literal(pace),
             imageWidth - 8 - this.font.width(pace), 165, dietColour, false);
         g.fill(8, 174, 8 + barW, 177, 0x30000000);
