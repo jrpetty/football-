@@ -50,9 +50,27 @@ public final class AssistantActions {
     public static final int SAVE_PRESET = 23;
     public static final int USE_PRESET = 24;
 
+    /** Naming. Nothing in this mod is typed, so the order carries an INDEX into
+     *  the shared name pool rather than a string: the client can only ask for a
+     *  name that already exists in common code, and the wire format is unchanged. */
+    public static final int NAME_BASE = 1000;
+
     /** Run an order. Returns false for an unknown id. */
     public static boolean apply(AssistantEntity a, Player player, int action) {
         if (!a.isOwner(player)) return false;
+        if (action >= NAME_BASE) {
+            int index = action - NAME_BASE;
+            if (!com.jrpetty.mcassistant.entity.Names.validIndex(index)) return false;
+            String picked = com.jrpetty.mcassistant.entity.Names.at(index);
+            if (com.jrpetty.mcassistant.entity.Names.inUse(player.getUUID(), picked)) {
+                a.say("One of us is already called " + picked + " — pick another.");
+                return true;
+            }
+            String was = a.displayNameCap();
+            a.rename(picked);
+            a.say("I was " + was + "; I'm " + a.displayNameCap() + " now.");
+            return true;
+        }
         switch (action) {
             case STOP -> a.requestStop();
             // Calling a specialist over (or parking it) must take it OFF the job,

@@ -236,6 +236,7 @@ public final class AssistantCommands {
         }
         assistant.moveTo(sx, player.getY(), sz, player.getYRot(), 0);
         assistant.setOwner(player);
+        assistant.rename(com.jrpetty.mcassistant.entity.Names.freeFor(player.getUUID()));
         player.serverLevel().addFreshEntity(assistant);
         return assistant;
     }

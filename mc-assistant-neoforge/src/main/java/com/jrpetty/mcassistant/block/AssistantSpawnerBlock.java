@@ -49,6 +49,7 @@ public class AssistantSpawnerBlock extends Block {
         if (assistant == null) return;
         assistant.moveTo(spot.x, spot.y, spot.z, serverPlayer.getYRot(), 0);
         assistant.setOwner(serverPlayer);
+        assistant.rename(com.jrpetty.mcassistant.entity.Names.freeFor(serverPlayer.getUUID()));
         assistant.setHome(pos);
         serverLevel.addFreshEntity(assistant);
         assistant.say("Reporting in — this spot is home. RIGHT-CLICK me to open my screen, "
@@ -98,6 +99,7 @@ public class AssistantSpawnerBlock extends Block {
         }
         assistant.moveTo(spot.x, spot.y, spot.z, serverPlayer.getYRot(), 0);
         assistant.setOwner(serverPlayer);
+        assistant.rename(com.jrpetty.mcassistant.entity.Names.freeFor(serverPlayer.getUUID()));
         assistant.setHome(pos);
         serverLevel.addFreshEntity(assistant);
         assistant.say("Reporting in. RIGHT-CLICK me to pick what I specialise in — "

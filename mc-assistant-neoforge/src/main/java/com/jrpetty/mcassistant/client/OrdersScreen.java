@@ -116,8 +116,11 @@ public class OrdersScreen extends Screen {
             .tooltip(Tooltip.create(Component.literal(
                 "Everything it has done in its career, counted")))
             .build());
-        add(x + 2 * (w4 + gap), y, w4, h, "Specialise", AssistantActions.CYCLE_BRANCH,
-            "At level 20 a specialist can pick a branch to deepen its trade");
+        this.addRenderableWidget(Button.builder(Component.literal("Name"),
+                b -> this.minecraft.setScreen(new NameScreen(bot)))
+            .bounds(x + 2 * (w4 + gap), y, w4, h)
+            .tooltip(Tooltip.create(Component.literal("Give this one a name — pick, don't type")))
+            .build());
         this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
             .bounds(x + 3 * (w4 + gap), y, w4, h).build());
 

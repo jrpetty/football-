@@ -28,13 +28,20 @@ public class RecordScreen extends Screen {
     protected void init() {
         this.left = (this.width - W) / 2;
         this.top = (this.height - H) / 2;
-        int w2 = (W - PAD * 2 - 4) / 2;
+        int gap = 4;
+        int w3 = (W - PAD * 2 - gap * 2) / 3;
         int y = top + H - PAD - 18;
+        this.addRenderableWidget(Button.builder(Component.literal("Specialise"), b ->
+                OrdersScreen.sendOrder(bot, com.jrpetty.mcassistant.AssistantActions.CYCLE_BRANCH))
+            .bounds(left + PAD, y, w3, 18)
+            .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(
+                "At level 20 a specialist can pick a branch to deepen its trade")))
+            .build());
         this.addRenderableWidget(Button.builder(Component.literal("Orders"),
                 b -> this.minecraft.setScreen(new OrdersScreen(bot)))
-            .bounds(left + PAD, y, w2, 18).build());
+            .bounds(left + PAD + w3 + gap, y, w3, 18).build());
         this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
-            .bounds(left + PAD + w2 + 4, y, w2, 18).build());
+            .bounds(left + PAD + 2 * (w3 + gap), y, w3, 18).build());
     }
 
     @Override

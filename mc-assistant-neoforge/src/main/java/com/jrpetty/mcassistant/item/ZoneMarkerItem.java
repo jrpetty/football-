@@ -25,14 +25,22 @@ import java.util.UUID;
 /**
  * Work Zone Marker — the surveyor's wand for laying out a specialist's patch.
  *
- *   right-click an assistant ... take charge of THAT bot's area. If it already
- *                                has one, this shows it; otherwise you're ready
- *                                to map one out.
- *   right-click a block ....... first click drops a corner stake, the second
- *                                closes the perimeter and hands it straight to
- *                                the bot. Further clicks widen it to include
- *                                what you clicked.
- *   sneak + right-click ....... let go of that bot and clear the wand.
+ * Two ways round, and they meet in the middle.
+ *
+ *   Mark the ground first, then hire to it:
+ *     right-click a block ..... first click drops a corner stake, the second
+ *                                closes the plot. Further clicks widen it.
+ *     right-click an assistant  puts THAT one on the plot. Do it again for the
+ *                                next, and the next — one field, marked once,
+ *                                worked by as many hands as you like. Widening
+ *                                it afterwards moves everyone already on it.
+ *
+ *   Or start from a bot:
+ *     right-click an assistant  (with an empty wand) take charge of ITS area.
+ *                                If it already has one, this shows it.
+ *     right-click a block ..... maps that bot's patch, as above.
+ *
+ *   sneak + right-click ....... clear the wand: plot, links and all.
  *
  * The outline is drawn while you're marking, and for a few seconds after each
  * change, so you can see the shape as you build it. Once it's set it stops
@@ -62,6 +70,24 @@ public class ZoneMarkerItem extends Item {
             return InteractionResult.CONSUME;
         }
         CompoundTag data = read(stack);
+
+        // Holding a plot? Then this click puts THIS bot on it. Clicking a second
+        // and a third adds them to the same ground, which is the whole point:
+        // one field, marked once, worked by as many hands as you like.
+        WorkZone plot = plotIn(data);
+        if (plot != null) {
+            bot.setWorkZone(plot);
+            link(data, bot);
+            data.putLong("ShowUntil", player.level().getGameTime() + SHOW_TICKS);
+            write(stack, data);
+            bot.showZoneTo(player);
+            int crew = onPlot(player, plot);
+            tell(player, bot.displayNameCap() + " is on this plot now — "
+                + crew + (crew == 1 ? " working it." : " working it together.")
+                + " Right-click another assistant to add them, or a block to redraw it for all of them.");
+            return InteractionResult.CONSUME;
+        }
+
         boolean already = bot.getUUID().toString().equals(data.getString("Bot"));
 
         CompoundTag next = new CompoundTag();
@@ -98,12 +124,40 @@ public class ZoneMarkerItem extends Item {
         }
 
         AssistantEntity bot = boundBot(ctx.getLevel(), data, pos);
+        long now = ctx.getLevel().getGameTime();
+
+        // No bot bound: lay the plot out on its own, and hand it to whoever you
+        // like afterwards. Marking the same field once per worker was the thing
+        // that made a crew tedious to set up.
         if (bot == null) {
-            tell(player, "Right-click one of your assistants first — this wand maps out ITS patch.");
+            if (!data.contains("Corner")) {
+                data.putLong("Corner", pos.asLong());
+                data.putLong("ShowUntil", now + SHOW_TICKS);
+                write(stack, data);
+                tell(player, "Corner one at " + pos.getX() + ", " + pos.getZ()
+                    + " — now click the opposite corner to close the plot.");
+                return InteractionResult.CONSUME;
+            }
+            WorkZone had = plotIn(data);
+            WorkZone marked = had != null
+                ? had.including(pos)
+                : WorkZone.of(BlockPos.of(data.getLong("Corner")), pos, WorkZone.DEFAULT_DEPTH);
+            data.putLong("PlotMin", marked.min().asLong());
+            data.putLong("PlotMax", marked.max().asLong());
+            data.putInt("PlotDepth", marked.depth());
+            data.putLong("Corner", pos.asLong());
+            data.putLong("ShowUntil", now + SHOW_TICKS);
+            // Anyone already put on this plot moves with it, so widening a field
+            // after the fact does not mean re-linking the whole crew.
+            int moved = retarget(ctx.getLevel(), data, marked);
+            write(stack, data);
+            outline((ServerLevel) ctx.getLevel(), marked, ParticleTypes.WAX_ON);
+            tell(player, "Plot is " + marked.describe()
+                + (moved > 0 ? " — moved " + moved + " with it." : ". Right-click an assistant to put them on it.")
+                + " Click more blocks to widen it.");
             return InteractionResult.CONSUME;
         }
 
-        long now = ctx.getLevel().getGameTime();
         if (!data.contains("Corner")) {
             data.putLong("Corner", pos.asLong());
             data.putLong("ShowUntil", now + SHOW_TICKS);
@@ -153,6 +207,10 @@ public class ZoneMarkerItem extends Item {
         CompoundTag data = read(stack);
         if (level.getGameTime() > data.getLong("ShowUntil")) return;
 
+        WorkZone plot = plotIn(data);
+        if (plot != null) {
+            outline(sl, plot, ParticleTypes.WAX_ON);
+        }
         AssistantEntity bot = boundBot(level, data, holder.blockPosition());
         if (bot != null && bot.workZone() != null && data.getBoolean("Closed")) {
             outline(sl, bot.workZone(), ParticleTypes.WAX_ON);
@@ -212,6 +270,56 @@ public class ZoneMarkerItem extends Item {
             new net.minecraft.world.phys.AABB(near).inflate(BIND_RANGE),
             a -> a.getUUID().equals(uuid));
         return found.isEmpty() ? null : found.get(0);
+    }
+
+    /** The plot this wand is carrying, if it has closed one. */
+    @Nullable
+    private static WorkZone plotIn(CompoundTag data) {
+        if (!data.contains("PlotMin") || !data.contains("PlotMax")) return null;
+        return new WorkZone(BlockPos.of(data.getLong("PlotMin")), BlockPos.of(data.getLong("PlotMax")),
+            data.contains("PlotDepth") ? data.getInt("PlotDepth") : WorkZone.DEFAULT_DEPTH);
+    }
+
+    /** Remember that this bot is on the wand's plot. */
+    private static void link(CompoundTag data, AssistantEntity bot) {
+        net.minecraft.nbt.ListTag linked = data.getList("Linked", net.minecraft.nbt.Tag.TAG_STRING);
+        String id = bot.getUUID().toString();
+        for (int i = 0; i < linked.size(); i++) {
+            if (linked.getString(i).equals(id)) return;
+        }
+        linked.add(net.minecraft.nbt.StringTag.valueOf(id));
+        data.put("Linked", linked);
+    }
+
+    /** Move everyone already on this wand's plot onto its new shape. */
+    private static int retarget(net.minecraft.world.level.Level level, CompoundTag data, WorkZone plot) {
+        net.minecraft.nbt.ListTag linked = data.getList("Linked", net.minecraft.nbt.Tag.TAG_STRING);
+        if (linked.isEmpty()) return 0;
+        int moved = 0;
+        for (int i = 0; i < linked.size(); i++) {
+            UUID uuid;
+            try {
+                uuid = UUID.fromString(linked.getString(i));
+            } catch (IllegalArgumentException e) {
+                continue;
+            }
+            for (AssistantEntity a : level.getEntitiesOfClass(AssistantEntity.class,
+                    new net.minecraft.world.phys.AABB(plot.center()).inflate(BIND_RANGE),
+                    x -> x.isAlive() && x.getUUID().equals(uuid))) {
+                a.setWorkZone(plot);
+                moved++;
+            }
+        }
+        return moved;
+    }
+
+    /** How many of this player's crew are working exactly this ground. */
+    private static int onPlot(Player player, WorkZone plot) {
+        int n = 0;
+        for (AssistantEntity a : AssistantEntity.allFor(player.getUUID())) {
+            if (a.isAlive() && plot.equals(a.workZone())) n++;
+        }
+        return n;
     }
 
     private static void tell(Player player, String message) {
