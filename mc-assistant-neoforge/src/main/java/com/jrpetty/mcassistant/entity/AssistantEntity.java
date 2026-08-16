@@ -206,7 +206,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b55 · SUPPLY CHAINS: a load now goes where it is wanted rather than into whichever chest is nearest — ore and fuel to the smelter, wheat and carrots to the rancher, spare food to whoever has an empty larder and is about to stall. Three chains, each obvious, no general routing to surprise you · WAGES: a specialist draws a wage in metal on top of its rations, and a wage is SPENT, not carried — hand one a diamond and it is gone, so you cannot kill it to get the diamond back. Iron covers a day, gold two, a diamond four · HIRING COST: the first three are free, then each hire wants one more diamond than the last · LEDGER: what the crew has cost you, on the crew screen and per bot on its record · DEATH MEMORY: a bot that died somewhere keeps a wider margin there next life · NAMES: every hire arrives with a name of its own instead of ten of them called assistant, and the Name button gives you a page of unused names to click — no anvil, no typing · PLOTS FIRST: mark a field with the wand before you own anyone, then right-click each assistant to put them on it. One field, marked once, worked by as many hands as you like, and widening it afterwards moves everyone already on it · SERVER COST: a requirement check used to probe every one of 6,875 positions in a zone, up to seven times a scan — about 48,000 block-entity lookups every three seconds per specialist. It now reads the block-entity map the chunk already keeps, which is at most nine maps of a handful of entries each. Same chests, same answers · LINKED CHESTS: everything a job needs counts as held whether it is in the pack or in a chest in the zone, and the bot fetches it itself — stock the chest once and it stops asking you · Hatted trades (farmer, miner, rancher, guard, fisher) had the whole head covered by the hat layer and no face at all — the overlay is now a crown and a brow band, so they look like people in hats · SAVED PATCHES: set a field up once, press Save Patch, and every future hire drops straight onto it — same trade, same ground, same shift. Put a second bot on the same patch and they crew it together · LAYOUT FIX: the orders sheet was drawing its career and perk lines underneath the duty buttons, so nobody ever saw them · JOB UNIFORMS: every trade wears its own kit — straw hat and wheat gold for the farmer, denim and a hard hat for the miner, hi-vis for the hauler — so you can read a crew of ten across a field · WORKING ICON: the tool of its trade floats over its head while it works, and turns into a barrier the moment it's stuck · MAP SCREEN: every patch and every specialist from above, click one to open its orders · WORK RECORD: the full career tally on its own page · CONFIG FILE: every number is yours now — upkeep rates, crew size, patch sizes, the XP curve, chunk loading — in config/mc_assistant-common.toml · LOYALTY: a specialist earns a permanent heart per week of service, up to four, so an old hand outlives a fresh hire · BRANCHES: at level 20 a specialist picks a branch (irrigation, husbandry, prospecting, forestry, sentinel, porterage) that deepens the job it already does · DEATH LOG: it tells you what killed it and where, and remembers when revived · danger sense · useful idling · work record · beds + shifts";
+        "2026-07-b56 · TOOL SENSE: among tools that dig a block at much the same rate the enchantment now decides — Fortune on ore for the extra yield, Silk Touch on the few blocks that shatter without it, and never Silk Touch on ore, which costs a miner drops · TEAMWORK: hands that have worked the same ground for weeks get up to 10% quicker at it · MILESTONES: a nametag earns a chevron at a thousand of whatever its trade is judged on, three at twenty thousand · SUPPLY CHAINS: a load now goes where it is wanted rather than into whichever chest is nearest — ore and fuel to the smelter, wheat and carrots to the rancher, spare food to whoever has an empty larder and is about to stall. Three chains, each obvious, no general routing to surprise you · WAGES: a specialist draws a wage in metal on top of its rations, and a wage is SPENT, not carried — hand one a diamond and it is gone, so you cannot kill it to get the diamond back. Iron covers a day, gold two, a diamond four · HIRING COST: the first three are free, then each hire wants one more diamond than the last · LEDGER: what the crew has cost you, on the crew screen and per bot on its record · DEATH MEMORY: a bot that died somewhere keeps a wider margin there next life · NAMES: every hire arrives with a name of its own instead of ten of them called assistant, and the Name button gives you a page of unused names to click — no anvil, no typing · PLOTS FIRST: mark a field with the wand before you own anyone, then right-click each assistant to put them on it. One field, marked once, worked by as many hands as you like, and widening it afterwards moves everyone already on it · SERVER COST: a requirement check used to probe every one of 6,875 positions in a zone, up to seven times a scan — about 48,000 block-entity lookups every three seconds per specialist. It now reads the block-entity map the chunk already keeps, which is at most nine maps of a handful of entries each. Same chests, same answers · LINKED CHESTS: everything a job needs counts as held whether it is in the pack or in a chest in the zone, and the bot fetches it itself — stock the chest once and it stops asking you · Hatted trades (farmer, miner, rancher, guard, fisher) had the whole head covered by the hat layer and no face at all — the overlay is now a crown and a brow band, so they look like people in hats · SAVED PATCHES: set a field up once, press Save Patch, and every future hire drops straight onto it — same trade, same ground, same shift. Put a second bot on the same patch and they crew it together · LAYOUT FIX: the orders sheet was drawing its career and perk lines underneath the duty buttons, so nobody ever saw them · JOB UNIFORMS: every trade wears its own kit — straw hat and wheat gold for the farmer, denim and a hard hat for the miner, hi-vis for the hauler — so you can read a crew of ten across a field · WORKING ICON: the tool of its trade floats over its head while it works, and turns into a barrier the moment it's stuck · MAP SCREEN: every patch and every specialist from above, click one to open its orders · WORK RECORD: the full career tally on its own page · CONFIG FILE: every number is yours now — upkeep rates, crew size, patch sizes, the XP curve, chunk loading — in config/mc_assistant-common.toml · LOYALTY: a specialist earns a permanent heart per week of service, up to four, so an old hand outlives a fresh hire · BRANCHES: at level 20 a specialist picks a branch (irrigation, husbandry, prospecting, forestry, sentinel, porterage) that deepens the job it already does · DEATH LOG: it tells you what killed it and where, and remembers when revived · danger sense · useful idling · work record · beds + shifts";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -612,6 +612,38 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     }
 
     private int kitTopUpTick = -1000;
+    private int shoulderTicks;       // time spent working the same ground as a mate
+    private int bondCheckTick = -1000;
+
+    /**
+     * Hands that have worked the same ground for a long time get quicker at it.
+     * Small and slow on purpose: a full bond is a couple of in-game weeks of
+     * shared work, and it is worth 10%, so it rewards a settled crew without
+     * making a lone specialist feel wrong.
+     */
+    public int teamworkPercent() {
+        return shoulderTicks >= 200000 ? 10 : shoulderTicks >= 60000 ? 5 : 0;
+    }
+
+    /** Is someone else of this crew working this same patch right now? */
+    private void tickTeamwork() {
+        if (workZone == null || stationTask == StationTask.NONE || ownerId == null) return;
+        if (tickCount - bondCheckTick < 200) return;
+        int elapsed = Math.min(400, tickCount - bondCheckTick);
+        bondCheckTick = tickCount;
+        for (AssistantEntity mate : allFor(ownerId)) {
+            if (mate == this || !mate.isAlive()) continue;
+            if (workZone.equals(mate.workZone()) && mate.stationTask() != StationTask.NONE) {
+                int was = teamworkPercent();
+                shoulderTicks = Math.min(200000, shoulderTicks + elapsed);
+                if (teamworkPercent() > was) {
+                    say("We've got the rhythm of this place now — "
+                        + teamworkPercent() + "% quicker working it together.");
+                }
+                return;
+            }
+        }
+    }
 
     /** Is this specialist short of the kit it works with, in its own hands?
      *  Reads only the pack — no world access — so it is safe to ask often. */
@@ -1401,6 +1433,20 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         deedStamp++;
     }
 
+    private String lastShownMarks = "";
+
+    /** What a long career shows on the nametag. One chevron for a thousand of
+     *  the thing this trade is judged on, two for five thousand, three for
+     *  twenty — earned slowly enough that seeing one means something. */
+    private String milestoneMarks() {
+        int best = 0;
+        for (int n : deeds.values()) best = Math.max(best, n);
+        if (best >= 20000) return "❯❯❯";
+        if (best >= 5000) return "❯❯";
+        if (best >= 1000) return "❯";
+        return "";
+    }
+
     /** Bumped whenever the career tally changes, so the published career string
      *  can be rebuilt on change rather than on every publish. */
     private long deedStamp;
@@ -1553,14 +1599,30 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Swap the best tool for this block into the main hand (player rules:
      *  axe for logs, pickaxe for stone — whatever digs fastest wins). */
     public void equipBestTool(BlockState state) {
-        float bestSpeed = this.getMainHandItem().getDestroySpeed(state);
+        // Speed first — never downgrade a diamond pickaxe to an enchanted wooden
+        // one — but among tools that dig this block at much the same rate, the
+        // enchantment decides. Fortune on ore is free extra yield every swing,
+        // and Silk Touch is the difference between a block and nothing at all
+        // on the handful that simply shatter without it.
+        boolean wantFortune = isOre(state);
+        boolean wantSilk = shattersWithoutSilk(state);
+
+        ItemStack held = this.getMainHandItem();
+        float bestSpeed = held.getDestroySpeed(state);
+        int bestBonus = toolBonus(held, wantFortune, wantSilk);
         int bestIdx = -1;
         for (int i = 0; i < inventory.size(); i++) {
             ItemStack s = inventory.get(i);
             if (s.isEmpty()) continue;
             float speed = s.getDestroySpeed(state);
-            if (speed > bestSpeed + 0.01F) {
-                bestSpeed = speed;
+            if (speed < bestSpeed * 0.9F) continue;          // meaningfully slower — no
+            int bonus = toolBonus(s, wantFortune, wantSilk);
+            boolean better = speed > bestSpeed + 0.01F
+                ? bonus >= bestBonus                          // faster, and no worse enchanted
+                : bonus > bestBonus;                          // same speed, better enchanted
+            if (better) {
+                bestSpeed = Math.max(bestSpeed, speed);
+                bestBonus = bonus;
                 bestIdx = i;
             }
         }
@@ -1569,6 +1631,47 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             this.setItemSlot(EquipmentSlot.MAINHAND, inventory.get(bestIdx));
             inventory.set(bestIdx, old);
         }
+    }
+
+    /** How much this tool's enchantments are worth for THIS block. */
+    private int toolBonus(ItemStack tool, boolean wantFortune, boolean wantSilk) {
+        if (tool.isEmpty()) return 0;
+        int bonus = 0;
+        if (wantSilk && enchantLevel(tool, net.minecraft.world.item.enchantment.Enchantments.SILK_TOUCH) > 0) {
+            bonus += 10;
+        }
+        if (wantFortune) {
+            // Silk Touch on ore is a downgrade for a working miner: one block
+            // instead of several drops. Fortune is what we actually want.
+            if (enchantLevel(tool, net.minecraft.world.item.enchantment.Enchantments.SILK_TOUCH) > 0) return -1;
+            bonus += enchantLevel(tool, net.minecraft.world.item.enchantment.Enchantments.FORTUNE) * 3;
+        }
+        return bonus;
+    }
+
+    /** Enchantment level, looked up through the world's registry — enchantments
+     *  are data-driven from 1.21, so there is no constant to compare against. */
+    private int enchantLevel(ItemStack stack,
+                             net.minecraft.resources.ResourceKey<net.minecraft.world.item.enchantment.Enchantment> key) {
+        try {
+            var registry = level().registryAccess()
+                .registryOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT);
+            return net.minecraft.world.item.enchantment.EnchantmentHelper
+                .getItemEnchantmentLevel(registry.getHolderOrThrow(key), stack);
+        } catch (RuntimeException e) {
+            return 0;   // a pack without this enchantment is not a crash
+        }
+    }
+
+    private static boolean isOre(BlockState state) {
+        return state.is(net.neoforged.neoforge.common.Tags.Blocks.ORES);
+    }
+
+    /** Blocks that leave nothing behind unless the tool is silked. */
+    private static boolean shattersWithoutSilk(BlockState state) {
+        return state.is(Blocks.GLASS) || state.is(Blocks.GLASS_PANE)
+            || state.is(Blocks.ICE) || state.is(Blocks.PACKED_ICE) || state.is(Blocks.BLUE_ICE)
+            || state.is(Blocks.SEA_LANTERN) || state.is(Blocks.GLOWSTONE);
     }
 
     /** Put a specific kind of tool in hand by item-id suffix ("_hoe", "_axe").
@@ -1601,6 +1704,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         int bonus = veteranLevel() >= 35 ? 30 : (veteranLevel() >= 20 ? 20 : (veteranLevel() >= 10 ? 10 : 0));
         // A forester's axe work (and a husbandman's shears) come off the same
         // clock, so the branch discount lands here alongside the veteran rungs.
+        bonus = Math.min(45, bonus + teamworkPercent());
         return Math.max(4, base * (100 - bonus) / 100 * branchCooldownPercent() / 100);
     }
 
@@ -3603,6 +3707,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         tag.putInt("WageGold", goldPaid);
         tag.putInt("WageDiamond", diamondPaid);
         tag.putInt("WagesPaid", wagesPaid);
+        tag.putInt("Shoulder", shoulderTicks);
         tag.putLong("FirstDay", firstServedDay);
         if (bedPos != null) tag.putLong("Bed", bedPos.asLong());
         tag.putInt("BaseStage", baseStage);
@@ -3684,6 +3789,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         goldPaid = tag.getInt("WageGold");
         diamondPaid = tag.getInt("WageDiamond");
         wagesPaid = tag.getInt("WagesPaid");
+        shoulderTicks = tag.getInt("Shoulder");
         deeds.clear();
         CompoundTag deedTag = tag.getCompound("Deeds");
         for (Deed d : Deed.values()) {
@@ -3899,6 +4005,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
 
         if (tickCount % 5 == 0) avoidStupidDeaths();
+        if (tickCount % 200 == 0) tickTeamwork();
 
         // Stand still when there is nothing to do. Bouncing on the spot looks
         // broken, and on a farm it was destroying the very crops the bot is
@@ -4136,7 +4243,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         int hp = Mth.ceil(getHealth());
         char glyph = stationTask == StationTask.NONE ? ' '
             : (!missingEssentials.isEmpty() || upkeepStalled) ? '⚠' : '⚒';
-        if (hp != lastShownHealth || veteranLevel() != lastShownLevel || glyph != lastShownGlyph) {
+        String marks = milestoneMarks();
+        if (hp != lastShownHealth || veteranLevel() != lastShownLevel || glyph != lastShownGlyph
+            || !marks.equals(lastShownMarks)) {
+            lastShownMarks = marks;
             lastShownHealth = hp;
             lastShownLevel = veteranLevel();
             lastShownGlyph = glyph;
@@ -4152,8 +4262,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             if (lastShownLevel >= 1) {
                 name.append(Component.literal("✦" + lastShownLevel + " ").withStyle(ChatFormatting.GOLD));
             }
-            name.append(Component.literal(displayNameCap() + " "))
-                .append(Component.literal(hp + "/" + max + "❤").withStyle(color));
+            name.append(Component.literal(displayNameCap() + " "));
+            if (!marks.isEmpty()) {
+                name.append(Component.literal(marks + " ").withStyle(ChatFormatting.AQUA));
+            }
+            name.append(Component.literal(hp + "/" + max + "❤").withStyle(color));
             setCustomName(name);
             setCustomNameVisible(true);
         }
@@ -4399,6 +4512,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         tag.putInt("WageGold", goldPaid);
         tag.putInt("WageDiamond", diamondPaid);
         tag.putInt("WagesPaid", wagesPaid);
+        tag.putInt("Shoulder", shoulderTicks);
         tag.putLong("FirstDay", firstServedDay);
         if (homePos != null) tag.putLong("Home", homePos.asLong());
         if (stationPos != null && stationTask != StationTask.NONE) {
@@ -4448,6 +4562,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         goldPaid = tag.getInt("WageGold");
         diamondPaid = tag.getInt("WageDiamond");
         wagesPaid = tag.getInt("WagesPaid");
+        shoulderTicks = tag.getInt("Shoulder");
         deeds.clear();
         CompoundTag deedTag = tag.getCompound("Deeds");
         for (Deed d : Deed.values()) {
