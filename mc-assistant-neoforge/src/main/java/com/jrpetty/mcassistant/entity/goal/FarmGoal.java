@@ -216,15 +216,20 @@ public class FarmGoal extends Goal {
         // Tilling wears a hoe, like a player's would — so the hoe a stationed
         // farmer asks for is a real, consumable part of running the farm rather
         // than a token in its pack.
-        if (assistant.equipToolNamed("_hoe")) {
-            assistant.damageHeldTool();
+        boolean alreadyTilled = assistant.level().getBlockState(pos).is(Blocks.FARMLAND);
+        if (!alreadyTilled) {
+            // Only breaking new ground costs a hoe and a till. Re-setting existing
+            // farmland would also wipe its moisture level, drying out the plot.
+            if (assistant.equipToolNamed("_hoe")) {
+                assistant.damageHeldTool();
+            }
+            assistant.level().setBlockAndUpdate(pos, Blocks.FARMLAND.defaultBlockState());
         }
-        assistant.level().setBlockAndUpdate(pos, Blocks.FARMLAND.defaultBlockState());
         for (Map.Entry<Item, Block> e : PLANT.entrySet()) {
             if (assistant.removeMatching(s -> s.is(e.getKey()), 1) == 1) {
                 assistant.level().setBlockAndUpdate(pos.above(), e.getValue().defaultBlockState());
                 planted++;
-                if (planted == 1) assistant.say("No farm here — starting one from scratch.");
+                if (planted == 1 && !alreadyTilled) assistant.say("No farm here — starting one from scratch.");
                 return;
             }
         }
@@ -288,10 +293,15 @@ public class FarmGoal extends Goal {
             || state.is(Blocks.FERN) || state.is(Blocks.LARGE_FERN);
     }
 
-    /** Dirt/grass with open space above that we can turn into farmland. */
+    /** Ground we can plant on: dirt/grass we'd till first, and — crucially —
+     *  farmland that is ALREADY tilled but bare. Leaving farmland out meant a
+     *  bot handed a real, finished player farm found "nothing plantable" and
+     *  idled forever, and any square harvested while the seed stock happened to
+     *  be empty became dead ground nothing could ever re-seed. */
     private boolean isTillable(BlockPos pos) {
         BlockState g = assistant.level().getBlockState(pos);
-        if (!(g.is(Blocks.DIRT) || g.is(Blocks.GRASS_BLOCK) || g.is(Blocks.COARSE_DIRT))) return false;
+        if (!(g.is(Blocks.DIRT) || g.is(Blocks.GRASS_BLOCK) || g.is(Blocks.COARSE_DIRT)
+              || g.is(Blocks.FARMLAND))) return false;
         return assistant.level().getBlockState(pos.above()).canBeReplaced();
     }
 

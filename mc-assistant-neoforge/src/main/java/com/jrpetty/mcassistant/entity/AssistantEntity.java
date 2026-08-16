@@ -205,11 +205,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b40 · SET AREA from the screen (stand in the middle, click; -/+ resizes, Show outlines it) and specialists are now held to that footprint — step outside and the next thing they do is walk back, and a miner stops its gallery at the edge rather than tunnelling under a neighbour · GUI fixes: the mode label no longer sits on top of the backpack and the gear caption no longer runs off the panel · name tags work properly now (the bot used to overwrite its own nametag and lose the rename) and spaces become underscores · overlapping work zones are called out the moment two specialists are given the same ground · SELF-RESUPPLY: a specialist whose tool wears out (or torches run low) now takes a replacement from its own station chest instead of downing tools until you notice — stock spares and walk away for hours · ASSISTANT HANDBOOK: a real written book comes with your first specialist, so the system teaches itself in-game (nine short pages: the loop, the screen, every job and what it needs, zones, running costs, the roster, levels and revival) · CREW ROSTER: right-click a Job Board to see every specialist at once — name, level, job, distance/bearing, live status, and what it produced today, with anyone stuck flagged in red (sneak-click still cycles the colony preset) · DAILY PRODUCTION REPORT: each specialist reports at dawn what it actually stashed, so a night of unattended work leaves a trace · every job is set up entirely by clicking the bot — the hauler's drop-off point was the last thing that needed a chat command, and it is a button now (shown only for haulers, as dig depth is only shown for miners) · every specialist holds its own upkeep back instead of stashing the rations/redstone it is about to need · a guard no longer nags for a chest nobody asked it to have · chests a job can SEE are now chests it can REACH (a chest that passed the checklist could sit out of range) · only roaming jobs drift across a big zone — smelter/fisher/storekeeper/hauler stay by their furnace, pond and chest · the farmer really uses (and wears out) the hoe it asks for · job-loop fixes: stationed bots no longer narrate every cycle (repeats hushed for ~5 min, new problems always get through) · Follow/Stay now actually take a specialist off the job · fisher searches wider for its water · storekeeper sorts on a cooldown · upkeep is clock-based so rations/charges really are spent · usability pass: picking a job is now ALL you do — the bot claims the ground around it and starts "
-        + "working the moment it has its tools (Zone Marker only if you want a different patch) · zones are drawn in particles "
-        + "while you hold a marker · the job button names the job · Follow/Stay back on the screen · ⚠/⚒ on the nametag "
-        + "shows who is stuck at a glance · nine jobs · running costs (rations + a redstone core charge) · veteran levels · "
-        + "memory core revival · manual chat/slash/voice commands parked";
+        "2026-07-b41 · ORDERS KEY (R): look at a bot and press it for a full order screen — job, area, follow/stay/come/guard, stash, go home, report, whole crew — no chat, ever · G reports the crew · + MAJOR AUTONOMY FIXES from a full nine-role audit: upkeep is on every checklist instead of silently stalling every job ~10 min in; chests are searched from the SAME place the checklist accepted one, and the leash now runs BEFORE upkeep so a hungry bot walks home; dispatch scans respect the zone so bots stop queueing work their goals instantly refuse; farmers plant on existing farmland (a real farm was a silent no-op); lumberjacks keep and restock saplings so a zone regrows; a full output chest no longer deadlocks the job";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -295,6 +291,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private int stationTorchTick = -99999;              // a guard post re-lights its ground rarely
     private int stationBreedTick = -99999;              // pace breeding to the animals' love cooldown
     private int stationSortTick = -99999;               // a storeroom only needs tidying now and then
+    private int depositBlockedTick = -99999;            // last time the output chest was full
     @Nullable private BlockPos mobileLoadCenter;        // hauler's traveling chunk window (persisted)
     @Nullable private WorkZone workZone;                // the patch it's assigned to (persisted)
     private int upkeepFoodTick;                         // work-ticks banked toward the next meal
@@ -355,6 +352,13 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     }
 
     public java.util.List<String> missingEssentials() { return missingEssentials; }
+
+    /** DepositGoal calls this when it reached a chest and could not fit anything
+     *  in. Backs the deposit rung off so productive work resumes meanwhile. */
+    public void noteDepositBlocked() {
+        depositBlockedTick = tickCount;
+        say("My output chest is full — I'll keep working, but it needs emptying.");
+    }
 
     @Nullable public WorkZone workZone() { return workZone; }
 
@@ -484,8 +488,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      *  anything was actually pulled. */
     private boolean resupplyFromChests() {
         java.util.function.Predicate<ItemStack> kit = switch (stationTask) {
-            case FARM -> s -> isToolNamed(s, "_hoe");
-            case WOOD -> s -> isToolNamed(s, "_axe");
+            // Saplings are the lumberjack's whole regrowth mechanism, so they
+            // are kit, not output: without them a zone is felled once and never
+            // grows back.
+            case WOOD -> s -> isToolNamed(s, "_axe") || s.is(ItemTags.SAPLINGS);
+            case FARM -> s -> isToolNamed(s, "_hoe") || s.is(Items.WHEAT_SEEDS)
+                || s.is(Items.BEETROOT_SEEDS) || s.is(Items.CARROT) || s.is(Items.POTATO);
             case MINE -> s -> isToolNamed(s, "_pickaxe") || s.is(Items.TORCH);
             case RANCH -> s -> s.is(Items.SHEARS);
             case GUARD -> s -> isToolNamed(s, "_sword") || s.is(Items.TORCH);
@@ -493,7 +501,13 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case SMELT -> s -> s.is(Items.COAL) || s.is(Items.CHARCOAL);
             case STORE, HAUL, NONE -> null;
         };
-        return kit != null && scoopFromChests(kit, 16, CHEST_RANGE) > 0;
+        // Upkeep is kit for EVERY job — the bot must be able to restock the
+        // rations and redstone that gate all of its work.
+        java.util.function.Predicate<ItemStack> upkeep =
+            s -> s.get(DataComponents.FOOD) != null || s.is(Items.REDSTONE);
+        boolean got = scoopFromChests(upkeep, 12, CHEST_RANGE) > 0;
+        if (kit != null) got |= scoopFromChests(kit, 16, CHEST_RANGE) > 0;
+        return got;
     }
 
     private static boolean isToolNamed(ItemStack s, String suffix) {
@@ -501,10 +515,26 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             .getKey(s.getItem()).getPath().endsWith(suffix);
     }
 
-    /** Spend one upkeep item from the pack, else from a chest in the zone. */
+    /** Spend one upkeep item from the pack, else from a chest in the zone.
+     *  Working stock is spared first: a farmer eating its own seed potatoes is
+     *  how a field quietly shrinks to nothing over a few hours. Only if there is
+     *  genuinely nothing else does it dip into the stock, since going hungry
+     *  stops the job outright. */
     private boolean consumeUpkeep(java.util.function.Predicate<ItemStack> what) {
-        if (removeMatching(what, 1) == 1) return true;
-        return scoopFromChests(what, 8, CHEST_RANGE) > 0 && removeMatching(what, 1) == 1;
+        java.util.function.Predicate<ItemStack> spare = s -> what.test(s) && !isWorkingStock(s);
+        if (removeMatching(spare, 1) == 1) return true;
+        if (scoopFromChests(what, 8, CHEST_RANGE) > 0 && removeMatching(spare, 1) == 1) return true;
+        return removeMatching(what, 1) == 1;
+    }
+
+    /** Items this job needs to keep in order to keep producing. */
+    private boolean isWorkingStock(ItemStack s) {
+        return switch (stationTask) {
+            case FARM -> s.is(Items.CARROT) || s.is(Items.POTATO)
+                || s.is(Items.WHEAT_SEEDS) || s.is(Items.BEETROOT_SEEDS);
+            case RANCH -> BREEDING_FOOD.test(s);
+            default -> false;
+        };
     }
     /** Chests a specialist can use, matching the range its checklist accepts
      *  one at — otherwise a chest could pass the requirement check and still
@@ -1874,12 +1904,15 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             }
             return false;
         }
-        // Running costs — rations and a core charge. Dry means downing tools.
-        if (!payUpkeep()) return false;
         // Stay on the patch. With a zone the boundary is the zone itself — step
         // outside the box (a chase, a retreat, a vein that ran on) and the next
         // thing this bot does is walk back in. Without one, fall back to a
         // radius around the post.
+        //
+        // This rung deliberately sits ABOVE the upkeep check: a bot that has run
+        // out of rations must still be able to walk home to the chest holding
+        // them. With the order reversed it stalled wherever it stood, repeating
+        // "I'm out of rations" with a full chest twenty blocks away, forever.
         if (workZone != null) {
             if (!workZone.containsColumn(blockPosition())) {
                 BlockPos back = workZone.center();
@@ -1893,6 +1926,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 return true;
             }
         }
+        // Running costs — rations and a core charge. Dry means downing tools,
+        // but only once we're stood at the post where the supplies live.
+        if (!payUpkeep()) return false;
         if (stationDepositDue()) return true;
         switch (stationTask) {
             case FARM -> {
@@ -2116,9 +2152,13 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      *  keeper taking ore and fuel, the rancher grabbing breeding food. */
     private int scoopFromChests(java.util.function.Predicate<ItemStack> what, int max, int radius) {
         int moved = 0;
-        BlockPos feet = feetPos();
+        // Search from the SAME origin and box the checklist used to accept a
+        // chest (zone centre, +/-5 in Y). Scanning from the bot instead meant a
+        // chest could pass the requirement check and still be permanently out
+        // of reach once the bot roamed to the far side of its own patch.
+        BlockPos origin = chestSearchOrigin();
         for (BlockPos pos : BlockPos.betweenClosed(
-                feet.offset(-radius, -3, -radius), feet.offset(radius, 3, radius))) {
+                origin.offset(-radius, -5, -radius), origin.offset(radius, 5, radius))) {
             if (!(level().getBlockEntity(pos) instanceof Container c)) continue;
             for (int i = 0; i < c.getContainerSize() && moved < max; i++) {
                 ItemStack s = c.getItem(i);
@@ -2175,6 +2215,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case STORE, HAUL, NONE -> 0;
         };
         if (!isPackFull() && surplus < 32) return false;
+        // A station chest that has filled up must not deadlock the whole job.
+        // This rung returns true (meaning "I acted") before the per-job switch,
+        // so without a cool-off a full chest meant the bot walked to it, moved
+        // nothing, and re-queued the same doomed deposit forever — never
+        // farming, mining or fishing again while showing a green "Working".
+        if (tickCount - depositBlockedTick < 6000) return false;
         if (findAnyChest(12) == null) {
             // No chest at the post yet: place one we carry, or craft one (a
             // lumberjack always has the planks for it).
@@ -2336,7 +2382,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private boolean resourceNearby(GatherGoal.Kind kind, int radius) {
         BlockPos feet = feetPos();
         for (BlockPos pos : BlockPos.betweenClosed(
-                feet.offset(-radius, -5, -radius), feet.offset(radius, 5, radius))) {
+                feet.offset(-radius, -6, -radius), feet.offset(radius, 8, radius))) {
+            if (!inZone(pos)) continue; // the goal filters by zone; so must we
             if (kind.matches(level().getBlockState(pos))) return true;
         }
         return false;
@@ -2352,7 +2399,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     private boolean cropsNearby() {
         BlockPos feet = feetPos();
-        for (BlockPos pos : BlockPos.betweenClosed(feet.offset(-12, -2, -12), feet.offset(12, 2, 12))) {
+        for (BlockPos pos : BlockPos.betweenClosed(feet.offset(-12, -3, -12), feet.offset(12, 3, 12))) {
+            if (!inZone(pos)) continue; // FarmGoal filters by zone; match it
             BlockState st = level().getBlockState(pos);
             if (st.is(Blocks.WHEAT) || st.is(Blocks.CARROTS)
                 || st.is(Blocks.POTATOES) || st.is(Blocks.BEETROOTS)) return true;
@@ -2367,7 +2415,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     private boolean matureCropsNearby() {
         BlockPos feet = feetPos();
-        for (BlockPos pos : BlockPos.betweenClosed(feet.offset(-12, -2, -12), feet.offset(12, 2, 12))) {
+        for (BlockPos pos : BlockPos.betweenClosed(feet.offset(-12, -3, -12), feet.offset(12, 3, 12))) {
+            if (!inZone(pos)) continue; // FarmGoal filters by zone; match it
             if (level().getBlockState(pos).getBlock()
                     instanceof net.minecraft.world.level.block.CropBlock crop
                 && crop.isMaxAge(level().getBlockState(pos))) return true;
@@ -2377,7 +2426,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     private boolean grassNearby() {
         BlockPos feet = feetPos();
-        for (BlockPos pos : BlockPos.betweenClosed(feet.offset(-10, -2, -10), feet.offset(10, 2, 10))) {
+        for (BlockPos pos : BlockPos.betweenClosed(feet.offset(-10, -3, -10), feet.offset(10, 3, 10))) {
+            if (!inZone(pos)) continue; // FarmGoal filters by zone; match it
             BlockState st = level().getBlockState(pos);
             if (st.is(Blocks.SHORT_GRASS) || st.is(Blocks.TALL_GRASS) || st.is(Blocks.FERN)) return true;
         }
@@ -2857,14 +2907,22 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         return best;
     }
 
+    /** Where a stationed bot looks for its chests: the middle of its patch (or
+     *  its post), which is what JobSpec checked when it accepted one. A bot
+     *  with no station falls back to wherever it happens to be. */
+    private BlockPos chestSearchOrigin() {
+        if (workZone != null) return workZone.center();
+        return stationPos != null ? stationPos : feetPos();
+    }
+
     /** Nearest container of any kind. */
     @Nullable
     public BlockPos findAnyChest(int radius) {
-        BlockPos feet = blockPosition();
+        BlockPos feet = chestSearchOrigin();
         BlockPos best = null;
         double bestDist = Double.MAX_VALUE;
         for (BlockPos pos : BlockPos.betweenClosed(
-                feet.offset(-radius, -4, -radius), feet.offset(radius, 4, radius))) {
+                feet.offset(-radius, -5, -radius), feet.offset(radius, 5, radius))) {
             if (level().getBlockEntity(pos) instanceof Container) {
                 double d = pos.distSqr(feet);
                 if (d < bestDist) { bestDist = d; best = pos.immutable(); }
@@ -3028,13 +3086,19 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             return net.minecraft.world.InteractionResult.sidedSuccess(this.level().isClientSide());
         }
         if (!this.level().isClientSide && player instanceof ServerPlayer sp) {
-            sp.openMenu(
-                new net.minecraft.world.SimpleMenuProvider(
-                    (id, inv, p) -> new com.jrpetty.mcassistant.menu.AssistantMenu(id, inv, this),
-                    Component.literal(displayNameCap())),
-                buf -> buf.writeVarInt(this.getId()));
+            openManagementScreen(sp);
         }
         return net.minecraft.world.InteractionResult.sidedSuccess(this.level().isClientSide());
+    }
+
+    /** Open the pack/management screen — from a right-click, or from the
+     *  Orders screen's Pack button. */
+    public void openManagementScreen(ServerPlayer player) {
+        player.openMenu(
+            new net.minecraft.world.SimpleMenuProvider(
+                (id, inv, p) -> new com.jrpetty.mcassistant.menu.AssistantMenu(id, inv, this),
+                Component.literal(displayNameCap())),
+            buf -> buf.writeVarInt(this.getId()));
     }
 
     @Override

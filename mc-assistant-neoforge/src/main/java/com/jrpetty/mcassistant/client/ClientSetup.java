@@ -37,6 +37,8 @@ public final class ClientSetup {
     @SubscribeEvent
     public static void onRegisterKeys(net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent event) {
         event.register(com.jrpetty.mcassistant.client.voice.VoiceInput.TALK);
+        event.register(AssistantTargeting.ORDERS);
+        event.register(AssistantTargeting.ROSTER);
     }
 
     public static class AssistantRenderer extends MobRenderer<AssistantEntity, HumanoidModel<AssistantEntity>> {

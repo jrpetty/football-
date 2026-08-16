@@ -133,7 +133,9 @@ public class GatherGoal extends Goal {
         this.buildTicks = 0;
         this.announcedReroute = false;
         this.unreachable.clear();
-        this.stumps.clear();
+        // NB: pending stumps deliberately survive between runs — a felling
+        // interrupted by combat, or one that ran out of saplings, must still be
+        // replantable on a later pass.
         if (assistant.isPackFull()) {
             finish("Pack's full — I need to deposit before gathering more.");
             return;
@@ -148,6 +150,7 @@ public class GatherGoal extends Goal {
             // queue so it resumes after the interruption (unless the queue was
             // cleared by !stop, in which case there's nothing to resume).
             assistant.say("Paused gathering (" + collected + " " + request.kind().label + " so far).");
+            replantStumps(); // don't lose the stumps to an interruption
         }
         this.request = null;
         this.myJob = null;
@@ -171,9 +174,11 @@ public class GatherGoal extends Goal {
     private void replantStumps() {
         if (stumps.isEmpty()) return;
         int planted = 0;
+        java.util.List<BlockPos> unplanted = new java.util.ArrayList<>();
         for (BlockPos stump : stumps) {
             if (!assistant.level().getBlockState(stump).canBeReplaced()) continue;
             if (!assistant.level().getBlockState(stump.below()).is(BlockTags.DIRT)) continue;
+            boolean plantedHere = false;
             var inv = assistant.getInventoryItems();
             boolean done = false;
             for (int i = 0; i < inv.size() && !done; i++) {
@@ -185,10 +190,17 @@ public class GatherGoal extends Goal {
                     if (s.isEmpty()) inv.set(i, ItemStack.EMPTY);
                     planted++;
                     done = true;
+                    plantedHere = true;
                 }
             }
+            // Out of saplings right now? Keep the stump on the books so a later
+            // run (once the station chest is stocked, or leaf drops are swept)
+            // can still replant it. Clearing it unconditionally is how a zone
+            // got felled once and never grew back.
+            if (!plantedHere) unplanted.add(stump);
         }
         stumps.clear();
+        stumps.addAll(unplanted);
         if (planted > 0) {
             assistant.say("Replanted " + planted + " sapling" + (planted == 1 ? "" : "s") + ".");
         }

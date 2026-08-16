@@ -29,6 +29,13 @@ public final class JobSpec {
 
     /** Human-readable checklist for a job, shown before it's even assigned. */
     public static List<String> checklist(AssistantEntity.StationTask task) {
+        if (task == AssistantEntity.StationTask.NONE) return List.of();
+        List<String> all = new ArrayList<>(jobKit(task));
+        all.add("food + redstone (upkeep)");
+        return all;
+    }
+
+    private static List<String> jobKit(AssistantEntity.StationTask task) {
         return switch (task) {
             case FARM -> List.of("a hoe", "a chest");
             case WOOD -> List.of("an axe", "a chest");
@@ -48,6 +55,19 @@ public final class JobSpec {
         AssistantEntity.StationTask task = a.stationTask();
         List<String> gaps = new ArrayList<>(3);
         if (task == AssistantEntity.StationTask.NONE) return gaps;
+
+        // Upkeep is not optional: every job is gated on it, so it belongs on
+        // every checklist. Silently stalling ten minutes after the player walks
+        // away — with a green "Working" status — is the worst failure this mod
+        // can have. Carried or stocked at the station both count.
+        if (a.countCarried(s -> s.get(net.minecraft.core.component.DataComponents.FOOD) != null) == 0
+            && !stockedNearby(a, s -> s.get(net.minecraft.core.component.DataComponents.FOOD) != null)) {
+            gaps.add("food (its rations)");
+        }
+        if (a.countCarried(s -> s.is(Items.REDSTONE)) == 0
+            && !stockedNearby(a, s -> s.is(Items.REDSTONE))) {
+            gaps.add("redstone (its core charge)");
+        }
 
         switch (task) {
             case FARM -> {
