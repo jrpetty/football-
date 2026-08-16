@@ -97,6 +97,7 @@ public class ShearGoal extends Goal {
         // brain only runs again once the queue is empty.
         if (++jobTicks > 1200) { finish("Giving up on shearing for now."); return; }
         if (job == null) return;
+        if (!assistant.actionReady()) return;   // still busy with the last one
 
         if (sheared >= job.amount()) {
             finish("Sheared " + sheared + " sheep — wool's in my pack.");
@@ -139,6 +140,7 @@ public class ShearGoal extends Goal {
         }
         sweepWool(target);
         sheared++;
+        assistant.noteAction();   // a shear is a job, not an instant
         target = null;
     }
 

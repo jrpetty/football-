@@ -141,8 +141,11 @@ public class FarmGoal extends Goal {
             return;
         }
 
-        if (++workTicks < 10) {
-            if (workTicks % 5 == 0) assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+        // Half a second per crop was the farm equivalent of a machine gun. Use
+        // the bot's own pace — three seconds for a recruit, down to about one
+        // and a half for a well-fed veteran working alongside its crew.
+        if (++workTicks < assistant.actionPaceTicks()) {
+            if (workTicks % 8 == 0) assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
             return;
         }
         workTicks = 0;

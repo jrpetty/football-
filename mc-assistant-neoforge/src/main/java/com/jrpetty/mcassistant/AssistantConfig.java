@@ -71,8 +71,12 @@ public final class AssistantConfig {
         b.comment("Veteran levels. Level = sqrt(lifetimeXp / factor), so a bigger",
                   "factor means slower levelling.")
          .push("progression");
-        XP_PER_LEVEL_FACTOR = b.comment("Divisor in the level curve (10 = slow, 4 = brisk).")
-            .defineInRange("levelCurveFactor", 10, 1, 200);
+        XP_PER_LEVEL_FACTOR = b.comment("Divisor in the level curve: xp needed for level L is",
+                                        "factor * L squared. 25 puts level 20 at 10,000 xp and",
+                                        "level 35 at 30,625 — a couple of hours of solid work for",
+                                        "a real veteran rather than twenty minutes. Drop it to 10",
+                                        "for the old, much faster curve.")
+            .defineInRange("levelCurveFactor", 25, 1, 400);
         LOYALTY_ENABLED = b.comment("Do long-serving specialists earn small permanent bonuses?")
             .define("loyaltyEnabled", true);
         b.pop();
@@ -101,7 +105,7 @@ public final class AssistantConfig {
     public static int maxCrew() { return read(MAX_CREW, 10); }
     public static int defaultZoneRadius() { return read(DEFAULT_ZONE_RADIUS, 12); }
     public static int maxZoneRadius() { return read(MAX_ZONE_RADIUS, 60); }
-    public static int levelCurveFactor() { return read(XP_PER_LEVEL_FACTOR, 10); }
+    public static int levelCurveFactor() { return read(XP_PER_LEVEL_FACTOR, 25); }
     public static boolean loyaltyEnabled() { return read(LOYALTY_ENABLED, true); }
     public static boolean chunkLoading() { return read(CHUNK_LOADING, true); }
     public static int workTickInterval() { return read(WORK_TICK_INTERVAL, 40); }
