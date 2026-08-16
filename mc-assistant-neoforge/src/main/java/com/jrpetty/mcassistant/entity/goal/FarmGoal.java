@@ -29,7 +29,10 @@ import java.util.Map;
 public class FarmGoal extends Goal {
 
     private static final int RANGE = 12;
-    private static final int PLOT_TARGET = 9; // plant up to a 3x3-ish plot per run
+    // How much gets planted in one run. This was 9 — a 3x3 patch — which read
+    // as "planted a handful of seeds and stopped" on any real field. A farmer
+    // with seeds and somewhere to put them should keep going.
+    private static final int PLOT_TARGET = 64;
 
     private enum Mode { HARVEST, TILL, SEEDS, WATER }
 
@@ -170,8 +173,12 @@ public class FarmGoal extends Goal {
                 targetPos = findWaterSpot();
                 if (targetPos != null) { mode = Mode.WATER; return; }
             }
-            targetPos = findTillable();
-            if (targetPos != null) { mode = Mode.TILL; return; }
+            // No dry-farming fallback. Farmland with no water within four
+            // blocks dries out and reverts to dirt, so tilling it is work that
+            // undoes itself — and it left plots of bare dirt all over a zone
+            // that looked like the bot had wandered off mid-job. If there is no
+            // water and no bucket to make some, the field is not ready and
+            // saying so is more use than digging it up.
         }
         if (!hasPlantable()) {
             targetPos = findGrass();
@@ -315,11 +322,6 @@ public class FarmGoal extends Goal {
     @Nullable
     private BlockPos findGrass() {
         return nearest(pos -> isGrass(assistant.level().getBlockState(pos)));
-    }
-
-    @Nullable
-    private BlockPos findTillable() {
-        return nearest(this::isTillable);
     }
 
     @Nullable
