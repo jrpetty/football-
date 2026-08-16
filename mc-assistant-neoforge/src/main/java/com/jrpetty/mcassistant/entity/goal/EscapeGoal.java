@@ -40,6 +40,7 @@ public class EscapeGoal extends Goal {
 
     @Override
     public boolean canUse() {
+        if (a.tickCount < giveUpUntil) return false;   // just tried, gave up
         if (suffocating()) return true;
         // Otherwise: on the ground, stuck for a few seconds, and actually walled
         // in — either on all sides, or by an obstacle in our path of travel.
@@ -47,10 +48,18 @@ public class EscapeGoal extends Goal {
         return boxedIn() || blockedAhead(travelDir());
     }
 
+    /** When this attempt started, so it cannot hold priority 0 for ever. */
+    private int startedAt;
+    private int giveUpUntil;
+
     @Override
     public boolean canContinueToUse() {
-        // Keep going on PHYSICAL state (not the stuck timer, which resets the moment
-        // we stop navigating on start) until we've actually broken free.
+        // Hard stop after ten seconds. This goal sits at priority 0, so while it
+        // runs the bot does NOTHING else — and its continue condition is purely
+        // physical, so a bot facing a fence it could simply walk around met it
+        // for ever: no work, and a hop every six ticks. Being wrong about being
+        // trapped has to be survivable.
+        if (a.tickCount - startedAt > 200) return false;
         if (suffocating() || boxedIn()) return true;
         return escapeDir != null && blockedAhead(escapeDir);
     }
@@ -77,6 +86,7 @@ public class EscapeGoal extends Goal {
 
     @Override
     public void start() {
+        this.startedAt = a.tickCount;
         this.work = 0;
         this.jumpFrom = null;
         this.escapeDir = travelDir();
@@ -88,6 +98,10 @@ public class EscapeGoal extends Goal {
     public void stop() {
         this.jumpFrom = null;
         this.escapeDir = null;
+        // Back off before trying again, or it re-triggers on the same wall the
+        // very next tick with nothing changed — which is how a bot ends up
+        // permanently "escaping" from a fence it could have walked around.
+        this.giveUpUntil = a.tickCount + 400;
         a.getNavigation().stop();
     }
 
@@ -114,7 +128,7 @@ public class EscapeGoal extends Goal {
             if (a.countMatching(NightShelterGoal.SHELTER_BLOCK) > 0) {
                 if (a.onGround()) {
                     jumpFrom = feet;
-                    a.getJumpControl().jump();
+                    a.tryHop();
                 } else if (jumpFrom != null && a.getY() - jumpFrom.getY() > 0.45
                         && a.level().getBlockState(jumpFrom).canBeReplaced()) {
                     placeAt(jumpFrom);
@@ -126,7 +140,7 @@ public class EscapeGoal extends Goal {
                 if (solid(head.relative(d)) || solid(aboveHead.relative(d))) {
                     breakBlock(aboveHead.relative(d));
                     breakBlock(head.relative(d));
-                    a.getJumpControl().jump();
+                    a.tryHop();
                     return;
                 }
             }

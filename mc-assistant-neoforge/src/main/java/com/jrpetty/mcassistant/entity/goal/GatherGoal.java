@@ -401,7 +401,7 @@ public class GatherGoal extends Goal {
         assistant.getLookControl().setLookAt(feet.getX() + 0.5, feet.getY() - 1.0, feet.getZ() + 0.5);
         if (assistant.onGround()) {
             pillarBase = feet;
-            assistant.getJumpControl().jump();
+            assistant.tryHop();
             return true;
         }
         if (pillarBase != null && assistant.getY() - pillarBase.getY() > 0.45
