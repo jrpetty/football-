@@ -164,6 +164,14 @@ public class FarmGoal extends Goal {
      *  hydrated; failing that, if we're carrying a water bucket we carve a
      *  contained source; otherwise we dry-farm any tillable ground. */
     private void pickTarget() {
+        // Gaps first. A bare square of farmland is growth that is not happening,
+        // and it stays bare until somebody plants it; a ripe crop keeps until
+        // someone gets round to it. So a farmer with seeds in hand fills the
+        // holes in its field before taking the harvest.
+        if (hasPlantable()) {
+            targetPos = findGap();
+            if (targetPos != null) { mode = Mode.TILL; return; }
+        }
         targetPos = findMatureCrop();
         if (targetPos != null) { mode = Mode.HARVEST; return; }
         if (planted < PLOT_TARGET && hasPlantable()) {
@@ -203,6 +211,14 @@ public class FarmGoal extends Goal {
 
     private void doHarvest(BlockPos pos) {
         BlockState state = assistant.level().getBlockState(pos);
+        // Never break a crop that is not ready. The target was chosen ripe and
+        // re-checked on the way, but this is the only line in the goal that can
+        // destroy a growing plant, so it verifies for itself rather than
+        // trusting whatever routed it here.
+        if (!isMatureCrop(state)) {
+            targetPos = null;
+            return;
+        }
         Block cropBlock = state.getBlock();
         if (assistant.level().destroyBlock(pos, true, assistant)) {
             harvested++;
@@ -343,6 +359,18 @@ public class FarmGoal extends Goal {
     @Nullable
     private BlockPos findGrass() {
         return nearest(pos -> isGrass(assistant.level().getBlockState(pos)));
+    }
+
+    /** A hole in an existing field: farmland already broken, nothing growing on
+     *  it, and close enough to water to stay wet. Distinct from tilling new
+     *  ground — this is finishing a field rather than starting one. */
+    @Nullable
+    private BlockPos findGap() {
+        BlockPos water = findWater();
+        if (water == null) return null;
+        return nearest(pos -> assistant.level().getBlockState(pos).is(Blocks.FARMLAND)
+            && isPlantableSpace(pos.above())
+            && withinHydration(pos, water));
     }
 
     @Nullable
