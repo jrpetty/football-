@@ -18,13 +18,25 @@ import net.minecraft.world.level.Level;
 import javax.annotation.Nullable;
 
 /**
- * Place Marker — a hand-held way to name a spot for your assistant. Rename it in
- * an anvil to a place name ("mine", "base", "farm"), then:
- *   - right-click a block: saves that spot as that named waypoint;
- *   - right-click the air:  saves where YOU are standing.
- * Afterwards, "go to the mine" walks the assistant there. The item is reusable —
- * it's a pointer, not a consumable, so one marker can label many places (rename
- * and re-use). This is the physical-item twin of "remember this spot as the X".
+ * Place Marker — points a specialist at a spot.
+ *
+ *   right-click a block .... that spot becomes the nearest assistant's home:
+ *                            where it sleeps out the night, where Go Home
+ *                            sends it, and where a hauler delivers its loads.
+ *   right-click the air .... same, but where YOU are standing.
+ *
+ * <p>No naming and no anvil. It used to do nothing at all until you renamed it
+ * in an anvil to a place name — which is typing, which this mod does not do,
+ * and the named waypoints it produced were only ever read by the chat commands
+ * and the patrol goal, both of which are switched off. So it was an item that
+ * demanded a step you cannot take in order to feed a system that is not
+ * running.
+ *
+ * <p>A name given in an anvil still registers a waypoint as well, so nothing is
+ * lost for whoever turns the command layer back on — but it is no longer the
+ * price of the item doing anything.
+ *
+ * <p>Reusable: it is a pointer, not a consumable.
  */
 public class PlaceMarkerItem extends Item {
 
@@ -52,19 +64,23 @@ public class PlaceMarkerItem extends Item {
     }
 
     private void mark(ServerPlayer sp, ItemStack stack, BlockPos pos) {
-        String name = placeName(stack);
-        if (name == null) {
-            actionBar(sp, "§eName this Place Marker in an anvil first (e.g. \"mine\"), then right-click a spot.");
-            return;
-        }
         AssistantEntity a = AssistantCommands.findAssistant(sp);
         if (a == null) {
-            actionBar(sp, "§eNo assistant nearby to remember \"" + name + "\" — spawn one first.");
+            actionBar(sp, "§eNo assistant of yours nearby — place a spawner first.");
             return;
         }
-        a.setWaypoint(name, pos);
-        actionBar(sp, "§aMarked \"" + name + "\" at " + pos.getX() + " " + pos.getY() + " " + pos.getZ()
-            + " — say \"go to the " + name + "\".");
+        a.setHome(pos);
+        // A name is optional now, not a precondition. If somebody has renamed
+        // the marker in an anvil, register that waypoint too.
+        String name = placeName(stack);
+        if (name != null) a.setWaypoint(name, pos);
+
+        String where = pos.getX() + " " + pos.getY() + " " + pos.getZ();
+        actionBar(sp, "§a" + a.displayNameCap() + "'s home is now " + where
+            + (a.stationTask() == AssistantEntity.StationTask.HAUL
+                ? " — it'll deliver its loads here."
+                : " — it'll sleep and return here.")
+            + (name == null ? "" : " (also saved as \"" + name + "\")"));
     }
 
     private static void actionBar(ServerPlayer sp, String msg) {
