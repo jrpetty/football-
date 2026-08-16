@@ -12,7 +12,8 @@ import javax.annotation.Nullable;
  */
 public record BotInfo(String branch, int daysServed, String topDeed,
                       int[] deeds, @Nullable int[] zone, int[] wages,
-                      String trait, String traitBlurb, int teamwork) {
+                      String trait, String traitBlurb, int teamwork,
+                      int diet, String lastMeal) {
 
     /** "branch|days|topDeed|deedCsv|zoneCsv", written by publishJobState. */
     public static BotInfo of(AssistantEntity bot) {
@@ -54,7 +55,30 @@ public record BotInfo(String branch, int daysServed, String topDeed,
             if (t.length > 1) teamwork = parse(t[1]);
             if (t.length > 2) blurb = t[2];
         }
-        return new BotInfo(branch, days, top, deeds, zone, wages, trait, blurb, teamwork);
+        // What it last ate, and the pace that bought.
+        int diet = 100;
+        String meal = "";
+        if (f.length > 7 && !f[7].isEmpty()) {
+            String[] d = f[7].split(",", 2);
+            if (d.length > 0) diet = parse(d[0]);
+            if (d.length > 1) meal = d[1];
+        }
+        return new BotInfo(branch, days, top, deeds, zone, wages, trait, blurb, teamwork,
+            diet <= 0 ? 100 : diet, meal);
+    }
+
+    /** How the diet reads on screen: the pace, and what bought it. */
+    public String dietLine() {
+        return AssistantEntity.foodLabel(diet) + " — working at " + diet + "%"
+            + (lastMeal.isEmpty() ? "" : ", last ate " + lastMeal);
+    }
+
+    /** Green when well fed, red when it is living on scraps. */
+    public int dietColour() {
+        if (diet >= 95) return Ui.GOOD;
+        if (diet >= 70) return Ui.INK;
+        if (diet >= 45) return Ui.WARN;
+        return Ui.BAD;
     }
 
     public int ironPaid()    { return wages[0]; }

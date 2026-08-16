@@ -214,6 +214,10 @@ public class OrdersScreen extends Screen {
         g.drawString(this.font, Ui.clip(this.font, career, inner), x, top + Y_CAREER, Ui.MUTED, false);
         g.drawString(this.font, Ui.clip(this.font, perkLine(lvl), inner), x, top + Y_PERKS,
             lvl >= 10 ? Ui.GOOD : Ui.FAINT, false);
+        // Diet sits with the status pill, not with the perks: it is a condition
+        // you can fix right now, not something the bot has earned.
+        Ui.right(g, this.font, info.diet() + "%", left + W - PAD, top + Y_CAREER,
+            info.dietColour());
 
         // Section headings.
         Ui.section(g, this.font, "Job", x, top + Y_SEC_JOB, inner);

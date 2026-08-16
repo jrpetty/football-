@@ -161,6 +161,25 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
             : status.startsWith("Needs") || status.startsWith("Out of") ? 0x9C2B18  // red: blocked
             : 0x7A5A10;                                                            // amber: still setting up
         g.drawString(this.font, Component.literal(trim(status)), 8, 165, colour, false);
+
+        // What it is running on. This is the line that explains a bot that is
+        // working but slow, so it gets a bar as well as a number — you should
+        // be able to see the difference between steak and rotten flesh without
+        // reading anything.
+        BotInfo info = BotInfo.of(a);
+        int diet = info.diet();
+        int barW = imageWidth - 16;
+        int fill = Math.max(1, barW * Math.max(0, Math.min(100, diet)) / 100);
+        int dietColour = diet >= 95 ? 0x1F7A34 : diet >= 70 ? 0x4A6A20
+            : diet >= 45 ? 0x7A5A10 : 0x9C2B18;
+        // Placed in the free band above the job line: the player's own inventory
+        // starts at y=178, so anything below ~150 lands on top of their slots.
+        g.drawString(this.font, Component.literal(trim(
+            AssistantEntity.foodLabel(diet) + " · works at " + diet + "%"
+            + (info.lastMeal().isEmpty() ? "" : " · last ate " + info.lastMeal()))),
+            8, 132, dietColour, false);
+        g.fill(8, 143, 8 + barW, 147, 0x30000000);
+        g.fill(8, 143, 8 + fill, 147, 0xFF000000 | dietColour);
     }
 
     /** Clip a readout to the panel so nothing spills onto the world behind it. */

@@ -206,7 +206,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b60 · SPAWNER RECIPE: the centre of the ring is a plain DIAMOND now, not a diamond block — hiring already costs diamonds from the fourth assistant on, so charging a whole block for the spawner as well was charging twice. Eight rotten flesh round one diamond · REQUEST BOARD: a specialist that cannot supply itself posts what it is short of, and anyone already carrying that takes it over on their next run — an answered request outranks the standing supply chains, because a posted need is somebody who has actually stopped working. The crew screen shows who is asking for what · GOOD GROUND: a miner remembers where the veins were and a lumberjack where it replanted, and both go back rather than wandering off in a straight line away from the ore they just found · THE BEAT: a guard with a patch now walks its perimeter corner to corner instead of standing in the middle — it meets things at the boundary, which is what a boundary is for · TRAITS: every hire turns up with a quirk of its own — quick, sturdy, cave-shy, a night owl, or thrifty — rolled from its own id so it is settled the moment you meet it and never rerolls · SHIFT HANDOVER: a specialist clocking off passes its load to whoever is coming on to the same plot, keeping its own tools and rations · TOOL SENSE: among tools that dig a block at much the same rate the enchantment now decides — Fortune on ore for the extra yield, Silk Touch on the few blocks that shatter without it, and never Silk Touch on ore, which costs a miner drops · TEAMWORK: hands that have worked the same ground for weeks get up to 10% quicker at it · MILESTONES: a nametag earns a chevron at a thousand of whatever its trade is judged on, three at twenty thousand · SUPPLY CHAINS: a load now goes where it is wanted rather than into whichever chest is nearest — ore and fuel to the smelter, wheat and carrots to the rancher, spare food to whoever has an empty larder and is about to stall. Three chains, each obvious, no general routing to surprise you · WAGES: a specialist draws a wage in metal on top of its rations, and a wage is SPENT, not carried — hand one a diamond and it is gone, so you cannot kill it to get the diamond back. Iron covers a day, gold two, a diamond four · HIRING COST: the first three are free, then each hire wants one more diamond than the last · LEDGER: what the crew has cost you, on the crew screen and per bot on its record · DEATH MEMORY: a bot that died somewhere keeps a wider margin there next life · NAMES: every hire arrives with a name of its own instead of ten of them called assistant, and the Name button gives you a page of unused names to click — no anvil, no typing · PLOTS FIRST: mark a field with the wand before you own anyone, then right-click each assistant to put them on it. One field, marked once, worked by as many hands as you like, and widening it afterwards moves everyone already on it · SERVER COST: a requirement check used to probe every one of 6,875 positions in a zone, up to seven times a scan — about 48,000 block-entity lookups every three seconds per specialist. It now reads the block-entity map the chunk already keeps, which is at most nine maps of a handful of entries each. Same chests, same answers · LINKED CHESTS: everything a job needs counts as held whether it is in the pack or in a chest in the zone, and the bot fetches it itself — stock the chest once and it stops asking you · Hatted trades (farmer, miner, rancher, guard, fisher) had the whole head covered by the hat layer and no face at all — the overlay is now a crown and a brow band, so they look like people in hats · SAVED PATCHES: set a field up once, press Save Patch, and every future hire drops straight onto it — same trade, same ground, same shift. Put a second bot on the same patch and they crew it together · LAYOUT FIX: the orders sheet was drawing its career and perk lines underneath the duty buttons, so nobody ever saw them · JOB UNIFORMS: every trade wears its own kit — straw hat and wheat gold for the farmer, denim and a hard hat for the miner, hi-vis for the hauler — so you can read a crew of ten across a field · WORKING ICON: the tool of its trade floats over its head while it works, and turns into a barrier the moment it's stuck · MAP SCREEN: every patch and every specialist from above, click one to open its orders · WORK RECORD: the full career tally on its own page · CONFIG FILE: every number is yours now — upkeep rates, crew size, patch sizes, the XP curve, chunk loading — in config/mc_assistant-common.toml · LOYALTY: a specialist earns a permanent heart per week of service, up to four, so an old hand outlives a fresh hire · BRANCHES: at level 20 a specialist picks a branch (irrigation, husbandry, prospecting, forestry, sentinel, porterage) that deepens the job it already does · DEATH LOG: it tells you what killed it and where, and remembers when revived · danger sense · useful idling · work record · beds + shifts";
+        "2026-07-b61 · YOU GET WHAT YOU FEED THEM: a specialist works at the pace of its last meal. Rotten flesh is 30%, carrots and melon around 55, bread and baked potato 85, a cooked steak or porkchop 100 — and it eats the best thing it has, so what it runs on is decided by what you stock. Right-click one and the bar under its gear shows the pace and what bought it · SPAWNER RECIPE: the centre of the ring is a plain DIAMOND now, not a diamond block — hiring already costs diamonds from the fourth assistant on, so charging a whole block for the spawner as well was charging twice. Eight rotten flesh round one diamond · REQUEST BOARD: a specialist that cannot supply itself posts what it is short of, and anyone already carrying that takes it over on their next run — an answered request outranks the standing supply chains, because a posted need is somebody who has actually stopped working. The crew screen shows who is asking for what · GOOD GROUND: a miner remembers where the veins were and a lumberjack where it replanted, and both go back rather than wandering off in a straight line away from the ore they just found · THE BEAT: a guard with a patch now walks its perimeter corner to corner instead of standing in the middle — it meets things at the boundary, which is what a boundary is for · TRAITS: every hire turns up with a quirk of its own — quick, sturdy, cave-shy, a night owl, or thrifty — rolled from its own id so it is settled the moment you meet it and never rerolls · SHIFT HANDOVER: a specialist clocking off passes its load to whoever is coming on to the same plot, keeping its own tools and rations · TOOL SENSE: among tools that dig a block at much the same rate the enchantment now decides — Fortune on ore for the extra yield, Silk Touch on the few blocks that shatter without it, and never Silk Touch on ore, which costs a miner drops · TEAMWORK: hands that have worked the same ground for weeks get up to 10% quicker at it · MILESTONES: a nametag earns a chevron at a thousand of whatever its trade is judged on, three at twenty thousand · SUPPLY CHAINS: a load now goes where it is wanted rather than into whichever chest is nearest — ore and fuel to the smelter, wheat and carrots to the rancher, spare food to whoever has an empty larder and is about to stall. Three chains, each obvious, no general routing to surprise you · WAGES: a specialist draws a wage in metal on top of its rations, and a wage is SPENT, not carried — hand one a diamond and it is gone, so you cannot kill it to get the diamond back. Iron covers a day, gold two, a diamond four · HIRING COST: the first three are free, then each hire wants one more diamond than the last · LEDGER: what the crew has cost you, on the crew screen and per bot on its record · DEATH MEMORY: a bot that died somewhere keeps a wider margin there next life · NAMES: every hire arrives with a name of its own instead of ten of them called assistant, and the Name button gives you a page of unused names to click — no anvil, no typing · PLOTS FIRST: mark a field with the wand before you own anyone, then right-click each assistant to put them on it. One field, marked once, worked by as many hands as you like, and widening it afterwards moves everyone already on it · SERVER COST: a requirement check used to probe every one of 6,875 positions in a zone, up to seven times a scan — about 48,000 block-entity lookups every three seconds per specialist. It now reads the block-entity map the chunk already keeps, which is at most nine maps of a handful of entries each. Same chests, same answers · LINKED CHESTS: everything a job needs counts as held whether it is in the pack or in a chest in the zone, and the bot fetches it itself — stock the chest once and it stops asking you · Hatted trades (farmer, miner, rancher, guard, fisher) had the whole head covered by the hat layer and no face at all — the overlay is now a crown and a brow band, so they look like people in hats · SAVED PATCHES: set a field up once, press Save Patch, and every future hire drops straight onto it — same trade, same ground, same shift. Put a second bot on the same patch and they crew it together · LAYOUT FIX: the orders sheet was drawing its career and perk lines underneath the duty buttons, so nobody ever saw them · JOB UNIFORMS: every trade wears its own kit — straw hat and wheat gold for the farmer, denim and a hard hat for the miner, hi-vis for the hauler — so you can read a crew of ten across a field · WORKING ICON: the tool of its trade floats over its head while it works, and turns into a barrier the moment it's stuck · MAP SCREEN: every patch and every specialist from above, click one to open its orders · WORK RECORD: the full career tally on its own page · CONFIG FILE: every number is yours now — upkeep rates, crew size, patch sizes, the XP curve, chunk loading — in config/mc_assistant-common.toml · LOYALTY: a specialist earns a permanent heart per week of service, up to four, so an old hand outlives a fresh hire · BRANCHES: at level 20 a specialist picks a branch (irrigation, husbandry, prospecting, forestry, sentinel, porterage) that deepens the job it already does · DEATH LOG: it tells you what killed it and where, and remembers when revived · danger sense · useful idling · work record · beds + shifts";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -386,7 +386,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // produces are nearly always byte-identical to the ones already sent.
         long stamp = deedStamp * 31L + branch.ordinal() * 7L + daysServed()
             + wagesPaid * 1009L + (wageDue() / 200L)
-            + trait.ordinal() * 65537L + teamworkPercent() * 131L;
+            + trait.ordinal() * 65537L + teamworkPercent() * 131L + dietPercent * 7919L;
         if (stamp != lastExtraStamp || lastExtraZone != zoneStamp()) {
             java.util.List<String> top = workRecord(1);
             this.entityData.set(DATA_EXTRA, branch.label + "|" + daysServed() + "|"
@@ -394,7 +394,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 + "|" + ironPaid + "," + goldPaid + "," + diamondPaid + "," + wageDue()
                 // blurb LAST: it contains commas of its own, so it has to be
                 // the field the reader stops splitting at.
-                + "|" + trait.label + "," + teamworkPercent() + "," + trait.blurb);
+                + "|" + trait.label + "," + teamworkPercent() + "," + trait.blurb
+                + "|" + dietPercent + "," + lastMeal);
             lastExtraStamp = stamp;
             lastExtraZone = zoneStamp();
         }
@@ -662,7 +663,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (com.jrpetty.mcassistant.AssistantConfig.upkeepEnabled()
             && tickCount - upkeepFoodTick
                 >= com.jrpetty.mcassistant.AssistantConfig.foodInterval() * traitUpkeepPercent() / 100) {             // ~2.5 minutes of work
-            if (consumeUpkeep(s -> s.get(DataComponents.FOOD) != null)) {
+            if (eatBestFood()) {
                 upkeepFoodTick = tickCount;
             } else {
                 ok = false;
@@ -852,6 +853,104 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (removeMatching(spare, 1) == 1) return true;
         if (scoopFromChests(what, 8, CHEST_RANGE) > 0 && removeMatching(spare, 1) == 1) return true;
         return removeMatching(what, 1) == 1;
+    }
+
+    // ------------------------------ what it runs on --------------------------
+    // A specialist works at the pace of its last meal. Rotten flesh keeps it
+    // alive and not much more; bread and vegetables are honest food; a cooked
+    // steak is what you feed someone you want a full day's work out of. This is
+    // what makes the difference between clearing out your zombie drops and
+    // actually provisioning a crew.
+
+    /** How hard this food lets a specialist work, as a percentage of full pace. */
+    public static int foodQuality(ItemStack food) {
+        FoodProperties fp = food.get(DataComponents.FOOD);
+        if (fp == null) return 0;                     // not food at all
+        // Anything that would poison a person is scraps, whatever its numbers.
+        for (FoodProperties.PossibleEffect e : fp.effects()) {
+            if (e.effect().getEffect().value().getCategory()
+                    == net.minecraft.world.effect.MobEffectCategory.HARMFUL) {
+                return 30;   // rotten flesh, spider eye, pufferfish
+            }
+        }
+        // A proper cooked meal — the top of the scale, by name, because that is
+        // the thing a player recognises as "good food".
+        if (food.is(Items.COOKED_BEEF) || food.is(Items.COOKED_PORKCHOP)
+            || food.is(Items.COOKED_MUTTON) || food.is(Items.COOKED_CHICKEN)
+            || food.is(Items.COOKED_RABBIT) || food.is(Items.COOKED_COD)
+            || food.is(Items.COOKED_SALMON) || food.is(Items.RABBIT_STEW)
+            || food.is(Items.GOLDEN_CARROT) || food.is(Items.GOLDEN_APPLE)
+            || food.is(Items.ENCHANTED_GOLDEN_APPLE)) {
+            return 100;
+        }
+        // Everything else scales on how filling it is, so modded food lands
+        // somewhere sensible without being listed here.
+        int n = fp.nutrition();
+        if (n >= 8) return 95;
+        if (n >= 6) return 85;   // bread, baked potato, cooked-ish
+        if (n >= 4) return 70;   // raw meat, apple, beetroot soup
+        if (n >= 2) return 55;   // carrot, melon, cookie
+        return 45;
+    }
+
+    /** A word for the pace, for the screens. */
+    public static String foodLabel(int quality) {
+        if (quality >= 100) return "well fed";
+        if (quality >= 85) return "fed";
+        if (quality >= 70) return "getting by";
+        if (quality >= 45) return "poorly fed";
+        return "living on scraps";
+    }
+
+    private int dietPercent = 100;         // pace set by the last meal
+    private String lastMeal = "";
+
+    public int dietPercent() { return dietPercent; }
+    public String lastMeal() { return lastMeal; }
+
+    /**
+     * Eat the best thing on hand, and let it set the pace until the next meal.
+     * Best-first on purpose: a bot holding both steak and rotten flesh should
+     * eat the steak, so what it runs on is decided by what you stock, not by
+     * which slot the stack happened to land in.
+     */
+    private boolean eatBestFood() {
+        java.util.function.Predicate<ItemStack> isFood =
+            s -> s.get(DataComponents.FOOD) != null;
+        int bestSlot = -1, bestScore = -1;
+        for (int i = 0; i < inventory.size(); i++) {
+            ItemStack s = inventory.get(i);
+            if (s.isEmpty() || !isFood.test(s) || isWorkingStock(s)) continue;
+            int score = foodQuality(s);
+            if (score > bestScore) { bestScore = score; bestSlot = i; }
+        }
+        if (bestSlot < 0) {
+            // Nothing in the pack — pull from the stores and look again.
+            if (scoopFromChests(isFood, 8, CHEST_RANGE) <= 0) {
+                return removeMatching(isFood, 1) == 1;   // last resort: seed stock
+            }
+            for (int i = 0; i < inventory.size(); i++) {
+                ItemStack s = inventory.get(i);
+                if (s.isEmpty() || !isFood.test(s) || isWorkingStock(s)) continue;
+                int score = foodQuality(s);
+                if (score > bestScore) { bestScore = score; bestSlot = i; }
+            }
+            if (bestSlot < 0) return false;
+        }
+        ItemStack meal = inventory.get(bestSlot);
+        int was = dietPercent;
+        dietPercent = bestScore;
+        lastMeal = meal.getHoverName().getString();
+        meal.shrink(1);
+        if (meal.isEmpty()) inventory.set(bestSlot, ItemStack.EMPTY);
+        if (was != dietPercent) {
+            sayRoutine(dietPercent >= 100
+                ? "That's proper food — I can give you a full day on that."
+                : dietPercent <= 30
+                    ? "Scraps again. I'll work, but don't expect much."
+                    : "That'll keep me going.");
+        }
+        return true;
     }
 
     private int wagePaidUntil;      // work-tick the current wage runs out on
@@ -1881,7 +1980,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // A forester's axe work (and a husbandman's shears) come off the same
         // clock, so the branch discount lands here alongside the veteran rungs.
         bonus = Math.min(45, bonus + teamworkPercent() + traitWorkPercent());
-        return Math.max(4, base * (100 - bonus) / 100 * branchCooldownPercent() / 100);
+        int ticks = base * (100 - bonus) / 100 * branchCooldownPercent() / 100;
+        // Diet is a multiplier on TIME, not on the bonus: at 30% pace a job
+        // takes three times as long, which is what "works at 30% speed" means.
+        ticks = ticks * 100 / Math.max(20, dietPercent);
+        return Math.max(4, ticks);
     }
 
     /** Wear the held tool by one use; announces when it breaks. */
@@ -3916,6 +4019,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         tag.putInt("WageDiamond", diamondPaid);
         tag.putInt("WagesPaid", wagesPaid);
         tag.putInt("Shoulder", shoulderTicks);
+        tag.putInt("Diet", dietPercent);
+        tag.putString("LastMeal", lastMeal);
         tag.putString("Trait", trait.name());
         net.minecraft.nbt.ListTag spots = new net.minecraft.nbt.ListTag();
         for (long k : richSpots) spots.add(net.minecraft.nbt.LongTag.valueOf(k));
@@ -4002,6 +4107,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         diamondPaid = tag.getInt("WageDiamond");
         wagesPaid = tag.getInt("WagesPaid");
         shoulderTicks = tag.getInt("Shoulder");
+        dietPercent = tag.contains("Diet") ? tag.getInt("Diet") : 100;
+        lastMeal = tag.getString("LastMeal");
         try {
             trait = tag.contains("Trait") ? Trait.valueOf(tag.getString("Trait")) : Trait.NONE;
         } catch (IllegalArgumentException ignored) {
@@ -4735,6 +4842,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         tag.putInt("WageDiamond", diamondPaid);
         tag.putInt("WagesPaid", wagesPaid);
         tag.putInt("Shoulder", shoulderTicks);
+        tag.putInt("Diet", dietPercent);
+        tag.putString("LastMeal", lastMeal);
         tag.putString("Trait", trait.name());
         net.minecraft.nbt.ListTag spots = new net.minecraft.nbt.ListTag();
         for (long k : richSpots) spots.add(net.minecraft.nbt.LongTag.valueOf(k));
@@ -4789,6 +4898,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         diamondPaid = tag.getInt("WageDiamond");
         wagesPaid = tag.getInt("WagesPaid");
         shoulderTicks = tag.getInt("Shoulder");
+        dietPercent = tag.contains("Diet") ? tag.getInt("Diet") : 100;
+        lastMeal = tag.getString("LastMeal");
         try {
             trait = tag.contains("Trait") ? Trait.valueOf(tag.getString("Trait")) : Trait.NONE;
         } catch (IllegalArgumentException ignored) {
