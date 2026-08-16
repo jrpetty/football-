@@ -206,7 +206,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b49 · JOB UNIFORMS: every trade wears its own kit — straw hat and wheat gold for the farmer, denim and a hard hat for the miner, hi-vis for the hauler — so you can read a crew of ten across a field · WORKING ICON: the tool of its trade floats over its head while it works, and turns into a barrier the moment it's stuck · MAP SCREEN: every patch and every specialist from above, click one to open its orders · WORK RECORD: the full career tally on its own page · CONFIG FILE: every number is yours now — upkeep rates, crew size, patch sizes, the XP curve, chunk loading — in config/mc_assistant-common.toml · LOYALTY: a specialist earns a permanent heart per week of service, up to four, so an old hand outlives a fresh hire · BRANCHES: at level 20 a specialist picks a branch (irrigation, husbandry, prospecting, forestry, sentinel, porterage) that deepens the job it already does · DEATH LOG: it tells you what killed it and where, and remembers when revived · danger sense · useful idling · work record · beds + shifts";
+        "2026-07-b50 · SAVED PATCHES: set a field up once, press Save Patch, and every future hire drops straight onto it — same trade, same ground, same shift. Put a second bot on the same patch and they crew it together · LAYOUT FIX: the orders sheet was drawing its career and perk lines underneath the duty buttons, so nobody ever saw them · JOB UNIFORMS: every trade wears its own kit — straw hat and wheat gold for the farmer, denim and a hard hat for the miner, hi-vis for the hauler — so you can read a crew of ten across a field · WORKING ICON: the tool of its trade floats over its head while it works, and turns into a barrier the moment it's stuck · MAP SCREEN: every patch and every specialist from above, click one to open its orders · WORK RECORD: the full career tally on its own page · CONFIG FILE: every number is yours now — upkeep rates, crew size, patch sizes, the XP curve, chunk loading — in config/mc_assistant-common.toml · LOYALTY: a specialist earns a permanent heart per week of service, up to four, so an old hand outlives a fresh hire · BRANCHES: at level 20 a specialist picks a branch (irrigation, husbandry, prospecting, forestry, sentinel, porterage) that deepens the job it already does · DEATH LOG: it tells you what killed it and where, and remembers when revived · danger sense · useful idling · work record · beds + shifts";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -628,6 +628,14 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         this.shift = s;
         refreshJobState();
     }
+
+    /** The saved patch this one is working, if it was put on one. Two bots on
+     *  the same preset are crewing the same ground together. */
+    @Nullable private String presetName;
+
+    @Nullable public String preset() { return presetName; }
+
+    public void setPreset(@Nullable String name) { this.presetName = name; }
 
     /** Is this specialist on duty right now? */
     public boolean onShift() {
@@ -3377,6 +3385,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         tag.put("Deeds", deedTag);
         tag.putString("Branch", branch.name());
         if (deathNote != null) tag.putString("DeathNote", deathNote);
+        if (presetName != null) tag.putString("Preset", presetName);
         tag.putLong("FirstDay", firstServedDay);
         if (bedPos != null) tag.putLong("Bed", bedPos.asLong());
         tag.putInt("BaseStage", baseStage);
@@ -3452,6 +3461,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
         firstServedDay = tag.contains("FirstDay") ? tag.getLong("FirstDay") : -1;
         deathNote = tag.contains("DeathNote") ? tag.getString("DeathNote") : null;
+        presetName = tag.contains("Preset") ? tag.getString("Preset") : null;
         deeds.clear();
         CompoundTag deedTag = tag.getCompound("Deeds");
         for (Deed d : Deed.values()) {
@@ -4149,6 +4159,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         tag.putBoolean("Auto", autonomous);
         if (deathNote != null) tag.putString("DeathNote", deathNote);
         tag.putString("Branch", branch.name());
+        if (presetName != null) tag.putString("Preset", presetName);
         tag.putLong("FirstDay", firstServedDay);
         if (homePos != null) tag.putLong("Home", homePos.asLong());
         if (stationPos != null && stationTask != StationTask.NONE) {
@@ -4192,6 +4203,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
         firstServedDay = tag.contains("FirstDay") ? tag.getLong("FirstDay") : -1;
         deathNote = tag.contains("DeathNote") ? tag.getString("DeathNote") : null;
+        presetName = tag.contains("Preset") ? tag.getString("Preset") : null;
         deeds.clear();
         CompoundTag deedTag = tag.getCompound("Deeds");
         for (Deed d : Deed.values()) {

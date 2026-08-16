@@ -18,12 +18,32 @@ import javax.annotation.Nullable;
  * a bot and pressing the orders key.
  *
  * Laid out in labelled groups — the job, its patch, handling, duty — so it
- * reads as a control panel rather than a wall of identical buttons.
+ * reads as a control panel rather than a wall of identical buttons. The whole
+ * panel stays under 240px tall so it fits at GUI scale 4 on a 1080p screen,
+ * which is what auto-scale picks there.
  */
 public class OrdersScreen extends Screen {
 
     private static final int W = 288, H = 236;
     private static final int PAD = 10;
+
+    // Every vertical position on the page, in one place, so a change to one
+    // row can't quietly land on top of another. (It did: the career lines were
+    // drawn at exactly the duty row's Y, and the buttons covered them.)
+    private static final int Y_NAME      = 8;
+    private static final int Y_BAR       = 22;
+    private static final int Y_CAREER    = 34;
+    private static final int Y_PERKS     = 44;
+    private static final int Y_SEC_JOB   = 58;
+    private static final int Y_JOB       = 68;
+    private static final int Y_SEC_PATCH = 90;
+    private static final int Y_PATCH     = 100;
+    private static final int Y_SEC_HAND  = 122;
+    private static final int Y_HAND1     = 132;
+    private static final int Y_HAND2     = 154;
+    private static final int Y_SEC_DUTY  = 176;
+    private static final int Y_DUTY      = 186;
+    private static final int Y_FOOTER    = 208;
 
     private final AssistantEntity bot;
     private int left, top;
@@ -46,7 +66,7 @@ public class OrdersScreen extends Screen {
         int w4 = (inner - gap * 3) / 4;
 
         // ---- the job itself: arrows either side of a work/pause toggle ----
-        int y = top + 60;
+        int y = top + Y_JOB;
         add(x, y, 18, h, "‹", AssistantActions.JOB_PREV, "Previous job");
         jobButton = add(x + 22, y, inner - 44, h, jobTitle(), AssistantActions.WORK,
             "Click to start or pause this job");
@@ -54,7 +74,7 @@ public class OrdersScreen extends Screen {
         shownJob = bot.clientJobOrdinal();
 
         // ---- its patch ----
-        y += h + 16;
+        y = top + Y_PATCH;
         add(x, y, w4, h, "Set Area", AssistantActions.ZONE_HERE,
             "Claim a patch centred where you're standing");
         add(x + (w4 + gap), y, w4, h, "Smaller", AssistantActions.ZONE_SHRINK, "Shrink the patch by 4 blocks");
@@ -62,20 +82,20 @@ public class OrdersScreen extends Screen {
         add(x + 3 * (w4 + gap), y, w4, h, "Show", AssistantActions.ZONE_SHOW, "Outline the patch in particles");
 
         // ---- handling ----
-        y += h + 16;
+        y = top + Y_HAND1;
         add(x, y, w4, h, "Follow", AssistantActions.FOLLOW, "Come with me (stops work)");
         add(x + (w4 + gap), y, w4, h, "Stay", AssistantActions.STAY, "Wait here (stops work)");
         add(x + 2 * (w4 + gap), y, w4, h, "Come", AssistantActions.COME, "Walk to me now");
         add(x + 3 * (w4 + gap), y, w4, h, "Guard", AssistantActions.GUARD, "Defend me");
 
-        y += h + gap;
+        y = top + Y_HAND2;
         add(x, y, w4, h, "Stash", AssistantActions.STASH, "Empty its pack into a chest");
         add(x + (w4 + gap), y, w4, h, "Go Home", AssistantActions.GO_HOME, "Return to its home point");
         add(x + 2 * (w4 + gap), y, w4, h, "Pack", AssistantActions.OPEN_PACK, "Open its inventory");
         add(x + 3 * (w4 + gap), y, w4, h, "Stop", AssistantActions.STOP, "Drop whatever it's doing");
 
         // ---- duty, bed, and the job-specific control ----
-        y += h + 16;
+        y = top + Y_DUTY;
         shiftButton = add(x, y, w4 * 2 + gap, h, dutyLabel(), AssistantActions.CYCLE_SHIFT,
             "When this one works. Off duty it sleeps in its bed.");
         add(x + 2 * (w4 + gap), y, w4, h, "Claim Bed", AssistantActions.CLAIM_BED,
@@ -88,7 +108,7 @@ public class OrdersScreen extends Screen {
             "Deliver loads to where you're standing");
 
         // ---- footer ----
-        y = top + H - PAD - h;
+        y = top + Y_FOOTER;
         add(x, y, w4, h, "Crew", AssistantActions.ROSTER, "Report on every assistant");
         this.addRenderableWidget(Button.builder(Component.literal("Record"),
                 b -> this.minecraft.setScreen(new RecordScreen(bot)))
@@ -158,7 +178,7 @@ public class OrdersScreen extends Screen {
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(g, mouseX, mouseY, partialTick);
-        Ui.panel(g, left, top, W, H, 32);
+        Ui.panel(g, left, top, W, H, 30);
 
         int x = left + PAD;
         int inner = W - PAD * 2;
@@ -166,54 +186,54 @@ public class OrdersScreen extends Screen {
 
         // Header: who, what level, and the one status line that matters.
         String name = bot.clientName();
-        g.drawString(this.font, name, x, top + 8, Ui.INK, false);
+        g.drawString(this.font, name, x, top + Y_NAME, Ui.INK, false);
         if (lvl >= 1) {
-            g.drawString(this.font, "✦" + lvl, x + this.font.width(name) + 6, top + 8, Ui.ACCENT, false);
+            g.drawString(this.font, "✦" + lvl, x + this.font.width(name) + 6, top + Y_NAME,
+                Ui.ACCENT, false);
         }
         String status = bot.clientStatus();
         int sw = this.font.width(status) + 8;
-        Ui.pill(g, this.font, status, left + W - PAD - sw, top + 8, Ui.statusColour(status));
+        Ui.pill(g, this.font, status, left + W - PAD - sw, top + Y_NAME, Ui.statusColour(status));
 
         // Level progress, so "how close is my veteran" is answerable at a glance.
         if (lvl < 50) {
-            Ui.bar(g, x, top + 22, inner - 46, 4, Ui.levelProgress(lvl, bot.clientLifetimeXp()), Ui.ACCENT);
-            Ui.right(g, this.font, "lv " + (lvl + 1), left + W - PAD, top + 20, Ui.FAINT);
+            Ui.bar(g, x, top + Y_BAR, inner - 46, 4, Ui.levelProgress(lvl, bot.clientLifetimeXp()),
+                Ui.ACCENT);
+            Ui.right(g, this.font, "lv " + (lvl + 1), left + W - PAD, top + Y_BAR - 2, Ui.FAINT);
         }
 
-        // Section headings.
-        Ui.section(g, this.font, "Job", x, top + 48, inner);
-        Ui.section(g, this.font, "Its patch", x, top + 60 + 18 + 4, inner);
-        Ui.section(g, this.font, "Handling", x, top + 60 + 2 * (18 + 16) - 12, inner);
-        Ui.section(g, this.font, "Duty", x, top + 60 + 3 * (18 + 16) + 18 + 4 - 12, inner);
-
-        // Patch and perks, above the footer.
-        int infoY = top + H - PAD - 18 - 24;
+        // Its patch, its service and what it has earned — high on the page,
+        // where there's room, rather than underneath the buttons.
         BotInfo info = BotInfo.of(bot);
-        String career = Ui.clip(this.font,
-            bot.clientZone() + "  ·  " + info.daysServed() + "d served"
+        String career = bot.clientZone() + "  ·  " + info.daysServed() + "d served"
             + (info.hasBranch() ? "  ·  " + info.branch() : "")
-            + (info.topDeed().isEmpty() ? "" : "  ·  " + info.topDeed()), inner);
-        g.drawString(this.font, career, x, infoY, Ui.MUTED, false);
-        g.drawString(this.font, Ui.clip(this.font, perkLine(lvl), inner), x, infoY + 11,
+            + (info.topDeed().isEmpty() ? "" : "  ·  " + info.topDeed());
+        g.drawString(this.font, Ui.clip(this.font, career, inner), x, top + Y_CAREER, Ui.MUTED, false);
+        g.drawString(this.font, Ui.clip(this.font, perkLine(lvl), inner), x, top + Y_PERKS,
             lvl >= 10 ? Ui.GOOD : Ui.FAINT, false);
+
+        // Section headings.
+        Ui.section(g, this.font, "Job", x, top + Y_SEC_JOB, inner);
+        Ui.section(g, this.font, "Its patch", x, top + Y_SEC_PATCH, inner);
+        Ui.section(g, this.font, "Handling", x, top + Y_SEC_HAND, inner);
+        Ui.section(g, this.font, "Duty", x, top + Y_SEC_DUTY, inner);
 
         super.render(g, mouseX, mouseY, partialTick);
     }
 
     /** What it has earned, and what it earns next. */
     private String perkLine(int lvl) {
-        StringBuilder have = new StringBuilder();
-        if (lvl >= 10) have.append("+10% work");
-        if (lvl >= 20) have.setLength(0);
-        if (lvl >= 20) have.append("+2♥ +20% work");
-        if (lvl >= 30) have.append("  +20% speed");
-        if (lvl >= 35) { have.setLength(0); have.append("+2♥ +30% work +20% speed"); }
+        String have = lvl >= 35 ? "+2♥ +30% work +20% speed"
+            : lvl >= 30 ? "+2♥ +20% work +20% speed"
+            : lvl >= 20 ? "+2♥ +20% work"
+            : lvl >= 10 ? "+10% work"
+            : "No bonuses yet";
         String next = lvl < 10 ? "next lv10: +10% work"
             : lvl < 20 ? "next lv20: +2♥, +20% work"
             : lvl < 30 ? "next lv30: +20% speed"
             : lvl < 35 ? "next lv35: +30% work"
             : "fully trained";
-        return (have.length() == 0 ? "No bonuses yet" : have.toString()) + "  ·  " + next;
+        return have + "  ·  " + next;
     }
 
     @Override

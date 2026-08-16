@@ -47,6 +47,8 @@ public final class AssistantActions {
     public static final int CYCLE_SHIFT = 20;
     public static final int CLAIM_BED = 21;
     public static final int CYCLE_BRANCH = 22;
+    public static final int SAVE_PRESET = 23;
+    public static final int USE_PRESET = 24;
 
     /** Run an order. Returns false for an unknown id. */
     public static boolean apply(AssistantEntity a, Player player, int action) {
@@ -130,6 +132,29 @@ public final class AssistantActions {
                 }
             }
             case CYCLE_BRANCH -> a.cycleBranch();
+            case SAVE_PRESET -> {
+                com.jrpetty.mcassistant.ZonePresets.Preset saved =
+                    com.jrpetty.mcassistant.ZonePresets.save(player, a);
+                if (saved == null) {
+                    a.say("Give me a job and a patch first — then I can save it as a preset.");
+                } else {
+                    a.say("Saved this patch as \"" + saved.name()
+                        + "\". Put anyone else on it with Use Patch.");
+                }
+            }
+            case USE_PRESET -> {
+                com.jrpetty.mcassistant.ZonePresets.Preset next =
+                    com.jrpetty.mcassistant.ZonePresets.next(player, a.preset());
+                if (next == null) {
+                    a.say("No saved patches yet — set one up and press Save Patch.");
+                } else {
+                    com.jrpetty.mcassistant.ZonePresets.applyTo(a, next);
+                    int crew = com.jrpetty.mcassistant.ZonePresets.crewOn(a, next.name());
+                    a.say("On \"" + next.name() + "\" now"
+                        + (crew > 1 ? " — working it with " + (crew - 1)
+                            + (crew == 2 ? " other." : " others.") : "."));
+                }
+            }
             case REPORT -> report(a);
             case ROSTER -> {
                 if (player instanceof ServerPlayer sp) roster(sp);

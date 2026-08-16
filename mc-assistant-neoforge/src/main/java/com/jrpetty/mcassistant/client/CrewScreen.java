@@ -20,10 +20,10 @@ import java.util.List;
  */
 public class CrewScreen extends Screen {
 
-    private static final int W = 300, H = 252;
+    private static final int W = 300, H = 236;
     private static final int PAD = 10;
     private static final int ROW_H = 16;
-    private static final int MAX_ROWS = 6;
+    private static final int MAX_ROWS = 5;
 
     private final List<AssistantEntity> crew = new ArrayList<>();
     private int picked = -1;
@@ -76,15 +76,20 @@ public class CrewScreen extends Screen {
             .tooltip(Tooltip.create(Component.literal("Everything you can tell this one to do")))
             .build());
 
+        // Patches you've set up once and can crew up later.
         by += h + gap;
+        order(x, by, w4, h, "Save Patch", AssistantActions.SAVE_PRESET,
+            "Remember this one's job and ground as a preset");
+        order(x + (w4 + gap), by, w4, h, "Use Patch", AssistantActions.USE_PRESET,
+            "Put this one on a saved patch — press again for the next one");
         this.addRenderableWidget(Button.builder(Component.literal("Map"),
                 b -> this.minecraft.setScreen(new MapScreen()))
-            .bounds(x, by, w4 * 2 + gap, h)
+            .bounds(x + 2 * (w4 + gap), by, w4, h)
             .tooltip(Tooltip.create(Component.literal(
                 "Every patch and every specialist, seen from above")))
             .build());
         this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
-            .bounds(x + 2 * (w4 + gap), by, w4 * 2 + gap, h).build());
+            .bounds(x + 3 * (w4 + gap), by, w4, h).build());
     }
 
     private void order(int x, int y, int w, int h, String label, int action, String tip) {
