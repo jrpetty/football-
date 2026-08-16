@@ -40,10 +40,10 @@ public final class JobSpec {
             case FARM -> List.of("a hoe", "a chest");
             case WOOD -> List.of("an axe", "a chest");
             case MINE -> List.of("a pickaxe", "8 torches", "a chest");
-            case RANCH -> List.of("shears", "a chest");
-            case GUARD -> List.of("a sword", "8 torches");
-            case SMELT -> List.of("a furnace in the zone", "fuel (coal or logs)", "a chest");
-            case HAUL -> List.of("a chest in the zone", "a home to deliver to");
+            case RANCH -> List.of("shears", "2+ animals in the zone", "breeding food", "a chest");
+            case GUARD -> List.of("a sword", "torches (it lights the area)");
+            case SMELT -> List.of("a furnace in the zone", "raw ore to smelt", "fuel (coal or logs)", "a chest");
+            case HAUL -> List.of("a chest in the zone", "a drop-off 28+ blocks away, with a chest");
             case FISH -> List.of("a fishing rod", "water in the zone", "a chest");
             case STORE -> List.of("two chests in the zone");
             case NONE -> List.of();
@@ -71,7 +71,9 @@ public final class JobSpec {
 
         switch (task) {
             case FARM -> {
-                if (!hasTool(a, "_hoe")) gaps.add("a hoe");
+                // A hoe only speeds up breaking new ground; the steady harvest
+                // and replant loop never uses one, so a worn-out hoe must not
+                // stop the whole farm.
                 needChest(a, gaps, 1);
             }
             case WOOD -> {
@@ -85,11 +87,20 @@ public final class JobSpec {
             }
             case RANCH -> {
                 if (a.countCarried(s -> s.is(Items.SHEARS)) == 0) gaps.add("shears");
+                // Without livestock a rancher is a permanent silent no-op, and
+                // it cannot obtain animals itself; without feed every breed job
+                // aborts the moment it starts.
+                if (a.adultAnimalsNearby(16) < 2) gaps.add("at least 2 adult animals in the zone");
+                boolean feed = a.countCarried(AssistantEntity.BREEDING_FOOD) >= 2
+                    || stockedNearby(a, AssistantEntity.BREEDING_FOOD);
+                if (!feed) gaps.add("breeding food (wheat, carrots or seeds)");
                 needChest(a, gaps, 1);
             }
             case GUARD -> {
+                // Torches are what a guard SPENDS lighting its patch, so they
+                // are not a precondition — gating on them stopped a guard
+                // defending at all once it had used them up.
                 if (!hasTool(a, "_sword")) gaps.add("a sword");
-                if (a.countCarried(s -> s.is(Items.TORCH)) < 8) gaps.add("8 torches");
             }
             case SMELT -> {
                 if (!fixtureNearby(a, FixtureKind.FURNACE)) gaps.add("a furnace in the zone");
@@ -97,11 +108,23 @@ public final class JobSpec {
                     || a.countCarried(s -> s.is(ItemTags.LOGS) || s.is(ItemTags.PLANKS)) > 0
                     || stockedNearby(a, s -> s.is(Items.COAL) || s.is(Items.CHARCOAL));
                 if (!fuel) gaps.add("fuel (coal or logs)");
+                boolean ore = a.countCarried(AssistantEntity.SMELTABLE_ORE) > 0
+                    || stockedNearby(a, AssistantEntity.SMELTABLE_ORE);
+                if (!ore) gaps.add("raw ore in the input chest");
                 needChest(a, gaps, 1);
             }
             case HAUL -> {
                 needChest(a, gaps, 1);
-                if (a.getHome() == null) gaps.add("a home to deliver to");
+                // The run only makes sense if the drop-off is somewhere else,
+                // and only works if there is something to unload into there.
+                if (a.getHome() == null) {
+                    gaps.add("a drop-off point (the Drop button)");
+                } else {
+                    if (a.stationPos() != null && a.getHome().distSqr(a.stationPos()) < 28.0 * 28.0) {
+                        gaps.add("a drop-off further from the pickup (28+ blocks)");
+                    }
+                    if (!chestNear(a, a.getHome())) gaps.add("a chest at the drop-off");
+                }
             }
             case FISH -> {
                 if (a.countCarried(s -> s.is(Items.FISHING_ROD)) == 0) gaps.add("a fishing rod");
@@ -112,6 +135,17 @@ public final class JobSpec {
             case NONE -> { }
         }
         return gaps;
+    }
+
+    /** Is there somewhere to unload at this spot? Used for a hauler's drop-off. */
+    private static boolean chestNear(AssistantEntity a, BlockPos where) {
+        for (BlockPos pos : BlockPos.betweenClosed(
+                where.offset(-FIXTURE_RANGE, -5, -FIXTURE_RANGE),
+                where.offset(FIXTURE_RANGE, 5, FIXTURE_RANGE))) {
+            if (a.level().getBlockEntity(pos) instanceof Container
+                && !(a.level().getBlockEntity(pos) instanceof AbstractFurnaceBlockEntity)) return true;
+        }
+        return false;
     }
 
     private static void needChest(AssistantEntity a, List<String> gaps, int count) {

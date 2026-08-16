@@ -2126,7 +2126,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     }
 
     /** Raw or block-form ore the smeltery keeper takes as input. */
-    private static final java.util.function.Predicate<ItemStack> SMELTABLE_ORE = s ->
+    public static final java.util.function.Predicate<ItemStack> SMELTABLE_ORE = s ->
         s.is(Items.RAW_IRON) || s.is(Items.IRON_ORE) || s.is(Items.DEEPSLATE_IRON_ORE)
         || s.is(Items.RAW_GOLD) || s.is(Items.GOLD_ORE) || s.is(Items.DEEPSLATE_GOLD_ORE)
         || s.is(Items.RAW_COPPER) || s.is(Items.COPPER_ORE) || s.is(Items.DEEPSLATE_COPPER_ORE);
@@ -2136,7 +2136,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             getBoundingBox().inflate(radius)).size();
     }
 
-    private int adultAnimalsNearby(int radius) {
+    public int adultAnimalsNearby(int radius) {
         return level().getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class,
             getBoundingBox().inflate(radius), a -> a.isAlive() && !a.isBaby()).size();
     }
@@ -2315,7 +2315,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         return ns + ew;
     }
 
-    private static final java.util.function.Predicate<ItemStack> BREEDING_FOOD = s ->
+    public static final java.util.function.Predicate<ItemStack> BREEDING_FOOD = s ->
         s.is(Items.WHEAT) || s.is(Items.CARROT) || s.is(Items.WHEAT_SEEDS);
 
     /** Highest-value iron kit piece still missing, or null when fully iron-safe. */
@@ -2910,6 +2910,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Where a stationed bot looks for its chests: the middle of its patch (or
      *  its post), which is what JobSpec checked when it accepted one. A bot
      *  with no station falls back to wherever it happens to be. */
+    public BlockPos stationSearchOrigin() { return chestSearchOrigin(); }
+
     private BlockPos chestSearchOrigin() {
         if (workZone != null) return workZone.center();
         return stationPos != null ? stationPos : feetPos();

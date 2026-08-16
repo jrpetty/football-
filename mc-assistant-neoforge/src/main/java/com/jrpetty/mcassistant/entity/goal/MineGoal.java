@@ -188,6 +188,15 @@ public class MineGoal extends Goal {
                 assistant.say("At Y" + cursor.getY() + " — opening the gallery.");
                 return;
             }
+            // The descent must stay on the patch too. Left unchecked a straight
+            // ramp walked the miner ~50 blocks off its own ground on the way down.
+            if (!assistant.inZoneColumn(cursor.relative(dir))) {
+                dir = dir.getClockWise(); // switchback rather than leave the zone
+                if (!assistant.inZoneColumn(cursor.relative(dir))) {
+                    phase = Phase.TUNNEL; // boxed in: start the gallery here
+                    return;
+                }
+            }
             planStep(cursor.relative(dir).below());
         } else {
             // Stop at the edge of the assigned patch as well as at length — a

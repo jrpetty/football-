@@ -157,14 +157,16 @@ public class FishGoal extends Goal {
 
     @Nullable
     private BlockPos findWater() {
-        BlockPos feet = assistant.feetPos();
+        // Search from the same place the checklist verified the water: the
+        // middle of the patch. Searching from the BOT meant that after one
+        // drift to a far corner the pond it was posted to fell out of range and
+        // the fisher stopped fishing for good.
+        BlockPos feet = assistant.stationSearchOrigin();
         BlockPos best = null;
         double bestDist = Double.MAX_VALUE;
-        // Reach a little further than the stationed fisher's requirement check
-        // (water within 12 of its zone centre) so a bot standing off-centre in
-        // its zone still finds the pond it was posted to.
         for (BlockPos pos : BlockPos.betweenClosed(
-                feet.offset(-18, -4, -18), feet.offset(18, 3, 18))) {
+                feet.offset(-16, -5, -16), feet.offset(16, 5, 16))) {
+            if (!assistant.inZone(pos)) continue; // fish our own patch, not next door
             if (!assistant.level().getFluidState(pos).is(FluidTags.WATER)) continue;
             if (!assistant.level().getBlockState(pos.above()).canBeReplaced()) continue;
             double d = pos.distSqr(feet);

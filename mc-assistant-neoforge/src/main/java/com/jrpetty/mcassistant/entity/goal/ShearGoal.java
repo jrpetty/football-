@@ -25,6 +25,7 @@ public class ShearGoal extends Goal {
     @Nullable private Sheep target;
     private int sheared;
     private int stuckTicks;
+    private int jobTicks; // hard budget: an unreachable animal must not freeze the station
     private int myGen;
 
     public ShearGoal(AssistantEntity assistant) {
@@ -46,6 +47,7 @@ public class ShearGoal extends Goal {
 
     @Override
     public void start() {
+        this.jobTicks = 0;
         this.job = assistant.peekJob();
         this.myGen = assistant.taskGen();
         this.sheared = 0;
@@ -91,6 +93,9 @@ public class ShearGoal extends Goal {
 
     @Override
     public void tick() {
+        // A job that cannot make progress must end, not spin: the station
+        // brain only runs again once the queue is empty.
+        if (++jobTicks > 1200) { finish("Giving up on shearing for now."); return; }
         if (job == null) return;
 
         if (sheared >= job.amount()) {

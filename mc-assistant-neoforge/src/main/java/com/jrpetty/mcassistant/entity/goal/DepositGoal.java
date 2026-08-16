@@ -197,6 +197,10 @@ public class DepositGoal extends Goal {
                 feet.offset(SEARCH_RADIUS, 4, SEARCH_RADIUS))) {
             BlockEntity be = assistant.level().getBlockEntity(pos);
             if (!(be instanceof Container)) continue;
+            // Never stash into a furnace: it is a Container, so a smelter was
+            // posting its finished ingots straight back into the furnace they
+            // came out of, and its output chest never saw a single item.
+            if (be instanceof net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity) continue;
             double d = pos.distSqr(feet);
             if (d < bestDist) {
                 bestDist = d;

@@ -41,6 +41,7 @@ public class BreedGoal extends Goal {
     @Nullable private Animal second;
     private int pairsBred;
     private int stuckTicks;
+    private int jobTicks; // hard budget: an unreachable animal must not freeze the station
     private int myGen;
 
     public BreedGoal(AssistantEntity assistant) {
@@ -62,6 +63,7 @@ public class BreedGoal extends Goal {
 
     @Override
     public void start() {
+        this.jobTicks = 0;
         this.job = assistant.peekJob();
         this.myGen = assistant.taskGen();
         this.pairsBred = 0;
@@ -105,6 +107,9 @@ public class BreedGoal extends Goal {
 
     @Override
     public void tick() {
+        // A job that cannot make progress must end, not spin: the station
+        // brain only runs again once the queue is empty.
+        if (++jobTicks > 1200) { finish("Giving up on breeding for now."); return; }
         if (job == null) return;
 
         if (pairsBred >= job.amount()) {

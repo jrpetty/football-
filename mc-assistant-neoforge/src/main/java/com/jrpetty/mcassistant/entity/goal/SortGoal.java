@@ -98,20 +98,32 @@ public class SortGoal extends Goal {
         assistant.getNavigation().stop();
     }
 
+    /** Real storage only. A furnace, hopper, dispenser or dropper is a Container
+     *  too, so sorting treated a smelter's furnace as a chest — shuffling its
+     *  fuel and ore out of it, and fighting anything that refills automatically. */
+    private static boolean isStorage(net.minecraft.world.level.block.entity.BlockEntity be) {
+        return be instanceof Container
+            && !(be instanceof net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity)
+            && !(be instanceof net.minecraft.world.level.block.entity.HopperBlockEntity)
+            && !(be instanceof net.minecraft.world.level.block.entity.DispenserBlockEntity);
+    }
+
     private void collectChests() {
-        BlockPos feet = assistant.feetPos();
+        // Same origin the checklist used to accept the chests, so the room it
+        // was posted to is the room it actually sorts.
+        BlockPos feet = assistant.stationSearchOrigin();
         java.util.Set<Long> seen = new java.util.HashSet<>();
         // Every remembered chest that's still loaded — the storage room may be a
         // few blocks past our scan radius, so don't gate remembered ones on range.
         for (BlockPos remembered : assistant.rememberedChests()) {
-            if (assistant.level().getBlockEntity(remembered) instanceof Container
-                && seen.add(remembered.asLong())) {
+            if (isStorage(assistant.level().getBlockEntity(remembered))
+                && assistant.inZone(remembered) && seen.add(remembered.asLong())) {
                 chests.add(remembered.immutable());
             }
         }
         for (BlockPos pos : BlockPos.betweenClosed(
-                feet.offset(-RADIUS, -4, -RADIUS), feet.offset(RADIUS, 4, RADIUS))) {
-            if (assistant.level().getBlockEntity(pos) instanceof Container && seen.add(pos.asLong())) {
+                feet.offset(-RADIUS, -5, -RADIUS), feet.offset(RADIUS, 5, RADIUS))) {
+            if (isStorage(assistant.level().getBlockEntity(pos)) && seen.add(pos.asLong())) {
                 chests.add(pos.immutable());
             }
         }
