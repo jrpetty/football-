@@ -200,12 +200,13 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     }
 
     public static final int INVENTORY_SIZE = 27;
-    public static final int MAX_PER_OWNER = 10;
+    /** How many specialists one player may run at once — config/crew.maxPerPlayer. */
+    public static int maxPerOwner() { return com.jrpetty.mcassistant.AssistantConfig.maxCrew(); }
 
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b47 · DANGER SENSE: the pathfinder now refuses lava, fire and hazards outright, and bots actively flee fire, surface before drowning and stop at ledges — most deaths were stupid ones · USEFUL IDLING: between jobs they sweep loose drops and light dark corners of their own patch instead of standing still · WORK RECORD: every bot keeps a career tally (blocks mined, crops harvested, saplings planted, fish caught, animals bred...) shown in its report · UI overhaul · beds + shifts · crew screen on ;";
+        "2026-07-b48 · CONFIG FILE: every number is yours now — upkeep rates, crew size, patch sizes, the XP curve, chunk loading — in config/mc_assistant-common.toml · LOYALTY: a specialist earns a permanent heart per week of service, up to four, so an old hand outlives a fresh hire · BRANCHES: at level 20 a specialist picks a branch (irrigation, husbandry, prospecting, forestry, sentinel, porterage) that deepens the job it already does · DEATH LOG: it tells you what killed it and where, and remembers when revived · danger sense · useful idling · work record · beds + shifts";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -321,6 +322,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         builder.define(DATA_LEVEL, 0);
         builder.define(DATA_SHIFT, 0);
         builder.define(DATA_XP, 0);
+        builder.define(DATA_EXTRA, "");
         builder.define(DATA_STATUS, "");
         builder.define(DATA_ZONE, "");
     }
@@ -338,6 +340,13 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private static final net.minecraft.network.syncher.EntityDataAccessor<Integer> DATA_XP =
         net.minecraft.network.syncher.SynchedEntityData.defineId(
             AssistantEntity.class, net.minecraft.network.syncher.EntityDataSerializers.INT);
+
+    private static final net.minecraft.network.syncher.EntityDataAccessor<String> DATA_EXTRA =
+        net.minecraft.network.syncher.SynchedEntityData.defineId(
+            AssistantEntity.class, net.minecraft.network.syncher.EntityDataSerializers.STRING);
+
+    /** "branch|daysServed|topDeed" — the career line the screens show. */
+    public String clientExtra() { return this.entityData.get(DATA_EXTRA); }
 
     public int clientLevel() { return this.entityData.get(DATA_LEVEL); }
     public int clientLifetimeXp() { return this.entityData.get(DATA_XP); }
@@ -366,6 +375,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         this.entityData.set(DATA_LEVEL, veteranLevel());
         this.entityData.set(DATA_SHIFT, shift.ordinal());
         this.entityData.set(DATA_XP, lifetimeXp);
+        java.util.List<String> top = workRecord(1);
+        this.entityData.set(DATA_EXTRA, branch.label + "|" + daysServed() + "|"
+            + (top.isEmpty() ? "" : top.get(0)));
         this.entityData.set(DATA_ZONE, workZone == null ? "No work zone set"
             : workZone.describe() + (stationTask == StationTask.MINE ? "  depth Y" + workZone.depth() : ""));
         String status;
@@ -440,7 +452,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         } else {
             if (workZone == null) {
                 BlockPos here = feetPos();
-                int r = DEFAULT_ZONE_RADIUS;
+                int r = defaultZoneRadius();
                 workZone = WorkZone.of(here.offset(-r, -4, -r), here.offset(r, 4, r), WorkZone.DEFAULT_DEPTH);
             }
             setStation(workZone.center(), task);
@@ -449,13 +461,31 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             upkeepStalled = false;
             clearQueue();
         }
+        if (firstServedDay < 0 && task != StationTask.NONE) {
+            firstServedDay = level().getDayTime() / 24000L;
+        }
         refreshJobState();
         // Hiring a second bot next to the first is the usual way patches end up
         // on top of each other, since an unzoned job claims the ground it stands on.
         if (task != StationTask.NONE) warnIfZoneClashes();
     }
 
-    private static final int DEFAULT_ZONE_RADIUS = 12; // 25x25 patch claimed on the spot
+    private static int defaultZoneRadius() { return com.jrpetty.mcassistant.AssistantConfig.defaultZoneRadius(); }
+
+    /** Irrigation and prospecting reach further out across the patch. */
+    public int branchWorkRadiusBonus() {
+        return branch == Branch.IRRIGATION || branch == Branch.PROSPECTOR ? 6 : 0;
+    }
+
+    /** A porter holds more before it has to break off and stash. */
+    public int branchPackBonus() {
+        return branch == Branch.PORTER ? 16 : 0;
+    }
+
+    /** Husbandry and forestry get through their cycles faster. */
+    public int branchCooldownPercent() {
+        return branch == Branch.HUSBANDRY || branch == Branch.FORESTER ? 60 : 100;
+    }
 
     /** Inside the assigned patch? Without a zone every position counts, so an
      *  unzoned specialist behaves the way stations did before zones existed. */
@@ -492,7 +522,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // "every 2.5 minutes" into most of a day.
         if (upkeepFoodTick == 0) upkeepFoodTick = tickCount;
         if (upkeepChargeTick == 0) upkeepChargeTick = tickCount;
-        if (tickCount - upkeepFoodTick >= 3000) {             // ~2.5 minutes of work
+        if (com.jrpetty.mcassistant.AssistantConfig.upkeepEnabled()
+            && tickCount - upkeepFoodTick >= com.jrpetty.mcassistant.AssistantConfig.foodInterval()) {             // ~2.5 minutes of work
             if (consumeUpkeep(s -> s.get(DataComponents.FOOD) != null)) {
                 upkeepFoodTick = tickCount;
             } else {
@@ -503,7 +534,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 }
             }
         }
-        if (tickCount - upkeepChargeTick >= 12000) {          // ~10 minutes of work
+        if (com.jrpetty.mcassistant.AssistantConfig.upkeepEnabled()
+            && tickCount - upkeepChargeTick >= com.jrpetty.mcassistant.AssistantConfig.chargeInterval()) {          // ~10 minutes of work
             if (consumeUpkeep(s -> s.is(Items.REDSTONE))) {
                 upkeepChargeTick = tickCount;
             } else {
@@ -1342,7 +1374,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // Veteran hands: 10% faster work at level 10, 20% at 20, 30% at 35 —
         // the cap. An edge you can feel, not a cheat.
         int bonus = veteranLevel() >= 35 ? 30 : (veteranLevel() >= 20 ? 20 : (veteranLevel() >= 10 ? 10 : 0));
-        return Math.max(4, base * (100 - bonus) / 100);
+        // A forester's axe work (and a husbandman's shears) come off the same
+        // clock, so the branch discount lands here alongside the veteran rungs.
+        return Math.max(4, base * (100 - bonus) / 100 * branchCooldownPercent() / 100);
     }
 
     /** Wear the held tool by one use; announces when it breaks. */
@@ -1650,24 +1684,111 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
     }
 
+    /**
+     * A specialist picks a branch at level 20 — the point where it has clearly
+     * settled into the work. Each branch deepens what that job is already for
+     * rather than handing out generic stats.
+     */
+    public enum Branch {
+        NONE("no speciality", "—"),
+        // Farmer
+        IRRIGATION("irrigation", "works a bigger plot"),
+        HUSBANDRY("husbandry", "breeds and shears faster"),
+        // Miner / lumberjack
+        PROSPECTOR("prospecting", "spots veins further off"),
+        FORESTER("forestry", "fells and replants faster"),
+        // Guard / hauler
+        SENTINEL("sentinel", "hits harder, watches wider"),
+        PORTER("porterage", "carries more per trip");
+
+        public final String label, blurb;
+        Branch(String label, String blurb) { this.label = label; this.blurb = blurb; }
+
+        /** The two branches on offer for a given job. */
+        public static Branch[] optionsFor(StationTask task) {
+            return switch (task) {
+                case FARM -> new Branch[]{ IRRIGATION, HUSBANDRY };
+                case RANCH -> new Branch[]{ HUSBANDRY, IRRIGATION };
+                case MINE -> new Branch[]{ PROSPECTOR, PORTER };
+                case WOOD -> new Branch[]{ FORESTER, PORTER };
+                case GUARD -> new Branch[]{ SENTINEL, PORTER };
+                case HAUL, STORE -> new Branch[]{ PORTER, SENTINEL };
+                case SMELT, FISH -> new Branch[]{ PORTER, PROSPECTOR };
+                case NONE -> new Branch[]{};
+            };
+        }
+    }
+
+    private Branch branch = Branch.NONE;
+    @Nullable private String deathNote;   // how the last life ended, carried by the core
+    private long firstServedDay = -1;   // the day it started work, for loyalty
+
+    public Branch branch() { return branch; }
+
+    /** Available once it has settled into the work at level 20. */
+    public boolean canChooseBranch() {
+        return veteranLevel() >= 20 && stationTask != StationTask.NONE;
+    }
+
+    public void cycleBranch() {
+        Branch[] options = Branch.optionsFor(stationTask);
+        if (options.length == 0 || !canChooseBranch()) {
+            say("I need to be a level 20 specialist before I can specialise further.");
+            return;
+        }
+        int at = -1;
+        for (int i = 0; i < options.length; i++) if (options[i] == branch) at = i;
+        branch = options[(at + 1) % options.length];
+        applyLevelPerks();
+        refreshJobState();
+        say("I'll focus on " + branch.label + " — " + branch.blurb + ".");
+    }
+
+    /** Days of service, which is what loyalty is actually measured in. */
+    public int daysServed() {
+        if (firstServedDay < 0) return 0;
+        return (int) Math.max(0, level().getDayTime() / 24000L - firstServedDay);
+    }
+
+    /** Small, slow, permanent: +1 heart per week served, capped at +4.
+     *  An old hand should be quietly better than a fresh hire. */
+    public int loyaltyHearts() {
+        if (!com.jrpetty.mcassistant.AssistantConfig.loyaltyEnabled()) return 0;
+        return Math.min(4, daysServed() / 7);
+    }
+
     /** Veteran level from LIFETIME xp — spending xp at the enchanting table
      *  never lowers it. Deliberately SLOW: level = sqrt(lifetimeXp / 10),
      *  capped at 50 (L10 = 1000 xp, L20 = 4000, L30 = 9000, L35 = 12250) —
      *  a true veteran is weeks of work, not an afternoon. */
     public int veteranLevel() {
-        return Math.min(50, (int) Math.floor(Math.sqrt(lifetimeXp / 10.0)));
+        return Math.min(50, (int) Math.floor(Math.sqrt(
+            lifetimeXp / (double) Math.max(1, com.jrpetty.mcassistant.AssistantConfig.levelCurveFactor()))));
     }
 
     /** Perks with teeth but a ceiling: +2 hearts at level 20 and 20% faster
      *  movement at 30 (attribute modifiers, re-applied idempotently); the
      *  work-speed rungs (10/20/30%) live in workTicksFor. */
+    private static final net.minecraft.resources.ResourceLocation BRANCH_DMG_ID =
+        net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mc_assistant", "branch_damage");
+
     private void applyLevelPerks() {
+        var dmg = getAttribute(Attributes.ATTACK_DAMAGE);
+        if (dmg != null) {
+            dmg.removeModifier(BRANCH_DMG_ID);
+            if (branch == Branch.SENTINEL) {
+                dmg.addPermanentModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(
+                    BRANCH_DMG_ID, 2.0,
+                    net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE));
+            }
+        }
         var hp = getAttribute(Attributes.MAX_HEALTH);
         if (hp != null) {
             hp.removeModifier(VETERAN_HP_ID);
-            if (veteranLevel() >= 20) {
+            double hearts = (veteranLevel() >= 20 ? 4.0 : 0.0) + loyaltyHearts() * 2.0;
+            if (hearts > 0) {
                 hp.addPermanentModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(
-                    VETERAN_HP_ID, 4.0,
+                    VETERAN_HP_ID, hearts,
                     net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE));
             }
         }
@@ -2269,8 +2390,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 // only from range), sweep the drops, and keep the area lit.
                 // A guard denies its whole patch, not just arm's reach — watch
                 // out to the zone's edge (capped so a huge claim stays sane).
-                Monster m = nearestMonster(workZone != null
-                    ? Math.min(32, Math.max(STATION_RADIUS, workZone.workRadius())) : STATION_RADIUS);
+                Monster m = nearestMonster((workZone != null
+                    ? Math.min(32, Math.max(STATION_RADIUS, workZone.workRadius())) : STATION_RADIUS)
+                    + branchWorkRadiusBonus());
                 if (m != null && !shouldDisengage()
                     && (!(m instanceof Creeper) || (hasBow() && hasArrows()))) {
                     setTarget(m);
@@ -2496,7 +2618,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // at a time looked like it never used its chest at all. Any output at
         // all gets banked once the bot has been holding it a while.
         boolean lingering = surplus > 0 && tickCount - lastStashTick > 3600;
-        if (!isPackFull() && surplus < 12 && !lingering) return false;
+        if (!isPackFull() && surplus < 12 + branchPackBonus() && !lingering) return false;
         // A station chest that has filled up must not deadlock the whole job.
         // This rung returns true (meaning "I acted") before the per-job switch,
         // so without a cool-off a full chest meant the bot walked to it, moved
@@ -3233,6 +3355,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             deedTag.putInt(e.getKey().name(), e.getValue());
         }
         tag.put("Deeds", deedTag);
+        tag.putString("Branch", branch.name());
+        if (deathNote != null) tag.putString("DeathNote", deathNote);
+        tag.putLong("FirstDay", firstServedDay);
         if (bedPos != null) tag.putLong("Bed", bedPos.asLong());
         tag.putInt("BaseStage", baseStage);
         if (stationPos != null) tag.putLong("StationPos", stationPos.asLong());
@@ -3300,6 +3425,13 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             shift = Shift.DAY;
         }
         bedPos = tag.contains("Bed") ? BlockPos.of(tag.getLong("Bed")) : null;
+        try {
+            branch = tag.contains("Branch") ? Branch.valueOf(tag.getString("Branch")) : Branch.NONE;
+        } catch (IllegalArgumentException ignored) {
+            branch = Branch.NONE;
+        }
+        firstServedDay = tag.contains("FirstDay") ? tag.getLong("FirstDay") : -1;
+        deathNote = tag.contains("DeathNote") ? tag.getString("DeathNote") : null;
         deeds.clear();
         CompoundTag deedTag = tag.getCompound("Deeds");
         for (Deed d : Deed.values()) {
@@ -3698,7 +3830,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // Autonomy is self-direction: run the idle brain regardless of FOLLOW/STAY/
         // GUARD (an explicit mode command turns autonomy off and re-attaches it).
         if (autonomous && jobs.isEmpty() && !retreating && getTarget() == null
-            && (idleKick || tickCount % (stationTask != StationTask.NONE ? 40 : 200) == 0)
+            && (idleKick || tickCount % (stationTask != StationTask.NONE
+                ? com.jrpetty.mcassistant.AssistantConfig.workTickInterval() : 200) == 0)
             && !restingAtHome) {
             idleKick = false;
             boolean townMember = ownerId != null && Town.center(ownerId) != null;
@@ -3959,6 +4092,19 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // The bot's SELF survives as a Memory Core: right-click the ground with
         // it and this exact companion comes back — name, level, role, waypoints,
         // and station. Its gear stays here where it fell.
+        // Write the epitaph before the core, so revival has a story attached.
+        String killer = source.getEntity() != null
+            ? source.getEntity().getName().getString()
+            : source.getMsgId();
+        String where = blockPosition().getX() + " " + blockPosition().getY() + " " + blockPosition().getZ();
+        deathNote = "Fell to " + killer + " at " + where
+            + " on day " + (level().getDayTime() / 24000L);
+        Player owner = getOwnerPlayer();
+        if (owner != null) {
+            owner.sendSystemMessage(Component.literal("<" + displayNameCap() + "> " + deathNote
+                + ". My Memory Core is here.").withStyle(ChatFormatting.RED));
+        }
+
         ItemStack core = new ItemStack(com.jrpetty.mcassistant.McAssistantMod.MEMORY_CORE.get());
         core.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
             net.minecraft.world.item.component.CustomData.of(writeMemoryCore()));
@@ -3981,6 +4127,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         tag.putInt("LifeXp", lifetimeXp);
         tag.putBoolean("NightHome", nightHome);
         tag.putBoolean("Auto", autonomous);
+        if (deathNote != null) tag.putString("DeathNote", deathNote);
+        tag.putString("Branch", branch.name());
+        tag.putLong("FirstDay", firstServedDay);
         if (homePos != null) tag.putLong("Home", homePos.asLong());
         if (stationPos != null && stationTask != StationTask.NONE) {
             tag.putLong("StationPos", stationPos.asLong());
@@ -4016,6 +4165,13 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             shift = Shift.DAY;
         }
         bedPos = tag.contains("Bed") ? BlockPos.of(tag.getLong("Bed")) : null;
+        try {
+            branch = tag.contains("Branch") ? Branch.valueOf(tag.getString("Branch")) : Branch.NONE;
+        } catch (IllegalArgumentException ignored) {
+            branch = Branch.NONE;
+        }
+        firstServedDay = tag.contains("FirstDay") ? tag.getLong("FirstDay") : -1;
+        deathNote = tag.contains("DeathNote") ? tag.getString("DeathNote") : null;
         deeds.clear();
         CompoundTag deedTag = tag.getCompound("Deeds");
         for (Deed d : Deed.values()) {
@@ -4040,6 +4196,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
         lastShownHealth = -1; // refresh the nametag (level star and all)
         refreshJobState();
+        if (deathNote != null) say("I remember how it ended: " + deathNote + ".");
         say("Back from the void — level " + veteranLevel() + ", and I remember everything. "
             + "My old gear died with me, though"
             + (stationTask != StationTask.NONE ? " — heading back to my station." : "."));

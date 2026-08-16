@@ -91,7 +91,8 @@ public class OrdersScreen extends Screen {
         // ---- footer ----
         y = top + H - PAD - h;
         add(x, y, w3, h, "Whole Crew", AssistantActions.ROSTER, "Report on every assistant");
-        add(x + (w3 + gap), y, w3, h, "Report", AssistantActions.REPORT, "What is it doing right now?");
+        add(x + (w3 + gap), y, w3, h, "Specialise", AssistantActions.CYCLE_BRANCH,
+            "At level 20 a specialist can pick a branch to deepen its trade");
         this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
             .bounds(x + 2 * (w3 + gap), y, w3, h).build());
 
@@ -182,7 +183,15 @@ public class OrdersScreen extends Screen {
 
         // Patch and perks, above the footer.
         int infoY = top + H - PAD - 18 - 24;
-        g.drawString(this.font, Ui.clip(this.font, bot.clientZone(), inner), x, infoY, Ui.MUTED, false);
+        String[] extra = bot.clientExtra().split("\\|", -1);
+        String branch = extra.length > 0 ? extra[0] : "";
+        String days = extra.length > 1 ? extra[1] : "0";
+        String deed = extra.length > 2 ? extra[2] : "";
+        String career = Ui.clip(this.font,
+            bot.clientZone() + "  ·  " + days + "d served"
+            + (branch.isEmpty() || branch.equals("no speciality") ? "" : "  ·  " + branch)
+            + (deed.isEmpty() ? "" : "  ·  " + deed), inner);
+        g.drawString(this.font, career, x, infoY, Ui.MUTED, false);
         g.drawString(this.font, Ui.clip(this.font, perkLine(lvl), inner), x, infoY + 11,
             lvl >= 10 ? Ui.GOOD : Ui.FAINT, false);
 

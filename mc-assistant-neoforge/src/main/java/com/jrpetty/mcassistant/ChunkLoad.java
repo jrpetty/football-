@@ -30,6 +30,9 @@ public final class ChunkLoad {
     /** Force (on=true) or release (on=false) a (2r+1)x(2r+1) square of fully
      *  ticking chunks around {@code center}, owned by {@code owner}. */
     public static void setLoaded(ServerLevel level, UUID owner, BlockPos center, int radius, boolean on) {
+        // Releasing always goes through, even with the feature switched off —
+        // otherwise flipping the config mid-world would strand live tickets.
+        if (on && !AssistantConfig.chunkLoading()) return;
         int cx = center.getX() >> 4;
         int cz = center.getZ() >> 4;
         for (int dx = -radius; dx <= radius; dx++) {

@@ -180,7 +180,7 @@ public final class AssistantCommands {
     private static int spawn(CommandContext<CommandSourceStack> ctx) {
         ServerPlayer player = ctx.getSource().getPlayer();
         if (player == null) return 0;
-        if (AssistantEntity.allFor(player.getUUID()).size() >= AssistantEntity.MAX_PER_OWNER) {
+        if (AssistantEntity.allFor(player.getUUID()).size() >= AssistantEntity.maxPerOwner()) {
             ctx.getSource().sendFailure(Component.literal("You already run a full crew — dismiss one first."));
             return 0;
         }

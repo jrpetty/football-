@@ -99,7 +99,9 @@ public final class McAssistantMod {
      *  way you run a crew; the parser and voice engine stay built, just idle. */
     public static final boolean MANUAL_COMMANDS_ENABLED = false;
 
-    public McAssistantMod(IEventBus modBus) {
+    public McAssistantMod(IEventBus modBus, net.neoforged.fml.ModContainer container) {
+        // Every tunable number lives in config/mc_assistant-common.toml.
+        container.registerConfig(net.neoforged.fml.config.ModConfig.Type.COMMON, AssistantConfig.SPEC);
         ENTITY_TYPES.register(modBus);
         MENU_TYPES.register(modBus);
         BLOCKS.register(modBus);

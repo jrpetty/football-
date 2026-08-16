@@ -46,6 +46,7 @@ public final class AssistantActions {
     public static final int ROSTER = 19;
     public static final int CYCLE_SHIFT = 20;
     public static final int CLAIM_BED = 21;
+    public static final int CYCLE_BRANCH = 22;
 
     /** Run an order. Returns false for an unknown id. */
     public static boolean apply(AssistantEntity a, Player player, int action) {
@@ -128,6 +129,7 @@ public final class AssistantActions {
                     a.say("No bed nearby — put one down and press it again.");
                 }
             }
+            case CYCLE_BRANCH -> a.cycleBranch();
             case REPORT -> report(a);
             case ROSTER -> {
                 if (player instanceof ServerPlayer sp) roster(sp);
@@ -189,7 +191,8 @@ public final class AssistantActions {
             a.say("No patch yet — stand in the middle of the ground you want and press Set Area.");
             return;
         }
-        int r = Math.max(4, Math.min(60, zone.radius() + delta));
+        int r = Math.max(4, Math.min(com.jrpetty.mcassistant.AssistantConfig.maxZoneRadius(),
+            zone.radius() + delta));
         a.setWorkZone(WorkZone.around(zone.center(), r, zone.depth()));
         a.showZoneTo(player);
         a.say("Patch is now " + a.workZone().describe() + ".");

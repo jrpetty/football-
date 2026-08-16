@@ -40,7 +40,7 @@ public class MemoryCoreItem extends Item {
                 "<Assistant> This core is blank — one only forms when a companion falls."));
             return InteractionResult.CONSUME;
         }
-        if (AssistantEntity.allFor(player.getUUID()).size() >= AssistantEntity.MAX_PER_OWNER) {
+        if (AssistantEntity.allFor(player.getUUID()).size() >= AssistantEntity.maxPerOwner()) {
             player.sendSystemMessage(Component.literal(
                 "<Assistant> Your crew is full — dismiss someone before a revival."));
             return InteractionResult.CONSUME; // keep the core

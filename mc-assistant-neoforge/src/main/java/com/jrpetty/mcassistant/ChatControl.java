@@ -235,7 +235,7 @@ public final class ChatControl {
     /** "spawn", "spawn a miner named bob", "summon another helper". */
     private static void handleSpawn(ServerPlayer player, String text) {
         List<AssistantEntity> existing = AssistantEntity.allFor(player.getUUID());
-        if (existing.size() >= AssistantEntity.MAX_PER_OWNER) {
+        if (existing.size() >= AssistantEntity.maxPerOwner()) {
             player.sendSystemMessage(Component.literal(
                 "<Assistant> You already run a crew of " + existing.size() + " — dismiss one first."));
             return;

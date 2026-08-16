@@ -39,7 +39,7 @@ public class AssistantSpawnerBlock extends Block {
             || !(placer instanceof ServerPlayer serverPlayer)) {
             return;
         }
-        if (AssistantEntity.allFor(serverPlayer.getUUID()).size() >= AssistantEntity.MAX_PER_OWNER) {
+        if (AssistantEntity.allFor(serverPlayer.getUUID()).size() >= AssistantEntity.maxPerOwner()) {
             serverPlayer.sendSystemMessage(Component.literal(
                 "<Assistant> You already run a full crew — dismiss one first (the spawner will keep)."));
             return; // block stays placed; mine it back when you're ready
