@@ -54,8 +54,17 @@ public class DepositGoal extends Goal {
             finish("Nothing to stash — my pack is empty.");
             return;
         }
-        // A town-work deposit names its depot; otherwise use the nearest chest.
+        // A town-work deposit names its depot. Otherwise: does a crewmate
+        // actually need what we are carrying? Ore belongs in the smelter's
+        // chest and wheat where the rancher can reach it, not in whichever
+        // chest happens to be closest to where we finished working.
         BlockPos targeted = targetedChest();
+        if (targeted == null) {
+            targeted = com.jrpetty.mcassistant.entity.Supply.routeFor(assistant);
+            if (targeted != null) {
+                assistant.sayRoutine("Running this load over to where it's wanted.");
+            }
+        }
         this.chestPos = targeted != null ? targeted : findChest();
         if (chestPos == null) {
             // No chest here — but maybe we remember one (home base, the depot).
@@ -202,19 +211,21 @@ public class DepositGoal extends Goal {
         BlockPos feet = assistant.feetPos();
         BlockPos best = null;
         double bestDist = Double.MAX_VALUE;
-        for (BlockPos pos : BlockPos.betweenClosed(
-                feet.offset(-SEARCH_RADIUS, -4, -SEARCH_RADIUS),
-                feet.offset(SEARCH_RADIUS, 4, SEARCH_RADIUS))) {
-            BlockEntity be = assistant.level().getBlockEntity(pos);
-            if (!(be instanceof Container)) continue;
+        for (com.jrpetty.mcassistant.entity.ZoneChests.Found found
+                : com.jrpetty.mcassistant.entity.ZoneChests.around(
+                    assistant.level(), feet, SEARCH_RADIUS, 4)) {
+            if (!found.stillThere()) continue;
             // Never stash into a furnace: it is a Container, so a smelter was
             // posting its finished ingots straight back into the furnace they
             // came out of, and its output chest never saw a single item.
-            if (be instanceof net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity) continue;
-            double d = pos.distSqr(feet);
+            if (found.blockEntity()
+                    instanceof net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity) {
+                continue;
+            }
+            double d = found.pos().distSqr(feet);
             if (d < bestDist) {
                 bestDist = d;
-                best = pos.immutable();
+                best = found.pos();
             }
         }
         return best;
