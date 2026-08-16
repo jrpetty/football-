@@ -52,6 +52,9 @@ public class TorchAreaGoal extends Goal {
         this.placed = 0;
         this.stuckTicks = 0;
         if (assistant.countMatching(s -> s.is(Items.TORCH)) == 0) {
+            assistant.topUpKit();
+        }
+        if (assistant.countMatching(s -> s.is(Items.TORCH)) == 0) {
             finish("I have no torches — \"craft torches\" first (coal + stick).");
             return;
         }

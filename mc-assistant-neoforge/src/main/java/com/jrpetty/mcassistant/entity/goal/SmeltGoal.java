@@ -166,6 +166,9 @@ public class SmeltGoal extends Goal {
         // We can smelt if we carry fuel OR the furnace already has fuel / is
         // burning — so a furnace you've already lit works even with an empty pack.
         if (countFuel() == 0 && !furnaceHasFuel(furnacePos)) {
+            assistant.topUpKit();   // coal in the smeltery chest is coal it has
+        }
+        if (countFuel() == 0 && !furnaceHasFuel(furnacePos)) {
             finish("I have no fuel and the furnace isn't lit — give me coal/planks/sticks/logs, or fuel the furnace yourself.");
             return;
         }
@@ -297,6 +300,9 @@ public class SmeltGoal extends Goal {
                 if (loaded) break;
             }
             if (furnace.getItem(1).isEmpty()) {
+                // Keeping the bank lit is the whole job — go to the chest for
+                // more fuel before letting a furnace go cold.
+                if (countFuel() > 0 || assistant.topUpKit()) return;
                 reclaim(furnace);
                 finish("Out of fuel and the furnace went cold — smelted " + collected + " so far.");
                 return;

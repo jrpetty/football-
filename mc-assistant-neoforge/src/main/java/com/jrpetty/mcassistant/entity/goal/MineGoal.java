@@ -101,6 +101,12 @@ public class MineGoal extends Goal {
         // No pickaxe, no mine — player rules.
         assistant.equipBestTool(Blocks.STONE.defaultBlockState());
         if (!assistant.getMainHandItem().isCorrectToolForDrops(Blocks.STONE.defaultBlockState())) {
+            // The chests on the patch before the player. A spare pickaxe left in
+            // the mine chest is the player having already answered this.
+            assistant.topUpKit();
+            assistant.equipBestTool(Blocks.STONE.defaultBlockState());
+        }
+        if (!assistant.getMainHandItem().isCorrectToolForDrops(Blocks.STONE.defaultBlockState())) {
             finish("I need a pickaxe before I can dig a mine — \"craft a wooden pickaxe\".");
             return;
         }

@@ -118,6 +118,15 @@ public class FarmGoal extends Goal {
             workTicks = 0;
             stuckTicks = 0;
             if (targetPos == null) {
+                // Nothing to do with what it is holding is not the same as
+                // nothing to do. Before giving up the run, go to the chests on
+                // the patch: the usual reason a farmer finds no work is that it
+                // is out of seeds, and the seeds are ten blocks away. Only if
+                // the chest has nothing either is the field genuinely finished.
+                if (assistant.topUpKit()) {
+                    pickTarget();
+                    if (targetPos != null) { emptyScans = 0; return; }
+                }
                 if (++emptyScans >= 2) finish(summary());
                 return;
             }

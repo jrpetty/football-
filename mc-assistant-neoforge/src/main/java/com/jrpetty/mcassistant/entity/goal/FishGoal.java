@@ -51,7 +51,7 @@ public class FishGoal extends Goal {
         this.caught = 0;
         this.biteTimer = 0;
         this.stuckTicks = 0;
-        if (!equipRod()) {
+        if (!equipRod() && !(assistant.topUpKit() && equipRod())) {
             finish("I need a fishing rod — \"craft a fishing rod\" (3 sticks + 2 string).");
             return;
         }

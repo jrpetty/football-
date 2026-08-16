@@ -55,6 +55,10 @@ public class ShearGoal extends Goal {
         this.target = null;
         if (assistant.countMatching(s -> s.is(Items.SHEARS)) == 0
             && !assistant.getMainHandItem().is(Items.SHEARS)) {
+            assistant.topUpKit();   // spare shears in the pen chest count as having some
+        }
+        if (assistant.countMatching(s -> s.is(Items.SHEARS)) == 0
+            && !assistant.getMainHandItem().is(Items.SHEARS)) {
             finish("I need shears — \"craft shears\" (2 iron ingots).");
             return;
         }

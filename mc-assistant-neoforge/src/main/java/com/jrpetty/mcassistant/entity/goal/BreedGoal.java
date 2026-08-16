@@ -147,6 +147,9 @@ public class BreedGoal extends Goal {
         stuckTicks = 0;
 
         Species sp = speciesForAnimal(target);
+        // Out of feed with a chest full of wheat ten blocks away is not out of
+        // feed. Try the stores before calling the run over.
+        if (sp != null && assistant.countMatching(sp.food()) == 0) assistant.topUpKit();
         if (sp == null || assistant.removeMatching(sp.food(), 1) < 1) {
             finish("Ran out of feed — bred " + pairsBred + " pair" + (pairsBred == 1 ? "" : "s") + ".");
             return;

@@ -254,6 +254,12 @@ public class GatherGoal extends Goal {
             assistant.equipBestTool(state);
             if (request.kind().needsProperTool()
                 && !assistant.getMainHandItem().isCorrectToolForDrops(state)) {
+                // A spare axe in the chest on the patch is an axe it has.
+                assistant.topUpKit();
+                assistant.equipBestTool(state);
+            }
+            if (request.kind().needsProperTool()
+                && !assistant.getMainHandItem().isCorrectToolForDrops(state)) {
                 finish("I can't harvest " + request.kind().label + " without " + request.kind().toolHint() + ".");
                 return;
             }
