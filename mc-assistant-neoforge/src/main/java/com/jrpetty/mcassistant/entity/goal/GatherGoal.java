@@ -140,7 +140,7 @@ public class GatherGoal extends Goal {
             finish("Pack's full — I need to deposit before gathering more.");
             return;
         }
-        assistant.say("On it — gathering " + request.amount() + " " + request.kind().label + ".");
+        assistant.sayRoutine("On it — gathering " + request.amount() + " " + request.kind().label + ".");
     }
 
     @Override
@@ -149,7 +149,7 @@ public class GatherGoal extends Goal {
             // Interrupted (combat / stop) — leave the job at the head of the
             // queue so it resumes after the interruption (unless the queue was
             // cleared by !stop, in which case there's nothing to resume).
-            assistant.say("Paused gathering (" + collected + " " + request.kind().label + " so far).");
+            assistant.sayRoutine("Paused gathering (" + collected + " " + request.kind().label + " so far).");
             replantStumps(); // don't lose the stumps to an interruption
         }
         this.request = null;
@@ -202,7 +202,7 @@ public class GatherGoal extends Goal {
         stumps.clear();
         stumps.addAll(unplanted);
         if (planted > 0) {
-            assistant.say("Replanted " + planted + " sapling" + (planted == 1 ? "" : "s") + ".");
+            assistant.sayRoutine("Replanted " + planted + " sapling" + (planted == 1 ? "" : "s") + ".");
         }
     }
 

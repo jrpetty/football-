@@ -78,11 +78,11 @@ public class CrewScreen extends Screen {
         order(left + 10, by, bw, bh, "Follow", AssistantActions.FOLLOW);
         order(left + 10 + (bw + gap), by, bw, bh, "Stay", AssistantActions.STAY);
         order(left + 10 + 2 * (bw + gap), by, bw, bh, "Come", AssistantActions.COME);
-        order(left + 10 + 3 * (bw + gap), by, bw, bh, "Go Home", AssistantActions.GO_HOME);
+        order(left + 10 + 3 * (bw + gap), by, bw, bh, "Claim Bed", AssistantActions.CLAIM_BED);
         by += bh + gap;
         order(left + 10, by, bw, bh, "Set Area", AssistantActions.ZONE_HERE);
         order(left + 10 + (bw + gap), by, bw, bh, "Show Area", AssistantActions.ZONE_SHOW);
-        order(left + 10 + 2 * (bw + gap), by, bw, bh, "Stop", AssistantActions.STOP);
+        order(left + 10 + 2 * (bw + gap), by, bw, bh, "Duty", AssistantActions.CYCLE_SHIFT);
         this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
             .bounds(left + 10 + 3 * (bw + gap), by, bw, bh).build());
     }
@@ -102,7 +102,8 @@ public class CrewScreen extends Screen {
 
     private String rowLabel(AssistantEntity a) {
         String job = AssistantEntity.StationTask.byOrdinal(a.clientJobOrdinal()).title;
-        return a.clientName() + "  —  " + job;
+        String lvl = a.clientLevel() >= 1 ? "✦" + a.clientLevel() + " " : "";
+        return lvl + a.clientName() + "  —  " + job + "  (" + a.clientShift().label + ")";
     }
 
     @Override
@@ -133,6 +134,13 @@ public class CrewScreen extends Screen {
                 : status.startsWith("Needs") || status.startsWith("Out of") ? BAD : WARN;
             g.drawString(this.font, a.clientName() + ": " + status, left + 10, y, colour, false);
             g.drawString(this.font, a.clientZone(), left + 10, y + 11, MUTED, false);
+            int lvl = a.clientLevel();
+            String perk = lvl < 10 ? "Lv " + lvl + " — next at 10: +10% work"
+                : lvl < 20 ? "Lv " + lvl + " — +10% work · next at 20: +2 hearts, +20% work"
+                : lvl < 30 ? "Lv " + lvl + " — +2 hearts, +20% work · next at 30: +20% speed"
+                : lvl < 35 ? "Lv " + lvl + " — +20% speed · next at 35: +30% work"
+                : "Lv " + lvl + " — fully trained (+2 hearts, +30% work, +20% speed)";
+            g.drawString(this.font, perk, left + 10, y + 22, lvl >= 10 ? GOOD : MUTED, false);
         }
     }
 

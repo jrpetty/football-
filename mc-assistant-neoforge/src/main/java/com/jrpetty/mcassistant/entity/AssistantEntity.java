@@ -205,7 +205,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b43 · THE RECIPES NOW EXIST: the mod shipped with no pack.mcmeta, so its whole datapack — every recipe, loot table and advancement — was never loaded. That is why the Assistant Spawner could not be crafted at all · the orders/crew keys now work (ownership is server-side, so the client filtered out every bot and the key looked dead) · NEW crew screen on ; — your assistants by name and job, click one and order it about (no inventory) · bots no longer hop on the spot when idle, which was also trampling a farmer's own crops back into dirt · stationed bots decide 5x more often, so they visibly get on with it · everyone stashes trickling output instead of hoarding it (the rancher never touched its chest)";
+        "2026-07-b44 · NIGHTS AND SHIFTS: assign a bot a bed (Claim Bed) and set when it works — days, nights or both. Off duty it walks to its bed and sleeps instead of standing in the open getting killed · CREW SCREEN on ; — your assistants by name, level, job and duty; click one to order it about (no inventory) · PERKS are visible: every screen shows what a bot has earned and what it unlocks next · MUCH QUIETER: routine narration (gathering, stashing, tending, casting) is silent while a specialist is working - only real news gets through · plus b43: the datapack finally loads so recipes exist, keybinds work, idle bots stand still instead of hopping (which was trampling the farm)";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -318,6 +318,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         super.defineSynchedData(builder);
         builder.define(DATA_JOB, 0);
         builder.define(DATA_NAME, "");
+        builder.define(DATA_LEVEL, 0);
+        builder.define(DATA_SHIFT, 0);
+        builder.define(DATA_XP, 0);
         builder.define(DATA_STATUS, "");
         builder.define(DATA_ZONE, "");
     }
@@ -325,6 +328,20 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private static final net.minecraft.network.syncher.EntityDataAccessor<String> DATA_NAME =
         net.minecraft.network.syncher.SynchedEntityData.defineId(
             AssistantEntity.class, net.minecraft.network.syncher.EntityDataSerializers.STRING);
+
+    private static final net.minecraft.network.syncher.EntityDataAccessor<Integer> DATA_LEVEL =
+        net.minecraft.network.syncher.SynchedEntityData.defineId(
+            AssistantEntity.class, net.minecraft.network.syncher.EntityDataSerializers.INT);
+    private static final net.minecraft.network.syncher.EntityDataAccessor<Integer> DATA_SHIFT =
+        net.minecraft.network.syncher.SynchedEntityData.defineId(
+            AssistantEntity.class, net.minecraft.network.syncher.EntityDataSerializers.INT);
+    private static final net.minecraft.network.syncher.EntityDataAccessor<Integer> DATA_XP =
+        net.minecraft.network.syncher.SynchedEntityData.defineId(
+            AssistantEntity.class, net.minecraft.network.syncher.EntityDataSerializers.INT);
+
+    public int clientLevel() { return this.entityData.get(DATA_LEVEL); }
+    public int clientLifetimeXp() { return this.entityData.get(DATA_XP); }
+    public Shift clientShift() { return Shift.values()[Math.floorMod(this.entityData.get(DATA_SHIFT), Shift.values().length)]; }
 
     public String clientName() {
         String n = this.entityData.get(DATA_NAME);
@@ -346,6 +363,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private void publishJobState() {
         this.entityData.set(DATA_JOB, stationTask.ordinal());
         this.entityData.set(DATA_NAME, displayNameCap());
+        this.entityData.set(DATA_LEVEL, veteranLevel());
+        this.entityData.set(DATA_SHIFT, shift.ordinal());
+        this.entityData.set(DATA_XP, lifetimeXp);
         this.entityData.set(DATA_ZONE, workZone == null ? "No work zone set"
             : workZone.describe() + (stationTask == StationTask.MINE ? "  depth Y" + workZone.depth() : ""));
         String status;
@@ -558,6 +578,96 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private static final int STATION_RADIUS = 16;       // how far it works from the post
     private int lastWarnTick = -1000;
     private boolean nightHome;        // "head home at night" toggle
+    @Nullable private BlockPos bedPos;  // the bed this one sleeps in (persisted)
+    private Shift shift = Shift.DAY;    // when this specialist is on duty
+
+    /** When a specialist works. Off shift it goes to its bed and sleeps, which
+     *  is also how it stops standing in the open at night getting killed. */
+    public enum Shift {
+        DAY("days"), NIGHT("nights"), ALWAYS("day and night");
+        public final String label;
+        Shift(String label) { this.label = label; }
+        public Shift next() { return values()[(ordinal() + 1) % values().length]; }
+    }
+
+    public Shift shift() { return shift; }
+
+    public void setShift(Shift s) {
+        this.shift = s;
+        refreshJobState();
+    }
+
+    /** Is this specialist on duty right now? */
+    public boolean onShift() {
+        return switch (shift) {
+            case ALWAYS -> true;
+            case DAY -> !level().isNight();
+            case NIGHT -> level().isNight();
+        };
+    }
+
+    @Nullable public BlockPos bedPos() { return bedPos; }
+
+    /** Claim the nearest free bed to `near` — how a player assigns one. */
+    public boolean claimBedNear(BlockPos near) {
+        BlockPos best = null;
+        double bestDist = Double.MAX_VALUE;
+        for (BlockPos pos : BlockPos.betweenClosed(
+                near.offset(-12, -5, -12), near.offset(12, 5, 12))) {
+            if (!(level().getBlockState(pos).getBlock() instanceof net.minecraft.world.level.block.BedBlock)) continue;
+            double d = pos.distSqr(near);
+            if (d < bestDist) { bestDist = d; best = pos.immutable(); }
+        }
+        if (best == null) return false;
+        this.bedPos = best;
+        refreshJobState();
+        return true;
+    }
+
+    /**
+     * Off-shift behaviour: go to bed and sleep there. Returns true when it has
+     * taken charge of the bot, so the work brain leaves it alone. Without this a
+     * specialist simply stood in the open all night and got killed.
+     */
+    private boolean restIfOffShift() {
+        boolean resting = !onShift();
+        if (!resting) {
+            if (isSleeping()) stopSleeping();
+            return false;
+        }
+        if (getTarget() != null || retreating) {
+            if (isSleeping()) stopSleeping(); // defend yourself first
+            return false;
+        }
+        BlockPos bed = bedPos;
+        if (bed != null && !(level().getBlockState(bed).getBlock()
+                instanceof net.minecraft.world.level.block.BedBlock)) {
+            bed = null;                 // someone mined it
+            bedPos = null;
+        }
+        if (bed == null) {
+            // No bed assigned: at least go home rather than stand in a field.
+            if (homePos != null && homePos.distSqr(blockPosition()) > 9.0) {
+                if (getNavigation().isDone()) {
+                    getNavigation().moveTo(homePos.getX() + 0.5, homePos.getY(), homePos.getZ() + 0.5, 1.0D);
+                }
+                return true;
+            }
+            return homePos != null; // parked at home, off duty
+        }
+        if (bed.distSqr(blockPosition()) > 4.0) {
+            if (isSleeping()) stopSleeping();
+            if (getNavigation().isDone()) {
+                getNavigation().moveTo(bed.getX() + 0.5, bed.getY(), bed.getZ() + 0.5, 1.0D);
+            }
+            return true;
+        }
+        if (!isSleeping()) {
+            getNavigation().stop();
+            startSleeping(bed);
+        }
+        return true;
+    }
     private boolean wentHomeTonight;  // one trip per night
     private boolean parkedForNight;   // the night routine parked it (un-park at dawn)
     private int baseStage;            // how far it has built up its home base (0=just home+chest)
@@ -897,6 +1007,16 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     }
 
     /** Say something to the owner. */
+    /** Narration — "gathering 16 logs", "stashed 12 items", "dropping a line".
+     *  A specialist quietly getting on with its job says NONE of this: it is
+     *  the difference between a colleague and a running commentary. Anything
+     *  the player actually needs (a missing tool, an empty chest, a level-up,
+     *  a death) goes through say() instead and always gets through. */
+    public void sayRoutine(String message) {
+        if (stationTask != StationTask.NONE && autonomous) return;
+        say(message);
+    }
+
     public void say(String message) {
         // A stationed specialist runs the same loop for hours — narrating every
         // cycle ("Dropping a line." … "Caught 8 — good haul." … forever) would
@@ -2267,7 +2387,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             }
             return false;
         }
-        say("Stashing the station's output.");
+        sayRoutine("Stashing the station's output.");
         enqueue(Job.deposit());
         return true;
     }
@@ -2964,6 +3084,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         tag.putString("Name", assistantName);
         tag.putBoolean("Auto", autonomous);
         tag.putBoolean("NightHome", nightHome);
+        tag.putString("Shift", shift.name());
+        if (bedPos != null) tag.putLong("Bed", bedPos.asLong());
         tag.putInt("BaseStage", baseStage);
         if (stationPos != null) tag.putLong("StationPos", stationPos.asLong());
         tag.putString("StationTask", stationTask.name());
@@ -3024,6 +3146,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (assistantName.isEmpty()) assistantName = "assistant";
         autonomous = tag.getBoolean("Auto");
         nightHome = tag.getBoolean("NightHome");
+        try {
+            shift = tag.contains("Shift") ? Shift.valueOf(tag.getString("Shift")) : Shift.DAY;
+        } catch (IllegalArgumentException ignored) {
+            shift = Shift.DAY;
+        }
+        bedPos = tag.contains("Bed") ? BlockPos.of(tag.getLong("Bed")) : null;
         baseStage = tag.getInt("BaseStage");
         stationPos = tag.contains("StationPos") ? BlockPos.of(tag.getLong("StationPos")) : null;
         try {
@@ -3218,6 +3346,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 }
                 mobileLoadCenter = here.immutable();
             }
+        }
+
+        if (isSleeping() && (onShift() || getTarget() != null)) {
+            stopSleeping();
         }
 
         // Stand still when there is nothing to do. Bouncing on the spot looks
@@ -3430,7 +3562,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             // zone the player fenced off. A specialist's kit and upkeep are the
             // player's job, which is exactly what the checklist is for; it still
             // eats to heal, stashes when full, and defends itself.
-            if (stationTask != StationTask.NONE && stationPos != null) {
+            if (restIfOffShift()) {
+                // Off duty: heading to bed / asleep. Never work through it.
+            } else if (stationTask != StationTask.NONE && stationPos != null) {
                 if (tickCount >= idleBackoffUntil) decideStation();
             } else if (!decideSurvival()) {
                 {
@@ -3726,6 +3860,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         xp = tag.getInt("Xp");
         lifetimeXp = tag.getInt("LifeXp");
         nightHome = tag.getBoolean("NightHome");
+        try {
+            shift = tag.contains("Shift") ? Shift.valueOf(tag.getString("Shift")) : Shift.DAY;
+        } catch (IllegalArgumentException ignored) {
+            shift = Shift.DAY;
+        }
+        bedPos = tag.contains("Bed") ? BlockPos.of(tag.getLong("Bed")) : null;
         if (tag.contains("Home")) setHome(BlockPos.of(tag.getLong("Home")));
         waypoints.clear();
         for (Tag t : tag.getList("Waypoints", Tag.TAG_COMPOUND)) {

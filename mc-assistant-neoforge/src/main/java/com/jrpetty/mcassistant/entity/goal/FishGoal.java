@@ -60,7 +60,7 @@ public class FishGoal extends Goal {
             finish("No open water within 12 blocks.");
             return;
         }
-        assistant.say("Dropping a line.");
+        assistant.sayRoutine("Dropping a line.");
     }
 
     private boolean equipRod() {

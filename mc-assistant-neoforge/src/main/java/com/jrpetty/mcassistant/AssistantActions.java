@@ -44,6 +44,8 @@ public final class AssistantActions {
     public static final int OPEN_PACK = 17;
     public static final int REPORT = 18;
     public static final int ROSTER = 19;
+    public static final int CYCLE_SHIFT = 20;
+    public static final int CLAIM_BED = 21;
 
     /** Run an order. Returns false for an unknown id. */
     public static boolean apply(AssistantEntity a, Player player, int action) {
@@ -114,6 +116,17 @@ public final class AssistantActions {
             }
             case OPEN_PACK -> {
                 if (player instanceof ServerPlayer sp) a.openManagementScreen(sp);
+            }
+            case CYCLE_SHIFT -> {
+                a.setShift(a.shift().next());
+                a.say("I'll work " + a.shift().label + " from now on.");
+            }
+            case CLAIM_BED -> {
+                if (a.claimBedNear(player.blockPosition())) {
+                    a.say("That's my bed — I'll sleep there when I'm off duty.");
+                } else {
+                    a.say("No bed nearby — put one down and press it again.");
+                }
             }
             case REPORT -> report(a);
             case ROSTER -> {
@@ -199,6 +212,8 @@ public final class AssistantActions {
             ? "No job yet." : "I'm on " + a.stationTask().label + ".");
         if (a.workZone() != null) s.append(" Patch: ").append(a.workZone().describe()).append('.');
         s.append(' ').append(a.clientStatus()).append('.');
+        s.append(" On duty ").append(a.shift().label).append('.');
+        if (a.veteranLevel() >= 1) s.append(" Level ").append(a.veteranLevel()).append('.');
         String made = a.productionSummary(4);
         if (made != null) s.append(" Today: ").append(made).append('.');
         a.say(s.toString());

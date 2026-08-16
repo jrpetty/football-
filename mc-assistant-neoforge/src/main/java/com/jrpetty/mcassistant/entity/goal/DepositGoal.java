@@ -78,6 +78,15 @@ public class DepositGoal extends Goal {
 
     private void finish(String message) { finish(message, false); }
 
+    /** End the job without narrating it — routine stashing is not news. */
+    private void finishQuiet(boolean productive) {
+        assistant.noteJobOutcome(productive);
+        assistant.pollJob();
+        this.active = false;
+        this.chestPos = null;
+        assistant.getNavigation().stop();
+    }
+
     /** Job finished (or couldn't run) — drop it from the queue and move on.
      *  productive=false cools off the idle brain so a no-chest/full-chest deposit
      *  doesn't get re-attempted every idle cycle. */
@@ -150,7 +159,8 @@ public class DepositGoal extends Goal {
         container.setChanged();
         assistant.rememberChest(chestPos, container); // storage memory: learn what's where
         if (moved == 0) assistant.noteDepositBlocked(); else assistant.noteStashed();
-        finish(moved > 0 ? "Stashed " + moved + " items." : "That chest is full.", moved > 0);
+        if (moved > 0) { assistant.sayRoutine("Stashed " + moved + " items."); finishQuiet(true); }
+        else finish("That chest is full.", false);
     }
 
     private static ItemStack insertInto(Container container, ItemStack stack) {

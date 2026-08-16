@@ -87,7 +87,7 @@ public class FarmGoal extends Goal {
         this.targetPos = null;
         this.mode = Mode.HARVEST;
         this.skip.clear();
-        assistant.say("Tending the crops.");
+        assistant.sayRoutine("Tending the crops.");
     }
 
     @Override
@@ -229,7 +229,7 @@ public class FarmGoal extends Goal {
             if (assistant.removeMatching(s -> s.is(e.getKey()), 1) == 1) {
                 assistant.level().setBlockAndUpdate(pos.above(), e.getValue().defaultBlockState());
                 planted++;
-                if (planted == 1 && !alreadyTilled) assistant.say("No farm here — starting one from scratch.");
+                if (planted == 1 && !alreadyTilled) assistant.sayRoutine("No farm here — starting one from scratch.");
                 return;
             }
         }

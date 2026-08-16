@@ -19,7 +19,7 @@ import javax.annotation.Nullable;
  */
 public class OrdersScreen extends Screen {
 
-    private static final int W = 256, H = 208;
+    private static final int W = 300, H = 244;
 
     private static final int PANEL      = 0xE8181A14;
     private static final int PANEL_EDGE = 0xFF3A4029;
@@ -33,7 +33,7 @@ public class OrdersScreen extends Screen {
     private final AssistantEntity bot;
     private int left, top;
     @Nullable private Button jobButton;
-    @Nullable private Button depthDown, depthUp, dropOff;
+    @Nullable private Button depthDown, depthUp, dropOff, shiftButton;
     private int shownJob = -1;
 
     public OrdersScreen(AssistantEntity bot) {
@@ -83,10 +83,17 @@ public class OrdersScreen extends Screen {
         depthUp = add(x + (w4 + gap), y, w4, h, "Shallower", AssistantActions.DEPTH_UP);
         dropOff = add(x, y, w3, h, "Set Drop-off", AssistantActions.SET_DROPOFF);
 
+        // --- when it works, and where it sleeps ---
+        y += h + gap;
+        shiftButton = add(x, y, w4 * 2 + gap, h, "On duty: " + bot.clientShift().label,
+            AssistantActions.CYCLE_SHIFT);
+        add(x + 2 * (w4 + gap), y, w4, h, "Claim Bed", AssistantActions.CLAIM_BED);
+        add(x + 3 * (w4 + gap), y, w4, h, "Show Area", AssistantActions.ZONE_SHOW);
+
         // --- reports ---
         y += h + gap;
-        add(x, y, w3, h, "Report", AssistantActions.REPORT);
-        add(x + (w3 + gap), y, w3, h, "Whole Crew", AssistantActions.ROSTER);
+        add(x, y, w3, h, "Whole Crew", AssistantActions.ROSTER);
+        add(x + (w3 + gap), y, w3, h, "Report", AssistantActions.REPORT);
         this.addRenderableWidget(Button.builder(Component.literal("Close"),
             b -> this.onClose()).bounds(x + 2 * (w3 + gap), y, w3, h).build());
 
@@ -129,6 +136,9 @@ public class OrdersScreen extends Screen {
             this.onClose();
             return;
         }
+        if (shiftButton != null) {
+            shiftButton.setMessage(Component.literal("On duty: " + bot.clientShift().label));
+        }
         if (bot.clientJobOrdinal() != shownJob) {
             shownJob = bot.clientJobOrdinal();
             if (jobButton != null) jobButton.setMessage(Component.literal(jobTitle()));
@@ -145,8 +155,8 @@ public class OrdersScreen extends Screen {
         g.renderOutline(left, top, W, H, PANEL_EDGE);
 
         // Who am I talking to, and how are they doing?
-        String name = (bot.veteranLevel() >= 1 ? "✦" + bot.veteranLevel() + " " : "")
-            + bot.displayNameCap();
+        String name = (bot.clientLevel() >= 1 ? "✦" + bot.clientLevel() + " " : "")
+            + bot.clientName();
         g.drawString(this.font, name, left + 12, top + 8, INK, false);
 
         String job = AssistantEntity.StationTask.byOrdinal(bot.clientJobOrdinal()).title;
@@ -159,7 +169,25 @@ public class OrdersScreen extends Screen {
 
         // Where it works, along the bottom.
         g.drawString(this.font, clip(bot.clientZone(), W - 24),
-            left + 12, top + H - 14, MUTED, false);
+            left + 12, top + H - 26, MUTED, false);
+
+        // What it has earned, and what it is working towards.
+        int lvl = bot.clientLevel();
+        StringBuilder have = new StringBuilder();
+        if (lvl >= 10) have.append("+10% work  ");
+        if (lvl >= 20) have.append("+2 hearts  +20% work  ");
+        if (lvl >= 30) have.append("+20% speed  ");
+        if (lvl >= 35) have.append("+30% work (max)");
+        String next = lvl < 10 ? "next at 10: +10% work"
+            : lvl < 20 ? "next at 20: +2 hearts, +20% work"
+            : lvl < 30 ? "next at 30: +20% movement speed"
+            : lvl < 35 ? "next at 35: +30% work (the cap)"
+            : "fully trained";
+        g.drawString(this.font, "Lv " + lvl + "  "
+            + (have.length() == 0 ? "no bonuses yet" : have.toString().trim()),
+            left + 12, top + H - 14, lvl >= 10 ? GOOD : MUTED, false);
+        g.drawString(this.font, next, left + W - 12 - this.font.width(next),
+            top + H - 14, MUTED, false);
 
         super.render(g, mouseX, mouseY, partialTick);
     }

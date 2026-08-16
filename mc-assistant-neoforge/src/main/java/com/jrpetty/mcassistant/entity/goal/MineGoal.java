@@ -108,14 +108,14 @@ public class MineGoal extends Goal {
             finish("Pack's full — let me deposit first.");
             return;
         }
-        assistant.say("Digging a mine down to Y" + (job != null ? job.amount() : 12)
+        assistant.sayRoutine("Digging a mine down to Y" + (job != null ? job.amount() : 12)
             + " — I'll torch it and grab every vein I pass.");
     }
 
     @Override
     public void stop() {
         if (job != null) {
-            assistant.say("Paused mining (" + oresMined + " ore so far).");
+            assistant.sayRoutine("Paused mining (" + oresMined + " ore so far).");
         }
         this.job = null;
         this.currentDig = null;
@@ -185,7 +185,7 @@ public class MineGoal extends Goal {
         if (phase == Phase.DESCEND) {
             if (cursor.getY() <= job.amount()) {
                 phase = Phase.TUNNEL;
-                assistant.say("At Y" + cursor.getY() + " — opening the gallery.");
+                assistant.sayRoutine("At Y" + cursor.getY() + " — opening the gallery.");
                 return;
             }
             // The descent must stay on the patch too. Left unchecked a straight

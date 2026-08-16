@@ -82,7 +82,7 @@ public class SortGoal extends Goal {
             sy = p.getY();
         }
         this.center = new BlockPos((int) (sx / chests.size()), sy, (int) (sz / chests.size()));
-        assistant.say("Organizing " + chests.size() + " chests — one item type per chest.");
+        assistant.sayRoutine("Organizing " + chests.size() + " chests — one item type per chest.");
     }
 
     @Override
