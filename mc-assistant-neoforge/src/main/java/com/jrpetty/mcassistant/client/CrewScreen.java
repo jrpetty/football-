@@ -121,7 +121,7 @@ public class CrewScreen extends Screen {
         int x = left + PAD;
         int inner = W - PAD * 2;
 
-        g.drawString(this.font, "Your crew", x, top + 8, Ui.INK, false);
+        g.drawString(this.font, "Your crew", x, top + 8, Ui.INK, true);
         // The bill, not the headcount: a crew you cannot pay is a crew that
         // stops working, and that is worth seeing before it happens.
         int iron = 0, gold = 0, diamond = 0, owed = 0;
@@ -146,17 +146,17 @@ public class CrewScreen extends Screen {
         if (asking.isEmpty()) {
             g.drawString(this.font, Ui.clip(this.font,
                 "wages so far: " + iron + " iron  ·  " + gold + " gold  ·  " + diamond + " diamond",
-                inner), x, top + 30, Ui.FAINT, false);
+                inner), x, top + 30, Ui.FAINT, true);
         } else {
             g.drawString(this.font, Ui.clip(this.font,
                 "asking for — " + String.join("  ·  ", asking), inner),
-                x, top + 30, Ui.WARN, false);
+                x, top + 30, Ui.WARN, true);
         }
 
         if (crew.isEmpty()) {
-            g.drawString(this.font, "Nobody here yet.", x, listTop + 6, Ui.MUTED, false);
+            g.drawString(this.font, "Nobody here yet.", x, listTop + 6, Ui.MUTED, true);
             g.drawString(this.font, "Place an Assistant Spawner to hire one.",
-                x, listTop + 18, Ui.FAINT, false);
+                x, listTop + 18, Ui.FAINT, true);
             super.render(g, mouseX, mouseY, partialTick);
             return;
         }
@@ -179,10 +179,10 @@ public class CrewScreen extends Screen {
             int lvl = a.clientLevel();
             if (lvl >= 1) {
                 String star = "✦" + lvl;
-                g.drawString(this.font, star, tx, ry + 4, Ui.ACCENT, false);
+                g.drawString(this.font, star, tx, ry + 4, Ui.ACCENT, true);
                 tx += this.font.width(star) + 5;
             }
-            g.drawString(this.font, a.clientName(), tx, ry + 4, sel ? Ui.INK : Ui.MUTED, false);
+            g.drawString(this.font, a.clientName(), tx, ry + 4, sel ? Ui.INK : Ui.MUTED, true);
 
             String job = AssistantEntity.StationTask.byOrdinal(a.clientJobOrdinal()).title;
             String duty = a.clientShift().label;
@@ -191,7 +191,7 @@ public class CrewScreen extends Screen {
         }
         if (crew.size() > MAX_ROWS) {
             g.drawString(this.font, "+" + (crew.size() - MAX_ROWS) + " more nearby",
-                x, listTop + rows * ROW_H + 2, Ui.FAINT, false);
+                x, listTop + rows * ROW_H + 2, Ui.FAINT, true);
         }
 
         // Detail for the selected one, just above the buttons.
@@ -200,8 +200,8 @@ public class CrewScreen extends Screen {
             int dy = top + H - PAD - 18 * 3 - 4 * 2 - 30;
             Ui.section(g, this.font, a.clientName(), x, dy - 12, inner);
             String status = a.clientStatus();
-            g.drawString(this.font, Ui.clip(this.font, status, inner), x, dy, Ui.statusColour(status), false);
-            g.drawString(this.font, Ui.clip(this.font, a.clientZone(), inner), x, dy + 10, Ui.FAINT, false);
+            g.drawString(this.font, Ui.clip(this.font, status, inner), x, dy, Ui.statusColour(status), true);
+            g.drawString(this.font, Ui.clip(this.font, a.clientZone(), inner), x, dy + 10, Ui.FAINT, true);
         }
 
         super.render(g, mouseX, mouseY, partialTick);

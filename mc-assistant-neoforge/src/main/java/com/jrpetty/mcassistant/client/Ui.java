@@ -13,28 +13,35 @@ public final class Ui {
 
     private Ui() {}
 
-    // A dark, slightly green slate — it sits over the world without glaring,
-    // and leaves the status colours room to actually mean something.
-    public static final int PANEL      = 0xF014170F;
-    public static final int PANEL_SOFT = 0xFF1B2015;
-    public static final int EDGE       = 0xFF3C4630;
-    public static final int EDGE_SOFT  = 0xFF2A3320;
-    public static final int HEADER     = 0xFF222A19;
-    public static final int ROW        = 0xFF1A1F13;
-    public static final int ROW_ALT    = 0xFF1D2316;
-    public static final int ROW_PICK   = 0xFF2C3A22;
+    // A dark, slightly green slate. FULLY opaque: at 94% the world showed
+    // through, and over a night-time forest the whole panel went to mud.
+    // Everything below is pitched to stay legible on that ground — the earlier
+    // muted greens measured under 3:1 against it, which is unreadable at the
+    // size Minecraft's font actually draws.
+    public static final int PANEL      = 0xFF11150D;
+    public static final int PANEL_SOFT = 0xFF20261A;
+    public static final int EDGE       = 0xFF5E7048;
+    public static final int EDGE_SOFT  = 0xFF3A462A;
+    public static final int HEADER     = 0xFF2A3320;
+    public static final int ROW        = 0xFF1A2013;
+    public static final int ROW_ALT    = 0xFF232B18;   // banding you can actually see
+    public static final int ROW_PICK   = 0xFF3E5330;
 
-    public static final int INK        = 0xFFEDF0E3;
-    public static final int MUTED      = 0xFF95A07E;
-    public static final int FAINT      = 0xFF66714F;
+    public static final int INK        = 0xFFF4F7EC;
+    public static final int MUTED      = 0xFFC3CFA6;
+    public static final int FAINT      = 0xFF9AA87C;
 
-    public static final int GOOD       = 0xFF86D08F;
-    public static final int WARN       = 0xFFE2AE45;
-    public static final int BAD        = 0xFFE0725A;
-    public static final int ACCENT     = 0xFF9BD46A;
+    public static final int GOOD       = 0xFF9BE5A4;
+    public static final int WARN       = 0xFFF5C45A;
+    public static final int BAD        = 0xFFF08A74;
+    public static final int ACCENT     = 0xFFB8EC84;
 
-    /** The window: soft fill, crisp edge, and a header band across the top. */
+    /** The window: solid fill, a crisp edge and a header band across the top.
+     *  The outer black ring is what makes it read as a panel rather than a
+     *  smudge — against a bright field or a night forest a single mid-tone
+     *  border disappears into whichever it happens to be sitting on. */
     public static void panel(GuiGraphics g, int x, int y, int w, int h, int headerHeight) {
+        g.fill(x - 1, y - 1, x + w + 1, y + h + 1, 0xFF000000);   // hard outer ring
         g.fill(x + 1, y + 1, x + w - 1, y + h - 1, PANEL);
         if (headerHeight > 0) {
             g.fill(x + 1, y + 1, x + w - 1, y + headerHeight, HEADER);
@@ -46,7 +53,7 @@ public final class Ui {
     /** A small-caps heading over a group of controls, with a hairline rule. */
     public static void section(GuiGraphics g, Font font, String label, int x, int y, int w) {
         String caps = label.toUpperCase();
-        g.drawString(font, caps, x, y, FAINT, false);
+        g.drawString(font, caps, x, y, FAINT, true);
         int textEnd = x + font.width(caps) + 4;
         if (textEnd < x + w) {
             g.fill(textEnd, y + 3, x + w, y + 4, EDGE_SOFT);
@@ -58,7 +65,7 @@ public final class Ui {
         int w = font.width(text) + 8;
         g.fill(x, y - 1, x + w, y + 10, PANEL_SOFT);
         g.fill(x, y - 1, x + 2, y + 10, colour);       // a coloured spine
-        g.drawString(font, text, x + 5, y + 1, colour, false);
+        g.drawString(font, text, x + 5, y + 1, colour, true);
     }
 
     /** Progress toward the next level. Reads instantly; a number does not. */
@@ -71,7 +78,7 @@ public final class Ui {
 
     /** Right-aligned helper, for putting a value opposite its label. */
     public static void right(GuiGraphics g, Font font, String text, int rightEdge, int y, int colour) {
-        g.drawString(font, text, rightEdge - font.width(text), y, colour, false);
+        g.drawString(font, text, rightEdge - font.width(text), y, colour, true);
     }
 
     /** Never let a readout run past the panel and onto the world behind it. */

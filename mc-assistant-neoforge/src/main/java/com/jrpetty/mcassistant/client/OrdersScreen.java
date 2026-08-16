@@ -189,10 +189,10 @@ public class OrdersScreen extends Screen {
 
         // Header: who, what level, and the one status line that matters.
         String name = bot.clientName();
-        g.drawString(this.font, name, x, top + Y_NAME, Ui.INK, false);
+        g.drawString(this.font, name, x, top + Y_NAME, Ui.INK, true);
         if (lvl >= 1) {
             g.drawString(this.font, "✦" + lvl, x + this.font.width(name) + 6, top + Y_NAME,
-                Ui.ACCENT, false);
+                Ui.ACCENT, true);
         }
         String status = bot.clientStatus();
         int sw = this.font.width(status) + 8;
@@ -211,9 +211,9 @@ public class OrdersScreen extends Screen {
         String career = bot.clientZone() + "  ·  " + info.daysServed() + "d served"
             + (info.hasBranch() ? "  ·  " + info.branch() : "")
             + (info.topDeed().isEmpty() ? "" : "  ·  " + info.topDeed());
-        g.drawString(this.font, Ui.clip(this.font, career, inner), x, top + Y_CAREER, Ui.MUTED, false);
+        g.drawString(this.font, Ui.clip(this.font, career, inner), x, top + Y_CAREER, Ui.MUTED, true);
         g.drawString(this.font, Ui.clip(this.font, perkLine(lvl), inner), x, top + Y_PERKS,
-            lvl >= 10 ? Ui.GOOD : Ui.FAINT, false);
+            lvl >= 10 ? Ui.GOOD : Ui.FAINT, true);
         // Diet sits with the status pill, not with the perks: it is a condition
         // you can fix right now, not something the bot has earned.
         Ui.right(g, this.font, info.diet() + "%", left + W - PAD, top + Y_CAREER,

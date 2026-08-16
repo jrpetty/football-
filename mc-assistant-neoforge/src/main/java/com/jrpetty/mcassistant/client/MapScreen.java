@@ -122,7 +122,7 @@ public class MapScreen extends Screen {
         Ui.panel(g, left, top, W, H, 26);
 
         int x = left + PAD;
-        g.drawString(this.font, "The operation", x, top + 8, Ui.INK, false);
+        g.drawString(this.font, "The operation", x, top + 8, Ui.INK, true);
         Ui.right(g, this.font, (maxX - minX) + " blocks across", left + W - PAD, top + 8, Ui.MUTED);
 
         // The ground.
@@ -176,12 +176,12 @@ public class MapScreen extends Screen {
             String job = AssistantEntity.StationTask.byOrdinal(a.clientJobOrdinal()).title;
             g.drawString(this.font, Ui.clip(this.font,
                 a.clientName() + "  ·  " + job + "  ·  " + a.clientStatus(), mapW),
-                mapX, ly, Ui.INK, false);
+                mapX, ly, Ui.INK, true);
         } else if (crew.isEmpty()) {
-            g.drawString(this.font, "No assistants nearby.", mapX, ly, Ui.MUTED, false);
+            g.drawString(this.font, "No assistants nearby.", mapX, ly, Ui.MUTED, true);
         } else {
             g.drawString(this.font, "Point at a patch or a chip to name it.",
-                mapX, ly, Ui.FAINT, false);
+                mapX, ly, Ui.FAINT, true);
         }
 
         super.render(g, mouseX, mouseY, partialTick);

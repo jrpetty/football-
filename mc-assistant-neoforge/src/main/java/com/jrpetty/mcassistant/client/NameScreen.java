@@ -115,12 +115,12 @@ public class NameScreen extends Screen {
         int x = left + PAD;
         int inner = W - PAD * 2;
 
-        g.drawString(this.font, "Name this one", x, top + 8, Ui.INK, false);
+        g.drawString(this.font, "Name this one", x, top + 8, Ui.INK, true);
         Ui.right(g, this.font, "currently " + bot.clientName(), left + W - PAD, top + 8, Ui.MUTED);
         g.drawString(this.font,
             offered.isEmpty() ? "Every name is taken — dismiss someone first."
                               : "Pick a name. Nobody on your crew has these.",
-            x, top + 22, Ui.FAINT, false);
+            x, top + 22, Ui.FAINT, true);
         Ui.section(g, this.font, "Names", x, top + 34, inner);
 
         super.render(g, mouseX, mouseY, partialTick);
