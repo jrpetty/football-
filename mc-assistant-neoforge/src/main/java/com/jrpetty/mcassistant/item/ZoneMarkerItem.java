@@ -5,9 +5,9 @@ import com.jrpetty.mcassistant.entity.WorkZone;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
@@ -19,63 +19,40 @@ import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.context.UseOnContext;
 
 import javax.annotation.Nullable;
+import java.util.List;
+import java.util.UUID;
 
 /**
- * Work Zone Marker — how the player fences off a patch of world for a
- * specialist.
+ * Work Zone Marker — the surveyor's wand for laying out a specialist's patch.
  *
- *   right-click a block .... first click sets one corner, the second closes the
- *                            box (the whole area between them becomes the zone)
- *   right-click more blocks  once a box exists, each further click GROWS it to
- *                            include that block — extend a farm row by row
- *   sneak + right-click ..... clears the marker and starts over (smaller zone)
- *   right-click an assistant  hands the zone to that bot as its workplace
+ *   right-click an assistant ... take charge of THAT bot's area. If it already
+ *                                has one, this shows it; otherwise you're ready
+ *                                to map one out.
+ *   right-click a block ....... first click drops a corner stake, the second
+ *                                closes the perimeter and hands it straight to
+ *                                the bot. Further clicks widen it to include
+ *                                what you clicked.
+ *   sneak + right-click ....... let go of that bot and clear the wand.
  *
- * The pending zone rides in the item itself, so several can be marked out and
- * handed to different bots.
+ * The outline is drawn while you're marking, and for a few seconds after each
+ * change, so you can see the shape as you build it. Once it's set it stops
+ * drawing — right-click the bot again with the wand whenever you want another
+ * look.
  */
 public class ZoneMarkerItem extends Item {
+
+    /** How long the outline keeps drawing after you change it (ticks). */
+    private static final int SHOW_TICKS = 160;
+    /** How far from a clicked block we'll look for the bot the wand is bound to. */
+    private static final double BIND_RANGE = 96.0;
 
     public ZoneMarkerItem(Properties properties) {
         super(properties.stacksTo(1).rarity(Rarity.UNCOMMON));
     }
 
-    @Override
-    public InteractionResult useOn(UseOnContext ctx) {
-        Player player = ctx.getPlayer();
-        if (ctx.getLevel().isClientSide || player == null) return InteractionResult.SUCCESS;
-        ItemStack stack = ctx.getItemInHand();
-        BlockPos pos = ctx.getClickedPos();
+    // ---------------------------------------------------------------- binding
 
-        if (player.isShiftKeyDown()) {
-            clear(stack);
-            tell(player, "Marker cleared — click a block to start a new zone.");
-            return InteractionResult.CONSUME;
-        }
-
-        CompoundTag data = read(stack);
-        WorkZone zone = WorkZone.load(data.contains("Zone") ? data.getCompound("Zone") : null);
-        if (zone != null) {
-            // Established box: every further click extends it.
-            zone = zone.including(pos);
-            store(stack, zone, null);
-            tell(player, "Zone extended — now " + zone.describe() + ". Right-click an assistant to assign it.");
-            return InteractionResult.CONSUME;
-        }
-        if (data.contains("Corner")) {
-            zone = WorkZone.of(BlockPos.of(data.getLong("Corner")), pos, WorkZone.DEFAULT_DEPTH);
-            store(stack, zone, null);
-            tell(player, "Zone marked: " + zone.describe()
-                + ". Click more blocks to extend it, or right-click an assistant to assign it.");
-            return InteractionResult.CONSUME;
-        }
-        store(stack, null, pos);
-        tell(player, "First corner set at " + pos.getX() + ", " + pos.getZ()
-            + " — now click the opposite corner.");
-        return InteractionResult.CONSUME;
-    }
-
-    /** Right-click an assistant: hand it the marked zone as its workplace. */
+    /** Right-click an assistant: take charge of its area (or re-show it). */
     @Override
     public InteractionResult interactLivingEntity(ItemStack stack, Player player, LivingEntity target, InteractionHand hand) {
         if (player.level().isClientSide) return InteractionResult.SUCCESS;
@@ -84,34 +61,103 @@ public class ZoneMarkerItem extends Item {
             tell(player, "That's not your assistant.");
             return InteractionResult.CONSUME;
         }
-        WorkZone zone = WorkZone.load(read(stack).contains("Zone") ? read(stack).getCompound("Zone") : null);
-        if (zone == null) {
-            tell(player, "Mark a zone first — click one corner, then the opposite one.");
-            return InteractionResult.CONSUME;
+        CompoundTag data = read(stack);
+        boolean already = bot.getUUID().toString().equals(data.getString("Bot"));
+
+        CompoundTag next = new CompoundTag();
+        next.putString("Bot", bot.getUUID().toString());
+        next.putLong("ShowUntil", player.level().getGameTime() + SHOW_TICKS);
+        write(stack, next); // binding always clears any half-finished perimeter
+
+        if (bot.workZone() != null) {
+            bot.showZoneTo(player);
+            tell(player, (already ? "" : "Marking out " + bot.displayNameCap() + ". ")
+                + "Its patch is " + bot.workZone().describe()
+                + " — showing it now. Click two blocks to redraw it.");
+        } else {
+            tell(player, "Marking out " + bot.displayNameCap()
+                + " — click one corner of its patch, then the opposite corner.");
         }
-        bot.setWorkZone(zone);
-        bot.say("This is my patch now — " + zone.describe() + "."
-            + (bot.stationTask() == AssistantEntity.StationTask.NONE
-                ? " Open me up and pick what I should do here."
-                : " " + (bot.missingEssentials().isEmpty()
-                    ? "Everything I need is here — getting to work."
-                    : "I still need " + String.join(", ", bot.missingEssentials()) + ".")));
         return InteractionResult.CONSUME;
     }
 
-    /** While it's in hand, keep drawing what's currently selected: the pending
-     *  corner as a pillar of sparks, or the whole box as an outline. Seeing the
-     *  selection is the difference between guessing and knowing. */
+    // ------------------------------------------------------------ the mapping
+
+    @Override
+    public InteractionResult useOn(UseOnContext ctx) {
+        Player player = ctx.getPlayer();
+        if (ctx.getLevel().isClientSide || player == null) return InteractionResult.SUCCESS;
+        ItemStack stack = ctx.getItemInHand();
+        BlockPos pos = ctx.getClickedPos();
+        CompoundTag data = read(stack);
+
+        if (player.isShiftKeyDown()) {
+            write(stack, new CompoundTag());
+            tell(player, "Wand cleared.");
+            return InteractionResult.CONSUME;
+        }
+
+        AssistantEntity bot = boundBot(ctx.getLevel(), data, pos);
+        if (bot == null) {
+            tell(player, "Right-click one of your assistants first — this wand maps out ITS patch.");
+            return InteractionResult.CONSUME;
+        }
+
+        long now = ctx.getLevel().getGameTime();
+        if (!data.contains("Corner")) {
+            data.putLong("Corner", pos.asLong());
+            data.putLong("ShowUntil", now + SHOW_TICKS);
+            write(stack, data);
+            tell(player, "Corner one at " + pos.getX() + ", " + pos.getZ()
+                + " — now click the opposite corner.");
+            return InteractionResult.CONSUME;
+        }
+
+        // Second click closes the perimeter; later clicks widen it.
+        WorkZone existing = bot.workZone();
+        WorkZone zone;
+        if (data.getBoolean("Closed") && existing != null) {
+            zone = existing.including(pos);
+        } else {
+            zone = WorkZone.of(BlockPos.of(data.getLong("Corner")), pos,
+                existing != null ? existing.depth() : WorkZone.DEFAULT_DEPTH);
+        }
+        bot.setWorkZone(zone);
+
+        data.putBoolean("Closed", true);
+        data.putLong("Corner", pos.asLong());
+        data.putLong("ShowUntil", now + SHOW_TICKS);
+        write(stack, data);
+
+        bot.showZoneTo(player);
+        tell(player, bot.displayNameCap() + "'s patch is now " + zone.describe()
+            + ". Click more blocks to widen it"
+            + (bot.missingEssentials().isEmpty() ? "." : " — it still needs "
+                + String.join(", ", bot.missingEssentials()) + "."));
+        return InteractionResult.CONSUME;
+    }
+
+    // ------------------------------------------------------------- the preview
+
+    /**
+     * Draw the outline while you're actually working on it — a stake on the
+     * pending corner, the full perimeter for a few seconds after each change.
+     * It deliberately stops once you're done, so a set patch isn't permanently
+     * glittering; right-clicking the bot brings it back.
+     */
     @Override
     public void inventoryTick(ItemStack stack, net.minecraft.world.level.Level level,
                               net.minecraft.world.entity.Entity holder, int slot, boolean selected) {
         if (!selected || level.isClientSide || !(level instanceof ServerLevel sl)) return;
         if (holder.tickCount % 10 != 0) return;
         CompoundTag data = read(stack);
-        WorkZone zone = WorkZone.load(data.contains("Zone") ? data.getCompound("Zone") : null);
-        if (zone != null) {
-            outline(sl, zone, ParticleTypes.WAX_ON);
-        } else if (data.contains("Corner")) {
+        if (level.getGameTime() > data.getLong("ShowUntil")) return;
+
+        AssistantEntity bot = boundBot(level, data, holder.blockPosition());
+        if (bot != null && bot.workZone() != null && data.getBoolean("Closed")) {
+            outline(sl, bot.workZone(), ParticleTypes.WAX_ON);
+        }
+        if (data.contains("Corner") && !data.getBoolean("Closed")) {
             BlockPos c = BlockPos.of(data.getLong("Corner"));
             for (int dy = 0; dy < 3; dy++) {
                 sl.sendParticles(ParticleTypes.WAX_ON, c.getX() + 0.5, c.getY() + 1.0 + dy, c.getZ() + 0.5,
@@ -121,12 +167,13 @@ public class ZoneMarkerItem extends Item {
     }
 
     /**
-     * Trace a zone's footprint in particles — the four edges at the marked
-     * height, spaced out so a big zone stays cheap to draw.
+     * Trace a zone's footprint in particles — the four edges, spaced out so a
+     * big patch stays cheap to draw, and draped over the ground so it reads as
+     * a fence line rather than floating in the air.
      */
     public static void outline(ServerLevel level, WorkZone zone, net.minecraft.core.particles.SimpleParticleType particle) {
         int y = zone.min().getY() + 1;
-        int step = Math.max(1, Math.max(zone.sizeX(), zone.sizeZ()) / 24); // ~48 marks per box
+        int step = Math.max(1, Math.max(zone.sizeX(), zone.sizeZ()) / 24);
         for (int x = zone.min().getX(); x <= zone.max().getX(); x += step) {
             spark(level, particle, x, y, zone.min().getZ());
             spark(level, particle, x, y, zone.max().getZ());
@@ -135,18 +182,40 @@ public class ZoneMarkerItem extends Item {
             spark(level, particle, zone.min().getX(), y, z);
             spark(level, particle, zone.max().getX(), y, z);
         }
+        // Always mark the four corners, whatever the spacing worked out to.
+        spark(level, particle, zone.min().getX(), y, zone.min().getZ());
+        spark(level, particle, zone.max().getX(), y, zone.min().getZ());
+        spark(level, particle, zone.min().getX(), y, zone.max().getZ());
+        spark(level, particle, zone.max().getX(), y, zone.max().getZ());
     }
 
     private static void spark(ServerLevel level, net.minecraft.core.particles.SimpleParticleType particle, int x, int y, int z) {
-        // Sit the mark on whatever the ground actually is, so an outline drapes
-        // over hills instead of hanging in the air or buried in a slope.
         int surface = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
         double drawY = Math.abs(surface - y) <= 12 ? surface + 0.6 : y + 0.6;
         level.sendParticles(particle, x + 0.5, drawY, z + 0.5, 1, 0.0, 0.0, 0.0, 0.0);
     }
 
+    // ------------------------------------------------------------------ plumbing
+
+    /** The assistant this wand is working on, if it's still around. */
+    @Nullable
+    private static AssistantEntity boundBot(net.minecraft.world.level.Level level, CompoundTag data, BlockPos near) {
+        String id = data.getString("Bot");
+        if (id.isEmpty()) return null;
+        UUID uuid;
+        try {
+            uuid = UUID.fromString(id);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+        List<AssistantEntity> found = level.getEntitiesOfClass(AssistantEntity.class,
+            new net.minecraft.world.phys.AABB(near).inflate(BIND_RANGE),
+            a -> a.getUUID().equals(uuid));
+        return found.isEmpty() ? null : found.get(0);
+    }
+
     private static void tell(Player player, String message) {
-        player.sendSystemMessage(Component.literal("<Zone Marker> " + message));
+        player.sendSystemMessage(Component.literal("<Zone Wand> " + message));
     }
 
     private static CompoundTag read(ItemStack stack) {
@@ -154,14 +223,7 @@ public class ZoneMarkerItem extends Item {
         return data == null ? new CompoundTag() : data.copyTag();
     }
 
-    private static void store(ItemStack stack, @Nullable WorkZone zone, @Nullable BlockPos corner) {
-        CompoundTag tag = new CompoundTag();
-        if (zone != null) tag.put("Zone", zone.save());
-        if (corner != null) tag.putLong("Corner", corner.asLong());
+    private static void write(ItemStack stack, CompoundTag tag) {
         stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
-    }
-
-    private static void clear(ItemStack stack) {
-        stack.set(DataComponents.CUSTOM_DATA, CustomData.of(new CompoundTag()));
     }
 }

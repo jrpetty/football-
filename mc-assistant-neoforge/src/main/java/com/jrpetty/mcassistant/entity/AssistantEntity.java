@@ -205,7 +205,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b44 · NIGHTS AND SHIFTS: assign a bot a bed (Claim Bed) and set when it works — days, nights or both. Off duty it walks to its bed and sleeps instead of standing in the open getting killed · CREW SCREEN on ; — your assistants by name, level, job and duty; click one to order it about (no inventory) · PERKS are visible: every screen shows what a bot has earned and what it unlocks next · MUCH QUIETER: routine narration (gathering, stashing, tending, casting) is silent while a specialist is working - only real news gets through · plus b43: the datapack finally loads so recipes exist, keybinds work, idle bots stand still instead of hopping (which was trampling the farm)";
+        "2026-07-b45 · ZONE WAND reworked: right-click an assistant to take charge of ITS patch, then click two blocks to lay the perimeter (further clicks widen it). The outline draws while you map it and for a few seconds after each change, then stops — right-click the bot again to see it any time · beds + day/night/both shifts · crew screen on ; · visible perks · much quieter bots · recipes exist again (the datapack had no pack.mcmeta) · orders key R, crew key ;, roster key G";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -3375,19 +3375,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             refreshJobState();
         }
 
-        // Show me my patch: while the owner is holding a Zone Marker nearby, this
-        // bot outlines its own work zone in particles, so zones are something you
-        // can SEE and compare rather than guess at.
-        if (workZone != null && tickCount % 10 == 0
-            && level() instanceof net.minecraft.server.level.ServerLevel zl) {
-            Player owner = getOwnerPlayer();
-            if (owner != null && owner.distanceToSqr(this) < 48 * 48
-                && (owner.getMainHandItem().is(com.jrpetty.mcassistant.McAssistantMod.ZONE_MARKER.get())
-                    || owner.getOffhandItem().is(com.jrpetty.mcassistant.McAssistantMod.ZONE_MARKER.get()))) {
-                com.jrpetty.mcassistant.item.ZoneMarkerItem.outline(zl, workZone,
-                    net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER);
-            }
-        }
+        // NB: the patch outline is no longer drawn just for holding the wand.
+        // A permanently glittering fence line is noise; the wand shows it while
+        // you are marking it out, and on demand when you right-click the bot.
 
         // Top up an empty bucket at any water we pass, so an irrigation source is
         // always on hand for a farm (FarmGoal spends it to hydrate a plot).
