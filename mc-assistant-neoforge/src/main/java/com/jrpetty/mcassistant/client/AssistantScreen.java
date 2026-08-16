@@ -160,7 +160,10 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
         int colour = status.startsWith("Working") ? 0x1F7A34   // green: earning its keep
             : status.startsWith("Needs") || status.startsWith("Out of") ? 0x9C2B18  // red: blocked
             : 0x7A5A10;                                                            // amber: still setting up
-        g.drawString(this.font, Component.literal(trim(status)), 8, 165, colour, false);
+        g.drawString(this.font, Component.literal(
+            clipTo(status, imageWidth - 16 - this.font.width(
+                AssistantEntity.foodLabel(diet) + " " + diet + "%") - 6)),
+            8, 165, colour, false);
 
         // What it is running on. This is the line that explains a bot that is
         // working but slow, so it gets a bar as well as a number — you should
@@ -172,14 +175,30 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
         int fill = Math.max(1, barW * Math.max(0, Math.min(100, diet)) / 100);
         int dietColour = diet >= 95 ? 0x1F7A34 : diet >= 70 ? 0x4A6A20
             : diet >= 45 ? 0x7A5A10 : 0x9C2B18;
-        // Placed in the free band above the job line: the player's own inventory
-        // starts at y=178, so anything below ~150 lands on top of their slots.
-        g.drawString(this.font, Component.literal(trim(
-            AssistantEntity.foodLabel(diet) + " · works at " + diet + "%"
-            + (info.lastMeal().isEmpty() ? "" : " · last ate " + info.lastMeal()))),
-            8, 132, dietColour, false);
-        g.fill(8, 143, 8 + barW, 147, 0x30000000);
-        g.fill(8, 143, 8 + fill, 147, 0xFF000000 | dietColour);
+        // This screen is packed: slots 18-96, three button rows 96-150, and the
+        // player's own inventory from 178. The only free band is 150-178, which
+        // already carries the job line and the status line. So the diet shares
+        // the status line — right-aligned, in its own colour — and the bar is a
+        // hairline in the last few pixels before the player's slots.
+        //
+        // The b61 version put this at y=132 and y=143, which is squarely on top
+        // of the Set Area / - / + / Show row. That is what was drawn through
+        // the buttons.
+        String pace = AssistantEntity.foodLabel(diet) + " " + diet + "%";
+        g.drawString(this.font, Component.literal(pace),
+            imageWidth - 8 - this.font.width(pace), 165, dietColour, false);
+        g.fill(8, 174, 8 + barW, 177, 0x30000000);
+        g.fill(8, 174, 8 + fill, 177, 0xFF000000 | dietColour);
+    }
+
+    /** Clip to an explicit width — used where two readouts share a line. */
+    private String clipTo(String text, int max) {
+        if (this.font.width(text) <= max) return text;
+        String cut = text;
+        while (cut.length() > 3 && this.font.width(cut + "...") > max) {
+            cut = cut.substring(0, cut.length() - 1);
+        }
+        return cut + "...";
     }
 
     /** Clip a readout to the panel so nothing spills onto the world behind it. */
