@@ -139,6 +139,9 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
 
     @Override
     protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
+        // One palette, not two: these used to be hand-picked greys and greens
+        // that drifted from Ui's every time Ui was retuned. 0x404040 stays,
+        // because that is vanilla's own container-title grey.
         g.drawString(this.font, this.title, 8, 6, 0x404040, false);
         AssistantEntity a = this.menu.getAssistant();
 
@@ -147,14 +150,15 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
         // caption ran off the right-hand edge of the panel entirely.
         String mode = a != null ? a.getMode().name() : "?";
         g.drawString(this.font, Component.literal(mode),
-            imageWidth - 8 - this.font.width(mode), 6, 0x707070, false);
-        g.drawString(this.font, Component.literal("gear"), 8 + 6 * 18 + 4, 82, 0x606060, false);
+            imageWidth - 8 - this.font.width(mode), 6, Ui.FAINT, false);
+        g.drawString(this.font, Component.literal("gear"), 8 + 6 * 18 + 4, 82,
+            Ui.FAINT, false);
 
         // --- Specialisation readout (synced from the entity, so it's live) ---
         if (a == null) return;
         AssistantEntity.StationTask job = AssistantEntity.StationTask.byOrdinal(a.clientJobOrdinal());
         g.drawString(this.font, Component.literal(trim(job.title + " · " + a.clientZone())),
-            8, 154, 0x303030, false);
+            8, 154, Ui.MUTED, false);
 
         // What it is running on. Worked out first because the status line below
         // shares its row and has to be clipped to whatever space this leaves.
@@ -162,14 +166,12 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
         int diet = info.diet();
         int barW = imageWidth - 16;
         int fill = Math.max(1, barW * Math.max(0, Math.min(100, diet)) / 100);
-        int dietColour = diet >= 95 ? 0x1F7A34 : diet >= 70 ? 0x4A6A20
-            : diet >= 45 ? 0x7A5A10 : 0x9C2B18;
+        int dietColour = diet >= 95 ? Ui.GOOD : diet >= 70 ? Ui.ACCENT
+            : diet >= 45 ? Ui.WARN : Ui.BAD;
         String pace = AssistantEntity.foodLabel(diet) + " " + diet + "%";
 
         String status = a.clientStatus();
-        int colour = status.startsWith("Working") ? 0x1F7A34   // green: earning its keep
-            : status.startsWith("Needs") || status.startsWith("Out of") ? 0x9C2B18  // red: blocked
-            : 0x7A5A10;                                                            // amber: still setting up
+        int colour = Ui.statusColour(status);
         g.drawString(this.font, Component.literal(
             clipTo(status, imageWidth - 16 - this.font.width(pace) - 6)),
             8, 165, colour, false);

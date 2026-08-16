@@ -62,9 +62,9 @@ public class RecordScreen extends Screen {
 
         // Who, and how far along.
         String name = bot.clientName();
-        g.drawString(this.font, name, x, top + 7, Ui.INK, true);
+        g.drawString(this.font, name, x, top + 7, Ui.INK, false);
         if (lvl >= 1) {
-            g.drawString(this.font, "✦" + lvl, x + this.font.width(name) + 6, top + 7, Ui.ACCENT, true);
+            g.drawString(this.font, "✦" + lvl, x + this.font.width(name) + 6, top + 7, Ui.ACCENT, false);
         }
         Ui.right(g, this.font,
             AssistantEntity.StationTask.byOrdinal(bot.clientJobOrdinal()).title,
@@ -73,7 +73,7 @@ public class RecordScreen extends Screen {
             info.daysServed() + " days served"
             + (info.hasBranch() ? "  ·  " + info.branch() : "")
             + "  ·  works " + bot.clientShift().label,
-            x, top + 18, Ui.FAINT, true);
+            x, top + 18, Ui.FAINT, false);
 
         // What it has cost you. Wages are spent, not carried — this is the only
         // place the metal you handed over is ever accounted for.
@@ -82,7 +82,7 @@ public class RecordScreen extends Screen {
               + info.diamondPaid() + " diamond  ·  " + info.wageStatus()
             : "no wages drawn yet  ·  " + info.wageStatus();
         g.drawString(this.font, Ui.clip(this.font, wages, inner), x, top + 28,
-            info.wageDueTicks() <= 0 ? Ui.BAD : Ui.MUTED, true);
+            info.wageDueTicks() <= 0 ? Ui.BAD : Ui.MUTED, false);
 
         // Who it is, as opposed to what it does: the quirk it arrived with, and
         // how long it has worked alongside the rest of the crew.
@@ -90,7 +90,7 @@ public class RecordScreen extends Screen {
             g.drawString(this.font, Ui.clip(this.font,
                 info.trait() + " — " + info.traitBlurb()
                 + (info.teamwork() > 0 ? "  ·  +" + info.teamwork() + "% crew rhythm" : ""),
-                inner), x, top + 38, Ui.GOOD, true);
+                inner), x, top + 38, Ui.GOOD, false);
         }
 
         // The career itself, biggest tally first, each with a bar for scale.
@@ -101,7 +101,7 @@ public class RecordScreen extends Screen {
 
         if (!info.hasRecord()) {
             g.drawString(this.font, "Nothing on the books yet — give it a job.",
-                x, y + 2, Ui.MUTED, true);
+                x, y + 2, Ui.MUTED, false);
         } else {
             java.util.List<AssistantEntity.Deed> done = new java.util.ArrayList<>();
             for (AssistantEntity.Deed d : AssistantEntity.Deed.values()) {
@@ -118,13 +118,13 @@ public class RecordScreen extends Screen {
                 // stand out without having to compare numbers.
                 int barW = Math.max(1, (inner - 4) * count / busiest);
                 g.fill(x - 2, y + rowH - 4, x - 2 + barW, y + rowH - 3, Ui.EDGE);
-                g.drawString(this.font, d.label, x, y, Ui.INK, true);
+                g.drawString(this.font, d.label, x, y, Ui.INK, false);
                 Ui.right(g, this.font, String.valueOf(count), x + inner, y, Ui.ACCENT);
                 y += rowH;
             }
             if (done.size() > maxRows) {
                 g.drawString(this.font, "+" + (done.size() - maxRows) + " more",
-                    x, y, Ui.FAINT, true);
+                    x, y, Ui.FAINT, false);
             }
         }
 

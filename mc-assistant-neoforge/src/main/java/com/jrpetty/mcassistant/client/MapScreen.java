@@ -122,7 +122,7 @@ public class MapScreen extends Screen {
         Ui.panel(g, left, top, W, H, 26);
 
         int x = left + PAD;
-        g.drawString(this.font, "The operation", x, top + 8, Ui.INK, true);
+        g.drawString(this.font, "The operation", x, top + 8, Ui.INK, false);
         Ui.right(g, this.font, (maxX - minX) + " blocks across", left + W - PAD, top + 8, Ui.MUTED);
 
         // The ground.
@@ -153,8 +153,12 @@ public class MapScreen extends Screen {
         if (this.minecraft != null && this.minecraft.player != null) {
             int myX = px(this.minecraft.player.getX());
             int myZ = pz(this.minecraft.player.getZ());
-            g.fill(myX - 3, myZ - 1, myX + 4, myZ + 2, 0xFFFFFFFF);
-            g.fill(myX - 1, myZ - 3, myX + 2, myZ + 4, 0xFFFFFFFF);
+            // Ink, not white: the ground under it is light grey, and a white
+            // cross on it is a cross you cannot find.
+            g.fill(myX - 4, myZ - 2, myX + 5, myZ + 3, 0xFFE9E9E9);   // halo
+            g.fill(myX - 2, myZ - 4, myX + 3, myZ + 5, 0xFFE9E9E9);
+            g.fill(myX - 3, myZ - 1, myX + 4, myZ + 2, Ui.INK);
+            g.fill(myX - 1, myZ - 3, myX + 2, myZ + 4, Ui.INK);
         }
 
         // The crew, each a chip in its trade's colour.
@@ -176,12 +180,12 @@ public class MapScreen extends Screen {
             String job = AssistantEntity.StationTask.byOrdinal(a.clientJobOrdinal()).title;
             g.drawString(this.font, Ui.clip(this.font,
                 a.clientName() + "  ·  " + job + "  ·  " + a.clientStatus(), mapW),
-                mapX, ly, Ui.INK, true);
+                mapX, ly, Ui.INK, false);
         } else if (crew.isEmpty()) {
-            g.drawString(this.font, "No assistants nearby.", mapX, ly, Ui.MUTED, true);
+            g.drawString(this.font, "No assistants nearby.", mapX, ly, Ui.MUTED, false);
         } else {
             g.drawString(this.font, "Point at a patch or a chip to name it.",
-                mapX, ly, Ui.FAINT, true);
+                mapX, ly, Ui.FAINT, false);
         }
 
         super.render(g, mouseX, mouseY, partialTick);
