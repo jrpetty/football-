@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
-import { search } from '../../core/catalogue.ts';
+import { browseParts, search } from '../../core/catalogue.ts';
 import { engineData } from '../store.ts';
 import type { Confidence, FpsEstimate, ModelTerm } from '../../core/types.ts';
 
@@ -19,23 +19,29 @@ export function PartPicker({
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
   const [cursor, setCursor] = useState(0);
+  const [vendorFilter, setVendorFilter] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   const current = kind === 'gpu' ? engineData.gpus.get(value) : engineData.cpus.get(value);
 
-  const hits = useMemo(() => {
-    if (!q.trim()) {
-      const pool = kind === 'gpu' ? [...engineData.gpus.values()] : [...engineData.cpus.values()];
-      return pool.slice(0, 40).map((p) => ({
-        id: p.id,
-        kind,
-        label: p.fullName,
-        disambiguator: '',
-        score: 0,
-      }));
+  const groups = useMemo(() => browseParts(kind, engineData), [kind]);
+
+  /**
+   * Browsing shows the WHOLE catalogue grouped by vendor; searching flattens
+   * matches into one relevance-ranked group. Either way the list is the same
+   * shape, so keyboard navigation and rendering do not branch.
+   */
+  const visibleGroups = useMemo(() => {
+    if (q.trim()) {
+      const hits = search(q, engineData, 200).filter((h) => h.kind === kind);
+      return hits.length ? [{ vendor: 'results', label: `${hits.length} match${hits.length === 1 ? '' : 'es'}`, hits }] : [];
     }
-    return search(q, engineData, 60).filter((h) => h.kind === kind);
-  }, [q, kind]);
+    return vendorFilter ? groups.filter((g) => g.vendor === vendorFilter) : groups;
+  }, [q, kind, groups, vendorFilter]);
+
+  // Flat view of the same items, so arrow keys cross group boundaries.
+  const flat = useMemo(() => visibleGroups.flatMap((g) => g.hits), [visibleGroups]);
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -45,11 +51,21 @@ export function PartPicker({
     return () => document.removeEventListener('mousedown', onDoc);
   }, []);
 
+  // Keep the highlighted row on screen — the browse list runs to hundreds of
+  // entries, so arrowing without this walks the cursor out of view immediately.
+  useEffect(() => {
+    if (!open) return;
+    const el = listRef.current?.querySelector('[data-cursor="true"]');
+    el?.scrollIntoView({ block: 'nearest' });
+  }, [cursor, open]);
+
   const pick = (id: string) => {
     onChange(id);
     setOpen(false);
     setQ('');
   };
+
+  let flatIndex = -1;
 
   return (
     <div className="field" ref={ref}>
@@ -58,7 +74,7 @@ export function PartPicker({
         <input
           type="text"
           value={open ? q : (current?.fullName ?? value)}
-          placeholder={`search ${kind}…`}
+          placeholder={`search or browse ${kind === 'gpu' ? 'GPUs' : 'CPUs'}…`}
           onFocus={() => {
             setOpen(true);
             setQ('');
@@ -70,24 +86,61 @@ export function PartPicker({
             setOpen(true);
           }}
           onKeyDown={(e) => {
-            if (e.key === 'ArrowDown') { e.preventDefault(); setCursor((c) => Math.min(c + 1, hits.length - 1)); }
+            if (e.key === 'ArrowDown') { e.preventDefault(); setOpen(true); setCursor((c) => Math.min(c + 1, flat.length - 1)); }
             else if (e.key === 'ArrowUp') { e.preventDefault(); setCursor((c) => Math.max(c - 1, 0)); }
-            else if (e.key === 'Enter' && hits[cursor]) { e.preventDefault(); pick(hits[cursor].id); }
+            else if (e.key === 'Enter' && flat[cursor]) { e.preventDefault(); pick(flat[cursor].id); }
             else if (e.key === 'Escape') setOpen(false);
           }}
         />
         {open && (
-          <div className="combo-list">
-            {hits.length === 0 && <div className="combo-item"><span className="disambig">no match</span></div>}
-            {hits.map((h, i) => (
-              <div
-                key={h.id}
-                className={`combo-item${i === cursor ? ' cursor' : ''}`}
-                onMouseEnter={() => setCursor(i)}
-                onMouseDown={(e) => { e.preventDefault(); pick(h.id); }}
-              >
-                <span className="label">{h.label}</span>
-                {h.disambiguator && <span className="disambig">{h.disambiguator}</span>}
+          <div className="combo-list" ref={listRef}>
+            {/* Vendor filters: jump straight to a brand without knowing a part
+                number. Hidden while searching, where relevance beats grouping. */}
+            {!q.trim() && groups.length > 1 && (
+              <div className="combo-filters">
+                <button
+                  type="button"
+                  className={`toggle${vendorFilter === null ? ' on' : ''}`}
+                  onMouseDown={(e) => { e.preventDefault(); setVendorFilter(null); setCursor(0); }}
+                >
+                  all {groups.reduce((n, g) => n + g.hits.length, 0)}
+                </button>
+                {groups.map((g) => (
+                  <button
+                    key={g.vendor}
+                    type="button"
+                    className={`toggle${vendorFilter === g.vendor ? ' on' : ''}`}
+                    onMouseDown={(e) => { e.preventDefault(); setVendorFilter(g.vendor); setCursor(0); }}
+                  >
+                    {g.label} {g.hits.length}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {visibleGroups.length === 0 && (
+              <div className="combo-item"><span className="disambig">no match</span></div>
+            )}
+
+            {visibleGroups.map((group) => (
+              <div key={group.vendor}>
+                <div className="combo-group">{group.label}</div>
+                {group.hits.map((h) => {
+                  flatIndex += 1;
+                  const i = flatIndex;
+                  return (
+                    <div
+                      key={h.id}
+                      data-cursor={i === cursor}
+                      className={`combo-item${i === cursor ? ' cursor' : ''}${h.id === value ? ' selected' : ''}`}
+                      onMouseEnter={() => setCursor(i)}
+                      onMouseDown={(e) => { e.preventDefault(); pick(h.id); }}
+                    >
+                      <span className="label">{h.label}</span>
+                      {h.disambiguator && <span className="disambig">{h.disambiguator}</span>}
+                    </div>
+                  );
+                })}
               </div>
             ))}
           </div>

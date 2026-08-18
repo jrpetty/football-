@@ -7,6 +7,7 @@
 import type { CpuRecord, GameRecord, GpuRecord, ProvenanceTable, RamConfig } from './types.ts';
 import type { EngineData, GameReference } from './engine.ts';
 import { ANCHORS } from './constants.ts';
+import { deriveCpuIndex, deriveGpuIndex } from './indices.ts';
 
 export interface CatalogueFiles {
   gpus: { records: GpuRecord[]; provenance: ProvenanceTable };
@@ -48,6 +49,7 @@ export interface SearchHit {
   label: string;
   /** Text that makes this hit unmistakable against near-identical names. */
   disambiguator: string;
+  vendor: string;
   score: number;
 }
 
@@ -85,17 +87,9 @@ export function search(query: string, data: EngineData, limit = 20): SearchHit[]
       hits.push({
         id: g.id,
         kind: 'gpu',
+        vendor: g.vendor,
         label: g.fullName,
-        disambiguator: [
-          g.architecture,
-          g.vramGB != null ? `${g.vramGB}GB ${g.vramType ?? ''}`.trim() : null,
-          g.memBusBits != null ? `${g.memBusBits}-bit` : null,
-          g.chip,
-          g.formFactor === 'igpu' ? 'integrated' : null,
-          g.launchDate?.slice(0, 4),
-        ]
-          .filter(Boolean)
-          .join(' · '),
+        disambiguator: gpuDisambiguator(g),
         score: sc,
       });
     }
@@ -107,20 +101,121 @@ export function search(query: string, data: EngineData, limit = 20): SearchHit[]
       hits.push({
         id: c.id,
         kind: 'cpu',
+        vendor: c.vendor,
         label: c.fullName,
-        disambiguator: [
-          c.architecture,
-          `${c.cores}C/${c.threads}T`,
-          c.socket,
-          c.vcache ? '3D V-Cache' : null,
-          c.launchDate?.slice(0, 4),
-        ]
-          .filter(Boolean)
-          .join(' · '),
+        disambiguator: cpuDisambiguator(c),
         score: sc,
       });
     }
   }
 
   return hits.sort((a, b) => b.score - a.score).slice(0, limit);
+}
+
+// ---------------------------------------------------------------------------
+// Browsing
+// ---------------------------------------------------------------------------
+
+/**
+ * Every part, grouped by vendor and ordered strongest-first within each vendor.
+ *
+ * Browsing is a first-class path, not a degraded search: someone who does not
+ * already know a part number needs to scroll the catalogue and see what exists.
+ * An earlier version returned the first 40 records in catalogue insertion order,
+ * which — because the reconciler merges the AMD agent's output first — meant
+ * Intel and Nvidia parts were unreachable without typing their names.
+ *
+ * Ordering by derived index rather than alphabetically puts the parts people
+ * actually shop for at the top of each brand, and makes the list double as a
+ * performance ladder.
+ */
+export interface BrowseGroup {
+  vendor: string;
+  label: string;
+  hits: SearchHit[];
+}
+
+const VENDOR_LABEL: Record<string, string> = {
+  nvidia: 'NVIDIA',
+  amd: 'AMD',
+  intel: 'Intel',
+};
+
+/** Vendor display order: largest catalogue share first, stable across renders. */
+const VENDOR_ORDER = ['nvidia', 'amd', 'intel'];
+
+function gpuDisambiguator(g: GpuRecord): string {
+  return [
+    g.architecture,
+    g.vramGB != null ? `${g.vramGB}GB ${g.vramType ?? ''}`.trim() : null,
+    g.memBusBits != null ? `${g.memBusBits}-bit` : null,
+    g.chip,
+    g.formFactor === 'igpu' ? 'integrated' : null,
+    g.launchDate?.slice(0, 4),
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+function cpuDisambiguator(c: CpuRecord): string {
+  return [
+    c.architecture,
+    `${c.cores}C/${c.threads}T`,
+    c.socket,
+    c.vcache ? '3D V-Cache' : null,
+    c.launchDate?.slice(0, 4),
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+/** Cached because it sorts the whole catalogue by derived index. */
+let browseCache: { gpu?: BrowseGroup[]; cpu?: BrowseGroup[] } = {};
+
+export function browseParts(kind: 'cpu' | 'gpu', data: EngineData): BrowseGroup[] {
+  const cached = browseCache[kind];
+  if (cached) return cached;
+
+  const scored: (SearchHit & { rank: number })[] =
+    kind === 'gpu'
+      ? [...data.gpus.values()].map((g) => ({
+          id: g.id,
+          kind: 'gpu' as const,
+          vendor: g.vendor,
+          label: g.fullName,
+          disambiguator: gpuDisambiguator(g),
+          score: 0,
+          rank: deriveGpuIndex(g, data.anchorGpu, ANCHOR_RAM).index.raster,
+        }))
+      : [...data.cpus.values()].map((c) => ({
+          id: c.id,
+          kind: 'cpu' as const,
+          vendor: c.vendor,
+          label: c.fullName,
+          disambiguator: cpuDisambiguator(c),
+          score: 0,
+          rank: deriveCpuIndex(c, ANCHOR_RAM, data.anchorCpu, ANCHOR_RAM).index.throughput,
+        }));
+
+  const groups: BrowseGroup[] = [];
+  for (const vendor of VENDOR_ORDER) {
+    const hits = scored
+      .filter((h) => h.vendor === vendor)
+      .sort((a, b) => b.rank - a.rank)
+      .map(({ rank: _rank, ...hit }) => hit);
+    if (hits.length) groups.push({ vendor, label: VENDOR_LABEL[vendor] ?? vendor, hits });
+  }
+  // Any vendor not in the explicit order still appears, rather than vanishing.
+  for (const h of scored) {
+    if (!VENDOR_ORDER.includes(h.vendor) && !groups.some((g) => g.vendor === h.vendor)) {
+      groups.push({
+        vendor: h.vendor,
+        label: VENDOR_LABEL[h.vendor] ?? h.vendor,
+        hits: scored.filter((x) => x.vendor === h.vendor).map(({ rank: _rank, ...hit }) => hit),
+      });
+    }
+  }
+
+  browseCache = { ...browseCache, [kind]: groups };
+  return groups;
 }

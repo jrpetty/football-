@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { buildEngineData, ANCHOR_RAM, search } from '../src/core/catalogue.ts';
+import { buildEngineData, ANCHOR_RAM, browseParts, search } from '../src/core/catalogue.ts';
 import { estimate, softMin } from '../src/core/engine.ts';
 import { gameVisibleL3PerCore } from '../src/core/indices.ts';
 import { compareBuilds, futureProofing } from '../src/core/queries.ts';
@@ -253,5 +253,45 @@ describe('search disambiguation', () => {
     expect(three).toBeDefined();
     expect(six).toBeDefined();
     expect(three!.id).not.toBe(six!.id);
+  });
+});
+
+describe('part browsing', () => {
+  it('reaches every vendor without typing anything', () => {
+    // Regression: the browse list used to return the first 40 records in
+    // catalogue insertion order. Because the reconciler merges the AMD agent's
+    // output first, Intel and Nvidia parts were unreachable by scrolling — you
+    // had to already know a part name to find one.
+    for (const kind of ['gpu', 'cpu'] as const) {
+      const groups = browseParts(kind, data);
+      const vendors = new Set(groups.map((g) => g.vendor));
+      expect(vendors.has('nvidia') || kind === 'cpu').toBe(true);
+      expect(vendors.has('amd')).toBe(true);
+      expect(vendors.has('intel')).toBe(true);
+    }
+  });
+
+  it('exposes the whole catalogue, not a truncated head', () => {
+    const gpuTotal = browseParts('gpu', data).reduce((n, g) => n + g.hits.length, 0);
+    const cpuTotal = browseParts('cpu', data).reduce((n, g) => n + g.hits.length, 0);
+    expect(gpuTotal).toBe(data.gpus.size);
+    expect(cpuTotal).toBe(data.cpus.size);
+  });
+
+  it('orders each vendor strongest-first so the list doubles as a ladder', () => {
+    const nvidia = browseParts('gpu', data).find((g) => g.vendor === 'nvidia')!;
+    const ids = nvidia.hits.map((h) => h.id);
+    const i4090 = ids.indexOf('nvidia-geforce-rtx-4090');
+    const i3060 = ids.indexOf('nvidia-geforce-rtx-3060-12gb');
+    const i1060 = ids.indexOf('nvidia-geforce-gtx-1060-6gb');
+    expect(i4090).toBeGreaterThanOrEqual(0);
+    expect(i4090).toBeLessThan(i3060);
+    expect(i3060).toBeLessThan(i1060);
+  });
+
+  it('carries a disambiguator on every browse entry, as search hits do', () => {
+    for (const g of browseParts('cpu', data)) {
+      for (const h of g.hits.slice(0, 20)) expect(h.disambiguator.length).toBeGreaterThan(3);
+    }
   });
 });
