@@ -18,7 +18,8 @@
     "calibrate": "tsx scripts/calibrate.ts",
     "validate": "tsx scripts/validate.ts",
     "coverage": "tsx scripts/coverage.ts",
-    "gate": "npm run import:manual && npm run validate"
+    "gate": "npm run import:manual && npm run validate",
+    "audit": "tsx scripts/audit.ts"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -30,6 +31,7 @@
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
+    "playwright": "^1.49.1",
     "tsx": "^4.19.1",
     "typescript": "^5.5.4",
     "vite": "^5.4.6",

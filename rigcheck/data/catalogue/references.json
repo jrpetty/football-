@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-18T17:40:17.047Z",
+  "generatedAt": "2026-08-18T18:03:04.123Z",
   "note": "Seed references fitted by scripts/calibrate.ts (scale-only, shrunk) against the full fixture set. Provenance unchanged: model-knowledge until measured data replaces it. The generalisation estimate for this procedure is validate.ts cross-validation, not the in-sample figures.",
   "provenance": {
     "model-knowledge": {

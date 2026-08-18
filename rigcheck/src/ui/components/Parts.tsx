@@ -118,6 +118,14 @@ export function FpsFigure({
   onExplain?: () => void;
   showBand?: boolean;
 }) {
+  if (estimate.status === 'NO_ESTIMATE') {
+    return (
+      <button className="fps" onClick={onExplain} title="Catalogue record incomplete — click for detail">
+        <span className="fps-band" style={{ fontSize: 11 }}>no estimate</span>
+        <span className="fps-band">record incomplete</span>
+      </button>
+    );
+  }
   if (estimate.status === 'WILL_NOT_RUN') {
     return (
       <button className="fps" onClick={onExplain} title="Fails a hard capability gate — click for detail">
@@ -178,6 +186,14 @@ export function ExplainPanel({ estimate, title }: { estimate: FpsEstimate; title
             A capability failure is not a low frame rate. The engine short-circuits before estimating,
             because the honest answer is that the title will not launch.
           </div>
+        </div>
+      )}
+
+      {estimate.status === 'NO_ESTIMATE' && (
+        <div style={{ padding: 10 }}>
+          {estimate.terms.map((t, i) => (
+            <div className="note warn" key={i}>{t.explain}</div>
+          ))}
         </div>
       )}
 

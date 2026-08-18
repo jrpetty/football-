@@ -38,6 +38,12 @@ jobs:
         # rejections are reported rather than silently dropped.
         run: npm run import:manual
 
+      - name: Data audit
+        # Cross-record consistency, catalogue/fixture coherence, and a full
+        # engine sweep proving every part yields a finite estimate or an honest
+        # refusal. Hard-fails on contradictions.
+        run: npm run audit
+
       - name: Validation gate
         # Fails the build when holdout error, rank correlation or delta sign
         # accuracy miss their thresholds. Drops to advisory (exit 0, loud

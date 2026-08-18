@@ -383,7 +383,14 @@ export interface ModelTerm {
 }
 
 export interface FpsEstimate {
-  status: 'ok' | 'WILL_NOT_RUN';
+  /**
+   * 'ok' — a real estimate. 'WILL_NOT_RUN' — a hard capability gate fired; the
+   * title will not launch. 'NO_ESTIMATE' — the catalogue lacks the fields to
+   * derive an index for a part (e.g. clocks pending harvest); the title runs,
+   * but showing a number would be a guess dressed as one. Never conflate the
+   * last two: one is a fact about the build, the other about our data.
+   */
+  status: 'ok' | 'WILL_NOT_RUN' | 'NO_ESTIMATE';
   gateFailures: GateFailure[];
   /** Undefined when status is WILL_NOT_RUN. */
   avgFps?: number;

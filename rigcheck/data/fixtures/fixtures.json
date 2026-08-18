@@ -1112,8 +1112,8 @@
       "ram": {
         "totalGB": 16,
         "channels": 2,
-        "speedMTs": 3200,
-        "type": "DDR4"
+        "speedMTs": 1600,
+        "type": "DDR3"
       },
       "storage": "nvme-gen3",
       "avgFps": 115,
@@ -1139,8 +1139,8 @@
       "ram": {
         "totalGB": 16,
         "channels": 2,
-        "speedMTs": 3200,
-        "type": "DDR4"
+        "speedMTs": 1600,
+        "type": "DDR3"
       },
       "storage": "nvme-gen3",
       "avgFps": 42,
@@ -1166,8 +1166,8 @@
       "ram": {
         "totalGB": 16,
         "channels": 2,
-        "speedMTs": 3200,
-        "type": "DDR4"
+        "speedMTs": 1600,
+        "type": "DDR3"
       },
       "storage": "nvme-gen3",
       "avgFps": 35,
@@ -1193,8 +1193,8 @@
       "ram": {
         "totalGB": 16,
         "channels": 2,
-        "speedMTs": 3200,
-        "type": "DDR4"
+        "speedMTs": 1600,
+        "type": "DDR3"
       },
       "storage": "nvme-gen3",
       "avgFps": 118,
@@ -1220,8 +1220,8 @@
       "ram": {
         "totalGB": 16,
         "channels": 2,
-        "speedMTs": 3200,
-        "type": "DDR4"
+        "speedMTs": 1600,
+        "type": "DDR3"
       },
       "storage": "nvme-gen3",
       "avgFps": 72,
@@ -1247,8 +1247,8 @@
       "ram": {
         "totalGB": 16,
         "channels": 2,
-        "speedMTs": 3200,
-        "type": "DDR4"
+        "speedMTs": 1600,
+        "type": "DDR3"
       },
       "storage": "nvme-gen3",
       "avgFps": 48,
@@ -1274,8 +1274,8 @@
       "ram": {
         "totalGB": 16,
         "channels": 2,
-        "speedMTs": 3200,
-        "type": "DDR4"
+        "speedMTs": 1866,
+        "type": "DDR3"
       },
       "storage": "nvme-gen3",
       "avgFps": 135,
@@ -1301,8 +1301,8 @@
       "ram": {
         "totalGB": 16,
         "channels": 2,
-        "speedMTs": 3200,
-        "type": "DDR4"
+        "speedMTs": 1866,
+        "type": "DDR3"
       },
       "storage": "nvme-gen3",
       "avgFps": 72,
@@ -1328,8 +1328,8 @@
       "ram": {
         "totalGB": 16,
         "channels": 2,
-        "speedMTs": 3200,
-        "type": "DDR4"
+        "speedMTs": 1866,
+        "type": "DDR3"
       },
       "storage": "nvme-gen3",
       "avgFps": 52,
@@ -1355,8 +1355,8 @@
       "ram": {
         "totalGB": 16,
         "channels": 2,
-        "speedMTs": 3200,
-        "type": "DDR4"
+        "speedMTs": 1866,
+        "type": "DDR3"
       },
       "storage": "nvme-gen3",
       "avgFps": 88,
@@ -2653,8 +2653,8 @@
       "ram": {
         "totalGB": 8,
         "channels": 1,
-        "speedMTs": 2400,
-        "type": "DDR4"
+        "speedMTs": 6000,
+        "type": "DDR5"
       },
       "storage": "nvme-gen3",
       "avgFps": 78,
@@ -3448,8 +3448,8 @@
       "ram": {
         "totalGB": 16,
         "channels": 2,
-        "speedMTs": 3200,
-        "type": "DDR4"
+        "speedMTs": 1600,
+        "type": "DDR3"
       },
       "storage": "nvme-gen3",
       "avgFps": 180,
@@ -3882,8 +3882,8 @@
       "ram": {
         "totalGB": 16,
         "channels": 2,
-        "speedMTs": 3200,
-        "type": "DDR4"
+        "speedMTs": 1600,
+        "type": "DDR3"
       },
       "storage": "nvme-gen3",
       "avgFps": 122,

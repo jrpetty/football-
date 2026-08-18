@@ -180,6 +180,29 @@ export function estimate(
   for (const s of gpuIdx.steps) {
     terms.push({ label: `gpu: ${s.label}`, value: s.value, confidence: 'spec-derived', sources: gpu._prov?.[''] ?? [], explain: s.explain });
   }
+  // A zero index means the derivation had nothing to work with (nulled clocks
+  // or shader counts awaiting harvest). Multiplying through it would emit
+  // "0 fps" with status ok — a guess dressed as a measurement. Refuse instead,
+  // and say which part and which fields.
+  if (gpuIdx.index.raster <= 0 || cpuIdx.index.throughput <= 0) {
+    const part = gpuIdx.index.raster <= 0 ? gpu : cpu;
+    const missing = gpuIdx.index.raster <= 0 ? gpuIdx.missingFields : cpuIdx.missingFields;
+    return {
+      status: 'NO_ESTIMATE',
+      gateFailures: [],
+      confidence: 'gate-blocked',
+      terms: [
+        {
+          label: 'insufficient specification data',
+          value: part.fullName,
+          confidence: 'gate-blocked',
+          sources: [],
+          explain: `The catalogue record for ${part.fullName} is missing ${missing.join(', ') || 'the fields needed to derive an index'}. The title runs on this hardware; the model refuses to invent a number for it. Harvesting specification sources fills this.`,
+        },
+      ],
+    };
+  }
+
   extraUncertainty += gpuIdx.missingFields.length * UNCERTAINTY.perMissingField;
   extraUncertainty += cpuIdx.missingFields.length * UNCERTAINTY.perMissingField;
   if (gpuIdx.unknownArchitecture || cpuIdx.unknownArchitecture) extraUncertainty += UNCERTAINTY.unknownArchitecture;
