@@ -106,11 +106,17 @@ export function runGates({ gpu, cpu, game, ram, resolution }: GateInput): GateFa
     });
   }
 
-  if (req.minSystemRamGB != null && ram.totalGB < req.minSystemRamGB) {
+  // Published system-RAM minimums are SOFT: a build under the figure boots and
+  // runs with paging stalls (a real 8GB machine runs Cyberpunk 2077, published
+  // minimum 12GB, at 44fps). The RAM capacity penalty models the slowdown, so a
+  // hard WILL_NOT_RUN here both double-counts and returns the worst possible
+  // wrong answer. Hard-block only below HALF the published minimum, where the
+  // game genuinely cannot keep its working set resident.
+  if (req.minSystemRamGB != null && ram.totalGB < req.minSystemRamGB * 0.5) {
     fails.push({
       code: 'SYSTEM_RAM_FLOOR',
-      detail: `${game.name} requires ${req.minSystemRamGB}GB system RAM; build has ${ram.totalGB}GB.`,
-      required: `${req.minSystemRamGB}GB`,
+      detail: `${game.name} publishes a ${req.minSystemRamGB}GB minimum; ${ram.totalGB}GB is below half of it — the working set cannot stay resident.`,
+      required: `${req.minSystemRamGB}GB published minimum`,
       actual: `${ram.totalGB}GB`,
     });
   }

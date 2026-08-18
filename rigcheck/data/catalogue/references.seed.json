@@ -1,6 +1,5 @@
 {
-  "generatedAt": "2026-08-18T17:40:17.047Z",
-  "note": "Seed references fitted by scripts/calibrate.ts (scale-only, shrunk) against the full fixture set. Provenance unchanged: model-knowledge until measured data replaces it. The generalisation estimate for this procedure is validate.ts cross-validation, not the in-sample figures.",
+  "generatedAt": "2026-08-18T17:40:16.244Z",
   "provenance": {
     "model-knowledge": {
       "id": "model-knowledge",
@@ -16,11 +15,11 @@
     {
       "gameId": "counter-strike-2",
       "gpuBound": {
-        "1080p": 364.63,
-        "1440p": 232.45,
-        "2160p": 145.85
+        "1080p": 400,
+        "1440p": 255,
+        "2160p": 160
       },
-      "cpuBound": 311,
+      "cpuBound": 265,
       "gpuScalingExponent": 0.65,
       "confidence": "spec-derived",
       "_prov": {
@@ -32,11 +31,11 @@
     {
       "gameId": "valorant",
       "gpuBound": {
-        "1080p": 732.66,
-        "1440p": 508.13,
-        "2160p": 307.24
+        "1080p": 620,
+        "1440p": 430,
+        "2160p": 260
       },
-      "cpuBound": 342.7,
+      "cpuBound": 290,
       "gpuScalingExponent": 0.65,
       "confidence": "spec-derived",
       "_prov": {
@@ -64,9 +63,9 @@
     {
       "gameId": "league-of-legends",
       "gpuBound": {
-        "1080p": 519.62,
-        "1440p": 381.05,
-        "2160p": 238.16
+        "1080p": 600,
+        "1440p": 440,
+        "2160p": 275
       },
       "cpuBound": 330,
       "gpuScalingExponent": 0.65,
@@ -112,11 +111,11 @@
     {
       "gameId": "apex-legends",
       "gpuBound": {
-        "1080p": 185.97,
-        "1440p": 127.52,
-        "2160p": 72.26
+        "1080p": 175,
+        "1440p": 120,
+        "2160p": 68
       },
-      "cpuBound": 177.8,
+      "cpuBound": 190,
       "gpuScalingExponent": 0.75,
       "confidence": "spec-derived",
       "_prov": {
@@ -128,9 +127,9 @@
     {
       "gameId": "fortnite",
       "gpuBound": {
-        "1080p": 124.91,
-        "1440p": 87.43,
-        "2160p": 48.3
+        "1080p": 150,
+        "1440p": 105,
+        "2160p": 58
       },
       "cpuBound": 165,
       "gpuScalingExponent": 0.85,
@@ -160,9 +159,9 @@
     {
       "gameId": "rocket-league",
       "gpuBound": {
-        "1080p": 433.01,
-        "1440p": 311.77,
-        "2160p": 186.2
+        "1080p": 500,
+        "1440p": 360,
+        "2160p": 215
       },
       "cpuBound": 300,
       "gpuScalingExponent": 0.65,
@@ -176,11 +175,11 @@
     {
       "gameId": "microsoft-flight-simulator-2024",
       "gpuBound": {
-        "1080p": 55.95,
-        "1440p": 40.28,
-        "2160p": 21.26
+        "1080p": 50,
+        "1440p": 36,
+        "2160p": 19
       },
-      "cpuBound": 43.9,
+      "cpuBound": 42,
       "gpuScalingExponent": 0.92,
       "confidence": "spec-derived",
       "_prov": {
@@ -240,11 +239,11 @@
     {
       "gameId": "total-war-warhammer-iii",
       "gpuBound": {
-        "1080p": 83.38,
-        "1440p": 59.56,
-        "2160p": 32.16
+        "1080p": 70,
+        "1440p": 50,
+        "2160p": 27
       },
-      "cpuBound": 71.5,
+      "cpuBound": 60,
       "gpuScalingExponent": 0.97,
       "confidence": "spec-derived",
       "_prov": {
@@ -336,9 +335,9 @@
     {
       "gameId": "red-dead-redemption-2",
       "gpuBound": {
-        "1080p": 76.65,
-        "1440p": 53.23,
-        "2160p": 27.68
+        "1080p": 72,
+        "1440p": 50,
+        "2160p": 26
       },
       "cpuBound": 100,
       "gpuScalingExponent": 1,
@@ -432,9 +431,9 @@
     {
       "gameId": "forza-horizon-5",
       "gpuBound": {
-        "1080p": 123.35,
-        "1440p": 88.82,
-        "2160p": 49.34
+        "1080p": 100,
+        "1440p": 72,
+        "2160p": 40
       },
       "cpuBound": 115,
       "gpuScalingExponent": 0.98,
@@ -448,9 +447,9 @@
     {
       "gameId": "shadow-of-the-tomb-raider",
       "gpuBound": {
-        "1080p": 111.13,
-        "1440p": 77.31,
-        "2160p": 40.59
+        "1080p": 115,
+        "1440p": 80,
+        "2160p": 42
       },
       "cpuBound": 135,
       "gpuScalingExponent": 1,
@@ -528,11 +527,11 @@
     {
       "gameId": "cyberpunk-2077",
       "gpuBound": {
-        "1080p": 40.07,
-        "1440p": 26.72,
-        "2160p": 13.36
+        "1080p": 42,
+        "1440p": 28,
+        "2160p": 14
       },
-      "cpuBound": 82.7,
+      "cpuBound": 70,
       "gpuScalingExponent": 1.04,
       "confidence": "spec-derived",
       "_prov": {
@@ -624,9 +623,9 @@
     {
       "gameId": "black-myth-wukong",
       "gpuBound": {
-        "1080p": 30.9,
-        "1440p": 20.28,
-        "2160p": 10.62
+        "1080p": 32,
+        "1440p": 21,
+        "2160p": 11
       },
       "cpuBound": 85,
       "gpuScalingExponent": 1.05,
@@ -640,9 +639,9 @@
     {
       "gameId": "alan-wake-2",
       "gpuBound": {
-        "1080p": 27.17,
-        "1440p": 18.11,
-        "2160p": 9.06
+        "1080p": 30,
+        "1440p": 20,
+        "2160p": 10
       },
       "cpuBound": 85,
       "gpuScalingExponent": 1.05,
@@ -704,9 +703,9 @@
     {
       "gameId": "hellblade-ii",
       "gpuBound": {
-        "1080p": 38.62,
-        "1440p": 27.03,
-        "2160p": 13.52
+        "1080p": 40,
+        "1440p": 28,
+        "2160p": 14
       },
       "cpuBound": 110,
       "gpuScalingExponent": 1.07,
@@ -736,11 +735,11 @@
     {
       "gameId": "the-last-of-us-part-i",
       "gpuBound": {
-        "1080p": 62.14,
-        "1440p": 44.39,
-        "2160p": 23.08
+        "1080p": 70,
+        "1440p": 50,
+        "2160p": 26
       },
-      "cpuBound": 58.9,
+      "cpuBound": 70,
       "gpuScalingExponent": 1,
       "confidence": "spec-derived",
       "_prov": {
@@ -752,9 +751,9 @@
     {
       "gameId": "hogwarts-legacy",
       "gpuBound": {
-        "1080p": 66.93,
-        "1440p": 48.4,
-        "2160p": 24.71
+        "1080p": 65,
+        "1440p": 47,
+        "2160p": 24
       },
       "cpuBound": 60,
       "gpuScalingExponent": 1,

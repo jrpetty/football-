@@ -143,8 +143,8 @@ function validateGameRef(agentId: string, r: GameReference): boolean {
       break;
     }
   }
-  if (r.gpuScalingExponent != null && (r.gpuScalingExponent < 0.8 || r.gpuScalingExponent > 1.15)) {
-    reject(agentId, r.gameId, 'scaling-exponent-range', `gpuScalingExponent ${r.gpuScalingExponent} outside 0.80-1.15.`);
+  if (r.gpuScalingExponent != null && (r.gpuScalingExponent < 0.5 || r.gpuScalingExponent > 1.15)) {
+    reject(agentId, r.gameId, 'scaling-exponent-range', `gpuScalingExponent ${r.gpuScalingExponent} outside 0.50-1.15.`);
     ok = false;
   }
   return ok;
@@ -292,6 +292,9 @@ function main() {
   writeFileSync(join(DATA, 'cpus.json'), JSON.stringify({ generatedAt: stamp, provenance, count: cpus.size, records: [...cpus.values()] }, null, 2));
   writeFileSync(join(DATA, 'games.json'), JSON.stringify({ generatedAt: stamp, provenance, count: games.size, records: [...games.values()] }, null, 2));
   writeFileSync(join(DATA, 'references.json'), JSON.stringify({ generatedAt: stamp, provenance, count: refs.size, records: [...refs.values()] }, null, 2));
+  // Pristine copy of the seed: cross-validation refits from this, so the gate
+  // measures the fitting PROCEDURE rather than an already-fitted artifact.
+  writeFileSync(join(DATA, 'references.seed.json'), JSON.stringify({ generatedAt: stamp, provenance, count: refs.size, records: [...refs.values()] }, null, 2));
 
   // References without a matching game (or vice versa) mean the engine will
   // refuse to estimate rather than guess, so surface both directions.

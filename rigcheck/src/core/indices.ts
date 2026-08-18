@@ -5,6 +5,7 @@
  * arbitrary global scale only; it is not a modelling choice.
  */
 import {
+  IGPU_MODEL,
   CPU_IPC,
   CPU_MODEL,
   DEFAULT_CPU_IPC,
@@ -54,7 +55,12 @@ export function effectiveBandwidth(gpu: GpuRecord, systemRam?: RamConfig): numbe
     // architecture name with cards that carry Infinity Cache but has nothing
     // comparable of its own. Applying the discrete multiplier over-predicted
     // integrated parts by roughly 2x in validation.
-    return (systemRam.channels * systemRam.speedMTs * 8) / 1000;
+    //
+    // The bandwidthShare derate is contention: the CPU consumes a share of the
+    // same memory controller exactly when frame rates — and therefore draw-call
+    // traffic — are highest. Without it, iGPU esports fixtures overpredicted
+    // by 1.5-2x while iGPU AAA fixtures were close.
+    return ((systemRam.channels * systemRam.speedMTs * 8) / 1000) * IGPU_MODEL.bandwidthShare;
   }
   if (gpu.memBandwidthGBs == null) return null;
   const mult = GPU_MODEL.cacheBandwidthMultiplier[gpu.architecture] ?? 1.0;
@@ -98,13 +104,23 @@ export function deriveGpuIndex(gpu: GpuRecord, reference: GpuRecord, systemRam?:
     };
   }
 
-  const effCompute = tflops * eff;
+  // Package-TDP sharing: an iGPU cannot hold its boost clock under combined
+  // CPU+GPU load, so its usable compute is derated below nameplate.
+  const sustain = gpu.formFactor === 'igpu' ? IGPU_MODEL.sustainedClockFactor : 1;
+  const effCompute = tflops * eff * sustain;
   const refEffCompute = refTflops * refEff;
   steps.push({
     label: 'nominal FP32',
     value: Number(tflops.toFixed(2)),
     explain: `${gpu.shaders ?? '?'} shaders x ${gpu.boostClockMHz ?? '?'} MHz x 2 / 1e6`,
   });
+  if (sustain !== 1) {
+    steps.push({
+      label: 'sustained clock derate',
+      value: sustain,
+      explain: 'Integrated graphics share the package power budget with the CPU; boost clocks do not sustain under combined load.',
+    });
+  }
   steps.push({
     label: 'architecture efficiency',
     value: eff,

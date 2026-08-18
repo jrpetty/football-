@@ -1,86 +1,68 @@
 {
-  "generatedAt": "2026-08-18T16:42:06.079Z",
-  "fixtureCount": 143,
+  "generatedAt": "2026-08-18T17:36:56.470Z",
+  "fixtureCount": 161,
+  "trainCount": 127,
+  "holdoutCount": 34,
   "fixtureProvenance": "predominantly model-knowledge (recalled)",
-  "objective": 0.2833123398217918,
+  "trainObjective": 0.20915220462836553,
   "metricsBefore": {
-    "n": 135,
-    "medianAPE": 0.17836811847567713,
-    "meanAPE": 0.20804408765154925,
-    "p90APE": 0.41936430123150004,
-    "spearman": 0.9224730287845917,
-    "signAccuracy": 1,
-    "signPairs": 5,
-    "blocked": 8,
-    "withinBand": 0.5555555555555556
+    "n": 127,
+    "medianAPE": 0.13877536222991793,
+    "meanAPE": 0.17581380173802535,
+    "p90APE": 0.3421955930058598,
+    "medianAPEUnweighted": 0.14263965500938314,
+    "p90APEUnweighted": 0.34425213690940915,
+    "spearman": 0.9354616296904545,
+    "signAccuracy": 0.875,
+    "signPairs": 8,
+    "blocked": 0,
+    "withinBand": 0.6614173228346457
   },
   "metricsAfter": {
-    "n": 135,
-    "medianAPE": 0.12017202208751776,
-    "meanAPE": 0.17548983734524964,
-    "p90APE": 0.36911826925091695,
-    "spearman": 0.9321021530070938,
-    "signAccuracy": 1,
-    "signPairs": 5,
-    "blocked": 8,
-    "withinBand": 0.6148148148148148
+    "n": 127,
+    "medianAPE": 0.09008285765840451,
+    "meanAPE": 0.1333018474217904,
+    "p90APE": 0.28308010005749384,
+    "medianAPEUnweighted": 0.09319244885097522,
+    "p90APEUnweighted": 0.2833090383628729,
+    "spearman": 0.9625279095841548,
+    "signAccuracy": 0.875,
+    "signPairs": 8,
+    "blocked": 0,
+    "withinBand": 0.7559055118110236
+  },
+  "holdoutAfter": {
+    "n": 32,
+    "medianAPE": 0.20081182003688713,
+    "meanAPE": 0.1866489377383102,
+    "p90APE": 0.37320352982781024,
+    "medianAPEUnweighted": 0.19139376945209952,
+    "p90APEUnweighted": 0.37320352982781024,
+    "spearman": 0.9195491334237771,
+    "signAccuracy": null,
+    "signPairs": 0,
+    "blocked": 2,
+    "withinBand": 0.5
   },
   "constants": {
-    "GPU_MODEL": {
-      "computeWeight": 0.55,
-      "sublinearExponent": 1
-    },
-    "CPU_MODEL": {
-      "threadExponent": 0.25
-    },
-    "COMBINE": {
-      "p": 4,
-      "pByResolution": {
-        "1080p": 3.64,
-        "1440p": 4,
-        "3440x1440": 4.12,
-        "2160p": 4.48
-      }
+    "GPU_ARCH_EFFICIENCY": {
+      "Ampere": 1.075,
+      "RDNA 2": 1.18,
+      "Ada Lovelace": 1.02,
+      "RDNA 3": 1.45,
+      "Blackwell": 1.05,
+      "Pascal": 1.075,
+      "Turing": 1.5
     },
     "RT_MODEL": {
-      "onVsOff": 0.7
+      "onVsOff": 0.6
     },
     "CPU_WEIGHTS": {
-      "esports": {
-        "throughput": 1,
-        "cacheEndowment": 0.22,
-        "latencyScore": 0.35,
-        "threadCapacity": 0.1
-      },
       "sim-cpu": {
         "throughput": 0.9,
-        "cacheEndowment": 0.85,
+        "cacheEndowment": 0.42,
         "latencyScore": 0.55,
         "threadCapacity": 0.15
-      },
-      "aaa-raster": {
-        "throughput": 0.85,
-        "cacheEndowment": 0.3,
-        "latencyScore": 0.3,
-        "threadCapacity": 0.3
-      },
-      "aaa-rt": {
-        "throughput": 0.9,
-        "cacheEndowment": 0.35,
-        "latencyScore": 0.3,
-        "threadCapacity": 0.35
-      },
-      "ue5": {
-        "throughput": 0.8,
-        "cacheEndowment": 0.25,
-        "latencyScore": 0.25,
-        "threadCapacity": 0.4
-      },
-      "vram-heavy": {
-        "throughput": 0.8,
-        "cacheEndowment": 0.3,
-        "latencyScore": 0.35,
-        "threadCapacity": 0.3
       }
     },
     "VRAM_MODEL": {
@@ -92,22 +74,22 @@
         },
         {
           "deficitRatio": 0.08,
-          "avgMultiplier": 0.9,
+          "avgMultiplier": 0.92,
           "lowMultiplier": 0.7
         },
         {
           "deficitRatio": 0.2,
-          "avgMultiplier": 0.5,
+          "avgMultiplier": 0.72,
           "lowMultiplier": 0.35
         },
         {
           "deficitRatio": 0.35,
-          "avgMultiplier": 0.4,
+          "avgMultiplier": 0.58,
           "lowMultiplier": 0.2
         },
         {
           "deficitRatio": 0.5,
-          "avgMultiplier": 0.25,
+          "avgMultiplier": 0.48,
           "lowMultiplier": 0.12
         }
       ]

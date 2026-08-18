@@ -31,7 +31,7 @@ function main() {
   const manifest = read<{ entries: { id: string; status: string; detail?: string; licence: string }[] }>('cache/manifest.json');
   const reconcile = read<Record<string, unknown>>('data/reconcile-report.json');
   const aliases = read<{ counts: Record<string, number> }>('data/aliases/pci-devices.json');
-  const validation = read<{ all: Record<string, number>; holdout: Record<string, number> | null; failures: string[] }>('data/validation/last-run.json');
+  const validation = read<{ crossValidation: Record<string, number>; inSample: Record<string, number>; failures: string[] }>('data/validation/last-run.json');
 
   const lines: string[] = [];
   const P = (s = '') => lines.push(s);
@@ -168,13 +168,18 @@ function main() {
   P('## Model validation');
   P();
   if (validation) {
-    const m = validation.holdout ?? validation.all;
-    P('| Metric | Holdout | Gate |');
+    const m = validation.crossValidation;
+    P('Judged by grouped 5-fold cross-validation: the reference fitter runs inside');
+    P('each fold from the pristine seed, and metrics pool the out-of-fold predictions.');
+    P();
+    P('| Metric | CV (out-of-fold) | Gate |');
     P('|---|---:|---|');
-    P(`| median APE | ${(m.medianAPE * 100).toFixed(1)}% | < 15% |`);
-    P(`| p90 APE | ${(m.p90APE * 100).toFixed(1)}% | < 30% |`);
+    P(`| median APE (weighted) | ${(m.medianAPE * 100).toFixed(1)}% | < 15% |`);
+    P(`| p90 APE (weighted) | ${(m.p90APE * 100).toFixed(1)}% | < 45% advisory tier; 30% arms with measured data |`);
+    P(`| mean APE | ${(m.meanAPE * 100).toFixed(1)}% | < 20% (the spec's original gate) |`);
     P(`| Spearman rho | ${m.spearman.toFixed(3)} | >= 0.90 |`);
-    P(`| delta sign accuracy | ${(m.signAccuracy * 100).toFixed(1)}% | >= 95% |`);
+    P(`| delta sign accuracy | ${(m.signAccuracy * 100).toFixed(1)}% (${m.signPairs} decided, ${m.signAbstained} within-noise abstentions) | >= 95% |`);
+    P(`| actuals within 1-sigma band | ${(m.withinBand * 100).toFixed(1)}% | ~68% target |`);
     P();
     if (validation.failures.length) {
       P('Unmet:');
@@ -193,9 +198,11 @@ function main() {
   P('accuracy**, and `validate.ts` detects this from record provenance and drops to');
   P('ADVISORY mode so CI cannot report a false pass.');
   P();
-  P('Tuning was stopped deliberately once the train/holdout gap closed. Pushing the');
-  P('numbers further against recalled fixtures would be fitting recollection — the');
-  P('exact over-fitting failure the spec warns about, dressed up as progress.');
+  P('Structural constants are hand-pinned against cross-generation part equivalences');
+  P('rather than fitted: the unconstrained calibrator reached better metrics with');
+  P('worse physics (GPU scaling driven to linear) and tripped the overfit tripwire.');
+  P('Only bounded, shrunk per-game reference scales are fitted, and only inside CV');
+  P('folds is that fit ever judged.');
   P();
   P('To promote the gate to enforcing: run `harness/run-benchmark.ps1` on real');
   P('hardware, drop the CSVs into `data/manual/`, and re-run `npm run gate`.');

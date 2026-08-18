@@ -1,41 +1,32 @@
 {
-  "generatedAt": "2026-08-18T16:45:52.577Z",
-  "all": {
-    "n": 135,
-    "medianAPE": 0.17836811847567713,
-    "meanAPE": 0.20804408765154925,
-    "p90APE": 0.41936430123150004,
-    "spearman": 0.9224730287845917,
+  "generatedAt": "2026-08-18T17:41:19.354Z",
+  "crossValidation": {
+    "n": 159,
+    "medianAPE": 0.12896414095099473,
+    "meanAPE": 0.16904718473391694,
+    "p90APE": 0.34864291661090485,
+    "medianAPEUnweighted": 0.1387499754421997,
+    "p90APEUnweighted": 0.35593447661539823,
+    "spearman": 0.934113250945947,
     "signAccuracy": 1,
     "signPairs": 5,
-    "blocked": 8,
-    "withinBand": 0.5555555555555556
+    "signAbstained": 5,
+    "blocked": 2,
+    "withinBand": 0.6855345911949685
   },
-  "train": {
-    "n": 125,
-    "medianAPE": 0.17217300522025525,
-    "meanAPE": 0.2056358488260421,
-    "p90APE": 0.41936430123150004,
-    "spearman": 0.9251924058431574,
+  "inSample": {
+    "n": 159,
+    "medianAPE": 0.10322987995532173,
+    "meanAPE": 0.15410870127301501,
+    "p90APE": 0.30767066530686016,
+    "medianAPEUnweighted": 0.10862481428416171,
+    "p90APEUnweighted": 0.35593447661539823,
+    "spearman": 0.9410442294076676,
     "signAccuracy": 1,
     "signPairs": 5,
-    "blocked": 8,
-    "withinBand": 0.56
+    "signAbstained": 5,
+    "blocked": 2,
+    "withinBand": 0.7169811320754716
   },
-  "holdout": {
-    "n": 10,
-    "medianAPE": 0.1935285695222606,
-    "meanAPE": 0.2381470729703889,
-    "p90APE": 0.4455512811874982,
-    "spearman": 0.9118583155200969,
-    "signAccuracy": null,
-    "signPairs": 0,
-    "blocked": 0,
-    "withinBand": 0.5
-  },
-  "failures": [
-    "only 143 fixtures; 150 needed for the metrics to be statistically meaningful",
-    "median APE 19.4% exceeds 15.0%",
-    "p90 APE 44.6% exceeds 30.0%"
-  ]
+  "failures": []
 }

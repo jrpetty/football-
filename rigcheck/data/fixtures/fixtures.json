@@ -1,18 +1,18 @@
 {
   "generatedAt": "2026-08-18T16:39:44.047Z",
   "provenanceNote": "RECALLED FIGURES, NOT MEASUREMENTS. Every benchmark source is blocked by this environment egress policy, so these are recollections. validate.ts detects provenance \"model-knowledge\" and runs the gate in ADVISORY mode: it measures agreement with recollection, not accuracy. Replace via data/manual/ + harness/ to promote the gate to enforcing.",
-  "count": 143,
+  "count": 161,
   "strata": {
-    "balanced-modern": 48,
-    "old-cpu-new-gpu": 18,
+    "balanced-modern": 61,
+    "old-cpu-new-gpu": 19,
     "new-cpu-old-gpu": 15,
-    "vram-starved": 12,
+    "vram-starved": 13,
     "igpu-only": 8,
     "single-channel": 6,
     "single-channel-pair": 2,
     "x3d-pair": 12,
-    "esports-high-fps": 14,
-    "upscaling": 4,
+    "esports-high-fps": 16,
+    "upscaling": 5,
     "rt-on": 4
   },
   "records": [
@@ -856,7 +856,7 @@
     {
       "id": "fx-032",
       "cpuId": "intel-core-i7-12700k",
-      "gpuId": "nvidia-geforce-rtx-3080",
+      "gpuId": "nvidia-geforce-rtx-3080-10gb",
       "gameId": "cyberpunk-2077",
       "resolution": "1440p",
       "preset": "high",
@@ -883,7 +883,7 @@
     {
       "id": "fx-033",
       "cpuId": "intel-core-i7-12700k",
-      "gpuId": "nvidia-geforce-rtx-3080",
+      "gpuId": "nvidia-geforce-rtx-3080-10gb",
       "gameId": "red-dead-redemption-2",
       "resolution": "1440p",
       "preset": "high",
@@ -2503,7 +2503,7 @@
     {
       "id": "fx-093",
       "cpuId": "intel-core-i5-13400",
-      "gpuId": "intel-uhd-730-rpl",
+      "gpuId": "intel-uhd-730-adl",
       "gameId": "league-of-legends",
       "resolution": "1080p",
       "preset": "low",
@@ -2974,7 +2974,7 @@
     {
       "id": "fx-110",
       "cpuId": "amd-ryzen-7-5800x3d",
-      "gpuId": "nvidia-geforce-rtx-3080",
+      "gpuId": "nvidia-geforce-rtx-3080-10gb",
       "gameId": "total-war-warhammer-iii",
       "resolution": "1080p",
       "preset": "high",
@@ -3002,7 +3002,7 @@
     {
       "id": "fx-111",
       "cpuId": "amd-ryzen-7-5800x",
-      "gpuId": "nvidia-geforce-rtx-3080",
+      "gpuId": "nvidia-geforce-rtx-3080-10gb",
       "gameId": "total-war-warhammer-iii",
       "resolution": "1080p",
       "preset": "high",
@@ -3030,7 +3030,7 @@
     {
       "id": "fx-112",
       "cpuId": "amd-ryzen-7-5800x3d",
-      "gpuId": "nvidia-geforce-rtx-3080",
+      "gpuId": "nvidia-geforce-rtx-3080-10gb",
       "gameId": "counter-strike-2",
       "resolution": "1080p",
       "preset": "high",
@@ -3892,6 +3892,499 @@
       "stratum": "upscaling",
       "sourceNote": "Upscaling cannot lift a CPU-walled build",
       "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-144",
+      "cpuId": "amd-ryzen-7-5800x",
+      "gpuId": "nvidia-geforce-rtx-3080-10gb",
+      "gameId": "red-dead-redemption-2",
+      "resolution": "1440p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 3600,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 98,
+      "low1Pct": 76,
+      "recallConfidence": "high",
+      "pairId": "nv-amd-rdr2",
+      "stratum": "balanced-modern",
+      "sourceNote": "Recalled from widely-reported review configurations",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-145",
+      "cpuId": "amd-ryzen-7-5800x",
+      "gpuId": "amd-radeon-rx-6800-xt",
+      "gameId": "red-dead-redemption-2",
+      "resolution": "1440p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 3600,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 103,
+      "low1Pct": 80,
+      "recallConfidence": "medium",
+      "pairId": "nv-amd-rdr2",
+      "stratum": "balanced-modern",
+      "sourceNote": "Recalled from widely-reported review configurations (RDR2 leans AMD under Vulkan)",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-146",
+      "cpuId": "intel-core-i9-9900k",
+      "gpuId": "nvidia-geforce-rtx-2080-ti",
+      "gameId": "shadow-of-the-tomb-raider",
+      "resolution": "1080p",
+      "preset": "highest",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 3200,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 135,
+      "low1Pct": 102,
+      "recallConfidence": "high",
+      "stratum": "balanced-modern",
+      "sourceNote": "Recalled from widely-reported review configurations (built-in benchmark, DX12)",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-147",
+      "cpuId": "amd-ryzen-5-3600",
+      "gpuId": "amd-radeon-rx-5700-xt",
+      "gameId": "shadow-of-the-tomb-raider",
+      "resolution": "1440p",
+      "preset": "highest",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 3200,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 78,
+      "low1Pct": 60,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Recalled from widely-reported review configurations",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-148",
+      "cpuId": "intel-core-i5-13600k",
+      "gpuId": "nvidia-geforce-rtx-4070",
+      "gameId": "hitman-world-of-assassination",
+      "resolution": "1440p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 140,
+      "low1Pct": 105,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Recalled from widely-reported review configurations (Dartmoor benchmark)",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-149",
+      "cpuId": "intel-core-i7-13700k",
+      "gpuId": "nvidia-geforce-rtx-4080",
+      "gameId": "forza-horizon-5",
+      "resolution": "2160p",
+      "preset": "extreme",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 150,
+      "low1Pct": 122,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Recalled from widely-reported review configurations (built-in benchmark)",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-150",
+      "cpuId": "intel-core-i5-13600k",
+      "gpuId": "nvidia-geforce-rtx-4070",
+      "gameId": "counter-strike-2",
+      "resolution": "1440p",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 390,
+      "low1Pct": 160,
+      "recallConfidence": "medium",
+      "stratum": "esports-high-fps",
+      "sourceNote": "Recalled from widely-reported review configurations",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-151",
+      "cpuId": "intel-core-i5-12400f",
+      "gpuId": "nvidia-geforce-rtx-3060-12gb",
+      "gameId": "valorant",
+      "resolution": "1080p",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 3200,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 450,
+      "low1Pct": 280,
+      "recallConfidence": "medium",
+      "stratum": "esports-high-fps",
+      "sourceNote": "Recalled from widely-reported review configurations (Valorant is engine/CPU capped, GPU nearly irrelevant at this tier)",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-152",
+      "cpuId": "amd-ryzen-9-7900x",
+      "gpuId": "amd-radeon-rx-7900-xt",
+      "gameId": "the-last-of-us-part-i",
+      "resolution": "2160p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 62,
+      "low1Pct": 50,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Recalled from widely-reported review configurations (20GB card, no VRAM pressure at 4K)",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-153",
+      "cpuId": "amd-ryzen-5-5600",
+      "gpuId": "amd-radeon-rx-6600",
+      "gameId": "hogwarts-legacy",
+      "resolution": "1080p",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 3200,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 70,
+      "low1Pct": 52,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Recalled from widely-reported review configurations",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-154",
+      "cpuId": "amd-ryzen-5-5600",
+      "gpuId": "amd-radeon-rx-6500-xt-4gb",
+      "gameId": "cyberpunk-2077",
+      "resolution": "1080p",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 3200,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 32,
+      "low1Pct": 19,
+      "recallConfidence": "low",
+      "stratum": "vram-starved",
+      "sourceNote": "Recalled roughly: 4GB + PCIe x4 card collapses at High textures; figure is preset-sensitive",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-155",
+      "cpuId": "amd-ryzen-7-5800x3d",
+      "gpuId": "nvidia-geforce-rtx-4080",
+      "gameId": "microsoft-flight-simulator-2024",
+      "resolution": "1440p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 3600,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 78,
+      "low1Pct": 58,
+      "recallConfidence": "low",
+      "stratum": "balanced-modern",
+      "sourceNote": "Recalled roughly: MSFS 2024 figures vary strongly by scene",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-156",
+      "cpuId": "intel-core-i7-2600k",
+      "gpuId": "nvidia-geforce-rtx-3060-12gb",
+      "gameId": "shadow-of-the-tomb-raider",
+      "resolution": "1080p",
+      "preset": "highest",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 1600,
+        "type": "DDR3"
+      },
+      "storage": "sata-ssd",
+      "avgFps": 65,
+      "low1Pct": 44,
+      "recallConfidence": "medium",
+      "pairId": "oldcpu-sotr",
+      "stratum": "old-cpu-new-gpu",
+      "sourceNote": "Recalled from widely-reported review configurations (retro-benchmark sets)",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-157",
+      "cpuId": "amd-ryzen-5-3600",
+      "gpuId": "nvidia-geforce-rtx-3060-12gb",
+      "gameId": "shadow-of-the-tomb-raider",
+      "resolution": "1080p",
+      "preset": "highest",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 3200,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 108,
+      "low1Pct": 82,
+      "recallConfidence": "high",
+      "pairId": "oldcpu-sotr",
+      "stratum": "balanced-modern",
+      "sourceNote": "Recalled from widely-reported review configurations",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-158",
+      "cpuId": "intel-core-i5-13600k",
+      "gpuId": "nvidia-geforce-rtx-4060-ti-16gb",
+      "gameId": "cyberpunk-2077",
+      "resolution": "1440p",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 52,
+      "low1Pct": 43,
+      "recallConfidence": "medium",
+      "pairId": "ada-tier-cp",
+      "stratum": "balanced-modern",
+      "sourceNote": "Recalled from widely-reported review configurations",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-159",
+      "cpuId": "intel-core-i5-13600k",
+      "gpuId": "nvidia-geforce-rtx-4070",
+      "gameId": "cyberpunk-2077",
+      "resolution": "1440p",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 70,
+      "low1Pct": 58,
+      "recallConfidence": "medium",
+      "pairId": "ada-tier-cp",
+      "stratum": "balanced-modern",
+      "sourceNote": "Recalled from widely-reported review configurations",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-160",
+      "cpuId": "intel-core-i5-12400f",
+      "gpuId": "intel-arc-a750",
+      "gameId": "forza-horizon-5",
+      "resolution": "1080p",
+      "preset": "extreme",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 3200,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 85,
+      "low1Pct": 64,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Recalled from widely-reported review configurations (Arc does comparatively well in modern DX12)",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-161",
+      "cpuId": "intel-core-i7-13700k",
+      "gpuId": "nvidia-geforce-rtx-4080",
+      "gameId": "cyberpunk-2077",
+      "resolution": "2160p",
+      "preset": "high",
+      "upscaling": {
+        "tech": "dlss",
+        "quality": "quality",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 105,
+      "low1Pct": 84,
+      "recallConfidence": "medium",
+      "stratum": "upscaling",
+      "sourceNote": "Recalled from widely-reported review configurations (native 4K ~68 on the same rig; DLSS Q ~1.55x when GPU-bound)",
+      "provenance": "model-knowledge"
     }
-  ]
+  ],
+  "actualCount": 161
 }

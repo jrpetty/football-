@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-16T23:02:35.204Z",
+  "generatedAt": "2026-08-18T17:40:16.244Z",
   "provenance": {
     "model-knowledge": {
       "id": "model-knowledge",
@@ -3543,8 +3543,8 @@
       },
       "vramDemandGB": {
         "1080p": 5.5,
-        "1440p": 7,
-        "2160p": 9.5
+        "1440p": 8.5,
+        "2160p": 10.5
       },
       "upscalingSupport": [
         "dlss",

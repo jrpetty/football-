@@ -20,7 +20,7 @@
         "2160p": 160
       },
       "cpuBound": 265,
-      "gpuScalingExponent": 0.95,
+      "gpuScalingExponent": 0.65,
       "confidence": "spec-derived",
       "_prov": {
         "*": [
@@ -36,7 +36,7 @@
         "2160p": 260
       },
       "cpuBound": 290,
-      "gpuScalingExponent": 0.93,
+      "gpuScalingExponent": 0.65,
       "confidence": "spec-derived",
       "_prov": {
         "*": [
@@ -52,7 +52,7 @@
         "2160p": 125
       },
       "cpuBound": 195,
-      "gpuScalingExponent": 0.93,
+      "gpuScalingExponent": 0.65,
       "confidence": "spec-derived",
       "_prov": {
         "*": [
@@ -68,7 +68,7 @@
         "2160p": 275
       },
       "cpuBound": 330,
-      "gpuScalingExponent": 0.9,
+      "gpuScalingExponent": 0.65,
       "confidence": "spec-derived",
       "_prov": {
         "*": [
@@ -84,7 +84,7 @@
         "2160p": 105
       },
       "cpuBound": 290,
-      "gpuScalingExponent": 0.97,
+      "gpuScalingExponent": 0.65,
       "confidence": "spec-derived",
       "_prov": {
         "*": [
@@ -100,7 +100,7 @@
         "2160p": 80
       },
       "cpuBound": 220,
-      "gpuScalingExponent": 0.96,
+      "gpuScalingExponent": 0.65,
       "confidence": "spec-derived",
       "_prov": {
         "*": [
@@ -116,7 +116,7 @@
         "2160p": 68
       },
       "cpuBound": 190,
-      "gpuScalingExponent": 0.95,
+      "gpuScalingExponent": 0.75,
       "confidence": "spec-derived",
       "_prov": {
         "*": [
@@ -132,7 +132,7 @@
         "2160p": 58
       },
       "cpuBound": 165,
-      "gpuScalingExponent": 0.98,
+      "gpuScalingExponent": 0.85,
       "confidence": "spec-derived",
       "_prov": {
         "*": [
@@ -148,7 +148,7 @@
         "2160p": 58
       },
       "cpuBound": 155,
-      "gpuScalingExponent": 0.97,
+      "gpuScalingExponent": 0.8,
       "confidence": "spec-derived",
       "_prov": {
         "*": [
@@ -164,7 +164,7 @@
         "2160p": 215
       },
       "cpuBound": 300,
-      "gpuScalingExponent": 0.93,
+      "gpuScalingExponent": 0.65,
       "confidence": "spec-derived",
       "_prov": {
         "*": [
@@ -816,5 +816,8 @@
   "expectedCount": 50,
   "actualCount": 50,
   "gaps": [],
-  "uncertainties": []
+  "uncertainties": [
+    "gpuScalingExponent for the esports archetype revised 0.9-0.95 -> 0.65 after validation: draw-call-dominated renderers are mostly fixed-cost per frame on the GPU side, so old cards still reach very high frame rates. The original seed values systematically underpredicted fast-CPU + old-GPU esports configurations.",
+    "Within esports: Fortnite 0.85 (UE5 Lumen/Nanite is genuinely GPU-heavy), PUBG 0.8, Apex 0.75 \u2014 these are not draw-call-flat like CS2/Valorant/Dota/LoL/R6/OW2/RL at 0.65."
+  ]
 }

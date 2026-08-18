@@ -35,38 +35,52 @@ export const ANCHORS = {
  * twice as fast as a 2080 Ti instead of ~1.3x.
  */
 export const GPU_ARCH_EFFICIENCY: Record<string, number> = {
-  Fermi: 0.95,
-  Kepler: 0.95,
-  Maxwell: 1.3,
-  Pascal: 1.46,
-  Turing: 1.76,
+  // Priors pinned against widely-reproduced cross-generation raster
+  // equivalences rather than guessed per-architecture folklore:
+  //   GTX 1080 Ti ~= RTX 3060 (+/-5%)  -> Pascal ~= 1.0 with sublinear 0.70
+  //   RTX 2080 Ti ~= RTX 3070 (1.35x a 3060) and RTX 2060 ~= 0.86x -> Turing ~= 1.5
+  //   RTX 3080 ~= 1.75x a 3060 -> anchors the sublinear exponent itself
+  //   RX 6700 XT ~= 1.17x, RX 6800 XT ~= 1.75x -> RDNA 2 ~= 1.1
+  // Nvidia Ampere/Ada figures count the doubled FP32 lanes games cannot fully
+  // use, so their efficiency sits near 1.0 while Turing (undoubled) sits ~1.5
+  // and RDNA 3/4 (stored single-issue, half of AMD marketing) sit above 1.3.
+  // These are priors; scripts/calibrate.ts refines them on the TRAIN split only.
+  Fermi: 0.7,
+  Kepler: 0.75,
+  Maxwell: 0.98,
+  Pascal: 1.0,
+  Turing: 1.5,
   Ampere: 1.0,
-  Ada: 1.1,
-  'Ada Lovelace': 1.1,
-  Blackwell: 1.12,
+  Ada: 1.02,
+  'Ada Lovelace': 1.02,
+  Blackwell: 1.05,
 
-  GCN: 0.95,
-  'GCN 1.0': 0.92,
-  'GCN 2.0': 0.93,
-  'GCN 3.0': 0.95,
-  'GCN 4.0': 1.05,
-  Polaris: 1.05,
-  Vega: 1.0,
-  'GCN 5.0': 1.0,
-  RDNA: 1.45,
-  'RDNA 1': 1.45,
-  'RDNA 2': 1.25,
-  'RDNA 3': 1.15,
-  'RDNA 4': 1.45,
+  GCN: 0.8,
+  'GCN 1.0': 0.78,
+  'GCN 2.0': 0.8,
+  'GCN 3.0': 0.82,
+  'GCN 4.0': 0.9,
+  Polaris: 0.9,
+  Vega: 0.85,
+  'GCN 5.0': 0.85,
+  RDNA: 1.25,
+  'RDNA 1': 1.25,
+  'RDNA 2': 1.18, // pin 1.1, +7.5% from the bounded train fit (regularised; see tuning log)
+  'RDNA 3': 1.45, // pin 1.35, +7.5% from the bounded train fit — consistent with the RDNA 4 pin direction
+  'RDNA 3.5': 1.35,
+  'RDNA 4': 1.6,
 
-  'Arc Alchemist': 0.95,
-  Alchemist: 0.95,
-  'Arc Battlemage': 1.25,
-  Battlemage: 1.25,
-  Xe: 0.9,
-  'Xe-LP': 0.9,
-  'Gen 9': 0.8,
-  'Gen 11': 0.85,
+  'Arc Alchemist': 0.85,
+  Alchemist: 0.85,
+  'Arc Battlemage': 1.15,
+  Battlemage: 1.15,
+  Xe: 0.85,
+  'Xe-LP': 0.85,
+  'Xe-LPG': 0.95,
+  Xe2: 1.05,
+  'Xe2-LPG': 1.05,
+  'Gen 9': 0.7,
+  'Gen 11': 0.75,
 };
 
 export const DEFAULT_GPU_ARCH_EFFICIENCY = 1.0;
@@ -76,25 +90,38 @@ export const DEFAULT_GPU_ARCH_EFFICIENCY = 1.0;
  * RT and raster rank differently by vendor, which is why GpuIndex carries both.
  */
 export const GPU_RT_EFFICIENCY: Record<string, number> = {
+  // Pinned by tier-drop behaviour: a part's RT index should land on the raster
+  // index of the tier it falls to with RT enabled. RX 6800 XT rasters ~= 3080
+  // but ray-traces ~= 3070 -> RDNA 2 ~= 0.85 in stored-TFLOP units. Turing holds
+  // its tier (2080 Ti RT ~= 3070 RT). Same unit caveat as the raster table:
+  // Ampere/Ada TFLOPs are lane-doubled, RDNA 3/4 stored halved.
   Turing: 1.35,
   Ampere: 1.0,
   Ada: 1.35,
   'Ada Lovelace': 1.35,
   Blackwell: 1.45,
-  'RDNA 2': 0.62,
-  'RDNA 3': 0.72,
-  'RDNA 4': 1.05,
-  'Arc Alchemist': 0.95,
-  Alchemist: 0.95,
-  'Arc Battlemage': 1.15,
-  Battlemage: 1.15,
+  'RDNA 2': 0.85,
+  'RDNA 3': 1.0,
+  'RDNA 3.5': 1.0,
+  'RDNA 4': 1.35,
+  'Arc Alchemist': 0.9,
+  Alchemist: 0.9,
+  'Arc Battlemage': 1.2,
+  Battlemage: 1.2,
+  'Xe-LPG': 0.9,
+  Xe2: 1.0,
+  'Xe2-LPG': 1.0,
 };
 
 export const GPU_MODEL = {
   /** Weight on compute vs bandwidth in the composite. */
   computeWeight: 0.7,
-  /** General sublinear scaling: doubling a GPU's resources gives ~1.8x, not 2x. */
-  sublinearExponent: 0.85,
+  /**
+   * General sublinear scaling on the composite. Pinned by the 3080 ~= 1.75x and
+   * 4090 ~= 3.2x equivalences: 0.85 made a 4090 4.6x a 3060, which no game
+   * reproduces. High-end parts flatten hard against fixed per-frame costs.
+   */
+  sublinearExponent: 0.7,
   /**
    * Infinity Cache / large L2 multiplies effective bandwidth. Keyed by
    * architecture; 1.0 means no on-die cache benefit modelled.
@@ -220,7 +247,7 @@ export const RT_MODEL = {
    * fingerprint rules exist to prevent — and it under-predicted every ray-traced
    * title by 55-80% in validation before it was added.
    */
-  onVsOff: 0.55,
+  onVsOff: 0.6, // pin 0.55; bounded train fit preferred 0.6 (RT costs ~40% here, tier-dependent 30-50% in the wild)
   /** Archetypes whose seeded references represent RT ENABLED. */
   referenceRtOn: ['aaa-rt'] as Archetype[],
 };
@@ -276,15 +303,34 @@ export const VRAM_MODEL = {
    *
    * `deficitRatio` = (demand - capacity) / demand.
    */
+  // Averages flatten near ~0.5 at deep deficits: modern streaming engines shed
+  // texture quality and stall the lows rather than halving the average. The
+  // pre-revision deep end (0.25 avg at 50% deficit) over-penalised averages by
+  // ~2x against the fixture set while the lows column was about right.
   cliff: [
     { deficitRatio: 0.0, avgMultiplier: 1.0, lowMultiplier: 1.0 },
-    { deficitRatio: 0.08, avgMultiplier: 0.9, lowMultiplier: 0.7 },
-    { deficitRatio: 0.2, avgMultiplier: 0.62, lowMultiplier: 0.35 },
-    { deficitRatio: 0.35, avgMultiplier: 0.4, lowMultiplier: 0.2 },
-    { deficitRatio: 0.5, avgMultiplier: 0.25, lowMultiplier: 0.12 },
+    { deficitRatio: 0.08, avgMultiplier: 0.92, lowMultiplier: 0.7 },
+    { deficitRatio: 0.2, avgMultiplier: 0.72, lowMultiplier: 0.35 },
+    { deficitRatio: 0.35, avgMultiplier: 0.58, lowMultiplier: 0.2 },
+    { deficitRatio: 0.5, avgMultiplier: 0.48, lowMultiplier: 0.12 },
   ],
   /** Headroom below which we warn without penalising. */
   warnHeadroomGB: 0.5,
+};
+
+/**
+ * Integrated-graphics contention. An iGPU shares two things a discrete card
+ * does not: the memory controller (the CPU consumes a large share of bandwidth
+ * exactly when frame rates are high) and the package power budget (boost clocks
+ * do not sustain under combined CPU+GPU load). Both are multiplicative derates
+ * observed as systematic ~1.5-2x overprediction on iGPU esports fixtures before
+ * this term existed.
+ */
+export const IGPU_MODEL = {
+  /** Share of system memory bandwidth actually available to the iGPU under load. */
+  bandwidthShare: 0.7,
+  /** Sustained clock as a fraction of boost, package TDP shared with the CPU. */
+  sustainedClockFactor: 0.85,
 };
 
 export const PCIE_MODEL = {
