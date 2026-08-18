@@ -163,7 +163,10 @@ public class FarmGoal extends Goal {
         // the bot's own pace — three seconds for a recruit, down to about one
         // and a half for a well-fed veteran working alongside its crew.
         if (++workTicks < assistant.actionPaceTicks()) {
-            if (workTicks % 8 == 0) assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+            if (workTicks % 8 == 0) {
+                assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+                assistant.workHit(targetPos);   // a worked farm SOUNDS worked
+            }
             return;
         }
         workTicks = 0;
@@ -276,10 +279,14 @@ public class FarmGoal extends Goal {
                 assistant.damageHeldTool();
             }
             assistant.level().setBlockAndUpdate(pos, Blocks.FARMLAND.defaultBlockState());
+            assistant.level().playSound(null, pos, net.minecraft.sounds.SoundEvents.HOE_TILL,
+                net.minecraft.sounds.SoundSource.BLOCKS, 1.0F, 1.0F);
         }
         Item seed = pickSeed();
         if (seed != null && assistant.removeMatching(s -> s.is(seed), 1) == 1) {
             assistant.level().setBlockAndUpdate(pos.above(), PLANT.get(seed).defaultBlockState());
+            assistant.level().playSound(null, pos.above(), net.minecraft.sounds.SoundEvents.CROP_PLANTED,
+                net.minecraft.sounds.SoundSource.BLOCKS, 1.0F, 1.0F);
             plantedByType.merge(seed, 1, Integer::sum);
             planted++;
             assistant.note(AssistantEntity.Deed.CROPS_PLANTED, 1);
@@ -329,6 +336,8 @@ public class FarmGoal extends Goal {
         if (assistant.removeMatching(s -> s.is(Items.WATER_BUCKET), 1) != 1) return;
         assistant.level().destroyBlock(pos, false);
         assistant.level().setBlockAndUpdate(pos, Blocks.WATER.defaultBlockState());
+        assistant.level().playSound(null, pos, net.minecraft.sounds.SoundEvents.BUCKET_EMPTY,
+            net.minecraft.sounds.SoundSource.BLOCKS, 1.0F, 1.0F);
         ItemStack leftover = assistant.insertItem(new ItemStack(Items.BUCKET));
         if (!leftover.isEmpty()) {
             assistant.level().addFreshEntity(new ItemEntity(assistant.level(),
@@ -348,7 +357,7 @@ public class FarmGoal extends Goal {
         for (ItemEntity drop : assistant.level().getEntitiesOfClass(
                 ItemEntity.class, new AABB(around).inflate(2.5))) {
             ItemStack leftover = assistant.insertItem(drop.getItem());
-            if (leftover.isEmpty()) drop.discard();
+            if (leftover.isEmpty()) { drop.discard(); assistant.popSound(); }
             else drop.setItem(leftover);
         }
     }

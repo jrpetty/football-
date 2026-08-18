@@ -57,6 +57,8 @@ public final class AssistantActions {
     public static final int PERK_SWIFT = 30;
     public static final int PERK_TOUGH = 31;
     public static final int PERK_PORTER = 32;
+    // Right-clicking a patch on the map cycles its name through Names.PATCHES.
+    public static final int PATCH_NAME_NEXT = 33;
 
     /** Naming. Nothing in this mod is typed, so the order carries an INDEX into
      *  the shared name pool rather than a string: the client can only ask for a
@@ -118,6 +120,7 @@ public final class AssistantActions {
             case DEPTH_SURFACE -> presetDepth(a, Integer.MIN_VALUE);
             case DEPTH_IRON -> presetDepth(a, 16);
             case DEPTH_DIAMOND -> presetDepth(a, -54);
+            case PATCH_NAME_NEXT -> a.cyclePatchName();
             case PERK_SWIFT -> a.choosePerk(AssistantEntity.Perk.SWIFT);
             case PERK_TOUGH -> a.choosePerk(AssistantEntity.Perk.TOUGH);
             case PERK_PORTER -> a.choosePerk(AssistantEntity.Perk.PORTER);

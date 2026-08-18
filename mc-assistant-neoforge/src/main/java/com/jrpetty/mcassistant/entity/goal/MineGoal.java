@@ -36,7 +36,7 @@ public class MineGoal extends Goal {
         BlockTags.COAL_ORES, BlockTags.IRON_ORES, BlockTags.COPPER_ORES, BlockTags.GOLD_ORES,
         BlockTags.REDSTONE_ORES, BlockTags.LAPIS_ORES, BlockTags.DIAMOND_ORES, BlockTags.EMERALD_ORES);
 
-    private enum Phase { DESCEND, TUNNEL }
+    private enum Phase { DESCEND, TUNNEL, RETURN }
 
     private final AssistantEntity assistant;
     @Nullable private Job job;
@@ -47,6 +47,11 @@ public class MineGoal extends Goal {
     private final ArrayDeque<BlockPos> veinQueue = new ArrayDeque<>();
     @Nullable private BlockPos currentDig;
     private boolean saidCapped;   // one liquid announcement per run, not per block
+    // Every step of the staircase, in order, so a full pack walks back UP the
+    // stairs it dug instead of pathfinding blind through whatever caves the
+    // dig happened to breach.
+    private final java.util.ArrayList<BlockPos> stairPath = new java.util.ArrayList<>();
+    private int returnIndex = -1;
     @Nullable private BlockPos moveTarget;
     private int workTicks;
     private int workNeeded;
@@ -96,6 +101,9 @@ public class MineGoal extends Goal {
         this.sinceTorch = 0;
         this.veinMined = 0;
         this.saidCapped = false;
+        this.stairPath.clear();
+        this.stairPath.add(this.cursor.immutable());   // the shaft head itself
+        this.returnIndex = -1;
         this.oresMined = 0;
         this.blocksMined = 0;
         this.phase = job != null && cursor.getY() <= job.amount() ? Phase.TUNNEL : Phase.DESCEND;
@@ -159,12 +167,24 @@ public class MineGoal extends Goal {
     public void tick() {
         if (job == null) return;
 
-        // Full pack: stash first, then the player can send us mining again.
-        if (assistant.isPackFull()) {
-            String msg = "Pack's full — got " + oresMined + " ore blocks. Stashing now.";
-            finish(msg);
-            assistant.enqueueFront(Job.deposit());
-            return;
+        // Full pack: walk back up our own staircase first — the known, lit,
+        // dug route — and only then stash. Finishing on the spot handed the
+        // pathfinder a bot at Y-50 and let it wander whatever caves the dig
+        // had breached on the way.
+        if (assistant.isPackFull() && phase != Phase.RETURN) {
+            if (stairPath.size() > 1) {
+                phase = Phase.RETURN;
+                returnIndex = stairPath.size() - 1;
+                digQueue.clear();
+                veinQueue.clear();
+                currentDig = null;
+                moveTarget = null;
+                assistant.sayRoutine("Pack's full — heading back up my own stairs.");
+            } else {
+                finish("Pack's full — got " + oresMined + " ore blocks. Stashing now.");
+                assistant.enqueueFront(Job.deposit());
+                return;
+            }
         }
 
         if (currentDig != null) {
@@ -193,6 +213,16 @@ public class MineGoal extends Goal {
         }
 
         // Plan the next step.
+        if (phase == Phase.RETURN) {
+            if (returnIndex < 0) {
+                finish("Back at the shaft head — got " + oresMined + " ore. Stashing now.");
+                assistant.enqueueFront(Job.deposit());
+                return;
+            }
+            moveTarget = stairPath.get(returnIndex--);
+            moveStuck = 0;
+            return;
+        }
         if (phase == Phase.DESCEND) {
             if (cursor.getY() <= job.amount()) {
                 phase = Phase.TUNNEL;
@@ -315,6 +345,7 @@ public class MineGoal extends Goal {
                 s.shrink(1);
                 if (s.isEmpty()) inv.set(i, ItemStack.EMPTY);
                 assistant.level().setBlockAndUpdate(pos, state);
+                assistant.placeSound(pos);
                 return true;
             }
         }
@@ -343,6 +374,7 @@ public class MineGoal extends Goal {
         if (++workTicks < workNeeded) {
             if (workTicks % 8 == 0) {
                 assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+                assistant.workHit(pos);   // a pick on stone SOUNDS like one
             }
             return;
         }
@@ -415,10 +447,13 @@ public class MineGoal extends Goal {
             cursor = dest;
             moveTarget = null;
             if (phase == Phase.TUNNEL) tunnelSteps++;
+            if (phase == Phase.DESCEND && stairPath.size() < 400) {
+                stairPath.add(dest.immutable());
+            }
             // A step can pass through open cave: those walls were never dug,
             // so the after-dig scan never saw them. Check around the two cells
             // now occupied, so ore in a cavity wall is chased like any other.
-            if (veinMined < MAX_VEIN_BLOCKS) {
+            if (phase != Phase.RETURN && veinMined < MAX_VEIN_BLOCKS) {
                 for (BlockPos cell : new BlockPos[] { cursor, cursor.above() }) {
                     for (Direction d : Direction.values()) {
                         BlockPos ore = cell.relative(d);
@@ -440,6 +475,7 @@ public class MineGoal extends Goal {
                     && assistant.level().getBlockState(floor).isFaceSturdy(assistant.level(), floor, Direction.UP)
                     && assistant.removeMatching(s -> s.is(Items.TORCH), 1) == 1) {
                     assistant.level().setBlockAndUpdate(cursor, Blocks.TORCH.defaultBlockState());
+                    assistant.placeSound(cursor);
                     sinceTorch = 0;
                 }
             }
@@ -450,6 +486,7 @@ public class MineGoal extends Goal {
         }
         if (++moveStuck > 100) {
             finish("Got stuck in the shaft — stopping here (" + oresMined + " ore so far).");
+            if (assistant.isPackFull()) assistant.enqueueFront(Job.deposit());
         }
     }
 

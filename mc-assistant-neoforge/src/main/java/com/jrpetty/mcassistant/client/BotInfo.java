@@ -14,7 +14,7 @@ public record BotInfo(String branch, int daysServed, String topDeed,
                       int[] deeds, @Nullable int[] zone, int[] wages,
                       String trait, String traitBlurb, int teamwork,
                       int diet, String lastMeal,
-                      @Nullable int[] deathSpot, int perk) {
+                      @Nullable int[] deathSpot, int perk, String patchName) {
 
     /** "branch|days|topDeed|deedCsv|zoneCsv", written by publishJobState. */
     public static BotInfo of(AssistantEntity bot) {
@@ -74,8 +74,9 @@ public record BotInfo(String branch, int daysServed, String topDeed,
             }
         }
         int perk = f.length > 9 ? parse(f[9]) : 0;
+        String patchName = f.length > 10 ? f[10] : "";
         return new BotInfo(branch, days, top, deeds, zone, wages, trait, blurb, teamwork,
-            diet <= 0 ? 100 : diet, meal, death, perk);
+            diet <= 0 ? 100 : diet, meal, death, perk, patchName);
     }
 
     /** The perk's display name, or empty while undecided. */

@@ -18,6 +18,13 @@ public final class Names {
     private Names() {}
 
     /** Working names — short, sayable, and distinct at a glance in a list. */
+    /** Ground names, cycled by right-clicking a patch on the map. Ends back
+     *  at unnamed, so a mis-click is never permanent. */
+    public static final List<String> PATCHES = List.of(
+        "North Farm", "South Field", "East Wood", "West Mine",
+        "The Pit", "The Orchard", "The Pens", "The Docks",
+        "Home Fields", "The Frontier", "The Quarry", "The Grange");
+
     public static final List<String> POOL = List.of(
         "Bramble", "Fen", "Holt", "Marrow", "Quill", "Rook",
         "Tansy", "Wick", "Bryn", "Cobb", "Dell", "Ember",

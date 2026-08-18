@@ -199,6 +199,7 @@ public class GatherGoal extends Goal {
                 if (s.isEmpty() || !s.is(net.minecraft.tags.ItemTags.SAPLINGS)) continue;
                 if (s.getItem() instanceof net.minecraft.world.item.BlockItem sapling) {
                     assistant.level().setBlockAndUpdate(stump, sapling.getBlock().defaultBlockState());
+                    assistant.placeSound(stump);
                     s.shrink(1);
                     if (s.isEmpty()) inv.set(i, ItemStack.EMPTY);
                     planted++;
@@ -325,6 +326,7 @@ public class GatherGoal extends Goal {
         if (++workTicks < workNeeded) {
             if (workTicks % 8 == 0) {
                 assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+                assistant.workHit(targetPos);
             }
             return;
         }

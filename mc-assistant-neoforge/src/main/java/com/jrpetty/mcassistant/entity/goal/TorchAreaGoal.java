@@ -144,6 +144,7 @@ public class TorchAreaGoal extends Goal {
             return;
         }
         assistant.level().setBlockAndUpdate(current, Blocks.TORCH.defaultBlockState());
+        assistant.placeSound(current);
         assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
         placed++;
         current = null;

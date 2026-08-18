@@ -27,6 +27,7 @@ public final class AssistantNetwork {
     public static void onRegisterPayloads(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar("1");
         registrar.playToServer(OrderPayload.TYPE, OrderPayload.STREAM_CODEC, AssistantNetwork::handleOrder);
+        registrar.playToServer(ZonePayload.TYPE, ZonePayload.STREAM_CODEC, AssistantNetwork::handleZone);
     }
 
     private static void handleOrder(OrderPayload payload, IPayloadContext context) {
@@ -42,6 +43,38 @@ public final class AssistantNetwork {
                 return;
             }
             AssistantActions.apply(assistant, player, payload.action());
+        });
+    }
+
+    /** A zone drawn on the map. Looser range than a spoken order — the map
+     *  legitimately shows the whole operation — but the same ownership rule,
+     *  a hard cap on the footprint, and the server picks the Y itself. */
+    private static void handleZone(ZonePayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            if (!(context.player() instanceof ServerPlayer player)) return;
+            Entity target = player.level().getEntity(payload.entityId());
+            if (!(target instanceof AssistantEntity assistant)) return;
+            if (!assistant.isOwner(player)) return;
+            if (assistant.distanceToSqr(player) > 256.0 * 256.0) return;
+            int minX = Math.min(payload.minX(), payload.maxX());
+            int maxX = Math.max(payload.minX(), payload.maxX());
+            int minZ = Math.min(payload.minZ(), payload.maxZ());
+            int maxZ = Math.max(payload.minZ(), payload.maxZ());
+            if (maxX - minX < 3 || maxZ - minZ < 3) {
+                assistant.say("That plot's too small to work — drag a bigger box.");
+                return;
+            }
+            if (maxX - minX > 96 || maxZ - minZ > 96) {
+                assistant.say("That's more ground than I can work — keep it under 96 blocks a side.");
+                return;
+            }
+            int y = assistant.blockPosition().getY();
+            com.jrpetty.mcassistant.entity.WorkZone old = assistant.workZone();
+            assistant.setWorkZone(com.jrpetty.mcassistant.entity.WorkZone.of(
+                new net.minecraft.core.BlockPos(minX, y, minZ),
+                new net.minecraft.core.BlockPos(maxX, y, maxZ),
+                old != null ? old.depth() : com.jrpetty.mcassistant.entity.WorkZone.DEFAULT_DEPTH));
+            assistant.say("New patch from the map — " + assistant.workZone().describe() + ".");
         });
     }
 }

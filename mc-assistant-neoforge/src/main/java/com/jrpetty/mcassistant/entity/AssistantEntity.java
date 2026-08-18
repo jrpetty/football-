@@ -206,7 +206,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Build stamp — say "version" to hear it. Bumped whenever features land, so
      *  you can tell at a glance whether the loaded jar is the current one. */
     public static final String BUILD_TAG =
-        "2026-07-b81 · TWELVE UPGRADES TO WHAT WAS ALREADY THERE — THE FARM: the field mix is the STOCK mix now, half wheat and half carrots in the chest comes out a field of half and half, because whichever seed is furthest behind its share goes in the ground next · melons and pumpkins: the seeds plant a STEM, the stem lives forever, and only the fruit is ever cut — plant those rows once · sugar cane: cut above the root and the root regrows it, no replanting, ever · bonemeal in the chest reaches the farmer and gets spent one application per quiet moment on something still growing — never on grass, which vanilla answers with a lawn of flowers · THE MINE: every exposed ore face is dug before the gallery advances, including ore in the walls of caves it merely WALKS through, which the old scan never saw because it only checked blocks it broke · lava or water in a wall or ahead gets walled off with the cobble it is already carrying and the tunnel carries ON PAST — a run used to abandon everything at the first drip, now it only stops when the filler runs out · and the dig floor jumps straight to the stratum: three buttons on the orders sheet, Surface, Y16 for iron, Y-54 for diamond, instead of eight blocks per click · THE CREW: skulls on the map where anyone died in the last day, gone after that, so you can see the danger spot while you re-zone · the crew list sorts three ways now — name, trade, or problems first, and it remembers which you picked · an off-shift bot with no bed claims the nearest free one around home BY ITSELF at dusk, and it can no longer take a bed a crewmate already owns or one someone is asleep in — which the button could · level 30 is a CHOICE now, made once on the record sheet: Swift is the old +20% speed, Tough is +4 armor, Porter banks and hauls half a pack more per trip — two veterans on one crew finally come out different · and payday is spoken: one quiet line naming the ingot it took, so metal leaving the chest is never a mystery · CHECKED ONE BY ONE, THREE CAUGHT: the bed-time stagger I shipped in b79 ANDed two tick clocks that can never agree for some bots — those bots would simply never have walked to bed again; it rolls a die per opportunity now, which cannot starve anyone. The off-duty stroll had the same disease and got the same cure. A failed restock was wiping the remembered POND along with the chest list, putting a stalled fisher back on the full 6,875-block water scan every checklist — the exact cost the chunk-map fix removed; retries now drop only the chest list. A hauler whose linked chest is its PICKUP chest would have delivered its cargo straight back into it, forever — delivery runs ignore the standing link. And the idle self-sort re-announced a sorted storeroom every five minutes; it only runs after something NEW was banked · THE SCREENS GOT THE PACK SCREEN\u2019S CONSTRUCTION: every panel now has the vanilla bevel — light where the light falls, shadow opposite — an engraved rule under the header band, section headings with a green tick and an engraved hairline, progress bars recessed into the panel with a glossy top edge on the fill, and the map sunk into the panel like a slot with N marked on it. Every trade\u2019s colour is now ONE palette shared by the map, the crew list and a new chip beside the name on the orders and record sheets — you find the farmer in a list the way you find it in a field. Career tallies draw on a soft full-width track so the biggest number owns its row · EIGHTEEN WAYS THEY WORK SMARTER: LINK A CHEST DIRECTLY — click a chest with the wand while a bot is bound and that chest is THE chest: restocks open it first, output banks there, and it survives a reload · CHESTS IN A SENSIBLE ORDER — the hand-linked chest, then the one that answered last time, then the nearest to where the bot is stood, instead of a fixed scan order that walked it past three nearer chests · RESTOCK BEFORE THE STALL — kit trending toward empty gets topped up in an idle window, not at zero with the field half-planted · BORROWING — chests empty but a crewmate ten feet away carrying a stack of seeds? It takes half, says thanks, and keeps working · FAILED PATHS ARE REMEMBERED — a spot no path reaches is blacklisted for a minute ACROSS runs, so the brain stops re-picking the same dead end the moment a goal restarts · FARMERS SPIRAL OUTWARD — target scans work ring by ring from the feet and stop at the first hit, instead of reading thousands of blocks to find the crop two steps away · SAPLINGS GET ROOM — a lumberjack skips replanting within two blocks of a standing sapling, so the forest comes back as trees rather than a choked thicket · TORCHES WHERE THE DARK IS — miners and lighting runs place a torch only where BLOCK light is zero, which is the only place anything can spawn, so a stack lights four times the ground · BATCHED DEPOSITS — a stash run waits for a fuller load; the ten-minute trickle timer and a full pack still force a trip, so nothing is ever stranded · QUIET WHEN UNWATCHED — with no player within 64 blocks the nametag stops rebuilding, the checklist re-checks a third as often and the idle brain looks for its next job a third as often; the jobs already queued run at full speed, so the work itself is untouched · CHEST LIST CACHED HONESTLY — the store index is reused for ten seconds instead of one and a half, drops itself the moment any chest in it vanishes, and a failed restock always looks fresh, so a just-placed chest is still seen within seconds · BED RUSH FIXED — a whole crew clocking off used to fire every pathfind on the same tick; path starts are now staggered across a two-second window per bot · OFF DUTY IS NOT A STATUE — a parked bot takes a short, cheap stroll around home now and then instead of running the full idle brain for nothing · A BELL WHEN ONE NEWLY NEEDS SOMETHING — you hear the stall from across the base instead of noticing a nametag glyph an hour later · MID-TRANSFER CLICKS — right-clicking a bot with its hands full of chest move gets a visible swing instead of a screen over a half-finished transfer · IDLE SELF-SORT — a stationed bot with genuinely nothing to do and two chests in reach straightens its own stores, rarely · AND THE SORT GATE — the ambient sort only queues when the chests are actually within the sorter's reach, so it never announces it cannot find them · THEY GO TO THE CHEST FOR SEEDS NOW, AND IT WAS THE TWO-SECOND TRANSFER THAT STOPPED THEM: a restock pulled three things in a row — rations, charges, then the kit — and each one was paced. The rations scoop took its items and started the two-second clock, and the redstone and the KIT scoops behind it both bailed out on that clock and returned nothing. The seeds were always last in the queue and were never once reached. So a farmer stood beside a chest full of seeds, restocking food it already had, for ever. The whole restock is one paced trip now, rations top UP to three rather than taking three every time, and the kit is never starved behind them · AND IT NO LONGER SITS BEHIND THE COOL-OFF: running out of seeds made the goal report a dry run, which earned a forty-second cool-off, which is exactly the window in which the restock lived — so the one thing that would have fixed it was the one thing it could not do. Restocking is not discretionary work; it runs from the tick regardless of the cool-off, the job queue or the station brain, and a dry run straight after a restock no longer counts as a tapped-out patch · AND THE JOBS ASK FOR THEMSELVES: before a farmer gives up a run for want of seeds, a miner for want of a pickaxe, a smelter for want of fuel, a rancher for want of feed, a lumberjack for want of an axe, a fisher for want of a rod — each one goes to the chests on its patch first, and only calls the run over if the chest has nothing either · THE SCREENS READ LIKE MINECRAFT NOW: I kept making the text brighter on a near-black panel, and it kept being hard to read, because contrast was never the problem — it already measured 17:1 against that panel, three times a vanilla button label. The problem was the panel. Every assistant screen now uses vanilla's own convention, dark ink on light grey, the same as the pack screen — the one screen nobody has ever called unreadable. Every ink in the set was measured against every band it can land on and the worst case is 4.3:1, where a vanilla button's label is 3.4:1 — so nothing the mod draws is quieter than the game's own text. The status badge sits on a raised light chip instead of the recessed grey, and the map's player cross went from white to ink, because white on light grey is a cross you cannot find · FARMERS FILL THE HOLES FIRST: a bare square is growth that is not happening, so a farmer with seeds plants the gaps in its field before taking the harvest — and the one line that can destroy a plant now checks the crop is ripe itself rather than trusting whatever routed it there · THEY WORK LIKE PEOPLE NOW: three seconds between actions for a raw recruit instead of a fraction of one, and that number is what levels, branch, crewmates, quirk and dinner all pull against — a fed veteran working alongside its crew gets down to about a second and a half, one on scraps takes ten · LEVELS ARE A PROCESS: the XP curve is two and a half times longer, so level 20 is 10,000 xp rather than 4,000 · CHESTS AT THE EDGE OF A PLOT WERE INVISIBLE: the search was a flat 12 blocks from the patch CENTRE, and a default 25x25 patch has corners 17 blocks out — so a farmer stood beside a chest full of seeds insisting it had none, for every job. The range now covers the whole marked plot · PACK SCREEN LAYOUT: the food readout I added in b61 was drawn at exactly the Set Area button row, so the bar and its text ran straight through the buttons. It now shares the status line with the bar as a hairline above the inventory, and the whole screen is mapped element by element so nothing else lands on anything · THE HOPPING — IT WAS NEVER MY JUMP CALLS: vanilla MoveControl jumps by itself whenever the next path node is above step height, so a bot handed a node it cannot reach bounces at the engine's own pace and rate-limiting the mod's jump() calls could never have touched it. setJumping is now overridden — the one point every jump from every source must pass through — capped at one per second, fluids exempt · THE HOPPING, AT THE SOURCE: four separate places called jump(), each able to fire every few ticks, which is why fixing them one at a time did not work twice. They all go through one gate now with a hard two-second floor, so a bot physically cannot bounce. The escape goal also sits at priority 0 and could hold it for ever on a fence it could have walked around — it now times out after ten seconds and backs off · THE HOPPING, PROPERLY: bounding the jumps was not enough — giving up reset the counter, the brain re-picked the same unreachable target a tick later, and the bot hopped twice more, for ever. Now: at most one hop every three seconds and only at something a hop clears; giving up blocks any new walking target for ten seconds; and the jump flag is forced off whenever there is no path at all · KIT CHECK: every ten seconds an idle specialist confirms it is holding the tool of its trade and equips it if not — a hoe for the farmer, shears for the rancher, a rod for the fisher — so nobody starts its next run a swing behind holding a stack of wheat · MINERS STAY ON THEIR PATCH: containment only ever checked X and Z, so anything built above or below the plot was fair game and vein-chasing wandered off the plan entirely — every dig is now gated on the footprint AND the depth you set · SMELTERS RUN THE WHOLE BANK: ten furnaces and 200 ore is 20 apiece, walked in rotation to keep them all lit, and fuel goes in longest-burning first · FARMERS LEAVE THE WATER ALONE: vanilla canBeReplaced() returns true for water, so every free-space test on a farm read a pond as open ground — a farmer would till its own bank and plant wheat into the source block, destroying the water hydrating its field. Fluids are never free space now · READABLE SCREENS: every line the mod draws itself had its drop shadow switched off, which is why the vanilla buttons looked crisp and everything above them did not — that is now on everywhere. The panel is fully opaque instead of 94%, so a night-time forest no longer shows through it, and the dimmest text went from 3.6:1 contrast to 7.3:1 · NO MORE HOPPING ON THE SPOT: a bot that could not reach where it was going hopped once a second forever. It now hops only at something a hop would clear, only twice, then drops the path and picks a different job · GUARDS WALK: the patrol deadlocked on the first corner it could not path to; it now abandons a leg it cannot finish and takes the next corner · FARMERS: a run plants up to 64 rather than 9, and nobody tills ground that has no water within four blocks, because dry farmland reverts to dirt · PLACE MARKER ACTUALLY DOES SOMETHING: it used to refuse to work until you renamed it in an anvil, which is typing, and the named waypoints it made were only read by the chat commands and the patrol goal — both switched off. Right-click a spot and it is now the nearest assistant home: where it sleeps, where Go Home sends it, where a hauler delivers · FARMERS PLANT AGAIN: a farmer would not sow a field that already had a single seedling in it — the check asked whether there were NO crops before planting, so one wheat anywhere in the plot stopped it sowing the other fifty empty squares. It now asks whether there is ROOM, which is a different question, and answers all three farm questions in one pass instead of three · THE WAND WORKS ON BOTS AGAIN: right-clicking an assistant with the Work Zone Marker opened its pack instead of assigning it, because the entity gets first refusal on a right-click and was consuming it before the wand ever saw it. Binding a bot and putting one on a marked plot have both been dead since the wand shipped · YOU GET WHAT YOU FEED THEM: a specialist works at the pace of its last meal. Rotten flesh is 30%, carrots and melon around 55, bread and baked potato 85, a cooked steak or porkchop 100 — and it eats the best thing it has, so what it runs on is decided by what you stock. Right-click one and the bar under its gear shows the pace and what bought it · SPAWNER RECIPE: the centre of the ring is a plain DIAMOND now, not a diamond block — hiring already costs diamonds from the fourth assistant on, so charging a whole block for the spawner as well was charging twice. Eight rotten flesh round one diamond · REQUEST BOARD: a specialist that cannot supply itself posts what it is short of, and anyone already carrying that takes it over on their next run — an answered request outranks the standing supply chains, because a posted need is somebody who has actually stopped working. The crew screen shows who is asking for what · GOOD GROUND: a miner remembers where the veins were and a lumberjack where it replanted, and both go back rather than wandering off in a straight line away from the ore they just found · THE BEAT: a guard with a patch now walks its perimeter corner to corner instead of standing in the middle — it meets things at the boundary, which is what a boundary is for · TRAITS: every hire turns up with a quirk of its own — quick, sturdy, cave-shy, a night owl, or thrifty — rolled from its own id so it is settled the moment you meet it and never rerolls · SHIFT HANDOVER: a specialist clocking off passes its load to whoever is coming on to the same plot, keeping its own tools and rations · TOOL SENSE: among tools that dig a block at much the same rate the enchantment now decides — Fortune on ore for the extra yield, Silk Touch on the few blocks that shatter without it, and never Silk Touch on ore, which costs a miner drops · TEAMWORK: hands that have worked the same ground for weeks get up to 10% quicker at it · MILESTONES: a nametag earns a chevron at a thousand of whatever its trade is judged on, three at twenty thousand · SUPPLY CHAINS: a load now goes where it is wanted rather than into whichever chest is nearest — ore and fuel to the smelter, wheat and carrots to the rancher, spare food to whoever has an empty larder and is about to stall. Three chains, each obvious, no general routing to surprise you · WAGES: a specialist draws a wage in metal on top of its rations, and a wage is SPENT, not carried — hand one a diamond and it is gone, so you cannot kill it to get the diamond back. Iron covers a day, gold two, a diamond four · HIRING COST: the first three are free, then each hire wants one more diamond than the last · LEDGER: what the crew has cost you, on the crew screen and per bot on its record · DEATH MEMORY: a bot that died somewhere keeps a wider margin there next life · NAMES: every hire arrives with a name of its own instead of ten of them called assistant, and the Name button gives you a page of unused names to click — no anvil, no typing · PLOTS FIRST: mark a field with the wand before you own anyone, then right-click each assistant to put them on it. One field, marked once, worked by as many hands as you like, and widening it afterwards moves everyone already on it · SERVER COST: a requirement check used to probe every one of 6,875 positions in a zone, up to seven times a scan — about 48,000 block-entity lookups every three seconds per specialist. It now reads the block-entity map the chunk already keeps, which is at most nine maps of a handful of entries each. Same chests, same answers · LINKED CHESTS: everything a job needs counts as held whether it is in the pack or in a chest in the zone, and the bot fetches it itself — stock the chest once and it stops asking you · Hatted trades (farmer, miner, rancher, guard, fisher) had the whole head covered by the hat layer and no face at all — the overlay is now a crown and a brow band, so they look like people in hats · SAVED PATCHES: set a field up once, press Save Patch, and every future hire drops straight onto it — same trade, same ground, same shift. Put a second bot on the same patch and they crew it together · LAYOUT FIX: the orders sheet was drawing its career and perk lines underneath the duty buttons, so nobody ever saw them · JOB UNIFORMS: every trade wears its own kit — straw hat and wheat gold for the farmer, denim and a hard hat for the miner, hi-vis for the hauler — so you can read a crew of ten across a field · WORKING ICON: the tool of its trade floats over its head while it works, and turns into a barrier the moment it's stuck · MAP SCREEN: every patch and every specialist from above, click one to open its orders · WORK RECORD: the full career tally on its own page · CONFIG FILE: every number is yours now — upkeep rates, crew size, patch sizes, the XP curve, chunk loading — in config/mc_assistant-common.toml · LOYALTY: a specialist earns a permanent heart per week of service, up to four, so an old hand outlives a fresh hire · BRANCHES: at level 20 a specialist picks a branch (irrigation, husbandry, prospecting, forestry, sentinel, porterage) that deepens the job it already does · DEATH LOG: it tells you what killed it and where, and remembers when revived · danger sense · useful idling · work record · beds + shifts";
+        "2026-07-b82 · NINE MORE, AND THE OPERATION RUNS ON ITS OWN KITCHEN: a smelter with no ore to run COOKS — the rancher's raw drops become the full-pace meals the diet system wants, banked for the supply chain to hand to whoever is hungry; the pen feeds the whole operation with nobody lifting a finger · eggs are swept the moment they exist, because an egg despawns in five minutes and general litter waits for three drops to pile up · A MINER WITH A FULL PACK WALKS BACK UP ITS OWN STAIRS — every step of the descent is remembered and retraced, instead of handing the pathfinder a bot at Y-50 and letting it wander whatever caves the dig had breached · ARMOR IN THE LINKED CHEST IS WORN: the same rule tools follow, one piece per kit check, the old piece left in the chest in trade, with the equip sound so you hear it happen · DRAW PLOTS ON THE MAP: drag a rectangle on open ground and click a chip to hand it over, or start the drag on an existing patch to resize it in place — the server clamps the size and never trusts the client past a footprint · RIGHT-CLICK GROUND TO NAME IT: North Farm, The Quarry — a preset list, no typing, shared by everyone working the same patch, written on the map and in every status line · OPERATION TOTALS: one page summing everything the whole crew has ever produced with a per-day rate, because 4,000 wheat is a career but 400 a day is a farm that feeds a server · CHESTS LABEL THEMSELVES: a bot with item frames hangs one on each linked chest showing what it mostly holds, and keeps the sample truthful as the contents drift · AND THE WORK IS AUDIBLE NOW: the rhythmic hit of a pick on stone and a hoe on dirt in time with the swing, the thunk of every torch, sapling, filler block and water bucket, the pop of drops entering the pack, the crunch of a meal, the clink of armor going on — a worked farm finally SOUNDS worked · TWELVE UPGRADES TO WHAT WAS ALREADY THERE — THE FARM: the field mix is the STOCK mix now, half wheat and half carrots in the chest comes out a field of half and half, because whichever seed is furthest behind its share goes in the ground next · melons and pumpkins: the seeds plant a STEM, the stem lives forever, and only the fruit is ever cut — plant those rows once · sugar cane: cut above the root and the root regrows it, no replanting, ever · bonemeal in the chest reaches the farmer and gets spent one application per quiet moment on something still growing — never on grass, which vanilla answers with a lawn of flowers · THE MINE: every exposed ore face is dug before the gallery advances, including ore in the walls of caves it merely WALKS through, which the old scan never saw because it only checked blocks it broke · lava or water in a wall or ahead gets walled off with the cobble it is already carrying and the tunnel carries ON PAST — a run used to abandon everything at the first drip, now it only stops when the filler runs out · and the dig floor jumps straight to the stratum: three buttons on the orders sheet, Surface, Y16 for iron, Y-54 for diamond, instead of eight blocks per click · THE CREW: skulls on the map where anyone died in the last day, gone after that, so you can see the danger spot while you re-zone · the crew list sorts three ways now — name, trade, or problems first, and it remembers which you picked · an off-shift bot with no bed claims the nearest free one around home BY ITSELF at dusk, and it can no longer take a bed a crewmate already owns or one someone is asleep in — which the button could · level 30 is a CHOICE now, made once on the record sheet: Swift is the old +20% speed, Tough is +4 armor, Porter banks and hauls half a pack more per trip — two veterans on one crew finally come out different · and payday is spoken: one quiet line naming the ingot it took, so metal leaving the chest is never a mystery · CHECKED ONE BY ONE, THREE CAUGHT: the bed-time stagger I shipped in b79 ANDed two tick clocks that can never agree for some bots — those bots would simply never have walked to bed again; it rolls a die per opportunity now, which cannot starve anyone. The off-duty stroll had the same disease and got the same cure. A failed restock was wiping the remembered POND along with the chest list, putting a stalled fisher back on the full 6,875-block water scan every checklist — the exact cost the chunk-map fix removed; retries now drop only the chest list. A hauler whose linked chest is its PICKUP chest would have delivered its cargo straight back into it, forever — delivery runs ignore the standing link. And the idle self-sort re-announced a sorted storeroom every five minutes; it only runs after something NEW was banked · THE SCREENS GOT THE PACK SCREEN\u2019S CONSTRUCTION: every panel now has the vanilla bevel — light where the light falls, shadow opposite — an engraved rule under the header band, section headings with a green tick and an engraved hairline, progress bars recessed into the panel with a glossy top edge on the fill, and the map sunk into the panel like a slot with N marked on it. Every trade\u2019s colour is now ONE palette shared by the map, the crew list and a new chip beside the name on the orders and record sheets — you find the farmer in a list the way you find it in a field. Career tallies draw on a soft full-width track so the biggest number owns its row · EIGHTEEN WAYS THEY WORK SMARTER: LINK A CHEST DIRECTLY — click a chest with the wand while a bot is bound and that chest is THE chest: restocks open it first, output banks there, and it survives a reload · CHESTS IN A SENSIBLE ORDER — the hand-linked chest, then the one that answered last time, then the nearest to where the bot is stood, instead of a fixed scan order that walked it past three nearer chests · RESTOCK BEFORE THE STALL — kit trending toward empty gets topped up in an idle window, not at zero with the field half-planted · BORROWING — chests empty but a crewmate ten feet away carrying a stack of seeds? It takes half, says thanks, and keeps working · FAILED PATHS ARE REMEMBERED — a spot no path reaches is blacklisted for a minute ACROSS runs, so the brain stops re-picking the same dead end the moment a goal restarts · FARMERS SPIRAL OUTWARD — target scans work ring by ring from the feet and stop at the first hit, instead of reading thousands of blocks to find the crop two steps away · SAPLINGS GET ROOM — a lumberjack skips replanting within two blocks of a standing sapling, so the forest comes back as trees rather than a choked thicket · TORCHES WHERE THE DARK IS — miners and lighting runs place a torch only where BLOCK light is zero, which is the only place anything can spawn, so a stack lights four times the ground · BATCHED DEPOSITS — a stash run waits for a fuller load; the ten-minute trickle timer and a full pack still force a trip, so nothing is ever stranded · QUIET WHEN UNWATCHED — with no player within 64 blocks the nametag stops rebuilding, the checklist re-checks a third as often and the idle brain looks for its next job a third as often; the jobs already queued run at full speed, so the work itself is untouched · CHEST LIST CACHED HONESTLY — the store index is reused for ten seconds instead of one and a half, drops itself the moment any chest in it vanishes, and a failed restock always looks fresh, so a just-placed chest is still seen within seconds · BED RUSH FIXED — a whole crew clocking off used to fire every pathfind on the same tick; path starts are now staggered across a two-second window per bot · OFF DUTY IS NOT A STATUE — a parked bot takes a short, cheap stroll around home now and then instead of running the full idle brain for nothing · A BELL WHEN ONE NEWLY NEEDS SOMETHING — you hear the stall from across the base instead of noticing a nametag glyph an hour later · MID-TRANSFER CLICKS — right-clicking a bot with its hands full of chest move gets a visible swing instead of a screen over a half-finished transfer · IDLE SELF-SORT — a stationed bot with genuinely nothing to do and two chests in reach straightens its own stores, rarely · AND THE SORT GATE — the ambient sort only queues when the chests are actually within the sorter's reach, so it never announces it cannot find them · THEY GO TO THE CHEST FOR SEEDS NOW, AND IT WAS THE TWO-SECOND TRANSFER THAT STOPPED THEM: a restock pulled three things in a row — rations, charges, then the kit — and each one was paced. The rations scoop took its items and started the two-second clock, and the redstone and the KIT scoops behind it both bailed out on that clock and returned nothing. The seeds were always last in the queue and were never once reached. So a farmer stood beside a chest full of seeds, restocking food it already had, for ever. The whole restock is one paced trip now, rations top UP to three rather than taking three every time, and the kit is never starved behind them · AND IT NO LONGER SITS BEHIND THE COOL-OFF: running out of seeds made the goal report a dry run, which earned a forty-second cool-off, which is exactly the window in which the restock lived — so the one thing that would have fixed it was the one thing it could not do. Restocking is not discretionary work; it runs from the tick regardless of the cool-off, the job queue or the station brain, and a dry run straight after a restock no longer counts as a tapped-out patch · AND THE JOBS ASK FOR THEMSELVES: before a farmer gives up a run for want of seeds, a miner for want of a pickaxe, a smelter for want of fuel, a rancher for want of feed, a lumberjack for want of an axe, a fisher for want of a rod — each one goes to the chests on its patch first, and only calls the run over if the chest has nothing either · THE SCREENS READ LIKE MINECRAFT NOW: I kept making the text brighter on a near-black panel, and it kept being hard to read, because contrast was never the problem — it already measured 17:1 against that panel, three times a vanilla button label. The problem was the panel. Every assistant screen now uses vanilla's own convention, dark ink on light grey, the same as the pack screen — the one screen nobody has ever called unreadable. Every ink in the set was measured against every band it can land on and the worst case is 4.3:1, where a vanilla button's label is 3.4:1 — so nothing the mod draws is quieter than the game's own text. The status badge sits on a raised light chip instead of the recessed grey, and the map's player cross went from white to ink, because white on light grey is a cross you cannot find · FARMERS FILL THE HOLES FIRST: a bare square is growth that is not happening, so a farmer with seeds plants the gaps in its field before taking the harvest — and the one line that can destroy a plant now checks the crop is ripe itself rather than trusting whatever routed it there · THEY WORK LIKE PEOPLE NOW: three seconds between actions for a raw recruit instead of a fraction of one, and that number is what levels, branch, crewmates, quirk and dinner all pull against — a fed veteran working alongside its crew gets down to about a second and a half, one on scraps takes ten · LEVELS ARE A PROCESS: the XP curve is two and a half times longer, so level 20 is 10,000 xp rather than 4,000 · CHESTS AT THE EDGE OF A PLOT WERE INVISIBLE: the search was a flat 12 blocks from the patch CENTRE, and a default 25x25 patch has corners 17 blocks out — so a farmer stood beside a chest full of seeds insisting it had none, for every job. The range now covers the whole marked plot · PACK SCREEN LAYOUT: the food readout I added in b61 was drawn at exactly the Set Area button row, so the bar and its text ran straight through the buttons. It now shares the status line with the bar as a hairline above the inventory, and the whole screen is mapped element by element so nothing else lands on anything · THE HOPPING — IT WAS NEVER MY JUMP CALLS: vanilla MoveControl jumps by itself whenever the next path node is above step height, so a bot handed a node it cannot reach bounces at the engine's own pace and rate-limiting the mod's jump() calls could never have touched it. setJumping is now overridden — the one point every jump from every source must pass through — capped at one per second, fluids exempt · THE HOPPING, AT THE SOURCE: four separate places called jump(), each able to fire every few ticks, which is why fixing them one at a time did not work twice. They all go through one gate now with a hard two-second floor, so a bot physically cannot bounce. The escape goal also sits at priority 0 and could hold it for ever on a fence it could have walked around — it now times out after ten seconds and backs off · THE HOPPING, PROPERLY: bounding the jumps was not enough — giving up reset the counter, the brain re-picked the same unreachable target a tick later, and the bot hopped twice more, for ever. Now: at most one hop every three seconds and only at something a hop clears; giving up blocks any new walking target for ten seconds; and the jump flag is forced off whenever there is no path at all · KIT CHECK: every ten seconds an idle specialist confirms it is holding the tool of its trade and equips it if not — a hoe for the farmer, shears for the rancher, a rod for the fisher — so nobody starts its next run a swing behind holding a stack of wheat · MINERS STAY ON THEIR PATCH: containment only ever checked X and Z, so anything built above or below the plot was fair game and vein-chasing wandered off the plan entirely — every dig is now gated on the footprint AND the depth you set · SMELTERS RUN THE WHOLE BANK: ten furnaces and 200 ore is 20 apiece, walked in rotation to keep them all lit, and fuel goes in longest-burning first · FARMERS LEAVE THE WATER ALONE: vanilla canBeReplaced() returns true for water, so every free-space test on a farm read a pond as open ground — a farmer would till its own bank and plant wheat into the source block, destroying the water hydrating its field. Fluids are never free space now · READABLE SCREENS: every line the mod draws itself had its drop shadow switched off, which is why the vanilla buttons looked crisp and everything above them did not — that is now on everywhere. The panel is fully opaque instead of 94%, so a night-time forest no longer shows through it, and the dimmest text went from 3.6:1 contrast to 7.3:1 · NO MORE HOPPING ON THE SPOT: a bot that could not reach where it was going hopped once a second forever. It now hops only at something a hop would clear, only twice, then drops the path and picks a different job · GUARDS WALK: the patrol deadlocked on the first corner it could not path to; it now abandons a leg it cannot finish and takes the next corner · FARMERS: a run plants up to 64 rather than 9, and nobody tills ground that has no water within four blocks, because dry farmland reverts to dirt · PLACE MARKER ACTUALLY DOES SOMETHING: it used to refuse to work until you renamed it in an anvil, which is typing, and the named waypoints it made were only read by the chat commands and the patrol goal — both switched off. Right-click a spot and it is now the nearest assistant home: where it sleeps, where Go Home sends it, where a hauler delivers · FARMERS PLANT AGAIN: a farmer would not sow a field that already had a single seedling in it — the check asked whether there were NO crops before planting, so one wheat anywhere in the plot stopped it sowing the other fifty empty squares. It now asks whether there is ROOM, which is a different question, and answers all three farm questions in one pass instead of three · THE WAND WORKS ON BOTS AGAIN: right-clicking an assistant with the Work Zone Marker opened its pack instead of assigning it, because the entity gets first refusal on a right-click and was consuming it before the wand ever saw it. Binding a bot and putting one on a marked plot have both been dead since the wand shipped · YOU GET WHAT YOU FEED THEM: a specialist works at the pace of its last meal. Rotten flesh is 30%, carrots and melon around 55, bread and baked potato 85, a cooked steak or porkchop 100 — and it eats the best thing it has, so what it runs on is decided by what you stock. Right-click one and the bar under its gear shows the pace and what bought it · SPAWNER RECIPE: the centre of the ring is a plain DIAMOND now, not a diamond block — hiring already costs diamonds from the fourth assistant on, so charging a whole block for the spawner as well was charging twice. Eight rotten flesh round one diamond · REQUEST BOARD: a specialist that cannot supply itself posts what it is short of, and anyone already carrying that takes it over on their next run — an answered request outranks the standing supply chains, because a posted need is somebody who has actually stopped working. The crew screen shows who is asking for what · GOOD GROUND: a miner remembers where the veins were and a lumberjack where it replanted, and both go back rather than wandering off in a straight line away from the ore they just found · THE BEAT: a guard with a patch now walks its perimeter corner to corner instead of standing in the middle — it meets things at the boundary, which is what a boundary is for · TRAITS: every hire turns up with a quirk of its own — quick, sturdy, cave-shy, a night owl, or thrifty — rolled from its own id so it is settled the moment you meet it and never rerolls · SHIFT HANDOVER: a specialist clocking off passes its load to whoever is coming on to the same plot, keeping its own tools and rations · TOOL SENSE: among tools that dig a block at much the same rate the enchantment now decides — Fortune on ore for the extra yield, Silk Touch on the few blocks that shatter without it, and never Silk Touch on ore, which costs a miner drops · TEAMWORK: hands that have worked the same ground for weeks get up to 10% quicker at it · MILESTONES: a nametag earns a chevron at a thousand of whatever its trade is judged on, three at twenty thousand · SUPPLY CHAINS: a load now goes where it is wanted rather than into whichever chest is nearest — ore and fuel to the smelter, wheat and carrots to the rancher, spare food to whoever has an empty larder and is about to stall. Three chains, each obvious, no general routing to surprise you · WAGES: a specialist draws a wage in metal on top of its rations, and a wage is SPENT, not carried — hand one a diamond and it is gone, so you cannot kill it to get the diamond back. Iron covers a day, gold two, a diamond four · HIRING COST: the first three are free, then each hire wants one more diamond than the last · LEDGER: what the crew has cost you, on the crew screen and per bot on its record · DEATH MEMORY: a bot that died somewhere keeps a wider margin there next life · NAMES: every hire arrives with a name of its own instead of ten of them called assistant, and the Name button gives you a page of unused names to click — no anvil, no typing · PLOTS FIRST: mark a field with the wand before you own anyone, then right-click each assistant to put them on it. One field, marked once, worked by as many hands as you like, and widening it afterwards moves everyone already on it · SERVER COST: a requirement check used to probe every one of 6,875 positions in a zone, up to seven times a scan — about 48,000 block-entity lookups every three seconds per specialist. It now reads the block-entity map the chunk already keeps, which is at most nine maps of a handful of entries each. Same chests, same answers · LINKED CHESTS: everything a job needs counts as held whether it is in the pack or in a chest in the zone, and the bot fetches it itself — stock the chest once and it stops asking you · Hatted trades (farmer, miner, rancher, guard, fisher) had the whole head covered by the hat layer and no face at all — the overlay is now a crown and a brow band, so they look like people in hats · SAVED PATCHES: set a field up once, press Save Patch, and every future hire drops straight onto it — same trade, same ground, same shift. Put a second bot on the same patch and they crew it together · LAYOUT FIX: the orders sheet was drawing its career and perk lines underneath the duty buttons, so nobody ever saw them · JOB UNIFORMS: every trade wears its own kit — straw hat and wheat gold for the farmer, denim and a hard hat for the miner, hi-vis for the hauler — so you can read a crew of ten across a field · WORKING ICON: the tool of its trade floats over its head while it works, and turns into a barrier the moment it's stuck · MAP SCREEN: every patch and every specialist from above, click one to open its orders · WORK RECORD: the full career tally on its own page · CONFIG FILE: every number is yours now — upkeep rates, crew size, patch sizes, the XP curve, chunk loading — in config/mc_assistant-common.toml · LOYALTY: a specialist earns a permanent heart per week of service, up to four, so an old hand outlives a fresh hire · BRANCHES: at level 20 a specialist picks a branch (irrigation, husbandry, prospecting, forestry, sentinel, porterage) that deepens the job it already does · DEATH LOG: it tells you what killed it and where, and remembers when revived · danger sense · useful idling · work record · beds + shifts";
 
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
@@ -387,7 +387,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         long stamp = deedStamp * 31L + branch.ordinal() * 7L + daysServed()
             + wagesPaid * 1009L + (wageDue() / 200L)
             + trait.ordinal() * 65537L + teamworkPercent() * 131L + dietPercent * 7919L
-            + perk30.ordinal() * 524287L
+            + perk30.ordinal() * 524287L + patchName.hashCode() * 8191L
             + (deathSite == null ? 0
                : deathSite.asLong() ^ ((level().getGameTime() - deathGameTime) / 1200L));
         if (stamp != lastExtraStamp || lastExtraZone != zoneStamp()) {
@@ -399,12 +399,13 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 // the field the reader stops splitting at.
                 + "|" + trait.label + "," + teamworkPercent() + "," + trait.blurb
                 + "|" + dietPercent + "," + lastMeal
-                + "|" + deathField() + "|" + perk30.ordinal());
+                + "|" + deathField() + "|" + perk30.ordinal() + "|" + patchName);
             lastExtraStamp = stamp;
             lastExtraZone = zoneStamp();
         }
         this.entityData.set(DATA_ZONE, workZone == null ? "No work zone set"
-            : workZone.describe() + (stationTask == StationTask.MINE ? "  depth Y" + workZone.depth() : ""));
+            : (patchName.isEmpty() ? "" : patchName + " — ") + workZone.describe()
+              + (stationTask == StationTask.MINE ? "  depth Y" + workZone.depth() : ""));
         String status;
         if (stationTask == StationTask.NONE) {
             status = "Pick a job, then mark a zone";
@@ -845,6 +846,34 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         return until != null && until > tickCount;
     }
 
+    /** What this one's ground is CALLED — "North Farm", "The Quarry" — shown
+     *  on the map, in its status line, and shared by everyone working the same
+     *  patch. Cycled by right-clicking the patch on the map: a preset list,
+     *  because nothing in this mod is ever typed. */
+    private String patchName = "";
+
+    public String patchName() { return patchName; }
+
+    public void cyclePatchName() {
+        if (workZone == null) {
+            say("Mark my patch first, then we can put a name on it.");
+            return;
+        }
+        int idx = Names.PATCHES.indexOf(patchName);
+        String next = idx + 1 >= Names.PATCHES.size() ? "" : Names.PATCHES.get(idx + 1);
+        java.util.List<AssistantEntity> mates = ownerId != null ? allFor(ownerId)
+            : java.util.List.of(this);
+        for (AssistantEntity mate : mates) {
+            if (!mate.isAlive() || !workZone.equals(mate.workZone())) continue;
+            mate.patchName = next;
+            mate.publishJobState();
+        }
+        this.patchName = next;
+        publishJobState();
+        say(next.isEmpty() ? "This patch goes back to being just ground."
+            : "This ground is " + next + " now.");
+    }
+
     /** The chest the player linked to this bot by hand (wand on a chest), and
      *  the chest that last actually answered a restock. Both are tried before
      *  the rest of the stores, so a restock usually opens one chest, not five. */
@@ -1057,6 +1086,42 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         return trait == Trait.THRIFTY ? 125 : 100;
     }
 
+    // ----------------------------- sound of work -----------------------------
+    // destroyBlock plays its own break sound, so harvesting and digging already
+    // sound right at the END of a job. These fill in the rest: the rhythmic
+    // hit while working, the placement thunk, the pickup pop — the difference
+    // between a farm that is worked and a farm where things silently change.
+
+    private int lastPopTick;
+
+    /** The soft pop of something entering the pack. Rate-limited: a swept pile
+     *  of forty drops is one workman picking things up, not a slot machine. */
+    public void popSound() {
+        if (tickCount - lastPopTick < 10) return;
+        lastPopTick = tickCount;
+        playSound(net.minecraft.sounds.SoundEvents.ITEM_PICKUP, 0.25F,
+            0.9F + random.nextFloat() * 0.4F);
+    }
+
+    /** The hit-sound of the block actually being worked, quiet, in time with
+     *  the swing — a pick on stone sounds like a pick on stone. */
+    public void workHit(BlockPos pos) {
+        BlockState st = level().getBlockState(pos);
+        if (st.isAir()) return;
+        var type = st.getSoundType();
+        level().playSound(null, pos, type.getHitSound(), net.minecraft.sounds.SoundSource.BLOCKS,
+            (type.getVolume() + 1.0F) / 8.0F, type.getPitch() * 0.6F);
+    }
+
+    /** The placement sound of whatever was just set down at pos. */
+    public void placeSound(BlockPos pos) {
+        BlockState st = level().getBlockState(pos);
+        if (st.isAir()) return;
+        var type = st.getSoundType();
+        level().playSound(null, pos, type.getPlaceSound(), net.minecraft.sounds.SoundSource.BLOCKS,
+            (type.getVolume() + 1.0F) / 2.0F, type.getPitch() * 0.8F);
+    }
+
     private int transferBusyUntil;
 
     /** Moving goods in or out of a block takes a moment, the way it would for a
@@ -1089,6 +1154,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (getTarget() != null || !jobs.isEmpty() || retreating) return;
         if (tickCount - kitCheckTick < 200) return;
         kitCheckTick = tickCount;
+        armorFromChests();
         switch (stationTask) {
             case FARM  -> equipToolNamed("_hoe");
             case WOOD  -> equipToolNamed("_axe");
@@ -1265,6 +1331,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         int was = dietPercent;
         dietPercent = bestScore;
         lastMeal = meal.getHoverName().getString();
+        // The meal's own sound, asked of the entity — the one path that has
+        // kept the same shape across versions while SoundEvents fields turned
+        // into Holders one release at a time.
+        playSound(this.getEatingSound(meal), 0.6F, 0.9F + random.nextFloat() * 0.2F);
+        swing(net.minecraft.world.InteractionHand.MAIN_HAND);
         meal.shrink(1);
         if (meal.isEmpty()) inventory.set(bestSlot, ItemStack.EMPTY);
         if (was != dietPercent) {
@@ -2058,6 +2129,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             && inZone(blockPosition())) {
             placeTorchNearby();
         }
+        labelChests();
         // A farmer with bonemeal is a farm that grows while you watch: one
         // application per quiet moment, only on something still growing —
         // never on grass, which vanilla would answer with a lawn of flowers.
@@ -2668,6 +2740,35 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         ItemStack bow = getMainHandItem();
         if (bow.is(Items.BOW)) {
             bow.hurtAndBreak(1, this, EquipmentSlot.MAINHAND);
+        }
+    }
+
+    /** Armor left in the linked chest is armor this one should be wearing —
+     *  the same rule tools already follow. One piece per kit check, the old
+     *  piece goes back in the chest in trade, and it says so, so a chestplate
+     *  vanishing from storage is never a mystery. */
+    private void armorFromChests() {
+        for (ZoneChests.Found f : linkedChests()) {
+            if (!f.stillThere()) continue;
+            Container c = f.container();
+            for (int i = 0; i < c.getContainerSize(); i++) {
+                ItemStack s = c.getItem(i);
+                if (s.isEmpty() || !(s.getItem() instanceof ArmorItem candidate)) continue;
+                EquipmentSlot slot = this.getEquipmentSlotForItem(s);
+                if (slot != EquipmentSlot.HEAD && slot != EquipmentSlot.CHEST
+                    && slot != EquipmentSlot.LEGS && slot != EquipmentSlot.FEET) continue;
+                ItemStack worn = this.getItemBySlot(slot);
+                int wornDefense = worn.getItem() instanceof ArmorItem w ? w.getDefense() : -1;
+                if (candidate.getDefense() <= wornDefense) continue;
+                ItemStack take = s.copy();
+                c.setItem(i, worn);
+                c.setChanged();
+                this.setItemSlot(slot, take);
+                playSound(candidate.getEquipSound().value(), 1.0F, 1.0F);
+                swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+                sayRoutine("Kitted up — took the " + take.getHoverName().getString() + " from the chest.");
+                return;
+            }
         }
     }
 
@@ -3571,6 +3672,16 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case RANCH -> {
                 // Shear what's woolly, cull when the herd is big, breed it back
                 // up when it's small — a rotating husbandry cycle at the pen.
+                // And eggs first: they despawn in five minutes, so a laid egg
+                // doesn't wait for three drops to pile up like general litter.
+                if (!isPackFull() && !level().getEntitiesOfClass(
+                        net.minecraft.world.entity.item.ItemEntity.class,
+                        getBoundingBox().inflate(STATION_RADIUS),
+                        d -> d.isAlive() && d.getItem().is(Items.EGG)
+                            && inZone(d.blockPosition())).isEmpty()) {
+                    enqueue(Job.cleanup());
+                    return true;
+                }
                 if (shearableSheepNearby()) {
                     if (countCarried(s -> s.is(Items.SHEARS)) > 0) {
                         enqueue(Job.shear(4));
@@ -3646,7 +3757,21 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 int iron = countMatching(s -> s.is(Items.RAW_IRON) || s.is(Items.IRON_ORE) || s.is(Items.DEEPSLATE_IRON_ORE));
                 int gold = countMatching(s -> s.is(Items.RAW_GOLD) || s.is(Items.GOLD_ORE) || s.is(Items.DEEPSLATE_GOLD_ORE));
                 int copper = countMatching(s -> s.is(Items.RAW_COPPER) || s.is(Items.COPPER_ORE) || s.is(Items.DEEPSLATE_COPPER_ORE));
-                if (iron + gold + copper == 0) return false; // input chest is empty — wait
+                if (iron + gold + copper == 0) {
+                    // No ore to run — cook for the crew instead. The rancher's
+                    // raw drops become the 100%-pace meals the diet system
+                    // wants, and the supply chain hands them to whoever is
+                    // hungry. The pen feeds the operation by itself.
+                    if (countMatching(RAW_FOOD) == 0) {
+                        scoopFromChests(RAW_FOOD, 32, chestRange());
+                    }
+                    int raw = countMatching(RAW_FOOD);
+                    if (raw > 0 && hasFuel) {
+                        enqueue(Job.smelt("food", raw));
+                        return true;
+                    }
+                    return false; // input chest is empty — wait
+                }
                 if (!hasFuel) {
                     if (tickCount - stationWarnTick > 4800) {
                         stationWarnTick = tickCount;
@@ -3868,7 +3993,13 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case GUARD -> countMatching(s -> s.is(Items.ROTTEN_FLESH) || s.is(Items.BONE)
                 || s.is(Items.STRING) || s.is(Items.GUNPOWDER) || s.is(Items.SPIDER_EYE));
             case SMELT -> surplusOf(Items.IRON_INGOT, 0) + surplusOf(Items.GOLD_INGOT, 0)
-                + surplusOf(Items.COPPER_INGOT, 0);
+                + surplusOf(Items.COPPER_INGOT, 0)
+                // The crew's dinners: banked so the supply chain can route
+                // them, minus a few kept back for the cook's own table.
+                + surplusOf(Items.COOKED_BEEF, 3) + surplusOf(Items.COOKED_PORKCHOP, 3)
+                + surplusOf(Items.COOKED_CHICKEN, 0) + surplusOf(Items.COOKED_MUTTON, 0)
+                + surplusOf(Items.COOKED_RABBIT, 0) + surplusOf(Items.COOKED_COD, 0)
+                + surplusOf(Items.COOKED_SALMON, 0);
             case MINE -> surplusOf(Items.COBBLESTONE, 16) + surplusOf(Items.COBBLED_DEEPSLATE, 0)
                 + surplusOf(Items.ANDESITE, 0) + surplusOf(Items.DIORITE, 0)
                 + surplusOf(Items.GRANITE, 0) + surplusOf(Items.TUFF, 0)
@@ -4162,6 +4293,68 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
     }
 
+    private int labelTick = -1000;
+
+    /** Self-labelling storage: put an item frame on a linked chest showing a
+     *  COPY of whatever the chest mostly holds, and keep it truthful as the
+     *  contents drift. One chest per pass, only with frames in the pack (or
+     *  pulled from stock), so a storeroom labels itself over a few quiet
+     *  minutes rather than in one flurry. */
+    private void labelChests() {
+        if (tickCount - labelTick < 1200) return;
+        labelTick = tickCount;
+        if (countCarried(t -> t.is(Items.ITEM_FRAME)) == 0
+            && scoopFromChests(t -> t.is(Items.ITEM_FRAME), 4, chestRange(), false) == 0) {
+            return;
+        }
+        for (ZoneChests.Found f : linkedChests()) {
+            if (!f.stillThere()) continue;
+            Container c = f.container();
+            // What does this chest mostly hold?
+            java.util.Map<net.minecraft.world.item.Item, Integer> tally = new java.util.HashMap<>();
+            for (int i = 0; i < c.getContainerSize(); i++) {
+                ItemStack st = c.getItem(i);
+                if (!st.isEmpty()) tally.merge(st.getItem(), st.getCount(), Integer::sum);
+            }
+            if (tally.isEmpty()) continue;
+            net.minecraft.world.item.Item main = null;
+            int best = 0;
+            for (var e : tally.entrySet()) {
+                if (e.getValue() > best) { best = e.getValue(); main = e.getKey(); }
+            }
+            // A frame already on the chest? Keep its sample truthful.
+            java.util.List<net.minecraft.world.entity.decoration.ItemFrame> frames =
+                level().getEntitiesOfClass(net.minecraft.world.entity.decoration.ItemFrame.class,
+                    new net.minecraft.world.phys.AABB(f.pos()).inflate(1.0));
+            boolean labelled = false;
+            for (var frame : frames) {
+                if (!frame.getPos().relative(frame.getDirection().getOpposite()).equals(f.pos())) continue;
+                labelled = true;
+                if (!frame.getItem().is(main)) {
+                    frame.setItem(new ItemStack(main));
+                    swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+                }
+                break;
+            }
+            if (labelled) continue;
+            // No frame yet: hang one on a free horizontal face.
+            for (net.minecraft.core.Direction d : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+                BlockPos facePos = f.pos().relative(d);
+                if (!level().getBlockState(facePos).canBeReplaced()) continue;
+                var frame = new net.minecraft.world.entity.decoration.ItemFrame(level(), facePos, d);
+                if (!frame.survives()) continue;
+                if (removeMatching(t -> t.is(Items.ITEM_FRAME), 1) != 1) return;
+                level().addFreshEntity(frame);
+                frame.setItem(new ItemStack(main));
+                placeSound(f.pos());
+                swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+                sayRoutine("Labelled the chest — it's mostly "
+                    + new ItemStack(main).getHoverName().getString() + ".");
+                return;   // one label per pass
+            }
+        }
+    }
+
     private boolean animalsNearby() {
         return !level().getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class,
             getBoundingBox().inflate(12.0), a -> a.isAlive() && !a.isBaby()).isEmpty();
@@ -4197,6 +4390,13 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     public static final java.util.function.Predicate<ItemStack> FARM_SEEDS = s ->
         s.is(Items.WHEAT_SEEDS) || s.is(Items.BEETROOT_SEEDS) || s.is(Items.CARROT)
         || s.is(Items.POTATO) || s.is(Items.MELON_SEEDS) || s.is(Items.PUMPKIN_SEEDS);
+
+    /** What the smelter turns into proper meals in a quiet spell: raw meat and
+     *  fish only. Potatoes are deliberately absent — they are a farmer's SEED
+     *  stock, and cooking the seed is how a farm quietly disappears. */
+    public static final java.util.function.Predicate<ItemStack> RAW_FOOD = s ->
+        s.is(Items.BEEF) || s.is(Items.PORKCHOP) || s.is(Items.CHICKEN)
+        || s.is(Items.MUTTON) || s.is(Items.RABBIT) || s.is(Items.COD) || s.is(Items.SALMON);
 
     private boolean hasSeeds() {
         return countMatching(FARM_SEEDS) > 0;
@@ -4723,6 +4923,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (deathSite != null) tag.putLong("DeathSite", deathSite.asLong());
         tag.putLong("DeathTime", deathGameTime);
         tag.putString("Perk30", perk30.name());
+        tag.putString("PatchName", patchName);
         tag.putInt("WageIron", ironPaid);
         tag.putInt("WageGold", goldPaid);
         tag.putInt("WageDiamond", diamondPaid);
@@ -4819,6 +5020,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         } catch (IllegalArgumentException e) {
             perk30 = Perk.NONE;
         }
+        patchName = tag.getString("PatchName");
         ironPaid = tag.getInt("WageIron");
         goldPaid = tag.getInt("WageGold");
         diamondPaid = tag.getInt("WageDiamond");
@@ -5624,6 +5826,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (deathSite != null) tag.putLong("DeathSite", deathSite.asLong());
         tag.putLong("DeathTime", deathGameTime);
         tag.putString("Perk30", perk30.name());
+        tag.putString("PatchName", patchName);
         tag.putInt("WageIron", ironPaid);
         tag.putInt("WageGold", goldPaid);
         tag.putInt("WageDiamond", diamondPaid);
@@ -5687,6 +5890,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         } catch (IllegalArgumentException e) {
             perk30 = Perk.NONE;
         }
+        patchName = tag.getString("PatchName");
         ironPaid = tag.getInt("WageIron");
         goldPaid = tag.getInt("WageGold");
         diamondPaid = tag.getInt("WageDiamond");

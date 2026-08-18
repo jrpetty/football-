@@ -6,6 +6,8 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
+import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,6 +24,15 @@ public class MapScreen extends Screen {
     private final List<AssistantEntity> crew = new ArrayList<>();
     private int left, top, mapX, mapY, mapW, mapH;
     private int hovered = -1;
+
+    // Drawing a plot: press, drag a rectangle, release. Started on a patch it
+    // resizes that patch; started on open ground it becomes a PENDING plot the
+    // next chip click hands over. All in world coords so the self-framing view
+    // can't shift it mid-drag.
+    private double pressX = -1, pressY = -1;
+    private boolean dragging;
+    private int pressHovered = -1;
+    @Nullable private int[] pending;   // world minX, minZ, maxX, maxZ
 
     // World bounds the map covers, in blocks.
     private int minX, minZ, maxX, maxZ;
@@ -49,11 +60,15 @@ public class MapScreen extends Screen {
         }
         fitBounds();
 
+        int w3 = (mapW - 8) / 3;
         this.addRenderableWidget(Button.builder(Component.literal("Crew"),
                 b -> this.minecraft.setScreen(new CrewScreen()))
-            .bounds(left + PAD, top + H - PAD - 18, (mapW - 4) / 2, 18).build());
+            .bounds(left + PAD, top + H - PAD - 18, w3, 18).build());
+        this.addRenderableWidget(Button.builder(Component.literal("Totals"),
+                b -> this.minecraft.setScreen(new TotalsScreen()))
+            .bounds(left + PAD + w3 + 4, top + H - PAD - 18, w3, 18).build());
         this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
-            .bounds(left + PAD + (mapW - 4) / 2 + 4, top + H - PAD - 18, (mapW - 4) / 2, 18).build());
+            .bounds(left + PAD + 2 * (w3 + 4), top + H - PAD - 18, mapW - 2 * (w3 + 4), 18).build());
     }
 
     /** Frame everything worth seeing: you, every bot, and every patch, with a
@@ -102,6 +117,18 @@ public class MapScreen extends Screen {
         return mapY + (int) ((worldZ - minZ) * mapH / (double) Math.max(1, maxZ - minZ));
     }
 
+    private int worldX(double screenX) {
+        return minX + (int) ((screenX - mapX) * (maxX - minX) / (double) Math.max(1, mapW));
+    }
+
+    private int worldZ(double screenY) {
+        return minZ + (int) ((screenY - mapY) * (maxZ - minZ) / (double) Math.max(1, mapH));
+    }
+
+    private boolean inMap(double mx, double my) {
+        return mx >= mapX && mx <= mapX + mapW && my >= mapY && my <= mapY + mapH;
+    }
+
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(g, mouseX, mouseY, partialTick);
@@ -138,7 +165,26 @@ public class MapScreen extends Screen {
             if (z1 - z0 < 2) z1 = z0 + 2;
             g.fill(x0, z0, x1, z1, (colour & 0x00FFFFFF) | 0x33000000);
             g.renderOutline(x0, z0, x1 - x0, z1 - z0, colour);
+            String patch = BotInfo.of(a).patchName();
+            if (!patch.isEmpty() && x1 - x0 > 30) {
+                g.drawString(this.font, Ui.clip(this.font, patch, x1 - x0 - 6),
+                    x0 + 3, z0 + 2, Ui.INK, false);
+            }
             if (mouseX >= x0 && mouseX <= x1 && mouseY >= z0 && mouseY <= z1) hovered = i;
+        }
+
+        // The plot being drawn right now, and the one waiting for a worker.
+        if (dragging && pressX >= 0) {
+            int rx0 = (int) Math.min(pressX, mouseX), ry0 = (int) Math.min(pressY, mouseY);
+            int rx1 = (int) Math.max(pressX, mouseX), ry1 = (int) Math.max(pressY, mouseY);
+            g.fill(rx0, ry0, rx1, ry1, 0x3324520D);
+            g.renderOutline(rx0, ry0, rx1 - rx0, ry1 - ry0, Ui.ACCENT);
+        }
+        if (pending != null) {
+            int rx0 = px(pending[0]), ry0 = pz(pending[1]);
+            int rx1 = px(pending[2]), ry1 = pz(pending[3]);
+            g.fill(rx0, ry0, rx1, ry1, 0x3324520D);
+            g.renderOutline(rx0, ry0, rx1 - rx0, ry1 - ry0, Ui.ACCENT);
         }
 
         // Where the crew has died in the last day: a small skull chip. The
@@ -189,10 +235,13 @@ public class MapScreen extends Screen {
             g.drawString(this.font, Ui.clip(this.font,
                 a.clientName() + "  ·  " + job + "  ·  " + a.clientStatus(), mapW),
                 mapX, ly, Ui.INK, false);
+        } else if (pending != null) {
+            g.drawString(this.font, "Plot drawn — now click a chip to hand it to that one.",
+                mapX, ly, Ui.ACCENT, false);
         } else if (crew.isEmpty()) {
             g.drawString(this.font, "No assistants nearby.", mapX, ly, Ui.MUTED, false);
         } else {
-            g.drawString(this.font, "Point at a patch or a chip to name it.",
+            g.drawString(this.font, "Drag to draw a plot · right-click ground to name it.",
                 mapX, ly, Ui.FAINT, false);
         }
 
@@ -216,14 +265,76 @@ public class MapScreen extends Screen {
         return Ui.job(a.clientJobOrdinal());   // one palette for map, list and chips
     }
 
-    /** Click a chip or a patch to open that specialist's orders. */
+    /** Press starts a possible drag; what it means is decided on release. */
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
-        if (hovered >= 0 && hovered < crew.size() && this.minecraft != null) {
-            this.minecraft.setScreen(new OrdersScreen(crew.get(hovered)));
+        if (button == 0 && inMap(mx, my)) {
+            pressX = mx;
+            pressY = my;
+            pressHovered = hovered;
+            dragging = false;
+            return true;
+        }
+        // Right-click a patch (or its worker's chip): cycle the ground's name.
+        if (button == 1 && inMap(mx, my) && hovered >= 0 && hovered < crew.size()) {
+            OrdersScreen.sendOrder(crew.get(hovered),
+                com.jrpetty.mcassistant.AssistantActions.PATCH_NAME_NEXT);
             return true;
         }
         return super.mouseClicked(mx, my, button);
+    }
+
+    @Override
+    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+        if (button == 0 && pressX >= 0) {
+            if (Math.abs(mx - pressX) + Math.abs(my - pressY) > 4) dragging = true;
+            return true;
+        }
+        return super.mouseDragged(mx, my, button, dx, dy);
+    }
+
+    @Override
+    public boolean mouseReleased(double mx, double my, int button) {
+        if (button != 0 || pressX < 0) return super.mouseReleased(mx, my, button);
+        boolean wasDrag = dragging;
+        double px0 = pressX, py0 = pressY;
+        pressX = -1;
+        dragging = false;
+
+        if (!wasDrag) {
+            // A plain click. A pending plot goes to the chip you click; failing
+            // that, a chip or patch opens its orders; open ground clears.
+            if (pending != null && hovered >= 0 && hovered < crew.size()) {
+                sendZone(crew.get(hovered), pending);
+                pending = null;
+                return true;
+            }
+            if (hovered >= 0 && hovered < crew.size() && this.minecraft != null) {
+                this.minecraft.setScreen(new OrdersScreen(crew.get(hovered)));
+                return true;
+            }
+            pending = null;
+            return true;
+        }
+
+        // A drag. Clamp to the map, convert to world.
+        double cx = Math.max(mapX, Math.min(mapX + mapW, mx));
+        double cy = Math.max(mapY, Math.min(mapY + mapH, my));
+        int[] rect = {
+            Math.min(worldX(px0), worldX(cx)), Math.min(worldZ(py0), worldZ(cy)),
+            Math.max(worldX(px0), worldX(cx)), Math.max(worldZ(py0), worldZ(cy)) };
+        if (pressHovered >= 0 && pressHovered < crew.size()) {
+            sendZone(crew.get(pressHovered), rect);   // started on a patch: resize it
+        } else {
+            pending = rect;                            // open ground: hand it to a chip
+        }
+        return true;
+    }
+
+    private static void sendZone(AssistantEntity bot, int[] rect) {
+        net.neoforged.neoforge.network.PacketDistributor.sendToServer(
+            new com.jrpetty.mcassistant.net.ZonePayload(
+                bot.getId(), rect[0], rect[1], rect[2], rect[3]));
     }
 
     @Override

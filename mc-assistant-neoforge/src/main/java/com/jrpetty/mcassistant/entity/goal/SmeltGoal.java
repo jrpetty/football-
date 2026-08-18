@@ -43,6 +43,9 @@ public class SmeltGoal extends Goal {
         SMELTABLES.put("logs", s -> s.is(ItemTags.LOGS)); // -> charcoal
         SMELTABLES.put("stone", s -> s.is(Items.COBBLESTONE) || s.is(Items.COBBLED_DEEPSLATE));
         SMELTABLES.put("sand", s -> s.is(Items.SAND) || s.is(Items.RED_SAND)); // -> glass
+        // One word for the whole larder: what the station brain queues when
+        // the ore runs dry and the rancher's drops are waiting.
+        SMELTABLES.put("food", com.jrpetty.mcassistant.entity.AssistantEntity.RAW_FOOD);
         SMELTABLES.put("beef", s -> s.is(Items.BEEF));
         SMELTABLES.put("porkchop", s -> s.is(Items.PORKCHOP));
         SMELTABLES.put("chicken", s -> s.is(Items.CHICKEN));
@@ -241,6 +244,7 @@ public class SmeltGoal extends Goal {
                 if (out.isEmpty()) furnace.setItem(2, ItemStack.EMPTY);
                 furnace.setChanged();
                 collected += taken;
+                assistant.popSound();
                 assistant.awardXp(taken); // fair XP toward enchanting
                 lastProgressTick = assistant.tickCount;
                 assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
