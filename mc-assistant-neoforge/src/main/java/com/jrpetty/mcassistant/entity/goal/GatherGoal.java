@@ -178,6 +178,19 @@ public class GatherGoal extends Goal {
         for (BlockPos stump : stumps) {
             if (!assistant.level().getBlockState(stump).canBeReplaced()) continue;
             if (!assistant.level().getBlockState(stump.below()).is(BlockTags.DIRT)) continue;
+            // Room to grow: two saplings side by side choke each other into a
+            // thicket of stunted trunks. Skip a stump with a sapling already
+            // standing within two blocks — the sapling in the pack keeps for
+            // a sparser spot, and the forest comes back as trees, not brush.
+            boolean crowded = false;
+            for (BlockPos near : BlockPos.betweenClosed(
+                    stump.offset(-2, -1, -2), stump.offset(2, 1, 2))) {
+                if (assistant.level().getBlockState(near).is(BlockTags.SAPLINGS)) {
+                    crowded = true;
+                    break;
+                }
+            }
+            if (crowded) continue;
             boolean plantedHere = false;
             var inv = assistant.getInventoryItems();
             boolean done = false;
@@ -472,7 +485,10 @@ public class GatherGoal extends Goal {
      *  announce the reroute once, and clear build state so the next target starts
      *  fresh. The next tick re-scans for another block of the same kind. */
     private void abandonTarget() {
-        if (targetPos != null) unreachable.add(targetPos.immutable());
+        if (targetPos != null) {
+            unreachable.add(targetPos.immutable());
+            assistant.noteUnreachable(targetPos);   // survives this goal ending
+        }
         if (!announcedReroute && request != null) {
             assistant.say("Can't reach that " + request.kind().label + " — going after another.");
             announcedReroute = true;
@@ -529,6 +545,7 @@ public class GatherGoal extends Goal {
                 feet.offset(-SEARCH_RADIUS, -6, -SEARCH_RADIUS),
                 feet.offset(SEARCH_RADIUS, 8, SEARCH_RADIUS))) {
             if (unreachable.contains(pos)) continue; // don't re-target blocks we couldn't reach
+            if (assistant.isUnreachable(pos)) continue; // nor ones an earlier run couldn't
             if (!assistant.inZone(pos)) continue;    // stay inside the marked work zone
             if (!request.kind().matches(assistant.level().getBlockState(pos))) continue;
             double d = pos.distSqr(feet);

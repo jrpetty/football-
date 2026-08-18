@@ -60,6 +60,9 @@ public class DepositGoal extends Goal {
         // chest and wheat where the rancher can reach it, not in whichever
         // chest happens to be closest to where we finished working.
         BlockPos targeted = targetedChest();
+        // The chest the player linked by hand outranks the automatic routing:
+        // an explicit "this bot uses this chest" is not a suggestion.
+        if (targeted == null) targeted = assistant.usablePreferredChest();
         if (targeted == null) {
             targeted = com.jrpetty.mcassistant.entity.Supply.routeFor(assistant);
             if (targeted != null) {

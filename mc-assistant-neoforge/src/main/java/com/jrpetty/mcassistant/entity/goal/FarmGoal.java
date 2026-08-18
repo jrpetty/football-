@@ -144,7 +144,10 @@ public class FarmGoal extends Goal {
                     targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5, 1.1D);
             }
             if (++stuckTicks > 100) {
-                if (targetPos != null) skip.add(targetPos.immutable()); // don't re-pick it
+                if (targetPos != null) {
+                    skip.add(targetPos.immutable());        // not again this run
+                    assistant.noteUnreachable(targetPos);   // nor next run either
+                }
                 targetPos = null;
             }
             return;
@@ -403,20 +406,35 @@ public class FarmGoal extends Goal {
 
     @Nullable
     private BlockPos nearest(java.util.function.Predicate<BlockPos> match) {
+        // Spiral outward from the feet, ring by ring, and stop at the first
+        // ring with a hit. The old scan tested every position in the whole
+        // box for every question asked of it — thousands of block reads to
+        // find a crop that was usually two steps away. Worst case (nothing
+        // anywhere) costs the same as before; the common case costs a ring.
         BlockPos feet = assistant.feetPos();
-        BlockPos best = null;
-        double bestDist = Double.MAX_VALUE;
-        for (BlockPos pos : BlockPos.betweenClosed(
-                feet.offset(-RANGE, -3, -RANGE), feet.offset(RANGE, 3, RANGE))) {
-            if (skip.contains(pos)) continue;     // couldn't reach it earlier
-            if (!assistant.inZone(pos)) continue; // stay inside the marked work zone
-            if (!match.test(pos)) continue;
-            double d = pos.distSqr(feet);
-            if (d < bestDist) {
-                bestDist = d;
-                best = pos.immutable();
+        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        for (int r = 0; r <= RANGE; r++) {
+            BlockPos best = null;
+            double bestDist = Double.MAX_VALUE;
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != r) continue; // ring only
+                    for (int dy = -3; dy <= 3; dy++) {
+                        cursor.setWithOffset(feet, dx, dy, dz);
+                        if (skip.contains(cursor)) continue;            // this run's failures
+                        if (assistant.isUnreachable(cursor)) continue;  // remembered failures
+                        if (!assistant.inZone(cursor)) continue;
+                        if (!match.test(cursor)) continue;
+                        double d = cursor.distSqr(feet);
+                        if (d < bestDist) {
+                            bestDist = d;
+                            best = cursor.immutable();
+                        }
+                    }
+                }
             }
+            if (best != null) return best;
         }
-        return best;
+        return null;
     }
 }

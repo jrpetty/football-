@@ -378,14 +378,18 @@ public class MineGoal extends Goal {
             cursor = dest;
             moveTarget = null;
             if (phase == Phase.TUNNEL) tunnelSteps++;
-            // Torch the path every few steps so nothing spawns behind us.
+            // Torch the path — but only where it is actually DARK. A stretch
+            // already lit by the last torch (or an old tunnel's) doesn't get
+            // one on a counter; the counter just says when to look again.
             if (++sinceTorch >= 6) {
-                sinceTorch = 0;
                 BlockPos floor = cursor.below();
-                if (assistant.level().getBlockState(cursor).canBeReplaced()
+                if (assistant.level().getBrightness(
+                        net.minecraft.world.level.LightLayer.BLOCK, cursor) == 0
+                    && assistant.level().getBlockState(cursor).canBeReplaced()
                     && assistant.level().getBlockState(floor).isFaceSturdy(assistant.level(), floor, Direction.UP)
                     && assistant.removeMatching(s -> s.is(Items.TORCH), 1) == 1) {
                     assistant.level().setBlockAndUpdate(cursor, Blocks.TORCH.defaultBlockState());
+                    sinceTorch = 0;
                 }
             }
             return;

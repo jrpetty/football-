@@ -126,6 +126,18 @@ public class ZoneMarkerItem extends Item {
         AssistantEntity bot = boundBot(ctx.getLevel(), data, pos);
         long now = ctx.getLevel().getGameTime();
 
+        // A bound bot and a clicked CHEST: that chest is now the bot's own.
+        // Restocks open it first and its output banks there — "this bot uses
+        // this chest", said with one click instead of hoping proximity gets it
+        // right. Clicking a chest never counts as a plot corner while a bot is
+        // bound, because nobody means the corner of their field to be a chest.
+        if (bot != null && ctx.getLevel().getBlockEntity(pos) instanceof net.minecraft.world.Container) {
+            bot.linkChest(pos);
+            tell(player, bot.displayNameCap() + " is linked to this chest now — "
+                + "it draws its kit from here first, and banks its output here.");
+            return InteractionResult.CONSUME;
+        }
+
         // No bot bound: lay the plot out on its own, and hand it to whoever you
         // like afterwards. Marking the same field once per worker was the thing
         // that made a crew tedious to set up.

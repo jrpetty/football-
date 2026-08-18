@@ -78,7 +78,11 @@ public class TorchAreaGoal extends Goal {
             BlockPos floor = pos.below();
             if (assistant.level().getBlockState(pos).canBeReplaced()
                 && assistant.level().getBlockState(floor).isFaceSturdy(assistant.level(), floor, Direction.UP)) {
-                return assistant.level().getMaxLocalRawBrightness(pos) < 8 ? pos : null;
+                // Mobs spawn where BLOCK light is zero — sky light doesn't
+                // stop them at night. Torching only true dark spots means a
+                // stack of torches lights four times the ground.
+                return assistant.level().getBrightness(
+                    net.minecraft.world.level.LightLayer.BLOCK, pos) == 0 ? pos : null;
             }
         }
         return null;
@@ -113,7 +117,8 @@ public class TorchAreaGoal extends Goal {
         }
 
         // Might have been lit by a neighbor torch in the meantime.
-        if (assistant.level().getMaxLocalRawBrightness(current) >= 8
+        if (assistant.level().getBrightness(
+                net.minecraft.world.level.LightLayer.BLOCK, current) > 0
             || !assistant.level().getBlockState(current).canBeReplaced()) {
             current = null;
             return;
