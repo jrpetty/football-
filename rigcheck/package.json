@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "RIGCHECK — build comparison & performance modelling platform",
+  "description": "RIGCHECK \u2014 build comparison & performance modelling platform",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -19,7 +19,8 @@
     "validate": "tsx scripts/validate.ts",
     "coverage": "tsx scripts/coverage.ts",
     "gate": "npm run import:manual && npm run validate",
-    "audit": "tsx scripts/audit.ts"
+    "audit": "tsx scripts/audit.ts",
+    "build:single": "vite build && node scripts/build-single.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
