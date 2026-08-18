@@ -180,9 +180,10 @@ export function DataExplorer() {
               <b>Read this before trusting a number.</b> The specification sources this pipeline is
               designed around — Wikipedia's MediaWiki API, vendor spec pages, the Vulkan hardware
               database and OpenBenchmarking — are blocked by this environment's egress policy. The
-              catalogue you are looking at was seeded from model knowledge and is tagged as such.
-              The harvest and parse pipeline is built and wired; running <span className="mono">npm run harvest</span> in an
-              unrestricted environment replaces the seed with sourced data and no code changes.
+              catalogue you are looking at was seeded from model knowledge and is tagged as such —
+              recalled figures, not measurements. The fetch and table-parsing stages are built and
+              tested, but the layer that maps parsed specification rows onto catalogue records is not
+              written yet, so harvesting alone does not replace this seed.
             </div>
             <dl className="kv" style={{ marginBottom: 14 }}>
               <dt>GPU anchor</dt><dd>{data.anchorGpu.fullName} = index 100</dd>

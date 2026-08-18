@@ -8,7 +8,9 @@
  * Sources this session's egress policy blocks are declared here anyway, marked
  * SOURCE_RESTRICTED. That is deliberate: the manifest is the record of what the
  * pipeline WANTS, so running this in an unrestricted environment fills the gaps
- * with no code change. Blocked sources are logged and skipped, never retried and
+ * once a spec-parsing layer exists (see scripts/parse.ts, currently a stub — the
+ * table expander is written, the column-to-record mapping is not). Blocked
+ * sources are logged and skipped, never retried and
  * never routed around.
  */
 import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';

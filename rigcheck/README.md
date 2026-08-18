@@ -34,9 +34,18 @@ source the design depends on is blocked by this environment's egress policy:
 
 So the catalogue (265 GPUs, 442 CPUs, 50 games) was seeded from model knowledge
 under a strict no-invention rule — null an uncertain field, omit an uncertain SKU
-— and every record is tagged `model-knowledge`. Running `npm run harvest && npm run
-parse && npm run reconcile` in an unrestricted environment replaces the seed with
-sourced, attributed data and requires no code change.
+— and every record is tagged `model-knowledge`.
+
+**What harvesting does and does not give you.** `npm run harvest` fetches and
+caches every declared source, and `src/parse/wikitable.ts` — the rowspan/colspan
+expander, unit-tested against the shapes that break naive parsers — turns a
+specification page into aligned rows. What does NOT exist yet is the mapping layer
+between them: the code that reads those rows and writes `GpuRecord` / `CpuRecord`
+fields (column identification, unit normalisation, id slugging, variant splitting,
+cross-page merging). `scripts/parse.ts` is currently a stub that runs the alias
+parser only. Writing that mapping is a real task, and it needs the cached HTML in
+hand to iterate against — which is precisely what the egress block prevents. Until
+it exists, harvesting caches raw pages but does not replace the seeded catalogue.
 
 **The validation fixtures are recalled figures, not measurements.** The gate
 therefore measures agreement with recollection, not accuracy, and `validate.ts`
