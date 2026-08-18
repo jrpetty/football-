@@ -13,7 +13,8 @@ import javax.annotation.Nullable;
 public record BotInfo(String branch, int daysServed, String topDeed,
                       int[] deeds, @Nullable int[] zone, int[] wages,
                       String trait, String traitBlurb, int teamwork,
-                      int diet, String lastMeal) {
+                      int diet, String lastMeal,
+                      @Nullable int[] deathSpot, int perk) {
 
     /** "branch|days|topDeed|deedCsv|zoneCsv", written by publishJobState. */
     public static BotInfo of(AssistantEntity bot) {
@@ -63,8 +64,24 @@ public record BotInfo(String branch, int daysServed, String topDeed,
             if (d.length > 0) diet = parse(d[0]);
             if (d.length > 1) meal = d[1];
         }
+        // Where it last died (x, y, z, age in ticks) — present only while the
+        // server still considers the grief fresh — and the level-30 perk.
+        int[] death = null;
+        if (f.length > 8 && !f[8].isEmpty()) {
+            String[] ds = f[8].split(",");
+            if (ds.length == 4) {
+                death = new int[]{ parse(ds[0]), parse(ds[1]), parse(ds[2]), parse(ds[3]) };
+            }
+        }
+        int perk = f.length > 9 ? parse(f[9]) : 0;
         return new BotInfo(branch, days, top, deeds, zone, wages, trait, blurb, teamwork,
-            diet <= 0 ? 100 : diet, meal);
+            diet <= 0 ? 100 : diet, meal, death, perk);
+    }
+
+    /** The perk's display name, or empty while undecided. */
+    public String perkLabel() {
+        AssistantEntity.Perk[] all = AssistantEntity.Perk.values();
+        return perk > 0 && perk < all.length ? all[perk].label : "";
     }
 
     /** How the diet reads on screen: the pace, and what bought it. */

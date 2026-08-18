@@ -29,6 +29,27 @@ public class CrewScreen extends Screen {
     private int picked = -1;
     private int left, top, listTop;
 
+    /** How the list reads: 0 by name, 1 by job, 2 problems first. Static so
+     *  the choice survives closing the screen — a sort you have to re-pick
+     *  every time is a sort nobody uses. */
+    private static int sortMode;
+    private static final String[] SORT_LABELS = { "A–Z", "Job", "Stuck" };
+
+    private void sortCrew() {
+        switch (sortMode) {
+            case 1 -> crew.sort(java.util.Comparator
+                .comparingInt(AssistantEntity::clientJobOrdinal)
+                .thenComparing(a -> a.clientName(), String.CASE_INSENSITIVE_ORDER));
+            case 2 -> crew.sort(java.util.Comparator
+                .comparingInt((AssistantEntity a) -> {
+                    int c = Ui.statusColour(a.clientStatus());
+                    return c == Ui.BAD ? 0 : c == Ui.WARN ? 1 : 2;   // worst first
+                })
+                .thenComparing(a -> a.clientName(), String.CASE_INSENSITIVE_ORDER));
+            default -> crew.sort((a, b) -> a.clientName().compareToIgnoreCase(b.clientName()));
+        }
+    }
+
     public CrewScreen() {
         super(Component.literal("Crew"));
     }
@@ -45,10 +66,23 @@ public class CrewScreen extends Screen {
                 AssistantEntity.class,
                 this.minecraft.player.getBoundingBox().inflate(256.0),
                 AssistantEntity::isAlive));
-            crew.sort((a, b) -> a.clientName().compareToIgnoreCase(b.clientName()));
+            sortCrew();
         }
         if (picked >= crew.size()) picked = crew.isEmpty() ? -1 : 0;
         if (picked < 0 && !crew.isEmpty()) picked = 0;
+
+        // The sort toggle sits by the headline, above the list it reorders.
+        this.addRenderableWidget(Button.builder(Component.literal(SORT_LABELS[sortMode]), b -> {
+                AssistantEntity keep = picked >= 0 && picked < crew.size() ? crew.get(picked) : null;
+                sortMode = (sortMode + 1) % SORT_LABELS.length;
+                sortCrew();
+                picked = keep == null ? picked : Math.max(0, crew.indexOf(keep));
+                b.setMessage(Component.literal(SORT_LABELS[sortMode]));
+            })
+            .bounds(left + W - PAD - 44, top + 24, 44, 14)
+            .tooltip(Tooltip.create(Component.literal(
+                "Sort the crew: by name, by trade, or problems first")))
+            .build());
 
         // Rows are drawn by hand and clicked through mouseClicked — a stack of
         // vanilla buttons looked like a toolbar, not a list.
@@ -143,13 +177,15 @@ public class CrewScreen extends Screen {
             String st = a.clientStatus();
             if (st.startsWith("Needs")) asking.add(a.clientName() + ": " + st.substring(6));
         }
+        // Clipped short of the sort toggle that now lives on this line's right.
+        int lineW = inner - 50;
         if (asking.isEmpty()) {
             g.drawString(this.font, Ui.clip(this.font,
                 "wages so far: " + iron + " iron  ·  " + gold + " gold  ·  " + diamond + " diamond",
-                inner), x, top + 30, Ui.FAINT, false);
+                lineW), x, top + 30, Ui.FAINT, false);
         } else {
             g.drawString(this.font, Ui.clip(this.font,
-                "asking for — " + String.join("  ·  ", asking), inner),
+                "asking for — " + String.join("  ·  ", asking), lineW),
                 x, top + 30, Ui.WARN, false);
         }
 

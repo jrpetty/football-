@@ -43,12 +43,16 @@ public class FarmGoal extends Goal {
         Blocks.POTATOES, Items.POTATO,
         Blocks.BEETROOTS, Items.BEETROOT_SEEDS);
 
-    // Seed we carry -> crop block it grows.
+    // Seed we carry -> crop block it grows. Melon and pumpkin seeds plant a
+    // STEM: the stem stays put for life and sets fruit on the ground beside
+    // it, so those two rows of the map are planted once and harvested forever.
     private static final Map<Item, Block> PLANT = Map.of(
         Items.WHEAT_SEEDS, Blocks.WHEAT,
         Items.CARROT, Blocks.CARROTS,
         Items.POTATO, Blocks.POTATOES,
-        Items.BEETROOT_SEEDS, Blocks.BEETROOTS);
+        Items.BEETROOT_SEEDS, Blocks.BEETROOTS,
+        Items.MELON_SEEDS, Blocks.MELON_STEM,
+        Items.PUMPKIN_SEEDS, Blocks.PUMPKIN_STEM);
 
     private final AssistantEntity assistant;
     private boolean active;
@@ -61,6 +65,7 @@ public class FarmGoal extends Goal {
     private int emptyScans;
     private int myGen;
     private final java.util.Set<BlockPos> skip = new java.util.HashSet<>(); // blocks we couldn't reach
+    private final java.util.Map<Item, Integer> plantedByType = new java.util.HashMap<>();
 
     public FarmGoal(AssistantEntity assistant) {
         this.assistant = assistant;
@@ -90,6 +95,7 @@ public class FarmGoal extends Goal {
         this.targetPos = null;
         this.mode = Mode.HARVEST;
         this.skip.clear();
+        this.plantedByType.clear();
         assistant.sayRoutine("Tending the crops.");
     }
 
@@ -214,7 +220,7 @@ public class FarmGoal extends Goal {
         if (targetPos == null) return false;
         BlockState st = assistant.level().getBlockState(targetPos);
         return switch (mode) {
-            case HARVEST -> isMatureCrop(st);
+            case HARVEST -> isHarvestable(targetPos, st);
             case SEEDS -> isGrass(st);
             case TILL -> isTillable(targetPos);
             case WATER -> isTillable(targetPos);
@@ -227,7 +233,7 @@ public class FarmGoal extends Goal {
         // re-checked on the way, but this is the only line in the goal that can
         // destroy a growing plant, so it verifies for itself rather than
         // trusting whatever routed it here.
-        if (!isMatureCrop(state)) {
+        if (!isHarvestable(pos, state)) {
             targetPos = null;
             return;
         }
@@ -271,15 +277,50 @@ public class FarmGoal extends Goal {
             }
             assistant.level().setBlockAndUpdate(pos, Blocks.FARMLAND.defaultBlockState());
         }
-        for (Map.Entry<Item, Block> e : PLANT.entrySet()) {
-            if (assistant.removeMatching(s -> s.is(e.getKey()), 1) == 1) {
-                assistant.level().setBlockAndUpdate(pos.above(), e.getValue().defaultBlockState());
-                planted++;
-                assistant.note(AssistantEntity.Deed.CROPS_PLANTED, 1);
-                if (planted == 1 && !alreadyTilled) assistant.sayRoutine("No farm here — starting one from scratch.");
-                return;
-            }
+        Item seed = pickSeed();
+        if (seed != null && assistant.removeMatching(s -> s.is(seed), 1) == 1) {
+            assistant.level().setBlockAndUpdate(pos.above(), PLANT.get(seed).defaultBlockState());
+            plantedByType.merge(seed, 1, Integer::sum);
+            planted++;
+            assistant.note(AssistantEntity.Deed.CROPS_PLANTED, 1);
+            if (planted == 1 && !alreadyTilled) assistant.sayRoutine("No farm here — starting one from scratch.");
         }
+    }
+
+    /**
+     * The field mix is the STOCK mix. Half wheat seeds and half carrots in the
+     * station's chests means a field that comes out half and half — the player
+     * decides what gets grown by what they stock, not by map iteration order.
+     *
+     * <p>Picks whichever plantable type is furthest BEHIND its share: stock is
+     * counted across pack and linked chests, what's been planted this run is
+     * tallied per type, and the biggest deficit goes in the ground next. Only
+     * types actually in the pack are candidates — the restock loop is what
+     * turns chest stock into pack stock.
+     */
+    @Nullable
+    private Item pickSeed() {
+        long totalStock = 0;
+        java.util.Map<Item, Integer> stock = new java.util.HashMap<>();
+        for (Item type : PLANT.keySet()) {
+            int have = assistant.countStocked(s -> s.is(type));
+            if (have > 0) { stock.put(type, have); totalStock += have; }
+        }
+        if (stock.isEmpty()) return null;
+        int plantedTotal = 0;
+        for (int v : plantedByType.values()) plantedTotal += v;
+        Item best = null;
+        double bestDeficit = -1e9;
+        for (Map.Entry<Item, Integer> e : stock.entrySet()) {
+            Item type = e.getKey();
+            if (assistant.countMatching(s -> s.is(type)) == 0) continue;  // not in hand yet
+            double share = e.getValue() / (double) totalStock;
+            double done = plantedTotal == 0 ? 0.0
+                : plantedByType.getOrDefault(type, 0) / (double) plantedTotal;
+            double deficit = share - done;
+            if (deficit > bestDeficit) { bestDeficit = deficit; best = type; }
+        }
+        return best;
     }
 
     /** Carve a 1-deep basin at farmland level and set a contained water source
@@ -335,6 +376,17 @@ public class FarmGoal extends Goal {
         return state.getBlock() instanceof CropBlock crop && crop.isMaxAge(state);
     }
 
+    /** Everything worth cutting: a ripe crop; a melon or pumpkin FRUIT (the
+     *  stem that grew it is never touched, so it just sets another); and
+     *  sugar cane standing on more cane — cutting above the root drops the
+     *  whole top and the root regrows it, no replanting ever. */
+    private boolean isHarvestable(BlockPos pos, BlockState st) {
+        if (isMatureCrop(st)) return true;
+        if (st.is(Blocks.MELON) || st.is(Blocks.PUMPKIN)) return true;
+        return st.is(Blocks.SUGAR_CANE)
+            && assistant.level().getBlockState(pos.below()).is(Blocks.SUGAR_CANE);
+    }
+
     private static boolean isGrass(BlockState state) {
         return state.is(Blocks.SHORT_GRASS) || state.is(Blocks.TALL_GRASS)
             || state.is(Blocks.FERN) || state.is(Blocks.LARGE_FERN);
@@ -365,7 +417,7 @@ public class FarmGoal extends Goal {
 
     @Nullable
     private BlockPos findMatureCrop() {
-        return nearest(pos -> isMatureCrop(assistant.level().getBlockState(pos)));
+        return nearest(pos -> isHarvestable(pos, assistant.level().getBlockState(pos)));
     }
 
     @Nullable

@@ -49,6 +49,14 @@ public final class AssistantActions {
     public static final int CYCLE_BRANCH = 22;
     public static final int SAVE_PRESET = 23;
     public static final int USE_PRESET = 24;
+    // Depth presets: straight to the strata that matter, not eight blocks at a time.
+    public static final int DEPTH_SURFACE = 25;
+    public static final int DEPTH_IRON = 26;
+    public static final int DEPTH_DIAMOND = 27;
+    // The level-30 perk, chosen by click on the record sheet.
+    public static final int PERK_SWIFT = 30;
+    public static final int PERK_TOUGH = 31;
+    public static final int PERK_PORTER = 32;
 
     /** Naming. Nothing in this mod is typed, so the order carries an INDEX into
      *  the shared name pool rather than a string: the client can only ask for a
@@ -107,6 +115,12 @@ public final class AssistantActions {
             case WORK -> toggleWork(a);
             case DEPTH_DOWN -> adjustDepth(a, -8);
             case DEPTH_UP -> adjustDepth(a, 8);
+            case DEPTH_SURFACE -> presetDepth(a, Integer.MIN_VALUE);
+            case DEPTH_IRON -> presetDepth(a, 16);
+            case DEPTH_DIAMOND -> presetDepth(a, -54);
+            case PERK_SWIFT -> a.choosePerk(AssistantEntity.Perk.SWIFT);
+            case PERK_TOUGH -> a.choosePerk(AssistantEntity.Perk.TOUGH);
+            case PERK_PORTER -> a.choosePerk(AssistantEntity.Perk.PORTER);
             case SET_DROPOFF -> {
                 a.setHome(player.blockPosition());
                 a.say("Drop-off set here — I'll bring every load to this spot.");
@@ -239,6 +253,22 @@ public final class AssistantActions {
         a.setWorkZone(WorkZone.around(zone.center(), r, zone.depth()));
         a.showZoneTo(player);
         a.say("Patch is now " + a.workZone().describe() + ".");
+    }
+
+    /** Jump the dig floor straight to a stratum. MIN_VALUE means "the marked
+     *  ground itself" — a surface strip rather than a shaft. */
+    private static void presetDepth(AssistantEntity a, int y) {
+        WorkZone zone = a.workZone();
+        if (zone == null) {
+            a.say("Set my area first, then I'll know where to dig.");
+            return;
+        }
+        int target = y == Integer.MIN_VALUE ? zone.min().getY() : y;
+        a.setWorkZone(zone.withDepth(target));
+        a.say(y == Integer.MIN_VALUE
+            ? "Staying at surface level — I'll work the ground as it's marked."
+            : "I'll dig down to Y" + target
+              + (y == 16 ? " — iron country." : " — diamond country."));
     }
 
     private static void adjustDepth(AssistantEntity a, int delta) {

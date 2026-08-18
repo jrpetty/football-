@@ -18,6 +18,7 @@ public class RecordScreen extends Screen {
 
     private final AssistantEntity bot;
     private int left, top;
+    private boolean perkRow;   // choosing the level-30 edge shortens the career list
 
     public RecordScreen(AssistantEntity bot) {
         super(Component.literal("Work record"));
@@ -31,6 +32,21 @@ public class RecordScreen extends Screen {
         int gap = 4;
         int w3 = (W - PAD * 2 - gap * 2) / 3;
         int y = top + H - PAD - 18;
+
+        // At level 30 the veteran picks its edge — once, permanently. The row
+        // only exists while the choice is open; made, the perk reads on the
+        // trait line and the career gets its space back.
+        BotInfo info = BotInfo.of(bot);
+        perkRow = bot.clientLevel() >= 30 && info.perk() == 0;
+        if (perkRow) {
+            int py = y - 18 - gap;
+            perk(py, left + PAD, w3, "Swift", com.jrpetty.mcassistant.AssistantActions.PERK_SWIFT,
+                "+20% move speed, for good");
+            perk(py, left + PAD + w3 + gap, w3, "Tough", com.jrpetty.mcassistant.AssistantActions.PERK_TOUGH,
+                "+4 armor, for good");
+            perk(py, left + PAD + 2 * (w3 + gap), w3, "Porter", com.jrpetty.mcassistant.AssistantActions.PERK_PORTER,
+                "Carries half a pack more per trip, for good");
+        }
         this.addRenderableWidget(Button.builder(Component.literal("Specialise"), b ->
                 OrdersScreen.sendOrder(bot, com.jrpetty.mcassistant.AssistantActions.CYCLE_BRANCH))
             .bounds(left + PAD, y, w3, 18)
@@ -42,6 +58,16 @@ public class RecordScreen extends Screen {
             .bounds(left + PAD + w3 + gap, y, w3, 18).build());
         this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
             .bounds(left + PAD + 2 * (w3 + gap), y, w3, 18).build());
+    }
+
+    private void perk(int y, int x, int w, String label, int action, String tip) {
+        this.addRenderableWidget(Button.builder(Component.literal("✦ " + label), b -> {
+                OrdersScreen.sendOrder(bot, action);
+                this.onClose();
+            })
+            .bounds(x, y, w, 18)
+            .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(tip)))
+            .build());
     }
 
     @Override
@@ -90,8 +116,13 @@ public class RecordScreen extends Screen {
         if (!info.trait().isEmpty()) {
             g.drawString(this.font, Ui.clip(this.font,
                 info.trait() + " — " + info.traitBlurb()
+                + (info.perkLabel().isEmpty() ? "" : "  ·  " + info.perkLabel())
                 + (info.teamwork() > 0 ? "  ·  +" + info.teamwork() + "% crew rhythm" : ""),
                 inner), x, top + 38, Ui.GOOD, false);
+        }
+        if (perkRow) {
+            g.drawString(this.font, "Level 30 — pick this one's edge:",
+                x, top + H - PAD - 18 * 2 - 4 - 11, Ui.ACCENT, false);
         }
 
         // The career itself, biggest tally first, each with a bar for scale.
@@ -110,7 +141,7 @@ public class RecordScreen extends Screen {
             }
             done.sort((a, b) -> Integer.compare(info.deed(b), info.deed(a)));
 
-            int maxRows = (top + H - PAD - 24 - y) / rowH;
+            int maxRows = (top + H - PAD - (perkRow ? 57 : 24) - y) / rowH;
             for (int i = 0; i < done.size() && i < maxRows; i++) {
                 AssistantEntity.Deed d = done.get(i);
                 int count = info.deed(d);

@@ -141,6 +141,19 @@ public class MapScreen extends Screen {
             if (mouseX >= x0 && mouseX <= x1 && mouseY >= z0 && mouseY <= z1) hovered = i;
         }
 
+        // Where the crew has died in the last day: a small skull chip. The
+        // marker is the server's to give — it stops synching it after a day —
+        // so an old danger spot doesn't haunt the map forever.
+        for (AssistantEntity a : crew) {
+            int[] grave = BotInfo.of(a).deathSpot();
+            if (grave == null) continue;
+            int gx = px(grave[0]), gz = pz(grave[2]);
+            g.fill(gx - 3, gz - 3, gx + 4, gz + 4, 0xFF000000);
+            g.fill(gx - 2, gz - 2, gx + 3, gz + 3, Ui.BAD);
+            g.fill(gx - 1, gz - 1, gx, gz, 0xFFE9E9E9);       // two pale eyes
+            g.fill(gx + 1, gz - 1, gx + 2, gz, 0xFFE9E9E9);
+        }
+
         // You.
         if (this.minecraft != null && this.minecraft.player != null) {
             int myX = px(this.minecraft.player.getX());

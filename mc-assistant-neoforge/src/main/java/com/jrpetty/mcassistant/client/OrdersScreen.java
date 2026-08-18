@@ -48,7 +48,7 @@ public class OrdersScreen extends Screen {
     private final AssistantEntity bot;
     private int left, top;
     @Nullable private Button jobButton, shiftButton;
-    @Nullable private Button depthDown, depthUp, dropOff;
+    @Nullable private Button depthSurface, depthIron, depthDiamond, dropOff;
     private int shownJob = -1;
 
     public OrdersScreen(AssistantEntity bot) {
@@ -100,10 +100,17 @@ public class OrdersScreen extends Screen {
             "When this one works. Off duty it sleeps in its bed.");
         add(x + 2 * (w4 + gap), y, w4, h, "Claim Bed", AssistantActions.CLAIM_BED,
             "Give it the nearest bed to you");
-        depthDown = add(x + 3 * (w4 + gap), y, w4, h, "Dig ▼", AssistantActions.DEPTH_DOWN,
-            "Mine 8 blocks deeper");
-        depthUp = add(x + 3 * (w4 + gap), y, w4, h, "Dig ▲", AssistantActions.DEPTH_UP,
-            "Mine 8 blocks shallower");
+        // Three strata, three buttons, in the one slot a miner gets. The
+        // labels are terse because 20 pixels is what a third of a slot IS —
+        // the tooltips carry the meaning.
+        int wp = (w4 - 4) / 3;
+        depthSurface = add(x + 3 * (w4 + gap), y, wp, h, "S", AssistantActions.DEPTH_SURFACE,
+            "Surface — work the ground as marked, no deep shaft");
+        depthIron = add(x + 3 * (w4 + gap) + wp + 2, y, wp, h, "16", AssistantActions.DEPTH_IRON,
+            "Iron country — dig down to Y16");
+        depthDiamond = add(x + 3 * (w4 + gap) + 2 * (wp + 2), y, w4 - 2 * (wp + 2), h, "D",
+            AssistantActions.DEPTH_DIAMOND,
+            "Diamond country — dig down to Y-54");
         dropOff = add(x + 3 * (w4 + gap), y, w4, h, "Drop-off", AssistantActions.SET_DROPOFF,
             "Deliver loads to where you're standing");
 
@@ -153,13 +160,15 @@ public class OrdersScreen extends Screen {
 
     /** Only ever show the control that means something for this job. */
     private void refreshJobButtons() {
-        if (depthDown == null || depthUp == null || dropOff == null) return;
+        if (depthSurface == null || depthIron == null || depthDiamond == null
+            || dropOff == null) return;
         AssistantEntity.StationTask job =
             AssistantEntity.StationTask.byOrdinal(bot.clientJobOrdinal());
         boolean miner = job == AssistantEntity.StationTask.MINE;
         boolean hauler = job == AssistantEntity.StationTask.HAUL;
-        depthDown.visible = miner;
-        depthUp.visible = false;          // one slot: deeper is the common case
+        depthSurface.visible = miner;
+        depthIron.visible = miner;
+        depthDiamond.visible = miner;
         dropOff.visible = hauler;
     }
 

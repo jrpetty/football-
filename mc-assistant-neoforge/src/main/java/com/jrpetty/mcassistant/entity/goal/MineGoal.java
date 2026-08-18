@@ -46,6 +46,7 @@ public class MineGoal extends Goal {
     private final ArrayDeque<BlockPos> digQueue = new ArrayDeque<>();
     private final ArrayDeque<BlockPos> veinQueue = new ArrayDeque<>();
     @Nullable private BlockPos currentDig;
+    private boolean saidCapped;   // one liquid announcement per run, not per block
     @Nullable private BlockPos moveTarget;
     private int workTicks;
     private int workNeeded;
@@ -94,6 +95,7 @@ public class MineGoal extends Goal {
         this.tunnelSteps = 0;
         this.sinceTorch = 0;
         this.veinMined = 0;
+        this.saidCapped = false;
         this.oresMined = 0;
         this.blocksMined = 0;
         this.phase = job != null && cursor.getY() <= job.amount() ? Phase.TUNNEL : Phase.DESCEND;
@@ -173,14 +175,17 @@ public class MineGoal extends Goal {
             beginDig(digQueue.pollFirst());
             return;
         }
-        if (!veinQueue.isEmpty()) {
+        // Veins BEFORE the tunnel advances: every exposed ore face gets dug
+        // before the gallery grows, so a run never walks past visible ore.
+        // Stale entries (mined out, or left behind) drain in one pass rather
+        // than burning a whole tick discarding each.
+        while (!veinQueue.isEmpty()) {
             BlockPos vein = veinQueue.pollFirst();
-            // Only chase veins we can reach from where we stand.
             if (isOre(assistant.level().getBlockState(vein))
                 && vein.distSqr(cursor) <= 20.0) {
                 beginDig(vein);
+                return;
             }
-            return;
         }
         if (moveTarget != null) {
             moveTick();
@@ -242,14 +247,15 @@ public class MineGoal extends Goal {
             ? new BlockPos[] { newFeet.above(2), newFeet.above(), newFeet }
             : new BlockPos[] { newFeet.above(), newFeet };
         for (BlockPos cell : cells) {
-            if (touchesFluid(cell)) {
-                finish("Hit liquid ahead — sealing off and stopping here ("
+            if (touchesFluid(cell) && !capFluid(cell)) {
+                finish("Hit liquid and I'm out of blocks to wall it off — stopping here ("
                     + oresMined + " ore so far).");
                 return;
             }
         }
-        if (touchesFluid(newFeet.below())) {
-            finish("Liquid under the next step — stopping here (" + oresMined + " ore so far).");
+        if (touchesFluid(newFeet.below()) && !capFluid(newFeet.below())) {
+            finish("Liquid underfoot and nothing to cap it with — stopping here ("
+                + oresMined + " ore so far).");
             return;
         }
 
@@ -271,6 +277,26 @@ public class MineGoal extends Goal {
         }
         moveTarget = newFeet;
         moveStuck = 0;
+    }
+
+    /** Wall off every fluid block touching this cell — the cell itself, the
+     *  block beyond it in the digging direction, and above and below — so the
+     *  gallery carries on PAST a pocket instead of abandoning the whole run at
+     *  the first drip. Returns false only when the filler runs out; anything
+     *  that seeps through a gap this misses is caught by the after-dig sweep. */
+    private boolean capFluid(BlockPos cell) {
+        BlockPos[] suspects = { cell, cell.relative(dir), cell.above(), cell.below() };
+        for (BlockPos f : suspects) {
+            if (!assistant.level().getFluidState(f).isEmpty()) {
+                if (!placeFiller(f)) return false;
+                if (!saidCapped) {
+                    saidCapped = true;
+                    assistant.sayRoutine("Walled off liquid in the tunnel.");
+                }
+            }
+        }
+        return assistant.level().getFluidState(cell).isEmpty()
+            && assistant.level().getFluidState(cell.relative(dir)).isEmpty();
     }
 
     private boolean touchesFluid(BlockPos pos) {
@@ -346,6 +372,17 @@ public class MineGoal extends Goal {
                 assistant.awardXp(2); // fair XP toward enchanting
             }
             assistant.damageHeldTool();
+            // A dug face can open onto lava or water SIDEWAYS — the planning
+            // checks only ever looked ahead. Wall the pocket off with filler
+            // before it pours into the gallery.
+            for (Direction d : Direction.values()) {
+                BlockPos side = pos.relative(d);
+                if (!assistant.level().getFluidState(side).isEmpty() && placeFiller(side)
+                    && !saidCapped) {
+                    saidCapped = true;
+                    assistant.sayRoutine("Walled off liquid in the tunnel.");
+                }
+            }
             sweepDrops(pos);
             // Gravel/sand above will fall into the hole — take it down too.
             BlockPos above = pos.above();
@@ -378,6 +415,20 @@ public class MineGoal extends Goal {
             cursor = dest;
             moveTarget = null;
             if (phase == Phase.TUNNEL) tunnelSteps++;
+            // A step can pass through open cave: those walls were never dug,
+            // so the after-dig scan never saw them. Check around the two cells
+            // now occupied, so ore in a cavity wall is chased like any other.
+            if (veinMined < MAX_VEIN_BLOCKS) {
+                for (BlockPos cell : new BlockPos[] { cursor, cursor.above() }) {
+                    for (Direction d : Direction.values()) {
+                        BlockPos ore = cell.relative(d);
+                        if (isOre(assistant.level().getBlockState(ore)) && mayDig(ore)
+                                && !veinQueue.contains(ore)) {
+                            veinQueue.addLast(ore);
+                        }
+                    }
+                }
+            }
             // Torch the path — but only where it is actually DARK. A stretch
             // already lit by the last torch (or an old tunnel's) doesn't get
             // one on a counter; the counter just says when to look again.
