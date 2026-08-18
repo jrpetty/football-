@@ -193,9 +193,24 @@ public class DepositGoal extends Goal {
         }
         container.setChanged();
         assistant.rememberChest(chestPos, container); // storage memory: learn what's where
-        if (moved == 0) assistant.noteDepositBlocked(); else assistant.noteStashed();
-        if (moved > 0) { assistant.sayRoutine("Stashed " + moved + " items."); finishQuiet(true); }
-        else finish("That chest is full.", false);
+        if (moved > 0) {
+            assistant.noteStashed();
+            assistant.sayRoutine("Stashed " + moved + " items.");
+            finishQuiet(true);
+            return;
+        }
+        // A full chest is not a full STATION: walk to the next linked chest
+        // with room and take the loading pause again, instead of writing the
+        // whole deposit off for five minutes.
+        BlockPos next = assistant.nextChestWithRoom(chestPos);
+        if (next != null) {
+            assistant.sayRoutine("That chest is full — using the next one.");
+            chestPos = next;
+            stashStartTick = -1;
+            return;
+        }
+        assistant.noteDepositBlocked();
+        finish("That chest is full.", false);
     }
 
     private static ItemStack insertInto(Container container, ItemStack stack) {

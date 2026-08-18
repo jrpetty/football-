@@ -48,7 +48,7 @@ public class OrdersScreen extends Screen {
     private final AssistantEntity bot;
     private int left, top;
     @Nullable private Button jobButton, shiftButton;
-    @Nullable private Button depthSurface, depthIron, depthDiamond, dropOff;
+    @Nullable private Button depthSurface, depthIron, depthDiamond, dropOff, escortBtn;
     private int shownJob = -1;
 
     public OrdersScreen(AssistantEntity bot) {
@@ -113,23 +113,38 @@ public class OrdersScreen extends Screen {
             "Diamond country — dig down to Y-54");
         dropOff = add(x + 3 * (w4 + gap), y, w4, h, "Drop-off", AssistantActions.SET_DROPOFF,
             "Deliver loads to where you're standing");
+        escortBtn = add(x + 3 * (w4 + gap), y, w4, h, "Escort ›", AssistantActions.ESCORT_NEXT,
+            "Shadow a crewmate instead of ground — click again for the next one, "
+            + "and past the last name to go back to the beat");
 
-        // ---- footer ----
+        // ---- footer: five now, so the chatter toggle gets a home ----
         y = top + Y_FOOTER;
-        add(x, y, w4, h, "Crew", AssistantActions.ROSTER, "Report on every assistant");
+        int w5 = (inner - gap * 4) / 5;
+        add(x, y, w5, h, "Crew", AssistantActions.ROSTER, "Report on every assistant");
         this.addRenderableWidget(Button.builder(Component.literal("Record"),
                 b -> this.minecraft.setScreen(new RecordScreen(bot)))
-            .bounds(x + (w4 + gap), y, w4, h)
+            .bounds(x + (w5 + gap), y, w5, h)
             .tooltip(Tooltip.create(Component.literal(
                 "Everything it has done in its career, counted")))
             .build());
         this.addRenderableWidget(Button.builder(Component.literal("Name"),
                 b -> this.minecraft.setScreen(new NameScreen(bot)))
-            .bounds(x + 2 * (w4 + gap), y, w4, h)
+            .bounds(x + 2 * (w5 + gap), y, w5, h)
             .tooltip(Tooltip.create(Component.literal("Give this one a name — pick, don't type")))
             .build());
+        boolean quietNow = BotInfo.of(bot).quiet();
+        this.addRenderableWidget(Button.builder(
+                Component.literal(quietNow ? "Chatty" : "Quiet"), b -> {
+                    OrdersScreen.sendOrder(bot, AssistantActions.QUIET_TOGGLE);
+                    boolean q = b.getMessage().getString().equals("Quiet");
+                    b.setMessage(Component.literal(q ? "Chatty" : "Quiet"));
+                })
+            .bounds(x + 3 * (w5 + gap), y, w5, h)
+            .tooltip(Tooltip.create(Component.literal(
+                "Mute the routine chatter — needs, deaths and paydays still come through")))
+            .build());
         this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
-            .bounds(x + 3 * (w4 + gap), y, w4, h).build());
+            .bounds(x + 4 * (w5 + gap), y, inner - 4 * (w5 + gap), h).build());
 
         refreshJobButtons();
     }
@@ -170,6 +185,7 @@ public class OrdersScreen extends Screen {
         depthIron.visible = miner;
         depthDiamond.visible = miner;
         dropOff.visible = hauler;
+        if (escortBtn != null) escortBtn.visible = job == AssistantEntity.StationTask.GUARD;
     }
 
     @Override

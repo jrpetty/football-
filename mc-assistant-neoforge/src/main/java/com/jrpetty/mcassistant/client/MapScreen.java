@@ -164,8 +164,16 @@ public class MapScreen extends Screen {
             if (x1 - x0 < 2) x1 = x0 + 2;
             if (z1 - z0 < 2) z1 = z0 + 2;
             g.fill(x0, z0, x1, z1, (colour & 0x00FFFFFF) | 0x33000000);
+            BotInfo bi = BotInfo.of(a);
+            // A farm warms toward harvest-gold as its crops ripen, so "worth
+            // visiting?" is answerable from up here without walking over.
+            if (a.clientJobOrdinal() == AssistantEntity.StationTask.FARM.ordinal()
+                && bi.ripe() > 0) {
+                int alpha = 0x22 + bi.ripe() * 0x55 / 100;
+                g.fill(x0, z0, x1, z1, (alpha << 24) | 0x00D9A62E);
+            }
             g.renderOutline(x0, z0, x1 - x0, z1 - z0, colour);
-            String patch = BotInfo.of(a).patchName();
+            String patch = bi.patchName();
             if (!patch.isEmpty() && x1 - x0 > 30) {
                 g.drawString(this.font, Ui.clip(this.font, patch, x1 - x0 - 6),
                     x0 + 3, z0 + 2, Ui.INK, false);

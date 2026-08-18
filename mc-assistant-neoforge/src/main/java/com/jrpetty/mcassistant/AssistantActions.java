@@ -59,6 +59,8 @@ public final class AssistantActions {
     public static final int PERK_PORTER = 32;
     // Right-clicking a patch on the map cycles its name through Names.PATCHES.
     public static final int PATCH_NAME_NEXT = 33;
+    public static final int ESCORT_NEXT = 34;    // guard: shadow the next crewmate
+    public static final int QUIET_TOGGLE = 35;   // routine chatter on/off
 
     /** Naming. Nothing in this mod is typed, so the order carries an INDEX into
      *  the shared name pool rather than a string: the client can only ask for a
@@ -121,6 +123,8 @@ public final class AssistantActions {
             case DEPTH_IRON -> presetDepth(a, 16);
             case DEPTH_DIAMOND -> presetDepth(a, -54);
             case PATCH_NAME_NEXT -> a.cyclePatchName();
+            case ESCORT_NEXT -> a.cycleEscort();
+            case QUIET_TOGGLE -> a.toggleQuiet();
             case PERK_SWIFT -> a.choosePerk(AssistantEntity.Perk.SWIFT);
             case PERK_TOUGH -> a.choosePerk(AssistantEntity.Perk.TOUGH);
             case PERK_PORTER -> a.choosePerk(AssistantEntity.Perk.PORTER);
