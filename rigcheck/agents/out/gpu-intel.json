@@ -1,0 +1,2443 @@
+{
+  "agentId": "gpu-intel",
+  "kind": "gpu",
+  "provenance": {
+    "model-knowledge": {
+      "id": "model-knowledge",
+      "source": "Model knowledge (seed)",
+      "url": "",
+      "licence": "n/a",
+      "retrievedAt": "2026-08-16",
+      "note": "Seed pending harvest; Wikipedia and vendor spec sources egress-blocked in this environment."
+    }
+  },
+  "records": [
+    {
+      "id": "intel-arc-a310",
+      "vendor": "intel",
+      "brand": "Intel Arc A310",
+      "fullName": "Intel Arc A310",
+      "architecture": "Xe-HPG (Alchemist)",
+      "chip": "DG2-128",
+      "launchDate": "2022-10",
+      "formFactor": "desktop",
+      "shaders": 768,
+      "baseClockMHz": null,
+      "boostClockMHz": 2000,
+      "vramGB": 4,
+      "vramType": "GDDR6",
+      "memBusBits": 64,
+      "memBandwidthGBs": 124,
+      "fp32TFLOPS": 3.072,
+      "tdpW": 75,
+      "processNm": 6,
+      "pcieGen": 4,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": null,
+      "recommendedPsuW": null,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "xess",
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-arc-a380",
+      "vendor": "intel",
+      "brand": "Intel Arc A380",
+      "fullName": "Intel Arc A380",
+      "architecture": "Xe-HPG (Alchemist)",
+      "chip": "DG2-128",
+      "launchDate": "2022-06",
+      "formFactor": "desktop",
+      "shaders": 1024,
+      "baseClockMHz": null,
+      "boostClockMHz": 2000,
+      "vramGB": 6,
+      "vramType": "GDDR6",
+      "memBusBits": 96,
+      "memBandwidthGBs": 186,
+      "fp32TFLOPS": 4.096,
+      "tdpW": 75,
+      "processNm": 6,
+      "pcieGen": 4,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": null,
+      "recommendedPsuW": null,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "xess",
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-arc-a580",
+      "vendor": "intel",
+      "brand": "Intel Arc A580",
+      "fullName": "Intel Arc A580",
+      "architecture": "Xe-HPG (Alchemist)",
+      "chip": "DG2-512",
+      "launchDate": "2023-10-10",
+      "formFactor": "desktop",
+      "shaders": 3072,
+      "baseClockMHz": null,
+      "boostClockMHz": 1700,
+      "vramGB": 8,
+      "vramType": "GDDR6",
+      "memBusBits": 256,
+      "memBandwidthGBs": 512,
+      "fp32TFLOPS": 10.445,
+      "tdpW": 175,
+      "processNm": 6,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": null,
+      "recommendedPsuW": null,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "xess",
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-arc-a750",
+      "vendor": "intel",
+      "brand": "Intel Arc A750",
+      "fullName": "Intel Arc A750 Limited Edition",
+      "architecture": "Xe-HPG (Alchemist)",
+      "chip": "DG2-512",
+      "launchDate": "2022-10-12",
+      "formFactor": "desktop",
+      "shaders": 3584,
+      "baseClockMHz": null,
+      "boostClockMHz": 2050,
+      "vramGB": 8,
+      "vramType": "GDDR6",
+      "memBusBits": 256,
+      "memBandwidthGBs": 512,
+      "fp32TFLOPS": 14.694,
+      "tdpW": 225,
+      "processNm": 6,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": 267,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin + 1x6-pin",
+      "recommendedPsuW": 600,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "xess",
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-arc-a770-8gb",
+      "vendor": "intel",
+      "brand": "Intel Arc A770",
+      "variant": "8GB",
+      "fullName": "Intel Arc A770 8GB",
+      "architecture": "Xe-HPG (Alchemist)",
+      "chip": "DG2-512",
+      "launchDate": "2022-10-12",
+      "formFactor": "desktop",
+      "shaders": 4096,
+      "baseClockMHz": null,
+      "boostClockMHz": 2100,
+      "vramGB": 8,
+      "vramType": "GDDR6",
+      "memBusBits": 256,
+      "memBandwidthGBs": 512,
+      "fp32TFLOPS": 17.203,
+      "tdpW": 225,
+      "processNm": 6,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin + 1x6-pin",
+      "recommendedPsuW": 600,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "xess",
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-arc-a770-16gb",
+      "vendor": "intel",
+      "brand": "Intel Arc A770",
+      "variant": "16GB",
+      "fullName": "Intel Arc A770 16GB Limited Edition",
+      "architecture": "Xe-HPG (Alchemist)",
+      "chip": "DG2-512",
+      "launchDate": "2022-10-12",
+      "formFactor": "desktop",
+      "shaders": 4096,
+      "baseClockMHz": null,
+      "boostClockMHz": 2100,
+      "vramGB": 16,
+      "vramType": "GDDR6",
+      "memBusBits": 256,
+      "memBandwidthGBs": 560,
+      "fp32TFLOPS": 17.203,
+      "tdpW": 225,
+      "processNm": 6,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": 267,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin + 1x6-pin",
+      "recommendedPsuW": 600,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "xess",
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-arc-b570",
+      "vendor": "intel",
+      "brand": "Intel Arc B570",
+      "fullName": "Intel Arc B570",
+      "architecture": "Xe2-HPG (Battlemage)",
+      "chip": "BMG-G21",
+      "launchDate": "2025-01-16",
+      "formFactor": "desktop",
+      "shaders": 2304,
+      "baseClockMHz": null,
+      "boostClockMHz": 2500,
+      "vramGB": 10,
+      "vramType": "GDDR6",
+      "memBusBits": 160,
+      "memBandwidthGBs": 380,
+      "fp32TFLOPS": 11.52,
+      "tdpW": 150,
+      "processNm": 5,
+      "pcieGen": 4,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": null,
+      "recommendedPsuW": null,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "xess",
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-arc-b580",
+      "vendor": "intel",
+      "brand": "Intel Arc B580",
+      "fullName": "Intel Arc B580 Limited Edition",
+      "architecture": "Xe2-HPG (Battlemage)",
+      "chip": "BMG-G21",
+      "launchDate": "2024-12-13",
+      "formFactor": "desktop",
+      "shaders": 2560,
+      "baseClockMHz": null,
+      "boostClockMHz": 2670,
+      "vramGB": 12,
+      "vramType": "GDDR6",
+      "memBusBits": 192,
+      "memBandwidthGBs": 456,
+      "fp32TFLOPS": 13.67,
+      "tdpW": 190,
+      "processNm": 5,
+      "pcieGen": 4,
+      "pcieLanes": 8,
+      "lengthMm": 272,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": null,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "xess",
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-hd-2000",
+      "vendor": "intel",
+      "brand": "Intel HD Graphics 2000",
+      "fullName": "Intel HD Graphics 2000 (Sandy Bridge, 6 EU)",
+      "architecture": "Gen 6 (Sandy Bridge)",
+      "chip": "Sandy Bridge GT1",
+      "launchDate": "2011-01",
+      "formFactor": "igpu",
+      "shaders": 48,
+      "baseClockMHz": null,
+      "boostClockMHz": 1100,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": null,
+      "tdpW": null,
+      "processNm": 32,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "10_1",
+        "shaderModel": "4_1",
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-hd-3000",
+      "vendor": "intel",
+      "brand": "Intel HD Graphics 3000",
+      "fullName": "Intel HD Graphics 3000 (Sandy Bridge, 12 EU)",
+      "architecture": "Gen 6 (Sandy Bridge)",
+      "chip": "Sandy Bridge GT2",
+      "launchDate": "2011-01",
+      "formFactor": "igpu",
+      "shaders": 96,
+      "baseClockMHz": null,
+      "boostClockMHz": 1350,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": null,
+      "tdpW": null,
+      "processNm": 32,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "10_1",
+        "shaderModel": "4_1",
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-hd-2500",
+      "vendor": "intel",
+      "brand": "Intel HD Graphics 2500",
+      "fullName": "Intel HD Graphics 2500 (Ivy Bridge, 6 EU)",
+      "architecture": "Gen 7 (Ivy Bridge)",
+      "chip": "Ivy Bridge GT1",
+      "launchDate": "2012-04",
+      "formFactor": "igpu",
+      "shaders": 48,
+      "baseClockMHz": null,
+      "boostClockMHz": 1100,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.106,
+      "tdpW": null,
+      "processNm": 22,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "5_1",
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-hd-4000",
+      "vendor": "intel",
+      "brand": "Intel HD Graphics 4000",
+      "fullName": "Intel HD Graphics 4000 (Ivy Bridge, 16 EU)",
+      "architecture": "Gen 7 (Ivy Bridge)",
+      "chip": "Ivy Bridge GT2",
+      "launchDate": "2012-04",
+      "formFactor": "igpu",
+      "shaders": 128,
+      "baseClockMHz": null,
+      "boostClockMHz": 1150,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.294,
+      "tdpW": null,
+      "processNm": 22,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "5_1",
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-hd-4600",
+      "vendor": "intel",
+      "brand": "Intel HD Graphics 4600",
+      "fullName": "Intel HD Graphics 4600 (Haswell, 20 EU)",
+      "architecture": "Gen 7.5 (Haswell)",
+      "chip": "Haswell GT2",
+      "launchDate": "2013-06",
+      "formFactor": "igpu",
+      "shaders": 160,
+      "baseClockMHz": null,
+      "boostClockMHz": 1250,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.4,
+      "tdpW": null,
+      "processNm": 22,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_1",
+        "shaderModel": "5_1",
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-iris-pro-5200",
+      "vendor": "intel",
+      "brand": "Intel Iris Pro Graphics 5200",
+      "fullName": "Intel Iris Pro Graphics 5200 (Haswell GT3e, 40 EU)",
+      "architecture": "Gen 7.5 (Haswell)",
+      "chip": "Haswell GT3e",
+      "launchDate": "2013-06",
+      "formFactor": "igpu",
+      "shaders": 320,
+      "baseClockMHz": null,
+      "boostClockMHz": 1300,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.832,
+      "tdpW": null,
+      "processNm": 22,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_1",
+        "shaderModel": "5_1",
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-hd-5500",
+      "vendor": "intel",
+      "brand": "Intel HD Graphics 5500",
+      "fullName": "Intel HD Graphics 5500 (Broadwell, 24 EU)",
+      "architecture": "Gen 8 (Broadwell)",
+      "chip": "Broadwell GT2",
+      "launchDate": "2015-01",
+      "formFactor": "igpu",
+      "shaders": 192,
+      "baseClockMHz": null,
+      "boostClockMHz": 950,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.365,
+      "tdpW": null,
+      "processNm": 14,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_1",
+        "shaderModel": "5_1",
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-iris-pro-6200",
+      "vendor": "intel",
+      "brand": "Intel Iris Pro Graphics 6200",
+      "fullName": "Intel Iris Pro Graphics 6200 (Broadwell GT3e, 48 EU)",
+      "architecture": "Gen 8 (Broadwell)",
+      "chip": "Broadwell GT3e",
+      "launchDate": "2015-06",
+      "formFactor": "igpu",
+      "shaders": 384,
+      "baseClockMHz": null,
+      "boostClockMHz": 1150,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.883,
+      "tdpW": null,
+      "processNm": 14,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_1",
+        "shaderModel": "5_1",
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-hd-510",
+      "vendor": "intel",
+      "brand": "Intel HD Graphics 510",
+      "fullName": "Intel HD Graphics 510 (Skylake GT1, 12 EU)",
+      "architecture": "Gen 9 (Skylake)",
+      "chip": "Skylake GT1",
+      "launchDate": "2015-09",
+      "formFactor": "igpu",
+      "shaders": 96,
+      "baseClockMHz": null,
+      "boostClockMHz": 1000,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.192,
+      "tdpW": null,
+      "processNm": 14,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-hd-520",
+      "vendor": "intel",
+      "brand": "Intel HD Graphics 520",
+      "fullName": "Intel HD Graphics 520 (Skylake GT2, 24 EU)",
+      "architecture": "Gen 9 (Skylake)",
+      "chip": "Skylake GT2",
+      "launchDate": "2015-09",
+      "formFactor": "igpu",
+      "shaders": 192,
+      "baseClockMHz": null,
+      "boostClockMHz": 1050,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.403,
+      "tdpW": null,
+      "processNm": 14,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-hd-530",
+      "vendor": "intel",
+      "brand": "Intel HD Graphics 530",
+      "fullName": "Intel HD Graphics 530 (Skylake GT2, 24 EU)",
+      "architecture": "Gen 9 (Skylake)",
+      "chip": "Skylake GT2",
+      "launchDate": "2015-08",
+      "formFactor": "igpu",
+      "shaders": 192,
+      "baseClockMHz": null,
+      "boostClockMHz": 1150,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.442,
+      "tdpW": null,
+      "processNm": 14,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-iris-540",
+      "vendor": "intel",
+      "brand": "Intel Iris Graphics 540",
+      "fullName": "Intel Iris Graphics 540 (Skylake GT3e, 48 EU)",
+      "architecture": "Gen 9 (Skylake)",
+      "chip": "Skylake GT3e",
+      "launchDate": "2015-09",
+      "formFactor": "igpu",
+      "shaders": 384,
+      "baseClockMHz": null,
+      "boostClockMHz": 1050,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.806,
+      "tdpW": null,
+      "processNm": 14,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-iris-pro-580",
+      "vendor": "intel",
+      "brand": "Intel Iris Pro Graphics 580",
+      "fullName": "Intel Iris Pro Graphics 580 (Skylake GT4e, 72 EU)",
+      "architecture": "Gen 9 (Skylake)",
+      "chip": "Skylake GT4e",
+      "launchDate": "2016-01",
+      "formFactor": "igpu",
+      "shaders": 576,
+      "baseClockMHz": null,
+      "boostClockMHz": 1050,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 1.21,
+      "tdpW": null,
+      "processNm": 14,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-hd-630",
+      "vendor": "intel",
+      "brand": "Intel HD Graphics 630",
+      "fullName": "Intel HD Graphics 630 (Kaby Lake GT2, 24 EU)",
+      "architecture": "Gen 9.5 (Kaby Lake)",
+      "chip": "Kaby Lake GT2",
+      "launchDate": "2017-01",
+      "formFactor": "igpu",
+      "shaders": 192,
+      "baseClockMHz": null,
+      "boostClockMHz": 1150,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.442,
+      "tdpW": null,
+      "processNm": 14,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-uhd-600",
+      "vendor": "intel",
+      "brand": "Intel UHD Graphics 600",
+      "fullName": "Intel UHD Graphics 600 (Gemini Lake, 12 EU)",
+      "architecture": "Gen 9.5 (Gemini Lake)",
+      "chip": "Gemini Lake",
+      "launchDate": "2017-12",
+      "formFactor": "igpu",
+      "shaders": 96,
+      "baseClockMHz": null,
+      "boostClockMHz": 700,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.134,
+      "tdpW": null,
+      "processNm": 14,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-uhd-605",
+      "vendor": "intel",
+      "brand": "Intel UHD Graphics 605",
+      "fullName": "Intel UHD Graphics 605 (Gemini Lake, 18 EU)",
+      "architecture": "Gen 9.5 (Gemini Lake)",
+      "chip": "Gemini Lake",
+      "launchDate": "2017-12",
+      "formFactor": "igpu",
+      "shaders": 144,
+      "baseClockMHz": null,
+      "boostClockMHz": 750,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.216,
+      "tdpW": null,
+      "processNm": 14,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-uhd-610",
+      "vendor": "intel",
+      "brand": "Intel UHD Graphics 610",
+      "fullName": "Intel UHD Graphics 610 (Coffee Lake GT1, 12 EU)",
+      "architecture": "Gen 9.5 (Coffee Lake)",
+      "chip": "Coffee Lake GT1",
+      "launchDate": "2018-04",
+      "formFactor": "igpu",
+      "shaders": 96,
+      "baseClockMHz": null,
+      "boostClockMHz": 1050,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.202,
+      "tdpW": null,
+      "processNm": 14,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-uhd-620",
+      "vendor": "intel",
+      "brand": "Intel UHD Graphics 620",
+      "fullName": "Intel UHD Graphics 620 (Kaby Lake-R GT2, 24 EU)",
+      "architecture": "Gen 9.5 (Kaby Lake-R)",
+      "chip": "Kaby Lake-R GT2",
+      "launchDate": "2017-08",
+      "formFactor": "igpu",
+      "shaders": 192,
+      "baseClockMHz": null,
+      "boostClockMHz": 1150,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.442,
+      "tdpW": null,
+      "processNm": 14,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-uhd-630",
+      "vendor": "intel",
+      "brand": "Intel UHD Graphics 630",
+      "fullName": "Intel UHD Graphics 630 (Coffee/Comet Lake GT2, 24 EU)",
+      "architecture": "Gen 9.5 (Coffee Lake)",
+      "chip": "Coffee Lake GT2",
+      "launchDate": "2017-10",
+      "formFactor": "igpu",
+      "shaders": 192,
+      "baseClockMHz": null,
+      "boostClockMHz": 1200,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.461,
+      "tdpW": null,
+      "processNm": 14,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-iris-plus-g4",
+      "vendor": "intel",
+      "brand": "Intel Iris Plus Graphics G4",
+      "fullName": "Intel Iris Plus Graphics G4 (Ice Lake, 48 EU)",
+      "architecture": "Gen 11 (Ice Lake)",
+      "chip": "Ice Lake GT1.5",
+      "launchDate": "2019-08",
+      "formFactor": "igpu",
+      "shaders": 384,
+      "baseClockMHz": null,
+      "boostClockMHz": 1050,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.806,
+      "tdpW": null,
+      "processNm": 10,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-iris-plus-g7",
+      "vendor": "intel",
+      "brand": "Intel Iris Plus Graphics G7",
+      "fullName": "Intel Iris Plus Graphics G7 (Ice Lake, 64 EU)",
+      "architecture": "Gen 11 (Ice Lake)",
+      "chip": "Ice Lake GT2",
+      "launchDate": "2019-08",
+      "formFactor": "igpu",
+      "shaders": 512,
+      "baseClockMHz": null,
+      "boostClockMHz": 1100,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 1.126,
+      "tdpW": null,
+      "processNm": 10,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-iris-xe-96eu",
+      "vendor": "intel",
+      "brand": "Intel Iris Xe Graphics",
+      "variant": "96 EU",
+      "fullName": "Intel Iris Xe Graphics (Tiger Lake, 96 EU)",
+      "architecture": "Xe-LP (Gen 12)",
+      "chip": "Tiger Lake GT2",
+      "launchDate": "2020-09",
+      "formFactor": "igpu",
+      "shaders": 768,
+      "baseClockMHz": null,
+      "boostClockMHz": 1350,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 2.074,
+      "tdpW": null,
+      "processNm": 10,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-iris-xe-80eu",
+      "vendor": "intel",
+      "brand": "Intel Iris Xe Graphics",
+      "variant": "80 EU",
+      "fullName": "Intel Iris Xe Graphics (Tiger Lake, 80 EU)",
+      "architecture": "Xe-LP (Gen 12)",
+      "chip": "Tiger Lake GT2",
+      "launchDate": "2020-09",
+      "formFactor": "igpu",
+      "shaders": 640,
+      "baseClockMHz": null,
+      "boostClockMHz": 1300,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 1.664,
+      "tdpW": null,
+      "processNm": 10,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-uhd-730-rkl",
+      "vendor": "intel",
+      "brand": "Intel UHD Graphics 730",
+      "variant": "Rocket Lake",
+      "fullName": "Intel UHD Graphics 730 (Rocket Lake, 24 EU)",
+      "architecture": "Xe-LP (Gen 12)",
+      "chip": "Rocket Lake-S GT1",
+      "launchDate": "2021-03",
+      "formFactor": "igpu",
+      "shaders": 192,
+      "baseClockMHz": null,
+      "boostClockMHz": 1300,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.499,
+      "tdpW": null,
+      "processNm": 14,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-uhd-750",
+      "vendor": "intel",
+      "brand": "Intel UHD Graphics 750",
+      "fullName": "Intel UHD Graphics 750 (Rocket Lake, 32 EU)",
+      "architecture": "Xe-LP (Gen 12)",
+      "chip": "Rocket Lake-S GT1",
+      "launchDate": "2021-03",
+      "formFactor": "igpu",
+      "shaders": 256,
+      "baseClockMHz": null,
+      "boostClockMHz": 1300,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.666,
+      "tdpW": null,
+      "processNm": 14,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-uhd-710",
+      "vendor": "intel",
+      "brand": "Intel UHD Graphics 710",
+      "fullName": "Intel UHD Graphics 710 (Alder Lake, 16 EU)",
+      "architecture": "Xe-LP (Gen 12)",
+      "chip": "Alder Lake-S GT1",
+      "launchDate": "2022-01",
+      "formFactor": "igpu",
+      "shaders": 128,
+      "baseClockMHz": null,
+      "boostClockMHz": 1300,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.333,
+      "tdpW": null,
+      "processNm": 10,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-uhd-730-adl",
+      "vendor": "intel",
+      "brand": "Intel UHD Graphics 730",
+      "variant": "Alder Lake",
+      "fullName": "Intel UHD Graphics 730 (Alder Lake, 24 EU)",
+      "architecture": "Xe-LP (Gen 12)",
+      "chip": "Alder Lake-S GT1",
+      "launchDate": "2022-01",
+      "formFactor": "igpu",
+      "shaders": 192,
+      "baseClockMHz": null,
+      "boostClockMHz": 1500,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.576,
+      "tdpW": null,
+      "processNm": 10,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-uhd-770-adl",
+      "vendor": "intel",
+      "brand": "Intel UHD Graphics 770",
+      "variant": "Alder Lake",
+      "fullName": "Intel UHD Graphics 770 (Alder Lake, 32 EU)",
+      "architecture": "Xe-LP (Gen 12)",
+      "chip": "Alder Lake-S GT1",
+      "launchDate": "2021-11",
+      "formFactor": "igpu",
+      "shaders": 256,
+      "baseClockMHz": null,
+      "boostClockMHz": 1550,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.794,
+      "tdpW": null,
+      "processNm": 10,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-uhd-770-rpl",
+      "vendor": "intel",
+      "brand": "Intel UHD Graphics 770",
+      "variant": "Raptor Lake",
+      "fullName": "Intel UHD Graphics 770 (Raptor Lake, 32 EU)",
+      "architecture": "Xe-LP (Gen 12)",
+      "chip": "Raptor Lake-S GT1",
+      "launchDate": "2022-10",
+      "formFactor": "igpu",
+      "shaders": 256,
+      "baseClockMHz": null,
+      "boostClockMHz": 1650,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.845,
+      "tdpW": null,
+      "processNm": 10,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-uhd-adl-n",
+      "vendor": "intel",
+      "brand": "Intel UHD Graphics",
+      "variant": "Alder Lake-N",
+      "fullName": "Intel UHD Graphics (Alder Lake-N, 24 EU)",
+      "architecture": "Xe-LP (Gen 12)",
+      "chip": "Alder Lake-N",
+      "launchDate": "2023-01",
+      "formFactor": "igpu",
+      "shaders": 192,
+      "baseClockMHz": null,
+      "boostClockMHz": 750,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.288,
+      "tdpW": null,
+      "processNm": 10,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-arc-igpu-mtl-8xe",
+      "vendor": "intel",
+      "brand": "Intel Arc Graphics",
+      "variant": "Meteor Lake 8 Xe-cores",
+      "fullName": "Intel Arc Graphics (Meteor Lake-H, 8 Xe-cores)",
+      "architecture": "Xe-LPG (Meteor Lake)",
+      "chip": "Meteor Lake GPU tile",
+      "launchDate": "2023-12",
+      "formFactor": "igpu",
+      "shaders": 1024,
+      "baseClockMHz": null,
+      "boostClockMHz": 2250,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 4.608,
+      "tdpW": null,
+      "processNm": 5,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "av1Encode": true,
+        "upscaling": [
+          "xess",
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-arc-igpu-mtl-7xe",
+      "vendor": "intel",
+      "brand": "Intel Arc Graphics",
+      "variant": "Meteor Lake 7 Xe-cores",
+      "fullName": "Intel Arc Graphics (Meteor Lake-H, 7 Xe-cores)",
+      "architecture": "Xe-LPG (Meteor Lake)",
+      "chip": "Meteor Lake GPU tile",
+      "launchDate": "2023-12",
+      "formFactor": "igpu",
+      "shaders": 896,
+      "baseClockMHz": null,
+      "boostClockMHz": 2200,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 3.942,
+      "tdpW": null,
+      "processNm": 5,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "av1Encode": true,
+        "upscaling": [
+          "xess",
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-graphics-arl-s-4xe",
+      "vendor": "intel",
+      "brand": "Intel Graphics",
+      "variant": "Arrow Lake-S",
+      "fullName": "Intel Graphics (Arrow Lake-S, 4 Xe-cores)",
+      "architecture": "Xe-LPG (Arrow Lake)",
+      "chip": "Arrow Lake-S GPU tile",
+      "launchDate": "2024-10",
+      "formFactor": "igpu",
+      "shaders": 512,
+      "baseClockMHz": null,
+      "boostClockMHz": 2000,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 2.048,
+      "tdpW": null,
+      "processNm": 5,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "av1Encode": true,
+        "upscaling": [
+          "xess",
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-arc-130v",
+      "vendor": "intel",
+      "brand": "Intel Arc Graphics 130V",
+      "fullName": "Intel Arc Graphics 130V (Lunar Lake, 7 Xe2-cores)",
+      "architecture": "Xe2-LPG (Lunar Lake)",
+      "chip": "Lunar Lake compute tile",
+      "launchDate": "2024-09",
+      "formFactor": "igpu",
+      "shaders": 896,
+      "baseClockMHz": null,
+      "boostClockMHz": 1850,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 3.315,
+      "tdpW": null,
+      "processNm": 3,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "av1Encode": true,
+        "upscaling": [
+          "xess",
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-arc-140v",
+      "vendor": "intel",
+      "brand": "Intel Arc Graphics 140V",
+      "fullName": "Intel Arc Graphics 140V (Lunar Lake, 8 Xe2-cores)",
+      "architecture": "Xe2-LPG (Lunar Lake)",
+      "chip": "Lunar Lake compute tile",
+      "launchDate": "2024-09",
+      "formFactor": "igpu",
+      "shaders": 1024,
+      "baseClockMHz": null,
+      "boostClockMHz": 1950,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 3.994,
+      "tdpW": null,
+      "processNm": 3,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "av1Encode": true,
+        "upscaling": [
+          "xess",
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-vega-3-raven",
+      "vendor": "amd",
+      "brand": "AMD Radeon Vega 3",
+      "variant": "Athlon 3000G",
+      "fullName": "AMD Radeon Vega 3 Graphics (Raven Ridge, 3 CU)",
+      "architecture": "GCN 5 (Vega)",
+      "chip": "Raven Ridge",
+      "launchDate": "2019-11",
+      "formFactor": "igpu",
+      "shaders": 192,
+      "baseClockMHz": null,
+      "boostClockMHz": 1100,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.422,
+      "tdpW": null,
+      "processNm": 14,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-vega-8-raven",
+      "vendor": "amd",
+      "brand": "AMD Radeon Vega 8",
+      "variant": "Ryzen 3 2200G",
+      "fullName": "AMD Radeon Vega 8 Graphics (Raven Ridge, 8 CU)",
+      "architecture": "GCN 5 (Vega)",
+      "chip": "Raven Ridge",
+      "launchDate": "2018-02",
+      "formFactor": "igpu",
+      "shaders": 512,
+      "baseClockMHz": null,
+      "boostClockMHz": 1100,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 1.126,
+      "tdpW": null,
+      "processNm": 14,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-vega-11-raven",
+      "vendor": "amd",
+      "brand": "AMD Radeon Vega 11",
+      "variant": "Ryzen 5 2400G",
+      "fullName": "AMD Radeon Vega 11 Graphics (Raven Ridge, 11 CU)",
+      "architecture": "GCN 5 (Vega)",
+      "chip": "Raven Ridge",
+      "launchDate": "2018-02",
+      "formFactor": "igpu",
+      "shaders": 704,
+      "baseClockMHz": null,
+      "boostClockMHz": 1250,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 1.76,
+      "tdpW": null,
+      "processNm": 14,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-vega-8-picasso",
+      "vendor": "amd",
+      "brand": "AMD Radeon Vega 8",
+      "variant": "Ryzen 3 3200G",
+      "fullName": "AMD Radeon Vega 8 Graphics (Picasso, 8 CU)",
+      "architecture": "GCN 5 (Vega)",
+      "chip": "Picasso",
+      "launchDate": "2019-07",
+      "formFactor": "igpu",
+      "shaders": 512,
+      "baseClockMHz": null,
+      "boostClockMHz": 1250,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 1.28,
+      "tdpW": null,
+      "processNm": 12,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-vega-11-picasso",
+      "vendor": "amd",
+      "brand": "AMD Radeon Vega 11",
+      "variant": "Ryzen 5 3400G",
+      "fullName": "AMD Radeon Vega 11 Graphics (Picasso, 11 CU)",
+      "architecture": "GCN 5 (Vega)",
+      "chip": "Picasso",
+      "launchDate": "2019-07",
+      "formFactor": "igpu",
+      "shaders": 704,
+      "baseClockMHz": null,
+      "boostClockMHz": 1400,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 1.971,
+      "tdpW": null,
+      "processNm": 12,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-vega-8-renoir",
+      "vendor": "amd",
+      "brand": "AMD Radeon Vega 8",
+      "variant": "Ryzen 7 4700G",
+      "fullName": "AMD Radeon Graphics (Renoir, 8 CU)",
+      "architecture": "GCN 5 (Vega)",
+      "chip": "Renoir",
+      "launchDate": "2020-07",
+      "formFactor": "igpu",
+      "shaders": 512,
+      "baseClockMHz": null,
+      "boostClockMHz": 2100,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 2.15,
+      "tdpW": null,
+      "processNm": 7,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-vega-6-cezanne",
+      "vendor": "amd",
+      "brand": "AMD Radeon Vega 6",
+      "variant": "Ryzen 3 5300G",
+      "fullName": "AMD Radeon Graphics (Cezanne, 6 CU)",
+      "architecture": "GCN 5 (Vega)",
+      "chip": "Cezanne",
+      "launchDate": "2021-04",
+      "formFactor": "igpu",
+      "shaders": 384,
+      "baseClockMHz": null,
+      "boostClockMHz": 1700,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 1.306,
+      "tdpW": null,
+      "processNm": 7,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-vega-7-cezanne",
+      "vendor": "amd",
+      "brand": "AMD Radeon Vega 7",
+      "variant": "Ryzen 5 5600G",
+      "fullName": "AMD Radeon Graphics (Cezanne, 7 CU)",
+      "architecture": "GCN 5 (Vega)",
+      "chip": "Cezanne",
+      "launchDate": "2021-08",
+      "formFactor": "igpu",
+      "shaders": 448,
+      "baseClockMHz": null,
+      "boostClockMHz": 1900,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 1.702,
+      "tdpW": null,
+      "processNm": 7,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-vega-8-cezanne",
+      "vendor": "amd",
+      "brand": "AMD Radeon Vega 8",
+      "variant": "Ryzen 7 5700G",
+      "fullName": "AMD Radeon Graphics (Cezanne, 8 CU)",
+      "architecture": "GCN 5 (Vega)",
+      "chip": "Cezanne",
+      "launchDate": "2021-08",
+      "formFactor": "igpu",
+      "shaders": 512,
+      "baseClockMHz": null,
+      "boostClockMHz": 2000,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 2.048,
+      "tdpW": null,
+      "processNm": 7,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-660m",
+      "vendor": "amd",
+      "brand": "AMD Radeon 660M",
+      "fullName": "AMD Radeon 660M (Rembrandt, 6 CU)",
+      "architecture": "RDNA 2",
+      "chip": "Rembrandt",
+      "launchDate": "2022-01",
+      "formFactor": "igpu",
+      "shaders": 384,
+      "baseClockMHz": null,
+      "boostClockMHz": 1900,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 1.459,
+      "tdpW": null,
+      "processNm": 6,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-680m",
+      "vendor": "amd",
+      "brand": "AMD Radeon 680M",
+      "fullName": "AMD Radeon 680M (Rembrandt, 12 CU)",
+      "architecture": "RDNA 2",
+      "chip": "Rembrandt",
+      "launchDate": "2022-01",
+      "formFactor": "igpu",
+      "shaders": 768,
+      "baseClockMHz": null,
+      "boostClockMHz": 2400,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 3.686,
+      "tdpW": null,
+      "processNm": 6,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-740m",
+      "vendor": "amd",
+      "brand": "AMD Radeon 740M",
+      "fullName": "AMD Radeon 740M (Phoenix, 4 CU)",
+      "architecture": "RDNA 3",
+      "chip": "Phoenix",
+      "launchDate": "2023-05",
+      "formFactor": "igpu",
+      "shaders": 256,
+      "baseClockMHz": null,
+      "boostClockMHz": 2500,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 1.28,
+      "tdpW": null,
+      "processNm": 4,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "av1Encode": true,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-760m",
+      "vendor": "amd",
+      "brand": "AMD Radeon 760M",
+      "fullName": "AMD Radeon 760M (Phoenix, 8 CU)",
+      "architecture": "RDNA 3",
+      "chip": "Phoenix",
+      "launchDate": "2023-05",
+      "formFactor": "igpu",
+      "shaders": 512,
+      "baseClockMHz": null,
+      "boostClockMHz": 2600,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 2.662,
+      "tdpW": null,
+      "processNm": 4,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "av1Encode": true,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-780m",
+      "vendor": "amd",
+      "brand": "AMD Radeon 780M",
+      "variant": "Phoenix mobile",
+      "fullName": "AMD Radeon 780M (Phoenix, 12 CU)",
+      "architecture": "RDNA 3",
+      "chip": "Phoenix",
+      "launchDate": "2023-05",
+      "formFactor": "igpu",
+      "shaders": 768,
+      "baseClockMHz": null,
+      "boostClockMHz": 2700,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 4.147,
+      "tdpW": null,
+      "processNm": 4,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "av1Encode": true,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-780m-8700g",
+      "vendor": "amd",
+      "brand": "AMD Radeon 780M",
+      "variant": "Ryzen 7 8700G",
+      "fullName": "AMD Radeon 780M (Ryzen 7 8700G desktop, 12 CU)",
+      "architecture": "RDNA 3",
+      "chip": "Phoenix",
+      "launchDate": "2024-01-31",
+      "formFactor": "igpu",
+      "shaders": 768,
+      "baseClockMHz": null,
+      "boostClockMHz": 2900,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 4.454,
+      "tdpW": null,
+      "processNm": 4,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "av1Encode": true,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-880m",
+      "vendor": "amd",
+      "brand": "AMD Radeon 880M",
+      "fullName": "AMD Radeon 880M (Strix Point, 12 CU)",
+      "architecture": "RDNA 3.5",
+      "chip": "Strix Point",
+      "launchDate": "2024-07",
+      "formFactor": "igpu",
+      "shaders": 768,
+      "baseClockMHz": null,
+      "boostClockMHz": 2900,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 4.454,
+      "tdpW": null,
+      "processNm": 4,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "av1Encode": true,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-890m",
+      "vendor": "amd",
+      "brand": "AMD Radeon 890M",
+      "fullName": "AMD Radeon 890M (Strix Point, 16 CU)",
+      "architecture": "RDNA 3.5",
+      "chip": "Strix Point",
+      "launchDate": "2024-07",
+      "formFactor": "igpu",
+      "shaders": 1024,
+      "baseClockMHz": null,
+      "boostClockMHz": 2900,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 5.939,
+      "tdpW": null,
+      "processNm": 4,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "av1Encode": true,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-8060s",
+      "vendor": "amd",
+      "brand": "AMD Radeon 8060S",
+      "fullName": "AMD Radeon 8060S (Strix Halo, 40 CU)",
+      "architecture": "RDNA 3.5",
+      "chip": "Strix Halo",
+      "launchDate": "2025-01",
+      "formFactor": "igpu",
+      "shaders": 2560,
+      "baseClockMHz": null,
+      "boostClockMHz": 2900,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 14.848,
+      "tdpW": null,
+      "processNm": 4,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "av1Encode": true,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    }
+  ],
+  "expectedCount": 70,
+  "actualCount": 61,
+  "gaps": [
+    "No pciIds on any record. Intel/AMD PCI device ids were not emitted because I am not confident enough in specific hex ids to risk poisoning the alias resolver; scripts/parse-aliases.ts harvests them from pci.ids anyway.",
+    "No Arc B770 or any Battlemage part above B580. I could not confirm such a desktop SKU actually shipped, and the BRIEF says omit rather than invent.",
+    "No Arc Pro workstation cards (A40/A50/A60, Pro B50/B60) — professional SKUs, and I am not confident of their full specs.",
+    "No Intel Iris Xe MAX (DG1). It was an OEM-only discrete part and I am not confident of its retail desktop presence or clocks.",
+    "No Panther Lake / Xe3 integrated graphics. I cannot confirm the shipping SKU names or clocks, so the newest Intel iGPU generation is missing.",
+    "baseClockMHz is null on every record. Intel publishes no base clock for Arc; iGPU graphics base frequency varies per host CPU SKU and I did not want to pick one arbitrarily.",
+    "recommendedPsuW populated only for A750/A770 (Intel states 600W). Null for A310/A380/A580/B570/B580.",
+    "lengthMm/slotWidth/powerConnectors populated only where an Intel reference/Limited Edition design exists (A750, A770 16GB, B580). A380/A310/A580/B570 are AIB-only designs with wide variance, so those fields are null.",
+    "driverEolDate is null on every record, including the eol Gen6-Gen8 Intel parts — I know support ended but not the exact dates.",
+    "fp32TFLOPS is null for HD Graphics 2000/3000 (Gen6). Sandy Bridge EUs have no FMA, so shaders*clock*2 overstates them by 2x and emitting it would have been a knowingly wrong number.",
+    "Desktop Ryzen 8500G/8600G iGPU clocks (740M/760M at desktop power) not emitted as separate records; only the mobile Phoenix clocks are covered, plus the 8700G 780M which I am confident about.",
+    "Mobile-only Vega APU configurations (4800U/5800U-class Vega 8 at their own clocks) are not covered; only desktop APU parts.",
+    "No Intel Iris Plus 640/650/655 (Kaby Lake-R/Coffee Lake GT3e) and no UHD P630 workstation part.",
+    "No Meteor Lake-U 4 Xe-core \"Intel Graphics\" record — I was not confident enough in its max frequency."
+  ],
+  "uncertainties": [
+    "FIELD SEMANTICS DEVIATION: `shaders` holds ALU/shading-unit counts for Intel, NOT EU counts (EU x 8 for Gen6-Gen12 Xe-LP; Xe-core x 128 for Xe-HPG/Xe-LPG/Xe2). Using EU counts would make fp32TFLOPS fail the BRIEF consistency rule by 8x and make Intel shader counts non-comparable with AMD/Nvidia. EU counts are recoverable: shaders/8 for pre-Arc, shaders/128 = Xe-cores for Arc.",
+    "Intel ALUs are still not perf-equivalent to AMD stream processors or Nvidia CUDA cores at equal count and clock; any fit that uses `shaders` across vendors needs a per-architecture efficiency term.",
+    "iGPU boostClockMHz is a per-CPU-SKU figure, not a property of the graphics name. I used a representative flagship host SKU for each (e.g. UHD 770 Alder Lake = i9-12900K 1550 MHz, Raptor Lake = i9-13900K 1650 MHz, HD 530 = i7-6700K 1150 MHz). Lower-tier hosts with the same graphics name run several hundred MHz lower.",
+    "Arc A770 boost is Intel published \"Graphics Clock\" 2100 MHz; third-party databases commonly list 2400 MHz peak, which would give ~19.7 TFLOPS instead of 17.2. My triple is internally consistent at 2100.",
+    "Least confident clocks: UHD 600 (700 MHz), UHD 605 (750 MHz), HD 510 (1000 MHz), Iris Graphics 540 (1050 MHz), Iris Plus G4 (1050 MHz), Arrow Lake-S iGPU (2000 MHz), Arc 130V (1850 MHz), Meteor Lake 7 Xe-core (2200 MHz), Vega 6 Cezanne (1700 MHz).",
+    "Arc 140V is 1950 MHz on Core Ultra 7 258V but runs higher (~2050 MHz) on the Core Ultra 9 288V; I used 1950.",
+    "shaderModel 6_0 assigned to all pre-Xe DX12 Intel parts (Gen9/9.5/11). Real driver-exposed SM may be higher (6.4-6.5) on Gen11; I under-claimed deliberately, which could produce false SHADER_MODEL gate failures on those parts.",
+    "upscaling lists mark XeSS on Xe-LP via the DP4a path, and FSR on any DX12-class part since FSR is shader-based. If `upscaling` is meant strictly as \"vendor-hardware-accelerated path\", the FSR entries on Intel parts should be dropped.",
+    "AMD driverStatus for Vega APU graphics set to legacy per the BRIEF rule for GCN 4/5. In practice Cezanne/Renoir Vega still receives Adrenalin updates, so maintenance may be the better label for those four records.",
+    "A580 is 1700 MHz / 24 Xe-cores per Intel; it is the SKU I am least sure of among Alchemist because it launched quietly a year after the rest.",
+    "RDNA 3/3.5 fp32TFLOPS uses the single-issue convention (shaders * clock * 2). AMD marketing figures for 780M/890M are 2x these because they count dual-issue FP32. The AMD dGPU agent must use the same convention or the two catalogues will not be comparable.",
+    "Radeon 8060S (Strix Halo) launch is given as 2025-01 (CES announcement); retail systems shipped somewhat later."
+  ]
+}

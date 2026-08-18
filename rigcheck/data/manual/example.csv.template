@@ -1,0 +1,2 @@
+gpu_id,cpu_id,game_id,resolution,preset,avg_fps,low_1pct,upscaling_tech,upscaling_quality,rt_tier,ram_gb,ram_channels,ram_mts,storage,game_build,driver_version,date,source_note
+nvidia-geforce-rtx-3060-12gb,amd-ryzen-5-3600,cyberpunk-2077,1080p,high,72,58,none,native,off,16,2,3200,nvme-gen3,2.13,566.14,2026-08-16,replace with your own measurement

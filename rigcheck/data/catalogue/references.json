@@ -1,0 +1,816 @@
+{
+  "generatedAt": "2026-08-16T23:02:35.204Z",
+  "provenance": {
+    "model-knowledge": {
+      "id": "model-knowledge",
+      "source": "Model knowledge (seed)",
+      "url": "",
+      "licence": "n/a",
+      "retrievedAt": "2026-08-16",
+      "note": "Seed pending harvest; Wikipedia and vendor spec sources egress-blocked in this environment."
+    }
+  },
+  "count": 50,
+  "records": [
+    {
+      "gameId": "counter-strike-2",
+      "gpuBound": {
+        "1080p": 400,
+        "1440p": 255,
+        "2160p": 160
+      },
+      "cpuBound": 265,
+      "gpuScalingExponent": 0.95,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "valorant",
+      "gpuBound": {
+        "1080p": 620,
+        "1440p": 430,
+        "2160p": 260
+      },
+      "cpuBound": 290,
+      "gpuScalingExponent": 0.93,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "dota-2",
+      "gpuBound": {
+        "1080p": 300,
+        "1440p": 205,
+        "2160p": 125
+      },
+      "cpuBound": 195,
+      "gpuScalingExponent": 0.93,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "league-of-legends",
+      "gpuBound": {
+        "1080p": 600,
+        "1440p": 440,
+        "2160p": 275
+      },
+      "cpuBound": 330,
+      "gpuScalingExponent": 0.9,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "rainbow-six-siege",
+      "gpuBound": {
+        "1080p": 280,
+        "1440p": 190,
+        "2160p": 105
+      },
+      "cpuBound": 290,
+      "gpuScalingExponent": 0.97,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "overwatch-2",
+      "gpuBound": {
+        "1080p": 210,
+        "1440p": 145,
+        "2160p": 80
+      },
+      "cpuBound": 220,
+      "gpuScalingExponent": 0.96,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "apex-legends",
+      "gpuBound": {
+        "1080p": 175,
+        "1440p": 120,
+        "2160p": 68
+      },
+      "cpuBound": 190,
+      "gpuScalingExponent": 0.95,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "fortnite",
+      "gpuBound": {
+        "1080p": 150,
+        "1440p": 105,
+        "2160p": 58
+      },
+      "cpuBound": 165,
+      "gpuScalingExponent": 0.98,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "pubg-battlegrounds",
+      "gpuBound": {
+        "1080p": 150,
+        "1440p": 105,
+        "2160p": 58
+      },
+      "cpuBound": 155,
+      "gpuScalingExponent": 0.97,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "rocket-league",
+      "gpuBound": {
+        "1080p": 500,
+        "1440p": 360,
+        "2160p": 215
+      },
+      "cpuBound": 300,
+      "gpuScalingExponent": 0.93,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "microsoft-flight-simulator-2024",
+      "gpuBound": {
+        "1080p": 50,
+        "1440p": 36,
+        "2160p": 19
+      },
+      "cpuBound": 42,
+      "gpuScalingExponent": 0.92,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "cities-skylines-ii",
+      "gpuBound": {
+        "1080p": 52,
+        "1440p": 38,
+        "2160p": 20
+      },
+      "cpuBound": 32,
+      "gpuScalingExponent": 0.95,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "factorio",
+      "gpuBound": {
+        "1080p": 600,
+        "1440p": 460,
+        "2160p": 265
+      },
+      "cpuBound": 110,
+      "gpuScalingExponent": 0.88,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "stellaris",
+      "gpuBound": {
+        "1080p": 480,
+        "1440p": 370,
+        "2160p": 220
+      },
+      "cpuBound": 140,
+      "gpuScalingExponent": 0.88,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "total-war-warhammer-iii",
+      "gpuBound": {
+        "1080p": 70,
+        "1440p": 50,
+        "2160p": 27
+      },
+      "cpuBound": 60,
+      "gpuScalingExponent": 0.97,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "anno-1800",
+      "gpuBound": {
+        "1080p": 85,
+        "1440p": 60,
+        "2160p": 32
+      },
+      "cpuBound": 68,
+      "gpuScalingExponent": 0.95,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "civilization-vii",
+      "gpuBound": {
+        "1080p": 130,
+        "1440p": 95,
+        "2160p": 52
+      },
+      "cpuBound": 115,
+      "gpuScalingExponent": 0.92,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "escape-from-tarkov",
+      "gpuBound": {
+        "1080p": 75,
+        "1440p": 54,
+        "2160p": 29
+      },
+      "cpuBound": 55,
+      "gpuScalingExponent": 0.95,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "star-citizen",
+      "gpuBound": {
+        "1080p": 55,
+        "1440p": 40,
+        "2160p": 22
+      },
+      "cpuBound": 32,
+      "gpuScalingExponent": 0.92,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "arma-reforger",
+      "gpuBound": {
+        "1080p": 70,
+        "1440p": 51,
+        "2160p": 28
+      },
+      "cpuBound": 55,
+      "gpuScalingExponent": 0.94,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "red-dead-redemption-2",
+      "gpuBound": {
+        "1080p": 72,
+        "1440p": 50,
+        "2160p": 26
+      },
+      "cpuBound": 100,
+      "gpuScalingExponent": 1,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "horizon-forbidden-west",
+      "gpuBound": {
+        "1080p": 65,
+        "1440p": 46,
+        "2160p": 24
+      },
+      "cpuBound": 100,
+      "gpuScalingExponent": 1.02,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "god-of-war-ragnarok",
+      "gpuBound": {
+        "1080p": 85,
+        "1440p": 60,
+        "2160p": 32
+      },
+      "cpuBound": 115,
+      "gpuScalingExponent": 1,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "baldurs-gate-3",
+      "gpuBound": {
+        "1080p": 90,
+        "1440p": 63,
+        "2160p": 33
+      },
+      "cpuBound": 60,
+      "gpuScalingExponent": 0.98,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "elden-ring",
+      "gpuBound": {
+        "1080p": 85,
+        "1440p": 62,
+        "2160p": 33
+      },
+      "cpuBound": 75,
+      "gpuScalingExponent": 0.97,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "the-witcher-3-next-gen",
+      "gpuBound": {
+        "1080p": 85,
+        "1440p": 60,
+        "2160p": 31
+      },
+      "cpuBound": 85,
+      "gpuScalingExponent": 1,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "forza-horizon-5",
+      "gpuBound": {
+        "1080p": 100,
+        "1440p": 72,
+        "2160p": 40
+      },
+      "cpuBound": 115,
+      "gpuScalingExponent": 0.98,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "shadow-of-the-tomb-raider",
+      "gpuBound": {
+        "1080p": 115,
+        "1440p": 80,
+        "2160p": 42
+      },
+      "cpuBound": 135,
+      "gpuScalingExponent": 1,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "hitman-world-of-assassination",
+      "gpuBound": {
+        "1080p": 110,
+        "1440p": 78,
+        "2160p": 42
+      },
+      "cpuBound": 120,
+      "gpuScalingExponent": 0.98,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "ghost-of-tsushima",
+      "gpuBound": {
+        "1080p": 85,
+        "1440p": 62,
+        "2160p": 33
+      },
+      "cpuBound": 115,
+      "gpuScalingExponent": 1,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "starfield",
+      "gpuBound": {
+        "1080p": 58,
+        "1440p": 42,
+        "2160p": 22
+      },
+      "cpuBound": 50,
+      "gpuScalingExponent": 0.98,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "assassins-creed-shadows",
+      "gpuBound": {
+        "1080p": 50,
+        "1440p": 35,
+        "2160p": 18
+      },
+      "cpuBound": 58,
+      "gpuScalingExponent": 1.02,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "cyberpunk-2077",
+      "gpuBound": {
+        "1080p": 42,
+        "1440p": 28,
+        "2160p": 14
+      },
+      "cpuBound": 70,
+      "gpuScalingExponent": 1.04,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "f1-24",
+      "gpuBound": {
+        "1080p": 78,
+        "1440p": 56,
+        "2160p": 30
+      },
+      "cpuBound": 125,
+      "gpuScalingExponent": 1,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "metro-exodus-enhanced",
+      "gpuBound": {
+        "1080p": 60,
+        "1440p": 43,
+        "2160p": 22
+      },
+      "cpuBound": 100,
+      "gpuScalingExponent": 1.03,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "far-cry-6",
+      "gpuBound": {
+        "1080p": 65,
+        "1440p": 48,
+        "2160p": 26
+      },
+      "cpuBound": 90,
+      "gpuScalingExponent": 0.98,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "watch-dogs-legion",
+      "gpuBound": {
+        "1080p": 50,
+        "1440p": 36,
+        "2160p": 19
+      },
+      "cpuBound": 80,
+      "gpuScalingExponent": 1,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "spider-man-2",
+      "gpuBound": {
+        "1080p": 60,
+        "1440p": 43,
+        "2160p": 22
+      },
+      "cpuBound": 65,
+      "gpuScalingExponent": 1,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "black-myth-wukong",
+      "gpuBound": {
+        "1080p": 32,
+        "1440p": 21,
+        "2160p": 11
+      },
+      "cpuBound": 85,
+      "gpuScalingExponent": 1.05,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "alan-wake-2",
+      "gpuBound": {
+        "1080p": 30,
+        "1440p": 20,
+        "2160p": 10
+      },
+      "cpuBound": 85,
+      "gpuScalingExponent": 1.05,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "remnant-ii",
+      "gpuBound": {
+        "1080p": 48,
+        "1440p": 34,
+        "2160p": 17
+      },
+      "cpuBound": 90,
+      "gpuScalingExponent": 1.02,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "stalker-2",
+      "gpuBound": {
+        "1080p": 45,
+        "1440p": 32,
+        "2160p": 16
+      },
+      "cpuBound": 58,
+      "gpuScalingExponent": 1.03,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "silent-hill-2-2024",
+      "gpuBound": {
+        "1080p": 50,
+        "1440p": 36,
+        "2160p": 18
+      },
+      "cpuBound": 75,
+      "gpuScalingExponent": 1.03,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "hellblade-ii",
+      "gpuBound": {
+        "1080p": 40,
+        "1440p": 28,
+        "2160p": 14
+      },
+      "cpuBound": 110,
+      "gpuScalingExponent": 1.07,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "the-finals",
+      "gpuBound": {
+        "1080p": 75,
+        "1440p": 54,
+        "2160p": 28
+      },
+      "cpuBound": 85,
+      "gpuScalingExponent": 1,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "the-last-of-us-part-i",
+      "gpuBound": {
+        "1080p": 70,
+        "1440p": 50,
+        "2160p": 26
+      },
+      "cpuBound": 70,
+      "gpuScalingExponent": 1,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "hogwarts-legacy",
+      "gpuBound": {
+        "1080p": 65,
+        "1440p": 47,
+        "2160p": 24
+      },
+      "cpuBound": 60,
+      "gpuScalingExponent": 1,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "ratchet-and-clank-rift-apart",
+      "gpuBound": {
+        "1080p": 95,
+        "1440p": 68,
+        "2160p": 36
+      },
+      "cpuBound": 100,
+      "gpuScalingExponent": 1,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "call-of-duty-black-ops-6",
+      "gpuBound": {
+        "1080p": 110,
+        "1440p": 78,
+        "2160p": 42
+      },
+      "cpuBound": 145,
+      "gpuScalingExponent": 1,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "gameId": "diablo-iv",
+      "gpuBound": {
+        "1080p": 135,
+        "1440p": 95,
+        "2160p": 50
+      },
+      "cpuBound": 150,
+      "gpuScalingExponent": 0.98,
+      "confidence": "spec-derived",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,116 @@
+{
+  "generatedAt": "2026-08-18T16:42:06.079Z",
+  "fixtureCount": 143,
+  "fixtureProvenance": "predominantly model-knowledge (recalled)",
+  "objective": 0.2833123398217918,
+  "metricsBefore": {
+    "n": 135,
+    "medianAPE": 0.17836811847567713,
+    "meanAPE": 0.20804408765154925,
+    "p90APE": 0.41936430123150004,
+    "spearman": 0.9224730287845917,
+    "signAccuracy": 1,
+    "signPairs": 5,
+    "blocked": 8,
+    "withinBand": 0.5555555555555556
+  },
+  "metricsAfter": {
+    "n": 135,
+    "medianAPE": 0.12017202208751776,
+    "meanAPE": 0.17548983734524964,
+    "p90APE": 0.36911826925091695,
+    "spearman": 0.9321021530070938,
+    "signAccuracy": 1,
+    "signPairs": 5,
+    "blocked": 8,
+    "withinBand": 0.6148148148148148
+  },
+  "constants": {
+    "GPU_MODEL": {
+      "computeWeight": 0.55,
+      "sublinearExponent": 1
+    },
+    "CPU_MODEL": {
+      "threadExponent": 0.25
+    },
+    "COMBINE": {
+      "p": 4,
+      "pByResolution": {
+        "1080p": 3.64,
+        "1440p": 4,
+        "3440x1440": 4.12,
+        "2160p": 4.48
+      }
+    },
+    "RT_MODEL": {
+      "onVsOff": 0.7
+    },
+    "CPU_WEIGHTS": {
+      "esports": {
+        "throughput": 1,
+        "cacheEndowment": 0.22,
+        "latencyScore": 0.35,
+        "threadCapacity": 0.1
+      },
+      "sim-cpu": {
+        "throughput": 0.9,
+        "cacheEndowment": 0.85,
+        "latencyScore": 0.55,
+        "threadCapacity": 0.15
+      },
+      "aaa-raster": {
+        "throughput": 0.85,
+        "cacheEndowment": 0.3,
+        "latencyScore": 0.3,
+        "threadCapacity": 0.3
+      },
+      "aaa-rt": {
+        "throughput": 0.9,
+        "cacheEndowment": 0.35,
+        "latencyScore": 0.3,
+        "threadCapacity": 0.35
+      },
+      "ue5": {
+        "throughput": 0.8,
+        "cacheEndowment": 0.25,
+        "latencyScore": 0.25,
+        "threadCapacity": 0.4
+      },
+      "vram-heavy": {
+        "throughput": 0.8,
+        "cacheEndowment": 0.3,
+        "latencyScore": 0.35,
+        "threadCapacity": 0.3
+      }
+    },
+    "VRAM_MODEL": {
+      "cliff": [
+        {
+          "deficitRatio": 0,
+          "avgMultiplier": 1,
+          "lowMultiplier": 1
+        },
+        {
+          "deficitRatio": 0.08,
+          "avgMultiplier": 0.9,
+          "lowMultiplier": 0.7
+        },
+        {
+          "deficitRatio": 0.2,
+          "avgMultiplier": 0.5,
+          "lowMultiplier": 0.35
+        },
+        {
+          "deficitRatio": 0.35,
+          "avgMultiplier": 0.4,
+          "lowMultiplier": 0.2
+        },
+        {
+          "deficitRatio": 0.5,
+          "avgMultiplier": 0.25,
+          "lowMultiplier": 0.12
+        }
+      ]
+    }
+  }
+}

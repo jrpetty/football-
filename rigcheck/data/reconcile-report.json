@@ -1,0 +1,241 @@
+{
+  "generatedAt": "2026-08-16T23:02:35.204Z",
+  "counts": {
+    "gpus": 265,
+    "cpus": 442,
+    "games": 50
+  },
+  "agents": [
+    {
+      "agentId": "cpu-amd",
+      "kind": "cpu",
+      "expected": 180,
+      "accepted": 183,
+      "rejected": 0,
+      "gaps": [
+        "Zen 5 X3D parts believed to exist but OMITTED because existence/spec could not be confirmed offline: Ryzen 5 9600X3D, Ryzen 7 9850X3D, Ryzen 9 9950X3D2. Emitting a wrong X3D record is the worst failure mode for this catalogue, so these are deferred to the harvest pipeline.",
+        "Zen 5 F-suffix desktop parts (Ryzen 5 9500F, Ryzen 7 9700F) omitted — recalled but not confidently verified.",
+        "Zen 5 desktop APUs on AM5 (a 9000G / Gorgon Point equivalent to the 8000G line) omitted entirely — no confident knowledge that a retail AM5 Zen 5 APU line shipped.",
+        "Ryzen 3 8300G (Phoenix 2, OEM) omitted — L3 configuration not confidently known.",
+        "Ryzen 3 5100 (Cezanne OEM) omitted — not confident it reached retail or OEM channels.",
+        "Bulldozer/Piledriver OEM-only SKUs omitted: FX-8140, FX-6120, FX-4150. Existence uncertain.",
+        "Athlon 3000G is included but the Athlon Gold/Silver PRO 3150G/3125GE OEM desktop parts are omitted (OEM-only, low gaming relevance, specs uncertain).",
+        "Sempron 2650/3850 (AM1 socket, Kabini) out of scope — AM1 is not in the requested socket set and the parts are not gaming-relevant.",
+        "Athlon II / Phenom II (AM3, pre-FX) out of scope per remit (FX onward).",
+        "A6-6400K, A4-series and other 2-core FM2/FM2+ APUs below A6-7400K omitted as not gaming-relevant.",
+        "pcieLanes null for Threadripper 7000/9000 non-PRO (TRX50) and for all Phoenix 8000G parts — the exact CPU-provided lane budget was not confidently known.",
+        "pcieLanes null for all AM3+ FX parts: those CPUs have no on-die PCIe; lanes come from the 990FX/970 northbridge. pcieGen 2 is recorded as a platform-level value.",
+        "MISSING iGPU RECORDS the gpu catalogue must add before these igpuId references resolve (12 refs, 38 CPU records affected): amd-radeon-graphics-raphael-2cu (the 2 CU RDNA 2 iGPU on every non-F Raphael and Granite Ridge desktop part — 20 records depend on it); amd-vega-7-renoir and amd-vega-6-renoir (4600G/4650G and 4300G/4350G); amd-radeon-hd-7660d, amd-radeon-hd-7560d, amd-radeon-hd-8670d (Trinity/Richland); amd-radeon-r7-kaveri-512sp, amd-radeon-r7-kaveri-384sp, amd-radeon-r5-kaveri-256sp (Kaveri/Godavari); amd-radeon-r7-bristol-ridge-512sp, amd-radeon-r7-bristol-ridge-384sp, amd-radeon-r5-bristol-ridge-384sp (Bristol Ridge).",
+        "The gpu-amd agent emitted only discrete desktop GPUs (0 igpu records); all AMD integrated graphics currently live in gpu-intel.json. Whichever agent owns that namespace needs to fill the 12 gaps above."
+      ]
+    },
+    {
+      "agentId": "cpu-intel",
+      "kind": "cpu",
+      "expected": 320,
+      "accepted": 259,
+      "rejected": 0,
+      "gaps": [
+        "S-suffix (65W low-power) desktop SKUs are omitted across every generation. They are numerous (i7-2600S, i5-4570S, i7-8700S-class OEM parts, etc.), are near-duplicates of the 65W non-suffixed part at lower clocks, and are effectively absent from the retail gaming market. Roughly 60-80 SKUs not emitted.",
+        "T-suffix (35W) parts are only sampled, not enumerated: i7-3770T, i7-6700T, i7-7700T, i7-8700T, i9-9900T, i5-9400T, i5-10400T, i9-11900T. 12th/13th/14th gen and Arrow Lake T parts (12900T, 13900T, 14900T, 285T, 265T, 245T, 235T, 225T) are omitted because I am not confident in their individual base/boost clocks. Roughly 40 SKUs not emitted.",
+        "OEM-only / tray-only SKUs are omitted throughout (i5-8400T-class, i7-9700TE, i5-2405S, Core i5-13400T, the \"Intel Processor 300/300T\" Raptor Lake entry part, and the 65W OEM 12900/13900 variants already partly covered).",
+        "Celeron desktop parts are almost entirely omitted per the gaming-relevance filter. Only Celeron G6900 (Alder Lake) is included. Sandy through Comet Lake Celerons (G530, G1610, G1840, G3900, G3930, G4900, G5900) are not emitted.",
+        "Sandy Bridge and Ivy Bridge Pentium parts (G620, G840, G850, G860, G2020, G2120, G2130) are omitted: dual-core, no HT, no AVX, not credible gaming parts even in 2012.",
+        "Xeon parts excluded by remit, including the LGA1151/LGA1200 Xeon E-series that share silicon with the desktop i7 parts and were used in budget builds.",
+        "Mobile parts excluded by remit.",
+        "Alder Lake-N / Twin Lake (N100, N305) are omitted: BGA-only, not socketed desktop parts.",
+        "Core Ultra 200S T-variants and any 200S refresh SKUs launched after my knowledge cutoff are not represented."
+      ]
+    },
+    {
+      "agentId": "game-refs",
+      "kind": "game-ref",
+      "expected": 50,
+      "accepted": 50,
+      "rejected": 0,
+      "gaps": []
+    },
+    {
+      "agentId": "games",
+      "kind": "game",
+      "expected": 50,
+      "accepted": 50,
+      "rejected": 0,
+      "gaps": [
+        "No record has cpuWeightOverride: per-game CPU weights need fixture data to fit and cannot be seeded from model knowledge without inventing numbers.",
+        "vramDemandGB covers 1080p/1440p/2160p only; 3440x1440 is left absent so the estimator interpolates from pixel count rather than reading a fabricated figure.",
+        "minVramGB is null for 4 records (Fortnite, Microsoft Flight Simulator 2024, Total War Warhammer III, Civilization VII) where the published minimum names a GPU family with no VRAM figure, names an iGPU, or where the published table contradicts itself.",
+        "minCores is null for 7 records and minThreads for 7 (MSFS 2024, Civilization VII, ARMA Reforger, Metro Exodus Enhanced, Spider-Man 2, Hellblade II in both; plus Counter-Strike 2 for cores, where Valve publishes only a thread floor, and Star Citizen for threads, where CIG publishes only 'quad core') rather than risk a false CORE_FLOOR/THREAD_FLOOR WILL_NOT_RUN.",
+        "minSystemRamGB is null for 1 record (The Finals).",
+        "minShaderModel is null for Starfield and Alan Wake 2 because their real requirements (SM 6.6, mesh shaders) cannot be expressed in this catalogue's shader-model vocabulary without falsely gating hardware the games actually run on."
+      ]
+    },
+    {
+      "agentId": "gpu-amd",
+      "kind": "gpu",
+      "expected": 130,
+      "accepted": 92,
+      "rejected": 0,
+      "gaps": [
+        "Dual-GPU desktop boards omitted (HD 7990 Malta, R9 295X2, Radeon Pro Duo): representing two GPUs as one GpuRecord would feed the fitted model a shader/TFLOPS figure no game can actually use, since CrossFire is dead in modern titles.",
+        "OEM-only rebadges omitted: Radeon R7 350 / R7 340 / R5 340X / R5 330 / R5 240, the entire RX 500X series (RX 550X/560X/570X/580X), RX 5300, OEM RX 5500 and RX 5600, RX 6300, RX 640/630. These were never sold at retail as standalone cards.",
+        "Pre-GCN VLIW parts sold under HD 7000 marketing names (HD 7670, HD 7570, HD 7510, HD 7450) omitted: they are TeraScale rebrands, outside the GCN 1.0+ remit.",
+        "China/regional SKUs omitted for lack of confident clocks: RX 6750 GRE 12GB and 10GB, RX 7650 GRE, RX 580 2048SP, RX 470D, RX 560D, and the non-XT RX 9060. Each is a real product; I could not recall boost clocks to within the 8% fp32 consistency band and would not guess.",
+        "RX 5700 XT 50th Anniversary Edition omitted: identical silicon to the RX 5700 XT with a 75 MHz higher boost, low value against the risk of family-ordering noise.",
+        "lengthMm and slotWidth are null on every record: both are AIB-board properties, not chip properties, and vary by 100mm+ across partners for the same SKU. The harvest pipeline should source these per board, not per SKU.",
+        "pciIds omitted entirely: pci-ids.ucw.cz and TechPowerUp are egress-blocked, and PCI device IDs are exactly the class of datum where a near-miss from memory is worse than absence.",
+        "driverEolDate is null on all records including the eol GCN 1.0-3.0 parts: I am confident about the status (AMD moved GCN 1.0-3.0 to legacy driver branches) but not about the precise announcement/final-driver dates.",
+        "Mobile and Radeon Pro / FirePro / Instinct parts excluded per remit."
+      ]
+    },
+    {
+      "agentId": "gpu-intel",
+      "kind": "gpu",
+      "expected": 70,
+      "accepted": 61,
+      "rejected": 0,
+      "gaps": [
+        "No pciIds on any record. Intel/AMD PCI device ids were not emitted because I am not confident enough in specific hex ids to risk poisoning the alias resolver; scripts/parse-aliases.ts harvests them from pci.ids anyway.",
+        "No Arc B770 or any Battlemage part above B580. I could not confirm such a desktop SKU actually shipped, and the BRIEF says omit rather than invent.",
+        "No Arc Pro workstation cards (A40/A50/A60, Pro B50/B60) — professional SKUs, and I am not confident of their full specs.",
+        "No Intel Iris Xe MAX (DG1). It was an OEM-only discrete part and I am not confident of its retail desktop presence or clocks.",
+        "No Panther Lake / Xe3 integrated graphics. I cannot confirm the shipping SKU names or clocks, so the newest Intel iGPU generation is missing.",
+        "baseClockMHz is null on every record. Intel publishes no base clock for Arc; iGPU graphics base frequency varies per host CPU SKU and I did not want to pick one arbitrarily.",
+        "recommendedPsuW populated only for A750/A770 (Intel states 600W). Null for A310/A380/A580/B570/B580.",
+        "lengthMm/slotWidth/powerConnectors populated only where an Intel reference/Limited Edition design exists (A750, A770 16GB, B580). A380/A310/A580/B570 are AIB-only designs with wide variance, so those fields are null.",
+        "driverEolDate is null on every record, including the eol Gen6-Gen8 Intel parts — I know support ended but not the exact dates.",
+        "fp32TFLOPS is null for HD Graphics 2000/3000 (Gen6). Sandy Bridge EUs have no FMA, so shaders*clock*2 overstates them by 2x and emitting it would have been a knowingly wrong number.",
+        "Desktop Ryzen 8500G/8600G iGPU clocks (740M/760M at desktop power) not emitted as separate records; only the mobile Phoenix clocks are covered, plus the 8700G 780M which I am confident about.",
+        "Mobile-only Vega APU configurations (4800U/5800U-class Vega 8 at their own clocks) are not covered; only desktop APU parts.",
+        "No Intel Iris Plus 640/650/655 (Kaby Lake-R/Coffee Lake GT3e) and no UHD P630 workstation part.",
+        "No Meteor Lake-U 4 Xe-core \"Intel Graphics\" record — I was not confident enough in its max frequency."
+      ]
+    },
+    {
+      "agentId": "gpu-nvidia",
+      "kind": "gpu",
+      "expected": 150,
+      "accepted": 112,
+      "rejected": 0,
+      "gaps": [
+        "Dual-GPU flagships (GTX 590, GTX 690, GTX Titan Z) deliberately omitted: one board carries two GPUs, so shaders/memBusBits/vramGB cannot be expressed in this schema without either doubling the shader count (which would make the fitted perf model wildly overestimate them, since AFR scaling is 0-70% and modern titles do not support SLI at all) or halving the marketed VRAM. Better absent than silently wrong.",
+        "OEM-only SKUs omitted for lack of confident specs: GTX 555, GTX 545, GT 545, GT 530, GT 420, GT 405, GTX 460 v2, GTX 645, GTX 660 OEM (1152-core), GTX 760 Ti (OEM), GTX 745, GT 605, GT 635, GT 705, GT 1010.",
+        "Ultra-low-end parts whose marketing name covers multiple different GPUs omitted: GT 630 (GF108 / GK107 / GK208 revisions), GT 620, GT 640 GDDR5 and GK208 revisions, GT 730 GF108 128-bit DDR3 revision. Splitting them correctly needs the PCI-ID tables that are egress-blocked here.",
+        "Regional/market variants omitted: GTX 1060 5GB (China), RTX 4090 D, RTX 5090 D, RTX 4070 GDDR6 (2024 respin), RTX 3050 8GB GA107 115W respin.",
+        "No RTX 50 \"Super\" refresh parts are included. As of this seed I have no reliable shader/clock/VRAM figures for any 2026 Blackwell refresh, and the brief forbids guessing. If such parts shipped, they are missing.",
+        "pciIds is absent on every record - PCI device IDs come from driver INF tables (pci-ids / TechPowerUp), both egress-blocked. The alias resolver gets nothing from this seed.",
+        "lengthMm is null on ~80% of records. Only Founders Edition / reference lengths I am confident of are populated; AIB board length variance is 40-80mm and guessing it would be worse than a null.",
+        "driverEolDate is populated only for Fermi and Kepler. Maxwell/Pascal/Volta moved to legacy after the seed cutoff and I am not confident of the exact branch end date.",
+        "fp32TFLOPS is null on all 17 Fermi records - see uncertainties, the shader hot clock is not representable in this schema.",
+        "AIB-only double-VRAM variants below Kepler are not split out (GTX 460 2GB, GTX 560 Ti 2GB, GTX 650 Ti 2GB, GTX 750 Ti 1GB). Kepler-era splits that Nvidia listed itself (680/670/660 Ti/660/770/780) are included.",
+        "Mobile parts, Quadro/Tesla/workstation parts and all pre-Fermi GeForce (GT200 and older) are out of remit and absent by design."
+      ]
+    }
+  ],
+  "rejections": [],
+  "duplicates": [],
+  "unverifiedAgainstPciRegistry": [
+    "amd-radeon-hd-7970-ghz-edition",
+    "amd-radeon-hd-7950-boost",
+    "amd-radeon-hd-7770-ghz-edition-1gb",
+    "amd-radeon-hd-7770-ghz-edition-2gb",
+    "amd-radeon-r9-280x",
+    "amd-radeon-r9-280",
+    "amd-radeon-r9-270x-2gb",
+    "amd-radeon-r9-270x-4gb",
+    "amd-radeon-r9-270",
+    "amd-radeon-r7-265",
+    "amd-radeon-r7-250x",
+    "amd-radeon-r7-250",
+    "amd-radeon-r9-fury-x",
+    "amd-radeon-r9-390x",
+    "amd-radeon-r9-390",
+    "amd-radeon-rx-480-8gb",
+    "amd-radeon-rx-480-4gb",
+    "amd-radeon-rx-570-4gb",
+    "amd-radeon-rx-570-8gb",
+    "amd-radeon-rx-590",
+    "amd-radeon-rx-vega-64",
+    "amd-radeon-rx-vega-64-liquid",
+    "amd-radeon-rx-5700-xt",
+    "amd-radeon-rx-5700",
+    "amd-radeon-rx-5600-xt",
+    "amd-radeon-rx-5500-xt-8gb",
+    "amd-radeon-rx-5500-xt-4gb",
+    "amd-radeon-rx-6800-xt",
+    "amd-radeon-rx-6750-xt",
+    "amd-radeon-rx-6700-xt",
+    "amd-radeon-rx-6600-xt",
+    "amd-radeon-rx-6500-xt-4gb",
+    "amd-radeon-rx-6500-xt-8gb",
+    "amd-radeon-rx-7900-xtx",
+    "amd-radeon-rx-7900-gre",
+    "amd-radeon-rx-7800-xt",
+    "amd-radeon-rx-7600-xt",
+    "amd-radeon-rx-9070-xt",
+    "amd-radeon-rx-9070-gre",
+    "amd-radeon-rx-9060-xt-16gb",
+    "amd-radeon-rx-9060-xt-8gb"
+  ],
+  "danglingIgpuReferences": [
+    {
+      "missingGpuId": "amd-radeon-hd-7660d",
+      "referencedByCpus": 1
+    },
+    {
+      "missingGpuId": "amd-radeon-hd-7560d",
+      "referencedByCpus": 1
+    },
+    {
+      "missingGpuId": "amd-radeon-hd-8670d",
+      "referencedByCpus": 2
+    },
+    {
+      "missingGpuId": "amd-radeon-r7-kaveri-512sp",
+      "referencedByCpus": 4
+    },
+    {
+      "missingGpuId": "amd-radeon-r7-kaveri-384sp",
+      "referencedByCpus": 2
+    },
+    {
+      "missingGpuId": "amd-radeon-r5-kaveri-256sp",
+      "referencedByCpus": 1
+    },
+    {
+      "missingGpuId": "amd-radeon-r7-bristol-ridge-512sp",
+      "referencedByCpus": 1
+    },
+    {
+      "missingGpuId": "amd-radeon-r7-bristol-ridge-384sp",
+      "referencedByCpus": 2
+    },
+    {
+      "missingGpuId": "amd-radeon-r5-bristol-ridge-384sp",
+      "referencedByCpus": 1
+    },
+    {
+      "missingGpuId": "amd-vega-7-renoir",
+      "referencedByCpus": 2
+    },
+    {
+      "missingGpuId": "amd-vega-6-renoir",
+      "referencedByCpus": 2
+    },
+    {
+      "missingGpuId": "amd-radeon-graphics-raphael-2cu",
+      "referencedByCpus": 19
+    },
+    {
+      "missingGpuId": "intel-hd-4400",
+      "referencedByCpus": 4
+    },
+    {
+      "missingGpuId": "intel-hd-610",
+      "referencedByCpus": 1
+    }
+  ],
+  "referencesWithoutGame": [],
+  "gamesWithoutReference": [],
+  "fixtures": 0
+}

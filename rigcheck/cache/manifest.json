@@ -1,0 +1,131 @@
+{
+  "generatedAt": "2026-08-16T22:46:07.203Z",
+  "entries": [
+    {
+      "id": "pci-ids",
+      "url": "https://raw.githubusercontent.com/pciutils/pciids/master/pci.ids",
+      "licence": "GPL-2.0-or-later OR BSD-3-Clause",
+      "purpose": "PCI vendor/device ID to marketing name. Primary alias seed.",
+      "status": "OK",
+      "bytes": 1658438,
+      "retrievedAt": "2026-08-16T22:46:06.979Z",
+      "path": "cache/raw/pci-ids.raw"
+    },
+    {
+      "id": "linux-amdgpu-drv",
+      "url": "https://raw.githubusercontent.com/torvalds/linux/master/drivers/gpu/drm/amd/amdgpu/amdgpu_drv.c",
+      "licence": "MIT (file header) / GPL-2.0 (kernel)",
+      "purpose": "AMD PCI device id to ASIC family mapping.",
+      "status": "OK",
+      "bytes": 104561,
+      "retrievedAt": "2026-08-16T22:46:07.095Z",
+      "path": "cache/raw/linux-amdgpu-drv.raw"
+    },
+    {
+      "id": "nvidia-open-pci-table",
+      "url": "https://raw.githubusercontent.com/NVIDIA/open-gpu-kernel-modules/main/kernel-open/nvidia/nv-pci-table.c",
+      "licence": "MIT/GPL-2.0 dual",
+      "purpose": "Nvidia supported PCI device ids.",
+      "status": "OK",
+      "bytes": 3037,
+      "retrievedAt": "2026-08-16T22:46:07.203Z",
+      "path": "cache/raw/nvidia-open-pci-table.raw"
+    },
+    {
+      "id": "wikipedia-nvidia-gpus",
+      "url": "https://en.wikipedia.org/w/api.php?action=parse&format=json&page=List_of_Nvidia_graphics_processing_units",
+      "licence": "CC BY-SA 4.0",
+      "purpose": "Nvidia GPU specifications.",
+      "status": "BLOCKED",
+      "detail": "Egress policy denied (403 at proxy). Not retried, not routed around. Re-run harvest in an unrestricted environment to fill this."
+    },
+    {
+      "id": "wikipedia-amd-gpus",
+      "url": "https://en.wikipedia.org/w/api.php?action=parse&format=json&page=List_of_AMD_graphics_processing_units",
+      "licence": "CC BY-SA 4.0",
+      "purpose": "AMD GPU specifications.",
+      "status": "BLOCKED",
+      "detail": "Egress policy denied (403 at proxy). Not retried, not routed around. Re-run harvest in an unrestricted environment to fill this."
+    },
+    {
+      "id": "wikipedia-intel-cpus",
+      "url": "https://en.wikipedia.org/w/api.php?action=parse&format=json&page=List_of_Intel_processors",
+      "licence": "CC BY-SA 4.0",
+      "purpose": "Intel CPU specifications.",
+      "status": "BLOCKED",
+      "detail": "Egress policy denied (403 at proxy). Not retried, not routed around. Re-run harvest in an unrestricted environment to fill this."
+    },
+    {
+      "id": "wikipedia-amd-cpus",
+      "url": "https://en.wikipedia.org/w/api.php?action=parse&format=json&page=List_of_AMD_processors",
+      "licence": "CC BY-SA 4.0",
+      "purpose": "AMD CPU specifications.",
+      "status": "BLOCKED",
+      "detail": "Egress policy denied (403 at proxy). Not retried, not routed around. Re-run harvest in an unrestricted environment to fill this."
+    },
+    {
+      "id": "vulkan-gpuinfo",
+      "url": "https://vulkan.gpuinfo.org/api/v3/reports.php",
+      "licence": "Community submitted; see site terms",
+      "purpose": "Capability gates: feature levels, extensions, limits.",
+      "status": "BLOCKED",
+      "detail": "Egress policy denied (403 at proxy). Not retried, not routed around. Re-run harvest in an unrestricted environment to fill this."
+    },
+    {
+      "id": "openbenchmarking",
+      "url": "https://openbenchmarking.org/api/index",
+      "licence": "Open results",
+      "purpose": "CPU throughput anchoring (compute workloads, not game FPS).",
+      "status": "BLOCKED",
+      "detail": "Egress policy denied (403 at proxy). Not retried, not routed around. Re-run harvest in an unrestricted environment to fill this."
+    },
+    {
+      "id": "userbenchmark",
+      "url": "https://www.userbenchmark.com/",
+      "licence": "RESTRICTED",
+      "purpose": "never ingested",
+      "status": "SOURCE_RESTRICTED",
+      "detail": "Source terms restrict automated collection. Never fetched."
+    },
+    {
+      "id": "passmark",
+      "url": "https://www.cpubenchmark.net/",
+      "licence": "RESTRICTED",
+      "purpose": "never ingested",
+      "status": "SOURCE_RESTRICTED",
+      "detail": "Source terms restrict automated collection. Never fetched."
+    },
+    {
+      "id": "geekbench",
+      "url": "https://browser.geekbench.com/",
+      "licence": "RESTRICTED",
+      "purpose": "never ingested",
+      "status": "SOURCE_RESTRICTED",
+      "detail": "Source terms restrict automated collection. Never fetched."
+    },
+    {
+      "id": "notebookcheck",
+      "url": "https://www.notebookcheck.net/",
+      "licence": "RESTRICTED",
+      "purpose": "never ingested",
+      "status": "SOURCE_RESTRICTED",
+      "detail": "Source terms restrict automated collection. Never fetched."
+    },
+    {
+      "id": "techpowerup",
+      "url": "https://www.techpowerup.com/gpu-specs/",
+      "licence": "RESTRICTED",
+      "purpose": "never ingested",
+      "status": "SOURCE_RESTRICTED",
+      "detail": "Source terms restrict automated collection. Never fetched."
+    },
+    {
+      "id": "youtube",
+      "url": "https://www.youtube.com/",
+      "licence": "RESTRICTED",
+      "purpose": "never ingested (figures are pixels in overlays)",
+      "status": "SOURCE_RESTRICTED",
+      "detail": "Source terms restrict automated collection. Never fetched."
+    }
+  ]
+}

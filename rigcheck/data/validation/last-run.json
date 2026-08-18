@@ -1,0 +1,41 @@
+{
+  "generatedAt": "2026-08-18T16:45:52.577Z",
+  "all": {
+    "n": 135,
+    "medianAPE": 0.17836811847567713,
+    "meanAPE": 0.20804408765154925,
+    "p90APE": 0.41936430123150004,
+    "spearman": 0.9224730287845917,
+    "signAccuracy": 1,
+    "signPairs": 5,
+    "blocked": 8,
+    "withinBand": 0.5555555555555556
+  },
+  "train": {
+    "n": 125,
+    "medianAPE": 0.17217300522025525,
+    "meanAPE": 0.2056358488260421,
+    "p90APE": 0.41936430123150004,
+    "spearman": 0.9251924058431574,
+    "signAccuracy": 1,
+    "signPairs": 5,
+    "blocked": 8,
+    "withinBand": 0.56
+  },
+  "holdout": {
+    "n": 10,
+    "medianAPE": 0.1935285695222606,
+    "meanAPE": 0.2381470729703889,
+    "p90APE": 0.4455512811874982,
+    "spearman": 0.9118583155200969,
+    "signAccuracy": null,
+    "signPairs": 0,
+    "blocked": 0,
+    "withinBand": 0.5
+  },
+  "failures": [
+    "only 143 fixtures; 150 needed for the metrics to be statistically meaningful",
+    "median APE 19.4% exceeds 15.0%",
+    "p90 APE 44.6% exceeds 30.0%"
+  ]
+}

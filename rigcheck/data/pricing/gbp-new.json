@@ -1,0 +1,6 @@
+{
+  "currency": "GBP",
+  "updated": "2026-08-16",
+  "note": "Operator-maintained. Prices are an overlay and are never baked into hardware records. Seed values only — replace with your own sourcing.",
+  "prices": {}
+}

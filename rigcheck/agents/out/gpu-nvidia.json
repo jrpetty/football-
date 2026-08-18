@@ -1,0 +1,5272 @@
+{
+  "agentId": "gpu-nvidia",
+  "kind": "gpu",
+  "provenance": {
+    "model-knowledge": {
+      "id": "model-knowledge",
+      "source": "Model knowledge (seed)",
+      "url": "",
+      "licence": "n/a",
+      "retrievedAt": "2026-08-16",
+      "note": "Seed pending harvest; Wikipedia and vendor spec sources egress-blocked in this environment."
+    }
+  },
+  "records": [
+    {
+      "id": "nvidia-geforce-gtx-480",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 480",
+      "fullName": "NVIDIA GeForce GTX 480",
+      "architecture": "Fermi",
+      "chip": "GF100",
+      "launchDate": "2010-03-26",
+      "formFactor": "desktop",
+      "shaders": 480,
+      "baseClockMHz": 700,
+      "boostClockMHz": 700,
+      "vramGB": 1.5,
+      "vramType": "GDDR5",
+      "memBusBits": 384,
+      "memBandwidthGBs": 177.4,
+      "fp32TFLOPS": null,
+      "tdpW": 250,
+      "processNm": 40,
+      "pcieGen": 2,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin + 1x8-pin",
+      "recommendedPsuW": 600,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "5_1",
+        "vulkanVersion": null,
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2019-04",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-470",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 470",
+      "fullName": "NVIDIA GeForce GTX 470",
+      "architecture": "Fermi",
+      "chip": "GF100",
+      "launchDate": "2010-03-26",
+      "formFactor": "desktop",
+      "shaders": 448,
+      "baseClockMHz": 607,
+      "boostClockMHz": 607,
+      "vramGB": 1.25,
+      "vramType": "GDDR5",
+      "memBusBits": 320,
+      "memBandwidthGBs": 133.9,
+      "fp32TFLOPS": null,
+      "tdpW": 215,
+      "processNm": 40,
+      "pcieGen": 2,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "2x6-pin",
+      "recommendedPsuW": 550,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "5_1",
+        "vulkanVersion": null,
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2019-04",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-465",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 465",
+      "fullName": "NVIDIA GeForce GTX 465",
+      "architecture": "Fermi",
+      "chip": "GF100",
+      "launchDate": "2010-05-31",
+      "formFactor": "desktop",
+      "shaders": 352,
+      "baseClockMHz": 607,
+      "boostClockMHz": 607,
+      "vramGB": 1,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 102.6,
+      "fp32TFLOPS": null,
+      "tdpW": 200,
+      "processNm": 40,
+      "pcieGen": 2,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "2x6-pin",
+      "recommendedPsuW": 550,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "5_1",
+        "vulkanVersion": null,
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2019-04",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-460-1gb",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 460",
+      "variant": "1GB",
+      "fullName": "NVIDIA GeForce GTX 460 1GB",
+      "architecture": "Fermi",
+      "chip": "GF104",
+      "launchDate": "2010-07-12",
+      "formFactor": "desktop",
+      "shaders": 336,
+      "baseClockMHz": 675,
+      "boostClockMHz": 675,
+      "vramGB": 1,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 115.2,
+      "fp32TFLOPS": null,
+      "tdpW": 160,
+      "processNm": 40,
+      "pcieGen": 2,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "2x6-pin",
+      "recommendedPsuW": 450,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "5_1",
+        "vulkanVersion": null,
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2019-04",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-460-768mb",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 460",
+      "variant": "768MB",
+      "fullName": "NVIDIA GeForce GTX 460 768MB",
+      "architecture": "Fermi",
+      "chip": "GF104",
+      "launchDate": "2010-07-12",
+      "formFactor": "desktop",
+      "shaders": 336,
+      "baseClockMHz": 675,
+      "boostClockMHz": 675,
+      "vramGB": 0.75,
+      "vramType": "GDDR5",
+      "memBusBits": 192,
+      "memBandwidthGBs": 86.4,
+      "fp32TFLOPS": null,
+      "tdpW": 150,
+      "processNm": 40,
+      "pcieGen": 2,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "2x6-pin",
+      "recommendedPsuW": 450,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "5_1",
+        "vulkanVersion": null,
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2019-04",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-460-se",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 460 SE",
+      "fullName": "NVIDIA GeForce GTX 460 SE",
+      "architecture": "Fermi",
+      "chip": "GF104",
+      "launchDate": "2010-11-15",
+      "formFactor": "desktop",
+      "shaders": 288,
+      "baseClockMHz": 650,
+      "boostClockMHz": 650,
+      "vramGB": 1,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 108.8,
+      "fp32TFLOPS": null,
+      "tdpW": 150,
+      "processNm": 40,
+      "pcieGen": 2,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "2x6-pin",
+      "recommendedPsuW": 450,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "5_1",
+        "vulkanVersion": null,
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2019-04",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gts-450",
+      "vendor": "nvidia",
+      "brand": "GeForce GTS 450",
+      "fullName": "NVIDIA GeForce GTS 450",
+      "architecture": "Fermi",
+      "chip": "GF106",
+      "launchDate": "2010-09-13",
+      "formFactor": "desktop",
+      "shaders": 192,
+      "baseClockMHz": 783,
+      "boostClockMHz": 783,
+      "vramGB": 1,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 57.7,
+      "fp32TFLOPS": null,
+      "tdpW": 106,
+      "processNm": 40,
+      "pcieGen": 2,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": 400,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "5_1",
+        "vulkanVersion": null,
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2019-04",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gt-440",
+      "vendor": "nvidia",
+      "brand": "GeForce GT 440",
+      "fullName": "NVIDIA GeForce GT 440",
+      "architecture": "Fermi",
+      "chip": "GF108",
+      "launchDate": "2011-02-01",
+      "formFactor": "desktop",
+      "shaders": 96,
+      "baseClockMHz": 810,
+      "boostClockMHz": 810,
+      "vramGB": 1,
+      "vramType": "DDR3",
+      "memBusBits": 128,
+      "memBandwidthGBs": 25.6,
+      "fp32TFLOPS": null,
+      "tdpW": 65,
+      "processNm": 40,
+      "pcieGen": 2,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "none",
+      "recommendedPsuW": 300,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "5_1",
+        "vulkanVersion": null,
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2019-04",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gt-430",
+      "vendor": "nvidia",
+      "brand": "GeForce GT 430",
+      "fullName": "NVIDIA GeForce GT 430",
+      "architecture": "Fermi",
+      "chip": "GF108",
+      "launchDate": "2010-10-11",
+      "formFactor": "desktop",
+      "shaders": 96,
+      "baseClockMHz": 700,
+      "boostClockMHz": 700,
+      "vramGB": 1,
+      "vramType": "DDR3",
+      "memBusBits": 128,
+      "memBandwidthGBs": 28.8,
+      "fp32TFLOPS": null,
+      "tdpW": 49,
+      "processNm": 40,
+      "pcieGen": 2,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 1,
+      "powerConnectors": "none",
+      "recommendedPsuW": 300,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "5_1",
+        "vulkanVersion": null,
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2019-04",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gt-520",
+      "vendor": "nvidia",
+      "brand": "GeForce GT 520",
+      "fullName": "NVIDIA GeForce GT 520",
+      "architecture": "Fermi",
+      "chip": "GF119",
+      "launchDate": "2011-04-12",
+      "formFactor": "desktop",
+      "shaders": 48,
+      "baseClockMHz": 810,
+      "boostClockMHz": 810,
+      "vramGB": 1,
+      "vramType": "DDR3",
+      "memBusBits": 64,
+      "memBandwidthGBs": 14.4,
+      "fp32TFLOPS": null,
+      "tdpW": 29,
+      "processNm": 40,
+      "pcieGen": 2,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 1,
+      "powerConnectors": "none",
+      "recommendedPsuW": 300,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "5_1",
+        "vulkanVersion": null,
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2019-04",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-580",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 580",
+      "fullName": "NVIDIA GeForce GTX 580",
+      "architecture": "Fermi",
+      "chip": "GF110",
+      "launchDate": "2010-11-09",
+      "formFactor": "desktop",
+      "shaders": 512,
+      "baseClockMHz": 772,
+      "boostClockMHz": 772,
+      "vramGB": 1.5,
+      "vramType": "GDDR5",
+      "memBusBits": 384,
+      "memBandwidthGBs": 192.4,
+      "fp32TFLOPS": null,
+      "tdpW": 244,
+      "processNm": 40,
+      "pcieGen": 2,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin + 1x8-pin",
+      "recommendedPsuW": 600,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "5_1",
+        "vulkanVersion": null,
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2019-04",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-570",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 570",
+      "fullName": "NVIDIA GeForce GTX 570",
+      "architecture": "Fermi",
+      "chip": "GF110",
+      "launchDate": "2010-12-07",
+      "formFactor": "desktop",
+      "shaders": 480,
+      "baseClockMHz": 732,
+      "boostClockMHz": 732,
+      "vramGB": 1.25,
+      "vramType": "GDDR5",
+      "memBusBits": 320,
+      "memBandwidthGBs": 152,
+      "fp32TFLOPS": null,
+      "tdpW": 219,
+      "processNm": 40,
+      "pcieGen": 2,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "2x6-pin",
+      "recommendedPsuW": 550,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "5_1",
+        "vulkanVersion": null,
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2019-04",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-560-ti-448",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 560 Ti 448 Cores",
+      "fullName": "NVIDIA GeForce GTX 560 Ti 448 Cores",
+      "architecture": "Fermi",
+      "chip": "GF110",
+      "launchDate": "2011-11-29",
+      "formFactor": "desktop",
+      "shaders": 448,
+      "baseClockMHz": 732,
+      "boostClockMHz": 732,
+      "vramGB": 1.25,
+      "vramType": "GDDR5",
+      "memBusBits": 320,
+      "memBandwidthGBs": 152,
+      "fp32TFLOPS": null,
+      "tdpW": 210,
+      "processNm": 40,
+      "pcieGen": 2,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "2x6-pin",
+      "recommendedPsuW": 550,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "5_1",
+        "vulkanVersion": null,
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2019-04",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-560-ti",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 560 Ti",
+      "fullName": "NVIDIA GeForce GTX 560 Ti",
+      "architecture": "Fermi",
+      "chip": "GF114",
+      "launchDate": "2011-01-25",
+      "formFactor": "desktop",
+      "shaders": 384,
+      "baseClockMHz": 822,
+      "boostClockMHz": 822,
+      "vramGB": 1,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 128.3,
+      "fp32TFLOPS": null,
+      "tdpW": 170,
+      "processNm": 40,
+      "pcieGen": 2,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "2x6-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "5_1",
+        "vulkanVersion": null,
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2019-04",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-560",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 560",
+      "fullName": "NVIDIA GeForce GTX 560",
+      "architecture": "Fermi",
+      "chip": "GF114",
+      "launchDate": "2011-05-17",
+      "formFactor": "desktop",
+      "shaders": 336,
+      "baseClockMHz": 810,
+      "boostClockMHz": 810,
+      "vramGB": 1,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 128.3,
+      "fp32TFLOPS": null,
+      "tdpW": 150,
+      "processNm": 40,
+      "pcieGen": 2,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "2x6-pin",
+      "recommendedPsuW": 450,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "5_1",
+        "vulkanVersion": null,
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2019-04",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-550-ti",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 550 Ti",
+      "fullName": "NVIDIA GeForce GTX 550 Ti",
+      "architecture": "Fermi",
+      "chip": "GF116",
+      "launchDate": "2011-03-15",
+      "formFactor": "desktop",
+      "shaders": 192,
+      "baseClockMHz": 900,
+      "boostClockMHz": 900,
+      "vramGB": 1,
+      "vramType": "GDDR5",
+      "memBusBits": 192,
+      "memBandwidthGBs": 98.5,
+      "fp32TFLOPS": null,
+      "tdpW": 116,
+      "processNm": 40,
+      "pcieGen": 2,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": 400,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "5_1",
+        "vulkanVersion": null,
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2019-04",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gt-610",
+      "vendor": "nvidia",
+      "brand": "GeForce GT 610",
+      "fullName": "NVIDIA GeForce GT 610",
+      "architecture": "Fermi",
+      "chip": "GF119",
+      "launchDate": "2012-05-29",
+      "formFactor": "desktop",
+      "shaders": 48,
+      "baseClockMHz": 810,
+      "boostClockMHz": 810,
+      "vramGB": 1,
+      "vramType": "DDR3",
+      "memBusBits": 64,
+      "memBandwidthGBs": 14.4,
+      "fp32TFLOPS": null,
+      "tdpW": 29,
+      "processNm": 40,
+      "pcieGen": 2,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 1,
+      "powerConnectors": "none",
+      "recommendedPsuW": 300,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "5_1",
+        "vulkanVersion": null,
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2019-04",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-680-2gb",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 680",
+      "variant": "2GB",
+      "fullName": "NVIDIA GeForce GTX 680 2GB",
+      "architecture": "Kepler",
+      "chip": "GK104",
+      "launchDate": "2012-03-22",
+      "formFactor": "desktop",
+      "shaders": 1536,
+      "baseClockMHz": 1006,
+      "boostClockMHz": 1058,
+      "vramGB": 2,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 192.3,
+      "fp32TFLOPS": 3.25,
+      "tdpW": 195,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": 254,
+      "slotWidth": 2,
+      "powerConnectors": "2x6-pin",
+      "recommendedPsuW": 550,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2024-09",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-680-4gb",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 680",
+      "variant": "4GB",
+      "fullName": "NVIDIA GeForce GTX 680 4GB",
+      "architecture": "Kepler",
+      "chip": "GK104",
+      "launchDate": "2012-05",
+      "formFactor": "desktop",
+      "shaders": 1536,
+      "baseClockMHz": 1006,
+      "boostClockMHz": 1058,
+      "vramGB": 4,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 192.3,
+      "fp32TFLOPS": 3.25,
+      "tdpW": 195,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": 254,
+      "slotWidth": 2,
+      "powerConnectors": "2x6-pin",
+      "recommendedPsuW": 550,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2024-09",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-670-2gb",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 670",
+      "variant": "2GB",
+      "fullName": "NVIDIA GeForce GTX 670 2GB",
+      "architecture": "Kepler",
+      "chip": "GK104",
+      "launchDate": "2012-05-10",
+      "formFactor": "desktop",
+      "shaders": 1344,
+      "baseClockMHz": 915,
+      "boostClockMHz": 980,
+      "vramGB": 2,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 192.3,
+      "fp32TFLOPS": 2.634,
+      "tdpW": 170,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "2x6-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2024-09",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-670-4gb",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 670",
+      "variant": "4GB",
+      "fullName": "NVIDIA GeForce GTX 670 4GB",
+      "architecture": "Kepler",
+      "chip": "GK104",
+      "launchDate": "2012-06",
+      "formFactor": "desktop",
+      "shaders": 1344,
+      "baseClockMHz": 915,
+      "boostClockMHz": 980,
+      "vramGB": 4,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 192.3,
+      "fp32TFLOPS": 2.634,
+      "tdpW": 170,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "2x6-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2024-09",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-660-ti-2gb",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 660 Ti",
+      "variant": "2GB",
+      "fullName": "NVIDIA GeForce GTX 660 Ti 2GB",
+      "architecture": "Kepler",
+      "chip": "GK104",
+      "launchDate": "2012-08-16",
+      "formFactor": "desktop",
+      "shaders": 1344,
+      "baseClockMHz": 915,
+      "boostClockMHz": 980,
+      "vramGB": 2,
+      "vramType": "GDDR5",
+      "memBusBits": 192,
+      "memBandwidthGBs": 144.2,
+      "fp32TFLOPS": 2.634,
+      "tdpW": 150,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "2x6-pin",
+      "recommendedPsuW": 450,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2024-09",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-660-ti-3gb",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 660 Ti",
+      "variant": "3GB",
+      "fullName": "NVIDIA GeForce GTX 660 Ti 3GB",
+      "architecture": "Kepler",
+      "chip": "GK104",
+      "launchDate": "2012-09",
+      "formFactor": "desktop",
+      "shaders": 1344,
+      "baseClockMHz": 915,
+      "boostClockMHz": 980,
+      "vramGB": 3,
+      "vramType": "GDDR5",
+      "memBusBits": 192,
+      "memBandwidthGBs": 144.2,
+      "fp32TFLOPS": 2.634,
+      "tdpW": 150,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "2x6-pin",
+      "recommendedPsuW": 450,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2024-09",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-660-2gb",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 660",
+      "variant": "2GB",
+      "fullName": "NVIDIA GeForce GTX 660 2GB",
+      "architecture": "Kepler",
+      "chip": "GK106",
+      "launchDate": "2012-09-13",
+      "formFactor": "desktop",
+      "shaders": 960,
+      "baseClockMHz": 980,
+      "boostClockMHz": 1033,
+      "vramGB": 2,
+      "vramType": "GDDR5",
+      "memBusBits": 192,
+      "memBandwidthGBs": 144.2,
+      "fp32TFLOPS": 1.983,
+      "tdpW": 140,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": 450,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2024-09",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-660-3gb",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 660",
+      "variant": "3GB",
+      "fullName": "NVIDIA GeForce GTX 660 3GB",
+      "architecture": "Kepler",
+      "chip": "GK106",
+      "launchDate": "2012-10",
+      "formFactor": "desktop",
+      "shaders": 960,
+      "baseClockMHz": 980,
+      "boostClockMHz": 1033,
+      "vramGB": 3,
+      "vramType": "GDDR5",
+      "memBusBits": 192,
+      "memBandwidthGBs": 144.2,
+      "fp32TFLOPS": 1.983,
+      "tdpW": 140,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": 450,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2024-09",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-650-ti-boost",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 650 Ti Boost",
+      "fullName": "NVIDIA GeForce GTX 650 Ti Boost",
+      "architecture": "Kepler",
+      "chip": "GK106",
+      "launchDate": "2013-03-26",
+      "formFactor": "desktop",
+      "shaders": 768,
+      "baseClockMHz": 980,
+      "boostClockMHz": 1033,
+      "vramGB": 2,
+      "vramType": "GDDR5",
+      "memBusBits": 192,
+      "memBandwidthGBs": 144.2,
+      "fp32TFLOPS": 1.587,
+      "tdpW": 134,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": 450,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2024-09",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-650-ti",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 650 Ti",
+      "fullName": "NVIDIA GeForce GTX 650 Ti",
+      "architecture": "Kepler",
+      "chip": "GK106",
+      "launchDate": "2012-10-09",
+      "formFactor": "desktop",
+      "shaders": 768,
+      "baseClockMHz": 925,
+      "boostClockMHz": 925,
+      "vramGB": 1,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 86.4,
+      "fp32TFLOPS": 1.421,
+      "tdpW": 110,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": 400,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2024-09",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-650",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 650",
+      "fullName": "NVIDIA GeForce GTX 650",
+      "architecture": "Kepler",
+      "chip": "GK107",
+      "launchDate": "2012-09-13",
+      "formFactor": "desktop",
+      "shaders": 384,
+      "baseClockMHz": 1058,
+      "boostClockMHz": 1058,
+      "vramGB": 1,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 80,
+      "fp32TFLOPS": 0.813,
+      "tdpW": 64,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": 400,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2024-09",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gt-640",
+      "vendor": "nvidia",
+      "brand": "GeForce GT 640",
+      "variant": "DDR3",
+      "fullName": "NVIDIA GeForce GT 640 DDR3",
+      "architecture": "Kepler",
+      "chip": "GK107",
+      "launchDate": "2012-06-05",
+      "formFactor": "desktop",
+      "shaders": 384,
+      "baseClockMHz": 900,
+      "boostClockMHz": 900,
+      "vramGB": 2,
+      "vramType": "DDR3",
+      "memBusBits": 128,
+      "memBandwidthGBs": 28.5,
+      "fp32TFLOPS": 0.691,
+      "tdpW": 65,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "none",
+      "recommendedPsuW": 300,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2024-09",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-780-ti",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 780 Ti",
+      "fullName": "NVIDIA GeForce GTX 780 Ti",
+      "architecture": "Kepler",
+      "chip": "GK110",
+      "launchDate": "2013-11-07",
+      "formFactor": "desktop",
+      "shaders": 2880,
+      "baseClockMHz": 875,
+      "boostClockMHz": 928,
+      "vramGB": 3,
+      "vramType": "GDDR5",
+      "memBusBits": 384,
+      "memBandwidthGBs": 336,
+      "fp32TFLOPS": 5.345,
+      "tdpW": 250,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": 267,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin + 1x8-pin",
+      "recommendedPsuW": 600,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2024-09",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-780-3gb",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 780",
+      "variant": "3GB",
+      "fullName": "NVIDIA GeForce GTX 780 3GB",
+      "architecture": "Kepler",
+      "chip": "GK110",
+      "launchDate": "2013-05-23",
+      "formFactor": "desktop",
+      "shaders": 2304,
+      "baseClockMHz": 863,
+      "boostClockMHz": 900,
+      "vramGB": 3,
+      "vramType": "GDDR5",
+      "memBusBits": 384,
+      "memBandwidthGBs": 288.4,
+      "fp32TFLOPS": 4.147,
+      "tdpW": 250,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": 267,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin + 1x8-pin",
+      "recommendedPsuW": 600,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2024-09",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-780-6gb",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 780",
+      "variant": "6GB",
+      "fullName": "NVIDIA GeForce GTX 780 6GB",
+      "architecture": "Kepler",
+      "chip": "GK110",
+      "launchDate": "2014-01",
+      "formFactor": "desktop",
+      "shaders": 2304,
+      "baseClockMHz": 863,
+      "boostClockMHz": 900,
+      "vramGB": 6,
+      "vramType": "GDDR5",
+      "memBusBits": 384,
+      "memBandwidthGBs": 288.4,
+      "fp32TFLOPS": 4.147,
+      "tdpW": 250,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": 267,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin + 1x8-pin",
+      "recommendedPsuW": 600,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2024-09",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-770-2gb",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 770",
+      "variant": "2GB",
+      "fullName": "NVIDIA GeForce GTX 770 2GB",
+      "architecture": "Kepler",
+      "chip": "GK104",
+      "launchDate": "2013-05-30",
+      "formFactor": "desktop",
+      "shaders": 1536,
+      "baseClockMHz": 1046,
+      "boostClockMHz": 1085,
+      "vramGB": 2,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 224.3,
+      "fp32TFLOPS": 3.333,
+      "tdpW": 230,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": 267,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin + 1x8-pin",
+      "recommendedPsuW": 600,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2024-09",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-770-4gb",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 770",
+      "variant": "4GB",
+      "fullName": "NVIDIA GeForce GTX 770 4GB",
+      "architecture": "Kepler",
+      "chip": "GK104",
+      "launchDate": "2013-06",
+      "formFactor": "desktop",
+      "shaders": 1536,
+      "baseClockMHz": 1046,
+      "boostClockMHz": 1085,
+      "vramGB": 4,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 224.3,
+      "fp32TFLOPS": 3.333,
+      "tdpW": 230,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": 267,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin + 1x8-pin",
+      "recommendedPsuW": 600,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2024-09",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-760",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 760",
+      "fullName": "NVIDIA GeForce GTX 760",
+      "architecture": "Kepler",
+      "chip": "GK104",
+      "launchDate": "2013-06-25",
+      "formFactor": "desktop",
+      "shaders": 1152,
+      "baseClockMHz": 980,
+      "boostClockMHz": 1033,
+      "vramGB": 2,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 192.3,
+      "fp32TFLOPS": 2.38,
+      "tdpW": 170,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "2x6-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2024-09",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gt-740",
+      "vendor": "nvidia",
+      "brand": "GeForce GT 740",
+      "variant": "GDDR5",
+      "fullName": "NVIDIA GeForce GT 740 GDDR5",
+      "architecture": "Kepler",
+      "chip": "GK107",
+      "launchDate": "2014-05-29",
+      "formFactor": "desktop",
+      "shaders": 384,
+      "baseClockMHz": 993,
+      "boostClockMHz": 993,
+      "vramGB": 1,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 80,
+      "fp32TFLOPS": 0.763,
+      "tdpW": 64,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "none",
+      "recommendedPsuW": 300,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2024-09",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gt-730-gddr5",
+      "vendor": "nvidia",
+      "brand": "GeForce GT 730",
+      "variant": "GDDR5 64-bit",
+      "fullName": "NVIDIA GeForce GT 730 GDDR5 64-bit",
+      "architecture": "Kepler",
+      "chip": "GK208",
+      "launchDate": "2014-06-18",
+      "formFactor": "desktop",
+      "shaders": 384,
+      "baseClockMHz": 902,
+      "boostClockMHz": 902,
+      "vramGB": 1,
+      "vramType": "GDDR5",
+      "memBusBits": 64,
+      "memBandwidthGBs": 40.1,
+      "fp32TFLOPS": 0.693,
+      "tdpW": 38,
+      "processNm": 28,
+      "pcieGen": 2,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": 1,
+      "powerConnectors": "none",
+      "recommendedPsuW": 300,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2024-09",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gt-730-ddr3",
+      "vendor": "nvidia",
+      "brand": "GeForce GT 730",
+      "variant": "DDR3 64-bit",
+      "fullName": "NVIDIA GeForce GT 730 DDR3 64-bit",
+      "architecture": "Kepler",
+      "chip": "GK208",
+      "launchDate": "2014-06-18",
+      "formFactor": "desktop",
+      "shaders": 384,
+      "baseClockMHz": 902,
+      "boostClockMHz": 902,
+      "vramGB": 2,
+      "vramType": "DDR3",
+      "memBusBits": 64,
+      "memBandwidthGBs": 14.4,
+      "fp32TFLOPS": 0.693,
+      "tdpW": 25,
+      "processNm": 28,
+      "pcieGen": 2,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": 1,
+      "powerConnectors": "none",
+      "recommendedPsuW": 300,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2024-09",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gt-720",
+      "vendor": "nvidia",
+      "brand": "GeForce GT 720",
+      "fullName": "NVIDIA GeForce GT 720",
+      "architecture": "Kepler",
+      "chip": "GK208",
+      "launchDate": "2014-03-19",
+      "formFactor": "desktop",
+      "shaders": 192,
+      "baseClockMHz": 797,
+      "boostClockMHz": 797,
+      "vramGB": 1,
+      "vramType": "DDR3",
+      "memBusBits": 64,
+      "memBandwidthGBs": 14.4,
+      "fp32TFLOPS": 0.306,
+      "tdpW": 19,
+      "processNm": 28,
+      "pcieGen": 2,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": 1,
+      "powerConnectors": "none",
+      "recommendedPsuW": 300,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2024-09",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gt-710",
+      "vendor": "nvidia",
+      "brand": "GeForce GT 710",
+      "fullName": "NVIDIA GeForce GT 710",
+      "architecture": "Kepler",
+      "chip": "GK208",
+      "launchDate": "2016-03-19",
+      "formFactor": "desktop",
+      "shaders": 192,
+      "baseClockMHz": 954,
+      "boostClockMHz": 954,
+      "vramGB": 2,
+      "vramType": "DDR3",
+      "memBusBits": 64,
+      "memBandwidthGBs": 14.4,
+      "fp32TFLOPS": 0.366,
+      "tdpW": 19,
+      "processNm": 28,
+      "pcieGen": 2,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": 1,
+      "powerConnectors": "none",
+      "recommendedPsuW": 300,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2024-09",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-titan",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX Titan",
+      "fullName": "NVIDIA GeForce GTX Titan",
+      "architecture": "Kepler",
+      "chip": "GK110",
+      "launchDate": "2013-02-21",
+      "formFactor": "desktop",
+      "shaders": 2688,
+      "baseClockMHz": 837,
+      "boostClockMHz": 876,
+      "vramGB": 6,
+      "vramType": "GDDR5",
+      "memBusBits": 384,
+      "memBandwidthGBs": 288.4,
+      "fp32TFLOPS": 4.709,
+      "tdpW": 250,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": 267,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin + 1x8-pin",
+      "recommendedPsuW": 600,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2024-09",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-titan-black",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX Titan Black",
+      "fullName": "NVIDIA GeForce GTX Titan Black",
+      "architecture": "Kepler",
+      "chip": "GK110",
+      "launchDate": "2014-02-18",
+      "formFactor": "desktop",
+      "shaders": 2880,
+      "baseClockMHz": 889,
+      "boostClockMHz": 980,
+      "vramGB": 6,
+      "vramType": "GDDR5",
+      "memBusBits": 384,
+      "memBandwidthGBs": 336,
+      "fp32TFLOPS": 5.645,
+      "tdpW": 250,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": 267,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin + 1x8-pin",
+      "recommendedPsuW": 600,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "eol",
+      "driverEolDate": "2024-09",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-750-ti",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 750 Ti",
+      "fullName": "NVIDIA GeForce GTX 750 Ti",
+      "architecture": "Maxwell 1",
+      "chip": "GM107",
+      "launchDate": "2014-02-18",
+      "formFactor": "desktop",
+      "shaders": 640,
+      "baseClockMHz": 1020,
+      "boostClockMHz": 1085,
+      "vramGB": 2,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 86.4,
+      "fp32TFLOPS": 1.389,
+      "tdpW": 60,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "none",
+      "recommendedPsuW": 300,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-750",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 750",
+      "fullName": "NVIDIA GeForce GTX 750",
+      "architecture": "Maxwell 1",
+      "chip": "GM107",
+      "launchDate": "2014-02-18",
+      "formFactor": "desktop",
+      "shaders": 512,
+      "baseClockMHz": 1020,
+      "boostClockMHz": 1085,
+      "vramGB": 1,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 80,
+      "fp32TFLOPS": 1.111,
+      "tdpW": 55,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "none",
+      "recommendedPsuW": 300,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-980-ti",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 980 Ti",
+      "fullName": "NVIDIA GeForce GTX 980 Ti",
+      "architecture": "Maxwell 2",
+      "chip": "GM200",
+      "launchDate": "2015-06-02",
+      "formFactor": "desktop",
+      "shaders": 2816,
+      "baseClockMHz": 1000,
+      "boostClockMHz": 1075,
+      "vramGB": 6,
+      "vramType": "GDDR5",
+      "memBusBits": 384,
+      "memBandwidthGBs": 336.5,
+      "fp32TFLOPS": 6.054,
+      "tdpW": 250,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": 267,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin + 1x8-pin",
+      "recommendedPsuW": 600,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-980",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 980",
+      "fullName": "NVIDIA GeForce GTX 980",
+      "architecture": "Maxwell 2",
+      "chip": "GM204",
+      "launchDate": "2014-09-19",
+      "formFactor": "desktop",
+      "shaders": 2048,
+      "baseClockMHz": 1126,
+      "boostClockMHz": 1216,
+      "vramGB": 4,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 224.3,
+      "fp32TFLOPS": 4.981,
+      "tdpW": 165,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": 267,
+      "slotWidth": 2,
+      "powerConnectors": "2x6-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-970",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 970",
+      "fullName": "NVIDIA GeForce GTX 970",
+      "architecture": "Maxwell 2",
+      "chip": "GM204",
+      "launchDate": "2014-09-19",
+      "formFactor": "desktop",
+      "shaders": 1664,
+      "baseClockMHz": 1050,
+      "boostClockMHz": 1178,
+      "vramGB": 4,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 224.3,
+      "fp32TFLOPS": 3.92,
+      "tdpW": 145,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": 267,
+      "slotWidth": 2,
+      "powerConnectors": "2x6-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-960-2gb",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 960",
+      "variant": "2GB",
+      "fullName": "NVIDIA GeForce GTX 960 2GB",
+      "architecture": "Maxwell 2",
+      "chip": "GM206",
+      "launchDate": "2015-01-22",
+      "formFactor": "desktop",
+      "shaders": 1024,
+      "baseClockMHz": 1127,
+      "boostClockMHz": 1178,
+      "vramGB": 2,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 112.2,
+      "fp32TFLOPS": 2.413,
+      "tdpW": 120,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": 400,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-960-4gb",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 960",
+      "variant": "4GB",
+      "fullName": "NVIDIA GeForce GTX 960 4GB",
+      "architecture": "Maxwell 2",
+      "chip": "GM206",
+      "launchDate": "2015-03",
+      "formFactor": "desktop",
+      "shaders": 1024,
+      "baseClockMHz": 1127,
+      "boostClockMHz": 1178,
+      "vramGB": 4,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 112.2,
+      "fp32TFLOPS": 2.413,
+      "tdpW": 120,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": 400,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-950",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 950",
+      "fullName": "NVIDIA GeForce GTX 950",
+      "architecture": "Maxwell 2",
+      "chip": "GM206",
+      "launchDate": "2015-08-20",
+      "formFactor": "desktop",
+      "shaders": 768,
+      "baseClockMHz": 1024,
+      "boostClockMHz": 1188,
+      "vramGB": 2,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 105.8,
+      "fp32TFLOPS": 1.825,
+      "tdpW": 90,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": 350,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-titan-x",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX Titan X",
+      "fullName": "NVIDIA GeForce GTX Titan X",
+      "architecture": "Maxwell 2",
+      "chip": "GM200",
+      "launchDate": "2015-03-17",
+      "formFactor": "desktop",
+      "shaders": 3072,
+      "baseClockMHz": 1000,
+      "boostClockMHz": 1075,
+      "vramGB": 12,
+      "vramType": "GDDR5",
+      "memBusBits": 384,
+      "memBandwidthGBs": 336.5,
+      "fp32TFLOPS": 6.605,
+      "tdpW": 250,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": 267,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin + 1x8-pin",
+      "recommendedPsuW": 600,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-1080-ti",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 1080 Ti",
+      "fullName": "NVIDIA GeForce GTX 1080 Ti",
+      "architecture": "Pascal",
+      "chip": "GP102",
+      "launchDate": "2017-03-10",
+      "formFactor": "desktop",
+      "shaders": 3584,
+      "baseClockMHz": 1480,
+      "boostClockMHz": 1582,
+      "vramGB": 11,
+      "vramType": "GDDR5X",
+      "memBusBits": 352,
+      "memBandwidthGBs": 484.4,
+      "fp32TFLOPS": 11.34,
+      "tdpW": 250,
+      "processNm": 16,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": 267,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin + 1x8-pin",
+      "recommendedPsuW": 600,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-1080",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 1080",
+      "fullName": "NVIDIA GeForce GTX 1080",
+      "architecture": "Pascal",
+      "chip": "GP104",
+      "launchDate": "2016-05-27",
+      "formFactor": "desktop",
+      "shaders": 2560,
+      "baseClockMHz": 1607,
+      "boostClockMHz": 1733,
+      "vramGB": 8,
+      "vramType": "GDDR5X",
+      "memBusBits": 256,
+      "memBandwidthGBs": 320.3,
+      "fp32TFLOPS": 8.873,
+      "tdpW": 180,
+      "processNm": 16,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": 267,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-1070-ti",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 1070 Ti",
+      "fullName": "NVIDIA GeForce GTX 1070 Ti",
+      "architecture": "Pascal",
+      "chip": "GP104",
+      "launchDate": "2017-11-02",
+      "formFactor": "desktop",
+      "shaders": 2432,
+      "baseClockMHz": 1607,
+      "boostClockMHz": 1683,
+      "vramGB": 8,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 256.3,
+      "fp32TFLOPS": 8.186,
+      "tdpW": 180,
+      "processNm": 16,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": 267,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-1070",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 1070",
+      "fullName": "NVIDIA GeForce GTX 1070",
+      "architecture": "Pascal",
+      "chip": "GP104",
+      "launchDate": "2016-06-10",
+      "formFactor": "desktop",
+      "shaders": 1920,
+      "baseClockMHz": 1506,
+      "boostClockMHz": 1683,
+      "vramGB": 8,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 256.3,
+      "fp32TFLOPS": 6.463,
+      "tdpW": 150,
+      "processNm": 16,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": 267,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-1060-6gb",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 1060",
+      "variant": "6GB",
+      "fullName": "NVIDIA GeForce GTX 1060 6GB",
+      "architecture": "Pascal",
+      "chip": "GP106",
+      "launchDate": "2016-07-19",
+      "formFactor": "desktop",
+      "shaders": 1280,
+      "baseClockMHz": 1506,
+      "boostClockMHz": 1708,
+      "vramGB": 6,
+      "vramType": "GDDR5",
+      "memBusBits": 192,
+      "memBandwidthGBs": 192.2,
+      "fp32TFLOPS": 4.372,
+      "tdpW": 120,
+      "processNm": 16,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": 250,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": 400,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-1060-3gb",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 1060",
+      "variant": "3GB",
+      "fullName": "NVIDIA GeForce GTX 1060 3GB",
+      "architecture": "Pascal",
+      "chip": "GP106",
+      "launchDate": "2016-08-18",
+      "formFactor": "desktop",
+      "shaders": 1152,
+      "baseClockMHz": 1506,
+      "boostClockMHz": 1708,
+      "vramGB": 3,
+      "vramType": "GDDR5",
+      "memBusBits": 192,
+      "memBandwidthGBs": 192.2,
+      "fp32TFLOPS": 3.935,
+      "tdpW": 120,
+      "processNm": 16,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": 250,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": 400,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-1050-ti",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 1050 Ti",
+      "fullName": "NVIDIA GeForce GTX 1050 Ti",
+      "architecture": "Pascal",
+      "chip": "GP107",
+      "launchDate": "2016-10-25",
+      "formFactor": "desktop",
+      "shaders": 768,
+      "baseClockMHz": 1290,
+      "boostClockMHz": 1392,
+      "vramGB": 4,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 112.1,
+      "fp32TFLOPS": 2.138,
+      "tdpW": 75,
+      "processNm": 14,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "none",
+      "recommendedPsuW": 300,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-1050-2gb",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 1050",
+      "variant": "2GB",
+      "fullName": "NVIDIA GeForce GTX 1050 2GB",
+      "architecture": "Pascal",
+      "chip": "GP107",
+      "launchDate": "2016-10-25",
+      "formFactor": "desktop",
+      "shaders": 640,
+      "baseClockMHz": 1354,
+      "boostClockMHz": 1455,
+      "vramGB": 2,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 112.1,
+      "fp32TFLOPS": 1.862,
+      "tdpW": 75,
+      "processNm": 14,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "none",
+      "recommendedPsuW": 300,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-1050-3gb",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 1050",
+      "variant": "3GB",
+      "fullName": "NVIDIA GeForce GTX 1050 3GB",
+      "architecture": "Pascal",
+      "chip": "GP107",
+      "launchDate": "2018-05-21",
+      "formFactor": "desktop",
+      "shaders": 768,
+      "baseClockMHz": 1392,
+      "boostClockMHz": 1518,
+      "vramGB": 3,
+      "vramType": "GDDR5",
+      "memBusBits": 96,
+      "memBandwidthGBs": 84.1,
+      "fp32TFLOPS": 2.332,
+      "tdpW": 75,
+      "processNm": 14,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "none",
+      "recommendedPsuW": 300,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gt-1030-gddr5",
+      "vendor": "nvidia",
+      "brand": "GeForce GT 1030",
+      "variant": "GDDR5",
+      "fullName": "NVIDIA GeForce GT 1030 GDDR5",
+      "architecture": "Pascal",
+      "chip": "GP108",
+      "launchDate": "2017-05-17",
+      "formFactor": "desktop",
+      "shaders": 384,
+      "baseClockMHz": 1227,
+      "boostClockMHz": 1468,
+      "vramGB": 2,
+      "vramType": "GDDR5",
+      "memBusBits": 64,
+      "memBandwidthGBs": 48.1,
+      "fp32TFLOPS": 1.127,
+      "tdpW": 30,
+      "processNm": 14,
+      "pcieGen": 3,
+      "pcieLanes": 4,
+      "lengthMm": null,
+      "slotWidth": 1,
+      "powerConnectors": "none",
+      "recommendedPsuW": 300,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gt-1030-ddr4",
+      "vendor": "nvidia",
+      "brand": "GeForce GT 1030",
+      "variant": "DDR4",
+      "fullName": "NVIDIA GeForce GT 1030 DDR4",
+      "architecture": "Pascal",
+      "chip": "GP108",
+      "launchDate": "2018-03",
+      "formFactor": "desktop",
+      "shaders": 384,
+      "baseClockMHz": 1151,
+      "boostClockMHz": 1379,
+      "vramGB": 2,
+      "vramType": "DDR4",
+      "memBusBits": 64,
+      "memBandwidthGBs": 16.8,
+      "fp32TFLOPS": 1.059,
+      "tdpW": 20,
+      "processNm": 14,
+      "pcieGen": 3,
+      "pcieLanes": 4,
+      "lengthMm": null,
+      "slotWidth": 1,
+      "powerConnectors": "none",
+      "recommendedPsuW": 300,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-titan-x-pascal",
+      "vendor": "nvidia",
+      "brand": "NVIDIA Titan X",
+      "variant": "Pascal",
+      "fullName": "NVIDIA Titan X Pascal",
+      "architecture": "Pascal",
+      "chip": "GP102",
+      "launchDate": "2016-08-02",
+      "formFactor": "desktop",
+      "shaders": 3584,
+      "baseClockMHz": 1417,
+      "boostClockMHz": 1531,
+      "vramGB": 12,
+      "vramType": "GDDR5X",
+      "memBusBits": 384,
+      "memBandwidthGBs": 480.4,
+      "fp32TFLOPS": 10.974,
+      "tdpW": 250,
+      "processNm": 16,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": 267,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin + 1x8-pin",
+      "recommendedPsuW": 600,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-titan-xp",
+      "vendor": "nvidia",
+      "brand": "NVIDIA Titan Xp",
+      "fullName": "NVIDIA Titan Xp",
+      "architecture": "Pascal",
+      "chip": "GP102",
+      "launchDate": "2017-04-06",
+      "formFactor": "desktop",
+      "shaders": 3840,
+      "baseClockMHz": 1405,
+      "boostClockMHz": 1582,
+      "vramGB": 12,
+      "vramType": "GDDR5X",
+      "memBusBits": 384,
+      "memBandwidthGBs": 547.6,
+      "fp32TFLOPS": 12.15,
+      "tdpW": 250,
+      "processNm": 16,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": 267,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin + 1x8-pin",
+      "recommendedPsuW": 600,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-titan-v",
+      "vendor": "nvidia",
+      "brand": "NVIDIA Titan V",
+      "fullName": "NVIDIA Titan V",
+      "architecture": "Volta",
+      "chip": "GV100",
+      "launchDate": "2017-12-07",
+      "formFactor": "desktop",
+      "shaders": 5120,
+      "baseClockMHz": 1200,
+      "boostClockMHz": 1455,
+      "vramGB": 12,
+      "vramType": "HBM2",
+      "memBusBits": 3072,
+      "memBandwidthGBs": 652.8,
+      "fp32TFLOPS": 14.899,
+      "tdpW": 250,
+      "processNm": 12,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": 267,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin + 1x8-pin",
+      "recommendedPsuW": 600,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-1660-ti",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 1660 Ti",
+      "fullName": "NVIDIA GeForce GTX 1660 Ti",
+      "architecture": "Turing",
+      "chip": "TU116",
+      "launchDate": "2019-02-22",
+      "formFactor": "desktop",
+      "shaders": 1536,
+      "baseClockMHz": 1500,
+      "boostClockMHz": 1770,
+      "vramGB": 6,
+      "vramType": "GDDR6",
+      "memBusBits": 192,
+      "memBandwidthGBs": 288,
+      "fp32TFLOPS": 5.437,
+      "tdpW": 120,
+      "processNm": 12,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 450,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "maintenance",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-1660-super",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 1660 Super",
+      "fullName": "NVIDIA GeForce GTX 1660 Super",
+      "architecture": "Turing",
+      "chip": "TU116",
+      "launchDate": "2019-10-29",
+      "formFactor": "desktop",
+      "shaders": 1408,
+      "baseClockMHz": 1530,
+      "boostClockMHz": 1785,
+      "vramGB": 6,
+      "vramType": "GDDR6",
+      "memBusBits": 192,
+      "memBandwidthGBs": 336,
+      "fp32TFLOPS": 5.027,
+      "tdpW": 125,
+      "processNm": 12,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 450,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "maintenance",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-1660",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 1660",
+      "fullName": "NVIDIA GeForce GTX 1660",
+      "architecture": "Turing",
+      "chip": "TU116",
+      "launchDate": "2019-03-14",
+      "formFactor": "desktop",
+      "shaders": 1408,
+      "baseClockMHz": 1530,
+      "boostClockMHz": 1785,
+      "vramGB": 6,
+      "vramType": "GDDR5",
+      "memBusBits": 192,
+      "memBandwidthGBs": 192,
+      "fp32TFLOPS": 5.027,
+      "tdpW": 120,
+      "processNm": 12,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 450,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "maintenance",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-1650-super",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 1650 Super",
+      "fullName": "NVIDIA GeForce GTX 1650 Super",
+      "architecture": "Turing",
+      "chip": "TU116",
+      "launchDate": "2019-11-22",
+      "formFactor": "desktop",
+      "shaders": 1280,
+      "baseClockMHz": 1530,
+      "boostClockMHz": 1725,
+      "vramGB": 4,
+      "vramType": "GDDR6",
+      "memBusBits": 128,
+      "memBandwidthGBs": 192,
+      "fp32TFLOPS": 4.416,
+      "tdpW": 100,
+      "processNm": 12,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": 350,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "maintenance",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-1650-gddr5",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 1650",
+      "variant": "GDDR5",
+      "fullName": "NVIDIA GeForce GTX 1650 GDDR5",
+      "architecture": "Turing",
+      "chip": "TU117",
+      "launchDate": "2019-04-23",
+      "formFactor": "desktop",
+      "shaders": 896,
+      "baseClockMHz": 1485,
+      "boostClockMHz": 1665,
+      "vramGB": 4,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 128,
+      "fp32TFLOPS": 2.984,
+      "tdpW": 75,
+      "processNm": 12,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "none",
+      "recommendedPsuW": 300,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "maintenance",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-1650-gddr6",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 1650",
+      "variant": "GDDR6",
+      "fullName": "NVIDIA GeForce GTX 1650 GDDR6",
+      "architecture": "Turing",
+      "chip": "TU117",
+      "launchDate": "2020-04-03",
+      "formFactor": "desktop",
+      "shaders": 896,
+      "baseClockMHz": 1410,
+      "boostClockMHz": 1590,
+      "vramGB": 4,
+      "vramType": "GDDR6",
+      "memBusBits": 128,
+      "memBandwidthGBs": 192,
+      "fp32TFLOPS": 2.849,
+      "tdpW": 75,
+      "processNm": 12,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "none",
+      "recommendedPsuW": 300,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "maintenance",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-gtx-1630",
+      "vendor": "nvidia",
+      "brand": "GeForce GTX 1630",
+      "fullName": "NVIDIA GeForce GTX 1630",
+      "architecture": "Turing",
+      "chip": "TU117",
+      "launchDate": "2022-06-28",
+      "formFactor": "desktop",
+      "shaders": 512,
+      "baseClockMHz": 1740,
+      "boostClockMHz": 1785,
+      "vramGB": 4,
+      "vramType": "GDDR6",
+      "memBusBits": 64,
+      "memBandwidthGBs": 96,
+      "fp32TFLOPS": 1.828,
+      "tdpW": 75,
+      "processNm": 12,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": null,
+      "recommendedPsuW": 300,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "maintenance",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-2080-ti",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 2080 Ti",
+      "fullName": "NVIDIA GeForce RTX 2080 Ti",
+      "architecture": "Turing",
+      "chip": "TU102",
+      "launchDate": "2018-09-27",
+      "formFactor": "desktop",
+      "shaders": 4352,
+      "baseClockMHz": 1350,
+      "boostClockMHz": 1545,
+      "vramGB": 11,
+      "vramType": "GDDR6",
+      "memBusBits": 352,
+      "memBandwidthGBs": 616,
+      "fp32TFLOPS": 13.448,
+      "tdpW": 250,
+      "processNm": 12,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": 267,
+      "slotWidth": 2,
+      "powerConnectors": "2x8-pin",
+      "recommendedPsuW": 650,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "maintenance",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-2080-super",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 2080 Super",
+      "fullName": "NVIDIA GeForce RTX 2080 Super",
+      "architecture": "Turing",
+      "chip": "TU104",
+      "launchDate": "2019-07-23",
+      "formFactor": "desktop",
+      "shaders": 3072,
+      "baseClockMHz": 1650,
+      "boostClockMHz": 1815,
+      "vramGB": 8,
+      "vramType": "GDDR6",
+      "memBusBits": 256,
+      "memBandwidthGBs": 496,
+      "fp32TFLOPS": 11.151,
+      "tdpW": 250,
+      "processNm": 12,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": 267,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin + 1x8-pin",
+      "recommendedPsuW": 650,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "maintenance",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-2080",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 2080",
+      "fullName": "NVIDIA GeForce RTX 2080",
+      "architecture": "Turing",
+      "chip": "TU104",
+      "launchDate": "2018-09-20",
+      "formFactor": "desktop",
+      "shaders": 2944,
+      "baseClockMHz": 1515,
+      "boostClockMHz": 1710,
+      "vramGB": 8,
+      "vramType": "GDDR6",
+      "memBusBits": 256,
+      "memBandwidthGBs": 448,
+      "fp32TFLOPS": 10.068,
+      "tdpW": 215,
+      "processNm": 12,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": 267,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin + 1x8-pin",
+      "recommendedPsuW": 650,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "maintenance",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-2070-super",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 2070 Super",
+      "fullName": "NVIDIA GeForce RTX 2070 Super",
+      "architecture": "Turing",
+      "chip": "TU104",
+      "launchDate": "2019-07-09",
+      "formFactor": "desktop",
+      "shaders": 2560,
+      "baseClockMHz": 1605,
+      "boostClockMHz": 1770,
+      "vramGB": 8,
+      "vramType": "GDDR6",
+      "memBusBits": 256,
+      "memBandwidthGBs": 448,
+      "fp32TFLOPS": 9.062,
+      "tdpW": 215,
+      "processNm": 12,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": 267,
+      "slotWidth": 2,
+      "powerConnectors": "1x6-pin + 1x8-pin",
+      "recommendedPsuW": 650,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "maintenance",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-2070",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 2070",
+      "fullName": "NVIDIA GeForce RTX 2070",
+      "architecture": "Turing",
+      "chip": "TU106",
+      "launchDate": "2018-10-17",
+      "formFactor": "desktop",
+      "shaders": 2304,
+      "baseClockMHz": 1410,
+      "boostClockMHz": 1620,
+      "vramGB": 8,
+      "vramType": "GDDR6",
+      "memBusBits": 256,
+      "memBandwidthGBs": 448,
+      "fp32TFLOPS": 7.465,
+      "tdpW": 175,
+      "processNm": 12,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": 229,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 550,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "maintenance",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-2060-super",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 2060 Super",
+      "fullName": "NVIDIA GeForce RTX 2060 Super",
+      "architecture": "Turing",
+      "chip": "TU106",
+      "launchDate": "2019-07-09",
+      "formFactor": "desktop",
+      "shaders": 2176,
+      "baseClockMHz": 1470,
+      "boostClockMHz": 1650,
+      "vramGB": 8,
+      "vramType": "GDDR6",
+      "memBusBits": 256,
+      "memBandwidthGBs": 448,
+      "fp32TFLOPS": 7.181,
+      "tdpW": 175,
+      "processNm": 12,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": 229,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 550,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "maintenance",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-2060-6gb",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 2060",
+      "variant": "6GB",
+      "fullName": "NVIDIA GeForce RTX 2060 6GB",
+      "architecture": "Turing",
+      "chip": "TU106",
+      "launchDate": "2019-01-15",
+      "formFactor": "desktop",
+      "shaders": 1920,
+      "baseClockMHz": 1365,
+      "boostClockMHz": 1680,
+      "vramGB": 6,
+      "vramType": "GDDR6",
+      "memBusBits": 192,
+      "memBandwidthGBs": 336,
+      "fp32TFLOPS": 6.451,
+      "tdpW": 160,
+      "processNm": 12,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": 229,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "maintenance",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-2060-12gb",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 2060",
+      "variant": "12GB",
+      "fullName": "NVIDIA GeForce RTX 2060 12GB",
+      "architecture": "Turing",
+      "chip": "TU106",
+      "launchDate": "2021-12-07",
+      "formFactor": "desktop",
+      "shaders": 2176,
+      "baseClockMHz": 1470,
+      "boostClockMHz": 1650,
+      "vramGB": 12,
+      "vramType": "GDDR6",
+      "memBusBits": 192,
+      "memBandwidthGBs": 336,
+      "fp32TFLOPS": 7.181,
+      "tdpW": 184,
+      "processNm": 12,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 550,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "maintenance",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-titan-rtx",
+      "vendor": "nvidia",
+      "brand": "NVIDIA Titan RTX",
+      "fullName": "NVIDIA Titan RTX",
+      "architecture": "Turing",
+      "chip": "TU102",
+      "launchDate": "2018-12-18",
+      "formFactor": "desktop",
+      "shaders": 4608,
+      "baseClockMHz": 1350,
+      "boostClockMHz": 1770,
+      "vramGB": 24,
+      "vramType": "GDDR6",
+      "memBusBits": 384,
+      "memBandwidthGBs": 672,
+      "fp32TFLOPS": 16.312,
+      "tdpW": 280,
+      "processNm": 12,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": 267,
+      "slotWidth": 2,
+      "powerConnectors": "2x8-pin",
+      "recommendedPsuW": 650,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "maintenance",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-3090-ti",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 3090 Ti",
+      "fullName": "NVIDIA GeForce RTX 3090 Ti",
+      "architecture": "Ampere",
+      "chip": "GA102",
+      "launchDate": "2022-03-29",
+      "formFactor": "desktop",
+      "shaders": 10752,
+      "baseClockMHz": 1560,
+      "boostClockMHz": 1860,
+      "vramGB": 24,
+      "vramType": "GDDR6X",
+      "memBusBits": 384,
+      "memBandwidthGBs": 1008,
+      "fp32TFLOPS": 39.997,
+      "tdpW": 450,
+      "processNm": 8,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": 313,
+      "slotWidth": 3,
+      "powerConnectors": "1x16-pin (12VHPWR)",
+      "recommendedPsuW": 850,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-3090",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 3090",
+      "fullName": "NVIDIA GeForce RTX 3090",
+      "architecture": "Ampere",
+      "chip": "GA102",
+      "launchDate": "2020-09-24",
+      "formFactor": "desktop",
+      "shaders": 10496,
+      "baseClockMHz": 1395,
+      "boostClockMHz": 1695,
+      "vramGB": 24,
+      "vramType": "GDDR6X",
+      "memBusBits": 384,
+      "memBandwidthGBs": 936,
+      "fp32TFLOPS": 35.581,
+      "tdpW": 350,
+      "processNm": 8,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": 313,
+      "slotWidth": 3,
+      "powerConnectors": "2x8-pin",
+      "recommendedPsuW": 750,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-3080-ti",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 3080 Ti",
+      "fullName": "NVIDIA GeForce RTX 3080 Ti",
+      "architecture": "Ampere",
+      "chip": "GA102",
+      "launchDate": "2021-06-03",
+      "formFactor": "desktop",
+      "shaders": 10240,
+      "baseClockMHz": 1365,
+      "boostClockMHz": 1665,
+      "vramGB": 12,
+      "vramType": "GDDR6X",
+      "memBusBits": 384,
+      "memBandwidthGBs": 912,
+      "fp32TFLOPS": 34.099,
+      "tdpW": 350,
+      "processNm": 8,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": 285,
+      "slotWidth": 2,
+      "powerConnectors": "2x8-pin",
+      "recommendedPsuW": 750,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-3080-12gb",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 3080",
+      "variant": "12GB",
+      "fullName": "NVIDIA GeForce RTX 3080 12GB",
+      "architecture": "Ampere",
+      "chip": "GA102",
+      "launchDate": "2022-01-11",
+      "formFactor": "desktop",
+      "shaders": 8960,
+      "baseClockMHz": 1260,
+      "boostClockMHz": 1710,
+      "vramGB": 12,
+      "vramType": "GDDR6X",
+      "memBusBits": 384,
+      "memBandwidthGBs": 912,
+      "fp32TFLOPS": 30.643,
+      "tdpW": 350,
+      "processNm": 8,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "2x8-pin",
+      "recommendedPsuW": 750,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-3080-10gb",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 3080",
+      "variant": "10GB",
+      "fullName": "NVIDIA GeForce RTX 3080 10GB",
+      "architecture": "Ampere",
+      "chip": "GA102",
+      "launchDate": "2020-09-17",
+      "formFactor": "desktop",
+      "shaders": 8704,
+      "baseClockMHz": 1440,
+      "boostClockMHz": 1710,
+      "vramGB": 10,
+      "vramType": "GDDR6X",
+      "memBusBits": 320,
+      "memBandwidthGBs": 760,
+      "fp32TFLOPS": 29.768,
+      "tdpW": 320,
+      "processNm": 8,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": 285,
+      "slotWidth": 2,
+      "powerConnectors": "2x8-pin",
+      "recommendedPsuW": 750,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-3070-ti",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 3070 Ti",
+      "fullName": "NVIDIA GeForce RTX 3070 Ti",
+      "architecture": "Ampere",
+      "chip": "GA104",
+      "launchDate": "2021-06-10",
+      "formFactor": "desktop",
+      "shaders": 6144,
+      "baseClockMHz": 1575,
+      "boostClockMHz": 1770,
+      "vramGB": 8,
+      "vramType": "GDDR6X",
+      "memBusBits": 256,
+      "memBandwidthGBs": 608,
+      "fp32TFLOPS": 21.75,
+      "tdpW": 290,
+      "processNm": 8,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": 242,
+      "slotWidth": 2,
+      "powerConnectors": "2x8-pin",
+      "recommendedPsuW": 750,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-3070",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 3070",
+      "fullName": "NVIDIA GeForce RTX 3070",
+      "architecture": "Ampere",
+      "chip": "GA104",
+      "launchDate": "2020-10-29",
+      "formFactor": "desktop",
+      "shaders": 5888,
+      "baseClockMHz": 1500,
+      "boostClockMHz": 1725,
+      "vramGB": 8,
+      "vramType": "GDDR6",
+      "memBusBits": 256,
+      "memBandwidthGBs": 448,
+      "fp32TFLOPS": 20.314,
+      "tdpW": 220,
+      "processNm": 8,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": 242,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 650,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-3060-ti-gddr6",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 3060 Ti",
+      "variant": "GDDR6",
+      "fullName": "NVIDIA GeForce RTX 3060 Ti GDDR6",
+      "architecture": "Ampere",
+      "chip": "GA104",
+      "launchDate": "2020-12-02",
+      "formFactor": "desktop",
+      "shaders": 4864,
+      "baseClockMHz": 1410,
+      "boostClockMHz": 1665,
+      "vramGB": 8,
+      "vramType": "GDDR6",
+      "memBusBits": 256,
+      "memBandwidthGBs": 448,
+      "fp32TFLOPS": 16.197,
+      "tdpW": 200,
+      "processNm": 8,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": 242,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 600,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-3060-ti-gddr6x",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 3060 Ti",
+      "variant": "GDDR6X",
+      "fullName": "NVIDIA GeForce RTX 3060 Ti GDDR6X",
+      "architecture": "Ampere",
+      "chip": "GA104",
+      "launchDate": "2022-10",
+      "formFactor": "desktop",
+      "shaders": 4864,
+      "baseClockMHz": 1410,
+      "boostClockMHz": 1665,
+      "vramGB": 8,
+      "vramType": "GDDR6X",
+      "memBusBits": 256,
+      "memBandwidthGBs": 608,
+      "fp32TFLOPS": 16.197,
+      "tdpW": 200,
+      "processNm": 8,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 600,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-3060-12gb",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 3060",
+      "variant": "12GB",
+      "fullName": "NVIDIA GeForce RTX 3060 12GB",
+      "architecture": "Ampere",
+      "chip": "GA106",
+      "launchDate": "2021-02-25",
+      "formFactor": "desktop",
+      "shaders": 3584,
+      "baseClockMHz": 1320,
+      "boostClockMHz": 1777,
+      "vramGB": 12,
+      "vramType": "GDDR6",
+      "memBusBits": 192,
+      "memBandwidthGBs": 360,
+      "fp32TFLOPS": 12.738,
+      "tdpW": 170,
+      "processNm": 8,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 550,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-3060-8gb",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 3060",
+      "variant": "8GB",
+      "fullName": "NVIDIA GeForce RTX 3060 8GB",
+      "architecture": "Ampere",
+      "chip": "GA106",
+      "launchDate": "2022-10",
+      "formFactor": "desktop",
+      "shaders": 3584,
+      "baseClockMHz": 1320,
+      "boostClockMHz": 1777,
+      "vramGB": 8,
+      "vramType": "GDDR6",
+      "memBusBits": 128,
+      "memBandwidthGBs": 240,
+      "fp32TFLOPS": 12.738,
+      "tdpW": 170,
+      "processNm": 8,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 550,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-3050-8gb",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 3050",
+      "variant": "8GB",
+      "fullName": "NVIDIA GeForce RTX 3050 8GB",
+      "architecture": "Ampere",
+      "chip": "GA106",
+      "launchDate": "2022-01-27",
+      "formFactor": "desktop",
+      "shaders": 2560,
+      "baseClockMHz": 1552,
+      "boostClockMHz": 1777,
+      "vramGB": 8,
+      "vramType": "GDDR6",
+      "memBusBits": 128,
+      "memBandwidthGBs": 224,
+      "fp32TFLOPS": 9.098,
+      "tdpW": 130,
+      "processNm": 8,
+      "pcieGen": 4,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 550,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-3050-6gb",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 3050",
+      "variant": "6GB",
+      "fullName": "NVIDIA GeForce RTX 3050 6GB",
+      "architecture": "Ampere",
+      "chip": "GA107",
+      "launchDate": "2024-02",
+      "formFactor": "desktop",
+      "shaders": 2304,
+      "baseClockMHz": 1042,
+      "boostClockMHz": 1470,
+      "vramGB": 6,
+      "vramType": "GDDR6",
+      "memBusBits": 96,
+      "memBandwidthGBs": 168,
+      "fp32TFLOPS": 6.774,
+      "tdpW": 70,
+      "processNm": 8,
+      "pcieGen": 4,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "none",
+      "recommendedPsuW": 350,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-4090",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 4090",
+      "fullName": "NVIDIA GeForce RTX 4090",
+      "architecture": "Ada Lovelace",
+      "chip": "AD102",
+      "launchDate": "2022-10-12",
+      "formFactor": "desktop",
+      "shaders": 16384,
+      "baseClockMHz": 2235,
+      "boostClockMHz": 2520,
+      "vramGB": 24,
+      "vramType": "GDDR6X",
+      "memBusBits": 384,
+      "memBandwidthGBs": 1008,
+      "fp32TFLOPS": 82.575,
+      "tdpW": 450,
+      "processNm": 5,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": 304,
+      "slotWidth": 3,
+      "powerConnectors": "1x16-pin (12VHPWR)",
+      "recommendedPsuW": 850,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.4",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-4080-super",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 4080 Super",
+      "fullName": "NVIDIA GeForce RTX 4080 Super",
+      "architecture": "Ada Lovelace",
+      "chip": "AD103",
+      "launchDate": "2024-01-31",
+      "formFactor": "desktop",
+      "shaders": 10240,
+      "baseClockMHz": 2295,
+      "boostClockMHz": 2550,
+      "vramGB": 16,
+      "vramType": "GDDR6X",
+      "memBusBits": 256,
+      "memBandwidthGBs": 736,
+      "fp32TFLOPS": 52.224,
+      "tdpW": 320,
+      "processNm": 5,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": 304,
+      "slotWidth": 3,
+      "powerConnectors": "1x16-pin (12VHPWR)",
+      "recommendedPsuW": 750,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.4",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-4080",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 4080",
+      "fullName": "NVIDIA GeForce RTX 4080",
+      "architecture": "Ada Lovelace",
+      "chip": "AD103",
+      "launchDate": "2022-11-16",
+      "formFactor": "desktop",
+      "shaders": 9728,
+      "baseClockMHz": 2205,
+      "boostClockMHz": 2505,
+      "vramGB": 16,
+      "vramType": "GDDR6X",
+      "memBusBits": 256,
+      "memBandwidthGBs": 716.8,
+      "fp32TFLOPS": 48.737,
+      "tdpW": 320,
+      "processNm": 5,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": 304,
+      "slotWidth": 3,
+      "powerConnectors": "1x16-pin (12VHPWR)",
+      "recommendedPsuW": 750,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.4",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-4070-ti-super",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 4070 Ti Super",
+      "fullName": "NVIDIA GeForce RTX 4070 Ti Super",
+      "architecture": "Ada Lovelace",
+      "chip": "AD103",
+      "launchDate": "2024-01-24",
+      "formFactor": "desktop",
+      "shaders": 8448,
+      "baseClockMHz": 2340,
+      "boostClockMHz": 2610,
+      "vramGB": 16,
+      "vramType": "GDDR6X",
+      "memBusBits": 256,
+      "memBandwidthGBs": 672,
+      "fp32TFLOPS": 44.099,
+      "tdpW": 285,
+      "processNm": 5,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x16-pin (12VHPWR)",
+      "recommendedPsuW": 700,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.4",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-4070-ti",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 4070 Ti",
+      "fullName": "NVIDIA GeForce RTX 4070 Ti",
+      "architecture": "Ada Lovelace",
+      "chip": "AD104",
+      "launchDate": "2023-01-05",
+      "formFactor": "desktop",
+      "shaders": 7680,
+      "baseClockMHz": 2310,
+      "boostClockMHz": 2610,
+      "vramGB": 12,
+      "vramType": "GDDR6X",
+      "memBusBits": 192,
+      "memBandwidthGBs": 504,
+      "fp32TFLOPS": 40.09,
+      "tdpW": 285,
+      "processNm": 5,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x16-pin (12VHPWR)",
+      "recommendedPsuW": 700,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.4",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-4070-super",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 4070 Super",
+      "fullName": "NVIDIA GeForce RTX 4070 Super",
+      "architecture": "Ada Lovelace",
+      "chip": "AD104",
+      "launchDate": "2024-01-17",
+      "formFactor": "desktop",
+      "shaders": 7168,
+      "baseClockMHz": 1980,
+      "boostClockMHz": 2475,
+      "vramGB": 12,
+      "vramType": "GDDR6X",
+      "memBusBits": 192,
+      "memBandwidthGBs": 504,
+      "fp32TFLOPS": 35.482,
+      "tdpW": 220,
+      "processNm": 5,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": 244,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 650,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.4",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-4070",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 4070",
+      "fullName": "NVIDIA GeForce RTX 4070",
+      "architecture": "Ada Lovelace",
+      "chip": "AD104",
+      "launchDate": "2023-04-13",
+      "formFactor": "desktop",
+      "shaders": 5888,
+      "baseClockMHz": 1920,
+      "boostClockMHz": 2475,
+      "vramGB": 12,
+      "vramType": "GDDR6X",
+      "memBusBits": 192,
+      "memBandwidthGBs": 504,
+      "fp32TFLOPS": 29.146,
+      "tdpW": 200,
+      "processNm": 5,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": 244,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 650,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.4",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-4060-ti-16gb",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 4060 Ti",
+      "variant": "16GB",
+      "fullName": "NVIDIA GeForce RTX 4060 Ti 16GB",
+      "architecture": "Ada Lovelace",
+      "chip": "AD106",
+      "launchDate": "2023-07-18",
+      "formFactor": "desktop",
+      "shaders": 4352,
+      "baseClockMHz": 2310,
+      "boostClockMHz": 2535,
+      "vramGB": 16,
+      "vramType": "GDDR6",
+      "memBusBits": 128,
+      "memBandwidthGBs": 288,
+      "fp32TFLOPS": 22.065,
+      "tdpW": 165,
+      "processNm": 5,
+      "pcieGen": 4,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 550,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.4",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-4060-ti-8gb",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 4060 Ti",
+      "variant": "8GB",
+      "fullName": "NVIDIA GeForce RTX 4060 Ti 8GB",
+      "architecture": "Ada Lovelace",
+      "chip": "AD106",
+      "launchDate": "2023-05-24",
+      "formFactor": "desktop",
+      "shaders": 4352,
+      "baseClockMHz": 2310,
+      "boostClockMHz": 2535,
+      "vramGB": 8,
+      "vramType": "GDDR6",
+      "memBusBits": 128,
+      "memBandwidthGBs": 288,
+      "fp32TFLOPS": 22.065,
+      "tdpW": 160,
+      "processNm": 5,
+      "pcieGen": 4,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 550,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.4",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-4060",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 4060",
+      "fullName": "NVIDIA GeForce RTX 4060",
+      "architecture": "Ada Lovelace",
+      "chip": "AD107",
+      "launchDate": "2023-06-29",
+      "formFactor": "desktop",
+      "shaders": 3072,
+      "baseClockMHz": 1830,
+      "boostClockMHz": 2460,
+      "vramGB": 8,
+      "vramType": "GDDR6",
+      "memBusBits": 128,
+      "memBandwidthGBs": 272,
+      "fp32TFLOPS": 15.114,
+      "tdpW": 115,
+      "processNm": 5,
+      "pcieGen": 4,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 550,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.4",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-5090",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 5090",
+      "fullName": "NVIDIA GeForce RTX 5090",
+      "architecture": "Blackwell",
+      "chip": "GB202",
+      "launchDate": "2025-01-30",
+      "formFactor": "desktop",
+      "shaders": 21760,
+      "baseClockMHz": 2017,
+      "boostClockMHz": 2407,
+      "vramGB": 32,
+      "vramType": "GDDR7",
+      "memBusBits": 512,
+      "memBandwidthGBs": 1792,
+      "fp32TFLOPS": 104.753,
+      "tdpW": 575,
+      "processNm": 5,
+      "pcieGen": 5,
+      "pcieLanes": 16,
+      "lengthMm": 304,
+      "slotWidth": 2,
+      "powerConnectors": "1x16-pin (12V-2x6)",
+      "recommendedPsuW": 1000,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.4",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-5080",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 5080",
+      "fullName": "NVIDIA GeForce RTX 5080",
+      "architecture": "Blackwell",
+      "chip": "GB203",
+      "launchDate": "2025-01-30",
+      "formFactor": "desktop",
+      "shaders": 10752,
+      "baseClockMHz": 2295,
+      "boostClockMHz": 2617,
+      "vramGB": 16,
+      "vramType": "GDDR7",
+      "memBusBits": 256,
+      "memBandwidthGBs": 960,
+      "fp32TFLOPS": 56.276,
+      "tdpW": 360,
+      "processNm": 5,
+      "pcieGen": 5,
+      "pcieLanes": 16,
+      "lengthMm": 304,
+      "slotWidth": 2,
+      "powerConnectors": "1x16-pin (12V-2x6)",
+      "recommendedPsuW": 850,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.4",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-5070-ti",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 5070 Ti",
+      "fullName": "NVIDIA GeForce RTX 5070 Ti",
+      "architecture": "Blackwell",
+      "chip": "GB203",
+      "launchDate": "2025-02-20",
+      "formFactor": "desktop",
+      "shaders": 8960,
+      "baseClockMHz": 2295,
+      "boostClockMHz": 2452,
+      "vramGB": 16,
+      "vramType": "GDDR7",
+      "memBusBits": 256,
+      "memBandwidthGBs": 896,
+      "fp32TFLOPS": 43.94,
+      "tdpW": 300,
+      "processNm": 5,
+      "pcieGen": 5,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x16-pin (12V-2x6)",
+      "recommendedPsuW": 750,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.4",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-5070",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 5070",
+      "fullName": "NVIDIA GeForce RTX 5070",
+      "architecture": "Blackwell",
+      "chip": "GB205",
+      "launchDate": "2025-03-05",
+      "formFactor": "desktop",
+      "shaders": 6144,
+      "baseClockMHz": 2325,
+      "boostClockMHz": 2512,
+      "vramGB": 12,
+      "vramType": "GDDR7",
+      "memBusBits": 192,
+      "memBandwidthGBs": 672,
+      "fp32TFLOPS": 30.867,
+      "tdpW": 250,
+      "processNm": 5,
+      "pcieGen": 5,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x16-pin (12V-2x6)",
+      "recommendedPsuW": 650,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.4",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-5060-ti-16gb",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 5060 Ti",
+      "variant": "16GB",
+      "fullName": "NVIDIA GeForce RTX 5060 Ti 16GB",
+      "architecture": "Blackwell",
+      "chip": "GB206",
+      "launchDate": "2025-04-16",
+      "formFactor": "desktop",
+      "shaders": 4608,
+      "baseClockMHz": 2407,
+      "boostClockMHz": 2572,
+      "vramGB": 16,
+      "vramType": "GDDR7",
+      "memBusBits": 128,
+      "memBandwidthGBs": 448,
+      "fp32TFLOPS": 23.704,
+      "tdpW": 180,
+      "processNm": 5,
+      "pcieGen": 5,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 600,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.4",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-5060-ti-8gb",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 5060 Ti",
+      "variant": "8GB",
+      "fullName": "NVIDIA GeForce RTX 5060 Ti 8GB",
+      "architecture": "Blackwell",
+      "chip": "GB206",
+      "launchDate": "2025-04-16",
+      "formFactor": "desktop",
+      "shaders": 4608,
+      "baseClockMHz": 2407,
+      "boostClockMHz": 2572,
+      "vramGB": 8,
+      "vramType": "GDDR7",
+      "memBusBits": 128,
+      "memBandwidthGBs": 448,
+      "fp32TFLOPS": 23.704,
+      "tdpW": 180,
+      "processNm": 5,
+      "pcieGen": 5,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 600,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.4",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-5060",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 5060",
+      "fullName": "NVIDIA GeForce RTX 5060",
+      "architecture": "Blackwell",
+      "chip": "GB206",
+      "launchDate": "2025-05-19",
+      "formFactor": "desktop",
+      "shaders": 3840,
+      "baseClockMHz": 2280,
+      "boostClockMHz": 2497,
+      "vramGB": 8,
+      "vramType": "GDDR7",
+      "memBusBits": 128,
+      "memBandwidthGBs": 448,
+      "fp32TFLOPS": 19.177,
+      "tdpW": 145,
+      "processNm": 5,
+      "pcieGen": 5,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 550,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.4",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nvidia-geforce-rtx-5050",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 5050",
+      "fullName": "NVIDIA GeForce RTX 5050",
+      "architecture": "Blackwell",
+      "chip": "GB207",
+      "launchDate": "2025-07",
+      "formFactor": "desktop",
+      "shaders": 2560,
+      "baseClockMHz": null,
+      "boostClockMHz": 2572,
+      "vramGB": 8,
+      "vramType": "GDDR6",
+      "memBusBits": 128,
+      "memBandwidthGBs": 320,
+      "fp32TFLOPS": 13.169,
+      "tdpW": 130,
+      "processNm": 5,
+      "pcieGen": 5,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 550,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.4",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    }
+  ],
+  "expectedCount": 150,
+  "actualCount": 112,
+  "gaps": [
+    "Dual-GPU flagships (GTX 590, GTX 690, GTX Titan Z) deliberately omitted: one board carries two GPUs, so shaders/memBusBits/vramGB cannot be expressed in this schema without either doubling the shader count (which would make the fitted perf model wildly overestimate them, since AFR scaling is 0-70% and modern titles do not support SLI at all) or halving the marketed VRAM. Better absent than silently wrong.",
+    "OEM-only SKUs omitted for lack of confident specs: GTX 555, GTX 545, GT 545, GT 530, GT 420, GT 405, GTX 460 v2, GTX 645, GTX 660 OEM (1152-core), GTX 760 Ti (OEM), GTX 745, GT 605, GT 635, GT 705, GT 1010.",
+    "Ultra-low-end parts whose marketing name covers multiple different GPUs omitted: GT 630 (GF108 / GK107 / GK208 revisions), GT 620, GT 640 GDDR5 and GK208 revisions, GT 730 GF108 128-bit DDR3 revision. Splitting them correctly needs the PCI-ID tables that are egress-blocked here.",
+    "Regional/market variants omitted: GTX 1060 5GB (China), RTX 4090 D, RTX 5090 D, RTX 4070 GDDR6 (2024 respin), RTX 3050 8GB GA107 115W respin.",
+    "No RTX 50 \"Super\" refresh parts are included. As of this seed I have no reliable shader/clock/VRAM figures for any 2026 Blackwell refresh, and the brief forbids guessing. If such parts shipped, they are missing.",
+    "pciIds is absent on every record - PCI device IDs come from driver INF tables (pci-ids / TechPowerUp), both egress-blocked. The alias resolver gets nothing from this seed.",
+    "lengthMm is null on ~80% of records. Only Founders Edition / reference lengths I am confident of are populated; AIB board length variance is 40-80mm and guessing it would be worse than a null.",
+    "driverEolDate is populated only for Fermi and Kepler. Maxwell/Pascal/Volta moved to legacy after the seed cutoff and I am not confident of the exact branch end date.",
+    "fp32TFLOPS is null on all 17 Fermi records - see uncertainties, the shader hot clock is not representable in this schema.",
+    "AIB-only double-VRAM variants below Kepler are not split out (GTX 460 2GB, GTX 560 Ti 2GB, GTX 650 Ti 2GB, GTX 750 Ti 1GB). Kepler-era splits that Nvidia listed itself (680/670/660 Ti/660/770/780) are included.",
+    "Mobile parts, Quadro/Tesla/workstation parts and all pre-Fermi GeForce (GT200 and older) are out of remit and absent by design."
+  ],
+  "uncertainties": [
+    "FERMI CLOCK DOMAIN: Fermi runs its shader array at 2x the core clock (GTX 580: 772 MHz core / 1544 MHz shader). GpuRecord has no shader-clock field, and the validator computes fp32 from shaders*boostClockMHz*2, which would give exactly half the true figure. I therefore set baseClockMHz = boostClockMHz = core clock (Fermi has no boost algorithm) and left fp32TFLOPS null. True FP32 for reference: GTX 480 1.345, GTX 580 1.581, GTX 570 1.405, GTX 560 Ti 1.263, GTX 460 1GB 0.907 TFLOPS.",
+    "GTX 16 SERIES FEATURE LEVEL: set to dxFeatureLevel 12_2 / shaderModel 6_7 per the brief. Nvidia does not market TU116/TU117 as DirectX 12 Ultimate because they have no RT cores, and the driver reports feature level 12_1. The load-bearing fact is unchanged and correct either way: meshShaders true, rayTracing false - a GTX 1660 does run Alan Wake 2 and does not run an RT-required title.",
+    "GTX 970 vramGB is 4, which is the marketed and physically-present configuration, but the last 512MB runs on a crippled partition at ~28GB/s. Any VRAM-ceiling gate treating it as a flat 4GB will be optimistic by roughly 0.5GB.",
+    "Asymmetric memory configurations reported at peak: GTX 660, GTX 660 Ti, GTX 550 Ti and GTX 1050 3GB do not have uniform bandwidth across the whole framebuffer. memBandwidthGBs is the headline peak figure.",
+    "RTX 5050: boost clock 2572 MHz is moderate confidence and the base clock is null. Shaders (2560), 8GB GDDR6 128-bit, 130W are higher confidence. Of all RTX 50 records this is the one most likely to need correction.",
+    "GT 730 (both variants), GT 720, GT 740 and GT 640: TDP and the base=boost assumption are moderate confidence. These GK107/GK208 parts have no published boost clock, so boostClockMHz repeats the core clock, which makes fp32TFLOPS a ceiling rather than a sustained figure.",
+    "recommendedPsuW is Nvidia's published minimum system power, not a measured transient figure. RTX 30/40/50 parts with large power spikes (3080 Ti, 3090 Ti, 4090) can trip protection on nominally-compliant units.",
+    "powerConnectors describes the Founders Edition / reference design. AIB variants routinely differ (e.g. RTX 3090 FE is 12-pin, AIB cards are 3x8-pin; RTX 5070 AIB cards ship with 1x8-pin).",
+    "caps.vulkanVersion is driver-branch dependent rather than a hardware property. Fermi is null (no confident answer), Kepler is pinned at 1.2 because its driver branch froze before Vulkan 1.3 shipped.",
+    "shaderModel for Kepler and Maxwell 1 is bucketed at 6_0 and for Maxwell 2/Pascal/Volta at 6_5. This follows the brief's coarse mapping; in practice Nvidia's modern driver reports a higher SM level on these parts than their feature support justifies.",
+    "processNm for Ada Lovelace and Blackwell is given as 5 (TSMC 4N and 4NP are 5nm-class nodes, not a distinct 4nm node). Pascal GP107/GP108 are 14 (Samsung) while the rest of Pascal is 16 (TSMC).",
+    "Launch dates for AIB double-VRAM variants (GTX 680 4GB, 670 4GB, 660 3GB, 660 Ti 3GB, 770 4GB, 780 6GB, GTX 960 4GB) are month-granularity approximations of when those configurations reached retail, not Nvidia launch announcements.",
+    "driverEolDate 2019-04 (Fermi) and 2024-09 (Kepler) are the end of extended security-update support at month granularity, not the last Game Ready driver date.",
+    "Titan parts are included although the remit made them optional. The four NVIDIA-branded ones (Titan X Pascal, Titan Xp, Titan V, Titan RTX) use nvidia-titan-* ids since they are not GeForce-branded; GTX Titan / Titan Black / Titan X (Maxwell) use nvidia-geforce-* ids."
+  ]
+}

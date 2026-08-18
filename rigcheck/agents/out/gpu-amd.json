@@ -1,0 +1,4148 @@
+{
+  "agentId": "gpu-amd",
+  "kind": "gpu",
+  "provenance": {
+    "model-knowledge": {
+      "id": "model-knowledge",
+      "source": "Model knowledge (seed)",
+      "url": "",
+      "licence": "n/a",
+      "retrievedAt": "2026-08-16",
+      "note": "Seed pending harvest; Wikipedia and vendor spec sources egress-blocked in this environment."
+    }
+  },
+  "records": [
+    {
+      "id": "amd-radeon-hd-7970-ghz-edition",
+      "vendor": "amd",
+      "brand": "Radeon HD 7970 GHz Edition",
+      "fullName": "AMD Radeon HD 7970 GHz Edition",
+      "architecture": "GCN 1.0",
+      "chip": "Tahiti XT2",
+      "launchDate": "2012-06-22",
+      "formFactor": "desktop",
+      "shaders": 2048,
+      "baseClockMHz": 1000,
+      "boostClockMHz": 1050,
+      "vramGB": 3,
+      "vramType": "GDDR5",
+      "memBusBits": 384,
+      "memBandwidthGBs": 288,
+      "fp32TFLOPS": 4.301,
+      "tdpW": 250,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x8-pin + 1x6-pin",
+      "recommendedPsuW": 550,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_1",
+        "shaderModel": "5_1",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-hd-7970",
+      "vendor": "amd",
+      "brand": "Radeon HD 7970",
+      "fullName": "AMD Radeon HD 7970",
+      "architecture": "GCN 1.0",
+      "chip": "Tahiti XT",
+      "launchDate": "2011-12-22",
+      "formFactor": "desktop",
+      "shaders": 2048,
+      "baseClockMHz": 925,
+      "boostClockMHz": 925,
+      "vramGB": 3,
+      "vramType": "GDDR5",
+      "memBusBits": 384,
+      "memBandwidthGBs": 264,
+      "fp32TFLOPS": 3.789,
+      "tdpW": 250,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x8-pin + 1x6-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_1",
+        "shaderModel": "5_1",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-hd-7950-boost",
+      "vendor": "amd",
+      "brand": "Radeon HD 7950 Boost",
+      "fullName": "AMD Radeon HD 7950 Boost",
+      "architecture": "GCN 1.0",
+      "chip": "Tahiti Pro",
+      "launchDate": "2012-08",
+      "formFactor": "desktop",
+      "shaders": 1792,
+      "baseClockMHz": 850,
+      "boostClockMHz": 925,
+      "vramGB": 3,
+      "vramType": "GDDR5",
+      "memBusBits": 384,
+      "memBandwidthGBs": 240,
+      "fp32TFLOPS": 3.315,
+      "tdpW": 225,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "2x6-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_1",
+        "shaderModel": "5_1",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-hd-7950",
+      "vendor": "amd",
+      "brand": "Radeon HD 7950",
+      "fullName": "AMD Radeon HD 7950",
+      "architecture": "GCN 1.0",
+      "chip": "Tahiti Pro",
+      "launchDate": "2012-01-31",
+      "formFactor": "desktop",
+      "shaders": 1792,
+      "baseClockMHz": 800,
+      "boostClockMHz": 800,
+      "vramGB": 3,
+      "vramType": "GDDR5",
+      "memBusBits": 384,
+      "memBandwidthGBs": 240,
+      "fp32TFLOPS": 2.867,
+      "tdpW": 200,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "2x6-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_1",
+        "shaderModel": "5_1",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-hd-7870-xt",
+      "vendor": "amd",
+      "brand": "Radeon HD 7870 XT",
+      "fullName": "AMD Radeon HD 7870 XT",
+      "architecture": "GCN 1.0",
+      "chip": "Tahiti LE",
+      "launchDate": "2012-11",
+      "formFactor": "desktop",
+      "shaders": 1536,
+      "baseClockMHz": 925,
+      "boostClockMHz": 975,
+      "vramGB": 2,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 192,
+      "fp32TFLOPS": 2.995,
+      "tdpW": 185,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": null,
+      "recommendedPsuW": null,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_1",
+        "shaderModel": "5_1",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-hd-7870-ghz-edition",
+      "vendor": "amd",
+      "brand": "Radeon HD 7870 GHz Edition",
+      "fullName": "AMD Radeon HD 7870 GHz Edition",
+      "architecture": "GCN 1.0",
+      "chip": "Pitcairn XT",
+      "launchDate": "2012-03-05",
+      "formFactor": "desktop",
+      "shaders": 1280,
+      "baseClockMHz": 1000,
+      "boostClockMHz": 1000,
+      "vramGB": 2,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 153.6,
+      "fp32TFLOPS": 2.56,
+      "tdpW": 175,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "2x6-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_1",
+        "shaderModel": "5_1",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-hd-7850-2gb",
+      "vendor": "amd",
+      "brand": "Radeon HD 7850",
+      "variant": "2GB",
+      "fullName": "AMD Radeon HD 7850 2GB",
+      "architecture": "GCN 1.0",
+      "chip": "Pitcairn Pro",
+      "launchDate": "2012-03-05",
+      "formFactor": "desktop",
+      "shaders": 1024,
+      "baseClockMHz": 860,
+      "boostClockMHz": 860,
+      "vramGB": 2,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 153.6,
+      "fp32TFLOPS": 1.761,
+      "tdpW": 130,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": 450,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_1",
+        "shaderModel": "5_1",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-hd-7850-1gb",
+      "vendor": "amd",
+      "brand": "Radeon HD 7850",
+      "variant": "1GB",
+      "fullName": "AMD Radeon HD 7850 1GB",
+      "architecture": "GCN 1.0",
+      "chip": "Pitcairn Pro",
+      "launchDate": null,
+      "formFactor": "desktop",
+      "shaders": 1024,
+      "baseClockMHz": 860,
+      "boostClockMHz": 860,
+      "vramGB": 1,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 153.6,
+      "fp32TFLOPS": 1.761,
+      "tdpW": 130,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": 450,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_1",
+        "shaderModel": "5_1",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-hd-7790-1gb",
+      "vendor": "amd",
+      "brand": "Radeon HD 7790",
+      "variant": "1GB",
+      "fullName": "AMD Radeon HD 7790 1GB",
+      "architecture": "GCN 2.0",
+      "chip": "Bonaire XT",
+      "launchDate": "2013-03-22",
+      "formFactor": "desktop",
+      "shaders": 896,
+      "baseClockMHz": 1000,
+      "boostClockMHz": 1000,
+      "vramGB": 1,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 96,
+      "fp32TFLOPS": 1.792,
+      "tdpW": 85,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": null,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-hd-7790-2gb",
+      "vendor": "amd",
+      "brand": "Radeon HD 7790",
+      "variant": "2GB",
+      "fullName": "AMD Radeon HD 7790 2GB",
+      "architecture": "GCN 2.0",
+      "chip": "Bonaire XT",
+      "launchDate": null,
+      "formFactor": "desktop",
+      "shaders": 896,
+      "baseClockMHz": 1000,
+      "boostClockMHz": 1000,
+      "vramGB": 2,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 96,
+      "fp32TFLOPS": 1.792,
+      "tdpW": 85,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": null,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-hd-7770-ghz-edition-1gb",
+      "vendor": "amd",
+      "brand": "Radeon HD 7770 GHz Edition",
+      "variant": "1GB",
+      "fullName": "AMD Radeon HD 7770 GHz Edition 1GB",
+      "architecture": "GCN 1.0",
+      "chip": "Cape Verde XT",
+      "launchDate": "2012-02-15",
+      "formFactor": "desktop",
+      "shaders": 640,
+      "baseClockMHz": 1000,
+      "boostClockMHz": 1000,
+      "vramGB": 1,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 72,
+      "fp32TFLOPS": 1.28,
+      "tdpW": 80,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": null,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_1",
+        "shaderModel": "5_1",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-hd-7770-ghz-edition-2gb",
+      "vendor": "amd",
+      "brand": "Radeon HD 7770 GHz Edition",
+      "variant": "2GB",
+      "fullName": "AMD Radeon HD 7770 GHz Edition 2GB",
+      "architecture": "GCN 1.0",
+      "chip": "Cape Verde XT",
+      "launchDate": "2012-02-15",
+      "formFactor": "desktop",
+      "shaders": 640,
+      "baseClockMHz": 1000,
+      "boostClockMHz": 1000,
+      "vramGB": 2,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 72,
+      "fp32TFLOPS": 1.28,
+      "tdpW": 80,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": null,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_1",
+        "shaderModel": "5_1",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-hd-7750-1gb",
+      "vendor": "amd",
+      "brand": "Radeon HD 7750",
+      "variant": "1GB",
+      "fullName": "AMD Radeon HD 7750 1GB",
+      "architecture": "GCN 1.0",
+      "chip": "Cape Verde Pro",
+      "launchDate": "2012-02-15",
+      "formFactor": "desktop",
+      "shaders": 512,
+      "baseClockMHz": 800,
+      "boostClockMHz": 800,
+      "vramGB": 1,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 72,
+      "fp32TFLOPS": 0.819,
+      "tdpW": 55,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "none",
+      "recommendedPsuW": null,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_1",
+        "shaderModel": "5_1",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-hd-7750-2gb",
+      "vendor": "amd",
+      "brand": "Radeon HD 7750",
+      "variant": "2GB",
+      "fullName": "AMD Radeon HD 7750 2GB",
+      "architecture": "GCN 1.0",
+      "chip": "Cape Verde Pro",
+      "launchDate": "2012-02-15",
+      "formFactor": "desktop",
+      "shaders": 512,
+      "baseClockMHz": 800,
+      "boostClockMHz": 800,
+      "vramGB": 2,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 72,
+      "fp32TFLOPS": 0.819,
+      "tdpW": 55,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "none",
+      "recommendedPsuW": null,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_1",
+        "shaderModel": "5_1",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-hd-7730",
+      "vendor": "amd",
+      "brand": "Radeon HD 7730",
+      "fullName": "AMD Radeon HD 7730",
+      "architecture": "GCN 1.0",
+      "chip": "Cape Verde LE",
+      "launchDate": "2013-04",
+      "formFactor": "desktop",
+      "shaders": 384,
+      "baseClockMHz": 800,
+      "boostClockMHz": 800,
+      "vramGB": 1,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 72,
+      "fp32TFLOPS": 0.614,
+      "tdpW": 47,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "none",
+      "recommendedPsuW": null,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_1",
+        "shaderModel": "5_1",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r9-290x-4gb",
+      "vendor": "amd",
+      "brand": "Radeon R9 290X",
+      "variant": "4GB",
+      "fullName": "AMD Radeon R9 290X 4GB",
+      "architecture": "GCN 2.0",
+      "chip": "Hawaii XT",
+      "launchDate": "2013-10-24",
+      "formFactor": "desktop",
+      "shaders": 2816,
+      "baseClockMHz": null,
+      "boostClockMHz": 1000,
+      "vramGB": 4,
+      "vramType": "GDDR5",
+      "memBusBits": 512,
+      "memBandwidthGBs": 320,
+      "fp32TFLOPS": 5.632,
+      "tdpW": 290,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x8-pin + 1x6-pin",
+      "recommendedPsuW": 750,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r9-290x-8gb",
+      "vendor": "amd",
+      "brand": "Radeon R9 290X",
+      "variant": "8GB",
+      "fullName": "AMD Radeon R9 290X 8GB",
+      "architecture": "GCN 2.0",
+      "chip": "Hawaii XT",
+      "launchDate": null,
+      "formFactor": "desktop",
+      "shaders": 2816,
+      "baseClockMHz": null,
+      "boostClockMHz": 1000,
+      "vramGB": 8,
+      "vramType": "GDDR5",
+      "memBusBits": 512,
+      "memBandwidthGBs": 320,
+      "fp32TFLOPS": 5.632,
+      "tdpW": 290,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x8-pin + 1x6-pin",
+      "recommendedPsuW": 750,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r9-290",
+      "vendor": "amd",
+      "brand": "Radeon R9 290",
+      "fullName": "AMD Radeon R9 290",
+      "architecture": "GCN 2.0",
+      "chip": "Hawaii Pro",
+      "launchDate": "2013-11-05",
+      "formFactor": "desktop",
+      "shaders": 2560,
+      "baseClockMHz": null,
+      "boostClockMHz": 947,
+      "vramGB": 4,
+      "vramType": "GDDR5",
+      "memBusBits": 512,
+      "memBandwidthGBs": 320,
+      "fp32TFLOPS": 4.849,
+      "tdpW": 275,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x8-pin + 1x6-pin",
+      "recommendedPsuW": 750,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r9-285-2gb",
+      "vendor": "amd",
+      "brand": "Radeon R9 285",
+      "variant": "2GB",
+      "fullName": "AMD Radeon R9 285 2GB",
+      "architecture": "GCN 3.0",
+      "chip": "Tonga Pro",
+      "launchDate": "2014-09-02",
+      "formFactor": "desktop",
+      "shaders": 1792,
+      "baseClockMHz": null,
+      "boostClockMHz": 918,
+      "vramGB": 2,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 176,
+      "fp32TFLOPS": 3.29,
+      "tdpW": 190,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "2x6-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r9-285-4gb",
+      "vendor": "amd",
+      "brand": "Radeon R9 285",
+      "variant": "4GB",
+      "fullName": "AMD Radeon R9 285 4GB",
+      "architecture": "GCN 3.0",
+      "chip": "Tonga Pro",
+      "launchDate": null,
+      "formFactor": "desktop",
+      "shaders": 1792,
+      "baseClockMHz": null,
+      "boostClockMHz": 918,
+      "vramGB": 4,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 176,
+      "fp32TFLOPS": 3.29,
+      "tdpW": 190,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "2x6-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r9-280x",
+      "vendor": "amd",
+      "brand": "Radeon R9 280X",
+      "fullName": "AMD Radeon R9 280X",
+      "architecture": "GCN 1.0",
+      "chip": "Tahiti XTL",
+      "launchDate": "2013-10-08",
+      "formFactor": "desktop",
+      "shaders": 2048,
+      "baseClockMHz": 850,
+      "boostClockMHz": 1000,
+      "vramGB": 3,
+      "vramType": "GDDR5",
+      "memBusBits": 384,
+      "memBandwidthGBs": 288,
+      "fp32TFLOPS": 4.096,
+      "tdpW": 250,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x8-pin + 1x6-pin",
+      "recommendedPsuW": 600,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_1",
+        "shaderModel": "5_1",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r9-280",
+      "vendor": "amd",
+      "brand": "Radeon R9 280",
+      "fullName": "AMD Radeon R9 280",
+      "architecture": "GCN 1.0",
+      "chip": "Tahiti Pro",
+      "launchDate": "2014-03-04",
+      "formFactor": "desktop",
+      "shaders": 1792,
+      "baseClockMHz": 827,
+      "boostClockMHz": 933,
+      "vramGB": 3,
+      "vramType": "GDDR5",
+      "memBusBits": 384,
+      "memBandwidthGBs": 240,
+      "fp32TFLOPS": 3.344,
+      "tdpW": 250,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "2x6-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_1",
+        "shaderModel": "5_1",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r9-270x-2gb",
+      "vendor": "amd",
+      "brand": "Radeon R9 270X",
+      "variant": "2GB",
+      "fullName": "AMD Radeon R9 270X 2GB",
+      "architecture": "GCN 1.0",
+      "chip": "Curacao XT",
+      "launchDate": "2013-10-08",
+      "formFactor": "desktop",
+      "shaders": 1280,
+      "baseClockMHz": 1000,
+      "boostClockMHz": 1050,
+      "vramGB": 2,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 179.2,
+      "fp32TFLOPS": 2.688,
+      "tdpW": 180,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "2x6-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_1",
+        "shaderModel": "5_1",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r9-270x-4gb",
+      "vendor": "amd",
+      "brand": "Radeon R9 270X",
+      "variant": "4GB",
+      "fullName": "AMD Radeon R9 270X 4GB",
+      "architecture": "GCN 1.0",
+      "chip": "Curacao XT",
+      "launchDate": "2013-10-08",
+      "formFactor": "desktop",
+      "shaders": 1280,
+      "baseClockMHz": 1000,
+      "boostClockMHz": 1050,
+      "vramGB": 4,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 179.2,
+      "fp32TFLOPS": 2.688,
+      "tdpW": 180,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "2x6-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_1",
+        "shaderModel": "5_1",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r9-270",
+      "vendor": "amd",
+      "brand": "Radeon R9 270",
+      "fullName": "AMD Radeon R9 270",
+      "architecture": "GCN 1.0",
+      "chip": "Curacao Pro",
+      "launchDate": "2013-11-13",
+      "formFactor": "desktop",
+      "shaders": 1280,
+      "baseClockMHz": 900,
+      "boostClockMHz": 925,
+      "vramGB": 2,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 179.2,
+      "fp32TFLOPS": 2.368,
+      "tdpW": 150,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_1",
+        "shaderModel": "5_1",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r7-265",
+      "vendor": "amd",
+      "brand": "Radeon R7 265",
+      "fullName": "AMD Radeon R7 265",
+      "architecture": "GCN 1.0",
+      "chip": "Curacao Pro",
+      "launchDate": "2014-02-13",
+      "formFactor": "desktop",
+      "shaders": 1024,
+      "baseClockMHz": 900,
+      "boostClockMHz": 925,
+      "vramGB": 2,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 179.2,
+      "fp32TFLOPS": 1.894,
+      "tdpW": 150,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": 450,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_1",
+        "shaderModel": "5_1",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r7-260x-2gb",
+      "vendor": "amd",
+      "brand": "Radeon R7 260X",
+      "variant": "2GB",
+      "fullName": "AMD Radeon R7 260X 2GB",
+      "architecture": "GCN 2.0",
+      "chip": "Bonaire XT",
+      "launchDate": "2013-10-08",
+      "formFactor": "desktop",
+      "shaders": 896,
+      "baseClockMHz": null,
+      "boostClockMHz": 1100,
+      "vramGB": 2,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 104,
+      "fp32TFLOPS": 1.971,
+      "tdpW": 115,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": 450,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r7-260x-1gb",
+      "vendor": "amd",
+      "brand": "Radeon R7 260X",
+      "variant": "1GB",
+      "fullName": "AMD Radeon R7 260X 1GB",
+      "architecture": "GCN 2.0",
+      "chip": "Bonaire XT",
+      "launchDate": "2013-10-08",
+      "formFactor": "desktop",
+      "shaders": 896,
+      "baseClockMHz": null,
+      "boostClockMHz": 1100,
+      "vramGB": 1,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 104,
+      "fp32TFLOPS": 1.971,
+      "tdpW": 115,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": 450,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r7-260",
+      "vendor": "amd",
+      "brand": "Radeon R7 260",
+      "fullName": "AMD Radeon R7 260",
+      "architecture": "GCN 2.0",
+      "chip": "Bonaire Pro",
+      "launchDate": "2013-12-17",
+      "formFactor": "desktop",
+      "shaders": 768,
+      "baseClockMHz": null,
+      "boostClockMHz": 1000,
+      "vramGB": 1,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 96,
+      "fp32TFLOPS": 1.536,
+      "tdpW": 95,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": 400,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r7-250x",
+      "vendor": "amd",
+      "brand": "Radeon R7 250X",
+      "fullName": "AMD Radeon R7 250X",
+      "architecture": "GCN 1.0",
+      "chip": "Cape Verde XT",
+      "launchDate": "2014-02-10",
+      "formFactor": "desktop",
+      "shaders": 640,
+      "baseClockMHz": null,
+      "boostClockMHz": 1000,
+      "vramGB": 1,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 72,
+      "fp32TFLOPS": 1.28,
+      "tdpW": 95,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": null,
+      "recommendedPsuW": 400,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_1",
+        "shaderModel": "5_1",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r7-250",
+      "vendor": "amd",
+      "brand": "Radeon R7 250",
+      "fullName": "AMD Radeon R7 250",
+      "architecture": "GCN 1.0",
+      "chip": "Oland XT",
+      "launchDate": "2013-10-08",
+      "formFactor": "desktop",
+      "shaders": 384,
+      "baseClockMHz": null,
+      "boostClockMHz": 1050,
+      "vramGB": 1,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 73.6,
+      "fp32TFLOPS": 0.806,
+      "tdpW": 65,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "none",
+      "recommendedPsuW": 400,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_1",
+        "shaderModel": "5_1",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r7-240",
+      "vendor": "amd",
+      "brand": "Radeon R7 240",
+      "fullName": "AMD Radeon R7 240",
+      "architecture": "GCN 1.0",
+      "chip": "Oland Pro",
+      "launchDate": "2013-10-08",
+      "formFactor": "desktop",
+      "shaders": 320,
+      "baseClockMHz": null,
+      "boostClockMHz": 780,
+      "vramGB": 2,
+      "vramType": "DDR3",
+      "memBusBits": 128,
+      "memBandwidthGBs": 28.8,
+      "fp32TFLOPS": 0.499,
+      "tdpW": 30,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "none",
+      "recommendedPsuW": null,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_1",
+        "shaderModel": "5_1",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r9-fury-x",
+      "vendor": "amd",
+      "brand": "Radeon R9 Fury X",
+      "fullName": "AMD Radeon R9 Fury X",
+      "architecture": "GCN 3.0",
+      "chip": "Fiji XT",
+      "launchDate": "2015-06-24",
+      "formFactor": "desktop",
+      "shaders": 4096,
+      "baseClockMHz": null,
+      "boostClockMHz": 1050,
+      "vramGB": 4,
+      "vramType": "HBM",
+      "memBusBits": 4096,
+      "memBandwidthGBs": 512,
+      "fp32TFLOPS": 8.602,
+      "tdpW": 275,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "2x8-pin",
+      "recommendedPsuW": 750,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r9-fury",
+      "vendor": "amd",
+      "brand": "Radeon R9 Fury",
+      "fullName": "AMD Radeon R9 Fury",
+      "architecture": "GCN 3.0",
+      "chip": "Fiji Pro",
+      "launchDate": "2015-07-14",
+      "formFactor": "desktop",
+      "shaders": 3584,
+      "baseClockMHz": null,
+      "boostClockMHz": 1000,
+      "vramGB": 4,
+      "vramType": "HBM",
+      "memBusBits": 4096,
+      "memBandwidthGBs": 512,
+      "fp32TFLOPS": 7.168,
+      "tdpW": 275,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "2x8-pin",
+      "recommendedPsuW": 750,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r9-nano",
+      "vendor": "amd",
+      "brand": "Radeon R9 Nano",
+      "fullName": "AMD Radeon R9 Nano",
+      "architecture": "GCN 3.0",
+      "chip": "Fiji XT",
+      "launchDate": "2015-09-10",
+      "formFactor": "desktop",
+      "shaders": 4096,
+      "baseClockMHz": null,
+      "boostClockMHz": 1000,
+      "vramGB": 4,
+      "vramType": "HBM",
+      "memBusBits": 4096,
+      "memBandwidthGBs": 512,
+      "fp32TFLOPS": 8.192,
+      "tdpW": 175,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 450,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r9-390x",
+      "vendor": "amd",
+      "brand": "Radeon R9 390X",
+      "fullName": "AMD Radeon R9 390X",
+      "architecture": "GCN 2.0",
+      "chip": "Grenada XT",
+      "launchDate": "2015-06-18",
+      "formFactor": "desktop",
+      "shaders": 2816,
+      "baseClockMHz": null,
+      "boostClockMHz": 1050,
+      "vramGB": 8,
+      "vramType": "GDDR5",
+      "memBusBits": 512,
+      "memBandwidthGBs": 384,
+      "fp32TFLOPS": 5.914,
+      "tdpW": 275,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x8-pin + 1x6-pin",
+      "recommendedPsuW": 750,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r9-390",
+      "vendor": "amd",
+      "brand": "Radeon R9 390",
+      "fullName": "AMD Radeon R9 390",
+      "architecture": "GCN 2.0",
+      "chip": "Grenada Pro",
+      "launchDate": "2015-06-18",
+      "formFactor": "desktop",
+      "shaders": 2560,
+      "baseClockMHz": null,
+      "boostClockMHz": 1000,
+      "vramGB": 8,
+      "vramType": "GDDR5",
+      "memBusBits": 512,
+      "memBandwidthGBs": 384,
+      "fp32TFLOPS": 5.12,
+      "tdpW": 275,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x8-pin + 1x6-pin",
+      "recommendedPsuW": 750,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r9-380x",
+      "vendor": "amd",
+      "brand": "Radeon R9 380X",
+      "fullName": "AMD Radeon R9 380X",
+      "architecture": "GCN 3.0",
+      "chip": "Antigua XT",
+      "launchDate": "2015-11-19",
+      "formFactor": "desktop",
+      "shaders": 2048,
+      "baseClockMHz": null,
+      "boostClockMHz": 970,
+      "vramGB": 4,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 182.4,
+      "fp32TFLOPS": 3.973,
+      "tdpW": 190,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "2x6-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r9-380-2gb",
+      "vendor": "amd",
+      "brand": "Radeon R9 380",
+      "variant": "2GB",
+      "fullName": "AMD Radeon R9 380 2GB",
+      "architecture": "GCN 3.0",
+      "chip": "Antigua Pro",
+      "launchDate": "2015-06-18",
+      "formFactor": "desktop",
+      "shaders": 1792,
+      "baseClockMHz": null,
+      "boostClockMHz": 970,
+      "vramGB": 2,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 182.4,
+      "fp32TFLOPS": 3.476,
+      "tdpW": 190,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "2x6-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r9-380-4gb",
+      "vendor": "amd",
+      "brand": "Radeon R9 380",
+      "variant": "4GB",
+      "fullName": "AMD Radeon R9 380 4GB",
+      "architecture": "GCN 3.0",
+      "chip": "Antigua Pro",
+      "launchDate": "2015-06-18",
+      "formFactor": "desktop",
+      "shaders": 1792,
+      "baseClockMHz": null,
+      "boostClockMHz": 970,
+      "vramGB": 4,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 182.4,
+      "fp32TFLOPS": 3.476,
+      "tdpW": 190,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "2x6-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r7-370-2gb",
+      "vendor": "amd",
+      "brand": "Radeon R7 370",
+      "variant": "2GB",
+      "fullName": "AMD Radeon R7 370 2GB",
+      "architecture": "GCN 1.0",
+      "chip": "Trinidad Pro",
+      "launchDate": "2015-06-18",
+      "formFactor": "desktop",
+      "shaders": 1024,
+      "baseClockMHz": null,
+      "boostClockMHz": 975,
+      "vramGB": 2,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 179.2,
+      "fp32TFLOPS": 1.997,
+      "tdpW": 110,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": 450,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_1",
+        "shaderModel": "5_1",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r7-370-4gb",
+      "vendor": "amd",
+      "brand": "Radeon R7 370",
+      "variant": "4GB",
+      "fullName": "AMD Radeon R7 370 4GB",
+      "architecture": "GCN 1.0",
+      "chip": "Trinidad Pro",
+      "launchDate": "2015-06-18",
+      "formFactor": "desktop",
+      "shaders": 1024,
+      "baseClockMHz": null,
+      "boostClockMHz": 975,
+      "vramGB": 4,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 179.2,
+      "fp32TFLOPS": 1.997,
+      "tdpW": 110,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": 450,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_1",
+        "shaderModel": "5_1",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r7-360",
+      "vendor": "amd",
+      "brand": "Radeon R7 360",
+      "fullName": "AMD Radeon R7 360",
+      "architecture": "GCN 2.0",
+      "chip": "Tobago Pro",
+      "launchDate": "2015-06-18",
+      "formFactor": "desktop",
+      "shaders": 768,
+      "baseClockMHz": null,
+      "boostClockMHz": 1050,
+      "vramGB": 2,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 104,
+      "fp32TFLOPS": 1.613,
+      "tdpW": 100,
+      "processNm": 28,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": 400,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-480-8gb",
+      "vendor": "amd",
+      "brand": "Radeon RX 480",
+      "variant": "8GB",
+      "fullName": "AMD Radeon RX 480 8GB",
+      "architecture": "GCN 4.0",
+      "chip": "Polaris 10 XT",
+      "launchDate": "2016-06-29",
+      "formFactor": "desktop",
+      "shaders": 2304,
+      "baseClockMHz": 1120,
+      "boostClockMHz": 1266,
+      "vramGB": 8,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 256,
+      "fp32TFLOPS": 5.834,
+      "tdpW": 150,
+      "processNm": 14,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-480-4gb",
+      "vendor": "amd",
+      "brand": "Radeon RX 480",
+      "variant": "4GB",
+      "fullName": "AMD Radeon RX 480 4GB",
+      "architecture": "GCN 4.0",
+      "chip": "Polaris 10 XT",
+      "launchDate": "2016-06-29",
+      "formFactor": "desktop",
+      "shaders": 2304,
+      "baseClockMHz": 1120,
+      "boostClockMHz": 1266,
+      "vramGB": 4,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 224,
+      "fp32TFLOPS": 5.834,
+      "tdpW": 150,
+      "processNm": 14,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-470-4gb",
+      "vendor": "amd",
+      "brand": "Radeon RX 470",
+      "variant": "4GB",
+      "fullName": "AMD Radeon RX 470 4GB",
+      "architecture": "GCN 4.0",
+      "chip": "Polaris 10 Pro",
+      "launchDate": "2016-08-04",
+      "formFactor": "desktop",
+      "shaders": 2048,
+      "baseClockMHz": 926,
+      "boostClockMHz": 1206,
+      "vramGB": 4,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 211.2,
+      "fp32TFLOPS": 4.94,
+      "tdpW": 120,
+      "processNm": 14,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": 450,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-470-8gb",
+      "vendor": "amd",
+      "brand": "Radeon RX 470",
+      "variant": "8GB",
+      "fullName": "AMD Radeon RX 470 8GB",
+      "architecture": "GCN 4.0",
+      "chip": "Polaris 10 Pro",
+      "launchDate": "2016-08-04",
+      "formFactor": "desktop",
+      "shaders": 2048,
+      "baseClockMHz": 926,
+      "boostClockMHz": 1206,
+      "vramGB": 8,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 211.2,
+      "fp32TFLOPS": 4.94,
+      "tdpW": 120,
+      "processNm": 14,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": 450,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-460-2gb",
+      "vendor": "amd",
+      "brand": "Radeon RX 460",
+      "variant": "2GB",
+      "fullName": "AMD Radeon RX 460 2GB",
+      "architecture": "GCN 4.0",
+      "chip": "Polaris 11 Pro",
+      "launchDate": "2016-08-08",
+      "formFactor": "desktop",
+      "shaders": 896,
+      "baseClockMHz": 1090,
+      "boostClockMHz": 1200,
+      "vramGB": 2,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 112,
+      "fp32TFLOPS": 2.15,
+      "tdpW": 75,
+      "processNm": 14,
+      "pcieGen": 3,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "none",
+      "recommendedPsuW": 350,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-460-4gb",
+      "vendor": "amd",
+      "brand": "Radeon RX 460",
+      "variant": "4GB",
+      "fullName": "AMD Radeon RX 460 4GB",
+      "architecture": "GCN 4.0",
+      "chip": "Polaris 11 Pro",
+      "launchDate": "2016-08-08",
+      "formFactor": "desktop",
+      "shaders": 896,
+      "baseClockMHz": 1090,
+      "boostClockMHz": 1200,
+      "vramGB": 4,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 112,
+      "fp32TFLOPS": 2.15,
+      "tdpW": 75,
+      "processNm": 14,
+      "pcieGen": 3,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "none",
+      "recommendedPsuW": 350,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-580-8gb",
+      "vendor": "amd",
+      "brand": "Radeon RX 580",
+      "variant": "8GB",
+      "fullName": "AMD Radeon RX 580 8GB",
+      "architecture": "GCN 4.0",
+      "chip": "Polaris 20 XTX",
+      "launchDate": "2017-04-18",
+      "formFactor": "desktop",
+      "shaders": 2304,
+      "baseClockMHz": 1257,
+      "boostClockMHz": 1340,
+      "vramGB": 8,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 256,
+      "fp32TFLOPS": 6.175,
+      "tdpW": 185,
+      "processNm": 14,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-580-4gb",
+      "vendor": "amd",
+      "brand": "Radeon RX 580",
+      "variant": "4GB",
+      "fullName": "AMD Radeon RX 580 4GB",
+      "architecture": "GCN 4.0",
+      "chip": "Polaris 20 XTX",
+      "launchDate": "2017-04-18",
+      "formFactor": "desktop",
+      "shaders": 2304,
+      "baseClockMHz": 1257,
+      "boostClockMHz": 1340,
+      "vramGB": 4,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 224,
+      "fp32TFLOPS": 6.175,
+      "tdpW": 185,
+      "processNm": 14,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-570-4gb",
+      "vendor": "amd",
+      "brand": "Radeon RX 570",
+      "variant": "4GB",
+      "fullName": "AMD Radeon RX 570 4GB",
+      "architecture": "GCN 4.0",
+      "chip": "Polaris 20 XL",
+      "launchDate": "2017-04-18",
+      "formFactor": "desktop",
+      "shaders": 2048,
+      "baseClockMHz": 1168,
+      "boostClockMHz": 1244,
+      "vramGB": 4,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 224,
+      "fp32TFLOPS": 5.095,
+      "tdpW": 150,
+      "processNm": 14,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 450,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-570-8gb",
+      "vendor": "amd",
+      "brand": "Radeon RX 570",
+      "variant": "8GB",
+      "fullName": "AMD Radeon RX 570 8GB",
+      "architecture": "GCN 4.0",
+      "chip": "Polaris 20 XL",
+      "launchDate": "2017-04-18",
+      "formFactor": "desktop",
+      "shaders": 2048,
+      "baseClockMHz": 1168,
+      "boostClockMHz": 1244,
+      "vramGB": 8,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 224,
+      "fp32TFLOPS": 5.095,
+      "tdpW": 150,
+      "processNm": 14,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 450,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-560-4gb",
+      "vendor": "amd",
+      "brand": "Radeon RX 560",
+      "variant": "4GB",
+      "fullName": "AMD Radeon RX 560 4GB",
+      "architecture": "GCN 4.0",
+      "chip": "Polaris 21 XT",
+      "launchDate": "2017-05",
+      "formFactor": "desktop",
+      "shaders": 1024,
+      "baseClockMHz": 1175,
+      "boostClockMHz": 1275,
+      "vramGB": 4,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 112,
+      "fp32TFLOPS": 2.611,
+      "tdpW": 80,
+      "processNm": 14,
+      "pcieGen": 3,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "none",
+      "recommendedPsuW": 400,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-560-2gb",
+      "vendor": "amd",
+      "brand": "Radeon RX 560",
+      "variant": "2GB",
+      "fullName": "AMD Radeon RX 560 2GB",
+      "architecture": "GCN 4.0",
+      "chip": "Polaris 21 XT",
+      "launchDate": "2017-05",
+      "formFactor": "desktop",
+      "shaders": 1024,
+      "baseClockMHz": 1175,
+      "boostClockMHz": 1275,
+      "vramGB": 2,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 112,
+      "fp32TFLOPS": 2.611,
+      "tdpW": 80,
+      "processNm": 14,
+      "pcieGen": 3,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "none",
+      "recommendedPsuW": 400,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-550-4gb",
+      "vendor": "amd",
+      "brand": "Radeon RX 550",
+      "variant": "4GB",
+      "fullName": "AMD Radeon RX 550 4GB",
+      "architecture": "GCN 4.0",
+      "chip": "Polaris 12",
+      "launchDate": "2017-04-20",
+      "formFactor": "desktop",
+      "shaders": 512,
+      "baseClockMHz": 1100,
+      "boostClockMHz": 1183,
+      "vramGB": 4,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 112,
+      "fp32TFLOPS": 1.211,
+      "tdpW": 50,
+      "processNm": 14,
+      "pcieGen": 3,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "none",
+      "recommendedPsuW": null,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-550-2gb",
+      "vendor": "amd",
+      "brand": "Radeon RX 550",
+      "variant": "2GB",
+      "fullName": "AMD Radeon RX 550 2GB",
+      "architecture": "GCN 4.0",
+      "chip": "Polaris 12",
+      "launchDate": "2017-04-20",
+      "formFactor": "desktop",
+      "shaders": 512,
+      "baseClockMHz": 1100,
+      "boostClockMHz": 1183,
+      "vramGB": 2,
+      "vramType": "GDDR5",
+      "memBusBits": 128,
+      "memBandwidthGBs": 112,
+      "fp32TFLOPS": 1.211,
+      "tdpW": 50,
+      "processNm": 14,
+      "pcieGen": 3,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "none",
+      "recommendedPsuW": null,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-590",
+      "vendor": "amd",
+      "brand": "Radeon RX 590",
+      "fullName": "AMD Radeon RX 590",
+      "architecture": "GCN 4.0",
+      "chip": "Polaris 30 XT",
+      "launchDate": "2018-11-15",
+      "formFactor": "desktop",
+      "shaders": 2304,
+      "baseClockMHz": 1469,
+      "boostClockMHz": 1545,
+      "vramGB": 8,
+      "vramType": "GDDR5",
+      "memBusBits": 256,
+      "memBandwidthGBs": 256,
+      "fp32TFLOPS": 7.119,
+      "tdpW": 175,
+      "processNm": 12,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x8-pin + 1x6-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-vega-56",
+      "vendor": "amd",
+      "brand": "Radeon RX Vega 56",
+      "fullName": "AMD Radeon RX Vega 56",
+      "architecture": "GCN 5.0",
+      "chip": "Vega 10 XL",
+      "launchDate": "2017-08-14",
+      "formFactor": "desktop",
+      "shaders": 3584,
+      "baseClockMHz": 1156,
+      "boostClockMHz": 1471,
+      "vramGB": 8,
+      "vramType": "HBM2",
+      "memBusBits": 2048,
+      "memBandwidthGBs": 409.6,
+      "fp32TFLOPS": 10.544,
+      "tdpW": 210,
+      "processNm": 14,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "2x8-pin",
+      "recommendedPsuW": 650,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-vega-64",
+      "vendor": "amd",
+      "brand": "Radeon RX Vega 64",
+      "variant": "Air Cooled",
+      "fullName": "AMD Radeon RX Vega 64 Air Cooled",
+      "architecture": "GCN 5.0",
+      "chip": "Vega 10 XT",
+      "launchDate": "2017-08-14",
+      "formFactor": "desktop",
+      "shaders": 4096,
+      "baseClockMHz": 1247,
+      "boostClockMHz": 1546,
+      "vramGB": 8,
+      "vramType": "HBM2",
+      "memBusBits": 2048,
+      "memBandwidthGBs": 483.8,
+      "fp32TFLOPS": 12.665,
+      "tdpW": 295,
+      "processNm": 14,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "2x8-pin",
+      "recommendedPsuW": 750,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-vega-64-liquid",
+      "vendor": "amd",
+      "brand": "Radeon RX Vega 64",
+      "variant": "Liquid Cooled",
+      "fullName": "AMD Radeon RX Vega 64 Liquid Cooled",
+      "architecture": "GCN 5.0",
+      "chip": "Vega 10 XT",
+      "launchDate": "2017-08-14",
+      "formFactor": "desktop",
+      "shaders": 4096,
+      "baseClockMHz": 1406,
+      "boostClockMHz": 1677,
+      "vramGB": 8,
+      "vramType": "HBM2",
+      "memBusBits": 2048,
+      "memBandwidthGBs": 483.8,
+      "fp32TFLOPS": 13.738,
+      "tdpW": 345,
+      "processNm": 14,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "2x8-pin",
+      "recommendedPsuW": 850,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-radeon-vii",
+      "vendor": "amd",
+      "brand": "Radeon VII",
+      "fullName": "AMD Radeon VII",
+      "architecture": "GCN 5.0",
+      "chip": "Vega 20",
+      "launchDate": "2019-02-07",
+      "formFactor": "desktop",
+      "shaders": 3840,
+      "baseClockMHz": 1400,
+      "boostClockMHz": 1750,
+      "vramGB": 16,
+      "vramType": "HBM2",
+      "memBusBits": 4096,
+      "memBandwidthGBs": 1024,
+      "fp32TFLOPS": 13.44,
+      "tdpW": 300,
+      "processNm": 7,
+      "pcieGen": 3,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "2x8-pin",
+      "recommendedPsuW": 750,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-5700-xt",
+      "vendor": "amd",
+      "brand": "Radeon RX 5700 XT",
+      "fullName": "AMD Radeon RX 5700 XT",
+      "architecture": "RDNA 1",
+      "chip": "Navi 10 XT",
+      "launchDate": "2019-07-07",
+      "formFactor": "desktop",
+      "shaders": 2560,
+      "baseClockMHz": 1605,
+      "boostClockMHz": 1905,
+      "vramGB": 8,
+      "vramType": "GDDR6",
+      "memBusBits": 256,
+      "memBandwidthGBs": 448,
+      "fp32TFLOPS": 9.754,
+      "tdpW": 225,
+      "processNm": 7,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x8-pin + 1x6-pin",
+      "recommendedPsuW": 600,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "maintenance",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-5700",
+      "vendor": "amd",
+      "brand": "Radeon RX 5700",
+      "fullName": "AMD Radeon RX 5700",
+      "architecture": "RDNA 1",
+      "chip": "Navi 10 XL",
+      "launchDate": "2019-07-07",
+      "formFactor": "desktop",
+      "shaders": 2304,
+      "baseClockMHz": 1465,
+      "boostClockMHz": 1725,
+      "vramGB": 8,
+      "vramType": "GDDR6",
+      "memBusBits": 256,
+      "memBandwidthGBs": 448,
+      "fp32TFLOPS": 7.949,
+      "tdpW": 180,
+      "processNm": 7,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x8-pin + 1x6-pin",
+      "recommendedPsuW": 550,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "maintenance",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-5600-xt",
+      "vendor": "amd",
+      "brand": "Radeon RX 5600 XT",
+      "fullName": "AMD Radeon RX 5600 XT",
+      "architecture": "RDNA 1",
+      "chip": "Navi 10 XLE",
+      "launchDate": "2020-01-21",
+      "formFactor": "desktop",
+      "shaders": 2304,
+      "baseClockMHz": null,
+      "boostClockMHz": 1750,
+      "vramGB": 6,
+      "vramType": "GDDR6",
+      "memBusBits": 192,
+      "memBandwidthGBs": 336,
+      "fp32TFLOPS": 8.064,
+      "tdpW": 150,
+      "processNm": 7,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "maintenance",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-5500-xt-8gb",
+      "vendor": "amd",
+      "brand": "Radeon RX 5500 XT",
+      "variant": "8GB",
+      "fullName": "AMD Radeon RX 5500 XT 8GB",
+      "architecture": "RDNA 1",
+      "chip": "Navi 14 XTX",
+      "launchDate": "2019-12-12",
+      "formFactor": "desktop",
+      "shaders": 1408,
+      "baseClockMHz": 1607,
+      "boostClockMHz": 1845,
+      "vramGB": 8,
+      "vramType": "GDDR6",
+      "memBusBits": 128,
+      "memBandwidthGBs": 224,
+      "fp32TFLOPS": 5.196,
+      "tdpW": 130,
+      "processNm": 7,
+      "pcieGen": 4,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 450,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "maintenance",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-5500-xt-4gb",
+      "vendor": "amd",
+      "brand": "Radeon RX 5500 XT",
+      "variant": "4GB",
+      "fullName": "AMD Radeon RX 5500 XT 4GB",
+      "architecture": "RDNA 1",
+      "chip": "Navi 14 XTX",
+      "launchDate": "2019-12-12",
+      "formFactor": "desktop",
+      "shaders": 1408,
+      "baseClockMHz": 1607,
+      "boostClockMHz": 1845,
+      "vramGB": 4,
+      "vramType": "GDDR6",
+      "memBusBits": 128,
+      "memBandwidthGBs": 224,
+      "fp32TFLOPS": 5.196,
+      "tdpW": 130,
+      "processNm": 7,
+      "pcieGen": 4,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 450,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "maintenance",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-6950-xt",
+      "vendor": "amd",
+      "brand": "Radeon RX 6950 XT",
+      "fullName": "AMD Radeon RX 6950 XT",
+      "architecture": "RDNA 2",
+      "chip": "Navi 21 KXTX",
+      "launchDate": "2022-05-10",
+      "formFactor": "desktop",
+      "shaders": 5120,
+      "baseClockMHz": null,
+      "boostClockMHz": 2310,
+      "vramGB": 16,
+      "vramType": "GDDR6",
+      "memBusBits": 256,
+      "memBandwidthGBs": 576,
+      "fp32TFLOPS": 23.654,
+      "tdpW": 335,
+      "processNm": 7,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "2x8-pin",
+      "recommendedPsuW": 850,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-6900-xt",
+      "vendor": "amd",
+      "brand": "Radeon RX 6900 XT",
+      "fullName": "AMD Radeon RX 6900 XT",
+      "architecture": "RDNA 2",
+      "chip": "Navi 21 XTX",
+      "launchDate": "2020-12-08",
+      "formFactor": "desktop",
+      "shaders": 5120,
+      "baseClockMHz": 1825,
+      "boostClockMHz": 2250,
+      "vramGB": 16,
+      "vramType": "GDDR6",
+      "memBusBits": 256,
+      "memBandwidthGBs": 512,
+      "fp32TFLOPS": 23.04,
+      "tdpW": 300,
+      "processNm": 7,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "2x8-pin",
+      "recommendedPsuW": 850,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-6800-xt",
+      "vendor": "amd",
+      "brand": "Radeon RX 6800 XT",
+      "fullName": "AMD Radeon RX 6800 XT",
+      "architecture": "RDNA 2",
+      "chip": "Navi 21 XT",
+      "launchDate": "2020-11-18",
+      "formFactor": "desktop",
+      "shaders": 4608,
+      "baseClockMHz": 1825,
+      "boostClockMHz": 2250,
+      "vramGB": 16,
+      "vramType": "GDDR6",
+      "memBusBits": 256,
+      "memBandwidthGBs": 512,
+      "fp32TFLOPS": 20.736,
+      "tdpW": 300,
+      "processNm": 7,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "2x8-pin",
+      "recommendedPsuW": 750,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-6800",
+      "vendor": "amd",
+      "brand": "Radeon RX 6800",
+      "fullName": "AMD Radeon RX 6800",
+      "architecture": "RDNA 2",
+      "chip": "Navi 21 XL",
+      "launchDate": "2020-11-18",
+      "formFactor": "desktop",
+      "shaders": 3840,
+      "baseClockMHz": 1700,
+      "boostClockMHz": 2105,
+      "vramGB": 16,
+      "vramType": "GDDR6",
+      "memBusBits": 256,
+      "memBandwidthGBs": 512,
+      "fp32TFLOPS": 16.166,
+      "tdpW": 250,
+      "processNm": 7,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "2x8-pin",
+      "recommendedPsuW": 650,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-6750-xt",
+      "vendor": "amd",
+      "brand": "Radeon RX 6750 XT",
+      "fullName": "AMD Radeon RX 6750 XT",
+      "architecture": "RDNA 2",
+      "chip": "Navi 22 KXT",
+      "launchDate": "2022-05-10",
+      "formFactor": "desktop",
+      "shaders": 2560,
+      "baseClockMHz": null,
+      "boostClockMHz": 2600,
+      "vramGB": 12,
+      "vramType": "GDDR6",
+      "memBusBits": 192,
+      "memBandwidthGBs": 432,
+      "fp32TFLOPS": 13.312,
+      "tdpW": 250,
+      "processNm": 7,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x8-pin + 1x6-pin",
+      "recommendedPsuW": 650,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-6700-xt",
+      "vendor": "amd",
+      "brand": "Radeon RX 6700 XT",
+      "fullName": "AMD Radeon RX 6700 XT",
+      "architecture": "RDNA 2",
+      "chip": "Navi 22 XT",
+      "launchDate": "2021-03-18",
+      "formFactor": "desktop",
+      "shaders": 2560,
+      "baseClockMHz": 2321,
+      "boostClockMHz": 2581,
+      "vramGB": 12,
+      "vramType": "GDDR6",
+      "memBusBits": 192,
+      "memBandwidthGBs": 384,
+      "fp32TFLOPS": 13.215,
+      "tdpW": 230,
+      "processNm": 7,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x8-pin + 1x6-pin",
+      "recommendedPsuW": 650,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-6700",
+      "vendor": "amd",
+      "brand": "Radeon RX 6700",
+      "fullName": "AMD Radeon RX 6700",
+      "architecture": "RDNA 2",
+      "chip": "Navi 22 XL",
+      "launchDate": null,
+      "formFactor": "desktop",
+      "shaders": 2304,
+      "baseClockMHz": null,
+      "boostClockMHz": 2450,
+      "vramGB": 10,
+      "vramType": "GDDR6",
+      "memBusBits": 160,
+      "memBandwidthGBs": 320,
+      "fp32TFLOPS": 11.29,
+      "tdpW": 175,
+      "processNm": 7,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": null,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-6650-xt",
+      "vendor": "amd",
+      "brand": "Radeon RX 6650 XT",
+      "fullName": "AMD Radeon RX 6650 XT",
+      "architecture": "RDNA 2",
+      "chip": "Navi 23 KXT",
+      "launchDate": "2022-05-10",
+      "formFactor": "desktop",
+      "shaders": 2048,
+      "baseClockMHz": null,
+      "boostClockMHz": 2635,
+      "vramGB": 8,
+      "vramType": "GDDR6",
+      "memBusBits": 128,
+      "memBandwidthGBs": 280,
+      "fp32TFLOPS": 10.793,
+      "tdpW": 180,
+      "processNm": 7,
+      "pcieGen": 4,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-6600-xt",
+      "vendor": "amd",
+      "brand": "Radeon RX 6600 XT",
+      "fullName": "AMD Radeon RX 6600 XT",
+      "architecture": "RDNA 2",
+      "chip": "Navi 23 XT",
+      "launchDate": "2021-08-11",
+      "formFactor": "desktop",
+      "shaders": 2048,
+      "baseClockMHz": 1968,
+      "boostClockMHz": 2589,
+      "vramGB": 8,
+      "vramType": "GDDR6",
+      "memBusBits": 128,
+      "memBandwidthGBs": 256,
+      "fp32TFLOPS": 10.605,
+      "tdpW": 160,
+      "processNm": 7,
+      "pcieGen": 4,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-6600",
+      "vendor": "amd",
+      "brand": "Radeon RX 6600",
+      "fullName": "AMD Radeon RX 6600",
+      "architecture": "RDNA 2",
+      "chip": "Navi 23 XL",
+      "launchDate": "2021-10-13",
+      "formFactor": "desktop",
+      "shaders": 1792,
+      "baseClockMHz": 1626,
+      "boostClockMHz": 2491,
+      "vramGB": 8,
+      "vramType": "GDDR6",
+      "memBusBits": 128,
+      "memBandwidthGBs": 224,
+      "fp32TFLOPS": 8.928,
+      "tdpW": 132,
+      "processNm": 7,
+      "pcieGen": 4,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 450,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-6500-xt-4gb",
+      "vendor": "amd",
+      "brand": "Radeon RX 6500 XT",
+      "variant": "4GB",
+      "fullName": "AMD Radeon RX 6500 XT 4GB",
+      "architecture": "RDNA 2",
+      "chip": "Navi 24 XT",
+      "launchDate": "2022-01-19",
+      "formFactor": "desktop",
+      "shaders": 1024,
+      "baseClockMHz": 2310,
+      "boostClockMHz": 2815,
+      "vramGB": 4,
+      "vramType": "GDDR6",
+      "memBusBits": 64,
+      "memBandwidthGBs": 144,
+      "fp32TFLOPS": 5.765,
+      "tdpW": 107,
+      "processNm": 6,
+      "pcieGen": 4,
+      "pcieLanes": 4,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": 400,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-6500-xt-8gb",
+      "vendor": "amd",
+      "brand": "Radeon RX 6500 XT",
+      "variant": "8GB",
+      "fullName": "AMD Radeon RX 6500 XT 8GB",
+      "architecture": "RDNA 2",
+      "chip": "Navi 24 XT",
+      "launchDate": null,
+      "formFactor": "desktop",
+      "shaders": 1024,
+      "baseClockMHz": 2310,
+      "boostClockMHz": 2815,
+      "vramGB": 8,
+      "vramType": "GDDR6",
+      "memBusBits": 64,
+      "memBandwidthGBs": 144,
+      "fp32TFLOPS": 5.765,
+      "tdpW": 107,
+      "processNm": 6,
+      "pcieGen": 4,
+      "pcieLanes": 4,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x6-pin",
+      "recommendedPsuW": 400,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-6400",
+      "vendor": "amd",
+      "brand": "Radeon RX 6400",
+      "fullName": "AMD Radeon RX 6400",
+      "architecture": "RDNA 2",
+      "chip": "Navi 24 XL",
+      "launchDate": "2022-04-20",
+      "formFactor": "desktop",
+      "shaders": 768,
+      "baseClockMHz": 1923,
+      "boostClockMHz": 2321,
+      "vramGB": 4,
+      "vramType": "GDDR6",
+      "memBusBits": 64,
+      "memBandwidthGBs": 128,
+      "fp32TFLOPS": 3.565,
+      "tdpW": 53,
+      "processNm": 6,
+      "pcieGen": 4,
+      "pcieLanes": 4,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "none",
+      "recommendedPsuW": 350,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-7900-xtx",
+      "vendor": "amd",
+      "brand": "Radeon RX 7900 XTX",
+      "fullName": "AMD Radeon RX 7900 XTX",
+      "architecture": "RDNA 3",
+      "chip": "Navi 31 XTX",
+      "launchDate": "2022-12-13",
+      "formFactor": "desktop",
+      "shaders": 6144,
+      "baseClockMHz": null,
+      "boostClockMHz": 2500,
+      "vramGB": 24,
+      "vramType": "GDDR6",
+      "memBusBits": 384,
+      "memBandwidthGBs": 960,
+      "fp32TFLOPS": 30.72,
+      "tdpW": 355,
+      "processNm": 5,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "2x8-pin",
+      "recommendedPsuW": 800,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-7900-xt",
+      "vendor": "amd",
+      "brand": "Radeon RX 7900 XT",
+      "fullName": "AMD Radeon RX 7900 XT",
+      "architecture": "RDNA 3",
+      "chip": "Navi 31 XT",
+      "launchDate": "2022-12-13",
+      "formFactor": "desktop",
+      "shaders": 5376,
+      "baseClockMHz": null,
+      "boostClockMHz": 2400,
+      "vramGB": 20,
+      "vramType": "GDDR6",
+      "memBusBits": 320,
+      "memBandwidthGBs": 800,
+      "fp32TFLOPS": 25.805,
+      "tdpW": 315,
+      "processNm": 5,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "2x8-pin",
+      "recommendedPsuW": 750,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-7900-gre",
+      "vendor": "amd",
+      "brand": "Radeon RX 7900 GRE",
+      "fullName": "AMD Radeon RX 7900 GRE",
+      "architecture": "RDNA 3",
+      "chip": "Navi 31 XL",
+      "launchDate": "2023-07-27",
+      "formFactor": "desktop",
+      "shaders": 5120,
+      "baseClockMHz": null,
+      "boostClockMHz": 2245,
+      "vramGB": 16,
+      "vramType": "GDDR6",
+      "memBusBits": 256,
+      "memBandwidthGBs": 576,
+      "fp32TFLOPS": 22.989,
+      "tdpW": 260,
+      "processNm": 5,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "2x8-pin",
+      "recommendedPsuW": 700,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-7800-xt",
+      "vendor": "amd",
+      "brand": "Radeon RX 7800 XT",
+      "fullName": "AMD Radeon RX 7800 XT",
+      "architecture": "RDNA 3",
+      "chip": "Navi 32 XT",
+      "launchDate": "2023-09-06",
+      "formFactor": "desktop",
+      "shaders": 3840,
+      "baseClockMHz": null,
+      "boostClockMHz": 2430,
+      "vramGB": 16,
+      "vramType": "GDDR6",
+      "memBusBits": 256,
+      "memBandwidthGBs": 624,
+      "fp32TFLOPS": 18.662,
+      "tdpW": 263,
+      "processNm": 5,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "2x8-pin",
+      "recommendedPsuW": 700,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-7700-xt",
+      "vendor": "amd",
+      "brand": "Radeon RX 7700 XT",
+      "fullName": "AMD Radeon RX 7700 XT",
+      "architecture": "RDNA 3",
+      "chip": "Navi 32 XL",
+      "launchDate": "2023-09-06",
+      "formFactor": "desktop",
+      "shaders": 3456,
+      "baseClockMHz": null,
+      "boostClockMHz": 2544,
+      "vramGB": 12,
+      "vramType": "GDDR6",
+      "memBusBits": 192,
+      "memBandwidthGBs": 432,
+      "fp32TFLOPS": 17.584,
+      "tdpW": 245,
+      "processNm": 5,
+      "pcieGen": 4,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "2x8-pin",
+      "recommendedPsuW": 700,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-7600-xt",
+      "vendor": "amd",
+      "brand": "Radeon RX 7600 XT",
+      "fullName": "AMD Radeon RX 7600 XT",
+      "architecture": "RDNA 3",
+      "chip": "Navi 33 XT",
+      "launchDate": "2024-01-24",
+      "formFactor": "desktop",
+      "shaders": 2048,
+      "baseClockMHz": null,
+      "boostClockMHz": 2755,
+      "vramGB": 16,
+      "vramType": "GDDR6",
+      "memBusBits": 128,
+      "memBandwidthGBs": 288,
+      "fp32TFLOPS": 11.284,
+      "tdpW": 190,
+      "processNm": 6,
+      "pcieGen": 4,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 600,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-7600",
+      "vendor": "amd",
+      "brand": "Radeon RX 7600",
+      "fullName": "AMD Radeon RX 7600",
+      "architecture": "RDNA 3",
+      "chip": "Navi 33 XL",
+      "launchDate": "2023-05-25",
+      "formFactor": "desktop",
+      "shaders": 2048,
+      "baseClockMHz": null,
+      "boostClockMHz": 2655,
+      "vramGB": 8,
+      "vramType": "GDDR6",
+      "memBusBits": 128,
+      "memBandwidthGBs": 288,
+      "fp32TFLOPS": 10.875,
+      "tdpW": 165,
+      "processNm": 6,
+      "pcieGen": 4,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 550,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-9070-xt",
+      "vendor": "amd",
+      "brand": "Radeon RX 9070 XT",
+      "fullName": "AMD Radeon RX 9070 XT",
+      "architecture": "RDNA 4",
+      "chip": "Navi 48 XT",
+      "launchDate": "2025-03-06",
+      "formFactor": "desktop",
+      "shaders": 4096,
+      "baseClockMHz": null,
+      "boostClockMHz": 2970,
+      "vramGB": 16,
+      "vramType": "GDDR6",
+      "memBusBits": 256,
+      "memBandwidthGBs": 640,
+      "fp32TFLOPS": 24.33,
+      "tdpW": 304,
+      "processNm": 4,
+      "pcieGen": 5,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "2x8-pin",
+      "recommendedPsuW": 750,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-9070",
+      "vendor": "amd",
+      "brand": "Radeon RX 9070",
+      "fullName": "AMD Radeon RX 9070",
+      "architecture": "RDNA 4",
+      "chip": "Navi 48 XL",
+      "launchDate": "2025-03-06",
+      "formFactor": "desktop",
+      "shaders": 3584,
+      "baseClockMHz": null,
+      "boostClockMHz": 2520,
+      "vramGB": 16,
+      "vramType": "GDDR6",
+      "memBusBits": 256,
+      "memBandwidthGBs": 640,
+      "fp32TFLOPS": 18.063,
+      "tdpW": 220,
+      "processNm": 4,
+      "pcieGen": 5,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "2x8-pin",
+      "recommendedPsuW": 650,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-9070-gre",
+      "vendor": "amd",
+      "brand": "Radeon RX 9070 GRE",
+      "fullName": "AMD Radeon RX 9070 GRE",
+      "architecture": "RDNA 4",
+      "chip": "Navi 48",
+      "launchDate": "2025-05",
+      "formFactor": "desktop",
+      "shaders": 3072,
+      "baseClockMHz": null,
+      "boostClockMHz": null,
+      "vramGB": 12,
+      "vramType": "GDDR6",
+      "memBusBits": 192,
+      "memBandwidthGBs": 480,
+      "fp32TFLOPS": null,
+      "tdpW": 220,
+      "processNm": 4,
+      "pcieGen": 5,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "2x8-pin",
+      "recommendedPsuW": null,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-9060-xt-16gb",
+      "vendor": "amd",
+      "brand": "Radeon RX 9060 XT",
+      "variant": "16GB",
+      "fullName": "AMD Radeon RX 9060 XT 16GB",
+      "architecture": "RDNA 4",
+      "chip": "Navi 44 XT",
+      "launchDate": "2025-06-05",
+      "formFactor": "desktop",
+      "shaders": 2048,
+      "baseClockMHz": null,
+      "boostClockMHz": 3130,
+      "vramGB": 16,
+      "vramType": "GDDR6",
+      "memBusBits": 128,
+      "memBandwidthGBs": 320,
+      "fp32TFLOPS": 12.82,
+      "tdpW": 160,
+      "processNm": 4,
+      "pcieGen": 5,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 500,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-rx-9060-xt-8gb",
+      "vendor": "amd",
+      "brand": "Radeon RX 9060 XT",
+      "variant": "8GB",
+      "fullName": "AMD Radeon RX 9060 XT 8GB",
+      "architecture": "RDNA 4",
+      "chip": "Navi 44 XT",
+      "launchDate": "2025-06-05",
+      "formFactor": "desktop",
+      "shaders": 2048,
+      "baseClockMHz": null,
+      "boostClockMHz": 3130,
+      "vramGB": 8,
+      "vramType": "GDDR6",
+      "memBusBits": 128,
+      "memBandwidthGBs": 320,
+      "fp32TFLOPS": 12.82,
+      "tdpW": 150,
+      "processNm": 4,
+      "pcieGen": 5,
+      "pcieLanes": 16,
+      "lengthMm": null,
+      "slotWidth": null,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 450,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    }
+  ],
+  "expectedCount": 130,
+  "actualCount": 92,
+  "gaps": [
+    "Dual-GPU desktop boards omitted (HD 7990 Malta, R9 295X2, Radeon Pro Duo): representing two GPUs as one GpuRecord would feed the fitted model a shader/TFLOPS figure no game can actually use, since CrossFire is dead in modern titles.",
+    "OEM-only rebadges omitted: Radeon R7 350 / R7 340 / R5 340X / R5 330 / R5 240, the entire RX 500X series (RX 550X/560X/570X/580X), RX 5300, OEM RX 5500 and RX 5600, RX 6300, RX 640/630. These were never sold at retail as standalone cards.",
+    "Pre-GCN VLIW parts sold under HD 7000 marketing names (HD 7670, HD 7570, HD 7510, HD 7450) omitted: they are TeraScale rebrands, outside the GCN 1.0+ remit.",
+    "China/regional SKUs omitted for lack of confident clocks: RX 6750 GRE 12GB and 10GB, RX 7650 GRE, RX 580 2048SP, RX 470D, RX 560D, and the non-XT RX 9060. Each is a real product; I could not recall boost clocks to within the 8% fp32 consistency band and would not guess.",
+    "RX 5700 XT 50th Anniversary Edition omitted: identical silicon to the RX 5700 XT with a 75 MHz higher boost, low value against the risk of family-ordering noise.",
+    "lengthMm and slotWidth are null on every record: both are AIB-board properties, not chip properties, and vary by 100mm+ across partners for the same SKU. The harvest pipeline should source these per board, not per SKU.",
+    "pciIds omitted entirely: pci-ids.ucw.cz and TechPowerUp are egress-blocked, and PCI device IDs are exactly the class of datum where a near-miss from memory is worse than absence.",
+    "driverEolDate is null on all records including the eol GCN 1.0-3.0 parts: I am confident about the status (AMD moved GCN 1.0-3.0 to legacy driver branches) but not about the precise announcement/final-driver dates.",
+    "Mobile and Radeon Pro / FirePro / Instinct parts excluded per remit."
+  ],
+  "uncertainties": [
+    "boostClockMHz is AMD's boost (peak) clock throughout, never the 'game clock'. For RDNA 1-4 AMD's marketing leads with game clock; using it would have understated fp32 by 8-20% and broken the shaders*clock*2 consistency rule against AMD's own published TFLOPS.",
+    "fp32TFLOPS for RDNA 3 and RDNA 4 is the single-issue figure (shaders*boost*2). AMD markets double these numbers (61.4 TFLOPS for the RX 7900 XTX, 48.7 for the RX 9070 XT) by counting dual-issue FP32, which only applies to co-issuable instruction pairs. The validator formula demands single-issue, and single-issue is the better predictor of game raster throughput; consumers of this data must not compare these figures with AMD's marketing slides.",
+    "Infinity Cache has no field on GpuRecord, so effective bandwidth is understated for RDNA 2-4. Sizes: RX 6950/6900/6800 XT/6800 128MB; 6750 XT/6700 XT 96MB; 6700 80MB; 6650 XT/6600 XT/6600 32MB; 6500 XT/6400 16MB; 7900 XTX 96MB; 7900 XT 80MB; 7900 GRE/7800 XT 64MB; 7700 XT 48MB; 7600 XT/7600 32MB; 9070 XT/9070 64MB; 9060 XT 32MB.",
+    "RX 5600 XT is recorded at its post-launch BIOS (1750 MHz boost, 14 Gbps memory, 336 GB/s). Launch-BIOS cards shipped at 1560 MHz boost and 12 Gbps (288 GB/s) and many were never reflashed; a single record cannot express both.",
+    "RX 9070 GRE has null base/boost clock and therefore null fp32TFLOPS. Shader count (3072), 12GB on a 192-bit bus and the 220W TBP I am confident about; the clocks I am not.",
+    "R9 290X and R9 290 tdpW (290W / 275W) are the widely-cited board figures; AMD never published a TDP for Hawaii. HD 7970 GHz Edition is 250W typical with a ~300W board maximum.",
+    "powerConnectors reflects the AMD reference board. Partner cards routinely add a connector (RX 570/580 8-pin+6-pin, RX 460/560 with a 6-pin, R7 250X variants). Treat as a floor, not a fixed fact.",
+    "recommendedPsuW is AMD's system-level recommendation where I am confident of it and null otherwise; it is a marketing guideline, not a measurement.",
+    "caps.vulkanVersion is a conservative floor per architecture (1.2 for GCN 1.0-3.0, 1.3 for GCN 4.0 onward). Actual exposed version depends on the installed driver branch; current Adrenalin exposes 1.4 on RDNA 2+.",
+    "caps.resizableBar is true from RDNA 1 onward because AMD backported Smart Access Memory to the RX 5000 series by driver in 2021; it is false for Polaris and Vega, which never got official support.",
+    "caps.upscaling is empty for GCN 1.0-3.0 and ['fsr'] from Polaris onward, matching AMD's official FSR support list. FSR 1 is a spatial post-process and does in practice run on HD 7000/R200/R300 hardware, so the empty list understates what those cards can do in FSR1-only titles.",
+    "shaderModel/dxFeatureLevel follow silicon, not marketing series: R7 370 and R9 270/270X/280/280X are Pitcairn/Tahiti (GCN 1.0, FL 11_1) while the R9 285/380/380X are Tonga (GCN 3.0, FL 12_0) and R9 390/390X are Hawaii (GCN 2.0, FL 12_0). The 200/300 series therefore splits across three feature levels.",
+    "Genuine naming inversion retained: R9 285 (1792 SP, Tonga) has fewer shaders than R9 280X (2048 SP, Tahiti) despite the higher model number. This is real AMD 200-series behaviour, not a data error; a family-monotonicity check that sorts by model number will flag it.",
+    "RX 6500 XT 8GB is a board-partner-only configuration (Sapphire, ASRock) rather than an AMD-reference SKU; it is emitted because the 4GB/8GB split materially changes VRAM gating.",
+    "RX 6700 10GB launchDate is null: the part is real (Navi 22 XL, 2304 SP, 160-bit, 175W) but its rollout was staggered and partly regional, and I do not trust my recollection of a date.",
+    "RX 7600 boostClockMHz is 2655, which is the figure I recall from AMD's spec page; AMD's own 21.5 TFLOPS (dual-issue) headline back-solves to 2625 MHz instead. The 1.1% discrepancy does not threaten the consistency band (fp32 here is computed from the stated clock) but the harvester should settle it.",
+    "HD 7730 memory configuration (1GB GDDR5, 128-bit, 4.5 Gbps) is my least-confident memory spec in the file, and its die attribution (Cape Verde LE vs Oland XT, both 384 SP) is likewise shaky; DDR3 versions of this part also existed.",
+    "Radeon RX Vega 64 carries variant 'Air Cooled' purely to disambiguate it from the Liquid Cooled Edition record; AMD's retail name for it is just 'Radeon RX Vega 64'.",
+    "R7 240 is recorded as the 2GB DDR3 128-bit configuration at 780 MHz; GDDR5 and 1GB versions also shipped and are not separately represented.",
+    "R9 270X/R9 270/R7 265 chip names are given as Curacao (the 300-series-era name for the Pitcairn respin); some sources label these Pitcairn XT/Pro. Architecture (GCN 1.0) is unaffected.",
+    "RX 9060 XT pcieLanes is set to 16 (Navi 44 is PCIe 5.0 x16, unlike the x8 RX 7600 it replaces); this is the RDNA 4 spec point I would most want re-checked by the harvester."
+  ]
+}

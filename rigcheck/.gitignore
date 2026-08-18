@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.local
+
+# Raw harvest cache: permanent on disk, never committed (large, regenerable).
+# Parsed output under data/ IS committed.
+cache/raw/

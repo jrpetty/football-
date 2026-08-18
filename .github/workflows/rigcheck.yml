@@ -1,0 +1,62 @@
+name: rigcheck
+
+# Scoped to the rigcheck/ subtree so it never interferes with the Gaffer app
+# that shares this repository.
+on:
+  push:
+    paths: ['rigcheck/**', '.github/workflows/rigcheck.yml']
+  pull_request:
+    paths: ['rigcheck/**', '.github/workflows/rigcheck.yml']
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: rigcheck
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: rigcheck/package-lock.json
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        # Includes the rowspan-parser fixtures, which must pass before any
+        # harvested record is trusted, and the gate/soft-min/VRAM-cliff tests.
+        run: npm test
+
+      - name: Manual data import
+        # The manual lane runs on every build so operator CSVs are picked up and
+        # rejections are reported rather than silently dropped.
+        run: npm run import:manual
+
+      - name: Validation gate
+        # Fails the build when holdout error, rank correlation or delta sign
+        # accuracy miss their thresholds. Drops to advisory (exit 0, loud
+        # warning) while the fixture set is recalled rather than measured, so it
+        # cannot report a false pass.
+        run: npm run validate
+
+      - name: Coverage report
+        run: npm run coverage
+
+      - name: Build
+        run: npm run build
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rigcheck-reports
+          path: |
+            rigcheck/COVERAGE.md
+            rigcheck/data/validation/last-run.json
+            rigcheck/data/reconcile-report.json
+          if-no-files-found: warn

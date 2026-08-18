@@ -1,0 +1,4 @@
+{
+  "note": "Fitted constant overrides, written by scripts/calibrate.ts and merged over the priors in src/core/constants.ts at load. Empty until a MEASURED fixture set exists: the calibrator refuses to write here while the fixtures are recalled rather than measured, because fitting recollection produces better metrics and worse physics. See data/calibration/proposed-constants.json for what it would have written, and note that it drove the GPU sublinear exponent to 1.0 (perfectly linear scaling, which is not how GPUs behave).",
+  "constants": {}
+}
