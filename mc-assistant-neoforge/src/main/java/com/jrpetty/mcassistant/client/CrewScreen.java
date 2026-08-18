@@ -175,7 +175,10 @@ public class CrewScreen extends Screen {
             g.fill(x, ry, x + 2, ry + ROW_H - 1, light);           // status spine
             if (sel) g.renderOutline(x, ry, inner, ROW_H - 1, Ui.ACCENT);
 
-            int tx = x + 8;
+            // The trade's colour, same as its uniform and its map chip — you
+            // can find the farmer in the list the way you find it in a field.
+            Ui.chip(g, x + 5, ry + 4, Ui.job(a.clientJobOrdinal()));
+            int tx = x + 15;
             int lvl = a.clientLevel();
             if (lvl >= 1) {
                 String star = "✦" + lvl;

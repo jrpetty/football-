@@ -19,20 +19,6 @@ public class MapScreen extends Screen {
     private static final int W = 300, H = 236;
     private static final int PAD = 10;
 
-    /** One colour per job, matching the uniforms so the map and the field agree. */
-    private static final int[] JOB_COLOUR = {
-        0xFF6E7A8A, // unassigned  slate
-        0xFFC9A227, // farmer      wheat
-        0xFFA6392C, // lumberjack  flannel
-        0xFF3C4A6B, // miner       denim
-        0xFF4E7A3A, // rancher     green
-        0xFF9AA1AC, // guard       iron
-        0xFFBA6028, // smelter     ember
-        0xFF2F6D9E, // fisher      blue
-        0xFF6A4A7A, // storekeeper purple
-        0xFFC4692A, // hauler      hi-vis
-    };
-
     private final List<AssistantEntity> crew = new ArrayList<>();
     private int left, top, mapX, mapY, mapW, mapH;
     private int hovered = -1;
@@ -125,8 +111,14 @@ public class MapScreen extends Screen {
         g.drawString(this.font, "The operation", x, top + 8, Ui.INK, false);
         Ui.right(g, this.font, (maxX - minX) + " blocks across", left + W - PAD, top + 8, Ui.MUTED);
 
-        // The ground.
+        // The ground — recessed into the panel the way a vanilla slot is:
+        // shadow on top and left, light underneath, so it reads as a window
+        // onto the world rather than a grey rectangle on a grey panel.
         g.fill(mapX, mapY, mapX + mapW, mapY + mapH, Ui.ROW);
+        g.fill(mapX, mapY, mapX + mapW, mapY + 1, Ui.LO);
+        g.fill(mapX, mapY, mapX + 1, mapY + mapH, Ui.LO);
+        g.fill(mapX, mapY + mapH - 1, mapX + mapW, mapY + mapH, Ui.HI);
+        g.fill(mapX + mapW - 1, mapY, mapX + mapW, mapY + mapH, Ui.HI);
         g.renderOutline(mapX, mapY, mapW, mapH, Ui.EDGE_SOFT);
         grid(g);
 
@@ -172,6 +164,9 @@ public class MapScreen extends Screen {
             if (Math.abs(mouseX - bx) <= 4 && Math.abs(mouseY - bz) <= 4) hovered = i;
         }
         g.disableScissor();
+        // North is up; say so — after the scissored world, so a patch that
+        // happens to sit in the corner can't paint over the compass.
+        g.drawString(this.font, "N", mapX + 4, mapY + 4, Ui.FAINT, false);
 
         // What you're pointing at, spelled out under the map.
         int ly = mapY + mapH + 5;
@@ -205,7 +200,7 @@ public class MapScreen extends Screen {
     }
 
     private static int jobColour(AssistantEntity a) {
-        return JOB_COLOUR[Math.floorMod(a.clientJobOrdinal(), JOB_COLOUR.length)];
+        return Ui.job(a.clientJobOrdinal());   // one palette for map, list and chips
     }
 
     /** Click a chip or a patch to open that specialist's orders. */

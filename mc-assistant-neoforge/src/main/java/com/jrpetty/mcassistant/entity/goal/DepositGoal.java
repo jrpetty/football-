@@ -61,8 +61,13 @@ public class DepositGoal extends Goal {
         // chest happens to be closest to where we finished working.
         BlockPos targeted = targetedChest();
         // The chest the player linked by hand outranks the automatic routing:
-        // an explicit "this bot uses this chest" is not a suggestion.
-        if (targeted == null) targeted = assistant.usablePreferredChest();
+        // an explicit "this bot uses this chest" is not a suggestion. Except
+        // for a hauler — its linked chest is the PICKUP chest, and delivering
+        // cargo back into the chest it just loaded from is a forever-loop.
+        if (targeted == null
+            && assistant.stationTask() != AssistantEntity.StationTask.HAUL) {
+            targeted = assistant.usablePreferredChest();
+        }
         if (targeted == null) {
             targeted = com.jrpetty.mcassistant.entity.Supply.routeFor(assistant);
             if (targeted != null) {

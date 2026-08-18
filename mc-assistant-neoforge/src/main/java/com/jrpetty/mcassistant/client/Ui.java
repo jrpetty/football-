@@ -44,6 +44,47 @@ public final class Ui {
     public static final int BAD        = 0xFF7F2011;
     public static final int ACCENT     = 0xFF24520D;
 
+    // Decorative only — never a text bed. The pack screen reads as "real
+    // Minecraft" because of its bevel: a light edge where the light falls,
+    // a shadow opposite. These give every panel the same construction.
+    public static final int HI         = 0xFFE9E9E9;
+    public static final int LO         = 0xFF9E9E9E;
+
+    /** One colour per job, matching the uniforms — used by the map, the crew
+     *  list and the header chips, so the same trade is the same colour
+     *  everywhere it appears. */
+    private static final int[] JOB = {
+        0xFF6E7A8A, // unassigned  slate
+        0xFFC9A227, // farmer      wheat
+        0xFFA6392C, // lumberjack  flannel
+        0xFF3C4A6B, // miner       denim
+        0xFF4E7A3A, // rancher     green
+        0xFF9AA1AC, // guard       iron
+        0xFFBA6028, // smelter     ember
+        0xFF2F6D9E, // fisher      blue
+        0xFF6A4A7A, // storekeeper purple
+        0xFFC4692A, // hauler      hi-vis
+    };
+
+    public static int job(int ordinal) {
+        return JOB[Math.floorMod(ordinal, JOB.length)];
+    }
+
+    /** A small job-colour swatch: ink outline, colour core, one pixel of
+     *  highlight so it reads as a chip rather than a smudge. */
+    public static void chip(GuiGraphics g, int x, int y, int colour) {
+        g.fill(x, y, x + 7, y + 7, 0xFF000000);
+        g.fill(x + 1, y + 1, x + 6, y + 6, colour);
+        g.fill(x + 1, y + 1, x + 6, y + 2, lighten(colour, 0.35F));
+    }
+
+    /** Mix a colour toward white — the glossy top edge of a bar or chip. */
+    public static int lighten(int argb, float f) {
+        int r = (argb >> 16) & 0xFF, gr = (argb >> 8) & 0xFF, b = argb & 0xFF;
+        r += (int) ((255 - r) * f); gr += (int) ((255 - gr) * f); b += (int) ((255 - b) * f);
+        return 0xFF000000 | (r << 16) | (gr << 8) | b;
+    }
+
     /** The window: solid fill, a crisp edge and a header band across the top.
      *  The outer black ring is what makes it read as a panel rather than a
      *  smudge — against a bright field or a night forest a single mid-tone
@@ -52,19 +93,30 @@ public final class Ui {
         g.fill(x - 1, y - 1, x + w + 1, y + h + 1, 0xFF000000);   // hard outer ring
         g.fill(x + 1, y + 1, x + w - 1, y + h - 1, PANEL);
         if (headerHeight > 0) {
-            g.fill(x + 1, y + 1, x + w - 1, y + headerHeight, HEADER);
-            g.fill(x + 1, y + headerHeight, x + w - 1, y + headerHeight + 1, EDGE);
+            g.fill(x + 2, y + 2, x + w - 2, y + headerHeight, HEADER);
+            // An engraved rule: shadow line, then light — the same trick a
+            // vanilla slot uses, and what makes the band read as a header
+            // rather than a stripe.
+            g.fill(x + 1, y + headerHeight, x + w - 1, y + headerHeight + 1, EDGE_SOFT);
+            g.fill(x + 1, y + headerHeight + 1, x + w - 1, y + headerHeight + 2, HI);
         }
+        // The bevel: light top and left, shadow bottom and right.
+        g.fill(x + 1, y + 1, x + w - 1, y + 2, HI);
+        g.fill(x + 1, y + 1, x + 2, y + h - 1, HI);
+        g.fill(x + 1, y + h - 2, x + w - 1, y + h - 1, LO);
+        g.fill(x + w - 2, y + 1, x + w - 1, y + h - 1, LO);
         g.renderOutline(x, y, w, h, EDGE);
     }
 
     /** A small-caps heading over a group of controls, with a hairline rule. */
     public static void section(GuiGraphics g, Font font, String label, int x, int y, int w) {
         String caps = label.toUpperCase();
-        g.drawString(font, caps, x, y, FAINT, false);
-        int textEnd = x + font.width(caps) + 4;
+        g.fill(x, y + 1, x + 2, y + 8, ACCENT);           // a small tick of colour
+        g.drawString(font, caps, x + 5, y, FAINT, false);
+        int textEnd = x + 5 + font.width(caps) + 4;
         if (textEnd < x + w) {
-            g.fill(textEnd, y + 3, x + w, y + 4, EDGE_SOFT);
+            g.fill(textEnd, y + 3, x + w, y + 4, EDGE_SOFT);   // engraved rule
+            g.fill(textEnd, y + 4, x + w, y + 5, HI);
         }
     }
 
@@ -81,9 +133,13 @@ public final class Ui {
 
     /** Progress toward the next level. Reads instantly; a number does not. */
     public static void bar(GuiGraphics g, int x, int y, int w, int h, float frac, int colour) {
-        g.fill(x, y, x + w, y + h, PANEL_SOFT);
+        g.fill(x, y, x + w, y + h, PANEL_SOFT);        // recessed track
+        g.fill(x, y, x + w, y + 1, 0xFF6F6F6F);        // inset shadow along the top
         int fill = (int) (w * Math.max(0F, Math.min(1F, frac)));
-        if (fill > 0) g.fill(x, y, x + fill, y + h, colour);
+        if (fill > 0) {
+            g.fill(x, y, x + fill, y + h, colour);
+            g.fill(x, y, x + fill, y + 1, lighten(colour, 0.4F));   // glossy edge
+        }
         g.renderOutline(x, y, w, h, EDGE);   // EDGE_SOFT is the track's own grey
     }
 

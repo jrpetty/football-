@@ -189,9 +189,10 @@ public class OrdersScreen extends Screen {
 
         // Header: who, what level, and the one status line that matters.
         String name = bot.clientName();
-        g.drawString(this.font, name, x, top + Y_NAME, Ui.INK, false);
+        Ui.chip(g, x, top + Y_NAME, Ui.job(bot.clientJobOrdinal()));
+        g.drawString(this.font, name, x + 10, top + Y_NAME, Ui.INK, false);
         if (lvl >= 1) {
-            g.drawString(this.font, "✦" + lvl, x + this.font.width(name) + 6, top + Y_NAME,
+            g.drawString(this.font, "✦" + lvl, x + 10 + this.font.width(name) + 6, top + Y_NAME,
                 Ui.ACCENT, false);
         }
         String status = bot.clientStatus();

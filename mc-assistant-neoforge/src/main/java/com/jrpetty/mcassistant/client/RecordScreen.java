@@ -62,9 +62,10 @@ public class RecordScreen extends Screen {
 
         // Who, and how far along.
         String name = bot.clientName();
-        g.drawString(this.font, name, x, top + 7, Ui.INK, false);
+        Ui.chip(g, x, top + 7, Ui.job(bot.clientJobOrdinal()));
+        g.drawString(this.font, name, x + 10, top + 7, Ui.INK, false);
         if (lvl >= 1) {
-            g.drawString(this.font, "✦" + lvl, x + this.font.width(name) + 6, top + 7, Ui.ACCENT, false);
+            g.drawString(this.font, "✦" + lvl, x + 10 + this.font.width(name) + 6, top + 7, Ui.ACCENT, false);
         }
         Ui.right(g, this.font,
             AssistantEntity.StationTask.byOrdinal(bot.clientJobOrdinal()).title,
@@ -117,7 +118,10 @@ public class RecordScreen extends Screen {
                 // The bar sits behind the label, so the biggest jobs of a life
                 // stand out without having to compare numbers.
                 int barW = Math.max(1, (inner - 4) * count / busiest);
-                g.fill(x - 2, y + rowH - 4, x - 2 + barW, y + rowH - 3, Ui.EDGE);
+                // A soft full-width track under an accent fill, so the scale of
+                // each tally is readable and the biggest one owns its row.
+                g.fill(x - 2, y + rowH - 4, x + inner + 2, y + rowH - 3, Ui.EDGE_SOFT);
+                g.fill(x - 2, y + rowH - 4, x - 2 + barW, y + rowH - 3, Ui.ACCENT);
                 g.drawString(this.font, d.label, x, y, Ui.INK, false);
                 Ui.right(g, this.font, String.valueOf(count), x + inner, y, Ui.ACCENT);
                 y += rowH;
