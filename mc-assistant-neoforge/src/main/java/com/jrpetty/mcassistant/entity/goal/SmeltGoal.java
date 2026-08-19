@@ -95,7 +95,7 @@ public class SmeltGoal extends Goal {
     // Foods cook in a furnace or smoker; ores in a furnace or blast furnace;
     // stone/sand/logs only in a plain furnace.
     private static final Set<String> FOODS = Set.of(
-        "beef", "porkchop", "chicken", "mutton", "rabbit", "fish", "potato");
+        "food", "beef", "porkchop", "chicken", "mutton", "rabbit", "fish", "potato");
 
     private static boolean isOreWord(String c) {
         return c.equals("iron") || c.equals("gold") || c.equals("copper");
@@ -380,6 +380,11 @@ public class SmeltGoal extends Goal {
             furnaces.add(f.pos());
         }
         furnaces.sort((a, b) -> Double.compare(a.distSqr(feet), b.distSqr(feet)));
+        // The right machine first: ore into blast furnaces, food into smokers
+        // — half the smelt time — with plain furnaces as the overflow bank.
+        // Stable sort, so within each group the nearest still wins.
+        furnaces.sort(java.util.Comparator.comparingInt(pos ->
+            assistant.level().getBlockState(pos).is(Blocks.FURNACE) ? 1 : 0));
     }
 
     /** Is there nothing left cooking or waiting anywhere in the bank? Finishing
