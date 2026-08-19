@@ -108,9 +108,19 @@ public class NameScreen extends Screen {
         if (!bot.isAlive()) this.onClose();
     }
 
+    /**
+     * ALL of this screen's own painting happens here, layered between the
+     * background and the widgets, because since 1.21 the vanilla render loop
+     * runs the menu BLUR SHADER inside renderBackground — and super.render()
+     * calls renderBackground itself. The old pattern (paint the panel, then
+     * call super.render) ran the blur a SECOND time over everything already
+     * drawn: every panel and every line of text got gaussian-smeared, and the
+     * vanilla buttons were drawn crisp on top afterwards. That is the blur
+     * that survived four palette overhauls — it was never contrast.
+     */
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(g, mouseX, mouseY, partialTick);
+    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        super.renderBackground(g, mouseX, mouseY, partialTick);
         Ui.panel(g, left, top, W, H, 30);
         int x = left + PAD;
         int inner = W - PAD * 2;
@@ -123,7 +133,6 @@ public class NameScreen extends Screen {
             x, top + 22, Ui.FAINT, false);
         Ui.section(g, this.font, "Names", x, top + 34, inner);
 
-        super.render(g, mouseX, mouseY, partialTick);
     }
 
     @Override
