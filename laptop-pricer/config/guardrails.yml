@@ -1,0 +1,9 @@
+# Sanity bounds. A quote violating these is flagged, never silently emitted.
+min_observations_for_tier1: 2
+max_value_vs_launch_rrp: 0.85     # a used unit above 85% of RRP is suspect
+outlier_modified_z: 3.5           # MAD-based rejection threshold
+min_price_gbp: 15
+max_price_gbp: 6000
+warn_if_newest_comp_older_than_days: 120
+warn_if_confidence_below: 0.45
+shrinkage_k: 4.0                  # tuned by backtest (design doc s06)

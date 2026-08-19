@@ -1,0 +1,24 @@
+id: supplier_stocklist
+label: "Supplier weekly stock list - asks, not sales"
+channel: trade_wholesale
+currency: GBP
+observation_type: ask
+trust: 0.40
+ask_haircut: 0.96              # asks sit above realised; fitted per source
+file_glob: "supplier_*.csv"
+
+price:
+  vat_treatment: exclusive
+  fees: {rate: 0.0, fixed: 0.0}
+
+columns:
+  raw_title: "Model"
+  price_gross: "Unit Price"
+  sold_at: "List Date"
+  quantity: "Available"
+  grade_raw: "Cond"
+
+date_format: "%Y-%m-%d"
+grade_map: {A: A, B: B, C: C, "AB": A, "BC": C}
+exclude_if:
+  - price_gross_below: 20

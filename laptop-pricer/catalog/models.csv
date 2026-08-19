@@ -1,0 +1,16 @@
+model_id,brand,family,model_name,generation,release_date,launch_rrp,build_class,supply_class,chassis_material,ram_upgradeable,storage_upgradeable,durability_cert,panel_class,port_class,parts_availability,successor_model_id
+dell-latitude-5420,Dell,Latitude,Latitude 5420,11th Gen,2021-03-01,1099,enterprise,lease_return_heavy,magnesium_alloy,1,1,MIL-STD-810,ips,thunderbolt,abundant,dell-latitude-5430
+dell-latitude-5430,Dell,Latitude,Latitude 5430,12th Gen,2022-04-01,1149,enterprise,lease_return_heavy,magnesium_alloy,1,1,MIL-STD-810,ips,thunderbolt,abundant,
+dell-latitude-7420,Dell,Latitude,Latitude 7420,11th Gen,2021-02-01,1499,enterprise,lease_return_heavy,carbon_fibre,0,1,MIL-STD-810,ips,thunderbolt,abundant,dell-latitude-7430
+dell-latitude-7430,Dell,Latitude,Latitude 7430,12th Gen,2022-05-01,1549,enterprise,lease_return_heavy,carbon_fibre,0,1,MIL-STD-810,ips,thunderbolt,moderate,
+dell-inspiron-3511,Dell,Inspiron,Inspiron 3511,11th Gen,2021-06-01,449,budget_consumer,retail_only,abs,1,1,,tn,usb_c_data,moderate,
+dell-xps-13-9310,Dell,XPS,XPS 13 9310,11th Gen,2020-10-01,1399,premium_consumer,retail_only,aluminium,0,1,,uhd,thunderbolt,moderate,
+hp-elitebook-840-g7,HP,EliteBook,EliteBook 840 G7,10th Gen,2020-04-01,1249,enterprise,lease_return_heavy,aluminium,1,1,MIL-STD-810,ips,thunderbolt,abundant,hp-elitebook-840-g8
+hp-elitebook-840-g8,HP,EliteBook,EliteBook 840 G8,11th Gen,2021-04-01,1299,enterprise,lease_return_heavy,aluminium,1,1,MIL-STD-810,ips,thunderbolt,abundant,
+lenovo-thinkpad-x1c-g9,Lenovo,ThinkPad,ThinkPad X1 Carbon Gen 9,11th Gen,2021-02-01,1729,enterprise,lease_return_heavy,carbon_fibre,0,1,MIL-STD-810,ips,thunderbolt,abundant,lenovo-thinkpad-x1c-g10
+lenovo-thinkpad-x1c-g10,Lenovo,ThinkPad,ThinkPad X1 Carbon Gen 10,12th Gen,2022-03-01,1799,enterprise,lease_return_heavy,carbon_fibre,0,1,MIL-STD-810,ips,thunderbolt,moderate,
+lenovo-thinkpad-t14-g2,Lenovo,ThinkPad,ThinkPad T14 Gen 2,11th Gen,2021-03-01,1249,enterprise,lease_return_heavy,magnesium_alloy,1,1,MIL-STD-810,ips,thunderbolt,abundant,
+lenovo-legion-5-15,Lenovo,Legion,Legion 5 15,2021,2021-05-01,1099,gaming,retail_only,abs,1,1,,ips,usb_c_data,moderate,
+apple-macbook-air-m1,Apple,MacBook Air,MacBook Air M1,M1,2020-11-01,999,apple,retail_only,aluminium,0,0,,ips,thunderbolt,moderate,apple-macbook-air-m2
+apple-macbook-air-m2,Apple,MacBook Air,MacBook Air M2,M2,2022-07-01,1249,apple,retail_only,aluminium,0,0,,ips,thunderbolt,moderate,
+apple-macbook-pro-14-m1p,Apple,MacBook Pro,MacBook Pro 14 M1 Pro,M1 Pro,2021-10-01,1899,apple,retail_only,aluminium,0,0,,uhd,thunderbolt,scarce,

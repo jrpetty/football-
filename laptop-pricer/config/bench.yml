@@ -1,0 +1,11 @@
+labour_rate_per_hour: 24.0
+weee_levy_per_unit: 13.0
+
+standard_jobs:
+  battery_replace:  {minutes: 20, typical_part_cost: 14.0}
+  palmrest_replace: {minutes: 35, typical_part_cost: 11.0}
+  screen_replace:   {minutes: 40, typical_part_cost: 38.0}
+  keyboard_replace: {minutes: 30, typical_part_cost: 12.0}
+  deep_clean:       {minutes: 15, typical_part_cost: 0.0}
+  wipe_and_image:   {minutes: 25, typical_part_cost: 0.0}
+  teardown:         {minutes: 25, typical_part_cost: 0.0}

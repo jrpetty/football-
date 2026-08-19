@@ -1,0 +1,18 @@
+# Seed priors (design doc s05, table 3). lambda is monthly decay.
+# Refitted per model family from your own data once history accumulates;
+# fitted values are written back under `fitted:`.
+global_lambda: 0.029
+half_life_days: 75          # weighting half-life, distinct from value drift
+
+by_build_class:
+  apple:            0.019
+  enterprise:       0.026
+  premium_consumer: 0.029
+  workstation:      0.030
+  gaming:           0.033
+  budget_consumer:  0.036
+  chromebook:       0.042
+
+# Step change applied when a successor model ships.
+successor_launch_shock: 0.10
+fitted: {}

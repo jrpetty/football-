@@ -1,0 +1,26 @@
+# Grade is COMPUTED from these checks, never typed (design doc s09, table 10).
+# Rule: the unit takes the WORST band any single check triggers.
+checks:
+  chassis:      {none: A_PLUS, light: A,  visible: B, dented: C, cracked: D}
+  screen:       {clean: A_PLUS, marks: A, scratches: B, dead_pixels: C, cracked: D}
+  keyboard:     {none: A_PLUS, shiny: A,  worn_legends: C, missing_keys: D}
+  hinges:       {pass: A_PLUS, stiff: C, broken: D}
+
+# Pass/fail checks. A failure creates a defect record and a refurb requirement.
+functional:
+  - ports
+  - webcam
+  - audio
+  - wifi
+  - trackpad
+
+battery_health_bands:
+  - {min_pct: 80, grade_cap: null}
+  - {min_pct: 70, grade_cap: B}
+  - {min_pct: 0,  grade_cap: C, defect: battery_replace}
+
+# Hard stops - block intake entirely (design doc s09).
+hard_stops:
+  bios_locked: "BIOS/supervisor password set - parts value only"
+  activation_locked: "Activation lock / MDM enrolled - parts value only"
+  no_wipe_certificate: "Cannot list without a data destruction record"

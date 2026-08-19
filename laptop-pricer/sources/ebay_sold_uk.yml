@@ -1,0 +1,34 @@
+id: ebay_sold_uk
+label: "eBay UK - completed listings export"
+channel: ebay_bin
+currency: GBP
+observation_type: sold
+trust: 0.90
+file_glob: "ebay_sold_*.csv"
+
+price:
+  vat_treatment: inclusive
+  fees: {rate: 0.128, fixed: 0.30}
+  shipping_column: "Postage"
+
+columns:
+  raw_title: "Item Title"
+  price_gross: "Sold For"
+  sold_at: "Date Sold"
+  quantity: "Qty"
+  grade_raw: "Condition"
+
+date_format: "%Y-%m-%d"
+
+grade_map:
+  "New (other)": A_PLUS
+  "Excellent - Refurbished": A
+  "Very Good": A
+  "Good": B
+  "Used": B
+  "Acceptable": C
+  "For parts or not working": SALVAGE
+
+exclude_if:
+  - title_matches: "(?i)\\b(job ?lot|bundle|x ?[2-9] ?laptops|spares|faulty|no ?(hdd|ssd|ram))\\b"
+  - price_gross_below: 25

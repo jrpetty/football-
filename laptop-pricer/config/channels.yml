@@ -1,0 +1,15 @@
+# Channel ladder (design doc s05, table 5).
+# Multiplier converts an observation IN that channel TO the reference channel.
+# IMPORTANT: expressed on the reference basis - ex-VAT NET REALISED. Trade
+# figures are already ex-VAT, so the step to retail is smaller than the
+# VAT-inclusive gap people quote from memory.
+reference: own_retail_b2c
+ladder:
+  own_retail_b2c:  {multiplier: 1.00, label: "Own site, with warranty"}
+  amazon_renewed:  {multiplier: 0.97, label: "Amazon Renewed"}
+  back_market:     {multiplier: 0.99, label: "Back Market"}
+  ebay_bin:        {multiplier: 1.04, label: "eBay buy-it-now"}
+  b2b_direct:      {multiplier: 1.12, label: "Direct business sale"}
+  ebay_auction:    {multiplier: 1.16, label: "eBay auction", variance: high}
+  trade_wholesale: {multiplier: 1.15, label: "Trade wholesale"}
+  trade_auction:   {multiplier: 1.21, label: "Trade auction"}

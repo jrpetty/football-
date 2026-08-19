@@ -1,0 +1,14 @@
+# Reference grade ladder (design doc s05, table 4).
+# Multipliers convert an observation AT that grade TO reference grade B.
+reference: B
+ladder:
+  A_PLUS: {label: "As new, often boxed",                       multiplier: 1.15, rank: 5}
+  A:      {label: "Light use, no marks at arm's length",        multiplier: 1.08, rank: 4}
+  B:      {label: "Minor scuffs, functional, battery >=80%",    multiplier: 1.00, rank: 3}
+  C:      {label: "Visible wear, dents, worn keys or palmrest", multiplier: 0.85, rank: 2}
+  D:      {label: "Heavy damage, cracked bezel, still works",   multiplier: 0.68, rank: 1}
+  SALVAGE: {label: "Not working / spares",                       multiplier: null, rank: 0}
+
+# Weight penalty when an observation's grade differs from the target grade.
+# Adjusted evidence is still evidence, just weaker.
+match_weight_by_rank_distance: [1.0, 0.9, 0.8, 0.65, 0.5]

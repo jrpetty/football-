@@ -1,0 +1,37 @@
+# Commercial policy. Edit freely - every change is a git commit with an author.
+base_currency: GBP
+vat_rate: 0.20
+vat_scheme: standard          # standard | margin_scheme
+
+reference:
+  grade: B
+  channel: own_retail_b2c
+  basis: net_ex_vat
+
+# Target gross margin by build_class. Falls back to `default`.
+target_margin:
+  default: 0.35
+  enterprise: 0.33
+  premium_consumer: 0.36
+  gaming: 0.38
+  workstation: 0.34
+  budget_consumer: 0.42
+  chromebook: 0.45
+
+# Expected refurb spend by build_class, replaced by realised cost once
+# the stock book has history (design doc s12).
+refurb_expected:
+  default: 22.0
+  enterprise: 22.0
+  premium_consumer: 28.0
+  gaming: 34.0
+  workstation: 31.0
+  budget_consumer: 16.0
+  chromebook: 11.0
+
+# Risk premium scales with (1 - pricer confidence). See s12.
+risk_premium_max_frac: 0.06
+
+rounding:
+  buy_price: {mode: down, to: 1}
+  list_price: {mode: charm, to: 1}   # 310.80 -> 309

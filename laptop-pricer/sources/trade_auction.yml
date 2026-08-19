@@ -1,0 +1,24 @@
+id: trade_auction
+label: "Weekly trade auction - hammer prices"
+channel: trade_auction
+currency: GBP
+observation_type: sold
+trust: 0.75
+file_glob: "auction_*.csv"
+
+price:
+  vat_treatment: exclusive
+  fees: {rate: 0.10, fixed: 0.0}       # buyer's premium
+
+columns:
+  raw_title: "LOT DESCRIPTION"
+  price_gross: "HAMMER"
+  sold_at: "SALE DATE"
+  quantity: "UNITS"
+  grade_raw: "GRADE"
+
+date_format: "%d/%m/%Y"
+grade_map: {"Grade 1": A, "Grade 2": B, "Grade 3": C, "Grade 4": D, "Untested": SALVAGE}
+exclude_if:
+  - title_matches: "(?i)\\b(pallet|job ?lot|mixed|untested|spares)\\b"
+  - price_gross_below: 20

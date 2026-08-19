@@ -1,0 +1,11 @@
+# Ageing and action thresholds (design doc s10).
+ageing_buckets: [30, 60, 90]
+bucket_state: {0: healthy, 1: healthy, 2: review, 3: act_now}
+
+margin_floor: 0.30            # below this a unit is flagged
+reprice_if_days_listed_over_expected: 2.0    # 2x typical days-to-sell
+part_out_if_parts_value_exceeds_unit_value: true
+trade_out_if_margin_below: 0.0
+
+# Fallback when a config has no days-to-sell history yet.
+default_expected_days_to_sell: 45

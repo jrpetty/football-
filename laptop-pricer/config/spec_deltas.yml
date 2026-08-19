@@ -1,0 +1,22 @@
+# Hedonic multipliers (design doc s06, table 6).
+# Two columns because the delta is conditional on upgradeability - an extra
+# 8GB is a commodity part on a ThinkPad and a scarcity premium on a MacBook.
+ram_gb:
+  upgradeable:  {8: 1.00, 16: 1.06, 32: 1.156, 64: 1.25}
+  soldered:     {8: 1.00, 16: 1.13, 32: 1.333, 64: 1.55}
+storage_gb:
+  upgradeable:  {128: 0.95, 256: 1.00, 512: 1.05, 1024: 1.124, 2048: 1.22}
+  soldered:     {128: 0.93, 256: 1.00, 512: 1.09, 1024: 1.221, 2048: 1.40}
+panel:
+  fhd: 1.00
+  qhd: 1.06
+  uhd: 1.10
+  oled: 1.12
+touch: 1.03
+gpu_tier_step: 1.15
+battery_health_below_70:
+  upgradeable: 0.93
+  soldered:    0.86
+no_charger:
+  upgradeable: 0.96
+  soldered:    0.93
