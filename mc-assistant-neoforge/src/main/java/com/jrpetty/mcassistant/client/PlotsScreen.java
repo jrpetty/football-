@@ -40,6 +40,7 @@ public class PlotsScreen extends Screen {
     private List<PlotListPayload.Entry> plots;
     private final List<AssistantEntity> crew = new ArrayList<>();
     @Nullable private String picked;          // by name, so refreshes keep it
+    @Nullable private Button tradeBtn;        // label follows the picked plot
     private int left, top;
 
     public PlotsScreen(List<PlotListPayload.Entry> plots) {
@@ -52,6 +53,16 @@ public class PlotsScreen extends Screen {
         this.plots = plots;
         if (picked != null && byName(picked) == null) picked = null;
         if (picked == null && !plots.isEmpty()) picked = plots.get(0).name();
+        updateTradeLabel();
+    }
+
+    /** The Trade button reads as the picked plot's trade, so the ground's
+     *  type is visible before you click anything onto it. */
+    private void updateTradeLabel() {
+        if (tradeBtn == null) return;
+        PlotListPayload.Entry e = picked == null ? null : byName(picked);
+        tradeBtn.setMessage(Component.literal(
+            e == null || e.job().isEmpty() ? "Trade ›" : e.job() + " ›"));
     }
 
     @Nullable
@@ -79,30 +90,38 @@ public class PlotsScreen extends Screen {
 
         int gap = 4;
         int inner = W - PAD * 2;
-        int w4 = (inner - gap * 3) / 4;
+        int w5 = (inner - gap * 4) / 5;
         int y = top + H - PAD - 18;
         int x = left + PAD;
 
         this.addRenderableWidget(Button.builder(Component.literal("Stake Here"),
                 b -> send(1, -1, ""))
-            .bounds(x, y, w4, 18)
+            .bounds(x, y, w5, 18)
             .tooltip(Tooltip.create(Component.literal(
                 "Stake a new 25×25 plot where you stand — named for you, crewed from this menu")))
             .build());
+        tradeBtn = this.addRenderableWidget(Button.builder(Component.literal("Trade ›"),
+                b -> { if (picked != null) send(5, -1, picked); })
+            .bounds(x + (w5 + gap), y, w5, 18)
+            .tooltip(Tooltip.create(Component.literal(
+                "What this ground is FOR. Cycle it and everyone on the plot retrains; "
+                + "workers joining bare ground keep their own trades instead")))
+            .build());
         this.addRenderableWidget(Button.builder(Component.literal("Name ›"),
                 b -> { if (picked != null) send(4, -1, picked); })
-            .bounds(x + (w4 + gap), y, w4, 18)
+            .bounds(x + 2 * (w5 + gap), y, w5, 18)
             .tooltip(Tooltip.create(Component.literal(
                 "Cycle the picked plot through the name pool — the crew's status lines follow")))
             .build());
         this.addRenderableWidget(Button.builder(Component.literal("Forget"),
                 b -> { if (picked != null) send(3, -1, picked); })
-            .bounds(x + 2 * (w4 + gap), y, w4, 18)
+            .bounds(x + 3 * (w5 + gap), y, w5, 18)
             .tooltip(Tooltip.create(Component.literal(
                 "Strike the picked plot from the book — anyone working it keeps working")))
             .build());
         this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
-            .bounds(x + 3 * (w4 + gap), y, w4, 18).build());
+            .bounds(x + 4 * (w5 + gap), y, inner - 4 * (w5 + gap), 18).build());
+        updateTradeLabel();
     }
 
     private static void send(int op, int entityId, String plotName) {
@@ -124,6 +143,7 @@ public class PlotsScreen extends Screen {
             int ry = top + LIST_TOP + i * PLOT_ROW_H;
             if (mx >= x && mx <= x + PLOT_W && my >= ry && my < ry + PLOT_ROW_H - 1) {
                 picked = plots.get(i).name();
+                updateTradeLabel();
                 return true;
             }
         }

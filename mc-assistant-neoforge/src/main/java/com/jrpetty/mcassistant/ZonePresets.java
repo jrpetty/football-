@@ -82,17 +82,23 @@ public final class ZonePresets {
         WorkZone zone = bot.workZone();
         if (zone == null || bot.stationTask() == AssistantEntity.StationTask.NONE) return null;
 
-        String name = bot.stationTask().title + " at "
-            + zone.center().getX() + ", " + zone.center().getZ();
-        Preset preset = new Preset(name, bot.stationTask(), zone, bot.shift());
-
+        // One book. Save Patch used to invent its own name ("Farmer at 120,
+        // -340") in the same storage the plot book reads — now it stakes like
+        // everything else, keeps the plot's name if the ground is already in
+        // the book, and pins the bot's shift onto it.
+        Preset staked = stake(player, zone, bot.stationTask());
         List<Preset> presets = list(player);
-        presets.removeIf(p -> p.name().equals(name));
-        presets.add(0, preset);
-        while (presets.size() > MAX) presets.remove(presets.size() - 1);
-        store(player, presets);
-        bot.setPreset(name);
-        return preset;
+        for (int i = 0; i < presets.size(); i++) {
+            if (presets.get(i).name().equals(staked.name())) {
+                staked = new Preset(staked.name(), staked.job(), staked.zone(), bot.shift());
+                presets.set(i, staked);
+                store(player, presets);
+                break;
+            }
+        }
+        bot.assignPlot(staked.zone(), staked.name());
+        bot.setPreset(staked.name());
+        return staked;
     }
 
     /** The preset after the one this bot is on — how the button cycles through. */
@@ -151,21 +157,58 @@ public final class ZonePresets {
      */
     public static Preset stake(Player player, WorkZone zone, AssistantEntity.StationTask job) {
         List<Preset> presets = list(player);
-        String keep = null;
+        Preset kept = null;
         for (Preset p : presets) {
             if (zone.containsColumn(p.zone().center())
                 || p.zone().containsColumn(zone.center())) {
-                keep = p.name();
+                kept = p;
                 break;
             }
         }
-        String name = keep != null ? keep : nextFreeName(player);
-        Preset preset = new Preset(name, job, zone, AssistantEntity.Shift.ALWAYS);
+        // Re-staking the same ground INHERITS what the caller does not know:
+        // the name always (it is still the same field), the trade when the new
+        // marking is bare (widening a farm with the empty wand must not untype
+        // it), and the shift the plot was saved with.
+        String name = kept != null ? kept.name() : nextFreeName(player);
+        AssistantEntity.StationTask effJob =
+            job == AssistantEntity.StationTask.NONE && kept != null ? kept.job() : job;
+        AssistantEntity.Shift shift = kept != null ? kept.shift() : AssistantEntity.Shift.ALWAYS;
+        Preset preset = new Preset(name, effJob, zone, shift);
         presets.removeIf(p -> p.name().equals(name));
         presets.add(0, preset);
         while (presets.size() > MAX) presets.remove(presets.size() - 1);
         store(player, presets);
         return preset;
+    }
+
+    /**
+     * Give a plot its trade, or the next one along — the click-cycle every
+     * other choice in this mod uses. Everyone already working the plot
+     * retrains on the spot: the ground defines the work, that is the point
+     * of naming it "North Farm".
+     */
+    @Nullable
+    public static AssistantEntity.StationTask cycleTrade(Player player, String name) {
+        List<Preset> presets = list(player);
+        for (int i = 0; i < presets.size(); i++) {
+            Preset p = presets.get(i);
+            if (!p.name().equals(name)) continue;
+            AssistantEntity.StationTask[] all = AssistantEntity.StationTask.values();
+            AssistantEntity.StationTask next = all[(p.job().ordinal() + 1) % all.length];
+            presets.set(i, new Preset(p.name(), next, p.zone(), p.shift()));
+            store(player, presets);
+            if (next != AssistantEntity.StationTask.NONE) {
+                for (AssistantEntity mate : AssistantEntity.allFor(player.getUUID())) {
+                    if (mate.isAlive() && p.zone().equals(mate.workZone())) {
+                        mate.setStation(p.zone().center(), next);
+                        mate.say("Retrained — working \"" + p.name() + "\" as a "
+                            + next.label + " now.");
+                    }
+                }
+            }
+            return next;
+        }
+        return null;
     }
 
     public static boolean forget(Player player, String name) {
@@ -203,8 +246,10 @@ public final class ZonePresets {
      * hands the trade over, but only to a bot that has none.
      */
     public static void applyGround(AssistantEntity bot, Preset preset) {
-        if (preset.job() != AssistantEntity.StationTask.NONE
-            && bot.stationTask() == AssistantEntity.StationTask.NONE) {
+        if (preset.job() != AssistantEntity.StationTask.NONE) {
+            // Assigning to "North Farm" means farming it — whatever the bot
+            // was before. Bare ground is the other way round: workers keep
+            // their own trades and the ground learns from the first of them.
             bot.setStation(preset.zone().center(), preset.job());
         }
         bot.assignPlot(preset.zone(), preset.name());

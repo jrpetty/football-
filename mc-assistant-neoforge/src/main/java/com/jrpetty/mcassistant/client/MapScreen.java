@@ -58,6 +58,7 @@ public class MapScreen extends Screen {
                 AssistantEntity::isAlive));
             crew.sort((a, b) -> a.clientName().compareToIgnoreCase(b.clientName()));
         }
+        PlotsClient.refresh();   // staked-but-empty ground shows too
         fitBounds();
 
         int w3 = (mapW - 8) / 3;
@@ -90,6 +91,10 @@ public class MapScreen extends Screen {
                 loX = Math.min(loX, z[0]); hiX = Math.max(hiX, z[2]);
                 loZ = Math.min(loZ, z[1]); hiZ = Math.max(hiZ, z[3]);
             }
+        }
+        for (var plot : PlotsClient.book) {
+            loX = Math.min(loX, plot.minX()); hiX = Math.max(hiX, plot.maxX());
+            loZ = Math.min(loZ, plot.minZ()); hiZ = Math.max(hiZ, plot.maxZ());
         }
         if (loX > hiX) { loX = hiX = 0; loZ = hiZ = 0; }
 
@@ -163,6 +168,22 @@ public class MapScreen extends Screen {
         // Everything below is plotted from live positions, so clip it to the
         // map rather than let a bot that has wandered draw over the chrome.
         g.enableScissor(mapX, mapY, mapX + mapW, mapY + mapH);
+
+        // Staked-but-empty ground first, quietest: a plot in the book with
+        // nobody on it exists nowhere else a player can see. Slate outline,
+        // its name, no fill — waiting ground, not worked ground.
+        for (var plot : PlotsClient.book) {
+            if (plot.workers() > 0) continue;   // a worked plot draws below, in its trade's colour
+            int x0 = px(plot.minX()), z0 = pz(plot.minZ());
+            int x1 = px(plot.maxX()), z1 = pz(plot.maxZ());
+            if (x1 - x0 < 2) x1 = x0 + 2;
+            if (z1 - z0 < 2) z1 = z0 + 2;
+            g.renderOutline(x0, z0, x1 - x0, z1 - z0, Ui.EDGE_SOFT);
+            if (x1 - x0 > 30) {
+                g.drawString(this.font, Ui.clip(this.font, plot.name(), x1 - x0 - 6),
+                    x0 + 3, z0 + 2, Ui.FAINT, false);
+            }
+        }
 
         // Patches first, so the bots sit on top of their own ground.
         for (int i = 0; i < crew.size(); i++) {

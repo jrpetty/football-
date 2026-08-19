@@ -136,11 +136,15 @@ public final class AssistantActions {
             }
             case ZONE_HERE -> {
                 WorkZone old = a.workZone();
-                a.setWorkZone(WorkZone.around(player.blockPosition(),
+                WorkZone here = WorkZone.around(player.blockPosition(),
                     old != null ? old.radius() : 12,
-                    old != null ? old.depth() : WorkZone.DEFAULT_DEPTH));
+                    old != null ? old.depth() : WorkZone.DEFAULT_DEPTH);
+                // Every way of marking ground feeds the one plot book.
+                ZonePresets.Preset staked = ZonePresets.stake(player, here, a.stationTask());
+                a.assignPlot(here, staked.name());
                 a.showZoneTo(player);
-                a.say("This is my patch now — " + a.workZone().describe() + ". I'll stay inside it.");
+                a.say("\"" + staked.name() + "\" is my patch now — "
+                    + a.workZone().describe() + ". I'll stay inside it.");
             }
             case ZONE_SHRINK -> resizeZone(a, player, -4);
             case ZONE_GROW -> resizeZone(a, player, 4);
@@ -259,7 +263,10 @@ public final class AssistantActions {
         }
         int r = Math.max(4, Math.min(com.jrpetty.mcassistant.AssistantConfig.maxZoneRadius(),
             zone.radius() + delta));
-        a.setWorkZone(WorkZone.around(zone.center(), r, zone.depth()));
+        WorkZone resized = WorkZone.around(zone.center(), r, zone.depth());
+        // The book's footprint follows the resize (same centre keeps the name).
+        ZonePresets.Preset staked = ZonePresets.stake(player, resized, a.stationTask());
+        a.assignPlot(resized, staked.name());
         a.showZoneTo(player);
         a.say("Patch is now " + a.workZone().describe() + ".");
     }

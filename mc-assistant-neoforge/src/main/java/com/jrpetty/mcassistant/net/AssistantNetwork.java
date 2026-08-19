@@ -118,13 +118,32 @@ public final class AssistantNetwork {
                         assistant.say("Off \"" + preset.name() + "\" — waiting on your word.");
                     } else {
                         com.jrpetty.mcassistant.ZonePresets.applyGround(assistant, preset);
+                        // Bare ground learns from its first worker, so the plot
+                        // row stops reading as untyped the moment someone with
+                        // a trade steps onto it.
+                        if (preset.job() == AssistantEntity.StationTask.NONE
+                            && assistant.stationTask() != AssistantEntity.StationTask.NONE) {
+                            com.jrpetty.mcassistant.ZonePresets.stake(
+                                player, preset.zone(), assistant.stationTask());
+                        }
                         assistant.say("On \"" + preset.name() + "\" now"
                             + (assistant.stationTask() == AssistantEntity.StationTask.NONE
-                               ? " — give me a trade and I'll get to it." : "."));
+                               ? " — set the plot's trade (or mine) and I'll get to it." : "."));
                     }
                 }
                 case 3 -> com.jrpetty.mcassistant.ZonePresets.forget(player, payload.plotName());
                 case 4 -> com.jrpetty.mcassistant.ZonePresets.rename(player, payload.plotName());
+                case 5 -> {   // give the plot a trade — the ground defines the work
+                    AssistantEntity.StationTask next =
+                        com.jrpetty.mcassistant.ZonePresets.cycleTrade(player, payload.plotName());
+                    if (next != null) {
+                        player.displayClientMessage(net.minecraft.network.chat.Component.literal(
+                            "\"" + payload.plotName() + "\" is "
+                            + (next == AssistantEntity.StationTask.NONE
+                               ? "bare ground now — workers keep their own trades."
+                               : next.label + " ground now.")), true);
+                    }
+                }
                 default -> { }
             }
             sendPlotBook(player);

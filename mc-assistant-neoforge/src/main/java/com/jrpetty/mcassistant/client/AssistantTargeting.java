@@ -74,8 +74,7 @@ public final class AssistantTargeting {
         while (PLOTS.consumeClick()) {
             // The screen opens when the server answers with the book — one
             // round trip, so it always opens showing the truth.
-            net.neoforged.neoforge.network.PacketDistributor.sendToServer(
-                new com.jrpetty.mcassistant.net.PlotOrderPayload(0, -1, ""));
+            PlotsClient.requestOpen();
         }
         while (ROSTER.consumeClick()) {
             // Whole-crew readout without walking to a Job Board.
