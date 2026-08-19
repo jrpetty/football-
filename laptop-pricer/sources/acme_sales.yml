@@ -1,0 +1,33 @@
+# Proposed by `pricer inspect`. Check the CONFIRM lines before using.
+id: acme_sales
+label: Auto-detected from Refurb Sales Export (Aug).csv
+channel: own_retail_b2c
+currency: GBP
+observation_type: sold
+trust: 1.0
+file_glob: Refurb Sales Export (Aug)*.csv
+price:
+  vat_treatment: inclusive
+  fees:
+    rate: 0.0
+    fixed: 0.0
+columns:
+  raw_title: Item Description
+  price_gross: Sold For
+  sold_at: Inv Date
+  grade_raw: Cond.
+  quantity: Qty
+  shipping: Postage
+date_format: '%d/%m/%Y'
+grade_map:
+  Grade B: B
+  Good: B
+  Grade A: A
+  Mint: A_PLUS
+  Very Good: A
+  Fair: C
+  Spares or Repair: SALVAGE
+exclude_if:
+- title_matches: (?i)\b(job ?lot|bundle|spares|faulty|pallet|mixed)\b
+- price_gross_below: 20
+header_row: 4

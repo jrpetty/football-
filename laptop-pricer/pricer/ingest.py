@@ -1,7 +1,6 @@
 """L0 - ingestion. A source profile per pricing file you own (design doc s03)."""
 from __future__ import annotations
 
-import csv
 import datetime as dt
 import hashlib
 import json
@@ -12,6 +11,7 @@ from .config import ROOT, sources
 from .match import resolve, verdict
 from .normalise import normalise
 from .parse import parse_title
+from .reading import read_rows, to_date, to_number
 
 
 def _hash(source_id: str, row: dict) -> str:
@@ -29,27 +29,22 @@ def _excluded(row: dict, profile: dict, title: str, gross: float) -> str | None:
     return None
 
 
-def _num(value) -> float | None:
-    if value is None:
-        return None
-    cleaned = re.sub(r"[^0-9.\-]", "", str(value))
-    try:
-        return float(cleaned)
-    except ValueError:
-        return None
-
-
 def ingest_file(con, path: Path, profile: dict, reference_grade: str = "B") -> dict:
     cols = profile["columns"]
     fmt = profile.get("date_format", "%Y-%m-%d")
-    stats = {"read": 0, "excluded": 0, "duplicate": 0, "review": 0, "loaded": 0}
+    stats = {"read": 0, "excluded": 0, "duplicate": 0, "review": 0, "loaded": 0, "skipped_junk": 0}
     batch = path.name
 
-    with open(path, newline="", encoding="utf-8-sig") as fh:
-        for row in csv.DictReader(fh):
+    rows, meta = read_rows(path, profile.get("header_row"))
+    stats["skipped_junk"] = meta["skipped_blank"] + meta["skipped_total_rows"]
+    if meta.get("junk_rows_above_header"):
+        stats["skipped_junk"] += meta["junk_rows_above_header"]
+
+    if True:
+        for row in rows:
             stats["read"] += 1
             title = (row.get(cols["raw_title"]) or "").strip()
-            gross = _num(row.get(cols["price_gross"]))
+            gross = to_number(row.get(cols["price_gross"]))
             if gross is None:
                 stats["excluded"] += 1
                 continue
@@ -93,9 +88,9 @@ def ingest_file(con, path: Path, profile: dict, reference_grade: str = "B") -> d
             )
             _ensure_config(con, config_id, spec)
 
-            sold_at = _parse_date(row.get(cols.get("sold_at", "")), fmt)
-            qty = int(_num(row.get(cols.get("quantity", ""))) or 1)
-            shipping = _num(row.get(profile.get("price", {}).get("shipping_column", ""))) or 0.0
+            sold_at = to_date(row.get(cols.get("sold_at", "")), fmt)
+            qty = int(to_number(row.get(cols.get("quantity", ""))) or 1)
+            shipping = to_number(row.get(profile.get("price", {}).get("shipping_column") or "")) or 0.0
             n = normalise(gross, profile, grade, reference_grade, qty, shipping)
 
             con.execute(
@@ -106,17 +101,6 @@ def ingest_file(con, path: Path, profile: dict, reference_grade: str = "B") -> d
             )
             stats["loaded"] += 1
     return stats
-
-
-def _parse_date(value, fmt) -> dt.date | None:
-    if not value:
-        return None
-    for f in (fmt, "%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y"):
-        try:
-            return dt.datetime.strptime(str(value).strip(), f).date()
-        except ValueError:
-            continue
-    return None
 
 
 def _ensure_config(con, config_id: str, spec) -> None:
@@ -139,6 +123,8 @@ def ingest_all(con, incoming: Path | None = None) -> dict:
     totals: dict[str, dict] = {}
     for source_id, profile in sources().items():
         for path in sorted(incoming.glob(profile.get("file_glob", "*.csv"))):
+            if path.suffix.lower() not in {".csv", ".tsv", ".txt", ".xlsx", ".xlsm", ".xltx"}:
+                continue
             stats = ingest_file(con, path, profile)
             totals[f"{source_id}:{path.name}"] = stats
     return totals

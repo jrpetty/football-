@@ -7,6 +7,7 @@ import argparse
 import datetime as dt
 import json
 import sys
+from pathlib import Path
 
 from . import stock as stockmod
 from .calibrate import calibrate, write as write_calibration
@@ -15,8 +16,10 @@ from .config import ROOT, cfg, strict_mode
 from .db import connect, reset
 from .estimate import estimate
 from .ingest import ingest_all
+from .inspect import inspect, propose_profile, write_profile
 from .match import config_key, verdict
 from .parse import parse_title
+from .parts import teardown
 
 RULE = "─" * 78
 
@@ -47,6 +50,66 @@ def cmd_ingest(args):
     if agg["review"]:
         print(f"\n{agg['review']} row(s) queued for review - run `review` to see them. "
               "Nothing is dropped silently.")
+
+
+def cmd_inspect(args):
+    """Look at a file you already have and report what is in it."""
+    insp = inspect(args.file)
+    m = insp.meta
+    print(RULE)
+    print(f"  {Path(m['path']).name}")
+    print(RULE)
+    print(f"  format {m['format']}   {m['rows']} data rows   header on row {m['header_row'] + 1}")
+    dropped = []
+    if m.get("junk_rows_above_header"):
+        dropped.append(f"{m['junk_rows_above_header']} banner row(s) above the header")
+    if m.get("skipped_blank"):
+        dropped.append(f"{m['skipped_blank']} blank")
+    if m.get("skipped_total_rows"):
+        dropped.append(f"{m['skipped_total_rows']} total/summary")
+    if dropped:
+        print(f"  ignored: {', '.join(dropped)}")
+
+    print(f"\n  Columns")
+    print(f"    {'in your file':<24}{'read as':<14}{'conf':>6}   why")
+    for c in insp.columns:
+        role = c.role or "— not used"
+        conf = f"{c.confidence:.2f}" if c.role else ""
+        print(f"    {c.name.strip()[:23]:<24}{role:<14}{conf:>6}   {'; '.join(c.evidence)}")
+
+    print(f"\n  Readings")
+    print(f"    currency      {insp.currency or 'not detected — assuming base currency'}")
+    print(f"    date format   {insp.date_format or 'not detected'}")
+    if insp.grades:
+        print(f"    grade words   {', '.join(insp.grades)}")
+
+    r = insp.recognition
+    if r.get("tested"):
+        print(f"\n  Recognition — the test that matters")
+        bar = int(round(r["rate"] * 30))
+        print(f"    [{'█' * bar}{'·' * (30 - bar)}]  {r['resolved']}/{r['tested']} rows "
+              f"resolve to a machine ({r['rate']:.0%})")
+        for reason, count in r["reasons"].items():
+            if reason != "resolved":
+                print(f"      {count:>4}  {reason}")
+        if insp.unresolved:
+            print(f"\n    Rows that did not resolve:")
+            for title, why in insp.unresolved:
+                print(f"      {title:<60} {why}")
+            print("\n    Fix by adding the model to catalog/models.csv or the CPU alias to")
+            print("    catalog/cpus.csv — then every future file with that machine resolves.")
+
+    for w in insp.warnings:
+        print(f"\n  ! {w}")
+
+    if args.write_profile:
+        profile = propose_profile(insp, args.write_profile, channel=args.channel,
+                                  observation_type=args.type, trust=args.trust)
+        path = write_profile(profile)
+        print(f"\n  Profile written to {path}")
+        print("  Check the CONFIRM lines (VAT treatment, fees) before ingesting.")
+    else:
+        print("\n  Nothing written. Re-run with --write-profile <id> to save a source profile.")
 
 
 def cmd_quote(args):
@@ -114,6 +177,66 @@ def cmd_quote(args):
     for w in est.warnings + p.warnings:
         print(f"\n  ! {w}")
     print()
+
+
+def cmd_parts(args):
+    """What each component of a machine is worth on its own."""
+    con = connect()
+    spec = parse_title(args.title)
+    if not spec.model_id:
+        print(f"Could not identify a model from:\n  {args.title}")
+        return 2
+
+    defects = tuple(d.strip() for d in (args.defects or "").split(",") if d.strip())
+    config = {"cpu_id": spec.cpu_id, "ram_gb": spec.ram_gb, "storage_gb": spec.storage_gb,
+              "panel": spec.panel, "screen_in": spec.screen_in}
+    td = teardown(spec.model_id, config, args.grade, args.battery,
+                  has_charger=not args.no_charger, defects=defects)
+
+    print(RULE)
+    print(f"  {args.title}")
+    print(f"  {spec.model_id}  ·  grade {args.grade}"
+          + (f"  ·  battery {args.battery}%" if args.battery else "")
+          + (f"  ·  defects: {', '.join(defects)}" if defects else ""))
+    print(RULE)
+    print(f"  {'component':<26}{'value':>9}   {'basis':<42}source")
+    print("  " + "─" * 92)
+    for p in td.parts:
+        mark = " " if p.recoverable and p.value > 0 else "×"
+        print(f"{mark} {p.label[:25]:<26}{p.value:>9.2f}   {p.basis[:41]:<42}{p.source}")
+    print("  " + "─" * 92)
+    print(f"  {'gross recovery':<26}{sum(x.value for x in td.parts):>9.2f}")
+    if td.scarcity != 1.0:
+        print(f"  {'parts availability':<26}{'×' + str(td.scarcity):>9}   "
+              f"{'adjusted gross ' + format(td.gross, '.2f'):<42}")
+    print(f"  {'teardown labour':<26}{-td.labour:>9.2f}")
+    print(f"  {'WEEE levy':<26}{-td.weee:>9.2f}")
+    print(f"  {'NET RECOVERY':<26}{td.net:>9.2f}")
+
+    hard_stops = set(cfg()["grading"]["hard_stops"])
+    stopped = sorted(hard_stops & set(defects))
+    if stopped:
+        print(f"\n  HARD STOP: {', '.join(stopped)} — this machine is parts only.")
+        print(f"  There is no whole-unit price to compare against. Net recovery is £{td.net:.2f}.")
+        return
+
+    est = estimate(con, spec.model_id, spec.cpu_id, spec.ram_gb, spec.storage_gb,
+                   args.grade, _date(args.as_of))
+    if est.value is not None:
+        whole = price(est.value, spec.model_id, config, args.grade,
+                      confidence=est.confidence).market_value_ex_vat
+        print(f"\n  {'whole unit, working':<26}{whole:>9.2f}   ex-VAT at grade {args.grade}")
+        if td.net > whole:
+            print(f"  → PART OUT: worth £{td.net - whole:.2f} more in pieces")
+        else:
+            print(f"  → SELL WHOLE: worth £{whole - td.net:.2f} more assembled")
+    else:
+        print(f"\n  No whole-unit valuation yet, so the part-out comparison cannot be made.")
+
+    seeded = sum(1 for p in td.parts if p.source == "seed formula")
+    if seeded:
+        print(f"\n  ! {seeded} of {len(td.parts)} lines use seed formulas. Put your own realised")
+        print(f"    parts prices in catalog/parts_prices.csv — they override these entirely.")
 
 
 def cmd_intake(args):
@@ -280,6 +403,14 @@ def main(argv=None):
     p.add_argument("--incoming", help="directory of files to ingest (default data/incoming)")
     p.set_defaults(fn=cmd_ingest)
 
+    p = sub.add_parser("inspect", help="see how a file of yours would be read")
+    p.add_argument("file")
+    p.add_argument("--write-profile", metavar="ID", help="save a source profile with this id")
+    p.add_argument("--channel", default="own_retail_b2c")
+    p.add_argument("--type", default="sold", help="sold | ask | offer | appraisal")
+    p.add_argument("--trust", type=float, default=0.8)
+    p.set_defaults(fn=cmd_inspect)
+
     p = sub.add_parser("quote", help="price a machine from a free-text description")
     p.add_argument("title")
     p.add_argument("--grade", default="B")
@@ -287,6 +418,15 @@ def main(argv=None):
     p.add_argument("--as-of", default=None)
     p.add_argument("--days", type=float, default=None, help="expected days to sell")
     p.set_defaults(fn=cmd_quote)
+
+    p = sub.add_parser("parts", help="value each component of a machine")
+    p.add_argument("title")
+    p.add_argument("--grade", default="C")
+    p.add_argument("--battery", type=int, help="measured battery health %%")
+    p.add_argument("--no-charger", action="store_true")
+    p.add_argument("--defects", help="comma separated, e.g. screen_cracked,board_fault")
+    p.add_argument("--as-of", default=None)
+    p.set_defaults(fn=cmd_parts)
 
     p = sub.add_parser("intake", help="book a physical machine into stock")
     p.add_argument("title")

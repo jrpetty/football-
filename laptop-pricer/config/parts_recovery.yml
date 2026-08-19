@@ -1,15 +1,53 @@
-# Component recovery values, used for the salvage floor and the part-out
-# decision. SEED VALUES - replace with your own realised parts sales, or let
-# `pricer calibrate` fit them once the parts register has history.
-panel_by_class:
-  fhd: 38.0
-  qhd: 62.0
-  uhd: 88.0
-  oled: 95.0
-  default: 38.0
-board_per_1000_bench_score: 4.3
-battery: 14.0
-ram_per_8gb: 9.0
-storage_per_256gb: 6.0
-chassis_by_grade: {A_PLUS: 22.0, A: 16.0, B: 8.0, C: 0.0, D: 0.0}
+# Per-component recovery values. SEED VALUES - override any line with your own
+# realised parts prices in catalog/parts_prices.csv, which always wins.
+#
+# Two rules encode real teardown behaviour and matter more than the numbers:
+#   - soldered RAM or storage has no separate parts value; it is part of the board
+#   - a component that failed the intake checklist recovers nothing
+
+components:
+  panel:
+    label: Display panel
+    base_by_size: {13: 34.0, 14: 38.0, 15: 42.0, 16: 52.0, 17: 64.0}
+    class_multiplier: {tn: 0.8, ips: 1.0, fhd: 1.0, qhd: 1.6, uhd: 2.3, oled: 2.5}
+    blocked_by: [screen_cracked, screen_dead_pixels]
+
+  board:
+    label: Motherboard
+    per_1000_bench_score: 4.3
+    floor: 18.0
+    blocked_by: [board_fault, bios_locked]
+
+  battery:
+    label: Battery
+    base: 14.0
+    health_multiplier: {90: 1.0, 80: 0.85, 70: 0.6, 0: 0.0}
+
+  ram:
+    label: RAM modules
+    per_8gb: 9.0
+    requires_upgradeable: true          # soldered RAM recovers nothing separately
+
+  storage:
+    label: SSD
+    per_256gb: 6.0
+    requires_upgradeable: true
+
+  chassis:
+    label: Chassis and palmrest
+    by_grade: {A_PLUS: 22.0, A: 16.0, B: 8.0, C: 0.0, D: 0.0}
+
+  keyboard:
+    label: Keyboard
+    base: 12.0
+    by_grade: {A_PLUS: 1.0, A: 1.0, B: 0.75, C: 0.3, D: 0.0}
+    blocked_by: [keyboard_missing_keys]
+
+  charger:
+    label: Charger
+    base: 9.0
+    requires_charger: true
+
 scarcity_multiplier: {abundant: 0.9, moderate: 1.0, scarce: 1.15}
+teardown_job: teardown                  # looked up in config/bench.yml
+apply_weee_levy: true

@@ -1,0 +1,5 @@
+key,value,note,updated
+# Your own realised parts prices. Most specific key wins.
+# Examples - delete these and add your own:
+panel:14:fhd,41.00,"median of 12 sold Aug 2026",2026-08-19
+battery:dell-latitude-5420,17.50,"we buy these in at 17.50",2026-08-19

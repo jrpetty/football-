@@ -18,6 +18,9 @@ from pricer.db import connect
 from pricer.estimate import (effective_n, estimate, mad_sigma, reject_outliers,
                              spec_delta, weighted_median, Comparable)
 from pricer.ingest import ingest_all
+from pricer.inspect import inspect, propose_profile
+from pricer.parts import teardown
+from pricer.reading import find_header_row, read_rows, to_date, to_number
 from pricer.match import config_key, cpu_compatible, resolve, verdict
 from pricer.normalise import net_realised, normalise, to_reference
 from pricer.parse import parse_title, tokens
@@ -464,3 +467,157 @@ class TestStrictMode(unittest.TestCase):
                   {"cpu_id": "intel-i5-1145g7", "ram_gb": 16, "storage_gb": 512}, "B")
         self.assertTrue(any("seed priors" in w for w in p.warnings))
         self.assertGreater(p.market_value_ex_vat, 0)
+
+
+SAMPLE_CSV = ROOT / "data" / "samples" / "Refurb Sales Export (Aug).csv"
+SAMPLE_XLSX = ROOT / "data" / "samples" / "supplier_list.xlsx"
+
+
+class TestTolerantReading(unittest.TestCase):
+    """Files arrive as they are, not as we would like them."""
+
+    def test_prices_however_they_are_written(self):
+        for text, expected in [("£1,234.56", 1234.56), ("1.234,56", 1234.56),
+                               ("(99.00)", -99.0), ("1 234", 1234.0), ("$450", 450.0),
+                               ("€1.299,00", 1299.0), ("285", 285.0)]:
+            with self.subTest(text=text):
+                self.assertAlmostEqual(to_number(text), expected, places=2)
+
+    def test_rubbish_is_not_coerced_to_a_number(self):
+        for text in ("", "n/a", "-", "TBC", None):
+            self.assertIsNone(to_number(text))
+
+    def test_dates_in_every_common_convention(self):
+        target = dt.date(2026, 8, 19)
+        for text in ("2026-08-19", "19/08/2026", "19 Aug 2026", "19-Aug-26", "20260819", 46253):
+            with self.subTest(text=text):
+                self.assertEqual(to_date(text), target)
+
+    def test_finds_the_header_under_a_report_banner(self):
+        rows, meta = read_rows(SAMPLE_CSV)
+        self.assertEqual(meta["header_row"], 4)
+        self.assertIn("Item Description", meta["columns"])
+
+    def test_drops_blank_and_total_rows(self):
+        rows, meta = read_rows(SAMPLE_CSV)
+        self.assertEqual(meta["skipped_total_rows"], 1)
+        self.assertGreaterEqual(meta["skipped_blank"], 1)
+        self.assertEqual(len(rows), 9)
+        self.assertFalse(any("TOTAL" in str(v).upper() for r in rows for v in r.values()))
+
+    def test_xlsx_reads_identically_to_csv(self):
+        csv_rows, csv_meta = read_rows(SAMPLE_CSV)
+        xls_rows, xls_meta = read_rows(SAMPLE_XLSX)
+        self.assertEqual(len(csv_rows), len(xls_rows))
+        self.assertEqual(csv_meta["columns"], xls_meta["columns"])
+
+
+class TestInspection(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.insp = inspect(SAMPLE_CSV)
+
+    def test_identifies_every_column_that_matters(self):
+        self.assertEqual(self.insp.mapping["raw_title"], "Item Description")
+        self.assertEqual(self.insp.mapping["price_gross"], "Sold For")
+        self.assertEqual(self.insp.mapping["sold_at"], "Inv Date")
+        self.assertEqual(self.insp.mapping["grade_raw"], "Cond.")
+        self.assertEqual(self.insp.mapping["quantity"], "Qty")
+
+    def test_leaves_irrelevant_columns_alone(self):
+        assigned = set(self.insp.mapping.values())
+        self.assertNotIn("VAT Rate", assigned)
+        self.assertNotIn("Cust Ref", assigned)
+
+    def test_detects_currency_and_date_convention(self):
+        self.assertEqual(self.insp.currency, "GBP")
+        self.assertEqual(self.insp.date_format, "%d/%m/%Y")
+
+    def test_reports_how_much_of_the_file_is_recognised(self):
+        r = self.insp.recognition
+        self.assertEqual(r["tested"], 9)
+        self.assertGreaterEqual(r["resolved"], 6)
+        self.assertIn("unknown model", r["reasons"])
+
+    def test_names_the_rows_it_could_not_resolve(self):
+        titles = [t for t, _ in self.insp.unresolved]
+        self.assertTrue(any("WonderBook" in t for t in titles))
+
+    def test_proposed_profile_maps_your_grade_words(self):
+        profile = propose_profile(self.insp, "test_source")
+        gm = profile["grade_map"]
+        self.assertEqual(gm["Grade B"], "B")
+        self.assertEqual(gm["Grade A"], "A")
+        self.assertEqual(gm["Mint"], "A_PLUS")
+        self.assertEqual(gm["Very Good"], "A")
+        self.assertEqual(gm["Spares or Repair"], "SALVAGE")
+
+    def test_profile_flags_what_it_cannot_infer(self):
+        profile = propose_profile(self.insp, "test_source")
+        self.assertIn("CONFIRM", profile["price"]["vat_treatment"])
+
+
+class TestPartsValuation(unittest.TestCase):
+    LAT = ("dell-latitude-5420",
+           {"cpu_id": "intel-i5-1145g7", "ram_gb": 16, "storage_gb": 512,
+            "panel": "fhd", "screen_in": 14.0})
+    MAC = ("apple-macbook-air-m1",
+           {"cpu_id": "apple-m1", "ram_gb": 8, "storage_gb": 256,
+            "panel": "ips", "screen_in": 13.3})
+
+    def test_every_component_gets_its_own_value(self):
+        td = teardown(*self.LAT, grade="C", battery_health_pct=74)
+        names = {p.component for p in td.parts}
+        self.assertEqual(names, {"panel", "board", "battery", "ram", "storage",
+                                 "chassis", "keyboard", "charger"})
+        self.assertTrue(all(p.value >= 0 for p in td.parts))
+
+    def test_net_recovery_is_gross_less_labour_and_weee(self):
+        td = teardown(*self.LAT, grade="C", battery_health_pct=74)
+        self.assertAlmostEqual(td.net, td.gross - td.labour - td.weee, places=2)
+
+    def test_your_own_prices_override_the_formula(self):
+        """catalog/parts_prices.csv wins over the seed formula."""
+        td = teardown(*self.LAT, grade="C", battery_health_pct=95)
+        panel = next(p for p in td.parts if p.component == "panel")
+        self.assertNotEqual(panel.source, "seed formula")
+        self.assertAlmostEqual(panel.value, 41.00, places=2)
+
+    def test_soldered_memory_has_no_separate_value(self):
+        td = teardown(*self.MAC, grade="B", battery_health_pct=90)
+        for component in ("ram", "storage"):
+            part = next(p for p in td.parts if p.component == component)
+            self.assertEqual(part.value, 0.0)
+            self.assertIn("soldered", part.basis)
+
+    def test_upgradeable_memory_does_have_a_value(self):
+        td = teardown(*self.LAT, grade="C", battery_health_pct=90)
+        self.assertGreater(next(p for p in td.parts if p.component == "ram").value, 0)
+
+    def test_a_defect_zeroes_the_component_it_breaks(self):
+        td = teardown(*self.LAT, grade="C", battery_health_pct=90, defects=("screen_cracked",))
+        panel = next(p for p in td.parts if p.component == "panel")
+        self.assertEqual(panel.value, 0.0)
+        self.assertFalse(panel.recoverable)
+
+    def test_dead_battery_recovers_nothing(self):
+        td = teardown(*self.LAT, grade="C", battery_health_pct=40)
+        self.assertEqual(next(p for p in td.parts if p.component == "battery").value, 0.0)
+
+    def test_worse_grade_recovers_less(self):
+        good = teardown(*self.LAT, grade="A", battery_health_pct=90).net
+        bad = teardown(*self.LAT, grade="D", battery_health_pct=90).net
+        self.assertGreater(good, bad)
+
+    def test_missing_charger_removes_its_line(self):
+        with_c = teardown(*self.LAT, grade="C", battery_health_pct=90, has_charger=True)
+        without = teardown(*self.LAT, grade="C", battery_health_pct=90, has_charger=False)
+        self.assertGreater(with_c.net, without.net)
+
+    def test_salvage_floor_matches_the_itemised_breakdown(self):
+        """The floor used in pricing and the breakdown shown to a human must agree."""
+        from pricer.commercial import parts_value
+        from pricer.config import catalog as cat
+        model = cat()["models"]["dell-latitude-5420"]
+        td = teardown(*self.LAT, grade="C")
+        self.assertAlmostEqual(parts_value(model, self.LAT[1], "C"), td.net, places=2)

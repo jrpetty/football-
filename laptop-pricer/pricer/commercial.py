@@ -54,22 +54,13 @@ def at_grade_and_channel(reference_value: float, grade: str, channel: str) -> fl
 
 
 def parts_value(model: dict, config: dict, grade: str = "C") -> float:
-    """Net recovery from a teardown - the floor under any working-unit estimate."""
-    bench = cfg()["bench"]
-    pr = cfg()["parts"]
-    cpu = catalog()["cpus"].get(config.get("cpu_id")) or {}
-    panels = pr["panel_by_class"]
-    gross = (
-        panels.get(config.get("panel") or "default", panels["default"])
-        + (cpu.get("bench_score", 0) / 1000.0) * pr["board_per_1000_bench_score"]
-        + pr["battery"]
-        + (config.get("ram_gb") or 0) / 8.0 * pr["ram_per_8gb"]
-        + (config.get("storage_gb") or 0) / 256.0 * pr["storage_per_256gb"]
-        + pr["chassis_by_grade"].get(grade, 0.0)
-    )
-    scarcity = pr["scarcity_multiplier"].get(model.get("parts_availability"), 1.0)
-    teardown = bench["standard_jobs"]["teardown"]["minutes"] / 60.0 * bench["labour_rate_per_hour"]
-    return round(gross * scarcity - teardown - bench["weee_levy_per_unit"], 2)
+    """Net recovery from a teardown - the floor under any working-unit estimate.
+
+    Delegates to the component model so the floor and the itemised breakdown in
+    `pricer parts` can never drift apart.
+    """
+    from .parts import net_recovery
+    return net_recovery(model["model_id"], config, grade)
 
 
 def price(reference_value: float, model_id: str, config: dict, grade: str = "B",

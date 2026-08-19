@@ -18,11 +18,13 @@ was derived.
 ## Install and run
 
 ```bash
-pip install duckdb pyyaml
+pip install duckdb pyyaml openpyxl
 cd laptop-pricer
 
 python3 -m pricer.cli ingest --reset          # load data/incoming via source profiles
+python3 -m pricer.cli inspect yourfile.xlsx    # what does it make of your data?
 python3 -m pricer.cli quote "Dell Latitude 5420 i5-1145G7 16GB 512GB"
+python3 -m pricer.cli parts "Dell Latitude 5420 i5-1145G7 16GB 512GB" --grade C
 python3 -m pricer.cli review                  # rows a human needs to decide
 
 python3 scripts/make_demo_data.py             # 6 months of synthetic history
@@ -30,7 +32,7 @@ python3 scripts/seed_demo.py                  # + a 71-unit stock book
 python3 -m pricer.cli stock                   # overview and ageing
 python3 -m pricer.cli actions                 # the morning action queue
 
-python3 -m unittest discover -s tests         # 41 tests
+python3 -m unittest discover -s tests         # 77 tests
 ```
 
 Dates are pinned to `2026-08-19` in the demo data. Pass `--as-of 2026-08-19`
@@ -38,8 +40,46 @@ to any command to reproduce the documented figures.
 
 ## Plugging in your own pricing files
 
-This is the part built for your data. Drop a CSV in `data/incoming/` and add a
-profile in `sources/`:
+Point it at a file you already have and it tells you what it found:
+
+```bash
+python3 -m pricer.cli inspect "Refurb Sales Export (Aug).csv"
+```
+
+```
+  format csv   9 data rows   header on row 5
+  ignored: 4 banner row(s) above the header, 2 blank, 1 total/summary
+
+  Columns
+    in your file            read as         conf   why
+    Inv Date                sold_at         0.95   header contains 'date'; 9/9 parse as dates
+    Item Description        raw_title       1.04   header contains 'description'; 8/9 contain a known brand
+    Cond.                   grade_raw       1.01   header is exactly 'cond'; 7 distinct short values
+    Sold For                price_gross     1.08   header is exactly 'sold for'; 9/9 numeric, median 312
+    VAT Rate                — not used
+
+  Recognition — the test that matters
+    [███████████████████████·······]  7/9 rows resolve to a machine (78%)
+         1  unknown model
+         1  unknown CPU
+```
+
+No reformatting required. It finds the header under report banners, drops blank
+and total rows, reads `£1,234.56` and `1.234,56` and `(99.00)`, handles six date
+conventions plus Excel serials, and takes `.csv`, `.tsv` or `.xlsx`.
+
+`--write-profile <id>` saves a source profile with your columns already mapped
+and your grade words already translated (`Grade B` → B, `Mint` → A_PLUS,
+`Spares or Repair` → SALVAGE). Only what it genuinely cannot infer is left for
+you: **does the price include VAT, is it a sale or an ask, and which channel.**
+
+The recognition percentage is the number to watch. Anything unresolved is named
+with its reason, and fixing it once — a model added to `catalog/models.csv`, a
+CPU alias added to `catalog/cpus.csv` — fixes it for every future file.
+
+### Writing a profile by hand
+
+Drop a file in `data/incoming/` and add a profile in `sources/`:
 
 ```yaml
 id: my_export
@@ -71,6 +111,57 @@ exclude_if:
 Three things the engine cannot infer and you must state: **does the price
 include VAT, is it a sale or an ask, and which channel is it.** Everything else
 is guessed from the file and confirmed by you.
+
+## The value of each part
+
+```bash
+python3 -m pricer.cli parts "Dell Latitude 5420 i5-1145G7 16GB 512GB 14in FHD" \
+    --grade C --battery 74
+```
+
+```
+  component                     value   basis                            source
+  Display panel                 41.00   14" fhd                          median of 12 sold Aug 2026
+  Motherboard                   44.72   Intel Core i5-1145G7 — 10400     seed formula
+  Battery                       10.50   74% health x 0.6                 we buy these in at 17.50
+  RAM modules                   18.00   16GB at £9.00/8GB                seed formula
+  SSD                           12.00   512GB at £6.00/256GB             seed formula
+× Chassis and palmrest           0.00   grade C                          seed formula
+  Keyboard                       3.60   grade C x 0.3                    seed formula
+  Charger                        9.00   included                         seed formula
+  gross recovery               138.82
+  parts availability             ×0.9   adjusted gross 124.94
+  teardown labour              -10.00
+  WEEE levy                    -13.00
+  NET RECOVERY                 101.94
+
+  whole unit, working          173.80   ex-VAT at grade C
+  → SELL WHOLE: worth £71.86 more assembled
+```
+
+Put your own realised parts prices in **`catalog/parts_prices.csv`** and they
+override the formula entirely — most specific key wins:
+
+```csv
+key,value,note,updated
+panel:14:fhd,41.00,"median of 12 sold Aug 2026",2026-08-19
+battery:dell-latitude-5420,17.50,"we buy these in at 17.50",2026-08-19
+board:intel-i5-1145g7,52.00,"broker pays this",2026-08-19
+```
+
+Three behaviours are worth knowing:
+
+- **Soldered memory has no separate value.** On a MacBook the RAM and SSD lines
+  come out at zero, because their value is already in the board. Charging for
+  them twice would overstate every Apple teardown.
+- **A failed check zeroes the component it breaks**, not the whole machine —
+  `--defects screen_cracked` kills the panel line and leaves the rest.
+- **A hard stop suppresses the comparison.** A BIOS-locked machine is parts
+  only, so no whole-unit price is offered against it.
+
+The same figure is the salvage floor under every working-unit valuation, so the
+breakdown you read and the floor the pricer applies can never drift apart —
+there is a test that asserts exactly that.
 
 ## Your data sets the parameters, not just the prices
 
@@ -141,6 +232,7 @@ your commercial policy and was always yours. Everything in between is fitted.
 | `config/parts_recovery.yml` | component recovery values for the salvage floor |
 | `config/fitted.yml` | **written by calibration** — never hand-edit |
 | `catalog/*.csv` | models with build attributes, CPUs and GPUs with aliases |
+| `catalog/parts_prices.csv` | **your own realised parts prices** — override the formulas |
 
 ## Reference basis
 
