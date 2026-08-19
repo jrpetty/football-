@@ -5,6 +5,7 @@ not in front of it (design doc s04).
 """
 from __future__ import annotations
 
+import functools
 import re
 from dataclasses import dataclass, field, asdict
 
@@ -64,13 +65,47 @@ def tokens(text: str) -> list[str]:
     return out
 
 
-def contains_sequence(hay: list[str], needle: list[str]) -> bool:
-    """True if `needle` appears as a contiguous run inside `hay`."""
+@functools.lru_cache(maxsize=4096)
+def _tokens_cached(text: str) -> tuple[str, ...]:
+    """Gazetteer entries are constant, so tokenise each one once."""
+    return tuple(tokens(text))
+
+
+@functools.lru_cache(maxsize=1)
+def _gazetteer(kind: str = "all"):
+    """Pre-tokenised aliases, longest first so the specific beats the vague."""
+    cat = catalog()
+    out = {}
+    for key in ("cpus", "gpus"):
+        entries = []
+        for row_id, row in cat[key].items():
+            for alias in [row["canonical"], *row["aliases"]]:
+                toks = _tokens_cached(alias)
+                if toks:
+                    entries.append((len(toks), toks, row_id))
+        entries.sort(key=lambda e: -e[0])
+        out[key] = entries
+    models = []
+    for model_id, model in cat["models"].items():
+        toks = _tokens_cached(model["model_name"])
+        models.append((len(toks), toks, model_id, model["brand"]))
+    models.sort(key=lambda e: -e[0])
+    out["models"] = models
+    return out
+
+
+def contains_sequence(hay, needle) -> bool:
+    """True if `needle` appears as a contiguous run inside `hay`.
+
+    Both are normalised to tuples: the gazetteer caches tuples while callers
+    pass lists, and a list slice never compares equal to a tuple.
+    """
+    hay, needle = tuple(hay), tuple(needle)
     if not needle or len(needle) > len(hay):
         return False
-    first = needle[0]
-    for i in range(len(hay) - len(needle) + 1):
-        if hay[i] == first and hay[i:i + len(needle)] == needle:
+    first, n = needle[0], len(needle)
+    for i in range(len(hay) - n + 1):
+        if hay[i] == first and hay[i:i + n] == needle:
             return True
     return False
 
@@ -118,19 +153,15 @@ def _ram_storage(title: str) -> tuple[int | None, int | None]:
     return ram, storage
 
 
-def _match_gazetteer(tok: list[str], table: dict, key: str) -> str | None:
+def _match_gazetteer(tok: list[str], kind: str) -> str | None:
     """Longest alias wins, so i5-1145G7 beats the generation-median 'i5 11th Gen'."""
-    best, best_len = None, 0
-    for row_id, row in table.items():
-        for alias in [row["canonical"], *row["aliases"]]:
-            a = tokens(alias)
-            if len(a) > best_len and contains_sequence(tok, a):
-                best, best_len = row_id, len(a)
-    return best
+    for _length, alias_tokens, row_id in _gazetteer()[kind]:
+        if contains_sequence(tok, alias_tokens):
+            return row_id
+    return None
 
 
 def parse_title(title: str) -> SpecVector:
-    cat = catalog()
     tok = tokens(title)
     spec = SpecVector(raw_title=title)
 
@@ -140,16 +171,15 @@ def parse_title(title: str) -> SpecVector:
             break
 
     # Model: every token of the model name must be present; most specific wins.
-    best_len = 0
-    for model_id, model in cat["models"].items():
-        if spec.brand and model["brand"] != spec.brand:
+    for _length, keys, model_id, brand in _gazetteer()["models"]:
+        if spec.brand and brand != spec.brand:
             continue
-        keys = tokens(model["model_name"])
-        if len(keys) > best_len and contains_sequence(tok, keys):
-            spec.model_id, best_len = model_id, len(keys)
+        if contains_sequence(tok, keys):
+            spec.model_id = model_id
+            break
 
-    spec.cpu_id = _match_gazetteer(tok, cat["cpus"], "cpu")
-    spec.gpu_id = _match_gazetteer(tok, cat["gpus"], "gpu")
+    spec.cpu_id = _match_gazetteer(tok, "cpus")
+    spec.gpu_id = _match_gazetteer(tok, "gpus")
     spec.ram_gb, spec.storage_gb = _ram_storage(title)
 
     if m := _SCREEN.search(title):

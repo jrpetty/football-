@@ -11,6 +11,7 @@ from pathlib import Path
 
 from . import stock as stockmod
 from .calibrate import calibrate, write as write_calibration
+from .capabilities import report as capability_report
 from .commercial import UncalibratedParameter, price
 from .config import ROOT, cfg, strict_mode
 from .db import connect, reset
@@ -54,6 +55,58 @@ def cmd_ingest(args):
         print(f"\n! {agg['no_date']} loaded row(s) have no usable date. They are stored but "
               f"CANNOT be used in any valuation -\n  every comparable needs a date. "
               f"Check the sold_at column in the source profile.")
+
+
+def cmd_capabilities(args):
+    """What the engine will accept, read from the live code and catalogue."""
+    r = capability_report()
+    print(RULE)
+    print("  WHAT THIS WILL ACCEPT")
+    print(RULE)
+
+    print("\n  File formats")
+    for name, note in r["formats"]:
+        print(f"    {name:<26}{note}")
+
+    print("\n  Prices — written any of these ways")
+    for text, parsed in r["numbers"]:
+        print(f"    {text:<16}-> {parsed}")
+
+    print(f"\n  Dates — {r['date_format_count']} conventions, including Excel serial numbers")
+    for text, parsed in r["dates"]:
+        print(f"    {text:<16}-> {parsed}")
+    print(f"    currencies recognised by symbol: {', '.join(r['currencies'])}")
+
+    print("\n  Columns it will find on its own (by header wording OR by value shape)")
+    for role, words in r["columns"].items():
+        print(f"    {role:<14}{', '.join(words)}")
+
+    print("\n  Structure it copes with")
+    for what, how in r["structural"]:
+        print(f"    {what:<44}{how}")
+
+    print("\n  Condition words translated automatically")
+    for grade, words in r["grade_words"].items():
+        print(f"    {grade:<10}{', '.join(words)}")
+
+    print(f"\n  Machines currently in the catalogue "
+          f"({r['model_count']} models, {r['cpu_count']} CPUs, {r['cpu_alias_count']} CPU spellings)")
+    for brand, models in r["catalogue"].items():
+        print(f"    {brand:<12}{', '.join(models)}")
+    print(f"    brands understood in a title: {', '.join(r['brands_recognised'])}")
+
+    print("\n  You must state these — no file contains them")
+    for key, values, why in r["must_declare"]:
+        print(f"    {key:<18}{values}")
+        print(f"    {'':<18}{why}")
+
+    print("\n  Not supported")
+    for what, why in r["unsupported"]:
+        print(f"    {what:<52}{why}")
+
+    print(RULE)
+    print("  Anything unrecognised goes to the review queue with a reason.")
+    print("  Nothing is silently dropped and nothing is silently guessed.")
 
 
 def cmd_inspect(args):
@@ -406,6 +459,9 @@ def main(argv=None):
     p.add_argument("--reset", action="store_true", help="rebuild the warehouse from scratch")
     p.add_argument("--incoming", help="directory of files to ingest (default data/incoming)")
     p.set_defaults(fn=cmd_ingest)
+
+    p = sub.add_parser("capabilities", help="what data inputs the engine accepts")
+    p.set_defaults(fn=cmd_capabilities)
 
     p = sub.add_parser("inspect", help="see how a file of yours would be read")
     p.add_argument("file")

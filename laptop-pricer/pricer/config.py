@@ -17,8 +17,10 @@ def _yaml(name: str) -> dict:
 
 
 def _csv(name: str) -> list[dict]:
+    """Catalogue CSVs may carry '#' comment lines above the header."""
     with open(ROOT / "catalog" / name, newline="") as fh:
-        return list(csv.DictReader(fh))
+        lines = [ln for ln in fh if not ln.lstrip().startswith("#")]
+    return list(csv.DictReader(lines))
 
 
 @functools.lru_cache(maxsize=None)
