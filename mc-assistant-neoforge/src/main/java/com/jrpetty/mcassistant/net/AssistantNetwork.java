@@ -92,6 +92,10 @@ public final class AssistantNetwork {
      * answer to all of them is the same — the refreshed plot book — so the
      * open screen updates itself after each click.
      */
+    /** The last bot ordered from the book, per owner — what Undo takes back. */
+    private static final java.util.Map<java.util.UUID, Integer> lastOrdered =
+        new java.util.concurrent.ConcurrentHashMap<>();
+
     private static void handlePlotOrder(PlotOrderPayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
             if (!(context.player() instanceof ServerPlayer player)) return;
@@ -113,6 +117,7 @@ public final class AssistantNetwork {
                     if (preset == null || !(target instanceof AssistantEntity assistant)) break;
                     if (!assistant.isOwner(player)) break;
                     if (assistant.distanceToSqr(player) > 256.0 * 256.0) break;
+                    lastOrdered.put(player.getUUID(), assistant.getId());
                     if (preset.zone().equals(assistant.workZone())) {
                         assistant.leavePlot();
                         assistant.say("Off \"" + preset.name() + "\" — waiting on your word.");
@@ -149,6 +154,42 @@ public final class AssistantNetwork {
                         staked == null
                             ? "Nothing copied yet — pick a plot and press Copy first."
                             : "Stamped \"" + staked.name() + "\" — chest spots are lit for a moment."), true);
+                }
+                case 9 -> {   // every free hand onto the picked plot
+                    com.jrpetty.mcassistant.ZonePresets.Preset preset =
+                        com.jrpetty.mcassistant.ZonePresets.byName(player, payload.plotName());
+                    if (preset != null) {
+                        int put = 0;
+                        for (AssistantEntity mate : AssistantEntity.allFor(player.getUUID())) {
+                            if (!mate.isAlive() || mate.workZone() != null
+                                || !mate.patchName().isEmpty()) continue;
+                            // A hauler with a linked route is working, not free.
+                            if (mate.stationTask() == AssistantEntity.StationTask.HAUL
+                                && mate.preferredChest() != null
+                                && mate.deliveryChest() != null) continue;
+                            if (mate.distanceToSqr(player) > 256.0 * 256.0) continue;
+                            com.jrpetty.mcassistant.ZonePresets.applyGround(mate, preset);
+                            mate.say("On \"" + preset.name() + "\" with the rest.");
+                            put++;
+                        }
+                        player.displayClientMessage(net.minecraft.network.chat.Component.literal(
+                            put == 0 ? "Nobody's free to send."
+                                : put + (put == 1 ? " hand" : " hands")
+                                    + " put on \"" + preset.name() + "\"."), true);
+                    }
+                }
+                case 10 -> {   // take back the last order given from the book
+                    Integer id = lastOrdered.get(player.getUUID());
+                    AssistantEntity bot = id != null
+                        && player.level().getEntity(id) instanceof AssistantEntity a
+                        && a.isAlive() ? a : null;
+                    if (bot == null || !bot.undoOrder()) {
+                        player.displayClientMessage(net.minecraft.network.chat.Component.literal(
+                            "Nothing to take back yet."), true);
+                    } else {
+                        player.displayClientMessage(net.minecraft.network.chat.Component.literal(
+                            bot.getAssistantName() + " goes back to how they stood."), true);
+                    }
                 }
                 case 8 -> {   // the plot's working hours
                     AssistantEntity.Shift next =
@@ -197,6 +238,7 @@ public final class AssistantNetwork {
                 workers,
                 yield,
                 com.jrpetty.mcassistant.ZonePresets.health(player.serverLevel(), p),
+                com.jrpetty.mcassistant.ZonePresets.chestFill(player.serverLevel(), p),
                 p.shift().label));
         }
         net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(

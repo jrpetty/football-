@@ -21,7 +21,7 @@ public record PlotListPayload(List<Entry> plots) implements CustomPacketPayload 
      *  crew are working it right now. */
     public record Entry(String name, String job, int minX, int minZ,
                         int maxX, int maxZ, int depth, int workers,
-                        int yield, int health, String shift) {
+                        int yield, int health, int chestPct, String shift) {
 
         public int sizeX() { return maxX - minX + 1; }
         public int sizeZ() { return maxZ - minZ + 1; }
@@ -46,6 +46,7 @@ public record PlotListPayload(List<Entry> plots) implements CustomPacketPayload 
             buf.writeVarInt(e.workers());
             buf.writeVarInt(e.yield());
             buf.writeVarInt(e.health());
+            buf.writeVarInt(e.chestPct());
             buf.writeUtf(e.shift());
         }
     }
@@ -57,7 +58,7 @@ public record PlotListPayload(List<Entry> plots) implements CustomPacketPayload 
             out.add(new Entry(buf.readUtf(), buf.readUtf(),
                 buf.readVarInt(), buf.readVarInt(), buf.readVarInt(),
                 buf.readVarInt(), buf.readVarInt(), buf.readVarInt(),
-                buf.readVarInt(), buf.readVarInt(), buf.readUtf()));
+                buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readUtf()));
         }
         return new PlotListPayload(out);
     }

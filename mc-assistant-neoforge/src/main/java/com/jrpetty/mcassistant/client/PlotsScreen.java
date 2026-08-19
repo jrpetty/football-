@@ -35,7 +35,7 @@ public class PlotsScreen extends Screen {
     private static final int PLOT_ROW_H = 18;
     private static final int CREW_ROW_H = 16;
     private static final int MAX_PLOTS = 7;
-    private static final int MAX_CREW = 8;
+    private static final int MAX_CREW = 7;
 
     private List<PlotListPayload.Entry> plots;
     private final List<AssistantEntity> crew = new ArrayList<>();
@@ -135,7 +135,7 @@ public class PlotsScreen extends Screen {
         // blueprint, stamp the copied one where you stand, and the ground's
         // working hours — which everyone assigned inherits.
         int mw = (PLOT_W - 8) / 3;
-        int my = top + LIST_TOP + MAX_PLOTS * PLOT_ROW_H + 2;
+        int my = top + LIST_TOP + MAX_PLOTS * PLOT_ROW_H + 8;
         this.addRenderableWidget(Button.builder(Component.literal("Copy"),
                 b -> { if (picked != null) send(6, -1, picked); })
             .bounds(x, my, mw, 16)
@@ -153,6 +153,25 @@ public class PlotsScreen extends Screen {
             .bounds(x + 2 * (mw + 4), my, PLOT_W - 2 * (mw + 4), 16)
             .tooltip(Tooltip.create(Component.literal(
                 "When this ground works — days, nights or both. Everyone assigned inherits it")))
+            .build());
+
+        // Crew tools, mirrored under the crew list: staff the picked plot
+        // with everyone standing idle, and take back the last order given.
+        int cx2 = x + PLOT_W + 8;
+        int cw2 = inner - PLOT_W - 8;
+        int hw = (cw2 - 4) / 2;
+        this.addRenderableWidget(Button.builder(Component.literal("All free ›"),
+                b -> { if (picked != null) send(9, -1, picked); })
+            .bounds(cx2, my, hw, 16)
+            .tooltip(Tooltip.create(Component.literal(
+                "Every free hand nearby goes onto the picked plot in one click")))
+            .build());
+        this.addRenderableWidget(Button.builder(Component.literal("Undo"),
+                b -> send(10, -1, ""))
+            .bounds(cx2 + hw + 4, my, cw2 - hw - 4, 16)
+            .tooltip(Tooltip.create(Component.literal(
+                "Take back the last order — the bot returns to its previous plot and trade. "
+                + "Press again to swap back")))
             .build());
         updateTradeLabel();
     }
@@ -283,12 +302,16 @@ public class PlotsScreen extends Screen {
         // drops, which is the whole point of the number.
         PlotListPayload.Entry pe = picked == null ? null : byName(picked);
         if (pe != null) {
-            int dy = top + LIST_TOP + MAX_CREW * CREW_ROW_H + 3;
+            int dy = top + LIST_TOP + MAX_CREW * CREW_ROW_H + 2;
             g.drawString(this.font, Ui.clip(this.font,
                 pe.sizeX() + "×" + pe.sizeZ() + " · banked " + pe.yield() + " today", cw),
                 cx, dy, Ui.MUTED, false);
             int hc = pe.health() >= 80 ? Ui.GOOD : pe.health() >= 50 ? Ui.WARN : Ui.BAD;
-            g.drawString(this.font, "condition " + pe.health() + "%", cx, dy + 10, hc, false);
+            String cond = "condition " + pe.health() + "%";
+            g.drawString(this.font, cond, cx, dy + 10, hc, false);
+            g.drawString(this.font, " · stores " + pe.chestPct() + "% full",
+                cx + this.font.width(cond), dy + 10,
+                pe.chestPct() >= 85 ? Ui.BAD : Ui.FAINT, false);
         }
 
         // A hairline between the columns, engraved like the section rules.

@@ -246,6 +246,7 @@ public final class ZonePresets {
      * hands the trade over, but only to a bot that has none.
      */
     public static void applyGround(AssistantEntity bot, Preset preset) {
+        bot.snapshotOrder();            // the book's Undo remembers this moment
         bot.setShift(preset.shift());   // the plot's hours are the plot's
         if (preset.job() != AssistantEntity.StationTask.NONE) {
             // Assigning to "North Farm" means farming it — whatever the bot
@@ -315,11 +316,32 @@ public final class ZonePresets {
         if (preset.job() == AssistantEntity.StationTask.FARM && !water) score -= 20;
         if (preset.job() == AssistantEntity.StationTask.RANCH) {
             int animals = level.getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class,
-                new net.minecraft.world.phys.AABB(zone.min(), zone.max().above(4)),
+                new net.minecraft.world.phys.AABB(
+                    zone.min().getX(), zone.min().getY() - 2.0, zone.min().getZ(),
+                    zone.max().getX() + 1.0, zone.max().getY() + 5.0, zone.max().getZ() + 1.0),
                 a -> a.isAlive() && !a.isBaby()).size();
             if (animals < 2) score -= 40;                    // a pen that cannot breed
         }
         return Math.max(0, Math.min(100, score));
+    }
+
+    /** How full the plot's chests run, 0-100 across every slot of every
+     *  container on the ground. 0 when there are no chests at all — an
+     *  unfurnished plot is not a bottleneck, just unfurnished. */
+    public static int chestFill(net.minecraft.server.level.ServerLevel level, Preset preset) {
+        WorkZone zone = preset.zone();
+        int slots = 0, used = 0;
+        for (com.jrpetty.mcassistant.entity.ZoneChests.Found f
+                : com.jrpetty.mcassistant.entity.ZoneChests.around(
+                    level, zone.center(), zone.radius() + 2, 6)) {
+            if (!f.stillThere()) continue;
+            net.minecraft.world.Container c = f.container();
+            slots += c.getContainerSize();
+            for (int i = 0; i < c.getContainerSize(); i++) {
+                if (!c.getItem(i).isEmpty()) used++;
+            }
+        }
+        return slots == 0 ? 0 : used * 100 / slots;
     }
 
     // ------------------------------ blueprints --------------------------------

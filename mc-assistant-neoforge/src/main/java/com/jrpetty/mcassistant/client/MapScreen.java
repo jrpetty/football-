@@ -245,6 +245,19 @@ public class MapScreen extends Screen {
             if (mouseX >= x0 && mouseX <= x1 && mouseY >= z0 && mouseY <= z1) hovered = i;
         }
 
+        // Bottlenecks from above: a little chest over any plot whose chests
+        // are nearly out of slots — the farm that is about to stall on a full
+        // store announces itself before the crew does.
+        for (var plot : PlotsClient.book) {
+            if (plot.chestPct() < 85) continue;
+            int fx = px(plot.maxX()) - 11, fy = pz(plot.minZ()) + 2;
+            g.fill(fx, fy, fx + 9, fy + 8, 0xFF191919);            // outline
+            g.fill(fx + 1, fy + 1, fx + 8, fy + 7, 0xFFB8863B);    // the chest
+            g.fill(fx + 1, fy + 3, fx + 8, fy + 4, 0xFF6B4A22);    // lid seam
+            g.fill(fx + 4, fy + 2, fx + 5, fy + 5, 0xFF3A3A3A);    // latch
+            g.fill(fx + 7, fy - 1, fx + 10, fy + 2, 0xFF7F2011);   // the red pip
+        }
+
         // The plot being drawn right now, and the one waiting for a worker.
         if (dragging && pressX >= 0) {
             int rx0 = (int) Math.min(pressX, mouseX), ry0 = (int) Math.min(pressY, mouseY);
