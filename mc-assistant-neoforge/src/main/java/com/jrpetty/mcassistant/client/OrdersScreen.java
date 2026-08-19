@@ -49,6 +49,7 @@ public class OrdersScreen extends Screen {
     private int left, top;
     @Nullable private Button jobButton, shiftButton;
     @Nullable private Button depthSurface, depthIron, depthDiamond, dropOff, escortBtn;
+    @Nullable private Button quarryBtn;
     private int shownJob = -1;
 
     public OrdersScreen(AssistantEntity bot) {
@@ -100,17 +101,28 @@ public class OrdersScreen extends Screen {
             "When this one works. Off duty it sleeps in its bed.");
         add(x + 2 * (w4 + gap), y, w4, h, "Claim Bed", AssistantActions.CLAIM_BED,
             "Give it the nearest bed to you");
-        // Three strata, three buttons, in the one slot a miner gets. The
-        // labels are terse because 20 pixels is what a third of a slot IS —
-        // the tooltips carry the meaning.
-        int wp = (w4 - 4) / 3;
-        depthSurface = add(x + 3 * (w4 + gap), y, wp, h, "S", AssistantActions.DEPTH_SURFACE,
-            "Surface — work the ground as marked, no deep shaft");
-        depthIron = add(x + 3 * (w4 + gap) + wp + 2, y, wp, h, "16", AssistantActions.DEPTH_IRON,
-            "Iron country — dig down to Y16");
-        depthDiamond = add(x + 3 * (w4 + gap) + 2 * (wp + 2), y, w4 - 2 * (wp + 2), h, "D",
-            AssistantActions.DEPTH_DIAMOND,
-            "Diamond country — dig down to Y-54");
+        // How deep, and how it gets there — the whole mining plan in the one
+        // slot a miner gets. Labels are terse because a quarter of a slot IS
+        // fifteen pixels; the tooltips carry the meaning.
+        int wp = (w4 - 6) / 4;
+        int dx0 = x + 3 * (w4 + gap);
+        depthSurface = add(dx0, y, wp, h, "S", AssistantActions.DEPTH_SURFACE,
+            "Depth: surface — work the ground as marked, no deep shaft");
+        depthIron = add(dx0 + wp + 2, y, wp, h, "16", AssistantActions.DEPTH_IRON,
+            "Depth: iron country — down to Y16");
+        depthDiamond = add(dx0 + 2 * (wp + 2), y, wp, h, "D", AssistantActions.DEPTH_DIAMOND,
+            "Depth: diamond country — down to Y-54");
+        quarryBtn = this.addRenderableWidget(Button.builder(
+                Component.literal(BotInfo.of(bot).quarry() ? "▤" : "▬"), b -> {
+                    sendOrder(bot, AssistantActions.QUARRY_TOGGLE);
+                    boolean on = b.getMessage().getString().equals("▬");
+                    b.setMessage(Component.literal(on ? "▤" : "▬"));
+                })
+            .bounds(dx0 + 3 * (wp + 2), y, w4 - 3 * (wp + 2), h)
+            .tooltip(Tooltip.create(Component.literal(
+                "Quarry: cut a level, drop four blocks, cut the next — terraced "
+                + "all the way down to the depth above. Off, it cuts one gallery and stops.")))
+            .build());
         dropOff = add(x + 3 * (w4 + gap), y, w4, h, "Drop-off", AssistantActions.SET_DROPOFF,
             "Deliver loads to where you're standing");
         escortBtn = add(x + 3 * (w4 + gap), y, w4, h, "Escort ›", AssistantActions.ESCORT_NEXT,
@@ -184,6 +196,7 @@ public class OrdersScreen extends Screen {
         depthSurface.visible = miner;
         depthIron.visible = miner;
         depthDiamond.visible = miner;
+        if (quarryBtn != null) quarryBtn.visible = miner;
         dropOff.visible = hauler;
         if (escortBtn != null) escortBtn.visible = job == AssistantEntity.StationTask.GUARD;
     }

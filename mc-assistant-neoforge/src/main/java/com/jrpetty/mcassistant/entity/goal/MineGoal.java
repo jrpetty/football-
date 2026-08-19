@@ -52,6 +52,11 @@ public class MineGoal extends Goal {
     // dig happened to breach.
     private final java.util.ArrayList<BlockPos> stairPath = new java.util.ArrayList<>();
     private int returnIndex = -1;
+    // Quarry mode: the Y of the gallery being cut right now. Each finished
+    // level drops four and turns a quarter, so the shaft comes out as terraced
+    // floors down to the depth the player set rather than one lonely tunnel.
+    private int levelFloor;
+    private int levelsCut;
     @Nullable private BlockPos moveTarget;
     private int workTicks;
     private int workNeeded;
@@ -106,7 +111,13 @@ public class MineGoal extends Goal {
         this.returnIndex = -1;
         this.oresMined = 0;
         this.blocksMined = 0;
-        this.phase = job != null && cursor.getY() <= job.amount() ? Phase.TUNNEL : Phase.DESCEND;
+        int target = job != null ? job.amount() : cursor.getY();
+        // A quarry works DOWN in four-block terraces from just under the
+        // surface; a single gallery drops straight to the target and cuts once.
+        this.levelFloor = assistant.quarry()
+            ? Math.max(target, cursor.getY() - 4) : target;
+        this.levelsCut = 0;
+        this.phase = cursor.getY() <= levelFloor ? Phase.TUNNEL : Phase.DESCEND;
 
         // No pickaxe, no mine — player rules.
         assistant.equipBestTool(Blocks.STONE.defaultBlockState());
@@ -224,8 +235,9 @@ public class MineGoal extends Goal {
             return;
         }
         if (phase == Phase.DESCEND) {
-            if (cursor.getY() <= job.amount()) {
+            if (cursor.getY() <= levelFloor) {
                 phase = Phase.TUNNEL;
+                tunnelSteps = 0;
                 assistant.sayRoutine("At Y" + cursor.getY() + " — opening the gallery.");
                 return;
             }
@@ -245,8 +257,24 @@ public class MineGoal extends Goal {
             // neighbour's farm.
             boolean leavingZone = !assistant.inZoneColumn(cursor.relative(dir));
             if (tunnelSteps >= TUNNEL_LENGTH || leavingZone) {
-                finish("Mine's done — " + blocksMined + " blocks dug, " + oresMined
-                    + " ore collected"
+                // Quarry: this floor is cut — drop four, turn a quarter, and
+                // open the next one, until the depth the player set is reached.
+                int target = job.amount();
+                if (assistant.quarry() && levelFloor > target) {
+                    levelFloor = Math.max(target, levelFloor - 4);
+                    levelsCut++;
+                    dir = dir.getClockWise();
+                    phase = Phase.DESCEND;
+                    tunnelSteps = 0;
+                    assistant.sayRoutine("Level " + levelsCut + " cut — dropping to Y"
+                        + levelFloor + " for the next.");
+                    return;
+                }
+                finish((assistant.quarry() && levelsCut > 0
+                        ? "Quarry's down to Y" + levelFloor + " — " + (levelsCut + 1)
+                          + " levels, "
+                        : "Mine's done — ")
+                    + blocksMined + " blocks dug, " + oresMined + " ore collected"
                     + (leavingZone ? " (that's the edge of my patch)." : "."));
                 return;
             }
@@ -448,6 +476,12 @@ public class MineGoal extends Goal {
             moveTarget = null;
             if (phase == Phase.TUNNEL) tunnelSteps++;
             if (phase == Phase.DESCEND && stairPath.size() < 400) {
+                stairPath.add(dest.immutable());
+            } else if (phase == Phase.TUNNEL && assistant.quarry()
+                && stairPath.size() < 400 && tunnelSteps % 4 == 0) {
+                // In a quarry the way home runs along the galleries too, so
+                // breadcrumb them sparsely — every fourth step is enough of a
+                // trail to walk back without filling the list.
                 stairPath.add(dest.immutable());
             }
             // A step can pass through open cave: those walls were never dug,

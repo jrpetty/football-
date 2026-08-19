@@ -78,7 +78,8 @@ public final class ZoneChests {
                 for (var entry : chunk.getBlockEntities().entrySet()) {
                     BlockPos pos = entry.getKey();
                     BlockEntity be = entry.getValue();
-                    if (be instanceof Container && inBox(pos, min, max)) {
+                    if (be instanceof Container && inBox(pos, min, max)
+                        && !isPrivate(level, pos)) {
                         out.add(new Found(pos.immutable(), be));
                     }
                 }
@@ -95,8 +96,32 @@ public final class ZoneChests {
         for (BlockPos pos : BlockPos.betweenClosed(
                 new BlockPos(x0, min.getY(), z0), new BlockPos(x1, max.getY(), z1))) {
             BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof Container) out.add(new Found(pos.immutable(), be));
+            if (be instanceof Container && !isPrivate(level, pos)) {
+                out.add(new Found(pos.immutable(), be));
+            }
         }
+    }
+
+    /**
+     * Yours alone: a container with a SIGN on it — any of its four sides or
+     * sitting on its lid — is invisible to every assistant. Nothing is taken
+     * from it, nothing is stashed into it, it never counts toward a
+     * checklist, and no hauler routes to it.
+     *
+     * <p>This is the one chokepoint every chest question in the mod passes
+     * through, so hanging one blank sign is the whole feature: no typing, no
+     * menu, no per-bot setting. The sign does not have to say anything —
+     * a sign is the mark.
+     */
+    public static boolean isPrivate(Level level, BlockPos chest) {
+        for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+            if (d == net.minecraft.core.Direction.DOWN) continue;   // under a chest: not a mark
+            if (level.getBlockState(chest.relative(d)).getBlock()
+                    instanceof net.minecraft.world.level.block.SignBlock) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean inBox(BlockPos p, BlockPos min, BlockPos max) {
