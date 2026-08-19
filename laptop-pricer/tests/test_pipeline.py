@@ -20,7 +20,7 @@ from pricer.estimate import (effective_n, estimate, mad_sigma, reject_outliers,
 from pricer.ingest import ingest_all
 from pricer.inspect import inspect, propose_profile
 from pricer.parts import teardown
-from pricer.reading import find_header_row, read_rows, to_date, to_number
+from pricer.reading import compose_title, find_header_row, read_rows, to_date, to_number
 from pricer.match import config_key, cpu_compatible, resolve, verdict
 from pricer.normalise import net_realised, normalise, to_reference
 from pricer.parse import parse_title, tokens
@@ -621,3 +621,62 @@ class TestPartsValuation(unittest.TestCase):
         model = cat()["models"]["dell-latitude-5420"]
         td = teardown(*self.LAT, grade="C")
         self.assertAlmostEqual(parts_value(model, self.LAT[1], "C"), td.net, places=2)
+
+
+FIXTURES = ROOT / "tests" / "fixtures"
+
+
+class TestAwkwardInputs(unittest.TestCase):
+    """Real exports that are not a tidy CSV with a description column."""
+
+    def _recognised(self, filename):
+        insp = inspect(FIXTURES / filename)
+        return insp, insp.recognition
+
+    def test_semicolon_delimited_with_european_decimals(self):
+        insp, r = self._recognised("semicolon.csv")
+        self.assertEqual(r["resolved"], 1)
+        self.assertIn("price_gross", insp.mapping)      # "Preis" found by value shape
+
+    def test_tab_separated(self):
+        _, r = self._recognised("tabs.tsv")
+        self.assertEqual(r["resolved"], 1)
+
+    def test_structured_columns_with_no_description_column(self):
+        """Brand, model, CPU and memory in separate columns - joined into one."""
+        insp, r = self._recognised("structured.csv")
+        self.assertIsInstance(insp.mapping["raw_title"], list)
+        self.assertIn("Brand", insp.mapping["raw_title"])
+        self.assertIn("Processor", insp.mapping["raw_title"])
+        self.assertEqual(r["resolved"], 3)
+
+    def test_composite_title_adds_units_to_bare_numbers(self):
+        row = {"Brand": "Dell", "Model": "Latitude 5420", "RAM": "16", "Storage": "512"}
+        title = compose_title(row, ["Brand", "Model", "RAM", "Storage"])
+        self.assertIn("16GB", title)
+        self.assertIn("512GB", title)
+
+    def test_header_found_under_a_spanning_title_row(self):
+        _, r = self._recognised("twinheader.csv")
+        self.assertEqual(r["resolved"], 1)
+
+    def test_a_missing_date_column_is_called_out_loudly(self):
+        """Undated rows load but can never be used, so this must not pass quietly."""
+        insp, _ = self._recognised("nodate.csv")
+        self.assertNotIn("sold_at", insp.mapping)
+        self.assertTrue(any("NO DATE COLUMN" in w for w in insp.warnings))
+
+    def test_non_laptop_stock_is_rejected_not_priced(self):
+        """Monitors, phones and docks must not become laptop comparables."""
+        insp, r = self._recognised("mixed_stock.csv")
+        self.assertEqual(r["resolved"], 1)
+        self.assertEqual(r["reasons"].get("unknown model"), 3)
+
+    def test_workbook_data_on_a_later_sheet(self):
+        _, r = self._recognised("multisheet.xlsx")
+        self.assertEqual(r["resolved"], 1)
+
+    def test_an_unknown_machine_is_never_silently_priced(self):
+        insp, r = self._recognised("mixed_stock.csv")
+        titles = [t for t, _ in insp.unresolved]
+        self.assertTrue(any("Monitor" in t or "iPhone" in t or "Docking" in t for t in titles))

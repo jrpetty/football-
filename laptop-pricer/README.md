@@ -32,7 +32,7 @@ python3 scripts/seed_demo.py                  # + a 71-unit stock book
 python3 -m pricer.cli stock                   # overview and ageing
 python3 -m pricer.cli actions                 # the morning action queue
 
-python3 -m unittest discover -s tests         # 77 tests
+python3 -m unittest discover -s tests         # 86 tests
 ```
 
 Dates are pinned to `2026-08-19` in the demo data. Pass `--as-of 2026-08-19`
@@ -77,6 +77,38 @@ The recognition percentage is the number to watch. Anything unresolved is named
 with its reason, and fixing it once — a model added to `catalog/models.csv`, a
 CPU alias added to `catalog/cpus.csv` — fixes it for every future file.
 
+### What works, and what does not
+
+Tested against deliberately awkward files (`tests/fixtures/`, locked in by
+`TestAwkwardInputs`):
+
+| Input | Result |
+|---|---|
+| `.csv`, `.tsv`, `.xlsx`, semicolon or tab delimited | works |
+| Report banners, blank rows, trailing TOTAL lines | ignored automatically |
+| `£1,234.56`, `1.234,56`, `(99.00)`, `$450`, `1 234` | all parsed |
+| Six date conventions, plus Excel serial numbers | all parsed |
+| Non-English headers (`Preis`, `Datum`, `Bezeichnung`) | works — matched on value shape, not wording |
+| Workbook where the data is on a later sheet | works — picks the sheet with the most data |
+| Brand / model / CPU / RAM in **separate** columns, no description | works — joined into one description |
+| Monitors, phones, docks mixed in with laptops | rejected to review, never priced as laptops |
+| **No date column** | loads, but **warns loudly** — undated rows can never be used |
+| A model or CPU not in the catalogue | rejected to review, named with its reason |
+
+Genuinely not supported: PDFs and scanned invoices, images of spreadsheets,
+live links to Google Sheets or a database (nothing is fetched — it is an
+offline tool), and machines other than laptops. Multi-currency files work but
+FX uses fixed rates rather than the rate on the transaction date, so a
+mixed-currency history will drift.
+
+Three things no file can reveal, which you must state in the profile:
+**whether the price includes VAT, whether a row is a sale or an ask, and which
+channel it came from.** Everything else is inferred and shown to you for
+confirmation.
+
+Nothing is ever silently dropped or silently guessed. Every row either loads,
+is excluded by a rule you wrote, or lands in the review queue with a reason.
+
 ### Writing a profile by hand
 
 Drop a file in `data/incoming/` and add a profile in `sources/`:
@@ -94,7 +126,8 @@ price:
   fees: {rate: 0.128, fixed: 0.30}
 
 columns:                     # your column names on the right
-  raw_title: "Item Title"
+  raw_title: "Item Title"        # or a list, to join several columns:
+  #raw_title: [Brand, Model, Processor, RAM, Storage]
   price_gross: "Sold For"
   sold_at: "Date Sold"
   grade_raw: "Condition"

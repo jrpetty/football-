@@ -11,7 +11,7 @@ from .config import ROOT, sources
 from .match import resolve, verdict
 from .normalise import normalise
 from .parse import parse_title
-from .reading import read_rows, to_date, to_number
+from .reading import compose_title, read_rows, to_date, to_number
 
 
 def _hash(source_id: str, row: dict) -> str:
@@ -32,10 +32,10 @@ def _excluded(row: dict, profile: dict, title: str, gross: float) -> str | None:
 def ingest_file(con, path: Path, profile: dict, reference_grade: str = "B") -> dict:
     cols = profile["columns"]
     fmt = profile.get("date_format", "%Y-%m-%d")
-    stats = {"read": 0, "excluded": 0, "duplicate": 0, "review": 0, "loaded": 0, "skipped_junk": 0}
+    stats = {"read": 0, "excluded": 0, "duplicate": 0, "review": 0, "loaded": 0, "skipped_junk": 0, "no_date": 0}
     batch = path.name
 
-    rows, meta = read_rows(path, profile.get("header_row"))
+    rows, meta = read_rows(path, profile.get("header_row"), profile.get("sheet"))
     stats["skipped_junk"] = meta["skipped_blank"] + meta["skipped_total_rows"]
     if meta.get("junk_rows_above_header"):
         stats["skipped_junk"] += meta["junk_rows_above_header"]
@@ -43,7 +43,7 @@ def ingest_file(con, path: Path, profile: dict, reference_grade: str = "B") -> d
     if True:
         for row in rows:
             stats["read"] += 1
-            title = (row.get(cols["raw_title"]) or "").strip()
+            title = compose_title(row, cols["raw_title"])
             gross = to_number(row.get(cols["price_gross"]))
             if gross is None:
                 stats["excluded"] += 1
@@ -88,7 +88,9 @@ def ingest_file(con, path: Path, profile: dict, reference_grade: str = "B") -> d
             )
             _ensure_config(con, config_id, spec)
 
-            sold_at = to_date(row.get(cols.get("sold_at", "")), fmt)
+            sold_at = to_date(row.get(cols.get("sold_at") or ""), fmt)
+            if sold_at is None:
+                stats["no_date"] += 1
             qty = int(to_number(row.get(cols.get("quantity", ""))) or 1)
             shipping = to_number(row.get(profile.get("price", {}).get("shipping_column") or "")) or 0.0
             n = normalise(gross, profile, grade, reference_grade, qty, shipping)

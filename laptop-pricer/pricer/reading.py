@@ -109,16 +109,28 @@ def detect_date_format(values: list) -> str | None:
 
 # ---------- reading a whole file ----------
 
-def _read_grid(path: Path) -> list[list]:
-    """Every cell as a rectangular grid, before any header is assumed."""
+def _read_grid(path: Path, sheet: str | None = None) -> list[list]:
+    """Every cell as a rectangular grid, before any header is assumed.
+
+    Workbooks often open on a cover or summary sheet, so without an explicit
+    sheet name the one carrying the most data wins rather than the first one.
+    """
     suffix = path.suffix.lower()
     if suffix in {".xlsx", ".xlsm", ".xltx"}:
         import openpyxl
         wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
-        ws = wb[wb.sheetnames[0]]
-        grid = [["" if c is None else c for c in row] for row in ws.iter_rows(values_only=True)]
-        wb.close()
-        return grid
+        try:
+            names = [sheet] if sheet and sheet in wb.sheetnames else wb.sheetnames
+            best, best_cells = [], -1
+            for name in names:
+                grid = [["" if c is None else c for c in row]
+                        for row in wb[name].iter_rows(values_only=True)]
+                cells = sum(1 for row in grid for c in row if str(c).strip())
+                if cells > best_cells:
+                    best, best_cells = grid, cells
+            return best
+        finally:
+            wb.close()
 
     with open(path, newline="", encoding="utf-8-sig", errors="replace") as fh:
         sample = fh.read(16384)
@@ -162,11 +174,12 @@ def find_header_row(grid: list[list], search_depth: int = 25) -> int:
     return best_index
 
 
-def read_rows(path: str | Path, header_row: int | None = None) -> tuple[list[dict], dict]:
+def read_rows(path: str | Path, header_row: int | None = None,
+              sheet: str | None = None) -> tuple[list[dict], dict]:
     """Return (rows, metadata). Junk above the header, blank rows and trailing
     total rows are dropped rather than becoming phantom observations."""
     path = Path(path)
-    grid = _read_grid(path)
+    grid = _read_grid(path, sheet)
     if not grid:
         return [], {"path": str(path), "rows": 0, "note": "file is empty"}
 
@@ -194,3 +207,25 @@ def read_rows(path: str | Path, header_row: int | None = None) -> tuple[list[dic
         "skipped_blank": skipped_blank, "skipped_total_rows": skipped_total,
         "junk_rows_above_header": header_index,
     }
+
+
+def compose_title(row: dict, spec) -> str:
+    """Build a description from one column, or from several.
+
+    Plenty of stock systems never store a title at all - brand, model, CPU and
+    memory each live in their own column. `raw_title` may therefore be a list,
+    and the pieces are joined into the sentence the parser expects.
+    """
+    if not isinstance(spec, (list, tuple)):
+        return str(row.get(spec, "") or "").strip()
+
+    parts = []
+    for column in spec:
+        value = str(row.get(column, "") or "").strip()
+        if not value:
+            continue
+        # a bare "16" in a memory column means 16GB
+        if re.fullmatch(r"\d{1,4}", value) and re.search(r"(?i)ram|memor|storage|ssd|hdd|disk|drive", column):
+            value += "GB"
+        parts.append(value)
+    return " ".join(parts)

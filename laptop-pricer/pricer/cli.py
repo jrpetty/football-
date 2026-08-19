@@ -39,17 +39,21 @@ def cmd_ingest(args):
     totals = ingest_all(con, ROOT / args.incoming if args.incoming else None)
     print(f"{'source : file':<46}{'read':>6}{'excl':>6}{'dup':>6}{'review':>8}{'loaded':>8}")
     print(RULE)
-    agg = {"read": 0, "excluded": 0, "duplicate": 0, "review": 0, "loaded": 0}
+    agg = {"read": 0, "excluded": 0, "duplicate": 0, "review": 0, "loaded": 0, "no_date": 0}
     for key, s in totals.items():
         print(f"{key:<46}{s['read']:>6}{s['excluded']:>6}{s['duplicate']:>6}{s['review']:>8}{s['loaded']:>8}")
         for k in agg:
-            agg[k] += s[k]
+            agg[k] += s.get(k, 0)
     print(RULE)
     print(f"{'total':<46}{agg['read']:>6}{agg['excluded']:>6}{agg['duplicate']:>6}"
           f"{agg['review']:>8}{agg['loaded']:>8}")
     if agg["review"]:
         print(f"\n{agg['review']} row(s) queued for review - run `review` to see them. "
               "Nothing is dropped silently.")
+    if agg.get("no_date"):
+        print(f"\n! {agg['no_date']} loaded row(s) have no usable date. They are stored but "
+              f"CANNOT be used in any valuation -\n  every comparable needs a date. "
+              f"Check the sold_at column in the source profile.")
 
 
 def cmd_inspect(args):

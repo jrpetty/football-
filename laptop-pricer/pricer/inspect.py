@@ -16,8 +16,10 @@ import yaml
 
 from .config import ROOT, cfg
 from .match import resolve, verdict
-from .parse import BRANDS, parse_title
-from .reading import (detect_currency, detect_date_format, read_rows, to_date, to_number)
+from .parse import BRANDS, parse_title, tokens
+from .config import catalog
+from .reading import (compose_title, detect_currency, detect_date_format, read_rows,
+                      to_date, to_number)
 
 # Header words that suggest a role, strongest first.
 SYNONYMS = {
@@ -93,7 +95,8 @@ def _value_score(values: list, role: str) -> tuple[float, str]:
         if len(good) / n < 0.7:
             return 0.0, ""
         typical = sorted(good)[len(good) // 2]
-        if 15 <= typical <= 8000 and len({round(x) for x in good}) > max(2, n * 0.15):
+        varied = n < 8 or len({round(x) for x in good}) > max(2, n * 0.15)
+        if 15 <= typical <= 8000 and varied:
             return 0.85, f"{len(good)}/{n} numeric, median {typical:.0f}"
         return 0.3, f"{len(good)}/{n} numeric but median {typical:.0f} looks wrong for a price"
 
@@ -131,6 +134,47 @@ def _value_score(values: list, role: str) -> tuple[float, str]:
     return 0.0, ""
 
 
+def detect_composite_title(rows: list[dict], columns: list[str]) -> list[str] | None:
+    """Spot a file that keeps brand, model, CPU and memory in separate columns.
+
+    Returns the columns to join, in reading order, or None if the file has a
+    normal single description column.
+    """
+    cpu_aliases = {a.upper() for c in catalog()["cpus"].values()
+                   for a in [c["canonical"], *c["aliases"]]}
+    found: dict[str, str] = {}
+
+    for name in columns:
+        values = [str(v).strip() for v in _values(rows, name, 120)]
+        if not values:
+            continue
+        n = len(values)
+        low = name.lower()
+
+        if sum(1 for v in values if v.upper() in BRANDS) / n > 0.6:
+            found.setdefault("brand", name)
+        elif sum(1 for v in values if any(a in v.upper() for a in cpu_aliases)) / n > 0.5:
+            found.setdefault("cpu", name)
+        elif re.search(r"(?i)\bram\b|memory", low) and \
+                sum(1 for v in values if re.fullmatch(r"(?i)\d{1,3} ?(gb)?", v)) / n > 0.6:
+            found.setdefault("ram", name)
+        elif re.search(r"(?i)storage|ssd|hdd|disk|drive|capacity", low) and \
+                sum(1 for v in values if re.fullmatch(r"(?i)\d{1,4} ?(gb|tb)?", v)) / n > 0.6:
+            found.setdefault("storage", name)
+        elif re.search(r"(?i)screen|display|size|panel", low) and \
+                sum(1 for v in values if re.fullmatch(r"(?i)1[0-9](\.\d)? ?(in|\"|inch)?", v)) / n > 0.6:
+            found.setdefault("screen", name)
+        elif re.search(r"(?i)model|type|part|sku", low) and \
+                sum(1 for v in values if re.search(r"\d", v) and 3 <= len(v) <= 40) / n > 0.6:
+            found.setdefault("model", name)
+
+    # A brand column on its own is the giveaway: a normal file puts the brand
+    # inside the description, not in a column of its own.
+    if "brand" not in found or not ({"model", "cpu"} & set(found)):
+        return None
+    return [found[k] for k in ("brand", "model", "cpu", "ram", "storage", "screen") if k in found]
+
+
 def inspect(path: str | Path, sample_rows: int = 300) -> Inspection:
     rows, meta = read_rows(path)
     warnings: list[str] = []
@@ -151,6 +195,8 @@ def inspect(path: str | Path, sample_rows: int = 300) -> Inspection:
                 scored[role].append((combined, name, [w for w in (h_why, v_why) if w]))
         columns.append(col)
 
+    composite = detect_composite_title(rows, meta["columns"])
+
     mapping, taken = {}, set()
     for role in ["raw_title", "price_gross", "sold_at", "grade_raw", "quantity", "serial", "shipping"]:
         best = sorted((c for c in scored[role] if c[1] not in taken), reverse=True)
@@ -162,11 +208,24 @@ def inspect(path: str | Path, sample_rows: int = 300) -> Inspection:
                 if col.name == name:
                     col.role, col.confidence, col.evidence = role, round(score, 2), why
 
+    if composite:
+        for name in composite:
+            taken.discard(name)
+        mapping["raw_title"] = composite
+        for col in columns:
+            if col.name in composite:
+                col.role = "raw_title (joined)"
+                col.confidence = 0.9
+                col.evidence = ["part of a composed description"]
+        warnings.append("no single description column - joining "
+                        + " + ".join(composite) + " to build one")
+
     for required in ("raw_title", "price_gross"):
         if required not in mapping:
             warnings.append(f"could not identify a '{required}' column - set it by hand in the profile")
 
-    currency = detect_currency(_values(rows, mapping["price_gross"])) if "price_gross" in mapping else None
+    currency = (detect_currency(_values(rows, mapping["price_gross"]))
+                if isinstance(mapping.get("price_gross"), str) else None)
     date_format = detect_date_format(_values(rows, mapping["sold_at"])) if "sold_at" in mapping else None
     if date_format in ("%d/%m/%Y", "%m/%d/%Y"):
         warnings.append(f"dates read as {date_format} - check a row where the day exceeds 12 to be sure")
@@ -174,6 +233,11 @@ def inspect(path: str | Path, sample_rows: int = 300) -> Inspection:
     grades = []
     if "grade_raw" in mapping:
         grades = [g for g, _ in Counter(_values(rows, mapping["grade_raw"], 2000)).most_common(20)]
+
+    if "sold_at" not in mapping:
+        warnings.append("NO DATE COLUMN FOUND - rows without a date load but are then "
+                        "excluded from every valuation. Map one by hand, or the file "
+                        "contributes nothing.")
 
     recognition, unresolved = _dry_run(rows[:sample_rows], mapping)
     return Inspection(meta, columns, mapping, currency, date_format, grades,
@@ -187,7 +251,7 @@ def _dry_run(rows: list[dict], mapping: dict) -> tuple[dict, list[tuple[str, str
     counts = Counter()
     misses: list[tuple[str, str]] = []
     for row in rows:
-        title = str(row.get(mapping["raw_title"], "")).strip()
+        title = compose_title(row, mapping["raw_title"])
         if not title:
             counts["empty title"] += 1
             continue
