@@ -27,12 +27,15 @@ public class PlotsScreen extends Screen {
 
     private static final int W = 340, H = 236;
     private static final int PAD = 10;
-    private static final int LIST_TOP = 44;
+    // 56, not 44: the hint line under the header runs to y≈38 and the section
+    // headings sit at LIST_TOP-11 — at 44 they overlapped by five pixels,
+    // which the layout render caught before anyone saw it in game.
+    private static final int LIST_TOP = 56;
     private static final int PLOT_W = 158;
     private static final int PLOT_ROW_H = 18;
     private static final int CREW_ROW_H = 16;
-    private static final int MAX_PLOTS = 8;
-    private static final int MAX_CREW = 9;
+    private static final int MAX_PLOTS = 7;
+    private static final int MAX_CREW = 8;
 
     private List<PlotListPayload.Entry> plots;
     private final List<AssistantEntity> crew = new ArrayList<>();
