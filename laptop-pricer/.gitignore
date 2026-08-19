@@ -1,3 +1,5 @@
 data/warehouse.duckdb
 __pycache__/
 *.pyc
+config/fitted.yml
+data/demo/

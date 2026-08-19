@@ -1,0 +1,15 @@
+# Component recovery values, used for the salvage floor and the part-out
+# decision. SEED VALUES - replace with your own realised parts sales, or let
+# `pricer calibrate` fit them once the parts register has history.
+panel_by_class:
+  fhd: 38.0
+  qhd: 62.0
+  uhd: 88.0
+  oled: 95.0
+  default: 38.0
+board_per_1000_bench_score: 4.3
+battery: 14.0
+ram_per_8gb: 9.0
+storage_per_256gb: 6.0
+chassis_by_grade: {A_PLUS: 22.0, A: 16.0, B: 8.0, C: 0.0, D: 0.0}
+scarcity_multiplier: {abundant: 0.9, moderate: 1.0, scarce: 1.15}

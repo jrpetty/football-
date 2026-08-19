@@ -9,8 +9,9 @@ import json
 import sys
 
 from . import stock as stockmod
-from .commercial import price
-from .config import ROOT, cfg
+from .calibrate import calibrate, write as write_calibration
+from .commercial import UncalibratedParameter, price
+from .config import ROOT, cfg, strict_mode
 from .db import connect, reset
 from .estimate import estimate
 from .ingest import ingest_all
@@ -73,8 +74,12 @@ def cmd_quote(args):
 
     cfg_row = {"cpu_id": spec.cpu_id, "ram_gb": spec.ram_gb,
                "storage_gb": spec.storage_gb, "panel": spec.panel}
-    p = price(est.value, spec.model_id, cfg_row, args.grade, args.channel,
-              confidence=est.confidence, expected_days_to_sell=args.days, band=est.band)
+    try:
+        p = price(est.value, spec.model_id, cfg_row, args.grade, args.channel,
+                  confidence=est.confidence, expected_days_to_sell=args.days, band=est.band)
+    except UncalibratedParameter as exc:
+        print(f"  Refusing to quote.\n  {exc}")
+        return 4
 
     print(f"  Market value (ex-VAT)   {_money(p.market_value_ex_vat):>12}")
     print(f"  List price (inc VAT)    {_money(p.list_price_inc_vat):>12}")
@@ -100,6 +105,11 @@ def cmd_quote(args):
                    f"  ({f['days']}d)")
         print(f"    {c.source_id:<20}{str(c.sold_at):<12}{c.grade_obs:<11}"
               f"{c.value:>10.2f}{c.weight:>9.4f}  {factors}")
+
+    print(f"\n  Parameters applied")
+    for name, key, value, prov in p.parameters:
+        mark = "·" if prov.startswith("fitted") else "!"
+        print(f"    {mark} {name + ' [' + key + ']':<42}{value:>9.4f}   {prov}")
 
     for w in est.warnings + p.warnings:
         print(f"\n  ! {w}")
@@ -186,6 +196,81 @@ def cmd_review(args):
           "so the parser learns it permanently.")
 
 
+def cmd_calibrate(args):
+    """Fit the pricing parameters from your own observations."""
+    con = connect()
+    cal = calibrate(con, _date(args.as_of))
+    print(RULE)
+    print(f"  CALIBRATION   {cal.observations} observations   as of {cal.as_of}")
+    print(RULE)
+
+    def table(title, rows, fmt="{:.4f}"):
+        print(f"\n  {title}")
+        print(f"    {'parameter':<22}{'seed':>9}{'fitted':>10}{'n':>7}{'used':>10}   note")
+        for key, v in rows.items():
+            fit = fmt.format(v["fitted"]) if v["fitted"] is not None else "—"
+            print(f"    {str(key):<22}{fmt.format(v['seed']):>9}{fit:>10}{v['n']:>7}"
+                  f"{fmt.format(v['value']):>10}   {v['note']}")
+
+    if not cal.depreciation and not cal.grades:
+        for d in cal.diagnostics:
+            print(f"  ! {d}")
+        return 1
+
+    table("Depreciation (monthly lambda)", cal.depreciation)
+    table("Grade multipliers", cal.grades)
+    table("Channel multipliers", cal.channels)
+    for kind, tbl in (("RAM", cal.spec_ram), ("Storage", cal.spec_storage)):
+        for group in ("upgradeable", "soldered"):
+            table(f"{kind} deltas — {group} chassis", tbl[group], "{:.3f}")
+
+    if cal.diagnostics:
+        print()
+        for d in cal.diagnostics:
+            print(f"  ! {d}")
+
+    if args.write:
+        path = write_calibration(cal)
+        print(f"\n  Written to {path}. The engine now uses these instead of the seeds.")
+    else:
+        print("\n  Nothing written. Re-run with --write to adopt these values.")
+
+
+def cmd_params(args):
+    """Show every parameter that moves a price, and where it came from."""
+    from .config import catalog, cfg, channel_multiplier, grade_multiplier, lambda_for, spec_delta_table
+    print(RULE)
+    print(f"  PARAMETERS IN USE   strict mode: {'ON' if strict_mode() else 'off'}")
+    print(RULE)
+    print(f"  {'parameter':<40}{'value':>10}   provenance")
+    seeds = 0
+    rows = []
+    for grade in cfg()["grades"]["ladder"]:
+        v, prov = grade_multiplier(grade, with_provenance=True)
+        if v is not None:
+            rows.append((f"grade multiplier [{grade}]", v, prov))
+    for channel in cfg()["channels"]["ladder"]:
+        v, prov = channel_multiplier(channel, with_provenance=True)
+        rows.append((f"channel multiplier [{channel}]", v, prov))
+    for bc in cfg()["depreciation"]["by_build_class"]:
+        v, prov = lambda_for({"model_id": "-", "build_class": bc}, with_provenance=True)
+        rows.append((f"depreciation lambda [{bc}]", v, prov))
+    for kind in ("ram_gb", "storage_gb"):
+        for group in ("upgradeable", "soldered"):
+            _t, prov = spec_delta_table(kind, group)
+            rows.append((f"spec deltas [{kind}/{group}]", float("nan"), prov))
+
+    for name, value, prov in rows:
+        mark = "·" if prov.startswith("fitted") else "!"
+        seeds += 0 if prov.startswith("fitted") else 1
+        shown = "     —" if value != value else f"{value:>10.4f}"
+        print(f"  {mark} {name:<38}{shown}   {prov}")
+    print(RULE)
+    print(f"  {len(rows) - seeds} fitted from your data · {seeds} still on seed priors")
+    if seeds:
+        print("  Run `pricer calibrate --write` after loading more of your own files.")
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="pricer", description="Laptop pricing and stock engine")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -209,6 +294,14 @@ def main(argv=None):
     p.add_argument("--battery", type=int); p.add_argument("--as-of")
     p.add_argument("--checks", help='JSON, e.g. {"chassis":"visible","screen":"marks"}')
     p.set_defaults(fn=cmd_intake)
+
+    p = sub.add_parser("calibrate", help="fit pricing parameters from your own data")
+    p.add_argument("--write", action="store_true", help="adopt the fitted values")
+    p.add_argument("--as-of", default=None)
+    p.set_defaults(fn=cmd_calibrate)
+
+    p = sub.add_parser("params", help="show every parameter and where it came from")
+    p.set_defaults(fn=cmd_params)
 
     for name, fn, helptext in [("stock", cmd_stock, "stock overview and ageing report"),
                                ("actions", cmd_actions, "the morning action queue"),

@@ -8,7 +8,7 @@ import math
 import statistics
 from dataclasses import dataclass, field
 
-from .config import catalog, cfg, lambda_for
+from .config import catalog, cfg, lambda_for, spec_delta_table
 from .match import config_key, cpu_compatible
 from .normalise import grade_match_weight
 
@@ -100,9 +100,8 @@ def _ladder_value(table: dict, key: int) -> float:
 
 def spec_delta(model: dict, frm: tuple[int, int], to: tuple[int, int]) -> float:
     """Multiplier converting a value at RAM/storage `frm` to RAM/storage `to`."""
-    sd = cfg()["spec_deltas"]
-    ram_tbl = sd["ram_gb"]["upgradeable" if model["ram_upgradeable"] else "soldered"]
-    sto_tbl = sd["storage_gb"]["upgradeable" if model["storage_upgradeable"] else "soldered"]
+    ram_tbl, _ = spec_delta_table("ram_gb", "upgradeable" if model["ram_upgradeable"] else "soldered")
+    sto_tbl, _ = spec_delta_table("storage_gb", "upgradeable" if model["storage_upgradeable"] else "soldered")
     ram = _ladder_value(ram_tbl, to[0]) / _ladder_value(ram_tbl, frm[0])
     sto = _ladder_value(sto_tbl, to[1]) / _ladder_value(sto_tbl, frm[1])
     return ram * sto

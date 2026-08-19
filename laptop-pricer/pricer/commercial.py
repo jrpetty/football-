@@ -5,18 +5,13 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 
-from .config import catalog, cfg, channel_multiplier, grade_multiplier, lambda_for
+from .config import (catalog, cfg, channel_multiplier, grade_multiplier,
+                     lambda_for, strict_mode)
 
-# Recoverable component values, used for the salvage floor and the part-out
-# decision. Replaced by realised parts sales once the parts register has history.
-PARTS_RECOVERY = {
-    "panel": {"fhd": 38.0, "qhd": 62.0, "uhd": 88.0, "oled": 95.0, None: 38.0},
-    "board_per_1000_bench": 4.3,
-    "battery": 14.0,
-    "ram_per_8gb": 9.0,
-    "storage_per_256gb": 6.0,
-    "chassis_by_grade": {"A_PLUS": 22.0, "A": 16.0, "B": 8.0, "C": 0.0, "D": 0.0},
-}
+
+
+class UncalibratedParameter(Exception):
+    """Raised in strict mode when a price would rely on a seed prior."""
 
 
 def _round(value: float, rule: dict) -> float:
@@ -45,6 +40,7 @@ class Pricing:
     risk_premium: float
     band_ex_vat: dict
     band_inc_vat: dict
+    parameters: list = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     waterfall: list[tuple[str, float]] = field(default_factory=list)
 
@@ -60,17 +56,18 @@ def at_grade_and_channel(reference_value: float, grade: str, channel: str) -> fl
 def parts_value(model: dict, config: dict, grade: str = "C") -> float:
     """Net recovery from a teardown - the floor under any working-unit estimate."""
     bench = cfg()["bench"]
-    cat = catalog()
-    cpu = cat["cpus"].get(config.get("cpu_id")) or {}
+    pr = cfg()["parts"]
+    cpu = catalog()["cpus"].get(config.get("cpu_id")) or {}
+    panels = pr["panel_by_class"]
     gross = (
-        PARTS_RECOVERY["panel"].get(config.get("panel"), 38.0)
-        + (cpu.get("bench_score", 0) / 1000.0) * PARTS_RECOVERY["board_per_1000_bench"]
-        + PARTS_RECOVERY["battery"]
-        + (config.get("ram_gb") or 0) / 8.0 * PARTS_RECOVERY["ram_per_8gb"]
-        + (config.get("storage_gb") or 0) / 256.0 * PARTS_RECOVERY["storage_per_256gb"]
-        + PARTS_RECOVERY["chassis_by_grade"].get(grade, 0.0)
+        panels.get(config.get("panel") or "default", panels["default"])
+        + (cpu.get("bench_score", 0) / 1000.0) * pr["board_per_1000_bench_score"]
+        + pr["battery"]
+        + (config.get("ram_gb") or 0) / 8.0 * pr["ram_per_8gb"]
+        + (config.get("storage_gb") or 0) / 256.0 * pr["storage_per_256gb"]
+        + pr["chassis_by_grade"].get(grade, 0.0)
     )
-    scarcity = {"abundant": 0.9, "moderate": 1.0, "scarce": 1.15}.get(model.get("parts_availability"), 1.0)
+    scarcity = pr["scarcity_multiplier"].get(model.get("parts_availability"), 1.0)
     teardown = bench["standard_jobs"]["teardown"]["minutes"] / 60.0 * bench["labour_rate_per_hour"]
     return round(gross * scarcity - teardown - bench["weee_levy_per_unit"], 2)
 
@@ -85,6 +82,13 @@ def price(reference_value: float, model_id: str, config: dict, grade: str = "B",
     vat = biz["vat_rate"]
     warnings: list[str] = []
 
+    gmul, gprov = grade_multiplier(grade, with_provenance=True)
+    cmul, cprov = channel_multiplier(channel, with_provenance=True)
+    lam, lprov = lambda_for(model, with_provenance=True)
+    parameters = [("grade multiplier", grade, gmul, gprov),
+                  ("channel multiplier", channel, cmul, cprov),
+                  ("depreciation lambda", build_class, lam, lprov)]
+
     value = at_grade_and_channel(reference_value, grade, channel)
     waterfall = [("reference value (grade B, own retail, ex-VAT)", round(reference_value, 2))]
     if grade != biz["reference"]["grade"]:
@@ -95,7 +99,6 @@ def price(reference_value: float, model_id: str, config: dict, grade: str = "B",
     margin = biz["target_margin"].get(build_class, biz["target_margin"]["default"])
     refurb = biz["refurb_expected"].get(build_class, biz["refurb_expected"]["default"])
     days = expected_days_to_sell or cfg()["stock"]["default_expected_days_to_sell"]
-    lam = lambda_for(model)
 
     # Holding cost: this machine depreciates on the shelf for as long as this
     # configuration actually takes to shift (design doc s12).
@@ -120,6 +123,15 @@ def price(reference_value: float, model_id: str, config: dict, grade: str = "B",
     if value < guard["min_price_gbp"]:
         warnings.append(f"below minimum sane price £{guard['min_price_gbp']}")
 
+    seeded = [f"{name} ({key})" for name, key, _v, prov in parameters if prov.startswith("seed")]
+    if seeded and strict_mode():
+        raise UncalibratedParameter(
+            "strict mode is on and these adjustments are not fitted from your data: "
+            + ", ".join(seeded) + ". Run `pricer calibrate --write`, or set "
+            "parameters.allow_seed_fallback: true in config/business.yml.")
+    if seeded:
+        warnings.append("using seed priors, not your data, for: " + ", ".join(seeded))
+
     # The estimator works at the reference grade and channel, so the band has to
     # take the same trip as the point estimate or the two sit on different scales.
     band_ex = {k: round(at_grade_and_channel(v, grade, channel), 2)
@@ -134,5 +146,6 @@ def price(reference_value: float, model_id: str, config: dict, grade: str = "B",
         parts_value=salvage, grade=grade, channel=channel,
         margin_target=margin, refurb_expected=refurb,
         holding_cost=round(holding, 2), risk_premium=round(risk, 2),
-        band_ex_vat=band_ex, band_inc_vat=band_inc, warnings=warnings, waterfall=waterfall,
+        band_ex_vat=band_ex, band_inc_vat=band_inc, parameters=parameters,
+        warnings=warnings, waterfall=waterfall,
     )

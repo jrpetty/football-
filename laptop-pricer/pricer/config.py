@@ -34,6 +34,7 @@ def cfg() -> dict:
         "grading": _yaml("grading_checklist.yml"),
         "stock": _yaml("stock_policy.yml"),
         "bench": _yaml("bench.yml"),
+        "parts": _yaml("parts_recovery.yml"),
     }
 
 
@@ -76,27 +77,91 @@ def catalog() -> dict:
     }
 
 
-def grade_multiplier(grade: str) -> float | None:
-    return cfg()["grades"]["ladder"].get(grade, {}).get("multiplier")
+_FITTED_OVERRIDE: dict | None = None
+
+
+def use_fitted(values: dict | None) -> None:
+    """Force a parameter set. Pass {} to run on seed priors only, None to
+    restore normal behaviour. Used by tests to pin documented figures."""
+    global _FITTED_OVERRIDE
+    _FITTED_OVERRIDE = values
+    _load_fitted.cache_clear()
+
+
+@functools.lru_cache(maxsize=None)
+def _load_fitted() -> dict:
+    path = ROOT / "config" / "fitted.yml"
+    if not path.exists():
+        return {}
+    with open(path) as fh:
+        return yaml.safe_load(fh) or {}
+
+
+def fitted() -> dict:
+    """Values fitted from YOUR data by `pricer calibrate`. Empty until you run it."""
+    return _FITTED_OVERRIDE if _FITTED_OVERRIDE is not None else _load_fitted()
+
+
+def _resolve(section: str, key, seed):
+    """Prefer a value fitted from your data; fall back to the seed prior.
+
+    Returns (value, provenance) so every number that moves a price can say
+    where it came from.
+    """
+    entry = (fitted().get(section) or {}).get(key)
+    if isinstance(entry, dict) and entry.get("value") is not None:
+        if entry.get("fitted") is None:
+            return float(entry["value"]), f"seed (no fit: {entry.get('note') or 'insufficient data'})"
+        return float(entry["value"]), f"fitted n={entry.get('n', '?')}"
+    return seed, "seed"
+
+
+def strict_mode() -> bool:
+    """When true, refuse to quote using any parameter not fitted from your data."""
+    return not cfg()["business"].get("parameters", {}).get("allow_seed_fallback", True)
+
+
+def grade_multiplier(grade: str, with_provenance: bool = False):
+    seed = cfg()["grades"]["ladder"].get(grade, {}).get("multiplier")
+    if seed is None:
+        return (None, "unknown grade") if with_provenance else None
+    value, prov = _resolve("grades", grade, seed)
+    return (value, prov) if with_provenance else value
 
 
 def grade_rank(grade: str) -> int:
     return cfg()["grades"]["ladder"].get(grade, {}).get("rank", 0)
 
 
-def channel_multiplier(channel: str) -> float:
+def channel_multiplier(channel: str, with_provenance: bool = False):
     ladder = cfg()["channels"]["ladder"]
     if channel not in ladder:
         raise KeyError(f"unknown channel {channel!r} - add it to config/channels.yml")
-    return ladder[channel]["multiplier"]
+    value, prov = _resolve("channels", channel, ladder[channel]["multiplier"])
+    return (value, prov) if with_provenance else value
 
 
-def lambda_for(model: dict | None) -> float:
+def lambda_for(model: dict | None, with_provenance: bool = False):
     """Monthly depreciation rate for a model's build class."""
     dep = cfg()["depreciation"]
     if not model:
-        return dep["global_lambda"]
-    fitted = (dep.get("fitted") or {}).get(model["model_id"])
-    if fitted:
-        return float(fitted)
-    return dep["by_build_class"].get(model["build_class"], dep["global_lambda"])
+        return (dep["global_lambda"], "seed (global)") if with_provenance else dep["global_lambda"]
+    bc = model["build_class"]
+    seed = dep["by_build_class"].get(bc, dep["global_lambda"])
+    value, prov = _resolve("depreciation", bc, seed)
+    return (value, prov) if with_provenance else value
+
+
+def spec_delta_table(kind: str, group: str) -> tuple[dict, str]:
+    """RAM or storage ladder for an upgradeable or soldered chassis."""
+    seed = cfg()["spec_deltas"][kind][group]
+    entry = ((fitted().get("spec_deltas") or {}).get(kind) or {}).get(group)
+    if not entry:
+        return {int(k): float(v) for k, v in seed.items()}, "seed"
+    table, any_fit = {}, False
+    for level, meta in entry.items():
+        table[int(level)] = float(meta["value"])
+        any_fit = any_fit or meta.get("fitted") is not None
+    note = entry[next(iter(entry))].get("note", "")
+    return table, (f"fitted from {entry[next(iter(entry))].get('n', 0)} config pairs"
+                   if any_fit else f"seed ({note})")

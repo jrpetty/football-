@@ -1,4 +1,10 @@
 # Commercial policy. Edit freely - every change is a git commit with an author.
+# Parameter policy. With allow_seed_fallback: false the engine refuses to quote
+# using any adjustment it has not fitted from your own data - run
+# `pricer calibrate` first. Start true, switch to false once you have history.
+parameters:
+  allow_seed_fallback: true
+
 base_currency: GBP
 vat_rate: 0.20
 vat_scheme: standard          # standard | margin_scheme
