@@ -246,6 +246,7 @@ public final class ZonePresets {
      * hands the trade over, but only to a bot that has none.
      */
     public static void applyGround(AssistantEntity bot, Preset preset) {
+        bot.setShift(preset.shift());   // the plot's hours are the plot's
         if (preset.job() != AssistantEntity.StationTask.NONE) {
             // Assigning to "North Farm" means farming it — whatever the bot
             // was before. Bare ground is the other way round: workers keep
@@ -254,6 +255,162 @@ public final class ZonePresets {
         }
         bot.assignPlot(preset.zone(), preset.name());
         bot.setPreset(preset.name());
+    }
+
+    /** Cycle the plot's working hours; everyone on it inherits them. */
+    @Nullable
+    public static AssistantEntity.Shift cycleShift(Player player, String name) {
+        List<Preset> presets = list(player);
+        for (int i = 0; i < presets.size(); i++) {
+            Preset p = presets.get(i);
+            if (!p.name().equals(name)) continue;
+            AssistantEntity.Shift next = p.shift().next();
+            presets.set(i, new Preset(p.name(), p.job(), p.zone(), next));
+            store(player, presets);
+            for (AssistantEntity mate : AssistantEntity.allFor(player.getUUID())) {
+                if (mate.isAlive() && p.zone().equals(mate.workZone())) {
+                    mate.setShift(next);
+                }
+            }
+            return next;
+        }
+        return null;
+    }
+
+    /**
+     * The plot's condition, 0-100: what is quietly wrong with the ground
+     * before it shows in the output. Sampled on a stride so a big plot costs
+     * about the same as a small one, and only when the book is opened.
+     */
+    public static int health(net.minecraft.server.level.ServerLevel level, Preset preset) {
+        WorkZone zone = preset.zone();
+        net.minecraft.core.BlockPos c = zone.center();
+        int rx = Math.max(1, zone.sizeX() / 2), rz = Math.max(1, zone.sizeZ() / 2);
+        int stride = Math.max(2, Math.max(rx, rz) / 6);
+        int columns = 0, dark = 0, farmland = 0, dry = 0;
+        boolean water = false;
+        for (int dx = -rx; dx <= rx; dx += stride) {
+            for (int dz = -rz; dz <= rz; dz += stride) {
+                int x = c.getX() + dx, z = c.getZ() + dz;
+                int y = level.getHeight(
+                    net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+                net.minecraft.core.BlockPos top = new net.minecraft.core.BlockPos(x, y, z);
+                columns++;
+                if (level.getBrightness(net.minecraft.world.level.LightLayer.BLOCK, top) == 0) dark++;
+                net.minecraft.world.level.block.state.BlockState ground = level.getBlockState(top.below());
+                if (ground.is(net.minecraft.world.level.block.Blocks.FARMLAND)) {
+                    farmland++;
+                    if (ground.getValue(net.minecraft.world.level.block.FarmBlock.MOISTURE) == 0) dry++;
+                }
+                if (ground.is(net.minecraft.world.level.block.Blocks.WATER)
+                    || level.getBlockState(top).is(net.minecraft.world.level.block.Blocks.WATER)) {
+                    water = true;
+                }
+            }
+        }
+        if (columns == 0) return 100;
+        int score = 100;
+        score -= dark * 30 / columns;                        // spawnable dark ground
+        if (farmland > 0) score -= dry * 40 / farmland;      // a drying field
+        if (preset.job() == AssistantEntity.StationTask.FARM && !water) score -= 20;
+        if (preset.job() == AssistantEntity.StationTask.RANCH) {
+            int animals = level.getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class,
+                new net.minecraft.world.phys.AABB(zone.min(), zone.max().above(4)),
+                a -> a.isAlive() && !a.isBaby()).size();
+            if (animals < 2) score -= 40;                    // a pen that cannot breed
+        }
+        return Math.max(0, Math.min(100, score));
+    }
+
+    // ------------------------------ blueprints --------------------------------
+    // A working plot, copied whole: its size, trade, hours, and where its
+    // chests sit relative to the middle. Stamp it somewhere new and the ground
+    // is staked and the chest spots are marked — set up once, repeat forever.
+
+    private static final String BP_KEY = "mc_assistant_blueprint";
+
+    public static boolean copyBlueprint(net.minecraft.server.level.ServerPlayer player, Preset preset) {
+        WorkZone zone = preset.zone();
+        CompoundTag bp = new CompoundTag();
+        bp.putInt("SX", zone.sizeX());
+        bp.putInt("SZ", zone.sizeZ());
+        bp.putInt("Depth", zone.depth());
+        bp.putString("Job", preset.job().name());
+        bp.putString("Shift", preset.shift().name());
+        ListTag chests = new ListTag();
+        for (com.jrpetty.mcassistant.entity.ZoneChests.Found f
+                : com.jrpetty.mcassistant.entity.ZoneChests.around(
+                    player.serverLevel(), zone.center(), zone.radius() + 2, 6)) {
+            if (chests.size() >= 8) break;
+            CompoundTag ct = new CompoundTag();
+            ct.putInt("X", f.pos().getX() - zone.center().getX());
+            ct.putInt("Y", f.pos().getY() - zone.center().getY());
+            ct.putInt("Z", f.pos().getZ() - zone.center().getZ());
+            chests.add(ct);
+        }
+        bp.put("Chests", chests);
+        player.getPersistentData().put(BP_KEY, bp);
+        return true;
+    }
+
+    /** Stamp the copied plot where the player stands: staked, named, and its
+     *  chest spots marked with light for a few seconds. Null = nothing copied. */
+    @Nullable
+    public static Preset stampBlueprint(net.minecraft.server.level.ServerPlayer player) {
+        CompoundTag bp = player.getPersistentData().getCompound(BP_KEY);
+        if (!bp.contains("SX")) return null;
+        AssistantEntity.StationTask job;
+        AssistantEntity.Shift shift;
+        try {
+            job = AssistantEntity.StationTask.valueOf(bp.getString("Job"));
+            shift = AssistantEntity.Shift.valueOf(bp.getString("Shift"));
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+        net.minecraft.core.BlockPos c = player.blockPosition();
+        int sx = Math.max(3, bp.getInt("SX")), sz = Math.max(3, bp.getInt("SZ"));
+        WorkZone zone = WorkZone.of(
+            c.offset(-(sx / 2), 0, -(sz / 2)),
+            c.offset(sx - 1 - sx / 2, 0, sz - 1 - sz / 2),
+            bp.getInt("Depth"));
+        Preset staked = stake(player, zone, job);
+        // Pin the copied shift onto the staked entry.
+        List<Preset> presets = list(player);
+        for (int i = 0; i < presets.size(); i++) {
+            if (presets.get(i).name().equals(staked.name())) {
+                staked = new Preset(staked.name(), staked.job(), staked.zone(), shift);
+                presets.set(i, staked);
+                store(player, presets);
+                break;
+            }
+        }
+        // Show the ground and the chest spots: perimeter in wax, chest columns
+        // in end-rod light, tall enough to see over a hedge.
+        net.minecraft.server.level.ServerLevel level = player.serverLevel();
+        net.minecraft.core.BlockPos min = zone.min(), max = zone.max();
+        for (int x = min.getX(); x <= max.getX(); x += 2) {
+            spark(level, x, c.getY(), min.getZ());
+            spark(level, x, c.getY(), max.getZ());
+        }
+        for (int z = min.getZ(); z <= max.getZ(); z += 2) {
+            spark(level, min.getX(), c.getY(), z);
+            spark(level, max.getX(), c.getY(), z);
+        }
+        ListTag chests = bp.getList("Chests", Tag.TAG_COMPOUND);
+        for (int i = 0; i < chests.size(); i++) {
+            CompoundTag ct = chests.getCompound(i);
+            for (int h = 0; h < 6; h++) {
+                level.sendParticles(net.minecraft.core.particles.ParticleTypes.END_ROD,
+                    c.getX() + ct.getInt("X") + 0.5, c.getY() + ct.getInt("Y") + 0.3 + h * 0.5,
+                    c.getZ() + ct.getInt("Z") + 0.5, 2, 0.05, 0.05, 0.05, 0.0);
+            }
+        }
+        return staked;
+    }
+
+    private static void spark(net.minecraft.server.level.ServerLevel level, int x, int y, int z) {
+        level.sendParticles(net.minecraft.core.particles.ParticleTypes.WAX_ON,
+            x + 0.5, y + 1.2, z + 0.5, 3, 0.1, 0.3, 0.1, 0.0);
     }
 
     /** How many of this owner's live crew are working that zone right now. */

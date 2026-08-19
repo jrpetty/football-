@@ -30,6 +30,7 @@ public class MapScreen extends Screen {
     // next chip click hands over. All in world coords so the self-framing view
     // can't shift it mid-drag.
     private double pressX = -1, pressY = -1;
+    private double dragX, dragY;      // where the drag is right now, for the ghost
     private boolean dragging;
     private int pressHovered = -1;
     @Nullable private int[] pending;   // world minX, minZ, maxX, maxZ
@@ -112,6 +113,38 @@ public class MapScreen extends Screen {
         super.tick();
         crew.removeIf(a -> !a.isAlive());
         fitBounds();
+        // The rectangle being drawn (or awaiting a worker) glows in the WORLD
+        // at the same time — client-side particles on the real ground, so
+        // "which field am I actually drawing on?" never needs guessing.
+        int[] rect = null;
+        if (dragging && pressX >= 0) {
+            rect = new int[]{ Math.min(worldX(pressX), worldX(dragX)),
+                Math.min(worldZ(pressY), worldZ(dragY)),
+                Math.max(worldX(pressX), worldX(dragX)),
+                Math.max(worldZ(pressY), worldZ(dragY)) };
+        } else if (pending != null) {
+            rect = pending;
+        }
+        if (rect != null && this.minecraft != null && this.minecraft.level != null) {
+            int strideX = Math.max(2, (rect[2] - rect[0]) / 12);
+            int strideZ = Math.max(2, (rect[3] - rect[1]) / 12);
+            for (int x = rect[0]; x <= rect[2]; x += strideX) {
+                ghost(x, rect[1]);
+                ghost(x, rect[3]);
+            }
+            for (int z = rect[1]; z <= rect[3]; z += strideZ) {
+                ghost(rect[0], z);
+                ghost(rect[2], z);
+            }
+        }
+    }
+
+    /** One client-side spark on the real ground at this column. */
+    private void ghost(int x, int z) {
+        int y = this.minecraft.level.getHeight(
+            net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z);
+        this.minecraft.level.addParticle(net.minecraft.core.particles.ParticleTypes.WAX_ON,
+            x + 0.5, y + 1.1, z + 0.5, 0.0, 0.05, 0.0);
     }
 
     private int px(double worldX) {
@@ -326,6 +359,8 @@ public class MapScreen extends Screen {
     public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
         if (button == 0 && pressX >= 0) {
             if (Math.abs(mx - pressX) + Math.abs(my - pressY) > 4) dragging = true;
+            dragX = mx;
+            dragY = my;
             return true;
         }
         return super.mouseDragged(mx, my, button, dx, dy);

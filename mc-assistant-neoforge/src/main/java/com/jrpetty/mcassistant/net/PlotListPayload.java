@@ -20,7 +20,8 @@ public record PlotListPayload(List<Entry> plots) implements CustomPacketPayload 
      *  ("" for ground staked without one), its footprint, and how many of the
      *  crew are working it right now. */
     public record Entry(String name, String job, int minX, int minZ,
-                        int maxX, int maxZ, int depth, int workers) {
+                        int maxX, int maxZ, int depth, int workers,
+                        int yield, int health, String shift) {
 
         public int sizeX() { return maxX - minX + 1; }
         public int sizeZ() { return maxZ - minZ + 1; }
@@ -43,6 +44,9 @@ public record PlotListPayload(List<Entry> plots) implements CustomPacketPayload 
             buf.writeVarInt(e.maxZ());
             buf.writeVarInt(e.depth());
             buf.writeVarInt(e.workers());
+            buf.writeVarInt(e.yield());
+            buf.writeVarInt(e.health());
+            buf.writeUtf(e.shift());
         }
     }
 
@@ -52,7 +56,8 @@ public record PlotListPayload(List<Entry> plots) implements CustomPacketPayload 
         for (int i = 0; i < count; i++) {
             out.add(new Entry(buf.readUtf(), buf.readUtf(),
                 buf.readVarInt(), buf.readVarInt(), buf.readVarInt(),
-                buf.readVarInt(), buf.readVarInt(), buf.readVarInt()));
+                buf.readVarInt(), buf.readVarInt(), buf.readVarInt(),
+                buf.readVarInt(), buf.readVarInt(), buf.readUtf()));
         }
         return new PlotListPayload(out);
     }

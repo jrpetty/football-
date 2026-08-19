@@ -41,6 +41,7 @@ public class PlotsScreen extends Screen {
     private final List<AssistantEntity> crew = new ArrayList<>();
     @Nullable private String picked;          // by name, so refreshes keep it
     @Nullable private Button tradeBtn;        // label follows the picked plot
+    @Nullable private Button shiftBtn;        // ditto: the plot's hours
     private int left, top;
 
     public PlotsScreen(List<PlotListPayload.Entry> plots) {
@@ -59,10 +60,18 @@ public class PlotsScreen extends Screen {
     /** The Trade button reads as the picked plot's trade, so the ground's
      *  type is visible before you click anything onto it. */
     private void updateTradeLabel() {
-        if (tradeBtn == null) return;
         PlotListPayload.Entry e = picked == null ? null : byName(picked);
-        tradeBtn.setMessage(Component.literal(
+        if (tradeBtn != null) tradeBtn.setMessage(Component.literal(
             e == null || e.job().isEmpty() ? "Trade ›" : e.job() + " ›"));
+        if (shiftBtn != null) shiftBtn.setMessage(Component.literal(
+            e == null ? "Shift ›" : shiftWord(e.shift()) + " ›"));
+    }
+
+    /** The plot's hours, short enough for a fifty-pixel button. */
+    private static String shiftWord(String label) {
+        if (label.isEmpty()) return "Shift";
+        if (label.startsWith("day and")) return "Always";
+        return Character.toUpperCase(label.charAt(0)) + label.substring(1);
     }
 
     @Nullable
@@ -121,6 +130,30 @@ public class PlotsScreen extends Screen {
             .build());
         this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
             .bounds(x + 4 * (w5 + gap), y, inner - 4 * (w5 + gap), 18).build());
+
+        // Plot tools, tucked under the plot list: copy the picked ground as a
+        // blueprint, stamp the copied one where you stand, and the ground's
+        // working hours — which everyone assigned inherits.
+        int mw = (PLOT_W - 8) / 3;
+        int my = top + LIST_TOP + MAX_PLOTS * PLOT_ROW_H + 2;
+        this.addRenderableWidget(Button.builder(Component.literal("Copy"),
+                b -> { if (picked != null) send(6, -1, picked); })
+            .bounds(x, my, mw, 16)
+            .tooltip(Tooltip.create(Component.literal(
+                "Copy the picked plot as a blueprint — size, depth, trade, shift and chest layout")))
+            .build());
+        this.addRenderableWidget(Button.builder(Component.literal("Stamp"),
+                b -> send(7, -1, ""))
+            .bounds(x + mw + 4, my, mw, 16)
+            .tooltip(Tooltip.create(Component.literal(
+                "Stake the copied blueprint where you stand — sparks mark the outline and chest spots")))
+            .build());
+        shiftBtn = this.addRenderableWidget(Button.builder(Component.literal("Shift ›"),
+                b -> { if (picked != null) send(8, -1, picked); })
+            .bounds(x + 2 * (mw + 4), my, PLOT_W - 2 * (mw + 4), 16)
+            .tooltip(Tooltip.create(Component.literal(
+                "When this ground works — days, nights or both. Everyone assigned inherits it")))
+            .build());
         updateTradeLabel();
     }
 
@@ -178,7 +211,9 @@ public class PlotsScreen extends Screen {
             x, top + 31, Ui.FAINT, false);
 
         // ---- left: the ground ----
-        Ui.section(g, this.font, "Ground", x, top + LIST_TOP - 11, PLOT_W);
+        Ui.section(g, this.font, plots.size() > MAX_PLOTS
+            ? "Ground · +" + (plots.size() - MAX_PLOTS) + " more"
+            : "Ground", x, top + LIST_TOP - 11, PLOT_W);
         if (plots.isEmpty()) {
             g.drawString(this.font, "No plots yet.", x, top + LIST_TOP + 4, Ui.MUTED, false);
             g.drawString(this.font, "Stake one here, or mark", x, top + LIST_TOP + 18, Ui.FAINT, false);
@@ -195,21 +230,26 @@ public class PlotsScreen extends Screen {
                 sel ? Ui.ROW_PICK : (hover || i % 2 == 0 ? Ui.ROW : Ui.ROW_ALT));
             if (sel) g.renderOutline(x, ry, PLOT_W, PLOT_ROW_H - 1, Ui.ACCENT);
             Ui.chip(g, x + 3, ry + 5, jobColour(e.job()));
-            g.drawString(this.font, Ui.clip(this.font, e.name(), PLOT_W - 60),
+            g.drawString(this.font, Ui.clip(this.font, e.name(), PLOT_W - 64),
                 x + 13, ry + 5, sel ? Ui.INK : Ui.MUTED, false);
-            String load = e.workers() > 0 ? e.workers() + "⚒" : "—";
-            Ui.right(g, this.font, e.sizeX() + "×" + e.sizeZ() + " " + load,
-                x + PLOT_W - 3, ry + 5, e.workers() > 0 ? Ui.ACCENT : Ui.FAINT);
-        }
-        if (plots.size() > MAX_PLOTS) {
-            g.drawString(this.font, "+" + (plots.size() - MAX_PLOTS) + " more",
-                x, top + LIST_TOP + rows * PLOT_ROW_H + 2, Ui.FAINT, false);
+            String perDay = e.yield() + "/d";
+            Ui.right(g, this.font, perDay, x + PLOT_W - 3, ry + 5,
+                e.yield() > 0 ? Ui.ACCENT : Ui.FAINT);
+            Ui.right(g, this.font, e.workers() > 0 ? e.workers() + "⚒" : "—",
+                x + PLOT_W - 8 - this.font.width(perDay), ry + 5,
+                e.workers() > 0 ? Ui.MUTED : Ui.FAINT);
+            if (e.health() < 80) {   // flagged before the output drops
+                g.fill(x, ry, x + 2, ry + PLOT_ROW_H - 1,
+                    e.health() >= 50 ? Ui.WARN : Ui.BAD);
+            }
         }
 
         // ---- right: the hands ----
         int cx = x + PLOT_W + 8;
         int cw = inner - PLOT_W - 8;
-        Ui.section(g, this.font, "Crew", cx, top + LIST_TOP - 11, cw);
+        Ui.section(g, this.font, crew.size() > MAX_CREW
+            ? "Crew · +" + (crew.size() - MAX_CREW) + " more"
+            : "Crew", cx, top + LIST_TOP - 11, cw);
         if (crew.isEmpty()) {
             g.drawString(this.font, "Nobody nearby.", cx, top + LIST_TOP + 4, Ui.MUTED, false);
         }
@@ -238,9 +278,17 @@ public class PlotsScreen extends Screen {
             Ui.right(g, this.font, Ui.clip(this.font, where, 64), cx + cw - 3, ry + 4,
                 onPicked ? Ui.GOOD : Ui.FAINT);
         }
-        if (crew.size() > MAX_CREW) {
-            g.drawString(this.font, "+" + (crew.size() - MAX_CREW) + " more nearby",
-                cx, top + LIST_TOP + crews * CREW_ROW_H + 2, Ui.FAINT, false);
+        // The picked plot's ledger, under the crew: what the ground banked
+        // today, and its condition — the warning lands before the output
+        // drops, which is the whole point of the number.
+        PlotListPayload.Entry pe = picked == null ? null : byName(picked);
+        if (pe != null) {
+            int dy = top + LIST_TOP + MAX_CREW * CREW_ROW_H + 3;
+            g.drawString(this.font, Ui.clip(this.font,
+                pe.sizeX() + "×" + pe.sizeZ() + " · banked " + pe.yield() + " today", cw),
+                cx, dy, Ui.MUTED, false);
+            int hc = pe.health() >= 80 ? Ui.GOOD : pe.health() >= 50 ? Ui.WARN : Ui.BAD;
+            g.drawString(this.font, "condition " + pe.health() + "%", cx, dy + 10, hc, false);
         }
 
         // A hairline between the columns, engraved like the section rules.

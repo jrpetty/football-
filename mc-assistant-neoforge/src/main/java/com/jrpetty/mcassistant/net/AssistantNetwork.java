@@ -133,6 +133,31 @@ public final class AssistantNetwork {
                 }
                 case 3 -> com.jrpetty.mcassistant.ZonePresets.forget(player, payload.plotName());
                 case 4 -> com.jrpetty.mcassistant.ZonePresets.rename(player, payload.plotName());
+                case 6 -> {   // copy the picked plot as a blueprint
+                    com.jrpetty.mcassistant.ZonePresets.Preset preset =
+                        com.jrpetty.mcassistant.ZonePresets.byName(player, payload.plotName());
+                    if (preset != null) {
+                        com.jrpetty.mcassistant.ZonePresets.copyBlueprint(player, preset);
+                        player.displayClientMessage(net.minecraft.network.chat.Component.literal(
+                            "Copied \"" + preset.name() + "\" — stand where the new one goes and press Stamp."), true);
+                    }
+                }
+                case 7 -> {   // stamp the blueprint where the player stands
+                    com.jrpetty.mcassistant.ZonePresets.Preset staked =
+                        com.jrpetty.mcassistant.ZonePresets.stampBlueprint(player);
+                    player.displayClientMessage(net.minecraft.network.chat.Component.literal(
+                        staked == null
+                            ? "Nothing copied yet — pick a plot and press Copy first."
+                            : "Stamped \"" + staked.name() + "\" — chest spots are lit for a moment."), true);
+                }
+                case 8 -> {   // the plot's working hours
+                    AssistantEntity.Shift next =
+                        com.jrpetty.mcassistant.ZonePresets.cycleShift(player, payload.plotName());
+                    if (next != null) {
+                        player.displayClientMessage(net.minecraft.network.chat.Component.literal(
+                            "\"" + payload.plotName() + "\" works " + next.label + " now."), true);
+                    }
+                }
                 case 5 -> {   // give the plot a trade — the ground defines the work
                     AssistantEntity.StationTask next =
                         com.jrpetty.mcassistant.ZonePresets.cycleTrade(player, payload.plotName());
@@ -150,18 +175,29 @@ public final class AssistantNetwork {
         });
     }
 
-    /** The plot book as the menu shows it, freshly counted. */
+    /** The plot book as the menu shows it, freshly counted: workers, what
+     *  they banked today, and the ground's condition score. */
     public static void sendPlotBook(ServerPlayer player) {
         java.util.List<PlotListPayload.Entry> entries = new java.util.ArrayList<>();
         for (com.jrpetty.mcassistant.ZonePresets.Preset p
                 : com.jrpetty.mcassistant.ZonePresets.list(player)) {
+            int workers = 0, yield = 0;
+            for (AssistantEntity mate : AssistantEntity.allFor(player.getUUID())) {
+                if (mate.isAlive() && p.zone().equals(mate.workZone())) {
+                    workers++;
+                    yield += mate.producedTodayTotal();
+                }
+            }
             entries.add(new PlotListPayload.Entry(
                 p.name(),
                 p.job() == AssistantEntity.StationTask.NONE ? "" : p.job().title,
                 p.zone().min().getX(), p.zone().min().getZ(),
                 p.zone().max().getX(), p.zone().max().getZ(),
                 p.zone().depth(),
-                com.jrpetty.mcassistant.ZonePresets.workersOn(player, p)));
+                workers,
+                yield,
+                com.jrpetty.mcassistant.ZonePresets.health(player.serverLevel(), p),
+                p.shift().label));
         }
         net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(
             player, new PlotListPayload(entries));

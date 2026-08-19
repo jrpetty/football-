@@ -12,6 +12,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 public final class PlotBookKeeper {
 
     private static final String KEY = "mc_assistant_presets";
+    private static final String BP_KEY = "mc_assistant_blueprint";
 
     @SubscribeEvent
     public static void onClone(PlayerEvent.Clone event) {
@@ -19,6 +20,9 @@ public final class PlotBookKeeper {
         var old = event.getOriginal().getPersistentData();
         if (old.contains(KEY)) {
             event.getEntity().getPersistentData().put(KEY, old.get(KEY).copy());
+        }
+        if (old.contains(BP_KEY)) {
+            event.getEntity().getPersistentData().put(BP_KEY, old.get(BP_KEY).copy());
         }
     }
 }

@@ -201,8 +201,11 @@ public class FarmGoal extends Goal {
                 targetPos = findTillableNear(water);
                 if (targetPos != null) { mode = Mode.TILL; return; }
             }
-            if (water == null && hasWaterBucket()) {
-                targetPos = findWaterSpot();
+            if (hasWaterBucket()) {
+                // Not just "no water anywhere": a bucket in hand gets spent
+                // wherever a big DRY patch of the field sits out of reach of
+                // every existing source — proper irrigation, not one hole.
+                targetPos = findIrrigationSpot();
                 if (targetPos != null) { mode = Mode.WATER; return; }
             }
             // No dry-farming fallback. Farmland with no water within four
@@ -463,6 +466,61 @@ public class FarmGoal extends Goal {
         return nearest(pos -> isTillable(pos)
             && isTillable(pos.north()) && isTillable(pos.south())
             && isTillable(pos.east()) && isTillable(pos.west()));
+    }
+
+    private int irrigationScanTick = -1000;
+
+    /**
+     * Where the next water source pays best: the dry-tillable cell whose
+     * 9×9 hydration square covers the most other dry cells. One pass collects
+     * water and tillable cells; dryness and scoring then run against those
+     * lists in memory, so the world is read once however big the field is.
+     * Needs a cluster of six-plus to spend a bucket — one damp corner is not
+     * worth a source block.
+     */
+    @Nullable
+    private BlockPos findIrrigationSpot() {
+        if (assistant.tickCount - irrigationScanTick < 200) return null;
+        irrigationScanTick = assistant.tickCount;
+        BlockPos feet = assistant.feetPos();
+        java.util.List<BlockPos> waterCells = new java.util.ArrayList<>();
+        java.util.List<BlockPos> tillables = new java.util.ArrayList<>();
+        for (BlockPos pos : BlockPos.betweenClosed(
+                feet.offset(-RANGE, -3, -RANGE), feet.offset(RANGE, 3, RANGE))) {
+            if (!assistant.inZone(pos)) continue;
+            BlockState st = assistant.level().getBlockState(pos);
+            if (st.is(Blocks.WATER)) {
+                waterCells.add(pos.immutable());
+            } else if (isTillable(pos)) {
+                tillables.add(pos.immutable());
+            }
+        }
+        java.util.List<BlockPos> dry = new java.util.ArrayList<>();
+        outer:
+        for (BlockPos t : tillables) {
+            for (BlockPos w : waterCells) {
+                if (Math.abs(t.getX() - w.getX()) <= 4 && Math.abs(t.getZ() - w.getZ()) <= 4
+                    && w.getY() - t.getY() >= 0 && w.getY() - t.getY() <= 1) {
+                    continue outer;
+                }
+            }
+            dry.add(t);
+        }
+        if (dry.size() < 6) return null;
+        BlockPos best = null;
+        int bestScore = 5;   // strictly more than the threshold-1
+        for (BlockPos candidate : dry) {
+            int score = 0;
+            for (BlockPos other : dry) {
+                if (Math.abs(candidate.getX() - other.getX()) <= 4
+                    && Math.abs(candidate.getZ() - other.getZ()) <= 4
+                    && Math.abs(candidate.getY() - other.getY()) <= 1) {
+                    score++;
+                }
+            }
+            if (score > bestScore) { bestScore = score; best = candidate; }
+        }
+        return best;
     }
 
     @Nullable
