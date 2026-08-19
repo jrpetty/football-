@@ -57,6 +57,8 @@ public class MineGoal extends Goal {
     // floors down to the depth the player set rather than one lonely tunnel.
     private int levelFloor;
     private int levelsCut;
+    private static final int MAX_LEVELS = 32;   // a bounded quarry, whatever the maths says
+    @Nullable private String returnReason;      // what to say once it surfaces
     @Nullable private BlockPos moveTarget;
     private int workTicks;
     private int workNeeded;
@@ -117,6 +119,7 @@ public class MineGoal extends Goal {
         this.levelFloor = assistant.quarry()
             ? Math.max(target, cursor.getY() - 4) : target;
         this.levelsCut = 0;
+        this.returnReason = null;
         this.phase = cursor.getY() <= levelFloor ? Phase.TUNNEL : Phase.DESCEND;
 
         // No pickaxe, no mine — player rules.
@@ -226,8 +229,9 @@ public class MineGoal extends Goal {
         // Plan the next step.
         if (phase == Phase.RETURN) {
             if (returnIndex < 0) {
-                finish("Back at the shaft head — got " + oresMined + " ore. Stashing now.");
-                assistant.enqueueFront(Job.deposit());
+                finish(returnReason != null ? returnReason
+                    : "Back at the shaft head — got " + oresMined + " ore. Stashing now.");
+                if (assistant.countItems() > 0) assistant.enqueueFront(Job.deposit());
                 return;
             }
             moveTarget = stairPath.get(returnIndex--);
@@ -241,15 +245,17 @@ public class MineGoal extends Goal {
                 assistant.sayRoutine("At Y" + cursor.getY() + " — opening the gallery.");
                 return;
             }
-            // The descent must stay on the patch too. Left unchecked a straight
-            // ramp walked the miner ~50 blocks off its own ground on the way down.
-            if (!assistant.inZoneColumn(cursor.relative(dir))) {
-                dir = dir.getClockWise(); // switchback rather than leave the zone
-                if (!assistant.inZoneColumn(cursor.relative(dir))) {
-                    phase = Phase.TUNNEL; // boxed in: start the gallery here
-                    return;
-                }
+            // The descent must stay on the patch. This used to try only TWO
+            // of the four directions before declaring itself boxed in, which
+            // in a quarry meant a corner could refuse a descent that was
+            // available one more turn round.
+            Direction step = descentDir(dir);
+            if (step == null) {
+                phase = Phase.TUNNEL;   // genuinely boxed in: cut here instead
+                tunnelSteps = 0;
+                return;
             }
+            dir = step;
             planStep(cursor.relative(dir).below());
         } else {
             // Stop at the edge of the assigned patch as well as at length — a
@@ -257,29 +263,102 @@ public class MineGoal extends Goal {
             // neighbour's farm.
             boolean leavingZone = !assistant.inZoneColumn(cursor.relative(dir));
             if (tunnelSteps >= TUNNEL_LENGTH || leavingZone) {
-                // Quarry: this floor is cut — drop four, turn a quarter, and
-                // open the next one, until the depth the player set is reached.
+                // Quarry: this floor is cut — drop four, aim back into the
+                // patch, and open the next one, down to the depth that was set.
+                //
+                // Three guards, each of which was a live spin in b87. The
+                // gallery must have actually CUT something: an empty gallery
+                // that ends instantly at the patch edge would otherwise drop a
+                // level every two ticks and rip through the whole quarry in a
+                // second, digging nothing and reporting it done. There must be
+                // somewhere in-zone to descend to, checked BEFORE committing
+                // rather than discovered next tick. And the level count is
+                // bounded, so no arithmetic slip can run away.
                 int target = job.amount();
-                if (assistant.quarry() && levelFloor > target) {
-                    levelFloor = Math.max(target, levelFloor - 4);
-                    levelsCut++;
-                    dir = dir.getClockWise();
-                    phase = Phase.DESCEND;
-                    tunnelSteps = 0;
-                    assistant.sayRoutine("Level " + levelsCut + " cut — dropping to Y"
-                        + levelFloor + " for the next.");
-                    return;
+                if (assistant.quarry() && levelFloor > target
+                    && tunnelSteps > 0 && levelsCut < MAX_LEVELS) {
+                    Direction inward = towardZoneCentre();
+                    if (descentDir(inward) != null) {
+                        levelFloor = Math.max(target, levelFloor - 4);
+                        levelsCut++;
+                        dir = inward;
+                        phase = Phase.DESCEND;
+                        tunnelSteps = 0;
+                        assistant.sayRoutine("Level " + levelsCut + " cut — dropping to Y"
+                            + levelFloor + " for the next.");
+                        return;
+                    }
                 }
-                finish((assistant.quarry() && levelsCut > 0
+                String done = (assistant.quarry() && levelsCut > 0
                         ? "Quarry's down to Y" + levelFloor + " — " + (levelsCut + 1)
                           + " levels, "
                         : "Mine's done — ")
                     + blocksMined + " blocks dug, " + oresMined + " ore collected"
-                    + (leavingZone ? " (that's the edge of my patch)." : "."));
+                    + (leavingZone ? " (that's the edge of my patch)." : ".");
+                // Deep in a terraced quarry, "finish here" leaves the bot at
+                // the bottom of a hole with four-block walls and asks the
+                // pathfinder to get it to a chest at the surface. It walks
+                // back up its own workings instead — the same trail the
+                // full-pack return uses.
+                if (climbOut(done)) return;
+                finish(done);
                 return;
             }
             planStep(cursor.relative(dir));
         }
+    }
+
+    /** A direction the descent can actually take from here, starting with the
+     *  preferred one and turning all the way round. Null means boxed in. */
+    @Nullable
+    private Direction descentDir(Direction preferred) {
+        Direction d = preferred;
+        for (int i = 0; i < 4; i++) {
+            if (assistant.inZoneColumn(cursor.relative(d))) return d;
+            d = d.getClockWise();
+        }
+        return null;
+    }
+
+    /** Back toward the middle of the patch — where a descent has the most room.
+     *  A gallery ends at the far edge by definition, which is the worst place
+     *  from which to start cutting downward. */
+    private Direction towardZoneCentre() {
+        com.jrpetty.mcassistant.entity.WorkZone zone = assistant.workZone();
+        if (zone == null) return dir.getClockWise();
+        BlockPos c = zone.center();
+        int dx = c.getX() - cursor.getX();
+        int dz = c.getZ() - cursor.getZ();
+        if (Math.abs(dx) >= Math.abs(dz)) {
+            return dx >= 0 ? Direction.EAST : Direction.WEST;
+        }
+        return dz >= 0 ? Direction.SOUTH : Direction.NORTH;
+    }
+
+    /** Switch to the walk home along our own workings, carrying the message to
+     *  say once we surface. False when there is no trail worth walking. */
+    private boolean climbOut(String message) {
+        if (stairPath.size() < 2 || phase == Phase.RETURN) return false;
+        if (cursor.getY() >= stairPath.get(0).getY() - 4) return false;  // barely below the head
+        returnReason = message;
+        phase = Phase.RETURN;
+        returnIndex = stairPath.size() - 1;
+        digQueue.clear();
+        veinQueue.clear();
+        currentDig = null;
+        moveTarget = null;
+        assistant.sayRoutine("Level's done — climbing back up.");
+        return true;
+    }
+
+    /** One trail, most recent first. A sliding window rather than a hard stop:
+     *  the old code stopped RECORDING at the cap, so a deep quarry's newest
+     *  steps were the ones missing and the walk home began from a waypoint
+     *  several levels above the bot, which is exactly the one it cannot path
+     *  to. Keeping the most recent 512 keeps the trail attached to the bot. */
+    private void breadcrumb(BlockPos p) {
+        stairPath.add(p.immutable());
+        if (stairPath.size() > 512) stairPath.remove(0);
     }
 
     /**
@@ -475,14 +554,13 @@ public class MineGoal extends Goal {
             cursor = dest;
             moveTarget = null;
             if (phase == Phase.TUNNEL) tunnelSteps++;
-            if (phase == Phase.DESCEND && stairPath.size() < 400) {
-                stairPath.add(dest.immutable());
-            } else if (phase == Phase.TUNNEL && assistant.quarry()
-                && stairPath.size() < 400 && tunnelSteps % 4 == 0) {
+            if (phase == Phase.DESCEND) {
+                breadcrumb(dest);
+            } else if (phase == Phase.TUNNEL && assistant.quarry() && tunnelSteps % 4 == 0) {
                 // In a quarry the way home runs along the galleries too, so
                 // breadcrumb them sparsely — every fourth step is enough of a
                 // trail to walk back without filling the list.
-                stairPath.add(dest.immutable());
+                breadcrumb(dest);
             }
             // A step can pass through open cave: those walls were never dug,
             // so the after-dig scan never saw them. Check around the two cells
@@ -519,6 +597,14 @@ public class MineGoal extends Goal {
             assistant.getNavigation().moveTo(dest.getX() + 0.5, dest.getY(), dest.getZ() + 0.5, 1.0D);
         }
         if (++moveStuck > 100) {
+            // On the way out, one unreachable waypoint is not a dead end —
+            // the trail has hundreds. Skip it and aim at the next one up
+            // rather than abandoning the bot at the bottom of its own quarry.
+            if (phase == Phase.RETURN && returnIndex >= 0) {
+                moveTarget = stairPath.get(returnIndex--);
+                moveStuck = 0;
+                return;
+            }
             finish("Got stuck in the shaft — stopping here (" + oresMined + " ore so far).");
             if (assistant.isPackFull()) assistant.enqueueFront(Job.deposit());
         }
