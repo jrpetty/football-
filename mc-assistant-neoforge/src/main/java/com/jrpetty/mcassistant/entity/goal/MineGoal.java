@@ -36,7 +36,7 @@ public class MineGoal extends Goal {
         BlockTags.COAL_ORES, BlockTags.IRON_ORES, BlockTags.COPPER_ORES, BlockTags.GOLD_ORES,
         BlockTags.REDSTONE_ORES, BlockTags.LAPIS_ORES, BlockTags.DIAMOND_ORES, BlockTags.EMERALD_ORES);
 
-    private enum Phase { DESCEND, TUNNEL, RETURN }
+    private enum Phase { DESCEND, TUNNEL, RETURN, SHAFT, CLIMB }
 
     private final AssistantEntity assistant;
     @Nullable private Job job;
@@ -59,6 +59,19 @@ public class MineGoal extends Goal {
     private int levelsCut;
     private static final int MAX_LEVELS = 32;   // a bounded quarry, whatever the maths says
     @Nullable private String returnReason;      // what to say once it surfaces
+
+    // --- the ladder shaft ---------------------------------------------------
+    // A quarry with ladders in stock sinks ONE vertical shaft and cuts its
+    // galleries off it like spokes, instead of switchbacking a staircase down.
+    // The way home stops being a thousand-block walk back through every level
+    // and becomes a straight climb. Without ladders the quarry falls back to
+    // the staircase, so this is an upgrade that can never be a dependency.
+    @Nullable private BlockPos shaftCol;        // the column, X/Z only
+    private int shaftTopY;                      // where the shaft breaks surface
+    @Nullable private BlockPos pendingLadder;   // cell to ladder the moment it opens
+    private int climbStall;                     // ticks on the ladder without rising
+    private int lastClimbY;
+    private boolean shaftLined;                 // at least one rung is in
     @Nullable private BlockPos moveTarget;
     private int workTicks;
     private int workNeeded;
@@ -120,7 +133,51 @@ public class MineGoal extends Goal {
             ? Math.max(target, cursor.getY() - 4) : target;
         this.levelsCut = 0;
         this.returnReason = null;
-        this.phase = cursor.getY() <= levelFloor ? Phase.TUNNEL : Phase.DESCEND;
+        com.jrpetty.mcassistant.entity.WorkZone zone = assistant.workZone();
+        if (assistant.quarry() && zone != null) {
+            // The middle of the patch, so the galleries come off it as spokes
+            // and every level's walk to the ladder is a short one. Derived
+            // rather than remembered: the same patch always resolves to the
+            // same column, so run two finds run one's shaft and carries on
+            // down it instead of sinking a second.
+            BlockPos c = zone.center();
+            this.shaftCol = new BlockPos(c.getX(), this.cursor.getY(), c.getZ());
+            this.shaftTopY = Math.max(this.cursor.getY(), zone.max().getY());
+        } else {
+            this.shaftCol = this.cursor;
+            this.shaftTopY = this.cursor.getY();
+        }
+        this.shaftLined = false;
+        this.pendingLadder = null;
+        this.climbStall = 0;
+        this.lastClimbY = this.cursor.getY();
+        // Does a shaft from an earlier run already stand here, and how deep
+        // does it go? One scan of the column answers both — checking a single
+        // cell would have missed a shaft whose top rung is not exactly level
+        // with wherever the bot happens to be standing today.
+        if (assistant.quarry() && this.shaftCol != null) {
+            int foot = this.shaftTopY;
+            boolean found = false;
+            int floorLimit = Math.max(target, assistant.level().getMinBuildHeight() + 1);
+            for (int y = this.shaftTopY; y >= floorLimit; y--) {
+                if (assistant.level().getBlockState(
+                        new BlockPos(this.shaftCol.getX(), y, this.shaftCol.getZ()))
+                        .is(Blocks.LADDER)) {
+                    if (!found) { found = true; this.shaftTopY = Math.max(this.shaftTopY, y); }
+                    foot = y;
+                }
+            }
+            if (found) {
+                // Ride it to its foot. Without this, run two starts at the
+                // surface, sets its first floor four blocks down — ground run
+                // one already opened — and re-walks every finished level
+                // before reaching rock worth cutting.
+                this.shaftLined = true;
+                this.levelFloor = Math.max(target, foot - 4);
+            }
+        }
+        this.phase = cursor.getY() <= levelFloor ? Phase.TUNNEL
+            : (assistant.quarry() && (hasLadders() || shaftLined) ? Phase.SHAFT : Phase.DESCEND);
 
         // No pickaxe, no mine — player rules.
         assistant.equipBestTool(Blocks.STONE.defaultBlockState());
@@ -185,7 +242,13 @@ public class MineGoal extends Goal {
         // dug route — and only then stash. Finishing on the spot handed the
         // pathfinder a bot at Y-50 and let it wander whatever caves the dig
         // had breached on the way.
-        if (assistant.isPackFull() && phase != Phase.RETURN) {
+        if (assistant.isPackFull() && phase != Phase.RETURN && phase != Phase.CLIMB) {
+            if (shaftLined && cursor.getY() < shaftTopY - 4) {
+                returnReason = "Pack's full — got " + oresMined + " ore. Stashing now.";
+                assistant.sayRoutine("Pack's full — up the ladder.");
+                beginClimb();
+                return;
+            }
             if (stairPath.size() > 1) {
                 phase = Phase.RETURN;
                 returnIndex = stairPath.size() - 1;
@@ -227,6 +290,8 @@ public class MineGoal extends Goal {
         }
 
         // Plan the next step.
+        if (phase == Phase.SHAFT) { shaftTick(); return; }
+        if (phase == Phase.CLIMB) { climbTick(); return; }
         if (phase == Phase.RETURN) {
             if (returnIndex < 0) {
                 finish(returnReason != null ? returnReason
@@ -277,13 +342,21 @@ public class MineGoal extends Goal {
                 int target = job.amount();
                 if (assistant.quarry() && levelFloor > target
                     && tunnelSteps > 0 && levelsCut < MAX_LEVELS) {
+                    // The shaft is the fast way down AND the fast way home;
+                    // the staircase is what happens when the ladders run out.
+                    boolean viaShaft = shaftCol != null && hasLadders();
                     Direction inward = towardZoneCentre();
-                    if (descentDir(inward) != null) {
+                    if (viaShaft || descentDir(inward) != null) {
                         levelFloor = Math.max(target, levelFloor - 4);
                         levelsCut++;
-                        dir = inward;
-                        phase = Phase.DESCEND;
                         tunnelSteps = 0;
+                        if (viaShaft) {
+                            phase = Phase.SHAFT;
+                            dir = dir.getClockWise();   // spokes, not one long trench
+                        } else {
+                            phase = Phase.DESCEND;
+                            dir = inward;
+                        }
                         assistant.sayRoutine("Level " + levelsCut + " cut — dropping to Y"
                             + levelFloor + " for the next.");
                         return;
@@ -300,12 +373,162 @@ public class MineGoal extends Goal {
                 // pathfinder to get it to a chest at the surface. It walks
                 // back up its own workings instead — the same trail the
                 // full-pack return uses.
+                if (shaftLined && cursor.getY() < shaftTopY - 4) {
+                    returnReason = done;
+                    beginClimb();
+                    return;
+                }
                 if (climbOut(done)) return;
                 finish(done);
                 return;
             }
             planStep(cursor.relative(dir));
         }
+    }
+
+    private boolean hasLadders() {
+        return assistant.countMatching(st -> st.is(Items.LADDER)) > 0;
+    }
+
+    /** Sink the shaft one block at a time, lining each cell with a ladder the
+     *  moment it opens — so the column is never an unlit hole to fall down,
+     *  and the way back up exists before it is needed. */
+    private void shaftTick() {
+        BlockPos col = shaftCol;
+        if (col == null) { phase = Phase.DESCEND; return; }
+
+        // A bot standing in its own shaft slides gently down the rungs —
+        // vanilla clamps a climbable descent rather than stopping it. That is
+        // the direction we want anyway, but the cursor has to follow the body
+        // or every check below reasons about a Y the bot left ten blocks ago.
+        BlockPos body = assistant.feetPos();
+        if (body.getX() == col.getX() && body.getZ() == col.getZ()) {
+            cursor = body;
+        }
+
+        // Stand in the column first. It is the head of the gallery we just
+        // cut, so this is a walk over open, already-dug ground.
+        if (cursor.getX() != col.getX() || cursor.getZ() != col.getZ()) {
+            moveTarget = new BlockPos(col.getX(), cursor.getY(), col.getZ());
+            moveStuck = 0;
+            return;
+        }
+        if (cursor.getY() <= levelFloor) {
+            phase = Phase.TUNNEL;
+            tunnelSteps = 0;
+            assistant.sayRoutine("At Y" + cursor.getY() + " — opening the gallery.");
+            return;
+        }
+        if (!hasLadders()) {                 // ran dry mid-shaft: staircase from here
+            phase = Phase.DESCEND;
+            assistant.sayRoutine("Out of ladders — cutting steps the rest of the way.");
+            return;
+        }
+        BlockPos below = cursor.below();
+        if (!mayDig(below)) {                // the depth the player set
+            phase = Phase.TUNNEL;
+            tunnelSteps = 0;
+            return;
+        }
+        if (touchesFluid(below) && !capFluid(below)) {
+            finish("Liquid in the shaft and nothing to wall it off with — stopping ("
+                + oresMined + " ore so far).");
+            return;
+        }
+        // Never open the floor onto a void: one step down is a step, an
+        // unlit cavity under it is a fall.
+        BlockPos under = below.below();
+        if (assistant.level().getBlockState(under).canBeReplaced() && !placeFiller(under)) {
+            phase = Phase.TUNNEL;
+            tunnelSteps = 0;
+            assistant.sayRoutine("The shaft opened into a cavity — cutting here instead.");
+            return;
+        }
+        digQueue.addLast(below);
+        pendingLadder = below;
+        moveTarget = below;
+        moveStuck = 0;
+    }
+
+    /** Hang a ladder in a freshly opened shaft cell, on whichever wall will
+     *  hold it. Checked BEFORE the item is spent, so a bad cell never eats one. */
+    private void placeLadder(BlockPos pos) {
+        for (Direction d : Direction.Plane.HORIZONTAL) {
+            BlockPos wall = pos.relative(d);
+            if (!assistant.level().getBlockState(wall)
+                    .isFaceSturdy(assistant.level(), wall, d.getOpposite())) continue;
+            if (assistant.removeMatching(st -> st.is(Items.LADDER), 1) != 1) return;
+            assistant.level().setBlockAndUpdate(pos,
+                Blocks.LADDER.defaultBlockState().setValue(
+                    net.minecraft.world.level.block.LadderBlock.FACING, d.getOpposite()));
+            assistant.placeSound(pos);
+            shaftLined = true;
+            return;
+        }
+    }
+
+    private void beginClimb() {
+        digQueue.clear();
+        veinQueue.clear();
+        currentDig = null;
+        moveTarget = null;
+        pendingLadder = null;
+        climbStall = 0;
+        lastClimbY = assistant.feetPos().getY();
+        phase = Phase.CLIMB;
+    }
+
+    /**
+     * Up the shaft, hand-driven. Deliberately NOT a pathfinding problem:
+     * GroundPathNavigation reasons in steps and falls and has no vertical
+     * climb node at all, so asking it to route up a ladder is asking it to
+     * fail. Vanilla climbs while the jump flag is held, so that is what this
+     * does — and if the bot is not rising, it gives up on the shaft and walks
+     * the breadcrumb trail instead of hanging there.
+     */
+    private void climbTick() {
+        BlockPos col = shaftCol;
+        BlockPos here = assistant.feetPos();
+        if (col == null) { if (!climbOut(returnReason)) finishClimb(); return; }
+
+        if (here.getY() >= shaftTopY - 1) { finishClimb(); return; }
+
+        // Into the column first — a short walk on the level we are already on.
+        if (here.getX() != col.getX() || here.getZ() != col.getZ()) {
+            if (assistant.getNavigation().isDone()) {
+                assistant.getNavigation().moveTo(
+                    col.getX() + 0.5, here.getY(), col.getZ() + 0.5, 1.0D);
+            }
+            if (++moveStuck > 120) {          // cannot reach the shaft — walk out
+                moveStuck = 0;
+                if (!climbOut(returnReason)) finishClimb();
+            }
+            return;
+        }
+        moveStuck = 0;
+        if (assistant.onClimbable()) {
+            assistant.getNavigation().stop();
+            assistant.setJumping(true);
+            assistant.getLookControl().setLookAt(
+                col.getX() + 0.5, here.getY() + 3.0, col.getZ() + 0.5);
+        }
+        // Rising? If not — a broken rung, a blocked cell — stop hanging about
+        // and take the long way rather than stall forever.
+        if (here.getY() > lastClimbY) {
+            lastClimbY = here.getY();
+            climbStall = 0;
+        } else if (++climbStall > 100) {
+            assistant.setJumping(false);
+            climbStall = 0;
+            if (!climbOut(returnReason)) finishClimb();
+        }
+    }
+
+    private void finishClimb() {
+        assistant.setJumping(false);
+        finish(returnReason != null ? returnReason
+            : "Back at the surface — " + oresMined + " ore.");
+        if (assistant.countItems() > 0) assistant.enqueueFront(Job.deposit());
     }
 
     /** A direction the descent can actually take from here, starting with the
@@ -337,7 +560,7 @@ public class MineGoal extends Goal {
 
     /** Switch to the walk home along our own workings, carrying the message to
      *  say once we surface. False when there is no trail worth walking. */
-    private boolean climbOut(String message) {
+    private boolean climbOut(@Nullable String message) {
         if (stairPath.size() < 2 || phase == Phase.RETURN) return false;
         if (cursor.getY() >= stairPath.get(0).getY() - 4) return false;  // barely below the head
         returnReason = message;
@@ -510,6 +733,10 @@ public class MineGoal extends Goal {
                 veinMined++;
                 assistant.awardXp(2); // fair XP toward enchanting
             }
+            if (pendingLadder != null && pos.equals(pendingLadder)) {
+                placeLadder(pos);       // rung in before the bot steps down
+                pendingLadder = null;
+            }
             assistant.damageHeldTool();
             // A dug face can open onto lava or water SIDEWAYS — the planning
             // checks only ever looked ahead. Wall the pocket off with filler
@@ -554,7 +781,7 @@ public class MineGoal extends Goal {
             cursor = dest;
             moveTarget = null;
             if (phase == Phase.TUNNEL) tunnelSteps++;
-            if (phase == Phase.DESCEND) {
+            if (phase == Phase.DESCEND || phase == Phase.SHAFT) {
                 breadcrumb(dest);
             } else if (phase == Phase.TUNNEL && assistant.quarry() && tunnelSteps % 4 == 0) {
                 // In a quarry the way home runs along the galleries too, so
