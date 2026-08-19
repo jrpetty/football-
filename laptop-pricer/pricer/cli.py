@@ -12,6 +12,8 @@ from pathlib import Path
 from . import stock as stockmod
 from .calibrate import calibrate, write as write_calibration
 from .capabilities import report as capability_report
+from .connectors import REGISTRY as CONNECTORS, get as get_connector
+from .connectors.base import ConnectorError, MissingCredentials
 from .commercial import UncalibratedParameter, price
 from .config import ROOT, cfg, strict_mode
 from .db import connect, reset
@@ -55,6 +57,68 @@ def cmd_ingest(args):
         print(f"\n! {agg['no_date']} loaded row(s) have no usable date. They are stored but "
               f"CANNOT be used in any valuation -\n  every comparable needs a date. "
               f"Check the sold_at column in the source profile.")
+
+
+def cmd_connectors(args):
+    """What each marketplace connector can actually give you."""
+    print(RULE)
+    print("  MARKETPLACE CONNECTORS")
+    print(RULE)
+    print(f"  {'connector':<22}{'gives':<7}{'trust':>6}  {'channel':<16}what it is")
+    for name, cls in CONNECTORS.items():
+        print(f"  {name:<22}{cls.observation_type:<7}{cls.trust:>6}  {cls.channel:<16}{cls.label}")
+    print(f"\n  Credentials configured: ", end="")
+    from .connectors.base import secrets
+    have = sorted(secrets())
+    print(", ".join(have) if have else "none — see config/secrets.yml.example")
+    print(RULE)
+    print("  A connector only fetches and writes a file. Everything downstream —")
+    print("  parsing, pricing, the stock book — reads that file offline, so a rate")
+    print("  limit or an outage never stops you pricing.")
+
+
+def cmd_sync(args):
+    """Fetch from a marketplace and write a file the normal pipeline reads."""
+    try:
+        cls = get_connector(args.connector)
+    except ConnectorError as exc:
+        print(exc)
+        return 2
+    connector = cls()
+    kwargs = {}
+    if args.query:
+        kwargs["queries"] = args.query
+    if args.asin:
+        kwargs["asins"] = args.asin
+    if args.days:
+        kwargs["since_days"] = args.days
+    if args.max_pages:
+        kwargs["max_pages"] = args.max_pages
+
+    try:
+        result = connector.sync(as_of=_date(args.as_of), **kwargs)
+    except MissingCredentials as exc:
+        print(f"  {exc}")
+        return 3
+    except ConnectorError as exc:
+        print(f"  {exc}")
+        return 4
+
+    print(f"  {result.source}: {result.fetched} rows")
+    print(f"    raw response  {result.raw_path}")
+    if result.csv_path:
+        print(f"    ready to ingest {result.csv_path}")
+    for note in result.notes:
+        print(f"    ! {note}")
+
+    profile_path = ROOT / "sources" / f"{connector.id}.yml"
+    if not profile_path.exists():
+        import yaml as _yaml
+        with open(profile_path, "w") as fh:
+            fh.write("# Written by `pricer sync`. Check the fee model before relying on it.\n")
+            _yaml.safe_dump(connector.profile(), fh, sort_keys=False)
+        print(f"    source profile written to {profile_path}")
+    print("\n  Now run: pricer ingest")
 
 
 def cmd_capabilities(args):
@@ -459,6 +523,18 @@ def main(argv=None):
     p.add_argument("--reset", action="store_true", help="rebuild the warehouse from scratch")
     p.add_argument("--incoming", help="directory of files to ingest (default data/incoming)")
     p.set_defaults(fn=cmd_ingest)
+
+    p = sub.add_parser("connectors", help="what each marketplace connector provides")
+    p.set_defaults(fn=cmd_connectors)
+
+    p = sub.add_parser("sync", help="fetch from a marketplace into a file")
+    p.add_argument("connector", choices=sorted(CONNECTORS))
+    p.add_argument("--query", action="append", help="search term (repeatable)")
+    p.add_argument("--asin", action="append", help="ASIN (repeatable)")
+    p.add_argument("--days", type=int, help="how far back to fetch")
+    p.add_argument("--max-pages", type=int)
+    p.add_argument("--as-of", default=None)
+    p.set_defaults(fn=cmd_sync)
 
     p = sub.add_parser("capabilities", help="what data inputs the engine accepts")
     p.set_defaults(fn=cmd_capabilities)

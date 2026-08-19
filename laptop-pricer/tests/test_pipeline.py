@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import datetime as dt
 import math
+import os
 import sys
 import tempfile
 import unittest
@@ -680,3 +681,103 @@ class TestAwkwardInputs(unittest.TestCase):
         insp, r = self._recognised("mixed_stock.csv")
         titles = [t for t, _ in insp.unresolved]
         self.assertTrue(any("Monitor" in t or "iPhone" in t or "Docking" in t for t in titles))
+
+
+class TestConnectors(unittest.TestCase):
+    """Connectors are exercised against recorded responses, so the suite needs
+    neither credentials nor network."""
+
+    EBAY_REPLAY = {
+        "identity/v1/oauth2/token": {"access_token": "tok", "expires_in": 7200},
+        "item_summary/search": {"itemSummaries": [
+            {"itemId": "v1|1", "title": "Dell Latitude 5420 i5-1145G7 16GB 512GB",
+             "price": {"value": "289.99", "currency": "GBP"}, "condition": "Very Good",
+             "seller": {"username": "refurbco"}, "buyingOptions": ["FIXED_PRICE"],
+             "itemCreationDate": "2026-08-14T10:00:00.000Z"},
+            {"itemId": "v1|2", "title": "HP EliteBook 840 G7 i5-10310U 16GB 256GB",
+             "price": {"value": "242.00", "currency": "GBP"}, "condition": "Good",
+             "seller": {"username": "techtrade"}, "buyingOptions": ["FIXED_PRICE"],
+             "itemCreationDate": "2026-08-16T09:00:00.000Z"}]}}
+
+    def setUp(self):
+        os.environ["PRICER_EBAY__CLIENT_ID"] = "test"
+        os.environ["PRICER_EBAY__CLIENT_SECRET"] = "test"
+
+    def tearDown(self):
+        os.environ.pop("PRICER_EBAY__CLIENT_ID", None)
+        os.environ.pop("PRICER_EBAY__CLIENT_SECRET", None)
+
+    def _browse(self):
+        from pricer.connectors import ReplayTransport
+        from pricer.connectors.ebay import EbayBrowse
+        return EbayBrowse(transport=ReplayTransport(self.EBAY_REPLAY))
+
+    def test_missing_credentials_explain_themselves(self):
+        from pricer.connectors.base import MissingCredentials, require
+        os.environ.pop("PRICER_EBAY__CLIENT_ID", None)
+        os.environ.pop("PRICER_EBAY__CLIENT_SECRET", None)
+        with self.assertRaises(MissingCredentials) as ctx:
+            require("nosuchsource", "client_id")
+        self.assertIn("secrets.yml", str(ctx.exception))
+
+    def test_browse_rows_carry_price_date_and_condition(self):
+        c = self._browse()
+        rows = c.to_rows(c.fetch(queries=["dell latitude 5420"], max_pages=1))
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]["date"], "2026-08-14")
+        self.assertEqual(rows[0]["condition"], "VERY_GOOD")
+        self.assertAlmostEqual(float(rows[0]["price"]), 289.99, places=2)
+
+    def test_active_listings_are_asks_not_sales(self):
+        """The distinction that decides how much this data is worth."""
+        c = self._browse()
+        profile = c.profile()
+        self.assertEqual(profile["observation_type"], "ask")
+        self.assertLess(profile["trust"], 0.5)
+        self.assertLess(profile["ask_haircut"], 1.0)
+
+    def test_connector_output_parses_through_the_normal_pipeline(self):
+        """A connector's job is to produce a file the existing L0 can read."""
+        c = self._browse()
+        rows = c.to_rows(c.fetch(queries=["x"], max_pages=1))
+        spec = parse_title(rows[0]["title"])
+        config_id, conf, _ = resolve(spec)
+        self.assertEqual(spec.model_id, "dell-latitude-5420")
+        self.assertEqual(verdict(conf), "auto")
+        mapped = c.profile()["grade_map"][rows[0]["condition"]]
+        self.assertEqual(mapped, "A")
+
+    def test_restricted_api_refuses_with_an_alternative(self):
+        from pricer.connectors import ReplayTransport
+        from pricer.connectors.base import ConnectorError
+        from pricer.connectors.ebay import EbaySold
+        c = EbaySold(transport=ReplayTransport(self.EBAY_REPLAY))
+        with self.assertRaises(ConnectorError) as ctx:
+            c.fetch(queries=["dell latitude 5420"])
+        message = str(ctx.exception)
+        self.assertIn("Limited Release", message)
+        self.assertIn("Terapeak", message)
+
+    def test_rate_limiter_survives_a_restart(self):
+        from pricer.connectors.base import RateLimiter
+        name = "test_restart"
+        a = RateLimiter(name, per_day=2)
+        a.take()
+        b = RateLimiter(name, per_day=2)          # a fresh process
+        self.assertEqual(b.remaining(), 1)
+        b.take()
+        from pricer.connectors.base import ConnectorError
+        with self.assertRaises(ConnectorError):
+            RateLimiter(name, per_day=2).take()
+        (ROOT / "data" / "raw" / f".ratelimit_{name}.json").unlink(missing_ok=True)
+
+    def test_every_connector_declares_what_it_provides(self):
+        from pricer.connectors import REGISTRY
+        for name, cls in REGISTRY.items():
+            with self.subTest(connector=name):
+                self.assertIn(cls.observation_type, {"sold", "ask", "offer", "appraisal"})
+                self.assertIn(cls.channel, cfg()["channels"]["ladder"])
+                self.assertTrue(0 < cls.trust <= 1.0)
+                # own-sales connectors are the only ones allowed full trust
+                if cls.trust == 1.0:
+                    self.assertEqual(cls.observation_type, "sold")

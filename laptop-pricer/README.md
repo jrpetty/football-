@@ -32,7 +32,7 @@ python3 scripts/seed_demo.py                  # + a 71-unit stock book
 python3 -m pricer.cli stock                   # overview and ageing
 python3 -m pricer.cli actions                 # the morning action queue
 
-python3 -m unittest discover -s tests         # 86 tests
+python3 -m unittest discover -s tests         # 93 tests
 ```
 
 Dates are pinned to `2026-08-19` in the demo data. Pass `--as-of 2026-08-19`
@@ -314,11 +314,51 @@ costing; multi-channel listing sync; the HTTP API.
 comparable evidence. That is deliberate — Tier 4 is what fills that gap, and
 it does not exist yet.
 
+## Marketplace connectors
+
+```bash
+python3 -m pricer.cli connectors                       # what each one gives you
+python3 -m pricer.cli sync ebay_browse --query "dell latitude 5420"
+python3 -m pricer.cli ingest
+```
+
+A connector's only job is to **fetch and write a file**. Everything downstream
+reads that file offline:
+
+```
+network  │  fetch  →  data/raw/<source>/<date>.json      (raw, never edited)
+         │            data/incoming/<source>_<date>.csv
+offline  │  ingest → parse → resolve → normalise → estimate
+```
+
+Pricing never blocks on a rate limit or an outage, every valuation stays
+reproducible because the response that produced it is on disk, and the whole
+pipeline below the connector keeps its existing tests unchanged.
+
+| Connector | Gives | Trust | Reality |
+|---|---|---|---|
+| `ebay_browse` | ask | 0.40 | Active listings. Open access, 5,000 calls/day. **Asking prices, not sales.** |
+| `ebay_sold` | sold | 0.90 | Marketplace Insights — **restricted, closed to new applicants**. Refuses with an alternative. |
+| `amazon_competitive` | ask | 0.45 | Offers, plus a 60-day average selling price that *is* transaction-derived. |
+| `amazon_orders` | sold | 1.00 | **Your own sales.** The most valuable source here. |
+| `backmarket_orders` | sold | 1.00 | **Your own sales.** Back Market has no market-data API. |
+
+The pattern worth understanding: **APIs mostly sell you asking prices.**
+Realised sold prices for machines you did not sell are gated almost everywhere.
+That is why the estimator has always distinguished `sold` from `ask`, applied a
+haircut and weighted them differently — an ask-fed pricer drifts high.
+
+Credentials live in `config/secrets.yml` (gitignored) or environment variables
+(`PRICER_EBAY__CLIENT_ID`). See `config/secrets.yml.example`. Rate limits are
+tracked in a token bucket persisted to disk, so a daily cap survives restarts.
+
 ## Offline by design
 
-No network imports, no URLs, two dependencies (`duckdb`, `PyYAML`). The test
-suite passes with sockets blocked. Nothing is fetched from an online price
-source, and nothing about your data leaves the machine.
+The pricing engine makes no network calls. Only `pricer sync` touches the
+network, and it writes files that everything else reads offline — so the test
+suite still passes with sockets blocked, and pricing works with the network
+down. Nothing about your stock or margins is ever sent anywhere; connectors
+only read public marketplace data and your own orders.
 
 ## A note on the numbers
 
