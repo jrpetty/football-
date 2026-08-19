@@ -219,6 +219,30 @@ public final class AssistantNetwork {
     /** The plot book as the menu shows it, freshly counted: workers, what
      *  they banked today, and the ground's condition score. */
     public static void sendPlotBook(ServerPlayer player) {
+        // Ground worked from before the book existed — or set by any path the
+        // book ever missed — is ADOPTED the moment the book opens: every area
+        // a bot is working shows up here, named and ready to crew. Overlapping
+        // ground counts as known, so two bots on drifted zones can never make
+        // the book flip an entry back and forth between them.
+        for (AssistantEntity mate : AssistantEntity.allFor(player.getUUID())) {
+            if (!mate.isAlive() || mate.workZone() == null) continue;
+            boolean known = false;
+            for (com.jrpetty.mcassistant.ZonePresets.Preset p
+                    : com.jrpetty.mcassistant.ZonePresets.list(player)) {
+                if (p.zone().equals(mate.workZone())
+                    || p.zone().containsColumn(mate.workZone().center())
+                    || mate.workZone().containsColumn(p.zone().center())) {
+                    known = true;
+                    break;
+                }
+            }
+            if (!known) {
+                com.jrpetty.mcassistant.ZonePresets.Preset adopted =
+                    com.jrpetty.mcassistant.ZonePresets.stake(
+                        player, mate.workZone(), mate.stationTask());
+                mate.adoptPatchName(adopted.name());
+            }
+        }
         java.util.List<PlotListPayload.Entry> entries = new java.util.ArrayList<>();
         for (com.jrpetty.mcassistant.ZonePresets.Preset p
                 : com.jrpetty.mcassistant.ZonePresets.list(player)) {

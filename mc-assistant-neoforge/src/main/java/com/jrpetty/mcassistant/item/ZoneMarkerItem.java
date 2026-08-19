@@ -170,8 +170,12 @@ public class ZoneMarkerItem extends Item {
                 com.jrpetty.mcassistant.ZonePresets.stake(player, marked,
                     AssistantEntity.StationTask.NONE);
             tell(player, "\"" + staked.name() + "\" is " + marked.describe()
-                + (moved > 0 ? " — moved " + moved + " with it." : ". Crew it from the plot book, or right-click an assistant.")
+                + (moved > 0 ? " — moved " + moved + " with it." : "")
                 + " Click more blocks to widen it.");
+            player.displayClientMessage(net.minecraft.network.chat.Component.literal("Press ")
+                .append(net.minecraft.network.chat.Component.keybind("key.mc_assistant.plots"))
+                .append(net.minecraft.network.chat.Component.literal(
+                    " to crew \"" + staked.name() + "\" from the plot book.")), true);
             return InteractionResult.CONSUME;
         }
 

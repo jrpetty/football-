@@ -147,6 +147,10 @@ public final class AssistantActions {
                 a.showZoneTo(player);
                 a.say("\"" + staked.name() + "\" is my patch now — "
                     + a.workZone().describe() + ". I'll stay inside it.");
+                player.displayClientMessage(net.minecraft.network.chat.Component.literal("Press ")
+                    .append(net.minecraft.network.chat.Component.keybind("key.mc_assistant.plots"))
+                    .append(net.minecraft.network.chat.Component.literal(
+                        " to crew \"" + staked.name() + "\" with more hands.")), true);
             }
             case ZONE_SHRINK -> resizeZone(a, player, -4);
             case ZONE_GROW -> resizeZone(a, player, 4);
