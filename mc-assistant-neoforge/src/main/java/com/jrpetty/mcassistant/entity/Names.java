@@ -23,7 +23,10 @@ public final class Names {
     public static final List<String> PATCHES = List.of(
         "North Farm", "South Field", "East Wood", "West Mine",
         "The Pit", "The Orchard", "The Pens", "The Docks",
-        "Home Fields", "The Frontier", "The Quarry", "The Grange");
+        "Home Fields", "The Frontier", "The Quarry", "The Grange",
+        "The Hollow", "Millbrook", "Long Acre", "The Warren",
+        "Cinder Row", "The Shallows", "High Meadow", "The Cut",
+        "Foxglove", "The Yards", "The Terraces", "Old Boundary");
 
     public static final List<String> POOL = List.of(
         "Bramble", "Fen", "Holt", "Marrow", "Quill", "Rook",

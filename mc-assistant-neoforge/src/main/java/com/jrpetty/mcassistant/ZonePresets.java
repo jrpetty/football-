@@ -141,6 +141,26 @@ public final class ZonePresets {
         return "Plot " + (presets.size() + 1);
     }
 
+    /** The next unused pool name AFTER the current one, wrapping round — so
+     *  the Name button walks the whole pool. Taking the FIRST free name made
+     *  it ping-pong: renaming North Farm to South Field freed North Farm,
+     *  which was then the first free name again, and the other ten names in
+     *  the pool could never be reached at all. */
+    private static String nextFreeNameAfter(List<Preset> presets, String current) {
+        List<String> pool = com.jrpetty.mcassistant.entity.Names.PATCHES;
+        int at = pool.indexOf(current);            // -1 for "Plot 13" and kin: start at the top
+        for (int step = 1; step <= pool.size(); step++) {
+            String candidate = pool.get((at + step) % pool.size());
+            if (candidate.equals(current)) continue;
+            boolean taken = false;
+            for (Preset p : presets) {
+                if (p.name().equals(candidate)) { taken = true; break; }
+            }
+            if (!taken) return candidate;
+        }
+        return "Plot " + (presets.size() + 1);
+    }
+
     @Nullable
     public static Preset byName(Player player, String name) {
         for (Preset p : list(player)) {
@@ -226,7 +246,7 @@ public final class ZonePresets {
         for (int i = 0; i < presets.size(); i++) {
             Preset p = presets.get(i);
             if (!p.name().equals(name)) continue;
-            String fresh = nextFreeName(player);
+            String fresh = nextFreeNameAfter(presets, name);
             presets.set(i, new Preset(fresh, p.job(), p.zone(), p.shift()));
             store(player, presets);
             for (AssistantEntity mate : AssistantEntity.allFor(player.getUUID())) {
