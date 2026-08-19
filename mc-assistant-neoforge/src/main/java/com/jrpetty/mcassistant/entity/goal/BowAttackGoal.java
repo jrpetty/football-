@@ -1,6 +1,7 @@
 package com.jrpetty.mcassistant.entity.goal;
 
 import com.jrpetty.mcassistant.entity.AssistantEntity;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.monster.Creeper;
@@ -46,6 +47,13 @@ public class BowAttackGoal extends Goal {
     @Override
     public void stop() {
         assistant.getNavigation().stop();
+        if (drawing()) assistant.stopUsingItem();
+    }
+
+    /** Mid-draw on the bow hand — never confuse this with a raised shield. */
+    private boolean drawing() {
+        return assistant.isUsingItem()
+            && assistant.getUsedItemHand() == InteractionHand.MAIN_HAND;
     }
 
     @Override
@@ -70,9 +78,20 @@ public class BowAttackGoal extends Goal {
             assistant.getNavigation().stop();
         }
 
-        if (--attackTimer <= 0 && distSq <= 225.0 && assistant.hasLineOfSight(t)) {
+        // The draw is real now: nock (a breather between shots), pull for a
+        // full second - the pose anyone reads as an arrow coming - then
+        // loose. The arrow used to leave the bow with no wind-up at all.
+        boolean inRange = distSq <= 225.0 && assistant.hasLineOfSight(t);
+        if (!inRange) {
+            if (drawing()) assistant.stopUsingItem();   // hold the arrow, keep moving
+            return;
+        }
+        if (!drawing()) {
+            if (--attackTimer <= 0) assistant.startUsingItem(InteractionHand.MAIN_HAND);
+        } else if (assistant.getTicksUsingItem() >= 20) {
+            assistant.stopUsingItem();
             assistant.performRangedAttack(t, 1.6F);
-            this.attackTimer = 30;
+            this.attackTimer = 10;   // nock the next one
         }
     }
 }
