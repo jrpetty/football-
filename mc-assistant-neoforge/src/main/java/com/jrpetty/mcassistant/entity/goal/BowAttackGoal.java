@@ -5,6 +5,8 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.monster.Creeper;
+import net.minecraft.world.item.CrossbowItem;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.Vec3;
 
@@ -29,9 +31,11 @@ public class BowAttackGoal extends Goal {
     @Override
     public boolean canUse() {
         LivingEntity t = assistant.getTarget();
+        ItemStack hand = assistant.getMainHandItem();
         return t != null && t.isAlive()
-            && assistant.getMainHandItem().is(Items.BOW)
-            && assistant.hasArrows();
+            && (hand.is(Items.BOW) || hand.is(Items.CROSSBOW))
+            && assistant.hasArrows()
+            && assistant.combatStance() != AssistantEntity.Stance.MELEE;
     }
 
     @Override
@@ -78,10 +82,15 @@ public class BowAttackGoal extends Goal {
             assistant.getNavigation().stop();
         }
 
+        ItemStack hand = assistant.getMainHandItem();
+        boolean inRange = distSq <= 225.0 && assistant.hasLineOfSight(t);
+        if (hand.is(Items.CROSSBOW)) {
+            tickCrossbow(t, hand, inRange);
+            return;
+        }
         // The draw is real now: nock (a breather between shots), pull for a
         // full second - the pose anyone reads as an arrow coming - then
         // loose. The arrow used to leave the bow with no wind-up at all.
-        boolean inRange = distSq <= 225.0 && assistant.hasLineOfSight(t);
         if (!inRange) {
             if (drawing()) assistant.stopUsingItem();   // hold the arrow, keep moving
             return;
@@ -92,6 +101,33 @@ public class BowAttackGoal extends Goal {
             assistant.stopUsingItem();
             assistant.performRangedAttack(t, 1.6F);
             this.attackTimer = 10;   // nock the next one
+        }
+    }
+
+    /** The crossbow's rhythm is its own: span it ANYWHERE - out of range, no
+     *  line of sight, mid-walk, that being the whole point of a crossbow -
+     *  carry it loaded, and loose the moment the shot is there. Vanilla's
+     *  loader asks the shooter for ammunition; the bolt is deducted from the
+     *  pack here, when the charge actually takes. */
+    private void tickCrossbow(LivingEntity t, ItemStack hand, boolean inRange) {
+        if (CrossbowItem.isCharged(hand)) {
+            if (inRange && --attackTimer <= 0) {
+                if (hand.getItem() instanceof CrossbowItem cb) {
+                    cb.performShooting(assistant.level(), assistant, InteractionHand.MAIN_HAND,
+                        hand, 1.6F, 6.0F, t);
+                }
+                this.attackTimer = 10;
+            }
+            return;
+        }
+        if (!drawing()) {
+            assistant.startUsingItem(InteractionHand.MAIN_HAND);
+        } else if (assistant.getTicksUsingItem() >= CrossbowItem.getChargeDuration(hand) + 2) {
+            assistant.releaseUsingItem();
+            if (CrossbowItem.isCharged(hand)) {
+                assistant.consumeArrow();
+                this.attackTimer = 5;   // shoulder it and pick the shot
+            }
         }
     }
 }

@@ -49,6 +49,8 @@ public class OrdersScreen extends Screen {
     private int left, top;
     @Nullable private Button jobButton, shiftButton;
     @Nullable private Button depthSurface, depthIron, depthDiamond, dropOff, escortBtn;
+    @Nullable private Button claimBedBtn, stanceBtn;
+    private int shownStance;
     @Nullable private Button quarryBtn;
     private int shownJob = -1;
 
@@ -99,8 +101,23 @@ public class OrdersScreen extends Screen {
         y = top + Y_DUTY;
         shiftButton = add(x, y, w4 * 2 + gap, h, dutyLabel(), AssistantActions.CYCLE_SHIFT,
             "When this one works. Off duty it sleeps in its bed.");
-        add(x + 2 * (w4 + gap), y, w4, h, "Claim Bed", AssistantActions.CLAIM_BED,
+        claimBedBtn = add(x + 2 * (w4 + gap), y, w4, h, "Claim Bed", AssistantActions.CLAIM_BED,
             "Give it the nearest bed to you");
+        // The guard's version of that slot: how it fights. Guards claim beds
+        // by themselves at dusk anyway, so the slot buys its keep here.
+        shownStance = BotInfo.of(bot).stance();
+        stanceBtn = this.addRenderableWidget(Button.builder(
+                Component.literal(stanceWord()), b -> {
+                    sendOrder(bot, AssistantActions.STANCE_NEXT);
+                    shownStance = (shownStance + 1) % AssistantEntity.Stance.values().length;
+                    b.setMessage(Component.literal(stanceWord()));
+                })
+            .bounds(x + 2 * (w4 + gap), y, w4, h)
+            .tooltip(Tooltip.create(Component.literal(
+                "How it fights. Auto reads the fight: bow at range, blade in close. "
+                + "Ranged keeps the bow up and its distance. Melee keeps the blade, "
+                + "and leaves creepers alone.")))
+            .build());
         // How deep, and how it gets there — the whole mining plan in the one
         // slot a miner gets. Labels are terse because a quarter of a slot IS
         // fifteen pixels; the tooltips carry the meaning.
@@ -181,6 +198,10 @@ public class OrdersScreen extends Screen {
         return job == AssistantEntity.StationTask.NONE ? "Pick a job" : job.title;
     }
 
+    private String stanceWord() {
+        return AssistantEntity.Stance.byOrdinal(shownStance).label + " \u203a";
+    }
+
     private String dutyLabel() {
         return "Works " + bot.clientShift().label;
     }
@@ -198,7 +219,10 @@ public class OrdersScreen extends Screen {
         depthDiamond.visible = miner;
         if (quarryBtn != null) quarryBtn.visible = miner;
         dropOff.visible = false;   // the hauler's route is two wand-linked chests now
-        if (escortBtn != null) escortBtn.visible = job == AssistantEntity.StationTask.GUARD;
+        boolean guarding = job == AssistantEntity.StationTask.GUARD;
+        if (escortBtn != null) escortBtn.visible = guarding;
+        if (stanceBtn != null) stanceBtn.visible = guarding;
+        if (claimBedBtn != null) claimBedBtn.visible = !guarding;
     }
 
     @Override
