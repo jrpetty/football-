@@ -117,6 +117,109 @@ public final class ZonePresets {
         bot.setPreset(preset.name());
     }
 
+    // ------------------------- the plot book ---------------------------------
+    // Ground as a first-class thing: staked from the plots menu or the wand,
+    // named automatically from the patch-name pool, and crewed by clicking.
+
+    /** The first patch name no plot of this player's is using; "Plot N" when
+     *  the pool runs dry. Nothing is ever typed. */
+    public static String nextFreeName(Player player) {
+        List<Preset> presets = list(player);
+        for (String candidate : com.jrpetty.mcassistant.entity.Names.PATCHES) {
+            boolean taken = false;
+            for (Preset p : presets) {
+                if (p.name().equals(candidate)) { taken = true; break; }
+            }
+            if (!taken) return candidate;
+        }
+        return "Plot " + (presets.size() + 1);
+    }
+
+    @Nullable
+    public static Preset byName(Player player, String name) {
+        for (Preset p : list(player)) {
+            if (p.name().equals(name)) return p;
+        }
+        return null;
+    }
+
+    /**
+     * Register a piece of ground as a plot, named for you. A plot re-staked
+     * over the same centre keeps its name — widening a field is still the same
+     * field — and the job is whatever the caller knows it to be (NONE for bare
+     * ground: the workers bring their own trades).
+     */
+    public static Preset stake(Player player, WorkZone zone, AssistantEntity.StationTask job) {
+        List<Preset> presets = list(player);
+        String keep = null;
+        for (Preset p : presets) {
+            if (zone.containsColumn(p.zone().center())
+                || p.zone().containsColumn(zone.center())) {
+                keep = p.name();
+                break;
+            }
+        }
+        String name = keep != null ? keep : nextFreeName(player);
+        Preset preset = new Preset(name, job, zone, AssistantEntity.Shift.ALWAYS);
+        presets.removeIf(p -> p.name().equals(name));
+        presets.add(0, preset);
+        while (presets.size() > MAX) presets.remove(presets.size() - 1);
+        store(player, presets);
+        return preset;
+    }
+
+    public static boolean forget(Player player, String name) {
+        List<Preset> presets = list(player);
+        boolean removed = presets.removeIf(p -> p.name().equals(name));
+        if (removed) store(player, presets);
+        return removed;
+    }
+
+    /** Cycle a plot's name to the next unused one in the pool, renaming the
+     *  bots working it so their status lines follow. Returns the new name. */
+    @Nullable
+    public static String rename(Player player, String name) {
+        List<Preset> presets = list(player);
+        for (int i = 0; i < presets.size(); i++) {
+            Preset p = presets.get(i);
+            if (!p.name().equals(name)) continue;
+            String fresh = nextFreeName(player);
+            presets.set(i, new Preset(fresh, p.job(), p.zone(), p.shift()));
+            store(player, presets);
+            for (AssistantEntity mate : AssistantEntity.allFor(player.getUUID())) {
+                if (mate.isAlive() && p.zone().equals(mate.workZone())) {
+                    mate.assignPlot(p.zone(), fresh);
+                }
+            }
+            return fresh;
+        }
+        return null;
+    }
+
+    /**
+     * Ground only: the bot takes the plot's zone and name but KEEPS its own
+     * trade — a plot staked bare is worked by whoever you put on it, as
+     * whatever they already are. A plot saved WITH a trade (Save Patch) still
+     * hands the trade over, but only to a bot that has none.
+     */
+    public static void applyGround(AssistantEntity bot, Preset preset) {
+        if (preset.job() != AssistantEntity.StationTask.NONE
+            && bot.stationTask() == AssistantEntity.StationTask.NONE) {
+            bot.setStation(preset.zone().center(), preset.job());
+        }
+        bot.assignPlot(preset.zone(), preset.name());
+        bot.setPreset(preset.name());
+    }
+
+    /** How many of this owner's live crew are working that zone right now. */
+    public static int workersOn(Player player, Preset preset) {
+        int n = 0;
+        for (AssistantEntity a : AssistantEntity.allFor(player.getUUID())) {
+            if (a.isAlive() && preset.zone().equals(a.workZone())) n++;
+        }
+        return n;
+    }
+
     /** How many of this owner's live crew are already working that patch. */
     public static int crewOn(AssistantEntity bot, String presetName) {
         if (bot.getOwnerId() == null) return 1;

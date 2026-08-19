@@ -49,6 +49,11 @@ public final class AssistantTargeting {
         "key.mc_assistant.crew", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_SEMICOLON,
         "key.categories.mc_assistant");
 
+    /** The plot book: every piece of staked ground, crewed by clicking. */
+    public static final KeyMapping PLOTS = new KeyMapping(
+        "key.mc_assistant.plots", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_B,
+        "key.categories.mc_assistant");
+
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
@@ -65,6 +70,12 @@ public final class AssistantTargeting {
         }
         while (CREW.consumeClick()) {
             mc.setScreen(new CrewScreen());
+        }
+        while (PLOTS.consumeClick()) {
+            // The screen opens when the server answers with the book — one
+            // round trip, so it always opens showing the truth.
+            net.neoforged.neoforge.network.PacketDistributor.sendToServer(
+                new com.jrpetty.mcassistant.net.PlotOrderPayload(0, -1, ""));
         }
         while (ROSTER.consumeClick()) {
             // Whole-crew readout without walking to a Job Board.

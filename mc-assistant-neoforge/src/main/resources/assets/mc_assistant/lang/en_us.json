@@ -9,5 +9,6 @@
   "key.mc_assistant.voice": "Voice Command (hold & speak)",
   "key.mc_assistant.orders": "Assistant Orders (look at one)",
   "key.mc_assistant.roster": "Assistant Crew Roster",
-  "key.mc_assistant.crew": "Manage Crew (list)"
+  "key.mc_assistant.crew": "Manage Crew (list)",
+  "key.mc_assistant.plots": "Plot Book (stake & crew ground)"
 }

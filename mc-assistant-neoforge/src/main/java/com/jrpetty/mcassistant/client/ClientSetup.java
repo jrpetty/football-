@@ -49,6 +49,7 @@ public final class ClientSetup {
         event.register(AssistantTargeting.ORDERS);
         event.register(AssistantTargeting.ROSTER);
         event.register(AssistantTargeting.CREW);
+        event.register(AssistantTargeting.PLOTS);
     }
 
     public static class AssistantRenderer extends MobRenderer<AssistantEntity, HumanoidModel<AssistantEntity>> {

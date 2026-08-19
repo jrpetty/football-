@@ -164,8 +164,13 @@ public class ZoneMarkerItem extends Item {
             int moved = retarget(ctx.getLevel(), data, marked);
             write(stack, data);
             outline((ServerLevel) ctx.getLevel(), marked, ParticleTypes.WAX_ON);
-            tell(player, "Plot is " + marked.describe()
-                + (moved > 0 ? " — moved " + moved + " with it." : ". Right-click an assistant to put them on it.")
+            // Into the plot book, named for you. Re-marking or widening the
+            // same ground keeps its name — it is still the same field.
+            com.jrpetty.mcassistant.ZonePresets.Preset staked =
+                com.jrpetty.mcassistant.ZonePresets.stake(player, marked,
+                    AssistantEntity.StationTask.NONE);
+            tell(player, "\"" + staked.name() + "\" is " + marked.describe()
+                + (moved > 0 ? " — moved " + moved + " with it." : ". Crew it from the plot book, or right-click an assistant.")
                 + " Click more blocks to widen it.");
             return InteractionResult.CONSUME;
         }
@@ -188,7 +193,9 @@ public class ZoneMarkerItem extends Item {
             zone = WorkZone.of(BlockPos.of(data.getLong("Corner")), pos,
                 existing != null ? existing.depth() : WorkZone.DEFAULT_DEPTH);
         }
-        bot.setWorkZone(zone);
+        com.jrpetty.mcassistant.ZonePresets.Preset staked =
+            com.jrpetty.mcassistant.ZonePresets.stake(player, zone, bot.stationTask());
+        bot.assignPlot(zone, staked.name());
 
         data.putBoolean("Closed", true);
         data.putLong("Corner", pos.asLong());
