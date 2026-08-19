@@ -387,7 +387,10 @@ public class MineGoal extends Goal {
     }
 
     private boolean hasLadders() {
-        return assistant.countMatching(st -> st.is(Items.LADDER)) > 0;
+        // Sinking a NEW shaft is level 40 work; riding one that already
+        // stands is just climbing, and stays open to everyone.
+        return assistant.can(AssistantEntity.Ability.MINE_SHAFT)
+            && assistant.countMatching(st -> st.is(Items.LADDER)) > 0;
     }
 
     /** Sink the shaft one block at a time, lining each cell with a ladder the
@@ -595,6 +598,11 @@ public class MineGoal extends Goal {
         com.jrpetty.mcassistant.entity.WorkZone zone = assistant.workZone();
         if (zone == null) return true;               // unzoned: old behaviour
         int floor = Math.min(zone.depth(), zone.min().getY());
+        // The mine ladder: shallow ground until 10, iron country until 20,
+        // then the deep — whatever the depth buttons are set to.
+        if (assistant.veteranLevel() < 20) {
+            floor = Math.max(floor, assistant.veteranLevel() >= 10 ? 16 : 32);
+        }
         int ceiling = zone.max().getY() + 4;         // headroom to stand and swing
         return pos.getY() >= floor && pos.getY() <= ceiling;
     }
@@ -731,8 +739,7 @@ public class MineGoal extends Goal {
                 assistant.noteRichSpot(pos);   // a vein rarely comes alone
 
                 veinMined++;
-                assistant.awardXp(2); // fair XP toward enchanting
-            }
+                    }
             if (pendingLadder != null && pos.equals(pendingLadder)) {
                 placeLadder(pos);       // rung in before the bot steps down
                 pendingLadder = null;

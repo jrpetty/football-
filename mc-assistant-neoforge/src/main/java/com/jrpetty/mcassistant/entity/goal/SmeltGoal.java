@@ -155,6 +155,11 @@ public class SmeltGoal extends Goal {
         if (furnaces.isEmpty() && placeCarriedFurnace()) {
             findFurnaces(job.arg()); // set one down and use it
         }
+        // The smelter's ladder: one furnace to start, three at 10, the
+        // whole bank at 20.
+        int bank = assistant.veteranLevel() >= 20 ? Integer.MAX_VALUE
+            : assistant.veteranLevel() >= 10 ? 3 : 1;
+        while (furnaces.size() > bank) furnaces.remove(furnaces.size() - 1);
         this.furnaceIndex = 0;
         this.furnacePos = furnaces.isEmpty() ? null : furnaces.get(0);
         // Divide the load across the whole bank. Ten furnaces and 200 ore is 20
@@ -245,7 +250,7 @@ public class SmeltGoal extends Goal {
                 furnace.setChanged();
                 collected += taken;
                 assistant.popSound();
-                assistant.awardXp(taken); // fair XP toward enchanting
+                assistant.note(AssistantEntity.Deed.ITEMS_SMELTED, taken);
                 lastProgressTick = assistant.tickCount;
                 assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
             }

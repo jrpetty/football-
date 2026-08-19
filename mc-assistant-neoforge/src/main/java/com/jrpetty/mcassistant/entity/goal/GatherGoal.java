@@ -36,7 +36,7 @@ public class GatherGoal extends Goal {
         public final String label;
         Kind(String label) { this.label = label; }
 
-        public boolean matches(BlockState state) {
+        public boolean matches(BlockState state) {   // rank gating lives in rankAllows
             return switch (this) {
                 case LOGS -> state.is(BlockTags.LOGS);
                 case STONE -> state.is(BlockTags.BASE_STONE_OVERWORLD)
@@ -95,6 +95,15 @@ public class GatherGoal extends Goal {
     private boolean announcedReroute;      // say "going after another" only once per run
     private final java.util.Set<BlockPos> unreachable = new java.util.HashSet<>();
     private final java.util.Set<BlockPos> stumps = new java.util.HashSet<>(); // for replanting
+
+    /** The wood ladder: a hand below level 10 fells only oak and birch. */
+    private boolean rankAllows(Kind kind, BlockState state) {
+        if (kind != Kind.LOGS || assistant.veteranLevel() >= 10) return true;
+        return state.is(net.minecraft.world.level.block.Blocks.OAK_LOG)
+            || state.is(net.minecraft.world.level.block.Blocks.BIRCH_LOG)
+            || state.is(net.minecraft.world.level.block.Blocks.STRIPPED_OAK_LOG)
+            || state.is(net.minecraft.world.level.block.Blocks.STRIPPED_BIRCH_LOG);
+    }
 
     public GatherGoal(AssistantEntity assistant) {
         this.assistant = assistant;
@@ -249,7 +258,9 @@ public class GatherGoal extends Goal {
             return;
         }
 
-        if (targetPos == null || !request.kind().matches(assistant.level().getBlockState(targetPos))) {
+        if (targetPos == null
+            || !request.kind().matches(assistant.level().getBlockState(targetPos))
+            || !rankAllows(request.kind(), assistant.level().getBlockState(targetPos))) {
             targetPos = findNearest();
             workTicks = 0;
             stuckTicks = 0;
@@ -549,7 +560,8 @@ public class GatherGoal extends Goal {
             if (unreachable.contains(pos)) continue; // don't re-target blocks we couldn't reach
             if (assistant.isUnreachable(pos)) continue; // nor ones an earlier run couldn't
             if (!assistant.inZone(pos)) continue;    // stay inside the marked work zone
-            if (!request.kind().matches(assistant.level().getBlockState(pos))) continue;
+            BlockState rankSt = assistant.level().getBlockState(pos);
+            if (!request.kind().matches(rankSt) || !rankAllows(request.kind(), rankSt)) continue;
             double d = pos.distSqr(feet);
             if (d < bestDist) {
                 bestDist = d;

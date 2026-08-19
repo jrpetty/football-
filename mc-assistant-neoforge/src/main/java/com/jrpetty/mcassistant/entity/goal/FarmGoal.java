@@ -201,7 +201,9 @@ public class FarmGoal extends Goal {
                 targetPos = findTillableNear(water);
                 if (targetPos != null) { mode = Mode.TILL; return; }
             }
-            if (hasWaterBucket()) {
+            if (hasWaterBucket()
+                && assistant.can(AssistantEntity.Ability.FARM_IRRIGATE)) {
+                // Level 40, the waterwright's rung.
                 // Not just "no water anywhere": a bucket in hand gets spent
                 // wherever a big DRY patch of the field sits out of reach of
                 // every existing source — proper irrigation, not one hole.
@@ -313,6 +315,7 @@ public class FarmGoal extends Goal {
         long totalStock = 0;
         java.util.Map<Item, Integer> stock = new java.util.HashMap<>();
         for (Item type : PLANT.keySet()) {
+            if (!mayGrow(type)) continue;   // above this one's rung
             int have = assistant.countStocked(s -> s.is(type));
             if (have > 0) { stock.put(type, have); totalStock += have; }
         }
@@ -388,14 +391,34 @@ public class FarmGoal extends Goal {
         return state.getBlock() instanceof CropBlock crop && crop.isMaxAge(state);
     }
 
+    /** The farm ladder: wheat from day one, roots at 10, beetroot at 20,
+     *  stems and cane at 30. What can't be grown yet also isn't planted. */
+    private boolean mayGrow(Item seed) {
+        int lvl = assistant.veteranLevel();
+        if (seed == Items.WHEAT_SEEDS) return true;
+        if (seed == Items.CARROT || seed == Items.POTATO) return lvl >= 10;
+        if (seed == Items.BEETROOT_SEEDS) return lvl >= 20;
+        return lvl >= 30;   // melon and pumpkin stems
+    }
+
+    /** Same ladder for the sickle: a field hand walks past carrots it can't
+     *  work yet rather than harvesting what it couldn't replant. */
+    private boolean mayCut(BlockState st) {
+        int lvl = assistant.veteranLevel();
+        if (st.is(Blocks.WHEAT)) return true;
+        if (st.is(Blocks.CARROTS) || st.is(Blocks.POTATOES)) return lvl >= 10;
+        if (st.is(Blocks.BEETROOTS)) return lvl >= 20;
+        return lvl >= 30;   // melon, pumpkin, cane
+    }
+
     /** Everything worth cutting: a ripe crop; a melon or pumpkin FRUIT (the
      *  stem that grew it is never touched, so it just sets another); and
      *  sugar cane standing on more cane — cutting above the root drops the
      *  whole top and the root regrows it, no replanting ever. */
     private boolean isHarvestable(BlockPos pos, BlockState st) {
-        if (isMatureCrop(st)) return true;
-        if (st.is(Blocks.MELON) || st.is(Blocks.PUMPKIN)) return true;
-        return st.is(Blocks.SUGAR_CANE)
+        if (isMatureCrop(st)) return mayCut(st);
+        if (st.is(Blocks.MELON) || st.is(Blocks.PUMPKIN)) return mayCut(st);
+        return st.is(Blocks.SUGAR_CANE) && mayCut(st)
             && assistant.level().getBlockState(pos.below()).is(Blocks.SUGAR_CANE);
     }
 

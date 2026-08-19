@@ -35,6 +35,12 @@ public class BreedGoal extends Goal {
             || s.is(Items.MELON_SEEDS) || s.is(Items.PUMPKIN_SEEDS), "chickens"),
         new Species(Rabbit.class, s -> s.is(Items.CARROT) || s.is(Items.DANDELION), "rabbits"));
 
+    /** The stockman's rung: below level 20 the pens hold cows and sheep only. */
+    private boolean rankKeeps(Species sp) {
+        return assistant.veteranLevel() >= 20
+            || sp.type() == Cow.class || sp.type() == Sheep.class;
+    }
+
     private final AssistantEntity assistant;
     @Nullable private Job job;
     @Nullable private Animal first;
@@ -95,6 +101,7 @@ public class BreedGoal extends Goal {
         if (word == null) return null;
         String w = word.endsWith("s") && !word.equals("sheep") ? word.substring(0, word.length() - 1) : word;
         for (Species sp : SPECIES) {
+            if (!rankKeeps(sp)) continue;
             if (sp.label().startsWith(w)) return sp;
         }
         return null;
@@ -161,6 +168,7 @@ public class BreedGoal extends Goal {
     @Nullable
     private Species speciesForAnimal(Animal a) {
         for (Species sp : SPECIES) {
+            if (!rankKeeps(sp)) continue;
             if (sp.type().isInstance(a)) return sp;
         }
         return null;
@@ -169,6 +177,7 @@ public class BreedGoal extends Goal {
     private boolean pickPair() {
         Species wanted = speciesFor(job != null ? job.arg() : null);
         for (Species sp : wanted != null ? List.of(wanted) : SPECIES) {
+            if (!rankKeeps(sp)) continue;
             if (assistant.countMatching(sp.food()) < 2) continue;
             List<? extends Animal> candidates = assistant.level().getEntitiesOfClass(
                 sp.type(), assistant.getBoundingBox().inflate(16.0), a -> breedable(a, sp));

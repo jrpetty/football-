@@ -33,7 +33,7 @@ public class BowAttackGoal extends Goal {
         LivingEntity t = assistant.getTarget();
         ItemStack hand = assistant.getMainHandItem();
         return t != null && t.isAlive()
-            && (hand.is(Items.BOW) || hand.is(Items.CROSSBOW))
+            && assistant.mayShoot(hand)
             && assistant.hasArrows()
             && assistant.combatStance() != AssistantEntity.Stance.MELEE;
     }
