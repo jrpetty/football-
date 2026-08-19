@@ -122,7 +122,7 @@ public class BowAttackGoal extends Goal {
         }
         if (!drawing()) {
             assistant.startUsingItem(InteractionHand.MAIN_HAND);
-        } else if (assistant.getTicksUsingItem() >= CrossbowItem.getChargeDuration(hand) + 2) {
+        } else if (assistant.getTicksUsingItem() >= CrossbowItem.getChargeDuration(hand, assistant) + 2) {
             assistant.releaseUsingItem();
             if (CrossbowItem.isCharged(hand)) {
                 assistant.consumeArrow();
