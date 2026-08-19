@@ -781,3 +781,135 @@ class TestConnectors(unittest.TestCase):
                 # own-sales connectors are the only ones allowed full trust
                 if cls.trust == 1.0:
                     self.assertEqual(cls.observation_type, "sold")
+
+
+class TestAllConnectors(unittest.TestCase):
+    """Every connector exercised against recorded responses."""
+
+    def setUp(self):
+        for k, v in {"PRICER_EBAY__CLIENT_ID": "x", "PRICER_EBAY__CLIENT_SECRET": "y",
+                     "PRICER_EBAY__REFRESH_TOKEN": "r", "PRICER_EBAY__REDIRECT_URI": "RuName",
+                     "PRICER_AMAZON__REFRESH_TOKEN": "r", "PRICER_AMAZON__CLIENT_ID": "i",
+                     "PRICER_AMAZON__CLIENT_SECRET": "s",
+                     "PRICER_BACKMARKET__TOKEN": "t"}.items():
+            os.environ[k] = v
+
+    def tearDown(self):
+        for k in list(os.environ):
+            if k.startswith("PRICER_"):
+                del os.environ[k]
+
+    def test_ebay_seller_orders_split_by_line_item(self):
+        """A two-machine order must become two rows, not one expensive laptop."""
+        from pricer.connectors import ReplayTransport
+        from pricer.connectors.ebay import EbaySellOrders
+        t = ReplayTransport({
+            "identity/v1/oauth2/token": {"access_token": "tok", "expires_in": 7200},
+            "sell/fulfillment/v1/order": {"orders": [{
+                "orderId": "05-1", "creationDate": "2026-08-12T10:00:00.000Z",
+                "lineItems": [
+                    {"title": "Dell Latitude 5420 i5-1145G7 16GB 512GB", "quantity": 1,
+                     "lineItemCost": {"value": "285.00", "currency": "GBP"}, "sku": "LAT-B"},
+                    {"title": "HP EliteBook 840 G7 i5-10310U 16GB 256GB", "quantity": 1,
+                     "lineItemCost": {"value": "232.00", "currency": "GBP"}, "sku": "EB-B"}]}]}})
+        c = EbaySellOrders(transport=t)
+        rows = c.to_rows(c.fetch(since_days=30))
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]["date"], "2026-08-12")
+        self.assertEqual(c.observation_type, "sold")
+        self.assertEqual(c.trust, 1.0)
+
+    def test_ebay_seller_data_refuses_an_application_token(self):
+        """getOrders needs a user token; an app token cannot stand in."""
+        from pricer.connectors import ReplayTransport
+        from pricer.connectors.base import ConnectorError
+        from pricer.connectors.ebay import EbaySellOrders
+        del os.environ["PRICER_EBAY__REFRESH_TOKEN"]
+        c = EbaySellOrders(transport=ReplayTransport({}))
+        with self.assertRaises(ConnectorError) as ctx:
+            c.fetch()
+        self.assertIn("authorize ebay", str(ctx.exception))
+
+    def test_ebay_consent_url_carries_the_seller_scope(self):
+        from pricer.connectors import ReplayTransport
+        from pricer.connectors.ebay import EbayAuth
+        url = EbayAuth(ReplayTransport({})).consent_url()
+        self.assertIn("response_type=code", url)
+        self.assertIn("sell.fulfillment", url)
+
+    def test_amazon_orders_unit_price_a_multi_unit_line(self):
+        """SP-API reports the line total; pricing it as a unit doubles the value."""
+        from pricer.connectors import ReplayTransport
+        from pricer.connectors.amazon import AmazonOrders
+        t = ReplayTransport({
+            "auth/o2/token": {"access_token": "tok", "expires_in": 3600},
+            "/orderItems": {"payload": {"OrderItems": [
+                {"Title": "Dell Latitude 5420 i5-1145G7 16GB 512GB",
+                 "ItemPrice": {"Amount": "570.00", "CurrencyCode": "GBP"},
+                 "QuantityOrdered": 2, "SellerSKU": "LAT-B", "ASIN": "B08X",
+                 "ConditionId": "UsedGood"}]}},
+            "/orders/v0/orders": {"payload": {"Orders": [
+                {"AmazonOrderId": "203-1", "PurchaseDate": "2026-08-12T10:00:00Z",
+                 "OrderTotal": {"Amount": "570.00", "CurrencyCode": "GBP"}}]}}})
+        c = AmazonOrders(transport=t)
+        rows = c.to_rows(c.fetch(since_days=30))
+        self.assertEqual(len(rows), 1)
+        self.assertAlmostEqual(float(rows[0]["price"]), 285.00, places=2)
+        self.assertEqual(rows[0]["quantity"], 2)
+
+    def test_amazon_competitive_separates_offers_from_transaction_data(self):
+        from pricer.connectors import ReplayTransport
+        from pricer.connectors.amazon import AmazonCompetitive
+        t = ReplayTransport({
+            "auth/o2/token": {"access_token": "tok", "expires_in": 3600},
+            "competitiveSummary": {"responses": [{"body": {
+                "asin": "B08X", "title": "Dell Latitude 5420 i5-1145G7 16GB 512GB",
+                "lowestPricedOffers": [
+                    {"listingPrice": {"amount": 299.0, "currencyCode": "GBP"},
+                     "condition": "used"}],
+                "referencePrices": [
+                    {"name": "AverageSellingPrice",
+                     "price": {"amount": 271.5, "currencyCode": "GBP"}}]}}]}})
+        c = AmazonCompetitive(transport=t)
+        rows = c.to_rows(c.fetch(asins=["B08X"]))
+        kinds = {r["kind"] for r in rows}
+        self.assertIn("offer", kinds)
+        self.assertIn("AverageSellingPrice", kinds)
+
+    def test_backmarket_orders_expand_order_lines(self):
+        from pricer.connectors import ReplayTransport
+        from pricer.connectors.backmarket import BackMarketOrders
+        t = ReplayTransport({"/ws/orders": {"results": [{
+            "order_id": 991, "date_creation": "2026-08-10T09:00:00Z", "currency": "GBP",
+            "orderlines": [
+                {"product": "Dell Latitude 5420 i5-1145G7 16GB 512GB", "price": 279.0,
+                 "quantity": 1, "state": "good"}]}], "next": None}})
+        c = BackMarketOrders(transport=t)
+        rows = c.to_rows(c.fetch(since_days=30))
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["date"], "2026-08-10")
+        self.assertEqual(c.trust, 1.0)
+
+    def test_every_connector_title_parses_to_a_machine(self):
+        """The point of a connector: its output must flow through the pipeline."""
+        for title in ["Dell Latitude 5420 i5-1145G7 16GB 512GB",
+                      "HP EliteBook 840 G7 i5-10310U 16GB 256GB"]:
+            with self.subTest(title=title):
+                spec = parse_title(title)
+                _cid, conf, _ = resolve(spec)
+                self.assertEqual(verdict(conf), "auto")
+
+    def test_marketplace_condition_words_all_map(self):
+        """Each marketplace has its own condition vocabulary."""
+        from pricer.connectors.ebay import EbayBrowse
+        gm = EbayBrowse().profile()["grade_map"]
+        for word, expected in [("VERY_GOOD", "A"), ("GOOD", "B"), ("USEDGOOD", "B"),
+                               ("USEDLIKENEW", "A_PLUS"), ("USEDVERYGOOD", "A"),
+                               ("FOR_PARTS_OR_NOT_WORKING", "SALVAGE")]:
+            with self.subTest(word=word):
+                self.assertEqual(gm[word], expected)
+
+    def test_expired_token_is_refreshed_not_reused(self):
+        from pricer.connectors.base import Token
+        self.assertFalse(Token.lasting("t", 30).valid())
+        self.assertTrue(Token.lasting("t", 7200).valid())

@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import datetime as dt
 
-from .base import Connector, ConnectorError, RateLimiter, require
+from .base import Connector, ConnectorError, RateLimiter, Token, require
 
 LWA_TOKEN_URL = "https://api.amazon.com/auth/o2/token"
 ENDPOINTS = {"eu": "https://sellingpartnerapi-eu.amazon.com",
@@ -30,6 +30,7 @@ ENDPOINTS = {"eu": "https://sellingpartnerapi-eu.amazon.com",
              "fe": "https://sellingpartnerapi-fe.amazon.com"}
 COMPETITIVE_PATH = "/batches/products/pricing/2022-05-01/items/competitiveSummary"
 ORDERS_PATH = "/orders/v0/orders"
+ORDER_ITEMS_PATH = "/orders/v0/orders/{order_id}/orderItems"
 
 
 class _AmazonBase(Connector):
@@ -43,8 +44,8 @@ class _AmazonBase(Connector):
         self._token = None
 
     def token(self) -> str:
-        if self._token:
-            return self._token
+        if self._token and self._token.valid():
+            return self._token.value
         creds = require("amazon", "refresh_token", "client_id", "client_secret")
         payload = self.transport.request(
             "POST", LWA_TOKEN_URL,
@@ -53,10 +54,12 @@ class _AmazonBase(Connector):
                   "client_id": creds["client_id"], "client_secret": creds["client_secret"]})
         if "access_token" not in payload:
             raise ConnectorError(f"Amazon did not return a token: {payload}")
-        self._token = payload["access_token"]
-        return self._token
+        self._token = Token.lasting(payload["access_token"], payload.get("expires_in", 3600))
+        return self._token.value
 
     def headers(self) -> dict:
+        # Since October 2023 SP-API needs only the LWA bearer token; AWS IAM and
+        # Signature Version 4 are no longer required.
         return {"x-amz-access-token": self.token(), "Content-Type": "application/json"}
 
 
@@ -150,23 +153,52 @@ class AmazonOrders(_AmazonBase):
             token = result.get("NextToken")
             if not token:
                 break
+
+        # An order total carries no item title, so on its own it cannot be
+        # matched to a machine. Pull the line items and price those instead.
+        for order in out:
+            order_id = order.get("AmazonOrderId")
+            if not order_id:
+                continue
+            self.limiter.take()
+            items = self.transport.request(
+                "GET", self.host + ORDER_ITEMS_PATH.format(order_id=order_id),
+                headers=self.headers())
+            body = items.get("payload") or items
+            order["_items"] = body.get("OrderItems") or []
         return out
 
+    columns = ["date", "title", "price", "currency", "condition", "quantity",
+               "order_id", "sku", "asin"]
+
     def to_rows(self, payload: list[dict]) -> list[dict]:
+        """One row per line item. An order containing three laptops must not
+        become one laptop at three times the price."""
         rows = []
         for order in payload:
-            total = (order.get("OrderTotal") or {})
-            if total.get("Amount") is None:
-                continue
-            rows.append({
-                "date": (order.get("PurchaseDate") or "")[:10],
-                "title": order.get("_title", ""),      # filled by the items call
-                "price": total["Amount"], "currency": total.get("CurrencyCode", "GBP"),
-                "condition": "USED", "quantity": order.get("NumberOfItemsShipped", 1),
-                "order_id": order.get("AmazonOrderId", ""),
-            })
+            date = (order.get("PurchaseDate") or "")[:10]
+            currency = (order.get("OrderTotal") or {}).get("CurrencyCode", "GBP")
+            for item in order.get("_items", []):
+                price = (item.get("ItemPrice") or {})
+                amount, quantity = price.get("Amount"), int(item.get("QuantityOrdered") or 1)
+                if amount is None or quantity < 1:
+                    continue
+                rows.append({
+                    "date": date,
+                    "title": item.get("Title", ""),
+                    "price": round(float(amount) / quantity, 2),   # ItemPrice covers the whole line
+                    "currency": price.get("CurrencyCode", currency),
+                    "condition": (item.get("ConditionId") or "USED").upper(),
+                    "quantity": quantity,
+                    "order_id": order.get("AmazonOrderId", ""),
+                    "sku": item.get("SellerSKU", ""),
+                    "asin": item.get("ASIN", ""),
+                })
         return rows
 
     def notes(self) -> list[str]:
-        return ["Order totals carry no item title. Pair with the Orders items call, "
-                "or match on SKU against your own catalogue, before these price."]
+        return ["Your own sales at trust 1.0.",
+                "One row per line item, with ItemPrice divided by quantity to get a "
+                "unit price - SP-API reports the line total, not the unit.",
+                "Amazon condition ids are coarse; if you record grade in the SKU, "
+                "map it in the source profile."]

@@ -32,7 +32,7 @@ python3 scripts/seed_demo.py                  # + a 71-unit stock book
 python3 -m pricer.cli stock                   # overview and ageing
 python3 -m pricer.cli actions                 # the morning action queue
 
-python3 -m unittest discover -s tests         # 93 tests
+python3 -m unittest discover -s tests         # 102 tests
 ```
 
 Dates are pinned to `2026-08-19` in the demo data. Pass `--as-of 2026-08-19`
@@ -338,6 +338,7 @@ pipeline below the connector keeps its existing tests unchanged.
 | Connector | Gives | Trust | Reality |
 |---|---|---|---|
 | `ebay_browse` | ask | 0.40 | Active listings. Open access, 5,000 calls/day. **Asking prices, not sales.** |
+| `ebay_orders` | sold | 1.00 | **Your own eBay sales.** The only eBay sold data not behind a gate. |
 | `ebay_sold` | sold | 0.90 | Marketplace Insights — **restricted, closed to new applicants**. Refuses with an alternative. |
 | `amazon_competitive` | ask | 0.45 | Offers, plus a 60-day average selling price that *is* transaction-derived. |
 | `amazon_orders` | sold | 1.00 | **Your own sales.** The most valuable source here. |
@@ -348,9 +349,38 @@ Realised sold prices for machines you did not sell are gated almost everywhere.
 That is why the estimator has always distinguished `sold` from `ask`, applied a
 haircut and weighted them differently — an ask-fed pricer drifts high.
 
+### Credentials and consent
+
 Credentials live in `config/secrets.yml` (gitignored) or environment variables
-(`PRICER_EBAY__CLIENT_ID`). See `config/secrets.yml.example`. Rate limits are
-tracked in a token bucket persisted to disk, so a daily cap survives restarts.
+(`PRICER_EBAY__CLIENT_ID`). See `config/secrets.yml.example`.
+
+eBay has **two token flows and they are not interchangeable**. Client
+credentials gives an *application* token, which reads public data — Browse works
+with it. Seller data does not: `getOrders` requires a *user* token from the
+authorization code grant, and eBay rejects an application token outright.
+
+```bash
+python3 -m pricer.cli authorize ebay              # prints a consent URL
+python3 -m pricer.cli authorize ebay --code '...' # stores the refresh token
+```
+
+That is a one-off: user tokens last two hours, but the refresh token issued
+alongside is long-lived and gets renewed automatically.
+
+Amazon needs only a Login with Amazon refresh token — since October 2023 SP-API
+no longer requires AWS IAM or Signature Version 4. Back Market issues a merchant
+token from your seller account.
+
+Rate limits are token buckets persisted to disk, so a daily cap survives a
+restart. Requests retry on 429 and 5xx with exponential backoff, honouring
+`Retry-After`.
+
+```bash
+python3 -m pricer.cli sync all --query "dell latitude 5420" --days 90
+```
+
+`sync all` runs every connector that has credentials and reports the ones it
+skipped, rather than stopping at the first gap.
 
 ## Offline by design
 

@@ -20,11 +20,165 @@ from __future__ import annotations
 import base64
 import datetime as dt
 
-from .base import Connector, ConnectorError, RateLimiter, require
+from .base import Connector, ConnectorError, RateLimiter, Token, require
 
 OAUTH_URL = "https://api.ebay.com/identity/v1/oauth2/token"
+CONSENT_URL = "https://auth.ebay.com/oauth2/authorize"
+ORDERS_URL = "https://api.ebay.com/sell/fulfillment/v1/order"
+SELL_SCOPES = ["https://api.ebay.com/oauth/api_scope/sell.fulfillment.readonly"]
 BROWSE_URL = "https://api.ebay.com/buy/browse/v1/item_summary/search"
 INSIGHTS_URL = "https://api.ebay.com/buy/marketplace_insights/v1_beta/item_sales/search"
+
+
+class EbayAuth:
+    """eBay has two token flows and they are not interchangeable.
+
+    Client credentials gives an APPLICATION token, which reads public data -
+    Browse works with it. Seller data does not: getOrders requires a USER token
+    obtained through the authorization code grant, and eBay rejects an
+    application token outright. User tokens last two hours; the refresh token
+    issued alongside them is long-lived, so consent is a one-off.
+    """
+
+    def __init__(self, transport):
+        self.transport = transport
+        self._app: Token | None = None
+        self._user: Token | None = None
+
+    def _basic(self) -> tuple[str, dict]:
+        creds = require("ebay", "client_id", "client_secret")
+        blob = base64.b64encode(
+            f"{creds['client_id']}:{creds['client_secret']}".encode()).decode()
+        return blob, creds
+
+    def app_token(self) -> str:
+        if self._app and self._app.valid():
+            return self._app.value
+        blob, _ = self._basic()
+        payload = self.transport.request(
+            "POST", OAUTH_URL,
+            headers={"Authorization": f"Basic {blob}",
+                     "Content-Type": "application/x-www-form-urlencoded"},
+            body={"grant_type": "client_credentials",
+                  "scope": "https://api.ebay.com/oauth/api_scope"})
+        if "access_token" not in payload:
+            raise ConnectorError(f"eBay did not return an application token: {payload}")
+        self._app = Token.lasting(payload["access_token"], payload.get("expires_in", 7200))
+        return self._app.value
+
+    def user_token(self) -> str:
+        if self._user and self._user.valid():
+            return self._user.value
+        blob, creds = self._basic()
+        refresh = creds.get("refresh_token")
+        if not refresh:
+            raise ConnectorError(
+                "eBay seller data needs a USER token, which an application token cannot "
+                "substitute for.\n  Run:  pricer authorize ebay\n"
+                "  That prints a consent URL; sign in as the seller, approve, then paste the\n"
+                "  code back. The refresh token it stores is long-lived, so this is a one-off.")
+        payload = self.transport.request(
+            "POST", OAUTH_URL,
+            headers={"Authorization": f"Basic {blob}",
+                     "Content-Type": "application/x-www-form-urlencoded"},
+            body={"grant_type": "refresh_token", "refresh_token": refresh,
+                  "scope": " ".join(SELL_SCOPES)})
+        if "access_token" not in payload:
+            raise ConnectorError(
+                f"eBay refused the refresh token: {payload}. Re-run `pricer authorize ebay`.")
+        self._user = Token.lasting(payload["access_token"], payload.get("expires_in", 7200))
+        return self._user.value
+
+    # -- one-off consent ------------------------------------------------
+    def consent_url(self) -> str:
+        import urllib.parse
+        creds = require("ebay", "client_id", "redirect_uri")
+        return CONSENT_URL + "?" + urllib.parse.urlencode({
+            "client_id": creds["client_id"], "response_type": "code",
+            "redirect_uri": creds["redirect_uri"], "scope": " ".join(SELL_SCOPES)})
+
+    def exchange_code(self, code: str) -> dict:
+        import urllib.parse
+        blob, creds = self._basic()
+        if not creds.get("redirect_uri"):
+            raise ConnectorError("ebay.redirect_uri (your RuName) is required in secrets.yml")
+        payload = self.transport.request(
+            "POST", OAUTH_URL,
+            headers={"Authorization": f"Basic {blob}",
+                     "Content-Type": "application/x-www-form-urlencoded"},
+            body={"grant_type": "authorization_code",
+                  "code": urllib.parse.unquote(code),
+                  "redirect_uri": creds["redirect_uri"]})
+        if "refresh_token" not in payload:
+            raise ConnectorError(f"eBay did not return a refresh token: {payload}")
+        return payload
+
+
+class EbaySellOrders(Connector):
+    """Your own eBay sales. Real prices, real dates, trust 1.0 - the single most
+    valuable feed on the list, and the only eBay sold data not behind a gate."""
+
+    id = "ebay_orders"
+    label = "eBay - your own sales"
+    channel = "ebay_bin"
+    observation_type = "sold"
+    trust = 1.00
+    columns = ["date", "title", "price", "currency", "condition", "quantity",
+               "order_id", "sku"]
+
+    def __init__(self, transport=None):
+        super().__init__(transport)
+        self.auth = EbayAuth(self.transport)
+        self.limiter = RateLimiter("ebay_orders", per_day=5000, min_interval_s=0.1)
+
+    def fetch(self, since_days: int = 90, max_pages: int = 50, **_) -> list[dict]:
+        since = (dt.datetime.now(dt.timezone.utc)
+                 - dt.timedelta(days=since_days)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+        headers = {"Authorization": f"Bearer {self.auth.user_token()}",
+                   "Content-Type": "application/json"}
+        out, offset = [], 0
+        for _ in range(max_pages):
+            self.limiter.take()
+            payload = self.transport.request(
+                "GET", ORDERS_URL, headers=headers,
+                params={"filter": f"creationdate:[{since}..]", "limit": 200, "offset": offset})
+            orders = payload.get("orders") or []
+            out.extend(orders)
+            if len(orders) < 200:
+                break
+            offset += 200
+        return out
+
+    def to_rows(self, payload: list[dict]) -> list[dict]:
+        """One row per line item: an order may contain several machines, and
+        pricing the order total as a single laptop would be badly wrong."""
+        rows = []
+        for order in payload:
+            date = (order.get("creationDate") or "")[:10]
+            for line in (order.get("lineItems") or []):
+                cost = (line.get("lineItemCost") or {})
+                if cost.get("value") is None:
+                    continue
+                quantity = int(line.get("quantity") or 1)
+                rows.append({
+                    "date": date,
+                    "title": line.get("title", ""),
+                    # lineItemCost is the unit price; total is unit x quantity
+                    "price": cost["value"],
+                    "currency": cost.get("currency", "GBP"),
+                    "condition": "USED",
+                    "quantity": quantity,
+                    "order_id": order.get("orderId", ""),
+                    "sku": line.get("sku", ""),
+                })
+        return rows
+
+    def notes(self) -> list[str]:
+        return ["Your own sales at trust 1.0 - these anchor every other source.",
+                "One row per line item, so a multi-machine order does not become "
+                "one very expensive laptop.",
+                "Condition is not on the order; if you record grade in the SKU, map it "
+                "in the source profile rather than letting everything default to B."]
 
 
 class EbayBrowse(Connector):
@@ -43,24 +197,10 @@ class EbayBrowse(Connector):
         super().__init__(transport)
         self.marketplace = marketplace or self.MARKETPLACE
         self.limiter = RateLimiter("ebay_browse", per_day=5000, min_interval_s=0.1)
-        self._token = None
+        self.auth = EbayAuth(self.transport)
 
     def token(self) -> str:
-        if self._token:
-            return self._token
-        creds = require("ebay", "client_id", "client_secret")
-        basic = base64.b64encode(
-            f"{creds['client_id']}:{creds['client_secret']}".encode()).decode()
-        payload = self.transport.request(
-            "POST", OAUTH_URL,
-            headers={"Authorization": f"Basic {basic}",
-                     "Content-Type": "application/x-www-form-urlencoded"},
-            body={"grant_type": "client_credentials",
-                  "scope": "https://api.ebay.com/oauth/api_scope"})
-        if "access_token" not in payload:
-            raise ConnectorError(f"eBay did not return a token: {payload}")
-        self._token = payload["access_token"]
-        return self._token
+        return self.auth.app_token()
 
     def fetch(self, queries: list[str] | None = None, max_pages: int = 3,
               category_ids: str = "177", **_) -> list[dict]:

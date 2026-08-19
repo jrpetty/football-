@@ -116,10 +116,35 @@ class RateLimiter:
         self._state.write_text(json.dumps(s))
 
 
+# ---------------------------------------------------------------- tokens
+
+@dataclass
+class Token:
+    """An access token and when it stops working.
+
+    Marketplace access tokens are short-lived - eBay user tokens last two hours.
+    Caching one for the life of the process works right up until a long sync,
+    then fails halfway through.
+    """
+    value: str
+    expires_at: float
+    SKEW = 120.0                       # refresh early rather than race the clock
+
+    def valid(self) -> bool:
+        return bool(self.value) and time.time() < self.expires_at - self.SKEW
+
+    @classmethod
+    def lasting(cls, value: str, seconds: float) -> "Token":
+        return cls(value, time.time() + float(seconds or 0))
+
+
 # ---------------------------------------------------------------- transport
 
 class Transport:
     """HTTP, isolated behind one seam so every connector is testable offline."""
+
+    RETRY_ON = {429, 500, 502, 503, 504}
+    MAX_ATTEMPTS = 4
 
     def request(self, method: str, url: str, headers: dict | None = None,
                 params: dict | None = None, body=None, timeout: float = 30.0) -> dict:
@@ -131,18 +156,30 @@ class Transport:
             url = f"{url}?{urllib.parse.urlencode(params, doseq=True)}"
         data = None
         if body is not None:
-            data = (urllib.parse.urlencode(body).encode() if isinstance(body, dict)
-                    and (headers or {}).get("Content-Type", "").startswith("application/x-www-form")
+            form = (headers or {}).get("Content-Type", "").startswith("application/x-www-form")
+            data = (urllib.parse.urlencode(body).encode() if form and isinstance(body, dict)
                     else json.dumps(body).encode())
-        req = urllib.request.Request(url, data=data, headers=headers or {}, method=method)
-        try:
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
-                return json.loads(resp.read().decode() or "{}")
-        except urllib.error.HTTPError as exc:
-            detail = exc.read().decode(errors="replace")[:400]
-            raise ConnectorError(f"{method} {url.split('?')[0]} -> HTTP {exc.code}: {detail}") from exc
-        except urllib.error.URLError as exc:
-            raise ConnectorError(f"cannot reach {url.split('?')[0]}: {exc.reason}") from exc
+
+        last = None
+        for attempt in range(self.MAX_ATTEMPTS):
+            req = urllib.request.Request(url, data=data, headers=headers or {}, method=method)
+            try:
+                with urllib.request.urlopen(req, timeout=timeout) as resp:
+                    return json.loads(resp.read().decode() or "{}")
+            except urllib.error.HTTPError as exc:
+                detail = exc.read().decode(errors="replace")[:400]
+                last = ConnectorError(f"{method} {url.split('?')[0]} -> HTTP {exc.code}: {detail}")
+                if exc.code not in self.RETRY_ON or attempt == self.MAX_ATTEMPTS - 1:
+                    raise last from exc
+                # honour Retry-After when the server sets it, else back off
+                wait = float(exc.headers.get("Retry-After") or 0) or 2.0 ** attempt
+                time.sleep(min(wait, 30.0))
+            except urllib.error.URLError as exc:
+                last = ConnectorError(f"cannot reach {url.split('?')[0]}: {exc.reason}")
+                if attempt == self.MAX_ATTEMPTS - 1:
+                    raise last from exc
+                time.sleep(2.0 ** attempt)
+        raise last
 
 
 class ReplayTransport(Transport):
@@ -228,9 +265,18 @@ class Connector:
             "columns": {"raw_title": "title", "price_gross": "price",
                         "sold_at": "date", "quantity": "quantity", "grade_raw": "condition"},
             "date_format": "%Y-%m-%d",
-            "grade_map": {"NEW": "A_PLUS", "LIKE_NEW": "A_PLUS", "EXCELLENT": "A",
-                          "VERY_GOOD": "A", "GOOD": "B", "USED": "B", "ACCEPTABLE": "C",
-                          "FAIR": "C", "FOR_PARTS_OR_NOT_WORKING": "SALVAGE"},
+            "grade_map": {
+                # eBay
+                "NEW": "A_PLUS", "NEW_OTHER": "A_PLUS", "LIKE_NEW": "A_PLUS",
+                "EXCELLENT_-_REFURBISHED": "A", "EXCELLENT": "A", "VERY_GOOD": "A",
+                "VERY_GOOD_-_REFURBISHED": "A", "GOOD": "B", "GOOD_-_REFURBISHED": "B",
+                "USED": "B", "SELLER_REFURBISHED": "B", "ACCEPTABLE": "C", "FAIR": "C",
+                "FOR_PARTS_OR_NOT_WORKING": "SALVAGE",
+                # Amazon condition ids
+                "USEDLIKENEW": "A_PLUS", "USEDVERYGOOD": "A", "USEDGOOD": "B",
+                "USEDACCEPTABLE": "C", "REFURBISHED": "A", "CLUB": "B",
+                # Back Market
+                "PREMIUM": "A_PLUS", "STALLONE": "A", "FAIR_CONDITION": "C"},
             "exclude_if": [{"title_matches": r"(?i)\b(job ?lot|bundle|spares|faulty|pallet)\b"},
                            {"price_gross_below": 20}],
         }

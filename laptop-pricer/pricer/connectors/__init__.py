@@ -3,10 +3,10 @@ from .base import (Connector, ConnectorError, MissingCredentials, RateLimiter,
                    ReplayTransport, SyncResult, Transport, secrets)
 from .amazon import AmazonCompetitive, AmazonOrders
 from .backmarket import BackMarketOrders
-from .ebay import EbayBrowse, EbaySold
+from .ebay import EbayAuth, EbayBrowse, EbaySellOrders, EbaySold
 
-REGISTRY = {c.id: c for c in (EbayBrowse, EbaySold, AmazonCompetitive,
-                             AmazonOrders, BackMarketOrders)}
+REGISTRY = {c.id: c for c in (EbayBrowse, EbaySellOrders, EbaySold,
+                             AmazonCompetitive, AmazonOrders, BackMarketOrders)}
 
 
 def get(name: str):

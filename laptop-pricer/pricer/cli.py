@@ -59,6 +59,43 @@ def cmd_ingest(args):
               f"Check the sold_at column in the source profile.")
 
 
+def cmd_authorize(args):
+    """One-off consent for seller APIs that need a user token."""
+    from .connectors.base import ConnectorError as _CE
+    if args.service != "ebay":
+        print(f"  {args.service} uses a refresh token issued in its own portal; "
+              f"paste it into config/secrets.yml. Only eBay needs this flow.")
+        return 1
+
+    from .connectors.ebay import EbayAuth
+    auth = EbayAuth(__import__("pricer.connectors.base", fromlist=["Transport"]).Transport())
+    try:
+        if not args.code:
+            print(RULE)
+            print("  1. Open this URL and sign in as the SELLER account:\n")
+            print(f"     {auth.consent_url()}\n")
+            print("  2. Approve. eBay redirects to your RuName with ?code=... in the URL.")
+            print("  3. Re-run with that code:\n")
+            print("     pricer authorize ebay --code '<the code>'")
+            print(RULE)
+            return 0
+        payload = auth.exchange_code(args.code)
+    except _CE as exc:
+        print(f"  {exc}")
+        return 2
+
+    import yaml as _yaml
+    path = ROOT / "config" / "secrets.yml"
+    data = _yaml.safe_load(path.read_text()) if path.exists() else {}
+    data.setdefault("ebay", {})["refresh_token"] = payload["refresh_token"]
+    path.write_text(_yaml.safe_dump(data, sort_keys=False))
+    expires_days = int(payload.get("refresh_token_expires_in", 0)) // 86400
+    print(f"  Refresh token stored in {path}")
+    if expires_days:
+        print(f"  Valid for about {expires_days} days — diarise re-consent before then.")
+    print("  Now run: pricer sync ebay_orders")
+
+
 def cmd_connectors(args):
     """What each marketplace connector can actually give you."""
     print(RULE)
@@ -77,14 +114,8 @@ def cmd_connectors(args):
     print("  limit or an outage never stops you pricing.")
 
 
-def cmd_sync(args):
-    """Fetch from a marketplace and write a file the normal pipeline reads."""
-    try:
-        cls = get_connector(args.connector)
-    except ConnectorError as exc:
-        print(exc)
-        return 2
-    connector = cls()
+def _sync_one(name: str, args) -> int:
+    connector = get_connector(name)()
     kwargs = {}
     if args.query:
         kwargs["queries"] = args.query
@@ -98,10 +129,10 @@ def cmd_sync(args):
     try:
         result = connector.sync(as_of=_date(args.as_of), **kwargs)
     except MissingCredentials as exc:
-        print(f"  {exc}")
+        print(f"  {name}: skipped — {str(exc).splitlines()[0]}")
         return 3
     except ConnectorError as exc:
-        print(f"  {exc}")
+        print(f"  {name}: {exc}")
         return 4
 
     print(f"  {result.source}: {result.fetched} rows")
@@ -118,6 +149,18 @@ def cmd_sync(args):
             fh.write("# Written by `pricer sync`. Check the fee model before relying on it.\n")
             _yaml.safe_dump(connector.profile(), fh, sort_keys=False)
         print(f"    source profile written to {profile_path}")
+    return 0
+
+
+def cmd_sync(args):
+    """Fetch from one marketplace, or all of them, into files."""
+    names = sorted(CONNECTORS) if args.connector == "all" else [args.connector]
+    failed = 0
+    for name in names:
+        code = _sync_one(name, args)
+        failed += 1 if code else 0
+    if len(names) > 1:
+        print(f"\n  {len(names) - failed} of {len(names)} connectors synced.")
     print("\n  Now run: pricer ingest")
 
 
@@ -524,11 +567,16 @@ def main(argv=None):
     p.add_argument("--incoming", help="directory of files to ingest (default data/incoming)")
     p.set_defaults(fn=cmd_ingest)
 
+    p = sub.add_parser("authorize", help="one-off seller consent (eBay user token)")
+    p.add_argument("service", choices=["ebay", "amazon", "backmarket"])
+    p.add_argument("--code", help="the code eBay returned after you approved")
+    p.set_defaults(fn=cmd_authorize)
+
     p = sub.add_parser("connectors", help="what each marketplace connector provides")
     p.set_defaults(fn=cmd_connectors)
 
     p = sub.add_parser("sync", help="fetch from a marketplace into a file")
-    p.add_argument("connector", choices=sorted(CONNECTORS))
+    p.add_argument("connector", choices=sorted(CONNECTORS) + ["all"])
     p.add_argument("--query", action="append", help="search term (repeatable)")
     p.add_argument("--asin", action="append", help="ASIN (repeatable)")
     p.add_argument("--days", type=int, help="how far back to fetch")
