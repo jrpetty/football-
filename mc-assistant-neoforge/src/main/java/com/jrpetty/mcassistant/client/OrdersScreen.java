@@ -76,35 +76,40 @@ public class OrdersScreen extends Screen {
         add(x + inner - 18, y, 18, h, "›", AssistantActions.JOB_NEXT, "Next job");
         shownJob = bot.clientJobOrdinal();
 
-        // ---- its patch ----
+        // ---- its ground: claim it, see it, or manage everything from the
+        // plot book. Resizing moved to where it is visual — drag on the map,
+        // or click more blocks with the wand.
         y = top + Y_PATCH;
-        add(x, y, w4, h, "Set Area", AssistantActions.ZONE_HERE,
+        int w3 = (inner - gap * 2) / 3;
+        add(x, y, w3, h, "Set Area", AssistantActions.ZONE_HERE,
             "Claim a patch centred where you're standing");
-        add(x + (w4 + gap), y, w4, h, "Smaller", AssistantActions.ZONE_SHRINK, "Shrink the patch by 4 blocks");
-        add(x + 2 * (w4 + gap), y, w4, h, "Bigger", AssistantActions.ZONE_GROW, "Grow the patch by 4 blocks");
-        add(x + 3 * (w4 + gap), y, w4, h, "Show", AssistantActions.ZONE_SHOW, "Outline the patch in particles");
+        add(x + (w3 + gap), y, w3, h, "Show", AssistantActions.ZONE_SHOW,
+            "Outline the patch in particles");
+        this.addRenderableWidget(Button.builder(Component.literal("Plot Book \u203a"), b -> {
+                this.onClose();
+                PlotsClient.requestOpen();
+            })
+            .bounds(x + 2 * (w3 + gap), y, inner - 2 * (w3 + gap), h)
+            .tooltip(Tooltip.create(Component.literal(
+                "Every plot and the whole crew on one page — assign, trade, shift, copy, undo")))
+            .build());
 
         // ---- handling ----
         y = top + Y_HAND1;
         add(x, y, w4, h, "Follow", AssistantActions.FOLLOW, "Come with me (stops work)");
         add(x + (w4 + gap), y, w4, h, "Stay", AssistantActions.STAY, "Wait here (stops work)");
         add(x + 2 * (w4 + gap), y, w4, h, "Come", AssistantActions.COME, "Walk to me now");
-        add(x + 3 * (w4 + gap), y, w4, h, "Guard", AssistantActions.GUARD, "Defend me");
-
-        y = top + Y_HAND2;
-        add(x, y, w4, h, "Stash", AssistantActions.STASH, "Empty its pack into a chest");
-        add(x + (w4 + gap), y, w4, h, "Go Home", AssistantActions.GO_HOME, "Return to its home point");
-        add(x + 2 * (w4 + gap), y, w4, h, "Pack", AssistantActions.OPEN_PACK, "Open its inventory");
         add(x + 3 * (w4 + gap), y, w4, h, "Stop", AssistantActions.STOP, "Drop whatever it's doing");
 
         // ---- duty, bed, and the job-specific control ----
         y = top + Y_DUTY;
         shiftButton = add(x, y, w4 * 2 + gap, h, dutyLabel(), AssistantActions.CYCLE_SHIFT,
             "When this one works. Off duty it sleeps in its bed.");
-        claimBedBtn = add(x + 2 * (w4 + gap), y, w4, h, "Claim Bed", AssistantActions.CLAIM_BED,
-            "Give it the nearest bed to you");
-        // The guard's version of that slot: how it fights. Guards claim beds
-        // by themselves at dusk anyway, so the slot buys its keep here.
+        // Claim Bed retired: they claim their own beds at dusk, and have
+        // since b81 — a button for a thing that happens by itself is noise.
+        claimBedBtn = add(x + 2 * (w4 + gap), y, w4, h, "Stash", AssistantActions.STASH,
+            "Empty its pack into the chests");
+        // The guard's version of that slot: how it fights.
         shownStance = BotInfo.of(bot).stance();
         stanceBtn = this.addRenderableWidget(Button.builder(
                 Component.literal(stanceWord()), b -> {
@@ -149,7 +154,7 @@ public class OrdersScreen extends Screen {
         // ---- footer: five now, so the chatter toggle gets a home ----
         y = top + Y_FOOTER;
         int w5 = (inner - gap * 4) / 5;
-        add(x, y, w5, h, "Crew", AssistantActions.ROSTER, "Report on every assistant");
+        add(x, y, w5, h, "Pack", AssistantActions.OPEN_PACK, "Open its inventory and gear");
         this.addRenderableWidget(Button.builder(Component.literal("Record"),
                 b -> this.minecraft.setScreen(new RecordScreen(bot)))
             .bounds(x + (w5 + gap), y, w5, h)
@@ -294,8 +299,8 @@ public class OrdersScreen extends Screen {
 
         // Section headings.
         Ui.section(g, this.font, "Job", x, top + Y_SEC_JOB, inner);
-        Ui.section(g, this.font, "Its patch", x, top + Y_SEC_PATCH, inner);
-        Ui.section(g, this.font, "Handling", x, top + Y_SEC_HAND, inner);
+        Ui.section(g, this.font, "Ground", x, top + Y_SEC_PATCH, inner);
+        Ui.section(g, this.font, "Orders", x, top + Y_SEC_HAND, inner);
         Ui.section(g, this.font, "Duty", x, top + Y_SEC_DUTY, inner);
 
     }

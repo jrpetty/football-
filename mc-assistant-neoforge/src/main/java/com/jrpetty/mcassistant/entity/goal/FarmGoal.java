@@ -230,7 +230,7 @@ public class FarmGoal extends Goal {
         return switch (mode) {
             case HARVEST -> isHarvestable(targetPos, st);
             case SEEDS -> isGrass(st);
-            case TILL -> isTillable(targetPos);
+            case TILL -> isTillable(targetPos) && hydrated(targetPos);
             case WATER -> isTillable(targetPos);
         };
     }
@@ -283,6 +283,7 @@ public class FarmGoal extends Goal {
             if (assistant.equipToolNamed("_hoe")) {
                 assistant.damageHeldTool();
             }
+            if (!hydrated(pos)) { skip.add(pos.immutable()); return; }
             assistant.level().setBlockAndUpdate(pos, Blocks.FARMLAND.defaultBlockState());
             assistant.level().playSound(null, pos, net.minecraft.sounds.SoundEvents.HOE_TILL,
                 net.minecraft.sounds.SoundSource.BLOCKS, 1.0F, 1.0F);
@@ -381,6 +382,23 @@ public class FarmGoal extends Goal {
 
     /** Farmland is hydrated by water within 4 blocks horizontally and no more
      *  than one level above — mirror that when choosing where to till. */
+    /** The farm IS the hydrated squares: inside the 4-block reach of SOME
+     *  water source (same level or one above), and nowhere else. Every till
+     *  and plant asks this at the moment it acts, so no farmland is ever
+     *  made — or seeded — outside a real water source's 9x9. */
+    private boolean hydrated(BlockPos farm) {
+        BlockPos.MutableBlockPos c = new BlockPos.MutableBlockPos();
+        for (int dx = -4; dx <= 4; dx++) {
+            for (int dz = -4; dz <= 4; dz++) {
+                for (int dy = 0; dy <= 1; dy++) {
+                    c.set(farm.getX() + dx, farm.getY() + dy, farm.getZ() + dz);
+                    if (assistant.level().getBlockState(c).is(Blocks.WATER)) return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private boolean withinHydration(BlockPos farm, BlockPos water) {
         return Math.abs(farm.getX() - water.getX()) <= 4
             && Math.abs(farm.getZ() - water.getZ()) <= 4
@@ -465,16 +483,14 @@ public class FarmGoal extends Goal {
      *  ground — this is finishing a field rather than starting one. */
     @Nullable
     private BlockPos findGap() {
-        BlockPos water = findWater();
-        if (water == null) return null;
         return nearest(pos -> assistant.level().getBlockState(pos).is(Blocks.FARMLAND)
             && isPlantableSpace(pos.above())
-            && withinHydration(pos, water));
+            && hydrated(pos));
     }
 
     @Nullable
     private BlockPos findTillableNear(BlockPos water) {
-        return nearest(pos -> isTillable(pos) && withinHydration(pos, water));
+        return nearest(pos -> isTillable(pos) && hydrated(pos));
     }
 
     @Nullable

@@ -23,8 +23,6 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
     private static final int SLOT_BG = 0xFF8B8B8B;
     private static final int SLOT_HI = 0xFF373737;
 
-    private Button jobButton;   // its label is the current job, kept live
-    private Button depthDown, depthUp, setHome; // job-specific controls
     private int shownJob = -1;
 
     public AssistantScreen(AssistantMenu menu, Inventory playerInv, Component title) {
@@ -40,35 +38,19 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
         int x = this.leftPos;
         int y = this.topPos;
 
-        // Job row: the middle button NAMES the current job (so you always see
-        // what you're choosing) and clicking it starts or pauses that work.
+        // The pack screen is the PACK now: its slots, its readouts, and two
+        // buttons — everything it used to duplicate (job cycling, handling,
+        // area sizing, dig depth) lives on the orders sheet, once.
         int bh = 18;
         AssistantEntity a = this.menu.getAssistant();
-        String jobName = a == null ? "..."
-            : AssistantEntity.StationTask.byOrdinal(a.clientJobOrdinal()).title;
-        addButton(x + 8, y + 96, 18, bh, "<", AssistantMenu.BTN_JOB_PREV);
-        this.jobButton = addButton(x + 28, y + 96, 120, bh, jobName, AssistantMenu.BTN_WORK);
         this.shownJob = a == null ? -1 : a.clientJobOrdinal();
-        addButton(x + 150, y + 96, 18, bh, ">", AssistantMenu.BTN_JOB_NEXT);
-
-        // Handling row: call it over, park it, stash its pack, set dig depth.
-        addButton(x + 8, y + 114, 40, bh, "Follow", AssistantMenu.BTN_FOLLOW);
-        addButton(x + 50, y + 114, 32, bh, "Stay", AssistantMenu.BTN_STAY);
-        addButton(x + 84, y + 114, 44, bh, "Stash", AssistantMenu.BTN_DEPOSIT);
-        // The last slot on this row is job-specific: dig depth for a miner, the
-        // drop-off point for a hauler, nothing for everyone else.
-        this.depthDown = addButton(x + 130, y + 114, 18, bh, "-", AssistantMenu.BTN_DEPTH_DOWN);
-        this.depthUp = addButton(x + 150, y + 114, 18, bh, "+", AssistantMenu.BTN_DEPTH_UP);
-        this.setHome = addButton(x + 130, y + 114, 38, bh, "Drop", AssistantMenu.BTN_SET_HOME);
-
-        // Area row: set and size the patch without crafting anything. "Area"
-        // claims a zone centred on where YOU are standing — walk to the middle
-        // of the field, click, done — and -/+ resize it in place.
-        addButton(x + 8, y + 132, 62, bh, "Set Area", AssistantMenu.BTN_ZONE_HERE);
-        addButton(x + 72, y + 132, 30, bh, "-", AssistantMenu.BTN_ZONE_SHRINK);
-        addButton(x + 104, y + 132, 30, bh, "+", AssistantMenu.BTN_ZONE_GROW);
-        addButton(x + 136, y + 132, 32, bh, "Show", AssistantMenu.BTN_ZONE_SHOW);
-        refreshJobButtons(a == null ? 0 : a.clientJobOrdinal());
+        this.addRenderableWidget(Button.builder(Component.literal("Orders \u203a"), b -> {
+                if (this.minecraft != null && this.minecraft.player != null && a != null) {
+                    this.minecraft.player.closeContainer();
+                    this.minecraft.setScreen(new OrdersScreen(a));
+                }
+            }).bounds(x + 8, y + 114, 100, bh).build());
+        addButton(x + 112, y + 114, 56, bh, "Stash", AssistantMenu.BTN_DEPOSIT);
     }
 
     private Button addButton(int x, int y, int w, int h, String label, int buttonId) {
@@ -79,30 +61,6 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
         }).bounds(x, y, w, h).build());
     }
 
-    /** Keep the job button's label in step with the entity as it's cycled. */
-    @Override
-    protected void containerTick() {
-        super.containerTick();
-        AssistantEntity a = this.menu.getAssistant();
-        if (a == null || jobButton == null) return;
-        int job = a.clientJobOrdinal();
-        if (job != shownJob) {
-            shownJob = job;
-            jobButton.setMessage(Component.literal(AssistantEntity.StationTask.byOrdinal(job).title));
-            refreshJobButtons(job);
-        }
-    }
-
-    /** Show only the controls that mean anything for the current job. */
-    private void refreshJobButtons(int jobOrdinal) {
-        if (depthDown == null || depthUp == null || setHome == null) return;
-        AssistantEntity.StationTask job = AssistantEntity.StationTask.byOrdinal(jobOrdinal);
-        boolean miner = job == AssistantEntity.StationTask.MINE;
-        boolean hauler = job == AssistantEntity.StationTask.HAUL;
-        depthDown.visible = miner;
-        depthUp.visible = miner;
-        setHome.visible = hauler;
-    }
 
     @Override
     protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
