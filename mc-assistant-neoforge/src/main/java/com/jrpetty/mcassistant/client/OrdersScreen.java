@@ -197,7 +197,7 @@ public class OrdersScreen extends Screen {
         depthIron.visible = miner;
         depthDiamond.visible = miner;
         if (quarryBtn != null) quarryBtn.visible = miner;
-        dropOff.visible = hauler;
+        dropOff.visible = false;   // the hauler's route is two wand-linked chests now
         if (escortBtn != null) escortBtn.visible = job == AssistantEntity.StationTask.GUARD;
     }
 

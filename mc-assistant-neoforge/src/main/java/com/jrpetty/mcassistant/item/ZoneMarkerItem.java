@@ -132,9 +132,9 @@ public class ZoneMarkerItem extends Item {
         // right. Clicking a chest never counts as a plot corner while a bot is
         // bound, because nobody means the corner of their field to be a chest.
         if (bot != null && ctx.getLevel().getBlockEntity(pos) instanceof net.minecraft.world.Container) {
-            bot.linkChest(pos);
-            tell(player, bot.displayNameCap() + " is linked to this chest now — "
-                + "it draws its kit from here first, and banks its output here.");
+            // The bot says what the link means for ITS trade — a hauler builds
+            // its pickup-to-delivery route out of these clicks.
+            bot.linkChestSmart(pos);
             return InteractionResult.CONSUME;
         }
 

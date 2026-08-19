@@ -47,7 +47,7 @@ public final class JobSpec {
             case RANCH -> List.of("shears", "2+ animals in the zone", "breeding food", "a chest");
             case GUARD -> List.of("a sword", "torches (it lights the area)");
             case SMELT -> List.of("a furnace in the zone", "raw ore to smelt", "fuel (coal or logs)", "a chest");
-            case HAUL -> List.of("a chest in the zone", "a drop-off 28+ blocks away, with a chest");
+            case HAUL -> List.of("a pickup chest (wand-click it)", "a delivery chest (wand-click it second)");
             case FISH -> List.of("a fishing rod", "water in the zone", "a chest");
             case STORE -> List.of("two chests in the zone");
             case NONE -> List.of();
@@ -122,16 +122,13 @@ public final class JobSpec {
                 needChest(a, stores, gaps, 1);
             }
             case HAUL -> {
-                needChest(a, stores, gaps, 1);
-                // The run only makes sense if the drop-off is somewhere else,
-                // and only works if there is something to unload into there.
-                if (a.getHome() == null) {
-                    gaps.add("a drop-off point (the Drop button)");
-                } else {
-                    if (a.stationPos() != null && a.getHome().distSqr(a.stationPos()) < 28.0 * 28.0) {
-                        gaps.add("a drop-off further from the pickup (28+ blocks)");
-                    }
-                    if (!chestNear(a, a.getHome())) gaps.add("a chest at the drop-off");
+                // The route is two wand-linked chests, nothing else: no zone,
+                // no home, no minimum distance. If both ends stand, it can run.
+                if (a.preferredChest() == null) {
+                    gaps.add("a pickup chest (wand-click it)");
+                }
+                if (a.deliveryChest() == null) {
+                    gaps.add("a delivery chest (wand-click it second)");
                 }
             }
             case FISH -> {
