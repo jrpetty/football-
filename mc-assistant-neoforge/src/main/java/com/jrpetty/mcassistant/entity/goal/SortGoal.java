@@ -216,6 +216,7 @@ public class SortGoal extends Goal {
                     src.setChanged();
                     dst.setChanged();
                     moved++;
+                    assistant.note(AssistantEntity.Deed.CHESTS_SORTED, 1);
                     return true;
                 }
             }

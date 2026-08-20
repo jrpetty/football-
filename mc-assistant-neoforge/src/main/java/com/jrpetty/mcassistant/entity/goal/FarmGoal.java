@@ -103,6 +103,7 @@ public class FarmGoal extends Goal {
     public void stop() {
         this.active = false;
         this.targetPos = null;
+        this.runnerUp = null;
         assistant.releaseClaim();
         assistant.getNavigation().stop();
     }
@@ -192,7 +193,7 @@ public class FarmGoal extends Goal {
         // holes in its field before taking the harvest.
         if (hasPlantable()) {
             targetPos = findGap();
-            if (targetPos != null) { mode = Mode.TILL; return; }
+            if (targetPos != null) { mode = Mode.TILL; claim(); return; }
         }
         // The job the last scan already found, if it is still there and
         // nobody else has taken it. This is the whole of the lookahead: the
@@ -533,7 +534,10 @@ public class FarmGoal extends Goal {
 
     @Nullable
     private BlockPos findWater() {
-        return nearest(pos -> assistant.level().getBlockState(pos).is(Blocks.WATER));
+        // Never crew-filtered. Water is not WORK — it is the gate that decides
+        // whether tilling is possible at all, and a farmer whose band happens
+        // to hold no pond would otherwise be unable to till anywhere.
+        return nearest(pos -> assistant.level().getBlockState(pos).is(Blocks.WATER), false);
     }
 
     /** A dirt block whose neighbours are also tillable — a good centre for a
@@ -602,6 +606,15 @@ public class FarmGoal extends Goal {
 
     @Nullable
     private BlockPos nearest(java.util.function.Predicate<BlockPos> match) {
+        BlockPos hit = nearest(match, true);
+        // If the crew filters are the only reason nothing was found, take the
+        // work anyway: a farmer standing in a ripe field because a crewmate
+        // claimed the one square it looked at is exactly the stall this was
+        // meant to prevent.
+        return hit != null ? hit : nearest(match, false);
+    }
+
+    private BlockPos nearest(java.util.function.Predicate<BlockPos> match, boolean respectCrew) {
         // Spiral outward from the feet, ring by ring, and stop at the first
         // ring with a hit. The old scan tested every position in the whole
         // box for every question asked of it — thousands of block reads to
@@ -622,9 +635,9 @@ public class FarmGoal extends Goal {
                         if (skip.contains(cursor)) continue;            // this run's failures
                         if (assistant.isUnreachable(cursor)) continue;  // remembered failures
                         if (!assistant.inZone(cursor)) continue;
-                        if (assistant.takenByCrew(cursor)) continue;    // a mate is already walking there
-                        if (assistant.outsideMyShare(cursor)) continue; // the other end is theirs
                         if (!match.test(cursor)) continue;
+                        if (respectCrew && assistant.takenByCrew(cursor)) continue;
+                        if (respectCrew && assistant.outsideMyShare(cursor)) continue;
                         // Level ground first: a crop twenty blocks up a hill
                         // is not "as near" as one across the field, whatever
                         // the straight line says. A block of climb costs about
@@ -632,8 +645,9 @@ public class FarmGoal extends Goal {
                         double d = cursor.distSqr(feet)
                             + Math.abs(cursor.getY() - feet.getY()) * 16.0;
                         if (d < bestDist) {
-                            bestDist = d;
                             second = best;              // the next job, found free
+                            secondDist = bestDist;      // ...and its real distance
+                            bestDist = d;
                             best = cursor.immutable();
                         } else if (d < secondDist) {
                             secondDist = d;

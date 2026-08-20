@@ -356,6 +356,7 @@ public class GatherGoal extends Goal {
         if (request.kind() == Kind.LOGS
             && assistant.level().getBlockState(pos.below()).is(BlockTags.DIRT)) {
             stumps.add(pos.immutable());
+            assistant.note(AssistantEntity.Deed.TREES_FELLED, 1);
         }
         if (assistant.level().destroyBlock(pos, true, assistant)) {
             collected++;
@@ -558,8 +559,18 @@ public class GatherGoal extends Goal {
 
     @Nullable
     private BlockPos findNearest() {
+        BlockPos hit = scanOutward(true);
+        // Nothing left that is unclaimed and in my band? Then the band and the
+        // claims are the only thing standing between this bot and work, and a
+        // bot with work in front of it must not report a dry run — that earns
+        // a forty-second cool-off in a wood full of timber.
+        return hit != null ? hit : scanOutward(false);
+    }
+
+    @Nullable
+    private BlockPos scanOutward(boolean respectCrew) {
         for (int r = scanRadius; ; r = Math.min(SEARCH_RADIUS, r + 6)) {
-            BlockPos hit = scanWithin(r);
+            BlockPos hit = scanWithin(r, respectCrew);
             if (hit != null) {
                 // Remember the radius that actually worked, easing tighter
                 // each time it keeps working. Without this the scan would
@@ -576,7 +587,7 @@ public class GatherGoal extends Goal {
     }
 
     @Nullable
-    private BlockPos scanWithin(int radius) {
+    private BlockPos scanWithin(int radius, boolean respectCrew) {
         BlockPos feet = assistant.feetPos();
         BlockPos best = null;
         double bestDist = Double.MAX_VALUE;
@@ -586,10 +597,12 @@ public class GatherGoal extends Goal {
             if (unreachable.contains(pos)) continue; // don't re-target blocks we couldn't reach
             if (assistant.isUnreachable(pos)) continue; // nor ones an earlier run couldn't
             if (!assistant.inZone(pos)) continue;    // stay inside the marked work zone
-            if (assistant.takenByCrew(pos)) continue;    // a crewmate is already walking there
-            if (assistant.outsideMyShare(pos)) continue; // that end of the wood is theirs
             BlockState rankSt = assistant.level().getBlockState(pos);
             if (!request.kind().matches(rankSt) || !rankAllows(request.kind(), rankSt)) continue;
+            // Crew checks last: they cost a map lookup each, and the block
+            // test above rejects all but a handful of positions.
+            if (respectCrew && assistant.takenByCrew(pos)) continue;
+            if (respectCrew && assistant.outsideMyShare(pos)) continue;
             double d = pos.distSqr(feet) + Math.abs(pos.getY() - feet.getY()) * 16.0;
             if (d < bestDist) {
                 bestDist = d;

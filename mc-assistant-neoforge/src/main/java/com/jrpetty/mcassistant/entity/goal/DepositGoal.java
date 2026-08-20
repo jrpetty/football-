@@ -21,6 +21,7 @@ public class DepositGoal extends Goal {
     private final AssistantEntity assistant;
     private boolean active;
     @Nullable private BlockPos chestPos;
+    private boolean fixedTarget;   // the destination was named, not guessed
     private int stuckTicks;
     private int stashStartTick = -1;   // when it started loading this chest
     private double bestDistSq = Double.MAX_VALUE;
@@ -74,6 +75,10 @@ public class DepositGoal extends Goal {
                 assistant.sayRoutine("Running this load over to where it's wanted.");
             }
         }
+        // A destination somebody CHOSE — a hauler's delivery chest, the town
+        // depot, a supply route, the hand-linked chest — is not a guess to be
+        // improved on. Only a nearest-chest guess may be re-aimed en route.
+        this.fixedTarget = targeted != null;
         this.chestPos = targeted != null ? targeted : findChest();
         if (chestPos == null) {
             // No chest here — but maybe we remember one (home base, the depot).
@@ -91,6 +96,7 @@ public class DepositGoal extends Goal {
     public void stop() {
         this.active = false;
         this.chestPos = null;
+        this.fixedTarget = false;
         this.stashStartTick = -1;
         assistant.getNavigation().stop();
     }
@@ -139,12 +145,16 @@ public class DepositGoal extends Goal {
             // across the base to a remembered chest, past an empty one on the
             // way, is a walk nobody needed to make. Only switches for a chest
             // at least twice as close, so it cannot dither between two.
-            if (assistant.tickCount % 20 == 0) {
+            if (!fixedTarget && assistant.tickCount % 20 == 0) {
                 BlockPos nearer = assistant.nextChestWithRoom(chestPos);
                 if (nearer != null && nearer.distSqr(assistant.blockPosition()) * 2.0 < distSq) {
                     chestPos = nearer;
                     bestDistSq = Double.MAX_VALUE;   // fresh walk, fresh watchdog
                     stuckTicks = 0;
+                    // Drop the old path too: without this the bot walks on to
+                    // where it was going while the watchdog measures somewhere
+                    // else entirely.
+                    assistant.getNavigation().stop();
                     assistant.sayRoutine("Chest on the way — banking here instead.");
                     return;
                 }
@@ -209,6 +219,12 @@ public class DepositGoal extends Goal {
         assistant.rememberChest(chestPos, container); // storage memory: learn what's where
         if (moved > 0) {
             assistant.noteStashed();
+            // Work that was never once written down: the career tally (and,
+            // since b101, the whole trade ladder) reads from these.
+            assistant.note(AssistantEntity.Deed.ITEMS_STASHED, moved);
+            if (assistant.stationTask() == AssistantEntity.StationTask.HAUL) {
+                assistant.note(AssistantEntity.Deed.LOADS_HAULED, 1);
+            }
             assistant.sayRoutine("Stashed " + moved + " items.");
             finishQuiet(true);
             return;
@@ -270,13 +286,7 @@ public class DepositGoal extends Goal {
                 : com.jrpetty.mcassistant.entity.ZoneChests.around(
                     assistant.level(), feet, SEARCH_RADIUS, 4)) {
             if (!found.stillThere()) continue;
-            // Never stash into a furnace: it is a Container, so a smelter was
-            // posting its finished ingots straight back into the furnace they
-            // came out of, and its output chest never saw a single item.
-            if (found.blockEntity()
-                    instanceof net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity) {
-                continue;
-            }
+            if (!com.jrpetty.mcassistant.entity.ZoneChests.isStashable(found)) continue;
             double d = found.pos().distSqr(feet);
             if (d < bestDist) {
                 bestDist = d;

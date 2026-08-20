@@ -144,6 +144,7 @@ public class ShearGoal extends Goal {
         }
         sweepWool(target);
         sheared++;
+        assistant.note(AssistantEntity.Deed.ANIMALS_SHEARED, 1);
         assistant.noteAction();   // a shear is a job, not an instant
         target = null;
     }

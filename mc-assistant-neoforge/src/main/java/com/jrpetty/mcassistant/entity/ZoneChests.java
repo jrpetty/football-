@@ -151,4 +151,19 @@ public final class ZoneChests {
         }
         return n;
     }
+
+    /**
+     * Is this container somewhere a LOAD may be put? A furnace, hopper,
+     * dropper, dispenser and brewing stand are all Containers, and stashing
+     * into one jams the machine and swallows the goods — a smelter once
+     * posted its finished ingots straight back into the furnace they came
+     * out of. Every chest picker asks this, so none of them can forget.
+     */
+    public static boolean isStashable(Found found) {
+        BlockEntity be = found.blockEntity();
+        return !(be instanceof net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity)
+            && !(be instanceof net.minecraft.world.level.block.entity.HopperBlockEntity)
+            && !(be instanceof net.minecraft.world.level.block.entity.DispenserBlockEntity)
+            && !(be instanceof net.minecraft.world.level.block.entity.BrewingStandBlockEntity);
+    }
 }

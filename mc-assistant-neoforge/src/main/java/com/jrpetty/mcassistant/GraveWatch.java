@@ -25,6 +25,7 @@ public final class GraveWatch {
         if (event.getSource().getEntity() instanceof AssistantEntity killer
                 && !(event.getEntity() instanceof ServerPlayer)) {
             killer.awardXp(xpFor(event.getEntity()));
+            killer.note(AssistantEntity.Deed.MOBS_KILLED, 1);
         }
 
         if (!(event.getEntity() instanceof ServerPlayer player)) return;

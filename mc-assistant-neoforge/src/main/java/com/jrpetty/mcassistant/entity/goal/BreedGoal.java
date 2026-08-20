@@ -129,6 +129,7 @@ public class BreedGoal extends Goal {
             || first.isInLove() && second.isInLove()) {
             if (first != null && second != null && first.isInLove() && second.isInLove()) {
                 pairsBred++; // that pair is handled
+                assistant.note(AssistantEntity.Deed.ANIMALS_BRED, 1);
             }
             if (!pickPair()) {
                 finish(pairsBred > 0
