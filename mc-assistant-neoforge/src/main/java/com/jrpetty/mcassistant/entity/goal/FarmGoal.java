@@ -392,7 +392,13 @@ public class FarmGoal extends Goal {
             for (int dz = -4; dz <= 4; dz++) {
                 for (int dy = 0; dy <= 1; dy++) {
                     c.set(farm.getX() + dx, farm.getY() + dy, farm.getZ() + dz);
-                    if (assistant.level().getBlockState(c).is(Blocks.WATER)) return true;
+                    // Vanilla's own farmland test is on the FLUID, not the
+                    // block: water held in a waterlogged slab, stair or fence
+                    // keeps farmland wet, and testing for the water BLOCK
+                    // missed every one of them — the farmer refused ground the
+                    // game considers perfectly hydrated.
+                    if (assistant.level().getFluidState(c)
+                            .is(net.minecraft.tags.FluidTags.WATER)) return true;
                 }
             }
         }

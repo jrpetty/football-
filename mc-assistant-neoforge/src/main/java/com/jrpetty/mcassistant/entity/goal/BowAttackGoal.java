@@ -116,6 +116,10 @@ public class BowAttackGoal extends Goal {
                     cb.performShooting(assistant.level(), assistant, InteractionHand.MAIN_HAND,
                         hand, 1.6F, 6.0F, t);
                 }
+                // Belt and braces: a charge that survives its own shot would
+                // fire for ever off one bolt. Clearing a spent one is a no-op.
+                hand.set(net.minecraft.core.component.DataComponents.CHARGED_PROJECTILES,
+                    net.minecraft.world.item.component.ChargedProjectiles.EMPTY);
                 this.attackTimer = 10;
             }
             return;
