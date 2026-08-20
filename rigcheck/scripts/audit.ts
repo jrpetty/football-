@@ -109,7 +109,29 @@ function main() {
     if (g.requirements?.minThreads != null && g.requirements?.minCores != null && g.requirements.minThreads < g.requirements.minCores) {
       fail(`game ${g.id}: minThreads ${g.requirements.minThreads} < minCores ${g.requirements.minCores}`);
     }
-    if (g.upscalingSupport?.includes('dlss') && g.year < 2018) warn(`game ${g.id}: claims DLSS but predates it (${g.year})`);
+    // Upscaling arrives by PATCH, frequently years after launch, so a game's
+    // release year says nothing about whether it supports DLSS — Fortnite
+    // shipped in 2017 and got DLSS in 2021. The rule that used to live here
+    // compared `year` against 2018 and flagged three CORRECT records as
+    // suspect, which is worse than no rule: it trains the reader to ignore the
+    // warning list. What is genuinely checkable is a definitional
+    // contradiction, and there is exactly one.
+    const upscalers: string[] = g.upscalingSupport ?? [];
+    // 'none' is the sentinel for a title with no upscaler, and must be alone:
+    // ['none', 'fsr'] is a contradiction, not a longer list.
+    const KNOWN_UPSCALERS = ['none', 'dlss', 'fsr', 'xess', 'tsr'];
+    for (const u of upscalers) {
+      if (!KNOWN_UPSCALERS.includes(u)) fail(`game ${g.id}: unknown upscaling technology "${u}"`);
+    }
+    if (new Set(upscalers).size !== upscalers.length) fail(`game ${g.id}: duplicate entries in upscalingSupport`);
+    if (upscalers.includes('none') && upscalers.length > 1) {
+      fail(`game ${g.id}: upscalingSupport lists 'none' alongside ${upscalers.filter((u) => u !== 'none').join(', ')}`);
+    }
+    // TSR is an Unreal Engine feature. A non-Unreal title cannot have it, and
+    // claiming it would apply an upscaling gain the game cannot deliver.
+    if (upscalers.includes('tsr') && !/unreal engine/i.test(String(g.engine ?? ''))) {
+      fail(`game ${g.id}: claims TSR but the engine is "${g.engine}". TSR is an Unreal Engine feature.`);
+    }
   }
   for (const r of refsFile.records) {
     const seq = ['1080p', '1440p', '2160p'].map((res) => r.gpuBound?.[res]).filter((v: number) => v != null);

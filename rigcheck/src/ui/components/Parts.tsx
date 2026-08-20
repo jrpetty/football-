@@ -137,6 +137,18 @@ export function PartPicker({
                       onMouseDown={(e) => { e.preventDefault(); pick(h.id); }}
                     >
                       <span className="label">{h.label}</span>
+                      {h.incomplete && (
+                        <span
+                          className={h.estimable ? 'tag' : 'tag bad'}
+                          title={
+                            h.estimable
+                              ? `Missing ${h.incomplete.join(', ')}. Still estimable — the band is just wider than it would be with the full record.`
+                              : `Missing ${h.incomplete.join(', ')}, which is everything the index needs. The engine will refuse to estimate rather than invent a figure.`
+                          }
+                        >
+                          {h.estimable ? 'gap' : 'no data'}
+                        </span>
+                      )}
                       {h.disambiguator && <span className="disambig">{h.disambiguator}</span>}
                     </div>
                   );

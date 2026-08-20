@@ -19,6 +19,8 @@ export function DataExplorer() {
   const [minVram, setMinVram] = useState(0);
   const [needMesh, setNeedMesh] = useState(false);
   const [needRt, setNeedRt] = useState(false);
+  // Find the records that still need data, which is the whole job when filling gaps.
+  const [onlyIncomplete, setOnlyIncomplete] = useState(false);
   // The CPU-side equivalents. Socket and memory type are the two that decide
   // whether an upgrade is a drop-in or a platform rebuild, so they filter here
   // rather than being something to read off row by row.
@@ -46,9 +48,10 @@ export function DataExplorer() {
         (!q || r.g.fullName.toLowerCase().includes(q.toLowerCase())) &&
         (minVram === 0 || (r.g.vramGB ?? 0) >= minVram) &&
         (!needMesh || r.g.caps.meshShaders) &&
-        (!needRt || r.g.caps.rayTracing),
+        (!needRt || r.g.caps.rayTracing) &&
+        (!onlyIncomplete || r.idx.missingFields.length > 0),
     );
-  }, [data, q, sort, minVram, needMesh, needRt]);
+  }, [data, q, sort, minVram, needMesh, needRt, onlyIncomplete]);
 
   const cpuRows = useMemo(() => {
     const rows = [...data.cpus.values()].map((c) => ({
@@ -65,9 +68,10 @@ export function DataExplorer() {
         (minThreads === 0 || r.c.threads >= minThreads) &&
         (!needVcache || !!r.c.vcache) &&
         (!socket || r.c.socket === socket) &&
-        (!memType || r.c.memoryType.includes(memType as (typeof r.c.memoryType)[number])),
+        (!memType || r.c.memoryType.includes(memType as (typeof r.c.memoryType)[number])) &&
+        (!onlyIncomplete || r.idx.missingFields.length > 0),
     );
-  }, [data, q, sort, minThreads, needVcache, socket, memType]);
+  }, [data, q, sort, minThreads, needVcache, socket, memType, onlyIncomplete]);
 
   // Sockets are listed by how many parts use them, so the platforms someone is
   // actually likely to be on come first rather than alphabetical order.
@@ -142,6 +146,13 @@ export function DataExplorer() {
               </div>
               <button className={`toggle${needMesh ? ' on' : ''}`} onClick={() => setNeedMesh(!needMesh)}>mesh shaders</button>
               <button className={`toggle${needRt ? ' on' : ''}`} onClick={() => setNeedRt(!needRt)}>ray tracing</button>
+              <button
+                className={`toggle${onlyIncomplete ? ' on' : ''}`}
+                onClick={() => setOnlyIncomplete(!onlyIncomplete)}
+                title="Records the engine cannot estimate from, because a field it needs is null. This is the working list for filling gaps."
+              >
+                needs data
+              </button>
               <span className="mini">{gpuRows.length} match</span>
             </div>
           </div>
@@ -164,6 +175,19 @@ export function DataExplorer() {
                       {g.fullName}
                       {g.id === ANCHORS.gpuId && <span className="tag" style={{ marginLeft: 6 }}>anchor</span>}
                       {g.formFactor === 'igpu' && <span className="tag" style={{ marginLeft: 6 }}>igpu</span>}
+                      {idx.missingFields.length > 0 && (
+                        <span
+                          className={idx.index.raster > 0 ? 'tag' : 'tag bad'}
+                          style={{ marginLeft: 6 }}
+                          title={
+                            idx.index.raster > 0
+                              ? `Missing ${idx.missingFields.join(', ')}. Still estimable, with a wider band.`
+                              : `Missing ${idx.missingFields.join(', ')}, which is everything the index needs — the engine refuses to estimate this part rather than invent a figure.`
+                          }
+                        >
+                          {idx.index.raster > 0 ? 'gap' : 'no data'}
+                        </span>
+                      )}
                     </td>
                     <td className="sub">{g.architecture}</td>
                     <td className="n" style={{ fontSize: 13 }}>{fmt(idx.index.raster, 1)}</td>
@@ -215,6 +239,13 @@ export function DataExplorer() {
                   <option key={m} value={m}>{m}</option>
                 ))}
               </select>
+              <button
+                className={`toggle${onlyIncomplete ? ' on' : ''}`}
+                onClick={() => setOnlyIncomplete(!onlyIncomplete)}
+                title="Records the engine cannot estimate from, because a field it needs is null. This is the working list for filling gaps."
+              >
+                needs data
+              </button>
               <span className="mini">{cpuRows.length} match</span>
             </div>
           </div>
@@ -236,6 +267,19 @@ export function DataExplorer() {
                       {c.fullName}
                       {c.id === ANCHORS.cpuId && <span className="tag" style={{ marginLeft: 6 }}>anchor</span>}
                       {c.vcache && <span className="tag cpu" style={{ marginLeft: 6 }}>3D</span>}
+                      {idx.missingFields.length > 0 && (
+                        <span
+                          className={idx.index.throughput > 0 ? 'tag' : 'tag bad'}
+                          style={{ marginLeft: 6 }}
+                          title={
+                            idx.index.throughput > 0
+                              ? `Missing ${idx.missingFields.join(', ')}. Still estimable, with a wider band.`
+                              : `Missing ${idx.missingFields.join(', ')}, which is everything the index needs — the engine refuses to estimate this part rather than invent a figure.`
+                          }
+                        >
+                          {idx.index.throughput > 0 ? 'gap' : 'no data'}
+                        </span>
+                      )}
                     </td>
                     <td className="sub">{c.architecture}</td>
                     <td className="n" style={{ fontSize: 13 }}>{fmt(idx.index.throughput, 1)}</td>

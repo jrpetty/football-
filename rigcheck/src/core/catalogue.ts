@@ -51,10 +51,39 @@ export interface SearchHit {
   disambiguator: string;
   vendor: string;
   score: number;
+  /**
+   * Specification fields this record is missing, if any.
+   *
+   * Missing a field is NOT the same as being unusable, and conflating the two
+   * would cry wolf: an Athlon 3000G missing only its boost clock still derives
+   * a throughput index of 52.7 and estimates perfectly well, just with a wider
+   * band. A Core Ultra 9 285 missing BOTH clocks derives zero, and the engine
+   * refuses outright. `estimable` is what separates them.
+   */
+  incomplete?: string[];
+  /**
+   * False when the record's index comes out at zero, which is exactly the test
+   * the engine uses before returning NO_ESTIMATE. The picker says so BEFORE the
+   * part is chosen — discovering it after building a comparison around the part
+   * is a bad surprise.
+   */
+  estimable?: boolean;
 }
 
 function normalise(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+/**
+ * The two gap facts a hit carries. Undefined rather than empty/true, so a
+ * complete record carries no flag at all and rendering can branch on presence.
+ */
+function gapsOf<T extends { missingFields: string[] }>(
+  idx: T,
+  headline: (i: T) => number,
+): { incomplete?: string[]; estimable?: boolean } {
+  if (!idx.missingFields.length) return {};
+  return { incomplete: idx.missingFields, estimable: headline(idx) > 0 };
 }
 
 /**
@@ -91,6 +120,7 @@ export function search(query: string, data: EngineData, limit = 20): SearchHit[]
         label: g.fullName,
         disambiguator: gpuDisambiguator(g),
         score: sc,
+        ...gapsOf(deriveGpuIndex(g, data.anchorGpu, ANCHOR_RAM), (i) => i.index.raster),
       });
     }
   }
@@ -105,6 +135,7 @@ export function search(query: string, data: EngineData, limit = 20): SearchHit[]
         label: c.fullName,
         disambiguator: cpuDisambiguator(c),
         score: sc,
+        ...gapsOf(deriveCpuIndex(c, ANCHOR_RAM, data.anchorCpu, ANCHOR_RAM), (i) => i.index.throughput),
       });
     }
   }
@@ -185,6 +216,7 @@ export function browseParts(kind: 'cpu' | 'gpu', data: EngineData): BrowseGroup[
           label: g.fullName,
           disambiguator: gpuDisambiguator(g),
           score: 0,
+          ...gapsOf(deriveGpuIndex(g, data.anchorGpu, ANCHOR_RAM), (i) => i.index.raster),
           rank: deriveGpuIndex(g, data.anchorGpu, ANCHOR_RAM).index.raster,
         }))
       : [...data.cpus.values()].map((c) => ({
@@ -194,6 +226,7 @@ export function browseParts(kind: 'cpu' | 'gpu', data: EngineData): BrowseGroup[
           label: c.fullName,
           disambiguator: cpuDisambiguator(c),
           score: 0,
+          ...gapsOf(deriveCpuIndex(c, ANCHOR_RAM, data.anchorCpu, ANCHOR_RAM), (i) => i.index.throughput),
           rank: deriveCpuIndex(c, ANCHOR_RAM, data.anchorCpu, ANCHOR_RAM).index.throughput,
         }));
 

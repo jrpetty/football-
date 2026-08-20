@@ -336,10 +336,9 @@
         "2160p": 5
       },
       "upscalingSupport": [
-        "dlss",
         "fsr"
       ],
-      "notes": "Deterministic built-in benchmark, one of the most reliable in the suite. Requirements are the original 2015 published minimums; the 2025 Siege X revision may have raised them.",
+      "notes": "Deterministic built-in benchmark, one of the most reliable in the suite. Requirements are the original 2015 published minimums; the 2025 Siege X revision may have raised them. DLSS was REMOVED from upscalingSupport: FSR is well attested, but DLSS support could not be substantiated to the standard the rest of this catalogue is held to, and asserting an upscaler a title does not have would credit it a frame-rate gain it cannot deliver. Restore it with a source. The practical effect is small either way \u2014 Siege is a CPU-bound esports title long before upscaling matters.",
       "_prov": {
         "id": [
           "model-knowledge"
@@ -563,7 +562,7 @@
         "xess",
         "tsr"
       ],
-      "notes": "Migrated to UE5 with Nanite/Lumen in the DX12 path, but the DX11 Performance mode keeps the hard floor low, so no mesh-shader gate. minVramGB null because the published minimum GPU is an iGPU with shared memory. vramDemandGB is for the Epic/Lumen DX12 preset.",
+      "notes": "Migrated to UE5 with Nanite/Lumen in the DX12 path, but the DX11 Performance mode keeps the hard floor low, so no mesh-shader gate. minVramGB null because the published minimum GPU is an iGPU with shared memory. vramDemandGB is for the Epic/Lumen DX12 preset. All four upscalers arrived by patch \u2014 DLSS in 2021, the rest with later updates \u2014 so the 2017 release year says nothing about upscaling support here.",
       "_prov": {
         "id": [
           "model-knowledge"
@@ -1304,7 +1303,7 @@
         "dlss",
         "fsr"
       ],
-      "notes": "Year is the closed-beta release. Streets of Tarkov is the worst case by a wide margin and is what the VRAM figures target; other maps are 1.5-2GB lighter. System RAM, not VRAM, is the usual limiter (16GB+ in practice).",
+      "notes": "Year is the closed-beta release. Streets of Tarkov is the worst case by a wide margin and is what the VRAM figures target; other maps are 1.5-2GB lighter. System RAM, not VRAM, is the usual limiter (16GB+ in practice). DLSS and FSR were added by patch years after the 2017 closed-beta release; neither shipped with the game.",
       "_prov": {
         "id": [
           "model-knowledge"
