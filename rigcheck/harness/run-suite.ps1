@@ -10,8 +10,8 @@
   to mistype a setting, and settings that drift between games produce rows that
   look comparable and are not.
 
-  This runs the same protocol — same warm-up, same timed capture, same discard of
-  run 1, same median, same spread warning — across a suite defined in
+  This runs the same protocol - same warm-up, same timed capture, same discard of
+  run 1, same median, same spread warning - across a suite defined in
   harness/suites/*.json, holding every setting fixed for the whole session.
 
   It is interruptible. State is written after every game, so closing the window,
@@ -34,7 +34,7 @@
 
 .NOTES
   Requires Administrator (ETW capture) and PresentMon 2.x.
-  UNTESTED ON REAL HARDWARE — see harness/README.md before the first run.
+  UNTESTED ON REAL HARDWARE - see harness/README.md before the first run.
 #>
 
 [CmdletBinding()]
@@ -144,7 +144,7 @@ if ($ListSuites) {
   if ($found.Count -eq 0) { Write-Host '  (none)' -ForegroundColor Yellow }
   foreach ($f in $found) {
     try {
-      $d = Get-Content -Raw -LiteralPath $f.FullName | ConvertFrom-Json
+      $d = Get-Content -Raw -Encoding UTF8 -LiteralPath $f.FullName | ConvertFrom-Json
       Write-Host ("  {0,-16} {1} game(s)  {2}" -f $d.id, @($d.games).Count, $d.name)
     } catch {
       Write-Host ("  {0,-16} UNREADABLE: {1}" -f $f.BaseName, $_.Exception.Message) -ForegroundColor Red
@@ -167,7 +167,7 @@ function Resolve-SuitePath {
 
 $suitePath = Resolve-SuitePath -Name $Suite
 try {
-  $def = Get-Content -Raw -LiteralPath $suitePath | ConvertFrom-Json
+  $def = Get-Content -Raw -Encoding UTF8 -LiteralPath $suitePath | ConvertFrom-Json
 } catch {
   throw "Suite $suitePath is not valid JSON: $($_.Exception.Message)"
 }
@@ -226,7 +226,7 @@ $ramCl = $null
 # and its values have had a human look at them.
 if ($HardwareJson) {
   if (-not (Test-Path -LiteralPath $HardwareJson)) { throw "Hardware file not found: $HardwareJson" }
-  $hwFile = Get-Content -Raw -LiteralPath $HardwareJson | ConvertFrom-Json
+  $hwFile = Get-Content -Raw -Encoding UTF8 -LiteralPath $HardwareJson | ConvertFrom-Json
   Write-Host "  Hardware    $HardwareJson (overrides live detection)" -ForegroundColor DarkCyan
 
   $mem = Get-OrDefault -Object $hwFile -Name 'memory'
@@ -293,7 +293,7 @@ if ($Fresh) {
 
 $gameState = @{}
 if (Test-Path -LiteralPath $statePath) {
-  $prior = Get-Content -Raw -LiteralPath $statePath | ConvertFrom-Json
+  $prior = Get-Content -Raw -Encoding UTF8 -LiteralPath $statePath | ConvertFrom-Json
 
   $priorSuite = [string](Get-OrDefault -Object $prior -Name 'suiteId' -Default '')
   $priorRes = [string](Get-OrDefault -Object $prior -Name 'resolution' -Default '')
@@ -580,9 +580,16 @@ foreach ($game in $queue) {
         -Storage $hw.Storage -GameBuild $GameBuild -DriverVersion $hw.DriverVersion `
         -Api $gApi -SourceNote $note
 
+      # Replace, never duplicate: a re-measured fixture must not leave the
+      # superseded row behind for the importer to average back in.
+      $replaced = Remove-CsvRowsForGame -Path $suiteCsv -GameId $gid -Resolution $Resolution -Preset $gPreset
       Add-CsvRow -Path $suiteCsv -Row $row
       Set-GameState -Id $gid -Status 'captured' -Summary $sum
-      Write-Host "   Appended to $(Split-Path -Leaf $suiteCsv)" -ForegroundColor DarkGreen
+      if ($replaced -gt 0) {
+        Write-Host "   Replaced $replaced superseded row(s) in $(Split-Path -Leaf $suiteCsv)" -ForegroundColor DarkGreen
+      } else {
+        Write-Host "   Appended to $(Split-Path -Leaf $suiteCsv)" -ForegroundColor DarkGreen
+      }
       $captured = $true
     } catch {
       $msg = $_.Exception.Message
@@ -654,8 +661,8 @@ if ($flagged.Count -gt 0) {
   Write-Host '  A high spread means the machine was not quiet, or the scene was not identical' -ForegroundColor Yellow
   Write-Host '  between runs. Those rows are not trustworthy. Close background load and redo:' -ForegroundColor Yellow
   Write-Host ("    .\run-suite.ps1 -Suite $suiteId -Only $($flagged -join ',')") -ForegroundColor Yellow
-  Write-Host '  (-Only re-runs in place and appends a corrected row; delete the bad row from' -ForegroundColor Yellow
-  Write-Host '   the CSV by hand before importing, or the old figure is imported too.)' -ForegroundColor Yellow
+  Write-Host '  (-Only re-measures in place and REPLACES the row, so there is nothing to' -ForegroundColor Yellow
+  Write-Host '   tidy up by hand afterwards.)' -ForegroundColor Yellow
 }
 
 $pending = @($summary | Where-Object { $_.status -eq 'not run' -or $_.status -eq 'pending' -or $_.status -eq 'failed' })

@@ -10,7 +10,7 @@
 
   The run protocol is fixed deliberately. Without a fixed warm-up, a fixed
   scene and repeated runs, human-played sessions vary so much that the data is
-  noise — and noisy fixtures are worse than no fixtures, because they look like
+  noise - and noisy fixtures are worse than no fixtures, because they look like
   signal to the calibrator.
 
 .NOTES
@@ -107,7 +107,7 @@ function Get-FrameStats {
   if (-not $col) { throw "No frametime column found in $CsvPath. Columns: $($rows[0].PSObject.Properties.Name -join ', ')" }
 
   $ft = $rows | ForEach-Object { [double]$_.$col } | Where-Object { $_ -gt 0 }
-  if ($ft.Count -lt 100) { throw "Only $($ft.Count) frames captured — too few to be meaningful." }
+  if ($ft.Count -lt 100) { throw "Only $($ft.Count) frames captured - too few to be meaningful." }
 
   $sorted = $ft | Sort-Object -Descending    # descending frametime = ascending FPS
   $avg = 1000.0 / (($ft | Measure-Object -Average).Average)
@@ -181,7 +181,7 @@ $spread = if ($usable.Count -gt 1) {
   [math]::Round((($mx - $mn) / $avgFps) * 100, 1)
 } else { 0 }
 if ($spread -gt 5) {
-  Write-Warning "Run-to-run spread is $spread%. That is high — check for background load before trusting this row."
+  Write-Warning "Run-to-run spread is $spread%. That is high - check for background load before trusting this row."
 }
 
 $outCsv = Join-Path $OutputDir "rigcheck_$(Get-Date -Format yyyyMMdd_HHmmss).csv"

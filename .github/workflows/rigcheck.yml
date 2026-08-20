@@ -38,6 +38,11 @@ jobs:
         # rejections are reported rather than silently dropped.
         run: npm run import:manual
 
+      - name: Parse cached sources
+        # Alias/identity parsing plus any cached specification pages. Pure
+        # functions over the cache — no network — so it is safe in CI.
+        run: npm run parse
+
       - name: Data audit
         # Cross-record consistency, catalogue/fixture coherence, and a full
         # engine sweep proving every part yields a finite estimate or an honest

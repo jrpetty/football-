@@ -126,7 +126,8 @@ export function tokenise(name: string): string[] {
     .filter(Boolean);
 }
 
-function main() {
+/** Exported so `scripts/parse.ts` can run this step; still self-runs when invoked directly. */
+export function main() {
   mkdirSync(OUT, { recursive: true });
   const pciPath = join(RAW, 'pci-ids.raw');
   if (!existsSync(pciPath)) {

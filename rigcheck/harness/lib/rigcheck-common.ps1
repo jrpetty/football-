@@ -6,7 +6,7 @@
   Dot-sourced by run-benchmark.ps1 (single game) and run-suite.ps1 (whole suite).
   It exists so there is exactly ONE implementation of the protocol. Two copies
   would drift, and two slightly different protocols produce rows that look
-  comparable and are not — the precise failure mode this project exists to avoid.
+  comparable and are not - the precise failure mode this project exists to avoid.
 
   Nothing in this file executes on load: it defines functions only, so it is safe
   to dot-source from anywhere.
@@ -154,7 +154,7 @@ function Get-StorageClass {
 
   $pd = Get-PhysicalDiskForPath -Path $Path
   if (-not $pd) {
-    $out.Note = "Could not resolve a physical disk for '$Path'. Defaulted to sata-ssd — set it by hand if that is wrong."
+    $out.Note = "Could not resolve a physical disk for '$Path'. Defaulted to sata-ssd - set it by hand if that is wrong."
     return $out
   }
 
@@ -182,7 +182,7 @@ function Get-StorageClass {
     } else {
       $out.Class = 'nvme-gen3'
       $out.BestEffort = $true
-      $out.Note = 'NVMe, but PCIe link speed could not be read. Assumed gen3 — check the drive and set nvme-gen4 by hand if it is a gen4 part.'
+      $out.Note = 'NVMe, but PCIe link speed could not be read. Assumed gen3 - check the drive and set nvme-gen4 by hand if it is a gen4 part.'
     }
     return $out
   }
@@ -343,7 +343,7 @@ function Get-FrameStats {
     Two column vocabularies exist. PresentMon 1.x (and 2.x run with
     --v1_metrics) emits MsBetweenPresents; PresentMon 2.x by default emits
     FrameTime. Both are milliseconds between the start of consecutive frames, so
-    either is usable — but only if the script recognises them, and a script that
+    either is usable - but only if the script recognises them, and a script that
     knows only the 1.x names dies on a stock 2.x capture.
   #>
   param([Parameter(Mandatory = $true)][string]$CsvPath)
@@ -383,7 +383,7 @@ function Get-FrameStats {
   }
 
   $ft = @($selected | ForEach-Object { [double]$_.$col } | Where-Object { $_ -gt 0 })
-  if ($ft.Count -lt 100) { throw "Only $($ft.Count) frames captured — too few to be meaningful." }
+  if ($ft.Count -lt 100) { throw "Only $($ft.Count) frames captured - too few to be meaningful." }
 
   $sorted = @($ft | Sort-Object -Descending)    # descending frametime = ascending FPS
   $avg = 1000.0 / (($ft | Measure-Object -Average).Average)
@@ -602,7 +602,7 @@ function Add-CsvRow {
        naive parsers and diffs do not, so UTF-8 without BOM is written explicitly
        rather than relied on by luck.
     2. Header safety. Appending to a file whose header does not match the row
-       being written would produce a CSV where columns and values disagree — data
+       being written would produce a CSV where columns and values disagree - data
        that looks valid and is not. That is checked here and refused.
   #>
   param(
@@ -614,7 +614,7 @@ function Add-CsvRow {
   $enc = New-Object System.Text.UTF8Encoding($false)
 
   if (Test-Path -LiteralPath $Path) {
-    $existingHeader = @(Get-Content -LiteralPath $Path -TotalCount 1)
+    $existingHeader = @(Get-Content -LiteralPath $Path -TotalCount 1 -Encoding UTF8)
     if ($existingHeader.Count -gt 0 -and $existingHeader[0] -ne $lines[0]) {
       throw "Refusing to append to $Path : its header does not match the row being written.`n  file: $($existingHeader[0])`n  row : $($lines[0])"
     }
@@ -626,6 +626,47 @@ function Add-CsvRow {
     $body = ($lines -join "`r`n") + "`r`n"
     [System.IO.File]::WriteAllText($Path, $body, $enc)
   }
+}
+
+function Remove-CsvRowsForGame {
+  <#
+    Drop any existing row for this exact fixture (game + resolution + preset)
+    before writing a replacement.
+
+    Re-measuring a game and APPENDING would leave two rows for one fixture, and
+    the importer has no way to know the first was the bad one - it would ingest
+    both and average a discarded result back into the model. Silent duplication
+    is worse than a loud failure, so the replacement is done here rather than
+    left as an instruction the operator may not follow.
+
+    Returns the number of rows removed.
+  #>
+  param(
+    [Parameter(Mandatory = $true)][string]$Path,
+    [Parameter(Mandatory = $true)][string]$GameId,
+    [Parameter(Mandatory = $true)][string]$Resolution,
+    [Parameter(Mandatory = $true)][string]$Preset
+  )
+
+  if (-not (Test-Path -LiteralPath $Path)) { return 0 }
+  $rows = @(Import-Csv -Path $Path)
+  if ($rows.Count -eq 0) { return 0 }
+
+  $keep = @($rows | Where-Object {
+      -not ("$($_.game_id)" -eq $GameId -and "$($_.resolution)" -eq $Resolution -and "$($_.preset)" -eq $Preset)
+    })
+  $removed = $rows.Count - $keep.Count
+  if ($removed -le 0) { return 0 }
+
+  $enc = New-Object System.Text.UTF8Encoding($false)
+  if ($keep.Count -eq 0) {
+    # No rows left: remove the file so the next append writes a fresh header.
+    Remove-Item -LiteralPath $Path -Force
+  } else {
+    $lines = @($keep | ConvertTo-Csv -NoTypeInformation)
+    [System.IO.File]::WriteAllText($Path, (($lines -join "`r`n") + "`r`n"), $enc)
+  }
+  return $removed
 }
 
 function Write-JsonAtomic {

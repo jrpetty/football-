@@ -15,7 +15,7 @@
     "rtTier": "off"
   },
   "notes": [
-    "The defaults are a NATIVE, NO-RT, NO-FRAME-GEN baseline. That is deliberate: it is the only pass that is comparable across every vendor and generation. Upscaled and RT passes are separate sessions, not a mixed run — the importer refuses to form a comparison edge across those axes anyway.",
+    "The defaults are a NATIVE, NO-RT, NO-FRAME-GEN baseline. That is deliberate: it is the only pass that is comparable across every vendor and generation. Upscaled and RT passes are separate sessions, not a mixed run - the importer refuses to form a comparison edge across those axes anyway.",
     "processName values are what PresentMon filters on. Verify each against Task Manager > Details on first run; the runner warns before capture when the named process is not running. A wrong name fails loudly (no frames captured), it does not corrupt a row.",
     "Games without a built-in benchmark need a fixed, repeatable route. WRITE THE ROUTE DOWN and reuse it verbatim on every machine, or the numbers are not comparable between rigs."
   ],
@@ -27,7 +27,7 @@
       "processName": "cs2.exe",
       "api": "dx11",
       "builtInBenchmark": false,
-      "scene": "No official benchmark ships. Use a saved demo played back from a fixed tick (console: playdemo <name>, then let it run untouched — do not move the free camera), or the community FPS Benchmark workshop map. Whichever you pick, use the SAME one on every machine.",
+      "scene": "No official benchmark ships. Use a saved demo played back from a fixed tick (console: playdemo <name>, then let it run untouched - do not move the free camera), or the community FPS Benchmark workshop map. Whichever you pick, use the SAME one on every machine.",
       "caution": "Demo playback is not deterministic across game builds. Record the build in -GameBuild so a patch does not silently invalidate the comparison."
     },
     {
@@ -58,7 +58,7 @@
       "api": "dx12",
       "builtInBenchmark": false,
       "scene": "No benchmark mode. Use a saved replay with the camera locked to one player, or a fixed Creative island route. DX12 with Nanite/Lumen is the reference path; the DX11 Performance mode is a different renderer and must not be mixed into the same fixture set.",
-      "caution": "Record which renderer (DX12 Lumen vs DX11 Performance) you used — they differ by multiples, not percentages."
+      "caution": "Record which renderer (DX12 Lumen vs DX11 Performance) you used - they differ by multiples, not percentages."
     },
     {
       "id": "factorio",
@@ -89,7 +89,7 @@
       "api": "dx12",
       "builtInBenchmark": true,
       "scene": "Settings > Video > Run Benchmark. It loops, so let it reach a steady loop before confirming here.",
-      "notes": "One of the best-behaved fixtures in the suite: deterministic and very consistent frame pacing. If THIS one shows a high spread, the machine has background load — fix that before trusting anything else in the session."
+      "notes": "One of the best-behaved fixtures in the suite: deterministic and very consistent frame pacing. If THIS one shows a high spread, the machine has background load - fix that before trusting anything else in the session."
     },
     {
       "id": "shadow-of-the-tomb-raider",
@@ -99,7 +99,7 @@
       "api": "dx12",
       "builtInBenchmark": true,
       "scene": "Graphics > Run Benchmark. Confirm here when the first scene starts.",
-      "notes": "This benchmark reports CPU-bound and GPU-bound frame rates SEPARATELY on its results screen. Those two numbers are unusually valuable for fitting the CPU/GPU split — copy them into the source note by hand. RT shadows stay OFF for the raster reference row."
+      "notes": "This benchmark reports CPU-bound and GPU-bound frame rates SEPARATELY on its results screen. Those two numbers are unusually valuable for fitting the CPU/GPU split - copy them into the source note by hand. RT shadows stay OFF for the raster reference row."
     },
     {
       "id": "cyberpunk-2077",
@@ -109,7 +109,7 @@
       "api": "dx12",
       "builtInBenchmark": true,
       "scene": "Settings > Graphics > Run Benchmark. Confirm here once the flythrough begins.",
-      "caution": "RT off for this baseline pass. Cyberpunk's RT and path-tracing modes are enormously heavier loads and belong in a separate session with rtTier set accordingly — never merged into the raster rows."
+      "caution": "RT off for this baseline pass. Cyberpunk's RT and path-tracing modes are enormously heavier loads and belong in a separate session with rtTier set accordingly - never merged into the raster rows."
     },
     {
       "id": "black-myth-wukong",
@@ -118,8 +118,8 @@
       "processName": "b1-Win64-Shipping.exe",
       "api": "dx12",
       "builtInBenchmark": true,
-      "scene": "The standalone benchmark tool released separately from the game is the cleanest fixture here — run that if you have it. Otherwise use a fixed route in the opening area.",
-      "caution": "The standalone benchmark tool is a DIFFERENT executable from the game. If you use it, set processName to whatever Task Manager shows for it, and record which one you used — the tool and the retail game are not necessarily the same workload."
+      "scene": "The standalone benchmark tool released separately from the game is the cleanest fixture here - run that if you have it. Otherwise use a fixed route in the opening area.",
+      "caution": "The standalone benchmark tool is a DIFFERENT executable from the game. If you use it, set processName to whatever Task Manager shows for it, and record which one you used - the tool and the retail game are not necessarily the same workload."
     },
     {
       "id": "alan-wake-2",
@@ -129,7 +129,7 @@
       "api": "dx12",
       "builtInBenchmark": false,
       "scene": "No benchmark mode. Use a fixed outdoor route (the forest around Cauldron Lake is the usual choice: heavy foliage, worst case for this renderer). Walk the same 60 s route every time, starting from the same save.",
-      "caution": "This is the mesh-shader gate title. On Pascal, Maxwell, GCN or RDNA 1 it will not launch at all — that is the expected WILL_NOT_RUN result, not a harness failure. Skip it on those cards; do not record a zero."
+      "caution": "This is the mesh-shader gate title. On Pascal, Maxwell, GCN or RDNA 1 it will not launch at all - that is the expected WILL_NOT_RUN result, not a harness failure. Skip it on those cards; do not record a zero."
     },
     {
       "id": "hogwarts-legacy",
@@ -139,7 +139,7 @@
       "api": "dx12",
       "builtInBenchmark": false,
       "scene": "No benchmark mode. Hogsmeade is both the VRAM and the CPU worst case and is the only location worth using: stand at a fixed spot on the high street and walk a fixed 60 s loop from the same save.",
-      "caution": "1440p Ultra exceeds 8GB here. On an 8GB card expect texture streaming stutter that shows up in the 1% low, not the average — which is the point of measuring it. Do not 'fix' a high spread by lowering settings; record it."
+      "caution": "1440p Ultra exceeds 8GB here. On an 8GB card expect texture streaming stutter that shows up in the 1% low, not the average - which is the point of measuring it. Do not 'fix' a high spread by lowering settings; record it."
     }
   ]
 }

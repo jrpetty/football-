@@ -26,6 +26,7 @@ import {
   parsePcieInterface,
   parseSpecPage,
   parseTflops,
+  rowToGpu,
   slugify,
   splitVariant,
   unwrapMediaWiki,
@@ -544,7 +545,6 @@ describe('never fabricate', () => {
     const row = { Model: 'N/A', TDP: '180 W' };
     const cols = { name: 0, tdpW: 1 };
     expect(cellOf(row, cols, 'tdpW')).toBe('180 W');
-    const { rowToGpu } = require('../src/parse/spec-mapper.ts');
     expect(rowToGpu(row, cols, { vendor: 'nvidia' })).toBeNull();
   });
 
