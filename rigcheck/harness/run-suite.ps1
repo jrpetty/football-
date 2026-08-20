@@ -367,9 +367,37 @@ function Set-GameState {
 
 # --- Work list --------------------------------------------------------------
 
+function Expand-IdList {
+  <#
+    Accept -Only a,b (a real array from a PowerShell prompt) and -Only "a,b"
+    (one string, which is what pwsh -File and a pasted command line produce).
+    Getting this wrong silently runs nothing, so handle both.
+  #>
+  param([string[]]$Values)
+  $out = New-Object System.Collections.ArrayList
+  foreach ($v in @($Values)) {
+    if ($null -eq $v) { continue }
+    foreach ($part in ("$v" -split '[,;]')) {
+      $p = $part.Trim()
+      if ($p) { [void]$out.Add($p) }
+    }
+  }
+  return @($out.ToArray())
+}
+
+$Only = Expand-IdList -Values $Only
+$Skip = Expand-IdList -Values $Skip
+
+$knownIds = @($suiteGames | ForEach-Object { [string]$_.id })
+foreach ($id in (@($Only) + @($Skip))) {
+  if ($knownIds -notcontains $id) {
+    throw "'$id' is not a game in suite '$suiteId'. Suite contains: $($knownIds -join ', ')"
+  }
+}
+
 $queue = @($suiteGames)
-if ($Only.Count -gt 0) { $queue = @($queue | Where-Object { $Only -contains $_.id }) }
-if ($Skip.Count -gt 0) { $queue = @($queue | Where-Object { $Skip -notcontains $_.id }) }
+if ($Only.Count -gt 0) { $queue = @($queue | Where-Object { $Only -contains [string]$_.id }) }
+if ($Skip.Count -gt 0) { $queue = @($queue | Where-Object { $Skip -notcontains [string]$_.id }) }
 if ($queue.Count -eq 0) { throw "Nothing to run: -Only/-Skip filtered every game out of suite '$suiteId'." }
 
 function Get-GameSetting {
@@ -594,15 +622,16 @@ foreach ($g in $suiteGames) {
     $status = "$($st.status)"
     if ($status -eq 'captured') {
       $capturedCount++
-      $avg = $st.avgFps
-      $low1 = $st.low1Pct
-      $spread = "$($st.spreadPct)%"
+      $avg = ('{0:N1}' -f [double]$st.avgFps)
+      $low1 = ('{0:N1}' -f [double]$st.low1Pct)
+      $spread = ('{0:N1}%' -f [double]$st.spreadPct)
       if ([double]$st.spreadPct -gt $SpreadWarnPercent) {
         $flag = "SPREAD >$SpreadWarnPercent%"
         $flagged += $g.id
       }
     } elseif ($status -eq 'skipped' -or $status -eq 'failed') {
       $flag = "$($st.reason)"
+      if ($flag.Length -gt 58) { $flag = $flag.Substring(0, 55) + '...' }
     }
   }
   $summary += [pscustomobject]([ordered]@{

@@ -119,12 +119,12 @@ pooling 159 out-of-fold rows is what made the numbers stable enough to gate on.
 
 | Metric | CV (out-of-fold) | Gate |
 |---|---:|---|
-| median APE (weighted) | 13.6% | < 15% |
-| p90 APE (weighted) | 35.6% | < 45% advisory tier¹ |
-| mean APE | 17.0% | < 20% (the spec's original gate) |
-| Spearman ρ | 0.931 | ≥ 0.90 |
+| median APE (weighted) | 12.6% | < 15% |
+| p90 APE (weighted) | 29.6% | < 45% advisory tier¹ |
+| mean APE | 15.8% | < 20% (the spec's original gate) |
+| Spearman ρ | 0.947 | ≥ 0.90 |
 | delta sign accuracy | 100% (5 decided, 5 abstained²) | ≥ 95% |
-| actuals within 1σ band | 69.2% | ~68% target |
+| actuals within 1σ band | 67.9% | ~68% target |
 
 ¹ The tail gate is two-tier: 45% while the fixture corpus is recalled, arming to
 the strict 30% automatically once measured fixtures outnumber recalled ones. The

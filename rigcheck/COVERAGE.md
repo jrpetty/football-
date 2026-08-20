@@ -1,6 +1,6 @@
 # RIGCHECK coverage report
 
-Generated 2026-08-18T18:09:37.996Z.
+Generated 2026-08-20T10:18:32.814Z.
 
 ## Catalogue against spec targets
 
@@ -142,12 +142,12 @@ each fold from the pristine seed, and metrics pool the out-of-fold predictions.
 
 | Metric | CV (out-of-fold) | Gate |
 |---|---:|---|
-| median APE (weighted) | 13.6% | < 15% |
-| p90 APE (weighted) | 35.6% | < 45% advisory tier; 30% arms with measured data |
-| mean APE | 17.0% | < 20% (the spec's original gate) |
-| Spearman rho | 0.931 | >= 0.90 |
+| median APE (weighted) | 12.6% | < 15% |
+| p90 APE (weighted) | 29.6% | < 45% advisory tier; 30% arms with measured data |
+| mean APE | 15.8% | < 20% (the spec's original gate) |
+| Spearman rho | 0.947 | >= 0.90 |
 | delta sign accuracy | 100.0% (5 decided, 5 within-noise abstentions) | >= 95% |
-| actuals within 1-sigma band | 69.2% | ~68% target |
+| actuals within 1-sigma band | 67.9% | ~68% target |
 
 ### The fixture set is recalled, not measured
 

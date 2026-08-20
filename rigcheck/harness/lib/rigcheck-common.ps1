@@ -523,7 +523,10 @@ function Invoke-CaptureRuns {
     [void]$results.Add($stats)
   }
 
-  return , @($results.ToArray())
+  # Return the runs unrolled and let the caller re-collect with @(). Returning
+  # ,$array here as well would double-wrap, and the caller would then median an
+  # array-of-arrays instead of the runs.
+  return $results.ToArray()
 }
 
 # --- Output -----------------------------------------------------------------

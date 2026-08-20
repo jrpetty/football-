@@ -22,5 +22,17 @@
     "signAccuracy": 1,
     "withinBand": 0.679,
     "pass": true
+  },
+  {
+    "at": "2026-08-20T10:18:34.015Z",
+    "fixtures": 161,
+    "measuredShare": 0,
+    "medianAPE": 0.1262,
+    "p90APE": 0.2959,
+    "meanAPE": 0.158,
+    "spearman": 0.9474,
+    "signAccuracy": 1,
+    "withinBand": 0.679,
+    "pass": true
   }
 ]

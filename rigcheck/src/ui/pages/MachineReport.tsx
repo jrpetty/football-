@@ -5,6 +5,9 @@ import { useApp } from '../store.ts';
 import { estimate } from '../../core/engine.ts';
 import { machineReport, bottleneckMap, sensitivity } from '../../core/analysis.ts';
 import { RESOLUTIONS } from '../../core/types.ts';
+import { checkFit, matchMonitors, type CaseRecord, type MonitorRecord } from '../../core/fit.ts';
+import casesJson from '../../../data/catalogue/cases.json';
+import monitorsJson from '../../../data/catalogue/monitors.json';
 import type { Resolution } from '../../core/types.ts';
 
 const AIRFLOW = ['restricted', 'moderate', 'good', 'excellent'] as const;
@@ -25,6 +28,18 @@ export function MachineReport() {
   const [hours, setHours] = useState(15);
   const [sensGame, setSensGame] = useState(games[0] ?? 'cyberpunk-2077');
 
+  const cases = (casesJson as { records: CaseRecord[] }).records;
+  const monitors = (monitorsJson as { records: MonitorRecord[] }).records;
+  const [caseId, setCaseId] = useState(cases[0]?.id ?? '');
+  const pcCase = cases.find((c) => c.id === caseId);
+
+  const fit = useMemo(() => {
+    const gpu = data.gpus.get(build.gpuId);
+    const cpu = data.cpus.get(build.cpuId);
+    return gpu && cpu && pcCase ? checkFit(build, gpu, cpu, pcCase) : [];
+  }, [build, data, pcCase]);
+
+
   const probe = useMemo(
     () => estimate(build, games[0] ?? 'cyberpunk-2077', res, data, { airflowTier: airflow }),
     [build, games, res, data, airflow],
@@ -39,6 +54,12 @@ export function MachineReport() {
         cpuBound: probe.limiter === 'cpu',
       }),
     [build, data, probe, panel, airflow],
+  );
+
+  // Declared after `probe`, which it reads.
+  const monitorMatches = useMemo(
+    () => (probe.avgFps ? matchMonitors(probe.avgFps, monitors, res).slice(0, 6) : []),
+    [probe.avgFps, monitors, res],
   );
 
   const bottleneck = useMemo(() => bottleneckMap(build, games, data), [build, games, data]);
@@ -177,6 +198,63 @@ export function MachineReport() {
                 <div className="note" style={{ marginTop: 8 }}>{noise.terms[0].explain}</div>
                 {latency?.terms.map((t, i) => (
                   <div className="note" key={i} style={{ marginTop: 8 }}>{t.explain}</div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid two">
+            <div className="panel">
+              <div className="panel-head">
+                <span>will it fit</span>
+                <span className="spacer" />
+                <select value={caseId} onChange={(e) => setCaseId(e.target.value)} style={{ width: 200 }}>
+                  {cases.map((c) => <option key={c.id} value={c.id}>{c.fullName}</option>)}
+                </select>
+              </div>
+              <div className="panel-body">
+                {fit.length === 0 && <div className="mini">Pick a case to check clearances.</div>}
+                {fit.map((f) => (
+                  <div key={f.aspect} style={{ marginBottom: 8 }}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <span className={`pill ${f.verdict === 'fits' ? 'ok' : f.verdict === 'tight' ? 'watch' : f.verdict === 'unknown' ? '' : 'critical'}`}>
+                        {f.verdict}
+                      </span>
+                      <span style={{ fontSize: 12 }}>{f.aspect}</span>
+                    </div>
+                    <div className="mini" style={{ marginTop: 2 }}>{f.detail}</div>
+                  </div>
+                ))}
+                {pcCase && (
+                  <div className="note" style={{ marginTop: 8 }}>
+                    {pcCase.airflowTier} airflow, {pcCase.noiseTier} acoustics
+                    {pcCase.notes ? ` — ${pcCase.notes}` : ''}. Set the airflow control above to match if you want the
+                    thermal figures to reflect this case.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="panel">
+              <div className="panel-head">display matching at {res}</div>
+              <div className="panel-body">
+                {monitorMatches.length === 0 && <div className="mini">No estimate available to match against.</div>}
+                {monitorMatches.map((m) => (
+                  <div key={m.monitor.id} style={{ marginBottom: 9, paddingBottom: 9, borderBottom: '1px solid var(--line)' }}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <span className="meter" style={{ width: 48 }}>
+                        <i
+                          style={{
+                            width: `${Math.min(100, m.refreshUtilisation * 100)}%`,
+                            background: m.verdict === 'well matched' || m.verdict === 'good' ? 'var(--measured)' : 'var(--spec)',
+                          }}
+                        />
+                      </span>
+                      <span style={{ fontSize: 12 }}>{m.monitor.fullName}</span>
+                      <span className="mini">{m.monitor.refreshHz}Hz {m.monitor.panelType}</span>
+                    </div>
+                    <div className="mini" style={{ marginTop: 2 }}>{m.detail}</div>
+                  </div>
                 ))}
               </div>
             </div>
