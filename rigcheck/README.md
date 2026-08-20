@@ -62,8 +62,9 @@ false pass. `COVERAGE.md` states every count, gap and reason.
 ```
 src/core/       types · constants · gates · indices · engine · queries · analysis
                 physics (power/thermal/noise/latency) · detect · fit · catalogue
+                evidence (source-quality ladder, shared by the gate and the UI)
 src/parse/      rowspan-aware table parser · spec-table → record mapper (fixture-tested)
-src/ui/         React app: 8 screens, dense dark instrument styling
+src/ui/         React app: 9 screens, dense dark instrument styling
 scripts/        harvest → parse → reconcile → import-manual → calibrate → validate → coverage
 harness/        PresentMon benchmark runner, emits straight into data/manual/
 data/           catalogue · aliases · fixtures · pricing · manual · calibration
@@ -179,7 +180,8 @@ promotes itself from advisory to enforcing, and `npm run calibrate` will write.
 ## Screens
 
 **Build Analyser** → **Comparison Matrix** (n-way) → **Upgrade Advisor** (Pareto
-frontier + knee) → **Inventory Optimiser** → **Data Explorer**.
+frontier + knee) → **Inventory Optimiser** → **Machine Report** → **Trade Desk** →
+**Identify** → **Data Explorer** → **Model Health**.
 
 Every number opens a panel showing each model term, its value, its confidence and
 its source. The Upgrade Advisor plots the price/performance Pareto frontier rather
@@ -187,3 +189,12 @@ than connecting every point — two cards at the same price with different
 performance are not a step along a curve — marks dominated parts hollow, and calls
 out saturation, which is usually the real finding: if the top of the curve is flat
 within the model's uncertainty, the *other* component is the wall.
+
+**Model Health** is the screen that argues against the rest of them. It shows how
+much of the gate's weight is a measurement versus a recollection, how many harness
+rows would arm the strict tail gate, accuracy drift across recorded validation
+runs with the thresholds drawn on, and where coverage is thinnest — including the
+values the tool offers but has never validated at all. Today that is 3440x1440
+(zero fixtures) and 29 of the 50 catalogue games. It reads its numbers from
+`src/core/evidence.ts`, the same module the gate uses, so it cannot quote a
+weighting the gate disagrees with.
