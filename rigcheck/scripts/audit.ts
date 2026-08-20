@@ -8,7 +8,7 @@
  * Hard failures are things that would corrupt an answer. Warnings are gaps or
  * oddities that degrade confidence but are visibly handled (nulls widen bands).
  */
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildEngineData, ANCHOR_RAM, search } from '../src/core/catalogue.ts';
 import { estimate } from '../src/core/engine.ts';
@@ -153,6 +153,169 @@ function main() {
     if (cpu && f.ram?.type && !cpu.memoryType.includes(f.ram.type)) {
       fail(`fixture ${f.id}: ${f.cpuId} (${cpu.socket}) cannot take ${f.ram.type}`);
     }
+  }
+
+
+  // ------------------------------------------------------- physical sanity --
+  //
+  // These check specifications against physics rather than against each other.
+  // A record can be perfectly self-consistent and still describe a card that
+  // could not be manufactured, and the three checks below are the ones that
+  // catch it: a memory system's bandwidth is fixed by its bus width and the
+  // data rate its chips run at, a frame buffer has to be built out of chips
+  // that exist, and a hybrid CPU's thread count follows from its core layout.
+  //
+  // Every one of these fired on first run and every one was WRONG — the ranges
+  // assumed modern parts and the catalogue reaches back to 2010. The bounds
+  // below are the corrected ones, and they are wide on purpose: the job is to
+  // catch the impossible, not to second-guess the unusual.
+
+  // Per-pin data rates each memory technology actually shipped at, across its
+  // whole life. Early GDDR5 ran at 3.2 Gbps on Fermi; late GDDR6 reaches 20 on
+  // RDNA 4. A single narrow "typical" figure would flag a third of the
+  // catalogue as broken.
+  const MEM_RATE_GBPS: Record<string, [number, number]> = {
+    GDDR3: [1.6, 2.5], GDDR5: [3.0, 8.2], GDDR5X: [10.0, 11.5],
+    GDDR6: [12.0, 20.5], GDDR6X: [19.0, 24.0], GDDR7: [26.0, 32.5],
+    HBM: [0.8, 1.2], HBM2: [1.6, 2.5], HBM2E: [2.4, 3.6],
+    DDR3: [1.2, 2.2], DDR4: [1.8, 3.4], LPDDR5: [5.5, 8.5],
+  };
+  // GDDR chip densities per 32-bit channel: 1Gbit through 16Gbit. Clamshell
+  // puts two chips on a channel and doubles any of them.
+  const CHIP_MB = [128, 256, 512, 1024, 2048];
+  const VALID_PER_CHANNEL_MB = new Set([...CHIP_MB, ...CHIP_MB.map((d) => d * 2)]);
+
+  for (const g of gpusFile.records) {
+    const type = (g.vramType ?? '').toUpperCase();
+    const range = MEM_RATE_GBPS[type];
+    if (g.memBandwidthGBs && g.memBusBits && range) {
+      const rate = (g.memBandwidthGBs * 8) / g.memBusBits;
+      if (rate < range[0] || rate > range[1]) {
+        fail(
+          `GPU ${g.id}: ${g.memBandwidthGBs}GB/s across ${g.memBusBits} bits implies ${rate.toFixed(2)} Gbps per pin, outside the ${range[0]}-${range[1]} range ${type} ever shipped at. One of bandwidth, bus width or memory type is wrong.`,
+        );
+      }
+    }
+    if (g.vramGB && g.memBusBits && !type.startsWith('HBM')) {
+      const channels = Math.floor(g.memBusBits / 32);
+      const perChannelMB = (g.vramGB * 1024) / channels;
+      if (!VALID_PER_CHANNEL_MB.has(perChannelMB)) {
+        // A non-integer figure means an asymmetric memory system, which four
+        // Nvidia cards genuinely had (GTX 550 Ti, 650 Ti Boost, 660, 660 Ti).
+        // Real, deliberate, and not something to hard-fail.
+        if (Number.isInteger(perChannelMB)) {
+          fail(
+            `GPU ${g.id}: ${g.vramGB}GB across ${channels} channels needs ${perChannelMB}MB chips, which is not a density that exists.`,
+          );
+        } else {
+          warn(
+            `GPU ${g.id}: ${g.vramGB}GB on a ${g.memBusBits}-bit bus is an asymmetric memory configuration (${perChannelMB.toFixed(1)}MB per channel). Real on a handful of Nvidia parts; verify it is one of them.`,
+          );
+        }
+      }
+    }
+  }
+
+  for (const c of cpusFile.records) {
+    const { cores, threads, pCores, eCores } = c as unknown as {
+      cores?: number; threads?: number; pCores?: number; eCores?: number;
+    };
+    if (cores != null && threads != null) {
+      if (threads < cores) fail(`CPU ${c.id}: ${threads} threads on ${cores} cores — fewer threads than cores is impossible.`);
+      if (threads > cores * 2) fail(`CPU ${c.id}: ${threads} threads on ${cores} cores — more than two threads per core does not exist on x86.`);
+    }
+    if (pCores != null && eCores != null) {
+      if (cores != null && pCores + eCores !== cores) {
+        fail(`CPU ${c.id}: ${pCores}P + ${eCores}E = ${pCores + eCores}, but the record says ${cores} cores.`);
+      }
+      if (threads != null && cores != null) {
+        // SMT is inferred rather than assumed: Arrow Lake is hybrid AND has no
+        // hyper-threading, so 8P+16E is 24 threads, not 32. Hard-coding
+        // "P-cores are SMT" flagged all 13 Arrow Lake parts as broken.
+        const smt = threads > cores;
+        const want = smt ? pCores * 2 + eCores : pCores + eCores;
+        if (want !== threads) {
+          fail(`CPU ${c.id}: ${pCores}P + ${eCores}E with SMT ${smt ? 'on' : 'off'} gives ${want} threads, but the record says ${threads}.`);
+        }
+      }
+    }
+    const base = (c as unknown as { baseClockMHz?: number }).baseClockMHz;
+    const boost = (c as unknown as { boostClockMHz?: number }).boostClockMHz;
+    if (base && boost && boost < base) fail(`CPU ${c.id}: boost ${boost}MHz is below base ${base}MHz.`);
+  }
+
+  // Socket determines memory generation. A record that disagrees describes a
+  // machine that cannot be assembled, and the build planner would emit it as a
+  // parts list.
+  const SOCKET_MEM: Record<string, string[]> = {
+    AM4: ['DDR4'], AM5: ['DDR5'], 'AM3+': ['DDR3'], FM2: ['DDR3'], 'FM2+': ['DDR3'],
+    LGA1700: ['DDR4', 'DDR5'], LGA1851: ['DDR5'], LGA1200: ['DDR4'],
+    LGA1151: ['DDR3', 'DDR4'], LGA1150: ['DDR3'], LGA1155: ['DDR3'],
+    LGA2066: ['DDR4'], LGA2011: ['DDR3'], 'LGA2011-3': ['DDR4'],
+    STR4: ['DDR4'], STRX4: ['DDR4'], STR5: ['DDR5'], SP3: ['DDR4'],
+  };
+  for (const c of cpusFile.records) {
+    const allowed = SOCKET_MEM[c.socket];
+    if (!allowed) continue;
+    for (const m of c.memoryType ?? []) {
+      if (!allowed.includes(m)) {
+        fail(`CPU ${c.id}: socket ${c.socket} cannot take ${m} (it takes ${allowed.join(' or ')}).`);
+      }
+    }
+  }
+
+
+  // ------------------------------------------------ identity cross-check ----
+  //
+  // The one check in this file that consults something OUTSIDE the project: the
+  // PCI ID Repository, which is the registry vendors actually submit their
+  // device names to. Everything else here proves the catalogue is consistent
+  // with itself; this proves the parts exist.
+  //
+  // It is name-based and therefore imperfect in one direction only — a card
+  // whose registry entry omits a suffix reads as missing even though it is
+  // there (the RX 5500 XT shares a device ID with the plain 5500 and the
+  // registry spells only the latter). So a miss is a warning, never a failure:
+  // a false alarm here must not be able to fail a build.
+  const pciPath = join(ROOT, 'data/aliases/pci-devices.json');
+  if (existsSync(pciPath)) {
+    const pci = load<{ devices: { vendor: string; name: string; subsystems: { name: string }[] }[] }>(
+      'data/aliases/pci-devices.json',
+    );
+    const byVendor = new Map<string, string>();
+    const acc: Record<string, string[]> = {};
+    for (const d of pci.devices) {
+      (acc[d.vendor] ??= []).push(d.name.toLowerCase());
+      for (const s of d.subsystems) acc[d.vendor].push(s.name.toLowerCase());
+    }
+    for (const [v, list] of Object.entries(acc)) byVendor.set(v, list.join(' || '));
+
+    // Longest suffix first, or XTX truncates to XT and matches the wrong card.
+    const KEY = /\b(?:rtx|gtx|gts|gt|rx|arc)\s*([a-z]?\d{3,4})(?:\s*(xtx|gre|ti\s*super|super|ti|xt))?/i;
+    let confirmed = 0;
+    const unmatched: string[] = [];
+    for (const g of gpusFile.records) {
+      if (g.formFactor === 'igpu') continue;
+      const m = KEY.exec(g.fullName);
+      if (!m) continue;
+      const num = m[1].toLowerCase();
+      const suffix = (m[2] ?? '').toLowerCase();
+      // Build the pattern from TOKENS. Escaping the whole string first and then
+      // substituting the whitespace produced a literal backslash followed by
+      // "s*", which matches nothing — it silently reported 57 real cards as
+      // absent from the registry.
+      const pattern =
+        num.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+        (suffix ? `\\s*${suffix.split(/\s+/).map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s*')}` : '');
+      if (new RegExp(pattern).test(byVendor.get(g.vendor) ?? '')) confirmed++;
+      else unmatched.push(`${g.id} (searched for "${num}${suffix ? ` ${suffix}` : ''}")`);
+    }
+    console.log(`  PCI registry: ${confirmed} discrete GPU model numbers confirmed present, ${unmatched.length} not found`);
+    for (const u of unmatched) {
+      warn(`GPU identity: ${u} does not appear in the PCI registry. Usually a registry naming quirk rather than a wrong record — check before assuming the part is fictitious.`);
+    }
+  } else {
+    warn('PCI registry cross-check skipped: data/aliases/pci-devices.json is missing. Run `npm run parse` after `npm run harvest`.');
   }
 
   // ------------------------------------------------- engine full-part sweep --

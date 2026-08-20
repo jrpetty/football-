@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-20T11:02:25.775Z",
+  "generatedAt": "2026-08-20T12:14:38.561Z",
   "provenance": {
     "pci-ids": {
       "id": "pci-ids",
@@ -16299,7 +16299,7 @@
       "vendorId": "1002",
       "deviceId": "7481",
       "vendor": "amd",
-      "name": "Navi 33 [Radeon Graphics]",
+      "name": "Navi 33 [Steam Machine]",
       "subsystems": []
     },
     {
