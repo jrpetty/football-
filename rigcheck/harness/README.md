@@ -37,9 +37,25 @@ PresentMon do not exist. What *was* verified:
 What could **not** be verified, and what you should therefore check on the first
 run, in this order:
 
+0. **Be in this directory first.** PowerShell opens in `C:\WINDOWS\system32`,
+   where these scripts are not. `cd` to wherever you unpacked `harness/` before
+   anything below, or every command fails with a path error that looks like a
+   broken script.
 1. **PowerShell version.** `$PSVersionTable.PSVersion` - anything 5.1 or later.
 2. **Execution policy.** Scripts are blocked by default. In the shell you are
    about to use: `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass`.
+
+   If you would rather pass the policy per-command, the program name is part of
+   the command and is not optional:
+
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File .\detect-hardware.ps1
+   ```
+
+   Typing only `-ExecutionPolicy Bypass -File .\detect-hardware.ps1` makes
+   PowerShell read `-ExecutionPolicy` as a command name and answer `The term
+   '-ExecutionPolicy' is not recognized as the name of a cmdlet`. That error is
+   about the missing `powershell`, not about the script.
 3. **`.\detect-hardware.ps1`.** It needs no Administrator and no PresentMon, so
    it is the cheapest possible test of the shared library and of every WMI query
    in the harness. **Read its output properly** - see "Best-effort values" below.
@@ -449,6 +465,9 @@ Do not "fix" a high spread by lowering settings, and do not average two bad runs
 | Symptom | Cause and fix |
 |---|---|
 | `cannot be loaded because running scripts is disabled` | `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass`. |
+| `The term '-ExecutionPolicy' is not recognized` | The `powershell` at the start of the command is missing. Run `powershell -ExecutionPolicy Bypass -File .\detect-hardware.ps1`, from this directory. |
+| `The argument ... does not exist` or a path error | You are still in `C:\WINDOWS\system32`. `cd` to the `harness` directory first. |
+| None of this is working and you just want the check | Open the app, go to **System Health**, and use the in-page test on the "Read the machine" step. It needs no terminal. It reads less than this harness does, and says so. |
 | `PresentMon needs Administrator...` | Re-open the shell as Administrator. |
 | `PresentMon not found` | Put `PresentMon.exe` (or `PresentMon-2.x.y-x64.exe`) in `harness/`, `harness/tools/`, or on `PATH`. |
 | `PresentMon produced no output for run N` | Not elevated, or the game is not presenting (minimised, on another GPU, or the `-ProcessName` filter matches nothing). |

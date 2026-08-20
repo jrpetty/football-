@@ -137,7 +137,7 @@ function configurationFindings(sys: DetectedSystem, gpu: GpuRecord, cpu: CpuReco
       id: 'mem-channels-ok',
       component: 'Memory',
       severity: 'ok',
-      title: `Memory is running in ${ram.channels === 2 ? 'dual' : `${ram.channels}-`}channel`,
+      title: `Memory is running in ${ram.channels === 2 ? 'dual-' : `${ram.channels}-`}channel`,
       evidence: `${ram.channels} channels populated.`,
       impact: 'Full memory bandwidth is available to the CPU.',
       remedy: null,
@@ -503,27 +503,7 @@ export function diagnose(
   const recoverablePct =
     findings.reduce((acc, f) => acc * (1 + (f.estimatedGainPct ?? 0)), 1) - 1;
 
-  const worst = findings[0]?.severity;
-  const anyShort = comparisons.some((c) => c.verdict === 'below expectation' || c.verdict === 'far below expectation');
-  const verdict =
-    !findings.length
-      ? measurements.length
-        ? anyShort
-          ? 'The configuration is clean, but the machine is not hitting what the model expects. Nothing in the specification explains it, which points at something this report cannot see — the list at the bottom is where to look next.'
-          : 'Nothing detectable is wrong with this machine, and the measurements land where the model expects. That is the best this report can say — it is not the same as proof that everything is optimal.'
-        : 'Nothing is wrong in the configuration. No measurements were supplied, so nothing has been verified against the hardware actually running.'
-      // Only quote a percentage when something was actually quantified. A
-      // measured shortfall has no modelled gain attached, and "worth roughly
-      // 0%" next to a list of real problems reads as though they do not matter.
-      : recoverablePct < 0.005
-        ? worst === 'critical' || worst === 'major'
-          ? `This machine is not performing as it should: ${findings[0].title.toLowerCase()}. What is costing the performance is not something the specification explains, so the findings below are where to start and the list at the bottom is what this could not see.`
-          : `Broadly healthy, with ${findings.length} minor thing${findings.length === 1 ? '' : 's'} worth tidying.`
-        : worst === 'critical'
-          ? `Something is materially wrong: ${findings[0].title.toLowerCase()}. Fixing what is listed here is worth roughly ${pct(recoverablePct)} — more than any upgrade you could buy for the price.`
-          : worst === 'major'
-            ? `This machine is leaving performance on the table. The findings below are worth roughly ${pct(recoverablePct)} together, and none of them cost anything like a new part.`
-            : `Broadly healthy, with ${findings.length} minor thing${findings.length === 1 ? '' : 's'} worth tidying — together worth about ${pct(recoverablePct)}.`;
+  const verdict = deriveVerdict(findings, comparisons, measurements);
 
   const notChecked = [
     'Per-core clock behaviour and whether Windows is on a balanced power plan capping boost. The detector cannot read this reliably.',
@@ -543,4 +523,51 @@ export function diagnose(
   }
 
   return { findings, healthy, verdict, recoverablePct, comparisons, notChecked };
+}
+
+/**
+ * The one-sentence verdict, derived from the findings rather than stored.
+ *
+ * Extracted so a caller that ADDS findings — the in-browser benchmark merges
+ * its own into the list — recomputes the headline instead of leaving the
+ * original in place. Leaving it produced "Broadly healthy, with 1 minor thing
+ * worth tidying" as the sentence directly above a critical finding saying no
+ * graphics card was being used at all.
+ */
+export function deriveVerdict(
+  findings: Finding[],
+  comparisons: MeasurementComparison[],
+  measurements: Measurement[],
+): string {
+  const recoverablePct = findings.reduce((acc, f) => acc * (1 + (f.estimatedGainPct ?? 0)), 1) - 1;
+  const worst = findings[0]?.severity;
+  const anyShort = comparisons.some((c) => c.verdict === 'below expectation' || c.verdict === 'far below expectation');
+  return (
+    !findings.length
+      ? measurements.length
+        ? anyShort
+          ? 'The configuration is clean, but the machine is not hitting what the model expects. Nothing in the specification explains it, which points at something this report cannot see — the list at the bottom is where to look next.'
+          : 'Nothing detectable is wrong with this machine, and the measurements land where the model expects. That is the best this report can say — it is not the same as proof that everything is optimal.'
+        : 'Nothing is wrong in the configuration. No measurements were supplied, so nothing has been verified against the hardware actually running.'
+      // Only quote a percentage when something was actually quantified. A
+      // measured shortfall has no modelled gain attached, and "worth roughly
+      // 0%" next to a list of real problems reads as though they do not matter.
+      : recoverablePct < 0.005
+        ? worst === 'critical' || worst === 'major'
+          ? `This machine is not performing as it should: ${findings[0].title.toLowerCase()}. What is costing the performance is not something the specification explains, so the findings below are where to start and the list at the bottom is what this could not see.`
+          : `Broadly healthy, with ${findings.length} minor thing${findings.length === 1 ? '' : 's'} worth tidying.`
+        : worst === 'critical'
+          // When the headline fault carries no quantified gain, the recoverable
+          // figure covers only the OTHER findings, and attaching it to the
+          // sentence that names the headline reads as though it does. "No
+          // graphics card is being used at all ... worth roughly 4%" was the
+          // real output, and understating a total loss as 4% is worse than
+          // quoting nothing.
+          ? findings[0].estimatedGainPct == null
+            ? `Something is materially wrong: ${findings[0].title.toLowerCase()}. That one is not quantified here because the loss is too large and too situation-specific to put a number on — the smaller findings below add up to about ${pct(recoverablePct)} between them, and they are not the problem.`
+            : `Something is materially wrong: ${findings[0].title.toLowerCase()}. Fixing what is listed here is worth roughly ${pct(recoverablePct)} — more than any upgrade you could buy for the price.`
+          : worst === 'major'
+            ? `This machine is leaving performance on the table. The findings below are worth roughly ${pct(recoverablePct)} together, and none of them cost anything like a new part.`
+            : `Broadly healthy, with ${findings.length} minor thing${findings.length === 1 ? '' : 's'} worth tidying — together worth about ${pct(recoverablePct)}.`
+  );
 }

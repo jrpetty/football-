@@ -19,13 +19,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../store.ts';
 import { detectHardware, detectionToBuild } from '../../core/detect.ts';
-import { diagnose, type DetectedSystem, type Measurement, type Severity } from '../../core/health.ts';
+import { deriveVerdict, diagnose, type DetectedSystem, type Measurement, type Severity } from '../../core/health.ts';
 import { DIFFICULTY_LABEL, guideFor } from '../../core/fixguides.ts';
 import {
   detectDegradation, machineId as machineIdOf, measurementKey, seriesFor,
   trackableKeys, verifyFixes, type AppliedFix, type HealthSession,
 } from '../../core/history.ts';
 import { comparePeers, findPeers, type PeerComparison } from '../../core/peers.ts';
+import { benchFindings, type BenchResult } from '../../core/browserbench.ts';
+import { deriveCpuIndex, deriveGpuIndex } from '../../core/indices.ts';
+import { BrowserBenchPanel } from '../components/BrowserBench.tsx';
 import { addSession, historyFor, loadSessions, removeSession } from '../sessions.ts';
 import measuredJson from '../../../data/measured/records.json';
 import type { PerfRecord } from '../../core/types.ts';
@@ -34,6 +37,40 @@ import { exportJson } from '../export.ts';
 import type { RamConfig, Resolution, Storage } from '../../core/types.ts';
 
 type Stage = 'consent' | 'detect' | 'confirm' | 'measure' | 'report' | 'history';
+
+/**
+ * A command block with a copy button.
+ *
+ * The reason this exists: the command was previously rendered as plain text
+ * and the first real user retyped it without the leading `powershell`, from
+ * the wrong directory, and got an error that reads as though the script is
+ * broken. A command that can be copied cannot be mistyped.
+ */
+function CopyBlock({ lines }: { lines: string[] }) {
+  const [copied, setCopied] = useState(false);
+  const text = lines.join('\n');
+  return (
+    <div style={{ position: 'relative' }}>
+      <pre
+        className="mono"
+        style={{
+          background: 'var(--surface-2)', padding: '12px 14px', borderRadius: 'var(--r)',
+          fontSize: 12, overflowX: 'auto', border: '1px solid var(--line)', margin: '0 0 8px',
+        }}
+      >{text}</pre>
+      <button
+        className="btn no-print"
+        style={{ position: 'absolute', top: 8, right: 8 }}
+        onClick={() => {
+          navigator.clipboard?.writeText(text).then(
+            () => { setCopied(true); setTimeout(() => setCopied(false), 1400); },
+            () => setCopied(false),
+          );
+        }}
+      >{copied ? 'copied' : 'copy'}</button>
+    </div>
+  );
+}
 
 /**
  * The imported measurement corpus — the ONLY source of real peers. It ships
@@ -54,6 +91,7 @@ export function SystemHealth() {
   const { data } = useApp();
   const [stage, setStage] = useState<Stage>('consent');
   const [agreed, setAgreed] = useState(false);
+  const [bench, setBench] = useState<BenchResult | null>(null);
   const [text, setText] = useState('');
 
   // Confirmed specification. Seeded from the detector, then editable — the
@@ -118,10 +156,45 @@ export function SystemHealth() {
     };
   }, [cpuId, gpuId, ram, storage, resolution, refreshHz, ratedMTs, pcieGen, pcieWidth, airflow, psuWatts, driverDate, uptimeDays, data]);
 
-  const report = useMemo(
-    () => (system ? diagnose(system, measurements, data) : null),
-    [system, measurements, data],
-  );
+  /**
+   * The report, with anything the in-browser run found folded in.
+   *
+   * Merged rather than shown separately: a person reading "what is wrong" wants
+   * one ranked list, and "the integrated graphics are rendering" belongs at the
+   * top of it, not in a second panel further down that they may never reach.
+   */
+  const report = useMemo(() => {
+    if (!system) return null;
+    const base = diagnose(system, measurements, data);
+    if (!bench) return base;
+    const gpuRec = data.gpus.get(system.build.gpuId);
+    const cpuRec = data.cpus.get(system.build.cpuId);
+    // Indices are derived against the catalogue anchors rather than stored on
+    // the record, so they are computed the same way the estimator computes them.
+    const extra = benchFindings(bench, {
+      expectedGpuName: gpuRec?.fullName,
+      expectedGpuIndex: gpuRec ? deriveGpuIndex(gpuRec, data.anchorGpu, system.build.ram).index.raster : undefined,
+      expectedCpuIndex: cpuRec
+        ? deriveCpuIndex(cpuRec, system.build.ram, data.anchorCpu, data.anchorRam).index.throughput
+        : undefined,
+    });
+    const rank: Record<Severity, number> = { critical: 0, major: 1, minor: 2, unknown: 3, ok: 4 };
+    const findings = [...extra, ...base.findings].sort((a, b) => rank[a.severity] - rank[b.severity]);
+    return {
+      ...base,
+      findings,
+      // Recomputed, not inherited. The verdict is derived FROM the findings, so
+      // adding findings without re-deriving it left "Broadly healthy, with 1
+      // minor thing worth tidying" sitting directly above a critical finding.
+      verdict: deriveVerdict(findings, base.comparisons, measurements),
+      recoverablePct: findings.reduce((acc, f) => acc * (1 + (f.estimatedGainPct ?? 0)), 1) - 1,
+      // The browser run answers the adapter question directly, so listing it as
+      // something this report could not see would be false once it has run.
+      notChecked: bench?.gpu?.renderer
+        ? base.notChecked.filter((n) => !/rendering on the intended adapter/i.test(n))
+        : base.notChecked,
+    };
+  }, [system, measurements, data, bench]);
 
   const thisMachineId = system ? machineIdOf(system) : '';
   const machineHistory = useMemo(
@@ -299,17 +372,33 @@ export function SystemHealth() {
           <div className="panel-head"><h2>Read the machine</h2></div>
           <div className="panel-body">
             <p className="mini" style={{ marginTop: 0 }}>
-              On the machine you want checked, from the <span className="mono">harness/</span> directory:
+              Open PowerShell, then run <b>both</b> of these. The first line moves to the folder holding
+              the script — PowerShell starts in <span className="mono">C:\\WINDOWS\\system32</span>, where
+              the script is not, and running the second line on its own from there fails:
             </p>
-            <pre
-              className="mono"
-              style={{ background: 'var(--surface-2)', padding: '10px 12px', borderRadius: 3, fontSize: 12, overflowX: 'auto', border: '1px solid var(--line)' }}
-            >{`powershell -ExecutionPolicy Bypass -File .\\detect-hardware.ps1`}</pre>
+            <CopyBlock
+              lines={[
+                'cd "$env:USERPROFILE\\Downloads\\rigcheck\\harness"',
+                'powershell -ExecutionPolicy Bypass -File .\\detect-hardware.ps1',
+              ]}
+            />
+            <p className="mini">
+              Change the first line to wherever you actually put the folder. The word{' '}
+              <span className="mono">powershell</span> at the start of the second line is not optional:
+              without it PowerShell reads <span className="mono">-ExecutionPolicy</span> as a command name
+              and answers{' '}
+              <span className="mono">The term '-ExecutionPolicy' is not recognized</span>.
+            </p>
             <p className="mini">
               It writes <span className="mono">out/hardware-&lt;timestamp&gt;.json</span>. Open it, read it
               — it is short and human-readable — then paste it below. A dxdiag dump or a line you typed
               from memory works too; anything ambiguous is asked about rather than assumed.
             </p>
+
+            <BrowserBenchPanel
+              onResult={setBench}
+              expectedGpuName={data.gpus.get(gpuId)?.fullName}
+            />
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -574,6 +663,26 @@ export function SystemHealth() {
       )}
 
       {/* ---------------------------------------------------------- report -- */}
+      {/* Reaching the verdict without a processor and card chosen renders nothing
+          at all — a blank screen with no explanation, which reads as a broken
+          app rather than as a missing input. Say what is missing and offer the
+          way back. */}
+      {stage === 'report' && !(report && system) && (
+        <div className="panel">
+          <div className="panel-head"><h2>Nothing to judge yet</h2></div>
+          <div className="panel-body">
+            <p className="mini" style={{ marginTop: 0 }}>
+              The verdict needs to know which processor and graphics card are in the machine. Nothing
+              read them and nothing was typed in, so there is nothing here to compare against.
+            </p>
+            <div className="wizard-nav">
+              <button className="btn primary" onClick={() => setStage('confirm')}>choose the parts</button>
+              <button className="btn" onClick={() => setStage('detect')}>go back and read the machine</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {stage === 'report' && report && system && (
         <>
           <div className="panel">

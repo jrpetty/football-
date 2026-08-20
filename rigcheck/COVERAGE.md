@@ -201,3 +201,34 @@ by following the call graph one hop for anything that did not appear —
 `planBuild`, `psuEfficiency` through `runningCost`, `configChanges` and
 `matchMeasurements` through `detectDegradation` and `verifyFixes`, and
 `estimateNoise` through `machineReport`.
+
+## The in-browser benchmark
+
+A second measurement path that needs no terminal, in `core/browserbench.ts`
+(interpretation, tested) and `ui/bench/run.ts` (the harness, which touches the
+GPU and workers and so is verified by driving a real browser rather than by
+unit test).
+
+It is deliberately much less capable than the PowerShell harness, and the
+difference is the point:
+
+| | PowerShell harness | In-browser |
+|---|---|---|
+| Frame rates in real games | yes | **never** |
+| Motherboard, memory timings, driver, PCIe link | yes | no |
+| Which adapter is actually rendering | yes | **yes** |
+| Software rendering | no | **yes** |
+| Decline under sustained load | no | **yes** |
+| Multi-core scaling | no | **yes** |
+| Needs anything installed | yes | no |
+
+Four of its findings need no calibration at all, which is why they are allowed
+to be `critical`: software rendering and the wrong-adapter check read the
+driver's own renderer string, and the throttle and scaling checks compare the
+machine with itself. The fifth — GPU-to-CPU ratio against the catalogue — does
+assume browser throughput scales like real throughput, so it is capped at
+`minor`, banded at a factor of two, and says out loud that it is an assumption.
+
+Nothing here produces a `Measurement`. That type is reserved for real game
+captures, and a test asserts that no finding this module emits mentions a frame
+rate in any field.
