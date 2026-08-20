@@ -49,7 +49,7 @@ public class OrdersScreen extends Screen {
     private int left, top;
     @Nullable private Button jobButton, shiftButton;
     @Nullable private Button depthSurface, depthIron, depthDiamond, dropOff, escortBtn;
-    @Nullable private Button claimBedBtn, stanceBtn;
+    @Nullable private Button claimBedBtn, stanceBtn, carryBtn;
     private int shownStance;
     @Nullable private Button quarryBtn;
     private int shownJob = -1;
@@ -103,8 +103,22 @@ public class OrdersScreen extends Screen {
 
         // ---- duty, bed, and the job-specific control ----
         y = top + Y_DUTY;
-        shiftButton = add(x, y, w4 * 2 + gap, h, dutyLabel(), AssistantActions.CYCLE_SHIFT,
+        shiftButton = add(x, y, w4, h, dutyLabel(), AssistantActions.CYCLE_SHIFT,
             "When this one works. Off duty it sleeps in its bed.");
+        // How big a load it gathers before walking it to the chest — yours to
+        // set, because a big field wants fewer, fuller trips and a slow
+        // trickle wants banking promptly.
+        carryBtn = this.addRenderableWidget(Button.builder(
+                Component.literal(BotInfo.of(bot).carryLabel()), b -> {
+                    sendOrder(bot, AssistantActions.CARRY_NEXT);
+                    b.setMessage(Component.literal(nextCarryLabel(b.getMessage().getString())));
+                })
+            .bounds(x + (w4 + gap), y, w4, h)
+            .tooltip(Tooltip.create(Component.literal(
+                "How much it gathers before banking a load: 8, 24, 48, or a full pack. "
+                + "A full pack means fewer trips; a small number means output reaches "
+                + "your chests sooner.")))
+            .build());
         // Claim Bed retired: they claim their own beds at dusk, and have
         // since b81 — a button for a thing that happens by itself is noise.
         claimBedBtn = add(x + 2 * (w4 + gap), y, w4, h, "Stash", AssistantActions.STASH,
@@ -207,8 +221,21 @@ public class OrdersScreen extends Screen {
         return AssistantEntity.Stance.byOrdinal(shownStance).label + " \u203a";
     }
 
+    /** The button steps through the same rungs the server does, so the label
+     *  is right the instant it is clicked rather than a tick later. */
+    private static String nextCarryLabel(String shown) {
+        return switch (shown) {
+            case "Bank 8" -> "Bank 24";
+            case "Bank 24" -> "Bank 48";
+            case "Bank 48" -> "Full pack";
+            default -> "Bank 8";
+        };
+    }
+
     private String dutyLabel() {
-        return "Works " + bot.clientShift().label;
+        String l = bot.clientShift().label;
+        return l.equals("day and night") ? "Day+Night"
+            : Character.toUpperCase(l.charAt(0)) + l.substring(1);
     }
 
     /** Only ever show the control that means something for this job. */

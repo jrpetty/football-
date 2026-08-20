@@ -135,6 +135,20 @@ public class DepositGoal extends Goal {
                 assistant.getNavigation().moveTo(
                     chestPos.getX() + 0.5, chestPos.getY(), chestPos.getZ() + 0.5, 1.1D);
             }
+            // Passing a nearer chest with room? Use that one. A load carried
+            // across the base to a remembered chest, past an empty one on the
+            // way, is a walk nobody needed to make. Only switches for a chest
+            // at least twice as close, so it cannot dither between two.
+            if (assistant.tickCount % 20 == 0) {
+                BlockPos nearer = assistant.nextChestWithRoom(chestPos);
+                if (nearer != null && nearer.distSqr(assistant.blockPosition()) * 2.0 < distSq) {
+                    chestPos = nearer;
+                    bestDistSq = Double.MAX_VALUE;   // fresh walk, fresh watchdog
+                    stuckTicks = 0;
+                    assistant.sayRoutine("Chest on the way — banking here instead.");
+                    return;
+                }
+            }
             // Progress-based watchdog: long walks to a remembered chest are
             // fine; standing still without getting closer is not.
             if (distSq < bestDistSq - 1.0) {

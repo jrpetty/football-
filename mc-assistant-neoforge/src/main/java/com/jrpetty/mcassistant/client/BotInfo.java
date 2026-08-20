@@ -15,7 +15,7 @@ public record BotInfo(String branch, int daysServed, String topDeed,
                       String trait, String traitBlurb, int teamwork,
                       int diet, String lastMeal,
                       @Nullable int[] deathSpot, int perk, String patchName,
-                      boolean quiet, int ripe, boolean quarry, int stance) {
+                      boolean quiet, int ripe, boolean quarry, int stance, int carry) {
 
     /** "branch|days|topDeed|deedCsv|zoneCsv", written by publishJobState. */
     public static BotInfo of(AssistantEntity bot) {
@@ -77,16 +77,22 @@ public record BotInfo(String branch, int daysServed, String topDeed,
         int perk = f.length > 9 ? parse(f[9]) : 0;
         String patchName = f.length > 10 ? f[10] : "";
         boolean quiet = false, quarry = false;
-        int ripe = 0, stance = 0;
+        int ripe = 0, stance = 0, carry = 24;
         if (f.length > 11 && !f[11].isEmpty()) {
             String[] qr = f[11].split(",");
             if (qr.length > 0) quiet = "1".equals(qr[0]);
             if (qr.length > 1) ripe = parse(qr[1]);
             if (qr.length > 2) quarry = "1".equals(qr[2]);
             if (qr.length > 3) stance = parse(qr[3]);
+            if (qr.length > 4) carry = parse(qr[4]);
         }
         return new BotInfo(branch, days, top, deeds, zone, wages, trait, blurb, teamwork,
-            diet <= 0 ? 100 : diet, meal, death, perk, patchName, quiet, ripe, quarry, stance);
+            diet <= 0 ? 100 : diet, meal, death, perk, patchName, quiet, ripe, quarry, stance, carry);
+    }
+
+    /** How full the pack gets before a stash run, as its button label. */
+    public String carryLabel() {
+        return carry == 0 ? "Full pack" : "Bank " + carry;
     }
 
     /** The guard's combat stance, as its button label. */

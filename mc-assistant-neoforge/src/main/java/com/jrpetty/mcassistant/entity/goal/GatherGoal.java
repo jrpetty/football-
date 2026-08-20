@@ -79,6 +79,10 @@ public class GatherGoal extends Goal {
     public record Request(Kind kind, int amount) {}
 
     private static final int SEARCH_RADIUS = 16;
+    /** The scan starts tight and only widens when the near ground is worked
+     *  out — a dense forest is read in a fraction of the blocks, and a picked-
+     *  over one still gets the full look before anybody gives up. */
+    private int scanRadius = 6;
 
     private final AssistantEntity assistant;
     @Nullable private Request request;
@@ -554,12 +558,31 @@ public class GatherGoal extends Goal {
 
     @Nullable
     private BlockPos findNearest() {
+        for (int r = scanRadius; ; r = Math.min(SEARCH_RADIUS, r + 6)) {
+            BlockPos hit = scanWithin(r);
+            if (hit != null) {
+                // Remember the radius that actually worked, easing tighter
+                // each time it keeps working. Without this the scan would
+                // widen from scratch on every call and cost MORE than the
+                // fixed box it replaced.
+                scanRadius = Math.max(6, r - 2);
+                return hit;
+            }
+            if (r >= SEARCH_RADIUS) {
+                scanRadius = SEARCH_RADIUS;   // this ground is worked out
+                return null;
+            }
+        }
+    }
+
+    @Nullable
+    private BlockPos scanWithin(int radius) {
         BlockPos feet = assistant.feetPos();
         BlockPos best = null;
         double bestDist = Double.MAX_VALUE;
         for (BlockPos pos : BlockPos.betweenClosed(
-                feet.offset(-SEARCH_RADIUS, -6, -SEARCH_RADIUS),
-                feet.offset(SEARCH_RADIUS, 8, SEARCH_RADIUS))) {
+                feet.offset(-radius, -6, -radius),
+                feet.offset(radius, 8, radius))) {
             if (unreachable.contains(pos)) continue; // don't re-target blocks we couldn't reach
             if (assistant.isUnreachable(pos)) continue; // nor ones an earlier run couldn't
             if (!assistant.inZone(pos)) continue;    // stay inside the marked work zone
@@ -567,7 +590,7 @@ public class GatherGoal extends Goal {
             if (assistant.outsideMyShare(pos)) continue; // that end of the wood is theirs
             BlockState rankSt = assistant.level().getBlockState(pos);
             if (!request.kind().matches(rankSt) || !rankAllows(request.kind(), rankSt)) continue;
-            double d = pos.distSqr(feet);
+            double d = pos.distSqr(feet) + Math.abs(pos.getY() - feet.getY()) * 16.0;
             if (d < bestDist) {
                 bestDist = d;
                 best = pos.immutable();

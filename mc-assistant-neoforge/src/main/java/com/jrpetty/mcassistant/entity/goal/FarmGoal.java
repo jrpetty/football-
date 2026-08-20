@@ -194,6 +194,21 @@ public class FarmGoal extends Goal {
             targetPos = findGap();
             if (targetPos != null) { mode = Mode.TILL; return; }
         }
+        // The job the last scan already found, if it is still there and
+        // nobody else has taken it. This is the whole of the lookahead: the
+        // scan that picked the last crop also picked this one.
+        if (runnerUp != null) {
+            BlockPos next = runnerUp;
+            runnerUp = null;
+            if (!skip.contains(next) && assistant.inZone(next)
+                && !assistant.takenByCrew(next)
+                && isHarvestable(next, assistant.level().getBlockState(next))) {
+                targetPos = next;
+                mode = Mode.HARVEST;
+                claim();
+                return;
+            }
+        }
         targetPos = findMatureCrop();
         if (targetPos != null) { mode = Mode.HARVEST; claim(); return; }
         if (planted < PLOT_TARGET && hasPlantable()) {
@@ -225,6 +240,10 @@ public class FarmGoal extends Goal {
         targetPos = null;
         assistant.releaseClaim();
     }
+
+    /** The runner-up from the last scan: the next thing to do, already
+     *  found. Cleared as it is used or when it stops being valid. */
+    @Nullable private BlockPos runnerUp;
 
     /** Announce the target to the crew the moment it is chosen. */
     private void claim() {
@@ -590,6 +609,8 @@ public class FarmGoal extends Goal {
         // anywhere) costs the same as before; the common case costs a ring.
         BlockPos feet = assistant.feetPos();
         BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        BlockPos second = null;
+        double secondDist = Double.MAX_VALUE;
         for (int r = 0; r <= RANGE; r++) {
             BlockPos best = null;
             double bestDist = Double.MAX_VALUE;
@@ -604,15 +625,29 @@ public class FarmGoal extends Goal {
                         if (assistant.takenByCrew(cursor)) continue;    // a mate is already walking there
                         if (assistant.outsideMyShare(cursor)) continue; // the other end is theirs
                         if (!match.test(cursor)) continue;
-                        double d = cursor.distSqr(feet);
+                        // Level ground first: a crop twenty blocks up a hill
+                        // is not "as near" as one across the field, whatever
+                        // the straight line says. A block of climb costs about
+                        // four of walking.
+                        double d = cursor.distSqr(feet)
+                            + Math.abs(cursor.getY() - feet.getY()) * 16.0;
                         if (d < bestDist) {
                             bestDist = d;
+                            second = best;              // the next job, found free
                             best = cursor.immutable();
+                        } else if (d < secondDist) {
+                            secondDist = d;
+                            second = cursor.immutable();
                         }
                     }
                 }
             }
-            if (best != null) return best;
+            if (best != null) {
+                // Lookahead: this scan already saw the runner-up, so the next
+                // pick costs nothing at all — no think-pause between actions.
+                runnerUp = second;
+                return best;
+            }
         }
         return null;
     }

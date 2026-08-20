@@ -63,6 +63,7 @@ public final class AssistantActions {
     public static final int QUIET_TOGGLE = 35;   // routine chatter on/off
     public static final int QUARRY_TOGGLE = 36;  // miner: terraced levels vs one gallery
     public static final int STANCE_NEXT = 37;    // guard: auto / ranged / melee
+    public static final int CARRY_NEXT = 38;     // how full the pack gets before banking
 
     /** Naming. Nothing in this mod is typed, so the order carries an INDEX into
      *  the shared name pool rather than a string: the client can only ask for a
@@ -129,6 +130,7 @@ public final class AssistantActions {
             case QUIET_TOGGLE -> a.toggleQuiet();
             case QUARRY_TOGGLE -> a.toggleQuarry();
             case STANCE_NEXT -> a.cycleStance();
+            case CARRY_NEXT -> a.cycleCarry();
             case PERK_SWIFT -> a.choosePerk(AssistantEntity.Perk.SWIFT);
             case PERK_TOUGH -> a.choosePerk(AssistantEntity.Perk.TOUGH);
             case PERK_PORTER -> a.choosePerk(AssistantEntity.Perk.PORTER);
