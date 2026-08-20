@@ -249,7 +249,7 @@ public class PlotsScreen extends Screen {
                 sel ? Ui.ROW_PICK : (hover || i % 2 == 0 ? Ui.ROW : Ui.ROW_ALT));
             if (sel) g.renderOutline(x, ry, PLOT_W, PLOT_ROW_H - 1, Ui.ACCENT);
             Ui.chip(g, x + 3, ry + 5, jobColour(e.job()));
-            g.drawString(this.font, Ui.clip(this.font, e.name(), PLOT_W - 64),
+            g.drawString(this.font, Ui.clip(this.font, e.name(), PLOT_W - 78),
                 x + 13, ry + 5, sel ? Ui.INK : Ui.MUTED, false);
             String perDay = e.yield() + "/d";
             Ui.right(g, this.font, perDay, x + PLOT_W - 3, ry + 5,
@@ -309,7 +309,9 @@ public class PlotsScreen extends Screen {
             int hc = pe.health() >= 80 ? Ui.GOOD : pe.health() >= 50 ? Ui.WARN : Ui.BAD;
             String cond = "condition " + pe.health() + "%";
             g.drawString(this.font, cond, cx, dy + 10, hc, false);
-            g.drawString(this.font, " · stores " + pe.chestPct() + "% full",
+            g.drawString(this.font, Ui.clip(this.font,
+                " · stores " + pe.chestPct() + "% full",
+                cw - this.font.width(cond)),
                 cx + this.font.width(cond), dy + 10,
                 pe.chestPct() >= 85 ? Ui.BAD : Ui.FAINT, false);
         }

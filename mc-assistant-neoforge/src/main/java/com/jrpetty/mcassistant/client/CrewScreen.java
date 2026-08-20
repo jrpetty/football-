@@ -236,9 +236,11 @@ public class CrewScreen extends Screen {
             AssistantEntity.StationTask trade =
                 AssistantEntity.StationTask.byOrdinal(a.clientJobOrdinal());
             String rank = Ladder.rank(trade, a.clientLevel());
-            Ui.right(g, this.font,
+            int nameEnd = tx + this.font.width(a.clientName()) + 8;
+            Ui.right(g, this.font, Ui.clip(this.font,
                 rank.isEmpty() ? trade.title + "  ·  " + a.clientShift().label
                     : trade.title + "  ·  " + rank,
+                left + W - PAD - 6 - nameEnd),
                 left + W - PAD - 6, ry + 4, sel ? Ui.MUTED : Ui.FAINT);
         }
         if (crew.size() > MAX_ROWS) {

@@ -272,7 +272,7 @@ public class OrdersScreen extends Screen {
             g.drawString(this.font, "✦" + lvl, x + 10 + this.font.width(name) + 6, top + Y_NAME,
                 Ui.ACCENT, false);
         }
-        String status = bot.clientStatus();
+        String status = Ui.clip(this.font, bot.clientStatus(), inner - 120);
         int sw = this.font.width(status) + 8;
         Ui.pill(g, this.font, status, left + W - PAD - sw, top + Y_NAME, Ui.statusColour(status));
 

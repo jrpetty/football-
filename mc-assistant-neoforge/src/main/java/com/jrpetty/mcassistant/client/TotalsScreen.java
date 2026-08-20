@@ -120,12 +120,13 @@ public class TotalsScreen extends Screen {
                 int barW = Math.max(1, (inner - 4) * count / busiest);
                 g.fill(x - 2, y + rowH - 4, x + inner + 2, y + rowH - 3, Ui.EDGE_SOFT);
                 g.fill(x - 2, y + rowH - 4, x - 2 + barW, y + rowH - 3, Ui.ACCENT);
-                g.drawString(this.font, d.label, x, y, Ui.INK, false);
                 // The rate makes the number mean something: 4,000 wheat is a
                 // career; 400 a day is a farm that feeds a server.
                 String rate = count / days > 0 ? count / days + "/day" : "";
-                Ui.right(g, this.font, count + (rate.isEmpty() ? "" : "  ·  " + rate),
-                    x + inner, y, Ui.ACCENT);
+                String tally = count + (rate.isEmpty() ? "" : "  ·  " + rate);
+                g.drawString(this.font, Ui.clip(this.font, d.label,
+                    inner - this.font.width(tally) - 8), x, y, Ui.INK, false);
+                Ui.right(g, this.font, tally, x + inner, y, Ui.ACCENT);
                 y += rowH;
             }
             if (done.size() > maxRows) {
