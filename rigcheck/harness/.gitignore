@@ -1,0 +1,8 @@
+# Raw PresentMon captures, session state and emitted CSVs. Regenerable, large,
+# and machine-specific. Only the CSV you deliberately copy into data/manual/
+# becomes part of the dataset.
+out/
+
+# PresentMon itself is downloaded per machine, not vendored.
+PresentMon*.exe
+tools/

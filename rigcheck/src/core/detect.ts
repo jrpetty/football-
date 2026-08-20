@@ -12,7 +12,8 @@
  * so an ambiguous match is surfaced for the operator to resolve.
  */
 import type { EngineData } from './engine.ts';
-import type { Build, CpuRecord, GpuRecord, MemoryType, RamConfig } from './types.ts';
+import { RESOLUTIONS } from './types.ts';
+import type { Build, CpuRecord, GpuRecord, MemoryType, RamConfig, Resolution, Storage } from './types.ts';
 
 export interface DetectedPart<T> {
   record: T;
@@ -24,8 +25,8 @@ export interface DetectionResult {
   cpu: DetectedPart<CpuRecord>[];
   gpu: DetectedPart<GpuRecord>[];
   ram?: Partial<RamConfig>;
-  storage?: Build['storage'];
-  resolution?: string;
+  storage?: Storage;
+  resolution?: Resolution;
   refreshHz?: number;
   driverVersion?: string;
   /** Anything recognised as hardware but not matched to a catalogue record. */
@@ -104,23 +105,182 @@ function parseRam(text: string): Partial<RamConfig> | undefined {
   return Object.keys(out).length ? out : undefined;
 }
 
+/**
+ * The harness writes two different JSON shapes and both land here.
+ *
+ *  - `harness/detect-hardware.ps1` emits a nested document tagged
+ *    `rigcheck-hardware/1`: `cpu.name`, `gpu.vramGB`, `memory.totalGB`,
+ *    `storage.system.class`, `display.refreshHz`, plus a `catalogueMapping`
+ *    block and a `bestEffort` list of everything it had to guess.
+ *  - `Get-HardwareProfile` in `harness/lib/rigcheck-common.ps1` emits a flat
+ *    PascalCase row — `CpuName`, `RamGB`, `Storage` — because that is the
+ *    minimum a data/manual/ CSV needs and the runner prints it inline.
+ *
+ * Normalising both into one internal shape here is the only place that has to
+ * know the difference. Reading just one of them silently produced a build with
+ * no CPU, no GPU and default 16GB/3200 RAM, which looks like a successful
+ * detection rather than a parse failure.
+ */
+interface StructuredHardware {
+  cpuName: string;
+  gpuName: string;
+  /** Nested shape only: the flat profile cannot report VRAM (AdapterRAM wraps at 4GB). */
+  gpuVramGB?: number;
+  /** Only ever the operator-CONFIRMED id. Suggestions are never used automatically. */
+  confirmedCpuId?: string;
+  confirmedGpuId?: string;
+  ram?: Partial<RamConfig>;
+  storage?: Storage;
+  resolution?: Resolution;
+  refreshHz?: number;
+  driverVersion?: string;
+  /** Everything the detector said it had to guess, verbatim. */
+  notes: string[];
+  shape: 'nested' | 'flat';
+}
+
+const STORAGE_CLASSES = new Set<string>(['hdd', 'sata-ssd', 'nvme-gen3', 'nvme-gen4']);
+const MEMORY_TYPES = new Set<string>(['DDR3', 'DDR4', 'DDR5']);
+
+const asObject = (v: unknown): Record<string, unknown> | undefined =>
+  v !== null && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : undefined;
+const asString = (v: unknown): string => (v === null || v === undefined ? '' : String(v).trim());
+const asPositive = (v: unknown): number | undefined => {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+};
+
+/** Map a pixel width to the four resolutions the catalogue actually has references for. */
+function widthToResolution(width: number): Resolution | undefined {
+  if (width >= 3840) return '2160p';
+  if (width >= 3440) return '3440x1440';
+  if (width >= 2560) return '1440p';
+  if (width >= 1280) return '1080p';
+  return undefined;
+}
+
+function readNested(raw: Record<string, unknown>): StructuredHardware {
+  const cpu = asObject(raw.cpu) ?? {};
+  const gpu = asObject(raw.gpu) ?? {};
+  const memory = asObject(raw.memory) ?? {};
+  const storage = asObject(raw.storage) ?? {};
+  const display = asObject(raw.display) ?? {};
+  const mapping = asObject(raw.catalogueMapping) ?? {};
+
+  const notes: string[] = [];
+  for (const entry of Array.isArray(raw.bestEffort) ? raw.bestEffort : []) {
+    const e = asObject(entry);
+    if (!e) continue;
+    const field = asString(e.field);
+    const why = asString(e.why);
+    if (why) notes.push(field ? `${field}: ${why}` : why);
+  }
+
+  // The games drive is the one that matters for streaming and load stutter, so
+  // it wins over the system drive when the detector found both.
+  const games = asObject(storage.games);
+  const system = asObject(storage.system);
+  const storageClass = [asString(games?.class), asString(system?.class)].find((c) => STORAGE_CLASSES.has(c));
+
+  const ram: Partial<RamConfig> = {};
+  const totalGB = asPositive(memory.totalGB);
+  if (totalGB) ram.totalGB = totalGB;
+  const channels = asPositive(memory.channels);
+  if (channels) ram.channels = (channels >= 8 ? 8 : channels >= 4 ? 4 : channels >= 2 ? 2 : 1) as RamConfig['channels'];
+  const speed = asPositive(memory.speedMTs);
+  if (speed) ram.speedMTs = speed;
+  const memType = asString(memory.type).toUpperCase().replace(/^LP/, '');
+  if (MEMORY_TYPES.has(memType)) ram.type = memType as MemoryType;
+  const timings = asObject(memory.timings);
+  if (timings) {
+    const cl = asPositive(timings.cl);
+    const trcd = asPositive(timings.trcd);
+    const trp = asPositive(timings.trp);
+    const tras = asPositive(timings.tras);
+    if (cl && trcd && trp && tras) ram.timings = { cl, trcd, trp, tras };
+  }
+
+  const catalogueRes = asString(display.catalogueResolution);
+  const widthPx = asPositive(display.widthPx);
+  const resolution =
+    catalogueRes && RESOLUTIONS.includes(catalogueRes as Resolution)
+      ? (catalogueRes as Resolution)
+      : widthPx
+        ? widthToResolution(widthPx)
+        : undefined;
+
+  return {
+    cpuName: asString(cpu.name),
+    gpuName: asString(gpu.name),
+    gpuVramGB: asPositive(gpu.vramGB),
+    confirmedCpuId: asString(mapping.confirmedCpuId) || undefined,
+    confirmedGpuId: asString(mapping.confirmedGpuId) || undefined,
+    ram: Object.keys(ram).length ? ram : undefined,
+    storage: storageClass as Storage | undefined,
+    resolution,
+    refreshHz: asPositive(display.refreshHz),
+    driverVersion: asString(gpu.driverVersion) || undefined,
+    notes,
+    shape: 'nested',
+  };
+}
+
+function readFlat(raw: Record<string, unknown>): StructuredHardware {
+  const notes = (Array.isArray(raw.Warnings) ? raw.Warnings : []).map(asString).filter(Boolean);
+  const storageClass = asString(raw.Storage);
+
+  const ram: Partial<RamConfig> = {};
+  const totalGB = asPositive(raw.RamGB);
+  if (totalGB) ram.totalGB = totalGB;
+  const channels = asPositive(raw.RamChannels);
+  if (channels) ram.channels = (channels >= 8 ? 8 : channels >= 4 ? 4 : channels >= 2 ? 2 : 1) as RamConfig['channels'];
+  const speed = asPositive(raw.RamMTs);
+  if (speed) ram.speedMTs = speed;
+
+  const res = asString(raw.Resolution);
+  return {
+    cpuName: asString(raw.CpuName),
+    gpuName: asString(raw.GpuName),
+    ram: Object.keys(ram).length ? ram : undefined,
+    storage: STORAGE_CLASSES.has(storageClass) ? (storageClass as Storage) : undefined,
+    resolution: RESOLUTIONS.includes(res as Resolution) ? (res as Resolution) : undefined,
+    refreshHz: asPositive(raw.RefreshHz),
+    driverVersion: asString(raw.DriverVersion) || undefined,
+    notes,
+    shape: 'flat',
+  };
+}
+
+/** Tell the two harness payloads apart. Anything else is treated as free text. */
+function readStructured(raw: Record<string, unknown>): StructuredHardware | null {
+  const nested = asString(raw.schema).startsWith('rigcheck-hardware/') || !!asObject(raw.cpu)?.name || !!asObject(raw.gpu)?.name;
+  if (nested) return readNested(raw);
+  if (raw.CpuName || raw.GpuName || raw.RamGB) return readFlat(raw);
+  return null;
+}
+
 export function detectHardware(text: string, data: EngineData): DetectionResult {
   const warnings: string[] = [];
   const unmatched: string[] = [];
 
-  // Structured JSON from the harness detector, if that is what we were given.
-  let structured: Record<string, unknown> | null = null;
+  // Structured JSON from one of the two harness detectors, if that is what we
+  // were given. Free text falls through to the regex path below.
+  let structured: StructuredHardware | null = null;
   const trimmed = text.trim();
   if (trimmed.startsWith('{')) {
     try {
-      structured = JSON.parse(trimmed) as Record<string, unknown>;
+      const raw = JSON.parse(trimmed) as Record<string, unknown>;
+      structured = readStructured(raw);
+      if (!structured) {
+        warnings.push('Input parsed as JSON but matched neither harness shape (no cpu.name and no CpuName); fell back to text matching.');
+      }
     } catch {
       warnings.push('Input looked like JSON but did not parse; fell back to text matching.');
     }
   }
 
-  const cpuText = structured?.CpuName ? String(structured.CpuName) : (CPU_LINE.exec(text)?.[1] ?? '');
-  const gpuText = structured?.GpuName ? String(structured.GpuName) : (GPU_LINE.exec(text)?.[1] ?? '');
+  const cpuText = structured?.cpuName || (CPU_LINE.exec(text)?.[1] ?? '');
+  const gpuText = structured?.gpuName || (GPU_LINE.exec(text)?.[1] ?? '');
 
   const rank = <T extends { fullName: string; brand: string }>(pool: T[], detected: string): DetectedPart<T>[] => {
     if (!detected.trim()) return [];
@@ -131,13 +291,47 @@ export function detectHardware(text: string, data: EngineData): DetectionResult 
       .slice(0, 5);
   };
 
-  const cpu = rank([...data.cpus.values()], cpuText);
-  const gpu = rank([...data.gpus.values()], gpuText);
+  /**
+   * An id the operator confirmed by hand beats anything name matching can do,
+   * so it short-circuits — but only if it is really in the catalogue. A typo
+   * silently falling back to a fuzzy match is exactly the failure the confirm
+   * step exists to prevent, so it is said out loud.
+   */
+  const confirmed = <T>(pool: Map<string, T>, id: string | undefined, kind: 'CPU' | 'GPU'): DetectedPart<T>[] | null => {
+    if (!id) return null;
+    const record = pool.get(id);
+    if (record) return [{ record, confidence: 100, matchedOn: `confirmed${kind === 'CPU' ? 'Cpu' : 'Gpu'}Id "${id}"` }];
+    warnings.push(`The harness confirmed ${kind} id "${id}", but no such record is in the catalogue — falling back to matching on the detected name. Check the id against data/catalogue/.`);
+    return null;
+  };
+
+  const cpu = confirmed(data.cpus, structured?.confirmedCpuId, 'CPU') ?? rank([...data.cpus.values()], cpuText);
+  let gpu = confirmed(data.gpus, structured?.confirmedGpuId, 'GPU') ?? rank([...data.gpus.values()], gpuText);
+
+  // Detected VRAM is the single best tiebreak between variants that share a
+  // name — 1060 3GB vs 6GB, 3080 10GB vs 12GB — and it is the difference the
+  // detector itself calls out as mattering most.
+  if (structured?.gpuVramGB && gpu.length > 1 && gpu[0].confidence < 100) {
+    const detectedVram = structured.gpuVramGB;
+    gpu = gpu
+      .map((h) => {
+        const v = h.record.vramGB;
+        if (!v) return h;
+        // Reported VRAM is a rounded byte count, so allow half a gigabyte of slop.
+        const matches = Math.abs(v - detectedVram) <= 0.5;
+        return {
+          ...h,
+          confidence: Math.max(0, Math.min(99, h.confidence + (matches ? 15 : -30))),
+          matchedOn: matches ? `${h.matchedOn} + ${detectedVram}GB VRAM` : h.matchedOn,
+        };
+      })
+      .sort((a, b) => b.confidence - a.confidence);
+  }
 
   if (cpuText && !cpu.length) unmatched.push(`CPU: "${cpuText.trim()}"`);
   if (gpuText && !gpu.length) unmatched.push(`GPU: "${gpuText.trim()}"`);
-  if (!cpuText) warnings.push('No CPU line recognised in the input.');
-  if (!gpuText) warnings.push('No GPU line recognised in the input.');
+  if (!cpuText && !cpu.length) warnings.push('No CPU line recognised in the input.');
+  if (!gpuText && !gpu.length) warnings.push('No GPU line recognised in the input.');
 
   // An ambiguous top match matters more than a missing one: picking silently
   // between a 1060 3GB and 6GB would corrupt everything downstream.
@@ -148,35 +342,34 @@ export function detectHardware(text: string, data: EngineData): DetectionResult 
     warnings.push(`GPU match is ambiguous between "${gpu[0].record.fullName}" and "${gpu[1].record.fullName}" — often a VRAM-variant difference, which materially changes the result.`);
   }
 
-  const ram = structured?.RamGB
-    ? {
-        totalGB: Number(structured.RamGB),
-        channels: (Number(structured.RamChannels) || 2) as RamConfig['channels'],
-        speedMTs: Number(structured.RamMTs) || 3200,
-      }
-    : parseRam(text);
+  const ram = structured?.ram ?? parseRam(text);
 
   if (ram?.channels === 1) {
     warnings.push('Detected a single memory channel. Verify this — channel count is inferred from populated slots and is the single easiest thing to get wrong, while also being one of the largest performance effects.');
   }
 
-  const storageText = structured?.Storage ? String(structured.Storage) : text;
-  const storage: Build['storage'] | undefined = /nvme|pcie\s*4/i.test(storageText)
-    ? /gen\s*4|pcie\s*4/i.test(storageText) ? 'nvme-gen4' : 'nvme-gen3'
-    : /ssd/i.test(storageText)
-      ? 'sata-ssd'
-      : /hdd|hard\s*disk|7200\s*rpm/i.test(storageText)
-        ? 'hdd'
-        : undefined;
+  let storage = structured?.storage;
+  if (!storage) {
+    const storageText = text;
+    storage = /nvme|pcie\s*4/i.test(storageText)
+      ? /gen\s*4|pcie\s*4/i.test(storageText)
+        ? 'nvme-gen4'
+        : 'nvme-gen3'
+      : /ssd/i.test(storageText)
+        ? 'sata-ssd'
+        : /hdd|hard\s*disk|7200\s*rpm/i.test(storageText)
+          ? 'hdd'
+          : undefined;
+  }
 
   const res = /(\d{3,4})\s*[x×]\s*(\d{3,4})/.exec(text);
-  const resolution = structured?.Resolution
-    ? String(structured.Resolution)
-    : res
-      ? Number(res[1]) >= 3840 ? '2160p' : Number(res[1]) >= 3440 ? '3440x1440' : Number(res[1]) >= 2560 ? '1440p' : '1080p'
-      : undefined;
+  const resolution = structured?.resolution ?? (res ? widthToResolution(Number(res[1])) : undefined);
 
   const hz = /(\d{2,3})\s*hz/i.exec(text);
+
+  // Everything the detector had to guess is carried through rather than
+  // dropped: those are the fields most likely to be wrong.
+  for (const note of structured?.notes ?? []) warnings.push(`Detector best-effort — ${note}`);
 
   return {
     cpu,
@@ -184,8 +377,8 @@ export function detectHardware(text: string, data: EngineData): DetectionResult 
     ram,
     storage,
     resolution,
-    refreshHz: structured?.RefreshHz ? Number(structured.RefreshHz) : hz ? Number(hz[1]) : undefined,
-    driverVersion: structured?.DriverVersion ? String(structured.DriverVersion) : undefined,
+    refreshHz: structured?.refreshHz ?? (hz ? Number(hz[1]) : undefined),
+    driverVersion: structured?.driverVersion,
     unmatched,
     warnings,
   };
@@ -208,7 +401,7 @@ export function detectionToBuild(d: DetectionResult, id = 'detected'): Build | n
     },
     storage: d.storage ?? 'nvme-gen3',
     target: {
-      resolution: (d.resolution as Build['target']['resolution']) ?? '1080p',
+      resolution: d.resolution ?? '1080p',
       refreshHz: d.refreshHz ?? 60,
     },
   };
