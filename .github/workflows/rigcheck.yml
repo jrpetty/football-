@@ -43,6 +43,12 @@ jobs:
         # functions over the cache — no network — so it is safe in CI.
         run: npm run parse
 
+      - name: Observed price import
+        # Marketplace observations from data/prices-observed/ override the
+        # recalled seed. Runs before the audit so a malformed row is reported
+        # rather than silently ignored.
+        run: npm run import:prices
+
       - name: Data audit
         # Cross-record consistency, catalogue/fixture coherence, and a full
         # engine sweep proving every part yields a finite estimate or an honest

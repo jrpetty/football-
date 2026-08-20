@@ -1,0 +1,118 @@
+{
+  "generatedAt": "2026-08-20T12:21:04.156Z",
+  "note": "Operator-supplied market observations. These OVERRIDE the recalled seed tables in gbp-new.json and gbp-used.json for any part they cover. Regenerate with `npm run import:prices`; edit the CSVs in data/prices-observed/, never this file.",
+  "provenance": "operator-observed",
+  "sourceFiles": [
+    "example.csv"
+  ],
+  "observationCount": 5,
+  "prices": [
+    {
+      "partId": "amd-radeon-rx-6700-xt",
+      "condition": "used",
+      "price": 168,
+      "observedMedian": 168,
+      "currency": "GBP",
+      "totalSamples": 9,
+      "observations": 1,
+      "spread": {
+        "low": 168,
+        "high": 168
+      },
+      "newestDate": "2026-08-19",
+      "ageDays": 2,
+      "stale": false,
+      "containsAsking": false,
+      "sources": [
+        "ebay-uk"
+      ],
+      "warnings": []
+    },
+    {
+      "partId": "nvidia-geforce-gtx-1080-ti",
+      "condition": "used",
+      "price": 131,
+      "observedMedian": 131,
+      "currency": "GBP",
+      "totalSamples": 11,
+      "observations": 1,
+      "spread": {
+        "low": 131,
+        "high": 131
+      },
+      "newestDate": "2026-08-17",
+      "ageDays": 4,
+      "stale": false,
+      "containsAsking": false,
+      "sources": [
+        "ebay-uk"
+      ],
+      "warnings": []
+    },
+    {
+      "partId": "nvidia-geforce-rtx-2070-super",
+      "condition": "used",
+      "price": 149,
+      "observedMedian": 175,
+      "currency": "GBP",
+      "totalSamples": 6,
+      "observations": 1,
+      "spread": {
+        "low": 175,
+        "high": 175
+      },
+      "newestDate": "2026-08-17",
+      "ageDays": 4,
+      "stale": false,
+      "containsAsking": true,
+      "sources": [
+        "ebay-uk"
+      ],
+      "warnings": [
+        "Every observation is an ASKING price, not a sale. Discounted by 15% to approximate what the part changes hands for, which is a prior and not a measurement. Replace with sold-listing data when you can."
+      ]
+    },
+    {
+      "partId": "nvidia-geforce-rtx-3060-12gb",
+      "condition": "used",
+      "price": 148,
+      "observedMedian": 148,
+      "currency": "GBP",
+      "totalSamples": 17,
+      "observations": 1,
+      "spread": {
+        "low": 148,
+        "high": 148
+      },
+      "newestDate": "2026-08-18",
+      "ageDays": 3,
+      "stale": false,
+      "containsAsking": false,
+      "sources": [
+        "ebay-uk"
+      ],
+      "warnings": []
+    },
+    {
+      "partId": "nvidia-geforce-rtx-3070",
+      "condition": "used",
+      "price": 192,
+      "observedMedian": 192,
+      "currency": "GBP",
+      "totalSamples": 14,
+      "observations": 1,
+      "spread": {
+        "low": 192,
+        "high": 192
+      },
+      "newestDate": "2026-08-18",
+      "ageDays": 3,
+      "stale": false,
+      "containsAsking": false,
+      "sources": [
+        "ebay-uk"
+      ],
+      "warnings": []
+    }
+  ]
+}

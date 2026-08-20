@@ -52,6 +52,31 @@ harvesting still does not replace the seeded catalogue — the first real run ne
 a human to read the report before anything is merged. `agents/log/spec-mapper.md`
 lists, in order, exactly what to check.
 
+### What has actually been verified
+
+The catalogue is checked against physics and against an external registry on
+every build, not just against itself:
+
+| check | result |
+|---|---|
+| memory bandwidth vs bus width vs memory type | 212/212 physically plausible |
+| frame buffer buildable from real chip densities | 212/212, 4 asymmetric (all genuine Nvidia designs) |
+| CPU cores/threads/socket/memory invariants | 442/442 |
+| GPU identity in the PCI ID Repository (live) | 156/158 confirmed real devices |
+
+Every one of those checks flagged records on its first run and every time the
+CHECK was wrong, not the data — the bounds assumed modern parts on a catalogue
+reaching back to 2010, and one regex bug reported 57 real cards as fictitious.
+The corrected bounds are deliberately wide: the job is to catch the impossible,
+not to second-guess the unusual.
+
+**Prices are the weakest data here and are handled separately.** The seed
+tables are recalled figures, never sourced. `data/prices-observed/` is the lane
+for real market observations — sold prices, not asking prices, with sample size
+and date — and anything imported there overrides the seed and is marked
+`sourced` in the UI against the `recalled` default. See that directory's README
+for how to gather them.
+
 **The validation fixtures are recalled figures, not measurements.** The gate
 therefore measures agreement with recollection, not accuracy, and `validate.ts`
 detects this from provenance and drops to ADVISORY mode so CI cannot report a
@@ -67,9 +92,11 @@ src/core/       types · constants · gates · indices · engine · queries · a
                 health (is this machine performing as it should)
 src/parse/      rowspan-aware table parser · spec-table → record mapper (fixture-tested)
 src/ui/         React app: 11 screens, dense dark instrument styling
-scripts/        harvest → parse → reconcile → import-manual → calibrate → validate → coverage
+scripts/        harvest → parse → reconcile → import-manual → import-prices
+                → calibrate → validate → audit → coverage
 harness/        PresentMon benchmark runner, emits straight into data/manual/
-data/           catalogue · aliases · fixtures · pricing · manual · calibration
+data/           catalogue · aliases · fixtures · pricing · prices-observed
+                manual · measured · calibration · validation
 agents/         per-agent output and logs from the acquisition fleet
 ```
 

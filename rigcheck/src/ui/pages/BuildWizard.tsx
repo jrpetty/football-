@@ -23,8 +23,7 @@ import { useApp } from '../store.ts';
 import { planBuild, type ComponentPrices, type PlanRequest } from '../../core/planner.ts';
 import { PRESETS, type Preset } from '../../core/presets.ts';
 import { exportJson } from '../export.ts';
-import newPrices from '../../../data/pricing/gbp-new.json';
-import usedPrices from '../../../data/pricing/gbp-used.json';
+import { findObserved, loadPrices, plannerTables, priceCoverage } from '../pricing.ts';
 import componentPrices from '../../../data/pricing/components-gbp.json';
 import monitorsJson from '../../../data/catalogue/monitors.json';
 import type { MonitorRecord } from '../../core/fit.ts';
@@ -32,11 +31,12 @@ import type { Resolution } from '../../core/types.ts';
 
 const monitors = (monitorsJson as { records: MonitorRecord[] }).records;
 const comp = componentPrices as unknown as ComponentPrices;
-const priceTables = {
-  newP: (newPrices as { prices: Record<string, number> }).prices,
-  usedP: (usedPrices as { prices: Record<string, number> }).prices,
-};
-const PRICE_AS_OF = (newPrices as { asOf?: string }).asOf ?? 'unknown';
+// Observed market data merged over the recalled seed. A part someone has
+// actually sourced beats a part the model remembers.
+const prices = loadPrices();
+const priceTables = plannerTables(prices);
+const coverage = priceCoverage(prices);
+const PRICE_AS_OF = prices.newP.updated ?? 'unknown';
 
 const STEPS = [
   { key: 'screen', title: 'Your screen', hint: 'resolution and refresh' },
@@ -311,13 +311,33 @@ export function BuildWizard() {
         <div className="panel">
           <div className="panel-head"><h2>What can you spend?</h2></div>
           <div className="panel-body">
-            <div className="note bad" style={{ marginBottom: 14 }}>
-              <b>Prices here are a recalled seed, not live data.</b> They date from {PRICE_AS_OF} and were
-              never sourced from a retailer. Graphics card pricing in particular moves 30% on supply
-              alone. Treat every figure as an order of magnitude, check the two or three parts you
-              actually intend to buy, and replace <span className="mono">data/pricing/</span> with your
-              own sourcing before trusting a plan to the pound.
-            </div>
+            {coverage.sourced === 0 ? (
+              <div className="note bad" style={{ marginBottom: 14 }}>
+                <b>Every price here is a recalled seed, not live data.</b> They date from {PRICE_AS_OF} and
+                were never sourced from a retailer or a marketplace. Graphics card pricing moves 30% on
+                supply alone, so treat each figure as an order of magnitude rather than a number.
+                <br />
+                <br />
+                To replace them with something real: put marketplace observations in{' '}
+                <span className="mono">data/prices-observed/</span> and run{' '}
+                <span className="mono">npm run import:prices</span>. The README there explains how to
+                pull <b>sold</b> prices rather than asking prices, which is the difference between a
+                useful figure and a misleading one — the listings easiest to find are the ones nobody
+                bought.
+              </div>
+            ) : (
+              <div className="note warn" style={{ marginBottom: 14 }}>
+                <b>
+                  {coverage.sourced} of {coverage.seeded} priced parts are sourced from real market
+                  observations ({Math.round(coverage.sourcedShare * 100)}%).
+                </b>{' '}
+                The rest still run on a recalled seed dated {PRICE_AS_OF} and are marked{' '}
+                <span className="tag">recalled</span> in the parts list below.
+                {coverage.staleCount > 0 && ` ${coverage.staleCount} sourced price(s) are over 90 days old and marked stale.`}{' '}
+                Add more in <span className="mono">data/prices-observed/</span> and re-run{' '}
+                <span className="mono">npm run import:prices</span>.
+              </div>
+            )}
 
             <div className="grid two">
               <div className="field">
@@ -512,6 +532,7 @@ function BuildStep({
                     <td className="part">
                       <b>{l.label}</b>
                       {l.allowance && <span className="tag" style={{ marginLeft: 6 }}>allowance</span>}
+                      {!l.allowance && l.partId && <PriceOrigin id={l.partId} />}
                       <div className="why">{l.rationale}</div>
                     </td>
                     <td className="money">£{l.price}</td>
@@ -663,5 +684,40 @@ function SettingsStep({
         </p>
       </div>
     </div>
+  );
+}
+
+/* ------------------------------------------------------------ provenance -- */
+
+/**
+ * Where a part's price came from, next to the price.
+ *
+ * A recalled figure and a figure drawn from fourteen completed sales are not
+ * the same kind of thing, and a build sheet that renders them identically
+ * invites someone to plan a purchase around a number nobody checked. Sourced
+ * prices carry their sample size and age; recalled ones say so plainly.
+ */
+function PriceOrigin({ id }: { id: string }) {
+  const o = findObserved(prices.observed, id, 'used') ?? findObserved(prices.observed, id, 'new');
+  if (!o) {
+    return (
+      <span className="tag" style={{ marginLeft: 6 }} title={`No market observation for this part — the figure is the recalled seed dated ${PRICE_AS_OF}, which was never sourced. Add one in data/prices-observed/.`}>
+        recalled
+      </span>
+    );
+  }
+  const detail =
+    `${o.observations} observation${o.observations === 1 ? '' : 's'} covering ${o.totalSamples} sale${o.totalSamples === 1 ? '' : 's'} ` +
+    `from ${o.sources.join(', ')}, newest ${o.newestDate} (${o.ageDays} days ago). ` +
+    `Observed range ${o.spread.low}–${o.spread.high}.` +
+    (o.warnings.length ? ` ${o.warnings.join(' ')}` : '');
+  return (
+    <span
+      className={`tag ${o.stale || o.containsAsking || o.totalSamples < 5 ? 'bad' : 'good'}`}
+      style={{ marginLeft: 6 }}
+      title={detail}
+    >
+      {o.stale ? `sourced · ${o.ageDays}d old` : o.containsAsking ? 'sourced · asking' : `sourced · ${o.totalSamples} sales`}
+    </span>
   );
 }
