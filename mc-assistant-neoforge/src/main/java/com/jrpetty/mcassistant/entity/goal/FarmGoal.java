@@ -103,6 +103,7 @@ public class FarmGoal extends Goal {
     public void stop() {
         this.active = false;
         this.targetPos = null;
+        assistant.releaseClaim();
         assistant.getNavigation().stop();
     }
 
@@ -194,12 +195,12 @@ public class FarmGoal extends Goal {
             if (targetPos != null) { mode = Mode.TILL; return; }
         }
         targetPos = findMatureCrop();
-        if (targetPos != null) { mode = Mode.HARVEST; return; }
+        if (targetPos != null) { mode = Mode.HARVEST; claim(); return; }
         if (planted < PLOT_TARGET && hasPlantable()) {
             BlockPos water = findWater();
             if (water != null) {
                 targetPos = findTillableNear(water);
-                if (targetPos != null) { mode = Mode.TILL; return; }
+                if (targetPos != null) { mode = Mode.TILL; claim(); return; }
             }
             if (hasWaterBucket()
                 && assistant.can(AssistantEntity.Ability.FARM_IRRIGATE)) {
@@ -208,7 +209,7 @@ public class FarmGoal extends Goal {
                 // wherever a big DRY patch of the field sits out of reach of
                 // every existing source — proper irrigation, not one hole.
                 targetPos = findIrrigationSpot();
-                if (targetPos != null) { mode = Mode.WATER; return; }
+                if (targetPos != null) { mode = Mode.WATER; claim(); return; }
             }
             // No dry-farming fallback. Farmland with no water within four
             // blocks dries out and reverts to dirt, so tilling it is work that
@@ -219,9 +220,15 @@ public class FarmGoal extends Goal {
         }
         if (!hasPlantable()) {
             targetPos = findGrass();
-            if (targetPos != null) { mode = Mode.SEEDS; return; }
+            if (targetPos != null) { mode = Mode.SEEDS; claim(); return; }
         }
         targetPos = null;
+        assistant.releaseClaim();
+    }
+
+    /** Announce the target to the crew the moment it is chosen. */
+    private void claim() {
+        assistant.claimTarget(targetPos);
     }
 
     private boolean targetStillValid() {
@@ -594,6 +601,8 @@ public class FarmGoal extends Goal {
                         if (skip.contains(cursor)) continue;            // this run's failures
                         if (assistant.isUnreachable(cursor)) continue;  // remembered failures
                         if (!assistant.inZone(cursor)) continue;
+                        if (assistant.takenByCrew(cursor)) continue;    // a mate is already walking there
+                        if (assistant.outsideMyShare(cursor)) continue; // the other end is theirs
                         if (!match.test(cursor)) continue;
                         double d = cursor.distSqr(feet);
                         if (d < bestDist) {

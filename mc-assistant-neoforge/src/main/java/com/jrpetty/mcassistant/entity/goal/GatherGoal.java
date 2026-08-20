@@ -164,6 +164,7 @@ public class GatherGoal extends Goal {
         this.request = null;
         this.myJob = null;
         this.targetPos = null;
+        assistant.releaseClaim();
         assistant.getNavigation().stop();
     }
 
@@ -176,6 +177,7 @@ public class GatherGoal extends Goal {
         this.request = null;
         this.myJob = null;
         this.targetPos = null;
+        assistant.releaseClaim();
         assistant.getNavigation().stop();
     }
 
@@ -262,6 +264,7 @@ public class GatherGoal extends Goal {
             || !request.kind().matches(assistant.level().getBlockState(targetPos))
             || !rankAllows(request.kind(), assistant.level().getBlockState(targetPos))) {
             targetPos = findNearest();
+            assistant.claimTarget(targetPos);   // tell the crew where I'm headed
             workTicks = 0;
             stuckTicks = 0;
             builtBlocks = 0;
@@ -560,6 +563,8 @@ public class GatherGoal extends Goal {
             if (unreachable.contains(pos)) continue; // don't re-target blocks we couldn't reach
             if (assistant.isUnreachable(pos)) continue; // nor ones an earlier run couldn't
             if (!assistant.inZone(pos)) continue;    // stay inside the marked work zone
+            if (assistant.takenByCrew(pos)) continue;    // a crewmate is already walking there
+            if (assistant.outsideMyShare(pos)) continue; // that end of the wood is theirs
             BlockState rankSt = assistant.level().getBlockState(pos);
             if (!request.kind().matches(rankSt) || !rankAllows(request.kind(), rankSt)) continue;
             double d = pos.distSqr(feet);
