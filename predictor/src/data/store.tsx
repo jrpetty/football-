@@ -20,7 +20,11 @@ import type {
 const BASE = import.meta.env.BASE_URL
 
 async function loadJson<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}data/${path}`)
+  // `no-cache` forces a revalidation rather than a blind cache hit. These
+  // files are rewritten by the weekly job at the same URLs, so a stale copy
+  // would quietly show last week's predictions as though they were current —
+  // the one failure this site cannot afford.
+  const res = await fetch(`${BASE}data/${path}`, { cache: 'no-cache' })
   if (!res.ok) throw new Error(`Could not load ${path} (HTTP ${res.status})`)
   return (await res.json()) as T
 }

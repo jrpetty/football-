@@ -8,6 +8,7 @@
 // ---------------------------------------------------------------------------
 
 import { fetchFplSeason, fetchOpenFootballSeason, XG_ERA_START } from './sources/mirror.ts'
+import { fetchLiveSeason } from './sources/live.ts'
 import { writeJson, cachePath } from './lib/fsjson.ts'
 import type { NormMatch, NormPlayer, NormPlayerGw } from './sources/types.ts'
 
@@ -37,7 +38,42 @@ function key(m: NormMatch): string {
   return `${m.season}|${m.home}|${m.away}`
 }
 
-export async function ingest(): Promise<Corpus> {
+export type SourceMode = 'auto' | 'live' | 'mirror'
+
+/**
+ * Overlay live data onto the mirror's richer per-player detail.
+ *
+ * The mirror carries expected goals and per-gameweek rows the live endpoints
+ * do not expose; the live feed carries fresher results and today's injury
+ * flags. Taking the best of each means a Tuesday run reflects the weekend even
+ * if the mirror has not refreshed yet, without losing xG.
+ */
+function overlayLive(mirror: Awaited<ReturnType<typeof fetchFplSeason>>, live: Awaited<ReturnType<typeof fetchLiveSeason>>) {
+  if (!mirror) return live
+  if (!live) return mirror
+
+  const liveByFixture = new Map(live.matches.map((m) => [m.fixtureId ?? -1, m]))
+  const matches = mirror.matches.map((m) => {
+    const hit = liveByFixture.get(m.fixtureId ?? -1)
+    if (!hit || !hit.finished) return m
+    // Live wins on results; the mirror keeps supplying xG.
+    return { ...m, homeGoals: hit.homeGoals, awayGoals: hit.awayGoals, finished: true }
+  })
+
+  // Availability is the most perishable field on the whole feed, so the live
+  // view of it always wins.
+  const liveById = new Map(live.players.map((p) => [p.id, p]))
+  const players = mirror.players.map((p) => {
+    const hit = liveById.get(p.id)
+    return hit ? { ...hit, xg: p.xg || hit.xg, xa: p.xa || hit.xa } : p
+  })
+  // Players the mirror has not seen yet (new signings) still need to appear.
+  for (const p of live.players) if (!mirror.players.some((m) => m.id === p.id)) players.push(p)
+
+  return { ...mirror, matches, players }
+}
+
+export async function ingest(source: SourceMode = 'auto'): Promise<Corpus> {
   const matches: NormMatch[] = []
   const playerGws: NormPlayerGw[] = []
   let players: NormPlayer[] = []
@@ -47,7 +83,16 @@ export async function ingest(): Promise<Corpus> {
   for (const season of SEASONS) {
     const isXgEra = season >= XG_ERA_START
     const of = await fetchOpenFootballSeason(season, CURRENT_SEASON, '1')
-    const fpl = isXgEra ? await fetchFplSeason(season, CURRENT_SEASON) : null
+    let fpl = isXgEra ? await fetchFplSeason(season, CURRENT_SEASON) : null
+
+    // Only the current season is worth fetching live; earlier ones are settled.
+    if (season === CURRENT_SEASON && source !== 'mirror') {
+      const live = await fetchLiveSeason(season)
+      if (live) fpl = overlayLive(fpl, live)
+      else if (source === 'live') {
+        throw new Error('live source was requested but the FPL API did not return usable data')
+      }
+    }
 
     // openfootball is the spine for played seasons; the FPL feed supplies xG
     // and is the only source for a season that has not started yet.
@@ -121,8 +166,10 @@ export async function loadCorpus(): Promise<Corpus> {
 
 const isMain = process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop() ?? '')
 if (isMain) {
-  console.log('Ingesting Premier League data...')
-  const corpus = await ingest()
+  const arg = process.argv.indexOf('--source')
+  const source = (arg >= 0 ? process.argv[arg + 1] : 'auto') as SourceMode
+  console.log(`Ingesting Premier League data (source: ${source})...`)
+  const corpus = await ingest(source)
   await writeJson(cachePath('corpus.json'), corpus)
   const played = corpus.matches.filter((m) => m.finished).length
   console.log(

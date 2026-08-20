@@ -7,6 +7,7 @@
 import { Link, useParams } from 'react-router-dom'
 import { useGameweek, useSeason } from '../data/store.tsx'
 import { ScoreMatrix } from '../components/ScoreMatrix.tsx'
+import { NarrativePanel } from '../components/NarrativePanel.tsx'
 import { ProbBar, Stat, TeamChip, formatKickoff, headlineScore } from '../components/primitives.tsx'
 import { clubColor, clubName, club } from '../config/teams.ts'
 import type { Evidence } from '../core/evidence.ts'
@@ -338,6 +339,10 @@ export default function FixtureDetail() {
           </table>
         </div>
       )}
+
+      <div style={{ marginBottom: 18 }}>
+        <NarrativePanel fixture={f} />
+      </div>
 
       <details className="panel panel-pad">
         <summary style={{ cursor: 'pointer', fontWeight: 650, fontSize: 14 }}>

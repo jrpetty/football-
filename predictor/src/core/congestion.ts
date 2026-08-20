@@ -63,7 +63,9 @@ export function restProfile(
 
   // A third match in a fortnight compounds the turnaround penalty.
   if (matchesIn14Days >= 3) logShift -= 0.02 * (matchesIn14Days - 2)
-  logShift = clamp(logShift, -0.15, 0)
+  // `+ 0` normalises -0, which would otherwise leak into artifacts and read
+  // oddly in comparisons despite being numerically zero.
+  logShift = clamp(logShift, -0.15, 0) + 0
 
   let note: string | null = null
   if (daysRest <= 3.5) note = `Only ${daysRest.toFixed(0)} days since their last match`
