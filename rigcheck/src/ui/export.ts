@@ -6,7 +6,35 @@
 import type { ComparisonMatrix } from '../core/types.ts';
 import type { EngineData } from '../core/engine.ts';
 
-function download(filename: string, content: string, mime: string) {
+/**
+ * Hand a file to the user.
+ *
+ * Two paths, because the app runs in two very different places. Served
+ * normally (or opened from the single-file build) an anchor download works.
+ * Inside the artifact viewer it does NOT — page-initiated downloads are
+ * blocked there, so an anchor click silently does nothing, which is the worst
+ * possible outcome: a button that looks like it worked. The viewer instead
+ * grants a mediated save the user confirms, so try that first when it exists.
+ */
+async function download(filename: string, content: string, mime: string): Promise<void> {
+  const claude = (globalThis as { claude?: { use?: (n: string) => Promise<unknown> } }).claude;
+  if (claude?.use) {
+    try {
+      const dl = (await claude.use('downloads')) as
+        | { save: (r: { filename: string; data: string }) => Promise<unknown> }
+        | null;
+      if (dl) {
+        await dl.save({ filename, data: content });
+        return;
+      }
+    } catch (err) {
+      // The viewer declining is a normal outcome, not an error to shout about.
+      const code = (err as { code?: string } | undefined)?.code;
+      if (code === 'declined' || code === 'rate_limited') return;
+      // Anything else: fall through and try the ordinary anchor path.
+    }
+  }
+
   const blob = new Blob([content], { type: mime });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -23,15 +51,15 @@ function csvCell(v: unknown): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-export function exportCsv(filename: string, rows: Record<string, unknown>[]) {
+export function exportCsv(filename: string, rows: Record<string, unknown>[]): void {
   if (!rows.length) return;
   const headers = [...new Set(rows.flatMap((r) => Object.keys(r)))];
   const body = [headers.join(','), ...rows.map((r) => headers.map((h) => csvCell(r[h])).join(','))].join('\n');
-  download(filename, body, 'text/csv;charset=utf-8');
+  void download(filename, body, 'text/csv;charset=utf-8');
 }
 
-export function exportJson(filename: string, data: unknown) {
-  download(filename, JSON.stringify(data, null, 2), 'application/json');
+export function exportJson(filename: string, data: unknown): void {
+  void download(filename, JSON.stringify(data, null, 2), 'application/json');
 }
 
 export function matrixToRows(matrix: ComparisonMatrix, data: EngineData): Record<string, unknown>[] {
