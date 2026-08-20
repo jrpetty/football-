@@ -163,6 +163,20 @@ button, input, select {
   font-weight: 600;
 }
 .panel-head .spacer { margin-left: auto; }
+/* A panel nested inside another panel's body: same header treatment, one step
+   down in the heading outline so screen readers get a real hierarchy rather
+   than a flat run of h2s. h3 is sized to match h2 explicitly because nothing
+   here resets UA heading sizes and the two would otherwise differ. */
+.panel-head h3 {
+  font-size: 16.5px;
+  font-weight: 700;
+  margin: 13.695px 0;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+}
+.sub-panel { background: var(--surface-2); margin-bottom: 0; }
+.sub-panel > .panel-head { background: transparent; }
 
 .panel-body { padding: 12px; }
 .panel-body.tight { padding: 0; }

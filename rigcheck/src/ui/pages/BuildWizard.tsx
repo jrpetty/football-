@@ -22,7 +22,7 @@ import { useMemo, useState } from 'react';
 import { useApp } from '../store.ts';
 import { planBuild, type ComponentPrices, type PlanRequest } from '../../core/planner.ts';
 import { PRESETS, type Preset } from '../../core/presets.ts';
-import { DEFAULT_USAGE, PSU_EFFICIENCY, runningCost, totalCostOfOwnership, type PsuTier, type UsageProfile } from '../../core/running.ts';
+import { DEFAULT_USAGE, PSU_EFFICIENCY, efficiencyPayback, runningCost, totalCostOfOwnership, type PsuTier, type UsageProfile } from '../../core/running.ts';
 import { exportJson } from '../export.ts';
 import { findObserved, loadPrices, plannerTables, priceCoverage } from '../pricing.ts';
 import componentPrices from '../../../data/pricing/components-gbp.json';
@@ -801,6 +801,24 @@ function RunningCostPanel({
   const running = runningCost(build.powerW, psuWatts, psuTier, usage);
   const tco = totalCostOfOwnership(build.total, running, usage);
 
+  // Is the next tier up worth buying? The premium is a typical retail figure the
+  // user can type over, because the honest answer depends on the two specific
+  // units in front of them rather than on the badge.
+  const tiers = Object.keys(PSU_EFFICIENCY) as PsuTier[];
+  const nextTier = tiers[tiers.indexOf(psuTier) + 1] ?? null;
+  const premiumKey = nextTier ? `${psuTier}->${nextTier}` : null;
+  const defaultPremium = premiumKey
+    ? Number((componentPrices.psuTierPremium as Record<string, unknown>)[premiumKey] ?? 20)
+    : 0;
+  // Keyed by the tier step, not held globally: a price typed in for
+  // gold -> platinum is meaningless for unrated -> bronze, and carrying it
+  // across produced a straight-faced "80+ Bronze costs £900 more".
+  const [premiums, setPremiums] = useState<Record<string, number>>({});
+  const usedPremium = premiumKey != null ? (premiums[premiumKey] ?? defaultPremium) : defaultPremium;
+  const payback = nextTier
+    ? efficiencyPayback(build.powerW, psuWatts, psuTier, nextTier, usedPremium, usage)
+    : null;
+
   return (
     <div className="panel">
       <div className="panel-head">
@@ -873,6 +891,63 @@ function RunningCostPanel({
             </span>
           </div>
         </div>
+
+        {payback && nextTier && (
+          <div className="panel sub-panel" style={{ marginTop: 14 }}>
+            <div className="panel-head">
+              <h3>Is {PSU_EFFICIENCY[nextTier].label} worth the extra?</h3>
+              <span className="spacer" />
+              <span className={`tag ${payback.worthIt ? 'good' : ''}`}>
+                {payback.worthIt ? 'pays for itself' : 'does not pay for itself'}
+              </span>
+            </div>
+            <div className="panel-body">
+              <div className="stat-row" style={{ marginBottom: 12 }}>
+                <div className="stat">
+                  <span className="v">£{payback.savingOverOwnership.toFixed(0)}</span>
+                  <span className="k">saved over {usage.ownershipYears} years</span>
+                </div>
+                <div className="stat">
+                  <span className="v">
+                    {payback.paybackYears == null ? '—' : `${payback.paybackYears.toFixed(1)}y`}
+                  </span>
+                  <span className="k">to break even</span>
+                </div>
+                <div className="stat">
+                  <span className="v">£{usedPremium}</span>
+                  <span className="k">assumed premium</span>
+                </div>
+              </div>
+
+              <div className="note" style={{ marginBottom: 12 }}>{payback.detail}</div>
+
+              <div className="field no-print" style={{ maxWidth: 260 }}>
+                <label>what the upgrade actually costs you, £</label>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={usedPremium}
+                  onChange={(e) =>
+                    premiumKey &&
+                    setPremiums({ ...premiums, [premiumKey]: Math.max(0, Number(e.target.value)) })
+                  }
+                />
+                <span className="mini">
+                  The default is a typical retail step at this wattage. Put your own two prices in —
+                  the answer swings entirely on this number, and a sale price can flip it.
+                </span>
+              </div>
+
+              <p className="mini" style={{ marginTop: 10 }}>
+                This compares electricity only. Higher tiers usually also bring better capacitors, a
+                quieter fan and a longer warranty, none of which show up in the sum above — so a
+                "does not pay for itself" verdict is a reason not to buy it <em>for the running
+                cost</em>, not a reason to avoid it.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

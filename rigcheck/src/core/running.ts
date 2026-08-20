@@ -196,9 +196,14 @@ export function totalCostOfOwnership(purchase: number, running: RunningCost, usa
     `About £${running.costPerYear.toFixed(0)} a year to run at ${usage.gamingHoursPerWeek}h a week of gaming and ${usage.idleHoursPerWeek}h idle, ` +
     `so £${running.costOverOwnership.toFixed(0)} over ${yrs} year${yrs === 1 ? '' : 's'} — ` +
     `${(runningShare * 100).toFixed(0)}% of what the machine actually costs you. ` +
+    // Deliberately does not promise that a better tier recovers this. The waste
+    // figure is the whole loss in the supply; a tier step recovers a couple of
+    // efficiency points of it, which is usually a small fraction. Saying
+    // otherwise put a "£50 is what a better tier buys back" line directly above
+    // a payback sum showing £9, and the two read as a contradiction.
     (running.psuWasteCostOverOwnership > 40
-      ? `£${running.psuWasteCostOverOwnership.toFixed(0)} of that is lost in the power supply alone, which is what a better efficiency tier buys back.`
-      : `Only £${running.psuWasteCostOverOwnership.toFixed(0)} of it is lost in the power supply, so a higher efficiency tier would not pay for itself here.`);
+      ? `£${running.psuWasteCostOverOwnership.toFixed(0)} of that is lost as heat in the power supply. A better efficiency tier recovers part of it — how much, and whether it is worth the price, is the sum below.`
+      : `Only £${running.psuWasteCostOverOwnership.toFixed(0)} of it is lost in the power supply, so there is very little for a better efficiency tier to recover.`);
   return { purchase, running, total, runningShare, verdict };
 }
 
@@ -217,6 +222,11 @@ export function efficiencyPayback(
   const savingOverOwnership = savingPerYear * usage.ownershipYears;
   const paybackYears = savingPerYear > 0 ? extraCost / savingPerYear : null;
   const worthIt = paybackYears != null && paybackYears < usage.ownershipYears;
+  // Two decimals while the annual saving is small, none once it is large. A
+  // yearly figure rounded to whole pounds does not multiply back to the
+  // headline total — "saves £2 a year" next to "£9 over 4 years" reads as an
+  // arithmetic mistake even though both roundings are individually correct.
+  const perYear = savingPerYear < 10 ? savingPerYear.toFixed(2) : savingPerYear.toFixed(0);
   return {
     savingOverOwnership,
     paybackYears,
@@ -225,7 +235,7 @@ export function efficiencyPayback(
       paybackYears == null
         ? `Moving from ${PSU_EFFICIENCY[from].label} to ${PSU_EFFICIENCY[to].label} saves nothing measurable at this load.`
         : worthIt
-          ? `${PSU_EFFICIENCY[to].label} costs £${extraCost} more and saves £${savingPerYear.toFixed(0)} a year, paying for itself in ${paybackYears.toFixed(1)} years — inside the ${usage.ownershipYears} you plan to keep it.`
-          : `${PSU_EFFICIENCY[to].label} costs £${extraCost} more and saves £${savingPerYear.toFixed(0)} a year, which takes ${paybackYears.toFixed(1)} years to pay back — longer than the ${usage.ownershipYears} you plan to keep it. Buy it for the build quality if you want it, not for the electricity.`,
+          ? `${PSU_EFFICIENCY[to].label} costs £${extraCost} more and saves £${perYear} a year, paying for itself in ${paybackYears.toFixed(1)} years — inside the ${usage.ownershipYears} you plan to keep it.`
+          : `${PSU_EFFICIENCY[to].label} costs £${extraCost} more and saves £${perYear} a year, which takes ${paybackYears.toFixed(1)} years to pay back — longer than the ${usage.ownershipYears} you plan to keep it. Buy it for the build quality if you want it, not for the electricity.`,
   };
 }

@@ -4,45 +4,178 @@
   "provenance": "model-knowledge",
   "note": "Allowances for the parts this catalogue does not model individually — motherboards, memory, storage, power supplies, cases and coolers. A build planner that priced only the CPU and GPU would understate a machine by 300-400 pounds, which is worse than not planning at all. These are typical figures for a competent budget part in each class, not the cheapest thing that will POST. Same caveat as the part prices: recalled, not sourced, and perishable.",
   "motherboard": {
-    "AM5": { "budget": 130, "mid": 180, "high": 260, "chipsets": "B650 / B650E / X670E" },
-    "AM4": { "budget": 75, "mid": 110, "high": 160, "chipsets": "B450 / B550 / X570" },
-    "LGA1851": { "budget": 150, "mid": 210, "high": 300, "chipsets": "B860 / Z890" },
-    "LGA1700": { "budget": 100, "mid": 150, "high": 220, "chipsets": "B760 / Z790" },
-    "LGA1200": { "budget": 80, "mid": 120, "high": 180, "chipsets": "B560 / Z590" },
-    "default": { "budget": 110, "mid": 160, "high": 230, "chipsets": "unknown socket — allowance is a mid-range guess" }
+    "AM5": {
+      "budget": 130,
+      "mid": 180,
+      "high": 260,
+      "chipsets": "B650 / B650E / X670E"
+    },
+    "AM4": {
+      "budget": 75,
+      "mid": 110,
+      "high": 160,
+      "chipsets": "B450 / B550 / X570"
+    },
+    "LGA1851": {
+      "budget": 150,
+      "mid": 210,
+      "high": 300,
+      "chipsets": "B860 / Z890"
+    },
+    "LGA1700": {
+      "budget": 100,
+      "mid": 150,
+      "high": 220,
+      "chipsets": "B760 / Z790"
+    },
+    "LGA1200": {
+      "budget": 80,
+      "mid": 120,
+      "high": 180,
+      "chipsets": "B560 / Z590"
+    },
+    "default": {
+      "budget": 110,
+      "mid": 160,
+      "high": 230,
+      "chipsets": "unknown socket — allowance is a mid-range guess"
+    }
   },
   "memory": {
-    "DDR5": { "16": 55, "32": 95, "64": 180, "note": "6000 MT/s CL30 two-stick kit, the sweet spot for AM5 and comfortably within Intel's range." },
-    "DDR4": { "16": 35, "32": 62, "64": 125, "note": "3600 MT/s CL16 two-stick kit. Two sticks, never four — a 2x16 kit beats 4x8 on every platform here." },
-    "DDR3": { "16": 30, "32": 70, "64": null, "note": "Effectively a used market only." }
+    "DDR5": {
+      "16": 55,
+      "32": 95,
+      "64": 180,
+      "note": "6000 MT/s CL30 two-stick kit, the sweet spot for AM5 and comfortably within Intel's range."
+    },
+    "DDR4": {
+      "16": 35,
+      "32": 62,
+      "64": 125,
+      "note": "3600 MT/s CL16 two-stick kit. Two sticks, never four — a 2x16 kit beats 4x8 on every platform here."
+    },
+    "DDR3": {
+      "16": 30,
+      "32": 70,
+      "64": null,
+      "note": "Effectively a used market only."
+    }
   },
   "storage": {
-    "nvme-gen4": { "500": 45, "1000": 70, "2000": 115, "4000": 230 },
-    "nvme-gen3": { "500": 35, "1000": 55, "2000": 95, "4000": 190 },
-    "sata-ssd": { "500": 30, "1000": 50, "2000": 90, "4000": 180 },
-    "hdd": { "1000": 35, "2000": 45, "4000": 75, "8000": 130 },
+    "nvme-gen4": {
+      "500": 45,
+      "1000": 70,
+      "2000": 115,
+      "4000": 230
+    },
+    "nvme-gen3": {
+      "500": 35,
+      "1000": 55,
+      "2000": 95,
+      "4000": 190
+    },
+    "sata-ssd": {
+      "500": 30,
+      "1000": 50,
+      "2000": 90,
+      "4000": 180
+    },
+    "hdd": {
+      "1000": 35,
+      "2000": 45,
+      "4000": 75,
+      "8000": 130
+    },
     "note": "Capacity keys are gigabytes. A modern install plus a handful of large games wants 1TB as the floor; 500GB is a false economy that costs a re-download every fortnight."
   },
   "psu": [
-    { "watts": 550, "price": 60, "tier": "80+ Bronze/Gold, reputable OEM" },
-    { "watts": 650, "price": 72, "tier": "80+ Gold" },
-    { "watts": 750, "price": 88, "tier": "80+ Gold, ATX 3.x with a 12V-2x6 connector" },
-    { "watts": 850, "price": 110, "tier": "80+ Gold, ATX 3.x" },
-    { "watts": 1000, "price": 150, "tier": "80+ Gold, ATX 3.x" },
-    { "watts": 1200, "price": 205, "tier": "80+ Platinum, ATX 3.x" },
-    { "watts": 1600, "price": 320, "tier": "80+ Platinum/Titanium" }
+    {
+      "watts": 550,
+      "price": 60,
+      "tier": "80+ Bronze/Gold, reputable OEM"
+    },
+    {
+      "watts": 650,
+      "price": 72,
+      "tier": "80+ Gold"
+    },
+    {
+      "watts": 750,
+      "price": 88,
+      "tier": "80+ Gold, ATX 3.x with a 12V-2x6 connector"
+    },
+    {
+      "watts": 850,
+      "price": 110,
+      "tier": "80+ Gold, ATX 3.x"
+    },
+    {
+      "watts": 1000,
+      "price": 150,
+      "tier": "80+ Gold, ATX 3.x"
+    },
+    {
+      "watts": 1200,
+      "price": 205,
+      "tier": "80+ Platinum, ATX 3.x"
+    },
+    {
+      "watts": 1600,
+      "price": 320,
+      "tier": "80+ Platinum/Titanium"
+    }
   ],
   "case": {
-    "restricted": { "price": 50, "label": "budget case, limited airflow" },
-    "moderate": { "price": 70, "label": "mainstream case, adequate airflow" },
-    "good": { "price": 95, "label": "mesh-front airflow case" },
-    "excellent": { "price": 135, "label": "high-airflow case with quality fans included" }
+    "restricted": {
+      "price": 50,
+      "label": "budget case, limited airflow"
+    },
+    "moderate": {
+      "price": 70,
+      "label": "mainstream case, adequate airflow"
+    },
+    "good": {
+      "price": 95,
+      "label": "mesh-front airflow case"
+    },
+    "excellent": {
+      "price": 135,
+      "label": "high-airflow case with quality fans included"
+    }
   },
   "cooler": {
-    "stock": { "price": 0, "label": "bundled cooler", "maxSustainedW": 90 },
-    "budget-tower": { "price": 32, "label": "single-tower air cooler", "maxSustainedW": 150 },
-    "premium-air": { "price": 85, "label": "dual-tower air cooler", "maxSustainedW": 230 },
-    "aio": { "price": 120, "label": "240-360mm liquid cooler", "maxSustainedW": 280 }
+    "stock": {
+      "price": 0,
+      "label": "bundled cooler",
+      "maxSustainedW": 90
+    },
+    "budget-tower": {
+      "price": 32,
+      "label": "single-tower air cooler",
+      "maxSustainedW": 150
+    },
+    "premium-air": {
+      "price": 85,
+      "label": "dual-tower air cooler",
+      "maxSustainedW": 230
+    },
+    "aio": {
+      "price": 120,
+      "label": "240-360mm liquid cooler",
+      "maxSustainedW": 280
+    }
   },
-  "os": { "price": 0, "note": "Deliberately zero. A Windows licence is a real cost for some people and free for others, and guessing which would put a wrong number in a budget. Add it yourself if you need one." }
+  "os": {
+    "price": 0,
+    "note": "Deliberately zero. A Windows licence is a real cost for some people and free for others, and guessing which would put a wrong number in a budget. Add it yourself if you need one."
+  },
+  "psuTierPremium": {
+    "note": "Typical extra cost, in pounds, to buy the next efficiency tier up at the same wattage from a comparable OEM. Efficiency is not the only thing that moves with the badge — higher tiers usually ship better capacitors, quieter fans and longer warranties — so treat these as the price of the whole step up, not of the efficiency alone. Same caveat as every other figure in this file: recalled from typical UK retail, not scraped from a live listing, and perishable. The payback sum in the wizard lets you type your own number over it, which is what you should do once you have two real products in front of you.",
+    "caveat": "80+ Silver barely exists in the retail channel — almost nothing ships with that badge, so the two steps either side of it are arithmetic rather than shopping advice.",
+    "none->bronze": 12,
+    "bronze->silver": 8,
+    "silver->gold": 10,
+    "gold->platinum": 30,
+    "platinum->titanium": 45
+  }
 }

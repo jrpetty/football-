@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-20T12:21:04.156Z",
+  "generatedAt": "2026-08-20T15:03:33.821Z",
   "note": "Operator-supplied market observations. These OVERRIDE the recalled seed tables in gbp-new.json and gbp-used.json for any part they cover. Regenerate with `npm run import:prices`; edit the CSVs in data/prices-observed/, never this file.",
   "provenance": "operator-observed",
   "sourceFiles": [

@@ -16,7 +16,7 @@
  *   3. How the machine actually measured against what the model expects — which
  *      is the only part that can catch a fault the specification cannot see.
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../store.ts';
 import { detectHardware, detectionToBuild } from '../../core/detect.ts';
 import { diagnose, type DetectedSystem, type Measurement, type Severity } from '../../core/health.ts';
@@ -171,6 +171,19 @@ export function SystemHealth() {
     setFixesApplied([]);
     setSessionNote('');
   };
+
+  /**
+   * A changed specification or a new measurement makes this a DIFFERENT check,
+   * so the save button has to come back.
+   *
+   * Without this the flag stuck after the first save and the button stayed
+   * disabled for the rest of the session — which silently broke the entire
+   * before-and-after feature, since a second session could never be recorded.
+   * Found by driving the flow rather than by reading it.
+   */
+  useEffect(() => {
+    setSaved(false);
+  }, [system, measurements]);
 
   /** Findings outstanding at the most recent session — the candidates to mark fixed. */
   const outstanding = machineHistory.length

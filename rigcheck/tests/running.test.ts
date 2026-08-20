@@ -121,4 +121,31 @@ describe('total cost of ownership', () => {
     expect(p.worthIt).toBe(true);
     expect(p.paybackYears!).toBeLessThan(6);
   });
+
+  it('quotes an annual saving that multiplies back to the headline total', () => {
+    // The quoted per-year figure and the over-ownership total are two separate
+    // roundings of the same quantity. Rounding the small one to whole pounds
+    // made them disagree on screen — "saves £2 a year" beside "£9 over 4
+    // years" — which reads as an arithmetic error to anyone who checks.
+    for (const [load, watts, from, to] of [
+      [300, 650, 'gold', 'platinum'],
+      [180, 550, 'gold', 'platinum'],
+      [600, 1000, 'none', 'bronze'],
+      [450, 850, 'bronze', 'silver'],
+    ] as [number, number, PsuTier, PsuTier][]) {
+      const p = efficiencyPayback(load, watts, from, to, 30, usage);
+      const quoted = Number(/saves £([\d.]+) a year/.exec(p.detail)?.[1] ?? NaN);
+      expect(Number.isFinite(quoted)).toBe(true);
+      // Whole pounds either way: the two displayed numbers must agree.
+      expect(Math.round(quoted * usage.ownershipYears)).toBe(Math.round(p.savingOverOwnership));
+    }
+  });
+
+  it('never claims a payback when the better tier saves nothing', () => {
+    const idle: UsageProfile = { gamingHoursPerWeek: 0, idleHoursPerWeek: 0, pencePerKwh: 25, ownershipYears: 4 };
+    const p = efficiencyPayback(300, 650, 'gold', 'titanium', 30, idle);
+    expect(p.paybackYears).toBeNull();
+    expect(p.worthIt).toBe(false);
+    expect(p.detail).toMatch(/saves nothing measurable/);
+  });
 });

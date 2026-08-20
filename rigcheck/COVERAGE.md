@@ -1,6 +1,6 @@
 # RIGCHECK coverage report
 
-Generated 2026-08-20T11:27:29.194Z.
+Generated 2026-08-20T15:03:36.247Z.
 
 ## Catalogue against spec targets
 
@@ -180,3 +180,24 @@ folds is that fit ever judged.
 
 To promote the gate to enforcing: run `harness/run-benchmark.ps1` on real
 hardware, drop the CSVs into `data/manual/`, and re-run `npm run gate`.
+
+## Engine surface not reachable from the UI
+
+Three functions exist in the engine, are tested, and are not reachable from any
+screen. They are listed here rather than quietly left in place, because "it is
+in the codebase" and "a user can get to it" are different claims and only the
+second one matters to someone using the tool.
+
+| Function | Module | What it does | Why it is not wired |
+|---|---|---|---|
+| `sweepGrid` | `core/analysis.ts` | Two-axis CPU x GPU grid, for reading a bottleneck surface rather than a single point | Needs a heatmap screen of its own; the Comparison Matrix covers the common case |
+| `rankAssemblies` | `core/analysis.ts` | Ranks whole assemblies against a scoring brief | Overlaps `planBuild`, which the wizard uses instead |
+| `priceToTarget` | `core/queries.ts` | Cheapest part that reaches a stated frame-rate target | Subsumed by the wizard's budget search; would suit a standalone "what is the cheapest card that does X" query |
+
+Everything else in `core/` is reachable, either directly from a screen or
+through a function that is. Checked by exported symbol against `src/ui/`, then
+by following the call graph one hop for anything that did not appear —
+`settingsForTarget` reaches the UI through `recommendForLibrary` and
+`planBuild`, `psuEfficiency` through `runningCost`, `configChanges` and
+`matchMeasurements` through `detectDegradation` and `verifyFixes`, and
+`estimateNoise` through `machineReport`.
