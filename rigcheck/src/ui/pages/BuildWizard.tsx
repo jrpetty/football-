@@ -456,7 +456,7 @@ export function BuildWizard() {
       <div className="wizard-nav">
         <button className="btn" onClick={() => go(Math.max(0, step - 1))} disabled={step === 0}>back</button>
         <button
-          className="btn"
+          className="btn primary"
           onClick={() => go(Math.min(STEPS.length - 1, step + 1))}
           disabled={step === STEPS.length - 1 || !canAdvance}
         >

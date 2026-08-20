@@ -57,7 +57,17 @@ function Shell({ children }: { children: React.ReactNode }) {
         >
           <span aria-hidden="true">{navOpen ? '✕' : '☰'}</span>
         </button>
-        <span className="brand">RIGCHECK<span> / build comparison</span></span>
+        <span className="brand">
+          {/* A gauge reticle: outline in the chrome's neutral, needle in the
+              accent. The one place the wordmark gets any ornament. */}
+          <svg className="brand-mark" viewBox="0 0 20 20" aria-hidden="true">
+            <circle cx="10" cy="10" r="8.1" fill="none" stroke="currentColor" strokeOpacity="0.5" strokeWidth="1.5" />
+            <path d="M10 1.9v2.3M18.1 10h-2.3M10 18.1v-2.3M1.9 10h2.3" stroke="currentColor" strokeOpacity="0.5" strokeWidth="1.3" strokeLinecap="round" />
+            <path d="M10 10l3.4-3.4" stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round" />
+            <circle cx="10" cy="10" r="1.7" fill="var(--accent)" />
+          </svg>
+          RIGCHECK<span> / build comparison</span>
+        </span>
         <span className="here" aria-hidden="true">{here?.label ?? ''}</span>
         <nav className={`nav${navOpen ? ' open' : ''}`} id="main-nav" aria-label="Screens">
           {NAV.map((n) => (
