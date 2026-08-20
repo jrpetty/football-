@@ -1,0 +1,31 @@
+{
+  "name": "pl-predictor",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Premier League match prediction system — Dixon-Coles + xG + player availability",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -b --noEmit",
+    "test": "node --test test/",
+    "ingest": "node scripts/ingest.ts",
+    "build:data": "node scripts/build-all.ts",
+    "verify": "node scripts/verify-artifacts.ts",
+    "backtest": "node scripts/backtest.ts",
+    "score": "node scripts/score-results.ts"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.2"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.6"
+  }
+}
