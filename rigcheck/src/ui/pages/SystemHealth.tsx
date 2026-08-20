@@ -20,11 +20,27 @@ import { useMemo, useState } from 'react';
 import { useApp } from '../store.ts';
 import { detectHardware, detectionToBuild } from '../../core/detect.ts';
 import { diagnose, type DetectedSystem, type Measurement, type Severity } from '../../core/health.ts';
+import { DIFFICULTY_LABEL, guideFor } from '../../core/fixguides.ts';
+import {
+  detectDegradation, machineId as machineIdOf, measurementKey, seriesFor,
+  trackableKeys, verifyFixes, type AppliedFix, type HealthSession,
+} from '../../core/history.ts';
+import { comparePeers, findPeers, type PeerComparison } from '../../core/peers.ts';
+import { addSession, historyFor, loadSessions, removeSession } from '../sessions.ts';
+import measuredJson from '../../../data/measured/records.json';
+import type { PerfRecord } from '../../core/types.ts';
 import { PRESETS } from '../../core/presets.ts';
 import { exportJson } from '../export.ts';
 import type { RamConfig, Resolution, Storage } from '../../core/types.ts';
 
-type Stage = 'consent' | 'detect' | 'confirm' | 'measure' | 'report';
+type Stage = 'consent' | 'detect' | 'confirm' | 'measure' | 'report' | 'history';
+
+/**
+ * The imported measurement corpus — the ONLY source of real peers. It ships
+ * empty, and a screen that dressed that up as a comparison would be inventing
+ * social proof, so the peer panel says so plainly instead.
+ */
+const measuredRecords = (measuredJson as { records: PerfRecord[] }).records ?? [];
 
 const SEVERITY_LABEL: Record<Severity, string> = {
   critical: 'critical',
@@ -56,6 +72,12 @@ export function SystemHealth() {
   const [psuWatts, setPsuWatts] = useState<number | ''>('');
   const [driverDate, setDriverDate] = useState('');
   const [uptimeDays, setUptimeDays] = useState<number | ''>('');
+
+  const [sessions, setSessions] = useState<HealthSession[]>(() => loadSessions());
+  const [machineLabel, setMachineLabel] = useState('my pc');
+  const [sessionNote, setSessionNote] = useState('');
+  const [fixesApplied, setFixesApplied] = useState<AppliedFix[]>([]);
+  const [saved, setSaved] = useState(false);
 
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [mGame, setMGame] = useState('cyberpunk-2077');
@@ -101,12 +123,67 @@ export function SystemHealth() {
     [system, measurements, data],
   );
 
+  const thisMachineId = system ? machineIdOf(system) : '';
+  const machineHistory = useMemo(
+    () => (thisMachineId ? historyFor(sessions, thisMachineId) : []),
+    [sessions, thisMachineId],
+  );
+
+  /**
+   * Peer comparison, one per measurement. Own history is drawn from earlier
+   * sessions of THIS machine at identical settings — real data, but n=1
+   * machine, which the comparison says out loud rather than passing off as
+   * peer evidence.
+   */
+  const peerComparisons = useMemo(() => {
+    if (!system) return [];
+    return measurements.map((m) => {
+      const key = measurementKey(m);
+      const own = machineHistory
+        .flatMap((s) => s.measurements.filter((x) => measurementKey(x) === key))
+        .map((x) => x.avgFps);
+      const peers = findPeers(measuredRecords, {
+        cpuId: system.build.cpuId, gpuId: system.build.gpuId,
+        gameId: m.gameId, resolution: m.resolution, preset: m.preset,
+      });
+      return {
+        label: `${data.games.get(m.gameId)?.name ?? m.gameId} at ${m.resolution}, ${m.preset ?? 'high'}`,
+        c: comparePeers({ avgFps: m.avgFps, gameId: m.gameId, resolution: m.resolution, preset: m.preset }, peers, own),
+      };
+    });
+  }, [system, measurements, machineHistory, data]);
+
+  const saveSession = () => {
+    if (!system || !report) return;
+    const s: HealthSession = {
+      id: `hs-${Date.now().toString(36)}`,
+      machineId: thisMachineId,
+      machineLabel: machineLabel.trim() || 'my pc',
+      at: new Date().toISOString(),
+      system,
+      measurements,
+      findings: report.findings.map((f) => ({ id: f.id, title: f.title, severity: f.severity, estimatedGainPct: f.estimatedGainPct })),
+      fixesApplied,
+      note: sessionNote.trim() || undefined,
+    };
+    setSessions(addSession(s));
+    setSaved(true);
+    setFixesApplied([]);
+    setSessionNote('');
+  };
+
+  /** Findings outstanding at the most recent session — the candidates to mark fixed. */
+  const outstanding = machineHistory.length
+    ? machineHistory[machineHistory.length - 1].findings
+    : [];
+
   const STAGES: { key: Stage; label: string; hint: string }[] = [
     { key: 'consent', label: 'What this reads', hint: 'and what it does not' },
     { key: 'detect', label: 'Read the machine', hint: 'or type it in' },
     { key: 'confirm', label: 'Check the specs', hint: 'correct anything wrong' },
     { key: 'measure', label: 'Add benchmarks', hint: 'optional, but it is the point' },
     { key: 'report', label: 'The verdict', hint: 'what is wrong and what it costs' },
+    { key: 'history', label: 'Over time', hint: 'did the fixes work' },
   ];
   const idx = STAGES.findIndex((s) => s.key === stage);
 
@@ -541,6 +618,7 @@ export function SystemHealth() {
                     <div className="row"><span className="k">seen</span>{f.evidence}</div>
                     <div className="row"><span className="k">costs</span>{f.impact}</div>
                     {f.remedy && <div className="row"><span className="k">fix</span>{f.remedy}</div>}
+                    <FixGuideBlock findingId={f.id} />
                   </div>
                 ))}
                 <p className="mini" style={{ marginTop: 8 }}>
@@ -585,6 +663,8 @@ export function SystemHealth() {
             </div>
           )}
 
+          <PeerPanel comparisons={peerComparisons} />
+
           {report.healthy.length > 0 && (
             <div className="panel">
               <div className="panel-head"><h2>What is fine</h2></div>
@@ -617,12 +697,369 @@ export function SystemHealth() {
             </div>
           </div>
 
+          <div className="panel">
+            <div className="panel-head">
+              <h2>Keep this, so you can compare later</h2>
+              <span className="spacer" />
+              {machineHistory.length > 0 && <span className="mini">{machineHistory.length} earlier session(s) on this machine</span>}
+            </div>
+            <div className="panel-body">
+              <p className="mini" style={{ marginTop: 0 }}>
+                A single check is a snapshot. Saving it means the next one can answer the two questions this screen
+                cannot answer on its own — did the fix work, and is the machine getting slower. Stored in this browser
+                only; nothing is sent anywhere.
+              </p>
+
+              <div className="grid two">
+                <div className="field">
+                  <label>what to call this machine</label>
+                  <input type="text" value={machineLabel} onChange={(e) => setMachineLabel(e.target.value)} placeholder="my pc" />
+                  <span className="mini">
+                    Identity is the CPU and GPU pairing, so swapping memory or a drive keeps the history — that is the
+                    point. Changing the CPU or GPU starts a new machine.
+                  </span>
+                </div>
+                <div className="field">
+                  <label>note (optional)</label>
+                  <input type="text" value={sessionNote} onChange={(e) => setSessionNote(e.target.value)} placeholder="e.g. after adding the second RAM stick" />
+                </div>
+              </div>
+
+              {outstanding.length > 0 && (
+                <div className="field">
+                  <label>have you fixed anything since the last check?</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {outstanding.map((f) => {
+                      const on = fixesApplied.some((x) => x.findingId === f.id);
+                      return (
+                        <button
+                          key={f.id}
+                          className={`toggle${on ? ' on' : ''}`}
+                          onClick={() =>
+                            setFixesApplied((cur) =>
+                              on
+                                ? cur.filter((x) => x.findingId !== f.id)
+                                : [...cur, { findingId: f.id, title: f.title, predictedGainPct: f.estimatedGainPct, appliedAt: new Date().toISOString() }],
+                            )
+                          }
+                        >
+                          {f.title}
+                          {f.estimatedGainPct != null && <span className="sub"> (+{Math.round(f.estimatedGainPct * 100)}% predicted)</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <span className="mini">
+                    Marking a fix lets the next measurement check the prediction against reality. Mark one at a time if
+                    you can — several applied together share one measurement and cannot be told apart afterwards.
+                  </span>
+                </div>
+              )}
+
+              <div className="wizard-nav">
+                <button className="btn" onClick={saveSession} disabled={saved}>
+                  {saved ? 'saved' : machineHistory.length ? 'save this check' : 'save this as the baseline'}
+                </button>
+                {machineHistory.length > 0 && (
+                  <button className="btn" onClick={() => setStage('history')}>see the history</button>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div className="wizard-nav">
             <button className="btn" onClick={() => setStage('measure')}>back</button>
             <button className="btn" onClick={() => setStage('confirm')}>change the specs</button>
           </div>
         </>
       )}
+
+      {/* --------------------------------------------------------- history -- */}
+      {stage === 'history' && (
+        machineHistory.length === 0 ? (
+          <div className="panel">
+            <div className="panel-head"><h2>Nothing on record yet</h2></div>
+            <div className="panel-body">
+              <div className="empty">
+                No saved sessions for this machine. Run a check, save it as the baseline, then come back after you
+                change something — that is when this becomes useful.
+              </div>
+              <div className="wizard-nav">
+                <button className="btn" onClick={() => setStage('report')}>back to the report</button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            <HistoryPanel
+              sessions={machineHistory}
+              gameName={(id) => data.games.get(id)?.name ?? id}
+              onDelete={(id) => setSessions(removeSession(id))}
+            />
+            <div className="wizard-nav">
+              <button className="btn" onClick={() => setStage('report')}>back to the report</button>
+            </div>
+          </>
+        )
+      )}
     </>
+  );
+}
+
+/* ---------------------------------------------------------- fix guide ---- */
+
+/**
+ * The walkthrough behind a finding.
+ *
+ * Collapsed by default: a report showing six findings each with a twelve-step
+ * guide is a wall nobody reads. Opened, it is everything needed to actually do
+ * the job — what to have ready, how long, the steps in order, how to check it
+ * worked, and what goes wrong.
+ */
+function FixGuideBlock({ findingId }: { findingId: string }) {
+  const [open, setOpen] = useState(false);
+  const guide = guideFor(findingId);
+  if (!guide) return null;
+  return (
+    <>
+      <button className="btn" style={{ marginTop: 8 }} onClick={() => setOpen(!open)}>
+        {open ? 'hide the walkthrough' : `show me how — ${guide.steps.length} steps, about ${guide.minutes} min`}
+      </button>
+      {open && (
+        <div className="guide">
+          <div className="guide-meta">
+            <span><b>{guide.summary}</b></span>
+            <span className="spacer" style={{ flex: 1 }} />
+            <span>{DIFFICULTY_LABEL[guide.difficulty]}</span>
+            <span>about {guide.minutes} minutes</span>
+          </div>
+
+          <h5>before you start</h5>
+          <ul>{guide.needs.map((n) => <li key={n}>{n}</li>)}</ul>
+
+          <h5>steps</h5>
+          <ol>
+            {guide.steps.map((s, i) => (
+              <li key={i}>
+                {s.do}
+                {s.detail && <span className="d">{s.detail}</span>}
+              </li>
+            ))}
+          </ol>
+
+          <h5>how to know it worked</h5>
+          <p className="verify" style={{ margin: 0 }}>{guide.verify}</p>
+
+          <h5>what can go wrong</h5>
+          <ul className="risk">{guide.risks.map((r) => <li key={r}>{r}</li>)}</ul>
+        </div>
+      )}
+    </>
+  );
+}
+
+/* ------------------------------------------------------------- history --- */
+
+/** A measurement's history as a sparkline. Five points do not need a library. */
+function Sparkline({ points }: { points: { at: string; avgFps: number }[] }) {
+  const W = 260;
+  const H = 34;
+  if (points.length < 2) return <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ maxWidth: W }} />;
+  const vals = points.map((p) => p.avgFps);
+  const lo = Math.min(...vals);
+  const hi = Math.max(...vals);
+  const span = hi - lo < 1e-9 ? Math.max(hi * 0.1, 1) : (hi - lo) * 1.25;
+  const mid = (hi + lo) / 2;
+  const yLo = mid - span / 2;
+  const x = (i: number) => 2 + (i / (points.length - 1)) * (W - 4);
+  const y = (v: number) => 4 + (1 - (v - yLo) / span) * (H - 8);
+  const declining = vals[vals.length - 1] < vals[0] * 0.96;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ maxWidth: W }} role="img" aria-label={`${points.length} measurements over time`}>
+      <polyline
+        points={vals.map((v, i) => `${x(i)},${y(v)}`).join(' ')}
+        fill="none"
+        stroke={declining ? 'var(--bad)' : 'var(--chart-series)'}
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      {vals.map((v, i) => (
+        <circle key={i} cx={x(i)} cy={y(v)} r={i === vals.length - 1 ? 3 : 2} fill={declining ? 'var(--bad)' : 'var(--chart-series)'}>
+          <title>{`${points[i].at.slice(0, 10)} — ${v.toFixed(0)}fps`}</title>
+        </circle>
+      ))}
+    </svg>
+  );
+}
+
+function HistoryPanel({
+  sessions,
+  gameName,
+  onDelete,
+}: {
+  sessions: HealthSession[];
+  gameName: (id: string) => string;
+  onDelete: (id: string) => void;
+}) {
+  const degradation = useMemo(() => detectDegradation(sessions), [sessions]);
+  const keys = useMemo(() => trackableKeys(sessions), [sessions]);
+  const verdicts = useMemo(() => {
+    // Verify each session's fixes against the session immediately before it,
+    // which is the only pairing where "what changed" is answerable.
+    const ordered = [...sessions].sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+    return ordered.flatMap((s, i) => (i === 0 ? [] : verifyFixes(ordered[i - 1], s)));
+  }, [sessions]);
+
+  const pct = (x: number) => `${x >= 0 ? '+' : ''}${(x * 100).toFixed(0)}%`;
+
+  return (
+    <>
+      {verdicts.length > 0 && (
+        <div className="panel">
+          <div className="panel-head">
+            <h2>Did the fixes work?</h2>
+            <span className="spacer" />
+            <span className="mini">measured, not predicted</span>
+          </div>
+          <div className="panel-body">
+            {verdicts.map((v, i) => (
+              <div key={i} className={`finding ${v.outcome === 'delivered' ? 'ok' : v.outcome === 'worse' ? 'critical' : v.outcome === 'partial' ? 'minor' : 'major'}`}>
+                <div className="head">
+                  <span className={`pill ${v.outcome === 'delivered' ? 'ok' : v.outcome === 'worse' ? 'critical' : v.outcome === 'unverifiable' ? 'watch' : 'risk'}`}>
+                    {v.outcome === 'delivered' ? 'worked' : v.outcome === 'partial' ? 'partly worked' : v.outcome === 'no-change' ? 'no change' : v.outcome === 'worse' ? 'got worse' : 'cannot tell'}
+                  </span>
+                  <b>{v.fix.title}</b>
+                  <span className="spacer" style={{ flex: 1 }} />
+                  {v.actualGainPct != null && (
+                    <span className="gain" style={{ color: v.actualGainPct >= 0.02 ? 'var(--good)' : 'var(--bad)' }}>
+                      {pct(v.actualGainPct)} measured
+                      {v.predictedGainPct != null && <span className="sub"> vs {pct(v.predictedGainPct)} predicted</span>}
+                    </span>
+                  )}
+                </div>
+                <div className="row">{v.detail}</div>
+                {v.modelDisagreement && (
+                  <div className="row" style={{ color: 'var(--spec)' }}>
+                    <span className="k">note</span>
+                    This is a miss by the model, not just by the fix. The prediction and the measurement disagree by more
+                    than half the prediction's own size, which is worth more than the fix itself: it is the kind of
+                    evidence that would let the model be corrected. Export this history and it can be.
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="panel">
+        <div className="panel-head">
+          <h2>Is it getting slower?</h2>
+          <span className="spacer" />
+          {degradation.span && <span className="mini">{degradation.span.days} days on record</span>}
+        </div>
+        <div className="panel-body">
+          <div className={`note${degradation.degraded ? ' bad' : ''}`} style={{ marginBottom: 12 }}>
+            {degradation.detail}
+          </div>
+
+          {degradation.changes.length > 0 && (
+            <>
+              <div className="mini" style={{ marginBottom: 4 }}>what changed between the first and latest session</div>
+              <ul style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--muted)', margin: '0 0 12px', paddingLeft: 18 }}>
+                {degradation.changes.map((c) => <li key={c} className="mono">{c}</li>)}
+              </ul>
+            </>
+          )}
+
+          {keys.length === 0 ? (
+            <div className="empty">
+              Nothing is measured twice at the same settings yet. Pick one game, note the exact preset, and re-run it
+              every time — that repeated measurement is the whole basis of a history.
+            </div>
+          ) : (
+            keys.map((k) => {
+              const series = seriesFor(sessions, k.key);
+              const first = series[0];
+              const last = series[series.length - 1];
+              const delta = first && last ? last.avgFps / first.avgFps - 1 : 0;
+              const parts = k.key.split('|');
+              return (
+                <div className="trend" key={k.key}>
+                  <div className="who">
+                    {gameName(k.gameId)}
+                    <span className="sub mono">{parts[1]} · {parts[2]}{parts[3] !== 'none' ? ` · ${parts[3]} ${parts[4]}` : ''}{parts[6] === 'on' ? ' · RT' : ''}</span>
+                  </div>
+                  <Sparkline points={series} />
+                  <div className="now">
+                    {last?.avgFps.toFixed(0)}fps
+                    <span className="delta" style={{ color: delta < -0.04 ? 'var(--bad)' : delta > 0.04 ? 'var(--good)' : 'var(--faint)' }}>
+                      {pct(delta)} over {series.length} runs
+                    </span>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      <div className="panel">
+        <div className="panel-head">
+          <h2>Sessions</h2>
+          <span className="spacer" />
+          <button className="btn" onClick={() => exportJson('rigcheck-machine-history.json', sessions)}>export history</button>
+        </div>
+        <div className="panel-body">
+          <p className="mini" style={{ marginTop: 0 }}>
+            Stored in this browser only. Export if you care about keeping it — a cleared cache takes the history with it,
+            and six months of measurements is not something to lose to a browser setting.
+          </p>
+          <div className="timeline">
+            {[...sessions].reverse().map((s) => (
+              <div key={s.id} className={`timeline-item${s.fixesApplied.length ? ' has-fix' : ''}`}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+                  <span className="mono" style={{ fontSize: 12 }}>{s.at.slice(0, 16).replace('T', ' ')}</span>
+                  <span className="sub" style={{ fontSize: 12 }}>
+                    {s.measurements.length} measurement{s.measurements.length === 1 ? '' : 's'}, {s.findings.length} finding{s.findings.length === 1 ? '' : 's'}
+                  </span>
+                  {s.fixesApplied.map((f) => (
+                    <span key={f.findingId} className="tag good">fixed: {f.title}</span>
+                  ))}
+                  <span className="spacer" style={{ flex: 1 }} />
+                  <button className="btn" onClick={() => onDelete(s.id)}>delete</button>
+                </div>
+                {s.note && <div className="mini" style={{ marginTop: 2 }}>{s.note}</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ---------------------------------------------------------------- peers --- */
+
+function PeerPanel({ comparisons }: { comparisons: { label: string; c: PeerComparison }[] }) {
+  if (!comparisons.length) return null;
+  return (
+    <div className="panel">
+      <div className="panel-head"><h2>Compared with other machines</h2></div>
+      <div className="panel-body">
+        {comparisons.map(({ label, c }) => (
+          <div key={label} style={{ marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+              <b style={{ fontSize: 13, fontWeight: 500 }}>{label}</b>
+              <span className={`pill ${c.tier === 'real-peers' ? 'ok' : c.tier === 'own-history' ? 'watch' : 'risk'}`}>
+                {c.tier === 'real-peers' ? `${c.samples.length} real peer${c.samples.length === 1 ? '' : 's'}` : c.tier === 'own-history' ? 'your own history only' : 'no peers exist'}
+              </span>
+            </div>
+            <p className="mini" style={{ margin: 0 }}>{c.detail}</p>
+            {c.nextStep && <p className="mini" style={{ margin: '4px 0 0', color: 'var(--spec)' }}>{c.nextStep}</p>}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

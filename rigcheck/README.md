@@ -89,7 +89,7 @@ src/core/       types · constants · gates · indices · engine · queries · a
                 physics (power/thermal/noise/latency) · detect · fit · catalogue
                 evidence (source-quality ladder, shared by the gate and the UI)
                 presets · advisor (settings for a target) · planner (budget to build)
-                health (is this machine performing as it should)
+                health · fixguides · history (before/after, degradation) · peers
 src/parse/      rowspan-aware table parser · spec-table → record mapper (fixture-tested)
 src/ui/         React app: 11 screens, dense dark instrument styling
 scripts/        harvest → parse → reconcile → import-manual → import-prices
@@ -241,6 +241,22 @@ measured ones, which inherit the model's uncertainty and are stated against an
 explicit band. Recoverable performance is compounded, not summed. The report
 ends with what it could NOT check, because a list of findings that stops looks
 complete.
+
+It also remembers. Saving a check makes the next one able to answer two things a
+snapshot cannot: **did the fix work** — the measured gain against the gain that
+was predicted, and when those disagree by more than half the prediction's size
+it says so, because a failed prediction is evidence about the model and hiding
+it would be the one thing this project exists to avoid — and **is it getting
+slower**, attributed only as far as the evidence allows. A configuration change
+is blamed before physics is, since someone who pulled a memory stick has a
+slower machine for a known reason and sending them to clean a heatsink would be
+wrong. Comparisons run on matched measurements only; different settings are
+reported as unmatchable rather than silently differenced.
+
+Peer comparison is deliberately blunt about having nothing to compare against:
+there is no server and no telemetry, so the only peers are imported
+measurements, and the corpus ships empty. It says that rather than substituting
+the model's own prediction and calling it a peer.
 
 Every number opens a panel showing each model term, its value, its confidence and
 its source. The Upgrade Advisor plots the price/performance Pareto frontier rather
