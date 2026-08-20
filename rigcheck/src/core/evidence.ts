@@ -183,9 +183,21 @@ export interface CoverageCell {
  * which cells have least evidence behind them, not which measurement would move
  * the model most. Those usually coincide, but not always, and claiming the
  * stronger thing would be dishonest.
+ *
+ * `universe` is the set of values the product actually offers, and passing it
+ * matters more than it looks. Without it, a dimension value with NO fixtures is
+ * simply absent from the result — so an output the tool offers but has never
+ * validated looks the same as one that does not exist. Zero is the most
+ * important number on this table, not the one to hide.
  */
-export function thinnestCells(fixtures: Fixture[], by: (f: Fixture) => string, limit = 12): CoverageCell[] {
+export function thinnestCells(
+  fixtures: Fixture[],
+  by: (f: Fixture) => string,
+  limit = 12,
+  universe?: readonly string[],
+): CoverageCell[] {
   const cells = new Map<string, CoverageCell>();
+  for (const key of universe ?? []) cells.set(key, { key, rows: 0, weight: 0 });
   for (const f of fixtures) {
     const key = by(f);
     const c = cells.get(key) ?? { key, rows: 0, weight: 0 };

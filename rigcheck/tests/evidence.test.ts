@@ -97,6 +97,27 @@ describe('evidence ladder', () => {
     expect(all.reduce((s, c) => s + c.rows, 0)).toBe(real.length);
   });
 
+  it('shows a zero-coverage cell rather than omitting it', () => {
+    // An output the tool offers but has never validated must not look the same
+    // as one that does not exist.
+    const set = [fx({ resolution: '1080p' }), fx({ resolution: '1440p' })];
+    const withUniverse = thinnestCells(set, (f) => f.resolution, 14, ['1080p', '1440p', '2160p', '3440x1440']);
+    expect(withUniverse.map((c) => c.key).sort()).toEqual(['1080p', '1440p', '2160p', '3440x1440']);
+    expect(withUniverse[0].rows).toBe(0);
+    expect(withUniverse.filter((c) => c.rows === 0).length).toBe(2);
+    // and without the universe the untested resolutions are simply absent
+    expect(thinnestCells(set, (f) => f.resolution, 14).length).toBe(2);
+  });
+
+  it('finds the real fixture set has no ultrawide coverage', () => {
+    // Regression guard: 3440x1440 is offered as a target everywhere in the UI.
+    // If a fixture for it ever lands, this test should be updated, not deleted.
+    const byRes = thinnestCells(real, (f) => f.resolution, 14, ['1080p', '1440p', '2160p', '3440x1440']);
+    const ultrawide = byRes.find((c) => c.key === '3440x1440');
+    expect(ultrawide).toBeDefined();
+    expect(ultrawide!.rows).toBe(0);
+  });
+
   it('keeps the advisory tail gate looser than the strict one', () => {
     // Otherwise promotion would relax the gate rather than tighten it.
     expect(GATES.p90APEAdvisory).toBeGreaterThan(GATES.p90APE);

@@ -22,6 +22,7 @@ import historyJson from '../../../data/validation/history.json';
 import lastRunJson from '../../../data/validation/last-run.json';
 import fixturesJson from '../../../data/fixtures/fixtures.json';
 import { GATES, STRICT_GATE_ARMS_AT, evidenceLadder, thinnestCells, type Fixture } from '../../core/evidence.ts';
+import { RESOLUTIONS } from '../../core/types.ts';
 import { useApp } from '../store.ts';
 import { exportCsv, exportJson } from '../export.ts';
 import { fmt } from '../components/Parts.tsx';
@@ -147,9 +148,18 @@ function DriftChart({ series, points }: { series: Series; points: HistoryPoint[]
   );
 }
 
+type CoverBy = 'stratum' | 'game' | 'resolution' | 'gpu' | 'cpu';
+
+const keyOf = (by: CoverBy): ((f: Fixture) => string) =>
+  by === 'stratum' ? (f) => f.stratum ?? 'unclassified'
+  : by === 'game' ? (f) => f.gameId
+  : by === 'resolution' ? (f) => f.resolution
+  : by === 'gpu' ? (f) => f.gpuId
+  : (f) => f.cpuId;
+
 export function ModelHealth() {
   const { data } = useApp();
-  const [coverBy, setCoverBy] = useState<'stratum' | 'game' | 'resolution' | 'gpu' | 'cpu'>('stratum');
+  const [coverBy, setCoverBy] = useState<CoverBy>('stratum');
 
   const ladder = useMemo(() => evidenceLadder(fixtures), []);
   const cv = lastRun.crossValidation;
@@ -159,15 +169,32 @@ export function ModelHealth() {
   const gap = cv.medianAPE - inSample.medianAPE;
   const overfitting = gap > GATES.maxTrainHoldoutGap;
 
-  const cells = useMemo(() => {
-    const by =
-      coverBy === 'stratum' ? (f: Fixture) => f.stratum ?? 'unclassified'
-      : coverBy === 'game' ? (f: Fixture) => f.gameId
-      : coverBy === 'resolution' ? (f: Fixture) => f.resolution
-      : coverBy === 'gpu' ? (f: Fixture) => f.gpuId
-      : (f: Fixture) => f.cpuId;
-    return thinnestCells(fixtures, by, 14);
-  }, [coverBy]);
+  const coverage = useMemo(() => {
+    const by = keyOf(coverBy);
+    // Where the product offers a fixed set of choices, pass that set in so a
+    // choice with NO fixtures shows as a zero row rather than being absent.
+    // An output the tool offers but has never validated is the single most
+    // important thing this table can say, and hiding it would be the exact
+    // failure the screen exists to prevent. Not done for parts: 231 GPUs sit
+    // at zero, and a list of them is the note below, not a table.
+    const universe =
+      coverBy === 'resolution' ? (RESOLUTIONS as readonly string[])
+      : coverBy === 'game' ? [...data.games.keys()]
+      : undefined;
+    return { rows: thinnestCells(fixtures, by, 14, universe), universe };
+  }, [coverBy, data]);
+
+  const cells = coverage.rows;
+  // Counted over the WHOLE universe, not the truncated table. With 29 of 50
+  // games unanchored, taking the count from the visible 14 rows would report
+  // less than half the real gap while looking authoritative.
+  const zeroCells = useMemo(
+    () =>
+      coverage.universe
+        ? thinnestCells(fixtures, keyOf(coverBy), coverage.universe.length, coverage.universe).filter((c) => c.rows === 0)
+        : [],
+    [coverBy, coverage.universe],
+  );
 
   // Catalogue parts with no fixture at all are a different kind of gap from a
   // thin one: nothing anchors them, so their estimates rest entirely on the
@@ -358,7 +385,7 @@ export function ModelHealth() {
           <h2>Thinnest coverage</h2>
           <span className="spacer" />
           <div className="toggle-row">
-            {(['stratum', 'game', 'resolution', 'gpu', 'cpu'] as const).map((k) => (
+            {(['stratum', 'game', 'resolution', 'gpu', 'cpu'] as CoverBy[]).map((k) => (
               <button key={k} className={`toggle${coverBy === k ? ' on' : ''}`} onClick={() => setCoverBy(k)}>{k}</button>
             ))}
           </div>
@@ -371,15 +398,31 @@ export function ModelHealth() {
               </thead>
               <tbody>
                 {cells.map((c) => (
-                  <tr key={c.key}>
-                    <td className="mono" style={{ fontSize: 12 }}>{c.key}</td>
-                    <td className="n">{c.rows}</td>
+                  <tr key={c.key} style={c.rows === 0 ? { background: 'color-mix(in srgb, var(--bad) 9%, transparent)' } : undefined}>
+                    <td className="mono" style={{ fontSize: 12 }}>
+                      {c.key}
+                      {c.rows === 0 && <span className="tag bad" style={{ marginLeft: 6 }}>no evidence</span>}
+                    </td>
+                    <td className="n" style={c.rows === 0 ? { color: 'var(--bad)' } : undefined}>{c.rows}</td>
                     <td className="n sub">{fmt(c.weight, 2)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          {zeroCells.length > 0 && (
+            <div className="note bad" style={{ marginTop: 12 }}>
+              <b>
+                {zeroCells.length} of {coverage.universe?.length} {coverBy}s the tool offers{' '}
+                {zeroCells.length === 1 ? 'has' : 'have'} no fixture at all
+              </b>
+              : <span className="mono" style={{ fontSize: 12 }}>{zeroCells.slice(0, 8).map((c) => c.key).join(', ')}</span>
+              {zeroCells.length > 8 && <> and {zeroCells.length - 8} more</>}. Estimates on{' '}
+              {zeroCells.length === 1 ? 'it' : 'them'} are pure extrapolation — nothing in the fixture
+              set anchors them, and no validation figure on this page covers them. Treat those numbers
+              as the weakest the tool produces.
+            </div>
+          )}
           <div className="note" style={{ marginTop: 12 }}>
             <b>{unanchored.gpus} of {unanchored.gpuTotal} GPUs and {unanchored.cpus} of {unanchored.cpuTotal} CPUs
             appear in no fixture at all.</b> Their estimates rest entirely on the index model
