@@ -16,6 +16,29 @@ import { join } from 'node:path';
 const ROOT = new URL('..', import.meta.url).pathname;
 const RAW = join(ROOT, 'cache/raw');
 const OUT = join(ROOT, 'data/aliases');
+const MANIFEST = join(ROOT, 'cache/manifest.json');
+
+/**
+ * The date the cache entry was actually fetched, not the date this parser ran.
+ *
+ * These differ, and the difference matters: this script is re-runnable by
+ * design, so stamping `new Date()` silently re-dated a 2026-08-16 fetch to
+ * whenever anyone last ran `npm run parse`. A provenance record that moves on
+ * its own is worse than no provenance record — it asserts a freshness that was
+ * never checked. Falls back to a stated unknown rather than to today.
+ */
+function retrievedAt(id: string): string {
+  try {
+    const m = JSON.parse(readFileSync(MANIFEST, 'utf8')) as {
+      entries?: { id: string; retrievedAt?: string | null }[];
+    };
+    const at = (m.entries ?? []).find((e) => e.id === id)?.retrievedAt;
+    if (at) return at.slice(0, 10);
+  } catch {
+    // fall through to the honest unknown below
+  }
+  return 'unknown — not recorded in cache/manifest.json';
+}
 
 const GPU_VENDORS: Record<string, 'nvidia' | 'amd' | 'intel'> = {
   '10de': 'nvidia',
@@ -148,6 +171,8 @@ export function main() {
   if (existsSync(nvPath)) nvidia = parseNvidiaPciTable(readFileSync(nvPath, 'utf8'));
 
   const payload = {
+    // When this parse ran. Distinct from each source's retrievedAt above,
+    // which is when the underlying file was actually fetched.
     generatedAt: new Date().toISOString(),
     provenance: {
       'pci-ids': {
@@ -155,21 +180,21 @@ export function main() {
         source: 'PCI ID Repository (pciutils/pciids)',
         url: 'https://raw.githubusercontent.com/pciutils/pciids/master/pci.ids',
         licence: 'GPL-2.0-or-later OR BSD-3-Clause',
-        retrievedAt: new Date().toISOString().slice(0, 10),
+        retrievedAt: retrievedAt('pci-ids'),
       },
       'linux-amdgpu': {
         id: 'linux-amdgpu',
         source: 'Linux kernel amdgpu driver',
         url: 'https://raw.githubusercontent.com/torvalds/linux/master/drivers/gpu/drm/amd/amdgpu/amdgpu_drv.c',
         licence: 'MIT / GPL-2.0',
-        retrievedAt: new Date().toISOString().slice(0, 10),
+        retrievedAt: retrievedAt('linux-amdgpu-drv'),
       },
       'nvidia-open': {
         id: 'nvidia-open',
         source: 'NVIDIA open-gpu-kernel-modules PCI table',
         url: 'https://raw.githubusercontent.com/NVIDIA/open-gpu-kernel-modules/main/kernel-open/nvidia/nv-pci-table.c',
         licence: 'MIT / GPL-2.0 dual',
-        retrievedAt: new Date().toISOString().slice(0, 10),
+        retrievedAt: retrievedAt('nvidia-open-pci-table'),
       },
     },
     counts: { ...byVendor, total: devices.length, amdFamilies: amdFamilies.length, nvidiaSupportedIds: nvidia.ids.length },

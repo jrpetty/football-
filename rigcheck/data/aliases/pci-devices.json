@@ -1,26 +1,26 @@
 {
-  "generatedAt": "2026-08-20T10:20:42.928Z",
+  "generatedAt": "2026-08-20T11:02:25.775Z",
   "provenance": {
     "pci-ids": {
       "id": "pci-ids",
       "source": "PCI ID Repository (pciutils/pciids)",
       "url": "https://raw.githubusercontent.com/pciutils/pciids/master/pci.ids",
       "licence": "GPL-2.0-or-later OR BSD-3-Clause",
-      "retrievedAt": "2026-08-20"
+      "retrievedAt": "2026-08-16"
     },
     "linux-amdgpu": {
       "id": "linux-amdgpu",
       "source": "Linux kernel amdgpu driver",
       "url": "https://raw.githubusercontent.com/torvalds/linux/master/drivers/gpu/drm/amd/amdgpu/amdgpu_drv.c",
       "licence": "MIT / GPL-2.0",
-      "retrievedAt": "2026-08-20"
+      "retrievedAt": "2026-08-16"
     },
     "nvidia-open": {
       "id": "nvidia-open",
       "source": "NVIDIA open-gpu-kernel-modules PCI table",
       "url": "https://raw.githubusercontent.com/NVIDIA/open-gpu-kernel-modules/main/kernel-open/nvidia/nv-pci-table.c",
       "licence": "MIT / GPL-2.0 dual",
-      "retrievedAt": "2026-08-20"
+      "retrievedAt": "2026-08-16"
     }
   },
   "counts": {

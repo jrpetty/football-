@@ -1,6 +1,6 @@
 # RIGCHECK coverage report
 
-Generated 2026-08-20T10:49:05.903Z.
+Generated 2026-08-20T11:07:57.526Z.
 
 ## Catalogue against spec targets
 
@@ -27,14 +27,18 @@ candidate records, and `npm run reconcile` merges them. Run somewhere without
 the egress restriction, that produces sourced, attributed records where today
 there are recalled ones.
 
-Two caveats, because "just run it elsewhere" is not the whole truth. The mapper
-has only ever been run against SYNTHETIC fixtures — it has never seen real
-markup. And two required fields are not in the table rows at all: CPU `socket`
-and `memoryType` live in section headings above the tables, and Nvidia pages
-head their sections with marketing series ("GeForce 10 series") rather than
-architectures. A record missing those is rejected by the reconciler, so those
-pages need section-level context mapping and a series-to-architecture table
-before they yield accepted records. Both are small, and both are code changes.
+One caveat, because "just run it elsewhere" is not the whole truth: the mapper
+has only ever been run against SYNTHETIC fixtures. It has never seen real markup.
+
+The two fields that used to guarantee rejection are handled now. CPU `socket`
+and `memoryType` are read from the section headings above a table rather than
+the rows (walking the whole heading chain, since the nearest heading is usually
+the product line and the platform sits on its parent), and marketing series
+such as "GeForce 10 series" resolve to an architecture through an explicit map
+that omits every series whose silicon split cannot be told from the heading.
+Inherited values are marked in `_prov` as `<source>#section:<heading>`, so a
+page nested differently from the assumption shows up as a traceable wrong
+attribution rather than as a plausible stated value.
 agents/log/spec-mapper.md states exactly what to check on first contact.
 
 GPU split: 212 desktop discrete, 53 integrated. Mobile parts are

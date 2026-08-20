@@ -57,11 +57,25 @@ export interface ColumnMap {
 /** Units a raw cell can be normalised into. `count` is a bare integer. */
 export type SpecUnit = 'MHz' | 'GHz' | 'GB' | 'MB' | 'bit' | 'W' | 'nm' | 'GB/s' | 'count' | 'date';
 
-/** Context a page carries that individual rows do not. */
+/**
+ * Context a page carries that individual rows do not.
+ *
+ * The platform fields are inherited from the section headings above a table
+ * (see `sectionContext`). A row column always wins over them: the heading is
+ * the general case, the column is the specific one.
+ */
 export interface MapContext {
   vendor: string;
   /** Fallback architecture when the table has no architecture column. */
   architecture?: string;
+  /** Section-heading fallback for a CPU's socket, e.g. "Socket AM4". */
+  socket?: string;
+  /** Section-heading fallback for supported memory types. */
+  memoryType?: MemoryType[];
+  /** Section-heading fallback for the memory controller's channel count. */
+  maxMemChannels?: 1 | 2 | 4 | 8;
+  /** The raw heading each inherited value came from, for the parse report. */
+  inheritedFrom?: Record<string, string>;
   /** Provenance key stamped onto `_prov` and `_conflicts`. */
   provenanceId?: string;
 }
@@ -84,7 +98,16 @@ export interface SpecPageReport {
     accepted: number;
     used: boolean;
     reason?: string;
+    /** The nearest heading above the table. */
     section?: string;
+    /**
+     * The full ancestor path, e.g. "Socket AM4 > Ryzen 5000 series". The leaf
+     * alone hides where an inherited socket came from, which is exactly what
+     * you need when a whole section maps to the wrong platform.
+     */
+    sectionPath?: string;
+    /** Fields this table inherited from headings, and the heading each came from. */
+    inherited?: Record<string, string>;
   }[];
   /** Free-text observations (merged duplicates, values rejected as implausible). */
   notes?: string[];
@@ -694,6 +717,89 @@ export function detectArchitecture(text: string | undefined | null): string | nu
   return null;
 }
 
+
+/**
+ * Marketing series to architecture, for pages that head their sections with a
+ * product line rather than the silicon.
+ *
+ * This exists because `detectArchitecture` correctly refuses to pass "GeForce
+ * 10 series" through — it is not an architecture — and Nvidia's pages head
+ * almost every section that way. Without this map no Nvidia record gets an
+ * architecture, no architecture means no derived capabilities, and the
+ * reconciler rejects the lot. That is the single largest blocker to a real
+ * Nvidia harvest ever producing accepted records.
+ *
+ * The mapping is a DERIVATION, not something the page states, and it is only
+ * safe where a series used exactly one architecture. Two rules follow:
+ *
+ *  - Series that genuinely mixed silicon are handled by naming the exceptions
+ *    (GeForce 700: Kepler, except the three GM107 Maxwell parts).
+ *  - Series whose split cannot be determined from the heading are LEFT OUT
+ *    entirely rather than mapped approximately. The GeForce 600 line mixed
+ *    Kepler with rebadged Fermi across the low end, and guessing which is
+ *    which would write a false architecture and then derive false capability
+ *    flags from it. Absent is recoverable; wrong is not.
+ *
+ * The AMD and Intel entries are here for the same reason — their pages head
+ * sections with "Radeon RX 6000 series" just as often. AMD's R9/R7 200 and 300
+ * lines are omitted on the same rebadge grounds as GeForce 600.
+ */
+interface SeriesRule {
+  re: RegExp;
+  architecture: string;
+  /** Members of the series built on different silicon, matched against the model name. */
+  exceptions?: { re: RegExp; architecture: string }[];
+}
+
+const SERIES_ARCH: SeriesRule[] = [
+  // Nvidia. Newest first so "GeForce RTX 50" cannot be caught by a looser rule.
+  { re: /\bgeforce\b[^|]*\b(rtx\s*)?50(00)?\s*(series)?\b/i, architecture: 'Blackwell' },
+  { re: /\bgeforce\b[^|]*\b(rtx\s*)?40(00)?\s*(series)?\b/i, architecture: 'Ada Lovelace' },
+  { re: /\bgeforce\b[^|]*\b(rtx\s*)?30(00)?\s*(series)?\b/i, architecture: 'Ampere' },
+  { re: /\bgeforce\b[^|]*\b(rtx\s*)?20(00)?\s*(series)?\b/i, architecture: 'Turing' },
+  { re: /\bgeforce\b[^|]*\b(gtx\s*)?16(00)?\s*(series)?\b/i, architecture: 'Turing' },
+  { re: /\bgeforce\b[^|]*\b10(00)?\s*(series)?\b/i, architecture: 'Pascal' },
+  { re: /\bgeforce\b[^|]*\b900\s*(series)?\b/i, architecture: 'Maxwell 2' },
+  {
+    re: /\bgeforce\b[^|]*\b700\s*(series)?\b/i,
+    architecture: 'Kepler',
+    // GM107: the only Maxwell parts to ship under a 700-series name.
+    exceptions: [{ re: /\bgtx\s*7(45|50)\b/i, architecture: 'Maxwell 1' }],
+  },
+  { re: /\bgeforce\b[^|]*\b500\s*(series)?\b/i, architecture: 'Fermi' },
+  { re: /\bgeforce\b[^|]*\b400\s*(series)?\b/i, architecture: 'Fermi' },
+
+  // AMD
+  { re: /\bradeon\b[^|]*\brx\s*9000\s*(series)?\b/i, architecture: 'RDNA 4' },
+  { re: /\bradeon\b[^|]*\brx\s*7000\s*(series)?\b/i, architecture: 'RDNA 3' },
+  { re: /\bradeon\b[^|]*\brx\s*6000\s*(series)?\b/i, architecture: 'RDNA 2' },
+  { re: /\bradeon\b[^|]*\brx\s*5000\s*(series)?\b/i, architecture: 'RDNA 1' },
+  { re: /\bradeon\b[^|]*\brx\s*[45]00\s*(series)?\b/i, architecture: 'GCN 4.0' },
+
+  // Intel
+  { re: /\barc\b[^|]*\bb-?\s*series\b|\barc\s*b\d/i, architecture: 'Xe2-HPG (Battlemage)' },
+  { re: /\barc\b[^|]*\ba-?\s*series\b|\barc\s*a\d/i, architecture: 'Xe-HPG (Alchemist)' },
+];
+
+/**
+ * Architecture implied by a marketing-series heading, or null.
+ *
+ * `modelName` is optional and only consulted to apply a series' exceptions, so
+ * calling this without one is safe — it just cannot catch a mixed-silicon part.
+ */
+export function architectureFromSeries(heading: string | undefined | null, modelName?: string): string | null {
+  if (!heading) return null;
+  const h = cleanCellText(heading);
+  for (const rule of SERIES_ARCH) {
+    if (!rule.re.test(h)) continue;
+    if (modelName) {
+      for (const ex of rule.exceptions ?? []) if (ex.re.test(modelName)) return ex.architecture;
+    }
+    return rule.architecture;
+  }
+  return null;
+}
+
 const MESH_SHADER_ARCHS = new Set([
   'Turing', 'Ampere', 'Ada Lovelace', 'Blackwell',
   'RDNA 2', 'RDNA 3', 'RDNA 3.5', 'RDNA 4',
@@ -1133,22 +1239,44 @@ export function rowToCpu(
   // X3D is stated by the name, and the reconciler cross-checks exactly that.
   rec.vcache = /x3d/i.test(rawName);
 
+  // Socket and memory: the row's own column first, then whatever the section
+  // headings above this table established. Both are REQUIRED by the reconciler
+  // and neither is usually in the row, so without the inherited fallback every
+  // record from a real page is rejected. Anything inherited is marked as such
+  // in `_prov` so a wrong section map is traceable rather than mysterious.
+  const inherited: string[] = [];
   const socketCell = cleanCellText(cellOf(row, cols, 'socket'));
-  const socket = extractSocket(socketCell) ?? extractSocket(ctx.architecture ?? '');
-  if (socket) rec.socket = socket;
+  const socket = extractSocket(socketCell) ?? ctx.socket ?? null;
+  if (socket) {
+    rec.socket = socket;
+    if (!extractSocket(socketCell)) inherited.push('socket');
+  }
 
   const mem = parseMemorySupport(cellOf(row, cols, 'memorySupport'));
   if (mem.types.length) rec.memoryType = mem.types;
+  else if (ctx.memoryType?.length) {
+    rec.memoryType = [...ctx.memoryType];
+    inherited.push('memoryType');
+  }
   if (mem.mts != null && mem.mts >= 800 && mem.mts <= 20000) rec.officialMemMTs = mem.mts;
   const channelsCell = normaliseUnit(cellOf(row, cols, 'maxMemChannels'), 'count');
-  const channels = mem.channels ?? (typeof channelsCell === 'number' && [1, 2, 4, 8].includes(channelsCell) ? (channelsCell as 1 | 2 | 4 | 8) : null);
+  const channels =
+    mem.channels ??
+    (typeof channelsCell === 'number' && [1, 2, 4, 8].includes(channelsCell) ? (channelsCell as 1 | 2 | 4 | 8) : null);
   if (channels != null) rec.maxMemChannels = channels;
+  else if (ctx.maxMemChannels != null) {
+    rec.maxMemChannels = ctx.maxMemChannels;
+    inherited.push('maxMemChannels');
+  }
 
   const caps = deriveCpuCaps(rec.architecture, rec.eCores);
   if (caps) rec.caps = caps;
 
   if (conflicts.length) rec._conflicts = conflicts;
   rec._prov = { '*': [provenanceId] };
+  for (const f of inherited) {
+    rec._prov[f] = [`${provenanceId}#section:${ctx.inheritedFrom?.[f] ?? 'heading'}`];
+  }
   return rec;
 }
 
@@ -1159,6 +1287,92 @@ export function extractSocket(text: string): string | null {
     /\b(LGA\s?\d{3,4}(?:-v\d)?|AM[2345]\+?|FM2\+?|FM1|TR4|sTRX4|sWRX8|sTR5|BGA\s?\d{3,4})\b/i.exec(text);
   if (!m) return null;
   return m[1].replace(/\s+/g, '').toUpperCase().replace(/^LGA/, 'LGA');
+}
+
+/**
+ * Context a table inherits from the headings ABOVE it.
+ *
+ * The reconciler requires `socket` and a non-empty `memoryType` on every CPU
+ * record, and neither appears in the per-row columns of a real specification
+ * page — they live in the section heading ("Socket AM4 (DDR4)"), because
+ * repeating them on every row of a 60-row table would be absurd. Reading only
+ * the row therefore rejected every CPU record ever parsed.
+ *
+ * The chain matters as much as the reading. Pages nest as
+ *
+ *     h2  Socket AM4
+ *       h3  Ryzen 5000 series
+ *         table
+ *
+ * so the nearest heading is the one WITHOUT the socket. Taking only the closest
+ * heading — which is what the architecture lookup did — misses the platform
+ * every time. `headingChain` walks back through the ancestors instead, and
+ * `sectionContext` merges them outermost-first so a more specific inner heading
+ * overrides a general outer one.
+ */
+export interface SectionContext {
+  architecture?: string;
+  socket?: string;
+  memoryType?: MemoryType[];
+  maxMemChannels?: 1 | 2 | 4 | 8;
+  /** Which heading each value was read from. Reported, not guessed at later. */
+  from: Record<string, string>;
+}
+
+export interface Heading {
+  at: number;
+  level: number;
+  title: string;
+}
+
+/**
+ * The heading ancestors of a position: for each level, the last heading of that
+ * level before `at`, discarding any that a later shallower heading closed.
+ *
+ * Without the closing rule an h3 from a previous h2's subtree would leak into
+ * the next section — which is how a page's second platform silently inherits
+ * the first platform's socket.
+ */
+export function headingChain(headings: Heading[], at: number): Heading[] {
+  const stack: Heading[] = [];
+  for (const h of headings) {
+    if (h.at >= at) break;
+    while (stack.length && stack[stack.length - 1].level >= h.level) stack.pop();
+    stack.push(h);
+  }
+  return stack;
+}
+
+/** Merge a heading chain into inherited context, outermost first. */
+export function sectionContext(chain: Heading[]): SectionContext {
+  const ctx: SectionContext = { from: {} };
+  for (const h of chain) {
+    const arch = detectArchitecture(h.title) ?? architectureFromSeries(h.title);
+    if (arch) {
+      ctx.architecture = arch;
+      ctx.from.architecture = h.title;
+    }
+    const socket = extractSocket(h.title);
+    if (socket) {
+      ctx.socket = socket;
+      ctx.from.socket = h.title;
+    }
+    // Only types and channels are taken from a heading. The MT/s figure is not:
+    // "Ryzen 7000 series" carries a four-digit number that has nothing to do
+    // with memory, and parseMemorySupport only binds a rating that is attached
+    // to a DDR token — but relying on that here would be relying on a detail of
+    // another function rather than on this one being right.
+    const mem = parseMemorySupport(h.title);
+    if (mem.types.length) {
+      ctx.memoryType = mem.types;
+      ctx.from.memoryType = h.title;
+    }
+    if (mem.channels != null) {
+      ctx.maxMemChannels = mem.channels;
+      ctx.from.maxMemChannels = h.title;
+    }
+  }
+  return ctx;
 }
 
 // ---------------------------------------------------------------------------
@@ -1183,14 +1397,19 @@ export function unwrapMediaWiki(raw: string): string {
   return raw;
 }
 
-/** Section headings with their offsets, used to attribute an architecture. */
-function headingIndex(html: string): { at: number; title: string }[] {
-  const out: { at: number; title: string }[] = [];
-  const re = /<h([2-4])\b[^>]*>([\s\S]*?)<\/h\1>/gi;
+/**
+ * Section headings with their offsets AND levels. The level is what lets
+ * `headingChain` tell an ancestor from a sibling's child; without it the only
+ * available heading is the nearest one, which is rarely the one carrying the
+ * platform.
+ */
+function headingIndex(html: string): Heading[] {
+  const out: Heading[] = [];
+  const re = /<h([2-6])\b[^>]*>([\s\S]*?)<\/h\1>/gi;
   let m: RegExpExecArray | null;
   while ((m = re.exec(html))) {
     const title = cleanCellText(m[2]).replace(/\[\s*edit\s*\]/gi, '').trim();
-    if (title) out.push({ at: m.index, title });
+    if (title) out.push({ at: m.index, level: Number(m[1]), title });
   }
   return out;
 }
@@ -1240,11 +1459,17 @@ export function parseSpecPage(
     const tableHtml = tables[t];
     const at = doc.indexOf(tableHtml, cursor);
     if (at >= 0) cursor = at + tableHtml.length;
-    const section = headings.filter((h) => h.at < (at < 0 ? Number.MAX_SAFE_INTEGER : at)).pop()?.title;
+    const chain = headingChain(headings, at < 0 ? Number.MAX_SAFE_INTEGER : at);
+    const inherited = sectionContext(chain);
+    // Reported as the full path, not just the nearest heading: "Socket AM4 >
+    // Ryzen 5000 series" is what actually determined this table's context, and
+    // showing only the leaf hides where a wrong socket came from.
+    const section = chain[chain.length - 1]?.title;
+    const sectionPath = chain.length ? chain.map((h) => h.title).join(' > ') : undefined;
 
     const rows = gridToRecords(expandTable(tableHtml));
     if (!rows.length) {
-      tableReports.push({ index: t, headers: [], dataRows: 0, accepted: 0, used: false, reason: 'no data rows', section });
+      tableReports.push({ index: t, headers: [], dataRows: 0, accepted: 0, used: false, reason: 'no data rows', section, sectionPath });
       continue;
     }
     const headers = Object.keys(rows[0]);
@@ -1253,19 +1478,26 @@ export function parseSpecPage(
 
     if (cols.name == null) {
       const reason = `no model-name column identified (headers: ${truncate(headers.join(' | '), 160)})`;
-      tableReports.push({ index: t, headers, dataRows: rows.length, accepted: 0, used: false, reason, section });
+      tableReports.push({ index: t, headers, dataRows: rows.length, accepted: 0, used: false, reason, section, sectionPath });
       skipped.push({ row: `table ${t}${section ? ` (${section})` : ''}`, reason });
       continue;
     }
     if (Object.keys(cols).length < 3) {
       const reason = `only ${Object.keys(cols).length} identifiable column(s); not a specification table`;
-      tableReports.push({ index: t, headers, dataRows: rows.length, accepted: 0, used: false, reason, section });
+      tableReports.push({ index: t, headers, dataRows: rows.length, accepted: 0, used: false, reason, section, sectionPath });
       skipped.push({ row: `table ${t}${section ? ` (${section})` : ''}`, reason });
       continue;
     }
 
-    const architecture = detectArchitecture(section) ?? ctx.architecture;
-    const rowCtx: MapContext = { ...ctx, architecture };
+    const architecture = inherited.architecture ?? ctx.architecture;
+    const rowCtx: MapContext = {
+      ...ctx,
+      architecture,
+      socket: inherited.socket ?? ctx.socket,
+      memoryType: inherited.memoryType ?? ctx.memoryType,
+      maxMemChannels: inherited.maxMemChannels ?? ctx.maxMemChannels,
+      inheritedFrom: inherited.from,
+    };
     let accepted = 0;
 
     for (const row of rows) {
@@ -1307,7 +1539,7 @@ export function parseSpecPage(
       accepted++;
     }
 
-    tableReports.push({ index: t, headers, dataRows: rows.length, accepted, used: accepted > 0, section });
+    tableReports.push({ index: t, headers, dataRows: rows.length, accepted, used: accepted > 0, section, sectionPath, inherited: Object.keys(inherited.from).length ? inherited.from : undefined });
     if (accepted > best.accepted) best = { cols, accepted };
   }
 

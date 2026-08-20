@@ -14,10 +14,13 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import type { CpuRecord, GpuRecord } from '../src/core/types.ts';
 import {
+  architectureFromSeries,
   cellOf,
   deriveGpuCaps,
   detectArchitecture,
   extractSocket,
+  headingChain,
+  sectionContext,
   isMissing,
   mapColumns,
   normaliseUnit,
@@ -458,7 +461,7 @@ describe('parseSpecPage — synthetic Nvidia GPU page', () => {
     expect(gt1030.pcieLanes).toBe(4);
   });
 
-  it('derives capabilities only where the page names the architecture', () => {
+  it('derives capabilities where the page names the architecture', () => {
     // The Turing section heading names it, so the gate-relevant caps follow.
     expect(byId.get('nvidia-geforce-rtx-2080')!.architecture).toBe('Turing');
     expect(byId.get('nvidia-geforce-rtx-2080')!.caps).toMatchObject({
@@ -466,9 +469,17 @@ describe('parseSpecPage — synthetic Nvidia GPU page', () => {
       rayTracing: true,
       dxFeatureLevel: '12_2',
     });
-    // "GeForce 10 series" names no architecture, so nothing is asserted.
-    expect(byId.get('nvidia-geforce-gtx-1080')!.architecture).toBeUndefined();
-    expect(byId.get('nvidia-geforce-gtx-1080')!.caps).toBeUndefined();
+  });
+
+  it('resolves a marketing-series heading to an architecture', () => {
+    // "GeForce 10 series" is not an architecture, and detectArchitecture still
+    // refuses it. The series map supplies Pascal, which is what unblocks caps
+    // and therefore reconciler acceptance for an entire Nvidia page.
+    expect(byId.get('nvidia-geforce-gtx-1080')!.architecture).toBe('Pascal');
+    expect(byId.get('nvidia-geforce-gtx-1080')!.caps).toMatchObject({
+      meshShaders: false,
+      rayTracing: false,
+    });
   });
 
   it('reports the architecture column as missing rather than inventing one', () => {
@@ -706,5 +717,186 @@ describe('page plumbing', () => {
     const report = parseSpecPage(NVIDIA_HTML, 'gpu', { vendor: 'matrox' });
     expect(report.records).toEqual([]);
     expect(report.skipped.length).toBeGreaterThan(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Section-heading context. Both of these existed as documented limitations in
+// agents/log/spec-mapper.md — "CPU socket and memoryType will usually be
+// missing" and "architecture is often absent on Nvidia-style pages" — and both
+// caused reconciler rejection of every record from a real page.
+// ---------------------------------------------------------------------------
+
+describe('marketing series to architecture', () => {
+  it('resolves the series Nvidia actually heads its sections with', () => {
+    expect(architectureFromSeries('GeForce 10 series')).toBe('Pascal');
+    expect(architectureFromSeries('GeForce 20 series')).toBe('Turing');
+    expect(architectureFromSeries('GeForce 16 series')).toBe('Turing');
+    expect(architectureFromSeries('GeForce 30 series')).toBe('Ampere');
+    expect(architectureFromSeries('GeForce RTX 40 series')).toBe('Ada Lovelace');
+    expect(architectureFromSeries('GeForce RTX 50 series')).toBe('Blackwell');
+    expect(architectureFromSeries('GeForce 900 series')).toBe('Maxwell 2');
+  });
+
+  it('applies a series exception when the model name identifies one', () => {
+    // The 700 line is Kepler apart from three GM107 parts. Without the model
+    // name it can only give the series answer; with it, it gives the right one.
+    expect(architectureFromSeries('GeForce 700 series')).toBe('Kepler');
+    expect(architectureFromSeries('GeForce 700 series', 'GeForce GTX 760')).toBe('Kepler');
+    expect(architectureFromSeries('GeForce 700 series', 'GeForce GTX 750 Ti')).toBe('Maxwell 1');
+    expect(architectureFromSeries('GeForce 700 series', 'GeForce GTX 745')).toBe('Maxwell 1');
+  });
+
+  it('leaves out series whose split cannot be told from the heading', () => {
+    // GeForce 600 mixed Kepler with rebadged Fermi. Absent is recoverable,
+    // wrong is not — a false architecture derives false capability flags.
+    expect(architectureFromSeries('GeForce 600 series')).toBeNull();
+    expect(architectureFromSeries('Radeon R9 300 series')).toBeNull();
+    expect(architectureFromSeries('Radeon R7 200 series')).toBeNull();
+  });
+
+  it('resolves AMD and Intel series headings too', () => {
+    expect(architectureFromSeries('Radeon RX 6000 series')).toBe('RDNA 2');
+    expect(architectureFromSeries('Radeon RX 7000 series')).toBe('RDNA 3');
+    expect(architectureFromSeries('Radeon RX 9000 series')).toBe('RDNA 4');
+    expect(architectureFromSeries('Radeon RX 500 series')).toBe('GCN 4.0');
+    expect(architectureFromSeries('Intel Arc A-Series')).toBe('Xe-HPG (Alchemist)');
+    expect(architectureFromSeries('Intel Arc B-Series')).toBe('Xe2-HPG (Battlemage)');
+  });
+
+  it('still refuses a heading that names nothing', () => {
+    expect(architectureFromSeries('Legend')).toBeNull();
+    expect(architectureFromSeries('Discontinued products')).toBeNull();
+    expect(architectureFromSeries('')).toBeNull();
+  });
+});
+
+describe('heading chain', () => {
+  const h = (level: number, at: number, title: string) => ({ level, at, title });
+
+  it('returns the ancestors of a position, not just the nearest heading', () => {
+    // The platform lives on the h2; the nearest heading is the h3.
+    const headings = [h(2, 0, 'Socket AM4'), h(3, 100, 'Ryzen 5000 series')];
+    expect(headingChain(headings, 200).map((x) => x.title)).toEqual(['Socket AM4', 'Ryzen 5000 series']);
+  });
+
+  it('closes a subtree when a shallower heading follows', () => {
+    // Without this, AM4's Ryzen 5000 subsection leaks into the AM5 section and
+    // a whole platform's worth of records get the wrong socket.
+    const headings = [
+      h(2, 0, 'Socket AM4'),
+      h(3, 100, 'Ryzen 5000 series'),
+      h(2, 200, 'Socket AM5'),
+      h(3, 300, 'Ryzen 7000 series'),
+    ];
+    expect(headingChain(headings, 400).map((x) => x.title)).toEqual(['Socket AM5', 'Ryzen 7000 series']);
+  });
+
+  it('drops a sibling at the same level', () => {
+    const headings = [h(3, 0, 'Desktop'), h(3, 100, 'Mobile')];
+    expect(headingChain(headings, 200).map((x) => x.title)).toEqual(['Mobile']);
+  });
+
+  it('is empty before the first heading', () => {
+    expect(headingChain([h(2, 500, 'Later')], 100)).toEqual([]);
+  });
+});
+
+describe('section context', () => {
+  const chain = (...titles: string[]) => titles.map((title, i) => ({ level: i + 2, at: i * 100, title }));
+
+  it('reads the socket and memory type a CPU page states only in its heading', () => {
+    const ctx = sectionContext(chain('Socket AM4 (DDR4)', 'Ryzen 5000 series'));
+    expect(ctx.socket).toBe('AM4');
+    expect(ctx.memoryType).toEqual(['DDR4']);
+    expect(ctx.from.socket).toBe('Socket AM4 (DDR4)');
+  });
+
+  it('lets an inner heading override an outer one', () => {
+    const ctx = sectionContext(chain('Socket LGA1700 (DDR4/DDR5)', 'Raptor Lake refresh'));
+    expect(ctx.socket).toBe('LGA1700');
+    expect(ctx.memoryType).toEqual(['DDR4', 'DDR5']);
+    expect(ctx.architecture).toBe('Raptor Lake');
+  });
+
+  it('takes an architecture from either a silicon name or a series name', () => {
+    expect(sectionContext(chain('Turing')).architecture).toBe('Turing');
+    expect(sectionContext(chain('GeForce 10 series')).architecture).toBe('Pascal');
+  });
+
+  it('does not read a series number as a memory rating', () => {
+    // "Ryzen 7000 series" carries a four-digit number that is not MT/s.
+    const ctx = sectionContext(chain('Ryzen 7000 series'));
+    expect(ctx.memoryType).toBeUndefined();
+    expect(ctx.maxMemChannels).toBeUndefined();
+  });
+
+  it('reads a stated channel count', () => {
+    expect(sectionContext(chain('Socket sTR5 (quad-channel DDR5)')).maxMemChannels).toBe(4);
+  });
+
+  it('returns nothing rather than a default when headings say nothing', () => {
+    const ctx = sectionContext(chain('Specifications', 'Notes'));
+    expect(ctx.socket).toBeUndefined();
+    expect(ctx.memoryType).toBeUndefined();
+    expect(ctx.architecture).toBeUndefined();
+  });
+});
+
+describe('parseSpecPage — CPU page whose platform is only in the headings', () => {
+  // The shape agents/log/spec-mapper.md predicted the real pages use: the
+  // socket and memory type on an h2, the product line on an h3, and per-row
+  // columns carrying neither. Before section inheritance every record from a
+  // page like this was rejected by the reconciler for a missing socket.
+  const HTML = `
+    <h2>Socket AM4 (DDR4)</h2>
+    <h3>Ryzen 5000 series</h3>
+    <table class="wikitable">
+      <tr><th>Model</th><th>Cores (threads)</th><th>Base clock</th><th>Boost clock</th><th>L3 cache</th><th>TDP</th></tr>
+      <tr><td>Ryzen 5 5600X</td><td>6 (12)</td><td>3.7 GHz</td><td>4.6 GHz</td><td>32 MB</td><td>65 W</td></tr>
+      <tr><td>Ryzen 7 5800X3D</td><td>8 (16)</td><td>3.4 GHz</td><td>4.5 GHz</td><td>96 MB</td><td>105 W</td></tr>
+    </table>
+    <h2>Socket AM5 (DDR5)</h2>
+    <h3>Ryzen 7000 series</h3>
+    <table class="wikitable">
+      <tr><th>Model</th><th>Cores (threads)</th><th>Base clock</th><th>Boost clock</th><th>L3 cache</th><th>TDP</th></tr>
+      <tr><td>Ryzen 7 7800X3D</td><td>8 (16)</td><td>4.2 GHz</td><td>5.0 GHz</td><td>96 MB</td><td>120 W</td></tr>
+    </table>`;
+  const report = parseSpecPage(HTML, 'cpu', { vendor: 'amd', provenanceId: 'test-page' });
+  const byId = new Map(report.records.map((r) => [r.id!, r as Partial<CpuRecord>]));
+
+  it('gives every record the socket from its own section', () => {
+    expect(byId.get('amd-ryzen-5-5600x')!.socket).toBe('AM4');
+    expect(byId.get('amd-ryzen-7-5800x3d')!.socket).toBe('AM4');
+    expect(byId.get('amd-ryzen-7-7800x3d')!.socket).toBe('AM5');
+  });
+
+  it('does not leak the first platform into the second', () => {
+    expect(byId.get('amd-ryzen-7-7800x3d')!.memoryType).toEqual(['DDR5']);
+    expect(byId.get('amd-ryzen-5-5600x')!.memoryType).toEqual(['DDR4']);
+  });
+
+  it('marks inherited fields in provenance rather than passing them off as stated', () => {
+    const prov = byId.get('amd-ryzen-5-5600x')!._prov!;
+    expect(prov.socket?.[0]).toMatch(/#section:Socket AM4/);
+    expect(prov.memoryType?.[0]).toMatch(/#section:Socket AM4/);
+    // A field genuinely read from a column carries no section marker.
+    expect(prov.cores).toBeUndefined();
+  });
+
+  it('reports the full heading path, not only the nearest heading', () => {
+    const used = report.tables!.filter((t) => t.used);
+    expect(used[0].sectionPath).toBe('Socket AM4 (DDR4) > Ryzen 5000 series');
+    expect(used[1].sectionPath).toBe('Socket AM5 (DDR5) > Ryzen 7000 series');
+    expect(used[0].inherited).toMatchObject({ socket: 'Socket AM4 (DDR4)' });
+  });
+
+  it('still reads the row columns it does have', () => {
+    const r = byId.get('amd-ryzen-7-5800x3d')!;
+    expect(r.cores).toBe(8);
+    expect(r.threads).toBe(16);
+    expect(r.l3CacheMB).toBe(96);
+    expect(r.vcache).toBe(true);
+    expect(r.tdpW).toBe(105);
   });
 });

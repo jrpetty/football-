@@ -108,19 +108,27 @@ record's provenance note says these fields are rule-derived, not page-derived.
 ## What it cannot do
 
 1. **It has never seen real HTML.** Everything below follows from that.
-2. **CPU `socket` and `memoryType` will usually be missing.** Both are *required*
-   by the reconciler. On the real pages they typically live in a section heading
-   or a separate platform table, not in the per-row columns. The mapper reads them
-   when a column exists (and `expandTable` correctly carries a rowspan-merged
-   socket down a whole table, which the Intel fixture exercises) but it does not
-   invent them. Expect a large rejection count on the first CPU run — that is the
-   design, not a bug, but it means CPU pages need a section-level platform map
-   before they yield usable records.
-3. **`architecture` is often absent on Nvidia-style pages.** The headings there
-   are marketing series ("GeForce 10 series"), not architectures, and
-   `detectArchitecture` deliberately refuses to pass an unrecognised string
-   through. No architecture → no caps → reconciler rejection. A hand-written
-   series→architecture map is the fix, and it is a small one.
+2. ~~**CPU `socket` and `memoryType` will usually be missing.**~~ **RESOLVED.**
+   `headingChain` + `sectionContext` now read the platform from the section
+   headings above a table and pass it into `rowToCpu` as a fallback beneath the
+   row's own column. The chain, not just the nearest heading, is walked — pages
+   nest as `h2 Socket AM4 > h3 Ryzen 5000 series > table`, so the closest
+   heading is precisely the one that does *not* carry the socket — and a
+   shallower heading closes the previous subtree so one platform cannot leak
+   into the next. Inherited values are marked in `_prov` as
+   `<source>#section:<heading>`, so a wrong section map is traceable rather
+   than indistinguishable from a stated value. Still not invented: a page whose
+   headings say nothing yields no socket.
+3. ~~**`architecture` is often absent on Nvidia-style pages.**~~ **RESOLVED.**
+   `architectureFromSeries` maps marketing series to silicon. `detectArchitecture`
+   is unchanged and still refuses "GeForce 10 series"; the series map is a
+   separate, explicitly-labelled derivation consulted after it. Two rules keep
+   it honest: series that mixed silicon name their exceptions (GeForce 700 is
+   Kepler except the three GM107 parts, matched on the model name), and series
+   whose split cannot be told from the heading are **left out entirely** —
+   GeForce 600 mixed Kepler with rebadged Fermi, and AMD's R9/R7 200 and 300
+   lines are rebadges. Absent is recoverable; a false architecture derives false
+   capability flags and is not.
 4. **No cross-page merging.** PCI ids, physical dimensions, driver EOL dates,
    `igpuId` links, real upscaling support and iGPU/APU parts all come from other
    sources and are not attempted here.
@@ -195,8 +203,11 @@ In order. Do not skip to step 6.
 8. Only now run `npm run reconcile`, and read `data/reconcile-report.json`:
    rejections, duplicates, and `unverifiedAgainstPciRegistry` together will show
    whether the mapping produced parts that actually exist.
-9. Expect CPU pages to need a section-level socket/memory map (point 2 of "cannot
-   do") before they produce accepted records at all.
+9. Check `tables[].sectionPath` and `tables[].inherited` in the parse report
+   BEFORE trusting any CPU record. Those name the heading each inherited socket
+   and memory type came from; a page organised differently from the assumed
+   `Socket X > product line > table` nesting will show up there as an inherited
+   value attributed to a heading that plainly is not a platform.
 
 ## Changes outside my own files
 

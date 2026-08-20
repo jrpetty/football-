@@ -232,7 +232,7 @@ function main() {
   console.log(`engine sweep: every part estimated; gate-blocked ${gateBlockedGpus} GPU(s) / ${gateBlockedCpus} CPU(s) (legitimate capability blocks in ${sweepGame})`);
   console.log(`\n${failures.length} hard failure(s), ${warnings.length} warning(s)`);
   for (const f of failures) console.log(`  FAIL ${f}`);
-  const shownWarnings = warnings.slice(0, 15);
+  const shownWarnings = process.env.AUDIT_ALL ? warnings : warnings.slice(0, 15);
   for (const w of shownWarnings) console.log(`  warn ${w}`);
   if (warnings.length > shownWarnings.length) console.log(`  ... and ${warnings.length - shownWarnings.length} more warnings`);
   process.exit(failures.length ? 1 : 0);

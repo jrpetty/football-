@@ -68,14 +68,18 @@ function main() {
   P('the egress restriction, that produces sourced, attributed records where today');
   P('there are recalled ones.');
   P();
-  P('Two caveats, because "just run it elsewhere" is not the whole truth. The mapper');
-  P('has only ever been run against SYNTHETIC fixtures — it has never seen real');
-  P('markup. And two required fields are not in the table rows at all: CPU `socket`');
-  P('and `memoryType` live in section headings above the tables, and Nvidia pages');
-  P('head their sections with marketing series ("GeForce 10 series") rather than');
-  P('architectures. A record missing those is rejected by the reconciler, so those');
-  P('pages need section-level context mapping and a series-to-architecture table');
-  P('before they yield accepted records. Both are small, and both are code changes.');
+  P('One caveat, because "just run it elsewhere" is not the whole truth: the mapper');
+  P('has only ever been run against SYNTHETIC fixtures. It has never seen real markup.');
+  P();
+  P('The two fields that used to guarantee rejection are handled now. CPU `socket`');
+  P('and `memoryType` are read from the section headings above a table rather than');
+  P('the rows (walking the whole heading chain, since the nearest heading is usually');
+  P('the product line and the platform sits on its parent), and marketing series');
+  P('such as "GeForce 10 series" resolve to an architecture through an explicit map');
+  P('that omits every series whose silicon split cannot be told from the heading.');
+  P('Inherited values are marked in `_prov` as `<source>#section:<heading>`, so a');
+  P('page nested differently from the assumption shows up as a traceable wrong');
+  P('attribution rather than as a plausible stated value.');
   P('agents/log/spec-mapper.md states exactly what to check on first contact.');
   P();
 
