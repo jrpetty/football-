@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { HashRouter, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AppCtx, CORE_LOOP, decodeState, encodeState, engineData, makeBuild } from './ui/store.ts';
 import { ProvenanceBanner } from './ui/components/Banner.tsx';
+import { BuildWizard } from './ui/pages/BuildWizard.tsx';
 import { BuildAnalyser } from './ui/pages/BuildAnalyser.tsx';
 import { ComparisonMatrix } from './ui/pages/ComparisonMatrix.tsx';
 import { UpgradeAdvisor } from './ui/pages/UpgradeAdvisor.tsx';
@@ -14,6 +15,7 @@ import { ModelHealth } from './ui/pages/ModelHealth.tsx';
 import type { Build, Resolution } from './core/types.ts';
 
 const NAV = [
+  { to: '/wizard', label: 'Build a PC' },
   { to: '/analyser', label: 'Build Analyser' },
   { to: '/matrix', label: 'Comparison Matrix' },
   { to: '/upgrade', label: 'Upgrade Advisor' },
@@ -101,6 +103,7 @@ export function App() {
       <HashRouter>
         <Shell>
           <Routes>
+            <Route path="/wizard" element={<BuildWizard />} />
             <Route path="/analyser" element={<BuildAnalyser />} />
             <Route path="/matrix" element={<ComparisonMatrix />} />
             <Route path="/upgrade" element={<UpgradeAdvisor />} />

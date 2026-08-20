@@ -606,3 +606,69 @@ textarea:focus { outline: none; border-color: var(--line-strong); }
 .stat-row { display: flex; gap: 18px; flex-wrap: wrap; }
 .mini { font-size: 10.5px; color: var(--faint); }
 .scroll-y { max-height: 60vh; overflow-y: auto; }
+
+/* ---------- wizard ---------- */
+
+/* A step rail rather than a progress bar: people need to go BACK and change an
+   answer far more often than they need to know how far through they are. */
+.steps { display: flex; gap: 0; align-items: stretch; flex-wrap: wrap; margin-bottom: 14px; }
+.step {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 14px 9px 12px;
+  background: var(--surface); border: 1px solid var(--line); border-right: none;
+  color: var(--faint); font-size: 12px; cursor: pointer; text-align: left;
+  font-family: inherit;
+}
+.step:first-child { border-radius: var(--r) 0 0 var(--r); }
+.step:last-child { border-right: 1px solid var(--line); border-radius: 0 var(--r) var(--r) 0; }
+.step:disabled { cursor: not-allowed; opacity: 0.55; }
+.step .n {
+  width: 19px; height: 19px; flex: 0 0 19px; border-radius: 50%;
+  border: 1px solid var(--line-strong); display: grid; place-items: center;
+  font-family: var(--mono); font-size: 10px;
+}
+.step .lbl { display: flex; flex-direction: column; gap: 1px; line-height: 1.25; }
+.step .lbl b { font-weight: 500; font-size: 12px; }
+.step .lbl span { font-size: 10px; color: var(--faint); }
+.step.done { color: var(--muted); }
+.step.done .n { border-color: var(--measured); color: var(--measured); }
+.step.on { background: var(--surface-3); color: var(--ink); box-shadow: inset 0 -2px 0 var(--chart-series); }
+.step.on .n { border-color: var(--chart-series); color: var(--chart-series); }
+@media (max-width: 900px) { .step .lbl span { display: none; } }
+
+/* The answer so far, pinned under the rail so a choice's effect is visible
+   without scrolling back to it. */
+.plan-strip {
+  display: flex; gap: 18px; flex-wrap: wrap; align-items: baseline;
+  padding: 9px 12px; border: 1px solid var(--line); border-radius: var(--r);
+  background: var(--surface); margin-bottom: 14px;
+}
+.plan-strip .k { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--faint); }
+.plan-strip .v { font-family: var(--mono); font-size: 13px; color: var(--ink); }
+.plan-strip .v.none { color: var(--faint); }
+
+.wizard-nav { display: flex; gap: 8px; margin-top: 16px; align-items: center; }
+
+/* Selectable cards for monitors and library presets. */
+.pick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 8px; }
+.pick-card {
+  text-align: left; padding: 10px 12px; border: 1px solid var(--line);
+  border-radius: var(--r); background: var(--surface); cursor: pointer;
+  color: var(--muted); font-family: inherit; font-size: 12px; line-height: 1.4;
+}
+.pick-card:hover { border-color: var(--line-strong); }
+.pick-card.on { border-color: var(--chart-series); background: var(--surface-3); color: var(--ink); }
+.pick-card b { display: block; color: var(--ink); font-weight: 500; margin-bottom: 2px; }
+.pick-card .sub { font-size: 11px; color: var(--faint); }
+
+/* Bill of materials: money on the right, reasoning underneath. */
+.bom { width: 100%; border-collapse: collapse; }
+.bom td { padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.bom tr:last-child td { border-bottom: none; }
+.bom .cat { width: 96px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--faint); padding-top: 10px; }
+.bom .part b { font-weight: 500; }
+.bom .why { font-size: 11px; color: var(--faint); margin-top: 3px; line-height: 1.45; }
+.bom .money { width: 84px; text-align: right; font-family: var(--mono); font-size: 13px; white-space: nowrap; }
+.bom tfoot td { border-top: 1px solid var(--line-strong); font-family: var(--mono); }
+
+.slider { width: 100%; accent-color: var(--chart-series); }
