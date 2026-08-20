@@ -58,6 +58,15 @@ interface RunMetrics {
 const history = historyJson as HistoryPoint[];
 const lastRun = lastRunJson as { generatedAt: string; crossValidation: RunMetrics; inSample: RunMetrics; failures: string[]; measuredShare: number };
 const fixtures = (fixturesJson as { records: Fixture[] }).records;
+/**
+ * Titles left without fixtures on purpose. Without this the coverage panel
+ * would report them beside the genuine gaps, which would be misleading in the
+ * direction that matters least — implying work is outstanding when the decision
+ * was that a frame-rate fixture is meaningless for a turn-based or
+ * server-bound title.
+ */
+const excluded = (fixturesJson as { deliberatelyUncovered?: { why: string; games: Record<string, string> } })
+  .deliberatelyUncovered;
 
 const pct = (x: number, dp = 1) => `${(x * 100).toFixed(dp)}%`;
 
@@ -188,13 +197,15 @@ export function ModelHealth() {
   // Counted over the WHOLE universe, not the truncated table. With 29 of 50
   // games unanchored, taking the count from the visible 14 rows would report
   // less than half the real gap while looking authoritative.
-  const zeroCells = useMemo(
-    () =>
-      coverage.universe
-        ? thinnestCells(fixtures, keyOf(coverBy), coverage.universe.length, coverage.universe).filter((c) => c.rows === 0)
-        : [],
-    [coverBy, coverage.universe],
-  );
+  const zeroCells = useMemo(() => {
+    if (!coverage.universe) return [];
+    const deliberate = new Set(Object.keys(excluded?.games ?? {}));
+    return thinnestCells(fixtures, keyOf(coverBy), coverage.universe.length, coverage.universe)
+      .filter((c) => c.rows === 0)
+      // A deliberate exclusion is not an outstanding gap, and counting it as
+      // one would overstate the work left while understating nothing.
+      .filter((c) => !(coverBy === 'game' && deliberate.has(c.key)));
+  }, [coverBy, coverage.universe]);
 
   // Catalogue parts with no fixture at all are a different kind of gap from a
   // thin one: nothing anchors them, so their estimates rest entirely on the
@@ -410,6 +421,19 @@ export function ModelHealth() {
               </tbody>
             </table>
           </div>
+          {coverBy === 'game' && excluded && (
+            <div className="note warn" style={{ marginTop: 12 }}>
+              <b>{Object.keys(excluded.games).length} of the uncovered games are excluded on purpose.</b>{' '}
+              {excluded.why}
+              <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>
+                {Object.entries(excluded.games).map(([id, reason]) => (
+                  <li key={id} className="mini" style={{ marginBottom: 2 }}>
+                    <span className="mono">{id}</span> — {reason}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {zeroCells.length > 0 && (
             <div className="note bad" style={{ marginTop: 12 }}>
               <b>

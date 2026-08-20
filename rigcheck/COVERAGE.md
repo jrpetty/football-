@@ -1,6 +1,6 @@
 # RIGCHECK coverage report
 
-Generated 2026-08-20T11:22:22.911Z.
+Generated 2026-08-20T11:27:29.194Z.
 
 ## Catalogue against spec targets
 
@@ -9,7 +9,7 @@ Generated 2026-08-20T11:22:22.911Z.
 | GPU SKUs | 279 | 1200 | 921 short (77%) |
 | CPU SKUs | 442 | 900 | 458 short (51%) |
 | Games | 50 | 50 | — |
-| Validation fixtures | 161 | 150 | — |
+| Validation fixtures | 234 | 150 | — |
 
 ### Why the SKU counts fall short
 
@@ -157,12 +157,12 @@ each fold from the pristine seed, and metrics pool the out-of-fold predictions.
 
 | Metric | CV (out-of-fold) | Gate |
 |---|---:|---|
-| median APE (weighted) | 12.6% | < 15% |
-| p90 APE (weighted) | 29.6% | < 45% advisory tier; 30% arms with measured data |
-| mean APE | 15.8% | < 20% (the spec's original gate) |
-| Spearman rho | 0.947 | >= 0.90 |
+| median APE (weighted) | 11.7% | < 15% |
+| p90 APE (weighted) | 28.4% | < 45% advisory tier; 30% arms with measured data |
+| mean APE | 14.5% | < 20% (the spec's original gate) |
+| Spearman rho | 0.951 | >= 0.90 |
 | delta sign accuracy | 100.0% (5 decided, 5 within-noise abstentions) | >= 95% |
-| actuals within 1-sigma band | 67.9% | ~68% target |
+| actuals within 1-sigma band | 71.6% | ~68% target |
 
 ### The fixture set is recalled, not measured
 

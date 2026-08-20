@@ -1,19 +1,21 @@
 {
   "generatedAt": "2026-08-18T16:39:44.047Z",
   "provenanceNote": "RECALLED FIGURES, NOT MEASUREMENTS. Every benchmark source is blocked by this environment egress policy, so these are recollections. validate.ts detects provenance \"model-knowledge\" and runs the gate in ADVISORY mode: it measures agreement with recollection, not accuracy. Replace via data/manual/ + harness/ to promote the gate to enforcing.",
-  "count": 161,
+  "count": 234,
   "strata": {
-    "balanced-modern": 61,
+    "balanced-modern": 105,
+    "esports-high-fps": 24,
     "old-cpu-new-gpu": 19,
+    "vram-starved": 16,
     "new-cpu-old-gpu": 15,
-    "vram-starved": 13,
+    "x3d-pair": 12,
+    "rt-on": 11,
+    "ue5-heavy": 9,
     "igpu-only": 8,
     "single-channel": 6,
-    "single-channel-pair": 2,
-    "x3d-pair": 12,
-    "esports-high-fps": 16,
     "upscaling": 5,
-    "rt-on": 4
+    "single-channel-pair": 2,
+    "sim-cpu-heavy": 2
   },
   "records": [
     {
@@ -4384,7 +4386,1990 @@
       "stratum": "upscaling",
       "sourceNote": "Recalled from widely-reported review configurations (native 4K ~68 on the same rig; DLSS Q ~1.55x when GPU-bound)",
       "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-162",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "baldurs-gate-3",
+      "resolution": "1440p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 140,
+      "low1Pct": 105,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Act 3 lower city, the CPU-heavy worst case",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-163",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "baldurs-gate-3",
+      "resolution": "2160p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 110,
+      "low1Pct": 88,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Act 3 lower city",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-164",
+      "cpuId": "amd-ryzen-5-5600",
+      "gpuId": "nvidia-geforce-rtx-3060-12gb",
+      "gameId": "baldurs-gate-3",
+      "resolution": "1080p",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 3200,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 70,
+      "low1Pct": 52,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Act 3 lower city",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-165",
+      "cpuId": "amd-ryzen-5-7600",
+      "gpuId": "amd-radeon-rx-7800-xt",
+      "gameId": "baldurs-gate-3",
+      "resolution": "1440p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 95,
+      "low1Pct": 72,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Act 3 lower city",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-166",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "elden-ring",
+      "resolution": "2160p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 60,
+      "low1Pct": 55,
+      "recallConfidence": "high",
+      "stratum": "balanced-modern",
+      "sourceNote": "Engine hard cap at 60fps; the rig is far above it",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-167",
+      "cpuId": "amd-ryzen-5-5600",
+      "gpuId": "nvidia-geforce-rtx-3060-12gb",
+      "gameId": "elden-ring",
+      "resolution": "1080p",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 3200,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 60,
+      "low1Pct": 50,
+      "recallConfidence": "high",
+      "stratum": "balanced-modern",
+      "sourceNote": "Engine hard cap at 60fps",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-168",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "diablo-iv",
+      "resolution": "2160p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 140,
+      "low1Pct": 110,
+      "recallConfidence": "medium",
+      "stratum": "vram-starved",
+      "sourceNote": "Open world, uncapped",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-169",
+      "cpuId": "amd-ryzen-5-5600",
+      "gpuId": "nvidia-geforce-rtx-3060-12gb",
+      "gameId": "diablo-iv",
+      "resolution": "1080p",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 3200,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 85,
+      "low1Pct": 64,
+      "recallConfidence": "medium",
+      "stratum": "vram-starved",
+      "sourceNote": "Open world, uncapped",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-170",
+      "cpuId": "amd-ryzen-5-7600",
+      "gpuId": "amd-radeon-rx-7800-xt",
+      "gameId": "diablo-iv",
+      "resolution": "1440p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 130,
+      "low1Pct": 100,
+      "recallConfidence": "medium",
+      "stratum": "vram-starved",
+      "sourceNote": "Open world, uncapped",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-171",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "far-cry-6",
+      "resolution": "1440p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 160,
+      "low1Pct": 128,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Built-in benchmark, HD texture pack",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-172",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "far-cry-6",
+      "resolution": "2160p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 120,
+      "low1Pct": 96,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Built-in benchmark, HD texture pack",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-173",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "far-cry-6",
+      "resolution": "1440p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "on",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 140,
+      "low1Pct": 110,
+      "recallConfidence": "medium",
+      "stratum": "rt-on",
+      "sourceNote": "Built-in benchmark, RT reflections and shadows",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-174",
+      "cpuId": "amd-ryzen-5-5600",
+      "gpuId": "nvidia-geforce-rtx-3060-12gb",
+      "gameId": "far-cry-6",
+      "resolution": "1080p",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 3200,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 85,
+      "low1Pct": 66,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Built-in benchmark",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-175",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "metro-exodus-enhanced",
+      "resolution": "1440p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "on",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 160,
+      "low1Pct": 120,
+      "recallConfidence": "medium",
+      "stratum": "rt-on",
+      "sourceNote": "Enhanced Edition; RT is always on, there is no off path",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-176",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "metro-exodus-enhanced",
+      "resolution": "2160p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "on",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 95,
+      "low1Pct": 74,
+      "recallConfidence": "medium",
+      "stratum": "rt-on",
+      "sourceNote": "Enhanced Edition built-in benchmark",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-177",
+      "cpuId": "amd-ryzen-5-5600",
+      "gpuId": "nvidia-geforce-rtx-3060-12gb",
+      "gameId": "metro-exodus-enhanced",
+      "resolution": "1080p",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "on",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 3200,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 60,
+      "low1Pct": 45,
+      "recallConfidence": "medium",
+      "stratum": "rt-on",
+      "sourceNote": "Enhanced Edition built-in benchmark",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-178",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "watch-dogs-legion",
+      "resolution": "1440p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 140,
+      "low1Pct": 108,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Built-in benchmark",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-179",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "watch-dogs-legion",
+      "resolution": "1440p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "on",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 95,
+      "low1Pct": 72,
+      "recallConfidence": "medium",
+      "stratum": "rt-on",
+      "sourceNote": "Built-in benchmark, RT ultra",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-180",
+      "cpuId": "amd-ryzen-5-5600",
+      "gpuId": "nvidia-geforce-rtx-3060-12gb",
+      "gameId": "watch-dogs-legion",
+      "resolution": "1080p",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 3200,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 70,
+      "low1Pct": 52,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Built-in benchmark",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-181",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "f1-24",
+      "resolution": "1440p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "on",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 200,
+      "low1Pct": 160,
+      "recallConfidence": "medium",
+      "stratum": "rt-on",
+      "sourceNote": "Built-in benchmark, RT on",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-182",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "f1-24",
+      "resolution": "2160p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "on",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 130,
+      "low1Pct": 104,
+      "recallConfidence": "medium",
+      "stratum": "rt-on",
+      "sourceNote": "Built-in benchmark, RT on",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-183",
+      "cpuId": "amd-ryzen-5-5600",
+      "gpuId": "nvidia-geforce-rtx-3060-12gb",
+      "gameId": "f1-24",
+      "resolution": "1080p",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 3200,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 95,
+      "low1Pct": 72,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Built-in benchmark, RT off",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-184",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "horizon-forbidden-west",
+      "resolution": "1440p",
+      "preset": "highest",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 160,
+      "low1Pct": 125,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Built-in benchmark",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-185",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "horizon-forbidden-west",
+      "resolution": "2160p",
+      "preset": "highest",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 105,
+      "low1Pct": 84,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Built-in benchmark",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-186",
+      "cpuId": "amd-ryzen-5-5600",
+      "gpuId": "nvidia-geforce-rtx-3060-12gb",
+      "gameId": "horizon-forbidden-west",
+      "resolution": "1080p",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 3200,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 70,
+      "low1Pct": 54,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Built-in benchmark",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-187",
+      "cpuId": "amd-ryzen-5-7600",
+      "gpuId": "amd-radeon-rx-7800-xt",
+      "gameId": "horizon-forbidden-west",
+      "resolution": "1440p",
+      "preset": "highest",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 105,
+      "low1Pct": 80,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Built-in benchmark",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-188",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "ghost-of-tsushima",
+      "resolution": "1440p",
+      "preset": "highest",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 170,
+      "low1Pct": 132,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Built-in benchmark",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-189",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "ghost-of-tsushima",
+      "resolution": "2160p",
+      "preset": "highest",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 115,
+      "low1Pct": 90,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Built-in benchmark",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-190",
+      "cpuId": "amd-ryzen-5-5600",
+      "gpuId": "nvidia-geforce-rtx-3060-12gb",
+      "gameId": "ghost-of-tsushima",
+      "resolution": "1080p",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 3200,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 80,
+      "low1Pct": 60,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Built-in benchmark",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-191",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "god-of-war-ragnarok",
+      "resolution": "1440p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 180,
+      "low1Pct": 140,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Open-field traversal",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-192",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "god-of-war-ragnarok",
+      "resolution": "2160p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 120,
+      "low1Pct": 95,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Open-field traversal",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-193",
+      "cpuId": "amd-ryzen-5-5600",
+      "gpuId": "nvidia-geforce-rtx-3060-12gb",
+      "gameId": "god-of-war-ragnarok",
+      "resolution": "1080p",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 3200,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 85,
+      "low1Pct": 64,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Open-field traversal",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-194",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "the-witcher-3-next-gen",
+      "resolution": "1440p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 160,
+      "low1Pct": 120,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Novigrad, RT off",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-195",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "the-witcher-3-next-gen",
+      "resolution": "2160p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 110,
+      "low1Pct": 84,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Novigrad, RT off",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-196",
+      "cpuId": "amd-ryzen-5-5600",
+      "gpuId": "nvidia-geforce-rtx-3060-12gb",
+      "gameId": "the-witcher-3-next-gen",
+      "resolution": "1080p",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 3200,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 75,
+      "low1Pct": 56,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Novigrad, RT off",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-197",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "starfield",
+      "resolution": "1440p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 110,
+      "low1Pct": 84,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "New Atlantis, the CPU worst case",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-198",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "starfield",
+      "resolution": "2160p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 85,
+      "low1Pct": 66,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "New Atlantis",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-199",
+      "cpuId": "amd-ryzen-5-5600",
+      "gpuId": "nvidia-geforce-rtx-3060-12gb",
+      "gameId": "starfield",
+      "resolution": "1080p",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 3200,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 50,
+      "low1Pct": 38,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "New Atlantis",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-200",
+      "cpuId": "amd-ryzen-5-7600",
+      "gpuId": "amd-radeon-rx-7800-xt",
+      "gameId": "starfield",
+      "resolution": "1440p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 75,
+      "low1Pct": 58,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "New Atlantis",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-201",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "spider-man-2",
+      "resolution": "1440p",
+      "preset": "highest",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 170,
+      "low1Pct": 130,
+      "recallConfidence": "low",
+      "stratum": "balanced-modern",
+      "sourceNote": "Traversal; the PC port is recent and reviews vary widely",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-202",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "spider-man-2",
+      "resolution": "2160p",
+      "preset": "highest",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 120,
+      "low1Pct": 92,
+      "recallConfidence": "low",
+      "stratum": "balanced-modern",
+      "sourceNote": "Traversal",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-203",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "assassins-creed-shadows",
+      "resolution": "1440p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 100,
+      "low1Pct": 78,
+      "recallConfidence": "low",
+      "stratum": "balanced-modern",
+      "sourceNote": "Built-in benchmark; 2025 title with limited settled coverage",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-204",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "assassins-creed-shadows",
+      "resolution": "2160p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 70,
+      "low1Pct": 55,
+      "recallConfidence": "low",
+      "stratum": "balanced-modern",
+      "sourceNote": "Built-in benchmark",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-205",
+      "cpuId": "amd-ryzen-5-5600",
+      "gpuId": "nvidia-geforce-rtx-3060-12gb",
+      "gameId": "assassins-creed-shadows",
+      "resolution": "1080p",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 3200,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 45,
+      "low1Pct": 34,
+      "recallConfidence": "low",
+      "stratum": "balanced-modern",
+      "sourceNote": "Built-in benchmark",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-206",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "remnant-ii",
+      "resolution": "1440p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 110,
+      "low1Pct": 84,
+      "recallConfidence": "medium",
+      "stratum": "ue5-heavy",
+      "sourceNote": "Native, no upscaling \u2014 the game defaults to upscaled and is very heavy without it",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-207",
+      "cpuId": "amd-ryzen-5-5600",
+      "gpuId": "nvidia-geforce-rtx-3060-12gb",
+      "gameId": "remnant-ii",
+      "resolution": "1080p",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 3200,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 50,
+      "low1Pct": 38,
+      "recallConfidence": "medium",
+      "stratum": "ue5-heavy",
+      "sourceNote": "Native, no upscaling",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-208",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "stalker-2",
+      "resolution": "1440p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 85,
+      "low1Pct": 64,
+      "recallConfidence": "medium",
+      "stratum": "ue5-heavy",
+      "sourceNote": "Epic preset, native",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-209",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "stalker-2",
+      "resolution": "2160p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 55,
+      "low1Pct": 42,
+      "recallConfidence": "medium",
+      "stratum": "ue5-heavy",
+      "sourceNote": "Epic preset, native",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-210",
+      "cpuId": "amd-ryzen-5-5600",
+      "gpuId": "nvidia-geforce-rtx-3060-12gb",
+      "gameId": "stalker-2",
+      "resolution": "1080p",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 3200,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 40,
+      "low1Pct": 30,
+      "recallConfidence": "medium",
+      "stratum": "ue5-heavy",
+      "sourceNote": "Native",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-211",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "silent-hill-2-2024",
+      "resolution": "1440p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 100,
+      "low1Pct": 74,
+      "recallConfidence": "medium",
+      "stratum": "ue5-heavy",
+      "sourceNote": "Epic preset, native",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-212",
+      "cpuId": "amd-ryzen-5-5600",
+      "gpuId": "nvidia-geforce-rtx-3060-12gb",
+      "gameId": "silent-hill-2-2024",
+      "resolution": "1080p",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 3200,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 45,
+      "low1Pct": 33,
+      "recallConfidence": "medium",
+      "stratum": "ue5-heavy",
+      "sourceNote": "Native",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-213",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "the-finals",
+      "resolution": "1440p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 200,
+      "low1Pct": 150,
+      "recallConfidence": "medium",
+      "stratum": "ue5-heavy",
+      "sourceNote": "Epic preset; destruction-heavy scene",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-214",
+      "cpuId": "amd-ryzen-5-5600",
+      "gpuId": "nvidia-geforce-rtx-3060-12gb",
+      "gameId": "the-finals",
+      "resolution": "1080p",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 3200,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 90,
+      "low1Pct": 66,
+      "recallConfidence": "medium",
+      "stratum": "ue5-heavy",
+      "sourceNote": "Destruction-heavy scene",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-215",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "dota-2",
+      "resolution": "1440p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 300,
+      "low1Pct": 220,
+      "recallConfidence": "medium",
+      "stratum": "esports-high-fps",
+      "sourceNote": "Best Looking preset; engine and CPU bound well before the GPU",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-216",
+      "cpuId": "amd-ryzen-5-5600",
+      "gpuId": "nvidia-geforce-rtx-3060-12gb",
+      "gameId": "dota-2",
+      "resolution": "1080p",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 3200,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 180,
+      "low1Pct": 130,
+      "recallConfidence": "medium",
+      "stratum": "esports-high-fps",
+      "sourceNote": "Teamfight, mid-game",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-217",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "rainbow-six-siege",
+      "resolution": "1440p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 550,
+      "low1Pct": 380,
+      "recallConfidence": "medium",
+      "stratum": "esports-high-fps",
+      "sourceNote": "Built-in benchmark, Vulkan; one of the lightest titles in the suite",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-218",
+      "cpuId": "amd-ryzen-5-5600",
+      "gpuId": "nvidia-geforce-rtx-3060-12gb",
+      "gameId": "rainbow-six-siege",
+      "resolution": "1080p",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 3200,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 300,
+      "low1Pct": 215,
+      "recallConfidence": "medium",
+      "stratum": "esports-high-fps",
+      "sourceNote": "Built-in benchmark, Vulkan",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-219",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "pubg-battlegrounds",
+      "resolution": "1440p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 250,
+      "low1Pct": 175,
+      "recallConfidence": "medium",
+      "stratum": "esports-high-fps",
+      "sourceNote": "Erangel, mid-game",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-220",
+      "cpuId": "amd-ryzen-5-5600",
+      "gpuId": "nvidia-geforce-rtx-3060-12gb",
+      "gameId": "pubg-battlegrounds",
+      "resolution": "1080p",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 3200,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 110,
+      "low1Pct": 78,
+      "recallConfidence": "medium",
+      "stratum": "esports-high-fps",
+      "sourceNote": "Erangel, mid-game",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-221",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "anno-1800",
+      "resolution": "1440p",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 110,
+      "low1Pct": 82,
+      "recallConfidence": "medium",
+      "stratum": "sim-cpu-heavy",
+      "sourceNote": "Built-in benchmark, late-game save; CPU bound",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-222",
+      "cpuId": "amd-ryzen-5-5600",
+      "gpuId": "nvidia-geforce-rtx-3060-12gb",
+      "gameId": "anno-1800",
+      "resolution": "1080p",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 3200,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 65,
+      "low1Pct": 48,
+      "recallConfidence": "medium",
+      "stratum": "sim-cpu-heavy",
+      "sourceNote": "Built-in benchmark, late-game save",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-223",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "cyberpunk-2077",
+      "resolution": "3440x1440",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 110,
+      "low1Pct": 84,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Ultrawide, RT off, native",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-224",
+      "cpuId": "amd-ryzen-5-5600",
+      "gpuId": "nvidia-geforce-rtx-3060-12gb",
+      "gameId": "cyberpunk-2077",
+      "resolution": "3440x1440",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 3200,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 40,
+      "low1Pct": 30,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Ultrawide, native",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-225",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "counter-strike-2",
+      "resolution": "3440x1440",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 400,
+      "low1Pct": 240,
+      "recallConfidence": "medium",
+      "stratum": "esports-high-fps",
+      "sourceNote": "Ultrawide; CPU bound",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-226",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "baldurs-gate-3",
+      "resolution": "3440x1440",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 125,
+      "low1Pct": 95,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Ultrawide, Act 3",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-227",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "hogwarts-legacy",
+      "resolution": "3440x1440",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 110,
+      "low1Pct": 80,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Ultrawide, Hogsmeade",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-228",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "alan-wake-2",
+      "resolution": "3440x1440",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 75,
+      "low1Pct": 58,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Ultrawide, RT off, native",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-229",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "forza-horizon-5",
+      "resolution": "3440x1440",
+      "preset": "extreme",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 140,
+      "low1Pct": 110,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Ultrawide, built-in benchmark",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-230",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "red-dead-redemption-2",
+      "resolution": "3440x1440",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 110,
+      "low1Pct": 85,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Ultrawide, built-in benchmark",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-231",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "horizon-forbidden-west",
+      "resolution": "3440x1440",
+      "preset": "highest",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 135,
+      "low1Pct": 105,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Ultrawide, built-in benchmark",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-232",
+      "cpuId": "amd-ryzen-7-7800x3d",
+      "gpuId": "nvidia-geforce-rtx-4090",
+      "gameId": "starfield",
+      "resolution": "3440x1440",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 95,
+      "low1Pct": 72,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Ultrawide, New Atlantis",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-233",
+      "cpuId": "amd-ryzen-5-7600",
+      "gpuId": "amd-radeon-rx-7800-xt",
+      "gameId": "cyberpunk-2077",
+      "resolution": "3440x1440",
+      "preset": "ultra",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 32,
+        "channels": 2,
+        "speedMTs": 6000,
+        "type": "DDR5"
+      },
+      "storage": "nvme-gen4",
+      "avgFps": 70,
+      "low1Pct": 52,
+      "recallConfidence": "medium",
+      "stratum": "balanced-modern",
+      "sourceNote": "Ultrawide, RT off, native",
+      "provenance": "model-knowledge"
+    },
+    {
+      "id": "fx-234",
+      "cpuId": "amd-ryzen-5-5600",
+      "gpuId": "nvidia-geforce-rtx-3060-12gb",
+      "gameId": "counter-strike-2",
+      "resolution": "3440x1440",
+      "preset": "high",
+      "upscaling": {
+        "tech": "none",
+        "quality": "native",
+        "frameGen": false
+      },
+      "rtTier": "off",
+      "ram": {
+        "totalGB": 16,
+        "channels": 2,
+        "speedMTs": 3200,
+        "type": "DDR4"
+      },
+      "storage": "nvme-gen3",
+      "avgFps": 190,
+      "low1Pct": 130,
+      "recallConfidence": "medium",
+      "stratum": "esports-high-fps",
+      "sourceNote": "Ultrawide; CPU bound",
+      "provenance": "model-knowledge"
     }
   ],
-  "actualCount": 161
+  "actualCount": 234,
+  "deliberatelyUncovered": {
+    "why": "These titles are in the catalogue because people play them and want estimates, but an average frame rate at a preset is not a reproducible measurement for them. A fixture written anyway would be noise wearing the costume of evidence, and the calibrator cannot tell the difference. They are listed here so the Model Health screen can say 'excluded on purpose' rather than leaving them looking like an oversight.",
+    "games": {
+      "factorio": "The simulation is capped at 60 UPS and the meaningful metric is update rate on a large save, not frames. The catalogue already records fpsCap 60.",
+      "stellaris": "Performance is measured in late-game turn time, not frames per second. A frame rate here says nothing about whether the game is playable.",
+      "civilization-vii": "Turn-based; the number that matters is turn processing time on a large map.",
+      "cities-skylines-ii": "Frame rate varies by more than 5x with city size and there is no standard save, so any single figure would be arbitrary.",
+      "star-citizen": "Permanent alpha. Server-side performance dominates the client frame rate and both change between patches, so a figure is stale within weeks.",
+      "escape-from-tarkov": "Map- and raid-dependent with no repeatable scene; Streets of Tarkov and Factory differ by a factor of two on identical hardware.",
+      "arma-reforger": "Scenario- and server-dependent. Player count and AI load move the result far more than the hardware does."
+    }
+  }
 }

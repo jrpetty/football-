@@ -590,3 +590,9 @@
 - CV median APE: 12.6%, p90: 29.6%, spearman: 0.947, sign: 100.0%
 - in-sample median APE: 9.4%
 - verdict: PASS (advisory — recalled fixtures)
+
+## 2026-08-20T11:25:14.191Z
+- fixtures: 234; grouped 5-fold CV with in-fold reference fitting
+- CV median APE: 11.7%, p90: 28.4%, spearman: 0.951, sign: 100.0%
+- in-sample median APE: 10.2%
+- verdict: PASS (advisory — recalled fixtures)

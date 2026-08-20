@@ -122,16 +122,27 @@ Judged by **grouped 5-fold cross-validation**: fixtures are partitioned by silic
 family (the same parts never straddle folds), the per-game reference fitter runs
 inside each fold from the pristine seed, and metrics pool the out-of-fold
 predictions. A single fixed holdout of ~34 rows swung ±4 points between runs;
-pooling 159 out-of-fold rows is what made the numbers stable enough to gate on.
+pooling the out-of-fold rows is what made the numbers stable enough to gate on.
 
 | Metric | CV (out-of-fold) | Gate |
 |---|---:|---|
-| median APE (weighted) | 12.6% | < 15% |
-| p90 APE (weighted) | 29.6% | < 45% advisory tier¹ |
-| mean APE | 15.8% | < 20% (the spec's original gate) |
-| Spearman ρ | 0.947 | ≥ 0.90 |
+| median APE (weighted) | 11.7% | < 15% |
+| p90 APE (weighted) | 28.4% | < 45% advisory tier¹ |
+| mean APE | 14.5% | < 20% (the spec's original gate) |
+| Spearman ρ | 0.951 | ≥ 0.90 |
 | delta sign accuracy | 100% (5 decided, 5 abstained²) | ≥ 95% |
-| actuals within 1σ band | 67.9% | ~68% target |
+| actuals within 1σ band | 71.6% | ~68% target |
+
+**Read that table with one caveat, and it is not a small one.** The fixture
+corpus grew from 161 to 234 by adding 22 games and the 3440x1440 resolution
+that the model had never been fitted against, and every metric improved. That
+is a real generalisation signal — the resolution scaling in particular held to
+a 12.6% mean error on twelve ultrawide fixtures with nothing anchoring that
+resolution beforehand. But the fixtures and the model's priors were written
+from the same source: recollection. Agreement between them is partly
+self-consistency, not independent validation, and no amount of it substitutes
+for a measurement. That is exactly what the Model Health screen exists to keep
+in front of you.
 
 ¹ The tail gate is two-tier: 45% while the fixture corpus is recalled, arming to
 the strict 30% automatically once measured fixtures outnumber recalled ones. The

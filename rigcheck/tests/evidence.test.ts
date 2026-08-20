@@ -109,13 +109,14 @@ describe('evidence ladder', () => {
     expect(thinnestCells(set, (f) => f.resolution, 14).length).toBe(2);
   });
 
-  it('finds the real fixture set has no ultrawide coverage', () => {
-    // Regression guard: 3440x1440 is offered as a target everywhere in the UI.
-    // If a fixture for it ever lands, this test should be updated, not deleted.
+  it('covers every resolution the product offers', () => {
+    // This test previously asserted that 3440x1440 had ZERO fixtures — it is
+    // offered as a target on every screen and nothing validated it. Fixtures
+    // now exist, so the assertion is inverted rather than removed: a resolution
+    // silently dropping back to no coverage is the regression worth catching.
     const byRes = thinnestCells(real, (f) => f.resolution, 14, ['1080p', '1440p', '2160p', '3440x1440']);
-    const ultrawide = byRes.find((c) => c.key === '3440x1440');
-    expect(ultrawide).toBeDefined();
-    expect(ultrawide!.rows).toBe(0);
+    expect(byRes.map((c) => c.key).sort()).toEqual(['1080p', '1440p', '2160p', '3440x1440']);
+    for (const cell of byRes) expect(cell.rows).toBeGreaterThan(0);
   });
 
   it('keeps the advisory tail gate looser than the strict one', () => {
