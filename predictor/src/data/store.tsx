@@ -1,0 +1,151 @@
+// ---------------------------------------------------------------------------
+// Loading the committed artifacts.
+//
+// The site is static: the weekly pipeline writes JSON into public/data and the
+// browser reads it. There is no API and no client-side model fitting, so a
+// gameweek page is a single fetch and the whole thing works offline once
+// cached.
+// ---------------------------------------------------------------------------
+
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import type {
+  SeasonArtifact,
+  GameweekArtifact,
+  PlayersArtifact,
+  AccuracyArtifact,
+} from '../core/schema.ts'
+
+// Vite rewrites BASE_URL at build time; with a relative base this resolves
+// correctly whether the app is served from the root or from /predictor/.
+const BASE = import.meta.env.BASE_URL
+
+async function loadJson<T>(path: string): Promise<T> {
+  const res = await fetch(`${BASE}data/${path}`)
+  if (!res.ok) throw new Error(`Could not load ${path} (HTTP ${res.status})`)
+  return (await res.json()) as T
+}
+
+interface SeasonState {
+  season: SeasonArtifact | null
+  accuracy: AccuracyArtifact | null
+  error: string | null
+  loading: boolean
+}
+
+const SeasonContext = createContext<SeasonState>({
+  season: null,
+  accuracy: null,
+  error: null,
+  loading: true,
+})
+
+export function SeasonProvider({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<SeasonState>({
+    season: null,
+    accuracy: null,
+    error: null,
+    loading: true,
+  })
+
+  useEffect(() => {
+    let cancelled = false
+    Promise.all([loadJson<SeasonArtifact>('season.json'), loadJson<AccuracyArtifact>('accuracy.json')])
+      .then(([season, accuracy]) => {
+        if (!cancelled) setState({ season, accuracy, error: null, loading: false })
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setState({
+            season: null,
+            accuracy: null,
+            error: err instanceof Error ? err.message : String(err),
+            loading: false,
+          })
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  return <SeasonContext.Provider value={state}>{children}</SeasonContext.Provider>
+}
+
+export function useSeason(): SeasonState {
+  return useContext(SeasonContext)
+}
+
+/** Load one gameweek's predictions, with a tiny in-memory cache. */
+const gameweekCache = new Map<number, GameweekArtifact>()
+
+export function useGameweek(gw: number | null): {
+  data: GameweekArtifact | null
+  loading: boolean
+  error: string | null
+} {
+  const [data, setData] = useState<GameweekArtifact | null>(
+    gw !== null ? (gameweekCache.get(gw) ?? null) : null,
+  )
+  const [loading, setLoading] = useState(gw !== null && !gameweekCache.has(gw))
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (gw === null) return
+    const cached = gameweekCache.get(gw)
+    if (cached) {
+      setData(cached)
+      setLoading(false)
+      setError(null)
+      return
+    }
+    let cancelled = false
+    setLoading(true)
+    setError(null)
+    loadJson<GameweekArtifact>(`predictions/gw${gw}.json`)
+      .then((json) => {
+        gameweekCache.set(gw, json)
+        if (!cancelled) {
+          setData(json)
+          setLoading(false)
+        }
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : String(err))
+          setLoading(false)
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [gw])
+
+  return { data, loading, error }
+}
+
+let playersPromise: Promise<PlayersArtifact> | null = null
+
+export function usePlayers(): { data: PlayersArtifact | null; loading: boolean } {
+  const [data, setData] = useState<PlayersArtifact | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    playersPromise ??= loadJson<PlayersArtifact>('players.json')
+    playersPromise
+      .then((json) => {
+        if (!cancelled) {
+          setData(json)
+          setLoading(false)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  return { data, loading }
+}
