@@ -371,6 +371,12 @@ public class FarmGoal extends Goal {
 
     private boolean hasPlantable() {
         for (Item seed : PLANT.keySet()) {
+            // Rank-aware on purpose: this answers "is there ground worth
+            // breaking?", and seed this one may not sow is not an answer.
+            // Without the check a level-1 farmer holding nothing but carrots
+            // reported itself ready, tilled the entire field, and planted not
+            // one square of it — for ever, because nothing ever got sown.
+            if (!mayGrow(seed)) continue;
             if (assistant.countMatching(s -> s.is(seed)) > 0) return true;
         }
         return false;
@@ -425,24 +431,24 @@ public class FarmGoal extends Goal {
         return lvl >= 30;   // melon and pumpkin stems
     }
 
-    /** Same ladder for the sickle: a field hand walks past carrots it can't
-     *  work yet rather than harvesting what it couldn't replant. */
-    private boolean mayCut(BlockState st) {
-        int lvl = assistant.veteranLevel();
-        if (st.is(Blocks.WHEAT)) return true;
-        if (st.is(Blocks.CARROTS) || st.is(Blocks.POTATOES)) return lvl >= 10;
-        if (st.is(Blocks.BEETROOTS)) return lvl >= 20;
-        return lvl >= 30;   // melon, pumpkin, cane
-    }
+    // There is deliberately no rank gate on HARVESTING. Rank gates husbandry,
+    // not labour: sowing and running a rotation is the skill, picking what is
+    // already ripe is not. Gating the sickle too was a progression DEADLOCK —
+    // a fresh farmer put on a carrot field could not harvest it (rank), could
+    // not sow it (rank), therefore earned nothing at all, and so could never
+    // reach the rank that would have let it work. It stood in a full field
+    // for ever. It now picks the carrots and cannot replace them, which is
+    // exactly what "cannot run a carrot farm yet" should feel like, and it
+    // earns its way to level 10 doing it.
 
     /** Everything worth cutting: a ripe crop; a melon or pumpkin FRUIT (the
      *  stem that grew it is never touched, so it just sets another); and
      *  sugar cane standing on more cane — cutting above the root drops the
      *  whole top and the root regrows it, no replanting ever. */
     private boolean isHarvestable(BlockPos pos, BlockState st) {
-        if (isMatureCrop(st)) return mayCut(st);
-        if (st.is(Blocks.MELON) || st.is(Blocks.PUMPKIN)) return mayCut(st);
-        return st.is(Blocks.SUGAR_CANE) && mayCut(st)
+        if (isMatureCrop(st)) return true;
+        if (st.is(Blocks.MELON) || st.is(Blocks.PUMPKIN)) return true;
+        return st.is(Blocks.SUGAR_CANE)
             && assistant.level().getBlockState(pos.below()).is(Blocks.SUGAR_CANE);
     }
 
