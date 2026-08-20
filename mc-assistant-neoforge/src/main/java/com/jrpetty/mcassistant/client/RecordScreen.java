@@ -13,7 +13,7 @@ import net.minecraft.network.chat.Component;
  */
 public class RecordScreen extends Screen {
 
-    private static final int W = 260, H = 216;
+    private static final int W = 384, H = 216;
     private static final int PAD = 10;
 
     private final AssistantEntity bot;
@@ -136,7 +136,8 @@ public class RecordScreen extends Screen {
         }
 
         // The career itself, biggest tally first, each with a bar for scale.
-        Ui.section(g, this.font, "Career", x, top + 54, inner);
+        int colW = 180;   // career left, the ladder right
+        Ui.section(g, this.font, "Career", x, top + 54, colW);
         int y = top + 66;
         int rowH = 12;
         int busiest = Math.max(1, info.busiest());
@@ -155,21 +156,65 @@ public class RecordScreen extends Screen {
             for (int i = 0; i < done.size() && i < maxRows; i++) {
                 AssistantEntity.Deed d = done.get(i);
                 int count = info.deed(d);
-                if (i % 2 == 0) g.fill(x - 2, y - 1, x + inner + 2, y + rowH - 2, Ui.ROW);
+                if (i % 2 == 0) g.fill(x - 2, y - 1, x + colW + 2, y + rowH - 2, Ui.ROW);
                 // The bar sits behind the label, so the biggest jobs of a life
                 // stand out without having to compare numbers.
-                int barW = Math.max(1, (inner - 4) * count / busiest);
+                int barW = Math.max(1, (colW - 4) * count / busiest);
                 // A soft full-width track under an accent fill, so the scale of
                 // each tally is readable and the biggest one owns its row.
-                g.fill(x - 2, y + rowH - 4, x + inner + 2, y + rowH - 3, Ui.EDGE_SOFT);
+                g.fill(x - 2, y + rowH - 4, x + colW + 2, y + rowH - 3, Ui.EDGE_SOFT);
                 g.fill(x - 2, y + rowH - 4, x - 2 + barW, y + rowH - 3, Ui.ACCENT);
                 g.drawString(this.font, d.label, x, y, Ui.INK, false);
-                Ui.right(g, this.font, String.valueOf(count), x + inner, y, Ui.ACCENT);
+                Ui.right(g, this.font, String.valueOf(count), x + colW, y, Ui.ACCENT);
                 y += rowH;
             }
             if (done.size() > maxRows) {
                 g.drawString(this.font, "+" + (done.size() - maxRows) + " more",
                     x, y, Ui.FAINT, false);
+            }
+        }
+
+        // ---- the ladder: where this one stands in its trade, and what every
+        // level it has not yet reached will open. The rung it is climbing
+        // toward is lit, and the bar is the climb itself.
+        int lx = x + 192;
+        int lw = inner - 192;
+        AssistantEntity.StationTask trade =
+            AssistantEntity.StationTask.byOrdinal(bot.clientJobOrdinal());
+        java.util.List<Ladder.Rung> rungs = Ladder.forTrade(trade);
+        String rank = Ladder.rank(trade, lvl);
+        Ui.section(g, this.font, rank.isEmpty() ? "Ladder" : "Ladder · " + rank,
+            lx, top + 54, lw);
+        int ly = top + 66;
+        if (rungs.isEmpty()) {
+            g.drawString(this.font, "Pick a trade to", lx, ly + 2, Ui.MUTED, false);
+            g.drawString(this.font, "start climbing.", lx, ly + 13, Ui.MUTED, false);
+        } else {
+            Ladder.Rung next = null;
+            for (Ladder.Rung r : rungs) {
+                if (lvl < r.level()) { next = r; break; }
+            }
+            if (next != null) {
+                int f = Math.max(1, com.jrpetty.mcassistant.AssistantConfig.levelCurveFactor());
+                float frac = bot.clientLifetimeXp() / (float) (f * next.level() * next.level());
+                Ui.bar(g, lx, ly, lw, 5, Math.min(1F, frac), Ui.ACCENT);
+                ly += 10;
+            }
+            int floor = top + H - PAD - (perkRow ? 57 : 24);
+            for (int i = 0; i < rungs.size(); i++) {
+                Ladder.Rung r = rungs.get(i);
+                if (ly + 11 > floor) {
+                    g.drawString(this.font, "+" + (rungs.size() - i) + " rungs above",
+                        lx, ly, Ui.FAINT, false);
+                    break;
+                }
+                boolean climbed = lvl >= r.level();
+                boolean isNext = next != null && r.level() == next.level();
+                String line = (climbed ? "\u2726 " : isNext ? "\u203a " : "\u00b7 ") + r.level() + "  "
+                    + (r.title().isEmpty() ? r.gives() : r.title() + " \u2014 " + r.gives());
+                g.drawString(this.font, Ui.clip(this.font, line, lw),
+                    lx, ly, climbed ? Ui.GOOD : isNext ? Ui.INK : Ui.FAINT, false);
+                ly += 13;
             }
         }
 
