@@ -229,15 +229,22 @@ function configurationFindings(sys: DetectedSystem, gpu: GpuRecord, cpu: CpuReco
   const thermal = estimateThermals(gpu, cpu, sys.build, sys.cooling?.airflow ?? 'good');
   if (thermal.throttling) {
     const loss = 1 - Math.min(thermal.cpuClockFactor, thermal.gpuClockFactor);
+    // Name the side that is actually throttling. Saying "cooling cannot hold
+    // this hardware" while reporting the CPU at 100% reads as a contradiction
+    // and sends someone to replace the wrong cooler.
+    const cpuHit = thermal.cpuClockFactor < 0.995;
+    const gpuHit = thermal.gpuClockFactor < 0.995;
+    const side = cpuHit && gpuHit ? 'CPU and GPU' : cpuHit ? 'CPU' : 'GPU';
     out.push({
       id: 'thermal-throttle',
       component: 'Cooling',
       severity: loss > 0.1 ? 'major' : 'minor',
-      title: 'Cooling cannot hold this hardware at full clocks',
-      evidence: `${thermal.cpuHeatW.toFixed(0)}W of CPU heat against an effective cooler capacity of ${thermal.capacityW.toFixed(0)}W after case airflow (load ratio ${thermal.loadRatio.toFixed(2)}).`,
-      impact: `Sustained clocks drop to ${pct(thermal.cpuClockFactor)} of boost on the CPU and ${pct(thermal.gpuClockFactor)} on the GPU. A throttling machine benchmarks fine for thirty seconds and is slow for the rest of the session, which is exactly the pattern people describe as "it gets worse the longer I play".`,
-      remedy:
-        'In order of effect per pound: clean the dust filters and heatsink fins, add or reverse case fans so the front intakes and the rear exhausts, re-seat the cooler with fresh paste, then replace the cooler. A better case is usually cheaper than a better CPU.',
+      title: `Heat is costing ${side} clock speed`,
+      evidence: `${thermal.cpuHeatW.toFixed(0)}W of CPU heat against an effective cooler capacity of ${thermal.capacityW.toFixed(0)}W after case airflow (load ratio ${thermal.loadRatio.toFixed(2)}). Sustained clocks: CPU ${pct(thermal.cpuClockFactor)} of boost, GPU ${pct(thermal.gpuClockFactor)}.`,
+      impact: `${gpuHit && !cpuHit ? 'The CPU cooler is coping; the case is not. Recirculated hot air is what the graphics card is breathing, and it drops its own clocks in response.' : 'Sustained clocks fall below boost under load.'} A throttling machine benchmarks fine for thirty seconds and is slow for the rest of the session, which is exactly the pattern people describe as "it gets worse the longer I play".`,
+      remedy: cpuHit
+        ? 'In order of effect per pound: clean the dust filters and heatsink fins, re-seat the cooler with fresh paste, add or reverse case fans so the front intakes and the rear exhausts, then replace the cooler. A better case is usually cheaper than a better CPU.'
+        : 'This one is the case, not the cooler. Add or reverse fans so the front intakes and the rear and top exhaust, clear the dust filters, and give the card room to breathe. Replacing the CPU cooler will not help — it is already coping.',
       measured: false,
       estimatedGainPct: 1 / Math.min(thermal.cpuClockFactor, thermal.gpuClockFactor) - 1,
     });
@@ -380,12 +387,35 @@ export function compareMeasurement(
  * experience is not — which is exactly the machine people describe as "good
  * numbers, feels bad".
  */
-function measuredFindings(comparisons: MeasurementComparison[]): Finding[] {
+function measuredFindings(comparisons: MeasurementComparison[], nameOf: (id: string) => string): Finding[] {
   const out: Finding[] = [];
   const usable = comparisons.filter((c) => c.ratio != null);
   if (!usable.length) return out;
 
   const short = usable.filter((c) => c.verdict === 'below expectation' || c.verdict === 'far below expectation');
+
+  // A single short title is a different fault from a machine that is short
+  // everywhere, and needs saying either way. Without this, one measurement
+  // 40% below expectation produced NO finding at all — the aggregate rule
+  // needs two — and the verdict then read "the measurements land where the
+  // model expects", which was flatly untrue.
+  for (const c of short) {
+    out.push({
+      id: `measured-short-${c.measurement.gameId}`,
+      component: 'GPU',
+      severity: c.verdict === 'far below expectation' ? 'major' : 'minor',
+      title: `${nameOf(c.measurement.gameId)} is ${pct(1 - c.ratio!)} slower than this hardware should be`,
+      evidence: `${c.measurement.avgFps.toFixed(0)}fps measured at ${c.measurement.preset ?? 'the reference preset'}, ${c.measurement.resolution}, against an expected ${c.expectedFps!.toFixed(0)} (band ${c.bandLow!.toFixed(0)}-${c.bandHigh!.toFixed(0)}).`,
+      impact:
+        usable.length === 1
+          ? 'One measurement cannot separate a problem with this title from a problem with the machine. A second capture in a different game is the cheapest way to tell them apart — if both are short, it is the machine.'
+          : 'The other measurements are closer to expectation, which points at this title rather than at the machine.',
+      remedy:
+        'First check the capture matched what was entered here: same preset, same resolution, no upscaling or frame generation the model was not told about. Then work down the configuration findings. If they are all clear, capture again after a reboot with nothing else running.',
+      measured: true,
+    });
+  }
+
   if (short.length >= Math.max(2, usable.length * 0.6)) {
     const worst = short.reduce((a, b) => (a.ratio! < b.ratio! ? a : b));
     out.push({
@@ -393,7 +423,7 @@ function measuredFindings(comparisons: MeasurementComparison[]): Finding[] {
       component: 'Platform',
       severity: 'major',
       title: 'The machine is slower than its parts across most of what was measured',
-      evidence: `${short.length} of ${usable.length} measurements came in below the model's band, worst being ${worst.measurement.gameId} at ${pct(1 - worst.ratio!)} short.`,
+      evidence: `${short.length} of ${usable.length} measurements came in below the model's band, worst being ${nameOf(worst.measurement.gameId)} at ${pct(1 - worst.ratio!)} short.`,
       impact:
         'A shortfall in one title is usually that title. A shortfall in most of them is the machine: a system-wide cause such as a power plan, memory configuration, thermal limit or background load.',
       remedy:
@@ -411,7 +441,7 @@ function measuredFindings(comparisons: MeasurementComparison[]): Finding[] {
         id: `stutter-${m.gameId}`,
         component: 'Storage',
         severity: ratio < 0.4 ? 'major' : 'minor',
-        title: `${m.gameId}: the average is fine but the frame pacing is not`,
+        title: `${nameOf(m.gameId)}: the average is fine but the frame pacing is not`,
         evidence: `1% low is ${m.low1PctFps.toFixed(0)}fps against a ${m.avgFps.toFixed(0)}fps average — a ratio of ${ratio.toFixed(2)}, where 0.7 to 0.8 is normal.`,
         impact:
           'This is the machine that "gets good numbers but feels bad". The average is carried by smooth stretches while the stalls people actually notice sit in the tail.',
@@ -454,7 +484,7 @@ export function diagnose(
 
   const all = configurationFindings(sys, gpu, cpu);
   const comparisons = measurements.map((m) => compareMeasurement(m, sys, data));
-  all.push(...measuredFindings(comparisons));
+  all.push(...measuredFindings(comparisons, (id) => data.games.get(id)?.name ?? id));
 
   const healthy = all.filter((f) => f.severity === 'ok');
   const findings = all
@@ -474,16 +504,26 @@ export function diagnose(
     findings.reduce((acc, f) => acc * (1 + (f.estimatedGainPct ?? 0)), 1) - 1;
 
   const worst = findings[0]?.severity;
+  const anyShort = comparisons.some((c) => c.verdict === 'below expectation' || c.verdict === 'far below expectation');
   const verdict =
     !findings.length
       ? measurements.length
-        ? 'Nothing detectable is wrong with this machine, and the measurements land where the model expects. That is the best this report can say — it is not the same as proof that everything is optimal.'
+        ? anyShort
+          ? 'The configuration is clean, but the machine is not hitting what the model expects. Nothing in the specification explains it, which points at something this report cannot see — the list at the bottom is where to look next.'
+          : 'Nothing detectable is wrong with this machine, and the measurements land where the model expects. That is the best this report can say — it is not the same as proof that everything is optimal.'
         : 'Nothing is wrong in the configuration. No measurements were supplied, so nothing has been verified against the hardware actually running.'
-      : worst === 'critical'
-        ? `Something is materially wrong: ${findings[0].title.toLowerCase()}. Fixing what is listed here is worth roughly ${pct(recoverablePct)} — more than any upgrade you could buy for the price.`
-        : worst === 'major'
-          ? `This machine is leaving performance on the table. The findings below are worth roughly ${pct(recoverablePct)} together, and none of them cost anything like a new part.`
-          : `Broadly healthy, with ${findings.length} minor thing${findings.length === 1 ? '' : 's'} worth tidying — together worth about ${pct(recoverablePct)}.`;
+      // Only quote a percentage when something was actually quantified. A
+      // measured shortfall has no modelled gain attached, and "worth roughly
+      // 0%" next to a list of real problems reads as though they do not matter.
+      : recoverablePct < 0.005
+        ? worst === 'critical' || worst === 'major'
+          ? `This machine is not performing as it should: ${findings[0].title.toLowerCase()}. What is costing the performance is not something the specification explains, so the findings below are where to start and the list at the bottom is what this could not see.`
+          : `Broadly healthy, with ${findings.length} minor thing${findings.length === 1 ? '' : 's'} worth tidying.`
+        : worst === 'critical'
+          ? `Something is materially wrong: ${findings[0].title.toLowerCase()}. Fixing what is listed here is worth roughly ${pct(recoverablePct)} — more than any upgrade you could buy for the price.`
+          : worst === 'major'
+            ? `This machine is leaving performance on the table. The findings below are worth roughly ${pct(recoverablePct)} together, and none of them cost anything like a new part.`
+            : `Broadly healthy, with ${findings.length} minor thing${findings.length === 1 ? '' : 's'} worth tidying — together worth about ${pct(recoverablePct)}.`;
 
   const notChecked = [
     'Per-core clock behaviour and whether Windows is on a balanced power plan capping boost. The detector cannot read this reliably.',

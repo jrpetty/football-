@@ -63,8 +63,10 @@ false pass. `COVERAGE.md` states every count, gap and reason.
 src/core/       types · constants · gates · indices · engine · queries · analysis
                 physics (power/thermal/noise/latency) · detect · fit · catalogue
                 evidence (source-quality ladder, shared by the gate and the UI)
+                presets · advisor (settings for a target) · planner (budget to build)
+                health (is this machine performing as it should)
 src/parse/      rowspan-aware table parser · spec-table → record mapper (fixture-tested)
-src/ui/         React app: 9 screens, dense dark instrument styling
+src/ui/         React app: 11 screens, dense dark instrument styling
 scripts/        harvest → parse → reconcile → import-manual → calibrate → validate → coverage
 harness/        PresentMon benchmark runner, emits straight into data/manual/
 data/           catalogue · aliases · fixtures · pricing · manual · calibration
@@ -190,9 +192,28 @@ promotes itself from advisory to enforcing, and `npm run calibrate` will write.
 
 ## Screens
 
-**Build Analyser** → **Comparison Matrix** (n-way) → **Upgrade Advisor** (Pareto
-frontier + knee) → **Inventory Optimiser** → **Machine Report** → **Trade Desk** →
-**Identify** → **Data Explorer** → **Model Health**.
+**Build a PC** (guided) → **Build Analyser** → **Comparison Matrix** (n-way) →
+**Upgrade Advisor** (Pareto frontier + knee) → **Inventory Optimiser** →
+**Machine Report** → **Trade Desk** → **System Health** → **Identify** →
+**Data Explorer** → **Model Health**.
+
+**Build a PC** is the guided path for someone who does not yet know what to
+compare: screen, games, budget, build, settings. It recommends the CHEAPEST
+build that meets the goal rather than the most expensive one that fits, and
+answers "what would the rest of the budget buy" separately — usually the answer
+is better-looking frames rather than more of them. "Meets the goal" includes a
+quality floor, because without one the cheapest build clearing 120fps at 4K is
+a mid-range card running everything at low.
+
+**System Health** answers the question people actually have about a machine they
+own. It opens with what the detector reads and what it never reads, in two
+columns, before any button — and the type-it-in path reaches the same report
+without running anything. It separates certain configuration findings
+(single-channel memory, XMP never enabled, a card in a chipset x4 slot) from
+measured ones, which inherit the model's uncertainty and are stated against an
+explicit band. Recoverable performance is compounded, not summed. The report
+ends with what it could NOT check, because a list of findings that stops looks
+complete.
 
 Every number opens a panel showing each model term, its value, its confidence and
 its source. The Upgrade Advisor plots the price/performance Pareto frontier rather

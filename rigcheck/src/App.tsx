@@ -12,6 +12,7 @@ import { TradeDesk } from './ui/pages/TradeDesk.tsx';
 import { Detect } from './ui/pages/Detect.tsx';
 import { DataExplorer } from './ui/pages/DataExplorer.tsx';
 import { ModelHealth } from './ui/pages/ModelHealth.tsx';
+import { SystemHealth } from './ui/pages/SystemHealth.tsx';
 import type { Build, Resolution } from './core/types.ts';
 
 const NAV = [
@@ -22,6 +23,7 @@ const NAV = [
   { to: '/inventory', label: 'Inventory Optimiser' },
   { to: '/machine', label: 'Machine Report' },
   { to: '/trade', label: 'Trade Desk' },
+  { to: '/system', label: 'System Health' },
   { to: '/detect', label: 'Identify' },
   { to: '/data', label: 'Data Explorer' },
   { to: '/health', label: 'Model Health' },
@@ -110,6 +112,7 @@ export function App() {
             <Route path="/inventory" element={<InventoryOptimiser />} />
             <Route path="/machine" element={<MachineReport />} />
             <Route path="/trade" element={<TradeDesk />} />
+            <Route path="/system" element={<SystemHealth />} />
             <Route path="/detect" element={<Detect />} />
             <Route path="/data" element={<DataExplorer />} />
             <Route path="/health" element={<ModelHealth />} />

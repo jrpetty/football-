@@ -116,6 +116,34 @@ describe('system health', () => {
     expect(r.comparisons[0].detail).toMatch(/not proof that the machine is healthy|nothing detectable is wrong/i);
   });
 
+  it('never says the measurements agree when one of them does not', () => {
+    // Found in the browser: a single capture 40% below expectation produced no
+    // finding (the aggregate rule needs two) and the verdict then claimed the
+    // measurements landed where the model expects. Flatly untrue.
+    const expected = diagnose(healthy, [{ gameId: 'cyberpunk-2077', resolution: '1440p', preset: 'high', avgFps: 1 }], data).comparisons[0].expectedFps!;
+    const r = diagnose(healthy, [{ gameId: 'cyberpunk-2077', resolution: '1440p', preset: 'high', avgFps: expected * 0.5 }], data);
+    expect(r.comparisons[0].verdict).toBe('far below expectation');
+    expect(r.verdict).not.toMatch(/land where the model expects/i);
+    expect(r.findings.map((f) => f.id)).toContain('measured-short-cyberpunk-2077');
+  });
+
+  it('never quotes a recoverable percentage it did not quantify', () => {
+    // "worth roughly 0% together" next to a list of real problems reads as
+    // though they do not matter.
+    const expected = diagnose(healthy, [{ gameId: 'cyberpunk-2077', resolution: '1440p', preset: 'high', avgFps: 1 }], data).comparisons[0].expectedFps!;
+    const r = diagnose(healthy, [{ gameId: 'cyberpunk-2077', resolution: '1440p', preset: 'high', avgFps: expected * 0.5 }], data);
+    expect(r.recoverablePct).toBeLessThan(0.005);
+    expect(r.verdict).not.toMatch(/roughly 0%|about 0%/);
+    expect(r.findings.length).toBeGreaterThan(0);
+  });
+
+  it('tells a single short title apart from a machine-wide problem', () => {
+    const expected = diagnose(healthy, [{ gameId: 'cyberpunk-2077', resolution: '1440p', preset: 'high', avgFps: 1 }], data).comparisons[0].expectedFps!;
+    const one = diagnose(healthy, [{ gameId: 'cyberpunk-2077', resolution: '1440p', preset: 'high', avgFps: expected * 0.5 }], data);
+    const f = one.findings.find((x) => x.id === 'measured-short-cyberpunk-2077')!;
+    expect(f.impact).toMatch(/cannot separate a problem with this title from a problem with the machine/i);
+  });
+
   it('flags a broad shortfall differently from a single slow title', () => {
     const probe = (g: string) => diagnose(healthy, [{ gameId: g, resolution: '1440p', preset: 'high', avgFps: 1 }], data).comparisons[0].expectedFps!;
     const games = ['cyberpunk-2077', 'counter-strike-2', 'baldurs-gate-3'];

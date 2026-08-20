@@ -96,10 +96,22 @@ button, input, select {
   letter-spacing: 0.14em;
   font-size: 13px;
   color: var(--ink);
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 .brand span { color: var(--faint); font-weight: 400; }
+/* At eleven screens the subtitle is what has to go, not the wordmark. */
+@media (max-width: 1500px) { .brand span { display: none; } }
 
-.nav { display: flex; gap: 2px; margin-left: 8px; flex-wrap: wrap; }
+/* Scroll rather than wrap. A wrapping nav grows the sticky header and shunts
+   the whole page down, which is worse than a row that scrolls. */
+.nav {
+  display: flex; gap: 2px; margin-left: 8px;
+  flex: 1 1 auto; min-width: 0;
+  overflow-x: auto; overflow-y: hidden;
+  scrollbar-width: none;
+}
+.nav::-webkit-scrollbar { display: none; }
 
 .nav a {
   padding: 5px 10px;
@@ -672,3 +684,31 @@ textarea:focus { outline: none; border-color: var(--line-strong); }
 .bom tfoot td { border-top: 1px solid var(--line-strong); font-family: var(--mono); }
 
 .slider { width: 100%; accent-color: var(--chart-series); }
+
+/* ---------- consent and health ---------- */
+
+/* Consent is a decision, not a formality, so it gets a real panel rather than a
+   checkbox in small print. The two columns say what IS and IS NOT read. */
+.consent { border: 1px solid var(--line-strong); border-radius: var(--r); background: var(--surface); padding: 16px 18px; }
+.consent h3 { margin: 0 0 4px; font-size: 14px; font-weight: 500; }
+.consent .lede { color: var(--muted); font-size: 13px; line-height: 1.55; margin: 0 0 14px; }
+.consent-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 14px; }
+@media (max-width: 800px) { .consent-cols { grid-template-columns: 1fr; } }
+.consent-cols h4 { margin: 0 0 6px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); font-weight: 500; }
+.consent-cols ul { margin: 0; padding-left: 16px; font-size: 12px; line-height: 1.6; color: var(--muted); }
+.consent-cols li::marker { color: var(--faint); }
+.consent-cols .no li::marker { color: var(--measured); }
+
+/* A finding: severity stripe, headline, then the reasoning underneath. */
+.finding { border: 1px solid var(--line); border-left-width: 3px; border-radius: var(--r); background: var(--surface); padding: 11px 13px; margin-bottom: 8px; }
+.finding.critical { border-left-color: var(--blocked); }
+.finding.major { border-left-color: var(--extrapolated); }
+.finding.minor { border-left-color: var(--spec); }
+.finding.ok { border-left-color: var(--measured); }
+.finding .head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.finding .head b { font-weight: 500; font-size: 13px; }
+.finding .row { font-size: 12px; color: var(--muted); line-height: 1.55; margin-top: 5px; }
+.finding .row .k { color: var(--faint); text-transform: uppercase; font-size: 9.5px; letter-spacing: 0.08em; margin-right: 6px; }
+.finding .gain { font-family: var(--mono); font-size: 12px; color: var(--measured); }
+
+.verdict-hero { padding: 14px 16px; border: 1px solid var(--line-strong); border-radius: var(--r); background: var(--surface-2); font-size: 14px; line-height: 1.6; }
