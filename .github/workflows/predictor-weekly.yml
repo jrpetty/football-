@@ -1,11 +1,15 @@
 # Weekly re-check for the Premier League predictor.
 #
-# Two runs a week, each with a different job:
-#   Tuesday  — the weekend is done. Ingest results, score the forecasts that
-#              were recorded before kickoff, refit ratings, publish the next
-#              gameweek.
-#   Friday   — team news has landed. Refresh availability and republish before
-#              the matches start.
+# Two runs a week:
+#   Wednesday — the main one. The gameweek is finished (including Monday night
+#               fixtures), so this ingests results, scores the forecasts that
+#               were recorded before kickoff, refreshes injuries and
+#               suspensions, refits the ratings and publishes the next
+#               gameweek.
+#   Friday    — a lighter top-up. Injury news moves a lot between midweek and
+#               a Saturday kickoff, so this refreshes availability and
+#               republishes. Delete this second cron line if one run a week is
+#               enough; nothing depends on it.
 #
 # Committing the artifacts is what triggers a Pages redeploy, so the site
 # updates itself without anyone touching it.
@@ -14,8 +18,9 @@ name: Predictor weekly update
 
 on:
   schedule:
-    # Times are UTC. Tuesday 06:00 and Friday 06:00.
-    - cron: '0 6 * * 2'
+    # Times are UTC. Wednesday 06:00 is the post-gameweek run; Friday 06:00
+    # tops up team news before the weekend.
+    - cron: '0 6 * * 3'
     - cron: '0 6 * * 5'
   workflow_dispatch:
     inputs:

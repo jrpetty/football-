@@ -183,6 +183,11 @@ export default function ModelReport() {
             this data source does not carry.
           </li>
           <li>
+            Starting elevens are predicted, never confirmed. For a newly promoted club with no
+            top-flight record in the data, the eleven is inferred from squad valuation and is a
+            rough guess — those are labelled as such on the match page.
+          </li>
+          <li>
             Football is high variance. A good model calls about half of matches correctly; bookmakers
             with far more data reach RPS ~0.19-0.20. Being wrong often is expected, not a bug.
           </li>

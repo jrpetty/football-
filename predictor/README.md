@@ -20,6 +20,9 @@ the one showing how often it has been wrong.
   the mechanism: the favourite's absences, a finishing run due to regress, a short turnaround.
 - **Tracks players.** Per-player goal, assist and card probabilities; injury and suspension
   status; and a yellow-card tracker that knows the 5/10/15 booking thresholds.
+- **Predicts the line-ups.** Both starting elevens on a pitch, from recent minutes and current
+  availability. Confirmed team sheets appear about an hour before kickoff and are deliberately not
+  waited for — this publishes days ahead.
 - **Re-checks itself weekly.** A scheduled job ingests results, scores the forecasts recorded
   *before* kickoff, refits, and republishes — so the accuracy record is real rather than
   retrospective.
@@ -135,9 +138,11 @@ comes back before it will use it. A quiet fallback beats a confidently wrong gam
 
 `.github/workflows/predictor-weekly.yml` runs twice a week:
 
-- **Tuesday** — the weekend is done. Ingest results, score the forecasts recorded before kickoff,
-  refit, publish the next gameweek.
-- **Friday** — team news has landed. Refresh availability and republish before kickoff.
+- **Wednesday** — the main run. The gameweek is over (including Monday night fixtures), so this
+  ingests results, scores the forecasts recorded before kickoff, refreshes injuries and
+  suspensions, refits and publishes the next gameweek.
+- **Friday** — a lighter top-up, since injury news moves between midweek and a Saturday kickoff.
+  Delete the second `cron` line if one run a week is enough; nothing depends on it.
 
 Forecasts are appended to an immutable ledger with a timestamp and never rewritten, which is what
 makes the report card meaningful. The job runs the test suite and an artifact verifier before it
@@ -147,8 +152,11 @@ will commit anything.
 
 ## What it can't do
 
-- **Line-ups aren't confirmed until an hour before kickoff.** Predictions use *expected*
-  availability, so a late change is not reflected.
+- **Line-ups are predicted, never confirmed.** Team sheets are published about an hour before
+  kickoff; this forecasts days ahead, so a late change is not reflected. For a promoted club with
+  no top-flight record in the data, the eleven is inferred from squad valuation and is a rough
+  guess — labelled as such on the page. Positions follow the Fantasy Premier League
+  classification, which does not always match where a player really lines up.
 - **Red-card ban lengths are inferred.** The feed records that a red card was shown but not the
   offence, so the one-match minimum is assumed and flagged.
 - **The availability adjustment isn't backtested.** Doing that honestly would need archived injury

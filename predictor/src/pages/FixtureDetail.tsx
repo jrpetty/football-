@@ -8,6 +8,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useGameweek, useSeason } from '../data/store.tsx'
 import { ScoreMatrix } from '../components/ScoreMatrix.tsx'
 import { NarrativePanel } from '../components/NarrativePanel.tsx'
+import { LineupPitch, LineupCaveat } from '../components/LineupPitch.tsx'
 import { ProbBar, Stat, TeamChip, formatKickoff, headlineScore } from '../components/primitives.tsx'
 import { clubColor, clubName, club } from '../config/teams.ts'
 import type { Evidence } from '../core/evidence.ts'
@@ -257,6 +258,22 @@ export default function FixtureDetail() {
           </div>
           <UpsetPanel fixture={f} />
         </div>
+      </div>
+
+      <div className="panel panel-pad" style={{ marginBottom: 18 }}>
+        <div className="section-title">
+          <h3 style={{ fontSize: 16 }}>Predicted line-ups</h3>
+          <span className="faint" style={{ fontSize: 11.5 }}>
+            {Math.round(((f.homeLineup.confidence + f.awayLineup.confidence) / 2) * 100)}% confidence
+          </span>
+        </div>
+        <LineupPitch
+          homeCode={f.home}
+          awayCode={f.away}
+          homeLineup={f.homeLineup}
+          awayLineup={f.awayLineup}
+        />
+        <LineupCaveat home={f.homeLineup} away={f.awayLineup} />
       </div>
 
       {missing.length > 0 && (

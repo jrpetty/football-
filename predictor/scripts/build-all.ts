@@ -18,6 +18,7 @@ import { predictFixture, type TeamContext } from '../src/core/predict.ts'
 import { buildEvidence } from '../src/core/evidence.ts'
 import { analyseUpset } from '../src/core/upset.ts'
 import { playerProps } from '../src/core/playerProps.ts'
+import { predictLineup } from '../src/core/lineup.ts'
 import { cardStatus } from '../src/core/suspensions.ts'
 import { outcomeOf, rps, logLoss, brier, summarize, calibration, expectedCalibrationError } from '../src/core/metrics.ts'
 import { round } from '../src/core/math.ts'
@@ -77,7 +78,7 @@ async function main(): Promise<void> {
   const seasonMatches = corpus.matches.filter((m) => m.season === CURRENT_SEASON)
   const played = seasonMatches.filter((m) => m.finished)
 
-  const rates = buildPlayerRates(corpus.players, corpus.playerGws, now)
+  const rates = buildPlayerRates(corpus.players, corpus.playerGws, now, CURRENT_SEASON)
 
   // Disciplinary records reset every season. The pre-season snapshot carries
   // last season's totals, so counting those would tell a fan that half of
@@ -286,6 +287,8 @@ async function main(): Promise<void> {
         awayPlayers,
         homeMissing: homeCtx.availability.missing,
         awayMissing: awayCtx.availability.missing,
+        homeLineup: predictLineup(homeSquad),
+        awayLineup: predictLineup(awaySquad),
         cardWatch: cardWatch.slice(0, 8),
       }
 
@@ -452,7 +455,7 @@ async function main(): Promise<void> {
 
   // --- Season --------------------------------------------------------------
   const notes: string[] = [
-    'Predictions use expected availability. Confirmed line-ups are only published about an hour before kickoff, so a late change will not be reflected.',
+    'Line-ups are predicted from recent minutes and current availability. Confirmed team sheets are only published about an hour before kickoff and are deliberately not waited for, so a late change will not be reflected.',
     'Red-card ban lengths are inferred: the data feed records that a red card was shown but not the offence, so the one-match minimum is assumed.',
   ]
   if (played.length === 0) {

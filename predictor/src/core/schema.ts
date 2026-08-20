@@ -11,6 +11,7 @@ import type { UpsetAnalysis } from './upset.ts'
 import type { LambdaTerm } from './predict.ts'
 import type { PlayerProp } from './playerProps.ts'
 import type { MissingPlayer } from './availability.ts'
+import type { PredictedLineup } from './lineup.ts'
 import type { Scoreline } from './dixonColes.ts'
 import type { CalibrationBin, MetricSummary, Probs } from './metrics.ts'
 
@@ -93,6 +94,14 @@ export interface FixtureArtifact {
   /** Players flagged out or heavily doubtful, with the value they carry. */
   homeMissing: MissingPlayer[]
   awayMissing: MissingPlayer[]
+  /**
+   * Predicted starting elevens. Confirmed team sheets only appear about an
+   * hour before kickoff and this publishes days ahead, so these are the sides
+   * the model expects — the same expected-minutes judgement its scoring rates
+   * already rest on, made visible.
+   */
+  homeLineup: PredictedLineup
+  awayLineup: PredictedLineup
 
   /** Players one booking from a suspension, either side. */
   cardWatch: CardWatchEntry[]

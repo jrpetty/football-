@@ -155,21 +155,35 @@ export function fitModel(
 /**
  * Build per-90 rates and minute shares for every player.
  *
- * At the start of a season the FPL pre-season snapshot carries each player's
- * *previous* season totals already attributed to their new club, so a summer
- * transfer arrives with his record intact. Once matches are played, the
- * per-gameweek rows take over.
+ * Two traps here, both of which silently produce plausible-looking nonsense:
+ *
+ * 1. **Element ids are reassigned every season.** Matching this season's player
+ *    ids against previous seasons' gameweek rows gives each player a *stranger's*
+ *    record — an earlier version of this function did exactly that, and handed
+ *    Arsenal's starting eleven to whoever happened to hold those ids last year.
+ *    So the recent-form window is restricted to the current season, where ids
+ *    are stable.
+ * 2. **Fixture ids repeat across seasons** (they run 1-380 every year), so
+ *    counting distinct ids across the whole corpus overstates how many matches
+ *    a club has played. The denominator is season-scoped for the same reason.
+ *
+ * Before a season has produced enough matches, rates come from the pre-season
+ * snapshot instead. That snapshot carries each player's *previous* season
+ * totals already attributed to his current club, so a summer signing arrives
+ * with his record intact — which is exactly what is wanted at gameweek one.
  */
 export function buildPlayerRates(
   players: readonly NormPlayer[],
   playerGws: readonly NormPlayerGw[],
   asOf: number,
+  currentSeason: string,
   windowMatches = 12,
 ): PlayerRates[] {
-  // Recent per-player windows, newest first.
+  // Only this season's rows: element ids are not comparable across seasons.
+  const thisSeason = playerGws.filter((g) => g.season === currentSeason && g.date < asOf)
+
   const recent = new Map<number, NormPlayerGw[]>()
-  for (const g of playerGws) {
-    if (g.date >= asOf) continue
+  for (const g of thisSeason) {
     if (!recent.has(g.element)) recent.set(g.element, [])
     recent.get(g.element)!.push(g)
   }
@@ -178,17 +192,17 @@ export function buildPlayerRates(
     list.length = Math.min(list.length, windowMatches)
   }
 
-  // Team match counts, so minute share is a share of one XI slot.
-  const teamMatches = new Map<string, Set<number>>()
-  for (const g of playerGws) {
-    if (g.date >= asOf) continue
-    if (!teamMatches.has(g.team)) teamMatches.set(g.team, new Set())
-    teamMatches.get(g.team)!.add(g.fixtureId)
+  // Matches each club has played this season, for the minute-share denominator.
+  const clubMatches = new Map<string, Set<number>>()
+  for (const g of thisSeason) {
+    if (!clubMatches.has(g.team)) clubMatches.set(g.team, new Set())
+    clubMatches.get(g.team)!.add(g.fixtureId)
   }
 
   const out: PlayerRates[] = []
   for (const p of players) {
     const window = recent.get(p.id) ?? []
+    // Four matches is enough to prefer live form over last season's totals.
     const useWindow = window.length >= 4
 
     const minutes = useWindow ? window.reduce((s, g) => s + g.minutes, 0) : p.minutes
@@ -201,12 +215,11 @@ export function buildPlayerRates(
 
     const per90 = (v: number): number => (minutes > 0 ? (v * 90) / minutes : 0)
 
-    // Denominator for minute share: how many matches the club has played in
-    // the same window.
-    const clubMatches = useWindow
-      ? Math.max(window.length, 1)
-      : Math.max((teamMatches.get(p.team)?.size ?? 0) || 38, 1)
-    const minuteShare = clamp(minutes / (clubMatches * 90), 0, 1)
+    // How many matches the player could have featured in over the same span.
+    const played = clubMatches.get(p.team)?.size ?? 0
+    const denominator = useWindow
+      ? Math.max(1, Math.min(played || window.length, windowMatches))
+      : 38 // a full previous season
 
     out.push({
       id: p.id,
@@ -223,7 +236,7 @@ export function buildPlayerRates(
       chanceNextRound: p.chanceNextRound,
       news: p.news,
       cost: p.cost,
-      minuteShare,
+      minuteShare: clamp(minutes / (denominator * 90), 0, 1),
     })
   }
   return out

@@ -113,6 +113,34 @@ async function main(): Promise<void> {
         check(p.brace <= p.goal + 1e-9, `${label}: ${p.name} brace exceeds goal probability`)
       }
 
+      // A predicted eleven must be a legal side. An early version produced a
+      // Coventry team with no goalkeeper, which is the kind of error a reader
+      // spots instantly and the model never would.
+      for (const [side, lineup] of [['home', f.homeLineup], ['away', f.awayLineup]] as const) {
+        if (lineup.formation === 'unknown') {
+          warn(false, `${label}: no ${side} eleven could be predicted`)
+          continue
+        }
+        check(lineup.starters.length === 11, `${label}: ${side} eleven has ${lineup.starters.length} players`)
+        const keepers = lineup.starters.filter((p) => p.position === 'GK').length
+        check(keepers === 1, `${label}: ${side} eleven has ${keepers} goalkeepers`)
+        const ids = new Set(lineup.starters.map((p) => p.id))
+        check(ids.size === lineup.starters.length, `${label}: ${side} eleven names a player twice`)
+        // Nobody flagged out should be in the side.
+        for (const p of lineup.starters) {
+          check(p.playProbability > 0, `${label}: ${side} eleven starts ${p.name}, who cannot play`)
+        }
+        const outfield = lineup.formation.split('-').map(Number)
+        check(
+          outfield.length === 3 && outfield.reduce((a, b) => a + b, 0) === 10,
+          `${label}: ${side} formation "${lineup.formation}" does not describe ten outfielders`,
+        )
+        warn(
+          lineup.basis === 'minutes' || lineup.confidence <= 0.6,
+          `${label}: ${side} eleven is price-based but claims ${(lineup.confidence * 100).toFixed(0)}% confidence`,
+        )
+      }
+
       // Card watch must only list players who can actually be banned.
       for (const c of f.cardWatch) {
         check(c.yellowsToBan >= 1, `${label}: ${c.name} listed with yellowsToBan ${c.yellowsToBan}`)
