@@ -13,9 +13,12 @@ import { Detect } from './ui/pages/Detect.tsx';
 import { DataExplorer } from './ui/pages/DataExplorer.tsx';
 import { ModelHealth } from './ui/pages/ModelHealth.tsx';
 import { SystemHealth } from './ui/pages/SystemHealth.tsx';
+import { Start } from './ui/pages/Start.tsx';
+import { CommandPalette } from './ui/components/Palette.tsx';
 import type { Build, Resolution } from './core/types.ts';
 
 const NAV = [
+  { to: '/start', label: 'Start' },
   { to: '/wizard', label: 'Build a PC' },
   { to: '/analyser', label: 'Build Analyser' },
   { to: '/matrix', label: 'Comparison Matrix' },
@@ -31,13 +34,34 @@ const NAV = [
 
 function Shell({ children }: { children: React.ReactNode }) {
   const loc = useLocation();
+  // On a phone the eleven-item bar becomes a drawer. A horizontally scrolling
+  // row of eleven links is technically usable and practically not: you cannot
+  // see where you are or what else exists without swiping blind.
+  const [navOpen, setNavOpen] = useState(false);
+  const here = NAV.find((n) => n.to === loc.pathname);
+
+  // Route changes close the drawer. Leaving it open over the new screen is the
+  // classic mobile-navigation bug.
+  useEffect(() => setNavOpen(false), [loc.pathname]);
+
   return (
     <div className="app">
+      <a href="#main" className="skip-link">Skip to content</a>
       <header className="topbar">
+        <button
+          className="nav-toggle"
+          aria-expanded={navOpen}
+          aria-controls="main-nav"
+          aria-label={navOpen ? 'Close navigation' : 'Open navigation'}
+          onClick={() => setNavOpen((o) => !o)}
+        >
+          <span aria-hidden="true">{navOpen ? '✕' : '☰'}</span>
+        </button>
         <span className="brand">RIGCHECK<span> / build comparison</span></span>
-        <nav className="nav">
+        <span className="here" aria-hidden="true">{here?.label ?? ''}</span>
+        <nav className={`nav${navOpen ? ' open' : ''}`} id="main-nav" aria-label="Screens">
           {NAV.map((n) => (
-            <NavLink key={n.to} to={n.to} className={loc.pathname === n.to ? 'active' : ''}>
+            <NavLink key={n.to} to={n.to} className={loc.pathname === n.to ? 'active' : ''} aria-current={loc.pathname === n.to ? 'page' : undefined}>
               {n.label}
             </NavLink>
           ))}
@@ -46,8 +70,9 @@ function Shell({ children }: { children: React.ReactNode }) {
           <ShareButton />
         </div>
       </header>
+      <CommandPalette screens={NAV} />
       <ProvenanceBanner />
-      <main className="main">{children}</main>
+      <main className="main" id="main" tabIndex={-1}>{children}</main>
     </div>
   );
 }
@@ -73,7 +98,29 @@ function ShareButton() {
   );
 }
 
+const SEEN_KEY = 'rigcheck.seenStart.v1';
+
 export function App() {
+  // A first visitor lands on Start; everyone after that lands where they were.
+  // Stored rather than inferred, because "have they used this before" is not
+  // something a URL can tell you.
+  const [seenStart, setSeenStart] = useState(() => {
+    try {
+      return localStorage.getItem(SEEN_KEY) === '1';
+    } catch {
+      return true;
+    }
+  });
+  const dismissStart = () => {
+    try {
+      localStorage.setItem(SEEN_KEY, '1');
+    } catch {
+      // Private browsing. Losing the flag means seeing Start again, which is
+      // a mild annoyance rather than a failure.
+    }
+    setSeenStart(true);
+  };
+
   const restored = useMemo(() => {
     const m = /[?&]s=([^&]+)/.exec(window.location.hash);
     return m ? decodeState(m[1]) : null;
@@ -116,7 +163,8 @@ export function App() {
             <Route path="/detect" element={<Detect />} />
             <Route path="/data" element={<DataExplorer />} />
             <Route path="/health" element={<ModelHealth />} />
-            <Route path="*" element={<Navigate to="/analyser" replace />} />
+            <Route path="/start" element={<Start onDismiss={dismissStart} />} />
+            <Route path="*" element={<Navigate to={seenStart ? '/analyser' : '/start'} replace />} />
           </Routes>
         </Shell>
       </HashRouter>

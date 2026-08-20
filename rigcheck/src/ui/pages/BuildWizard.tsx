@@ -22,6 +22,7 @@ import { useMemo, useState } from 'react';
 import { useApp } from '../store.ts';
 import { planBuild, type ComponentPrices, type PlanRequest } from '../../core/planner.ts';
 import { PRESETS, type Preset } from '../../core/presets.ts';
+import { DEFAULT_USAGE, PSU_EFFICIENCY, runningCost, totalCostOfOwnership, type PsuTier, type UsageProfile } from '../../core/running.ts';
 import { exportJson } from '../export.ts';
 import { findObserved, loadPrices, plannerTables, priceCoverage } from '../pricing.ts';
 import componentPrices from '../../../data/pricing/components-gbp.json';
@@ -84,6 +85,8 @@ export function BuildWizard() {
   const [ramGB, setRamGB] = useState<number | null>(null);
   const [storageGB, setStorageGB] = useState(1000);
   const [showAlt, setShowAlt] = useState(false);
+  const [usage, setUsage] = useState<UsageProfile>(DEFAULT_USAGE);
+  const [psuTier, setPsuTier] = useState<PsuTier>('gold');
 
   const go = (i: number) => {
     setStep(i);
@@ -126,7 +129,19 @@ export function BuildWizard() {
 
   return (
     <>
-      <div className="page-head">
+      <div className="print-only" style={{ marginBottom: 12, borderBottom: '1px solid #bbb', paddingBottom: 8 }}>
+        <b style={{ fontSize: 16 }}>RIGCHECK build sheet</b>
+        <div style={{ fontSize: 11, color: '#555', marginTop: 3 }}>
+          {resolution} at {refreshHz}Hz · {gameIds.length} game{gameIds.length === 1 ? '' : 's'} ·{' '}
+          {noBudget ? 'no budget limit' : `£${budget} budget`} · {condition} parts · printed {new Date().toISOString().slice(0, 10)}
+        </div>
+        <div style={{ fontSize: 10, color: '#555', marginTop: 4 }}>
+          Prices are estimates and were not sourced from a retailer — check each one before buying.
+          Frame rates come from a model, not from measurements of this exact build.
+        </div>
+      </div>
+
+      <div className="page-head no-print">
         <h1>Build a PC</h1>
         <p>
           Tell it what screen you have, what you play and what you can spend. It works backwards to a
@@ -228,7 +243,15 @@ export function BuildWizard() {
                     match the panel ({refreshHz})
                   </button>
                   {[60, 120, 144].filter((f) => f < refreshHz).map((f) => (
-                    <button key={f} className={`toggle${targetFps === f ? ' on' : ''}`} onClick={() => setTargetFps(f)}>{f}</button>
+                    <button
+                      key={f}
+                      className={`toggle${targetFps === f ? ' on' : ''}`}
+                      aria-label={`Target ${f} frames per second`}
+                      aria-pressed={targetFps === f}
+                      onClick={() => setTargetFps(f)}
+                    >
+                      {f}
+                    </button>
                   ))}
                 </div>
                 <span className="mini">
@@ -414,7 +437,18 @@ export function BuildWizard() {
       )}
 
       {/* ----------------------------------------------------------- build -- */}
-      {step === 3 && <BuildStep plan={plan} showAlt={showAlt} setShowAlt={setShowAlt} target={target} />}
+      {step === 3 && (
+        <BuildStep
+          plan={plan}
+          showAlt={showAlt}
+          setShowAlt={setShowAlt}
+          target={target}
+          usage={usage}
+          setUsage={setUsage}
+          psuTier={psuTier}
+          setPsuTier={setPsuTier}
+        />
+      )}
 
       {/* -------------------------------------------------------- settings -- */}
       {step === 4 && <SettingsStep plan={plan} resolution={resolution} />}
@@ -450,6 +484,11 @@ export function BuildWizard() {
             export plan
           </button>
         )}
+        {plan?.pick && (
+          <button className="btn" onClick={() => window.print()} title="Prints the parts list, prices and per-game settings on white, with the navigation and controls removed">
+            print the build sheet
+          </button>
+        )}
       </div>
     </>
   );
@@ -462,11 +501,19 @@ function BuildStep({
   showAlt,
   setShowAlt,
   target,
+  usage,
+  setUsage,
+  psuTier,
+  setPsuTier,
 }: {
   plan: ReturnType<typeof planBuild> | null;
   showAlt: boolean;
   setShowAlt: (b: boolean) => void;
   target: number;
+  usage: UsageProfile;
+  setUsage: (u: UsageProfile) => void;
+  psuTier: PsuTier;
+  setPsuTier: (t: PsuTier) => void;
 }) {
   if (!plan) return <div className="empty">Pick at least one game and there will be a build to show.</div>;
   if (!plan.pick) {
@@ -560,8 +607,10 @@ function BuildStep({
         </div>
       </div>
 
+      <RunningCostPanel build={shown} usage={usage} setUsage={setUsage} psuTier={psuTier} setPsuTier={setPsuTier} />
+
       {plan.candidates.length > 1 && (
-        <div className="panel">
+        <div className="panel no-print">
           <div className="panel-head"><h2>Other builds in this budget</h2></div>
           <div className="panel-body">
             <div className="table-wrap">
@@ -719,5 +768,112 @@ function PriceOrigin({ id }: { id: string }) {
     >
       {o.stale ? `sourced · ${o.ageDays}d old` : o.containsAsking ? 'sourced · asking' : `sourced · ${o.totalSamples} sales`}
     </span>
+  );
+}
+
+/* ----------------------------------------------------------- running cost -- */
+
+/**
+ * What the machine costs to own, not to buy.
+ *
+ * The price is the number everyone compares and it is not the number that
+ * decides what a machine costs. Two builds within 50 of each other on price can
+ * be 200 apart across four years, and until this panel existed nothing here
+ * said so. The power supply's own losses are broken out separately, because
+ * that is what turns an efficiency rating from a specification into a purchase
+ * decision.
+ */
+function RunningCostPanel({
+  build,
+  usage,
+  setUsage,
+  psuTier,
+  setPsuTier,
+}: {
+  build: { total: number; powerW: number; bom: { category: string; label: string }[] };
+  usage: UsageProfile;
+  setUsage: (u: UsageProfile) => void;
+  psuTier: PsuTier;
+  setPsuTier: (t: PsuTier) => void;
+}) {
+  const psuLine = build.bom.find((l) => l.category === 'PSU');
+  const psuWatts = Number(/(\d+)W/.exec(psuLine?.label ?? '')?.[1] ?? 750);
+  const running = runningCost(build.powerW, psuWatts, psuTier, usage);
+  const tco = totalCostOfOwnership(build.total, running, usage);
+
+  return (
+    <div className="panel">
+      <div className="panel-head">
+        <h2>What it costs to run</h2>
+        <span className="spacer" />
+        <span className="mini">{psuWatts}W supply at {(running.loadFraction * 100).toFixed(0)}% load</span>
+      </div>
+      <div className="panel-body">
+        <div className="stat-row" style={{ marginBottom: 14 }}>
+          <div className="stat"><span className="v">{running.loadWallW.toFixed(0)}W</span><span className="k">from the wall, gaming</span></div>
+          <div className="stat"><span className="v">{running.idleWallW.toFixed(0)}W</span><span className="k">from the wall, idle</span></div>
+          <div className="stat"><span className="v">{(running.efficiencyAtLoad * 100).toFixed(0)}%</span><span className="k">PSU efficiency at load</span></div>
+          <div className="stat"><span className="v">£{running.costPerYear.toFixed(0)}</span><span className="k">a year</span></div>
+          <div className="stat"><span className="v">£{tco.total.toFixed(0)}</span><span className="k">total over {usage.ownershipYears} years</span></div>
+        </div>
+
+        <div className="note" style={{ marginBottom: 12 }}>{tco.verdict}</div>
+
+        <p className="mini" style={{ marginTop: 0 }}>
+          The wall figure is higher than the component draw because a power supply is not free: at{' '}
+          {build.powerW.toFixed(0)}W of components this one pulls {running.loadWallW.toFixed(0)}W,
+          and the difference is heat. That is the entire reason efficiency ratings exist, and it is
+          what a "how much does my PC cost to run" sum usually leaves out.
+        </p>
+
+        {running.notes.map((n) => (
+          <div key={n} className="note warn" style={{ marginTop: 8 }}>{n}</div>
+        ))}
+
+        <div className="grid three no-print" style={{ marginTop: 14 }}>
+          <div className="field">
+            <label>gaming hours a week</label>
+            <input type="number" min={0} max={168} value={usage.gamingHoursPerWeek}
+              onChange={(e) => setUsage({ ...usage, gamingHoursPerWeek: Math.max(0, Number(e.target.value)) })} />
+          </div>
+          <div className="field">
+            <label>idle hours a week</label>
+            <input type="number" min={0} max={168} value={usage.idleHoursPerWeek}
+              onChange={(e) => setUsage({ ...usage, idleHoursPerWeek: Math.max(0, Number(e.target.value)) })} />
+            <span className="mini">Powered on but not playing. Most machines spend more time here than gaming.</span>
+          </div>
+          <div className="field">
+            <label>electricity, pence per kWh</label>
+            <input type="number" min={0} step={0.1} value={usage.pencePerKwh}
+              onChange={(e) => setUsage({ ...usage, pencePerKwh: Math.max(0, Number(e.target.value)) })} />
+            <span className="mini">On your bill as the unit rate. The default is a UK average and yours will differ.</span>
+          </div>
+          <div className="field">
+            <label>years you will keep it</label>
+            <div className="toggle-row">
+              {[2, 3, 4, 6].map((y) => (
+                <button key={y} className={`toggle${usage.ownershipYears === y ? ' on' : ''}`} onClick={() => setUsage({ ...usage, ownershipYears: y })}>{y}</button>
+              ))}
+            </div>
+          </div>
+          <div className="field" style={{ gridColumn: 'span 2' }}>
+            <label>power supply efficiency rating</label>
+            <div className="toggle-row">
+              {(Object.keys(PSU_EFFICIENCY) as PsuTier[]).map((t) => (
+                <button key={t} className={`toggle${psuTier === t ? ' on' : ''}`} onClick={() => setPsuTier(t)}>
+                  {PSU_EFFICIENCY[t].label}
+                </button>
+              ))}
+            </div>
+            <span className="mini">
+              Efficiency depends on load as well as on the badge — the 80 Plus tiers are specified at
+              20%, 50% and 100% of rated output and the curve sags at both ends. An oversized supply
+              spends its life at the wrong end of it, which is the honest counterweight to buying
+              headroom for transient spikes.
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

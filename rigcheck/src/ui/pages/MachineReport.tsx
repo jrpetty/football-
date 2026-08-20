@@ -13,6 +13,15 @@ import type { Resolution } from '../../core/types.ts';
 const AIRFLOW = ['restricted', 'moderate', 'good', 'excellent'] as const;
 const PANELS = ['OLED', 'QD-OLED', 'TN', 'IPS', 'VA'] as const;
 
+/** Spoken names, so a two-letter toggle is not read out as two letters. */
+const PANEL_LABEL: Record<(typeof PANELS)[number], string> = {
+  OLED: 'OLED panel',
+  'QD-OLED': 'Quantum-dot OLED panel',
+  TN: 'TN (twisted nematic) panel',
+  IPS: 'IPS (in-plane switching) panel',
+  VA: 'VA (vertical alignment) panel',
+};
+
 /**
  * The whole-machine view: what the box draws, how hot and loud it gets, how
  * responsive it feels, and where its constraint actually sits. Everything here
@@ -96,7 +105,7 @@ export function MachineReport() {
                 <label>display panel</label>
                 <div className="toggle-row">
                   {PANELS.map((p) => (
-                    <button key={p} className={`toggle${p === panel ? ' on' : ''}`} onClick={() => setPanel(p)}>{p}</button>
+                    <button key={p} className={`toggle${p === panel ? ' on' : ''}`} aria-label={PANEL_LABEL[p]} aria-pressed={p === panel} onClick={() => setPanel(p)}>{p}</button>
                   ))}
                 </div>
               </div>
@@ -136,6 +145,10 @@ export function MachineReport() {
               </div>
               <div className={`note ${psuVerdict.ok ? '' : 'bad'}`}>{psuVerdict.message}</div>
               <table className="terms" style={{ marginTop: 10 }}>
+                <caption className="sr-only">Power model terms, with each term&apos;s value and explanation</caption>
+                <thead className="sr-only">
+                  <tr><th scope="col">term</th><th scope="col">value</th><th scope="col">explanation</th></tr>
+                </thead>
                 <tbody>
                   {power.terms.map((t, i) => (
                     <tr key={i}>
@@ -208,7 +221,7 @@ export function MachineReport() {
               <div className="panel-head">
                 <span>will it fit</span>
                 <span className="spacer" />
-                <select value={caseId} onChange={(e) => setCaseId(e.target.value)} style={{ width: 200 }}>
+                <select value={caseId} aria-label="Case to check the build against" onChange={(e) => setCaseId(e.target.value)} style={{ width: 200 }}>
                   {cases.map((c) => <option key={c.id} value={c.id}>{c.fullName}</option>)}
                 </select>
               </div>
@@ -301,7 +314,7 @@ export function MachineReport() {
             <div className="panel-head">
               <span>what would change this answer</span>
               <span className="spacer" />
-              <select value={sensGame} onChange={(e) => setSensGame(e.target.value)} style={{ width: 220 }}>
+              <select value={sensGame} aria-label="Game to run the sensitivity analysis on" onChange={(e) => setSensGame(e.target.value)} style={{ width: 220 }}>
                 {games.map((g) => <option key={g} value={g}>{data.games.get(g)?.name ?? g}</option>)}
               </select>
             </div>

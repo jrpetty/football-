@@ -60,7 +60,13 @@ export function Detect() {
             <button className="btn" onClick={() => setText('')}>clear</button>
           </div>
           <div className="panel-body">
-            <textarea value={text} onChange={(e) => setText(e.target.value)} style={{ minHeight: 260 }} />
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              aria-label="Paste hardware description, dxdiag output, or harness JSON"
+              placeholder="paste a dxdiag dump, systeminfo output, harness JSON, or just: Ryzen 5 3600 / RTX 3060"
+              style={{ minHeight: 260 }}
+            />
           </div>
         </div>
 

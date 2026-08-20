@@ -52,6 +52,24 @@ harvesting still does not replace the seeded catalogue — the first real run ne
 a human to read the report before anything is merged. `agents/log/spec-mapper.md`
 lists, in order, exactly what to check.
 
+### Accessibility
+
+`npm run a11y` drives a running preview and measures rather than assuming:
+computed contrast against the effective background, form labels, table headers,
+accessible names on icon-only controls, heading structure, landmarks, and focus
+rings from real Tab presses. Current state is clean on all twelve screens —
+0 contrast failures, 10/10 focus rings.
+
+It found one defect worth naming: `--faint`, the colour most of the secondary
+text in the app is written in, measured **3.30:1** against the lightest surface
+and failed WCAG AA on every screen. It is now `#7c8994` at 4.53:1. The audit
+also caught the input focus rules removing the outline outright, which made
+tabbing through the app a guessing game.
+
+Two of its own first-run results were false positives and both are documented
+in the script: an element inside a `display: none` ancestor still reports a
+colour, and calling `.focus()` deliberately does not match `:focus-visible`.
+
 ### What has actually been verified
 
 The catalogue is checked against physics and against an external registry on
@@ -90,10 +108,12 @@ src/core/       types · constants · gates · indices · engine · queries · a
                 evidence (source-quality ladder, shared by the gate and the UI)
                 presets · advisor (settings for a target) · planner (budget to build)
                 health · fixguides · history (before/after, degradation) · peers
+                running (PSU efficiency curve, tariff, cost of ownership) · builddiff
 src/parse/      rowspan-aware table parser · spec-table → record mapper (fixture-tested)
-src/ui/         React app: 11 screens, dense dark instrument styling
+src/ui/         React app: 12 screens, command palette, mobile drawer, print sheet
 scripts/        harvest → parse → reconcile → import-manual → import-prices
                 → calibrate → validate → audit → coverage
+                a11y-audit.mjs (contrast, labels, focus, landmarks — needs a preview)
 harness/        PresentMon benchmark runner, emits straight into data/manual/
 data/           catalogue · aliases · fixtures · pricing · prices-observed
                 manual · measured · calibration · validation
@@ -219,7 +239,7 @@ promotes itself from advisory to enforcing, and `npm run calibrate` will write.
 
 ## Screens
 
-**Build a PC** (guided) → **Build Analyser** → **Comparison Matrix** (n-way) →
+**Start** (what are you trying to do) → **Build a PC** (guided) → **Build Analyser** → **Comparison Matrix** (n-way) →
 **Upgrade Advisor** (Pareto frontier + knee) → **Inventory Optimiser** →
 **Machine Report** → **Trade Desk** → **System Health** → **Identify** →
 **Data Explorer** → **Model Health**.

@@ -99,7 +99,7 @@ export function TradeDesk() {
                 <span className="chip on" key={id}>
                   {data.cpus.get(id)?.brand ?? id}
                   <span className="mini" style={{ marginLeft: 4 }}>{priceOf(id) != null ? `£${priceOf(id)}` : 'no price'}</span>
-                  <button onClick={() => setCpuIds(cpuIds.filter((x) => x !== id))}>×</button>
+                  <button aria-label={`Remove ${data.cpus.get(id)?.fullName ?? id}`} onClick={() => setCpuIds(cpuIds.filter((x) => x !== id))}>×</button>
                 </span>
               ))}
             </div>
@@ -110,7 +110,7 @@ export function TradeDesk() {
                 <span className="chip on" key={id}>
                   {data.gpus.get(id)?.brand ?? id}
                   <span className="mini" style={{ marginLeft: 4 }}>{priceOf(id) != null ? `£${priceOf(id)}` : 'no price'}</span>
-                  <button onClick={() => setGpuIds(gpuIds.filter((x) => x !== id))}>×</button>
+                  <button aria-label={`Remove ${data.gpus.get(id)?.fullName ?? id}`} onClick={() => setGpuIds(gpuIds.filter((x) => x !== id))}>×</button>
                 </span>
               ))}
             </div>

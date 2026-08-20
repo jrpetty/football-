@@ -11,7 +11,12 @@
 
   --ink: #e3e8ed;
   --muted: #97a3ae;
-  --faint: #66727d;
+  /* 4.53:1 against the lightest surface in the palette, which is the WCAG AA
+     floor for body text. The previous value (#66727d) measured 3.30:1 and
+     failed on every screen — it is the colour most of the secondary text in
+     this app is written in, so it was the single largest accessibility defect
+     here. Same hue, lifted until it passes. */
+  --faint: #7c8994;
 
   --measured: #5ec27a;
   --interpolated: #6aaed6;
@@ -190,9 +195,14 @@ input[type="text"], input[type="number"], select {
   font-size: 12px;
 }
 input:focus, select:focus {
-  outline: none;
   border-color: var(--line-strong);
   background: #0d1114;
+}
+/* Keyboard focus keeps a ring; pointer focus does not need one. Removing the
+   outline outright — which is what this rule used to do — makes tabbing
+   through the app a guessing game about where you are. */
+input:focus:not(:focus-visible), select:focus:not(:focus-visible), textarea:focus:not(:focus-visible) {
+  outline: none;
 }
 
 .btn {
@@ -610,7 +620,7 @@ textarea {
   resize: vertical;
   min-height: 130px;
 }
-textarea:focus { outline: none; border-color: var(--line-strong); }
+textarea:focus { border-color: var(--line-strong); }
 
 /* ---------- misc additions ---------- */
 .split-bar { display: flex; height: 22px; border-radius: var(--r); overflow: hidden; border: 1px solid var(--line); }
@@ -740,3 +750,176 @@ textarea:focus { outline: none; border-color: var(--line-strong); }
 .timeline-item { position: relative; padding: 8px 0; }
 .timeline-item::before { content: ''; position: absolute; left: -18px; top: 13px; width: 7px; height: 7px; border-radius: 50%; background: var(--surface); border: 1px solid var(--line-strong); }
 .timeline-item.has-fix::before { background: var(--measured); border-color: var(--measured); }
+
+/* ---------- accessibility ---------- */
+
+/* A visible focus ring everywhere. The dark theme had none, which makes
+   keyboard navigation a guessing game — you can tab through the whole app and
+   never know where you are. */
+:focus-visible {
+  outline: 2px solid var(--chart-series);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.skip-link {
+  position: absolute; left: 8px; top: -44px; z-index: 100;
+  background: var(--surface-3); color: var(--ink);
+  padding: 8px 14px; border: 1px solid var(--line-strong); border-radius: var(--r);
+  font-size: 13px; transition: top 0.12s;
+}
+.skip-link:focus { top: 8px; }
+/* Screen-reader-only text: present in the accessibility tree, invisible on screen. */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+/* ---------- command palette ---------- */
+
+.palette-backdrop {
+  position: fixed; inset: 0; z-index: 90;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 12vh 16px 16px;
+}
+.palette {
+  width: min(620px, 100%); max-height: 70vh; display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--line-strong); border-radius: 5px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.5); overflow: hidden;
+}
+.palette > input {
+  border: none; border-bottom: 1px solid var(--line); border-radius: 0;
+  padding: 13px 15px; font-size: 14px; background: transparent;
+}
+.palette > input:focus-visible { outline: none; }
+.palette-list { overflow-y: auto; padding: 5px 0; }
+.palette-group {
+  font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--faint); padding: 8px 15px 3px;
+}
+.palette-item {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 7px 15px; cursor: pointer; font-size: 13px;
+}
+.palette-item.on { background: var(--surface-3); }
+.palette-item .l { color: var(--ink); }
+.palette-item .h { color: var(--faint); font-size: 11px; margin-left: auto; text-align: right; }
+.palette-empty { padding: 18px 15px; color: var(--faint); font-size: 13px; }
+.palette-foot {
+  display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
+  padding: 8px 15px; border-top: 1px solid var(--line);
+  font-size: 10.5px; color: var(--faint);
+}
+kbd {
+  font-family: var(--mono); font-size: 10px; padding: 1px 5px;
+  border: 1px solid var(--line-strong); border-bottom-width: 2px;
+  border-radius: 3px; background: var(--surface-2); color: var(--muted);
+}
+
+/* ---------- start screen ---------- */
+
+.start-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 10px; }
+.start-card {
+  display: block; padding: 14px 16px; border: 1px solid var(--line);
+  border-radius: var(--r); background: var(--surface); color: var(--muted);
+}
+.start-card:hover { border-color: var(--line-strong); background: var(--surface-2); text-decoration: none; }
+.start-card b { display: block; color: var(--ink); font-weight: 500; font-size: 14px; margin-bottom: 5px; line-height: 1.35; }
+.start-card .screen {
+  display: inline-block; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--chart-series); margin-bottom: 6px;
+}
+.start-card .detail { display: block; font-size: 12px; line-height: 1.55; }
+
+/* ---------- mobile ---------- */
+
+.nav-toggle { display: none; background: none; border: none; color: var(--muted); font-size: 17px; padding: 4px 8px; cursor: pointer; }
+.topbar .here { display: none; font-size: 12px; color: var(--muted); }
+
+@media (max-width: 860px) {
+  .topbar { gap: 8px; padding: 0 10px; }
+  .nav-toggle { display: block; }
+  .topbar .here { display: block; margin-left: auto; }
+  .brand span { display: none; }
+  .brand { font-size: 11px; }
+
+  /* The nav becomes a drawer. Eleven links in a horizontally scrolling row is
+     technically usable and practically not — you cannot see where you are or
+     what else exists without swiping blind. */
+  .nav {
+    position: fixed; left: 0; right: 0; top: 44px; bottom: 0; z-index: 80;
+    flex-direction: column; gap: 0; margin: 0; padding: 6px 0;
+    background: var(--bg); border-top: 1px solid var(--line);
+    overflow-y: auto; display: none;
+  }
+  .nav.open { display: flex; }
+  .nav a { padding: 13px 18px; font-size: 15px; border-bottom: 1px solid var(--line); border-radius: 0; }
+  .nav a.active { box-shadow: inset 3px 0 0 var(--chart-series); }
+
+  .main { padding: 12px 10px; }
+  .page-head h1 { font-size: 19px; }
+  .grid.two, .grid.three { grid-template-columns: minmax(0, 1fr); }
+  .start-grid { grid-template-columns: minmax(0, 1fr); }
+
+  /* Dense tables do not fit a phone. Let them scroll inside their own box
+     rather than forcing the page sideways — a horizontally scrolling PAGE
+     makes every screen feel broken. */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .table-wrap table { min-width: 560px; }
+
+  /* Steps stack; the rail is a column on a narrow screen. */
+  .steps { flex-direction: column; }
+  .step { border-right: 1px solid var(--line); border-bottom: none; }
+  .step:first-child { border-radius: var(--r) var(--r) 0 0; }
+  .step:last-child { border-radius: 0 0 var(--r) var(--r); }
+  .step.on { box-shadow: inset 3px 0 0 var(--chart-series); }
+  .step .lbl span { display: block; }
+
+  .plan-strip { gap: 10px; }
+  .bom .cat { width: 70px; }
+  .bom .money { width: 62px; }
+  .trend { flex-wrap: wrap; }
+  .trend .who { width: 100%; flex: 1 1 100%; }
+  .trend .now { width: auto; flex: 0 0 auto; text-align: left; }
+  .palette-backdrop { padding: 6vh 10px 10px; }
+  .finding .head { gap: 6px; }
+}
+
+@media (max-width: 520px) {
+  .stat-row { gap: 12px; }
+  .stat .v { font-size: 16px; }
+  .toggle-row { flex-wrap: wrap; }
+}
+
+/* ---------- print ---------- */
+
+/* A build sheet gets taken to a shop. On paper the dark theme is a waste of
+   toner and unreadable besides, so print gets ink on white, the chrome
+   removed, and URLs spelled out because a printed link is otherwise a dead
+   end. */
+@media print {
+  :root {
+    --bg: #fff; --surface: #fff; --surface-2: #fff; --surface-3: #f4f4f4;
+    --line: #ccc; --line-strong: #888;
+    --ink: #000; --muted: #222; --faint: #555;
+    --chart-series: #333;
+  }
+  body { background: #fff; color: #000; }
+  .topbar, .nav, .topbar-right, .skip-link, .palette-backdrop,
+  .provenance-banner, .wizard-nav, .steps, .btn, .toggle-row, .nav-toggle { display: none !important; }
+  .app, .main { display: block; padding: 0; max-width: none; }
+  .panel { border: 1px solid #bbb; break-inside: avoid; margin-bottom: 10px; box-shadow: none; }
+  .panel-head { border-bottom: 1px solid #bbb; }
+  a { color: #000; text-decoration: underline; }
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 9px; color: #555; }
+  .table-wrap { overflow: visible; }
+  table { break-inside: auto; }
+  tr { break-inside: avoid; }
+  .print-only { display: block !important; }
+  .no-print { display: none !important; }
+  @page { margin: 14mm; }
+}
+.print-only { display: none; }

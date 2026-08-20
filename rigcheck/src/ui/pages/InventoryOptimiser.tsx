@@ -48,7 +48,7 @@ export function InventoryOptimiser() {
               {cpuIds.map((id) => (
                 <span className="chip on" key={id}>
                   {data.cpus.get(id)?.brand ?? id}
-                  <button onClick={() => setCpuIds(cpuIds.filter((x) => x !== id))}>×</button>
+                  <button aria-label={`Remove ${data.cpus.get(id)?.fullName ?? id}`} onClick={() => setCpuIds(cpuIds.filter((x) => x !== id))}>×</button>
                 </span>
               ))}
             </div>
@@ -61,7 +61,7 @@ export function InventoryOptimiser() {
               {gpuIds.map((id) => (
                 <span className="chip on" key={id}>
                   {data.gpus.get(id)?.brand ?? id}
-                  <button onClick={() => setGpuIds(gpuIds.filter((x) => x !== id))}>×</button>
+                  <button aria-label={`Remove ${data.gpus.get(id)?.fullName ?? id}`} onClick={() => setGpuIds(gpuIds.filter((x) => x !== id))}>×</button>
                 </span>
               ))}
             </div>
@@ -73,7 +73,7 @@ export function InventoryOptimiser() {
                   <span className="chip on" style={{ flex: 1 }}>
                     {k.totalGB}GB · {k.channels}ch · {k.speedMTs} · {k.type}
                   </span>
-                  <button className="btn danger" onClick={() => setRamKits(ramKits.filter((_, j) => j !== i))}>×</button>
+                  <button className="btn danger" aria-label={`Remove memory kit ${i + 1}`} onClick={() => setRamKits(ramKits.filter((_, j) => j !== i))}>×</button>
                 </div>
               ))}
               <button
