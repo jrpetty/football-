@@ -2496,7 +2496,6 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
     }
 
-    @Override
     /** Ground a person would walk round. Vanilla's own path costs take these
      *  weights, so this steers the actual route rather than reacting once the
      *  bot is already standing in the fire. Lava is impassable; everything
