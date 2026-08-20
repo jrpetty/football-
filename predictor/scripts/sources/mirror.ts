@@ -142,12 +142,15 @@ export async function fetchFplSeason(season: string, currentSeason: string): Pro
       news: r['news'] ?? '',
       chanceNextRound: chanceRaw === undefined || chanceRaw === '' ? null : Number(chanceRaw),
       cost: num(r, 'now_cost') / 10,
+      // The feed writes the string "None" rather than leaving it blank.
+      joinedAt: r['team_join_date'] && r['team_join_date'] !== 'None' ? r['team_join_date'] : null,
     })
   }
 
   // Per-gameweek player lines. Absent for a season that has not kicked off.
   const gwRows = (await fetchCsv(`${FPL_MIRROR}/${season}/gws/merged_gw.csv`, ttl)) ?? []
   const hasXg = gwRows.length > 0 && gwRows[0]!['expected_goals'] !== undefined
+  const positionByElement = new Map(players.map((p) => [p.id, p.position]))
   const playerGws: NormPlayerGw[] = []
   for (const r of gwRows) {
     const element = num(r, 'element')
@@ -163,6 +166,11 @@ export async function fetchFplSeason(season: string, currentSeason: string): Pro
       team: teamCode,
       opponent,
       wasHome: bool(r, 'was_home'),
+      // `position` only exists from 2022-23; fall back to the season roster.
+      position:
+        (r['position'] as PositionCode | undefined) ??
+        positionByElement.get(element) ??
+        'MID',
       minutes: num(r, 'minutes'),
       starts: num(r, 'starts'),
       goals: num(r, 'goals_scored'),

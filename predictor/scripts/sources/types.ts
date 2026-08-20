@@ -50,6 +50,8 @@ export interface NormPlayer {
   chanceNextRound: number | null
   /** Price in millions, a decent proxy for perceived quality. */
   cost: number
+  /** ISO date the player joined this club, when the feed states one. */
+  joinedAt: string | null
 }
 
 /** One player's line in one match. */
@@ -63,6 +65,8 @@ export interface NormPlayerGw {
   team: string
   opponent: string
   wasHome: boolean
+  /** Position in this match, needed to reconstruct the shape a club started. */
+  position: PositionCode
   minutes: number
   starts: number
   goals: number

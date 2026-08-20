@@ -237,6 +237,7 @@ export function buildPlayerRates(
       news: p.news,
       cost: p.cost,
       minuteShare: clamp(minutes / (denominator * 90), 0, 1),
+      joinedAt: p.joinedAt,
     })
   }
   return out

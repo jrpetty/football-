@@ -19,6 +19,7 @@ import { buildEvidence } from '../src/core/evidence.ts'
 import { analyseUpset } from '../src/core/upset.ts'
 import { playerProps } from '../src/core/playerProps.ts'
 import { predictLineup } from '../src/core/lineup.ts'
+import { deriveShapes, DEFAULT_SHAPE, type ShapeRow } from '../src/core/formation.ts'
 import { cardStatus } from '../src/core/suspensions.ts'
 import { outcomeOf, rps, logLoss, brier, summarize, calibration, expectedCalibrationError } from '../src/core/metrics.ts'
 import { round } from '../src/core/math.ts'
@@ -33,6 +34,8 @@ import type {
   LedgerEntry,
   AccuracyArtifact,
   CardWatchEntry,
+  SquadsArtifact,
+  RecomputeSide,
 } from '../src/core/schema.ts'
 import { SCHEMA_VERSION } from '../src/core/schema.ts'
 import type { NormMatch } from './sources/types.ts'
@@ -79,6 +82,10 @@ async function main(): Promise<void> {
   const played = seasonMatches.filter((m) => m.finished)
 
   const rates = buildPlayerRates(corpus.players, corpus.playerGws, now, CURRENT_SEASON)
+
+  // The shape each club actually starts, read from its recent team sheets and
+  // weighted toward recent matches so a change of system shows through.
+  const shapes = deriveShapes(corpus.playerGws as ShapeRow[], now)
 
   // Disciplinary records reset every season. The pre-season snapshot carries
   // last season's totals, so counting those would tell a fan that half of
@@ -164,6 +171,16 @@ async function main(): Promise<void> {
   }
   const ledgerKey = (e: { season: string; fixtureId: number }): string => `${e.season}#${e.fixtureId}`
   const ledgerIndex = new Map(ledger.entries.map((e) => [ledgerKey(e), e]))
+
+  const side = (ctx: TeamContext, code: string): RecomputeSide => ({
+    attack: round(model.ratings.attack[code] ?? 0, 4),
+    defence: round(model.ratings.defence[code] ?? 0, 4),
+    ratingSd: round(ctx.ratingSd, 4),
+    matchesPlayed: ctx.matchesPlayed,
+    promoted: ctx.promoted,
+    rest: ctx.rest,
+    shape: shapes.get(code) ?? DEFAULT_SHAPE,
+  })
 
   const buildContext = (code: string, kickoff: number): TeamContext => {
     const squad = ratesByTeam.get(code) ?? []
@@ -287,8 +304,14 @@ async function main(): Promise<void> {
         awayPlayers,
         homeMissing: homeCtx.availability.missing,
         awayMissing: awayCtx.availability.missing,
-        homeLineup: predictLineup(homeSquad),
-        awayLineup: predictLineup(awaySquad),
+        homeLineup: predictLineup(homeSquad, shapes.get(m.home) ?? DEFAULT_SHAPE, now),
+        awayLineup: predictLineup(awaySquad, shapes.get(m.away) ?? DEFAULT_SHAPE, now),
+        recompute: {
+          homeAdvantage: round(model.ratings.homeAdvantage, 4),
+          rho: round(model.ratings.rho, 4),
+          home: side(homeCtx, m.home),
+          away: side(awayCtx, m.away),
+        },
         cardWatch: cardWatch.slice(0, 8),
       }
 
@@ -420,6 +443,19 @@ async function main(): Promise<void> {
     players: playerArtifacts,
   }
   await writeJson(dataPath('players.json'), playersArtifact)
+
+  // Squad rates, one copy per club. Fixtures reference these rather than
+  // embedding them, which keeps a gameweek file small even though every match
+  // needs both full squads to be re-runnable in the browser.
+  const squads: Record<string, typeof rates> = {}
+  for (const code of currentTeams) squads[code] = ratesByTeam.get(code) ?? []
+  const squadsArtifact: SquadsArtifact = {
+    schemaVersion: SCHEMA_VERSION,
+    season: CURRENT_SEASON,
+    generatedAt: now,
+    squads,
+  }
+  await writeJson(dataPath('squads.json'), squadsArtifact)
 
   // --- Accuracy ------------------------------------------------------------
   const scoredEntries = ledger.entries.filter((e) => e.actual)

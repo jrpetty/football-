@@ -12,6 +12,9 @@ import type { LambdaTerm } from './predict.ts'
 import type { PlayerProp } from './playerProps.ts'
 import type { MissingPlayer } from './availability.ts'
 import type { PredictedLineup } from './lineup.ts'
+import type { PlayerRates } from './availability.ts'
+import type { RestProfile } from './congestion.ts'
+import type { ClubShape } from './formation.ts'
 import type { Scoreline } from './dixonColes.ts'
 import type { CalibrationBin, MetricSummary, Probs } from './metrics.ts'
 
@@ -103,6 +106,18 @@ export interface FixtureArtifact {
   homeLineup: PredictedLineup
   awayLineup: PredictedLineup
 
+  /**
+   * Everything needed to re-run this fixture in the browser.
+   *
+   * The model core is deliberately free of Node and DOM dependencies, so the
+   * identical code that produced these numbers can recompute them client-side
+   * when a reader edits a squad. Shipping the inputs — rather than trying to
+   * approximate the result — is what makes "remove this player and see what
+   * happens" show the model's real answer instead of a plausible-looking
+   * interpolation.
+   */
+  recompute: RecomputeInputs
+
   /** Players one booking from a suspension, either side. */
   cardWatch: CardWatchEntry[]
 
@@ -115,6 +130,36 @@ export interface FixtureArtifact {
     logLoss: number
     brier: number
   }
+}
+
+/** One side's non-squad inputs to a prediction. */
+export interface RecomputeSide {
+  attack: number
+  defence: number
+  ratingSd: number
+  matchesPlayed: number
+  promoted: boolean
+  rest: RestProfile
+  shape: ClubShape
+}
+
+export interface RecomputeInputs {
+  homeAdvantage: number
+  rho: number
+  home: RecomputeSide
+  away: RecomputeSide
+}
+
+/**
+ * Per-club squad rates, shared by every fixture rather than duplicated into
+ * each one — the same twenty squads back all ten matches in a gameweek.
+ */
+export interface SquadsArtifact {
+  schemaVersion: number
+  season: string
+  generatedAt: number
+  /** Club code -> that club's rated players. */
+  squads: Record<string, PlayerRates[]>
 }
 
 export interface CardWatchEntry {

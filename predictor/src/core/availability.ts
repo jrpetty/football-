@@ -48,6 +48,8 @@ export interface PlayerRates {
   cost: number
   /** Share of the team's available minutes this player took recently. */
   minuteShare: number
+  /** ISO date he joined this club, when known — used to flag new signings. */
+  joinedAt: string | null
 }
 
 export interface MissingPlayer {

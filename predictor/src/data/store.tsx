@@ -13,6 +13,7 @@ import type {
   GameweekArtifact,
   PlayersArtifact,
   AccuracyArtifact,
+  SquadsArtifact,
 } from '../core/schema.ts'
 
 // Vite rewrites BASE_URL at build time; with a relative base this resolves
@@ -125,6 +126,34 @@ export function useGameweek(gw: number | null): {
   }, [gw])
 
   return { data, loading, error }
+}
+
+let squadsPromise: Promise<SquadsArtifact> | null = null
+
+/** Squad rates, loaded once and shared — every fixture on a page needs them. */
+export function useSquads(): { data: SquadsArtifact | null; loading: boolean } {
+  const [data, setData] = useState<SquadsArtifact | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    squadsPromise ??= loadJson<SquadsArtifact>('squads.json')
+    squadsPromise
+      .then((json) => {
+        if (!cancelled) {
+          setData(json)
+          setLoading(false)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  return { data, loading }
 }
 
 let playersPromise: Promise<PlayersArtifact> | null = null

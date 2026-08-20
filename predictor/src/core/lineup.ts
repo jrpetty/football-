@@ -15,6 +15,7 @@
 
 import { clamp, round } from './math.ts'
 import { playProbability, absenceReason, type PlayerRates, type Position } from './availability.ts'
+import { DEFAULT_SHAPE, type ClubShape } from './formation.ts'
 
 export interface LineupSlot {
   id: number
@@ -28,6 +29,12 @@ export interface LineupSlot {
   minuteShare: number
   status: string
   news: string
+  /**
+   * True when the player joined within the last few months. His record came
+   * with him from another club, so it says something about his quality but
+   * little about the role he will be given here.
+   */
+  newSigning: boolean
 }
 
 export interface PredictedLineup {
@@ -45,6 +52,8 @@ export interface PredictedLineup {
   absent: LineupSlot[]
   /** Mean start confidence across the eleven. */
   confidence: number
+  /** How often the club has actually started this shape, 0-1. */
+  shapeShare: number
 }
 
 /**
@@ -72,7 +81,21 @@ function priceScore(p: PlayerRates, maxCost: number): number {
   return base * playProbability(p)
 }
 
-function toSlot(p: PlayerRates, basis: 'minutes' | 'price', maxCost: number): LineupSlot {
+/** Days within which a move still counts as "new" for role uncertainty. */
+const NEW_SIGNING_DAYS = 120
+
+function isNewSigning(joinedAt: string | null, now: number): boolean {
+  if (!joinedAt) return false
+  const t = Date.parse(joinedAt)
+  return Number.isFinite(t) && now - t < NEW_SIGNING_DAYS * 86400000
+}
+
+function toSlot(
+  p: PlayerRates,
+  basis: 'minutes' | 'price',
+  maxCost: number,
+  now: number,
+): LineupSlot {
   return {
     id: p.id,
     name: p.name,
@@ -85,14 +108,19 @@ function toSlot(p: PlayerRates, basis: 'minutes' | 'price', maxCost: number): Li
     minuteShare: round(p.minuteShare, 3),
     status: p.status,
     news: p.news,
+    newSigning: isNewSigning(p.joinedAt, now),
   }
 }
 
-/** Minimum and maximum players a plausible shape uses in each line. */
-const SHAPE: Record<Exclude<Position, 'GK'>, { min: number; max: number }> = {
+/**
+ * Absolute bounds, used only as a backstop when a club's real shape is
+ * unknown. The shape itself now comes from what the club has actually been
+ * starting — see formation.ts.
+ */
+const BOUNDS: Record<Exclude<Position, 'GK'>, { min: number; max: number }> = {
   DEF: { min: 3, max: 5 },
-  MID: { min: 2, max: 5 },
-  FWD: { min: 1, max: 3 },
+  MID: { min: 2, max: 6 },
+  FWD: { min: 0, max: 3 },
 }
 
 /**
@@ -103,7 +131,11 @@ const SHAPE: Record<Exclude<Position, 'GK'>, { min: number; max: number }> = {
  * each line's minimum is filled first, then the remaining places go to the
  * best available regardless of position, subject to each line's maximum.
  */
-export function predictLineup(squad: readonly PlayerRates[]): PredictedLineup {
+export function predictLineup(
+  squad: readonly PlayerRates[],
+  shape: ClubShape = DEFAULT_SHAPE,
+  now: number = Date.now(),
+): PredictedLineup {
   // A promoted club has no minutes in this data at all, so fall back to price.
   const withMinutes = squad.filter((p) => p.minutes > 0).length
   const basis: 'minutes' | 'price' = withMinutes >= 11 ? 'minutes' : 'price'
@@ -114,11 +146,9 @@ export function predictLineup(squad: readonly PlayerRates[]): PredictedLineup {
   const pool = squad
     .map((p) => ({ p, score: score(p) }))
     // A player who cannot feature is never a selection case, whatever his
-    // record. Without this the shape-filling loops will reach past the fit
-    // players to satisfy a line's minimum and start someone who is injured.
+    // record. Without this the shape-filling loops reach past the fit players
+    // to satisfy a line and start someone who is injured.
     .filter((x) => playProbability(x.p) > 0)
-    // Under the price basis nobody is excluded for lack of minutes; under the
-    // minutes basis a player with none is not a selection case.
     .filter((x) => (basis === 'minutes' ? x.p.minutes > 0 : true))
     .sort((a, b) => b.score - a.score)
 
@@ -129,8 +159,11 @@ export function predictLineup(squad: readonly PlayerRates[]): PredictedLineup {
     bench: [],
     absent: [],
     confidence: 0,
+    shapeShare: shape.share,
   }
-  if (pool.length < 11) return { ...empty, starters: pool.map((x) => toSlot(x.p, basis, maxCost)) }
+  if (pool.length < 11) {
+    return { ...empty, starters: pool.map((x) => toSlot(x.p, basis, maxCost, now)) }
+  }
 
   const chosen: PlayerRates[] = []
   const used = new Set<number>()
@@ -143,9 +176,6 @@ export function predictLineup(squad: readonly PlayerRates[]): PredictedLineup {
   }
 
   // A goalkeeper is not optional and never interchangeable with an outfielder.
-  // Search the whole squad rather than the pool: a promoted club's keeper may
-  // have no minutes at all, and naming an eleven without one is worse than
-  // naming a low-confidence guess.
   const keeper =
     pool.find((x) => x.p.position === 'GK')?.p ??
     [...squad]
@@ -153,24 +183,48 @@ export function predictLineup(squad: readonly PlayerRates[]): PredictedLineup {
       .sort((a, b) => b.cost - a.cost)[0]
   if (keeper) take(keeper)
 
-  // Fill each line's minimum with the best available in that position.
+  // Fill each line to exactly the number the club actually starts. This is the
+  // whole point: minute share alone knows nothing about shape, and letting it
+  // decide produced sides no manager would ever pick.
+  const target: Record<Exclude<Position, 'GK'>, number> = {
+    DEF: shape.def,
+    MID: shape.mid,
+    FWD: shape.fwd,
+  }
+
+  // Fit players with no minutes yet — squad depth and new signings. They are
+  // not first choice, but they are who actually plays when a club runs short
+  // in one position. Liverpool went into this season with three fit defenders
+  // who had Premier League minutes and five who did not; without this the
+  // selection reached for a sixth midfielder instead of a reserve full-back,
+  // which is not a side anyone would field.
+  const reserves = squad
+    .filter((p) => playProbability(p) > 0 && !pool.some((x) => x.p.id === p.id))
+    .sort((a, b) => b.cost - a.cost)
+
   for (const position of ['DEF', 'MID', 'FWD'] as const) {
     for (const entry of pool) {
-      if (counts[position] >= SHAPE[position].min) break
+      if (counts[position] >= target[position]) break
       if (used.has(entry.p.id) || entry.p.position !== position) continue
       take(entry.p)
     }
+    // Still short in this line: call on the reserves before distorting shape.
+    for (const p of reserves) {
+      if (counts[position] >= target[position]) break
+      if (used.has(p.id) || p.position !== position) continue
+      take(p)
+    }
   }
 
-  // Remaining places to the best available, respecting each line's maximum.
+  // A line the club cannot fill — three fit defenders for a back four, say —
+  // leaves places over. Give them to the best available, within sane bounds.
   for (const entry of pool) {
     if (chosen.length >= 11) break
     if (used.has(entry.p.id) || entry.p.position === 'GK') continue
-    if (counts[entry.p.position] >= SHAPE[entry.p.position as Exclude<Position, 'GK'>].max) continue
+    const position = entry.p.position as Exclude<Position, 'GK'>
+    if (counts[position] >= BOUNDS[position].max) continue
     take(entry.p)
   }
-
-  // If the shape maxima left us short (a very lopsided squad), relax them.
   for (const entry of pool) {
     if (chosen.length >= 11) break
     if (used.has(entry.p.id) || entry.p.position === 'GK') continue
@@ -182,10 +236,10 @@ export function predictLineup(squad: readonly PlayerRates[]): PredictedLineup {
   if (chosen.length < 11) {
     return {
       ...empty,
-      starters: chosen.map((p) => toSlot(p, basis, maxCost)),
+      starters: chosen.map((p) => toSlot(p, basis, maxCost, now)),
       absent: squad
         .filter((p) => playProbability(p) < 0.5 && p.minuteShare >= 0.4)
-        .map((p) => toSlot(p, basis, maxCost)),
+        .map((p) => toSlot(p, basis, maxCost, now)),
     }
   }
 
@@ -193,18 +247,17 @@ export function predictLineup(squad: readonly PlayerRates[]): PredictedLineup {
   const order: Record<Position, number> = { GK: 0, DEF: 1, MID: 2, FWD: 3 }
   const starters = chosen
     .sort((a, b) => order[a.position] - order[b.position] || score(b) - score(a))
-    .map((p) => toSlot(p, basis, maxCost))
+    .map((p) => toSlot(p, basis, maxCost, now))
 
   const bench = pool
     .filter((x) => !used.has(x.p.id) && playProbability(x.p) > 0)
     .slice(0, 7)
-    .map((x) => toSlot(x.p, basis, maxCost))
+    .map((x) => toSlot(x.p, basis, maxCost, now))
 
-  // Players good enough to start who cannot: the ones a reader wants named.
   const absent = squad
     .filter((p) => playProbability(p) < 0.5 && p.minuteShare >= 0.4)
     .sort((a, b) => b.minuteShare - a.minuteShare)
-    .map((p) => toSlot(p, basis, maxCost))
+    .map((p) => toSlot(p, basis, maxCost, now))
 
   const confidence =
     starters.length > 0
@@ -217,8 +270,8 @@ export function predictLineup(squad: readonly PlayerRates[]): PredictedLineup {
     starters,
     bench,
     absent,
-    // A price-based eleven is a guess; say so in the number as well as the label.
     confidence: basis === 'price' ? round(confidence * 0.5, 3) : confidence,
+    shapeShare: shape.share,
   }
 }
 

@@ -144,7 +144,7 @@ function player(over: Partial<PlayerRates> = {}): PlayerRates {
   return {
     id: 1, name: 'P', team: 'ARS', position: 'MID',
     minutes: 2000, xgi90: 0.4, xgc90: 1.1, saves90: 0, yellow90: 0.2, red90: 0.01,
-    status: 'a', chanceNextRound: null, news: '', cost: 7, minuteShare: 0.8,
+    status: 'a', chanceNextRound: null, news: '', cost: 7, minuteShare: 0.8, joinedAt: null,
     ...over,
   }
 }

@@ -12,7 +12,9 @@
 import { readdir } from 'node:fs/promises'
 import { readJson, dataPath } from './lib/fsjson.ts'
 import { SCHEMA_VERSION } from '../src/core/schema.ts'
-import type { SeasonArtifact, GameweekArtifact, PlayersArtifact, AccuracyArtifact, LedgerArtifact } from '../src/core/schema.ts'
+import type {
+  SeasonArtifact, GameweekArtifact, PlayersArtifact, AccuracyArtifact, LedgerArtifact, SquadsArtifact,
+} from '../src/core/schema.ts'
 
 const problems: string[] = []
 const warnings: string[] = []
@@ -135,6 +137,20 @@ async function main(): Promise<void> {
           outfield.length === 3 && outfield.reduce((a, b) => a + b, 0) === 10,
           `${label}: ${side} formation "${lineup.formation}" does not describe ten outfielders`,
         )
+        // The shape must be one a side could actually set up in. The version
+        // this replaces produced 3-6-1, which no manager has ever picked.
+        const [d = 0, mid = 0, fwd = 0] = outfield
+        check(d >= 3 && d <= 5, `${label}: ${side} plays ${d} at the back`)
+        check(mid <= 6, `${label}: ${side} plays ${mid} in midfield`)
+        check(fwd <= 3, `${label}: ${side} plays ${fwd} up front`)
+        // And it should be the shape the club actually starts, where known.
+        const target = side === 'home' ? f.recompute.home.shape : f.recompute.away.shape
+        if (target.sample > 0 && lineup.basis === 'minutes') {
+          warn(
+            lineup.formation === target.label,
+            `${label}: ${side} eleven is ${lineup.formation} but the club usually starts ${target.label}`,
+          )
+        }
         warn(
           lineup.basis === 'minutes' || lineup.confidence <= 0.6,
           `${label}: ${side} eleven is price-based but claims ${(lineup.confidence * 100).toFixed(0)}% confidence`,
@@ -163,6 +179,28 @@ async function main(): Promise<void> {
     if (season.teams.every((t) => t.played === 0)) {
       const brink = players.players.filter((p) => p.onBrink).length
       check(brink === 0, `${brink} players flagged one booking from a ban before the season started`)
+    }
+  }
+
+  // --- squads --------------------------------------------------------------
+  // The browser re-runs fixtures against these, so a gap here silently breaks
+  // the what-if feature rather than showing an error.
+  const squads = await readJson<SquadsArtifact>(dataPath('squads.json'))
+  check(squads !== null, 'squads.json is missing')
+  if (squads && season) {
+    for (const t of season.teams) {
+      const roster = squads.squads[t.code]
+      check(Array.isArray(roster) && roster.length >= 11, `squads.json has no usable squad for ${t.code}`)
+    }
+    for (const [code, roster] of Object.entries(squads.squads)) {
+      const ids = new Set(roster.map((p) => p.id))
+      check(ids.size === roster.length, `${code} squad lists a player twice`)
+      for (const p of roster.slice(0, 40)) {
+        for (const [k, v] of [['xgi90', p.xgi90], ['minuteShare', p.minuteShare], ['yellow90', p.yellow90]] as const) {
+          check(Number.isFinite(v) && v >= 0, `${code} ${p.name}: ${k} is ${v}`)
+        }
+        check(p.minuteShare <= 1, `${code} ${p.name}: minute share ${p.minuteShare} exceeds one`)
+      }
     }
   }
 

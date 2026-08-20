@@ -20,9 +20,14 @@ the one showing how often it has been wrong.
   the mechanism: the favourite's absences, a finishing run due to regress, a short turnaround.
 - **Tracks players.** Per-player goal, assist and card probabilities; injury and suspension
   status; and a yellow-card tracker that knows the 5/10/15 booking thresholds.
-- **Predicts the line-ups.** Both starting elevens on a pitch, from recent minutes and current
-  availability. Confirmed team sheets appear about an hour before kickoff and are deliberately not
-  waited for — this publishes days ahead.
+- **Predicts the line-ups.** Both starting elevens on a pitch, in the shape each club has actually
+  been starting — read from its recent team sheets, weighted toward recent matches so a change of
+  system shows through. Confirmed sheets appear about an hour before kickoff and are deliberately
+  not waited for; this publishes days ahead.
+- **Lets you edit the squad and watch the forecast move.** Take a player out and the whole fixture
+  re-runs in your browser — probabilities, expected goals and the eleven itself. It runs the same
+  model core that produced the published numbers, so with nothing removed it reproduces them
+  exactly.
 - **Re-checks itself weekly.** A scheduled job ingests results, scores the forecasts recorded
   *before* kickoff, refits, and republishes — so the accuracy record is real rather than
   retrospective.
@@ -70,6 +75,14 @@ measured, not assumed: across 2023-24 to 2025-26, sides with all three of their 
 available scored 1.520 goals per match; sides missing at least two of them scored 1.146. The xG
 deltas match the goal deltas to within 0.005, so it is a real change in chance creation rather
 than finishing luck.
+
+**Shape.** Every gameweek row records the position a player was listed in and whether he started,
+so the eleven a club fielded reconstructs exactly. The line-up picker targets the shape that club
+actually starts most often rather than a generic rule — an earlier version imposed "at least three
+at the back, at most five in midfield" and produced Liverpool as 3-6-1, a formation nobody has
+ever set up in. When a club is short in one line (Liverpool began this season with three fit
+defenders who had Premier League minutes and five who did not) it calls on squad depth rather than
+distorting the shape.
 
 **Uncertainty.** Scorelines come from a negative binomial rather than a Poisson, with dispersion
 set from how confident the ratings are (`r = 1/σ²`). A newly promoted club with a wide rating band
@@ -156,7 +169,8 @@ will commit anything.
   kickoff; this forecasts days ahead, so a late change is not reflected. For a promoted club with
   no top-flight record in the data, the eleven is inferred from squad valuation and is a rough
   guess — labelled as such on the page. Positions follow the Fantasy Premier League
-  classification, which does not always match where a player really lines up.
+  classification, which does not always match where a player really lines up, so a real 4-3-3
+  often reads as 4-5-1 here.
 - **Red-card ban lengths are inferred.** The feed records that a red card was shown but not the
   offence, so the one-match minimum is assumed and flagged.
 - **The availability adjustment isn't backtested.** Doing that honestly would need archived injury

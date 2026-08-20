@@ -30,6 +30,7 @@ interface BootstrapElement {
   chance_of_playing_next_round: number | null; now_cost: number
   expected_goals: string | number; expected_assists: string | number
   expected_goals_conceded: string | number
+  team_join_date?: string | null
 }
 interface Bootstrap { teams: BootstrapTeam[]; elements: BootstrapElement[] }
 interface LiveFixture {
@@ -116,6 +117,7 @@ export async function fetchLiveSeason(season: string): Promise<NormSeason | null
       news: e.news ?? '',
       chanceNextRound: e.chance_of_playing_next_round,
       cost: n(e.now_cost) / 10,
+      joinedAt: e.team_join_date && e.team_join_date !== 'None' ? e.team_join_date : null,
     }))
 
   const matches: NormMatch[] = []

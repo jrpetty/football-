@@ -75,10 +75,33 @@ function place(lineup: PredictedLineup, away: boolean): Placed[] {
   return out
 }
 
-function Player({ p, color }: { p: Placed; color: string }) {
+function Player({
+  p, color, removed, onToggle,
+}: {
+  p: Placed
+  color: string
+  removed?: boolean
+  onToggle?: (id: number) => void
+}) {
   const doubtful = p.slot.playProbability < 0.95
+  const interactive = Boolean(onToggle)
   return (
-    <g>
+    <g
+      onClick={onToggle ? () => onToggle(p.slot.id) : undefined}
+      style={interactive ? { cursor: 'pointer' } : undefined}
+      role={interactive ? 'button' : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      onKeyDown={
+        onToggle
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onToggle(p.slot.id)
+              }
+            }
+          : undefined
+      }
+    >
       <circle
         cx={p.x}
         cy={p.y}
@@ -86,8 +109,14 @@ function Player({ p, color }: { p: Placed; color: string }) {
         fill={color}
         stroke="rgba(4,18,31,0.85)"
         strokeWidth={2.5}
-        opacity={doubtful ? 0.55 : 1}
+        opacity={removed ? 0.2 : doubtful ? 0.55 : 1}
       />
+      {removed && (
+        <g stroke="var(--away)" strokeWidth={3} strokeLinecap="round">
+          <line x1={p.x - 9} y1={p.y - 9} x2={p.x + 9} y2={p.y + 9} />
+          <line x1={p.x + 9} y1={p.y - 9} x2={p.x - 9} y2={p.y + 9} />
+        </g>
+      )}
       {doubtful && (
         <text x={p.x} y={p.y + 4} textAnchor="middle" fontSize={13} fontWeight={800} fill="#04121f">
           ?
@@ -101,10 +130,16 @@ function Player({ p, color }: { p: Placed; color: string }) {
         textAnchor="middle"
         fontSize={13}
         fontWeight={650}
-        fill="var(--text)"
-        style={{ paintOrder: 'stroke', stroke: 'rgba(4,12,22,0.85)', strokeWidth: 3 }}
+        fill={removed ? 'var(--text-faint)' : 'var(--text)'}
+        style={{
+          paintOrder: 'stroke',
+          stroke: 'rgba(4,12,22,0.85)',
+          strokeWidth: 3,
+          textDecoration: removed ? 'line-through' : undefined,
+        }}
       >
         {p.slot.name}
+        {p.slot.newSigning ? ' ✦' : ''}
       </text>
       <title>
         {`${p.slot.name} — ${p.slot.position}, ${Math.round(p.slot.startConfidence * 100)}% likely to start` +
@@ -119,11 +154,17 @@ export function LineupPitch({
   awayCode,
   homeLineup,
   awayLineup,
+  removed,
+  onToggle,
 }: {
   homeCode: string
   awayCode: string
   homeLineup: PredictedLineup
   awayLineup: PredictedLineup
+  /** Player ids the reader has taken out. */
+  removed?: ReadonlySet<number>
+  /** When given, players become clickable and can be toggled out. */
+  onToggle?: (id: number) => void
 }) {
   const home = place(homeLineup, false)
   const away = place(awayLineup, true)
@@ -164,8 +205,14 @@ export function LineupPitch({
         {club(awayCode).short} {awayLineup.formation}
       </text>
 
-      {home.map((p) => <Player key={`h${p.slot.id}`} p={p} color={pitchColor(clubColor(homeCode))} />)}
-      {away.map((p) => <Player key={`a${p.slot.id}`} p={p} color={pitchColor(clubColor(awayCode))} />)}
+      {home.map((p) => (
+        <Player key={`h${p.slot.id}`} p={p} color={pitchColor(clubColor(homeCode))}
+          removed={removed?.has(p.slot.id)} onToggle={onToggle} />
+      ))}
+      {away.map((p) => (
+        <Player key={`a${p.slot.id}`} p={p} color={pitchColor(clubColor(awayCode))}
+          removed={removed?.has(p.slot.id)} onToggle={onToggle} />
+      ))}
     </svg>
   )
 }
@@ -173,13 +220,19 @@ export function LineupPitch({
 /** The caveat that belongs under any predicted eleven. */
 export function LineupCaveat({ home, away }: { home: PredictedLineup; away: PredictedLineup }) {
   const priced = [home, away].some((l) => l.basis === 'price')
+  const shapeShare = Math.round(Math.max(home.shapeShare, away.shapeShare) * 100)
   return (
     <p className="faint" style={{ fontSize: 12, lineHeight: 1.55, marginTop: 10 }}>
+      {shapeShare > 0 && (
+        <>Shapes are the ones these clubs have actually been starting ({shapeShare}% of recent
+        matches for the more consistent of the two), weighted toward recent form. </>
+      )}
       Predicted from recent minutes and current availability — confirmed team sheets are not
       published until about an hour before kickoff, and this forecast is made days ahead. A faded
       circle marks a player carrying a doubt. Positions come from the Fantasy Premier League
       classification, which sometimes differs from where a player actually lines up, so the shape
-      is a guide rather than a tactical read.
+      is a guide rather than a tactical read. A ✦ marks a recent signing, whose record came with
+      him from another club and says little about the role he will be given here.
       {priced && (
         <>
           {' '}
