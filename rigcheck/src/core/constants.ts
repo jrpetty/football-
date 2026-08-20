@@ -55,6 +55,21 @@ export const GPU_ARCH_EFFICIENCY: Record<string, number> = {
   'Ada Lovelace': 1.02,
   Blackwell: 1.05,
 
+  /**
+   * TeraScale 3 is VLIW4: its nominal FLOPS assume all four slots issue every
+   * cycle, which real game shaders rarely achieved — that dependence on
+   * compiler-extracted instruction-level parallelism is exactly why AMD
+   * replaced it with GCN. It therefore sits BELOW GCN 1.0 per nominal FLOP.
+   *
+   * This is a prior with NO fixture behind it: the only parts using it are the
+   * 2012-13 Trinity and Richland APUs, and the fixture set contains none of
+   * them. It exists so those records do not silently fall through to the 1.0
+   * default, which would rate them above every GCN part in the catalogue. Treat
+   * any Trinity/Richland estimate as the least-evidenced number the tool
+   * produces, and see Model Health for what that means.
+   */
+  'TeraScale 3 (VLIW4)': 0.6,
+
   GCN: 0.8,
   'GCN 1.0': 0.78,
   'GCN 2.0': 0.8,

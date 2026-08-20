@@ -1,12 +1,12 @@
 # RIGCHECK coverage report
 
-Generated 2026-08-20T11:07:57.526Z.
+Generated 2026-08-20T11:22:22.911Z.
 
 ## Catalogue against spec targets
 
 | Dataset | Have | Target | Shortfall |
 |---|---:|---:|---|
-| GPU SKUs | 265 | 1200 | 935 short (78%) |
+| GPU SKUs | 279 | 1200 | 921 short (77%) |
 | CPU SKUs | 442 | 900 | 458 short (51%) |
 | Games | 50 | 50 | — |
 | Validation fixtures | 161 | 150 | — |
@@ -41,7 +41,7 @@ page nested differently from the assumption shows up as a traceable wrong
 attribution rather than as a plausible stated value.
 agents/log/spec-mapper.md states exactly what to check on first contact.
 
-GPU split: 212 desktop discrete, 53 integrated. Mobile parts are
+GPU split: 212 desktop discrete, 67 integrated. Mobile parts are
 deliberately excluded: configurable TDP swings identical silicon by 40%+, and
 averaging across that would inject error rather than coverage.
 
@@ -49,14 +49,14 @@ Most-nulled GPU fields:
 
 | Field | Null | % |
 |---|---:|---:|
-| `pciIds` | 265 | 100% |
-| `driverEolDate` | 223 | 84% |
-| `lengthMm` | 218 | 82% |
-| `slotWidth` | 147 | 55% |
-| `baseClockMHz` | 101 | 38% |
-| `recommendedPsuW` | 71 | 27% |
-| `memBandwidthGBs` | 53 | 20% |
-| `fp32TFLOPS` | 20 | 8% |
+| `pciIds` | 279 | 100% |
+| `driverEolDate` | 237 | 85% |
+| `lengthMm` | 232 | 83% |
+| `slotWidth` | 161 | 58% |
+| `baseClockMHz` | 115 | 41% |
+| `recommendedPsuW` | 85 | 30% |
+| `memBandwidthGBs` | 67 | 24% |
+| `fp32TFLOPS` | 20 | 7% |
 
 Most-nulled CPU fields:
 

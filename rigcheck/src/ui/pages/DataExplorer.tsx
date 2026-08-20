@@ -175,6 +175,11 @@ export function DataExplorer() {
                       {g.fullName}
                       {g.id === ANCHORS.gpuId && <span className="tag" style={{ marginLeft: 6 }}>anchor</span>}
                       {g.formFactor === 'igpu' && <span className="tag" style={{ marginLeft: 6 }}>igpu</span>}
+                      {g._note && (
+                        <span className="tag" style={{ marginLeft: 6, borderStyle: 'dashed' }} title={g._note}>
+                          shared record
+                        </span>
+                      )}
                       {idx.missingFields.length > 0 && (
                         <span
                           className={idx.index.raster > 0 ? 'tag' : 'tag bad'}

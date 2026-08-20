@@ -10,7 +10,7 @@
       "note": "Seed pending harvest; Wikipedia and vendor spec sources egress-blocked in this environment."
     }
   },
-  "count": 265,
+  "count": 279,
   "records": [
     {
       "id": "amd-radeon-hd-7970-ghz-edition",
@@ -31767,6 +31767,1431 @@
           "model-knowledge"
         ]
       }
+    },
+    {
+      "id": "amd-radeon-graphics-raphael-2cu",
+      "vendor": "amd",
+      "brand": "AMD Radeon Graphics",
+      "variant": "Raphael",
+      "fullName": "AMD Radeon Graphics (Raphael, 2 CU)",
+      "architecture": "RDNA 2",
+      "chip": "Raphael",
+      "launchDate": "2022-09",
+      "formFactor": "igpu",
+      "shaders": 128,
+      "baseClockMHz": null,
+      "boostClockMHz": 2200,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.5632,
+      "tdpW": null,
+      "processNm": 6,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "id": [
+          "model-knowledge"
+        ],
+        "vendor": [
+          "model-knowledge"
+        ],
+        "brand": [
+          "model-knowledge"
+        ],
+        "variant": [
+          "model-knowledge"
+        ],
+        "fullName": [
+          "model-knowledge"
+        ],
+        "architecture": [
+          "model-knowledge"
+        ],
+        "chip": [
+          "model-knowledge"
+        ],
+        "launchDate": [
+          "model-knowledge"
+        ],
+        "formFactor": [
+          "model-knowledge"
+        ],
+        "shaders": [
+          "model-knowledge"
+        ],
+        "baseClockMHz": [
+          "model-knowledge"
+        ],
+        "boostClockMHz": [
+          "model-knowledge"
+        ],
+        "vramGB": [
+          "model-knowledge"
+        ],
+        "vramType": [
+          "model-knowledge"
+        ],
+        "memBusBits": [
+          "model-knowledge"
+        ],
+        "memBandwidthGBs": [
+          "model-knowledge"
+        ],
+        "fp32TFLOPS": [
+          "model-knowledge"
+        ],
+        "tdpW": [
+          "model-knowledge"
+        ],
+        "processNm": [
+          "model-knowledge"
+        ],
+        "caps": [
+          "model-knowledge"
+        ],
+        "driverStatus": [
+          "model-knowledge"
+        ],
+        "driverEolDate": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-vega-6-renoir",
+      "vendor": "amd",
+      "brand": "AMD Radeon Graphics",
+      "variant": "Ryzen 3 4300G",
+      "fullName": "AMD Radeon Graphics (Renoir, 6 CU)",
+      "architecture": "GCN 5 (Vega)",
+      "chip": "Renoir",
+      "launchDate": "2020-07",
+      "formFactor": "igpu",
+      "shaders": 384,
+      "baseClockMHz": null,
+      "boostClockMHz": 1700,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 1.3056,
+      "tdpW": null,
+      "processNm": 7,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "id": [
+          "model-knowledge"
+        ],
+        "vendor": [
+          "model-knowledge"
+        ],
+        "brand": [
+          "model-knowledge"
+        ],
+        "variant": [
+          "model-knowledge"
+        ],
+        "fullName": [
+          "model-knowledge"
+        ],
+        "architecture": [
+          "model-knowledge"
+        ],
+        "chip": [
+          "model-knowledge"
+        ],
+        "launchDate": [
+          "model-knowledge"
+        ],
+        "formFactor": [
+          "model-knowledge"
+        ],
+        "shaders": [
+          "model-knowledge"
+        ],
+        "baseClockMHz": [
+          "model-knowledge"
+        ],
+        "boostClockMHz": [
+          "model-knowledge"
+        ],
+        "vramGB": [
+          "model-knowledge"
+        ],
+        "vramType": [
+          "model-knowledge"
+        ],
+        "memBusBits": [
+          "model-knowledge"
+        ],
+        "memBandwidthGBs": [
+          "model-knowledge"
+        ],
+        "fp32TFLOPS": [
+          "model-knowledge"
+        ],
+        "tdpW": [
+          "model-knowledge"
+        ],
+        "processNm": [
+          "model-knowledge"
+        ],
+        "caps": [
+          "model-knowledge"
+        ],
+        "driverStatus": [
+          "model-knowledge"
+        ],
+        "driverEolDate": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-vega-7-renoir",
+      "vendor": "amd",
+      "brand": "AMD Radeon Graphics",
+      "variant": "Ryzen 5 4600G",
+      "fullName": "AMD Radeon Graphics (Renoir, 7 CU)",
+      "architecture": "GCN 5 (Vega)",
+      "chip": "Renoir",
+      "launchDate": "2020-07",
+      "formFactor": "igpu",
+      "shaders": 448,
+      "baseClockMHz": null,
+      "boostClockMHz": 1900,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 1.7024,
+      "tdpW": null,
+      "processNm": 7,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_5",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "id": [
+          "model-knowledge"
+        ],
+        "vendor": [
+          "model-knowledge"
+        ],
+        "brand": [
+          "model-knowledge"
+        ],
+        "variant": [
+          "model-knowledge"
+        ],
+        "fullName": [
+          "model-knowledge"
+        ],
+        "architecture": [
+          "model-knowledge"
+        ],
+        "chip": [
+          "model-knowledge"
+        ],
+        "launchDate": [
+          "model-knowledge"
+        ],
+        "formFactor": [
+          "model-knowledge"
+        ],
+        "shaders": [
+          "model-knowledge"
+        ],
+        "baseClockMHz": [
+          "model-knowledge"
+        ],
+        "boostClockMHz": [
+          "model-knowledge"
+        ],
+        "vramGB": [
+          "model-knowledge"
+        ],
+        "vramType": [
+          "model-knowledge"
+        ],
+        "memBusBits": [
+          "model-knowledge"
+        ],
+        "memBandwidthGBs": [
+          "model-knowledge"
+        ],
+        "fp32TFLOPS": [
+          "model-knowledge"
+        ],
+        "tdpW": [
+          "model-knowledge"
+        ],
+        "processNm": [
+          "model-knowledge"
+        ],
+        "caps": [
+          "model-knowledge"
+        ],
+        "driverStatus": [
+          "model-knowledge"
+        ],
+        "driverEolDate": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r7-kaveri-512sp",
+      "vendor": "amd",
+      "brand": "AMD Radeon R7",
+      "variant": "Kaveri",
+      "fullName": "AMD Radeon R7 Graphics (Kaveri, 8 CU)",
+      "architecture": "GCN 2.0",
+      "chip": "Kaveri",
+      "launchDate": "2014-01",
+      "formFactor": "igpu",
+      "shaders": 512,
+      "baseClockMHz": null,
+      "boostClockMHz": 720,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.7373,
+      "tdpW": null,
+      "processNm": 28,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_note": "Shared by four APUs whose iGPU clocks differ (A10-7850K 720 MHz through A10-7890K 866 MHz). The LOWEST is recorded: overstating a shared record would credit the slower parts with the faster part's performance, and understating is the recoverable direction.",
+      "_prov": {
+        "id": [
+          "model-knowledge"
+        ],
+        "vendor": [
+          "model-knowledge"
+        ],
+        "brand": [
+          "model-knowledge"
+        ],
+        "variant": [
+          "model-knowledge"
+        ],
+        "fullName": [
+          "model-knowledge"
+        ],
+        "architecture": [
+          "model-knowledge"
+        ],
+        "chip": [
+          "model-knowledge"
+        ],
+        "launchDate": [
+          "model-knowledge"
+        ],
+        "formFactor": [
+          "model-knowledge"
+        ],
+        "shaders": [
+          "model-knowledge"
+        ],
+        "baseClockMHz": [
+          "model-knowledge"
+        ],
+        "boostClockMHz": [
+          "model-knowledge"
+        ],
+        "vramGB": [
+          "model-knowledge"
+        ],
+        "vramType": [
+          "model-knowledge"
+        ],
+        "memBusBits": [
+          "model-knowledge"
+        ],
+        "memBandwidthGBs": [
+          "model-knowledge"
+        ],
+        "fp32TFLOPS": [
+          "model-knowledge"
+        ],
+        "tdpW": [
+          "model-knowledge"
+        ],
+        "processNm": [
+          "model-knowledge"
+        ],
+        "caps": [
+          "model-knowledge"
+        ],
+        "driverStatus": [
+          "model-knowledge"
+        ],
+        "driverEolDate": [
+          "model-knowledge"
+        ],
+        "_note": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r7-kaveri-384sp",
+      "vendor": "amd",
+      "brand": "AMD Radeon R7",
+      "variant": "Kaveri",
+      "fullName": "AMD Radeon R7 Graphics (Kaveri, 6 CU)",
+      "architecture": "GCN 2.0",
+      "chip": "Kaveri",
+      "launchDate": "2014-01",
+      "formFactor": "igpu",
+      "shaders": 384,
+      "baseClockMHz": null,
+      "boostClockMHz": 720,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.553,
+      "tdpW": null,
+      "processNm": 28,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "id": [
+          "model-knowledge"
+        ],
+        "vendor": [
+          "model-knowledge"
+        ],
+        "brand": [
+          "model-knowledge"
+        ],
+        "variant": [
+          "model-knowledge"
+        ],
+        "fullName": [
+          "model-knowledge"
+        ],
+        "architecture": [
+          "model-knowledge"
+        ],
+        "chip": [
+          "model-knowledge"
+        ],
+        "launchDate": [
+          "model-knowledge"
+        ],
+        "formFactor": [
+          "model-knowledge"
+        ],
+        "shaders": [
+          "model-knowledge"
+        ],
+        "baseClockMHz": [
+          "model-knowledge"
+        ],
+        "boostClockMHz": [
+          "model-knowledge"
+        ],
+        "vramGB": [
+          "model-knowledge"
+        ],
+        "vramType": [
+          "model-knowledge"
+        ],
+        "memBusBits": [
+          "model-knowledge"
+        ],
+        "memBandwidthGBs": [
+          "model-knowledge"
+        ],
+        "fp32TFLOPS": [
+          "model-knowledge"
+        ],
+        "tdpW": [
+          "model-knowledge"
+        ],
+        "processNm": [
+          "model-knowledge"
+        ],
+        "caps": [
+          "model-knowledge"
+        ],
+        "driverStatus": [
+          "model-knowledge"
+        ],
+        "driverEolDate": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r5-kaveri-256sp",
+      "vendor": "amd",
+      "brand": "AMD Radeon R5",
+      "variant": "Kaveri",
+      "fullName": "AMD Radeon R5 Graphics (Kaveri, 4 CU)",
+      "architecture": "GCN 2.0",
+      "chip": "Kaveri",
+      "launchDate": "2014-01",
+      "formFactor": "igpu",
+      "shaders": 256,
+      "baseClockMHz": null,
+      "boostClockMHz": 756,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.3871,
+      "tdpW": null,
+      "processNm": 28,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "id": [
+          "model-knowledge"
+        ],
+        "vendor": [
+          "model-knowledge"
+        ],
+        "brand": [
+          "model-knowledge"
+        ],
+        "variant": [
+          "model-knowledge"
+        ],
+        "fullName": [
+          "model-knowledge"
+        ],
+        "architecture": [
+          "model-knowledge"
+        ],
+        "chip": [
+          "model-knowledge"
+        ],
+        "launchDate": [
+          "model-knowledge"
+        ],
+        "formFactor": [
+          "model-knowledge"
+        ],
+        "shaders": [
+          "model-knowledge"
+        ],
+        "baseClockMHz": [
+          "model-knowledge"
+        ],
+        "boostClockMHz": [
+          "model-knowledge"
+        ],
+        "vramGB": [
+          "model-knowledge"
+        ],
+        "vramType": [
+          "model-knowledge"
+        ],
+        "memBusBits": [
+          "model-knowledge"
+        ],
+        "memBandwidthGBs": [
+          "model-knowledge"
+        ],
+        "fp32TFLOPS": [
+          "model-knowledge"
+        ],
+        "tdpW": [
+          "model-knowledge"
+        ],
+        "processNm": [
+          "model-knowledge"
+        ],
+        "caps": [
+          "model-knowledge"
+        ],
+        "driverStatus": [
+          "model-knowledge"
+        ],
+        "driverEolDate": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r7-bristol-ridge-512sp",
+      "vendor": "amd",
+      "brand": "AMD Radeon R7",
+      "variant": "Bristol Ridge",
+      "fullName": "AMD Radeon R7 Graphics (Bristol Ridge, 8 CU)",
+      "architecture": "GCN 3.0",
+      "chip": "Bristol Ridge",
+      "launchDate": "2017-07",
+      "formFactor": "igpu",
+      "shaders": 512,
+      "baseClockMHz": null,
+      "boostClockMHz": 1108,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 1.1346,
+      "tdpW": null,
+      "processNm": 28,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "id": [
+          "model-knowledge"
+        ],
+        "vendor": [
+          "model-knowledge"
+        ],
+        "brand": [
+          "model-knowledge"
+        ],
+        "variant": [
+          "model-knowledge"
+        ],
+        "fullName": [
+          "model-knowledge"
+        ],
+        "architecture": [
+          "model-knowledge"
+        ],
+        "chip": [
+          "model-knowledge"
+        ],
+        "launchDate": [
+          "model-knowledge"
+        ],
+        "formFactor": [
+          "model-knowledge"
+        ],
+        "shaders": [
+          "model-knowledge"
+        ],
+        "baseClockMHz": [
+          "model-knowledge"
+        ],
+        "boostClockMHz": [
+          "model-knowledge"
+        ],
+        "vramGB": [
+          "model-knowledge"
+        ],
+        "vramType": [
+          "model-knowledge"
+        ],
+        "memBusBits": [
+          "model-knowledge"
+        ],
+        "memBandwidthGBs": [
+          "model-knowledge"
+        ],
+        "fp32TFLOPS": [
+          "model-knowledge"
+        ],
+        "tdpW": [
+          "model-knowledge"
+        ],
+        "processNm": [
+          "model-knowledge"
+        ],
+        "caps": [
+          "model-knowledge"
+        ],
+        "driverStatus": [
+          "model-knowledge"
+        ],
+        "driverEolDate": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r7-bristol-ridge-384sp",
+      "vendor": "amd",
+      "brand": "AMD Radeon R7",
+      "variant": "Bristol Ridge",
+      "fullName": "AMD Radeon R7 Graphics (Bristol Ridge, 6 CU)",
+      "architecture": "GCN 3.0",
+      "chip": "Bristol Ridge",
+      "launchDate": "2017-07",
+      "formFactor": "igpu",
+      "shaders": 384,
+      "baseClockMHz": null,
+      "boostClockMHz": 900,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.6912,
+      "tdpW": null,
+      "processNm": 28,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_note": "Shared by the A10-9700 (1029 MHz) and A8-9600 (900 MHz). The LOWER is recorded, for the same reason as the Kaveri 512SP record.",
+      "_prov": {
+        "id": [
+          "model-knowledge"
+        ],
+        "vendor": [
+          "model-knowledge"
+        ],
+        "brand": [
+          "model-knowledge"
+        ],
+        "variant": [
+          "model-knowledge"
+        ],
+        "fullName": [
+          "model-knowledge"
+        ],
+        "architecture": [
+          "model-knowledge"
+        ],
+        "chip": [
+          "model-knowledge"
+        ],
+        "launchDate": [
+          "model-knowledge"
+        ],
+        "formFactor": [
+          "model-knowledge"
+        ],
+        "shaders": [
+          "model-knowledge"
+        ],
+        "baseClockMHz": [
+          "model-knowledge"
+        ],
+        "boostClockMHz": [
+          "model-knowledge"
+        ],
+        "vramGB": [
+          "model-knowledge"
+        ],
+        "vramType": [
+          "model-knowledge"
+        ],
+        "memBusBits": [
+          "model-knowledge"
+        ],
+        "memBandwidthGBs": [
+          "model-knowledge"
+        ],
+        "fp32TFLOPS": [
+          "model-knowledge"
+        ],
+        "tdpW": [
+          "model-knowledge"
+        ],
+        "processNm": [
+          "model-knowledge"
+        ],
+        "caps": [
+          "model-knowledge"
+        ],
+        "driverStatus": [
+          "model-knowledge"
+        ],
+        "driverEolDate": [
+          "model-knowledge"
+        ],
+        "_note": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-r5-bristol-ridge-384sp",
+      "vendor": "amd",
+      "brand": "AMD Radeon R5",
+      "variant": "Bristol Ridge",
+      "fullName": "AMD Radeon R5 Graphics (Bristol Ridge, 6 CU)",
+      "architecture": "GCN 3.0",
+      "chip": "Bristol Ridge",
+      "launchDate": "2017-07",
+      "formFactor": "igpu",
+      "shaders": 384,
+      "baseClockMHz": null,
+      "boostClockMHz": 1029,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.7903,
+      "tdpW": null,
+      "processNm": 28,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_0",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.2",
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "id": [
+          "model-knowledge"
+        ],
+        "vendor": [
+          "model-knowledge"
+        ],
+        "brand": [
+          "model-knowledge"
+        ],
+        "variant": [
+          "model-knowledge"
+        ],
+        "fullName": [
+          "model-knowledge"
+        ],
+        "architecture": [
+          "model-knowledge"
+        ],
+        "chip": [
+          "model-knowledge"
+        ],
+        "launchDate": [
+          "model-knowledge"
+        ],
+        "formFactor": [
+          "model-knowledge"
+        ],
+        "shaders": [
+          "model-knowledge"
+        ],
+        "baseClockMHz": [
+          "model-knowledge"
+        ],
+        "boostClockMHz": [
+          "model-knowledge"
+        ],
+        "vramGB": [
+          "model-knowledge"
+        ],
+        "vramType": [
+          "model-knowledge"
+        ],
+        "memBusBits": [
+          "model-knowledge"
+        ],
+        "memBandwidthGBs": [
+          "model-knowledge"
+        ],
+        "fp32TFLOPS": [
+          "model-knowledge"
+        ],
+        "tdpW": [
+          "model-knowledge"
+        ],
+        "processNm": [
+          "model-knowledge"
+        ],
+        "caps": [
+          "model-knowledge"
+        ],
+        "driverStatus": [
+          "model-knowledge"
+        ],
+        "driverEolDate": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-hd-7660d",
+      "vendor": "amd",
+      "brand": "AMD Radeon HD 7660D",
+      "variant": "Trinity",
+      "fullName": "AMD Radeon HD 7660D (Trinity, 384 SP)",
+      "architecture": "TeraScale 3 (VLIW4)",
+      "chip": "Trinity",
+      "launchDate": "2012-10",
+      "formFactor": "igpu",
+      "shaders": 384,
+      "baseClockMHz": null,
+      "boostClockMHz": 800,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.6144,
+      "tdpW": null,
+      "processNm": 32,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "5_0",
+        "vulkanVersion": null,
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "id": [
+          "model-knowledge"
+        ],
+        "vendor": [
+          "model-knowledge"
+        ],
+        "brand": [
+          "model-knowledge"
+        ],
+        "variant": [
+          "model-knowledge"
+        ],
+        "fullName": [
+          "model-knowledge"
+        ],
+        "architecture": [
+          "model-knowledge"
+        ],
+        "chip": [
+          "model-knowledge"
+        ],
+        "launchDate": [
+          "model-knowledge"
+        ],
+        "formFactor": [
+          "model-knowledge"
+        ],
+        "shaders": [
+          "model-knowledge"
+        ],
+        "baseClockMHz": [
+          "model-knowledge"
+        ],
+        "boostClockMHz": [
+          "model-knowledge"
+        ],
+        "vramGB": [
+          "model-knowledge"
+        ],
+        "vramType": [
+          "model-knowledge"
+        ],
+        "memBusBits": [
+          "model-knowledge"
+        ],
+        "memBandwidthGBs": [
+          "model-knowledge"
+        ],
+        "fp32TFLOPS": [
+          "model-knowledge"
+        ],
+        "tdpW": [
+          "model-knowledge"
+        ],
+        "processNm": [
+          "model-knowledge"
+        ],
+        "caps": [
+          "model-knowledge"
+        ],
+        "driverStatus": [
+          "model-knowledge"
+        ],
+        "driverEolDate": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-hd-7560d",
+      "vendor": "amd",
+      "brand": "AMD Radeon HD 7560D",
+      "variant": "Trinity",
+      "fullName": "AMD Radeon HD 7560D (Trinity, 256 SP)",
+      "architecture": "TeraScale 3 (VLIW4)",
+      "chip": "Trinity",
+      "launchDate": "2012-10",
+      "formFactor": "igpu",
+      "shaders": 256,
+      "baseClockMHz": null,
+      "boostClockMHz": 760,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.3891,
+      "tdpW": null,
+      "processNm": 32,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "5_0",
+        "vulkanVersion": null,
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "id": [
+          "model-knowledge"
+        ],
+        "vendor": [
+          "model-knowledge"
+        ],
+        "brand": [
+          "model-knowledge"
+        ],
+        "variant": [
+          "model-knowledge"
+        ],
+        "fullName": [
+          "model-knowledge"
+        ],
+        "architecture": [
+          "model-knowledge"
+        ],
+        "chip": [
+          "model-knowledge"
+        ],
+        "launchDate": [
+          "model-knowledge"
+        ],
+        "formFactor": [
+          "model-knowledge"
+        ],
+        "shaders": [
+          "model-knowledge"
+        ],
+        "baseClockMHz": [
+          "model-knowledge"
+        ],
+        "boostClockMHz": [
+          "model-knowledge"
+        ],
+        "vramGB": [
+          "model-knowledge"
+        ],
+        "vramType": [
+          "model-knowledge"
+        ],
+        "memBusBits": [
+          "model-knowledge"
+        ],
+        "memBandwidthGBs": [
+          "model-knowledge"
+        ],
+        "fp32TFLOPS": [
+          "model-knowledge"
+        ],
+        "tdpW": [
+          "model-knowledge"
+        ],
+        "processNm": [
+          "model-knowledge"
+        ],
+        "caps": [
+          "model-knowledge"
+        ],
+        "driverStatus": [
+          "model-knowledge"
+        ],
+        "driverEolDate": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "amd-radeon-hd-8670d",
+      "vendor": "amd",
+      "brand": "AMD Radeon HD 8670D",
+      "variant": "Richland",
+      "fullName": "AMD Radeon HD 8670D (Richland, 384 SP)",
+      "architecture": "TeraScale 3 (VLIW4)",
+      "chip": "Richland",
+      "launchDate": "2013-06",
+      "formFactor": "igpu",
+      "shaders": 384,
+      "baseClockMHz": null,
+      "boostClockMHz": 844,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.6482,
+      "tdpW": null,
+      "processNm": 32,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_0",
+        "shaderModel": "5_0",
+        "vulkanVersion": null,
+        "resizableBar": false,
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "id": [
+          "model-knowledge"
+        ],
+        "vendor": [
+          "model-knowledge"
+        ],
+        "brand": [
+          "model-knowledge"
+        ],
+        "variant": [
+          "model-knowledge"
+        ],
+        "fullName": [
+          "model-knowledge"
+        ],
+        "architecture": [
+          "model-knowledge"
+        ],
+        "chip": [
+          "model-knowledge"
+        ],
+        "launchDate": [
+          "model-knowledge"
+        ],
+        "formFactor": [
+          "model-knowledge"
+        ],
+        "shaders": [
+          "model-knowledge"
+        ],
+        "baseClockMHz": [
+          "model-knowledge"
+        ],
+        "boostClockMHz": [
+          "model-knowledge"
+        ],
+        "vramGB": [
+          "model-knowledge"
+        ],
+        "vramType": [
+          "model-knowledge"
+        ],
+        "memBusBits": [
+          "model-knowledge"
+        ],
+        "memBandwidthGBs": [
+          "model-knowledge"
+        ],
+        "fp32TFLOPS": [
+          "model-knowledge"
+        ],
+        "tdpW": [
+          "model-knowledge"
+        ],
+        "processNm": [
+          "model-knowledge"
+        ],
+        "caps": [
+          "model-knowledge"
+        ],
+        "driverStatus": [
+          "model-knowledge"
+        ],
+        "driverEolDate": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-hd-4400",
+      "vendor": "intel",
+      "brand": "Intel HD Graphics 4400",
+      "variant": "Haswell GT2",
+      "fullName": "Intel HD Graphics 4400 (Haswell, 20 EU)",
+      "architecture": "Gen 7.5 (Haswell)",
+      "chip": "Haswell GT2",
+      "launchDate": "2013-09",
+      "formFactor": "igpu",
+      "shaders": 160,
+      "baseClockMHz": null,
+      "boostClockMHz": 1150,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.368,
+      "tdpW": null,
+      "processNm": 22,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "11_1",
+        "shaderModel": "5_1",
+        "av1Encode": false,
+        "upscaling": []
+      },
+      "driverStatus": "eol",
+      "driverEolDate": null,
+      "_prov": {
+        "id": [
+          "model-knowledge"
+        ],
+        "vendor": [
+          "model-knowledge"
+        ],
+        "brand": [
+          "model-knowledge"
+        ],
+        "variant": [
+          "model-knowledge"
+        ],
+        "fullName": [
+          "model-knowledge"
+        ],
+        "architecture": [
+          "model-knowledge"
+        ],
+        "chip": [
+          "model-knowledge"
+        ],
+        "launchDate": [
+          "model-knowledge"
+        ],
+        "formFactor": [
+          "model-knowledge"
+        ],
+        "shaders": [
+          "model-knowledge"
+        ],
+        "baseClockMHz": [
+          "model-knowledge"
+        ],
+        "boostClockMHz": [
+          "model-knowledge"
+        ],
+        "vramGB": [
+          "model-knowledge"
+        ],
+        "vramType": [
+          "model-knowledge"
+        ],
+        "memBusBits": [
+          "model-knowledge"
+        ],
+        "memBandwidthGBs": [
+          "model-knowledge"
+        ],
+        "fp32TFLOPS": [
+          "model-knowledge"
+        ],
+        "tdpW": [
+          "model-knowledge"
+        ],
+        "processNm": [
+          "model-knowledge"
+        ],
+        "caps": [
+          "model-knowledge"
+        ],
+        "driverStatus": [
+          "model-knowledge"
+        ],
+        "driverEolDate": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "intel-hd-610",
+      "vendor": "intel",
+      "brand": "Intel HD Graphics 610",
+      "variant": "Kaby Lake GT1",
+      "fullName": "Intel HD Graphics 610 (Kaby Lake GT1, 12 EU)",
+      "architecture": "Gen 9.5 (Kaby Lake)",
+      "chip": "Kaby Lake GT1",
+      "launchDate": "2017-01",
+      "formFactor": "igpu",
+      "shaders": 96,
+      "baseClockMHz": null,
+      "boostClockMHz": 1050,
+      "vramGB": null,
+      "vramType": null,
+      "memBusBits": null,
+      "memBandwidthGBs": null,
+      "fp32TFLOPS": 0.2016,
+      "tdpW": null,
+      "processNm": 14,
+      "caps": {
+        "meshShaders": false,
+        "rayTracing": false,
+        "dxFeatureLevel": "12_1",
+        "shaderModel": "6_0",
+        "vulkanVersion": "1.3",
+        "av1Encode": false,
+        "upscaling": [
+          "fsr"
+        ]
+      },
+      "driverStatus": "legacy",
+      "driverEolDate": null,
+      "_prov": {
+        "id": [
+          "model-knowledge"
+        ],
+        "vendor": [
+          "model-knowledge"
+        ],
+        "brand": [
+          "model-knowledge"
+        ],
+        "variant": [
+          "model-knowledge"
+        ],
+        "fullName": [
+          "model-knowledge"
+        ],
+        "architecture": [
+          "model-knowledge"
+        ],
+        "chip": [
+          "model-knowledge"
+        ],
+        "launchDate": [
+          "model-knowledge"
+        ],
+        "formFactor": [
+          "model-knowledge"
+        ],
+        "shaders": [
+          "model-knowledge"
+        ],
+        "baseClockMHz": [
+          "model-knowledge"
+        ],
+        "boostClockMHz": [
+          "model-knowledge"
+        ],
+        "vramGB": [
+          "model-knowledge"
+        ],
+        "vramType": [
+          "model-knowledge"
+        ],
+        "memBusBits": [
+          "model-knowledge"
+        ],
+        "memBandwidthGBs": [
+          "model-knowledge"
+        ],
+        "fp32TFLOPS": [
+          "model-knowledge"
+        ],
+        "tdpW": [
+          "model-knowledge"
+        ],
+        "processNm": [
+          "model-knowledge"
+        ],
+        "caps": [
+          "model-knowledge"
+        ],
+        "driverStatus": [
+          "model-knowledge"
+        ],
+        "driverEolDate": [
+          "model-knowledge"
+        ]
+      }
     }
-  ]
+  ],
+  "actualCount": 279
 }

@@ -156,6 +156,13 @@ export interface GpuRecord {
 
   _prov: ProvMap;
   _conflicts?: Conflict[];
+  /**
+   * A caveat about the record itself, surfaced in the UI. Used where one record
+   * serves several parts that differ — an iGPU id shared by four APUs whose
+   * clocks are not the same — so the compromise is visible rather than buried
+   * in the JSON.
+   */
+  _note?: string;
 }
 
 export type CpuSegment = 'entry' | 'mainstream' | 'performance' | 'enthusiast' | 'hedt';
