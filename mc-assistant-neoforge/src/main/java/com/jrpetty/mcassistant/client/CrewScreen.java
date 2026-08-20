@@ -233,10 +233,13 @@ public class CrewScreen extends Screen {
             }
             g.drawString(this.font, a.clientName(), tx, ry + 4, sel ? Ui.INK : Ui.MUTED, false);
 
-            String job = AssistantEntity.StationTask.byOrdinal(a.clientJobOrdinal()).title;
-            String duty = a.clientShift().label;
-            Ui.right(g, this.font, job + "  ·  " + duty, left + W - PAD - 6, ry + 4,
-                sel ? Ui.MUTED : Ui.FAINT);
+            AssistantEntity.StationTask trade =
+                AssistantEntity.StationTask.byOrdinal(a.clientJobOrdinal());
+            String rank = Ladder.rank(trade, a.clientLevel());
+            Ui.right(g, this.font,
+                rank.isEmpty() ? trade.title + "  ·  " + a.clientShift().label
+                    : trade.title + "  ·  " + rank,
+                left + W - PAD - 6, ry + 4, sel ? Ui.MUTED : Ui.FAINT);
         }
         if (crew.size() > MAX_ROWS) {
             g.drawString(this.font, "+" + (crew.size() - MAX_ROWS) + " more nearby",
@@ -251,6 +254,23 @@ public class CrewScreen extends Screen {
             String status = a.clientStatus();
             g.drawString(this.font, Ui.clip(this.font, status, inner), x, dy, Ui.statusColour(status), false);
             g.drawString(this.font, Ui.clip(this.font, a.clientZone(), inner), x, dy + 10, Ui.FAINT, false);
+            // The ladder, in one line: rank, level, and what the next rung
+            // opens — the record sheet has the full climb.
+            AssistantEntity.StationTask pt =
+                AssistantEntity.StationTask.byOrdinal(a.clientJobOrdinal());
+            Ladder.Rung next = null;
+            for (Ladder.Rung r : Ladder.forTrade(pt)) {
+                if (a.clientLevel() < r.level()) { next = r; break; }
+            }
+            String rk = Ladder.rank(pt, a.clientLevel());
+            String climb = next == null
+                ? (rk.isEmpty() ? "" : rk + " — the top of the ladder")
+                : (rk.isEmpty() ? "" : rk + " · ") + "lv " + a.clientLevel()
+                    + " — next lv" + next.level() + ": "
+                    + (next.title().isEmpty() ? "" : next.title() + ", ") + next.gives();
+            if (!climb.isEmpty()) {
+                g.drawString(this.font, Ui.clip(this.font, climb, inner), x, dy + 20, Ui.ACCENT, false);
+            }
         }
 
     }
