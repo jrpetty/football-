@@ -101,6 +101,105 @@ export const GPU_ARCH_EFFICIENCY: Record<string, number> = {
 export const DEFAULT_GPU_ARCH_EFFICIENCY = 1.0;
 
 /**
+ * Graphics-preset scaling. THE LEAST-EVIDENCED PART OF THIS MODEL — read this
+ * before trusting anything the settings advisor says.
+ *
+ * The reference frame rates in data/catalogue/references.json carry no preset,
+ * so the model had no preset dimension at all until this table existed: a
+ * fixture captured at "low" and one at "ultra" on identical hardware produced
+ * the same prediction, and the difference was silently absorbed as error.
+ *
+ * These multipliers could NOT be fitted from the fixture corpus, and the
+ * attempt is worth recording rather than hiding. Grouping the 234 fixtures by
+ * preset and taking the median log-ratio of actual to predicted gives:
+ *
+ *     high      n=141   -0.019     <- effectively zero: high IS the reference
+ *     ultra     n=56    +0.014     <- also zero; the corpus does not separate them
+ *     low       n=18    -0.131     <- confounded: mostly iGPUs and weak cards
+ *     highest   n=12    +0.034
+ *     extreme   n=3     -0.255     <- n too small to mean anything
+ *     medium    n=2     -0.210
+ *
+ * Two things follow. `high` is the reference preset and is pinned at exactly
+ * 1.00, which the largest bucket supports. And the corpus contains exactly ONE
+ * group of fixtures differing only in preset — Shadow of the Tomb Raider on a
+ * 3060, where "highest" came out FASTER than "high", which is backwards. There
+ * is no controlled preset variation to fit against, so everything below is a
+ * prior.
+ *
+ * The priors themselves are ordinary knowledge of how presets behave: the
+ * spread is small in visually simple, CPU-bound esports titles and largest in
+ * UE5 titles, where Lumen and Nanite quality scale hard. GPU load moves far
+ * more than CPU load, because presets change shading work rather than draw
+ * calls — though shadow cascades, view distance and crowd density do cost CPU,
+ * which is why the CPU column is not all 1.00.
+ *
+ * When measured fixtures arrive the harness records the preset of every run, so
+ * this becomes fittable. Until then the Model Health screen reports preset as
+ * an unvalidated axis, and it should.
+ */
+export const PRESET_MODEL = {
+  /** The preset the references are expressed at. Identity multipliers. */
+  referencePreset: 'high' as const,
+  /** Quality order, worst first. Used to rank settings and to walk the ladder. */
+  ladder: ['low', 'medium', 'high', 'ultra', 'highest'] as const,
+  /**
+   * FPS multipliers relative to `high`, per archetype. Above 1 means faster
+   * than the reference preset.
+   */
+  gpu: {
+    esports: { low: 1.18, medium: 1.07, high: 1.0, ultra: 0.95, highest: 0.92 },
+    'sim-cpu': { low: 1.4, medium: 1.16, high: 1.0, ultra: 0.88, highest: 0.82 },
+    'aaa-raster': { low: 1.45, medium: 1.18, high: 1.0, ultra: 0.87, highest: 0.8 },
+    'aaa-rt': { low: 1.5, medium: 1.2, high: 1.0, ultra: 0.85, highest: 0.78 },
+    ue5: { low: 1.75, medium: 1.3, high: 1.0, ultra: 0.82, highest: 0.72 },
+    'vram-heavy': { low: 1.5, medium: 1.2, high: 1.0, ultra: 0.86, highest: 0.79 },
+  } as Record<string, Record<string, number>>,
+  /** The same, for the CPU-bound side. Much flatter, and deliberately so. */
+  cpu: {
+    esports: { low: 1.04, medium: 1.02, high: 1.0, ultra: 0.99, highest: 0.98 },
+    'sim-cpu': { low: 1.15, medium: 1.06, high: 1.0, ultra: 0.96, highest: 0.94 },
+    'aaa-raster': { low: 1.12, medium: 1.05, high: 1.0, ultra: 0.97, highest: 0.95 },
+    'aaa-rt': { low: 1.12, medium: 1.05, high: 1.0, ultra: 0.96, highest: 0.94 },
+    ue5: { low: 1.14, medium: 1.06, high: 1.0, ultra: 0.96, highest: 0.94 },
+    'vram-heavy': { low: 1.1, medium: 1.04, high: 1.0, ultra: 0.97, highest: 0.95 },
+  } as Record<string, Record<string, number>>,
+  /**
+   * VRAM demand multipliers. Texture pool size dominates, which is why this
+   * moves further than the frame-rate columns and why dropping one preset step
+   * is the standard escape from a VRAM cliff.
+   */
+  vram: { low: 0.62, medium: 0.8, high: 1.0, ultra: 1.15, highest: 1.25 } as Record<string, number>,
+  /**
+   * Widen the uncertainty band when a preset other than the reference is asked
+   * for, because the multiplier applied is a prior rather than a fitted value.
+   * One step from `high` costs this much; two steps costs twice.
+   */
+  uncertaintyPerStep: 0.05,
+};
+
+/** Aliases people and review sites actually use, mapped onto the ladder. */
+export const PRESET_ALIASES: Record<string, string> = {
+  lowest: 'low',
+  minimum: 'low',
+  min: 'low',
+  performance: 'low',
+  normal: 'medium',
+  balanced: 'medium',
+  standard: 'medium',
+  quality: 'high',
+  'very high': 'ultra',
+  max: 'highest',
+  maximum: 'highest',
+  extreme: 'highest',
+  epic: 'highest',
+  cinematic: 'highest',
+  psycho: 'highest',
+  'ultra nightmare': 'highest',
+};
+
+
+/**
  * Ray tracing throughput per nominal TFLOP, relative to Ampere = 1.00.
  * RT and raster rank differently by vendor, which is why GpuIndex carries both.
  */

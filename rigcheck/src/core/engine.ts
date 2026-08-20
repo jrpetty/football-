@@ -10,8 +10,9 @@
  *      discontinuous or asymmetric between average and 1% low.
  *   5. Every step emits a ModelTerm so the UI can show the full working.
  */
-import { COMBINE, FRAMEGEN_MODEL, LOW_END_MODEL, LOW1PCT_RATIO, PCIE_MODEL, RAM_MODEL, RT_MODEL, RT_WEIGHT, STORAGE_MODEL, STUTTER_MODEL, UNCERTAINTY, VRAM_MODEL, CPU_WEIGHTS } from './constants.ts';
+import { PRESET_MODEL, COMBINE, FRAMEGEN_MODEL, LOW_END_MODEL, LOW1PCT_RATIO, PCIE_MODEL, RAM_MODEL, RT_MODEL, RT_WEIGHT, STORAGE_MODEL, STUTTER_MODEL, UNCERTAINTY, VRAM_MODEL, CPU_WEIGHTS } from './constants.ts';
 import { estimateThermals } from './physics.ts';
+import { normalisePreset, presetEffect } from './presets.ts';
 import { runGates } from './gates.ts';
 import { applyCpuWeights, deriveCpuIndex, deriveGpuIndex } from './indices.ts';
 import type {
@@ -64,6 +65,13 @@ export interface EngineData {
 
 export interface EstimateOptions {
   upscaling?: UpscalingSetting;
+  /**
+   * Graphics preset. Defaults to the reference preset ('high'), which is the
+   * identity — an unspecified query behaves exactly as it did before presets
+   * existed. See PRESET_MODEL for why these multipliers are priors and not
+   * fitted values.
+   */
+  preset?: string;
   /** Ray tracing setting for THIS query. Defaults to off — raster comparison. */
   rtTier?: 'on' | 'off';
   /**
@@ -231,6 +239,15 @@ export function estimate(
   if (gpuIdx.unknownArchitecture || cpuIdx.unknownArchitecture) extraUncertainty += UNCERTAINTY.unknownArchitecture;
   if (gpuIdx.missingFields.length || cpuIdx.missingFields.length) confidence = weakest(confidence, 'spec-derived');
 
+  // Preset multipliers. `high` is the reference and multiplies by exactly 1,
+  // so an unspecified preset changes nothing.
+  const preset = normalisePreset(opts.preset);
+  const presetEff = presetEffect(preset, game.archetype);
+  if (presetEff.steps !== 0) {
+    extraUncertainty += Math.abs(presetEff.steps) * PRESET_MODEL.uncertaintyPerStep;
+    confidence = weakest(confidence, 'interpolated');
+  }
+
   // Reference FPS at this resolution. If the reference lacks this resolution,
   // scale from 1080p by pixel count rather than dropping the estimate.
   let refGpuFps = ref.gpuBound[resolution];
@@ -352,7 +369,7 @@ export function estimate(
     });
   }
 
-  const gpuBoundFps = refGpuFps * scaledIndex * upscaleGain * thermal.gpuClockFactor;
+  const gpuBoundFps = refGpuFps * scaledIndex * upscaleGain * thermal.gpuClockFactor * presetEff.gpu;
   terms.push({
     label: 'GPU-bound FPS',
     value: Number(gpuBoundFps.toFixed(1)),
@@ -406,7 +423,17 @@ export function estimate(
   }
 
   const cpuBoundFps =
-    ref.cpuBound * (cpuScalar / 100) * channelMult * capacityMult * thermal.cpuClockFactor;
+    ref.cpuBound * (cpuScalar / 100) * channelMult * capacityMult * thermal.cpuClockFactor * presetEff.cpu;
+  if (presetEff.steps !== 0) {
+    terms.push({
+      label: `preset: ${preset}`,
+      value: `x${presetEff.gpu.toFixed(2)} GPU, x${presetEff.cpu.toFixed(2)} CPU, x${presetEff.vram.toFixed(2)} VRAM`,
+      confidence: 'interpolated',
+      sources: [],
+      explain: `${preset} is ${Math.abs(presetEff.steps)} step${Math.abs(presetEff.steps) === 1 ? '' : 's'} ${presetEff.steps > 0 ? 'above' : 'below'} the reference preset (${PRESET_MODEL.referencePreset}) for a ${game.archetype} title. These multipliers are PRIORS, not fitted values — the fixture corpus has no controlled preset variation to fit against, so the band is widened by ${(Math.abs(presetEff.steps) * PRESET_MODEL.uncertaintyPerStep * 100).toFixed(0)}%.`,
+    });
+  }
+
   terms.push({
     label: 'CPU-bound FPS',
     value: Number(cpuBoundFps.toFixed(1)),
@@ -428,7 +455,10 @@ export function estimate(
   });
 
   // --- 5. VRAM cliff ------------------------------------------------------
-  const demand = game.vramDemandGB[resolution];
+  // Texture pool size is what preset moves most, which is why dropping a step
+  // is the standard escape from a VRAM cliff.
+  const baseDemand = game.vramDemandGB[resolution];
+  const demand = baseDemand != null ? baseDemand * presetEff.vram : baseDemand;
   let vramAvg = 1;
   let vramLow = 1;
   let vramLimited = false;
