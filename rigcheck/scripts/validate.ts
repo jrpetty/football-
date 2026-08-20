@@ -20,29 +20,17 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync, appendFileSync } fr
 import { join } from 'node:path';
 import { buildEngineData, ANCHOR_RAM } from '../src/core/catalogue.ts';
 import { estimate, type EngineData } from '../src/core/engine.ts';
-import type { Build, RamConfig, Resolution, UpscalingSetting } from '../src/core/types.ts';
+import type { Build } from '../src/core/types.ts';
+import { GATES, RECALL_WEIGHT, SOURCE_TIER, measuredShare, rowWeight, type Fixture } from '../src/core/evidence.ts';
+
+// The evidence ladder is shared with the Model Health screen so the gate and
+// the dashboard cannot quote different weightings. Re-exported because
+// scripts/calibrate.ts and scripts/audit.ts import them from here.
+export { GATES, RECALL_WEIGHT, SOURCE_TIER, measuredShare, rowWeight };
+export type { Fixture };
 
 const ROOT = new URL('..', import.meta.url).pathname;
 
-export interface Fixture {
-  id: string;
-  cpuId: string;
-  gpuId: string;
-  gameId: string;
-  resolution: Resolution;
-  preset: string;
-  upscaling?: UpscalingSetting;
-  /** Ray-tracing setting this measurement was taken at. Part of the fingerprint. */
-  rtTier?: 'on' | 'off';
-  ram?: RamConfig;
-  storage?: Build['storage'];
-  avgFps: number;
-  low1Pct?: number;
-  recallConfidence?: 'high' | 'medium' | 'low';
-  pairId?: string;
-  sourceNote?: string;
-  provenance?: string;
-}
 
 export interface Metrics {
   n: number;
@@ -61,24 +49,6 @@ export interface Metrics {
   withinBand: number;
 }
 
-export const GATES = {
-  medianAPE: 0.15,
-  /**
-   * Tail gate, two tiers. Against MEASURED fixtures the tail must hold 30%.
-   * Against recalled fixtures the p90 is dominated by the recollections
-   * themselves (the same rows swing 30-56% between fits that all improve the
-   * median), so the strict tier would only reward fitting noise — it arms
-   * automatically when measured rows outnumber recalled ones.
-   */
-  p90APE: 0.3,
-  p90APEAdvisory: 0.45,
-  spearman: 0.9,
-  signAccuracy: 0.95,
-  /** Below this fixture count the metrics are not statistically meaningful. */
-  minFixtures: 150,
-  /** Train/holdout divergence beyond this indicates overfitting. */
-  maxTrainHoldoutGap: 0.08,
-};
 
 /**
  * Row weights. The manual-import lane already weights measured rows by
@@ -87,7 +57,6 @@ export const GATES = {
  * tail metric exactly as hard as a high-confidence figure. Both weighted and
  * unweighted metrics are reported; the gate reads the weighted ones.
  */
-export const RECALL_WEIGHT: Record<string, number> = { high: 1.0, medium: 0.6, low: 0.3 };
 
 /**
  * Source-quality ladder.
@@ -99,32 +68,10 @@ export const RECALL_WEIGHT: Record<string, number> = { high: 1.0, medium: 0.6, l
  * gate promotion: once measured rows carry the majority of the weight, the
  * strict thresholds arm themselves.
  */
-export const SOURCE_TIER: Record<string, { weight: number; label: string }> = {
-  harness: { weight: 1.0, label: 'measured by the operator harness (PresentMon frametime capture)' },
-  'manual-measured': { weight: 0.9, label: 'operator-supplied measurement' },
-  reviewer: { weight: 0.7, label: 'published reviewer dataset under licence' },
-  community: { weight: 0.5, label: 'community-submitted benchmark' },
-  'model-knowledge': { weight: 0.25, label: 'recalled from training data — NOT a measurement' },
-};
 
 /** Combined row weight: source tier x stated recall confidence. */
-export function rowWeight(f: Fixture): number {
-  const tier = SOURCE_TIER[f.provenance ?? 'model-knowledge']?.weight ?? 0.25;
-  const recall = RECALL_WEIGHT[f.recallConfidence ?? 'medium'] ?? 0.6;
-  // Recall confidence only modulates recalled rows; a measurement is a
-  // measurement regardless of how well anyone remembers taking it.
-  return f.provenance === 'model-knowledge' ? tier * recall : tier;
-}
 
 /** Share of total evidence weight that comes from genuine measurements. */
-export function measuredShare(fixtures: Fixture[]): number {
-  const total = fixtures.reduce((s, f) => s + rowWeight(f), 0);
-  if (!total) return 0;
-  const measured = fixtures
-    .filter((f) => f.provenance === 'harness' || f.provenance === 'manual-measured')
-    .reduce((s, f) => s + rowWeight(f), 0);
-  return measured / total;
-}
 
 function weightedQuantile(pairs: { v: number; w: number }[], q: number): number {
   if (!pairs.length) return NaN;

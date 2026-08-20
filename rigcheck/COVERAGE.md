@@ -1,6 +1,6 @@
 # RIGCHECK coverage report
 
-Generated 2026-08-20T10:18:32.814Z.
+Generated 2026-08-20T10:49:05.903Z.
 
 ## Catalogue against spec targets
 
@@ -21,10 +21,21 @@ strict no-invention rule: agents were instructed to null an uncertain field and
 omit an uncertain SKU rather than guess, because a wrong number silently corrupts
 the fitted model while a gap is merely visible.
 
-The harvest and parse pipeline is complete and wired. Running `npm run harvest`
-followed by `npm run parse && npm run reconcile` in an environment without the
-egress restriction fills the gap with sourced, attributed data and requires no
-code change. The shortfall is an environment limitation, not a design one.
+The harvest and parse pipeline is complete and wired: `npm run harvest` caches
+the pages, `npm run parse` runs src/parse/spec-mapper.ts over them and writes
+candidate records, and `npm run reconcile` merges them. Run somewhere without
+the egress restriction, that produces sourced, attributed records where today
+there are recalled ones.
+
+Two caveats, because "just run it elsewhere" is not the whole truth. The mapper
+has only ever been run against SYNTHETIC fixtures — it has never seen real
+markup. And two required fields are not in the table rows at all: CPU `socket`
+and `memoryType` live in section headings above the tables, and Nvidia pages
+head their sections with marketing series ("GeForce 10 series") rather than
+architectures. A record missing those is rejected by the reconciler, so those
+pages need section-level context mapping and a series-to-architecture table
+before they yield accepted records. Both are small, and both are code changes.
+agents/log/spec-mapper.md states exactly what to check on first contact.
 
 GPU split: 212 desktop discrete, 53 integrated. Mobile parts are
 deliberately excluded: configurable TDP swings identical silicon by 40%+, and

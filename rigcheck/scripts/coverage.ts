@@ -62,10 +62,21 @@ function main() {
   P('omit an uncertain SKU rather than guess, because a wrong number silently corrupts');
   P('the fitted model while a gap is merely visible.');
   P();
-  P('The harvest and parse pipeline is complete and wired. Running `npm run harvest`');
-  P('followed by `npm run parse && npm run reconcile` in an environment without the');
-  P('egress restriction fills the gap with sourced, attributed data and requires no');
-  P('code change. The shortfall is an environment limitation, not a design one.');
+  P('The harvest and parse pipeline is complete and wired: `npm run harvest` caches');
+  P('the pages, `npm run parse` runs src/parse/spec-mapper.ts over them and writes');
+  P('candidate records, and `npm run reconcile` merges them. Run somewhere without');
+  P('the egress restriction, that produces sourced, attributed records where today');
+  P('there are recalled ones.');
+  P();
+  P('Two caveats, because "just run it elsewhere" is not the whole truth. The mapper');
+  P('has only ever been run against SYNTHETIC fixtures — it has never seen real');
+  P('markup. And two required fields are not in the table rows at all: CPU `socket`');
+  P('and `memoryType` live in section headings above the tables, and Nvidia pages');
+  P('head their sections with marketing series ("GeForce 10 series") rather than');
+  P('architectures. A record missing those is rejected by the reconciler, so those');
+  P('pages need section-level context mapping and a series-to-architecture table');
+  P('before they yield accepted records. Both are small, and both are code changes.');
+  P('agents/log/spec-mapper.md states exactly what to check on first contact.');
   P();
 
   if (gpus) {

@@ -25,6 +25,12 @@
   --balanced: #5ec27a;
   --cap: #9b8fd0;
 
+  /* Semantic aliases for pass/fail marks. Same hues as the provenance colours
+     above, named for the judgement rather than the source, so a gate verdict
+     and a data-quality tag are not accidentally styled as the same thing. */
+  --good: var(--measured);
+  --bad: var(--blocked);
+
   /* Chart marks: validated for the dark surface (#101418) against the six
      checks — lightness band, chroma floor, CVD separation, normal-vision
      separation and contrast. Do not "brighten" these without re-validating. */
@@ -391,6 +397,8 @@ table.data .sub { color: var(--faint); font-size: 10.5px; }
   border: 1px solid var(--line);
   color: var(--faint);
 }
+.tag.good { color: var(--good); border-color: color-mix(in srgb, var(--good) 35%, var(--line)); }
+.tag.bad { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 35%, var(--line)); }
 .tag.cpu { color: var(--cpu); border-color: color-mix(in srgb, var(--cpu) 35%, var(--line)); }
 .tag.gpu { color: var(--gpu); border-color: color-mix(in srgb, var(--gpu) 35%, var(--line)); }
 .tag.vram { color: var(--vram); border-color: color-mix(in srgb, var(--vram) 35%, var(--line)); }

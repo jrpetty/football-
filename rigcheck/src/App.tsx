@@ -10,6 +10,7 @@ import { MachineReport } from './ui/pages/MachineReport.tsx';
 import { TradeDesk } from './ui/pages/TradeDesk.tsx';
 import { Detect } from './ui/pages/Detect.tsx';
 import { DataExplorer } from './ui/pages/DataExplorer.tsx';
+import { ModelHealth } from './ui/pages/ModelHealth.tsx';
 import type { Build, Resolution } from './core/types.ts';
 
 const NAV = [
@@ -21,6 +22,7 @@ const NAV = [
   { to: '/trade', label: 'Trade Desk' },
   { to: '/detect', label: 'Identify' },
   { to: '/data', label: 'Data Explorer' },
+  { to: '/health', label: 'Model Health' },
 ];
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -107,6 +109,7 @@ export function App() {
             <Route path="/trade" element={<TradeDesk />} />
             <Route path="/detect" element={<Detect />} />
             <Route path="/data" element={<DataExplorer />} />
+            <Route path="/health" element={<ModelHealth />} />
             <Route path="*" element={<Navigate to="/analyser" replace />} />
           </Routes>
         </Shell>

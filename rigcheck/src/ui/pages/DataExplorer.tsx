@@ -19,8 +19,18 @@ export function DataExplorer() {
   const [minVram, setMinVram] = useState(0);
   const [needMesh, setNeedMesh] = useState(false);
   const [needRt, setNeedRt] = useState(false);
+  // The CPU-side equivalents. Socket and memory type are the two that decide
+  // whether an upgrade is a drop-in or a platform rebuild, so they filter here
+  // rather than being something to read off row by row.
+  const [minThreads, setMinThreads] = useState(0);
+  const [needVcache, setNeedVcache] = useState(false);
+  const [socket, setSocket] = useState('');
+  const [memType, setMemType] = useState('');
   const [diffA, setDiffA] = useState('nvidia-geforce-rtx-3060-12gb');
   const [diffB, setDiffB] = useState('nvidia-geforce-rtx-4060');
+  const [diffKind, setDiffKind] = useState<'gpu' | 'cpu'>('gpu');
+  const [cpuDiffA, setCpuDiffA] = useState('amd-ryzen-5-3600');
+  const [cpuDiffB, setCpuDiffB] = useState('amd-ryzen-7-5800x3d');
 
   const gpuRows = useMemo(() => {
     const rows = [...data.gpus.values()].map((g) => ({
@@ -49,8 +59,23 @@ export function DataExplorer() {
       sort === 'index' ? b.idx.index.throughput - a.idx.index.throughput
       : sort === 'date' ? (b.c.launchDate ?? '').localeCompare(a.c.launchDate ?? '')
       : a.c.fullName.localeCompare(b.c.fullName));
-    return rows.filter((r) => !q || r.c.fullName.toLowerCase().includes(q.toLowerCase()));
-  }, [data, q, sort]);
+    return rows.filter(
+      (r) =>
+        (!q || r.c.fullName.toLowerCase().includes(q.toLowerCase())) &&
+        (minThreads === 0 || r.c.threads >= minThreads) &&
+        (!needVcache || !!r.c.vcache) &&
+        (!socket || r.c.socket === socket) &&
+        (!memType || r.c.memoryType.includes(memType as (typeof r.c.memoryType)[number])),
+    );
+  }, [data, q, sort, minThreads, needVcache, socket, memType]);
+
+  // Sockets are listed by how many parts use them, so the platforms someone is
+  // actually likely to be on come first rather than alphabetical order.
+  const sockets = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const c of data.cpus.values()) counts.set(c.socket, (counts.get(c.socket) ?? 0) + 1);
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([s]) => s);
+  }, [data]);
 
   return (
     <>
@@ -161,6 +186,41 @@ export function DataExplorer() {
         )}
 
         {tab === 'cpu' && (
+          <div className="panel-body" style={{ paddingTop: 8, paddingBottom: 8, borderBottom: '1px solid var(--line)' }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <span className="mini">capability filter</span>
+              <div className="toggle-row">
+                {[0, 8, 12, 16, 24].map((v) => (
+                  <button key={v} className={`toggle${minThreads === v ? ' on' : ''}`} onClick={() => setMinThreads(v)}>
+                    {v === 0 ? 'any threads' : `${v}T+`}
+                  </button>
+                ))}
+              </div>
+              <button
+                className={`toggle${needVcache ? ' on' : ''}`}
+                onClick={() => setNeedVcache(!needVcache)}
+                title="Stacked L3. Worth a great deal in simulation and strategy titles, almost nothing in a GPU-bound shooter."
+              >
+                3D V-Cache
+              </button>
+              <select value={socket} onChange={(e) => setSocket(e.target.value)} style={{ width: 130 }}>
+                <option value="">any socket</option>
+                {sockets.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+              <select value={memType} onChange={(e) => setMemType(e.target.value)} style={{ width: 120 }}>
+                <option value="">any memory</option>
+                {(['DDR3', 'DDR4', 'DDR5'] as const).map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+              <span className="mini">{cpuRows.length} match</span>
+            </div>
+          </div>
+        )}
+
+        {tab === 'cpu' && (
           <div className="table-wrap" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
             <table className="data">
               <thead>
@@ -223,11 +283,97 @@ export function DataExplorer() {
 
         {tab === 'compare' && (
           <div className="panel-body">
-            <div className="grid two" style={{ marginBottom: 12 }}>
-              <PartPicker kind="gpu" label="part A" value={diffA} onChange={setDiffA} />
-              <PartPicker kind="gpu" label="part B" value={diffB} onChange={setDiffB} />
+            <div className="toggle-row" style={{ marginBottom: 10 }}>
+              {(['gpu', 'cpu'] as const).map((k) => (
+                <button key={k} className={`toggle${diffKind === k ? ' on' : ''}`} onClick={() => setDiffKind(k)}>
+                  compare {k === 'gpu' ? 'GPUs' : 'CPUs'}
+                </button>
+              ))}
             </div>
-            {(() => {
+            <div className="grid two" style={{ marginBottom: 12 }}>
+              {diffKind === 'gpu' ? (
+                <>
+                  <PartPicker kind="gpu" label="part A" value={diffA} onChange={setDiffA} />
+                  <PartPicker kind="gpu" label="part B" value={diffB} onChange={setDiffB} />
+                </>
+              ) : (
+                <>
+                  <PartPicker kind="cpu" label="part A" value={cpuDiffA} onChange={setCpuDiffA} />
+                  <PartPicker kind="cpu" label="part B" value={cpuDiffB} onChange={setCpuDiffB} />
+                </>
+              )}
+            </div>
+            {diffKind === 'cpu' && (() => {
+              const a = data.cpus.get(cpuDiffA);
+              const b = data.cpus.get(cpuDiffB);
+              if (!a || !b) return <div className="empty">Pick two parts.</div>;
+              const ia = deriveCpuIndex(a, ANCHOR_RAM, data.anchorCpu, ANCHOR_RAM).index;
+              const ib = deriveCpuIndex(b, ANCHOR_RAM, data.anchorCpu, ANCHOR_RAM).index;
+              const pct = (x: number, y: number) => (x > 0 ? `${(((y - x) / x) * 100).toFixed(1)}%` : '');
+              const cores = (c: typeof a) => (c.pCores ? `${c.pCores}P + ${c.eCores ?? 0}E` : `${c.cores}`);
+              const rows: { field: string; a: string | number; b: string | number; delta?: string; note?: string }[] = [
+                { field: 'throughput index', a: ia.throughput.toFixed(1), b: ib.throughput.toFixed(1), delta: pct(ia.throughput, ib.throughput) },
+                { field: 'cache endowment', a: ia.cacheEndowment.toFixed(2), b: ib.cacheEndowment.toFixed(2), delta: pct(ia.cacheEndowment, ib.cacheEndowment), note: 'Game-visible L3 per core, not package total. This is what separates the X3D parts.' },
+                { field: 'latency score', a: ia.latencyScore.toFixed(2), b: ib.latencyScore.toFixed(2), delta: pct(ia.latencyScore, ib.latencyScore) },
+                { field: 'thread capacity', a: ia.threadCapacity.toFixed(2), b: ib.threadCapacity.toFixed(2), delta: pct(ia.threadCapacity, ib.threadCapacity) },
+                { field: 'architecture', a: a.architecture, b: b.architecture },
+                { field: 'cores', a: cores(a), b: cores(b) },
+                { field: 'threads', a: a.threads, b: b.threads },
+                { field: 'boost clock', a: a.boostClockMHz ? `${a.boostClockMHz} MHz` : '—', b: b.boostClockMHz ? `${b.boostClockMHz} MHz` : '—' },
+                { field: 'L3 cache', a: a.l3CacheMB != null ? `${a.l3CacheMB}MB` : '—', b: b.l3CacheMB != null ? `${b.l3CacheMB}MB` : '—' },
+                { field: '3D V-Cache', a: a.vcache ? 'yes' : 'no', b: b.vcache ? 'yes' : 'no', note: 'The single biggest driver of game-to-game rank flips: worth a great deal in simulation, near nothing when GPU-bound.' },
+                { field: 'TDP', a: a.tdpW ? `${a.tdpW}W` : '—', b: b.tdpW ? `${b.tdpW}W` : '—' },
+                { field: 'socket', a: a.socket, b: b.socket, note: 'Different sockets mean a new board, not a drop-in swap.' },
+                { field: 'memory', a: a.memoryType.join('/'), b: b.memoryType.join('/'), note: 'A DDR4 to DDR5 move means new memory as well as a new board.' },
+                { field: 'memory channels', a: a.maxMemChannels, b: b.maxMemChannels },
+                { field: 'official mem speed', a: a.officialMemMTs ? `${a.officialMemMTs} MT/s` : '—', b: b.officialMemMTs ? `${b.officialMemMTs} MT/s` : '—' },
+                { field: 'PCIe', a: a.pcieGen ? `gen ${a.pcieGen} ×${a.pcieLanes ?? '?'}` : '—', b: b.pcieGen ? `gen ${b.pcieGen} ×${b.pcieLanes ?? '?'}` : '—' },
+                { field: 'hybrid topology', a: a.caps.hybrid ? 'yes' : 'no', b: b.caps.hybrid ? 'yes' : 'no' },
+                { field: 'AVX2 / AVX-512', a: `${a.caps.avx2 ? 'yes' : 'no'} / ${a.caps.avx512 ? 'yes' : 'no'}`, b: `${b.caps.avx2 ? 'yes' : 'no'} / ${b.caps.avx512 ? 'yes' : 'no'}` },
+                { field: 'integrated graphics', a: a.igpuId ?? 'none', b: b.igpuId ?? 'none' },
+                { field: 'launched', a: a.launchDate ?? '—', b: b.launchDate ?? '—' },
+              ];
+              const platformChange = a.socket !== b.socket || a.memoryType.join('/') !== b.memoryType.join('/');
+              return (
+                <>
+                  {platformChange && (
+                    <div className="note bad" style={{ marginBottom: 10 }}>
+                      <b>This is a platform change, not a CPU swap.</b>{' '}
+                      {a.socket !== b.socket && `Socket ${a.socket} → ${b.socket} means a new motherboard. `}
+                      {a.memoryType.join('/') !== b.memoryType.join('/') && `Memory ${a.memoryType.join('/')} → ${b.memoryType.join('/')} means new memory too. `}
+                      Price the board and the RAM before comparing the index numbers.
+                    </div>
+                  )}
+                  <div className="table-wrap">
+                    <table className="data">
+                      <thead>
+                        <tr><th>field</th><th>{a.fullName}</th><th>{b.fullName}</th><th className="n">delta</th></tr>
+                      </thead>
+                      <tbody>
+                        {rows.map((r) => {
+                          const differs = String(r.a) !== String(r.b);
+                          return (
+                            <tr key={r.field} style={differs ? { background: 'var(--surface-2)' } : undefined} title={r.note}>
+                              <td className="sub">{r.field}{r.note && <span className="mini" style={{ marginLeft: 4 }}>ⓘ</span>}</td>
+                              <td className="mono" style={{ color: differs ? 'var(--ink)' : 'var(--faint)' }}>{r.a}</td>
+                              <td className="mono" style={{ color: differs ? 'var(--ink)' : 'var(--faint)' }}>{r.b}</td>
+                              <td className="n sub">{r.delta ?? ''}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="mini" style={{ marginTop: 8 }}>
+                    A CPU index is a vector, not one number, because no single figure ranks CPUs the same
+                    way across genres. Each archetype weights these four differently — cache endowment
+                    dominates a simulation, throughput dominates a heavily threaded engine — so two parts
+                    can trade places depending on the game.
+                  </p>
+                </>
+              );
+            })()}
+            {diffKind === 'gpu' && (() => {
               const a = data.gpus.get(diffA);
               const b = data.gpus.get(diffB);
               if (!a || !b) return <div className="empty">Pick two parts.</div>;
