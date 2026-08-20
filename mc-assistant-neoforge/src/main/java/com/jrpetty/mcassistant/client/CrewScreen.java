@@ -116,11 +116,12 @@ public class CrewScreen extends Screen {
             "Remember this one's job and ground as a preset");
         order(x + (w4 + gap), by, w4, h, "Use Patch", AssistantActions.USE_PRESET,
             "Put this one on a saved patch — press again for the next one");
-        this.addRenderableWidget(Button.builder(Component.literal("Map"),
-                b -> this.minecraft.setScreen(new MapScreen()))
+        this.addRenderableWidget(Button.builder(Component.literal("Plots"),
+                b -> { this.onClose(); PlotsClient.requestOpen(); })
             .bounds(x + 2 * (w4 + gap), by, w4, h)
             .tooltip(Tooltip.create(Component.literal(
-                "Every patch and every specialist, seen from above")))
+                "The plot book: every piece of ground, its yield and condition, "
+                + "and who's working it — crew a plot with a click")))
             .build());
         this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
             .bounds(x + 3 * (w4 + gap), by, w4, h).build());

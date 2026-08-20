@@ -22,6 +22,8 @@ public class FishGoal extends Goal {
     private final AssistantEntity assistant;
     @Nullable private Job job;
     @Nullable private BlockPos water;
+    @Nullable private BlockPos bobber;   // where the cast landed — the visible wait
+    private int reelTicks;               // the bite is on; a beat before the yank
     private int caught;
     private int biteTimer;
     private int stuckTicks;
@@ -81,6 +83,7 @@ public class FishGoal extends Goal {
     public void stop() {
         this.job = null;
         this.water = null;
+        this.bobber = null;
         assistant.getNavigation().stop();
     }
 
@@ -90,6 +93,7 @@ public class FishGoal extends Goal {
         assistant.pollJob();
         this.job = null;
         this.water = null;
+        this.bobber = null;
         assistant.getNavigation().stop();
     }
 
@@ -121,14 +125,57 @@ public class FishGoal extends Goal {
         }
         assistant.getNavigation().stop();
 
-        if (biteTimer <= 0) {
-            // Cast and wait a vanilla-ish bite time (5-15 seconds).
-            biteTimer = 100 + assistant.getRandom().nextInt(200);
+        net.minecraft.server.level.ServerLevel sl =
+            (net.minecraft.server.level.ServerLevel) assistant.level();
+        if (bobber == null) {
+            // THE CAST: rod swings, the line whistles out, and the bobber
+            // lands ON the water — the whole wait is visible and audible,
+            // the way a player's cast is.
+            bobber = water.immutable();
+            biteTimer = 100 + assistant.getRandom().nextInt(300);
+            reelTicks = 0;
             assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+            sl.playSound(null, assistant.blockPosition(),
+                net.minecraft.sounds.SoundEvents.FISHING_BOBBER_THROW,
+                net.minecraft.sounds.SoundSource.NEUTRAL, 0.5F,
+                0.4F / (assistant.getRandom().nextFloat() * 0.4F + 0.8F));
+            sl.sendParticles(net.minecraft.core.particles.ParticleTypes.SPLASH,
+                bobber.getX() + 0.5, bobber.getY() + 1.0, bobber.getZ() + 0.5,
+                4, 0.1, 0.0, 0.1, 0.1);
             return;
         }
-        if (--biteTimer > 0) return;
+        if (reelTicks > 0) {
+            if (--reelTicks > 0) return;
+            catchOne(sl);
+            return;
+        }
+        if (--biteTimer > 0) {
+            // The bobber rides the water while the wait runs — a ripple every
+            // half-second, so the cast reads as a cast from across the pond.
+            if (biteTimer % 10 == 0) {
+                sl.sendParticles(net.minecraft.core.particles.ParticleTypes.FISHING,
+                    bobber.getX() + 0.5, bobber.getY() + 0.95, bobber.getZ() + 0.5,
+                    1, 0.05, 0.0, 0.05, 0.0);
+            }
+            return;
+        }
+        // THE BITE: the splash every player knows, then a beat to reel.
+        reelTicks = 8;
+        sl.playSound(null, bobber,
+            net.minecraft.sounds.SoundEvents.FISHING_BOBBER_SPLASH,
+            net.minecraft.sounds.SoundSource.NEUTRAL, 0.6F,
+            1.0F + (assistant.getRandom().nextFloat() - 0.4F) * 0.4F);
+        sl.sendParticles(net.minecraft.core.particles.ParticleTypes.SPLASH,
+            bobber.getX() + 0.5, bobber.getY() + 1.0, bobber.getZ() + 0.5,
+            10, 0.15, 0.1, 0.15, 0.2);
+        sl.sendParticles(net.minecraft.core.particles.ParticleTypes.BUBBLE,
+            bobber.getX() + 0.5, bobber.getY() + 0.9, bobber.getZ() + 0.5,
+            8, 0.1, 0.05, 0.1, 0.1);
+    }
 
+    /** THE YANK: the catch flies out of the water toward the rod, the reel
+     *  clicks, and the loot lands in the pack. */
+    private void catchOne(net.minecraft.server.level.ServerLevel sl) {
         // The catch, weighted roughly like vanilla fishing.
         int roll = assistant.getRandom().nextInt(100);
         ItemStack loot;
@@ -143,6 +190,21 @@ public class FishGoal extends Goal {
         else loot = new ItemStack(Items.SADDLE);
 
         assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+        if (bobber != null) {
+            sl.playSound(null, bobber,
+                net.minecraft.sounds.SoundEvents.FISHING_BOBBER_RETRIEVE,
+                net.minecraft.sounds.SoundSource.NEUTRAL, 0.6F,
+                1.0F + (assistant.getRandom().nextFloat() - 0.4F) * 0.4F);
+            double ax = assistant.getX() - (bobber.getX() + 0.5);
+            double az = assistant.getZ() - (bobber.getZ() + 0.5);
+            for (int i = 0; i < 3; i++) {
+                sl.sendParticles(new net.minecraft.core.particles.ItemParticleOption(
+                        net.minecraft.core.particles.ParticleTypes.ITEM, loot),
+                    bobber.getX() + 0.5, bobber.getY() + 1.1, bobber.getZ() + 0.5,
+                    0, ax * 0.08, 0.25, az * 0.08, 1.0);
+            }
+        }
+        bobber = null;   // the next tick casts again
         ItemStack leftover = assistant.insertItem(loot);
         if (!leftover.isEmpty()) {
             finish("Pack's full — caught " + caught + ".");
