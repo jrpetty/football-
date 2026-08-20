@@ -37,15 +37,20 @@ under a strict no-invention rule — null an uncertain field, omit an uncertain 
 — and every record is tagged `model-knowledge`.
 
 **What harvesting does and does not give you.** `npm run harvest` fetches and
-caches every declared source, and `src/parse/wikitable.ts` — the rowspan/colspan
-expander, unit-tested against the shapes that break naive parsers — turns a
-specification page into aligned rows. What does NOT exist yet is the mapping layer
-between them: the code that reads those rows and writes `GpuRecord` / `CpuRecord`
-fields (column identification, unit normalisation, id slugging, variant splitting,
-cross-page merging). `scripts/parse.ts` is currently a stub that runs the alias
-parser only. Writing that mapping is a real task, and it needs the cached HTML in
-hand to iterate against — which is precisely what the egress block prevents. Until
-it exists, harvesting caches raw pages but does not replace the seeded catalogue.
+caches every declared source, `src/parse/wikitable.ts` — the rowspan/colspan
+expander — turns a specification page into aligned rows, and
+`src/parse/spec-mapper.ts` maps those rows onto `GpuRecord` / `CpuRecord` fields
+(column identification by header alias, unit normalisation, id slugging, variant
+splitting) and reports every row and column it could not use. `npm run parse` runs
+both, writing candidates to `agents/out/parsed-*.json` for the reconciler.
+
+The catch is that **the mapper has never been run against a real page**: its tests
+run against synthetic fixtures written from memory of what these tables look like,
+because the sources are egress-blocked here. The arithmetic, the never-fabricate
+rules and the reporting are real; the header vocabulary is a hypothesis. So
+harvesting still does not replace the seeded catalogue — the first real run needs
+a human to read the report before anything is merged. `agents/log/spec-mapper.md`
+lists, in order, exactly what to check.
 
 **The validation fixtures are recalled figures, not measurements.** The gate
 therefore measures agreement with recollection, not accuracy, and `validate.ts`
@@ -55,9 +60,10 @@ false pass. `COVERAGE.md` states every count, gap and reason.
 ## Architecture
 
 ```
-src/core/       types · constants · gates · indices · engine · queries · catalogue
-src/parse/      rowspan-aware table parser (unit-tested against fixtures)
-src/ui/         React app: 5 screens, dense dark instrument styling
+src/core/       types · constants · gates · indices · engine · queries · analysis
+                physics (power/thermal/noise/latency) · detect · fit · catalogue
+src/parse/      rowspan-aware table parser · spec-table → record mapper (fixture-tested)
+src/ui/         React app: 8 screens, dense dark instrument styling
 scripts/        harvest → parse → reconcile → import-manual → calibrate → validate → coverage
 harness/        PresentMon benchmark runner, emits straight into data/manual/
 data/           catalogue · aliases · fixtures · pricing · manual · calibration
