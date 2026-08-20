@@ -235,6 +235,24 @@ export const CPU_WEIGHTS: Record<Archetype, CpuWeights> = {
  * roughly 0.6-0.7x Ampere's while their raster is competitive. Ignoring it would
  * bake in exactly the vendor bias this model is supposed to avoid.
  */
+/**
+ * Low-end scaling correction.
+ *
+ * A flat per-title scaling exponent interpolates well between capable cards but
+ * breaks at the bottom of the range. Esports titles use an exponent near 0.65
+ * because draw-call-bound renderers barely respond to extra GPU power — but
+ * applied to an integrated GPU at index ~25 that implies 40% of a reference
+ * card's frame rate, which is roughly triple what integrated graphics actually
+ * deliver. Below the floor, scaling reverts toward linear: a weak GPU really is
+ * the wall, whatever the title's usual behaviour.
+ */
+export const LOW_END_MODEL = {
+  /** GPU index below which the flat exponent stops applying. */
+  indexFloor: 55,
+  /** Exponent used beneath the floor. Near-linear: no free frames down here. */
+  floorExponent: 1.15,
+};
+
 export const RT_MODEL = {
   /**
    * Frame rate with ray tracing enabled, as a fraction of the same scene with it
@@ -353,10 +371,167 @@ export const PCIE_MODEL = {
   vramOversubscribeAmplifier: 2.5,
 };
 
+/**
+ * Power draw.
+ *
+ * TDP is a thermal rating, not a measurement, and the two diverge in opposite
+ * directions by vendor: Nvidia's board power is close to real gaming draw, while
+ * AMD's TBP excludes some board components and Intel's PL1 is a sustained floor
+ * that PL2 blows through for tens of seconds. Gaming load is also well under
+ * an all-core stress load for CPUs — a 253W-rated part draws ~40% of that while
+ * feeding a GPU, because games never saturate every core.
+ */
+export const POWER_MODEL = {
+  /** Real gaming draw as a fraction of the CPU's rated TDP. */
+  cpuGamingLoadFactor: 0.42,
+  /** Gaming draw as a fraction of a GPU's rated TDP/TBP, by vendor. */
+  gpuLoadFactor: { nvidia: 0.95, amd: 0.98, intel: 0.92 } as Record<string, number>,
+  /** Everything that is not the CPU or GPU: board, RAM, drives, fans, USB. */
+  systemBaseW: 55,
+  /** Per-stick and per-drive additions, small but real in a 12-stick workstation. */
+  perRamStickW: 3,
+  perDriveW: 5,
+  /**
+   * Transient spikes. Modern GPUs pull far above their rated draw for
+   * microseconds; a PSU's over-current protection trips on the spike, not the
+   * average, which is why a "650W is enough" calculation kills 3080 builds.
+   */
+  transientMultiplier: { nvidia: 1.8, amd: 1.5, intel: 1.4 } as Record<string, number>,
+  /** Ampere's spikes were unusually severe; Ada improved markedly. */
+  transientByArchitecture: { Ampere: 2.0, 'RDNA 2': 1.45, Ada: 1.6, 'Ada Lovelace': 1.6 } as Record<string, number>,
+  /** Recommended PSU headroom above sustained draw, for efficiency and ageing. */
+  psuHeadroom: 1.35,
+  /** Typical UK electricity price, p/kWh. Operator-overridable. */
+  pencePerKwh: 24.5,
+};
+
+/**
+ * Thermals and throttling.
+ *
+ * A part that cannot shed its heat does not run at its boost clock, and the
+ * catalogue's clock figures assume it can. Cooler tier and case airflow together
+ * set a sustained-clock multiplier; the spec deferred this, but with TDP present
+ * on every record it is cheap to model and it is the difference between a
+ * quoted figure and what the machine does twenty minutes in.
+ */
+export const THERMAL_MODEL = {
+  /** Heat a cooler can dissipate while holding boost clocks, in watts. */
+  coolerCapacityW: {
+    stock: 75,
+    'budget-tower': 130,
+    'premium-air': 220,
+    aio: 260,
+  } as Record<string, number>,
+  /** Case airflow multiplies effective cooler capacity. */
+  airflowMultiplier: {
+    restricted: 0.78,
+    moderate: 0.92,
+    good: 1.0,
+    excellent: 1.08,
+  } as Record<string, number>,
+  /**
+   * Sustained clock as a fraction of boost, given heat load over capacity.
+   * Throttling is gradual, not a cliff: silicon steps down bins.
+   */
+  throttleCurve: [
+    { loadRatio: 1.0, clockFactor: 1.0 },
+    { loadRatio: 1.15, clockFactor: 0.96 },
+    { loadRatio: 1.4, clockFactor: 0.88 },
+    { loadRatio: 1.8, clockFactor: 0.78 },
+    { loadRatio: 2.5, clockFactor: 0.68 },
+  ],
+  /** Blower and single-fan cards in a restricted case suffer further. */
+  gpuRestrictedCasePenalty: 0.96,
+};
+
+/**
+ * Acoustics. Rough, and honestly labelled as such: perceived noise depends on
+ * fan curves, bearing type and case panels far more than on wattage. This
+ * models the trend (more heat in a worse case is louder), not a spec figure.
+ */
+export const NOISE_MODEL = {
+  /** Idle floor by case noise tier, dBA at ~1m. */
+  baseDba: { loud: 34, moderate: 30, quiet: 26, silent: 22 } as Record<string, number>,
+  /** dBA added per unit of (heat load / cooler capacity) above 0.5. */
+  dbaPerLoadRatio: 11,
+  coolerBonusDba: { stock: 3, 'budget-tower': 0, 'premium-air': -2, aio: -1 } as Record<string, number>,
+  maxDba: 55,
+};
+
+/**
+ * System latency (click-to-photon), the metric esports players actually feel.
+ *
+ * Deliberately separate from FPS: at a fixed frame rate, latency still varies
+ * by queue depth, sync mode and whether frame generation is on. Frame gen
+ * RAISES latency slightly while doubling the frame counter, which is exactly
+ * why presenting generated frames as equivalent to real ones is dishonest.
+ */
+export const LATENCY_MODEL = {
+  /** Frames the render queue holds; each costs roughly one frame time. */
+  queueFrames: { default: 2, lowLatency: 1, ultraLowLatency: 0.5 } as Record<string, number>,
+  /** Fixed input-stack cost: peripheral polling, OS, engine sampling, in ms. */
+  inputStackMs: 6.5,
+  /** Display pipeline: scanout plus panel response, in ms. */
+  displayMs: { OLED: 2.5, 'QD-OLED': 2.5, TN: 4, IPS: 6, VA: 9 } as Record<string, number>,
+  /** V-Sync adds up to a full refresh interval of waiting. */
+  vsyncPenaltyFrames: 1.0,
+  /**
+   * Frame generation inserts an interpolated frame, so the real frame must be
+   * held back one interval before it can be shown. Latency rises even as the
+   * frame counter doubles.
+   */
+  frameGenLatencyPenaltyMs: 8,
+  /** Being CPU-bound adds simulation-step latency beyond raw frame time. */
+  cpuBoundPenaltyMs: 3,
+};
+
+/**
+ * Frame generation.
+ *
+ * Modelled as a presentation-layer multiplier that never touches the CPU-bound
+ * estimate and never improves latency. The engine reports generated frames
+ * separately from rendered ones so a comparison cannot silently put a
+ * frame-gen figure beside a native one.
+ */
+export const FRAMEGEN_MODEL = {
+  /** Presented frames per rendered frame. Not 2.0: generation costs GPU time. */
+  multiplier: { dlss: 1.75, fsr: 1.7, xess: 1.65, tsr: 1.0, none: 1.0 } as Record<string, number>,
+  /** Below this rendered frame rate, generation feels bad regardless of counter. */
+  minimumSensibleBaseFps: 55,
+};
+
 export const STORAGE_MODEL = {
   /** Storage barely moves average FPS; it moves 1% lows and traversal stutter. */
   low1PctMultiplier: { hdd: 0.72, 'sata-ssd': 0.95, 'nvme-gen3': 1.0, 'nvme-gen4': 1.01 } as Record<string, number>,
   avgMultiplier: { hdd: 0.97, 'sata-ssd': 0.997, 'nvme-gen3': 1.0, 'nvme-gen4': 1.0 } as Record<string, number>,
+};
+
+/**
+ * Frame-time consistency.
+ *
+ * A fixed ratio of average was the previous model, and it cannot represent the
+ * thing players actually complain about: a build can hold a fine average and
+ * still feel broken. Lows are driven by discrete stall sources — a CPU with no
+ * headroom, shader compilation, texture streaming over a slow bus, memory
+ * pressure — each of which is modelled separately and multiplied in.
+ */
+export const STUTTER_MODEL = {
+  /** Extra penalty to lows when the CPU is the limiter: frame pacing collapses. */
+  cpuBoundLowPenalty: 0.88,
+  /** Below the game's comfortable thread count, stalls become frequent. */
+  threadStarvationPenalty: 0.8,
+  /** UE5 and DX12 titles compile shaders during play on first run. */
+  shaderCompilationPenalty: { ue5: 0.86, 'aaa-rt': 0.93, 'vram-heavy': 0.92 } as Record<string, number>,
+  /** System RAM pressure forces paging mid-frame. */
+  ramPressurePenalty: [
+    { belowGB: 8, multiplier: 0.62 },
+    { belowGB: 16, multiplier: 0.85 },
+    { belowGB: 32, multiplier: 0.97 },
+  ],
+  /** 0.1% low as a fraction of the 1% low. The deep tail is far worse. */
+  low01FromLow1: 0.72,
+  /** With a VRAM deficit the deep tail collapses much further. */
+  low01VramCliffExtra: 0.6,
 };
 
 /** Ratio of 1% low to average, by archetype. Fitted. */

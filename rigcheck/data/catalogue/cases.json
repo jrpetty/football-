@@ -1,0 +1,1088 @@
+{
+  "generatedAt": "2026-08-20T10:01:47.000Z",
+  "note": "Seeded from model knowledge; clearance figures are the manufacturer-published maxima where recalled confidently, null otherwise.",
+  "provenance": {
+    "model-knowledge": {
+      "id": "model-knowledge",
+      "source": "Model knowledge (seed)",
+      "url": "",
+      "licence": "n/a",
+      "retrievedAt": "2026-08-20"
+    }
+  },
+  "count": 48,
+  "records": [
+    {
+      "id": "fractal-design-north",
+      "brand": "Fractal Design",
+      "name": "North",
+      "fullName": "Fractal Design North",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": 355,
+      "maxCoolerHeightMm": 170,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": [
+        "360mm front",
+        "240mm top",
+        "120mm rear"
+      ],
+      "includedFans": 2,
+      "airflowTier": "good",
+      "noiseTier": "quiet",
+      "releaseYear": 2022,
+      "notes": "Walnut slat front with a mesh layer behind it; ships with two 140mm Aspect intake fans. A mesh side panel version exists alongside the tempered glass one and breathes noticeably better with a hot GPU. GPU figure is the published maximum with a front fan installed.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "fractal-design-north-xl",
+      "brand": "Fractal Design",
+      "name": "North XL",
+      "fullName": "Fractal Design North XL",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": null,
+      "airflowTier": "good",
+      "noiseTier": "quiet",
+      "releaseYear": 2023,
+      "notes": "Taller, deeper North with more radiator and drive capacity. Clearance figures and included fan count not recalled with confidence, so left null rather than borrowed from the standard North.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "fractal-design-meshify-2",
+      "brand": "Fractal Design",
+      "name": "Meshify 2",
+      "fullName": "Fractal Design Meshify 2",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": 315,
+      "maxCoolerHeightMm": 185,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": [
+        "420mm front",
+        "360mm top",
+        "120mm rear"
+      ],
+      "includedFans": 3,
+      "airflowTier": "excellent",
+      "noiseTier": "moderate",
+      "releaseYear": 2020,
+      "notes": "Mesh-front sibling of the Define 7 sharing the same chassis and open/storage layout switch. GPU figure is the published length with a front fan fitted; the open layout with the front fan removed clears substantially more, but that larger number is not recalled precisely.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "fractal-design-meshify-2-compact",
+      "brand": "Fractal Design",
+      "name": "Meshify 2 Compact",
+      "fullName": "Fractal Design Meshify 2 Compact",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": [
+        "360mm front",
+        "240mm top",
+        "120mm rear"
+      ],
+      "includedFans": null,
+      "airflowTier": "excellent",
+      "noiseTier": "moderate",
+      "releaseYear": 2021,
+      "notes": "Smaller Meshify 2 without the storage layout. Clearances nulled: my recall conflicts with the full-size Meshify 2 numbers and I will not guess between them.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "fractal-design-meshify-c",
+      "brand": "Fractal Design",
+      "name": "Meshify C",
+      "fullName": "Fractal Design Meshify C",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": 315,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": [
+        "360mm front",
+        "240mm top",
+        "120mm rear"
+      ],
+      "includedFans": 2,
+      "airflowTier": "good",
+      "noiseTier": "moderate",
+      "releaseYear": 2016,
+      "notes": "The case that started the mesh-front trend; still very common second-hand. Ships with two 120mm Dynamic X2 GP-12 fans. Cooler clearance nulled — I recall competing 170mm and 172mm figures for the Define C / Meshify C chassis.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "fractal-design-define-7",
+      "brand": "Fractal Design",
+      "name": "Define 7",
+      "fullName": "Fractal Design Define 7",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": 315,
+      "maxCoolerHeightMm": 185,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": [
+        "420mm front",
+        "360mm top",
+        "120mm rear"
+      ],
+      "includedFans": 3,
+      "airflowTier": "moderate",
+      "noiseTier": "silent",
+      "releaseYear": 2020,
+      "notes": "Sound-dampened solid front with side intake channels; same chassis as the Meshify 2. Quiet by design, and correspondingly airflow-limited compared with its mesh twin. GPU figure is with a front fan fitted.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "fractal-design-define-r5",
+      "brand": "Fractal Design",
+      "name": "Define R5",
+      "fullName": "Fractal Design Define R5",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": 440,
+      "maxCoolerHeightMm": 180,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": [
+        "360mm front",
+        "420mm top",
+        "120mm rear"
+      ],
+      "includedFans": 2,
+      "airflowTier": "moderate",
+      "noiseTier": "silent",
+      "releaseYear": 2014,
+      "notes": "The classic silent build case, everywhere on the second-hand market. GPU figure is the published maximum with the middle drive cage removed; with the cage in place it is far shorter. Ships with two 140mm Dynamic GP-14 fans.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "fractal-design-pop-air",
+      "brand": "Fractal Design",
+      "name": "Pop Air",
+      "fullName": "Fractal Design Pop Air",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": 3,
+      "airflowTier": "good",
+      "noiseTier": "moderate",
+      "releaseYear": 2022,
+      "notes": "Budget-tier mesh front, three 120mm Aspect fans included. Clearance figures not recalled confidently.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "fractal-design-torrent",
+      "brand": "Fractal Design",
+      "name": "Torrent",
+      "fullName": "Fractal Design Torrent",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": 5,
+      "airflowTier": "excellent",
+      "noiseTier": "moderate",
+      "releaseYear": 2021,
+      "notes": "Airflow-first design: two 180mm front fans plus three 140mm in the floor, five fans in total, and no 5.25in or front drive obstruction. One of the coolest-running ATX cases available; the trade-off is bulk and fan noise at load.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "fractal-design-terra",
+      "brand": "Fractal Design",
+      "name": "Terra",
+      "fullName": "Fractal Design Terra",
+      "formFactor": "sff",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": null,
+      "airflowTier": "moderate",
+      "noiseTier": "quiet",
+      "releaseYear": 2023,
+      "notes": "Roughly 10L wood-and-aluminium Mini-ITX sandwich case with a repositionable central spine that trades CPU cooler height against GPU thickness. SFX/SFX-L power supply only. Clearances are configuration-dependent and not recalled precisely, so nulled.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "fractal-design-focus-g",
+      "brand": "Fractal Design",
+      "name": "Focus G",
+      "fullName": "Fractal Design Focus G",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": null,
+      "airflowTier": "good",
+      "noiseTier": "moderate",
+      "releaseYear": 2017,
+      "notes": "Cheap ATX tower with mesh side intakes on the front panel; a very common first-build and second-hand chassis. Included fan count varies by colour/LED SKU, so nulled.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "lian-li-o11-dynamic",
+      "brand": "Lian Li",
+      "name": "O11 Dynamic",
+      "fullName": "Lian Li PC-O11 Dynamic",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": 420,
+      "maxCoolerHeightMm": 155,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": [
+        "360mm top",
+        "360mm side",
+        "360mm bottom"
+      ],
+      "includedFans": 0,
+      "airflowTier": "good",
+      "noiseTier": "moderate",
+      "releaseYear": 2018,
+      "notes": "Dual-chamber showcase case designed with Der8auer. Ships with NO fans — thermals depend entirely on what the owner fits. With side and bottom intake populated it cools well; run bare it is poor, so treat the airflow tier as potential rather than out-of-box.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "lian-li-o11-dynamic-evo",
+      "brand": "Lian Li",
+      "name": "O11 Dynamic EVO",
+      "fullName": "Lian Li O11 Dynamic EVO",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": [
+        "360mm top",
+        "360mm side",
+        "360mm bottom"
+      ],
+      "includedFans": 0,
+      "airflowTier": "good",
+      "noiseTier": "moderate",
+      "releaseYear": 2022,
+      "notes": "Reworked O11 with reversible layout and modular front I/O. Also ships without fans. Clearance figures nulled — I could not separate them cleanly from the original O11 Dynamic.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "lian-li-o11-air-mini",
+      "brand": "Lian Li",
+      "name": "O11 Air Mini",
+      "fullName": "Lian Li O11 Air Mini",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": 3,
+      "airflowTier": "excellent",
+      "noiseTier": "moderate",
+      "releaseYear": 2021,
+      "notes": "Mesh-panelled compact version of the O11 that, unlike the Dynamic, ships with fans. Takes ATX boards despite the small footprint.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "lian-li-lancool-215",
+      "brand": "Lian Li",
+      "name": "Lancool 215",
+      "fullName": "Lian Li Lancool 215",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": 3,
+      "airflowTier": "excellent",
+      "noiseTier": "moderate",
+      "releaseYear": 2020,
+      "notes": "Budget airflow standout: two 200mm ARGB front intakes plus a 120mm rear exhaust. Large slow fans mean strong cooling at low noise.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "lian-li-lancool-ii-mesh",
+      "brand": "Lian Li",
+      "name": "Lancool II Mesh",
+      "fullName": "Lian Li Lancool II Mesh",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": [
+        "360mm front",
+        "240mm top",
+        "120mm rear"
+      ],
+      "includedFans": null,
+      "airflowTier": "excellent",
+      "noiseTier": "moderate",
+      "releaseYear": 2020,
+      "notes": "Mesh-front revision of the Lancool II with hinged side panels. Included fan count differs between the plain, RGB and Performance SKUs, so nulled.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "lian-li-lancool-iii",
+      "brand": "Lian Li",
+      "name": "Lancool III",
+      "fullName": "Lian Li Lancool III",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": 4,
+      "airflowTier": "excellent",
+      "noiseTier": "moderate",
+      "releaseYear": 2023,
+      "notes": "Large mesh tower shipping with four 140mm PWM fans and very generous radiator support. Clearances not recalled precisely.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nzxt-h510",
+      "brand": "NZXT",
+      "name": "H510",
+      "fullName": "NZXT H510",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": 381,
+      "maxCoolerHeightMm": 165,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": [
+        "240mm front",
+        "120mm rear"
+      ],
+      "includedFans": 2,
+      "airflowTier": "restricted",
+      "noiseTier": "quiet",
+      "releaseYear": 2019,
+      "notes": "Extremely popular and thermally poor: solid front panel with only a thin side intake gap, and no top radiator mount. Quiet because airflow is choked, not because it is well damped. Ships with two 120mm Aer F fans.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nzxt-h5-flow",
+      "brand": "NZXT",
+      "name": "H5 Flow",
+      "fullName": "NZXT H5 Flow",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": 2,
+      "airflowTier": "good",
+      "noiseTier": "quiet",
+      "releaseYear": 2022,
+      "notes": "The corrective to the H510: perforated front and a floor intake position under the GPU. Clearances nulled.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nzxt-h7-flow",
+      "brand": "NZXT",
+      "name": "H7 Flow",
+      "fullName": "NZXT H7 Flow",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": [
+        "360mm front",
+        "360mm top"
+      ],
+      "includedFans": 3,
+      "airflowTier": "excellent",
+      "noiseTier": "moderate",
+      "releaseYear": 2022,
+      "notes": "Full mesh front and top, three included fans, and proper 360mm support in both positions.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nzxt-h210",
+      "brand": "NZXT",
+      "name": "H210",
+      "fullName": "NZXT H210",
+      "formFactor": "mini-itx",
+      "maxGpuLengthMm": 325,
+      "maxCoolerHeightMm": 165,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": [
+        "240mm front",
+        "120mm rear"
+      ],
+      "includedFans": 2,
+      "airflowTier": "restricted",
+      "noiseTier": "quiet",
+      "releaseYear": 2019,
+      "notes": "Mini-ITX version of the H510 and it inherits the same choked front panel. Surprisingly long GPU clearance for the footprint.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "nzxt-s340",
+      "brand": "NZXT",
+      "name": "S340",
+      "fullName": "NZXT S340",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": 2,
+      "airflowTier": "moderate",
+      "noiseTier": "quiet",
+      "releaseYear": 2014,
+      "notes": "The pre-H-series budget favourite; large numbers still in circulation second-hand. Clearances nulled.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "corsair-4000d-airflow",
+      "brand": "Corsair",
+      "name": "4000D Airflow",
+      "fullName": "Corsair 4000D Airflow",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": 360,
+      "maxCoolerHeightMm": 170,
+      "maxPsuLengthMm": 180,
+      "radiatorSupport": [
+        "360mm front",
+        "280mm top",
+        "120mm rear"
+      ],
+      "includedFans": 2,
+      "airflowTier": "good",
+      "noiseTier": "moderate",
+      "releaseYear": 2020,
+      "notes": "The default mid-range recommendation for several years. Two 120mm AirGuide fans included, which is on the light side for the mesh front — a third intake helps materially.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "corsair-icue-4000x-rgb",
+      "brand": "Corsair",
+      "name": "iCUE 4000X RGB",
+      "fullName": "Corsair iCUE 4000X RGB",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": 360,
+      "maxCoolerHeightMm": 170,
+      "maxPsuLengthMm": 180,
+      "radiatorSupport": [
+        "360mm front",
+        "280mm top",
+        "120mm rear"
+      ],
+      "includedFans": 3,
+      "airflowTier": "moderate",
+      "noiseTier": "moderate",
+      "releaseYear": 2020,
+      "notes": "Same chassis as the 4000D but with a tempered glass front, so intake is via the side gaps only. Ships with three SP120 RGB Elite fans, which partly offsets the restriction.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "corsair-5000d-airflow",
+      "brand": "Corsair",
+      "name": "5000D Airflow",
+      "fullName": "Corsair 5000D Airflow",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": 400,
+      "maxCoolerHeightMm": 170,
+      "maxPsuLengthMm": 225,
+      "radiatorSupport": [
+        "360mm front",
+        "360mm top",
+        "280mm side"
+      ],
+      "includedFans": 2,
+      "airflowTier": "good",
+      "noiseTier": "moderate",
+      "releaseYear": 2021,
+      "notes": "Larger 4000D with a side radiator mount and much better cable management space. Also only two fans included.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "corsair-7000d-airflow",
+      "brand": "Corsair",
+      "name": "7000D Airflow",
+      "fullName": "Corsair 7000D Airflow",
+      "formFactor": "full-tower",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": 3,
+      "airflowTier": "excellent",
+      "noiseTier": "moderate",
+      "releaseYear": 2021,
+      "notes": "Full tower with mesh front, huge radiator capacity and three 140mm fans included. Clearance figures nulled — I could not separate them reliably from the 5000D.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "corsair-carbide-275r",
+      "brand": "Corsair",
+      "name": "Carbide 275R",
+      "fullName": "Corsair Carbide Series 275R",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": 2,
+      "airflowTier": "moderate",
+      "noiseTier": "moderate",
+      "releaseYear": 2018,
+      "notes": "Plain, cheap, solid-front ATX tower that sold in volume; a later 275R Airflow SKU swapped in a mesh front and breathes better. This record describes the original solid-front version.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "phanteks-eclipse-p400a",
+      "brand": "Phanteks",
+      "name": "Eclipse P400A",
+      "fullName": "Phanteks Eclipse P400A Digital",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": 3,
+      "airflowTier": "excellent",
+      "noiseTier": "moderate",
+      "releaseYear": 2019,
+      "notes": "Ultra-fine mesh front that measured near the top of its class on release, with three 120mm D-RGB fans included on the Digital SKU. The plain P400A ships with fewer fans.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "phanteks-eclipse-g360a",
+      "brand": "Phanteks",
+      "name": "Eclipse G360A",
+      "fullName": "Phanteks Eclipse G360A",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": 3,
+      "airflowTier": "excellent",
+      "noiseTier": "moderate",
+      "releaseYear": 2021,
+      "notes": "Budget mesh tower with three included D-RGB 120mm intakes. Clearances not recalled confidently.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "phanteks-eclipse-p500a",
+      "brand": "Phanteks",
+      "name": "Eclipse P500A",
+      "fullName": "Phanteks Eclipse P500A D-RGB",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": [
+        "420mm front",
+        "360mm top"
+      ],
+      "includedFans": null,
+      "airflowTier": "excellent",
+      "noiseTier": "moderate",
+      "releaseYear": 2020,
+      "notes": "Larger mesh Phanteks with 140mm-class front mounts and very high radiator ceiling. Included fan count differs between the plain and D-RGB SKUs, so nulled.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "be-quiet-pure-base-500dx",
+      "brand": "be quiet!",
+      "name": "Pure Base 500DX",
+      "fullName": "be quiet! Pure Base 500DX",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": 369,
+      "maxCoolerHeightMm": 190,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": [
+        "360mm front",
+        "240mm top",
+        "120mm rear"
+      ],
+      "includedFans": 3,
+      "airflowTier": "good",
+      "noiseTier": "quiet",
+      "releaseYear": 2020,
+      "notes": "Mesh front and top with three Pure Wings 2 140mm fans included — the airflow version of be quiet!'s usual silence-first formula. Unusually generous CPU cooler clearance for the size.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "be-quiet-pure-base-600",
+      "brand": "be quiet!",
+      "name": "Pure Base 600",
+      "fullName": "be quiet! Pure Base 600",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": 2,
+      "airflowTier": "moderate",
+      "noiseTier": "quiet",
+      "releaseYear": 2016,
+      "notes": "Damped solid front with bottom intake slots. Quiet, mid-pack thermals. Clearances nulled.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "be-quiet-silent-base-802",
+      "brand": "be quiet!",
+      "name": "Silent Base 802",
+      "fullName": "be quiet! Silent Base 802",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": 3,
+      "airflowTier": "moderate",
+      "noiseTier": "silent",
+      "releaseYear": 2020,
+      "notes": "Ships with interchangeable solid (damped) and mesh front/top panels, so the owner picks the silence/airflow point. Tiers here describe the damped configuration it ships assembled in.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "cooler-master-nr200p",
+      "brand": "Cooler Master",
+      "name": "NR200P",
+      "fullName": "Cooler Master MasterBox NR200P",
+      "formFactor": "sff",
+      "maxGpuLengthMm": 330,
+      "maxCoolerHeightMm": 155,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": null,
+      "airflowTier": "good",
+      "noiseTier": "moderate",
+      "releaseYear": 2020,
+      "notes": "The mainstream Mini-ITX case: roughly 18L, mesh on nearly every surface, SFX/SFX-L power supply. Cooler clearance is 155mm with the vented side panel and far lower (about 76mm) if the tempered glass panel is fitted — the 155mm figure is the mesh configuration. Included fan count nulled; it differs across NR200 and NR200P/NR200P MAX SKUs.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "cooler-master-td500-mesh",
+      "brand": "Cooler Master",
+      "name": "TD500 Mesh",
+      "fullName": "Cooler Master MasterBox TD500 Mesh",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": 3,
+      "airflowTier": "excellent",
+      "noiseTier": "moderate",
+      "releaseYear": 2020,
+      "notes": "Crystalline mesh front with three ARGB 120mm intakes included; a common budget airflow pick. Clearances nulled.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "cooler-master-masterbox-nr600",
+      "brand": "Cooler Master",
+      "name": "MasterBox NR600",
+      "fullName": "Cooler Master MasterBox NR600",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": 2,
+      "airflowTier": "good",
+      "noiseTier": "moderate",
+      "releaseYear": 2018,
+      "notes": "Plain mesh-front ATX tower, sold with and without an ODD bay. Clearances nulled.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "cooler-master-masterbox-q300l",
+      "brand": "Cooler Master",
+      "name": "MasterBox Q300L",
+      "fullName": "Cooler Master MasterBox Q300L",
+      "formFactor": "micro-atx",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": 1,
+      "airflowTier": "moderate",
+      "noiseTier": "moderate",
+      "releaseYear": 2018,
+      "notes": "Very cheap Micro-ATX cube with magnetic dust filter panels and a single 120mm rear exhaust included. Front intake depends on which perforated panel arrangement the owner uses.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "cooler-master-haf-912",
+      "brand": "Cooler Master",
+      "name": "HAF 912",
+      "fullName": "Cooler Master HAF 912",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": 2,
+      "airflowTier": "good",
+      "noiseTier": "moderate",
+      "releaseYear": 2010,
+      "notes": "High Air Flow era budget tower — 200mm front intake and 120mm rear exhaust, thin steel, no dampening. Still turns up constantly in cheap second-hand builds.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "hyte-y60",
+      "brand": "Hyte",
+      "name": "Y60",
+      "fullName": "Hyte Y60",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": 3,
+      "airflowTier": "moderate",
+      "noiseTier": "moderate",
+      "releaseYear": 2022,
+      "notes": "Three-sided glass fishbowl with an included vertical GPU riser. Intake is bottom and side only, so it runs warmer than a mesh case despite three included fans.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "hyte-y70",
+      "brand": "Hyte",
+      "name": "Y70",
+      "fullName": "Hyte Y70",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": null,
+      "airflowTier": "moderate",
+      "noiseTier": "moderate",
+      "releaseYear": 2023,
+      "notes": "Larger Y60 successor, also glass-fronted with a vertical GPU mount; a Touch variant adds a display panel. Included fan count and clearances not recalled confidently.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "ncase-m1",
+      "brand": "Ncase",
+      "name": "M1",
+      "fullName": "Ncase M1",
+      "formFactor": "sff",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": 130,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": 0,
+      "airflowTier": "moderate",
+      "noiseTier": "quiet",
+      "releaseYear": 2015,
+      "notes": "Roughly 12.7L aluminium Mini-ITX classic, revised repeatedly (v5, v6, v6.1) with different GPU thickness and radiator options per revision — releaseYear is the original crowdfunded launch. Ships bare, no fans. GPU length nulled because it changed across revisions.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "ssupd-meshlicious",
+      "brand": "SSUPD",
+      "name": "Meshlicious",
+      "fullName": "SSUPD Meshlicious",
+      "formFactor": "sff",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": 0,
+      "airflowTier": "good",
+      "noiseTier": "moderate",
+      "releaseYear": 2021,
+      "notes": "Full-mesh sandwich-layout Mini-ITX case at roughly 15L, supporting full-length triple-slot GPUs via a riser. No fans included. Clearances are layout-dependent and nulled.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "montech-air-903-max",
+      "brand": "Montech",
+      "name": "AIR 903 MAX",
+      "fullName": "Montech AIR 903 MAX",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": 4,
+      "airflowTier": "excellent",
+      "noiseTier": "moderate",
+      "releaseYear": 2022,
+      "notes": "Cheap mesh tower whose selling point is four 140mm ARGB fans in the box. Clearances not recalled confidently.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "deepcool-ch510",
+      "brand": "DeepCool",
+      "name": "CH510",
+      "fullName": "DeepCool CH510",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": 1,
+      "airflowTier": "good",
+      "noiseTier": "moderate",
+      "releaseYear": 2021,
+      "notes": "Budget mesh-front tower with a single pre-installed 120mm rear exhaust — front intakes must be bought separately, which materially changes its thermals.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "antec-df700-flux",
+      "brand": "Antec",
+      "name": "DF700 Flux",
+      "fullName": "Antec DF700 Flux",
+      "formFactor": "mid-tower",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": 5,
+      "airflowTier": "good",
+      "noiseTier": "moderate",
+      "releaseYear": 2021,
+      "notes": "Five fans included, including a small PSU-shroud fan blowing up onto the graphics card — the \"Flux\" platform feature. Good value cooling, unremarkable build quality.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "thermaltake-versa-h18",
+      "brand": "Thermaltake",
+      "name": "Versa H18",
+      "fullName": "Thermaltake Versa H18",
+      "formFactor": "micro-atx",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": 1,
+      "airflowTier": "restricted",
+      "noiseTier": "moderate",
+      "releaseYear": 2018,
+      "notes": "Bottom-tier Micro-ATX tower with a solid plastic front and narrow side intake slits, one 120mm rear fan. Common in cheap prebuilts and first builds; expect high component temperatures unless fans are added.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "dell-optiplex-7010-sff",
+      "brand": "Dell",
+      "name": "OptiPlex 7010 SFF",
+      "fullName": "Dell OptiPlex 7010 Small Form Factor",
+      "formFactor": "sff",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": 1,
+      "airflowTier": "restricted",
+      "noiseTier": "moderate",
+      "releaseYear": 2012,
+      "notes": "Ex-office desktop, ubiquitous and cheap second-hand. Takes half-height, low-profile cards only and uses a proprietary low-wattage TFX power supply with non-standard connectors, so a normal GPU upgrade is not possible without swapping the chassis. Clearances nulled: the constraint is card height and PSU wattage, not a published millimetre maximum.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "hp-elitedesk-800-g4-sff",
+      "brand": "HP",
+      "name": "EliteDesk 800 G4 SFF",
+      "fullName": "HP EliteDesk 800 G4 Small Form Factor",
+      "formFactor": "sff",
+      "maxGpuLengthMm": null,
+      "maxCoolerHeightMm": null,
+      "maxPsuLengthMm": null,
+      "radiatorSupport": null,
+      "includedFans": 1,
+      "airflowTier": "restricted",
+      "noiseTier": "moderate",
+      "releaseYear": 2018,
+      "notes": "Same story as the OptiPlex: low-profile half-height GPUs only, proprietary PSU and front-panel wiring. Near-silent at idle, ramps hard and audibly under sustained load, which is why the noise tier is moderate rather than quiet.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    }
+  ]
+}

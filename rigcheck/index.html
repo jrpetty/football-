@@ -7,9 +7,19 @@
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <title>RIGCHECK — build comparison &amp; performance modelling</title>
     <meta name="description" content="Compare PC builds across games and resolutions with a fully auditable performance model." />
+      <link rel="manifest" href="manifest.webmanifest" />
+    <meta name="theme-color" content="#0a0c0e" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Offline support. Registered only when served over http(s) — the
+      // single-file build runs from file://, where service workers are
+      // unavailable and registration would throw.
+      if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+        window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+      }
+    </script>
   </body>
 </html>

@@ -2,6 +2,9 @@ import React, { useMemo, useState } from 'react';
 import { BuildEditor, GamePicker } from '../components/BuildEditor.tsx';
 import { ExplainPanel, FpsFigure, Legend, LimiterTag, fmt } from '../components/Parts.tsx';
 import { useApp } from '../store.ts';
+import { BuildLibrary } from '../components/Library.tsx';
+import { buildQuoteHtml, exportCsv, printQuote } from '../export.ts';
+import { machineReport } from '../../core/analysis.ts';
 import { estimate } from '../../core/engine.ts';
 import { futureProofing } from '../../core/queries.ts';
 import type { Resolution } from '../../core/types.ts';
@@ -19,6 +22,35 @@ export function BuildAnalyser() {
   );
 
   const fp = useMemo(() => futureProofing(build, data), [build, data]);
+  const report = useMemo(() => machineReport(build, data, { fps: rows.find((r) => r.est.status === 'ok')?.est.avgFps }), [build, data, rows]);
+
+  const quote = () => {
+    const cpu = data.cpus.get(build.cpuId);
+    const gpu = data.gpus.get(build.gpuId);
+    if (!cpu || !gpu) return;
+    printQuote(
+      buildQuoteHtml({
+        title: `${build.label ?? 'Build'} — performance`,
+        buildName: build.label || `${cpu.brand} / ${gpu.brand}`,
+        cpu: cpu.fullName,
+        gpu: gpu.fullName,
+        ram: `${build.ram.totalGB}GB ${build.ram.type ?? ''} ${build.ram.channels}-channel @ ${build.ram.speedMTs} MT/s`,
+        storage: build.storage,
+        rows: rows
+          .filter((r) => r.est.status === 'ok')
+          .map((r) => ({
+            game: data.games.get(r.gameId)?.name ?? r.gameId,
+            resolution: res,
+            fps: fmt(r.est.avgFps),
+            low: fmt(r.est.low1PctFps),
+          })),
+        powerW: report ? Math.round(report.power.totalW) : undefined,
+        psuW: report?.power.recommendedPsuW,
+        yearlyCost: report ? `£${report.power.costPerYearGBP(15).toFixed(0)}` : undefined,
+        seeded: true,
+      }),
+    );
+  };
 
   const ok = rows.filter((r) => r.est.status === 'ok');
   const blocked = rows.length - ok.length;
@@ -41,6 +73,8 @@ export function BuildAnalyser() {
       <div className="grid" style={{ gridTemplateColumns: 'minmax(280px, 340px) minmax(0, 1fr)' }}>
         <div>
           <BuildEditor build={build} onChange={(b) => setBuilds([b, ...builds.slice(1)])} />
+
+          <BuildLibrary current={build} onLoad={(b) => setBuilds([{ ...b, id: build.id }, ...builds.slice(1)])} />
 
           <div className="panel">
             <div className="panel-head">forward risk</div>
@@ -77,6 +111,30 @@ export function BuildAnalyser() {
                   </button>
                 ))}
               </div>
+              <button className="btn" style={{ marginLeft: 8 }} onClick={quote} title="Printable customer-facing sheet">
+                quote
+              </button>
+              <button
+                className="btn"
+                onClick={() =>
+                  exportCsv(
+                    'rigcheck-build.csv',
+                    rows.map((r) => ({
+                      game: data.games.get(r.gameId)?.name ?? r.gameId,
+                      resolution: res,
+                      status: r.est.status,
+                      avg_fps: r.est.avgFps?.toFixed(1) ?? '',
+                      low_1pct: r.est.low1PctFps?.toFixed(1) ?? '',
+                      low_01pct: r.est.low01PctFps?.toFixed(1) ?? '',
+                      smoothness: r.est.smoothness?.verdict ?? '',
+                      limiter: r.est.limiter ?? '',
+                      uncertainty_pct: r.est.uncertainty ? (r.est.uncertainty * 100).toFixed(0) : '',
+                    })),
+                  )
+                }
+              >
+                CSV
+              </button>
             </div>
             <div className="panel-body">
               <div className="grid three" style={{ marginBottom: 12 }}>

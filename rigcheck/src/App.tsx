@@ -1,10 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { HashRouter, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AppCtx, CORE_LOOP, decodeState, encodeState, engineData, makeBuild } from './ui/store.ts';
+import { ProvenanceBanner } from './ui/components/Banner.tsx';
 import { BuildAnalyser } from './ui/pages/BuildAnalyser.tsx';
 import { ComparisonMatrix } from './ui/pages/ComparisonMatrix.tsx';
 import { UpgradeAdvisor } from './ui/pages/UpgradeAdvisor.tsx';
 import { InventoryOptimiser } from './ui/pages/InventoryOptimiser.tsx';
+import { MachineReport } from './ui/pages/MachineReport.tsx';
+import { TradeDesk } from './ui/pages/TradeDesk.tsx';
+import { Detect } from './ui/pages/Detect.tsx';
 import { DataExplorer } from './ui/pages/DataExplorer.tsx';
 import type { Build, Resolution } from './core/types.ts';
 
@@ -13,6 +17,9 @@ const NAV = [
   { to: '/matrix', label: 'Comparison Matrix' },
   { to: '/upgrade', label: 'Upgrade Advisor' },
   { to: '/inventory', label: 'Inventory Optimiser' },
+  { to: '/machine', label: 'Machine Report' },
+  { to: '/trade', label: 'Trade Desk' },
+  { to: '/detect', label: 'Identify' },
   { to: '/data', label: 'Data Explorer' },
 ];
 
@@ -33,6 +40,7 @@ function Shell({ children }: { children: React.ReactNode }) {
           <ShareButton />
         </div>
       </header>
+      <ProvenanceBanner />
       <main className="main">{children}</main>
     </div>
   );
@@ -95,6 +103,9 @@ export function App() {
             <Route path="/matrix" element={<ComparisonMatrix />} />
             <Route path="/upgrade" element={<UpgradeAdvisor />} />
             <Route path="/inventory" element={<InventoryOptimiser />} />
+            <Route path="/machine" element={<MachineReport />} />
+            <Route path="/trade" element={<TradeDesk />} />
+            <Route path="/detect" element={<Detect />} />
             <Route path="/data" element={<DataExplorer />} />
             <Route path="*" element={<Navigate to="/analyser" replace />} />
           </Routes>

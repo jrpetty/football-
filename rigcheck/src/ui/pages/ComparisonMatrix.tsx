@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { BuildEditor } from '../components/BuildEditor.tsx';
 import { Delta, ExplainPanel, FpsFigure, Legend, fmt } from '../components/Parts.tsx';
 import { makeBuild, useApp } from '../store.ts';
+import { exportCsv, exportJson, matrixToRows } from '../export.ts';
 import { compareBuilds } from '../../core/queries.ts';
 import type { Resolution } from '../../core/types.ts';
 import { RESOLUTIONS } from '../../core/types.ts';
@@ -11,6 +12,7 @@ export function ComparisonMatrix() {
   const [baseline, setBaseline] = useState<string>(builds[0]?.id ?? '');
   const [open, setOpen] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [heatmap, setHeatmap] = useState(true);
 
   const base = builds.some((b) => b.id === baseline) ? baseline : builds[0]?.id;
 
@@ -21,6 +23,24 @@ export function ComparisonMatrix() {
 
   const cell = (buildId: string, gameId: string, res: Resolution) =>
     matrix.cells.find((c) => c.buildId === buildId && c.gameId === gameId && c.resolution === res);
+
+  /**
+   * Heat is computed per ROW (one game at one resolution), not across the whole
+   * table. A global scale would just colour every esports row hot and every 4K
+   * row cold, which says nothing — the useful comparison is between builds
+   * playing the same game.
+   */
+  const rowHeat = (gameId: string, res: Resolution) => {
+    const vals = builds
+      .map((b) => cell(b.id, gameId, res)?.estimate.avgFps)
+      .filter((v): v is number => v != null);
+    return { min: Math.min(...vals), max: Math.max(...vals) };
+  };
+  const heatStyle = (fps: number | undefined, range: { min: number; max: number }) => {
+    if (!heatmap || fps == null || !Number.isFinite(range.min) || range.max === range.min) return undefined;
+    const t = (fps - range.min) / (range.max - range.min);
+    return { background: `color-mix(in srgb, var(--chart-series) ${(t * 22).toFixed(0)}%, transparent)` };
+  };
 
   return (
     <>
@@ -52,6 +72,15 @@ export function ComparisonMatrix() {
               </button>
             ))}
           </div>
+          <button className={`toggle${heatmap ? ' on' : ''}`} style={{ marginRight: 6 }} onClick={() => setHeatmap(!heatmap)}>
+            heatmap
+          </button>
+          <button className="btn" onClick={() => exportCsv('rigcheck-matrix.csv', matrixToRows(matrix, data))}>
+            CSV
+          </button>
+          <button className="btn" onClick={() => exportJson('rigcheck-matrix.json', matrix)}>
+            JSON
+          </button>
           <button className="btn" onClick={() => setEditing(!editing)}>
             {editing ? 'done' : 'edit builds'}
           </button>
@@ -125,9 +154,10 @@ export function ComparisonMatrix() {
                         {builds.map((b) => {
                           const c = cell(b.id, gameId, res);
                           if (!c) return <td key={b.id} colSpan={2} className="n">—</td>;
+                          const heat = heatStyle(c.estimate.avgFps, rowHeat(gameId, res));
                           return (
                             <React.Fragment key={b.id}>
-                              <td className="n">
+                              <td className="n" style={heat}>
                                 <FpsFigure
                                   estimate={c.estimate}
                                   showBand={false}

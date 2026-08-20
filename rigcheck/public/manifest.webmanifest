@@ -1,0 +1,13 @@
+{
+  "name": "RIGCHECK — build comparison",
+  "short_name": "RIGCHECK",
+  "description": "Compare PC builds across games and resolutions with a fully auditable performance model.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0a0c0e",
+  "theme_color": "#0a0c0e",
+  "icons": [
+    { "src": "./favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

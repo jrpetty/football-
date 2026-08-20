@@ -10,7 +10,8 @@
  *      discontinuous or asymmetric between average and 1% low.
  *   5. Every step emits a ModelTerm so the UI can show the full working.
  */
-import { COMBINE, LOW1PCT_RATIO, PCIE_MODEL, RAM_MODEL, RT_MODEL, RT_WEIGHT, STORAGE_MODEL, UNCERTAINTY, VRAM_MODEL, CPU_WEIGHTS } from './constants.ts';
+import { COMBINE, FRAMEGEN_MODEL, LOW_END_MODEL, LOW1PCT_RATIO, PCIE_MODEL, RAM_MODEL, RT_MODEL, RT_WEIGHT, STORAGE_MODEL, STUTTER_MODEL, UNCERTAINTY, VRAM_MODEL, CPU_WEIGHTS } from './constants.ts';
+import { estimateThermals } from './physics.ts';
 import { runGates } from './gates.ts';
 import { applyCpuWeights, deriveCpuIndex, deriveGpuIndex } from './indices.ts';
 import type {
@@ -65,6 +66,12 @@ export interface EstimateOptions {
   upscaling?: UpscalingSetting;
   /** Ray tracing setting for THIS query. Defaults to off — raster comparison. */
   rtTier?: 'on' | 'off';
+  /**
+   * Case airflow. Defaults to 'good' so an unspecified build is not silently
+   * penalised — but a restricted case is a real and commonly ignored cause of a
+   * machine underperforming its parts list.
+   */
+  airflowTier?: 'restricted' | 'moderate' | 'good' | 'excellent';
 }
 
 function weakest(a: Confidence, b: Confidence): Confidence {
@@ -98,6 +105,11 @@ function vramCliffMultipliers(deficitRatio: number): { avg: number; low: number 
  * At equal inputs this returns 2^(-1/p) of either. p is fitted per resolution;
  * see COMBINE for why the spec's stated p=4 and its stated ~10% loss disagree.
  */
+/** True when the CPU side is the binding constraint by a clear margin. */
+function limiterIsCpu(cpuFps: number, gpuFps: number): boolean {
+  return cpuFps < gpuFps * 0.95;
+}
+
 export function softMin(cpuFps: number, gpuFps: number, p: number): number {
   if (cpuFps <= 0 || gpuFps <= 0) return 0;
   return Math.pow(Math.pow(cpuFps, -p) + Math.pow(gpuFps, -p), -1 / p);
@@ -201,6 +213,17 @@ export function estimate(
         },
       ],
     };
+  }
+
+  // Sustained clocks, not boost clocks. The catalogue's clock figures assume the
+  // cooling can hold boost; a stock cooler in a restricted case cannot, and the
+  // gap between a benchmark run and twenty minutes of play lives here.
+  const thermal = estimateThermals(gpu, cpu, build, opts.airflowTier ?? 'good');
+  const thermalFactor = Math.min(thermal.cpuClockFactor, thermal.gpuClockFactor);
+  if (thermal.throttling) {
+    for (const t of thermal.terms) {
+      terms.push({ label: `thermal: ${t.label}`, value: t.value, confidence: 'spec-derived', sources: [], explain: t.explain });
+    }
   }
 
   extraUncertainty += gpuIdx.missingFields.length * UNCERTAINTY.perMissingField;
@@ -309,7 +332,27 @@ export function estimate(
     });
   }
 
-  const gpuBoundFps = refGpuFps * Math.pow(effectiveGpuIndex / 100, ref.gpuScalingExponent) * upscaleGain;
+  // Piecewise scaling: the title's own exponent above the floor, reverting
+  // toward linear beneath it. Applied as two segments so the curve stays
+  // continuous at the floor rather than stepping.
+  const idxRatio = effectiveGpuIndex / 100;
+  const floorRatio = LOW_END_MODEL.indexFloor / 100;
+  let scaledIndex: number;
+  if (idxRatio >= floorRatio) {
+    scaledIndex = Math.pow(idxRatio, ref.gpuScalingExponent);
+  } else {
+    const atFloor = Math.pow(floorRatio, ref.gpuScalingExponent);
+    scaledIndex = atFloor * Math.pow(idxRatio / floorRatio, LOW_END_MODEL.floorExponent);
+    terms.push({
+      label: 'low-end scaling',
+      value: Number((scaledIndex * 100).toFixed(1)),
+      confidence: 'interpolated',
+      sources: [],
+      explain: `GPU index ${effectiveGpuIndex.toFixed(0)} is below the ${LOW_END_MODEL.indexFloor} floor, so scaling reverts toward linear (exponent ${LOW_END_MODEL.floorExponent}) instead of this title's usual ${ref.gpuScalingExponent}. A draw-call-bound title barely rewards extra GPU power at the top of the range, but at the bottom the GPU genuinely is the wall.`,
+    });
+  }
+
+  const gpuBoundFps = refGpuFps * scaledIndex * upscaleGain * thermal.gpuClockFactor;
   terms.push({
     label: 'GPU-bound FPS',
     value: Number(gpuBoundFps.toFixed(1)),
@@ -362,7 +405,8 @@ export function estimate(
     });
   }
 
-  const cpuBoundFps = ref.cpuBound * (cpuScalar / 100) * channelMult * capacityMult;
+  const cpuBoundFps =
+    ref.cpuBound * (cpuScalar / 100) * channelMult * capacityMult * thermal.cpuClockFactor;
   terms.push({
     label: 'CPU-bound FPS',
     value: Number(cpuBoundFps.toFixed(1)),
@@ -455,21 +499,94 @@ export function estimate(
     });
   }
 
-  // --- 8. 1% lows ---------------------------------------------------------
+  // --- 8. Frame-time consistency -----------------------------------------
+  //
+  // Lows were previously a fixed ratio of the average, which cannot express the
+  // complaint players actually have: a build can hold a respectable average and
+  // still feel broken. Each stall source is modelled separately so the panel
+  // can name the cause rather than just showing a smaller number.
   const lowRatio = LOW1PCT_RATIO[game.archetype];
-  const low1Pct = fps * lowRatio * (vramLow / Math.max(vramAvg, 0.01)) * storageLow;
+  const stutterCauses: string[] = [];
+  let stutterMult = 1;
+
+  if (limiterIsCpu(cpuBoundFps, gpuBoundFps)) {
+    stutterMult *= STUTTER_MODEL.cpuBoundLowPenalty;
+    stutterCauses.push('CPU is the limiter — frame pacing degrades before the average does');
+  }
+  const comfortableThreads = (game.requirements.minThreads ?? 4) * 1.5;
+  if (cpu.threads < comfortableThreads) {
+    stutterMult *= STUTTER_MODEL.threadStarvationPenalty;
+    stutterCauses.push(`${cpu.threads} threads against a comfortable ${Math.ceil(comfortableThreads)} for this title`);
+  }
+  const shaderPenalty = STUTTER_MODEL.shaderCompilationPenalty[game.archetype];
+  if (shaderPenalty) {
+    stutterMult *= shaderPenalty;
+    stutterCauses.push('shader compilation during play (worst on a first run, and after every driver update)');
+  }
+  for (const rule of STUTTER_MODEL.ramPressurePenalty) {
+    if (build.ram.totalGB < rule.belowGB) {
+      stutterMult = Math.min(stutterMult, stutterMult * rule.multiplier);
+      stutterCauses.push(`${build.ram.totalGB}GB system RAM forces paging mid-frame`);
+      break;
+    }
+  }
+  if (vramLimited) stutterCauses.push('VRAM over-subscribed — textures stream across the PCIe bus mid-frame');
+  if (build.storage === 'hdd') stutterCauses.push('mechanical drive cannot stream assets fast enough during traversal');
+
+  const low1Pct = fps * lowRatio * (vramLow / Math.max(vramAvg, 0.01)) * storageLow * stutterMult;
+  const low01Pct =
+    low1Pct * STUTTER_MODEL.low01FromLow1 * (vramLimited ? STUTTER_MODEL.low01VramCliffExtra : 1);
+
+  const smoothnessRatio = low1Pct / Math.max(fps, 1);
+  const smoothnessVerdict =
+    smoothnessRatio >= 0.75 ? 'smooth' : smoothnessRatio >= 0.62 ? 'good' : smoothnessRatio >= 0.48 ? 'uneven' : 'stuttery';
+
   terms.push({
     label: '1% low',
     value: Number(low1Pct.toFixed(1)),
     confidence: weakest(ref.confidence, 'interpolated'),
     sources: [],
-    explain: `Average x${lowRatio} archetype ratio, then storage and VRAM effects which hit lows disproportionately.`,
+    explain: `Average x${lowRatio} archetype ratio, then VRAM, storage and stall sources${stutterCauses.length ? `: ${stutterCauses.join('; ')}` : ' (none active)'}.`,
+  });
+  terms.push({
+    label: '0.1% low',
+    value: Number(low01Pct.toFixed(1)),
+    confidence: weakest(ref.confidence, 'extrapolated'),
+    sources: [],
+    explain: `The deep tail — the individual stalls you notice rather than feel. ${(STUTTER_MODEL.low01FromLow1 * 100).toFixed(0)}% of the 1% low${vramLimited ? ', collapsed further because a VRAM deficit produces long single-frame stalls' : ''}.`,
+  });
+  terms.push({
+    label: 'smoothness',
+    value: smoothnessVerdict,
+    confidence: 'interpolated',
+    sources: [],
+    explain: `1% low is ${(smoothnessRatio * 100).toFixed(0)}% of the average. Above ~75% feels smooth; below ~48% feels stuttery regardless of how good the average looks.`,
   });
 
-  // --- 9. Limiter and uncertainty ----------------------------------------
+  // --- 9. Frame generation ------------------------------------------------
+  //
+  // Reported as a SEPARATE figure. Generated frames raise the counter without
+  // improving latency, so folding them into avgFps would make a frame-gen build
+  // look faster than a native one that is genuinely more responsive.
+  let presentedFps: number | undefined;
+  const frameGenActive = upscaling.frameGen && upscaling.tech !== 'none' && gpu.caps.upscaling.includes(upscaling.tech);
+  if (frameGenActive) {
+    const mult = FRAMEGEN_MODEL.multiplier[upscaling.tech] ?? 1;
+    presentedFps = fps * mult;
+    terms.push({
+      label: 'frame generation',
+      value: `${presentedFps.toFixed(0)} presented`,
+      confidence: 'spec-derived',
+      sources: [],
+      explain: `${upscaling.tech.toUpperCase()} generation presents ${mult}x the rendered frames (not 2x — generating costs GPU time). Rendered rate stays ${fps.toFixed(0)}. Latency RISES slightly; this figure is reported separately precisely so it is never compared against a native number as though they measured the same thing.${fps < FRAMEGEN_MODEL.minimumSensibleBaseFps ? ` Below ${FRAMEGEN_MODEL.minimumSensibleBaseFps} rendered fps this feels bad however high the counter reads.` : ''}`,
+    });
+  }
+
+  // --- 10. Limiter and uncertainty ---------------------------------------
   const gpuBoundRatio = cpuBoundFps / (cpuBoundFps + gpuBoundFps);
   if (!limiter) {
-    if (vramLimited && vramAvg < 0.8) limiter = 'vram';
+    if (thermalFactor < 0.97) limiter = 'thermal';
+    else if (vramLimited && vramAvg < 0.8) limiter = 'vram';
     else if (gpuBoundFps < cpuBoundFps * 0.9) limiter = 'gpu';
     else if (cpuBoundFps < gpuBoundFps * 0.9) limiter = 'cpu';
     else limiter = 'balanced';
@@ -494,6 +611,11 @@ export function estimate(
     gateFailures: [],
     avgFps: fps,
     low1PctFps: low1Pct,
+    low01PctFps: low01Pct,
+    presentedFps,
+    frameGenActive,
+    smoothness: { ratio: smoothnessRatio, verdict: smoothnessVerdict, causes: stutterCauses },
+    thermalFactor,
     uncertainty,
     band: { low: fps * (1 - uncertainty), high: fps * (1 + uncertainty) },
     confidence,

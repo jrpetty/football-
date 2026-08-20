@@ -526,3 +526,37 @@
 - CV median APE: 13.6%, p90: 35.6%, spearman: 0.931, sign: 100.0%
 - in-sample median APE: 10.3%
 - verdict: PASS (advisory — recalled fixtures)
+
+## 2026-08-20T10:05:17.655Z
+- fixtures: 161; grouped 5-fold CV with in-fold reference fitting
+- CV median APE: 13.6%, p90: 35.6%, spearman: 0.931, sign: 100.0%
+- in-sample median APE: 10.3%
+- verdict: PASS (advisory — recalled fixtures)
+
+## calibration 2026-08-20T10:05:56.028Z
+- fixtures: 161 (161 recalled)
+- in-sample medianAPE 14.3% -> 9.4%
+- ref cyberpunk-2077 gpuBound x0.954 cpuBound x1.182 (43 fixtures)
+- ref counter-strike-2 gpuBound x1 cpuBound x1.174 (29 fixtures)
+- ref forza-horizon-5 gpuBound x1.234 cpuBound x1 (16 fixtures)
+- ref shadow-of-the-tomb-raider gpuBound x0.966 cpuBound x1 (8 fixtures)
+- ref red-dead-redemption-2 gpuBound x1.065 cpuBound x1 (6 fixtures)
+- ref fortnite gpuBound x0.833 cpuBound x1 (7 fixtures)
+- ref alan-wake-2 gpuBound x0.906 cpuBound x1 (4 fixtures)
+- ref black-myth-wukong gpuBound x0.965 cpuBound x1 (2 fixtures)
+- ref total-war-warhammer-iii gpuBound x1.191 cpuBound x1.191 (8 fixtures)
+- ref the-last-of-us-part-i gpuBound x0.888 cpuBound x0.841 (6 fixtures)
+- ref hogwarts-legacy gpuBound x1.03 cpuBound x1 (6 fixtures)
+- ref rocket-league gpuBound x0.866 cpuBound x1 (4 fixtures)
+- ref league-of-legends gpuBound x0.906 cpuBound x1 (4 fixtures)
+- ref microsoft-flight-simulator-2024 gpuBound x1.119 cpuBound x1.046 (3 fixtures)
+- ref hellblade-ii gpuBound x0.965 cpuBound x1 (2 fixtures)
+- ref valorant gpuBound x1.182 cpuBound x1.182 (7 fixtures)
+- ref apex-legends gpuBound x1.063 cpuBound x0.936 (2 fixtures)
+- global constants: frozen priors (see src/core/constants.ts); constants.json untouched
+
+## 2026-08-20T10:05:57.339Z
+- fixtures: 161; grouped 5-fold CV with in-fold reference fitting
+- CV median APE: 12.6%, p90: 29.6%, spearman: 0.947, sign: 100.0%
+- in-sample median APE: 9.4%
+- verdict: PASS (advisory — recalled fixtures)

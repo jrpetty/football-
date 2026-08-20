@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-18T18:03:04.123Z",
+  "generatedAt": "2026-08-20T10:05:56.027Z",
   "note": "Seed references fitted by scripts/calibrate.ts (scale-only, shrunk) against the full fixture set. Provenance unchanged: model-knowledge until measured data replaces it. The generalisation estimate for this procedure is validate.ts cross-validation, not the in-sample figures.",
   "provenance": {
     "model-knowledge": {
@@ -16,9 +16,9 @@
     {
       "gameId": "counter-strike-2",
       "gpuBound": {
-        "1080p": 364.63,
-        "1440p": 232.45,
-        "2160p": 145.85
+        "1080p": 400,
+        "1440p": 255,
+        "2160p": 160
       },
       "cpuBound": 311,
       "gpuScalingExponent": 0.65,
@@ -64,9 +64,9 @@
     {
       "gameId": "league-of-legends",
       "gpuBound": {
-        "1080p": 519.62,
-        "1440p": 381.05,
-        "2160p": 238.16
+        "1080p": 543.32,
+        "1440p": 398.44,
+        "2160p": 249.02
       },
       "cpuBound": 330,
       "gpuScalingExponent": 0.65,

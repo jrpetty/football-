@@ -395,6 +395,19 @@ export interface FpsEstimate {
   /** Undefined when status is WILL_NOT_RUN. */
   avgFps?: number;
   low1PctFps?: number;
+  /** The deep tail — the stalls players actually notice. */
+  low01PctFps?: number;
+  /**
+   * Frames PRESENTED per second with frame generation on. Deliberately a
+   * separate field from avgFps: generated frames raise the counter without
+   * improving latency, so they must never be compared against a native figure.
+   */
+  presentedFps?: number;
+  frameGenActive?: boolean;
+  /** How consistent the frame pacing is, independent of the average. */
+  smoothness?: { ratio: number; verdict: 'smooth' | 'good' | 'uneven' | 'stuttery'; causes: string[] };
+  /** Sustained-clock derate applied for cooling, 1 = none. */
+  thermalFactor?: number;
   /** Multiplicative 1-sigma uncertainty, e.g. 0.18 means +/-18%. */
   uncertainty?: number;
   /** Absolute band derived from `uncertainty`. */
@@ -404,7 +417,7 @@ export interface FpsEstimate {
   gpuBoundFps?: number;
   /** Which side dominates, as a 0..1 ratio. 1 = fully GPU bound. */
   gpuBoundRatio?: number;
-  limiter?: 'cpu' | 'gpu' | 'balanced' | 'vram' | 'engine-cap';
+  limiter?: 'cpu' | 'gpu' | 'balanced' | 'vram' | 'engine-cap' | 'thermal';
   terms: ModelTerm[];
 }
 

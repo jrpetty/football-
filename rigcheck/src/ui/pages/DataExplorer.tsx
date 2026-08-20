@@ -4,14 +4,23 @@ import { deriveGpuIndex, deriveCpuIndex } from '../../core/indices.ts';
 import { ANCHOR_RAM } from '../../core/catalogue.ts';
 import { fmt } from '../components/Parts.tsx';
 import { ANCHORS } from '../../core/constants.ts';
+import { exportCsv } from '../export.ts';
+import { PartPicker } from '../components/Parts.tsx';
 
-type Tab = 'gpu' | 'cpu' | 'game' | 'provenance';
+type Tab = 'gpu' | 'cpu' | 'game' | 'compare' | 'provenance';
 
 export function DataExplorer() {
   const { data } = useApp();
   const [tab, setTab] = useState<Tab>('gpu');
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<'index' | 'name' | 'date'>('index');
+  // Capability filters: find parts by what they can DO, not by name. "Every
+  // 16GB+ mesh-shader card" is a question the search box cannot express.
+  const [minVram, setMinVram] = useState(0);
+  const [needMesh, setNeedMesh] = useState(false);
+  const [needRt, setNeedRt] = useState(false);
+  const [diffA, setDiffA] = useState('nvidia-geforce-rtx-3060-12gb');
+  const [diffB, setDiffB] = useState('nvidia-geforce-rtx-4060');
 
   const gpuRows = useMemo(() => {
     const rows = [...data.gpus.values()].map((g) => ({
@@ -22,8 +31,14 @@ export function DataExplorer() {
       sort === 'index' ? b.idx.index.raster - a.idx.index.raster
       : sort === 'date' ? (b.g.launchDate ?? '').localeCompare(a.g.launchDate ?? '')
       : a.g.fullName.localeCompare(b.g.fullName));
-    return rows.filter((r) => !q || r.g.fullName.toLowerCase().includes(q.toLowerCase()));
-  }, [data, q, sort]);
+    return rows.filter(
+      (r) =>
+        (!q || r.g.fullName.toLowerCase().includes(q.toLowerCase())) &&
+        (minVram === 0 || (r.g.vramGB ?? 0) >= minVram) &&
+        (!needMesh || r.g.caps.meshShaders) &&
+        (!needRt || r.g.caps.rayTracing),
+    );
+  }, [data, q, sort, minVram, needMesh, needRt]);
 
   const cpuRows = useMemo(() => {
     const rows = [...data.cpus.values()].map((c) => ({
@@ -50,9 +65,9 @@ export function DataExplorer() {
       <div className="panel">
         <div className="panel-head">
           <div className="toggle-row">
-            {(['gpu', 'cpu', 'game', 'provenance'] as Tab[]).map((t) => (
+            {(['gpu', 'cpu', 'game', 'compare', 'provenance'] as Tab[]).map((t) => (
               <button key={t} className={`toggle${tab === t ? ' on' : ''}`} onClick={() => setTab(t)}>
-                {t === 'gpu' ? `GPUs (${data.gpus.size})` : t === 'cpu' ? `CPUs (${data.cpus.size})` : t === 'game' ? `games (${data.games.size})` : 'provenance'}
+                {t === 'gpu' ? `GPUs (${data.gpus.size})` : t === 'cpu' ? `CPUs (${data.cpus.size})` : t === 'game' ? `games (${data.games.size})` : t === 'compare' ? 'compare parts' : 'provenance'}
               </button>
             ))}
           </div>
@@ -69,11 +84,43 @@ export function DataExplorer() {
                 value={q}
                 placeholder="filter…"
                 onChange={(e) => setQ(e.target.value)}
-                style={{ width: 180 }}
+                style={{ width: 150 }}
               />
+              <button
+                className="btn"
+                style={{ marginLeft: 6 }}
+                onClick={() =>
+                  exportCsv(
+                    `rigcheck-${tab}s.csv`,
+                    tab === 'gpu'
+                      ? gpuRows.map(({ g, idx }) => ({ id: g.id, name: g.fullName, arch: g.architecture, raster_index: idx.index.raster.toFixed(1), rt_index: idx.index.rt.toFixed(1), shaders: g.shaders ?? '', boost_mhz: g.boostClockMHz ?? '', vram_gb: g.vramGB ?? '', bandwidth_gbs: g.memBandwidthGBs ?? '', tdp_w: g.tdpW ?? '', mesh_shaders: g.caps.meshShaders, ray_tracing: g.caps.rayTracing, dx_level: g.caps.dxFeatureLevel, driver_status: g.driverStatus }))
+                      : cpuRows.map(({ c, idx }) => ({ id: c.id, name: c.fullName, arch: c.architecture, throughput: idx.index.throughput.toFixed(1), cache_endowment: idx.index.cacheEndowment.toFixed(2), cores: c.cores, threads: c.threads, socket: c.socket, memory: c.memoryType.join('/'), l3_mb: c.l3CacheMB ?? '', tdp_w: c.tdpW ?? '', vcache: !!c.vcache })),
+                  )
+                }
+              >
+                CSV
+              </button>
             </>
           )}
         </div>
+
+        {tab === 'gpu' && (
+          <div className="panel-body" style={{ paddingTop: 8, paddingBottom: 8, borderBottom: '1px solid var(--line)' }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <span className="mini">capability filter</span>
+              <div className="toggle-row">
+                {[0, 8, 12, 16, 24].map((v) => (
+                  <button key={v} className={`toggle${minVram === v ? ' on' : ''}`} onClick={() => setMinVram(v)}>
+                    {v === 0 ? 'any VRAM' : `${v}GB+`}
+                  </button>
+                ))}
+              </div>
+              <button className={`toggle${needMesh ? ' on' : ''}`} onClick={() => setNeedMesh(!needMesh)}>mesh shaders</button>
+              <button className={`toggle${needRt ? ' on' : ''}`} onClick={() => setNeedRt(!needRt)}>ray tracing</button>
+              <span className="mini">{gpuRows.length} match</span>
+            </div>
+          </div>
+        )}
 
         {tab === 'gpu' && (
           <div className="table-wrap" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
@@ -171,6 +218,61 @@ export function DataExplorer() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {tab === 'compare' && (
+          <div className="panel-body">
+            <div className="grid two" style={{ marginBottom: 12 }}>
+              <PartPicker kind="gpu" label="part A" value={diffA} onChange={setDiffA} />
+              <PartPicker kind="gpu" label="part B" value={diffB} onChange={setDiffB} />
+            </div>
+            {(() => {
+              const a = data.gpus.get(diffA);
+              const b = data.gpus.get(diffB);
+              if (!a || !b) return <div className="empty">Pick two parts.</div>;
+              const ia = deriveGpuIndex(a, data.anchorGpu, ANCHOR_RAM).index;
+              const ib = deriveGpuIndex(b, data.anchorGpu, ANCHOR_RAM).index;
+              const rows: { field: string; a: string | number; b: string | number; delta?: string }[] = [
+                { field: 'raster index', a: ia.raster.toFixed(1), b: ib.raster.toFixed(1), delta: `${(((ib.raster - ia.raster) / ia.raster) * 100).toFixed(1)}%` },
+                { field: 'RT index', a: ia.rt.toFixed(1), b: ib.rt.toFixed(1) },
+                { field: 'architecture', a: a.architecture, b: b.architecture },
+                { field: 'shaders', a: a.shaders ?? '—', b: b.shaders ?? '—' },
+                { field: 'boost clock', a: a.boostClockMHz ?? '—', b: b.boostClockMHz ?? '—' },
+                { field: 'VRAM', a: a.vramGB != null ? `${a.vramGB}GB ${a.vramType ?? ''}` : 'shared', b: b.vramGB != null ? `${b.vramGB}GB ${b.vramType ?? ''}` : 'shared' },
+                { field: 'bus width', a: a.memBusBits ? `${a.memBusBits}-bit` : '—', b: b.memBusBits ? `${b.memBusBits}-bit` : '—' },
+                { field: 'bandwidth', a: a.memBandwidthGBs ?? '—', b: b.memBandwidthGBs ?? '—' },
+                { field: 'TDP', a: a.tdpW ? `${a.tdpW}W` : '—', b: b.tdpW ? `${b.tdpW}W` : '—' },
+                { field: 'mesh shaders', a: a.caps.meshShaders ? 'yes' : 'no', b: b.caps.meshShaders ? 'yes' : 'no' },
+                { field: 'ray tracing', a: a.caps.rayTracing ? 'yes' : 'no', b: b.caps.rayTracing ? 'yes' : 'no' },
+                { field: 'DX feature level', a: a.caps.dxFeatureLevel, b: b.caps.dxFeatureLevel },
+                { field: 'upscaling', a: a.caps.upscaling.join(', ') || '—', b: b.caps.upscaling.join(', ') || '—' },
+                { field: 'driver status', a: a.driverStatus, b: b.driverStatus },
+                { field: 'launched', a: a.launchDate ?? '—', b: b.launchDate ?? '—' },
+              ];
+              return (
+                <div className="table-wrap">
+                  <table className="data">
+                    <thead>
+                      <tr><th>field</th><th>{a.fullName}</th><th>{b.fullName}</th><th className="n">delta</th></tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((r) => {
+                        const differs = String(r.a) !== String(r.b);
+                        return (
+                          <tr key={r.field} style={differs ? { background: 'var(--surface-2)' } : undefined}>
+                            <td className="sub">{r.field}</td>
+                            <td className="mono" style={{ color: differs ? 'var(--ink)' : 'var(--faint)' }}>{r.a}</td>
+                            <td className="mono" style={{ color: differs ? 'var(--ink)' : 'var(--faint)' }}>{r.b}</td>
+                            <td className="n sub">{r.delta ?? ''}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
           </div>
         )}
 

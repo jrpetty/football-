@@ -89,6 +89,43 @@ export const GATES = {
  */
 export const RECALL_WEIGHT: Record<string, number> = { high: 1.0, medium: 0.6, low: 0.3 };
 
+/**
+ * Source-quality ladder.
+ *
+ * Not all evidence is equal, and the gate should say so. A frametime capture
+ * from the harness on known hardware outranks a figure recalled from training
+ * data by a wide margin, and the weighting makes better data actually change
+ * the answer rather than merely being present. The tiers also drive automatic
+ * gate promotion: once measured rows carry the majority of the weight, the
+ * strict thresholds arm themselves.
+ */
+export const SOURCE_TIER: Record<string, { weight: number; label: string }> = {
+  harness: { weight: 1.0, label: 'measured by the operator harness (PresentMon frametime capture)' },
+  'manual-measured': { weight: 0.9, label: 'operator-supplied measurement' },
+  reviewer: { weight: 0.7, label: 'published reviewer dataset under licence' },
+  community: { weight: 0.5, label: 'community-submitted benchmark' },
+  'model-knowledge': { weight: 0.25, label: 'recalled from training data — NOT a measurement' },
+};
+
+/** Combined row weight: source tier x stated recall confidence. */
+export function rowWeight(f: Fixture): number {
+  const tier = SOURCE_TIER[f.provenance ?? 'model-knowledge']?.weight ?? 0.25;
+  const recall = RECALL_WEIGHT[f.recallConfidence ?? 'medium'] ?? 0.6;
+  // Recall confidence only modulates recalled rows; a measurement is a
+  // measurement regardless of how well anyone remembers taking it.
+  return f.provenance === 'model-knowledge' ? tier * recall : tier;
+}
+
+/** Share of total evidence weight that comes from genuine measurements. */
+export function measuredShare(fixtures: Fixture[]): number {
+  const total = fixtures.reduce((s, f) => s + rowWeight(f), 0);
+  if (!total) return 0;
+  const measured = fixtures
+    .filter((f) => f.provenance === 'harness' || f.provenance === 'manual-measured')
+    .reduce((s, f) => s + rowWeight(f), 0);
+  return measured / total;
+}
+
 function weightedQuantile(pairs: { v: number; w: number }[], q: number): number {
   if (!pairs.length) return NaN;
   const s = [...pairs].sort((a, b) => a.v - b.v);
@@ -198,7 +235,7 @@ export function metricsFromRows(rows: EvalRow[]): Metrics {
   for (const r of rows) {
     if (r.blocked || r.ape == null || r.predicted == null) { blocked++; continue; }
     apes.push(r.ape);
-    weighted.push({ v: r.ape, w: RECALL_WEIGHT[r.f.recallConfidence ?? 'medium'] ?? 0.6 });
+    weighted.push({ v: r.ape, w: rowWeight(r.f) });
     logActual.push(Math.log(r.f.avgFps));
     logPredicted.push(Math.log(r.predicted));
     if (r.withinBand) withinBand++;
@@ -349,7 +386,10 @@ async function main() {
     console.log(`${name.padEnd(20)}${a.padEnd(18)}${b.padEnd(12)}${gate}`);
 
   const recalledCount = fixtures.filter((f) => f.provenance === 'model-knowledge').length;
-  const advisoryTier = recalledCount / fixtures.length > 0.5;
+  // Promotion is by evidence WEIGHT, not row count: fifty recalled rows should
+  // not outvote thirty measurements just by being numerous.
+  const measured = measuredShare(fixtures);
+  const advisoryTier = measured < 0.5;
   const p90Gate = advisoryTier ? GATES.p90APEAdvisory : GATES.p90APE;
 
   line('median APE (wtd)', fmtPct(cv.medianAPE), fmtPct(inSample.medianAPE), `< ${fmtPct(GATES.medianAPE)}`);
@@ -360,6 +400,14 @@ async function main() {
   line('spearman rho', cv.spearman.toFixed(3), inSample.spearman.toFixed(3), `>= ${GATES.spearman}`);
   line('sign accuracy', fmtPct(cv.signAccuracy), fmtPct(inSample.signAccuracy), `>= ${fmtPct(GATES.signAccuracy)} (${cv.signPairs} decided, ${cv.signAbstained} within-noise abstention${cv.signAbstained === 1 ? '' : 's'})`);
   line('actual within band', fmtPct(cv.withinBand), fmtPct(inSample.withinBand), '(target ~68%)');
+  console.log('');
+  const tiers = new Map<string, number>();
+  for (const f of fixtures) tiers.set(f.provenance ?? 'model-knowledge', (tiers.get(f.provenance ?? 'model-knowledge') ?? 0) + 1);
+  console.log('evidence mix:');
+  for (const [tier, n] of [...tiers.entries()].sort((a, b) => b[1] - a[1])) {
+    console.log(`  ${String(n).padStart(4)} rows  ${tier.padEnd(18)} ${SOURCE_TIER[tier]?.label ?? 'unknown tier'}`);
+  }
+  console.log(`  measured share of evidence weight: ${fmtPct(measured)} (strict gate tier arms at 50%)`);
 
   const failures: string[] = [];
   if (fixtures.length < GATES.minFixtures) failures.push(`only ${fixtures.length} fixtures; ${GATES.minFixtures} needed for the metrics to be statistically meaningful`);
@@ -384,8 +432,29 @@ async function main() {
   mkdirSync(join(ROOT, 'data/validation'), { recursive: true });
   writeFileSync(
     join(ROOT, 'data/validation/last-run.json'),
-    JSON.stringify({ generatedAt: new Date().toISOString(), crossValidation: cv, inSample, failures }, null, 2),
+    JSON.stringify({ generatedAt: new Date().toISOString(), crossValidation: cv, inSample, failures, measuredShare: measured }, null, 2),
   );
+
+  // Metric history. A single accuracy figure says nothing about whether the
+  // model is getting better; the trajectory does, and it is the only way to see
+  // measured data actually paying off as it arrives.
+  const historyPath = join(ROOT, 'data/validation/history.json');
+  const history: unknown[] = existsSync(historyPath)
+    ? (JSON.parse(readFileSync(historyPath, 'utf8')) as unknown[])
+    : [];
+  history.push({
+    at: new Date().toISOString(),
+    fixtures: fixtures.length,
+    measuredShare: Number(measured.toFixed(3)),
+    medianAPE: Number(cv.medianAPE.toFixed(4)),
+    p90APE: Number(cv.p90APE.toFixed(4)),
+    meanAPE: Number(cv.meanAPE.toFixed(4)),
+    spearman: Number(cv.spearman.toFixed(4)),
+    signAccuracy: Number.isFinite(cv.signAccuracy) ? Number(cv.signAccuracy.toFixed(4)) : null,
+    withinBand: Number(cv.withinBand.toFixed(3)),
+    pass: failures.length === 0,
+  });
+  writeFileSync(historyPath, JSON.stringify(history.slice(-500), null, 2));
 
   const advisory = advisoryTier;
 

@@ -1,0 +1,793 @@
+{
+  "generatedAt": "2026-08-20T10:01:47.000Z",
+  "note": "Seeded from model knowledge; panel specifications are the manufacturer-published figures where recalled confidently, null otherwise. refreshHz is the headline maximum including factory overclock, with the native rate given in notes where it differs; typicalPriceGBP is indicative only.",
+  "provenance": {
+    "model-knowledge": {
+      "id": "model-knowledge",
+      "source": "Model knowledge (seed)",
+      "url": "",
+      "licence": "n/a",
+      "retrievedAt": "2026-08-20"
+    }
+  },
+  "count": 37,
+  "records": [
+    {
+      "id": "lg-24mp60g-b",
+      "brand": "LG",
+      "name": "24MP60G-B",
+      "fullName": "LG 24MP60G-B",
+      "resolution": "1080p",
+      "refreshHz": 75,
+      "panelType": "IPS",
+      "sizeInches": 23.8,
+      "responseMs": 5,
+      "adaptiveSync": "freesync",
+      "hdr": null,
+      "releaseYear": 2021,
+      "typicalPriceGBP": 90,
+      "notes": "Plain office/home IPS panel, no height adjustment. The \"1ms\" on the box is MBR backlight strobing; 5ms is the GtG claim.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "lg-24gn650-b",
+      "brand": "LG",
+      "name": "24GN650-B",
+      "fullName": "LG UltraGear 24GN650-B",
+      "resolution": "1080p",
+      "refreshHz": 144,
+      "panelType": "IPS",
+      "sizeInches": 23.8,
+      "responseMs": 1,
+      "adaptiveSync": "freesync",
+      "hdr": "HDR10",
+      "releaseYear": 2020,
+      "typicalPriceGBP": 130,
+      "notes": "Entry UltraGear. FreeSync Premium certified and works fine as a variable-refresh display on NVIDIA in practice; HDR10 is input support only, there is nowhere near the brightness for real HDR.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "lg-27gl850-b",
+      "brand": "LG",
+      "name": "27GL850-B",
+      "fullName": "LG UltraGear 27GL850-B",
+      "resolution": "1440p",
+      "refreshHz": 144,
+      "panelType": "IPS",
+      "sizeInches": 27,
+      "responseMs": 1,
+      "adaptiveSync": "gsync-compatible",
+      "hdr": "DisplayHDR 400",
+      "releaseYear": 2019,
+      "typicalPriceGBP": null,
+      "notes": "The Nano IPS panel that made 1440p/144 mainstream. Discontinued, so price is nulled — second-hand spread is too wide to give a useful figure.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "lg-27gp850-b",
+      "brand": "LG",
+      "name": "27GP850-B",
+      "fullName": "LG UltraGear 27GP850-B",
+      "resolution": "1440p",
+      "refreshHz": 180,
+      "panelType": "IPS",
+      "sizeInches": 27,
+      "responseMs": 1,
+      "adaptiveSync": "gsync-compatible",
+      "hdr": "DisplayHDR 400",
+      "releaseYear": 2021,
+      "typicalPriceGBP": 280,
+      "notes": "Successor to the 27GL850. 165Hz native, 180Hz with the factory overclock enabled in the OSD.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "lg-27gn950-b",
+      "brand": "LG",
+      "name": "27GN950-B",
+      "fullName": "LG UltraGear 27GN950-B",
+      "resolution": "2160p",
+      "refreshHz": 160,
+      "panelType": "IPS",
+      "sizeInches": 27,
+      "responseMs": 1,
+      "adaptiveSync": "gsync-compatible",
+      "hdr": "DisplayHDR 600",
+      "releaseYear": 2020,
+      "typicalPriceGBP": null,
+      "notes": "First mainstream 4K high-refresh Nano IPS, with edge-lit local dimming. 144Hz native, 160Hz overclocked. Superseded, price nulled.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "lg-27gr95qe-b",
+      "brand": "LG",
+      "name": "27GR95QE-B",
+      "fullName": "LG UltraGear 27GR95QE-B",
+      "resolution": "1440p",
+      "refreshHz": 240,
+      "panelType": "OLED",
+      "sizeInches": 26.5,
+      "responseMs": 0.03,
+      "adaptiveSync": "gsync-compatible",
+      "hdr": "DisplayHDR True Black 400",
+      "releaseYear": 2023,
+      "typicalPriceGBP": 600,
+      "notes": "26.5in WOLED panel sold as a 27in class monitor. Very fast, but WOLED subpixel layout means visible colour fringing on text at this pixel density.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "lg-32gs95ue-b",
+      "brand": "LG",
+      "name": "32GS95UE-B",
+      "fullName": "LG UltraGear 32GS95UE-B",
+      "resolution": "2160p",
+      "refreshHz": 240,
+      "panelType": "OLED",
+      "sizeInches": 31.5,
+      "responseMs": 0.03,
+      "adaptiveSync": "gsync-compatible",
+      "hdr": "DisplayHDR True Black 400",
+      "releaseYear": 2024,
+      "typicalPriceGBP": 1000,
+      "notes": "Dual-mode panel: 4K at 240Hz or 1080p at 480Hz, switched in the OSD. Price is a rough new-street figure and moves quickly.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "lg-34gn850-b",
+      "brand": "LG",
+      "name": "34GN850-B",
+      "fullName": "LG UltraGear 34GN850-B",
+      "resolution": "3440x1440",
+      "refreshHz": 160,
+      "panelType": "IPS",
+      "sizeInches": 34,
+      "responseMs": 1,
+      "adaptiveSync": "gsync-compatible",
+      "hdr": "DisplayHDR 400",
+      "releaseYear": 2020,
+      "typicalPriceGBP": null,
+      "notes": "Curved Nano IPS ultrawide. 144Hz native, 160Hz overclocked. Superseded by the 34GP83A/34GS95 line, price nulled.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "dell-p2419h",
+      "brand": "Dell",
+      "name": "P2419H",
+      "fullName": "Dell P2419H",
+      "resolution": "1080p",
+      "refreshHz": 60,
+      "panelType": "IPS",
+      "sizeInches": 23.8,
+      "responseMs": 5,
+      "adaptiveSync": "none",
+      "hdr": null,
+      "releaseYear": 2018,
+      "typicalPriceGBP": null,
+      "notes": "Corporate desk-fleet panel; enormous numbers on the second-hand market and a very common \"monitor I already own\". 5ms is the fast-mode GtG claim, 8ms normal.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "dell-u2720q",
+      "brand": "Dell",
+      "name": "U2720Q",
+      "fullName": "Dell UltraSharp U2720Q",
+      "resolution": "2160p",
+      "refreshHz": 60,
+      "panelType": "IPS",
+      "sizeInches": 27,
+      "responseMs": 5,
+      "adaptiveSync": "none",
+      "hdr": "DisplayHDR 400",
+      "releaseYear": 2019,
+      "typicalPriceGBP": null,
+      "notes": "Colour-accurate 4K office/content panel with 90W USB-C. No adaptive sync. Superseded by the U2723QE, price nulled.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "dell-s2721dgf",
+      "brand": "Dell",
+      "name": "S2721DGF",
+      "fullName": "Dell S2721DGF",
+      "resolution": "1440p",
+      "refreshHz": 165,
+      "panelType": "IPS",
+      "sizeInches": 27,
+      "responseMs": 1,
+      "adaptiveSync": "gsync-compatible",
+      "hdr": "DisplayHDR 400",
+      "releaseYear": 2020,
+      "typicalPriceGBP": 300,
+      "notes": "Fast IPS, one of the best-value 1440p high-refresh panels of its generation. FreeSync Premium Pro and G-Sync Compatible certified.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "alienware-aw2521h",
+      "brand": "Alienware",
+      "name": "AW2521H",
+      "fullName": "Alienware AW2521H",
+      "resolution": "1080p",
+      "refreshHz": 360,
+      "panelType": "IPS",
+      "sizeInches": 24.5,
+      "responseMs": 1,
+      "adaptiveSync": "gsync",
+      "hdr": "DisplayHDR 400",
+      "releaseYear": 2020,
+      "typicalPriceGBP": null,
+      "notes": "Hardware G-Sync module plus NVIDIA Reflex Latency Analyzer. Not to be confused with the AW2521HF, which is a different, cheaper 240Hz FreeSync panel. Discontinued, price nulled.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "alienware-aw3423dw",
+      "brand": "Alienware",
+      "name": "AW3423DW",
+      "fullName": "Alienware AW3423DW",
+      "resolution": "3440x1440",
+      "refreshHz": 175,
+      "panelType": "QD-OLED",
+      "sizeInches": 34,
+      "responseMs": 0.1,
+      "adaptiveSync": "gsync",
+      "hdr": "DisplayHDR True Black 400",
+      "releaseYear": 2022,
+      "typicalPriceGBP": null,
+      "notes": "The first consumer QD-OLED monitor, with a hardware G-Sync Ultimate module (and its fan). Largely replaced by the DWF, price nulled.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "alienware-aw3423dwf",
+      "brand": "Alienware",
+      "name": "AW3423DWF",
+      "fullName": "Alienware AW3423DWF",
+      "resolution": "3440x1440",
+      "refreshHz": 165,
+      "panelType": "QD-OLED",
+      "sizeInches": 34,
+      "responseMs": 0.1,
+      "adaptiveSync": "freesync",
+      "hdr": "DisplayHDR True Black 400",
+      "releaseYear": 2022,
+      "typicalPriceGBP": 650,
+      "notes": "Cheaper, module-free sibling of the AW3423DW: FreeSync Premium Pro instead of G-Sync hardware, 165Hz instead of 175Hz, no fan.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "samsung-odyssey-g4-25",
+      "brand": "Samsung",
+      "name": "Odyssey G4 25in",
+      "fullName": "Samsung Odyssey G4 25in (G40B)",
+      "resolution": "1080p",
+      "refreshHz": 240,
+      "panelType": "IPS",
+      "sizeInches": 25,
+      "responseMs": 1,
+      "adaptiveSync": "gsync-compatible",
+      "hdr": "HDR10",
+      "releaseYear": 2022,
+      "typicalPriceGBP": 200,
+      "notes": "Flat 1080p 240Hz IPS aimed at competitive play. HDR10 input only.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "samsung-odyssey-g5-32",
+      "brand": "Samsung",
+      "name": "Odyssey G5 32in",
+      "fullName": "Samsung Odyssey G5 32in (G55T)",
+      "resolution": "1440p",
+      "refreshHz": 144,
+      "panelType": "VA",
+      "sizeInches": 31.5,
+      "responseMs": null,
+      "adaptiveSync": "freesync",
+      "hdr": "HDR10",
+      "releaseYear": 2020,
+      "typicalPriceGBP": 200,
+      "notes": "Heavily curved (1000R) VA. Response time nulled: Samsung quotes 1ms MPRT, and real VA GtG on this panel is several times that with visible dark smearing.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "samsung-odyssey-g7-32",
+      "brand": "Samsung",
+      "name": "Odyssey G7 32in",
+      "fullName": "Samsung Odyssey G7 32in (G75T)",
+      "resolution": "1440p",
+      "refreshHz": 240,
+      "panelType": "VA",
+      "sizeInches": 31.5,
+      "responseMs": 1,
+      "adaptiveSync": "gsync-compatible",
+      "hdr": "DisplayHDR 600",
+      "releaseYear": 2020,
+      "typicalPriceGBP": null,
+      "notes": "1000R curved VA at 240Hz — genuinely fast for VA, with some dark-scene smearing. Discontinued, price nulled.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "samsung-odyssey-neo-g7-32",
+      "brand": "Samsung",
+      "name": "Odyssey Neo G7 32in",
+      "fullName": "Samsung Odyssey Neo G7 32in",
+      "resolution": "2160p",
+      "refreshHz": 165,
+      "panelType": "VA",
+      "sizeInches": 31.5,
+      "responseMs": 1,
+      "adaptiveSync": "freesync",
+      "hdr": "HDR10+ (Samsung Quantum HDR 2000)",
+      "releaseYear": 2022,
+      "typicalPriceGBP": 700,
+      "notes": "Mini-LED backlight with a large local dimming zone count; one of the few real-HDR-capable monitors at this price. Samsung's HDR branding is its own, not a VESA DisplayHDR tier.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "samsung-odyssey-oled-g8-34",
+      "brand": "Samsung",
+      "name": "Odyssey OLED G8 34in",
+      "fullName": "Samsung Odyssey OLED G8 34in",
+      "resolution": "3440x1440",
+      "refreshHz": 175,
+      "panelType": "QD-OLED",
+      "sizeInches": 34,
+      "responseMs": 0.03,
+      "adaptiveSync": "gsync-compatible",
+      "hdr": "DisplayHDR True Black 400",
+      "releaseYear": 2022,
+      "typicalPriceGBP": 750,
+      "notes": "Same generation of QD-OLED ultrawide panel as the Alienware AW3423DW, in a much thinner chassis with a smart-TV style OS.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "asus-vg248qe",
+      "brand": "ASUS",
+      "name": "VG248QE",
+      "fullName": "ASUS VG248QE",
+      "resolution": "1080p",
+      "refreshHz": 144,
+      "panelType": "TN",
+      "sizeInches": 24,
+      "responseMs": 1,
+      "adaptiveSync": "none",
+      "hdr": null,
+      "releaseYear": 2013,
+      "typicalPriceGBP": null,
+      "notes": "The 144Hz TN panel of the 2010s, sold in huge volume and still circulating second-hand. Predates adaptive sync entirely; colours are poor by modern standards but motion is still respectable.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "asus-vg259qm",
+      "brand": "ASUS",
+      "name": "VG259QM",
+      "fullName": "ASUS TUF Gaming VG259QM",
+      "resolution": "1080p",
+      "refreshHz": 280,
+      "panelType": "IPS",
+      "sizeInches": 24.5,
+      "responseMs": 1,
+      "adaptiveSync": "gsync-compatible",
+      "hdr": "DisplayHDR 400",
+      "releaseYear": 2020,
+      "typicalPriceGBP": 230,
+      "notes": "Fast IPS with ELMB-Sync (strobing usable alongside variable refresh). 240Hz native, sold and run at 280Hz overclocked.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "asus-tuf-vg27aq",
+      "brand": "ASUS",
+      "name": "VG27AQ",
+      "fullName": "ASUS TUF Gaming VG27AQ",
+      "resolution": "1440p",
+      "refreshHz": 165,
+      "panelType": "IPS",
+      "sizeInches": 27,
+      "responseMs": 1,
+      "adaptiveSync": "gsync-compatible",
+      "hdr": "DisplayHDR 400",
+      "releaseYear": 2019,
+      "typicalPriceGBP": 280,
+      "notes": "Long-running mid-range 1440p pick, notable for ELMB-Sync.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "asus-rog-swift-pg279q",
+      "brand": "ASUS",
+      "name": "PG279Q",
+      "fullName": "ASUS ROG Swift PG279Q",
+      "resolution": "1440p",
+      "refreshHz": 165,
+      "panelType": "IPS",
+      "sizeInches": 27,
+      "responseMs": 4,
+      "adaptiveSync": "gsync",
+      "hdr": null,
+      "releaseYear": 2015,
+      "typicalPriceGBP": null,
+      "notes": "Hardware G-Sync module. 144Hz native, 165Hz overclocked. One of the defining enthusiast panels of its era and still common second-hand. No HDR.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "asus-rog-swift-oled-pg27aqdm",
+      "brand": "ASUS",
+      "name": "PG27AQDM",
+      "fullName": "ASUS ROG Swift OLED PG27AQDM",
+      "resolution": "1440p",
+      "refreshHz": 240,
+      "panelType": "OLED",
+      "sizeInches": 26.5,
+      "responseMs": 0.03,
+      "adaptiveSync": "gsync-compatible",
+      "hdr": "DisplayHDR True Black 400",
+      "releaseYear": 2023,
+      "typicalPriceGBP": 700,
+      "notes": "WOLED sibling of the LG 27GR95QE with a custom heatsink and more aggressive uniformity compensation.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "asus-rog-swift-oled-pg32ucdm",
+      "brand": "ASUS",
+      "name": "PG32UCDM",
+      "fullName": "ASUS ROG Swift OLED PG32UCDM",
+      "resolution": "2160p",
+      "refreshHz": 240,
+      "panelType": "QD-OLED",
+      "sizeInches": 31.5,
+      "responseMs": 0.03,
+      "adaptiveSync": "gsync-compatible",
+      "hdr": "DisplayHDR True Black 400",
+      "releaseYear": 2024,
+      "typicalPriceGBP": 1000,
+      "notes": "Third-generation QD-OLED at 4K/240. Price is a rough new-street figure.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "aoc-24g2",
+      "brand": "AOC",
+      "name": "24G2",
+      "fullName": "AOC 24G2/24G2U",
+      "resolution": "1080p",
+      "refreshHz": 144,
+      "panelType": "IPS",
+      "sizeInches": 23.8,
+      "responseMs": null,
+      "adaptiveSync": "freesync",
+      "hdr": null,
+      "releaseYear": 2019,
+      "typicalPriceGBP": 120,
+      "notes": "The budget-gaming default for years, sold as 24G2, 24G2U and 24G2Z depending on region and ports. Response nulled: the \"1ms\" is MPRT, real GtG is around 4ms.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "aoc-c24g1",
+      "brand": "AOC",
+      "name": "C24G1",
+      "fullName": "AOC C24G1",
+      "resolution": "1080p",
+      "refreshHz": 144,
+      "panelType": "VA",
+      "sizeInches": 23.6,
+      "responseMs": null,
+      "adaptiveSync": "freesync",
+      "hdr": null,
+      "releaseYear": 2018,
+      "typicalPriceGBP": null,
+      "notes": "1500R curved VA budget panel, superseded by the C24G2. Response nulled for the same MPRT reason; VA smearing is noticeable in dark scenes.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "aoc-cu34g2x",
+      "brand": "AOC",
+      "name": "CU34G2X",
+      "fullName": "AOC CU34G2X",
+      "resolution": "3440x1440",
+      "refreshHz": 144,
+      "panelType": "VA",
+      "sizeInches": 34,
+      "responseMs": null,
+      "adaptiveSync": "freesync",
+      "hdr": null,
+      "releaseYear": 2020,
+      "typicalPriceGBP": 330,
+      "notes": "The cheap way into 3440x1440 high refresh. VA contrast is good; motion handling is mid-pack. Response nulled (MPRT claim).",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "msi-mag274qrf-qd",
+      "brand": "MSI",
+      "name": "MAG274QRF-QD",
+      "fullName": "MSI Optix MAG274QRF-QD",
+      "resolution": "1440p",
+      "refreshHz": 165,
+      "panelType": "IPS",
+      "sizeInches": 27,
+      "responseMs": 1,
+      "adaptiveSync": "gsync-compatible",
+      "hdr": "DisplayHDR 400",
+      "releaseYear": 2021,
+      "typicalPriceGBP": 280,
+      "notes": "Quantum-dot Rapid IPS; wide gamut with a usable sRGB clamp, which is unusual at this price.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "msi-mpg321urx",
+      "brand": "MSI",
+      "name": "MPG 321URX",
+      "fullName": "MSI MPG 321URX QD-OLED",
+      "resolution": "2160p",
+      "refreshHz": 240,
+      "panelType": "QD-OLED",
+      "sizeInches": 31.5,
+      "responseMs": 0.03,
+      "adaptiveSync": "gsync-compatible",
+      "hdr": "DisplayHDR True Black 400",
+      "releaseYear": 2024,
+      "typicalPriceGBP": 850,
+      "notes": "Same panel generation as the PG32UCDM, usually the cheaper of the two.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "gigabyte-m27q",
+      "brand": "Gigabyte",
+      "name": "M27Q",
+      "fullName": "Gigabyte M27Q",
+      "resolution": "1440p",
+      "refreshHz": 170,
+      "panelType": "IPS",
+      "sizeInches": 27,
+      "responseMs": null,
+      "adaptiveSync": "gsync-compatible",
+      "hdr": "HDR10",
+      "releaseYear": 2020,
+      "typicalPriceGBP": 240,
+      "notes": "Built-in KVM made this a desk favourite. Rev 1 units use a BGR subpixel layout, which softens text rendering in Windows; later revisions fixed it. Response nulled (0.5ms MPRT claim). Refresh is the figure I am least sure of on this panel — 165Hz and 170Hz are both plausible from memory.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "gigabyte-m32u",
+      "brand": "Gigabyte",
+      "name": "M32U",
+      "fullName": "Gigabyte M32U",
+      "resolution": "2160p",
+      "refreshHz": 144,
+      "panelType": "IPS",
+      "sizeInches": 31.5,
+      "responseMs": 1,
+      "adaptiveSync": "gsync-compatible",
+      "hdr": "DisplayHDR 400",
+      "releaseYear": 2021,
+      "typicalPriceGBP": 550,
+      "notes": "HDMI 2.1 and KVM; a common console-plus-PC 4K panel.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "benq-zowie-xl2411p",
+      "brand": "BenQ",
+      "name": "XL2411P",
+      "fullName": "BenQ ZOWIE XL2411P",
+      "resolution": "1080p",
+      "refreshHz": 144,
+      "panelType": "TN",
+      "sizeInches": 24,
+      "responseMs": 1,
+      "adaptiveSync": "none",
+      "hdr": null,
+      "releaseYear": 2018,
+      "typicalPriceGBP": null,
+      "notes": "Esports TN staple with no adaptive sync at all. Ubiquitous second-hand and in tournament setups.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "benq-zowie-xl2546k",
+      "brand": "BenQ",
+      "name": "XL2546K",
+      "fullName": "BenQ ZOWIE XL2546K",
+      "resolution": "1080p",
+      "refreshHz": 240,
+      "panelType": "TN",
+      "sizeInches": 24.5,
+      "responseMs": 0.5,
+      "adaptiveSync": "none",
+      "hdr": null,
+      "releaseYear": 2020,
+      "typicalPriceGBP": 380,
+      "notes": "DyAc+ backlight strobing is the reason people buy this rather than an IPS 240Hz; no variable refresh support.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "acer-nitro-vg240y",
+      "brand": "Acer",
+      "name": "VG240Y",
+      "fullName": "Acer Nitro VG240Y bmiix",
+      "resolution": "1080p",
+      "refreshHz": 75,
+      "panelType": "IPS",
+      "sizeInches": 23.8,
+      "responseMs": null,
+      "adaptiveSync": "freesync",
+      "hdr": null,
+      "releaseYear": 2018,
+      "typicalPriceGBP": 90,
+      "notes": "Budget 75Hz IPS sold in very large numbers. Response nulled (1ms VRB is strobing, not GtG).",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "acer-predator-xb271hu",
+      "brand": "Acer",
+      "name": "XB271HU",
+      "fullName": "Acer Predator XB271HU",
+      "resolution": "1440p",
+      "refreshHz": 165,
+      "panelType": "IPS",
+      "sizeInches": 27,
+      "responseMs": 4,
+      "adaptiveSync": "gsync",
+      "hdr": null,
+      "releaseYear": 2015,
+      "typicalPriceGBP": null,
+      "notes": "Hardware G-Sync module. 144Hz native, 165Hz overclocked. Contemporary of the PG279Q and equally common second-hand.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    },
+    {
+      "id": "hp-24mh",
+      "brand": "HP",
+      "name": "24mh",
+      "fullName": "HP 24mh",
+      "resolution": "1080p",
+      "refreshHz": 75,
+      "panelType": "IPS",
+      "sizeInches": 23.8,
+      "responseMs": 5,
+      "adaptiveSync": "freesync",
+      "hdr": null,
+      "releaseYear": 2020,
+      "typicalPriceGBP": 110,
+      "notes": "Cheap home/office IPS with a height-adjustable stand and built-in speakers.",
+      "_prov": {
+        "*": [
+          "model-knowledge"
+        ]
+      }
+    }
+  ]
+}
