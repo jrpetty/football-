@@ -178,9 +178,18 @@ export default function ModelReport() {
         <ul className="muted" style={{ fontSize: 13, lineHeight: 1.7, paddingLeft: 20, margin: 0 }}>
           {season.notes.map((n, i) => <li key={i}>{n}</li>)}
           <li>
-            The player-availability adjustment is measured from historical squad data, not validated
-            by walk-forward backtest — doing that honestly would need archived injury reports, which
-            this data source does not carry.
+            <strong>The player-availability adjustment does not demonstrably improve forecasts.</strong>{' '}
+            Walk-forward testing — inferring absences from who missed a club's previous two matches,
+            the only signal the archive supports that was genuinely known before kickoff — found it
+            cost 0.0006 RPS at its current weight and up to 0.0031 at higher ones, at every severity
+            of absence. Recency-weighted team ratings appear to absorb most of the effect already: a
+            side playing without its best players produces worse results, and the rating has read
+            that. The weight was cut from 0.7 to 0.3 on this evidence. It is kept, rather than
+            removed, because the test's absence signal is far noisier than the live one (the proxy
+            flags 7.0 players per team-match; the real injury feed flags 2.9 per club, so most of
+            what it catches is rotation) and because at 0.3 the cost is well inside the noise for a
+            380-match sample. Availability flags are now recorded weekly so the honest version of
+            this test becomes possible once this season has produced a real history.
           </li>
           <li>
             Starting elevens are predicted, never confirmed. For a newly promoted club with no

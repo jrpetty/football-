@@ -12,6 +12,7 @@
 import { readdir } from 'node:fs/promises'
 import { readJson, dataPath } from './lib/fsjson.ts'
 import { SCHEMA_VERSION } from '../src/core/schema.ts'
+import { recomputeFixture } from '../src/core/whatIf.ts'
 import type {
   SeasonArtifact, GameweekArtifact, PlayersArtifact, AccuracyArtifact, LedgerArtifact, SquadsArtifact,
 } from '../src/core/schema.ts'
@@ -204,6 +205,44 @@ async function main(): Promise<void> {
     }
   }
 
+  // --- the what-if guarantee ----------------------------------------------
+  //
+  // With nothing removed, re-running a fixture in the browser must reproduce
+  // the published forecast exactly. If it does not, every "what if he is out"
+  // is quietly measured against a different baseline than the one on screen.
+  // Unit tests cannot catch a drift between the pipeline and the browser —
+  // only checking the real artifacts can.
+  if (squads) {
+    for (const file of files.slice(0, 3)) {
+      const gwArtifact = await readJson<GameweekArtifact>(dataPath('predictions', file))
+      if (!gwArtifact) continue
+      for (const f of gwArtifact.fixtures) {
+        const homeSquad = squads.squads[f.home]
+        const awaySquad = squads.squads[f.away]
+        if (!homeSquad || !awaySquad) continue
+        const again = recomputeFixture({
+          inputs: f.recompute,
+          homeCode: f.home,
+          awayCode: f.away,
+          kickoff: f.kickoff,
+          homeSquad,
+          awaySquad,
+          removed: new Set(),
+        })
+        const drift = Math.max(
+          Math.abs(again.prediction.probs.home - f.probs.home),
+          Math.abs(again.prediction.probs.draw - f.probs.draw),
+          Math.abs(again.prediction.probs.away - f.probs.away),
+        )
+        check(
+          drift < 0.0005,
+          `${file} ${f.home}v${f.away}: browser recompute differs from the published forecast by ` +
+            `${(drift * 100).toFixed(2)}pp — the what-if tool would contradict the page`,
+        )
+      }
+    }
+  }
+
   // --- ledger and accuracy -------------------------------------------------
   const ledger = await readJson<LedgerArtifact>(dataPath('ledger.json'))
   const accuracy = await readJson<AccuracyArtifact>(dataPath('accuracy.json'))
@@ -216,8 +255,19 @@ async function main(): Promise<void> {
       const key = `${e.season}#${e.fixtureId}`
       check(!seen.has(key), `ledger has a duplicate entry for ${key}`)
       seen.add(key)
-      // The whole point of the ledger is that forecasts predate kickoff.
+      // The whole point of the ledger is that forecasts predate kickoff. A
+      // forecast may be revised while the match is still to come, but never
+      // once it has started — that line is what makes the record honest.
       check(e.predictedAt <= e.kickoff, `ledger entry ${key} was recorded after kickoff`)
+      check(
+        (e.updatedAt ?? e.predictedAt) <= e.kickoff,
+        `ledger entry ${key} was revised after kickoff — the record is no longer a forecast`,
+      )
+      // A played match must carry its result, and an unplayed one must not.
+      const played = e.kickoff < Date.now()
+      if (!played) {
+        check(e.actual === undefined, `ledger entry ${key} has a result before kickoff`)
+      }
       const t = e.probs.home + e.probs.draw + e.probs.away
       check(near(t, 1, 0.002), `ledger entry ${key} probabilities sum to ${t.toFixed(4)}`)
     }

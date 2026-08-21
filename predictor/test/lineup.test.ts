@@ -282,6 +282,7 @@ test('a recent signing is flagged', () => {
 const INPUTS: RecomputeInputs = {
   homeAdvantage: 0.25,
   rho: -0.05,
+  availabilityStrength: 0.3,
   home: {
     attack: 0.3, defence: 0.2, ratingSd: 0.12, matchesPlayed: 10, promoted: false,
     rest: { daysRest: 7, matchesIn14Days: 1, logShift: 0, note: null },
@@ -372,4 +373,78 @@ test('probabilities stay a valid distribution however much is removed', () => {
   const { home: h, draw: d, away: a } = r.prediction.probs
   assert.ok(Math.abs(h + d + a - 1) < 0.002, `sums to ${h + d + a}`)
   for (const v of [h, d, a]) assert.ok(v >= 0 && v <= 1)
+})
+
+// --- The ledger's sealing rule ----------------------------------------------
+//
+// These encode the rule directly, because it is the one thing that makes the
+// accuracy record mean anything and it is invisible in the UI.
+
+import type { LedgerEntry } from '../src/core/schema.ts'
+
+/** The rule as implemented by the build: revise until kickoff, then seal. */
+function applyForecast(
+  entry: LedgerEntry | undefined,
+  forecast: { probs: { home: number; draw: number; away: number } },
+  now: number,
+  kickoff: number,
+): { entry: LedgerEntry | undefined; changed: boolean } {
+  const kickedOff = kickoff <= now
+  if (!entry && !kickedOff) {
+    return {
+      entry: {
+        season: '2026-27', gameweek: 1, fixtureId: 1, home: 'ARS', away: 'CHE',
+        kickoff, predictedAt: now, updatedAt: now, revisions: 0,
+        probs: forecast.probs, lambdaHome: 1.5, lambdaAway: 1.1,
+        predictedScore: { home: 1, away: 1 },
+      },
+      changed: true,
+    }
+  }
+  if (entry && !kickedOff && !entry.actual) {
+    const moved = Math.abs(entry.probs.home - forecast.probs.home) > 1e-6
+    entry.probs = forecast.probs
+    entry.updatedAt = now
+    if (moved) entry.revisions = (entry.revisions ?? 0) + 1
+    return { entry, changed: moved }
+  }
+  return { entry, changed: false }
+}
+
+test('a forecast can be revised while the match is still to come', () => {
+  // The model refits weekly and gets fixed when it is wrong. Freezing the
+  // first version would score a model that no longer exists — which nearly
+  // happened: every gameweek-one entry was written before a player-rates bug
+  // was found, holding Arsenal at 53.7% when the fix said 66.7%.
+  const kickoff = Date.UTC(2026, 7, 21, 19)
+  const first = applyForecast(undefined, { probs: { home: 0.537, draw: 0.28, away: 0.183 } }, kickoff - 86400000, kickoff)
+  const revised = applyForecast(first.entry, { probs: { home: 0.667, draw: 0.22, away: 0.113 } }, kickoff - 3600000, kickoff)
+  assert.equal(revised.entry!.probs.home, 0.667)
+  assert.equal(revised.entry!.revisions, 1, 'and the revision is recorded, not hidden')
+})
+
+test('a forecast is sealed the moment the match kicks off', () => {
+  const kickoff = Date.UTC(2026, 7, 21, 19)
+  const before = applyForecast(undefined, { probs: { home: 0.6, draw: 0.25, away: 0.15 } }, kickoff - 3600000, kickoff)
+  // One second after kickoff, nothing may change it again.
+  const after = applyForecast(before.entry, { probs: { home: 0.99, draw: 0.005, away: 0.005 } }, kickoff + 1000, kickoff)
+  assert.equal(after.entry!.probs.home, 0.6, 'a forecast must never move once the match has started')
+  assert.equal(after.changed, false)
+})
+
+test('a scored entry is never rewritten, even before a later kickoff', () => {
+  const kickoff = Date.UTC(2026, 7, 21, 19)
+  const entry = applyForecast(undefined, { probs: { home: 0.6, draw: 0.25, away: 0.15 } }, kickoff - 86400000, kickoff).entry!
+  entry.actual = {
+    homeGoals: 2, awayGoals: 1, outcome: 'home', rps: 0.1, logLoss: 0.5,
+    brier: 0.3, correctOutcome: true, correctScore: false,
+  }
+  const attempt = applyForecast(entry, { probs: { home: 0.95, draw: 0.03, away: 0.02 } }, kickoff - 3600000, kickoff)
+  assert.equal(attempt.entry!.probs.home, 0.6, 'a result already in the ledger freezes the forecast')
+})
+
+test('no entry is created for a match that has already started', () => {
+  const kickoff = Date.UTC(2026, 7, 21, 19)
+  const r = applyForecast(undefined, { probs: { home: 0.6, draw: 0.25, away: 0.15 } }, kickoff + 60000, kickoff)
+  assert.equal(r.entry, undefined, 'a forecast made after kickoff is not a forecast')
 })

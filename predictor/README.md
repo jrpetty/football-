@@ -94,7 +94,7 @@ thumb on the scale.
 per game, but 5 cleared 1.30 — so promoted sides carry inflated variance rather than just a lower
 mean.
 
-### Two things the data changed my mind about
+### Three things the data changed my mind about
 
 **Championship form barely predicts Premier League output.** Goal difference correlates with
 attacking output at r = 0.28. Championship *points per game* correlates **negatively** (r = −0.21),
@@ -102,6 +102,25 @@ and defensive record not at all (r = 0.05). Burnley won their division by +1.16 
 took 0.63 points a game in the top flight; Sunderland came up at +0.31 and took 1.42. An earlier
 version of this model rewarded Championship points and was pushing promoted sides the wrong way.
 The coefficients are now only what the data supports.
+
+**The player-availability adjustment does not demonstrably help.** This was the one part of the
+model running on a measured effect size rather than a walk-forward test, because testing it looked
+like it needed archived injury reports the feed does not carry. There is an honest way round that:
+a player who missed his club's previous two matches was, in most cases, already known to be
+unavailable — information a forecaster genuinely had at kickoff. Tested that way, the adjustment
+made forecasts *worse* at every weight and every severity of absence, costing 0.0006 RPS at 0.3
+and 0.0031 at 1.1. Recency-weighted ratings seem to absorb most of it already: a side playing
+without its best players produces worse results, and the rating has read that.
+
+The weight was cut from 0.7 to 0.3 on this evidence rather than removed, for two reasons. The
+test's absence signal is much noisier than the live one — the proxy flags 7.0 players per
+team-match where the real injury feed flags 2.9 per club, so most of what it detects is rotation,
+which is not a downgrade. And at 0.3 the measured cost sits well inside the noise, while the
+adjustment is what makes the player-level reasoning and the squad editor reflect the model rather
+than decorate it. Availability flags are now recorded every week (`status-history.json`) so the
+clean version of this test becomes possible in a few months.
+
+Reproduce it: `node scripts/backtest-availability.ts`
 
 **Hyperparameters barely matter here.** A 16-point sweep across time-decay and xG-blend settings
 moved RPS by under 0.0005 — well inside the noise for 380 matches. They are left at sensible
@@ -125,6 +144,7 @@ npm run dev        # http://localhost:5174
 | `npm run ingest` | Fetch and normalise source data into `.cache/` |
 | `npm run build:data` | Rebuild predictions from the cached corpus |
 | `npm run backtest` | Walk-forward evaluation |
+| `node scripts/backtest-availability.ts` | Tests whether the availability adjustment earns its place |
 | `npm run verify` | Validate artifacts before publishing |
 
 Node 22+ is required — the pipeline scripts are TypeScript executed directly, so there is no build

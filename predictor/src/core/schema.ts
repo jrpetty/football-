@@ -146,6 +146,13 @@ export interface RecomputeSide {
 export interface RecomputeInputs {
   homeAdvantage: number
   rho: number
+  /**
+   * The availability damping the pipeline used. Carried rather than defaulted
+   * so the browser recomputes with the identical setting — without it, tuning
+   * this parameter would silently make every what-if disagree with the
+   * published forecast it is shown against.
+   */
+  availabilityStrength: number
   home: RecomputeSide
   away: RecomputeSide
 }
@@ -235,8 +242,17 @@ export interface LedgerEntry {
   home: string
   away: string
   kickoff: number
-  /** When the forecast was recorded — always before kickoff. */
+  /** When this forecast was first recorded. */
   predictedAt: number
+  /**
+   * When it was last revised. A forecast stays open to revision until kickoff
+   * — the model refits every week, and freezing the first version would score
+   * a model that no longer exists. It is sealed the moment the match starts,
+   * which is what makes the record honest; `revisions` shows how often it
+   * moved so a reader can see that it was.
+   */
+  updatedAt?: number
+  revisions?: number
   probs: Probs
   lambdaHome: number
   lambdaAway: number

@@ -21,7 +21,28 @@ export interface ModelParams {
   ridge: number
   /** Effective-match scale controlling how fast a new club's prior fades. */
   shrinkScale: number
-  /** Availability damping. */
+  /**
+   * Availability damping.
+   *
+   * Reduced from 0.7 to 0.3 after walk-forward testing (scripts/backtest-availability.ts).
+   * Inferring absences from who missed a club's previous two matches — the only
+   * pre-kickoff signal the archive supports — the adjustment did not improve
+   * forecasts at any weight or any severity of absence, costing 0.0006 RPS at
+   * 0.3 and 0.0031 at 1.1. Recency-weighted team ratings appear to absorb most
+   * of the effect already: a side playing without its best players produces
+   * worse results, and the rating has read that.
+   *
+   * It is kept at a reduced weight rather than removed for two reasons. The
+   * test's absence signal is much noisier than the live one — the proxy flags
+   * 7.0 players per team-match where the real injury feed flags 2.9 per club,
+   * so most of what it "detects" is rotation, which is not a downgrade. And at
+   * 0.3 the measured cost is well inside the noise for 380 matches, while the
+   * adjustment is what makes the player-level reasoning and the what-if tool
+   * reflect the model rather than decorate it.
+   *
+   * Once this season has produced real injury-status history, the honest
+   * version of this test becomes possible and this number should be revisited.
+   */
   availabilityStrength: number
   /** Trailing matches used for form. */
   formWindow: number
@@ -33,7 +54,7 @@ export const DEFAULT_PARAMS: ModelParams = {
   xgBlend: 0.7,
   ridge: 0.02,
   shrinkScale: 12,
-  availabilityStrength: 0.7,
+  availabilityStrength: 0.3,
   formWindow: 8,
 }
 

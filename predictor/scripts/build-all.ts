@@ -309,15 +309,36 @@ async function main(): Promise<void> {
         recompute: {
           homeAdvantage: round(model.ratings.homeAdvantage, 4),
           rho: round(model.ratings.rho, 4),
+          availabilityStrength: DEFAULT_PARAMS.availabilityStrength,
           home: side(homeCtx, m.home),
           away: side(awayCtx, m.away),
         },
         cardWatch: cardWatch.slice(0, 8),
       }
 
-      // Record the forecast in the ledger before kickoff, once and only once.
+      // The ledger holds the last forecast made before kickoff.
+      //
+      // Not the first: the model refits every week and gets fixed when it is
+      // wrong, so freezing the opening version would score a model that no
+      // longer exists. (It nearly did — every gameweek-one entry was written
+      // before a player-rates bug was found, and Arsenal v Coventry sat at
+      // 53.7% when the corrected model said 66.7%.) An entry stays open to
+      // revision right up to kickoff and is sealed the instant the match
+      // starts, which is the line that actually matters: nothing here is ever
+      // revised with knowledge of a result.
       const key = `${CURRENT_SEASON}#${m.fixtureId ?? 0}`
-      if (!ledgerIndex.has(key) && m.date > now) {
+      const kickedOff = m.date <= now
+      const forecast = {
+        probs: prediction.probs,
+        lambdaHome: prediction.lambdaHome,
+        lambdaAway: prediction.lambdaAway,
+        predictedScore: {
+          home: prediction.topScorelines[0]?.home ?? 0,
+          away: prediction.topScorelines[0]?.away ?? 0,
+        },
+      }
+      const existing = ledgerIndex.get(key)
+      if (!existing && !kickedOff) {
         const entry: LedgerEntry = {
           season: CURRENT_SEASON,
           gameweek: gw,
@@ -326,16 +347,17 @@ async function main(): Promise<void> {
           away: m.away,
           kickoff: m.date,
           predictedAt: now,
-          probs: prediction.probs,
-          lambdaHome: prediction.lambdaHome,
-          lambdaAway: prediction.lambdaAway,
-          predictedScore: {
-            home: prediction.topScorelines[0]?.home ?? 0,
-            away: prediction.topScorelines[0]?.away ?? 0,
-          },
+          updatedAt: now,
+          revisions: 0,
+          ...forecast,
         }
         ledger.entries.push(entry)
         ledgerIndex.set(key, entry)
+      } else if (existing && !kickedOff && !existing.actual) {
+        const moved = Math.abs(existing.probs.home - forecast.probs.home) > 1e-6
+        Object.assign(existing, forecast)
+        existing.updatedAt = now
+        if (moved) existing.revisions = (existing.revisions ?? 0) + 1
       }
 
       // Score a finished fixture against whatever was forecast beforehand.
@@ -456,6 +478,35 @@ async function main(): Promise<void> {
     squads,
   }
   await writeJson(dataPath('squads.json'), squadsArtifact)
+
+  // Append this week's availability flags to a history file.
+  //
+  // The archive carries no record of who was injured *before* a past match, so
+  // the availability adjustment can only be tested against a noisy proxy today
+  // (see scripts/backtest-availability.ts). Recording the real flags each week
+  // means that in a few months it can be tested properly — against what was
+  // actually known at the time.
+  interface StatusSnapshot {
+    takenAt: number
+    gameweek: number
+    /** player id -> [status, chance-of-playing] for anyone not fully available. */
+    flags: Record<number, [string, number | null]>
+  }
+  const history = (await readJson<{ schemaVersion: number; snapshots: StatusSnapshot[] }>(
+    dataPath('status-history.json'),
+  )) ?? { schemaVersion: SCHEMA_VERSION, snapshots: [] }
+
+  const flags: Record<number, [string, number | null]> = {}
+  for (const p of corpus.players) {
+    if (p.status !== 'a' || p.chanceNextRound !== null) flags[p.id] = [p.status, p.chanceNextRound]
+  }
+  // One snapshot per gameweek; a rerun in the same week replaces it rather
+  // than piling up near-identical rows.
+  const existingIdx = history.snapshots.findIndex((x) => x.gameweek === currentGameweek)
+  const snapshot: StatusSnapshot = { takenAt: now, gameweek: currentGameweek, flags }
+  if (existingIdx >= 0) history.snapshots[existingIdx] = snapshot
+  else history.snapshots.push(snapshot)
+  await writeJson(dataPath('status-history.json'), history)
 
   // --- Accuracy ------------------------------------------------------------
   const scoredEntries = ledger.entries.filter((e) => e.actual)

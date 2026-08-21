@@ -91,8 +91,10 @@ export function recomputeFixture(req: WhatIfRequest): WhatIfResult {
   const homeSquad = applyEdits(req.homeSquad, req.removed, restored)
   const awaySquad = applyEdits(req.awaySquad, req.removed, restored)
 
-  const homeAvailability = teamAvailability(req.homeCode, homeSquad)
-  const awayAvailability = teamAvailability(req.awayCode, awaySquad)
+  // Use the pipeline's own damping, never the library default.
+  const options = { strength: req.inputs.availabilityStrength }
+  const homeAvailability = teamAvailability(req.homeCode, homeSquad, options)
+  const awayAvailability = teamAvailability(req.awayCode, awaySquad, options)
 
   const prediction = predictFixture({
     home: contextFrom(req.inputs.home, req.homeCode, homeAvailability),
