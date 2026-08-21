@@ -46,8 +46,32 @@ export function InventoryOptimiser() {
         </div>
 
         <div>
-          {!result && <div className="panel"><div className="empty">No compatible combination in this pile.</div></div>}
-          {result && (
+          {!result.build && (
+            <div className="panel">
+              <div className="panel-head"><h2 className="micro">nothing can be assembled</h2></div>
+              <div className="panel-body">
+                <p className="mini" style={{ marginTop: 0 }}>
+                  No combination in this pile makes a machine that could physically exist. The
+                  compatibility filter knows why, so here is what it rejected and how often:
+                </p>
+                {result.rejected.length ? (
+                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12.5, lineHeight: 1.7 }}>
+                    {result.rejected.map((r) => (
+                      <li key={r.reason}>
+                        {r.reason} <span className="mini">— {r.count} combination{r.count === 1 ? '' : 's'}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mini">
+                    There was nothing to try. Add at least one processor, one graphics card, one
+                    memory kit and one drive.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+          {result.build && (
             <>
               <div className="panel">
                 <div className="panel-head"><h2 className="micro">best assembly</h2></div>

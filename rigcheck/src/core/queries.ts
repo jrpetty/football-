@@ -11,6 +11,7 @@ import type {
   FutureProofing,
   GpuRecord,
   InventoryResult,
+  InventoryFailure,
   MemoryType,
   PartInventory,
   PriceToTargetResult,
@@ -279,7 +280,7 @@ export function bestFromInventory(
   resolutions: Resolution[],
   data: EngineData,
   constraints: { target?: { resolution: Resolution; refreshHz: number } } = {},
-): InventoryResult | null {
+): InventoryResult | InventoryFailure {
   const rejected = new Map<string, number>();
   const bump = (reason: string) => rejected.set(reason, (rejected.get(reason) ?? 0) + 1);
 
@@ -333,7 +334,16 @@ export function bestFromInventory(
     }
   }
 
-  if (!best) return null;
+  // Nothing assembled. The reasons were being computed and then dropped, which
+  // left the screen saying "no compatible combination" and nothing else — in
+  // precisely the situation where the user most needs to know whether it was
+  // the socket, the memory generation or a missing drive.
+  if (!best) {
+    return {
+      build: null,
+      rejected: [...rejected.entries()].map(([reason, count]) => ({ reason, count })).sort((a, b) => b.count - a.count),
+    };
+  }
 
   const usedRamKey = JSON.stringify(best.build.ram);
   return {

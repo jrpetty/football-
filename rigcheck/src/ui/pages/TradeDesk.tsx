@@ -58,7 +58,7 @@ export function TradeDesk() {
         { cpuIds, gpuIds },
         // Was passing the ARITHMETIC mean into a field named geomeanFps, so the
         // appraisal was scored against a figure inflated by the esports titles.
-        inv ? { build: inv.build, geomeanFps: inv.geomeanFps } : null,
+        inv.build ? { build: inv.build, geomeanFps: inv.geomeanFps } : null,
         priceOf,
         { assemblyPremium: 1 + premium / 100 },
       ),
@@ -66,11 +66,14 @@ export function TradeDesk() {
   );
 
   const margin = useMemo(() => {
-    if (!inv) return null;
-    const gpu = data.gpus.get(inv.build.gpuId);
-    const cpu = data.cpus.get(inv.build.cpuId);
+    // No assembly means no margin on one: an empty or incompatible pile has
+    // nothing to sell as a working machine.
+    const built = inv.build;
+    if (!built) return null;
+    const gpu = data.gpus.get(built.gpuId);
+    const cpu = data.cpus.get(built.cpuId);
     if (!gpu || !cpu) return null;
-    return calculateMargin(inv.build, gpu, cpu, priceOf, { salePrice });
+    return calculateMargin(built, gpu, cpu, priceOf, { salePrice });
   }, [inv, data, priceOf, salePrice]);
 
   const allocation = useMemo(() => {
@@ -128,6 +131,20 @@ export function TradeDesk() {
         </div>
 
         <div>
+          {/* An empty pile has nothing to appraise, and the arithmetic on
+              nothing produced a confident "SELL AS PARTS" over three £0
+              figures. */}
+          {!pile.cpuIds.length && !pile.gpuIds.length && (
+            <div className="panel">
+              <div className="panel-head"><h2 className="micro">nothing to appraise</h2></div>
+              <div className="panel-body">
+                <p className="mini" style={{ marginTop: 0 }}>
+                  Add the parts you are weighing up on the left. Until then there is nothing to
+                  price, and a verdict on an empty pile would be a verdict on nothing.
+                </p>
+              </div>
+            </div>
+          )}
           <div className="panel">
             <div className="panel-head"><h2 className="micro">build it or break it up?</h2></div>
             <div className="panel-body">
@@ -148,7 +165,7 @@ export function TradeDesk() {
                 </div>
               </div>
               <div className="note">{appraisal.reasoning}</div>
-              {inv && (
+              {inv.build && (
                 <div className="note" style={{ marginTop: 8 }}>
                   Best assembly: <b className="mono">{data.cpus.get(inv.build.cpuId)?.fullName}</b> +{' '}
                   <b className="mono">{data.gpus.get(inv.build.gpuId)?.fullName}</b> — {fmt(inv.geomeanFps, 1)} geomean fps.

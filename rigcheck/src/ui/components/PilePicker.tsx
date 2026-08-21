@@ -37,6 +37,9 @@ const MEMORY_TYPES: MemoryType[] = ['DDR5', 'DDR4', 'DDR3'];
 const STORAGE_KINDS: Storage[] = ['nvme-gen4', 'nvme-gen3', 'sata-ssd', 'hdd'];
 const DEFAULT_KIT: RamConfig = { totalGB: 32, channels: 2, speedMTs: 6000, type: 'DDR5' };
 
+/** Keep a typed number inside the range the field advertises. */
+const clamp = (v: number, lo: number, hi: number) => (Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : lo);
+
 export function PilePicker({ pile, onChange, showStorage = true, annotate }: PileEditorProps) {
   const { data } = useApp();
   const [addCpu, setAddCpu] = useState('amd-ryzen-5-5600');
@@ -111,14 +114,17 @@ export function PilePicker({ pile, onChange, showStorage = true, annotate }: Pil
           <label>capacity (GB)</label>
           <input
             type="number" min={2} max={256} value={kit.totalGB}
-            onChange={(e) => setKit({ ...kit, totalGB: Math.max(2, Number(e.target.value)) })}
+            /* Clamped in JS, not just declared: a browser does not enforce max
+               on a typed value, and a 99999GB kit was accepted, stored in the
+               shared pile and fed to the assembly search. */
+            onChange={(e) => setKit({ ...kit, totalGB: clamp(Number(e.target.value), 2, 256) })}
           />
         </div>
         <div className="field">
           <label>speed (MT/s)</label>
           <input
             type="number" min={800} max={9000} step={100} value={kit.speedMTs}
-            onChange={(e) => setKit({ ...kit, speedMTs: Math.max(800, Number(e.target.value)) })}
+            onChange={(e) => setKit({ ...kit, speedMTs: clamp(Number(e.target.value), 800, 9000) })}
           />
         </div>
         <div className="field">

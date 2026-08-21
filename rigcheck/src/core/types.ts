@@ -516,6 +516,18 @@ export interface PartInventory {
   motherboards?: { chipset: string; socket: string; memoryType: MemoryType; pcieVersion: number }[];
 }
 
+/**
+ * What comes back when the pile cannot make a machine.
+ *
+ * The compatibility filter already knows why — the socket, the memory
+ * generation, no drive at all — and the answer is far more useful than
+ * "nothing fits".
+ */
+export interface InventoryFailure {
+  build: null;
+  rejected: { reason: string; count: number }[];
+}
+
 export interface InventoryResult {
   build: Build;
   score: number;

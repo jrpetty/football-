@@ -396,7 +396,7 @@ function main() {
       { cpuIds: ['amd-ryzen-5-3600', 'intel-core-i7-2600k'], gpuIds: ['nvidia-geforce-rtx-3060-12gb', 'nvidia-geforce-gtx-1060-6gb'], ramKits: [{ totalGB: 16, channels: 2, speedMTs: 3200, type: 'DDR4' }, { totalGB: 8, channels: 2, speedMTs: 1600, type: 'DDR3' }], storage: ['nvme-gen3'] },
       games.slice(0, 3), ['1080p'], data,
     );
-    if (!inv) fail('bestFromInventory: returned null for a viable pile');
+    if (!inv.build) fail('bestFromInventory: assembled nothing from a viable pile');
     else if (inv.build.cpuId === 'intel-core-i7-2600k' && inv.build.ram.type === 'DDR4') fail('bestFromInventory: paired DDR4 with an LGA1155 part');
 
     const fp = futureProofing(b1, data);

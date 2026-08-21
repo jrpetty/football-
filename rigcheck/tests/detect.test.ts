@@ -178,41 +178,56 @@ describe('hardware detection', () => {
   });
 });
 
-describe('memory parsed from free text, in the order people actually write it', () => {
-  // The regression this guards: the parser scanned the whole line for the first
-  // number that fit, so a card mentioned before the memory supplied both the
-  // capacity and the speed. "RX 6800 XT" produced 6800 MT/s of DDR4.
-  const cases: [string, { totalGB?: number; speedMTs?: number; type?: string; channels?: number }][] = [
+describe('memory read out of a spec line written the way people write them', () => {
+  /**
+   * A spec line contains three different figures written as a number and "GB" —
+   * the card's memory, the system memory and the drives — and only one is the
+   * answer. Every case here was a real misread at some point: the card's VRAM
+   * taken as system memory, a pair of 512GB drives reported as 1024GB of RAM, a
+   * processor's model number taken as a memory speed, a board's supported
+   * speed taken as the fitted one, and "16.0 GB" read as 0GB.
+   *
+   * `null` means the text does not state that figure, and inventing one is a
+   * worse failure than admitting it.
+   */
+  const cases: [string, { totalGB?: number | null; speedMTs?: number | null; type?: string | null; channels?: number | null }][] = [
     ['Ryzen 5 3600 / RTX 3060 12GB / 16GB DDR4-3200', { totalGB: 16, speedMTs: 3200, type: 'DDR4' }],
     ['i7-9700K, RTX 2070 8GB, 16GB DDR4 3600MHz', { totalGB: 16, speedMTs: 3600, type: 'DDR4' }],
     ['Ryzen 7 5800X3D / RX 6800 XT / 32GB DDR4-3600', { totalGB: 32, speedMTs: 3600, type: 'DDR4' }],
     ['i5-12400F, Arc A750, 16GB DDR5-5200', { totalGB: 16, speedMTs: 5200, type: 'DDR5' }],
     ['Ryzen 5 7600 + RTX 4070 + 32GB DDR5 6000 MT/s', { totalGB: 32, speedMTs: 6000, type: 'DDR5' }],
-    // Memory first still works — the ordering that used to be the only one that did.
     ['32GB DDR4-3600, Ryzen 7 5800X3D, RTX 3080 10GB', { totalGB: 32, speedMTs: 3600, type: 'DDR4' }],
     ['Ryzen 5 5600, RTX 3060, 1x16GB DDR4-3200', { totalGB: 16, speedMTs: 3200, channels: 1 }],
     ['Ryzen 9 7950X, RTX 4090 24GB, 2x32GB DDR5-6000', { totalGB: 64, speedMTs: 6000, channels: 2 }],
+    ['Ryzen 7 5800X, RTX 3070, 16GB DDR4, 2x 512GB NVMe SSD', { totalGB: 16, type: 'DDR4' }],
+    ['Installed RAM: 32 GB DDR4\nGraphics memory: 12 GB\nCard name: NVIDIA GeForce RTX 3060', { totalGB: 32, type: 'DDR4' }],
+    ['Installed Physical Memory (RAM): 16.0 GB\nProcessor: Intel Core i7-9700K', { totalGB: 16 }],
+    ['GT 1030 2GB DDR5, 8GB DDR3 1600MHz RAM', { totalGB: 8, speedMTs: 1600, type: 'DDR3' }],
+    ['Ryzen 5 5600X + RTX 3060 12GB', { totalGB: null }],
+    ['MSI GeForce RTX 3060 Ti 8GB GDDR6', { totalGB: null }],
+    ['Radeon RX 580 8GB', { totalGB: null }],
+    ['Gaming PC - i7-9700K - RTX 2070 8GB - 16GB DDR4', { totalGB: 16, type: 'DDR4' }],
+    ['Ryzen 5 3600; RTX 3060 12GB; 16GB DDR4-3200', { totalGB: 16, speedMTs: 3200 }],
+    ['i5-10400F • GTX 1660 Super 6GB • 16GB DDR4', { totalGB: 16, type: 'DDR4' }],
+    ['16GB RAM and Intel UHD Graphics', { totalGB: 16 }],
+    ['B550 board supports DDR4-4400 OC, installed 16GB DDR4-3200', { totalGB: 16, speedMTs: 3200 }],
+    ['Ryzen 5 3600 and an RTX 3060', { totalGB: null, speedMTs: null }],
+    ['32GB (2x16GB) DDR4-3600', { totalGB: 32, speedMTs: 3600, channels: 2 }],
+    ['Laptop: i7-1165G7, 16GB LPDDR4X-4266, Iris Xe', { totalGB: 16 }],
+    ['8GB DDR3 1333MHz, GTX 1050 Ti 4GB', { totalGB: 8, speedMTs: 1333, type: 'DDR3' }],
+    ['RTX 4080 Super 16GB GDDR6X, 64GB DDR5 6400, 4TB NVMe', { totalGB: 64, speedMTs: 6400, type: 'DDR5' }],
+    ['Dell OptiPlex, 8GB RAM, 256GB SSD', { totalGB: 8 }],
+    ['4 x 16 GB DDR4-3200 ECC', { totalGB: 64, channels: 4 }],
+    ['i9-13900K | RTX 4090 | 32GB DDR5-6000 | 2TB Gen4', { totalGB: 32, speedMTs: 6000 }],
   ];
 
   for (const [text, want] of cases) {
-    it(`reads "${text}"`, () => {
-      const d = detectHardware(text, data);
-      if (want.totalGB != null) expect(d.ram?.totalGB, 'totalGB').toBe(want.totalGB);
-      if (want.speedMTs != null) expect(d.ram?.speedMTs, 'speedMTs').toBe(want.speedMTs);
-      if (want.type != null) expect(d.ram?.type, 'type').toBe(want.type);
-      if (want.channels != null) expect(d.ram?.channels, 'channels').toBe(want.channels);
+    it(`reads ${JSON.stringify(text)}`, () => {
+      const ram = detectHardware(text, data).ram ?? {};
+      for (const [k, v] of Object.entries(want)) {
+        const got = (ram as Record<string, unknown>)[k] ?? null;
+        expect(got, k).toBe(v);
+      }
     });
   }
-
-  it('never reports a memory speed a DDR generation cannot reach', () => {
-    // The specific absurdity the old parser produced from a card's model number.
-    const d = detectHardware('Ryzen 7 5800X3D / RX 6800 XT / 32GB DDR4-3600', data);
-    expect(d.ram?.type).toBe('DDR4');
-    expect(d.ram?.speedMTs).toBeLessThan(5000);
-  });
-
-  it('does not invent a speed from a bare model number with no memory mentioned', () => {
-    const d = detectHardware('Ryzen 5 3600 and an RTX 3060', data);
-    expect(d.ram?.speedMTs).toBeUndefined();
-  });
 });

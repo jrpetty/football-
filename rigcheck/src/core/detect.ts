@@ -88,83 +88,195 @@ const GPU_LINE =
   /((?:geforce|radeon|intel\s+arc|arc\s+[ab]\d|rtx|gtx|rx)\s*[^\n,;(/|]*)/i;
 
 /**
- * Things that mark a clause as being about the graphics card rather than the
- * system memory. A card carries its own gigabytes and its own four-digit model
- * number, and both look exactly like a memory figure out of context.
+ * Finding the SYSTEM memory in free text.
+ *
+ * Three different things in a spec line are written as a number and "GB", and
+ * only one of them is the answer:
+ *
+ *     Ryzen 7 5800X, RTX 3070 8GB, 16GB DDR4, 2x 512GB NVMe SSD
+ *                             ^^^  ^^^^          ^^^^^
+ *                             VRAM  RAM          storage
+ *
+ * Two earlier attempts got this wrong in different ways. Scanning the line for
+ * the first number that fits took the graphics card's figure whenever the card
+ * was written first, which is the usual ordering. Splitting into clauses and
+ * preferring the one that mentions memory then failed on its own terms: a card
+ * clause reading "GT 1030 2GB DDR5" does mention DDR5, so it was promoted to
+ * the top; "2x 512GB SSD" looks exactly like a memory kit and reported 1024GB
+ * of RAM; and joining clauses back together to search them defeated a guard
+ * that relied on line breaks.
+ *
+ * So candidates are SCORED by their surroundings rather than filtered by the
+ * clause they fell in. Every figure is a candidate; being near "DDR4" or "RAM"
+ * argues for it, being near "RTX" or "SSD" argues against, separators block a
+ * marker from reaching across into the next part of the sentence, and the best
+ * positive score wins. Nothing positive means the text does not state the
+ * system memory, in which case nothing is returned rather than a figure
+ * borrowed from the graphics card.
  */
-const GPU_CLAUSE = /\b(?:rtx|gtx|geforce|radeon|rx\s*\d|arc\s*a\d|quadro|vram|graphics|video)\b/i;
-/** Things that mark a clause as being about system memory. */
-const RAM_CLAUSE = /\b(?:ddr[345]|lpddr[345]|ram|memory|dimm|sodimm)\b/i;
+
+/** How far a marker's influence reaches, in characters. */
+const NEAR = 24;
+
+const MARK = {
+  ram: /\b(?:ddr[2345]|lpddr[345]x?|ram|memory|dimm|sodimm|installed physical)\b/gi,
+  gpu: /\b(?:rtx|gtx|gt\s*\d{3,4}|geforce|radeon|quadro|vram|graphics|video|gddr\d?x?|iris|arc\s*a\d|rx\s*\d{3,4})\b/gi,
+  storage: /\b(?:ssd|nvme|hdd|m\.2|sata|hard\s*drive|storage|drive|gen\d|tb)\b/gi,
+  /** A figure introduced as a capability is what the board takes, not what is fitted. */
+  capability: /\b(?:supports?|up\s*to|max(?:imum)?|capable|oc|overclock)\b/gi,
+};
+
+/** Phrases naming the graphics card's memory outright. These beat proximity. */
+const VRAM_PHRASE = /\b(?:graphics|video|dedicated)\s+memory\b/gi;
 
 /**
- * Parse a memory description such as "32GB DDR5-6000 (2x16GB)".
- *
- * Read CLAUSE BY CLAUSE, not by scanning the whole line for the first number
- * that fits. The old version did the latter and was wrong on most real input,
- * because people write the parts in the order they think of them:
- *
- *   "Ryzen 5 3600 / RTX 3060 12GB / 16GB DDR4-3200"
- *
- * gave 12GB of memory — the card's VRAM — running at 3600 MT/s, which is the
- * processor's model number. "RX 6800 XT" produced 6800 MT/s of DDR4, which is
- * not a speed DDR4 can reach. Both figures feed the processor index and the
- * VRAM headroom check, so the whole estimate moved with them.
- *
- * Splitting on the separators people actually use, then preferring the clause
- * that mentions memory and skipping the one that mentions a card, fixes the
- * ordering problem at its root rather than by adding another bound.
+ * A separator ends one part of a spec and begins the next, so a marker on the
+ * far side of one is not describing this figure. Without this the DDR4 in
+ * "GTX 1660 Super 6GB • 16GB DDR4" reached back across the bullet and claimed
+ * the card's 6GB.
  */
-function parseRam(text: string): Partial<RamConfig> | undefined {
-  const clauses = text.split(/[,/|\n]|\s\+\s/).map((c) => c.trim()).filter(Boolean);
-  const ramClauses = clauses.filter((c) => RAM_CLAUSE.test(c));
-  const neutral = clauses.filter((c) => !GPU_CLAUSE.test(c));
-  // Most specific first: a clause that names memory, then any clause that at
-  // least does not name a graphics card, then the raw text as a last resort.
-  const scopes = [ramClauses.join(' ; '), neutral.join(' ; '), text].filter(Boolean);
+const BARRIER = /[,;/|\n•]| - | \+ /g;
 
-  const firstMatch = (re: RegExp): RegExpExecArray | null => {
-    for (const scope of scopes) {
-      const m = re.exec(scope);
-      if (m) return m;
-    }
-    return null;
+type Span = [number, number];
+
+function marks(text: string, re: RegExp): Span[] {
+  const out: Span[] = [];
+  re.lastIndex = 0;
+  for (let m = re.exec(text); m; m = re.exec(text)) out.push([m.index, m.index + m[0].length]);
+  return out;
+}
+
+interface RamContext {
+  ram: Span[];
+  gpu: Span[];
+  storage: Span[];
+  vram: Span[];
+  bars: number[];
+}
+
+function crosses(a: number, b: number, bars: number[]): boolean {
+  const lo = Math.min(a, b);
+  const hi = Math.max(a, b);
+  return bars.some((x) => x > lo && x < hi);
+}
+
+/**
+ * How strongly the surroundings argue that a bare capacity is system memory.
+ *
+ * A marker belongs to the clause it STARTS in, so the barrier test uses its
+ * start offset — testing its near edge instead put a marker ending exactly at a
+ * comma on the same side as the figure after it, which let "GDDR6X," claim the
+ * "64GB" that followed.
+ */
+function memoryScore(at: number, ctx: RamContext): number {
+  const dist = (ms: Span[]): number => {
+    const ds = ms
+      .filter(([a]) => !crosses(at, a, ctx.bars))
+      .map(([a, b]) => (at < a ? a - at : at > b ? at - b : 0));
+    return ds.length ? Math.min(...ds) : Infinity;
   };
+  // A label precedes its value, so "graphics memory" disqualifies only figures
+  // after it and before the next separator.
+  if (ctx.vram.some(([, b]) => at > b && at - b <= NEAR && !crosses(b, at, ctx.bars))) return -10;
 
+  const dRam = dist(ctx.ram);
+  if (dRam === Infinity || dRam > NEAR) return -1;
+  const rival = Math.min(dist(ctx.gpu), dist(ctx.storage));
+  if (rival === Infinity) return 3;
+  // The rival must be clearly closer to take it; otherwise the memory word
+  // keeps it, because "16GB DDR4" beside "RTX 3060 12GB" belongs to the DDR4.
+  return dRam <= rival ? 3 : rival * 1.6 < dRam ? -5 : 1;
+}
+
+/**
+ * Score a DDR token, which IS the memory evidence and so needs no memory word
+ * beside it. The only question is whether something else has a better claim:
+ * "GT 1030 2GB DDR5" states the card's memory generation, not the machine's.
+ */
+function ddrScore(at: number, ctx: RamContext): number {
+  const near = (ms: Span[], within: number) =>
+    ms.some(([a, b]) => {
+      if (crosses(at, a, ctx.bars)) return false;
+      const d = at < a ? a - at : at > b ? at - b : 0;
+      return d <= within;
+    });
+  return near(ctx.gpu, 14) || near(ctx.storage, 14) ? -5 : 3;
+}
+
+/** Parse a memory description such as "32GB DDR5-6000 (2x16GB)". */
+function parseRam(text: string): Partial<RamConfig> | undefined {
+  const ctx: RamContext = {
+    ram: marks(text, MARK.ram),
+    gpu: marks(text, MARK.gpu),
+    storage: marks(text, MARK.storage),
+    vram: marks(text, VRAM_PHRASE),
+    bars: marks(text, BARRIER).map(([a]) => a),
+  };
+  const capability = marks(text, MARK.capability);
   const out: Partial<RamConfig> = {};
 
-  // The kit is resolved FIRST, because "2x32GB" states the capacity outright and
-  // does it more reliably than any standalone figure elsewhere in the line.
-  const kit = firstMatch(/(\d)\s*x\s*(\d{1,3})\s*gb/i);
-  if (kit) {
-    const sticks = Number(kit[1]);
-    out.channels = (sticks >= 4 ? 4 : sticks >= 2 ? 2 : 1) as RamConfig['channels'];
-    out.totalGB = sticks * Number(kit[2]);
+  // --- capacity ---------------------------------------------------------
+  // The kit is resolved first: "2x32GB" states the total outright.
+  const kitRe = /(\d{1,2})\s*x\s*(\d{1,3})(?:\.\d+)?\s*gb\b/gi;
+  let bestKit: { sticks: number; each: number; score: number } | null = null;
+  for (let m = kitRe.exec(text); m; m = kitRe.exec(text)) {
+    const sticks = Number(m[1]);
+    const each = Number(m[2]);
+    // Physical bound: consumer modules stop well short of 128GB and boards at
+    // eight slots. "2x 512GB" is a pair of drives, and reading it as memory
+    // reported a machine with 1024GB of RAM.
+    if (each > 128 || sticks > 8) continue;
+    const score = memoryScore(m.index, ctx);
+    if (score > 0 && (!bestKit || score > bestKit.score)) bestKit = { sticks, each, score };
+  }
+  if (bestKit) {
+    out.channels = (bestKit.sticks >= 4 ? 4 : bestKit.sticks >= 2 ? 2 : 1) as RamConfig['channels'];
+    out.totalGB = bestKit.sticks * bestKit.each;
   }
 
-  // A capacity that is the SIZE OF ONE STICK — the 32 in "2x32GB" — is not the
-  // total, and taking it as one quarters the machine's memory. Skipped by
-  // scanning rather than with a lookbehind, which older Safari rejects when the
-  // regex is constructed and would take the whole module down with it.
-  const totalRe = /(\d{1,3})\s*gb\b(?![^\n]*(?:vram|graphics))/gi;
-  outer: for (const scope of out.totalGB ? [] : scopes) {
-    totalRe.lastIndex = 0;
-    for (let m = totalRe.exec(scope); m; m = totalRe.exec(scope)) {
-      if (/\d\s*x\s*$/i.test(scope.slice(Math.max(0, m.index - 4), m.index))) continue;
-      out.totalGB = Number(m[1]);
-      break outer;
+  if (!out.totalGB) {
+    // The decimal is optional but must be CONSUMED: "16.0 GB", which is how
+    // Windows prints it, otherwise matches at the "0" and reports 0GB — a
+    // figure that then slips past every "no memory recorded" fallback.
+    const gbRe = /(\d{1,3})(?:\.\d+)?\s*gb\b/gi;
+    let best: { gb: number; score: number } | null = null;
+    for (let m = gbRe.exec(text); m; m = gbRe.exec(text)) {
+      if (/\d\s*x\s*$/i.test(text.slice(Math.max(0, m.index - 5), m.index))) continue;
+      const gb = Number(m[1]);
+      if (!gb) continue;
+      const score = memoryScore(m.index, ctx);
+      if (score > 0 && (!best || score > best.score)) best = { gb, score };
     }
+    if (best) out.totalGB = best.gb;
   }
 
-  const type = /\b(?:lp)?(ddr[345])\b/i.exec(text);
-  if (type) out.type = type[1].toUpperCase() as MemoryType;
+  // --- generation -------------------------------------------------------
+  // GDDR cannot match: there is no word boundary between the G and the D.
+  const typeRe = /\b(?:lp)?(ddr[345])x?\b/gi;
+  let bestType: { t: string; score: number } | null = null;
+  for (let m = typeRe.exec(text); m; m = typeRe.exec(text)) {
+    const score = ddrScore(m.index, ctx);
+    if (score > 0 && (!bestType || score > bestType.score)) bestType = { t: m[1], score };
+  }
+  if (bestType) out.type = bestType.t.toUpperCase() as MemoryType;
 
-  // Anchored on both attempts: a bare four-digit number is a model number far
-  // more often than it is a memory speed. The DDR prefix is tried across the
-  // whole text first because it is the strongest signal there is.
-  const speed =
-    /\b(?:lp)?ddr[345][-\s]?(\d{4,5})\b/i.exec(text) ??
-    firstMatch(/\b(\d{4,5})\s*(?:mhz|mt\/s)\b/i);
-  if (speed && Number(speed[1]) >= 1066 && Number(speed[1]) <= 9000) out.speedMTs = Number(speed[1]);
+  // --- speed ------------------------------------------------------------
+  // Anchored on either side: a bare four-digit number is a part number far more
+  // often than a memory speed.
+  const speedRe = /\b(?:lp)?ddr[345]x?[-\s]?(\d{4,5})\b|\b(\d{4,5})\s*(?:mhz|mt\/s)\b/gi;
+  let bestSpeed: { mts: number; score: number } | null = null;
+  for (let m = speedRe.exec(text); m; m = speedRe.exec(text)) {
+    const mts = Number(m[1] ?? m[2]);
+    if (!(mts >= 1066 && mts <= 9000)) continue;
+    // A DDR-prefixed figure is the strongest signal there is; a bare one with a
+    // unit still has to earn it from its surroundings.
+    let score = m[1] != null ? ddrScore(m.index, ctx) + 2 : memoryScore(m.index, ctx);
+    if (capability.some(([a, b]) => m.index > b && m.index - b <= 20 && !crosses(a, m.index, ctx.bars))) {
+      score -= 4;
+    }
+    if (score > 0 && (!bestSpeed || score > bestSpeed.score)) bestSpeed = { mts, score };
+  }
+  if (bestSpeed) out.speedMTs = bestSpeed.mts;
 
   return Object.keys(out).length ? out : undefined;
 }

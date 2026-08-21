@@ -145,6 +145,19 @@ export function CommandPalette({ screens }: { screens: { to: string; label: stri
     (acc[a.group] ??= []).push(a);
     return acc;
   }, {});
+
+  /**
+   * The rendered order, flattened — and the ONLY index the cursor uses.
+   *
+   * Grouping reorders: a processor and a graphics card that interleave by score
+   * in `filtered` are split into two blocks on screen. The highlight was painted
+   * at the rendered position while Enter ran `filtered[cursor]`, so once the two
+   * orders diverged the highlighted row and the row that fired were different
+   * actions. That was invisible while every part hit did the same harmless
+   * thing; now that choosing a part swaps it into the build, it would apply a
+   * graphics card the user never highlighted.
+   */
+  const ordered = Object.values(grouped).flat();
   let flat = -1;
 
   return (
@@ -164,13 +177,13 @@ export function CommandPalette({ screens }: { screens: { to: string; label: stri
           aria-label="Search screens, parts and games"
           onChange={(e) => { setQ(e.target.value); setCursor(0); }}
           onKeyDown={(e) => {
-            if (e.key === 'ArrowDown') { e.preventDefault(); setCursor((c) => Math.min(c + 1, filtered.length - 1)); }
+            if (e.key === 'ArrowDown') { e.preventDefault(); setCursor((c) => Math.min(c + 1, ordered.length - 1)); }
             if (e.key === 'ArrowUp') { e.preventDefault(); setCursor((c) => Math.max(c - 1, 0)); }
-            if (e.key === 'Enter' && filtered[cursor]) { e.preventDefault(); filtered[cursor].run(); setOpen(false); }
+            if (e.key === 'Enter' && ordered[cursor]) { e.preventDefault(); ordered[cursor].run(); setOpen(false); }
           }}
         />
         <div className="palette-list" role="listbox" aria-label="Results">
-          {filtered.length === 0 && <div className="palette-empty">Nothing matches “{q}”.</div>}
+          {ordered.length === 0 && <div className="palette-empty">Nothing matches “{q}”.</div>}
           {Object.entries(grouped).map(([group, items]) => (
             <div key={group}>
               <div className="palette-group">{group}</div>
