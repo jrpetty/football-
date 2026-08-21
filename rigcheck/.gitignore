@@ -16,6 +16,7 @@ probe.mjs
 __probe.mjs
 vrfy.cjs
 *.probe.mjs
+probe/
 
 # Screenshots taken while checking a change in a real browser.
 *.png

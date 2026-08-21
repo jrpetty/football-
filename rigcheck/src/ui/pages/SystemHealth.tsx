@@ -28,9 +28,13 @@ import {
   trackableKeys, verifyFixes, type AppliedFix, type HealthSession,
 } from '../../core/history.ts';
 import { comparePeers, findPeers, type PeerComparison } from '../../core/peers.ts';
-import { benchFindings, type BenchResult } from '../../core/browserbench.ts';
-import { deriveCpuIndex, deriveGpuIndex } from '../../core/indices.ts';
+import {
+  benchDrift, benchFindings, benchSnapshot, cacheReading, coreInference, corroborateCpu,
+  type BenchContext, type BenchResult,
+} from '../../core/browserbench.ts';
 import { BrowserBenchPanel } from '../components/BrowserBench.tsx';
+import { BrowserSpecPanel } from '../components/BrowserSpec.tsx';
+import type { GpuIdentification } from '../bench/inspect.ts';
 import { addSession, historyFor, loadSessions, removeSession } from '../sessions.ts';
 import measuredJson from '../../../data/measured/records.json';
 import type { PerfRecord } from '../../core/types.ts';
@@ -97,6 +101,11 @@ export function SystemHealth() {
     typeof v === 'string' && ['consent', 'detect', 'confirm', 'measure', 'report', 'history'].includes(v));
   const [agreed, setAgreed] = useStickyState('sh.agreed', false);
   const [bench, setBench] = useState<BenchResult | null>(null);
+  // What the browser's own renderer string resolved to in the catalogue. Held
+  // separately from the benchmark because reading it costs nothing and takes no
+  // time, while a benchmark run costs a minute of fan noise — somebody who does
+  // only the first should still get the cross-check the second would have given.
+  const [browserGpu, setBrowserGpu] = useState<GpuIdentification | null>(null);
   const [text, setText] = useStickyState('sh.text', '');
 
   // Confirmed specification. Seeded from the detector, then editable — the
@@ -161,6 +170,50 @@ export function SystemHealth() {
     };
   }, [cpuId, gpuId, ram, storage, resolution, refreshHz, ratedMTs, pcieGen, pcieWidth, airflow, psuWatts, driverDate, uptimeDays, data]);
 
+  const thisMachineId = system ? machineIdOf(system) : '';
+  const machineHistory = useMemo(
+    () => (thisMachineId ? historyFor(sessions, thisMachineId) : []),
+    [sessions, thisMachineId],
+  );
+
+  /**
+   * What the form claims is in the machine, handed to the benchmark so it can
+   * disagree.
+   *
+   * This is the direction of travel that matters. The other screens take the
+   * form as given and produce estimates from it; this hands the form to the
+   * measurements and lets them say "that is not what I am running on". A
+   * renderer string that resolves to a different card, a thread count that does
+   * not match, a cache step in the wrong place — each of those is a reason to
+   * doubt an estimate before acting on it.
+   */
+  const benchContext: BenchContext = useMemo(() => {
+    const gpuRec = data.gpus.get(gpuId);
+    const cpuRec = data.cpus.get(cpuId);
+    // The most recent earlier session of THIS machine that took a run. Browser
+    // benchmark numbers are meaningless against a corpus and quantitative
+    // against themselves, so this is where they stop being decorative.
+    const previous = [...machineHistory]
+      .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
+      .find((h) => h.bench)?.bench;
+    return {
+      previous,
+      expectedGpuName: gpuRec?.fullName,
+      expectedGpuId: gpuRec?.id,
+      detectedGpuId: browserGpu?.gpuId ?? undefined,
+      detectedGpuName: browserGpu?.gpuName ?? undefined,
+      expectedCpu: cpuRec
+        ? {
+            fullName: cpuRec.fullName,
+            cores: cpuRec.cores,
+            threads: cpuRec.threads,
+            l3CacheMB: cpuRec.l3CacheMB,
+            hybrid: cpuRec.caps?.hybrid,
+          }
+        : undefined,
+    };
+  }, [data, gpuId, cpuId, browserGpu, machineHistory]);
+
   /**
    * The report, with anything the in-browser run found folded in.
    *
@@ -172,17 +225,7 @@ export function SystemHealth() {
     if (!system) return null;
     const base = diagnose(system, measurements, data);
     if (!bench) return base;
-    const gpuRec = data.gpus.get(system.build.gpuId);
-    const cpuRec = data.cpus.get(system.build.cpuId);
-    // Indices are derived against the catalogue anchors rather than stored on
-    // the record, so they are computed the same way the estimator computes them.
-    const extra = benchFindings(bench, {
-      expectedGpuName: gpuRec?.fullName,
-      expectedGpuIndex: gpuRec ? deriveGpuIndex(gpuRec, data.anchorGpu, system.build.ram).index.raster : undefined,
-      expectedCpuIndex: cpuRec
-        ? deriveCpuIndex(cpuRec, system.build.ram, data.anchorCpu, data.anchorRam).index.throughput
-        : undefined,
-    });
+    const extra = benchFindings(bench, benchContext);
     const rank: Record<Severity, number> = { critical: 0, major: 1, minor: 2, unknown: 3, ok: 4 };
     const findings = [...extra, ...base.findings].sort((a, b) => rank[a.severity] - rank[b.severity]);
     return {
@@ -199,13 +242,7 @@ export function SystemHealth() {
         ? base.notChecked.filter((n) => !/rendering on the intended adapter/i.test(n))
         : base.notChecked,
     };
-  }, [system, measurements, data, bench]);
-
-  const thisMachineId = system ? machineIdOf(system) : '';
-  const machineHistory = useMemo(
-    () => (thisMachineId ? historyFor(sessions, thisMachineId) : []),
-    [sessions, thisMachineId],
-  );
+  }, [system, measurements, data, bench, benchContext]);
 
   /**
    * Peer comparison, one per measurement. Own history is drawn from earlier
@@ -243,6 +280,7 @@ export function SystemHealth() {
       findings: report.findings.map((f) => ({ id: f.id, title: f.title, severity: f.severity, estimatedGainPct: f.estimatedGainPct })),
       fixesApplied,
       note: sessionNote.trim() || undefined,
+      bench: bench ? benchSnapshot(bench) : undefined,
     };
     setSessions(addSession(s));
     setSaved(true);
@@ -423,10 +461,16 @@ export function SystemHealth() {
               from memory works too; anything ambiguous is asked about rather than assumed.
             </p>
 
-            <BrowserBenchPanel
-              onResult={setBench}
-              expectedGpuName={data.gpus.get(gpuId)?.fullName}
+            <BrowserSpecPanel
+              currentGpuId={gpuId}
+              onIdentified={setBrowserGpu}
+              onApply={(s) => {
+                if (s.gpuId) setGpuId(s.gpuId);
+                if (s.resolution) setResolution(s.resolution);
+                if (s.refreshHz) setRefreshHz(s.refreshHz);
+              }}
             />
+            <BrowserBenchPanel onResult={setBench} context={benchContext} />
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -739,6 +783,8 @@ export function SystemHealth() {
             </div>
           </div>
 
+          <CorroborationPanel bench={bench} context={benchContext} />
+
           {report.findings.length > 0 && (
             <div className="panel">
               <div className="panel-head"><h2>What is wrong</h2><span className="spacer" /><span className="mini">worst first</span></div>
@@ -956,6 +1002,99 @@ export function SystemHealth() {
  * the job — what to have ready, how long, the steps in order, how to check it
  * worked, and what goes wrong.
  */
+/**
+ * Does the machine agree with the form?
+ *
+ * This lives on the report rather than beside the benchmark for a sequencing
+ * reason found by driving the flow: the benchmark runs on the "read the
+ * machine" step, and the processor is not chosen until the step AFTER it. So at
+ * the moment the readout was drawn there was nothing to check the measurements
+ * against, and the checks silently rendered as an empty list — the best thing
+ * the deeper benchmark does, invisible in normal use.
+ *
+ * By the report every part is chosen and the run is still in state, so the
+ * comparison can finally be made. Nothing is re-measured to do it.
+ */
+function CorroborationPanel({ bench, context }: { bench: BenchResult | null; context: BenchContext }) {
+  const corr = useMemo(() => (bench?.cpu ? corroborateCpu(bench.cpu, context.expectedCpu) : null), [bench, context]);
+  const cores = useMemo(
+    () => (bench?.cpu?.scaling ? coreInference(bench.cpu.scaling, bench.cpu.reportedThreads) : null),
+    [bench],
+  );
+  const cache = useMemo(() => (bench?.cpu?.latencyCurve ? cacheReading(bench.cpu.latencyCurve) : null), [bench]);
+  const drift = useMemo(
+    () => (bench && context.previous ? benchDrift(benchSnapshot(bench), context.previous) : []),
+    [bench, context.previous],
+  );
+  if (!corr?.checks.length && !cores && !cache && !drift.length) return null;
+
+  return (
+    <div className="panel">
+      <div className="panel-head">
+        <h2>Does the machine match the parts you picked?</h2>
+        <span className="spacer" />
+        <span className={`tag ${corr?.conflicts ? 'bad' : 'good'}`}>
+          {corr?.conflicts ? 'something differs' : 'consistent'}
+        </span>
+      </div>
+      <div className="panel-body">
+        <p className="mini" style={{ marginTop: 0 }}>
+          Every other screen takes the parts list as given. This is the one place the measurements get to
+          argue with it — the thread count, the shape of the scaling curve and where the cache levels end
+          are all facts about the machine in front of you, and they either fit the processor you chose or
+          they do not.
+        </p>
+        {corr?.checks.map((c) => (
+          <div key={c.label} className="check-row">
+            <span className={`tag ${c.agrees === true ? 'good' : c.agrees === false ? 'bad' : ''}`}>
+              {c.agrees === true ? 'agrees' : c.agrees === false ? 'differs' : 'not checked'}
+            </span>
+            <span>{c.detail}</span>
+          </div>
+        ))}
+        {(cores || cache) && (
+          <div className="mini" style={{ marginTop: 10 }}>
+            {[cores?.detail, cache?.detail].filter(Boolean).join(' ')}
+          </div>
+        )}
+
+        {drift.length > 0 && (
+          <>
+            <h3 style={{ margin: '18px 0 6px', fontSize: 13 }}>Against your last run</h3>
+            <p className="mini" style={{ marginTop: 0 }}>
+              The only quantitative comparison this benchmark can honestly make. Both sides are in the same
+              invented units, taken by the same code on the same machine, so whatever those units are worth
+              cancels out — and what is left is whether this machine got slower.
+            </p>
+            <div className="stat-row">
+              {drift.map((d) => {
+                const pct = (d.change - 1) * 100;
+                const better = d.higherIsBetter ? pct > 0 : pct < 0;
+                return (
+                  <div className="stat" key={d.label}>
+                    <span
+                      className="v"
+                      style={{ fontSize: 18, color: !d.moved ? undefined : better ? 'var(--good)' : 'var(--bad)' }}
+                    >
+                      {pct >= 0 ? '+' : ''}{pct.toFixed(0)}%
+                    </span>
+                    <span className="k">{d.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+            {!drift.some((d) => d.moved) && (
+              <div className="mini" style={{ marginTop: 8 }}>
+                Nothing moved further than run-to-run noise, so the machine is measuring the same as it did.
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function FixGuideBlock({ findingId }: { findingId: string }) {
   const [open, setOpen] = useState(false);
   const guide = guideFor(findingId);

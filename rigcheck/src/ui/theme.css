@@ -1192,3 +1192,52 @@ kbd {
   @page { margin: 14mm; }
 }
 .print-only { display: none; }
+
+/* -- browser inspection readout -------------------------------------------- */
+
+/* One card per field the browser could answer. auto-fit rather than a fixed
+   count: six of these at 320px each need 2000px, and the same rule has to serve
+   a phone. */
+.probe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.probe {
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--surface);
+  padding: 10px 12px;
+}
+.probe-head { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+.probe-head .k {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--faint);
+}
+.probe > .v { font-size: 13.5px; line-height: 1.4; word-break: break-word; }
+.probe .mini { margin-top: 5px; }
+
+/* The four provenance words, coloured the same way the rest of the app colours
+   provenance — measured is the strong one, a bound is the weak one. */
+.tag.prov-reported { color: var(--measured); border-color: color-mix(in srgb, var(--measured) 38%, var(--line)); }
+.tag.prov-measured { color: var(--chart-series); border-color: color-mix(in srgb, var(--chart-series) 38%, var(--line)); }
+.tag.prov-derived { color: var(--spec); border-color: color-mix(in srgb, var(--spec) 38%, var(--line)); }
+.tag.prov-bound { color: var(--extrapolated); border-color: color-mix(in srgb, var(--extrapolated) 38%, var(--line)); }
+
+/* One agreement check between what was measured and what the form says. */
+.check-row {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--muted);
+  padding: 7px 0;
+  border-top: 1px solid var(--line);
+}
+.check-row:first-of-type { border-top: 0; }
+.check-row > .tag { flex: none; margin-top: 1px; }

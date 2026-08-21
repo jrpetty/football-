@@ -123,35 +123,65 @@ describe('findings', () => {
         cpu: cpu({ multiThread: 1.5e6, windows: win([100, 99, 98, 97, 96, 95, 94, 93]) }),
         memory: { copyGBs: 12, stridedGBs: 2 },
       }),
-      { expectedGpuIndex: 100, expectedCpuIndex: 100 },
+      { expectedGpuName: 'NVIDIA GeForce RTX 3060' },
     );
     const text = f.map((x) => `${x.title} ${x.evidence} ${x.impact} ${x.remedy ?? ''}`).join(' ');
     expect(text).not.toMatch(/\d+\s*fps/i);
     expect(text).not.toMatch(/frames per second/i);
   });
 
-  it('caps the catalogue cross-check at minor and labels the assumption', () => {
+  /**
+   * The removed cross-check, pinned so it cannot come back.
+   *
+   * It compared the measured GPU-to-CPU throughput ratio with the ratio the
+   * catalogue implies. Both measured figures are in units this benchmark
+   * invented, so the two ratios differ by an unknown constant — and with the
+   * constant assumed to be 1, the check fires on every machine that has a
+   * working graphics card. A real RTX 3060 measures its shader loop in the
+   * hundreds of billions of operations a second against a few hundred million
+   * integer operations on one core, so the ratio comes out in the hundreds
+   * where the catalogue expects about three.
+   */
+  it('makes no absolute comparison between browser throughput and the catalogue', () => {
     const f = benchFindings(
       result({
-        gpu: { renderer: 'NVIDIA GeForce RTX 3060', vendor: 'NVIDIA', api: 'webgl2', throughput: 1e5, windows: [] },
-        cpu: cpu(),
+        gpu: { renderer: 'NVIDIA GeForce RTX 3060', vendor: 'NVIDIA', api: 'webgl2', throughput: 2.4e11, windows: [] },
+        cpu: cpu({ singleThread: 4.3e8, multiThread: 4.3e8 * 7 }),
       }),
-      { expectedGpuIndex: 300, expectedCpuIndex: 100 },
+      { expectedGpuName: 'NVIDIA GeForce RTX 3060', expectedGpuId: 'nvidia-geforce-rtx-3060-12gb' },
     );
-    const r = f.find((x) => x.id === 'bench-ratio-mismatch')!;
-    expect(r.severity).toBe('minor');
-    expect(r.impact).toMatch(/weak evidence/i);
+    expect(f.map((x) => x.id)).not.toContain('bench-ratio-mismatch');
+    expect(f.filter((x) => x.severity !== 'ok' && x.severity !== 'unknown')).toHaveLength(0);
   });
 
-  it('stays quiet on the cross-check inside the wide band', () => {
+  it('reports the card in the machine differing from the card on the form', () => {
     const f = benchFindings(
       result({
         gpu: { renderer: 'NVIDIA GeForce RTX 3060', vendor: 'NVIDIA', api: 'webgl2', throughput: 1e6, windows: [] },
-        cpu: cpu({ singleThread: 1e6 }),
+        cpu: cpu(),
       }),
-      { expectedGpuIndex: 100, expectedCpuIndex: 100 },
+      {
+        expectedGpuId: 'nvidia-geforce-rtx-4070',
+        expectedGpuName: 'NVIDIA GeForce RTX 4070',
+        detectedGpuId: 'nvidia-geforce-rtx-3060-12gb',
+        detectedGpuName: 'NVIDIA GeForce RTX 3060 12GB',
+      },
     );
-    expect(f.find((x) => x.id === 'bench-ratio-mismatch')).toBeUndefined();
+    const m = f.find((x) => x.id === 'bench-gpu-mismatch')!;
+    expect(m.severity).toBe('major');
+    expect(m.evidence).toContain('RTX 3060');
+    expect(m.evidence).toContain('RTX 4070');
+  });
+
+  it('stays quiet when the detected card matches the selected one', () => {
+    const f = benchFindings(
+      result({
+        gpu: { renderer: 'NVIDIA GeForce RTX 3060', vendor: 'NVIDIA', api: 'webgl2', throughput: 1e6, windows: [] },
+        cpu: cpu(),
+      }),
+      { expectedGpuId: 'nvidia-geforce-rtx-3060-12gb', detectedGpuId: 'nvidia-geforce-rtx-3060-12gb' },
+    );
+    expect(f.map((x) => x.id)).not.toContain('bench-gpu-mismatch');
   });
 
   it('invalidates a run measured in a background tab', () => {

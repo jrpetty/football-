@@ -16,6 +16,7 @@
  * answer about degradation sends someone dismantling a working machine.
  */
 import type { DetectedSystem, Measurement } from './health.ts';
+import type { BenchSnapshot } from './browserbench.ts';
 
 /** One run of the health check, kept so a later one can be compared to it. */
 export interface HealthSession {
@@ -32,6 +33,15 @@ export interface HealthSession {
   /** Fixes the operator says they applied since the previous session. */
   fixesApplied: AppliedFix[];
   note?: string;
+  /**
+   * The in-browser run's figures, if one was taken.
+   *
+   * Reduced rather than raw — see `benchSnapshot`. Its whole purpose is the
+   * next session: browser-benchmark numbers mean nothing against a corpus and
+   * everything against the same machine a month later, so this is the only
+   * place those numbers become quantitative.
+   */
+  bench?: BenchSnapshot;
 }
 
 export interface AppliedFix {
