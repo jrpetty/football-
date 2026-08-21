@@ -40,6 +40,18 @@ export interface FitOptions {
   ridge: number
   /** Fit the Dixon-Coles rho as well. */
   fitRho: boolean
+  /**
+   * Give every club its own home-advantage deviation instead of sharing one
+   * league-wide number. Adds 2n parameters — see `homeRidge`.
+   */
+  perTeamHome: boolean
+  /**
+   * Ridge strength on the per-team home deviations. Deliberately much stronger
+   * than the attack/defence ridge: a club plays only ~19 home matches a season,
+   * so an unshrunk venue effect is mostly noise. This is the dial that decides
+   * how far a club is allowed to depart from the league-wide home advantage.
+   */
+  homeRidge: number
   iterations: number
   learningRate: number
 }
@@ -49,16 +61,38 @@ export const DEFAULT_FIT: FitOptions = {
   asOf: 0,
   ridge: 0.02,
   fitRho: true,
+  perTeamHome: true,
+  homeRidge: 0.12,
   iterations: 500,
   learningRate: 0.05,
 }
 
 export interface TeamRatings {
+  /**
+   * League baseline log scoring rate — what an average side scores against an
+   * average side away from home. Held as its own parameter rather than left to
+   * be absorbed by the defence ratings, so the ridge shrinks how far clubs sit
+   * from the league mean without also shrinking the league mean itself.
+   */
+  intercept: number
   /** code -> attack rating (log scale, centred on 0). */
   attack: Record<string, number>
-  /** code -> defence rating (log scale, higher = concedes fewer). */
+  /** code -> defence rating (log scale, centred on 0, higher = concedes fewer). */
   defence: Record<string, number>
+  /** League-wide home advantage, log scale, applied to the home side's lambda. */
   homeAdvantage: number
+  /**
+   * code -> this club's own deviation from the league home advantage, log
+   * scale, applied to its scoring rate when it plays at home. Centred on zero,
+   * so the league-wide figure above is still the average.
+   */
+  homeAttackDev: Record<string, number>
+  /**
+   * code -> this club's deviation in how much it suppresses visitors, log
+   * scale, subtracted from the away side's lambda at this ground. Also centred
+   * on zero. A fortress shows up here; a soft home ground shows up negative.
+   */
+  homeDefenceDev: Record<string, number>
   rho: number
   /** Sum of time-decay weights behind each team's rating — its effective sample size. */
   weight: Record<string, number>
@@ -84,11 +118,26 @@ export function fitRatings(obs: readonly FitObservation[], opts: Partial<FitOpti
   const index = new Map(teams.map((t, i) => [t, i]))
   const n = teams.length
   if (n === 0) {
-    return { attack: {}, defence: {}, homeAdvantage: 0.25, rho: 0, weight: {}, effectiveN: 0 }
+    return {
+      intercept: Math.log(1.35),
+      attack: {},
+      defence: {},
+      homeAdvantage: 0.25,
+      homeAttackDev: {},
+      homeDefenceDev: {},
+      rho: 0,
+      weight: {},
+      effectiveN: 0,
+    }
   }
 
   const att = new Float64Array(n)
   const def = new Float64Array(n)
+  // Per-team departures from the league home advantage: hAtt lifts the club's
+  // own scoring at home, hDef suppresses its visitors'. Both centred on zero.
+  const hAtt = new Float64Array(n)
+  const hDef = new Float64Array(n)
+  let mu = Math.log(1.35)
   let home = 0.25
   let rho = 0
 
@@ -114,6 +163,12 @@ export function fitRatings(obs: readonly FitObservation[], opts: Partial<FitOpti
   const vAtt = new Float64Array(n)
   const mDef = new Float64Array(n)
   const vDef = new Float64Array(n)
+  const mHAtt = new Float64Array(n)
+  const vHAtt = new Float64Array(n)
+  const mHDef = new Float64Array(n)
+  const vHDef = new Float64Array(n)
+  let mMu = 0
+  let vMu = 0
   let mHome = 0
   let vHome = 0
   let mRho = 0
@@ -125,6 +180,9 @@ export function fitRatings(obs: readonly FitObservation[], opts: Partial<FitOpti
   for (let it = 1; it <= o.iterations; it++) {
     const gAtt = new Float64Array(n)
     const gDef = new Float64Array(n)
+    const gHAtt = new Float64Array(n)
+    const gHDef = new Float64Array(n)
+    let gMu = 0
     let gHome = 0
     let gRho = 0
 
@@ -133,8 +191,8 @@ export function fitRatings(obs: readonly FitObservation[], opts: Partial<FitOpti
       const w = wt[k]!
       const a = ih[k]!
       const b = ia[k]!
-      const lh = Math.exp(att[a]! - def[b]! + home)
-      const la = Math.exp(att[b]! - def[a]!)
+      const lh = Math.exp(mu + att[a]! - def[b]! + home + hAtt[a]!)
+      const la = Math.exp(mu + att[b]! - def[a]! - hDef[a]!)
 
       // d/dtheta of [y*log(mu) - mu] where mu = exp(theta) gives (y - mu).
       const rh = (m.homeGoals - lh) * w
@@ -144,6 +202,11 @@ export function fitRatings(obs: readonly FitObservation[], opts: Partial<FitOpti
       gHome += rh
       gAtt[b] = gAtt[b]! + ra
       gDef[a] = gDef[a]! - ra
+      gMu += rh + ra
+      // The venue terms are the same residuals, but only over the matches this
+      // club actually hosts — which is exactly what a home record is.
+      gHAtt[a] = gHAtt[a]! + rh
+      gHDef[a] = gHDef[a]! - ra
 
       // Numerical gradient for rho only over the four affected scorelines.
       if (o.fitRho && m.homeGoals <= 1 && m.awayGoals <= 1) {
@@ -161,6 +224,12 @@ export function fitRatings(obs: readonly FitObservation[], opts: Partial<FitOpti
         gDef[i] = gDef[i]! - o.ridge * effectiveN * def[i]!
       }
     }
+    if (o.perTeamHome && o.homeRidge > 0) {
+      for (let i = 0; i < n; i++) {
+        gHAtt[i] = gHAtt[i]! - o.homeRidge * effectiveN * hAtt[i]!
+        gHDef[i] = gHDef[i]! - o.homeRidge * effectiveN * hDef[i]!
+      }
+    }
     // Keep rho in a sane band; it is a small correction, not a free parameter.
     if (o.fitRho) gRho -= o.ridge * effectiveN * rho * 10
 
@@ -176,7 +245,23 @@ export function fitRatings(obs: readonly FitObservation[], opts: Partial<FitOpti
       mDef[i] = b1 * mDef[i]! + (1 - b1) * gDef[i]!
       vDef[i] = b2 * vDef[i]! + (1 - b2) * gDef[i]! * gDef[i]!
       def[i] = def[i]! + (lr * (mDef[i]! / c1)) / (Math.sqrt(vDef[i]! / c2) + eps)
+
+      if (o.perTeamHome) {
+        mHAtt[i] = b1 * mHAtt[i]! + (1 - b1) * gHAtt[i]!
+        vHAtt[i] = b2 * vHAtt[i]! + (1 - b2) * gHAtt[i]! * gHAtt[i]!
+        hAtt[i] = hAtt[i]! + (lr * (mHAtt[i]! / c1)) / (Math.sqrt(vHAtt[i]! / c2) + eps)
+
+        mHDef[i] = b1 * mHDef[i]! + (1 - b1) * gHDef[i]!
+        vHDef[i] = b2 * vHDef[i]! + (1 - b2) * gHDef[i]! * gHDef[i]!
+        hDef[i] = hDef[i]! + (lr * (mHDef[i]! / c1)) / (Math.sqrt(vHDef[i]! / c2) + eps)
+      }
     }
+
+    // The intercept is deliberately unpenalised: how many goals the league
+    // scores is an observed fact, not something to shrink toward zero.
+    mMu = b1 * mMu + (1 - b1) * gMu
+    vMu = b2 * vMu + (1 - b2) * gMu * gMu
+    mu += (lr * (mMu / c1)) / (Math.sqrt(vMu / c2) + eps)
 
     mHome = b1 * mHome + (1 - b1) * gHome
     vHome = b2 * vHome + (1 - b2) * gHome * gHome
@@ -189,20 +274,68 @@ export function fitRatings(obs: readonly FitObservation[], opts: Partial<FitOpti
       rho = Math.max(-0.25, Math.min(0.25, rho))
     }
 
-    // Identifiability: centre attack ratings on zero.
+    // Identifiability. Adding a constant to every attack rating is the same
+    // model with a different intercept, so the parameterisation only pins down
+    // once each group of ratings is centred on zero. Each step below moves the
+    // discarded mean into the parameter that can absorb it exactly, leaving
+    // both lambdas bit-for-bit unchanged — these are re-gauges, not nudges,
+    // and doing them exactly is what lets the intercept converge quickly
+    // instead of being dragged along by twenty defence ratings at once.
     let meanAtt = 0
     for (let i = 0; i < n; i++) meanAtt += att[i]!
     meanAtt /= n
     for (let i = 0; i < n; i++) att[i] = att[i]! - meanAtt
+    mu += meanAtt
+
+    if (o.perTeamHome) {
+      let mHA = 0
+      let mHD = 0
+      for (let i = 0; i < n; i++) {
+        mHA += hAtt[i]!
+        mHD += hDef[i]!
+      }
+      mHA /= n
+      mHD /= n
+      for (let i = 0; i < n; i++) {
+        hAtt[i] = hAtt[i]! - mHA
+        hDef[i] = hDef[i]! - mHD
+      }
+      // Removing the mean home-scoring lift is absorbed by the shared home
+      // term. Removing the mean visitor suppression raises every away lambda,
+      // which the intercept takes back — and that in turn lowers every home
+      // lambda, which the home term restores.
+      home += mHA + mHD
+      mu -= mHD
+    }
+
+    let meanDef = 0
+    for (let i = 0; i < n; i++) meanDef += def[i]!
+    meanDef /= n
+    for (let i = 0; i < n; i++) def[i] = def[i]! - meanDef
+    mu -= meanDef
   }
 
   const attack: Record<string, number> = {}
   const defence: Record<string, number> = {}
+  const homeAttackDev: Record<string, number> = {}
+  const homeDefenceDev: Record<string, number> = {}
   for (let i = 0; i < n; i++) {
     attack[teams[i]!] = att[i]!
     defence[teams[i]!] = def[i]!
+    homeAttackDev[teams[i]!] = hAtt[i]!
+    homeDefenceDev[teams[i]!] = hDef[i]!
   }
-  return { attack, defence, homeAdvantage: home, rho, weight: weightByTeam, effectiveN }
+  return {
+    intercept: mu,
+    attack,
+    defence,
+    homeAdvantage: home,
+    homeAttackDev,
+    homeDefenceDev,
+    rho,
+    weight: weightByTeam,
+    effectiveN,
+  }
 }
 
 /**
@@ -214,10 +347,18 @@ export function fitRatings(obs: readonly FitObservation[], opts: Partial<FitOpti
  * the optimum near w=0.7 toward xG: RPS 0.2095 -> 0.2080 and log-loss
  * 1.0418 -> 1.0272 versus goals alone.
  */
+function mix(a: number | undefined, b: number | undefined, w: number): number {
+  if (b === undefined) return a ?? 0
+  if (a === undefined) return b
+  return (1 - w) * a + w * b
+}
+
 export function blendRatings(goals: TeamRatings, xg: TeamRatings, w: number): TeamRatings {
   const codes = [...new Set([...Object.keys(goals.attack), ...Object.keys(xg.attack)])]
   const attack: Record<string, number> = {}
   const defence: Record<string, number> = {}
+  const homeAttackDev: Record<string, number> = {}
+  const homeDefenceDev: Record<string, number> = {}
   for (const c of codes) {
     // A team missing from the xG fit (pre-2022 only) keeps its goals rating.
     const ga = goals.attack[c]
@@ -226,11 +367,19 @@ export function blendRatings(goals: TeamRatings, xg: TeamRatings, w: number): Te
     const xd = xg.defence[c]
     attack[c] = xa === undefined ? (ga ?? 0) : ga === undefined ? xa : (1 - w) * ga + w * xa
     defence[c] = xd === undefined ? (gd ?? 0) : gd === undefined ? xd : (1 - w) * gd + w * xd
+    homeAttackDev[c] = mix(goals.homeAttackDev[c], xg.homeAttackDev[c], w)
+    homeDefenceDev[c] = mix(goals.homeDefenceDev[c], xg.homeDefenceDev[c], w)
   }
   return {
+    // The intercept stays on the goals scale. xG and goals agree closely in
+    // aggregate, but the model predicts goals, so the level it is anchored to
+    // has to be the one goals were actually scored at.
+    intercept: goals.intercept,
     attack,
     defence,
     homeAdvantage: (1 - w) * goals.homeAdvantage + w * xg.homeAdvantage,
+    homeAttackDev,
+    homeDefenceDev,
     // rho describes the goals process specifically; xG has no scorelines.
     rho: goals.rho,
     weight: goals.weight,

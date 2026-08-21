@@ -280,7 +280,10 @@ test('a recent signing is flagged', () => {
 // --- What-if ----------------------------------------------------------------
 
 const INPUTS: RecomputeInputs = {
+  intercept: Math.log(1.4),
   homeAdvantage: 0.25,
+  homeAttackDev: 0,
+  homeDefenceDev: 0,
   rho: -0.05,
   availabilityStrength: 0.3,
   home: {

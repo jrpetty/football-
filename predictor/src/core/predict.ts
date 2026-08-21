@@ -111,6 +111,24 @@ export function dispersionFromUncertainty(sigma: number): number {
   return clamp(1 / (s * s), 6, 400)
 }
 
+/**
+ * Describe a club's own home record in the two directions it actually acts:
+ * scoring more at home, and letting visitors score less. Reported as a
+ * percentage on the scoring rate because that is the scale the term lives on.
+ */
+export function venueDetail(attackDev: number, defenceDev: number): string {
+  const parts: string[] = []
+  const pct = (x: number) => `${Math.abs(Math.round((Math.exp(x) - 1) * 100))}%`
+  if (Math.abs(attackDev) >= 0.005) {
+    parts.push(`scoring ${pct(attackDev)} ${attackDev > 0 ? 'more' : 'less'}`)
+  }
+  if (Math.abs(defenceDev) >= 0.005) {
+    parts.push(`conceding ${pct(defenceDev)} ${defenceDev > 0 ? 'fewer' : 'more'}`)
+  }
+  if (parts.length === 0) return 'Home record in line with the league average'
+  return `Their own home record, over and above the league-wide advantage: ${parts.join(', ')} here than their overall rating implies`
+}
+
 /** Build a fixture prediction, recording every term as it is applied. */
 export function predictFixture(
   input: FixtureInput,
@@ -126,6 +144,13 @@ export function predictFixture(
 
   const terms: LambdaTerm[] = []
 
+  terms.push({
+    key: 'baseline',
+    label: 'League baseline',
+    home: ratings.intercept,
+    away: ratings.intercept,
+    detail: `An average side scores about ${Math.exp(ratings.intercept).toFixed(2)} against an average side away from home`,
+  })
   terms.push({
     key: 'attack',
     label: 'Attacking strength',
@@ -145,6 +170,22 @@ export function predictFixture(
     away: 0,
     detail: `Lifts the home side's scoring rate by about ${Math.round((Math.exp(ratings.homeAdvantage) - 1) * 100)}%`,
   })
+
+  // How this particular ground departs from the league-wide figure, fitted from
+  // the host's own home record: one term for how much more they score there,
+  // one for how much they suppress visitors. Both are zero for a club whose
+  // home record is unremarkable, so this term simply does not appear.
+  const venueAttack = ratings.homeAttackDev?.[home.code] ?? 0
+  const venueDefence = ratings.homeDefenceDev?.[home.code] ?? 0
+  if (venueAttack !== 0 || venueDefence !== 0) {
+    terms.push({
+      key: 'venue-record',
+      label: 'Home record at this ground',
+      home: venueAttack,
+      away: -venueDefence,
+      detail: venueDetail(venueAttack, venueDefence),
+    })
+  }
 
   // Availability: a side's own weakened attack lowers its lambda; a weakened
   // defence raises the opponent's.

@@ -133,6 +133,43 @@ export function buildEvidence(ctx: EvidenceContext): Evidence[] {
     })
   }
 
+  // --- This ground specifically --------------------------------------------
+  //
+  // Distinct from the bullet above: that one is the league-wide effect of
+  // playing at home, this one is how far this particular ground departs from
+  // it. Both are fitted, and both are controlled for opponent — unlike the raw
+  // venue record further down, which is the club's results as they came.
+  const venueTerm = termsByKey.get('venue-record')
+  if (venueTerm && Math.abs(venueTerm.home) + Math.abs(venueTerm.away) > 0.02) {
+    const scoring = venueTerm.home
+    const suppression = -venueTerm.away
+    const total = scoring + suppression
+    const fortress = total > 0
+    const goals = Math.abs(goalsImpact(p.lambdaHome, scoring)) + Math.abs(goalsImpact(p.lambdaAway, -suppression))
+    const parts: string[] = []
+    if (Math.abs(scoring) > 0.01) {
+      parts.push(`score ${Math.abs(Math.round((Math.exp(scoring) - 1) * 100))}% ${scoring > 0 ? 'more' : 'less'}`)
+    }
+    if (Math.abs(suppression) > 0.01) {
+      parts.push(
+        `concede ${Math.abs(Math.round((Math.exp(-suppression) - 1) * 100))}% ${suppression > 0 ? 'fewer' : 'more'}`,
+      )
+    }
+    out.push({
+      key: 'venue-effect',
+      headline: `${homeName}'s home record is ${fortress ? 'better' : 'worse'} than their rating alone implies`,
+      detail:
+        `Over and above the league-wide home advantage, ${homeName} ${parts.join(' and ')} at this ground ` +
+        `once the strength of their visitors is divided out — worth about ${goals.toFixed(2)} goals here. ` +
+        `Fitted from their own home matches and shrunk toward the league figure, because nineteen home ` +
+        `games a season is a small sample.`,
+      favours: fortress ? 'home' : 'away',
+      weight: goals,
+      magnitude: magnitudeOf(goals),
+      category: 'venue',
+    })
+  }
+
   // --- Availability --------------------------------------------------------
   const describeAbsences = (
     avail: TeamAvailability,
@@ -269,7 +306,9 @@ export function buildEvidence(ctx: EvidenceContext): Evidence[] {
           key: `venue-record-${side}`,
           headline: `${teamName} are ${strong ? 'strong' : 'poor'} ${side === 'home' ? 'at home' : 'on the road'}`,
           detail:
-            `${form.venuePpg.toFixed(2)} points per game across ${form.venueMatches} ${side === 'home' ? 'home' : 'away'} matches.`,
+            `${form.venuePpg.toFixed(2)} points per game across ${form.venueMatches} ` +
+            `${side === 'home' ? 'home' : 'away'} matches. This is the raw record, not adjusted for who ` +
+            `they played; the model's own venue effect is the adjusted version.`,
           favours: strong ? side : side === 'home' ? 'away' : 'home',
           weight: 0.05,
           magnitude: 'minor',

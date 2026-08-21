@@ -164,14 +164,22 @@ test('the fitter accepts fractional goals, so it can be run over xG', () => {
 
 test('blending ratings keeps teams present in only one fit', () => {
   const goals = {
+    intercept: 0.3,
     attack: { A: 0.2, B: -0.2, OLD: 0.5 },
     defence: { A: 0.1, B: -0.1, OLD: 0.3 },
-    homeAdvantage: 0.25, rho: -0.05, weight: {}, effectiveN: 10,
+    homeAdvantage: 0.25,
+    homeAttackDev: { A: 0.1, B: -0.1, OLD: 0.2 },
+    homeDefenceDev: { A: 0.05, B: -0.05, OLD: 0.1 },
+    rho: -0.05, weight: {}, effectiveN: 10,
   }
   const xg = {
+    intercept: 0.9,
     attack: { A: 0.4, B: -0.4 },
     defence: { A: 0.3, B: -0.3 },
-    homeAdvantage: 0.21, rho: 0, weight: {}, effectiveN: 10,
+    homeAdvantage: 0.21,
+    homeAttackDev: { A: 0.3, B: -0.3 },
+    homeDefenceDev: { A: 0.15, B: -0.15 },
+    rho: 0, weight: {}, effectiveN: 10,
   }
   const b = blendRatings(goals, xg, 0.5)
   close(b.attack['A']!, 0.3)
@@ -179,6 +187,13 @@ test('blending ratings keeps teams present in only one fit', () => {
   // being dragged toward zero.
   close(b.attack['OLD']!, 0.5)
   close(b.homeAdvantage, 0.23)
+  // The intercept is the goals-scale level and does not blend.
+  close(b.intercept, 0.3)
+  // Venue deviations blend on the same terms, and a club with no xG-era home
+  // record keeps the one its goals record produced.
+  close(b.homeAttackDev['A']!, 0.2)
+  close(b.homeDefenceDev['A']!, 0.1)
+  close(b.homeAttackDev['OLD']!, 0.2)
 })
 
 test('RPS respects outcome ordering', () => {
@@ -253,4 +268,120 @@ test('MAX_GOALS is high enough that truncation is negligible', () => {
   assert.ok(MAX_GOALS >= 8)
   const eg = expectedGoals(m)
   close(eg.home, 3.0, 5e-3)
+})
+
+// ---------------------------------------------------------------------------
+// Venue effects and the league baseline.
+//
+// The two tests below guard bugs that were live in this repo. The first is the
+// one that caught them: the fitted goal rates must reproduce the goal rates
+// actually observed. When the league scoring level was carried by the defence
+// ratings, the ridge shrank it, and the fit settled on away lambdas 7% below
+// what teams really scored — with the home-advantage term quietly absorbing
+// the error and reading 0.246 when the data said 0.175.
+// ---------------------------------------------------------------------------
+
+/** A round-robin season generated from known parameters, with fixed scorelines. */
+function syntheticSeason(opts: {
+  teams: string[]
+  intercept: number
+  home: number
+  /** Per-team extra home scoring, log scale. */
+  venueAttack?: Record<string, number>
+  /** Per-team extra visitor suppression, log scale. */
+  venueDefence?: Record<string, number>
+  rounds?: number
+}) {
+  const day = 86400000
+  const base = 1_700_000_000_000
+  const obs: { home: string; away: string; homeGoals: number; awayGoals: number; date: number }[] = []
+  let k = 0
+  for (let r = 0; r < (opts.rounds ?? 30); r++) {
+    for (const h of opts.teams) {
+      for (const a of opts.teams) {
+        if (h === a) continue
+        // Expected goals under the generating parameters, realised as the two
+        // integers straddling them in the ratio that reproduces the mean. That
+        // keeps the test deterministic while giving the fitter the right
+        // first moment to recover.
+        const lh = Math.exp(opts.intercept + opts.home + (opts.venueAttack?.[h] ?? 0))
+        const la = Math.exp(opts.intercept - (opts.venueDefence?.[h] ?? 0))
+        const split = (lam: number, i: number) => {
+          const lo = Math.floor(lam)
+          return (i % 100) / 100 < lam - lo ? lo + 1 : lo
+        }
+        obs.push({ home: h, away: a, homeGoals: split(lh, k * 37), awayGoals: split(la, k * 53), date: base + k * day })
+        k++
+      }
+    }
+  }
+  return obs
+}
+
+test('the fit reproduces the goal rates actually observed', () => {
+  const obs = syntheticSeason({ teams: ['A', 'B', 'C', 'D', 'E'], intercept: Math.log(1.3), home: 0.22 })
+  const r = fitRatings(obs, { xi: 0, ridge: 0.02, fitRho: false, iterations: 800 })
+
+  let lh = 0
+  let la = 0
+  for (const m of obs) {
+    lh += Math.exp(r.intercept + r.attack[m.home]! - r.defence[m.away]! + r.homeAdvantage + (r.homeAttackDev[m.home] ?? 0))
+    la += Math.exp(r.intercept + r.attack[m.away]! - r.defence[m.home]! - (r.homeDefenceDev[m.home] ?? 0))
+  }
+  const actualHome = obs.reduce((s, m) => s + m.homeGoals, 0)
+  const actualAway = obs.reduce((s, m) => s + m.awayGoals, 0)
+
+  // Within half a percent on both sides. The ridge shrinks how far clubs sit
+  // from the league mean, so it must not move the league mean itself.
+  close(lh / obs.length, actualHome / obs.length, 0.006)
+  close(la / obs.length, actualAway / obs.length, 0.006)
+
+  // And the reported home advantage is the log ratio of the two, not a
+  // parameter that has quietly absorbed the fit's leftovers.
+  close(r.homeAdvantage, Math.log(actualHome / actualAway), 0.01)
+})
+
+test('the fit recovers a per-team home advantage it was given', () => {
+  // B is a fortress: scores more at home and lets visitors score less. D is the
+  // opposite. A, C and E are unremarkable.
+  const venueAttack = { A: 0, B: 0.25, C: 0, D: -0.2, E: 0 }
+  const venueDefence = { A: 0, B: 0.2, C: 0, D: -0.15, E: 0 }
+  const obs = syntheticSeason({
+    teams: ['A', 'B', 'C', 'D', 'E'],
+    intercept: Math.log(1.3),
+    home: 0.2,
+    venueAttack,
+    venueDefence,
+  })
+  const r = fitRatings(obs, { xi: 0, ridge: 0.02, homeRidge: 0.002, fitRho: false, iterations: 1200 })
+
+  const edge = (t: string) => (r.homeAttackDev[t] ?? 0) + (r.homeDefenceDev[t] ?? 0)
+  assert.ok(edge('B') > edge('A'), 'the fortress should out-rate an average ground')
+  assert.ok(edge('A') > edge('D'), 'the soft ground should under-rate an average one')
+  assert.ok(edge('B') > 0.25, `B's venue edge should be substantial, got ${edge('B').toFixed(3)}`)
+  assert.ok(edge('D') < -0.2, `D's venue edge should be clearly negative, got ${edge('D').toFixed(3)}`)
+
+  // Both directions are recovered separately: B's is not all attributed to
+  // scoring, which would make the model wrong about how visitors fare there.
+  assert.ok(r.homeAttackDev['B']! > 0.1, 'B scores more at home')
+  assert.ok(r.homeDefenceDev['B']! > 0.1, 'B concedes less at home')
+
+  // Deviations are centred, so the shared figure stays the league average.
+  const codes = ['A', 'B', 'C', 'D', 'E']
+  close(codes.reduce((s, t) => s + r.homeAttackDev[t]!, 0) / codes.length, 0, 1e-6)
+  close(codes.reduce((s, t) => s + r.homeDefenceDev[t]!, 0) / codes.length, 0, 1e-6)
+})
+
+test('turning per-team home advantage off leaves every club on the shared figure', () => {
+  const obs = syntheticSeason({
+    teams: ['A', 'B', 'C', 'D'],
+    intercept: Math.log(1.3),
+    home: 0.2,
+    venueAttack: { A: 0.3, B: -0.3, C: 0, D: 0 },
+  })
+  const r = fitRatings(obs, { xi: 0, ridge: 0.02, perTeamHome: false, fitRho: false, iterations: 400 })
+  for (const t of ['A', 'B', 'C', 'D']) {
+    close(r.homeAttackDev[t]!, 0, 1e-12)
+    close(r.homeDefenceDev[t]!, 0, 1e-12)
+  }
 })

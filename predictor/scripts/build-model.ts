@@ -9,6 +9,7 @@ import { fitRatings, blendRatings, type TeamRatings, type FitObservation } from 
 import { measurePromotedPrior, promotedPrior, championshipTable, type PromotedPrior } from '../src/core/promoted.ts'
 import type { PlayerRates } from '../src/core/availability.ts'
 import type { TeamForm } from '../src/core/evidence.ts'
+import type { VenueRecord } from '../src/core/schema.ts'
 import type { NormMatch, NormPlayer, NormPlayerGw } from './sources/types.ts'
 import { clamp } from '../src/core/math.ts'
 
@@ -46,6 +47,15 @@ export interface ModelParams {
   availabilityStrength: number
   /** Trailing matches used for form. */
   formWindow: number
+  /**
+   * Ridge strength on each club's own home-advantage deviation. Zero turns the
+   * split off entirely and every club shares the league-wide figure; there is
+   * no useful "unshrunk" setting, because a club plays only ~19 home matches a
+   * season and its raw venue split is mostly noise.
+   *
+   * Set by walk-forward backtest — see the venue rows in scripts/backtest.ts.
+   */
+  homeRidge: number
 }
 
 export const DEFAULT_PARAMS: ModelParams = {
@@ -56,6 +66,7 @@ export const DEFAULT_PARAMS: ModelParams = {
   shrinkScale: 12,
   availabilityStrength: 0.3,
   formWindow: 8,
+  homeRidge: 0.12,
 }
 
 export interface FittedModel {
@@ -111,10 +122,11 @@ export function fitModel(
   const goals = goalObservations(matches, asOf)
   const xg = xgObservations(matches, asOf)
 
-  const goalsFit = fitRatings(goals, { xi: params.xi, asOf, ridge: params.ridge, fitRho: true })
+  const venue = { perTeamHome: params.homeRidge > 0, homeRidge: params.homeRidge }
+  const goalsFit = fitRatings(goals, { xi: params.xi, asOf, ridge: params.ridge, fitRho: true, ...venue })
   const xgFit =
     xg.length > 200
-      ? fitRatings(xg, { xi: params.xi, asOf, ridge: params.ridge, fitRho: false })
+      ? fitRatings(xg, { xi: params.xi, asOf, ridge: params.ridge, fitRho: false, ...venue })
       : goalsFit
   const blended = blendRatings(goalsFit, xgFit, xg.length > 200 ? params.xgBlend : 0)
 
@@ -277,6 +289,47 @@ export function buildPlayerRates(
  * real (empty) recent record rather than a decade-old one.
  */
 export const FORM_MAX_AGE_DAYS = 460
+
+/**
+ * A club's record at one venue.
+ *
+ * This season's own matches are the truth when there are enough of them. Below
+ * that threshold the split is meaningless — three home games says nothing — so
+ * it falls back to a trailing window of the club's last 19 at that venue, and
+ * says so, rather than presenting a two-match sample as a record.
+ */
+export function venueRecord(
+  matches: readonly NormMatch[],
+  team: string,
+  season: string,
+  asOf: number,
+  venue: 'home' | 'away',
+): VenueRecord {
+  const at = (m: NormMatch) => (venue === 'home' ? m.home === team : m.away === team)
+  const playable = matches
+    .filter((m) => m.finished && m.date < asOf && at(m))
+    .sort((a, b) => b.date - a.date)
+
+  const thisSeason = playable.filter((m) => m.season === season)
+  const trailing = thisSeason.length < 6
+  const oldest = asOf - FORM_MAX_AGE_DAYS * 86400000
+  const rows = trailing ? playable.filter((m) => m.date >= oldest).slice(0, 19) : thisSeason
+
+  const rec: VenueRecord = {
+    played: rows.length, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, trailing,
+  }
+  for (const m of rows) {
+    const isHome = m.home === team
+    const gf = (isHome ? m.homeGoals : m.awayGoals) ?? 0
+    const ga = (isHome ? m.awayGoals : m.homeGoals) ?? 0
+    rec.goalsFor += gf
+    rec.goalsAgainst += ga
+    if (gf > ga) rec.won++
+    else if (gf === ga) rec.drawn++
+    else rec.lost++
+  }
+  return rec
+}
 
 /** Trailing form for one team, optionally restricted to a venue. */
 export function teamForm(

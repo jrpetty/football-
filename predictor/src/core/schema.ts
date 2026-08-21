@@ -21,6 +21,36 @@ import type { CalibrationBin, MetricSummary, Probs } from './metrics.ts'
 
 export const SCHEMA_VERSION = 1
 
+/** A club's record at one venue: home or away. */
+export interface VenueRecord {
+  played: number
+  won: number
+  drawn: number
+  lost: number
+  goalsFor: number
+  goalsAgainst: number
+  /**
+   * True when these figures come from a trailing window rather than this
+   * season — which is the whole table before a ball is kicked, and still the
+   * honest source for a club with three home matches played.
+   */
+  trailing: boolean
+}
+
+/** Everything the site knows about how a club's results split by venue. */
+export interface TeamVenue {
+  home: VenueRecord
+  away: VenueRecord
+  /**
+   * Fitted extra scoring at home, log scale, over and above the league-wide
+   * home advantage. Unlike the raw record above this is controlled for who the
+   * opponents were, so it is what the forecast actually uses.
+   */
+  homeAttackDev: number
+  /** Fitted extra suppression of visitors at home, log scale. */
+  homeDefenceDev: number
+}
+
 export interface TeamSummary {
   code: string
   name: string
@@ -42,6 +72,8 @@ export interface TeamSummary {
   ratingSd: number
   /** Recent results, newest first. */
   form: string[]
+  /** Home and away records, and the venue effect fitted from them. */
+  venue: TeamVenue
 }
 
 export interface SeasonArtifact {
@@ -145,7 +177,17 @@ export interface RecomputeSide {
 }
 
 export interface RecomputeInputs {
+  intercept: number
   homeAdvantage: number
+  /**
+   * The host club's own venue deviations, fitted from its home record. Only
+   * the home side's matter, so they travel as two scalars rather than a map.
+   * Carried for the same reason as `availabilityStrength` below: the browser
+   * has to reproduce the published lambdas exactly before it can show a reader
+   * what their edit changed.
+   */
+  homeAttackDev: number
+  homeDefenceDev: number
   rho: number
   /**
    * The availability damping the pipeline used. Carried rather than defaulted

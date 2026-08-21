@@ -54,6 +54,39 @@ async function main(): Promise<void> {
   const homeAdv = season.params['homeAdvantage'] ?? 0
   check(homeAdv > 0 && homeAdv < 0.8, `home advantage ${homeAdv} is outside anything believable`)
 
+  // The league baseline must land near a real Premier League scoring rate. This
+  // is the check that would have caught the fit shrinking the league's scoring
+  // level along with the ratings, which it did for months while every other
+  // number looked fine.
+  const baseline = Math.exp(season.params['intercept'] ?? 0)
+  check(
+    baseline > 0.9 && baseline < 2.0,
+    `league baseline ${baseline.toFixed(2)} goals is outside anything a real league produces`,
+  )
+
+  // Venue effects are deliberately shrunk toward the league figure. A club
+  // departing from it by more than ~20% on its scoring rate means the shrinkage
+  // has stopped working, not that it has found a remarkable ground.
+  for (const t of season.teams) {
+    const edge = t.venue.homeAttackDev + t.venue.homeDefenceDev
+    check(
+      Number.isFinite(edge) && Math.abs(edge) < 0.2,
+      `${t.code} venue effect ${edge.toFixed(3)} is too large to be shrunk properly`,
+    )
+    for (const [where, r] of [['home', t.venue.home], ['away', t.venue.away]] as const) {
+      check(
+        r.won + r.drawn + r.lost === r.played,
+        `${t.code} ${where} record does not add up: ${r.won}-${r.drawn}-${r.lost} from ${r.played}`,
+      )
+    }
+  }
+  const meanVenue =
+    season.teams.reduce((s, t) => s + t.venue.homeAttackDev + t.venue.homeDefenceDev, 0) / season.teams.length
+  warn(
+    Math.abs(meanVenue) < 0.02,
+    `mean venue effect ${meanVenue.toFixed(4)} is far from centred — the league figure should be the average`,
+  )
+
   // --- gameweek files ------------------------------------------------------
   const files = (await readdir(dataPath('predictions')).catch(() => [])).filter((f) => f.endsWith('.json'))
   check(files.length > 0, 'no gameweek prediction files were written')

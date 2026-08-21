@@ -9,7 +9,7 @@
 // ---------------------------------------------------------------------------
 
 import { loadCorpus, CURRENT_SEASON } from './ingest.ts'
-import { fitModel, buildPlayerRates, teamForm, DEFAULT_PARAMS } from './build-model.ts'
+import { fitModel, buildPlayerRates, teamForm, venueRecord, DEFAULT_PARAMS } from './build-model.ts'
 import { writeJson, readJson, dataPath } from './lib/fsjson.ts'
 import { clubName, club } from '../src/config/teams.ts'
 import { teamAvailability } from '../src/core/availability.ts'
@@ -72,7 +72,8 @@ async function main(): Promise<void> {
   )
   console.log(
     `  ${Object.keys(model.ratings.attack).length} teams rated, ` +
-      `home advantage ${model.ratings.homeAdvantage.toFixed(3)}, rho ${model.ratings.rho.toFixed(4)}`,
+      `baseline ${Math.exp(model.ratings.intercept).toFixed(2)} goals, home advantage ` +
+        `${model.ratings.homeAdvantage.toFixed(3)}, rho ${model.ratings.rho.toFixed(4)}`,
   )
   console.log(
     `  promoted: ${[...model.promoted].join(', ')} ` +
@@ -140,6 +141,12 @@ async function main(): Promise<void> {
       defence: round(model.ratings.defence[code] ?? 0, 4),
       ratingSd: round(model.ratingSd[code] ?? 0.15, 4),
       form: form.recent,
+      venue: {
+        home: venueRecord(corpus.matches, code, CURRENT_SEASON, now, 'home'),
+        away: venueRecord(corpus.matches, code, CURRENT_SEASON, now, 'away'),
+        homeAttackDev: round(model.ratings.homeAttackDev[code] ?? 0, 4),
+        homeDefenceDev: round(model.ratings.homeDefenceDev[code] ?? 0, 4),
+      },
     }
   })
   teams.sort((a, b) => b.points - a.points || b.goalsFor - b.goalsAgainst - (a.goalsFor - a.goalsAgainst))
@@ -309,7 +316,10 @@ async function main(): Promise<void> {
         homeLineup: predictLineup(homeSquad, shapes.get(m.home) ?? DEFAULT_SHAPE, now),
         awayLineup: predictLineup(awaySquad, shapes.get(m.away) ?? DEFAULT_SHAPE, now),
         recompute: {
+          intercept: round(model.ratings.intercept, 4),
           homeAdvantage: round(model.ratings.homeAdvantage, 4),
+          homeAttackDev: round(model.ratings.homeAttackDev[m.home] ?? 0, 4),
+          homeDefenceDev: round(model.ratings.homeDefenceDev[m.home] ?? 0, 4),
           rho: round(model.ratings.rho, 4),
           availabilityStrength: DEFAULT_PARAMS.availabilityStrength,
           home: side(homeCtx, m.home),
@@ -616,6 +626,7 @@ async function main(): Promise<void> {
       xi: DEFAULT_PARAMS.xi,
       xgBlend: DEFAULT_PARAMS.xgBlend,
       ridge: DEFAULT_PARAMS.ridge,
+      intercept: round(model.ratings.intercept, 4),
       homeAdvantage: round(model.ratings.homeAdvantage, 4),
       rho: round(model.ratings.rho, 4),
       availabilityStrength: DEFAULT_PARAMS.availabilityStrength,

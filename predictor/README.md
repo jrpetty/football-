@@ -39,24 +39,33 @@ the one showing how often it has been wrong.
 
 ## How well does it work?
 
-Walk-forward over the 2025/26 season (the model refits as the season progresses and never sees a
-result before predicting it), n = 380:
+Walk-forward over five seasons, 2021-22 to 2025-26 (the model refits as each season progresses and
+never sees a result before predicting it), n = 1,900:
 
 | | RPS ↓ | Log-loss ↓ | Brier ↓ | Outcomes called ↑ |
 |---|---|---|---|---|
-| Fixed 44/25/31 baseline | 0.2274 | 1.0808 | 0.6542 | 42.6% |
-| **This model** | **0.2095** | **1.0284** | **0.6179** | **48.2%** |
+| Fixed 44/25/31 baseline | 0.2320 | 1.0679 | 0.6461 | 44.2% |
+| **This model** | **0.2011** | **0.9794** | **0.5824** | **53.8%** |
 
 Calibration error is 0.016 — of everything it called at 30%, close to 30% happened. For scale,
 bookmakers with vastly more data land around RPS 0.19–0.20, so there is real headroom left.
 
+Seasons differ a lot, and the average hides that. The hardest of the five, 2025/26, scored RPS
+0.2108 against a 0.2274 baseline and called 48.9% — so treat the pooled figure as an average
+rather than a promise.
+
 **Ranked Probability Score** is the primary measure because it respects the ordering of the three
 outcomes: predicting a home win when the away side wins is penalised more than predicting a draw.
+
+The headline is pooled across five seasons rather than one on purpose. A single season is 380
+matches, where the standard error on RPS is about 0.008 — wide enough that a genuine improvement
+and a genuine regression look identical. That is not a hypothetical: per-team home advantage
+looked *harmful* on 2025/26 alone and is clearly worth having across 1,900 matches.
 
 Reproduce it yourself:
 
 ```bash
-npm run backtest              # 2025-26 by default
+npm run backtest              # 2025-26 by default, with the full ablation table
 node scripts/backtest.ts --season 2024-25 --sweep
 ```
 
@@ -66,13 +75,28 @@ node scripts/backtest.ts --season 2024-25 --sweep
 
 **Ratings.** A Dixon-Coles model gives each club an attack and a defence rating, with a
 league-wide home advantage and a correction for the fact that real football produces more 0-0s
-and 1-1s than independent scoring rates predict. Three departures from the textbook version:
+and 1-1s than independent scoring rates predict. Four departures from the textbook version:
 
 1. **Time decay** — a result from 2019 says little about 2026. Worth about 0.007 RPS.
 2. **Ridge priors** — with ~38 matches a season, unregularised fitting overreacts to early noise.
+   The league's overall scoring rate is held as its own unpenalised parameter, so the ridge shrinks
+   how far clubs sit from the league mean without also shrinking the league mean itself.
 3. **Fitted twice** — once on goals across the full history, once on expected goals over the
    seasons that have it, then blended. xG measures chance quality rather than whether the ball
    went in, so it is the steadier signal; goals supply the longer history.
+4. **Home advantage per club** — see below.
+
+**Home and away.** The league-wide home advantage is currently worth about 19% on the home side's
+scoring rate, but clubs are not equal at it. Each gets two further parameters fitted from its own
+home matches: how much more it scores there, and how much it suppresses visitors there. Because
+they sit inside the likelihood, they are controlled for *who* a club happened to host — a side that
+faced the bottom six in its first eight home games gets no credit for it. Both are shrunk hard
+toward the league figure, because nineteen home matches a season is a small sample and an unshrunk
+venue split is mostly noise; the shrinkage is tuned by backtest and holds the largest fitted effect
+to about 9%.
+
+The `Ratings → Home and away` page shows every club's record at each venue beside the effect fitted
+from it, and says plainly where the two disagree.
 
 **Players.** Each absent player's share of squad value is removed and replaced at that club's own
 replacement level, so a deep bench is punished less than a thin one. The size of the effect is

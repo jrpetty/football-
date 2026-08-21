@@ -79,8 +79,11 @@ export async function backtest(
     const defenceHome = model.ratings.defence[m.home] ?? 0
     const defenceAway = model.ratings.defence[m.away] ?? 0
 
-    let logHome = attackHome - defenceAway + model.ratings.homeAdvantage
-    let logAway = attackAway - defenceHome
+    // The host's own venue deviations, exactly as predictFixture applies them.
+    const mu = model.ratings.intercept
+    let logHome =
+      mu + attackHome - defenceAway + model.ratings.homeAdvantage + (model.ratings.homeAttackDev[m.home] ?? 0)
+    let logAway = mu + attackAway - defenceHome - (model.ratings.homeDefenceDev[m.home] ?? 0)
 
     if (useRest) {
       logHome += restProfile(m.date, kickoffsByTeam.get(m.home) ?? []).logShift
@@ -111,51 +114,66 @@ function report(label: string, scored: ScoredPrediction[]): void {
   )
 }
 
-const args = process.argv.slice(2)
+// Importable: the ablation below only runs when this file is the entry point,
+// so other scripts can reuse `backtest` without triggering a full sweep.
+const isEntryPoint = (process.argv[1] ?? '').endsWith('backtest.ts')
+const args = isEntryPoint ? process.argv.slice(2) : []
 const seasonArg = args.includes('--season') ? args[args.indexOf('--season') + 1]! : '2025-26'
 const sweep = args.includes('--sweep')
 
-console.log(`Walk-forward backtest on ${seasonArg} (refit every ${REFIT_EVERY} matches)\n`)
+if (isEntryPoint) {
+  console.log(`Walk-forward backtest on ${seasonArg} (refit every ${REFIT_EVERY} matches)\n`)
 
-// Baselines first, so the model has something honest to beat.
-const base = await backtest(seasonArg, DEFAULT_PARAMS, true)
-const fixed: ScoredPrediction[] = base.scored.map((s) => ({
-  probs: { home: 0.44, draw: 0.25, away: 0.31 },
-  actual: s.actual,
-}))
-console.log('Baselines:')
-report('fixed 44/25/31', fixed)
+  // Baselines first, so the model has something honest to beat.
+  const base = await backtest(seasonArg, DEFAULT_PARAMS, true)
+  const fixed: ScoredPrediction[] = base.scored.map((s) => ({
+    probs: { home: 0.44, draw: 0.25, away: 0.31 },
+    actual: s.actual,
+  }))
+  console.log('Baselines:')
+  report('fixed 44/25/31', fixed)
 
-console.log('\nModel:')
-report('full (xG blend + priors + rest)', base.scored)
+  console.log('\nModel:')
+  report('full (xG blend + priors + rest)', base.scored)
 
-const noRest = await backtest(seasonArg, DEFAULT_PARAMS, false)
-report('without rest adjustment', noRest.scored)
+  const noRest = await backtest(seasonArg, DEFAULT_PARAMS, false)
+  report('without rest adjustment', noRest.scored)
 
-const goalsOnly = await backtest(seasonArg, { ...DEFAULT_PARAMS, xgBlend: 0 }, true)
-report('goals only (no xG blend)', goalsOnly.scored)
+  const goalsOnly = await backtest(seasonArg, { ...DEFAULT_PARAMS, xgBlend: 0 }, true)
+  report('goals only (no xG blend)', goalsOnly.scored)
 
-const noDecay = await backtest(seasonArg, { ...DEFAULT_PARAMS, xi: 0 }, true)
-report('no time decay', noDecay.scored)
+  const noDecay = await backtest(seasonArg, { ...DEFAULT_PARAMS, xi: 0 }, true)
+  report('no time decay', noDecay.scored)
 
-const bins = calibration(base.scored)
-console.log(`\nCalibration (ECE ${expectedCalibrationError(bins).toFixed(4)}):`)
-for (const b of bins) {
-  if (b.count < 5) continue
-  const bar = '#'.repeat(Math.round(b.observed * 40))
-  console.log(
-    `  ${(b.lower * 100).toFixed(0).padStart(3)}-${(b.upper * 100).toFixed(0).padEnd(3)}% ` +
-      `n=${String(b.count).padStart(4)}  predicted ${(b.predicted * 100).toFixed(1).padStart(5)}%  ` +
-      `observed ${(b.observed * 100).toFixed(1).padStart(5)}%  ${bar}`,
-  )
-}
+  // Does a club's own home record carry information the league-wide home
+  // advantage misses? The ridge decides how far a club may depart from it, so
+  // sweeping it spans the whole question: 0 is one shared number for everyone,
+  // and lower values let each ground speak more loudly.
+  console.log('\nPer-team home advantage (homeRidge; 0 = one shared figure):')
+  for (const homeRidge of [0, 0.4, 0.25, 0.12, 0.06, 0.03]) {
+    const r = await backtest(seasonArg, { ...DEFAULT_PARAMS, homeRidge }, true)
+    report(homeRidge === 0 ? 'shared home advantage' : `per-team, homeRidge=${homeRidge}`, r.scored)
+  }
 
-if (sweep) {
-  console.log('\nHyperparameter sweep:')
-  for (const xi of [0.0012, 0.0018, 0.0025, 0.0035]) {
-    for (const xgBlend of [0.5, 0.6, 0.7, 0.8]) {
-      const r = await backtest(seasonArg, { ...DEFAULT_PARAMS, xi, xgBlend }, true)
-      report(`xi=${xi} xgBlend=${xgBlend}`, r.scored)
+  const bins = calibration(base.scored)
+  console.log(`\nCalibration (ECE ${expectedCalibrationError(bins).toFixed(4)}):`)
+  for (const b of bins) {
+    if (b.count < 5) continue
+    const bar = '#'.repeat(Math.round(b.observed * 40))
+    console.log(
+      `  ${(b.lower * 100).toFixed(0).padStart(3)}-${(b.upper * 100).toFixed(0).padEnd(3)}% ` +
+        `n=${String(b.count).padStart(4)}  predicted ${(b.predicted * 100).toFixed(1).padStart(5)}%  ` +
+        `observed ${(b.observed * 100).toFixed(1).padStart(5)}%  ${bar}`,
+    )
+  }
+
+  if (sweep) {
+    console.log('\nHyperparameter sweep:')
+    for (const xi of [0.0012, 0.0018, 0.0025, 0.0035]) {
+      for (const xgBlend of [0.5, 0.6, 0.7, 0.8]) {
+        const r = await backtest(seasonArg, { ...DEFAULT_PARAMS, xi, xgBlend }, true)
+        report(`xi=${xi} xgBlend=${xgBlend}`, r.scored)
+      }
     }
   }
 }

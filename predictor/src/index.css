@@ -297,6 +297,17 @@ table.data td.num, table.data th.num { text-align: right; font-variant-numeric: 
   .gw-nav::-webkit-scrollbar { display: none; }
   .gw-btn { flex: none; }
 
+  /*
+   * The home/away table exists to be compared side by side, so on a phone it
+   * drops the supporting columns rather than pushing the away half off-screen
+   * behind a horizontal scroll nobody discovers.
+   */
+  .venue-table .hide-narrow { display: none; }
+  .venue-table th, .venue-table td { padding-left: 5px; padding-right: 5px; }
+  /* The bar is the comparison once the W-D-L columns are gone, so it stays — narrower. */
+  .venue-table .venue-bar-col { width: 96px; }
+  .venue-table .venue-bar-svg { width: 96px; height: auto; }
+
   /* Wide content scrolls inside its own box rather than the page. */
   table.data { font-size: 12.5px; }
   .panel { overflow-x: auto; }

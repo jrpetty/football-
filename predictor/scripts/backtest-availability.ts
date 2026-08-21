@@ -129,8 +129,17 @@ export async function run(
       lastFit = i
     }
 
-    let logHome = (model.ratings.attack[m.home] ?? 0) - (model.ratings.defence[m.away] ?? 0) + model.ratings.homeAdvantage
-    let logAway = (model.ratings.attack[m.away] ?? 0) - (model.ratings.defence[m.home] ?? 0)
+    let logHome =
+      model.ratings.intercept +
+      (model.ratings.attack[m.home] ?? 0) -
+      (model.ratings.defence[m.away] ?? 0) +
+      model.ratings.homeAdvantage +
+      (model.ratings.homeAttackDev[m.home] ?? 0)
+    let logAway =
+      model.ratings.intercept +
+      (model.ratings.attack[m.away] ?? 0) -
+      (model.ratings.defence[m.home] ?? 0) -
+      (model.ratings.homeDefenceDev[m.home] ?? 0)
 
     logHome += restProfile(m.date, kickoffsByTeam.get(m.home) ?? []).logShift
     logAway += restProfile(m.date, kickoffsByTeam.get(m.away) ?? []).logShift

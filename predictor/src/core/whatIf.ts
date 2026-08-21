@@ -139,6 +139,7 @@ function ratingsFrom(
   shifts: { home: { attack: number; defence: number }; away: { attack: number; defence: number } },
 ): TeamRatings {
   return {
+    intercept: inputs.intercept,
     attack: {
       [homeCode]: inputs.home.attack + shifts.home.attack,
       [awayCode]: inputs.away.attack + shifts.away.attack,
@@ -148,6 +149,8 @@ function ratingsFrom(
       [awayCode]: inputs.away.defence + shifts.away.defence,
     },
     homeAdvantage: inputs.homeAdvantage,
+    homeAttackDev: { [homeCode]: inputs.homeAttackDev },
+    homeDefenceDev: { [homeCode]: inputs.homeDefenceDev },
     rho: inputs.rho,
     weight: {},
     effectiveN: 0,

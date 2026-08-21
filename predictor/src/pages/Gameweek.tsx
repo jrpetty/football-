@@ -108,7 +108,7 @@ export default function Gameweek() {
           sub={
             scored > 0
               ? `${scored} matches scored · RPS ${(accuracy?.overall.rps ?? 0).toFixed(3)} vs ${(accuracy?.baseline.rps ?? 0).toFixed(3)} baseline`
-              : `${BACKTEST.season} backtest · RPS ${BACKTEST.model.rps.toFixed(3)} vs ${BACKTEST.baseline.rps.toFixed(3)} baseline. This season's record starts here.`
+              : `${BACKTEST.matches} matches backtested across ${BACKTEST.season} · RPS ${BACKTEST.model.rps.toFixed(3)} vs ${BACKTEST.baseline.rps.toFixed(3)} baseline. This season's record starts here.`
           }
         />
         <Stat

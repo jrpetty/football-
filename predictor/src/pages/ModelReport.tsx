@@ -131,8 +131,8 @@ export default function ModelReport() {
             <span>
               No {season.season} match has been played yet, so there is nothing here to score. This
               page fills in from the first results onward. Until then, what follows is the model's
-              performance on the {BACKTEST.season} season, measured walk-forward — refitting as the
-              season progressed and never seeing a result before predicting it.
+              performance across {BACKTEST.season}, measured walk-forward — refitting as each season
+              progressed and never seeing a result before predicting it.
             </span>
           </div>
           <div className="grid-3" style={{ marginBottom: 22 }}>
@@ -164,8 +164,12 @@ export default function ModelReport() {
             <p className="faint" style={{ fontSize: 12, marginTop: 12, lineHeight: 1.55 }}>
               Reproduce it with <code style={{ fontFamily: 'var(--mono)' }}>{BACKTEST.command}</code>.
               The standard error on this measure at {BACKTEST.matches} matches is about{' '}
-              {RPS_STANDARD_ERROR.toFixed(3)}, so the gap over the baseline is real and the gap to a
-              bookmaker is the honest amount of room left.
+              {RPS_STANDARD_ERROR.toFixed(4)}, so the gap over the baseline is real and the gap to a
+              bookmaker is the honest amount of room left. Seasons differ: the hardest of the five,
+              {' '}{BACKTEST.latest.season}, scored {BACKTEST.latest.model.rps.toFixed(4)} against a
+              {' '}{BACKTEST.latest.baseline.rps.toFixed(4)} baseline and called{' '}
+              {(BACKTEST.latest.model.accuracy * 100).toFixed(1)}% of outcomes, so treat the pooled
+              figure as an average rather than a promise.
             </p>
           </div>
         </>

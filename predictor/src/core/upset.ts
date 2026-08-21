@@ -154,7 +154,28 @@ export function analyseUpset(ctx: UpsetContext): UpsetAnalysis {
     })
   }
 
-  // 6. The underdog missing players cuts the other way.
+  // 6. The ground itself is not the fortress the favourite's rating assumes.
+  //
+  // Only meaningful when the home side are favourites: a soft home ground is a
+  // route to an upset, whereas an away favourite visiting a fortress is the
+  // same effect seen from the other end and is already covered above.
+  const venueTerm = p.terms.find((t) => t.key === 'venue-record')
+  if (venueTerm && homeIsFavourite) {
+    const edge = venueTerm.home - venueTerm.away
+    if (edge < -0.02) {
+      mechanisms.push({
+        key: 'soft-home-ground',
+        label: 'Favourite less imposing at home than their rating implies',
+        detail:
+          `${favourite}'s own home matches, once the strength of their visitors is divided out, run about ` +
+          `${Math.abs(Math.round((Math.exp(edge) - 1) * 100))}% below what the league-wide home advantage ` +
+          `would give them — so playing here costs ${underdog} less than it usually would.`,
+        strength: clamp(-edge / 0.12, 0, 1),
+      })
+    }
+  }
+
+  // 7. The underdog missing players cuts the other way.
   if (!dogAvailability.unknown && dogAvailability.attackMultiplier < 0.95) {
     mechanisms.push({
       key: 'underdog-absences',
