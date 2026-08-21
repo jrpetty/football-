@@ -18,6 +18,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../store.ts';
+import { PartPicker } from '../components/Parts.tsx';
 import { useStickyState, clearSticky } from '../useStickyState.ts';
 import { detectHardware, detectionToBuild } from '../../core/detect.ts';
 import { deriveVerdict, diagnose, type DetectedSystem, type Measurement, type Severity } from '../../core/health.ts';
@@ -475,24 +476,14 @@ export function SystemHealth() {
 
             <div className="grid two">
               <div>
-                <div className="field">
-                  <label>CPU</label>
-                  <select value={cpuId} onChange={(e) => setCpuId(e.target.value)}>
-                    <option value="">— pick your CPU —</option>
-                    {[...data.cpus.values()].sort((a, b) => a.fullName.localeCompare(b.fullName)).map((c) => (
-                      <option key={c.id} value={c.id}>{c.fullName}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="field">
-                  <label>GPU</label>
-                  <select value={gpuId} onChange={(e) => setGpuId(e.target.value)}>
-                    <option value="">— pick your GPU —</option>
-                    {[...data.gpus.values()].sort((a, b) => a.fullName.localeCompare(b.fullName)).map((g) => (
-                      <option key={g.id} value={g.id}>{g.fullName}</option>
-                    ))}
-                  </select>
-                </div>
+                {/* The same type-ahead every other screen uses. These were
+                    native selects holding 442 and 279 options in alphabetical
+                    order, which asks someone to scroll a list the length of a
+                    catalogue to find a part they can already name — and gives
+                    none of the disambiguation that makes four different "7700"
+                    parts tellable apart. */}
+                <PartPicker kind="cpu" label="CPU" value={cpuId} onChange={setCpuId} />
+                <PartPicker kind="gpu" label="GPU" value={gpuId} onChange={setGpuId} />
                 <div className="grid two">
                   <div className="field">
                     <label>memory installed (GB)</label>

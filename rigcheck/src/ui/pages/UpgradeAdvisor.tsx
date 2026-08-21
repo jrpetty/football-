@@ -3,13 +3,14 @@ import { SweepCurve } from '../components/SweepCurve.tsx';
 import { fmt } from '../components/Parts.tsx';
 import { useApp } from '../store.ts';
 import { sweepComponent } from '../../core/queries.ts';
+import { RESOLUTIONS } from '../../core/types.ts';
 import { loadPrices, priceLookup } from '../pricing.ts';
 
 /** Rows rendered in the candidate table; the count is stated when it truncates. */
 const ROW_CAP = 60;
 
 export function UpgradeAdvisor() {
-  const { builds, games, resolutions, data } = useApp();
+  const { builds, games, resolutions, setResolutions, data } = useApp();
   const base = builds[0];
   const [axis, setAxis] = useState<'cpu' | 'gpu'>('gpu');
   const [scope, setScope] = useState<'priced' | 'ladder' | 'all'>('priced');
@@ -85,6 +86,32 @@ export function UpgradeAdvisor() {
           <div className="toggle-row" style={{ marginLeft: 8 }}>
             <button className={`toggle${axis === 'gpu' ? ' on' : ''}`} onClick={() => setAxis('gpu')}>swap GPU</button>
             <button className={`toggle${axis === 'cpu' ? ' on' : ''}`} onClick={() => setAxis('cpu')}>swap CPU</button>
+          </div>
+          {/* This screen's whole argument is where the price/performance curve
+              flattens, and the answer is averaged across whichever resolutions
+              are selected — which moves the knee. The control lived on another
+              screen entirely, so the number changed for reasons invisible from
+              here. */}
+          <span className="mini" style={{ marginLeft: 10 }}>at</span>
+          <div className="toggle-row">
+            {RESOLUTIONS.map((r) => (
+              <button
+                key={r}
+                className={`toggle${resolutions.includes(r) ? ' on' : ''}`}
+                title={resolutions.includes(r) && resolutions.length === 1
+                  ? 'The last resolution — pick another before removing this one'
+                  : `Include ${r} in the average`}
+                onClick={() =>
+                  setResolutions(
+                    resolutions.includes(r)
+                      ? (resolutions.length > 1 ? resolutions.filter((x) => x !== r) : resolutions)
+                      : [...resolutions, r],
+                  )
+                }
+              >
+                {r}
+              </button>
+            ))}
           </div>
           <span className="spacer" />
           <span style={{ fontSize: 10, letterSpacing: '0.08em', color: 'var(--faint)', textTransform: 'uppercase', marginRight: 6 }}>
