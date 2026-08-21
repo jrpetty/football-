@@ -1,28 +1,25 @@
-import { useMemo, useState } from 'react';
-import { PartPicker, fmt } from '../components/Parts.tsx';
+import { useMemo } from 'react';
+import { fmt } from '../components/Parts.tsx';
 import { useApp } from '../store.ts';
+import { useStickyState } from '../useStickyState.ts';
+import { PilePicker } from '../components/PilePicker.tsx';
 import { bestFromInventory } from '../../core/queries.ts';
-import type { PartInventory, RamConfig } from '../../core/types.ts';
+import type { PartInventory } from '../../core/types.ts';
 
 export function InventoryOptimiser() {
   const { games, resolutions, data } = useApp();
-  const [cpuIds, setCpuIds] = useState<string[]>(['amd-ryzen-5-3600', 'intel-core-i7-2600k']);
-  const [gpuIds, setGpuIds] = useState<string[]>(['nvidia-geforce-rtx-3060-12gb', 'nvidia-geforce-gtx-1060-6gb']);
-  const [ramKits, setRamKits] = useState<RamConfig[]>([
-    { totalGB: 16, channels: 2, speedMTs: 3200, type: 'DDR4' },
-    { totalGB: 8, channels: 1, speedMTs: 2400, type: 'DDR4' },
-  ]);
-  const [addCpu, setAddCpu] = useState('amd-ryzen-5-5600');
-  const [addGpu, setAddGpu] = useState('amd-radeon-rx-6600');
-
-  const inventory: PartInventory = useMemo(
-    () => ({ cpuIds, gpuIds, ramKits, storage: ['nvme-gen3', 'sata-ssd'] }),
-    [cpuIds, gpuIds, ramKits],
-  );
+  /* One pile, shared with Trade Desk, and sticky so a list of parts you have
+     assembled survives a glance at another screen. */
+  const [pile, setPile] = useStickyState<PartInventory>('pile', {
+    cpuIds: ['amd-ryzen-5-3600', 'intel-core-i5-12400f'],
+    gpuIds: ['nvidia-geforce-rtx-3060-12gb', 'amd-radeon-rx-6600'],
+    ramKits: [{ totalGB: 16, channels: 2, speedMTs: 3200, type: 'DDR4' }],
+    storage: ['nvme-gen3', 'sata-ssd'],
+  });
 
   const result = useMemo(
-    () => bestFromInventory(inventory, games, resolutions, data),
-    [inventory, games, resolutions, data],
+    () => bestFromInventory(pile, games, resolutions, data),
+    [pile, games, resolutions, data],
   );
 
   return (
@@ -38,51 +35,9 @@ export function InventoryOptimiser() {
 
       <div className="grid rail">
         <div className="panel">
-          <div className="panel-head">parts on hand</div>
+          <div className="panel-head"><h2 className="micro">parts on hand</h2></div>
           <div className="panel-body">
-            <PartPicker kind="cpu" label="add CPU" value={addCpu} onChange={setAddCpu} />
-            <button className="btn" style={{ marginBottom: 12 }} onClick={() => !cpuIds.includes(addCpu) && setCpuIds([...cpuIds, addCpu])}>
-              + add to pile
-            </button>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 14 }}>
-              {cpuIds.map((id) => (
-                <span className="chip on" key={id}>
-                  {data.cpus.get(id)?.brand ?? id}
-                  <button aria-label={`Remove ${data.cpus.get(id)?.fullName ?? id}`} onClick={() => setCpuIds(cpuIds.filter((x) => x !== id))}>×</button>
-                </span>
-              ))}
-            </div>
-
-            <PartPicker kind="gpu" label="add GPU" value={addGpu} onChange={setAddGpu} />
-            <button className="btn" style={{ marginBottom: 12 }} onClick={() => !gpuIds.includes(addGpu) && setGpuIds([...gpuIds, addGpu])}>
-              + add to pile
-            </button>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 14 }}>
-              {gpuIds.map((id) => (
-                <span className="chip on" key={id}>
-                  {data.gpus.get(id)?.brand ?? id}
-                  <button aria-label={`Remove ${data.gpus.get(id)?.fullName ?? id}`} onClick={() => setGpuIds(gpuIds.filter((x) => x !== id))}>×</button>
-                </span>
-              ))}
-            </div>
-
-            <div className="field">
-              <label>memory kits</label>
-              {ramKits.map((k, i) => (
-                <div key={i} style={{ display: 'flex', gap: 4, marginBottom: 4, alignItems: 'center' }}>
-                  <span className="chip on" style={{ flex: 1 }}>
-                    {k.totalGB}GB · {k.channels}ch · {k.speedMTs} · {k.type}
-                  </span>
-                  <button className="btn danger" aria-label={`Remove memory kit ${i + 1}`} onClick={() => setRamKits(ramKits.filter((_, j) => j !== i))}>×</button>
-                </div>
-              ))}
-              <button
-                className="btn"
-                onClick={() => setRamKits([...ramKits, { totalGB: 32, channels: 2, speedMTs: 6000, type: 'DDR5' }])}
-              >
-                + add 32GB DDR5-6000
-              </button>
-            </div>
+            <PilePicker pile={pile} onChange={setPile} />
           </div>
         </div>
 
@@ -91,7 +46,7 @@ export function InventoryOptimiser() {
           {result && (
             <>
               <div className="panel">
-                <div className="panel-head">best assembly</div>
+                <div className="panel-head"><h2 className="micro">best assembly</h2></div>
                 <div className="panel-body">
                   <div className="grid two">
                     <dl className="kv">
@@ -111,7 +66,7 @@ export function InventoryOptimiser() {
               </div>
 
               <div className="panel">
-                <div className="panel-head">left over</div>
+                <div className="panel-head"><h2 className="micro">left over</h2></div>
                 <div className="panel-body">
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                     {[...result.unused.cpuIds.map((id) => data.cpus.get(id)?.brand ?? id),
@@ -129,7 +84,7 @@ export function InventoryOptimiser() {
 
               {result.rejected.length > 0 && (
                 <div className="panel">
-                  <div className="panel-head">combinations rejected</div>
+                  <div className="panel-head"><h2 className="micro">combinations rejected</h2></div>
                   <div className="table-wrap">
                     <table className="data">
                       <thead><tr><th>reason</th><th className="n">count</th></tr></thead>

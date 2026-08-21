@@ -93,10 +93,25 @@ export function DataExplorer() {
 
       <div className="panel">
         <div className="panel-head">
+          {/* Two groups, not five chips in a row. Three of these are catalogues
+              you browse and two are tools that work across them; rendering them
+              identically made "provenance" — where every specification came
+              from, which is load-bearing on a tool that says its data is
+              recalled — read as a fourth category of part. */}
+          <h2 className="micro">catalogue</h2>
           <div className="toggle-row">
-            {(['gpu', 'cpu', 'game', 'compare', 'provenance'] as Tab[]).map((t) => (
+            {(['gpu', 'cpu', 'game'] as Tab[]).map((t) => (
               <button key={t} className={`toggle${tab === t ? ' on' : ''}`} onClick={() => setTab(t)}>
-                {t === 'gpu' ? `GPUs (${data.gpus.size})` : t === 'cpu' ? `CPUs (${data.cpus.size})` : t === 'game' ? `games (${data.games.size})` : t === 'compare' ? 'compare parts' : 'provenance'}
+                {t === 'gpu' ? `GPUs (${data.gpus.size})` : t === 'cpu' ? `CPUs (${data.cpus.size})` : `games (${data.games.size})`}
+              </button>
+            ))}
+          </div>
+          <span aria-hidden="true" style={{ width: 1, alignSelf: 'stretch', background: 'var(--line-strong)', margin: '0 4px' }} />
+          <h2 className="micro">views</h2>
+          <div className="toggle-row">
+            {(['compare', 'provenance'] as Tab[]).map((t) => (
+              <button key={t} className={`toggle${tab === t ? ' on' : ''}`} onClick={() => setTab(t)}>
+                {t === 'compare' ? 'compare parts' : 'where the data came from'}
               </button>
             ))}
           </div>

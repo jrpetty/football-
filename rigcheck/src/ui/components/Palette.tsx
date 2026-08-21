@@ -13,7 +13,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { search } from '../../core/catalogue.ts';
-import { engineData } from '../store.ts';
+import { engineData, useApp } from '../store.ts';
 
 export interface PaletteAction {
   id: string;
@@ -28,6 +28,10 @@ export function CommandPalette({ screens }: { screens: { to: string; label: stri
   const [q, setQ] = useState('');
   const [cursor, setCursor] = useState(0);
   const navigate = useNavigate();
+  // Renamed on the way in: the palette already has a local `games` holding its
+  // game ACTIONS, and shadowing the app's selected game ids with it would be a
+  // quiet way to add the wrong thing to the wrong list.
+  const { builds, setBuilds, games: selectedGames, setGames } = useApp();
   const inputRef = useRef<HTMLInputElement>(null);
   const restoreTo = useRef<HTMLElement | null>(null);
 
@@ -83,14 +87,24 @@ export function CommandPalette({ screens }: { screens: { to: string; label: stri
     const term = q.trim();
     if (term.length < 2) return base;
 
+    // Selecting a part PUTS IT IN THE BUILD and shows you the effect. It used
+    // to list the exact part, disambiguated, and then navigate to an unfiltered
+    // Data Explorer — throwing away the one piece of information the user had
+    // just supplied. "Where is the 4070" is nearly always "what would the 4070
+    // do for me".
     const parts = search(term, engineData, 8).map<PaletteAction>((h) => ({
       id: `part-${h.id}`,
       label: h.label,
-      hint: `${h.kind.toUpperCase()} · ${h.disambiguator}`,
+      hint: `${h.kind.toUpperCase()} · ${h.disambiguator} · swaps into your build`,
       group: h.kind === 'gpu' ? 'graphics cards' : 'processors',
-      // The Data Explorer's filter is the closest thing to "show me this part",
-      // so a part hit goes there rather than nowhere.
-      run: () => navigate('/data'),
+      run: () => {
+        const first = builds[0];
+        if (first) {
+          const next = h.kind === 'gpu' ? { ...first, gpuId: h.id } : { ...first, cpuId: h.id };
+          setBuilds([next, ...builds.slice(1)]);
+        }
+        navigate('/analyser');
+      },
     }));
 
     const games = [...engineData.games.values()]
@@ -99,9 +113,12 @@ export function CommandPalette({ screens }: { screens: { to: string; label: stri
       .map<PaletteAction>((g) => ({
         id: `game-${g.id}`,
         label: g.name,
-        hint: `${g.archetype}${g.fpsCap ? ` · capped at ${g.fpsCap}fps` : ''}`,
+        hint: `${g.archetype}${g.fpsCap ? ` · capped at ${g.fpsCap}fps` : ''} · adds to your selection`,
         group: 'games',
-        run: () => navigate('/wizard'),
+        run: () => {
+          if (!selectedGames.includes(g.id)) setGames([...selectedGames, g.id]);
+          navigate('/analyser');
+        },
       }));
 
     return [...base, ...parts, ...games];

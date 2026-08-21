@@ -95,7 +95,7 @@ export function MachineReport() {
         <div>
           <BuildEditor build={build} onChange={(b) => setBuilds([b, ...builds.slice(1)])} />
           <div className="panel">
-            <div className="panel-head">environment</div>
+            <div className="panel-head"><h2 className="micro">environment</h2></div>
             <div className="panel-body">
               <div className="field">
                 <label>case airflow</label>
@@ -131,7 +131,7 @@ export function MachineReport() {
 
         <div>
           <div className="panel">
-            <div className="panel-head">power</div>
+            <div className="panel-head"><h2 className="micro">power</h2></div>
             <div className="panel-body">
               <div className="grid three" style={{ marginBottom: 12 }}>
                 <div className="stat">
@@ -168,7 +168,7 @@ export function MachineReport() {
 
           <div className="grid two">
             <div className="panel">
-              <div className="panel-head">thermals</div>
+              <div className="panel-head"><h2 className="micro">thermals</h2></div>
               <div className="panel-body">
                 <div className="stat" style={{ marginBottom: 8 }}>
                   <span className="v" style={{ color: thermal.throttling ? 'var(--extrapolated)' : 'var(--measured)' }}>
@@ -197,7 +197,7 @@ export function MachineReport() {
             </div>
 
             <div className="panel">
-              <div className="panel-head">acoustics &amp; latency</div>
+              <div className="panel-head"><h2 className="micro">acoustics &amp; latency</h2></div>
               <div className="panel-body">
                 <div className="stat-row" style={{ marginBottom: 10 }}>
                   <div className="stat">
@@ -223,7 +223,7 @@ export function MachineReport() {
           <div className="grid two">
             <div className="panel">
               <div className="panel-head">
-                <span>will it fit</span>
+                <h2 className="micro">will it fit</h2>
                 <span className="spacer" />
                 <select value={caseId} aria-label="Case to check the build against" onChange={(e) => setCaseId(e.target.value)} style={{ width: 200 }}>
                   {cases.map((c) => <option key={c.id} value={c.id}>{c.fullName}</option>)}
@@ -253,7 +253,7 @@ export function MachineReport() {
             </div>
 
             <div className="panel">
-              <div className="panel-head">display matching at {res}</div>
+              <div className="panel-head"><h2 className="micro">display matching at {res}</h2></div>
               <div className="panel-body">
                 {monitorMatches.length === 0 && <div className="mini">No estimate available to match against.</div>}
                 {monitorMatches.map((m) => (
@@ -278,7 +278,7 @@ export function MachineReport() {
           </div>
 
           <div className="panel">
-            <div className="panel-head">where the bottleneck actually sits</div>
+            <div className="panel-head"><h2 className="micro">where the bottleneck actually sits</h2></div>
             <div className="panel-body">
               <div className="note warn" style={{ marginBottom: 6 }}>{bottleneck.summary}</div>
               <div className="note">{bottleneck.recommendation}</div>
@@ -316,7 +316,7 @@ export function MachineReport() {
 
           <div className="panel">
             <div className="panel-head">
-              <span>what would change this answer</span>
+              <h2 className="micro">what would change this answer</h2>
               <span className="spacer" />
               <select value={sensGame} aria-label="Game to run the sensitivity analysis on" onChange={(e) => setSensGame(e.target.value)} style={{ width: 220 }}>
                 {games.map((g) => <option key={g} value={g}>{data.games.get(g)?.name ?? g}</option>)}

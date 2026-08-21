@@ -81,7 +81,7 @@ export function UpgradeAdvisor() {
 
       <div className="panel">
         <div className="panel-head">
-          <span>sweep axis</span>
+          <h2 className="micro">sweep axis</h2>
           <div className="toggle-row" style={{ marginLeft: 8 }}>
             <button className={`toggle${axis === 'gpu' ? ' on' : ''}`} onClick={() => setAxis('gpu')}>swap GPU</button>
             <button className={`toggle${axis === 'cpu' ? ' on' : ''}`} onClick={() => setAxis('cpu')}>swap CPU</button>
@@ -128,7 +128,7 @@ export function UpgradeAdvisor() {
       </div>
 
       <div className="panel">
-        <div className="panel-head">candidates — table view</div>
+        <div className="panel-head"><h2 className="micro">candidates — table view</h2></div>
         <div className="table-wrap">
           <table className="data">
             <thead>

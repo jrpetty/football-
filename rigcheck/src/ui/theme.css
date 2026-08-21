@@ -248,6 +248,22 @@ button, input, select {
   text-transform: none;
   color: var(--ink);
 }
+/* A panel title that IS a heading but does not look like one.
+   Utility panels — "environment", "titles", "left over" — read better as the
+   engraved micro-label the panel head already provides, but they still have to
+   be headings: without them a screen-reader user gets one landmark per screen
+   and has to arrow through everything linearly to find anything. Semantics and
+   appearance are separate concerns, so this takes the semantics and leaves the
+   appearance alone. */
+.panel-head h2.micro,
+.panel-head h3.micro {
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  margin: 0;
+}
+
 .sub-panel { background: var(--surface-2); margin-bottom: 0; box-shadow: none; }
 .sub-panel > .panel-head { background: transparent; }
 

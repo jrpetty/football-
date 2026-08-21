@@ -67,7 +67,7 @@ export function ComparisonMatrix() {
 
       <div className="panel">
         <div className="panel-head">
-          <span>builds — {builds.length}</span>
+          <h2 className="micro">builds — {builds.length}</h2>
           <span className="spacer" />
           <div className="toggle-row" style={{ marginRight: 8 }}>
             {RESOLUTIONS.map((r) => (
@@ -226,7 +226,7 @@ export function ComparisonMatrix() {
       </div>
 
       <div className="panel">
-        <div className="panel-head">summary</div>
+        <div className="panel-head"><h2 className="micro">summary</h2></div>
         <div className="table-wrap">
           <table className="data">
             <thead>

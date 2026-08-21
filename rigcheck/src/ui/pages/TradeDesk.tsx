@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
-import { PartPicker, fmt } from '../components/Parts.tsx';
+import { fmt } from '../components/Parts.tsx';
 import { useApp } from '../store.ts';
+import { useStickyState } from '../useStickyState.ts';
+import { PilePicker } from '../components/PilePicker.tsx';
 import { useDebounced } from '../useDebounced.ts';
 import { bestFromInventory } from '../../core/queries.ts';
 import { appraiseTrade, batchScore, calculateMargin, allocateBudget } from '../../core/analysis.ts';
 import { loadPrices, priceLookup } from '../pricing.ts';
-import type { Build, Resolution } from '../../core/types.ts';
+import type { Build, PartInventory, Resolution } from '../../core/types.ts';
 
 /**
  * The trade view: valuing a pile, deciding whether to build or break it up,
@@ -13,14 +15,20 @@ import type { Build, Resolution } from '../../core/types.ts';
  * money rather than frames, which is why it is a screen of its own.
  */
 export function TradeDesk() {
-  const { games, data } = useApp();
+  const { games, data, resolutions } = useApp();
   const prices = useMemo(() => loadPrices(), []);
   const priceOf = useMemo(() => priceLookup(prices), [prices]);
 
-  const [cpuIds, setCpuIds] = useState<string[]>(['amd-ryzen-5-3600', 'intel-core-i5-12400f']);
-  const [gpuIds, setGpuIds] = useState<string[]>(['nvidia-geforce-rtx-3060-12gb', 'amd-radeon-rx-6600']);
-  const [addCpu, setAddCpu] = useState('amd-ryzen-5-5600');
-  const [addGpu, setAddGpu] = useState('nvidia-geforce-gtx-1660-super');
+  /* The same pile the Inventory Optimiser edits, under the same key: the two
+     screens ask the same question of the same parts, so carrying a pile between
+     them is the behaviour people expect and the divergence was never intended. */
+  const [pile, setPile] = useStickyState<PartInventory>('pile', {
+    cpuIds: ['amd-ryzen-5-3600', 'intel-core-i5-12400f'],
+    gpuIds: ['nvidia-geforce-rtx-3060-12gb', 'amd-radeon-rx-6600'],
+    ramKits: [{ totalGB: 16, channels: 2, speedMTs: 3200, type: 'DDR4' }],
+    storage: ['nvme-gen3', 'sata-ssd'],
+  });
+  const { cpuIds, gpuIds } = pile;
   const [salePrice, setSalePrice] = useState(650);
   const [premium, setPremium] = useState(18);
   const [budget, setBudget] = useState(700);
@@ -33,8 +41,11 @@ export function TradeDesk() {
   );
 
   const inv = useMemo(
-    () => bestFromInventory({ cpuIds, gpuIds, ramKits: [{ totalGB: 16, channels: 2, speedMTs: 3200, type: 'DDR4' }], storage: ['nvme-gen3'] }, games.slice(0, 6), ['1080p'], data),
-    [cpuIds, gpuIds, games, data],
+    // Your games, your resolutions, your memory. This used to pass the first
+    // six games at 1080p with an invented 16GB kit, so the same pile answered
+    // differently here than on the Inventory Optimiser with nothing to say why.
+    () => bestFromInventory(pile, games, resolutions, data),
+    [pile, games, resolutions, data],
   );
 
   const appraisal = useMemo(
@@ -97,30 +108,13 @@ export function TradeDesk() {
 
       <div className="grid rail">
         <div className="panel">
-          <div className="panel-head">the pile</div>
+          <div className="panel-head"><h2 className="micro">the pile</h2></div>
           <div className="panel-body">
-            <PartPicker kind="cpu" label="add CPU" value={addCpu} onChange={setAddCpu} />
-            <button className="btn" style={{ marginBottom: 10 }} onClick={() => !cpuIds.includes(addCpu) && setCpuIds([...cpuIds, addCpu])}>+ add</button>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 14 }}>
-              {cpuIds.map((id) => (
-                <span className="chip on" key={id}>
-                  {data.cpus.get(id)?.brand ?? id}
-                  <span className="mini" style={{ marginLeft: 4 }}>{priceOf(id) != null ? `£${priceOf(id)}` : 'no price'}</span>
-                  <button aria-label={`Remove ${data.cpus.get(id)?.fullName ?? id}`} onClick={() => setCpuIds(cpuIds.filter((x) => x !== id))}>×</button>
-                </span>
-              ))}
-            </div>
-            <PartPicker kind="gpu" label="add GPU" value={addGpu} onChange={setAddGpu} />
-            <button className="btn" style={{ marginBottom: 10 }} onClick={() => !gpuIds.includes(addGpu) && setGpuIds([...gpuIds, addGpu])}>+ add</button>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 14 }}>
-              {gpuIds.map((id) => (
-                <span className="chip on" key={id}>
-                  {data.gpus.get(id)?.brand ?? id}
-                  <span className="mini" style={{ marginLeft: 4 }}>{priceOf(id) != null ? `£${priceOf(id)}` : 'no price'}</span>
-                  <button aria-label={`Remove ${data.gpus.get(id)?.fullName ?? id}`} onClick={() => setGpuIds(gpuIds.filter((x) => x !== id))}>×</button>
-                </span>
-              ))}
-            </div>
+            <PilePicker
+              pile={pile}
+              onChange={setPile}
+              annotate={(id) => (priceOf(id) != null ? `£${priceOf(id)}` : 'no price')}
+            />
             <div className="field">
               <label>assembly premium %</label>
               <input type="number" value={premium} onChange={(e) => setPremium(Number(e.target.value))} />
@@ -131,7 +125,7 @@ export function TradeDesk() {
 
         <div>
           <div className="panel">
-            <div className="panel-head">build it or break it up?</div>
+            <div className="panel-head"><h2 className="micro">build it or break it up?</h2></div>
             <div className="panel-body">
               <div className="grid three" style={{ marginBottom: 12 }}>
                 <div className="stat">
@@ -161,7 +155,7 @@ export function TradeDesk() {
 
           {margin && (
             <div className="panel">
-              <div className="panel-head">margin on the best build</div>
+              <div className="panel-head"><h2 className="micro">margin on the best build</h2></div>
               <div className="panel-body">
                 <div className="field" style={{ maxWidth: 200 }}>
                   <label>sale price £</label>
@@ -184,7 +178,7 @@ export function TradeDesk() {
           )}
 
           <div className="panel">
-            <div className="panel-head">budget allocator</div>
+            <div className="panel-head"><h2 className="micro">budget allocator</h2></div>
             <div className="panel-body">
               <div className="field" style={{ maxWidth: 200 }}>
                 <label>budget £</label>
@@ -214,7 +208,7 @@ export function TradeDesk() {
           </div>
 
           <div className="panel">
-            <div className="panel-head">batch triage</div>
+            <div className="panel-head"><h2 className="micro">batch triage</h2></div>
             <div className="panel-body">
               <div className="field">
                 <label>one machine per line: label, cpu-id, gpu-id</label>

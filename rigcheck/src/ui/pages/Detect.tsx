@@ -54,7 +54,7 @@ export function Detect() {
       <div className="grid two">
         <div className="panel">
           <div className="panel-head">
-            <span>input</span>
+            <h2 className="micro">input</h2>
             <span className="spacer" />
             <button className="btn" onClick={() => setText(SAMPLE)}>sample</button>
             <button className="btn" onClick={() => setText('')}>clear</button>
@@ -72,7 +72,7 @@ export function Detect() {
 
         <div>
           <div className="panel">
-            <div className="panel-head">what was recognised</div>
+            <div className="panel-head"><h2 className="micro">what was recognised</h2></div>
             <div className="panel-body">
               {!result && <div className="empty">Paste something to identify.</div>}
               {result && (
@@ -124,7 +124,7 @@ export function Detect() {
           {candidate && (
             <div className="panel">
               <div className="panel-head">
-                <span>resulting build</span>
+                <h2 className="micro">resulting build</h2>
                 <span className="spacer" />
                 <button className="btn primary" onClick={apply}>use this build →</button>
               </div>

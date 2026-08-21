@@ -19,7 +19,7 @@ export function BuildLibrary({ current, onLoad }: { current: Build; onLoad: (b: 
   return (
     <div className="panel">
       <div className="panel-head">
-        <span>saved builds — {items.length}</span>
+        <h2 className="micro">saved builds — {items.length}</h2>
         <span className="spacer" />
         {items.length > 0 && (
           <button className="btn" onClick={() => exportJson('rigcheck-library.json', items)}>export</button>

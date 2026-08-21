@@ -89,7 +89,7 @@ export function BuildAnalyser() {
           <BuildLibrary current={build} onLoad={(b) => setBuilds([{ ...b, id: build.id }, ...builds.slice(1)])} />
 
           <div className="panel">
-            <div className="panel-head">forward risk</div>
+            <div className="panel-head"><h2 className="micro">forward risk</h2></div>
             <div className="panel-body">
               <div className="stat" style={{ marginBottom: 10 }}>
                 <span className="v">{fp.score}<span style={{ fontSize: 12, color: 'var(--faint)' }}>/100</span></span>
@@ -114,7 +114,7 @@ export function BuildAnalyser() {
         <div>
           <div className="panel">
             <div className="panel-head">
-              <span>results</span>
+              <h2 className="micro">results</h2>
               <span className="spacer" />
               <div className="toggle-row">
                 {RESOLUTIONS.map((r) => (
@@ -220,7 +220,7 @@ export function BuildAnalyser() {
           </div>
 
           <div className="panel">
-            <div className="panel-head">titles</div>
+            <div className="panel-head"><h2 className="micro">titles</h2></div>
             <div className="panel-body">
               <GamePicker selected={games} onChange={setGames} />
             </div>
