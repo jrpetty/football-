@@ -8,3 +8,15 @@ cache/raw/
 
 # TypeScript incremental build cache
 *.tsbuildinfo
+
+# Throwaway browser-driving scripts. Playwright resolves its import from the
+# project directory, so verification probes have to be written here rather than
+# in a temp dir; they are scratch, never deliverables.
+probe.mjs
+__probe.mjs
+vrfy.cjs
+*.probe.mjs
+
+# Screenshots taken while checking a change in a real browser.
+*.png
+!public/**/*.png
