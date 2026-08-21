@@ -1,15 +1,20 @@
 name: Deploy to GitHub Pages
 
-# Builds the app and publishes ./dist to GitHub Pages.
+# Builds both apps and publishes ./dist to GitHub Pages.
 # One-time setup: repo Settings → Pages → Build and deployment → Source: "GitHub Actions".
 # After that, every push to this branch (or main) redeploys automatically.
+#
+# Only the default branch publishes. There is one Pages site, so a second
+# branch listed here would overwrite whatever the default branch last
+# published — and with the predictor updating its data daily, that would mean
+# a stray feature-branch push silently rolling the site back to older
+# forecasts. Use workflow_dispatch to preview a branch instead.
 
 on:
   push:
     branches:
       - main
       - claude/football-analysis-app-jj3vxi
-      - claude/premier-league-predictions-y7epq5
   workflow_dispatch:
 
 permissions:
@@ -17,9 +22,13 @@ permissions:
   pages: write
   id-token: write
 
+# Shared with the predictor's daily publish so the two queue rather than race.
+# Never cancel: the other holder of this group is a data publish, and killing
+# it would leave the site showing forecasts the repository has already moved
+# past, with nothing to retry it until the next morning.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -46,6 +55,14 @@ jobs:
         run: |
           mkdir -p dist/predictor
           cp -r predictor/dist/. dist/predictor/
+
+      # Provisions the Pages site on first use. Without this the deploy below
+      # 404s until someone flips Settings -> Pages -> Source: "GitHub Actions"
+      # by hand, and the only symptom is a red job with a message that reads
+      # like a bug in this workflow rather than a missing one-time setting.
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:

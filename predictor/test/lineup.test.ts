@@ -731,3 +731,43 @@ test('no confirmed sheet leaves the forecast exactly as published', () => {
   })
   assert.deepEqual(base.prediction.probs, withNull.prediction.probs)
 })
+
+// --- Ledger identity and scoring eligibility ---------------------------------
+//
+// Both of these went wrong in this repo, and both fail quietly and in the
+// flattering direction, which is the worst combination for a record whose only
+// purpose is to be honest about how the model is doing.
+
+import { ledgerKey, isScorable } from '../src/core/ledger.ts'
+
+test('fixtures without a feed id do not collapse onto one ledger key', () => {
+  const season = '2026-27'
+  // No feed id: this is the case where the results source is carrying the
+  // season alone. Previously every such fixture keyed as "2026-27#0".
+  const a = ledgerKey({ season, fixtureId: 0, home: 'ARS', away: 'COV' })
+  const b = ledgerKey({ season, fixtureId: 0, home: 'LIV', away: 'HUL' })
+  assert.notEqual(a, b, 'two different fixtures must never share a ledger key')
+
+  // The reverse fixture later in the season is a different match too.
+  assert.notEqual(a, ledgerKey({ season, fixtureId: 0, home: 'COV', away: 'ARS' }))
+
+  // A feed id still wins when there is one, and is stable across runs.
+  assert.equal(
+    ledgerKey({ season, fixtureId: 12, home: 'ARS', away: 'COV' }),
+    ledgerKey({ season, fixtureId: 12, home: 'ARS', away: 'COV' }),
+  )
+  // The same fixture number in a different season is a different match.
+  assert.notEqual(
+    ledgerKey({ season: '2025-26', fixtureId: 12, home: 'ARS', away: 'COV' }),
+    ledgerKey({ season: '2026-27', fixtureId: 12, home: 'ARS', away: 'COV' }),
+  )
+})
+
+test('a finished fixture with no sealed forecast is left out of the record', () => {
+  // The whole point: there is no "score it against what we think now" path.
+  // That model has already been refitted on this very result.
+  assert.equal(isScorable(undefined), false)
+  assert.equal(isScorable(null), false)
+  assert.equal(isScorable({}), false, 'an entry with no stored probabilities is not a forecast')
+  assert.equal(isScorable({ probs: { home: 0.6, draw: 0.25, away: 0.15 } }), true)
+})

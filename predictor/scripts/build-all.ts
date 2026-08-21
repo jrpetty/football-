@@ -24,6 +24,7 @@ import { deriveShapes, DEFAULT_SHAPE, type ShapeRow } from '../src/core/formatio
 import { cardStatus } from '../src/core/suspensions.ts'
 import { outcomeOf, rps, logLoss, brier, summarize, calibration, expectedCalibrationError } from '../src/core/metrics.ts'
 import { round } from '../src/core/math.ts'
+import { ledgerKey, isScorable } from '../src/core/ledger.ts'
 import type {
   SeasonArtifact,
   GameweekArtifact,
@@ -178,8 +179,12 @@ async function main(): Promise<void> {
     generatedAt: now,
     entries: [],
   }
-  const ledgerKey = (e: { season: string; fixtureId: number }): string => `${e.season}#${e.fixtureId}`
   const ledgerIndex = new Map(ledger.entries.map((e) => [ledgerKey(e), e]))
+  // Finished fixtures the ledger never held a pre-kickoff forecast for. They
+  // are kept out of the accuracy record and named in the site's notes, because
+  // an unexplained gap in the record is the kind of thing that quietly becomes
+  // a flattering one.
+  const unscored: string[] = []
 
   const side = (ctx: TeamContext, code: string): RecomputeSide => ({
     attack: round(model.ratings.attack[code] ?? 0, 4),
@@ -338,7 +343,12 @@ async function main(): Promise<void> {
       // revision right up to kickoff and is sealed the instant the match
       // starts, which is the line that actually matters: nothing here is ever
       // revised with knowledge of a result.
-      const key = `${CURRENT_SEASON}#${m.fixtureId ?? 0}`
+      const key = ledgerKey({
+        season: CURRENT_SEASON,
+        fixtureId: m.fixtureId ?? 0,
+        home: m.home,
+        away: m.away,
+      })
       const kickedOff = m.date <= now
       const forecast = {
         probs: prediction.probs,
@@ -373,33 +383,43 @@ async function main(): Promise<void> {
       }
 
       // Score a finished fixture against whatever was forecast beforehand.
+      // Score a finished fixture ONLY against a forecast that was sealed
+      // before it kicked off.
+      //
+      // The obvious-looking fallback — score it against the prediction just
+      // computed — is look-ahead: that model has already ingested this very
+      // result and refitted on it, so it would flatter itself, and the more
+      // matches the ledger missed the better the published record would look.
+      // A fixture with no sealed forecast is simply not part of the record,
+      // and `unscored` below says how many there were rather than hiding it.
       if (m.finished && m.homeGoals !== null && m.awayGoals !== null) {
         const recorded = ledgerIndex.get(key)
-        const probs = recorded?.probs ?? prediction.probs
-        const actual = outcomeOf(m.homeGoals, m.awayGoals)
-        const predictedScore = recorded?.predictedScore ?? {
-          home: prediction.topScorelines[0]?.home ?? 0,
-          away: prediction.topScorelines[0]?.away ?? 0,
-        }
-        const scored = {
-          homeGoals: m.homeGoals,
-          awayGoals: m.awayGoals,
-          outcome: actual,
-          rps: round(rps(probs, actual), 5),
-          logLoss: round(logLoss(probs, actual), 5),
-          brier: round(brier(probs, actual), 5),
-          correctOutcome:
-            (probs.home >= probs.draw && probs.home >= probs.away ? 'home' : probs.draw >= probs.away ? 'draw' : 'away') === actual,
-          correctScore: predictedScore.home === m.homeGoals && predictedScore.away === m.awayGoals,
-        }
-        if (recorded) recorded.actual = scored
-        fixtureArtifact.result = {
-          outcome: actual,
-          correctOutcome: scored.correctOutcome,
-          correctScore: scored.correctScore,
-          rps: scored.rps,
-          logLoss: scored.logLoss,
-          brier: scored.brier,
+        if (!isScorable(recorded)) {
+          unscored.push(`${m.home} v ${m.away}`)
+        } else {
+          const probs = recorded!.probs
+          const actual = outcomeOf(m.homeGoals, m.awayGoals)
+          const predictedScore = recorded!.predictedScore
+          const scored = {
+            homeGoals: m.homeGoals,
+            awayGoals: m.awayGoals,
+            outcome: actual,
+            rps: round(rps(probs, actual), 5),
+            logLoss: round(logLoss(probs, actual), 5),
+            brier: round(brier(probs, actual), 5),
+            correctOutcome:
+              (probs.home >= probs.draw && probs.home >= probs.away ? 'home' : probs.draw >= probs.away ? 'draw' : 'away') === actual,
+            correctScore: predictedScore.home === m.homeGoals && predictedScore.away === m.awayGoals,
+          }
+          recorded!.actual = scored
+          fixtureArtifact.result = {
+            outcome: actual,
+            correctOutcome: scored.correctOutcome,
+            correctScore: scored.correctScore,
+            rps: scored.rps,
+            logLoss: scored.logLoss,
+            brier: scored.brier,
+          }
         }
       }
 
@@ -611,6 +631,14 @@ async function main(): Promise<void> {
   if (played.length === 0) {
     notes.unshift(
       'The season has not started. Every rating here comes from previous seasons, with newly promoted clubs on a measured prior — so uncertainty is at its highest of the whole campaign.',
+    )
+  }
+  if (unscored.length > 0) {
+    notes.push(
+      `${unscored.length} finished ${unscored.length === 1 ? 'fixture is' : 'fixtures are'} missing from the accuracy record ` +
+        `(${unscored.slice(0, 4).join(', ')}${unscored.length > 4 ? `, and ${unscored.length - 4} more` : ''}). ` +
+        'No forecast for them was sealed before kickoff, and scoring them against a model that has already seen ' +
+        'the result would flatter the record rather than measure it.',
     )
   }
 
