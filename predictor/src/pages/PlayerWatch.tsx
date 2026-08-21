@@ -6,10 +6,32 @@
 
 import { useMemo, useState } from 'react'
 import { usePlayers, useSeason } from '../data/store.tsx'
-import { TeamChip } from '../components/primitives.tsx'
+import { Stat, TeamChip } from '../components/primitives.tsx'
 import { clubName } from '../config/teams.ts'
 
 type Tab = 'availability' | 'discipline' | 'form'
+
+/**
+ * Share of a club's attacking value, as a small meter.
+ *
+ * A number alone does not answer "is 9% a lot?". Against a common scale it is
+ * obvious at a glance which absences are the ones that matter.
+ */
+function ImpactMeter({ share }: { share: number }) {
+  const W = 54
+  const pct = Math.min(1, share / 0.15)
+  return (
+    <span className="row gap-6" style={{ justifyContent: 'flex-end' }}>
+      <span className="tabular" style={{ fontSize: 12, minWidth: 34 }}>
+        {share > 0 ? `${(share * 100).toFixed(1)}%` : '—'}
+      </span>
+      <svg width={W} height={8} role="img" aria-label={`${(share * 100).toFixed(1)}% of the club's attacking value`}>
+        <rect width={W} height={8} rx={4} fill="var(--panel-3)" />
+        <rect width={Math.max(share > 0 ? 3 : 0, pct * W)} height={8} rx={4} fill="var(--home)" />
+      </svg>
+    </span>
+  )
+}
 
 const STATUS_LABEL: Record<string, string> = {
   i: 'Injured',
@@ -29,9 +51,10 @@ export default function PlayerWatch() {
     if (!data) return []
     const filtered = team ? data.players.filter((p) => p.team === team) : data.players
     if (tab === 'availability') {
-      return filtered
-        .filter((p) => p.status !== 'a')
-        .sort((a, b) => b.xgi90 - a.xgi90)
+      // By impact, not by scoring rate: a fringe forward out-ranks a
+      // first-choice centre-half on xGI/90, which buries the absences that
+      // actually move a forecast.
+      return filtered.filter((p) => p.status !== 'a').sort((a, b) => b.impact - a.impact)
     }
     if (tab === 'discipline') {
       const thisSeason = filtered.filter((p) => p.yellowCards > 0 || p.redCards > 0)
@@ -44,7 +67,7 @@ export default function PlayerWatch() {
           : b.priorYellowCards - a.priorYellowCards,
       )
     }
-    return filtered.filter((p) => p.minutes >= 450).sort((a, b) => b.xgi90 - a.xgi90)
+    return filtered.filter((p) => p.minutes >= 450).sort((a, b) => b.impact - a.impact)
   }, [data, tab, team])
 
   // True when no bookings have happened yet, so the table is showing last
@@ -65,6 +88,34 @@ export default function PlayerWatch() {
         Availability, discipline and output. Rates carry over from last season until enough of this
         one has been played — which is also how the model treats a summer signing at his new club.
       </p>
+
+      {tab === 'availability' && players.length > 0 && (
+        <div className="grid-3" style={{ marginBottom: 16 }}>
+          <Stat
+            label="Unavailable"
+            value={players.filter((p) => p.status === 'i' || p.status === 's' || p.status === 'u').length}
+            sub={`${players.filter((p) => p.status === 'd').length} more carrying a doubt`}
+          />
+          <Stat
+            label="Biggest absence"
+            value={players[0] ? players[0].name : '—'}
+            sub={
+              players[0]
+                ? `${clubName(players[0].team)} — ${(players[0].impact * 100).toFixed(1)}% of their attacking value`
+                : undefined
+            }
+          />
+          <Stat
+            label="Suspended"
+            value={players.filter((p) => p.status === 's').length}
+            sub={
+              players.filter((p) => p.status === 's').length > 0
+                ? players.filter((p) => p.status === 's').map((p) => p.name).slice(0, 3).join(', ')
+                : 'Nobody is serving a ban'
+            }
+          />
+        </div>
+      )}
 
       <div className="row gap-8 wrap" style={{ marginBottom: 16 }}>
         {(['availability', 'discipline', 'form'] as Tab[]).map((t) => (
@@ -90,7 +141,7 @@ export default function PlayerWatch() {
         </select>
       </div>
 
-      <div className="panel" style={{ overflowX: 'auto' }}>
+      <div className="panel table-scroll">
         <table className="data">
           <thead>
             <tr>
@@ -100,6 +151,7 @@ export default function PlayerWatch() {
               {tab === 'availability' && (
                 <>
                   <th>Status</th>
+                  <th className="num" title="Share of his club's attacking value">Impact</th>
                   <th className="num">Chance</th>
                   <th>Detail</th>
                 </>
@@ -118,6 +170,7 @@ export default function PlayerWatch() {
                   <th className="num">Goals</th>
                   <th className="num">Assists</th>
                   <th className="num">xGI/90</th>
+                  <th className="num" title="Share of his club's attacking value">Impact</th>
                 </>
               )}
             </tr>
@@ -142,6 +195,9 @@ export default function PlayerWatch() {
                         {STATUS_LABEL[p.status] ?? p.status}
                       </span>
                     </td>
+                    <td className="num tabular">
+                      <ImpactMeter share={p.impact} />
+                    </td>
                     <td className="num tabular">{p.chanceNextRound === null ? '—' : `${p.chanceNextRound}%`}</td>
                     <td className="muted" style={{ fontSize: 12.5, maxWidth: 320 }}>{p.news || '—'}</td>
                   </>
@@ -160,6 +216,7 @@ export default function PlayerWatch() {
                     <td className="num tabular">{p.goals}</td>
                     <td className="num tabular">{p.assists}</td>
                     <td className="num tabular">{p.xgi90.toFixed(2)}</td>
+                    <td className="num tabular"><ImpactMeter share={p.impact} /></td>
                   </>
                 )}
               </tr>

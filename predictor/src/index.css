@@ -144,6 +144,8 @@ p { margin: 0; }
 .team-chip { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
 .team-bar { width: 4px; height: 20px; border-radius: 2px; flex: none; }
 .team-name { font-weight: 650; font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Narrow screens get the three-letter code rather than a truncated name. */
+.team-name-short { display: none; }
 
 /* --- Probability bar ------------------------------------------------------ */
 
@@ -279,4 +281,26 @@ table.data td.num, table.data th.num { text-align: right; font-variant-numeric: 
   .nav { overflow-x: auto; }
   .grid-2, .grid-3 { grid-template-columns: 1fr; }
   .fixture-grid { grid-template-columns: 1fr; }
+
+  /* Codes instead of truncated names. */
+  .team-name-full { display: none; }
+  .team-name-short { display: inline; }
+
+  /* Thirty-eight gameweek buttons is four rows on a phone; scroll one row. */
+  .gw-nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .gw-nav::-webkit-scrollbar { display: none; }
+  .gw-btn { flex: none; }
+
+  /* Wide content scrolls inside its own box rather than the page. */
+  table.data { font-size: 12.5px; }
+  .panel { overflow-x: auto; }
 }
+
+/* Any table can outgrow a narrow screen; give it its own scroll container. */
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }

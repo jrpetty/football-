@@ -412,6 +412,12 @@ async function main(): Promise<void> {
   }
 
   // --- Players -------------------------------------------------------------
+  // Each club's total attacking value, so a player's share of it can be shown.
+  const teamAttackValue = new Map<string, number>()
+  for (const r of rates) {
+    teamAttackValue.set(r.team, (teamAttackValue.get(r.team) ?? 0) + Math.max(0, r.xgi90) * r.minuteShare)
+  }
+
   const playerArtifacts: PlayerArtifact[] = corpus.players
     .map((p) => {
       const rate = rates.find((r) => r.id === p.id)
@@ -453,6 +459,12 @@ async function main(): Promise<void> {
         cost: p.cost,
         yellowsToBan: status.yellowsToBan,
         onBrink: status.onBrink,
+        impact: round(
+          rate && (teamAttackValue.get(p.team) ?? 0) > 0
+            ? (Math.max(0, rate.xgi90) * rate.minuteShare) / teamAttackValue.get(p.team)!
+            : 0,
+          4,
+        ),
       }
     })
     .filter((p) => p.minutes > 0 || p.status !== 'a')

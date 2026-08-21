@@ -5,10 +5,14 @@ import type { ReactNode } from 'react'
 import { clubColor, clubName, club } from '../config/teams.ts'
 
 export function TeamChip({ code, reverse = false }: { code: string; reverse?: boolean }) {
+  // Both names are rendered and CSS picks one. Truncating "Bournemouth" to
+  // "Bournemou…" on a phone is worse than showing "BOU", and swapping in
+  // JavaScript on resize would reflow the whole board.
   return (
     <span className="team-chip" style={reverse ? { flexDirection: 'row-reverse' } : undefined}>
       <span className="team-bar" style={{ background: clubColor(code) }} aria-hidden="true" />
-      <span className="team-name">{clubName(code)}</span>
+      <span className="team-name team-name-full">{clubName(code)}</span>
+      <span className="team-name team-name-short" aria-hidden="true">{club(code).short}</span>
     </span>
   )
 }

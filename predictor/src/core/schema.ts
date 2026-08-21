@@ -219,6 +219,13 @@ export interface PlayerArtifact {
   /** Suspension tracking. */
   yellowsToBan: number | null
   onBrink: boolean
+  /**
+   * Share of his club's attacking value, 0-1 — minutes weighted by expected
+   * goal involvement. Without it an availability list sorts a fringe forward
+   * above a first-choice centre-half, and the absences that actually move a
+   * forecast are lost among the ones that do not.
+   */
+  impact: number
 }
 
 export interface PlayersArtifact {

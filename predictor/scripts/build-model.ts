@@ -266,6 +266,17 @@ export function buildPlayerRates(
 
 // --- Form --------------------------------------------------------------------
 
+/**
+ * How far back a result can be and still count as "form".
+ *
+ * Without a bound this happily reached back to whenever a club was last in the
+ * top flight: Hull City's form was being drawn from May 2017 and displayed
+ * beside Arsenal's from May 2026, with nothing to distinguish them. Roughly
+ * fifteen months covers a season plus a summer, so a promoted club shows its
+ * real (empty) recent record rather than a decade-old one.
+ */
+export const FORM_MAX_AGE_DAYS = 460
+
 /** Trailing form for one team, optionally restricted to a venue. */
 export function teamForm(
   matches: readonly NormMatch[],
@@ -274,8 +285,12 @@ export function teamForm(
   window: number,
   venue: 'home' | 'away' | null,
 ): TeamForm {
+  const oldest = asOf - FORM_MAX_AGE_DAYS * 86400000
   const played = matches
-    .filter((m) => m.finished && m.date < asOf && (m.home === team || m.away === team))
+    .filter(
+      (m) =>
+        m.finished && m.date < asOf && m.date >= oldest && (m.home === team || m.away === team),
+    )
     .sort((a, b) => b.date - a.date)
 
   const recentMatches = played.slice(0, window)

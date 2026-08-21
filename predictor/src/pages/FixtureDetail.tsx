@@ -4,7 +4,8 @@
 // wrong with it. Reasoning sits above player detail because the reasoning is
 // the point of the exercise.
 
-import { Link, useParams } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useGameweek, useSeason, useSquads } from '../data/store.tsx'
 import { ScoreMatrix } from '../components/ScoreMatrix.tsx'
 import { NarrativePanel } from '../components/NarrativePanel.tsx'
@@ -147,11 +148,40 @@ function PlayerTable({ players, title }: { players: FixtureArtifact['homePlayers
   )
 }
 
+/**
+ * Arrow keys step between matches.
+ *
+ * Reading a whole gameweek means opening ten pages; going back to the board
+ * each time is the kind of friction that stops people looking. Typing fields
+ * are excluded so the API-key input still behaves.
+ */
+function FixtureKeys({
+  prevTo, nextTo, navigate,
+}: {
+  prevTo: string | null
+  nextTo: string | null
+  navigate: (to: string) => void
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      const el = e.target as HTMLElement | null
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT')) return
+      if (e.key === 'ArrowLeft' && prevTo) navigate(prevTo)
+      if (e.key === 'ArrowRight' && nextTo) navigate(nextTo)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [prevTo, nextTo, navigate])
+  return null
+}
+
 export default function FixtureDetail() {
   const { gw, id } = useParams()
   const { season } = useSeason()
   const { data, loading } = useGameweek(gw ? Number(gw) : null)
   const { data: squads } = useSquads()
+  const navigate = useNavigate()
 
   if (loading) return <div className="loading">Loading match…</div>
   const fixture = data?.fixtures.find((f) => f.id === Number(id))
@@ -166,9 +196,48 @@ export default function FixtureDetail() {
     ...f.awayMissing.map((m) => ({ ...m, team: f.away })),
   ]
 
+  // Ordered as the gameweek board shows them, so prev/next matches what the
+  // reader just scrolled past rather than some internal ordering.
+  const ordered = [...(data?.fixtures ?? [])].sort((a, b) => a.kickoff - b.kickoff)
+  const at = ordered.findIndex((x) => x.id === f.id)
+  const prev = at > 0 ? ordered[at - 1] : null
+  const next = at >= 0 && at < ordered.length - 1 ? ordered[at + 1] : null
+
   return (
     <>
-      <Link to={`/?gw=${f.gameweek}`} className="back-link">← Gameweek {f.gameweek}</Link>
+      <FixtureKeys
+        prevTo={prev ? `/fixture/${f.gameweek}/${prev.id}` : null}
+        nextTo={next ? `/fixture/${f.gameweek}/${next.id}` : null}
+        navigate={navigate}
+      />
+      <div className="row" style={{ justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+        <Link to={`/?gw=${f.gameweek}`} className="back-link" style={{ marginBottom: 0 }}>
+          ← Gameweek {f.gameweek}
+        </Link>
+        <span className="row gap-6">
+          <span className="faint tabular" style={{ fontSize: 12, marginRight: 4 }}>
+            {at + 1} of {ordered.length}
+          </span>
+          {prev ? (
+            <Link to={`/fixture/${f.gameweek}/${prev.id}`} className="gw-btn"
+              style={{ padding: '0 11px', display: 'inline-flex', alignItems: 'center' }}
+              title={`${clubName(prev.home)} v ${clubName(prev.away)}`}>
+              ← {club(prev.home).short}–{club(prev.away).short}
+            </Link>
+          ) : (
+            <span className="gw-btn" style={{ padding: '0 11px', opacity: 0.35, display: 'inline-flex', alignItems: 'center' }}>←</span>
+          )}
+          {next ? (
+            <Link to={`/fixture/${f.gameweek}/${next.id}`} className="gw-btn"
+              style={{ padding: '0 11px', display: 'inline-flex', alignItems: 'center' }}
+              title={`${clubName(next.home)} v ${clubName(next.away)}`}>
+              {club(next.home).short}–{club(next.away).short} →
+            </Link>
+          ) : (
+            <span className="gw-btn" style={{ padding: '0 11px', opacity: 0.35, display: 'inline-flex', alignItems: 'center' }}>→</span>
+          )}
+        </span>
+      </div>
 
       <div className="panel panel-pad" style={{ marginBottom: 18 }}>
         <div className="row" style={{ justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>

@@ -7,6 +7,7 @@
 import { useSeason } from '../data/store.tsx'
 import { Stat } from '../components/primitives.tsx'
 import { clubName } from '../config/teams.ts'
+import { BACKTEST, RPS_STANDARD_ERROR } from '../config/backtest.ts'
 
 function CalibrationChart({ bins }: { bins: { predicted: number; observed: number; count: number }[] }) {
   const w = 380
@@ -57,6 +58,55 @@ function CalibrationChart({ bins }: { bins: { predicted: number; observed: numbe
   )
 }
 
+/**
+ * Where the model sits between doing nothing and a serious bookmaker.
+ *
+ * A bar chart of three RPS values would be nearly unreadable — they differ in
+ * the third decimal — so this places them on a shared axis instead, which is
+ * what the reader actually wants to judge: how far along the gap the model
+ * has come.
+ */
+function ScoreScale() {
+  const W = 640
+  const H = 92
+  const pad = 18
+  // A little headroom either side of the values being plotted.
+  const lo = BACKTEST.bookmakerRps - 0.006
+  const hi = BACKTEST.baseline.rps + 0.006
+  const x = (v: number): number => pad + ((v - lo) / (hi - lo)) * (W - pad * 2)
+
+  const marks = [
+    { v: BACKTEST.baseline.rps, label: 'Fixed baseline', color: 'var(--away)', above: true },
+    { v: BACKTEST.model.rps, label: 'This model', color: 'var(--good)', above: false },
+    { v: BACKTEST.bookmakerRps, label: 'Strong bookmaker', color: 'var(--text-faint)', above: true },
+  ]
+
+  return (
+    <svg width="100%" viewBox={`0 0 ${W} ${H}`} role="img"
+      aria-label={`Ranked probability score: baseline ${BACKTEST.baseline.rps}, this model ${BACKTEST.model.rps}, bookmaker ${BACKTEST.bookmakerRps}`}>
+      {/* The span from "no model at all" to "as good as it gets". */}
+      <line x1={x(BACKTEST.bookmakerRps)} y1={H / 2} x2={x(BACKTEST.baseline.rps)} y2={H / 2}
+        stroke="var(--border)" strokeWidth={3} strokeLinecap="round" />
+      {/* How much of that span the model has closed. */}
+      <line x1={x(BACKTEST.model.rps)} y1={H / 2} x2={x(BACKTEST.baseline.rps)} y2={H / 2}
+        stroke="var(--good)" strokeWidth={3} strokeLinecap="round" />
+      {marks.map((m) => (
+        <g key={m.label}>
+          <circle cx={x(m.v)} cy={H / 2} r={6} fill={m.color} stroke="var(--panel)" strokeWidth={2.5} />
+          <text x={x(m.v)} y={m.above ? H / 2 - 16 : H / 2 + 24} textAnchor="middle"
+            fontSize={11.5} fontWeight={700} fill="var(--text-dim)">
+            {m.label}
+          </text>
+          <text x={x(m.v)} y={m.above ? H / 2 - 30 : H / 2 + 38} textAnchor="middle"
+            fontSize={12} fontWeight={700} fill={m.color} className="tabular">
+            {m.v.toFixed(4)}
+          </text>
+        </g>
+      ))}
+    </svg>
+  )
+}
+
 export default function ModelReport() {
   const { season, accuracy, loading } = useSeason()
   if (loading) return <div className="loading">Loading…</div>
@@ -75,15 +125,50 @@ export default function ModelReport() {
       </p>
 
       {scored === 0 ? (
-        <div className="note" style={{ marginBottom: 22 }}>
-          <span className="note-icon">i</span>
-          <span>
-            No matches have been scored yet — the {season.season} season starts with this gameweek.
-            This page fills in from the first results onward. For reference, a walk-forward backtest
-            over the 2025/26 season scored <strong>RPS 0.2095</strong> against a
-            baseline of <strong>0.2274</strong>, calling 48.2% of results correctly versus 42.6%.
-          </span>
-        </div>
+        <>
+          <div className="note" style={{ marginBottom: 18 }}>
+            <span className="note-icon">i</span>
+            <span>
+              No {season.season} match has been played yet, so there is nothing here to score. This
+              page fills in from the first results onward. Until then, what follows is the model's
+              performance on the {BACKTEST.season} season, measured walk-forward — refitting as the
+              season progressed and never seeing a result before predicting it.
+            </span>
+          </div>
+          <div className="grid-3" style={{ marginBottom: 22 }}>
+            <Stat
+              label="Ranked probability score"
+              value={BACKTEST.model.rps.toFixed(4)}
+              sub={`Baseline ${BACKTEST.baseline.rps.toFixed(4)} · a strong bookmaker ≈ ${BACKTEST.bookmakerRps.toFixed(3)}`}
+              accent="var(--good)"
+            />
+            <Stat
+              label="Outcomes called"
+              value={`${(BACKTEST.model.accuracy * 100).toFixed(1)}%`}
+              sub={`Baseline ${(BACKTEST.baseline.accuracy * 100).toFixed(1)}% over ${BACKTEST.matches} matches`}
+            />
+            <Stat
+              label="Calibration error"
+              value={BACKTEST.calibrationError.toFixed(4)}
+              sub="Of everything called at 30%, close to 30% happened"
+            />
+          </div>
+          <div className="panel panel-pad" style={{ marginBottom: 22 }}>
+            <div className="section-title">
+              <h3 style={{ fontSize: 16 }}>Measured against the alternatives</h3>
+              <span className="faint" style={{ fontSize: 11.5 }}>
+                {BACKTEST.season}, {BACKTEST.matches} matches · lower is better
+              </span>
+            </div>
+            <ScoreScale />
+            <p className="faint" style={{ fontSize: 12, marginTop: 12, lineHeight: 1.55 }}>
+              Reproduce it with <code style={{ fontFamily: 'var(--mono)' }}>{BACKTEST.command}</code>.
+              The standard error on this measure at {BACKTEST.matches} matches is about{' '}
+              {RPS_STANDARD_ERROR.toFixed(3)}, so the gap over the baseline is real and the gap to a
+              bookmaker is the honest amount of room left.
+            </p>
+          </div>
+        </>
       ) : (
         <div className="grid-3" style={{ marginBottom: 22 }}>
           <Stat
@@ -99,18 +184,18 @@ export default function ModelReport() {
         </div>
       )}
 
-      <div className="grid-2" style={{ marginBottom: 22, alignItems: 'start' }}>
-        <div className="panel panel-pad">
-          <div className="section-title">
-            <h3 style={{ fontSize: 16 }}>Calibration</h3>
-            <span className="faint" style={{ fontSize: 11.5 }}>of everything called 30%, did 30% happen?</span>
-          </div>
-          {scored > 0 ? (
+      {/* Before any match is played the calibration panel has nothing to draw,
+          and an empty box beside a full one just reads as broken. */}
+      <div className={scored > 0 ? 'grid-2' : ''} style={{ marginBottom: 22, alignItems: 'start' }}>
+        {scored > 0 && (
+          <div className="panel panel-pad">
+            <div className="section-title">
+              <h3 style={{ fontSize: 16 }}>Calibration</h3>
+              <span className="faint" style={{ fontSize: 11.5 }}>of everything called 30%, did 30% happen?</span>
+            </div>
             <CalibrationChart bins={accuracy.calibration} />
-          ) : (
-            <p className="muted" style={{ fontSize: 13 }}>Fills in once matches have been played.</p>
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="panel panel-pad">
           <div className="section-title">

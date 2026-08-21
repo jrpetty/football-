@@ -11,6 +11,7 @@ import { useSeason, useGameweek } from '../data/store.tsx'
 import { FixtureCard } from '../components/FixtureCard.tsx'
 import { Stat, formatDayLabel } from '../components/primitives.tsx'
 import { clubName } from '../config/teams.ts'
+import { BACKTEST } from '../config/backtest.ts'
 
 export default function Gameweek() {
   const { season, accuracy, loading, error } = useSeason()
@@ -98,12 +99,16 @@ export default function Gameweek() {
 
       <div className="grid-3" style={{ marginBottom: 22 }}>
         <Stat
-          label="Model record"
-          value={scored > 0 ? `${((accuracy?.overall.accuracy ?? 0) * 100).toFixed(0)}%` : '—'}
+          label={scored > 0 ? 'Model record' : 'Measured last season'}
+          value={
+            scored > 0
+              ? `${((accuracy?.overall.accuracy ?? 0) * 100).toFixed(0)}%`
+              : `${(BACKTEST.model.accuracy * 100).toFixed(0)}%`
+          }
           sub={
             scored > 0
               ? `${scored} matches scored · RPS ${(accuracy?.overall.rps ?? 0).toFixed(3)} vs ${(accuracy?.baseline.rps ?? 0).toFixed(3)} baseline`
-              : 'No matches scored yet — the season starts here'
+              : `${BACKTEST.season} backtest · RPS ${BACKTEST.model.rps.toFixed(3)} vs ${BACKTEST.baseline.rps.toFixed(3)} baseline. This season's record starts here.`
           }
         />
         <Stat
