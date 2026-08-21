@@ -90,7 +90,10 @@ const SEVERITY_LABEL: Record<Severity, string> = {
 
 export function SystemHealth() {
   const { data } = useApp();
-  const [stage, setStage] = useStickyState<Stage>('sh.stage', 'consent');
+  // Same reason as the wizard's step: a stage name this build does not know
+  // would render the rail with nothing selected and no panel beneath it.
+  const [stage, setStage] = useStickyState<Stage>('sh.stage', 'consent', (v) =>
+    typeof v === 'string' && ['consent', 'detect', 'confirm', 'measure', 'report', 'history'].includes(v));
   const [agreed, setAgreed] = useStickyState('sh.agreed', false);
   const [bench, setBench] = useState<BenchResult | null>(null);
   const [text, setText] = useStickyState('sh.text', '');
@@ -115,10 +118,10 @@ export function SystemHealth() {
   const [sessions, setSessions] = useState<HealthSession[]>(() => loadSessions());
   const [machineLabel, setMachineLabel] = useStickyState('sh.machineLabel', 'my pc');
   const [sessionNote, setSessionNote] = useStickyState('sh.sessionNote', '');
-  const [fixesApplied, setFixesApplied] = useStickyState<AppliedFix[]>('sh.fixesApplied', []);
+  const [fixesApplied, setFixesApplied] = useStickyState<AppliedFix[]>('sh.fixesApplied', [], (v) => Array.isArray(v));
   const [saved, setSaved] = useState(false);
 
-  const [measurements, setMeasurements] = useStickyState<Measurement[]>('sh.measurements', []);
+  const [measurements, setMeasurements] = useStickyState<Measurement[]>('sh.measurements', [], (v) => Array.isArray(v));
   const [mGame, setMGame] = useState('cyberpunk-2077');
   const [mPreset, setMPreset] = useState('high');
   const [mAvg, setMAvg] = useState<number | ''>('');

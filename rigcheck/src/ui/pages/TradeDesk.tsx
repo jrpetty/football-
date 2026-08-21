@@ -27,6 +27,10 @@ export function TradeDesk() {
     gpuIds: ['nvidia-geforce-rtx-3060-12gb', 'amd-radeon-rx-6600'],
     ramKits: [{ totalGB: 16, channels: 2, speedMTs: 3200, type: 'DDR4' }],
     storage: ['nvme-gen3', 'sata-ssd'],
+  }, (v) => {
+    const p = v as PartInventory | null;
+    return !!p && Array.isArray(p.cpuIds) && Array.isArray(p.gpuIds)
+      && Array.isArray(p.ramKits) && Array.isArray(p.storage);
   });
   const { cpuIds, gpuIds } = pile;
   const [salePrice, setSalePrice] = useState(650);

@@ -70,13 +70,17 @@ const LIBRARY_PRESETS: { label: string; sub: string; pick: (ids: string[], arche
 
 export function BuildWizard() {
   const { data } = useApp();
-  const [step, setStep] = useStickyState('wiz.step', 0);
-  const [reached, setReached] = useStickyState('wiz.reached', 0);
+  // Both are indexes into STEPS. A restored value outside that range rendered
+  // the rail with nothing active and no panel at all — a blank screen with no
+  // explanation, which is the worst thing persistence can do.
+  const inRange = (v: unknown) => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v < STEPS.length;
+  const [step, setStep] = useStickyState('wiz.step', 0, inRange);
+  const [reached, setReached] = useStickyState('wiz.reached', 0, inRange);
 
   const [resolution, setResolution] = useStickyState<Resolution>('wiz.resolution', '1440p');
   const [refreshHz, setRefreshHz] = useStickyState('wiz.refreshHz', 144);
   const [monitorId, setMonitorId] = useStickyState<string>('wiz.monitorId', '');
-  const [gameIds, setGameIds] = useStickyState<string[]>('wiz.gameIds', []);
+  const [gameIds, setGameIds] = useStickyState<string[]>('wiz.gameIds', [], (v) => Array.isArray(v));
   const [gameQuery, setGameQuery] = useStickyState('wiz.gameQuery', '');
   const [budget, setBudget] = useStickyState('wiz.budget', 1200);
   /* The slider stays on `budget` so the handle and its label track the finger.

@@ -22,7 +22,8 @@
     "audit": "tsx scripts/audit.ts",
     "build:single": "vite build && node scripts/build-single.mjs",
     "import:prices": "tsx scripts/import-prices.ts",
-    "a11y": "node scripts/a11y-audit.mjs"
+    "a11y": "node scripts/a11y-audit.mjs",
+    "fuzz:sticky": "node scripts/sticky-fuzz.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
