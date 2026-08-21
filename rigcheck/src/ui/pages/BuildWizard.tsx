@@ -20,6 +20,7 @@
  */
 import { useMemo, useState } from 'react';
 import { useApp } from '../store.ts';
+import { useStickyState, clearSticky } from '../useStickyState.ts';
 import { useDebounced } from '../useDebounced.ts';
 import { planBuild, type ComponentPrices, type PlanRequest } from '../../core/planner.ts';
 import { PRESETS, type Preset } from '../../core/presets.ts';
@@ -69,29 +70,29 @@ const LIBRARY_PRESETS: { label: string; sub: string; pick: (ids: string[], arche
 
 export function BuildWizard() {
   const { data } = useApp();
-  const [step, setStep] = useState(0);
-  const [reached, setReached] = useState(0);
+  const [step, setStep] = useStickyState('wiz.step', 0);
+  const [reached, setReached] = useStickyState('wiz.reached', 0);
 
-  const [resolution, setResolution] = useState<Resolution>('1440p');
-  const [refreshHz, setRefreshHz] = useState(144);
-  const [monitorId, setMonitorId] = useState<string>('');
-  const [gameIds, setGameIds] = useState<string[]>([]);
-  const [gameQuery, setGameQuery] = useState('');
-  const [budget, setBudget] = useState(1200);
+  const [resolution, setResolution] = useStickyState<Resolution>('wiz.resolution', '1440p');
+  const [refreshHz, setRefreshHz] = useStickyState('wiz.refreshHz', 144);
+  const [monitorId, setMonitorId] = useStickyState<string>('wiz.monitorId', '');
+  const [gameIds, setGameIds] = useStickyState<string[]>('wiz.gameIds', []);
+  const [gameQuery, setGameQuery] = useStickyState('wiz.gameQuery', '');
+  const [budget, setBudget] = useStickyState('wiz.budget', 1200);
   /* The slider stays on `budget` so the handle and its label track the finger.
      The planner reads the settled value, because re-planning on every one of
      the slider's 145 stops froze the page for seconds at a time. */
   const plannedBudget = useDebounced(budget, 200);
-  const [noBudget, setNoBudget] = useState(false);
-  const [condition, setCondition] = useState<'new' | 'used' | 'either'>('new');
-  const [minPreset, setMinPreset] = useState<Preset>('high');
-  const [targetFps, setTargetFps] = useState<number | null>(null);
-  const [preferQuiet, setPreferQuiet] = useState(false);
-  const [ramGB, setRamGB] = useState<number | null>(null);
-  const [storageGB, setStorageGB] = useState(1000);
+  const [noBudget, setNoBudget] = useStickyState('wiz.noBudget', false);
+  const [condition, setCondition] = useStickyState<'new' | 'used' | 'either'>('wiz.condition', 'new');
+  const [minPreset, setMinPreset] = useStickyState<Preset>('wiz.minPreset', 'high');
+  const [targetFps, setTargetFps] = useStickyState<number | null>('wiz.targetFps', null);
+  const [preferQuiet, setPreferQuiet] = useStickyState('wiz.preferQuiet', false);
+  const [ramGB, setRamGB] = useStickyState<number | null>('wiz.ramGB', null);
+  const [storageGB, setStorageGB] = useStickyState('wiz.storageGB', 1000);
   const [showAlt, setShowAlt] = useState(false);
-  const [usage, setUsage] = useState<UsageProfile>(DEFAULT_USAGE);
-  const [psuTier, setPsuTier] = useState<PsuTier>('gold');
+  const [usage, setUsage] = useStickyState<UsageProfile>('wiz.usage', DEFAULT_USAGE);
+  const [psuTier, setPsuTier] = useStickyState<PsuTier>('wiz.psuTier', 'gold');
 
   const go = (i: number) => {
     setStep(i);
@@ -468,6 +469,25 @@ export function BuildWizard() {
           {step === 1 && !gameIds.length ? 'pick at least one game' : 'next'}
         </button>
         <span className="spacer" style={{ flex: 1 }} />
+        {/* Answers now persist across navigation and reload, which needs a way
+            out: without one, a wizard that remembers is a wizard you cannot
+            start over. */}
+        <button
+          className="btn"
+          title="Forget every answer and start from the first step"
+          onClick={() => {
+            clearSticky('wiz.');
+            setStep(0); setReached(0);
+            setResolution('1440p'); setRefreshHz(144); setMonitorId('');
+            setGameIds([]); setGameQuery('');
+            setBudget(1200); setNoBudget(false); setCondition('new');
+            setMinPreset('high'); setTargetFps(null); setPreferQuiet(false);
+            setRamGB(null); setStorageGB(1000);
+            setUsage(DEFAULT_USAGE); setPsuTier('gold');
+          }}
+        >
+          start again
+        </button>
         {plan?.pick && (
           <button
             className="btn"

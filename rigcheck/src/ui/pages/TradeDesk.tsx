@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { PartPicker, fmt } from '../components/Parts.tsx';
 import { useApp } from '../store.ts';
+import { useDebounced } from '../useDebounced.ts';
 import { bestFromInventory } from '../../core/queries.ts';
 import { appraiseTrade, batchScore, calculateMargin, allocateBudget } from '../../core/analysis.ts';
 import { loadPrices, priceLookup } from '../pricing.ts';
@@ -23,6 +24,10 @@ export function TradeDesk() {
   const [salePrice, setSalePrice] = useState(650);
   const [premium, setPremium] = useState(18);
   const [budget, setBudget] = useState(700);
+  /* The field stays on `budget` so typing is immediate; the 196-pairing budget
+     allocation reads the settled value. Same reason as the wizard's slider —
+     re-running the search on every keystroke is work nobody asked for. */
+  const settledBudget = useDebounced(budget, 200);
   const [batchText, setBatchText] = useState(
     'Lot A,amd-ryzen-5-3600,nvidia-geforce-rtx-3060-12gb\nLot B,intel-core-i5-12400f,amd-radeon-rx-6600\nLot C,intel-core-i7-2600k,nvidia-geforce-gtx-1060-6gb',
   );
@@ -61,8 +66,8 @@ export function TradeDesk() {
     };
     const cpuPool = [...data.cpus.values()].filter((c) => priceOf(c.id) != null).map((c) => c.id).slice(0, 14);
     const gpuPool = [...data.gpus.values()].filter((g) => priceOf(g.id) != null).map((g) => g.id).slice(0, 14);
-    return allocateBudget(budget, base, cpuPool, gpuPool, games.slice(0, 4), '1440p', data, priceOf);
-  }, [budget, cpuIds, gpuIds, games, data, priceOf]);
+    return allocateBudget(settledBudget, base, cpuPool, gpuPool, games.slice(0, 4), '1440p', data, priceOf);
+  }, [settledBudget, cpuIds, gpuIds, games, data, priceOf]);
 
   const batch = useMemo(() => {
     const machines = batchText

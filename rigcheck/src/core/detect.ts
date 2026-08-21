@@ -87,21 +87,85 @@ const CPU_LINE =
 const GPU_LINE =
   /((?:geforce|radeon|intel\s+arc|arc\s+[ab]\d|rtx|gtx|rx)\s*[^\n,;(/|]*)/i;
 
-/** Parse a memory description such as "32GB DDR5-6000 (2x16GB)". */
+/**
+ * Things that mark a clause as being about the graphics card rather than the
+ * system memory. A card carries its own gigabytes and its own four-digit model
+ * number, and both look exactly like a memory figure out of context.
+ */
+const GPU_CLAUSE = /\b(?:rtx|gtx|geforce|radeon|rx\s*\d|arc\s*a\d|quadro|vram|graphics|video)\b/i;
+/** Things that mark a clause as being about system memory. */
+const RAM_CLAUSE = /\b(?:ddr[345]|lpddr[345]|ram|memory|dimm|sodimm)\b/i;
+
+/**
+ * Parse a memory description such as "32GB DDR5-6000 (2x16GB)".
+ *
+ * Read CLAUSE BY CLAUSE, not by scanning the whole line for the first number
+ * that fits. The old version did the latter and was wrong on most real input,
+ * because people write the parts in the order they think of them:
+ *
+ *   "Ryzen 5 3600 / RTX 3060 12GB / 16GB DDR4-3200"
+ *
+ * gave 12GB of memory — the card's VRAM — running at 3600 MT/s, which is the
+ * processor's model number. "RX 6800 XT" produced 6800 MT/s of DDR4, which is
+ * not a speed DDR4 can reach. Both figures feed the processor index and the
+ * VRAM headroom check, so the whole estimate moved with them.
+ *
+ * Splitting on the separators people actually use, then preferring the clause
+ * that mentions memory and skipping the one that mentions a card, fixes the
+ * ordering problem at its root rather than by adding another bound.
+ */
 function parseRam(text: string): Partial<RamConfig> | undefined {
+  const clauses = text.split(/[,/|\n]|\s\+\s/).map((c) => c.trim()).filter(Boolean);
+  const ramClauses = clauses.filter((c) => RAM_CLAUSE.test(c));
+  const neutral = clauses.filter((c) => !GPU_CLAUSE.test(c));
+  // Most specific first: a clause that names memory, then any clause that at
+  // least does not name a graphics card, then the raw text as a last resort.
+  const scopes = [ramClauses.join(' ; '), neutral.join(' ; '), text].filter(Boolean);
+
+  const firstMatch = (re: RegExp): RegExpExecArray | null => {
+    for (const scope of scopes) {
+      const m = re.exec(scope);
+      if (m) return m;
+    }
+    return null;
+  };
+
   const out: Partial<RamConfig> = {};
-  const total = /(\d{1,3})\s*gb\b(?![^\n]*(?:vram|graphics))/i.exec(text);
-  if (total) out.totalGB = Number(total[1]);
-  const type = /\b(ddr[345])\b/i.exec(text);
-  if (type) out.type = type[1].toUpperCase() as MemoryType;
-  const speed = /\b(?:ddr[345][-\s]?)?(\d{4,5})\s*(?:mhz|mt\/s)?\b/i.exec(text);
-  if (speed && Number(speed[1]) >= 1066 && Number(speed[1]) <= 9000) out.speedMTs = Number(speed[1]);
-  const kit = /(\d)\s*x\s*(\d{1,2})\s*gb/i.exec(text);
+
+  // The kit is resolved FIRST, because "2x32GB" states the capacity outright and
+  // does it more reliably than any standalone figure elsewhere in the line.
+  const kit = firstMatch(/(\d)\s*x\s*(\d{1,3})\s*gb/i);
   if (kit) {
     const sticks = Number(kit[1]);
     out.channels = (sticks >= 4 ? 4 : sticks >= 2 ? 2 : 1) as RamConfig['channels'];
-    if (!out.totalGB) out.totalGB = sticks * Number(kit[2]);
+    out.totalGB = sticks * Number(kit[2]);
   }
+
+  // A capacity that is the SIZE OF ONE STICK — the 32 in "2x32GB" — is not the
+  // total, and taking it as one quarters the machine's memory. Skipped by
+  // scanning rather than with a lookbehind, which older Safari rejects when the
+  // regex is constructed and would take the whole module down with it.
+  const totalRe = /(\d{1,3})\s*gb\b(?![^\n]*(?:vram|graphics))/gi;
+  outer: for (const scope of out.totalGB ? [] : scopes) {
+    totalRe.lastIndex = 0;
+    for (let m = totalRe.exec(scope); m; m = totalRe.exec(scope)) {
+      if (/\d\s*x\s*$/i.test(scope.slice(Math.max(0, m.index - 4), m.index))) continue;
+      out.totalGB = Number(m[1]);
+      break outer;
+    }
+  }
+
+  const type = /\b(?:lp)?(ddr[345])\b/i.exec(text);
+  if (type) out.type = type[1].toUpperCase() as MemoryType;
+
+  // Anchored on both attempts: a bare four-digit number is a model number far
+  // more often than it is a memory speed. The DDR prefix is tried across the
+  // whole text first because it is the strongest signal there is.
+  const speed =
+    /\b(?:lp)?ddr[345][-\s]?(\d{4,5})\b/i.exec(text) ??
+    firstMatch(/\b(\d{4,5})\s*(?:mhz|mt\/s)\b/i);
+  if (speed && Number(speed[1]) >= 1066 && Number(speed[1]) <= 9000) out.speedMTs = Number(speed[1]);
+
   return Object.keys(out).length ? out : undefined;
 }
 

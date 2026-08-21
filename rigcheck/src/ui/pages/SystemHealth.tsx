@@ -18,6 +18,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../store.ts';
+import { useStickyState, clearSticky } from '../useStickyState.ts';
 import { detectHardware, detectionToBuild } from '../../core/detect.ts';
 import { deriveVerdict, diagnose, type DetectedSystem, type Measurement, type Severity } from '../../core/health.ts';
 import { DIFFICULTY_LABEL, guideFor } from '../../core/fixguides.ts';
@@ -89,35 +90,35 @@ const SEVERITY_LABEL: Record<Severity, string> = {
 
 export function SystemHealth() {
   const { data } = useApp();
-  const [stage, setStage] = useState<Stage>('consent');
-  const [agreed, setAgreed] = useState(false);
+  const [stage, setStage] = useStickyState<Stage>('sh.stage', 'consent');
+  const [agreed, setAgreed] = useStickyState('sh.agreed', false);
   const [bench, setBench] = useState<BenchResult | null>(null);
-  const [text, setText] = useState('');
+  const [text, setText] = useStickyState('sh.text', '');
 
   // Confirmed specification. Seeded from the detector, then editable — the
   // detector guesses some fields and being able to correct them matters more
   // than the convenience of not having to.
-  const [cpuId, setCpuId] = useState('');
-  const [gpuId, setGpuId] = useState('');
-  const [ram, setRam] = useState<RamConfig>({ totalGB: 16, channels: 2, speedMTs: 3200, type: 'DDR4' });
-  const [ratedMTs, setRatedMTs] = useState<number | ''>('');
-  const [storage, setStorage] = useState<Storage>('nvme-gen4');
-  const [resolution, setResolution] = useState<Resolution>('1440p');
-  const [refreshHz, setRefreshHz] = useState(144);
-  const [pcieGen, setPcieGen] = useState<number | ''>('');
-  const [pcieWidth, setPcieWidth] = useState<number | ''>('');
-  const [airflow, setAirflow] = useState<'restricted' | 'moderate' | 'good' | 'excellent'>('good');
-  const [psuWatts, setPsuWatts] = useState<number | ''>('');
-  const [driverDate, setDriverDate] = useState('');
-  const [uptimeDays, setUptimeDays] = useState<number | ''>('');
+  const [cpuId, setCpuId] = useStickyState('sh.cpuId', '');
+  const [gpuId, setGpuId] = useStickyState('sh.gpuId', '');
+  const [ram, setRam] = useStickyState<RamConfig>('sh.ram', { totalGB: 16, channels: 2, speedMTs: 3200, type: 'DDR4' });
+  const [ratedMTs, setRatedMTs] = useStickyState<number | ''>('sh.ratedMTs', '');
+  const [storage, setStorage] = useStickyState<Storage>('sh.storage', 'nvme-gen4');
+  const [resolution, setResolution] = useStickyState<Resolution>('sh.resolution', '1440p');
+  const [refreshHz, setRefreshHz] = useStickyState('sh.refreshHz', 144);
+  const [pcieGen, setPcieGen] = useStickyState<number | ''>('sh.pcieGen', '');
+  const [pcieWidth, setPcieWidth] = useStickyState<number | ''>('sh.pcieWidth', '');
+  const [airflow, setAirflow] = useStickyState<'restricted' | 'moderate' | 'good' | 'excellent'>('sh.airflow', 'good');
+  const [psuWatts, setPsuWatts] = useStickyState<number | ''>('sh.psuWatts', '');
+  const [driverDate, setDriverDate] = useStickyState('sh.driverDate', '');
+  const [uptimeDays, setUptimeDays] = useStickyState<number | ''>('sh.uptimeDays', '');
 
   const [sessions, setSessions] = useState<HealthSession[]>(() => loadSessions());
-  const [machineLabel, setMachineLabel] = useState('my pc');
-  const [sessionNote, setSessionNote] = useState('');
-  const [fixesApplied, setFixesApplied] = useState<AppliedFix[]>([]);
+  const [machineLabel, setMachineLabel] = useStickyState('sh.machineLabel', 'my pc');
+  const [sessionNote, setSessionNote] = useStickyState('sh.sessionNote', '');
+  const [fixesApplied, setFixesApplied] = useStickyState<AppliedFix[]>('sh.fixesApplied', []);
   const [saved, setSaved] = useState(false);
 
-  const [measurements, setMeasurements] = useState<Measurement[]>([]);
+  const [measurements, setMeasurements] = useStickyState<Measurement[]>('sh.measurements', []);
   const [mGame, setMGame] = useState('cyberpunk-2077');
   const [mPreset, setMPreset] = useState('high');
   const [mAvg, setMAvg] = useState<number | ''>('');
@@ -281,6 +282,29 @@ export function SystemHealth() {
           Whether the machine you already own is performing as well as its parts say it should — and if
           not, which of the handful of invisible causes it is.
         </p>
+        {/* The flow now remembers where you were, so it needs a way to forget.
+            Saved sessions are not touched: those live in their own store and are
+            the whole point of coming back. */}
+        {stage !== 'consent' && (
+          <button
+            className="btn no-print"
+            style={{ marginTop: 10 }}
+            title="Forget this check and go back to the start. Saved sessions are kept."
+            onClick={() => {
+              clearSticky('sh.');
+              setStage('consent'); setAgreed(false); setText(''); setBench(null);
+              setCpuId(''); setGpuId('');
+              setRam({ totalGB: 16, channels: 2, speedMTs: 3200, type: 'DDR4' });
+              setRatedMTs(''); setStorage('nvme-gen4'); setResolution('1440p'); setRefreshHz(144);
+              setPcieGen(''); setPcieWidth(''); setAirflow('good'); setPsuWatts('');
+              setDriverDate(''); setUptimeDays('');
+              setMachineLabel('my pc'); setSessionNote('');
+              setFixesApplied([]); setMeasurements([]);
+            }}
+          >
+            start this check again
+          </button>
+        )}
       </div>
 
       <div className="steps">
