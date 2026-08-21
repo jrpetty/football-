@@ -1,0 +1,371 @@
+// ---------------------------------------------------------------------------
+// Artifact gate.
+//
+// Run: node scripts/verify-artifacts.ts
+//
+// The weekly job runs this before committing. Publishing a broken or
+// implausible artifact is worse than publishing nothing, because the site
+// gives no hint that the numbers stopped meaning anything — so anything that
+// fails here stops the pipeline.
+// ---------------------------------------------------------------------------
+
+import { readdir } from 'node:fs/promises'
+import { readJson, dataPath } from './lib/fsjson.ts'
+import { SCHEMA_VERSION } from '../src/core/schema.ts'
+import { recomputeFixture } from '../src/core/whatIf.ts'
+import type {
+  SeasonArtifact, GameweekArtifact, PlayersArtifact, AccuracyArtifact, LedgerArtifact, SquadsArtifact,
+  TransfersArtifact,
+} from '../src/core/schema.ts'
+
+const problems: string[] = []
+const warnings: string[] = []
+
+function check(condition: boolean, message: string): void {
+  if (!condition) problems.push(message)
+}
+function warn(condition: boolean, message: string): void {
+  if (!condition) warnings.push(message)
+}
+
+const near = (a: number, b: number, eps: number): boolean => Math.abs(a - b) <= eps
+
+async function main(): Promise<void> {
+  // --- season.json ---------------------------------------------------------
+  const season = await readJson<SeasonArtifact>(dataPath('season.json'))
+  check(season !== null, 'season.json is missing')
+  if (!season) return finish()
+
+  check(season.schemaVersion === SCHEMA_VERSION, `season.json schema ${season.schemaVersion} != ${SCHEMA_VERSION}`)
+  check(season.teams.length === 20, `expected 20 clubs, found ${season.teams.length}`)
+  check(new Set(season.teams.map((t) => t.code)).size === season.teams.length, 'duplicate club in the table')
+  check(season.currentGameweek >= 1 && season.currentGameweek <= 38, `currentGameweek ${season.currentGameweek} out of range`)
+  check(season.allGameweeks.length > 0, 'no gameweeks listed')
+
+  // Ratings are log-scale and centred; anything wild means the fit diverged.
+  for (const t of season.teams) {
+    check(Number.isFinite(t.attack) && Math.abs(t.attack) < 2, `${t.code} attack rating ${t.attack} is implausible`)
+    check(Number.isFinite(t.defence) && Math.abs(t.defence) < 2, `${t.code} defence rating ${t.defence} is implausible`)
+    check(t.ratingSd > 0 && t.ratingSd < 1, `${t.code} rating sd ${t.ratingSd} is implausible`)
+  }
+  const meanAttack = season.teams.reduce((s, t) => s + t.attack, 0) / season.teams.length
+  warn(Math.abs(meanAttack) < 0.35, `mean attack rating ${meanAttack.toFixed(3)} is far from centred`)
+
+  const homeAdv = season.params['homeAdvantage'] ?? 0
+  check(homeAdv > 0 && homeAdv < 0.8, `home advantage ${homeAdv} is outside anything believable`)
+
+  // The league baseline must land near a real Premier League scoring rate. This
+  // is the check that would have caught the fit shrinking the league's scoring
+  // level along with the ratings, which it did for months while every other
+  // number looked fine.
+  const baseline = Math.exp(season.params['intercept'] ?? 0)
+  check(
+    baseline > 0.9 && baseline < 2.0,
+    `league baseline ${baseline.toFixed(2)} goals is outside anything a real league produces`,
+  )
+
+  // Venue effects are deliberately shrunk toward the league figure. A club
+  // departing from it by more than ~20% on its scoring rate means the shrinkage
+  // has stopped working, not that it has found a remarkable ground.
+  for (const t of season.teams) {
+    const edge = t.venue.homeAttackDev + t.venue.homeDefenceDev
+    check(
+      Number.isFinite(edge) && Math.abs(edge) < 0.2,
+      `${t.code} venue effect ${edge.toFixed(3)} is too large to be shrunk properly`,
+    )
+    for (const [where, r] of [['home', t.venue.home], ['away', t.venue.away]] as const) {
+      check(
+        r.won + r.drawn + r.lost === r.played,
+        `${t.code} ${where} record does not add up: ${r.won}-${r.drawn}-${r.lost} from ${r.played}`,
+      )
+    }
+  }
+  const meanVenue =
+    season.teams.reduce((s, t) => s + t.venue.homeAttackDev + t.venue.homeDefenceDev, 0) / season.teams.length
+  warn(
+    Math.abs(meanVenue) < 0.02,
+    `mean venue effect ${meanVenue.toFixed(4)} is far from centred — the league figure should be the average`,
+  )
+
+  // --- gameweek files ------------------------------------------------------
+  const files = (await readdir(dataPath('predictions')).catch(() => [])).filter((f) => f.endsWith('.json'))
+  check(files.length > 0, 'no gameweek prediction files were written')
+
+  let fixtureCount = 0
+  for (const file of files.sort()) {
+    const gw = await readJson<GameweekArtifact>(dataPath('predictions', file))
+    if (!gw) {
+      problems.push(`${file} could not be read`)
+      continue
+    }
+    check(gw.schemaVersion === SCHEMA_VERSION, `${file} schema ${gw.schemaVersion} != ${SCHEMA_VERSION}`)
+    check(gw.fixtures.length > 0, `${file} has no fixtures`)
+
+    for (const f of gw.fixtures) {
+      fixtureCount++
+      const label = `${file} ${f.home}v${f.away}`
+
+      // Probabilities must be a distribution.
+      const total = f.probs.home + f.probs.draw + f.probs.away
+      check(near(total, 1, 0.002), `${label}: 1X2 probabilities sum to ${total.toFixed(4)}`)
+      for (const [k, v] of Object.entries(f.probs)) {
+        check(v >= 0 && v <= 1, `${label}: ${k} probability ${v} out of range`)
+      }
+      for (const [k, v] of [['btts', f.btts], ['over25', f.over25], ['cleanSheetHome', f.cleanSheetHome], ['cleanSheetAway', f.cleanSheetAway]] as const) {
+        check(v >= 0 && v <= 1, `${label}: ${k} ${v} out of range`)
+      }
+
+      // Scoring rates must be sane; a diverged fit shows up here first.
+      check(f.lambdaHome > 0 && f.lambdaHome < 6, `${label}: lambdaHome ${f.lambdaHome} implausible`)
+      check(f.lambdaAway > 0 && f.lambdaAway < 6, `${label}: lambdaAway ${f.lambdaAway} implausible`)
+      check(f.home !== f.away, `${label}: a club cannot play itself`)
+      check(f.kickoff > 0, `${label}: missing kickoff time`)
+
+      // The headline scoreline the site shows must agree with the outcome the
+      // model favours — the two contradicting each other was a real bug.
+      const favouredHome = f.probs.home >= f.probs.draw && f.probs.home >= f.probs.away
+      const favouredAway = f.probs.away >= f.probs.draw && f.probs.away > f.probs.home
+      if (favouredHome) check(f.modalScore.home.home > f.modalScore.home.away, `${label}: home modal score is not a home win`)
+      if (favouredAway) check(f.modalScore.away.away > f.modalScore.away.home, `${label}: away modal score is not an away win`)
+      check(f.modalScore.draw.home === f.modalScore.draw.away, `${label}: draw modal score is not level`)
+
+      // Top scorelines must descend.
+      for (let i = 1; i < f.topScorelines.length; i++) {
+        check(
+          f.topScorelines[i - 1]!.prob >= f.topScorelines[i]!.prob,
+          `${label}: scorelines are not sorted by probability`,
+        )
+      }
+
+      // Reasoning must exist — a fixture with no evidence means the generator
+      // silently produced nothing.
+      check(f.evidence.length > 0, `${label}: no evidence was generated`)
+      check(typeof f.upset.summary === 'string' && f.upset.summary.length > 20, `${label}: upset summary is empty`)
+
+      // Player probabilities must be probabilities.
+      for (const p of [...f.homePlayers, ...f.awayPlayers]) {
+        for (const [k, v] of [['goal', p.goal], ['assist', p.assist], ['yellow', p.yellow], ['red', p.red]] as const) {
+          check(v >= 0 && v <= 1, `${label}: ${p.name} ${k} ${v} out of range`)
+        }
+        check(p.brace <= p.goal + 1e-9, `${label}: ${p.name} brace exceeds goal probability`)
+      }
+
+      // A predicted eleven must be a legal side. An early version produced a
+      // Coventry team with no goalkeeper, which is the kind of error a reader
+      // spots instantly and the model never would.
+      for (const [side, lineup] of [['home', f.homeLineup], ['away', f.awayLineup]] as const) {
+        if (lineup.formation === 'unknown') {
+          warn(false, `${label}: no ${side} eleven could be predicted`)
+          continue
+        }
+        check(lineup.starters.length === 11, `${label}: ${side} eleven has ${lineup.starters.length} players`)
+        const keepers = lineup.starters.filter((p) => p.position === 'GK').length
+        check(keepers === 1, `${label}: ${side} eleven has ${keepers} goalkeepers`)
+        const ids = new Set(lineup.starters.map((p) => p.id))
+        check(ids.size === lineup.starters.length, `${label}: ${side} eleven names a player twice`)
+        // Nobody flagged out should be in the side.
+        for (const p of lineup.starters) {
+          check(p.playProbability > 0, `${label}: ${side} eleven starts ${p.name}, who cannot play`)
+        }
+        const outfield = lineup.formation.split('-').map(Number)
+        check(
+          outfield.length === 3 && outfield.reduce((a, b) => a + b, 0) === 10,
+          `${label}: ${side} formation "${lineup.formation}" does not describe ten outfielders`,
+        )
+        // The shape must be one a side could actually set up in. The version
+        // this replaces produced 3-6-1, which no manager has ever picked.
+        const [d = 0, mid = 0, fwd = 0] = outfield
+        check(d >= 3 && d <= 5, `${label}: ${side} plays ${d} at the back`)
+        check(mid <= 6, `${label}: ${side} plays ${mid} in midfield`)
+        check(fwd <= 3, `${label}: ${side} plays ${fwd} up front`)
+        // And it should be the shape the club actually starts, where known.
+        const target = side === 'home' ? f.recompute.home.shape : f.recompute.away.shape
+        if (target.sample > 0 && lineup.basis === 'minutes') {
+          warn(
+            lineup.formation === target.label,
+            `${label}: ${side} eleven is ${lineup.formation} but the club usually starts ${target.label}`,
+          )
+        }
+        warn(
+          lineup.basis === 'minutes' || lineup.confidence <= 0.6,
+          `${label}: ${side} eleven is price-based but claims ${(lineup.confidence * 100).toFixed(0)}% confidence`,
+        )
+      }
+
+      // Card watch must only list players who can actually be banned.
+      for (const c of f.cardWatch) {
+        check(c.yellowsToBan >= 1, `${label}: ${c.name} listed with yellowsToBan ${c.yellowsToBan}`)
+        check(c.yellows > 0, `${label}: ${c.name} on the card watch with no bookings`)
+      }
+    }
+  }
+
+  // --- players.json --------------------------------------------------------
+  const players = await readJson<PlayersArtifact>(dataPath('players.json'))
+  check(players !== null, 'players.json is missing')
+  if (players) {
+    check(players.players.length > 100, `only ${players.players.length} players — the feed looks truncated`)
+    for (const p of players.players.slice(0, 2000)) {
+      check(p.yellowCards >= 0 && p.yellowCards < 40, `${p.name}: implausible yellow count ${p.yellowCards}`)
+      check(p.minutes >= 0, `${p.name}: negative minutes`)
+      // No single player is most of a club's attack. A share that high means
+      // the club has too little measured data for the ratio to mean anything.
+      check(
+        p.impact >= 0 && p.impact <= 0.45,
+        `${p.name}: reported as ${(p.impact * 100).toFixed(0)}% of ${p.team}'s attacking value`,
+      )
+    }
+    // Suspension counters reset each season, so nobody can be on the brink
+    // before any match has been played.
+    if (season.teams.every((t) => t.played === 0)) {
+      const brink = players.players.filter((p) => p.onBrink).length
+      check(brink === 0, `${brink} players flagged one booking from a ban before the season started`)
+    }
+  }
+
+  // --- squads --------------------------------------------------------------
+  // The browser re-runs fixtures against these, so a gap here silently breaks
+  // the what-if feature rather than showing an error.
+  const squads = await readJson<SquadsArtifact>(dataPath('squads.json'))
+  check(squads !== null, 'squads.json is missing')
+  if (squads && season) {
+    for (const t of season.teams) {
+      const roster = squads.squads[t.code]
+      check(Array.isArray(roster) && roster.length >= 11, `squads.json has no usable squad for ${t.code}`)
+    }
+    for (const [code, roster] of Object.entries(squads.squads)) {
+      const ids = new Set(roster.map((p) => p.id))
+      check(ids.size === roster.length, `${code} squad lists a player twice`)
+      for (const p of roster.slice(0, 40)) {
+        for (const [k, v] of [['xgi90', p.xgi90], ['minuteShare', p.minuteShare], ['yellow90', p.yellow90]] as const) {
+          check(Number.isFinite(v) && v >= 0, `${code} ${p.name}: ${k} is ${v}`)
+        }
+        check(p.minuteShare <= 1, `${code} ${p.name}: minute share ${p.minuteShare} exceeds one`)
+      }
+    }
+  }
+
+  // --- the what-if guarantee ----------------------------------------------
+  //
+  // With nothing removed, re-running a fixture in the browser must reproduce
+  // the published forecast exactly. If it does not, every "what if he is out"
+  // is quietly measured against a different baseline than the one on screen.
+  // Unit tests cannot catch a drift between the pipeline and the browser —
+  // only checking the real artifacts can.
+  if (squads) {
+    for (const file of files.slice(0, 3)) {
+      const gwArtifact = await readJson<GameweekArtifact>(dataPath('predictions', file))
+      if (!gwArtifact) continue
+      for (const f of gwArtifact.fixtures) {
+        const homeSquad = squads.squads[f.home]
+        const awaySquad = squads.squads[f.away]
+        if (!homeSquad || !awaySquad) continue
+        const again = recomputeFixture({
+          inputs: f.recompute,
+          homeCode: f.home,
+          awayCode: f.away,
+          kickoff: f.kickoff,
+          homeSquad,
+          awaySquad,
+          removed: new Set(),
+        })
+        const drift = Math.max(
+          Math.abs(again.prediction.probs.home - f.probs.home),
+          Math.abs(again.prediction.probs.draw - f.probs.draw),
+          Math.abs(again.prediction.probs.away - f.probs.away),
+        )
+        check(
+          drift < 0.0005,
+          `${file} ${f.home}v${f.away}: browser recompute differs from the published forecast by ` +
+            `${(drift * 100).toFixed(2)}pp — the what-if tool would contradict the page`,
+        )
+      }
+    }
+  }
+
+  // --- transfers -----------------------------------------------------------
+  const transfers = await readJson<TransfersArtifact>(dataPath('transfers.json'))
+  check(transfers !== null, 'transfers.json is missing')
+  if (transfers && season) {
+    check(transfers.season === season.season, 'transfer ledger is for a different season')
+    const tracked = Object.keys(transfers.roster.byPlayer).length
+    check(tracked > 100, `transfer roster tracks only ${tracked} players — the diff would report nonsense`)
+    for (const r of transfers.records.slice(0, 100)) {
+      check(r.from !== null || r.to !== null, `${r.name}: a transfer with neither origin nor destination`)
+      check(r.from !== r.to, `${r.name}: recorded as moving to the club he was already at`)
+      check(r.detectedAt > 0, `${r.name}: transfer has no detection time`)
+    }
+    // Everyone in the ledger's roster should still resolve to a real club.
+    const codes = new Set(season.teams.map((t) => t.code))
+    let unknown = 0
+    for (const e of Object.values(transfers.roster.byPlayer)) if (!codes.has(e.team)) unknown++
+    warn(unknown === 0, `${unknown} tracked players sit at a club not in this season`)
+  }
+
+  // --- freshness -----------------------------------------------------------
+  //
+  // The whole point of a daily job is that these do not go stale. If they have,
+  // the site will keep serving confident-looking numbers with no hint that
+  // nothing has updated in a fortnight.
+  if (season) {
+    const ageDays = (Date.now() - season.generatedAt) / 86400000
+    warn(ageDays < 3, `artifacts are ${ageDays.toFixed(1)} days old — has the daily job stopped running?`)
+    check(season.generatedAt <= Date.now() + 3600000, 'artifacts are timestamped in the future')
+  }
+
+  // --- ledger and accuracy -------------------------------------------------
+  const ledger = await readJson<LedgerArtifact>(dataPath('ledger.json'))
+  const accuracy = await readJson<AccuracyArtifact>(dataPath('accuracy.json'))
+  check(ledger !== null, 'ledger.json is missing')
+  check(accuracy !== null, 'accuracy.json is missing')
+
+  if (ledger) {
+    const seen = new Set<string>()
+    for (const e of ledger.entries) {
+      const key = `${e.season}#${e.fixtureId}`
+      check(!seen.has(key), `ledger has a duplicate entry for ${key}`)
+      seen.add(key)
+      // The whole point of the ledger is that forecasts predate kickoff. A
+      // forecast may be revised while the match is still to come, but never
+      // once it has started — that line is what makes the record honest.
+      check(e.predictedAt <= e.kickoff, `ledger entry ${key} was recorded after kickoff`)
+      check(
+        (e.updatedAt ?? e.predictedAt) <= e.kickoff,
+        `ledger entry ${key} was revised after kickoff — the record is no longer a forecast`,
+      )
+      // A played match must carry its result, and an unplayed one must not.
+      const played = e.kickoff < Date.now()
+      if (!played) {
+        check(e.actual === undefined, `ledger entry ${key} has a result before kickoff`)
+      }
+      const t = e.probs.home + e.probs.draw + e.probs.away
+      check(near(t, 1, 0.002), `ledger entry ${key} probabilities sum to ${t.toFixed(4)}`)
+    }
+  }
+
+  if (accuracy && accuracy.overall.n > 0) {
+    check(accuracy.overall.rps >= 0 && accuracy.overall.rps <= 1, `overall RPS ${accuracy.overall.rps} out of range`)
+    check(accuracy.overall.accuracy >= 0 && accuracy.overall.accuracy <= 1, 'accuracy out of range')
+    warn(
+      accuracy.overall.rps <= accuracy.baseline.rps,
+      `the model (RPS ${accuracy.overall.rps.toFixed(4)}) is behind the fixed baseline ` +
+        `(${accuracy.baseline.rps.toFixed(4)}) — worth investigating, not necessarily broken`,
+    )
+  }
+
+  console.log(`Checked ${files.length} gameweek files, ${fixtureCount} fixtures, ${players?.players.length ?? 0} players.`)
+  finish()
+}
+
+function finish(): void {
+  for (const w of warnings) console.warn(`  warning: ${w}`)
+  if (problems.length > 0) {
+    console.error(`\n${problems.length} problem${problems.length === 1 ? '' : 's'} found:`)
+    for (const p of problems.slice(0, 40)) console.error(`  - ${p}`)
+    if (problems.length > 40) console.error(`  ...and ${problems.length - 40} more`)
+    process.exit(1)
+  }
+  console.log(warnings.length > 0 ? `\nArtifacts OK (${warnings.length} warning(s)).` : '\nArtifacts OK.')
+}
+
+await main()

@@ -12,6 +12,12 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url)
   if (url.origin !== self.location.origin) return // never cache cross-origin
 
+  // The predictor is a separate app published alongside this one under
+  // /predictor/. Its whole point is that the data changes every week, and this
+  // worker's stale-while-revalidate would serve a returning visitor last
+  // week's predictions. Leave it entirely to the network.
+  if (url.pathname.includes('/predictor/')) return
+
   event.respondWith(
     caches.open(CACHE).then(async (cache) => {
       const cached = await cache.match(req)

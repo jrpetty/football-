@@ -1,0 +1,268 @@
+# Keeps the Premier League predictor current, without anyone touching it.
+#
+# Runs every morning. The pipeline is idempotent — it ingests whatever is
+# current, scores any fixture that has finished since the last run, refits and
+# republishes — so one job serves every purpose and there is no schedule to
+# keep in sync:
+#
+#   Wednesday   the gameweek is complete (Monday night included), so this is
+#               the run that scores the round's forecasts and publishes the next.
+#   Every day   injuries, suspensions and transfers change daily, and during a
+#               window a squad can change hours before a deadline. A weekly
+#               cadence would have shown a player at the wrong club for six days.
+#
+# TWO THINGS THAT ARE EASY TO GET WRONG HERE, both learned the hard way:
+#
+#  1. `schedule:` only fires from the workflow file on the repository's DEFAULT
+#     branch. A perfectly good cron sitting on a feature branch never runs, and
+#     GitHub gives no warning — it simply does not register the workflow. If
+#     this file is ever moved off the default branch, the whole thing silently
+#     stops.
+#
+#  2. Pushes made with the built-in GITHUB_TOKEN do NOT trigger other
+#     workflows. So the data commit below cannot wake deploy.yml, and relying
+#     on it would leave the site frozen on old forecasts while the repository
+#     quietly filled with fresh ones. That is why this workflow publishes to
+#     Pages itself rather than handing off.
+
+name: Predictor daily update
+
+on:
+  schedule:
+    # 06:00 UTC daily — after any European night fixture has finished and
+    # before team news for the coming weekend lands.
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      source:
+        description: 'Data source: auto (live with mirror fallback), live, or mirror'
+        required: false
+        default: 'auto'
+        type: choice
+        options: [auto, live, mirror]
+
+# Never let two updates race for the same commit.
+concurrency:
+  group: predictor-update
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.commit.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history: the push below rebases if someone else has committed
+          # in the meantime, and rebasing a shallow clone is a bad time.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          # Node 22 runs the pipeline's TypeScript directly, so there is no
+          # build step and no extra dependency to install for it.
+          node-version: 22
+          cache: npm
+          cache-dependency-path: predictor/package-lock.json
+
+      # Twelve seasons of results and player history is ~27 MB across 40-odd
+      # files, and the archive seasons never change. Carrying them between runs
+      # cuts the job's runtime and, more importantly, cuts the number of chances
+      # for a transient network failure to fail the run. Entries for the current
+      # season carry a short TTL and are refetched regardless of this cache.
+      - name: Restore the raw data cache
+        uses: actions/cache@v4
+        with:
+          path: predictor/.cache/http
+          key: predictor-http-${{ github.run_id }}
+          restore-keys: predictor-http-
+
+      - name: Install
+        working-directory: predictor
+        run: npm ci
+
+      - name: Check the model still passes its own tests
+        working-directory: predictor
+        # A bad refactor should stop the pipeline before it publishes numbers,
+        # not after.
+        run: npm test
+
+      - name: Ingest data and rebuild predictions
+        working-directory: predictor
+        run: |
+          node scripts/ingest.ts --source "${{ inputs.source || 'auto' }}"
+          node scripts/build-all.ts
+
+      - name: Verify the artifacts before publishing
+        working-directory: predictor
+        run: node scripts/verify-artifacts.ts
+
+      - name: Commit if anything changed
+        id: commit
+        run: |
+          set -euo pipefail
+
+          # Stage first, then compare the index. `git diff` on its own cannot
+          # see untracked files, so a brand new gameweek file — exactly the
+          # thing this job exists to publish — would read as "no change".
+          git add -A -- predictor/public/data
+
+          if git diff --cached --quiet -- predictor/public/data; then
+            echo "No change in the artifacts — nothing to publish."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "Artifacts changed:"
+          git diff --cached --name-status -- predictor/public/data
+
+          # NOTE: an earlier version of this step tried to be clever and skip
+          # runs where only the generatedAt stamps had moved. It could not
+          # work, for two independent reasons, and both are worth recording so
+          # nobody reinvents it:
+          #
+          #   - The artifacts are written minified, one line per file, so a
+          #     file's timestamp and all of its data share a single diff line.
+          #     A line-based filter therefore matched every change and the job
+          #     would have committed nothing, ever.
+          #   - The forecasts genuinely move between runs regardless. Ratings
+          #     are time-decayed against the moment of the fit, so a rebuild
+          #     seconds later shifts probabilities in the ninth significant
+          #     figure and a rebuild a day later shifts them meaningfully.
+          #
+          # There is no quiet day to suppress. Publishing whatever changed is
+          # both simpler and the only version that cannot silently stop.
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Written to a file rather than interpolated into the shell, so no
+          # value derived from match data can ever reach the command line.
+          node -e "
+            const fs = require('node:fs');
+            // readFileSync resolves against the working directory whatever the
+            // caller is; a relative require would resolve against the script's
+            // own directory once this stops being an inline -e program.
+            const read = (f) => JSON.parse(fs.readFileSync('predictor/public/data/' + f, 'utf8'));
+            const s = read('season.json');
+            const a = read('accuracy.json');
+            const t = read('transfers.json');
+            const scored = a.overall.n;
+            // Anything detected in the last day is news worth naming.
+            const fresh = t.records.filter((r) => Date.now() - r.detectedAt < 26 * 3600 * 1000);
+            const head =
+              'Update predictions (gameweek ' + s.currentGameweek +
+              (scored ? ', ' + scored + ' scored, RPS ' + a.overall.rps.toFixed(4) : ', no results yet') +
+              (fresh.length ? ', ' + fresh.length + ' squad change' + (fresh.length > 1 ? 's' : '') : '') +
+              ')';
+            const body = [
+              'Season ' + s.season + ', gameweek ' + s.currentGameweek + '.',
+              scored
+                ? 'Scored ' + scored + ' matches: RPS ' + a.overall.rps.toFixed(4) +
+                  ' against a ' + a.baseline.rps.toFixed(4) + ' baseline, ' +
+                  (a.overall.accuracy * 100).toFixed(1) + '% of outcomes called.'
+                : 'No results scored yet this season.',
+              fresh.length
+                ? 'Squad changes detected: ' +
+                  fresh.slice(0, 8).map((r) => r.name + ' (' + r.kind + ')').join(', ') +
+                  (fresh.length > 8 ? ', and ' + (fresh.length - 8) + ' more' : '') + '.'
+                : '',
+            ].filter(Boolean).join('\n');
+            fs.writeFileSync('/tmp/commit-msg.txt', head + '\n\n' + body + '\n');
+          "
+          git commit -q -F /tmp/commit-msg.txt
+
+          # A push can lose a race with a human commit. Rather than rebase —
+          # which can conflict, and would need resolving unattended — rebuild
+          # the commit on top of whatever is now upstream. These artifacts are
+          # regenerated from scratch every run, so replaying them onto a newer
+          # base is always the right answer and can never conflict. Only the
+          # data directory is staged, so a source change someone else pushed in
+          # the meantime is left exactly as they wrote it.
+          for attempt in 1 2 3; do
+            if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "Push rejected (attempt $attempt); replaying onto the latest and retrying."
+            sleep $((attempt * 5))
+            # Guarded so a failed fetch costs a retry rather than killing the
+            # step outright under `set -e`.
+            if ! git fetch origin "${GITHUB_REF_NAME}"; then
+              echo "Could not fetch; will retry."
+              continue
+            fi
+            git reset --mixed "origin/${GITHUB_REF_NAME}"
+            git add -A -- predictor/public/data
+            if git diff --cached --quiet -- predictor/public/data; then
+              echo "Upstream already carries these artifacts — nothing left to push."
+              echo "changed=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            git commit -q -F /tmp/commit-msg.txt
+          done
+          echo "Could not push after three attempts."
+          exit 1
+
+  # Pages is published from here rather than from deploy.yml, because a push
+  # made with GITHUB_TOKEN does not trigger deploy.yml's push event. Without
+  # this job the data would update in the repository and never reach the site.
+  publish:
+    needs: update
+    if: needs.update.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    # Shares deploy.yml's group so a data publish and a code deploy queue
+    # rather than racing. Never cancel: a half-finished Pages deploy is worse
+    # than a slightly late one.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The commit the job above just pushed, which github.sha predates.
+          ref: ${{ github.ref_name }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Gaffer (the coaching app) is published at the site root.
+      - run: npm ci
+      - run: npm run build
+
+      # The predictor is a separate app published under /predictor/. Its vite
+      # base is relative, so it works from a sub-path.
+      - name: Build the predictor
+        working-directory: predictor
+        run: |
+          npm ci
+          npm run build
+      - name: Place the predictor under /predictor
+        run: |
+          mkdir -p dist/predictor
+          cp -r predictor/dist/. dist/predictor/
+
+      # Provisions the Pages site on first use. Without this the deploy below
+      # 404s until someone flips Settings -> Pages -> Source: "GitHub Actions"
+      # by hand, and the only symptom is a red job with a message that reads
+      # like a bug in this workflow rather than a missing one-time setting.
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
