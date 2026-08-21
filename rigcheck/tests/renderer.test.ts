@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { buildEngineData } from '../src/core/catalogue.ts';
 import { detectHardware } from '../src/core/detect.ts';
 import { cleanDeviceName, parseRenderer } from '../src/core/renderer.ts';
+import { identifyGpu } from '../src/ui/bench/inspect.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const load = (p: string) => JSON.parse(readFileSync(join(ROOT, p), 'utf8'));
@@ -109,5 +110,77 @@ describe('renderer strings reach the catalogue', () => {
     expect(software).toBe(true);
     const d = detectHardware(cleanDeviceName(device), data);
     expect(d.gpu.length).toBe(0);
+  });
+});
+
+/* ------------------------------------------------- renderer to catalogue -- */
+
+/**
+ * The end of the chain: a renderer string in, a catalogue part out.
+ *
+ * These are the cases that decide whether the specification form fills itself,
+ * and the distinction that matters is between a name the driver answered
+ * precisely and one it genuinely left open. Filling the form with the 8GB card
+ * when the driver only said "RTX 3060" would be a silently wrong answer, and a
+ * silently wrong part is worse than an empty field.
+ */
+describe('identifying the card from the renderer string', () => {
+  const id = (raw: string) => identifyGpu(raw, data);
+
+  it('fills the form when exactly one part fits', () => {
+    expect(id('ANGLE (NVIDIA, NVIDIA GeForce RTX 4090 (0x00002684), Vulkan 1.3.224)').gpuId)
+      .toBe('nvidia-geforce-rtx-4090');
+    expect(id('ANGLE (AMD, AMD Radeon RX 6800 XT Direct3D11 vs_5_0 ps_5_0, D3D11)').gpuId)
+      .toBe('amd-radeon-rx-6800-xt');
+  });
+
+  it('is not put off by a runner-up that merely scores lower', () => {
+    // "RTX 4070 Ti SUPER" also matches the plain Ti and the plain Super, but
+    // less well. An earlier version treated any runner-up as ambiguity and so
+    // filled the field almost never — the feature existed and never fired.
+    const r = id('ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti SUPER Direct3D11 vs_5_0 ps_5_0, D3D11)');
+    expect(r.gpuId).toBe('nvidia-geforce-rtx-4070-ti-super');
+    expect(r.ambiguous).toHaveLength(0);
+  });
+
+  it('refuses to choose between parts the driver did not separate', () => {
+    for (const [raw, count] of [
+      ['ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0, D3D11)', 2],
+      ['ANGLE (NVIDIA GeForce GTX 1060 Direct3D11 vs_5_0 ps_5_0)', 2],
+    ] as [string, number][]) {
+      const r = id(raw);
+      expect(r.gpuId).toBeNull();
+      expect(r.ambiguous).toHaveLength(count);
+      // The best guess is still named, so the user is choosing from a shortlist
+      // rather than starting again.
+      expect(r.gpuName).toBeTruthy();
+    }
+  });
+
+  it('identifies integrated graphics, which is the case that matters most', () => {
+    // The renderer string naming an integrated adapter is how you find out the
+    // discrete card is idle. It used to match nothing at all: the detector's
+    // GPU line had no pattern for any Intel integrated family.
+    expect(id('ANGLE (Intel, Intel(R) UHD Graphics 630 Direct3D11 vs_5_0 ps_5_0, D3D11)').gpuId)
+      .toBe('intel-uhd-630');
+    expect(id('ANGLE (Intel, Intel(R) UHD Graphics 770 Direct3D11 vs_5_0 ps_5_0, D3D11)').gpuName)
+      .toMatch(/UHD Graphics 770/);
+  });
+
+  it('never offers a card from a different vendor', () => {
+    // Intel's UHD 770 and NVIDIA's GTX 770 share the token "770" and nothing
+    // else, and the scorer saturates at 99 once a model matches — so they came
+    // back as equally good answers and a machine on its integrated adapter was
+    // offered a 2013 NVIDIA card.
+    const r = id('ANGLE (Intel, Intel(R) UHD Graphics 770 Direct3D11 vs_5_0 ps_5_0, D3D11)');
+    const names = [r.gpuName, ...r.ambiguous.map((a) => a.name)].join(' ');
+    expect(names).not.toMatch(/NVIDIA|GeForce|GTX/);
+  });
+
+  it('says nothing at all when the renderer is a software rasteriser', () => {
+    const r = id('ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)), SwiftShader driver)');
+    expect(r.gpuId).toBeNull();
+    expect(r.ambiguous).toHaveLength(0);
+    expect(r.identity.software).toBe(true);
   });
 });

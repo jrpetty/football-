@@ -34,15 +34,40 @@ import {
 /** What the inspection concluded about the graphics card, ready to apply. */
 export interface GpuIdentification {
   identity: RendererIdentity;
-  /** Catalogue id, when the detector matched one confidently. */
+  /** Catalogue id, but only when exactly one part fits the name. */
   gpuId: string | null;
   /** Catalogue full name for that id. */
   gpuName: string | null;
-  /** Runner-up ids, when the name did not narrow to one part. */
-  alternatives: { id: string; name: string }[];
-  /** Anything the detector wanted flagged — the 1060 3GB/6GB case lands here. */
+  /** The detector's score for the best candidate, 0-100. */
+  confidence: number;
+  /**
+   * Every part the name fits EQUALLY well, when more than one does.
+   *
+   * Not runners-up. A renderer string reading "NVIDIA GeForce RTX 4070 Ti
+   * SUPER" scores 99 for the Ti Super and 94 for the plain Ti, and calling that
+   * ambiguous would refuse to fill a field the driver answered precisely. A
+   * string reading "NVIDIA GeForce RTX 3060" scores 99 for both the 12GB and
+   * the 8GB card, because the driver genuinely did not say which — and that is
+   * the case worth stopping for.
+   *
+   * Empty when the name resolved to one part.
+   */
+  ambiguous: { id: string; name: string }[];
+  /** Anything the detector wanted flagged. */
   warnings: string[];
 }
+
+/**
+ * How close a candidate has to score to the best one to count as tied.
+ *
+ * Eight, which is the gap the detector itself already uses to decide a match is
+ * ambiguous — one threshold rather than two that can disagree. It is a wide
+ * window and it can afford to be: a name that genuinely distinguishes two parts
+ * separates them by fourteen points or more, because that is what one suffix
+ * present on one side and absent on the other is worth. A name that does not
+ * distinguish them produces the identical score, not a near one.
+ */
+const TIE_WINDOW = 8;
 
 /* ------------------------------------------------------------------- gpu -- */
 
@@ -94,7 +119,8 @@ export function identifyGpu(renderer: string, data: EngineData): GpuIdentificati
     identity,
     gpuId: null,
     gpuName: null,
-    alternatives: [],
+    confidence: 0,
+    ambiguous: [],
     warnings: [],
   };
   if (!identity.device || identity.software) return empty;
@@ -104,11 +130,17 @@ export function identifyGpu(renderer: string, data: EngineData): GpuIdentificati
   const best = det.gpu[0];
   if (!best) return { ...empty, warnings: det.warnings };
 
+  const tied = det.gpu.filter((c) => best.confidence - c.confidence <= TIE_WINDOW);
+  const unique = tied.length === 1;
   return {
     identity,
-    gpuId: best.record.id,
+    // Only when one part fits. Filling the form with the 8GB card because it
+    // happened to sort first would be a silently wrong answer, and a silently
+    // wrong part is worse than an empty field somebody has to think about.
+    gpuId: unique ? best.record.id : null,
     gpuName: best.record.fullName,
-    alternatives: det.gpu.slice(1, 4).map((c) => ({ id: c.record.id, name: c.record.fullName })),
+    confidence: best.confidence,
+    ambiguous: unique ? [] : tied.map((c) => ({ id: c.record.id, name: c.record.fullName })),
     warnings: det.warnings,
   };
 }
@@ -336,11 +368,9 @@ export interface SpecPrefill {
 
 export function prefillFrom(i: BrowserInspection, gpu: GpuIdentification | null): SpecPrefill {
   const out: SpecPrefill = {};
-  // Only when the name narrowed to exactly one part. An ambiguous name — the
-  // 1060 that could be the 3GB or the 6GB — is shown with its alternatives and
-  // left for the user, because filling it with the wrong one silently is worse
-  // than not filling it at all.
-  if (gpu?.gpuId && !gpu.alternatives.length && !gpu.identity.software) out.gpuId = gpu.gpuId;
+  // `gpuId` is already null unless exactly one part fits, so this needs no
+  // further test than that the reading came from real hardware.
+  if (gpu?.gpuId && !gpu.identity.software) out.gpuId = gpu.gpuId;
   if (i.display) {
     const r = resolutionFor(i.display.value.width);
     if (r) out.resolution = r;

@@ -40,6 +40,25 @@ function normalise(s: string): string {
 }
 
 /**
+ * The vendor a part name declares, or null when it declares none.
+ *
+ * Null matters as much as the three answers: a string like "3060" or "5600X"
+ * names no vendor, and treating that as a conflict would reject the shorthand
+ * people actually type. Only an explicit contradiction disqualifies.
+ *
+ * Applied to names already through `normalise`, so trademark marks and
+ * punctuation are gone and word boundaries are spaces.
+ */
+function vendorOfName(normalised: string): 'nvidia' | 'amd' | 'intel' | null {
+  if (/\bnvidia\b|\bgeforce\b|\bgtx\b|\brtx\b|\bquadro\b|\btitan\b/.test(normalised)) return 'nvidia';
+  if (/\bintel\b|\bcore i\d|\bcore ultra\b|\barc\b|\buhd\b|\biris\b|\bpentium\b|\bceleron\b|\bxeon\b/.test(normalised)) {
+    return 'intel';
+  }
+  if (/\bamd\b|\bradeon\b|\bryzen\b|\bathlon\b|\bthreadripper\b|\bepyc\b/.test(normalised)) return 'amd';
+  return null;
+}
+
+/**
  * Score a catalogue name against a detected string.
  *
  * Model numbers carry nearly all the signal ("3060", "5800x3d"), so they are
@@ -52,6 +71,17 @@ function scoreName(detected: string, candidate: string): number {
   if (!d || !c) return 0;
   if (d === c) return 100;
 
+  // A model number that two vendors both used is not a match. "Intel UHD
+  // Graphics 770" and "NVIDIA GeForce GTX 770" share the token 770 and nothing
+  // else, and because the score saturates at 99 once a model matches and no
+  // suffix disagrees, they scored IDENTICALLY — so a machine reporting its
+  // integrated adapter was offered a decade-old NVIDIA card as an equally good
+  // answer. Vendor is the one thing a name can contradict outright, so it is
+  // checked before anything is scored rather than nudged afterwards.
+  const dVendor = vendorOfName(d);
+  const cVendor = vendorOfName(c);
+  if (dVendor && cVendor && dVendor !== cVendor) return 0;
+
   const modelTokens = (s: string): string[] => s.match(/\b[a-z]*\d{3,5}[a-z0-9]*\b/g) ?? [];
   const dModels = modelTokens(d);
   const cModels = modelTokens(c);
@@ -61,12 +91,28 @@ function scoreName(detected: string, candidate: string): number {
   if (!exactModel) return 0;
 
   let score = 55;
-  // Suffixes are what separate a 4080 from a 4080 Super, or a 5800X from a 5800X3D.
-  for (const suffix of ['ti', 'super', 'xt', 'xtx', 'x3d', 'ks', 'kf', 'k', 'f', 'g', 'ge', 'gre', 'le']) {
-    const inD = new RegExp(`\\b\\w*${suffix}\\b`).test(d);
-    const inC = new RegExp(`\\b\\w*${suffix}\\b`).test(c);
-    if (inD === inC) score += 4;
-    else score -= 12;
+  // Suffixes are what separate a 4080 from a 4080 Super, or a 5800X from a
+  // 5800X3D.
+  //
+  // Mutual ABSENCE earns nothing. It used to earn the same +4 as a match, and
+  // since almost no pair of names shares more than one or two suffixes, that
+  // handed nearly every candidate the full bonus for the dozen suffixes neither
+  // name mentioned — pushing the total past the 99 ceiling, where every real
+  // difference was flattened away. "RTX 4070 Ti Super" and "RTX 4070 Ti" both
+  // came back at 99 and 98 on a string that names one of them exactly, which
+  // also tripped the detector's own eight-point ambiguity warning. Two names
+  // that both fail to mention "x3d" have told you nothing about each other.
+  //
+  // `uhd` is on the list even though it is a prefix: Intel shipped an HD 630 and
+  // a UHD 630 a generation apart with the same model number. Only the `u` form
+  // is listed — a bare `hd` would match inside `uhd` and cancel itself out, and
+  // it would collide with every Radeon HD card.
+  for (const suffix of ['ti', 'super', 'xt', 'xtx', 'x3d', 'ks', 'kf', 'k', 'f', 'g', 'ge', 'gre', 'le', 'uhd']) {
+    const re = new RegExp(`\\b\\w*${suffix}\\b`);
+    const inD = re.test(d);
+    const inC = re.test(c);
+    if (inD && inC) score += 6;
+    else if (inD !== inC) score -= 14;
   }
   // Capacity disambiguates variants that are otherwise identical strings.
   const capD = /(\d+)\s*gb/.exec(d);
@@ -84,8 +130,13 @@ function scoreName(detected: string, candidate: string): number {
 // the common shorthand silently found nothing.
 const CPU_LINE =
   /((?:ryzen|core\s*(?:ultra\s*)?i?\d|core\s*ultra|athlon|pentium|celeron|threadripper|fx)[\s-]*[^\n,;(/|]*)/i;
+// The Intel integrated families are here because the browser's renderer string
+// is very often one of them — "Intel(R) UHD Graphics 770" is what a machine
+// says when the discrete card is idle, which is the single most useful thing
+// this whole detector can catch. Without them the line matched nothing at all
+// and an integrated adapter silently produced no result.
 const GPU_LINE =
-  /((?:geforce|radeon|intel\s+arc|arc\s+[ab]\d|rtx|gtx|rx)\s*[^\n,;(/|]*)/i;
+  /((?:geforce|radeon|intel\s+arc|arc\s+[ab]\d|intel\s+u?hd|intel\s+iris|u?hd\s+graphics|iris\s+(?:xe|pro|plus)?\s*graphics|rtx|gtx|rx)\s*[^\n,;(/|]*)/i;
 
 /**
  * Finding the SYSTEM memory in free text.

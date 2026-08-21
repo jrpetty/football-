@@ -105,6 +105,29 @@ export function estimateSeconds(depth: Depth, threads = navigator.hardwareConcur
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
+/**
+ * Hand the page back so it can paint, and get control back as soon as it has.
+ *
+ * `setTimeout(0)` is not zero: browsers clamp nested timeouts to about four
+ * milliseconds, and a pass loop that yields that way spends a fifth of a
+ * twenty-second run doing nothing. A `MessageChannel` message is a task like
+ * any other — the browser can paint between tasks — but carries no clamp, so
+ * the same run collects meaningfully more samples, which is what the percentile
+ * read is made of.
+ */
+const yieldToPage: () => Promise<void> =
+  typeof MessageChannel === 'function'
+    ? () =>
+        new Promise<void>((resolve) => {
+          const ch = new MessageChannel();
+          ch.port1.onmessage = () => {
+            ch.port1.close();
+            resolve();
+          };
+          ch.port2.postMessage(0);
+        })
+    : () => sleep(0);
+
 /* ------------------------------------------------------------------- GPU -- */
 
 const VERT = `#version 300 es
@@ -169,20 +192,40 @@ void main() {
 }`;
 
 /**
- * Raster back end. Trivial shading, blending on.
+ * Raster back end. Trivial shading, blending on, drawn as instances.
  *
  * Blending forces a read-modify-write of the framebuffer for every fragment,
- * which is what stops the driver from collapsing overlapping full-screen
- * passes into one. What this measures is how fast the card can actually put
- * pixels down, which is a different bottleneck from either of the others and
- * the one that moves most with render resolution.
+ * which is what stops the driver from collapsing overlapping full-screen passes
+ * into one. What this measures is how fast the card can actually put pixels
+ * down — a different bottleneck from either of the others, and the one that
+ * moves most with render resolution.
+ *
+ * The overdraw comes from ONE instanced draw rather than from a loop issuing
+ * thousands of draw calls. Each `drawArrays` costs the driver a few
+ * microseconds of CPU work, and at the four thousand layers a fast card needs
+ * to fill a 22ms budget that is over ten milliseconds of submission sitting
+ * inside the timed region, measuring the driver instead of the card.
+ *
+ * The instance id reaches the fragment shader so no two layers are identical —
+ * a driver is entitled to notice it is drawing the same thing repeatedly, and
+ * this removes the question.
  */
+const VERT_FILL = `#version 300 es
+in vec2 aPos;
+flat out int vInstance;
+void main() {
+  vInstance = gl_InstanceID;
+  gl_Position = vec4(aPos, 0.0, 1.0);
+}`;
+
 const FRAG_FILL = `#version 300 es
 precision mediump float;
+flat in int vInstance;
 uniform float uSeed;
 out vec4 outColor;
 void main() {
-  outColor = vec4(fract(uSeed * 0.01), gl_FragCoord.x * 0.0005, gl_FragCoord.y * 0.0005, 0.04);
+  float k = fract((uSeed + float(vInstance)) * 0.013);
+  outColor = vec4(k, gl_FragCoord.x * 0.0005, gl_FragCoord.y * 0.0005, 0.04);
 }`;
 
 const ALU_SIDE = 512;
@@ -199,9 +242,9 @@ function compile(gl: WebGL2RenderingContext, type: number, src: string): WebGLSh
   return sh;
 }
 
-function link(gl: WebGL2RenderingContext, frag: string): WebGLProgram {
+function link(gl: WebGL2RenderingContext, frag: string, vert = VERT): WebGLProgram {
   const prog = gl.createProgram()!;
-  gl.attachShader(prog, compile(gl, gl.VERTEX_SHADER, VERT));
+  gl.attachShader(prog, compile(gl, gl.VERTEX_SHADER, vert));
   gl.attachShader(prog, compile(gl, gl.FRAGMENT_SHADER, frag));
   gl.linkProgram(prog);
   if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(`link: ${gl.getProgramInfoLog(prog)}`);
@@ -215,6 +258,11 @@ class GpuHarness {
   private seed = 0;
   private tex: WebGLTexture | null = null;
   private canvas: HTMLCanvasElement;
+  // Looked up once. `getUniformLocation` is a driver call with a string lookup
+  // behind it, and calling it three times per pass on a run of a thousand
+  // passes is thousands of avoidable round trips between the passes being
+  // timed.
+  private uniforms!: Record<'alu' | 'bandwidth' | 'fill', Record<string, WebGLUniformLocation | null>>;
 
   constructor(canvas: HTMLCanvasElement) {
     const gl = canvas.getContext('webgl2', {
@@ -233,7 +281,7 @@ class GpuHarness {
     this.progs = {
       alu: link(gl, FRAG_ALU),
       bandwidth: link(gl, FRAG_BANDWIDTH),
-      fill: link(gl, FRAG_FILL),
+      fill: link(gl, FRAG_FILL, VERT_FILL),
     };
 
     // One full-screen triangle, shared by all three programs. The attribute
@@ -250,6 +298,15 @@ class GpuHarness {
         gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
       }
     }
+    this.uniforms = {
+      alu: { uSeed: gl.getUniformLocation(this.progs.alu, 'uSeed'), uIter: gl.getUniformLocation(this.progs.alu, 'uIter') },
+      bandwidth: {
+        uSeed: gl.getUniformLocation(this.progs.bandwidth, 'uSeed'),
+        uTaps: gl.getUniformLocation(this.progs.bandwidth, 'uTaps'),
+        uTex: gl.getUniformLocation(this.progs.bandwidth, 'uTex'),
+      },
+      fill: { uSeed: gl.getUniformLocation(this.progs.fill, 'uSeed') },
+    };
   }
 
   identity(): { renderer: string; vendor: string; maxTextureSize: number } {
@@ -282,10 +339,15 @@ class GpuHarness {
     const side = Math.min(TEX_SIDE, max);
     if (side < 512) return false;
     const data = new Uint8Array(side * side * 4);
+    // Written a word at a time. Byte by byte this is sixteen million iterations
+    // on the main thread with nothing painting, which is a visible freeze on a
+    // slow machine for no benefit — one xorshift produces four bytes of noise
+    // just as well as four do.
+    const words = new Uint32Array(data.buffer);
     let s = 0x9e3779b9;
-    for (let i = 0; i < data.length; i++) {
+    for (let i = 0; i < words.length; i++) {
       s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0;
-      data[i] = s & 0xff;
+      words[i] = s;
     }
     const tex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -319,29 +381,30 @@ class GpuHarness {
     }
     gl.viewport(0, 0, side, side);
     gl.useProgram(prog);
+    const u = this.uniforms[kind];
     const seed = (this.seed = (this.seed + 1) % 997);
-    gl.uniform1f(gl.getUniformLocation(prog, 'uSeed'), seed);
+    gl.uniform1f(u.uSeed, seed);
 
     if (kind === 'alu') {
       gl.disable(gl.BLEND);
-      gl.uniform1i(gl.getUniformLocation(prog, 'uIter'), amount);
+      gl.uniform1i(u.uIter, amount);
     } else if (kind === 'bandwidth') {
       gl.disable(gl.BLEND);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, this.tex);
-      gl.uniform1i(gl.getUniformLocation(prog, 'uTex'), 0);
-      gl.uniform1i(gl.getUniformLocation(prog, 'uTaps'), amount);
+      gl.uniform1i(u.uTex, 0);
+      gl.uniform1i(u.uTaps, amount);
     } else {
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     }
 
     const t0 = performance.now();
-    // The fill pass gets its work from repeated draws rather than from a loop
-    // inside the shader — overdraw is the thing being measured, and a shader
-    // loop would measure arithmetic again.
-    const draws = kind === 'fill' ? amount : 1;
-    for (let i = 0; i < draws; i++) gl.drawArrays(gl.TRIANGLES, 0, 3);
+    // The fill pass gets its work from instances rather than from a loop inside
+    // the shader — overdraw is the thing being measured, and a shader loop would
+    // measure arithmetic again.
+    if (kind === 'fill') gl.drawArraysInstanced(gl.TRIANGLES, 0, 3, amount);
+    else gl.drawArrays(gl.TRIANGLES, 0, 3);
     // Blocks until the draws have actually completed. Without this the timing
     // measures command submission and every GPU looks the same.
     gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, this.px);
@@ -384,10 +447,33 @@ class GpuHarness {
  * over, which is why it matters that every pass be the same size: a pass that
  * grew mid-run would show up as a tail that is not there.
  */
-function autoRange(run: (amount: number) => number, start: number, max: number, targetMs = 22): number {
+async function autoRange(
+  run: (amount: number) => number,
+  start: number,
+  max: number,
+  targetMs = 22,
+): Promise<number> {
+  // Three passes, take the middle one, and yield between them exactly as the
+  // sustained phase will.
+  //
+  // Both parts matter. A single sample decides the size of every pass in the
+  // run, and pass times are a distribution rather than a number — a headless
+  // run whose passes sat at 14.5ms typically and 20ms at the 99th percentile
+  // accepted the first size it tried because that one sample landed near the
+  // top. And back-to-back passes with no yield do not behave like passes with
+  // one, so calibrating without the yield sizes the workload for conditions
+  // the run never experiences.
+  const measure = async (amount: number) => {
+    const xs: number[] = [];
+    for (let i = 0; i < 3; i++) {
+      xs.push(run(amount));
+      await yieldToPage();
+    }
+    return xs.sort((a, b) => a - b)[1];
+  };
   let amount = start;
   for (let i = 0; i < 24; i++) {
-    const ms = run(amount);
+    const ms = await measure(amount);
     if (ms > targetMs * 0.85 && ms < targetMs * 2.5) return amount;
     if (ms >= targetMs * 2.5) return Math.max(1, Math.floor(amount * (targetMs / ms)));
     const scale = Math.min(6, Math.max(1.5, targetMs / Math.max(ms, 0.15)));
@@ -403,6 +489,14 @@ function autoRange(run: (amount: number) => number, start: number, max: number, 
  * Both the reduced windows and the raw pass timings come back: the windows show
  * the trend, and the raw list is the only thing that can show the tail, because
  * a reduction has by definition thrown the outliers away.
+ *
+ * The time recorded includes the fence — the one-pixel `readPixels` that waits
+ * for the GPU to finish — so every throughput figure here is slightly lower
+ * than the card's true rate by whatever that round trip costs. It is not
+ * subtracted out, because the cost is not measurable separately without
+ * assuming something about the driver. It is the same cost on every pass and
+ * on the same machine next month, so it cancels in every comparison this module
+ * actually makes.
  */
 async function sustain(
   h: GpuHarness,
@@ -438,7 +532,7 @@ async function sustain(
     });
     // Yield so the page keeps painting. Without this the tab locks up and the
     // browser offers to kill it.
-    await sleep(0);
+    await yieldToPage();
   }
   return { passMs, windows, peak };
 }
@@ -514,10 +608,17 @@ async function runGpu(opts: BenchOptions, plan: Plan, notes: string[]): Promise<
 
     /* -- arithmetic, the long one ---------------------------------------- */
     opts.onProgress?.({ phase: 'gpu-calibrate', fraction: 0.02, label: 'sizing the graphics workload' });
-    const iter = autoRange((n) => h.pass('alu', n), 32, 4_000_000);
-    // Warm-up: the first passes after calibration run at idle clocks, and
-    // including them would make every machine look like it throttles.
-    for (let i = 0; i < 6; i++) h.pass('alu', iter);
+    // Warm up BEFORE calibrating, not after. The first passes on a fresh
+    // context pay for shader compilation and a GPU still at idle clocks, and
+    // calibrating against those picks a workload sized for a machine slower
+    // than the one being measured — a headless run chose 32 iterations from a
+    // cold pass reading 20ms, then ran the whole sustained phase at 14.8ms per
+    // pass, well under the budget it was supposed to fill.
+    for (let i = 0; i < 6; i++) h.pass('alu', 64);
+    const iter = await autoRange((n) => h.pass('alu', n), 32, 4_000_000);
+    // And again at the chosen size, so the sustained phase starts from clocks
+    // that have already settled rather than showing the ramp as a decline.
+    for (let i = 0; i < 4; i++) h.pass('alu', iter);
 
     const alu = await sustain(h, 'alu', iter, plan.gpuSustainedS, opts, 'gpu-sustained', 0.04, 0.36,
       'holding graphics load');
@@ -533,7 +634,8 @@ async function runGpu(opts: BenchOptions, plan: Plan, notes: string[]): Promise<
               `this device's limit. A smaller texture is easier for the cache to hold, so the figure reads high.`,
           );
         }
-        const taps = autoRange((n) => h.pass('bandwidth', n), 8, 8192);
+        for (let i = 0; i < 3; i++) h.pass('bandwidth', 8);
+        const taps = await autoRange((n) => h.pass('bandwidth', n), 8, 8192);
         for (let i = 0; i < 3; i++) h.pass('bandwidth', taps);
         const bw = await sustain(h, 'bandwidth', taps, plan.gpuShortS, opts, 'gpu-bandwidth', 0.36, 0.44,
           'reading scattered memory');
@@ -546,7 +648,8 @@ async function runGpu(opts: BenchOptions, plan: Plan, notes: string[]): Promise<
     /* -- fill rate -------------------------------------------------------- */
     if (!opts.signal?.aborted) {
       opts.onProgress?.({ phase: 'gpu-fill', fraction: 0.44, label: 'sizing the fill-rate workload' });
-      const layers = autoRange((n) => h.pass('fill', n), 4, 4096);
+      for (let i = 0; i < 3; i++) h.pass('fill', 8);
+      const layers = await autoRange((n) => h.pass('fill', n), 4, 4096);
       for (let i = 0; i < 3; i++) h.pass('fill', layers);
       const fill = await sustain(h, 'fill', layers, plan.gpuShortS, opts, 'gpu-fill', 0.44, 0.5,
         'drawing overlapping pixels');
@@ -641,11 +744,17 @@ function chaseOne(bytes) {
     const t = a[i]; a[i] = a[j]; a[j] = t;
   }
 
-  // Walk it once to fault the pages in and settle the JIT, then size the timed
-  // run so it lasts tens of milliseconds — long enough that the clock's
-  // resolution, which browsers deliberately coarsen, cannot affect the answer.
+  // Settle the JIT, then size the timed run so it lasts tens of milliseconds —
+  // long enough that the clock's resolution, which browsers deliberately
+  // coarsen, cannot affect the answer.
+  //
+  // Capped. A full lap of a 128MB array is 32 million dependent loads at main
+  // memory latency, which is three seconds spent on warm-up alone, and it buys
+  // nothing: the shuffle above just wrote every element, so every page is
+  // already resident and only the JIT still needs convincing.
   let p = 0;
-  for (let i = 0; i < n; i++) p = a[p];
+  const warm = Math.min(n, 2000000);
+  for (let i = 0; i < warm; i++) p = a[p];
   let steps = 200000;
   let dt = 0;
   for (let attempt = 0; attempt < 4; attempt++) {
@@ -924,6 +1033,13 @@ export async function runBenchmark(options: Partial<BenchOptions> = {}): Promise
     const gpu = await runGpu(opts, plan, notes);
     const cpu = await runCpu(opts, plan, notes);
     const memory = runMemory(opts, notes);
+    if (opts.signal?.aborted) {
+      notes.push(
+        'The run was stopped before it finished, so any phase that had not started was skipped and any ' +
+          'phase in progress has fewer samples than it wanted. Findings that depend on a sustained load — ' +
+          'anything about decline or cooling — should not be read from a shortened run.',
+      );
+    }
     opts.onProgress?.({ phase: 'done', fraction: 1, label: 'done' });
     return {
       startedAt,

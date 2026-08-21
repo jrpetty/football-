@@ -91,8 +91,13 @@ describe('steadiness', () => {
 
   it('does not fire on the 2.5x a headless software rasteriser produces at rest', () => {
     // Measured, not imagined: a quick run under SwiftShader in this container
-    // with nothing else happening came out at p50 8.3ms, p99 21.1ms, 2.54x. The
-    // threshold sits above it so an idle machine is not told it has a problem.
+    // with nothing else happening came out at p50 8.3ms, p99 21.1ms, 2.54x, and
+    // the threshold was set above it so an idle machine is not told it has a
+    // problem. The same run measures 1.4-1.7x since the pass loop stopped
+    // yielding through a clamped timer — most of that 2.54 was the browser's
+    // four-millisecond timeout floor, not the renderer — so the headroom is now
+    // wider than it was designed to be. The old figure is kept as the fixture
+    // because it is the harder case.
     const passes = [...Array.from({ length: 590 }, () => 8.3), ...Array.from({ length: 7 }, () => 21.1)];
     const v = steadinessVerdict(passes)!;
     expect(v.pct.worstRatio).toBeCloseTo(2.54, 1);

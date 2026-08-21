@@ -108,10 +108,12 @@ export function BrowserSpecPanel({
                 value={
                   state.gpu?.identity.software
                     ? 'no card is involved — this is software rendering'
-                    : (state.gpu?.gpuName ??
-                      (state.i.renderer
-                        ? `${state.i.renderer} — not a name this catalogue recognises`
-                        : 'the browser would not say'))
+                    : state.gpu?.ambiguous.length
+                      ? `one of ${state.gpu.ambiguous.length} parts with this name`
+                      : (state.gpu?.gpuName ??
+                        (state.i.renderer
+                          ? `${state.i.renderer} — not a name this catalogue recognises`
+                          : 'the browser would not say'))
                 }
                 note={
                   state.gpu?.identity.software
@@ -119,11 +121,27 @@ export function BrowserSpecPanel({
                     : (state.i.gpuName?.note ?? '')
                 }
                 extra={
-                  state.gpu?.alternatives.length ? (
-                    <div className="mini" style={{ marginTop: 5 }}>
-                      Could also be {state.gpu.alternatives.map((a) => a.name).join(', ')} — the name the driver
-                      reports does not separate them, so this one is left for you.
-                    </div>
+                  state.gpu?.ambiguous.length ? (
+                    <>
+                      <div className="mini" style={{ marginTop: 5 }}>
+                        The driver's name fits {state.gpu.ambiguous.length} parts equally well and does not
+                        separate them. Pick the one you have:
+                      </div>
+                      <div className="toggle-row" style={{ marginTop: 6 }}>
+                        {state.gpu.ambiguous.map((a) => (
+                          <button
+                            key={a.id}
+                            className={`toggle${currentGpuId === a.id ? ' on' : ''}`}
+                            onClick={() => {
+                              onApply({ gpuId: a.id });
+                              setApplied(true);
+                            }}
+                          >
+                            {a.name}
+                          </button>
+                        ))}
+                      </div>
+                    </>
                   ) : null
                 }
               />
