@@ -23,6 +23,19 @@ export interface FetchOptions {
   headers?: Record<string, string>
   /** Attempts before giving up, with exponential backoff. */
   retries?: number
+  /** Abandon a single request after this long. */
+  timeoutMs?: number
+  /**
+   * Reject an implausible 200 before it reaches the cache.
+   *
+   * A source that answers 200 with an empty body, an HTML error page or a
+   * truncated file is worse than one that fails outright: the response looks
+   * fine, gets cached, and — for the historical seasons, which are cached
+   * forever and now carried between CI runs — stays wrong until someone
+   * notices the model is off. Return false and the response is treated as a
+   * failed attempt: retried, and never written to the cache.
+   */
+  accept?: (text: string) => boolean
 }
 
 function cachePath(url: string): string {
@@ -52,20 +65,40 @@ async function readCache(path: string, ttlMs: number): Promise<string | null> {
 export async function fetchText(url: string, options: FetchOptions = {}): Promise<string | null> {
   const ttlMs = options.ttlMs ?? 30 * 60 * 1000
   const retries = options.retries ?? 3
+  const timeoutMs = options.timeoutMs ?? 30000
+  const accept = options.accept ?? ((t: string) => t.trim().length > 0)
   const path = cachePath(url)
 
   const cached = await readCache(path, ttlMs)
   if (cached !== null) return cached
+
+  // Whether we have ever successfully held this URL, regardless of TTL. It
+  // decides how to read a 404 below.
+  const everSeen = await readCache(path, Infinity)
 
   let lastError: unknown = null
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const res = await fetch(url, {
         headers: { 'user-agent': 'pl-predictor/1.0 (+github actions)', ...options.headers },
+        // Without this a black-holed source holds the runner open indefinitely
+        // and the daily job never finishes, rather than failing and retrying.
+        signal: AbortSignal.timeout(timeoutMs),
       })
-      if (res.status === 404) return null
+      if (res.status === 404) {
+        // A 404 usually means "this season has no data yet", which is a real
+        // answer and not worth retrying. But if we have successfully fetched
+        // this exact URL before, the data cannot have stopped existing — that
+        // is a blip at the source, and treating it as absence would quietly
+        // drop a whole season out of the training corpus.
+        if (everSeen === null) return null
+        throw new Error('HTTP 404 for a URL that has previously returned data')
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`)
       const text = await res.text()
+      if (!accept(text)) {
+        throw new Error(`response rejected as implausible (${text.length} bytes)`)
+      }
       await mkdir(dirname(path), { recursive: true })
       await writeFile(path, text, 'utf8')
       return text
@@ -77,9 +110,9 @@ export async function fetchText(url: string, options: FetchOptions = {}): Promis
       }
     }
   }
-  // Stale cache beats no data: a weekly run should not fail outright because
+  // Stale cache beats no data: a daily run should not fail outright because
   // one source blipped.
-  const stale = await readCache(path, Infinity)
+  const stale = everSeen
   if (stale !== null) {
     console.warn(`  ! ${url} unreachable, using stale cache (${String(lastError)})`)
     return stale

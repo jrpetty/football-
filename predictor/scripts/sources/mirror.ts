@@ -91,8 +91,27 @@ const POSITION_BY_ELEMENT_TYPE: Record<number, PositionCode> = {
   5: 'MID',
 }
 
+/**
+ * A CSV response that is plausibly CSV.
+ *
+ * A source having a bad day can answer 200 with an empty body, an HTML error
+ * or maintenance page, or a truncated file. Any of those parse to zero rows
+ * and read downstream as "this season has no players", which is a far worse
+ * outcome than a failed fetch: it is silent, it looks like data, and for the
+ * archive seasons — cached indefinitely and now carried between CI runs — it
+ * would persist. Rejecting it here turns it back into a retry.
+ */
+export function looksLikeCsv(text: string): boolean {
+  const trimmed = text.trim()
+  if (trimmed.length === 0) return false
+  if (trimmed.startsWith('<')) return false // HTML error or maintenance page
+  const firstLine = trimmed.slice(0, trimmed.indexOf('\n') + 1 || undefined)
+  // A header row and at least one comma: every file this reads is multi-column.
+  return firstLine.includes(',') && trimmed.includes('\n')
+}
+
 async function fetchCsv(url: string, ttlMs: number): Promise<CsvRecord[] | null> {
-  const text = await fetchText(url, { ttlMs })
+  const text = await fetchText(url, { ttlMs, accept: looksLikeCsv })
   return text === null ? null : parseCsv(text)
 }
 

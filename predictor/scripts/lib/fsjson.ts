@@ -39,11 +39,32 @@ export async function writeJson(path: string, value: unknown, pretty = false): P
 }
 
 /** Read a JSON file, or null when it does not exist. */
+/**
+ * Read a JSON artifact, or null if it is not there.
+ *
+ * "Not there" and "there but unreadable" are deliberately different outcomes.
+ * Collapsing them into null was quietly destructive: the pipeline treats null
+ * as "start a fresh one", so a truncated ledger.json — a half-finished write,
+ * an interrupted job, a bad merge — would silently reset the entire forecast
+ * record, and the daily job would then commit that reset over the real one.
+ * A file that exists but cannot be parsed is a fault, and faults should stop
+ * the run rather than erase history.
+ */
 export async function readJson<T>(path: string): Promise<T | null> {
+  let text: string
   try {
-    return JSON.parse(await readFile(path, 'utf8')) as T
-  } catch {
-    return null
+    text = await readFile(path, 'utf8')
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException)?.code === 'ENOENT') return null
+    throw new Error(`Could not read ${path}: ${String(err)}`)
+  }
+  try {
+    return JSON.parse(text) as T
+  } catch (err) {
+    throw new Error(
+      `${path} exists but is not valid JSON (${String(err)}). Refusing to continue, ` +
+        'because carrying on would replace it with a freshly built one and lose whatever it held.',
+    )
   }
 }
 

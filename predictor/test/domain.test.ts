@@ -378,3 +378,55 @@ test('only keepers and defenders carry a clean-sheet probability', () => {
   assert.ok(props.find((p) => p.name === 'GK')!.cleanSheet > 0)
   assert.equal(props.find((p) => p.name === 'ST')!.cleanSheet, 0)
 })
+
+// --- Behaviour when a data source is having a bad day -------------------------
+//
+// These paths only run when something is already going wrong, which is exactly
+// when nobody is watching. Every one of them was a silent failure before: the
+// pipeline carried on, produced plausible-looking artifacts, and committed
+// them.
+
+import { looksLikeCsv } from '../scripts/sources/mirror.ts'
+import { writeJson, readJson } from '../scripts/lib/fsjson.ts'
+import { mkdtemp, writeFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
+test('a 200 that is not really a CSV is rejected rather than read as an empty season', () => {
+  assert.equal(looksLikeCsv(''), false, 'an empty body is not a season with no players')
+  assert.equal(looksLikeCsv('   \n  '), false)
+  assert.equal(looksLikeCsv('<!DOCTYPE html><html><body>502</body></html>'), false, 'an error page is not data')
+  assert.equal(looksLikeCsv('<html>'), false)
+  // A single header line with no rows is a truncated file, not a real feed.
+  assert.equal(looksLikeCsv('id,name,team'), false)
+
+  // Real content passes.
+  assert.equal(looksLikeCsv('id,name,team\n1,Saka,ARS\n2,Odegaard,ARS\n'), true)
+})
+
+test('a corrupt artifact stops the run instead of silently resetting history', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'predictor-fsjson-'))
+  try {
+    const missing = join(dir, 'not-here.json')
+    const good = join(dir, 'good.json')
+    const corrupt = join(dir, 'corrupt.json')
+
+    // Absent is a legitimate first run: the pipeline starts a fresh artifact.
+    assert.equal(await readJson(missing), null)
+
+    await writeJson(good, { entries: [1, 2, 3] })
+    assert.deepEqual(await readJson(good), { entries: [1, 2, 3] })
+
+    // Truncated — a half-finished write, an interrupted job, a bad merge.
+    // Previously this also read as null, so the pipeline would have built a
+    // fresh ledger over the top and committed the loss.
+    await writeFile(corrupt, '{"entries":[{"season":"2026-27","fix', 'utf8')
+    await assert.rejects(
+      () => readJson(corrupt),
+      /not valid JSON/,
+      'a file that exists but cannot be parsed must be a hard failure',
+    )
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})

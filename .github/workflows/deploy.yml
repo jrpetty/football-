@@ -56,13 +56,15 @@ jobs:
           mkdir -p dist/predictor
           cp -r predictor/dist/. dist/predictor/
 
-      # Provisions the Pages site on first use. Without this the deploy below
-      # 404s until someone flips Settings -> Pages -> Source: "GitHub Actions"
-      # by hand, and the only symptom is a red job with a message that reads
-      # like a bug in this workflow rather than a missing one-time setting.
-      - uses: actions/configure-pages@v5
-        with:
-          enablement: true
+      # NOTE: actions/configure-pages with enablement: true was tried here and
+      # cannot work on this repository — GITHUB_TOKEN gets "Resource not
+      # accessible by integration" from the create-Pages-site API, which is an
+      # app-permission policy no workflow can talk its way around. It also made
+      # things worse: it failed two steps earlier with an error that reads like
+      # a permissions bug. actions/deploy-pages below fails with the far more
+      # useful "Ensure GitHub Pages has been enabled" and a link straight to
+      # the settings page, so the site has to be switched on by a human once:
+      # Settings -> Pages -> Build and deployment -> Source: "GitHub Actions".
 
       - uses: actions/upload-pages-artifact@v3
         with:
