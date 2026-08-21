@@ -155,6 +155,43 @@ export function FormRun({ form }: { form: string[] }) {
   )
 }
 
+/** "3 hours ago" — how recently the pipeline ran. */
+export function formatAge(ms: number): string {
+  const mins = Math.max(0, Math.round((Date.now() - ms) / 60000))
+  if (mins < 2) return 'just now'
+  if (mins < 60) return `${mins} minutes ago`
+  const hours = Math.round(mins / 60)
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`
+  const days = Math.round(hours / 24)
+  return `${days} day${days === 1 ? '' : 's'} ago`
+}
+
+/**
+ * Freshness badge.
+ *
+ * A daily pipeline is only trustworthy if a reader can see it ran. Past three
+ * days this turns into a warning rather than staying quietly reassuring —
+ * stale numbers that look current are worse than an obvious gap.
+ */
+export function FreshnessBadge({ generatedAt }: { generatedAt: number }) {
+  const ageDays = (Date.now() - generatedAt) / 86400000
+  const stale = ageDays > 3
+  return (
+    <span
+      className={stale ? 'badge badge-live' : 'chip'}
+      title={`Data last rebuilt ${new Date(generatedAt).toLocaleString()}`}
+    >
+      <span
+        className="chip-dot"
+        style={{ background: stale ? 'var(--warn)' : 'var(--good)' }}
+        aria-hidden="true"
+      />
+      {stale ? 'Data may be stale — ' : 'Updated '}
+      {formatAge(generatedAt)}
+    </span>
+  )
+}
+
 export function formatKickoff(ms: number): string {
   return new Date(ms).toLocaleString(undefined, {
     weekday: 'short',

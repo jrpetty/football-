@@ -448,3 +448,133 @@ test('no entry is created for a match that has already started', () => {
   const r = applyForecast(undefined, { probs: { home: 0.6, draw: 0.25, away: 0.15 } }, kickoff + 60000, kickoff)
   assert.equal(r.entry, undefined, 'a forecast made after kickoff is not a forecast')
 })
+
+// --- Transfer detection ------------------------------------------------------
+//
+// A move is invisible in one snapshot — the feed reports where a player is,
+// never that he moved — so this is entirely a diffing problem, and the ways it
+// goes wrong are all about identity.
+
+import {
+  diffRosters, takeSnapshot, mergeTransfers, recentTransfers, classifyArrival,
+  IMPLAUSIBLE_CHANGE_COUNT, type RosterPlayer,
+} from '../src/core/transfers.ts'
+
+function roster(over: Partial<RosterPlayer> = {}): RosterPlayer {
+  return { id: 1, name: 'Player', team: 'ARS', position: 'MID', cost: 6, joinedAt: null, ...over }
+}
+
+const NOW = Date.UTC(2026, 7, 25)
+
+test('a club change is detected as a move', () => {
+  const before = takeSnapshot([roster({ id: 1, name: 'Haaland', team: 'BOU' })], '2026-27', NOW - 86400000)
+  const after = [roster({ id: 1, name: 'Haaland', team: 'MCI', joinedAt: '2026-08-24' })]
+  const { records, rejected } = diffRosters(before, after, '2026-27', NOW)
+  assert.equal(rejected, null)
+  assert.equal(records.length, 1)
+  assert.equal(records[0]!.kind, 'moved')
+  assert.equal(records[0]!.from, 'BOU')
+  assert.equal(records[0]!.to, 'MCI')
+  assert.equal(records[0]!.joinedAt, '2026-08-24')
+})
+
+test('an arrival and a departure are distinguished from a move', () => {
+  const before = takeSnapshot(
+    [roster({ id: 1, name: 'Stays' }), roster({ id: 2, name: 'Leaves', team: 'CHE' })],
+    '2026-27', NOW - 86400000,
+  )
+  const after = [
+    roster({ id: 1, name: 'Stays' }),
+    // A recent join date is what makes this a signing rather than a listing.
+    roster({ id: 3, name: 'Arrives', team: 'LIV', joinedAt: '2026-08-20' }),
+  ]
+  const { records } = diffRosters(before, after, '2026-27', NOW)
+  const byKind = Object.fromEntries(records.map((r) => [r.name, r]))
+  assert.equal(byKind['Arrives']!.kind, 'arrived')
+  assert.equal(byKind['Arrives']!.from, null)
+  assert.equal(byKind['Leaves']!.kind, 'left')
+  assert.equal(byKind['Leaves']!.to, null)
+  assert.ok(!byKind['Stays'], 'an unchanged player is not a transfer')
+})
+
+test('a season rollover reports nothing, because ids are reassigned', () => {
+  // Element ids do not survive a season change, so diffing across one would
+  // report every player in the league as having moved.
+  const before = takeSnapshot([roster({ id: 1, team: 'ARS' })], '2025-26', NOW - 86400000)
+  const after = [roster({ id: 1, team: 'CHE' })]
+  const { records, rejected } = diffRosters(before, after, '2026-27', NOW)
+  assert.equal(records.length, 0)
+  assert.match(rejected ?? '', /season changed/)
+})
+
+test('the first run establishes a baseline instead of inventing transfers', () => {
+  const { records, rejected } = diffRosters(null, [roster()], '2026-27', NOW)
+  assert.equal(records.length, 0)
+  assert.equal(rejected, null)
+})
+
+test('an implausible number of changes is treated as a feed problem', () => {
+  // Even a chaotic deadline day moves a handful of players. A hundred at once
+  // means the source changed shape, and writing that in would bury real moves.
+  const before = takeSnapshot(
+    Array.from({ length: IMPLAUSIBLE_CHANGE_COUNT + 5 }, (_, i) => roster({ id: i, team: 'ARS' })),
+    '2026-27', NOW - 86400000,
+  )
+  const after = Array.from({ length: IMPLAUSIBLE_CHANGE_COUNT + 5 }, (_, i) => roster({ id: i, team: 'CHE' }))
+  const { records, rejected } = diffRosters(before, after, '2026-27', NOW)
+  assert.equal(records.length, 0)
+  assert.match(rejected ?? '', /feed problem/)
+})
+
+test('a move is not re-recorded on every subsequent run', () => {
+  const move = {
+    playerId: 1, name: 'Haaland', kind: 'moved' as const, from: 'BOU', to: 'MCI',
+    joinedAt: '2026-08-24', detectedAt: NOW, position: 'FWD', cost: 15,
+  }
+  const once = mergeTransfers([], [move])
+  const twice = mergeTransfers(once, [{ ...move, detectedAt: NOW + 86400000 }])
+  assert.equal(twice.length, 1, 'the same move must not accumulate day after day')
+})
+
+test('the ledger stays bounded and newest-first', () => {
+  const many = Array.from({ length: 400 }, (_, i) => ({
+    playerId: i, name: `P${i}`, kind: 'moved' as const, from: 'ARS', to: 'CHE',
+    joinedAt: null, detectedAt: NOW + i, position: 'MID', cost: 5,
+  }))
+  const merged = mergeTransfers([], many, 300)
+  assert.equal(merged.length, 300)
+  assert.ok(merged[0]!.detectedAt > merged[299]!.detectedAt, 'newest first')
+})
+
+test('recent transfers respect their window', () => {
+  const records = [
+    { playerId: 1, name: 'New', kind: 'moved' as const, from: 'ARS', to: 'CHE', joinedAt: null, detectedAt: NOW - 5 * 86400000, position: 'MID', cost: 5 },
+    { playerId: 2, name: 'Old', kind: 'moved' as const, from: 'ARS', to: 'CHE', joinedAt: null, detectedAt: NOW - 200 * 86400000, position: 'MID', cost: 5 },
+  ]
+  const recent = recentTransfers(records, NOW, 60)
+  assert.equal(recent.length, 1)
+  assert.equal(recent[0]!.name, 'New')
+})
+
+test('a player appearing in the feed is not assumed to have signed', () => {
+  // The source periodically expands its roster, and a squad player who was
+  // previously unlisted looks exactly like an arrival. Mudryk turning up with
+  // a join date of January 2023 has plainly not just moved.
+  assert.equal(classifyArrival('2026-08-08', NOW), 'arrived')
+  assert.equal(classifyArrival('2023-01-15', NOW), 'listed')
+  assert.equal(classifyArrival(null, NOW), 'listed')
+  assert.equal(classifyArrival('not a date', NOW), 'listed')
+})
+
+test('arrivals are classified when the diff runs, not afterwards', () => {
+  const before = takeSnapshot([roster({ id: 1, name: 'Existing' })], '2026-27', NOW - 86400000)
+  const after = [
+    roster({ id: 1, name: 'Existing' }),
+    roster({ id: 2, name: 'Signing', team: 'CHE', joinedAt: '2026-08-20' }),
+    roster({ id: 3, name: 'Reappeared', team: 'CHE', joinedAt: '2023-01-15' }),
+  ]
+  const { records } = diffRosters(before, after, '2026-27', NOW)
+  const byName = Object.fromEntries(records.map((r) => [r.name, r.kind]))
+  assert.equal(byName['Signing'], 'arrived')
+  assert.equal(byName['Reappeared'], 'listed')
+})

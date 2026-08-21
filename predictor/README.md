@@ -28,9 +28,10 @@ the one showing how often it has been wrong.
   re-runs in your browser — probabilities, expected goals and the eleven itself. It runs the same
   model core that produced the published numbers, so with nothing removed it reproduces them
   exactly.
-- **Re-checks itself weekly.** A scheduled job ingests results, scores the forecasts recorded
-  *before* kickoff, refits, and republishes — so the accuracy record is real rather than
-  retrospective.
+- **Re-checks itself every morning.** A scheduled job ingests results, scores the forecasts
+  recorded *before* kickoff, refits, and republishes — so the accuracy record is real rather than
+  retrospective. It also watches for squad movement: transfers are detected by diffing each run
+  against the last, because the feed reports where a player *is*, never that he moved.
 
 ## How well does it work?
 
@@ -169,13 +170,19 @@ comes back before it will use it. A quiet fallback beats a confidently wrong gam
 
 ## The weekly cycle
 
-`.github/workflows/predictor-weekly.yml` runs twice a week:
+`.github/workflows/predictor-daily.yml` runs every morning at 06:00 UTC. The pipeline is
+idempotent — it ingests whatever is current, scores any fixture finished since the last run,
+refits and republishes — so one job covers every case:
 
-- **Wednesday** — the main run. The gameweek is over (including Monday night fixtures), so this
-  ingests results, scores the forecasts recorded before kickoff, refreshes injuries and
-  suspensions, refits and publishes the next gameweek.
-- **Friday** — a lighter top-up, since injury news moves between midweek and a Saturday kickoff.
-  Delete the second `cron` line if one run a week is enough; nothing depends on it.
+- **Wednesday** the gameweek is complete (Monday night included), so that run is the one which
+  scores the round's forecasts and publishes the next.
+- **Every day** injuries, suspensions and transfers move daily, and during a window a squad can
+  change hours before a deadline. A weekly cadence would have shown a player at the wrong club for
+  six days.
+
+Nothing is committed unless something actually changed, so a quiet day costs a minute of CI and
+produces no commit. The site header shows when the data was last rebuilt, and turns into a warning
+past three days — stale numbers that look current are worse than an obvious gap.
 
 Forecasts are appended to an immutable ledger with a timestamp and never rewritten, which is what
 makes the report card meaningful. The job runs the test suite and an artifact verifier before it
@@ -197,6 +204,12 @@ will commit anything.
   reports — knowing who was fit *before* each match. Reconstructing line-ups from minutes played
   would leak the result. Its size is measured from historical squad data instead, and that
   distinction is stated on the report card rather than glossed over.
+- **Transfers are inferred, not announced.** The feed states where a player is, so a move is only
+  visible as a difference between two runs. A player appearing for the first time is not
+  necessarily a signing — the source periodically expands its roster — so an arrival carrying an
+  old join date is labelled "newly listed" rather than counted as a transfer. A diff of more than
+  60 changes at once is treated as a feed problem and discarded rather than written into the
+  ledger.
 - **Football is high variance.** Roughly half of matches called correctly is a good model, not a
   broken one.
 

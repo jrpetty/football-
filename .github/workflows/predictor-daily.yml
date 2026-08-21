@@ -1,27 +1,28 @@
 # Weekly re-check for the Premier League predictor.
 #
-# Two runs a week:
-#   Wednesday — the main one. The gameweek is finished (including Monday night
-#               fixtures), so this ingests results, scores the forecasts that
-#               were recorded before kickoff, refreshes injuries and
-#               suspensions, refits the ratings and publishes the next
-#               gameweek.
-#   Friday    — a lighter top-up. Injury news moves a lot between midweek and
-#               a Saturday kickoff, so this refreshes availability and
-#               republishes. Delete this second cron line if one run a week is
-#               enough; nothing depends on it.
+# Runs every morning.
 #
-# Committing the artifacts is what triggers a Pages redeploy, so the site
-# updates itself without anyone touching it.
+# The pipeline is idempotent — it ingests whatever is current, scores any
+# fixture that has finished since the last run, refits and republishes — so one
+# job serves every purpose and there is no schedule to keep in sync:
+#
+#   Wednesday   the gameweek is complete (Monday night included), so this is
+#               the run that scores the round's forecasts and publishes the next.
+#   Every day   injuries, suspensions and transfers change daily, and during a
+#               window a squad can change hours before a deadline. A weekly
+#               cadence would have shown a player at the wrong club for six days.
+#
+# Nothing is committed unless something actually changed, so quiet days cost
+# a minute of CI and produce no commit. Committing is what triggers a Pages
+# redeploy, so the site keeps itself current without anyone touching it.
 
-name: Predictor weekly update
+name: Predictor daily update
 
 on:
   schedule:
-    # Times are UTC. Wednesday 06:00 is the post-gameweek run; Friday 06:00
-    # tops up team news before the weekend.
-    - cron: '0 6 * * 3'
-    - cron: '0 6 * * 5'
+    # 06:00 UTC daily — after any European night fixture has finished and
+    # before team news for the coming weekend lands.
+    - cron: '0 6 * * *'
   workflow_dispatch:
     inputs:
       source:
@@ -85,10 +86,15 @@ jobs:
           SUMMARY=$(node -e "
             const s = require('./predictor/public/data/season.json');
             const a = require('./predictor/public/data/accuracy.json');
+            const t = require('./predictor/public/data/transfers.json');
             const scored = a.overall.n;
+            // Anything detected in the last day is news worth naming.
+            const fresh = t.records.filter(r => Date.now() - r.detectedAt < 26 * 3600 * 1000);
+            const moves = fresh.length ? ', ' + fresh.length + ' squad change' + (fresh.length > 1 ? 's' : '') : '';
             process.stdout.write(
               'gameweek ' + s.currentGameweek +
-              (scored ? ', ' + scored + ' scored, RPS ' + a.overall.rps.toFixed(4) : ', no results yet')
+              (scored ? ', ' + scored + ' scored, RPS ' + a.overall.rps.toFixed(4) : ', no results yet') +
+              moves
             );
           ")
           git commit -m "Update predictions ($SUMMARY)"

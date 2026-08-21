@@ -15,6 +15,7 @@ import type { PredictedLineup } from './lineup.ts'
 import type { PlayerRates } from './availability.ts'
 import type { RestProfile } from './congestion.ts'
 import type { ClubShape } from './formation.ts'
+import type { RosterSnapshot, TransferRecord } from './transfers.ts'
 import type { Scoreline } from './dixonColes.ts'
 import type { CalibrationBin, MetricSummary, Probs } from './metrics.ts'
 
@@ -169,6 +170,17 @@ export interface SquadsArtifact {
   squads: Record<string, PlayerRates[]>
 }
 
+/** Squad movement, diffed between runs. */
+export interface TransfersArtifact {
+  schemaVersion: number
+  season: string
+  generatedAt: number
+  /** Where everyone was at this run, for the next run to diff against. */
+  roster: RosterSnapshot
+  /** Most recent first. */
+  records: TransferRecord[]
+}
+
 export interface CardWatchEntry {
   playerId: number
   name: string
@@ -219,6 +231,8 @@ export interface PlayerArtifact {
   /** Suspension tracking. */
   yellowsToBan: number | null
   onBrink: boolean
+  /** ISO date he joined this club, per the feed. */
+  joinedAt: string | null
   /**
    * Share of his club's attacking value, 0-1 — minutes weighted by expected
    * goal involvement. Without it an availability list sorts a fringe forward

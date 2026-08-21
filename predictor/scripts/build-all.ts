@@ -19,6 +19,7 @@ import { buildEvidence } from '../src/core/evidence.ts'
 import { analyseUpset } from '../src/core/upset.ts'
 import { playerProps } from '../src/core/playerProps.ts'
 import { predictLineup } from '../src/core/lineup.ts'
+import { diffRosters, takeSnapshot, mergeTransfers, type RosterPlayer } from '../src/core/transfers.ts'
 import { deriveShapes, DEFAULT_SHAPE, type ShapeRow } from '../src/core/formation.ts'
 import { cardStatus } from '../src/core/suspensions.ts'
 import { outcomeOf, rps, logLoss, brier, summarize, calibration, expectedCalibrationError } from '../src/core/metrics.ts'
@@ -36,6 +37,7 @@ import type {
   CardWatchEntry,
   SquadsArtifact,
   RecomputeSide,
+  TransfersArtifact,
 } from '../src/core/schema.ts'
 import { SCHEMA_VERSION } from '../src/core/schema.ts'
 import type { NormMatch } from './sources/types.ts'
@@ -413,9 +415,19 @@ async function main(): Promise<void> {
 
   // --- Players -------------------------------------------------------------
   // Each club's total attacking value, so a player's share of it can be shown.
+  //
+  // A share is only meaningful when there is a squad to take a share of. A
+  // newly promoted club has almost nobody with Premier League minutes, so the
+  // one player who does absorbs nearly all of it — Awoniyi came out at 92.5%
+  // of Coventry's attacking value, which reads as "he is their whole attack"
+  // when it actually means "we can barely measure this club at all". Those
+  // clubs report no impact rather than a confident-looking fiction.
+  const MIN_RATED_SQUAD = 8
   const teamAttackValue = new Map<string, number>()
+  const teamRatedCount = new Map<string, number>()
   for (const r of rates) {
     teamAttackValue.set(r.team, (teamAttackValue.get(r.team) ?? 0) + Math.max(0, r.xgi90) * r.minuteShare)
+    if (r.minutes > 0) teamRatedCount.set(r.team, (teamRatedCount.get(r.team) ?? 0) + 1)
   }
 
   const playerArtifacts: PlayerArtifact[] = corpus.players
@@ -459,8 +471,11 @@ async function main(): Promise<void> {
         cost: p.cost,
         yellowsToBan: status.yellowsToBan,
         onBrink: status.onBrink,
+        joinedAt: p.joinedAt,
         impact: round(
-          rate && (teamAttackValue.get(p.team) ?? 0) > 0
+          rate &&
+          (teamAttackValue.get(p.team) ?? 0) > 0 &&
+          (teamRatedCount.get(p.team) ?? 0) >= MIN_RATED_SQUAD
             ? (Math.max(0, rate.xgi90) * rate.minuteShare) / teamAttackValue.get(p.team)!
             : 0,
           4,
@@ -490,6 +505,32 @@ async function main(): Promise<void> {
     squads,
   }
   await writeJson(dataPath('squads.json'), squadsArtifact)
+
+  // --- Transfers -----------------------------------------------------------
+  //
+  // A move is invisible in a single snapshot: the feed just reports a player at
+  // a different club than last time. Diffing against the previous run turns
+  // that into a record, which matters because a club that has sold its main
+  // striker keeps the team rating it earned with him until results catch up.
+  const rosterPlayers: RosterPlayer[] = corpus.players.map((p) => ({
+    id: p.id, name: p.name, team: p.team, position: p.position, cost: p.cost, joinedAt: p.joinedAt,
+  }))
+  const previousTransfers = await readJson<TransfersArtifact>(dataPath('transfers.json'))
+  const diff = diffRosters(previousTransfers?.roster ?? null, rosterPlayers, CURRENT_SEASON, now)
+  if (diff.rejected) console.warn(`  ! squad diff skipped: ${diff.rejected}`)
+  if (diff.records.length > 0) {
+    console.log(`  ${diff.records.length} squad change(s): ` +
+      diff.records.slice(0, 5).map((r) =>
+        r.kind === 'moved' ? `${r.name} ${r.from}->${r.to}` : `${r.name} ${r.kind}`).join(', '))
+  }
+  const transfersArtifact: TransfersArtifact = {
+    schemaVersion: SCHEMA_VERSION,
+    season: CURRENT_SEASON,
+    generatedAt: now,
+    roster: takeSnapshot(rosterPlayers, CURRENT_SEASON, now),
+    records: mergeTransfers(previousTransfers?.records ?? [], diff.records),
+  }
+  await writeJson(dataPath('transfers.json'), transfersArtifact)
 
   // Append this week's availability flags to a history file.
   //

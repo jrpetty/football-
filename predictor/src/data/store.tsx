@@ -14,6 +14,7 @@ import type {
   PlayersArtifact,
   AccuracyArtifact,
   SquadsArtifact,
+  TransfersArtifact,
 } from '../core/schema.ts'
 
 // Vite rewrites BASE_URL at build time; with a relative base this resolves
@@ -146,6 +147,36 @@ export function useSquads(): { data: SquadsArtifact | null; loading: boolean } {
         }
       })
       .catch(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  return { data, loading }
+}
+
+let transfersPromise: Promise<TransfersArtifact> | null = null
+
+/** Squad movement detected between pipeline runs. */
+export function useTransfers(): { data: TransfersArtifact | null; loading: boolean } {
+  const [data, setData] = useState<TransfersArtifact | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    transfersPromise ??= loadJson<TransfersArtifact>('transfers.json')
+    transfersPromise
+      .then((json) => {
+        if (!cancelled) {
+          setData(json)
+          setLoading(false)
+        }
+      })
+      .catch(() => {
+        // The ledger is absent until the pipeline has run twice; that is not
+        // an error worth surfacing.
         if (!cancelled) setLoading(false)
       })
     return () => {

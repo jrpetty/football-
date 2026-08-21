@@ -15,6 +15,7 @@ import { SCHEMA_VERSION } from '../src/core/schema.ts'
 import { recomputeFixture } from '../src/core/whatIf.ts'
 import type {
   SeasonArtifact, GameweekArtifact, PlayersArtifact, AccuracyArtifact, LedgerArtifact, SquadsArtifact,
+  TransfersArtifact,
 } from '../src/core/schema.ts'
 
 const problems: string[] = []
@@ -174,6 +175,12 @@ async function main(): Promise<void> {
     for (const p of players.players.slice(0, 2000)) {
       check(p.yellowCards >= 0 && p.yellowCards < 40, `${p.name}: implausible yellow count ${p.yellowCards}`)
       check(p.minutes >= 0, `${p.name}: negative minutes`)
+      // No single player is most of a club's attack. A share that high means
+      // the club has too little measured data for the ratio to mean anything.
+      check(
+        p.impact >= 0 && p.impact <= 0.45,
+        `${p.name}: reported as ${(p.impact * 100).toFixed(0)}% of ${p.team}'s attacking value`,
+      )
     }
     // Suspension counters reset each season, so nobody can be on the brink
     // before any match has been played.
@@ -241,6 +248,36 @@ async function main(): Promise<void> {
         )
       }
     }
+  }
+
+  // --- transfers -----------------------------------------------------------
+  const transfers = await readJson<TransfersArtifact>(dataPath('transfers.json'))
+  check(transfers !== null, 'transfers.json is missing')
+  if (transfers && season) {
+    check(transfers.season === season.season, 'transfer ledger is for a different season')
+    const tracked = Object.keys(transfers.roster.byPlayer).length
+    check(tracked > 100, `transfer roster tracks only ${tracked} players — the diff would report nonsense`)
+    for (const r of transfers.records.slice(0, 100)) {
+      check(r.from !== null || r.to !== null, `${r.name}: a transfer with neither origin nor destination`)
+      check(r.from !== r.to, `${r.name}: recorded as moving to the club he was already at`)
+      check(r.detectedAt > 0, `${r.name}: transfer has no detection time`)
+    }
+    // Everyone in the ledger's roster should still resolve to a real club.
+    const codes = new Set(season.teams.map((t) => t.code))
+    let unknown = 0
+    for (const e of Object.values(transfers.roster.byPlayer)) if (!codes.has(e.team)) unknown++
+    warn(unknown === 0, `${unknown} tracked players sit at a club not in this season`)
+  }
+
+  // --- freshness -----------------------------------------------------------
+  //
+  // The whole point of a daily job is that these do not go stale. If they have,
+  // the site will keep serving confident-looking numbers with no hint that
+  // nothing has updated in a fortnight.
+  if (season) {
+    const ageDays = (Date.now() - season.generatedAt) / 86400000
+    warn(ageDays < 3, `artifacts are ${ageDays.toFixed(1)} days old — has the daily job stopped running?`)
+    check(season.generatedAt <= Date.now() + 3600000, 'artifacts are timestamped in the future')
   }
 
   // --- ledger and accuracy -------------------------------------------------

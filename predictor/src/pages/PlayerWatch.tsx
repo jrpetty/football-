@@ -5,11 +5,12 @@
 // almost never surfaced anywhere a fan can see it.
 
 import { useMemo, useState } from 'react'
-import { usePlayers, useSeason } from '../data/store.tsx'
+import { usePlayers, useSeason, useTransfers } from '../data/store.tsx'
 import { Stat, TeamChip } from '../components/primitives.tsx'
 import { clubName } from '../config/teams.ts'
+import type { PlayerArtifact, TransfersArtifact } from '../core/schema.ts'
 
-type Tab = 'availability' | 'discipline' | 'form'
+type Tab = 'availability' | 'discipline' | 'form' | 'transfers'
 
 /**
  * Share of a club's attacking value, as a small meter.
@@ -33,6 +34,154 @@ function ImpactMeter({ share }: { share: number }) {
   )
 }
 
+function TransfersView({
+  transfers,
+  teamFilter,
+  players,
+}: {
+  transfers: TransfersArtifact | null
+  teamFilter: string
+  players: PlayerArtifact[]
+}) {
+  if (!transfers) {
+    return (
+      <div className="note">
+        <span className="note-icon">i</span>
+        <span>The transfer ledger has not been written yet — it appears once the pipeline has run.</span>
+      </div>
+    )
+  }
+  // Real movement first; feed listings are the least interesting rows here.
+  const rank = { moved: 0, arrived: 1, left: 2, listed: 3 } as const
+  const records = transfers.records
+    .filter((r) => !teamFilter || r.from === teamFilter || r.to === teamFilter)
+    .slice()
+    .sort((a, b) => rank[a.kind] - rank[b.kind] || b.detectedAt - a.detectedAt)
+  // Before the pipeline has seen a squad change there is nothing to diff, but
+  // the feed states a join date for every player — so recent signings can be
+  // listed from day one. It is a different kind of evidence and is labelled as
+  // such rather than being passed off as detected movement.
+  if (records.length === 0) {
+    const cutoff = Date.now() - 120 * 86400000
+    const recent = players
+      .filter((p) => {
+        if (!p.joinedAt) return false
+        const t = Date.parse(p.joinedAt)
+        return Number.isFinite(t) && t >= cutoff
+      })
+      .filter((p) => !teamFilter || p.team === teamFilter)
+      .sort((a, b) => Date.parse(b.joinedAt!) - Date.parse(a.joinedAt!))
+
+    return (
+      <>
+        <div className="note" style={{ marginBottom: 16 }}>
+          <span className="note-icon">i</span>
+          <span>
+            This pipeline detects movement by comparing each daily run against the one before, so
+            its own ledger fills in from the next change onward. Meanwhile, these are the players
+            the feed says joined their club in the last four months.
+          </span>
+        </div>
+        {recent.length === 0 ? (
+          <div className="note">
+            <span className="note-icon">i</span>
+            <span>No recent signings {teamFilter ? `at ${clubName(teamFilter)}` : 'in the league'}.</span>
+          </div>
+        ) : (
+          <div className="panel table-scroll">
+            <table className="data">
+              <thead>
+                <tr>
+                  <th>Player</th>
+                  <th>Club</th>
+                  <th>Pos</th>
+                  <th>Joined</th>
+                  <th className="num">Value</th>
+                  <th className="num">Impact</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recent.slice(0, 60).map((p) => (
+                  <tr key={p.id}>
+                    <td style={{ fontWeight: 600 }}>{p.name}</td>
+                    <td><TeamChip code={p.team} /></td>
+                    <td className="faint">{p.position}</td>
+                    <td className="faint" style={{ fontSize: 12.5 }}>
+                      {new Date(p.joinedAt!).toLocaleDateString(undefined, {
+                        day: 'numeric', month: 'short', year: 'numeric',
+                      })}
+                    </td>
+                    <td className="num tabular">£{p.cost.toFixed(1)}m</td>
+                    <td className="num tabular"><ImpactMeter share={p.impact} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="faint" style={{ fontSize: 12, padding: '12px 14px 4px', lineHeight: 1.55, margin: 0 }}>
+              From the feed's own join dates, not detected by this pipeline. "Value" is a Fantasy
+              Premier League price, not a fee. Impact is the share of his new club's attacking value
+              he already accounts for — near zero for someone who has yet to play there, which is
+              exactly the point: a signing's record travels with him but his role does not.
+            </p>
+          </div>
+        )}
+      </>
+    )
+  }
+  return (
+    <div className="panel table-scroll">
+      <table className="data">
+        <thead>
+          <tr>
+            <th>Player</th>
+            <th>Pos</th>
+            <th>Move</th>
+            <th>Announced</th>
+            <th className="num">Value</th>
+            <th>Detected</th>
+          </tr>
+        </thead>
+        <tbody>
+          {records.slice(0, 80).map((r) => (
+            <tr key={`${r.playerId}-${r.kind}-${r.to ?? 'out'}`}>
+              <td style={{ fontWeight: 600 }}>{r.name}</td>
+              <td className="faint">{r.position || '—'}</td>
+              <td>
+                <span className="row gap-6" style={{ alignItems: 'center' }}>
+                  {r.from ? (
+                    <TeamChip code={r.from} />
+                  ) : (
+                    <span className="chip">
+                      {r.kind === 'listed' ? 'newly listed' : 'outside the league'}
+                    </span>
+                  )}
+                  <span className="faint">→</span>
+                  {r.to ? <TeamChip code={r.to} /> : <span className="chip">left the league</span>}
+                </span>
+              </td>
+              <td className="faint" style={{ fontSize: 12.5 }}>
+                {r.joinedAt ? new Date(r.joinedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+              </td>
+              <td className="num tabular">{r.cost > 0 ? `£${r.cost.toFixed(1)}m` : '—'}</td>
+              <td className="faint" style={{ fontSize: 12.5 }}>
+                {new Date(r.detectedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="faint" style={{ fontSize: 12, padding: '12px 14px 4px', lineHeight: 1.55, margin: 0 }}>
+        Detected by comparing each daily run against the previous one — the feed reports where a
+        player is, never that he moved. "Value" is his Fantasy Premier League price, not a fee.
+        A club that has just sold a key player keeps the rating it earned with him until results
+        catch up, which is exactly why these are worth seeing. "Newly listed" means a player
+        appeared in the feed without having just signed — the source periodically expands its
+        roster, and that is not a transfer.
+      </p>
+    </div>
+  )
+}
+
 const STATUS_LABEL: Record<string, string> = {
   i: 'Injured',
   s: 'Suspended',
@@ -44,6 +193,7 @@ const STATUS_LABEL: Record<string, string> = {
 export default function PlayerWatch() {
   const { data, loading } = usePlayers()
   const { season } = useSeason()
+  const { data: transfers } = useTransfers()
   const [tab, setTab] = useState<Tab>('availability')
   const [team, setTeam] = useState<string>('')
 
@@ -118,7 +268,7 @@ export default function PlayerWatch() {
       )}
 
       <div className="row gap-8 wrap" style={{ marginBottom: 16 }}>
-        {(['availability', 'discipline', 'form'] as Tab[]).map((t) => (
+        {(['availability', 'discipline', 'form', 'transfers'] as Tab[]).map((t) => (
           <button
             key={t}
             className={`gw-btn${tab === t ? ' active' : ''}`}
@@ -141,6 +291,9 @@ export default function PlayerWatch() {
         </select>
       </div>
 
+      {tab === 'transfers' ? (
+        <TransfersView transfers={transfers} teamFilter={team} players={data.players} />
+      ) : (
       <div className="panel table-scroll">
         <table className="data">
           <thead>
@@ -224,8 +377,9 @@ export default function PlayerWatch() {
           </tbody>
         </table>
       </div>
+      )}
 
-      {players.length === 0 && (
+      {tab !== 'transfers' && players.length === 0 && (
         <div className="note" style={{ marginTop: 16 }}>
           <span className="note-icon">i</span>
           <span>
