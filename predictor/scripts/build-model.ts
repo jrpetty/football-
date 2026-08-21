@@ -245,6 +245,7 @@ export function buildPlayerRates(
     out.push({
       id: p.id,
       name: p.name,
+      fullName: p.fullName,
       team: p.team,
       position: p.position,
       minutes,

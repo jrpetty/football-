@@ -14,10 +14,20 @@
 // ---------------------------------------------------------------------------
 
 import { predictFixture, type FixturePrediction, type TeamContext } from './predict.ts'
-import { teamAvailability, type PlayerRates, type TeamAvailability } from './availability.ts'
+import {
+  teamAvailability, squadAttackValue, squadDefenceValue,
+  type PlayerRates, type TeamAvailability,
+} from './availability.ts'
+import { clamp } from './math.ts'
 import { predictLineup, type PredictedLineup } from './lineup.ts'
 import type { TeamRatings } from './fit.ts'
 import type { RecomputeInputs, RecomputeSide } from './schema.ts'
+
+export interface ConfirmedLineups {
+  /** Player ids named in the home side's starting eleven. */
+  home: ReadonlySet<number>
+  away: ReadonlySet<number>
+}
 
 export interface WhatIfRequest {
   inputs: RecomputeInputs
@@ -30,6 +40,13 @@ export interface WhatIfRequest {
   removed: ReadonlySet<number>
   /** Players the reader has forced back in, overriding an injury flag. */
   restored?: ReadonlySet<number>
+  /**
+   * A confirmed team sheet, once one is available. Quite different from an
+   * edit: it replaces the model's guess at who plays with what a reader can
+   * actually see, which is the single piece of information the pipeline
+   * cannot have when it publishes.
+   */
+  confirmed?: ConfirmedLineups | null
   now?: number
 }
 
@@ -61,10 +78,75 @@ export function applyEdits(
   })
 }
 
-function ratingsFrom(inputs: RecomputeInputs, homeCode: string, awayCode: string): TeamRatings {
+/**
+ * Minutes a named substitute is expected to get.
+ *
+ * A confirmed eleven does not mean the other eighteen contribute nothing —
+ * substitutes come on and score. Zeroing them would overstate the effect of
+ * being left out and make every confirmed line-up swing the forecast further
+ * than it should.
+ */
+export const BENCH_MINUTE_SHARE = 0.12
+
+/**
+ * Replace expected minutes with a confirmed team sheet.
+ *
+ * Starters are treated as playing the full match, everyone else as a possible
+ * substitute. Players already flagged unavailable stay that way — a team sheet
+ * that omits an injured player tells us nothing new about him.
+ */
+export function applyConfirmedLineup(
+  squad: readonly PlayerRates[],
+  starting: ReadonlySet<number>,
+): PlayerRates[] {
+  // A sheet that named nobody is not information; leave the squad alone.
+  if (starting.size === 0) return [...squad]
+  return squad.map((p) => {
+    if (starting.has(p.id)) {
+      return { ...p, minuteShare: 1, status: 'a', chanceNextRound: 100 }
+    }
+    return { ...p, minuteShare: Math.min(p.minuteShare, BENCH_MINUTE_SHARE) }
+  })
+}
+
+/**
+ * How much a confirmed eleven differs from the side that was expected.
+ *
+ * Returned as log shifts on the club's attack and defence ratings, damped by
+ * the same coefficient the pipeline uses for availability and clamped so one
+ * unusual team sheet cannot send a forecast somewhere absurd. A side naming
+ * its strongest available eleven produces roughly zero; one resting five
+ * players produces a real, visible reduction.
+ */
+export function confirmedShift(
+  expected: readonly PlayerRates[],
+  confirmed: readonly PlayerRates[],
+  strength: number,
+): { attack: number; defence: number } {
+  const baseAttack = squadAttackValue(expected)
+  const baseDefence = squadDefenceValue(expected)
+  if (baseAttack <= 0 || baseDefence <= 0) return { attack: 0, defence: 0 }
   return {
-    attack: { [homeCode]: inputs.home.attack, [awayCode]: inputs.away.attack },
-    defence: { [homeCode]: inputs.home.defence, [awayCode]: inputs.away.defence },
+    attack: strength * Math.log(clamp(squadAttackValue(confirmed) / baseAttack, 0.7, 1.2)),
+    defence: strength * Math.log(clamp(squadDefenceValue(confirmed) / baseDefence, 0.7, 1.2)),
+  }
+}
+
+function ratingsFrom(
+  inputs: RecomputeInputs,
+  homeCode: string,
+  awayCode: string,
+  shifts: { home: { attack: number; defence: number }; away: { attack: number; defence: number } },
+): TeamRatings {
+  return {
+    attack: {
+      [homeCode]: inputs.home.attack + shifts.home.attack,
+      [awayCode]: inputs.away.attack + shifts.away.attack,
+    },
+    defence: {
+      [homeCode]: inputs.home.defence + shifts.home.defence,
+      [awayCode]: inputs.away.defence + shifts.away.defence,
+    },
     homeAdvantage: inputs.homeAdvantage,
     rho: inputs.rho,
     weight: {},
@@ -88,19 +170,40 @@ export function recomputeFixture(req: WhatIfRequest): WhatIfResult {
   const now = req.now ?? Date.now()
   const restored = req.restored ?? new Set<number>()
 
-  const homeSquad = applyEdits(req.homeSquad, req.removed, restored)
-  const awaySquad = applyEdits(req.awaySquad, req.removed, restored)
+  // A confirmed sheet is applied first, then the reader's own edits on top —
+  // so someone can still ask "what if this named starter picks up a knock in
+  // the warm-up".
+  const homeBase = req.confirmed
+    ? applyConfirmedLineup(req.homeSquad, req.confirmed.home)
+    : req.homeSquad
+  const awayBase = req.confirmed
+    ? applyConfirmedLineup(req.awaySquad, req.confirmed.away)
+    : req.awaySquad
+
+  const homeSquad = applyEdits(homeBase, req.removed, restored)
+  const awaySquad = applyEdits(awayBase, req.removed, restored)
 
   // Use the pipeline's own damping, never the library default.
   const options = { strength: req.inputs.availabilityStrength }
   const homeAvailability = teamAvailability(req.homeCode, homeSquad, options)
   const awayAvailability = teamAvailability(req.awayCode, awaySquad, options)
 
+  // A confirmed sheet is a rating adjustment, not an availability one: it says
+  // who is actually on the pitch, measured against who was expected to be.
+  const strength = req.inputs.availabilityStrength
+  const noShift = { attack: 0, defence: 0 }
+  const shifts = req.confirmed
+    ? {
+        home: confirmedShift(req.homeSquad, homeSquad, strength),
+        away: confirmedShift(req.awaySquad, awaySquad, strength),
+      }
+    : { home: noShift, away: noShift }
+
   const prediction = predictFixture({
     home: contextFrom(req.inputs.home, req.homeCode, homeAvailability),
     away: contextFrom(req.inputs.away, req.awayCode, awayAvailability),
     kickoff: req.kickoff,
-    ratings: ratingsFrom(req.inputs, req.homeCode, req.awayCode),
+    ratings: ratingsFrom(req.inputs, req.homeCode, req.awayCode, shifts),
   })
 
   return {

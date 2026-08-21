@@ -10,7 +10,7 @@ import type { NormPlayer, NormPlayerGw } from '../scripts/sources/types.ts'
 
 function rate(over: Partial<PlayerRates> = {}): PlayerRates {
   return {
-    id: 1, name: 'P', team: 'ARS', position: 'MID',
+    id: 1, name: 'P', fullName: 'P Player', team: 'ARS', position: 'MID',
     minutes: 2000, xgi90: 0.3, xgc90: 1.1, saves90: 0, yellow90: 0.2, red90: 0.01,
     status: 'a', chanceNextRound: null, news: '', cost: 6, minuteShare: 0.7, joinedAt: null,
     ...over,
@@ -577,4 +577,154 @@ test('arrivals are classified when the diff runs, not afterwards', () => {
   const byName = Object.fromEntries(records.map((r) => [r.name, r.kind]))
   assert.equal(byName['Signing'], 'arrived')
   assert.equal(byName['Reappeared'], 'listed')
+})
+
+// --- Reading a team sheet ----------------------------------------------------
+//
+// The feed's short forms are chosen for a fantasy game, not for matching what
+// a broadcaster prints. These are the real cases.
+
+import { matchName, matchLineup, normalizeName, type MatchCandidate } from '../src/core/lineupMatch.ts'
+import { confirmedShift, applyConfirmedLineup, BENCH_MINUTE_SHARE } from '../src/core/whatIf.ts'
+
+const LIVERPOOL: MatchCandidate[] = [
+  { id: 1, name: 'A.Becker', fullName: 'Alisson Becker', position: 'GK' },
+  { id: 2, name: 'Virgil', fullName: 'Virgil van Dijk', position: 'DEF' },
+  { id: 3, name: 'Kerkez', fullName: 'Milos Kerkez', position: 'DEF' },
+  { id: 4, name: 'Mac Allister', fullName: 'Alexis Mac Allister', position: 'MID' },
+  { id: 5, name: 'Szoboszlai', fullName: 'Dominik Szoboszlai', position: 'MID' },
+  { id: 6, name: 'Gakpo', fullName: 'Cody Gakpo', position: 'MID' },
+]
+
+test('a broadcast name reaches the right player despite the feed short form', () => {
+  // Neither string contains the other in either of these.
+  assert.equal(matchName('Van Dijk', LIVERPOOL).player?.id, 2)
+  assert.equal(matchName('Alisson', LIVERPOOL).player?.id, 1)
+  // And the straightforward ones still work.
+  assert.equal(matchName('Kerkez', LIVERPOOL).player?.id, 3)
+  assert.equal(matchName('Mac Allister', LIVERPOOL).player?.id, 4)
+})
+
+test('initials, accents and punctuation do not defeat a match', () => {
+  const squad: MatchCandidate[] = [
+    { id: 1, name: 'B.Fernandes', fullName: 'Bruno Borges Fernandes', position: 'MID' },
+    { id: 2, name: 'Nørgaard', fullName: 'Christian Nørgaard', position: 'MID' },
+    { id: 3, name: 'Matheus N.', fullName: 'Matheus Nunes', position: 'MID' },
+  ]
+  assert.equal(matchName('Bruno Fernandes', squad).player?.id, 1)
+  assert.equal(matchName('B. Fernandes', squad).player?.id, 1)
+  assert.equal(matchName('Norgaard', squad).player?.id, 2)
+  assert.equal(matchName('Matheus Nunes', squad).player?.id, 3)
+})
+
+test('normalising strips what varies between a graphic and a feed', () => {
+  assert.equal(normalizeName('Nørgaard'), 'norgaard')
+  assert.equal(normalizeName('B.Fernandes'), 'b fernandes')
+  assert.equal(normalizeName("O'Reilly"), 'o reilly')
+  assert.equal(normalizeName('  Van   Dijk  '), 'van dijk')
+  // Never throws on whatever a vision model returned.
+  assert.equal(normalizeName(null), '')
+  assert.equal(normalizeName(undefined), '')
+})
+
+test('two players who cannot be told apart are reported, not guessed', () => {
+  // Guessing here puts the wrong player in an eleven and moves a forecast with
+  // nothing on screen to say so.
+  const squad: MatchCandidate[] = [
+    { id: 1, name: 'Neves', fullName: 'Lucas Neves', position: 'MID' },
+    { id: 2, name: 'Neves', fullName: 'Ruben Neves', position: 'MID' },
+  ]
+  const m = matchName('Neves', squad)
+  assert.equal(m.player, null)
+  assert.equal(m.quality, 'ambiguous')
+  assert.equal(m.alternatives.length, 2)
+  // A first name resolves it.
+  assert.equal(matchName('Ruben Neves', squad).player?.id, 2)
+})
+
+test('a name that is not in the squad is left unresolved rather than forced', () => {
+  const m = matchName('Mbappé', LIVERPOOL)
+  assert.equal(m.player, null)
+  assert.equal(m.quality, 'none')
+})
+
+test('two printed names cannot collapse onto the same player', () => {
+  // Without claiming, a near-miss could take a player already matched exactly,
+  // silently producing a ten-man side.
+  const result = matchLineup(['Virgil', 'Van Dijk', 'Gakpo'], LIVERPOOL)
+  const ids = result.matched.map((m) => m.player.id)
+  assert.equal(new Set(ids).size, ids.length, 'no player is used twice')
+  assert.equal(result.matched.length + result.unresolved.length, 3)
+})
+
+test('a whole printed eleven resolves, reported in the order given', () => {
+  const printed = ['Alisson', 'Van Dijk', 'Kerkez', 'Szoboszlai', 'Mac Allister', 'Gakpo']
+  const result = matchLineup(printed, LIVERPOOL)
+  assert.equal(result.matched.length, 6)
+  assert.equal(result.unresolved.length, 0)
+  assert.deepEqual(result.matched.map((m) => m.query), printed)
+})
+
+// --- Applying a confirmed sheet ---------------------------------------------
+
+test('a confirmed sheet promotes the eleven and benches the rest', () => {
+  const s = squad()
+  const starting = new Set(s.slice(0, 11).map((p) => p.id))
+  const applied = applyConfirmedLineup(s, starting)
+  for (const p of applied) {
+    if (starting.has(p.id)) assert.equal(p.minuteShare, 1, `${p.name} starts`)
+    else assert.ok(p.minuteShare <= BENCH_MINUTE_SHARE, `${p.name} is on the bench`)
+  }
+})
+
+test('a substitute is not written off entirely', () => {
+  // Zeroing the bench would overstate every team sheet: substitutes come on
+  // and score.
+  assert.ok(BENCH_MINUTE_SHARE > 0 && BENCH_MINUTE_SHARE < 0.3)
+})
+
+test('an empty sheet changes nothing', () => {
+  const s = squad()
+  const applied = applyConfirmedLineup(s, new Set())
+  assert.deepEqual(applied.map((p) => p.minuteShare), s.map((p) => p.minuteShare))
+})
+
+test('a strong eleven lifts a side and a rotated one lowers it', () => {
+  // This is the bug the first attempt had: teamAvailability derives its
+  // baseline from the squad handed to it, so scaling everyone's minutes moved
+  // numerator and denominator together and changed nothing at all. A confirmed
+  // sheet has to be measured against what was *expected*.
+  // Every player in the default squad has the same involvement rate, so which
+  // eleven starts would not change the total at all — the test has to give
+  // them different quality to mean anything.
+  const s = squad((i) => ({ xgi90: 0.9 - i * 0.045 }))
+  const best = [...s].sort((a, b) => b.xgi90 * b.minuteShare - a.xgi90 * a.minuteShare).slice(0, 11)
+  const worst = [...s].sort((a, b) => a.xgi90 * a.minuteShare - b.xgi90 * b.minuteShare).slice(0, 11)
+
+  const strong = confirmedShift(s, applyConfirmedLineup(s, new Set(best.map((p) => p.id))), 0.3)
+  const rotated = confirmedShift(s, applyConfirmedLineup(s, new Set(worst.map((p) => p.id))), 0.3)
+
+  assert.ok(strong.attack > rotated.attack, 'the stronger eleven must rate higher')
+  assert.ok(rotated.attack < 0, 'a heavily rotated side is a downgrade on expectation')
+})
+
+test('the confirmed shift stays bounded however odd the sheet', () => {
+  const s = squad()
+  const oneMan = confirmedShift(s, applyConfirmedLineup(s, new Set([s[0]!.id])), 1)
+  assert.ok(Math.abs(oneMan.attack) <= Math.abs(Math.log(0.7)) + 1e-9, 'clamped')
+  assert.ok(Number.isFinite(oneMan.defence))
+})
+
+test('no confirmed sheet leaves the forecast exactly as published', () => {
+  const home = squad()
+  const away = squad((i) => ({ id: 100 + i, name: `A${i}` }))
+  const base = recomputeFixture({
+    inputs: INPUTS, homeCode: 'ARS', awayCode: 'CHE', kickoff: Date.UTC(2026, 7, 21),
+    homeSquad: home, awaySquad: away, removed: new Set(),
+  })
+  const withNull = recomputeFixture({
+    inputs: INPUTS, homeCode: 'ARS', awayCode: 'CHE', kickoff: Date.UTC(2026, 7, 21),
+    homeSquad: home, awaySquad: away, removed: new Set(), confirmed: null,
+  })
+  assert.deepEqual(base.prediction.probs, withNull.prediction.probs)
 })

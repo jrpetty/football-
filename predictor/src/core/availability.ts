@@ -24,6 +24,8 @@ export type Position = 'GK' | 'DEF' | 'MID' | 'FWD'
 export interface PlayerRates {
   id: number
   name: string
+  /** First and last name. Broadcast graphics rarely use the feed's short form. */
+  fullName: string
   team: string
   position: Position
   /** Minutes played in the window these rates were built from. */
@@ -146,6 +148,26 @@ export function absenceReason(status: string): string {
  */
 function attackValue(p: PlayerRates): number {
   return Math.max(0, p.xgi90) * p.minuteShare
+}
+
+/**
+ * A squad's expected attacking output, weighted by availability.
+ *
+ * Exported because a confirmed team sheet has to be measured against what was
+ * *expected*, not against itself. `teamAvailability` derives its baseline from
+ * the squad it is handed, so scaling everyone's minutes to match a real eleven
+ * changes numerator and denominator together and moves nothing — which is
+ * exactly the trap this avoids.
+ */
+export function squadAttackValue(squad: readonly PlayerRates[]): number {
+  return squad.reduce((total, p) => total + attackValue(p) * playProbability(p), 0)
+}
+
+/** The same, for defensive value. */
+export function squadDefenceValue(squad: readonly PlayerRates[]): number {
+  const costs = squad.map((p) => p.cost).sort((a, b) => a - b)
+  const median = costs[Math.floor(costs.length / 2)] ?? 5
+  return squad.reduce((total, p) => total + defenceValue(p, median) * playProbability(p), 0)
 }
 
 /**

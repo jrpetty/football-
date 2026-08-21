@@ -28,6 +28,10 @@ the one showing how often it has been wrong.
   re-runs in your browser — probabilities, expected goals and the eleven itself. It runs the same
   model core that produced the published numbers, so with nothing removed it reproduces them
   exactly.
+- **Reads a confirmed team sheet from a photograph.** Confirmed elevens are published about an hour
+  before kickoff, long after this forecast is written — so photograph one (the television works)
+  and the match re-runs against the side actually playing. Claude reads the names; matching them to
+  players is done afterwards by tested code that reports whatever it could not resolve.
 - **Re-checks itself every morning.** A scheduled job ingests results, scores the forecasts
   recorded *before* kickoff, refits, and republishes — so the accuracy record is real rather than
   retrospective. It also watches for squad movement: transfers are detected by diffing each run
@@ -84,6 +88,14 @@ at the back, at most five in midfield" and produced Liverpool as 3-6-1, a format
 ever set up in. When a club is short in one line (Liverpool began this season with three fit
 defenders who had Premier League minutes and five who did not) it calls on squad depth rather than
 distorting the shape.
+
+**Confirmed line-ups.** A team sheet is a rating adjustment, not an availability one: it says who
+is on the pitch, measured against who was *expected* to be. That distinction is the whole trick —
+an earlier version scaled everyone's expected minutes to match the sheet, but the availability
+calculation derives its baseline from the squad it is handed, so numerator and denominator moved
+together and the forecast did not budge. Comparing the named eleven against expectation, Manchester
+City naming their strongest side moves them from 60.3% to 63.8%, and a heavily rotated one to 58.7%.
+Substitutes are not written off — they come on and score — so the bench keeps a small share.
 
 **Uncertainty.** Scorelines come from a negative binomial rather than a Poisson, with dispersion
 set from how confident the ratings are (`r = 1/σ²`). A newly promoted club with a wide rating band
@@ -210,6 +222,10 @@ will commit anything.
   old join date is labelled "newly listed" rather than counted as a transfer. A diff of more than
   60 changes at once is treated as a feed problem and discarded rather than written into the
   ledger.
+- **A photographed team sheet is read, not verified.** Claude is asked to report only names it can
+  see, never to infer a likely eleven, but a blurred or cropped image can still yield a partial
+  reading — which is why every matched name is shown against the player it resolved to and anything
+  unresolved is listed rather than dropped. Nothing reaches the forecast until you apply it.
 - **Football is high variance.** Roughly half of matches called correctly is a good model, not a
   broken one.
 

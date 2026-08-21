@@ -11,6 +11,7 @@ import { recomputeFixture, probabilityDelta } from '../core/whatIf.ts'
 import type { PlayerRates } from '../core/availability.ts'
 import type { FixtureArtifact } from '../core/schema.ts'
 import { LineupPitch, LineupCaveat } from './LineupPitch.tsx'
+import { LineupUpload, type ConfirmedSelection } from './LineupUpload.tsx'
 import { ProbBar } from './primitives.tsx'
 import { club, clubName, clubColor } from '../config/teams.ts'
 
@@ -97,6 +98,8 @@ export function SquadEditor({
   awaySquad: readonly PlayerRates[]
 }) {
   const [removed, setRemoved] = useState<ReadonlySet<number>>(new Set())
+  // A confirmed team sheet, once the reader has photographed one.
+  const [confirmed, setConfirmed] = useState<ConfirmedSelection | null>(null)
 
   const toggle = (id: number): void => {
     setRemoved((prev) => {
@@ -117,11 +120,12 @@ export function SquadEditor({
         homeSquad,
         awaySquad,
         removed,
+        confirmed,
       }),
-    [fixture, homeSquad, awaySquad, removed],
+    [fixture, homeSquad, awaySquad, removed, confirmed],
   )
 
-  const edited = removed.size > 0
+  const edited = removed.size > 0 || confirmed !== null
   const after = result.prediction.probs
   const delta = probabilityDelta(fixture.probs, after)
 
@@ -136,12 +140,23 @@ export function SquadEditor({
         <h3 style={{ fontSize: 16 }}>Predicted line-ups</h3>
         <span className="row gap-8" style={{ alignItems: 'center' }}>
           {edited && (
-            <button className="gw-btn" style={{ padding: '0 12px' }} onClick={() => setRemoved(new Set())}>
+            <button
+              className="gw-btn"
+              style={{ padding: '0 12px' }}
+              onClick={() => {
+                setRemoved(new Set())
+                setConfirmed(null)
+              }}
+            >
               Reset
             </button>
           )}
           <span className="faint" style={{ fontSize: 11.5 }}>
-            {edited ? `${removed.size} removed` : 'click a player to take him out'}
+            {confirmed
+              ? `confirmed team sheet applied${removed.size > 0 ? `, ${removed.size} removed` : ''}`
+              : removed.size > 0
+                ? `${removed.size} removed`
+                : 'click a player to take him out'}
           </span>
         </span>
       </div>
@@ -163,7 +178,9 @@ export function SquadEditor({
             boxShadow: 'var(--shadow)',
           }}
         >
-          <div className="eyebrow" style={{ marginBottom: 9 }}>With your changes</div>
+          <div className="eyebrow" style={{ marginBottom: 9 }}>
+            {confirmed ? 'With the confirmed line-ups' : 'With your changes'}
+          </div>
           <ProbBar probs={after} homeCode={fixture.home} awayCode={fixture.away} height={28} />
           <div className="row wrap gap-16" style={{ marginTop: 11, fontSize: 12.5 }}>
             {([
@@ -189,6 +206,22 @@ export function SquadEditor({
           </div>
         </div>
       )}
+
+      <div style={{ marginBottom: 16 }}>
+        <LineupUpload
+          homeCode={fixture.home}
+          awayCode={fixture.away}
+          homeSquad={homeSquad}
+          awaySquad={awaySquad}
+          applied={confirmed !== null}
+          onApply={(selection) => {
+            setConfirmed(selection)
+            // A confirmed sheet supersedes any manual edits made before it.
+            setRemoved(new Set())
+          }}
+          onClear={() => setConfirmed(null)}
+        />
+      </div>
 
       <LineupPitch
         homeCode={fixture.home}
