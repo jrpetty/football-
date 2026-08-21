@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { HashRouter, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AppCtx, CORE_LOOP, decodeState, encodeState, engineData, makeBuild } from './ui/store.ts';
+import { useApp } from './ui/store.ts';
 import { ProvenanceBanner } from './ui/components/Banner.tsx';
 import { BuildWizard } from './ui/pages/BuildWizard.tsx';
 import { BuildAnalyser } from './ui/pages/BuildAnalyser.tsx';
@@ -17,23 +18,57 @@ import { Start } from './ui/pages/Start.tsx';
 import { CommandPalette } from './ui/components/Palette.tsx';
 import type { Build, Resolution } from './core/types.ts';
 
+/**
+ * The twelve screens.
+ *
+ * `label` is what the top bar shows; `full` is the screen's real name, used in
+ * the drawer, the command palette, the tooltip and the current-screen readout.
+ *
+ * The short labels are not only about width, though width was the trigger: at
+ * full length the row needed 1545px, so every common laptop width silently hid
+ * three or four destinations behind a fade with no scrollbar. They also read
+ * better. "Comparison Matrix" and "Inventory Optimiser" are this project's
+ * names for things; "Compare" and "Inventory" are the user's.
+ */
 const NAV = [
-  { to: '/start', label: 'Start' },
-  { to: '/wizard', label: 'Build a PC' },
-  { to: '/analyser', label: 'Build Analyser' },
-  { to: '/matrix', label: 'Comparison Matrix' },
-  { to: '/upgrade', label: 'Upgrade Advisor' },
-  { to: '/inventory', label: 'Inventory Optimiser' },
-  { to: '/machine', label: 'Machine Report' },
-  { to: '/trade', label: 'Trade Desk' },
-  { to: '/system', label: 'System Health' },
-  { to: '/detect', label: 'Identify' },
-  { to: '/data', label: 'Data Explorer' },
-  { to: '/health', label: 'Model Health' },
+  { to: '/start', label: 'Start', full: 'Start' },
+  { to: '/wizard', label: 'Build', full: 'Build a PC' },
+  { to: '/analyser', label: 'Analyse', full: 'Build Analyser' },
+  { to: '/matrix', label: 'Compare', full: 'Comparison Matrix' },
+  { to: '/upgrade', label: 'Upgrade', full: 'Upgrade Advisor' },
+  { to: '/inventory', label: 'Inventory', full: 'Inventory Optimiser' },
+  { to: '/machine', label: 'Machine', full: 'Machine Report' },
+  { to: '/trade', label: 'Trade', full: 'Trade Desk' },
+  { to: '/system', label: 'My PC', full: 'System Health' },
+  { to: '/detect', label: 'Identify', full: 'Identify a Machine' },
+  { to: '/data', label: 'Data', full: 'Data Explorer' },
+  { to: '/health', label: 'Accuracy', full: 'Model Health' },
 ];
+
+/**
+ * Keeps the encoded build state on the URL.
+ *
+ * This lives inside the router on purpose. It used to run in `App`, keyed only
+ * on the state itself — so navigating to another screen replaced the hash with
+ * a bare `#/matrix` and nothing re-appended the `?s=`. Pressing "share" in that
+ * window copied a link with no builds in it, which is the entire thing share
+ * exists to do. Keyed on the location as well, the state is restored to the URL
+ * after every navigation.
+ */
+function useUrlState() {
+  const loc = useLocation();
+  const { builds, games, resolutions } = useApp();
+  useEffect(() => {
+    const s = encodeState(builds, games, resolutions);
+    const path = window.location.hash.split('?')[0] || '#/analyser';
+    const next = `${path}?s=${s}`;
+    if (window.location.hash !== next) window.history.replaceState(null, '', next);
+  }, [builds, games, resolutions, loc.pathname, loc.key]);
+}
 
 function Shell({ children }: { children: React.ReactNode }) {
   const loc = useLocation();
+  useUrlState();
   // On a phone the eleven-item bar becomes a drawer. A horizontally scrolling
   // row of eleven links is technically usable and practically not: you cannot
   // see where you are or what else exists without swiping blind.
@@ -68,11 +103,20 @@ function Shell({ children }: { children: React.ReactNode }) {
           </svg>
           RIGCHECK<span> / build comparison</span>
         </span>
-        <span className="here" aria-hidden="true">{here?.label ?? ''}</span>
+        <span className="here" aria-hidden="true">{here?.full ?? ''}</span>
         <nav className={`nav${navOpen ? ' open' : ''}`} id="main-nav" aria-label="Screens">
           {NAV.map((n) => (
-            <NavLink key={n.to} to={n.to} className={loc.pathname === n.to ? 'active' : ''} aria-current={loc.pathname === n.to ? 'page' : undefined}>
-              {n.label}
+            <NavLink
+              key={n.to}
+              to={n.to}
+              className={loc.pathname === n.to ? 'active' : ''}
+              aria-current={loc.pathname === n.to ? 'page' : undefined}
+              title={n.full}
+            >
+              {/* The bar is tight, the drawer is not: the drawer shows the full
+                  name, so nothing is only ever known by its abbreviation. */}
+              <span className="nav-short">{n.label}</span>
+              <span className="nav-full">{n.full}</span>
             </NavLink>
           ))}
         </nav>
@@ -144,16 +188,6 @@ export function App() {
   );
   const [games, setGames] = useState<string[]>(restored?.games ?? CORE_LOOP);
   const [resolutions, setResolutions] = useState<Resolution[]>(restored?.resolutions ?? ['1080p', '1440p']);
-
-  // Builds are first-class objects: saveable and shareable by URL.
-  useEffect(() => {
-    const s = encodeState(builds, games, resolutions);
-    const path = window.location.hash.split('?')[0] || '#/analyser';
-    const next = `${path}?s=${s}`;
-    if (window.location.hash !== next) {
-      window.history.replaceState(null, '', next);
-    }
-  }, [builds, games, resolutions]);
 
   const value = { builds, setBuilds, games, setGames, resolutions, setResolutions, data: engineData };
 

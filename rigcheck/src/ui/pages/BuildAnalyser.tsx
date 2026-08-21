@@ -14,7 +14,19 @@ export function BuildAnalyser() {
   const { builds, setBuilds, games, setGames, data } = useApp();
   const build = builds[0];
   const [open, setOpen] = useState<string | null>(null);
-  const [res, setRes] = useState<Resolution>(build?.target.resolution ?? '1440p');
+  /**
+   * The screen's resolution IS the build's resolution — one value, not two.
+   *
+   * This was a separate `useState` seeded from the build. Because a useState
+   * initialiser runs once, changing the target resolution in the editor on the
+   * left moved the build but not the table on the right, so the two controls on
+   * this one screen sat there disagreeing: the user said 4K, the editor agreed,
+   * and the frame-rate table went on answering the 1440p question with nothing
+   * to indicate it.
+   */
+  const res: Resolution = build?.target.resolution ?? '1440p';
+  const setRes = (r: Resolution) =>
+    setBuilds([{ ...build, target: { ...build.target, resolution: r } }, ...builds.slice(1)]);
 
   const rows = useMemo(
     () => games.map((gameId) => ({ gameId, est: estimate(build, gameId, res, data) })),
@@ -70,7 +82,7 @@ export function BuildAnalyser() {
         </p>
       </div>
 
-      <div className="grid" style={{ gridTemplateColumns: 'minmax(280px, 340px) minmax(0, 1fr)' }}>
+      <div className="grid rail">
         <div>
           <BuildEditor build={build} onChange={(b) => setBuilds([b, ...builds.slice(1)])} />
 

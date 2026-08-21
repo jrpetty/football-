@@ -20,6 +20,7 @@
  */
 import { useMemo, useState } from 'react';
 import { useApp } from '../store.ts';
+import { useDebounced } from '../useDebounced.ts';
 import { planBuild, type ComponentPrices, type PlanRequest } from '../../core/planner.ts';
 import { PRESETS, type Preset } from '../../core/presets.ts';
 import { DEFAULT_USAGE, PSU_EFFICIENCY, efficiencyPayback, runningCost, totalCostOfOwnership, type PsuTier, type UsageProfile } from '../../core/running.ts';
@@ -77,6 +78,10 @@ export function BuildWizard() {
   const [gameIds, setGameIds] = useState<string[]>([]);
   const [gameQuery, setGameQuery] = useState('');
   const [budget, setBudget] = useState(1200);
+  /* The slider stays on `budget` so the handle and its label track the finger.
+     The planner reads the settled value, because re-planning on every one of
+     the slider's 145 stops froze the page for seconds at a time. */
+  const plannedBudget = useDebounced(budget, 200);
   const [noBudget, setNoBudget] = useState(false);
   const [condition, setCondition] = useState<'new' | 'used' | 'either'>('new');
   const [minPreset, setMinPreset] = useState<Preset>('high');
@@ -102,7 +107,7 @@ export function BuildWizard() {
 
   const request: PlanRequest = useMemo(
     () => ({
-      budget: noBudget ? undefined : budget,
+      budget: noBudget ? undefined : plannedBudget,
       condition,
       resolution,
       refreshHz,
@@ -113,7 +118,7 @@ export function BuildWizard() {
       ramGB: ramGB ?? undefined,
       storageGB,
     }),
-    [budget, noBudget, condition, resolution, refreshHz, gameIds, targetFps, minPreset, preferQuiet, ramGB, storageGB],
+    [plannedBudget, noBudget, condition, resolution, refreshHz, gameIds, targetFps, minPreset, preferQuiet, ramGB, storageGB],
   );
 
   // Planning is ~0.2s, so it runs on every change rather than behind a button.

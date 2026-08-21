@@ -36,7 +36,7 @@ export function InventoryOptimiser() {
         </p>
       </div>
 
-      <div className="grid" style={{ gridTemplateColumns: 'minmax(300px, 380px) minmax(0, 1fr)' }}>
+      <div className="grid rail">
         <div className="panel">
           <div className="panel-head">parts on hand</div>
           <div className="panel-body">
@@ -102,8 +102,8 @@ export function InventoryOptimiser() {
                     </dl>
                     <div>
                       <div className="stat">
-                        <span className="v">{fmt(result.meanFps, 1)}</span>
-                        <span className="k">mean fps across {games.length} titles</span>
+                        <span className="v">{fmt(result.geomeanFps, 1)}</span>
+                        <span className="k">geomean fps across {games.length} titles</span>
                       </div>
                     </div>
                   </div>

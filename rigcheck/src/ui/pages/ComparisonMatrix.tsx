@@ -16,9 +16,21 @@ export function ComparisonMatrix() {
 
   const base = builds.some((b) => b.id === baseline) ? baseline : builds[0]?.id;
 
+  /**
+   * Keyed on the fields the engine actually reads, not on the builds array.
+   *
+   * `builds` gets a new identity on every keystroke in a build's name field, so
+   * renaming a build re-ran the entire matrix — up to 400 estimates per
+   * character typed — to produce identical numbers.
+   */
+  // Everything except `label`, which is the one field the engine never reads.
+  // Enumerating the fields it DOES read would silently go stale the next time
+  // one is added; excluding the single irrelevant one cannot.
+  const engineSig = JSON.stringify(builds.map(({ label: _label, ...rest }) => rest));
   const matrix = useMemo(
     () => compareBuilds(builds, games, resolutions, data, { baselineBuildId: base }),
-    [builds, games, resolutions, data, base],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- engineSig stands in for builds
+    [engineSig, games, resolutions, data, base],
   );
 
   const cell = (buildId: string, gameId: string, res: Resolution) =>
@@ -86,7 +98,15 @@ export function ComparisonMatrix() {
           </button>
           <button
             className="btn primary"
-            onClick={() => setBuilds([...builds, makeBuild({ label: `build ${builds.length + 1}` })])}
+            /* Clone the baseline rather than inserting a fixed default pair.
+               The reason to add a build is almost always "the same machine but
+               with one part changed"; starting from a hardcoded Ryzen 5 3600 and
+               RTX 3060 meant retyping both parts to compare one. */
+            onClick={() => {
+              const from = builds.find((b) => b.id === base) ?? builds[0];
+              const seed = makeBuild({ label: `build ${builds.length + 1}` });
+              setBuilds([...builds, from ? { ...from, id: seed.id, label: seed.label } : seed]);
+            }}
           >
             + add build
           </button>

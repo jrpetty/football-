@@ -519,7 +519,17 @@ export interface PartInventory {
 export interface InventoryResult {
   build: Build;
   score: number;
+  /** Arithmetic mean across titles. Kept for callers that already read it. */
   meanFps: number;
+  /**
+   * Geometric mean across titles, and the figure to SHOW.
+   *
+   * The selection already scores on this. Across a library spanning 45fps to
+   * 400fps the arithmetic mean is dominated by the esports entries, so a build
+   * read as materially faster here than on the screens that use the geometric
+   * mean — the exact distortion the Comparison Matrix footnote warns about.
+   */
+  geomeanFps: number;
   unused: {
     cpuIds: string[];
     gpuIds: string[];

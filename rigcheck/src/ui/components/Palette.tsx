@@ -23,7 +23,7 @@ export interface PaletteAction {
   run: () => void;
 }
 
-export function CommandPalette({ screens }: { screens: { to: string; label: string; hint?: string }[] }) {
+export function CommandPalette({ screens }: { screens: { to: string; label: string; full?: string; hint?: string }[] }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
   const [cursor, setCursor] = useState(0);
@@ -72,7 +72,14 @@ export function CommandPalette({ screens }: { screens: { to: string; label: stri
     const go = (to: string, label: string, hint?: string): PaletteAction => ({
       id: `nav${to}`, label, hint, group: 'screens', run: () => navigate(to),
     });
-    const base = screens.map((s) => go(s.to, s.label, s.hint));
+    // The palette lists the FULL screen name and stays searchable by the short
+    // one: the top bar says "Compare", so someone who has only ever seen that
+    // must be able to type it, and someone who remembers "Comparison Matrix"
+    // must find it too.
+    const base = screens.map((s) => ({
+      ...go(s.to, s.full ?? s.label, s.hint),
+      alias: s.full && s.full !== s.label ? s.label : undefined,
+    }));
     const term = q.trim();
     if (term.length < 2) return base;
 
@@ -103,7 +110,12 @@ export function CommandPalette({ screens }: { screens: { to: string; label: stri
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
     if (!term) return actions;
-    return actions.filter((a) => a.label.toLowerCase().includes(term) || (a.hint ?? '').toLowerCase().includes(term));
+    return actions.filter(
+      (a) =>
+        a.label.toLowerCase().includes(term) ||
+        (a.hint ?? '').toLowerCase().includes(term) ||
+        ((a as { alias?: string }).alias ?? '').toLowerCase().includes(term),
+    );
   }, [actions, q]);
 
   useEffect(() => {

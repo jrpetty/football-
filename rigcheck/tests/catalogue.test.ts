@@ -59,3 +59,29 @@ describe('incomplete-record flags', () => {
     expect(hit.incomplete?.length).toBeGreaterThan(0);
   });
 });
+
+describe('search scoping', () => {
+  it('returns only the kind asked for, and never touches the other catalogue', () => {
+    const gpus = search('7700', data, 50, 'gpu');
+    const cpus = search('7700', data, 50, 'cpu');
+    expect(gpus.length).toBeGreaterThan(0);
+    expect(cpus.length).toBeGreaterThan(0);
+    expect(gpus.every((h) => h.kind === 'gpu')).toBe(true);
+    expect(cpus.every((h) => h.kind === 'cpu')).toBe(true);
+  });
+
+  it('applies the limit AFTER narrowing, so a caller gets what it asked for', () => {
+    // The bug: the picker searched both catalogues with limit 200 and then
+    // filtered by kind, so a query matching many parts of the other kind could
+    // silently return fewer results than the limit allowed.
+    const unscoped = search('r', data, 6).filter((h) => h.kind === 'cpu');
+    const scoped = search('r', data, 6, 'cpu');
+    expect(scoped).toHaveLength(6);
+    expect(scoped.length).toBeGreaterThanOrEqual(unscoped.length);
+  });
+
+  it('still finds both kinds when no kind is given', () => {
+    const both = search('7700', data, 50);
+    expect(new Set(both.map((h) => h.kind)).size).toBe(2);
+  });
+});

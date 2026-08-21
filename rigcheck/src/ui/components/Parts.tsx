@@ -34,7 +34,7 @@ export function PartPicker({
    */
   const visibleGroups = useMemo(() => {
     if (q.trim()) {
-      const hits = search(q, engineData, 200).filter((h) => h.kind === kind);
+      const hits = search(q, engineData, 200, kind);
       return hits.length ? [{ vendor: 'results', label: `${hits.length} match${hits.length === 1 ? '' : 'es'}`, hits }] : [];
     }
     return vendorFilter ? groups.filter((g) => g.vendor === vendorFilter) : groups;
@@ -68,7 +68,20 @@ export function PartPicker({
   let flatIndex = -1;
 
   return (
-    <div className="field" ref={ref}>
+    <div
+      className="field"
+      ref={ref}
+      /* Close when focus leaves the combobox ENTIRELY.
+         React's onBlur maps to focusout, which bubbles, so this fires wherever
+         focus was inside — the input, the vendor filters, a list row. Putting
+         it on the input alone did not work: tabbing goes input -> filters ->
+         rows, so the input had already blurred long before focus actually left,
+         and two 400-row overlays ended up stacked over the page at once.
+         The containment check keeps it open while focus moves WITHIN. */
+      onBlur={(e) => {
+        if (!ref.current?.contains(e.relatedTarget as Node | null)) setOpen(false);
+      }}
+    >
       {label && <label>{label}</label>}
       <div className="combo">
         <input

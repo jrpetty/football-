@@ -131,15 +131,15 @@ function DriftChart({ series, points }: { series: Series; points: HistoryPoint[]
           {moved ? `${improved ? 'better' : 'worse'} by ${series.format(Math.abs(delta))} across ${points.length} runs` : 'unchanged across every recorded run'}
         </div>
       </div>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block' }} role="img" aria-label={`${series.label} over ${points.length} validation runs`}>
+      <svg className="spark" viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block' }} role="img" aria-label={`${series.label} over ${points.length} validation runs`}>
         {series.gate != null && (
           <>
             <line x1={PAD.l} x2={W - PAD.r} y1={y(series.gate)} y2={y(series.gate)} stroke="var(--bad)" strokeDasharray="3 3" strokeWidth="1" opacity="0.7" />
-            <text x={W - PAD.r} y={y(series.gate) - 3} textAnchor="end" fontSize="8" fill="var(--bad)" opacity="0.85">{series.gateLabel}</text>
+            <text x={W - PAD.r} y={y(series.gate) - 3} textAnchor="end" fill="var(--bad)" opacity="0.85">{series.gateLabel}</text>
           </>
         )}
-        <text x={PAD.l - 5} y={y(hi) + 3} textAnchor="end" fontSize="8" fill="var(--faint)">{series.format(hi)}</text>
-        <text x={PAD.l - 5} y={y(lo) + 3} textAnchor="end" fontSize="8" fill="var(--faint)">{series.format(lo)}</text>
+        <text x={PAD.l - 5} y={y(hi) + 3} textAnchor="end" fill="var(--faint)">{series.format(hi)}</text>
+        <text x={PAD.l - 5} y={y(lo) + 3} textAnchor="end" fill="var(--faint)">{series.format(lo)}</text>
         <polyline
           points={vals.map((v, i) => `${x(i)},${y(v)}`).join(' ')}
           fill="none"

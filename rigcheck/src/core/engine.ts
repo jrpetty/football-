@@ -123,6 +123,24 @@ export function softMin(cpuFps: number, gpuFps: number, p: number): number {
   return Math.pow(Math.pow(cpuFps, -p) + Math.pow(gpuFps, -p), -1 / p);
 }
 
+/** The record fields `deriveGpuIndex` reads, for crediting the right sources. */
+const GPU_INDEX_INPUTS = ['shaders', 'boostClockMHz', 'architecture', 'memBandwidthGBs', 'fp32TFLOPS'] as const;
+
+/**
+ * Distinct provenance ids across a set of fields, in first-seen order.
+ *
+ * Falls back to the record-level `'*'` key, which is what the spec parser
+ * stamps when it could not attribute a value field by field.
+ */
+function provenanceFor(prov: Record<string, string[]> | undefined, fields: readonly string[]): string[] {
+  if (!prov) return [];
+  const out: string[] = [];
+  for (const f of [...fields, '*']) {
+    for (const id of prov[f] ?? []) if (!out.includes(id)) out.push(id);
+  }
+  return out;
+}
+
 export function estimate(
   build: Build,
   gameId: string,
@@ -197,8 +215,18 @@ export function estimate(
   const gpuIdx = deriveGpuIndex(gpu, data.anchorGpu, build.ram);
   const cpuIdx = deriveCpuIndex(cpu, build.ram, data.anchorCpu, data.anchorRam);
 
+  // Provenance for the graphics terms.
+  //
+  // This used to read `gpu._prov?.['']`. No record has an empty-string key, so
+  // every graphics term in the "how was this calculated" panel carried an empty
+  // source list — the attribution silently showed nothing, on the one screen
+  // whose entire purpose is showing where a number came from.
+  //
+  // Keyed by the fields the index derivation actually consumes, so what is
+  // credited is what was used, rather than every field on the record.
+  const gpuSources = provenanceFor(gpu._prov, GPU_INDEX_INPUTS);
   for (const s of gpuIdx.steps) {
-    terms.push({ label: `gpu: ${s.label}`, value: s.value, confidence: 'spec-derived', sources: gpu._prov?.[''] ?? [], explain: s.explain });
+    terms.push({ label: `gpu: ${s.label}`, value: s.value, confidence: 'spec-derived', sources: gpuSources, explain: s.explain });
   }
   // A zero index means the derivation had nothing to work with (nulled clocks
   // or shader counts awaiting harvest). Multiplying through it would emit

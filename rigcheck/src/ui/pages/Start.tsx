@@ -45,6 +45,13 @@ const ROUTES: Route[] = [
     detail: 'Pick the parts, get frame rates per game with the working shown — every term, its value, its confidence and where it came from.',
   },
   {
+    q: 'Will it fit, what will it draw, and how loud will it be?',
+    to: '/machine',
+    screen: 'Machine Report',
+    detail:
+      'Sustained draw and transient peak, the power supply that needs, whether the cooling holds the clocks, roughly how loud it gets and what the input latency looks like.',
+  },
+  {
     q: 'Which of these two or three builds should I buy?',
     to: '/matrix',
     screen: 'Comparison Matrix',

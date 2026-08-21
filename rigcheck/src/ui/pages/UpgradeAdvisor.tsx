@@ -5,6 +5,9 @@ import { useApp } from '../store.ts';
 import { sweepComponent } from '../../core/queries.ts';
 import { loadPrices, priceLookup } from '../pricing.ts';
 
+/** Rows rendered in the candidate table; the count is stated when it truncates. */
+const ROW_CAP = 60;
+
 export function UpgradeAdvisor() {
   const { builds, games, resolutions, data } = useApp();
   const base = builds[0];
@@ -163,7 +166,16 @@ export function UpgradeAdvisor() {
                     </tr>
                   );
                 })
-                .slice(0, 60)}
+                .slice(0, ROW_CAP)}
+              {sweep.points.length > ROW_CAP && (
+                <tr>
+                  <td colSpan={8} className="sub" style={{ textAlign: 'center' }}>
+                    Showing the first {ROW_CAP} of {sweep.points.length} candidates, ranked as above. A
+                    screen that states a count and then quietly renders fewer rows is the kind of thing
+                    this tool exists not to do.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

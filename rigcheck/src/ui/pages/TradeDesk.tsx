@@ -36,7 +36,9 @@ export function TradeDesk() {
     () =>
       appraiseTrade(
         { cpuIds, gpuIds },
-        inv ? { build: inv.build, geomeanFps: inv.meanFps } : null,
+        // Was passing the ARITHMETIC mean into a field named geomeanFps, so the
+        // appraisal was scored against a figure inflated by the esports titles.
+        inv ? { build: inv.build, geomeanFps: inv.geomeanFps } : null,
         priceOf,
         { assemblyPremium: 1 + premium / 100 },
       ),
@@ -88,7 +90,7 @@ export function TradeDesk() {
         the arithmetic is only ever as good as those numbers.
       </div>
 
-      <div className="grid" style={{ gridTemplateColumns: 'minmax(280px, 330px) minmax(0, 1fr)' }}>
+      <div className="grid rail">
         <div className="panel">
           <div className="panel-head">the pile</div>
           <div className="panel-body">
@@ -146,7 +148,7 @@ export function TradeDesk() {
               {inv && (
                 <div className="note" style={{ marginTop: 8 }}>
                   Best assembly: <b className="mono">{data.cpus.get(inv.build.cpuId)?.fullName}</b> +{' '}
-                  <b className="mono">{data.gpus.get(inv.build.gpuId)?.fullName}</b> — {fmt(inv.meanFps, 1)} mean fps.
+                  <b className="mono">{data.gpus.get(inv.build.gpuId)?.fullName}</b> — {fmt(inv.geomeanFps, 1)} geomean fps.
                 </div>
               )}
             </div>

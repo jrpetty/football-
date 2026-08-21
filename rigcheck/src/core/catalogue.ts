@@ -91,7 +91,20 @@ function gapsOf<T extends { missingFields: string[] }>(
  * i7-7700, i7-7700K, Ryzen 7 7700X and RX 7700 XT, each unmistakable. That means
  * every hit carries a disambiguator built from the fields that actually differ.
  */
-export function search(query: string, data: EngineData, limit = 20): SearchHit[] {
+export function search(
+  query: string,
+  data: EngineData,
+  limit = 20,
+  /**
+   * Restrict to one catalogue.
+   *
+   * Without it the part pickers searched both catalogues, derived an index for
+   * every match in each, then threw half the results away — and because the
+   * limit was applied before the caller's filter, a search that matched many
+   * parts of the other kind could return fewer than the caller asked for.
+   */
+  kind?: 'gpu' | 'cpu',
+): SearchHit[] {
   const q = normalise(query);
   if (!q) return [];
   const tokens = q.split(' ');
@@ -110,7 +123,7 @@ export function search(query: string, data: EngineData, limit = 20): SearchHit[]
     return s + Math.max(0, 30 - h.length / 2);
   };
 
-  for (const g of data.gpus.values()) {
+  if (kind !== 'cpu') for (const g of data.gpus.values()) {
     const sc = score(`${g.fullName} ${g.brand} ${g.variant ?? ''} ${g.chip ?? ''}`);
     if (sc > 0) {
       hits.push({
@@ -125,7 +138,7 @@ export function search(query: string, data: EngineData, limit = 20): SearchHit[]
     }
   }
 
-  for (const c of data.cpus.values()) {
+  if (kind !== 'gpu') for (const c of data.cpus.values()) {
     const sc = score(`${c.fullName} ${c.brand} ${c.variant ?? ''} ${c.codename ?? ''}`);
     if (sc > 0) {
       hits.push({

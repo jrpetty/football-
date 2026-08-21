@@ -1,0 +1,45 @@
+[
+  {
+    "file": "ibm-plex-mono-normal-400.woff2",
+    "family": "IBM Plex Mono",
+    "style": "normal",
+    "weights": [
+      "400"
+    ]
+  },
+  {
+    "file": "ibm-plex-mono-normal-500.woff2",
+    "family": "IBM Plex Mono",
+    "style": "normal",
+    "weights": [
+      "500"
+    ]
+  },
+  {
+    "file": "ibm-plex-mono-normal-600.woff2",
+    "family": "IBM Plex Mono",
+    "style": "normal",
+    "weights": [
+      "600"
+    ]
+  },
+  {
+    "file": "ibm-plex-sans-italic-400.woff2",
+    "family": "IBM Plex Sans",
+    "style": "italic",
+    "weights": [
+      "400"
+    ]
+  },
+  {
+    "file": "ibm-plex-sans-normal-400-500-600-700.woff2",
+    "family": "IBM Plex Sans",
+    "style": "normal",
+    "weights": [
+      "400",
+      "500",
+      "600",
+      "700"
+    ]
+  }
+]

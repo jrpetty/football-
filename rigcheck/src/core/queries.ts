@@ -283,7 +283,7 @@ export function bestFromInventory(
   const rejected = new Map<string, number>();
   const bump = (reason: string) => rejected.set(reason, (rejected.get(reason) ?? 0) + 1);
 
-  let best: { build: Build; score: number; meanFps: number } | null = null;
+  let best: { build: Build; score: number; meanFps: number; geomeanFps: number } | null = null;
 
   const storages = parts.storage.length ? parts.storage : (['nvme-gen3'] as const);
   const target = constraints.target ?? { resolution: resolutions[0] ?? '1080p', refreshHz: 144 };
@@ -327,7 +327,7 @@ export function bestFromInventory(
           if (s.gamesBlocked === games.length * resolutions.length) { bump('fails every capability gate'); continue; }
           // Score on geometric mean, penalised for blocked titles.
           const score = s.geomeanFps * (1 - s.gamesBlocked / (games.length * resolutions.length));
-          if (!best || score > best.score) best = { build, score, meanFps: s.meanFps };
+          if (!best || score > best.score) best = { build, score, meanFps: s.meanFps, geomeanFps: s.geomeanFps };
         }
       }
     }
@@ -340,6 +340,12 @@ export function bestFromInventory(
     build: best.build,
     score: best.score,
     meanFps: best.meanFps,
+    /* The selection already scores on the geometric mean; this carries it out
+       so the screens can show the same figure they were selected by. The
+       arithmetic mean stays available but is not the headline: across titles
+       ranging from 45 to 400fps it is dominated by the esports entries, which
+       is the exact distortion the Comparison Matrix footnote warns about. */
+    geomeanFps: best.geomeanFps,
     unused: {
       cpuIds: parts.cpuIds.filter((id) => id !== best!.build.cpuId),
       gpuIds: parts.gpuIds.filter((id) => id !== best!.build.gpuId),

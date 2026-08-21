@@ -295,3 +295,17 @@ describe('part browsing', () => {
     }
   });
 });
+
+describe('provenance on the derivation terms', () => {
+  it('credits the sources behind the graphics terms rather than nothing', () => {
+    // The bug this guards: the lookup was keyed by '' — a key no record has —
+    // so every graphics term showed an empty source list on the one panel whose
+    // whole job is saying where a number came from.
+    const r = estimate(build('amd-ryzen-5-3600', 'nvidia-geforce-rtx-3060-12gb'), 'cyberpunk-2077', '1440p', data);
+    const gpuTerms = r.terms.filter((t) => t.label.startsWith('gpu: '));
+    expect(gpuTerms.length).toBeGreaterThan(0);
+    for (const t of gpuTerms) {
+      expect(t.sources.length, `${t.label} has no attributed source`).toBeGreaterThan(0);
+    }
+  });
+});

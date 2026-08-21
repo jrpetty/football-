@@ -33,7 +33,11 @@ export function MachineReport() {
   const build = builds[0];
   const [airflow, setAirflow] = useState<(typeof AIRFLOW)[number]>('good');
   const [panel, setPanel] = useState<(typeof PANELS)[number]>('IPS');
-  const [res, setRes] = useState<Resolution>(build?.target.resolution ?? '1440p');
+  /* Same single source of truth as the Analyser: the build owns the resolution,
+     so the environment toggle and the build editor cannot disagree. */
+  const res: Resolution = build?.target.resolution ?? '1440p';
+  const setRes = (r: Resolution) =>
+    setBuilds([{ ...build, target: { ...build.target, resolution: r } }, ...builds.slice(1)]);
   const [hours, setHours] = useState(15);
   const [sensGame, setSensGame] = useState(games[0] ?? 'cyberpunk-2077');
 
@@ -87,7 +91,7 @@ export function MachineReport() {
         </p>
       </div>
 
-      <div className="grid" style={{ gridTemplateColumns: 'minmax(280px, 330px) minmax(0, 1fr)' }}>
+      <div className="grid rail">
         <div>
           <BuildEditor build={build} onChange={(b) => setBuilds([b, ...builds.slice(1)])} />
           <div className="panel">
