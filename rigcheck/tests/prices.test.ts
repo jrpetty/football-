@@ -145,10 +145,12 @@ const observedRow = (over: Partial<ObservedPrice> = {}): ObservedPrice => ({
   sources: ['ebay-uk'], warnings: [], ...over,
 });
 
-const tables = (over: Partial<{ newP: PriceTable; usedP: PriceTable; override: Record<string, number>; observed: ObservedPrice[] }> = {}) => ({
+type Override = { new: Record<string, number>; used: Record<string, number> };
+
+const tables = (over: Partial<{ newP: PriceTable; usedP: PriceTable; override: Override; observed: ObservedPrice[] }> = {}) => ({
   newP: { currency: 'GBP', updated: '2026-05', prices: { 'nvidia-geforce-rtx-3070': 400 } } as PriceTable,
   usedP: { currency: 'GBP', updated: '2026-05', prices: { 'nvidia-geforce-rtx-3070': 230 } } as PriceTable,
-  override: {},
+  override: { new: {}, used: {} } as Override,
   observed: [],
   ...over,
 });
@@ -170,13 +172,25 @@ describe('price provenance', () => {
   });
 
   it('lets an operator override beat everything, because they know their own price', () => {
-    const r = pricedLookup(tables({ observed: [observedRow()], override: { 'nvidia-geforce-rtx-3070': 100 } }), 'used')('nvidia-geforce-rtx-3070');
+    const r = pricedLookup(tables({ observed: [observedRow()], override: { new: {}, used: { 'nvidia-geforce-rtx-3070': 100 } } }), 'used')('nvidia-geforce-rtx-3070');
     expect(r.value).toBe(100);
     expect(r.origin).toBe('operator-override');
   });
 
   it('reports no price rather than zero for an unpriced part', () => {
     expect(pricedLookup(tables(), 'used')('amd-radeon-rx-9070-xt').origin).toBe('none');
+  });
+
+  it('does not answer a new-condition question with the operator\'s used price', () => {
+    // The override used to be one flat map covering both conditions, so a used
+    // figure somebody typed became the new price too — and on the Trade Desk,
+    // where the whole screen is the gap between the two, that closed the gap to
+    // zero and reported every part as worth exactly what it costs new.
+    const t = tables({ override: { new: {}, used: { 'nvidia-geforce-rtx-3070': 100 } } });
+    expect(pricedLookup(t, 'used')('nvidia-geforce-rtx-3070').value).toBe(100);
+    const asNew = pricedLookup(t, 'new')('nvidia-geforce-rtx-3070');
+    expect(asNew.value).toBe(400);
+    expect(asNew.origin).toBe('recalled-seed');
   });
 
   it('uses the other condition before falling back to a recalled figure', () => {

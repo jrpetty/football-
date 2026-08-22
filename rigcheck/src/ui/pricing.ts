@@ -1,6 +1,8 @@
 import newPrices from '../../data/pricing/gbp-new.json';
 import usedPrices from '../../data/pricing/gbp-used.json';
 import observedPrices from '../../data/pricing/observed.json';
+import { priceOverlay, type UserData } from '../core/userdata.ts';
+import { loadUserData } from './userdata.ts';
 
 export interface PriceTable {
   currency: string;
@@ -48,23 +50,24 @@ const observed = observedPrices as { prices: ObservedPrice[]; generatedAt?: stri
  * evidence of anything. The tier is returned alongside the number so a screen
  * can show the difference rather than presenting all three as equally solid.
  */
-export function loadPrices(): {
+export function loadPrices(user?: UserData): {
   newP: PriceTable;
   usedP: PriceTable;
-  override: Record<string, number>;
+  /**
+   * Prices the operator entered, split by condition.
+   *
+   * It used to be one flat map covering both, which meant a used-market figure
+   * somebody typed also became the answer to "what does this cost new?" — and
+   * on the Trade Desk, where the whole screen is the gap between those two
+   * numbers, that quietly closed the gap to zero.
+   */
+  override: { new: Record<string, number>; used: Record<string, number> };
   observed: ObservedPrice[];
 } {
-  let override: Record<string, number> = {};
-  try {
-    const raw = localStorage.getItem('rigcheck.priceOverride');
-    if (raw) override = JSON.parse(raw) as Record<string, number>;
-  } catch {
-    override = {};
-  }
   return {
     newP: newPrices as PriceTable,
     usedP: usedPrices as PriceTable,
-    override,
+    override: priceOverlay(user ?? loadUserData()),
     observed: observed.prices ?? [],
   };
 }
@@ -80,7 +83,12 @@ export function findObserved(
 /** Price with its provenance, for a screen that needs to show the difference. */
 export function pricedLookup(p: ReturnType<typeof loadPrices>, prefer: 'used' | 'new' = 'used') {
   return (id: string): PricedValue => {
-    if (p.override[id] != null) return { value: p.override[id], origin: 'operator-override' };
+    // The operator's own figure for the condition being asked about wins
+    // outright; their figure for the OTHER condition does not, because a used
+    // price is not a new price. It falls through to the observed and seeded
+    // tiers instead, which at least know which condition they describe.
+    const mine = p.override[prefer][id];
+    if (mine != null) return { value: mine, origin: 'operator-override' };
     const first = findObserved(p.observed, id, prefer);
     if (first) return { value: first.price, origin: 'observed', observed: first };
     const other = findObserved(p.observed, id, prefer === 'used' ? 'new' : 'used');
@@ -116,10 +124,8 @@ export function plannerTables(p: ReturnType<typeof loadPrices>): {
   for (const o of p.observed) {
     (o.condition === 'new' ? newP : usedP)[o.partId] = o.price;
   }
-  for (const [id, v] of Object.entries(p.override)) {
-    newP[id] = v;
-    usedP[id] = v;
-  }
+  for (const [id, v] of Object.entries(p.override.new)) newP[id] = v;
+  for (const [id, v] of Object.entries(p.override.used)) usedP[id] = v;
   return { newP, usedP };
 }
 
@@ -129,13 +135,28 @@ export function priceCoverage(p: ReturnType<typeof loadPrices>): {
   seeded: number;
   sourcedShare: number;
   staleCount: number;
+  /** Parts the operator priced themselves. The strongest tier there is. */
+  operator: number;
 } {
   const seeded = new Set([...Object.keys(p.newP.prices), ...Object.keys(p.usedP.prices)]);
   const sourced = new Set(p.observed.map((o) => o.partId));
+  const operator = new Set([...Object.keys(p.override.new), ...Object.keys(p.override.used)]);
   return {
     sourced: sourced.size,
     seeded: seeded.size,
     sourcedShare: seeded.size ? sourced.size / seeded.size : 0,
     staleCount: p.observed.filter((o) => o.stale).length,
+    operator: operator.size,
   };
+}
+
+/** Every part that carries a price from any tier — what the planner can cost. */
+export function pricedIds(p: ReturnType<typeof loadPrices>): Set<string> {
+  return new Set([
+    ...Object.keys(p.newP.prices),
+    ...Object.keys(p.usedP.prices),
+    ...p.observed.map((o) => o.partId),
+    ...Object.keys(p.override.new),
+    ...Object.keys(p.override.used),
+  ]);
 }

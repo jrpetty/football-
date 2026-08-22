@@ -350,6 +350,15 @@ input:focus:not(:focus-visible), select:focus:not(:focus-visible), textarea:focu
 .btn.primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); color: var(--accent-ink); }
 .btn.danger:hover { color: var(--blocked); border-color: var(--blocked); background: color-mix(in srgb, var(--blocked) 10%, var(--surface-2)); }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+/* Row-scale button, for a remove control that sits inside a table cell and
+   must not set the row height. */
+.btn.tiny { padding: 3px 7px; font-size: 10.5px; }
+/* A <label> wrapping a hidden file input has to carry the button's box itself —
+   the .btn rules are written for <button> and a label picks up none of its
+   default box. Without this the import control rendered as bare text, and then
+   in uppercase, because the label rules elsewhere in this sheet are written for
+   field captions and reached it. */
+label.btn { display: inline-flex; align-items: center; text-transform: none; letter-spacing: normal; font-family: inherit; font-size: 12.5px; font-weight: 500; color: var(--muted); }
 
 .chip {
   display: inline-flex;

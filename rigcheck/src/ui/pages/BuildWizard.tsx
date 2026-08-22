@@ -36,10 +36,7 @@ const monitors = (monitorsJson as { records: MonitorRecord[] }).records;
 const comp = componentPrices as unknown as ComponentPrices;
 // Observed market data merged over the recalled seed. A part someone has
 // actually sourced beats a part the model remembers.
-const prices = loadPrices();
-const priceTables = plannerTables(prices);
-const coverage = priceCoverage(prices);
-const PRICE_AS_OF = prices.newP.updated ?? 'unknown';
+
 
 const STEPS = [
   { key: 'screen', title: 'Your screen', hint: 'resolution and refresh' },
@@ -69,6 +66,20 @@ const LIBRARY_PRESETS: { label: string; sub: string; pick: (ids: string[], arche
 ];
 
 export function BuildWizard() {
+  // Loaded inside the component, not at module scope. At module scope it ran
+  // once per page load and never again, so a price entered in the Data Explorer
+  // did not reach this screen until the tab was reloaded — which, on a tool
+  // whose whole point is that you can improve its data from inside it, reads as
+  // the entry having silently failed.
+  const { prices, priceTables, coverage, PRICE_AS_OF } = useMemo(() => {
+    const p = loadPrices();
+    return {
+      prices: p,
+      priceTables: plannerTables(p),
+      coverage: priceCoverage(p),
+      PRICE_AS_OF: p.newP.updated ?? 'unknown',
+    };
+  }, []);
   const { data } = useApp();
   // Both are indexes into STEPS. A restored value outside that range rendered
   // the rail with nothing active and no panel at all — a blank screen with no
@@ -449,6 +460,8 @@ export function BuildWizard() {
       {/* ----------------------------------------------------------- build -- */}
       {step === 3 && (
         <BuildStep
+          prices={prices}
+          priceAsOf={PRICE_AS_OF}
           plan={plan}
           showAlt={showAlt}
           setShowAlt={setShowAlt}
@@ -534,6 +547,8 @@ function BuildStep({
   setUsage,
   psuTier,
   setPsuTier,
+  prices,
+  priceAsOf,
 }: {
   plan: ReturnType<typeof planBuild> | null;
   showAlt: boolean;
@@ -543,6 +558,10 @@ function BuildStep({
   setUsage: (u: UsageProfile) => void;
   psuTier: PsuTier;
   setPsuTier: (t: PsuTier) => void;
+  // Passed down rather than read from module scope, so a price entered during
+  // this session reaches the build sheet without a reload.
+  prices: ReturnType<typeof loadPrices>;
+  priceAsOf: string;
 }) {
   if (!plan) return <div className="empty">Pick at least one game and there will be a build to show.</div>;
   if (!plan.pick) {
@@ -608,7 +627,7 @@ function BuildStep({
                     <td className="part">
                       <b>{l.label}</b>
                       {l.allowance && <span className="tag" style={{ marginLeft: 6 }}>allowance</span>}
-                      {!l.allowance && l.partId && <PriceOrigin id={l.partId} />}
+                      {!l.allowance && l.partId && <PriceOrigin id={l.partId} prices={prices} asOf={priceAsOf} />}
                       <div className="why">{l.rationale}</div>
                     </td>
                     <td className="money">£{l.price}</td>
@@ -775,11 +794,30 @@ function SettingsStep({
  * invites someone to plan a purchase around a number nobody checked. Sourced
  * prices carry their sample size and age; recalled ones say so plainly.
  */
-function PriceOrigin({ id }: { id: string }) {
+function PriceOrigin({
+  id,
+  prices,
+  asOf,
+}: {
+  id: string;
+  prices: ReturnType<typeof loadPrices>;
+  asOf: string;
+}) {
+  // A price the operator entered outranks everything, so it is checked first
+  // and labelled as theirs. Showing their own figure as "recalled" would be
+  // both wrong and discouraging — the point of letting somebody enter a price
+  // is that the tool then visibly uses it.
+  if (prices.override.used[id] != null || prices.override.new[id] != null) {
+    return (
+      <span className="tag good" style={{ marginLeft: 6 }} title="A price you entered yourself. It beats every other source here.">
+        yours
+      </span>
+    );
+  }
   const o = findObserved(prices.observed, id, 'used') ?? findObserved(prices.observed, id, 'new');
   if (!o) {
     return (
-      <span className="tag" style={{ marginLeft: 6 }} title={`No market observation for this part — the figure is the recalled seed dated ${PRICE_AS_OF}, which was never sourced. Add one in data/prices-observed/.`}>
+      <span className="tag" style={{ marginLeft: 6 }} title={`No market observation for this part — the figure is the recalled seed dated ${asOf}, which was never sourced. Add one under "add your own data" in the Data Explorer, or in data/prices-observed/.`}>
         recalled
       </span>
     );

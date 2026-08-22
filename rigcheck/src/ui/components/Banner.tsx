@@ -28,8 +28,9 @@ export function ProvenanceBanner() {
         <b>These figures come from recalled data, not measurements.</b> The specification sources this
         tool is built around were unreachable when the catalogue was seeded, so every hardware record and
         every validation fixture is tagged <span className="mono">model-knowledge</span>. Relative
-        orderings are reliable; absolute frame rates are not. Import measurements via{' '}
-        <span className="mono">data/manual/</span> to replace them — this notice clears itself when
+        orderings are reliable; absolute frame rates are not. Add measurements under{' '}
+        <b>add your own data</b> in the Data Explorer, or import a batch via{' '}
+        <span className="mono">data/manual/</span>, to replace them — this notice clears itself when
         measured data outweighs recalled.
       </span>
       <button onClick={() => setDismissed(true)} title="Hide until reload">dismiss</button>

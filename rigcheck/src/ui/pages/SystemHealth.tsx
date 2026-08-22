@@ -37,6 +37,8 @@ import { BrowserSpecPanel } from '../components/BrowserSpec.tsx';
 import type { GpuIdentification } from '../bench/inspect.ts';
 import { addSession, historyFor, loadSessions, removeSession } from '../sessions.ts';
 import measuredJson from '../../../data/measured/records.json';
+import { toPerfRecords } from '../../core/userdata.ts';
+import { loadUserData } from '../userdata.ts';
 import type { PerfRecord } from '../../core/types.ts';
 import { PRESETS } from '../../core/presets.ts';
 import { exportJson } from '../export.ts';
@@ -83,7 +85,7 @@ function CopyBlock({ lines }: { lines: string[] }) {
  * empty, and a screen that dressed that up as a comparison would be inventing
  * social proof, so the peer panel says so plainly instead.
  */
-const measuredRecords = (measuredJson as { records: PerfRecord[] }).records ?? [];
+const bundledRecords = (measuredJson as { records: PerfRecord[] }).records ?? [];
 
 const SEVERITY_LABEL: Record<Severity, string> = {
   critical: 'critical',
@@ -126,6 +128,17 @@ export function SystemHealth() {
   const [uptimeDays, setUptimeDays] = useStickyState<number | ''>('sh.uptimeDays', '');
 
   const [sessions, setSessions] = useState<HealthSession[]>(() => loadSessions());
+  /**
+   * The corpus peer comparison actually searches.
+   *
+   * `data/measured/records.json` ships empty, so until something was added to
+   * it the peer panel could never produce a result — a feature that was
+   * written, tested, wired in and structurally incapable of firing. Captures
+   * the user has entered go in alongside whatever the build ships with, which
+   * is the only way this fills up at all given no measured corpus is reachable
+   * from here.
+   */
+  const measuredRecords = useMemo(() => [...bundledRecords, ...toPerfRecords(loadUserData())], []);
   const [machineLabel, setMachineLabel] = useStickyState('sh.machineLabel', 'my pc');
   const [sessionNote, setSessionNote] = useStickyState('sh.sessionNote', '');
   const [fixesApplied, setFixesApplied] = useStickyState<AppliedFix[]>('sh.fixesApplied', [], (v) => Array.isArray(v));

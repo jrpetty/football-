@@ -4,11 +4,18 @@
  *
  * The honest version of this feature is mostly about what it refuses to do.
  * There is no server behind this tool and no telemetry, so the only peers that
- * exist are measurements somebody imported into `data/measured/` — and that
- * file currently holds zero records. A screen that rendered "compared against
- * 0 peers" as a comparison, or that quietly substituted the model's own
- * prediction and called it a peer, would be inventing a social proof that does
- * not exist. Both are worse than saying there is nothing to compare against.
+ * exist are measurements somebody put here deliberately: the bundled
+ * `data/measured/` corpus, which ships empty, plus whatever the person using it
+ * has captured themselves. A screen that rendered "compared against 0 peers" as
+ * a comparison, or that quietly substituted the model's own prediction and
+ * called it a peer, would be inventing a social proof that does not exist. Both
+ * are worse than saying there is nothing to compare against.
+ *
+ * For most of this project's life the bundled corpus was the only route in, and
+ * it needed a checkout and a CLI — so on the single HTML file everyone actually
+ * uses, this returned the `none` tier every time it was called, for every
+ * machine, without exception. Captures added from inside the page now feed the
+ * same search, which is what makes the first tier reachable at all.
  *
  * So there are three tiers and they are never conflated:
  *
@@ -106,7 +113,7 @@ export function comparePeers(
           ? ' None of them used the same preset as you, so this compares the hardware rather than the configuration and is weaker for it.'
           : '') +
         (use.length < 3 ? ' With this few peers, a difference of less than about 15% means very little.' : ''),
-      nextStep: use.length < 5 ? 'More imported measurements of this pairing would make this comparison worth something. See data/manual/README.md.' : undefined,
+      nextStep: use.length < 5 ? 'More measurements of this pairing would make this comparison worth something. Add one under "add your own data" in the Data Explorer, or import a batch into data/manual/.' : undefined,
     };
   }
 
@@ -121,7 +128,7 @@ export function comparePeers(
       percentile: null,
       detail:
         `No measurement of this CPU and GPU pairing by anyone else has been imported, so there are no peers to compare against. What there is: ${ownHistory.length} earlier measurement${ownHistory.length === 1 ? '' : 's'} of THIS machine at these settings, median ${med.toFixed(0)}fps, against your current ${mine.avgFps.toFixed(0)} — ${Number(pct) >= 0 ? `${pct}% above` : `${Math.abs(Number(pct))}% below`}. That tells you whether the machine has drifted. It cannot tell you whether it is normal for the hardware.`,
-      nextStep: 'Peer comparison needs measurements from other machines. Import them into data/manual/ and they become peers for everyone using this build.',
+      nextStep: 'Peer comparison needs measurements from other machines. Add them under "add your own data" in the Data Explorer, or import a batch into data/manual/, and they become peers.',
     };
   }
 
@@ -134,6 +141,6 @@ export function comparePeers(
     detail:
       'There is nothing to compare against. This tool has no server and collects no telemetry, so the only peers that can exist are measurements someone has imported — and none match this hardware and game. The frame-rate expectation elsewhere in this report comes from the model, which is a different thing from other people\'s machines and is not presented as one.',
     nextStep:
-      'Run the harness on this machine and import the result, and it becomes the first peer. A second machine with the same parts makes the comparison real.',
+      'Capture a frame rate on this machine and add it under "add your own data" in the Data Explorer, and it becomes the first peer. A second machine with the same parts makes the comparison real.',
   };
 }

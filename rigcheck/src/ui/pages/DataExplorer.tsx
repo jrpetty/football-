@@ -6,8 +6,9 @@ import { fmt } from '../components/Parts.tsx';
 import { ANCHORS } from '../../core/constants.ts';
 import { exportCsv } from '../export.ts';
 import { PartPicker } from '../components/Parts.tsx';
+import { Contribute } from '../components/Contribute.tsx';
 
-type Tab = 'gpu' | 'cpu' | 'game' | 'compare' | 'provenance';
+type Tab = 'gpu' | 'cpu' | 'game' | 'compare' | 'provenance' | 'contribute';
 
 export function DataExplorer() {
   const { data } = useApp();
@@ -109,9 +110,9 @@ export function DataExplorer() {
           <span aria-hidden="true" style={{ width: 1, alignSelf: 'stretch', background: 'var(--line-strong)', margin: '0 4px' }} />
           <h2 className="micro">views</h2>
           <div className="toggle-row">
-            {(['compare', 'provenance'] as Tab[]).map((t) => (
+            {(['compare', 'provenance', 'contribute'] as Tab[]).map((t) => (
               <button key={t} className={`toggle${tab === t ? ' on' : ''}`} onClick={() => setTab(t)}>
-                {t === 'compare' ? 'compare parts' : 'where the data came from'}
+                {t === 'compare' ? 'compare parts' : t === 'provenance' ? 'where the data came from' : 'add your own data'}
               </button>
             ))}
           </div>
@@ -512,6 +513,10 @@ export function DataExplorer() {
           </div>
         )}
       </div>
+
+      {/* Outside the wrapping panel: this view brings its own, because it is a
+          set of forms and tables rather than one table with a toolbar. */}
+      {tab === 'contribute' && <Contribute />}
     </>
   );
 }
