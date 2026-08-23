@@ -499,6 +499,22 @@ export interface CoreInference {
  * memory bandwidth and the browser's own scheduling all cost something — so the
  * bar for "still holding" is 72%, and a machine has to lose considerably more
  * than that at a single step before this is willing to call it thread sharing.
+ *
+ * **On the two thresholds below.** They are reasoned from how thread sharing is
+ * expected to behave — a second thread on a busy core adding roughly a quarter
+ * of a core rather than a whole one — and they have never been checked against a
+ * machine whose topology is known. The only real hardware this has run on is a
+ * four-vCPU container, whose curve is genuinely ambiguous and which this
+ * correctly declines to classify. The tests exercise ladders generated from that
+ * same expected behaviour, which makes them a check on the arithmetic and not on
+ * the premise.
+ *
+ * That is why the knee itself and the inference from it are kept apart
+ * everywhere they surface. The knee is measured: per-thread throughput held to
+ * here and fell after, which is true whatever the cause. "That is eight cores
+ * running two threads each" is an inference from the shape, and it is worded as
+ * one — and `corroborateCpu` treats a disagreement on core count as the weakest
+ * of its three checks for the same reason.
  */
 
 /** Per-thread throughput, relative to one thread, that still counts as holding. */
@@ -562,8 +578,10 @@ export function coreInference(scaling: ScalingPoint[], reported: number): CoreIn
       detail:
         `Per-thread throughput held out to ${knee} workers and then fell ` +
         `${((1 - worst.retained) * 100).toFixed(0)}% across the next doubling, while the browser reports ` +
-        `${reported} logical processors. That is the shape of ${knee} physical cores running two threads ` +
-        `each — the second thread on a core adds throughput but not a whole core's worth.`,
+        `${reported} logical processors. The measured part is the fall itself. The likeliest reading of it ` +
+        `is ${knee} physical cores running two threads each, since a second thread on a busy core adds ` +
+        `throughput but not a whole core's worth — though a part that simply runs out of memory bandwidth ` +
+        `at this width would look similar.`,
     };
   }
 
@@ -875,8 +893,10 @@ export function corroborateCpu(
         detail: agrees
           ? `The scaling curve knees at ${cores.physicalCores} workers, matching the ${record.cores} cores ` +
             `${an(record.fullName)} ${record.fullName} has.`
-          : `The scaling curve knees at ${cores.physicalCores} workers; ${an(record.fullName)} ${record.fullName} has ` +
-            `${record.cores} cores.`,
+          : `The scaling curve knees at ${cores.physicalCores} workers; ${an(record.fullName)} ${record.fullName} ` +
+            `has ${record.cores} cores. The weakest of these checks: the knee is measured, but reading a core ` +
+            `count off it assumes the fall is thread sharing rather than memory bandwidth running out, and ` +
+            `that assumption has not been checked against a machine whose topology is known.`,
       });
     }
   }

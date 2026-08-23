@@ -207,3 +207,77 @@ export function thinnestCells(
   }
   return [...cells.values()].sort((a, b) => a.weight - b.weight || a.rows - b.rows).slice(0, limit);
 }
+
+/* ------------------------------------------------- what the error measures -- */
+
+/**
+ * What the validation error figure is actually a measure of.
+ *
+ * This exists because the number it describes is the most trustworthy-looking
+ * thing in the whole tool and, right now, the one to trust least. The gate
+ * reports a median error of about 12% against 232 held-out fixtures — which
+ * sounds like accuracy, is labelled like accuracy, and lives on a screen the
+ * navigation calls "Accuracy".
+ *
+ * It is not accuracy. Every fixture in the set carries the source note
+ * "Recalled from widely-reported review configurations", and every catalogue
+ * record the estimator reads is tagged `model-knowledge`. So the figure is a
+ * model's estimate checked against a model's recollection: it measures whether
+ * the estimator is internally consistent with the same memory that seeded it.
+ * A perfect score would mean the two agree, not that either is right.
+ *
+ * That distinction cannot be left to a footnote somebody scrolls past, and it
+ * must not be hardcoded either — it has to weaken on its own as real
+ * measurements arrive, or it becomes another stale claim. So it is derived from
+ * the measured share, which is the same number the gate arms on.
+ */
+export type AccuracyKind = 'self-consistency' | 'partly-measured' | 'accuracy';
+
+export interface AccuracyClaim {
+  kind: AccuracyKind;
+  /** The correct name for the figure, for use as a label. */
+  term: string;
+  /** One short sentence, for a banner. */
+  headline: string;
+  /** The reasoning, for the paragraph under it. */
+  detail: string;
+}
+
+export function accuracyClaim(share: number): AccuracyClaim {
+  const pct = (x: number) => `${Math.round(x * 100)}%`;
+
+  if (!(share > 0)) {
+    return {
+      kind: 'self-consistency',
+      term: 'self-consistency',
+      headline: 'This is not an accuracy figure.',
+      detail:
+        'Not one fixture in this set is a measurement. Every one is recalled, and so is every catalogue ' +
+        'record the estimator reads — so what is being compared is a model against its own memory. The ' +
+        'number below says the estimator is internally consistent with the seed it was built from. It ' +
+        'cannot say whether either of them matches a real machine, and a perfect score here would not ' +
+        'mean it did. Add measurements and this notice changes on its own.',
+    };
+  }
+  if (share < STRICT_GATE_ARMS_AT) {
+    return {
+      kind: 'partly-measured',
+      term: 'error against a mostly-recalled set',
+      headline: `Only ${pct(share)} of the evidence behind this figure is measured.`,
+      detail:
+        `The rest is recalled, so most of what the estimator is being checked against came from the same ` +
+        `memory that seeded it. The figure is becoming an accuracy measure and is not one yet; it starts ` +
+        `being worth reading as accuracy somewhere past ${pct(STRICT_GATE_ARMS_AT)}, which is also where ` +
+        `the strict tail gate arms.`,
+    };
+  }
+  return {
+    kind: 'accuracy',
+    term: 'accuracy',
+    headline: `${pct(share)} of the evidence behind this figure is measured.`,
+    detail:
+      'Most of what the estimator is checked against is a real capture rather than a recollection, so ' +
+      'this reads as an error against reality. The recalled remainder still pulls it toward the seed, ' +
+      'and the gap between out-of-fold and in-sample is the thing to watch for that.',
+  };
+}

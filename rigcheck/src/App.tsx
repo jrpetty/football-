@@ -42,7 +42,11 @@ const NAV = [
   { to: '/system', label: 'My PC', full: 'System Health' },
   { to: '/detect', label: 'Identify', full: 'Identify a Machine' },
   { to: '/data', label: 'Data', full: 'Data Explorer' },
-  { to: '/health', label: 'Accuracy', full: 'Model Health' },
+  // "Accuracy" was the wrong word and the most consequential one on the bar:
+  // the screen's headline figure is the estimator agreeing with a recalled
+  // fixture set, and labelling the way in to it "Accuracy" made the one number
+  // that should be read most sceptically look like the most reliable.
+  { to: '/health', label: 'Evidence', full: 'Model Health' },
 ];
 
 /**

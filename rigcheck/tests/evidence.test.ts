@@ -5,6 +5,7 @@ import {
   GATES,
   SOURCE_TIER,
   STRICT_GATE_ARMS_AT,
+  accuracyClaim,
   evidenceLadder,
   measuredShare,
   rowWeight,
@@ -127,5 +128,66 @@ describe('evidence ladder', () => {
   it('marks exactly the harness and manual tiers as measurements', () => {
     const measured = Object.entries(SOURCE_TIER).filter(([, v]) => v.measured).map(([k]) => k);
     expect(measured.sort()).toEqual(['harness', 'manual-measured']);
+  });
+});
+
+/* ------------------------------------------ what the error figure measures -- */
+
+/**
+ * The most trustworthy-looking number in the tool, and currently the one to
+ * trust least.
+ *
+ * The gate reports roughly 12% median error against 232 held-out fixtures. Every
+ * one of those fixtures carries the source note "Recalled from widely-reported
+ * review configurations", and every catalogue record the estimator reads is
+ * tagged `model-knowledge` — so the figure is a model checked against its own
+ * memory. These pin the wording that says so, and pin that it weakens on its own
+ * rather than needing somebody to remember to take it down.
+ */
+describe('naming what the validation figure measures', () => {
+  it('refuses to call it accuracy when nothing behind it was measured', () => {
+    const c = accuracyClaim(0);
+    expect(c.kind).toBe('self-consistency');
+    expect(c.headline).toMatch(/not an accuracy figure/i);
+    expect(c.term).not.toMatch(/accuracy/);
+  });
+
+  it('says a perfect score would still not mean the model is right', () => {
+    // The specific misreading this exists to prevent: 0% error against a
+    // recalled set means the estimator agrees with the memory that seeded it.
+    expect(accuracyClaim(0).detail).toMatch(/perfect score/i);
+  });
+
+  it('softens on its own as measurements arrive', () => {
+    const none = accuracyClaim(0);
+    const some = accuracyClaim(0.2);
+    const most = accuracyClaim(0.8);
+    expect([none.kind, some.kind, most.kind]).toEqual([
+      'self-consistency',
+      'partly-measured',
+      'accuracy',
+    ]);
+    // Only the last one is allowed to use the word.
+    expect(most.term).toBe('accuracy');
+    expect(some.term).not.toBe('accuracy');
+  });
+
+  it('turns over exactly where the strict gate arms, not somewhere else', () => {
+    // Two thresholds that disagree would let the screen say the figure reads as
+    // accuracy while the gate still refuses to arm on it.
+    expect(accuracyClaim(STRICT_GATE_ARMS_AT - 0.01).kind).toBe('partly-measured');
+    expect(accuracyClaim(STRICT_GATE_ARMS_AT).kind).toBe('accuracy');
+  });
+
+  it('quotes the measured share back rather than a fixed number', () => {
+    expect(accuracyClaim(0.2).headline).toContain('20%');
+    expect(accuracyClaim(0.35).headline).toContain('35%');
+  });
+
+  it('describes the fixture set this build actually ships with', () => {
+    // Guards against the notice going stale in the other direction: if real
+    // measurements ever land in the repository, this test fails and the claim
+    // has to be re-read rather than left saying "nothing was measured".
+    expect(accuracyClaim(measuredShare(real)).kind).toBe('self-consistency');
   });
 });

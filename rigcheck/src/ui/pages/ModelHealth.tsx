@@ -21,7 +21,9 @@ import { useMemo, useState } from 'react';
 import historyJson from '../../../data/validation/history.json';
 import lastRunJson from '../../../data/validation/last-run.json';
 import fixturesJson from '../../../data/fixtures/fixtures.json';
-import { GATES, STRICT_GATE_ARMS_AT, evidenceLadder, thinnestCells, type Fixture } from '../../core/evidence.ts';
+import {
+  GATES, STRICT_GATE_ARMS_AT, accuracyClaim, evidenceLadder, thinnestCells, type Fixture,
+} from '../../core/evidence.ts';
 import { RESOLUTIONS } from '../../core/types.ts';
 import { useApp } from '../store.ts';
 import { exportCsv, exportJson } from '../export.ts';
@@ -85,9 +87,9 @@ interface Series {
 }
 
 const SERIES: Series[] = [
-  { key: 'medianAPE', label: 'median error', lowerIsBetter: true, gate: GATES.medianAPE, gateLabel: 'gate 15%', format: (x) => pct(x) },
-  { key: 'p90APE', label: 'p90 error (tail)', lowerIsBetter: true, gate: GATES.p90APEAdvisory, gateLabel: 'advisory 45%', format: (x) => pct(x) },
-  { key: 'meanAPE', label: 'mean error', lowerIsBetter: true, format: (x) => pct(x) },
+  { key: 'medianAPE', label: 'median disagreement', lowerIsBetter: true, gate: GATES.medianAPE, gateLabel: 'gate 15%', format: (x) => pct(x) },
+  { key: 'p90APE', label: 'p90 disagreement (tail)', lowerIsBetter: true, gate: GATES.p90APEAdvisory, gateLabel: 'advisory 45%', format: (x) => pct(x) },
+  { key: 'meanAPE', label: 'mean disagreement', lowerIsBetter: true, format: (x) => pct(x) },
   { key: 'spearman', label: 'rank correlation', lowerIsBetter: false, gate: GATES.spearman, gateLabel: 'gate 0.90', format: (x) => x.toFixed(3) },
   { key: 'withinBand', label: 'inside stated band', lowerIsBetter: false, format: (x) => pct(x) },
 ];
@@ -171,6 +173,9 @@ export function ModelHealth() {
   const [coverBy, setCoverBy] = useState<CoverBy>('stratum');
 
   const ladder = useMemo(() => evidenceLadder(fixtures), []);
+  // Derived from the measured share rather than written down, so it weakens on
+  // its own as real captures arrive instead of becoming another stale claim.
+  const claim = useMemo(() => accuracyClaim(ladder.measuredShare), [ladder.measuredShare]);
   const cv = lastRun.crossValidation;
   const inSample = lastRun.inSample;
   // The overfit tripwire: an in-sample fit far better than the out-of-fold one
@@ -228,11 +233,21 @@ export function ModelHealth() {
       <div className="page-head">
         <h1>Model Health</h1>
         <p>
-          What the estimates rest on, how accuracy is moving, and where the evidence is thinnest.
-          Every figure here comes from the same module the validation gate uses, so this screen
-          cannot quote a weighting the gate disagrees with.
+          What the estimates rest on, how the error figure is moving, and where the evidence is
+          thinnest. Every figure here comes from the same module the validation gate uses, so this
+          screen cannot quote a weighting the gate disagrees with.
         </p>
       </div>
+
+      {/* Above everything, including the ladder. The error figure below is the
+          most trustworthy-looking number in the tool and currently the one to
+          trust least, and a reader who takes only one thing from this screen
+          should take this. */}
+      {claim.kind !== 'accuracy' && (
+        <div className={`note ${claim.kind === 'self-consistency' ? 'bad' : 'warn'}`} style={{ marginBottom: 14 }}>
+          <b>{claim.headline}</b> {claim.detail}
+        </div>
+      )}
 
       {/* --- Evidence ladder --------------------------------------------- */}
       <div className="panel">
@@ -301,7 +316,7 @@ export function ModelHealth() {
       {/* --- Drift -------------------------------------------------------- */}
       <div className="panel">
         <div className="panel-head">
-          <h2>Accuracy drift</h2>
+          <h2>{claim.kind === 'accuracy' ? 'Accuracy drift' : 'Error drift'}</h2>
           <span className="spacer" />
           <span className="mini">{history.length} recorded run{history.length === 1 ? '' : 's'}</span>
           <button
@@ -329,7 +344,9 @@ export function ModelHealth() {
             Every point is one grouped 5-fold cross-validation over the whole fixture set, with the
             per-game reference refitted inside each fold. Points are coloured by whether that run
             passed. A run whose fixture count changed is not comparable with the one before it, so
-            the count is on every tooltip.
+            the count is on every tooltip. What moves here is {claim.term} — a falling line means the
+            estimator agrees more closely with the fixture set, which is only worth as much as the
+            fixture set is.
           </p>
         </div>
       </div>
@@ -338,6 +355,7 @@ export function ModelHealth() {
       <div className="panel">
         <div className="panel-head">
           <h2>Latest run</h2>
+          <span className={`tag ${claim.kind === 'accuracy' ? 'good' : 'bad'}`}>{claim.term}</span>
           <span className="spacer" />
           <span className="mini mono">{lastRun.generatedAt.slice(0, 16).replace('T', ' ')}</span>
           <button
@@ -363,9 +381,16 @@ export function ModelHealth() {
               </thead>
               <tbody>
                 {([
-                  ['median error', cv.medianAPE, inSample.medianAPE, `≤ ${pct(GATES.medianAPE, 0)}`, cv.medianAPE <= GATES.medianAPE, true],
-                  ['p90 error', cv.p90APE, inSample.p90APE, `≤ ${pct(ladder.strictGateArmed ? GATES.p90APE : GATES.p90APEAdvisory, 0)}${ladder.strictGateArmed ? '' : ' (advisory)'}`, cv.p90APE <= (ladder.strictGateArmed ? GATES.p90APE : GATES.p90APEAdvisory), true],
-                  ['mean error', cv.meanAPE, inSample.meanAPE, '—', true, true],
+                  [
+                    // Named for what it measures, not for what it would be if the
+                    // fixtures were measurements. On a fully recalled set this
+                    // reads "median disagreement with the recalled set", which is
+                    // exactly what a 12% figure there means.
+                    claim.kind === 'accuracy' ? 'median error' : 'median disagreement with the recalled set',
+                    cv.medianAPE, inSample.medianAPE, `≤ ${pct(GATES.medianAPE, 0)}`, cv.medianAPE <= GATES.medianAPE, true,
+                  ],
+                  [claim.kind === 'accuracy' ? 'p90 error' : 'p90 disagreement (tail)', cv.p90APE, inSample.p90APE, `≤ ${pct(ladder.strictGateArmed ? GATES.p90APE : GATES.p90APEAdvisory, 0)}${ladder.strictGateArmed ? '' : ' (advisory)'}`, cv.p90APE <= (ladder.strictGateArmed ? GATES.p90APE : GATES.p90APEAdvisory), true],
+                  [claim.kind === 'accuracy' ? 'mean error' : 'mean disagreement', cv.meanAPE, inSample.meanAPE, '—', true, true],
                   ['rank correlation', cv.spearman, inSample.spearman, `≥ ${GATES.spearman.toFixed(2)}`, cv.spearman >= GATES.spearman, false],
                   ['inside stated band', cv.withinBand, inSample.withinBand, '—', true, false],
                 ] as [string, number, number, string, boolean, boolean][]).map(([label, out, ins, gate, ok, isPct]) => (

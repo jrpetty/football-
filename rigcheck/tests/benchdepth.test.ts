@@ -16,7 +16,18 @@ const cpu = (over: Partial<CpuProbe> = {}): CpuProbe => ({
   ...over,
 });
 
-/** A scaling ladder for a part with `cores` cores and `smt` threads per core. */
+/**
+ * A scaling ladder for a part with `cores` cores and `threadsPerCore` per core.
+ *
+ * **This is a model, not data.** The 0.97 and 0.25 below are how thread sharing
+ * is expected to behave, written here from the same reasoning that set the
+ * thresholds being tested — so these cases check that the arithmetic finds the
+ * knee in a curve of the expected shape. They do not check that real hardware
+ * produces that shape. No machine with a known topology has been available to
+ * run this against; the one that has is a four-vCPU container whose curve is
+ * ambiguous, and the case below named "abstains rather than halving the core
+ * count" is built from its real numbers.
+ */
 function ladderFor(cores: number, threadsPerCore: 1 | 2, perCore = 1e8): ScalingPoint[] {
   const total = cores * threadsPerCore;
   const widths = [...new Set([1, 2, 4, 8, 16, Math.ceil(total / 2), total])]
