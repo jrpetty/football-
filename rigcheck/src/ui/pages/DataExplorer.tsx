@@ -22,6 +22,17 @@ export function DataExplorer() {
   const [needRt, setNeedRt] = useState(false);
   // Find the records that still need data, which is the whole job when filling gaps.
   const [onlyIncomplete, setOnlyIncomplete] = useState(false);
+  /**
+   * Capability filters, folded away.
+   *
+   * Eleven buttons across the top of a table nobody has scrolled yet. They are
+   * the screen's most powerful feature and its least used, which is exactly the
+   * shape that belongs behind a disclosure rather than in front of one.
+   *
+   * It opens itself whenever a filter is actually on. A hidden control that is
+   * silently excluding rows is worse than a visible one nobody wanted.
+   */
+  const [showFilters, setShowFilters] = useState(false);
   // The CPU-side equivalents. Socket and memory type are the two that decide
   // whether an upgrade is a drop-in or a platform rebuild, so they filter here
   // rather than being something to read off row by row.
@@ -85,7 +96,7 @@ export function DataExplorer() {
   return (
     <>
       <div className="page-head">
-        <h1>Data Explorer</h1>
+        <h1>The catalogue behind the estimates</h1>
         <p>
           The catalogue behind every estimate, with derived indices shown alongside the specs they came
           from. Both indices are anchored at 100 on the reference parts.
@@ -151,8 +162,19 @@ export function DataExplorer() {
 
         {tab === 'gpu' && (
           <div className="panel-body" style={{ paddingTop: 8, paddingBottom: 8, borderBottom: '1px solid var(--line)' }}>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-              <span className="mini">capability filter</span>
+            <button
+              className="disclosure"
+              style={{ marginBottom: showFilters || minVram > 0 || needMesh || needRt || onlyIncomplete ? 10 : 0 }}
+              aria-expanded={showFilters || minVram > 0 || needMesh || needRt || onlyIncomplete}
+              onClick={() => setShowFilters((f) => !f)}
+            >
+              <span aria-hidden="true">{showFilters || minVram > 0 || needMesh || needRt || onlyIncomplete ? '▾' : '▸'}</span>
+              <span className="k">filter by capability</span>
+              <span className="summary">
+                {minVram > 0 || needMesh || needRt || onlyIncomplete ? 'filters on' : 'off'} · {gpuRows.length} of {data.gpus.size} shown
+              </span>
+            </button>
+            <div style={{ display: showFilters || minVram > 0 || needMesh || needRt || onlyIncomplete ? 'flex' : 'none', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <div className="toggle-row">
                 {[0, 8, 12, 16, 24].map((v) => (
                   <button key={v} className={`toggle${minVram === v ? ' on' : ''}`} onClick={() => setMinVram(v)}>
@@ -169,7 +191,6 @@ export function DataExplorer() {
               >
                 needs data
               </button>
-              <span className="mini">{gpuRows.length} match</span>
             </div>
           </div>
         )}
@@ -232,8 +253,19 @@ export function DataExplorer() {
 
         {tab === 'cpu' && (
           <div className="panel-body" style={{ paddingTop: 8, paddingBottom: 8, borderBottom: '1px solid var(--line)' }}>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-              <span className="mini">capability filter</span>
+            <button
+              className="disclosure"
+              style={{ marginBottom: showFilters || minThreads > 0 || needVcache || !!socket || !!memType ? 10 : 0 }}
+              aria-expanded={showFilters || minThreads > 0 || needVcache || !!socket || !!memType}
+              onClick={() => setShowFilters((f) => !f)}
+            >
+              <span aria-hidden="true">{showFilters || minThreads > 0 || needVcache || !!socket || !!memType ? '▾' : '▸'}</span>
+              <span className="k">filter by capability</span>
+              <span className="summary">
+                {minThreads > 0 || needVcache || !!socket || !!memType ? 'filters on' : 'off'} · {cpuRows.length} of {data.cpus.size} shown
+              </span>
+            </button>
+            <div style={{ display: showFilters || minThreads > 0 || needVcache || !!socket || !!memType ? 'flex' : 'none', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <div className="toggle-row">
                 {[0, 8, 12, 16, 24].map((v) => (
                   <button key={v} className={`toggle${minThreads === v ? ' on' : ''}`} onClick={() => setMinThreads(v)}>
@@ -267,7 +299,6 @@ export function DataExplorer() {
               >
                 needs data
               </button>
-              <span className="mini">{cpuRows.length} match</span>
             </div>
           </div>
         )}

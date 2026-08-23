@@ -3,9 +3,6 @@
  * get data out of is a dead end, and a quote you cannot hand to a customer is
  * half a feature.
  */
-import type { ComparisonMatrix } from '../core/types.ts';
-import type { EngineData } from '../core/engine.ts';
-
 /**
  * Hand a file to the user.
  *
@@ -62,32 +59,6 @@ export function exportJson(filename: string, data: unknown): void {
   void download(filename, JSON.stringify(data, null, 2), 'application/json');
 }
 
-export function matrixToRows(matrix: ComparisonMatrix, data: EngineData): Record<string, unknown>[] {
-  return matrix.cells.map((c) => ({
-    build: c.buildId,
-    game: data.games.get(c.gameId)?.name ?? c.gameId,
-    resolution: c.resolution,
-    status: c.estimate.status,
-    avg_fps: c.estimate.avgFps?.toFixed(1) ?? '',
-    low_1pct: c.estimate.low1PctFps?.toFixed(1) ?? '',
-    low_01pct: c.estimate.low01PctFps?.toFixed(1) ?? '',
-    smoothness: c.estimate.smoothness?.verdict ?? '',
-    limiter: c.estimate.limiter ?? '',
-    uncertainty_pct: c.estimate.uncertainty ? (c.estimate.uncertainty * 100).toFixed(0) : '',
-    confidence: c.estimate.confidence,
-    delta_vs_baseline_pct: c.delta != null ? (c.delta * 100).toFixed(1) : '',
-    delta_within_noise: c.deltaWithinNoise ? 'yes' : '',
-    gate_failures: c.estimate.gateFailures.map((f) => f.code).join('; '),
-  }));
-}
-
-/**
- * A printable customer quote.
- *
- * Deliberately carries the provenance caveat: handing someone a performance
- * sheet that looks authoritative without saying where the numbers came from
- * would be the dishonest use of this tool.
- */
 export function printQuote(html: string) {
   const w = window.open('', '_blank');
   if (!w) return;

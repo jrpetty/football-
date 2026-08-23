@@ -43,7 +43,7 @@ export function Detect() {
   return (
     <>
       <div className="page-head">
-        <h1>Identify a Machine</h1>
+        <h1>Identify a machine from a spec</h1>
         <p>
           Paste anything that describes the hardware — a dxdiag dump, <span className="mono">systeminfo</span>,
           the JSON from <span className="mono">harness/detect-hardware.ps1</span>, a listing, or just a line

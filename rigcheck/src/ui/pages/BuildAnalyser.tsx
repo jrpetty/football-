@@ -75,7 +75,7 @@ export function BuildAnalyser() {
   return (
     <>
       <div className="page-head">
-        <h1>Build Analyser</h1>
+        <h1>Analyse one build in detail</h1>
         <p>
           One build, measured across your game selection. Every figure carries an uncertainty band and
           opens its full working — click any number.

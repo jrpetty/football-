@@ -73,7 +73,7 @@ export function UpgradeAdvisor() {
   return (
     <>
       <div className="page-head">
-        <h1>Upgrade Advisor</h1>
+        <h1>What to upgrade first</h1>
         <p>
           Where the upgrade curve flattens. The knee is the point past which marginal frames per pound
           collapse — the answer to "how far up the stack is it worth going".

@@ -231,7 +231,7 @@ export function ModelHealth() {
   return (
     <>
       <div className="page-head">
-        <h1>Model Health</h1>
+        <h1>What the estimates rest on</h1>
         <p>
           What the estimates rest on, how the error figure is moving, and where the evidence is
           thinnest. Every figure here comes from the same module the validation gate uses, so this

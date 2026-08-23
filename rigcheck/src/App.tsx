@@ -1,15 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { HashRouter, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AppCtx, CORE_LOOP, decodeState, encodeState, engineData, makeBuild } from './ui/store.ts';
 import { useApp } from './ui/store.ts';
 import { ProvenanceBanner } from './ui/components/Banner.tsx';
 import { BuildWizard } from './ui/pages/BuildWizard.tsx';
 import { BuildAnalyser } from './ui/pages/BuildAnalyser.tsx';
-import { ComparisonMatrix } from './ui/pages/ComparisonMatrix.tsx';
 import { UpgradeAdvisor } from './ui/pages/UpgradeAdvisor.tsx';
-import { InventoryOptimiser } from './ui/pages/InventoryOptimiser.tsx';
 import { MachineReport } from './ui/pages/MachineReport.tsx';
-import { TradeDesk } from './ui/pages/TradeDesk.tsx';
 import { Detect } from './ui/pages/Detect.tsx';
 import { DataExplorer } from './ui/pages/DataExplorer.tsx';
 import { ModelHealth } from './ui/pages/ModelHealth.tsx';
@@ -18,35 +15,46 @@ import { Start } from './ui/pages/Start.tsx';
 import { CommandPalette } from './ui/components/Palette.tsx';
 import type { Build, Resolution } from './core/types.ts';
 
+interface NavItem {
+  to: string;
+  label: string;
+  full: string;
+  /** Shown in the top bar. Everything else lives behind "more". */
+  primary?: boolean;
+}
+
 /**
- * The twelve screens.
+ * The nine screens, two of which are in the bar.
  *
- * `label` is what the top bar shows; `full` is the screen's real name, used in
- * the drawer, the command palette, the tooltip and the current-screen readout.
+ * `label` is what the bar and the menu show; `full` is a plain sentence saying
+ * what the screen is FOR, used in the drawer, the command palette, the tooltip
+ * and the current-screen readout.
  *
- * The short labels are not only about width, though width was the trigger: at
- * full length the row needed 1545px, so every common laptop width silently hid
- * three or four destinations behind a fade with no scrollbar. They also read
- * better. "Comparison Matrix" and "Inventory Optimiser" are this project's
- * names for things; "Compare" and "Inventory" are the user's.
+ * The full names used to be the project's names for things — "Comparison
+ * Matrix", "Inventory Optimiser", "Model Health" — which told somebody what a
+ * developer had called a module and nothing about whether it was the screen
+ * they wanted. They are now descriptions, because the only reader who benefits
+ * from a proper noun is one who already knows the app.
  */
-const NAV = [
-  { to: '/start', label: 'Start', full: 'Start' },
-  { to: '/wizard', label: 'Build', full: 'Build a PC' },
-  { to: '/analyser', label: 'Analyse', full: 'Build Analyser' },
-  { to: '/matrix', label: 'Compare', full: 'Comparison Matrix' },
-  { to: '/upgrade', label: 'Upgrade', full: 'Upgrade Advisor' },
-  { to: '/inventory', label: 'Inventory', full: 'Inventory Optimiser' },
-  { to: '/machine', label: 'Machine', full: 'Machine Report' },
-  { to: '/trade', label: 'Trade', full: 'Trade Desk' },
-  { to: '/system', label: 'My PC', full: 'System Health' },
-  { to: '/detect', label: 'Identify', full: 'Identify a Machine' },
-  { to: '/data', label: 'Data', full: 'Data Explorer' },
-  // "Accuracy" was the wrong word and the most consequential one on the bar:
-  // the screen's headline figure is the estimator agreeing with a recalled
-  // fixture set, and labelling the way in to it "Accuracy" made the one number
-  // that should be read most sceptically look like the most reliable.
-  { to: '/health', label: 'Evidence', full: 'Model Health' },
+const NAV: NavItem[] = [
+  // Two destinations carry the whole app, because there are only two things
+  // anyone comes here to do: work out what to buy, or find out whether the
+  // machine they already have is behaving. Everything else is a way of looking
+  // at one of those two, and a way of looking at something does not deserve a
+  // place in the bar next to the thing itself.
+  { to: '/wizard', label: 'Build', full: 'Build a PC', primary: true },
+  { to: '/system', label: 'My PC', full: 'Check my PC', primary: true },
+
+  // Behind "more". Reachable, searchable in the palette, and out of the way of
+  // somebody who has just arrived and does not yet know which of eleven words
+  // describes what they want.
+  { to: '/analyser', label: 'Analyse', full: 'Analyse one build in detail' },
+  { to: '/upgrade', label: 'Upgrade', full: 'What to upgrade first' },
+  { to: '/machine', label: 'Machine', full: 'Power, heat and noise' },
+  { to: '/detect', label: 'Identify', full: 'Identify a machine from a spec' },
+  { to: '/data', label: 'Data', full: 'The catalogue behind the estimates' },
+  { to: '/health', label: 'Evidence', full: 'What the estimates rest on' },
+  { to: '/start', label: 'Start', full: 'Not sure? Start from a question' },
 ];
 
 /**
@@ -109,7 +117,10 @@ function Shell({ children }: { children: React.ReactNode }) {
         </span>
         <span className="here" aria-hidden="true">{here?.full ?? ''}</span>
         <nav className={`nav${navOpen ? ' open' : ''}`} id="main-nav" aria-label="Screens">
-          {NAV.map((n) => (
+          {/* On a phone the drawer shows everything at once: an overflow menu
+              inside a drawer is a menu inside a menu, and the drawer has the
+              room the bar does not. `primary` only governs the bar. */}
+          {NAV.filter((n) => n.primary || navOpen).map((n) => (
             <NavLink
               key={n.to}
               to={n.to}
@@ -125,12 +136,76 @@ function Shell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
         <div className="topbar-right">
+          <MoreMenu current={loc.pathname} />
           <ShareButton />
         </div>
       </header>
       <CommandPalette screens={NAV} />
       <ProvenanceBanner />
       <main className="main" id="main" tabIndex={-1}>{children}</main>
+    </div>
+  );
+}
+
+/**
+ * Everything that is not one of the two things people come here to do.
+ *
+ * A menu rather than more items in the bar. Eleven destinations across a bar
+ * present eleven equally-weighted choices at the moment somebody arrives, which
+ * is precisely when they know least about which word describes what they want —
+ * and the two that matter got no more prominence than "Inventory Optimiser".
+ *
+ * Closes on Escape and on any click outside it, both of which people expect and
+ * neither of which a menu gets for free.
+ */
+function MoreMenu({ current }: { current: string }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  const items = NAV.filter((n) => !n.primary);
+  const hereInMenu = items.some((n) => n.to === current);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (!box.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  return (
+    <div className="more" ref={box}>
+      <button
+        className={`btn${hereInMenu ? ' primary' : ''}`}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        onClick={() => setOpen((o) => !o)}
+      >
+        more
+      </button>
+      {open && (
+        <div className="more-menu" role="menu">
+          {items.map((n) => (
+            <NavLink
+              key={n.to}
+              to={n.to}
+              role="menuitem"
+              className={current === n.to ? 'active' : ''}
+              onClick={() => setOpen(false)}
+            >
+              <b>{n.label}</b>
+              <span>{n.full}</span>
+            </NavLink>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -202,17 +277,18 @@ export function App() {
           <Routes>
             <Route path="/wizard" element={<BuildWizard />} />
             <Route path="/analyser" element={<BuildAnalyser />} />
-            <Route path="/matrix" element={<ComparisonMatrix />} />
             <Route path="/upgrade" element={<UpgradeAdvisor />} />
-            <Route path="/inventory" element={<InventoryOptimiser />} />
             <Route path="/machine" element={<MachineReport />} />
-            <Route path="/trade" element={<TradeDesk />} />
             <Route path="/system" element={<SystemHealth />} />
             <Route path="/detect" element={<Detect />} />
             <Route path="/data" element={<DataExplorer />} />
             <Route path="/health" element={<ModelHealth />} />
             <Route path="/start" element={<Start onDismiss={dismissStart} />} />
-            <Route path="*" element={<Navigate to={seenStart ? '/analyser' : '/start'} replace />} />
+            {/* The analyser used to be the landing screen. It is the most
+                detailed thing here and now sits behind "more"; landing someone
+                on it meant their first sight of the app was a dense table of a
+                build they never chose. */}
+            <Route path="*" element={<Navigate to={seenStart ? '/wizard' : '/start'} replace />} />
           </Routes>
         </Shell>
       </HashRouter>

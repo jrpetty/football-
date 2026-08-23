@@ -84,7 +84,7 @@ export function MachineReport() {
   return (
     <>
       <div className="page-head">
-        <h1>Machine Report</h1>
+        <h1>Power, heat and noise</h1>
         <p>
           What the machine draws, how hot and loud it runs, and how responsive it feels — the properties
           that belong to the box rather than to any one game.

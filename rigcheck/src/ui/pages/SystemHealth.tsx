@@ -332,7 +332,7 @@ export function SystemHealth() {
   return (
     <>
       <div className="page-head">
-        <h1>System Health</h1>
+        <h1>Check my PC</h1>
         <p>
           Whether the machine you already own is performing as well as its parts say it should — and if
           not, which of the handful of invisible causes it is.
