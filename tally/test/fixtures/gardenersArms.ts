@@ -1,25 +1,145 @@
 // ---------------------------------------------------------------------------
 // A real Z read: the Gardeners Arms, 23 August 2026, Z counter 1685.
 //
-// Transcribed from photographs of the actual roll. The summary and clerk
-// sections are transcribed with confidence *because* they cross-foot — every
-// equation the receipt states about itself holds on these figures, which is a
-// far stronger guarantee than careful reading.
+// Transcribed from photographs of the actual roll, IN THE LAYOUT THE TILL
+// ACTUALLY PRINTS. That qualifier is the whole point of this file. An earlier
+// version of it invented a tidy one-line-per-department format, the parser was
+// built to match, and every test passed against a receipt that does not exist.
 //
-// The PLU list from the same roll is deliberately NOT included. It could not be
-// transcribed reliably from the photograph: the item values ran a column out of
-// step with their quantities, and the cross-foot caught it (the spirits lines
-// came to £60.60 against a printed department total of £35.25). Inventing the
-// missing figures to make a fuller fixture would be exactly the failure this
-// whole app exists to prevent, so the PLU parser is tested against a small
-// constructed case instead, and the real list waits for a legible photograph.
+// The real thing splits a department across three lines:
+//
+//     D01                    406.000 Q     <- code and quantity
+//     DRAUGHT BEERS           *1492.25     <- name and value
+//                               68.05%     <- percentage, on its own
+//
+// and does the same to CASH, CREDIT CARD, VOID, the group subtotals and the
+// department total. Any parser that assumes one line per record reads nothing
+// at all from this receipt.
+//
+// The summary and clerk sections are transcribed with confidence *because* they
+// cross-foot — every equation the receipt states about itself holds on these
+// figures, which is a far stronger guarantee than careful reading.
+//
+// The PLU list from the same roll is deliberately NOT included: it could not be
+// transcribed reliably from the photograph, and the cross-foot caught the
+// attempt (the spirits lines came to £60.60 against a printed £35.25). Inventing
+// the missing figures to make a fuller fixture is exactly the failure this app
+// exists to prevent.
 // ---------------------------------------------------------------------------
 
 import type { ZRead } from '../../src/core/zread.ts'
 
-/** The roll as printed, in the layout the till uses. */
+/** The roll exactly as printed, line breaks included. */
 export const GARDENERS_ARMS_TEXT = `Samuel Smith
-#1233   23/08/2026 21:39:16      000000
+#1233    23/08/2026 21:39:16            000000
+0004 CLERK0004
+                    *Z1*
+GT1                         *0000140111.26     Z1 1685
+GT2                         *0000142296.83
+GT3                        -00000021185.57
+
+DEPT./GROUP
+D01                             406.000 Q
+DRAUGHT BEERS                    *1492.25
+                                   68.05%
+D02                              11.000 Q
+SPIRITS                            *35.25
+                                    1.61%
+D03                              43.000 Q
+WINE                              *234.80
+                                   10.71%
+D04                               4.000 Q
+BOTTLED BEERS                      *27.00
+                                    1.23%
+D05                             137.000 Q
+MIXERS                            *252.90
+                                   11.53%
+D07                              86.000 Q
+SUNDRIES                          *146.20
+                                    6.67%
+GROUP01                         687.000 Q
+                                 *2188.40
+                                   99.80%
+
+D08                               2.000 Q
+OPEN FOOD                           *4.40
+                                    0.20%
+GROUP02                           2.000 Q
+                                    *4.40
+                                    0.20%
+
+*DEPT TL                        689.000 Q
+                                 *2192.80
+                                  100.00%
+
+TRANSACTION
+NET1                             *2192.80
+NET2                             *2192.80
+VOID                                  3 Q
+                                   *12.50
+NO SALE                               5 Q
+GUEST                               267 Q
+ORDER TL                         *2192.80
+PAID TL                          *2192.80
+AVE.                                *8.21
+CASH                                 57 Q
+                                  *351.80
+CREDIT CARD                         210 Q
+                                 *1841.00
+****CID                           *351.80
+CA/CHK ID                         *351.80
+
+ALL CLERK    *Z1*
+CLK#0001 CLERK0001
+PAID TL                             *0.00
+CLK#0002 CLERK0002
+ORDER TL                            *4.00
+NON COM.                            *4.00
+PAID TL                             *4.00
+AVE.                                *4.00
+GUEST                                 1 Q
+CREDIT CARD                           1 Q
+                                    *4.00
+CLK#0004 CLERK0004
+ORDER TL                         *2188.80
+NON COM.                         *2188.80
+PAID TL                          *2188.80
+AVE.                                *8.23
+VOID                                  3 Q
+                                   *12.50
+GUEST                               266 Q
+CASH                                 57 Q
+                                  *351.80
+CREDIT CARD                         209 Q
+                                 *1837.00
+****CID                           *351.80
+CA/CHK ID                         *351.80
+***TOTAL
+ORDER TL                         *2192.80
+NON COM.                         *2192.80
+PAID TL                          *2192.80
+AVE.                                *8.21
+VOID                                  3 Q
+                                   *12.50
+GUEST                               267 Q
+CASH                                 57 Q
+                                  *351.80
+CREDIT CARD                         210 Q
+                                 *1841.00
+****CID                           *351.80
+CA/CHK ID                         *351.80
+GARDENERS ARMS
+`
+
+/**
+ * The same roll flattened onto one line per record.
+ *
+ * Kept because a vision model asked to transcribe may tidy the columns up
+ * despite being told not to, and reading the receipt must not depend on which
+ * way it chose. Both layouts have to produce the identical result.
+ */
+export const GARDENERS_ARMS_FLAT = `Samuel Smith
+#1233    23/08/2026 21:39:16      000000
 0004 CLERK0004
         *Z1*
 GT1     *0000140111.26     Z1  1685
@@ -89,7 +209,7 @@ CA/CHK ID                             *351.80
 GARDENERS ARMS
 `
 
-/** The same roll, as the app should end up holding it. */
+/** The roll as the app should end up holding it, from either layout. */
 export const GARDENERS_ARMS: ZRead = {
   header: {
     receiptNo: '1233',

@@ -23,30 +23,52 @@ import { crossfootVerdict, type CrossfootVerdict } from '../core/crossfoot.ts'
 import { emptyZRead, mergeZRead, sectionsIn, type ZRead, type ZReadSection } from '../core/zread.ts'
 import { prepareForVision } from './image.ts'
 import { transcribeOnDevice } from './device.ts'
-import { loadSettings, effectiveEngine, supportsEffort } from '../storage/settings.ts'
+import { loadSettings, effectiveEngine } from '../storage/settings.ts'
 import type { EngineId } from './types.ts'
 
 const SYSTEM = `You transcribe photographs of a British pub's end-of-day till roll (a "Z read").
 
 Your only job is to copy out what is printed. You are not reading for meaning.
 
-Rules, in order of importance:
+THE MOST IMPORTANT RULE: keep the till's own line breaks exactly as they are.
+
+This till splits one record across several printed lines. A department looks like this:
+
+    D01                             406.000 Q
+    DRAUGHT BEERS                    *1492.25
+                                       68.05%
+
+That is three lines: the code with its quantity, then the name with its value, then the
+percentage on its own. Payments do the same:
+
+    CASH                                 57 Q
+                                      *351.80
+
+Transcribe that as three lines and two lines respectively. Do NOT tidy it into one line per
+record, do NOT move a figure up beside its label, and do NOT invent a label for a line that
+has none. Something downstream reassembles these; it is built for the real layout and a
+helpfully straightened one loses which figure belongs to which record.
+
+The rest, in order of importance:
 - Transcribe verbatim, line by line, top to bottom. Same words, same numbers, same order.
 - Never calculate. Never add a column up, never work out a missing figure, never correct a
   figure that looks wrong to you. If the paper says something that cannot be right, transcribe
   what the paper says — a disagreement is information, and something downstream is checking for
   exactly that.
 - Never omit a line because it looks unimportant, and never invent a line that is not there.
-- Keep each printed line on its own line. Keep the label and its figures on that same line,
-  separated by spaces, in the order printed: label, then quantity, then amount, then percentage.
+  A line holding only a percentage, or only an amount, is a real line: keep it.
 - Keep the till's own punctuation exactly: the leading * on amounts, the trailing Q on
   quantities, the % on percentages, the leading D on department codes, the # on numbers.
-- This roll prints amounts like *1492.25 and quantities like 406.000 Q. Do not reformat either.
-  Do not add thousands separators the till did not print. Do not drop trailing zeroes.
+  Amounts print like *1492.25 and quantities like 406.000 Q. Do not reformat either, do not add
+  thousands separators the till did not print, and do not drop trailing zeroes.
+- Roughly preserve the horizontal spacing, so the figures stay in their column.
 - The same labels (CASH, CREDIT CARD, PAID TL, CID) appear several times on one roll: once for
   the whole day, then again for each clerk. Transcribe every occurrence, in place, including
   the section headings (DEPT./GROUP, TRANSACTION, ALL CLERK, CLK#0001, ***TOTAL, PLU) that say
   which is which. Those headings are what makes the repeats tellable apart.
+- The roll is photographed in pieces and may be sideways in the frame. Read it whichever way
+  up it is; transcribe only what this photograph shows, and do not carry over anything from
+  what a till roll usually contains.
 - If a character is genuinely ambiguous, transcribe your best reading and say so in notes,
   naming the line. Do not silently pick the likelier one, and do not use placeholders like ? in
   the transcription itself.
@@ -104,10 +126,10 @@ async function transcribeWithVision(file: Blob, signal?: AbortSignal): Promise<{
       // A full roll with a PLU list runs long; truncating it mid-transcription
       // would silently lose the sections that come last.
       max_tokens: 8000,
-      // Copying, not reasoning: low effort is both cheaper and quicker, and
-      // thinking stays on, which keeps the model from writing a tool call into
-      // its visible text instead of calling the tool.
-      ...(supportsEffort(settings.model) ? { output_config: { effort: 'low' as const } } : {}),
+      // Deliberately left at the default effort rather than lowered. Copying a
+      // dense, multi-column roll accurately is not the trivial task it looks
+      // like, and a line missed here costs far more than the fraction of a
+      // penny that a cheaper setting would save.
       system: SYSTEM,
       tools: [TOOL],
       tool_choice: { type: 'tool', name: 'report_till_roll' },

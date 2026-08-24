@@ -87,6 +87,31 @@ problem, and a conventional scanner cannot do it — which is why the on-device
 path needs the hand-written keyword rules in `src/ocr/extractTotal.ts`, and why
 it is still the weaker of the two.
 
+### The layout trap
+
+The hard part of this receipt is not the characters. It is that the till spreads
+one record across several printed lines:
+
+```
+D01                             406.000 Q     <- code and quantity
+DRAUGHT BEERS                    *1492.25     <- name and value
+                                   68.05%     <- percentage, alone
+```
+
+`CASH`, `CREDIT CARD`, `VOID`, the group subtotals and the department total all
+split the same way. An earlier version of this parser assumed one line per
+record, was built against a tidy layout invented for the fixture, and passed
+every test while being able to read **nothing at all** from the real paper. The
+fixture is now transcribed from the photograph, in the layout the till actually
+prints, and there is a second copy of it flattened onto one line per record — a
+transcription may straighten the columns despite being asked not to, and a test
+holds both to producing the identical result.
+
+So the parser reads *records*, not lines: a starter line opens one, the lines
+below fill in what it is missing, and the next starter closes it. It tolerates
+inconsistent spacing, blank lines mid-record, a missing percentage, `* 1492.25`
+with a space after the star, and `D1` where the till printed `D01`.
+
 ### The division of labour
 
 Claude is asked only to **transcribe** — to copy the roll out line by line,
