@@ -21,7 +21,7 @@ import {
 
 const ENGINE_HELP: Record<EnginePreference, string> = {
   vision:
-    'Claude reads the photograph. Much the better reader on faded or curled receipt paper, because it understands which line is the total rather than only seeing shapes. Needs a signal and an API key, and costs roughly a penny a night.',
+    'Claude reads the photograph. Much the better reader on faded or curled receipt paper, because it understands which line is the total rather than only seeing shapes. Needs a signal and an API key. A full roll is three photographs, so reckon on a few pence a night — a pound or two a month.',
   device:
     'The phone reads the photograph itself. Free, private and works with no signal, but noticeably worse on thermal receipts — expect to correct it more often.',
   off:

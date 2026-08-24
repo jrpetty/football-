@@ -91,6 +91,18 @@ export function saveSettings(s: Settings): void {
   write('keepPhotos', String(s.keepPhotos))
 }
 
+/**
+ * Whether a model accepts the effort control.
+ *
+ * Transcribing a receipt is not a reasoning problem — it is a copying problem —
+ * so the models that take an effort setting are told to spend little on it.
+ * That cuts both the bill and the wait. Haiku has no effort control and errors
+ * if given one, so it is left alone.
+ */
+export function supportsEffort(model: string): boolean {
+  return model === 'claude-opus-5' || model === 'claude-sonnet-5'
+}
+
 export function hasApiKey(s: Settings): boolean {
   return s.apiKey.trim().length > 10
 }

@@ -23,7 +23,7 @@ import { crossfootVerdict, type CrossfootVerdict } from '../core/crossfoot.ts'
 import { emptyZRead, mergeZRead, sectionsIn, type ZRead, type ZReadSection } from '../core/zread.ts'
 import { prepareForVision } from './image.ts'
 import { transcribeOnDevice } from './device.ts'
-import { loadSettings, effectiveEngine } from '../storage/settings.ts'
+import { loadSettings, effectiveEngine, supportsEffort } from '../storage/settings.ts'
 import type { EngineId } from './types.ts'
 
 const SYSTEM = `You transcribe photographs of a British pub's end-of-day till roll (a "Z read").
@@ -104,6 +104,10 @@ async function transcribeWithVision(file: Blob, signal?: AbortSignal): Promise<{
       // A full roll with a PLU list runs long; truncating it mid-transcription
       // would silently lose the sections that come last.
       max_tokens: 8000,
+      // Copying, not reasoning: low effort is both cheaper and quicker, and
+      // thinking stays on, which keeps the model from writing a tool call into
+      // its visible text instead of calling the tool.
+      ...(supportsEffort(settings.model) ? { output_config: { effort: 'low' as const } } : {}),
       system: SYSTEM,
       tools: [TOOL],
       tool_choice: { type: 'tool', name: 'report_till_roll' },

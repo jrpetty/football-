@@ -76,7 +76,7 @@ work, and either can be selected in Settings. The default is Claude.
 | Photographed at an angle | Good | Poor; wants a flat, square scan |
 | Picking the *right* line | Understands that `GROSS TOTAL` is the figure and `SUBTOTAL` is not | Only sees shapes; relies on our keyword rules |
 | Works with no signal | No | Yes, after the first run |
-| Cost | Roughly a penny a night | Free |
+| Cost | A few pence a night — a pound or two a month | Free |
 | Privacy | The photograph goes to Anthropic | Never leaves the phone |
 | Setup | Needs an API key | None |
 
