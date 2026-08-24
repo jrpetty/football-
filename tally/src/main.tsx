@@ -16,8 +16,10 @@ void requestPersistence()
 // under /tally/, or from the home screen.
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
-    void navigator.serviceWorker.register(new URL('sw.js', document.baseURI), {
-      scope: new URL('./', document.baseURI).pathname,
-    })
+    // Ignored rather than thrown: a host serving the app without the worker
+    // (a preview, a file drop) is still a perfectly working app, just online-only.
+    void navigator.serviceWorker
+      .register(new URL('sw.js', document.baseURI), { scope: new URL('./', document.baseURI).pathname })
+      .catch(() => {})
   })
 }

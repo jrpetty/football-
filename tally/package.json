@@ -12,7 +12,8 @@
     "test": "node --test test/*.test.ts",
     "test:e2e": "node e2e/run.ts",
     "icons": "node scripts/make-icons.ts",
-    "test:subpath": "node e2e/subpath.ts"
+    "test:subpath": "node e2e/subpath.ts",
+    "build:single": "TALLY_SINGLE=1 vite build && node scripts/build-single.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
