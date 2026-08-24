@@ -11,7 +11,13 @@ import { formatLong } from '../core/date.ts'
 import { formatMoney, formatSigned } from '../core/money.ts'
 import { reconcileDay, verdictHeadline } from '../core/reconcile.ts'
 import type { Capture, DayRecord } from '../core/types.ts'
-import { VerdictPanel } from '../components/Verdict.tsx'
+import { ItemisedLegs, VerdictPanel } from '../components/Verdict.tsx'
+import { CrossfootList, CrossfootSummary } from '../components/CrossfootPanel.tsx'
+import { crossfootVerdict } from '../core/crossfoot.ts'
+import { departmentLabel, departmentSlot } from '../core/departments.ts'
+import { formatQty, shareBp, formatPercent } from '../core/zread.ts'
+import { seriesVar, ShareBar, Legend } from '../components/charts.tsx'
+import { reconcileFull } from '../core/reconcile.ts'
 import { deleteDay, getDay, getPhoto } from '../storage/db.ts'
 import { loadSettings } from '../storage/settings.ts'
 
@@ -81,7 +87,24 @@ export function DayDetail({ date, onBack, onEdit, onDeleted }: Props) {
   if (day === null) return <div className="main"><p className="note">That night is no longer saved.</p><button type="button" onClick={onBack}>Back</button></div>
 
   const r = reconcileDay(day, tolerance)
+  const full = reconcileFull({
+    tillPence: day.till.pence,
+    cardPence: day.card.pence,
+    cashPence: day.cashPence,
+    tolerancePence: tolerance,
+    ...(day.zRead ? { zRead: day.zRead } : {}),
+  })
   const counted = day.card.pence !== null && day.cashPence !== null ? day.card.pence + day.cashPence : null
+  const zRead = day.zRead
+  const deptTotal = zRead?.deptTotal?.pence ?? 0
+  const shareRows =
+    zRead?.departments.map((d) => ({
+      key: d.code,
+      label: departmentLabel(d.code, d.name),
+      pence: d.pence,
+      percentBp: shareBp(d.pence, deptTotal),
+      slot: departmentSlot(d.code),
+    })) ?? []
 
   return (
     <div className="main">
@@ -106,6 +129,65 @@ export function DayDetail({ date, onBack, onEdit, onDeleted }: Props) {
       </section>
 
       <VerdictPanel r={r} />
+
+      <ItemisedLegs r={full} />
+
+      {zRead && (
+        <section className="card">
+          <div className="card-head">
+            <h2>What sold</h2>
+            {zRead.header.zNumber !== undefined && <span className="badge">Z {zRead.header.zNumber}</span>}
+          </div>
+          <CrossfootSummary verdict={crossfootVerdict(zRead)} />
+          <CrossfootList verdict={crossfootVerdict(zRead)} />
+          {shareRows.length > 0 && (
+            <>
+              <ShareBar rows={shareRows} />
+              <Legend items={shareRows.map((x) => ({ label: x.label, color: seriesVar(x.slot) }))} />
+              <div className="table-wrap">
+                <table className="data">
+                  <thead>
+                    <tr>
+                      <th scope="col">Department</th>
+                      <th scope="col">Sold</th>
+                      <th scope="col">Taken</th>
+                      <th scope="col">Share</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {zRead.departments.map((d) => (
+                      <tr key={d.code}>
+                        <th scope="row">
+                          <span className="swatch" style={{ background: seriesVar(departmentSlot(d.code)) }} aria-hidden="true" />
+                          {departmentLabel(d.code, d.name)}
+                        </th>
+                        <td className="num">{formatQty(d.qtyMilli)}</td>
+                        <td className="num">{formatMoney(d.pence)}</td>
+                        <td className="num">{formatPercent(shareBp(d.pence, deptTotal))}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td>Total</td>
+                      <td className="num">{formatQty(zRead.deptTotal?.qtyMilli ?? 0)}</td>
+                      <td className="num">{formatMoney(deptTotal)}</td>
+                      <td className="num">100.00%</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </>
+          )}
+          {zRead.transaction.guestCount !== undefined && (
+            <p className="note">
+              {zRead.transaction.guestCount} sales, {formatMoney(zRead.transaction.avePence ?? 0)} average
+              {zRead.transaction.voidCount ? ` · ${zRead.transaction.voidCount} voids` : ''}
+              {zRead.transaction.noSaleCount ? ` · ${zRead.transaction.noSaleCount} no-sales` : ''}
+            </p>
+          )}
+        </section>
+      )}
 
       {day.note && (
         <section className="card">

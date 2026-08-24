@@ -86,6 +86,16 @@ export interface ParseOptions {
    * came out of an OCR engine; a human typing "S" meant to type "S".
    */
   loose?: boolean
+  /**
+   * Raise the sanity ceiling.
+   *
+   * The default rejects anything above £100,000 because no pub takes that in a
+   * night, and a figure that large is a slipped key. The till's running grand
+   * totals are a genuine exception — GT1 on the reference receipt is
+   * £140,111.26 of lifetime trade — so those parse with a ceiling of their own
+   * rather than by weakening the one that guards the nightly figures.
+   */
+  maxPence?: number
 }
 
 /**
@@ -169,7 +179,7 @@ export function parsePence(input: string, opts: ParseOptions = {}): number | nul
   if (!Number.isFinite(pounds)) return null
 
   const total = pounds * 100 + pence
-  if (total > MAX_REASONABLE_PENCE) return null
+  if (total > (opts.maxPence ?? MAX_REASONABLE_PENCE)) return null
   return negative ? -total : total
 }
 

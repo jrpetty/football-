@@ -2,6 +2,8 @@
 // The shape of a night.
 // ---------------------------------------------------------------------------
 
+import type { ZRead } from './zread.ts'
+
 /** Where a figure came from. Recorded so a number's provenance is never lost. */
 export type CaptureSource = 'manual' | 'vision' | 'device'
 
@@ -38,6 +40,16 @@ export interface DayRecord {
   /** The drawer count. Always typed — no receipt exists for it. */
   cashPence: number | null
   note: string
+  /**
+   * The full Z read, when the roll was captured rather than just its total.
+   *
+   * Optional by design. A night entered in a hurry with three typed figures is
+   * still a complete, useful record — the department detail is what makes the
+   * dashboard possible, not what makes the night valid.
+   */
+  zRead?: ZRead
+  /** Photographs of the roll, which usually takes several. */
+  zPhotoIds?: string[]
   createdAt: number
   updatedAt: number
 }

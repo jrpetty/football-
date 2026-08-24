@@ -1,7 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { reconcile, DEFAULT_TOLERANCE_PENCE } from '../src/core/reconcile.ts'
+import { reconcileFull, itemisedHeadline } from '../src/core/reconcile.ts'
 import { parseTolerance } from '../src/storage/settings.ts'
+import { GARDENERS_ARMS } from './fixtures/gardenersArms.ts'
 
 const at = (till: number | null, card: number | null, cash: number | null) =>
   reconcile({ tillPence: till, cardPence: card, cashPence: cash })
@@ -83,4 +85,82 @@ test('a fresh install gets the intended tolerance, not zero', () => {
 test('a tolerance she has set is honoured, including zero', () => {
   assert.equal(parseTolerance('0'), 0, 'deliberately strict is a real choice')
   assert.equal(parseTolerance('100'), 100)
+})
+
+// --- reconciling against the till's own figures -----------------------------
+
+test('splits the variance into the drawer and the card machine', () => {
+  // The real receipt: the till says £351.80 cash and £1,841.00 card. She counts
+  // £339.80 in the drawer and the card slip agrees exactly.
+  const r = reconcileFull({
+    tillPence: null,
+    cardPence: 184100,
+    cashPence: 33980,
+    zRead: GARDENERS_ARMS,
+  })
+  assert.equal(r.itemised, true)
+  assert.equal(r.card?.verdict, 'balanced')
+  assert.equal(r.cash?.verdict, 'short')
+  assert.equal(r.cash?.variancePence, -1200)
+  assert.equal(
+    itemisedHeadline(r),
+    'The card machine agrees with the till — the difference is in the drawer.',
+  )
+})
+
+test('takes the till total from the roll rather than asking for it twice', () => {
+  const r = reconcileFull({
+    tillPence: null,
+    cardPence: 184100,
+    cashPence: 35180,
+    zRead: GARDENERS_ARMS,
+  })
+  assert.equal(r.overall.complete, true, 'the roll supplies the till figure')
+  assert.equal(r.overall.verdict, 'balanced')
+  assert.equal(r.overall.variancePence, 0)
+})
+
+test('the two legs always sum to the overall variance', () => {
+  // Guaranteed by the receipt's own cash + card = paid total, which crossfoot
+  // verifies — so if this ever drifts, the roll was misread.
+  const r = reconcileFull({
+    tillPence: null,
+    cardPence: 183900,
+    cashPence: 34980,
+    zRead: GARDENERS_ARMS,
+  })
+  assert.equal((r.cash?.variancePence ?? 0) + (r.card?.variancePence ?? 0), r.overall.variancePence)
+})
+
+test('names the card machine when that is the side that disagrees', () => {
+  const r = reconcileFull({
+    tillPence: null,
+    cardPence: 183000,
+    cashPence: 35180,
+    zRead: GARDENERS_ARMS,
+  })
+  assert.equal(
+    itemisedHeadline(r),
+    'The drawer agrees with the till — the difference is on the card machine.',
+  )
+})
+
+test('says so plainly when everything agrees', () => {
+  const r = reconcileFull({ tillPence: null, cardPence: 184100, cashPence: 35180, zRead: GARDENERS_ARMS })
+  assert.equal(itemisedHeadline(r), 'The drawer and the card machine both agree with the till.')
+})
+
+test('falls back to the plain sum when no roll was captured', () => {
+  const r = reconcileFull({ tillPence: 219280, cardPence: 184100, cashPence: 35180 })
+  assert.equal(r.itemised, false)
+  assert.equal(itemisedHeadline(r), null)
+  assert.equal(r.overall.verdict, 'balanced')
+})
+
+test('prefers cash in drawer over cash taken, when the till states both', () => {
+  const z = structuredClone(GARDENERS_ARMS)
+  z.transaction.cidPence = 45180 // £100 float left in overnight
+  const r = reconcileFull({ tillPence: null, cardPence: 184100, cashPence: 45180, zRead: z })
+  assert.equal(r.cash?.expectedPence, 45180, 'CID is the drawer figure specifically')
+  assert.equal(r.cash?.verdict, 'balanced')
 })

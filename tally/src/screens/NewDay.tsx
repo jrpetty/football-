@@ -1,23 +1,28 @@
 // ---------------------------------------------------------------------------
 // Tonight's count.
 //
-// The brief describes this as a sequence of steps, and it is — but it is laid
-// out as one scrolling page rather than a wizard. Standing at a bar you want
-// every figure visible at once: the running verdict updates as each one lands,
-// a misread is corrected without paging backwards, and there is no state in
-// which the app is holding a number she cannot see. The order down the page is
-// the order in the brief.
+// One scrolling page rather than a wizard. Standing at a bar you want every
+// figure visible at once: the verdict updates as each lands, a misread is
+// corrected without paging backwards, and there is no state in which the app is
+// holding a number she cannot see. The order down the page is the order of the
+// job — roll, card machine, drawer.
+//
+// Since the till roll states what the card machine and the drawer should hold,
+// the last two are checks against a stated figure rather than raw inputs, and
+// the verdict can say which side the difference is on.
 // ---------------------------------------------------------------------------
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { FigureCard, emptyFigure, type FigureState } from '../components/FigureCard.tsx'
 import { MoneyInput } from '../components/MoneyInput.tsx'
-import { VerdictPanel } from '../components/Verdict.tsx'
+import { TillRollCard, emptyRoll, rollTotalPence, type RollState } from '../components/TillRollCard.tsx'
+import { ItemisedLegs, VerdictPanel } from '../components/Verdict.tsx'
 import { formatLong, isAfterMidnightForTradingDay, tradingDayKey } from '../core/date.ts'
-import { parsePence, penceToInput } from '../core/money.ts'
-import { reconcile } from '../core/reconcile.ts'
+import { formatMoney, parsePence, penceToInput } from '../core/money.ts'
+import { reconcileFull, tillExpectations } from '../core/reconcile.ts'
 import type { Capture, DayRecord } from '../core/types.ts'
 import { emptyDay } from '../core/types.ts'
+import { isZReadEmpty, type ZRead } from '../core/zread.ts'
 import { getDay, getPhoto, saveDay, savePhoto } from '../storage/db.ts'
 import { loadSettings } from '../storage/settings.ts'
 import { makeThumbnail } from '../ocr/index.ts'
@@ -44,12 +49,8 @@ async function captureFromFigure(figure: FigureState, keepPhotos: boolean, exist
   }
   if (figure.confidence) capture.confidence = figure.confidence
   if (figure.notes) capture.notes = figure.notes
-
   if (keepPhotos && figure.photo) {
-    // A shrunk copy: the original off a modern phone is several megabytes, and
-    // a year of them at that size is more than a browser will hold.
-    const thumb = await makeThumbnail(figure.photo)
-    capture.photoId = await savePhoto(thumb)
+    capture.photoId = await savePhoto(await makeThumbnail(figure.photo))
   } else if (existingPhotoId && keepPhotos) {
     capture.photoId = existingPhotoId
   }
@@ -58,13 +59,14 @@ async function captureFromFigure(figure: FigureState, keepPhotos: boolean, exist
 
 interface Props {
   onSaved: (date: string) => void
+  onReviewRoll: (zRead: ZRead, apply: (next: ZRead) => void) => void
   initialDate?: string
 }
 
-export function NewDay({ onSaved, initialDate }: Props) {
+export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
   const settings = useMemo(() => loadSettings(), [])
   const [date, setDate] = useState(initialDate ?? tradingDayKey())
-  const [till, setTill] = useState<FigureState>(emptyFigure)
+  const [roll, setRoll] = useState<RollState>(emptyRoll)
   const [card, setCard] = useState<FigureState>(emptyFigure)
   const [cashText, setCashText] = useState('')
   const [note, setNote] = useState('')
@@ -73,8 +75,7 @@ export function NewDay({ onSaved, initialDate }: Props) {
   const [toast, setToast] = useState('')
   const lateNight = useRef(isAfterMidnightForTradingDay()).current
 
-  // Re-opening a night edits it rather than starting a second copy of it, so
-  // correcting yesterday is the same gesture as entering tonight.
+  // Re-opening a night edits it rather than starting a second copy of it.
   useEffect(() => {
     let cancelled = false
     void (async () => {
@@ -82,18 +83,21 @@ export function NewDay({ onSaved, initialDate }: Props) {
       if (cancelled) return
       setExisting(found ?? null)
       if (!found) {
-        setTill(emptyFigure())
+        setRoll(emptyRoll())
         setCard(emptyFigure())
         setCashText('')
         setNote('')
         return
       }
-      const [tillPhoto, cardPhoto] = await Promise.all([
-        found.till.photoId ? getPhoto(found.till.photoId).catch(() => undefined) : undefined,
-        found.card.photoId ? getPhoto(found.card.photoId).catch(() => undefined) : undefined,
-      ])
+      const cardPhoto = found.card.photoId ? await getPhoto(found.card.photoId).catch(() => undefined) : undefined
       if (cancelled) return
-      setTill(figureFromCapture(found.till, tillPhoto))
+      setRoll({
+        ...emptyRoll(),
+        ...(found.zRead ? { zRead: found.zRead } : {}),
+        totalText: found.zRead ? '' : penceToInput(found.till.pence),
+        source: found.till.source,
+        edited: found.till.edited,
+      })
       setCard(figureFromCapture(found.card, cardPhoto))
       setCashText(penceToInput(found.cashPence))
       setNote(found.note)
@@ -103,28 +107,44 @@ export function NewDay({ onSaved, initialDate }: Props) {
     }
   }, [date])
 
-  const r = reconcile({
-    tillPence: parsePence(till.text),
+  const zRead = roll.zRead && !isZReadEmpty(roll.zRead) ? roll.zRead : undefined
+  const expected = tillExpectations(zRead)
+
+  const r = reconcileFull({
+    tillPence: rollTotalPence(roll),
     cardPence: parsePence(card.text),
     cashPence: parsePence(cashText),
     tolerancePence: settings.tolerancePence,
+    ...(zRead ? { zRead } : {}),
   })
 
-  const busy = till.scanning || card.scanning
+  const busy = roll.scanning || card.scanning
 
   async function save() {
     setSaving(true)
     try {
       const base = existing ?? emptyDay(date)
+      const photoIds: string[] = []
+      if (settings.keepPhotos) {
+        for (const photo of roll.photos) photoIds.push(await savePhoto(await makeThumbnail(photo)))
+      }
+
       const record: DayRecord = {
         ...base,
         date,
-        till: await captureFromFigure(till, settings.keepPhotos, existing?.till.photoId),
+        till: {
+          pence: rollTotalPence(roll),
+          source: roll.source,
+          edited: roll.edited,
+        },
         card: await captureFromFigure(card, settings.keepPhotos, existing?.card.photoId),
         cashPence: parsePence(cashText),
         note,
         updatedAt: Date.now(),
       }
+      if (zRead) record.zRead = zRead
+      if (photoIds.length) record.zPhotoIds = [...(base.zPhotoIds ?? []), ...photoIds]
+
       await saveDay(record)
       onSaved(date)
     } catch (err) {
@@ -154,17 +174,17 @@ export function NewDay({ onSaved, initialDate }: Props) {
           </div>
         </section>
 
-        <FigureCard
-          title="Till roll total"
-          hint="Z read"
-          kind="till"
-          value={till}
-          onChange={setTill}
+        <TillRollCard
+          value={roll}
+          onChange={setRoll}
+          onReview={() => {
+            if (roll.zRead) onReviewRoll(roll.zRead, (next) => setRoll({ ...roll, zRead: next }))
+          }}
         />
 
         <FigureCard
-          title="Card total"
-          hint="End-of-day slip"
+          title="Card machine"
+          hint={expected.cardPence === undefined ? 'End-of-day slip' : `till says ${formatMoney(expected.cardPence)}`}
           kind="card"
           value={card}
           onChange={setCard}
@@ -173,13 +193,17 @@ export function NewDay({ onSaved, initialDate }: Props) {
         <section className="card">
           <div className="card-head">
             <h2>Cash counted</h2>
-            <span className="hint">From the drawer</span>
+            <span className="hint">
+              {expected.cashPence === undefined ? 'From the drawer' : `till says ${formatMoney(expected.cashPence)}`}
+            </span>
           </div>
           <div className="figure">
             <MoneyInput id="figure-cash" label="Cash counted" value={cashText} onChange={setCashText} />
           </div>
           <p className="note">The one figure with no receipt behind it — count the drawer and type it in.</p>
         </section>
+
+        <ItemisedLegs r={r} />
 
         <section className="card">
           <div className="field" style={{ marginBottom: 0 }}>
@@ -196,13 +220,8 @@ export function NewDay({ onSaved, initialDate }: Props) {
 
       <div className="verdict-bar">
         <div className="inner">
-          <VerdictPanel r={r} />
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={() => void save()}
-            disabled={saving || busy}
-          >
+          <VerdictPanel r={r.overall} />
+          <button type="button" className="btn-primary" onClick={() => void save()} disabled={saving || busy}>
             {saving ? 'Saving…' : busy ? 'Reading the photograph…' : existing ? 'Update this night' : 'Save this night'}
           </button>
         </div>

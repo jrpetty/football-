@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { toCsv, toJson, parseBackup } from '../src/storage/export.ts'
 import { emptyDay } from '../src/core/types.ts'
 import type { DayRecord } from '../src/core/types.ts'
+import { GARDENERS_ARMS } from './fixtures/gardenersArms.ts'
 
 function day(over: Partial<DayRecord> = {}): DayRecord {
   const d = emptyDay('2026-08-21', 0)
@@ -67,4 +68,26 @@ test('refuses a file that is not a backup', () => {
 test('drops entries that are not days rather than importing rubbish', () => {
   const restored = parseBackup(JSON.stringify({ days: [{ date: 'nope' }, null, 42] }))
   assert.equal(restored.length, 0)
+})
+
+test('carries the till’s own figures and every department into the spreadsheet', () => {
+  const d = day()
+  d.zRead = structuredClone(GARDENERS_ARMS)
+  const csv = toCsv([d])
+  const [header, row] = csv.split('\r\n')
+  assert.ok(header?.includes('"Draught beers"'))
+  assert.ok(header?.includes('"Cash in drawer"'))
+  assert.ok(header?.includes('"Z number"'))
+  assert.ok(row?.includes('"1685"'), 'the Z counter')
+  assert.ok(row?.includes('"1492.25"'), 'draught beers')
+  assert.ok(row?.includes('"351.80"'), 'cash in drawer')
+  assert.ok(row?.includes('"267"'), 'the sales count')
+})
+
+test('keeps a fixed department column order even when a department sold nothing', () => {
+  const quiet = day()
+  quiet.zRead = structuredClone(GARDENERS_ARMS)
+  quiet.zRead.departments = quiet.zRead.departments.filter((x) => x.code === 'D01')
+  const rows = toCsv([day(), quiet]).split('\r\n')
+  assert.equal(rows[1]?.split(',').length, rows[2]?.split(',').length, 'columns must line up')
 })

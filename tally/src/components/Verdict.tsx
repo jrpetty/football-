@@ -6,8 +6,8 @@
 // she has to interpret, and never a colour doing the work on its own.
 // ---------------------------------------------------------------------------
 
-import { formatMoney } from '../core/money.ts'
-import type { Reconciliation } from '../core/reconcile.ts'
+import { formatMoney, formatSigned } from '../core/money.ts'
+import { itemisedHeadline, type DayReconciliation, type LegResult, type Reconciliation } from '../core/reconcile.ts'
 
 const MISSING_WORDS: Record<'till' | 'card' | 'cash', string> = {
   till: 'the till roll total',
@@ -58,5 +58,43 @@ export function VerdictPanel({ r }: { r: Reconciliation }) {
         <span className="detail"> {detail}</span>
       </span>
     </div>
+  )
+}
+
+/**
+ * The two legs, when the till stated what it expected.
+ *
+ * This is the part that saves her the hunt. One blended "£12 short" means
+ * checking a whole night; "the card machine agrees, the drawer is £12 light"
+ * means checking the drawer.
+ */
+export function ItemisedLegs({ r }: { r: DayReconciliation }) {
+  if (!r.itemised) return null
+  const headline = itemisedHeadline(r)
+
+  const row = (name: string, leg: LegResult | undefined) => {
+    if (!leg) return null
+    return (
+      <div className="zrow">
+        <span className="zname">
+          {name}
+          <small>
+            till says {formatMoney(leg.expectedPence)} · counted {formatMoney(leg.countedPence)}
+          </small>
+        </span>
+        <span className={`delta ${leg.verdict}`} style={{ fontSize: 16 }}>
+          {leg.verdict === 'balanced' ? '✅' : formatSigned(leg.variancePence)}
+        </span>
+      </div>
+    )
+  }
+
+  return (
+    <section className="card">
+      <div className="card-head"><h2>Where the difference is</h2></div>
+      {row('Drawer', r.cash)}
+      {row('Card machine', r.card)}
+      {headline && <p className="note" style={{ marginBottom: 0 }}>{headline}</p>}
+    </section>
   )
 }

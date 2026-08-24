@@ -66,6 +66,20 @@ export async function releaseDeviceEngine(): Promise<void> {
   }
 }
 
+/**
+ * Raw text off a photograph, with no interpretation at all.
+ *
+ * Used for the full till roll, where parseZRead does the reading. Shares the
+ * cached worker with the single-total path — starting a second one would mean
+ * compiling several megabytes of WASM twice.
+ */
+export async function transcribeOnDevice(file: Blob): Promise<string> {
+  const prepared = await prepareForDevice(file)
+  const worker = await getWorker()
+  const { data } = await worker.recognize(prepared)
+  return data.text ?? ''
+}
+
 /** Tesseract's own 0–100 score, mapped conservatively. */
 function gradeConfidence(score: number, guessed: boolean): 'high' | 'medium' | 'low' {
   if (guessed) return 'low'

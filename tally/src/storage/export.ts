@@ -10,8 +10,9 @@
 
 import type { DayRecord } from '../core/types.ts'
 import { reconcileDay, verdictHeadline } from '../core/reconcile.ts'
+import { DEPARTMENTS, departmentLabel } from '../core/departments.ts'
 
-const HEADERS = [
+const CORE_HEADERS = [
   'Date',
   'Weekday',
   'Till roll',
@@ -24,6 +25,26 @@ const HEADERS = [
   'Card from',
   'Note',
 ] as const
+
+/**
+ * The till's own figures, then one column per department.
+ *
+ * Fixed columns rather than only the departments seen, so a fortnight where
+ * nobody bought a bottled beer still lines up with one where they did — a
+ * spreadsheet with a shifting column order is worse than no spreadsheet.
+ */
+const TILL_HEADERS = [
+  'Z number',
+  'Sales',
+  'Average spend',
+  'Till cash',
+  'Till card',
+  'Cash in drawer',
+  'Voids',
+  'No sales',
+] as const
+
+const DEPT_HEADERS = DEPARTMENTS.map((d) => departmentLabel(d.code, d.printed))
 
 function pounds(pence: number | null): string {
   return pence === null ? '' : (pence / 100).toFixed(2)
@@ -50,7 +71,7 @@ function csvField(value: string): string {
 }
 
 export function toCsv(days: readonly DayRecord[], tolerancePence?: number): string {
-  const lines = [HEADERS.map(csvField).join(',')]
+  const lines = [[...CORE_HEADERS, ...TILL_HEADERS, ...DEPT_HEADERS].map(csvField).join(',')]
   for (const day of days) {
     const r = reconcileDay(day, tolerancePence)
     const counted =
@@ -68,6 +89,18 @@ export function toCsv(days: readonly DayRecord[], tolerancePence?: number): stri
         provenance(day.till.source, day.till.edited),
         provenance(day.card.source, day.card.edited),
         day.note,
+        // The till's own account of the night, where the roll was captured.
+        day.zRead?.header.zNumber === undefined ? '' : String(day.zRead.header.zNumber),
+        day.zRead?.transaction.guestCount === undefined ? '' : String(day.zRead.transaction.guestCount),
+        pounds(day.zRead?.transaction.avePence ?? null),
+        pounds(day.zRead?.transaction.cashPence ?? null),
+        pounds(day.zRead?.transaction.cardPence ?? null),
+        pounds(day.zRead?.transaction.cidPence ?? null),
+        pounds(day.zRead?.transaction.voidPence ?? null),
+        day.zRead?.transaction.noSaleCount === undefined ? '' : String(day.zRead.transaction.noSaleCount),
+        ...DEPARTMENTS.map((meta) =>
+          pounds(day.zRead?.departments.find((d) => d.code === meta.code)?.pence ?? null),
+        ),
       ]
         .map(csvField)
         .join(','),

@@ -20,6 +20,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname } from 'node:path'
 import type { Page } from 'playwright'
 import { launchChromium } from '../scripts/browser.ts'
+import { GARDENERS_ARMS } from '../test/fixtures/gardenersArms.ts'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const dist = join(here, '..', 'dist')
@@ -95,7 +96,7 @@ await context.addInitScript(() => {
   }
 })
 
-const page = await context.newPage()
+let page = await context.newPage()
 const pageErrors: string[] = []
 page.on('pageerror', (err) => pageErrors.push(String(err)))
 page.on('console', (msg) => {
@@ -129,7 +130,7 @@ try {
     `got "${await verdictText(page)}" — the default tolerance should absorb this`)
 
   console.log('\nA scan that cannot run')
-  await page.setInputFiles('[data-testid="file-till"]', join(here, '..', 'public', 'icon-192.png'))
+  await page.setInputFiles('[data-testid="file-roll"]', join(here, '..', 'public', 'icon-192.png'))
   await page.waitForSelector('.note.bad', { timeout: 5000 })
   const scanNote = await page.locator('.note.bad').first().innerText()
   check('says why it could not scan', /switched off/i.test(scanNote), `got "${scanNote}"`)
@@ -155,7 +156,16 @@ try {
   console.log('\nCorrecting a saved night')
   await page.click('button:has-text("Edit")')
   await page.waitForSelector('#figure-till', { timeout: 5000 })
-  check('editing loads the saved figures', (await page.inputValue('#figure-card')) === '2321.75')
+  // The record loads asynchronously after the boxes render, so wait for the
+  // figure rather than reading the empty box it starts as.
+  await page
+    .waitForFunction(() => (document.querySelector('#figure-card') as HTMLInputElement | null)?.value === '2321.75', null, { timeout: 5000 })
+    .catch(() => {})
+  check(
+    'editing loads the saved figures',
+    (await page.inputValue('#figure-card')) === '2321.75',
+    `got "${await page.inputValue('#figure-card')}"`,
+  )
   await setFigure(page, 'figure-cash', '1800.55')
   check('the verdict follows the correction', (await verdictText(page)) === 'Short by £90.00',
     `got "${await verdictText(page)}"`)
@@ -165,7 +175,7 @@ try {
 
   console.log('\nSurviving a restart')
   await page.reload({ waitUntil: 'networkidle' })
-  await page.click('button:has-text("History")')
+  await page.click('button:has-text("Nights")')
   await page.waitForSelector('.day-row', { timeout: 5000 })
   check('the night is still there after a reload', (await page.locator('.day-row').count()) === 1)
   check('and still shows it was short', (await page.locator('.day-row .delta').innerText()).includes('−£90.00'))
@@ -179,6 +189,120 @@ try {
   check('it ships the icons a launcher needs', manifest.icons.length >= 4)
   const sw = await page.evaluate(() => navigator.serviceWorker.getRegistrations().then((r) => r.length))
   check('the service worker registers', sw >= 1)
+
+  console.log('\nA real till roll')
+  // A fresh context, so the dashboard totals are exactly one known night — the
+  // Gardeners Arms roll of 23/08/2026 — rather than that night plus whatever
+  // the earlier flow happened to leave behind.
+  await page.close()
+  const clean = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 3,
+    isMobile: true,
+    hasTouch: true,
+  })
+  await clean.addInitScript(() => {
+    try {
+      localStorage.setItem('tally.engine', 'off')
+    } catch {
+      /* ignore */
+    }
+  })
+  page = await clean.newPage()
+  page.on('pageerror', (err) => pageErrors.push(String(err)))
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') pageErrors.push(msg.text())
+  })
+  await page.goto(base, { waitUntil: 'networkidle' })
+
+  await page.evaluate(async (day) => {
+    await new Promise<void>((resolve, reject) => {
+      const req = indexedDB.open('tally', 1)
+      req.onupgradeneeded = () => {
+        const db = req.result
+        if (!db.objectStoreNames.contains('days')) db.createObjectStore('days', { keyPath: 'date' })
+        if (!db.objectStoreNames.contains('photos')) db.createObjectStore('photos', { keyPath: 'id' })
+      }
+      req.onsuccess = () => {
+        const tx = req.result.transaction('days', 'readwrite')
+        tx.objectStore('days').put(day)
+        tx.oncomplete = () => resolve()
+        tx.onerror = () => reject(tx.error)
+      }
+      req.onerror = () => reject(req.error)
+    })
+  }, {
+    date: '2026-08-23',
+    till: { pence: 219280, source: 'vision', edited: false },
+    card: { pence: 184100, source: 'manual', edited: false },
+    // £12 light in the drawer; the card slip agrees with the till exactly.
+    cashPence: 33980,
+    note: '',
+    zRead: GARDENERS_ARMS,
+    createdAt: 0,
+    updatedAt: 0,
+  })
+
+  await page.reload({ waitUntil: 'networkidle' })
+  await page.click('button:has-text("Nights")')
+  await page.waitForSelector('.day-row', { timeout: 5000 })
+  check('exactly the one seeded night is present', (await page.locator('.day-row').count()) === 1)
+  await page.click('.day-row')
+  await page.waitForSelector('.verdict', { timeout: 5000 })
+  const rollDetail = await page.locator('.main').innerText()
+  check('the roll’s own sums are reported as agreeing', /Adds up/i.test(rollDetail))
+  check('the department split is shown', rollDetail.includes('Draught beers'))
+  check('with the percentage the till printed', rollDetail.includes('68.05%'))
+  check('the takings match the roll', rollDetail.includes('£2,192.80'))
+  check('the sales count comes across', /267 sales/.test(rollDetail))
+  check('the shortfall is reported', /−£12\.00/.test(rollDetail), rollDetail.slice(0, 200))
+  check(
+    'and pinned to the drawer rather than left vague',
+    /the difference is in the drawer/i.test(rollDetail),
+  )
+
+  console.log('\nThe dashboard')
+  await page.click('button:has-text("Trade")')
+  await page.waitForSelector('.kpi-row', { timeout: 5000 })
+  const dash = await page.locator('.main').innerText()
+  check('leads with what was taken', dash.includes('£2,192.80'))
+  check('splits cash and card as the till states them', dash.includes('£351.80') && dash.includes('£1,841.00'))
+  check('shows every department with its share', dash.includes('Draught beers') && dash.includes('68.05%'))
+  check('shows the quantities sold', dash.includes('406'))
+  check('the shares total 100%', dash.includes('100.00%'))
+  check('reports the night as short by twelve pounds', dash.includes('−£12.00'), dash.slice(0, 300))
+  check('charts rendered', (await page.locator('.chart svg').count()) >= 2)
+  check('a legend names the departments', (await page.locator('.legend li').count()) >= 7)
+
+  console.log('\nFiltering')
+  await page.click('.chip:has-text("Draught beers")')
+  await page.click('.chip:has-text("Wine")')
+  await page.waitForTimeout(150)
+  const filtered = await page.locator('table.data').first().innerText()
+  check('filtering keeps only the chosen departments', !filtered.includes('Spirits'), filtered.slice(0, 160))
+  check(
+    'and re-bases their percentages onto each other',
+    filtered.includes('86.40%'),
+    `expected draught to become 86.40% of draught+wine; got ${filtered.slice(0, 200)}`,
+  )
+  await page.click('.chip:has-text("Draught beers")')
+  await page.click('.chip:has-text("Wine")')
+  await page.waitForTimeout(150)
+  check(
+    'clearing the filter restores the full split',
+    (await page.locator('table.data').first().innerText()).includes('68.05%'),
+  )
+
+  await page.click('.chip:has-text("Sun")')
+  await page.waitForTimeout(150)
+  check('a weekday filter keeps a Sunday night', (await page.locator('.day-row').count()) === 1)
+  await page.click('.chip:has-text("Mon")')
+  await page.click('.chip:has-text("Sun")')
+  await page.waitForTimeout(150)
+  check(
+    'and a weekday with no trade empties the selection',
+    (await page.locator('.main').innerText()).includes('No nights match those filters'),
+  )
 
   check('nothing threw along the way', pageErrors.length === 0, pageErrors.join('\n        '))
 } finally {

@@ -24,6 +24,23 @@
   --warn: #d9a441;
   --warn-bg: #33270f;
 
+  /* Categorical palette for the dashboard. Validated with the data-viz
+     validator against both card surfaces (#182126 dark, #ffffff light):
+     all checks pass, with light mode returning a contrast relief that the
+     always-visible department table satisfies. Slots are assigned to
+     departments by registry in core/departments.ts and never reassigned —
+     filtering Wine out must not repaint Mixers. */
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --series-6: #008300;
+  --series-7: #9085e9;
+  --series-8: #e66767;
+
+  --grid: #2c3a42;
+
   --radius: 14px;
   --tap: 56px;
   --pad: 16px;
@@ -48,6 +65,19 @@
     --bad-bg: #fbe6e4;
     --warn: #8a6414;
     --warn-bg: #fbf0d8;
+
+    /* The same eight hues, stepped for the light surface — a selected palette,
+       not an automatic flip of the dark one. Validated separately. */
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    --series-3: #1baf7a;
+    --series-4: #eda100;
+    --series-5: #e87ba4;
+    --series-6: #008300;
+    --series-7: #4a3aa7;
+    --series-8: #e34948;
+
+    --grid: #e4ded1;
   }
 }
 
@@ -128,9 +158,15 @@ body {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
+  gap: 4px 8px;
   margin-bottom: 10px;
+  /* Wrapping rather than colliding: a long title and a long subtitle on a
+     narrow phone would otherwise interleave their wrapped lines. */
+  flex-wrap: wrap;
 }
+
+.card-head h2 { flex: 1 1 auto; min-width: 0; }
+.card-head .hint { flex: 0 0 auto; }
 
 .card-head h2 {
   margin: 0;
@@ -457,3 +493,147 @@ button:disabled { opacity: 0.5; cursor: default; }
   max-width: min(90vw, 480px);
   text-align: center;
 }
+
+/* ---- dashboard --------------------------------------------------------- */
+
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+
+.stat-label { font-size: 12px; color: var(--muted); }
+.stat-value { font-size: 24px; font-weight: 700; line-height: 1.2; margin-top: 2px; }
+.stat-value.good { color: var(--good); }
+.stat-value.bad { color: var(--bad); }
+.stat-value.warn { color: var(--warn); }
+.stat-detail { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+/* The hero: the one number the dashboard leads with. */
+.hero { text-align: left; }
+.hero .stat-value { font-size: 40px; letter-spacing: -0.01em; }
+
+.chart { position: relative; width: 100%; }
+.chart svg { display: block; overflow: visible; }
+
+/* Axis and label text wears text tokens, never a series colour — a light
+   categorical hue is illegible as type on either surface. */
+.chart-axis { font-size: 11px; fill: var(--muted); }
+.chart-label { font-size: 12px; fill: var(--text); }
+.chart-value { font-size: 12px; fill: var(--muted); }
+
+.chart-tip {
+  position: absolute;
+  transform: translate(-50%, 0);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 12px;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 5;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.chart-tip-title { font-weight: 600; margin-bottom: 4px; }
+.chart-tip-row { display: flex; align-items: center; gap: 6px; }
+.chart-tip-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.chart-tip-label { color: var(--muted); }
+.chart-tip-value { margin-left: auto; font-weight: 600; }
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.legend li { display: flex; align-items: center; gap: 6px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+
+/* ---- filters ----------------------------------------------------------- */
+
+.filters { display: flex; flex-direction: column; gap: 10px; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.chip {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.chip[aria-pressed='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.chip .swatch { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 7px; vertical-align: 0; }
+
+/* ---- data table -------------------------------------------------------- */
+
+.table-wrap { overflow-x: auto; margin-top: 12px; }
+
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  /* Sized so "Draught beers" and "£15,026.98" both sit on one line inside a
+     390px phone; wrapped department names made every other row double height. */
+  font-size: 13px;
+}
+
+table.data th,
+table.data td { padding: 8px 5px; text-align: right; white-space: nowrap; }
+table.data th:first-child,
+table.data td:first-child { text-align: left; white-space: normal; }
+table.data thead th { font-size: 12px; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--line); }
+table.data tbody tr + tr td { border-top: 1px solid var(--line); }
+table.data tfoot td { border-top: 2px solid var(--line); font-weight: 700; }
+table.data .swatch { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 8px; }
+
+/* ---- cross-foot -------------------------------------------------------- */
+
+.checks { list-style: none; margin: 10px 0 0; padding: 0; font-size: 13px; }
+.checks li { display: flex; gap: 8px; padding: 7px 0; border-top: 1px solid var(--line); align-items: flex-start; }
+.checks li:first-child { border-top: 0; }
+.checks .mark { flex: none; width: 16px; }
+.checks .said { color: var(--muted); font-variant-numeric: tabular-nums; }
+.checks li.bad .mark { color: var(--bad); }
+.checks li.warn .mark { color: var(--warn); }
+.checks li.ok .mark { color: var(--good); }
+
+.zrow { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
+.zrow:first-of-type { border-top: 0; }
+.zrow .zname { flex: 1; min-width: 0; }
+.zrow .zname small { display: block; color: var(--muted); font-size: 12px; }
+.zrow input {
+  width: 104px;
+  font: inherit;
+  font-size: 16px;
+  text-align: right;
+  min-height: 44px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.zrow .zpct { width: 62px; text-align: right; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
