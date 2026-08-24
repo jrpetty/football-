@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Tally — nightly pub till reconciliation from photographs of the receipts",
+  "description": "Tally \u2014 nightly pub till reconciliation from photographs of the receipts",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -11,7 +11,8 @@
     "typecheck": "tsc -b --noEmit",
     "test": "node --test test/*.test.ts",
     "test:e2e": "node e2e/run.ts",
-    "icons": "node scripts/make-icons.ts"
+    "icons": "node scripts/make-icons.ts",
+    "test:subpath": "node e2e/subpath.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
