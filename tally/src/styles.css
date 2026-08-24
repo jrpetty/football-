@@ -1,0 +1,459 @@
+/* ---------------------------------------------------------------------------
+   Tally.
+
+   Designed for one specific situation: a phone held in one hand, at midnight,
+   at the end of a long shift, standing at a bar. Everything below follows from
+   that — large type, tap targets you cannot miss with tired hands, a verdict
+   readable at arm's length, and dark by default because the room is.
+   --------------------------------------------------------------------------- */
+
+:root {
+  --bg: #10161a;
+  --surface: #182126;
+  --surface-2: #1f2a30;
+  --line: #2c3a42;
+  --text: #eef4f2;
+  --muted: #93a5ad;
+  --accent: #d8b26a;
+  --accent-ink: #201a0c;
+
+  --good: #4ba97a;
+  --good-bg: #14301f;
+  --bad: #d9645c;
+  --bad-bg: #341a19;
+  --warn: #d9a441;
+  --warn-bg: #33270f;
+
+  --radius: 14px;
+  --tap: 56px;
+  --pad: 16px;
+
+  color-scheme: dark light;
+}
+
+/* Daylight — the cellar delivery, the accountant's kitchen table. */
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f4f1ea;
+    --surface: #ffffff;
+    --surface-2: #f7f5f0;
+    --line: #ddd6c8;
+    --text: #1b2226;
+    --muted: #5d6b73;
+    --accent: #8a6a1f;
+    --accent-ink: #ffffff;
+    --good: #1f7a4d;
+    --good-bg: #e2f2e8;
+    --bad: #b23a32;
+    --bad-bg: #fbe6e4;
+    --warn: #8a6414;
+    --warn-bg: #fbf0d8;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.45 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior-y: none;
+}
+
+/* Tabular figures everywhere money appears, so columns of pounds line up and a
+   digit changing does not shift the ones beside it. */
+.num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+/* ---- header ------------------------------------------------------------ */
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+  padding: max(10px, env(safe-area-inset-top)) var(--pad) 10px;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.header .sub { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+
+/* Only the counting screen carries the fixed verdict bar; the others would
+   just have a hole at the bottom of the scroll. */
+.main.with-bar { padding-bottom: 232px; }
+
+.main {
+  flex: 1;
+  padding: var(--pad);
+  padding-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ---- cards ------------------------------------------------------------- */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+
+.card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.card-head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.card-head .hint { font-size: 12px; color: var(--muted); }
+
+/* ---- the figure row ---------------------------------------------------- */
+
+.figure {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.money-field {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0 12px;
+  min-height: var(--tap);
+}
+
+.money-field:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 26%, transparent);
+}
+
+.money-field .sign {
+  font-size: 22px;
+  color: var(--muted);
+  padding-right: 6px;
+}
+
+/* 17px so iOS does not zoom the page when the field takes focus. */
+.money-field input {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 26px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  padding: 10px 0;
+}
+
+.money-field input::placeholder { color: var(--muted); font-weight: 400; }
+.money-field.invalid { border-color: var(--bad); }
+
+/* ---- buttons ----------------------------------------------------------- */
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--text);
+  min-height: var(--tap);
+  padding: 0 16px;
+  touch-action: manipulation;
+}
+
+button:disabled { opacity: 0.5; cursor: default; }
+
+.btn-scan {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 84px;
+  line-height: 1.1;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.btn-scan .glyph { font-size: 22px; }
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+  font-size: 17px;
+  width: 100%;
+}
+
+.btn-ghost { background: transparent; }
+.btn-row { display: flex; gap: 10px; }
+.btn-row > * { flex: 1; }
+
+.btn-danger { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 50%, var(--line)); }
+
+.btn-small { min-height: 40px; font-size: 14px; padding: 0 12px; }
+
+/* ---- scan feedback ----------------------------------------------------- */
+
+.note {
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.note.warn { color: var(--warn); }
+.note.bad { color: var(--bad); }
+
+.badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.badge.good { color: var(--good); border-color: color-mix(in srgb, var(--good) 45%, var(--line)); }
+.badge.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); }
+.badge.bad { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
+
+.alts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+
+.alts button {
+  min-height: 40px;
+  font-size: 13px;
+  padding: 0 12px;
+  color: var(--muted);
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+  vertical-align: -3px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation-duration: 2.4s; }
+}
+
+/* ---- the verdict ------------------------------------------------------- */
+
+.verdict-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  border-top: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg) 94%, transparent);
+  backdrop-filter: blur(10px);
+  padding: 12px var(--pad) calc(12px + env(safe-area-inset-bottom));
+}
+
+.verdict-bar .inner { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+
+.verdict {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.verdict.balanced { background: var(--good-bg); border-color: color-mix(in srgb, var(--good) 45%, var(--line)); }
+.verdict.short { background: var(--bad-bg); border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
+.verdict.over { background: var(--warn-bg); border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); }
+
+.verdict .glyph { font-size: 26px; line-height: 1; }
+.verdict .words { flex: 1; min-width: 0; }
+.verdict .headline { display: block; font-size: 19px; font-weight: 700; }
+.verdict .detail { font-size: 13px; color: var(--muted); }
+
+.verdict.balanced .headline { color: var(--good); }
+.verdict.short .headline { color: var(--bad); }
+.verdict.over .headline { color: var(--warn); }
+
+/* ---- history ----------------------------------------------------------- */
+
+.day-list { display: flex; flex-direction: column; gap: 8px; }
+
+.day-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  min-height: 64px;
+}
+
+.day-row .when { flex: 1; min-width: 0; }
+.day-row .when .date { font-weight: 600; }
+.day-row .when .takings { font-size: 13px; color: var(--muted); }
+.day-row .delta { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.day-row .delta.balanced { color: var(--good); }
+.day-row .delta.short { color: var(--bad); }
+.day-row .delta.over { color: var(--warn); }
+.day-row .delta.incomplete { color: var(--muted); font-size: 13px; font-weight: 500; }
+
+.empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 48px 24px;
+  line-height: 1.6;
+}
+
+/* ---- settings ---------------------------------------------------------- */
+
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.field label { font-size: 13px; font-weight: 600; }
+.field .help { font-size: 12px; color: var(--muted); line-height: 1.45; }
+
+.field input[type='text'],
+.field input[type='password'],
+.field input[type='date'],
+.field input[type='number'],
+.field select,
+.field textarea {
+  font: inherit;
+  font-size: 16px;
+  min-height: 48px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--text);
+  width: 100%;
+}
+
+.field textarea { min-height: 72px; resize: vertical; }
+
+.switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: var(--tap); }
+.switch input { width: 24px; height: 24px; accent-color: var(--accent); }
+
+/* ---- navigation -------------------------------------------------------- */
+
+.tabs {
+  display: flex;
+  gap: 6px;
+  padding: 8px var(--pad) 0;
+}
+
+.tabs button {
+  flex: 1;
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 600;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: var(--muted);
+}
+
+.tabs button[aria-current='page'] { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ---- photograph preview ------------------------------------------------ */
+
+.shot { margin-top: 10px; }
+.shot img { width: 100%; border-radius: 10px; border: 1px solid var(--line); display: block; }
+
+.raw {
+  margin-top: 10px;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 220px;
+  overflow: auto;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  color: var(--muted);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  /* Below the header rather than above the verdict bar: the bar is only on one
+     screen and changes height with the message inside it, so anchoring to it
+     put the toast in mid-air everywhere else. */
+  top: 124px;
+  z-index: 40;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-size: 14px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+  max-width: min(90vw, 480px);
+  text-align: center;
+}

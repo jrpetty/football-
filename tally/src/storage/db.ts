@@ -1,0 +1,168 @@
+// ---------------------------------------------------------------------------
+// The database.
+//
+// IndexedDB, on the phone, with nothing behind it. Pub wifi is unreliable and
+// the reconciliation happens whether or not the signal is up, so there is no
+// point in the night's work depending on a network round trip. The backup
+// story is the export in settings rather than a sync service — see the README
+// for why that is the right shape for one pub and the wrong one for fifty.
+//
+// Written directly against the IndexedDB API rather than pulling in a wrapper:
+// it is two object stores and six operations, and the dependency would be
+// larger than the code.
+// ---------------------------------------------------------------------------
+
+import type { DayRecord } from '../core/types.ts'
+
+const DB_NAME = 'tally'
+const DB_VERSION = 1
+const DAYS = 'days'
+const PHOTOS = 'photos'
+
+let dbPromise: Promise<IDBDatabase> | null = null
+
+function open(): Promise<IDBDatabase> {
+  const existing = dbPromise
+  if (existing) return existing
+
+  // Held in a local as well as the module slot: the failure handler clears the
+  // slot so a later call can retry, which means the slot itself is not a safe
+  // thing to return.
+  const created = new Promise<IDBDatabase>((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION)
+    req.onupgradeneeded = () => {
+      const db = req.result
+      // Keyed by date: one record per trading day, so saving the same night
+      // twice corrects it rather than duplicating it.
+      if (!db.objectStoreNames.contains(DAYS)) db.createObjectStore(DAYS, { keyPath: 'date' })
+      if (!db.objectStoreNames.contains(PHOTOS)) db.createObjectStore(PHOTOS, { keyPath: 'id' })
+    }
+    req.onsuccess = () => resolve(req.result)
+    req.onerror = () => reject(req.error ?? new Error('Could not open the database.'))
+    req.onblocked = () => reject(new Error('The database is open in another tab.'))
+  }).catch((err: unknown) => {
+    dbPromise = null
+    throw err
+  })
+
+  dbPromise = created
+  return created
+}
+
+function run<T>(store: string, mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest<T>): Promise<T> {
+  return open().then(
+    (db) =>
+      new Promise<T>((resolve, reject) => {
+        const tx = db.transaction(store, mode)
+        const req = fn(tx.objectStore(store))
+        // Resolve on the transaction, not the request: on a write, the request
+        // succeeds before the data is durable, and a quota failure surfaces
+        // here rather than there.
+        tx.oncomplete = () => resolve(req.result)
+        tx.onerror = () => reject(tx.error ?? new Error('The database refused that write.'))
+        tx.onabort = () => reject(tx.error ?? new Error('That write was aborted — the phone may be out of space.'))
+      }),
+  )
+}
+
+export function saveDay(day: DayRecord): Promise<unknown> {
+  return run(DAYS, 'readwrite', (s) => s.put({ ...day, updatedAt: Date.now() }))
+}
+
+export function getDay(date: string): Promise<DayRecord | undefined> {
+  return run<DayRecord | undefined>(DAYS, 'readonly', (s) => s.get(date))
+}
+
+/** Every night, most recent first — the order the history is read in. */
+export async function listDays(): Promise<DayRecord[]> {
+  const all = await run<DayRecord[]>(DAYS, 'readonly', (s) => s.getAll())
+  return all.sort((a, b) => b.date.localeCompare(a.date))
+}
+
+export async function deleteDay(date: string): Promise<void> {
+  const day = await getDay(date)
+  if (day) {
+    for (const id of [day.till.photoId, day.card.photoId]) {
+      if (id) await deletePhoto(id)
+    }
+  }
+  await run(DAYS, 'readwrite', (s) => s.delete(date))
+}
+
+let photoCounter = 0
+
+export async function savePhoto(blob: Blob): Promise<string> {
+  // Time plus a counter: unique without needing crypto.randomUUID, which is
+  // absent in a non-secure context and would fail exactly where a plain HTTP
+  // preview is being used.
+  const id = `${Date.now().toString(36)}-${(photoCounter++).toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`
+  await run(PHOTOS, 'readwrite', (s) => s.put({ id, blob, savedAt: Date.now() }))
+  return id
+}
+
+export async function getPhoto(id: string): Promise<Blob | undefined> {
+  const row = await run<{ id: string; blob: Blob } | undefined>(PHOTOS, 'readonly', (s) => s.get(id))
+  return row?.blob
+}
+
+export function deletePhoto(id: string): Promise<unknown> {
+  return run(PHOTOS, 'readwrite', (s) => s.delete(id))
+}
+
+/**
+ * Drop photographs older than a cutoff, leaving the figures untouched.
+ *
+ * The numbers are tiny and worth keeping forever. The photographs are not, and
+ * a phone that fills up is a phone the app stops working on.
+ */
+export async function prunePhotosBefore(cutoffMs: number): Promise<number> {
+  const rows = await run<Array<{ id: string; savedAt: number }>>(PHOTOS, 'readonly', (s) => s.getAll())
+
+  const removedIds = new Set<string>()
+  for (const row of rows) {
+    if (row.savedAt >= cutoffMs) continue
+    await deletePhoto(row.id)
+    removedIds.add(row.id)
+  }
+  if (removedIds.size === 0) return 0
+
+  // Clear the now-dangling references, so the day detail never offers a
+  // photograph that is no longer there.
+  for (const day of await listDays()) {
+    let touched = false
+    if (day.till.photoId && removedIds.has(day.till.photoId)) {
+      delete day.till.photoId
+      touched = true
+    }
+    if (day.card.photoId && removedIds.has(day.card.photoId)) {
+      delete day.card.photoId
+      touched = true
+    }
+    if (touched) await saveDay(day)
+  }
+
+  return removedIds.size
+}
+
+/** Roughly how much room the app is taking, when the browser will say. */
+export async function estimateUsage(): Promise<{ usedBytes: number; quotaBytes: number } | null> {
+  if (!navigator.storage?.estimate) return null
+  const e = await navigator.storage.estimate()
+  return { usedBytes: e.usage ?? 0, quotaBytes: e.quota ?? 0 }
+}
+
+/**
+ * Ask the browser not to evict the data under storage pressure.
+ *
+ * Without this, IndexedDB is "best effort" and a phone short on space may clear
+ * it. Silently ignored where unsupported.
+ */
+export async function requestPersistence(): Promise<boolean> {
+  try {
+    if (!navigator.storage?.persist) return false
+    if (await navigator.storage.persisted?.()) return true
+    return await navigator.storage.persist()
+  } catch {
+    return false
+  }
+}

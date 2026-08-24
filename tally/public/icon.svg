@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Tally">
+  <rect width="512" height="512" rx="112" fill="#12241c"/>
+  <!-- A till roll, torn at the bottom the way they come off the printer. -->
+  <path d="M150 108h212a16 16 0 0 1 16 16v250l-26-18-26 18-26-18-26 18-26-18-26 18-26-18-26 18V124a16 16 0 0 1 16-16z" fill="#e9e2cf"/>
+  <g fill="#12241c" opacity="0.55">
+    <rect x="182" y="156" width="148" height="14" rx="7"/>
+    <rect x="182" y="192" width="106" height="12" rx="6"/>
+    <rect x="182" y="224" width="126" height="12" rx="6"/>
+  </g>
+  <!-- The tick: the whole point of the app is this mark appearing. -->
+  <path d="M196 300l44 44 96-104" fill="none" stroke="#4ba97a" stroke-width="34"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M118 424h276" stroke="#d8b26a" stroke-width="24" stroke-linecap="round"/>
+</svg>

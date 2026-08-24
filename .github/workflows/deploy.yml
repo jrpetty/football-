@@ -56,6 +56,21 @@ jobs:
           mkdir -p dist/predictor
           cp -r predictor/dist/. dist/predictor/
 
+      # Tally, the pub till reconciliation app, is published under /tally/.
+      # Its vite base is relative for the same reason the predictor's is, so it
+      # works from a sub-path — and, because it is installed to a phone's home
+      # screen, that sub-path is also its permanent address. Moving it later
+      # would orphan every installed copy.
+      - name: Build Tally
+        working-directory: tally
+        run: |
+          npm ci
+          npm run build
+      - name: Place Tally under /tally
+        run: |
+          mkdir -p dist/tally
+          cp -r tally/dist/. dist/tally/
+
       # NOTE: actions/configure-pages with enablement: true was tried here and
       # cannot work on this repository — GITHUB_TOKEN gets "Resource not
       # accessible by integration" from the create-Pages-site API, which is an
