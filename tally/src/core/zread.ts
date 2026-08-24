@@ -158,6 +158,37 @@ export function shareBp(part: number, total: number): number {
   return Math.round((part / total) * 10000)
 }
 
+/** The parts of a roll, which arrive on different photographs. */
+export type ZReadSection = 'departments' | 'totals' | 'clerks' | 'items'
+
+const SECTION_LABELS: Record<ZReadSection, string> = {
+  departments: 'Departments',
+  totals: 'Totals and payments',
+  clerks: 'By clerk',
+  items: 'Items',
+}
+
+export function sectionLabel(section: ZReadSection): string {
+  return SECTION_LABELS[section]
+}
+
+/**
+ * Which sections a parsed read actually contains.
+ *
+ * The roll is longer than a phone camera's frame, so it arrives as several
+ * photographs and nobody should have to remember which is which. This is how
+ * each one announces itself — "Items", "Departments" — so a missing part of the
+ * roll is visible rather than silently absent.
+ */
+export function sectionsIn(z: ZRead): ZReadSection[] {
+  const found: ZReadSection[] = []
+  if (z.departments.length > 0 || z.groups.length > 0 || z.deptTotal) found.push('departments')
+  if (Object.keys(z.transaction).length > 0) found.push('totals')
+  if (z.clerks.length > 0) found.push('clerks')
+  if (z.plus.length > 0) found.push('items')
+  return found
+}
+
 /**
  * Merge a freshly-scanned section into what has been captured so far.
  *

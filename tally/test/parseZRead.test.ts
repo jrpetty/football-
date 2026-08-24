@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { parseZRead, readLine } from '../src/ocr/parseZRead.ts'
 import { crossfootVerdict } from '../src/core/crossfoot.ts'
+import { emptyZRead, isZReadEmpty, mergeZRead, sectionsIn } from '../src/core/zread.ts'
 import { GARDENERS_ARMS, GARDENERS_ARMS_TEXT } from './fixtures/gardenersArms.ts'
 
 const parsed = parseZRead(GARDENERS_ARMS_TEXT)
@@ -118,4 +119,61 @@ test('returns an empty read rather than inventing one from noise', () => {
   assert.equal(z.departments.length, 0)
   assert.equal(z.deptTotal, undefined)
   assert.equal(Object.keys(z.transaction).length, 0)
+})
+
+// --- several photographs of one roll ----------------------------------------
+
+test('names which sections a photograph turned out to contain', () => {
+  assert.deepEqual(sectionsIn(parsed), ['departments', 'totals', 'clerks'])
+  assert.deepEqual(sectionsIn(emptyZRead()), [])
+})
+
+test('recognises an item-list photograph on its own', () => {
+  const z = parseZRead(`PLU/EAN
+P00001  PINT DARK MILD        5.000 Q      *14.00
+***TOTAL                      5.000 Q      *14.00
+`)
+  assert.deepEqual(sectionsIn(z), ['items'])
+})
+
+test('the roll comes out the same whichever order the photographs arrive in', () => {
+  // She will not photograph the roll in a consistent order at midnight, and it
+  // must not matter that she does not.
+  const summary = parseZRead(GARDENERS_ARMS_TEXT.slice(0, GARDENERS_ARMS_TEXT.indexOf('ALL CLERK')))
+  const clerks = parseZRead(GARDENERS_ARMS_TEXT.slice(GARDENERS_ARMS_TEXT.indexOf('ALL CLERK')))
+
+  const forwards = mergeZRead(summary, clerks)
+  const backwards = mergeZRead(clerks, summary)
+
+  assert.equal(forwards.deptTotal?.pence, 219280)
+  assert.equal(backwards.deptTotal?.pence, 219280)
+  assert.equal(forwards.clerks.length, 3)
+  assert.equal(backwards.clerks.length, 3)
+  assert.equal(forwards.transaction.paidTotalPence, backwards.transaction.paidTotalPence)
+  assert.equal(crossfootVerdict(forwards).clean, true)
+  assert.equal(crossfootVerdict(backwards).clean, true)
+})
+
+test('merging keeps sections a later photograph does not carry', () => {
+  const items = parseZRead(`PLU/EAN
+P00001  PINT DARK MILD        5.000 Q      *14.00
+`)
+  // Photographing the summary after the item list must add to it, not wipe it.
+  const merged = mergeZRead(items, parsed)
+  assert.equal(merged.plus.length, 1, 'the items survive')
+  assert.equal(merged.departments.length, 7, 'and the departments arrive')
+})
+
+test('an unreadable photograph contributes nothing rather than corrupting the roll', () => {
+  const merged = mergeZRead(parsed, parseZRead('~~~ blurred ~~~'))
+  assert.deepEqual(merged.departments, parsed.departments)
+  assert.equal(crossfootVerdict(merged).clean, true)
+})
+
+test('a scan that read nothing leaves an empty read, not a broken one', () => {
+  // The interface leans on this to decide whether it may discard a figure she
+  // typed by hand: nothing read means nothing may be thrown away.
+  const nothing = parseZRead('~~~~\n####\n')
+  assert.equal(isZReadEmpty(nothing), true)
+  assert.equal(isZReadEmpty(parsed), false)
 })

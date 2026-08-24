@@ -637,3 +637,60 @@ table.data .swatch { display: inline-block; width: 9px; height: 9px; border-radi
   font-variant-numeric: tabular-nums;
 }
 .zrow .zpct { width: 62px; text-align: right; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+
+/* ---- the roll drop area ------------------------------------------------- */
+
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  min-height: 132px;
+  padding: 18px 16px;
+  margin-bottom: 10px;
+  border: 2px dashed var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.dropzone:hover,
+.dropzone:focus-visible { border-color: var(--accent); }
+.dropzone:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 40%, transparent); outline-offset: 2px; }
+.dropzone.over { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface-2)); }
+.dropzone.busy { cursor: default; border-style: solid; }
+
+.dz-glyph { font-size: 30px; line-height: 1; }
+.dz-hint { font-size: 13px; color: var(--muted); max-width: 30ch; line-height: 1.4; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dropzone { transition: none; }
+}
+
+/* Each photograph, and what it turned out to contain. */
+.shots { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+
+.shots li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.shots img,
+.shots .shot-blank {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.shots .shot-what { min-width: 0; color: var(--muted); }
+.shots .shot-bad { color: var(--bad); }

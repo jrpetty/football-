@@ -20,7 +20,7 @@
 
 import { parseZRead } from './parseZRead.ts'
 import { crossfootVerdict, type CrossfootVerdict } from '../core/crossfoot.ts'
-import { mergeZRead, type ZRead } from '../core/zread.ts'
+import { emptyZRead, mergeZRead, sectionsIn, type ZRead, type ZReadSection } from '../core/zread.ts'
 import { prepareForVision } from './image.ts'
 import { transcribeOnDevice } from './device.ts'
 import { loadSettings, effectiveEngine } from '../storage/settings.ts'
@@ -179,4 +179,90 @@ export function describeZReadError(err: unknown): string {
   if (/credit|billing|quota/i.test(msg)) return 'There is a billing problem on that Anthropic account.'
   if (/CORS|Failed to fetch|NetworkError/i.test(msg)) return 'Could not reach the internet. Type the figures in, or switch to on-device scanning.'
   return `Could not read that photograph: ${msg}`
+}
+
+
+// ---------------------------------------------------------------------------
+// Several photographs at once.
+//
+// The roll does not fit in one frame, so it arrives in pieces — and nobody
+// standing at a bar should have to remember that the item list goes second.
+// Each photograph is read on its own, announces which sections it turned out to
+// contain, and is then folded into one read. Order does not matter, a photograph
+// that fails does not take the others with it, and what is still missing is
+// visible rather than silently absent.
+// ---------------------------------------------------------------------------
+
+export interface PhotoOutcome {
+  index: number
+  /** Sections this photograph turned out to contain. Empty if it read nothing. */
+  sections: ZReadSection[]
+  error?: string
+  rawText?: string
+  confidence?: 'high' | 'medium' | 'low'
+  notes?: string
+}
+
+export interface BatchResult {
+  zRead: ZRead
+  verdict: CrossfootVerdict
+  photos: PhotoOutcome[]
+}
+
+interface BatchRequest {
+  files: Blob[]
+  signal?: AbortSignal
+  existing?: ZRead
+  /** Called as each photograph lands, so the interface can show progress. */
+  onProgress?: (done: number, total: number) => void
+}
+
+/** One photograph, reduced to its own parsed read and never merged in place. */
+async function readOne(file: Blob, index: number, signal?: AbortSignal): Promise<{ z: ZRead; outcome: PhotoOutcome }> {
+  try {
+    const result = await scanZRead({ file, ...(signal ? { signal } : {}) })
+    return {
+      z: result.zRead,
+      outcome: {
+        index,
+        sections: sectionsIn(result.zRead),
+        rawText: result.rawText,
+        confidence: result.confidence,
+        notes: result.notes,
+      },
+    }
+  } catch (err) {
+    return { z: emptyZRead(), outcome: { index, sections: [], error: describeZReadError(err) } }
+  }
+}
+
+export async function scanZReadBatch(req: BatchRequest): Promise<BatchResult> {
+  const total = req.files.length
+  let done = 0
+  const tick = () => req.onProgress?.(++done, total)
+
+  // Claude handles the photographs concurrently, which turns a fifteen-second
+  // wait into a five-second one. The on-device scanner shares a single worker
+  // and has to go one at a time.
+  const concurrent = effectiveEngine(loadSettings()) === 'vision'
+
+  let results: Array<{ z: ZRead; outcome: PhotoOutcome }>
+  if (concurrent) {
+    results = await Promise.all(
+      req.files.map((file, i) => readOne(file, i, req.signal).then((r) => (tick(), r))),
+    )
+  } else {
+    results = []
+    for (const [i, file] of req.files.entries()) {
+      results.push(await readOne(file, i, req.signal))
+      tick()
+    }
+  }
+
+  // Folded in photograph order, so a figure appearing on two of them settles
+  // the same way every time.
+  let zRead = req.existing ?? emptyZRead()
+  for (const r of results) zRead = mergeZRead(zRead, r.z)
+
+  return { zRead, verdict: crossfootVerdict(zRead), photos: results.map((r) => r.outcome) }
 }
