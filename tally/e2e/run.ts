@@ -237,7 +237,9 @@ try {
 
   await page.evaluate(async (day) => {
     await new Promise<void>((resolve, reject) => {
-      const req = indexedDB.open('tally', 1)
+      // No version pinned: the app has already opened the database at whatever
+      // version it is on, and asking for an older one throws.
+      const req = indexedDB.open('tally')
       req.onupgradeneeded = () => {
         const db = req.result
         if (!db.objectStoreNames.contains('days')) db.createObjectStore('days', { keyPath: 'date' })
@@ -339,6 +341,35 @@ try {
     'and it does not claim to say whose till was short',
     /not whose till was short/i.test(whoText),
   )
+
+  console.log('\nPrices')
+  await page.click('button:has-text("Settings")')
+  await page.waitForSelector('button:has-text("Open the price list")', { timeout: 5000 })
+  await page.click('button:has-text("Open the price list")')
+  await page.waitForSelector('.zrow', { timeout: 5000 })
+  const priceText = await page.locator('.main').innerText()
+  check('every item sold is listed to price', /38 lines|0 of 38 priced/.test(priceText) || priceText.includes('PINT TADDY LAGER'))
+  check('with what the till averaged', priceText.includes('£4.00'))
+
+  // Accept the till's own price for the biggest earner, then set a higher one.
+  await page.click('button:has-text("Use £4.00")')
+  await page.waitForTimeout(300)
+  // The badge is uppercased by CSS, and innerText reports what is rendered.
+  const pricedBadge = (await page.locator('.badge:has-text("priced")').innerText()).trim()
+  check('a suggested price can be accepted in one tap', /^1 of 38 priced$/i.test(pricedBadge), `got "${pricedBadge}"`)
+
+  await page.fill('input[aria-label="Board price for PINT TADDY LAGER"]', '4.20')
+  await page.waitForTimeout(400)
+  check(
+    'and correcting it flags the gap',
+    (await page.locator('.main').innerText()).includes('under by £0.20'),
+  )
+
+  await page.click('button:has-text("Trade")')
+  await page.waitForSelector('.kpi-row', { timeout: 5000 })
+  const priced = await page.locator('.main').innerText()
+  check('the dashboard reports what that cost over the night', priced.includes('£24.00'), '120 pints, 20p each')
+  check('and names the innocent explanation', /discount/i.test(priced))
 
   console.log('\nFiltering')
   await page.click('.chip:has-text("Draught beers")')

@@ -29,7 +29,7 @@ const ENGINE_HELP: Record<EnginePreference, string> = {
     'No scanning at all. Photograph nothing and type the three figures in. Still far quicker than the paper ledger, and completely reliable.',
 }
 
-export function Settings({ onChanged }: { onChanged: () => void }) {
+export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; onOpenPrices: () => void }) {
   const [s, setS] = useState<SettingsShape>(loadSettings)
   const [toleranceText, setToleranceText] = useState(() => penceToInput(loadSettings().tolerancePence))
   const [usage, setUsage] = useState<{ usedBytes: number; quotaBytes: number } | null>(null)
@@ -206,6 +206,18 @@ export function Settings({ onChanged }: { onChanged: () => void }) {
             </div>
           </>
         }
+      </section>
+
+      <section className="card">
+        <div className="card-head"><h2>What things should cost</h2></div>
+        <p className="help" style={{ marginTop: 0 }}>
+          Set the board price for each line and the app can check what the till <em>should</em> have
+          taken, not only whether the drawer matched what it did. A till told the wrong price balances
+          perfectly every night.
+        </p>
+        <button type="button" className="btn-primary" onClick={onOpenPrices}>
+          Open the price list
+        </button>
       </section>
 
       <section className="card">

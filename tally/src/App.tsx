@@ -13,6 +13,7 @@ import { History } from './screens/History.tsx'
 import { DayDetail } from './screens/DayDetail.tsx'
 import { Dashboard } from './screens/Dashboard.tsx'
 import { Settings } from './screens/Settings.tsx'
+import { Prices } from './screens/Prices.tsx'
 import { ZReadReview } from './screens/ZReadReview.tsx'
 import { formatShort, tradingDayKey } from './core/date.ts'
 import type { ZRead } from './core/zread.ts'
@@ -32,6 +33,7 @@ export function App() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [saved, setSaved] = useState('')
   const [reviewing, setReviewing] = useState<Reviewing | null>(null)
+  const [pricing, setPricing] = useState(false)
 
   function afterSave(date: string) {
     setRefreshKey((k) => k + 1)
@@ -45,9 +47,12 @@ export function App() {
     setTab(next)
     setOpenDate(null)
     setReviewing(null)
+    setPricing(false)
   }
 
-  const subtitle = reviewing
+  const subtitle = pricing
+    ? 'The price list'
+    : reviewing
     ? 'Checking the roll'
     : tab === 'tonight'
       ? editDate
@@ -72,7 +77,9 @@ export function App() {
         </nav>
       </header>
 
-      {reviewing ? (
+      {pricing ? (
+        <Prices onChanged={() => setRefreshKey((k) => k + 1)} />
+      ) : reviewing ? (
         <ZReadReview
           zRead={reviewing.zRead}
           onChange={(next) => {
@@ -119,7 +126,9 @@ export function App() {
             />
           )}
 
-          {tab === 'settings' && <Settings onChanged={() => setRefreshKey((k) => k + 1)} />}
+          {tab === 'settings' && (
+            <Settings onChanged={() => setRefreshKey((k) => k + 1)} onOpenPrices={() => setPricing(true)} />
+          )}
         </>
       )}
 

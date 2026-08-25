@@ -13,11 +13,14 @@
 // ---------------------------------------------------------------------------
 
 import type { DayRecord } from '../core/types.ts'
+import type { PriceBookEntry } from '../core/priceBook.ts'
 
 const DB_NAME = 'tally'
-const DB_VERSION = 1
+/** v2 added the price book. Nothing already stored changes shape. */
+const DB_VERSION = 2
 const DAYS = 'days'
 const PHOTOS = 'photos'
+const PRICES = 'prices'
 
 let dbPromise: Promise<IDBDatabase> | null = null
 
@@ -34,8 +37,11 @@ function open(): Promise<IDBDatabase> {
       const db = req.result
       // Keyed by date: one record per trading day, so saving the same night
       // twice corrects it rather than duplicating it.
+      // Guarded individually rather than by version number, so upgrading from
+      // either version — or from none — creates exactly what is missing.
       if (!db.objectStoreNames.contains(DAYS)) db.createObjectStore(DAYS, { keyPath: 'date' })
       if (!db.objectStoreNames.contains(PHOTOS)) db.createObjectStore(PHOTOS, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(PRICES)) db.createObjectStore(PRICES, { keyPath: 'id' })
     }
     req.onsuccess = () => resolve(req.result)
     req.onerror = () => reject(req.error ?? new Error('Could not open the database.'))
@@ -165,4 +171,29 @@ export async function requestPersistence(): Promise<boolean> {
   } catch {
     return false
   }
+}
+
+
+// --- the price book ----------------------------------------------------------
+
+/**
+ * Stored whole rather than an entry per row.
+ *
+ * A pub's list runs to a hundred lines at most, it is read all at once and
+ * written all at once, and one record means no key scheme to get wrong when an
+ * item is renamed.
+ */
+const BOOK_ID = 'book'
+
+export async function loadPriceBook(): Promise<PriceBookEntry[]> {
+  const row = await run<{ id: string; entries: PriceBookEntry[] } | undefined>(
+    PRICES,
+    'readonly',
+    (s) => s.get(BOOK_ID),
+  ).catch(() => undefined)
+  return row?.entries ?? []
+}
+
+export function savePriceBook(entries: readonly PriceBookEntry[]): Promise<unknown> {
+  return run(PRICES, 'readwrite', (s) => s.put({ id: BOOK_ID, entries, updatedAt: Date.now() }))
 }

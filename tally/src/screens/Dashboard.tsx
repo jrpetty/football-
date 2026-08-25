@@ -31,7 +31,8 @@ import { departmentSlot } from '../core/departments.ts'
 import { formatShort, tradingDayKey } from '../core/date.ts'
 import { formatMoney, formatSigned } from '../core/money.ts'
 import { formatQty } from '../core/zread.ts'
-import { listDays } from '../storage/db.ts'
+import { listDays, loadPriceBook } from '../storage/db.ts'
+import { checkPrices, priceHeadline, type PriceBookEntry } from '../core/priceBook.ts'
 import { loadSettings } from '../storage/settings.ts'
 import {
   BarChart,
@@ -62,6 +63,7 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
   const [onlyUnbalanced, setOnlyUnbalanced] = useState(false)
   const [itemSort, setItemSort] = useState<'value' | 'quantity'>('value')
   const [showAllItems, setShowAllItems] = useState(false)
+  const [book, setBook] = useState<PriceBookEntry[]>([])
 
   useEffect(() => {
     let cancelled = false
@@ -72,6 +74,16 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
         setAll(days.map((d) => dayStats(d, tolerance)))
       })
       .catch((err: unknown) => !cancelled && setError(err instanceof Error ? err.message : String(err)))
+    return () => {
+      cancelled = true
+    }
+  }, [refreshKey])
+
+  useEffect(() => {
+    let cancelled = false
+    loadPriceBook()
+      .then((b) => !cancelled && setBook(b))
+      .catch(() => {})
     return () => {
       cancelled = true
     }
@@ -94,6 +106,10 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
   const week = useMemo(() => weekdayTotals(selected), [selected])
   const clerks = useMemo(() => clerkTotals(selected), [selected])
   const items = useMemo(() => itemTotals(selected, itemSort), [selected, itemSort])
+  const prices = useMemo(
+    () => checkPrices(itemTotals(selected).map((i) => ({ code: i.code, name: i.name, qtyMilli: i.qtyMilli, pence: i.pence })), book),
+    [selected, book],
+  )
 
   if (error) return <div className="main"><p className="note bad">Could not read the saved nights: {error}</p></div>
   if (all === null) return <div className="main"><p className="note"><span className="spinner" /> Loading…</p></div>
@@ -349,6 +365,66 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
           </table>
         </div>
       </ChartCard>
+
+      {prices.pricedCount > 0 && (
+        <ChartCard
+          title="Rung at the right price?"
+          subtitle={`${prices.pricedCount} of ${prices.pricedCount + prices.unpricedCount} lines priced`}
+        >
+          <div className="kpi-row">
+            <StatTile
+              label="Under the board price"
+              value={formatMoney(prices.underPence)}
+              detail="what those lines would have taken"
+              tone={prices.underPence === 0 ? 'good' : 'bad'}
+            />
+            <StatTile
+              label="Over"
+              value={formatMoney(prices.overPence)}
+              detail="rung above the board price"
+              tone={prices.overPence === 0 ? undefined : 'warn'}
+            />
+          </div>
+
+          {prices.rows.filter((r) => r.verdict === 'under' || r.verdict === 'over').length > 0 && (
+            <div className="table-wrap">
+              <table className="data">
+                <thead>
+                  <tr>
+                    <th scope="col">Item</th>
+                    <th scope="col">Sold</th>
+                    <th scope="col">Board</th>
+                    <th scope="col">Rang at</th>
+                    <th scope="col">Difference</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {prices.rows
+                    .filter((r) => r.verdict === 'under' || r.verdict === 'over')
+                    .map((r) => (
+                      <tr key={r.code}>
+                        <th scope="row">{r.name}</th>
+                        <td className="num">{formatQty(r.qtyMilli)}</td>
+                        <td className="num">{r.expectedPencePerItem === null ? '—' : formatMoney(r.expectedPencePerItem)}</td>
+                        <td className="num">{formatMoney(r.avgPencePerItem)}</td>
+                        <td className={`num delta ${(r.variancePence ?? 0) < 0 ? 'short' : 'over'}`}>
+                          {formatSigned(r.variancePence ?? 0)}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <p className="note">{priceHeadline(prices)}</p>
+          <p className="note">
+            The till's price here is its takings divided by how many went out, so a sale rung at a
+            discount — an OAP price, a staff drink — pulls it under the board price quite honestly. A
+            gap is a question worth asking, not a finding.
+          </p>
+        </ChartCard>
+      )}
 
       {items.length > 0 && (
         <ChartCard
