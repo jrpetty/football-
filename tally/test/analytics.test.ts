@@ -4,6 +4,7 @@ import {
   clerkTotals,
   dayStats,
   filterDays,
+  itemTotals,
   lastNDays,
   totals,
   departmentTotals,
@@ -270,4 +271,42 @@ test('a night with no roll has no clerks to report', () => {
   const d = emptyDay('2026-08-26', 0)
   d.till = { pence: 100000, source: 'manual', edited: false }
   assert.deepEqual(clerkTotals([dayStats(d)]), [])
+})
+
+// --- item-level sales -------------------------------------------------------
+
+test('totals every item sold, biggest earner first', () => {
+  const rows = itemTotals([dayStats(night('2026-08-23'))])
+  assert.equal(rows.length, 38)
+  assert.equal(rows[0]?.name, 'PINT TADDY LAGER', 'the pub’s biggest earner that night')
+  assert.equal(rows[0]?.pence, 48000)
+  assert.equal(rows[0]?.qtyMilli, 120000)
+  assert.equal(rows[0]?.avgPencePerItem, 400, '120 pints for £480 is £4 a pint')
+})
+
+test('can rank by how many went over the bar instead', () => {
+  const byQty = itemTotals([dayStats(night('2026-08-23'))], 'quantity')
+  assert.equal(byQty[0]?.name, 'PINT TADDY LAGER', '120 of them, and still the most sold')
+  // Crisps outsell most drinks by count but earn far less.
+  const crispsByQty = byQty.findIndex((r) => r.name === 'CRISPS')
+  const crispsByValue = itemTotals([dayStats(night('2026-08-23'))]).findIndex((r) => r.name === 'CRISPS')
+  assert.ok(crispsByQty < crispsByValue, 'crisps rank higher by count than by takings')
+})
+
+test('items accumulate over a run of nights', () => {
+  const rows = itemTotals(['2026-08-21', '2026-08-22'].map((d) => dayStats(night(d))))
+  assert.equal(rows[0]?.qtyMilli, 240000, '240 pints over two nights')
+  assert.equal(rows[0]?.avgPencePerItem, 400, 'still £4 a pint')
+})
+
+test('the item shares account for the whole', () => {
+  const rows = itemTotals([dayStats(night('2026-08-23'))])
+  const sum = rows.reduce((a, r) => a + r.percentBp, 0)
+  assert.ok(Math.abs(sum - 10000) <= 20, `shares came to ${sum} basis points`)
+})
+
+test('a night with no item list contributes none', () => {
+  const d = emptyDay('2026-08-27', 0)
+  d.till = { pence: 100000, source: 'manual', edited: false }
+  assert.deepEqual(itemTotals([dayStats(d)]), [])
 })

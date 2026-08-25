@@ -69,6 +69,7 @@ test('the whole parse matches the receipt as transcribed by hand', () => {
 test('splits a printed line into label, quantity, value and percentage', () => {
   assert.deepEqual(readLine('D01 DRAUGHT BEERS      406.000 Q     *1492.25    68.05%'), {
     label: 'D01 DRAUGHT BEERS',
+    rawLabel: 'D01 DRAUGHT BEERS',
     qtyMilli: 406000,
     pence: 149225,
     percentBp: 6805,
@@ -78,6 +79,7 @@ test('splits a printed line into label, quantity, value and percentage', () => {
 test('reads a line carrying only a count', () => {
   assert.deepEqual(readLine('NO SALE                      5 Q'), {
     label: 'NO SALE',
+    rawLabel: 'NO SALE',
     qtyMilli: 5000,
     pence: undefined,
     percentBp: undefined,
@@ -124,7 +126,7 @@ test('returns an empty read rather than inventing one from noise', () => {
 // --- several photographs of one roll ----------------------------------------
 
 test('names which sections a photograph turned out to contain', () => {
-  assert.deepEqual(sectionsIn(parsed), ['departments', 'totals', 'clerks'])
+  assert.deepEqual(sectionsIn(parsed), ['departments', 'totals', 'clerks', 'items'])
   assert.deepEqual(sectionsIn(emptyZRead()), [])
 })
 
@@ -155,12 +157,15 @@ test('the roll comes out the same whichever order the photographs arrive in', ()
 })
 
 test('merging keeps sections a later photograph does not carry', () => {
-  const items = parseZRead(`PLU/EAN
-P00001  PINT DARK MILD        5.000 Q      *14.00
+  const oneItem = parseZRead(`PLU/EAN
+P90001  A LINE FROM NOWHERE ELSE   5.000 Q      *14.00
 `)
   // Photographing the summary after the item list must add to it, not wipe it.
-  const merged = mergeZRead(items, parsed)
-  assert.equal(merged.plus.length, 1, 'the items survive')
+  const merged = mergeZRead(oneItem, parsed)
+  assert.ok(
+    merged.plus.some((p) => p.code === 'P90001'),
+    'the item read from the first photograph survives',
+  )
   assert.equal(merged.departments.length, 7, 'and the departments arrive')
 })
 
@@ -351,4 +356,44 @@ GROUP1                          687.000 Q
   assert.equal(z.departments[0]?.code, 'D01')
   assert.equal(z.groups[0]?.code, 'GROUP01')
   assert.equal(z.departments[0]?.group, 'GROUP01', 'and it still files under its group')
+})
+
+// --- the item list ----------------------------------------------------------
+
+test('reads all 38 item lines off the real roll', () => {
+  assert.equal(parsed.plus.length, 38)
+  assert.deepEqual(parsed.plus[5], { code: 'P00014', name: 'PINT TADDY LAGER', qtyMilli: 120000, pence: 48000 })
+})
+
+test('the item list adds up to the total the till printed for it', () => {
+  // Not "read carefully" — reconciled. 38 lines to 689 items and £2,192.80,
+  // which is what makes it safe to trust as a fixture.
+  const items = parsed.plus.reduce((a, p) => a + p.pence, 0)
+  const qty = parsed.plus.reduce((a, p) => a + p.qtyMilli, 0)
+  assert.equal(items, 219280)
+  assert.equal(qty, 689000)
+  assert.deepEqual(parsed.pluTotal, { qtyMilli: 689000, pence: 219280 })
+})
+
+test('and its draught lines come to exactly the draught department', () => {
+  // The first twelve items are the draught beers, and they hit D01 on the nose
+  // — 406 items, £1,492.25 — which is a second, independent confirmation.
+  const draught = parsed.plus.slice(0, 12)
+  assert.equal(draught.reduce((a, p) => a + p.pence, 0), 149225)
+  assert.equal(draught.reduce((a, p) => a + p.qtyMilli, 0), 406000)
+})
+
+test('keeps an item name in the case the till printed it', () => {
+  // The till mixes case — "Spiced rum", "550ml alc free" — and shouting them
+  // back is a needless loss of what the paper said.
+  assert.equal(parsed.plus.find((p) => p.code === 'P00034')?.name, 'Spiced rum')
+  assert.equal(parsed.plus.find((p) => p.code === 'P00059')?.name, '550ml alc free')
+  assert.equal(parsed.plus.find((p) => p.code === 'P00050')?.name, 'Bot pure brew')
+})
+
+test('the whole roll, items included, still cross-foots', () => {
+  const v = crossfootVerdict(parsed)
+  assert.deepEqual(v.checks.filter((c) => !c.ok).map((c) => c.id), [])
+  assert.ok(v.checks.some((c) => c.id === 'plu-sum' && c.ok))
+  assert.ok(v.checks.some((c) => c.id === 'plu-matches-departments' && c.ok))
 })

@@ -19,6 +19,7 @@ import {
   departmentTotals,
   departmentsPresent,
   filterDays,
+  itemTotals,
   lastNDays,
   timeSeries,
   totals,
@@ -59,6 +60,8 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
   const [weekdays, setWeekdays] = useState<string[]>([])
   const [depts, setDepts] = useState<string[]>([])
   const [onlyUnbalanced, setOnlyUnbalanced] = useState(false)
+  const [itemSort, setItemSort] = useState<'value' | 'quantity'>('value')
+  const [showAllItems, setShowAllItems] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -90,6 +93,7 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
   const series = useMemo(() => timeSeries(selected), [selected])
   const week = useMemo(() => weekdayTotals(selected), [selected])
   const clerks = useMemo(() => clerkTotals(selected), [selected])
+  const items = useMemo(() => itemTotals(selected, itemSort), [selected, itemSort])
 
   if (error) return <div className="main"><p className="note bad">Could not read the saved nights: {error}</p></div>
   if (all === null) return <div className="main"><p className="note"><span className="spinner" /> Loading…</p></div>
@@ -345,6 +349,67 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
           </table>
         </div>
       </ChartCard>
+
+      {items.length > 0 && (
+        <ChartCard
+          title="What people actually bought"
+          subtitle={`${items.length} lines on the till`}
+        >
+          <div className="chip-row" style={{ marginBottom: 12 }}>
+            <button type="button" className="chip" aria-pressed={itemSort === 'value'} onClick={() => setItemSort('value')}>
+              By takings
+            </button>
+            <button type="button" className="chip" aria-pressed={itemSort === 'quantity'} onClick={() => setItemSort('quantity')}>
+              By how many
+            </button>
+          </div>
+
+          <BarChart
+            rows={items.slice(0, 8).map((i) => ({
+              key: i.code,
+              // Trimmed to what fits the column; the table below carries the
+              // full name, so nothing is lost by shortening it here.
+              label: i.name.length > 15 ? `${i.name.slice(0, 14)}…` : i.name,
+              value: itemSort === 'value' ? i.pence : i.qtyMilli / 1000,
+              detail: itemSort === 'value' ? 'Taken' : 'Sold',
+            }))}
+            format={itemSort === 'value' ? formatMoney : (v) => String(Math.round(v))}
+            labelWidth={112}
+          />
+
+          <div className="table-wrap">
+            <table className="data">
+              <thead>
+                <tr>
+                  <th scope="col">Item</th>
+                  <th scope="col">Sold</th>
+                  <th scope="col">Taken</th>
+                  <th scope="col">Each</th>
+                  <th scope="col">Share</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(showAllItems ? items : items.slice(0, 12)).map((i) => (
+                  <tr key={i.code}>
+                    <th scope="row">{i.name}</th>
+                    <td className="num">{formatQty(i.qtyMilli)}</td>
+                    <td className="num">{formatMoney(i.pence)}</td>
+                    <td className="num">{i.avgPencePerItem === null ? '—' : formatMoney(i.avgPencePerItem)}</td>
+                    <td className="num">{(i.percentBp / 100).toFixed(2)}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {items.length > 12 && (
+            <div className="alts">
+              <button type="button" className="btn-small" onClick={() => setShowAllItems((v) => !v)}>
+                {showAllItems ? 'Show the top twelve' : `Show all ${items.length}`}
+              </button>
+            </div>
+          )}
+        </ChartCard>
+      )}
 
       {clerks.length > 0 && (
         <ChartCard title="Who rang it up" subtitle={`${clerks.length} behind the bar`}>

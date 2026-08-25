@@ -52,6 +52,8 @@ export interface DayStats {
   /** The drawer opened without a sale. */
   noSaleCount: number | null
   clerks: Array<{ code: string; name: string; pence: number; sales: number | null; voids: number | null }>
+  /** Line-by-line item sales, when the item list was captured. */
+  items: Array<{ code: string; name: string; qtyMilli: number; pence: number }>
 }
 
 export function dayStats(day: DayRecord, tolerancePence = DEFAULT_TOLERANCE_PENCE): DayStats {
@@ -99,6 +101,12 @@ export function dayStats(day: DayRecord, tolerancePence = DEFAULT_TOLERANCE_PENC
         sales: c.guestCount ?? null,
         voids: c.voidCount ?? null,
       })),
+    items: (z?.plus ?? []).map((p) => ({
+      code: p.code,
+      name: p.name || p.code,
+      qtyMilli: p.qtyMilli,
+      pence: p.pence,
+    })),
   }
 }
 
@@ -356,4 +364,52 @@ export function departmentsPresent(stats: DayStats[]): Array<{ code: string; lab
   const seen = new Map<string, string>()
   for (const day of stats) for (const d of day.departments) seen.set(d.code, d.label)
   return sortByRegistry([...seen].map(([code, label]) => ({ code, label })))
+}
+
+
+export interface ItemStat {
+  code: string
+  name: string
+  qtyMilli: number
+  pence: number
+  /** What one went for, averaged over the selection. */
+  avgPencePerItem: number | null
+  /** Share of the takings across the items shown. */
+  percentBp: number
+}
+
+/**
+ * Every item sold across the selection, biggest first.
+ *
+ * This is the finest grain the roll offers, and the only place a question like
+ * "are we selling more Taddy than Alpine" can be answered. Ordered by takings
+ * rather than by quantity: a hundred mixers at £1.85 matter less to the till
+ * than forty pints at £5.30, and the till is what this app is about.
+ */
+export function itemTotals(stats: DayStats[], sortBy: 'value' | 'quantity' = 'value'): ItemStat[] {
+  const acc = new Map<string, { code: string; name: string; qtyMilli: number; pence: number }>()
+
+  for (const day of stats) {
+    for (const item of day.items) {
+      const found = acc.get(item.code)
+      if (found) {
+        found.qtyMilli += item.qtyMilli
+        found.pence += item.pence
+      } else {
+        acc.set(item.code, { ...item })
+      }
+    }
+  }
+
+  const rows = [...acc.values()]
+  const total = rows.reduce((a, r) => a + r.pence, 0)
+  return rows
+    .map((r) => ({
+      ...r,
+      avgPencePerItem: r.qtyMilli > 0 ? Math.round(r.pence / (r.qtyMilli / 1000)) : null,
+      percentBp: shareBp(r.pence, total),
+    }))
+    .sort((a, b) =>
+      sortBy === 'quantity' ? b.qtyMilli - a.qtyMilli || b.pence - a.pence : b.pence - a.pence || b.qtyMilli - a.qtyMilli,
+    )
 }

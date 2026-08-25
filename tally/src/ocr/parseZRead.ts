@@ -41,7 +41,16 @@ const GRAND_TOTAL_MAX = 1_000_000_000
 
 /** Figures pulled off one printed line. */
 interface Fields {
+  /** Upper-cased and de-decorated, for matching against known wording. */
   label: string
+  /**
+   * The same text as printed.
+   *
+   * Item names are kept from this rather than from `label`: the till prints
+   * "Spiced rum" and "550ml alc free" in mixed case, and shouting them back as
+   * SPICED RUM is a small, needless loss of what the paper actually said.
+   */
+  rawLabel: string
   qtyMilli?: number
   pence?: number
   percentBp?: number
@@ -101,9 +110,10 @@ export function readLine(line: string): Fields | null {
     rest = rest.slice(0, qty.index)
   }
 
+  const rawLabel = rest.replace(/^[*#\s]+/, '').replace(/[.\s]+$/, '').replace(/\s+/g, ' ').trim()
   const label = normaliseLabel(rest)
   if (!label && pence === undefined && qtyMilli === undefined && percentBp === undefined) return null
-  return { label, qtyMilli, pence, percentBp }
+  return { label, rawLabel, qtyMilli, pence, percentBp }
 }
 
 // --- records ----------------------------------------------------------------
@@ -119,6 +129,7 @@ type Pending =
   | { kind: 'group'; code: string; qtyMilli?: number; pence?: number; percentBp?: number }
   | { kind: 'deptTotal'; qtyMilli?: number; pence?: number; percentBp?: number }
   | { kind: 'plu'; code: string; name: string; qtyMilli?: number; pence?: number }
+  | { kind: 'pluTotal'; qtyMilli?: number; pence?: number }
   | { kind: 'stat'; label: string; count?: number; pence?: number }
 
 /**
@@ -128,7 +139,7 @@ type Pending =
  * "DRAUGHT BEERS  *1492.25" is understood to belong to the "D01" above it
  * rather than to be a record of its own.
  */
-function starterFor(label: string): Pending | null {
+function starterFor(label: string, raw: string): Pending | null {
   // One to three digits, normalised to the till's own two. A transcription may
   // tidy "D01" to "D1"; requiring exactly two digits would drop the whole
   // department on the floor over a leading zero.
@@ -136,7 +147,8 @@ function starterFor(label: string): Pending | null {
   if (dept?.[1]) {
     const n = Number(dept[1])
     const code = Number.isFinite(n) && n < 100 ? `D${String(n).padStart(2, '0')}` : `D${dept[1]}`
-    return { kind: 'dept', code, name: (dept[2] ?? '').trim() }
+    const inline = /^D\s?\d{1,3}\b\s*(.*)$/.exec(raw)?.[1] ?? ''
+    return { kind: 'dept', code, name: inline.trim() }
   }
 
   const group = /^GROUP\s?(\d{1,3})\b/.exec(label)
@@ -149,7 +161,10 @@ function starterFor(label: string): Pending | null {
   if (label === 'DEPT TL') return { kind: 'deptTotal' }
 
   const plu = /^(P\d{4,})\b\s*(.*)$/.exec(label)
-  if (plu?.[1]) return { kind: 'plu', code: plu[1], name: (plu[2] ?? '').trim() }
+  if (plu?.[1]) {
+    const inline = /^P\d{4,}\b\s*(.*)$/.exec(raw)?.[1] ?? ''
+    return { kind: 'plu', code: plu[1], name: inline.trim() }
+  }
 
   if (STAT_LABELS.has(label)) return { kind: 'stat', label }
 
@@ -269,6 +284,11 @@ export function parseZRead(text: string): ZRead {
         z.plus.push({ code: p.code, name: p.name, qtyMilli: p.qtyMilli ?? 0, pence: p.pence })
         return
       }
+      case 'pluTotal': {
+        if (p.pence === undefined) return
+        z.pluTotal = { qtyMilli: p.qtyMilli ?? 0, pence: p.pence }
+        return
+      }
       case 'stat':
         putStat(p.label, p.count, p.pence)
         return
@@ -292,12 +312,16 @@ export function parseZRead(text: string): ZRead {
       }
     }
     if (f.pence !== undefined && p.pence === undefined) p.pence = f.pence
-    if (f.percentBp !== undefined && p.kind !== 'stat' && p.kind !== 'plu' && p.percentBp === undefined) {
+    if (
+      f.percentBp !== undefined &&
+      (p.kind === 'dept' || p.kind === 'group' || p.kind === 'deptTotal') &&
+      p.percentBp === undefined
+    ) {
       p.percentBp = f.percentBp
     }
     // A department or item whose code arrived alone takes its name from the
     // next labelled line.
-    if (!isStarter && (p.kind === 'dept' || p.kind === 'plu') && !p.name && f.label) p.name = f.label
+    if (!isStarter && (p.kind === 'dept' || p.kind === 'plu') && !p.name && f.rawLabel) p.name = f.rawLabel
   }
 
   for (const rawLine of text.split(/\r?\n/)) {
@@ -387,15 +411,17 @@ export function parseZRead(text: string): ZRead {
       continue
     }
 
-    // The item list's own total, which is a starter nowhere else.
-    if (section === 'plu' && fields.label === 'TOTAL' && fields.pence !== undefined) {
+    // --- records ------------------------------------------------------------
+    // The item list's own total, whose value may sit on the line below it. The
+    // clerk section's bare ***TOTAL is caught earlier, so this cannot swallow it.
+    if (section === 'plu' && fields.label === 'TOTAL') {
       flush()
-      z.pluTotal = { qtyMilli: fields.qtyMilli ?? 0, pence: fields.pence }
+      pending = { kind: 'pluTotal' }
+      absorb(pending, fields, true)
       continue
     }
 
-    // --- records ------------------------------------------------------------
-    const starter = starterFor(fields.label)
+    const starter = starterFor(fields.label, fields.rawLabel)
     if (starter) {
       flush()
       pending = starter

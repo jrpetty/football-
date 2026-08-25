@@ -301,6 +301,45 @@ try {
   check('charts rendered', (await page.locator('.chart svg').count()) >= 2)
   check('a legend names the departments', (await page.locator('.legend li').count()) >= 7)
 
+  console.log('\nWhat people bought')
+  check('the item list is shown', dash.includes('PINT TADDY LAGER'), 'the biggest earner')
+  check('with how many went over the bar', dash.includes('120'))
+  check('and what one went for', dash.includes('£4.00'), '120 pints for £480')
+  // The item table is scoped to its own card; the page has several tables.
+  const itemTable = page.locator('.card:has-text("What people actually bought") table.data')
+
+  // Only the top twelve show until asked; Spiced rum is well down the list.
+  await page.click('button:has-text("Show all 38")')
+  await page.waitForTimeout(200)
+  check('all 38 lines can be shown', (await itemTable.locator('tbody tr').count()) === 38)
+  check('item names keep the case the till printed', (await itemTable.innerText()).includes('Spiced rum'))
+
+  const firstByValue = (await itemTable.locator('tbody tr th').first().innerText()).trim()
+  await page.click('.chip:has-text("By how many")')
+  await page.waitForTimeout(250)
+  const rowsByQty = (await itemTable.innerText()).split('\n')
+  const idx = (name: string) => rowsByQty.findIndex((l) => l.includes(name))
+  check(
+    'ranking by count lifts crisps above the pints they outsell',
+    idx('CRISPS') !== -1 && idx('CRISPS') < idx('PINT OBB'),
+    `crisps at ${idx('CRISPS')}, OBB at ${idx('PINT OBB')}`,
+  )
+  await page.click('.chip:has-text("By takings")')
+  await page.waitForTimeout(250)
+  check(
+    'and switching back restores the takings order',
+    (await itemTable.locator('tbody tr th').first().innerText()).trim() === firstByValue,
+  )
+
+  console.log('\nWho rang it up')
+  const whoText = await page.locator('.main').innerText()
+  check('the clerk split is shown', whoText.includes('CLERK0004'))
+  check('with what they took', whoText.includes('£2,188.80'))
+  check(
+    'and it does not claim to say whose till was short',
+    /not whose till was short/i.test(whoText),
+  )
+
   console.log('\nFiltering')
   await page.click('.chip:has-text("Draught beers")')
   await page.click('.chip:has-text("Wine")')

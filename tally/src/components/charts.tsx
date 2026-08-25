@@ -373,11 +373,20 @@ export interface BarRow {
  * each darker-where-bigger would double-encode the bar length as hue, spending
  * the only free channel on something the chart already shows.
  */
-export function BarChart({ rows, format = formatMoney }: { rows: BarRow[]; format?: (v: number) => string }) {
+export function BarChart({
+  rows,
+  format = formatMoney,
+  labelWidth = 92,
+}: {
+  rows: BarRow[]
+  format?: (v: number) => string
+  /** Widen for longer names — "PINT PURE BREW" does not fit a weekday's column. */
+  labelWidth?: number
+}) {
   const [ref, width] = useMeasure()
   const [tip, setTip] = useState<TipState | null>(null)
   const rowH = 34
-  const labelW = 92
+  const labelW = labelWidth
 
   if (rows.length === 0) return <p className="note">Nothing to compare yet.</p>
   const max = Math.max(1, ...rows.map((r) => Math.abs(r.value)))

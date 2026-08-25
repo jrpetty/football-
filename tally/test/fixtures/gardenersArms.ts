@@ -25,11 +25,13 @@
 // where the number starts. GT1 + |GT3| = GT2 holds to the penny only at
 // -2185.57, so that is what it is. There is now a check for it.
 //
-// The PLU list from the same roll is deliberately NOT included: it could not be
-// transcribed reliably from the photograph, and the cross-foot caught the
-// attempt (the spirits lines came to £60.60 against a printed £35.25). Inventing
-// the missing figures to make a fuller fixture is exactly the failure this app
-// exists to prevent.
+// The item list IS now included, and it is included because it reconciles: all
+// 38 lines come to 689 items and £2,192.80, matching the roll's own ***TOTAL on
+// both counts, and the first twelve come to exactly D01's 406 items and
+// £1,492.25. An earlier attempt was abandoned when the spirits appeared to come
+// to £60.60 against a printed £35.25 — but that was a bad guess at which
+// department each item belongs to, which the receipt never states. The item
+// figures themselves were right.
 // ---------------------------------------------------------------------------
 
 import type { ZRead } from '../../src/core/zread.ts'
@@ -134,6 +136,90 @@ CREDIT CARD                         210 Q
 ****CID                           *351.80
 CA/CHK ID                         *351.80
 GARDENERS ARMS
+
+PLU/EAN
+PLU                       00001-9999999999
+P00001                  5.000 Q
+PINT DARK MILD          *14.00
+P00002                  28.000 Q
+PINT CIDER              *148.40
+P00007                  6.000 Q
+HALF CIDER              *15.90
+P00011                  66.000 Q
+PINT OBB                *237.60
+P00013                  66.000 Q
+PINT ALPINE             *198.00
+P00014                  120.000 Q
+PINT TADDY LAGER        *480.00
+P00016                  40.000 Q
+PINT PURE BREW          *212.00
+P00017                  24.000 Q
+PINT STOUT              *96.00
+P00018                  3.000 Q
+HALF OBB                *5.40
+P00020                  26.000 Q
+HALF ALPINE             *39.00
+P00021                  19.000 Q
+HALF TADDY LAGER        *38.00
+P00023                  3.000 Q
+HALF PURE BREW          *7.95
+P00029                  8.000 Q
+125ML HOUSE WINE        *30.00
+P00030                  7.000 Q
+175ML HOUSE WINE        *36.75
+P00031                  11.000 Q
+250ML HOUSE WINE        *82.50
+P00032                  2.000 Q
+BOURBON                 *8.10
+P00034                  4.000 Q
+Spiced rum              *13.80
+P00035                  1.000 Q
+PEACH SCHNAPPS          *3.45
+P00037                  6.000 Q
+175ML ROSE              *31.50
+P00038                  3.000 Q
+250ML ROSE              *22.50
+P00040                  2.000 Q
+GIN                     *6.30
+P00041                  8.000 Q
+VODKA                   *25.20
+P00047                  1.000 Q
+Raspgin                 *3.75
+P00050                  1.000 Q
+Bot pure brew           *6.20
+P00053                  6.000 Q
+GINGER BEER             *22.80
+P00054                  5.000 Q
+ELDERFLOWER             *19.00
+P00058                  3.000 Q
+FRUIT BEER              *22.20
+P00059                  1.000 Q
+550ml alc free          *4.80
+P00060                  1.000 Q
+ORANGE JUICE            *3.80
+P00067                  3.000 Q
+TONIC                   *8.70
+P00068                  3.000 Q
+O A P                   *9.90
+P00069                  73.000 Q
+HALF POST MIX           *138.70
+P00070                  39.000 Q
+DASH                    *23.40
+P00073                  7.000 Q
+APPLE JUICE             *26.60
+P00074                  79.000 Q
+CRISPS                  *134.30
+P00075                  3.000 Q
+SALTED NUTS             *5.10
+P00076                  4.000 Q
+DRY ROAST               *6.80
+P00080                  2.000 Q
+OPEN FOOD               *4.40
+***TOTAL                        689.000 Q
+                                 *2192.80
+*SET PLU*
+EAN
+*SET EAN*
 `
 
 /**
@@ -212,6 +298,51 @@ CREDIT CARD                210 Q     *1841.00
 ****CID                               *351.80
 CA/CHK ID                             *351.80
 GARDENERS ARMS
+
+PLU/EAN
+PLU                       00001-9999999999
+P00001 PINT DARK MILD           5.000 Q   *   14.00
+P00002 PINT CIDER              28.000 Q   *  148.40
+P00007 HALF CIDER               6.000 Q   *   15.90
+P00011 PINT OBB                66.000 Q   *  237.60
+P00013 PINT ALPINE             66.000 Q   *  198.00
+P00014 PINT TADDY LAGER       120.000 Q   *  480.00
+P00016 PINT PURE BREW          40.000 Q   *  212.00
+P00017 PINT STOUT              24.000 Q   *   96.00
+P00018 HALF OBB                 3.000 Q   *    5.40
+P00020 HALF ALPINE             26.000 Q   *   39.00
+P00021 HALF TADDY LAGER        19.000 Q   *   38.00
+P00023 HALF PURE BREW           3.000 Q   *    7.95
+P00029 125ML HOUSE WINE         8.000 Q   *   30.00
+P00030 175ML HOUSE WINE         7.000 Q   *   36.75
+P00031 250ML HOUSE WINE        11.000 Q   *   82.50
+P00032 BOURBON                  2.000 Q   *    8.10
+P00034 Spiced rum               4.000 Q   *   13.80
+P00035 PEACH SCHNAPPS           1.000 Q   *    3.45
+P00037 175ML ROSE               6.000 Q   *   31.50
+P00038 250ML ROSE               3.000 Q   *   22.50
+P00040 GIN                      2.000 Q   *    6.30
+P00041 VODKA                    8.000 Q   *   25.20
+P00047 Raspgin                  1.000 Q   *    3.75
+P00050 Bot pure brew            1.000 Q   *    6.20
+P00053 GINGER BEER              6.000 Q   *   22.80
+P00054 ELDERFLOWER              5.000 Q   *   19.00
+P00058 FRUIT BEER               3.000 Q   *   22.20
+P00059 550ml alc free           1.000 Q   *    4.80
+P00060 ORANGE JUICE             1.000 Q   *    3.80
+P00067 TONIC                    3.000 Q   *    8.70
+P00068 O A P                    3.000 Q   *    9.90
+P00069 HALF POST MIX           73.000 Q   *  138.70
+P00070 DASH                    39.000 Q   *   23.40
+P00073 APPLE JUICE              7.000 Q   *   26.60
+P00074 CRISPS                  79.000 Q   *  134.30
+P00075 SALTED NUTS              3.000 Q   *    5.10
+P00076 DRY ROAST                4.000 Q   *    6.80
+P00080 OPEN FOOD                2.000 Q   *    4.40
+***TOTAL                     689.000 Q   *2192.80
+*SET PLU*
+EAN
+*SET EAN*
 `
 
 /** The roll as the app should end up holding it, from either layout. */
@@ -286,5 +417,47 @@ export const GARDENERS_ARMS: ZRead = {
       cidPence: 35180,
     },
   ],
-  plus: [],
+  // Verified by the roll's own arithmetic, not by careful reading: these sum to
+  // the printed ***TOTAL on both quantity and value.
+  plus: [
+    { code: 'P00001', name: 'PINT DARK MILD', qtyMilli: 5000, pence: 1400 },
+    { code: 'P00002', name: 'PINT CIDER', qtyMilli: 28000, pence: 14840 },
+    { code: 'P00007', name: 'HALF CIDER', qtyMilli: 6000, pence: 1590 },
+    { code: 'P00011', name: 'PINT OBB', qtyMilli: 66000, pence: 23760 },
+    { code: 'P00013', name: 'PINT ALPINE', qtyMilli: 66000, pence: 19800 },
+    { code: 'P00014', name: 'PINT TADDY LAGER', qtyMilli: 120000, pence: 48000 },
+    { code: 'P00016', name: 'PINT PURE BREW', qtyMilli: 40000, pence: 21200 },
+    { code: 'P00017', name: 'PINT STOUT', qtyMilli: 24000, pence: 9600 },
+    { code: 'P00018', name: 'HALF OBB', qtyMilli: 3000, pence: 540 },
+    { code: 'P00020', name: 'HALF ALPINE', qtyMilli: 26000, pence: 3900 },
+    { code: 'P00021', name: 'HALF TADDY LAGER', qtyMilli: 19000, pence: 3800 },
+    { code: 'P00023', name: 'HALF PURE BREW', qtyMilli: 3000, pence: 795 },
+    { code: 'P00029', name: '125ML HOUSE WINE', qtyMilli: 8000, pence: 3000 },
+    { code: 'P00030', name: '175ML HOUSE WINE', qtyMilli: 7000, pence: 3675 },
+    { code: 'P00031', name: '250ML HOUSE WINE', qtyMilli: 11000, pence: 8250 },
+    { code: 'P00032', name: 'BOURBON', qtyMilli: 2000, pence: 810 },
+    { code: 'P00034', name: 'Spiced rum', qtyMilli: 4000, pence: 1380 },
+    { code: 'P00035', name: 'PEACH SCHNAPPS', qtyMilli: 1000, pence: 345 },
+    { code: 'P00037', name: '175ML ROSE', qtyMilli: 6000, pence: 3150 },
+    { code: 'P00038', name: '250ML ROSE', qtyMilli: 3000, pence: 2250 },
+    { code: 'P00040', name: 'GIN', qtyMilli: 2000, pence: 630 },
+    { code: 'P00041', name: 'VODKA', qtyMilli: 8000, pence: 2520 },
+    { code: 'P00047', name: 'Raspgin', qtyMilli: 1000, pence: 375 },
+    { code: 'P00050', name: 'Bot pure brew', qtyMilli: 1000, pence: 620 },
+    { code: 'P00053', name: 'GINGER BEER', qtyMilli: 6000, pence: 2280 },
+    { code: 'P00054', name: 'ELDERFLOWER', qtyMilli: 5000, pence: 1900 },
+    { code: 'P00058', name: 'FRUIT BEER', qtyMilli: 3000, pence: 2220 },
+    { code: 'P00059', name: '550ml alc free', qtyMilli: 1000, pence: 480 },
+    { code: 'P00060', name: 'ORANGE JUICE', qtyMilli: 1000, pence: 380 },
+    { code: 'P00067', name: 'TONIC', qtyMilli: 3000, pence: 870 },
+    { code: 'P00068', name: 'O A P', qtyMilli: 3000, pence: 990 },
+    { code: 'P00069', name: 'HALF POST MIX', qtyMilli: 73000, pence: 13870 },
+    { code: 'P00070', name: 'DASH', qtyMilli: 39000, pence: 2340 },
+    { code: 'P00073', name: 'APPLE JUICE', qtyMilli: 7000, pence: 2660 },
+    { code: 'P00074', name: 'CRISPS', qtyMilli: 79000, pence: 13430 },
+    { code: 'P00075', name: 'SALTED NUTS', qtyMilli: 3000, pence: 510 },
+    { code: 'P00076', name: 'DRY ROAST', qtyMilli: 4000, pence: 680 },
+    { code: 'P00080', name: 'OPEN FOOD', qtyMilli: 2000, pence: 440 },
+  ],
+  pluTotal: { qtyMilli: 689000, pence: 219280 },
 }

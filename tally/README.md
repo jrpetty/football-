@@ -172,12 +172,18 @@ That is worth far more than a confidence score. "80% sure" cannot be acted on;
 she is correcting, so fixing the digit turns the failing sum green in front of
 her.
 
-**The author was caught by it himself.** Transcribing that roll by eye, the item
-list came out £25.35 over the department total — the spirits lines had been read
-a column out of step. The check found it immediately. That is why the PLU list
-from the reference receipt is *not* in the test fixture: the summary and clerk
-sections are, because they cross-foot, and the item list waits for a legible
-photograph rather than being invented to look complete.
+**The author was caught by it twice.** Transcribing that roll by eye, the item
+list came out £25.35 over the department total, and GT3 was read as −£21,185.57
+out of "-00000021185.57" when the padding zeros hide that it is −£2,185.57. Both
+were found by arithmetic, not by re-reading.
+
+The first turned out to be a misdiagnosis, and the fix is instructive: the item
+*figures* were right all along — what was wrong was a guess at which department
+each item belongs to, which the receipt never states. Checked the way the
+receipt actually allows, all 38 lines come to 689 items and £2,192.80, matching
+its own printed total on both counts, and the first twelve come to exactly D01's
+406 items and £1,492.25. The item list is in the fixture now because it
+reconciles, not because it was read carefully.
 
 Two traps that roll contains, both now covered by tests:
 
