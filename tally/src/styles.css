@@ -428,14 +428,17 @@ button:disabled { opacity: 0.5; cursor: default; }
 
 .tabs {
   display: flex;
-  gap: 6px;
+  gap: 2px;
   padding: 8px var(--pad) 0;
 }
 
 .tabs button {
   flex: 1;
+  min-width: 0;
   min-height: 44px;
-  font-size: 14px;
+  /* Five tabs on a 390px phone: small enough to fit, large enough to hit. */
+  font-size: 13px;
+  padding: 0 2px;
   font-weight: 600;
   background: transparent;
   border: 0;

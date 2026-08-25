@@ -14,13 +14,17 @@
 
 import type { DayRecord } from '../core/types.ts'
 import type { PriceBookEntry } from '../core/priceBook.ts'
+import type { Delivery, Pour, StockCount, StockItem } from '../core/stock.ts'
 
 const DB_NAME = 'tally'
-/** v2 added the price book. Nothing already stored changes shape. */
-const DB_VERSION = 2
+/** v2 added the price book, v3 the cellar. Nothing already stored changes shape. */
+const DB_VERSION = 3
 const DAYS = 'days'
 const PHOTOS = 'photos'
 const PRICES = 'prices'
+const STOCK = 'stock'
+const DELIVERIES = 'deliveries'
+const COUNTS = 'stockcounts'
 
 let dbPromise: Promise<IDBDatabase> | null = null
 
@@ -42,6 +46,10 @@ function open(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(DAYS)) db.createObjectStore(DAYS, { keyPath: 'date' })
       if (!db.objectStoreNames.contains(PHOTOS)) db.createObjectStore(PHOTOS, { keyPath: 'id' })
       if (!db.objectStoreNames.contains(PRICES)) db.createObjectStore(PRICES, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(STOCK)) db.createObjectStore(STOCK, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(DELIVERIES)) db.createObjectStore(DELIVERIES, { keyPath: 'id' })
+      // Keyed by date: one stock take a day, and re-counting corrects it.
+      if (!db.objectStoreNames.contains(COUNTS)) db.createObjectStore(COUNTS, { keyPath: 'date' })
     }
     req.onsuccess = () => resolve(req.result)
     req.onerror = () => reject(req.error ?? new Error('Could not open the database.'))
@@ -196,4 +204,52 @@ export async function loadPriceBook(): Promise<PriceBookEntry[]> {
 
 export function savePriceBook(entries: readonly PriceBookEntry[]): Promise<unknown> {
   return run(PRICES, 'readwrite', (s) => s.put({ id: BOOK_ID, entries, updatedAt: Date.now() }))
+}
+
+
+// --- the cellar --------------------------------------------------------------
+
+const STOCK_ID = 'config'
+
+export interface StockConfig {
+  items: StockItem[]
+  pours: Pour[]
+  /** The house measure, so changing it moves every spirit at once. */
+  mlPerShot: number
+}
+
+export const EMPTY_STOCK: StockConfig = { items: [], pours: [], mlPerShot: 30 }
+
+export async function loadStockConfig(): Promise<StockConfig> {
+  const row = await run<(StockConfig & { id: string }) | undefined>(STOCK, 'readonly', (s) => s.get(STOCK_ID)).catch(
+    () => undefined,
+  )
+  if (!row) return { ...EMPTY_STOCK }
+  return { items: row.items ?? [], pours: row.pours ?? [], mlPerShot: row.mlPerShot ?? 30 }
+}
+
+export function saveStockConfig(config: StockConfig): Promise<unknown> {
+  return run(STOCK, 'readwrite', (s) => s.put({ id: STOCK_ID, ...config, updatedAt: Date.now() }))
+}
+
+export async function listDeliveries(): Promise<Delivery[]> {
+  const all = await run<Delivery[]>(DELIVERIES, 'readonly', (s) => s.getAll()).catch(() => [])
+  return all.sort((a, b) => b.date.localeCompare(a.date))
+}
+
+export function saveDelivery(delivery: Delivery): Promise<unknown> {
+  return run(DELIVERIES, 'readwrite', (s) => s.put(delivery))
+}
+
+export function deleteDelivery(id: string): Promise<unknown> {
+  return run(DELIVERIES, 'readwrite', (s) => s.delete(id))
+}
+
+export async function listStockCounts(): Promise<StockCount[]> {
+  const all = await run<StockCount[]>(COUNTS, 'readonly', (s) => s.getAll()).catch(() => [])
+  return all.sort((a, b) => b.date.localeCompare(a.date))
+}
+
+export function saveStockCount(count: StockCount): Promise<unknown> {
+  return run(COUNTS, 'readwrite', (s) => s.put(count))
 }

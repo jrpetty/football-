@@ -342,6 +342,39 @@ try {
     /not whose till was short/i.test(whoText),
   )
 
+  console.log('\nThe cellar')
+  await page.click('button:has-text("Cellar")')
+  await page.waitForSelector('button:has-text("Build the cellar from the till")', { timeout: 5000 })
+  await page.click('button:has-text("Build the cellar from the till")')
+  await page.waitForTimeout(600)
+  const built = await page.locator('.main').innerText()
+  check('the cellar is built from the till’s own item list', /cellar lines set up|lines/i.test(built))
+  check('with the beers as their own lines', built.includes('Taddy Lager'))
+
+  await page.click('.chip:has-text("Set up")')
+  await page.waitForTimeout(300)
+  const setup = page.locator('.card:has-text("What each sale pours") table.data')
+  const pourText = await setup.innerText()
+  check('a pint pours a pint', /PINT TADDY LAGER[\s\S]*?1 pint/.test(pourText), pourText.slice(0, 160))
+  check('a half pours half of one', /HALF TADDY LAGER[\s\S]*?0\.5 pints/.test(pourText))
+  check('a spirit pours a shot', /VODKA[\s\S]*?1 shot/.test(pourText))
+  check('a measured wine pours its measure', pourText.includes('175ML HOUSE WINE'))
+
+  // Book two firkins of Taddy in, then look at what should be left.
+  await page.click('.chip:has-text("Delivery in")')
+  await page.waitForSelector('input[aria-label="Taddy Lager delivered"]', { timeout: 5000 })
+  await page.fill('input[aria-label="Taddy Lager delivered"]', '144')
+  await page.click('button:has-text("Book the delivery in")')
+  await page.waitForTimeout(600)
+  const levels = await page.locator('.main').innerText()
+  check('the delivery is booked in', /144 pints/.test(levels), levels.slice(0, 300))
+  check(
+    'and the night’s pouring is already taken off it',
+    /129\.5 pints/.test(levels),
+    '120 pints plus 19 halves',
+  )
+  check('leaving what should be in the cellar', /14\.5 pints/.test(levels), '144 in, 129.5 out')
+
   console.log('\nPrices')
   await page.click('button:has-text("Settings")')
   await page.waitForSelector('button:has-text("Open the price list")', { timeout: 5000 })

@@ -14,11 +14,12 @@ import { DayDetail } from './screens/DayDetail.tsx'
 import { Dashboard } from './screens/Dashboard.tsx'
 import { Settings } from './screens/Settings.tsx'
 import { Prices } from './screens/Prices.tsx'
+import { Stock } from './screens/Stock.tsx'
 import { ZReadReview } from './screens/ZReadReview.tsx'
 import { formatShort, tradingDayKey } from './core/date.ts'
 import type { ZRead } from './core/zread.ts'
 
-type Tab = 'tonight' | 'dashboard' | 'history' | 'settings'
+type Tab = 'tonight' | 'dashboard' | 'stock' | 'history' | 'settings'
 
 /** An open review, together with where to write the corrected roll back to. */
 interface Reviewing {
@@ -60,6 +61,8 @@ export function App() {
         : 'Tonight’s count'
       : tab === 'dashboard'
         ? 'How trade is going'
+        : tab === 'stock'
+        ? 'What is in the cellar'
         : tab === 'history'
           ? 'Every night so far'
           : 'Settings'
@@ -72,6 +75,7 @@ export function App() {
         <nav className="tabs" aria-label="Sections">
           <button type="button" aria-current={tab === 'tonight' ? 'page' : undefined} onClick={() => go('tonight')}>Tonight</button>
           <button type="button" aria-current={tab === 'dashboard' ? 'page' : undefined} onClick={() => go('dashboard')}>Trade</button>
+          <button type="button" aria-current={tab === 'stock' ? 'page' : undefined} onClick={() => go('stock')}>Cellar</button>
           <button type="button" aria-current={tab === 'history' ? 'page' : undefined} onClick={() => go('history')}>Nights</button>
           <button type="button" aria-current={tab === 'settings' ? 'page' : undefined} onClick={() => go('settings')}>Settings</button>
         </nav>
@@ -104,6 +108,8 @@ export function App() {
           {tab === 'dashboard' && openDate === null && (
             <Dashboard refreshKey={refreshKey} onOpen={setOpenDate} />
           )}
+
+          {tab === 'stock' && <Stock onChanged={() => setRefreshKey((k) => k + 1)} />}
 
           {tab === 'history' && openDate === null && (
             <History
