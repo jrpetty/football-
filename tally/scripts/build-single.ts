@@ -34,7 +34,12 @@ void html
 // A closing script tag inside the bundle would end the inline block early.
 const safeJs = js.replace(/<\/script>/gi, '<\\/script>')
 
-const out = `<title>${title}</title>
+// The charset declaration must come first: this file gets opened straight
+// from disk, where there is no server header to say it is UTF-8, and a
+// browser left to guess picks Windows-1252 and turns every apostrophe into
+// "â€™".
+const out = `<meta charset="utf-8" />
+<title>${title}</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="color-scheme" content="dark light" />
 <style>
@@ -45,6 +50,10 @@ ${css}
 ${safeJs}
 </script>
 `
+
+if (!out.startsWith('<meta charset="utf-8"')) {
+  throw new Error('The charset declaration must be the first thing in the file.')
+}
 
 const target = join(root, 'tally-single.html')
 writeFileSync(target, out)
