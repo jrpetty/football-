@@ -91,3 +91,14 @@ test('keeps a fixed department column order even when a department sold nothing'
   const rows = toCsv([day(), quiet]).split('\r\n')
   assert.equal(rows[1]?.split(',').length, rows[2]?.split(',').length, 'columns must line up')
 })
+
+test('carries items sold into the spreadsheet, per department and in total', () => {
+  const d = day()
+  d.zRead = structuredClone(GARDENERS_ARMS)
+  const csv = toCsv([d])
+  const [header, row] = csv.split('\r\n')
+  assert.ok(header?.includes('"Items sold"'))
+  assert.ok(header?.includes('"Draught beers (sold)"'))
+  assert.ok(row?.includes('"689"'), '689 items across the night')
+  assert.ok(row?.includes('"406"'), '406 of them draught')
+})

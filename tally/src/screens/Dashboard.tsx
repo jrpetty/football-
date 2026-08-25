@@ -115,6 +115,7 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
   }))
 
   const deptTotalPence = deptRows.reduce((a, d) => a + d.pence, 0)
+  const deptItemsMilli = deptRows.reduce((a, d) => a + d.qtyMilli, 0)
   const withZRead = selected.filter((s) => s.hasZRead).length
 
   return (
@@ -202,6 +203,11 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
           detail="short and over added together"
           tone={t.absVariancePence === 0 ? 'good' : undefined}
         />
+        <StatTile
+          label="Items sold"
+          value={formatQty(t.itemsMilli)}
+          detail={t.itemsPerSale === null ? undefined : `${t.itemsPerSale} a round`}
+        />
         <StatTile label="Balanced" value={`${t.balancedNights}/${t.nights}`} detail={`${t.shortNights} short, ${t.overNights} over`} tone={t.balancedNights === t.nights ? 'good' : undefined} />
       </div>
 
@@ -230,6 +236,7 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
                     <th scope="col">Department</th>
                     <th scope="col">Sold</th>
                     <th scope="col">Taken</th>
+                    <th scope="col">Each</th>
                     <th scope="col">Share</th>
                   </tr>
                 </thead>
@@ -242,6 +249,7 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
                       </th>
                       <td className="num">{formatQty(d.qtyMilli)}</td>
                       <td className="num">{formatMoney(d.pence)}</td>
+                      <td className="num">{d.avgPencePerItem === null ? '—' : formatMoney(d.avgPencePerItem)}</td>
                       <td className="num">{(d.percentBp / 100).toFixed(2)}%</td>
                     </tr>
                   ))}
@@ -249,8 +257,11 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
                 <tfoot>
                   <tr>
                     <td>Total</td>
-                    <td className="num">{formatQty(deptRows.reduce((a, d) => a + d.qtyMilli, 0))}</td>
+                    <td className="num">{formatQty(deptItemsMilli)}</td>
                     <td className="num">{formatMoney(deptTotalPence)}</td>
+                    <td className="num">
+                      {deptItemsMilli > 0 ? formatMoney(Math.round(deptTotalPence / (deptItemsMilli / 1000))) : '—'}
+                    </td>
                     <td className="num">100.00%</td>
                   </tr>
                 </tfoot>

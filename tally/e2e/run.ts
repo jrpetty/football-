@@ -269,6 +269,13 @@ try {
   check('splits cash and card as the till states them', dash.includes('£351.80') && dash.includes('£1,841.00'))
   check('shows every department with its share', dash.includes('Draught beers') && dash.includes('68.05%'))
   check('shows the quantities sold', dash.includes('406'))
+  check('counts the items across the night', dash.includes('689'))
+  check(
+    'works out what a drink went for',
+    dash.includes('£3.68'),
+    '406 draught for £1,492.25 should read £3.68 each',
+  )
+  check('and what the dearest category went for', dash.includes('£5.46'), 'wine')
   check('the shares total 100%', dash.includes('100.00%'))
   check('reports the night as short by twelve pounds', dash.includes('−£12.00'), dash.slice(0, 300))
   check('charts rendered', (await page.locator('.chart svg').count()) >= 2)

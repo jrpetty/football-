@@ -151,6 +151,7 @@ export function DayDetail({ date, onBack, onEdit, onDeleted }: Props) {
                       <th scope="col">Department</th>
                       <th scope="col">Sold</th>
                       <th scope="col">Taken</th>
+                      <th scope="col">Each</th>
                       <th scope="col">Share</th>
                     </tr>
                   </thead>
@@ -163,6 +164,9 @@ export function DayDetail({ date, onBack, onEdit, onDeleted }: Props) {
                         </th>
                         <td className="num">{formatQty(d.qtyMilli)}</td>
                         <td className="num">{formatMoney(d.pence)}</td>
+                        <td className="num">
+                          {d.qtyMilli > 0 ? formatMoney(Math.round(d.pence / (d.qtyMilli / 1000))) : '—'}
+                        </td>
                         <td className="num">{formatPercent(shareBp(d.pence, deptTotal))}</td>
                       </tr>
                     ))}
@@ -172,6 +176,11 @@ export function DayDetail({ date, onBack, onEdit, onDeleted }: Props) {
                       <td>Total</td>
                       <td className="num">{formatQty(zRead.deptTotal?.qtyMilli ?? 0)}</td>
                       <td className="num">{formatMoney(deptTotal)}</td>
+                      <td className="num">
+                        {(zRead.deptTotal?.qtyMilli ?? 0) > 0
+                          ? formatMoney(Math.round(deptTotal / ((zRead.deptTotal?.qtyMilli ?? 1) / 1000)))
+                          : '—'}
+                      </td>
                       <td className="num">100.00%</td>
                     </tr>
                   </tfoot>

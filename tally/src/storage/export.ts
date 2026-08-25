@@ -11,6 +11,7 @@
 import type { DayRecord } from '../core/types.ts'
 import { reconcileDay, verdictHeadline } from '../core/reconcile.ts'
 import { DEPARTMENTS, departmentLabel } from '../core/departments.ts'
+import { formatQty } from '../core/zread.ts'
 
 const CORE_HEADERS = [
   'Date',
@@ -36,6 +37,7 @@ const CORE_HEADERS = [
 const TILL_HEADERS = [
   'Z number',
   'Sales',
+  'Items sold',
   'Average spend',
   'Till cash',
   'Till card',
@@ -44,7 +46,9 @@ const TILL_HEADERS = [
   'No sales',
 ] as const
 
+/** Money per department, then items per department — Q on a department line. */
 const DEPT_HEADERS = DEPARTMENTS.map((d) => departmentLabel(d.code, d.printed))
+const DEPT_QTY_HEADERS = DEPARTMENTS.map((d) => `${departmentLabel(d.code, d.printed)} (sold)`)
 
 function pounds(pence: number | null): string {
   return pence === null ? '' : (pence / 100).toFixed(2)
@@ -71,7 +75,9 @@ function csvField(value: string): string {
 }
 
 export function toCsv(days: readonly DayRecord[], tolerancePence?: number): string {
-  const lines = [[...CORE_HEADERS, ...TILL_HEADERS, ...DEPT_HEADERS].map(csvField).join(',')]
+  const lines = [
+    [...CORE_HEADERS, ...TILL_HEADERS, ...DEPT_HEADERS, ...DEPT_QTY_HEADERS].map(csvField).join(','),
+  ]
   for (const day of days) {
     const r = reconcileDay(day, tolerancePence)
     const counted =
@@ -92,6 +98,7 @@ export function toCsv(days: readonly DayRecord[], tolerancePence?: number): stri
         // The till's own account of the night, where the roll was captured.
         day.zRead?.header.zNumber === undefined ? '' : String(day.zRead.header.zNumber),
         day.zRead?.transaction.guestCount === undefined ? '' : String(day.zRead.transaction.guestCount),
+        day.zRead?.deptTotal?.qtyMilli === undefined ? '' : formatQty(day.zRead.deptTotal.qtyMilli),
         pounds(day.zRead?.transaction.avePence ?? null),
         pounds(day.zRead?.transaction.cashPence ?? null),
         pounds(day.zRead?.transaction.cardPence ?? null),
@@ -101,6 +108,10 @@ export function toCsv(days: readonly DayRecord[], tolerancePence?: number): stri
         ...DEPARTMENTS.map((meta) =>
           pounds(day.zRead?.departments.find((d) => d.code === meta.code)?.pence ?? null),
         ),
+        ...DEPARTMENTS.map((meta) => {
+          const qty = day.zRead?.departments.find((d) => d.code === meta.code)?.qtyMilli
+          return qty === undefined ? '' : formatQty(qty)
+        }),
       ]
         .map(csvField)
         .join(','),

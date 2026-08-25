@@ -179,3 +179,48 @@ test('an empty selection totals to zero rather than dividing by it', () => {
   assert.deepEqual(departmentTotals([]), [])
   assert.deepEqual(weekdayTotals([]), [])
 })
+
+// --- what the Q column buys you ---------------------------------------------
+
+test('works out what each item went for, per department', () => {
+  // The Q against a department is items sold, so value over quantity is the
+  // average price of a drink in that category — the real receipt's figures.
+  const rows = departmentTotals([dayStats(night('2026-08-23'))])
+  const each = (code: string) => rows.find((r) => r.code === code)?.avgPencePerItem
+  assert.equal(each('D01'), 368, '406 draught for £1,492.25 is £3.68 a drink')
+  assert.equal(each('D02'), 320, 'spirits')
+  assert.equal(each('D03'), 546, 'wine, the dearest thing behind the bar')
+  assert.equal(each('D05'), 185, 'mixers, the cheapest')
+  assert.equal(each('D07'), 170, 'sundries')
+})
+
+test('counts the items sold, and how many go on a round', () => {
+  const t = totals([dayStats(night('2026-08-23'))])
+  assert.equal(t.itemsMilli, 689000, '689 items across the departments')
+  assert.equal(t.guestCount, 267, 'over 267 sales')
+  assert.equal(t.itemsPerSale, 2.6, 'so about two and a half things a round')
+})
+
+test('items add up across a run of nights', () => {
+  const t = totals(['2026-08-21', '2026-08-22'].map((d) => dayStats(night(d))))
+  assert.equal(t.itemsMilli, 689000 * 2)
+  assert.equal(t.itemsPerSale, 2.6, 'the ratio holds')
+})
+
+test('a department that sold nothing has no price each, rather than a divide by zero', () => {
+  const d = emptyDay('2026-08-24', 0)
+  d.zRead = structuredClone(GARDENERS_ARMS)
+  d.zRead.departments = [{ code: 'D06', name: 'UNUSED', qtyMilli: 0, pence: 0 }]
+  const rows = departmentTotals([dayStats(d)])
+  assert.equal(rows[0]?.avgPencePerItem, null)
+})
+
+test('a night with no roll contributes no item count', () => {
+  const d = emptyDay('2026-08-25', 0)
+  d.till = { pence: 300000, source: 'manual', edited: false }
+  d.card = { pence: 200000, source: 'manual', edited: false }
+  d.cashPence = 100000
+  const t = totals([dayStats(d)])
+  assert.equal(t.itemsMilli, 0)
+  assert.equal(t.itemsPerSale, null, 'no guests either, so nothing to divide')
+})

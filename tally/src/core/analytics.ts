@@ -16,9 +16,18 @@ export interface DeptStat {
   code: string
   label: string
   pence: number
+  /** Items sold — the figure the till prints against Q on a department line. */
   qtyMilli: number
   /** Share of the total in the current selection, not as printed on any roll. */
   percentBp: number
+  /**
+   * Average taken per item sold.
+   *
+   * Worth having because it is the one number here that moves for a reason
+   * other than how busy the night was: a shifting average means the mix inside
+   * a department changed, or a price did.
+   */
+  avgPencePerItem: number | null
 }
 
 /** One night, flattened into the numbers a dashboard asks for. */
@@ -115,6 +124,10 @@ export interface Totals {
   cashPence: number
   cardPence: number
   guestCount: number
+  /** Items sold across the selection, from the department quantities. */
+  itemsMilli: number
+  /** Items per sale — how much is on an average round. */
+  itemsPerSale: number | null
   /** Weighted by guests across the selection, not an average of averages. */
   avePence: number | null
   /** Nights where a variance could be computed at all. */
@@ -132,6 +145,7 @@ export function totals(stats: DayStats[]): Totals {
   let cashPence = 0
   let cardPence = 0
   let guestCount = 0
+  let itemsMilli = 0
   let reconciledNights = 0
   let netVariancePence = 0
   let absVariancePence = 0
@@ -144,6 +158,7 @@ export function totals(stats: DayStats[]): Totals {
     cashPence += s.cashPence ?? 0
     cardPence += s.cardPence ?? 0
     guestCount += s.guestCount ?? 0
+    for (const d of s.departments) itemsMilli += d.qtyMilli
     if (s.variancePence !== null) {
       reconciledNights++
       netVariancePence += s.variancePence
@@ -160,6 +175,10 @@ export function totals(stats: DayStats[]): Totals {
     cashPence,
     cardPence,
     guestCount,
+    itemsMilli,
+    // Rounded to one place: "2.6 items a round" is the useful precision, and
+    // three decimals would imply the till counts more finely than it does.
+    itemsPerSale: guestCount > 0 ? Math.round((itemsMilli / 1000 / guestCount) * 10) / 10 : null,
     // Recomputed from the totals rather than averaging the nightly averages,
     // which would weight a quiet Monday the same as a packed Saturday.
     avePence: guestCount > 0 ? Math.round(takingsPence / guestCount) : null,
@@ -197,7 +216,11 @@ export function departmentTotals(stats: DayStats[], codes?: string[]): DeptStat[
 
   const rows = sortByRegistry([...acc.values()])
   const total = rows.reduce((a, r) => a + r.pence, 0)
-  return rows.map((r) => ({ ...r, percentBp: shareBp(r.pence, total) }))
+  return rows.map((r) => ({
+    ...r,
+    percentBp: shareBp(r.pence, total),
+    avgPencePerItem: r.qtyMilli > 0 ? Math.round(r.pence / (r.qtyMilli / 1000)) : null,
+  }))
 }
 
 export interface WeekdayStat {
