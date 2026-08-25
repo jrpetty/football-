@@ -14,6 +14,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import {
+  clerkTotals,
   dayStats,
   departmentTotals,
   departmentsPresent,
@@ -88,6 +89,7 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
   const available = useMemo(() => (all ? departmentsPresent(all) : []), [all])
   const series = useMemo(() => timeSeries(selected), [selected])
   const week = useMemo(() => weekdayTotals(selected), [selected])
+  const clerks = useMemo(() => clerkTotals(selected), [selected])
 
   if (error) return <div className="main"><p className="note bad">Could not read the saved nights: {error}</p></div>
   if (all === null) return <div className="main"><p className="note"><span className="spinner" /> Loading…</p></div>
@@ -211,6 +213,28 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
         <StatTile label="Balanced" value={`${t.balancedNights}/${t.nights}`} detail={`${t.shortNights} short, ${t.overNights} over`} tone={t.balancedNights === t.nights ? 'good' : undefined} />
       </div>
 
+      {(t.voidCount > 0 || t.noSaleCount > 0) && (
+        <ChartCard title="Worth an eye" subtitle="over the whole selection">
+          <div className="kpi-row">
+            <StatTile
+              label="Voids"
+              value={String(t.voidCount)}
+              detail={`${formatMoney(t.voidPence)} rung up then cancelled`}
+            />
+            <StatTile
+              label="No sales"
+              value={String(t.noSaleCount)}
+              detail="drawer opened with nothing sold"
+            />
+          </div>
+          <p className="note">
+            Neither is wrong on its own — a mis-rung round gets voided, and the drawer opens to give
+            change for the phone. They are here because they are the two figures on the roll that are
+            worth knowing the usual number for, so an unusual one stands out.
+          </p>
+        </ChartCard>
+      )}
+
       {/* --- trend ---------------------------------------------------------- */}
       <ChartCard title="Takings by night" subtitle={`${t.nights} nights`}>
         <TrendChart points={series.map((s) => ({ date: s.date, label: formatShort(s.date), pence: s.takingsPence ?? 0 }))} />
@@ -321,6 +345,42 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
           </table>
         </div>
       </ChartCard>
+
+      {clerks.length > 0 && (
+        <ChartCard title="Who rang it up" subtitle={`${clerks.length} behind the bar`}>
+          <div className="table-wrap">
+            <table className="data">
+              <thead>
+                <tr>
+                  <th scope="col">Clerk</th>
+                  <th scope="col">Nights</th>
+                  <th scope="col">Sales</th>
+                  <th scope="col">Took</th>
+                  <th scope="col">Average</th>
+                  <th scope="col">Voids</th>
+                </tr>
+              </thead>
+              <tbody>
+                {clerks.map((c) => (
+                  <tr key={c.code}>
+                    <th scope="row">{c.name}</th>
+                    <td className="num">{c.nights}</td>
+                    <td className="num">{c.sales || '—'}</td>
+                    <td className="num">{formatMoney(c.pence)}</td>
+                    <td className="num">{c.avgPence === null ? '—' : formatMoney(c.avgPence)}</td>
+                    <td className="num">{c.voids || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="note">
+            This is who took what, not whose till was short. The drawer is counted once for the whole
+            night, so a shortfall cannot be pinned on a person from this receipt — only a till with a
+            drawer each could tell you that.
+          </p>
+        </ChartCard>
+      )}
 
       {/* --- the nights themselves --------------------------------------------- */}
       <ChartCard title="The nights" subtitle="tap one to open it">

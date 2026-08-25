@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  clerkTotals,
   dayStats,
   filterDays,
   lastNDays,
@@ -223,4 +224,50 @@ test('a night with no roll contributes no item count', () => {
   const t = totals([dayStats(d)])
   assert.equal(t.itemsMilli, 0)
   assert.equal(t.itemsPerSale, null, 'no guests either, so nothing to divide')
+})
+
+// --- the figures the roll carried that nothing was reading -------------------
+
+test('carries voids and no-sales through, which were only ever a footnote', () => {
+  const t = totals([dayStats(night('2026-08-23'))])
+  assert.equal(t.voidCount, 3)
+  assert.equal(t.voidPence, 1250)
+  assert.equal(t.noSaleCount, 5)
+})
+
+test('adds them up across a run of nights, so a usual number exists', () => {
+  const t = totals(['2026-08-21', '2026-08-22', '2026-08-23'].map((d) => dayStats(night(d))))
+  assert.equal(t.voidCount, 9)
+  assert.equal(t.noSaleCount, 15)
+})
+
+test('totals who rang what up', () => {
+  const rows = clerkTotals([dayStats(night('2026-08-23'))])
+  // Clerk 1 rang up nothing at all and is left off.
+  assert.equal(rows.length, 2)
+  const busiest = rows[0]
+  assert.equal(busiest?.name, 'CLERK0004')
+  assert.equal(busiest?.pence, 218880)
+  assert.equal(busiest?.sales, 266)
+  assert.equal(busiest?.voids, 3)
+  assert.equal(busiest?.avgPence, 823, 'matches the average the till printed for that clerk')
+})
+
+test('a clerk accumulates over several nights', () => {
+  const rows = clerkTotals(['2026-08-21', '2026-08-22'].map((d) => dayStats(night(d))))
+  const busiest = rows[0]
+  assert.equal(busiest?.nights, 2)
+  assert.equal(busiest?.pence, 218880 * 2)
+  assert.equal(busiest?.avgPence, 823, 'the average per sale is unchanged by doing it twice')
+})
+
+test('clerk shares account for the whole', () => {
+  const rows = clerkTotals([dayStats(night('2026-08-23'))])
+  assert.equal(rows.reduce((a, r) => a + r.percentBp, 0), 10000)
+})
+
+test('a night with no roll has no clerks to report', () => {
+  const d = emptyDay('2026-08-26', 0)
+  d.till = { pence: 100000, source: 'manual', edited: false }
+  assert.deepEqual(clerkTotals([dayStats(d)]), [])
 })

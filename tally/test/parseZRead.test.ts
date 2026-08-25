@@ -17,7 +17,7 @@ test('reads the lifetime grand totals, which exceed a night’s sanity cap', () 
   // £140,111.26 would be an absurd night and a perfectly ordinary lifetime.
   assert.equal(parsed.header.gt1Pence, 14011126)
   assert.equal(parsed.header.gt2Pence, 14229683)
-  assert.equal(parsed.header.gt3Pence, -2118557, 'GT3 is printed negative')
+  assert.equal(parsed.header.gt3Pence, -218557, 'GT3 is printed negative')
 })
 
 test('reads every department with its quantity, value and percentage', () => {

@@ -102,3 +102,13 @@ test('carries items sold into the spreadsheet, per department and in total', () 
   assert.ok(row?.includes('"689"'), '689 items across the night')
   assert.ok(row?.includes('"406"'), '406 of them draught')
 })
+
+test('carries the void count as well as its value', () => {
+  const d = day()
+  d.zRead = structuredClone(GARDENERS_ARMS)
+  const csv = toCsv([d])
+  const [header, row] = csv.split('\r\n')
+  assert.ok(header?.includes('"Voids"') && header?.includes('"Void value"'))
+  assert.ok(row?.includes('"12.50"'), 'the value')
+  assert.ok(row?.includes('"5"'), 'the no-sale count')
+})

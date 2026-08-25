@@ -46,6 +46,12 @@ export interface DayStats {
   cardVariancePence: number | null
   verdict: Verdict
   hasZRead: boolean
+  /** Transactions rung up and then cancelled. */
+  voidCount: number | null
+  voidPence: number | null
+  /** The drawer opened without a sale. */
+  noSaleCount: number | null
+  clerks: Array<{ code: string; name: string; pence: number; sales: number | null; voids: number | null }>
 }
 
 export function dayStats(day: DayRecord, tolerancePence = DEFAULT_TOLERANCE_PENCE): DayStats {
@@ -80,6 +86,19 @@ export function dayStats(day: DayRecord, tolerancePence = DEFAULT_TOLERANCE_PENC
     cardVariancePence: r.card?.variancePence ?? null,
     verdict: r.overall.verdict,
     hasZRead: !!z,
+    voidCount: z?.transaction.voidCount ?? null,
+    voidPence: z?.transaction.voidPence ?? null,
+    noSaleCount: z?.transaction.noSaleCount ?? null,
+    clerks: (z?.clerks ?? [])
+      // A clerk who rang nothing up is noise on a summary.
+      .filter((c) => (c.paidTotalPence ?? 0) > 0)
+      .map((c) => ({
+        code: c.code,
+        name: c.name ?? c.code,
+        pence: c.paidTotalPence ?? 0,
+        sales: c.guestCount ?? null,
+        voids: c.voidCount ?? null,
+      })),
   }
 }
 
@@ -138,6 +157,11 @@ export interface Totals {
   balancedNights: number
   shortNights: number
   overNights: number
+  /** Cancelled transactions, and what they came to. */
+  voidCount: number
+  voidPence: number
+  /** Drawer openings with no sale behind them. */
+  noSaleCount: number
 }
 
 export function totals(stats: DayStats[]): Totals {
@@ -152,6 +176,9 @@ export function totals(stats: DayStats[]): Totals {
   let balancedNights = 0
   let shortNights = 0
   let overNights = 0
+  let voidCount = 0
+  let voidPence = 0
+  let noSaleCount = 0
 
   for (const s of stats) {
     takingsPence += s.takingsPence ?? 0
@@ -167,6 +194,9 @@ export function totals(stats: DayStats[]): Totals {
     if (s.verdict === 'balanced') balancedNights++
     if (s.verdict === 'short') shortNights++
     if (s.verdict === 'over') overNights++
+    voidCount += s.voidCount ?? 0
+    voidPence += s.voidPence ?? 0
+    noSaleCount += s.noSaleCount ?? 0
   }
 
   return {
@@ -188,7 +218,68 @@ export function totals(stats: DayStats[]): Totals {
     balancedNights,
     shortNights,
     overNights,
+    voidCount,
+    voidPence,
+    noSaleCount,
   }
+}
+
+export interface ClerkStat {
+  code: string
+  name: string
+  /** Nights this clerk appears on. */
+  nights: number
+  pence: number
+  sales: number
+  /** Weighted across the selection, not a mean of nightly means. */
+  avgPence: number | null
+  voids: number
+  /** Share of the takings in the selection. */
+  percentBp: number
+}
+
+/**
+ * Who rang up what, across the selection.
+ *
+ * A deliberate limitation, and an important one: this says nothing about who a
+ * shortfall belongs to. The drawer is counted once for the whole night, so a
+ * missing twelve pounds cannot be attributed to a person from this receipt —
+ * only a till with a drawer per clerk could do that. What this shows is who
+ * took what, how busy each was, and who cancelled the most transactions.
+ */
+export function clerkTotals(stats: DayStats[]): ClerkStat[] {
+  const acc = new Map<string, ClerkStat>()
+
+  for (const day of stats) {
+    for (const c of day.clerks) {
+      const found = acc.get(c.code)
+      if (found) {
+        found.nights++
+        found.pence += c.pence
+        found.sales += c.sales ?? 0
+        found.voids += c.voids ?? 0
+      } else {
+        acc.set(c.code, {
+          code: c.code,
+          name: c.name,
+          nights: 1,
+          pence: c.pence,
+          sales: c.sales ?? 0,
+          voids: c.voids ?? 0,
+          avgPence: null,
+          percentBp: 0,
+        })
+      }
+    }
+  }
+
+  const rows = [...acc.values()].sort((a, b) => b.pence - a.pence)
+  const total = rows.reduce((a, r) => a + r.pence, 0)
+  return rows.map((r) => ({
+    ...r,
+    avgPence: r.sales > 0 ? Math.round(r.pence / r.sales) : null,
+    percentBp: shareBp(r.pence, total),
+  }))
 }
 
 /**

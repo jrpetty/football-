@@ -144,3 +144,27 @@ test('prints quantities the way the till does', () => {
   assert.ok(!formatQty(120000).endsWith('.'))
   assert.ok(!formatQty(4000001 / 1000 * 1000).endsWith('.'))
 })
+
+test('the running grand totals check each other', () => {
+  // GT1 + |GT3| = GT2 on the real receipt, to the penny.
+  const v = crossfootVerdict(GARDENERS_ARMS)
+  const gt = v.checks.find((c) => c.id === 'grand-totals')
+  assert.ok(gt, 'the check should run when all three are captured')
+  assert.equal(gt.ok, true)
+})
+
+test('and catch a digit misread out of the padding zeros', () => {
+  // "-00000021185.57" was transcribed as -21185.57 when it is -2185.57. The
+  // leading zeros hide where the figure starts, and nothing else on the roll
+  // refers to GT3 — so without this check the error is invisible.
+  const z = clone()
+  z.header.gt3Pence = -2118557
+  const v = crossfootVerdict(z)
+  assert.ok(v.warnings.some((c) => c.id === 'grand-totals'))
+})
+
+test('the grand-total check stays quiet when a figure was not captured', () => {
+  const z = clone()
+  delete z.header.gt3Pence
+  assert.ok(!crossfoot(z).some((c) => c.id === 'grand-totals'))
+})

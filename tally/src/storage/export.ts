@@ -43,6 +43,7 @@ const TILL_HEADERS = [
   'Till card',
   'Cash in drawer',
   'Voids',
+  'Void value',
   'No sales',
 ] as const
 
@@ -103,6 +104,7 @@ export function toCsv(days: readonly DayRecord[], tolerancePence?: number): stri
         pounds(day.zRead?.transaction.cashPence ?? null),
         pounds(day.zRead?.transaction.cardPence ?? null),
         pounds(day.zRead?.transaction.cidPence ?? null),
+        day.zRead?.transaction.voidCount === undefined ? '' : String(day.zRead.transaction.voidCount),
         pounds(day.zRead?.transaction.voidPence ?? null),
         day.zRead?.transaction.noSaleCount === undefined ? '' : String(day.zRead.transaction.noSaleCount),
         ...DEPARTMENTS.map((meta) =>

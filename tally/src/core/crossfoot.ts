@@ -288,6 +288,24 @@ export function crossfoot(z: ZRead): CrossfootCheck[] {
     }
   }
 
+  // The three running grand totals describe each other: the gross is the net
+  // plus what was voided out of it. Inferred from one receipt rather than from
+  // a manual, so it is a warning — but it holds to the penny there, and it
+  // caught a digit misread out of "-00000021185.57", where the padding zeros
+  // hide where the figure starts.
+  if (z.header.gt1Pence !== undefined && z.header.gt2Pence !== undefined && z.header.gt3Pence !== undefined) {
+    out.push(
+      moneyCheck(
+        'grand-totals',
+        'The running grand totals agree with each other',
+        z.header.gt2Pence,
+        z.header.gt1Pence + Math.abs(z.header.gt3Pence),
+        ['header.gt1Pence', 'header.gt2Pence', 'header.gt3Pence'],
+        'warning',
+      ),
+    )
+  }
+
   return out.filter((c): c is CrossfootCheck => c !== null)
 }
 

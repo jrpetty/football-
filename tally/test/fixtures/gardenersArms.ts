@@ -20,6 +20,11 @@
 // cross-foot — every equation the receipt states about itself holds on these
 // figures, which is a far stronger guarantee than careful reading.
 //
+// One digit in here was wrong until the receipt itself disproved it. GT3 was
+// transcribed as -21185.57 from "-00000021185.57", where the leading zeros hide
+// where the number starts. GT1 + |GT3| = GT2 holds to the penny only at
+// -2185.57, so that is what it is. There is now a check for it.
+//
 // The PLU list from the same roll is deliberately NOT included: it could not be
 // transcribed reliably from the photograph, and the cross-foot caught the
 // attempt (the spirits lines came to £60.60 against a printed £35.25). Inventing
@@ -36,7 +41,7 @@ export const GARDENERS_ARMS_TEXT = `Samuel Smith
                     *Z1*
 GT1                         *0000140111.26     Z1 1685
 GT2                         *0000142296.83
-GT3                        -00000021185.57
+GT3                         -0000002185.57
 
 DEPT./GROUP
 D01                             406.000 Q
@@ -144,7 +149,7 @@ export const GARDENERS_ARMS_FLAT = `Samuel Smith
         *Z1*
 GT1     *0000140111.26     Z1  1685
 GT2     *0000142296.83
-GT3     -00000021185.57
+GT3      -0000002185.57
 
 DEPT./GROUP
 D01 DRAUGHT BEERS      406.000 Q     *1492.25    68.05%
@@ -218,7 +223,7 @@ export const GARDENERS_ARMS: ZRead = {
     printedAt: '23/08/2026 21:39:16',
     gt1Pence: 14011126,
     gt2Pence: 14229683,
-    gt3Pence: -2118557,
+    gt3Pence: -218557,
   },
   departments: [
     { code: 'D01', name: 'DRAUGHT BEERS', qtyMilli: 406000, pence: 149225, percentBp: 6805, group: 'GROUP01' },
