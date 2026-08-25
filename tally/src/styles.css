@@ -254,9 +254,18 @@ body {
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: 1fr;
-  gap: 4px;
+  gap: 2px;
   padding: 8px 0 6px;
   margin-top: 6px;
+}
+
+.tabs button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Below about 340px even that will not do it, so the words step back and the
+   icons carry the bar alone rather than truncating into nonsense. */
+@media (max-width: 339px) {
+  .tabs button span { display: none; }
+  .tabs button { min-height: 46px; }
 }
 
 .tabs button {
@@ -267,11 +276,14 @@ body {
   gap: 3px;
   min-width: 0;
   min-height: 52px;
-  /* Five tabs on a 390px phone: small enough to fit, large enough to hit. */
-  font-size: 11px;
+  /* Six tabs on a 390px phone. The label is allowed to shrink and the padding
+     with it, because losing a tab entirely is worse than tight type — and the
+     icon carries the meaning when the word gets small. */
+  font-size: 10.5px;
   font-weight: 600;
-  letter-spacing: 0.02em;
-  padding: 6px 2px 5px;
+  letter-spacing: 0;
+  padding: 6px 1px 5px;
+  overflow: hidden;
   background: transparent;
   border: 0;
   border-radius: var(--radius-sm);
@@ -913,6 +925,10 @@ table.data .swatch { display: inline-block; width: 9px; height: 9px; border-radi
   table.data tbody tr:hover td, table.data tbody tr:hover th { background: color-mix(in srgb, var(--text) 3%, transparent); }
 }
 
+/* People's names are short and must not break away from their swatch the way a
+   long department name is allowed to. The table scrolls instead. */
+table.data.crew th[scope='row'] { white-space: nowrap; }
+
 /* ---- cross-foot ---------------------------------------------------------- */
 
 .checks { list-style: none; margin: 10px 0 0; padding: 0; font-size: 13px; }
@@ -1036,3 +1052,54 @@ table.data .swatch { display: inline-block; width: 9px; height: 9px; border-radi
   }
   .spinner { animation: spin 2.4s linear infinite !important; }
 }
+
+/* ---- the rota -------------------------------------------------------------- */
+
+.week-nav { display: flex; align-items: center; gap: 10px; }
+.week-nav .btn-small { min-width: 46px; font-size: 20px; line-height: 1; padding: 0; }
+.week-nav .week-when { flex: 1; text-align: center; min-width: 0; }
+.week-nav .week-when strong { display: block; font-family: var(--font-display); font-size: 16px; font-weight: 600; }
+.week-nav .week-when small { color: var(--muted); font-size: 12px; }
+
+/* A night on the rota. Padding moves to the button inside it so the whole row
+   is the tap target, not a strip of card around one. */
+.day-card { padding: 0; overflow: hidden; }
+.day-card.today { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+
+.day-open {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 12px 14px;
+  min-height: 62px;
+}
+
+@media (hover: hover) {
+  .day-open:hover { background: var(--surface-2); }
+}
+
+.day-open .day-when { flex: none; width: 78px; }
+.day-open .day-when strong { display: block; font-weight: 650; font-size: 14.5px; }
+.day-open .day-when small { color: var(--muted); font-size: 11.5px; }
+
+.day-crew { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 3px 10px; font-size: 13px; }
+.day-crew .who { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.day-crew .day-nobody { color: var(--faint); font-size: 13px; }
+
+.day-open .day-hours { flex: none; font-size: 12.5px; color: var(--muted); }
+.day-open .chev { flex: none; color: var(--faint); transition: transform 0.18s var(--ease); }
+.day-open .chev.open { transform: rotate(90deg); }
+
+.day-edit { padding: 0 14px 14px; border-top: 1px solid var(--line-soft); padding-top: 12px; }
+.day-edit .chip .icon { margin-right: 6px; }
+
+/* Two time boxes side by side. Wide enough for a twelve-hour locale — "11:30 PM"
+   plus the browser's own clock button — because a clipped "06:00 P" is worse
+   than a wide box. The name wraps to its own line above them (see .zrow:has),
+   so there is a full card width to spend on the pair. */
+.zrow input[type='time'] { width: 136px; padding: 6px 8px; }

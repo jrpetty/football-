@@ -83,6 +83,50 @@ for (const scheme of ['dark', 'light'] as const) {
   await page.screenshot({ path: join(out, `trade-${scheme}.png`), fullPage: false })
   await page.screenshot({ path: join(out, `trade-full-${scheme}.png`), fullPage: true })
 
+  // The rota, with a crew on the week.
+  await page.click('button:has-text("Rota")')
+  await page.waitForSelector('button:has-text("Add the first person")', { timeout: 5000 })
+  await page.click('button:has-text("Add the first person")')
+  await page.waitForSelector('#person-name', { timeout: 5000 })
+  for (const [who, rate] of [['Kelly', '12.21'], ['Dave', '13.50'], ['Marie', '12.21']] as const) {
+    await page.fill('#person-name', who)
+    await page.fill('#person-rate', rate)
+    await page.click('button:has-text("Add to the rota")')
+    await page.waitForTimeout(200)
+  }
+  await page.click('.chip:has-text("The week")')
+  await page.waitForSelector('.day-card', { timeout: 5000 })
+  for (const [row, whos] of [[3, ['Kelly', 'Dave']], [4, ['Kelly', 'Marie']], [5, ['Kelly', 'Dave', 'Marie']], [6, ['Marie']]] as const) {
+    await page.locator('.day-open').nth(row).click()
+    await page.waitForTimeout(120)
+    for (const who of whos) {
+      await page.locator(`.day-edit .chip:has-text("${who}")`).click()
+      await page.waitForTimeout(120)
+    }
+    await page.locator('.day-open').nth(row).click()
+    await page.waitForTimeout(120)
+  }
+  await page.screenshot({ path: join(out, `rota-${scheme}.png`), fullPage: false })
+  await page.locator('.day-open').nth(5).click()
+  await page.waitForTimeout(250)
+  await page.screenshot({ path: join(out, `rota-open-${scheme}.png`), fullPage: false })
+  while ((await page.locator('.week-when strong').innerText()).trim() !== '17 Aug – 23 Aug') {
+    await page.locator('.week-nav button[aria-label="The week before"]').click()
+    await page.waitForTimeout(120)
+  }
+  await page.locator('.day-open').nth(6).click()
+  await page.waitForTimeout(150)
+  for (const who of ['Kelly', 'Dave']) {
+    await page.locator(`.day-edit .chip:has-text("${who}")`).click()
+    await page.waitForTimeout(150)
+  }
+
+  // Trade again, now the rota covers the seeded night, so the crew card is there.
+  await page.click('button:has-text("Trade")')
+  await page.waitForSelector('.kpi-row', { timeout: 5000 })
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: join(out, `trade-crew-${scheme}.png`), fullPage: true })
+
   await page.click('button:has-text("Cellar")')
   await page.waitForTimeout(300)
   await page.screenshot({ path: join(out, `cellar-${scheme}.png`), fullPage: false })

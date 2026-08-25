@@ -15,12 +15,13 @@ import { Dashboard } from './screens/Dashboard.tsx'
 import { Settings } from './screens/Settings.tsx'
 import { Prices } from './screens/Prices.tsx'
 import { Stock } from './screens/Stock.tsx'
+import { Rota } from './screens/Rota.tsx'
 import { ZReadReview } from './screens/ZReadReview.tsx'
 import { formatShort, tradingDayKey } from './core/date.ts'
 import type { ZRead } from './core/zread.ts'
-import { IconBarrel, IconBook, IconChart, IconMoon, IconSliders, TallyMark } from './components/icons.tsx'
+import { IconBarrel, IconBook, IconChart, IconMoon, IconPeople, IconSliders, TallyMark } from './components/icons.tsx'
 
-type Tab = 'tonight' | 'dashboard' | 'stock' | 'history' | 'settings'
+type Tab = 'tonight' | 'dashboard' | 'stock' | 'rota' | 'history' | 'settings'
 
 /** An open review, together with where to write the corrected roll back to. */
 interface Reviewing {
@@ -64,6 +65,8 @@ export function App() {
         ? 'How trade is going'
         : tab === 'stock'
         ? 'What is in the cellar'
+        : tab === 'rota'
+        ? 'Who is on'
         : tab === 'history'
           ? 'Every night so far'
           : 'Settings'
@@ -87,6 +90,9 @@ export function App() {
           </button>
           <button type="button" aria-current={tab === 'stock' ? 'page' : undefined} onClick={() => go('stock')}>
             <IconBarrel /><span>Cellar</span>
+          </button>
+          <button type="button" aria-current={tab === 'rota' ? 'page' : undefined} onClick={() => go('rota')}>
+            <IconPeople /><span>Rota</span>
           </button>
           <button type="button" aria-current={tab === 'history' ? 'page' : undefined} onClick={() => go('history')}>
             <IconBook /><span>Nights</span>
@@ -126,6 +132,8 @@ export function App() {
           )}
 
           {tab === 'stock' && <Stock onChanged={() => setRefreshKey((k) => k + 1)} />}
+
+          {tab === 'rota' && <Rota onChanged={() => setRefreshKey((k) => k + 1)} />}
 
           {tab === 'history' && openDate === null && (
             <History

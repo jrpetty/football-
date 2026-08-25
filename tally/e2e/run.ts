@@ -375,6 +375,86 @@ try {
   )
   check('leaving what should be in the cellar', /14\.5 pints/.test(levels), '144 in, 129.5 out')
 
+  console.log('\nThe rota')
+  await page.click('button:has-text("Rota")')
+  await page.waitForSelector('button:has-text("Add the first person")', { timeout: 5000 })
+  await page.click('button:has-text("Add the first person")')
+  await page.waitForSelector('#person-name', { timeout: 5000 })
+
+  await page.fill('#person-name', 'Kelly')
+  await page.fill('#person-rate', '12.21')
+  await page.click('button:has-text("Add to the rota")')
+  await page.waitForTimeout(300)
+  check('someone can be put on the books', (await page.locator('.badge:has-text("1 person")').count()) === 1)
+
+  await page.fill('#person-name', 'Dave')
+  await page.click('button:has-text("Add to the rota")')
+  await page.waitForTimeout(300)
+  check('and a second', (await page.locator('.badge:has-text("2 people")').count()) === 1)
+
+  await page.click('.chip:has-text("The week")')
+  await page.waitForSelector('.day-card', { timeout: 5000 })
+  check('the week shows seven nights', (await page.locator('.day-card').count()) === 7)
+  check('and starts with nobody on', (await page.locator('.day-nobody').count()) === 7)
+
+  // Put both on the Saturday — the fifth row, Monday being the first.
+  await page.locator('.day-open').nth(5).click()
+  await page.waitForTimeout(200)
+  await page.locator('.day-edit .chip:has-text("Kelly")').click()
+  await page.waitForTimeout(200)
+  await page.locator('.day-edit .chip:has-text("Dave")').click()
+  await page.waitForTimeout(250)
+  const saturday = await page.locator('.day-card').nth(5).innerText()
+  check('both go on the night', saturday.includes('Kelly') && saturday.includes('Dave'), saturday.slice(0, 120))
+  check('and the hours are totted up', /11h/.test(saturday), `got "${saturday}"`)
+
+  const wages = await page.locator('.day-edit').innerText()
+  check('wages count only the person with a rate', wages.includes('£67.16'), wages.slice(-160))
+
+  // The whole week, copied forward.
+  await page.locator('.week-nav button[aria-label="The week after"]').click()
+  await page.waitForTimeout(250)
+  check('the next week starts empty', (await page.locator('.day-nobody').count()) === 7)
+  await page.click('button:has-text("Copy last week")')
+  await page.waitForTimeout(400)
+  check('copying last week brings the shifts forward', (await page.locator('.day-nobody').count()) === 6)
+  check('and says how many it moved', (await page.locator('.toast').innerText()).includes('2 shifts'))
+
+  await page.reload({ waitUntil: 'networkidle' })
+  await page.click('button:has-text("Rota")')
+  await page.waitForSelector('.day-card', { timeout: 5000 })
+  check('the rota survives a restart', (await page.locator('.day-nobody').count()) === 6)
+
+  // Back to the week of the seeded night, so the dashboard has a rostered
+  // night to report on rather than a rota that never overlaps the trade.
+  while ((await page.locator('.week-when strong').innerText()).trim() !== '17 Aug – 23 Aug') {
+    await page.locator('.week-nav button[aria-label="The week before"]').click()
+    await page.waitForTimeout(120)
+  }
+  await page.locator('.day-open').nth(6).click() // the Sunday
+  await page.waitForTimeout(200)
+  await page.locator('.day-edit .chip:has-text("Kelly")').click()
+  await page.waitForTimeout(300)
+
+  await page.click('button:has-text("Trade")')
+  await page.waitForSelector('.kpi-row', { timeout: 5000 })
+  const onTonight = await page.locator('.main').innerText()
+  check('the dashboard reports who was on', onTonight.includes('Who was on'), onTonight.slice(0, 120))
+  check('with the hours they worked', /5h 30m/.test(onTonight))
+  check('and the wage bill for the night', onTonight.includes('£67.16'), '5.5 hours at £12.21')
+  check(
+    'and withholds a comparison it cannot support',
+    onTonight.includes('too soon'),
+    'one night is nowhere near enough to compare anybody',
+  )
+
+  await page.click('button:has-text("Nights")')
+  await page.waitForSelector('.day-row', { timeout: 5000 })
+  await page.click('.day-row')
+  await page.waitForSelector('.verdict', { timeout: 5000 })
+  const nightCrew = await page.locator('.main').innerText()
+  check('the night itself names who worked it', nightCrew.includes('Who was on') && nightCrew.includes('Kelly'))
+
   console.log('\nPrices')
   await page.click('button:has-text("Settings")')
   await page.waitForSelector('button:has-text("Open the price list")', { timeout: 5000 })

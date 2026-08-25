@@ -15,16 +15,22 @@
 import type { DayRecord } from '../core/types.ts'
 import type { PriceBookEntry } from '../core/priceBook.ts'
 import type { Delivery, Pour, StockCount, StockItem } from '../core/stock.ts'
+import type { Person, Shift } from '../core/rota.ts'
 
 const DB_NAME = 'tally'
-/** v2 added the price book, v3 the cellar. Nothing already stored changes shape. */
-const DB_VERSION = 3
+/**
+ * v2 added the price book, v3 the cellar, v4 the rota. Nothing already stored
+ * changes shape on any of them.
+ */
+const DB_VERSION = 4
 const DAYS = 'days'
 const PHOTOS = 'photos'
 const PRICES = 'prices'
 const STOCK = 'stock'
 const DELIVERIES = 'deliveries'
 const COUNTS = 'stockcounts'
+const PEOPLE = 'people'
+const SHIFTS = 'shifts'
 
 let dbPromise: Promise<IDBDatabase> | null = null
 
@@ -50,6 +56,10 @@ function open(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(DELIVERIES)) db.createObjectStore(DELIVERIES, { keyPath: 'id' })
       // Keyed by date: one stock take a day, and re-counting corrects it.
       if (!db.objectStoreNames.contains(COUNTS)) db.createObjectStore(COUNTS, { keyPath: 'date' })
+      if (!db.objectStoreNames.contains(PEOPLE)) db.createObjectStore(PEOPLE, { keyPath: 'id' })
+      // Keyed `date:personId`, so putting someone on a day they are already on
+      // corrects the hours rather than rostering them twice.
+      if (!db.objectStoreNames.contains(SHIFTS)) db.createObjectStore(SHIFTS, { keyPath: 'id' })
     }
     req.onsuccess = () => resolve(req.result)
     req.onerror = () => reject(req.error ?? new Error('Could not open the database.'))
@@ -252,4 +262,39 @@ export async function listStockCounts(): Promise<StockCount[]> {
 
 export function saveStockCount(count: StockCount): Promise<unknown> {
   return run(COUNTS, 'readwrite', (s) => s.put(count))
+}
+
+
+// --- the rota ----------------------------------------------------------------
+
+/** Everyone, in the order they were added, so the week grid is stable. */
+export function listPeople(): Promise<Person[]> {
+  return run<Person[]>(PEOPLE, 'readonly', (s) => s.getAll())
+}
+
+export function savePerson(person: Person): Promise<unknown> {
+  return run(PEOPLE, 'readwrite', (s) => s.put(person))
+}
+
+/**
+ * People are archived rather than deleted.
+ *
+ * Their shifts are what makes a past night's crew readable, and a barman who
+ * left in March must not quietly empty out every night he worked.
+ */
+export async function archivePerson(id: string): Promise<void> {
+  const person = await run<Person | undefined>(PEOPLE, 'readonly', (s) => s.get(id))
+  if (person) await savePerson({ ...person, archived: true })
+}
+
+export function listShifts(): Promise<Shift[]> {
+  return run<Shift[]>(SHIFTS, 'readonly', (s) => s.getAll())
+}
+
+export function saveShift(shift: Shift): Promise<unknown> {
+  return run(SHIFTS, 'readwrite', (s) => s.put(shift))
+}
+
+export function deleteShift(id: string): Promise<unknown> {
+  return run(SHIFTS, 'readwrite', (s) => s.delete(id))
 }

@@ -18,7 +18,8 @@ import { departmentLabel, departmentSlot } from '../core/departments.ts'
 import { formatQty, shareBp, formatPercent } from '../core/zread.ts'
 import { seriesVar, ShareBar, Legend } from '../components/charts.tsx'
 import { reconcileFull } from '../core/reconcile.ts'
-import { deleteDay, getDay, getPhoto } from '../storage/db.ts'
+import { deleteDay, getDay, getPhoto, listPeople, listShifts } from '../storage/db.ts'
+import { crewFor, formatHours, formatTime, shiftMinutes, type Person, type Shift } from '../core/rota.ts'
 import { loadSettings } from '../storage/settings.ts'
 
 function provenance(c: Capture): string {
@@ -52,7 +53,23 @@ export function DayDetail({ date, onBack, onEdit, onDeleted }: Props) {
   const [day, setDay] = useState<DayRecord | null | undefined>(undefined)
   const [shots, setShots] = useState<{ till?: string; card?: string }>({})
   const [confirming, setConfirming] = useState(false)
+  const [people, setPeople] = useState<Person[]>([])
+  const [shifts, setShifts] = useState<Shift[]>([])
   const tolerance = loadSettings().tolerancePence
+
+  useEffect(() => {
+    let cancelled = false
+    void Promise.all([listPeople(), listShifts()])
+      .then(([p, sh]) => {
+        if (cancelled) return
+        setPeople(p)
+        setShifts(sh)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [date])
 
   useEffect(() => {
     let cancelled = false
@@ -131,6 +148,35 @@ export function DayDetail({ date, onBack, onEdit, onDeleted }: Props) {
       <VerdictPanel r={r} />
 
       <ItemisedLegs r={full} />
+
+      {crewFor(date, shifts, people).shifts.length > 0 && (() => {
+        const night = crewFor(date, shifts, people)
+        return (
+          <section className="card">
+            <div className="card-head">
+              <h2>Who was on</h2>
+              <span className="hint">{formatHours(night.minutes)}{night.costPence === null ? '' : ` · ${formatMoney(night.costPence)}`}</span>
+            </div>
+            {night.shifts.map((sh) => {
+              const person = people.find((p) => p.id === sh.personId)
+              return (
+                <div className="zrow" key={sh.id}>
+                  <span className="zname">
+                    <span
+                      className="legend-dot"
+                      style={{ background: seriesVar(person?.slot ?? 1), marginRight: 8 }}
+                      aria-hidden="true"
+                    />
+                    {person?.name ?? 'Someone'}
+                    <small>{formatTime(sh.startMin)}–{formatTime(sh.endMin)}</small>
+                  </span>
+                  <span className="num">{formatHours(shiftMinutes(sh))}</span>
+                </div>
+              )
+            })}
+          </section>
+        )
+      })()}
 
       {zRead && (
         <section className="card">

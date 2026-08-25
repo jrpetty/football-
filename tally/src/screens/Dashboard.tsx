@@ -31,7 +31,16 @@ import { departmentSlot } from '../core/departments.ts'
 import { formatShort, tradingDayKey } from '../core/date.ts'
 import { formatMoney, formatSigned } from '../core/money.ts'
 import { formatQty } from '../core/zread.ts'
-import { listDays, loadPriceBook } from '../storage/db.ts'
+import { listDays, listPeople, listShifts, loadPriceBook } from '../storage/db.ts'
+import {
+  crewFor,
+  crewStats,
+  formatHours,
+  labourShareBp,
+  MIN_NIGHTS_FOR_COMPARISON,
+  type Person,
+  type Shift,
+} from '../core/rota.ts'
 import { checkPrices, priceHeadline, type PriceBookEntry } from '../core/priceBook.ts'
 import { loadSettings } from '../storage/settings.ts'
 import { IconChart } from '../components/icons.tsx'
@@ -65,6 +74,8 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
   const [itemSort, setItemSort] = useState<'value' | 'quantity'>('value')
   const [showAllItems, setShowAllItems] = useState(false)
   const [book, setBook] = useState<PriceBookEntry[]>([])
+  const [people, setPeople] = useState<Person[]>([])
+  const [shifts, setShifts] = useState<Shift[]>([])
 
   useEffect(() => {
     let cancelled = false
@@ -90,6 +101,20 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
     }
   }, [refreshKey])
 
+  useEffect(() => {
+    let cancelled = false
+    void Promise.all([listPeople(), listShifts()])
+      .then(([p, sh]) => {
+        if (cancelled) return
+        setPeople(p)
+        setShifts(sh)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [refreshKey])
+
   const filter: Filter = useMemo(() => {
     const chosen = RANGES.find((r) => r.key === range)
     const f: Filter = {}
@@ -107,6 +132,37 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
   const week = useMemo(() => weekdayTotals(selected), [selected])
   const clerks = useMemo(() => clerkTotals(selected), [selected])
   const items = useMemo(() => itemTotals(selected, itemSort), [selected, itemSort])
+  const crew = useMemo(
+    () =>
+      crewStats(
+        selected.map((d) => ({ date: d.date, variancePence: d.variancePence, takingsPence: d.takingsPence })),
+        shifts,
+        people,
+      ),
+    [selected, shifts, people],
+  )
+
+  /** Hours and wages across the selected nights that actually have a rota. */
+  const labour = useMemo(() => {
+    let minutes = 0
+    let cost = 0
+    let priced = false
+    let nights = 0
+    let takings = 0
+    for (const day of selected) {
+      const night = crewFor(day.date, shifts, people)
+      if (night.shifts.length === 0) continue
+      nights++
+      minutes += night.minutes
+      takings += day.takingsPence ?? 0
+      if (night.costPence !== null) {
+        cost += night.costPence
+        priced = true
+      }
+    }
+    return { minutes, costPence: priced ? cost : null, nights, takingsPence: takings }
+  }, [selected, shifts, people])
+
   const prices = useMemo(
     () => checkPrices(itemTotals(selected).map((i) => ({ code: i.code, name: i.name, qtyMilli: i.qtyMilli, pence: i.pence })), book),
     [selected, book],
@@ -486,6 +542,71 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
               </button>
             </div>
           )}
+        </ChartCard>
+      )}
+
+      {crew.length > 0 && labour.nights > 0 && (
+        <ChartCard
+          title="Who was on"
+          subtitle={`${labour.nights} of ${selected.length} nights rostered`}
+        >
+          <div className="kpi-row">
+            <StatTile label="Hours worked" value={formatHours(labour.minutes)} detail={`over ${labour.nights} ${labour.nights === 1 ? 'night' : 'nights'}`} />
+            {labour.costPence !== null && (
+              <StatTile
+                label="Wages"
+                value={formatMoney(labour.costPence)}
+                detail={
+                  labourShareBp(labour.costPence, labour.takingsPence) === null
+                    ? undefined
+                    : `${((labourShareBp(labour.costPence, labour.takingsPence) as number) / 100).toFixed(1)}% of takings`
+                }
+              />
+            )}
+          </div>
+
+          <div className="table-wrap">
+            {/* Six columns, not seven: "other nights" is implied by the
+                difference beside it, and a seventh pushes the one column that
+                matters off the side of a phone. */}
+            <table className="data crew">
+              <thead>
+                <tr>
+                  <th scope="col">Person</th>
+                  <th scope="col">Nights</th>
+                  <th scope="col">Hours</th>
+                  <th scope="col">Avg take</th>
+                  <th scope="col">Their nights</th>
+                  <th scope="col">vs others</th>
+                </tr>
+              </thead>
+              <tbody>
+                {crew.map((c) => (
+                  <tr key={c.personId}>
+                    <th scope="row">
+                      <span className="swatch" style={{ background: seriesVar(c.slot) }} aria-hidden="true" />
+                      {c.name}
+                    </th>
+                    <td className="num">{c.nightsOn}</td>
+                    <td className="num">{formatHours(c.minutes)}</td>
+                    <td className="num">{c.avgTakingsOnPence === null ? '—' : formatMoney(c.avgTakingsOnPence)}</td>
+                    <td className="num">{c.avgVarianceOnPence === null ? '—' : formatSigned(c.avgVarianceOnPence)}</td>
+                    <td className={`num${c.meaningful && c.differencePence !== null ? ` delta ${c.differencePence < 0 ? 'short' : c.differencePence > 0 ? 'over' : 'balanced'}` : ''}`}>
+                      {c.meaningful && c.differencePence !== null ? formatSigned(c.differencePence) : 'too soon'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <p className="note">
+            The last column compares the drawer on the nights each person worked against the nights
+            they did not. Most nights have two or three people on, so this can never single anybody
+            out — it is a place to look, not a finding. Nothing is shown until there are at least{' '}
+            {MIN_NIGHTS_FOR_COMPARISON} nights on both sides, and nights with no rota are left out of
+            it entirely rather than counted as nights off.
+          </p>
         </ChartCard>
       )}
 

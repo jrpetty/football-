@@ -107,6 +107,18 @@ export function IconSliders(p: IconProps) {
   )
 }
 
+/** The rota — two people, because a pub night is never one. */
+export function IconPeople(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <circle cx="9" cy="8" r="3.4" />
+      <path d="M2.8 20.2a6.5 6.5 0 0 1 12.4 0" />
+      <path d="M16.4 5.2a3.4 3.4 0 0 1 0 6.5" />
+      <path d="M18.2 14.4a6.5 6.5 0 0 1 3.1 4.6" />
+    </Svg>
+  )
+}
+
 export function IconCamera(p: IconProps) {
   return (
     <Svg {...p}>
