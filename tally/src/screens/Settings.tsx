@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from 'react'
 import { formatMoney, parsePence, penceToInput } from '../core/money.ts'
 import { listDays, estimateUsage, prunePhotosBefore, saveDay, requestPersistence } from '../storage/db.ts'
 import { downloadFile, parseBackup, toCsv, toJson } from '../storage/export.ts'
+import { testApiKey, type KeyCheck } from '../ocr/scanZRead.ts'
 import {
   AI_MODELS,
   loadSettings,
@@ -34,6 +35,11 @@ export function Settings({ onChanged }: { onChanged: () => void }) {
   const [usage, setUsage] = useState<{ usedBytes: number; quotaBytes: number } | null>(null)
   const [toast, setToast] = useState('')
   const [showKey, setShowKey] = useState(false)
+  // The box holds its own text so "Save" means something. Saving on every
+  // keystroke, as this did before, is indistinguishable from not saving at all.
+  const [keyText, setKeyText] = useState(() => loadSettings().apiKey)
+  const [keyState, setKeyState] = useState<KeyCheck | null>(null)
+  const [checking, setChecking] = useState(false)
   const importRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -101,40 +107,105 @@ export function Settings({ onChanged }: { onChanged: () => void }) {
           <p className="help">{ENGINE_HELP[s.engine]}</p>
         </div>
 
-        {s.engine === 'vision' && (
+        {/* Always shown. The scan failure tells her to "add a key in Settings",
+            and hiding the box behind a setting she has not chosen yet makes
+            that instruction impossible to follow. */}
+        {
           <>
+            {s.engine !== 'vision' && (
+              <p className="note warn">
+                Claude is not reading the photographs at the moment, so this key will sit unused.{' '}
+                <button
+                  type="button"
+                  className="btn-small"
+                  onClick={() => update({ engine: 'vision' })}
+                >
+                  Switch Claude on
+                </button>
+              </p>
+            )}
             <div className="field">
               <label htmlFor="apiKey">Anthropic API key</label>
               <input
                 id="apiKey"
                 type={showKey ? 'text' : 'password'}
-                value={s.apiKey}
+                value={keyText}
                 autoComplete="off"
                 spellCheck={false}
                 placeholder="sk-ant-…"
-                onChange={(e) => update({ apiKey: e.target.value })}
+                onChange={(e) => setKeyText(e.target.value)}
               />
+              <div className="btn-row" style={{ marginTop: 4 }}>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  disabled={keyText.trim() === s.apiKey.trim()}
+                  onClick={() => {
+                    update({ apiKey: keyText })
+                    setKeyState(null)
+                    say(keyText.trim() ? 'Key saved.' : 'Key removed.')
+                  }}
+                >
+                  {keyText.trim() === s.apiKey.trim() ? 'Saved' : 'Save key'}
+                </button>
+                <button
+                  type="button"
+                  disabled={checking || !s.apiKey.trim()}
+                  onClick={() => {
+                    setChecking(true)
+                    setKeyState(null)
+                    void testApiKey()
+                      .then(setKeyState)
+                      .finally(() => setChecking(false))
+                  }}
+                >
+                  {checking ? 'Checking…' : 'Test it'}
+                </button>
+              </div>
               <div className="alts">
                 <button type="button" className="btn-small" onClick={() => setShowKey((v) => !v)}>
                   {showKey ? 'Hide key' : 'Show key'}
                 </button>
+                {s.apiKey.trim() ? (
+                  <span className="badge good">Key saved</span>
+                ) : (
+                  <span className="badge warn">No key yet</span>
+                )}
               </div>
+
+              {/* The answer to "is it the key, the model, or this browser?" */}
+              {keyState && (
+                <p className={`note ${keyState.ok ? '' : keyState.blocked ? 'warn' : 'bad'}`} role="status">
+                  <span className={`badge ${keyState.ok ? 'good' : keyState.blocked ? 'warn' : 'bad'}`}>
+                    {keyState.ok ? 'Works' : keyState.blocked ? 'Blocked here' : 'Not working'}
+                  </span>{' '}
+                  {keyState.message}
+                </p>
+              )}
+
               <p className="help">
-                Kept in this browser and sent straight to Anthropic — there is no server in between. It never
-                leaves the phone except to read a receipt.
+                Get one at console.anthropic.com — Billing first, then API keys. It is kept in this browser
+                and sent straight to Anthropic; there is no server in between.
               </p>
             </div>
 
             <div className="field">
               <label htmlFor="model">Model</label>
-              <select id="model" value={s.model} onChange={(e) => update({ model: e.target.value })}>
+              <select
+                id="model"
+                value={s.model}
+                onChange={(e) => {
+                  update({ model: e.target.value })
+                  setKeyState(null)
+                }}
+              >
                 {AI_MODELS.map((m) => (
                   <option key={m.id} value={m.id}>{m.label} — {m.hint}</option>
                 ))}
               </select>
             </div>
           </>
-        )}
+        }
       </section>
 
       <section className="card">

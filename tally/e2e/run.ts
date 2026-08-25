@@ -180,6 +180,26 @@ try {
   check('the night is still there after a reload', (await page.locator('.day-row').count()) === 1)
   check('and still shows it was short', (await page.locator('.day-row .delta').innerText()).includes('−£90.00'))
 
+  console.log('\nSaving a key')
+  await page.click('button:has-text("Settings")')
+  await page.waitForSelector('#apiKey', { timeout: 5000 })
+  check('the key box is on screen', (await page.locator('#apiKey').count()) === 1)
+  check('and says there is no key yet', (await page.locator('.badge:has-text("No key yet")').count()) === 1)
+  check('with nothing to save', await page.locator('button:has-text("Saved")').isDisabled())
+
+  await page.fill('#apiKey', 'sk-ant-not-a-real-key-for-testing-only')
+  await page.waitForTimeout(120)
+  check('typing enables the save button', await page.locator('button:has-text("Save key")').isEnabled())
+  await page.click('button:has-text("Save key")')
+  await page.waitForTimeout(250)
+  check('saving says so', (await page.locator('.toast').innerText()).includes('Key saved'))
+  check('and the badge confirms it', (await page.locator('.badge:has-text("Key saved")').count()) === 1)
+
+  await page.reload({ waitUntil: 'networkidle' })
+  await page.click('button:has-text("Settings")')
+  await page.waitForSelector('#apiKey', { timeout: 5000 })
+  check('the key is still there after a reload', (await page.inputValue('#apiKey')).startsWith('sk-ant-'))
+
   console.log('\nInstalling')
   const manifest = await page.evaluate(async () => {
     const res = await fetch('./manifest.webmanifest')

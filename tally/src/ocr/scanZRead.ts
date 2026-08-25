@@ -203,7 +203,14 @@ export function describeZReadError(err: unknown): string {
   if (/401|authentication|invalid x-api-key/i.test(msg)) return 'That API key was rejected. Check it in Settings.'
   if (/429|rate.?limit/i.test(msg)) return 'Rate limited — wait a moment and try again.'
   if (/credit|billing|quota/i.test(msg)) return 'There is a billing problem on that Anthropic account.'
-  if (/CORS|Failed to fetch|NetworkError/i.test(msg)) return 'Could not reach the internet. Type the figures in, or switch to on-device scanning.'
+  if (/CORS|Failed to fetch|NetworkError|load failed|Connection error/i.test(msg)) {
+    // Online but the request never left: something is refusing it. On a
+    // sandboxed preview link that is the sandbox, and no key will fix it.
+    const online = typeof navigator === 'undefined' ? true : navigator.onLine
+    return online
+      ? 'This page cannot reach Anthropic — a preview link blocks it, and no key will change that. Put the app on a real address, or type the figures in.'
+      : 'No connection. Type the figures in, or try again when the wifi is back.'
+  }
   return `Could not read that photograph: ${msg}`
 }
 
@@ -291,4 +298,74 @@ export async function scanZReadBatch(req: BatchRequest): Promise<BatchResult> {
   for (const r of results) zRead = mergeZRead(zRead, r.z)
 
   return { zRead, verdict: crossfootVerdict(zRead), photos: results.map((r) => r.outcome) }
+}
+
+
+// ---------------------------------------------------------------------------
+// Does the key actually work?
+//
+// A key box that saves silently and a scan that fails later are, together, an
+// unanswerable question: is the key wrong, is the model wrong, or can this
+// browser not reach Anthropic at all? This asks directly and says which.
+//
+// It looks the model up rather than sending it anything. That validates the
+// key, the network path and access to that particular model, and it is billed
+// nothing — so the button can be pressed as often as it takes.
+// ---------------------------------------------------------------------------
+
+export interface KeyCheck {
+  ok: boolean
+  message: string
+  /** True when the browser could not reach Anthropic at all. */
+  blocked?: boolean
+}
+
+export async function testApiKey(): Promise<KeyCheck> {
+  const settings = loadSettings()
+  const apiKey = settings.apiKey.trim()
+  if (!apiKey) return { ok: false, message: 'No key saved yet — paste one in and press Save.' }
+  if (apiKey.length < 20) return { ok: false, message: 'That looks too short to be a key. They start "sk-ant-".' }
+
+  const { default: Anthropic } = await import('@anthropic-ai/sdk')
+
+  try {
+    const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true })
+    const model = await client.models.retrieve(settings.model)
+    const name = (model as { display_name?: string }).display_name ?? settings.model
+    return { ok: true, message: `Working. ${name} is ready to read your receipts.` }
+  } catch (err) {
+    // The SDK's typed classes, not string matching on messages that change
+    // between versions. Most specific first.
+    if (err instanceof Anthropic.AuthenticationError) {
+      return { ok: false, message: 'That key was rejected. Check it was copied whole, including "sk-ant-".' }
+    }
+    if (err instanceof Anthropic.NotFoundError) {
+      return { ok: false, message: `The key works, but it cannot use ${settings.model}. Pick another model above.` }
+    }
+    if (err instanceof Anthropic.PermissionDeniedError) {
+      return { ok: false, message: 'That key is not allowed to use this model. Pick another model above.' }
+    }
+    if (err instanceof Anthropic.RateLimitError) {
+      return { ok: false, message: 'The key works — it is only rate limited this moment. Try again shortly.' }
+    }
+    if (err instanceof Anthropic.APIConnectionError) {
+      // The request never left the browser. Online, that means something in
+      // between refused it — on a sandboxed preview link, the sandbox.
+      const online = typeof navigator === 'undefined' ? true : navigator.onLine
+      return online
+        ? {
+            ok: false,
+            blocked: true,
+            message:
+              'This page cannot reach Anthropic at all, so the key is not the problem. A preview link is sandboxed and blocks the connection. On a real web address it will work.',
+          }
+        : { ok: false, message: 'No connection. Try again when the wifi is back.' }
+    }
+
+    const msg = err instanceof Error ? err.message : String(err)
+    if (/credit|billing|quota/i.test(msg)) {
+      return { ok: false, message: 'The key is valid but the account has no credit. Add some at console.anthropic.com.' }
+    }
+    return { ok: false, message: `Could not check the key: ${msg}` }
+  }
 }
