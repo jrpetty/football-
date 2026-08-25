@@ -2,6 +2,10 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './App.tsx'
 import { requestPersistence } from './storage/db.ts'
+// The display face, shipped with the app rather than fetched from a fonts
+// host: the till is counted at midnight on pub wifi, and the artifact build
+// must carry everything it needs.
+import '@fontsource-variable/fraunces/opsz.css'
 import './styles.css'
 
 const root = document.getElementById('root')

@@ -18,6 +18,7 @@ import { Stock } from './screens/Stock.tsx'
 import { ZReadReview } from './screens/ZReadReview.tsx'
 import { formatShort, tradingDayKey } from './core/date.ts'
 import type { ZRead } from './core/zread.ts'
+import { IconBarrel, IconBook, IconChart, IconMoon, IconSliders, TallyMark } from './components/icons.tsx'
 
 type Tab = 'tonight' | 'dashboard' | 'stock' | 'history' | 'settings'
 
@@ -70,14 +71,29 @@ export function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1>Tally</h1>
-        <p className="sub">{subtitle}</p>
+        <div className="brand">
+          <span className="brand-mark" aria-hidden="true"><TallyMark size={26} /></span>
+          <div>
+            <h1>Tally</h1>
+            <p className="sub">{subtitle}</p>
+          </div>
+        </div>
         <nav className="tabs" aria-label="Sections">
-          <button type="button" aria-current={tab === 'tonight' ? 'page' : undefined} onClick={() => go('tonight')}>Tonight</button>
-          <button type="button" aria-current={tab === 'dashboard' ? 'page' : undefined} onClick={() => go('dashboard')}>Trade</button>
-          <button type="button" aria-current={tab === 'stock' ? 'page' : undefined} onClick={() => go('stock')}>Cellar</button>
-          <button type="button" aria-current={tab === 'history' ? 'page' : undefined} onClick={() => go('history')}>Nights</button>
-          <button type="button" aria-current={tab === 'settings' ? 'page' : undefined} onClick={() => go('settings')}>Settings</button>
+          <button type="button" aria-current={tab === 'tonight' ? 'page' : undefined} onClick={() => go('tonight')}>
+            <IconMoon /><span>Tonight</span>
+          </button>
+          <button type="button" aria-current={tab === 'dashboard' ? 'page' : undefined} onClick={() => go('dashboard')}>
+            <IconChart /><span>Trade</span>
+          </button>
+          <button type="button" aria-current={tab === 'stock' ? 'page' : undefined} onClick={() => go('stock')}>
+            <IconBarrel /><span>Cellar</span>
+          </button>
+          <button type="button" aria-current={tab === 'history' ? 'page' : undefined} onClick={() => go('history')}>
+            <IconBook /><span>Nights</span>
+          </button>
+          <button type="button" aria-current={tab === 'settings' ? 'page' : undefined} onClick={() => go('settings')}>
+            <IconSliders /><span>Settings</span>
+          </button>
         </nav>
       </header>
 

@@ -8,6 +8,7 @@
 
 import { formatMoney, formatSigned } from '../core/money.ts'
 import { itemisedHeadline, type DayReconciliation, type LegResult, type Reconciliation } from '../core/reconcile.ts'
+import { IconAlert, IconCheck, IconClock, IconTickSmall } from './icons.tsx'
 
 const MISSING_WORDS: Record<'till' | 'card' | 'cash', string> = {
   till: 'the till roll total',
@@ -23,27 +24,27 @@ function list(items: string[]): string {
 export function VerdictPanel({ r }: { r: Reconciliation }) {
   const amount = formatMoney(Math.abs(r.variancePence))
 
-  const { glyph, headline, detail } =
+  const { icon, headline, detail } =
     r.verdict === 'balanced'
       ? {
-          glyph: '✅',
+          icon: <IconCheck size={22} strokeWidth={2.2} />,
           headline: 'Balanced',
           detail: r.variancePence === 0 ? 'The money and the till agree exactly.' : `Out by ${amount} — near enough.`,
         }
       : r.verdict === 'short'
         ? {
-            glyph: '⚠️',
+            icon: <IconAlert size={22} strokeWidth={2} />,
             headline: `Short by ${amount}`,
             detail: 'There is less money than the till says was taken.',
           }
         : r.verdict === 'over'
           ? {
-              glyph: '⚠️',
+              icon: <IconAlert size={22} strokeWidth={2} />,
               headline: `Over by ${amount}`,
               detail: 'There is more money than the till says was taken.',
             }
           : {
-              glyph: '⏳',
+              icon: <IconClock size={22} strokeWidth={2} />,
               headline: 'Not finished',
               detail: `Still need ${list(r.missing.map((m) => MISSING_WORDS[m]))}.`,
             }
@@ -51,8 +52,10 @@ export function VerdictPanel({ r }: { r: Reconciliation }) {
   return (
     // aria-live so the verdict is announced when it changes, rather than only
     // being visible to someone already looking at the bottom of the screen.
-    <div className={`verdict ${r.verdict}`} role="status" aria-live="polite">
-      <span className="glyph" aria-hidden="true">{glyph}</span>
+    // Keyed on the verdict so a change re-runs the entrance animation — the
+    // moment the answer arrives is the moment worth a flicker of ceremony.
+    <div key={r.verdict} className={`verdict ${r.verdict}`} role="status" aria-live="polite">
+      <span className="verdict-icon" aria-hidden="true">{icon}</span>
       <span className="words">
         <span className="headline">{headline}</span>
         <span className="detail"> {detail}</span>
@@ -83,7 +86,7 @@ export function ItemisedLegs({ r }: { r: DayReconciliation }) {
           </small>
         </span>
         <span className={`delta ${leg.verdict}`} style={{ fontSize: 16 }}>
-          {leg.verdict === 'balanced' ? '✅' : formatSigned(leg.variancePence)}
+          {leg.verdict === 'balanced' ? <IconTickSmall size={18} /> : formatSigned(leg.variancePence)}
         </span>
       </div>
     )

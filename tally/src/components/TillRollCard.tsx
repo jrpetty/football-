@@ -22,6 +22,7 @@ import { formatMoney, parsePence } from '../core/money.ts'
 import { isZReadEmpty, sectionLabel, sectionsIn, type ZRead } from '../core/zread.ts'
 import type { CaptureConfidence, CaptureSource } from '../core/types.ts'
 import { scanZReadBatch, type PhotoOutcome } from '../ocr/scanZRead.ts'
+import { IconCamera, IconReceipt, IconTickSmall } from './icons.tsx'
 
 export interface RollState {
   zRead?: ZRead
@@ -66,9 +67,12 @@ interface Props {
   value: RollState
   onChange: (next: RollState) => void
   onReview: () => void
+  /** Where this sits in the nightly walk down the page. */
+  step?: number
+  done?: boolean
 }
 
-export function TillRollCard({ value, onChange, onReview }: Props) {
+export function TillRollCard({ value, onChange, onReview, step, done }: Props) {
   const pickRef = useRef<HTMLInputElement>(null)
   const cameraRef = useRef<HTMLInputElement>(null)
   const abortRef = useRef<AbortController | null>(null)
@@ -182,6 +186,11 @@ export function TillRollCard({ value, onChange, onReview }: Props) {
   return (
     <section className="card">
       <div className="card-head">
+        {step !== undefined && (
+          <span className={`step-dot${done ? ' done' : ''}`} aria-hidden="true">
+            {done ? <IconTickSmall size={13} /> : step}
+          </span>
+        )}
         <h2>Till roll</h2>
         <span className="hint">Z read</span>
       </div>
@@ -220,7 +229,7 @@ export function TillRollCard({ value, onChange, onReview }: Props) {
           </>
         ) : (
           <>
-            <span className="dz-glyph" aria-hidden="true">🧾</span>
+            <span className="dz-glyph" aria-hidden="true"><IconReceipt size={30} strokeWidth={1.5} /></span>
             <strong>{value.photos.length ? 'Add more of the roll' : 'Add the till roll'}</strong>
             <span className="dz-hint">
               Tap to pick every photo at once — the roll takes two or three. It works out which is which.
@@ -231,7 +240,7 @@ export function TillRollCard({ value, onChange, onReview }: Props) {
 
       <div className="alts">
         <button type="button" className="btn-small" onClick={() => cameraRef.current?.click()} disabled={value.scanning}>
-          📷 Use the camera
+          <IconCamera size={17} /> Use the camera
         </button>
         {value.photos.length > 0 && (
           <button

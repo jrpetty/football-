@@ -13,6 +13,7 @@ import { reconcileDay } from '../core/reconcile.ts'
 import type { DayRecord } from '../core/types.ts'
 import { listDays } from '../storage/db.ts'
 import { loadSettings } from '../storage/settings.ts'
+import { IconBook, IconChevronRight, IconTickSmall } from '../components/icons.tsx'
 
 interface Props {
   onOpen: (date: string) => void
@@ -48,6 +49,7 @@ export function History({ onOpen, onStart, refreshKey }: Props) {
     return (
       <div className="main">
         <div className="empty">
+          <span className="empty-mark"><IconBook size={40} strokeWidth={1.4} /></span>
           <p>No nights recorded yet.</p>
           <p>Close up, photograph the till roll and the card slip, and the first one will appear here.</p>
         </div>
@@ -76,9 +78,10 @@ export function History({ onOpen, onStart, refreshKey }: Props) {
                 {r.verdict === 'incomplete'
                   ? '—'
                   : r.verdict === 'balanced'
-                    ? '✅'
+                    ? <IconTickSmall size={18} />
                     : formatSigned(r.variancePence)}
               </span>
+              <span className="chev" aria-hidden="true"><IconChevronRight size={16} /></span>
             </button>
           )
         })}

@@ -240,8 +240,15 @@ export function TrendChart({ points }: { points: TrendPoint[] }) {
             </g>
           ))}
 
-          <path d={area} fill="var(--series-1)" opacity={0.1} />
-          <path d={line} fill="none" stroke="var(--series-1)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+          <defs>
+            {/* The wash under the line, fading to nothing — takings as weather. */}
+            <linearGradient id="trend-fade" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="var(--series-1)" stopOpacity="0.26" />
+              <stop offset="1" stopColor="var(--series-1)" stopOpacity="0.02" />
+            </linearGradient>
+          </defs>
+          <path d={area} fill="url(#trend-fade)" />
+          <path d={line} fill="none" stroke="var(--series-1)" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
 
           {/* The end point, ringed in the surface colour so it reads over the line. */}
           <circle cx={x(points.length - 1)} cy={y(last.pence)} r={4.5} fill="var(--series-1)" stroke="var(--surface)" strokeWidth={2} />

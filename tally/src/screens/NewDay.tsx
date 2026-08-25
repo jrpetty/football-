@@ -26,6 +26,7 @@ import { isZReadEmpty, type ZRead } from '../core/zread.ts'
 import { getDay, getPhoto, saveDay, savePhoto } from '../storage/db.ts'
 import { loadSettings } from '../storage/settings.ts'
 import { makeThumbnail } from '../ocr/index.ts'
+import { IconTickSmall } from '../components/icons.tsx'
 
 function figureFromCapture(capture: Capture, photo?: Blob): FigureState {
   const text = penceToInput(capture.pence)
@@ -180,6 +181,8 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
           onReview={() => {
             if (roll.zRead) onReviewRoll(roll.zRead, (next) => setRoll({ ...roll, zRead: next }))
           }}
+          step={1}
+          done={rollTotalPence(roll) !== null}
         />
 
         <FigureCard
@@ -188,10 +191,15 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
           kind="card"
           value={card}
           onChange={setCard}
+          step={2}
+          done={parsePence(card.text) !== null}
         />
 
         <section className="card">
           <div className="card-head">
+            <span className={`step-dot${parsePence(cashText) !== null ? ' done' : ''}`} aria-hidden="true">
+              {parsePence(cashText) !== null ? <IconTickSmall size={13} /> : 3}
+            </span>
             <h2>Cash counted</h2>
             <span className="hint">
               {expected.cashPence === undefined ? 'From the drawer' : `till says ${formatMoney(expected.cashPence)}`}

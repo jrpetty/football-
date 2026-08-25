@@ -34,6 +34,7 @@ import { formatQty } from '../core/zread.ts'
 import { listDays, loadPriceBook } from '../storage/db.ts'
 import { checkPrices, priceHeadline, type PriceBookEntry } from '../core/priceBook.ts'
 import { loadSettings } from '../storage/settings.ts'
+import { IconChart } from '../components/icons.tsx'
 import {
   BarChart,
   ChartCard,
@@ -118,6 +119,7 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
     return (
       <div className="main">
         <div className="empty">
+          <span className="empty-mark"><IconChart size={40} strokeWidth={1.4} /></span>
           <p>Nothing to show yet.</p>
           <p>Save a night or two and this fills in — takings, the department split, and where the money went astray.</p>
         </div>

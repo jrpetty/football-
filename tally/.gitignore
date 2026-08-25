@@ -6,3 +6,4 @@ dist
 dist-single
 tally-single.html
 *.traineddata
+shots/
