@@ -134,6 +134,59 @@ for (const scheme of ['dark', 'light'] as const) {
     await page.waitForTimeout(150)
   }
 
+  // A brewery rise the board did not follow, so the alerts have something real.
+  await page.evaluate(async () => {
+    // No named function consts in here: esbuild wraps those in a __name helper
+    // that does not exist in the page, and the call fails with a bare
+    // ReferenceError a long way from the cause.
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, 3000)
+      try {
+        const req = indexedDB.open('tally')
+        req.onsuccess = () => {
+          const tx = req.result.transaction('stock', 'readwrite')
+          const store = tx.objectStore('stock')
+          const get = store.get('config')
+          get.onsuccess = () => {
+            const config = get.result as
+              | { items: Array<{ name: string; container?: { baseUnits: number }; cost?: unknown; costHistory?: unknown[] }> }
+              | undefined
+            const taddy = config?.items.find((i) => i.name === 'Taddy Lager')
+            if (config && taddy?.container) {
+              taddy.cost = { pence: 10800, baseUnits: taddy.container.baseUnits }
+              taddy.costHistory = [
+                { date: '2026-01-01', pence: 9500, baseUnits: taddy.container.baseUnits },
+                { date: '2026-08-26', pence: 10800, baseUnits: taddy.container.baseUnits },
+              ]
+              store.put(config)
+            }
+          }
+          tx.oncomplete = () => {
+            clearTimeout(timer)
+            resolve()
+          }
+          tx.onerror = () => {
+            clearTimeout(timer)
+            resolve()
+          }
+        }
+        req.onerror = () => {
+          clearTimeout(timer)
+          resolve()
+        }
+        req.onblocked = () => {
+          clearTimeout(timer)
+          resolve()
+        }
+      } catch {
+        clearTimeout(timer)
+        resolve()
+      }
+    })
+  })
+
+  await page.reload({ waitUntil: 'networkidle' })
+
   // Trade again, now the rota covers the seeded night, so the crew card is there.
   await page.click('button:has-text("Trade")')
   await page.waitForSelector('.kpi-row', { timeout: 5000 })

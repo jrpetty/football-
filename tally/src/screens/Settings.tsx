@@ -9,7 +9,22 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { formatMoney, parsePence, penceToInput } from '../core/money.ts'
-import { listDays, estimateUsage, prunePhotosBefore, saveDay, requestPersistence } from '../storage/db.ts'
+import {
+  listDays,
+  listDeliveries,
+  listPeople,
+  listShifts,
+  loadStockConfig,
+  estimateUsage,
+  loadDigest,
+  prunePhotosBefore,
+  saveDay,
+  requestPersistence,
+} from '../storage/db.ts'
+import { dayStats } from '../core/analytics.ts'
+import { addDays, tradingDayKey } from '../core/date.ts'
+import { cellarValue, costOf } from '../core/margin.ts'
+import { monthlyCsv, monthlyTakings, yearEndPack } from '../core/yearEnd.ts'
 import { downloadFile, parseBackup, toCsv, toJson } from '../storage/export.ts'
 import { testApiKey, type KeyCheck } from '../ocr/scanZRead.ts'
 import { describeWeatherError, findPlace, type Place } from '../weather/openMeteo.ts'
@@ -50,6 +65,9 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
     const f = loadSettings().standingFloatPence
     return f > 0 ? penceToInput(f) : ''
   })
+  const [nudge, setNudge] = useState<NotificationPermission | 'unsupported'>(() =>
+    typeof Notification === 'undefined' ? 'unsupported' : Notification.permission,
+  )
   const [placeQuery, setPlaceQuery] = useState('')
   const [places, setPlaces] = useState<Place[] | null>(null)
   const [findingPlace, setFindingPlace] = useState(false)
@@ -69,6 +87,117 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
   function say(message: string) {
     setToast(message)
     setTimeout(() => setToast(''), 5000)
+  }
+
+  /**
+   * Ask for the weekly nudge.
+   *
+   * Two separate permissions, and only the first is universal: showing a
+   * notification at all, and being woken up on a schedule to show one. The
+   * second is registered where it exists and quietly skipped where it does not,
+   * because a browser that cannot do it is not a failure to report — it is
+   * simply an app that speaks when opened, as it did before.
+   */
+  async function askForNudge() {
+    if (typeof Notification === 'undefined') return say('This browser does not do notifications.')
+    const permission = await Notification.requestPermission()
+    setNudge(permission)
+    if (permission !== 'granted') return say('Left switched off.')
+
+    try {
+      const registration = await navigator.serviceWorker.ready
+      const periodic = (registration as unknown as {
+        periodicSync?: { register: (tag: string, options: { minInterval: number }) => Promise<void> }
+      }).periodicSync
+      if (periodic) {
+        await periodic.register('tally-weekly', { minInterval: 7 * 24 * 60 * 60 * 1000 })
+        say('On. You will get one a week.')
+      } else {
+        say('On — though this browser will only show it while Tally is open.')
+      }
+    } catch {
+      say('On — though this browser would not agree to a weekly schedule.')
+    }
+  }
+
+  /** What this week's would say, so it is not a mystery what was signed up for. */
+  async function showNudgeNow() {
+    const digest = await loadDigest().catch(() => null)
+    const body = digest?.summary ?? 'Nothing worked out yet — open Trade once and it will fill in.'
+    try {
+      const registration = await navigator.serviceWorker.ready
+      await registration.showNotification('Tally', { body, icon: './icon-192.png', tag: 'tally-weekly' })
+    } catch {
+      say(body)
+    }
+  }
+
+  /**
+   * The year's pack, assembled.
+   *
+   * Everything in it exists elsewhere in the app; what has never existed is the
+   * putting together, which is the part that goes wrong when it is done by hand
+   * the night before a deadline.
+   */
+  async function exportYearEnd() {
+    const to = tradingDayKey()
+    const from = addDays(to, -364)
+    const tolerance = s.tolerancePence
+
+    const [days, shifts, people, stock, deliveries] = await Promise.all([
+      listDays(),
+      listShifts(),
+      listPeople(),
+      loadStockConfig(),
+      listDeliveries(),
+    ])
+    if (days.length === 0) return say('No nights recorded yet.')
+
+    const stats = days.map((d) => dayStats(d, tolerance))
+    // Valued at what is on hand now, which is what a year end asks for.
+    const onHand = new Map<string, number>()
+    for (const delivery of deliveries) {
+      for (const line of delivery.lines) {
+        onHand.set(line.stockItemId, (onHand.get(line.stockItemId) ?? 0) + line.baseUnits)
+      }
+    }
+    const cellar = stock.items.length
+      ? cellarValue(
+          stock.items.map((item) => ({
+            item,
+            countedBaseUnits: 0,
+            deliveredBaseUnits: 0,
+            pouredBaseUnits: 0,
+            expectedBaseUnits: onHand.get(item.id) ?? 0,
+          })),
+        )
+      : null
+
+    // What was bought in over the year, at the costs entered — the input side.
+    let purchasesPence: number | null = null
+    for (const delivery of deliveries) {
+      if (delivery.date < from || delivery.date > to) continue
+      for (const line of delivery.lines) {
+        const item = stock.items.find((i) => i.id === line.stockItemId)
+        const cost = item ? costOf(item, line.baseUnits) : null
+        if (cost !== null) purchasesPence = (purchasesPence ?? 0) + cost
+      }
+    }
+
+    const text = yearEndPack({
+      from,
+      to,
+      days: stats,
+      shifts,
+      people,
+      cellar,
+      vatBp: s.vatBp,
+      purchasesPence,
+    })
+
+    downloadFile(`year-end-${to}.txt`, text, 'text/plain')
+    downloadFile(`takings-by-month-${to}.csv`, monthlyCsv(monthlyTakings(stats.filter((d) => d.date >= from && d.date <= to), s.vatBp)), 'text/csv')
+    say('Year-end pack saved — the summary and the monthly figures.')
   }
 
   async function exportCsv() {
@@ -410,6 +539,44 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
       </section>
 
       <section className="card">
+        <div className="card-head">
+          <h2>The weekly nudge</h2>
+          {nudge === 'granted' && <span className="badge good">On</span>}
+        </div>
+        <p className="help" style={{ marginTop: 0 }}>
+          Once a week, the phone can show the one thing most worth knowing — a weekday well down on
+          last year, a line whose margin has slipped, a cellar that does not agree with the till.
+        </p>
+        <div className="btn-row">
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={nudge === 'granted' || nudge === 'denied'}
+            onClick={() => void askForNudge()}
+          >
+            {nudge === 'granted' ? 'Switched on' : nudge === 'denied' ? 'Blocked in the browser' : 'Turn it on'}
+          </button>
+          {nudge === 'granted' && (
+            <button type="button" className="btn-small" onClick={() => void showNudgeNow()}>
+              Show me this week's
+            </button>
+          )}
+        </div>
+        <p className="help">
+          Worth being straight about what this is. A proper push notification needs a server to send
+          it, and this app has none — nothing about the pub's takings leaves the phone, which is the
+          whole point of it. What a browser will do instead is wake the app on a schedule, on Android
+          and on a phone where Tally has been added to the home screen; on an iPhone it will not.
+          {nudge === 'denied' && ' Notifications are blocked for this site, which has to be undone in the browser rather than here.'}
+        </p>
+        <p className="help">
+          It also shows what the app last worked out rather than checking afresh, because the part of
+          the browser that wakes up cannot do the sums. Opening Tally now and again keeps it current —
+          which counting up every night does anyway.
+        </p>
+      </section>
+
+      <section className="card">
         <div className="card-head"><h2>The photographs</h2></div>
         <div className="switch">
           <span>
@@ -430,6 +597,25 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
             Delete photographs over 90 days old
           </button>
         </div>
+      </section>
+
+      <section className="card">
+        <div className="card-head">
+          <h2>The year end</h2>
+          <span className="hint">for the accountant</span>
+        </div>
+        <p className="help" style={{ marginTop: 0 }}>
+          The last twelve months put together in one go: takings by month, the split between cash and
+          card, what is in the cellar at cost, the hours rostered, and the VAT on both sides. Two
+          files — a summary to read and a spreadsheet for the detail.
+        </p>
+        <button type="button" className="btn-primary" onClick={() => void exportYearEnd()}>
+          Make the year-end pack
+        </button>
+        <p className="help">
+          Working figures drawn from the till, not a return — the VAT lines especially are something
+          to hand an accountant, not something to file. It says so on the document.
+        </p>
       </section>
 
       <section className="card">

@@ -1219,3 +1219,24 @@ table.data.crew th[scope='row'] { white-space: nowrap; }
 }
 .counter-sub { font-size: 10.5px; color: var(--faint); height: 14px; line-height: 14px; text-align: right; }
 .btn-scan .glyph { font-size: 21px; font-weight: 650; color: var(--accent); line-height: 1; }
+
+/* A sub-line inside a table row that carries a verdict. */
+.hint.bad { color: var(--bad); }
+
+/* This week worth knowing about. */
+.alerts { border-color: color-mix(in srgb, var(--warn) 35%, var(--line)); }
+.alert { display: flex; gap: 11px; padding: 11px 0; border-top: 1px solid var(--line-soft); }
+.alert:first-of-type { border-top: 0; }
+.alert-mark {
+  flex: none; width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 8px;
+  color: var(--muted);
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+.alert.bad .alert-mark { color: var(--bad); }
+.alert.warn .alert-mark { color: var(--warn); }
+.alert.info .alert-mark { color: var(--accent); }
+.alert-words { min-width: 0; }
+.alert-words strong { display: block; font-size: 14.5px; line-height: 1.35; }
+.alert-words small { display: block; margin-top: 2px; font-size: 12.5px; color: var(--muted); line-height: 1.45; }

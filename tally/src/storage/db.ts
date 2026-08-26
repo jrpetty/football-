@@ -20,10 +20,10 @@ import type { DayWeather } from '../core/forecast.ts'
 
 const DB_NAME = 'tally'
 /**
- * v2 added the price book, v3 the cellar, v4 the rota, v5 the weather. Nothing
- * already stored changes shape on any of them.
+ * v2 added the price book, v3 the cellar, v4 the rota, v5 the weather, v6 the
+ * weekly digest. Nothing already stored changes shape on any of them.
  */
-const DB_VERSION = 5
+const DB_VERSION = 6
 const DAYS = 'days'
 const PHOTOS = 'photos'
 const PRICES = 'prices'
@@ -33,6 +33,7 @@ const COUNTS = 'stockcounts'
 const PEOPLE = 'people'
 const SHIFTS = 'shifts'
 const WEATHER = 'weather'
+const DIGEST = 'digest'
 
 let dbPromise: Promise<IDBDatabase> | null = null
 
@@ -66,6 +67,10 @@ function open(): Promise<IDBDatabase> {
       // twice — and so a forecast is replaced by the actual weather once the
       // day has been and gone.
       if (!db.objectStoreNames.contains(WEATHER)) db.createObjectStore(WEATHER, { keyPath: 'date' })
+      // One record. The page writes what it last worked out; the service
+      // worker reads it when the browser wakes it up, because a worker cannot
+      // run the analytics itself.
+      if (!db.objectStoreNames.contains(DIGEST)) db.createObjectStore(DIGEST, { keyPath: 'id' })
     }
     req.onsuccess = () => resolve(req.result)
     req.onerror = () => reject(req.error ?? new Error('Could not open the database.'))
@@ -314,4 +319,24 @@ export function listWeather(): Promise<DayWeather[]> {
 
 export async function saveWeather(days: readonly DayWeather[]): Promise<void> {
   for (const day of days) await run(WEATHER, 'readwrite', (s) => s.put(day))
+}
+
+
+// --- the weekly digest --------------------------------------------------------
+
+export interface Digest {
+  id: 'weekly'
+  /** The one line a notification has room for. */
+  summary: string
+  count: number
+  updatedAt: number
+}
+
+export async function loadDigest(): Promise<Digest | null> {
+  const row = await run<Digest | undefined>(DIGEST, 'readonly', (s) => s.get('weekly'))
+  return row ?? null
+}
+
+export function saveDigest(summary: string, count: number): Promise<unknown> {
+  return run(DIGEST, 'readwrite', (s) => s.put({ id: 'weekly', summary, count, updatedAt: Date.now() }))
 }

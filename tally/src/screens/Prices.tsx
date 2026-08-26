@@ -23,6 +23,8 @@ import {
   type PriceProposal,
   type SoldItem,
 } from '../core/priceBook.ts'
+import { record } from '../core/history.ts'
+import { tradingDayKey } from '../core/date.ts'
 import { scanPriceBoard } from '../ocr/scanList.ts'
 import { describeZReadError } from '../ocr/scanZRead.ts'
 import { IconCamera, IconTickSmall } from '../components/icons.tsx'
@@ -98,7 +100,7 @@ export function Prices({ onChanged }: { onChanged: () => void }) {
     if (!proposals) return
     const taking = acceptable(proposals)
     if (taking.length === 0) return say('Nothing to apply.')
-    const next = applyPrices(book, taking)
+    const next = applyPrices(book, taking, tradingDayKey())
     await commit(next)
     setDrafts(Object.fromEntries(next.map((e) => [e.code ?? `name:${e.name}`, penceToInput(e.pence)])))
     setProposals(null)
@@ -126,7 +128,11 @@ export function Prices({ onChanged }: { onChanged: () => void }) {
       if (text.trim() === '' && lookup(index, item)) await commit(without)
       return
     }
-    await commit([...without, { code: item.code, name: item.name, pence }])
+    // The line's own history follows it, so a price typed by hand shows up in
+    // "what changed" beside one read off a photograph of the board.
+    const existing = lookup(index, item)
+    const history = record(existing?.history ?? [], { date: tradingDayKey(), pence })
+    await commit([...without, { code: item.code, name: item.name, pence, history }])
   }
 
   if (items === null) return <div className="main"><p className="note"><span className="spinner" /> Loading…</p></div>

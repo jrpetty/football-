@@ -98,3 +98,76 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(cacheFirst(request))
   }
 })
+
+
+/* ---------------------------------------------------------------------------
+   The weekly nudge.
+
+   A push notification in the ordinary sense needs a server to send it, and this
+   app deliberately has none — nothing about a pub's takings leaves the phone.
+   What a browser will do without one is wake a service worker on a schedule,
+   where it is supported at all, and let it show something.
+
+   So the worker does not work anything out. The page computes the week's
+   findings whenever it is opened and leaves one line behind in IndexedDB; this
+   reads that line and shows it. That is honest about what it is — a reminder of
+   what the app last knew, not a live check — and it is why the interface says
+   to open the app now and then.
+   --------------------------------------------------------------------------- */
+
+function readDigest() {
+  return new Promise((resolve) => {
+    let settled = false
+    const done = (value) => {
+      if (!settled) {
+        settled = true
+        resolve(value)
+      }
+    }
+    try {
+      const req = indexedDB.open('tally')
+      req.onsuccess = () => {
+        const db = req.result
+        if (!db.objectStoreNames.contains('digest')) return done(null)
+        const tx = db.transaction('digest', 'readonly')
+        const get = tx.objectStore('digest').get('weekly')
+        get.onsuccess = () => done(get.result ?? null)
+        tx.onerror = () => done(null)
+      }
+      req.onerror = () => done(null)
+      req.onblocked = () => done(null)
+    } catch {
+      done(null)
+    }
+  })
+}
+
+async function showWeekly() {
+  const digest = await readDigest()
+  if (!digest || !digest.summary) return
+  // Nothing to say is a reason to stay quiet, not to send an empty notification.
+  if (digest.count === 0) return
+  await self.registration.showNotification('Tally', {
+    body: digest.summary,
+    icon: './icon-192.png',
+    badge: './icon-192.png',
+    tag: 'tally-weekly',
+    data: { url: './' },
+  })
+}
+
+self.addEventListener('periodicsync', (event) => {
+  if (event.tag === 'tally-weekly') event.waitUntil(showWeekly())
+})
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if ('focus' in client) return client.focus()
+      }
+      return self.clients.openWindow('./')
+    }),
+  )
+})

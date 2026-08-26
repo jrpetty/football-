@@ -64,6 +64,14 @@ export interface StockItem {
    * this line reads as unknown rather than as free beer.
    */
   cost?: { pence: number; baseUnits: number }
+  /**
+   * Every cost this line has been at, oldest first.
+   *
+   * Alongside `cost` rather than instead of it: everything that reads a cost
+   * keeps working untouched, and the log answers the separate question of when
+   * the brewery moved and whether the board followed.
+   */
+  costHistory?: Array<{ date: string; pence: number; baseUnits: number }>
 }
 
 /** One sold line, and what it takes out of the cellar. */

@@ -64,7 +64,7 @@ test('applying replaces by code and leaves the rest of the book alone', () => {
     { code: '9', name: 'CRISPS', pence: 170 },
   ]
   const proposals = proposePrices([{ name: 'Pint Alpine', pence: 320 }], TILL, book)
-  const next = applyPrices(book, proposals)
+  const next = applyPrices(book, proposals, '2026-08-26')
   assert.equal(next.length, 2)
   assert.equal(next.find((b) => b.code === '3')!.pence, 320)
   assert.equal(next.find((b) => b.code === '9')!.pence, 170, 'untouched')
@@ -72,7 +72,7 @@ test('applying replaces by code and leaves the rest of the book alone', () => {
 
 test('applying an unmatched row writes nothing', () => {
   const proposals = proposePrices([{ name: 'Pork Scratchings', pence: 150 }], TILL, [])
-  assert.deepEqual(applyPrices([], proposals), [])
+  assert.deepEqual(applyPrices([], proposals, '2026-08-26'), [])
 })
 
 // --- the rota -----------------------------------------------------------------

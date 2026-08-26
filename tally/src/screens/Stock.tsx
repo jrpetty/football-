@@ -41,6 +41,7 @@ import {
   type StockItem,
 } from '../core/stock.ts'
 import { bestMatch } from '../core/match.ts'
+import { record } from '../core/history.ts'
 import { scanDeliveryNote } from '../ocr/scanList.ts'
 import { describeZReadError } from '../ocr/scanZRead.ts'
 import { IconCamera, IconTickSmall } from '../components/icons.tsx'
@@ -180,11 +181,17 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
         const name = patch.name ?? i.container?.name ?? 'container'
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { container: _c, cost: _p, ...bare } = i
+        const costs = hasPrice && hasSize
+          ? record(i.costHistory ?? [], { date: tradingDayKey(), pence, baseUnits })
+          : i.costHistory
         return {
           ...bare,
           ...(hasSize ? { container: { name, baseUnits } } : {}),
           // A price with no size is not yet a cost; it waits in the box.
           ...(hasPrice && hasSize ? { cost: { pence, baseUnits } } : {}),
+          // Kept whatever happens to the current cost: a line going uncosted
+          // must not erase what it used to cost.
+          ...(costs && costs.length > 0 ? { costHistory: costs } : {}),
         }
       }),
     }

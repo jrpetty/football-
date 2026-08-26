@@ -29,6 +29,8 @@ export interface PriceBookEntry {
   /** The price on the board, in pence. */
   pence: number
   note?: string
+  /** Every price this line has been at, oldest first. See core/history.ts. */
+  history?: Array<{ date: string; pence: number }>
 }
 
 export interface SoldItem {
@@ -192,6 +194,7 @@ export function priceHeadline(report: PriceReport): string {
 // --- reading the board -------------------------------------------------------
 
 import { bestMatch } from './match.ts'
+import { record } from './history.ts'
 
 export interface PriceProposal {
   /** The line as written on the board. */
@@ -251,7 +254,12 @@ export function proposePrices(
 }
 
 /** Fold accepted proposals into the book, replacing by code where there is one. */
-export function applyPrices(book: readonly PriceBookEntry[], accepted: readonly PriceProposal[]): PriceBookEntry[] {
+export function applyPrices(
+  book: readonly PriceBookEntry[],
+  accepted: readonly PriceProposal[],
+  /** The day the board was read, so the change is dated when it happened. */
+  on: string,
+): PriceBookEntry[] {
   const next = [...book]
   for (const row of accepted) {
     // Hoisted so the narrowing survives into the closure below.
@@ -261,8 +269,9 @@ export function applyPrices(book: readonly PriceBookEntry[], accepted: readonly 
     const at = next.findIndex((b) =>
       code && b.code ? b.code.toUpperCase() === code.toUpperCase() : normalise(b.name) === normalise(name),
     )
-    const entry: PriceBookEntry = { name, pence: row.pence, ...(code ? { code } : {}) }
     const found = at >= 0 ? next[at] : undefined
+    const history = record(found?.history ?? [], { date: on, pence: row.pence })
+    const entry: PriceBookEntry = { name, pence: row.pence, ...(code ? { code } : {}), history }
     if (found) next[at] = { ...found, ...entry }
     else next.push(entry)
   }

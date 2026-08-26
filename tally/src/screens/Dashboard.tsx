@@ -34,6 +34,10 @@ import { formatQty } from '../core/zread.ts'
 import { listDays, listPeople, listShifts, loadPriceBook, loadStockConfig, EMPTY_STOCK, type StockConfig } from '../storage/db.ts'
 import { marginReport } from '../core/margin.ts'
 import { forecastWeek, MIN_FOR_WEATHER, type DayWeather } from '../core/forecast.ts'
+import { marginMoves } from '../core/history.ts'
+import { alertSummary, weeklyAlerts } from '../core/alerts.ts'
+import { saveDigest } from '../storage/db.ts'
+import { IconAlert } from '../components/icons.tsx'
 import { likeForLike } from '../core/analytics.ts'
 import { listWeather, saveWeather } from '../storage/db.ts'
 import { describeWeatherError, fetchForecast, fetchHistory } from '../weather/openMeteo.ts'
@@ -272,6 +276,45 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
     return likeForLike(all, dates[0] as string, dates[dates.length - 1] as string)
   }, [all, selected])
 
+  const moves = useMemo(
+    () => marginMoves(stock.items, stock.pours, book, loadSettings().vatBp),
+    [stock, book],
+  )
+
+  /**
+   * The week's findings, from everything already worked out above.
+   *
+   * Per weekday rather than overall: "trade is down" is a mood, and "Fridays
+   * are down twelve percent" is something to do something about.
+   */
+  const alerts = useMemo(() => {
+    if (all === null) return []
+    const WEEKDAY_NAMES = WEEKDAYS
+    const weekdayYoY = WEEKDAY_NAMES.map((weekday) => {
+      const mine = all.filter((d) => d.weekday === weekday && d.takingsPence !== null)
+      if (mine.length === 0) return null
+      const dates = mine.map((d) => d.date).sort()
+      return { weekday, change: likeForLike(all, dates[0] as string, dates[dates.length - 1] as string) }
+    }).filter((x): x is { weekday: string; change: ReturnType<typeof likeForLike> } => x !== null)
+
+    return weeklyAlerts({
+      recent: [...all].sort((a, b) => b.date.localeCompare(a.date)),
+      weekdayYoY,
+      gp,
+      moves,
+      // Lines with no board price specifically — uncostedCount also counts
+      // lines that have a price but no cost yet, which is a different job.
+      unpricedCount: gp.lines.filter((l) => l.missing === 'price').length,
+    })
+  }, [all, gp, moves])
+
+  // Left where the service worker can find it, since a worker cannot run any
+  // of the above itself. See public/sw.js.
+  useEffect(() => {
+    if (all === null) return
+    void saveDigest(alertSummary(alerts), alerts.length).catch(() => {})
+  }, [alerts, all])
+
   const prices = useMemo(
     () => checkPrices(itemTotals(selected).map((i) => ({ code: i.code, name: i.name, qtyMilli: i.qtyMilli, pence: i.pence })), book),
     [selected, book],
@@ -399,6 +442,30 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
         />
         <StatTile label="Balanced" value={`${t.balancedNights}/${t.nights}`} detail={`${t.shortNights} short, ${t.overNights} over`} tone={t.balancedNights === t.nights ? 'good' : undefined} />
       </div>
+
+      {alerts.length > 0 && (
+        <section className="card alerts">
+          <div className="card-head">
+            <h2>Worth knowing</h2>
+            <span className="badge warn">{alerts.length}</span>
+          </div>
+          {alerts.map((a) => (
+            <div className={`alert ${a.level}`} key={a.id}>
+              <span className="alert-mark" aria-hidden="true">
+                <IconAlert size={16} strokeWidth={2} />
+              </span>
+              <span className="alert-words">
+                <strong>{a.headline}</strong>
+                <small>{a.detail}</small>
+              </span>
+            </div>
+          ))}
+          <p className="note">
+            Only things worth acting on appear here, and never more than five — a list nobody
+            finishes is a list nobody reads.
+          </p>
+        </section>
+      )}
 
       {/* --- what next week might take --------------------------------------- */}
       {forecast && forecast.nightsUsed >= 3 && (
@@ -806,6 +873,63 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
             before profit is counted — a £4.00 pint is £3.33 to the pub — and the cost is the invoice
             price ex VAT.
             {gp.uncostedCount > 0 && ` ${gp.uncostedCount} lines have no price or no cost entered yet and are left out of both figures above.`}
+          </p>
+        </ChartCard>
+      )}
+
+      {moves.length > 0 && (
+        <ChartCard
+          title="What changed underneath"
+          subtitle={`${moves.filter((m) => m.verdict === 'squeezed').length} being absorbed`}
+        >
+          <div className="table-wrap">
+            <table className="data crew">
+              <thead>
+                <tr>
+                  <th scope="col">Line</th>
+                  <th scope="col">Cost</th>
+                  <th scope="col">Sells at</th>
+                  <th scope="col">GP then</th>
+                  <th scope="col">Now</th>
+                </tr>
+              </thead>
+              <tbody>
+                {moves.map((m) => (
+                  <tr key={m.code}>
+                    <th scope="row">
+                      {m.name}
+                      <br />
+                      <span className={`hint${m.verdict === 'squeezed' ? ' bad' : ''}`}>
+                        {m.verdict === 'squeezed'
+                          ? 'you are absorbing this'
+                          : m.verdict === 'kept up'
+                            ? 'the board kept up'
+                            : m.verdict === 'improved'
+                              ? 'better than it was'
+                              : 'unchanged'}
+                      </span>
+                    </th>
+                    <td className="num">
+                      {formatMoney(m.costThenPence)}
+                      {m.costNowPence !== m.costThenPence && <> → {formatMoney(m.costNowPence)}</>}
+                    </td>
+                    <td className="num">
+                      {formatMoney(m.priceThenPence)}
+                      {m.priceNowPence !== m.priceThenPence && <> → {formatMoney(m.priceNowPence)}</>}
+                    </td>
+                    <td className="num">{(m.then.gpBp / 100).toFixed(1)}%</td>
+                    <td className={`num${m.gpChangeBp <= -100 ? ' bad' : m.gpChangeBp >= 100 ? ' good' : ''}`}>
+                      {(m.now.gpBp / 100).toFixed(1)}%
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="note">
+            A brewery puts a cask up and nothing breaks — the night still balances, the cellar still
+            reconciles, and the pint quietly makes less. This is the only place that shows up. Lines
+            marked as absorbed are ones where the cost moved and the board did not follow.
           </p>
         </ChartCard>
       )}

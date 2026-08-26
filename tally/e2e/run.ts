@@ -608,6 +608,73 @@ try {
     'three nights is the floor; one night forecasts nothing',
   )
 
+  console.log('\nWhen the brewery put the price up')
+  // The £95 entered earlier is dated today, and a second figure typed the same
+  // day is a correction rather than a price rise — which is right, and means a
+  // real rise has to be staged with an older point behind it.
+  await page.evaluate(async () => {
+    await new Promise<void>((resolve, reject) => {
+      const req = indexedDB.open('tally')
+      req.onsuccess = () => {
+        const tx = req.result.transaction('stock', 'readwrite')
+        const store = tx.objectStore('stock')
+        const get = store.get('config')
+        get.onsuccess = () => {
+          const config = get.result as {
+            items: Array<{ name: string; container?: { baseUnits: number }; costHistory?: unknown[] }>
+          }
+          const taddy = config.items.find((i) => i.name === 'Taddy Lager')
+          if (taddy?.container) {
+            taddy.costHistory = [
+              { date: '2026-01-01', pence: 9500, baseUnits: taddy.container.baseUnits },
+              ...((taddy.costHistory ?? []) as Array<Record<string, unknown>>).filter(
+                (p) => p.date !== '2026-01-01',
+              ),
+            ]
+          }
+          store.put(config)
+        }
+        tx.oncomplete = () => resolve()
+        tx.onerror = () => reject(tx.error)
+      }
+      req.onerror = () => reject(req.error)
+    })
+  })
+  await page.reload({ waitUntil: 'networkidle' })
+
+  // Now the cask goes up, and the board does not follow. Nothing anywhere
+  // fails — the pint just makes less.
+  await page.click('button:has-text("Cellar")')
+  await page.waitForSelector('.chip:has-text("What it costs")', { timeout: 5000 })
+  await page.click('.chip:has-text("What it costs")')
+  await page.waitForSelector('input[aria-label="Taddy Lager cost"]', { timeout: 5000 })
+  await page.fill('input[aria-label="Taddy Lager cost"]', '108.00')
+  await page.waitForTimeout(500)
+  const risen = await page.locator('.main').innerText()
+  check('a risen cost re-prices the pint', risen.includes('£1.50'), '£108 across 72 pints')
+
+  await page.click('button:has-text("Trade")')
+  await page.waitForSelector('.kpi-row', { timeout: 5000 })
+  const changed = await page.locator('.main').innerText()
+  check('the movement is reported', changed.includes('What changed underneath'), changed.slice(0, 140))
+  check('with both costs shown', /£1\.32 → £1\.50/.test(changed))
+  check(
+    'and names it as being absorbed',
+    /absorbing this/.test(changed),
+    'the board never moved, so the margin fell',
+  )
+
+  console.log('\nWorth knowing')
+  const worth = await page.locator('.main').innerText()
+  check('the week has findings at the top', worth.includes('Worth knowing'), worth.slice(0, 140))
+  check(
+    'including the cost rise nobody passed on',
+    /costs £1\.50 now, up from £1\.32/.test(worth),
+    worth.slice(0, 400),
+  )
+  const alertCount = await page.locator('.alert').count()
+  check('and never more than five of them', alertCount > 0 && alertCount <= 5, `got ${alertCount}`)
+
   console.log('\nStaff records')
   await page.click('button:has-text("Rota")')
   await page.waitForSelector('.chip:has-text("Records")', { timeout: 5000 })
