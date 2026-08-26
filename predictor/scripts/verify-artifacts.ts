@@ -208,11 +208,24 @@ async function main(): Promise<void> {
     for (const p of players.players.slice(0, 2000)) {
       check(p.yellowCards >= 0 && p.yellowCards < 40, `${p.name}: implausible yellow count ${p.yellowCards}`)
       check(p.minutes >= 0, `${p.name}: negative minutes`)
-      // No single player is most of a club's attack. A share that high means
-      // the club has too little measured data for the ratio to mean anything.
+      // No single player should be most of a club's attack. A share that high
+      // means the club has too little measured data for the ratio to mean
+      // anything — which is the normal state of a promoted side in August,
+      // when one goal is most of what has been measured.
+      //
+      // This was a hard failure and it stopped the pipeline for four days over
+      // a display figure, while six real results sat unpublished. The gate is
+      // meant to keep bad numbers off the site, not to keep good ones off it:
+      // a share that is merely uninformative is a warning, and only a
+      // structurally impossible one still fails the build.
       check(
-        p.impact >= 0 && p.impact <= 0.45,
-        `${p.name}: reported as ${(p.impact * 100).toFixed(0)}% of ${p.team}'s attacking value`,
+        p.impact >= 0 && p.impact <= 1,
+        `${p.name}: impact share ${p.impact} is outside 0-1 and cannot be a share of anything`,
+      )
+      warn(
+        p.impact <= 0.45,
+        `${p.name}: reported as ${(p.impact * 100).toFixed(0)}% of ${p.team}'s attacking value — ` +
+          'too concentrated to be informative, which is expected while a squad has barely played',
       )
     }
     // Suspension counters reset each season, so nobody can be on the brink

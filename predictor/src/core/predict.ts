@@ -129,6 +129,30 @@ export function venueDetail(attackDev: number, defenceDev: number): string {
   return `Their own home record, over and above the league-wide advantage: ${parts.join(', ')} here than their overall rating implies`
 }
 
+/**
+ * The score to put in front of a reader.
+ *
+ * The single most likely exact score is often a draw even when the model
+ * favours a win — 1-1 was the modal scoreline in seven of gameweek one's ten
+ * matches, and a draw was the likeliest outcome in none of them. Quoting that
+ * beside a "62% home" bar reads as a contradiction. This takes the most likely
+ * score *within* the most likely outcome instead, so the headline can never
+ * disagree with the probabilities. The true global mode is still published in
+ * the full scoreline list.
+ *
+ * The ledger records this same figure, because the score a forecast is graded
+ * on has to be the score it actually showed.
+ */
+export function headlineScore(f: {
+  probs: Probs
+  modalScore: { home: Scoreline; draw: Scoreline; away: Scoreline }
+}): { home: number; away: number } {
+  const { home, draw, away } = f.probs
+  if (home >= draw && home >= away) return f.modalScore.home
+  if (away >= draw && away >= home) return f.modalScore.away
+  return f.modalScore.draw
+}
+
 /** Build a fixture prediction, recording every term as it is applied. */
 export function predictFixture(
   input: FixtureInput,

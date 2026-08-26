@@ -14,7 +14,7 @@ import { writeJson, readJson, dataPath } from './lib/fsjson.ts'
 import { clubName, club } from '../src/config/teams.ts'
 import { teamAvailability } from '../src/core/availability.ts'
 import { restProfile } from '../src/core/congestion.ts'
-import { predictFixture, type TeamContext } from '../src/core/predict.ts'
+import { predictFixture, headlineScore, type TeamContext } from '../src/core/predict.ts'
 import { buildEvidence } from '../src/core/evidence.ts'
 import { analyseUpset } from '../src/core/upset.ts'
 import { playerProps } from '../src/core/playerProps.ts'
@@ -354,10 +354,11 @@ async function main(): Promise<void> {
         probs: prediction.probs,
         lambdaHome: prediction.lambdaHome,
         lambdaAway: prediction.lambdaAway,
-        predictedScore: {
-          home: prediction.topScorelines[0]?.home ?? 0,
-          away: prediction.topScorelines[0]?.away ?? 0,
-        },
+        // The score the site actually shows. Grading against the global modal
+        // scoreline instead — which is what this did — means the record judges
+        // a prediction nobody was ever given: the board said Brentford 2-1
+        // while the ledger graded 1-1.
+        predictedScore: headlineScore(prediction),
       }
       const existing = ledgerIndex.get(key)
       if (!existing && !kickedOff) {
