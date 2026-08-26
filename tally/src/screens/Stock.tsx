@@ -15,12 +15,18 @@
 // only one of the three that a perfect night's reconciliation cannot see.
 // ---------------------------------------------------------------------------
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { dayStats, itemTotals } from '../core/analytics.ts'
 import { addDays, formatShort, tradingDayKey } from '../core/date.ts'
 import {
   buildLedger,
   compareToCount,
+  containersToBase,
+  CONTAINER_SIZES,
+  deadStock,
+  deliveryLinesFrom,
+  describeStock,
+  proposeDelivery,
   formatServings,
   formatServingsSigned,
   guessPour,
@@ -31,8 +37,13 @@ import {
   type Delivery,
   type Pour,
   type PourGuess,
+  type DeliveryProposal,
   type StockItem,
 } from '../core/stock.ts'
+import { bestMatch } from '../core/match.ts'
+import { scanDeliveryNote } from '../ocr/scanList.ts'
+import { describeZReadError } from '../ocr/scanZRead.ts'
+import { IconCamera, IconTickSmall } from '../components/icons.tsx'
 import {
   listDays,
   listDeliveries,
@@ -50,20 +61,6 @@ import { buildIndex, lookup, type PriceBookEntry } from '../core/priceBook.ts'
 import { formatMoney, parsePence, penceToInput } from '../core/money.ts'
 
 type Panel = 'levels' | 'delivery' | 'count' | 'costs' | 'setup'
-
-/**
- * The containers a cellar actually receives, in servings.
- *
- * Offered as one tap because "how many pints in a firkin" is the sort of thing
- * that is obvious in the trade and looked up by everyone else.
- */
-const CONTAINERS = [
-  { label: 'Firkin (72)', servings: 72 },
-  { label: 'Kil (144)', servings: 144 },
-  { label: 'Keg (88)', servings: 88 },
-  { label: 'Case (24)', servings: 24 },
-  { label: 'Bottle (1)', servings: 1 },
-] as const
 
 /**
  * How a cellar line is counted, given every measure that draws on it.
@@ -102,6 +99,15 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
   /** Draft numbers being typed into the delivery or count sheets. */
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [sheetDate, setSheetDate] = useState(tradingDayKey())
+  const [scanning, setScanning] = useState(false)
+  const [scanError, setScanError] = useState('')
+  const [scanNotes, setScanNotes] = useState('')
+  const [proposals, setProposals] = useState<DeliveryProposal[] | null>(null)
+  const [rejected, setRejected] = useState<Set<number>>(new Set())
+  const noteRef = useRef<HTMLInputElement>(null)
+  const abortRef = useRef<AbortController | null>(null)
+
+  useEffect(() => () => abortRef.current?.abort(), [])
 
   useEffect(() => {
     let cancelled = false
@@ -139,23 +145,48 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
    * a cost once both sides are real numbers; clearing either takes it away
    * again, which is how a mistyped price is undone.
    */
-  async function setCost(item: StockItem, priceText: string, sizeText: string) {
-    setDrafts((d) => ({ ...d, [`${item.id}:price`]: priceText, [`${item.id}:size`]: sizeText }))
+  /**
+   * Set the unit a line arrives in and what it costs, together.
+   *
+   * Deliberately one function taking both boxes rather than two taking one
+   * each. The cost is a price *per container*, so neither figure means
+   * anything without the other — and handling them separately meant typing
+   * the price before the size silently threw the price away, because at that
+   * moment there was no size to attach it to. Reading both drafts on every
+   * keystroke means whichever is typed second completes the pair.
+   */
+  async function setLine(item: StockItem, patch: { name?: string; sizeText?: string; priceText?: string }) {
+    const sizeKey = `${item.id}:size`
+    const priceKey = `${item.id}:price`
+    const currentSize = drafts[sizeKey] ?? (item.container ? String(Math.round(item.container.baseUnits / item.servingBaseUnits)) : '')
+    const currentPrice = drafts[priceKey] ?? (item.cost ? penceToInput(item.cost.pence) : '')
+
+    const sizeText = patch.sizeText ?? currentSize
+    const priceText = patch.priceText ?? currentPrice
+    setDrafts((d) => ({ ...d, [sizeKey]: sizeText, [priceKey]: priceText }))
     if (!config) return
 
-    const pence = parsePence(priceText)
     const servings = Number(sizeText.trim())
-    const usable = pence !== null && pence > 0 && Number.isFinite(servings) && servings > 0
+    const hasSize = sizeText.trim() !== '' && Number.isFinite(servings) && servings > 0
+    const baseUnits = hasSize ? Math.round(servings * item.servingBaseUnits) : 0
+
+    const pence = parsePence(priceText)
+    const hasPrice = pence !== null && pence > 0
 
     const next = {
       ...config,
-      items: config.items.map((i) =>
-        i.id !== item.id
-          ? i
-          : usable
-            ? { ...i, cost: { pence, baseUnits: Math.round(servings * i.servingBaseUnits) } }
-            : (({ cost: _drop, ...rest }) => rest)(i),
-      ),
+      items: config.items.map((i) => {
+        if (i.id !== item.id) return i
+        const name = patch.name ?? i.container?.name ?? 'container'
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { container: _c, cost: _p, ...bare } = i
+        return {
+          ...bare,
+          ...(hasSize ? { container: { name, baseUnits } } : {}),
+          // A price with no size is not yet a cost; it waits in the box.
+          ...(hasPrice && hasSize ? { cost: { pence, baseUnits } } : {}),
+        }
+      }),
     }
     setConfig(next)
     await saveStockConfig(next)
@@ -256,13 +287,63 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
     say(`${next.items.length} cellar lines set up from ${seen.length} till lines.`)
   }
 
+  async function readNote(file: File) {
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+    setScanning(true)
+    setScanError('')
+    setScanNotes('')
+    try {
+      const result = await scanDeliveryNote(file, controller.signal)
+      if (controller.signal.aborted) return
+      const rows = proposeDelivery(result.lines, config?.items ?? [], bestMatch)
+      setProposals(rows)
+      setRejected(new Set())
+      setScanNotes(result.notes)
+      if (rows.length === 0) setScanError('No stock lines could be read on that note.')
+    } catch (err) {
+      if (controller.signal.aborted) return
+      setScanError(describeZReadError(err))
+    } finally {
+      if (!controller.signal.aborted) setScanning(false)
+    }
+  }
+
+  function acceptable(rows: DeliveryProposal[]): DeliveryProposal[] {
+    return rows.filter((r, i) => !rejected.has(i) && r.status === 'ready')
+  }
+
+  async function bookNote() {
+    if (!proposals) return
+    const lines = deliveryLinesFrom(acceptable(proposals))
+    if (lines.length === 0) return say('Nothing on that note to book in.')
+    const delivery: Delivery = { id: `${sheetDate}-${Date.now().toString(36)}`, date: sheetDate, lines }
+    await saveDelivery(delivery)
+    setDeliveries(await listDeliveries())
+    setProposals(null)
+    onChanged()
+    say(`Delivery of ${lines.length} ${lines.length === 1 ? 'line' : 'lines'} booked in from the note.`)
+    setPanel('levels')
+  }
+
   async function saveSheet(kind: 'delivery' | 'count') {
-    const lines = Object.entries(drafts)
-      .map(([id, text]) => {
-        const item = config!.items.find((i) => i.id === id)
-        const servings = Number(text)
-        if (!item || !Number.isFinite(servings) || text.trim() === '') return null
-        return { stockItemId: id, baseUnits: servingsToBase(servings, item) }
+    // Each line can be entered as whole containers, as loose servings, or as
+    // both — "two kils and about thirty pints" is one line, not two.
+    const lines = (config?.items ?? [])
+      .map((item) => {
+        const fullText = drafts[`${item.id}:full`] ?? ''
+        const looseText = drafts[item.id] ?? ''
+        if (fullText.trim() === '' && looseText.trim() === '') return null
+
+        const full = fullText.trim() === '' ? 0 : Number(fullText)
+        const loose = looseText.trim() === '' ? 0 : Number(looseText)
+        if (!Number.isFinite(full) || !Number.isFinite(loose)) return null
+
+        const baseUnits = item.container
+          ? containersToBase(full, loose, item)
+          : servingsToBase(loose, item)
+        return { stockItemId: item.id, baseUnits }
       })
       .filter((l): l is { stockItemId: string; baseUnits: number } => l !== null)
 
@@ -338,7 +419,7 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
                       <td className="num">{formatServings(l.countedBaseUnits, l.item)}</td>
                       <td className="num">{formatServings(l.deliveredBaseUnits, l.item)}</td>
                       <td className="num">{formatServings(l.pouredBaseUnits, l.item)}</td>
-                      <td className={`num delta ${l.expectedBaseUnits < 0 ? 'short' : ''}`}>
+                      <td className={`num delta ${l.expectedBaseUnits < 0 ? 'short' : ''}`} title={describeStock(l.expectedBaseUnits, l.item)}>
                         {formatServings(l.expectedBaseUnits, l.item)}
                       </td>
                     </tr>
@@ -372,21 +453,130 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
             <label htmlFor="sheet-date">Date</label>
             <input id="sheet-date" type="date" value={sheetDate} onChange={(e) => e.target.value && setSheetDate(e.target.value)} />
           </div>
-          {config.items.map((item) => (
-            <div className="zrow" key={item.id}>
-              <span className="zname">
-                {item.name}
-                <small>in {item.servingName}s</small>
-              </span>
+
+          {panel === 'delivery' && (
+            <>
+              <div className="alts">
+                <button type="button" className="btn-small" onClick={() => noteRef.current?.click()} disabled={scanning}>
+                  {scanning ? <><span className="spinner" /> Reading the note…</> : <><IconCamera size={17} /> Photograph the note</>}
+                </button>
+              </div>
               <input
-                aria-label={`${item.name} ${panel === 'delivery' ? 'delivered' : 'counted'}`}
-                inputMode="decimal"
-                placeholder="—"
-                value={drafts[item.id] ?? ''}
-                onChange={(e) => setDrafts((d) => ({ ...d, [item.id]: e.target.value }))}
+                ref={noteRef}
+                type="file"
+                accept="image/*"
+                className="visually-hidden"
+                data-testid="file-note"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  e.target.value = ''
+                  if (file) void readNote(file)
+                }}
               />
+              {scanError && <p className="note bad" role="status">{scanError}</p>}
+              {scanNotes && !scanError && <p className="note warn" role="status">{scanNotes}</p>}
+            </>
+          )}
+          {panel === 'delivery' && proposals && (
+            <div className="proposal">
+              <div className="card-head">
+                <h2>What the note says</h2>
+                <span className="badge">{acceptable(proposals).length} to book in</span>
+              </div>
+              <p className="note" style={{ marginTop: 0 }}>
+                Nothing is in the cellar yet. Quantities are read as whole containers where the line
+                has a size set — two kils is 288 pints, not two.
+              </p>
+              {proposals.map((row, i) => {
+                const off = rejected.has(i)
+                const item = config.items.find((it) => it.id === row.stockItemId)
+                return (
+                  <div className="zrow" key={`${row.written}-${i}`}>
+                    <span className="zname">
+                      {row.itemName ?? row.written}
+                      <small>
+                        {row.status === 'unmatched' && `“${row.written}” — nothing in the cellar matches`}
+                        {row.status === 'ambiguous' && `“${row.written}” — could be ${row.between?.join(' or ')}`}
+                        {row.status === 'no-container' && `${row.quantity} ${row.unit} — no size set for that unit`}
+                        {row.status === 'ready' && item && (
+                          <>
+                            {row.quantity} {row.unit || (row.countedAs === 'container' ? item.container?.name ?? '' : item.servingName)}
+                            {' · '}
+                            {describeStock(row.baseUnits ?? 0, item)}
+                          </>
+                        )}
+                      </small>
+                    </span>
+                    {row.status === 'ready' ? (
+                      <button
+                        type="button"
+                        className="chip"
+                        aria-pressed={!off}
+                        aria-label={`${off ? 'Include' : 'Skip'} ${row.itemName ?? row.written}`}
+                        onClick={() =>
+                          setRejected((r) => {
+                            const next = new Set(r)
+                            if (next.has(i)) next.delete(i)
+                            else next.add(i)
+                            return next
+                          })
+                        }
+                      >
+                        {off ? 'Skipped' : <IconTickSmall size={13} />}
+                      </button>
+                    ) : (
+                      <span className="badge warn">by hand</span>
+                    )}
+                  </div>
+                )
+              })}
+              <div className="btn-row" style={{ marginTop: 14 }}>
+                <button type="button" className="btn-primary" onClick={() => void bookNote()}>
+                  Book {acceptable(proposals).length} in
+                </button>
+                <button type="button" className="btn-small" onClick={() => setProposals(null)}>
+                  Throw it away
+                </button>
+              </div>
             </div>
-          ))}
+          )}
+
+          {config.items.map((item) => {
+            const perContainer = item.container
+              ? Math.round(item.container.baseUnits / item.servingBaseUnits)
+              : 0
+            // A container worth counting is one that holds more than a serving.
+            const counted = perContainer > 1
+            const word = panel === 'delivery' ? 'delivered' : 'counted'
+            return (
+              <div className="zrow" key={item.id}>
+                <span className="zname">
+                  {item.name}
+                  <small>
+                    {counted
+                      ? `${item.container!.name}s of ${perContainer}, then loose ${item.servingName}s`
+                      : `in ${item.servingName}s`}
+                  </small>
+                </span>
+                {counted && (
+                  <input
+                    aria-label={`${item.name} ${item.container!.name}s ${word}`}
+                    inputMode="decimal"
+                    placeholder={item.container!.name}
+                    value={drafts[`${item.id}:full`] ?? ''}
+                    onChange={(e) => setDrafts((d) => ({ ...d, [`${item.id}:full`]: e.target.value }))}
+                  />
+                )}
+                <input
+                  aria-label={`${item.name} ${word}`}
+                  inputMode="decimal"
+                  placeholder={counted ? item.servingName : '—'}
+                  value={drafts[item.id] ?? ''}
+                  onChange={(e) => setDrafts((d) => ({ ...d, [item.id]: e.target.value }))}
+                />
+              </div>
+            )
+          })}
           <button type="button" className="btn-primary" style={{ marginTop: 12 }} onClick={() => void saveSheet(panel)}>
             {panel === 'delivery' ? 'Book the delivery in' : 'Save the stock take'}
           </button>
@@ -413,55 +603,69 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
           </p>
 
           {config.items.map((item) => {
-            const servings = item.cost ? Math.round(item.cost.baseUnits / item.servingBaseUnits) : 0
+            const servings = item.container ? Math.round(item.container.baseUnits / item.servingBaseUnits) : 0
             const priceKey = `${item.id}:price`
             const sizeKey = `${item.id}:size`
             const perServing = costOf(item, item.servingBaseUnits)
-            // The sell price of the commonest pour off this line, for GP.
             const pour = config.pours.find((p) => p.stockItemId === item.id)
             const sell = pour ? lookup(buildIndex(book), { code: pour.itemCode, name: pour.itemName }) : undefined
-            const gp =
-              sell && pour && costOf(item, pour.baseUnits) !== null
-                ? margin(sell.pence, costOf(item, pour.baseUnits) as number, loadSettings().vatBp)
-                : null
+            const pourCost = pour ? costOf(item, pour.baseUnits) : null
+            const gp = sell && pourCost !== null ? margin(sell.pence, pourCost, loadSettings().vatBp) : null
+            const sizeText = drafts[sizeKey] ?? (servings ? String(servings) : '')
 
             return (
-              <div className="zrow" key={item.id}>
-                <span className="zname">
-                  {item.name}
-                  <small>
+              <div className="stock-line" key={item.id}>
+                <div className="stock-line-head">
+                  <strong>{item.name}</strong>
+                  <span className="hint">
                     {perServing === null
-                      ? `per ${item.servingName} — not costed yet`
+                      ? `not costed · per ${item.servingName}`
                       : `${formatMoney(perServing)} a ${item.servingName}`}
-                    {gp && ` · ${(gp.gpBp / 100).toFixed(1)}% GP at ${formatMoney(gp.sellPence)}`}
-                  </small>
-                </span>
-                <input
-                  aria-label={`${item.name} cost`}
-                  inputMode="decimal"
-                  placeholder="£ —"
-                  value={drafts[priceKey] ?? (item.cost ? penceToInput(item.cost.pence) : '')}
-                  onChange={(e) => void setCost(item, e.target.value, drafts[sizeKey] ?? String(servings || ''))}
-                />
-                <input
-                  aria-label={`${item.name} servings per container`}
-                  inputMode="numeric"
-                  placeholder={item.servingName === 'pint' ? '72' : '1'}
-                  value={drafts[sizeKey] ?? (servings ? String(servings) : '')}
-                  onChange={(e) => void setCost(item, drafts[priceKey] ?? (item.cost ? penceToInput(item.cost.pence) : ''), e.target.value)}
-                />
+                    {gp && ` · ${(gp.gpBp / 100).toFixed(1)}% GP`}
+                  </span>
+                </div>
+                <div className="stock-line-row">
+                  <select
+                    aria-label={`${item.name} container`}
+                    value={CONTAINER_SIZES.some((c) => c.name === item.container?.name) ? item.container!.name : ''}
+                    onChange={(e) => {
+                      const preset = CONTAINER_SIZES.find((c) => c.name === e.target.value)
+                      void setLine(item, {
+                        ...(preset ? { name: preset.name, sizeText: String(preset.servings) } : { name: '' }),
+                      })
+                    }}
+                  >
+                    <option value="">unit…</option>
+                    {CONTAINER_SIZES.map((c) => (
+                      <option key={c.name} value={c.name}>
+                        {c.name} ({c.servings})
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    aria-label={`${item.name} servings per container`}
+                    inputMode="numeric"
+                    placeholder={item.servingName === 'pint' ? '72' : '1'}
+                    value={sizeText}
+                    onChange={(e) => void setLine(item, { sizeText: e.target.value })}
+                  />
+                  <input
+                    aria-label={`${item.name} cost`}
+                    inputMode="decimal"
+                    placeholder="£ —"
+                    value={drafts[priceKey] ?? (item.cost ? penceToInput(item.cost.pence) : '')}
+                    onChange={(e) => void setLine(item, { priceText: e.target.value })}
+                  />
+                </div>
               </div>
             )
           })}
 
-          <div className="chip-row" style={{ marginTop: 12 }}>
-            {CONTAINERS.map((c) => (
-              <span key={c.label} className="chip" aria-hidden="true">{c.label}</span>
-            ))}
-          </div>
           <p className="note">
-            The second box is how many servings the container holds — the sizes above are the usual ones.
-            Anything left blank simply has no margin figure; nothing is ever assumed to be free.
+            The unit is what a delivery arrives as and what the price is for — a kil of Taddy is 144
+            pints, a firkin 72. Set it once and the cellar counts in barrels rather than in pints, and
+            the invoice price divides itself down. Anything left blank simply has no margin figure;
+            nothing is ever assumed to be free.
           </p>
         </section>
       )}
@@ -534,7 +738,7 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
                 <div className="zrow" key={l.item.id}>
                   <span className="zname">
                     {l.item.name}
-                    <small>{formatServings(l.baseUnits, l.item)}</small>
+                    <small>{describeStock(l.baseUnits, l.item)}</small>
                   </span>
                   <span className="num">{formatMoney(l.pence as number)}</span>
                 </div>
@@ -546,6 +750,55 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
                 “What it costs”.
               </p>
             )}
+          </section>
+        )
+      })()}
+
+      {panel === 'levels' && config.items.length > 0 && (() => {
+        // Measured over the same open window the levels above use, so the
+        // rate and the stock on hand are talking about the same period.
+        const days = Math.max(1, Math.round((Date.parse(tradingDayKey()) - Date.parse(since)) / 86_400_000))
+        const slow = deadStock(ledger, usageBetween(since), days, costOf)
+        if (slow.length === 0) return null
+        return (
+          <section className="card">
+            <div className="card-head">
+              <h2>Not earning its keep</h2>
+              <span className="hint">over {days} days</span>
+            </div>
+            <div className="table-wrap">
+              <table className="data crew">
+                <thead>
+                  <tr>
+                    <th scope="col">Line</th>
+                    <th scope="col">A week</th>
+                    <th scope="col">On hand</th>
+                    <th scope="col">Lasts</th>
+                    <th scope="col">Tied up</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {slow.map((l) => (
+                    <tr key={l.item.id}>
+                      <th scope="row">
+                        {l.item.name}
+                        <br />
+                        <span className="hint">{l.reason === 'not selling' ? 'barely sells' : 'too much ordered'}</span>
+                      </th>
+                      <td className="num">{l.perWeek}</td>
+                      <td className="num">{describeStock(l.onHandBaseUnits, l.item)}</td>
+                      <td className="num">{l.weeksOfCover === null ? '—' : `${l.weeksOfCover}w`}</td>
+                      <td className="num">{l.tiedUpPence === null ? '—' : formatMoney(l.tiedUpPence)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="note">
+              Two different problems. “Barely sells” is a listing decision — under {2} a week, it may
+              not be worth the space at all. “Too much ordered” is an ordering one: the beer is fine,
+              there is just over two months of it downstairs. The column that matters is the last one.
+            </p>
           </section>
         )
       })()}

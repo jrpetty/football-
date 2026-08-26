@@ -24,6 +24,10 @@ export interface Settings {
   keepPhotos: boolean
   /** VAT on a pint, in basis points. Standard rate, but rates do change. */
   vatBp: number
+  /** Hours the week is meant to come to. 0 means no target is set. */
+  weeklyHoursTarget: number
+  /** Where the pub is, for the weather. Empty name means none set. */
+  place: { name: string; latitude: number; longitude: number }
 }
 
 export const AI_MODELS = [
@@ -38,6 +42,8 @@ export const DEFAULT_SETTINGS: Settings = {
   engine: 'vision',
   tolerancePence: DEFAULT_TOLERANCE_PENCE,
   vatBp: 2000,
+  weeklyHoursTarget: 0,
+  place: { name: '', latitude: 0, longitude: 0 },
   keepPhotos: true,
 }
 
@@ -81,6 +87,29 @@ function parseVat(raw: string | null): number {
   return Math.round(n)
 }
 
+/** A weekly hours target. Zero, or absent, means no target at all. */
+function parseHours(raw: string | null): number {
+  if (raw === null) return DEFAULT_SETTINGS.weeklyHoursTarget
+  const n = Number(raw)
+  if (!Number.isFinite(n) || n < 0 || n > 1000) return DEFAULT_SETTINGS.weeklyHoursTarget
+  return Math.round(n * 10) / 10
+}
+
+/** The stored location. Anything malformed reads as "not set". */
+function parsePlace(raw: string | null): Settings['place'] {
+  if (!raw) return DEFAULT_SETTINGS.place
+  try {
+    const p = JSON.parse(raw) as Record<string, unknown>
+    const name = typeof p.name === 'string' ? p.name : ''
+    const latitude = typeof p.latitude === 'number' ? p.latitude : NaN
+    const longitude = typeof p.longitude === 'number' ? p.longitude : NaN
+    if (!name || !Number.isFinite(latitude) || !Number.isFinite(longitude)) return DEFAULT_SETTINGS.place
+    return { name, latitude, longitude }
+  } catch {
+    return DEFAULT_SETTINGS.place
+  }
+}
+
 export function loadSettings(): Settings {
   const engine = read('engine')
   return {
@@ -93,6 +122,8 @@ export function loadSettings(): Settings {
     tolerancePence: parseTolerance(read('tolerance')),
     keepPhotos: (read('keepPhotos') ?? 'true') === 'true',
     vatBp: parseVat(read('vatBp')),
+    weeklyHoursTarget: parseHours(read('weeklyHoursTarget')),
+    place: parsePlace(read('place')),
   }
 }
 
@@ -103,6 +134,8 @@ export function saveSettings(s: Settings): void {
   write('tolerance', String(s.tolerancePence))
   write('keepPhotos', String(s.keepPhotos))
   write('vatBp', String(s.vatBp))
+  write('weeklyHoursTarget', String(s.weeklyHoursTarget))
+  write('place', JSON.stringify(s.place))
 }
 
 /**

@@ -12,6 +12,7 @@ import { formatMoney, parsePence, penceToInput } from '../core/money.ts'
 import { listDays, estimateUsage, prunePhotosBefore, saveDay, requestPersistence } from '../storage/db.ts'
 import { downloadFile, parseBackup, toCsv, toJson } from '../storage/export.ts'
 import { testApiKey, type KeyCheck } from '../ocr/scanZRead.ts'
+import { describeWeatherError, findPlace, type Place } from '../weather/openMeteo.ts'
 import {
   AI_MODELS,
   loadSettings,
@@ -32,6 +33,11 @@ const ENGINE_HELP: Record<EnginePreference, string> = {
 export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; onOpenPrices: () => void }) {
   const [s, setS] = useState<SettingsShape>(loadSettings)
   const [toleranceText, setToleranceText] = useState(() => penceToInput(loadSettings().tolerancePence))
+  const [vatText, setVatText] = useState(() => String(loadSettings().vatBp / 100))
+  const [hoursText, setHoursText] = useState(() => {
+    const h = loadSettings().weeklyHoursTarget
+    return h > 0 ? String(h) : ''
+  })
   const [usage, setUsage] = useState<{ usedBytes: number; quotaBytes: number } | null>(null)
   const [toast, setToast] = useState('')
   const [showKey, setShowKey] = useState(false)
@@ -40,6 +46,9 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
   const [keyText, setKeyText] = useState(() => loadSettings().apiKey)
   const [keyState, setKeyState] = useState<KeyCheck | null>(null)
   const [checking, setChecking] = useState(false)
+  const [placeQuery, setPlaceQuery] = useState('')
+  const [places, setPlaces] = useState<Place[] | null>(null)
+  const [findingPlace, setFindingPlace] = useState(false)
   const importRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -238,6 +247,137 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
             A night out by less than {formatMoney(s.tolerancePence)} is called balanced. Set it to £0.00 to be
             told about every penny — but a till that has taken four hundred cash transactions is routinely a
             few pence out, and an app that cried wolf nightly would stop being read.
+          </p>
+        </div>
+      </section>
+
+      <section className="card">
+        <div className="card-head"><h2>The trade</h2></div>
+        <div className="field">
+          <label htmlFor="vat">VAT rate</label>
+          <input
+            id="vat"
+            inputMode="decimal"
+            value={vatText}
+            onChange={(e) => {
+              setVatText(e.target.value)
+              const percent = Number(e.target.value)
+              if (Number.isFinite(percent) && percent >= 0 && percent <= 100) update({ vatBp: Math.round(percent * 100) })
+            }}
+          />
+          <p className="help">
+            Taken off the selling price before gross profit is worked out, because that part of it is
+            never yours. At {(s.vatBp / 100).toFixed(1)}% a £4.00 pint is {formatMoney(Math.round((400 * 10000) / (10000 + s.vatBp)))} to the pub.
+          </p>
+        </div>
+        <div className="field">
+          <label htmlFor="place">Where the pub is</label>
+          {s.place.name ? (
+            <div className="zrow" style={{ borderTop: 0, paddingTop: 0 }}>
+              <span className="zname">
+                {s.place.name}
+                <small>{s.place.latitude.toFixed(2)}, {s.place.longitude.toFixed(2)}</small>
+              </span>
+              <button
+                type="button"
+                className="btn-small"
+                onClick={() => { update({ place: { name: '', latitude: 0, longitude: 0 } }); setPlaces(null) }}
+              >
+                Change
+              </button>
+            </div>
+          ) : (
+            <>
+              <input
+                id="place"
+                type="text"
+                placeholder="Tadcaster"
+                autoComplete="off"
+                value={placeQuery}
+                onChange={(e) => setPlaceQuery(e.target.value)}
+              />
+              <div className="btn-row">
+                <button
+                  type="button"
+                  className="btn-small"
+                  disabled={findingPlace || placeQuery.trim().length < 2}
+                  onClick={() => {
+                    setFindingPlace(true)
+                    void findPlace(placeQuery.trim())
+                      .then((found) => {
+                        setPlaces(found)
+                        if (found.length === 0) say('Nothing found by that name.')
+                      })
+                      .catch((err: unknown) => say(describeWeatherError(err)))
+                      .finally(() => setFindingPlace(false))
+                  }}
+                >
+                  {findingPlace ? <><span className="spinner" /> Looking…</> : 'Find the town'}
+                </button>
+                <button
+                  type="button"
+                  className="btn-small"
+                  onClick={() => {
+                    if (!navigator.geolocation) return say('This phone will not give a location.')
+                    navigator.geolocation.getCurrentPosition(
+                      (pos) => {
+                        update({
+                          place: {
+                            name: 'Here',
+                            latitude: Math.round(pos.coords.latitude * 1000) / 1000,
+                            longitude: Math.round(pos.coords.longitude * 1000) / 1000,
+                          },
+                        })
+                        say('Location set from the phone.')
+                      },
+                      () => say('The phone would not share a location.'),
+                    )
+                  }}
+                >
+                  Use where I am
+                </button>
+              </div>
+              {places && places.length > 0 && (
+                <div className="alts">
+                  {places.map((p) => (
+                    <button
+                      key={`${p.latitude},${p.longitude}`}
+                      type="button"
+                      className="btn-small"
+                      onClick={() => { update({ place: p }); setPlaces(null); setPlaceQuery('') }}
+                    >
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+          <p className="help">
+            Only used to look up the weather, which is what lets the forecast learn what a warm dry
+            Saturday is worth here. Nothing else is sent, and leaving it blank simply drops the
+            weather column.
+          </p>
+        </div>
+
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label htmlFor="hours-target">Hours in a week</label>
+          <input
+            id="hours-target"
+            inputMode="decimal"
+            placeholder="none"
+            value={hoursText}
+            onChange={(e) => {
+              setHoursText(e.target.value)
+              const hours = Number(e.target.value)
+              if (e.target.value.trim() === '') update({ weeklyHoursTarget: 0 })
+              else if (Number.isFinite(hours) && hours >= 0) update({ weeklyHoursTarget: Math.round(hours * 10) / 10 })
+            }}
+          />
+          <p className="help">
+            {s.weeklyHoursTarget > 0
+              ? `The rota counts down from ${s.weeklyHoursTarget} hours as people go on, so you can see what is still to cover.`
+              : 'Set a figure and the rota will count down from it as people go on nights. Leave it blank for no target.'}
           </p>
         </div>
       </section>

@@ -490,7 +490,9 @@ try {
   await page.click('.chip:has-text("What it costs")')
   await page.waitForSelector('input[aria-label="Taddy Lager cost"]', { timeout: 5000 })
 
-  // A firkin of Taddy: £95 ex VAT for 72 pints.
+  // A firkin of Taddy: £95 ex VAT for 72 pints. Deliberately price first, then
+  // size: a price with no size yet is not a cost, and an earlier version threw
+  // it away instead of waiting for the size to arrive.
   await page.fill('input[aria-label="Taddy Lager cost"]', '95.00')
   await page.fill('input[aria-label="Taddy Lager servings per container"]', '72')
   await page.waitForTimeout(400)
@@ -518,6 +520,12 @@ try {
   const profit = await page.locator('.main').innerText()
   check('the dashboard reports gross profit', profit.includes('What it actually makes'))
   check('with the rate across the costed lines', /62\.3%/.test(profit), profit.slice(0, 200))
+
+  check(
+    'and holds off forecasting from a single night',
+    !(await page.locator('.main').innerText()).includes('What next week might take'),
+    'three nights is the floor; one night forecasts nothing',
+  )
 
   console.log('\nStaff records')
   await page.click('button:has-text("Rota")')

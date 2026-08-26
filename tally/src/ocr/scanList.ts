@@ -24,6 +24,15 @@ export interface ScannedPrice {
   note?: string
 }
 
+/** One line off a delivery note, as written. */
+export interface ScannedDelivery {
+  name: string
+  /** How many of whatever unit the note lists — casks, cases, bottles. */
+  quantity: number
+  /** The unit as written: "kil", "firkin", "case", "bottles". May be empty. */
+  unit: string
+}
+
 /** One line off the paper rota, as written. */
 export interface ScannedShift {
   name: string
@@ -58,6 +67,42 @@ const PRICE_TOOL = {
     required: ['prices', 'notes'],
   },
 }
+
+const DELIVERY_TOOL = {
+  name: 'report_delivery_note',
+  description: 'Return every stock line on the delivery note, exactly as written.',
+  input_schema: {
+    type: 'object' as const,
+    properties: {
+      lines: {
+        type: 'array',
+        description: 'One entry per product line. Empty if nothing is readable.',
+        items: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', description: 'The product as written on the note.' },
+            quantity: { type: 'string', description: 'How many, exactly as printed. Just the figure.' },
+            unit: { type: 'string', description: 'The unit as written — "kil", "firkin", "case", "btl". Empty if the note does not say.' },
+          },
+          required: ['name', 'quantity', 'unit'],
+        },
+      },
+      notes: { type: 'string', description: 'Anything unclear, or lines you deliberately left out. May be empty.' },
+    },
+    required: ['lines', 'notes'],
+  },
+}
+
+const DELIVERY_SYSTEM = `You read a photograph of a brewery delivery note or invoice for a British pub.
+
+Copy out every line of stock delivered. Do not interpret, convert or total.
+
+- One entry per product line, named as the note names it.
+- Copy the quantity exactly as printed — the number of containers, not the number of pints. If the note says 2 KIL TADDY, the quantity is 2 and the unit is "kil".
+- Copy the unit as written: kil, firkin, keg, case, btl, each. Leave it empty if the note does not give one.
+- Ignore anything that is not stock: delivery charges, cask deposits, VAT lines, totals, account numbers.
+- If a line is a credit or a return (a negative quantity, "RET", "CREDIT"), leave it out and say so in notes — booking a return in as a delivery would overstate the cellar.
+- If you cannot read a quantity with confidence, leave the line out and say so.`
 
 const ROTA_TOOL = {
   name: 'report_rota',
@@ -104,11 +149,18 @@ Copy out every shift. Do not interpret or tidy.
 - Times: give 24-hour "HH:MM". "6" in an evening column is "18:00"; "12" in a daytime column is "12:00". If a cell says only a tick, an X, or "in", leave both times empty. "close", "late" and "til close" are an empty end time — do not invent one.
 - If a cell is crossed out, leave it out and mention it in notes.`
 
+/** The shape the SDK needs of a tool, rather than a union of the specific ones. */
+interface VisionTool {
+  name: string
+  description: string
+  input_schema: { type: 'object'; properties: Record<string, unknown>; required: string[] }
+}
+
 interface Call<T> {
   file: Blob
   signal?: AbortSignal
   system: string
-  tool: typeof PRICE_TOOL | typeof ROTA_TOOL
+  tool: VisionTool
   ask: string
   read: (input: Record<string, unknown>) => T
 }
@@ -229,4 +281,30 @@ export async function scanRota(file: Blob, signal?: AbortSignal): Promise<{ shif
     },
   })
   return { shifts: value, notes }
+}
+
+
+export async function scanDeliveryNote(file: Blob, signal?: AbortSignal): Promise<{ lines: ScannedDelivery[]; notes: string }> {
+  const { value, notes } = await callVision({
+    file,
+    ...(signal ? { signal } : {}),
+    system: DELIVERY_SYSTEM,
+    tool: DELIVERY_TOOL,
+    ask: 'Read this delivery note.',
+    read: (input) => {
+      const rows = Array.isArray(input.lines) ? (input.lines as Array<Record<string, unknown>>) : []
+      const out: ScannedDelivery[] = []
+      for (const row of rows) {
+        const name = typeof row.name === 'string' ? row.name.trim() : ''
+        const raw = typeof row.quantity === 'string' ? row.quantity.trim() : ''
+        const quantity = Number(raw.replace(/[^0-9.]/g, ''))
+        // A zero or a negative is a credit line or a misread; neither belongs
+        // in a delivery, and adding one would overstate the cellar.
+        if (!name || !Number.isFinite(quantity) || quantity <= 0) continue
+        out.push({ name, quantity, unit: typeof row.unit === 'string' ? row.unit.trim() : '' })
+      }
+      return out
+    },
+  })
+  return { lines: value, notes }
 }

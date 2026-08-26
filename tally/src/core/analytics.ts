@@ -7,7 +7,7 @@
 // ---------------------------------------------------------------------------
 
 import { departmentLabel, sortByRegistry } from './departments.ts'
-import { fromDateKey, weekdayOf } from './date.ts'
+import { addDays, fromDateKey, weekdayOf } from './date.ts'
 import { reconcileFull, DEFAULT_TOLERANCE_PENCE, type Verdict } from './reconcile.ts'
 import type { DayRecord } from './types.ts'
 import { shareBp } from './zread.ts'
@@ -412,4 +412,78 @@ export function itemTotals(stats: DayStats[], sortBy: 'value' | 'quantity' = 'va
     .sort((a, b) =>
       sortBy === 'quantity' ? b.qtyMilli - a.qtyMilli || b.pence - a.pence : b.pence - a.pence || b.qtyMilli - a.qtyMilli,
     )
+}
+
+
+// --- against this time last year ----------------------------------------------
+
+/**
+ * A year ago, in weeks.
+ *
+ * 364 days rather than 365, because 52 whole weeks lands on the same weekday.
+ * In a trade where Saturday takes four times what Tuesday does, comparing a
+ * Saturday with a Friday because the calendar says "same date" is worse than
+ * not comparing at all.
+ */
+export const YEAR_IN_DAYS = 364
+
+export interface LikeForLike {
+  /** The window being reported. */
+  nights: number
+  takingsPence: number
+  /** The matching window a year earlier, on the same weekdays. */
+  lastYearNights: number
+  lastYearTakingsPence: number
+  /** Only nights present in BOTH windows, which is the honest comparison. */
+  matchedNights: number
+  matchedPence: number
+  matchedLastYearPence: number
+  changeBp: number | null
+  /** True when there is enough of last year to say anything at all. */
+  comparable: boolean
+}
+
+/**
+ * This period against the same period last year, like for like.
+ *
+ * The "like for like" is the whole point: a pub that opened three extra days
+ * this year has not grown, and totting up both windows regardless would say it
+ * had. So the headline change is computed only across nights that traded in
+ * both windows, and the raw totals are reported beside it rather than instead
+ * of it.
+ */
+export function likeForLike(all: readonly DayStats[], from: string, to: string): LikeForLike {
+  const inWindow = (d: DayStats, a: string, b: string) => d.date >= a && d.date <= b
+  const lastFrom = addDays(from, -YEAR_IN_DAYS)
+  const lastTo = addDays(to, -YEAR_IN_DAYS)
+
+  const now = all.filter((d) => inWindow(d, from, to) && d.takingsPence !== null)
+  const then = all.filter((d) => inWindow(d, lastFrom, lastTo) && d.takingsPence !== null)
+  const thenByDate = new Map(then.map((d) => [d.date, d]))
+
+  let matchedNights = 0
+  let matchedPence = 0
+  let matchedLastYearPence = 0
+  for (const night of now) {
+    const other = thenByDate.get(addDays(night.date, -YEAR_IN_DAYS))
+    if (!other) continue
+    matchedNights++
+    matchedPence += night.takingsPence ?? 0
+    matchedLastYearPence += other.takingsPence ?? 0
+  }
+
+  return {
+    nights: now.length,
+    takingsPence: now.reduce((a, d) => a + (d.takingsPence ?? 0), 0),
+    lastYearNights: then.length,
+    lastYearTakingsPence: then.reduce((a, d) => a + (d.takingsPence ?? 0), 0),
+    matchedNights,
+    matchedPence,
+    matchedLastYearPence,
+    changeBp:
+      matchedLastYearPence > 0
+        ? Math.round(((matchedPence - matchedLastYearPence) / matchedLastYearPence) * 10000)
+        : null,
+    comparable: matchedNights > 0,
+  }
 }

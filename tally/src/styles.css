@@ -1116,3 +1116,57 @@ table.data.crew th[scope='row'] { white-space: nowrap; }
 }
 .person-row .chev { color: var(--faint); flex: none; }
 @media (hover: hover) { .person-row:hover { background: var(--surface-2); } }
+
+/* A cellar line being set up: name and figures on top, its three controls
+   beneath, because a select and two boxes never fit beside a beer's name. */
+.stock-line { padding: 11px 0; border-top: 1px solid var(--line-soft); }
+.stock-line:first-of-type { border-top: 0; }
+.stock-line-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.stock-line-head .hint { font-size: 12px; color: var(--muted); }
+.stock-line-row { display: flex; gap: 8px; margin-top: 8px; }
+.stock-line-row select { flex: 1.2; min-width: 0; }
+.stock-line-row input { flex: 1; min-width: 0; text-align: right; }
+.stock-line-row select,
+.stock-line-row input {
+  font: inherit;
+  font-size: 15px;
+  min-height: 46px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.stock-line-row select:focus-visible,
+.stock-line-row input:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* A read-back proposal sitting inside the card that produced it. */
+.proposal {
+  margin: 12px 0 16px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+/* How much of the week is covered. */
+.meter {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  overflow: hidden;
+  margin-top: 10px;
+}
+.meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.3s var(--ease);
+}
+.meter-fill.over { background: var(--warn); }

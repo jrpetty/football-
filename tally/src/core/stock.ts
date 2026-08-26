@@ -300,3 +300,261 @@ export function formatServingsSigned(baseUnits: number, item: StockItem): string
 export function servingsToBase(servings: number, item: StockItem): number {
   return Math.round(servings * item.servingBaseUnits)
 }
+
+
+// --- containers --------------------------------------------------------------
+
+/**
+ * The containers a British cellar actually receives.
+ *
+ * Cask sizes are the traditional ones and are not going to change: a firkin is
+ * nine gallons, a kilderkin eighteen, and in pints that is 72 and 144. Keg beer
+ * arrives as 11 gallons (88 pints) or as 50 litres, which is 88 pints as near
+ * as the cellar cares. Offered as a list because "how many pints in a kil" is
+ * obvious in the trade and looked up by everybody else.
+ */
+export const CONTAINER_SIZES = [
+  { name: 'firkin', servings: 72, hint: '9 gallons' },
+  { name: 'kil', servings: 144, hint: '18 gallons' },
+  { name: 'keg', servings: 88, hint: '11 gallons' },
+  { name: 'pin', servings: 36, hint: '4½ gallons' },
+  { name: 'case', servings: 24, hint: 'bottles' },
+  { name: 'box', servings: 12, hint: 'packets' },
+] as const
+
+/** The container a line comes in, in base units — null when none is set. */
+export function containerBaseUnits(item: StockItem): number | null {
+  return item.container && item.container.baseUnits > 0 ? item.container.baseUnits : null
+}
+
+export interface ContainerBreakdown {
+  /** Whole unopened containers. */
+  full: number
+  /** What is left in the one on the stillage, in servings. */
+  partServings: number
+  /** The lot, in servings, which is what everything else works in. */
+  totalServings: number
+  containerName: string
+  servingName: string
+}
+
+/**
+ * How a cellar actually reads: "two kils and about thirty pints".
+ *
+ * The whole point of tracking a container size is that nobody counts 174 pints.
+ * They count the barrels stacked against the wall and estimate the one that is
+ * running. Null when the line has no container set, in which case servings are
+ * the only sensible unit.
+ */
+export function breakdown(baseUnits: number, item: StockItem): ContainerBreakdown | null {
+  const size = containerBaseUnits(item)
+  if (size === null || item.servingBaseUnits <= 0) return null
+  const perContainer = size / item.servingBaseUnits
+  if (perContainer <= 1) return null
+
+  const totalServings = baseUnits / item.servingBaseUnits
+  const full = Math.floor(totalServings / perContainer)
+  const partServings = Math.round((totalServings - full * perContainer) * 10) / 10
+  return {
+    full,
+    partServings,
+    totalServings: Math.round(totalServings * 10) / 10,
+    containerName: item.container?.name ?? 'container',
+    servingName: item.servingName,
+  }
+}
+
+/** "2 kils + 30 pints", or just the servings when there is no container. */
+export function describeStock(baseUnits: number, item: StockItem): string {
+  const b = breakdown(baseUnits, item)
+  if (!b || (b.full === 0 && b.partServings === 0)) return formatServings(baseUnits, item)
+
+  const parts: string[] = []
+  if (b.full > 0) parts.push(`${b.full} ${b.containerName}${b.full === 1 ? '' : 's'}`)
+  if (b.partServings > 0) parts.push(formatServings(servingsToBase(b.partServings, item), item))
+  // A part-used barrel with nothing in it is not worth mentioning; a cellar
+  // with nothing in it at all is.
+  return parts.length > 0 ? parts.join(' + ') : formatServings(baseUnits, item)
+}
+
+/** Full containers plus a part-used remainder, back into base units. */
+export function containersToBase(full: number, partServings: number, item: StockItem): number {
+  const size = containerBaseUnits(item) ?? 0
+  return Math.round(full * size + partServings * item.servingBaseUnits)
+}
+
+
+// --- reading a delivery note --------------------------------------------------
+
+export interface DeliveryProposal {
+  /** The line as written on the note. */
+  written: string
+  quantity: number
+  unit: string
+  stockItemId?: string
+  itemName?: string
+  /** What that comes to in base units, once the unit is understood. */
+  baseUnits?: number
+  /** How the quantity was read: as containers, or as bare servings. */
+  countedAs: 'container' | 'serving' | null
+  status: 'ready' | 'ambiguous' | 'unmatched' | 'no-container'
+  between?: string[]
+}
+
+/**
+ * Turn a photographed delivery note into a proposal for the cellar.
+ *
+ * The unit is the hard part. "2 KIL TADDY" is 288 pints and "2 TADDY" on a note
+ * from a brewery that only sells kils is also 288 pints — but a bare 2 against a
+ * line with no container set could mean two pints, and guessing wrong by a
+ * factor of 144 is not a small error. So a bare quantity is only read as
+ * containers when the line has a container to read it as, and anything else is
+ * handed back for a person to say.
+ */
+export function proposeDelivery(
+  scanned: ReadonlyArray<{ name: string; quantity: number; unit: string }>,
+  items: readonly StockItem[],
+  match: <T>(written: string, candidates: readonly T[], label: (c: T) => string) =>
+    | { kind: 'matched'; value: T; score: number }
+    | { kind: 'ambiguous'; between: T[]; score: number }
+    | { kind: 'unmatched' },
+): DeliveryProposal[] {
+  return scanned.map((row) => {
+    const found = match(row.name, items, (i) => i.name)
+    if (found.kind === 'unmatched') {
+      return { written: row.name, quantity: row.quantity, unit: row.unit, countedAs: null, status: 'unmatched' as const }
+    }
+    if (found.kind === 'ambiguous') {
+      return {
+        written: row.name,
+        quantity: row.quantity,
+        unit: row.unit,
+        countedAs: null,
+        status: 'ambiguous' as const,
+        between: found.between.map((i) => i.name),
+      }
+    }
+
+    const item = found.value
+    const container = containerBaseUnits(item)
+    const unit = row.unit.trim().toLowerCase()
+    // An explicit serving unit on the note overrides the container.
+    const saysServings = unit !== '' && (unit === item.servingName || unit === `${item.servingName}s`)
+
+    if (saysServings || container === null) {
+      if (container === null && !saysServings && unit !== '') {
+        // A unit the cellar has no size for — "case" against a line set up in
+        // pints. Refusing beats multiplying by a number nobody has given.
+        return {
+          written: row.name,
+          quantity: row.quantity,
+          unit: row.unit,
+          stockItemId: item.id,
+          itemName: item.name,
+          countedAs: null,
+          status: 'no-container' as const,
+        }
+      }
+      return {
+        written: row.name,
+        quantity: row.quantity,
+        unit: row.unit,
+        stockItemId: item.id,
+        itemName: item.name,
+        baseUnits: servingsToBase(row.quantity, item),
+        countedAs: 'serving' as const,
+        status: 'ready' as const,
+      }
+    }
+
+    return {
+      written: row.name,
+      quantity: row.quantity,
+      unit: row.unit,
+      stockItemId: item.id,
+      itemName: item.name,
+      baseUnits: Math.round(row.quantity * container),
+      countedAs: 'container' as const,
+      status: 'ready' as const,
+    }
+  })
+}
+
+/** The delivery lines an accepted proposal would book in. */
+export function deliveryLinesFrom(proposals: readonly DeliveryProposal[]): Array<{ stockItemId: string; baseUnits: number }> {
+  const out: Array<{ stockItemId: string; baseUnits: number }> = []
+  for (const p of proposals) {
+    if (p.status !== 'ready' || !p.stockItemId || p.baseUnits === undefined) continue
+    // A note listing the same beer twice is two drops of the same line.
+    const found = out.find((l) => l.stockItemId === p.stockItemId)
+    if (found) found.baseUnits += p.baseUnits
+    else out.push({ stockItemId: p.stockItemId, baseUnits: p.baseUnits })
+  }
+  return out
+}
+
+
+// --- what is not selling ------------------------------------------------------
+
+export interface DeadStockLine {
+  item: StockItem
+  onHandBaseUnits: number
+  /** Servings a week, from the till, over the window measured. */
+  perWeek: number
+  /** How long the stock on hand would last at that rate. Null when nothing sells. */
+  weeksOfCover: number | null
+  /** Money tied up in it, when the line has a cost. */
+  tiedUpPence: number | null
+  reason: 'not selling' | 'overstocked' | null
+}
+
+/** Selling fewer than this many a week is slow for a pub, whatever the line. */
+export const SLOW_PER_WEEK = 2
+
+/** More than this many weeks of stock is money standing still. */
+export const OVERSTOCKED_WEEKS = 8
+
+/**
+ * What is taking up cellar space without earning it.
+ *
+ * Two different problems, deliberately named apart. A line selling two a week
+ * is a listing decision — it may not be worth stocking at all. A line selling
+ * perfectly well but with three months of it downstairs is an ordering
+ * decision, and the beer is fine. Lumping them together as "dead stock" would
+ * suggest delisting something that just needs a smaller order.
+ */
+export function deadStock(
+  ledger: readonly StockLine[],
+  usedBaseUnits: ReadonlyMap<string, number>,
+  days: number,
+  costOfServing: (item: StockItem, baseUnits: number) => number | null,
+): DeadStockLine[] {
+  const weeks = Math.max(1, days / 7)
+
+  return ledger
+    .map((line) => {
+      const used = usedBaseUnits.get(line.item.id) ?? 0
+      const servings = line.item.servingBaseUnits > 0 ? used / line.item.servingBaseUnits : 0
+      const perWeek = Math.round((servings / weeks) * 10) / 10
+      const onHand = Math.max(0, line.expectedBaseUnits)
+      const onHandServings = line.item.servingBaseUnits > 0 ? onHand / line.item.servingBaseUnits : 0
+
+      const weeksOfCover = perWeek > 0 ? Math.round((onHandServings / perWeek) * 10) / 10 : null
+      const tiedUpPence = costOfServing(line.item, onHand)
+
+      // Nothing on hand is not a problem, whatever it sells.
+      const reason: DeadStockLine['reason'] =
+        onHandServings <= 0
+          ? null
+          : perWeek < SLOW_PER_WEEK
+            ? 'not selling'
+            : weeksOfCover !== null && weeksOfCover > OVERSTOCKED_WEEKS
+              ? 'overstocked'
+              : null
+
+      return { item: line.item, onHandBaseUnits: onHand, perWeek, weeksOfCover, tiedUpPence, reason }
+    })
+    .filter((l) => l.reason !== null)
+    // Most money standing still first — that is the one worth acting on.
+    .sort((a, b) => (b.tiedUpPence ?? 0) - (a.tiedUpPence ?? 0) || (b.weeksOfCover ?? 0) - (a.weeksOfCover ?? 0))
+}

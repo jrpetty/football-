@@ -16,13 +16,14 @@ import type { DayRecord } from '../core/types.ts'
 import type { PriceBookEntry } from '../core/priceBook.ts'
 import type { Delivery, Pour, StockCount, StockItem } from '../core/stock.ts'
 import type { Person, Shift } from '../core/rota.ts'
+import type { DayWeather } from '../core/forecast.ts'
 
 const DB_NAME = 'tally'
 /**
- * v2 added the price book, v3 the cellar, v4 the rota. Nothing already stored
- * changes shape on any of them.
+ * v2 added the price book, v3 the cellar, v4 the rota, v5 the weather. Nothing
+ * already stored changes shape on any of them.
  */
-const DB_VERSION = 4
+const DB_VERSION = 5
 const DAYS = 'days'
 const PHOTOS = 'photos'
 const PRICES = 'prices'
@@ -31,6 +32,7 @@ const DELIVERIES = 'deliveries'
 const COUNTS = 'stockcounts'
 const PEOPLE = 'people'
 const SHIFTS = 'shifts'
+const WEATHER = 'weather'
 
 let dbPromise: Promise<IDBDatabase> | null = null
 
@@ -60,6 +62,10 @@ function open(): Promise<IDBDatabase> {
       // Keyed `date:personId`, so putting someone on a day they are already on
       // corrects the hours rather than rostering them twice.
       if (!db.objectStoreNames.contains(SHIFTS)) db.createObjectStore(SHIFTS, { keyPath: 'id' })
+      // Keyed by date, so re-fetching a day corrects it rather than storing it
+      // twice — and so a forecast is replaced by the actual weather once the
+      // day has been and gone.
+      if (!db.objectStoreNames.contains(WEATHER)) db.createObjectStore(WEATHER, { keyPath: 'date' })
     }
     req.onsuccess = () => resolve(req.result)
     req.onerror = () => reject(req.error ?? new Error('Could not open the database.'))
@@ -297,4 +303,15 @@ export function saveShift(shift: Shift): Promise<unknown> {
 
 export function deleteShift(id: string): Promise<unknown> {
   return run(SHIFTS, 'readwrite', (s) => s.delete(id))
+}
+
+
+// --- the weather -------------------------------------------------------------
+
+export function listWeather(): Promise<DayWeather[]> {
+  return run<DayWeather[]>(WEATHER, 'readonly', (s) => s.getAll())
+}
+
+export async function saveWeather(days: readonly DayWeather[]): Promise<void> {
+  for (const day of days) await run(WEATHER, 'readwrite', (s) => s.put(day))
 }

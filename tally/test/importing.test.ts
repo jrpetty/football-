@@ -157,3 +157,87 @@ test('a shortened name on the paper still finds the person', () => {
   assert.equal(row!.date, '2026-08-29')
   assert.equal(row!.endMin, 30)
 })
+
+// --- the delivery note --------------------------------------------------------
+
+import { bestMatch } from '../src/core/match.ts'
+import {
+  deliveryLinesFrom,
+  ML_PER_PINT,
+  proposeDelivery,
+  type StockItem,
+} from '../src/core/stock.ts'
+
+const cellar: StockItem[] = [
+  {
+    id: 'taddy', name: 'Taddy Lager', kind: 'liquid',
+    servingBaseUnits: ML_PER_PINT, servingName: 'pint',
+    container: { name: 'kil', baseUnits: 144 * ML_PER_PINT },
+  },
+  {
+    id: 'alpine', name: 'Alpine', kind: 'liquid',
+    servingBaseUnits: ML_PER_PINT, servingName: 'pint',
+    container: { name: 'firkin', baseUnits: 72 * ML_PER_PINT },
+  },
+  { id: 'crisps', name: 'Crisps', kind: 'count', servingBaseUnits: 1, servingName: 'each' },
+]
+
+const propose = (rows: Array<{ name: string; quantity: number; unit: string }>) =>
+  proposeDelivery(rows, cellar, bestMatch)
+
+test('two kils on the note is two kils in the cellar', () => {
+  const [row] = propose([{ name: 'Taddy Lager', quantity: 2, unit: 'kil' }])
+  assert.equal(row!.status, 'ready')
+  assert.equal(row!.countedAs, 'container')
+  assert.equal(row!.baseUnits, 288 * ML_PER_PINT)
+})
+
+test('a bare quantity is read as containers when the line has one', () => {
+  // The whole risk: reading "3" as three pints instead of three firkins is
+  // wrong by a factor of 72.
+  const [row] = propose([{ name: 'Alpine', quantity: 3, unit: '' }])
+  assert.equal(row!.baseUnits, 216 * ML_PER_PINT)
+  assert.equal(row!.countedAs, 'container')
+})
+
+test('a note that says pints means pints', () => {
+  const [row] = propose([{ name: 'Taddy Lager', quantity: 20, unit: 'pints' }])
+  assert.equal(row!.countedAs, 'serving')
+  assert.equal(row!.baseUnits, 20 * ML_PER_PINT)
+})
+
+test('a line with no container falls back to servings', () => {
+  const [row] = propose([{ name: 'Crisps', quantity: 48, unit: '' }])
+  assert.equal(row!.status, 'ready')
+  assert.equal(row!.baseUnits, 48)
+})
+
+test('a unit the cellar has no size for is refused, not multiplied', () => {
+  const [row] = propose([{ name: 'Crisps', quantity: 4, unit: 'case' }])
+  assert.equal(row!.status, 'no-container')
+  assert.equal(row!.baseUnits, undefined)
+})
+
+test('a product not in the cellar is left unmatched', () => {
+  const [row] = propose([{ name: 'Cask deposit', quantity: 2, unit: '' }])
+  assert.equal(row!.status, 'unmatched')
+})
+
+test('the same beer twice on one note is added up, not listed twice', () => {
+  const rows = propose([
+    { name: 'Taddy Lager', quantity: 2, unit: 'kil' },
+    { name: 'Taddy Lager', quantity: 1, unit: 'kil' },
+  ])
+  const lines = deliveryLinesFrom(rows)
+  assert.equal(lines.length, 1)
+  assert.equal(lines[0]!.baseUnits, 432 * ML_PER_PINT)
+})
+
+test('only ready lines are booked in', () => {
+  const rows = propose([
+    { name: 'Taddy Lager', quantity: 2, unit: 'kil' },
+    { name: 'Cask deposit', quantity: 2, unit: '' },
+    { name: 'Crisps', quantity: 4, unit: 'case' },
+  ])
+  assert.equal(deliveryLinesFrom(rows).length, 1)
+})

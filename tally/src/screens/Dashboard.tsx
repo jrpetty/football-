@@ -33,6 +33,11 @@ import { formatMoney, formatSigned } from '../core/money.ts'
 import { formatQty } from '../core/zread.ts'
 import { listDays, listPeople, listShifts, loadPriceBook, loadStockConfig, EMPTY_STOCK, type StockConfig } from '../storage/db.ts'
 import { marginReport } from '../core/margin.ts'
+import { forecastWeek, MIN_FOR_WEATHER, type DayWeather } from '../core/forecast.ts'
+import { likeForLike } from '../core/analytics.ts'
+import { listWeather, saveWeather } from '../storage/db.ts'
+import { describeWeatherError, fetchForecast, fetchHistory } from '../weather/openMeteo.ts'
+import { addDays } from '../core/date.ts'
 import {
   crewFor,
   crewStats,
@@ -78,6 +83,9 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
   const [people, setPeople] = useState<Person[]>([])
   const [shifts, setShifts] = useState<Shift[]>([])
   const [stock, setStock] = useState<StockConfig>(EMPTY_STOCK)
+  const [weather, setWeather] = useState<DayWeather[]>([])
+  const [ahead, setAhead] = useState<DayWeather[]>([])
+  const [weatherNote, setWeatherNote] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -120,6 +128,66 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
       cancelled = true
     }
   }, [refreshKey])
+
+  /**
+   * Keep the weather caught up with the takings.
+   *
+   * Every night already recorded wants the weather it had, and the coming
+   * fortnight wants the forecast — so this looks at what is stored, works out
+   * what is missing, and asks only for that. Re-running it costs nothing once
+   * the history is filled in, which is what makes it safe to run on every
+   * visit rather than on a schedule nobody would remember to keep.
+   */
+  useEffect(() => {
+    if (all === null || all.length === 0) return
+    const place = loadSettings().place
+    if (!place.name) return
+
+    let cancelled = false
+    const controller = new AbortController()
+
+    void (async () => {
+      try {
+        const stored = await listWeather()
+        if (cancelled) return
+        const have = new Set(stored.map((w) => w.date))
+        setWeather(stored)
+
+        const today = tradingDayKey()
+        const traded = all.map((d) => d.date).filter((d) => d < today)
+        const missing = traded.filter((d) => !have.has(d)).sort()
+
+        // One request covering the whole gap rather than one per night: the
+        // archive is served by date range, and a pub with a year of history
+        // would otherwise make three hundred calls.
+        if (missing.length > 0) {
+          const from = missing[0] as string
+          const to = missing[missing.length - 1] as string
+          const fetched = await fetchHistory(place, from, to, controller.signal)
+          if (cancelled) return
+          if (fetched.length > 0) {
+            await saveWeather(fetched)
+            setWeather(await listWeather())
+          }
+        }
+
+        const forecast = await fetchForecast(place, 14, controller.signal)
+        if (cancelled) return
+        setAhead(forecast)
+        setWeatherNote('')
+      } catch (err) {
+        if (cancelled || controller.signal.aborted) return
+        // The weather is a nicety. Losing it must not disturb anything else on
+        // the screen, so this reports quietly and the rest carries on.
+        setWeatherNote(describeWeatherError(err))
+      }
+    })()
+
+    return () => {
+      cancelled = true
+      controller.abort()
+    }
+  }, [all, refreshKey])
 
   const filter: Filter = useMemo(() => {
     const chosen = RANGES.find((r) => r.key === range)
@@ -180,6 +248,29 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
       ),
     [selected, book, stock],
   )
+
+  /** The seven nights after today, with whatever forecast exists for them. */
+  const forecast = useMemo(() => {
+    if (all === null) return null
+    const today = tradingDayKey()
+    const byDate = new Map(ahead.map((w) => [w.date, w]))
+    const upcoming = Array.from({ length: 7 }, (_, i) => {
+      const date = addDays(today, i + 1)
+      const w = byDate.get(date)
+      return w ? { date, weather: w } : { date }
+    })
+    return forecastWeek(
+      all.filter((d) => d.takingsPence !== null).map((d) => ({ date: d.date, takingsPence: d.takingsPence as number })),
+      weather,
+      upcoming,
+    )
+  }, [all, weather, ahead])
+
+  const yoy = useMemo(() => {
+    if (all === null || selected.length === 0) return null
+    const dates = selected.map((d) => d.date).sort()
+    return likeForLike(all, dates[0] as string, dates[dates.length - 1] as string)
+  }, [all, selected])
 
   const prices = useMemo(
     () => checkPrices(itemTotals(selected).map((i) => ({ code: i.code, name: i.name, qtyMilli: i.qtyMilli, pence: i.pence })), book),
@@ -308,6 +399,102 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
         />
         <StatTile label="Balanced" value={`${t.balancedNights}/${t.nights}`} detail={`${t.shortNights} short, ${t.overNights} over`} tone={t.balancedNights === t.nights ? 'good' : undefined} />
       </div>
+
+      {/* --- what next week might take --------------------------------------- */}
+      {forecast && forecast.nightsUsed >= 3 && (
+        <ChartCard
+          title="What next week might take"
+          subtitle={
+            forecast.weatherNights >= MIN_FOR_WEATHER
+              ? `from ${forecast.nightsUsed} nights and the forecast`
+              : `from ${forecast.nightsUsed} nights of trade`
+          }
+        >
+          <div className="kpi-row">
+            <StatTile
+              label="Next seven nights"
+              value={formatMoney(forecast.totalPence)}
+              detail={`somewhere between ${formatMoney(forecast.lowPence)} and ${formatMoney(forecast.highPence)}`}
+            />
+            {forecast.perDegreePence !== null && (
+              <StatTile
+                label="Each degree warmer"
+                value={formatSigned(forecast.perDegreePence)}
+                detail={
+                  forecast.perMmRainPence === null || forecast.perMmRainPence === 0
+                    ? 'a night, on this pub’s own history'
+                    : `a night · ${formatSigned(forecast.perMmRainPence)} per mm of rain`
+                }
+                tone={forecast.perDegreePence > 0 ? 'good' : undefined}
+              />
+            )}
+          </div>
+
+          <div className="table-wrap">
+            <table className="data crew">
+              <thead>
+                <tr>
+                  <th scope="col">Night</th>
+                  <th scope="col">Usually</th>
+                  <th scope="col">Weather</th>
+                  <th scope="col">Estimate</th>
+                </tr>
+              </thead>
+              <tbody>
+                {forecast.days.map((d) => (
+                  <tr key={d.date}>
+                    <th scope="row">{formatShort(d.date)}</th>
+                    <td className="num">{formatMoney(d.basePence)}</td>
+                    <td className="num">
+                      {d.weather ? `${d.weather.tempC}°${d.weather.rainMm > 0 ? ` · ${d.weather.rainMm}mm` : ''}` : '—'}
+                    </td>
+                    <td className="num">{formatMoney(d.estimatePence)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <p className="note">
+            {forecast.weatherNights >= MIN_FOR_WEATHER
+              ? 'The usual figure for each weekday, moved by what the weather is forecast to do — measured on this pub, not on pubs in general.'
+              : `Weekday averages only so far. Once ${MIN_FOR_WEATHER} nights have weather recorded against them, the forecast starts moving these figures — fitting weather to fewer than that produces a confident number that is really noise.`}{' '}
+            It is a steer, not a budget.
+          </p>
+          {weatherNote && <p className="note warn">{weatherNote}</p>}
+          {!loadSettings().place.name && (
+            <p className="note warn">
+              No location set, so there is no weather to work with. Set the town in Settings and the
+              forecast learns what warm dry Saturdays are worth to this pub.
+            </p>
+          )}
+        </ChartCard>
+      )}
+
+      {/* --- against last year ------------------------------------------------ */}
+      {yoy && yoy.comparable && (
+        <ChartCard title="Against last year" subtitle={`${yoy.matchedNights} nights that traded both years`}>
+          <div className="kpi-row">
+            <StatTile
+              label="Like for like"
+              value={yoy.changeBp === null ? '—' : `${yoy.changeBp > 0 ? '+' : ''}${(yoy.changeBp / 100).toFixed(1)}%`}
+              detail={`${formatMoney(yoy.matchedPence)} against ${formatMoney(yoy.matchedLastYearPence)}`}
+              tone={yoy.changeBp === null ? undefined : yoy.changeBp > 0 ? 'good' : yoy.changeBp < 0 ? 'bad' : undefined}
+            />
+            <StatTile
+              label="Nights open"
+              value={`${yoy.nights} v ${yoy.lastYearNights}`}
+              detail="this year against last"
+            />
+          </div>
+          <p className="note">
+            Compared night against the same night a year before — 52 weeks back, so a Saturday meets a
+            Saturday. Only nights that traded in both years count towards the percentage: opening an
+            extra night is more takings but it is not growth, and totting both years up regardless
+            would call it growth anyway.
+          </p>
+        </ChartCard>
+      )}
 
       {(t.voidCount > 0 || t.noSaleCount > 0) && (
         <ChartCard title="Worth an eye" subtitle="over the whole selection">

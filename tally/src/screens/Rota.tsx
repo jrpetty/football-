@@ -128,6 +128,9 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
     [shifts, days],
   )
   const weekMinutes = weekShifts.reduce((a, s) => a + shiftMinutes(s), 0)
+  const target = loadSettings().weeklyHoursTarget
+  /** Positive: still to cover. Negative: rostered past the target. */
+  const leftToRoster = target > 0 ? target * 60 - weekMinutes : 0
   const weekCost = useMemo(() => {
     let total = 0
     let priced = false
@@ -517,11 +520,42 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
           })}
 
           <section className="card">
-            <div className="card-head"><h2>The week</h2></div>
-            <div className="zrow">
-              <span className="zname">Hours rostered<small>everyone, all seven nights</small></span>
-              <strong className="num">{formatHours(weekMinutes)}</strong>
+            <div className="card-head">
+              <h2>The week</h2>
+              {target > 0 && (
+                <span className={`badge ${leftToRoster === 0 ? 'good' : leftToRoster < 0 ? 'bad' : 'warn'}`}>
+                  {leftToRoster === 0
+                    ? 'target met'
+                    : leftToRoster > 0
+                      ? `${formatHours(leftToRoster)} to go`
+                      : `${formatHours(-leftToRoster)} over`}
+                </span>
+              )}
             </div>
+            <div className="zrow">
+              <span className="zname">
+                Hours rostered
+                <small>{target > 0 ? `of a ${target} hour week` : 'everyone, all seven nights'}</small>
+              </span>
+              <strong className="num">
+                {formatHours(weekMinutes)}
+                {target > 0 && <span className="hint"> / {target}h</span>}
+              </strong>
+            </div>
+            {target > 0 && (
+              // A plain bar rather than a number alone: the point of a target is
+              // seeing at a glance how much of the week is still to cover.
+              <div
+                className="meter"
+                role="img"
+                aria-label={`${formatHours(weekMinutes)} rostered of a ${target} hour target`}
+              >
+                <span
+                  className={`meter-fill${weekMinutes > target * 60 ? ' over' : ''}`}
+                  style={{ width: `${Math.min(100, Math.round((weekMinutes / (target * 60)) * 100))}%` }}
+                />
+              </div>
+            )}
             {weekCost !== null && (
               <div className="zrow">
                 <span className="zname">Wages<small>at the rates set on each person</small></span>
