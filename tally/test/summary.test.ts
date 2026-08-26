@@ -103,3 +103,27 @@ test('a typed night says the figures were typed', () => {
 test('the filename needs no renaming', () => {
   assert.equal(summaryFilename('2026-08-23'), 'takings-2026-08-23.txt')
 })
+
+test('a float is spelled out so the banking can be followed', () => {
+  // An accountant reconciling the bank needs to know the drawer held more than
+  // the takings figure says.
+  const withFloat: DayRecord = { ...night, cashPence: 33980, floatPence: 20000 }
+  const text = summarise(withFloat, [])
+  assert.match(text, /Drawer counted\s+£539\.80/)
+  assert.match(text, /Less float\s+−£200\.00/)
+  assert.match(text, /Cash takings\s+£339\.80/)
+})
+
+test('a night with no float reads exactly as it always did', () => {
+  const text = summarise(night, [])
+  assert.match(text, /Cash counted\s+£339\.80/)
+  assert.equal(text.includes('Less float'), false)
+})
+
+test('the float never changes what reconciles', () => {
+  // Both nights took the same money; one left change in the drawer. The
+  // verdict must be identical.
+  const withFloat: DayRecord = { ...night, floatPence: 20000 }
+  assert.match(summarise(withFloat, []), /SHORT by £12\.00/)
+  assert.match(summarise(night, []), /SHORT by £12\.00/)
+})

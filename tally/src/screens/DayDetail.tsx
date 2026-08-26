@@ -30,7 +30,18 @@ function provenance(c: Capture): string {
   return c.edited ? `${engine}, then corrected` : engine
 }
 
-function Row({ label, capture, pence }: { label: string; capture?: Capture; pence: number | null }) {
+function Row({
+  label,
+  capture,
+  pence,
+  signed,
+}: {
+  label: string
+  capture?: Capture
+  pence: number | null
+  /** A deduction, shown with the same typographic minus as every variance. */
+  signed?: boolean
+}) {
   return (
     <div className="card-head" style={{ marginBottom: 6 }}>
       <span>
@@ -38,7 +49,7 @@ function Row({ label, capture, pence }: { label: string; capture?: Capture; penc
         {capture && <><br /><span className="hint">{provenance(capture)}</span></>}
       </span>
       <span className="num" style={{ fontSize: 19, fontWeight: 700 }}>
-        {pence === null ? '—' : formatMoney(pence)}
+        {pence === null ? '—' : signed ? formatSigned(pence) : formatMoney(pence)}
       </span>
     </div>
   )
@@ -169,7 +180,15 @@ export function DayDetail({ date, onBack, onEdit, onDeleted }: Props) {
         </div>
         <Row label="Till roll total" capture={day.till} pence={day.till.pence} />
         <Row label="Card total" capture={day.card} pence={day.card.pence} />
-        <Row label="Cash counted" pence={day.cashPence} />
+        {day.floatPence ? (
+          <>
+            <Row label="Drawer counted" pence={(day.cashPence ?? 0) + day.floatPence} />
+            <Row label="Less float" pence={-day.floatPence} signed />
+            <Row label="Cash takings" pence={day.cashPence} />
+          </>
+        ) : (
+          <Row label="Cash counted" pence={day.cashPence} />
+        )}
         <hr style={{ border: 0, borderTop: '1px solid var(--line)', margin: '10px 0' }} />
         <Row label="Card + cash" pence={counted} />
         <div className="card-head" style={{ marginBottom: 0 }}>

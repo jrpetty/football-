@@ -129,6 +129,66 @@ try {
   check('three pence out still counts as balanced', (await verdictText(page)) === 'Balanced',
     `got "${await verdictText(page)}" — the default tolerance should absorb this`)
 
+  console.log('\nCounting the drawer out')
+  await page.click('button[aria-label="Count the drawer out in notes and coins"]')
+  await page.waitForSelector('input[aria-label="How many £20"]', { timeout: 5000 })
+  // Ninety-four twenties, a five, five pounds in coin, and some silver.
+  await page.fill('input[aria-label="How many £20"]', '94')
+  await page.fill('input[aria-label="How many £5"]', '1')
+  await page.fill('input[aria-label="How many £1"]', '5')
+  await page.fill('input[aria-label="How many 50p"]', '3')
+  await page.fill('input[aria-label="How many 5p"]', '1')
+  await page.waitForTimeout(200)
+  check(
+    'the counter adds the drawer up',
+    (await page.locator('.counter').innerText()).includes('£1,891.55'),
+    (await page.locator('.counter').innerText()).slice(-120),
+  )
+  await page.click('button:has-text("Use £1,891.55")')
+  await page.waitForTimeout(200)
+  check(
+    'and puts the total in the cash box',
+    (await page.inputValue('#figure-cash')) === '1891.55',
+    `got "${await page.inputValue('#figure-cash')}"`,
+  )
+
+  // Back to the balancing figure for the rest of the run.
+  await setFigure(page, 'figure-cash', '1890.52')
+  check('the night still balances after counting', (await verdictText(page)) === 'Balanced')
+
+  console.log('\nThe float')
+  // The fault this exists to prevent: leave £200 in the drawer and, without
+  // saying so, every night reads exactly £200 over — consistently enough that
+  // it looks like the pub doing well rather than like a bug.
+  // Exactly £200 on top of the balancing figure of £1,890.55.
+  await setFigure(page, 'figure-cash', '2090.55')
+  check('an unexplained float reads as over', (await verdictText(page)) === 'Over by £200.00',
+    `got "${await verdictText(page)}"`)
+
+  await page.fill('#figure-float', '200')
+  await page.waitForTimeout(200)
+  check(
+    'declaring the float balances the night',
+    (await verdictText(page)) === 'Balanced',
+    `got "${await verdictText(page)}" — the float must come off before anything reconciles`,
+  )
+  check(
+    'and the takings are shown apart from the drawer',
+    (await page.locator('.main').innerText()).includes('£2,090.55 counted, less £200.00 float'),
+  )
+
+  await page.fill('#figure-float', '3000')
+  await page.waitForTimeout(200)
+  check(
+    'a float bigger than the drawer is called out',
+    (await page.locator('.note.bad').first().innerText()).includes('more than was counted'),
+  )
+
+  await page.fill('#figure-float', '')
+  await setFigure(page, 'figure-cash', '1890.52')
+  await page.waitForTimeout(150)
+  check('clearing the float restores the plain count', (await verdictText(page)) === 'Balanced')
+
   console.log('\nA scan that cannot run')
   await page.setInputFiles('[data-testid="file-roll"]', join(here, '..', 'public', 'icon-192.png'))
   await page.waitForSelector('.note.bad', { timeout: 5000 })
@@ -138,18 +198,27 @@ try {
   check('and the night can still be finished', (await verdictText(page)) === 'Balanced')
 
   console.log('\nSaving and reading back')
+  // Saved with a float on, so the round trip through storage is covered: the
+  // record keeps takings and float apart, and the night must come back showing
+  // the drawer she actually counted.
+  await page.fill('#figure-float', '200')
+  await setFigure(page, 'figure-cash', '2090.55')
   await page.fill('#note', 'Quiz night, one card machine down')
   await page.click('.verdict-bar .btn-primary')
   await page.waitForSelector('.day-row', { timeout: 5000 })
   check('saving lands in the history', (await page.locator('.day-row').count()) === 1)
   const rowText = await page.locator('.day-row').first().innerText()
-  check('the row shows what was taken', /4,212\.27|4,212\.2/.test(rowText), `got "${rowText}"`)
+  check('the row shows what was taken', /4,212\.30/.test(rowText), `got "${rowText}"`)
 
   await page.click('.day-row')
   await page.waitForSelector('.verdict', { timeout: 5000 })
   const detail = await page.locator('.main').innerText()
   check('the night reads back with its till total', detail.includes('£4,212.30'))
   check('the night reads back with its card total', detail.includes('£2,321.75'))
+  check('the drawer is read back as counted', detail.includes('£2,090.55'), 'float included')
+  check('with the float shown coming off it', /Less float/.test(detail) && detail.includes('−£200.00'))
+  check('and the takings stated apart', detail.includes('£1,890.55'))
+  check('the night still balanced', (await page.locator('.verdict .headline').first().innerText()).trim() === 'Balanced')
   check('the note is kept', detail.includes('Quiz night'))
   check('the figures are marked as typed', detail.includes('Typed in'))
 
@@ -166,6 +235,18 @@ try {
     (await page.inputValue('#figure-card')) === '2321.75',
     `got "${await page.inputValue('#figure-card')}"`,
   )
+  check(
+    'and the float comes back with them',
+    (await page.inputValue('#figure-float')) === '200.00',
+    `got "${await page.inputValue('#figure-float')}"`,
+  )
+  check(
+    'with the drawer as it was counted, not the takings',
+    (await page.inputValue('#figure-cash')) === '2090.55',
+    `got "${await page.inputValue('#figure-cash')}" — the float must be added back for editing`,
+  )
+  // Float taken back out, so the rest of the run reads as it always did.
+  await page.fill('#figure-float', '')
   await setFigure(page, 'figure-cash', '1800.55')
   check('the verdict follows the correction', (await verdictText(page)) === 'Short by £90.00',
     `got "${await verdictText(page)}"`)

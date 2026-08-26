@@ -45,7 +45,15 @@ export function nightSummary({ day, reconciliation, people, shifts, pubName }: S
 
   out.push(line('Till roll', day.till.pence === null ? '—' : formatMoney(day.till.pence)))
   out.push(line('Card machine', day.card.pence === null ? '—' : formatMoney(day.card.pence)))
-  out.push(line('Cash counted', day.cashPence === null ? '—' : formatMoney(day.cashPence)))
+  if (day.floatPence) {
+    // Stated in full, because an accountant reconciling the banking needs to
+    // know the drawer held more than the takings figure says.
+    out.push(line('Drawer counted', formatMoney((day.cashPence ?? 0) + day.floatPence)))
+    out.push(line('Less float', `−${formatMoney(day.floatPence)}`))
+    out.push(line('Cash takings', day.cashPence === null ? '—' : formatMoney(day.cashPence)))
+  } else {
+    out.push(line('Cash counted', day.cashPence === null ? '—' : formatMoney(day.cashPence)))
+  }
   if (day.card.pence !== null && day.cashPence !== null) {
     out.push(line('Card + cash', formatMoney(day.card.pence + day.cashPence)))
   }

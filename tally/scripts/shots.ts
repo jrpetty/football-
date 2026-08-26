@@ -77,6 +77,19 @@ for (const scheme of ['dark', 'light'] as const) {
   await page.waitForTimeout(200)
   await page.screenshot({ path: join(out, `tonight-${scheme}.png`), fullPage: false })
 
+  // The drawer counted out, with a float declared.
+  await page.fill('#figure-float', '200')
+  await page.click('button[aria-label="Count the drawer out in notes and coins"]')
+  await page.waitForSelector('input[aria-label="How many £20"]', { timeout: 5000 })
+  for (const [label, n] of [['£20', '17'], ['£10', '6'], ['£5', '4'], ['£1', '23'], ['50p', '11'], ['20p', '9']] as const) {
+    await page.fill(`input[aria-label="How many ${label}"]`, n)
+  }
+  await page.waitForTimeout(250)
+  await page.screenshot({ path: join(out, `cashup-${scheme}.png`), fullPage: false })
+  await page.click('button:has-text("Close")')
+  await page.fill('#figure-float', '')
+  await page.waitForTimeout(150)
+
   await page.click('button:has-text("Trade")')
   await page.waitForSelector('.kpi-row', { timeout: 5000 })
   await page.waitForTimeout(250)

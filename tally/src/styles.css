@@ -1170,3 +1170,52 @@ table.data.crew th[scope='row'] { white-space: nowrap; }
   transition: width 0.3s var(--ease);
 }
 .meter-fill.over { background: var(--warn); }
+
+/* Counting the drawer out: a grid of what is in it, biggest first. */
+.counter {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+.counter-grid {
+  /* Four across on a phone: twelve denominations in three tidy rows. */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(62px, 1fr));
+  gap: 8px 6px;
+  margin-bottom: 10px;
+}
+/* Every cell the same height, or the grid rows step up and down as some
+   denominations gain a sub-total and others do not. */
+.counter-cell { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.counter-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 16px;
+  height: 16px;
+  letter-spacing: 0.01em;
+  color: var(--muted);
+}
+.counter-label.note { color: var(--accent); }
+.counter-cell input {
+  font: inherit;
+  font-size: 16px;
+  text-align: right;
+  height: 46px;
+  min-height: 46px;
+  width: 100%;
+  padding: 4px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.counter-cell input:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.counter-sub { font-size: 10.5px; color: var(--faint); height: 14px; line-height: 14px; text-align: right; }
+.btn-scan .glyph { font-size: 21px; font-weight: 650; color: var(--accent); line-height: 1; }

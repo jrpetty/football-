@@ -46,6 +46,10 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
   const [keyText, setKeyText] = useState(() => loadSettings().apiKey)
   const [keyState, setKeyState] = useState<KeyCheck | null>(null)
   const [checking, setChecking] = useState(false)
+  const [floatTextSetting, setFloatTextSetting] = useState(() => {
+    const f = loadSettings().standingFloatPence
+    return f > 0 ? penceToInput(f) : ''
+  })
   const [placeQuery, setPlaceQuery] = useState('')
   const [places, setPlaces] = useState<Place[] | null>(null)
   const [findingPlace, setFindingPlace] = useState(false)
@@ -270,6 +274,29 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
             never yours. At {(s.vatBp / 100).toFixed(1)}% a £4.00 pint is {formatMoney(Math.round((400 * 10000) / (10000 + s.vatBp)))} to the pub.
           </p>
         </div>
+        <div className="field">
+          <label htmlFor="standing-float">Float left in the drawer</label>
+          <input
+            id="standing-float"
+            inputMode="decimal"
+            placeholder="none"
+            value={floatTextSetting}
+            onChange={(e) => {
+              setFloatTextSetting(e.target.value)
+              if (e.target.value.trim() === '') update({ standingFloatPence: 0 })
+              else {
+                const pence = parsePence(e.target.value)
+                if (pence !== null && pence >= 0) update({ standingFloatPence: pence })
+              }
+            }}
+          />
+          <p className="help">
+            {s.standingFloatPence > 0
+              ? `Filled in on every night, so the ${formatMoney(s.standingFloatPence)} left for change is taken off the drawer before anything is compared with the till. Change it on the night if it was different.`
+              : 'If change is left in the drawer overnight, put the usual amount here and it will be filled in each night. Without it a float reads as the pub being over by exactly that much, every single night.'}
+          </p>
+        </div>
+
         <div className="field">
           <label htmlFor="place">Where the pub is</label>
           {s.place.name ? (

@@ -27,6 +27,8 @@ import { getDay, getPhoto, saveDay, savePhoto } from '../storage/db.ts'
 import { loadSettings } from '../storage/settings.ts'
 import { makeThumbnail } from '../ocr/index.ts'
 import { IconTickSmall } from '../components/icons.tsx'
+import { CashCount } from '../components/CashCount.tsx'
+import { splitDrawer, type Tally } from '../core/cash.ts'
 
 function figureFromCapture(capture: Capture, photo?: Blob): FigureState {
   const text = penceToInput(capture.pence)
@@ -69,7 +71,14 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
   const [date, setDate] = useState(initialDate ?? tradingDayKey())
   const [roll, setRoll] = useState<RollState>(emptyRoll)
   const [card, setCard] = useState<FigureState>(emptyFigure)
-  const [cashText, setCashText] = useState('')
+  /** What was in the drawer, float and all — the figure she actually counts. */
+  const [drawerText, setDrawerText] = useState('')
+  const [floatText, setFloatText] = useState(() => {
+    const standing = loadSettings().standingFloatPence
+    return standing > 0 ? penceToInput(standing) : ''
+  })
+  const [tally, setTally] = useState<Tally>({})
+  const [counting, setCounting] = useState(false)
   const [note, setNote] = useState('')
   const [existing, setExisting] = useState<DayRecord | null>(null)
   const [saving, setSaving] = useState(false)
@@ -86,7 +95,7 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
       if (!found) {
         setRoll(emptyRoll())
         setCard(emptyFigure())
-        setCashText('')
+        setDrawerText('')
         setNote('')
         return
       }
@@ -100,7 +109,10 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
         edited: found.till.edited,
       })
       setCard(figureFromCapture(found.card, cardPhoto))
-      setCashText(penceToInput(found.cashPence))
+      // Stored as takings and float apart; shown as the drawer she counted.
+      const floatPence = found.floatPence ?? 0
+      setFloatText(floatPence > 0 ? penceToInput(floatPence) : '')
+      setDrawerText(found.cashPence === null ? '' : penceToInput(found.cashPence + floatPence))
       setNote(found.note)
     })()
     return () => {
@@ -111,10 +123,18 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
   const zRead = roll.zRead && !isZReadEmpty(roll.zRead) ? roll.zRead : undefined
   const expected = tillExpectations(zRead)
 
+  // The drawer holds the float as well as the takings, and only the takings
+  // reconcile. Without this subtraction a £200 float reads as £200 over every
+  // night — consistently enough to look like the pub doing well.
+  const drawerPence = parsePence(drawerText)
+  const floatPence = parsePence(floatText) ?? 0
+  const split = drawerPence === null ? null : splitDrawer(drawerPence, floatPence)
+  const takingsCashPence = split ? split.takingsPence : null
+
   const r = reconcileFull({
     tillPence: rollTotalPence(roll),
     cardPence: parsePence(card.text),
-    cashPence: parsePence(cashText),
+    cashPence: takingsCashPence,
     tolerancePence: settings.tolerancePence,
     ...(zRead ? { zRead } : {}),
   })
@@ -139,10 +159,12 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
           edited: roll.edited,
         },
         card: await captureFromFigure(card, settings.keepPhotos, existing?.card.photoId),
-        cashPence: parsePence(cashText),
+        cashPence: takingsCashPence,
         note,
         updatedAt: Date.now(),
       }
+      if (floatPence > 0) record.floatPence = floatPence
+      else delete record.floatPence
       if (zRead) record.zRead = zRead
       if (photoIds.length) record.zPhotoIds = [...(base.zPhotoIds ?? []), ...photoIds]
 
@@ -197,18 +219,82 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
 
         <section className="card">
           <div className="card-head">
-            <span className={`step-dot${parsePence(cashText) !== null ? ' done' : ''}`} aria-hidden="true">
-              {parsePence(cashText) !== null ? <IconTickSmall size={13} /> : 3}
+            <span className={`step-dot${drawerPence !== null ? ' done' : ''}`} aria-hidden="true">
+              {drawerPence !== null ? <IconTickSmall size={13} /> : 3}
             </span>
             <h2>Cash counted</h2>
             <span className="hint">
               {expected.cashPence === undefined ? 'From the drawer' : `till says ${formatMoney(expected.cashPence)}`}
             </span>
           </div>
+
           <div className="figure">
-            <MoneyInput id="figure-cash" label="Cash counted" value={cashText} onChange={setCashText} />
+            <MoneyInput
+              id="figure-cash"
+              label="Cash counted"
+              value={drawerText}
+              onChange={setDrawerText}
+            />
+            <button
+              type="button"
+              className="btn-scan"
+              onClick={() => setCounting((v) => !v)}
+              aria-label="Count the drawer out in notes and coins"
+              aria-expanded={counting}
+            >
+              <span className="glyph num" aria-hidden="true">£</span>
+              <span>{counting ? 'Hide' : 'Count'}</span>
+            </button>
           </div>
-          <p className="note">The one figure with no receipt behind it — count the drawer and type it in.</p>
+
+          {counting && (
+            <CashCount
+              tally={tally}
+              onChange={setTally}
+              onUse={(pence) => {
+                setDrawerText(penceToInput(pence))
+                setCounting(false)
+              }}
+              onClose={() => setCounting(false)}
+            />
+          )}
+
+          <div className="field" style={{ marginTop: 14, marginBottom: 0 }}>
+            <label htmlFor="figure-float">Float left in the drawer</label>
+            <div className="figure">
+              <MoneyInput
+                id="figure-float"
+                label="Float left in the drawer"
+                value={floatText}
+                onChange={setFloatText}
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+
+          {split && split.floatPence > 0 && (
+            <div className="zrow" style={{ marginTop: 10 }}>
+              <span className="zname">
+                Takings in the drawer
+                <small>
+                  {formatMoney(split.drawerPence)} counted, less {formatMoney(split.floatPence)} float
+                </small>
+              </span>
+              <strong className="num">{formatMoney(split.takingsPence)}</strong>
+            </div>
+          )}
+
+          {split?.impossible ? (
+            <p className="note bad" role="status">
+              The float is more than was counted in the drawer, so one of the two is wrong. Nothing
+              will reconcile until they agree.
+            </p>
+          ) : (
+            <p className="note">
+              Count the whole drawer, float and all, and put the float in the second box — it is not
+              takings, so it comes off before anything is compared with the till.
+            </p>
+          )}
         </section>
 
         <ItemisedLegs r={r} />

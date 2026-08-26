@@ -26,6 +26,8 @@ export interface Settings {
   vatBp: number
   /** Hours the week is meant to come to. 0 means no target is set. */
   weeklyHoursTarget: number
+  /** The float usually left in the drawer, prefilled each night. 0 for none. */
+  standingFloatPence: number
   /** Where the pub is, for the weather. Empty name means none set. */
   place: { name: string; latitude: number; longitude: number }
 }
@@ -43,6 +45,7 @@ export const DEFAULT_SETTINGS: Settings = {
   tolerancePence: DEFAULT_TOLERANCE_PENCE,
   vatBp: 2000,
   weeklyHoursTarget: 0,
+  standingFloatPence: 0,
   place: { name: '', latitude: 0, longitude: 0 },
   keepPhotos: true,
 }
@@ -110,6 +113,17 @@ function parsePlace(raw: string | null): Settings['place'] {
   }
 }
 
+/**
+ * The standing float. Its own parser rather than the tolerance one, whose
+ * fallback is five pence — which would put a phantom 5p float on every night.
+ */
+function parseFloat_(raw: string | null): number {
+  if (raw === null) return DEFAULT_SETTINGS.standingFloatPence
+  const n = Number(raw)
+  if (!Number.isFinite(n) || n < 0) return DEFAULT_SETTINGS.standingFloatPence
+  return Math.round(n)
+}
+
 export function loadSettings(): Settings {
   const engine = read('engine')
   return {
@@ -124,6 +138,7 @@ export function loadSettings(): Settings {
     vatBp: parseVat(read('vatBp')),
     weeklyHoursTarget: parseHours(read('weeklyHoursTarget')),
     place: parsePlace(read('place')),
+    standingFloatPence: parseFloat_(read('standingFloat')),
   }
 }
 
@@ -136,6 +151,7 @@ export function saveSettings(s: Settings): void {
   write('vatBp', String(s.vatBp))
   write('weeklyHoursTarget', String(s.weeklyHoursTarget))
   write('place', JSON.stringify(s.place))
+  write('standingFloat', String(s.standingFloatPence))
 }
 
 /**

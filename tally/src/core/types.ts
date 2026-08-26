@@ -37,8 +37,22 @@ export interface DayRecord {
   date: string
   till: Capture
   card: Capture
-  /** The drawer count. Always typed — no receipt exists for it. */
+  /**
+   * The takings cash: what was in the drawer LESS the float left behind.
+   *
+   * This is the figure that reconciles against the till, and it always has
+   * been — the float below is recorded beside it rather than folded into it,
+   * so nothing downstream had to change when floats arrived.
+   */
   cashPence: number | null
+  /**
+   * The change left in the drawer for tomorrow, already excluded from
+   * `cashPence`. Absent or zero means the drawer was emptied.
+   *
+   * Kept because a night has to be readable back as it was counted — and
+   * because a float that quietly grows is itself worth being able to see.
+   */
+  floatPence?: number
   note: string
   /**
    * The full Z read, when the roll was captured rather than just its total.

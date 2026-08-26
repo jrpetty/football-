@@ -138,8 +138,13 @@ function leg(expectedPence: number, countedPence: number, tolerance: number): Le
  * What the till expects to find, drawn from the Z read.
  *
  * CID is preferred for cash because it is the drawer figure specifically; where
- * it was not captured, the cash taken is the same number on a till with no
- * float or payouts, which is how this one runs.
+ * it was not captured, the cash taken is the same number on a till that records
+ * no payouts, which is how this one runs.
+ *
+ * Note that the float is not this function's business. Whatever change is left
+ * in the drawer overnight is subtracted before a night is reconciled at all —
+ * `cashPence` always means the takings — so the figure compared here is
+ * like for like whether or not the pub floats the till.
  */
 export function tillExpectations(z: ZRead | undefined): { cashPence?: number; cardPence?: number; totalPence?: number } {
   if (!z) return {}
