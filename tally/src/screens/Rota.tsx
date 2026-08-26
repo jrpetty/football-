@@ -11,7 +11,7 @@
 // ---------------------------------------------------------------------------
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { addDays, formatShort, tradingDayKey, weekdayOf } from '../core/date.ts'
+import { addDays, formatLong, formatShort, tradingDayKey, weekdayOf } from '../core/date.ts'
 import { formatMoney, parsePence, penceToInput } from '../core/money.ts'
 import {
   crewFor,
@@ -31,6 +31,8 @@ import {
 } from '../core/rota.ts'
 import { scanRota } from '../ocr/scanList.ts'
 import { describeZReadError } from '../ocr/scanZRead.ts'
+import { wagesCsv, wagesSummary, weekWages } from '../core/wagesWeek.ts'
+import { downloadFile } from '../storage/export.ts'
 import { seriesVar, StatTile } from '../components/charts.tsx'
 import { dayStats } from '../core/analytics.ts'
 import { crewRanking, crewStats, type CrewRank } from '../core/rota.ts'
@@ -71,6 +73,7 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
   /** Whose profile is open, if any. */
   const [openPerson, setOpenPerson] = useState<string | null>(null)
   const [toast, setToast] = useState('')
+  const [wagesSent, setWagesSent] = useState('')
   const [scanning, setScanning] = useState(false)
   const [scanError, setScanError] = useState('')
   const [scanNotes, setScanNotes] = useState('')
@@ -117,6 +120,42 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
   function say(message: string) {
     setToast(message)
     setTimeout(() => setToast(''), 4000)
+  }
+
+  /**
+   * The week's hours, handed to whoever runs payroll.
+   *
+   * Same three-step fallback as sending a night on: the share sheet where the
+   * phone has one, the clipboard where it has not, a file as the last resort —
+   * and a message saying which of the three happened.
+   */
+  async function sendWages() {
+    const text = wagesSummary(weekWages(monday, shifts, people ?? []))
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: `Wages — week beginning ${formatLong(monday)}`, text })
+        return
+      }
+      await navigator.clipboard.writeText(text)
+      setWagesSent('Copied — paste it to whoever runs payroll.')
+    } catch (err) {
+      // A cancelled share sheet is not a failure and must not look like one.
+      if (err instanceof DOMException && err.name === 'AbortError') return
+      try {
+        downloadFile(`wages-week-${monday}.txt`, text, 'text/plain')
+        setWagesSent('Saved as a file.')
+      } catch {
+        setWagesSent('Could not send the wages.')
+      }
+    } finally {
+      setTimeout(() => setWagesSent(''), 4000)
+    }
+  }
+
+  function saveWagesCsv() {
+    downloadFile(`wages-week-${monday}.csv`, wagesCsv(weekWages(monday, shifts, people ?? [])), 'text/csv')
+    setWagesSent('Spreadsheet saved.')
+    setTimeout(() => setWagesSent(''), 4000)
   }
 
   const days = useMemo(() => weekDays(monday), [monday])
@@ -567,6 +606,17 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
                 ? 'Add an hourly rate to anyone and the wage bill for the week appears here — and labour as a share of takings appears on Trade.'
                 : 'What this week costs before anyone has pulled a pint. Trade shows it against what the pub actually took.'}
             </p>
+            <div className="btn-row">
+              <button type="button" className="btn-primary" onClick={() => void sendWages()}>
+                Send the week’s wages
+              </button>
+              <button type="button" onClick={saveWagesCsv}>As a spreadsheet</button>
+            </div>
+            <p className="note" style={{ marginBottom: 0 }}>
+              Hours per person for this week, ready for whoever runs payroll. A cross-check, not the
+              payroll itself.
+            </p>
+            {wagesSent && <p className="note" role="status">{wagesSent}</p>}
           </section>
         </>
       )}

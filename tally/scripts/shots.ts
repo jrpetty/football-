@@ -45,6 +45,36 @@ for (const scheme of ['dark', 'light'] as const) {
   const page = await ctx.newPage()
   await page.goto(base, { waitUntil: 'networkidle' })
   await page.evaluate(async (day) => {
+    // A till roll drawn on canvas, so the photographs card and the lightbox
+    // have something that reads as a roll rather than an app icon.
+    const canvas = document.createElement('canvas')
+    canvas.width = 440
+    canvas.height = 1020
+    const g = canvas.getContext('2d')
+    if (g) {
+      g.fillStyle = '#f6f3ec'
+      g.fillRect(0, 0, 440, 1020)
+      g.fillStyle = '#23261f'
+      g.textAlign = 'center'
+      g.font = '600 22px monospace'
+      g.fillText('* GARDENERS ARMS *', 220, 56)
+      g.font = '19px monospace'
+      g.textAlign = 'left'
+      let y = 100
+      for (const line of [
+        'Z READ                #0042', '23-08-2026            23:41', '---------------------------',
+        'DEPT./GROUP', 'D01              406.000 Q', 'DRAUGHT BEERS     *1492.25', '                    68.05%',
+        'D03               41.000 Q', 'WINE               *214.60', '                     9.79%',
+        'D05               55.000 Q', 'SPIRITS            *291.15', '                    13.28%',
+        '---------------------------', 'TRANSACTION', 'CASH                  57 Q', '                   *351.80',
+        'CREDIT CARD          210 Q', '                  *1841.00', 'PAID TL              267 Q', '                  *2192.80',
+        '---------------------------', '    *** THANK YOU ***',
+      ]) {
+        g.fillText(line, 30, y)
+        y += 34
+      }
+    }
+    const blob = await new Promise<Blob | null>((res) => canvas.toBlob((b) => res(b), 'image/jpeg', 0.85))
     await new Promise<void>((resolve, reject) => {
       const req = indexedDB.open('tally')
       req.onupgradeneeded = () => {
@@ -53,8 +83,9 @@ for (const scheme of ['dark', 'light'] as const) {
         if (!db.objectStoreNames.contains('photos')) db.createObjectStore('photos', { keyPath: 'id' })
       }
       req.onsuccess = () => {
-        const tx = req.result.transaction('days', 'readwrite')
+        const tx = req.result.transaction(['days', 'photos'], 'readwrite')
         tx.objectStore('days').put(day)
+        if (blob) tx.objectStore('photos').put({ id: 'shot-roll-1', blob, savedAt: 0 })
         tx.oncomplete = () => resolve()
         tx.onerror = () => reject(tx.error)
       }
@@ -67,6 +98,7 @@ for (const scheme of ['dark', 'light'] as const) {
     cashPence: 33980,
     note: '',
     zRead: GARDENERS_ARMS,
+    zPhotoIds: ['shot-roll-1'],
     createdAt: 0, updatedAt: 0,
   })
   await page.reload({ waitUntil: 'networkidle' })
@@ -120,6 +152,14 @@ for (const scheme of ['dark', 'light'] as const) {
     await page.waitForTimeout(120)
   }
   await page.screenshot({ path: join(out, `rota-${scheme}.png`), fullPage: false })
+
+  // The week card with the wages send, further down the same screen.
+  await page.locator('button:has-text("Send the week")').scrollIntoViewIfNeeded()
+  await page.waitForTimeout(250)
+  await page.screenshot({ path: join(out, `wages-${scheme}.png`), fullPage: false })
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await page.waitForTimeout(150)
+
   await page.locator('.day-open').nth(5).click()
   await page.waitForTimeout(250)
   await page.screenshot({ path: join(out, `rota-open-${scheme}.png`), fullPage: false })
@@ -193,6 +233,15 @@ for (const scheme of ['dark', 'light'] as const) {
   await page.waitForTimeout(300)
   await page.screenshot({ path: join(out, `trade-crew-${scheme}.png`), fullPage: true })
 
+  // The question box, sat near the top of Trade.
+  await page.evaluate(() => {
+    document.querySelectorAll('.card h2').forEach((h) => {
+      if (h.textContent === 'Ask the till') h.closest('.card')?.scrollIntoView({ block: 'center' })
+    })
+  })
+  await page.waitForTimeout(200)
+  await page.screenshot({ path: join(out, `ask-${scheme}.png`), fullPage: false })
+
   // The staff record, with a couple of people on the books.
   await page.click('button:has-text("Rota")')
   await page.waitForSelector('.chip:has-text("Records")', { timeout: 5000 })
@@ -242,13 +291,22 @@ for (const scheme of ['dark', 'light'] as const) {
   await page.waitForTimeout(300)
   await page.screenshot({ path: join(out, `moving-${scheme}.png`), fullPage: false })
 
-  // The saved night, opened.
+  // The saved night, opened — and its photograph, full screen.
   await page.click('button:has-text("Nights")')
   await page.waitForSelector('.day-row', { timeout: 5000 })
   await page.click('.day-row')
   await page.waitForSelector('.verdict', { timeout: 5000 })
   await page.waitForTimeout(200)
   await page.screenshot({ path: join(out, `night-${scheme}.png`), fullPage: false })
+  await page.waitForSelector('.photo-thumb', { timeout: 5000 })
+  await page.locator('.photo-thumb').scrollIntoViewIfNeeded()
+  await page.waitForTimeout(200)
+  await page.screenshot({ path: join(out, `night-photos-${scheme}.png`), fullPage: false })
+  await page.click('.photo-thumb')
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: join(out, `lightbox-${scheme}.png`), fullPage: false })
+  await page.click('.lb-close')
+  await page.waitForTimeout(200)
 
   // The roll review, reached by editing the night.
   await page.click('button:has-text("Edit")')

@@ -23,6 +23,7 @@ import { crewFor, formatHours, formatTime, shiftMinutes, type Person, type Shift
 import { nightSummary, summaryFilename } from '../core/summary.ts'
 import { downloadFile } from '../storage/export.ts'
 import { loadSettings } from '../storage/settings.ts'
+import { Lightbox, type LightboxPhoto } from '../components/Lightbox.tsx'
 
 function provenance(c: Capture): string {
   if (c.source === 'manual') return 'Typed in'
@@ -64,7 +65,9 @@ interface Props {
 
 export function DayDetail({ date, onBack, onEdit, onDeleted }: Props) {
   const [day, setDay] = useState<DayRecord | null | undefined>(undefined)
-  const [shots, setShots] = useState<{ till?: string; card?: string }>({})
+  const [gallery, setGallery] = useState<LightboxPhoto[]>([])
+  const [missingShots, setMissingShots] = useState(0)
+  const [viewing, setViewing] = useState<number | null>(null)
   const [confirming, setConfirming] = useState(false)
   const [shared, setShared] = useState('')
   const [people, setPeople] = useState<Person[]>([])
@@ -92,21 +95,38 @@ export function DayDetail({ date, onBack, onEdit, onDeleted }: Props) {
       const found = await getDay(date).catch(() => undefined)
       if (cancelled) return
       setDay(found ?? null)
+      setViewing(null)
       if (!found) return
-      const next: { till?: string; card?: string } = {}
-      for (const [key, id] of [['till', found.till.photoId], ['card', found.card.photoId]] as const) {
-        if (!id) continue
-        const blob = await getPhoto(id).catch(() => undefined)
-        if (!blob) continue
+
+      // Every photograph the night kept, in the order they were taken: the
+      // roll — usually several — then the older single till shot where one
+      // exists, then the card slip.
+      const rollIds = found.zPhotoIds ?? []
+      const wanted: { id: string; label: string }[] = [
+        ...rollIds.map((id, i) => ({ id, label: rollIds.length > 1 ? `Till roll ${i + 1}` : 'Till roll' })),
+        ...(found.till.photoId ? [{ id: found.till.photoId, label: 'Till roll' }] : []),
+        ...(found.card.photoId ? [{ id: found.card.photoId, label: 'Card slip' }] : []),
+      ]
+      const next: LightboxPhoto[] = []
+      let gone = 0
+      for (const w of wanted) {
+        const blob = await getPhoto(w.id).catch(() => undefined)
+        if (!blob) {
+          // The record remembers a photograph that is no longer stored —
+          // cleared out to save space. Said plainly rather than skipped.
+          gone++
+          continue
+        }
         const url = URL.createObjectURL(blob)
         urls.push(url)
-        next[key] = url
+        next.push({ url, label: w.label })
       }
       if (cancelled) {
         urls.forEach((u) => URL.revokeObjectURL(u))
         return
       }
-      setShots(next)
+      setGallery(next)
+      setMissingShots(gone)
     })()
     return () => {
       cancelled = true
@@ -305,12 +325,41 @@ export function DayDetail({ date, onBack, onEdit, onDeleted }: Props) {
         </section>
       )}
 
-      {(shots.till || shots.card) && (
+      {(gallery.length > 0 || missingShots > 0) && (
         <section className="card">
-          <div className="card-head"><h2>The receipts</h2></div>
-          {shots.till && <div className="shot"><img src={shots.till} alt="The till roll as photographed" /></div>}
-          {shots.card && <div className="shot"><img src={shots.card} alt="The card slip as photographed" /></div>}
+          <div className="card-head">
+            <h2>The photographs</h2>
+            {gallery.length > 0 && <span className="hint">tap one to read it</span>}
+          </div>
+          {gallery.length > 0 && (
+            <div className="photo-strip">
+              {gallery.map((g, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className="photo-thumb"
+                  onClick={() => setViewing(i)}
+                  aria-label={`Open ${g.label} full screen`}
+                >
+                  <img src={g.url} alt={g.label} loading="lazy" />
+                  <span>{g.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {missingShots > 0 && (
+            <p className="note">
+              {missingShots === 1
+                ? 'One photograph from this night is'
+                : `${missingShots} photographs from this night are`}{' '}
+              no longer stored — older ones go when photographs are cleared out from Settings.
+            </p>
+          )}
         </section>
+      )}
+
+      {viewing !== null && gallery.length > 0 && (
+        <Lightbox photos={gallery} initial={viewing} onClose={() => setViewing(null)} />
       )}
 
       <section className="card">

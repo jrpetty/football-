@@ -23,6 +23,7 @@ import { isZReadEmpty, sectionLabel, sectionsIn, type ZRead } from '../core/zrea
 import type { CaptureConfidence, CaptureSource } from '../core/types.ts'
 import { scanZReadBatch, type PhotoOutcome } from '../ocr/scanZRead.ts'
 import { IconCamera, IconReceipt, IconTickSmall } from './icons.tsx'
+import { Lightbox } from './Lightbox.tsx'
 
 export interface RollState {
   zRead?: ZRead
@@ -79,6 +80,7 @@ export function TillRollCard({ value, onChange, onReview, step, done }: Props) {
   const [dragging, setDragging] = useState(false)
   const [showChecks, setShowChecks] = useState(false)
   const [previews, setPreviews] = useState<string[]>([])
+  const [viewing, setViewing] = useState<number | null>(null)
 
   useEffect(() => () => abortRef.current?.abort(), [])
 
@@ -281,7 +283,18 @@ export function TillRollCard({ value, onChange, onReview, step, done }: Props) {
         <ul className="shots">
           {value.photoOutcomes.map((p, i) => (
             <li key={p.index}>
-              {previews[i] ? <img src={previews[i]} alt="" /> : <span className="shot-blank" aria-hidden="true" />}
+              {previews[i] ? (
+                <button
+                  type="button"
+                  className="shot-open"
+                  onClick={() => setViewing(i)}
+                  aria-label={`Open photograph ${i + 1} full screen`}
+                >
+                  <img src={previews[i]} alt="" />
+                </button>
+              ) : (
+                <span className="shot-blank" aria-hidden="true" />
+              )}
               <span className="shot-what">
                 {p.error ? (
                   // One shared cause is stated once, underneath, rather than
@@ -365,6 +378,14 @@ export function TillRollCard({ value, onChange, onReview, step, done }: Props) {
           </div>
           {showChecks && verdict && <CrossfootList verdict={verdict} showPassing />}
         </>
+      )}
+
+      {viewing !== null && previews.length > 0 && (
+        <Lightbox
+          photos={previews.map((url, i) => ({ url, label: `Photograph ${i + 1} of the roll` }))}
+          initial={viewing}
+          onClose={() => setViewing(null)}
+        />
       )}
     </section>
   )

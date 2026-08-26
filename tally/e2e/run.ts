@@ -222,6 +222,35 @@ try {
   check('the note is kept', detail.includes('Quiz night'))
   check('the figures are marked as typed', detail.includes('Typed in'))
 
+  console.log('\nThe photographs, full screen')
+  // The failed scan above still kept its photograph, and a kept photograph
+  // must be readable — that is the whole point of keeping it.
+  await page.waitForSelector('.photo-thumb', { timeout: 5000 })
+  check('the roll photograph is kept on the night', (await page.locator('.photo-thumb').count()) === 1)
+  check('and labelled as the roll', (await page.locator('.photo-thumb span').innerText()).trim() === 'Till roll')
+  await page.click('.photo-thumb')
+  await page.waitForSelector('[data-testid="lightbox"]', { timeout: 5000 })
+  check('tapping it opens the viewer', (await page.locator('[data-testid="lightbox"] img').count()) === 1)
+  check('with the caption naming it', (await page.locator('.lb-caption').innerText()).trim() === 'Till roll')
+  check('one photograph means no page-turn arrows', (await page.locator('.lb-nav').count()) === 0)
+
+  // Double-tap zooms in; the stage says so with a class the cursor rides on.
+  await page.locator('[data-testid="lightbox"] img').dblclick()
+  await page.waitForTimeout(250)
+  check('a double tap zooms in', (await page.locator('.lb-stage.zoomed').count()) === 1)
+  await page.locator('[data-testid="lightbox"] img').dblclick()
+  await page.waitForTimeout(250)
+  check('and a second one zooms back out', (await page.locator('.lb-stage.zoomed').count()) === 0)
+
+  await page.keyboard.press('Escape')
+  await page.waitForSelector('[data-testid="lightbox"]', { state: 'detached', timeout: 5000 })
+  check('escape puts it away', (await page.locator('[data-testid="lightbox"]').count()) === 0)
+  await page.click('.photo-thumb')
+  await page.waitForSelector('[data-testid="lightbox"]', { timeout: 5000 })
+  await page.click('.lb-close')
+  await page.waitForSelector('[data-testid="lightbox"]', { state: 'detached', timeout: 5000 })
+  check('so does the close button, which is what a phone has', (await page.locator('[data-testid="lightbox"]').count()) === 0)
+
   console.log('\nCorrecting a saved night')
   await page.click('button:has-text("Edit")')
   await page.waitForSelector('#figure-till', { timeout: 5000 })
@@ -260,6 +289,21 @@ try {
   await page.waitForSelector('.day-row', { timeout: 5000 })
   check('the night is still there after a reload', (await page.locator('.day-row').count()) === 1)
   check('and still shows it was short', (await page.locator('.day-row .delta').innerText()).includes('−£90.00'))
+
+  console.log('\nAsking without a key')
+  // Deliberately before any key is saved: the honest answer is a pointer to
+  // Settings, not a spinner that dies quietly.
+  await page.click('button:has-text("Trade")')
+  await page.waitForSelector('.card:has(h2:text("Ask the till"))', { timeout: 5000 })
+  await page.fill('input[aria-label="Ask a question about the records"]', 'What did we take last night?')
+  await page.click('.ask-row .btn-primary')
+  await page.waitForSelector('.card:has(h2:text("Ask the till")) .note.bad', { timeout: 5000 })
+  const askErr = await page.locator('.card:has(h2:text("Ask the till")) .note.bad').innerText()
+  check('it points at the key in Settings', /API key in Settings/.test(askErr), askErr)
+  check(
+    'the question is not lost to the failure',
+    (await page.inputValue('input[aria-label="Ask a question about the records"]')) === 'What did we take last night?',
+  )
 
   console.log('\nSaving a key')
   await page.click('button:has-text("Settings")')
@@ -491,6 +535,24 @@ try {
 
   const wages = await page.locator('.day-edit').innerText()
   check('wages count only the person with a rate', wages.includes('£67.16'), wages.slice(-160))
+
+  console.log('\nThe week’s wages, sent on')
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
+  await page.evaluate(() => {
+    ;(navigator as { share?: unknown }).share = undefined
+  })
+  await page.click('button:has-text("Send the week")')
+  await page.waitForTimeout(400)
+  const wagesText = await page.evaluate(() => navigator.clipboard.readText())
+  check('the wages summary names the week', /Wages — week beginning/.test(wagesText), wagesText.slice(0, 60))
+  check('each person gets hours, shifts and money', /Kelly\s+5h 30m over 1 shift · £67\.16/.test(wagesText))
+  check('a missing rate is said, not priced at nothing', /Dave\s+5h 30m over 1 shift — no rate set/.test(wagesText))
+  check('the hours foot to the week', /Hours in total\s+11h/.test(wagesText))
+  check('and it says it is a cross-check, not the payroll', /cross-check for payroll/.test(wagesText))
+  check(
+    'the button says what it did',
+    (await page.locator('p:has-text("paste it to whoever runs payroll")').count()) === 1,
+  )
 
   // The whole week, copied forward.
   await page.locator('.week-nav button[aria-label="The week after"]').click()

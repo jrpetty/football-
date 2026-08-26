@@ -67,6 +67,8 @@ import {
 } from '../core/rota.ts'
 import { checkPrices, priceHeadline, type PriceBookEntry } from '../core/priceBook.ts'
 import { loadSettings } from '../storage/settings.ts'
+import { AskCard } from '../components/AskCard.tsx'
+import type { AskData } from '../core/askContext.ts'
 import { IconChart } from '../components/icons.tsx'
 import {
   BarChart,
@@ -109,6 +111,8 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
   const [weather, setWeather] = useState<DayWeather[]>([])
   const [ahead, setAhead] = useState<DayWeather[]>([])
   const [weatherNote, setWeatherNote] = useState('')
+  /** The night notes, kept beside the stats for the question box. */
+  const [notes, setNotes] = useState<ReadonlyMap<string, string>>(new Map())
 
   useEffect(() => {
     let cancelled = false
@@ -117,6 +121,7 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
       .then((days) => {
         if (cancelled) return
         setAll(days.map((d) => dayStats(d, tolerance)))
+        setNotes(new Map(days.filter((d) => d.note.trim() !== '').map((d) => [d.date, d.note])))
       })
       .catch((err: unknown) => !cancelled && setError(err instanceof Error ? err.message : String(err)))
     return () => {
@@ -299,6 +304,24 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
 
   const moves = useMemo(() => marginMoves(stock.items, stock.pours, book), [stock, book])
 
+  // One cellar picture, shared by the alerts and the question box — computed
+  // once so the two can never disagree about what is on hand.
+  const cellar = useMemo(
+    () =>
+      all !== null && stock.items.length > 0
+        ? cellarHealth({
+            items: stock.items,
+            pours: stock.pours,
+            counts: stockCounts,
+            deliveries,
+            days: all,
+            today: tradingDayKey(),
+            costOfServing: costOf,
+          })
+        : null,
+    [all, stock, deliveries, stockCounts],
+  )
+
   /**
    * The week's findings.
    *
@@ -333,19 +356,6 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
       stock.items,
     )
 
-    const cellar =
-      stock.items.length > 0
-        ? cellarHealth({
-            items: stock.items,
-            pours: stock.pours,
-            counts: stockCounts,
-            deliveries,
-            days: all,
-            today: tradingDayKey(),
-            costOfServing: costOf,
-          })
-        : null
-
     return weeklyAlerts({
       recent: [...all].sort((a, b) => b.date.localeCompare(a.date)),
       weekdayYoY,
@@ -358,7 +368,7 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
       // lines that have a price but no cost yet, which is a different job.
       unpricedCount: monthGp.lines.filter((l) => l.missing === 'price').length,
     })
-  }, [all, book, stock, deliveries, stockCounts, moves])
+  }, [all, book, stock, stockCounts, moves, cellar])
 
   // Left where the service worker can find it, since a worker cannot run any
   // of the above itself. See public/sw.js.
@@ -370,6 +380,12 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
   const prices = useMemo(
     () => checkPrices(itemTotals(selected).map((i) => ({ code: i.code, name: i.name, qtyMilli: i.qtyMilli, pence: i.pence })), book),
     [selected, book],
+  )
+
+  // Everything the question box may be asked about, in one place.
+  const askData = useMemo<AskData>(
+    () => ({ days: all ?? [], notes, book, cellar, people, shifts, weather, today: tradingDayKey() }),
+    [all, notes, book, cellar, people, shifts, weather],
   )
 
   if (error) return <div className="main"><p className="note bad">Could not read the saved nights: {error}</p></div>
@@ -442,6 +458,8 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
           </p>
         </section>
       )}
+
+      <AskCard data={askData} />
 
       {/* --- filters, in one row above the charts --------------------------- */}
       <section className="card">

@@ -1281,3 +1281,217 @@ tr.item-row { cursor: pointer; }
 @media (hover: hover) {
   .item-open:hover { color: var(--accent); }
 }
+
+/* ---- the photographs, full screen ------------------------------------------ */
+
+/* The strip of thumbnails on a saved night. Fixed-height crops — the lightbox
+   is where a photograph gets read, the strip only has to say which is which. */
+.photo-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.photo-thumb {
+  display: block;
+  padding: 0;
+  min-height: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+  overflow: hidden;
+  cursor: zoom-in;
+  text-align: center;
+}
+
+.photo-thumb img {
+  display: block;
+  width: 100%;
+  height: 128px;
+  object-fit: cover;
+  /* Rolls are read from the top; crop the bottom, not the header. */
+  object-position: top;
+}
+
+.photo-thumb span {
+  display: block;
+  padding: 6px 4px 7px;
+  font-size: 12px;
+  color: var(--muted);
+  border-top: 1px solid var(--line-soft);
+}
+
+@media (hover: hover) {
+  .photo-thumb:hover { border-color: var(--accent); }
+}
+
+/* A thumbnail in the capture list that opens full screen. */
+.shot-open {
+  display: block;
+  flex: none;
+  padding: 0;
+  min-height: 0;
+  border: 0;
+  background: none;
+  line-height: 0;
+  cursor: zoom-in;
+  border-radius: 10px;
+}
+
+/* The viewer itself. Always dark, whatever the theme — photographs are read
+   against black, and the roll is white paper. Opaque: the page bleeding
+   through behind a photograph is noise, not depth. */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background: #06080a;
+  color: #e8edeb;
+}
+
+.lb-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 14px 10px;
+}
+
+.lb-caption {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-size: 15.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lb-count { flex: none; font-size: 13px; color: #9fb0ac; font-variant-numeric: tabular-nums; }
+
+.lb-close {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 0.16);
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.06);
+  color: inherit;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.lb-stage {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  cursor: zoom-in;
+}
+
+.lb-stage.zoomed { cursor: grab; }
+.lb-stage.zoomed.dragging { cursor: grabbing; }
+
+.lb-stage img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+  will-change: transform;
+  transition: transform 0.18s var(--ease);
+}
+
+/* Fingers move the image directly; easing behind them makes it feel greasy. */
+.lb-stage.dragging img { transition: none; }
+
+.lb-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  min-height: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(255 255 255 / 0.16);
+  border-radius: 50%;
+  background: rgb(10 13 15 / 0.65);
+  color: #e8edeb;
+}
+
+.lb-prev { left: 10px; }
+.lb-next { right: 10px; }
+.lb-nav:disabled { opacity: 0.3; }
+
+.lb-hint {
+  margin: 0;
+  padding: 8px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+  text-align: center;
+  font-size: 12px;
+  color: #9fb0ac;
+}
+
+/* ---- the question box ------------------------------------------------------ */
+
+.ask-row { display: flex; gap: 8px; margin: 4px 0 10px; }
+
+.ask-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 14px;
+  font-size: 16px; /* not smaller: iOS zooms the page on focus below 16px */
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--text);
+  transition: border-color 0.16s var(--ease), box-shadow 0.16s var(--ease);
+}
+.ask-row input:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.ask-row input::placeholder { color: var(--faint); }
+.ask-row .btn-primary { flex: none; width: auto; padding-inline: 22px; }
+
+.ask-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+
+.ask-thread { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 12px; }
+
+.ask-turn {
+  max-width: 92%;
+  padding: 9px 13px;
+  border-radius: 14px;
+  font-size: 14.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.ask-turn.user {
+  align-self: flex-end;
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface-2));
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+  border-bottom-right-radius: 5px;
+}
+
+.ask-turn.assistant {
+  align-self: flex-start;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-bottom-left-radius: 5px;
+}
+
+.ask-turn.thinking { color: var(--muted); display: flex; align-items: center; gap: 8px; }
