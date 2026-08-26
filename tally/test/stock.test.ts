@@ -83,8 +83,65 @@ test('ginger beer is not a gin', () => {
   // ever, and silently. Whole words only.
   const g = guessPour('P00053', 'GINGER BEER')
   assert.equal(g.kind, 'count')
+  assert.equal(g.servingName, 'bottle', 'it is a bottle off a shelf, and counted like one')
   assert.notEqual(g.baseUnits, 30)
-  assert.equal(g.sure, false, 'it lands on the list to be checked instead')
+})
+
+// --- how each kind of drink is counted ----------------------------------------
+
+test('a bottle is counted by the bottle, whatever size is printed on it', () => {
+  // The measure printed here is the bottle's own size, not a pour out of
+  // something bigger — so counting it in millilitres would be counting the
+  // fridge in millilitres.
+  const alcFree = guessPour('P00059', '550ml alc free')
+  assert.equal(alcFree.kind, 'count')
+  assert.equal(alcFree.servingName, 'bottle')
+  assert.equal(alcFree.baseUnits, 1)
+  assert.equal(alcFree.stockName, 'alc free')
+  assert.equal(alcFree.sure, true)
+
+  const mixer = guessPour('x', '275ML CRANBERRY')
+  assert.equal(mixer.servingName, 'bottle')
+  assert.equal(mixer.baseUnits, 1)
+})
+
+test('the juices and the mixers are bottles too', () => {
+  for (const name of ['ORANGE JUICE', 'APPLE JUICE', 'TONIC', 'ELDERFLOWER', 'FRUIT BEER']) {
+    const g = guessPour('x', name)
+    assert.equal(g.kind, 'count', name)
+    assert.equal(g.servingName, 'bottle', name)
+  }
+})
+
+test('a bottle named as one is a bottle, and sure of it', () => {
+  const g = guessPour('P00050', 'Bot pure brew')
+  assert.equal(g.kind, 'count')
+  assert.equal(g.servingName, 'bottle')
+  assert.equal(g.sure, true, 'the till said bottle — there is nothing left to check')
+})
+
+test('a spirit with the tonic in its name still pours the spirit', () => {
+  // GIN AND TONIC must not be counted off a shelf because of the tonic.
+  const g = guessPour('x', 'GIN AND TONIC')
+  assert.equal(g.kind, 'liquid')
+  assert.equal(g.servingName, 'shot')
+  assert.equal(g.baseUnits, 30)
+})
+
+test('a measure small enough to be a spirit is poured, not counted', () => {
+  const g = guessPour('x', '25ML BELLS')
+  assert.equal(g.kind, 'liquid')
+  assert.equal(g.servingName, 'shot')
+  assert.equal(g.stockName, 'Bells')
+})
+
+test('the tap beers stay in pints', () => {
+  for (const name of ['PINT TADDY LAGER', 'PINT OBB', 'PINT CIDER', 'PINT STOUT']) {
+    const g = guessPour('x', name)
+    assert.equal(g.kind, 'liquid', name)
+    assert.equal(g.servingName, 'pint', name)
+    assert.equal(g.baseUnits, ML_PER_PINT, name)
+  }
 })
 
 test('an unguessable spirit is left unsure rather than guessed wrong', () => {

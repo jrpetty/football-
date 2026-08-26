@@ -658,6 +658,39 @@ try {
   await page.click('.chip:has-text("What it costs")')
   await page.waitForSelector('input[aria-label="Taddy Lager cost"]', { timeout: 5000 })
 
+  console.log('\nHow each kind of drink is counted')
+  // Straight off the till's own names: the tap beers in pints, the spirits in
+  // millilitres at the house measure, the bottles by the bottle.
+  check(
+    'a tap beer is counted in pints',
+    (await page.locator('select[aria-label="Taddy Lager counted in"]').inputValue()) === 'pint',
+  )
+  check(
+    'a spirit is counted in shots of millilitres',
+    (await page.locator('select[aria-label="Vodka counted in"]').inputValue()) === 'shot',
+  )
+  check(
+    'the alcohol-free is counted by the bottle, not by its 550ml',
+    (await page.locator('select[aria-label="alc free counted in"]').inputValue()) === 'bottle',
+  )
+  check(
+    'and so is the juice',
+    (await page.locator('select[aria-label="Orange Juice counted in"]').inputValue()) === 'bottle',
+  )
+  // A line the guess got wrong can be put right, and says what that cost.
+  await page.selectOption('select[aria-label="Crisps counted in"]', 'bottle')
+  await page.waitForTimeout(400)
+  check(
+    'a line can be recounted by hand',
+    (await page.locator('select[aria-label="Crisps counted in"]').inputValue()) === 'bottle',
+  )
+  check(
+    'and it says the unit and cost went with the change',
+    /set its unit and cost again/.test(await page.locator('.toast').innerText()),
+  )
+  await page.selectOption('select[aria-label="Crisps counted in"]', 'each')
+  await page.waitForTimeout(400)
+
   // A firkin of Taddy: £95 for 72 pints, as the invoice charges it.
   // Deliberately price first, then
   // size: a price with no size yet is not a cost, and an earlier version threw

@@ -150,6 +150,31 @@ const SPIRIT_WORDS = [
   'SCHNAPPS', 'SAMBUCA', 'AMARETTO', 'PORT', 'SHERRY', 'LIQUEUR', 'ARCHERS',
 ]
 
+/**
+ * The measures a glass of wine is poured at.
+ *
+ * These are the only sizes that mean "poured from a bigger bottle". Any other
+ * size printed on a line is the container the drink arrives in — a 275ml
+ * mixer, a 550ml alcohol-free — and those are counted by the bottle.
+ */
+const WINE_MEASURES = new Set([125, 175, 250])
+
+/** At or below this, a printed measure is a spirit measure, not a bottle. */
+const SPIRIT_MEASURE_MAX_ML = 60
+
+/**
+ * Sold by the bottle, one at a time.
+ *
+ * The juices, the mixers and the alcohol-free all come out of a fridge and go
+ * back on a shelf, so they are counted the way they are stored: in bottles.
+ * BEER only reaches this list after PINT and HALF have had their turn, so what
+ * is left of it — a fruit beer, a ginger beer — is the bottled sort.
+ */
+const BOTTLE_WORDS = [
+  'JUICE', 'TONIC', 'LEMONADE', 'COKE', 'PEPSI', 'PRESSE', 'CORDIAL',
+  'ELDERFLOWER', 'ALC', 'ALCOHOL', 'BEER',
+]
+
 export interface PourGuess {
   itemCode: string
   itemName: string
@@ -190,21 +215,42 @@ export function guessPour(code: string, name: string, mlPerShot = DEFAULT_ML_PER
   const half = /^HALF\s+(.+)$/.exec(upper)
   if (half?.[1]) return base(titleise(half[1]), ML_PER_HALF, 'liquid', 'pint', true)
 
-  // "175ML ROSE", "550ml alc free" — the measure is printed in the name.
-  const measured = /^(\d{2,4})\s*ML\s+(.+)$/.exec(upper)
+  // A measure printed in the name. What it means depends entirely on its size,
+  // and getting that wrong is the difference between counting a fridge and
+  // counting a wine cellar:
+  //   175ml on a rose is a glass poured out of a bottle
+  //   25ml on a whisky is a measure poured out of a bottle
+  //   550ml on an alcohol-free is the bottle itself, sold whole
+  // Read off the original rather than the shouted copy, so a line the till
+  // deliberately typed in lower case — "550ml alc free" — keeps its name.
+  const measured = /^(\d{2,4})\s*ML\s+(.+)$/i.exec(clean)
   if (measured?.[1] && measured[2]) {
-    return base(titleise(measured[2]), Number(measured[1]), 'liquid', `${measured[1]}ml`, true)
+    const ml = Number(measured[1])
+    const rest = titleise(measured[2])
+    if (WINE_MEASURES.has(ml)) return base(rest, ml, 'liquid', `${ml}ml`, true)
+    if (ml <= SPIRIT_MEASURE_MAX_ML) return base(rest, ml, 'liquid', 'shot', true)
+    return base(rest, 1, 'count', 'bottle', true)
   }
 
-  // A bottle whose size is not printed cannot be poured by volume.
-  if (/^BOT(TLE)?\b/.test(upper)) return base(titleise(clean.replace(/^BOT(TLE)?\s*/i, '')), 1, 'count', 'bottle', false)
+  // A bottle is counted as a bottle. Nobody counts the fridge in millilitres.
+  if (/^BOT(TLE)?\b/.test(upper)) return base(titleise(clean.replace(/^BOT(TLE)?\s*/i, '')), 1, 'count', 'bottle', true)
 
   // Whole words only. Substring matching makes GINGER BEER a gin and pours it
   // as a 30ml shot for ever, which is worse than not guessing: a wrong pour is
   // silent, where an unguessed one lands on the list to check. That trade also
   // costs the guess on "Raspgin", and that is the right way round.
+  //
+  // Spirits are checked before the bottled words on purpose: a line reading
+  // GIN AND TONIC pours gin, and the tonic in its name must not turn it into
+  // something counted off a shelf.
   if (SPIRIT_WORDS.some((w) => new RegExp(`\\b${w}\\b`).test(upper))) {
     return base(titleise(clean), mlPerShot, 'liquid', 'shot', true)
+  }
+
+  // The juices, the mixers, the alcohol-free, the bottled beers: all sold one
+  // bottle at a time, and counted the same way.
+  if (BOTTLE_WORDS.some((w) => new RegExp(`\\b${w}\\b`).test(upper))) {
+    return base(titleise(clean), 1, 'count', 'bottle', true)
   }
 
   // Everything else — crisps, nuts, a dash, open food — is counted, not poured.
@@ -323,14 +369,32 @@ export function servingsToBase(servings: number, item: StockItem): number {
  * as the cellar cares. Offered as a list because "how many pints in a kil" is
  * obvious in the trade and looked up by everybody else.
  */
-export const CONTAINER_SIZES = [
+export interface ContainerPreset {
+  name: string
+  /** What it holds, counted in the servings of the line it is set on. */
+  servings?: number
+  /**
+   * What it holds in millilitres, for the lines measured that way.
+   *
+   * A spirit bottle is 70cl whatever the house measure is; how many shots that
+   * comes to depends on the measure, so it is worked out from the line rather
+   * than written down here.
+   */
+  ml?: number
+  hint: string
+}
+
+export const CONTAINER_SIZES: ContainerPreset[] = [
   { name: 'firkin', servings: 72, hint: '9 gallons' },
   { name: 'kil', servings: 144, hint: '18 gallons' },
   { name: 'keg', servings: 88, hint: '11 gallons' },
   { name: 'pin', servings: 36, hint: '4½ gallons' },
   { name: 'case', servings: 24, hint: 'bottles' },
   { name: 'box', servings: 12, hint: 'packets' },
-] as const
+  { name: '70cl bottle', ml: 700, hint: 'spirits' },
+  { name: 'litre bottle', ml: 1000, hint: 'spirits' },
+  { name: 'wine bottle', ml: ML_PER_BOTTLE, hint: '75cl' },
+]
 
 /** The container a line comes in, in base units — null when none is set. */
 export function containerBaseUnits(item: StockItem): number | null {
