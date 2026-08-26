@@ -747,6 +747,77 @@ try {
     (await page.locator('.main').innerText()).includes('No nights match those filters'),
   )
 
+  console.log('\nMoving to a new copy')
+  // The whole point of a backup: everything set up here has to arrive intact
+  // in an empty copy of the app. The version this replaced saved only the
+  // nights and lost the prices, the cellar and the rota without a word.
+  await page.click('button:has-text("Settings")')
+  await page.waitForSelector('button:has-text("Save everything")', { timeout: 5000 })
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.click('button:has-text("Save everything")'),
+  ])
+  const savedTo = await download.path()
+  check('a backup file is produced', !!savedTo)
+  check(
+    'named so it is recognisable later',
+    /\.tally\.json$/.test(download.suggestedFilename()),
+    download.suggestedFilename(),
+  )
+
+  const backupText = savedTo ? await readFile(savedTo, 'utf8') : '{}'
+  check('it does not carry the API key', !backupText.includes('sk-ant') && !backupText.includes('apiKey'))
+
+  // A brand new copy of the app, with nothing in it at all.
+  const fresh = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 3,
+    isMobile: true,
+    hasTouch: true,
+  })
+  await fresh.addInitScript(() => {
+    try {
+      localStorage.setItem('tally.engine', 'off')
+    } catch {
+      /* ignore */
+    }
+  })
+  const newCopy = await fresh.newPage()
+  newCopy.on('pageerror', (err) => pageErrors.push(String(err)))
+  await newCopy.goto(base, { waitUntil: 'networkidle' })
+  await newCopy.click('button:has-text("Nights")')
+  await newCopy.waitForTimeout(400)
+  check('the new copy starts empty', (await newCopy.locator('.day-row').count()) === 0)
+
+  await newCopy.click('button:has-text("Settings")')
+  await newCopy.waitForSelector('[data-testid="file-restore"]', { timeout: 5000 })
+  await newCopy.setInputFiles('[data-testid="file-restore"]', savedTo as string)
+  await newCopy.waitForTimeout(1800)
+  const said = await newCopy.locator('.toast').innerText().catch(() => '')
+  check('it says what came back', /Restored/.test(said), said)
+
+  await newCopy.click('button:has-text("Nights")')
+  await newCopy.waitForSelector('.day-row', { timeout: 5000 })
+  check('the nights came across', (await newCopy.locator('.day-row').count()) >= 1)
+
+  await newCopy.click('button:has-text("Cellar")')
+  await newCopy.waitForTimeout(700)
+  const cellarBack = await newCopy.locator('.main').innerText()
+  check('the cellar came across', cellarBack.includes('Taddy Lager'), cellarBack.slice(0, 120))
+  await newCopy.click('.chip:has-text("What it costs")')
+  await newCopy.waitForTimeout(500)
+  check(
+    'with the barrel costs still on it',
+    (await newCopy.locator('.main').innerText()).includes('£1.50'),
+    'the £108 firkin, not a blank box',
+  )
+
+  await newCopy.click('button:has-text("Rota")')
+  await newCopy.waitForTimeout(700)
+  check('the people came across', /Kelly/.test(await newCopy.locator('.main').innerText()))
+
+  await fresh.close()
+
   check('nothing threw along the way', pageErrors.length === 0, pageErrors.join('\n        '))
 } finally {
   await browser.close()

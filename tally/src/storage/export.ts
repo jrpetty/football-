@@ -9,6 +9,17 @@
 // ---------------------------------------------------------------------------
 
 import type { DayRecord } from '../core/types.ts'
+import type { PriceBookEntry } from '../core/priceBook.ts'
+import type { Delivery, Pour, StockCount, StockItem } from '../core/stock.ts'
+import type { Person, Shift } from '../core/rota.ts'
+import type { DayWeather } from '../core/forecast.ts'
+
+/** Mirrors the stored shape; imported as a type would be a cycle through db. */
+interface StockConfig {
+  items: StockItem[]
+  pours: Pour[]
+  mlPerShot: number
+}
 import { reconcileDay, verdictHeadline } from '../core/reconcile.ts'
 import { DEPARTMENTS, departmentLabel } from '../core/departments.ts'
 import { formatQty } from '../core/zread.ts'
@@ -122,22 +133,147 @@ export function toCsv(days: readonly DayRecord[], tolerancePence?: number): stri
   return lines.join('\r\n')
 }
 
-/** A full-fidelity copy, for restoring rather than reading. */
-export function toJson(days: readonly DayRecord[]): string {
-  return JSON.stringify({ app: 'tally', version: 1, exportedAt: new Date().toISOString(), days }, null, 2)
+// --- the whole app in one file -------------------------------------------------
+
+/**
+ * Everything worth keeping.
+ *
+ * The first version of this saved only the nights, which was quietly the worst
+ * kind of bug: the backup appeared to work, restored without complaint, and
+ * lost the price list, the cellar, every barrel cost, the rota and everyone on
+ * it. A backup that is missing most of the work is more dangerous than no
+ * backup at all, because it is trusted.
+ *
+ * Two deliberate omissions, both stated in the interface rather than only here:
+ * the photographs, which are an audit trail rather than data and would make the
+ * file enormous; and the API key, because a backup gets emailed and a key in an
+ * inbox is a key in the wrong place.
+ */
+export interface Backup {
+  app: 'tally'
+  version: 2
+  exportedAt: string
+  days: DayRecord[]
+  prices: PriceBookEntry[]
+  stock: StockConfig
+  deliveries: Delivery[]
+  stockCounts: StockCount[]
+  people: Person[]
+  shifts: Shift[]
+  weather: DayWeather[]
+  /** Everything but the key. */
+  settings: Record<string, unknown>
 }
 
-/** Read a backup back, rejecting anything that is not one. */
-export function parseBackup(text: string): DayRecord[] {
+export function toJson(backup: Omit<Backup, 'app' | 'version' | 'exportedAt'>): string {
+  return JSON.stringify(
+    { app: 'tally', version: 2, exportedAt: new Date().toISOString(), ...backup },
+    null,
+    2,
+  )
+}
+
+/** What a restore actually found, so it can say rather than guess. */
+export interface Restored {
+  days: DayRecord[]
+  prices: PriceBookEntry[]
+  stock: StockConfig | null
+  deliveries: Delivery[]
+  stockCounts: StockCount[]
+  people: Person[]
+  shifts: Shift[]
+  weather: DayWeather[]
+  settings: Record<string, unknown> | null
+  /** True for a backup written before this file saved anything but nights. */
+  nightsOnly: boolean
+}
+
+function arrayOf<T>(value: unknown, keep: (row: unknown) => boolean): T[] {
+  return Array.isArray(value) ? (value.filter(keep) as T[]) : []
+}
+
+const hasId = (row: unknown): boolean =>
+  !!row && typeof row === 'object' && typeof (row as { id?: unknown }).id === 'string'
+
+const hasDate = (row: unknown): boolean =>
+  !!row && typeof row === 'object' && /^\d{4}-\d{2}-\d{2}$/.test(String((row as { date?: unknown }).date))
+
+/**
+ * Read a backup back.
+ *
+ * Every section is optional and validated on its own, so a file written by an
+ * older version restores what it has rather than refusing, and one section
+ * being malformed costs that section rather than the whole restore. Only a file
+ * that is not a Tally backup at all is rejected outright.
+ */
+export function parseBackup(text: string): Restored {
   const parsed: unknown = JSON.parse(text)
   if (!parsed || typeof parsed !== 'object') throw new Error('That file is not a Tally backup.')
-  const days = (parsed as { days?: unknown }).days
-  if (!Array.isArray(days)) throw new Error('That file has no days in it.')
-  return days.filter((d): d is DayRecord => {
+  const bundle = parsed as Record<string, unknown>
+  if (bundle.app !== 'tally' && !Array.isArray(bundle.days)) {
+    throw new Error('That file is not a Tally backup.')
+  }
+
+  const days = arrayOf<DayRecord>(bundle.days, (d) => {
     if (!d || typeof d !== 'object') return false
     const day = d as Partial<DayRecord>
     return typeof day.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(day.date) && !!day.till && !!day.card
   })
+
+  const stockRaw = bundle.stock as Partial<StockConfig> | undefined
+  const stock: StockConfig | null =
+    stockRaw && Array.isArray(stockRaw.items) && Array.isArray(stockRaw.pours)
+      ? {
+          items: stockRaw.items,
+          pours: stockRaw.pours,
+          mlPerShot: typeof stockRaw.mlPerShot === 'number' ? stockRaw.mlPerShot : 30,
+        }
+      : null
+
+  const restored: Restored = {
+    days,
+    prices: arrayOf<PriceBookEntry>(
+      bundle.prices,
+      (p) => !!p && typeof p === 'object' && typeof (p as { pence?: unknown }).pence === 'number',
+    ),
+    stock,
+    deliveries: arrayOf<Delivery>(bundle.deliveries, hasId),
+    stockCounts: arrayOf<StockCount>(bundle.stockCounts, hasDate),
+    people: arrayOf<Person>(bundle.people, hasId),
+    shifts: arrayOf<Shift>(bundle.shifts, hasId),
+    weather: arrayOf<DayWeather>(bundle.weather, hasDate),
+    settings:
+      bundle.settings && typeof bundle.settings === 'object'
+        ? (bundle.settings as Record<string, unknown>)
+        : null,
+    nightsOnly: false,
+  }
+
+  restored.nightsOnly =
+    restored.prices.length === 0 &&
+    restored.stock === null &&
+    restored.people.length === 0 &&
+    restored.shifts.length === 0
+
+  if (days.length === 0 && restored.nightsOnly) throw new Error('That file has nothing in it.')
+  return restored
+}
+
+/** What came back, in words, so a restore is never a silent success. */
+export function describeRestored(r: Restored): string {
+  const bits: string[] = []
+  const add = (n: number, one: string, many = `${one}s`) => {
+    if (n > 0) bits.push(`${n} ${n === 1 ? one : many}`)
+  }
+  add(r.days.length, 'night')
+  add(r.prices.length, 'price')
+  add(r.stock?.items.length ?? 0, 'cellar line')
+  add(r.people.length, 'person', 'people')
+  add(r.shifts.length, 'shift')
+  add(r.deliveries.length, 'delivery', 'deliveries')
+  add(r.stockCounts.length, 'stock take')
+  if (bits.length === 0) return 'Nothing was in that file.'
+  return `Restored ${bits.slice(0, -1).join(', ')}${bits.length > 1 ? ' and ' : ''}${bits[bits.length - 1]}.`
 }
 
 /**

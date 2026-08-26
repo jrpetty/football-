@@ -18,20 +18,24 @@ import {
   estimateUsage,
   loadDigest,
   prunePhotosBefore,
-  saveDay,
   requestPersistence,
+  collectBackup,
+  restoreBackup,
 } from '../storage/db.ts'
 import { dayStats } from '../core/analytics.ts'
 import { addDays, tradingDayKey } from '../core/date.ts'
 import { cellarValue, costOf } from '../core/margin.ts'
 import { monthlyCsv, monthlyTakings, yearEndPack } from '../core/yearEnd.ts'
-import { downloadFile, parseBackup, toCsv, toJson } from '../storage/export.ts'
+import { describeRestored, downloadFile, parseBackup, toCsv, toJson } from '../storage/export.ts'
 import { testApiKey, type KeyCheck } from '../ocr/scanZRead.ts'
 import { describeWeatherError, findPlace, type Place } from '../weather/openMeteo.ts'
+import { IconReceipt } from '../components/icons.tsx'
 import {
   AI_MODELS,
   loadSettings,
+  restoreSettings,
   saveSettings,
+  settingsForBackup,
   type EnginePreference,
   type Settings as SettingsShape,
 } from '../storage/settings.ts'
@@ -61,6 +65,8 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
   const [keyText, setKeyText] = useState(() => loadSettings().apiKey)
   const [keyState, setKeyState] = useState<KeyCheck | null>(null)
   const [checking, setChecking] = useState(false)
+  const [restoring, setRestoring] = useState(false)
+  const [dragging, setDragging] = useState(false)
   const [floatTextSetting, setFloatTextSetting] = useState(() => {
     const f = loadSettings().standingFloatPence
     return f > 0 ? penceToInput(f) : ''
@@ -207,22 +213,44 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
     say(`Exported ${days.length} nights.`)
   }
 
+  /**
+   * Everything, in one file.
+   *
+   * The nights are the least of it — the price list, the cellar with every
+   * barrel cost, the rota and everyone on it all live here too, and an earlier
+   * version of this saved only the nights, which meant moving to a new copy of
+   * the app quietly threw most of the work away.
+   */
   async function exportBackup() {
-    const days = await listDays()
-    if (days.length === 0) return say('Nothing to back up yet.')
-    downloadFile(`tally-backup-${new Date().toISOString().slice(0, 10)}.json`, toJson(days), 'application/json')
-    say(`Backed up ${days.length} nights.`)
+    const bundle = await collectBackup()
+    if (bundle.days.length === 0 && bundle.stock.items.length === 0 && bundle.people.length === 0) {
+      return say('Nothing to back up yet.')
+    }
+    downloadFile(
+      `tally-${new Date().toISOString().slice(0, 10)}.tally.json`,
+      toJson({ ...bundle, settings: settingsForBackup() }),
+      'application/json',
+    )
+    say('Saved. That one file is the whole app — keep it somewhere safe.')
   }
 
   async function importBackup(file: File) {
+    setRestoring(true)
     try {
-      const days = parseBackup(await file.text())
-      if (days.length === 0) return say('That file had no nights in it.')
-      for (const day of days) await saveDay(day)
+      const restored = parseBackup(await file.text())
+      await restoreBackup(restored)
+      restoreSettings(restored.settings)
+      setS(loadSettings())
       onChanged()
-      say(`Restored ${days.length} nights.`)
+      say(
+        restored.nightsOnly
+          ? `${describeRestored(restored)} That file was made by an older version, so it only had the nights in it.`
+          : describeRestored(restored),
+      )
     } catch (err) {
       say(err instanceof Error ? err.message : 'That file could not be read.')
+    } finally {
+      setRestoring(false)
     }
   }
 
@@ -619,29 +647,90 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
       </section>
 
       <section className="card">
-        <div className="card-head"><h2>Keeping the data safe</h2></div>
+        <div className="card-head"><h2>Moving to a new version</h2></div>
         <p className="help" style={{ marginTop: 0 }}>
-          Everything lives on this phone and nowhere else, which is why it works with the wifi down — and why a
-          backup matters. Mail yourself the file now and again.
+          Everything lives on this device and nowhere else, which is why it works with the wifi down.
+          To carry it to a new copy of Tally — a new phone, a laptop, or a newer file — save it here
+          and drop that one file onto the new copy.
         </p>
+
         <div className="btn-row" style={{ marginBottom: 10 }}>
-          <button type="button" onClick={() => void exportCsv()}>Export spreadsheet</button>
-          <button type="button" onClick={() => void exportBackup()}>Back up</button>
+          <button type="button" className="btn-primary" onClick={() => void exportBackup()}>
+            Save everything
+          </button>
+          <button type="button" onClick={() => void exportCsv()}>Spreadsheet</button>
         </div>
-        <button type="button" className="btn-ghost" onClick={() => importRef.current?.click()}>
-          Restore from a backup
-        </button>
+
+        {/* Drag-and-drop as well as a file picker: on a laptop the file is
+            already sitting in a folder, and dragging it on is fewer steps than
+            finding it through a dialog. */}
+        <div
+          className={`dropzone${dragging ? ' over' : ''}${restoring ? ' busy' : ''}`}
+          onDragOver={(e) => {
+            e.preventDefault()
+            setDragging(true)
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault()
+            setDragging(false)
+            const file = [...e.dataTransfer.files][0]
+            if (file) void importBackup(file)
+          }}
+          onClick={() => !restoring && importRef.current?.click()}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              importRef.current?.click()
+            }
+          }}
+          aria-label="Restore from a saved file"
+        >
+          {restoring ? (
+            <>
+              <span className="spinner" />
+              <strong>Putting it back…</strong>
+            </>
+          ) : (
+            <>
+              <span className="dz-glyph" aria-hidden="true"><IconReceipt size={28} strokeWidth={1.5} /></span>
+              <strong>Bring everything back</strong>
+              <span className="dz-hint">Drop a saved file here, or tap to find it.</span>
+            </>
+          )}
+        </div>
+
         <input
           ref={importRef}
           type="file"
           accept="application/json,.json"
           className="visually-hidden"
+          data-testid="file-restore"
           onChange={(e) => {
             const file = e.target.files?.[0]
             e.target.value = ''
             if (file) void importBackup(file)
           }}
         />
+
+        <p className="help">
+          The file holds the nights, the price list, the cellar with its costs, the rota and everyone
+          on it. Restoring adds to whatever is already there — a night with the same date is replaced
+          by the one in the file, and nothing else is touched.
+        </p>
+        <p className="help">
+          Two things it deliberately leaves out: the photographs, which are an audit trail rather than
+          figures and would make the file too big to email; and the API key, because a backup gets
+          sent about and a key is better typed in again.
+        </p>
+        {megabytes && (
+          <p className="help">
+            Tally is using about {megabytes} MB on this device.
+            {usage && usage.quotaBytes > 0 && ` There is room for roughly ${Math.round(usage.quotaBytes / 1_048_576)} MB.`}
+          </p>
+        )}
       </section>
 
       <section className="card">

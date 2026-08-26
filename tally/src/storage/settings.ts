@@ -183,3 +183,28 @@ export function effectiveEngine(s: Settings, online = navigator.onLine): EngineP
   }
   return 'device'
 }
+
+
+/**
+ * The settings a backup carries — everything except the key.
+ *
+ * A backup gets emailed, and an API key sitting in an inbox is a key in the
+ * wrong place. Re-typing it on a new copy is a few seconds; the alternative is
+ * a secret with a life of its own.
+ */
+export function settingsForBackup(): Record<string, unknown> {
+  const { apiKey: _key, ...rest } = loadSettings()
+  return rest
+}
+
+/** Put backed-up settings back, keeping whatever key is already on this device. */
+export function restoreSettings(stored: Record<string, unknown> | null): void {
+  if (!stored) return
+  const current = loadSettings()
+  saveSettings({
+    ...current,
+    ...(stored as Partial<Settings>),
+    // Never taken from a file, since a backup never carries one.
+    apiKey: current.apiKey,
+  })
+}

@@ -340,3 +340,87 @@ export async function loadDigest(): Promise<Digest | null> {
 export function saveDigest(summary: string, count: number): Promise<unknown> {
   return run(DIGEST, 'readwrite', (s) => s.put({ id: 'weekly', summary, count, updatedAt: Date.now() }))
 }
+
+
+// --- the whole app, out and back in -------------------------------------------
+
+/**
+ * Everything worth keeping, gathered for a backup.
+ *
+ * Photographs are deliberately left out: they are an audit trail rather than
+ * data, and a year of them would make a file too big to email — which would
+ * mean no backup at all rather than a bigger one.
+ */
+export async function collectBackup(): Promise<{
+  days: DayRecord[]
+  prices: PriceBookEntry[]
+  stock: StockConfig
+  deliveries: Delivery[]
+  stockCounts: StockCount[]
+  people: Person[]
+  shifts: Shift[]
+  weather: DayWeather[]
+}> {
+  const [days, prices, stock, deliveries, stockCounts, people, shifts, weather] = await Promise.all([
+    listDays(),
+    loadPriceBook(),
+    loadStockConfig(),
+    listDeliveries(),
+    listStockCounts(),
+    listPeople(),
+    listShifts(),
+    listWeather(),
+  ])
+  return { days, prices, stock, deliveries, stockCounts, people, shifts, weather }
+}
+
+export interface RestoreCounts {
+  days: number
+  prices: number
+  cellarLines: number
+  deliveries: number
+  stockCounts: number
+  people: number
+  shifts: number
+  weather: number
+}
+
+/**
+ * Put a backup back.
+ *
+ * Records are merged by their own key rather than the store being emptied
+ * first: restoring a file onto an app that already has something in it adds to
+ * it, and a night with the same date is replaced by the file's version. That is
+ * the behaviour that cannot lose anything by surprise — and it is what moving
+ * to a new copy of the app wants anyway, since the new copy is empty.
+ */
+export async function restoreBackup(bundle: {
+  days?: readonly DayRecord[]
+  prices?: readonly PriceBookEntry[]
+  stock?: StockConfig | null
+  deliveries?: readonly Delivery[]
+  stockCounts?: readonly StockCount[]
+  people?: readonly Person[]
+  shifts?: readonly Shift[]
+  weather?: readonly DayWeather[]
+}): Promise<RestoreCounts> {
+  for (const day of bundle.days ?? []) await saveDay(day)
+  if (bundle.prices && bundle.prices.length > 0) await savePriceBook(bundle.prices)
+  if (bundle.stock) await saveStockConfig(bundle.stock)
+  for (const delivery of bundle.deliveries ?? []) await saveDelivery(delivery)
+  for (const count of bundle.stockCounts ?? []) await saveStockCount(count)
+  for (const person of bundle.people ?? []) await savePerson(person)
+  for (const shift of bundle.shifts ?? []) await saveShift(shift)
+  if (bundle.weather && bundle.weather.length > 0) await saveWeather(bundle.weather)
+
+  return {
+    days: bundle.days?.length ?? 0,
+    prices: bundle.prices?.length ?? 0,
+    cellarLines: bundle.stock?.items.length ?? 0,
+    deliveries: bundle.deliveries?.length ?? 0,
+    stockCounts: bundle.stockCounts?.length ?? 0,
+    people: bundle.people?.length ?? 0,
+    shifts: bundle.shifts?.length ?? 0,
+    weather: bundle.weather?.length ?? 0,
+  }
+}
