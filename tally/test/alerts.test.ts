@@ -235,3 +235,21 @@ test('the unpriced alert counts only lines actually missing a price', () => {
   const alerts = weeklyAlerts({ ...nothing, unpricedCount: 12 })
   assert.match(alerts[0]!.headline, /^12 lines still have no price set$/)
 })
+
+
+test('an old stock take stops being news', () => {
+  // Without the cut-off a January variance tops the digest in the present
+  // tense until somebody counts again in August.
+  const fresh = weeklyAlerts({ ...nothing, cellarGapPence: -60000, cellarCountAgeDays: 10 })
+  assert.equal(fresh.length, 1)
+
+  const stale = weeklyAlerts({ ...nothing, cellarGapPence: -60000, cellarCountAgeDays: 200 })
+  assert.equal(stale.length, 0, 'seven months old is history, not a finding')
+
+  const unknownAge = weeklyAlerts({ ...nothing, cellarGapPence: -60000 })
+  assert.equal(unknownAge.length, 1, 'no age given keeps the old behaviour')
+})
+
+test('a reconciled cellar (£0) is never an alert', () => {
+  assert.equal(weeklyAlerts({ ...nothing, cellarGapPence: 0, cellarCountAgeDays: 5 }).length, 0)
+})

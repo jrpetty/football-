@@ -599,8 +599,8 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
         </p>
         <p className="help">
           It also shows what the app last worked out rather than checking afresh, because the part of
-          the browser that wakes up cannot do the sums. Opening Tally now and again keeps it current —
-          which counting up every night does anyway.
+          the browser that wakes up cannot do the sums. The working-out happens on the Trade screen,
+          so glancing at Trade now and again is what keeps it current.
         </p>
       </section>
 

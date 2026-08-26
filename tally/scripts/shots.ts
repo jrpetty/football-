@@ -225,6 +225,7 @@ for (const scheme of ['dark', 'light'] as const) {
   await page.click('button:has-text("Settings")')
   await page.waitForTimeout(300)
   await page.screenshot({ path: join(out, `settings-${scheme}.png`), fullPage: false })
+  await page.screenshot({ path: join(out, `settings-full-${scheme}.png`), fullPage: true })
   await page.locator('button:has-text("Save everything")').scrollIntoViewIfNeeded()
   await page.waitForTimeout(300)
   await page.screenshot({ path: join(out, `moving-${scheme}.png`), fullPage: false })

@@ -22,6 +22,8 @@
 // that looks like shrinkage and is arithmetic.
 // ---------------------------------------------------------------------------
 
+import { addDays as addDaysKey } from './date.ts'
+
 /** The app's pint. Fixed so deliveries and sales cancel exactly. */
 export const ML_PER_PINT = 568
 
@@ -565,4 +567,118 @@ export function deadStock(
     .filter((l) => l.reason !== null)
     // Most money standing still first — that is the one worth acting on.
     .sort((a, b) => (b.tiedUpPence ?? 0) - (a.tiedUpPence ?? 0) || (b.weeksOfCover ?? 0) - (a.weeksOfCover ?? 0))
+}
+
+
+// --- the cellar, judged in one place ------------------------------------------
+
+/**
+ * Everything the app concludes about the cellar, computed once.
+ *
+ * This existed first as private arithmetic inside the Cellar screen, which
+ * produced a quiet failure: the weekly alerts were built to say "the cellar is
+ * £600 light" and could never say it, because the only code that knew the
+ * figure was a screen the alerts cannot see. One shared function means the
+ * screen and the alerts cannot drift apart — they are reading the same answer.
+ *
+ * Two windows, and they are different questions. The OPEN window runs from the
+ * last stock take to now and answers "what should be down there" — it has no
+ * verdict in it, because nothing has been counted at its far end. The CLOSED
+ * window runs between the last two takes and is the only one that can be
+ * judged, because it has a count at both ends.
+ */
+export interface CellarHealth {
+  /** Where the open window starts. */
+  since: string
+  sinceDays: number
+  /** The open window: what should be on hand now. */
+  ledger: StockLine[]
+  /** Lines taking up space without earning it, over the open window. */
+  dead: DeadStockLine[]
+  /**
+   * The closed window's variance, valued at cost. Null until two counts exist
+   * or when none of the discrepancies carries a cost; £0 when the window was
+   * judged and reconciled exactly.
+   */
+  gapPence: number | null
+  /** The closed window line by line, worst first. Empty until two counts exist. */
+  gapLines: StockVariance[]
+}
+
+export function cellarHealth(args: {
+  items: readonly StockItem[]
+  pours: readonly Pour[]
+  /** Most recent first, as listStockCounts returns them. */
+  counts: readonly StockCount[]
+  deliveries: readonly Delivery[]
+  /** Every night's sold lines, whatever order. */
+  days: ReadonlyArray<{ date: string; items: readonly SoldLine[] }>
+  today: string
+  costOfServing: (item: StockItem, baseUnits: number) => number | null
+}): CellarHealth {
+  const { items, pours, counts, deliveries, days, today, costOfServing } = args
+
+  const soldBetween = (from: string, to?: string): SoldLine[] =>
+    days
+      .filter((d) => d.date > from && (to === undefined || d.date <= to))
+      .flatMap((d) => d.items as SoldLine[])
+
+  const usageBetween = (from: string, to?: string) => pourUsage(soldBetween(from, to), pours).used
+
+  const deliveredBetween = (from: string, to?: string) => {
+    const acc = new Map<string, number>()
+    for (const d of deliveries.filter((x) => x.date > from && (to === undefined || x.date <= to))) {
+      for (const line of d.lines) acc.set(line.stockItemId, (acc.get(line.stockItemId) ?? 0) + line.baseUnits)
+    }
+    return acc
+  }
+
+  const latest = counts[0]
+  const previous = counts[1]
+
+  // With no take yet, a week is enough history to say what is moving without
+  // averaging a line's whole life into its rate.
+  const since = latest?.date ?? addDaysKey(today, -7)
+  const sinceDays = Math.max(1, Math.round((Date.parse(today) - Date.parse(since)) / 86_400_000))
+
+  const opening = new Map((latest?.lines ?? []).map((l) => [l.stockItemId, l.baseUnits]))
+  const openUsage = usageBetween(since)
+  const ledger = buildLedger(items, opening, deliveredBetween(since), openUsage)
+  const dead = deadStock(ledger, openUsage, sinceDays, costOfServing)
+
+  let gapPence: number | null = null
+  let gapLines: StockVariance[] = []
+  if (latest && previous) {
+    const closedOpening = new Map(previous.lines.map((l) => [l.stockItemId, l.baseUnits]))
+    const closed = buildLedger(
+      items,
+      closedOpening,
+      deliveredBetween(previous.date, latest.date),
+      usageBetween(previous.date, latest.date),
+    )
+    gapLines = compareToCount(closed, new Map(latest.lines.map((l) => [l.stockItemId, l.baseUnits])))
+      .filter((v) => v.varianceBaseUnits !== null && v.varianceBaseUnits !== 0)
+      .sort((a, b) => (a.varianceBaseUnits ?? 0) - (b.varianceBaseUnits ?? 0))
+
+    if (gapLines.length === 0) {
+      // A judged window where every line counted exactly as expected is a
+      // reconciled cellar — £0 out, which is an answer, not an unknown.
+      gapPence = 0
+    } else {
+      // Valued line by line at each line's own cost. Lines with no cost cannot
+      // be valued and are left out; if none of the discrepancies could be
+      // valued, the answer is "unknown" rather than a zero that reads as fine.
+      let valuedAny = false
+      let total = 0
+      for (const line of gapLines) {
+        const pence = costOfServing(line.item, line.varianceBaseUnits as number)
+        if (pence === null) continue
+        valuedAny = true
+        total += pence
+      }
+      gapPence = valuedAny ? total : null
+    }
+  }
+
+  return { since, sinceDays, ledger, dead, gapPence, gapLines }
 }

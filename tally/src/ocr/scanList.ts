@@ -180,8 +180,11 @@ async function callVision<T>({ file, signal, system, tool, ask, read }: Call<T>)
     // printed in a fixed font; a chalkboard is hopeless, and pretending
     // otherwise would waste her evening.
     if (settings.engine === 'off') throw new Error('SCANNING_OFF')
-    if (!settings.apiKey.trim()) throw new Error('NO_KEY')
+    // Before the key check: the ordinary on-device setup has no key at all,
+    // and telling that user to add one would be wrong advice — the roll scans
+    // fine as they are, and this photograph needs a different engine, not a key.
     if (settings.engine === 'device') throw new Error('NEEDS_VISION')
+    if (!settings.apiKey.trim()) throw new Error('NO_KEY')
     throw new Error('OFFLINE')
   }
 

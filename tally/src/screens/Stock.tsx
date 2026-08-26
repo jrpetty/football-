@@ -19,11 +19,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { dayStats, itemTotals } from '../core/analytics.ts'
 import { addDays, formatShort, tradingDayKey } from '../core/date.ts'
 import {
-  buildLedger,
-  compareToCount,
+  cellarHealth,
   containersToBase,
   CONTAINER_SIZES,
-  deadStock,
   deliveryLinesFrom,
   describeStock,
   proposeDelivery,
@@ -201,53 +199,37 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
   }
 
   /**
-   * Two windows, and they are different questions.
+   * The cellar's whole state, from the shared core.
    *
-   * "What is left" runs from the last stock take to now. "How did we do" runs
-   * from the take before that to the last one, because only a window with a
-   * count at both ends can be checked — an open window has nothing to compare
-   * against yet.
+   * Once computed privately here, which meant the weekly alerts could never
+   * see the figure this screen was showing. Now both read cellarHealth, so
+   * what the screen says and what the alerts say cannot disagree.
    */
+  const health = useMemo(
+    () =>
+      config
+        ? cellarHealth({
+            items: config.items,
+            pours: config.pours,
+            counts,
+            deliveries,
+            days,
+            today: tradingDayKey(),
+            costOfServing: costOf,
+          })
+        : null,
+    [config, counts, deliveries, days],
+  )
+
+  const vatBp = loadSettings().vatBp
+  // Built once: rebuilding it inside the items loop made every keystroke in a
+  // cost box do items-times-book work for the same answer.
+  const priceIndex = useMemo(() => buildIndex(book), [book])
   const latestCount = counts[0]
   const previousCount = counts[1]
-  const since = latestCount?.date ?? addDays(tradingDayKey(), -7)
-
-  const usageBetween = (from: string, to?: string) => {
-    const inWindow = days.filter((d) => d.date > from && (to === undefined || d.date <= to))
-    const sold = itemTotals(inWindow).map((i) => ({ code: i.code, name: i.name, qtyMilli: i.qtyMilli }))
-    return pourUsage(sold, config?.pours ?? []).used
-  }
-
-  const deliveredBetween = (from: string, to?: string) => {
-    const acc = new Map<string, number>()
-    for (const d of deliveries.filter((x) => x.date > from && (to === undefined || x.date <= to))) {
-      for (const line of d.lines) acc.set(line.stockItemId, (acc.get(line.stockItemId) ?? 0) + line.baseUnits)
-    }
-    return acc
-  }
-
-  const ledger = useMemo(() => {
-    if (!config) return []
-    const opening = new Map((latestCount?.lines ?? []).map((l) => [l.stockItemId, l.baseUnits]))
-    return buildLedger(config.items, opening, deliveredBetween(since), usageBetween(since))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config, days, deliveries, counts, since])
-
-  /** The finished window: the last take measured against what was expected. */
-  const result = useMemo(() => {
-    if (!config || !latestCount || !previousCount) return []
-    const opening = new Map(previousCount.lines.map((l) => [l.stockItemId, l.baseUnits]))
-    const closed = buildLedger(
-      config.items,
-      opening,
-      deliveredBetween(previousCount.date, latestCount.date),
-      usageBetween(previousCount.date, latestCount.date),
-    )
-    return compareToCount(closed, new Map(latestCount.lines.map((l) => [l.stockItemId, l.baseUnits])))
-      .filter((v) => v.varianceBaseUnits !== null && v.varianceBaseUnits !== 0)
-      .sort((a, b) => (a.varianceBaseUnits ?? 0) - (b.varianceBaseUnits ?? 0))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config, days, deliveries, counts])
+  const since = health?.since ?? addDays(tradingDayKey(), -7)
+  const ledger = health?.ledger ?? []
+  const result = health?.gapLines ?? []
 
   const unmapped = useMemo(() => {
     if (!config) return []
@@ -615,9 +597,9 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
             const sizeKey = `${item.id}:size`
             const perServing = costOf(item, item.servingBaseUnits)
             const pour = config.pours.find((p) => p.stockItemId === item.id)
-            const sell = pour ? lookup(buildIndex(book), { code: pour.itemCode, name: pour.itemName }) : undefined
+            const sell = pour ? lookup(priceIndex, { code: pour.itemCode, name: pour.itemName }) : undefined
             const pourCost = pour ? costOf(item, pour.baseUnits) : null
-            const gp = sell && pourCost !== null ? margin(sell.pence, pourCost, loadSettings().vatBp) : null
+            const gp = sell && pourCost !== null ? margin(sell.pence, pourCost, vatBp) : null
             const sizeText = drafts[sizeKey] ?? (servings ? String(servings) : '')
 
             return (
@@ -762,10 +744,8 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
       })()}
 
       {panel === 'levels' && config.items.length > 0 && (() => {
-        // Measured over the same open window the levels above use, so the
-        // rate and the stock on hand are talking about the same period.
-        const days = Math.max(1, Math.round((Date.parse(tradingDayKey()) - Date.parse(since)) / 86_400_000))
-        const slow = deadStock(ledger, usageBetween(since), days, costOf)
+        const days = health?.sinceDays ?? 1
+        const slow = health?.dead ?? []
         if (slow.length === 0) return null
         return (
           <section className="card">

@@ -1,7 +1,7 @@
 {
   "name": "Tally — till reconciliation",
   "short_name": "Tally",
-  "description": "Photograph the till roll and the card slip, count the drawer, and know in a minute whether the night balances.",
+  "description": "Photograph the till roll, count the drawer, and know in a minute whether the night balances — then what it made, what the cellar holds, and who was on.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

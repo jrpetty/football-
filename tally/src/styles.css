@@ -685,10 +685,10 @@ button:disabled { opacity: 0.45; cursor: default; }
 .field label { font-size: 13px; font-weight: 650; }
 .field .help { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
 
-.field input[type='text'],
-.field input[type='password'],
-.field input[type='date'],
-.field input[type='number'],
+/* Every box in a form field, whatever its type attribute — several fields use
+   bare inputMode inputs, and listing types here once left those with naked
+   browser styling. Checkboxes and radios keep their native size. */
+.field input:not([type='checkbox']):not([type='radio']),
 .field select,
 .field textarea {
   font: inherit;
@@ -703,7 +703,7 @@ button:disabled { opacity: 0.45; cursor: default; }
   transition: border-color 0.16s var(--ease), box-shadow 0.16s var(--ease);
 }
 
-.field input:focus-visible,
+.field input:not([type='checkbox']):not([type='radio']):focus-visible,
 .field select:focus-visible,
 .field textarea:focus-visible {
   outline: none;

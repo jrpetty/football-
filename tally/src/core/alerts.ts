@@ -48,6 +48,14 @@ const GP_FLOOR_BP = 5500
 /** Cellar variance worth mentioning, in pence. */
 const CELLAR_GAP_PENCE = 20000
 
+/**
+ * A stock take older than this is history, not news. Without the cut-off, a
+ * January variance would top the digest in the present tense until somebody
+ * counted again in August — seven months of "the cellar IS £250 light"
+ * drowning out everything newer.
+ */
+export const STALE_COUNT_DAYS = 45
+
 /** Money in slow stock worth mentioning. */
 const DEAD_STOCK_PENCE = 20000
 
@@ -62,6 +70,8 @@ export interface AlertInput {
   deadStock?: readonly DeadStockLine[]
   /** Cellar variance at the last stock take: what was really there, less expected. */
   cellarGapPence?: number | null
+  /** How long ago that take was, so an old one is not reported as current. */
+  cellarCountAgeDays?: number | null
   unpricedCount?: number
 }
 
@@ -116,7 +126,10 @@ export function weeklyAlerts(input: AlertInput): Alert[] {
 
   // --- the cellar disagreeing with the till ------------------------------------
   const gap = input.cellarGapPence
-  if (gap !== null && gap !== undefined && Math.abs(gap) >= CELLAR_GAP_PENCE) {
+  const gapFresh = input.cellarCountAgeDays === null || input.cellarCountAgeDays === undefined
+    ? true
+    : input.cellarCountAgeDays <= STALE_COUNT_DAYS
+  if (gap !== null && gap !== undefined && gapFresh && Math.abs(gap) >= CELLAR_GAP_PENCE) {
     out.push({
       id: 'cellar-gap',
       level: gap < 0 ? 'bad' : 'warn',

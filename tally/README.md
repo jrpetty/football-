@@ -338,23 +338,36 @@ where the tests are.
 
 ---
 
-## Not in v1, on purpose
+## Beyond the nightly count
 
-Staff hours, wage costs, stock deliveries, weekly and monthly summaries,
-multi-pub, manager accounts, any accounts system at all.
+The reconciliation above was v1. The rest grew out of it, each piece reading
+what the nights already record rather than asking for new typing:
 
-There is no cloud sync — which is why the export in Settings matters. "No cloud"
-must not mean "one dropped phone and the year is gone", so there is a spreadsheet
-export and a full backup file she can mail to herself, and nothing is trapped
-inside the app.
+- **The Cellar** — stock in real containers (a kil is 144 pints), deliveries
+  booked in by photographing the note, stock takes, and a variance that names
+  the loss no balanced drawer can see: beer that left without going through the
+  till. Costs per container turn into cost per pint, what the cellar is worth,
+  and a dead-stock list of what is not earning its space.
+- **Gross profit** — the price book (photographable off the board) joined to
+  the cellar costs gives VAT-correct GP per line, and a price-history log shows
+  which brewery rises the board never followed.
+- **The Rota** — people, shifts, a weekly hours target, wage costs, and each
+  person's record: how the drawer behaves on their nights against everyone
+  else's, with the sample-size honesty that comparison demands.
+- **Trade intelligence** — a weather-informed forecast of next week fitted to
+  this pub's own history, like-for-like against 52 weeks back, and a capped
+  list of weekly findings worth acting on.
+- **Paperwork** — any night shareable as plain text for the accountant, and a
+  one-button year-end pack: takings by month, stock at cost, wages, VAT
+  workings, stamped as working figures rather than a return.
 
-**Phase 2**, once this is proven: staff hours and wage cost per day, and stock
-delivery costs. Both hang off the same date key, so they are additive rather than
-a rewrite. The weekly view that answers "are Fridays always short?" arrived early
-— the roll turned out to carry the data already.
+There is still no cloud sync, on purpose — which is why "Save everything" in
+Settings matters. One file carries the whole app (nights, prices, cellar, rota,
+settings; never the API key) to a new phone, laptop or newer copy, and "no
+cloud" never means "one dropped phone and the year is gone".
 
-**Phase 3**, the brewery pitch: multi-pub, manager accounts, aggregate reporting.
-That is the version that needs a backend, and that is the point at which the
+**The brewery pitch**, someday: multi-pub, manager accounts, aggregate
+reporting. That is the version that needs a backend, and the point at which the
 API-key-in-the-browser decision above gets paid back.
 
 ---

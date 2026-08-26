@@ -31,7 +31,19 @@ import { departmentSlot } from '../core/departments.ts'
 import { formatShort, tradingDayKey } from '../core/date.ts'
 import { formatMoney, formatSigned } from '../core/money.ts'
 import { formatQty } from '../core/zread.ts'
-import { listDays, listPeople, listShifts, loadPriceBook, loadStockConfig, EMPTY_STOCK, type StockConfig } from '../storage/db.ts'
+import {
+  listDays,
+  listDeliveries,
+  listPeople,
+  listShifts,
+  listStockCounts,
+  loadPriceBook,
+  loadStockConfig,
+  EMPTY_STOCK,
+  type StockConfig,
+} from '../storage/db.ts'
+import { cellarHealth, type Delivery, type StockCount } from '../core/stock.ts'
+import { costOf } from '../core/margin.ts'
 import { marginReport } from '../core/margin.ts'
 import { forecastWeek, MIN_FOR_WEATHER, type DayWeather } from '../core/forecast.ts'
 import { marginMoves } from '../core/history.ts'
@@ -87,6 +99,8 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
   const [people, setPeople] = useState<Person[]>([])
   const [shifts, setShifts] = useState<Shift[]>([])
   const [stock, setStock] = useState<StockConfig>(EMPTY_STOCK)
+  const [deliveries, setDeliveries] = useState<Delivery[]>([])
+  const [stockCounts, setStockCounts] = useState<StockCount[]>([])
   const [weather, setWeather] = useState<DayWeather[]>([])
   const [ahead, setAhead] = useState<DayWeather[]>([])
   const [weatherNote, setWeatherNote] = useState('')
@@ -107,11 +121,13 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
 
   useEffect(() => {
     let cancelled = false
-    void Promise.all([loadPriceBook(), loadStockConfig()])
-      .then(([b, cfg]) => {
+    void Promise.all([loadPriceBook(), loadStockConfig(), listDeliveries(), listStockCounts()])
+      .then(([b, cfg, dels, cts]) => {
         if (cancelled) return
         setBook(b)
         setStock(cfg)
+        setDeliveries(dels)
+        setStockCounts(cts)
       })
       .catch(() => {})
     return () => {
@@ -216,6 +232,7 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
         selected.map((d) => ({ date: d.date, variancePence: d.variancePence, takingsPence: d.takingsPence })),
         shifts,
         people,
+        loadSettings().tolerancePence,
       ),
     [selected, shifts, people],
   )
@@ -282,31 +299,66 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
   )
 
   /**
-   * The week's findings, from everything already worked out above.
+   * The week's findings.
    *
-   * Per weekday rather than overall: "trade is down" is a mood, and "Fridays
-   * are down twelve percent" is something to do something about.
+   * Computed over fixed windows rather than whatever the filter chips happen
+   * to say: a weekly digest that changed when "Didn't balance" was tapped
+   * would be a different list every visit, and the nudge notification would be
+   * describing a filter nobody remembers setting.
    */
   const alerts = useMemo(() => {
     if (all === null) return []
-    const WEEKDAY_NAMES = WEEKDAYS
-    const weekdayYoY = WEEKDAY_NAMES.map((weekday) => {
+
+    // Each weekday against ITS OWN nights, and only THIS year's against last
+    // year's. Two earlier versions of this line were each wrong in turn:
+    // passing the whole history made every weekday report the same figure
+    // (like-for-like windows do not know about weekdays), and an unbounded
+    // window let a slump from two years ago keep firing "Fridays down" after
+    // Fridays had fully recovered, because every past year paired against the
+    // year before it with equal weight.
+    const today = tradingDayKey()
+    const yearBack = lastNDays(today, 364)
+    const weekdayYoY = WEEKDAYS.map((weekday) => {
       const mine = all.filter((d) => d.weekday === weekday && d.takingsPence !== null)
       if (mine.length === 0) return null
-      const dates = mine.map((d) => d.date).sort()
-      return { weekday, change: likeForLike(all, dates[0] as string, dates[dates.length - 1] as string) }
+      return { weekday, change: likeForLike(mine, yearBack, today) }
     }).filter((x): x is { weekday: string; change: ReturnType<typeof likeForLike> } => x !== null)
+
+    const lastMonth = all.filter((d) => d.date >= lastNDays(today, 30))
+    const monthGp = marginReport(
+      itemTotals(lastMonth).map((i) => ({ code: i.code, name: i.name, qtyMilli: i.qtyMilli })),
+      book,
+      stock.pours,
+      stock.items,
+      loadSettings().vatBp,
+    )
+
+    const cellar =
+      stock.items.length > 0
+        ? cellarHealth({
+            items: stock.items,
+            pours: stock.pours,
+            counts: stockCounts,
+            deliveries,
+            days: all,
+            today: tradingDayKey(),
+            costOfServing: costOf,
+          })
+        : null
 
     return weeklyAlerts({
       recent: [...all].sort((a, b) => b.date.localeCompare(a.date)),
       weekdayYoY,
-      gp,
+      gp: monthGp,
       moves,
+      deadStock: cellar?.dead ?? [],
+      cellarGapPence: cellar?.gapPence ?? null,
+      cellarCountAgeDays: cellar && stockCounts.length > 0 ? cellar.sinceDays : null,
       // Lines with no board price specifically — uncostedCount also counts
       // lines that have a price but no cost yet, which is a different job.
-      unpricedCount: gp.lines.filter((l) => l.missing === 'price').length,
+      unpricedCount: monthGp.lines.filter((l) => l.missing === 'price').length,
     })
-  }, [all, gp, moves])
+  }, [all, book, stock, deliveries, stockCounts, moves])
 
   // Left where the service worker can find it, since a worker cannot run any
   // of the above itself. See public/sw.js.
@@ -352,6 +404,30 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
 
   return (
     <div className="main">
+      {alerts.length > 0 && (
+        <section className="card alerts">
+          <div className="card-head">
+            <h2>Worth knowing</h2>
+            <span className="badge warn">{alerts.length}</span>
+          </div>
+          {alerts.map((a) => (
+            <div className={`alert ${a.level}`} key={a.id}>
+              <span className="alert-mark" aria-hidden="true">
+                <IconAlert size={16} strokeWidth={2} />
+              </span>
+              <span className="alert-words">
+                <strong>{a.headline}</strong>
+                <small>{a.detail}</small>
+              </span>
+            </div>
+          ))}
+          <p className="note">
+            Only things worth acting on appear here, and never more than five — a list nobody
+            finishes is a list nobody reads.
+          </p>
+        </section>
+      )}
+
       {/* --- filters, in one row above the charts --------------------------- */}
       <section className="card">
         <div className="card-head"><h2>Show me</h2></div>
@@ -442,30 +518,6 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
         />
         <StatTile label="Balanced" value={`${t.balancedNights}/${t.nights}`} detail={`${t.shortNights} short, ${t.overNights} over`} tone={t.balancedNights === t.nights ? 'good' : undefined} />
       </div>
-
-      {alerts.length > 0 && (
-        <section className="card alerts">
-          <div className="card-head">
-            <h2>Worth knowing</h2>
-            <span className="badge warn">{alerts.length}</span>
-          </div>
-          {alerts.map((a) => (
-            <div className={`alert ${a.level}`} key={a.id}>
-              <span className="alert-mark" aria-hidden="true">
-                <IconAlert size={16} strokeWidth={2} />
-              </span>
-              <span className="alert-words">
-                <strong>{a.headline}</strong>
-                <small>{a.detail}</small>
-              </span>
-            </div>
-          ))}
-          <p className="note">
-            Only things worth acting on appear here, and never more than five — a list nobody
-            finishes is a list nobody reads.
-          </p>
-        </section>
-      )}
 
       {/* --- what next week might take --------------------------------------- */}
       {forecast && forecast.nightsUsed >= 3 && (

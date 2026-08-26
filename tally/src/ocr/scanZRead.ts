@@ -198,6 +198,9 @@ export function describeZReadError(err: unknown): string {
   if (msg === 'SCANNING_OFF') return 'Scanning is switched off in Settings.'
   if (msg === 'NO_KEY') return 'Add an Anthropic API key in Settings to scan the roll.'
   if (msg === 'OFFLINE') return 'No connection. Switch to on-device scanning, or type the figures in.'
+  if (msg === 'NEEDS_VISION') {
+    return 'The phone’s own reader cannot make out a board or handwriting — switch “How the photographs are read” to Claude in Settings for this one.'
+  }
   if (msg === 'NO_ANSWER') return 'Nothing came back from that photograph. Try again, or type the figures in.'
   if (/abort/i.test(msg)) return 'Cancelled.'
   if (/401|authentication|invalid x-api-key/i.test(msg)) return 'That API key was rejected. Check it in Settings.'
