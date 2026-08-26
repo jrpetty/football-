@@ -571,7 +571,8 @@ try {
   await page.click('.chip:has-text("What it costs")')
   await page.waitForSelector('input[aria-label="Taddy Lager cost"]', { timeout: 5000 })
 
-  // A firkin of Taddy: £95 ex VAT for 72 pints. Deliberately price first, then
+  // A firkin of Taddy: £95 for 72 pints, as the invoice charges it.
+  // Deliberately price first, then
   // size: a price with no size yet is not a cost, and an earlier version threw
   // it away instead of waiting for the size to arrive.
   await page.fill('input[aria-label="Taddy Lager cost"]', '95.00')
@@ -581,8 +582,8 @@ try {
   check('a barrel price becomes a price per pint', costed.includes('£1.32'), '£95 across 72 pints')
   check(
     'and the margin is worked out against the board price',
-    /62\.3% GP/.test(costed),
-    'the board says £4.20 here; VAT comes off before profit, so not the 68.6% that forgets it',
+    /68\.6% GP/.test(costed),
+    'the board says £4.20 and the firkin makes each pint £1.32',
   )
 
   // The cellar is worth something now.
@@ -600,7 +601,7 @@ try {
   await page.waitForSelector('.kpi-row', { timeout: 5000 })
   const profit = await page.locator('.main').innerText()
   check('the dashboard reports gross profit', profit.includes('What it actually makes'))
-  check('with the rate across the costed lines', /62\.3%/.test(profit), profit.slice(0, 200))
+  check('with the rate across the costed lines', /68\.6%/.test(profit), profit.slice(0, 200))
 
   check(
     'and holds off forecasting from a single night',

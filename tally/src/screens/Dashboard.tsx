@@ -265,7 +265,6 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
         book,
         stock.pours,
         stock.items,
-        loadSettings().vatBp,
       ),
     [selected, book, stock],
   )
@@ -293,10 +292,7 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
     return likeForLike(all, dates[0] as string, dates[dates.length - 1] as string)
   }, [all, selected])
 
-  const moves = useMemo(
-    () => marginMoves(stock.items, stock.pours, book, loadSettings().vatBp),
-    [stock, book],
-  )
+  const moves = useMemo(() => marginMoves(stock.items, stock.pours, book), [stock, book])
 
   /**
    * The week's findings.
@@ -330,7 +326,6 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
       book,
       stock.pours,
       stock.items,
-      loadSettings().vatBp,
     )
 
     const cellar =
@@ -878,7 +873,7 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
             <StatTile
               label="Gross profit"
               value={formatMoney(gp.profitPence)}
-              detail="after what the beer cost, before VAT"
+              detail="the till price, less what the beer cost"
             />
             <StatTile
               label="GP rate"
@@ -921,9 +916,8 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
           </div>
 
           <p className="note">
-            Worst margin first, because that is the line worth looking at. The sale has VAT taken off
-            before profit is counted — a £4.00 pint is £3.33 to the pub — and the cost is the invoice
-            price ex VAT.
+            Worst margin first, because that is the line worth looking at. Margin here is the plain
+            one — the price on the board against the price on the invoice.
             {gp.uncostedCount > 0 && ` ${gp.uncostedCount} lines have no price or no cost entered yet and are left out of both figures above.`}
           </p>
         </ChartCard>

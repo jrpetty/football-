@@ -100,7 +100,6 @@ export function marginMoves(
   items: readonly StockItem[],
   pours: readonly Pour[],
   book: readonly PriceBookEntry[],
-  vatBp: number,
 ): MarginMove[] {
   const byId = new Map(items.map((i) => [i.id, i]))
   const bookByCode = new Map(book.filter((b) => b.code).map((b) => [b.code!.toUpperCase(), b]))
@@ -136,8 +135,8 @@ export function marginMoves(
     const costNow = costAtPoint(costNowPoint)
     if (costThen === null || costNow === null) continue
 
-    const then = margin(priceThen, costThen, vatBp)
-    const now = margin(priceNow, costNow, vatBp)
+    const then = margin(priceThen, costThen)
+    const now = margin(priceNow, costNow)
     const gpChangeBp = now.gpBp - then.gpBp
 
     // A point either way is noise — rounding, or a penny on a case.

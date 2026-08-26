@@ -8,9 +8,9 @@
 //
 // One caution runs through this file and is repeated in the output itself: what
 // comes out is a set of working figures drawn from the till, not a return.
-// The VAT lines in particular are an estimate from takings and purchases, which
-// is a useful thing to hand an accountant and is not a thing to file. Saying so
-// once in a comment would not be enough; it is printed on the document.
+// Deliberately no tax arithmetic anywhere in it — gross takings, costs as
+// invoiced, hours as rostered. The tax treatment of those is the accountant's
+// job, and this pack exists to hand them clean inputs, not conclusions.
 // ---------------------------------------------------------------------------
 
 import type { DayStats } from './analytics.ts'
@@ -32,13 +32,10 @@ export interface MonthRow {
   takingsPence: number
   cashPence: number
   cardPence: number
-  /** Net of VAT at the rate given, which is what an accountant works in. */
-  netPence: number
-  vatPence: number
 }
 
 /** Takings by month, which is the spine of the whole pack. */
-export function monthlyTakings(days: readonly DayStats[], vatBp: number): MonthRow[] {
+export function monthlyTakings(days: readonly DayStats[]): MonthRow[] {
   const byMonth = new Map<string, MonthRow>()
 
   for (const day of days) {
@@ -47,8 +44,7 @@ export function monthlyTakings(days: readonly DayStats[], vatBp: number): MonthR
     const date = fromDateKey(day.date)
     const label = `${MONTHS[date.getMonth()]} ${date.getFullYear()}`
     const row =
-      byMonth.get(key) ??
-      { key, label, nights: 0, takingsPence: 0, cashPence: 0, cardPence: 0, netPence: 0, vatPence: 0 }
+      byMonth.get(key) ?? { key, label, nights: 0, takingsPence: 0, cashPence: 0, cardPence: 0 }
 
     row.nights++
     row.takingsPence += day.takingsPence
@@ -57,13 +53,7 @@ export function monthlyTakings(days: readonly DayStats[], vatBp: number): MonthR
     byMonth.set(key, row)
   }
 
-  return [...byMonth.values()]
-    .map((row) => {
-      // The VAT inside a gross figure, not added on top of it.
-      const netPence = Math.round((row.takingsPence * 10000) / (10000 + vatBp))
-      return { ...row, netPence, vatPence: row.takingsPence - netPence }
-    })
-    .sort((a, b) => a.key.localeCompare(b.key))
+  return [...byMonth.values()].sort((a, b) => a.key.localeCompare(b.key))
 }
 
 export interface WageRow {
@@ -113,8 +103,7 @@ export interface YearEndInput {
   shifts: readonly Shift[]
   people: readonly Person[]
   cellar: CellarValue | null
-  vatBp: number
-  /** What was bought in over the year, at cost, when it is known. */
+  /** What was bought in over the year, at the costs entered, when known. */
   purchasesPence?: number | null
   pubName?: string
 }
@@ -125,14 +114,12 @@ function pad(label: string, value: string, width = 26): string {
 
 /** The whole pack, as plain text an accountant can be sent. */
 export function yearEndPack(input: YearEndInput): string {
-  const { from, to, days, vatBp } = input
+  const { from, to, days } = input
   const inRange = days.filter((d) => d.date >= from && d.date <= to)
-  const months = monthlyTakings(inRange, vatBp)
+  const months = monthlyTakings(inRange)
   const wages = wageBill(input.shifts, input.people, from, to)
 
   const takings = months.reduce((a, m) => a + m.takingsPence, 0)
-  const net = months.reduce((a, m) => a + m.netPence, 0)
-  const outputVat = months.reduce((a, m) => a + m.vatPence, 0)
   const cash = months.reduce((a, m) => a + m.cashPence, 0)
   const card = months.reduce((a, m) => a + m.cardPence, 0)
   const nights = months.reduce((a, m) => a + m.nights, 0)
@@ -141,28 +128,26 @@ export function yearEndPack(input: YearEndInput): string {
   out.push(input.pubName ? `${input.pubName} — takings ${from} to ${to}` : `Takings ${from} to ${to}`)
   out.push('')
   out.push('WORKING FIGURES, NOT A RETURN. Everything below is drawn from the')
-  out.push('till roll and the app’s own records. The VAT lines are an estimate to')
-  out.push('work from, not a computed liability.')
+  out.push('till roll and the app’s own records: takings as rung, costs as')
+  out.push('invoiced, hours as rostered. The tax side is yours.')
   out.push('')
 
   out.push('SUMMARY')
   out.push(pad('  Nights traded', String(nights)))
-  out.push(pad('  Takings (gross)', formatMoney(takings)))
-  out.push(pad(`  Net of VAT at ${(vatBp / 100).toFixed(1)}%`, formatMoney(net)))
-  out.push(pad('  VAT on takings', formatMoney(outputVat)))
+  out.push(pad('  Takings', formatMoney(takings)))
   out.push(pad('  Of which cash', formatMoney(cash)))
   out.push(pad('  Of which card', formatMoney(card)))
   out.push('')
 
   out.push('BY MONTH')
-  out.push(pad('  Month', 'Nights      Gross         Net         VAT', 12))
+  out.push(pad('  Month', 'Nights     Takings        Cash        Card', 12))
   for (const m of months) {
     out.push(
-      `  ${m.label.padEnd(16, ' ')}${String(m.nights).padStart(4, ' ')}  ${formatMoney(m.takingsPence).padStart(11, ' ')} ${formatMoney(m.netPence).padStart(11, ' ')} ${formatMoney(m.vatPence).padStart(11, ' ')}`,
+      `  ${m.label.padEnd(16, ' ')}${String(m.nights).padStart(4, ' ')}  ${formatMoney(m.takingsPence).padStart(11, ' ')} ${formatMoney(m.cashPence).padStart(11, ' ')} ${formatMoney(m.cardPence).padStart(11, ' ')}`,
     )
   }
   out.push(
-    `  ${'Total'.padEnd(16, ' ')}${String(nights).padStart(4, ' ')}  ${formatMoney(takings).padStart(11, ' ')} ${formatMoney(net).padStart(11, ' ')} ${formatMoney(outputVat).padStart(11, ' ')}`,
+    `  ${'Total'.padEnd(16, ' ')}${String(nights).padStart(4, ' ')}  ${formatMoney(takings).padStart(11, ' ')} ${formatMoney(cash).padStart(11, ' ')} ${formatMoney(card).padStart(11, ' ')}`,
   )
   out.push('')
 
@@ -199,20 +184,13 @@ export function yearEndPack(input: YearEndInput): string {
     out.push('')
   }
 
-  out.push('VAT, ROUGHLY')
-  out.push(pad('  On takings (output)', formatMoney(outputVat)))
   if (input.purchasesPence !== null && input.purchasesPence !== undefined) {
-    const inputVat = Math.round((input.purchasesPence * vatBp) / 10000)
-    out.push(pad('  On stock bought (input)', formatMoney(inputVat)))
-    out.push(pad('  Difference', formatMoney(outputVat - inputVat)))
+    out.push('STOCK BOUGHT IN')
+    out.push(pad('  Over the period', formatMoney(input.purchasesPence)))
+    out.push('  At the costs entered against deliveries — a cross-check against the')
+    out.push('  purchase invoices, which remain the record.')
     out.push('')
-    out.push('  Input VAT is estimated from stock booked in at the costs entered,')
-    out.push('  and takes no account of anything else the pub buys. The real')
-    out.push('  figure comes off the purchase invoices.')
-  } else {
-    out.push('  No purchase figures entered, so only the output side is shown.')
   }
-  out.push('')
   out.push('Prepared by Tally from the nightly till reads.')
 
   return out.join('\n')
@@ -220,14 +198,12 @@ export function yearEndPack(input: YearEndInput): string {
 
 /** The monthly table as a spreadsheet, for the detail behind the summary. */
 export function monthlyCsv(months: readonly MonthRow[]): string {
-  const rows = [['Month', 'Nights', 'Gross', 'Net', 'VAT', 'Cash', 'Card']]
+  const rows = [['Month', 'Nights', 'Takings', 'Cash', 'Card']]
   for (const m of months) {
     rows.push([
       m.label,
       String(m.nights),
       (m.takingsPence / 100).toFixed(2),
-      (m.netPence / 100).toFixed(2),
-      (m.vatPence / 100).toFixed(2),
       (m.cashPence / 100).toFixed(2),
       (m.cardPence / 100).toFixed(2),
     ])

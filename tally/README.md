@@ -349,8 +349,9 @@ what the nights already record rather than asking for new typing:
   till. Costs per container turn into cost per pint, what the cellar is worth,
   and a dead-stock list of what is not earning its space.
 - **Gross profit** — the price book (photographable off the board) joined to
-  the cellar costs gives VAT-correct GP per line, and a price-history log shows
-  which brewery rises the board never followed.
+  the cellar costs gives GP per line on the plain basis the bar talks in — the
+  board price against the invoice price — and a price-history log shows which
+  brewery rises the board never followed.
 - **The Rota** — people, shifts, a weekly hours target, wage costs, and each
   person's record: how the drawer behaves on their nights against everyone
   else's, with the sample-size honesty that comparison demands.
@@ -358,8 +359,8 @@ what the nights already record rather than asking for new typing:
   this pub's own history, like-for-like against 52 weeks back, and a capped
   list of weekly findings worth acting on.
 - **Paperwork** — any night shareable as plain text for the accountant, and a
-  one-button year-end pack: takings by month, stock at cost, wages, VAT
-  workings, stamped as working figures rather than a return.
+  one-button year-end pack: takings by month, stock at cost, wages and what
+  was bought in, stamped as working figures rather than a return.
 
 There is still no cloud sync, on purpose — which is why "Save everything" in
 Settings matters. One file carries the whole app (nights, prices, cellar, rota,

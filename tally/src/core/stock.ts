@@ -61,9 +61,9 @@ export interface StockItem {
    * What the brewery charges, and what that buys — a firkin at £95 is
    * `{ pence: 9500, baseUnits: 72 * 568 }`.
    *
-   * Ex VAT, because that is how an invoice quotes it and how gross profit is
-   * worked out. Absent means no cost is known, and every margin figure for
-   * this line reads as unknown rather than as free beer.
+   * Entered exactly as the invoice charges it. Absent means no cost is known,
+   * and every margin figure for this line reads as unknown rather than as
+   * free beer.
    */
   cost?: { pence: number; baseUnits: number }
   /**

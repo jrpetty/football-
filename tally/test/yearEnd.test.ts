@@ -7,8 +7,6 @@ import { ML_PER_PINT, type StockItem } from '../src/core/stock.ts'
 import { cellarValue } from '../src/core/margin.ts'
 import { weekdayOf } from '../src/core/date.ts'
 
-const VAT = 2000
-
 function night(date: string, takingsPence: number, cashPence = 0, cardPence = 0): DayStats {
   return {
     date, weekday: weekdayOf(date), takingsPence, cashPence, cardPence,
@@ -23,30 +21,27 @@ const dave: Person = { id: 'd', name: 'Dave', slot: 2, defaultStartMin: 1080, de
 
 // --- by month -------------------------------------------------------------------
 
-test('takings are grouped into months with VAT taken out of the gross', () => {
-  const months = monthlyTakings([night('2026-01-05', 120000), night('2026-01-06', 80000), night('2026-02-01', 60000)], VAT)
+test('takings are grouped into months, as rung', () => {
+  const months = monthlyTakings([night('2026-01-05', 120000), night('2026-01-06', 80000), night('2026-02-01', 60000)])
   assert.equal(months.length, 2)
   assert.equal(months[0]!.label, 'January 2026')
   assert.equal(months[0]!.nights, 2)
   assert.equal(months[0]!.takingsPence, 200000)
-  // £2,000 gross is £1,666.67 net and £333.33 of VAT — inside the figure, not on top.
-  assert.equal(months[0]!.netPence, 166667)
-  assert.equal(months[0]!.vatPence, 33333)
 })
 
 test('months come out in order whatever order the nights arrive in', () => {
-  const months = monthlyTakings([night('2026-03-01', 100), night('2026-01-01', 100), night('2026-02-01', 100)], VAT)
+  const months = monthlyTakings([night('2026-03-01', 100), night('2026-01-01', 100), night('2026-02-01', 100)])
   assert.deepEqual(months.map((m) => m.key), ['2026-01', '2026-02', '2026-03'])
 })
 
 test('an unfinished night is left out rather than counted as nothing', () => {
   const unfinished = { ...night('2026-01-05', 0), takingsPence: null }
-  const months = monthlyTakings([night('2026-01-06', 80000), unfinished], VAT)
+  const months = monthlyTakings([night('2026-01-06', 80000), unfinished])
   assert.equal(months[0]!.nights, 1)
 })
 
 test('the cash and card split is carried through', () => {
-  const months = monthlyTakings([night('2026-01-05', 120000, 20000, 100000)], VAT)
+  const months = monthlyTakings([night('2026-01-05', 120000, 20000, 100000)])
   assert.equal(months[0]!.cashPence, 20000)
   assert.equal(months[0]!.cardPence, 100000)
 })
@@ -97,7 +92,6 @@ function pack(over: Partial<YearEndInput> = {}): string {
     cellar: cellarValue([
       { item: taddy, countedBaseUnits: 0, deliveredBaseUnits: 0, pouredBaseUnits: 0, expectedBaseUnits: 72 * ML_PER_PINT },
     ]),
-    vatBp: VAT,
     ...over,
   })
 }
@@ -109,12 +103,19 @@ test('the pack says up front that it is not a return', () => {
 
 test('it carries the summary, the months, the stock and the wages', () => {
   const text = pack()
-  assert.match(text, /Takings \(gross\)\s+£2,000\.00/)
+  assert.match(text, /Takings\s+£2,000\.00/)
   assert.match(text, /January 2026/)
   assert.match(text, /February 2026/)
   assert.match(text, /Value on hand\s+£95\.00/)
   assert.match(text, /Kelly/)
-  assert.match(text, /VAT, ROUGHLY/)
+})
+
+test('no tax arithmetic appears anywhere in the pack', () => {
+  // The deliberate basis of the whole app: takings as rung, costs as invoiced.
+  // The tax side belongs to the accountant, and the document says whose it is.
+  const text = pack({ purchasesPence: 50000 })
+  assert.equal(/VAT/.test(text), false)
+  assert.match(text, /The tax side is yours/)
 })
 
 test('the monthly rows add up to the total', () => {
@@ -123,15 +124,15 @@ test('the monthly rows add up to the total', () => {
   assert.match(text, /Total\s+2\s+£2,000\.00/)
 })
 
-test('with purchases entered it shows both sides of the VAT', () => {
+test('with purchases entered, what was bought in is a plain line', () => {
   const text = pack({ purchasesPence: 50000 })
-  assert.match(text, /On stock bought \(input\)\s+£100\.00/)
-  assert.match(text, /Difference/)
-  assert.match(text, /comes off the purchase invoices/)
+  assert.match(text, /STOCK BOUGHT IN/)
+  assert.match(text, /Over the period\s+£500\.00/)
+  assert.match(text, /purchase invoices, which remain the record/)
 })
 
-test('without purchases it shows one side and says so', () => {
-  assert.match(pack({ purchasesPence: null }), /only the output side is shown/)
+test('without purchases the section is simply absent', () => {
+  assert.equal(/STOCK BOUGHT IN/.test(pack({ purchasesPence: null })), false)
 })
 
 test('uncosted stock is flagged so the valuation is not read as complete', () => {
@@ -157,10 +158,10 @@ test('a year with nothing in it still produces a document', () => {
 // --- the spreadsheet -----------------------------------------------------------------
 
 test('the csv has a header and a row per month in pounds', () => {
-  const csv = monthlyCsv(monthlyTakings([night('2026-01-05', 120000, 20000, 100000)], VAT))
+  const csv = monthlyCsv(monthlyTakings([night('2026-01-05', 120000, 20000, 100000)]))
   const [header, row] = csv.split('\n')
-  assert.equal(header, 'Month,Nights,Gross,Net,VAT,Cash,Card')
-  assert.match(row as string, /^January 2026,1,1200\.00,1000\.00,200\.00,200\.00,1000\.00$/)
+  assert.equal(header, 'Month,Nights,Takings,Cash,Card')
+  assert.match(row as string, /^January 2026,1,1200\.00,200\.00,1000\.00$/)
 })
 
 test('wages are costed off the total hours, matching the staff profile exactly', () => {

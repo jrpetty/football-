@@ -42,8 +42,14 @@ export const MAX_ALERTS = 5
 /** A weekday has to be this far down on last year before it is worth saying. */
 const WEEKDAY_FALL_BP = 1000
 
-/** A line's GP below this is worth a look, whatever else is going on. */
-const GP_FLOOR_BP = 5500
+/**
+ * A line's GP below this is worth a look, whatever else is going on.
+ *
+ * On the plain basis the whole app uses — profit over the till price, no tax
+ * arithmetic — a healthy wet line sits around 65–70%, so 60% is the level at
+ * which a line has stopped pulling its weight.
+ */
+const GP_FLOOR_BP = 6000
 
 /** Cellar variance worth mentioning, in pence. */
 const CELLAR_GAP_PENCE = 20000
@@ -105,7 +111,7 @@ export function weeklyAlerts(input: AlertInput): Alert[] {
     if (line.qtyMilli < 20_000) continue
     out.push({
       id: `gp-low-${line.code}`,
-      level: line.margin.gpBp < 4500 ? 'bad' : 'warn',
+      level: line.margin.gpBp < 5000 ? 'bad' : 'warn',
       headline: `${line.name} is making ${(line.margin.gpBp / 100).toFixed(0)}%`,
       detail: `Selling at ${formatMoney(line.margin.sellPence)} and costing ${formatMoney(line.margin.costPence)}. ${formatMoney(line.periodProfitPence ?? 0)} of profit over the period.`,
       screen: 'trade',

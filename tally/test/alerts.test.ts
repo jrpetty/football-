@@ -55,7 +55,7 @@ test('a weekday that is up is never an alert', () => {
 // --- margin ----------------------------------------------------------------------
 
 function gpReport(costPence: number) {
-  const m = margin(400, costPence, 2000)
+  const m = margin(400, costPence)
   return {
     lines: [{ code: '1', name: 'PINT TADDY LAGER', qtyMilli: 120_000, margin: m, periodProfitPence: 18000, missing: null }],
     profitPence: 18000, netSalesPence: 40000, blendedGpBp: m.gpBp, costedCount: 1, uncostedCount: 0,
@@ -63,27 +63,26 @@ function gpReport(costPence: number) {
 }
 
 test('a line under the floor is flagged, with the figures in it', () => {
-  // £4.00 costing £1.80 is 46% once VAT is off — under the 55% floor, but not
-  // yet alarming.
+  // £4.00 costing £1.80 is 55% — under the 60% floor, but not yet alarming.
   const alerts = weeklyAlerts({ ...nothing, gp: gpReport(180) })
   assert.equal(alerts.length, 1)
-  assert.match(alerts[0]!.headline, /PINT TADDY LAGER is making 46%/)
+  assert.match(alerts[0]!.headline, /PINT TADDY LAGER is making 55%/)
   assert.match(alerts[0]!.detail, /Selling at £4\.00 and costing £1\.80/)
   assert.equal(alerts[0]!.level, 'warn')
 })
 
 test('a line well under it is reported more urgently', () => {
-  // £2.00 of cost on a £4.00 pint is 40%, which is a problem rather than a note.
-  const alerts = weeklyAlerts({ ...nothing, gp: gpReport(200) })
+  // £2.20 of cost on a £4.00 pint is 45%, which is a problem rather than a note.
+  const alerts = weeklyAlerts({ ...nothing, gp: gpReport(220) })
   assert.equal(alerts[0]!.level, 'bad')
-  assert.match(alerts[0]!.headline, /making 40%/)
+  assert.match(alerts[0]!.headline, /making 45%/)
 })
 
 test('a healthy line is left alone', () => {
   const alerts = weeklyAlerts({
     ...nothing,
     gp: {
-      lines: [{ code: '1', name: 'PINT TADDY LAGER', qtyMilli: 120_000, margin: margin(400, 120, 2000), periodProfitPence: 25000, missing: null }],
+      lines: [{ code: '1', name: 'PINT TADDY LAGER', qtyMilli: 120_000, margin: margin(400, 120), periodProfitPence: 25000, missing: null }],
       profitPence: 25000, netSalesPence: 40000, blendedGpBp: 6400, costedCount: 1, uncostedCount: 0,
     },
   })
@@ -94,7 +93,7 @@ test('a thin margin on something that barely sells is not worth a alert', () => 
   const alerts = weeklyAlerts({
     ...nothing,
     gp: {
-      lines: [{ code: '9', name: 'ODDITY', qtyMilli: 3_000, margin: margin(400, 300, 2000), periodProfitPence: 100, missing: null }],
+      lines: [{ code: '9', name: 'ODDITY', qtyMilli: 3_000, margin: margin(400, 300), periodProfitPence: 100, missing: null }],
       profitPence: 100, netSalesPence: 1000, blendedGpBp: 1000, costedCount: 1, uncostedCount: 0,
     },
   })
@@ -107,7 +106,7 @@ test('a cost rise nobody passed on is named with both figures', () => {
     moves: [{
       code: '1', name: 'PINT TADDY LAGER', fromDate: '2026-01-01', toDate: '2026-06-01',
       costThenPence: 132, costNowPence: 150, priceThenPence: 400, priceNowPence: 400,
-      then: margin(400, 132, 2000), now: margin(400, 150, 2000),
+      then: margin(400, 132), now: margin(400, 150),
       gpChangeBp: -540, verdict: 'squeezed',
     }],
   })
@@ -121,7 +120,7 @@ test('a cost rise that was passed on is not an alert', () => {
     moves: [{
       code: '1', name: 'PINT TADDY LAGER', fromDate: '2026-01-01', toDate: '2026-06-01',
       costThenPence: 132, costNowPence: 150, priceThenPence: 400, priceNowPence: 455,
-      then: margin(400, 132, 2000), now: margin(455, 150, 2000),
+      then: margin(400, 132), now: margin(455, 150),
       gpChangeBp: 20, verdict: 'kept up',
     }],
   })

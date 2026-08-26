@@ -22,8 +22,6 @@ export interface Settings {
   tolerancePence: number
   /** Keep the photographs alongside the figures, as an audit trail. */
   keepPhotos: boolean
-  /** VAT on a pint, in basis points. Standard rate, but rates do change. */
-  vatBp: number
   /** Hours the week is meant to come to. 0 means no target is set. */
   weeklyHoursTarget: number
   /** The float usually left in the drawer, prefilled each night. 0 for none. */
@@ -43,7 +41,6 @@ export const DEFAULT_SETTINGS: Settings = {
   model: 'claude-sonnet-5',
   engine: 'vision',
   tolerancePence: DEFAULT_TOLERANCE_PENCE,
-  vatBp: 2000,
   weeklyHoursTarget: 0,
   standingFloatPence: 0,
   place: { name: '', latitude: 0, longitude: 0 },
@@ -78,15 +75,6 @@ export function parseTolerance(raw: string | null): number {
   if (raw === null || raw.trim() === '') return DEFAULT_SETTINGS.tolerancePence
   const n = Number(raw)
   if (!Number.isFinite(n) || n < 0) return DEFAULT_SETTINGS.tolerancePence
-  return Math.round(n)
-}
-
-/** A stored VAT rate, or the standard one. Nonsense falls back rather than
- *  quietly reporting every margin against a zero rate. */
-function parseVat(raw: string | null): number {
-  if (raw === null) return DEFAULT_SETTINGS.vatBp
-  const n = Number(raw)
-  if (!Number.isFinite(n) || n < 0 || n > 10000) return DEFAULT_SETTINGS.vatBp
   return Math.round(n)
 }
 
@@ -135,7 +123,6 @@ export function loadSettings(): Settings {
         : DEFAULT_SETTINGS.engine,
     tolerancePence: parseTolerance(read('tolerance')),
     keepPhotos: (read('keepPhotos') ?? 'true') === 'true',
-    vatBp: parseVat(read('vatBp')),
     weeklyHoursTarget: parseHours(read('weeklyHoursTarget')),
     place: parsePlace(read('place')),
     standingFloatPence: parseFloat_(read('standingFloat')),
@@ -148,7 +135,6 @@ export function saveSettings(s: Settings): void {
   write('engine', s.engine)
   write('tolerance', String(s.tolerancePence))
   write('keepPhotos', String(s.keepPhotos))
-  write('vatBp', String(s.vatBp))
   write('weeklyHoursTarget', String(s.weeklyHoursTarget))
   write('place', JSON.stringify(s.place))
   write('standingFloat', String(s.standingFloatPence))

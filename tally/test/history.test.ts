@@ -4,8 +4,6 @@ import { at, marginMoves, record, type CostPoint, type PricePoint } from '../src
 import { ML_PER_PINT, type Pour, type StockItem } from '../src/core/stock.ts'
 import type { PriceBookEntry } from '../src/core/priceBook.ts'
 
-const VAT = 2000
-
 // --- the log ------------------------------------------------------------------
 
 test('a change is appended in date order however it arrives', () => {
@@ -77,7 +75,6 @@ test('a cost rise the board ignored reads as squeezed', () => {
     ])],
     [pour],
     [entry([{ date: '2026-01-01', pence: 400 }])],
-    VAT,
   )
   assert.equal(moves.length, 1)
   const m = moves[0]!
@@ -99,7 +96,6 @@ test('a cost rise the board followed holds the margin', () => {
       { date: '2026-01-01', pence: 400 },
       { date: '2026-06-01', pence: 455 },
     ])],
-    VAT,
   )
   assert.equal(moves[0]!.verdict, 'kept up')
   assert.ok(Math.abs(moves[0]!.gpChangeBp) < 100)
@@ -113,7 +109,6 @@ test('putting the price up without a cost rise improves the margin', () => {
       { date: '2026-01-01', pence: 400 },
       { date: '2026-06-01', pence: 440 },
     ])],
-    VAT,
   )
   assert.equal(moves[0]!.verdict, 'improved')
   assert.ok(moves[0]!.gpChangeBp > 0)
@@ -124,7 +119,6 @@ test('a line nothing has happened to is not reported', () => {
     [taddy([{ date: '2026-01-01', pence: 9500, baseUnits: firkin }])],
     [pour],
     [entry([{ date: '2026-01-01', pence: 400 }])],
-    VAT,
   )
   assert.equal(moves.length, 0, 'nothing has moved, so there is nothing to say')
 })
@@ -137,7 +131,6 @@ test('a line with no price in the book is skipped rather than guessed at', () =>
     ])],
     [pour],
     [],
-    VAT,
   )
   assert.equal(moves.length, 0)
 })
@@ -161,7 +154,6 @@ test('the worst squeeze is listed first', () => {
     ],
     [pour, alpine],
     [entry([{ date: '2026-01-01', pence: 400 }]), { code: '3', name: 'PINT ALPINE', pence: 300, history: [{ date: '2026-01-01', pence: 300 }] }],
-    VAT,
   )
   assert.equal(moves[0]!.code, '1', 'the biggest fall comes first')
   assert.ok(moves[0]!.gpChangeBp < moves[1]!.gpChangeBp)
@@ -176,7 +168,6 @@ test('a container size change is costed on the basis in force at the time', () =
     ])],
     [pour],
     [entry([{ date: '2026-01-01', pence: 400 }])],
-    VAT,
   )
   assert.equal(moves[0]!.costThenPence, 132)
   assert.equal(moves[0]!.costNowPence, 125, '£180 across 144 pints')

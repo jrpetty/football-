@@ -3,8 +3,6 @@ import { test } from 'node:test'
 import { cellarValue, costOf, margin, marginReport } from '../src/core/margin.ts'
 import { ML_PER_HALF, ML_PER_PINT, type Pour, type StockItem, type StockLine } from '../src/core/stock.ts'
 
-const VAT = 2000
-
 /** A firkin — 72 pints — at £95 ex VAT, which is about what a cask costs. */
 const taddy: StockItem = {
   id: 'taddy',
@@ -24,19 +22,18 @@ const crisps: StockItem = {
   // No cost entered.
 }
 
-test('VAT comes out of the sale before profit is counted', () => {
-  // £4.00 inc VAT is £3.33 net. This is the step that flatters a pub's
-  // margin by six or seven points when it gets skipped.
-  const m = margin(400, 132, VAT)
-  assert.equal(m.sellExVatPence, 333)
-  assert.equal(m.grossProfitPence, 201)
-  assert.equal(m.gpBp, 6036) // 60.36%
+test('margin is the till price less the invoice price, nothing else', () => {
+  // The deliberate plain basis: the price on the board against the price on
+  // the invoice, with no tax arithmetic anywhere in the app.
+  const m = margin(400, 132)
+  assert.equal(m.grossProfitPence, 268)
+  assert.equal(m.gpBp, 6700)
 })
 
-test('a zero VAT rate leaves the price alone', () => {
-  const m = margin(400, 132, 0)
-  assert.equal(m.sellExVatPence, 400)
-  assert.equal(m.gpBp, 6700)
+test('a pint sold at cost makes nothing, and below cost makes less', () => {
+  assert.equal(margin(400, 400).gpBp, 0)
+  assert.equal(margin(400, 500).gpBp, -2500)
+  assert.equal(margin(0, 100).gpBp, 0, 'a free pint has no rate to speak of')
 })
 
 test('a pint costs its share of the barrel', () => {
@@ -75,11 +72,11 @@ test('gross profit across a night joins price, pour and cost', () => {
     { code: '1', name: 'PINT TADDY LAGER', qtyMilli: 120_000 },
     { code: '9', name: 'CRISPS', qtyMilli: 79_000 },
   ]
-  const r = marginReport(sold, book, pours, [taddy, crisps], VAT)
+  const r = marginReport(sold, book, pours, [taddy, crisps])
 
   const pint = r.lines.find((l) => l.code === '1')!
-  assert.equal(pint.margin?.gpBp, 6036)
-  assert.equal(pint.periodProfitPence, 201 * 120) // £241.20 on 120 pints
+  assert.equal(pint.margin?.gpBp, 6700)
+  assert.equal(pint.periodProfitPence, 268 * 120) // £321.60 on 120 pints
 
   // Crisps have a price and a pour but no cost, so they are named as uncosted
   // rather than counted as pure profit.
@@ -87,20 +84,20 @@ test('gross profit across a night joins price, pour and cost', () => {
   assert.equal(packet.margin, null)
   assert.equal(packet.missing, 'cost')
 
-  assert.equal(r.profitPence, 24120)
+  assert.equal(r.profitPence, 32160)
   assert.equal(r.costedCount, 1)
   assert.equal(r.uncostedCount, 1)
 })
 
 test('an unpriced line says so is the price that is missing', () => {
   const sold = [{ code: '3', name: 'PINT ALPINE', qtyMilli: 66_000 }]
-  const r = marginReport(sold, book, pours, [taddy], VAT)
+  const r = marginReport(sold, book, pours, [taddy])
   assert.equal(r.lines[0]!.missing, 'price')
 })
 
 test('a priced line with no pour set names the pour', () => {
   const sold = [{ code: '4', name: 'PINT OBB', qtyMilli: 66_000 }]
-  const r = marginReport(sold, [...book, { code: '4', name: 'PINT OBB', pence: 360 }], pours, [taddy], VAT)
+  const r = marginReport(sold, [...book, { code: '4', name: 'PINT OBB', pence: 360 }], pours, [taddy])
   assert.equal(r.lines[0]!.missing, 'pour')
 })
 
@@ -109,12 +106,10 @@ test('the blended rate covers only what could be costed', () => {
     { code: '1', name: 'PINT TADDY LAGER', qtyMilli: 100_000 },
     { code: '2', name: 'HALF TADDY LAGER', qtyMilli: 100_000 },
   ]
-  const r = marginReport(sold, book, pours, [taddy], VAT)
-  // Not quite the pint's own 60.36%: rounding to whole pence rounds the half's
-  // net sale up (166.67 to 167) and its cost down, so a half is a whisker more
-  // profitable than half a pint. Real, and worth leaving visible rather than
-  // smoothing away — it is the same rounding the till itself does.
-  assert.equal(r.blendedGpBp, 6040)
+  const r = marginReport(sold, book, pours, [taddy])
+  // A half sells for exactly half a pint and costs exactly half, so on the
+  // plain basis the blend lands exactly on the same rate as either line.
+  assert.equal(r.blendedGpBp, 6700)
   assert.equal(r.costedCount, 2)
 })
 
@@ -124,7 +119,7 @@ test('the worst margin is listed first', () => {
     { code: '1', name: 'PINT TADDY LAGER', qtyMilli: 1000 },
     { code: '2', name: 'HALF TADDY LAGER', qtyMilli: 1000 },
   ]
-  const r = marginReport(sold, [book[0]!, thin], pours, [taddy], VAT)
+  const r = marginReport(sold, [book[0]!, thin], pours, [taddy])
   assert.equal(r.lines[0]!.code, '2', 'the line that is not paying its way comes first')
 })
 

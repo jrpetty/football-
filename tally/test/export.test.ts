@@ -88,7 +88,7 @@ test('a backup carries everything, not just the nights', () => {
     people: [{ id: 'k', name: 'Kelly', slot: 1, defaultStartMin: 1080, defaultEndMin: 1410, ratePencePerHour: 1221 }],
     shifts: [{ id: '2026-08-23:k', date: '2026-08-23', personId: 'k', startMin: 1080, endMin: 1410 }],
     weather: [{ date: '2026-08-23', tempC: 21, rainMm: 0 }],
-    settings: { vatBp: 2000, weeklyHoursTarget: 45 },
+    settings: { weeklyHoursTarget: 45 },
   })
 
   const r = parseBackup(full)
@@ -103,13 +103,13 @@ test('a backup carries everything, not just the nights', () => {
   assert.equal(r.people[0]?.ratePencePerHour, 1221, 'and so does the hourly rate')
   assert.equal(r.shifts.length, 1)
   assert.equal(r.weather.length, 1)
-  assert.equal(r.settings?.vatBp, 2000)
+  assert.equal(r.settings?.weeklyHoursTarget, 45)
   assert.equal(r.nightsOnly, false)
 })
 
 test('a backup never carries the API key', () => {
   // It gets emailed. A key in an inbox is a key in the wrong place.
-  const text = toJson({ ...EMPTY, settings: { vatBp: 2000 } })
+  const text = toJson({ ...EMPTY, settings: { weeklyHoursTarget: 45 } })
   assert.equal(text.includes('apiKey'), false)
   assert.equal(text.includes('sk-ant'), false)
 })

@@ -6,24 +6,21 @@
 // question a landlady actually lies awake on, which is whether the pint is
 // worth pouring at all.
 //
-//     GP% = (what it sold for, ex VAT − what it cost) ÷ what it sold for, ex VAT
+//     GP% = (what it sells for − what it cost) ÷ what it sells for
 //
-// The VAT step is not a detail; getting it wrong is the single most common way
-// a pub overstates its own margin. A £4.00 pint costing £1.32 looks like 67%
-// until you remember that 66p of the £4.00 belongs to HMRC. The real figure is
-// just over 60%, and the difference across a year of draught is thousands.
-//
-// So: the shelf price is taken as VAT-inclusive, because that is what the
-// customer hands over; the brewery cost is taken as VAT-exclusive, because that
-// is how the invoice quotes it and the VAT on it is reclaimed. Both are said
-// plainly in the interface, since an assumption nobody can see is a bug waiting.
+// Deliberately the plain version, with no tax arithmetic anywhere in it. This
+// pub asked for the figures the way the bar talks about them — the price on
+// the board against the price on the invoice — and the tax treatment of either
+// is the accountant's page, not this app's. What matters here is only that the
+// same basis is used everywhere, so a margin on Trade, a margin in an alert
+// and a margin in the cellar can never disagree about what "margin" means.
 // ---------------------------------------------------------------------------
 
 import type { PriceBookEntry } from './priceBook.ts'
 import { normalise } from './match.ts'
 import type { Pour, SoldLine, StockItem, StockLine } from './stock.ts'
 
-/** What a serving costs, ex VAT — null when the line has no cost entered. */
+/** What a serving costs, off the invoice price — null when none is entered. */
 export function costOf(item: StockItem | undefined, baseUnits: number): number | null {
   if (!item?.cost || item.cost.baseUnits <= 0) return null
   return Math.round((item.cost.pence * baseUnits) / item.cost.baseUnits)
@@ -32,25 +29,20 @@ export function costOf(item: StockItem | undefined, baseUnits: number): number |
 export interface Margin {
   /** What the customer pays. */
   sellPence: number
-  /** What the pub keeps of it before costs. */
-  sellExVatPence: number
-  /** What the beer cost, ex VAT. */
+  /** What it cost, as the invoice charges it. */
   costPence: number
   grossProfitPence: number
-  /** Gross profit as a share of net sales, in basis points. */
+  /** Gross profit as a share of the selling price, in basis points. */
   gpBp: number
 }
 
-export function margin(sellPence: number, costPence: number, vatBp: number): Margin {
-  // 10000 + vatBp rather than a multiplier, so 20% is exact integer arithmetic.
-  const sellExVatPence = Math.round((sellPence * 10000) / (10000 + vatBp))
-  const grossProfitPence = sellExVatPence - costPence
+export function margin(sellPence: number, costPence: number): Margin {
+  const grossProfitPence = sellPence - costPence
   return {
     sellPence,
-    sellExVatPence,
     costPence,
     grossProfitPence,
-    gpBp: sellExVatPence > 0 ? Math.round((grossProfitPence / sellExVatPence) * 10000) : 0,
+    gpBp: sellPence > 0 ? Math.round((grossProfitPence / sellPence) * 10000) : 0,
   }
 }
 
@@ -73,7 +65,7 @@ export interface MarginReport {
   lines: MarginLine[]
   /** Profit on the lines that could be worked out at all. */
   profitPence: number
-  /** Net sales behind that profit, so the blended GP is honest about coverage. */
+  /** The takings behind that profit, so the blended GP is honest about coverage. */
   netSalesPence: number
   blendedGpBp: number | null
   costedCount: number
@@ -93,7 +85,6 @@ export function marginReport(
   book: readonly PriceBookEntry[],
   pours: readonly Pour[],
   items: readonly StockItem[],
-  vatBp: number,
 ): MarginReport {
   const byCode = new Map(book.filter((b) => b.code).map((b) => [b.code!.toUpperCase(), b]))
   const byName = new Map(book.map((b) => [normalise(b.name), b]))
@@ -121,11 +112,11 @@ export function marginReport(
       return { code: line.code, name: line.name, qtyMilli: line.qtyMilli, margin: null, periodProfitPence: null, missing }
     }
 
-    const m = margin(price.pence, cost, vatBp)
+    const m = margin(price.pence, cost)
     // Quantities are thousandths, so multiply before dividing.
     const period = Math.round((m.grossProfitPence * line.qtyMilli) / 1000)
     profitPence += period
-    netSalesPence += Math.round((m.sellExVatPence * line.qtyMilli) / 1000)
+    netSalesPence += Math.round((m.sellPence * line.qtyMilli) / 1000)
     costedCount++
 
     return { code: line.code, name: line.name, qtyMilli: line.qtyMilli, margin: m, periodProfitPence: period, missing: null }
@@ -165,8 +156,7 @@ export interface CellarValue {
  * actually tied up in it — the figure an accountant asks for at year end and
  * the one that says whether too much is sitting in the cold.
  */
-export function cellarValue(ledger: readonly StockLine[], vatBp = 0): CellarValue {
-  void vatBp // stock is valued ex VAT, which is the cost as entered
+export function cellarValue(ledger: readonly StockLine[]): CellarValue {
   let totalPence = 0
   let unvaluedCount = 0
 

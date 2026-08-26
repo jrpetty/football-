@@ -221,7 +221,6 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
     [config, counts, deliveries, days],
   )
 
-  const vatBp = loadSettings().vatBp
   // Built once: rebuilding it inside the items loop made every keystroke in a
   // cost box do items-times-book work for the same answer.
   const priceIndex = useMemo(() => buildIndex(book), [book])
@@ -586,9 +585,8 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
             <span className="badge">{config.items.filter((i) => i.cost).length} of {config.items.length} costed</span>
           </div>
           <p className="note" style={{ marginTop: 0 }}>
-            What the invoice charges, and what that buys. A firkin of Taddy at £95 is £95 for 72 pints.
-            Enter it <strong>ex VAT</strong>, the way the invoice shows it — the VAT on the selling price
-            is taken off separately, which is the step that otherwise flatters a margin by six points.
+            What the invoice charges, and what that buys. A firkin of Taddy at £95 is £95 for 72
+            pints, and the margin on every pour works itself out from there.
           </p>
 
           {config.items.map((item) => {
@@ -599,7 +597,7 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
             const pour = config.pours.find((p) => p.stockItemId === item.id)
             const sell = pour ? lookup(priceIndex, { code: pour.itemCode, name: pour.itemName }) : undefined
             const pourCost = pour ? costOf(item, pour.baseUnits) : null
-            const gp = sell && pourCost !== null ? margin(sell.pence, pourCost, vatBp) : null
+            const gp = sell && pourCost !== null ? margin(sell.pence, pourCost) : null
             const sizeText = drafts[sizeKey] ?? (servings ? String(servings) : '')
 
             return (

@@ -52,7 +52,6 @@ const ENGINE_HELP: Record<EnginePreference, string> = {
 export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; onOpenPrices: () => void }) {
   const [s, setS] = useState<SettingsShape>(loadSettings)
   const [toleranceText, setToleranceText] = useState(() => penceToInput(loadSettings().tolerancePence))
-  const [vatText, setVatText] = useState(() => String(loadSettings().vatBp / 100))
   const [hoursText, setHoursText] = useState(() => {
     const h = loadSettings().weeklyHoursTarget
     return h > 0 ? String(h) : ''
@@ -197,12 +196,11 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
       shifts,
       people,
       cellar,
-      vatBp: s.vatBp,
       purchasesPence,
     })
 
     downloadFile(`year-end-${to}.txt`, text, 'text/plain')
-    downloadFile(`takings-by-month-${to}.csv`, monthlyCsv(monthlyTakings(stats.filter((d) => d.date >= from && d.date <= to), s.vatBp)), 'text/csv')
+    downloadFile(`takings-by-month-${to}.csv`, monthlyCsv(monthlyTakings(stats.filter((d) => d.date >= from && d.date <= to))), 'text/csv')
     say('Year-end pack saved — the summary and the monthly figures.')
   }
 
@@ -415,23 +413,6 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
       <section className="card">
         <div className="card-head"><h2>The trade</h2></div>
         <div className="field">
-          <label htmlFor="vat">VAT rate</label>
-          <input
-            id="vat"
-            inputMode="decimal"
-            value={vatText}
-            onChange={(e) => {
-              setVatText(e.target.value)
-              const percent = Number(e.target.value)
-              if (Number.isFinite(percent) && percent >= 0 && percent <= 100) update({ vatBp: Math.round(percent * 100) })
-            }}
-          />
-          <p className="help">
-            Taken off the selling price before gross profit is worked out, because that part of it is
-            never yours. At {(s.vatBp / 100).toFixed(1)}% a £4.00 pint is {formatMoney(Math.round((400 * 10000) / (10000 + s.vatBp)))} to the pub.
-          </p>
-        </div>
-        <div className="field">
           <label htmlFor="standing-float">Float left in the drawer</label>
           <input
             id="standing-float"
@@ -634,15 +615,15 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
         </div>
         <p className="help" style={{ marginTop: 0 }}>
           The last twelve months put together in one go: takings by month, the split between cash and
-          card, what is in the cellar at cost, the hours rostered, and the VAT on both sides. Two
-          files — a summary to read and a spreadsheet for the detail.
+          card, what is in the cellar at cost, the hours rostered, and what was bought in. Two files —
+          a summary to read and a spreadsheet for the detail.
         </p>
         <button type="button" className="btn-primary" onClick={() => void exportYearEnd()}>
           Make the year-end pack
         </button>
         <p className="help">
-          Working figures drawn from the till, not a return — the VAT lines especially are something
-          to hand an accountant, not something to file. It says so on the document.
+          Working figures drawn from the till, not a return — something to hand an accountant, and it
+          says so on the document.
         </p>
       </section>
 
