@@ -112,24 +112,10 @@ export function UpsetBadge({ rating }: { rating: UpsetRating }) {
   )
 }
 
-/**
- * The scoreline to lead with.
- *
- * The single most likely exact score is often a draw even when the model
- * favours a win, so quoting it beside a "62% home" bar reads as a
- * contradiction. Showing the most likely score *given the most likely
- * outcome* keeps the headline internally consistent; the true global mode is
- * still on the match page in the full grid.
- */
-export function headlineScore(f: {
-  probs: { home: number; draw: number; away: number }
-  modalScore: { home: { home: number; away: number }; draw: { home: number; away: number }; away: { home: number; away: number } }
-}): { home: number; away: number } {
-  const { home, draw, away } = f.probs
-  if (home >= draw && home >= away) return f.modalScore.home
-  if (away >= draw && away >= home) return f.modalScore.away
-  return f.modalScore.draw
-}
+// headlineScore lives in the core so the pipeline grades the same number the
+// page prints. Re-exported here because every call site is a component.
+export { headlineScore } from '../core/predict.ts'
+
 
 /** Form run as coloured letters — W/D/L is already the label, colour is a second channel. */
 export function FormRun({ form }: { form: string[] }) {
