@@ -35,13 +35,19 @@ export interface Person {
   name: string
   /** Palette slot, fixed at creation so a person's colour never moves. */
   slot: number
-  /** The shift they usually work, so putting them on a day is one tap. */
-  defaultStartMin: number
-  defaultEndMin: number
   /** Optional: without it, no labour cost is shown rather than a wrong one. */
   ratePencePerHour?: number
   archived?: boolean
 }
+
+/** A start and a finish, in minutes since midnight. */
+export interface Hours {
+  startMin: number
+  endMin: number
+}
+
+/** Six until close — where the boxes start on a rota with nothing on it yet. */
+export const DEFAULT_SHIFT: Hours = { startMin: 18 * 60, endMin: 23 * 60 + 30 }
 
 export interface Shift {
   /** `date:personId` — one shift per person per day, so re-tapping corrects it. */
@@ -56,15 +62,31 @@ export function shiftId(date: string, personId: string): string {
   return `${date}:${personId}`
 }
 
-/** A shift at the person's usual hours. */
-export function shiftFor(person: Person, date: string): Shift {
-  return {
-    id: shiftId(date, person.id),
-    date,
-    personId: person.id,
-    startMin: person.defaultStartMin,
-    endMin: person.defaultEndMin,
+/** One person on one night, for hours somebody chose. */
+export function shiftAt(personId: string, date: string, hours: Hours): Shift {
+  return { id: shiftId(date, personId), date, personId, startMin: hours.startMin, endMin: hours.endMin }
+}
+
+/**
+ * The hours to start from when putting somebody on.
+ *
+ * Never a property of the person — people do not have "usual hours", nights
+ * have hours, and the same person works six-till-close on Saturday and a
+ * lunchtime on Sunday. So: what the rest of that night is already set to,
+ * since a crew nearly always shares a session; failing that the last hours
+ * anybody was put on for, which is what she typed most recently; failing
+ * that six until close. Whatever comes out is shown in a box she can change
+ * before tapping anyone, so nothing here is ever assumed silently.
+ */
+export function hoursFor(date: string, shifts: readonly Shift[]): Hours {
+  const onTheNight = shifts.filter((s) => s.date === date)
+  if (onTheNight.length > 0) {
+    const first = onTheNight[0] as Shift
+    return { startMin: first.startMin, endMin: first.endMin }
   }
+  let latest: Shift | undefined
+  for (const s of shifts) if (!latest || s.date > latest.date) latest = s
+  return latest ? { startMin: latest.startMin, endMin: latest.endMin } : DEFAULT_SHIFT
 }
 
 /**
@@ -308,8 +330,11 @@ export interface ShiftProposal {
   date?: string
   startMin?: number
   endMin?: number
-  /** Whether the times came off the paper or from the person's usual shift. */
-  timesFrom: 'paper' | 'usual' | null
+  /**
+   * Whether the times came off the paper, or are only a starting point the
+   * paper never gave — in which case the screen puts them in a box to change.
+   */
+  timesFrom: 'paper' | 'chosen' | null
   status: 'new' | 'already' | 'ambiguous' | 'unknown-person' | 'unknown-day'
   between?: string[]
 }
@@ -345,9 +370,10 @@ export function dayToDate(written: string, days: readonly string[]): string | nu
 /**
  * Turn a photographed rota into a proposal for the week on screen.
  *
- * Times off the paper win; where the paper only ticks a box, the person's usual
- * shift is used and the row says so, so nobody is credited with hours the rota
- * never claimed.
+ * Times off the paper win. Where the paper only ticks a box, the row starts at
+ * whatever that night is already set to and is marked as not having come off
+ * the paper, so the screen can put the hours in a box to be chosen rather than
+ * crediting anybody with hours the rota never claimed.
  */
 export function proposeShifts(
   scanned: ReadonlyArray<{ name: string; day: string; start: string; end: string }>,
@@ -389,15 +415,16 @@ export function proposeShifts(
     const start = parseTime(row.start)
     const end = parseTime(row.end)
     const fromPaper = start !== null && end !== null
+    const night = hoursFor(date, existing)
     return {
       written: row.name,
       writtenDay: row.day,
       personId: person.id,
       personName: person.name,
       date,
-      startMin: start ?? person.defaultStartMin,
-      endMin: end ?? person.defaultEndMin,
-      timesFrom: fromPaper ? ('paper' as const) : ('usual' as const),
+      startMin: start ?? night.startMin,
+      endMin: end ?? night.endMin,
+      timesFrom: fromPaper ? ('paper' as const) : ('chosen' as const),
       status: have.has(shiftId(date, person.id)) ? ('already' as const) : ('new' as const),
     }
   })

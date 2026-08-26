@@ -2,10 +2,16 @@ import { strict as assert } from 'node:assert'
 import { test } from 'node:test'
 import { monthlyCsv, monthlyTakings, wageBill, yearEndPack, type YearEndInput } from '../src/core/yearEnd.ts'
 import type { DayStats } from '../src/core/analytics.ts'
-import { shiftFor, type Person } from '../src/core/rota.ts'
+import { shiftAt, type Person } from '../src/core/rota.ts'
 import { ML_PER_PINT, type StockItem } from '../src/core/stock.ts'
 import { cellarValue } from '../src/core/margin.ts'
 import { weekdayOf } from '../src/core/date.ts'
+
+/** 18:00 to 23:30 — the hours these tests put people on for. Hours belong to
+    the night now, so every shift here says which ones it means. */
+const EVENING = { startMin: 1080, endMin: 1410 }
+const on = (person: Person, date: string, hours = EVENING) => shiftAt(person.id, date, hours)
+
 
 function night(date: string, takingsPence: number, cashPence = 0, cardPence = 0): DayStats {
   return {
@@ -16,8 +22,8 @@ function night(date: string, takingsPence: number, cashPence = 0, cardPence = 0)
   }
 }
 
-const kelly: Person = { id: 'k', name: 'Kelly', slot: 1, defaultStartMin: 1080, defaultEndMin: 1410, ratePencePerHour: 1221 }
-const dave: Person = { id: 'd', name: 'Dave', slot: 2, defaultStartMin: 1080, defaultEndMin: 1410 }
+const kelly: Person = { id: 'k', name: 'Kelly', slot: 1, ratePencePerHour: 1221 }
+const dave: Person = { id: 'd', name: 'Dave', slot: 2 }
 
 // --- by month -------------------------------------------------------------------
 
@@ -49,7 +55,7 @@ test('the cash and card split is carried through', () => {
 // --- wages -----------------------------------------------------------------------
 
 test('wages total the hours rostered and cost them at each rate', () => {
-  const shifts = [shiftFor(kelly, '2026-01-05'), shiftFor(kelly, '2026-01-06'), shiftFor(dave, '2026-01-05')]
+  const shifts = [on(kelly, '2026-01-05'), on(kelly, '2026-01-06'), on(dave, '2026-01-05')]
   const rows = wageBill(shifts, [kelly, dave], '2026-01-01', '2026-12-31')
   const k = rows.find((r) => r.name === 'Kelly')!
   assert.equal(k.shifts, 2)
@@ -58,18 +64,18 @@ test('wages total the hours rostered and cost them at each rate', () => {
 })
 
 test('somebody with no rate is reported as unknown, never as free', () => {
-  const rows = wageBill([shiftFor(dave, '2026-01-05')], [kelly, dave], '2026-01-01', '2026-12-31')
+  const rows = wageBill([on(dave, '2026-01-05')], [kelly, dave], '2026-01-01', '2026-12-31')
   assert.equal(rows[0]!.costPence, null)
 })
 
 test('shifts outside the year are not counted', () => {
-  const shifts = [shiftFor(kelly, '2025-12-31'), shiftFor(kelly, '2026-01-05')]
+  const shifts = [on(kelly, '2025-12-31'), on(kelly, '2026-01-05')]
   assert.equal(wageBill(shifts, [kelly], '2026-01-01', '2026-12-31')[0]!.shifts, 1)
 })
 
 test('a shift by someone since gone is still counted', () => {
   // Their hours were worked and paid; losing them would understate the year.
-  const rows = wageBill([shiftFor(kelly, '2026-01-05')], [], '2026-01-01', '2026-12-31')
+  const rows = wageBill([on(kelly, '2026-01-05')], [], '2026-01-01', '2026-12-31')
   assert.equal(rows.length, 1)
   assert.match(rows[0]!.name, /no longer on the books/)
 })
@@ -87,7 +93,7 @@ function pack(over: Partial<YearEndInput> = {}): string {
     from: '2026-01-01',
     to: '2026-12-31',
     days: [night('2026-01-05', 120000, 20000, 100000), night('2026-02-05', 80000, 10000, 70000)],
-    shifts: [shiftFor(kelly, '2026-01-05')],
+    shifts: [on(kelly, '2026-01-05')],
     people: [kelly],
     cellar: cellarValue([
       { item: taddy, countedBaseUnits: 0, deliveredBaseUnits: 0, pouredBaseUnits: 0, expectedBaseUnits: 72 * ML_PER_PINT },
@@ -167,7 +173,7 @@ test('the csv has a header and a row per month in pounds', () => {
 test('wages are costed off the total hours, matching the staff profile exactly', () => {
   // Rounding each shift separately drifts a penny at a time, and the year-end
   // pack would then disagree with the same person's own profile.
-  const shifts = [shiftFor(kelly, '2026-01-05'), shiftFor(kelly, '2026-01-06')]
+  const shifts = [on(kelly, '2026-01-05'), on(kelly, '2026-01-06')]
   const row = wageBill(shifts, [kelly], '2026-01-01', '2026-12-31')[0]!
   assert.equal(row.costPence, Math.round((row.minutes * 1221) / 60))
 })

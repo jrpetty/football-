@@ -85,7 +85,7 @@ test('a backup carries everything, not just the nights', () => {
     },
     deliveries: [{ id: 'd1', date: '2026-08-20', lines: [{ stockItemId: 'taddy', baseUnits: 40896 }] }],
     stockCounts: [{ date: '2026-08-19', lines: [{ stockItemId: 'taddy', baseUnits: 8236 }] }],
-    people: [{ id: 'k', name: 'Kelly', slot: 1, defaultStartMin: 1080, defaultEndMin: 1410, ratePencePerHour: 1221 }],
+    people: [{ id: 'k', name: 'Kelly', slot: 1, ratePencePerHour: 1221 }],
     shifts: [{ id: '2026-08-23:k', date: '2026-08-23', personId: 'k', startMin: 1080, endMin: 1410 }],
     weather: [{ date: '2026-08-23', tempC: 21, rainMm: 0 }],
     settings: { weeklyHoursTarget: 45 },
@@ -149,7 +149,7 @@ test('a restore says what came back rather than succeeding silently', () => {
   const r = parseBackup(toJson({
     ...EMPTY,
     days: [day(), day({ date: '2026-08-22' })],
-    people: [{ id: 'k', name: 'Kelly', slot: 1, defaultStartMin: 1080, defaultEndMin: 1410 }],
+    people: [{ id: 'k', name: 'Kelly', slot: 1 }],
   }))
   const said = describeRestored(r)
   assert.match(said, /2 nights/)

@@ -2,11 +2,17 @@ import { strict as assert } from 'node:assert'
 import { test } from 'node:test'
 import { nightSummary, summaryFilename } from '../src/core/summary.ts'
 import { reconcileFull } from '../src/core/reconcile.ts'
-import { shiftFor, type Person } from '../src/core/rota.ts'
+import { shiftAt, type Person } from '../src/core/rota.ts'
 import { GARDENERS_ARMS } from './fixtures/gardenersArms.ts'
 import type { DayRecord } from '../src/core/types.ts'
 
-const kelly: Person = { id: 'k', name: 'Kelly', slot: 1, defaultStartMin: 1080, defaultEndMin: 1410 }
+/** 18:00 to 23:30 — the hours these tests put people on for. Hours belong to
+    the night now, so every shift here says which ones it means. */
+const EVENING = { startMin: 1080, endMin: 1410 }
+const on = (person: Person, date: string, hours = EVENING) => shiftAt(person.id, date, hours)
+
+
+const kelly: Person = { id: 'k', name: 'Kelly', slot: 1 }
 
 /** The real night: £12 light in the drawer, the card slip agreeing exactly. */
 const night: DayRecord = {
@@ -20,7 +26,7 @@ const night: DayRecord = {
   updatedAt: 0,
 }
 
-function summarise(day: DayRecord = night, shifts = [shiftFor(kelly, '2026-08-23')]) {
+function summarise(day: DayRecord = night, shifts = [on(kelly, '2026-08-23')]) {
   return nightSummary({
     day,
     reconciliation: reconcileFull({

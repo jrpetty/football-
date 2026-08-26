@@ -1098,6 +1098,36 @@ table.data.crew th[scope='row'] { white-space: nowrap; }
 .day-edit { padding: 0 14px 14px; border-top: 1px solid var(--line-soft); padding-top: 12px; }
 .day-edit .chip .icon { margin-right: 6px; }
 
+/* Quiet, because most nights nobody needs it: the way to give one person hours
+   of their own when everybody else is on the night's. */
+.hours-change {
+  font: inherit;
+  font-size: 12.5px;
+  flex: none;
+  background: none;
+  border: 0;
+  padding: 0 2px;
+  min-height: 0;
+  color: var(--muted);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .hours-change:hover { color: var(--accent); }
+}
+
+/* The night's own hours, set before anybody is tapped on. Sits apart from the
+   people underneath because it governs all of them. */
+.night-hours {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 9px 11px;
+  margin-bottom: 12px;
+}
+
 /* Two time boxes side by side. Wide enough for a twelve-hour locale — "11:30 PM"
    plus the browser's own clock button — because a clipped "06:00 P" is worse
    than a wide box. The name wraps to its own line above them (see .zrow:has),

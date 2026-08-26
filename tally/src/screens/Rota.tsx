@@ -17,14 +17,17 @@ import {
   crewFor,
   formatHours,
   formatTime,
+  hoursFor,
   parseTime,
   proposeShifts,
-  shiftFor,
+  shiftAt,
   shiftId,
   shiftMinutes,
   shiftsFrom,
   weekDays,
   weekStart,
+  DEFAULT_SHIFT,
+  type Hours,
   type Person,
   type Shift,
   type ShiftProposal,
@@ -52,10 +55,6 @@ import {
 
 type Panel = 'week' | 'people' | 'record'
 
-/** Six until close, the shift most bar staff are actually on. */
-const DEFAULT_START = 18 * 60
-const DEFAULT_END = 23 * 60 + 30
-
 let counter = 0
 function newId(): string {
   // Not crypto.randomUUID: it is absent over plain HTTP, which is exactly where
@@ -67,6 +66,10 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
   const [panel, setPanel] = useState<Panel>('week')
   const [monday, setMonday] = useState(() => weekStart(tradingDayKey()))
   const [openDay, setOpenDay] = useState<string | null>(null)
+  /** The hours the night is being rostered at — what a tap puts somebody on for. */
+  const [nightHours, setNightHours] = useState<Hours>(DEFAULT_SHIFT)
+  /** Shifts whose own time boxes have been asked for, by shift id. */
+  const [oddHours, setOddHours] = useState<Set<string>>(new Set())
   const [people, setPeople] = useState<Person[] | null>(null)
   const [shifts, setShifts] = useState<Shift[]>([])
   const [ranking, setRanking] = useState<CrewRank[]>([])
@@ -86,8 +89,6 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
 
   // The new-person form.
   const [name, setName] = useState('')
-  const [startText, setStartText] = useState(formatTime(DEFAULT_START))
-  const [endText, setEndText] = useState(formatTime(DEFAULT_END))
   const [rateText, setRateText] = useState('')
 
   useEffect(() => {
@@ -183,6 +184,13 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
     return priced ? total : null
   }, [weekShifts, people])
 
+  /** Open a night, with its hours box set to what that night is already on. */
+  function openNight(date: string | null) {
+    setOpenDay(date)
+    setOddHours(new Set())
+    if (date !== null) setNightHours(hoursFor(date, shifts))
+  }
+
   async function toggle(date: string, person: Person) {
     const id = shiftId(date, person.id)
     const existing = shifts.find((s) => s.id === id)
@@ -190,11 +198,29 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
       await deleteShift(id)
       setShifts(shifts.filter((s) => s.id !== id))
     } else {
-      const shift = shiftFor(person, date)
+      const shift = shiftAt(person.id, date, nightHours)
       await saveShift(shift)
       setShifts([...shifts, shift])
     }
     onChanged()
+  }
+
+  /**
+   * Change the night's hours, and everybody already on it with them.
+   *
+   * The alternative — leaving the crew where they were — makes the box a lie
+   * about the night it sits on. One person who came in late is corrected on
+   * their own row underneath.
+   */
+  async function setNightAt(date: string, patch: Partial<Hours>) {
+    const next = { ...nightHours, ...patch }
+    setNightHours(next)
+    const moved = shifts.filter((s) => s.date === date).map((s) => ({ ...s, ...next }))
+    for (const shift of moved) await saveShift(shift)
+    if (moved.length > 0) {
+      setShifts(shifts.map((s) => moved.find((m) => m.id === s.id) ?? s))
+      onChanged()
+    }
   }
 
   async function setHours(shift: Shift, patch: Partial<Pick<Shift, 'startMin' | 'endMin'>>) {
@@ -267,17 +293,12 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
   async function addPerson() {
     const trimmed = name.trim()
     if (!trimmed) return say('They need a name.')
-    const start = parseTime(startText)
-    const end = parseTime(endText)
-    if (start === null || end === null) return say('Those hours are not a time.')
     const rate = parsePence(rateText)
     const person: Person = {
       id: newId(),
       name: trimmed,
       // Fixed at creation, so a person's colour survives everyone else leaving.
       slot: ((people?.length ?? 0) % 8) + 1,
-      defaultStartMin: start,
-      defaultEndMin: end,
       ...(rate ? { ratePencePerHour: rate } : {}),
     }
     await savePerson(person)
@@ -407,14 +428,37 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
                         {(row.status === 'new' || row.status === 'already') && row.date && (
                           <>
                             {weekdayOf(row.date)}
-                            {row.startMin !== undefined && row.endMin !== undefined
-                              ? ` ${formatTime(row.startMin)}–${formatTime(row.endMin)}`
-                              : ''}
-                            {row.timesFrom === 'usual' ? ' · their usual hours' : ''}
+                            {row.timesFrom === 'paper' && row.startMin !== undefined && row.endMin !== undefined
+                              ? ` ${formatTime(row.startMin)}–${formatTime(row.endMin)} · off the paper`
+                              : ' · no times on the paper — set them'}
                           </>
                         )}
                       </small>
                     </span>
+                    {/* The paper only ticked a box, so the hours are hers to choose
+                        rather than the app's to assume. */}
+                    {row.status === 'new' && row.timesFrom === 'chosen' && (
+                      <>
+                        <input
+                          type="time"
+                          aria-label={`${row.personName ?? row.written} starts`}
+                          value={formatTime(row.startMin ?? 0)}
+                          onChange={(e) => {
+                            const min = parseTime(e.target.value)
+                            if (min !== null) setProposals((rows) => rows && rows.map((r, j) => (j === i ? { ...r, startMin: min } : r)))
+                          }}
+                        />
+                        <input
+                          type="time"
+                          aria-label={`${row.personName ?? row.written} finishes`}
+                          value={formatTime(row.endMin ?? 0)}
+                          onChange={(e) => {
+                            const min = parseTime(e.target.value)
+                            if (min !== null) setProposals((rows) => rows && rows.map((r, j) => (j === i ? { ...r, endMin: min } : r)))
+                          }}
+                        />
+                      </>
+                    )}
                     {row.status === 'new' ? (
                       <button
                         type="button"
@@ -461,7 +505,7 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
                   type="button"
                   className="day-open"
                   aria-expanded={isOpen}
-                  onClick={() => setOpenDay(isOpen ? null : date)}
+                  onClick={() => openNight(isOpen ? null : date)}
                 >
                   <span className="day-when">
                     <strong>{weekdayOf(date)}</strong>
@@ -496,6 +540,31 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
 
                 {isOpen && (
                   <div className="day-edit">
+                    <div className="zrow night-hours">
+                      <span className="zname">
+                        Hours for this night
+                        <small>{formatHours(shiftMinutes(nightHours))} · everyone tapped below goes on for these</small>
+                      </span>
+                      <input
+                        type="time"
+                        aria-label={`Everyone starts on ${date}`}
+                        value={formatTime(nightHours.startMin)}
+                        onChange={(e) => {
+                          const min = parseTime(e.target.value)
+                          if (min !== null) void setNightAt(date, { startMin: min })
+                        }}
+                      />
+                      <input
+                        type="time"
+                        aria-label={`Everyone finishes on ${date}`}
+                        value={formatTime(nightHours.endMin)}
+                        onChange={(e) => {
+                          const min = parseTime(e.target.value)
+                          if (min !== null) void setNightAt(date, { endMin: min })
+                        }}
+                      />
+                    </div>
+
                     <div className="chip-row">
                       {active.map((person) => {
                         const on = shifts.some((s) => s.id === shiftId(date, person.id))
@@ -520,6 +589,28 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
 
                     {crew.shifts.map((s) => {
                       const person = people.find((p) => p.id === s.personId)
+                      // Somebody on the night's own hours needs no boxes of their
+                      // own — three identical pairs of times is noise. The boxes
+                      // appear for whoever actually differs, or on asking.
+                      const differs = s.startMin !== nightHours.startMin || s.endMin !== nightHours.endMin
+                      if (!differs && !oddHours.has(s.id)) {
+                        return (
+                          <div className="zrow" key={s.id}>
+                            <span className="zname">
+                              {person?.name ?? 'Someone'}
+                              <small>{formatHours(shiftMinutes(s))} · the night’s hours</small>
+                            </span>
+                            <button
+                              type="button"
+                              className="hours-change"
+                              aria-label={`Give ${person?.name ?? 'them'} different hours`}
+                              onClick={() => setOddHours((o) => new Set(o).add(s.id))}
+                            >
+                              Different hours
+                            </button>
+                          </div>
+                        )
+                      }
                       return (
                         <div className="zrow" key={s.id}>
                           <span className="zname">
@@ -547,10 +638,17 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
                         </div>
                       )
                     })}
-                    {crew.costPence !== null && (
+                    {crew.shifts.length === 0 ? (
                       <p className="note" style={{ marginBottom: 0 }}>
-                        {formatHours(crew.minutes)} on the bar, {formatMoney(crew.costPence)} in wages.
+                        Set the hours above, then tap whoever worked. Anyone who came in at a
+                        different time gets their own boxes here.
                       </p>
+                    ) : (
+                      crew.costPence !== null && (
+                        <p className="note" style={{ marginBottom: 0 }}>
+                          {formatHours(crew.minutes)} on the bar, {formatMoney(crew.costPence)} in wages.
+                        </p>
+                      )
                     )}
                   </div>
                 )}
@@ -776,17 +874,7 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
                 onChange={(e) => setName(e.target.value)}
               />
             </div>
-            <div className="btn-row">
-              <div className="field" style={{ marginBottom: 0 }}>
-                <label htmlFor="person-start">Usually starts</label>
-                <input id="person-start" type="time" value={startText} onChange={(e) => setStartText(e.target.value)} />
-              </div>
-              <div className="field" style={{ marginBottom: 0 }}>
-                <label htmlFor="person-end">Usually finishes</label>
-                <input id="person-end" type="time" value={endText} onChange={(e) => setEndText(e.target.value)} />
-              </div>
-            </div>
-            <div className="field" style={{ marginTop: 14 }}>
+            <div className="field">
               <label htmlFor="person-rate">Hourly rate (optional)</label>
               <input
                 id="person-rate"
@@ -804,6 +892,10 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
             <button type="button" className="btn-primary" onClick={() => void addPerson()}>
               Add to the rota
             </button>
+            <p className="note" style={{ marginBottom: 0 }}>
+              No hours here on purpose. Hours belong to the night, not the person — you set them on
+              the week, or they come off a photograph of the paper rota.
+            </p>
           </section>
 
           {active.map((person) => (
@@ -816,30 +908,8 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
                 />
                 <h2>{person.name}</h2>
                 <span className="hint">
-                  {formatTime(person.defaultStartMin)}–{formatTime(person.defaultEndMin)}
-                  {person.ratePencePerHour ? ` · ${formatMoney(person.ratePencePerHour)}/hr` : ''}
+                  {person.ratePencePerHour ? `${formatMoney(person.ratePencePerHour)}/hr` : 'no rate set'}
                 </span>
-              </div>
-              <div className="zrow">
-                <span className="zname">Usual hours<small>what a tap puts them on for</small></span>
-                <input
-                  type="time"
-                  aria-label={`${person.name} usually starts`}
-                  value={formatTime(person.defaultStartMin)}
-                  onChange={(e) => {
-                    const min = parseTime(e.target.value)
-                    if (min !== null) void updatePerson(person, { defaultStartMin: min })
-                  }}
-                />
-                <input
-                  type="time"
-                  aria-label={`${person.name} usually finishes`}
-                  value={formatTime(person.defaultEndMin)}
-                  onChange={(e) => {
-                    const min = parseTime(e.target.value)
-                    if (min !== null) void updatePerson(person, { defaultEndMin: min })
-                  }}
-                />
               </div>
               <div className="zrow">
                 <span className="zname">Hourly rate<small>blank means no wage figures</small></span>

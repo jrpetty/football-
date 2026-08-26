@@ -506,6 +506,11 @@ try {
   await page.click('button:has-text("Add the first person")')
   await page.waitForSelector('#person-name', { timeout: 5000 })
 
+  check(
+    'adding somebody asks for a name and a rate, not for hours they "usually" work',
+    (await page.locator('#person-start').count()) === 0 && (await page.locator('#person-end').count()) === 0,
+  )
+
   await page.fill('#person-name', 'Kelly')
   await page.fill('#person-rate', '12.21')
   await page.click('button:has-text("Add to the rota")')
@@ -535,6 +540,26 @@ try {
 
   const wages = await page.locator('.day-edit').innerText()
   check('wages count only the person with a rate', wages.includes('£67.16'), wages.slice(-160))
+
+  console.log('\nThe hours belong to the night')
+  check('the night opens with its hours in a box', (await page.locator('.night-hours input').count()) === 2)
+  check(
+    'starting at six until close, since nothing else has been rostered',
+    (await page.locator('.night-hours input').first().inputValue()) === '18:00',
+  )
+  // Four o'clock start: everyone already on the night moves with it, so the
+  // box is never describing hours the crew is not actually on.
+  await page.locator('.night-hours input').first().fill('16:00')
+  await page.waitForTimeout(400)
+  const longer = await page.locator('.day-edit').innerText()
+  check('changing it moves everybody on that night', /15h/.test(longer), longer.slice(-200))
+  check('and the wages follow the hours', longer.includes('£91.58'), longer.slice(-200))
+  await page.locator('.night-hours input').first().fill('18:00')
+  await page.waitForTimeout(400)
+  check(
+    'putting it back restores the night',
+    (await page.locator('.day-edit').innerText()).includes('£67.16'),
+  )
 
   console.log('\nThe week’s wages, sent on')
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])

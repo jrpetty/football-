@@ -3,10 +3,16 @@ import { test } from 'node:test'
 import { buildAskPack, MAX_PACK_NIGHTS, type AskData } from '../src/core/askContext.ts'
 import type { DayStats } from '../src/core/analytics.ts'
 import { weekdayOf, addDays } from '../src/core/date.ts'
-import { shiftFor, type Person } from '../src/core/rota.ts'
+import { shiftAt, type Person } from '../src/core/rota.ts'
 import type { StockItem } from '../src/core/stock.ts'
 import { cellarHealth } from '../src/core/stock.ts'
 import { costOf } from '../src/core/margin.ts'
+
+/** 18:00 to 23:30 — the hours these tests put people on for. Hours belong to
+    the night now, so every shift here says which ones it means. */
+const EVENING = { startMin: 1080, endMin: 1410 }
+const on = (person: Person, date: string, hours = EVENING) => shiftAt(person.id, date, hours)
+
 
 function night(date: string, takingsPence: number, extra: Partial<DayStats> = {}): DayStats {
   return {
@@ -120,12 +126,12 @@ test('the cellar lists what is on hand in servings, valued at cost', () => {
 })
 
 test('staff hours and rates are included, and an unset rate says so', () => {
-  const kelly: Person = { id: 'k', name: 'Kelly', slot: 1, defaultStartMin: 1080, defaultEndMin: 1410, ratePencePerHour: 1221 }
-  const dave: Person = { id: 'd', name: 'Dave', slot: 2, defaultStartMin: 1080, defaultEndMin: 1410 }
+  const kelly: Person = { id: 'k', name: 'Kelly', slot: 1, ratePencePerHour: 1221 }
+  const dave: Person = { id: 'd', name: 'Dave', slot: 2 }
   const pack = buildAskPack(
     base([night('2026-08-21', 100)], {
       people: [kelly, dave],
-      shifts: [shiftFor(kelly, '2026-08-21'), shiftFor(kelly, '2026-08-22'), shiftFor(dave, '2026-08-21')],
+      shifts: [on(kelly, '2026-08-21'), on(kelly, '2026-08-22'), on(dave, '2026-08-21')],
     }),
   )
   assert.ok(pack.text.includes('Kelly|£12.21/h|2|11h|2026-08-22'))

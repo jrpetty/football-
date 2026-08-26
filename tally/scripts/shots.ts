@@ -252,6 +252,11 @@ for (const scheme of ['dark', 'light'] as const) {
   await page.waitForTimeout(300)
   await page.screenshot({ path: join(out, `profile-${scheme}.png`), fullPage: false })
 
+  // Who works here — a name and a rate, no hours.
+  await page.click('.chip:has-text("Who works here")')
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: join(out, `people-${scheme}.png`), fullPage: false })
+
   // One item's card, reached through the search — which lives on Trade.
   await page.click('button:has-text("Trade")')
   await page.waitForSelector('input[aria-label="Find an item"]', { timeout: 5000 })

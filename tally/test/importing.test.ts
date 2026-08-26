@@ -1,8 +1,14 @@
 import { strict as assert } from 'node:assert'
 import { test } from 'node:test'
 import { applyPrices, proposePrices } from '../src/core/priceBook.ts'
-import { dayToDate, proposeShifts, shiftFor, shiftsFrom, weekDays, type Person } from '../src/core/rota.ts'
+import { dayToDate, proposeShifts, shiftAt, shiftsFrom, weekDays, type Person } from '../src/core/rota.ts'
 import { parseBoardPrice } from '../src/ocr/scanList.ts'
+
+/** 18:00 to 23:30 — the hours these tests put people on for. Hours belong to
+    the night now, so every shift here says which ones it means. */
+const EVENING = { startMin: 1080, endMin: 1410 }
+const on = (person: Person, date: string, hours = EVENING) => shiftAt(person.id, date, hours)
+
 
 const TILL = [
   { code: '1', name: 'PINT TADDY LAGER' },
@@ -78,8 +84,8 @@ test('applying an unmatched row writes nothing', () => {
 // --- the rota -----------------------------------------------------------------
 
 const WEEK = weekDays('2026-08-24') // Monday 24th to Sunday 30th August 2026
-const kelly: Person = { id: 'k', name: 'Kelly', slot: 1, defaultStartMin: 1080, defaultEndMin: 1410 }
-const dave: Person = { id: 'd', name: 'Dave', slot: 2, defaultStartMin: 1080, defaultEndMin: 1410 }
+const kelly: Person = { id: 'k', name: 'Kelly', slot: 1 }
+const dave: Person = { id: 'd', name: 'Dave', slot: 2 }
 
 test('a day column is resolved by name or by date', () => {
   assert.equal(dayToDate('Mon', WEEK), '2026-08-24')
@@ -103,14 +109,27 @@ test('a shift with times on the paper uses them', () => {
   assert.equal(row!.timesFrom, 'paper')
 })
 
-test('a ticked box falls back to their usual hours and says so', () => {
+test('a ticked box is marked as having no times on the paper', () => {
   const [row] = proposeShifts([{ name: 'Kelly', day: 'Fri', start: '', end: '' }], [kelly], WEEK, [])
+  // Six until close, since there is nothing else to go on — but flagged, so the
+  // screen puts it in a box rather than crediting hours the paper never claimed.
   assert.equal(row!.startMin, 1080)
-  assert.equal(row!.timesFrom, 'usual', 'so nobody is credited with hours the paper never claimed')
+  assert.equal(row!.endMin, 1410)
+  assert.equal(row!.timesFrom, 'chosen')
+})
+
+test('a ticked box starts at the hours that night is already rostered at', () => {
+  // Dave is already on that Friday from four until eleven. Kelly's ticked box
+  // starts there rather than at a house default nobody chose.
+  const existing = [on(dave, '2026-08-28', { startMin: 16 * 60, endMin: 23 * 60 })]
+  const [row] = proposeShifts([{ name: 'Kelly', day: 'Fri', start: '', end: '' }], [kelly, dave], WEEK, existing)
+  assert.equal(row!.startMin, 16 * 60)
+  assert.equal(row!.endMin, 23 * 60)
+  assert.equal(row!.timesFrom, 'chosen')
 })
 
 test('a shift already on the rota is proposed as already there', () => {
-  const existing = [shiftFor(kelly, '2026-08-28')]
+  const existing = [on(kelly, '2026-08-28')]
   const [row] = proposeShifts([{ name: 'Kelly', day: 'Fri', start: '', end: '' }], [kelly], WEEK, existing)
   assert.equal(row!.status, 'already')
 })
@@ -162,6 +181,7 @@ test('a shortened name on the paper still finds the person', () => {
 
 import { bestMatch } from '../src/core/match.ts'
 import {
+
   deliveryLinesFrom,
   ML_PER_PINT,
   proposeDelivery,
