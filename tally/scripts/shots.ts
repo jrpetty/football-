@@ -127,9 +127,29 @@ for (const scheme of ['dark', 'light'] as const) {
   await page.waitForTimeout(300)
   await page.screenshot({ path: join(out, `trade-crew-${scheme}.png`), fullPage: true })
 
+  // The staff record, with a couple of people on the books.
+  await page.click('button:has-text("Rota")')
+  await page.waitForSelector('.chip:has-text("Records")', { timeout: 5000 })
+  await page.click('.chip:has-text("Records")')
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: join(out, `records-${scheme}.png`), fullPage: false })
+  await page.click('.person-row:has-text("Kelly")')
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: join(out, `profile-${scheme}.png`), fullPage: false })
+
   await page.click('button:has-text("Cellar")')
   await page.waitForTimeout(300)
   await page.screenshot({ path: join(out, `cellar-${scheme}.png`), fullPage: false })
+
+  // Costs: a firkin of Taddy, so the margin has something to say.
+  await page.click('button:has-text("Build the cellar from the till")').catch(() => {})
+  await page.waitForTimeout(500)
+  await page.click('.chip:has-text("What it costs")')
+  await page.waitForSelector('input[aria-label="Taddy Lager cost"]', { timeout: 5000 })
+  await page.fill('input[aria-label="Taddy Lager cost"]', '95.00')
+  await page.fill('input[aria-label="Taddy Lager servings per container"]', '72')
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: join(out, `costs-${scheme}.png`), fullPage: false })
 
   await page.click('button:has-text("Nights")')
   await page.waitForSelector('.day-row', { timeout: 5000 })

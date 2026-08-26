@@ -31,7 +31,8 @@ import { departmentSlot } from '../core/departments.ts'
 import { formatShort, tradingDayKey } from '../core/date.ts'
 import { formatMoney, formatSigned } from '../core/money.ts'
 import { formatQty } from '../core/zread.ts'
-import { listDays, listPeople, listShifts, loadPriceBook } from '../storage/db.ts'
+import { listDays, listPeople, listShifts, loadPriceBook, loadStockConfig, EMPTY_STOCK, type StockConfig } from '../storage/db.ts'
+import { marginReport } from '../core/margin.ts'
 import {
   crewFor,
   crewStats,
@@ -76,6 +77,7 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
   const [book, setBook] = useState<PriceBookEntry[]>([])
   const [people, setPeople] = useState<Person[]>([])
   const [shifts, setShifts] = useState<Shift[]>([])
+  const [stock, setStock] = useState<StockConfig>(EMPTY_STOCK)
 
   useEffect(() => {
     let cancelled = false
@@ -93,8 +95,12 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
 
   useEffect(() => {
     let cancelled = false
-    loadPriceBook()
-      .then((b) => !cancelled && setBook(b))
+    void Promise.all([loadPriceBook(), loadStockConfig()])
+      .then(([b, cfg]) => {
+        if (cancelled) return
+        setBook(b)
+        setStock(cfg)
+      })
       .catch(() => {})
     return () => {
       cancelled = true
@@ -162,6 +168,18 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
     }
     return { minutes, costPence: priced ? cost : null, nights, takingsPence: takings }
   }, [selected, shifts, people])
+
+  const gp = useMemo(
+    () =>
+      marginReport(
+        itemTotals(selected).map((i) => ({ code: i.code, name: i.name, qtyMilli: i.qtyMilli })),
+        book,
+        stock.pours,
+        stock.items,
+        loadSettings().vatBp,
+      ),
+    [selected, book, stock],
+  )
 
   const prices = useMemo(
     () => checkPrices(itemTotals(selected).map((i) => ({ code: i.code, name: i.name, qtyMilli: i.qtyMilli, pence: i.pence })), book),
@@ -542,6 +560,66 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
               </button>
             </div>
           )}
+        </ChartCard>
+      )}
+
+      {gp.costedCount > 0 && (
+        <ChartCard
+          title="What it actually makes"
+          subtitle={`${gp.costedCount} of ${gp.costedCount + gp.uncostedCount} lines costed`}
+        >
+          <div className="kpi-row">
+            <StatTile
+              label="Gross profit"
+              value={formatMoney(gp.profitPence)}
+              detail="after what the beer cost, before VAT"
+            />
+            <StatTile
+              label="GP rate"
+              value={gp.blendedGpBp === null ? '—' : `${(gp.blendedGpBp / 100).toFixed(1)}%`}
+              detail="across the costed lines"
+              tone={gp.blendedGpBp !== null && gp.blendedGpBp >= 5500 ? 'good' : gp.blendedGpBp !== null && gp.blendedGpBp < 4500 ? 'bad' : undefined}
+            />
+          </div>
+
+          <div className="table-wrap">
+            <table className="data">
+              <thead>
+                <tr>
+                  <th scope="col">Line</th>
+                  <th scope="col">Sold</th>
+                  <th scope="col">Sells at</th>
+                  <th scope="col">Costs</th>
+                  <th scope="col">GP</th>
+                  <th scope="col">Made</th>
+                </tr>
+              </thead>
+              <tbody>
+                {gp.lines
+                  .filter((l) => l.margin)
+                  .slice(0, 12)
+                  .map((l) => (
+                    <tr key={l.code}>
+                      <th scope="row">{l.name}</th>
+                      <td className="num">{formatQty(l.qtyMilli)}</td>
+                      <td className="num">{formatMoney(l.margin!.sellPence)}</td>
+                      <td className="num">{formatMoney(l.margin!.costPence)}</td>
+                      <td className={`num${l.margin!.gpBp < 4500 ? ' bad' : ''}`}>
+                        {(l.margin!.gpBp / 100).toFixed(1)}%
+                      </td>
+                      <td className="num">{formatMoney(l.periodProfitPence ?? 0)}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+
+          <p className="note">
+            Worst margin first, because that is the line worth looking at. The sale has VAT taken off
+            before profit is counted — a £4.00 pint is £3.33 to the pub — and the cost is the invoice
+            price ex VAT.
+            {gp.uncostedCount > 0 && ` ${gp.uncostedCount} lines have no price or no cost entered yet and are left out of both figures above.`}
+          </p>
         </ChartCard>
       )}
 

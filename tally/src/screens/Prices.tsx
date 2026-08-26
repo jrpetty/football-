@@ -11,10 +11,21 @@
 // told the wrong price counts correctly all evening and balances to the penny.
 // ---------------------------------------------------------------------------
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { formatMoney, parsePence, penceToInput } from '../core/money.ts'
 import { formatQty } from '../core/zread.ts'
-import { buildIndex, lookup, type PriceBookEntry, type SoldItem } from '../core/priceBook.ts'
+import {
+  applyPrices,
+  buildIndex,
+  lookup,
+  proposePrices,
+  type PriceBookEntry,
+  type PriceProposal,
+  type SoldItem,
+} from '../core/priceBook.ts'
+import { scanPriceBoard } from '../ocr/scanList.ts'
+import { describeZReadError } from '../ocr/scanZRead.ts'
+import { IconCamera, IconTickSmall } from '../components/icons.tsx'
 import { dayStats, itemTotals } from '../core/analytics.ts'
 import { listDays, loadPriceBook, savePriceBook } from '../storage/db.ts'
 import { loadSettings } from '../storage/settings.ts'
@@ -25,6 +36,16 @@ export function Prices({ onChanged }: { onChanged: () => void }) {
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [toast, setToast] = useState('')
   const [onlyUnpriced, setOnlyUnpriced] = useState(false)
+  const [scanning, setScanning] = useState(false)
+  const [scanError, setScanError] = useState('')
+  const [scanNotes, setScanNotes] = useState('')
+  /** Null until a board has been read. Nothing is written until she accepts. */
+  const [proposals, setProposals] = useState<PriceProposal[] | null>(null)
+  const [rejected, setRejected] = useState<Set<number>>(new Set())
+  const boardRef = useRef<HTMLInputElement>(null)
+  const abortRef = useRef<AbortController | null>(null)
+
+  useEffect(() => () => abortRef.current?.abort(), [])
 
   useEffect(() => {
     let cancelled = false
@@ -44,6 +65,45 @@ export function Prices({ onChanged }: { onChanged: () => void }) {
   }, [])
 
   const index = useMemo(() => buildIndex(book), [book])
+
+  async function readBoard(file: File) {
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+    setScanning(true)
+    setScanError('')
+    setScanNotes('')
+    try {
+      const result = await scanPriceBoard(file, controller.signal)
+      if (controller.signal.aborted) return
+      const rows = proposePrices(result.prices, items ?? [], book)
+      setProposals(rows)
+      setRejected(new Set())
+      setScanNotes(result.notes)
+      if (rows.length === 0) setScanError('Nothing priced could be read on that photograph.')
+    } catch (err) {
+      if (controller.signal.aborted) return
+      setScanError(describeZReadError(err))
+    } finally {
+      if (!controller.signal.aborted) setScanning(false)
+    }
+  }
+
+  /** Rows that would actually change something, minus anything she has waved off. */
+  function acceptable(rows: PriceProposal[]): PriceProposal[] {
+    return rows.filter((r, i) => !rejected.has(i) && (r.status === 'new' || r.status === 'changed'))
+  }
+
+  async function applyBoard() {
+    if (!proposals) return
+    const taking = acceptable(proposals)
+    if (taking.length === 0) return say('Nothing to apply.')
+    const next = applyPrices(book, taking)
+    await commit(next)
+    setDrafts(Object.fromEntries(next.map((e) => [e.code ?? `name:${e.name}`, penceToInput(e.pence)])))
+    setProposals(null)
+    say(`${taking.length} ${taking.length === 1 ? 'price' : 'prices'} taken off the board.`)
+  }
 
   function say(message: string) {
     setToast(message)
@@ -107,7 +167,92 @@ export function Prices({ onChanged }: { onChanged: () => void }) {
             Still to price
           </button>
         </div>
+
+        <div className="alts">
+          <button type="button" className="btn-small" onClick={() => boardRef.current?.click()} disabled={scanning}>
+            {scanning ? <><span className="spinner" /> Reading the board…</> : <><IconCamera size={17} /> Photograph the board</>}
+          </button>
+        </div>
+        <input
+          ref={boardRef}
+          type="file"
+          accept="image/*"
+          className="visually-hidden"
+          data-testid="file-board"
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            e.target.value = ''
+            if (file) void readBoard(file)
+          }}
+        />
+        {scanError && <p className="note bad" role="status">{scanError}</p>}
+        {scanNotes && !scanError && <p className="note warn" role="status">{scanNotes}</p>}
       </section>
+
+      {/* --- what the board said, before anything is written ------------------ */}
+      {proposals && (
+        <section className="card">
+          <div className="card-head">
+            <h2>What the board says</h2>
+            <span className="badge">{acceptable(proposals).length} to apply</span>
+          </div>
+          <p className="note" style={{ marginTop: 0 }}>
+            Nothing has been saved yet. Check the matches — anything it could not place, or could not
+            choose between, is left for you rather than guessed at.
+          </p>
+
+          {proposals.map((row, i) => {
+            const off = rejected.has(i)
+            const doable = row.status === 'new' || row.status === 'changed'
+            return (
+              <div className="zrow" key={`${row.written}-${i}`}>
+                <span className="zname">
+                  {row.name ?? row.written}
+                  <small>
+                    {row.status === 'unmatched' && `“${row.written}” — nothing on the till matches this`}
+                    {row.status === 'ambiguous' && `“${row.written}” — could be ${row.between?.join(' or ')}`}
+                    {row.status === 'new' && `new price · read as “${row.written}”`}
+                    {row.status === 'changed' && `was ${formatMoney(row.wasPence ?? 0)}`}
+                    {row.status === 'same' && 'already this price'}
+                  </small>
+                </span>
+                <strong className="num">{formatMoney(row.pence)}</strong>
+                {doable ? (
+                  <button
+                    type="button"
+                    className="chip"
+                    aria-pressed={!off}
+                    aria-label={`${off ? 'Include' : 'Skip'} ${row.name ?? row.written}`}
+                    onClick={() =>
+                      setRejected((r) => {
+                        const next = new Set(r)
+                        if (next.has(i)) next.delete(i)
+                        else next.add(i)
+                        return next
+                      })
+                    }
+                  >
+                    {off ? 'Skipped' : <IconTickSmall size={13} />}
+                  </button>
+                ) : (
+                  <span className={`badge ${row.status === 'same' ? 'good' : 'warn'}`}>
+                    {row.status === 'same' ? 'no change' : 'by hand'}
+                  </span>
+                )}
+              </div>
+            )
+          })}
+
+          <div className="btn-row" style={{ marginTop: 14 }}>
+            <button type="button" className="btn-primary" onClick={() => void applyBoard()}>
+              Apply {acceptable(proposals).length}
+            </button>
+            <button type="button" className="btn-small" onClick={() => setProposals(null)}>
+              Throw it away
+            </button>
+          </div>
+        </section>
+      )}
 
       <section className="card">
         {shown.map((item) => {

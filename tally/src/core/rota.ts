@@ -21,7 +21,8 @@
 // It is a place to look, never a verdict. The screen says so too.
 // ---------------------------------------------------------------------------
 
-import { addDays, dateKey, fromDateKey } from './date.ts'
+import { addDays, dateKey, fromDateKey, weekdayOf } from './date.ts'
+import { bestMatch, normalise } from './match.ts'
 
 /** Minutes in a day, for shifts that finish after midnight. */
 const DAY_MINUTES = 24 * 60
@@ -179,6 +180,13 @@ export interface CrewStat {
   differencePence: number | null
   /** False when either side is too thin to mean anything. */
   meaningful: boolean
+  /** Of the nights they worked that reconciled: how they came out. */
+  balancedNights: number
+  shortNights: number
+  overNights: number
+  /** The worst single night on their watch, for context on an average. */
+  worstNightPence: number | null
+  worstNightDate: string | null
 }
 
 /**
@@ -193,6 +201,7 @@ export function crewStats(
   nights: readonly RotaNight[],
   shifts: readonly Shift[],
   people: readonly Person[],
+  tolerancePence = 0,
 ): CrewStat[] {
   const rotaed = new Set(shifts.map((s) => s.date))
   const onByDate = new Map<string, Set<string>>()
@@ -235,6 +244,25 @@ export function crewStats(
         if (wasOn && night.takingsPence !== null) takingsOn.push(night.takingsPence)
       }
 
+      // How their own nights came out, one by one — an average of −£4 reads
+      // very differently if it is one bad night or twenty small ones.
+      let balancedNights = 0
+      let shortNights = 0
+      let overNights = 0
+      let worstNightPence: number | null = null
+      let worstNightDate: string | null = null
+      for (const night of comparable) {
+        if (!(onByDate.get(night.date)?.has(person.id) ?? false)) continue
+        const v = night.variancePence as number
+        if (Math.abs(v) <= tolerancePence) balancedNights++
+        else if (v < 0) shortNights++
+        else overNights++
+        if (worstNightPence === null || v < worstNightPence) {
+          worstNightPence = v
+          worstNightDate = night.date
+        }
+      }
+
       const avgOn = mean(on)
       const avgOff = mean(off)
       return {
@@ -251,6 +279,11 @@ export function crewStats(
         avgVarianceOffPence: avgOff,
         differencePence: avgOn !== null && avgOff !== null ? avgOn - avgOff : null,
         meaningful: on.length >= MIN_NIGHTS_FOR_COMPARISON && off.length >= MIN_NIGHTS_FOR_COMPARISON,
+        balancedNights,
+        shortNights,
+        overNights,
+        worstNightPence,
+        worstNightDate,
       }
     })
     .sort((a, b) => b.nightsOn - a.nightsOn || a.name.localeCompare(b.name))
@@ -260,4 +293,161 @@ export function crewStats(
 export function labourShareBp(costPence: number, takingsPence: number): number | null {
   if (takingsPence <= 0) return null
   return Math.round((costPence / takingsPence) * 10000)
+}
+
+
+// --- reading the rota off a photograph ---------------------------------------
+
+export interface ShiftProposal {
+  /** The name as written on the paper. */
+  written: string
+  /** The day column, as written. */
+  writtenDay: string
+  personId?: string
+  personName?: string
+  date?: string
+  startMin?: number
+  endMin?: number
+  /** Whether the times came off the paper or from the person's usual shift. */
+  timesFrom: 'paper' | 'usual' | null
+  status: 'new' | 'already' | 'ambiguous' | 'unknown-person' | 'unknown-day'
+  between?: string[]
+}
+
+/**
+ * Work out which of the week's dates a written day column means.
+ *
+ * Handles the two ways a rota labels a column — by name ("Mon", "Monday") and
+ * by date ("Sat 29", "29") — and refuses anything else rather than defaulting
+ * to a day, since putting a shift on the wrong night is the whole risk here.
+ */
+export function dayToDate(written: string, days: readonly string[]): string | null {
+  const text = normalise(written)
+  if (!text) return null
+
+  for (const date of days) {
+    const weekday = normalise(weekdayOf(date))
+    // "MON" against "MONDAY", and "MONDAY" against itself.
+    if (weekday && (text === weekday || text.startsWith(weekday.slice(0, 3)))) return date
+  }
+
+  // A bare day of the month — "29", or the 29 inside "SAT 29".
+  const number = /(\d{1,2})/.exec(text)
+  if (number) {
+    const wanted = Number(number[1])
+    for (const date of days) {
+      if (fromDateKey(date).getDate() === wanted) return date
+    }
+  }
+  return null
+}
+
+/**
+ * Turn a photographed rota into a proposal for the week on screen.
+ *
+ * Times off the paper win; where the paper only ticks a box, the person's usual
+ * shift is used and the row says so, so nobody is credited with hours the rota
+ * never claimed.
+ */
+export function proposeShifts(
+  scanned: ReadonlyArray<{ name: string; day: string; start: string; end: string }>,
+  people: readonly Person[],
+  days: readonly string[],
+  existing: readonly Shift[],
+): ShiftProposal[] {
+  const live = people.filter((p) => !p.archived)
+  const have = new Set(existing.map((s) => s.id))
+
+  return scanned.map((row) => {
+    const match = bestMatch(row.name, live, (p) => p.name)
+    if (match.kind === 'unmatched') {
+      return { written: row.name, writtenDay: row.day, timesFrom: null, status: 'unknown-person' as const }
+    }
+    if (match.kind === 'ambiguous') {
+      return {
+        written: row.name,
+        writtenDay: row.day,
+        timesFrom: null,
+        status: 'ambiguous' as const,
+        between: match.between.map((p) => p.name),
+      }
+    }
+
+    const person = match.value
+    const date = dayToDate(row.day, days)
+    if (!date) {
+      return {
+        written: row.name,
+        writtenDay: row.day,
+        personId: person.id,
+        personName: person.name,
+        timesFrom: null,
+        status: 'unknown-day' as const,
+      }
+    }
+
+    const start = parseTime(row.start)
+    const end = parseTime(row.end)
+    const fromPaper = start !== null && end !== null
+    return {
+      written: row.name,
+      writtenDay: row.day,
+      personId: person.id,
+      personName: person.name,
+      date,
+      startMin: start ?? person.defaultStartMin,
+      endMin: end ?? person.defaultEndMin,
+      timesFrom: fromPaper ? ('paper' as const) : ('usual' as const),
+      status: have.has(shiftId(date, person.id)) ? ('already' as const) : ('new' as const),
+    }
+  })
+}
+
+/** The shifts an accepted proposal would write. */
+export function shiftsFrom(proposals: readonly ShiftProposal[]): Shift[] {
+  const out: Shift[] = []
+  for (const p of proposals) {
+    if (!p.personId || !p.date || p.startMin === undefined || p.endMin === undefined) continue
+    out.push({ id: shiftId(p.date, p.personId), date: p.date, personId: p.personId, startMin: p.startMin, endMin: p.endMin })
+  }
+  return out
+}
+
+
+/**
+ * Who runs the tightest till.
+ *
+ * Ranked by how often their nights balance, not by the size of the variance:
+ * one freak night of −£80 says less about somebody than twenty nights of −£3,
+ * and a rate is comparable between someone who works twice a week and someone
+ * who works five times.
+ *
+ * Only people with enough nights to judge are ranked at all. The rest come back
+ * unranked rather than bottom, because "no record yet" is not a bad record.
+ */
+export interface CrewRank {
+  stat: CrewStat
+  /** Nights that balanced, in basis points of nights that could be judged. */
+  balancedBp: number | null
+  place: number | null
+}
+
+export function crewRanking(stats: readonly CrewStat[]): CrewRank[] {
+  const rated = stats.map((stat) => {
+    const judged = stat.balancedNights + stat.shortNights + stat.overNights
+    return {
+      stat,
+      balancedBp: judged > 0 ? Math.round((stat.balancedNights / judged) * 10000) : null,
+      judged,
+    }
+  })
+
+  const rankable = rated
+    .filter((r) => r.judged >= MIN_NIGHTS_FOR_COMPARISON)
+    .sort((a, b) => (b.balancedBp ?? 0) - (a.balancedBp ?? 0) || b.judged - a.judged)
+
+  const places = new Map(rankable.map((r, i) => [r.stat.personId, i + 1]))
+  return rated
+    .map((r) => ({ stat: r.stat, balancedBp: r.balancedBp, place: places.get(r.stat.personId) ?? null }))
+    .sort((a, b) => (a.place ?? 99) - (b.place ?? 99) || b.stat.nightsOn - a.stat.nightsOn)
 }

@@ -20,6 +20,8 @@ import { seriesVar, ShareBar, Legend } from '../components/charts.tsx'
 import { reconcileFull } from '../core/reconcile.ts'
 import { deleteDay, getDay, getPhoto, listPeople, listShifts } from '../storage/db.ts'
 import { crewFor, formatHours, formatTime, shiftMinutes, type Person, type Shift } from '../core/rota.ts'
+import { nightSummary, summaryFilename } from '../core/summary.ts'
+import { downloadFile } from '../storage/export.ts'
 import { loadSettings } from '../storage/settings.ts'
 
 function provenance(c: Capture): string {
@@ -53,6 +55,7 @@ export function DayDetail({ date, onBack, onEdit, onDeleted }: Props) {
   const [day, setDay] = useState<DayRecord | null | undefined>(undefined)
   const [shots, setShots] = useState<{ till?: string; card?: string }>({})
   const [confirming, setConfirming] = useState(false)
+  const [shared, setShared] = useState('')
   const [people, setPeople] = useState<Person[]>([])
   const [shifts, setShifts] = useState<Shift[]>([])
   const tolerance = loadSettings().tolerancePence
@@ -112,6 +115,38 @@ export function DayDetail({ date, onBack, onEdit, onDeleted }: Props) {
     ...(day.zRead ? { zRead: day.zRead } : {}),
   })
   const counted = day.card.pence !== null && day.cashPence !== null ? day.card.pence + day.cashPence : null
+
+  /**
+   * Hand the night to somebody else.
+   *
+   * The share sheet where the phone has one, because that is how a photograph
+   * of the roll gets emailed already and it is the fewest taps. Falling back to
+   * the clipboard, then to a file — one of the three works everywhere, and the
+   * message says which happened so nothing appears to have silently failed.
+   */
+  async function share() {
+    const text = nightSummary({ day: day as DayRecord, reconciliation: full, people, shifts })
+    const title = `Takings — ${formatLong(date)}`
+    try {
+      if (navigator.share) {
+        await navigator.share({ title, text })
+        return
+      }
+      await navigator.clipboard.writeText(text)
+      setShared('Copied — paste it into an email.')
+    } catch (err) {
+      // A cancelled share sheet is not a failure and must not look like one.
+      if (err instanceof DOMException && err.name === 'AbortError') return
+      try {
+        downloadFile(summaryFilename(date), text, 'text/plain')
+        setShared('Saved as a file.')
+      } catch {
+        setShared('Could not share that night.')
+      }
+    } finally {
+      setTimeout(() => setShared(''), 4000)
+    }
+  }
   const zRead = day.zRead
   const deptTotal = zRead?.deptTotal?.pence ?? 0
   const shareRows =
@@ -258,6 +293,21 @@ export function DayDetail({ date, onBack, onEdit, onDeleted }: Props) {
           {shots.card && <div className="shot"><img src={shots.card} alt="The card slip as photographed" /></div>}
         </section>
       )}
+
+      <section className="card">
+        <div className="card-head">
+          <h2>Send this night on</h2>
+          <span className="hint">for the accountant</span>
+        </div>
+        <p className="note" style={{ marginTop: 0 }}>
+          The figures, the split, who was on and what explains the variance — as plain text, ready to
+          paste into an email.
+        </p>
+        <button type="button" className="btn-primary" onClick={() => void share()}>
+          Share this night
+        </button>
+        {shared && <p className="note" role="status">{shared}</p>}
+      </section>
 
       <div className="btn-row">
         <button type="button" onClick={onBack}>Back</button>

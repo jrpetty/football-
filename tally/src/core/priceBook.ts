@@ -94,7 +94,10 @@ export function buildIndex(book: readonly PriceBookEntry[]): Map<string, PriceBo
   return index
 }
 
-export function lookup(index: Map<string, PriceBookEntry>, item: SoldItem): PriceBookEntry | undefined {
+export function lookup(
+  index: Map<string, PriceBookEntry>,
+  item: { code: string; name: string },
+): PriceBookEntry | undefined {
   return index.get(`code:${item.code.toUpperCase()}`) ?? index.get(`name:${normalise(item.name)}`)
 }
 
@@ -183,4 +186,85 @@ export function priceHeadline(report: PriceReport): string {
     return `Some lines rang above the board price. Usually a price rise the board has not caught up with.`
   }
   return 'Some lines rang under the board price and some over. Worth a look at both ends.'
+}
+
+
+// --- reading the board -------------------------------------------------------
+
+import { bestMatch } from './match.ts'
+
+export interface PriceProposal {
+  /** The line as written on the board. */
+  written: string
+  pence: number
+  /** The till line it was matched to, when one was found. */
+  code?: string
+  name?: string
+  /** What the book already says, so a change is visible as a change. */
+  wasPence?: number
+  status: 'new' | 'changed' | 'same' | 'ambiguous' | 'unmatched'
+  /** When ambiguous, the lines it could equally have been. */
+  between?: string[]
+}
+
+/**
+ * Turn a photographed price board into a proposal for the book.
+ *
+ * Nothing here writes anything. Every row comes back labelled with what it
+ * would do — add a price, change one, or nothing at all — and the two failure
+ * cases are labelled just as plainly, because a board reading "Taddy Lager
+ * 4.00" genuinely cannot be resolved to the pint or the half without asking.
+ */
+export function proposePrices(
+  scanned: ReadonlyArray<{ name: string; pence: number }>,
+  tillItems: ReadonlyArray<{ code: string; name: string }>,
+  book: readonly PriceBookEntry[],
+): PriceProposal[] {
+  const byCode = new Map(book.filter((b) => b.code).map((b) => [b.code!.toUpperCase(), b]))
+  const byName = new Map(book.map((b) => [normalise(b.name), b]))
+
+  return scanned.map((row) => {
+    const match = bestMatch(row.name, tillItems, (t) => t.name)
+
+    if (match.kind === 'unmatched') return { written: row.name, pence: row.pence, status: 'unmatched' as const }
+    if (match.kind === 'ambiguous') {
+      return {
+        written: row.name,
+        pence: row.pence,
+        status: 'ambiguous' as const,
+        between: match.between.map((t) => t.name),
+      }
+    }
+
+    const item = match.value
+    const existing = byCode.get(item.code.toUpperCase()) ?? byName.get(normalise(item.name))
+    const status = !existing ? 'new' : existing.pence === row.pence ? 'same' : 'changed'
+    return {
+      written: row.name,
+      pence: row.pence,
+      code: item.code,
+      name: item.name,
+      ...(existing ? { wasPence: existing.pence } : {}),
+      status: status as PriceProposal['status'],
+    }
+  })
+}
+
+/** Fold accepted proposals into the book, replacing by code where there is one. */
+export function applyPrices(book: readonly PriceBookEntry[], accepted: readonly PriceProposal[]): PriceBookEntry[] {
+  const next = [...book]
+  for (const row of accepted) {
+    // Hoisted so the narrowing survives into the closure below.
+    const name = row.name
+    if (!name) continue
+    const code = row.code
+    const at = next.findIndex((b) =>
+      code && b.code ? b.code.toUpperCase() === code.toUpperCase() : normalise(b.name) === normalise(name),
+    )
+    const entry: PriceBookEntry = { name, pence: row.pence, ...(code ? { code } : {}) }
+    const found = at >= 0 ? next[at] : undefined
+    if (found) next[at] = { ...found, ...entry }
+    else next.push(entry)
+  }
+  return next
 }

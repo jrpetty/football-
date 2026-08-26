@@ -484,6 +484,83 @@ try {
   check('the dashboard reports what that cost over the night', priced.includes('£24.00'), '120 pints, 20p each')
   check('and names the innocent explanation', /discount/i.test(priced))
 
+  console.log('\nWhat it costs, and what it makes')
+  await page.click('button:has-text("Cellar")')
+  await page.waitForSelector('.chip:has-text("What it costs")', { timeout: 5000 })
+  await page.click('.chip:has-text("What it costs")')
+  await page.waitForSelector('input[aria-label="Taddy Lager cost"]', { timeout: 5000 })
+
+  // A firkin of Taddy: £95 ex VAT for 72 pints.
+  await page.fill('input[aria-label="Taddy Lager cost"]', '95.00')
+  await page.fill('input[aria-label="Taddy Lager servings per container"]', '72')
+  await page.waitForTimeout(400)
+  const costed = await page.locator('.main').innerText()
+  check('a barrel price becomes a price per pint', costed.includes('£1.32'), '£95 across 72 pints')
+  check(
+    'and the margin is worked out against the board price',
+    /62\.3% GP/.test(costed),
+    'the board says £4.20 here; VAT comes off before profit, so not the 68.6% that forgets it',
+  )
+
+  // The cellar is worth something now.
+  await page.click('.chip:has-text("What’s left")')
+  await page.waitForTimeout(400)
+  const value = await page.locator('.main').innerText()
+  check('the cellar is valued at what the stock cost', value.includes('Money in the cellar'), value.slice(0, 160))
+  check(
+    'at the right figure, right through from the delivery',
+    value.includes('£19.13'),
+    '144 pints in less 129.5 poured is 14.5 left, at £95 the firkin',
+  )
+
+  await page.click('button:has-text("Trade")')
+  await page.waitForSelector('.kpi-row', { timeout: 5000 })
+  const profit = await page.locator('.main').innerText()
+  check('the dashboard reports gross profit', profit.includes('What it actually makes'))
+  check('with the rate across the costed lines', /62\.3%/.test(profit), profit.slice(0, 200))
+
+  console.log('\nStaff records')
+  await page.click('button:has-text("Rota")')
+  await page.waitForSelector('.chip:has-text("Records")', { timeout: 5000 })
+  await page.click('.chip:has-text("Records")')
+  await page.waitForTimeout(400)
+  const records = await page.locator('.main').innerText()
+  check('the records list names the people', records.includes('Kelly'))
+  check(
+    'and refuses to rank anyone on one night',
+    /too soon/i.test(records),
+    'five countable nights is the floor',
+  )
+
+  await page.click('.person-row:has-text("Kelly")')
+  await page.waitForTimeout(300)
+  const profile = await page.locator('.main').innerText()
+  check('a profile opens on the person', /nights worked/i.test(profile))
+  check('showing the drawer on their nights', profile.includes('The drawer on their nights'))
+  check('and says it is not evidence', /not evidence/.test(profile))
+
+  console.log('\nSending a night on')
+  await page.click('button:has-text("Nights")')
+  await page.waitForSelector('.day-row', { timeout: 5000 })
+  await page.click('.day-row')
+  await page.waitForSelector('button:has-text("Share this night")', { timeout: 5000 })
+  // No share sheet in a headless browser, so the clipboard is the path taken.
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
+  await page.evaluate(() => {
+    ;(navigator as { share?: unknown }).share = undefined
+  })
+  await page.click('button:has-text("Share this night")')
+  await page.waitForTimeout(500)
+  const summary = await page.evaluate(() => navigator.clipboard.readText())
+  check('the summary carries the date and the figures', /Sunday 23 August/.test(summary) && summary.includes('£2,192.80'))
+  check('it states the verdict in words', /SHORT by £12\.00/.test(summary), summary.slice(0, 120))
+  check('it says which leg was out', /Drawer\s+till says £351\.80/.test(summary))
+  check('and who was on', summary.includes('Kelly'))
+
+  // Back to the dashboard, which is where the next block picks up.
+  await page.click('button:has-text("Trade")')
+  await page.waitForSelector('.kpi-row', { timeout: 5000 })
+
   console.log('\nFiltering')
   await page.click('.chip:has-text("Draught beers")')
   await page.click('.chip:has-text("Wine")')

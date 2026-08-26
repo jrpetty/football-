@@ -10,7 +10,7 @@
 // same five people every Sunday is a tool that gets abandoned by the third one.
 // ---------------------------------------------------------------------------
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { addDays, formatShort, tradingDayKey, weekdayOf } from '../core/date.ts'
 import { formatMoney, parsePence, penceToInput } from '../core/money.ts'
 import {
@@ -18,16 +18,27 @@ import {
   formatHours,
   formatTime,
   parseTime,
+  proposeShifts,
   shiftFor,
   shiftId,
   shiftMinutes,
+  shiftsFrom,
   weekDays,
   weekStart,
   type Person,
   type Shift,
+  type ShiftProposal,
 } from '../core/rota.ts'
-import { seriesVar } from '../components/charts.tsx'
-import { IconChevronRight, IconTickSmall } from '../components/icons.tsx'
+import { scanRota } from '../ocr/scanList.ts'
+import { describeZReadError } from '../ocr/scanZRead.ts'
+import { seriesVar, StatTile } from '../components/charts.tsx'
+import { dayStats } from '../core/analytics.ts'
+import { crewRanking, crewStats, type CrewRank } from '../core/rota.ts'
+import { listDays } from '../storage/db.ts'
+import { loadSettings } from '../storage/settings.ts'
+import { formatSigned } from '../core/money.ts'
+import { formatShort as formatShortDate } from '../core/date.ts'
+import { IconCamera, IconChevronRight, IconTickSmall } from '../components/icons.tsx'
 import {
   archivePerson,
   deleteShift,
@@ -37,7 +48,7 @@ import {
   saveShift,
 } from '../storage/db.ts'
 
-type Panel = 'week' | 'people'
+type Panel = 'week' | 'people' | 'record'
 
 /** Six until close, the shift most bar staff are actually on. */
 const DEFAULT_START = 18 * 60
@@ -56,7 +67,19 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
   const [openDay, setOpenDay] = useState<string | null>(null)
   const [people, setPeople] = useState<Person[] | null>(null)
   const [shifts, setShifts] = useState<Shift[]>([])
+  const [ranking, setRanking] = useState<CrewRank[]>([])
+  /** Whose profile is open, if any. */
+  const [openPerson, setOpenPerson] = useState<string | null>(null)
   const [toast, setToast] = useState('')
+  const [scanning, setScanning] = useState(false)
+  const [scanError, setScanError] = useState('')
+  const [scanNotes, setScanNotes] = useState('')
+  const [proposals, setProposals] = useState<ShiftProposal[] | null>(null)
+  const [rejected, setRejected] = useState<Set<number>>(new Set())
+  const photoRef = useRef<HTMLInputElement>(null)
+  const abortRef = useRef<AbortController | null>(null)
+
+  useEffect(() => () => abortRef.current?.abort(), [])
 
   // The new-person form.
   const [name, setName] = useState('')
@@ -71,6 +94,25 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
       setShifts(s)
     })()
   }, [])
+
+  // The record is rebuilt whenever the rota changes, since a shift going on or
+  // off a night changes whose night it was.
+  useEffect(() => {
+    if (people === null) return
+    let cancelled = false
+    void (async () => {
+      const tolerance = loadSettings().tolerancePence
+      const saved = await listDays().catch(() => [])
+      if (cancelled) return
+      const nights = saved
+        .map((d) => dayStats(d, tolerance))
+        .map((d) => ({ date: d.date, variancePence: d.variancePence, takingsPence: d.takingsPence }))
+      setRanking(crewRanking(crewStats(nights, shifts, people, tolerance)))
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [people, shifts])
 
   function say(message: string) {
     setToast(message)
@@ -140,6 +182,46 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
     say(`Copied ${made.length} ${made.length === 1 ? 'shift' : 'shifts'} from last week.`)
   }
 
+  async function readRota(file: File) {
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+    setScanning(true)
+    setScanError('')
+    setScanNotes('')
+    try {
+      const result = await scanRota(file, controller.signal)
+      if (controller.signal.aborted) return
+      // Resolved against the week on screen, so a rota photographed in advance
+      // lands on the week she is looking at rather than on today.
+      const rows = proposeShifts(result.shifts, people ?? [], days, shifts)
+      setProposals(rows)
+      setRejected(new Set())
+      setScanNotes(result.notes)
+      if (rows.length === 0) setScanError('No shifts could be read on that photograph.')
+    } catch (err) {
+      if (controller.signal.aborted) return
+      setScanError(describeZReadError(err))
+    } finally {
+      if (!controller.signal.aborted) setScanning(false)
+    }
+  }
+
+  function acceptable(rows: ShiftProposal[]): ShiftProposal[] {
+    return rows.filter((r, i) => !rejected.has(i) && r.status === 'new')
+  }
+
+  async function applyRota() {
+    if (!proposals) return
+    const taking = shiftsFrom(acceptable(proposals))
+    if (taking.length === 0) return say('Nothing new to put on.')
+    for (const shift of taking) await saveShift(shift)
+    setShifts([...shifts.filter((s) => !taking.some((t) => t.id === s.id)), ...taking])
+    setProposals(null)
+    onChanged()
+    say(`${taking.length} ${taking.length === 1 ? 'shift' : 'shifts'} taken off the photograph.`)
+  }
+
   async function addPerson() {
     const trimmed = name.trim()
     if (!trimmed) return say('They need a name.')
@@ -188,9 +270,15 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
           <span className="badge">{active.length} {active.length === 1 ? 'person' : 'people'}</span>
         </div>
         <div className="chip-row">
-          {(['week', 'people'] as Panel[]).map((p) => (
-            <button key={p} type="button" className="chip" aria-pressed={panel === p} onClick={() => setPanel(p)}>
-              {p === 'week' ? 'The week' : 'Who works here'}
+          {(['week', 'record', 'people'] as Panel[]).map((p) => (
+            <button
+              key={p}
+              type="button"
+              className="chip"
+              aria-pressed={panel === p}
+              onClick={() => { setPanel(p); setOpenPerson(null) }}
+            >
+              {p === 'week' ? 'The week' : p === 'record' ? 'Records' : 'Who works here'}
             </button>
           ))}
         </div>
@@ -228,13 +316,98 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
               <button type="button" className="btn-small" onClick={() => void copyLastWeek()}>
                 Copy last week
               </button>
+              <button type="button" className="btn-small" onClick={() => photoRef.current?.click()} disabled={scanning}>
+                {scanning ? <><span className="spinner" /> Reading…</> : <><IconCamera size={17} /> Photograph the rota</>}
+              </button>
               {monday !== thisWeek && (
                 <button type="button" className="btn-small" onClick={() => setMonday(thisWeek)}>
                   Back to this week
                 </button>
               )}
             </div>
+            <input
+              ref={photoRef}
+              type="file"
+              accept="image/*"
+              className="visually-hidden"
+              data-testid="file-rota"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                e.target.value = ''
+                if (file) void readRota(file)
+              }}
+            />
+            {scanError && <p className="note bad" role="status">{scanError}</p>}
+            {scanNotes && !scanError && <p className="note warn" role="status">{scanNotes}</p>}
           </section>
+
+          {/* --- what the paper said, before anything is written --------------- */}
+          {proposals && (
+            <section className="card">
+              <div className="card-head">
+                <h2>What the paper says</h2>
+                <span className="badge">{acceptable(proposals).length} to put on</span>
+              </div>
+              <p className="note" style={{ marginTop: 0 }}>
+                Nothing is on the rota yet. Anyone it could not recognise, and any day it could not
+                place, is left for you — it will not guess which night someone is working.
+              </p>
+              {proposals.map((row, i) => {
+                const off = rejected.has(i)
+                return (
+                  <div className="zrow" key={`${row.written}-${row.writtenDay}-${i}`}>
+                    <span className="zname">
+                      {row.personName ?? row.written}
+                      <small>
+                        {row.status === 'unknown-person' && `“${row.written}” — nobody on the books by that name`}
+                        {row.status === 'ambiguous' && `“${row.written}” — could be ${row.between?.join(' or ')}`}
+                        {row.status === 'unknown-day' && `could not read the day “${row.writtenDay}”`}
+                        {(row.status === 'new' || row.status === 'already') && row.date && (
+                          <>
+                            {weekdayOf(row.date)}
+                            {row.startMin !== undefined && row.endMin !== undefined
+                              ? ` ${formatTime(row.startMin)}–${formatTime(row.endMin)}`
+                              : ''}
+                            {row.timesFrom === 'usual' ? ' · their usual hours' : ''}
+                          </>
+                        )}
+                      </small>
+                    </span>
+                    {row.status === 'new' ? (
+                      <button
+                        type="button"
+                        className="chip"
+                        aria-pressed={!off}
+                        aria-label={`${off ? 'Include' : 'Skip'} ${row.personName ?? row.written}`}
+                        onClick={() =>
+                          setRejected((r) => {
+                            const next = new Set(r)
+                            if (next.has(i)) next.delete(i)
+                            else next.add(i)
+                            return next
+                          })
+                        }
+                      >
+                        {off ? 'Skipped' : <IconTickSmall size={13} />}
+                      </button>
+                    ) : (
+                      <span className={`badge ${row.status === 'already' ? 'good' : 'warn'}`}>
+                        {row.status === 'already' ? 'already on' : 'by hand'}
+                      </span>
+                    )}
+                  </div>
+                )
+              })}
+              <div className="btn-row" style={{ marginTop: 14 }}>
+                <button type="button" className="btn-primary" onClick={() => void applyRota()}>
+                  Put {acceptable(proposals).length} on
+                </button>
+                <button type="button" className="btn-small" onClick={() => setProposals(null)}>
+                  Throw it away
+                </button>
+              </div>
+            </section>
+          )}
 
           {days.map((date) => {
             const crew = crewFor(date, shifts, people)
@@ -363,6 +536,145 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
           </section>
         </>
       )}
+
+      {/* --- how everybody is doing ------------------------------------------ */}
+      {panel === 'record' && active.length > 0 && (() => {
+        const open = openPerson ? ranking.find((r) => r.stat.personId === openPerson) : null
+        if (open) {
+          const { stat } = open
+          const judged = stat.balancedNights + stat.shortNights + stat.overNights
+          return (
+            <>
+              <section className="card">
+                <div className="card-head">
+                  <span
+                    className="legend-dot"
+                    style={{ background: seriesVar(stat.slot), width: 12, height: 12, marginRight: 10 }}
+                    aria-hidden="true"
+                  />
+                  <h2>{stat.name}</h2>
+                  <span className="badge">{open.place ? `#${open.place} on record` : 'not enough nights'}</span>
+                </div>
+                <div className="kpi-row">
+                  <StatTile label="Nights worked" value={String(stat.nightsOn)} detail={formatHours(stat.minutes)} />
+                  <StatTile
+                    label="Nights balanced"
+                    value={judged === 0 ? '—' : `${stat.balancedNights}/${judged}`}
+                    detail={open.balancedBp === null ? 'none counted yet' : `${(open.balancedBp / 100).toFixed(0)}% of their nights`}
+                    // Coloured only once there are enough nights to rank on.
+                    // Painting one bad night red while the badge says "not
+                    // enough nights" is the app contradicting itself.
+                    tone={open.place === null ? undefined : (open.balancedBp ?? 0) >= 8000 ? 'good' : (open.balancedBp ?? 0) < 5000 ? 'bad' : undefined}
+                  />
+                  <StatTile
+                    label="Avg take"
+                    value={stat.avgTakingsOnPence === null ? '—' : formatMoney(stat.avgTakingsOnPence)}
+                    detail="on their nights"
+                  />
+                  {stat.costPence !== null && (
+                    <StatTile label="Wages" value={formatMoney(stat.costPence)} detail="over these nights" />
+                  )}
+                </div>
+              </section>
+
+              <section className="card">
+                <div className="card-head"><h2>The drawer on their nights</h2></div>
+                <div className="zrow">
+                  <span className="zname">Their nights<small>{stat.comparedOn} counted</small></span>
+                  <strong className={`num delta ${stat.avgVarianceOnPence !== null && stat.avgVarianceOnPence < 0 ? 'short' : ''}`}>
+                    {stat.avgVarianceOnPence === null ? '—' : formatSigned(stat.avgVarianceOnPence)}
+                  </strong>
+                </div>
+                <div className="zrow">
+                  <span className="zname">Everyone else’s<small>{stat.comparedOff} counted</small></span>
+                  <strong className="num">
+                    {stat.avgVarianceOffPence === null ? '—' : formatSigned(stat.avgVarianceOffPence)}
+                  </strong>
+                </div>
+                <div className="zrow">
+                  <span className="zname">Difference<small>their nights against the rest</small></span>
+                  <strong className="num">
+                    {stat.meaningful && stat.differencePence !== null ? formatSigned(stat.differencePence) : 'too soon to say'}
+                  </strong>
+                </div>
+                {stat.shortNights + stat.overNights > 0 && (
+                  <div className="zrow">
+                    <span className="zname">
+                      Went out
+                      <small>
+                        {stat.shortNights} short, {stat.overNights} over
+                        {stat.worstNightDate ? ` · worst ${formatShortDate(stat.worstNightDate)}` : ''}
+                      </small>
+                    </span>
+                    <span className="num delta short">
+                      {stat.worstNightPence === null ? '—' : formatSigned(stat.worstNightPence)}
+                    </span>
+                  </div>
+                )}
+                <p className="note">
+                  Two or three people work most nights, so none of this is {stat.name}’s doing on its
+                  own — every figure here belongs to the whole night, and the same numbers appear on
+                  everyone else who was on. It is worth knowing and it is not evidence.
+                </p>
+              </section>
+
+              <button type="button" className="btn-small" onClick={() => setOpenPerson(null)}>
+                Back to everyone
+              </button>
+            </>
+          )
+        }
+
+        return (
+          <section className="card">
+            <div className="card-head">
+              <h2>Who runs the tightest till</h2>
+              <span className="hint">by nights that balanced</span>
+            </div>
+            {ranking.length === 0 || ranking.every((r) => r.balancedBp === null) ? (
+              <p className="note" style={{ marginTop: 0 }}>
+                Nothing to compare yet. Put people on nights, save those nights, and a record builds
+                itself from here.
+              </p>
+            ) : (
+              ranking.map((r) => (
+                <button
+                  type="button"
+                  className="zrow person-row"
+                  key={r.stat.personId}
+                  onClick={() => setOpenPerson(r.stat.personId)}
+                >
+                  <span className="zname">
+                    <span
+                      className="legend-dot"
+                      style={{ background: seriesVar(r.stat.slot), marginRight: 8 }}
+                      aria-hidden="true"
+                    />
+                    {r.stat.name}
+                    <small>
+                      {r.stat.nightsOn} {r.stat.nightsOn === 1 ? 'night' : 'nights'}
+                      {r.balancedBp === null
+                        ? ' · none counted yet'
+                        : ` · ${r.stat.balancedNights} of ${r.stat.balancedNights + r.stat.shortNights + r.stat.overNights} balanced`}
+                    </small>
+                  </span>
+                  <span className="num">
+                    {r.balancedBp === null ? '—' : `${(r.balancedBp / 100).toFixed(0)}%`}
+                  </span>
+                  <span className="badge">{r.place ? `#${r.place}` : 'too soon'}</span>
+                  <span className="chev" aria-hidden="true"><IconChevronRight size={16} /></span>
+                </button>
+              ))
+            )}
+            <p className="note">
+              Ranked on how often a night balanced rather than by how much it was out, because one
+              freak night says less than twenty small ones — and a rate compares someone who works
+              twice a week with someone who works five times. Nobody is ranked until there are five
+              countable nights behind them.
+            </p>
+          </section>
+        )
+      })()}
 
       {/* --- who works here -------------------------------------------------- */}
       {panel === 'people' && (

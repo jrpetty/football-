@@ -163,3 +163,60 @@ test('hours and wages accumulate per person across the window', () => {
   assert.equal(stats[0]!.minutes, 780)
   assert.equal(stats[0]!.costPence, 15873) // 13 hours at £12.21
 })
+
+// --- a person's own record ----------------------------------------------------
+
+import { crewRanking } from '../src/core/rota.ts'
+
+test("a person's nights are counted as balanced, short or over against the tolerance", () => {
+  const dates = ['2026-08-01', '2026-08-02', '2026-08-03']
+  const shifts = dates.map((d) => shiftFor(kelly, d))
+  const stats = crewStats(
+    [
+      { date: dates[0]!, variancePence: -2, takingsPence: 200000 },   // within 5p
+      { date: dates[1]!, variancePence: -1000, takingsPence: 200000 },
+      { date: dates[2]!, variancePence: 800, takingsPence: 200000 },
+    ],
+    shifts,
+    [kelly],
+    5,
+  )
+  const k = stats[0]!
+  assert.equal(k.balancedNights, 1)
+  assert.equal(k.shortNights, 1)
+  assert.equal(k.overNights, 1)
+  assert.equal(k.worstNightPence, -1000)
+  assert.equal(k.worstNightDate, '2026-08-02')
+})
+
+test('the ranking goes on how often nights balance, not the size of one bad one', () => {
+  // Kelly: five nights, four balanced, one dreadful. Dave: five nights, two
+  // balanced, three small shorts. Kelly's average is far worse; her record is
+  // better, and the record is what is ranked.
+  const dates = Array.from({ length: 10 }, (_, i) => `2026-09-${String(i + 1).padStart(2, '0')}`)
+  const shifts = [
+    ...dates.slice(0, 5).map((d) => shiftFor(kelly, d)),
+    ...dates.slice(5).map((d) => shiftFor(dave, d)),
+  ]
+  const nights = [
+    ...dates.slice(0, 5).map((d, i) => ({ date: d, variancePence: i === 0 ? -8000 : 0, takingsPence: 200000 })),
+    ...dates.slice(5).map((d, i) => ({ date: d, variancePence: i < 3 ? -300 : 0, takingsPence: 200000 })),
+  ]
+  const ranked = crewRanking(crewStats(nights, shifts, [kelly, dave], 5))
+  assert.equal(ranked[0]!.stat.name, 'Kelly')
+  assert.equal(ranked[0]!.place, 1)
+  assert.equal(ranked[0]!.balancedBp, 8000) // four nights in five
+  assert.equal(ranked[1]!.balancedBp, 4000)
+})
+
+test('someone with too few nights is unranked rather than bottom', () => {
+  const stats = crewStats(
+    [{ date: '2026-08-01', variancePence: -5000, takingsPence: 200000 }],
+    [shiftFor(kelly, '2026-08-01')],
+    [kelly],
+    5,
+  )
+  const ranked = crewRanking(stats)
+  assert.equal(ranked[0]!.place, null, 'no record yet is not a bad record')
+  assert.equal(ranked[0]!.balancedBp, 0, 'the rate is still reported, it is just not ranked')
+})

@@ -22,6 +22,8 @@ export interface Settings {
   tolerancePence: number
   /** Keep the photographs alongside the figures, as an audit trail. */
   keepPhotos: boolean
+  /** VAT on a pint, in basis points. Standard rate, but rates do change. */
+  vatBp: number
 }
 
 export const AI_MODELS = [
@@ -35,6 +37,7 @@ export const DEFAULT_SETTINGS: Settings = {
   model: 'claude-sonnet-5',
   engine: 'vision',
   tolerancePence: DEFAULT_TOLERANCE_PENCE,
+  vatBp: 2000,
   keepPhotos: true,
 }
 
@@ -69,6 +72,15 @@ export function parseTolerance(raw: string | null): number {
   return Math.round(n)
 }
 
+/** A stored VAT rate, or the standard one. Nonsense falls back rather than
+ *  quietly reporting every margin against a zero rate. */
+function parseVat(raw: string | null): number {
+  if (raw === null) return DEFAULT_SETTINGS.vatBp
+  const n = Number(raw)
+  if (!Number.isFinite(n) || n < 0 || n > 10000) return DEFAULT_SETTINGS.vatBp
+  return Math.round(n)
+}
+
 export function loadSettings(): Settings {
   const engine = read('engine')
   return {
@@ -80,6 +92,7 @@ export function loadSettings(): Settings {
         : DEFAULT_SETTINGS.engine,
     tolerancePence: parseTolerance(read('tolerance')),
     keepPhotos: (read('keepPhotos') ?? 'true') === 'true',
+    vatBp: parseVat(read('vatBp')),
   }
 }
 
@@ -89,6 +102,7 @@ export function saveSettings(s: Settings): void {
   write('engine', s.engine)
   write('tolerance', String(s.tolerancePence))
   write('keepPhotos', String(s.keepPhotos))
+  write('vatBp', String(s.vatBp))
 }
 
 /**

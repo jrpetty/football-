@@ -1103,3 +1103,16 @@ table.data.crew th[scope='row'] { white-space: nowrap; }
    than a wide box. The name wraps to its own line above them (see .zrow:has),
    so there is a full card width to spend on the pair. */
 .zrow input[type='time'] { width: 136px; padding: 6px 8px; }
+
+/* A person's row on the records list — a whole-width tap into their profile. */
+.person-row {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  min-height: 58px;
+  padding: 9px 0;
+}
+.person-row .chev { color: var(--faint); flex: none; }
+@media (hover: hover) { .person-row:hover { background: var(--surface-2); } }

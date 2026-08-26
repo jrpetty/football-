@@ -44,8 +44,26 @@ import {
   type StockConfig,
 } from '../storage/db.ts'
 import { loadSettings } from '../storage/settings.ts'
+import { loadPriceBook } from '../storage/db.ts'
+import { cellarValue, costOf, margin } from '../core/margin.ts'
+import { buildIndex, lookup, type PriceBookEntry } from '../core/priceBook.ts'
+import { formatMoney, parsePence, penceToInput } from '../core/money.ts'
 
-type Panel = 'levels' | 'delivery' | 'count' | 'setup'
+type Panel = 'levels' | 'delivery' | 'count' | 'costs' | 'setup'
+
+/**
+ * The containers a cellar actually receives, in servings.
+ *
+ * Offered as one tap because "how many pints in a firkin" is the sort of thing
+ * that is obvious in the trade and looked up by everyone else.
+ */
+const CONTAINERS = [
+  { label: 'Firkin (72)', servings: 72 },
+  { label: 'Kil (144)', servings: 144 },
+  { label: 'Keg (88)', servings: 88 },
+  { label: 'Case (24)', servings: 24 },
+  { label: 'Bottle (1)', servings: 1 },
+] as const
 
 /**
  * How a cellar line is counted, given every measure that draws on it.
@@ -78,6 +96,7 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
   const [deliveries, setDeliveries] = useState<Delivery[]>([])
   const [counts, setCounts] = useState<Array<{ date: string; lines: Array<{ stockItemId: string; baseUnits: number }> }>>([])
   const [days, setDays] = useState<ReturnType<typeof dayStats>[]>([])
+  const [book, setBook] = useState<PriceBookEntry[]>([])
   const [toast, setToast] = useState('')
 
   /** Draft numbers being typed into the delivery or count sheets. */
@@ -88,17 +107,19 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
     let cancelled = false
     void (async () => {
       const tolerance = loadSettings().tolerancePence
-      const [cfg, dels, cts, saved] = await Promise.all([
+      const [cfg, dels, cts, saved, prices] = await Promise.all([
         loadStockConfig().catch(() => null),
         listDeliveries().catch(() => []),
         listStockCounts().catch(() => []),
         listDays().catch(() => []),
+        loadPriceBook().catch(() => []),
       ])
       if (cancelled) return
       setConfig(cfg ?? { items: [], pours: [], mlPerShot: 30 })
       setDeliveries(dels)
       setCounts(cts)
       setDays(saved.map((d) => dayStats(d, tolerance)))
+      setBook(prices)
     })()
     return () => {
       cancelled = true
@@ -108,6 +129,37 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
   function say(message: string) {
     setToast(message)
     setTimeout(() => setToast(''), 4000)
+  }
+
+  /**
+   * Set what a container costs and what it holds.
+   *
+   * Both boxes are kept as typed while she works, because a half-entered "£95
+   * for " is not yet a cost and must not be stored as one. The item only gains
+   * a cost once both sides are real numbers; clearing either takes it away
+   * again, which is how a mistyped price is undone.
+   */
+  async function setCost(item: StockItem, priceText: string, sizeText: string) {
+    setDrafts((d) => ({ ...d, [`${item.id}:price`]: priceText, [`${item.id}:size`]: sizeText }))
+    if (!config) return
+
+    const pence = parsePence(priceText)
+    const servings = Number(sizeText.trim())
+    const usable = pence !== null && pence > 0 && Number.isFinite(servings) && servings > 0
+
+    const next = {
+      ...config,
+      items: config.items.map((i) =>
+        i.id !== item.id
+          ? i
+          : usable
+            ? { ...i, cost: { pence, baseUnits: Math.round(servings * i.servingBaseUnits) } }
+            : (({ cost: _drop, ...rest }) => rest)(i),
+      ),
+    }
+    setConfig(next)
+    await saveStockConfig(next)
+    onChanged()
   }
 
   /**
@@ -239,9 +291,9 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
           <span className="badge">{config.items.length} lines</span>
         </div>
         <div className="chip-row">
-          {(['levels', 'delivery', 'count', 'setup'] as const).map((p) => (
+          {(['levels', 'delivery', 'count', 'costs', 'setup'] as const).map((p) => (
             <button key={p} type="button" className="chip" aria-pressed={panel === p} onClick={() => { setPanel(p); setDrafts({}) }}>
-              {p === 'levels' ? 'What’s left' : p === 'delivery' ? 'Delivery in' : p === 'count' ? 'Stock take' : 'Set up'}
+              {p === 'levels' ? 'What’s left' : p === 'delivery' ? 'Delivery in' : p === 'count' ? 'Stock take' : p === 'costs' ? 'What it costs' : 'Set up'}
             </button>
           ))}
         </div>
@@ -347,6 +399,73 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
       )}
 
       {/* --- the pours ------------------------------------------------------- */}
+      {/* --- what the brewery charges ---------------------------------------- */}
+      {panel === 'costs' && config.items.length > 0 && (
+        <section className="card">
+          <div className="card-head">
+            <h2>What it costs</h2>
+            <span className="badge">{config.items.filter((i) => i.cost).length} of {config.items.length} costed</span>
+          </div>
+          <p className="note" style={{ marginTop: 0 }}>
+            What the invoice charges, and what that buys. A firkin of Taddy at £95 is £95 for 72 pints.
+            Enter it <strong>ex VAT</strong>, the way the invoice shows it — the VAT on the selling price
+            is taken off separately, which is the step that otherwise flatters a margin by six points.
+          </p>
+
+          {config.items.map((item) => {
+            const servings = item.cost ? Math.round(item.cost.baseUnits / item.servingBaseUnits) : 0
+            const priceKey = `${item.id}:price`
+            const sizeKey = `${item.id}:size`
+            const perServing = costOf(item, item.servingBaseUnits)
+            // The sell price of the commonest pour off this line, for GP.
+            const pour = config.pours.find((p) => p.stockItemId === item.id)
+            const sell = pour ? lookup(buildIndex(book), { code: pour.itemCode, name: pour.itemName }) : undefined
+            const gp =
+              sell && pour && costOf(item, pour.baseUnits) !== null
+                ? margin(sell.pence, costOf(item, pour.baseUnits) as number, loadSettings().vatBp)
+                : null
+
+            return (
+              <div className="zrow" key={item.id}>
+                <span className="zname">
+                  {item.name}
+                  <small>
+                    {perServing === null
+                      ? `per ${item.servingName} — not costed yet`
+                      : `${formatMoney(perServing)} a ${item.servingName}`}
+                    {gp && ` · ${(gp.gpBp / 100).toFixed(1)}% GP at ${formatMoney(gp.sellPence)}`}
+                  </small>
+                </span>
+                <input
+                  aria-label={`${item.name} cost`}
+                  inputMode="decimal"
+                  placeholder="£ —"
+                  value={drafts[priceKey] ?? (item.cost ? penceToInput(item.cost.pence) : '')}
+                  onChange={(e) => void setCost(item, e.target.value, drafts[sizeKey] ?? String(servings || ''))}
+                />
+                <input
+                  aria-label={`${item.name} servings per container`}
+                  inputMode="numeric"
+                  placeholder={item.servingName === 'pint' ? '72' : '1'}
+                  value={drafts[sizeKey] ?? (servings ? String(servings) : '')}
+                  onChange={(e) => void setCost(item, drafts[priceKey] ?? (item.cost ? penceToInput(item.cost.pence) : ''), e.target.value)}
+                />
+              </div>
+            )
+          })}
+
+          <div className="chip-row" style={{ marginTop: 12 }}>
+            {CONTAINERS.map((c) => (
+              <span key={c.label} className="chip" aria-hidden="true">{c.label}</span>
+            ))}
+          </div>
+          <p className="note">
+            The second box is how many servings the container holds — the sizes above are the usual ones.
+            Anything left blank simply has no margin figure; nothing is ever assumed to be free.
+          </p>
+        </section>
+      )}
+
       {panel === 'setup' && (
         <section className="card">
           <div className="card-head">
@@ -391,6 +510,45 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
           </p>
         </section>
       )}
+
+      {panel === 'levels' && config.items.length > 0 && (() => {
+        const value = cellarValue(ledger)
+        if (value.totalPence === 0 && value.unvaluedCount === 0) return null
+        return (
+          <section className="card">
+            <div className="card-head">
+              <h2>What is down there</h2>
+              <span className="hint">at what it cost</span>
+            </div>
+            <div className="zrow">
+              <span className="zname">
+                Money in the cellar
+                <small>stock on hand, valued at the invoice price</small>
+              </span>
+              <strong className="num" style={{ fontSize: 20 }}>{formatMoney(value.totalPence)}</strong>
+            </div>
+            {value.lines
+              .filter((l) => l.pence !== null && l.pence > 0)
+              .slice(0, 6)
+              .map((l) => (
+                <div className="zrow" key={l.item.id}>
+                  <span className="zname">
+                    {l.item.name}
+                    <small>{formatServings(l.baseUnits, l.item)}</small>
+                  </span>
+                  <span className="num">{formatMoney(l.pence as number)}</span>
+                </div>
+              ))}
+            {value.unvaluedCount > 0 && (
+              <p className="note warn">
+                {value.unvaluedCount} {value.unvaluedCount === 1 ? 'line has' : 'lines have'} stock but no
+                cost entered, so the real figure is higher than this. Put the invoice prices in under
+                “What it costs”.
+              </p>
+            )}
+          </section>
+        )
+      })()}
 
       {panel === 'levels' && result.length > 0 && (
         <section className="card">
