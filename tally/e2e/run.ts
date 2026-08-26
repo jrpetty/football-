@@ -480,9 +480,18 @@ try {
   await page.waitForTimeout(300)
   const setup = page.locator('.card:has-text("What each sale pours") table.data')
   const pourText = await setup.innerText()
-  check('a pint pours a pint', /PINT TADDY LAGER[\s\S]*?1 pint/.test(pourText), pourText.slice(0, 160))
-  check('a half pours half of one', /HALF TADDY LAGER[\s\S]*?0\.5 pints/.test(pourText))
-  check('a spirit pours a shot', /VODKA[\s\S]*?1 shot/.test(pourText))
+  // Each pour is a box now, so the amount is its value and the measure the word
+  // beside it.
+  const takes = async (line: string) => ({
+    amount: await page.locator(`input[aria-label="${line} takes"]`).inputValue(),
+    measure: (await page.locator(`tr:has(input[aria-label="${line} takes"]) .pour-each small`).innerText()).trim(),
+  })
+  const pint = await takes('PINT TADDY LAGER')
+  check('a pint pours a pint', pint.amount === '1' && pint.measure === 'pint', JSON.stringify(pint))
+  const half = await takes('HALF TADDY LAGER')
+  check('a half pours half of one', half.amount === '0.5' && half.measure === 'pint', JSON.stringify(half))
+  const shot = await takes('VODKA')
+  check('a spirit pours a shot', shot.amount === '1' && shot.measure === 'shot', JSON.stringify(shot))
   check('a measured wine pours its measure', pourText.includes('175ML HOUSE WINE'))
 
   // Book two firkins of Taddy in, then look at what should be left.
@@ -658,38 +667,127 @@ try {
   await page.click('.chip:has-text("What it costs")')
   await page.waitForSelector('input[aria-label="Taddy Lager cost"]', { timeout: 5000 })
 
-  console.log('\nHow each kind of drink is counted')
+  console.log('\nHow each kind of drink is measured')
   // Straight off the till's own names: the tap beers in pints, the spirits in
-  // millilitres at the house measure, the bottles by the bottle.
+  // shots, the bottles by the bottle.
   check(
-    'a tap beer is counted in pints',
-    (await page.locator('select[aria-label="Taddy Lager counted in"]').inputValue()) === 'pint',
+    'a tap beer is measured in pints',
+    (await page.locator('select[aria-label="Taddy Lager measured in"]').inputValue()) === 'pint',
   )
   check(
-    'a spirit is counted in shots of millilitres',
-    (await page.locator('select[aria-label="Vodka counted in"]').inputValue()) === 'shot',
+    'and a pint is 568ml, which is not up for discussion',
+    (await page.locator('input[aria-label="Taddy Lager millilitres per serving"]').inputValue()) === '568' &&
+      (await page.locator('input[aria-label="Taddy Lager millilitres per serving"]').isDisabled()),
+  )
+  check(
+    'a spirit is measured in shots',
+    (await page.locator('select[aria-label="Vodka measured in"]').inputValue()) === 'shot',
+  )
+  check(
+    'of the house measure, and that one is hers to set',
+    (await page.locator('input[aria-label="Vodka millilitres per serving"]').inputValue()) === '30' &&
+      !(await page.locator('input[aria-label="Vodka millilitres per serving"]').isDisabled()),
   )
   check(
     'the alcohol-free is counted by the bottle, not by its 550ml',
-    (await page.locator('select[aria-label="alc free counted in"]').inputValue()) === 'bottle',
+    (await page.locator('select[aria-label="alc free measured in"]').inputValue()) === 'bottle',
   )
   check(
     'and so is the juice',
-    (await page.locator('select[aria-label="Orange Juice counted in"]').inputValue()) === 'bottle',
+    (await page.locator('select[aria-label="Orange Juice measured in"]').inputValue()) === 'bottle',
   )
-  // A line the guess got wrong can be put right, and says what that cost.
-  await page.selectOption('select[aria-label="Crisps counted in"]', 'bottle')
+
+  console.log('\nSetting the measure by hand')
+  // A 25ml house: the shot changes and everything drawn on it follows.
+  await page.fill('input[aria-label="Vodka millilitres per serving"]', '25')
+  await page.waitForTimeout(400)
+  await page.reload({ waitUntil: 'networkidle' })
+  await page.click('button:has-text("Cellar")')
+  await page.waitForSelector('.chip:has-text("What it costs")', { timeout: 5000 })
+  await page.click('.chip:has-text("What it costs")')
+  await page.waitForSelector('input[aria-label="Vodka millilitres per serving"]', { timeout: 5000 })
+  check(
+    'a measure set by hand is kept',
+    (await page.locator('input[aria-label="Vodka millilitres per serving"]').inputValue()) === '25',
+  )
+  await page.fill('input[aria-label="Vodka millilitres per serving"]', '30')
+  await page.waitForTimeout(300)
+
+  // Wine is a bottle that gets opened and poured out of — three measures off
+  // one 75cl bottle — and the till's own three measures put it there.
+  check(
+    'wine is a bottle that gets poured from',
+    (await page.locator('select[aria-label="Rose measured in"]').inputValue()) === 'open',
+  )
+  check(
+    'holding 75cl of it',
+    (await page.locator('input[aria-label="Rose millilitres per serving"]').inputValue()) === '750',
+  )
+  // And it can be put on glasses instead, at whatever the house pours.
+  await page.selectOption('select[aria-label="Rose measured in"]', 'glass')
   await page.waitForTimeout(400)
   check(
-    'a line can be recounted by hand',
-    (await page.locator('select[aria-label="Crisps counted in"]').inputValue()) === 'bottle',
+    'a line can be put on glasses, starting at the common pour',
+    (await page.locator('input[aria-label="Rose millilitres per serving"]').inputValue()) === '175',
+  )
+  await page.fill('input[aria-label="Rose millilitres per serving"]', '250')
+  await page.waitForTimeout(400)
+  check(
+    'and that glass can be made a large one',
+    (await page.locator('input[aria-label="Rose millilitres per serving"]').inputValue()) === '250',
+  )
+  await page.selectOption('select[aria-label="Rose measured in"]', 'open')
+  await page.waitForTimeout(400)
+
+  // Changing between two poured measures keeps the unit and the cost, because
+  // both are held in millilitres either way.
+  await page.selectOption('select[aria-label="Crisps measured in"]', 'bottle')
+  await page.waitForTimeout(400)
+  check(
+    'a counted line can be recounted by hand',
+    (await page.locator('select[aria-label="Crisps measured in"]').inputValue()) === 'bottle',
   )
   check(
-    'and it says the unit and cost went with the change',
-    /set its unit and cost again/.test(await page.locator('.toast').innerText()),
+    'and going from counted to poured says the unit and cost went with it',
+    /set its unit and cost again/.test(
+      await (async () => {
+        await page.selectOption('select[aria-label="Crisps measured in"]', 'shot')
+        await page.waitForTimeout(400)
+        return page.locator('.toast').innerText()
+      })(),
+    ),
   )
-  await page.selectOption('select[aria-label="Crisps counted in"]', 'each')
+  await page.selectOption('select[aria-label="Crisps measured in"]', 'each')
   await page.waitForTimeout(400)
+
+  console.log('\nWhat each sale takes off the cellar')
+  await page.click('.chip:has-text("Set up")')
+  await page.waitForSelector('input[aria-label="VODKA takes"]', { timeout: 5000 })
+  check(
+    'a single is one shot to begin with',
+    (await page.locator('input[aria-label="VODKA takes"]').inputValue()) === '1',
+  )
+  check('and the table says which measure that is', (await page.locator('.pour-each small').first().innerText()).length > 0)
+  // A till line that is really a double: two shots off the cellar, not one.
+  await page.fill('input[aria-label="VODKA takes"]', '2')
+  await page.waitForTimeout(400)
+  await page.reload({ waitUntil: 'networkidle' })
+  await page.click('button:has-text("Cellar")')
+  await page.waitForSelector('.chip:has-text("Set up")', { timeout: 5000 })
+  await page.click('.chip:has-text("Set up")')
+  await page.waitForSelector('input[aria-label="VODKA takes"]', { timeout: 5000 })
+  check(
+    'a pour set by hand survives a restart',
+    (await page.locator('input[aria-label="VODKA takes"]').inputValue()) === '2',
+  )
+  await page.fill('input[aria-label="VODKA takes"]', '1')
+  await page.waitForTimeout(400)
+  check(
+    'and can be put back',
+    (await page.locator('input[aria-label="VODKA takes"]').inputValue()) === '1',
+  )
+  await page.click('.chip:has-text("What it costs")')
+  await page.waitForSelector('input[aria-label="Taddy Lager cost"]', { timeout: 5000 })
 
   // A firkin of Taddy: £95 for 72 pints, as the invoice charges it.
   // Deliberately price first, then
@@ -704,6 +802,56 @@ try {
     'and the margin is worked out against the board price',
     /68\.6% GP/.test(costed),
     'the board says £4.20 and the firkin makes each pint £1.32',
+  )
+
+  // A firkin is 40,896ml however the line is measured. The box beside it shows
+  // that divided into servings and rounded, and an earlier version multiplied
+  // the rounded figure back out — shaving millilitres off the barrel every time
+  // the price next to it was touched.
+  await page.selectOption('select[aria-label="Taddy Lager measured in"]', 'glass')
+  await page.waitForTimeout(400)
+  check(
+    'the barrel re-reads itself in the new measure',
+    (await page.locator('input[aria-label="Taddy Lager servings per container"]').inputValue()) === '234',
+    `got "${await page.locator('input[aria-label="Taddy Lager servings per container"]').inputValue()}" — a firkin is ${72 * 568}ml, which is 234 glasses of 175`,
+  )
+  // A real edit to the price beside it — the same value again would be no edit
+  // at all, since nothing changed to react to.
+  await page.fill('input[aria-label="Taddy Lager cost"]', '96.00')
+  await page.waitForTimeout(500)
+
+  // Read the stored figure rather than the box, and read it here, while the
+  // line is still on the other measure: the box shows the barrel divided into
+  // servings, so a barrel going astray is invisible there — and switching back
+  // and touching the price again would put it right by accident, hiding it.
+  const barrel = await page.evaluate(async () => {
+    return await new Promise<number | null>((resolve) => {
+      const req = indexedDB.open('tally')
+      req.onsuccess = () => {
+        const tx = req.result.transaction('stock', 'readonly')
+        const get = tx.objectStore('stock').get('config')
+        get.onsuccess = () => {
+          const cfg = get.result as { items: Array<{ name: string; container?: { baseUnits: number } }> } | undefined
+          resolve(cfg?.items.find((i) => i.name === 'Taddy Lager')?.container?.baseUnits ?? null)
+        }
+        get.onerror = () => resolve(null)
+      }
+      req.onerror = () => resolve(null)
+    })
+  })
+  check(
+    'a barrel is still exactly a barrel after being measured another way',
+    barrel === 72 * 568,
+    `got ${barrel}ml — a firkin is ${72 * 568}ml however the line is measured`,
+  )
+
+  await page.selectOption('select[aria-label="Taddy Lager measured in"]', 'pint')
+  await page.waitForTimeout(400)
+  await page.fill('input[aria-label="Taddy Lager cost"]', '95.00')
+  await page.waitForTimeout(400)
+  check(
+    'and it still costs what the invoice said',
+    (await page.locator('.card:has-text("Taddy Lager")').first().innerText()).includes('£1.32'),
   )
 
   // The cellar is worth something now.

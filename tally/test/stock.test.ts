@@ -9,6 +9,10 @@ import {
   formatServings,
   formatServingsSigned,
   guessPour,
+  basisKeepsUnit,
+  basisOf,
+  basisTakesAmount,
+  servingOf,
   pourUsage,
   servingsToBase,
   type Pour,
@@ -278,4 +282,75 @@ test('a shortfall reads as a shortfall', () => {
   assert.equal(formatServingsSigned(-2 * ML_PER_PINT, taddy), '−2 pints')
   assert.equal(formatServingsSigned(3 * ML_PER_PINT, taddy), '+3 pints')
   assert.equal(formatServingsSigned(0, taddy), '0 pints')
+})
+
+// --- setting how a line is measured -------------------------------------------
+
+test('each basis says what one serving is', () => {
+  assert.deepEqual(servingOf('pint', 0), { kind: 'liquid', servingBaseUnits: ML_PER_PINT, servingName: 'pint' })
+  assert.deepEqual(servingOf('shot', 30), { kind: 'liquid', servingBaseUnits: 30, servingName: 'shot' })
+  assert.deepEqual(servingOf('shot', 25), { kind: 'liquid', servingBaseUnits: 25, servingName: 'shot' })
+  assert.deepEqual(servingOf('glass', 175), { kind: 'liquid', servingBaseUnits: 175, servingName: '175ml' })
+  assert.deepEqual(servingOf('open', 750), { kind: 'liquid', servingBaseUnits: 750, servingName: 'bottle' })
+  assert.deepEqual(servingOf('bottle', 0), { kind: 'count', servingBaseUnits: 1, servingName: 'bottle' })
+  assert.deepEqual(servingOf('each', 0), { kind: 'count', servingBaseUnits: 1, servingName: 'each' })
+})
+
+test('a pint stays 568ml whatever size is handed to it', () => {
+  // The pint is what makes deliveries and sales cancel exactly; it is not a
+  // number anybody gets to set.
+  assert.equal(servingOf('pint', 999).servingBaseUnits, ML_PER_PINT)
+  assert.equal(servingOf('bottle', 550).servingBaseUnits, 1)
+})
+
+test('a measure is never zero or a fraction of a millilitre', () => {
+  assert.equal(servingOf('shot', 0).servingBaseUnits, 1)
+  assert.equal(servingOf('shot', -5).servingBaseUnits, 1)
+  assert.equal(servingOf('glass', 175.4).servingBaseUnits, 175)
+})
+
+test('only the poured measures have a size to set', () => {
+  assert.equal(basisTakesAmount('shot'), true)
+  assert.equal(basisTakesAmount('glass'), true)
+  assert.equal(basisTakesAmount('open'), true)
+  assert.equal(basisTakesAmount('pint'), false)
+  assert.equal(basisTakesAmount('bottle'), false)
+  assert.equal(basisTakesAmount('each'), false)
+})
+
+test('a line reports the basis it is on, and survives a round trip', () => {
+  for (const [basis, ml] of [['pint', 0], ['shot', 30], ['glass', 175], ['open', 750], ['bottle', 0], ['each', 0]] as const) {
+    const item: StockItem = { id: 'x', name: 'X', ...servingOf(basis, ml) }
+    assert.equal(basisOf(item), basis, basis)
+  }
+})
+
+test('the unit and the cost survive a change between two poured measures', () => {
+  // Both are held in millilitres, so a firkin is still a firkin.
+  assert.equal(basisKeepsUnit('pint', 'shot'), true)
+  assert.equal(basisKeepsUnit('glass', 'pint'), true)
+  assert.equal(basisKeepsUnit('open', 'glass'), true, 'wine is poured either way')
+  assert.equal(basisKeepsUnit('bottle', 'each'), true)
+})
+
+test('but not a change between poured and counted', () => {
+  // 700 would stop meaning millilitres and start meaning bottles.
+  assert.equal(basisKeepsUnit('shot', 'bottle'), false)
+  assert.equal(basisKeepsUnit('each', 'pint'), false)
+  assert.equal(basisKeepsUnit('open', 'bottle'), false, 'a poured bottle and a counted one are not the same unit')
+})
+
+test('a container holds what the measure set against it says it holds', () => {
+  // One 70cl bottle: 23 shots at 30ml, 28 at 25ml. The bottle does not change.
+  const spirit: StockItem = { id: 'g', name: 'Gin', ...servingOf('shot', 30), container: { name: '70cl bottle', baseUnits: 700 } }
+  assert.equal(Math.floor(700 / spirit.servingBaseUnits), 23)
+  const at25: StockItem = { ...spirit, ...servingOf('shot', 25) }
+  assert.equal(Math.floor(700 / at25.servingBaseUnits), 28)
+  assert.equal(at25.container!.baseUnits, 700, 'the bottle is still 70cl')
+})
+
+test('what a sale takes is set in the line’s own measure', () => {
+  const spirit: StockItem = { id: 'g', name: 'Gin', ...servingOf('shot', 30) }
+  assert.equal(servingsToBase(2, spirit), 60, 'a double is two shots')
+  assert.equal(servingsToBase(0.5, { id: 'b', name: 'Beer', ...servingOf('pint', 0) }), 284, 'a half')
 })

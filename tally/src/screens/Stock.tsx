@@ -19,9 +19,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { dayStats, itemTotals } from '../core/analytics.ts'
 import { addDays, formatShort, tradingDayKey } from '../core/date.ts'
 import {
+  basisKeepsUnit,
+  basisOf,
+  basisTakesAmount,
   cellarHealth,
   containersToBase,
   CONTAINER_SIZES,
+  DEFAULT_GLASS_ML,
   deliveryLinesFrom,
   describeStock,
   proposeDelivery,
@@ -29,10 +33,11 @@ import {
   formatServingsSigned,
   guessPour,
   ML_PER_BOTTLE,
-  ML_PER_PINT,
   pourUsage,
+  servingOf,
   servingsToBase,
   type Delivery,
+  type Basis,
   type Pour,
   type PourGuess,
   type DeliveryProposal,
@@ -77,29 +82,21 @@ function servingFor(
 ): Pick<StockItem, 'kind' | 'servingBaseUnits' | 'servingName'> {
   // A counted line keeps the word the guess used: a bottle of juice is counted
   // in bottles, a bag of crisps in each.
-  if (guess.kind !== 'liquid') return { kind: 'count', servingBaseUnits: 1, servingName: guess.servingName }
-  if (guess.servingName === 'pint') return { kind: 'liquid', servingBaseUnits: ML_PER_PINT, servingName: 'pint' }
-  // Every shot is the house measure, whatever an individual line prints. A
-  // double pours two of them; it does not redefine what a shot is, and the
-  // cellar has to hold one answer to "how much is a shot" or the spirits
-  // never add up.
-  if (guess.servingName === 'shot') return { kind: 'liquid', servingBaseUnits: mlPerShot, servingName: 'shot' }
+  if (guess.kind !== 'liquid') return servingOf(guess.servingName === 'bottle' ? 'bottle' : 'each', 1)
+  if (guess.servingName === 'pint') return servingOf('pint', 0)
+  // Every shot starts at the house measure, whatever an individual line
+  // prints. A double pours two of them; it does not redefine what a shot is,
+  // and the cellar has to hold one answer to "how much is a shot" or the
+  // spirits never add up. The measure itself is hers to set, per line.
+  if (guess.servingName === 'shot') return servingOf('shot', mlPerShot)
+  // Wine sold at three measures out of one bottle is stocked as bottles.
   if ((measures?.size ?? 1) > 1) return { kind: 'liquid', servingBaseUnits: ML_PER_BOTTLE, servingName: 'bottle' }
-  return { kind: 'liquid', servingBaseUnits: guess.baseUnits, servingName: guess.servingName }
+  return servingOf('glass', guess.baseUnits)
 }
 
-/**
- * Which of the four ways this line is counted.
- *
- * Wine is the odd one out: it is poured by the glass at three different
- * measures out of one bottle, so it answers to none of the four and says so
- * rather than being flattened into the nearest.
- */
-function basisOf(item: StockItem): 'pint' | 'shot' | 'bottle' | 'each' | 'glass' {
-  if (item.kind === 'count') return item.servingName === 'bottle' ? 'bottle' : 'each'
-  if (item.servingName === 'pint') return 'pint'
-  if (item.servingName === 'shot') return 'shot'
-  return 'glass'
+/** "pints", "shots" — and "items", because "eachs" is not a word. */
+function plural(servingName: string): string {
+  return servingName === 'each' ? 'items' : `${servingName}s`
 }
 
 /** A stable id from a name, so re-running setup does not duplicate a line. */
@@ -176,28 +173,51 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
    * keystroke means whichever is typed second completes the pair.
    */
   /**
-   * Change how a line is counted.
+   * Change how a line is measured, and how much of it a serving is.
    *
-   * The guess gets most of it right off the till's own names, but "most" is not
-   * all, and a line stuck on the wrong basis is wrong in the cellar figures
-   * every week after. The unit and the cost go when the basis does: both were
-   * measured the old way — a case of 24 means nothing on a line that has just
-   * become millilitres — and quietly carrying them over would be a wrong
-   * number rather than a missing one.
+   * Both are the user's to set. Reading till names gets most lines right, but
+   * no amount of reading can know that this cellar pours a 30ml measure where
+   * most of the country pours 25, or that the house white goes out in 175s —
+   * and a line left on the wrong basis is wrong in the cellar figures every
+   * week after.
+   *
+   * What happens to the unit and the cost depends on whether the change moves
+   * between poured and counted. Pints to shots keeps both: a firkin is 40,896
+   * millilitres either way. Shots to bottles cannot, because 700 stops meaning
+   * millilitres and starts meaning bottles, so they go and the toast says so.
    */
-  async function setBasis(item: StockItem, basis: string) {
+  async function setMeasure(item: StockItem, patch: { basis?: Basis; amountText?: string }) {
     if (!config) return
-    const shape =
-      basis === 'pint'
-        ? { kind: 'liquid' as const, servingBaseUnits: ML_PER_PINT, servingName: 'pint' }
-        : basis === 'shot'
-          ? { kind: 'liquid' as const, servingBaseUnits: config.mlPerShot, servingName: 'shot' }
-          : basis === 'bottle'
-            ? { kind: 'count' as const, servingBaseUnits: 1, servingName: 'bottle' }
-            : basis === 'each'
-              ? { kind: 'count' as const, servingBaseUnits: 1, servingName: 'each' }
-              : null
-    if (!shape) return
+    const from = basisOf(item)
+    const basis = patch.basis ?? from
+    const amountKey = `${item.id}:amount`
+
+    // The size the box is showing, which is what an unfinished "17" of a 175
+    // still is until it is a real number.
+    const shown = patch.amountText ?? drafts[amountKey] ?? String(item.servingBaseUnits)
+    if (patch.amountText !== undefined) setDrafts((d) => ({ ...d, [amountKey]: patch.amountText as string }))
+
+    let ml = Number(shown.trim())
+    if (!Number.isFinite(ml) || ml <= 0) {
+      // A half-typed size is left in the box rather than saved as nonsense.
+      if (patch.amountText !== undefined) return
+      ml = item.servingBaseUnits
+    }
+    // Switching between the two poured kinds starts at a sensible size rather
+    // than carrying a 30ml shot over as a 30ml glass of wine.
+    if (patch.basis !== undefined && patch.basis !== from) {
+      ml =
+        patch.basis === 'shot'
+          ? config.mlPerShot
+          : patch.basis === 'glass'
+            ? DEFAULT_GLASS_ML
+            : patch.basis === 'open'
+              ? ML_PER_BOTTLE
+              : ml
+      setDrafts((d) => ({ ...d, [amountKey]: String(ml) }))
+    }
+
+    const shape = servingOf(basis, ml)
     if (
       shape.kind === item.kind &&
       shape.servingBaseUnits === item.servingBaseUnits &&
@@ -206,20 +226,68 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
       return
     }
 
+    const keeps = basisKeepsUnit(from, basis)
     const next = {
       ...config,
       items: config.items.map((i) => {
         if (i.id !== item.id) return i
+        if (keeps) return { ...i, ...shape }
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { container: _c, cost: _p, ...bare } = i
         return { ...bare, ...shape }
       }),
     }
     setConfig(next)
-    setDrafts((d) => ({ ...d, [`${item.id}:size`]: '', [`${item.id}:price`]: '' }))
+    // The size box counts servings, so what it holds means something different
+    // the moment the serving changes: 72 pints is 234 glasses of the same
+    // barrel. Clearing the box lets it re-read the barrel in the new measure
+    // rather than showing a number that has quietly stopped being true.
+    // Dropped rather than blanked: a draft of '' is still a draft, and would sit
+    // in front of the stored figure instead of letting it through.
+    setDrafts((d) => {
+      const rest = { ...d }
+      delete rest[`${item.id}:size`]
+      if (!keeps) delete rest[`${item.id}:price`]
+      return rest
+    })
     await saveStockConfig(next)
     onChanged()
-    say(`${item.name} is now counted in ${shape.servingName}s — set its unit and cost again.`)
+    if (patch.basis !== undefined) {
+      say(
+        keeps
+          ? `${item.name} is now measured in ${shape.servingName}s.`
+          : `${item.name} is now counted in ${shape.servingName}s — set its unit and cost again.`,
+      )
+    }
+  }
+
+  /**
+   * What one sale takes off the cellar.
+   *
+   * Entered in the line's own servings, because that is how it is thought
+   * about: a double is two shots, not sixty millilitres. Guessed off the till's
+   * names to begin with, and wrong often enough — a double, a schooner, a
+   * jug — that leaving it unfixable would quietly cost the stock figures every
+   * week.
+   */
+  async function setPour(pour: Pour, text: string) {
+    if (!config) return
+    const key = `pour:${pour.itemCode}`
+    setDrafts((d) => ({ ...d, [key]: text }))
+    const item = config.items.find((i) => i.id === pour.stockItemId)
+    if (!item) return
+    const servings = Number(text.trim())
+    if (!Number.isFinite(servings) || servings <= 0) return
+
+    const baseUnits = servingsToBase(servings, item)
+    if (baseUnits === pour.baseUnits) return
+    const next = {
+      ...config,
+      pours: config.pours.map((p) => (p.itemCode === pour.itemCode ? { ...p, baseUnits } : p)),
+    }
+    setConfig(next)
+    await saveStockConfig(next)
+    onChanged()
   }
 
   async function setLine(item: StockItem, patch: { name?: string; sizeText?: string; priceText?: string }) {
@@ -234,8 +302,18 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
     if (!config) return
 
     const servings = Number(sizeText.trim())
-    const hasSize = sizeText.trim() !== '' && Number.isFinite(servings) && servings > 0
-    const baseUnits = hasSize ? Math.round(servings * item.servingBaseUnits) : 0
+    const typedSize = sizeText.trim() !== '' && Number.isFinite(servings) && servings > 0
+    // The box shows the container's millilitres divided into servings, rounded
+    // for reading. Multiplying that rounded figure back out would shave a few
+    // millilitres off the barrel every time the price beside it was touched, so
+    // a container nobody has just retyped is carried across exactly as it is.
+    const untouched = patch.sizeText === undefined && item.container !== undefined
+    const hasSize = untouched || typedSize
+    const baseUnits = untouched
+      ? (item.container as { baseUnits: number }).baseUnits
+      : typedSize
+        ? Math.round(servings * item.servingBaseUnits)
+        : 0
 
     const pence = parsePence(priceText)
     const hasPrice = pence !== null && pence > 0
@@ -244,7 +322,7 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
       ...config,
       items: config.items.map((i) => {
         if (i.id !== item.id) return i
-        const name = patch.name ?? i.container?.name ?? 'container'
+        const name = patch.name ?? i.container?.name ?? 'unit'
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { container: _c, cost: _p, ...bare } = i
         const costs = hasPrice && hasSize
@@ -667,6 +745,8 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
             const pourCost = pour ? costOf(item, pour.baseUnits) : null
             const gp = sell && pourCost !== null ? margin(sell.pence, pourCost) : null
             const sizeText = drafts[sizeKey] ?? (servings ? String(servings) : '')
+            const basis = basisOf(item)
+            const takesAmount = basisTakesAmount(basis)
 
             return (
               <div className="stock-line" key={item.id}>
@@ -681,16 +761,37 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
                 </div>
                 <div className="stock-line-row">
                   <select
-                    aria-label={`${item.name} counted in`}
-                    value={basisOf(item)}
-                    onChange={(e) => void setBasis(item, e.target.value)}
+                    aria-label={`${item.name} measured in`}
+                    value={basis}
+                    onChange={(e) => void setMeasure(item, { basis: e.target.value as Basis })}
                   >
                     <option value="pint">pints</option>
-                    <option value="shot">shots (ml)</option>
-                    <option value="bottle">bottles</option>
+                    <option value="shot">shots</option>
+                    <option value="glass">glasses</option>
+                    <option value="open">bottles, poured</option>
+                    <option value="bottle">bottles, whole</option>
                     <option value="each">each</option>
-                    {basisOf(item) === 'glass' && <option value="glass">by the glass</option>}
                   </select>
+                  {/* The size of that measure, where the measure has one. A pint
+                      is 568ml by definition and a bottle is one bottle, so those
+                      show what they are rather than inviting a number that would
+                      not mean anything. */}
+                  <span className="stock-field">
+                    <input
+                      aria-label={`${item.name} millilitres per serving`}
+                      inputMode="numeric"
+                      disabled={!takesAmount}
+                      value={
+                        takesAmount
+                          ? drafts[`${item.id}:amount`] ?? String(item.servingBaseUnits)
+                          : basis === 'pint'
+                            ? '568'
+                            : '1'
+                      }
+                      onChange={(e) => void setMeasure(item, { amountText: e.target.value })}
+                    />
+                    <small>{item.kind === 'liquid' ? 'ml' : 'each'}</small>
+                  </span>
                   <select
                     aria-label={`${item.name} container`}
                     value={CONTAINER_SIZES.some((c) => c.name === item.container?.name) ? item.container!.name : ''}
@@ -714,26 +815,33 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
                       </option>
                     ))}
                   </select>
-                  <input
-                    aria-label={`${item.name} servings per container`}
-                    inputMode="numeric"
-                    placeholder={
-                      item.servingName === 'pint'
-                        ? '72'
-                        : item.servingName === 'shot'
-                          ? String(Math.round((700 / item.servingBaseUnits) * 100) / 100)
-                          : '1'
-                    }
-                    value={sizeText}
-                    onChange={(e) => void setLine(item, { sizeText: e.target.value })}
-                  />
-                  <input
-                    aria-label={`${item.name} cost`}
-                    inputMode="decimal"
-                    placeholder="£ —"
-                    value={drafts[priceKey] ?? (item.cost ? penceToInput(item.cost.pence) : '')}
-                    onChange={(e) => void setLine(item, { priceText: e.target.value })}
-                  />
+                  <span className="stock-field">
+                    <input
+                      aria-label={`${item.name} servings per container`}
+                      inputMode="numeric"
+                      placeholder={
+                        item.servingName === 'pint'
+                          ? '72'
+                          : item.servingName === 'shot'
+                            ? String(Math.round((700 / item.servingBaseUnits) * 100) / 100)
+                            : '1'
+                      }
+                      value={sizeText}
+                      onChange={(e) => void setLine(item, { sizeText: e.target.value })}
+                    />
+                    <small>{plural(item.servingName)}</small>
+                  </span>
+                  <span className="stock-field stock-cost">
+                    <small>£</small>
+                    <input
+                      aria-label={`${item.name} cost`}
+                      inputMode="decimal"
+                      placeholder="—"
+                      value={drafts[priceKey] ?? (item.cost ? penceToInput(item.cost.pence) : '')}
+                      onChange={(e) => void setLine(item, { priceText: e.target.value })}
+                    />
+                    <small>a {item.container?.name ?? 'unit'}</small>
+                  </span>
                 </div>
               </div>
             )
@@ -781,11 +889,26 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
               <tbody>
                 {config.pours.map((p) => {
                   const item = config.items.find((i) => i.id === p.stockItemId)
+                  const each = item ? p.baseUnits / item.servingBaseUnits : p.baseUnits
                   return (
                     <tr key={p.itemCode}>
                       <th scope="row">{p.itemName}</th>
                       <td>{item?.name ?? p.stockItemId}</td>
-                      <td className="num">{item ? formatServings(p.baseUnits, item) : `${p.baseUnits}`}</td>
+                      <td className="num">
+                        {item ? (
+                          <span className="pour-each">
+                            <input
+                              aria-label={`${p.itemName} takes`}
+                              inputMode="decimal"
+                              value={drafts[`pour:${p.itemCode}`] ?? String(Math.round(each * 100) / 100)}
+                              onChange={(e) => void setPour(p, e.target.value)}
+                            />
+                            <small>{item.servingName}</small>
+                          </span>
+                        ) : (
+                          `${p.baseUnits}`
+                        )}
+                      </td>
                     </tr>
                   )
                 })}
@@ -793,8 +916,10 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
             </table>
           </div>
           <p className="note">
-            A pint is taken as 568ml and a shot as {config.mlPerShot}ml, so pints and halves of the same
-            beer add into one figure. Halves are exactly half a pint, which is why two of them cancel one.
+            What each sale takes off the cellar, in that line's own measure — so a double is 2 and a
+            half is 0.5. Guessed off the till's own names to start with; change any it read wrong.
+            Halves are exactly half a pint, which is why two of them cancel one, and the size of a
+            shot or a glass is set against the line itself under What it costs.
           </p>
         </section>
       )}

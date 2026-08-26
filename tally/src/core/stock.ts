@@ -41,6 +41,9 @@ export const DEFAULT_ML_PER_SHOT = 30
 /** A wine bottle, which is how a cellar counts anything poured by the glass. */
 export const ML_PER_BOTTLE = 750
 
+/** Where a glass starts before anybody says otherwise — the common house pour. */
+export const DEFAULT_GLASS_ML = 175
+
 export type StockKind = 'liquid' | 'count'
 
 export interface StockItem {
@@ -395,6 +398,70 @@ export const CONTAINER_SIZES: ContainerPreset[] = [
   { name: 'litre bottle', ml: 1000, hint: 'spirits' },
   { name: 'wine bottle', ml: ML_PER_BOTTLE, hint: '75cl' },
 ]
+
+// --- how a line is measured --------------------------------------------------
+//
+// The five ways this pub measures anything. The type is the user's to pick and
+// the size is the user's to set, because no amount of reading till names can
+// know that this cellar pours a 30ml measure rather than the 25ml most of the
+// country pours, or that the house white goes out in 175s.
+
+export type Basis = 'pint' | 'shot' | 'glass' | 'open' | 'bottle' | 'each'
+
+export interface Serving {
+  kind: StockKind
+  servingBaseUnits: number
+  servingName: string
+}
+
+/** Whether the basis has a size of its own, or is a size already. */
+export function basisTakesAmount(basis: Basis): boolean {
+  return basis === 'shot' || basis === 'glass' || basis === 'open'
+}
+
+/** What one serving is, given the basis picked and the size set against it. */
+export function servingOf(basis: Basis, ml: number): Serving {
+  const size = Math.max(1, Math.round(ml))
+  switch (basis) {
+    case 'pint':
+      // Fixed at the app's pint so deliveries and sales cancel exactly.
+      return { kind: 'liquid', servingBaseUnits: ML_PER_PINT, servingName: 'pint' }
+    case 'shot':
+      return { kind: 'liquid', servingBaseUnits: size, servingName: 'shot' }
+    case 'glass':
+      // Named by its size, because "a 175ml" is what the board calls it.
+      return { kind: 'liquid', servingBaseUnits: size, servingName: `${size}ml` }
+    case 'open':
+      // A bottle that gets opened and poured out of — the wine. Counted in
+      // bottles like the juices, but a sale takes a glass rather than the lot.
+      return { kind: 'liquid', servingBaseUnits: size, servingName: 'bottle' }
+    case 'bottle':
+      return { kind: 'count', servingBaseUnits: 1, servingName: 'bottle' }
+    case 'each':
+      return { kind: 'count', servingBaseUnits: 1, servingName: 'each' }
+  }
+}
+
+/** Which of the five a line is currently on. */
+export function basisOf(item: StockItem): Basis {
+  if (item.kind === 'count') return item.servingName === 'bottle' ? 'bottle' : 'each'
+  if (item.servingName === 'pint') return 'pint'
+  if (item.servingName === 'shot') return 'shot'
+  if (item.servingName === 'bottle') return 'open'
+  return 'glass'
+}
+
+/**
+ * Whether changing basis can keep the unit and the cost already set.
+ *
+ * Both are stored in base units, and base units mean millilitres on a poured
+ * line and things on a counted one. Pints to shots is safe — still millilitres,
+ * a firkin is still 40,896 of them. Shots to bottles is not: 700 would stop
+ * meaning 700ml and start meaning 700 bottles.
+ */
+export function basisKeepsUnit(from: Basis, to: Basis): boolean {
+  return servingOf(from, 1).kind === servingOf(to, 1).kind
+}
 
 /** The container a line comes in, in base units — null when none is set. */
 export function containerBaseUnits(item: StockItem): number | null {
