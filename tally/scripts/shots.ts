@@ -203,6 +203,18 @@ for (const scheme of ['dark', 'light'] as const) {
   await page.waitForTimeout(300)
   await page.screenshot({ path: join(out, `profile-${scheme}.png`), fullPage: false })
 
+  // One item's card, reached through the search — which lives on Trade.
+  await page.click('button:has-text("Trade")')
+  await page.waitForSelector('input[aria-label="Find an item"]', { timeout: 5000 })
+  await page.fill('input[aria-label="Find an item"]', 'taddy')
+  await page.waitForTimeout(250)
+  await page.locator('.item-open:has-text("PINT TADDY LAGER")').click().catch(() => {})
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: join(out, `item-${scheme}.png`), fullPage: false })
+  await page.screenshot({ path: join(out, `item-full-${scheme}.png`), fullPage: true })
+  await page.click('button:has-text("Back to the trade")').catch(() => {})
+  await page.waitForTimeout(200)
+
   await page.click('button:has-text("Cellar")')
   await page.waitForTimeout(300)
   await page.screenshot({ path: join(out, `cellar-${scheme}.png`), fullPage: false })

@@ -198,7 +198,19 @@ export interface TrendPoint {
  * final value is labelled. A number against every point is chaos and goes
  * unread; the axis and the tooltip carry the rest.
  */
-export function TrendChart({ points }: { points: TrendPoint[] }) {
+export function TrendChart({
+  points,
+  format = formatMoney,
+  axisFormat,
+  seriesLabel = 'Took',
+}: {
+  points: TrendPoint[]
+  /** How a value reads in the tooltip and the one-night note. Money unless told otherwise. */
+  format?: (value: number) => string
+  /** How an axis tick reads; falls back to the compact money ticks. */
+  axisFormat?: (value: number) => string
+  seriesLabel?: string
+}) {
   const [ref, width] = useMeasure()
   const [tip, setTip] = useState<TipState | null>(null)
   const height = 168
@@ -210,7 +222,7 @@ export function TrendChart({ points }: { points: TrendPoint[] }) {
   if (points.length === 0) return <p className="note">No nights in this range.</p>
   if (points.length === 1) {
     const only = points[0]!
-    return <p className="note">One night so far: {only.label}, {formatMoney(only.pence)}.</p>
+    return <p className="note">One night so far: {only.label}, {format(only.pence)}.</p>
   }
 
   const plotW = Math.max(1, width - padL - padR)
@@ -235,7 +247,7 @@ export function TrendChart({ points }: { points: TrendPoint[] }) {
             <g key={t}>
               <line x1={padL} x2={width - padR} y1={y(t)} y2={y(t)} stroke="var(--grid)" strokeWidth={1} />
               <text x={padL - 8} y={y(t) + 4} textAnchor="end" className="chart-axis">
-                {t >= 1000_00 ? `£${Math.round(t / 100000)}k` : `£${Math.round(t / 100)}`}
+                {axisFormat ? axisFormat(t) : t >= 1000_00 ? `£${Math.round(t / 100000)}k` : `£${Math.round(t / 100)}`}
               </text>
             </g>
           ))}
@@ -266,7 +278,7 @@ export function TrendChart({ points }: { points: TrendPoint[] }) {
               height={plotH}
               fill="transparent"
               onMouseEnter={() =>
-                setTip({ x: x(i), y: y(p.pence) + 12, title: p.label, rows: [{ label: 'Took', value: formatMoney(p.pence), color: 'var(--series-1)' }] })
+                setTip({ x: x(i), y: y(p.pence) + 12, title: p.label, rows: [{ label: seriesLabel, value: format(p.pence), color: 'var(--series-1)' }] })
               }
               onMouseLeave={() => setTip(null)}
             />

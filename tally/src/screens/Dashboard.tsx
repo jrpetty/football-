@@ -43,6 +43,8 @@ import {
   type StockConfig,
 } from '../storage/db.ts'
 import { cellarHealth, type Delivery, type StockCount } from '../core/stock.ts'
+import { searchItems } from '../core/itemHistory.ts'
+import { ItemDetail } from './ItemDetail.tsx'
 import { costOf } from '../core/margin.ts'
 import { marginReport } from '../core/margin.ts'
 import { forecastWeek, MIN_FOR_WEATHER, type DayWeather } from '../core/forecast.ts'
@@ -95,6 +97,9 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
   const [onlyUnbalanced, setOnlyUnbalanced] = useState(false)
   const [itemSort, setItemSort] = useState<'value' | 'quantity'>('value')
   const [showAllItems, setShowAllItems] = useState(false)
+  const [itemQuery, setItemQuery] = useState('')
+  /** The item whose card is open, if any. The dashboard stays mounted behind it. */
+  const [openItem, setOpenItem] = useState<{ code: string; name: string } | null>(null)
   const [book, setBook] = useState<PriceBookEntry[]>([])
   const [people, setPeople] = useState<Person[]>([])
   const [shifts, setShifts] = useState<Shift[]>([])
@@ -396,6 +401,21 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
   const deptTotalPence = deptRows.reduce((a, d) => a + d.pence, 0)
   const deptItemsMilli = deptRows.reduce((a, d) => a + d.qtyMilli, 0)
   const withZRead = selected.filter((s) => s.hasZRead).length
+
+  if (openItem) {
+    return (
+      <ItemDetail
+        all={all}
+        code={openItem.code}
+        name={openItem.name}
+        book={book}
+        stock={stock}
+        deliveries={deliveries}
+        stockCounts={stockCounts}
+        onBack={() => setOpenItem(null)}
+      />
+    )
+  }
 
   return (
     <div className="main">
@@ -803,11 +823,26 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
         </ChartCard>
       )}
 
-      {items.length > 0 && (
+      {items.length > 0 && (() => {
+        const matches = searchItems(items, itemQuery)
+        const shownItems = itemQuery.trim() !== '' ? matches : showAllItems ? items : items.slice(0, 12)
+        return (
         <ChartCard
           title="What people actually bought"
           subtitle={`${items.length} lines on the till`}
         >
+          {/* Type a drink, get its whole story. The search runs over every
+              line the till has ever sold, not just the rows on show. */}
+          <div className="item-search">
+            <input
+              aria-label="Find an item"
+              type="search"
+              placeholder="Find a drink — Taddy, wine, crisps…"
+              value={itemQuery}
+              onChange={(e) => setItemQuery(e.target.value)}
+            />
+          </div>
+
           <div className="chip-row" style={{ marginBottom: 12 }}>
             <button type="button" className="chip" aria-pressed={itemSort === 'value'} onClick={() => setItemSort('value')}>
               By takings
@@ -842,19 +877,41 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
                 </tr>
               </thead>
               <tbody>
-                {(showAllItems ? items : items.slice(0, 12)).map((i) => (
-                  <tr key={i.code}>
-                    <th scope="row">{i.name}</th>
+                {shownItems.map((i) => (
+                  // The whole row opens the item's own card; the button in the
+                  // name cell is what a screen reader lands on.
+                  <tr
+                    key={i.code}
+                    className="item-row"
+                    onClick={() => setOpenItem({ code: i.code, name: i.name })}
+                  >
+                    <th scope="row">
+                      <button
+                        type="button"
+                        className="item-open"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setOpenItem({ code: i.code, name: i.name })
+                        }}
+                      >
+                        {i.name}
+                      </button>
+                    </th>
                     <td className="num">{formatQty(i.qtyMilli)}</td>
                     <td className="num">{formatMoney(i.pence)}</td>
                     <td className="num">{i.avgPencePerItem === null ? '—' : formatMoney(i.avgPencePerItem)}</td>
                     <td className="num">{(i.percentBp / 100).toFixed(2)}%</td>
                   </tr>
                 ))}
+                {shownItems.length === 0 && (
+                  <tr>
+                    <td colSpan={5}>Nothing the till sells matches “{itemQuery}”.</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
-          {items.length > 12 && (
+          {itemQuery.trim() === '' && items.length > 12 && (
             <div className="alts">
               <button type="button" className="btn-small" onClick={() => setShowAllItems((v) => !v)}>
                 {showAllItems ? 'Show the top twelve' : `Show all ${items.length}`}
@@ -862,7 +919,8 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
             </div>
           )}
         </ChartCard>
-      )}
+        )
+      })()}
 
       {gp.costedCount > 0 && (
         <ChartCard

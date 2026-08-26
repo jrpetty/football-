@@ -676,6 +676,42 @@ try {
   const alertCount = await page.locator('.alert').count()
   check('and never more than five of them', alertCount > 0 && alertCount <= 5, `got ${alertCount}`)
 
+  console.log('\nOne item, its whole story')
+  // The costs and the price were set earlier in the run, so the card can be
+  // checked with every panel lit: history, price, margin, and the cellar.
+  await page.fill('input[aria-label="Find an item"]', 'taddy')
+  await page.waitForTimeout(250)
+  const foundTable = page.locator('.card:has-text("What people actually bought") table.data')
+  const found = await foundTable.innerText()
+  check('search narrows to the matching lines', found.includes('PINT TADDY LAGER') && !found.includes('CRISPS'), found.slice(0, 160))
+  check('halves included, since they are taddy too', found.includes('HALF TADDY LAGER'))
+
+  await page.click('.item-open:has-text("PINT TADDY LAGER")')
+  await page.waitForTimeout(400)
+  const card = await page.locator('.main').innerText()
+  check('the card leads with the item', /PINT TADDY LAGER/.test(card))
+  check('how many ever sold', /Sold\s+120/i.test(card), card.slice(0, 200))
+  check('what it took', card.includes('£480.00'))
+  check('what one goes for, against the board', /£4\.00/.test(card) && /board/i.test(card))
+  // By this point the run has already staged the brewery rise to £108 a
+  // firkin, so the card must show the margin as it stands NOW: £1.50 a pint
+  // against the £4.20 board is 64.3% — and the squeeze note beside it.
+  check('its margin from the cellar cost, as it stands today', /64\.3%/.test(card), card.slice(0, 260))
+  check('with the squeeze called out on the card', /board has not moved/.test(card))
+  check('what is left downstairs', /14\.5 pints/.test(card), 'the cellar leg on the same card')
+  check('and the weekday that sold it', /Sun/.test(card))
+
+  await page.click('button:has-text("Back to the trade")')
+  await page.waitForTimeout(300)
+  await page.fill('input[aria-label="Find an item"]', 'guinness')
+  await page.waitForTimeout(250)
+  check(
+    'a drink the till has never sold says so',
+    (await page.locator('.main').innerText()).includes('Nothing the till sells matches'),
+  )
+  await page.fill('input[aria-label="Find an item"]', '')
+  await page.waitForTimeout(200)
+
   console.log('\nStaff records')
   await page.click('button:has-text("Rota")')
   await page.waitForSelector('.chip:has-text("Records")', { timeout: 5000 })
