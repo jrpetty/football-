@@ -1,0 +1,446 @@
+[
+  {
+    "name": "The £700 one",
+    "budget": 700,
+    "resolution": "1080p",
+    "refreshHz": 144,
+    "total": 582,
+    "cpu": "AMD Ryzen 5 5600",
+    "gpu": "Intel Arc A580",
+    "cpuShort": "Ryzen 5 5600",
+    "gpuShort": "Intel Arc A580",
+    "vram": 8,
+    "cores": 6,
+    "threads": 12,
+    "ram": "16GB DDR4",
+    "storage": "nvme-gen4",
+    "powerW": 260,
+    "psuW": 400,
+    "cyberpunk1440": 43,
+    "bom": [
+      {
+        "cat": "GPU",
+        "price": 160,
+        "part": "Intel Arc A580"
+      },
+      {
+        "cat": "CPU",
+        "price": 80,
+        "part": "AMD Ryzen 5 5600"
+      },
+      {
+        "cat": "Motherboard",
+        "price": 75,
+        "part": "AM4 board (B450 / B550 / X570)"
+      },
+      {
+        "cat": "Memory",
+        "price": 35,
+        "part": "16GB DDR4 (2 sticks)"
+      },
+      {
+        "cat": "Storage",
+        "price": 70,
+        "part": "1TB nvme-gen4"
+      },
+      {
+        "cat": "PSU",
+        "price": 60,
+        "part": "550W 80+ Bronze/Gold, reputable OEM"
+      },
+      {
+        "cat": "Case",
+        "price": 70,
+        "part": "mainstream case, adequate airflow"
+      },
+      {
+        "cat": "Cooler",
+        "price": 32,
+        "part": "single-tower air cooler"
+      }
+    ],
+    "rows": [
+      {
+        "game": "Counter-Strike 2",
+        "fps": 355,
+        "low": 263,
+        "high": 448,
+        "low1": 216,
+        "limiter": "balanced"
+      },
+      {
+        "game": "Fortnite",
+        "fps": 122,
+        "low": 90,
+        "high": 153,
+        "low1": 74,
+        "limiter": "gpu"
+      },
+      {
+        "game": "Cyberpunk 2077",
+        "fps": 65,
+        "low": 48,
+        "high": 81,
+        "low1": 44,
+        "limiter": "gpu"
+      },
+      {
+        "game": "Baldur's Gate 3",
+        "fps": 71,
+        "low": 53,
+        "high": 89,
+        "low1": 48,
+        "limiter": "cpu"
+      },
+      {
+        "game": "Call of Duty Black Ops 6",
+        "fps": 107,
+        "low": 79,
+        "high": 134,
+        "low1": 67,
+        "limiter": "gpu"
+      },
+      {
+        "game": "Elden Ring",
+        "fps": 60,
+        "low": 44,
+        "high": 76,
+        "low1": 46,
+        "limiter": "engine-cap"
+      }
+    ]
+  },
+  {
+    "name": "The £1,100 one",
+    "budget": 1100,
+    "resolution": "1440p",
+    "refreshHz": 144,
+    "total": 1089,
+    "cpu": "AMD Ryzen 7 5800X3D",
+    "gpu": "AMD Radeon RX 9070",
+    "cpuShort": "Ryzen 7 5800X3D",
+    "gpuShort": "Radeon RX 9070",
+    "vram": 16,
+    "cores": 8,
+    "threads": 16,
+    "ram": "32GB DDR4",
+    "storage": "nvme-gen4",
+    "powerW": 332,
+    "psuW": 500,
+    "cyberpunk1440": 83,
+    "bom": [
+      {
+        "cat": "GPU",
+        "price": 520,
+        "part": "AMD Radeon RX 9070"
+      },
+      {
+        "cat": "CPU",
+        "price": 200,
+        "part": "AMD Ryzen 7 5800X3D"
+      },
+      {
+        "cat": "Motherboard",
+        "price": 75,
+        "part": "AM4 board (B450 / B550 / X570)"
+      },
+      {
+        "cat": "Memory",
+        "price": 62,
+        "part": "32GB DDR4 (2 sticks)"
+      },
+      {
+        "cat": "Storage",
+        "price": 70,
+        "part": "1TB nvme-gen4"
+      },
+      {
+        "cat": "PSU",
+        "price": 60,
+        "part": "550W 80+ Bronze/Gold, reputable OEM"
+      },
+      {
+        "cat": "Case",
+        "price": 70,
+        "part": "mainstream case, adequate airflow"
+      },
+      {
+        "cat": "Cooler",
+        "price": 32,
+        "part": "single-tower air cooler"
+      }
+    ],
+    "rows": [
+      {
+        "game": "Counter-Strike 2",
+        "fps": 370,
+        "low": 303,
+        "high": 436,
+        "low1": 232,
+        "limiter": "gpu"
+      },
+      {
+        "game": "Fortnite",
+        "fps": 146,
+        "low": 120,
+        "high": 172,
+        "low1": 91,
+        "limiter": "gpu"
+      },
+      {
+        "game": "Cyberpunk 2077",
+        "fps": 83,
+        "low": 68,
+        "high": 98,
+        "low1": 58,
+        "limiter": "gpu"
+      },
+      {
+        "game": "Baldur's Gate 3",
+        "fps": 92,
+        "low": 75,
+        "high": 108,
+        "low1": 63,
+        "limiter": "cpu"
+      },
+      {
+        "game": "Call of Duty Black Ops 6",
+        "fps": 142,
+        "low": 117,
+        "high": 168,
+        "low1": 92,
+        "limiter": "gpu"
+      },
+      {
+        "game": "Elden Ring",
+        "fps": 60,
+        "low": 49,
+        "high": 71,
+        "low1": 47,
+        "limiter": "engine-cap"
+      }
+    ]
+  },
+  {
+    "name": "The £1,800 one",
+    "budget": 1800,
+    "resolution": "1440p",
+    "refreshHz": 165,
+    "total": 1719,
+    "cpu": "AMD Ryzen 7 7800X3D",
+    "gpu": "NVIDIA GeForce RTX 4080 Super",
+    "cpuShort": "Ryzen 7 7800X3D",
+    "gpuShort": "GeForce RTX 4080 Super",
+    "vram": 16,
+    "cores": 8,
+    "threads": 16,
+    "ram": "32GB DDR5",
+    "storage": "nvme-gen4",
+    "powerW": 426,
+    "psuW": 650,
+    "cyberpunk1440": 115,
+    "bom": [
+      {
+        "cat": "GPU",
+        "price": 900,
+        "part": "NVIDIA GeForce RTX 4080 Super"
+      },
+      {
+        "cat": "CPU",
+        "price": 350,
+        "part": "AMD Ryzen 7 7800X3D"
+      },
+      {
+        "cat": "Motherboard",
+        "price": 130,
+        "part": "AM5 board (B650 / B650E / X670E)"
+      },
+      {
+        "cat": "Memory",
+        "price": 95,
+        "part": "32GB DDR5 (2 sticks)"
+      },
+      {
+        "cat": "Storage",
+        "price": 70,
+        "part": "1TB nvme-gen4"
+      },
+      {
+        "cat": "PSU",
+        "price": 72,
+        "part": "650W 80+ Gold"
+      },
+      {
+        "cat": "Case",
+        "price": 70,
+        "part": "mainstream case, adequate airflow"
+      },
+      {
+        "cat": "Cooler",
+        "price": 32,
+        "part": "single-tower air cooler"
+      }
+    ],
+    "rows": [
+      {
+        "game": "Counter-Strike 2",
+        "fps": 456,
+        "low": 374,
+        "high": 538,
+        "low1": 285,
+        "limiter": "gpu"
+      },
+      {
+        "game": "Fortnite",
+        "fps": 192,
+        "low": 157,
+        "high": 226,
+        "low1": 120,
+        "limiter": "gpu"
+      },
+      {
+        "game": "Cyberpunk 2077",
+        "fps": 115,
+        "low": 95,
+        "high": 136,
+        "low1": 80,
+        "limiter": "gpu"
+      },
+      {
+        "game": "Baldur's Gate 3",
+        "fps": 112,
+        "low": 92,
+        "high": 132,
+        "low1": 78,
+        "limiter": "cpu"
+      },
+      {
+        "game": "Call of Duty Black Ops 6",
+        "fps": 194,
+        "low": 159,
+        "high": 229,
+        "low1": 126,
+        "limiter": "gpu"
+      },
+      {
+        "game": "Elden Ring",
+        "fps": 60,
+        "low": 49,
+        "high": 71,
+        "low1": 42,
+        "limiter": "engine-cap"
+      }
+    ]
+  },
+  {
+    "name": "The £2,600 one",
+    "budget": 2600,
+    "resolution": "2160p",
+    "refreshHz": 144,
+    "total": 2012,
+    "cpu": "AMD Ryzen 9 9900X3D",
+    "gpu": "NVIDIA GeForce RTX 5080",
+    "cpuShort": "Ryzen 9 9900X3D",
+    "gpuShort": "GeForce RTX 5080",
+    "vram": 16,
+    "cores": 12,
+    "threads": 24,
+    "ram": "32GB DDR5",
+    "storage": "nvme-gen4",
+    "powerW": 464,
+    "psuW": 800,
+    "cyberpunk1440": 129,
+    "bom": [
+      {
+        "cat": "GPU",
+        "price": 1000,
+        "part": "NVIDIA GeForce RTX 5080"
+      },
+      {
+        "cat": "CPU",
+        "price": 480,
+        "part": "AMD Ryzen 9 9900X3D"
+      },
+      {
+        "cat": "Motherboard",
+        "price": 130,
+        "part": "AM5 board (B650 / B650E / X670E)"
+      },
+      {
+        "cat": "Memory",
+        "price": 95,
+        "part": "32GB DDR5 (2 sticks)"
+      },
+      {
+        "cat": "Storage",
+        "price": 70,
+        "part": "1TB nvme-gen4"
+      },
+      {
+        "cat": "PSU",
+        "price": 110,
+        "part": "850W 80+ Gold, ATX 3.x"
+      },
+      {
+        "cat": "Case",
+        "price": 95,
+        "part": "mesh-front airflow case"
+      },
+      {
+        "cat": "Cooler",
+        "price": 32,
+        "part": "single-tower air cooler"
+      }
+    ],
+    "rows": [
+      {
+        "game": "Counter-Strike 2",
+        "fps": 314,
+        "low": 257,
+        "high": 370,
+        "low1": 196,
+        "limiter": "gpu"
+      },
+      {
+        "game": "Fortnite",
+        "fps": 117,
+        "low": 96,
+        "high": 137,
+        "low1": 73,
+        "limiter": "gpu"
+      },
+      {
+        "game": "Cyberpunk 2077",
+        "fps": 65,
+        "low": 54,
+        "high": 77,
+        "low1": 45,
+        "limiter": "gpu"
+      },
+      {
+        "game": "Baldur's Gate 3",
+        "fps": 90,
+        "low": 74,
+        "high": 107,
+        "low1": 71,
+        "limiter": "gpu"
+      },
+      {
+        "game": "Call of Duty Black Ops 6",
+        "fps": 118,
+        "low": 97,
+        "high": 140,
+        "low1": 77,
+        "limiter": "gpu"
+      },
+      {
+        "game": "Elden Ring",
+        "fps": 60,
+        "low": 49,
+        "high": 71,
+        "low1": 47,
+        "limiter": "engine-cap"
+      }
+    ]
+  }
+]

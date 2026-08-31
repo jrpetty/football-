@@ -1,0 +1,130 @@
+import { chromium } from 'playwright';
+import { readFileSync, writeFileSync } from 'node:fs';
+
+const builds = JSON.parse(readFileSync('marketing/builds.json', 'utf8'));
+const fonts = readFileSync('src/ui/fonts.css', 'utf8');
+
+const P = {
+  bg: '#0a0d12', surface: '#10151c', surface2: '#161d26', line: '#242e3a', lineStrong: '#34404e',
+  ink: '#e6ecf3', muted: '#9aabbc', faint: '#83919f', accent: '#8ec1ee',
+  good: '#5ec27a', gpu: '#62a8dd', cpu: '#d3a34a', spec: '#c2a04c',
+};
+
+const css = `
+${fonts}
+*{margin:0;padding:0;box-sizing:border-box}
+body{width:1080px;height:1350px;background:${P.bg};color:${P.ink};
+  font-family:'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased;
+  display:flex;flex-direction:column;padding:64px 60px 52px;position:relative;overflow:hidden}
+body::after{content:'';position:absolute;inset:0;
+  background:radial-gradient(900px 620px at 78% -8%, rgba(142,193,238,.10), transparent 62%);pointer-events:none}
+.brandrow{display:flex;align-items:center;gap:12px;margin-bottom:44px}
+.mark{width:32px;height:32px;flex:none}
+.wordmark{font-family:'IBM Plex Mono',monospace;font-size:19px;font-weight:500;letter-spacing:.24em}
+.kicker{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.18em;
+  text-transform:uppercase;color:${P.faint}}
+h1{font-size:78px;line-height:.98;font-weight:600;letter-spacing:-.028em;margin-bottom:16px}
+h1 em{font-style:normal;color:${P.accent}}
+.sub{font-size:23px;line-height:1.42;color:${P.muted};margin-bottom:40px;max-width:850px}
+.parts{display:flex;gap:14px;margin-bottom:34px}
+.part{flex:1;background:${P.surface};border:1px solid ${P.line};border-radius:12px;padding:20px 22px}
+.part .k{font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:${P.faint};margin-bottom:9px}
+.part .v{font-size:26px;font-weight:600;line-height:1.18;letter-spacing:-.012em}
+.part .d{font-family:'IBM Plex Mono',monospace;font-size:13.5px;color:${P.muted};margin-top:8px}
+.rows{background:${P.surface};border:1px solid ${P.line};border-radius:12px;overflow:hidden;margin-bottom:auto}
+.row{display:flex;align-items:center;gap:18px;padding:25px 26px;border-bottom:1px solid ${P.line}}
+.row:last-child{border-bottom:none}
+.row .g{flex:1;font-size:23px;font-weight:500;display:flex;align-items:center;gap:11px}
+.cap{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:${P.spec};border:1px solid ${P.spec}55;border-radius:4px;padding:3px 7px}
+.strip{display:flex;gap:26px;margin-bottom:30px;padding:0 4px}
+.strip div{font-family:'IBM Plex Mono',monospace;font-size:15px;color:${P.faint}}
+.strip b{color:${P.muted};font-weight:400}
+.row .bar{width:210px;height:9px;background:${P.surface2};border-radius:5px;overflow:hidden}
+.row .bar i{display:block;height:100%;background:${P.accent};border-radius:5px}
+.row .n{width:120px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:31px;font-weight:500;
+  letter-spacing:-.02em}
+.row .n span{font-size:14px;color:${P.faint};margin-left:4px;letter-spacing:0}
+.foot{display:flex;align-items:flex-end;gap:20px;margin-top:34px;padding-top:24px;border-top:1px solid ${P.line}}
+.foot .note{flex:1;font-size:16px;line-height:1.5;color:${P.faint}}
+.foot .note b{color:${P.spec};font-weight:600}
+.price{text-align:right;flex:none}
+.price .k{font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:${P.faint};margin-bottom:4px}
+.price .v{font-family:'IBM Plex Mono',monospace;font-size:56px;font-weight:600;letter-spacing:-.03em;color:${P.ink}}
+.why{display:flex;gap:16px;margin-top:34px}
+.why div{flex:1;border-left:2px solid ${P.accent}66;padding:4px 0 4px 16px}
+.why .t{font-size:19px;font-weight:600;margin-bottom:6px}
+.why .b{font-size:16px;line-height:1.48;color:${P.faint}}
+`;
+
+const MARK = `<svg class="mark" viewBox="0 0 20 20">
+  <circle cx="10" cy="10" r="8.1" fill="none" stroke="${P.ink}" stroke-opacity=".5" stroke-width="1.5"/>
+  <path d="M10 1.9v2.3M18.1 10h-2.3M10 18.1v-2.3M1.9 10h2.3" stroke="${P.ink}" stroke-opacity=".5" stroke-width="1.3" stroke-linecap="round"/>
+  <path d="M10 10l3.4-3.4" stroke="${P.accent}" stroke-width="1.8" stroke-linecap="round"/>
+  <circle cx="10" cy="10" r="1.7" fill="${P.accent}"/></svg>`;
+
+const esc = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+
+function buildCard(b) {
+  const shown = b.rows.filter(r => r.fps).slice(0, 6);
+  const max = Math.max(...shown.map(r => r.fps));
+  return `<div class="brandrow">${MARK}<span class="wordmark">RIGCHECK</span>
+    <span class="kicker">£${b.budget} budget · ${b.resolution} ${b.refreshHz}Hz</span></div>
+  <h1>£${b.total.toLocaleString()}<br><em>gaming PC</em></h1>
+  <div class="sub">${esc(b.gpu)} paired with a ${esc(b.cpuShort)}. Estimated frame rates at ${b.resolution}, high preset, no upscaling.</div>
+  <div class="parts">
+    <div class="part"><div class="k">graphics</div><div class="v">${esc(b.gpuShort)}</div><div class="d">${b.vram}GB VRAM</div></div>
+    <div class="part"><div class="k">processor</div><div class="v">${esc(b.cpuShort)}</div><div class="d">${b.cores}C / ${b.threads}T</div></div>
+    <div class="part"><div class="k">power</div><div class="v">${b.powerW}W</div><div class="d">${b.psuW}W PSU</div></div>
+  </div>
+  <div class="strip"><div>memory <b>${esc(b.ram)}</b></div><div>storage <b>${esc(b.storage)}</b></div>
+    <div>1% lows <b>${Math.min(...shown.map(r => r.low1))}–${Math.max(...shown.map(r => r.low1))} fps</b></div></div>
+  <div class="rows">${shown.map(r => `<div class="row">
+      <span class="g">${esc(r.game)}${r.limiter === 'engine-cap' ? '<span class="cap">engine cap</span>' : ''}</span>
+      <span class="bar"><i style="width:${Math.round((r.fps / max) * 100)}%"></i></span>
+      <span class="n">${r.fps}<span>fps</span></span></div>`).join('')}</div>
+  <div class="foot">
+    <div class="note"><b>Modelled, not measured.</b> These come from a physics-and-specification model,
+      not from a benchmark run on this exact machine. Treat the ordering as reliable and the absolute
+      numbers as ±20%.</div>
+    <div class="price"><div class="k">under budget by</div><div class="v">£${(b.budget - b.total).toLocaleString()}</div></div>
+  </div>`;
+}
+
+function coverCard() {
+  return `<div class="brandrow">${MARK}<span class="wordmark">RIGCHECK</span>
+    <span class="kicker">2026 build guide</span></div>
+  <h1>Four PC builds,<br><em>and what they<br>actually do</em></h1>
+  <div class="sub">£582 to £2,012. Every frame rate below comes out of an open model that shows its
+    working — and tells you where it is guessing.</div>
+  <div class="rows" style="margin-bottom:auto">
+    ${builds.map(b => `<div class="row">
+        <span class="g">£${b.total.toLocaleString()}<span style="color:${P.faint};font-size:17px;font-weight:400">${esc(b.gpuShort)}</span></span>
+        <span class="bar"><i style="width:${Math.round((b.cyberpunk1440 / Math.max(...builds.map(x => x.cyberpunk1440))) * 100)}%"></i></span>
+        <span class="n">${b.cyberpunk1440}<span>fps</span></span></div>`).join('')}
+  </div>
+  <div class="why">
+    <div><div class="t">Every number opens</div><div class="b">Tap any frame rate and it shows the terms, the multipliers and where each came from.</div></div>
+    <div><div class="t">It argues with itself</div><div class="b">One screen exists to tell you how much of the model is measured and how much is recalled.</div></div>
+    <div><div class="t">No affiliate links</div><div class="b">Nothing here is sponsored and no part is promoted. The planner picks on price and fit.</div></div>
+  </div>
+  <div class="foot"><div class="note">All four running <b style="color:${P.muted}">Cyberpunk 2077 at 1440p</b>,
+    high preset, no upscaling — the same test on every build, so the ladder means something. Swipe for
+    each one in full: parts, power draw and six games apiece.</div></div>`;
+}
+
+const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] });
+const page = await browser.newPage({ viewport: { width: 1080, height: 1350 }, deviceScaleFactor: 2 });
+const shots = [];
+const cards = [{ name: '01-cover', html: coverCard() }, ...builds.map((b, i) => ({ name: `0${i + 2}-${b.budget}`, html: buildCard(b) }))];
+for (const c of cards) {
+  await page.setContent(`<style>${css}</style>${c.html}`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(300);
+  const f = `marketing/images/${c.name}.png`;
+  await page.screenshot({ path: f });
+  shots.push(f);
+}
+await browser.close();
+console.log(shots.join('\n'));
