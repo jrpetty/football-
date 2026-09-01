@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 
 const builds = JSON.parse(readFileSync('marketing/builds.json', 'utf8'));
 const bottleneck = JSON.parse(readFileSync('marketing/bottleneck.json', 'utf8'));
+const pillars = JSON.parse(readFileSync('marketing/pillars.json', 'utf8'));
 const fonts = readFileSync('src/ui/fonts.css', 'utf8');
 
 const P = {
@@ -76,6 +77,19 @@ h1 em{font-style:normal;color:${P.accent}}
 .bn .gain.nil{color:${P.faint}}
 .legend{display:flex;gap:10px;margin-bottom:26px;padding:0 4px}
 .legend div{flex:1;font-family:'IBM Plex Mono',monospace;font-size:13px;color:${P.faint};text-align:center}
+/* before → after, with the gain carrying the emphasis */
+.ba{display:flex;align-items:center;gap:18px;padding:26px 24px;border-bottom:1px solid ${P.line}}
+.ba:last-child{border-bottom:none}
+.ba .g{flex:1;font-size:22px;font-weight:500}
+.ba .n{font-family:'IBM Plex Mono',monospace;font-size:28px;color:${P.faint};width:78px;text-align:right}
+.ba .n.to{color:${P.good};font-weight:500}
+.ba .arrow{color:${P.faint};font-size:17px}
+.ba .gain{width:104px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:32px;font-weight:600;color:${P.good}}
+.ba .gain.nil{color:${P.faint};font-weight:400}
+.big{font-family:'IBM Plex Mono',monospace;font-size:150px;font-weight:600;letter-spacing:-.05em;
+  line-height:1;color:${P.good};margin:10px 0 6px}
+.big.warn{color:${P.spec}}
+.card-note{font-size:20px;line-height:1.5;color:${P.muted};max-width:880px;margin-bottom:30px}
 `;
 
 const MARK = `<svg class="mark" viewBox="0 0 20 20">
@@ -143,6 +157,64 @@ function bottleneckCard(s) {
   </div>`;
 }
 
+
+function silentTaxCard(t) {
+  const best = t.rows[0];
+  return `<div class="brandrow">${MARK}<span class="wordmark">RIGCHECK</span>
+    <span class="kicker">${esc(t.gpu)} · ${esc(t.cpu)} · ${t.resolution}</span></div>
+  <h1>Your PC might be<br><em>losing 40% for free</em></h1>
+  <div class="card-note">One stick of RAM instead of two. Same capacity, same speed, same everything else —
+    the memory just runs on one channel instead of two. It is the most common invisible fault there is,
+    and fixing it costs nothing if you already own the second stick.</div>
+  <div class="rows" style="margin-bottom:auto">${t.rows.map((r) => `<div class="ba">
+      <span class="g">${esc(r.game)}</span>
+      <span class="n">${r.before}</span><span class="arrow">→</span><span class="n to">${r.after}</span>
+      <span class="gain ${r.gainPct < 5 ? 'nil' : ''}">+${r.gainPct}%</span></div>`).join('')}</div>
+  <div class="foot"><div class="note"><b>Modelled, not measured.</b> Check yours: Task Manager →
+    Performance → Memory, and look for "Slots used". If it says 1 of 2 or 1 of 4 and you have a spare
+    stick, that is ${best.gainPct}% in ${esc(best.game)} sitting in a drawer.</div></div>`;
+}
+
+function vramCard(v) {
+  const at4k = v.rows.find((r) => r.resolution === '2160p');
+  return `<div class="brandrow">${MARK}<span class="wordmark">RIGCHECK</span>
+    <span class="kicker">${esc(v.a.brand)} · 8GB vs 16GB · Cyberpunk 2077</span></div>
+  <h1>Twice the VRAM.<br><em>Zero extra frames.</em></h1>
+  <div class="card-note">The same chip, sold with 8GB and with 16GB. At the resolutions most people
+    actually play at, the extra memory does exactly nothing — because the card runs out of shader
+    performance long before it runs out of memory.</div>
+  <div class="rows" style="margin-bottom:auto">${v.rows.map((r) => `<div class="ba">
+      <span class="g">${r.resolution}${r.vramWall ? '<span class="cap">8GB runs out</span>' : ''}</span>
+      <span class="n">${r.a}</span><span class="arrow">→</span><span class="n ${r.gainPct ? 'to' : ''}">${r.b}</span>
+      <span class="gain ${r.gainPct < 5 ? 'nil' : ''}">${r.gainPct ? '+' : ''}${r.gainPct}%</span></div>`).join('')}</div>
+  <div class="why">
+    <div><div class="t">Why it happens</div><div class="b">A card runs out of shader throughput long before it runs out of memory. Extra VRAM only helps once memory is the thing you ran out of.</div></div>
+    <div><div class="t">When it does matter</div><div class="b">4K, heavy texture mods, ray tracing, and anything that streams a lot of assets. That is a real list — it is just not most people.</div></div>
+    <div><div class="t">What to buy instead</div><div class="b">At the same money, a faster chip with less memory beats a slower chip with more, unless you are at 4K.</div></div>
+  </div>
+  <div class="foot"><div class="note"><b>Modelled, not measured.</b> The 16GB card earns its money at 4K
+    and only at 4K — ${at4k ? `+${at4k.gainPct}% there, and the 8GB version hits a memory wall` : 'where the 8GB version runs out'}.
+    Below that you are paying for headroom you cannot use.</div></div>`;
+}
+
+function stillGoodCard(s) {
+  return `<div class="brandrow">${MARK}<span class="wordmark">RIGCHECK</span>
+    <span class="kicker">${s.resolution} · high · ${esc(s.cpu)}</span></div>
+  <h1>Is your old card<br><em>still good?</em></h1>
+  <div class="card-note">Four cards between eight and twelve years old, against three games people are
+    playing now. Modern shooters are kinder to old hardware than anyone expects; one 2020 title is where
+    they stop.</div>
+  <div class="legend"><div style="flex:1;text-align:left">&nbsp;</div>
+    ${s.cards[0].rows.map((r) => `<div>${esc(r.game.split(' ')[0].toUpperCase())}</div>`).join('')}</div>
+  <div class="rows" style="margin-bottom:auto">${s.cards.map((c) => `<div class="bn">
+      <span class="g">${esc(c.gpu)}<span style="color:${P.faint};font-size:15px">${c.year} · ${c.vram}GB</span></span>
+      <span class="pts">${c.rows.map((r) => `<span class="pt${r.fps && r.fps >= 60 ? ' top' : ''}">${r.fps ?? '—'}</span>`).join('')}</span>
+    </div>`).join('')}</div>
+  <div class="foot"><div class="note"><b>Modelled, not measured.</b> A dash means the card cannot run that
+    game at all — the GTX 970's 3.5GB is below what Cyberpunk will start with. Everything else here still
+    clears 60 in a shooter, which is most of what most people play.</div></div>`;
+}
+
 function coverCard() {
   return `<div class="brandrow">${MARK}<span class="wordmark">RIGCHECK</span>
     <span class="kicker">2026 build guide</span></div>
@@ -172,6 +244,9 @@ const cards = [
   { name: '01-cover', html: coverCard() },
   ...builds.map((b, i) => ({ name: `0${i + 2}-${b.budget}`, html: buildCard(b) })),
   ...bottleneck.map((s, i) => ({ name: `bottleneck-${i + 1}-${s.gpuShort.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`, html: bottleneckCard(s) })),
+  { name: 'silent-tax-memory-channels', html: silentTaxCard(pillars.silentTax) },
+  ...(pillars.vram ? [{ name: 'myth-vram', html: vramCard(pillars.vram) }] : []),
+  { name: 'still-good-old-cards', html: stillGoodCard(pillars.stillGood) },
 ];
 for (const c of cards) {
   await page.setContent(`<style>${css}</style>${c.html}`, { waitUntil: 'networkidle' });

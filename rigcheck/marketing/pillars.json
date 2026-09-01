@@ -1,0 +1,459 @@
+{
+  "silentTax": {
+    "cpu": "Ryzen 7 5800X3D",
+    "gpu": "GeForce RTX 4070",
+    "resolution": "1080p",
+    "rows": [
+      {
+        "game": "Baldur's Gate 3",
+        "before": 65,
+        "after": 95,
+        "gainPct": 46,
+        "limiter": "cpu"
+      },
+      {
+        "game": "Total War Warhammer III",
+        "before": 83,
+        "after": 117,
+        "gainPct": 41,
+        "limiter": "cpu"
+      },
+      {
+        "game": "Counter-Strike 2",
+        "before": 336,
+        "after": 469,
+        "gainPct": 40,
+        "limiter": "cpu"
+      },
+      {
+        "game": "Cyberpunk 2077",
+        "before": 90,
+        "after": 113,
+        "gainPct": 26,
+        "limiter": "gpu"
+      },
+      {
+        "game": "Fortnite",
+        "before": 168,
+        "after": 196,
+        "gainPct": 17,
+        "limiter": "gpu"
+      }
+    ]
+  },
+  "vram": {
+    "a": {
+      "id": "nvidia-geforce-rtx-4060-ti-8gb",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 4060 Ti",
+      "variant": "8GB",
+      "fullName": "NVIDIA GeForce RTX 4060 Ti 8GB",
+      "architecture": "Ada Lovelace",
+      "chip": "AD106",
+      "launchDate": "2023-05-24",
+      "formFactor": "desktop",
+      "shaders": 4352,
+      "baseClockMHz": 2310,
+      "boostClockMHz": 2535,
+      "vramGB": 8,
+      "vramType": "GDDR6",
+      "memBusBits": 128,
+      "memBandwidthGBs": 288,
+      "fp32TFLOPS": 22.065,
+      "tdpW": 160,
+      "processNm": 5,
+      "pcieGen": 4,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 550,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.4",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "id": [
+          "model-knowledge"
+        ],
+        "vendor": [
+          "model-knowledge"
+        ],
+        "brand": [
+          "model-knowledge"
+        ],
+        "variant": [
+          "model-knowledge"
+        ],
+        "fullName": [
+          "model-knowledge"
+        ],
+        "architecture": [
+          "model-knowledge"
+        ],
+        "chip": [
+          "model-knowledge"
+        ],
+        "launchDate": [
+          "model-knowledge"
+        ],
+        "formFactor": [
+          "model-knowledge"
+        ],
+        "shaders": [
+          "model-knowledge"
+        ],
+        "baseClockMHz": [
+          "model-knowledge"
+        ],
+        "boostClockMHz": [
+          "model-knowledge"
+        ],
+        "vramGB": [
+          "model-knowledge"
+        ],
+        "vramType": [
+          "model-knowledge"
+        ],
+        "memBusBits": [
+          "model-knowledge"
+        ],
+        "memBandwidthGBs": [
+          "model-knowledge"
+        ],
+        "fp32TFLOPS": [
+          "model-knowledge"
+        ],
+        "tdpW": [
+          "model-knowledge"
+        ],
+        "processNm": [
+          "model-knowledge"
+        ],
+        "pcieGen": [
+          "model-knowledge"
+        ],
+        "pcieLanes": [
+          "model-knowledge"
+        ],
+        "lengthMm": [
+          "model-knowledge"
+        ],
+        "slotWidth": [
+          "model-knowledge"
+        ],
+        "powerConnectors": [
+          "model-knowledge"
+        ],
+        "recommendedPsuW": [
+          "model-knowledge"
+        ],
+        "caps": [
+          "model-knowledge"
+        ],
+        "driverStatus": [
+          "model-knowledge"
+        ],
+        "driverEolDate": [
+          "model-knowledge"
+        ]
+      }
+    },
+    "b": {
+      "id": "nvidia-geforce-rtx-4060-ti-16gb",
+      "vendor": "nvidia",
+      "brand": "GeForce RTX 4060 Ti",
+      "variant": "16GB",
+      "fullName": "NVIDIA GeForce RTX 4060 Ti 16GB",
+      "architecture": "Ada Lovelace",
+      "chip": "AD106",
+      "launchDate": "2023-07-18",
+      "formFactor": "desktop",
+      "shaders": 4352,
+      "baseClockMHz": 2310,
+      "boostClockMHz": 2535,
+      "vramGB": 16,
+      "vramType": "GDDR6",
+      "memBusBits": 128,
+      "memBandwidthGBs": 288,
+      "fp32TFLOPS": 22.065,
+      "tdpW": 165,
+      "processNm": 5,
+      "pcieGen": 4,
+      "pcieLanes": 8,
+      "lengthMm": null,
+      "slotWidth": 2,
+      "powerConnectors": "1x8-pin",
+      "recommendedPsuW": 550,
+      "caps": {
+        "meshShaders": true,
+        "rayTracing": true,
+        "dxFeatureLevel": "12_2",
+        "shaderModel": "6_7",
+        "vulkanVersion": "1.4",
+        "resizableBar": true,
+        "av1Encode": true,
+        "upscaling": [
+          "dlss",
+          "fsr",
+          "xess",
+          "tsr"
+        ]
+      },
+      "driverStatus": "current",
+      "driverEolDate": null,
+      "_prov": {
+        "id": [
+          "model-knowledge"
+        ],
+        "vendor": [
+          "model-knowledge"
+        ],
+        "brand": [
+          "model-knowledge"
+        ],
+        "variant": [
+          "model-knowledge"
+        ],
+        "fullName": [
+          "model-knowledge"
+        ],
+        "architecture": [
+          "model-knowledge"
+        ],
+        "chip": [
+          "model-knowledge"
+        ],
+        "launchDate": [
+          "model-knowledge"
+        ],
+        "formFactor": [
+          "model-knowledge"
+        ],
+        "shaders": [
+          "model-knowledge"
+        ],
+        "baseClockMHz": [
+          "model-knowledge"
+        ],
+        "boostClockMHz": [
+          "model-knowledge"
+        ],
+        "vramGB": [
+          "model-knowledge"
+        ],
+        "vramType": [
+          "model-knowledge"
+        ],
+        "memBusBits": [
+          "model-knowledge"
+        ],
+        "memBandwidthGBs": [
+          "model-knowledge"
+        ],
+        "fp32TFLOPS": [
+          "model-knowledge"
+        ],
+        "tdpW": [
+          "model-knowledge"
+        ],
+        "processNm": [
+          "model-knowledge"
+        ],
+        "pcieGen": [
+          "model-knowledge"
+        ],
+        "pcieLanes": [
+          "model-knowledge"
+        ],
+        "lengthMm": [
+          "model-knowledge"
+        ],
+        "slotWidth": [
+          "model-knowledge"
+        ],
+        "powerConnectors": [
+          "model-knowledge"
+        ],
+        "recommendedPsuW": [
+          "model-knowledge"
+        ],
+        "caps": [
+          "model-knowledge"
+        ],
+        "driverStatus": [
+          "model-knowledge"
+        ],
+        "driverEolDate": [
+          "model-knowledge"
+        ]
+      }
+    },
+    "rows": [
+      {
+        "resolution": "1080p",
+        "a": 90,
+        "b": 90,
+        "gainPct": 0,
+        "vramWall": false
+      },
+      {
+        "resolution": "1440p",
+        "a": 61,
+        "b": 61,
+        "gainPct": 0,
+        "vramWall": false
+      },
+      {
+        "resolution": "2160p",
+        "a": 24,
+        "b": 30,
+        "gainPct": 25,
+        "vramWall": true
+      }
+    ]
+  },
+  "stillGood": {
+    "resolution": "1080p",
+    "cpu": "Ryzen 5 5600",
+    "cards": [
+      {
+        "gpu": "GeForce GTX 970",
+        "year": "2014",
+        "vram": 4,
+        "rows": [
+          {
+            "game": "Counter-Strike 2",
+            "fps": 246,
+            "status": "ok"
+          },
+          {
+            "game": "Fortnite",
+            "fps": 60,
+            "status": "ok"
+          },
+          {
+            "game": "Cyberpunk 2077",
+            "fps": null,
+            "status": "WILL_NOT_RUN"
+          }
+        ]
+      },
+      {
+        "gpu": "GeForce GTX 1060",
+        "year": "2016",
+        "vram": 6,
+        "rows": [
+          {
+            "game": "Counter-Strike 2",
+            "fps": 251,
+            "status": "ok"
+          },
+          {
+            "game": "Fortnite",
+            "fps": 70,
+            "status": "ok"
+          },
+          {
+            "game": "Cyberpunk 2077",
+            "fps": 34,
+            "status": "ok"
+          }
+        ]
+      },
+      {
+        "gpu": "Radeon RX 580",
+        "year": "2017",
+        "vram": 8,
+        "rows": [
+          {
+            "game": "Counter-Strike 2",
+            "fps": 287,
+            "status": "ok"
+          },
+          {
+            "game": "Fortnite",
+            "fps": 83,
+            "status": "ok"
+          },
+          {
+            "game": "Cyberpunk 2077",
+            "fps": 41,
+            "status": "ok"
+          }
+        ]
+      },
+      {
+        "gpu": "GeForce GTX 1080 Ti",
+        "year": "2017",
+        "vram": 11,
+        "rows": [
+          {
+            "game": "Counter-Strike 2",
+            "fps": 359,
+            "status": "ok"
+          },
+          {
+            "game": "Fortnite",
+            "fps": 125,
+            "status": "ok"
+          },
+          {
+            "game": "Cyberpunk 2077",
+            "fps": 66,
+            "status": "ok"
+          }
+        ]
+      }
+    ]
+  },
+  "resolutionCost": [
+    {
+      "gpu": "GeForce RTX 4070",
+      "rows": [
+        {
+          "resolution": "1080p",
+          "fps": 117
+        },
+        {
+          "resolution": "1440p",
+          "fps": 80
+        },
+        {
+          "resolution": "2160p",
+          "fps": 40
+        }
+      ]
+    },
+    {
+      "gpu": "GeForce RTX 4090",
+      "rows": [
+        {
+          "resolution": "1080p",
+          "fps": 162
+        },
+        {
+          "resolution": "1440p",
+          "fps": 145
+        },
+        {
+          "resolution": "2160p",
+          "fps": 79
+        }
+      ]
+    }
+  ]
+}

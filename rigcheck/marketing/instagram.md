@@ -161,3 +161,88 @@ shooters at 1440p live on the card. The answer is per-game and it always was.
 Modelled, not measured — ordering reliable, absolutes ±20%.
 
 #cpu #bottleneck #pcbuild #buildapc #pcgaming #ryzen #pchardware
+
+---
+
+## POST 7 — the silent tax (pillar 1)
+
+**Image:** `images/silent-tax-memory-channels.png`
+
+**Caption:**
+
+Your PC might be 46% slower than it should be, and fixing it costs nothing.
+
+One stick of RAM instead of two. Same capacity, same speed, same everything —
+the memory just runs on one channel instead of two. Identical hardware, 1080p:
+
+Baldur's Gate 3 — 65 → 95fps (+46%)
+Total War Warhammer III — 83 → 117fps (+41%)
+Counter-Strike 2 — 336 → 469fps (+40%)
+Cyberpunk 2077 — 90 → 113fps (+26%)
+
+Check yours right now: Task Manager → Performance → Memory → "Slots used". If
+it says 1 of 2 or 1 of 4 and you have a spare stick in a drawer, that is 46%
+in Baldur's Gate 3 you are not using.
+
+This is the single most common invisible fault in PC building. It happens
+because one 16GB stick and two 8GB sticks cost about the same and one of them
+looks tidier in the box.
+
+Modelled, not measured. Ordering reliable, absolutes ±20%.
+
+#pcbuild #buildapc #pcgaming #ram #pctips #pchardware #gamingpc #pcmasterrace #techtips
+
+---
+
+## POST 8 — the VRAM myth (pillar 2)
+
+**Image:** `images/myth-vram.png`
+
+**Caption:**
+
+Twice the VRAM. Zero extra frames.
+
+Same chip, sold with 8GB and with 16GB. Cyberpunk 2077, high, no upscaling:
+
+1080p — 90 vs 90fps
+1440p — 61 vs 61fps
+2160p — 24 vs 30fps
+
+Identical at the two resolutions almost everybody plays at. The 16GB card earns
+its money at 4K and nowhere else, because a card runs out of shader throughput
+long before it runs out of memory.
+
+VRAM matters when memory is the thing you ran out of — 4K, heavy texture mods,
+ray tracing, asset streaming. That is a real list. It is just not most people,
+and "more VRAM" has become a way to sell a slower chip.
+
+Modelled, not measured. Ordering reliable, absolutes ±20%.
+
+#vram #pcbuild #buildapc #gpu #pcgaming #pchardware #techtips #graphicscard
+
+---
+
+## POST 9 — is your old card still good (pillar 4)
+
+**Image:** `images/still-good-old-cards.png`
+
+**Caption:**
+
+A 2017 graphics card still does 66fps in Cyberpunk 2077.
+
+Four old cards, three current games, 1080p high:
+
+GeForce GTX 1080 Ti (2017) — CS2 359, Fortnite 125, Cyberpunk 66
+GeForce GTX 1060 (2016) — CS2 251, Fortnite 70, Cyberpunk 34
+GeForce GTX 970 (2014) — CS2 246, Fortnite 60, Cyberpunk won't start
+
+The GeForce GTX 970 is where the line falls. Its 4GB is below what Cyberpunk will
+launch with at all — not slow, not playable at low, just refused.
+
+Everything above that line still clears 60 in a shooter, which is most of what
+most people actually play. "You need an upgrade" is usually a statement about
+one game, not about your PC.
+
+Modelled, not measured. Ordering reliable, absolutes ±20%.
+
+#pcgaming #buildapc #gtx1080ti #gtx1060 #pcbuild #retropc #pchardware #budgetgaming
