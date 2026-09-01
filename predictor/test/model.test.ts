@@ -385,3 +385,48 @@ test('turning per-team home advantage off leaves every club on the shared figure
     close(r.homeDefenceDev[t]!, 0, 1e-12)
   }
 })
+
+// --- The headline score, and its right to say "draw" -------------------------
+
+import { headlineScore, DRAW_THRESHOLD } from '../src/core/predict.ts'
+
+const modal = {
+  home: { home: 2, away: 1, prob: 0.09 },
+  draw: { home: 1, away: 1, prob: 0.11 },
+  away: { home: 1, away: 2, prob: 0.08 },
+}
+
+test('a draw can be the headline score when the model rates one highly', () => {
+  // The exact case the old rule could never express: a favourite on 45%, but a
+  // draw above its long-run average. Picking inside the likeliest outcome gave
+  // 2-1 here and could not produce a draw in forty consecutive forecasts.
+  const s = headlineScore({ probs: { home: 0.45, draw: 0.28, away: 0.27 }, modalScore: modal })
+  assert.deepEqual({ home: s.home, away: s.away }, { home: 1, away: 1 })
+})
+
+test('a clear favourite still gets a winning scoreline', () => {
+  const s = headlineScore({ probs: { home: 0.74, draw: 0.18, away: 0.08 }, modalScore: modal })
+  assert.equal(s.home > s.away, true, 'a 74% favourite must not be given a draw')
+
+  const away = headlineScore({ probs: { home: 0.2, draw: 0.24, away: 0.56 }, modalScore: modal })
+  assert.equal(away.away > away.home, true)
+})
+
+test('the draw threshold is the boundary, and it is inclusive', () => {
+  const just = headlineScore({ probs: { home: 0.45, draw: DRAW_THRESHOLD, away: 0.3 }, modalScore: modal })
+  assert.deepEqual({ home: just.home, away: just.away }, { home: 1, away: 1 })
+
+  const under = headlineScore({ probs: { home: 0.47, draw: DRAW_THRESHOLD - 0.01, away: 0.29 }, modalScore: modal })
+  assert.equal(under.home > under.away, true, 'below the threshold the favourite wins the headline')
+})
+
+test('a draw is not called against a clear favourite', () => {
+  // Hull 26 / draw 26 / Villa 48. The draw clears its own average, but Villa
+  // are 22 points clear of it — calling 1-1 here reads as broken.
+  const s = headlineScore({ probs: { home: 0.26, draw: 0.26, away: 0.48 }, modalScore: modal })
+  assert.equal(s.away > s.home, true, 'a 48% favourite must not be given a draw')
+
+  // Everton 36 / draw 27 / United 37 — genuinely tight, so a draw is right.
+  const tight = headlineScore({ probs: { home: 0.36, draw: 0.27, away: 0.37 }, modalScore: modal })
+  assert.deepEqual({ home: tight.home, away: tight.away }, { home: 1, away: 1 })
+})
