@@ -121,7 +121,7 @@ const CLAIMS = [
       return p[p.length - 1].fps - p.find((x) => x.cpu === 'Ryzen 5 5600').fps === 52; } },
   { file: 'instagram.md', quote: 'The best processor on this list is worth +67% in Baldur\'s Gate 3\nand +4% in Fortnite.',
     check: () => lad('4070', "Baldur's Gate 3").gainPct === 67 && lad('4070', 'Fortnite').gainPct === 4 },
-  { file: 'instagram.md', quote: 'Your PC might be 46% slower than it should be',
+  { file: 'instagram.md', quote: 'A second stick of RAM is worth up to +46%',
     check: () => Math.max(...pillars.silentTax.rows.map((r) => r.gainPct)) === 46 },
   { file: 'instagram.md', quote: 'Same chip, sold with 8GB and with 16GB.',
     // Not a number — a fact about the parts. If these ever stop being one die
@@ -190,6 +190,79 @@ for (const c of CLAIMS) {
   try { ok = c.check(validation); } catch (e) { fail(`${c.file}: check threw`, String(e.message)); continue; }
   if (ok) pass(`${c.file}: ${c.quote.replace(/\n/g, ' ').slice(0, 62)}`);
   else fail(`${c.file}: the data no longer supports this`, `"${c.quote.replace(/\n/g, ' ').slice(0, 78)}"`);
+}
+
+
+// --- 4. templates ----------------------------------------------------------
+// The renderer is where numbers turn into pixels, and the markdown checks above
+// cannot see pixels. The silent-tax card once said "40%" in 78-point type over
+// data that said 46 — typed into the template, never derived. So: walk every
+// template literal in cards.mjs (recursing into ${...} expressions, which hold
+// nested templates), drop the expressions, and fail on any figure with a unit
+// left in the literal text. A number the data did not put there is a number
+// nobody is checking.
+console.log('\nTEMPLATES — no hand-typed figures in the card renderer?');
+{
+  const hits = [];
+  const UNIT = /(£\s*\d[\d,]*|\d[\d,]*(?:\.\d+)?\s*(?:%|fps|GB|Hz|W\b))/g;
+  // Terms that carry a digit but are names, not data.
+  const ALLOW = ['1% low'];
+  const check = (text) => {
+    // Inline styles are presentation, not content: border-radius:50% is a circle.
+    let t = text.replace(/style="[^"]*"/g, ' ');
+    for (const a of ALLOW) t = t.split(a).join(' ');
+    for (const m of t.match(UNIT) ?? []) hits.push(`"${m}" in "${text.replace(/\s+/g, ' ').trim().slice(0, 70)}"`);
+  };
+  const skipString = (src, i) => { const q = src[i]; let j = i + 1; while (j < src.length && src[j] !== q) { if (src[j] === '\\') j++; j++; } return j + 1; };
+  // Index of the closing backtick for a template whose body starts at i.
+  const templateEnd = (src, i) => {
+    while (i < src.length) {
+      const c = src[i];
+      if (c === '\\') { i += 2; continue; }
+      if (c === '`') return i;
+      if (c === '$' && src[i + 1] === '{') { i = exprEnd(src, i + 2); continue; }
+      i++;
+    }
+    return src.length;
+  };
+  // Index just past the brace that closes an expression whose body starts at i.
+  const exprEnd = (src, i) => {
+    let depth = 1;
+    while (i < src.length && depth) {
+      const c = src[i];
+      if (c === '`') { i = templateEnd(src, i + 1) + 1; continue; }
+      if (c === "'" || c === '"') { i = skipString(src, i); continue; }
+      if (c === '{') depth++; else if (c === '}') depth--;
+      i++;
+    }
+    return i;
+  };
+  const scanTemplate = (t) => {
+    let i = 0, text = '';
+    while (i < t.length) {
+      if (t[i] === '$' && t[i + 1] === '{') { const e = exprEnd(t, i + 2); scanSource(t.slice(i + 2, e - 1)); text += ' · '; i = e; continue; }
+      text += t[i++];
+    }
+    check(text);
+  };
+  const scanSource = (src) => {
+    let i = 0;
+    while (i < src.length) {
+      const c = src[i];
+      if (c === '/' && src[i + 1] === '/') { const j = src.indexOf('\n', i); i = j < 0 ? src.length : j; continue; }
+      if (c === '/' && src[i + 1] === '*') { const j = src.indexOf('*/', i + 2); i = j < 0 ? src.length : j + 2; continue; }
+      if (c === "'" || c === '"') { i = skipString(src, i); continue; }
+      if (c === '`') { const e = templateEnd(src, i + 1); scanTemplate(src.slice(i + 1, e)); i = e + 1; continue; }
+      i++;
+    }
+  };
+  let src = readFileSync('marketing/scripts/cards.mjs', 'utf8');
+  // The stylesheet is not content: widths like 100% live there by design.
+  const cssAt = src.indexOf('const css = `');
+  if (cssAt >= 0) { const e = templateEnd(src, cssAt + 'const css = `'.length); src = src.slice(0, cssAt) + src.slice(e + 1); }
+  scanSource(src);
+  if (hits.length) for (const h of hits) fail('cards.mjs has a typed-in figure', h);
+  else pass('cards.mjs: every figure on every card comes through a data expression');
 }
 
 console.log(`\n${failures === 0 ? 'PASS' : `${failures} FAILURE${failures > 1 ? 'S' : ''}`} — ${CLAIMS.length} claims, ${builds.length} builds, ${bottleneck.length} ladders`);

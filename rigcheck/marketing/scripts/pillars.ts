@@ -78,6 +78,9 @@ const OLD = ['nvidia-geforce-gtx-970', 'nvidia-geforce-gtx-1060-6gb', 'amd-radeo
 const stillGood = {
   resolution: '1080p' as Resolution,
   cpu: data.cpus.get('amd-ryzen-5-5600')!.brand,
+  // The published minimum the 970 sits under. On the card, not in anyone's head.
+  minVramGame: name('cyberpunk-2077'),
+  minVramGB: data.games.get('cyberpunk-2077')?.requirements.minVramGB ?? null,
   cards: OLD.filter((g) => data.gpus.has(g)).map((g) => {
     const rec = data.gpus.get(g)!;
     const b = base('amd-ryzen-5-5600', g, '1080p');
@@ -85,6 +88,12 @@ const stillGood = {
       gpu: rec.brand,
       year: rec.launchDate?.slice(0, 4) ?? '',
       vram: rec.vramGB,
+      // Every memory size this card was sold in, from the catalogue, so the
+      // card can say "the 1060 shipped as 3GB and 6GB" without anyone typing
+      // it. Same brand string, different variant record.
+      siblings: [...new Set([...data.gpus.values()]
+        .filter((o) => o.brand === rec.brand && o.vramGB != null)
+        .map((o) => o.vramGB as number))].sort((a, b) => a - b),
       rows: ['counter-strike-2', 'fortnite', 'cyberpunk-2077'].filter((x) => data.games.has(x)).map((x) => {
         const r = fps(b, x, '1080p');
         return { game: name(x), fps: r.fps, status: r.status };

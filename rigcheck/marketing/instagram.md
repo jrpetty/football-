@@ -101,7 +101,7 @@ Modelled, not measured. Ordering reliable, absolutes ±20%. Prices are recalled,
 1. "Two of these builds run Cyberpunk at 65fps. One costs £582, the other £2,012."
    → reveal: different resolutions. Then show the like-for-like ladder.
 
-2. "£293 more money. 14 more frames."
+2. "£293 more money. 14 more frames." — still: `images/hero-price-step.png`
    → the flattening curve, and where to stop spending.
 
 3. "My tool says it is 11% accurate. Here is why I do not believe it."
@@ -109,9 +109,9 @@ Modelled, not measured. Ordering reliable, absolutes ±20%. Prices are recalled,
 
 ---
 
-## POST 5 — the bottleneck carousel (2 slides)
+## POST 5 — the bottleneck carousel (3 slides)
 
-**Images:** `images/bottleneck-1-geforce-rtx-4070.png`, `images/bottleneck-2-geforce-rtx-4090.png`
+**Images:** `images/bottleneck-fan-out.png` (the hook — both cards side by side), then `images/bottleneck-1-geforce-rtx-4070.png`, `images/bottleneck-2-geforce-rtx-4090.png`
 
 **Caption:**
 
@@ -147,7 +147,7 @@ Modelled, not measured. Ordering reliable, absolutes ±20%.
 
 ## POST 6 — the single-stat hook
 
-**Image:** `images/bottleneck-1-geforce-rtx-4070.png`
+**Image:** `images/hero-cpu-split.png`
 
 **Caption:**
 
@@ -172,7 +172,7 @@ Modelled, not measured — ordering reliable, absolutes ±20%.
 
 **Caption:**
 
-Your PC might be 46% slower than it should be, and fixing it costs nothing.
+A second stick of RAM is worth up to +46%, and if you already own one it costs nothing.
 
 One stick of RAM instead of two. Same capacity, same speed, same everything —
 the memory just runs on one channel instead of two. Identical hardware, 1080p:
@@ -183,7 +183,7 @@ Counter-Strike 2 — 336 → 469fps (+40%)
 Cyberpunk 2077 — 90 → 113fps (+26%)
 
 Check yours right now: Task Manager → Performance → Memory → "Slots used". If
-it says 1 of 2 or 1 of 4 and you have a spare stick in a drawer, that is 46%
+it says 1 of 2 or 1 of 4 and you have a spare stick in a drawer, that is +46%
 in Baldur's Gate 3 you are not using.
 
 This is the single most common invisible fault in PC building. It happens
@@ -226,7 +226,7 @@ Modelled, not measured. Ordering reliable, absolutes ±20%.
 
 ## POST 9 — is your old card still good (pillar 4)
 
-**Image:** `images/still-good-old-cards.png`
+**Images:** `images/still-good-old-cards.png`, then `images/hero-gtx-970.png` — the 21fps beat as its own slide
 
 **Caption:**
 

@@ -23,7 +23,22 @@ npm run marketing:verify                 # fact-checks the prose against them
 
 `cards.mjs` needs a Chromium binary; it uses the one Playwright ships with.
 `images/` is gitignored — it is generated, so it is never committed, and it has
-to be re-rendered after any data change.
+to be re-rendered after any data change. What renders, and the form each one
+takes — chosen by the data's job, never a table:
+
+| Image | Form |
+|---|---|
+| `01-cover` | price → frame-rate curve, knee computed and marked |
+| `02-700` … `05-2600` | six games as bars against the refresh target, 1% low as a tick |
+| `bottleneck-fan-out` | two slope panels indexed to the slowest chip — bunched vs fanned |
+| `bottleneck-1-*`, `-2-*` | the same slope chart, one card per panel, for the swipe |
+| `silent-tax-memory-channels` | dumbbell per game, indexed so bar length is the gain |
+| `myth-vram` | paired columns, one hue in two shades; identical pairs labelled once |
+| `still-good-old-cards` | three small multiples with a 60fps rule |
+| `hero-price-step`, `hero-cpu-split`, `hero-gtx-970` | one derived figure, one line |
+
+Every figure on every card arrives through a data expression; `verify.mjs`
+walks the renderer's templates and fails on a typed-in number with a unit.
 
 **Do not hand-edit the figures** — the whole point is that they trace back to
 the model, and a number typed in by hand is exactly the thing this project

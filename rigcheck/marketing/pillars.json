@@ -329,11 +329,16 @@
   "stillGood": {
     "resolution": "1080p",
     "cpu": "Ryzen 5 5600",
+    "minVramGame": "Cyberpunk 2077",
+    "minVramGB": 6,
     "cards": [
       {
         "gpu": "GeForce GTX 970",
         "year": "2014",
         "vram": 4,
+        "siblings": [
+          4
+        ],
         "rows": [
           {
             "game": "Counter-Strike 2",
@@ -356,6 +361,10 @@
         "gpu": "GeForce GTX 1060",
         "year": "2016",
         "vram": 6,
+        "siblings": [
+          3,
+          6
+        ],
         "rows": [
           {
             "game": "Counter-Strike 2",
@@ -378,6 +387,10 @@
         "gpu": "Radeon RX 580",
         "year": "2017",
         "vram": 8,
+        "siblings": [
+          4,
+          8
+        ],
         "rows": [
           {
             "game": "Counter-Strike 2",
@@ -400,6 +413,9 @@
         "gpu": "GeForce GTX 1080 Ti",
         "year": "2017",
         "vram": 11,
+        "siblings": [
+          11
+        ],
         "rows": [
           {
             "game": "Counter-Strike 2",

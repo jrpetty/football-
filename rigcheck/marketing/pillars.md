@@ -12,7 +12,7 @@ how much I like them.
 
 ## 1 · The silent tax — free performance you are losing
 
-**The hook:** your PC might be 46% slower than it should be, and fixing it costs nothing.
+**The hook:** a second stick of RAM is worth up to +46%, and if you already own one it costs nothing.
 
 The strongest thing this project has. One stick of RAM instead of two, on
 identical hardware, at 1080p:
@@ -69,7 +69,7 @@ where the same ladder on a 4090 turns +10% into +75% is a genuine
 GPU is not the limit.**
 
 **Cadence:** fortnightly, rotating the card and the resolution.
-**Assets:** `images/bottleneck-1-*.png`, `bottleneck-2-*.png`
+**Assets:** `images/bottleneck-fan-out.png` for the hook, `bottleneck-1-*.png` and `bottleneck-2-*.png` for the swipe, `hero-cpu-split.png` for the single-stat post
 
 ---
 
