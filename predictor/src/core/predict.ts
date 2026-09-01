@@ -143,14 +143,42 @@ export function venueDetail(attackDev: number, defenceDev: number): string {
  * The ledger records this same figure, because the score a forecast is graded
  * on has to be the score it actually showed.
  */
+export const DRAW_THRESHOLD = 0.25
+/**
+ * How far behind the favourite a draw may sit and still be the headline.
+ *
+ * Without this the threshold alone produced Hull 1-1 Aston Villa on a
+ * 26/26/48 forecast — a draw called against a side the model made a 48%
+ * favourite, which reads as broken however defensible the arithmetic. Over
+ * 1,140 matches this cuts draw calls from 24.8% to 19.6% and exact scorelines
+ * from 12.1% to 11.8%, and lifts outcome agreement from 50.1% to 51.1%. Worth
+ * it: slightly under-calling draws is a better failure than calling one
+ * against a clear favourite.
+ */
+export const DRAW_MAX_GAP = 0.2
+
 export function headlineScore(f: {
   probs: Probs
   modalScore: { home: Scoreline; draw: Scoreline; away: Scoreline }
 }): { home: number; away: number } {
   const { home, draw, away } = f.probs
-  if (home >= draw && home >= away) return f.modalScore.home
-  if (away >= draw && away >= home) return f.modalScore.away
-  return f.modalScore.draw
+  // A draw is almost never the single likeliest outcome — a favourite on 40%
+  // beats a draw on 25% every time — so picking the score inside the likeliest
+  // outcome could never produce one. Across the first forty forecasts it
+  // produced exactly zero, while a quarter of matches are drawn and the model
+  // itself put the average draw at 24.6%. The model was right and the display
+  // rule was gagging it.
+  //
+  // So: call a draw when the model rates one at or above its own long-run
+  // average. Measured over 1,140 walk-forward matches that predicts draws
+  // 24.8% of the time against a real 24.5%, and lifts exact scorelines from
+  // 10.1% to 12.1%. It costs agreement with the outcome bar in about a quarter
+  // of matches, which is a presentation cost rather than an inconsistency:
+  // "the closest single score is 1-1" and "the likeliest single outcome is a
+  // home win" are both true and answer different questions.
+  const favourite = Math.max(home, away)
+  if (draw >= DRAW_THRESHOLD && favourite - draw <= DRAW_MAX_GAP) return f.modalScore.draw
+  return home >= away ? f.modalScore.home : f.modalScore.away
 }
 
 /** Build a fixture prediction, recording every term as it is applied. */
