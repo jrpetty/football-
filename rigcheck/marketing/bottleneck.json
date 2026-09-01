@@ -1,0 +1,352 @@
+[
+  {
+    "gpu": "NVIDIA GeForce RTX 4070",
+    "gpuShort": "GeForce RTX 4070",
+    "resolution": "1440p",
+    "cpus": [
+      "Ryzen 5 3600",
+      "Ryzen 5 5600",
+      "Ryzen 7 5800X3D",
+      "Ryzen 7 7800X3D"
+    ],
+    "games": [
+      {
+        "game": "Baldur's Gate 3",
+        "points": [
+          {
+            "cpu": "Ryzen 5 3600",
+            "fps": 60,
+            "limiter": "cpu"
+          },
+          {
+            "cpu": "Ryzen 5 5600",
+            "fps": 74,
+            "limiter": "cpu"
+          },
+          {
+            "cpu": "Ryzen 7 5800X3D",
+            "fps": 91,
+            "limiter": "cpu"
+          },
+          {
+            "cpu": "Ryzen 7 7800X3D",
+            "fps": 100,
+            "limiter": "balanced"
+          }
+        ],
+        "gainPct": 67,
+        "cpuBound": 3
+      },
+      {
+        "game": "Total War Warhammer III",
+        "points": [
+          {
+            "cpu": "Ryzen 5 3600",
+            "fps": 71,
+            "limiter": "cpu"
+          },
+          {
+            "cpu": "Ryzen 5 5600",
+            "fps": 87,
+            "limiter": "balanced"
+          },
+          {
+            "cpu": "Ryzen 7 5800X3D",
+            "fps": 99,
+            "limiter": "gpu"
+          },
+          {
+            "cpu": "Ryzen 7 7800X3D",
+            "fps": 102,
+            "limiter": "gpu"
+          }
+        ],
+        "gainPct": 44,
+        "cpuBound": 1
+      },
+      {
+        "game": "Counter-Strike 2",
+        "points": [
+          {
+            "cpu": "Ryzen 5 3600",
+            "fps": 298,
+            "limiter": "cpu"
+          },
+          {
+            "cpu": "Ryzen 5 5600",
+            "fps": 345,
+            "limiter": "balanced"
+          },
+          {
+            "cpu": "Ryzen 7 5800X3D",
+            "fps": 361,
+            "limiter": "gpu"
+          },
+          {
+            "cpu": "Ryzen 7 7800X3D",
+            "fps": 366,
+            "limiter": "gpu"
+          }
+        ],
+        "gainPct": 23,
+        "cpuBound": 1
+      },
+      {
+        "game": "Cyberpunk 2077",
+        "points": [
+          {
+            "cpu": "Ryzen 5 3600",
+            "fps": 73,
+            "limiter": "balanced"
+          },
+          {
+            "cpu": "Ryzen 5 5600",
+            "fps": 78,
+            "limiter": "gpu"
+          },
+          {
+            "cpu": "Ryzen 7 5800X3D",
+            "fps": 80,
+            "limiter": "gpu"
+          },
+          {
+            "cpu": "Ryzen 7 7800X3D",
+            "fps": 80,
+            "limiter": "gpu"
+          }
+        ],
+        "gainPct": 10,
+        "cpuBound": 0
+      },
+      {
+        "game": "Fortnite",
+        "points": [
+          {
+            "cpu": "Ryzen 5 3600",
+            "fps": 135,
+            "limiter": "gpu"
+          },
+          {
+            "cpu": "Ryzen 5 5600",
+            "fps": 140,
+            "limiter": "gpu"
+          },
+          {
+            "cpu": "Ryzen 7 5800X3D",
+            "fps": 141,
+            "limiter": "gpu"
+          },
+          {
+            "cpu": "Ryzen 7 7800X3D",
+            "fps": 141,
+            "limiter": "gpu"
+          }
+        ],
+        "gainPct": 4,
+        "cpuBound": 0
+      },
+      {
+        "game": "Factorio",
+        "points": [
+          {
+            "cpu": "Ryzen 5 3600",
+            "fps": 60,
+            "limiter": "engine-cap"
+          },
+          {
+            "cpu": "Ryzen 5 5600",
+            "fps": 60,
+            "limiter": "engine-cap"
+          },
+          {
+            "cpu": "Ryzen 7 5800X3D",
+            "fps": 60,
+            "limiter": "engine-cap"
+          },
+          {
+            "cpu": "Ryzen 7 7800X3D",
+            "fps": 60,
+            "limiter": "engine-cap"
+          }
+        ],
+        "gainPct": 0,
+        "cpuBound": 0
+      }
+    ]
+  },
+  {
+    "gpu": "NVIDIA GeForce RTX 4090",
+    "gpuShort": "GeForce RTX 4090",
+    "resolution": "1440p",
+    "cpus": [
+      "Ryzen 5 3600",
+      "Ryzen 5 5600",
+      "Ryzen 7 5800X3D",
+      "Ryzen 7 7800X3D"
+    ],
+    "games": [
+      {
+        "game": "Total War Warhammer III",
+        "points": [
+          {
+            "cpu": "Ryzen 5 3600",
+            "fps": 71,
+            "limiter": "cpu"
+          },
+          {
+            "cpu": "Ryzen 5 5600",
+            "fps": 93,
+            "limiter": "cpu"
+          },
+          {
+            "cpu": "Ryzen 7 5800X3D",
+            "fps": 122,
+            "limiter": "cpu"
+          },
+          {
+            "cpu": "Ryzen 7 7800X3D",
+            "fps": 145,
+            "limiter": "cpu"
+          }
+        ],
+        "gainPct": 104,
+        "cpuBound": 4
+      },
+      {
+        "game": "Baldur's Gate 3",
+        "points": [
+          {
+            "cpu": "Ryzen 5 3600",
+            "fps": 60,
+            "limiter": "cpu"
+          },
+          {
+            "cpu": "Ryzen 5 5600",
+            "fps": 75,
+            "limiter": "cpu"
+          },
+          {
+            "cpu": "Ryzen 7 5800X3D",
+            "fps": 95,
+            "limiter": "cpu"
+          },
+          {
+            "cpu": "Ryzen 7 7800X3D",
+            "fps": 114,
+            "limiter": "cpu"
+          }
+        ],
+        "gainPct": 90,
+        "cpuBound": 4
+      },
+      {
+        "game": "Cyberpunk 2077",
+        "points": [
+          {
+            "cpu": "Ryzen 5 3600",
+            "fps": 83,
+            "limiter": "cpu"
+          },
+          {
+            "cpu": "Ryzen 5 5600",
+            "fps": 104,
+            "limiter": "cpu"
+          },
+          {
+            "cpu": "Ryzen 7 5800X3D",
+            "fps": 130,
+            "limiter": "cpu"
+          },
+          {
+            "cpu": "Ryzen 7 7800X3D",
+            "fps": 145,
+            "limiter": "balanced"
+          }
+        ],
+        "gainPct": 75,
+        "cpuBound": 3
+      },
+      {
+        "game": "Counter-Strike 2",
+        "points": [
+          {
+            "cpu": "Ryzen 5 3600",
+            "fps": 310,
+            "limiter": "cpu"
+          },
+          {
+            "cpu": "Ryzen 5 5600",
+            "fps": 398,
+            "limiter": "cpu"
+          },
+          {
+            "cpu": "Ryzen 7 5800X3D",
+            "fps": 470,
+            "limiter": "cpu"
+          },
+          {
+            "cpu": "Ryzen 7 7800X3D",
+            "fps": 526,
+            "limiter": "balanced"
+          }
+        ],
+        "gainPct": 70,
+        "cpuBound": 3
+      },
+      {
+        "game": "Fortnite",
+        "points": [
+          {
+            "cpu": "Ryzen 5 3600",
+            "fps": 163,
+            "limiter": "cpu"
+          },
+          {
+            "cpu": "Ryzen 5 5600",
+            "fps": 204,
+            "limiter": "cpu"
+          },
+          {
+            "cpu": "Ryzen 7 5800X3D",
+            "fps": 229,
+            "limiter": "balanced"
+          },
+          {
+            "cpu": "Ryzen 7 7800X3D",
+            "fps": 241,
+            "limiter": "gpu"
+          }
+        ],
+        "gainPct": 48,
+        "cpuBound": 2
+      },
+      {
+        "game": "Factorio",
+        "points": [
+          {
+            "cpu": "Ryzen 5 3600",
+            "fps": 60,
+            "limiter": "engine-cap"
+          },
+          {
+            "cpu": "Ryzen 5 5600",
+            "fps": 60,
+            "limiter": "engine-cap"
+          },
+          {
+            "cpu": "Ryzen 7 5800X3D",
+            "fps": 60,
+            "limiter": "engine-cap"
+          },
+          {
+            "cpu": "Ryzen 7 7800X3D",
+            "fps": 60,
+            "limiter": "engine-cap"
+          }
+        ],
+        "gainPct": 0,
+        "cpuBound": 0
+      }
+    ]
+  }
+]

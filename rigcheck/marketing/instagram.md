@@ -104,3 +104,60 @@ Modelled, not measured. Ordering reliable, absolutes ±20%.
 
 3. "My tool says it is 12% accurate. Here is why I do not believe it."
    → the recalled-fixtures problem, in fifteen seconds.
+
+---
+
+## POST 5 — the bottleneck carousel (2 slides)
+
+**Images:** `images/bottleneck-1-geforce-rtx-4070.png`, `images/bottleneck-2-geforce-rtx-4090.png`
+
+**Caption:**
+
+"Am I CPU bottlenecked?" has no answer until you say which game.
+
+Same four processors — 3600 → 5600 → 5800X3D → 7800X3D — under an RTX 4070 at 1440p:
+
+Baldur's Gate 3: 60 → 100fps (+67%)
+Total War Warhammer III: 71 → 102fps (+44%)
+Cyberpunk 2077: 73 → 80fps (+10%)
+Fortnite: 135 → 141fps (+4%)
+
+Two thirds more frames in one game. Four percent in another. Same parts.
+
+Now swipe. Same four processors, same games, same resolution — on a 4090
+instead. Cyberpunk goes from +10% to +75%. Fortnite from +4% to +48%.
+Nothing about the processors changed. The card stopped being the limit, so the
+processor started being it.
+
+Which is the actual answer:
+
+**Your CPU matters exactly as much as your GPU is not the limit.**
+
+Factorio reads 60 on all eight because Factorio is capped at 60. That is the
+game, not the hardware — worth marking, because a chart that does not makes a
+perfectly good processor look pointless.
+
+Modelled, not measured. Ordering reliable, absolutes ±20%.
+
+#pcbuild #buildapc #cpu #bottleneck #gamingpc #pcgaming #ryzen #pchardware #1440p #pcmasterrace
+
+---
+
+## POST 6 — the single-stat hook
+
+**Image:** `images/bottleneck-1-geforce-rtx-4070.png`
+
+**Caption:**
+
+The best processor on this list is worth +67% in Baldur's Gate 3
+and +4% in Fortnite.
+
+Same graphics card. Same resolution. Same four chips.
+
+If somebody tells you a CPU "bottlenecks" a card without asking what you play,
+they are guessing. Simulation and strategy titles live on the processor;
+shooters at 1440p live on the card. The answer is per-game and it always was.
+
+Modelled, not measured — ordering reliable, absolutes ±20%.
+
+#cpu #bottleneck #pcbuild #buildapc #pcgaming #ryzen #pchardware

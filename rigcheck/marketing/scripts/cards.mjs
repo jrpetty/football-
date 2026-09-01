@@ -2,6 +2,7 @@ import { chromium } from 'playwright';
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const builds = JSON.parse(readFileSync('marketing/builds.json', 'utf8'));
+const bottleneck = JSON.parse(readFileSync('marketing/bottleneck.json', 'utf8'));
 const fonts = readFileSync('src/ui/fonts.css', 'utf8');
 
 const P = {
@@ -57,6 +58,24 @@ h1 em{font-style:normal;color:${P.accent}}
 .why div{flex:1;border-left:2px solid ${P.accent}66;padding:4px 0 4px 16px}
 .why .t{font-size:19px;font-weight:600;margin-bottom:6px}
 .why .b{font-size:16px;line-height:1.48;color:${P.faint}}
+/* One game per row, four processors across it.
+   No bars. Each row scaled to its own maximum, which is the only scaling that
+   fits four numbers spanning 60 to 366 on one card — and under that scaling
+   Factorio's four identical 60s rendered as four full-height bars, which reads
+   as "maxed out" when it means "the engine is capped and the processor changes
+   nothing". The gain column is the story; geometry that argues with it is
+   worse than no geometry. */
+.bn{display:flex;align-items:center;gap:16px;padding:24px;border-bottom:1px solid ${P.line}}
+.bn:last-child{border-bottom:none}
+.bn .g{width:250px;font-size:21px;font-weight:500;display:flex;align-items:center;gap:9px;flex:none}
+.bn .pts{flex:1;display:flex;align-items:baseline;gap:8px}
+.bn .pt{flex:1;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:26px;color:${P.muted}}
+.bn .pt.top{color:${P.accent};font-weight:500}
+.bn .arrow{color:${P.faint};font-size:16px;flex:none}
+.bn .gain{width:96px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:30px;font-weight:500;flex:none}
+.bn .gain.nil{color:${P.faint}}
+.legend{display:flex;gap:10px;margin-bottom:26px;padding:0 4px}
+.legend div{flex:1;font-family:'IBM Plex Mono',monospace;font-size:13px;color:${P.faint};text-align:center}
 `;
 
 const MARK = `<svg class="mark" viewBox="0 0 20 20">
@@ -93,6 +112,37 @@ function buildCard(b) {
   </div>`;
 }
 
+
+function bottleneckCard(s) {
+  const shown = s.games.slice(0, 6);
+  return `<div class="brandrow">${MARK}<span class="wordmark">RIGCHECK</span>
+    <span class="kicker">${esc(s.gpuShort)} · ${s.resolution} · high</span></div>
+  <h1>Does your CPU<br><em>actually matter?</em></h1>
+  <div class="sub">Same graphics card throughout. Four processors underneath it. The answer changes
+    completely depending on which game you are asking about.</div>
+  <div class="legend">${s.cpus.map((c) => `<div>${esc(c.replace('Ryzen ', 'R'))}</div>`).join('')}
+    <div style="width:96px;flex:none;text-align:right">GAIN</div></div>
+  <div class="rows" style="margin-bottom:auto">${shown.map((g) => {
+    const ok = g.points.filter((p) => p.fps);
+    const max = Math.max(...ok.map((p) => p.fps));
+    const capped = g.points.every((p) => p.limiter === 'engine-cap');
+    // Nothing is "best" in a row where every value is the same — highlighting
+    // all four put the accent on the one row where the processor changes
+    // nothing, which is the opposite of what the colour is for.
+    const flat = ok.length > 1 && ok.every((p) => p.fps === ok[0].fps);
+    return `<div class="bn">
+      <span class="g">${esc(g.game)}${capped ? '<span class="cap">engine cap</span>' : ''}</span>
+      <span class="pts">${g.points.map((p, i) => `${i ? '<span class="arrow">→</span>' : ''}<span class="pt${!flat && p.fps === max ? ' top' : ''}">${p.fps ?? '—'}</span>`).join('')}</span>
+      <span class="gain ${g.gainPct < 5 ? 'nil' : ''}">${g.gainPct > 0 ? '+' : ''}${g.gainPct}%</span>
+    </div>`;
+  }).join('')}</div>
+  <div class="foot">
+    <div class="note"><b>Modelled, not measured.</b> The spread on the right is what swapping
+      ${esc(s.cpus[0])} for ${esc(s.cpus[s.cpus.length - 1])} is worth in that game, on this card, at this
+      resolution. Change any of the three and the answer changes.</div>
+  </div>`;
+}
+
 function coverCard() {
   return `<div class="brandrow">${MARK}<span class="wordmark">RIGCHECK</span>
     <span class="kicker">2026 build guide</span></div>
@@ -118,7 +168,11 @@ function coverCard() {
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] });
 const page = await browser.newPage({ viewport: { width: 1080, height: 1350 }, deviceScaleFactor: 2 });
 const shots = [];
-const cards = [{ name: '01-cover', html: coverCard() }, ...builds.map((b, i) => ({ name: `0${i + 2}-${b.budget}`, html: buildCard(b) }))];
+const cards = [
+  { name: '01-cover', html: coverCard() },
+  ...builds.map((b, i) => ({ name: `0${i + 2}-${b.budget}`, html: buildCard(b) })),
+  ...bottleneck.map((s, i) => ({ name: `bottleneck-${i + 1}-${s.gpuShort.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`, html: bottleneckCard(s) })),
+];
 for (const c of cards) {
   await page.setContent(`<style>${css}</style>${c.html}`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(300);

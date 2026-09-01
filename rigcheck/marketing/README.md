@@ -1,16 +1,21 @@
 # Marketing content
 
-Generated from the app, not written by hand. Every figure in `blog-four-builds.md`
-and `instagram.md` comes from `builds.json`, which is produced by running the
-project's own planner and estimator.
+Generated from the app, not written by hand. Every figure in the posts comes
+from `builds.json` or `bottleneck.json`, both produced by running the project's
+own planner and estimator.
+
+- `blog-four-builds.md` — four builds by budget, from the planner
+- `blog-cpu-bottleneck.md` — what four processors are worth, per game, on two cards
+- `instagram.md` — six posts and three reel hooks covering both
 
 ## Regenerating
 
 Run both from the `rigcheck/` directory:
 
 ```
-npx tsx marketing/scripts/plans.ts   # re-runs the planner → builds.json
-node marketing/scripts/cards.mjs     # re-renders images/ from builds.json
+npx tsx marketing/scripts/plans.ts       # the planner → builds.json
+npx tsx marketing/scripts/bottleneck.ts  # the estimator → bottleneck.json
+node marketing/scripts/cards.mjs         # re-renders images/ from both
 ```
 
 `cards.mjs` needs a Chromium binary; it uses the one Playwright ships with.
