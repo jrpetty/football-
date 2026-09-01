@@ -23,6 +23,8 @@ import {
   type BenchContext, type BenchResult, type LatencyPoint, type ScalingPoint,
 } from '../../core/browserbench.ts';
 import { DEFAULT_DEPTH, estimateSeconds, runBenchmark, type Depth, type Progress } from '../bench/run.ts';
+import { benchCard, cardHeadline } from '../../core/benchcard.ts';
+import { saveBenchCard } from '../bench/drawcard.ts';
 
 const DEPTHS: { id: Depth; label: string; sees: string }[] = [
   { id: 'quick', label: 'quick', sees: 'Which adapter is rendering, software rendering, the cache levels and the core topology.' },
@@ -151,6 +153,49 @@ export function BrowserBenchPanel({
   );
 }
 
+/**
+ * Saving what the run found as an image.
+ *
+ * The only thing in this whole project that measures real hardware is the run
+ * that just finished, which makes it the one result worth handing somebody in a
+ * form they can post. What it must not become is a scoreboard: the card carries
+ * what was established about this machine and says in its own footer that it is
+ * not a score and not comparable with anyone else's.
+ *
+ * Drawing is deferred until the button is pressed. Rendering a 2160x2700 canvas
+ * on every readout would cost a visible pause for an image most people never
+ * ask for.
+ */
+function SaveCard({ result }: { result: BenchResult }) {
+  const card = useMemo(() => benchCard(result), [result]);
+  const [state, setState] = useState<'idle' | 'working' | 'saved' | 'failed'>('idle');
+  if (card.empty) return null;
+
+  return (
+    <div className="wizard-nav" style={{ marginTop: 0, marginBottom: 14 }}>
+      <button
+        className="btn"
+        disabled={state === 'working'}
+        onClick={async () => {
+          setState('working');
+          try {
+            setState((await saveBenchCard(card)) ? 'saved' : 'failed');
+          } catch {
+            setState('failed');
+          }
+        }}
+      >
+        {state === 'working' ? 'drawing…' : state === 'saved' ? 'saved' : 'save this as an image'}
+      </button>
+      <span className="mini">
+        {state === 'failed'
+          ? 'This browser would not produce the image.'
+          : cardHeadline(card)}
+      </span>
+    </div>
+  );
+}
+
 function formatDuration(seconds: number): string {
   if (seconds < 90) return `${seconds}s`;
   return `${Math.round(seconds / 60)} min`;
@@ -174,6 +219,8 @@ function BenchReadout({ result, context }: { result: BenchResult; context?: Benc
   return (
     <div style={{ marginTop: 14 }}>
       <div className="verdict-hero" style={{ marginBottom: 14 }}>{benchSummary(result, findings)}</div>
+
+      <SaveCard result={result} />
 
       {/* -- identity ------------------------------------------------------ */}
       {result.gpu && (

@@ -143,6 +143,7 @@ export function SystemHealth() {
   const [sessionNote, setSessionNote] = useStickyState('sh.sessionNote', '');
   const [fixesApplied, setFixesApplied] = useStickyState<AppliedFix[]>('sh.fixesApplied', [], (v) => Array.isArray(v));
   const [saved, setSaved] = useState(false);
+  const [showScript, setShowScript] = useState(false);
 
   const [measurements, setMeasurements] = useStickyState<Measurement[]>('sh.measurements', [], (v) => Array.isArray(v));
   const [mGame, setMGame] = useState('cyberpunk-2077');
@@ -381,11 +382,37 @@ export function SystemHealth() {
         <div className="consent">
           <h3>Before anything reads your machine</h3>
           <p className="lede">
-            To tell you whether your PC is underperforming, this needs to know what is in it. You can type
-            that in by hand and never run anything — that path is fully supported and reaches the same
-            report. If you would rather not type it, there is a script that reads it for you, and here is
-            precisely what it does.
+            To tell you whether your PC is underperforming, this needs to know what is in it. The fastest
+            way is to let this page look for itself — no download, no script, nothing transmitted. Below
+            that is a script that reads far more, and here is precisely what it does.
           </p>
+
+          {/* The consent screen used to open with the script's disclosure, and
+              the browser path — which downloads nothing, installs nothing and
+              is the only thing here that measures real hardware — was three
+              clicks further in. That is backwards: the path needing the least
+              trust was hidden behind the disclosure for the path needing the
+              most. */}
+          <div className="note" style={{ marginBottom: 18 }}>
+            <b>The quick way, with nothing to install.</b> This page can read your graphics card straight
+            from the browser and measure the machine in about half a minute — which adapter is really
+            rendering, whether it holds its clocks under load, how many cores it has. Nothing leaves the
+            page, because there is nowhere for it to go.
+            <div className="wizard-nav" style={{ marginTop: 12, marginBottom: 0 }}>
+              <button
+                className="btn primary"
+                onClick={() => {
+                  // Straight past the paste box: this path needs no consent for
+                  // a script it never runs.
+                  setAgreed(true);
+                  setStage('detect');
+                }}
+              >
+                read my PC in the browser
+              </button>
+              <span className="mini">No download. Nothing transmitted.</span>
+            </div>
+          </div>
 
           <div className="consent-cols">
             <div>
@@ -437,7 +464,9 @@ export function SystemHealth() {
           </label>
 
           <div className="wizard-nav">
-            <button className="btn" disabled={!agreed} onClick={() => setStage('detect')}>continue</button>
+            <button className="btn" disabled={!agreed} onClick={() => setStage('detect')}>
+              continue to the script
+            </button>
             <button className="btn" disabled={!agreed} onClick={() => setStage('confirm')}>
               skip the script, I will type it in
             </button>
@@ -450,6 +479,37 @@ export function SystemHealth() {
         <div className="panel">
           <div className="panel-head"><h2>Read the machine</h2></div>
           <div className="panel-body">
+            <BrowserSpecPanel
+              currentGpuId={gpuId}
+              onIdentified={setBrowserGpu}
+              onApply={(s) => {
+                if (s.gpuId) setGpuId(s.gpuId);
+                if (s.resolution) setResolution(s.resolution);
+                if (s.refreshHz) setRefreshHz(s.refreshHz);
+              }}
+            />
+            <BrowserBenchPanel onResult={setBench} context={benchContext} />
+
+            {/* The script reads far more than a browser can — motherboard,
+                memory timings, driver version, PCIe link — and it is still the
+                accurate path. It is second on the page rather than first
+                because it asks for the most trust and the most effort, and
+                putting it above the two panels that ask for neither meant most
+                people met the harder path first. */}
+            <button
+              className="disclosure"
+              style={{ marginTop: 14 }}
+              aria-expanded={showScript}
+              onClick={() => setShowScript((v) => !v)}
+            >
+              <span aria-hidden="true">{showScript ? '▾' : '▸'}</span>
+              <span className="k">or run the script, which reads more</span>
+              <span className="summary">
+                motherboard, memory timings, driver version and the PCIe link — none of which a browser can see
+              </span>
+            </button>
+            {showScript && (
+              <div style={{ marginTop: 4 }}>
             <p className="mini" style={{ marginTop: 0 }}>
               Open PowerShell, then run <b>both</b> of these. The first line moves to the folder holding
               the script — PowerShell starts in <span className="mono">C:\\WINDOWS\\system32</span>, where
@@ -473,17 +533,8 @@ export function SystemHealth() {
               — it is short and human-readable — then paste it below. A dxdiag dump or a line you typed
               from memory works too; anything ambiguous is asked about rather than assumed.
             </p>
-
-            <BrowserSpecPanel
-              currentGpuId={gpuId}
-              onIdentified={setBrowserGpu}
-              onApply={(s) => {
-                if (s.gpuId) setGpuId(s.gpuId);
-                if (s.resolution) setResolution(s.resolution);
-                if (s.refreshHz) setRefreshHz(s.refreshHz);
-              }}
-            />
-            <BrowserBenchPanel onResult={setBench} context={benchContext} />
+              </div>
+            )}
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
