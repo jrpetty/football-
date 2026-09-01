@@ -65,6 +65,12 @@ export function DataExplorer() {
     );
   }, [data, q, sort, minVram, needMesh, needRt, onlyIncomplete]);
 
+  /** Scale for the magnitude bars — the largest index actually rendered. */
+  const maxRaster = useMemo(
+    () => Math.max(1, ...gpuRows.slice(0, 400).map(({ idx }) => idx.index.raster)),
+    [gpuRows],
+  );
+
   const cpuRows = useMemo(() => {
     const rows = [...data.cpus.values()].map((c) => ({
       c,
@@ -232,7 +238,15 @@ export function DataExplorer() {
                       )}
                     </td>
                     <td className="sub">{g.architecture}</td>
-                    <td className="n" style={{ fontSize: 13 }}>{fmt(idx.index.raster, 1)}</td>
+                    <td className="n mag" style={{ fontSize: 13 }}>
+                      {/* A magnitude bar behind the figure. 279 rows of identically
+                          styled numbers hide their own shape — the whole point of
+                          an index column is the spread, and it was invisible.
+                          Scaled against the largest index on screen, so it reads
+                          as "relative to the top card" rather than an absolute. */}
+                      <span>{fmt(idx.index.raster, 1)}</span>
+                      <i style={{ width: `${Math.max(1.5, (idx.index.raster / maxRaster) * 100)}%` }} aria-hidden />
+                    </td>
                     <td className="n sub">{idx.index.rt ? fmt(idx.index.rt, 1) : '—'}</td>
                     <td className="n sub">{g.shaders ?? '—'}</td>
                     <td className="n sub">{g.boostClockMHz ?? '—'}</td>

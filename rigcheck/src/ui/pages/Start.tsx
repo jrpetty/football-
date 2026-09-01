@@ -15,41 +15,59 @@
  */
 import { Link } from 'react-router-dom';
 
+/**
+ * Three families, not eight colours. The eight questions group into buying
+ * something, interrogating the machine you already own, and going at the
+ * numbers themselves — and three is also the most hues that survive an
+ * all-pairs colourblind check on one screen. A grid is read all at once, so
+ * every card is "adjacent" to every other; four families were tried and the
+ * fourth put two hues on screen that deuteranopes cannot separate. The family
+ * tints the card, never identifies it — each card still carries its own
+ * heading and a named kicker.
+ */
+type Family = 'plan' | 'machine' | 'numbers';
+
 interface Route {
   q: string;
   to: string;
   screen: string;
   detail: string;
+  family: Family;
 }
 
 const ROUTES: Route[] = [
   {
     q: 'I want to build a PC and I do not know where to start',
     to: '/wizard',
+    family: 'plan',
     screen: 'Build a PC',
     detail: 'Tell it your screen, your games and your budget. It works backwards to a parts list, explains every line, and ends with what to set each game to. Start here if you are buying.',
   },
   {
     q: 'My PC feels slower than it should',
     to: '/system',
+    family: 'machine',
     screen: 'Check my PC',
     detail: 'Checks the handful of faults that are invisible on a spec sheet — single-channel memory, a memory profile never enabled, a card in the wrong slot — and tells you what each is costing. Save the check and it can verify your fix worked.',
   },
   {
     q: 'Should I upgrade, and which part?',
     to: '/upgrade',
+    family: 'plan',
     screen: 'What to upgrade first',
     detail: 'Plots price against performance for every upgrade path from where you are, marks the point where spending more stops buying much, and says when the other component is the real wall.',
   },
   {
     q: 'Is this specific build any good?',
     to: '/analyser',
+    family: 'numbers',
     screen: 'Analyse one build',
     detail: 'Pick the parts, get frame rates per game with the working shown — every term, its value, its confidence and where it came from.',
   },
   {
     q: 'Will it fit, what will it draw, and how loud will it be?',
     to: '/machine',
+    family: 'machine',
     screen: 'Power, heat and noise',
     detail:
       'Sustained draw and transient peak, the power supply that needs, whether the cooling holds the clocks, roughly how loud it gets and what the input latency looks like.',
@@ -57,18 +75,21 @@ const ROUTES: Route[] = [
   {
     q: 'What is actually in this machine?',
     to: '/detect',
+    family: 'machine',
     screen: 'Identify a machine',
     detail: 'Paste a dxdiag dump, the harness output, or a line you typed from memory. Ambiguous matches are asked about rather than guessed.',
   },
   {
     q: 'I want the numbers behind all of this',
     to: '/data',
+    family: 'numbers',
     screen: 'The catalogue',
     detail: '279 graphics cards and 442 processors with their derived indices, the specs those came from, and filters by capability rather than by name.',
   },
   {
     q: 'How much should I trust any of these numbers?',
     to: '/health',
+    family: 'numbers',
     screen: 'What the estimates rest on',
     detail: 'The one screen that argues against the others: how much of the evidence is a measurement rather than a recollection, how accuracy is moving, and which parts of the model nothing has ever validated. Worth reading before you spend money on the basis of anything here.',
   },
@@ -87,7 +108,7 @@ export function Start({ onDismiss }: { onDismiss: () => void }) {
 
       <div className="start-grid">
         {ROUTES.map((r) => (
-          <Link key={r.to} to={r.to} className="start-card" onClick={onDismiss}>
+          <Link key={r.to} to={r.to} className={`start-card fam-${r.family}`} onClick={onDismiss}>
             <b>{r.q}</b>
             <span className="screen">{r.screen}</span>
             <span className="detail">{r.detail}</span>

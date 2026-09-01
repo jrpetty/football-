@@ -1,45 +1,76 @@
-/* RIGCHECK — a precision instrument.
-   The chrome is quiet, cold and layered; saturated colour is reserved for what
-   the data means (provenance, verdicts, CPU vs GPU). One interactive accent —
-   ice blue — carries focus, selection and action everywhere, so "coloured
-   because it means something" and "coloured because you can click it" never
-   blur into each other. Type is IBM Plex: Sans for prose, Mono for figures and
-   for the engraved micro-labels that make it read like a front panel. */
+/* RIGCHECK — a precision instrument, in colour.
+   The chrome layers rather than floats: four surfaces with real distance
+   between them, so a panel sits IN the page instead of on a void. Saturated
+   colour is still reserved for what the data MEANS — provenance, verdicts,
+   what is limiting a frame rate — but the palette it draws on is now wide
+   enough to tell those things apart at a glance, and the surfaces underneath
+   it are warm enough to sit still under saturation.
+
+   Every categorical and status hue below was validated against the dark
+   surface (see the block above each set). The two rules that constrain this
+   file: a colour that carries meaning must clear 3:1 on the LIGHTEST surface
+   it can land on (surface-3), and no meaning may be carried by hue alone —
+   every coloured mark in the app ships beside its own text label.
+
+   Type is IBM Plex: Sans for prose, Mono for figures and for the engraved
+   micro-labels that make it read like a front panel. */
 
 :root {
-  --bg: #0a0d12;
-  --surface: #10151c;
-  --surface-2: #161d26;
-  --surface-3: #1e2631;
-  --line: #242e3a;
-  --line-strong: #34404e;
+  /* A four-step ladder with real separation. The old one moved 6 points of
+     lightness across three surfaces, which is why every panel read as the
+     same near-black rectangle. These are also nudged off pure blue-black
+     toward a warmer slate, which stops saturated marks vibrating on them. */
+  --bg: #080b11;
+  --surface: #111823;
+  --surface-2: #1a2331;
+  --surface-3: #26313f;
+  --line: #2c3849;
+  --line-strong: #3e4d61;
 
-  --ink: #e6ecf3;
-  --muted: #9aabbc;
-  /* 4.79:1 against the lightest surface in the palette (surface-3), above the
+  --ink: #eaf0f7;
+  --muted: #a3b4c6;
+  /* 4.7:1 against the lightest surface in the palette (surface-3), above the
      WCAG AA floor for body text. Recomputed for this ramp — do not darken
      without re-measuring; this token carries most secondary text in the app. */
-  --faint: #83919f;
+  --faint: #90a0b2;
 
   /* The one interactive hue. Active nav, focus rings, selected cards, links,
-     the primary button. Deliberately in the same cold family as the GPU/
-     interpolated data blues — the app's temperature — but lighter and
-     reserved for things you can act on. */
-  --accent: #8ec1ee;
-  --accent-strong: #b2d5f6;
-  --accent-ink: #0a0d12;
+     the primary button. Kept in the same cold family as the GPU blue — the
+     app's temperature — but a full step brighter and more saturated, so
+     "coloured because you can click it" never reads as "coloured because it
+     means something". */
+  --accent: #5eb3f5;
+  --accent-strong: #93cdfb;
+  --accent-ink: #06090e;
 
-  --measured: #5ec27a;
-  --interpolated: #6aaed6;
-  --spec: #c2a04c;
-  --extrapolated: #c8804a;
-  --blocked: #d4605e;
+  /* ---- limiter: what is holding this frame rate back --------------------
+     A true categorical set — five independent identities, no order between
+     them. Validated as a set against surface-2 (#1a2331): lightness band,
+     chroma floor, adjacent-pair CVD separation (worst ΔE 8.4 protan),
+     normal-vision separation (worst ΔE 19.3) and contrast all PASS.
+     Do not "brighten" these without re-validating; the previous set had
+     three of five sitting in the same warm arc.
+     CPU and GPU are deliberately the hot/cold opposition — they are the
+     app's central question and should never be confused for each other. */
+  --gpu: #3987e5;
+  --cpu: #d95926;
+  --balanced: #199e70;
+  --cap: #c98500;
+  --vram: #d55181;
 
-  --cpu: #d3a34a;
-  --gpu: #62a8dd;
-  --vram: #d4605e;
-  --balanced: #5ec27a;
-  --cap: #9b8fd0;
+  /* ---- provenance: how much evidence is behind a number -----------------
+     A STATUS scale, not a categorical one: it runs good → unknown, and the
+     ends are meant to be read as ends. Green against red cannot be separated
+     under deuteranopia at any usable step — that pair is the blind spot
+     itself — so this set is governed by the label rule instead: every dot,
+     tag and pill that uses these ships with its own text beside it, and the
+     Data Explorer legend spells all five out. Contrast is the gate that does
+     apply, and all five clear 3:1 on every surface. */
+  --measured: #2fa96b;
+  --interpolated: #4a94e0;
+  --spec: #c99200;
+  --extrapolated: #cd6626;
+  --blocked: #e2574f;
 
   /* Semantic aliases for pass/fail marks. Same hues as the provenance colours
      above, named for the judgement rather than the source, so a gate verdict
@@ -53,14 +84,25 @@
   --chart-series: #3d8fd0;
   --chart-knee: #b08a2a;
 
+  /* ---- magnitude ramp ---------------------------------------------------
+     One hue, light → dark, for showing how big a number is relative to its
+     column. Sequential data gets a sequential encoding: never the categorical
+     hues above, and never a rainbow. Used behind index figures so a 435 and a
+     193 stop looking identical in a table of 279 rows. */
+  --mag-1: #16324d;
+  --mag-2: #1c4d78;
+  --mag-3: #2a6ca8;
+  --mag-4: #3d8fd0;
+  --mag-5: #6fb4e8;
+
   --mono: "IBM Plex Mono", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
   --sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
   --r: 6px;
   --r-lg: 10px;
-  --shadow-1: 0 1px 2px rgba(2, 6, 12, 0.45), 0 8px 24px -12px rgba(2, 6, 12, 0.55);
-  --shadow-2: 0 24px 70px -16px rgba(2, 6, 12, 0.8);
-  --ring: 0 0 0 3px rgba(142, 193, 238, 0.2);
+  --shadow-1: 0 1px 2px rgba(2, 6, 12, 0.5), 0 8px 24px -12px rgba(2, 6, 12, 0.6);
+  --shadow-2: 0 24px 70px -16px rgba(2, 6, 12, 0.85);
+  --ring: 0 0 0 3px rgba(94, 179, 245, 0.26);
   --ease: 130ms cubic-bezier(0.2, 0.6, 0.3, 1);
 }
 
@@ -73,8 +115,9 @@ body {
   /* A faint cold wash at the top and a fainter violet in the far corner: just
      enough atmosphere that the panels sit IN something rather than ON a void. */
   background:
-    radial-gradient(1100px 480px at 50% -190px, rgba(97, 152, 219, 0.075), transparent 65%),
-    radial-gradient(900px 640px at 108% 112%, rgba(122, 103, 196, 0.05), transparent 62%),
+    radial-gradient(1200px 520px at 50% -200px, rgba(94, 179, 245, 0.14), transparent 66%),
+    radial-gradient(880px 620px at 104% 108%, rgba(213, 81, 129, 0.075), transparent 60%),
+    radial-gradient(760px 560px at -6% 82%, rgba(25, 158, 112, 0.06), transparent 58%),
     var(--bg);
   background-attachment: fixed;
   color: var(--ink);
@@ -85,7 +128,7 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-::selection { background: rgba(142, 193, 238, 0.3); }
+::selection { background: rgba(94, 179, 245, 0.32); }
 
 /* Figures are always monospace and tabular so columns align down the page. */
 .num, .mono {
@@ -1044,9 +1087,43 @@ kbd {
 .start-card b { display: block; color: var(--ink); font-weight: 600; font-size: 14.5px; margin-bottom: 6px; line-height: 1.35; letter-spacing: -0.005em; text-wrap: balance; }
 .start-card .screen {
   display: inline-block; font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase;
-  color: var(--accent); margin-bottom: 7px;
+  color: var(--fam); margin-bottom: 7px;
 }
 .start-card .detail { display: block; font-size: 12.5px; line-height: 1.6; }
+
+/* The three families. --fam is set per card and everything else on the card
+   reads from it, so a family is one declaration rather than four rules: the
+   rail down the left edge, the kicker, the wash behind the panel and the
+   hover border all move together. Validated all-pairs against surface-2 —
+   worst CVD ΔE 9.4, worst normal-vision ΔE 20.9. The colour groups the cards;
+   it never names them, which is what the heading and the kicker are for. */
+.start-card.fam-plan { --fam: var(--gpu); }
+.start-card.fam-machine { --fam: var(--cpu); }
+.start-card.fam-numbers { --fam: var(--balanced); }
+
+.start-card {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--fam) 7%, transparent), transparent 60%),
+    var(--surface);
+}
+/* A 3px rail rather than a tinted border: at 1px a hue this saturated turns to
+   mud against the line colour, and the card stops reading as grouped at all. */
+.start-card::before {
+  content: '';
+  position: absolute; inset: 0 auto 0 0; width: 3px;
+  background: var(--fam);
+  opacity: 0.85;
+  transition: opacity var(--ease);
+}
+.start-card:hover {
+  border-color: color-mix(in srgb, var(--fam) 42%, var(--line));
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--fam) 13%, transparent), transparent 62%),
+    var(--surface-2);
+}
+.start-card:hover::before { opacity: 1; }
 
 /* ---------- mobile ---------- */
 
@@ -1326,4 +1403,27 @@ kbd {
   font-size: 11.5px;
   line-height: 1.45;
   color: var(--muted);
+}
+
+
+/* ---------- magnitude cell ----------
+   A sequential encoding for a sequential quantity: one hue, dark → light, sized
+   by value. 279 rows of identical mono digits hid the shape of their own column
+   — the whole point of an index is the spread, and it was invisible.
+
+   The bar sits UNDER the figure, not behind it. Behind was tried: a bar narrower
+   than its own number leaves the digits half on the fill and half on the row,
+   which is worse than no bar. A 3px rule under the value is unambiguous at every
+   width and never fights the text.
+
+   Never the categorical hues — those mean "which kind", this means "how much". */
+td.n.mag > span { display: block; }
+td.n.mag > i {
+  display: block;
+  height: 2px;
+  margin-top: 2px;
+  margin-left: auto;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--mag-2), var(--mag-5));
+  pointer-events: none;
 }

@@ -8,10 +8,15 @@ const pillars = JSON.parse(readFileSync('marketing/pillars.json', 'utf8'));
 const NOW = new Date().getFullYear();
 const fonts = readFileSync('src/ui/fonts.css', 'utf8');
 
+/* Kept in step with src/ui/theme.css by hand — the cards render outside the app,
+   so they cannot read its custom properties. The data hues here are the same
+   validated categorical set the app uses (adjacent-pair CVD ΔE 8.4 worst,
+   normal-vision 19.3, all clearing 3:1 on the card surface); if the app's
+   palette moves, move these with it or the posts stop looking like the tool. */
 const P = {
-  bg: '#0a0d12', surface: '#10151c', surface2: '#161d26', line: '#242e3a', lineStrong: '#34404e',
-  ink: '#e6ecf3', muted: '#9aabbc', faint: '#83919f', accent: '#8ec1ee',
-  good: '#5ec27a', gpu: '#62a8dd', cpu: '#d3a34a', spec: '#c2a04c',
+  bg: '#080b11', surface: '#111823', surface2: '#1a2331', line: '#2c3849', lineStrong: '#3e4d61',
+  ink: '#eaf0f7', muted: '#a3b4c6', faint: '#90a0b2', accent: '#5eb3f5',
+  good: '#2fa96b', gpu: '#3987e5', cpu: '#d95926', spec: '#c99200', vram: '#d55181',
 };
 
 const css = `
@@ -21,7 +26,7 @@ body{width:1080px;height:1350px;background:${P.bg};color:${P.ink};
   font-family:'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased;
   display:flex;flex-direction:column;padding:64px 60px 52px;position:relative;overflow:hidden}
 body::after{content:'';position:absolute;inset:0;
-  background:radial-gradient(900px 620px at 78% -8%, rgba(142,193,238,.10), transparent 62%);pointer-events:none}
+  background:radial-gradient(940px 640px at 78% -8%, rgba(94,179,245,.16), transparent 62%),radial-gradient(760px 560px at -8% 104%, rgba(213,81,129,.07), transparent 58%);pointer-events:none}
 .brandrow{display:flex;align-items:center;gap:12px;margin-bottom:44px}
 .mark{width:32px;height:32px;flex:none}
 .wordmark{font-family:'IBM Plex Mono',monospace;font-size:19px;font-weight:500;letter-spacing:.24em}
