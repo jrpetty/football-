@@ -23,7 +23,9 @@
     "build:single": "vite build && node scripts/build-single.mjs",
     "import:prices": "tsx scripts/import-prices.ts",
     "a11y": "node scripts/a11y-audit.mjs",
-    "fuzz:sticky": "node scripts/sticky-fuzz.mjs"
+    "fuzz:sticky": "node scripts/sticky-fuzz.mjs",
+    "marketing:cards": "node marketing/scripts/cards.mjs",
+    "marketing:verify": "node marketing/scripts/verify.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

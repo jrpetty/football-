@@ -347,8 +347,8 @@
           },
           {
             "game": "Cyberpunk 2077",
-            "fps": null,
-            "status": "WILL_NOT_RUN"
+            "fps": 21,
+            "status": "ok"
           }
         ]
       },

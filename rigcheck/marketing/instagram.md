@@ -25,6 +25,8 @@ Look at the last two rows. £293 more buys 14 more frames. The curve flattens ha
 
 One thing I will not pretend about: these are modelled, not measured. Nobody built these four machines and benchmarked them. The ordering is solid, the absolute numbers are ±20%, and the tool that produced them has an entire screen devoted to telling you how much of it is guesswork.
 
+The prices are the softer half. They are recalled UK street prices, not scraped from any retailer, and they are already months old. GPU pricing swings 30% on supply alone. Read the totals as the shape of a budget and price the parts yourself.
+
 Swipe for each build in full — parts, power draw, six games apiece.
 
 #pcbuild #gamingpc #pcgaming #pcmasterrace #buildapc #pcbuilding #gamingsetup #pchardware #1440pgaming #budgetgaming
@@ -50,7 +52,7 @@ At 1440p, high, no upscaling:
 
 The Ryzen 7 5800X3D is in there for a specific reason. Its stacked cache is worth almost nothing in a GPU-bound shooter and a lot in simulation and strategy — which is exactly why Baldur's Gate 3 is the one game here where the processor, not the card, is the limit.
 
-Modelled, not measured. Ordering reliable, absolutes ±20%.
+Modelled, not measured. Ordering reliable, absolutes ±20%. Prices are recalled, not sourced — price the parts yourself.
 
 #pcbuild #gamingpc #buildapc #1440p #rx9070 #ryzen #pcgaming #pchardware
 
@@ -64,7 +66,7 @@ Modelled, not measured. Ordering reliable, absolutes ±20%.
 
 Every PC build guide gives you a frame rate. Almost none of them tell you where it came from.
 
-Mine says 12% median error against its validation set — and then tells you, on the same screen, that every fixture in that set is *recalled* rather than measured. So the 12% is not accuracy. It measures whether the estimator agrees with the memory it was built from. A perfect score would mean the two halves agree, not that either matches your desk.
+Mine says 11% median error against its validation set — and then tells you, on the same screen, that every fixture in that set is *recalled* rather than measured. So the 11% is not accuracy. It measures whether the estimator agrees with the memory it was built from. A perfect score would mean the two halves agree, not that either matches your desk.
 
 I built a screen whose entire job is arguing against the rest of the app. The number it reports is labelled "disagreement with the recalled set", not "accuracy", because those are different things and only one of them is true.
 
@@ -82,13 +84,13 @@ If you take one thing from this account, take that distinction and point it at e
 
 £582, and it plays everything at 1080p.
 
-Intel Arc A580 · Ryzen 5 5600 · 16GB DDR4 · 260W
+Intel Arc A580 · Ryzen 5 5600 · 16GB DDR4 · 260W draw, 550W PSU
 
 Cyberpunk at 65fps is the honest headline. This is a machine that runs the demanding stuff at sixty rather than a hundred and forty, and runs everything else very comfortably indeed — 355fps in CS2, 107 in BO6.
 
 Elden Ring reads 60 because Elden Ring is capped at 60. That is the game, not the build. Worth saying, because a chart that does not mark it makes a fine machine look weak.
 
-Modelled, not measured. Ordering reliable, absolutes ±20%.
+Modelled, not measured. Ordering reliable, absolutes ±20%. Prices are recalled, not sourced — price the parts yourself.
 
 #budgetgaming #pcbuild #buildapc #1080pgaming #gamingpc #intelarc #pchardware
 
@@ -102,7 +104,7 @@ Modelled, not measured. Ordering reliable, absolutes ±20%.
 2. "£293 more money. 14 more frames."
    → the flattening curve, and where to stop spending.
 
-3. "My tool says it is 12% accurate. Here is why I do not believe it."
+3. "My tool says it is 11% accurate. Here is why I do not believe it."
    → the recalled-fixtures problem, in fifteen seconds.
 
 ---
@@ -232,16 +234,22 @@ A 2017 graphics card still does 66fps in Cyberpunk 2077.
 
 Four old cards, three current games, 1080p high:
 
-GeForce GTX 1080 Ti (2017) — CS2 359, Fortnite 125, Cyberpunk 66
-GeForce GTX 1060 (2016) — CS2 251, Fortnite 70, Cyberpunk 34
-GeForce GTX 970 (2014) — CS2 246, Fortnite 60, Cyberpunk won't start
+GeForce GTX 1080 Ti 11GB (2017) — CS2 359, Fortnite 125, Cyberpunk 66
+Radeon RX 580 8GB (2017) — CS2 287, Fortnite 83, Cyberpunk 41
+GeForce GTX 1060 6GB (2016) — CS2 251, Fortnite 70, Cyberpunk 34
+GeForce GTX 970 4GB (2014) — CS2 246, Fortnite 60, Cyberpunk 21
 
-The GeForce GTX 970 is where the line falls. Its 4GB is below what Cyberpunk will
-launch with at all — not slow, not playable at low, just refused.
+Every one of them still clears 60 in a shooter. That is most of what most people
+actually play, and it is why "you need an upgrade" is usually a statement about
+one game rather than about your PC.
 
-Everything above that line still clears 60 in a shooter, which is most of what
-most people actually play. "You need an upgrade" is usually a statement about
-one game, not about your PC.
+Cyberpunk is that one game. 21 to 66 across four cards people mention in the same
+breath — and the GTX 970 is under Cyberpunk's published 6GB minimum, so 21fps is
+the honest answer rather than a refusal. It starts. You won't enjoy it.
+
+Memory sizes above are deliberate: the 1060 came in 3GB and 6GB with different
+shader counts, and the RX 580 in 4GB and 8GB. Check which one you have before
+you read your own card off this list.
 
 Modelled, not measured. Ordering reliable, absolutes ±20%.
 

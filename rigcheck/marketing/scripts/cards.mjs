@@ -4,6 +4,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 const builds = JSON.parse(readFileSync('marketing/builds.json', 'utf8'));
 const bottleneck = JSON.parse(readFileSync('marketing/bottleneck.json', 'utf8'));
 const pillars = JSON.parse(readFileSync('marketing/pillars.json', 'utf8'));
+/** Card ages are stated on the card, so they have to move with the calendar. */
+const NOW = new Date().getFullYear();
 const fonts = readFileSync('src/ui/fonts.css', 'utf8');
 
 const P = {
@@ -201,7 +203,8 @@ function stillGoodCard(s) {
   return `<div class="brandrow">${MARK}<span class="wordmark">RIGCHECK</span>
     <span class="kicker">${s.resolution} · high · ${esc(s.cpu)}</span></div>
   <h1>Is your old card<br><em>still good?</em></h1>
-  <div class="card-note">Four cards between eight and twelve years old, against three games people are
+  <div class="card-note">Four cards between ${Math.min(...s.cards.map((c) => NOW - Number(c.year)))} and
+    ${Math.max(...s.cards.map((c) => NOW - Number(c.year)))} years old, against three games people are
     playing now. Modern shooters are kinder to old hardware than anyone expects; one 2020 title is where
     they stop.</div>
   <div class="legend"><div style="flex:1;text-align:left">&nbsp;</div>
@@ -210,9 +213,20 @@ function stillGoodCard(s) {
       <span class="g">${esc(c.gpu)}<span style="color:${P.faint};font-size:15px">${c.year} · ${c.vram}GB</span></span>
       <span class="pts">${c.rows.map((r) => `<span class="pt${r.fps && r.fps >= 60 ? ' top' : ''}">${r.fps ?? '—'}</span>`).join('')}</span>
     </div>`).join('')}</div>
-  <div class="foot"><div class="note"><b>Modelled, not measured.</b> A dash means the card cannot run that
-    game at all — the GTX 970's 3.5GB is below what Cyberpunk will start with. Everything else here still
-    clears 60 in a shooter, which is most of what most people play.</div></div>`;
+  <div class="why">
+    <div><div class="t">Check which one you own</div><div class="b">The 1060 shipped as 3GB and 6GB with
+      different shader counts, and the RX 580 as 4GB and 8GB. On a chart about where the line falls, the
+      memory size is half the answer.</div></div>
+    <div><div class="t">Below minimum still starts</div><div class="b">The 970's 4GB is under Cyberpunk's
+      published 6GB. That costs frames, not the launch — 21fps is running, and running is not the same as
+      playable.</div></div>
+  </div>
+  <div class="foot"><div class="note"><b>Modelled, not measured.</b> Every card here still clears 60 in a
+    shooter, which is most of what most people play. Cyberpunk is where they separate:
+    ${Math.min(...s.cards.flatMap((c) => c.rows.filter((r) => /cyberpunk/i.test(r.game) && r.fps).map((r) => r.fps)))}
+    to ${Math.max(...s.cards.flatMap((c) => c.rows.filter((r) => /cyberpunk/i.test(r.game) && r.fps).map((r) => r.fps)))}fps
+    across four cards people mention in the same breath. A dash would mean the card cannot run that game
+    at all.</div></div>`;
 }
 
 function coverCard() {

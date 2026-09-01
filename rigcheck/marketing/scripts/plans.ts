@@ -51,11 +51,21 @@ const out = TIERS.map((t) => {
     vram: gpu.vramGB, cores: cpu.cores, threads: cpu.threads,
     ram: `${b.ram.totalGB}GB ${b.ram.type}`, storage: b.storage,
     powerW: rep ? Math.round(rep.power.totalW) : null,
+    // Two different numbers, and publishing only the first was a trap.
+    // psuW is the model's FLOOR — draw plus headroom, rounded up to 50W. The
+    // parts list prices an actual purchasable unit, which is a size or two
+    // above that floor. A header reading "400W supply" next to a bill of
+    // materials containing a 550W PSU invites a reader to buy the 400W.
     psuW: rep?.power.recommendedPsuW ?? null,
+    psuPartW: (() => {
+      const line = r.pick!.bom.find((l: any) => l.category === 'PSU');
+      const m = /(\d{3,4})\s*W/i.exec(line?.label ?? '');
+      return m ? Number(m[1]) : null;
+    })(),
     cyberpunk1440: at1440.status === 'ok' ? Math.round(at1440.avgFps!) : null,
     bom: r.pick!.bom.map((l: any) => ({ cat: l.category, price: Math.round(l.price), part: l.label ?? '' })),
     rows,
   };
 });
 writeFileSync('marketing/builds.json', JSON.stringify(out, null, 2));
-console.log(JSON.stringify(out.map(o => ({ n: o.name, total: o.total, cpu: o.cpuShort, gpu: o.gpuShort, w: o.powerW, psu: o.psuW })), null, 1));
+console.log(JSON.stringify(out.map(o => ({ n: o.name, total: o.total, cpu: o.cpuShort, gpu: o.gpuShort, w: o.powerW, psuFloor: o.psuW, psuPart: o.psuPartW })), null, 1));

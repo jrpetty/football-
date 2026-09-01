@@ -79,14 +79,20 @@ GPU is not the limit.**
 
 | Card | Year | CS2 | Fortnite | Cyberpunk |
 |---|---|---|---|---|
-| GeForce GTX 970 | 2014 | 246 | 60 | won't run |
-| GeForce GTX 1060 | 2016 | 251 | 70 | 34 |
-| Radeon RX 580 | 2017 | 287 | 83 | 41 |
-| GeForce GTX 1080 Ti | 2017 | 359 | 125 | 66 |
+| GeForce GTX 970 4GB | 2014 | 246 | 60 | 21 |
+| GeForce GTX 1060 6GB | 2016 | 251 | 70 | 34 |
+| Radeon RX 580 8GB | 2017 | 287 | 83 | 41 |
+| GeForce GTX 1080 Ti 11GB | 2017 | 359 | 125 | 66 |
 
 Nostalgia plus genuine search intent — "is a 1060 still good in 2026" is typed
-into search boxes constantly. The GeForce GTX 970 not running Cyberpunk at all is
-the emotional beat: there is a line, and this is where it falls.
+into search boxes constantly. The beat is the split screen: every one of these
+cards clears 60 in a shooter, and the spread in Cyberpunk is 21 to 66 — a
+three-fold difference between cards people talk about in the same breath.
+
+Quote the memory size every time. The 1060 shipped in 3GB and 6GB versions with
+different shader counts, and the RX 580 in 4GB and 8GB. On a post about where
+the line falls, an unqualified "GTX 1060" is the wrong answer for whichever half
+of the audience owns the other one.
 
 **Cadence:** fortnightly, one card family at a time.
 **Asset:** `images/still-good-old-cards.png`
@@ -131,7 +137,7 @@ which makes it the most defensible thing on the account.
 
 ## 7 · Receipts on ourselves
 
-**The hook:** my tool says it is 12% accurate. Here is why I do not believe it.
+**The hook:** my tool says it is 11% accurate. Here is why I do not believe it.
 
 The differentiator. Publishing the model's own weaknesses — that its validation
 set is recalled rather than measured, that its reported error is

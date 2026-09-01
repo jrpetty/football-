@@ -17,6 +17,13 @@ clocks, memory bandwidth, cache — and works forward to a frame rate, calibrate
 against reference figures for each game. Nobody built these four machines and
 benchmarked them. The ordering is reliable; treat the absolute numbers as ±20%.
 
+**The prices are weaker still, and they are the headline.** Every component
+price here is a recalled UK street price rather than a sourced one — nobody
+scraped a retailer, and the seed figures carry a knowledge horizon of May 2026.
+GPU pricing moves 30% on supply alone, so treat every total on this page as the
+shape of a budget, not a quote. Price the parts yourself before you buy; the
+tool lets you paste your own prices in and will re-plan around them.
+
 That is a weaker claim than most build guides make. It is also, as far as I can
 tell, a more honest one.
 
@@ -69,7 +76,7 @@ on this page if you are deciding what to spend.
 
 ## £582 — 1080p, high, no compromises worth mentioning
 
-**Intel Arc A580 · Ryzen 5 5600 · 16GB DDR4 · 260W, 400W supply**
+**Intel Arc A580 · Ryzen 5 5600 · 16GB DDR4 · 260W draw, 550W supply**
 
 | Game | Average | 1% low |
 |---|---|---|
@@ -94,7 +101,7 @@ likely to bite you.
 
 ## £1,089 — the one most people should buy
 
-**Radeon RX 9070 · Ryzen 7 5800X3D · 32GB DDR4 · 332W, 500W supply**
+**Radeon RX 9070 · Ryzen 7 5800X3D · 32GB DDR4 · 332W draw, 550W supply**
 
 | Game | Average | 1% low |
 |---|---|---|
@@ -118,7 +125,7 @@ processor, not the card, is the limit.
 
 ## £1,719 — for a high-refresh 1440p panel
 
-**GeForce RTX 4080 Super · Ryzen 7 7800X3D · 32GB DDR5 · 426W, 650W supply**
+**GeForce RTX 4080 Super · Ryzen 7 7800X3D · 32GB DDR5 · 426W draw, 650W supply**
 
 | Game | Average | 1% low |
 |---|---|---|
@@ -129,15 +136,20 @@ processor, not the card, is the limit.
 | Call of Duty Black Ops 6 | 194 fps | 126 fps |
 | Elden Ring | 60 fps | 42 fps |
 
-Everything except Cyberpunk clears 165fps, and Cyberpunk clears 100. If you own
-a 165Hz or 240Hz 1440p monitor and you play competitively, this is the build
-that actually feeds it.
+The two competitive titles clear 165fps with room to spare — Counter-Strike at
+456 and Black Ops 6 at 194 — and Fortnite manages 192. Cyberpunk lands at 115
+and Baldur's Gate 3 at 112, which is a 1440p/120 experience rather than a
+165Hz one. Elden Ring reads 60 because Elden Ring is capped at 60.
+
+So: if you own a 165Hz or 240Hz 1440p panel and you play shooters, this is the
+build that actually feeds it. If you mostly play the demanding single-player
+titles, you are buying frames you will not see.
 
 ---
 
 ## £2,012 — 4K, and where the argument gets weak
 
-**GeForce RTX 5080 · Ryzen 9 9900X3D · 32GB DDR5 · 464W, 800W supply**
+**GeForce RTX 5080 · Ryzen 9 9900X3D · 32GB DDR5 · 464W draw, 850W supply**
 
 | Game | Average | 1% low |
 |---|---|---|
@@ -162,13 +174,13 @@ would rather quote the floor.
 
 ## Why you should be sceptical of all of this
 
-The model behind these figures reports a median error of about 12% against its
+The model behind these figures reports a median error of about 11% against its
 own validation set. That sounds reassuring and it is not, quite, because of what
 the validation set is.
 
 Every fixture in it is *recalled* rather than measured — a model's memory of
 widely-reported review configurations, not a capture from a real machine. So
-that 12% measures whether the estimator agrees with the memory it was built
+that 11% measures whether the estimator agrees with the memory it was built
 from. It is a self-consistency figure. A perfect score would mean the two halves
 agree, not that either matches your desk.
 

@@ -77,13 +77,22 @@ export function runGates({ gpu, cpu, game, ram, resolution }: GateInput): GateFa
     });
   }
 
-  // VRAM below the published minimum is a launch failure. VRAM merely below
-  // demand is a performance cliff, handled in the engine — a different thing.
-  if (req.minVramGB != null && gpu.vramGB != null && gpu.vramGB < req.minVramGB) {
+  // Published VRAM minimums are SOFT, exactly like the system-RAM ones below.
+  // A card under the figure still launches the game: the driver spills the
+  // overflow to system memory across PCIe and the result is heavy stutter, not
+  // a refusal. Nothing in a shipping title checks VRAM and exits. Treating the
+  // published figure as a hard gate was a category error — it sat next to the
+  // mesh-shader and feature-level gates, which genuinely do stop a game
+  // starting, and it produced the flatly false claim that a 4GB GTX 970 cannot
+  // run Cyberpunk 2077 (published minimum 6GB) when in fact it runs it badly.
+  // The VRAM cliff in the engine already models that badly, and hits 1% lows
+  // harder than averages. Hard-block only below HALF the published minimum,
+  // where the working set cannot stay resident at any preset.
+  if (req.minVramGB != null && gpu.vramGB != null && gpu.vramGB < req.minVramGB * 0.5) {
     fails.push({
       code: 'VRAM_CEILING',
-      detail: `${game.name} requires ${req.minVramGB}GB VRAM minimum; ${gpu.fullName} has ${gpu.vramGB}GB. At ${resolution} this is below the launch floor.`,
-      required: `${req.minVramGB}GB`,
+      detail: `${game.name} publishes a ${req.minVramGB}GB VRAM minimum; ${gpu.fullName} has ${gpu.vramGB}GB — below half of it. At ${resolution} the working set cannot stay resident at any preset.`,
+      required: `${req.minVramGB}GB published minimum`,
       actual: `${gpu.vramGB}GB`,
     });
   }

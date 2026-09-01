@@ -56,21 +56,27 @@ card no longer the limit.
 | Fortnite | 163 | 204 | 229 | 241 | **+48%** |
 | Factorio | 60 | 60 | 60 | 60 | **+0%** |
 
-Every single number went up, and the *shape* changed completely.
+Most numbers went up and the *shape* changed completely.
 
 Cyberpunk went from a 10% spread to 75%. Fortnite from 4% to 48%.
 Counter-Strike from 23% to 70%. Nothing about the processors changed — the
 graphics card stopped being the thing holding them back, and the processor
 became the thing that was.
 
+The exceptions prove it better than the gains do. The Ryzen 5 3600 reads 60 in
+Baldur's Gate 3 and 71 in Total War on *both* cards — identical, to the frame.
+Every extra pound of graphics card bought that processor nothing at all in those
+two games, because it was never the graphics card holding it back. Factorio does the same thing for a different reason: 60 across
+all eight cells, because 60 is the engine.
+
 That is the actual answer to "does my CPU matter":
 
 > **Your CPU matters exactly as much as your GPU is not the limit.**
 
 Which is why "is a 5600 enough?" cannot be answered without knowing what card
-it is sitting next to and what you play. On a 4070 playing shooters, a
-Ryzen 5 5600 is within a few frames of the best part on this list. On a 4090
-playing Total War, it leaves 52 frames on the table.
+it is sitting next to and what you play. On a 4070 playing Fortnite, a Ryzen 5
+5600 lands one frame off the best part on this list — 140 against 141. On a
+4090 playing Total War, the same processor leaves 52 frames on the table.
 
 ## How to use this
 

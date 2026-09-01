@@ -69,6 +69,26 @@ describe('hard gates', () => {
       expect(est.gateFailures.some((f) => f.code === 'RAY_TRACING_REQUIRED')).toBe(true);
     }
   });
+
+  // A published VRAM minimum is not a capability gate. Cyberpunk 2077 publishes
+  // 6GB; a 4GB GTX 970 launches it and runs it badly. Claiming otherwise is a
+  // false statement about the real world, and this project published one.
+  it('does not block a card merely below a published VRAM minimum', () => {
+    const est = estimate(build('amd-ryzen-5-5600', 'nvidia-geforce-gtx-970'), 'cyberpunk-2077', '1080p', data);
+    expect(est.status).toBe('ok');
+    expect(est.gateFailures.map((f) => f.code)).not.toContain('VRAM_CEILING');
+    // Playable-adjacent, and clearly not playable. Both halves matter: a number
+    // this low is the finding, and a number this low being absent was the bug.
+    expect(est.avgFps).toBeGreaterThan(10);
+    expect(est.avgFps).toBeLessThan(35);
+  });
+
+  it('still blocks below half the published VRAM minimum', () => {
+    // 2GB against Cyberpunk's published 6GB: the working set cannot stay resident.
+    const est = estimate(build('amd-ryzen-5-5600', 'nvidia-geforce-gtx-1050-2gb'), 'cyberpunk-2077', '1080p', data);
+    expect(est.status).toBe('WILL_NOT_RUN');
+    expect(est.gateFailures.map((f) => f.code)).toContain('VRAM_CEILING');
+  });
 });
 
 describe('anchor calibration', () => {

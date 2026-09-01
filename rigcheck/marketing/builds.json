@@ -16,6 +16,7 @@
     "storage": "nvme-gen4",
     "powerW": 260,
     "psuW": 400,
+    "psuPartW": 550,
     "cyberpunk1440": 43,
     "bom": [
       {
@@ -127,6 +128,7 @@
     "storage": "nvme-gen4",
     "powerW": 332,
     "psuW": 500,
+    "psuPartW": 550,
     "cyberpunk1440": 83,
     "bom": [
       {
@@ -238,6 +240,7 @@
     "storage": "nvme-gen4",
     "powerW": 426,
     "psuW": 650,
+    "psuPartW": 650,
     "cyberpunk1440": 115,
     "bom": [
       {
@@ -349,6 +352,7 @@
     "storage": "nvme-gen4",
     "powerW": 464,
     "psuW": 800,
+    "psuPartW": 850,
     "cyberpunk1440": 129,
     "bom": [
       {
