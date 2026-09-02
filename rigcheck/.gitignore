@@ -21,3 +21,8 @@ probe/
 # Screenshots taken while checking a change in a real browser.
 *.png
 !public/**/*.png
+
+# Generated posting calendar and the daily drop folder. rotation.json and
+# posted.json beside them are the inputs and the record, and are committed.
+marketing/calendar/
+marketing/drop/

@@ -92,3 +92,50 @@ Every piece of content here says so in its own body copy rather than in a
 footnote. That is deliberate: the honesty is the differentiator, and burying it
 would remove the only thing that makes this different from the guides that quote
 frame rates with no provenance at all.
+
+## Posting every day without it becoming a job
+
+The renderer is a library (`scripts/cardlib.mjs`): every template takes the
+object it draws, in either format — a 1080×1350 post or a 1080×1920 story from
+the same HTML, the story stacking any side-by-side panels. Anything can call
+it with any data:
+
+```
+npm run marketing:build -- --budget 900 --resolution 1440p   # one build, both formats, caption
+npm run marketing:versus -- nvidia-geforce-rtx-4070 amd-radeon-rx-9070
+npm run game -- request "Helldivers 2" --votes 3             # the queue the poll card reads
+npm run marketing:calendar                                   # four weeks into calendar/<date>/
+npm run marketing:next                                       # today's folder → drop/, caption printed
+```
+
+**The calendar.** `rotation.json` is a week template: Monday a build of the
+week at a rotating budget, Tuesday and Thursday and Friday existing posts in
+rotation, Wednesday a versus pair, Saturday the which-game-next poll, Sunday a
+story. `marketing:calendar` expands it into dated folders, each with the
+image(s), the story image(s), `caption.txt` and `meta.json`. Existing posts are
+copied from the rendered set; builds, versus and the poll are generated against
+the data as it is that day. Every folder is checked — images present, the
+caption carrying the sentence printed on the card, every `· Game — Nfps` line
+matching the folder's own `data.json`, no `undefined` anywhere — and the
+caption verifier runs last. The folders are generated and ignored by git;
+`rotation.json` and `posted.json` beside them are committed.
+
+**The daily two minutes.** `marketing:next` picks the next unposted day
+(today, or the earliest overdue), regenerates just that day against current
+data, re-checks it, copies it to `drop/<date>/`, prints the caption and
+records the date. Upload the folder, paste the caption. Nothing here talks to
+Instagram; that is a deliberate boundary until there is an account and an app
+to talk to.
+
+**Versus.** Any two parts of one kind on identical partners — the same
+processor for two cards, the same card for two processors, at 1080p so the card
+is out of the way. "Ahead by N% on average" is a geometric mean of per-game
+ratios, which treats +50% and −33% as the same distance; an arithmetic mean of
+percentages does not.
+
+**Game requests.** `data/catalogue/requests.json` is the queue. `npm run game`
+adds, votes, lists, scaffolds and promotes. A scaffold is the full game record
+with a null everywhere a value must go and a checklist saying what each one
+means; `promote` refuses anything still null and refuses a game with no
+reference figures, because the engine would answer NO_ESTIMATE for it. Adding a
+game is data entry, and the tooling makes that literally true.

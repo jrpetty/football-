@@ -1,3 +1,11 @@
+/**
+ * The build planner, parameterised.
+ *
+ * `planTier` takes a budget, a resolution, a refresh rate and a game list and
+ * returns everything a build card needs. Run with no arguments it writes the
+ * four standard tiers to builds.json; the calendar calls it for any budget it
+ * likes, which is what makes "build of the week" a loop rather than new work.
+ */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { buildEngineData } from '../../src/core/catalogue.ts';
 import { planBuild } from '../../src/core/planner.ts';
@@ -6,15 +14,24 @@ import { machineReport } from '../../src/core/analysis.ts';
 import type { Resolution } from '../../src/core/types.ts';
 
 const load = (p: string) => JSON.parse(readFileSync(p, 'utf8'));
-const data = buildEngineData({
-  gpus: load('data/catalogue/gpus.json'), cpus: load('data/catalogue/cpus.json'),
-  games: load('data/catalogue/games.json'), references: load('data/catalogue/references.json'),
-});
-const newP = load('data/pricing/gbp-new.json').prices as Record<string, number>;
-const usedP = load('data/pricing/gbp-used.json').prices as Record<string, number>;
-const comp = load('data/pricing/components-gbp.json');
 
-const GAMES = ['counter-strike-2', 'fortnite', 'cyberpunk-2077', 'baldurs-gate-3', 'call-of-duty-black-ops-6', 'elden-ring'];
+export interface Tier { name: string; budget: number; resolution: Resolution; refreshHz: number; games?: string[] }
+
+export function loadPlanContext() {
+  const data = buildEngineData({
+    gpus: load('data/catalogue/gpus.json'), cpus: load('data/catalogue/cpus.json'),
+    games: load('data/catalogue/games.json'), references: load('data/catalogue/references.json'),
+  });
+  return {
+    data,
+    newP: load('data/pricing/gbp-new.json').prices as Record<string, number>,
+    usedP: load('data/pricing/gbp-used.json').prices as Record<string, number>,
+    comp: load('data/pricing/components-gbp.json'),
+  };
+}
+export type PlanContext = ReturnType<typeof loadPlanContext>;
+
+export const GAMES = ['counter-strike-2', 'fortnite', 'cyberpunk-2077', 'baldurs-gate-3', 'call-of-duty-black-ops-6', 'elden-ring'];
 const TIERS: { name: string; budget: number; resolution: Resolution; refreshHz: number }[] = [
   { name: 'The £700 one', budget: 700, resolution: '1080p', refreshHz: 144 },
   { name: 'The £1,100 one', budget: 1100, resolution: '1440p', refreshHz: 144 },
@@ -22,11 +39,14 @@ const TIERS: { name: string; budget: number; resolution: Resolution; refreshHz: 
   { name: 'The £2,600 one', budget: 2600, resolution: '2160p', refreshHz: 144 },
 ];
 
-const out = TIERS.map((t) => {
-  const r = planBuild({ budget: t.budget, resolution: t.resolution, refreshHz: t.refreshHz, condition: 'new', gameIds: GAMES.filter((g) => data.games.has(g)) }, data, { newP, usedP }, comp);
-  const b = r.pick!.build;
+export function planTier(t: Tier, ctx: PlanContext) {
+  const { data, newP, usedP, comp } = ctx;
+  const games = (t.games ?? GAMES).filter((g) => data.games.has(g));
+  const r = planBuild({ budget: t.budget, resolution: t.resolution, refreshHz: t.refreshHz, condition: 'new', gameIds: games }, data, { newP, usedP }, comp);
+  if (!r.pick) return null;
+  const b = r.pick.build;
   const cpu = data.cpus.get(b.cpuId)!, gpu = data.gpus.get(b.gpuId)!;
-  const rows = GAMES.filter((g) => data.games.has(g)).map((g) => {
+  const rows = games.map((g) => {
     const e = estimate(b, g, t.resolution, data);
     return {
       game: data.games.get(g)!.name,
@@ -45,6 +65,7 @@ const out = TIERS.map((t) => {
   const at1440 = estimate(b, 'cyberpunk-2077', '1440p', data);
   return {
     ...t,
+    games: undefined,
     total: Math.round(r.pick!.total),
     cpu: cpu.fullName, gpu: gpu.fullName,
     cpuShort: cpu.brand, gpuShort: gpu.brand,
@@ -66,6 +87,12 @@ const out = TIERS.map((t) => {
     bom: r.pick!.bom.map((l: any) => ({ cat: l.category, price: Math.round(l.price), part: l.label ?? '' })),
     rows,
   };
-});
-writeFileSync('marketing/builds.json', JSON.stringify(out, null, 2));
-console.log(JSON.stringify(out.map(o => ({ n: o.name, total: o.total, cpu: o.cpuShort, gpu: o.gpuShort, w: o.powerW, psuFloor: o.psuW, psuPart: o.psuPartW })), null, 1));
+}
+export type PlannedBuild = NonNullable<ReturnType<typeof planTier>>;
+
+if (process.argv[1]?.endsWith('plans.ts')) {
+  const ctx = loadPlanContext();
+  const out = TIERS.map((t) => planTier(t, ctx)).filter(Boolean);
+  writeFileSync('marketing/builds.json', JSON.stringify(out, null, 2));
+  console.log(JSON.stringify(out.map((o) => ({ n: o!.name, total: o!.total, cpu: o!.cpuShort, gpu: o!.gpuShort, w: o!.powerW, psuFloor: o!.psuW, psuPart: o!.psuPartW })), null, 1));
+}

@@ -1,0 +1,13 @@
+{
+  "start": "2026-09-07",
+  "weeks": 4,
+  "week": {
+    "mon": { "kind": "build", "budgets": [900, 1300, 1600, 2200], "resolution": ["1080p", "1440p", "1440p", "2160p"], "refreshHz": [144, 144, 165, 144] },
+    "tue": { "kind": "post", "rotate": ["POST 5", "POST 7", "POST 8", "POST 9"] },
+    "wed": { "kind": "versus", "pairs": [["nvidia-geforce-rtx-4070", "amd-radeon-rx-9070"], ["amd-ryzen-5-7600", "amd-ryzen-7-7800x3d"], ["nvidia-geforce-rtx-5070", "nvidia-geforce-rtx-4070-super"], ["amd-ryzen-7-5800x3d", "amd-ryzen-7-7800x3d"]] },
+    "thu": { "kind": "post", "rotate": ["POST 6", "POST 12", "POST 2", "POST 4"] },
+    "fri": { "kind": "post", "rotate": ["POST 1", "POST 3", "POST 10", "POST 11"] },
+    "sat": { "kind": "poll" },
+    "sun": { "kind": "story", "rotate": ["hero-gtx-970", "hero-cpu-split", "hero-price-step", "silent-tax-memory-channels"] }
+  }
+}

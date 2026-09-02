@@ -26,7 +26,12 @@
     "fuzz:sticky": "node scripts/sticky-fuzz.mjs",
     "marketing:cards": "node marketing/scripts/cards.mjs",
     "marketing:verify": "tsx marketing/scripts/verify.mjs",
-    "price": "tsx scripts/price.ts"
+    "price": "tsx scripts/price.ts",
+    "marketing:calendar": "tsx marketing/scripts/calendar.ts",
+    "marketing:next": "tsx marketing/scripts/next.ts",
+    "marketing:versus": "tsx marketing/scripts/versus-cli.ts",
+    "marketing:build": "tsx marketing/scripts/build-cli.ts",
+    "game": "tsx scripts/game.ts"
   },
   "dependencies": {
     "react": "^18.3.1",

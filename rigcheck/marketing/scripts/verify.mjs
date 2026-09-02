@@ -262,13 +262,20 @@ console.log('\nTEMPLATES — no hand-typed figures in the card renderer?');
       i++;
     }
   };
-  let src = readFileSync('marketing/scripts/cards.mjs', 'utf8');
-  // The stylesheet is not content: widths like 100% live there by design.
-  const cssAt = src.indexOf('const css = `');
-  if (cssAt >= 0) { const e = templateEnd(src, cssAt + 'const css = `'.length); src = src.slice(0, cssAt) + src.slice(e + 1); }
-  scanSource(src);
-  if (hits.length) for (const h of hits) fail('cards.mjs has a typed-in figure', h);
-  else pass('cards.mjs: every figure on every card comes through a data expression');
+  for (const file of ['marketing/scripts/cardlib.mjs', 'marketing/scripts/cards.mjs']) {
+    let src = readFileSync(file, 'utf8');
+    // Stylesheets are not content: widths like 100% live there by design. Any
+    // template literal assigned to a name containing "css" is one.
+    for (;;) {
+      const m = /(?:export )?const \w*(?:css|CSS)\w* = (?:\([^)]*\) => )?`/.exec(src);
+      if (!m) break;
+      const e = templateEnd(src, m.index + m[0].length);
+      src = src.slice(0, m.index) + src.slice(e + 1);
+    }
+    scanSource(src);
+  }
+  if (hits.length) for (const h of hits) fail('the card renderer has a typed-in figure', h);
+  else pass('cardlib.mjs + cards.mjs: every figure on every card comes through a data expression');
 }
 
 

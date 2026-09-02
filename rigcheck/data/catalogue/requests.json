@@ -1,0 +1,4 @@
+{
+  "note": "Games followers have asked for that are not in the catalogue yet. Managed by `npm run game -- request|vote|list|scaffold|promote`; the poll card and the Saturday calendar slot read it. Adding a game is data entry — a complete record and reference figures — never code.",
+  "requests": []
+}
