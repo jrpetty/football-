@@ -28,13 +28,15 @@ import { DEFAULT_USAGE, PSU_EFFICIENCY, efficiencyPayback, runningCost, totalCos
 import { exportJson } from '../export.ts';
 import { findObserved, loadPrices, plannerTables, priceCoverage } from '../pricing.ts';
 import { changeOverall, describeChange, monthLabel } from '../../core/pricetrend.ts';
+import { overlayComponents } from '../../core/components.ts';
 import componentPrices from '../../../data/pricing/components-gbp.json';
 import monitorsJson from '../../../data/catalogue/monitors.json';
 import type { MonitorRecord } from '../../core/fit.ts';
 import type { Resolution } from '../../core/types.ts';
 
 const monitors = (monitorsJson as { records: MonitorRecord[] }).records;
-const comp = componentPrices as unknown as ComponentPrices;
+/** The recalled allowance table. Observed prices are laid over it per render, below. */
+const SEED_COMP = componentPrices as unknown as ComponentPrices;
 // Observed market data merged over the recalled seed. A part someone has
 // actually sourced beats a part the model remembers.
 
@@ -72,13 +74,16 @@ export function BuildWizard() {
   // did not reach this screen until the tab was reloaded — which, on a tool
   // whose whole point is that you can improve its data from inside it, reads as
   // the entry having silently failed.
-  const { prices, priceTables, coverage, PRICE_AS_OF } = useMemo(() => {
+  const { prices, priceTables, coverage, PRICE_AS_OF, comp } = useMemo(() => {
     const p = loadPrices();
     return {
       prices: p,
       priceTables: plannerTables(p),
       coverage: priceCoverage(p),
       PRICE_AS_OF: p.newP.updated ?? 'unknown',
+      // Motherboard, memory, storage, PSU, case and cooler allowances, with any
+      // observed class price (memory.DDR5.32, psu.650 …) written over the seed.
+      comp: overlayComponents(SEED_COMP, p.observed),
     };
   }, []);
   const { data } = useApp();
@@ -627,7 +632,8 @@ function BuildStep({
                     <td className="cat">{l.category}</td>
                     <td className="part">
                       <b>{l.label}</b>
-                      {l.allowance && <span className="tag" style={{ marginLeft: 6 }}>allowance</span>}
+                      {l.allowance && <span className="tag" style={{ marginLeft: 6 }} title={l.key ? `A class allowance. Record a price against ${l.key} and it replaces the recalled figure.` : undefined}>allowance</span>}
+                      {l.allowance && l.key && <PriceOrigin id={l.key} prices={prices} asOf={priceAsOf} />}
                       {!l.allowance && l.partId && <PriceOrigin id={l.partId} prices={prices} asOf={priceAsOf} />}
                       <div className="why">{l.rationale}</div>
                     </td>

@@ -83,6 +83,27 @@ The importer accepts `asking` and `retail` as a basis, because sometimes that is
 all you have — but it will say loudly that asking prices run high, and the
 planner marks anything sourced that way as weaker evidence.
 
+## Not just processors and graphics cards
+
+Motherboards, memory, storage, power supplies, cases and coolers are priced as
+**class allowances** — the planner budgets "a competent AM4 board" or "a 650W
+Gold supply" rather than a specific product. Record a price against the class
+key and it replaces the recalled figure for the whole class:
+
+```
+npm run price -- "ddr5 32" new 89 --basis retail --source scan-uk      # memory.DDR5.32
+npm run price -- "650w" new 68 --basis retail --source scan-uk         # psu.650
+npm run price -- --id motherboard.AM5.budget new 125 --basis retail    # any key, exactly
+```
+
+Keys: `motherboard.<socket>.<budget|mid|high>`, `memory.<DDR4|DDR5>.<16|32|64>`,
+`storage.<nvme-gen4|nvme-gen3|sata-ssd|hdd>.<GB>`, `psu.<watts>`,
+`case.<restricted|moderate|good|excellent>`, `cooler.<budget-tower|premium-air|aio>`.
+`npm run prices:audit` lists every one with its recalled figure.
+
+Cases and monitors in the catalogue are priced by their own id
+(`fractal-design-north`, `lg-24mp60g-b`); the name resolves them too.
+
 ## Format
 
 One row per observation. Header required, column order irrelevant, extra columns

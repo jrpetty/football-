@@ -79,6 +79,8 @@ export interface BomLine {
   /** True when this is a class allowance rather than a specific catalogue part. */
   allowance: boolean;
   partId?: string;
+  /** For an allowance: the key an observed price would be recorded against, e.g. memory.DDR5.32. */
+  key?: string;
 }
 
 export interface PlanCandidate {
@@ -159,11 +161,13 @@ function platformCost(
 ): BomLine[] {
   const lines: BomLine[] = [];
 
-  const mb = comp.motherboard[cpu.socket] ?? comp.motherboard.default;
+  const mbSocket = comp.motherboard[cpu.socket] ? cpu.socket : 'default';
+  const mb = comp.motherboard[mbSocket];
   lines.push({
     category: 'Motherboard',
     label: `${cpu.socket} board (${mb.chipsets})`,
     price: mb.budget,
+    key: `motherboard.${mbSocket}.budget`,
     rationale: `${cpu.socket} is fixed by the CPU — it is not a free choice. Budget-tier board; a mid-tier one is about ${mb.mid - mb.budget} more and buys VRM headroom and connectivity, not frame rate.`,
     allowance: true,
   });
@@ -175,6 +179,7 @@ function platformCost(
     category: 'Memory',
     label: `${opts.ramGB}GB ${memType} (2 sticks)`,
     price: memPrice,
+    key: `memory.${memType}.${memRow[String(opts.ramGB)] != null ? opts.ramGB : 32}`,
     rationale: `${cpu.socket} takes ${cpu.memoryType.join(' or ')}. Two sticks, not four — dual channel is worth more than capacity here, and a 2x kit clocks higher than a 4x one on every platform in this catalogue.`,
     allowance: true,
   });
@@ -185,6 +190,7 @@ function platformCost(
     category: 'Storage',
     label: `${opts.storageGB >= 1000 ? `${opts.storageGB / 1000}TB` : `${opts.storageGB}GB`} ${opts.storage}`,
     price: storePrice,
+    key: `storage.${opts.storage}.${opts.storageGB}`,
     rationale:
       opts.storage === 'hdd'
         ? 'A mechanical drive is a false economy for games — texture streaming stalls show up as stutter, not as a loading-screen wait.'
@@ -197,15 +203,18 @@ function platformCost(
     category: 'PSU',
     label: `${psu.watts}W ${psu.tier}`,
     price: psu.price,
+    key: `psu.${psu.watts}`,
     rationale: `Sized from the TRANSIENT peak, not the average draw. Modern GPUs spike far above their rated power for microseconds, and it is the spike that trips a supply's protection — an average-sized PSU shuts the machine off under load and looks like a faulty card.`,
     allowance: true,
   });
 
-  const cs = comp.case[opts.airflow] ?? comp.case.good;
+  const csTier = comp.case[opts.airflow] ? opts.airflow : 'good';
+  const cs = comp.case[csTier];
   lines.push({
     category: 'Case',
     label: cs.label,
     price: cs.price,
+    key: `case.${csTier}`,
     rationale:
       opts.airflow === 'restricted'
         ? 'A restricted case costs real sustained clocks. It is in here because it is what the budget allows, not because it is a good idea.'
@@ -213,11 +222,13 @@ function platformCost(
     allowance: true,
   });
 
-  const cool = comp.cooler[opts.cooler] ?? comp.cooler['budget-tower'];
+  const coolTier = comp.cooler[opts.cooler] ? opts.cooler : 'budget-tower';
+  const cool = comp.cooler[coolTier];
   lines.push({
     category: 'Cooler',
     label: cool.label,
     price: cool.price,
+    key: `cooler.${coolTier}`,
     rationale: `Sized to hold ${cpu.fullName} at its sustained gaming draw without dropping clocks. Budgeted even if the CPU might include one — whether a given SKU ships with a cooler is not in this catalogue, and a plan that is short a cooler on arrival is worse than one that is 32 over.`,
     allowance: true,
   });

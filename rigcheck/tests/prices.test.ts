@@ -28,7 +28,7 @@ describe('price observation import', () => {
   it('rejects a part id that is not in the catalogue, by name', () => {
     const { rows, rejected } = parseObservations(`${HEAD}\nrtx-3070,used,sold,192,GBP,ebay,2026-08-18,5,`, 't.csv', validIds);
     expect(rows).toEqual([]);
-    expect(rejected[0].reason).toMatch(/not in the catalogue/);
+    expect(rejected[0].reason).toMatch(/not a catalogue part or an allowance key/);
   });
 
   it('rejects rather than guesses on every malformed field', () => {

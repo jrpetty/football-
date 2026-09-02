@@ -13,6 +13,8 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { STATUS_ADVICE, STATUS_PRIORITY, priceStatus, type PriceStatus } from '../src/core/priceaudit.ts';
+import { allowanceKeys } from '../src/core/components.ts';
+import type { ComponentPrices } from '../src/core/planner.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const load = (p: string) => JSON.parse(readFileSync(join(ROOT, p), 'utf8'));
@@ -97,6 +99,33 @@ section('Recalled USED price', by('recalled-used'), 'These are the figures most 
 section('Recalled NEW price on a recent part', by('recalled-new'), 'Plausible, unsourced, undated. A retail price with a date replaces each one; a sold-listing used price beside it is what the upgrade advisor actually wants.', () => 'new');
 section('Sourced', by('sourced'), 'On record from a real observation. A second snapshot on a later date is what turns each into a trend.', (r) => (r.obs[0]?.condition ?? 'used'));
 
+// --- everything that is not a processor or a graphics card --------------------
+const comp = load('data/pricing/components-gbp.json') as ComponentPrices & { asOf: string };
+const allow = allowanceKeys(comp);
+const obsFor = (id: string) => observed.filter((o) => o.partId === id);
+md.push(`## Component allowances (${allow.length})`, '');
+md.push(`Motherboards, memory, storage, power supplies, cases and coolers are not modelled part by part. The planner budgets a class — "a competent AM4 board", "a 650W Gold supply" — from this table, recalled in ${comp.asOf}. A price recorded against the key replaces the recalled figure for the whole class, which is the grain the planner works at. Cases here are airflow tiers; the ${(load('data/catalogue/cases.json').records as unknown[]).length} named cases in the catalogue carry fit data only and no price.`, '');
+md.push('| key | class | on file | check |', '|---|---|---|---|');
+for (const k of allow) {
+  const o = obsFor(k.key);
+  const onFile = o.length ? o.map((x) => `£${x.price} ${x.condition}, sourced ${x.newestDate}`).join('; ') : `£${k.price} new, recalled (seed ${comp.asOf})`;
+  md.push(`| \`${k.key}\` | ${k.label} | ${onFile} | \`npm run price -- --id ${k.key} new <£> --basis retail --source <shop>\` |`);
+}
+md.push('');
+const monitors = load('data/catalogue/monitors.json').records as { id: string; fullName: string; typicalPriceGBP: number | null; releaseYear: number | null }[];
+md.push(`## Monitors (${monitors.length})`, '');
+md.push('Each monitor record carries a recalled typical price. None is sourced. Record a retail price against the monitor id and it will be reported here as sourced.', '');
+md.push('| monitor | released | on file | check |', '|---|---|---|---|');
+for (const m of monitors) {
+  const o = obsFor(m.id);
+  const onFile = o.length ? o.map((x) => `£${x.price} ${x.condition}, sourced ${x.newestDate}`).join('; ') : m.typicalPriceGBP != null ? `£${m.typicalPriceGBP} new, recalled` : 'no price';
+  md.push(`| ${m.fullName} | ${m.releaseYear ?? '?'} | ${onFile} | \`npm run price -- --id ${m.id} new <£> --basis retail --source <shop>\` |`);
+}
+md.push('');
+const sourcedAllow = allow.filter((k) => obsFor(k.key).length).length, sourcedMon = monitors.filter((m) => obsFor(m.id).length).length;
+md.splice(md.indexOf('') + 1, 0); // no-op keeps structure explicit
+md[3] = md[3]; // summary table stays as is
+
 writeFileSync(join(ROOT, 'data/pricing/PRICE-AUDIT.md'), md.join('\n') + '\n');
 
 // --- terminal --------------------------------------------------------------
@@ -105,4 +134,5 @@ for (const s of ['none', 'recalled-new-old-part', 'recalled-used', 'recalled-new
 const first = rows.filter((r) => r.status !== 'sourced').slice(0, 12);
 console.log(`\nstart here — the ${first.length} that matter most:\n`);
 for (const r of first) console.log(`  ${r.name.padEnd(34)} ${String(r.year ?? '?').padEnd(6)} ${describe(r)}${r.mentioned ? '   ← in posts' : ''}`);
+console.log(`\ncomponent allowances: ${sourcedAllow} of ${allow.length} sourced · monitors: ${sourcedMon} of ${monitors.length} sourced · cases: ${(load('data/catalogue/cases.json').records as unknown[]).length} in the catalogue, priced by airflow tier`);
 console.log(`\nfull list with commands: data/pricing/PRICE-AUDIT.md`);

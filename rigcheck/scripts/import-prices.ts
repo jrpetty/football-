@@ -25,6 +25,25 @@ import { join } from 'node:path';
 import { parseCsv } from './import-manual.ts';
 import type { CpuRecord, GpuRecord } from '../src/core/types.ts';
 import type { SeriesPoint } from '../src/core/pricetrend.ts';
+import { allowanceKeys } from '../src/core/components.ts';
+import type { ComponentPrices } from '../src/core/planner.ts';
+
+/**
+ * Everything a price can be recorded against: processors and graphics cards
+ * by catalogue id, cases and monitors by catalogue id, and the component
+ * allowances by key (memory.DDR5.32, psu.650, case.good …). Labels are for
+ * the resolver in scripts/price.ts and for reports.
+ */
+export function priceableIds(): { ids: Set<string>; labels: Map<string, string>; kinds: Map<string, string> } {
+  const j = (p: string) => JSON.parse(readFileSync(join(ROOT, p), 'utf8'));
+  const labels = new Map<string, string>(), kinds = new Map<string, string>();
+  for (const r of (j('data/catalogue/gpus.json') as { records: GpuRecord[] }).records) { labels.set(r.id, r.fullName); kinds.set(r.id, 'gpu'); }
+  for (const r of (j('data/catalogue/cpus.json') as { records: CpuRecord[] }).records) { labels.set(r.id, r.fullName); kinds.set(r.id, 'cpu'); }
+  for (const r of (j('data/catalogue/cases.json') as { records: { id: string; fullName: string }[] }).records) { labels.set(r.id, `${r.fullName} (case)`); kinds.set(r.id, 'case'); }
+  for (const r of (j('data/catalogue/monitors.json') as { records: { id: string; fullName: string }[] }).records) { labels.set(r.id, `${r.fullName} (monitor)`); kinds.set(r.id, 'monitor'); }
+  for (const a of allowanceKeys(j('data/pricing/components-gbp.json') as ComponentPrices)) { labels.set(a.key, a.label); kinds.set(a.key, 'allowance'); }
+  return { ids: new Set(labels.keys()), labels, kinds };
+}
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const IN = join(ROOT, 'data/prices-observed');
@@ -128,7 +147,7 @@ export function parseObservations(
 
     const partId = get('part_id');
     if (!partId) { reject('part_id is empty'); continue; }
-    if (!validIds.has(partId)) { reject(`part_id "${partId}" is not in the catalogue — check the exact id in data/catalogue/`); continue; }
+    if (!validIds.has(partId)) { reject(`part_id "${partId}" is not a catalogue part or an allowance key — see data/prices-observed/README.md`); continue; }
 
     const condition = get('condition').toLowerCase();
     if (!CONDITIONS.has(condition)) { reject(`condition "${condition}" must be new or used`); continue; }
@@ -262,9 +281,7 @@ export function aggregate(rows: Observation[], today: Date): AggregatedPrice[] {
 }
 
 export function main() {
-  const gpus = JSON.parse(readFileSync(join(ROOT, 'data/catalogue/gpus.json'), 'utf8')) as { records: GpuRecord[] };
-  const cpus = JSON.parse(readFileSync(join(ROOT, 'data/catalogue/cpus.json'), 'utf8')) as { records: CpuRecord[] };
-  const validIds = new Set([...gpus.records.map((r) => r.id), ...cpus.records.map((r) => r.id)]);
+  const validIds = priceableIds().ids;
 
   mkdirSync(IN, { recursive: true });
   const files = readdirSync(IN).filter(isObservationFile).sort();

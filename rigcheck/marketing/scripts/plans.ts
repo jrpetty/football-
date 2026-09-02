@@ -12,6 +12,7 @@ import { planBuild } from '../../src/core/planner.ts';
 import { estimate } from '../../src/core/engine.ts';
 import { machineReport } from '../../src/core/analysis.ts';
 import type { Resolution } from '../../src/core/types.ts';
+import { overlayComponents } from '../../src/core/components.ts';
 
 const load = (p: string) => JSON.parse(readFileSync(p, 'utf8'));
 
@@ -26,7 +27,8 @@ export function loadPlanContext() {
     data,
     newP: load('data/pricing/gbp-new.json').prices as Record<string, number>,
     usedP: load('data/pricing/gbp-used.json').prices as Record<string, number>,
-    comp: load('data/pricing/components-gbp.json'),
+    // Observed allowance prices (memory.DDR5.32, psu.650 …) override the recalled ones.
+    comp: overlayComponents(load('data/pricing/components-gbp.json'), load('data/pricing/observed.json').prices ?? []),
   };
 }
 export type PlanContext = ReturnType<typeof loadPlanContext>;

@@ -4,6 +4,10 @@
  *   npm run price -- "i7 7700" used 40
  *   npm run price -- "rtx 3070" used 192 --basis sold --source ebay-uk --n 14
  *   npm run price -- "rtx 5070" new 549 --basis retail --source scan-uk
+ *   npm run price -- "ddr5 32" new 89 --basis retail --source scan-uk     (an allowance: memory.DDR5.32)
+ *   npm run price -- "650w" new 68 --basis retail                          (psu.650)
+ *   npm run price -- --id case.good new 92 --basis retail                  (any key or id, exactly)
+ *   npm run price -- "fractal north" new 110 --basis retail                (a case from the catalogue)
  *
  * Resolves the part by search, refuses to guess between close matches, appends
  * the row to this week's snapshot file under data/prices-observed/, and re-runs
@@ -15,11 +19,10 @@
  * source "operator", one sample, today's date, GBP. Anything read from live
  * listings that have not sold should say --basis asking.
  */
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { buildEngineData, search } from '../src/core/catalogue.ts';
 import { snapshotWeek } from '../src/core/pricetrend.ts';
-import { main as importPrices } from './import-prices.ts';
+import { main as importPrices, priceableIds } from './import-prices.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const DIR = join(ROOT, 'data/prices-observed');
@@ -38,7 +41,8 @@ for (let i = 0; i < argv.length; i++) {
   const a = argv[i];
   if (a.startsWith('--')) { flags[a.slice(2)] = argv[i + 1] ?? ''; i++; } else positional.push(a);
 }
-const [query, conditionRaw, priceRaw] = positional;
+// With --id the query is the id itself, so the positionals are condition and price.
+const [query, conditionRaw, priceRaw] = flags.id ? [flags.id, ...positional] : positional;
 if (!query || !conditionRaw || !priceRaw) usage();
 const condition = conditionRaw.toLowerCase();
 if (condition !== 'new' && condition !== 'used') usage(`condition must be new or used, not "${conditionRaw}"`);
@@ -53,35 +57,43 @@ if (!Number.isInteger(n) || n < 1) usage(`--n must be a whole number of sales, 1
 const currency = (flags.currency ?? 'GBP').toUpperCase();
 const source = flags.source ?? 'operator';
 
-const load = (p: string) => JSON.parse(readFileSync(join(ROOT, p), 'utf8'));
-const data = buildEngineData({
-  gpus: load('data/catalogue/gpus.json'), cpus: load('data/catalogue/cpus.json'),
-  games: load('data/catalogue/games.json'), references: load('data/catalogue/references.json'),
-});
+const { ids, labels, kinds } = priceableIds();
 
+/**
+ * Resolve a query against everything priceable: processors, graphics cards,
+ * cases and monitors by name, allowances by their label ("32GB DDR5 kit",
+ * "650W power supply", "case, mesh-front airflow case"). Every token must
+ * match; a query that is a whole name wins outright; otherwise a clear lead
+ * on score is required, because a price filed against the wrong thing is
+ * worse than no price.
+ */
+const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 let id = flags.id;
 let label = '';
 if (id) {
-  const rec = data.gpus.get(id) ?? data.cpus.get(id);
-  if (!rec) usage(`"${id}" is not a catalogue id`);
-  label = rec.fullName;
+  if (!ids.has(id)) usage(`"${id}" is not a catalogue id or an allowance key — see data/prices-observed/README.md`);
+  label = labels.get(id)!;
 } else {
-  const hits = search(query, data, 8);
-  if (!hits.length) usage(`nothing in the catalogue matches "${query}"`);
-  // A query that IS a part's name wins outright: "rtx 3070" is the RTX 3070,
-  // not a toss-up with the 3070 Ti because the two score a few points apart.
-  // "7700" ends four different names and stays ambiguous, which is right.
-  const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-  const exact = hits.filter((h) => { const l = norm(h.label); const q = norm(query); return l === q || l.endsWith(` ${q}`); });
+  const q = norm(query);
+  const tokens = q.split(' ').filter(Boolean);
+  const hits = [...labels.entries()].map(([cid, lab]) => {
+    const h = norm(`${lab} ${cid.replace(/[.-]/g, ' ')}`);
+    let score = 0;
+    for (const t of tokens) { if (!h.includes(t)) return null; score += new RegExp(`\\b${t}\\b`).test(h) ? 20 : 8; }
+    // Words in the label the query did not mention count against it: "fractal
+    // north" is the North, not the North XL, and "rtx 3070" is not the 3070 Ti.
+    const unmatched = norm(lab).split(' ').filter((w) => w && !tokens.some((t) => w.includes(t))).length;
+    return { id: cid, label: lab, score: score + Math.max(0, 30 - h.length / 2) - 12 * unmatched };
+  }).filter((x): x is { id: string; label: string; score: number } => !!x).sort((a, b) => b.score - a.score);
+  if (!hits.length) usage(`nothing priceable matches "${query}"`);
+  const exact = hits.filter((h) => { const l = norm(h.label); return l === q || l.endsWith(` ${q}`); });
   if (exact.length === 1) { id = exact[0].id; label = exact[0].label; }
   else {
-    // Otherwise refuse to guess. A price filed against the wrong part is worse
-    // than no price.
     const pool = exact.length > 1 ? exact : hits;
     const [a, b] = pool;
     if (b && a.score - b.score < 10) {
       console.error(`\n"${query}" is ambiguous. Say which, with --id:\n`);
-      for (const h of pool) console.error(`  ${h.id.padEnd(36)} ${h.label}  ${h.disambiguator ?? ''}`);
+      for (const h of pool.slice(0, 8)) console.error(`  ${h.id.padEnd(36)} ${h.label}  [${kinds.get(h.id)}]`);
       process.exit(1);
     }
     id = a.id; label = a.label;

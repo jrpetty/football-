@@ -170,3 +170,110 @@ On record from a real observation. A second snapshot on a later date is what tur
 |---|---|---|---|
 | Intel Core i7-7700 | 2017 (9y) | £40 used, sourced 2026-09-02, 1 sale | `npm run price -- "Core i7-7700" used <£> --source ebay-uk --basis sold --n <sales>` |
 
+## Component allowances (56)
+
+Motherboards, memory, storage, power supplies, cases and coolers are not modelled part by part. The planner budgets a class — "a competent AM4 board", "a 650W Gold supply" — from this table, recalled in 2026-05. A price recorded against the key replaces the recalled figure for the whole class, which is the grain the planner works at. Cases here are airflow tiers; the 48 named cases in the catalogue carry fit data only and no price.
+
+| key | class | on file | check |
+|---|---|---|---|
+| `motherboard.AM5.budget` | AM5 motherboard, budget tier (B650 / B650E / X670E) | £130 new, recalled (seed 2026-05) | `npm run price -- --id motherboard.AM5.budget new <£> --basis retail --source <shop>` |
+| `motherboard.AM5.mid` | AM5 motherboard, mid tier (B650 / B650E / X670E) | £180 new, recalled (seed 2026-05) | `npm run price -- --id motherboard.AM5.mid new <£> --basis retail --source <shop>` |
+| `motherboard.AM5.high` | AM5 motherboard, high tier (B650 / B650E / X670E) | £260 new, recalled (seed 2026-05) | `npm run price -- --id motherboard.AM5.high new <£> --basis retail --source <shop>` |
+| `motherboard.AM4.budget` | AM4 motherboard, budget tier (B450 / B550 / X570) | £75 new, recalled (seed 2026-05) | `npm run price -- --id motherboard.AM4.budget new <£> --basis retail --source <shop>` |
+| `motherboard.AM4.mid` | AM4 motherboard, mid tier (B450 / B550 / X570) | £110 new, recalled (seed 2026-05) | `npm run price -- --id motherboard.AM4.mid new <£> --basis retail --source <shop>` |
+| `motherboard.AM4.high` | AM4 motherboard, high tier (B450 / B550 / X570) | £160 new, recalled (seed 2026-05) | `npm run price -- --id motherboard.AM4.high new <£> --basis retail --source <shop>` |
+| `motherboard.LGA1851.budget` | LGA1851 motherboard, budget tier (B860 / Z890) | £150 new, recalled (seed 2026-05) | `npm run price -- --id motherboard.LGA1851.budget new <£> --basis retail --source <shop>` |
+| `motherboard.LGA1851.mid` | LGA1851 motherboard, mid tier (B860 / Z890) | £210 new, recalled (seed 2026-05) | `npm run price -- --id motherboard.LGA1851.mid new <£> --basis retail --source <shop>` |
+| `motherboard.LGA1851.high` | LGA1851 motherboard, high tier (B860 / Z890) | £300 new, recalled (seed 2026-05) | `npm run price -- --id motherboard.LGA1851.high new <£> --basis retail --source <shop>` |
+| `motherboard.LGA1700.budget` | LGA1700 motherboard, budget tier (B760 / Z790) | £100 new, recalled (seed 2026-05) | `npm run price -- --id motherboard.LGA1700.budget new <£> --basis retail --source <shop>` |
+| `motherboard.LGA1700.mid` | LGA1700 motherboard, mid tier (B760 / Z790) | £150 new, recalled (seed 2026-05) | `npm run price -- --id motherboard.LGA1700.mid new <£> --basis retail --source <shop>` |
+| `motherboard.LGA1700.high` | LGA1700 motherboard, high tier (B760 / Z790) | £220 new, recalled (seed 2026-05) | `npm run price -- --id motherboard.LGA1700.high new <£> --basis retail --source <shop>` |
+| `motherboard.LGA1200.budget` | LGA1200 motherboard, budget tier (B560 / Z590) | £80 new, recalled (seed 2026-05) | `npm run price -- --id motherboard.LGA1200.budget new <£> --basis retail --source <shop>` |
+| `motherboard.LGA1200.mid` | LGA1200 motherboard, mid tier (B560 / Z590) | £120 new, recalled (seed 2026-05) | `npm run price -- --id motherboard.LGA1200.mid new <£> --basis retail --source <shop>` |
+| `motherboard.LGA1200.high` | LGA1200 motherboard, high tier (B560 / Z590) | £180 new, recalled (seed 2026-05) | `npm run price -- --id motherboard.LGA1200.high new <£> --basis retail --source <shop>` |
+| `motherboard.default.budget` | default motherboard, budget tier (unknown socket — allowance is a mid-range guess) | £110 new, recalled (seed 2026-05) | `npm run price -- --id motherboard.default.budget new <£> --basis retail --source <shop>` |
+| `motherboard.default.mid` | default motherboard, mid tier (unknown socket — allowance is a mid-range guess) | £160 new, recalled (seed 2026-05) | `npm run price -- --id motherboard.default.mid new <£> --basis retail --source <shop>` |
+| `motherboard.default.high` | default motherboard, high tier (unknown socket — allowance is a mid-range guess) | £230 new, recalled (seed 2026-05) | `npm run price -- --id motherboard.default.high new <£> --basis retail --source <shop>` |
+| `memory.DDR5.16` | 16GB DDR5 kit, 2 sticks | £55 new, recalled (seed 2026-05) | `npm run price -- --id memory.DDR5.16 new <£> --basis retail --source <shop>` |
+| `memory.DDR5.32` | 32GB DDR5 kit, 2 sticks | £95 new, recalled (seed 2026-05) | `npm run price -- --id memory.DDR5.32 new <£> --basis retail --source <shop>` |
+| `memory.DDR5.64` | 64GB DDR5 kit, 2 sticks | £180 new, recalled (seed 2026-05) | `npm run price -- --id memory.DDR5.64 new <£> --basis retail --source <shop>` |
+| `memory.DDR4.16` | 16GB DDR4 kit, 2 sticks | £35 new, recalled (seed 2026-05) | `npm run price -- --id memory.DDR4.16 new <£> --basis retail --source <shop>` |
+| `memory.DDR4.32` | 32GB DDR4 kit, 2 sticks | £62 new, recalled (seed 2026-05) | `npm run price -- --id memory.DDR4.32 new <£> --basis retail --source <shop>` |
+| `memory.DDR4.64` | 64GB DDR4 kit, 2 sticks | £125 new, recalled (seed 2026-05) | `npm run price -- --id memory.DDR4.64 new <£> --basis retail --source <shop>` |
+| `memory.DDR3.16` | 16GB DDR3 kit, 2 sticks | £30 new, recalled (seed 2026-05) | `npm run price -- --id memory.DDR3.16 new <£> --basis retail --source <shop>` |
+| `memory.DDR3.32` | 32GB DDR3 kit, 2 sticks | £70 new, recalled (seed 2026-05) | `npm run price -- --id memory.DDR3.32 new <£> --basis retail --source <shop>` |
+| `storage.nvme-gen4.500` | 500GB nvme-gen4 drive | £45 new, recalled (seed 2026-05) | `npm run price -- --id storage.nvme-gen4.500 new <£> --basis retail --source <shop>` |
+| `storage.nvme-gen4.1000` | 1TB nvme-gen4 drive | £70 new, recalled (seed 2026-05) | `npm run price -- --id storage.nvme-gen4.1000 new <£> --basis retail --source <shop>` |
+| `storage.nvme-gen4.2000` | 2TB nvme-gen4 drive | £115 new, recalled (seed 2026-05) | `npm run price -- --id storage.nvme-gen4.2000 new <£> --basis retail --source <shop>` |
+| `storage.nvme-gen4.4000` | 4TB nvme-gen4 drive | £230 new, recalled (seed 2026-05) | `npm run price -- --id storage.nvme-gen4.4000 new <£> --basis retail --source <shop>` |
+| `storage.nvme-gen3.500` | 500GB nvme-gen3 drive | £35 new, recalled (seed 2026-05) | `npm run price -- --id storage.nvme-gen3.500 new <£> --basis retail --source <shop>` |
+| `storage.nvme-gen3.1000` | 1TB nvme-gen3 drive | £55 new, recalled (seed 2026-05) | `npm run price -- --id storage.nvme-gen3.1000 new <£> --basis retail --source <shop>` |
+| `storage.nvme-gen3.2000` | 2TB nvme-gen3 drive | £95 new, recalled (seed 2026-05) | `npm run price -- --id storage.nvme-gen3.2000 new <£> --basis retail --source <shop>` |
+| `storage.nvme-gen3.4000` | 4TB nvme-gen3 drive | £190 new, recalled (seed 2026-05) | `npm run price -- --id storage.nvme-gen3.4000 new <£> --basis retail --source <shop>` |
+| `storage.sata-ssd.500` | 500GB sata-ssd drive | £30 new, recalled (seed 2026-05) | `npm run price -- --id storage.sata-ssd.500 new <£> --basis retail --source <shop>` |
+| `storage.sata-ssd.1000` | 1TB sata-ssd drive | £50 new, recalled (seed 2026-05) | `npm run price -- --id storage.sata-ssd.1000 new <£> --basis retail --source <shop>` |
+| `storage.sata-ssd.2000` | 2TB sata-ssd drive | £90 new, recalled (seed 2026-05) | `npm run price -- --id storage.sata-ssd.2000 new <£> --basis retail --source <shop>` |
+| `storage.sata-ssd.4000` | 4TB sata-ssd drive | £180 new, recalled (seed 2026-05) | `npm run price -- --id storage.sata-ssd.4000 new <£> --basis retail --source <shop>` |
+| `storage.hdd.1000` | 1TB hdd drive | £35 new, recalled (seed 2026-05) | `npm run price -- --id storage.hdd.1000 new <£> --basis retail --source <shop>` |
+| `storage.hdd.2000` | 2TB hdd drive | £45 new, recalled (seed 2026-05) | `npm run price -- --id storage.hdd.2000 new <£> --basis retail --source <shop>` |
+| `storage.hdd.4000` | 4TB hdd drive | £75 new, recalled (seed 2026-05) | `npm run price -- --id storage.hdd.4000 new <£> --basis retail --source <shop>` |
+| `storage.hdd.8000` | 8TB hdd drive | £130 new, recalled (seed 2026-05) | `npm run price -- --id storage.hdd.8000 new <£> --basis retail --source <shop>` |
+| `psu.550` | 550W power supply, 80+ Bronze/Gold, reputable OEM | £60 new, recalled (seed 2026-05) | `npm run price -- --id psu.550 new <£> --basis retail --source <shop>` |
+| `psu.650` | 650W power supply, 80+ Gold | £72 new, recalled (seed 2026-05) | `npm run price -- --id psu.650 new <£> --basis retail --source <shop>` |
+| `psu.750` | 750W power supply, 80+ Gold, ATX 3.x with a 12V-2x6 connector | £88 new, recalled (seed 2026-05) | `npm run price -- --id psu.750 new <£> --basis retail --source <shop>` |
+| `psu.850` | 850W power supply, 80+ Gold, ATX 3.x | £110 new, recalled (seed 2026-05) | `npm run price -- --id psu.850 new <£> --basis retail --source <shop>` |
+| `psu.1000` | 1000W power supply, 80+ Gold, ATX 3.x | £150 new, recalled (seed 2026-05) | `npm run price -- --id psu.1000 new <£> --basis retail --source <shop>` |
+| `psu.1200` | 1200W power supply, 80+ Platinum, ATX 3.x | £205 new, recalled (seed 2026-05) | `npm run price -- --id psu.1200 new <£> --basis retail --source <shop>` |
+| `psu.1600` | 1600W power supply, 80+ Platinum/Titanium | £320 new, recalled (seed 2026-05) | `npm run price -- --id psu.1600 new <£> --basis retail --source <shop>` |
+| `case.restricted` | case, budget case, limited airflow | £50 new, recalled (seed 2026-05) | `npm run price -- --id case.restricted new <£> --basis retail --source <shop>` |
+| `case.moderate` | case, mainstream case, adequate airflow | £70 new, recalled (seed 2026-05) | `npm run price -- --id case.moderate new <£> --basis retail --source <shop>` |
+| `case.good` | case, mesh-front airflow case | £95 new, recalled (seed 2026-05) | `npm run price -- --id case.good new <£> --basis retail --source <shop>` |
+| `case.excellent` | case, high-airflow case with quality fans included | £135 new, recalled (seed 2026-05) | `npm run price -- --id case.excellent new <£> --basis retail --source <shop>` |
+| `cooler.budget-tower` | cooler, single-tower air cooler | £32 new, recalled (seed 2026-05) | `npm run price -- --id cooler.budget-tower new <£> --basis retail --source <shop>` |
+| `cooler.premium-air` | cooler, dual-tower air cooler | £85 new, recalled (seed 2026-05) | `npm run price -- --id cooler.premium-air new <£> --basis retail --source <shop>` |
+| `cooler.aio` | cooler, 240-360mm liquid cooler | £120 new, recalled (seed 2026-05) | `npm run price -- --id cooler.aio new <£> --basis retail --source <shop>` |
+
+## Monitors (37)
+
+Each monitor record carries a recalled typical price. None is sourced. Record a retail price against the monitor id and it will be reported here as sourced.
+
+| monitor | released | on file | check |
+|---|---|---|---|
+| LG 24MP60G-B | 2021 | £90 new, recalled | `npm run price -- --id lg-24mp60g-b new <£> --basis retail --source <shop>` |
+| LG UltraGear 24GN650-B | 2020 | £130 new, recalled | `npm run price -- --id lg-24gn650-b new <£> --basis retail --source <shop>` |
+| LG UltraGear 27GL850-B | 2019 | no price | `npm run price -- --id lg-27gl850-b new <£> --basis retail --source <shop>` |
+| LG UltraGear 27GP850-B | 2021 | £280 new, recalled | `npm run price -- --id lg-27gp850-b new <£> --basis retail --source <shop>` |
+| LG UltraGear 27GN950-B | 2020 | no price | `npm run price -- --id lg-27gn950-b new <£> --basis retail --source <shop>` |
+| LG UltraGear 27GR95QE-B | 2023 | £600 new, recalled | `npm run price -- --id lg-27gr95qe-b new <£> --basis retail --source <shop>` |
+| LG UltraGear 32GS95UE-B | 2024 | £1000 new, recalled | `npm run price -- --id lg-32gs95ue-b new <£> --basis retail --source <shop>` |
+| LG UltraGear 34GN850-B | 2020 | no price | `npm run price -- --id lg-34gn850-b new <£> --basis retail --source <shop>` |
+| Dell P2419H | 2018 | no price | `npm run price -- --id dell-p2419h new <£> --basis retail --source <shop>` |
+| Dell UltraSharp U2720Q | 2019 | no price | `npm run price -- --id dell-u2720q new <£> --basis retail --source <shop>` |
+| Dell S2721DGF | 2020 | £300 new, recalled | `npm run price -- --id dell-s2721dgf new <£> --basis retail --source <shop>` |
+| Alienware AW2521H | 2020 | no price | `npm run price -- --id alienware-aw2521h new <£> --basis retail --source <shop>` |
+| Alienware AW3423DW | 2022 | no price | `npm run price -- --id alienware-aw3423dw new <£> --basis retail --source <shop>` |
+| Alienware AW3423DWF | 2022 | £650 new, recalled | `npm run price -- --id alienware-aw3423dwf new <£> --basis retail --source <shop>` |
+| Samsung Odyssey G4 25in (G40B) | 2022 | £200 new, recalled | `npm run price -- --id samsung-odyssey-g4-25 new <£> --basis retail --source <shop>` |
+| Samsung Odyssey G5 32in (G55T) | 2020 | £200 new, recalled | `npm run price -- --id samsung-odyssey-g5-32 new <£> --basis retail --source <shop>` |
+| Samsung Odyssey G7 32in (G75T) | 2020 | no price | `npm run price -- --id samsung-odyssey-g7-32 new <£> --basis retail --source <shop>` |
+| Samsung Odyssey Neo G7 32in | 2022 | £700 new, recalled | `npm run price -- --id samsung-odyssey-neo-g7-32 new <£> --basis retail --source <shop>` |
+| Samsung Odyssey OLED G8 34in | 2022 | £750 new, recalled | `npm run price -- --id samsung-odyssey-oled-g8-34 new <£> --basis retail --source <shop>` |
+| ASUS VG248QE | 2013 | no price | `npm run price -- --id asus-vg248qe new <£> --basis retail --source <shop>` |
+| ASUS TUF Gaming VG259QM | 2020 | £230 new, recalled | `npm run price -- --id asus-vg259qm new <£> --basis retail --source <shop>` |
+| ASUS TUF Gaming VG27AQ | 2019 | £280 new, recalled | `npm run price -- --id asus-tuf-vg27aq new <£> --basis retail --source <shop>` |
+| ASUS ROG Swift PG279Q | 2015 | no price | `npm run price -- --id asus-rog-swift-pg279q new <£> --basis retail --source <shop>` |
+| ASUS ROG Swift OLED PG27AQDM | 2023 | £700 new, recalled | `npm run price -- --id asus-rog-swift-oled-pg27aqdm new <£> --basis retail --source <shop>` |
+| ASUS ROG Swift OLED PG32UCDM | 2024 | £1000 new, recalled | `npm run price -- --id asus-rog-swift-oled-pg32ucdm new <£> --basis retail --source <shop>` |
+| AOC 24G2/24G2U | 2019 | £120 new, recalled | `npm run price -- --id aoc-24g2 new <£> --basis retail --source <shop>` |
+| AOC C24G1 | 2018 | no price | `npm run price -- --id aoc-c24g1 new <£> --basis retail --source <shop>` |
+| AOC CU34G2X | 2020 | £330 new, recalled | `npm run price -- --id aoc-cu34g2x new <£> --basis retail --source <shop>` |
+| MSI Optix MAG274QRF-QD | 2021 | £280 new, recalled | `npm run price -- --id msi-mag274qrf-qd new <£> --basis retail --source <shop>` |
+| MSI MPG 321URX QD-OLED | 2024 | £850 new, recalled | `npm run price -- --id msi-mpg321urx new <£> --basis retail --source <shop>` |
+| Gigabyte M27Q | 2020 | £240 new, recalled | `npm run price -- --id gigabyte-m27q new <£> --basis retail --source <shop>` |
+| Gigabyte M32U | 2021 | £550 new, recalled | `npm run price -- --id gigabyte-m32u new <£> --basis retail --source <shop>` |
+| BenQ ZOWIE XL2411P | 2018 | no price | `npm run price -- --id benq-zowie-xl2411p new <£> --basis retail --source <shop>` |
+| BenQ ZOWIE XL2546K | 2020 | £380 new, recalled | `npm run price -- --id benq-zowie-xl2546k new <£> --basis retail --source <shop>` |
+| Acer Nitro VG240Y bmiix | 2018 | £90 new, recalled | `npm run price -- --id acer-nitro-vg240y new <£> --basis retail --source <shop>` |
+| Acer Predator XB271HU | 2015 | no price | `npm run price -- --id acer-predator-xb271hu new <£> --basis retail --source <shop>` |
+| HP 24mh | 2020 | £110 new, recalled | `npm run price -- --id hp-24mh new <£> --basis retail --source <shop>` |
+
