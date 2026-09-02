@@ -1,118 +1,43 @@
 {
-  "generatedAt": "2026-08-20T15:03:33.821Z",
+  "generatedAt": "2026-09-02T14:33:42.794Z",
   "note": "Operator-supplied market observations. These OVERRIDE the recalled seed tables in gbp-new.json and gbp-used.json for any part they cover. Regenerate with `npm run import:prices`; edit the CSVs in data/prices-observed/, never this file.",
   "provenance": "operator-observed",
   "sourceFiles": [
-    "example.csv"
+    "2026-08-31.csv"
   ],
-  "observationCount": 5,
+  "observationCount": 1,
   "prices": [
     {
-      "partId": "amd-radeon-rx-6700-xt",
+      "partId": "intel-core-i7-7700",
       "condition": "used",
-      "price": 168,
-      "observedMedian": 168,
+      "price": 40,
+      "observedMedian": 40,
       "currency": "GBP",
-      "totalSamples": 9,
+      "totalSamples": 1,
       "observations": 1,
       "spread": {
-        "low": 168,
-        "high": 168
+        "low": 40,
+        "high": 40
       },
-      "newestDate": "2026-08-19",
-      "ageDays": 2,
+      "newestDate": "2026-09-02",
+      "firstDate": "2026-09-02",
+      "ageDays": 1,
       "stale": false,
       "containsAsking": false,
       "sources": [
-        "ebay-uk"
-      ],
-      "warnings": []
-    },
-    {
-      "partId": "nvidia-geforce-gtx-1080-ti",
-      "condition": "used",
-      "price": 131,
-      "observedMedian": 131,
-      "currency": "GBP",
-      "totalSamples": 11,
-      "observations": 1,
-      "spread": {
-        "low": 131,
-        "high": 131
-      },
-      "newestDate": "2026-08-17",
-      "ageDays": 4,
-      "stale": false,
-      "containsAsking": false,
-      "sources": [
-        "ebay-uk"
-      ],
-      "warnings": []
-    },
-    {
-      "partId": "nvidia-geforce-rtx-2070-super",
-      "condition": "used",
-      "price": 149,
-      "observedMedian": 175,
-      "currency": "GBP",
-      "totalSamples": 6,
-      "observations": 1,
-      "spread": {
-        "low": 175,
-        "high": 175
-      },
-      "newestDate": "2026-08-17",
-      "ageDays": 4,
-      "stale": false,
-      "containsAsking": true,
-      "sources": [
-        "ebay-uk"
+        "operator-purchase"
       ],
       "warnings": [
-        "Every observation is an ASKING price, not a sale. Discounted by 15% to approximate what the part changes hands for, which is a prior and not a measurement. Replace with sold-listing data when you can."
+        "Only 1 sale behind this figure. Marketplace prices scatter widely; treat anything under about five as indicative."
+      ],
+      "series": [
+        {
+          "date": "2026-09-02",
+          "price": 40,
+          "sampleSize": 1,
+          "basis": "sold"
+        }
       ]
-    },
-    {
-      "partId": "nvidia-geforce-rtx-3060-12gb",
-      "condition": "used",
-      "price": 148,
-      "observedMedian": 148,
-      "currency": "GBP",
-      "totalSamples": 17,
-      "observations": 1,
-      "spread": {
-        "low": 148,
-        "high": 148
-      },
-      "newestDate": "2026-08-18",
-      "ageDays": 3,
-      "stale": false,
-      "containsAsking": false,
-      "sources": [
-        "ebay-uk"
-      ],
-      "warnings": []
-    },
-    {
-      "partId": "nvidia-geforce-rtx-3070",
-      "condition": "used",
-      "price": 192,
-      "observedMedian": 192,
-      "currency": "GBP",
-      "totalSamples": 14,
-      "observations": 1,
-      "spread": {
-        "low": 192,
-        "high": 192
-      },
-      "newestDate": "2026-08-18",
-      "ageDays": 3,
-      "stale": false,
-      "containsAsking": false,
-      "sources": [
-        "ebay-uk"
-      ],
-      "warnings": []
     }
   ]
 }

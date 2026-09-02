@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { aggregate, parseObservations, weightedMedian, type Observation } from '../scripts/import-prices.ts';
+import { CURRENT_WINDOW_DAYS, aggregate, isObservationFile, parseObservations, weightedMedian, type Observation } from '../scripts/import-prices.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const load = (p: string) => JSON.parse(readFileSync(join(ROOT, p), 'utf8'));
@@ -59,10 +59,21 @@ describe('price observation import', () => {
     expect(rejected[0].reason).toMatch(/condition/);
   });
 
-  it('imports the shipped example file cleanly', () => {
-    const { rows, rejected } = parseObservations(readFileSync(join(ROOT, 'data/prices-observed/example.csv'), 'utf8'), 'example.csv', validIds);
+  it('treats example files as documentation, never data', () => {
+    // A shipped example.csv of invented eBay medians was once imported as real
+    // observations, and the app labelled them "sourced". Examples live in the
+    // README now, and a file named example-anything is skipped by name.
+    expect(isObservationFile('example.csv')).toBe(false);
+    expect(isObservationFile('EXAMPLE-old.csv')).toBe(false);
+    expect(isObservationFile('_scratch.csv')).toBe(false);
+    expect(isObservationFile('2026-08-31.csv')).toBe(true);
+    expect(isObservationFile('notes.txt')).toBe(false);
+  });
+
+  it('imports the real snapshot file cleanly', () => {
+    const { rows, rejected } = parseObservations(readFileSync(join(ROOT, 'data/prices-observed/2026-08-31.csv'), 'utf8'), '2026-08-31.csv', validIds);
     expect(rejected).toEqual([]);
-    expect(rows.length).toBeGreaterThan(3);
+    expect(rows[0]).toMatchObject({ partId: 'intel-core-i7-7700', condition: 'used', basis: 'sold', price: 40 });
   });
 });
 
@@ -128,6 +139,30 @@ describe('price aggregation', () => {
     const a = aggregate([obs({ source: 'ebay-uk' }), obs({ source: 'cex' })], TODAY)[0];
     expect(a.sources.sort()).toEqual(['cex', 'ebay-uk']);
   });
+
+  it('keeps one point per observation date, oldest first, so a trend can be read', () => {
+    const a = aggregate([obs({ observedDate: '2026-08-15', price: 190 }), obs({ observedDate: '2026-07-01', price: 220 })], TODAY)[0];
+    expect(a.series.map((p) => [p.date, p.price])).toEqual([['2026-07-01', 220], ['2026-08-15', 190]]);
+    expect(a.firstDate).toBe('2026-07-01');
+    expect(a.newestDate).toBe('2026-08-15');
+  });
+
+  it('prices from the newest window, so an old observation cannot drag the current figure', () => {
+    // Fifty sales in June at 300 and five in August at 190. The June rows are
+    // outside the window measured back from the newest observation: they stay
+    // in the series as history and do not vote on what the part costs now.
+    expect(CURRENT_WINDOW_DAYS).toBe(45);
+    const a = aggregate([obs({ observedDate: '2026-06-01', price: 300, sampleSize: 50 }), obs({ observedDate: '2026-08-15', price: 190, sampleSize: 5 })], TODAY)[0];
+    expect(a.price).toBe(190);
+    expect(a.totalSamples).toBe(5);
+    expect(a.series).toHaveLength(2);
+  });
+
+  it('discounts a date on which every row was an asking price, and only that date', () => {
+    const a = aggregate([obs({ observedDate: '2026-08-01', basis: 'asking', price: 200 }), obs({ observedDate: '2026-08-15', basis: 'sold', price: 180 })], TODAY)[0];
+    expect(a.series[0]).toMatchObject({ price: 170, basis: 'asking' });
+    expect(a.series[1]).toMatchObject({ price: 180, basis: 'sold' });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -141,8 +176,10 @@ import { findObserved, plannerTables, priceCoverage, pricedLookup, type Observed
 const observedRow = (over: Partial<ObservedPrice> = {}): ObservedPrice => ({
   partId: 'nvidia-geforce-rtx-3070', condition: 'used', price: 192, observedMedian: 192,
   currency: 'GBP', totalSamples: 14, observations: 1, spread: { low: 180, high: 210 },
-  newestDate: '2026-08-18', ageDays: 2, stale: false, containsAsking: false,
-  sources: ['ebay-uk'], warnings: [], ...over,
+  newestDate: '2026-08-18', firstDate: '2026-08-18', ageDays: 2, stale: false, containsAsking: false,
+  sources: ['ebay-uk'], warnings: [],
+  series: [{ date: '2026-08-18', price: over.price ?? 192, sampleSize: 14, basis: 'sold' }],
+  ...over,
 });
 
 type Override = { new: Record<string, number>; used: Record<string, number> };
@@ -220,5 +257,54 @@ describe('price provenance', () => {
     expect(findObserved(list, 'nvidia-geforce-rtx-3070', 'used')!.price).toBe(192);
     expect(findObserved(list, 'nvidia-geforce-rtx-3070', 'new')!.price).toBe(400);
     expect(findObserved(list, 'nope', 'used')).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Old parts are priced from the resale market or not at all. A used lookup
+// used to fall through to a new price when nothing else existed, and the new
+// price of a 2017 processor is a launch-era figure: that is how a chip that
+// changes hands for £40 gets shown at £300.
+// ---------------------------------------------------------------------------
+
+const TODAY_26 = new Date('2026-09-02T00:00:00Z');
+const years = (id: string) => (id === 'intel-core-i7-7700' ? 2017 : id === 'amd-radeon-rx-9070' ? 2025 : undefined);
+
+describe('resale-only rule for old parts', () => {
+  it('never answers a used question about an old part with a new price', () => {
+    const t = tables({
+      newP: { currency: 'GBP', updated: '2026-05', prices: { 'intel-core-i7-7700': 300 } },
+      usedP: { currency: 'GBP', updated: '2026-05', prices: {} },
+      observed: [observedRow({ partId: 'intel-core-i7-7700', condition: 'new', price: 300 })],
+    });
+    const r = pricedLookup(t, 'used', years, TODAY_26)('intel-core-i7-7700');
+    expect(r.origin).toBe('none');
+    expect(r.reason).toBe('resale-only');
+    expect(r.value).toBe(0);
+    // Without the rule the same lookup hands back the launch-era figure.
+    expect(pricedLookup(t, 'used')('intel-core-i7-7700').value).toBe(300);
+  });
+
+  it('a resale observation answers it', () => {
+    const t = tables({ observed: [observedRow({ partId: 'intel-core-i7-7700', condition: 'used', price: 40 })] });
+    expect(pricedLookup(t, 'used', years, TODAY_26)('intel-core-i7-7700')).toMatchObject({ value: 40, origin: 'observed' });
+  });
+
+  it('a recalled used seed is still allowed, labelled as recalled', () => {
+    const t = tables({ usedP: { currency: 'GBP', updated: '2026-05', prices: { 'intel-core-i7-7700': 55 } } });
+    expect(pricedLookup(t, 'used', years, TODAY_26)('intel-core-i7-7700')).toMatchObject({ value: 55, origin: 'recalled-seed' });
+  });
+
+  it('leaves a recent part alone', () => {
+    const t = tables({
+      newP: { currency: 'GBP', updated: '2026-05', prices: { 'amd-radeon-rx-9070': 520 } },
+      usedP: { currency: 'GBP', updated: '2026-05', prices: {} },
+    });
+    expect(pricedLookup(t, 'used', years, TODAY_26)('amd-radeon-rx-9070')).toMatchObject({ value: 520, origin: 'recalled-seed' });
+  });
+
+  it('does nothing when no launch-year lookup is supplied', () => {
+    const t = tables({ newP: { currency: 'GBP', updated: '2026-05', prices: { 'intel-core-i7-7700': 300 } }, usedP: { currency: 'GBP', updated: '2026-05', prices: {} } });
+    expect(pricedLookup(t, 'used')('intel-core-i7-7700').value).toBe(300);
   });
 });

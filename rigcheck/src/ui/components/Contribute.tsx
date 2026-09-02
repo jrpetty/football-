@@ -26,6 +26,7 @@ import {
   addMeasurement, addPrice, clearUserData, loadUserData, removeMeasurement, removePrice, saveUserData,
 } from '../userdata.ts';
 import { mergeUserData } from '../../core/userdata.ts';
+import { changeOverall, describeChange, monthLabel } from '../../core/pricetrend.ts';
 import type { Resolution } from '../../core/types.ts';
 
 const RESOLUTIONS: Resolution[] = ['1080p', '1440p', '2160p', '3440x1440'];
@@ -37,6 +38,10 @@ export function Contribute() {
   const [notice, setNotice] = useState<{ good: boolean; lines: string[] } | null>(null);
 
   const priced = useMemo(() => pricedIds(loadPrices(user)), [user]);
+  const observed = useMemo(() => loadPrices(user).observed, [user]);
+  const watched = useMemo(() => observed.filter((o) => (o.series?.length ?? 0) > 1), [observed]);
+  const single = useMemo(() => observed.filter((o) => (o.series?.length ?? 0) === 1), [observed]);
+  const partName = (id: string) => data.gpus.get(id)?.fullName ?? data.cpus.get(id)?.fullName ?? id;
   const coverage = useMemo(
     () => ({
       gpu: priceCoverageOf([...data.gpus.keys()], priced, user),
@@ -105,6 +110,70 @@ export function Contribute() {
               machines" panel has nothing to compare against and does not appear. Every capture added below
               goes into it.
             </div>
+          )}
+        </div>
+      </div>
+
+      <div className="panel">
+        <div className="panel-head"><h2>Price movement</h2></div>
+        <div className="panel-body">
+          {observed.length === 0 ? (
+            <p className="mini" style={{ marginTop: 0 }}>
+              No market observations on record yet, so every price in the app is a recalled seed with no
+              date behind it. Record one in a line from a checkout:{' '}
+              <span className="mono">npm run price -- "i7 7700" used 40</span>. It goes into this
+              week's snapshot file under <span className="mono">data/prices-observed/</span>, and a
+              second snapshot on a later date is what turns a price into a trend.
+            </p>
+          ) : (
+            <>
+              <p className="mini" style={{ marginTop: 0 }}>
+                The current figure for a part is the median of its newest observations; every earlier
+                snapshot is kept, and the movement below runs from the first date on record to the
+                latest. A part seen once has a price, not a trend — the second snapshot is the one that
+                makes a claim like "down 12% since August" possible, and nothing here will say it before
+                then.
+              </p>
+              {watched.length > 0 && (
+                <div className="table-wrap">
+                  <table className="data">
+                    <thead>
+                      <tr>
+                        <th>part</th><th>condition</th><th className="n">first seen</th><th className="n">latest</th><th>movement</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {watched.map((o) => {
+                        const m = changeOverall(o.series)!;
+                        return (
+                          <tr key={`${o.partId}-${o.condition}`}>
+                            <td>{partName(o.partId)}</td>
+                            <td className="sub">{o.condition}</td>
+                            <td className="n sub">£{m.from.price} · {m.from.date}</td>
+                            <td className="n">£{m.to.price} · {m.to.date}</td>
+                            <td className={m.pct < 0 ? 'good' : m.pct > 0 ? 'bad' : 'sub'}>
+                              {describeChange(m, monthLabel(m.from.date.slice(0, 7)))}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {single.length > 0 && (
+                <p className="mini" style={{ marginBottom: 0 }}>
+                  Seen once, so a price rather than a trend:{' '}
+                  {single.map((o, i) => (
+                    <span key={`${o.partId}-${o.condition}`}>
+                      {i ? ', ' : ''}
+                      {partName(o.partId)} ({o.condition}) £{o.price} on {o.newestDate}
+                    </span>
+                  ))}
+                  . Record it again in a later week and the movement appears here.
+                </p>
+              )}
+            </>
           )}
         </div>
       </div>

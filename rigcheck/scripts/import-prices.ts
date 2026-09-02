@@ -24,6 +24,7 @@ import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseCsv } from './import-manual.ts';
 import type { CpuRecord, GpuRecord } from '../src/core/types.ts';
+import type { SeriesPoint } from '../src/core/pricetrend.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const IN = join(ROOT, 'data/prices-observed');
@@ -42,6 +43,26 @@ const ASKING_TO_SOLD = 0.85;
 
 /** Beyond this, a price is a historical note rather than a current figure. */
 const STALE_DAYS = 90;
+
+/**
+ * The current figure is the median of the newest cluster of observations, not
+ * of everything ever recorded. With weekly snapshots accumulating for months,
+ * a median over all rows would drift toward the past and a real fall in price
+ * would take a season to show. Rows older than this, measured back from the
+ * newest observation, still count — they become the series a trend is read
+ * from — but they do not vote on what the part costs now.
+ */
+export const CURRENT_WINDOW_DAYS = 45;
+
+/**
+ * Which files in data/prices-observed/ are observations. Anything named
+ * example* is documentation and never data: a shipped example was once imported
+ * as five real eBay medians and the app labelled them "sourced".
+ */
+export function isObservationFile(name: string): boolean {
+  const n = name.toLowerCase();
+  return n.endsWith('.csv') && !n.startsWith('example') && !n.startsWith('_') && !n.startsWith('.');
+}
 
 const CONDITIONS = new Set(['new', 'used']);
 const BASES = new Set(['sold', 'asking', 'retail']);
@@ -153,12 +174,19 @@ export interface AggregatedPrice {
   /** Lowest and highest observed, so a wide spread is visible. */
   spread: { low: number; high: number };
   newestDate: string;
+  /** Earliest observation on record, so the screen can say how long it has been watched. */
+  firstDate: string;
   ageDays: number;
   stale: boolean;
   /** True when any contributing row was an asking price rather than a sale. */
   containsAsking: boolean;
   sources: string[];
   warnings: string[];
+  /**
+   * One point per observation date, oldest first: the material a trend is
+   * read from. Each point is that date's own sample-weighted median.
+   */
+  series: SeriesPoint[];
 }
 
 export function aggregate(rows: Observation[], today: Date): AggregatedPrice[] {
@@ -169,9 +197,29 @@ export function aggregate(rows: Observation[], today: Date): AggregatedPrice[] {
   }
 
   const out: AggregatedPrice[] = [];
-  for (const [k, group] of groups) {
+  for (const [k, all] of groups) {
     const [partId, condition, currency] = k.split('::');
     const warnings: string[] = [];
+
+    // The series: every date gets its own median, so a trend can be read.
+    const byDate = new Map<string, Observation[]>();
+    for (const r of all) (byDate.get(r.observedDate) ?? byDate.set(r.observedDate, []).get(r.observedDate)!).push(r);
+    const series: SeriesPoint[] = [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([date, rows]) => {
+      const med = weightedMedian(rows.map((g) => ({ value: g.price, weight: g.sampleSize })));
+      const asking = rows.every((g) => g.basis === 'asking');
+      return {
+        date,
+        price: Math.round(asking ? med * ASKING_TO_SOLD : med),
+        sampleSize: rows.reduce((t, g) => t + g.sampleSize, 0),
+        basis: asking ? 'asking' : rows.some((g) => g.basis === 'sold') ? 'sold' : 'retail',
+      };
+    });
+    const firstDate = series[0].date;
+    const newestDate = series[series.length - 1].date;
+
+    // The current figure votes only from the newest window.
+    const cutoff = new Date(Date.parse(newestDate) - CURRENT_WINDOW_DAYS * 86400000).toISOString().slice(0, 10);
+    const group = all.filter((g) => g.observedDate >= cutoff);
 
     const observedMedian = weightedMedian(group.map((g) => ({ value: g.price, weight: g.sampleSize })));
     // Discount is applied to the group only when every row is an asking price.
@@ -200,27 +248,26 @@ export function aggregate(rows: Observation[], today: Date): AggregatedPrice[] {
       warnings.push(`Observations range from ${spread.low} to ${spread.high} — a spread that wide usually means the listings were not comparable (bundles, faulty parts, or different variants sharing a name).`);
     }
 
-    const newestDate = group.map((g) => g.observedDate).sort().reverse()[0];
     const ageDays = Math.round((today.getTime() - Date.parse(newestDate)) / 86400000);
     const stale = ageDays > STALE_DAYS;
     if (stale) warnings.push(`Newest observation is ${ageDays} days old. Graphics-card pricing moves; this is a historical note rather than a current figure.`);
 
     out.push({
       partId, condition: condition as 'new' | 'used', price, observedMedian: Math.round(observedMedian),
-      currency, totalSamples, observations: group.length, spread, newestDate, ageDays, stale,
-      containsAsking, sources: [...new Set(group.map((g) => g.source))], warnings,
+      currency, totalSamples, observations: group.length, spread, newestDate, firstDate, ageDays, stale,
+      containsAsking, sources: [...new Set(all.map((g) => g.source))], warnings, series,
     });
   }
   return out.sort((a, b) => a.partId.localeCompare(b.partId));
 }
 
-function main() {
+export function main() {
   const gpus = JSON.parse(readFileSync(join(ROOT, 'data/catalogue/gpus.json'), 'utf8')) as { records: GpuRecord[] };
   const cpus = JSON.parse(readFileSync(join(ROOT, 'data/catalogue/cpus.json'), 'utf8')) as { records: CpuRecord[] };
   const validIds = new Set([...gpus.records.map((r) => r.id), ...cpus.records.map((r) => r.id)]);
 
   mkdirSync(IN, { recursive: true });
-  const files = readdirSync(IN).filter((f) => f.toLowerCase().endsWith('.csv'));
+  const files = readdirSync(IN).filter(isObservationFile).sort();
 
   const all: Observation[] = [];
   const rejected: Rejection[] = [];
@@ -254,6 +301,8 @@ function main() {
   console.log(`Read ${files.length} file(s) from data/prices-observed/`);
   console.log(`  ${all.length} observation(s) accepted, ${rejected.length} rejected`);
   console.log(`  ${aggregated.length} part/condition pair(s) now carry a sourced price`);
+  const watched = aggregated.filter((a) => a.series.length > 1);
+  console.log(`  ${watched.length} of them have been observed on more than one date, so a trend can be read`);
   if (rejected.length) {
     console.log('\nrejected rows:');
     for (const r of rejected) console.log(`  ${r.file}:${r.line}  ${r.reason}`);

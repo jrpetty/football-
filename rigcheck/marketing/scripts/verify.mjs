@@ -20,9 +20,15 @@
  *      longer supports it. Both directions matter: stale prose and stale
  *      checks are the same bug.
  *
- * Run: node marketing/scripts/verify.mjs
+ *   4. TEMPLATES — no typed-in figure in the card renderer.
+ *   5. IMAGES — every image captioned with the sentence printed on it.
+ *   6. PRICE MOVEMENT — a caption saying "down 12% since August" is computed
+ *      from the observed series, by the same function the app uses.
+ *
+ * Run: npm run marketing:verify   (tsx, so it can import the app's own modules)
  */
 import { readFileSync, writeFileSync, copyFileSync, mkdtempSync } from 'node:fs';
+import { changeSinceMonth, describeChange, monthLabel } from '../../src/core/pricetrend.ts';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -295,6 +301,32 @@ console.log('\nIMAGES — does every image travel with its caption?');
   let n = 0; bad = 0;
   for (const m of ig.matchAll(/^· (.+? — \d+fps)$/gm)) { n++; if (!rows.has(m[1])) { fail('instagram.md per-game line is not in builds.json', m[1]); bad++; } }
   if (!bad) pass(`${n} per-game caption lines match builds.json`);
+}
+
+
+// --- 6. price movement ---------------------------------------------------------
+// A price claim in a caption names a part, a condition and a month, and the
+// sentence must be exactly what pricetrend.ts computes from the observed
+// series. Nothing here reads the seed tables: a recalled figure has no date it
+// was observed on, so it cannot start a trend, and a caption cannot say
+// "since August" about a part that was not observed in August.
+console.log('\nPRICE MOVEMENT — do price-change captions match the observed series?');
+{
+  const observed = JSON.parse(readFileSync('data/pricing/observed.json', 'utf8')).prices ?? [];
+  const PRICE_CLAIMS = [
+    // { file: 'instagram.md', part: 'nvidia-geforce-rtx-3070', condition: 'used', since: '2026-08' },
+  ];
+  let bad = 0;
+  for (const c of PRICE_CLAIMS) {
+    const o = observed.find((p) => p.partId === c.part && p.condition === c.condition);
+    const m = o && changeSinceMonth(o.series, c.since);
+    if (!m) { fail(`${c.file}: no basis for a "since ${monthLabel(c.since)}" claim on ${c.part}`, 'needs an observation in that month and a later one outside it'); bad++; continue; }
+    const sentence = describeChange(m, monthLabel(c.since));
+    if (!read(c.file).includes(sentence)) { fail(`${c.file}: price claim does not match the series`, `expected "${sentence}" for ${c.part} (${c.condition})`); bad++; }
+    else pass(`${c.file}: "${sentence}" (${c.part}, ${c.condition})`);
+  }
+  const watched = observed.filter((p) => (p.series?.length ?? 0) > 1);
+  if (!bad) pass(`${PRICE_CLAIMS.length} price claim(s) checked; ${watched.length} part(s) observed on more than one date could support one`);
 }
 
 console.log(`\n${failures === 0 ? 'PASS' : `${failures} FAILURE${failures > 1 ? 'S' : ''}`} — ${CLAIMS.length} claims, ${builds.length} builds, ${bottleneck.length} ladders`);

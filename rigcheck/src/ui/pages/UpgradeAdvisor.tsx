@@ -4,7 +4,7 @@ import { fmt } from '../components/Parts.tsx';
 import { useApp } from '../store.ts';
 import { sweepComponent } from '../../core/queries.ts';
 import { RESOLUTIONS } from '../../core/types.ts';
-import { loadPrices, priceLookup } from '../pricing.ts';
+import { launchYears, loadPrices, priceLookup } from '../pricing.ts';
 
 /** Rows rendered in the candidate table; the count is stated when it truncates. */
 const ROW_CAP = 60;
@@ -16,7 +16,8 @@ export function UpgradeAdvisor() {
   const [scope, setScope] = useState<'priced' | 'ladder' | 'all'>('priced');
 
   const prices = useMemo(() => loadPrices(), []);
-  const priceOf = useMemo(() => priceLookup(prices), [prices]);
+  // Used prices for old parts come from the resale market or not at all — see RESALE_ONLY_AFTER_YEARS.
+  const priceOf = useMemo(() => priceLookup(prices, 'used', launchYears(data)), [prices, data]);
 
   /**
    * Candidate scope.

@@ -27,6 +27,7 @@ import { PRESETS, type Preset } from '../../core/presets.ts';
 import { DEFAULT_USAGE, PSU_EFFICIENCY, efficiencyPayback, runningCost, totalCostOfOwnership, type PsuTier, type UsageProfile } from '../../core/running.ts';
 import { exportJson } from '../export.ts';
 import { findObserved, loadPrices, plannerTables, priceCoverage } from '../pricing.ts';
+import { changeOverall, describeChange, monthLabel } from '../../core/pricetrend.ts';
 import componentPrices from '../../../data/pricing/components-gbp.json';
 import monitorsJson from '../../../data/catalogue/monitors.json';
 import type { MonitorRecord } from '../../core/fit.ts';
@@ -827,13 +828,20 @@ function PriceOrigin({
     `from ${o.sources.join(', ')}, newest ${o.newestDate} (${o.ageDays} days ago). ` +
     `Observed range ${o.spread.low}–${o.spread.high}.` +
     (o.warnings.length ? ` ${o.warnings.join(' ')}` : '');
+  // Movement, when there is more than one snapshot to read it from. Measured
+  // from the first observation on record, and named by that month, so the tag
+  // says "down 12% since Aug" and the caption verifier can check the same thing.
+  const move = changeOverall(o.series ?? []);
+  const trend = move && move.from.date.slice(0, 7) !== move.to.date.slice(0, 7)
+    ? ` · ${describeChange(move, monthLabel(move.from.date.slice(0, 7), true))}`
+    : '';
   return (
     <span
       className={`tag ${o.stale || o.containsAsking || o.totalSamples < 5 ? 'bad' : 'good'}`}
       style={{ marginLeft: 6 }}
-      title={detail}
+      title={detail + (move ? ` Watched since ${o.firstDate}: ${describeChange(move, monthLabel(move.from.date.slice(0, 7)))}.` : '')}
     >
-      {o.stale ? `sourced · ${o.ageDays}d old` : o.containsAsking ? 'sourced · asking' : `sourced · ${o.totalSamples} sales`}
+      {o.stale ? `sourced · ${o.ageDays}d old` : o.containsAsking ? 'sourced · asking' : `sourced · ${o.totalSamples} sales`}{trend}
     </span>
   );
 }

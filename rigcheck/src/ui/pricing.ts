@@ -2,7 +2,19 @@ import newPrices from '../../data/pricing/gbp-new.json';
 import usedPrices from '../../data/pricing/gbp-used.json';
 import observedPrices from '../../data/pricing/observed.json';
 import { priceOverlay, type UserData } from '../core/userdata.ts';
+import type { SeriesPoint } from '../core/pricetrend.ts';
 import { loadUserData } from './userdata.ts';
+
+/**
+ * Past this age, a part is priced from the resale market or not at all.
+ *
+ * The seed's new prices are launch-era figures, and a used lookup that finds
+ * no used price used to fall through to them. That is how a site ends up
+ * saying an i7-7700 costs what it did in 2017 when it changes hands for £40.
+ * For an old part, "no resale price recorded" is the true answer, and the fix
+ * is to record one — see scripts/price.ts.
+ */
+export const RESALE_ONLY_AFTER_YEARS = 4;
 
 export interface PriceTable {
   currency: string;
@@ -20,11 +32,14 @@ export interface ObservedPrice {
   observations: number;
   spread: { low: number; high: number };
   newestDate: string;
+  firstDate: string;
   ageDays: number;
   stale: boolean;
   containsAsking: boolean;
   sources: string[];
   warnings: string[];
+  /** One point per observation date, oldest first. Two or more and a trend exists. */
+  series: SeriesPoint[];
 }
 
 /** Where a price came from. Drives whether the UI presents it as evidence. */
@@ -35,6 +50,20 @@ export interface PricedValue {
   origin: PriceOrigin;
   /** Present only for observed prices — the sourcing behind the figure. */
   observed?: ObservedPrice;
+  /** Why there is no figure, when there is none and the reason is a rule rather than a gap. */
+  reason?: 'resale-only';
+}
+
+/** A launch-year lookup built from the catalogue maps, for the resale-only rule. */
+export function launchYears(data: {
+  gpus: Map<string, { launchDate?: string | null }>;
+  cpus: Map<string, { launchDate?: string | null }>;
+}): (id: string) => number | undefined {
+  return (id) => {
+    const d = (data.gpus.get(id) ?? data.cpus.get(id))?.launchDate;
+    const y = d ? Number(d.slice(0, 4)) : NaN;
+    return Number.isFinite(y) ? y : undefined;
+  };
 }
 
 const observed = observedPrices as { prices: ObservedPrice[]; generatedAt?: string };
@@ -81,7 +110,12 @@ export function findObserved(
 }
 
 /** Price with its provenance, for a screen that needs to show the difference. */
-export function pricedLookup(p: ReturnType<typeof loadPrices>, prefer: 'used' | 'new' = 'used') {
+export function pricedLookup(
+  p: ReturnType<typeof loadPrices>,
+  prefer: 'used' | 'new' = 'used',
+  launchYear?: (id: string) => number | undefined,
+  today: Date = new Date(),
+) {
   return (id: string): PricedValue => {
     // The operator's own figure for the condition being asked about wins
     // outright; their figure for the OTHER condition does not, because a used
@@ -91,6 +125,16 @@ export function pricedLookup(p: ReturnType<typeof loadPrices>, prefer: 'used' | 
     if (mine != null) return { value: mine, origin: 'operator-override' };
     const first = findObserved(p.observed, id, prefer);
     if (first) return { value: first.price, origin: 'observed', observed: first };
+    // An old part asked about used is answered from the resale market or not
+    // at all: never from a new price, sourced or recalled.
+    if (prefer === 'used' && launchYear) {
+      const y = launchYear(id);
+      if (y != null && today.getUTCFullYear() - y >= RESALE_ONLY_AFTER_YEARS) {
+        const seed = p.usedP.prices[id];
+        if (seed != null) return { value: seed, origin: 'recalled-seed' };
+        return { value: 0, origin: 'none', reason: 'resale-only' };
+      }
+    }
     const other = findObserved(p.observed, id, prefer === 'used' ? 'new' : 'used');
     if (other) return { value: other.price, origin: 'observed', observed: other };
     const a = prefer === 'used' ? p.usedP.prices[id] : p.newP.prices[id];
@@ -102,8 +146,12 @@ export function pricedLookup(p: ReturnType<typeof loadPrices>, prefer: 'used' | 
 }
 
 /** Bare-number form, kept for callers that only need the figure. */
-export function priceLookup(p: ReturnType<typeof loadPrices>, prefer: 'used' | 'new' = 'used') {
-  const priced = pricedLookup(p, prefer);
+export function priceLookup(
+  p: ReturnType<typeof loadPrices>,
+  prefer: 'used' | 'new' = 'used',
+  launchYear?: (id: string) => number | undefined,
+) {
+  const priced = pricedLookup(p, prefer, launchYear);
   return (id: string): number | undefined => {
     const r = priced(id);
     return r.origin === 'none' ? undefined : r.value;

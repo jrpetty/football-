@@ -1,6 +1,0 @@
-part_id,condition,basis,price,currency,source,observed_date,sample_size,note
-nvidia-geforce-rtx-3060-12gb,used,sold,148,GBP,ebay-uk,2026-08-18,17,median of 17 sold auctions; excluded 2 mining lots
-nvidia-geforce-rtx-3070,used,sold,192,GBP,ebay-uk,2026-08-18,14,median of 14 sold auctions
-amd-radeon-rx-6700-xt,used,sold,168,GBP,ebay-uk,2026-08-19,9,thin sample
-nvidia-geforce-gtx-1080-ti,used,sold,131,GBP,ebay-uk,2026-08-17,11,still a lot of mining cards in this pool
-nvidia-geforce-rtx-2070-super,used,asking,175,GBP,ebay-uk,2026-08-17,6,ASKING not sold - discounted on import
