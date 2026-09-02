@@ -24,7 +24,7 @@
  * the mark beside the text.
  */
 import { chromium } from 'playwright';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 
 const builds = JSON.parse(readFileSync('marketing/builds.json', 'utf8'));
 const bottleneck = JSON.parse(readFileSync('marketing/bottleneck.json', 'utf8'));
@@ -81,22 +81,33 @@ h1 em{font-style:normal;color:${P.accent}}
 .panel{flex:1}
 .panel .t{font-size:24px;font-weight:600;margin-bottom:6px;letter-spacing:-.01em}
 .panel .d{font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:${P.faint};margin-bottom:10px}
-.legend{display:flex;flex-wrap:wrap;gap:10px 22px;margin-top:18px;padding:0 2px;margin-bottom:auto}
+.legend{display:flex;flex-wrap:wrap;gap:10px 22px;margin-top:18px;padding:0 2px}
 .legend div{display:flex;align-items:center;gap:8px;font-size:15px;color:${P.muted}}
 .legend i{display:inline-block;width:14px;height:14px;border-radius:3px;flex:none}
 .legend i.line{height:3px;border-radius:2px;width:22px}
 .legend i.tick{width:2px;height:16px;border-radius:1px;background:${P.ink};opacity:.8}
-.foot{display:flex;align-items:flex-end;gap:20px;margin-top:28px;padding-top:22px;border-top:1px solid ${P.line}}
+.foot{display:flex;align-items:flex-end;gap:20px;margin-top:auto;padding-top:22px;border-top:1px solid ${P.line}}
 .foot .note{flex:1;font-size:16px;line-height:1.5;color:${P.faint}}
 .foot .note b{color:${P.spec};font-weight:600}
-.why{display:flex;gap:16px;margin-top:30px;margin-bottom:auto}
+.why{display:flex;gap:16px;margin-top:30px}
 .why div{flex:1;border-left:2px solid ${P.accent}66;padding:4px 0 4px 16px}
 .why .t{font-size:19px;font-weight:600;margin-bottom:6px}
 .why .b{font-size:16px;line-height:1.48;color:${P.faint}}
 .card-note{font-size:20px;line-height:1.5;color:${P.muted};max-width:880px;margin-bottom:26px}
+/* What this shows: one derived sentence, printed on the card and repeated
+   word-for-word in the caption file, so an image never travels without its
+   subject. The accent rail marks it as the thing to read first after the title. */
+.shows{display:flex;gap:18px;align-items:flex-start;font-size:19px;line-height:1.42;color:${P.ink};
+  margin:0 0 24px;padding:14px 18px;border:1px solid ${P.line};border-left:3px solid ${P.accent};
+  border-radius:8px;background:${P.surface}}
+.shows span{font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:${P.accent};flex:none;padding-top:4px}
+.howto{display:flex;gap:18px;align-items:flex-start;font-size:16px;line-height:1.45;color:${P.faint};margin-top:16px}
+.howto span{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  color:${P.faint};flex:none;padding-top:3px;white-space:nowrap}
 /* Hero figures: the same sans as everything else, proportional digits. Mono at
    this size gives every digit the width of a zero and "121" falls apart. */
-.hero{display:flex;flex-direction:column;gap:34px;margin:auto 0}
+.hero{display:flex;flex-direction:column;gap:30px;margin:26px 0 0}
 .hero .fig{display:flex;align-items:baseline;gap:34px}
 .hero .v{font-size:250px;font-weight:700;letter-spacing:-.06em;line-height:.9;font-variant-numeric:normal;flex:none}
 .hero .v.two{font-size:190px}
@@ -123,6 +134,8 @@ const pct = (n) => `${n > 0 ? '+' : ''}${n}%`;
 const brand = (row) => `<div class="brandrow">${MARK}<span class="wordmark">RIGCHECK</span><span class="kicker">${esc(row)}</span></div>`;
 const foot = (html) => `<div class="foot"><div class="note"><b>Modelled, not measured.</b> ${html}</div></div>`;
 const shortCpu = (c) => c.replace(/^Ryzen (\d) /, 'R$1 ');
+const shows = (t) => `<div class="shows"><span>What this shows</span><div>${esc(t)}</div></div>`;
+const howto = (t) => `<div class="howto"><span>How to read it</span><div>${esc(t)}</div></div>`;
 
 /* ---- SVG primitives ------------------------------------------------------ */
 const SVG = (w, h, inner) => `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${inner}</svg>`;
@@ -191,13 +204,14 @@ function curve(pts, { w, h, big = true }) {
 
 function coverCard() {
   const pts = builds.map((b) => ({ x: b.total, y: b.cyberpunk1440, label: b.gpuShort }));
-  return `${brand(`${NOW} build guide`)}
+  const subject = `Four PC builds from £${fmt(builds[0].total)} to £${fmt(builds[builds.length - 1].total)}, all running Cyberpunk 2077 at 1440p on high with no upscaling — what each costs against the frame rate it gets`;
+  return { subject, html: `${brand(`${NOW} build guide`)}
   <h1>Four PC builds,<br><em>and what they<br>actually do</em></h1>
-  <div class="sub">£${fmt(builds[0].total)} to £${fmt(builds[builds.length - 1].total)}, all running Cyberpunk 2077 at 1440p on high with no
-    upscaling — the same test on every machine, so the curve means something.</div>
-  <div class="chart" style="margin-bottom:auto">${curve(pts, { w: 960, h: 620 })}</div>
+  ${shows(subject)}
+  <div class="chart">${curve(pts, { w: 960, h: 560 })}</div>
+  ${howto('Each dot is a build. Left to right is what it costs; up is the frame rate it gets. Where the line flattens, the next pound buys less.')}
   ${foot(`Frame rates come out of an open model that shows its working. Prices are recalled UK street prices, not
-    scraped — read the totals as the shape of a budget. Swipe for each build: parts, power draw and six games apiece.`)}`;
+    scraped — read the totals as the shape of a budget. Swipe for each build: parts, power draw and six games apiece.`)}` };
 }
 
 /* ---- build cards: bars against the target -------------------------------- */
@@ -225,13 +239,16 @@ function buildBars(b) {
 
 function buildCard(b) {
   const clears = b.rows.filter((r) => r.fps >= b.refreshHz).length;
-  return `${brand(`${b.resolution} · ${b.refreshHz}Hz · high · no upscaling`)}
-  <h1>£${fmt(b.total)}<br><em>${esc(b.gpuShort)}</em></h1>
-  <div class="strip"><div><b>${esc(b.cpuShort)}</b></div><div><b>${esc(b.ram)}</b></div><div><b>${b.powerW}W</b> draw</div><div><b>${b.psuPartW}W</b> supply</div></div>
+  const subject = `The £${fmt(b.total)} build — ${esc(b.gpuShort)} with a ${esc(b.cpuShort)} — in ${b.rows.length} games at ${b.resolution} on high with no upscaling, against its ${b.refreshHz}Hz monitor`;
+  return { subject, html: `${brand(`${b.resolution} · ${b.refreshHz}Hz · high · no upscaling`)}
+  <h1>The £${fmt(b.total)} build<br><em>${clears} of ${b.rows.length} games clear ${b.refreshHz}Hz</em></h1>
+  ${shows(subject)}
+  <div class="strip"><div><b>${esc(b.gpuShort)}</b></div><div><b>${esc(b.cpuShort)}</b></div><div><b>${esc(b.ram)}</b></div><div><b>${b.powerW}W</b> draw</div><div><b>${b.psuPartW}W</b> supply</div></div>
   <div class="chart">${buildBars(b)}</div>
   <div class="legend"><div><i style="background:${P.seq[3]}"></i>average fps</div><div><i class="tick"></i>1% low</div><div><i style="background:${P.seq[3]};opacity:.55"></i>under the target</div></div>
+  ${howto(`Bars are average frame rate. The white tick inside each bar is the 1% low — the stutters. The vertical rule is the monitor's ${b.refreshHz}Hz; a dim bar falls short of it.`)}
   ${foot(`${clears} of ${b.rows.length} games clear the ${b.refreshHz}Hz target at ${b.resolution}. The dimmer bars do not — for those you
-    are buying a ${b.resolution} panel, not a ${b.refreshHz}Hz one. Prices are recalled, not sourced; price the parts yourself.`)}`;
+    are buying a ${b.resolution} panel, not a ${b.refreshHz}Hz one. Prices are recalled, not sourced; price the parts yourself.`)}` };
 }
 
 /* ---- bottleneck: slope chart indexed to the slowest chip ----------------- */
@@ -246,7 +263,7 @@ function slope(s, { w, h, ymax, axis = true }) {
   let out = '';
   for (let g = 100; g <= ymax; g += 25) {
     out += hair(padL, Y(g), w - padR, Y(g));
-    if (axis) out += T(padL - 10, Y(g), `${g}`, { mono: true, size: 13, fill: P.faint, anchor: 'end' });
+    if (axis) out += T(padL - 10, Y(g), pct(g - 100), { mono: true, size: 13, fill: P.faint, anchor: 'end' });
   }
   cpus.forEach((c, i) => { out += hair(X(i), padT, X(i), h - padB, P.line); out += T(X(i), h - padB + 22, narrow ? c.replace(/^Ryzen \d /, '') : shortCpu(c), { mono: true, size: 13, fill: P.faint, anchor: 'middle' }); });
   const series = s.games.map((g) => {
@@ -275,14 +292,15 @@ const sharedYmax = () => Math.ceil(Math.max(...bottleneck.flatMap((s) => s.games
 function bottleneckCard(s) {
   const top = [...s.games].sort((a, b) => b.gainPct - a.gainPct)[0];
   const low = [...s.games].filter((g) => g.gainPct > 0).sort((a, b) => a.gainPct - b.gainPct)[0];
-  return `${brand(`${s.gpuShort} · ${s.resolution} · high`)}
-  <h1>Does your CPU<br><em>actually matter?</em></h1>
-  <div class="sub">Same graphics card. Four processors under it. Each line is one game, indexed to the slowest chip
-    at 100 — so the height of a line at the right is what the best processor is worth in that game.</div>
-  <div class="chart">${slope(s, { w: 960, h: 640, ymax: sharedYmax() })}</div>
+  const subject = `Four processors, from a ${esc(s.cpus[0])} to a ${esc(s.cpus[s.cpus.length - 1])}, under one ${esc(s.gpuShort)} at ${s.resolution} on high — how much faster each game runs on the better chip`;
+  return { subject, html: `${brand(`${s.gpuShort} · ${s.resolution} · high`)}
+  <h1>Four processors,<br><em>one graphics card</em></h1>
+  ${shows(subject)}
+  <div class="chart">${slope(s, { w: 960, h: 560, ymax: sharedYmax() })}</div>
   ${gameLegend(s)}
+  ${howto('Each line is one game. It starts at the slowest chip on the left and ends at the best on the right; the higher it climbs, the more the processor mattered. The dashed line is capped by its engine.')}
   ${foot(`${pct(top.gainPct)} in ${esc(top.game)} against ${pct(low.gainPct)} in ${esc(low.game)}, from the same upgrade on the same
-    card. The dashed line is capped by its engine and no processor changes it. Change the card or the game and the answer changes.`)}`;
+    card. The dashed line is capped by its engine and no processor changes it. Change the card or the game and the answer changes.`)}` };
 }
 
 function fanOutCard() {
@@ -290,17 +308,18 @@ function fanOutCard() {
   const [a, b] = bottleneck;
   const g = (s, name) => s.games.find((x) => x.game === name);
   const cp = 'Cyberpunk 2077';
-  return `${brand(`same four processors · ${a.resolution} · high`)}
-  <h1 class="tight">Your CPU matters exactly<br><em>as much as your GPU is not<br>the limit</em></h1>
-  <div class="sub">Same processors, same games, same resolution — one weaker card on the left, one stronger on the right.
-    Nothing about the chips changed. The card stopped being the wall, so the chips became it.</div>
+  const subject = `The same four processors under a ${esc(a.gpuShort)} and then a ${esc(b.gpuShort)}, at ${a.resolution} on high — how much the processor matters depends on the card it sits next to`;
+  return { subject, html: `${brand(`same four processors · ${a.resolution} · high`)}
+  <h1 class="tight">Same four processors,<br><em>two graphics cards</em></h1>
+  ${shows(subject)}
   <div class="panels">
-    <div class="panel"><div class="t">${esc(a.gpuShort)}</div><div class="d">lines bunch — the card is the limit</div>${slope(a, { w: 470, h: 560, ymax })}</div>
-    <div class="panel"><div class="t">${esc(b.gpuShort)}</div><div class="d">lines fan — the chip is the limit</div>${slope(b, { w: 470, h: 560, ymax, axis: false })}</div>
+    <div class="panel"><div class="t">${esc(a.gpuShort)}</div><div class="d">lines bunch — the card is the limit</div>${slope(a, { w: 470, h: 500, ymax })}</div>
+    <div class="panel"><div class="t">${esc(b.gpuShort)}</div><div class="d">lines fan — the chip is the limit</div>${slope(b, { w: 470, h: 500, ymax, axis: false })}</div>
   </div>
   ${gameLegend(a)}
+  ${howto('Each line is one game, starting at the slowest chip and ending at the best. Both panels share one scale. Bunched lines mean the card was the limit; fanned lines mean the processor was.')}
   ${foot(`Cyberpunk goes from ${pct(g(a, cp).gainPct)} to ${pct(g(b, cp).gainPct)} for the same four chips. "Is a ${esc(a.cpus[1])} enough?"
-    cannot be answered without knowing what card it sits next to and what you play.`)}`;
+    cannot be answered without knowing what card it sits next to and what you play.`)}` };
 }
 
 /* ---- silent tax: dumbbell, one hue in two shades ------------------------- */
@@ -339,15 +358,16 @@ function slots(filled) {
 function silentTaxCard(t) {
   const rows = [...t.rows].sort((a, b) => b.gainPct - a.gainPct);
   const best = rows[0];
-  return `${brand(`${t.gpu} · ${t.cpu} · ${t.resolution}`)}
-  <h1>A second stick of RAM<br><em>is worth up to ${pct(best.gainPct)}</em></h1>
-  <div class="sub">One stick instead of two: same capacity, same speed, same everything — the memory just runs on one
-    channel. The most common invisible fault there is, and free to fix if the second stick is in a drawer.</div>
-  <div class="chart">${dumbbell(rows, { w: 960, h: 560 })}</div>
+  const subject = `One stick of RAM against two — same capacity, same speed — on a ${esc(t.gpu)} with a ${esc(t.cpu)} at ${t.resolution}: what the second memory channel is worth, game by game`;
+  return { subject, html: `${brand(`${t.gpu} · ${t.cpu} · ${t.resolution}`)}
+  <h1 class="tight">One RAM stick or two?<br><em>Two is worth up to ${pct(best.gainPct)}</em></h1>
+  ${shows(subject)}
+  <div class="chart">${dumbbell(rows, { w: 960, h: 500 })}</div>
   <div class="legend"><div><i style="background:${P.seq[1]};border-radius:50%"></i>one stick, one channel</div><div><i style="background:${P.seq[4]};border-radius:50%"></i>two sticks, two channels</div>
     <div style="margin-left:auto;gap:14px">${slots(1)}<span style="color:${P.faint}">→</span>${slots(2)}</div></div>
+  ${howto('Left dot: one stick. Right dot: two sticks. The bar between them is what the second channel adds. Every row starts on the same line so the bars compare; the real frame rates sit beside the dots.')}
   ${foot(`Check yours: Task Manager → Performance → Memory, "Slots used". If it reads one of two and you have a spare
-    stick, that is ${pct(best.gainPct)} in ${esc(best.game)} sitting in a drawer.`)}`;
+    stick, that is ${pct(best.gainPct)} in ${esc(best.game)} sitting in a drawer.`)}` };
 }
 
 /* ---- VRAM: paired columns, one hue in two shades ------------------------- */
@@ -387,15 +407,16 @@ function die(rec, shade) {
 function vramCard(v) {
   const same = v.rows.filter((r) => r.gainPct === 0).map((r) => r.resolution);
   const wall = v.rows.find((r) => r.gainPct > 0);
-  return `${brand(`${v.a.brand} · cyberpunk 2077 · high`)}
-  <h1>Twice the VRAM.<br><em>Zero extra frames.</em></h1>
-  <div class="sub">Same ${esc(v.a.chip)} die, same ${fmt(v.a.shaders)} shaders, same clocks — sold with ${v.a.vramGB}GB and
-    with ${v.b.vramGB}GB. Identical at ${same.join(' and ')}. The bigger number earns its money at ${wall ? wall.resolution : 'no resolution here'} and nowhere else.</div>
-  <div class="chart">${paired(v.rows, { w: 960, h: 560, a: v.a, b: v.b })}</div>
+  const subject = `${esc(v.a.brand)} with ${v.a.vramGB}GB against the same card with ${v.b.vramGB}GB — identical ${esc(v.a.chip)} chip, ${fmt(v.a.shaders)} shaders and clocks — in Cyberpunk 2077 on high at three resolutions`;
+  return { subject, html: `${brand(`${v.a.brand} · cyberpunk 2077 · high`)}
+  <h1 class="tight">Same chip, ${v.a.vramGB}GB or ${v.b.vramGB}GB.<br><em>Zero extra frames at ${same.join(' and ')}.</em></h1>
+  ${shows(subject)}
+  <div class="chart">${paired(v.rows, { w: 960, h: 500, a: v.a, b: v.b })}</div>
   <div class="legend"><div><i style="background:${P.seq[2]}"></i>${v.a.vramGB}GB</div><div><i style="background:${P.seq[4]}"></i>${v.b.vramGB}GB</div>
     <div style="margin-left:auto;gap:22px">${die(v.a, P.seq[2])}${die(v.b, P.seq[4])}</div></div>
+  ${howto(`Two columns per resolution: the ${v.a.vramGB}GB card, then the ${v.b.vramGB}GB. The same height means the extra memory did nothing. The chips on the right are the same die with more memory beside it.`)}
   ${foot(`A card runs out of shader throughput long before it runs out of memory at the two resolutions almost
-    everybody plays at. VRAM matters when memory is the thing you ran out of — ${wall ? wall.resolution : '4K'}, texture mods, heavy ray tracing. Real list. Not most people.`)}`;
+    everybody plays at. VRAM matters when memory is the thing you ran out of — ${wall ? wall.resolution : '4K'}, texture mods, heavy ray tracing. Real list. Not most people.`)}` };
 }
 
 /* ---- still good: small multiples with a 60fps rule ----------------------- */
@@ -431,25 +452,29 @@ function stillGoodCard(s) {
   const under = s.cards.filter((c) => s.minVramGB != null && c.vram < s.minVramGB);
   const multi = s.cards.filter((c) => c.siblings.length > 1);
   const clearsShooters = s.cards.every((c) => c.rows.filter((r) => !/cyberpunk/i.test(r.game)).every((r) => r.fps >= SIXTY));
-  return `${brand(`${s.resolution} · high · ${s.cpu}`)}
+  const years = s.cards.map((c) => Number(c.year));
+  const subject = `Four graphics cards from ${Math.min(...years)} to ${Math.max(...years)} — ${s.cards.map((c) => esc(c.gpu.replace(/^\w+ /, ''))).join(', ')} — in three current games at ${s.resolution} on high, with a ${esc(s.cpu)}`;
+  return { subject, html: `${brand(`${s.resolution} · high · ${s.cpu}`)}
   <h1>Is your old card<br><em>still good?</em></h1>
-  <div class="card-note">Four cards between ${Math.min(...ages)} and ${Math.max(...ages)} years old, against three games people are playing now.
-    ${clearsShooters ? 'Every one of them still clears sixty in a shooter.' : ''} Cyberpunk is where they separate:
-    ${Math.min(...cp)} to ${Math.max(...cp)}fps across four cards people mention in the same breath.</div>
+  ${shows(subject)}
   <div class="chart">${stillGrid(s)}</div>
+  ${howto(`Each column is a game, each row a card. The rule is ${SIXTY}fps; a bright bar clears it and a dim one falls short. ${clearsShooters ? 'Every card clears it in both shooters.' : ''} Cyberpunk is where they separate: ${Math.min(...cp)} to ${Math.max(...cp)}fps.`)}
   <div class="why">
     <div><div class="t">Check which one you own</div><div class="b">${multi.map((c, i) => `${i ? 'the' : 'The'} ${esc(c.gpu.replace(/^\w+ /, ''))} shipped as ${c.siblings.map((g) => `${g}GB`).join(' and ')}`).join(', ')}.
       On a chart about where the line falls, the memory size is half the answer.</div></div>
     <div><div class="t">Below minimum still starts</div><div class="b">${under.map((c) => `The ${esc(c.gpu.replace(/^\w+ /, ''))}'s ${c.vram}GB is under ${esc(s.minVramGame)}'s published ${s.minVramGB}GB. That costs frames, not the launch — ${c.rows.find((r) => /cyberpunk/i.test(r.game)).fps}fps is running, and running is not the same as playable.`).join(' ')}</div></div>
   </div>
-  ${foot(`Rule at ${SIXTY}. Dim bars fall under it. A dash would mean the card cannot run that game at all.`)}`;
+  ${foot(`Four cards between ${Math.min(...ages)} and ${Math.max(...ages)} years old. A dash would mean the card cannot run that game at all.`)}` };
 }
 
 /* ---- hero figures --------------------------------------------------------- */
 function heroStepCard() {
   const a = builds[builds.length - 2], b = builds[builds.length - 1];
   const pts = builds.map((x) => ({ x: x.total, y: x.cyberpunk1440 }));
-  return `${brand('the last two builds · cyberpunk 2077 · 1440p')}
+  const subject = `The top step of the build ladder — from the £${fmt(a.total)} build to the £${fmt(b.total)} one — in Cyberpunk 2077 at 1440p on high`;
+  return { subject, html: `${brand('the last two builds · cyberpunk 2077 · 1440p')}
+  <h1>The last £${fmt(b.total - a.total)}<br><em>of a PC build</em></h1>
+  ${shows(subject)}
   <div class="hero">
     <div class="fig"><div class="v two">£${fmt(b.total - a.total)}</div><div class="l">more money, from the £${fmt(a.total)} build to the £${fmt(b.total)} one</div></div>
     <div class="fig"><div class="v two">+${b.cyberpunk1440 - a.cyberpunk1440}</div><div class="l">more frames — ${a.cyberpunk1440} to ${b.cyberpunk1440} in Cyberpunk 2077 at 1440p</div></div>
@@ -457,34 +482,41 @@ function heroStepCard() {
   <div class="sub" style="margin-top:36px">£${fmt(a.total)} → £${fmt(b.total)} is ${Math.round((b.total / a.total - 1) * 100)}% more money for
     ${Math.round((b.cyberpunk1440 / a.cyberpunk1440 - 1) * 100)}% more frames. The curve flattens hard after about £${fmt(Math.round(a.total / 100) * 100)},
     and that is the most useful thing on this account if you are deciding what to spend.</div>
-  <div class="chart" style="margin-bottom:0">${curve(pts, { w: 960, h: 150, big: false })}</div>
-  ${foot(`Ordering reliable; absolute frame rates are not. Prices are recalled, not sourced — the shape holds, the totals move.`)}`;
+  <div class="chart">${curve(pts, { w: 960, h: 150, big: false })}</div>
+  ${howto('The line is all four builds — price left to right, frame rate up. The last segment is the flattest.')}
+  ${foot(`Ordering reliable; absolute frame rates are not. Prices are recalled, not sourced — the shape holds, the totals move.`)}` };
 }
 
 function heroCpuCard() {
   const s = bottleneck[0];
   const games = [...s.games].filter((g) => g.gainPct > 0).sort((a, b) => b.gainPct - a.gainPct);
   const top = games[0], low = games[games.length - 1];
-  return `${brand(`same four processors · ${s.gpuShort} · ${s.resolution}`)}
+  const subject = `What the best of four processors is worth over the slowest, on a ${esc(s.gpuShort)} at ${s.resolution} on high — in the game where it matters most and the one where it barely does`;
+  return { subject, html: `${brand(`same four processors · ${s.gpuShort} · ${s.resolution}`)}
+  <h1>What a CPU upgrade<br><em>is actually worth</em></h1>
+  ${shows(subject)}
   <div class="hero">
     <div class="fig"><div class="v two">${pct(top.gainPct)}</div><div class="l"><span class="swatch" style="background:${gameColor(top.game)}"></span><b>${esc(top.game)}</b><br>the best chip over the slowest</div></div>
     <div class="fig"><div class="v two">${pct(low.gainPct)}</div><div class="l"><span class="swatch" style="background:${gameColor(low.game)}"></span><b>${esc(low.game)}</b><br>same four chips, same card</div></div>
   </div>
   <div class="sub" style="margin-top:44px">What the best processor on the list is worth over the slowest — same card, same
     resolution, same four chips. If somebody says a CPU "bottlenecks" a card without asking what you play, they are guessing.</div>
-  ${foot(`Simulation and strategy live on the processor; shooters at ${s.resolution} live on the card. The answer is per-game and it always was.`)}`;
+  ${foot(`Simulation and strategy live on the processor; shooters at ${s.resolution} live on the card. The answer is per-game and it always was.`)}` };
 }
 
 function hero970Card() {
   const s = pillars.stillGood;
   const c = s.cards.find((x) => /970/.test(x.gpu));
   const v = c.rows.find((r) => /cyberpunk/i.test(r.game)).fps;
-  return `${brand(`${c.gpu} · ${c.year} · cyberpunk 2077 · ${s.resolution} high`)}
+  const subject = `A ${esc(c.gpu)} from ${c.year} running Cyberpunk 2077 at ${s.resolution} on high, with a ${esc(s.cpu)}`;
+  return { subject, html: `${brand(`${c.gpu} · ${c.year} · cyberpunk 2077 · ${s.resolution} high`)}
+  <h1>A ${NOW - Number(c.year)}-year-old card<br><em>in Cyberpunk 2077</em></h1>
+  ${shows(subject)}
   <div class="hero"><div class="fig"><div class="v">${v}<small>fps</small></div>
     <div class="l">A ${NOW - Number(c.year)}-year-old card in ${esc(s.minVramGame)}. Its ${c.vram}GB is under the published ${s.minVramGB}GB minimum.</div></div></div>
   <div class="sub" style="margin-top:44px"><b style="color:${P.ink}">It starts.</b> Nothing in a shipping game checks your memory and refuses. A card under the minimum spills to system
     RAM over the bus and stutters — a low number, not a locked door. Starting is not the same as playing, and ${v} is the honest figure.</div>
-  ${foot(`The number the model used to give here was "will not run". That was false about the real world, and it has been fixed.`)}`;
+  ${foot(`The number the model used to give here was "will not run". That was false about the real world, and it has been fixed.`)}` };
 }
 
 /* ---- render --------------------------------------------------------------- */
@@ -493,17 +525,22 @@ const page = await browser.newPage({ viewport: { width: 1080, height: 1350 }, de
 const shots = [];
 const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 const cards = [
-  { name: '01-cover', html: coverCard() },
-  ...builds.map((b, i) => ({ name: `0${i + 2}-${b.budget}`, html: buildCard(b) })),
-  ...bottleneck.map((s, i) => ({ name: `bottleneck-${i + 1}-${slug(s.gpuShort)}`, html: bottleneckCard(s) })),
-  { name: 'bottleneck-fan-out', html: fanOutCard() },
-  { name: 'silent-tax-memory-channels', html: silentTaxCard(pillars.silentTax) },
-  ...(pillars.vram ? [{ name: 'myth-vram', html: vramCard(pillars.vram) }] : []),
-  { name: 'still-good-old-cards', html: stillGoodCard(pillars.stillGood) },
-  { name: 'hero-price-step', html: heroStepCard() },
-  { name: 'hero-cpu-split', html: heroCpuCard() },
-  { name: 'hero-gtx-970', html: hero970Card() },
+  { name: '01-cover', ...coverCard() },
+  ...builds.map((b, i) => ({ name: `0${i + 2}-${b.budget}`, ...buildCard(b) })),
+  ...bottleneck.map((s, i) => ({ name: `bottleneck-${i + 1}-${slug(s.gpuShort)}`, ...bottleneckCard(s) })),
+  { name: 'bottleneck-fan-out', ...fanOutCard() },
+  { name: 'silent-tax-memory-channels', ...silentTaxCard(pillars.silentTax) },
+  ...(pillars.vram ? [{ name: 'myth-vram', ...vramCard(pillars.vram) }] : []),
+  { name: 'still-good-old-cards', ...stillGoodCard(pillars.stillGood) },
+  { name: 'hero-price-step', ...heroStepCard() },
+  { name: 'hero-cpu-split', ...heroCpuCard() },
+  { name: 'hero-gtx-970', ...hero970Card() },
 ];
+// The manifest: every image, and the sentence printed on it. verify.mjs holds
+// the caption file to this — an image with no caption, a caption pointing at
+// no image, or a caption whose "shows" line differs from the card's all fail.
+const unesc = (t) => t.replace(/&amp;/g, '&').replace(/&lt;/g, '<');
+writeFileSync('marketing/cards.json', JSON.stringify(cards.map((c) => ({ name: c.name, file: `images/${c.name}.png`, subject: unesc(c.subject) })), null, 2) + '\n');
 for (const c of cards) {
   await page.setContent(`<style>${css}</style>${c.html}`, { waitUntil: 'networkidle' });
   await page.evaluate(() => document.fonts.ready);

@@ -265,6 +265,38 @@ console.log('\nTEMPLATES — no hand-typed figures in the card renderer?');
   else pass('cards.mjs: every figure on every card comes through a data expression');
 }
 
+
+// --- 5. images -------------------------------------------------------------
+// A picture never goes out without its caption, and the caption never
+// describes a different picture. The renderer writes cards.json — every image
+// it makes, with the "what this shows" sentence printed on it — and every one
+// must appear in instagram.md on a line reading `images/name.png` — shows: …
+// with that exact sentence. Both directions: an image with no caption fails,
+// and a caption pointing at an image the renderer does not make fails.
+console.log('\nIMAGES — does every image travel with its caption?');
+{
+  const manifest = JSON.parse(read('cards.json'));
+  const ig = read('instagram.md');
+  const shows = new Map();
+  for (const m of ig.matchAll(/`images\/([\w-]+)\.png`[^\n]*?—\s*shows:\s*([^\n]+)/g)) shows.set(m[1], m[2].trim());
+  const referenced = new Set([...ig.matchAll(/`images\/([\w-]+)\.png`/g)].map((m) => m[1]));
+  let bad = 0;
+  for (const c of manifest) {
+    const got = shows.get(c.name);
+    if (!got) { fail(`${c.file} has no caption`, 'no line in instagram.md reads `images/…png` — shows: …'); bad++; continue; }
+    if (got !== c.subject) { fail(`${c.file}: the caption describes a different picture`, `card:    "${c.subject}"\n        caption: "${got}"`); bad++; }
+  }
+  for (const r of referenced) if (!manifest.some((c) => c.name === r)) { fail(`instagram.md points at images/${r}.png`, 'the renderer does not make it'); bad++; }
+  if (!bad) pass(`${manifest.length} images, each captioned with the sentence printed on it`);
+
+  // Per-game caption lines are the other place a figure can drift: every
+  // "· Game — Nfps" line must be a row of some build.
+  const rows = new Set(builds.flatMap((b) => b.rows.map((r) => `${r.game} — ${r.fps}fps`)));
+  let n = 0; bad = 0;
+  for (const m of ig.matchAll(/^· (.+? — \d+fps)$/gm)) { n++; if (!rows.has(m[1])) { fail('instagram.md per-game line is not in builds.json', m[1]); bad++; } }
+  if (!bad) pass(`${n} per-game caption lines match builds.json`);
+}
+
 console.log(`\n${failures === 0 ? 'PASS' : `${failures} FAILURE${failures > 1 ? 'S' : ''}`} — ${CLAIMS.length} claims, ${builds.length} builds, ${bottleneck.length} ladders`);
 if (failures) console.log('Published copy disagrees with the data behind it. Fix the copy or re-render, then re-run.');
 process.exit(failures ? 1 : 0);

@@ -40,6 +40,14 @@ takes — chosen by the data's job, never a table:
 Every figure on every card arrives through a data expression; `verify.mjs`
 walks the renderer's templates and fails on a typed-in number with a unit.
 
+Every card also prints a one-sentence **What this shows** strip, derived from
+the data, and the renderer writes those sentences to `cards.json`. Each image
+must appear in `instagram.md` on a line that names the file and repeats that
+sentence after *shows:* — `verify.mjs` fails on an image with no such line, a
+line pointing at an image the renderer does not make, or a sentence that
+differs. An image never goes out without its caption, and the caption never
+describes a different image.
+
 **Do not hand-edit the figures** — the whole point is that they trace back to
 the model, and a number typed in by hand is exactly the thing this project
 exists not to do.
