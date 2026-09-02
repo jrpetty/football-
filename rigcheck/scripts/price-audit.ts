@@ -1,0 +1,108 @@
+/**
+ * npm run prices:audit
+ *
+ * For every priced part, and every part the published posts name: is the
+ * figure on file a NEW price or a USED one, where did it come from, how old is
+ * the part, and what should be checked on a marketplace next. Writes
+ * data/pricing/PRICE-AUDIT.md and prints the checklist.
+ *
+ * It does not fetch anything. Marketplaces are read by a person, sold listings
+ * not asking prices, and recorded with `npm run price` — this is the list of
+ * what to read, in the order it matters.
+ */
+import { readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { STATUS_ADVICE, STATUS_PRIORITY, priceStatus, type PriceStatus } from '../src/core/priceaudit.ts';
+
+const ROOT = new URL('..', import.meta.url).pathname;
+const load = (p: string) => JSON.parse(readFileSync(join(ROOT, p), 'utf8'));
+const read = (p: string) => readFileSync(join(ROOT, p), 'utf8');
+
+interface Rec { id: string; fullName: string; brand: string; variant?: string | null; launchDate?: string | null }
+const gpus = (load('data/catalogue/gpus.json').records as Rec[]).map((r) => ({ ...r, kind: 'gpu' as const }));
+const cpus = (load('data/catalogue/cpus.json').records as Rec[]).map((r) => ({ ...r, kind: 'cpu' as const }));
+const parts = [...gpus, ...cpus];
+const seedNew = load('data/pricing/gbp-new.json') as { updated: string; prices: Record<string, number> };
+const seedUsed = load('data/pricing/gbp-used.json') as { updated: string; prices: Record<string, number> };
+const observed = (load('data/pricing/observed.json').prices ?? []) as { partId: string; condition: 'new' | 'used'; price: number; newestDate: string; totalSamples: number; sources: string[]; series: unknown[] }[];
+
+// Parts the published content names, by brand string, so a post can never
+// quote a part the app cannot price without this report saying so.
+const corpus = ['marketing/instagram.md', 'marketing/cards.json', 'marketing/builds.json', 'marketing/bottleneck.json', 'marketing/pillars.json']
+  .map((f) => { try { return read(f); } catch { return ''; } }).join('\n');
+// Longest brand wins at each position, and a match must stand alone:
+// "Ryzen 7 5800" is not named by a post about the 5800X3D, and "GTX 1080" is
+// not named by one about the 1080 Ti. Variants that share a brand string (the
+// RX 580 4GB and 8GB) both count as named, which is what a post about "the
+// RX 580" means.
+const mentioned = new Set<string>();
+{
+  const esc = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const brands = [...new Set(parts.map((r) => r.brand).filter(Boolean))].sort((a, b) => b.length - a.length);
+  let masked = corpus;
+  for (const b of brands) {
+    const re = new RegExp(`(?<![\\w-])${esc(b)}(?![\\w-])`, 'g');
+    if (re.test(masked)) {
+      for (const r of parts) if (r.brand === b) mentioned.add(r.id);
+      masked = masked.replace(re, (m) => '\u0000'.repeat(m.length));
+    }
+  }
+}
+
+const today = new Date();
+const year = (r: Rec) => { const y = Number(String(r.launchDate ?? '').slice(0, 4)); return Number.isFinite(y) && y > 1990 ? y : null; };
+
+interface Row { id: string; name: string; kind: 'gpu' | 'cpu'; year: number | null; age: number | null; seedNew: number | null; seedUsed: number | null; obs: typeof observed; status: PriceStatus; mentioned: boolean }
+const ids = new Set([...Object.keys(seedNew.prices), ...Object.keys(seedUsed.prices), ...observed.map((o) => o.partId), ...mentioned]);
+const rows: Row[] = [...ids].map((id) => {
+  const r = parts.find((p) => p.id === id);
+  const obs = observed.filter((o) => o.partId === id);
+  const y = r ? year(r) : null;
+  const sn = seedNew.prices[id] ?? null, su = seedUsed.prices[id] ?? null;
+  return {
+    id, name: r?.fullName ?? id, kind: r?.kind ?? 'gpu', year: y, age: y ? today.getUTCFullYear() - y : null,
+    seedNew: sn, seedUsed: su, obs,
+    status: priceStatus({ launchYear: y, seedNew: sn, seedUsed: su, observedNew: obs.some((o) => o.condition === 'new'), observedUsed: obs.some((o) => o.condition === 'used') }, today),
+    mentioned: mentioned.has(id),
+  };
+}).sort((a, b) => STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status] || Number(b.mentioned) - Number(a.mentioned) || (b.age ?? 0) - (a.age ?? 0) || a.name.localeCompare(b.name));
+
+const by = (s: PriceStatus) => rows.filter((r) => r.status === s);
+const short = (r: Row) => parts.find((p) => p.id === r.id)?.brand ?? r.name;
+const cmd = (r: Row, cond: 'new' | 'used') => `npm run price -- "${short(r)}" ${cond} <£> --source ebay-uk --basis sold --n <sales>`;
+const describe = (r: Row) => {
+  const bits: string[] = [];
+  for (const o of r.obs) bits.push(`£${o.price} ${o.condition}, sourced ${o.newestDate}, ${o.totalSamples} sale${o.totalSamples === 1 ? '' : 's'}${o.series.length > 1 ? `, ${o.series.length} snapshots` : ''}`);
+  if (r.seedUsed != null && !r.obs.some((o) => o.condition === 'used')) bits.push(`£${r.seedUsed} used, recalled (seed ${seedUsed.updated})`);
+  if (r.seedNew != null && !r.obs.some((o) => o.condition === 'new')) bits.push(`£${r.seedNew} new, recalled (seed ${seedNew.updated})`);
+  return bits.join('; ') || 'no price';
+};
+
+const md: string[] = [];
+md.push(`# Price audit — ${today.toISOString().slice(0, 10)}`, '');
+md.push(`Every priced part, and every part the published posts name, with whether the figure on file is a **new** price or a **used** one, where it came from, and what to check next. Generated by \`npm run prices:audit\`; nothing here was fetched. Marketplaces are read by a person — sold listings, not asking prices — and recorded with \`npm run price\`.`, '');
+md.push('| status | parts | meaning |', '|---|---|---|');
+for (const s of ['none', 'recalled-new-old-part', 'recalled-used', 'recalled-new', 'sourced'] as PriceStatus[]) md.push(`| ${s} | ${by(s).length} | ${STATUS_ADVICE[s]} |`);
+md.push('', `Parts named in published posts: ${rows.filter((r) => r.mentioned).length}. Of those with no price at all: ${rows.filter((r) => r.mentioned && r.status === 'none').length}.`, '');
+
+const section = (title: string, list: Row[], note: string, cond: (r: Row) => 'new' | 'used') => {
+  if (!list.length) return;
+  md.push(`## ${title} (${list.length})`, '', note, '', '| part | launched | on file | check |', '|---|---|---|---|');
+  for (const r of list) md.push(`| ${r.name}${r.mentioned ? ' **·in posts**' : ''} | ${r.year ?? '?'}${r.age != null ? ` (${r.age}y)` : ''} | ${describe(r)} | \`${cmd(r, cond(r))}\` |`);
+  md.push('');
+};
+section('No price at all', by('none'), 'The planner cannot consider these and the posts cannot quote them. The ones marked **in posts** already appear in published content, so a follower can ask what one costs and the app has no answer.', (r) => (r.age != null && r.age >= 4 ? 'used' : 'new'));
+section('Recalled NEW price on an old part', by('recalled-new-old-part'), 'A launch-era number on a part that sells used. Under the resale-only rule a used question about these gets "no resale price recorded" until a real one is entered — which is the truth, and also the reason to record one.', () => 'used');
+section('Recalled USED price', by('recalled-used'), 'These are the figures most likely to be wrong by the most: undated, recalled, on parts whose value only falls. Read sold listings, take the median, record how many sales. Oldest parts first.', () => 'used');
+section('Recalled NEW price on a recent part', by('recalled-new'), 'Plausible, unsourced, undated. A retail price with a date replaces each one; a sold-listing used price beside it is what the upgrade advisor actually wants.', () => 'new');
+section('Sourced', by('sourced'), 'On record from a real observation. A second snapshot on a later date is what turns each into a trend.', (r) => (r.obs[0]?.condition ?? 'used'));
+
+writeFileSync(join(ROOT, 'data/pricing/PRICE-AUDIT.md'), md.join('\n') + '\n');
+
+// --- terminal --------------------------------------------------------------
+console.log(`price audit — ${rows.length} parts\n`);
+for (const s of ['none', 'recalled-new-old-part', 'recalled-used', 'recalled-new', 'sourced'] as PriceStatus[]) console.log(`  ${String(by(s).length).padStart(4)}  ${s.padEnd(24)} ${STATUS_ADVICE[s]}`);
+const first = rows.filter((r) => r.status !== 'sourced').slice(0, 12);
+console.log(`\nstart here — the ${first.length} that matter most:\n`);
+for (const r of first) console.log(`  ${r.name.padEnd(34)} ${String(r.year ?? '?').padEnd(6)} ${describe(r)}${r.mentioned ? '   ← in posts' : ''}`);
+console.log(`\nfull list with commands: data/pricing/PRICE-AUDIT.md`);

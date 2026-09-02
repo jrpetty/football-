@@ -121,6 +121,15 @@ nvidia-geforce-rtx-5070,new,retail,549,GBP,scan-uk,2026-08-19,1,in stock
   from the newest 45 days; older points are what the trend is read from.
 - **Every rejection is reported with a reason.** Nothing is dropped silently.
 
+## What to check next
+
+`npm run prices:audit` writes `data/pricing/PRICE-AUDIT.md`: every priced part
+and every part the posts name, with whether the figure on file is a **new**
+price or a **used** one, where it came from, how old the part is, and a
+prefilled `npm run price` line for each. It sorts by what matters — parts the
+posts quote with no price at all, then launch-era new prices on old parts,
+then every recalled used figure oldest first.
+
 ## Which parts are worth your time
 
 You do not need all 279. The planner only ever recommends parts it has a price

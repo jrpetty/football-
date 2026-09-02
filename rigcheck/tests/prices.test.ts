@@ -308,3 +308,44 @@ describe('resale-only rule for old parts', () => {
     expect(pricedLookup(t, 'used')('intel-core-i7-7700').value).toBe(300);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Every answer says which condition it is, so a screen can print "new" or
+// "used" beside the figure and never let one stand in for the other silently.
+// ---------------------------------------------------------------------------
+
+import { describePrice } from '../src/ui/pricing.ts';
+import { priceStatus } from '../src/core/priceaudit.ts';
+
+describe('a price says what condition it is', () => {
+  it('reports the condition it answered with, even when it is not the one asked for', () => {
+    // Recent part, nothing used on file: the new seed stands in, and says so.
+    const t = tables({ usedP: { currency: 'GBP', updated: '2026-05', prices: {} } });
+    const r = pricedLookup(t, 'used')('nvidia-geforce-rtx-3070');
+    expect(r).toMatchObject({ value: 400, origin: 'recalled-seed', condition: 'new', asOf: '2026-05' });
+    expect(describePrice(r)).toBe('£400 · new · recalled 2026-05');
+  });
+  it('dates a sourced figure by its observation', () => {
+    const r = pricedLookup(tables({ observed: [observedRow()] }), 'used')('nvidia-geforce-rtx-3070');
+    expect(r).toMatchObject({ condition: 'used', asOf: '2026-08-18' });
+    expect(describePrice(r)).toBe('£192 · used · sourced 2026-08-18');
+  });
+  it('words the resale-only refusal', () => {
+    const t = tables({ newP: { currency: 'GBP', updated: '2026-05', prices: { 'intel-core-i7-7700': 300 } }, usedP: { currency: 'GBP', updated: '2026-05', prices: {} } });
+    expect(describePrice(pricedLookup(t, 'used', years, TODAY_26)('intel-core-i7-7700'))).toBe('no resale price recorded');
+  });
+});
+
+describe('price status for the audit', () => {
+  const T = new Date('2026-09-02T00:00:00Z');
+  it('classifies by what is on file and how old the part is', () => {
+    expect(priceStatus({ observedUsed: true }, T)).toBe('sourced');
+    expect(priceStatus({ seedUsed: 45, launchYear: 2019 }, T)).toBe('recalled-used');
+    expect(priceStatus({ seedNew: 95, launchYear: 2020 }, T)).toBe('recalled-new-old-part');
+    expect(priceStatus({ seedNew: 520, launchYear: 2025 }, T)).toBe('recalled-new');
+    expect(priceStatus({ launchYear: 2014 }, T)).toBe('none');
+  });
+  it('an observation outranks any seed', () => {
+    expect(priceStatus({ seedNew: 95, seedUsed: 40, observedNew: true, launchYear: 2020 }, T)).toBe('sourced');
+  });
+});

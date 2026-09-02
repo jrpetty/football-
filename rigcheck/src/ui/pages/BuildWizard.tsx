@@ -795,31 +795,29 @@ function SettingsStep({
  * invites someone to plan a purchase around a number nobody checked. Sourced
  * prices carry their sample size and age; recalled ones say so plainly.
  */
-function PriceOrigin({
-  id,
-  prices,
-  asOf,
-}: {
-  id: string;
-  prices: ReturnType<typeof loadPrices>;
-  asOf: string;
-}) {
-  // A price the operator entered outranks everything, so it is checked first
-  // and labelled as theirs. Showing their own figure as "recalled" would be
-  // both wrong and discouraging — the point of letting somebody enter a price
-  // is that the tool then visibly uses it.
-  if (prices.override.used[id] != null || prices.override.new[id] != null) {
+function PriceOrigin({ id, prices, asOf, condition = 'new' }: { id: string; prices: ReturnType<typeof loadPrices>; asOf: string; condition?: 'new' | 'used' }) {
+  // The bill of materials is priced NEW, so the tag looks up the new price and
+  // says so. It used to look up a used observation first, which would have put
+  // "sourced · 1 sale" beside a recalled new figure the moment a used price for
+  // the same part was recorded — the i7-7700 at £40 would have done exactly that.
+  const mine = prices.override[condition][id];
+  if (mine != null) {
     return (
-      <span className="tag good" style={{ marginLeft: 6 }} title="A price you entered yourself. It beats every other source here.">
-        yours
+      <span className="tag good" style={{ marginLeft: 6 }} title={`A ${condition} price you entered yourself. It beats every other source here.`}>
+        yours · {condition}
       </span>
     );
   }
-  const o = findObserved(prices.observed, id, 'used') ?? findObserved(prices.observed, id, 'new');
+  const o = findObserved(prices.observed, id, condition);
   if (!o) {
+    const other = findObserved(prices.observed, id, condition === 'new' ? 'used' : 'new');
     return (
-      <span className="tag" style={{ marginLeft: 6 }} title={`No market observation for this part — the figure is the recalled seed dated ${asOf}, which was never sourced. Add one under "add your own data" in the Data Explorer, or in data/prices-observed/.`}>
-        recalled
+      <span
+        className="tag"
+        style={{ marginLeft: 6 }}
+        title={`No market observation for this part as ${condition} — the figure is the recalled seed dated ${asOf}, which was never sourced.${other ? ` A ${other.condition} price is on record (£${other.price}, ${other.newestDate}), but this line is priced ${condition}.` : ''} Add one with npm run price, or under "add your own data" in the Data Explorer.`}
+      >
+        recalled · {condition}
       </span>
     );
   }
@@ -841,7 +839,7 @@ function PriceOrigin({
       style={{ marginLeft: 6 }}
       title={detail + (move ? ` Watched since ${o.firstDate}: ${describeChange(move, monthLabel(move.from.date.slice(0, 7)))}.` : '')}
     >
-      {o.stale ? `sourced · ${o.ageDays}d old` : o.containsAsking ? 'sourced · asking' : `sourced · ${o.totalSamples} sales`}{trend}
+      {o.stale ? `sourced · ${condition} · ${o.ageDays}d old` : o.containsAsking ? `sourced · ${condition} · asking` : `sourced · ${condition} · ${o.totalSamples} sale${o.totalSamples === 1 ? '' : 's'}`}{trend}
     </span>
   );
 }

@@ -31,7 +31,8 @@
     "marketing:next": "tsx marketing/scripts/next.ts",
     "marketing:versus": "tsx marketing/scripts/versus-cli.ts",
     "marketing:build": "tsx marketing/scripts/build-cli.ts",
-    "game": "tsx scripts/game.ts"
+    "game": "tsx scripts/game.ts",
+    "prices:audit": "tsx scripts/price-audit.ts"
   },
   "dependencies": {
     "react": "^18.3.1",

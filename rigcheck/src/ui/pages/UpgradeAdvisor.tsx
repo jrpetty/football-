@@ -4,7 +4,7 @@ import { fmt } from '../components/Parts.tsx';
 import { useApp } from '../store.ts';
 import { sweepComponent } from '../../core/queries.ts';
 import { RESOLUTIONS } from '../../core/types.ts';
-import { launchYears, loadPrices, priceLookup } from '../pricing.ts';
+import { describePrice, launchYears, loadPrices, priceLookup, pricedLookup, type PricedValue } from '../pricing.ts';
 
 /** Rows rendered in the candidate table; the count is stated when it truncates. */
 const ROW_CAP = 60;
@@ -18,6 +18,10 @@ export function UpgradeAdvisor() {
   const prices = useMemo(() => loadPrices(), []);
   // Used prices for old parts come from the resale market or not at all — see RESALE_ONLY_AFTER_YEARS.
   const priceOf = useMemo(() => priceLookup(prices, 'used', launchYears(data)), [prices, data]);
+  // The same answer with its provenance, for the tag beside each figure: a
+  // used question can be answered with a new price for a recent part, and the
+  // table has to say which it got.
+  const pricedOf = useMemo(() => pricedLookup(prices, 'used', launchYears(data)), [prices, data]);
 
   /**
    * Candidate scope.
@@ -165,7 +169,7 @@ export function UpgradeAdvisor() {
                 <th className="n">geomean fps</th>
                 <th className="n">±</th>
                 <th className="n">vs base</th>
-                <th className="n">price</th>
+                <th className="n" title="Used-market price where one is recorded; a new price stands in for a recent part with no resale figure; old parts are resale-only.">price</th>
                 <th className="n">fps / £</th>
                 <th className="n">marginal fps / £</th>
               </tr>
@@ -188,7 +192,7 @@ export function UpgradeAdvisor() {
                       <td className="n" style={{ color: p.deltaVsBase > 0 ? 'var(--measured)' : p.deltaVsBase < 0 ? 'var(--extrapolated)' : 'var(--faint)' }}>
                         {p.deltaVsBase > 0 ? '+' : ''}{(p.deltaVsBase * 100).toFixed(1)}%
                       </td>
-                      <td className="n">{p.price != null ? `£${p.price.toFixed(0)}` : <span className="sub">—</span>}</td>
+                      <td className="n">{p.price != null ? <>£{p.price.toFixed(0)} <PriceTag v={pricedOf(p.candidateId)} /></> : <span className="sub">—</span>}</td>
                       <td className="n">{p.fpsPerCurrency != null ? p.fpsPerCurrency.toFixed(3) : <span className="sub">—</span>}</td>
                       <td className="n">{p.marginalPerCurrency != null ? p.marginalPerCurrency.toFixed(3) : <span className="sub">—</span>}</td>
                     </tr>
@@ -209,5 +213,16 @@ export function UpgradeAdvisor() {
         </div>
       </div>
     </>
+  );
+}
+
+/** "used · sourced" beside a figure, with the full provenance on hover. */
+function PriceTag({ v }: { v: PricedValue }) {
+  if (v.origin === 'none') return null;
+  const origin = v.origin === 'operator-override' ? 'yours' : v.origin === 'observed' ? 'sourced' : 'recalled';
+  return (
+    <span className={`tag${v.origin === 'observed' || v.origin === 'operator-override' ? ' good' : ''}`} style={{ marginLeft: 4, fontSize: 9.5 }} title={describePrice(v)}>
+      {v.condition} · {origin}
+    </span>
   );
 }

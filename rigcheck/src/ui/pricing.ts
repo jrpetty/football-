@@ -48,10 +48,25 @@ export type PriceOrigin = 'operator-override' | 'observed' | 'recalled-seed' | '
 export interface PricedValue {
   value: number;
   origin: PriceOrigin;
+  /**
+   * Which condition the figure describes. It can differ from what was asked
+   * for — a used question about a recent part may be answered with a new
+   * price when nothing else exists — and a screen must say which it got.
+   */
+  condition?: 'new' | 'used';
+  /** When the figure dates from: an observation date, or the seed's month. */
+  asOf?: string;
   /** Present only for observed prices — the sourcing behind the figure. */
   observed?: ObservedPrice;
   /** Why there is no figure, when there is none and the reason is a rule rather than a gap. */
   reason?: 'resale-only';
+}
+
+/** One line a screen can print beside a price: "£40 · used · sourced 2026-09-02". */
+export function describePrice(v: PricedValue): string {
+  if (v.origin === 'none') return v.reason === 'resale-only' ? 'no resale price recorded' : 'no price';
+  const origin = v.origin === 'operator-override' ? 'yours' : v.origin === 'observed' ? 'sourced' : 'recalled';
+  return `£${v.value} · ${v.condition ?? '?'} · ${origin}${v.asOf ? ` ${v.asOf}` : ''}`;
 }
 
 /** A launch-year lookup built from the catalogue maps, for the resale-only rule. */
@@ -121,26 +136,28 @@ export function pricedLookup(
     // outright; their figure for the OTHER condition does not, because a used
     // price is not a new price. It falls through to the observed and seeded
     // tiers instead, which at least know which condition they describe.
+    const other = prefer === 'used' ? 'new' : 'used';
     const mine = p.override[prefer][id];
-    if (mine != null) return { value: mine, origin: 'operator-override' };
+    if (mine != null) return { value: mine, origin: 'operator-override', condition: prefer };
     const first = findObserved(p.observed, id, prefer);
-    if (first) return { value: first.price, origin: 'observed', observed: first };
+    if (first) return { value: first.price, origin: 'observed', observed: first, condition: prefer, asOf: first.newestDate };
     // An old part asked about used is answered from the resale market or not
     // at all: never from a new price, sourced or recalled.
     if (prefer === 'used' && launchYear) {
       const y = launchYear(id);
       if (y != null && today.getUTCFullYear() - y >= RESALE_ONLY_AFTER_YEARS) {
         const seed = p.usedP.prices[id];
-        if (seed != null) return { value: seed, origin: 'recalled-seed' };
+        if (seed != null) return { value: seed, origin: 'recalled-seed', condition: 'used', asOf: p.usedP.updated };
         return { value: 0, origin: 'none', reason: 'resale-only' };
       }
     }
-    const other = findObserved(p.observed, id, prefer === 'used' ? 'new' : 'used');
-    if (other) return { value: other.price, origin: 'observed', observed: other };
-    const a = prefer === 'used' ? p.usedP.prices[id] : p.newP.prices[id];
-    if (a != null) return { value: a, origin: 'recalled-seed' };
-    const b = prefer === 'used' ? p.newP.prices[id] : p.usedP.prices[id];
-    if (b != null) return { value: b, origin: 'recalled-seed' };
+    const second = findObserved(p.observed, id, other);
+    if (second) return { value: second.price, origin: 'observed', observed: second, condition: other, asOf: second.newestDate };
+    const table = (c: 'new' | 'used') => (c === 'used' ? p.usedP : p.newP);
+    const a = table(prefer).prices[id];
+    if (a != null) return { value: a, origin: 'recalled-seed', condition: prefer, asOf: table(prefer).updated };
+    const b = table(other).prices[id];
+    if (b != null) return { value: b, origin: 'recalled-seed', condition: other, asOf: table(other).updated };
     return { value: 0, origin: 'none' };
   };
 }
