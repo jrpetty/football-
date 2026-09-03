@@ -17,28 +17,28 @@ caption never describes a different picture.
 ## POST 1 — the carousel (5 slides)
 
 **Images, in order:**
-1. `images/01-cover.png` — shows: Four PC builds from £582 to £2,012, all running Cyberpunk 2077 at 1440p on high with no upscaling — what each costs against the frame rate it gets
+1. `images/01-cover.png` — shows: Four PC builds from £582 to £2,254, all running Cyberpunk 2077 at 1440p on high with no upscaling — what each costs against the frame rate it gets
 2. `images/02-700.png` — shows: The £582 build — Intel Arc A580 with a Ryzen 5 5600 — in 6 games at 1080p on high with no upscaling, against its 144Hz monitor
 3. `images/03-1100.png` — shows: The £1,089 build — Radeon RX 9070 with a Ryzen 7 5800X3D — in 6 games at 1440p on high with no upscaling, against its 144Hz monitor
-4. `images/04-1800.png` — shows: The £1,719 build — GeForce RTX 4080 Super with a Ryzen 7 7800X3D — in 6 games at 1440p on high with no upscaling, against its 165Hz monitor
-5. `images/05-2600.png` — shows: The £2,012 build — GeForce RTX 5080 with a Ryzen 9 9900X3D — in 6 games at 2160p on high with no upscaling, against its 144Hz monitor
+4. `images/04-1800.png` — shows: The £1,781 build — GeForce RTX 5070 Ti with a Ryzen 9 7900 — in 6 games at 1440p on high with no upscaling, against its 165Hz monitor
+5. `images/05-2600.png` — shows: The £2,254 build — GeForce RTX 5080 with a Ryzen 9 9900X3D — in 6 games at 2160p on high with no upscaling, against its 144Hz monitor
 
 **Caption:**
 
-Four gaming PCs, £582 to £2,012, and what each one actually does.
+Four gaming PCs, £582 to £2,254, and what each one actually does.
 
 Same test on all four so the ladder means something — Cyberpunk 2077, 1440p, high, no upscaling:
 
 £582 → 43fps
 £1,089 → 83fps
-£1,719 → 115fps
-£2,012 → 129fps
+£1,781 → 111fps
+£2,254 → 129fps
 
-Look at the last two rows. £293 more buys 14 more frames. The curve flattens hard after about £1,700, and that is the most useful thing on here if you are deciding what to spend.
+Look at the last two rows. £473 more buys 18 more frames. The curve flattens hard after about £1,800, and that is the most useful thing on here if you are deciding what to spend.
 
 One thing I will not pretend about: these are modelled, not measured. Nobody built these four machines and benchmarked them. The ordering is solid, the absolute numbers are ±20%, and the tool that produced them has an entire screen devoted to telling you how much of it is guesswork.
 
-The prices are the softer half. They are recalled UK street prices, not scraped from any retailer, and they are already months old. GPU pricing swings 30% on supply alone. Read the totals as the shape of a budget and price the parts yourself.
+The prices are the softer half. They are recalled UK street prices, not scraped from any retailer, and they are already months old. GPU pricing swings 30% on supply alone. Read the totals as the shape of a budget and price the parts yourself. Memory: DDR5 is priced from September 2026 listings; DDR4 is still the recalled spring figure and has very likely risen too.
 
 Swipe for each build in full — parts, power draw, six games apiece.
 
@@ -65,7 +65,7 @@ At 1440p, high, no upscaling:
 
 The Ryzen 7 5800X3D is in there for a specific reason. Its stacked cache is worth almost nothing in a GPU-bound shooter and a lot in simulation and strategy — which is exactly why Baldur's Gate 3 is the one game here where the processor, not the card, is the limit.
 
-Modelled, not measured. Ordering reliable, absolutes ±20%. Prices are recalled, not sourced — price the parts yourself.
+Modelled, not measured. Ordering reliable, absolutes ±20%. Prices are recalled, not sourced — price the parts yourself. Memory: DDR5 is priced from September 2026 listings; DDR4 is still the recalled spring figure and has very likely risen too.
 
 #pcbuild #gamingpc #buildapc #1440p #rx9070 #ryzen #pcgaming #pchardware
 
@@ -73,7 +73,7 @@ Modelled, not measured. Ordering reliable, absolutes ±20%. Prices are recalled,
 
 ## POST 3 — the honest one (single image, use the cover)
 
-**Image:** `images/01-cover.png` — shows: Four PC builds from £582 to £2,012, all running Cyberpunk 2077 at 1440p on high with no upscaling — what each costs against the frame rate it gets
+**Image:** `images/01-cover.png` — shows: Four PC builds from £582 to £2,254, all running Cyberpunk 2077 at 1440p on high with no upscaling — what each costs against the frame rate it gets
 
 **Caption:**
 
@@ -103,7 +103,7 @@ Cyberpunk at 65fps is the honest headline. This is a machine that runs the deman
 
 Elden Ring reads 60 because Elden Ring is capped at 60. That is the game, not the build. Worth saying, because a chart that does not mark it makes a fine machine look weak.
 
-Modelled, not measured. Ordering reliable, absolutes ±20%. Prices are recalled, not sourced — price the parts yourself.
+Modelled, not measured. Ordering reliable, absolutes ±20%. Prices are recalled, not sourced — price the parts yourself. Memory: DDR5 is priced from September 2026 listings; DDR4 is still the recalled spring figure and has very likely risen too.
 
 #budgetgaming #pcbuild #buildapc #1080pgaming #gamingpc #intelarc #pchardware
 
@@ -111,10 +111,10 @@ Modelled, not measured. Ordering reliable, absolutes ±20%. Prices are recalled,
 
 ## Story / Reel hooks (15s each)
 
-1. "Two of these builds run Cyberpunk at 65fps. One costs £582, the other £2,012."
+1. "Two of these builds run Cyberpunk at 65fps. One costs £582, the other £2,254."
    → reveal: different resolutions. Then show the like-for-like ladder.
 
-2. "£293 more money. 14 more frames." — the still for this is POST 12
+2. "£473 more money. 18 more frames." — the still for this is POST 12
    → the flattening curve, and where to stop spending.
 
 3. "My tool says it is 11% accurate. Here is why I do not believe it."
@@ -275,43 +275,40 @@ Modelled, not measured. Ordering reliable, absolutes ±20%.
 
 ---
 
-## POST 10 — the £1,719 build (single image)
+## POST 10 — the £1,781 build (single image)
 
-**Image:** `images/04-1800.png` — shows: The £1,719 build — GeForce RTX 4080 Super with a Ryzen 7 7800X3D — in 6 games at 1440p on high with no upscaling, against its 165Hz monitor
+**Image:** `images/04-1800.png` — shows: The £1,781 build — GeForce RTX 5070 Ti with a Ryzen 9 7900 — in 6 games at 1440p on high with no upscaling, against its 165Hz monitor
 
 **Caption:**
 
-The one for a high-refresh 1440p panel.
+The £1,781 build — for a high-refresh 1440p panel.
 
-£1,719 · GeForce RTX 4080 Super · Ryzen 7 7800X3D · 32GB DDR5 · 426W draw, 650W supply
+£1,781 · GeForce RTX 5070 Ti · Ryzen 9 7900 · 32GB DDR5 · 384W draw, 650W supply
 
 At 1440p, high, no upscaling:
-· Counter-Strike 2 — 456fps
-· Fortnite — 192fps
-· Cyberpunk 2077 — 115fps
-· Baldur's Gate 3 — 112fps
-· Call of Duty Black Ops 6 — 194fps
+· Counter-Strike 2 — 448fps
+· Fortnite — 187fps
+· Cyberpunk 2077 — 111fps
+· Baldur's Gate 3 — 106fps
+· Call of Duty Black Ops 6 — 188fps
 · Elden Ring — 60fps
 
-3 of 6 clear the 165Hz target — Cyberpunk 2077 at 115, Baldur's Gate 3 at 112 do not. Elden Ring reads 60 because Elden Ring is capped at 60.
+3 of 6 games clear the 165Hz target — Counter-Strike 2 at 448, Fortnite at 187, Call of Duty Black Ops 6 at 188. Cyberpunk 2077 at 111 and Baldur's Gate 3 at 106 do not, which makes this a 1440p/120 experience in the demanding single-player titles and a 165Hz one in the shooters. Elden Ring reads 60 because Elden Ring is capped there.
 
-If you own a 165Hz or 240Hz 1440p monitor and you play shooters, this is the build that actually feeds it. If you mostly play the demanding single-player titles, you are buying frames you will not see.
+Modelled, not measured. Ordering reliable, absolutes ±20%. Prices are recalled, not sourced — price the parts yourself. Memory: DDR5 is priced from September 2026 listings; DDR4 is still the recalled spring figure and has very likely risen too.
 
-Modelled, not measured. Ordering reliable, absolutes ±20%. Prices are recalled, not sourced — price the parts yourself.
-
-#pcbuild #gamingpc #buildapc #1440p #pcgaming #pchardware #highrefresh
-
+#pcbuild #gamingpc #buildapc #pcgaming #pchardware
 ---
 
-## POST 11 — the £2,012 build (single image)
+## POST 11 — the £2,254 build (single image)
 
-**Image:** `images/05-2600.png` — shows: The £2,012 build — GeForce RTX 5080 with a Ryzen 9 9900X3D — in 6 games at 2160p on high with no upscaling, against its 144Hz monitor
+**Image:** `images/05-2600.png` — shows: The £2,254 build — GeForce RTX 5080 with a Ryzen 9 9900X3D — in 6 games at 2160p on high with no upscaling, against its 144Hz monitor
 
 **Caption:**
 
-4K, and where the argument gets weak.
+The £2,254 build — 4K, and where the argument gets weak.
 
-£2,012 · GeForce RTX 5080 · Ryzen 9 9900X3D · 32GB DDR5 · 464W draw, 850W supply
+£2,254 · GeForce RTX 5080 · Ryzen 9 9900X3D · 32GB DDR5 · 464W draw, 850W supply
 
 At 2160p, high, no upscaling:
 · Counter-Strike 2 — 314fps
@@ -321,28 +318,25 @@ At 2160p, high, no upscaling:
 · Call of Duty Black Ops 6 — 118fps
 · Elden Ring — 60fps
 
-1 of 6 clear the 144Hz target — Fortnite at 117, Cyberpunk 2077 at 65, Baldur's Gate 3 at 90, Call of Duty Black Ops 6 at 118 do not. Elden Ring reads 60 because Elden Ring is capped at 60.
+It came in £346 under a £2,600 budget. At 4K, Cyberpunk lands at 65fps — the same number the £582 machine manages at 1080p, which tells you exactly what four times the pixels costs. If you want high refresh rates at 4K in demanding titles, no build at this price does it without upscaling. Every number here is native resolution, because upscaling numbers depend on which mode you pick and I would rather quote the floor.
 
-It came in £588 under a £2,600 budget, and it should have come in further under. At 4K, Cyberpunk lands at 65fps — the same number the £582 machine manages at 1080p, which tells you exactly what four times the pixels costs. If you want high refresh rates at 4K in demanding titles, no build at this price does it without upscaling. Every number here is native resolution, because upscaling numbers depend on which mode you pick and I would rather quote the floor.
+Modelled, not measured. Ordering reliable, absolutes ±20%. Prices are recalled, not sourced — price the parts yourself. Memory: DDR5 is priced from September 2026 listings; DDR4 is still the recalled spring figure and has very likely risen too.
 
-Modelled, not measured. Ordering reliable, absolutes ±20%. Prices are recalled, not sourced — price the parts yourself.
-
-#pcbuild #gamingpc #buildapc #2160p #pcgaming #pchardware #highrefresh
-
+#pcbuild #gamingpc #buildapc #pcgaming #pchardware
 ---
 
-## POST 12 — the last £293 (single image)
+## POST 12 — the last £473 (single image)
 
-**Image:** `images/hero-price-step.png` — shows: The top step of the build ladder — from the £1,719 build to the £2,012 one — in Cyberpunk 2077 at 1440p on high
+**Image:** `images/hero-price-step.png` — shows: The top step of the build ladder — from the £1,781 build to the £2,254 one — in Cyberpunk 2077 at 1440p on high
 
 **Caption:**
 
-£293 more money. 14 more frames.
+£473 more money. 18 more frames.
 
-That is the step from the £1,719 build to the £2,012 one, in Cyberpunk 2077 at 1440p: 115 → 129fps. 17% more money for 12% more frames.
+That is the step from the £1,781 build to the £2,254 one, in Cyberpunk 2077 at 1440p: 111 → 129fps. 27% more money for 16% more frames.
 
-The curve flattens hard after about £1,700, and that is the most useful thing on this account if you are deciding what to spend. Below that line every pound is buying something. Above it you are paying for the last few frames, and they are the most expensive frames on the chart.
+The curve flattens hard after about £1,800, and that is the most useful thing on this account if you are deciding what to spend. Below that line every pound is buying something. Above it you are paying for the last few frames, and they are the most expensive frames on the chart.
 
-Modelled, not measured. Ordering reliable, absolutes ±20%. Prices are recalled, not sourced — the shape holds, the totals move.
+Modelled, not measured. Ordering reliable, absolutes ±20%. Prices are recalled, not sourced — price the parts yourself. Memory: DDR5 is priced from September 2026 listings; DDR4 is still the recalled spring figure and has very likely risen too.
 
-#pcbuild #buildapc #gamingpc #pcgaming #budget #pchardware #1440p
+#pcbuild #buildapc #gamingpc #pcgaming #pchardware #budget

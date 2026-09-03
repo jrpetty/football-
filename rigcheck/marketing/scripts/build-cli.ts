@@ -2,7 +2,7 @@
  * npm run marketing:build -- --budget 900 [--resolution 1440p] [--refresh 144] [--games id,id]
  * Plans one build and renders its card in both formats, with a caption.
  */
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { loadPlanContext, planTier } from './plans.ts';
 import { buildCaption } from './lib/captions.ts';
 import { renderCards, buildCard, unesc } from './cardlib.mjs';
@@ -22,4 +22,4 @@ await renderCards([{ name, ...buildCard(b) }], { dir: 'marketing/images', format
 await renderCards([{ name, ...buildCard(b) }], { dir: 'marketing/images/story', format: 'story' });
 console.log(`marketing/images/${name}.png\nmarketing/images/story/${name}.png\n`);
 console.log(`shows: ${unesc(buildCard(b).subject)}\n`);
-console.log(buildCaption(b));
+console.log(buildCaption(b, new Set<string>((JSON.parse(readFileSync('data/pricing/observed.json', 'utf8')).prices ?? []).map((o: { partId: string }) => o.partId))));

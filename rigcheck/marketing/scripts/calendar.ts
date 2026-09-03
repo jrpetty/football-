@@ -25,6 +25,7 @@ const rot = json('marketing/rotation.json') as Rotation;
 const manifest = json('marketing/cards.json') as { name: string; file: string; story: string; subject: string }[];
 const posts = parsePosts(readFileSync('marketing/instagram.md', 'utf8'));
 const requests = json('data/catalogue/requests.json');
+const sourced = new Set<string>((json('data/pricing/observed.json').prices ?? []).map((o: { partId: string }) => o.partId));
 const ctx = loadPlanContext();
 
 interface Meta { date: string; kind: string; title: string; subjects: string[]; images: string[]; stories: string[] }
@@ -73,7 +74,7 @@ for (const d of days) {
     await renderCards([{ name: 'story-01', ...card }], { dir, format: 'story' });
     meta.title = `build of the week — £${b.total}`; meta.images.push('01.png'); meta.stories.push('story-01.png'); meta.subjects.push(unesc(card.subject));
     writeFileSync(`${dir}/data.json`, JSON.stringify(b, null, 2));
-    caption = buildCaption(b);
+    caption = buildCaption(b, sourced);
   } else if (d.kind === 'versus') {
     const pair = rotating(d.slot.pairs, d.index)!;
     let v;

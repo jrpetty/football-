@@ -22,7 +22,7 @@ price here is a recalled UK street price rather than a sourced one — nobody
 scraped a retailer, and the seed figures carry a knowledge horizon of May 2026.
 GPU pricing moves 30% on supply alone, so treat every total on this page as the
 shape of a budget, not a quote. Price the parts yourself before you buy; the
-tool lets you paste your own prices in and will re-plan around them.
+tool lets you paste your own prices in and will re-plan around them. Memory: DDR5 is priced from September 2026 listings; DDR4 is still the recalled spring figure and has very likely risen too.
 
 That is a weaker claim than most build guides make. It is also, as far as I can
 tell, a more honest one.
@@ -39,8 +39,8 @@ promoted — the planner picks on price and fit alone.
 |---|---|---|---|---|
 | £700 | **£582** | Intel Arc A580 | Ryzen 5 5600 | 1080p, 144Hz |
 | £1,100 | **£1,089** | Radeon RX 9070 | Ryzen 7 5800X3D | 1440p, 144Hz |
-| £1,800 | **£1,719** | GeForce RTX 4080 Super | Ryzen 7 7800X3D | 1440p, 165Hz |
-| £2,600 | **£2,012** | GeForce RTX 5080 | Ryzen 9 9900X3D | 4K, 144Hz |
+| £1,800 | **£1,781** | GeForce RTX 5070 Ti | Ryzen 9 7900 | 1440p, 165Hz |
+| £2,600 | **£2,254** | GeForce RTX 5080 | Ryzen 9 9900X3D | 4K, 144Hz |
 
 Three of the four come in under budget. That is not the planner being clever —
 it is the planner refusing to spend money that buys nothing you asked for. Once
@@ -53,7 +53,7 @@ just more graphics card.
 
 The single most misleading thing a build guide does is compare machines at
 different resolutions and print the frame rates next to each other. At its own
-target, the £2,012 build runs Cyberpunk at 65fps and the £582 one runs it at
+target, the £2,254 build runs Cyberpunk at 65fps and the £582 one runs it at
 65fps — identical numbers, wildly different machines, because one is doing four
 times the pixels.
 
@@ -64,12 +64,12 @@ upscaling, all four:
 |---|---|
 | £582 · Intel Arc A580 | 43 fps |
 | £1,089 · Radeon RX 9070 | 83 fps |
-| £1,719 · GeForce RTX 4080 Super | 115 fps |
-| £2,012 · GeForce RTX 5080 | 129 fps |
+| £1,781 · GeForce RTX 5070 Ti | 111 fps |
+| £2,254 · GeForce RTX 5080 | 129 fps |
 
-Note what happens between the third and fourth rows. £293 more buys
-14 more frames — about 12%, for 17% more money. The curve
-flattens hard after the £1,700 mark, and that is the single most useful thing
+Note what happens between the third and fourth rows. £473 more buys
+18 more frames — about 16%, for 27% more money. The curve
+flattens hard after the £1,800 mark, and that is the single most useful thing
 on this page if you are deciding what to spend.
 
 ---
@@ -123,23 +123,29 @@ processor, not the card, is the limit.
 
 ---
 
-## £1,719 — for a high-refresh 1440p panel
+## £1,781 — for a high-refresh 1440p panel
 
-**GeForce RTX 4080 Super · Ryzen 7 7800X3D · 32GB DDR5 · 426W draw, 650W supply**
+**GeForce RTX 5070 Ti · Ryzen 9 7900 · 32GB DDR5 · 384W draw, 650W supply**
 
 | Game | Average | 1% low |
 |---|---|---|
-| Counter-Strike 2 | 456 fps | 285 fps |
-| Fortnite | 192 fps | 120 fps |
-| Cyberpunk 2077 | 115 fps | 80 fps |
-| Baldur's Gate 3 | 112 fps | 78 fps |
-| Call of Duty Black Ops 6 | 194 fps | 126 fps |
+| Counter-Strike 2 | 448 fps | 280 fps |
+| Fortnite | 187 fps | 117 fps |
+| Cyberpunk 2077 | 111 fps | 77 fps |
+| Baldur's Gate 3 | 106 fps | 74 fps |
+| Call of Duty Black Ops 6 | 188 fps | 122 fps |
 | Elden Ring | 60 fps | 42 fps |
 
 The two competitive titles clear 165fps with room to spare — Counter-Strike at
-456 and Black Ops 6 at 194 — and Fortnite manages 192. Cyberpunk lands at 115
-and Baldur's Gate 3 at 112, which is a 1440p/120 experience rather than a
+448 and Black Ops 6 at 188 — and Fortnite manages 187. Cyberpunk lands at 111
+and Baldur's Gate 3 at 106, which is a 1440p/120 experience rather than a
 165Hz one. Elden Ring reads 60 because Elden Ring is capped at 60.
+
+The parts moved when memory was priced for real. A 32GB DDR5 kit now costs
+what a mid-range graphics card did a year ago, and the planner answered by
+spending less on the card and the processor to keep the total under budget:
+the GeForce RTX 5070 Ti and the Ryzen 9 7900 are the picks now, where a 4080 Super and a
+7800X3D were before the memory line more than trebled.
 
 So: if you own a 165Hz or 240Hz 1440p panel and you play shooters, this is the
 build that actually feeds it. If you mostly play the demanding single-player
@@ -147,7 +153,7 @@ titles, you are buying frames you will not see.
 
 ---
 
-## £2,012 — 4K, and where the argument gets weak
+## £2,254 — 4K, and where the argument gets weak
 
 **GeForce RTX 5080 · Ryzen 9 9900X3D · 32GB DDR5 · 464W draw, 850W supply**
 
@@ -160,7 +166,7 @@ titles, you are buying frames you will not see.
 | Call of Duty Black Ops 6 | 118 fps | 77 fps |
 | Elden Ring | 60 fps | 47 fps |
 
-It came in £588 under a £2,600 budget, and it should have come in further
+It came in £346 under a £2,600 budget, and it should have come in further
 under. At 4K, Cyberpunk lands at 65fps — the same number the £582 machine
 manages at 1080p, which tells you exactly how much four times the pixels costs.
 

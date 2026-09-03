@@ -29,6 +29,7 @@
  */
 import { readFileSync, writeFileSync, copyFileSync, mkdtempSync } from 'node:fs';
 import { changeSinceMonth, describeChange, monthLabel } from '../../src/core/pricetrend.ts';
+import { MEMORY_CAVEAT } from './lib/captions.ts';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -58,6 +59,7 @@ console.log('\nREGENERATION — does the committed data still match the app?');
 }
 
 const builds = json('builds.json');
+const sourcedIds = new Set((JSON.parse(readFileSync('data/pricing/observed.json', 'utf8')).prices ?? []).map((o) => o.partId));
 const bottleneck = json('bottleneck.json');
 const pillars = json('pillars.json');
 
@@ -90,26 +92,28 @@ console.log('\nTABLES — does every quoted fps figure exist in the data?');
 // Each entry: the exact published sentence, and what has to be true for it.
 console.log('\nCLAIMS — is each quantified prose claim still true?');
 const B = (t) => builds.find((b) => b.total === t);
+const T = (budget) => builds.find((b) => b.budget === budget);
 const fps = (t, game) => B(t).rows.find((r) => r.game === game).fps;
 const lad = (gpu, game) => bottleneck.find((s) => new RegExp(gpu, 'i').test(s.gpuShort)).games.find((g) => g.game === game);
 const old = (name) => pillars.stillGood.cards.find((c) => new RegExp(name, 'i').test(c.gpu));
 const oldFps = (name, game) => old(name).rows.find((r) => new RegExp(game, 'i').test(r.game)).fps;
 
 const CLAIMS = [
-  { file: 'instagram.md', quote: '£293 more buys 14 more frames',
-    check: () => B(2012).total - B(1719).total === 293 && B(2012).cyberpunk1440 - B(1719).cyberpunk1440 === 14 },
-  { file: 'blog-four-builds.md', quote: '14 more frames — about 12%, for 17% more money',
-    check: () => Math.round((B(2012).cyberpunk1440 / B(1719).cyberpunk1440 - 1) * 100) === 12
-              && Math.round((B(2012).total / B(1719).total - 1) * 100) === 17 },
-  { file: 'blog-four-builds.md', quote: 'It came in £588 under a £2,600 budget',
-    check: () => B(2012).budget - B(2012).total === 588 && B(2012).budget === 2600 },
+  // The two AM5 tiers are addressed by BUDGET, not by total: totals move with prices.
+  { file: 'instagram.md', quote: '£473 more buys 18 more frames',
+    check: () => T(2600).total - T(1800).total === 473 && T(2600).cyberpunk1440 - T(1800).cyberpunk1440 === 18 },
+  { file: 'blog-four-builds.md', quote: '18 more frames — about 16%, for 27% more money',
+    check: () => Math.round((T(2600).cyberpunk1440 / T(1800).cyberpunk1440 - 1) * 100) === 16
+              && Math.round((T(2600).total / T(1800).total - 1) * 100) === 27 },
+  { file: 'blog-four-builds.md', quote: 'It came in £346 under a £2,600 budget',
+    check: () => T(2600).budget - T(2600).total === 346 && T(2600).budget === 2600 },
   { file: 'blog-four-builds.md', quote: 'the same number the £582 machine\nmanages at 1080p',
-    check: () => fps(2012, 'Cyberpunk 2077') === fps(582, 'Cyberpunk 2077') },
+    check: () => T(2600).rows.find((r) => r.game === 'Cyberpunk 2077').fps === fps(582, 'Cyberpunk 2077') },
   { file: 'blog-four-builds.md', quote: 'The two competitive titles clear 165fps with room to spare',
     // The claim it replaced said "everything except Cyberpunk", which was wrong
     // on three of six rows. Pin the exact shape so it cannot regress.
     check: () => {
-      const over = B(1719).rows.filter((r) => r.fps >= 165).map((r) => r.game);
+      const over = T(1800).rows.filter((r) => r.fps >= 165).map((r) => r.game);
       return over.length === 3 && over.includes('Counter-Strike 2')
           && over.includes('Call of Duty Black Ops 6') && over.includes('Fortnite');
     } },
@@ -161,6 +165,13 @@ const CLAIMS = [
   // somebody ends up buying a 400W supply for this machine.
   { file: 'blog-four-builds.md', quote: '260W draw, 550W supply',
     check: () => B(582).psuPartW === 550 && B(582).powerW === 260 && B(582).psuPartW >= B(582).psuW },
+  // While one memory type is sourced and the other is not, a DDR4 build shown
+  // beside a DDR5 one is cheaper than reality by an unknown amount, and every
+  // build post has to say so. The sentence is defined once, in captions.ts.
+  ...(sourcedIds.has('memory.DDR5.32') && !sourcedIds.has('memory.DDR4.32')
+    ? [{ file: 'instagram.md', quote: MEMORY_CAVEAT, check: () => read('instagram.md').split(MEMORY_CAVEAT).length - 1 >= 5 },
+       { file: 'blog-four-builds.md', quote: MEMORY_CAVEAT, check: () => true }]
+    : []),
   { file: 'blog-four-builds.md', quote: 'a median error of about 11% against its',
     check: (v) => v.medianApe != null && Math.round(v.medianApe) === 11,
     needsValidation: true },

@@ -9,8 +9,18 @@ const fmt = (n: number) => n.toLocaleString('en-GB');
 const pct = (n: number) => `${n > 0 ? '+' : ''}${n}%`;
 export const DISCLAIMER = 'Modelled, not measured. Ordering reliable, absolutes ±20%.';
 export const PRICE_CAVEAT = 'Prices are recalled, not sourced — price the parts yourself.';
+/**
+ * Said on any build while one memory type is sourced and the other is not.
+ * DDR5 was priced from September 2026 listings after memory roughly
+ * quadrupled in a year; DDR4 still runs on the recalled spring figure. A
+ * DDR4 build shown beside a DDR5 one is cheaper than reality by an unknown
+ * amount, and the caption has to say so until DDR4 is sourced too.
+ */
+export const MEMORY_CAVEAT = 'Memory: DDR5 is priced from September 2026 listings; DDR4 is still the recalled spring figure and has very likely risen too.';
+/** The caveat applies while memory.DDR5.32 is sourced and memory.DDR4.32 is not. */
+export const memoryCaveat = (sourced: Set<string>) => (sourced.has('memory.DDR5.32') && !sourced.has('memory.DDR4.32') ? MEMORY_CAVEAT : '');
 
-export function buildCaption(b: PlannedBuild): string {
+export function buildCaption(b: PlannedBuild, sourced: Set<string> = new Set()): string {
   const clears = b.rows.filter((r) => r.fps != null && r.fps >= b.refreshHz);
   const under = b.rows.filter((r) => r.fps != null && r.fps < b.refreshHz && r.limiter !== 'engine-cap');
   const capped = b.rows.filter((r) => r.limiter === 'engine-cap');
@@ -25,7 +35,8 @@ export function buildCaption(b: PlannedBuild): string {
   ];
   if (under.length) lines.push(`${under.map((r) => `${r.game} at ${r.fps}`).join(', ')} ${under.length === 1 ? 'falls' : 'fall'} short of ${b.refreshHz}Hz — for ${under.length === 1 ? 'that game' : 'those'} this is a ${b.resolution} panel, not a ${b.refreshHz}Hz one.`);
   if (capped.length) lines.push(`${capped.map((r) => r.game).join(' and ')} read${capped.length === 1 ? 's' : ''} ${capped[0].fps} because the engine is capped there — that is the game, not the build.`);
-  lines.push('', `${DISCLAIMER} ${PRICE_CAVEAT}`, '', '#pcbuild #buildapc #gamingpc #pcgaming #pchardware #buildoftheweek');
+  const mem = memoryCaveat(sourced);
+  lines.push('', `${DISCLAIMER} ${PRICE_CAVEAT}${mem ? ` ${mem}` : ''}`, '', '#pcbuild #buildapc #gamingpc #pcgaming #pchardware #buildoftheweek');
   return lines.join('\n');
 }
 

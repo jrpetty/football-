@@ -3,7 +3,7 @@
     "name": "01-cover",
     "file": "images/01-cover.png",
     "story": "images/story/01-cover.png",
-    "subject": "Four PC builds from £582 to £2,012, all running Cyberpunk 2077 at 1440p on high with no upscaling — what each costs against the frame rate it gets"
+    "subject": "Four PC builds from £582 to £2,254, all running Cyberpunk 2077 at 1440p on high with no upscaling — what each costs against the frame rate it gets"
   },
   {
     "name": "02-700",
@@ -21,13 +21,13 @@
     "name": "04-1800",
     "file": "images/04-1800.png",
     "story": "images/story/04-1800.png",
-    "subject": "The £1,719 build — GeForce RTX 4080 Super with a Ryzen 7 7800X3D — in 6 games at 1440p on high with no upscaling, against its 165Hz monitor"
+    "subject": "The £1,781 build — GeForce RTX 5070 Ti with a Ryzen 9 7900 — in 6 games at 1440p on high with no upscaling, against its 165Hz monitor"
   },
   {
     "name": "05-2600",
     "file": "images/05-2600.png",
     "story": "images/story/05-2600.png",
-    "subject": "The £2,012 build — GeForce RTX 5080 with a Ryzen 9 9900X3D — in 6 games at 2160p on high with no upscaling, against its 144Hz monitor"
+    "subject": "The £2,254 build — GeForce RTX 5080 with a Ryzen 9 9900X3D — in 6 games at 2160p on high with no upscaling, against its 144Hz monitor"
   },
   {
     "name": "bottleneck-1-geforce-rtx-4070",
@@ -69,7 +69,7 @@
     "name": "hero-price-step",
     "file": "images/hero-price-step.png",
     "story": "images/story/hero-price-step.png",
-    "subject": "The top step of the build ladder — from the £1,719 build to the £2,012 one — in Cyberpunk 2077 at 1440p on high"
+    "subject": "The top step of the build ladder — from the £1,781 build to the £2,254 one — in Cyberpunk 2077 at 1440p on high"
   },
   {
     "name": "hero-cpu-split",
