@@ -9,15 +9,13 @@ Every priced part, and every part the published posts name, with whether the fig
 | recalled-used | 44 | a recalled used figure with no date behind it — read sold listings and record what it actually goes for |
 | recalled-new | 46 | a recalled new figure on a recent part — plausible, but nobody looked it up; a retail price with a date would replace it |
 | sourced | 14 | sourced from a market observation — keep it fresh with a new snapshot |
-## Prices that contradict the performance ordering (3)
+## Prices that contradict the performance ordering (1)
 
 A much slower part priced above a much faster one. Nearly always a data error — a mis-read figure, a bundle listed as one card, the wrong variant. Scarcity can genuinely do this to a discontinued part, so these are warnings and not rejections; check each against a listing.
 
-| slower part | faster part | premium | speed gap |
-|---|---|---|---|
-| NVIDIA GeForce GTX 1060 6GB £80 (idx 51.9) | Intel Core i7-7700 £40 (idx 71.2) | **2x dearer** | 1.37x faster |
-| NVIDIA GeForce GTX 970 £44 (idx 50.8) | Intel Core i7-7700 £40 (idx 71.2) | **1.1x dearer** | 1.4x faster |
-| AMD Ryzen 7 5800X3D £309 (idx 158.9) | AMD Ryzen 7 7800X3D £240 (idx 189.7) | **1.29x dearer** | 1.19x faster |
+| kind | slower part | faster part | premium | speed gap |
+|---|---|---|---|---|
+| cpu | AMD Ryzen 7 5800X3D £309 (idx 158.9) | AMD Ryzen 7 7800X3D £240 (idx 189.7) | **1.29x dearer** | 1.19x faster |
 
 ## Seed figures a sibling has overtaken (1)
 

@@ -98,25 +98,25 @@ for (const s of ['none', 'recalled-new-old-part', 'recalled-used', 'recalled-new
     gpus: load('data/catalogue/gpus.json'), cpus: load('data/catalogue/cpus.json'),
     games: load('data/catalogue/games.json'), references: load('data/catalogue/references.json'),
   });
-  const priced: { id: string; name: string; index: number; price: number; condition: 'new' | 'used' }[] = [];
+  const priced: { id: string; name: string; kind: 'gpu' | 'cpu'; index: number; price: number; condition: 'new' | 'used' }[] = [];
   for (const o of observed) {
     const g = data.gpus.get(o.partId), c = data.cpus.get(o.partId);
-    if (g) priced.push({ id: g.id, name: g.fullName, index: deriveGpuIndex(g, data.anchorGpu, ANCHOR_RAM).index.raster, price: o.price, condition: o.condition });
+    if (g) priced.push({ id: g.id, name: g.fullName, kind: 'gpu', index: deriveGpuIndex(g, data.anchorGpu, ANCHOR_RAM).index.raster, price: o.price, condition: o.condition });
     // A CPU index is a vector, not a scalar: throughput, cache, latency and
     // thread capacity are weighted differently per game archetype. For an
     // ordering check any consistent weighting will do, so use the aaa-raster
     // profile — the closest thing to a general-purpose gaming weighting.
-    else if (c) priced.push({ id: c.id, name: c.fullName, index: applyCpuWeights(deriveCpuIndex(c, ANCHOR_RAM, data.anchorCpu, ANCHOR_RAM).index, CPU_WEIGHTS['aaa-raster']), price: o.price, condition: o.condition });
+    else if (c) priced.push({ id: c.id, name: c.fullName, kind: 'cpu', index: applyCpuWeights(deriveCpuIndex(c, ANCHOR_RAM, data.anchorCpu, ANCHOR_RAM).index, CPU_WEIGHTS['aaa-raster']), price: o.price, condition: o.condition });
   }
   const inv = priceInversions(priced);
   if (inv.length) {
     md.push(`## Prices that contradict the performance ordering (${inv.length})`, '');
     md.push('A much slower part priced above a much faster one. Nearly always a data error — a mis-read figure, a bundle listed as one card, the wrong variant. Scarcity can genuinely do this to a discontinued part, so these are warnings and not rejections; check each against a listing.', '');
-    md.push('| slower part | faster part | premium | speed gap |', '|---|---|---|---|');
-    for (const v of inv) md.push(`| ${v.slower.name} £${v.slower.price} (idx ${v.slower.index}) | ${v.faster.name} £${v.faster.price} (idx ${v.faster.index}) | **${v.premium}x dearer** | ${v.speedGap}x faster |`);
+    md.push('| kind | slower part | faster part | premium | speed gap |', '|---|---|---|---|---|');
+    for (const v of inv) md.push(`| ${v.kind} | ${v.slower.name} £${v.slower.price} (idx ${v.slower.index}) | ${v.faster.name} £${v.faster.price} (idx ${v.faster.index}) | **${v.premium}x dearer** | ${v.speedGap}x faster |`);
     md.push('');
   } else {
-    md.push('## Prices that contradict the performance ordering', '', `None. All ${priced.length} sourced part price(s) sit in an order consistent with their derived performance index.`, '');
+    md.push('## Prices that contradict the performance ordering', '', `None. All ${priced.length} sourced part price(s) sit in an order consistent with their derived performance index, compared within graphics cards and within processors.`, '');
   }
 }
 

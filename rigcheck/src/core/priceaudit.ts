@@ -123,10 +123,18 @@ export function driftCaveat(d: FamilyDrift, label: (key: string) => string): str
  * genuinely cost more than a faster current one, and the operator is the one
  * who knows whether that is what they are looking at. The default tolerances
  * are deliberately loose so only the implausible cases surface.
+ *
+ * Only ever compares like with like. A graphics card's raster index and a
+ * processor's weighted index are different scales measuring different work, so
+ * ranking one against the other is meaningless — the first version of this did
+ * exactly that and reported a GTX 1060 as "2x dearer than an i7-7700", which
+ * is not a statement about anything.
  */
 export interface PriceInversion {
   slower: { id: string; name: string; index: number; price: number };
   faster: { id: string; name: string; index: number; price: number };
+  /** Both parts are of this kind; the check never crosses the two. */
+  kind: 'gpu' | 'cpu';
   condition: 'new' | 'used';
   /** How much more the slower part costs, as a multiple of the faster one. */
   premium: number;
@@ -135,12 +143,12 @@ export interface PriceInversion {
 }
 
 export function priceInversions(
-  parts: { id: string; name: string; index: number; price: number; condition: 'new' | 'used' }[],
+  parts: { id: string; name: string; kind: 'gpu' | 'cpu'; index: number; price: number; condition: 'new' | 'used' }[],
   { minSpeedGap = 1.15, minPremium = 1.1 } = {},
 ): PriceInversion[] {
   const out: PriceInversion[] = [];
-  for (const cond of ['new', 'used'] as const) {
-    const pool = parts.filter((p) => p.condition === cond && p.index > 0 && p.price > 0);
+  for (const cond of ['new', 'used'] as const) for (const kind of ['gpu', 'cpu'] as const) {
+    const pool = parts.filter((p) => p.condition === cond && p.kind === kind && p.index > 0 && p.price > 0);
     for (const a of pool) {
       for (const b of pool) {
         if (a.id === b.id) continue;
@@ -151,6 +159,7 @@ export function priceInversions(
           out.push({
             slower: { id: a.id, name: a.name, index: Math.round(a.index * 10) / 10, price: a.price },
             faster: { id: b.id, name: b.name, index: Math.round(b.index * 10) / 10, price: b.price },
+            kind,
             condition: cond,
             premium: Math.round(premium * 100) / 100,
             speedGap: Math.round(speedGap * 100) / 100,

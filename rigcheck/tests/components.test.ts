@@ -115,7 +115,7 @@ describe('family drift', () => {
 
 import { priceInversions } from '../src/core/priceaudit.ts';
 
-const P = (id: string, index: number, price: number, condition: 'new' | 'used' = 'new') => ({ id, name: id, index, price, condition });
+const P = (id: string, index: number, price: number, condition: 'new' | 'used' = 'new', kind: 'gpu' | 'cpu' = 'gpu') => ({ id, name: id, kind, index, price, condition });
 
 describe('price inversions', () => {
   it('catches a slower part priced above a faster one', () => {
@@ -149,6 +149,15 @@ describe('price inversions', () => {
     const inv = priceInversions([P('slow', 100, 900), P('mid', 200, 500), P('fast', 400, 400)]);
     expect(inv[0].faster.id).toBe('fast');
     expect(inv[0].slower.id).toBe('slow');
+  });
+
+  it('never ranks a graphics card against a processor', () => {
+    // Their indices are different scales measuring different work. The first
+    // version of this compared them and reported a GTX 1060 as "2x dearer than
+    // an i7-7700", which is not a statement about anything.
+    expect(priceInversions([P('gtx-1060', 52, 80, 'used', 'gpu'), P('i7-7700', 71, 40, 'used', 'cpu')])).toEqual([]);
+    // Same numbers, same kind: now it is a real inversion.
+    expect(priceInversions([P('slow-gpu', 52, 80, 'used', 'gpu'), P('fast-gpu', 71, 40, 'used', 'gpu')])).toHaveLength(1);
   });
 
   it('finds no inversion in the shipped sourced prices', () => {
