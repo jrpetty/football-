@@ -3,31 +3,31 @@
     "name": "01-cover",
     "file": "images/01-cover.png",
     "story": "images/story/01-cover.png",
-    "subject": "Four PC builds from £582 to £2,254, all running Cyberpunk 2077 at 1440p on high with no upscaling — what each costs against the frame rate it gets"
+    "subject": "Four PC builds from £597 to £2,434, all running Cyberpunk 2077 at 1440p on high with no upscaling — what each costs against the frame rate it gets"
   },
   {
     "name": "02-700",
     "file": "images/02-700.png",
     "story": "images/story/02-700.png",
-    "subject": "The £582 build — Intel Arc A580 with a Ryzen 5 5600 — in 6 games at 1080p on high with no upscaling, against its 144Hz monitor"
+    "subject": "The £597 build — Intel Arc A580 with a Ryzen 5 5600X — in 6 games at 1080p on high with no upscaling, against its 144Hz monitor"
   },
   {
     "name": "03-1100",
     "file": "images/03-1100.png",
     "story": "images/story/03-1100.png",
-    "subject": "The £1,089 build — Radeon RX 9070 with a Ryzen 7 5800X3D — in 6 games at 1440p on high with no upscaling, against its 144Hz monitor"
+    "subject": "The £1,076 build — Radeon RX 9070 XT with a Ryzen 5 5600X — in 6 games at 1440p on high with no upscaling, against its 144Hz monitor"
   },
   {
     "name": "04-1800",
     "file": "images/04-1800.png",
     "story": "images/story/04-1800.png",
-    "subject": "The £1,781 build — GeForce RTX 5070 Ti with a Ryzen 9 7900 — in 6 games at 1440p on high with no upscaling, against its 165Hz monitor"
+    "subject": "The £1,671 build — GeForce RTX 4070 Ti Super with a Ryzen 7 7800X3D — in 6 games at 1440p on high with no upscaling, against its 165Hz monitor"
   },
   {
     "name": "05-2600",
     "file": "images/05-2600.png",
     "story": "images/story/05-2600.png",
-    "subject": "The £2,254 build — GeForce RTX 5080 with a Ryzen 9 9900X3D — in 6 games at 2160p on high with no upscaling, against its 144Hz monitor"
+    "subject": "The £2,434 build — GeForce RTX 5080 with a Ryzen 9 9900X3D — in 6 games at 2160p on high with no upscaling, against its 144Hz monitor"
   },
   {
     "name": "bottleneck-1-geforce-rtx-4070",
@@ -69,7 +69,7 @@
     "name": "hero-price-step",
     "file": "images/hero-price-step.png",
     "story": "images/story/hero-price-step.png",
-    "subject": "The top step of the build ladder — from the £1,781 build to the £2,254 one — in Cyberpunk 2077 at 1440p on high"
+    "subject": "The top step of the build ladder — from the £1,671 build to the £2,434 one — in Cyberpunk 2077 at 1440p on high"
   },
   {
     "name": "hero-cpu-split",

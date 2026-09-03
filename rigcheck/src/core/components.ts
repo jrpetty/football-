@@ -66,3 +66,24 @@ export function overlayComponents(
   }
   return out;
 }
+
+/**
+ * The seed part tables with observed prices written over them, by condition.
+ *
+ * The UI does this in src/ui/pricing.ts as part of a three-tier lookup that
+ * also reads the operator's own overrides out of browser storage. A script
+ * cannot import that — it touches localStorage — so this is the same merge
+ * without the browser tier, for the marketing planner and anything else that
+ * runs in Node. Without it a generator silently plans against the recalled
+ * seed while the app plans against sourced data, and the two disagree about
+ * what a build costs.
+ */
+export function overlayPartPrices(
+  newP: Record<string, number>,
+  usedP: Record<string, number>,
+  observed: { partId: string; condition: 'new' | 'used'; price: number }[],
+): { newP: Record<string, number>; usedP: Record<string, number> } {
+  const n = { ...newP }, u = { ...usedP };
+  for (const o of observed) (o.condition === 'new' ? n : u)[o.partId] = o.price;
+  return { newP: n, usedP: u };
+}

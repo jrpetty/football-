@@ -44,7 +44,14 @@ export function buildCaption(b: PlannedBuild, memCaveat = ''): string {
   if (under.length) lines.push(`${under.map((r) => `${r.game} at ${r.fps}`).join(', ')} ${under.length === 1 ? 'falls' : 'fall'} short of ${b.refreshHz}Hz — for ${under.length === 1 ? 'that game' : 'those'} this is a ${b.resolution} panel, not a ${b.refreshHz}Hz one.`);
   if (capped.length) lines.push(`${capped.map((r) => r.game).join(' and ')} read${capped.length === 1 ? 's' : ''} ${capped[0].fps} because the engine is capped there — that is the game, not the build.`);
   const mem = memCaveat;
-  lines.push('', `${DISCLAIMER} ${PRICE_CAVEAT}${mem ? ` ${mem}` : ''}`, '', '#pcbuild #buildapc #gamingpc #pcgaming #pchardware #buildoftheweek');
+  // How much of the total rests on a checked price. Stated because every price
+  // checked so far has moved, so a planner choosing on price prefers the
+  // unchecked parts and the total is optimistically biased by an unknown amount.
+  const share = (b as { sourcedSharePct?: number }).sourcedSharePct;
+  const sourcedLine = share == null ? ''
+    : share === 0 ? ' Not one line of this total has been checked against a shop.'
+    : ` ${share}% of this total rests on a price checked against a listing; the rest is recalled, and every price checked so far has moved.`;
+  lines.push('', `${DISCLAIMER} ${PRICE_CAVEAT}${sourcedLine}${mem ? ` ${mem}` : ''}`, '', '#pcbuild #buildapc #gamingpc #pcgaming #pchardware #buildoftheweek');
   return lines.join('\n');
 }
 

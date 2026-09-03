@@ -108,3 +108,57 @@ export function driftCaveat(d: FamilyDrift, label: (key: string) => string): str
   return `${label(d.sourcedKey)} is priced from current listings at ${d.factor}x its recalled figure. ` +
     `The other ${d.category} figures here are still the recalled ones and nobody has checked them, so a build using one is very likely cheaper on paper than in a shop.`;
 }
+
+/**
+ * A price that contradicts the performance ordering.
+ *
+ * The catalogue derives a performance index for every part, so it can check
+ * something a price on its own cannot: a much slower part priced well above a
+ * much faster one. Nearly always a data error — a mis-scraped figure, a bundle
+ * listed as a single card, the wrong variant — and worth catching before it
+ * reaches a build sheet. A search once offered an RTX 4070 at £1,541 while an
+ * RTX 5080 sat at £1,180, and only the ordering revealed it.
+ *
+ * A WARNING, never a rejection. Scarcity is real: a discontinued part can
+ * genuinely cost more than a faster current one, and the operator is the one
+ * who knows whether that is what they are looking at. The default tolerances
+ * are deliberately loose so only the implausible cases surface.
+ */
+export interface PriceInversion {
+  slower: { id: string; name: string; index: number; price: number };
+  faster: { id: string; name: string; index: number; price: number };
+  condition: 'new' | 'used';
+  /** How much more the slower part costs, as a multiple of the faster one. */
+  premium: number;
+  /** The faster part's index as a multiple of the slower one's. */
+  speedGap: number;
+}
+
+export function priceInversions(
+  parts: { id: string; name: string; index: number; price: number; condition: 'new' | 'used' }[],
+  { minSpeedGap = 1.15, minPremium = 1.1 } = {},
+): PriceInversion[] {
+  const out: PriceInversion[] = [];
+  for (const cond of ['new', 'used'] as const) {
+    const pool = parts.filter((p) => p.condition === cond && p.index > 0 && p.price > 0);
+    for (const a of pool) {
+      for (const b of pool) {
+        if (a.id === b.id) continue;
+        const speedGap = b.index / a.index;
+        const premium = a.price / b.price;
+        // a is the slower one; only flag when it is BOTH clearly slower and clearly dearer.
+        if (speedGap >= minSpeedGap && premium >= minPremium) {
+          out.push({
+            slower: { id: a.id, name: a.name, index: Math.round(a.index * 10) / 10, price: a.price },
+            faster: { id: b.id, name: b.name, index: Math.round(b.index * 10) / 10, price: b.price },
+            condition: cond,
+            premium: Math.round(premium * 100) / 100,
+            speedGap: Math.round(speedGap * 100) / 100,
+          });
+        }
+      }
+    }
+  }
+  // Worst first: the biggest premium on the biggest speed gap.
+  return out.sort((x, y) => y.premium * y.speedGap - x.premium * x.speedGap);
+}

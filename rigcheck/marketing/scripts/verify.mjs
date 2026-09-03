@@ -104,23 +104,32 @@ const oldFps = (name, game) => old(name).rows.find((r) => new RegExp(game, 'i').
 
 const CLAIMS = [
   // The two AM5 tiers are addressed by BUDGET, not by total: totals move with prices.
-  { file: 'instagram.md', quote: '£473 more buys 18 more frames',
-    check: () => T(2600).total - T(1800).total === 473 && T(2600).cyberpunk1440 - T(1800).cyberpunk1440 === 18 },
-  { file: 'blog-four-builds.md', quote: '18 more frames — about 16%, for 27% more money',
-    check: () => Math.round((T(2600).cyberpunk1440 / T(1800).cyberpunk1440 - 1) * 100) === 16
-              && Math.round((T(2600).total / T(1800).total - 1) * 100) === 27 },
-  { file: 'blog-four-builds.md', quote: 'It came in £346 under a £2,600 budget',
-    check: () => T(2600).budget - T(2600).total === 346 && T(2600).budget === 2600 },
-  { file: 'blog-four-builds.md', quote: 'the same number the £582 machine\nmanages at 1080p',
-    check: () => T(2600).rows.find((r) => r.game === 'Cyberpunk 2077').fps === fps(582, 'Cyberpunk 2077') },
-  { file: 'blog-four-builds.md', quote: 'The two competitive titles clear 165fps with room to spare',
-    // The claim it replaced said "everything except Cyberpunk", which was wrong
-    // on three of six rows. Pin the exact shape so it cannot regress.
+  { file: 'instagram.md', quote: 'The value is all in the first step.',
+    // The SHAPE, not a phrase. Sourcing real prices moved the ladder and the
+    // old claim — "the curve flattens hard after X" — stopped being true: the
+    // top segment is now better value than the middle one, so nothing
+    // flattens monotonically. What is true is that the first step dwarfs the
+    // rest, and that is what this pins.
     check: () => {
-      const over = T(1800).rows.filter((r) => r.fps >= 165).map((r) => r.game);
-      return over.length === 3 && over.includes('Counter-Strike 2')
-          && over.includes('Call of Duty Black Ops 6') && over.includes('Fortnite');
+      const s = builds.slice(0, -1).map((b, i) => (builds[i + 1].cyberpunk1440 - b.cyberpunk1440) / (builds[i + 1].total - b.total));
+      return s[0] === Math.max(...s) && Math.round(s[0] / Math.max(...s.slice(1))) === 3;
     } },
+  { file: 'instagram.md', quote: '46% more money for 24% more frames',
+    check: () => Math.round((T(2600).cyberpunk1440 / T(1800).cyberpunk1440 - 1) * 100) === 24
+              && Math.round((T(2600).total / T(1800).total - 1) * 100) === 46 },
+  { file: 'blog-four-builds.md', quote: 'It came in £166 under a £2,600 budget',
+    check: () => T(2600).budget - T(2600).total === 166 && T(2600).budget === 2600 },
+  { file: 'blog-four-builds.md', quote: 'the same number the £597 machine manages at 1080p',
+    // The 4K flagship and the cheapest 1080p machine landing on the same
+    // Cyberpunk figure is a coincidence of the data, so the claim only
+    // appears while it holds — the generator omits it otherwise.
+    check: () => T(2600).rows.find((r) => r.game === 'Cyberpunk 2077').fps === T(700).rows.find((r) => r.game === 'Cyberpunk 2077').fps },
+  { file: 'blog-four-builds.md', quote: '3 of 6 games clear the 165Hz target at 1440p',
+    // Regenerated from the data now, so the count is the check. The claim
+    // this replaced said "everything except Cyberpunk", which was wrong on
+    // three of six rows and had to be rewritten by hand every time prices
+    // moved a part.
+    check: () => T(1800).rows.filter((r) => r.fps >= T(1800).refreshHz).length === 3 },
   { file: 'blog-cpu-bottleneck.md', quote: 'The Ryzen 5 3600 reads 60 in\nBaldur\'s Gate 3 and 71 in Total War on *both* cards — identical, to the frame.',
     check: () => {
       const at = (gpu, game) => lad(gpu, game).points.find((p) => p.cpu === 'Ryzen 5 3600').fps;
@@ -168,7 +177,10 @@ const CLAIMS = [
   // floor. Publishing the floor next to a bigger unit in the parts list is how
   // somebody ends up buying a 400W supply for this machine.
   { file: 'blog-four-builds.md', quote: '260W draw, 550W supply',
-    check: () => B(582).psuPartW === 550 && B(582).powerW === 260 && B(582).psuPartW >= B(582).psuW },
+    // The header quotes the PSU a reader would actually buy, not the model's
+    // floor. Publishing the floor next to a bigger unit in the parts list is
+    // how somebody ends up buying a 400W supply for this machine.
+    check: () => T(700).psuPartW === 550 && T(700).powerW === 260 && T(700).psuPartW >= T(700).psuW },
   // While one memory type is sourced and the other is not, a DDR4 build shown
   // beside a DDR5 one is cheaper than reality by an unknown amount, and every
   // build post has to say so. The sentence is defined once, in captions.ts.
@@ -176,6 +188,14 @@ const CLAIMS = [
     ? [{ file: 'instagram.md', quote: MEM_CAVEAT, check: () => read('instagram.md').split(MEM_CAVEAT).length - 1 >= 5 },
        { file: 'blog-four-builds.md', quote: MEM_CAVEAT, check: () => true }]
     : []),
+  // The sourced share is stated on every build post and in the blog, so it
+  // has to match the data. Every price checked so far has moved, which makes
+  // an unsourced build look cheap for reasons unrelated to its parts.
+  ...builds.filter((b) => b.sourcedSharePct > 0).map((b) => ({
+    file: 'instagram.md',
+    quote: `${b.sourcedSharePct}% of this total rests on a price checked against a listing`,
+    check: () => b.sourcedSharePct === Math.round((b.bom.filter((l) => l.sourced).reduce((t, l) => t + l.price, 0) / b.bom.reduce((t, l) => t + l.price, 0)) * 100),
+  })),
   { file: 'blog-four-builds.md', quote: 'a median error of about 11% against its',
     check: (v) => v.medianApe != null && Math.round(v.medianApe) === 11,
     needsValidation: true },

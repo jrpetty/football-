@@ -5,10 +5,20 @@ Every priced part, and every part the published posts name, with whether the fig
 | status | parts | meaning |
 |---|---|---|
 | none | 2 | no price at all — the planner cannot consider it and the posts cannot quote it |
-| recalled-new-old-part | 20 | a recalled NEW figure on an old part — that is a launch-era number, and the part sells used; record a resale price |
-| recalled-used | 46 | a recalled used figure with no date behind it — read sold listings and record what it actually goes for |
-| recalled-new | 53 | a recalled new figure on a recent part — plausible, but nobody looked it up; a retail price with a date would replace it |
-| sourced | 3 | sourced from a market observation — keep it fresh with a new snapshot |
+| recalled-new-old-part | 18 | a recalled NEW figure on an old part — that is a launch-era number, and the part sells used; record a resale price |
+| recalled-used | 44 | a recalled used figure with no date behind it — read sold listings and record what it actually goes for |
+| recalled-new | 46 | a recalled new figure on a recent part — plausible, but nobody looked it up; a retail price with a date would replace it |
+| sourced | 14 | sourced from a market observation — keep it fresh with a new snapshot |
+## Prices that contradict the performance ordering (3)
+
+A much slower part priced above a much faster one. Nearly always a data error — a mis-read figure, a bundle listed as one card, the wrong variant. Scarcity can genuinely do this to a discontinued part, so these are warnings and not rejections; check each against a listing.
+
+| slower part | faster part | premium | speed gap |
+|---|---|---|---|
+| NVIDIA GeForce GTX 1060 6GB £80 (idx 51.9) | Intel Core i7-7700 £40 (idx 71.2) | **2x dearer** | 1.37x faster |
+| NVIDIA GeForce GTX 970 £44 (idx 50.8) | Intel Core i7-7700 £40 (idx 71.2) | **1.1x dearer** | 1.4x faster |
+| AMD Ryzen 7 5800X3D £309 (idx 158.9) | AMD Ryzen 7 7800X3D £240 (idx 189.7) | **1.29x dearer** | 1.19x faster |
+
 ## Seed figures a sibling has overtaken (1)
 
 One class in each family below was repriced from real listings and moved a long way; its siblings are still on the recalled figure and nobody has checked them. A build using an unchecked sibling is cheaper on paper than in a shop, and the published copy says so with the multiple.
@@ -31,15 +41,13 @@ The planner cannot consider these and the posts cannot quote them. The ones mark
 | NVIDIA GeForce GTX 1060 3GB **·in posts** | 2016 (10y) | no price | `npm run price -- "GeForce GTX 1060" used <£> --source ebay-uk --basis sold --n <sales>` |
 | AMD Radeon RX 580 4GB **·in posts** | 2017 (9y) | no price | `npm run price -- "Radeon RX 580" used <£> --source ebay-uk --basis sold --n <sales>` |
 
-## Recalled NEW price on an old part (20)
+## Recalled NEW price on an old part (18)
 
 A launch-era number on a part that sells used. Under the resale-only rule a used question about these gets "no resale price recorded" until a real one is entered — which is the truth, and also the reason to record one.
 
 | part | launched | on file | check |
 |---|---|---|---|
-| AMD Ryzen 5 5600 **·in posts** | 2022 (4y) | £80 new, recalled (seed 2026-05) | `npm run price -- "Ryzen 5 5600" used <£> --source ebay-uk --basis sold --n <sales>` |
-| AMD Ryzen 7 5800X3D **·in posts** | 2022 (4y) | £200 new, recalled (seed 2026-05) | `npm run price -- "Ryzen 7 5800X3D" used <£> --source ebay-uk --basis sold --n <sales>` |
-| AMD Ryzen 5 5600X | 2020 (6y) | £95 new, recalled (seed 2026-05) | `npm run price -- "Ryzen 5 5600X" used <£> --source ebay-uk --basis sold --n <sales>` |
+| AMD Ryzen 5 5600X **·in posts** | 2020 (6y) | £95 new, recalled (seed 2026-05) | `npm run price -- "Ryzen 5 5600X" used <£> --source ebay-uk --basis sold --n <sales>` |
 | AMD Ryzen 5 5600G | 2021 (5y) | £95 new, recalled (seed 2026-05) | `npm run price -- "Ryzen 5 5600G" used <£> --source ebay-uk --basis sold --n <sales>` |
 | AMD Ryzen 7 5700G | 2021 (5y) | £125 new, recalled (seed 2026-05) | `npm run price -- "Ryzen 7 5700G" used <£> --source ebay-uk --basis sold --n <sales>` |
 | AMD Radeon RX 7900 XT | 2022 (4y) | £680 new, recalled (seed 2026-05) | `npm run price -- "Radeon RX 7900 XT" used <£> --source ebay-uk --basis sold --n <sales>` |
@@ -58,13 +66,12 @@ A launch-era number on a part that sells used. Under the resale-only rule a used
 | Intel Core i9-13900K | 2022 (4y) | £400 new, recalled (seed 2026-05) | `npm run price -- "Core i9-13900K" used <£> --source ebay-uk --basis sold --n <sales>` |
 | NVIDIA GeForce RTX 3050 8GB | 2022 (4y) | £180 new, recalled (seed 2026-05) | `npm run price -- "GeForce RTX 3050" used <£> --source ebay-uk --basis sold --n <sales>` |
 
-## Recalled USED price (46)
+## Recalled USED price (44)
 
 These are the figures most likely to be wrong by the most: undated, recalled, on parts whose value only falls. Read sold listings, take the median, record how many sales. Oldest parts first.
 
 | part | launched | on file | check |
 |---|---|---|---|
-| NVIDIA GeForce GTX 1060 6GB **·in posts** | 2016 (10y) | £55 used, recalled (seed 2026-05) | `npm run price -- "GeForce GTX 1060" used <£> --source ebay-uk --basis sold --n <sales>` |
 | AMD Radeon RX 580 8GB **·in posts** | 2017 (9y) | £60 used, recalled (seed 2026-05) | `npm run price -- "Radeon RX 580" used <£> --source ebay-uk --basis sold --n <sales>` |
 | NVIDIA GeForce GTX 1080 Ti **·in posts** | 2017 (9y) | £140 used, recalled (seed 2026-05) | `npm run price -- "GeForce GTX 1080 Ti" used <£> --source ebay-uk --basis sold --n <sales>` |
 | AMD Ryzen 5 3600 **·in posts** | 2019 (7y) | £45 used, recalled (seed 2026-05) | `npm run price -- "Ryzen 5 3600" used <£> --source ebay-uk --basis sold --n <sales>` |
@@ -82,7 +89,6 @@ These are the figures most likely to be wrong by the most: undated, recalled, on
 | AMD Radeon RX 6800 | 2020 (6y) | £260 used, recalled (seed 2026-05) | `npm run price -- "Radeon RX 6800" used <£> --source ebay-uk --basis sold --n <sales>` |
 | AMD Radeon RX 6800 XT | 2020 (6y) | £300 used, recalled (seed 2026-05) | `npm run price -- "Radeon RX 6800 XT" used <£> --source ebay-uk --basis sold --n <sales>` |
 | AMD Radeon RX 6900 XT | 2020 (6y) | £290 used, recalled (seed 2026-05) | `npm run price -- "Radeon RX 6900 XT" used <£> --source ebay-uk --basis sold --n <sales>` |
-| AMD Ryzen 7 5800X | 2020 (6y) | £110 used, recalled (seed 2026-05) | `npm run price -- "Ryzen 7 5800X" used <£> --source ebay-uk --basis sold --n <sales>` |
 | AMD Ryzen 9 5900X | 2020 (6y) | £150 used, recalled (seed 2026-05) | `npm run price -- "Ryzen 9 5900X" used <£> --source ebay-uk --basis sold --n <sales>` |
 | AMD Ryzen 9 5950X | 2020 (6y) | £230 used, recalled (seed 2026-05) | `npm run price -- "Ryzen 9 5950X" used <£> --source ebay-uk --basis sold --n <sales>` |
 | Intel Core i5-10400F | 2020 (6y) | £45 used, recalled (seed 2026-05) | `npm run price -- "Core i5-10400F" used <£> --source ebay-uk --basis sold --n <sales>` |
@@ -111,22 +117,19 @@ These are the figures most likely to be wrong by the most: undated, recalled, on
 | NVIDIA GeForce RTX 4080 | 2022 (4y) | £700 used, recalled (seed 2026-05) | `npm run price -- "GeForce RTX 4080" used <£> --source ebay-uk --basis sold --n <sales>` |
 | NVIDIA GeForce RTX 4070 Ti | 2023 (3y) | £480 used, recalled (seed 2026-05) | `npm run price -- "GeForce RTX 4070 Ti" used <£> --source ebay-uk --basis sold --n <sales>` |
 
-## Recalled NEW price on a recent part (53)
+## Recalled NEW price on a recent part (46)
 
 Plausible, unsourced, undated. A retail price with a date replaces each one; a sold-listing used price beside it is what the upgrade advisor actually wants.
 
 | part | launched | on file | check |
 |---|---|---|---|
-| AMD Ryzen 7 7800X3D **·in posts** | 2023 (3y) | £350 new, recalled (seed 2026-05) | `npm run price -- "Ryzen 7 7800X3D" new <£> --source ebay-uk --basis sold --n <sales>` |
-| AMD Ryzen 9 7900 **·in posts** | 2023 (3y) | £320 new, recalled (seed 2026-05) | `npm run price -- "Ryzen 9 7900" new <£> --source ebay-uk --basis sold --n <sales>` |
 | Intel Arc A580 **·in posts** | 2023 (3y) | £160 new, recalled (seed 2026-05) | `npm run price -- "Intel Arc A580" new <£> --source ebay-uk --basis sold --n <sales>` |
 | NVIDIA GeForce RTX 4060 Ti 16GB **·in posts** | 2023 (3y) | £400 new, recalled (seed 2026-05) | `npm run price -- "GeForce RTX 4060 Ti" new <£> --source ebay-uk --basis sold --n <sales>` |
 | NVIDIA GeForce RTX 4060 Ti 8GB **·in posts** | 2023 (3y) | £340 new, recalled (seed 2026-05) | `npm run price -- "GeForce RTX 4060 Ti" new <£> --source ebay-uk --basis sold --n <sales>` |
 | NVIDIA GeForce RTX 4070 **·in posts** | 2023 (3y) | £480 new, recalled (seed 2026-05) | `npm run price -- "GeForce RTX 4070" new <£> --source ebay-uk --basis sold --n <sales>` |
-| AMD Radeon RX 9070 **·in posts** | 2025 (1y) | £520 new, recalled (seed 2026-05) | `npm run price -- "Radeon RX 9070" new <£> --source ebay-uk --basis sold --n <sales>` |
+| NVIDIA GeForce RTX 4070 Ti Super **·in posts** | 2024 (2y) | £720 new, recalled (seed 2026-05) | `npm run price -- "GeForce RTX 4070 Ti Super" new <£> --source ebay-uk --basis sold --n <sales>` |
+| AMD Radeon RX 9070 XT **·in posts** | 2025 (1y) | £600 new, recalled (seed 2026-05) | `npm run price -- "Radeon RX 9070 XT" new <£> --source ebay-uk --basis sold --n <sales>` |
 | AMD Ryzen 9 9900X3D **·in posts** | 2025 (1y) | £480 new, recalled (seed 2026-05) | `npm run price -- "Ryzen 9 9900X3D" new <£> --source ebay-uk --basis sold --n <sales>` |
-| NVIDIA GeForce RTX 5070 Ti **·in posts** | 2025 (1y) | £750 new, recalled (seed 2026-05) | `npm run price -- "GeForce RTX 5070 Ti" new <£> --source ebay-uk --basis sold --n <sales>` |
-| NVIDIA GeForce RTX 5080 **·in posts** | 2025 (1y) | £1000 new, recalled (seed 2026-05) | `npm run price -- "GeForce RTX 5080" new <£> --source ebay-uk --basis sold --n <sales>` |
 | AMD Radeon RX 7600 | 2023 (3y) | £250 new, recalled (seed 2026-05) | `npm run price -- "Radeon RX 7600" new <£> --source ebay-uk --basis sold --n <sales>` |
 | AMD Radeon RX 7700 XT | 2023 (3y) | £360 new, recalled (seed 2026-05) | `npm run price -- "Radeon RX 7700 XT" new <£> --source ebay-uk --basis sold --n <sales>` |
 | AMD Radeon RX 7800 XT | 2023 (3y) | £450 new, recalled (seed 2026-05) | `npm run price -- "Radeon RX 7800 XT" new <£> --source ebay-uk --basis sold --n <sales>` |
@@ -148,7 +151,6 @@ Plausible, unsourced, undated. A retail price with a date replaces each one; a s
 | AMD Ryzen 7 8700G | 2024 (2y) | £260 new, recalled (seed 2026-05) | `npm run price -- "Ryzen 7 8700G" new <£> --source ebay-uk --basis sold --n <sales>` |
 | AMD Ryzen 7 9700X | 2024 (2y) | £300 new, recalled (seed 2026-05) | `npm run price -- "Ryzen 7 9700X" new <£> --source ebay-uk --basis sold --n <sales>` |
 | AMD Ryzen 7 9800X3D | 2024 (2y) | £450 new, recalled (seed 2026-05) | `npm run price -- "Ryzen 7 9800X3D" new <£> --source ebay-uk --basis sold --n <sales>` |
-| AMD Ryzen 9 9900X | 2024 (2y) | £380 new, recalled (seed 2026-05) | `npm run price -- "Ryzen 9 9900X" new <£> --source ebay-uk --basis sold --n <sales>` |
 | AMD Ryzen 9 9950X | 2024 (2y) | £520 new, recalled (seed 2026-05) | `npm run price -- "Ryzen 9 9950X" new <£> --source ebay-uk --basis sold --n <sales>` |
 | Intel Arc B580 Limited Edition | 2024 (2y) | £250 new, recalled (seed 2026-05) | `npm run price -- "Intel Arc B580" new <£> --source ebay-uk --basis sold --n <sales>` |
 | Intel Core i5-14400F | 2024 (2y) | £150 new, recalled (seed 2026-05) | `npm run price -- "Core i5-14400F" new <£> --source ebay-uk --basis sold --n <sales>` |
@@ -156,11 +158,9 @@ Plausible, unsourced, undated. A retail price with a date replaces each one; a s
 | Intel Core Ultra 7 265K | 2024 (2y) | £350 new, recalled (seed 2026-05) | `npm run price -- "Core Ultra 7 265K" new <£> --source ebay-uk --basis sold --n <sales>` |
 | Intel Core Ultra 9 285K | 2024 (2y) | £550 new, recalled (seed 2026-05) | `npm run price -- "Core Ultra 9 285K" new <£> --source ebay-uk --basis sold --n <sales>` |
 | NVIDIA GeForce RTX 4070 Super | 2024 (2y) | £550 new, recalled (seed 2026-05) | `npm run price -- "GeForce RTX 4070 Super" new <£> --source ebay-uk --basis sold --n <sales>` |
-| NVIDIA GeForce RTX 4070 Ti Super | 2024 (2y) | £720 new, recalled (seed 2026-05) | `npm run price -- "GeForce RTX 4070 Ti Super" new <£> --source ebay-uk --basis sold --n <sales>` |
 | NVIDIA GeForce RTX 4080 Super | 2024 (2y) | £900 new, recalled (seed 2026-05) | `npm run price -- "GeForce RTX 4080 Super" new <£> --source ebay-uk --basis sold --n <sales>` |
 | AMD Radeon RX 9060 XT 16GB | 2025 (1y) | £340 new, recalled (seed 2026-05) | `npm run price -- "Radeon RX 9060 XT" new <£> --source ebay-uk --basis sold --n <sales>` |
 | AMD Radeon RX 9060 XT 8GB | 2025 (1y) | £280 new, recalled (seed 2026-05) | `npm run price -- "Radeon RX 9060 XT" new <£> --source ebay-uk --basis sold --n <sales>` |
-| AMD Radeon RX 9070 XT | 2025 (1y) | £600 new, recalled (seed 2026-05) | `npm run price -- "Radeon RX 9070 XT" new <£> --source ebay-uk --basis sold --n <sales>` |
 | AMD Ryzen 5 9600 | 2025 (1y) | £190 new, recalled (seed 2026-05) | `npm run price -- "Ryzen 5 9600" new <£> --source ebay-uk --basis sold --n <sales>` |
 | AMD Ryzen 9 9950X3D | 2025 (1y) | £620 new, recalled (seed 2026-05) | `npm run price -- "Ryzen 9 9950X3D" new <£> --source ebay-uk --basis sold --n <sales>` |
 | Intel Arc B570 | 2025 (1y) | £210 new, recalled (seed 2026-05) | `npm run price -- "Intel Arc B570" new <£> --source ebay-uk --basis sold --n <sales>` |
@@ -168,17 +168,27 @@ Plausible, unsourced, undated. A retail price with a date replaces each one; a s
 | NVIDIA GeForce RTX 5060 | 2025 (1y) | £290 new, recalled (seed 2026-05) | `npm run price -- "GeForce RTX 5060" new <£> --source ebay-uk --basis sold --n <sales>` |
 | NVIDIA GeForce RTX 5060 Ti 16GB | 2025 (1y) | £400 new, recalled (seed 2026-05) | `npm run price -- "GeForce RTX 5060 Ti" new <£> --source ebay-uk --basis sold --n <sales>` |
 | NVIDIA GeForce RTX 5060 Ti 8GB | 2025 (1y) | £350 new, recalled (seed 2026-05) | `npm run price -- "GeForce RTX 5060 Ti" new <£> --source ebay-uk --basis sold --n <sales>` |
-| NVIDIA GeForce RTX 5070 | 2025 (1y) | £550 new, recalled (seed 2026-05) | `npm run price -- "GeForce RTX 5070" new <£> --source ebay-uk --basis sold --n <sales>` |
 | NVIDIA GeForce RTX 5090 | 2025 (1y) | £1900 new, recalled (seed 2026-05) | `npm run price -- "GeForce RTX 5090" new <£> --source ebay-uk --basis sold --n <sales>` |
 
-## Sourced (3)
+## Sourced (14)
 
 On record from a real observation. A second snapshot on a later date is what turns each into a trend.
 
 | part | launched | on file | check |
 |---|---|---|---|
 | NVIDIA GeForce GTX 970 **·in posts** | 2014 (12y) | £44 used, sourced 2026-09-02, 1 sale | `npm run price -- "GeForce GTX 970" used <£> --source ebay-uk --basis sold --n <sales>` |
+| NVIDIA GeForce GTX 1060 6GB **·in posts** | 2016 (10y) | £80 used, sourced 2026-09-02, 1 sale | `npm run price -- "GeForce GTX 1060" used <£> --source ebay-uk --basis sold --n <sales>` |
+| AMD Ryzen 5 5600 **·in posts** | 2022 (4y) | £114 new, sourced 2026-09-02, 1 sale | `npm run price -- "Ryzen 5 5600" new <£> --source ebay-uk --basis sold --n <sales>` |
+| AMD Ryzen 7 5800X3D **·in posts** | 2022 (4y) | £309 new, sourced 2026-09-02, 1 sale | `npm run price -- "Ryzen 7 5800X3D" new <£> --source ebay-uk --basis sold --n <sales>` |
+| AMD Ryzen 7 7800X3D **·in posts** | 2023 (3y) | £240 new, sourced 2026-09-02, 1 sale | `npm run price -- "Ryzen 7 7800X3D" new <£> --source ebay-uk --basis sold --n <sales>` |
+| NVIDIA GeForce RTX 5080 **·in posts** | 2025 (1y) | £1180 new, sourced 2026-09-02, 1 sale | `npm run price -- "GeForce RTX 5080" new <£> --source ebay-uk --basis sold --n <sales>` |
 | Intel Core i7-7700 | 2017 (9y) | £40 used, sourced 2026-09-02, 1 sale | `npm run price -- "Core i7-7700" used <£> --source ebay-uk --basis sold --n <sales>` |
+| AMD Ryzen 7 5800X | 2020 (6y) | £178 new, sourced 2026-09-02, 1 sale; £110 used, recalled (seed 2026-05) | `npm run price -- "Ryzen 7 5800X" new <£> --source ebay-uk --basis sold --n <sales>` |
+| AMD Ryzen 9 7900 | 2023 (3y) | £281 new, sourced 2026-09-02, 1 sale | `npm run price -- "Ryzen 9 7900" new <£> --source ebay-uk --basis sold --n <sales>` |
+| AMD Ryzen 9 9900X | 2024 (2y) | £300 new, sourced 2026-09-02, 1 sale | `npm run price -- "Ryzen 9 9900X" new <£> --source ebay-uk --basis sold --n <sales>` |
+| AMD Radeon RX 9070 | 2025 (1y) | £557 new, sourced 2026-09-02, 1 sale | `npm run price -- "Radeon RX 9070" new <£> --source ebay-uk --basis sold --n <sales>` |
+| NVIDIA GeForce RTX 5070 | 2025 (1y) | £541 new, sourced 2026-09-02, 1 sale | `npm run price -- "GeForce RTX 5070" new <£> --source ebay-uk --basis sold --n <sales>` |
+| NVIDIA GeForce RTX 5070 Ti | 2025 (1y) | £993 new, sourced 2026-09-02, 1 sale | `npm run price -- "GeForce RTX 5070 Ti" new <£> --source ebay-uk --basis sold --n <sales>` |
 | memory.DDR5.32 | ? | £337 new, sourced 2026-09-02, 2 sales | `npm run price -- "memory.DDR5.32" new <£> --source ebay-uk --basis sold --n <sales>` |
 
 ## Component allowances (56)

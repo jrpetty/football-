@@ -12,29 +12,59 @@ import { planBuild } from '../../src/core/planner.ts';
 import { estimate } from '../../src/core/engine.ts';
 import { machineReport } from '../../src/core/analysis.ts';
 import type { Resolution } from '../../src/core/types.ts';
-import { overlayComponents } from '../../src/core/components.ts';
+import { overlayComponents, overlayPartPrices } from '../../src/core/components.ts';
 
 const load = (p: string) => JSON.parse(readFileSync(p, 'utf8'));
 
 export interface Tier { name: string; budget: number; resolution: Resolution; refreshHz: number; games?: string[] }
 
 export function loadPlanContext() {
+  const observedRows = (load('data/pricing/observed.json').prices ?? []) as { partId: string; condition: 'new' | 'used'; price: number }[];
   const data = buildEngineData({
     gpus: load('data/catalogue/gpus.json'), cpus: load('data/catalogue/cpus.json'),
     games: load('data/catalogue/games.json'), references: load('data/catalogue/references.json'),
   });
+  // Sourced prices override the recalled seed for BOTH parts and component
+  // allowances, exactly as the app's own lookup does. Without the part half of
+  // this the generator planned against the seed while the app planned against
+  // observations, and the two disagreed about what a build costs.
+  const observed = observedRows;
+  const parts = overlayPartPrices(
+    load('data/pricing/gbp-new.json').prices as Record<string, number>,
+    load('data/pricing/gbp-used.json').prices as Record<string, number>,
+    observed,
+  );
   return {
     data,
-    newP: load('data/pricing/gbp-new.json').prices as Record<string, number>,
-    usedP: load('data/pricing/gbp-used.json').prices as Record<string, number>,
-    // Observed allowance prices (memory.DDR5.32, psu.650 …) override the recalled ones.
-    comp: overlayComponents(load('data/pricing/components-gbp.json'), load('data/pricing/observed.json').prices ?? []),
+    newP: parts.newP,
+    usedP: parts.usedP,
+    comp: overlayComponents(load('data/pricing/components-gbp.json'), observed),
+    /** Ids and allowance keys that carry a sourced price, for sourcedShare. */
+    sourced: new Set(observed.map((o) => o.partId)),
   };
 }
 export type PlanContext = ReturnType<typeof loadPlanContext>;
 
+/**
+ * What share of a build's money rests on a sourced price.
+ *
+ * Every price sourced so far has moved, most of them upward, so a planner
+ * choosing on price now systematically prefers the parts nobody has checked:
+ * their figures are the old, low ones. A build sheet full of unsourced lines
+ * looks cheaper than one full of sourced lines for reasons that have nothing
+ * to do with the parts. This is the number that makes that visible, and it is
+ * weighted by money because a sourced case at £70 and a sourced graphics card
+ * at £1,180 are not equally reassuring.
+ */
+export function sourcedShare(bom: { price: number; partId?: string; key?: string }[], sourced: Set<string>): number {
+  const total = bom.reduce((t, l) => t + l.price, 0);
+  if (!total) return 0;
+  const covered = bom.reduce((t, l) => t + ((l.partId && sourced.has(l.partId)) || (l.key && sourced.has(l.key)) ? l.price : 0), 0);
+  return Math.round((covered / total) * 100);
+}
+
 export const GAMES = ['counter-strike-2', 'fortnite', 'cyberpunk-2077', 'baldurs-gate-3', 'call-of-duty-black-ops-6', 'elden-ring'];
-const TIERS: { name: string; budget: number; resolution: Resolution; refreshHz: number }[] = [
+export const TIERS: { name: string; budget: number; resolution: Resolution; refreshHz: number }[] = [
   { name: 'The £700 one', budget: 700, resolution: '1080p', refreshHz: 144 },
   { name: 'The £1,100 one', budget: 1100, resolution: '1440p', refreshHz: 144 },
   { name: 'The £1,800 one', budget: 1800, resolution: '1440p', refreshHz: 165 },
@@ -46,7 +76,23 @@ export function planTier(t: Tier, ctx: PlanContext) {
   const games = (t.games ?? GAMES).filter((g) => data.games.has(g));
   const r = planBuild({ budget: t.budget, resolution: t.resolution, refreshHz: t.refreshHz, condition: 'new', gameIds: games }, data, { newP, usedP }, comp);
   if (!r.pick) return null;
-  const b = r.pick.build;
+  /*
+   * A build guide asks a different question from the planner.
+   *
+   * `pick` is the CHEAPEST build that hits the stated target, which is the
+   * right answer to "what do I need?" — once every game clears 144fps, more
+   * money buys nothing that was asked for. But a reader looking at a £1,100
+   * column is asking "what is the best £1,100 machine?", and answering that
+   * with a £624 one is answering a question nobody asked. It also broke the
+   * ladder: with sourced prices the £700 and £1,100 tiers came back £27 apart.
+   *
+   * `maxOut` is the planner's own answer to the budget question — the best the
+   * full budget buys — and is null exactly when `pick` already spends it. So
+   * the guide takes maxOut when it exists and pick when it does not, and every
+   * column is then the best machine for its budget.
+   */
+  const chosen = r.maxOut ?? r.pick;
+  const b = chosen.build;
   const cpu = data.cpus.get(b.cpuId)!, gpu = data.gpus.get(b.gpuId)!;
   const rows = games.map((g) => {
     const e = estimate(b, g, t.resolution, data);
@@ -68,7 +114,7 @@ export function planTier(t: Tier, ctx: PlanContext) {
   return {
     ...t,
     games: undefined,
-    total: Math.round(r.pick!.total),
+    total: Math.round(chosen.total),
     cpu: cpu.fullName, gpu: gpu.fullName,
     cpuShort: cpu.brand, gpuShort: gpu.brand,
     vram: gpu.vramGB, cores: cpu.cores, threads: cpu.threads,
@@ -81,12 +127,14 @@ export function planTier(t: Tier, ctx: PlanContext) {
     // materials containing a 550W PSU invites a reader to buy the 400W.
     psuW: rep?.power.recommendedPsuW ?? null,
     psuPartW: (() => {
-      const line = r.pick!.bom.find((l: any) => l.category === 'PSU');
+      const line = chosen.bom.find((l: any) => l.category === 'PSU');
       const m = /(\d{3,4})\s*W/i.exec(line?.label ?? '');
       return m ? Number(m[1]) : null;
     })(),
     cyberpunk1440: at1440.status === 'ok' ? Math.round(at1440.avgFps!) : null,
-    bom: r.pick!.bom.map((l: any) => ({ cat: l.category, price: Math.round(l.price), part: l.label ?? '' })),
+    bom: chosen.bom.map((l: any) => ({ cat: l.category, price: Math.round(l.price), part: l.label ?? '', sourced: !!((l.partId && ctx.sourced.has(l.partId)) || (l.key && ctx.sourced.has(l.key))) })),
+    /** Percent of this build's total that rests on a sourced price. */
+    sourcedSharePct: sourcedShare(chosen.bom as { price: number; partId?: string; key?: string }[], ctx.sourced),
     rows,
   };
 }

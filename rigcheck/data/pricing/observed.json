@@ -1,12 +1,236 @@
 {
-  "generatedAt": "2026-09-03T16:19:55.834Z",
+  "generatedAt": "2026-09-03T16:40:04.259Z",
   "note": "Operator-supplied market observations. These OVERRIDE the recalled seed tables in gbp-new.json and gbp-used.json for any part they cover. Regenerate with `npm run import:prices`; edit the CSVs in data/prices-observed/, never this file.",
   "provenance": "operator-observed",
   "sourceFiles": [
     "2026-08-31.csv"
   ],
-  "observationCount": 4,
+  "observationCount": 15,
   "prices": [
+    {
+      "partId": "amd-radeon-rx-9070",
+      "condition": "new",
+      "price": 557,
+      "observedMedian": 557,
+      "currency": "GBP",
+      "totalSamples": 1,
+      "observations": 1,
+      "spread": {
+        "low": 557,
+        "high": 557
+      },
+      "newestDate": "2026-09-02",
+      "firstDate": "2026-09-02",
+      "ageDays": 2,
+      "stale": false,
+      "containsAsking": false,
+      "sources": [
+        "gpupricehistory-uk"
+      ],
+      "warnings": [
+        "Only 1 sale behind this figure. Marketplace prices scatter widely; treat anything under about five as indicative."
+      ],
+      "series": [
+        {
+          "date": "2026-09-02",
+          "price": 557,
+          "sampleSize": 1,
+          "basis": "retail"
+        }
+      ]
+    },
+    {
+      "partId": "amd-ryzen-5-5600",
+      "condition": "new",
+      "price": 114,
+      "observedMedian": 114,
+      "currency": "GBP",
+      "totalSamples": 1,
+      "observations": 1,
+      "spread": {
+        "low": 114,
+        "high": 114
+      },
+      "newestDate": "2026-09-02",
+      "firstDate": "2026-09-02",
+      "ageDays": 2,
+      "stale": false,
+      "containsAsking": false,
+      "sources": [
+        "idealo-uk"
+      ],
+      "warnings": [
+        "Only 1 sale behind this figure. Marketplace prices scatter widely; treat anything under about five as indicative."
+      ],
+      "series": [
+        {
+          "date": "2026-09-02",
+          "price": 114,
+          "sampleSize": 1,
+          "basis": "retail"
+        }
+      ]
+    },
+    {
+      "partId": "amd-ryzen-7-5800x",
+      "condition": "new",
+      "price": 178,
+      "observedMedian": 178,
+      "currency": "GBP",
+      "totalSamples": 1,
+      "observations": 1,
+      "spread": {
+        "low": 178,
+        "high": 178
+      },
+      "newestDate": "2026-09-02",
+      "firstDate": "2026-09-02",
+      "ageDays": 2,
+      "stale": false,
+      "containsAsking": false,
+      "sources": [
+        "idealo-uk"
+      ],
+      "warnings": [
+        "Only 1 sale behind this figure. Marketplace prices scatter widely; treat anything under about five as indicative."
+      ],
+      "series": [
+        {
+          "date": "2026-09-02",
+          "price": 178,
+          "sampleSize": 1,
+          "basis": "retail"
+        }
+      ]
+    },
+    {
+      "partId": "amd-ryzen-7-5800x3d",
+      "condition": "new",
+      "price": 309,
+      "observedMedian": 309,
+      "currency": "GBP",
+      "totalSamples": 1,
+      "observations": 1,
+      "spread": {
+        "low": 309,
+        "high": 309
+      },
+      "newestDate": "2026-09-02",
+      "firstDate": "2026-09-02",
+      "ageDays": 2,
+      "stale": false,
+      "containsAsking": false,
+      "sources": [
+        "idealo-uk"
+      ],
+      "warnings": [
+        "Only 1 sale behind this figure. Marketplace prices scatter widely; treat anything under about five as indicative."
+      ],
+      "series": [
+        {
+          "date": "2026-09-02",
+          "price": 309,
+          "sampleSize": 1,
+          "basis": "retail"
+        }
+      ]
+    },
+    {
+      "partId": "amd-ryzen-7-7800x3d",
+      "condition": "new",
+      "price": 240,
+      "observedMedian": 240,
+      "currency": "GBP",
+      "totalSamples": 1,
+      "observations": 1,
+      "spread": {
+        "low": 240,
+        "high": 240
+      },
+      "newestDate": "2026-09-02",
+      "firstDate": "2026-09-02",
+      "ageDays": 2,
+      "stale": false,
+      "containsAsking": false,
+      "sources": [
+        "idealo-uk"
+      ],
+      "warnings": [
+        "Only 1 sale behind this figure. Marketplace prices scatter widely; treat anything under about five as indicative."
+      ],
+      "series": [
+        {
+          "date": "2026-09-02",
+          "price": 240,
+          "sampleSize": 1,
+          "basis": "retail"
+        }
+      ]
+    },
+    {
+      "partId": "amd-ryzen-9-7900",
+      "condition": "new",
+      "price": 281,
+      "observedMedian": 281,
+      "currency": "GBP",
+      "totalSamples": 1,
+      "observations": 1,
+      "spread": {
+        "low": 281,
+        "high": 281
+      },
+      "newestDate": "2026-09-02",
+      "firstDate": "2026-09-02",
+      "ageDays": 2,
+      "stale": false,
+      "containsAsking": false,
+      "sources": [
+        "idealo-uk"
+      ],
+      "warnings": [
+        "Only 1 sale behind this figure. Marketplace prices scatter widely; treat anything under about five as indicative."
+      ],
+      "series": [
+        {
+          "date": "2026-09-02",
+          "price": 281,
+          "sampleSize": 1,
+          "basis": "retail"
+        }
+      ]
+    },
+    {
+      "partId": "amd-ryzen-9-9900x",
+      "condition": "new",
+      "price": 300,
+      "observedMedian": 300,
+      "currency": "GBP",
+      "totalSamples": 1,
+      "observations": 1,
+      "spread": {
+        "low": 300,
+        "high": 300
+      },
+      "newestDate": "2026-09-02",
+      "firstDate": "2026-09-02",
+      "ageDays": 2,
+      "stale": false,
+      "containsAsking": false,
+      "sources": [
+        "idealo-uk"
+      ],
+      "warnings": [
+        "Only 1 sale behind this figure. Marketplace prices scatter widely; treat anything under about five as indicative."
+      ],
+      "series": [
+        {
+          "date": "2026-09-02",
+          "price": 300,
+          "sampleSize": 1,
+          "basis": "retail"
+        }
+      ]
+    },
     {
       "partId": "intel-core-i7-7700",
       "condition": "used",
@@ -72,6 +296,39 @@
       ]
     },
     {
+      "partId": "nvidia-geforce-gtx-1060-6gb",
+      "condition": "used",
+      "price": 80,
+      "observedMedian": 94,
+      "currency": "GBP",
+      "totalSamples": 1,
+      "observations": 1,
+      "spread": {
+        "low": 94,
+        "high": 94
+      },
+      "newestDate": "2026-09-02",
+      "firstDate": "2026-09-02",
+      "ageDays": 2,
+      "stale": false,
+      "containsAsking": true,
+      "sources": [
+        "koukan-uk-used-gpu-guide"
+      ],
+      "warnings": [
+        "Every observation is an ASKING price, not a sale. Discounted by 15% to approximate what the part changes hands for, which is a prior and not a measurement. Replace with sold-listing data when you can.",
+        "Only 1 sale behind this figure. Marketplace prices scatter widely; treat anything under about five as indicative."
+      ],
+      "series": [
+        {
+          "date": "2026-09-02",
+          "price": 80,
+          "sampleSize": 1,
+          "basis": "asking"
+        }
+      ]
+    },
+    {
       "partId": "nvidia-geforce-gtx-970",
       "condition": "used",
       "price": 44,
@@ -101,6 +358,102 @@
           "price": 44,
           "sampleSize": 1,
           "basis": "asking"
+        }
+      ]
+    },
+    {
+      "partId": "nvidia-geforce-rtx-5070",
+      "condition": "new",
+      "price": 541,
+      "observedMedian": 541,
+      "currency": "GBP",
+      "totalSamples": 1,
+      "observations": 1,
+      "spread": {
+        "low": 541,
+        "high": 541
+      },
+      "newestDate": "2026-09-02",
+      "firstDate": "2026-09-02",
+      "ageDays": 2,
+      "stale": false,
+      "containsAsking": false,
+      "sources": [
+        "gpupricehistory-uk"
+      ],
+      "warnings": [
+        "Only 1 sale behind this figure. Marketplace prices scatter widely; treat anything under about five as indicative."
+      ],
+      "series": [
+        {
+          "date": "2026-09-02",
+          "price": 541,
+          "sampleSize": 1,
+          "basis": "retail"
+        }
+      ]
+    },
+    {
+      "partId": "nvidia-geforce-rtx-5070-ti",
+      "condition": "new",
+      "price": 993,
+      "observedMedian": 993,
+      "currency": "GBP",
+      "totalSamples": 1,
+      "observations": 1,
+      "spread": {
+        "low": 993,
+        "high": 993
+      },
+      "newestDate": "2026-09-02",
+      "firstDate": "2026-09-02",
+      "ageDays": 2,
+      "stale": false,
+      "containsAsking": false,
+      "sources": [
+        "gpupricehistory-uk"
+      ],
+      "warnings": [
+        "Only 1 sale behind this figure. Marketplace prices scatter widely; treat anything under about five as indicative."
+      ],
+      "series": [
+        {
+          "date": "2026-09-02",
+          "price": 993,
+          "sampleSize": 1,
+          "basis": "retail"
+        }
+      ]
+    },
+    {
+      "partId": "nvidia-geforce-rtx-5080",
+      "condition": "new",
+      "price": 1180,
+      "observedMedian": 1180,
+      "currency": "GBP",
+      "totalSamples": 1,
+      "observations": 1,
+      "spread": {
+        "low": 1180,
+        "high": 1180
+      },
+      "newestDate": "2026-09-02",
+      "firstDate": "2026-09-02",
+      "ageDays": 2,
+      "stale": false,
+      "containsAsking": false,
+      "sources": [
+        "gpupricehistory-uk"
+      ],
+      "warnings": [
+        "Only 1 sale behind this figure. Marketplace prices scatter widely; treat anything under about five as indicative."
+      ],
+      "series": [
+        {
+          "date": "2026-09-02",
+          "price": 1180,
+          "sampleSize": 1,
+          "basis": "retail"
         }
       ]
     }

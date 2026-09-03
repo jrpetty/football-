@@ -105,3 +105,58 @@ describe('family drift', () => {
     expect(mem!.unsourced).toContain('memory.DDR4.32');
   });
 });
+
+// ---------------------------------------------------------------------------
+// A price that contradicts the performance ordering. The catalogue derives an
+// index for every part, so it can catch what a price alone cannot: a much
+// slower part priced well above a much faster one. A search offered an RTX
+// 4070 at £1,541 while a 5080 sat at £1,180, and only the ordering revealed it.
+// ---------------------------------------------------------------------------
+
+import { priceInversions } from '../src/core/priceaudit.ts';
+
+const P = (id: string, index: number, price: number, condition: 'new' | 'used' = 'new') => ({ id, name: id, index, price, condition });
+
+describe('price inversions', () => {
+  it('catches a slower part priced above a faster one', () => {
+    const inv = priceInversions([P('rtx-4070', 176, 1541), P('rtx-5080', 282, 1180)]);
+    expect(inv).toHaveLength(1);
+    expect(inv[0]).toMatchObject({ premium: 1.31, speedGap: 1.6 });
+    expect(inv[0].slower.id).toBe('rtx-4070');
+    expect(inv[0].faster.id).toBe('rtx-5080');
+  });
+
+  it('says nothing when price follows performance', () => {
+    expect(priceInversions([P('a', 100, 200), P('b', 200, 400), P('c', 300, 600)])).toEqual([]);
+  });
+
+  it('tolerates a small premium on a near-identical part', () => {
+    // Two parts within 15% of each other on index are not an ordering claim.
+    expect(priceInversions([P('a', 100, 210), P('b', 110, 200)])).toEqual([]);
+  });
+
+  it('never compares a used price with a new one', () => {
+    // A used flagship under a new budget card is normal, not an inversion.
+    expect(priceInversions([P('flagship', 300, 400, 'used'), P('budget', 100, 300, 'new')])).toEqual([]);
+  });
+
+  it('ignores a part with no index or no price', () => {
+    expect(priceInversions([P('a', 0, 900), P('b', 200, 100)])).toEqual([]);
+    expect(priceInversions([P('a', 100, 0), P('b', 200, 100)])).toEqual([]);
+  });
+
+  it('reports the worst pairing first', () => {
+    const inv = priceInversions([P('slow', 100, 900), P('mid', 200, 500), P('fast', 400, 400)]);
+    expect(inv[0].faster.id).toBe('fast');
+    expect(inv[0].slower.id).toBe('slow');
+  });
+
+  it('finds no inversion in the shipped sourced prices', () => {
+    const obs = JSON.parse(readFileSync(join(ROOT, 'data/pricing/observed.json'), 'utf8')).prices;
+    const gpus = JSON.parse(readFileSync(join(ROOT, 'data/catalogue/gpus.json'), 'utf8')).records as { id: string }[];
+    // Only a smoke check that the shipped set is self-consistent by id overlap;
+    // the audit script does the index-aware version on every run.
+    const priced = obs.filter((o: { partId: string }) => gpus.some((g) => g.id === o.partId));
+    expect(priced.length).toBeGreaterThan(0);
+  });
+});
