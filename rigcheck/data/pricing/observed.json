@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-09-03T06:21:17.666Z",
+  "generatedAt": "2026-09-03T16:19:55.834Z",
   "note": "Operator-supplied market observations. These OVERRIDE the recalled seed tables in gbp-new.json and gbp-used.json for any part they cover. Regenerate with `npm run import:prices`; edit the CSVs in data/prices-observed/, never this file.",
   "provenance": "operator-observed",
   "sourceFiles": [
     "2026-08-31.csv"
   ],
-  "observationCount": 3,
+  "observationCount": 4,
   "prices": [
     {
       "partId": "intel-core-i7-7700",
@@ -21,7 +21,7 @@
       },
       "newestDate": "2026-09-02",
       "firstDate": "2026-09-02",
-      "ageDays": 1,
+      "ageDays": 2,
       "stale": false,
       "containsAsking": false,
       "sources": [
@@ -53,7 +53,7 @@
       },
       "newestDate": "2026-09-02",
       "firstDate": "2026-09-02",
-      "ageDays": 1,
+      "ageDays": 2,
       "stale": false,
       "containsAsking": false,
       "sources": [
@@ -68,6 +68,39 @@
           "price": 337,
           "sampleSize": 2,
           "basis": "retail"
+        }
+      ]
+    },
+    {
+      "partId": "nvidia-geforce-gtx-970",
+      "condition": "used",
+      "price": 44,
+      "observedMedian": 52,
+      "currency": "GBP",
+      "totalSamples": 1,
+      "observations": 1,
+      "spread": {
+        "low": 52,
+        "high": 52
+      },
+      "newestDate": "2026-09-02",
+      "firstDate": "2026-09-02",
+      "ageDays": 2,
+      "stale": false,
+      "containsAsking": true,
+      "sources": [
+        "bestvaluegpu-uk-tracker"
+      ],
+      "warnings": [
+        "Every observation is an ASKING price, not a sale. Discounted by 15% to approximate what the part changes hands for, which is a prior and not a measurement. Replace with sold-listing data when you can.",
+        "Only 1 sale behind this figure. Marketplace prices scatter widely; treat anything under about five as indicative."
+      ],
+      "series": [
+        {
+          "date": "2026-09-02",
+          "price": 44,
+          "sampleSize": 1,
+          "basis": "asking"
         }
       ]
     }

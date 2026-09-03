@@ -2,3 +2,4 @@ part_id,condition,basis,price,currency,source,observed_date,sample_size,note
 intel-core-i7-7700,used,sold,40,GBP,operator-purchase,2026-09-02,1,"bought by the operator; retail-style listings still show this part near its launch price"
 memory.DDR5.32,new,retail,336.99,GBP,amazon-uk,2026-09-02,1,"cheapest 32GB (2x16) DDR5-6000 CL30 kit listed on Amazon UK search results; retailer pages are egress-blocked from this environment, figure read from the listing as indexed"
 memory.DDR5.32,new,retail,344.99,GBP,amazon-uk,2026-09-02,1,"Corsair Vengeance CMK32GX5M2B6000Z30 non-RGB, Amazon UK listing as indexed"
+nvidia-geforce-gtx-970,used,asking,52,GBP,bestvaluegpu-uk-tracker,2026-09-02,1,"UK used average quoted by the bestvaluegpu price tracker (GBP 51.66) as surfaced in search results; the tracker page itself is egress-blocked so whether it aggregates sold or listed prices could not be confirmed, hence basis=asking, which discounts it rather than risk overstating"

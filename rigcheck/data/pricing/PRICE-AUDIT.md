@@ -4,11 +4,11 @@ Every priced part, and every part the published posts name, with whether the fig
 
 | status | parts | meaning |
 |---|---|---|
-| none | 3 | no price at all — the planner cannot consider it and the posts cannot quote it |
+| none | 2 | no price at all — the planner cannot consider it and the posts cannot quote it |
 | recalled-new-old-part | 20 | a recalled NEW figure on an old part — that is a launch-era number, and the part sells used; record a resale price |
 | recalled-used | 46 | a recalled used figure with no date behind it — read sold listings and record what it actually goes for |
 | recalled-new | 53 | a recalled new figure on a recent part — plausible, but nobody looked it up; a retail price with a date would replace it |
-| sourced | 2 | sourced from a market observation — keep it fresh with a new snapshot |
+| sourced | 3 | sourced from a market observation — keep it fresh with a new snapshot |
 ## Seed figures a sibling has overtaken (1)
 
 One class in each family below was repriced from real listings and moved a long way; its siblings are still on the recalled figure and nobody has checked them. A build using an unchecked sibling is cheaper on paper than in a shop, and the published copy says so with the multiple.
@@ -20,15 +20,14 @@ One class in each family below was repriced from real listings and moved a long 
 Caveat currently required in published copy: *32GB DDR5 kit, 2 sticks is priced from current listings at 3.5x its recalled figure. The other memory figures here are still the recalled ones and nobody has checked them, so a build using one is very likely cheaper on paper than in a shop.*
 
 
-Parts named in published posts: 20. Of those with no price at all: 3.
+Parts named in published posts: 20. Of those with no price at all: 2.
 
-## No price at all (3)
+## No price at all (2)
 
 The planner cannot consider these and the posts cannot quote them. The ones marked **in posts** already appear in published content, so a follower can ask what one costs and the app has no answer.
 
 | part | launched | on file | check |
 |---|---|---|---|
-| NVIDIA GeForce GTX 970 **·in posts** | 2014 (12y) | no price | `npm run price -- "GeForce GTX 970" used <£> --source ebay-uk --basis sold --n <sales>` |
 | NVIDIA GeForce GTX 1060 3GB **·in posts** | 2016 (10y) | no price | `npm run price -- "GeForce GTX 1060" used <£> --source ebay-uk --basis sold --n <sales>` |
 | AMD Radeon RX 580 4GB **·in posts** | 2017 (9y) | no price | `npm run price -- "Radeon RX 580" used <£> --source ebay-uk --basis sold --n <sales>` |
 
@@ -172,12 +171,13 @@ Plausible, unsourced, undated. A retail price with a date replaces each one; a s
 | NVIDIA GeForce RTX 5070 | 2025 (1y) | £550 new, recalled (seed 2026-05) | `npm run price -- "GeForce RTX 5070" new <£> --source ebay-uk --basis sold --n <sales>` |
 | NVIDIA GeForce RTX 5090 | 2025 (1y) | £1900 new, recalled (seed 2026-05) | `npm run price -- "GeForce RTX 5090" new <£> --source ebay-uk --basis sold --n <sales>` |
 
-## Sourced (2)
+## Sourced (3)
 
 On record from a real observation. A second snapshot on a later date is what turns each into a trend.
 
 | part | launched | on file | check |
 |---|---|---|---|
+| NVIDIA GeForce GTX 970 **·in posts** | 2014 (12y) | £44 used, sourced 2026-09-02, 1 sale | `npm run price -- "GeForce GTX 970" used <£> --source ebay-uk --basis sold --n <sales>` |
 | Intel Core i7-7700 | 2017 (9y) | £40 used, sourced 2026-09-02, 1 sale | `npm run price -- "Core i7-7700" used <£> --source ebay-uk --basis sold --n <sales>` |
 | memory.DDR5.32 | ? | £337 new, sourced 2026-09-02, 2 sales | `npm run price -- "memory.DDR5.32" new <£> --source ebay-uk --basis sold --n <sales>` |
 
