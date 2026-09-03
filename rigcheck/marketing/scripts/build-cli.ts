@@ -4,7 +4,8 @@
  */
 import { mkdirSync, readFileSync } from 'node:fs';
 import { loadPlanContext, planTier } from './plans.ts';
-import { buildCaption } from './lib/captions.ts';
+import { buildCaption, memoryCaveat } from './lib/captions.ts';
+import { allowanceKeys } from '../../src/core/components.ts';
 import { renderCards, buildCard, unesc } from './cardlib.mjs';
 import type { Resolution } from '../../src/core/types.ts';
 
@@ -22,4 +23,4 @@ await renderCards([{ name, ...buildCard(b) }], { dir: 'marketing/images', format
 await renderCards([{ name, ...buildCard(b) }], { dir: 'marketing/images/story', format: 'story' });
 console.log(`marketing/images/${name}.png\nmarketing/images/story/${name}.png\n`);
 console.log(`shows: ${unesc(buildCard(b).subject)}\n`);
-console.log(buildCaption(b, new Set<string>((JSON.parse(readFileSync('data/pricing/observed.json', 'utf8')).prices ?? []).map((o: { partId: string }) => o.partId))));
+console.log(buildCaption(b, memoryCaveat(allowanceKeys(JSON.parse(readFileSync('data/pricing/components-gbp.json', 'utf8'))), JSON.parse(readFileSync('data/pricing/observed.json', 'utf8')).prices ?? [])));

@@ -38,7 +38,7 @@ Look at the last two rows. £473 more buys 18 more frames. The curve flattens ha
 
 One thing I will not pretend about: these are modelled, not measured. Nobody built these four machines and benchmarked them. The ordering is solid, the absolute numbers are ±20%, and the tool that produced them has an entire screen devoted to telling you how much of it is guesswork.
 
-The prices are the softer half. They are recalled UK street prices, not scraped from any retailer, and they are already months old. GPU pricing swings 30% on supply alone. Read the totals as the shape of a budget and price the parts yourself. Memory: DDR5 is priced from September 2026 listings; DDR4 is still the recalled spring figure and has very likely risen too.
+The prices are the softer half. They are recalled UK street prices, not scraped from any retailer, and they are already months old. GPU pricing swings 30% on supply alone. Read the totals as the shape of a budget and price the parts yourself. 32GB DDR5 kit, 2 sticks is priced from current listings at 3.5x its recalled figure. The other memory figures here are still the recalled ones and nobody has checked them, so a build using one is very likely cheaper on paper than in a shop.
 
 Swipe for each build in full — parts, power draw, six games apiece.
 
@@ -65,7 +65,7 @@ At 1440p, high, no upscaling:
 
 The Ryzen 7 5800X3D is in there for a specific reason. Its stacked cache is worth almost nothing in a GPU-bound shooter and a lot in simulation and strategy — which is exactly why Baldur's Gate 3 is the one game here where the processor, not the card, is the limit.
 
-Modelled, not measured. Ordering reliable, absolutes ±20%. Prices are recalled, not sourced — price the parts yourself. Memory: DDR5 is priced from September 2026 listings; DDR4 is still the recalled spring figure and has very likely risen too.
+Modelled, not measured. Ordering reliable, absolutes ±20%. Prices are recalled, not sourced — price the parts yourself. 32GB DDR5 kit, 2 sticks is priced from current listings at 3.5x its recalled figure. The other memory figures here are still the recalled ones and nobody has checked them, so a build using one is very likely cheaper on paper than in a shop.
 
 #pcbuild #gamingpc #buildapc #1440p #rx9070 #ryzen #pcgaming #pchardware
 
@@ -103,7 +103,7 @@ Cyberpunk at 65fps is the honest headline. This is a machine that runs the deman
 
 Elden Ring reads 60 because Elden Ring is capped at 60. That is the game, not the build. Worth saying, because a chart that does not mark it makes a fine machine look weak.
 
-Modelled, not measured. Ordering reliable, absolutes ±20%. Prices are recalled, not sourced — price the parts yourself. Memory: DDR5 is priced from September 2026 listings; DDR4 is still the recalled spring figure and has very likely risen too.
+Modelled, not measured. Ordering reliable, absolutes ±20%. Prices are recalled, not sourced — price the parts yourself. 32GB DDR5 kit, 2 sticks is priced from current listings at 3.5x its recalled figure. The other memory figures here are still the recalled ones and nobody has checked them, so a build using one is very likely cheaper on paper than in a shop.
 
 #budgetgaming #pcbuild #buildapc #1080pgaming #gamingpc #intelarc #pchardware
 
@@ -295,7 +295,7 @@ At 1440p, high, no upscaling:
 
 3 of 6 games clear the 165Hz target — Counter-Strike 2 at 448, Fortnite at 187, Call of Duty Black Ops 6 at 188. Cyberpunk 2077 at 111 and Baldur's Gate 3 at 106 do not, which makes this a 1440p/120 experience in the demanding single-player titles and a 165Hz one in the shooters. Elden Ring reads 60 because Elden Ring is capped there.
 
-Modelled, not measured. Ordering reliable, absolutes ±20%. Prices are recalled, not sourced — price the parts yourself. Memory: DDR5 is priced from September 2026 listings; DDR4 is still the recalled spring figure and has very likely risen too.
+Modelled, not measured. Ordering reliable, absolutes ±20%. Prices are recalled, not sourced — price the parts yourself. 32GB DDR5 kit, 2 sticks is priced from current listings at 3.5x its recalled figure. The other memory figures here are still the recalled ones and nobody has checked them, so a build using one is very likely cheaper on paper than in a shop.
 
 #pcbuild #gamingpc #buildapc #pcgaming #pchardware
 ---
@@ -320,7 +320,7 @@ At 2160p, high, no upscaling:
 
 It came in £346 under a £2,600 budget. At 4K, Cyberpunk lands at 65fps — the same number the £582 machine manages at 1080p, which tells you exactly what four times the pixels costs. If you want high refresh rates at 4K in demanding titles, no build at this price does it without upscaling. Every number here is native resolution, because upscaling numbers depend on which mode you pick and I would rather quote the floor.
 
-Modelled, not measured. Ordering reliable, absolutes ±20%. Prices are recalled, not sourced — price the parts yourself. Memory: DDR5 is priced from September 2026 listings; DDR4 is still the recalled spring figure and has very likely risen too.
+Modelled, not measured. Ordering reliable, absolutes ±20%. Prices are recalled, not sourced — price the parts yourself. 32GB DDR5 kit, 2 sticks is priced from current listings at 3.5x its recalled figure. The other memory figures here are still the recalled ones and nobody has checked them, so a build using one is very likely cheaper on paper than in a shop.
 
 #pcbuild #gamingpc #buildapc #pcgaming #pchardware
 ---
@@ -337,6 +337,6 @@ That is the step from the £1,781 build to the £2,254 one, in Cyberpunk 2077 at
 
 The curve flattens hard after about £1,800, and that is the most useful thing on this account if you are deciding what to spend. Below that line every pound is buying something. Above it you are paying for the last few frames, and they are the most expensive frames on the chart.
 
-Modelled, not measured. Ordering reliable, absolutes ±20%. Prices are recalled, not sourced — price the parts yourself. Memory: DDR5 is priced from September 2026 listings; DDR4 is still the recalled spring figure and has very likely risen too.
+Modelled, not measured. Ordering reliable, absolutes ±20%. Prices are recalled, not sourced — price the parts yourself. 32GB DDR5 kit, 2 sticks is priced from current listings at 3.5x its recalled figure. The other memory figures here are still the recalled ones and nobody has checked them, so a build using one is very likely cheaper on paper than in a shop.
 
 #pcbuild #buildapc #gamingpc #pcgaming #pchardware #budget

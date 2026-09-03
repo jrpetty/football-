@@ -22,7 +22,7 @@ price here is a recalled UK street price rather than a sourced one — nobody
 scraped a retailer, and the seed figures carry a knowledge horizon of May 2026.
 GPU pricing moves 30% on supply alone, so treat every total on this page as the
 shape of a budget, not a quote. Price the parts yourself before you buy; the
-tool lets you paste your own prices in and will re-plan around them. Memory: DDR5 is priced from September 2026 listings; DDR4 is still the recalled spring figure and has very likely risen too.
+tool lets you paste your own prices in and will re-plan around them. 32GB DDR5 kit, 2 sticks is priced from current listings at 3.5x its recalled figure. The other memory figures here are still the recalled ones and nobody has checked them, so a build using one is very likely cheaper on paper than in a shop.
 
 That is a weaker claim than most build guides make. It is also, as far as I can
 tell, a more honest one.

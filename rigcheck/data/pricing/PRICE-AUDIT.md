@@ -9,6 +9,16 @@ Every priced part, and every part the published posts name, with whether the fig
 | recalled-used | 46 | a recalled used figure with no date behind it — read sold listings and record what it actually goes for |
 | recalled-new | 53 | a recalled new figure on a recent part — plausible, but nobody looked it up; a retail price with a date would replace it |
 | sourced | 2 | sourced from a market observation — keep it fresh with a new snapshot |
+## Seed figures a sibling has overtaken (1)
+
+One class in each family below was repriced from real listings and moved a long way; its siblings are still on the recalled figure and nobody has checked them. A build using an unchecked sibling is cheaper on paper than in a shop, and the published copy says so with the multiple.
+
+| family | repriced | moved | still recalled | check |
+|---|---|---|---|---|
+| memory | `memory.DDR5.32` £95 → £337 | **3.5x** | `memory.DDR5.16`, `memory.DDR5.64`, `memory.DDR4.16`, `memory.DDR4.32`, `memory.DDR4.64`, `memory.DDR3.16`, `memory.DDR3.32` | `npm run price -- --id memory.DDR5.16 new <£> --basis retail --source <shop>` |
+
+Caveat currently required in published copy: *32GB DDR5 kit, 2 sticks is priced from current listings at 3.5x its recalled figure. The other memory figures here are still the recalled ones and nobody has checked them, so a build using one is very likely cheaper on paper than in a shop.*
+
 
 Parts named in published posts: 20. Of those with no price at all: 3.
 

@@ -2,7 +2,7 @@
   "currency": "GBP",
   "asOf": "2026-05",
   "provenance": "model-knowledge",
-  "note": "Allowances for the parts this catalogue does not model individually — motherboards, memory, storage, power supplies, cases and coolers. A build planner that priced only the CPU and GPU would understate a machine by 300-400 pounds, which is worse than not planning at all. These are typical figures for a competent budget part in each class, not the cheapest thing that will POST. Same caveat as the part prices: recalled, not sourced, and perishable.",
+  "note": "Allowances for the parts this catalogue does not model individually \u2014 motherboards, memory, storage, power supplies, cases and coolers. A build planner that priced only the CPU and GPU would understate a machine by 300-400 pounds, which is worse than not planning at all. These are typical figures for a competent budget part in each class, not the cheapest thing that will POST. Same caveat as the part prices: recalled, not sourced, and perishable.",
   "motherboard": {
     "AM5": {
       "budget": 130,
@@ -38,7 +38,7 @@
       "budget": 110,
       "mid": 160,
       "high": 230,
-      "chipsets": "unknown socket — allowance is a mid-range guess"
+      "chipsets": "unknown socket \u2014 allowance is a mid-range guess"
     }
   },
   "memory": {
@@ -52,7 +52,7 @@
       "16": 35,
       "32": 62,
       "64": 125,
-      "note": "3600 MT/s CL16 two-stick kit. Two sticks, never four — a 2x16 kit beats 4x8 on every platform here."
+      "note": "3600 MT/s CL16 two-stick kit. Two sticks, never four \u2014 a 2x16 kit beats 4x8 on every platform here. PRICE UNSOURCED and known to be wrong: DDR5 was repriced from September 2026 listings at about 3.5x this file's recalled figures, and reporting on DDR4 in the same period is contradictory \u2014 some sources have DDR4 spot prices soaring as manufacturers end production and buyers stockpile, others have it holding steadier than DDR5. No UK retail figure could be read, so the spring number stands and is flagged by familyDrift rather than replaced by a guess."
     },
     "DDR3": {
       "16": 30,
@@ -170,8 +170,8 @@
     "note": "Deliberately zero. A Windows licence is a real cost for some people and free for others, and guessing which would put a wrong number in a budget. Add it yourself if you need one."
   },
   "psuTierPremium": {
-    "note": "Typical extra cost, in pounds, to buy the next efficiency tier up at the same wattage from a comparable OEM. Efficiency is not the only thing that moves with the badge — higher tiers usually ship better capacitors, quieter fans and longer warranties — so treat these as the price of the whole step up, not of the efficiency alone. Same caveat as every other figure in this file: recalled from typical UK retail, not scraped from a live listing, and perishable. The payback sum in the wizard lets you type your own number over it, which is what you should do once you have two real products in front of you.",
-    "caveat": "80+ Silver barely exists in the retail channel — almost nothing ships with that badge, so the two steps either side of it are arithmetic rather than shopping advice.",
+    "note": "Typical extra cost, in pounds, to buy the next efficiency tier up at the same wattage from a comparable OEM. Efficiency is not the only thing that moves with the badge \u2014 higher tiers usually ship better capacitors, quieter fans and longer warranties \u2014 so treat these as the price of the whole step up, not of the efficiency alone. Same caveat as every other figure in this file: recalled from typical UK retail, not scraped from a live listing, and perishable. The payback sum in the wizard lets you type your own number over it, which is what you should do once you have two real products in front of you.",
+    "caveat": "80+ Silver barely exists in the retail channel \u2014 almost nothing ships with that badge, so the two steps either side of it are arithmetic rather than shopping advice.",
     "none->bronze": 12,
     "bronze->silver": 8,
     "silver->gold": 10,

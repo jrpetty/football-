@@ -4,23 +4,31 @@
  */
 import type { PlannedBuild } from '../plans.ts';
 import type { VersusData } from './versus.ts';
+import { driftCaveat, familyDrift } from '../../../src/core/priceaudit.ts';
 
 const fmt = (n: number) => n.toLocaleString('en-GB');
 const pct = (n: number) => `${n > 0 ? '+' : ''}${n}%`;
 export const DISCLAIMER = 'Modelled, not measured. Ordering reliable, absolutes ±20%.';
 export const PRICE_CAVEAT = 'Prices are recalled, not sourced — price the parts yourself.';
 /**
- * Said on any build while one memory type is sourced and the other is not.
- * DDR5 was priced from September 2026 listings after memory roughly
- * quadrupled in a year; DDR4 still runs on the recalled spring figure. A
- * DDR4 build shown beside a DDR5 one is cheaper than reality by an unknown
- * amount, and the caption has to say so until DDR4 is sourced too.
+ * The mixed-freshness caveat, derived.
+ *
+ * When one memory type has been repriced from real listings and the other has
+ * not, a build using the unsourced one is cheaper on paper than in a shop, and
+ * every build post has to say so with the actual multiple rather than a vague
+ * hedge. Computed by familyDrift, so the sentence moves when the data does and
+ * disappears entirely once both are sourced.
  */
-export const MEMORY_CAVEAT = 'Memory: DDR5 is priced from September 2026 listings; DDR4 is still the recalled spring figure and has very likely risen too.';
-/** The caveat applies while memory.DDR5.32 is sourced and memory.DDR4.32 is not. */
-export const memoryCaveat = (sourced: Set<string>) => (sourced.has('memory.DDR5.32') && !sourced.has('memory.DDR4.32') ? MEMORY_CAVEAT : '');
+export function memoryCaveat(
+  allowances: { key: string; price: number; label: string }[],
+  observed: { partId: string; price: number }[],
+): string {
+  const label = (k: string) => allowances.find((a) => a.key === k)?.label ?? k;
+  const mem = familyDrift(allowances, observed).find((d) => d.category === 'memory');
+  return mem ? driftCaveat(mem, label) : '';
+}
 
-export function buildCaption(b: PlannedBuild, sourced: Set<string> = new Set()): string {
+export function buildCaption(b: PlannedBuild, memCaveat = ''): string {
   const clears = b.rows.filter((r) => r.fps != null && r.fps >= b.refreshHz);
   const under = b.rows.filter((r) => r.fps != null && r.fps < b.refreshHz && r.limiter !== 'engine-cap');
   const capped = b.rows.filter((r) => r.limiter === 'engine-cap');
@@ -35,7 +43,7 @@ export function buildCaption(b: PlannedBuild, sourced: Set<string> = new Set()):
   ];
   if (under.length) lines.push(`${under.map((r) => `${r.game} at ${r.fps}`).join(', ')} ${under.length === 1 ? 'falls' : 'fall'} short of ${b.refreshHz}Hz — for ${under.length === 1 ? 'that game' : 'those'} this is a ${b.resolution} panel, not a ${b.refreshHz}Hz one.`);
   if (capped.length) lines.push(`${capped.map((r) => r.game).join(' and ')} read${capped.length === 1 ? 's' : ''} ${capped[0].fps} because the engine is capped there — that is the game, not the build.`);
-  const mem = memoryCaveat(sourced);
+  const mem = memCaveat;
   lines.push('', `${DISCLAIMER} ${PRICE_CAVEAT}${mem ? ` ${mem}` : ''}`, '', '#pcbuild #buildapc #gamingpc #pcgaming #pchardware #buildoftheweek');
   return lines.join('\n');
 }

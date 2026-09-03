@@ -29,7 +29,8 @@
  */
 import { readFileSync, writeFileSync, copyFileSync, mkdtempSync } from 'node:fs';
 import { changeSinceMonth, describeChange, monthLabel } from '../../src/core/pricetrend.ts';
-import { MEMORY_CAVEAT } from './lib/captions.ts';
+import { memoryCaveat } from './lib/captions.ts';
+import { allowanceKeys } from '../../src/core/components.ts';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -59,7 +60,10 @@ console.log('\nREGENERATION — does the committed data still match the app?');
 }
 
 const builds = json('builds.json');
-const sourcedIds = new Set((JSON.parse(readFileSync('data/pricing/observed.json', 'utf8')).prices ?? []).map((o) => o.partId));
+const observedPrices = JSON.parse(readFileSync('data/pricing/observed.json', 'utf8')).prices ?? [];
+// The mixed-freshness sentence, computed exactly as the captions compute it.
+// Empty means the families agree and no caveat is required.
+const MEM_CAVEAT = memoryCaveat(allowanceKeys(JSON.parse(readFileSync('data/pricing/components-gbp.json', 'utf8'))), observedPrices);
 const bottleneck = json('bottleneck.json');
 const pillars = json('pillars.json');
 
@@ -168,9 +172,9 @@ const CLAIMS = [
   // While one memory type is sourced and the other is not, a DDR4 build shown
   // beside a DDR5 one is cheaper than reality by an unknown amount, and every
   // build post has to say so. The sentence is defined once, in captions.ts.
-  ...(sourcedIds.has('memory.DDR5.32') && !sourcedIds.has('memory.DDR4.32')
-    ? [{ file: 'instagram.md', quote: MEMORY_CAVEAT, check: () => read('instagram.md').split(MEMORY_CAVEAT).length - 1 >= 5 },
-       { file: 'blog-four-builds.md', quote: MEMORY_CAVEAT, check: () => true }]
+  ...(MEM_CAVEAT
+    ? [{ file: 'instagram.md', quote: MEM_CAVEAT, check: () => read('instagram.md').split(MEM_CAVEAT).length - 1 >= 5 },
+       { file: 'blog-four-builds.md', quote: MEM_CAVEAT, check: () => true }]
     : []),
   { file: 'blog-four-builds.md', quote: 'a median error of about 11% against its',
     check: (v) => v.medianApe != null && Math.round(v.medianApe) === 11,
