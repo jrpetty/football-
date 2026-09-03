@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { CURRENT_WINDOW_DAYS, aggregate, isObservationFile, parseObservations, weightedMedian, type Observation } from '../scripts/import-prices.ts';
+import { CURRENT_WINDOW_DAYS, aggregate, isObservationFile, parseObservations, priceableIds, weightedMedian, type Observation } from '../scripts/import-prices.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const load = (p: string) => JSON.parse(readFileSync(join(ROOT, p), 'utf8'));
@@ -71,9 +71,13 @@ describe('price observation import', () => {
   });
 
   it('imports the real snapshot file cleanly', () => {
-    const { rows, rejected } = parseObservations(readFileSync(join(ROOT, 'data/prices-observed/2026-08-31.csv'), 'utf8'), '2026-08-31.csv', validIds);
+    // The real file holds allowance rows beside part rows, so it is parsed
+    // against everything priceable — the hand-built set above is for the
+    // rejection tests and leaves allowances out on purpose.
+    const { rows, rejected } = parseObservations(readFileSync(join(ROOT, 'data/prices-observed/2026-08-31.csv'), 'utf8'), '2026-08-31.csv', priceableIds().ids);
     expect(rejected).toEqual([]);
     expect(rows[0]).toMatchObject({ partId: 'intel-core-i7-7700', condition: 'used', basis: 'sold', price: 40 });
+    expect(rows.some((r) => r.partId === 'memory.DDR5.32' && r.condition === 'new' && r.basis === 'retail')).toBe(true);
   });
 });
 
