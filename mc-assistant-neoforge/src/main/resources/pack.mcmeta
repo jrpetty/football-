@@ -1,0 +1,10 @@
+{
+  "pack": {
+    "description": "MC Assistant",
+    "pack_format": 48,
+    "supported_formats": [
+      15,
+      99
+    ]
+  }
+}
