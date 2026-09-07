@@ -388,7 +388,7 @@ test('turning per-team home advantage off leaves every club on the shared figure
 
 // --- The headline score, and its right to say "draw" -------------------------
 
-import { headlineScore, DRAW_THRESHOLD } from '../src/core/predict.ts'
+import { headlineScore, outcomeOfScore, DRAW_THRESHOLD } from '../src/core/predict.ts'
 
 const modal = {
   home: { home: 2, away: 1, prob: 0.09 },
@@ -429,4 +429,17 @@ test('a draw is not called against a clear favourite', () => {
   // Everton 36 / draw 27 / United 37 — genuinely tight, so a draw is right.
   const tight = headlineScore({ probs: { home: 0.36, draw: 0.27, away: 0.37 }, modalScore: modal })
   assert.deepEqual({ home: tight.home, away: tight.away }, { home: 1, away: 1 })
+})
+
+test('a printed score is graded on its own outcome, not the favourite', () => {
+  // Forest v Spurs: probabilities favoured Forest 42%, the board printed 1-1,
+  // the match finished 0-0. The board was right about the result and was
+  // marked wrong, because the mark was reading the favourite.
+  const printed = headlineScore({ probs: { home: 0.42, draw: 0.27, away: 0.31 }, modalScore: modal })
+  assert.equal(outcomeOfScore(printed), 'draw')
+  assert.equal(outcomeOfScore({ home: 0, away: 0 }), 'draw', 'the actual 0-0 is a draw too')
+  assert.equal(outcomeOfScore(printed) === outcomeOfScore({ home: 0, away: 0 }), true)
+
+  assert.equal(outcomeOfScore({ home: 3, away: 0 }), 'home')
+  assert.equal(outcomeOfScore({ home: 0, away: 2 }), 'away')
 })

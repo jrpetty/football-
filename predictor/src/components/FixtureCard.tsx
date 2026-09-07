@@ -4,6 +4,7 @@
 import { Link } from 'react-router-dom'
 import type { FixtureArtifact } from '../core/schema.ts'
 import { ProbBar, TeamChip, UpsetBadge, formatTimeOnly, headlineScore } from './primitives.tsx'
+import { outcomeOfScore } from '../core/predict.ts'
 import { clubName, club } from '../config/teams.ts'
 
 export function FixtureCard({ fixture }: { fixture: FixtureArtifact }) {
@@ -46,7 +47,10 @@ export function FixtureCard({ fixture }: { fixture: FixtureArtifact }) {
         </span>
         <span>
           {played
-            ? f.result?.correctOutcome
+            ? // Grades the score shown on this very card, not the side the
+              // probabilities favoured — those are different claims, and the
+              // card is only entitled to be judged on the one it printed.
+              f.result && outcomeOfScore(score) === f.result.outcome
               ? 'Called it'
               : 'Missed'
             : f.probs.home >= f.probs.draw && f.probs.home >= f.probs.away

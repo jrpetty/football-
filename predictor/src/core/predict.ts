@@ -181,6 +181,21 @@ export function headlineScore(f: {
   return home >= away ? f.modalScore.home : f.modalScore.away
 }
 
+/**
+ * The outcome implied by a printed scoreline.
+ *
+ * Needed because a forecast makes two separate claims and they can disagree:
+ * the probabilities favour a side, and the headline prints a score. In the
+ * round where six of ten matches finished level the printed scores took five
+ * outcomes and the favoured side took three. Grading one against the other is
+ * how a correctly called draw ends up marked wrong.
+ */
+export function outcomeOfScore(score: { home: number; away: number }): 'home' | 'draw' | 'away' {
+  if (score.home > score.away) return 'home'
+  if (score.home < score.away) return 'away'
+  return 'draw'
+}
+
 /** Build a fixture prediction, recording every term as it is applied. */
 export function predictFixture(
   input: FixtureInput,
