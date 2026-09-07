@@ -27,10 +27,14 @@
  *
  * Run: npm run marketing:verify   (tsx, so it can import the app's own modules)
  */
-import { readFileSync, writeFileSync, copyFileSync, mkdtempSync } from 'node:fs';
+import { readFileSync, writeFileSync, copyFileSync, mkdtempSync, readdirSync, existsSync } from 'node:fs';
 import { changeSinceMonth, describeChange, monthLabel } from '../../src/core/pricetrend.ts';
 import { memoryCaveat } from './lib/captions.ts';
 import { allowanceKeys } from '../../src/core/components.ts';
+import { convergence, LEGACY_RAM } from '../../src/core/pairing.ts';
+import { deriveGpuIndex } from '../../src/core/indices.ts';
+import { rigData } from './lib/rig.ts';
+import { loadPlanContext } from './plans.ts';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -66,6 +70,10 @@ const observedPrices = JSON.parse(readFileSync('data/pricing/observed.json', 'ut
 const MEM_CAVEAT = memoryCaveat(allowanceKeys(JSON.parse(readFileSync('data/pricing/components-gbp.json', 'utf8'))), observedPrices);
 const bottleneck = json('bottleneck.json');
 const pillars = json('pillars.json');
+/* The rig checks run the engine rather than reading a stored file, because the
+   claim they defend is about the model's behaviour, not about a snapshot. */
+const ctxData = loadPlanContext().data;
+const RIG_RAM = LEGACY_RAM;
 
 // --- 2. tables -------------------------------------------------------------
 console.log('\nTABLES — does every quoted fps figure exist in the data?');
@@ -369,6 +377,78 @@ console.log('\nPRICE MOVEMENT — do price-change captions match the observed se
   }
   const watched = observed.filter((p) => (p.series?.length ?? 0) > 1);
   if (!bad) pass(`${PRICE_CLAIMS.length} price claim(s) checked; ${watched.length} part(s) observed on more than one date could support one`);
+}
+
+
+// --- 7. the check-my-rig format ------------------------------------------------
+// This format rests on one empirical claim: on an old processor, graphics
+// cards that are far apart on paper are close together on screen. If the model
+// ever stops showing that, the format's premise is gone and the copy printed
+// on those cards — "a faster card changes almost nothing" — becomes a false
+// statement about real hardware.
+//
+// The claim needs two sets to be worth anything, and getting this wrong is
+// easy: checking only the fast cards proves nothing, because they are alike to
+// begin with (1.11x apart on raster index — this check failed on exactly that
+// when it was first written). So:
+//
+//   ABOVE  four cards that all clear the processor's ceiling. These must
+//          converge — that is the finding.
+//   ALL    the same four plus a 2015 card that does NOT clear it, spanning
+//          1.5x. This set must NOT fully converge, which is what says the
+//          model is reporting a processor ceiling rather than flattening
+//          everything handed to it.
+console.log('\nCHECK MY RIG — does the format\'s premise still hold?');
+{
+  const OLD_CPU = 'intel-core-i7-7700';
+  const ABOVE = ['nvidia-geforce-rtx-2060-super', 'nvidia-titan-x-pascal', 'nvidia-titan-xp', 'nvidia-geforce-gtx-1080-ti'];
+  const SLOW = 'nvidia-geforce-gtx-titan-x';
+  const ALL = [...ABOVE, SLOW];
+  const idx = (id) => deriveGpuIndex(ctxData.gpus.get(id), ctxData.anchorGpu, RIG_RAM).index.raster;
+
+  const spread = Math.max(...ALL.map(idx)) / Math.min(...ALL.map(idx));
+  if (spread < 1.4) fail('the convergence claim compares cards that are already alike', `raster spread is only ${spread.toFixed(2)}x`);
+  else pass(`the cards span ${spread.toFixed(2)}x on raster index`);
+
+  const conv = convergence(OLD_CPU, ABOVE, ctxData, { resolution: '1080p' });
+  if (conv.convergedCount < conv.comparableCount / 2) {
+    fail('the format claims cards converge on an old processor; they no longer do',
+      `${conv.convergedCount} of ${conv.comparableCount} games within ${conv.toleranceFps}fps`);
+  } else pass(`${conv.convergedCount} of ${conv.comparableCount} games within ${conv.toleranceFps}fps on a ${ctxData.cpus.get(OLD_CPU).brand}`);
+
+  // The control. Add a card the processor is NOT holding back and the
+  // agreement has to break, or the convergence is an artefact.
+  const withSlow = convergence(OLD_CPU, ALL, ctxData, { resolution: '1080p' });
+  if (withSlow.convergedCount >= conv.convergedCount) {
+    fail('adding a card below the processor ceiling did not break the agreement',
+      `${withSlow.convergedCount} of ${withSlow.comparableCount} still converge with the ${ctxData.gpus.get(SLOW).brand} in the set`);
+  } else pass(`adding the ${ctxData.gpus.get(SLOW).brand} drops it to ${withSlow.convergedCount} of ${withSlow.comparableCount} — the model is not flattening everything`);
+
+  // The second control: raise the resolution and the cards must separate,
+  // because the processor stops being the thing in the way.
+  const at1440 = convergence(OLD_CPU, ABOVE, ctxData, { resolution: '1440p' });
+  if (at1440.convergedCount >= conv.convergedCount) {
+    fail('cards converge at 1440p as much as at 1080p', 'the convergence is not being caused by the processor');
+  } else pass(`at 1440p only ${at1440.convergedCount} of ${at1440.comparableCount} converge — the processor is the cause`);
+
+  // The verdict must not be a rubber stamp, or every card ever generated says
+  // "upgrade your processor" and the format is an advert rather than a check.
+  const modern = rigData('amd-ryzen-7-7800x3d', 'nvidia-geforce-rtx-4070', ctxData,
+    { resolution: '1440p', ram: { totalGB: 32, channels: 2, speedMTs: 6000, type: 'DDR5' } });
+  if (modern.spendOn === 'cpu') fail('a current pairing reads as processor-limited', 'the verdict would tell everyone to buy a CPU');
+  else pass(`a current pairing reads "${modern.spendOn}", so the verdict discriminates`);
+
+  // A game that will not launch has no frame rate. Charting it as a zero would
+  // read as "very slow", which is a different and false claim.
+  let bad = 0;
+  for (const dir of readdirSync('marketing/calendar')) {
+    const f = `marketing/calendar/${dir}/data.json`;
+    if (!existsSync(f)) continue;
+    const d = JSON.parse(readFileSync(f, 'utf8'));
+    if (!d.blocked) continue;
+    for (const b of d.blocked) if (d.rows.some((r) => r.game === b.game)) { fail(`${dir}: "${b.game}" is both blocked and charted`, b.reason); bad++; }
+  }
+  if (!bad) pass('no blocked game appears as a frame rate on any rig card');
 }
 
 console.log(`\n${failures === 0 ? 'PASS' : `${failures} FAILURE${failures > 1 ? 'S' : ''}`} — ${CLAIMS.length} claims, ${builds.length} builds, ${bottleneck.length} ladders`);

@@ -143,6 +143,9 @@ export const pct = (n) => `${n > 0 ? '+' : ''}${n}%`;
 export const brand = (row) => `<div class="brandrow">${MARK}<span class="wordmark">RIGCHECK</span><span class="kicker">${esc(row)}</span></div>`;
 export const foot = (html) => `<div class="foot"><div class="note"><b>Modelled, not measured.</b> ${html}</div></div>`;
 export const shortCpu = (c) => c.replace(/^Ryzen (\d) /, 'R$1 ');
+/* Family off, model kept: "GeForce RTX 4070" at title size ran to four lines,
+   and the family name is already on the subject strip. */
+export const model = (s) => String(s).replace(/^(GeForce|Radeon|Arc|Core|Ryzen)\s+/, '');
 export const shows = (t) => `<div class="shows"><span>What this shows</span><div>${esc(t)}</div></div>`;
 export const howto = (t) => `<div class="howto"><span>How to read it</span><div>${esc(t)}</div></div>`;
 
@@ -548,6 +551,10 @@ body.story .hero .l{font-size:30px}
 body.story .legend div{font-size:17px}
 body.story .panels.stack{flex-direction:column;gap:26px}
 body.story .strip div{font-size:17px}
+body.story .why{margin-top:44px;gap:22px}
+body.story .why .t{font-size:22px}
+body.story .why .b{font-size:18px;line-height:1.5}
+body.story .card-note{font-size:23px}
 `;
 
 /* ---- versus: any two parts of one kind --------------------------------------- */
@@ -580,14 +587,14 @@ export function versusCard(v, { format = 'post' } = {}) {
   const subject = `${v.a.name} against ${v.b.name} in ${rows.length} games at ${v.resolution} on high with no upscaling, both paired with the same ${v.partnerName}`;
   // "GeForce RTX 4070 vs Radeon RX 9070" ran to four lines at title size. The
   // vendor's family name is on the subject strip; the title needs the model.
-  const model = (p) => p.short.replace(/^(GeForce|Radeon|Arc|Core|Ryzen) /, '');
-  const take = lead === 0 ? 'level on average' : `${esc(model(ahead))} ahead by ${Math.abs(lead)}%`;
+  const part = (p) => model(p.short);
+  const take = lead === 0 ? 'level on average' : `${esc(part(ahead))} ahead by ${Math.abs(lead)}%`;
   return { subject, html: `${brand(`${v.kind} versus · ${v.resolution} · high`)}
-  <h1 class="tight">${esc(model(v.a))} vs ${esc(model(v.b))}<br><em>${take}</em></h1>
+  <h1 class="tight">${esc(part(v.a))} vs ${esc(part(v.b))}<br><em>${take}</em></h1>
   ${shows(subject)}
   <div class="chart">${pairedVersus(v, { w: 960, h: format === 'story' ? 640 : 520 })}</div>
   <div class="legend"><div><i style="background:${P.cat[0]}"></i>${esc(v.a.short)}</div><div><i style="background:${P.cat[1]}"></i>${esc(v.b.short)}</div>
-    <div style="margin-left:auto;color:${P.faint}">wins: ${esc(model(v.a))} ${v.summary.wins.a} · level ${v.summary.wins.tie} · ${esc(model(v.b))} ${v.summary.wins.b}</div></div>
+    <div style="margin-left:auto;color:${P.faint}">wins: ${esc(part(v.a))} ${v.summary.wins.a} · level ${v.summary.wins.tie} · ${esc(part(v.b))} ${v.summary.wins.b}</div></div>
   ${howto(`Two columns per game: ${esc(v.a.short)} in blue, then ${esc(v.b.short)} in orange. The figure under each pair is the second part against the first. "On average" is the geometric mean across the games shown.`)}
   ${foot(`Same ${esc(v.partnerName)}, same memory, same settings on both sides, so the gap is the two parts and nothing else. Change the games and the average moves; ask what you play before you ask which is faster.`)}` };
 }
@@ -626,6 +633,55 @@ export function pollCard(req, { asOf } = {}) {
   <div class="chart">${chart}</div>
   ${n ? howto('Bars are votes. Reply with a game and it goes on the list; the one at the top gets added first. Adding a game is data entry — its requirements, memory demand and reference figures — not new code.') : ''}
   ${foot(`Every game in the catalogue carries the same record: what it needs to launch, how much memory it wants at each resolution, and reference frame rates to anchor the model. A requested game ships when that record is complete and audited, not before.`)}` };
+}
+
+
+/* ---- check my rig: one real machine, and what its weak half costs -------- */
+
+/**
+ * The dumbbell, but the story is a loss rather than a gain.
+ *
+ * silentTaxCard's dumbbell reads left-to-right as an improvement you can buy
+ * for the price of a stick of RAM. Here the right-hand dot is a platform
+ * change costing several hundred pounds, so the bar is framed as what is being
+ * given up, not as a purchase — same geometry, opposite argument, and the copy
+ * has to carry that or the card reads as an advert for an upgrade nobody asked
+ * about.
+ */
+export function rigCard(r, { format = 'post' } = {}) {
+  const rows = r.rows.slice(0, 6);
+  const worst = rows[0];
+  const least = rows[rows.length - 1];
+  const blocked = r.blocked ?? [];
+  const subject = `${r.cpuFull} with a ${r.gpuFull} in ${r.rows.length} games at ${r.resolution} on high, `
+    + `against the same graphics card on a current platform — how much of the card the processor is not letting through`;
+  const title = r.spendOn === 'cpu'
+    ? `Your ${esc(model(r.cpu))} is<br><em>capping your ${esc(model(r.gpu))}</em>`
+    : r.spendOn === 'gpu'
+      ? `Your ${esc(model(r.gpu))} is<br><em>the part to replace</em>`
+      : `${esc(model(r.cpu))} + ${esc(model(r.gpu))}<br><em>fairly matched</em>`;
+  /* Three derived columns rather than one long paragraph. Without them the
+     card ran ~300px short of the footer and the hole read as a rendering
+     fault; with them the space carries the only thing a reader actually wants
+     next, which is what to do about it. */
+  const why = worst ? `<div class="why">
+    <div><div class="t">Worst: ${esc(worst.game)}</div><div class="b">${worst.before}fps now, ${worst.after}fps with the same card on a current platform. ${pct(worst.gainPct)} of that card is not reaching the screen.</div></div>
+    <div><div class="t">Least: ${esc(least.game)}</div><div class="b">${least.before} to ${least.after}fps, ${pct(least.gainPct)}. Not every game cares — which is why "is it bottlenecked" has no answer without naming one.</div></div>
+    <div><div class="t">${r.spendOn === 'cpu' ? 'A faster card' : 'A faster chip'}</div><div class="b">${r.spendOn === 'cpu'
+      ? `Changes almost nothing here. ${r.cpuBound} of ${r.ran} games are already waiting on the ${esc(model(r.cpu))}, not the ${esc(model(r.gpu))}.`
+      : `Would not help much: the ${esc(model(r.gpu))} is the limit in most of these, and that is the cheap half to replace.`}</div></div>
+  </div>` : '';
+  return { subject, html: `${brand(`check my rig · ${r.resolution} · high`)}
+  <h1 class="tight">${title}</h1>
+  ${shows(subject)}
+  <div class="chart">${dumbbell(rows.map((x) => ({ game: x.game, before: x.before, after: x.after, gainPct: x.gainPct })), { w: 960, h: format === 'story' ? 860 : 440 })}</div>
+  <div class="legend"><div><i style="background:${P.seq[1]};border-radius:50%"></i>${esc(r.cpu)} — what you have</div>
+    <div><i style="background:${P.seq[4]};border-radius:50%"></i>same card, ${esc(r.ceiling)} platform</div>
+    <div style="margin-left:auto;color:${P.faint}">${r.cpuBound} of ${r.ran} games processor-limited</div></div>
+  ${blocked.length ? `<div class="card-note" style="margin-top:22px;margin-bottom:0"><b style="color:${P.vram}">Will not launch:</b> ${esc(blocked.map((b) => b.game).join(', '))} — the ${esc(model(r.gpu))} has no mesh shader support. Not slow: it does not start.</div>` : ''}
+  ${why}
+  ${howto('Left dot: this machine as it stands. Right dot: the same graphics card, nothing else kept. Every row starts on the same line so the bars compare; the real frame rates sit beside the dots.')}
+  ${foot(`The right-hand dot is a new board, chip and memory — ${esc(r.ram.type)} does not carry over — so read it as what the card could do, not as a shopping list. Nothing here was measured on your machine; it is the model's estimate for those parts.`)}` };
 }
 
 /* ---- the standard set ----------------------------------------------------------- */

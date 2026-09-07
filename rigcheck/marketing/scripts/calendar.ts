@@ -13,10 +13,11 @@ import { execFileSync } from 'node:child_process';
 import { expandRotation, parsePosts, rotating, type Rotation } from './lib/rotation.ts';
 import { loadPlanContext, planTier } from './plans.ts';
 import { versusData } from './lib/versus.ts';
-import { buildCaption, memoryCaveat, pollCaption, versusCaption, DISCLAIMER } from './lib/captions.ts';
+import { rigData } from './lib/rig.ts';
+import { buildCaption, memoryCaveat, pollCaption, rigCaption, versusCaption, DISCLAIMER } from './lib/captions.ts';
 import { allowanceKeys } from '../../src/core/components.ts';
-import { buildCard, pollCard, renderCards, unesc, versusCard } from './cardlib.mjs';
-import type { Resolution } from '../../src/core/types.ts';
+import { buildCard, pollCard, renderCards, rigCard, unesc, versusCard } from './cardlib.mjs';
+import type { RamConfig, Resolution } from '../../src/core/types.ts';
 
 const args = process.argv.slice(2);
 const only = args.includes('--only') ? args[args.indexOf('--only') + 1] : undefined;
@@ -88,6 +89,23 @@ for (const d of days) {
     meta.title = `versus — ${v.a.short} vs ${v.b.short}`; meta.images.push('01.png'); meta.stories.push('story-01.png'); meta.subjects.push(unesc(post.subject));
     writeFileSync(`${dir}/data.json`, JSON.stringify(v, null, 2));
     caption = versusCaption(v);
+  } else if (d.kind === 'rig') {
+    /* A real machine somebody owns, run through the same pairing analysis the
+       `npm run analyse` command uses. The rotation seeds it with common older
+       pairings; in practice the week's entry gets replaced by whatever spec
+       turned up in the comments, which is the whole point of the format. */
+    const spec = rotating(d.slot.rigs, d.index)!;
+    const ramType = (spec.ramType ?? 'DDR4') as RamConfig['type'];
+    const ram: RamConfig = { totalGB: spec.ram ?? 16, channels: 2, speedMTs: ramType === 'DDR5' ? 6000 : 3200, type: ramType };
+    let r;
+    try { r = rigData(spec.cpu, spec.gpu, ctx.data, { resolution: (d.slot.resolution as Resolution) ?? '1080p', ram }); }
+    catch (e) { problems.push(`${d.date}: ${(e as Error).message}`); continue; }
+    const post = rigCard(r), story = rigCard(r, { format: 'story' });
+    await renderCards([{ name: '01', ...post }], { dir, format: 'post' });
+    await renderCards([{ name: 'story-01', ...story }], { dir, format: 'story' });
+    meta.title = `check my rig — ${r.cpu} + ${r.gpu}`; meta.images.push('01.png'); meta.stories.push('story-01.png'); meta.subjects.push(unesc(post.subject));
+    writeFileSync(`${dir}/data.json`, JSON.stringify(r, null, 2));
+    caption = rigCaption(r);
   } else if (d.kind === 'poll') {
     const card = pollCard(requests, { asOf: d.date });
     await renderCards([{ name: '01', ...card }], { dir, format: 'post' });
@@ -122,6 +140,16 @@ for (const d of days) {
     }
     for (const m of cap.matchAll(/^· (.+?) — (\d+) vs (\d+)fps/gm)) {
       if (!rows.some((r) => r.game === m[1] && r.a === Number(m[2]) && r.b === Number(m[3]))) problems.push(`${d.date}: "${m[0]}" is not in data.json`);
+    }
+    // A rig caption reads "· Game — 42 → 88fps (+110%)". Both ends and the
+    // percentage are checked, because the percentage is the number that gets
+    // quoted back and it is the easiest one to leave stale.
+    for (const m of cap.matchAll(/^· (.+?) — (\d+) → (\d+)fps \(([-+]\d+)%\)$/gm)) {
+      const row = (rows as unknown as { game: string; before?: number; after?: number; gainPct?: number }[])
+        .find((r) => r.game === m[1]);
+      if (!row || row.before !== Number(m[2]) || row.after !== Number(m[3]) || row.gainPct !== Number(m[4])) {
+        problems.push(`${d.date}: "${m[0]}" is not in data.json`);
+      }
     }
   }
 }

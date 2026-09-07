@@ -3,8 +3,8 @@
  * calendar, kept free of rendering so they can be tested.
  */
 
-export type Kind = 'post' | 'build' | 'versus' | 'poll' | 'story';
-export interface RotationSlot { kind: Kind; rotate?: string[]; budgets?: number[]; resolution?: string | string[]; refreshHz?: number[]; pairs?: string[][] }
+export type Kind = 'post' | 'build' | 'versus' | 'poll' | 'story' | 'rig';
+export interface RotationSlot { kind: Kind; rotate?: string[]; budgets?: number[]; resolution?: string | string[]; refreshHz?: number[]; pairs?: string[][]; rigs?: { cpu: string; gpu: string; ram?: number; ramType?: 'DDR4' | 'DDR5' }[] }
 export interface Rotation { start: string; weeks: number; week: Record<string, RotationSlot> }
 export interface Day { date: string; weekday: string; week: number; kind: Kind; index: number; slot: RotationSlot }
 

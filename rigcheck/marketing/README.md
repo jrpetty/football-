@@ -103,15 +103,40 @@ it with any data:
 ```
 npm run marketing:build -- --budget 900 --resolution 1440p   # one build, both formats, caption
 npm run marketing:versus -- nvidia-geforce-rtx-4070 amd-radeon-rx-9070
+npm run marketing:rig -- --cpu "i7 7700" --gpu "1080 ti"     # someone's actual machine, from a comment
 npm run game -- request "Helldivers 2" --votes 3             # the queue the poll card reads
 npm run marketing:calendar                                   # four weeks into calendar/<date>/
 npm run marketing:next                                       # today's folder → drop/, caption printed
 ```
 
+**Check my rig — the format that never runs out.** Every other format posts a
+subject we chose. This one posts a machine somebody else owns: they comment a
+processor and a graphics card, `marketing:rig` turns it into a card and a
+caption, and the next spec in the comments is the next post. It is the same
+pairing analysis `npm run analyse` prints, so the post and the tool cannot
+disagree.
+
+What it answers is the question the comments are already asking in worse
+words: *is my CPU bottlenecking my GPU?* The card shows, per game, what the
+same graphics card would do with a current platform underneath it — and says
+so as a platform, never as a chip swap, because DDR4 does not go into an AM5
+board and pricing it as one would be a lie by omission.
+
+Two things keep it honest, both checked by `marketing:verify`:
+
+- **The verdict has to discriminate.** A current pairing must not read as
+  processor-limited. If it did, every card generated would say "upgrade your
+  CPU" and the format would be an advert rather than a check.
+- **The premise has to hold.** Four cards spanning 1.1x converge on a 2017
+  quad-core; add a 2015 card the processor is *not* holding back and the
+  agreement breaks; raise the resolution and it breaks again. Both controls
+  run against the engine on every verify, because without them "the cards are
+  all the same" would just be the model flattening whatever it was given.
+
 **The calendar.** `rotation.json` is a week template: Monday a build of the
-week at a rotating budget, Tuesday and Thursday and Friday existing posts in
-rotation, Wednesday a versus pair, Saturday the which-game-next poll, Sunday a
-story. `marketing:calendar` expands it into dated folders, each with the
+week at a rotating budget, Tuesday and Friday existing posts in rotation,
+Wednesday a versus pair, Thursday a check-my-rig, Saturday the
+which-game-next poll, Sunday a story. `marketing:calendar` expands it into dated folders, each with the
 image(s), the story image(s), `caption.txt` and `meta.json`. Existing posts are
 copied from the rendered set; builds, versus and the poll are generated against
 the data as it is that day. Every folder is checked — images present, the

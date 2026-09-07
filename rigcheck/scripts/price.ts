@@ -22,6 +22,7 @@
 import { appendFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { snapshotWeek } from '../src/core/pricetrend.ts';
+import { resolveOne } from '../src/core/resolve.ts';
 import { main as importPrices, priceableIds } from './import-prices.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -62,42 +63,24 @@ const { ids, labels, kinds } = priceableIds();
 /**
  * Resolve a query against everything priceable: processors, graphics cards,
  * cases and monitors by name, allowances by their label ("32GB DDR5 kit",
- * "650W power supply", "case, mesh-front airflow case"). Every token must
- * match; a query that is a whole name wins outright; otherwise a clear lead
- * on score is required, because a price filed against the wrong thing is
- * worse than no price.
+ * "650W power supply", "case, mesh-front airflow case"). The matching itself
+ * lives in src/core/resolve.ts so this command and `npm run analyse` cannot
+ * drift apart about what a given name means.
  */
-const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 let id = flags.id;
 let label = '';
 if (id) {
   if (!ids.has(id)) usage(`"${id}" is not a catalogue id or an allowance key — see data/prices-observed/README.md`);
   label = labels.get(id)!;
 } else {
-  const q = norm(query);
-  const tokens = q.split(' ').filter(Boolean);
-  const hits = [...labels.entries()].map(([cid, lab]) => {
-    const h = norm(`${lab} ${cid.replace(/[.-]/g, ' ')}`);
-    let score = 0;
-    for (const t of tokens) { if (!h.includes(t)) return null; score += new RegExp(`\\b${t}\\b`).test(h) ? 20 : 8; }
-    // Words in the label the query did not mention count against it: "fractal
-    // north" is the North, not the North XL, and "rtx 3070" is not the 3070 Ti.
-    const unmatched = norm(lab).split(' ').filter((w) => w && !tokens.some((t) => w.includes(t))).length;
-    return { id: cid, label: lab, score: score + Math.max(0, 30 - h.length / 2) - 12 * unmatched };
-  }).filter((x): x is { id: string; label: string; score: number } => !!x).sort((a, b) => b.score - a.score);
-  if (!hits.length) usage(`nothing priceable matches "${query}"`);
-  const exact = hits.filter((h) => { const l = norm(h.label); return l === q || l.endsWith(` ${q}`); });
-  if (exact.length === 1) { id = exact[0].id; label = exact[0].label; }
-  else {
-    const pool = exact.length > 1 ? exact : hits;
-    const [a, b] = pool;
-    if (b && a.score - b.score < 10) {
-      console.error(`\n"${query}" is ambiguous. Say which, with --id:\n`);
-      for (const h of pool.slice(0, 8)) console.error(`  ${h.id.padEnd(36)} ${h.label}  [${kinds.get(h.id)}]`);
-      process.exit(1);
-    }
-    id = a.id; label = a.label;
+  const r = resolveOne(query, labels);
+  if (!r.ok && r.reason === 'none') usage(`nothing priceable matches "${query}"`);
+  if (!r.ok) {
+    console.error(`\n"${query}" is ambiguous. Say which, with --id:\n`);
+    for (const h of r.candidates) console.error(`  ${h.id.padEnd(36)} ${h.label}  [${kinds.get(h.id)}]`);
+    process.exit(1);
   }
+  id = r.id; label = r.label;
 }
 
 const note = (flags.note ?? '').replace(/"/g, '""');

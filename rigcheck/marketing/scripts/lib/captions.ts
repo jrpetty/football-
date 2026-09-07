@@ -4,6 +4,8 @@
  */
 import type { PlannedBuild } from '../plans.ts';
 import type { VersusData } from './versus.ts';
+import type { RigData } from './rig.ts';
+import { rigVerdict } from './rig.ts';
 import { driftCaveat, familyDrift } from '../../../src/core/priceaudit.ts';
 
 const fmt = (n: number) => n.toLocaleString('en-GB');
@@ -79,5 +81,36 @@ export function pollCaption(open: { title: string; votes: number }[], asOf: stri
     ? [`Which game should I add to the catalogue next? Votes so far, as of ${asOf}:`, '', ...open.map((r) => `· ${r.title} — ${r.votes} vote${r.votes === 1 ? '' : 's'}`), '', 'Reply with a game and it goes on the list. The top of the list gets added first.']
     : ['Which game should I add to the catalogue next? Reply with one and it goes on the list.', '', 'The top of the list gets added first.'];
   lines.push('', 'Adding a game is data entry, not code: what it needs to launch, how much memory it wants at each resolution, and reference frame rates to anchor the model. It ships when that record is complete and audited.', '', '#pcgaming #buildapc #whichgame #pchardware');
+  return lines.join('\n');
+}
+
+/**
+ * The caption for a check-my-rig post.
+ *
+ * Leads with the verdict rather than the frame rates, because the verdict is
+ * what was asked. Ends with the invitation, because the format only works if
+ * the next spec arrives in the comments.
+ */
+export function rigCaption(r: RigData): string {
+  const worst = r.rows[0];
+  const lines = [
+    `${r.cpuFull} + ${r.gpuFull}, ${r.resolution}, high, no upscaling.`,
+    '',
+    rigVerdict(r),
+    '',
+    `Same graphics card, current platform underneath it:`,
+    ...r.rows.map((x) => `· ${x.game} — ${x.before} → ${x.after}fps (${pct(x.gainPct)})`),
+  ];
+  if (r.blocked.length) {
+    lines.push('', `${r.blocked.map((b) => b.game).join(', ')} ${r.blocked.length === 1 ? 'does' : 'do'} not launch on the ${r.gpu} at all — no mesh shader support. That is not a frame rate problem, it is a compatibility one.`);
+  }
+  if (worst) {
+    lines.push('', `Worst case is ${worst.game}: ${pct(worst.gainPct)} sitting behind the ${r.cpu}.`);
+  }
+  // The right-hand figure is a platform, and saying "CPU upgrade" would both
+  // understate the cost and overstate what a bare chip swap buys.
+  lines.push('', `The comparison holds the graphics card still and changes everything else — board, processor and memory — because ${r.ram.type} does not go into a current board. Read it as what the card could do, not as a shopping list.`);
+  if (r.power) lines.push('', `Draw ${r.power.totalW}W, ${r.power.psuW}W supply recommended.`);
+  lines.push('', DISCLAIMER, '', `Comment your CPU and GPU and I will run yours.`, '', '#pcbuild #buildapc #gamingpc #bottleneck #pcgaming #pchardware #checkmyrig');
   return lines.join('\n');
 }

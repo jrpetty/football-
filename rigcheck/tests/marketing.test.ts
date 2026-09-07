@@ -21,7 +21,7 @@ describe('rotation', () => {
     expect(days[0].date).toBe(rot.start);
     expect(days[0].weekday).toBe('mon');
     expect(days.filter((d) => d.weekday === 'mon').map((d) => d.index)).toEqual([0, 1, 2, 3]);
-    expect(new Set(days.map((d) => d.kind))).toEqual(new Set(['build', 'post', 'versus', 'poll', 'story']));
+    expect(new Set(days.map((d) => d.kind))).toEqual(new Set(['build', 'post', 'versus', 'poll', 'story', 'rig']));
   });
   it('rotates a list by week and wraps', () => {
     expect(rotating(['a', 'b', 'c'], 0)).toBe('a');

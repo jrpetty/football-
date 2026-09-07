@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "RIGCHECK \u2014 build comparison & performance modelling platform",
+  "description": "RIGCHECK — build comparison & performance modelling platform",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -32,7 +32,9 @@
     "marketing:versus": "tsx marketing/scripts/versus-cli.ts",
     "marketing:build": "tsx marketing/scripts/build-cli.ts",
     "game": "tsx scripts/game.ts",
-    "prices:audit": "tsx scripts/price-audit.ts"
+    "prices:audit": "tsx scripts/price-audit.ts",
+    "analyse": "tsx scripts/analyse.ts",
+    "marketing:rig": "tsx marketing/scripts/rig-cli.ts"
   },
   "dependencies": {
     "react": "^18.3.1",

@@ -237,6 +237,37 @@ The two lanes that make the model better are deliberately frictionless:
 Then `npm run gate`. Once measured fixtures outnumber recalled ones the gate
 promotes itself from advisory to enforcing, and `npm run calibrate` will write.
 
+## Analysing a real machine — `npm run analyse`
+
+```
+npm run analyse -- --cpu "i7 7700" --gpu "2060 super" --gpu "1080 ti"
+npm run analyse -- --cpu "ryzen 5 3600" --gpu "rx 6600" --resolution 1440p
+npm run analyse -- --cpu "i7 7700" --gpu "titan x"      # names three cards, runs all three
+```
+
+Answers the question people actually have — *is this card worth putting in my
+machine* — instead of the one a spec sheet answers. Per game: the frame rate,
+which part is setting it, and what the same card would do on a current
+platform. Then the games that will not launch at all and the gate that blocks
+them, where several cards stop being distinguishable from each other, and power
+and PSU.
+
+Three things it is careful about, because each is a way to be confidently
+wrong:
+
+- **A blocked game is not a slow game.** A card without mesh shaders does not
+  render Alan Wake 2 badly, it does not start it. Those rows carry the gate
+  that fired and are kept out of every average.
+- **The comparison is a platform, not a chip.** DDR4 does not go into an AM5
+  board, so "what a current processor would give you" necessarily includes its
+  memory and board. Calling that a CPU upgrade would understate the cost.
+- **A name that matches several parts runs all of them.** "Titan X" is three
+  cards a third apart in speed; picking one silently is how you analyse the
+  wrong hardware.
+
+Add `--json` for the same thing machine-readable. The marketing side calls the
+same module (`src/core/pairing.ts`), so a post and this table cannot disagree.
+
 ## Screens
 
 **Start** (what are you trying to do) → **Build a PC** (guided) → **Build Analyser** → **Comparison Matrix** (n-way) →

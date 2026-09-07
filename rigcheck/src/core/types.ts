@@ -389,6 +389,9 @@ export interface ModelTerm {
   explain: string;
 }
 
+/** Which part of the machine is setting the frame rate. */
+export type Limiter = 'cpu' | 'gpu' | 'balanced' | 'vram' | 'engine-cap' | 'thermal';
+
 export interface FpsEstimate {
   /**
    * 'ok' — a real estimate. 'WILL_NOT_RUN' — a hard capability gate fired; the
@@ -424,7 +427,7 @@ export interface FpsEstimate {
   gpuBoundFps?: number;
   /** Which side dominates, as a 0..1 ratio. 1 = fully GPU bound. */
   gpuBoundRatio?: number;
-  limiter?: 'cpu' | 'gpu' | 'balanced' | 'vram' | 'engine-cap' | 'thermal';
+  limiter?: Limiter;
   terms: ModelTerm[];
 }
 
