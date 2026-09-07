@@ -11,6 +11,7 @@ import { ScoreMatrix } from '../components/ScoreMatrix.tsx'
 import { NarrativePanel } from '../components/NarrativePanel.tsx'
 import { SquadEditor } from '../components/SquadEditor.tsx'
 import { ProbBar, Stat, TeamChip, formatKickoff, headlineScore } from '../components/primitives.tsx'
+import { outcomeOfScore } from '../core/predict.ts'
 import { clubColor, clubName, club } from '../config/teams.ts'
 import type { Evidence } from '../core/evidence.ts'
 import type { FixtureArtifact } from '../core/schema.ts'
@@ -283,10 +284,15 @@ export default function FixtureDetail() {
 
         {played && f.result && (
           <div className="note" style={{ marginTop: 16 }}>
-            <span className="note-icon">{f.result.correctOutcome ? '✓' : '×'}</span>
+            <span className="note-icon">{outcomeOfScore(score) === f.result.outcome ? '✓' : '×'}</span>
             <span>
-              The model {f.result.correctOutcome ? 'called this correctly' : 'got this wrong'}
-              {f.result.correctScore ? ', including the exact scoreline' : ''}. RPS {f.result.rps.toFixed(3)} —
+              The {score.home}–{score.away} shown here{' '}
+              {outcomeOfScore(score) === f.result.outcome ? 'had the right result' : 'had the wrong result'}
+              {f.result.correctScore ? ', and was the exact scoreline' : ''}.{' '}
+              {/* The two claims can disagree, so both are stated rather than one
+                  standing in for the other. */}
+              The side the probabilities favoured{' '}
+              {f.result.correctOutcome ? 'won' : 'did not win'}. RPS {f.result.rps.toFixed(3)} —
               lower is better, and a coin-flip forecast scores about 0.33.
             </span>
           </div>
