@@ -58,9 +58,10 @@ public final class VillageCommands {
         }
         Villages.Village v = Villages.nearest(player.serverLevel(), player.blockPosition(),
             Villages.VILLAGE_RANGE * 2);
-        int total = v == null ? stood : Villages.headcount(v.id());
+        final int raised = stood;
+        final int total = v == null ? stood : Villages.headcount(v.id());
         ctx.getSource().sendSuccess(() -> Component.literal(
-            "Stood " + stood + " up. This village is now " + total + " strong."), false);
+            "Stood " + raised + " up. This village is now " + total + " strong."), false);
         return stood;
     }
 
