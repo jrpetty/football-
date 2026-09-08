@@ -299,16 +299,28 @@ public final class BlockLore {
         // Nothing can be done with a block nothing can break.
         if (block.defaultDestroyTime() < 0.0F) return Use.BEDROCK;
 
-        // Light first: a lit block's job is lighting, whatever else it is made
-        // of. This is read from the block's own emission, so a lamp added by
+        // A block with a JOB keeps its job, whatever it happens to give off:
+        // an enchanting table glows, and is a workstation; fire glows, and is
+        // a hazard. Only once those are spoken for does "it gives off light"
+        // get to decide.
+        if (block instanceof LiquidBlock) return Use.LIQUID;
+        if (isWorkstation(path)) return Use.WORKSTATION;
+        if (isUtility(path)) return Use.UTILITY;
+        if (isHazard(path)) return Use.HAZARD;
+        if (block instanceof ChestBlock || path.endsWith("shulker_box")
+            || path.equals("barrel") || path.equals("chest") || path.equals("trapped_chest")
+            || path.equals("ender_chest")) {
+            return Use.STORAGE;
+        }
+
+        // Light: read from the block's own emission, so a lamp added by
         // another mod is a light here without anybody being told.
-        if (state.getLightEmission() >= 7 && !(block instanceof LiquidBlock)
+        if (state.getLightEmission() >= 7
             && !path.startsWith("redstone") && !path.contains("ore")
             && !path.equals("magma_block")) {
             return Use.LIGHT;
         }
 
-        if (block instanceof LiquidBlock) return Use.LIQUID;
         if (block instanceof LeavesBlock || state.is(BlockTags.LEAVES)) return Use.FOLIAGE;
         if (block instanceof SaplingBlock || state.is(BlockTags.SAPLINGS)) return Use.SAPLING;
         if (block instanceof CropBlock || state.is(BlockTags.CROPS)) return Use.CROP;
@@ -327,20 +339,12 @@ public final class BlockLore {
             return Use.DOORWAY;
         }
         if (state.is(BlockTags.FENCES) || state.is(BlockTags.WALLS)) return Use.FENCE;
-        if (block instanceof ChestBlock || path.endsWith("shulker_box")
-            || path.equals("barrel") || path.equals("chest") || path.equals("trapped_chest")
-            || path.equals("ender_chest")) {
-            return Use.STORAGE;
-        }
-        if (isWorkstation(path)) return Use.WORKSTATION;
         // Grown, not quarried: a melon or a pumpkin is a harvest that happens
         // to be a full cube, and both were reading as building material.
         if (path.equals("melon") || path.equals("pumpkin")
             || path.equals("attached_melon_stem") || path.equals("attached_pumpkin_stem")) {
             return Use.CROP;
         }
-        if (isUtility(path)) return Use.UTILITY;
-        if (isHazard(path)) return Use.HAZARD;
         if (state.is(BlockTags.RAILS) || path.contains("rail")) return Use.TRANSPORT;
         if (isRedstone(path)) return Use.REDSTONE;
         if (path.endsWith("_ore") || path.equals("ancient_debris")

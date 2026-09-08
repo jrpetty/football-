@@ -227,8 +227,10 @@ public final class Villages {
             }
         }
         // Count the newcomer itself, so the very first folk in an empty village
-        // works out its share against a village of one and takes the farm.
-        int total = Math.max(1, folk.size());
+        // works out its share against a village of one and takes the farm —
+        // and count against the ROLL, not the room: a newborn in a town of a
+        // hundred with thirty loaded must not size its village at thirty.
+        int total = Math.max(1, Math.max(folk.size(), headcount(villageId)));
         AssistantEntity.StationTask best = AssistantEntity.StationTask.FARM;
         double bestDeficit = -Double.MAX_VALUE;
         int bestWeight = 0;

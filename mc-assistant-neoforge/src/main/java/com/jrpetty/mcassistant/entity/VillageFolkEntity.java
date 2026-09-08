@@ -695,6 +695,12 @@ public class VillageFolkEntity extends AssistantEntity {
         return true;
     }
 
+    /** When this one last CHECKED whether to raise a child. */
+    private int breedCheckTick = -100000;
+    /** When this one last actually DID — the only thing a partner is judged on.
+     *  These were one field, and every folk stamped it on its own check every
+     *  five minutes, so at any moment every folk in the village had "just
+     *  bred" and nobody ever qualified as a partner. No child was ever born. */
     private int breedTick = -100000;
 
     /**
@@ -719,8 +725,9 @@ public class VillageFolkEntity extends AssistantEntity {
         if (!(level() instanceof net.minecraft.server.level.ServerLevel server)) return false;
         UUID village = ownerId();
         if (village == null || villageCentre == null) return false;
-        if (tickCount - breedTick < 6000) return false;          // five minutes apiece
-        breedTick = tickCount;
+        if (tickCount - breedCheckTick < 6000) return false;     // five minutes apiece
+        breedCheckTick = tickCount;
+        if (tickCount - breedTick < 6000) return false;          // not straight after the last
 
         if (stationTask() == StationTask.NONE) return false;      // in work
         if (countFood() < 2) return false;                        // and fed
@@ -755,6 +762,7 @@ public class VillageFolkEntity extends AssistantEntity {
         partner.removeMatching(
             s -> s.get(net.minecraft.core.component.DataComponents.FOOD) != null, 2);
         partner.breedTick = partner.tickCount;
+        this.breedTick = tickCount;
 
         VillageFolkEntity child = com.jrpetty.mcassistant.McAssistantMod.VILLAGE_FOLK.get()
             .create(server);
@@ -809,6 +817,13 @@ public class VillageFolkEntity extends AssistantEntity {
         if (village == null) return false;
         if (tickCount - tradeCheckTick < 6000) return false;      // once every five minutes
         tradeCheckTick = tickCount;
+        // Only on a full view. The shape is judged from who is LOADED, and in
+        // a big village that is whoever is near the player: stand by the
+        // farms and the miners are all asleep in unloaded chunks, so "miners:
+        // nobody" and "farmers: too many" are both true of the view and
+        // false of the village — and farmers would have walked off to mine,
+        // and back again from the other side of the valley.
+        if (Villages.loadedCount(village) * 5 < Villages.headcount(village) * 4) return false;
         StationTask mine = stationTask();
         StationTask vacancy = Villages.vacancy(village);
         if (vacancy == null || vacancy == mine) return false;
