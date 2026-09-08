@@ -36,7 +36,8 @@ public final class ClientSetup {
     @SubscribeEvent
     public static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(McAssistantMod.ASSISTANT.get(), AssistantRenderer::new);
-        event.registerEntityRenderer(McAssistantMod.VILLAGE_FOLK.get(), AssistantRenderer::new);
+        // Folk are villagers, not uniformed staff — see VillagerFolkRenderer.
+        event.registerEntityRenderer(McAssistantMod.VILLAGE_FOLK.get(), VillagerFolkRenderer::new);
     }
 
     @SubscribeEvent

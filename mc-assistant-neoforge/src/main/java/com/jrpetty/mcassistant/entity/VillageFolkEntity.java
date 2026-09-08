@@ -106,6 +106,29 @@ public class VillageFolkEntity extends AssistantEntity {
         if (village != null) Villages.noteProject(village, structure, level().getGameTime());
     }
 
+    // ------------------------------ they sound like villagers too ------------
+    //
+    // Looking like a villager and grunting like a hired hand is worse than
+    // either. These are the vanilla villager's own sounds; the folk still
+    // never say a WORD in chat, which is a different thing entirely.
+
+    @Override
+    @Nullable
+    protected net.minecraft.sounds.SoundEvent getAmbientSound() {
+        return net.minecraft.sounds.SoundEvents.VILLAGER_AMBIENT;
+    }
+
+    @Override
+    protected net.minecraft.sounds.SoundEvent getHurtSound(
+            net.minecraft.world.damagesource.DamageSource source) {
+        return net.minecraft.sounds.SoundEvents.VILLAGER_HURT;
+    }
+
+    @Override
+    protected net.minecraft.sounds.SoundEvent getDeathSound() {
+        return net.minecraft.sounds.SoundEvents.VILLAGER_DEATH;
+    }
+
     @Override
     public void aiStep() {
         super.aiStep();
