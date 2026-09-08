@@ -108,6 +108,7 @@ public final class Villages {
     /** The settlement is gone. Drops its register entry and everything hung
      *  off it, so nothing keeps pointing at a village nobody lives in. */
     public static void forget(UUID villageId) {
+        POP.remove(villageId);
         ALL.remove(villageId);
         AGE.remove(villageId);
         BUILT.remove(villageId);
@@ -118,9 +119,48 @@ public final class Villages {
      *  state lives in memory only, so the folk carry it: the first one to
      *  load puts its village — and how far it had got — back on the map. */
     public static void restore(Level level, UUID id, BlockPos centre, Age age, List<String> built) {
+        restore(level, id, centre, age, built, 0);
+    }
+
+    public static void restore(Level level, UUID id, BlockPos centre, Age age,
+                               List<String> built, int population) {
         ALL.putIfAbsent(id, new Village(id, centre, level.dimension()));
         AGE.putIfAbsent(id, age);
         BUILT.computeIfAbsent(id, k -> new ArrayList<>(built));
+        if (population > 0) POP.merge(id, population, Math::max);
+    }
+
+    // ------------------------------ how many people live here ----------------
+    //
+    // Counting the folk that happen to be LOADED is not counting the folk who
+    // live here, and every number this settlement runs on is worked out from
+    // the answer: how much food it needs, how much iron, how far its people
+    // search for ground, how much of it stays awake, and whether it is allowed
+    // to raise another child. A town of a hundred keeps eight chunks ticking
+    // and spreads over fifteen, so with nobody nearby it would have reported
+    // about thirty people, decided thirty people's rations were plenty, and
+    // gone on breeding past its own cap because thirty is under it.
+    //
+    // The roll is kept instead: written down when folk are seen, carried on
+    // their save data so it survives a restart, and it only ever comes down
+    // when somebody actually dies.
+
+    private static final Map<UUID, Integer> POP = new ConcurrentHashMap<>();
+
+    /** Somebody was born here. */
+    public static void recordBirth(UUID villageId) {
+        POP.merge(villageId, 1, Integer::sum);
+    }
+
+    /** Somebody died here — the one thing that makes a village smaller. */
+    public static void recordDeath(UUID villageId) {
+        POP.computeIfPresent(villageId, (k, n) -> Math.max(0, n - 1));
+    }
+
+    /** What this village should be saving as its roll. */
+    public static int recordedPopulation(@Nullable UUID villageId) {
+        if (villageId == null) return 0;
+        return POP.getOrDefault(villageId, 0);
     }
 
     public static Age ageOf(UUID id) { return age(id); }
@@ -139,7 +179,24 @@ public final class Villages {
         return out;
     }
 
+    /**
+     * How many people live here — not how many are loaded. The roll is the
+     * higher of the two, and seeing more than the roll says is itself proof
+     * the roll was low, so it is corrected on the spot.
+     */
     public static int headcount(@Nullable UUID villageId) {
+        int live = folkOf(villageId).size();
+        if (villageId == null) return live;
+        Integer roll = POP.get(villageId);
+        if (roll == null || live > roll) {
+            if (live > 0) POP.put(villageId, live);
+            return live;
+        }
+        return Math.max(live, roll);
+    }
+
+    /** Everybody who is actually here to be given a job right now. */
+    public static int loadedCount(@Nullable UUID villageId) {
         return folkOf(villageId).size();
     }
 

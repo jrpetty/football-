@@ -85,8 +85,14 @@ public class VillageFolkEntity extends AssistantEntity {
         BlockPos centre = villageCentre;
         super.remove(reason);
         if (!reason.shouldDestroy() || village == null || centre == null) return;
+        Villages.recordDeath(village);      // unloading is not dying
         if (!(level() instanceof net.minecraft.server.level.ServerLevel server)) return;
-        if (!Villages.folkOf(village).isEmpty()) return;    // somebody still lives here
+        // Somebody still lives here — and "here" means the roll, not the room.
+        // The last LOADED folk dying while ninety-nine are asleep in unloaded
+        // chunks would otherwise have wiped the settlement's age, its
+        // buildings and its roll, and dropped the chunks it keeps awake.
+        if (!Villages.folkOf(village).isEmpty()) return;
+        if (Villages.recordedPopulation(village) > 0) return;
         com.jrpetty.mcassistant.ChunkLoad.setLoaded(
             server, village, centre,
             com.jrpetty.mcassistant.VillageSpawner.MAX_LOADED_RADIUS, false);
@@ -736,6 +742,7 @@ public class VillageFolkEntity extends AssistantEntity {
         child.setHome(villageCentre);
         child.setAutonomous(true);
         server.addFreshEntity(child);
+        Villages.recordBirth(village);
         // The settlement is bigger than it was, so it keeps more ground awake.
         // Re-taken at the new radius, which is a superset of the old one, so
         // nothing is dropped and nothing is doubled.
@@ -951,6 +958,10 @@ public class VillageFolkEntity extends AssistantEntity {
                 built.add(net.minecraft.nbt.StringTag.valueOf(s));
             }
             tag.put("VillageBuilt", built);
+            // The roll rides on its people, the same as the age and the
+            // buildings do. Without it a restart forgets how many live here
+            // and the place sizes its larder for whoever happens to be loaded.
+            tag.putInt("VillagePop", Villages.recordedPopulation(village));
         }
     }
 
@@ -972,7 +983,8 @@ public class VillageFolkEntity extends AssistantEntity {
                 for (net.minecraft.nbt.Tag t : tag.getList("VillageBuilt", net.minecraft.nbt.Tag.TAG_STRING)) {
                     built.add(t.getAsString());
                 }
-                Villages.restore(level(), id, villageCentre, age, built);
+                Villages.restore(level(), id, villageCentre, age, built,
+                    tag.getInt("VillagePop"));
             }
         }
     }
