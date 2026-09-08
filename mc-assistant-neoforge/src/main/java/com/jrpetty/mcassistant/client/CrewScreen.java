@@ -84,6 +84,16 @@ public class CrewScreen extends Screen {
                 "Sort the crew: by name, by trade, or problems first")))
             .build());
 
+        // The book the crew builds out of: what every block in the game is
+        // for, why you would place one, and when it starts to matter.
+        this.addRenderableWidget(Button.builder(Component.literal("Blocks"),
+                b -> { if (this.minecraft != null) this.minecraft.setScreen(new BlockBookScreen()); })
+            .bounds(left + W - PAD - 92, top + 24, 44, 14)
+            .tooltip(Tooltip.create(Component.literal(
+                "The block book: what every block does, why you'd build it, "
+                + "when it matters, and the recipe that makes it")))
+            .build());
+
         // Rows are drawn by hand and clicked through mouseClicked — a stack of
         // vanilla buttons looked like a toolbar, not a list.
         int x = left + PAD;
@@ -189,7 +199,8 @@ public class CrewScreen extends Screen {
             if (st.startsWith("Needs")) asking.add(a.clientName() + ": " + st.substring(6));
         }
         // Clipped short of the sort toggle that now lives on this line's right.
-        int lineW = inner - 50;
+        // Clipped short of BOTH buttons that share this line.
+        int lineW = inner - 98;
         if (asking.isEmpty()) {
             g.drawString(this.font, Ui.clip(this.font,
                 "wages so far: " + iron + " iron  ·  " + gold + " gold  ·  " + diamond + " diamond",

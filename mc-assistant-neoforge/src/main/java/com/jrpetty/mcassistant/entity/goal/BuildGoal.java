@@ -67,11 +67,21 @@ public class BuildGoal extends Goal {
         this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
     }
 
+    /**
+     * Is this something to build a wall out of?
+     *
+     * <p>This was a list of six items, which meant a crew standing on a pile
+     * of deepslate, bricks, sandstone or wool it had just made could not put a
+     * single one of them in a wall — it would go and cut more oak instead. The
+     * question is now asked of the block itself: does it stack, stay put and
+     * fill its own cube, and does it have no better job to be doing? Every
+     * brick, tile, plank and stone the game has answers yes, including ones
+     * added by other mods, and sand answers no because a sand wall arrives on
+     * the floor.
+     */
     public static boolean isBuildingBlock(ItemStack s) {
         if (s.isEmpty() || !(s.getItem() instanceof BlockItem)) return false;
-        return s.is(ItemTags.PLANKS) || s.is(ItemTags.LOGS)
-            || s.is(Blocks.COBBLESTONE.asItem()) || s.is(Blocks.COBBLED_DEEPSLATE.asItem())
-            || s.is(Blocks.STONE.asItem()) || s.is(Blocks.DIRT.asItem());
+        return com.jrpetty.mcassistant.BlockLore.structural(s);
     }
 
     /** Parts placed from any matching item (block taken from the item itself). */
