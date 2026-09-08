@@ -68,10 +68,18 @@ public final class JobSpec {
         // every checklist. Silently stalling ten minutes after the player walks
         // away — with a green "Working" status — is the worst failure this mod
         // can have. Carried or stocked at the station both count.
-        if (!held(a, stores, s -> s.get(net.minecraft.core.component.DataComponents.FOOD) != null)) {
+        if (com.jrpetty.mcassistant.AssistantConfig.upkeepEnabled()
+            && !held(a, stores, s -> s.get(net.minecraft.core.component.DataComponents.FOOD) != null)) {
             gaps.add("food (its rations)");
         }
-        if (!held(a, stores, s -> s.is(Items.REDSTONE))) {
+        // Only for hands that are actually ON a charge. Village Folk are not,
+        // and asking them for redstone put every one of them at "Needs
+        // redstone" for ever — the checklist gate runs BEFORE any work, so a
+        // whole settlement stood still having never done a thing. Exempting
+        // them from paying it (which is where this was first fixed) is no use
+        // if they are still asked for it.
+        if (a.needsCharge() && com.jrpetty.mcassistant.AssistantConfig.upkeepEnabled()
+            && !held(a, stores, s -> s.is(Items.REDSTONE))) {
             gaps.add("redstone (its core charge)");
         }
 

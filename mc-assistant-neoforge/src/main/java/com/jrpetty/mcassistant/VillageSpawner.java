@@ -46,7 +46,7 @@ public final class VillageSpawner {
 
     /** Chunks a village keeps awake around itself, so it grows whether or not
      *  anybody is watching. Four is a comfortable settlement's worth. */
-    private static final int LOADED_RADIUS = 4;
+    public static final int LOADED_RADIUS = 4;
 
     /** Cells we have already looked at this session, so a chunk that loads and
      *  unloads repeatedly is not re-examined every time. */
@@ -69,7 +69,6 @@ public final class VillageSpawner {
         // Only the chunk that actually contains the anchor does the work, so
         // this costs one comparison for every other chunk in the cell.
         if ((anchor.getX() >> 4) != chunk.x || (anchor.getZ() >> 4) != chunk.z) return;
-        CONSIDERED.add(cellKey);
 
         if (Villages.nearest(level, anchor) != null) return;      // one already stands here
         if (folkNearby(level, anchor)) return;                    // ...or its people do
@@ -81,7 +80,13 @@ public final class VillageSpawner {
         // very chunk you are settling; the server runs this at the top of the
         // next tick instead, by which time the ground is really there.
         level.getServer().execute(() -> {
+            // Re-checked on the tick, when the neighbouring chunks the height
+            // samples come from are really loaded — and only NOW is the cell
+            // written off, so a site rejected because its surroundings had not
+            // generated yet gets another look rather than being lost for good.
             if (Villages.nearest(level, ground) != null || folkNearby(level, ground)) return;
+            if (!liveable(level, ground)) return;
+            CONSIDERED.add(cellKey);
             found(level, ground);
         });
     }
@@ -138,7 +143,7 @@ public final class VillageSpawner {
         RandomSource r = RandomSource.create(level.getSeed() ^ ground.asLong());
         int size = min + r.nextInt(max - min + 1);
 
-        Villages.Village village = Villages.found(ground);
+        Villages.Village village = Villages.found(level, ground);
         supplyChest(level, ground);
 
         Set<String> used = new HashSet<>();
@@ -180,7 +185,10 @@ public final class VillageSpawner {
      * furnace, no food beyond what they carry.
      */
     private static void supplyChest(ServerLevel level, BlockPos ground) {
-        BlockPos at = ground.above();
+        // groundAt() returns the first free block ABOVE the surface, so the
+        // chest belongs exactly there — putting it one higher again left every
+        // village's founding stores hovering with a gap underneath.
+        BlockPos at = ground;
         level.setBlockAndUpdate(at, Blocks.CHEST.defaultBlockState());
         if (!(level.getBlockEntity(at) instanceof Container chest)) return;
         List<ItemStack> stores = List.of(

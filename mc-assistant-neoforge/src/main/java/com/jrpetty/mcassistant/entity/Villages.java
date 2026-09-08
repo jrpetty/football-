@@ -30,7 +30,8 @@ public final class Villages {
 
     private Villages() {}
 
-    public record Village(UUID id, BlockPos centre) {}
+    public record Village(UUID id, BlockPos centre,
+                          net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> dim) {}
 
     private static final Map<UUID, Village> ALL = new ConcurrentHashMap<>();
 
@@ -82,6 +83,7 @@ public final class Villages {
         Village best = null;
         double bestDist = Double.MAX_VALUE;
         for (Village v : ALL.values()) {
+            if (!v.dim().equals(level.dimension())) continue;   // not our world
             double d = v.centre().distSqr(pos);
             if (d > (double) VILLAGE_RANGE * VILLAGE_RANGE || d >= bestDist) continue;
             bestDist = d;
@@ -90,10 +92,34 @@ public final class Villages {
         return best;
     }
 
-    public static Village found(BlockPos centre) {
-        Village v = new Village(UUID.randomUUID(), centre.immutable());
+    public static Village found(Level level, BlockPos centre) {
+        Village v = new Village(UUID.randomUUID(), centre.immutable(), level.dimension());
         ALL.put(v.id(), v);
         return v;
+    }
+
+    /** The settlement is gone. Drops its register entry and everything hung
+     *  off it, so nothing keeps pointing at a village nobody lives in. */
+    public static void forget(UUID villageId) {
+        ALL.remove(villageId);
+        AGE.remove(villageId);
+        BUILT.remove(villageId);
+        LAST_PROJECT.remove(villageId);
+    }
+
+    /** Restore a settlement from what one of its folk remembers. Village
+     *  state lives in memory only, so the folk carry it: the first one to
+     *  load puts its village — and how far it had got — back on the map. */
+    public static void restore(Level level, UUID id, BlockPos centre, Age age, List<String> built) {
+        ALL.putIfAbsent(id, new Village(id, centre, level.dimension()));
+        AGE.putIfAbsent(id, age);
+        BUILT.computeIfAbsent(id, k -> new ArrayList<>(built));
+    }
+
+    public static Age ageOf(UUID id) { return age(id); }
+
+    public static List<String> builtList(UUID id) {
+        return new ArrayList<>(BUILT.getOrDefault(id, List.of()));
     }
 
     /** Everyone alive who belongs to this settlement. */
@@ -215,14 +241,28 @@ public final class Villages {
      * when this age's list is complete — at which point it advances, says so,
      * and a longer list appears.
      */
+    /** The whole list, in order. Callers take the first one they can actually
+     *  do something about — a building nobody has the timber for must never
+     *  hide the timber-cutting behind it. */
+    public static List<Need> needs(net.minecraft.server.level.ServerLevel level, UUID villageId) {
+        List<Need> all = wantsFor(level, villageId);
+        if (all.isEmpty()) advance(level, villageId, age(villageId));
+        return all;
+    }
+
     @Nullable
     public static Need nextNeed(net.minecraft.server.level.ServerLevel level, UUID villageId) {
+        List<Need> all = needs(level, villageId);
+        return all.isEmpty() ? null : all.get(0);
+    }
+
+    private static List<Need> wantsFor(net.minecraft.server.level.ServerLevel level, UUID villageId) {
         Village v = get(villageId);
-        if (v == null) return null;
         int folk = headcount(villageId);
         Age at = age(villageId);
 
         List<Need> wants = new ArrayList<>();
+        if (v == null) return wants;
         switch (at) {
             case WOOD -> {
                 // Timber, a roof, and food coming in. Everything a place needs
@@ -247,7 +287,6 @@ public final class Villages {
                 // afford the time to put up.
                 need(wants, level, v, "iron", Task.IRON, 64);
                 if (built(villageId, "workshop") < 1) wants.add(new Need("a workshop", Task.BUILD, 1));
-                if (folk < VILLAGE_SIZE) wants.add(new Need("more hands", Task.HANDS, VILLAGE_SIZE - folk));
                 if (built(villageId, "watchtower") < 1) wants.add(new Need("a watchtower", Task.BUILD, 1));
                 need(wants, level, v, "food in the stores", Task.FOOD, 256);
             }
@@ -264,11 +303,7 @@ public final class Villages {
                 need(wants, level, v, "food in the stores", Task.FOOD, 256);
             }
         }
-        if (wants.isEmpty()) {
-            advance(level, villageId, at);
-            return null;
-        }
-        return wants.get(0);
+        return wants;
     }
 
     /**

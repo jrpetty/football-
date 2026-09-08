@@ -45,7 +45,7 @@ public class VillageCharterItem extends Item {
 
         Villages.Village village = Villages.nearest(level, spot);
         boolean founding = village == null;
-        if (founding) village = Villages.found(spot);
+        if (founding) village = Villages.found(level, spot);
 
         int headcount = Villages.headcount(village.id());
         if (headcount >= Villages.VILLAGE_SIZE) {

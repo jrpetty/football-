@@ -63,10 +63,30 @@ public class VillageFolkEntity extends AssistantEntity {
      *  one thing a village is for — but a settlement does not run on redstone
      *  and does not answer to a payroll. */
     @Override
-    protected boolean needsCharge() { return false; }
+    public boolean needsCharge() { return false; }
 
     @Override
     protected boolean drawsWages() { return false; }
+
+    /**
+     * When the last of a settlement dies, its chunks stop being held open.
+     * The force-load ticket is taken under the VILLAGE's id, and no entity's
+     * own clean-up could ever release it — so a dead village would have kept
+     * eighty-one chunks ticking for the life of the world, and the id needed
+     * to free them died with the last folk.
+     */
+    @Override
+    public void remove(net.minecraft.world.entity.Entity.RemovalReason reason) {
+        UUID village = ownerId();
+        BlockPos centre = villageCentre;
+        super.remove(reason);
+        if (!reason.shouldDestroy() || village == null || centre == null) return;
+        if (!(level() instanceof net.minecraft.server.level.ServerLevel server)) return;
+        if (!Villages.folkOf(village).isEmpty()) return;    // somebody still lives here
+        com.jrpetty.mcassistant.ChunkLoad.setLoaded(
+            server, village, centre, com.jrpetty.mcassistant.VillageSpawner.LOADED_RADIUS, false);
+        Villages.forget(village);
+    }
 
     /** Only a building that actually went up counts as built. */
     @Override
@@ -121,8 +141,17 @@ public class VillageFolkEntity extends AssistantEntity {
             return true;
         }
 
-        Villages.Need need = Villages.nextNeed(server, village);
-        if (need == null) return false;
+        if (tickCount - lastHelpTick < 1200) return false;   // one attempt a minute, at most
+        for (Villages.Need need : Villages.needs(server, village)) {
+            if (takeOn(server, need)) { lastHelpTick = tickCount; return true; }
+        }
+        return false;
+    }
+
+    private int lastHelpTick = -100000;
+
+    /** Can this hand do anything about that particular want? */
+    private boolean takeOn(net.minecraft.server.level.ServerLevel server, Villages.Need need) {
         switch (need.task()) {
             case COAL -> {
                 enqueue(Job.gather(com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.COAL,
@@ -138,30 +167,22 @@ public class VillageFolkEntity extends AssistantEntity {
                 return false;
             }
             case LOGS -> {
-                say("The village is short of timber. I'll cut some.");
                 enqueue(Job.gather(com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.LOGS,
                     Math.min(48, Math.max(16, need.amount()))));
                 enqueue(Job.deposit());
                 return true;
             }
             case STONE -> {
-                say("The village wants stone. I'll fetch some.");
                 enqueue(Job.gather(com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.STONE,
                     Math.min(64, Math.max(16, need.amount()))));
                 enqueue(Job.deposit());
                 return true;
             }
             case IRON -> {
-                // The courier run the smelter actually needs: ore out of
-                // whichever chest it is sitting in, and into the forge's.
-                if (stationTask() != StationTask.SMELT
-                    && countStocked(st -> st.is(net.minecraft.world.item.Items.RAW_IRON)) > 0) {
-                    say("Taking this ore over to the forge.");
-                    enqueue(Job.withdraw("raw iron", 32));
-                    enqueue(Job.deposit());
-                    return true;
-                }
-                say("We could do with iron. I'll go and dig.");
+                // No withdraw-and-redeposit "courier" here: a deposit with no
+                // route picks the NEAREST chest, which is the one the ore was
+                // just taken out of, so the run moved the ore in a circle. The
+                // carry-what-is-wanted path above is the real courier.
                 enqueue(Job.gather(com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.IRON,
                     Math.min(32, Math.max(8, need.amount()))));
                 enqueue(Job.deposit());
@@ -189,7 +210,7 @@ public class VillageFolkEntity extends AssistantEntity {
     private void settle() {
         Villages.Village v = Villages.nearest(level(), blockPosition());
         if (v == null) {
-            v = Villages.found(blockPosition());
+            v = Villages.found(level(), blockPosition());
             say("There's good ground here. This'll do for a village.");
         }
         this.villageCentre = v.centre();
@@ -206,25 +227,57 @@ public class VillageFolkEntity extends AssistantEntity {
      * needs water and a miner needs stone — what you are decides where you go.
      */
     private void takeUpATrade() {
-        StationTask trade = stationTask() != StationTask.NONE
-            ? stationTask() : Villages.needed(ownerId());
+        // Looking for ground is expensive and the answer rarely changes from
+        // one second to the next. Once a minute is plenty, and it stops every
+        // folk in a village re-running a quarter-million block reads on the
+        // same tick for ever.
+        if (tickCount - searchFailTick < 1200) { roam(); return; }
+        searchFailTick = tickCount;
+
+        // Claim the trade BEFORE going to look for ground. The village works
+        // out what it is short of from what its folk ARE, so a folk that has
+        // decided but not yet settled used to be invisible — and every folk
+        // in the village would pick the same trade, look for the same ground,
+        // and fail together, for ever.
+        if (stationTask() == StationTask.NONE) {
+            setStation(blockPosition(), Villages.needed(ownerId()));
+        }
+        StationTask trade = stationTask();
         BlockPos site = findSite(trade, radiusFor(trade));
         if (site == null) {
-            // Nothing suitable in sight. Don't thrash: wander a little and
-            // look again in a while. A folk that cannot find water yet is not
-            // a folk that should stand still for ever.
-            if (tickCount - searchFailTick > 1200) {
-                searchFailTick = tickCount;
-                say("Looking for somewhere to work as " + trade.label + ".");
+            // This trade has nowhere to work HERE. Rather than stand in a
+            // field looking for water that does not exist, try the next thing
+            // the village wants — a settlement in a desert should end up
+            // quarrying and cutting, not waiting for a farm it cannot have.
+            triedTrades++;
+            if (triedTrades >= 3) {
+                triedTrades = 0;
+                StationTask fallback = nextTradeAfter(trade);
+                if (fallback != trade) setStation(blockPosition(), fallback);
             }
             roam();
             return;
         }
+        triedTrades = 0;
         WorkZone zone = WorkZone.around(site, radiusFor(trade), depthFor(trade));
         setStation(site, trade);
         assignPlot(zone, patchNameFor(trade));
         setAutonomous(true);
         say("I'll take up " + trade.label + " — this ground will do for it.");
+    }
+
+    private int triedTrades;
+
+    /** The next trade worth trying when this one has nowhere to work. Ordered
+     *  by how little ground it is fussy about: stone and timber are almost
+     *  everywhere, a farm needs water, a forge needs nothing at all. */
+    private StationTask nextTradeAfter(StationTask trade) {
+        StationTask[] order = { StationTask.WOOD, StationTask.MINE,
+                                StationTask.FARM, StationTask.SMELT };
+        for (int i = 0; i < order.length; i++) {
+            if (order[i] == trade) return order[(i + 1) % order.length];
+        }
+        return StationTask.WOOD;
     }
 
     private static int radiusFor(StationTask trade) {
@@ -274,7 +327,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // village fans out around its centre rather than piling into one
         // corner of it — which is precisely how two miners ended up trying to
         // dig the same hill.
-        double angle = (getId() % 8) * (Math.PI / 4.0);
+        double angle = ((getId() + searchBearing) % 8) * (Math.PI / 4.0);
         BlockPos from = heart.offset(
             (int) Math.round(Math.cos(angle) * 12), 0, (int) Math.round(Math.sin(angle) * 12));
         return switch (trade) {
@@ -320,6 +373,8 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     private boolean taken(BlockPos pos, int plotRadius) {
         WorkZone mine = WorkZone.around(pos, plotRadius + 2, WorkZone.DEFAULT_DEPTH);
+        // Ground we are deliberately leaving counts as somebody else's.
+        if (avoidHere != null && mine.overlaps(avoidHere)) return true;
         for (AssistantEntity mate : Villages.folkOf(ownerId())) {
             if (mate == this) continue;
             WorkZone theirs = mate.workZone();
@@ -391,10 +446,15 @@ public class VillageFolkEntity extends AssistantEntity {
         // clearing all afternoon.
         if (tickCount - spentSince < 3600) return false;
         spentSince = 0;
+        // Look somewhere ELSE. findSite is deterministic and a mined-out patch
+        // still looks like perfectly good stone from the surface, so searching
+        // the same way returns the same spent ground every time. Turning the
+        // bearing and standing further off is what actually moves them on.
+        avoidHere = workZone();
+        searchBearing++;
         BlockPos site = findSite(trade, radiusFor(trade));
+        avoidHere = null;
         if (site == null) return false;
-        WorkZone here = workZone();
-        if (here != null && here.containsColumn(site)) return false;   // same ground again
         WorkZone zone = WorkZone.around(site, radiusFor(trade), depthFor(trade));
         setStation(site, trade);
         assignPlot(zone, patchNameFor(trade));
@@ -403,6 +463,8 @@ public class VillageFolkEntity extends AssistantEntity {
     }
 
     private int spentSince;
+    private int searchBearing;
+    @Nullable private WorkZone avoidHere;
 
     /**
      * Nobody works every waking hour. After a long stretch a folk knocks off
@@ -462,6 +524,19 @@ public class VillageFolkEntity extends AssistantEntity {
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         if (villageCentre != null) tag.putLong("VillageCentre", villageCentre.asLong());
+        UUID village = ownerId();
+        if (village != null) {
+            // The settlement's own progress rides on its people. The register
+            // is memory-only, so without this a village that had reached the
+            // Iron Age came back from a restart as a camp and set about
+            // building the storehouse it already had.
+            tag.putString("VillageAge", Villages.ageOf(village).name());
+            net.minecraft.nbt.ListTag built = new net.minecraft.nbt.ListTag();
+            for (String s : Villages.builtList(village)) {
+                built.add(net.minecraft.nbt.StringTag.valueOf(s));
+            }
+            tag.put("VillageBuilt", built);
+        }
     }
 
     @Override
@@ -470,10 +545,19 @@ public class VillageFolkEntity extends AssistantEntity {
         if (tag.contains("VillageCentre")) {
             this.villageCentre = BlockPos.of(tag.getLong("VillageCentre"));
             // The register lives in memory only; the first folk to load puts
-            // its settlement back on the map for the rest.
+            // its settlement back on the map for the rest — age, buildings
+            // and all.
             UUID id = ownerId();
-            if (id != null && Villages.get(id) == null) {
-                Villages.register(new Villages.Village(id, villageCentre));
+            if (id != null) {
+                Villages.Age age = Villages.Age.WOOD;
+                try {
+                    if (tag.contains("VillageAge")) age = Villages.Age.valueOf(tag.getString("VillageAge"));
+                } catch (IllegalArgumentException ignored) { }
+                java.util.List<String> built = new java.util.ArrayList<>();
+                for (net.minecraft.nbt.Tag t : tag.getList("VillageBuilt", net.minecraft.nbt.Tag.TAG_STRING)) {
+                    built.add(t.getAsString());
+                }
+                Villages.restore(level(), id, villageCentre, age, built);
             }
         }
     }
