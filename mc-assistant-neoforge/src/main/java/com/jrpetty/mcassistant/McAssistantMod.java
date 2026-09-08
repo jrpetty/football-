@@ -127,6 +127,7 @@ public final class McAssistantMod {
         NeoForge.EVENT_BUS.register(ChatControl.class);
         NeoForge.EVENT_BUS.register(GraveWatch.class);
         NeoForge.EVENT_BUS.register(PlotBookKeeper.class);
+        NeoForge.EVENT_BUS.register(VillageSpawner.class);
     }
 
     private void onEntityAttributes(EntityAttributeCreationEvent event) {

@@ -34,6 +34,10 @@ public final class AssistantConfig {
     // --- behaviour ---
     public static final ModConfigSpec.BooleanValue CHUNK_LOADING;
     public static final ModConfigSpec.IntValue WORK_TICK_INTERVAL;
+    public static final ModConfigSpec.BooleanValue NATURAL_VILLAGES;
+    public static final ModConfigSpec.IntValue VILLAGE_SPACING;
+    public static final ModConfigSpec.IntValue VILLAGE_MIN_FOLK;
+    public static final ModConfigSpec.IntValue VILLAGE_MAX_FOLK;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -91,6 +95,22 @@ public final class AssistantConfig {
             .defineInRange("workTickInterval", 40, 5, 400);
         b.pop();
 
+        b.comment("Settlements that grow on the map by themselves.")
+         .push("villages");
+        NATURAL_VILLAGES = b.comment(
+                "Let Village Folk settlements generate in the world as chunks are explored.",
+                "They keep their own chunks loaded and grow whether or not you are watching.")
+            .define("naturalVillages", true);
+        VILLAGE_SPACING = b.comment(
+                "Blocks between candidate settlement sites. One village per grid cell,",
+                "its exact spot fixed by the world seed. Bigger means rarer and further apart.")
+            .defineInRange("villageSpacing", 768, 256, 8000);
+        VILLAGE_MIN_FOLK = b.comment("Fewest folk a new settlement is founded with.")
+            .defineInRange("villageMinFolk", 8, 1, 60);
+        VILLAGE_MAX_FOLK = b.comment("Most folk a new settlement is founded with.")
+            .defineInRange("villageMaxFolk", 12, 1, 60);
+        b.pop();
+
         SPEC = b.build();
     }
 
@@ -109,6 +129,10 @@ public final class AssistantConfig {
     public static boolean loyaltyEnabled() { return read(LOYALTY_ENABLED, true); }
     public static boolean chunkLoading() { return read(CHUNK_LOADING, true); }
     public static int workTickInterval() { return read(WORK_TICK_INTERVAL, 40); }
+    public static boolean naturalVillages() { return read(NATURAL_VILLAGES, true); }
+    public static int villageSpacing() { return read(VILLAGE_SPACING, 768); }
+    public static int villageMinFolk() { return read(VILLAGE_MIN_FOLK, 8); }
+    public static int villageMaxFolk() { return read(VILLAGE_MAX_FOLK, 12); }
 
     /** Config values throw if read before the file is loaded (early world gen,
      *  datagen, a dedicated server still booting) — fall back rather than crash. */
