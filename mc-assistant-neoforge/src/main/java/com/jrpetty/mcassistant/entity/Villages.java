@@ -382,7 +382,7 @@ public final class Villages {
     /** Add a stores requirement only if the stores actually fall short. */
     private static void need(List<Need> wants, net.minecraft.server.level.ServerLevel level,
                              Village v, String what, Task task, int amount) {
-        int have = stock(level, v.centre(), task);
+        int have = stock(level, v.centre(), task, storesRadius(v.id()));
         if (have < amount) wants.add(new Need(what, task, amount - have));
     }
 
@@ -395,26 +395,62 @@ public final class Villages {
     private static final Map<UUID, int[]> STOCK = new ConcurrentHashMap<>();
 
     public static int stock(net.minecraft.server.level.ServerLevel level, BlockPos centre, Task task) {
-        int idx = task.ordinal();
+        return stock(level, centre, task, 32);
+    }
+
+    /**
+     * What the settlement holds, counted from the chests within {@code radius}
+     * of its heart.
+     *
+     * <p>THE RADIUS HAS TO GROW WITH THE VILLAGE, and this is the rung that
+     * quietly broke everything above it when it did not. The stores were read
+     * from thirty-two blocks around the middle while plots are staked sixty
+     * and more out — and further the bigger the place gets — so the harvest
+     * went into a field chest the village's own plan could not see. The plan
+     * therefore read "short of food" no matter how much was grown, the ages
+     * never advanced because their thresholds were never met, and every hand
+     * spent its life lending itself out to gather more of what the settlement
+     * already had piles of.
+     *
+     * <p>One sweep fills every counter, rather than one sweep per thing asked
+     * about: a grown village's ring is a couple of hundred chunks, and asking
+     * ten separate questions about it ten times a minute is how you make a
+     * settlement cost more than the rest of the world put together.
+     */
+    public static int stock(net.minecraft.server.level.ServerLevel level, BlockPos centre,
+                            Task task, int radius) {
         UUID key = UUID.nameUUIDFromBytes(("v" + centre.asLong()).getBytes(java.nio.charset.StandardCharsets.UTF_8));
-        long[] when = STOCK_TICK.computeIfAbsent(key, k -> new long[Task.values().length]);
+        long[] when = STOCK_TICK.computeIfAbsent(key, k -> new long[1]);
         int[] cache = STOCK.computeIfAbsent(key, k -> new int[Task.values().length]);
         long now = level.getGameTime();
-        if (now - when[idx] < 200L) return cache[idx];
-        when[idx] = now;
-        int total = 0;
-        for (com.jrpetty.mcassistant.entity.ZoneChests.Found f
-                : com.jrpetty.mcassistant.entity.ZoneChests.around(level, centre, 32, 6)) {
-            if (!f.stillThere() || !ZoneChests.isStashable(f)) continue;
-            net.minecraft.world.Container c = f.container();
-            for (int i = 0; i < c.getContainerSize(); i++) {
-                net.minecraft.world.item.ItemStack st = c.getItem(i);
-                if (st.isEmpty()) continue;
-                if (matches(task, st)) total += st.getCount();
+        if (now - when[0] >= 200L || when[0] == 0L) {
+            when[0] = now;
+            java.util.Arrays.fill(cache, 0);
+            Task[] all = Task.values();
+            for (com.jrpetty.mcassistant.entity.ZoneChests.Found f
+                    : com.jrpetty.mcassistant.entity.ZoneChests.around(level, centre, radius, 8)) {
+                if (!f.stillThere() || !ZoneChests.isStashable(f)) continue;
+                net.minecraft.world.Container c = f.container();
+                for (int i = 0; i < c.getContainerSize(); i++) {
+                    net.minecraft.world.item.ItemStack st = c.getItem(i);
+                    if (st.isEmpty()) continue;
+                    for (Task t : all) {
+                        if (matches(t, st)) cache[t.ordinal()] += st.getCount();
+                    }
+                }
             }
         }
-        cache[idx] = total;
-        return total;
+        return cache[task.ordinal()];
+    }
+
+    /**
+     * How far out the stores reach, which is however far the plots do. Kept in
+     * step with the fan-out a growing village searches on, so a village never
+     * loses sight of its own output by getting bigger.
+     */
+    public static int storesRadius(@Nullable UUID villageId) {
+        int folk = headcount(villageId);
+        return Math.min(112, 40 + Math.max(0, folk - 8) * 5);
     }
 
     private static boolean matches(Task task, net.minecraft.world.item.ItemStack st) {

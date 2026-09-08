@@ -48,9 +48,13 @@ public class VillageCharterItem extends Item {
         if (founding) village = Villages.found(level, spot);
 
         int headcount = Villages.headcount(village.id());
-        if (headcount >= Villages.VILLAGE_SIZE) {
+        // The cap that matters is how large a settlement may GROW to, not the
+        // ten its trade shares are measured against — a village that raises
+        // its own people past ten should not refuse a newcomer at the gate.
+        int cap = com.jrpetty.mcassistant.AssistantConfig.villageGrowthCap();
+        if (headcount >= cap) {
             player.displayClientMessage(Component.literal(
-                "That village is full — ten is a village. Found another further out."), true);
+                "That village is full at " + cap + ". Found another further out."), true);
             return InteractionResult.CONSUME;
         }
 
@@ -66,7 +70,7 @@ public class VillageCharterItem extends Item {
         player.displayClientMessage(Component.literal(
             founding
                 ? "A village is founded here. They'll sort themselves out."
-                : Villages.folkOf(village.id()).size() + " of ten have settled here."), true);
+                : Villages.folkOf(village.id()).size() + " have settled here."), true);
         if (!player.getAbilities().instabuild) ctx.getItemInHand().shrink(1);
         return InteractionResult.CONSUME;
     }

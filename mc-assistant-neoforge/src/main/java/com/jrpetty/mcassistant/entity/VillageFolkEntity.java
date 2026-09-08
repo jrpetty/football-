@@ -88,7 +88,8 @@ public class VillageFolkEntity extends AssistantEntity {
         if (!(level() instanceof net.minecraft.server.level.ServerLevel server)) return;
         if (!Villages.folkOf(village).isEmpty()) return;    // somebody still lives here
         com.jrpetty.mcassistant.ChunkLoad.setLoaded(
-            server, village, centre, com.jrpetty.mcassistant.VillageSpawner.LOADED_RADIUS, false);
+            server, village, centre,
+            com.jrpetty.mcassistant.VillageSpawner.MAX_LOADED_RADIUS, false);
         Villages.forget(village);
     }
 
@@ -365,8 +366,18 @@ public class VillageFolkEntity extends AssistantEntity {
         // corner of it — which is precisely how two miners ended up trying to
         // dig the same hill.
         double angle = ((getId() + searchBearing) % 8) * (Math.PI / 4.0);
+        // ...and it starts that look FURTHER OUT the bigger the village is.
+        // Ten plots fit around one hillside; twenty do not, and the ground is
+        // claimed whole and never shared — so past ten folk every search that
+        // starts at the same place finds nothing but its neighbours' fields,
+        // gives up, and the newcomer stands in the square for ever with no
+        // trade. Widening the SCAN instead would have squared its cost, and
+        // that scan already reads eight hundred blocks per candidate; moving
+        // where it starts costs nothing at all.
+        int reach = Math.min(48, 12 + Math.max(0, Villages.headcount(ownerId()) - 8) * 4);
         BlockPos from = heart.offset(
-            (int) Math.round(Math.cos(angle) * 12), 0, (int) Math.round(Math.sin(angle) * 12));
+            (int) Math.round(Math.cos(angle) * reach), 0,
+            (int) Math.round(Math.sin(angle) * reach));
         return switch (trade) {
             case FARM -> scan(from, 48, 6, radius, this::farmable);
             case WOOD -> scan(from, 64, 6, radius, this::woodland);
@@ -673,10 +684,28 @@ public class VillageFolkEntity extends AssistantEntity {
         // Less than its parents spent on it — see childKit. A village that
         // could breed its way to a full larder would never have to farm.
         com.jrpetty.mcassistant.VillageSpawner.childKit(child);
+        // BORN INTO THIS VILLAGE, not left to go and look for one. A newborn
+        // settles by finding the nearest settlement within ninety-six blocks,
+        // and it is born wherever its parents were STANDING — which is out on
+        // their plot, which as a village grows is most of ninety-six blocks
+        // from the heart already. A child born a step too far would have
+        // FOUNDED A RIVAL VILLAGE on top of its own parents, split the
+        // headcount, and set both halves back to the Wood Age. It is given the
+        // village it was born into, and its agenda picks up from there.
+        child.villageCentre = villageCentre;
+        child.adoptVillage(village);
+        child.setHome(villageCentre);
+        child.setAutonomous(true);
         server.addFreshEntity(child);
-        // Settling, choosing whichever trade the village is now short of, and
-        // finding ground for it all happen on the child's own agenda a moment
-        // from now — exactly as they did for its parents.
+        // The settlement is bigger than it was, so it keeps more ground awake.
+        // Re-taken at the new radius, which is a superset of the old one, so
+        // nothing is dropped and nothing is doubled.
+        com.jrpetty.mcassistant.ChunkLoad.setLoaded(server, village, villageCentre,
+            com.jrpetty.mcassistant.VillageSpawner.loadedRadiusFor(
+                Villages.headcount(village)), true);
+        // Choosing whichever trade the village is now short of, and finding
+        // ground for it, happen on the child's own agenda a moment from now —
+        // exactly as they did for its parents.
         return true;
     }
 

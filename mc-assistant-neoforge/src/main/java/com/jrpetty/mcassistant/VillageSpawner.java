@@ -48,6 +48,23 @@ public final class VillageSpawner {
      *  anybody is watching. Four is a comfortable settlement's worth. */
     public static final int LOADED_RADIUS = 4;
 
+    /** The most a grown settlement ever keeps awake. Releasing is always done
+     *  at THIS radius rather than whatever the village had reached, because a
+     *  release that is one ring short of what was taken strands those chunks
+     *  ticking for the rest of the world's life — and releasing a chunk nobody
+     *  forced is free. */
+    public static final int MAX_LOADED_RADIUS = 7;
+
+    /**
+     * How much ground a settlement keeps awake, which has to grow with the
+     * settlement. Eight folk fit on one hillside; twenty do not, and a plot
+     * outside the loaded ring is a plot nobody works while you are away —
+     * which is the one thing these villages are FOR.
+     */
+    public static int loadedRadiusFor(int folk) {
+        return Math.min(MAX_LOADED_RADIUS, LOADED_RADIUS + Math.max(0, folk - 8) / 3);
+    }
+
     /** Cells we have already looked at this session, so a chunk that loads and
      *  unloads repeatedly is not re-examined every time. */
     private static final Set<Long> CONSIDERED = new HashSet<>();

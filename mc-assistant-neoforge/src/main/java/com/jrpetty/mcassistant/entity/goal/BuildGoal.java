@@ -45,7 +45,7 @@ public class BuildGoal extends Goal {
         "house", "room", "pen", "fortify", "lighthouse", "column");
 
     /** What goes in a blueprint cell. */
-    public enum Part { BLOCK, FURNACE, CHEST, CRAFTING_TABLE, TORCH, LADDER, FENCE, GATE, WINDOW }
+    public enum Part { BLOCK, FURNACE, CHEST, CRAFTING_TABLE, TORCH, LADDER, FENCE, GATE, WINDOW, BED }
 
     private record Placement(BlockPos pos, Part part) {}
 
@@ -91,7 +91,10 @@ public class BuildGoal extends Goal {
 
     /** Decorative parts skipped (not blocked-on) when we lack the item. */
     private static boolean isDecorative(Part part) {
-        return part == Part.TORCH || part == Part.WINDOW;
+        // A bed is skipped, not blocked on: wool takes a rancher or a lucky
+        // hunt, and a house with no bed is still a house. It gets one the next
+        // time a house goes up with wool in the stores.
+        return part == Part.TORCH || part == Part.WINDOW || part == Part.BED;
     }
 
     private static Predicate<ItemStack> itemFor(Part part) {
@@ -105,6 +108,7 @@ public class BuildGoal extends Goal {
             case FENCE -> s -> s.is(ItemTags.FENCES);
             case GATE -> s -> s.is(ItemTags.FENCE_GATES);
             case WINDOW -> s -> s.is(Items.GLASS) || s.is(Items.GLASS_PANE);
+            case BED -> s -> s.is(ItemTags.BEDS);
         };
     }
 
@@ -119,6 +123,7 @@ public class BuildGoal extends Goal {
             case FENCE -> "fences (\"craft fences\")";
             case GATE -> "a fence gate (\"craft a fence gate\")";
             case WINDOW -> "glass";
+            case BED -> "a bed (\"craft a bed\" — 3 wool, 3 planks)";
         };
     }
 
@@ -291,10 +296,38 @@ public class BuildGoal extends Goal {
             }
             state = stateFor(part);
         }
-        assistant.level().setBlockAndUpdate(pos, state);
+        if (part == Part.BED) {
+            // A bed is TWO cells, which no other part is. If the second cell
+            // is not free the whole thing is skipped rather than half a bed
+            // being left in the wall — and the item is already spent, so the
+            // next house gets it instead.
+            if (!layBed(pos, state)) { cursor++; return; }
+        } else {
+            assistant.level().setBlockAndUpdate(pos, state);
+        }
         assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
         placed++;
         cursor++;
+    }
+
+    /** Lay a bed foot-first into the room, head against the wall behind it.
+     *  Somewhere to sleep is what turns a shell into a house, and it is how
+     *  anybody living here skips a night. */
+    private boolean layBed(BlockPos foot, BlockState carried) {
+        Direction lie = facing;                      // head toward the back wall
+        BlockPos head = foot.relative(lie);
+        if (!assistant.level().getBlockState(head).canBeReplaced()) return false;
+        if (!assistant.level().getBlockState(head.below()).isSolid()) return false;
+        BlockState bed = carried.getBlock() instanceof net.minecraft.world.level.block.BedBlock
+            ? carried : Blocks.RED_BED.defaultBlockState();
+        bed = bed.setValue(net.minecraft.world.level.block.BedBlock.FACING, lie);
+        assistant.level().setBlockAndUpdate(foot, bed.setValue(
+            net.minecraft.world.level.block.BedBlock.PART,
+            net.minecraft.world.level.block.state.properties.BedPart.FOOT));
+        assistant.level().setBlockAndUpdate(head, bed.setValue(
+            net.minecraft.world.level.block.BedBlock.PART,
+            net.minecraft.world.level.block.state.properties.BedPart.HEAD));
+        return true;
     }
 
     private BlockState stateFor(Part part) {
@@ -307,6 +340,9 @@ public class BuildGoal extends Goal {
             case CRAFTING_TABLE -> Blocks.CRAFTING_TABLE.defaultBlockState();
             case TORCH -> Blocks.TORCH.defaultBlockState();
             case LADDER -> Blocks.LADDER.defaultBlockState().setValue(LadderBlock.FACING, toDoor);
+            // Beds are laid by layBed, which needs two cells; this is only the
+            // fallback the switch demands.
+            case BED -> Blocks.RED_BED.defaultBlockState();
         };
     }
 
@@ -412,6 +448,9 @@ public class BuildGoal extends Goal {
                 out.add(new Placement(cell(center, right, facing, 1, 1), Part.CHEST));
                 out.add(new Placement(cell(center, right, facing, -1, -1), Part.TORCH));
                 out.add(new Placement(cell(center, right, facing, 1, -1), Part.TORCH));
+                // And somewhere to sleep. A village that builds houses nobody
+                // can sleep in has built sheds.
+                out.add(new Placement(cell(center, right, facing, -1, 0), Part.BED));
             }
             case "pen" -> {
                 BlockPos center = centered ? feet : feet.relative(facing, 5);
