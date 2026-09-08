@@ -116,6 +116,7 @@ public class VillageFolkEntity extends AssistantEntity {
     private void agenda() {
         if (ownerId() == null) { settle(); return; }
         if (workZone() == null) { takeUpATrade(); return; }
+        mindTheRoute();                                // a carrier's round is chosen, not clicked
         if (peekJob() != null) return;                 // already busy
         if (resting()) return;                         // off the clock for a bit
         if (movedOnFromSpentGround()) return;          // this patch is finished
@@ -272,11 +273,10 @@ public class VillageFolkEntity extends AssistantEntity {
             return;
         }
         triedTrades = 0;
-        WorkZone zone = WorkZone.around(site, radiusFor(trade), depthFor(trade));
+        WorkZone zone = WorkZone.around(site, radiusFor(trade), depthFor(trade, site));
         setStation(site, trade);
         assignPlot(zone, patchNameFor(trade));
         setAutonomous(true);
-        say("I'll take up " + trade.label + " — this ground will do for it.");
     }
 
     private int triedTrades;
@@ -302,9 +302,9 @@ public class VillageFolkEntity extends AssistantEntity {
         };
     }
 
-    private int depthFor(StationTask trade) {
+    private int depthFor(StationTask trade, BlockPos site) {
         return trade == StationTask.MINE
-            ? Math.max(level().getMinBuildHeight() + 8, blockPosition().getY() - 24)
+            ? Math.max(level().getMinBuildHeight() + 8, site.getY() - 24)
             : WorkZone.DEFAULT_DEPTH;
     }
 
@@ -347,8 +347,24 @@ public class VillageFolkEntity extends AssistantEntity {
             case FARM -> scan(from, 48, 6, radius, this::farmable);
             case WOOD -> scan(from, 64, 6, radius, this::woodland);
             case MINE -> scan(from, 48, 6, radius, this::diggable);
-            // The forge belongs in the village, not out in a field.
-            default -> level().getBlockState(heart).isAir() ? heart : surfaceAt(heart.getX(), heart.getZ());
+            // A pen goes where the animals already are and a jetty goes on
+            // water — both were staking the village square, where a rancher
+            // found nothing to breed and a fisher nothing to cast into, and
+            // both trades were a silent no-op for the life of the settlement.
+            case RANCH -> scan(from, 64, 6, radius, this::pasture);
+            case FISH -> scan(from, 64, 6, radius, this::fishable);
+            // The indoor trades belong in the village rather than out in a
+            // field — but not all three in the same square. Each takes its own
+            // corner of the middle, on its own bearing, so the forge, the
+            // storeroom and the carrier's post are neighbours instead of one
+            // pile.
+            default -> {
+                BlockPos near = surfaceAt(
+                    heart.getX() + (int) Math.round(Math.cos(angle) * 6),
+                    heart.getZ() + (int) Math.round(Math.sin(angle) * 6));
+                yield near != null && !taken(near, radius) ? near
+                    : surfaceAt(heart.getX(), heart.getZ());
+            }
         };
     }
 
@@ -408,6 +424,24 @@ public class VillageFolkEntity extends AssistantEntity {
         return water && soil >= 20;
     }
 
+    /** Livestock on the hoof: a herd worth putting a fence round. */
+    private boolean pasture(BlockPos pos) {
+        return level().getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class,
+            new net.minecraft.world.phys.AABB(
+                pos.getX() - 8, pos.getY() - 5, pos.getZ() - 8,
+                pos.getX() + 8, pos.getY() + 5, pos.getZ() + 8),
+            a -> a.isAlive() && !a.isBaby()).size() >= 2;
+    }
+
+    /** Open water, and enough of it to be worth a rod. */
+    private boolean fishable(BlockPos pos) {
+        int water = 0;
+        for (BlockPos p : BlockPos.betweenClosed(pos.offset(-6, -3, -6), pos.offset(6, 1, 6))) {
+            if (level().getBlockState(p).is(Blocks.WATER) && ++water >= 12) return true;
+        }
+        return false;
+    }
+
     /** Standing timber, and enough of it to be worth walking to. */
     private boolean woodland(BlockPos pos) {
         int logs = 0;
@@ -426,6 +460,59 @@ public class VillageFolkEntity extends AssistantEntity {
             if (stone >= 24) return true;
         }
         return false;
+    }
+
+    // ------------------------------ the carrier's round ---------------------
+
+    private int routeTick = -100000;
+
+    /**
+     * A hauler's round, chosen rather than clicked. There is no wand and no
+     * player in a settlement, and the freight checklist will not let a carrier
+     * move so much as a loaf until both ends of a route stand — so a village's
+     * carrier would have been a permanent no-op.
+     *
+     * <p>The round a carrier would pick for itself: load wherever the goods
+     * are actually piling up — the field chest, the woodpile, the mine head —
+     * and unload at the storehouse in the middle. Re-read every couple of
+     * minutes, because the fullest chest in a working village is a different
+     * chest by the afternoon.
+     */
+    private void mindTheRoute() {
+        if (stationTask() != StationTask.HAUL) return;
+        if (tickCount - routeTick < 2400) return;
+        routeTick = tickCount;
+        BlockPos heart = villageCentre;
+        if (heart == null) return;
+
+        // One look at every chest in the settlement, block entities only.
+        java.util.List<ZoneChests.Found> all = new java.util.ArrayList<>();
+        for (ZoneChests.Found f : ZoneChests.around(level(), heart, 64, 12)) {
+            if (ZoneChests.isStashable(f)) all.add(f);     // a furnace is not a depot
+        }
+        BlockPos depot = null, load = null;
+        double depotDist = Double.MAX_VALUE;
+        int fullest = 0;
+        for (ZoneChests.Found f : all) {
+            double d = f.pos().distSqr(heart);
+            if (d < depotDist) { depotDist = d; depot = f.pos(); }
+        }
+        for (ZoneChests.Found f : all) {
+            if (f.pos().equals(depot)) continue;           // never haul the depot to itself
+            int held = stockIn(f);
+            if (held > fullest) { fullest = held; load = f.pos(); }
+        }
+        // One chest in the whole village is a village with nothing to carry
+        // between; leave the route alone and let the hand lend itself out.
+        if (depot != null && load != null) setHaulRoute(load, depot);
+    }
+
+    /** How much is actually sitting in this chest. */
+    private int stockIn(ZoneChests.Found f) {
+        if (!(f.blockEntity() instanceof net.minecraft.world.Container box)) return 0;
+        int n = 0;
+        for (int i = 0; i < box.getContainerSize(); i++) n += box.getItem(i).getCount();
+        return n;
     }
 
     /** A short stroll while looking for somewhere to settle to work. */
@@ -468,7 +555,7 @@ public class VillageFolkEntity extends AssistantEntity {
         BlockPos site = findSite(trade, radiusFor(trade));
         avoidHere = null;
         if (site == null) return false;
-        WorkZone zone = WorkZone.around(site, radiusFor(trade), depthFor(trade));
+        WorkZone zone = WorkZone.around(site, radiusFor(trade), depthFor(trade, site));
         setStation(site, trade);
         assignPlot(zone, patchNameFor(trade));
         setAutonomous(true);

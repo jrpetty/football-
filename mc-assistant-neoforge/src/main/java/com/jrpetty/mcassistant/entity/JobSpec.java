@@ -43,7 +43,7 @@ public final class JobSpec {
         return switch (task) {
             case FARM -> List.of("a hoe", "a chest");
             case WOOD -> List.of("an axe", "a chest");
-            case MINE -> List.of("a pickaxe", "8 torches", "a chest");
+            case MINE -> List.of("a pickaxe", "a chest", "torches (it lights the shaft)");
             case RANCH -> List.of("shears", "2+ animals in the zone", "breeding food", "a chest");
             case GUARD -> List.of("a sword", "torches (it lights the area)");
             case SMELT -> List.of("a furnace in the zone", "raw ore to smelt", "fuel (coal or logs)", "a chest");
@@ -96,10 +96,13 @@ public final class JobSpec {
             }
             case MINE -> {
                 if (!heldTool(a, stores, "_pickaxe")) gaps.add("a pickaxe");
-                if (a.countCarried(s -> s.is(Items.TORCH))
-                    + ZoneChests.countIn(stores, s -> s.is(Items.TORCH)) < 8) {
-                    gaps.add("8 torches");
-                }
+                // Torches are what a miner MAKES OUT OF what it digs up, so
+                // demanding them before it may dig is a closed loop: no
+                // torches, no mining, no coal, no torches. A settlement's
+                // miners stood at "needs 8 torches" from the hour they were
+                // founded with no way on earth to get any. Same reasoning as
+                // the guard below — a torch is spent, not required — and the
+                // shaft still gets lit, out of the first coal that comes up it.
                 needChest(a, stores, gaps, 1);
             }
             case RANCH -> {

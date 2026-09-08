@@ -170,11 +170,25 @@ public final class VillageSpawner {
         ChunkLoad.setLoaded(level, village.id(), ground, LOADED_RADIUS, true);
     }
 
-    /** What a pair of hands needs to survive its first day and start work. */
-    private static void starterKit(VillageFolkEntity folk) {
+    /**
+     * What a pair of hands needs to survive its first day and start work —
+     * carried, not stored, because a folk's plot can be fifty blocks from the
+     * founding chest and a bot only reaches the stores on its OWN ground.
+     * Everything here answers a question the village cannot answer for it:
+     * what do I eat, what do I work with, where do I put what I produce, and
+     * what do I put in the ground.
+     */
+    public static void starterKit(VillageFolkEntity folk) {
         folk.insertItem(new ItemStack(Items.BREAD, 16));
         folk.insertItem(new ItemStack(Items.STONE_AXE));
         folk.insertItem(new ItemStack(Items.STONE_PICKAXE));
+        // A chest of its own. The station brain plants this the first time it
+        // has something to put away, which is what turns a claimed field into
+        // a working one — without it the harvest has nowhere to go and the
+        // whole trade jams on a full pack.
+        folk.insertItem(new ItemStack(Items.CHEST));
+        folk.insertItem(new ItemStack(Items.WHEAT_SEEDS, 8));
+        folk.insertItem(new ItemStack(Items.OAK_SAPLING, 4));
     }
 
     /**

@@ -58,6 +58,7 @@ public class VillageCharterItem extends Item {
         if (folk == null) return InteractionResult.CONSUME;
         folk.moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, player.getYRot(), 0.0F);
         folk.rename(freshName(village.id()));
+        com.jrpetty.mcassistant.VillageSpawner.starterKit(folk);
         level.addFreshEntity(folk);
         // Settling, choosing a trade and claiming ground all happen on the
         // folk's own agenda a moment from now — this only puts them there.
