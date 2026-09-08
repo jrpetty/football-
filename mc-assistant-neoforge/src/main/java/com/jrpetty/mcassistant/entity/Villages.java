@@ -176,26 +176,43 @@ public final class Villages {
     // same mechanism that answers "why build a village?", "what should I do
     // when my own trade has nothing for me?" and "what is this place FOR?".
 
-    public enum Stage {
-        CAMP("a camp"), HAMLET("a hamlet"), VILLAGE("a village"), TOWN("a town");
+    /**
+     * The ages of a settlement. Every one is named for the material that
+     * defines it, because that is what actually changes: a village in the Wood
+     * Age is felling and building in timber, a village in the Stone Age is
+     * quarrying and walling itself in, and a village in the Iron Age is
+     * running a forge. What they gather, what they build and what they arm
+     * themselves with all follow from which age they are in.
+     */
+    public enum Age {
+        WOOD("the Wood Age"),
+        STONE("the Stone Age"),
+        IRON("the Iron Age"),
+        DIAMOND("the Diamond Age"),
+        NETHER("the Nether Age");
+
         public final String label;
-        Stage(String label) { this.label = label; }
+        Age(String label) { this.label = label; }
+
+        Age next() {
+            return this == NETHER ? NETHER : values()[ordinal() + 1];
+        }
     }
 
     /** A thing the village still wants, and the kind of work that gets it. */
     public record Need(String what, Task task, int amount) {}
 
-    public enum Task { FOOD, LOGS, STONE, IRON, BUILD, HANDS, NONE }
+    public enum Task { FOOD, LOGS, STONE, COAL, IRON, DIAMOND, OBSIDIAN, BUILD, HANDS, NONE }
 
-    private static final Map<UUID, Stage> STAGE = new ConcurrentHashMap<>();
+    private static final Map<UUID, Age> AGE = new ConcurrentHashMap<>();
 
-    public static Stage stage(UUID villageId) {
-        return STAGE.getOrDefault(villageId, Stage.CAMP);
+    public static Age age(UUID villageId) {
+        return AGE.getOrDefault(villageId, Age.WOOD);
     }
 
     /**
-     * What the settlement still needs before it is the next thing up. Returns
-     * null when this stage is complete — at which point the village advances
+     * What the settlement still needs before it comes of age. Returns null
+     * when this age's list is complete — at which point it advances, says so,
      * and a longer list appears.
      */
     @Nullable
@@ -203,58 +220,73 @@ public final class Villages {
         Village v = get(villageId);
         if (v == null) return null;
         int folk = headcount(villageId);
-        Stage at = stage(villageId);
+        Age at = age(villageId);
 
         List<Need> wants = new ArrayList<>();
         switch (at) {
-            case CAMP -> {
-                // A camp becomes a hamlet when it can feed itself and has
-                // somewhere to put what it grows.
-                if (built(villageId, "storage") < 1) wants.add(new Need("somewhere to store things", Task.BUILD, 1));
+            case WOOD -> {
+                // Timber, a roof, and food coming in. Everything a place needs
+                // before it can afford to think about stone.
                 need(wants, level, v, "food in the stores", Task.FOOD, 64);
-                need(wants, level, v, "timber", Task.LOGS, 64);
+                if (built(villageId, "storage") < 1) wants.add(new Need("somewhere to store things", Task.BUILD, 1));
+                need(wants, level, v, "timber", Task.LOGS, 128);
+                if (built(villageId, "shelter") < 1) wants.add(new Need("a shelter", Task.BUILD, 1));
+                if (built(villageId, "house") < Math.max(1, folk / 4)) wants.add(new Need("houses", Task.BUILD, 1));
             }
-            case HAMLET -> {
-                // A hamlet becomes a village when everybody is under a roof
-                // and the forge is lit.
-                if (built(villageId, "house") < Math.max(1, folk / 3)) wants.add(new Need("a roof for everyone", Task.BUILD, 1));
-                need(wants, level, v, "stone", Task.STONE, 128);
+            case STONE -> {
+                // Quarry, wall, and a fire to work by.
+                need(wants, level, v, "stone", Task.STONE, 256);
+                need(wants, level, v, "coal", Task.COAL, 32);
+                if (built(villageId, "fortify") < 1) wants.add(new Need("a wall around the village", Task.BUILD, 1));
+                if (built(villageId, "house") < Math.max(2, folk / 3)) wants.add(new Need("more houses", Task.BUILD, 1));
                 if (built(villageId, "smeltery") < 1) wants.add(new Need("a smeltery", Task.BUILD, 1));
                 need(wants, level, v, "food in the stores", Task.FOOD, 128);
             }
-            case VILLAGE -> {
-                // A village becomes a town on metal and hands.
-                need(wants, level, v, "iron", Task.IRON, 32);
+            case IRON -> {
+                // Metal, and the buildings that only a village with metal can
+                // afford the time to put up.
+                need(wants, level, v, "iron", Task.IRON, 64);
                 if (built(villageId, "workshop") < 1) wants.add(new Need("a workshop", Task.BUILD, 1));
                 if (folk < VILLAGE_SIZE) wants.add(new Need("more hands", Task.HANDS, VILLAGE_SIZE - folk));
+                if (built(villageId, "watchtower") < 1) wants.add(new Need("a watchtower", Task.BUILD, 1));
                 need(wants, level, v, "food in the stores", Task.FOOD, 256);
             }
-            case TOWN -> {
-                // A town is never finished; it simply keeps itself.
+            case DIAMOND -> {
+                need(wants, level, v, "diamonds", Task.DIAMOND, 8);
+                need(wants, level, v, "iron", Task.IRON, 128);
+                if (built(villageId, "lighthouse") < 1) wants.add(new Need("a lighthouse", Task.BUILD, 1));
+            }
+            case NETHER -> {
+                // The last thing a settlement builds for itself is a way out
+                // of the world it started in.
+                need(wants, level, v, "obsidian", Task.OBSIDIAN, 10);
+                need(wants, level, v, "diamonds", Task.DIAMOND, 16);
                 need(wants, level, v, "food in the stores", Task.FOOD, 256);
-                need(wants, level, v, "timber", Task.LOGS, 128);
-                need(wants, level, v, "iron", Task.IRON, 64);
             }
         }
         if (wants.isEmpty()) {
-            advance(villageId, at);
+            advance(level, villageId, at);
             return null;
         }
         return wants.get(0);
     }
 
-    private static void advance(UUID villageId, Stage from) {
-        Stage next = switch (from) {
-            case CAMP -> Stage.HAMLET;
-            case HAMLET -> Stage.VILLAGE;
-            case VILLAGE -> Stage.TOWN;
-            case TOWN -> Stage.TOWN;
-        };
+    /**
+     * Coming of age. This is the ONE thing a settlement says out loud — the
+     * folk themselves never speak, but a village reaching its next age is a
+     * thing worth being told about wherever you are.
+     */
+    private static void advance(net.minecraft.server.level.ServerLevel level, UUID villageId, Age from) {
+        Age next = from.next();
         if (next == from) return;
-        STAGE.put(villageId, next);
-        AssistantEntity boss = leader(villageId);
-        if (boss != null) {
-            boss.say("That's us " + next.label + " now. Good work, all of you.");
+        AGE.put(villageId, next);
+        Village v = get(villageId);
+        String where = v == null ? "" : " (" + v.centre().getX() + ", " + v.centre().getZ() + ")";
+        net.minecraft.network.chat.Component line = net.minecraft.network.chat.Component.literal(
+            "A village has entered " + next.label + where + ".")
+            .withStyle(net.minecraft.ChatFormatting.GOLD);
+        for (net.minecraft.server.level.ServerPlayer p : level.players()) {
+            p.sendSystemMessage(line);
         }
     }
 
@@ -265,8 +297,11 @@ public final class Villages {
         if (have < amount) wants.add(new Need(what, task, amount - have));
     }
 
-    /** What the settlement holds, counted from the chests around its heart.
-     *  Cached briefly: this is asked by every folk with a spare moment. */
+    /** What the settlement holds, counted from the chests around its heart —
+     *  which is what a "storage area" actually means here: the stores are
+     *  wherever the village keeps them, near the middle, and every count of
+     *  what the place owns reads from exactly that. Cached briefly, because
+     *  every hand with a spare moment asks. */
     private static final Map<UUID, long[]> STOCK_TICK = new ConcurrentHashMap<>();
     private static final Map<UUID, int[]> STOCK = new ConcurrentHashMap<>();
 
@@ -300,10 +335,14 @@ public final class Villages {
             case STONE -> st.is(net.minecraft.world.item.Items.COBBLESTONE)
                 || st.is(net.minecraft.world.item.Items.STONE)
                 || st.is(net.minecraft.world.item.Items.COBBLED_DEEPSLATE);
+            case COAL -> st.is(net.minecraft.world.item.Items.COAL)
+                || st.is(net.minecraft.world.item.Items.CHARCOAL);
             case IRON -> st.is(net.minecraft.world.item.Items.IRON_INGOT)
                 || st.is(net.minecraft.world.item.Items.RAW_IRON)
                 || st.is(net.minecraft.world.item.Items.IRON_ORE)
                 || st.is(net.minecraft.world.item.Items.DEEPSLATE_IRON_ORE);
+            case DIAMOND -> st.is(net.minecraft.world.item.Items.DIAMOND);
+            case OBSIDIAN -> st.is(net.minecraft.world.item.Items.OBSIDIAN);
             default -> false;
         };
     }
@@ -337,23 +376,46 @@ public final class Villages {
 
     /**
      * What the settlement should put up next, or null when it is content for
-     * now. Storage first — nowhere to put anything is the first thing that
-     * hurts — then a roof per few folk, then the workshop and the smeltery
-     * that the trades actually use.
+     * now. Buildings follow the age: a village in the Wood Age puts up timber
+     * — a store, a shelter, houses — and only once it is quarrying does it
+     * wall itself in and light a smeltery. Parts are placed from whatever the
+     * builder is carrying, so what the village gathered for its age is what
+     * its buildings come out of.
+     *
+     * <p>Earlier ages' buildings are still wanted if they were never built: a
+     * settlement does not skip its storehouse because it found iron.
      */
     @Nullable
     public static String nextProject(UUID villageId) {
         int folk = headcount(villageId);
         if (folk == 0) return null;
+        Age at = age(villageId);
+
         if (built(villageId, "storage") < 1) return "storage";
-        if (built(villageId, "house") < Math.max(1, folk / 3)) return "house";
-        boolean smelter = false;
-        for (AssistantEntity a : folkOf(villageId)) {
-            if (a.stationTask() == AssistantEntity.StationTask.SMELT) { smelter = true; break; }
-        }
-        if (smelter && built(villageId, "smeltery") < 1) return "smeltery";
-        if (folk >= 4 && built(villageId, "workshop") < 1) return "workshop";
+        if (built(villageId, "shelter") < 1) return "shelter";
+        if (built(villageId, "house") < Math.max(1, folk / 4)) return "house";
+        if (at == Age.WOOD) return null;
+
+        if (built(villageId, "fortify") < 1) return "fortify";        // the wall
+        if (built(villageId, "house") < Math.max(2, folk / 3)) return "house";
+        if (built(villageId, "smeltery") < 1) return "smeltery";
+        if (at == Age.STONE) return null;
+
+        if (built(villageId, "workshop") < 1) return "workshop";
         if (folk >= 8 && built(villageId, "watchtower") < 1) return "watchtower";
+        if (at == Age.IRON) return null;
+
+        if (built(villageId, "lighthouse") < 1) return "lighthouse";
         return null;
+    }
+
+    /** What an idle hand should be gathering for the age the village is in —
+     *  the answer to "there is nothing in my own trade to do right now". */
+    public static Task gatherFor(Age age) {
+        return switch (age) {
+            case WOOD -> Task.LOGS;
+            case STONE -> Task.STONE;
+            case IRON, DIAMOND, NETHER -> Task.IRON;
+        };
     }
 }

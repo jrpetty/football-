@@ -76,6 +76,8 @@ public class VillageFolkEntity extends AssistantEntity {
         if (ownerId() == null) { settle(); return; }
         if (workZone() == null) { takeUpATrade(); return; }
         if (peekJob() != null) return;                 // already busy
+        if (resting()) return;                         // off the clock for a bit
+        if (movedOnFromSpentGround()) return;          // this patch is finished
         if (workedOut() && lendAHand()) return;        // my trade has nothing: help
         considerVillageWork();
     }
@@ -105,6 +107,19 @@ public class VillageFolkEntity extends AssistantEntity {
         Villages.Need need = Villages.nextNeed(server, village);
         if (need == null) return false;
         switch (need.task()) {
+            case COAL -> {
+                enqueue(Job.gather(com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.COAL,
+                    Math.min(32, Math.max(8, need.amount()))));
+                enqueue(Job.deposit());
+                return true;
+            }
+            case DIAMOND, OBSIDIAN -> {
+                // Both live in the deep, and both are a miner's business.
+                // Everyone else helps by keeping the stores moving instead.
+                if (stationTask() == StationTask.MINE) return false;
+                if (countItems() > 0) { enqueue(Job.deposit()); return true; }
+                return false;
+            }
             case LOGS -> {
                 say("The village is short of timber. I'll cut some.");
                 enqueue(Job.gather(com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.LOGS,
@@ -337,6 +352,64 @@ public class VillageFolkEntity extends AssistantEntity {
         BlockPos to = surfaceAt(x, z);
         if (to != null) walkTo(to, 1.0D);
     }
+
+    // ------------------------------ moving on, and knocking off --------------
+
+    /**
+     * A worked-out patch is not a patch. A miner whose seam is exhausted, or a
+     * woodcutter left standing in stumps, does not walk the same empty ground
+     * for ever — it lets the claim go and finds fresh ground. This is the only
+     * reason a village can keep growing past its first hillside.
+     *
+     * <p>Only for the trades whose ground genuinely runs out. A field does not
+     * run out; it comes round again.
+     */
+    private boolean movedOnFromSpentGround() {
+        StationTask trade = stationTask();
+        if (trade != StationTask.MINE && trade != StationTask.WOOD) return false;
+        if (!workedOut()) { spentSince = 0; return false; }
+        if (spentSince == 0) { spentSince = tickCount; return false; }
+        // Three solid minutes of finding nothing: long enough that a slow
+        // patch is not abandoned, short enough that nobody stands in a
+        // clearing all afternoon.
+        if (tickCount - spentSince < 3600) return false;
+        spentSince = 0;
+        BlockPos site = findSite(trade, radiusFor(trade));
+        if (site == null) return false;
+        WorkZone here = workZone();
+        if (here != null && here.containsColumn(site)) return false;   // same ground again
+        WorkZone zone = WorkZone.around(site, radiusFor(trade), depthFor(trade));
+        setStation(site, trade);
+        assignPlot(zone, patchNameFor(trade));
+        setAutonomous(true);
+        return true;
+    }
+
+    private int spentSince;
+
+    /**
+     * Nobody works every waking hour. After a long stretch a folk knocks off
+     * for a minute or two — wanders back toward the middle of the village and
+     * stands about — before going back to it. It costs a little output and
+     * buys the thing that makes a settlement look inhabited rather than
+     * operated: people who are sometimes just there.
+     */
+    private boolean resting() {
+        if (tickCount < restUntil) {
+            if (getNavigation().isDone() && villageCentre != null
+                && villageCentre.distSqr(blockPosition()) > 64.0) {
+                walkTo(villageCentre, 0.9D);
+            }
+            return true;
+        }
+        if (tickCount - lastRest < 12000) return false;   // ten minutes on the job
+        lastRest = tickCount;
+        restUntil = tickCount + 1200 + getRandom().nextInt(1200);
+        return true;
+    }
+
+    private int restUntil;
+    private int lastRest;
 
     // ------------------------------ the village's work -----------------------
 
