@@ -6203,10 +6203,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case LOGS, DIRT, SAND, GRAVEL, SUGAR_CANE -> true;
             case COAL, STONE -> bestPickTier() >= 1;
             case IRON -> bestPickTier() >= 2;
+            case OBSIDIAN -> bestPickTier() >= 4;   // diamond or nothing
         };
         if (!toolOk) return false;
         return switch (role) {
-            case MINER -> kind == GatherGoal.Kind.STONE || kind == GatherGoal.Kind.IRON || kind == GatherGoal.Kind.COAL;
+            case MINER -> kind == GatherGoal.Kind.STONE || kind == GatherGoal.Kind.IRON
+                || kind == GatherGoal.Kind.COAL || kind == GatherGoal.Kind.OBSIDIAN;
             case LUMBERJACK -> kind == GatherGoal.Kind.LOGS;
             case BUILDER -> kind == GatherGoal.Kind.LOGS || kind == GatherGoal.Kind.STONE;
             case FARMER, NONE -> false; // farmers tend the larder, not the mines
@@ -7381,6 +7383,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 || s.is(net.minecraft.world.item.Items.RED_SAND);
             case GRAVEL -> s -> s.is(net.minecraft.world.item.Items.GRAVEL);
             case SUGAR_CANE -> s -> s.is(net.minecraft.world.item.Items.SUGAR_CANE);
+            case OBSIDIAN -> s -> s.is(net.minecraft.world.item.Items.OBSIDIAN);
         };
     }
 
