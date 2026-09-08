@@ -14,33 +14,66 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class VillageMathTest {
 
-    private static final int MAX_FOLK = 60;
+    private static final int MAX_FOLK = 500;
 
     @Test
-    @DisplayName("the stores reach at least as far as the plots do")
-    void storesKeepUpWithPlots() {
+    @DisplayName("a village either sees its own output, or has carriers to fetch it")
+    void nothingIsEverStranded() {
         // THE BUG THIS EXISTS FOR: stores were read from 32 blocks while plots
         // were staked 60+ out, so a village could not see its own harvest, the
         // plan read "short of food" for ever and the ages never advanced.
+        // A town too big to see its own edges is allowed — but only if it has
+        // somebody whose job is carrying the far fields' output to the middle.
         for (int folk = 1; folk <= MAX_FOLK; folk++) {
-            int plots = VillageMath.plotReach(folk);
-            int stores = VillageMath.storesRadius(folk);
-            assertTrue(stores >= plots,
-                "at " + folk + " folk the stores reach " + stores
-                + " but plots go out to " + plots);
+            if (VillageMath.storesRadius(folk) >= VillageMath.plotReach(folk)) continue;
+            assertTrue(VillageMath.shapeOf(folk)[VillageMath.HAUL] >= 1,
+                "at " + folk + " folk the plots reach " + VillageMath.plotReach(folk)
+                + " past stores of " + VillageMath.storesRadius(folk)
+                + " and there is no carrier");
         }
     }
 
     @Test
-    @DisplayName("the loaded ring covers where the plots actually are")
-    void ringCoversPlots() {
+    @DisplayName("a settlement small enough to be watched over entirely, is")
+    void smallVillagesRunUnattended() {
+        // Up to the point where a place outgrows the ring, every plot must sit
+        // inside it — that is what "grows while you are away" means.
         for (int folk = 1; folk <= MAX_FOLK; folk++) {
-            int ring = VillageMath.loadedRadiusBlocks(folk);
-            int plots = VillageMath.plotReach(folk);
-            assertTrue(ring >= plots,
-                "at " + folk + " folk the ring is " + ring
-                + " blocks but plots go out to " + plots);
+            if (VillageMath.loadedRadiusChunks(folk) >= VillageMath.MAX_LOADED_RADIUS) continue;
+            assertTrue(VillageMath.loadedRadiusBlocks(folk) >= VillageMath.plotReach(folk),
+                "at " + folk + " folk the ring is " + VillageMath.loadedRadiusBlocks(folk)
+                + " but plots go out to " + VillageMath.plotReach(folk)
+                + " and the ring is not even at its cap");
         }
+    }
+
+    @Test
+    @DisplayName("there is room on the ground for everybody's plot")
+    void everyPlotHasSomewhereToGo() {
+        // Ground is claimed whole and never shared, so the disc a village
+        // searches has to hold every plot in it with room to spare for the
+        // ground that suits nobody. Three times the bare footprint.
+        for (int folk = 8; folk <= MAX_FOLK; folk++) {
+            double disc = Math.PI * Math.pow(VillageMath.plotReach(folk), 2);
+            double needed = 3.0 * folk * averagePlotFootprint();
+            assertTrue(disc >= needed,
+                "at " + folk + " folk the search disc is " + (long) disc
+                + " but the plots want " + (long) needed);
+        }
+    }
+
+    /** Mean plot footprint with elbow room, weighted by the trade shares. */
+    private static double averagePlotFootprint() {
+        int totalWeight = 0;
+        for (VillageMath.Slot s : VillageMath.SLOTS) totalWeight += s.weight();
+        // farm 8, mine 8, wood 14, the rest 6 — plus two blocks of elbow.
+        int[] radii = { 8, 8, 14, 6, 6, 6, 6, 6, 6 };
+        double sum = 0;
+        for (int i = 0; i < VillageMath.SLOTS.length; i++) {
+            double side = 2 * (radii[i] + 2) + 1;
+            sum += VillageMath.SLOTS[i].weight() * side * side;
+        }
+        return sum / totalWeight;
     }
 
     @Test
@@ -110,12 +143,32 @@ class VillageMathTest {
     @Test
     @DisplayName("growing far enough opens every trade there is")
     void growthReachesEveryTrade() {
-        // The point of breeding: at the default cap of twenty, no role in the
-        // mod should still be unreachable.
+        // The point of breeding: by twenty, no role in the mod is unreachable.
         int[] shape = VillageMath.shapeOf(20);
         for (int i = 0; i < shape.length; i++) {
             assertTrue(shape[i] > 0,
                 "slot " + i + " is still empty in a village of twenty");
+        }
+    }
+
+    @Test
+    @DisplayName("a town of a hundred keeps the shape a village of ten had")
+    void theShapeSurvivesScale() {
+        // Four farmers to three miners to two woodcutters is the ratio that
+        // was asked for. It has to still read that way at a hundred, or the
+        // ratio was only ever a special case of ten.
+        int[] shape = VillageMath.shapeOf(100);
+        assertTrue(shape[0] > shape[1] && shape[1] > shape[2],
+            "farmers/miners/woodcutters out of order at a hundred: "
+            + shape[0] + "/" + shape[1] + "/" + shape[2]);
+        double farmToMine = shape[0] / (double) shape[1];
+        double mineToWood = shape[1] / (double) shape[2];
+        assertTrue(Math.abs(farmToMine - 4.0 / 3.0) < 0.25,
+            "farmers to miners is " + farmToMine + ", wanted about 1.33");
+        assertTrue(Math.abs(mineToWood - 1.5) < 0.25,
+            "miners to woodcutters is " + mineToWood + ", wanted about 1.5");
+        for (int i = 0; i < shape.length; i++) {
+            assertTrue(shape[i] > 0, "slot " + i + " empty in a town of a hundred");
         }
     }
 

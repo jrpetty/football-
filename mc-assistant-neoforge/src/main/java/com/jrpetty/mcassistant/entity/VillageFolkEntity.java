@@ -270,7 +270,9 @@ public class VillageFolkEntity extends AssistantEntity {
         // one second to the next. Once a minute is plenty, and it stops every
         // folk in a village re-running a quarter-million block reads on the
         // same tick for ever.
-        if (tickCount - searchFailTick < 1200) { roam(); return; }
+        // Staggered by entity id: a hundred folk all failing to find ground on
+        // the same tick, once a minute, is a hundred searches in one tick.
+        if (tickCount - searchFailTick < 1200 + (getId() % 12) * 100) { roam(); return; }
         searchFailTick = tickCount;
 
         // Claim the trade BEFORE going to look for ground. The village works
@@ -413,6 +415,22 @@ public class VillageFolkEntity extends AssistantEntity {
     @Nullable
     private BlockPos scan(BlockPos from, int radius, int stride, int plotRadius,
                           java.util.function.Predicate<BlockPos> good) {
+        // Fetched ONCE, not once per candidate. The overlap test runs for
+        // every square of every ring, and in a town of a hundred that was
+        // building a hundred-element list a few hundred times per search.
+        neighbours = Villages.folkOf(ownerId());
+        try {
+            return scanRings(from, radius, stride, plotRadius, good);
+        } finally {
+            neighbours = null;
+        }
+    }
+
+    @Nullable private java.util.List<AssistantEntity> neighbours;
+
+    @Nullable
+    private BlockPos scanRings(BlockPos from, int radius, int stride, int plotRadius,
+                               java.util.function.Predicate<BlockPos> good) {
         for (int r = stride; r <= radius; r += stride) {
             for (int dx = -r; dx <= r; dx += stride) {
                 for (int dz = -r; dz <= r; dz += stride) {
@@ -445,7 +463,9 @@ public class VillageFolkEntity extends AssistantEntity {
         WorkZone mine = WorkZone.around(pos, plotRadius + 2, WorkZone.DEFAULT_DEPTH);
         // Ground we are deliberately leaving counts as somebody else's.
         if (avoidHere != null && mine.overlaps(avoidHere)) return true;
-        for (AssistantEntity mate : Villages.folkOf(ownerId())) {
+        java.util.List<AssistantEntity> crew =
+            neighbours != null ? neighbours : Villages.folkOf(ownerId());
+        for (AssistantEntity mate : crew) {
             if (mate == this) continue;
             WorkZone theirs = mate.workZone();
             if (theirs != null && mine.overlaps(theirs)) return true;
@@ -457,12 +477,17 @@ public class VillageFolkEntity extends AssistantEntity {
     private boolean farmable(BlockPos pos) {
         boolean water = false;
         int soil = 0;
+        // Reads every block in an 13x5x13 box, and did so to the last block
+        // even once the answer was settled. A hundred folk each testing a few
+        // hundred candidates a minute made that the most expensive thing in
+        // the mod by a wide margin. Stop as soon as it is known.
         for (BlockPos p : BlockPos.betweenClosed(pos.offset(-6, -2, -6), pos.offset(6, 2, 6))) {
             BlockState st = level().getBlockState(p);
             if (st.is(Blocks.WATER)) water = true;
             else if (st.is(BlockTags.DIRT)) soil++;
+            if (water && soil >= 20) return true;
         }
-        return water && soil >= 20;
+        return false;
     }
 
     /** Livestock on the hoof: a herd worth putting a fence round. */
@@ -526,19 +551,27 @@ public class VillageFolkEntity extends AssistantEntity {
         BlockPos heart = villageCentre;
         if (heart == null) return;
 
-        // One look at every chest in the settlement, block entities only.
-        java.util.List<ZoneChests.Found> all = new java.util.ArrayList<>();
-        for (ZoneChests.Found f : ZoneChests.around(level(), heart, 64, 12)) {
-            if (ZoneChests.isStashable(f)) all.add(f);     // a furnace is not a depot
-        }
-        BlockPos depot = null, load = null;
+        // The depot is whatever chest sits closest to the middle. A tight look:
+        // the storehouse is at the heart by definition.
+        BlockPos depot = null;
         double depotDist = Double.MAX_VALUE;
-        int fullest = 0;
-        for (ZoneChests.Found f : all) {
+        for (ZoneChests.Found f : ZoneChests.around(level(), heart, 32, 10)) {
+            if (!ZoneChests.isStashable(f)) continue;      // a furnace is not a depot
             double d = f.pos().distSqr(heart);
             if (d < depotDist) { depotDist = d; depot = f.pos(); }
         }
-        for (ZoneChests.Found f : all) {
+        // The load is the fullest chest near THIS carrier's own post, not the
+        // fullest in the settlement. A town of a hundred has several carriers
+        // and reaches two hundred blocks out; one shared answer would have put
+        // every one of them on the same chest and left three quarters of the
+        // place uncollected — and a scan of the whole town, per carrier, every
+        // two minutes, is a bill nobody wants to pay either. Each has its own
+        // post on its own bearing, so a sector each falls out of it.
+        BlockPos post = stationPos() != null ? stationPos() : blockPosition();
+        BlockPos load = null;
+        int fullest = 0;
+        for (ZoneChests.Found f : ZoneChests.around(level(), post, 64, 12)) {
+            if (!ZoneChests.isStashable(f)) continue;
             if (f.pos().equals(depot)) continue;           // never haul the depot to itself
             int held = stockIn(f);
             if (held > fullest) { fullest = held; load = f.pos(); }

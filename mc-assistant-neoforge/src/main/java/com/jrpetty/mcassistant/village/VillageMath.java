@@ -26,10 +26,16 @@ public final class VillageMath {
     /** Chunks a young settlement keeps awake around itself. */
     public static final int LOADED_RADIUS = 4;
 
-    /** The most a grown one ever keeps awake. Releasing is always done at THIS
-     *  radius, so a ring that grew can never be under-released and left
-     *  ticking for the rest of the world's life. */
-    public static final int MAX_LOADED_RADIUS = 6;
+    /**
+     * The most ground a settlement ever keeps ticking while you are away.
+     * Eight chunks is a 17x17 square — about what vanilla keeps awake around
+     * world spawn — and it is a CAP, not a target. A town of a hundred spreads
+     * further than this, and its outermost plots simply work when somebody is
+     * in the area rather than around the clock. That is a deliberate trade: a
+     * four-hundred-block city ticking for free is not something a server can
+     * be asked to pay for.
+     */
+    public static final int MAX_LOADED_RADIUS = 8;
 
     /** How far a folk's ground search scans outward from where it starts. One
      *  number for every trade: the ring, the stores and the plots all have to
@@ -37,28 +43,60 @@ public final class VillageMath {
      *  a different distance. */
     public static final int SCAN = 48;
 
-    /** How far a folk's ground search STARTS from the village heart. Ten plots
-     *  fit around one hillside and twenty do not; ground is claimed whole and
-     *  never shared, so past eight folk a search that starts where everybody
-     *  else's started finds nothing but its neighbours' fields. */
+    /** How far the village heart can see on its own: the range its stores are
+     *  counted over, and the size of settlement that needs no carriers. Past
+     *  this a town relies on its haulers, which is what haulers are for. */
+    public static final int CORE = 128;
+
+    /** The furthest a search will ever start from the heart. A town has to be
+     *  allowed to spread or its people have nowhere to work; it does not have
+     *  to be allowed to spread without limit. */
+    public static final int MAX_REACH = 520;
+
+    /**
+     * How far a folk's ground search STARTS from the village heart.
+     *
+     * <p>Grows with the SQUARE ROOT of the headcount, because what a village
+     * needs is AREA and area goes as the square of the radius. Growing it
+     * linearly would have a town of a hundred reaching to the horizon; growing
+     * it not at all — which is what it did until now — packs a hundred plots
+     * into a space that fits twenty, and eighty of those people would have
+     * stood in the square with no trade for ever, because ground here is
+     * claimed whole and never shared.
+     *
+     * <p>The coefficient carries three times the bare footprint of the plots,
+     * because a farmer needs water and a miner needs stone and most ground
+     * suits neither.
+     */
     public static int searchReach(int folk) {
-        return Math.min(32, 12 + Math.max(0, folk - 8) * 3);
+        double spread = 20.0 * Math.sqrt(Math.max(0, folk - 8));
+        return (int) Math.min(MAX_REACH, Math.round(12 + spread));
     }
 
     /** The furthest a plot can end up from the heart. EVERYTHING ELSE IS
-     *  DERIVED FROM THIS, rather than guessed alongside it — the ring, the
-     *  stores. Three numbers guessed separately is precisely how a village
-     *  came to be unable to see its own harvest. */
+     *  DERIVED FROM THIS rather than guessed alongside it — the ring, the
+     *  stores, whether the place needs carriers at all. Three numbers guessed
+     *  separately is precisely how a village came to be unable to see its own
+     *  harvest. */
     public static int plotReach(int folk) {
         return searchReach(folk) + SCAN;
     }
 
-    /** Chunks kept awake. Derived from the plots, because a plot outside the
-     *  ring is a plot nobody works while you are away — which is the one thing
-     *  a settlement on the map is FOR. */
+    /**
+     * Chunks kept awake. Derived from the plots so a small settlement is
+     * covered entirely, then capped — see {@link #MAX_LOADED_RADIUS}. A
+     * village up to about twenty runs completely unattended; a town past that
+     * keeps its heart and its inner ring alive and works its far fields when
+     * you are near.
+     */
     public static int loadedRadiusChunks(int folk) {
+        return loadedRadiusChunks(folk, MAX_LOADED_RADIUS);
+    }
+
+    /** The same, with the cap the server is willing to pay for. */
+    public static int loadedRadiusChunks(int folk, int cap) {
         int chunks = (plotReach(folk) + 15) / 16;              // ceiling
-        return Math.max(LOADED_RADIUS, Math.min(MAX_LOADED_RADIUS, chunks));
+        return Math.max(LOADED_RADIUS, Math.min(Math.max(LOADED_RADIUS, cap), chunks));
     }
 
     /** The same ring in blocks. */
@@ -66,11 +104,26 @@ public final class VillageMath {
         return loadedRadiusChunks(folk) * 16;
     }
 
-    /** How far out the village's own stores are counted from. Derived from the
-     *  plots with a little margin: a settlement that cannot see the chest at
-     *  the far end of its own farm believes it is starving in a good year. */
+    /** Is this settlement entirely inside its own loaded ring? */
+    public static boolean fullyAwake(int folk) {
+        return loadedRadiusBlocks(folk) >= plotReach(folk);
+    }
+
+    /** How far out the village's own stores are counted from. Capped at the
+     *  core: sweeping every chest inside a four-hundred-block town ten times a
+     *  minute is not a thing anybody should ask a server to do. */
     public static int storesRadius(int folk) {
-        return Math.min(112, plotReach(folk) + 8);
+        return Math.min(CORE, plotReach(folk) + 8);
+    }
+
+    /**
+     * Has this place outgrown what its heart can see? Past this size the
+     * outlying plots bank into their own chests and it takes a CARRIER to get
+     * that into the stores the plan reads — so a town this big that has no
+     * hauler is a town that will starve in a full barn.
+     */
+    public static boolean needsCarriers(int folk) {
+        return plotReach(folk) > storesRadius(folk);
     }
 
     // ------------------------------------------------------------ trade shares
@@ -92,6 +145,10 @@ public final class VillageMath {
         new Slot(1, 14),   // RANCH
         new Slot(1, 16),   // FISH
     };
+
+    /** Index of the carrier in {@link #SLOTS} — the trade a town past its own
+     *  eyesight cannot do without. */
+    public static final int HAUL = 5;
 
     /**
      * Which trade the next pair of hands should take: whichever is furthest

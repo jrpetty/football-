@@ -40,6 +40,7 @@ public final class AssistantConfig {
     public static final ModConfigSpec.IntValue VILLAGE_MAX_FOLK;
     public static final ModConfigSpec.BooleanValue VILLAGE_BREEDING;
     public static final ModConfigSpec.IntValue VILLAGE_GROWTH_CAP;
+    public static final ModConfigSpec.IntValue VILLAGE_LOADED_CHUNKS;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -119,8 +120,20 @@ public final class AssistantConfig {
         VILLAGE_GROWTH_CAP = b.comment(
                 "How large a settlement may grow by raising children. The trade shares",
                 "keep scaling with it: a watch at eleven, a carrier at twelve, a",
-                "storekeeper at thirteen, a pen at fourteen and a boat at sixteen.")
-            .defineInRange("villageGrowthCap", 20, 2, 60);
+                "storekeeper at thirteen, a pen at fourteen and a boat at sixteen,",
+                "and past that it is simply more of everything in the same proportion.",
+                "A town spreads with the SQUARE ROOT of its population, because what it",
+                "needs is area: a hundred folk stake plots up to ~250 blocks out, five",
+                "hundred up to ~500. Every one of those people is a ticking entity.")
+            .defineInRange("villageGrowthCap", 100, 2, 500);
+        VILLAGE_LOADED_CHUNKS = b.comment(
+                "How many chunks around its heart a settlement keeps ticking while",
+                "nobody is there, as a radius. Eight is a 17x17 square, about what",
+                "vanilla keeps awake around world spawn. A town bigger than this ring",
+                "still works — its outer fields just wait until somebody is in the",
+                "area. Raise it if your machine can pay for it; the cost is the",
+                "square of the number.")
+            .defineInRange("villageLoadedChunks", 8, 2, 24);
         b.pop();
 
         SPEC = b.build();
@@ -146,7 +159,8 @@ public final class AssistantConfig {
     public static int villageMinFolk() { return read(VILLAGE_MIN_FOLK, 8); }
     public static int villageMaxFolk() { return read(VILLAGE_MAX_FOLK, 12); }
     public static boolean villageBreeding() { return read(VILLAGE_BREEDING, true); }
-    public static int villageGrowthCap() { return read(VILLAGE_GROWTH_CAP, 20); }
+    public static int villageGrowthCap() { return read(VILLAGE_GROWTH_CAP, 100); }
+    public static int villageLoadedChunks() { return read(VILLAGE_LOADED_CHUNKS, 8); }
 
     /** Config values throw if read before the file is loaded (early world gen,
      *  datagen, a dedicated server still booting) — fall back rather than crash. */

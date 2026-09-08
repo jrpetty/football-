@@ -53,8 +53,7 @@ public final class VillageSpawner {
      *  release that is one ring short of what was taken strands those chunks
      *  ticking for the rest of the world's life — and releasing a chunk nobody
      *  forced is free. */
-    public static final int MAX_LOADED_RADIUS =
-        com.jrpetty.mcassistant.village.VillageMath.MAX_LOADED_RADIUS;
+    public static final int MAX_LOADED_RADIUS = 24;   // the config's ceiling
 
     /**
      * How much ground a settlement keeps awake, which has to grow with the
@@ -66,7 +65,8 @@ public final class VillageSpawner {
      * See VillageMath, and the tests that hold the two together.
      */
     public static int loadedRadiusFor(int folk) {
-        return com.jrpetty.mcassistant.village.VillageMath.loadedRadiusChunks(folk);
+        return com.jrpetty.mcassistant.village.VillageMath.loadedRadiusChunks(
+            folk, AssistantConfig.villageLoadedChunks());
     }
 
     /** Cells we have already looked at this session, so a chunk that loads and
