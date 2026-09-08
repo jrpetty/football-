@@ -39,7 +39,6 @@ public class VillageFolkEntity extends AssistantEntity {
     @Nullable private BlockPos villageCentre;
     private int agendaTick = -1000;
     private int searchFailTick = -100000;
-    private int lastSpeechTick = -100000;
 
     public VillageFolkEntity(EntityType<? extends PathfinderMob> type, Level level) {
         super(type, level);
@@ -48,6 +47,16 @@ public class VillageFolkEntity extends AssistantEntity {
     public static AttributeSupplier.Builder createAttributes() {
         return AssistantEntity.createAttributes();
     }
+
+    /**
+     * Folk never speak. Not a word, ever — not a greeting, not a complaint,
+     * not the day's tally, not "my pack is full". A settlement is meant to be
+     * something you come across and watch, and ten of them narrating their
+     * every decision would fill the chat with noise nobody asked for. What
+     * they are doing is legible from what they are DOING.
+     */
+    @Override
+    protected boolean speaksInChat() { return false; }
 
     @Override
     public void aiStep() {
@@ -67,7 +76,6 @@ public class VillageFolkEntity extends AssistantEntity {
         if (ownerId() == null) { settle(); return; }
         if (workZone() == null) { takeUpATrade(); return; }
         if (peekJob() != null) return;                 // already busy
-        if (leadIfLeader()) return;                    // the plan, said out loud
         if (workedOut() && lendAHand()) return;        // my trade has nothing: help
         considerVillageWork();
     }
@@ -142,21 +150,6 @@ public class VillageFolkEntity extends AssistantEntity {
         }
     }
 
-    /** The leader keeps the plan and says it out loud now and then, so the
-     *  village's goal is something you can hear rather than infer. */
-    private boolean leadIfLeader() {
-        if (!(level() instanceof net.minecraft.server.level.ServerLevel server)) return false;
-        UUID village = ownerId();
-        if (village == null) return false;
-        if (Villages.leader(village) != this) return false;
-        if (tickCount - lastSpeechTick < 2400) return false;
-        lastSpeechTick = tickCount;
-        Villages.Need need = Villages.nextNeed(server, village);
-        if (need == null) return false;
-        say("We're " + Villages.stage(village).label + ". What we want next is "
-            + need.what() + ".");
-        return false;   // saying it is not a job — carry on afterwards
-    }
 
     // ------------------------------ belonging --------------------------------
 
