@@ -374,20 +374,26 @@ public class VillageFolkEntity extends AssistantEntity {
         // trade. Widening the SCAN instead would have squared its cost, and
         // that scan already reads eight hundred blocks per candidate; moving
         // where it starts costs nothing at all.
-        int reach = Math.min(48, 12 + Math.max(0, Villages.headcount(ownerId()) - 8) * 4);
+        int reach = com.jrpetty.mcassistant.village.VillageMath
+            .searchReach(Villages.headcount(ownerId()));
         BlockPos from = heart.offset(
             (int) Math.round(Math.cos(angle) * reach), 0,
             (int) Math.round(Math.sin(angle) * reach));
         return switch (trade) {
-            case FARM -> scan(from, 48, 6, radius, this::farmable);
-            case WOOD -> scan(from, 64, 6, radius, this::woodland);
-            case MINE -> scan(from, 48, 6, radius, this::diggable);
+            // One scan distance for every trade. The ring a village keeps
+            // awake and the range its stores are read over are both derived
+            // from how far a plot can end up, and neither can be reasoned
+            // about while the woodcutter quietly reaches a third further than
+            // everybody else.
+            case FARM -> scan(from, SCAN, 6, radius, this::farmable);
+            case WOOD -> scan(from, SCAN, 6, radius, this::woodland);
+            case MINE -> scan(from, SCAN, 6, radius, this::diggable);
             // A pen goes where the animals already are and a jetty goes on
             // water — both were staking the village square, where a rancher
             // found nothing to breed and a fisher nothing to cast into, and
             // both trades were a silent no-op for the life of the settlement.
-            case RANCH -> scan(from, 64, 6, radius, this::pasture);
-            case FISH -> scan(from, 64, 6, radius, this::fishable);
+            case RANCH -> scan(from, SCAN, 6, radius, this::pasture);
+            case FISH -> scan(from, SCAN, 6, radius, this::fishable);
             // The indoor trades belong in the village rather than out in a
             // field — but not all three in the same square. Each takes its own
             // corner of the middle, on its own bearing, so the forge, the
@@ -757,6 +763,9 @@ public class VillageFolkEntity extends AssistantEntity {
         setAutonomous(true);
         return true;
     }
+
+    /** How far a ground search reaches out from where it starts. */
+    private static final int SCAN = com.jrpetty.mcassistant.village.VillageMath.SCAN;
 
     private int spentSince;
     private int searchBearing;

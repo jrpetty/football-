@@ -449,8 +449,7 @@ public final class Villages {
      * loses sight of its own output by getting bigger.
      */
     public static int storesRadius(@Nullable UUID villageId) {
-        int folk = headcount(villageId);
-        return Math.min(112, 40 + Math.max(0, folk - 8) * 5);
+        return com.jrpetty.mcassistant.village.VillageMath.storesRadius(headcount(villageId));
     }
 
     private static boolean matches(Task task, net.minecraft.world.item.ItemStack st) {

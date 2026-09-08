@@ -53,16 +53,20 @@ public final class VillageSpawner {
      *  release that is one ring short of what was taken strands those chunks
      *  ticking for the rest of the world's life — and releasing a chunk nobody
      *  forced is free. */
-    public static final int MAX_LOADED_RADIUS = 7;
+    public static final int MAX_LOADED_RADIUS =
+        com.jrpetty.mcassistant.village.VillageMath.MAX_LOADED_RADIUS;
 
     /**
      * How much ground a settlement keeps awake, which has to grow with the
      * settlement. Eight folk fit on one hillside; twenty do not, and a plot
      * outside the loaded ring is a plot nobody works while you are away —
      * which is the one thing these villages are FOR.
+     *
+     * <p>Derived from how far the plots actually go, not guessed beside it.
+     * See VillageMath, and the tests that hold the two together.
      */
     public static int loadedRadiusFor(int folk) {
-        return Math.min(MAX_LOADED_RADIUS, LOADED_RADIUS + Math.max(0, folk - 8) / 3);
+        return com.jrpetty.mcassistant.village.VillageMath.loadedRadiusChunks(folk);
     }
 
     /** Cells we have already looked at this session, so a chunk that loads and
@@ -233,7 +237,12 @@ public final class VillageSpawner {
         // The settlement keeps its own chunks awake, so it grows while the
         // player is a thousand blocks away — which is the entire point of a
         // village that lives on the map rather than in front of you.
-        ChunkLoad.setLoaded(level, village.id(), ground, LOADED_RADIUS, true);
+        // Sized to how far this many folk will actually stake their plots,
+        // rather than to a fixed four — a founding of twelve already reaches
+        // past four chunks, and a plot outside the ring is a plot nobody works
+        // while you are away.
+        ChunkLoad.setLoaded(level, village.id(), ground,
+            loadedRadiusFor(Villages.headcount(village.id())), true);
     }
 
     /**

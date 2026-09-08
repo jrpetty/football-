@@ -20,6 +20,14 @@ repositories {
 }
 
 dependencies {
+    // The settlement arithmetic is plain Java on purpose, so the relationships
+    // between its numbers can be checked on an ordinary machine rather than
+    // taken on trust. `gradlew build` runs these, so a jar is never published
+    // with the plots reaching further than the stores can see.
+    testImplementation platform('org.junit:junit-bom:5.10.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
     // Vosk: offline speech-to-text for the push-to-talk voice control.
     // Embedded in the mod jar via NeoForge's jar-in-jar so users install
     // one file. JNA (vosk's only dependency) already ships with Minecraft.
@@ -47,6 +55,14 @@ neoForge {
         "${mod_id}" {
             sourceSet sourceSets.main
         }
+    }
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    testLogging {
+        events 'failed'
+        exceptionFormat 'full'
     }
 }
 
