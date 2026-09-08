@@ -41,6 +41,7 @@ public final class AssistantConfig {
     public static final ModConfigSpec.BooleanValue VILLAGE_BREEDING;
     public static final ModConfigSpec.IntValue VILLAGE_GROWTH_CAP;
     public static final ModConfigSpec.IntValue VILLAGE_LOADED_CHUNKS;
+    public static final ModConfigSpec.BooleanValue REPLACE_VILLAGERS;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -134,6 +135,15 @@ public final class AssistantConfig {
                 "area. Raise it if your machine can pay for it; the cost is the",
                 "square of the number.")
             .defineInRange("villageLoadedChunks", 8, 2, 24);
+        REPLACE_VILLAGERS = b.comment(
+                "Turn the game's own villagers into Village Folk as you meet them, so",
+                "they work the village they already live in — its houses, beds, chests,",
+                "furnaces and fields — instead of standing about. The settlement is",
+                "credited with the buildings it plainly already has.",
+                "THIS REMOVES TRADING with those villagers: they are gone, replaced by",
+                "people who work. Wandering traders are untouched. Turn it off to keep",
+                "vanilla villages as they are and use only settlements this mod founds.")
+            .define("replaceVillagers", true);
         b.pop();
 
         SPEC = b.build();
@@ -161,6 +171,7 @@ public final class AssistantConfig {
     public static boolean villageBreeding() { return read(VILLAGE_BREEDING, true); }
     public static int villageGrowthCap() { return read(VILLAGE_GROWTH_CAP, 100); }
     public static int villageLoadedChunks() { return read(VILLAGE_LOADED_CHUNKS, 8); }
+    public static boolean replaceVillagers() { return read(REPLACE_VILLAGERS, true); }
 
     /** Config values throw if read before the file is loaded (early world gen,
      *  datagen, a dedicated server still booting) — fall back rather than crash. */
