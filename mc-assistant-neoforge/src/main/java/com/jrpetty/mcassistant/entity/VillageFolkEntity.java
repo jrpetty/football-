@@ -58,6 +58,23 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean speaksInChat() { return false; }
 
+    /** Nobody hired them, so nobody owes them a wage or a charge. They eat
+     *  like anyone else — a village that cannot feed itself has failed at the
+     *  one thing a village is for — but a settlement does not run on redstone
+     *  and does not answer to a payroll. */
+    @Override
+    protected boolean needsCharge() { return false; }
+
+    @Override
+    protected boolean drawsWages() { return false; }
+
+    /** Only a building that actually went up counts as built. */
+    @Override
+    public void noteBuilt(String structure) {
+        UUID village = ownerId();
+        if (village != null) Villages.noteProject(village, structure, level().getGameTime());
+    }
+
     @Override
     public void aiStep() {
         super.aiStep();
@@ -430,13 +447,13 @@ public class VillageFolkEntity extends AssistantEntity {
         // Only a folk standing near the village heart takes the job on — the
         // buildings go up where people live, not wherever the volunteer was.
         if (villageCentre.distSqr(blockPosition()) > 32.0 * 32.0) return;
-        Villages.noteProject(village, project, now);
-        say("The village could do with " + article(project) + project + ". I'll see to it.");
+        // Only the ATTEMPT is recorded here, which is what paces the projects.
+        // Whether it actually went up is reported by the build itself — this
+        // used to mark the storehouse "built" the moment somebody set off to
+        // build it, so a village that could not find the timber ticked the job
+        // off its list anyway and never built it at all.
+        Villages.noteAttempt(village, now);
         enqueue(Job.build(project));
-    }
-
-    private static String article(String word) {
-        return "aeiou".indexOf(word.charAt(0)) >= 0 ? "an " : "a ";
     }
 
     // ------------------------------ persistence ------------------------------

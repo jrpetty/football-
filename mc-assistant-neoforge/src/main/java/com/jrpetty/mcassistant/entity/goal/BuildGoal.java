@@ -55,6 +55,8 @@ public class BuildGoal extends Goal {
     private Direction facing = Direction.NORTH;
     private int cursor;
     private int placed;
+    /** What we set out to build, kept so the finish can report it. */
+    @Nullable private String building;
     private int workTicks;
     private int stuckTicks;
     private int myGen;
@@ -138,6 +140,7 @@ public class BuildGoal extends Goal {
         String rawArg = job != null ? job.arg() : null;
         String structure = rawArg;
         BlockPos anchor = null;
+        // captured below, once the encoded form has been split
         Direction anchorFacing = null;
         if (rawArg != null && rawArg.indexOf('|') >= 0) {
             String[] head = rawArg.split("\\|", 2);
@@ -149,6 +152,7 @@ public class BuildGoal extends Goal {
                 if (p.length > 4) this.perimeterRadius = Math.max(4, Math.min(16, Integer.parseInt(p[4])));
             } catch (Exception e) { anchor = null; anchorFacing = null; }
         }
+        this.building = structure;
         if (structure == null || !STRUCTURES.contains(structure)) {
             finish("I can build: " + String.join(", ", STRUCTURES) + ".");
             return;
@@ -234,6 +238,7 @@ public class BuildGoal extends Goal {
             stuckTicks = 0;
         }
         if (target == null) {
+            if (building != null) assistant.noteBuilt(building);
             finish("Done — placed " + placed + " parts.");
             return;
         }

@@ -361,6 +361,15 @@ public final class Villages {
         return gameTime - LAST_PROJECT.getOrDefault(villageId, -PROJECT_GAP) >= PROJECT_GAP;
     }
 
+    /** Somebody has set off to build something. Paces the next project;
+     *  says nothing about whether this one succeeds. */
+    public static void noteAttempt(UUID villageId, long gameTime) {
+        LAST_PROJECT.put(villageId, gameTime);
+    }
+
+    /** Something actually went up. Only finished buildings count toward the
+     *  village's ages — a village that could not find the timber has not got
+     *  a storehouse, however many times it tried. */
     public static void noteProject(UUID villageId, String structure, long gameTime) {
         LAST_PROJECT.put(villageId, gameTime);
         BUILT.computeIfAbsent(villageId, k -> new ArrayList<>()).add(structure);
