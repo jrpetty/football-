@@ -164,12 +164,33 @@ public class VillageFolkEntity extends AssistantEntity {
                 enqueue(Job.deposit());
                 return true;
             }
-            case DIAMOND, OBSIDIAN -> {
-                // Both live in the deep, and both are a miner's business.
-                // Everyone else helps by keeping the stores moving instead.
-                if (stationTask() == StationTask.MINE) return false;
+            case DIAMOND -> {
+                // The deep is a miner's business; everyone else helps by
+                // keeping the stores moving. A mine floor set 24 blocks under
+                // the hillside it was staked on sits a hundred blocks above the
+                // nearest diamond, though, so the shaft has to go down before
+                // the seam can be found at all — which is why no settlement
+                // could ever leave the Diamond Age.
+                if (stationTask() == StationTask.MINE) return deepenShaft();
                 if (countItems() > 0) { enqueue(Job.deposit()); return true; }
                 return false;
+            }
+            case OBSIDIAN -> {
+                // Nothing under diamond drops obsidian, so this is a job for
+                // one miner in the whole village: the one that has been given
+                // the pickaxe. It is down there already; the lava is what it
+                // has been walking round for weeks.
+                if (stationTask() != StationTask.MINE) {
+                    if (countItems() > 0) { enqueue(Job.deposit()); return true; }
+                    return false;
+                }
+                if (countCarried(st -> st.is(net.minecraft.world.item.Items.DIAMOND_PICKAXE)) == 0) {
+                    return deepenShaft();
+                }
+                enqueue(Job.gather(com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.OBSIDIAN,
+                    Math.min(16, Math.max(4, need.amount()))));
+                enqueue(Job.deposit());
+                return true;
             }
             case LOGS -> {
                 enqueue(Job.gather(com.jrpetty.mcassistant.entity.goal.GatherGoal.Kind.LOGS,
@@ -513,6 +534,24 @@ public class VillageFolkEntity extends AssistantEntity {
         int n = 0;
         for (int i = 0; i < box.getContainerSize(); i++) n += box.getItem(i).getCount();
         return n;
+    }
+
+    /**
+     * Sink the same shaft properly. A village mine is staked on the surface
+     * and floored 24 blocks under it, which is the right depth for stone, coal
+     * and iron and nowhere near deep enough for anything else. An experienced
+     * miner whose village is asking for diamonds re-marks its own plot down to
+     * the bedrock and keeps digging — same ground, same claim, a real shaft.
+     */
+    private boolean deepenShaft() {
+        WorkZone zone = workZone();
+        if (zone == null || veteranLevel() < 20) return false;
+        int floor = level().getMinBuildHeight() + 8;
+        if (zone.depth() <= floor + 4) return false;          // already down there
+        assignPlot(WorkZone.around(zone.center(), zone.radius(), floor),
+            patchNameFor(StationTask.MINE));
+        setAutonomous(true);
+        return true;
     }
 
     /** A short stroll while looking for somewhere to settle to work. */

@@ -31,7 +31,10 @@ public class GatherGoal extends Goal {
         COAL("coal ore"),
         SAND("sand"),
         GRAVEL("gravel"),
-        SUGAR_CANE("sugar cane");
+        SUGAR_CANE("sugar cane"),
+        // The last thing a settlement needs and the hardest to get: a diamond
+        // pickaxe, deep ground, and lava somewhere near enough to have made it.
+        OBSIDIAN("obsidian");
 
         public final String label;
         Kind(String label) { this.label = label; }
@@ -47,15 +50,17 @@ public class GatherGoal extends Goal {
                 case SAND -> state.is(BlockTags.SAND);
                 case GRAVEL -> state.is(net.minecraft.world.level.block.Blocks.GRAVEL);
                 case SUGAR_CANE -> state.is(net.minecraft.world.level.block.Blocks.SUGAR_CANE);
+                case OBSIDIAN -> state.is(net.minecraft.world.level.block.Blocks.OBSIDIAN);
             };
         }
 
         /** Player rules: ores and stone yield nothing without the right pickaxe. */
         public boolean needsProperTool() {
-            return this == STONE || this == IRON || this == COAL;
+            return this == STONE || this == IRON || this == COAL || this == OBSIDIAN;
         }
 
         public String toolHint() {
+            if (this == OBSIDIAN) return "a diamond pickaxe — nothing else touches obsidian";
             return this == IRON ? "a stone pickaxe or better (\"craft a stone pickaxe\")"
                 : "a pickaxe (\"craft a wooden pickaxe\")";
         }
@@ -70,6 +75,7 @@ public class GatherGoal extends Goal {
             if (w.startsWith("dirt")) return DIRT;
             if (w.startsWith("sand")) return SAND;
             if (w.startsWith("gravel")) return GRAVEL;
+            if (w.startsWith("obsidian")) return OBSIDIAN;
             if (w.startsWith("sugar") || w.startsWith("cane") || w.startsWith("reed")) return SUGAR_CANE;
             return null;
         }
