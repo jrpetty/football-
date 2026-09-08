@@ -250,6 +250,37 @@ public final class BlockLore {
         return out;
     }
 
+    /**
+     * Write down what this build believes about every block in the game, so
+     * the belief can be checked against the game instead of taken on trust.
+     *
+     * <p>The sort below is rules over the registry, and rules over a thousand
+     * blocks are wrong somewhere. This is how you find where: one line per
+     * block, its id and the verdict, in a file you can read.
+     */
+    public static java.nio.file.Path audit(java.nio.file.Path dir) throws java.io.IOException {
+        java.nio.file.Path out = dir.resolve("mcassistant-blocklore.txt");
+        StringBuilder sb = new StringBuilder();
+        Map<Use, Integer> counts = census();
+        sb.append("MC Assistant — what every block is for\n");
+        sb.append(BuiltInRegistries.BLOCK.size()).append(" blocks\n\n");
+        for (Use u : Use.values()) {
+            sb.append(String.format("%-18s %5d   %s%n", u.name(), counts.getOrDefault(u, 0), u.label));
+        }
+        sb.append('\n');
+        for (Use u : Use.values()) {
+            sb.append("\n== ").append(u.name()).append(" — ").append(u.label).append(" ==\n");
+            sb.append("   does: ").append(u.does).append('\n');
+            sb.append("   why:  ").append(u.why).append('\n');
+            sb.append("   when: ").append(u.when).append("  (").append(u.age).append(")\n");
+            for (Block b : byUse(u)) {
+                sb.append("   ").append(BuiltInRegistries.BLOCK.getKey(b)).append('\n');
+            }
+        }
+        java.nio.file.Files.writeString(out, sb.toString());
+        return out;
+    }
+
     // ---------------------------------------------------------------- the sort
 
     /**
@@ -302,6 +333,12 @@ public final class BlockLore {
             return Use.STORAGE;
         }
         if (isWorkstation(path)) return Use.WORKSTATION;
+        // Grown, not quarried: a melon or a pumpkin is a harvest that happens
+        // to be a full cube, and both were reading as building material.
+        if (path.equals("melon") || path.equals("pumpkin")
+            || path.equals("attached_melon_stem") || path.equals("attached_pumpkin_stem")) {
+            return Use.CROP;
+        }
         if (isUtility(path)) return Use.UTILITY;
         if (isHazard(path)) return Use.HAZARD;
         if (state.is(BlockTags.RAILS) || path.contains("rail")) return Use.TRANSPORT;
@@ -338,7 +375,8 @@ public final class BlockLore {
 
     private static boolean isUtility(String path) {
         return path.equals("composter") || path.equals("beehive") || path.equals("bee_nest")
-            || path.equals("lectern") || path.equals("bell") || path.equals("bookshelf")
+            || path.equals("lectern") || path.equals("bell") || path.contains("bookshelf")
+            || path.equals("sponge") || path.equals("wet_sponge")
             || path.contains("cauldron") || path.equals("hopper") || path.equals("dropper")
             || path.equals("dispenser") || path.equals("beacon") || path.equals("conduit")
             || path.equals("respawn_anchor") || path.equals("lodestone")
@@ -368,11 +406,18 @@ public final class BlockLore {
     }
 
     private static boolean isFuel(String path) {
+        // A hay bale burns twenty items in a furnace, which makes it fuel
+        // before it is anything else — it was falling through to "build a wall
+        // out of it", which is a wall you could have smelted a stack with.
         return path.equals("coal_block") || path.equals("dried_kelp_block")
-            || path.equals("charcoal_block");
+            || path.equals("charcoal_block") || path.equals("hay_block");
     }
 
     private static boolean isValuable(String path) {
+        // Raw ore blocks are a stack of ore in one cube. They are solid and
+        // they occlude, so they were coming out as ordinary building material
+        // — a village would happily have walled itself in with its own iron.
+        if (path.startsWith("raw_") && path.endsWith("_block")) return true;
         return path.equals("diamond_block") || path.equals("emerald_block")
             || path.equals("gold_block") || path.equals("iron_block")
             || path.equals("netherite_block") || path.equals("lapis_block")

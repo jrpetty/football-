@@ -60,17 +60,27 @@ public class BlockBookScreen extends Screen {
 
         int inner = W - PAD * 2;
         int gap = 4;
-        int w3 = (inner - gap * 2) / 3;
+        int w4 = (inner - gap * 3) / 4;
         int y = top + H - PAD - 18;
         int x = left + PAD;
         this.addRenderableWidget(Button.builder(Component.literal("‹ Back"),
                 b -> { this.onClose(); PlotsClient.requestOpen(); })
-            .bounds(x, y, w3, 18).build());
-        this.addRenderableWidget(Button.builder(Component.literal("More blocks ›"),
+            .bounds(x, y, w4, 18).build());
+        this.addRenderableWidget(Button.builder(Component.literal("More ›"),
                 b -> pageBlocks())
-            .bounds(x + w3 + gap, y, w3, 18).build());
+            .bounds(x + w4 + gap, y, w4, 18).build());
+        // The classification is rules read over the whole registry, and rules
+        // over a thousand blocks are wrong somewhere. This writes down every
+        // verdict so it can be checked against the game rather than believed.
+        this.addRenderableWidget(Button.builder(Component.literal("Export"),
+                b -> exportAudit())
+            .bounds(x + 2 * (w4 + gap), y, w4, 18)
+            .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(
+                "Write every block and what this build thinks it is for to "
+                + "mcassistant-blocklore.txt in your game folder")))
+            .build());
         this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
-            .bounds(x + 2 * (w3 + gap), y, inner - 2 * (w3 + gap), 18).build());
+            .bounds(x + 3 * (w4 + gap), y, inner - 3 * (w4 + gap), 18).build());
     }
 
     /** The picked category's blocks, in registry order. */
@@ -96,8 +106,10 @@ public class BlockBookScreen extends Screen {
         g.drawString(this.font, "Block book", x, top + 8, Ui.INK, false);
         Ui.right(g, this.font, BuiltInRegistries.BLOCK.size() + " blocks known",
             left + W - PAD, top + 8, Ui.MUTED);
-        g.drawString(this.font, "What it does, why you'd build it, and when.",
-            x, top + 30, Ui.FAINT, false);
+        g.drawString(this.font, exported.isEmpty()
+                ? "What it does, why you'd build it, and when."
+                : exported,
+            x, top + 30, exported.isEmpty() ? Ui.FAINT : Ui.GOOD, false);
 
         renderUses(g, mouseX, mouseY);
         renderDetail(g, mouseX, mouseY);
@@ -232,6 +244,19 @@ public class BlockBookScreen extends Screen {
         }
         return true;
     }
+
+    /** Dump the whole classification next to the game's own files. */
+    private void exportAudit() {
+        if (this.minecraft == null) return;
+        try {
+            java.nio.file.Path wrote = BlockLore.audit(this.minecraft.gameDirectory.toPath());
+            this.exported = "Written to " + wrote.getFileName();
+        } catch (Exception e) {
+            this.exported = "Could not write the file: " + e.getMessage();
+        }
+    }
+
+    private String exported = "";
 
     @Override
     public boolean isPauseScreen() {
