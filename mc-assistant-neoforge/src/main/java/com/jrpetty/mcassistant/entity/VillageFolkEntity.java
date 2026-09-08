@@ -615,7 +615,72 @@ public class VillageFolkEntity extends AssistantEntity {
         // build it, so a village that could not find the timber ticked the job
         // off its list anyway and never built it at all.
         Villages.noteAttempt(village, now);
+        // Load up FIRST. The builder places real items out of its own pack —
+        // no cheating — and nothing was putting them there, so every volunteer
+        // walked to the site empty-handed, read out a list of what it still
+        // needed and gave up on the spot. No village ever built anything, which
+        // means no village ever left the Wood Age either.
+        if (!stockedFor(project)) return;
         enqueue(Job.build(project));
+    }
+
+    /** Everything a shell is made of, and the fixtures that go inside it. */
+    private static boolean buildStock(net.minecraft.world.item.ItemStack s) {
+        return com.jrpetty.mcassistant.entity.goal.BuildGoal.isBuildingBlock(s)
+            || s.is(net.minecraft.world.item.Items.CHEST)
+            || s.is(net.minecraft.world.item.Items.FURNACE)
+            || s.is(net.minecraft.world.item.Items.CRAFTING_TABLE)
+            || s.is(net.minecraft.world.item.Items.LADDER)
+            || s.is(net.minecraft.world.item.Items.TORCH)
+            || s.is(net.minecraft.world.item.Items.GLASS);
+    }
+
+    /** Chests, furnaces and benches this blueprint blocks on, in that order. */
+    private static int[] fixturesFor(String project) {
+        return switch (project) {
+            case "storage" -> new int[]{ 4, 0, 0 };
+            case "smeltery" -> new int[]{ 2, 3, 1 };
+            case "workshop", "house" -> new int[]{ 1, 1, 1 };
+            default -> new int[]{ 0, 0, 0 };
+        };
+    }
+
+    /** Roughly what the shell alone costs, so a volunteer does not set off
+     *  with a handful of planks for a building that wants a hundred. */
+    private static int blocksFor(String project) {
+        return switch (project) {
+            case "house" -> 120;
+            case "wall", "platform", "pen" -> 40;
+            default -> 90;
+        };
+    }
+
+    /**
+     * Fill the pack from the village stores, and make up whatever fixture the
+     * blueprint is short of. Returns false when the settlement genuinely does
+     * not have the materials yet — the attempt is still recorded, so the next
+     * try is paced rather than hammered, and the gather plan will have moved
+     * timber and stone into the stores by then.
+     */
+    private boolean stockedFor(String project) {
+        BlockPos heart = villageCentre;
+        if (heart == null) return false;
+        drawFrom(heart, VillageFolkEntity::buildStock, 384, 48);
+
+        int[] want = fixturesFor(project);
+        int chests = countCarried(s -> s.is(net.minecraft.world.item.Items.CHEST));
+        int furnaces = countCarried(s -> s.is(net.minecraft.world.item.Items.FURNACE));
+        int benches = countCarried(s -> s.is(net.minecraft.world.item.Items.CRAFTING_TABLE));
+        // One craft a visit: the planner queues real jobs, and a build that
+        // needs three furnaces gets them over three visits rather than fighting
+        // over one pack of cobble.
+        if (chests < want[0] && craftNow("chest", want[0] - chests)) return false;
+        if (furnaces < want[1] && craftNow("furnace", want[1] - furnaces)) return false;
+        if (benches < want[2] && craftNow("crafting_table", want[2] - benches)) return false;
+        if (chests < want[0] || furnaces < want[1] || benches < want[2]) return false;
+
+        return countCarried(com.jrpetty.mcassistant.entity.goal.BuildGoal::isBuildingBlock)
+            >= blocksFor(project);
     }
 
     // ------------------------------ persistence ------------------------------
