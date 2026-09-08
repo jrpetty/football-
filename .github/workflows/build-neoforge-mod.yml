@@ -59,10 +59,11 @@ jobs:
             Compiled mod jar for **Minecraft 1.21.1 / NeoForge 21.1**.
             Drop it into your `mods/` folder (client for single player;
             server + client for multiplayer). Everything is obtainable in
-            SURVIVAL — craft an Assistant Spawner (8 rotten flesh around a
-            diamond) and place it, or craft a Village Charter (paper, bread,
-            a gold ingot, seeds and a chest) and right-click the ground to
-            found a settlement that runs itself. Villages also generate on
-            their own as you explore. Command an assistant in chat:
-            `!follow`, `!guard`, `!gather logs 16`, `!deposit`, `!status`.
+            SURVIVAL. A hired assistant: craft an Assistant Spawner (8 rotten
+            flesh around a diamond) and PLACE it. A self-running village:
+            craft a Village Folk Spawner (8 bread around a gold ingot) and
+            PLACE it — the first founds the village, each one after adds a
+            settler — or use `/village spawn 12` and `/village status`.
+            Villages also generate on their own as you explore. Talk to an
+            assistant in chat: `!follow`, `!guard`, `!gather logs 16`.
           files: mc-assistant-neoforge/build/libs/*.jar

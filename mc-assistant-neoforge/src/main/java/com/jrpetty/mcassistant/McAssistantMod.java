@@ -74,6 +74,19 @@ public final class McAssistantMod {
     public static final DeferredItem<BlockItem> ASSISTANT_SPAWNER_ITEM =
         ITEMS.registerSimpleBlockItem(ASSISTANT_SPAWNER);
 
+    // The Village Folk Spawner: the same shape as the assistant's — craft it,
+    // place it, and a settler stands up. The first one founds a village.
+    public static final DeferredBlock<com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock> FOLK_SPAWNER =
+        BLOCKS.registerBlock("village_folk_spawner",
+            com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock::new,
+            BlockBehaviour.Properties.of()
+                .mapColor(MapColor.COLOR_YELLOW)
+                .strength(1.0F, 2.0F)
+                .sound(SoundType.GRASS));
+
+    public static final DeferredItem<BlockItem> FOLK_SPAWNER_ITEM =
+        ITEMS.registerSimpleBlockItem(FOLK_SPAWNER);
+
     // The Job Board block: right-click to set the crew's role preset and mark it
     // the town center, which the autonomous crew organizes its labour around.
     public static final DeferredBlock<JobBoardBlock> JOB_BOARD =
@@ -130,6 +143,7 @@ public final class McAssistantMod {
         NeoForge.EVENT_BUS.register(VillageSpawner.class);
         NeoForge.EVENT_BUS.register(SleepWatch.class);
         NeoForge.EVENT_BUS.register(VillagerTakeover.class);
+        NeoForge.EVENT_BUS.register(VillageCommands.class);
     }
 
     private void onEntityAttributes(EntityAttributeCreationEvent event) {
@@ -142,6 +156,7 @@ public final class McAssistantMod {
     private void onBuildCreativeTabs(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.FUNCTIONAL_BLOCKS) {
             event.accept(ASSISTANT_SPAWNER_ITEM);
+            event.accept(FOLK_SPAWNER_ITEM);
             event.accept(VILLAGE_CHARTER);
             event.accept(JOB_BOARD_ITEM);
         }
