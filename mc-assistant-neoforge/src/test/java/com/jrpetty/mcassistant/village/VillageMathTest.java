@@ -173,6 +173,66 @@ class VillageMathTest {
     }
 
     @Test
+    @DisplayName("the larder is sized to the mouths that eat out of it")
+    void foodCoversThePopulation() {
+        // A flat sixty-four is a fortnight for ten and twenty minutes for a
+        // hundred. Whatever the number is, it has to be at least a day's real
+        // meals or a town declares itself well fed and starves.
+        for (int folk = 1; folk <= MAX_FOLK; folk++) {
+            int aDay = folk * VillageMath.MEALS_PER_DAY;
+            assertTrue(VillageMath.foodWanted(folk) >= aDay,
+                "at " + folk + " folk the larder target is " + VillageMath.foodWanted(folk)
+                + " but they eat " + aDay + " in a day");
+        }
+    }
+
+    @Test
+    @DisplayName("the iron target actually pays for the armour it promises")
+    void ironCoversTheWatchAndTheTools() {
+        for (int folk = 1; folk <= MAX_FOLK; folk++) {
+            int guards = Math.max(1, VillageMath.shapeOf(folk)[VillageMath.GUARD]);
+            assertTrue(VillageMath.ironForTheWatch(folk) >= guards * VillageMath.ARMOUR_SET,
+                "at " + folk + " folk the watch's armour is under-funded");
+            assertTrue(
+                VillageMath.ironWanted(folk)
+                    >= VillageMath.ironForTheWatch(folk) + VillageMath.ironForTools(folk),
+                "at " + folk + " folk the iron target does not cover watch + tools");
+            assertTrue(VillageMath.ironForEveryone(folk) >= VillageMath.ironForTheWatch(folk),
+                "arming everybody costs less than arming the watch at " + folk);
+        }
+    }
+
+    @Test
+    @DisplayName("what the place needs only ever grows with the place")
+    void needsAreMonotonic() {
+        for (int folk = 2; folk <= MAX_FOLK; folk++) {
+            assertTrue(VillageMath.foodWanted(folk) >= VillageMath.foodWanted(folk - 1),
+                "food target shrank at " + folk);
+            assertTrue(VillageMath.ironWanted(folk) >= VillageMath.ironWanted(folk - 1),
+                "iron target shrank at " + folk);
+            assertTrue(VillageMath.diamondsWanted(folk) >= VillageMath.diamondsWanted(folk - 1),
+                "diamond target shrank at " + folk);
+            assertTrue(VillageMath.stoneWanted(folk) >= VillageMath.stoneWanted(folk - 1),
+                "stone target shrank at " + folk);
+            assertTrue(VillageMath.timberWanted(folk) >= VillageMath.timberWanted(folk - 1),
+                "timber target shrank at " + folk);
+        }
+    }
+
+    @Test
+    @DisplayName("there are enough houses for everyone to have a bed in one")
+    void housesCoverThePopulation() {
+        for (int folk = 1; folk <= MAX_FOLK; folk++) {
+            assertTrue(VillageMath.housesWanted(folk, true) * 3 >= folk - 2,
+                "at " + folk + " folk the crowded target of "
+                + VillageMath.housesWanted(folk, true) + " houses sleeps too few");
+            assertTrue(VillageMath.housesWanted(folk, true)
+                    >= VillageMath.housesWanted(folk, false),
+                "the crowded target is smaller than the roomy one at " + folk);
+        }
+    }
+
+    @Test
     @DisplayName("the last hand in a trade is never spare")
     void neverStripsTheLastOfATrade() {
         // Re-badging must never take a village's only smelter to staff

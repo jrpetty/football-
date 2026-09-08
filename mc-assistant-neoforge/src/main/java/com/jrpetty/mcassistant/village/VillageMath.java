@@ -186,6 +186,98 @@ public final class VillageMath {
         return have > Math.max(1, (int) Math.ceil(target));
     }
 
+    // ------------------------------------------------ what the place needs
+    //
+    // Every one of these used to be a constant: sixty-four food, sixty-four
+    // iron, eight diamonds, whether the settlement was ten people or a
+    // hundred. Sixty-four food is a fortnight's larder for ten and about
+    // twenty minutes' eating for a hundred, so a town would have declared
+    // itself well fed and then starved. A village works out what it needs from
+    // how many mouths and hands it actually has.
+
+    /** Meals one pair of hands eats in a Minecraft day, at the default
+     *  upkeep of one ration per 3000 ticks against a 24000-tick day. */
+    public static final int MEALS_PER_DAY = 8;
+
+    /** Iron in a full set of armour: helmet 5, chest 8, legs 7, boots 4. */
+    public static final int ARMOUR_SET = 24;
+
+    /** Iron in one trade's tool, near enough — a pickaxe or axe is three. */
+    public static final int TOOL_IRON = 3;
+
+    /**
+     * Food the stores should hold: a day and a half of actual meals for
+     * actual people, with a floor so a hamlet still keeps a sensible larder.
+     * At ten folk that is about the sixty-four it always was; at a hundred it
+     * is twelve hundred, because a hundred people eat a hundred people's
+     * worth.
+     */
+    public static int foodWanted(int folk) {
+        return Math.max(64, (int) Math.round(folk * MEALS_PER_DAY * 1.5));
+    }
+
+    /** Iron to put a full set of armour on every watchman — the first call on
+     *  a settlement's metal, because they are the ones walking at things in
+     *  the dark. */
+    public static int ironForTheWatch(int folk) {
+        return Math.max(1, shapeOf(folk)[GUARD]) * ARMOUR_SET;
+    }
+
+    /** Iron to put a decent tool in every hand in the place. */
+    public static int ironForTools(int folk) {
+        return folk * TOOL_IRON;
+    }
+
+    /** Iron to armour everybody, not just the watch — what a town works
+     *  towards once its own people are the thing worth protecting. */
+    public static int ironForEveryone(int folk) {
+        return folk * ARMOUR_SET;
+    }
+
+    /** What the Iron Age is actually asking for: the watch in armour and
+     *  everybody in decent tools. */
+    public static int ironWanted(int folk) {
+        return Math.max(64, ironForTheWatch(folk) + ironForTools(folk));
+    }
+
+    /** Diamonds: a pickaxe for every mining crew, and never fewer than the
+     *  eight it takes to say a town has diamonds at all. A diamond pickaxe is
+     *  what makes obsidian — and therefore the last age — possible. */
+    public static int diamondsWanted(int folk) {
+        int miners = Math.max(1, shapeOf(folk)[MINE]);
+        return Math.max(8, 3 * Math.max(1, miners / 6));
+    }
+
+    /** Roofs. A house sleeps about four. */
+    public static int housesWanted(int folk, boolean crowded) {
+        return crowded ? Math.max(2, folk / 3) : Math.max(1, folk / 4);
+    }
+
+    /** Timber: what the houses on the list are actually made of. */
+    public static int timberWanted(int folk) {
+        return Math.max(128, housesWanted(folk, false) * 96);
+    }
+
+    /** Stone: the wall, the smeltery, and the houses that follow them. */
+    public static int stoneWanted(int folk) {
+        return Math.max(256, folk * 24);
+    }
+
+    /** Coal: fuel for the forge, and torches for everybody down a hole. */
+    public static int coalWanted(int folk) {
+        return Math.max(32, folk * 2);
+    }
+
+    /** Obsidian for the way out of the world. Fixed: a portal is a portal
+     *  whether ten people built it or five hundred. */
+    public static int obsidianWanted(int folk) {
+        return 10;
+    }
+
+    /** Index of the watch and the mine in {@link #SLOTS}. */
+    public static final int GUARD = 4;
+    public static final int MINE = 1;
+
     /**
      * The shape a village of this size settles into, as a count per slot —
      * what you would get by handing out every pair of hands in turn.

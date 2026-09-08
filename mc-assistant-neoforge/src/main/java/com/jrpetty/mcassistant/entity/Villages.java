@@ -317,44 +317,66 @@ public final class Villages {
 
         List<Need> wants = new ArrayList<>();
         if (v == null) return wants;
+        // Everything below is worked out from how many mouths and hands the
+        // place actually has — see VillageMath. These were flat numbers, and a
+        // flat sixty-four food is a fortnight's larder for ten people and
+        // twenty minutes' eating for a hundred: a town would have declared
+        // itself well fed and then starved with the plan saying nothing.
+        int foodNow = com.jrpetty.mcassistant.village.VillageMath.foodWanted(folk);
         switch (at) {
             case WOOD -> {
                 // Timber, a roof, and food coming in. Everything a place needs
                 // before it can afford to think about stone.
-                need(wants, level, v, "food in the stores", Task.FOOD, 64);
+                need(wants, level, v, "food in the stores", Task.FOOD, foodNow);
                 if (built(villageId, "storage") < 1) wants.add(new Need("somewhere to store things", Task.BUILD, 1));
-                need(wants, level, v, "timber", Task.LOGS, 128);
+                need(wants, level, v, "timber", Task.LOGS,
+                    com.jrpetty.mcassistant.village.VillageMath.timberWanted(folk));
                 if (built(villageId, "shelter") < 1) wants.add(new Need("a shelter", Task.BUILD, 1));
-                if (built(villageId, "house") < Math.max(1, folk / 4)) wants.add(new Need("houses", Task.BUILD, 1));
+                if (built(villageId, "house")
+                        < com.jrpetty.mcassistant.village.VillageMath.housesWanted(folk, false)) {
+                    wants.add(new Need("houses", Task.BUILD, 1));
+                }
             }
             case STONE -> {
                 // Quarry, wall, and a fire to work by.
-                need(wants, level, v, "stone", Task.STONE, 256);
-                need(wants, level, v, "coal", Task.COAL, 32);
+                need(wants, level, v, "stone", Task.STONE,
+                    com.jrpetty.mcassistant.village.VillageMath.stoneWanted(folk));
+                need(wants, level, v, "coal", Task.COAL,
+                    com.jrpetty.mcassistant.village.VillageMath.coalWanted(folk));
                 if (built(villageId, "fortify") < 1) wants.add(new Need("a wall around the village", Task.BUILD, 1));
-                if (built(villageId, "house") < Math.max(2, folk / 3)) wants.add(new Need("more houses", Task.BUILD, 1));
+                if (built(villageId, "house")
+                        < com.jrpetty.mcassistant.village.VillageMath.housesWanted(folk, true)) {
+                    wants.add(new Need("more houses", Task.BUILD, 1));
+                }
                 if (built(villageId, "smeltery") < 1) wants.add(new Need("a smeltery", Task.BUILD, 1));
-                need(wants, level, v, "food in the stores", Task.FOOD, 128);
+                need(wants, level, v, "food in the stores", Task.FOOD, foodNow);
             }
             case IRON -> {
-                // Metal, and the buildings that only a village with metal can
-                // afford the time to put up.
-                need(wants, level, v, "iron", Task.IRON, 64);
+                // Enough metal to put the watch in armour and a decent tool in
+                // every hand — which is what "the Iron Age" is FOR, rather
+                // than a round number somebody picked.
+                need(wants, level, v, "iron", Task.IRON,
+                    com.jrpetty.mcassistant.village.VillageMath.ironWanted(folk));
                 if (built(villageId, "workshop") < 1) wants.add(new Need("a workshop", Task.BUILD, 1));
                 if (built(villageId, "watchtower") < 1) wants.add(new Need("a watchtower", Task.BUILD, 1));
-                need(wants, level, v, "food in the stores", Task.FOOD, 256);
+                need(wants, level, v, "food in the stores", Task.FOOD, foodNow);
             }
             case DIAMOND -> {
-                need(wants, level, v, "diamonds", Task.DIAMOND, 8);
-                need(wants, level, v, "iron", Task.IRON, 128);
+                need(wants, level, v, "diamonds", Task.DIAMOND,
+                    com.jrpetty.mcassistant.village.VillageMath.diamondsWanted(folk));
+                // And now the armour is for EVERYBODY, not only the watch.
+                need(wants, level, v, "iron", Task.IRON,
+                    com.jrpetty.mcassistant.village.VillageMath.ironForEveryone(folk));
                 if (built(villageId, "lighthouse") < 1) wants.add(new Need("a lighthouse", Task.BUILD, 1));
             }
             case NETHER -> {
                 // The last thing a settlement builds for itself is a way out
                 // of the world it started in.
-                need(wants, level, v, "obsidian", Task.OBSIDIAN, 10);
-                need(wants, level, v, "diamonds", Task.DIAMOND, 16);
-                need(wants, level, v, "food in the stores", Task.FOOD, 256);
+                need(wants, level, v, "obsidian", Task.OBSIDIAN,
+                    com.jrpetty.mcassistant.village.VillageMath.obsidianWanted(folk));
+                need(wants, level, v, "diamonds", Task.DIAMOND,
+                    2 * com.jrpetty.mcassistant.village.VillageMath.diamondsWanted(folk));
+                need(wants, level, v, "food in the stores", Task.FOOD, foodNow);
             }
         }
         return wants;
