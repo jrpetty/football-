@@ -49,6 +49,14 @@ public final class McAssistantMod {
             .clientTrackingRange(10)
             .build("assistant"));
 
+    /** Village Folk: the same hands, with nobody telling them what to do. */
+    public static final DeferredHolder<EntityType<?>, EntityType<com.jrpetty.mcassistant.entity.VillageFolkEntity>>
+        VILLAGE_FOLK = ENTITY_TYPES.register("village_folk", () -> EntityType.Builder
+            .of(com.jrpetty.mcassistant.entity.VillageFolkEntity::new, MobCategory.CREATURE)
+            .sized(0.6F, 1.95F)
+            .clientTrackingRange(10)
+            .build("village_folk"));
+
     // Extended menu type: the entity id travels to the client in the buffer.
     public static final DeferredHolder<MenuType<?>, MenuType<AssistantMenu>> ASSISTANT_MENU =
         MENU_TYPES.register("assistant", () -> IMenuTypeExtension.create(AssistantMenu::new));
@@ -94,6 +102,11 @@ public final class McAssistantMod {
     public static final DeferredItem<com.jrpetty.mcassistant.item.ZoneMarkerItem> ZONE_MARKER =
         ITEMS.registerItem("zone_marker", com.jrpetty.mcassistant.item.ZoneMarkerItem::new);
 
+    /** Settles one villager, founding a village if there isn't one nearby. */
+    public static final DeferredItem<net.minecraft.world.item.Item> VILLAGE_CHARTER =
+        ITEMS.registerItem("village_charter",
+            com.jrpetty.mcassistant.item.VillageCharterItem::new);
+
     /** Master switch for the chat / slash / voice command layer. Off while the
      *  specialisation flow (spawner -> management screen -> zone marker) is the
      *  way you run a crew; the parser and voice engine stay built, just idle. */
@@ -118,12 +131,15 @@ public final class McAssistantMod {
 
     private void onEntityAttributes(EntityAttributeCreationEvent event) {
         event.put(ASSISTANT.get(), AssistantEntity.createAttributes().build());
+        event.put(VILLAGE_FOLK.get(),
+            com.jrpetty.mcassistant.entity.VillageFolkEntity.createAttributes().build());
     }
 
     /** Put the spawner in the Functional Blocks creative tab. */
     private void onBuildCreativeTabs(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.FUNCTIONAL_BLOCKS) {
             event.accept(ASSISTANT_SPAWNER_ITEM);
+            event.accept(VILLAGE_CHARTER);
             event.accept(JOB_BOARD_ITEM);
         }
         if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {

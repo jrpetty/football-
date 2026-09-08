@@ -36,6 +36,7 @@ public final class ClientSetup {
     @SubscribeEvent
     public static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(McAssistantMod.ASSISTANT.get(), AssistantRenderer::new);
+        event.registerEntityRenderer(McAssistantMod.VILLAGE_FOLK.get(), AssistantRenderer::new);
     }
 
     @SubscribeEvent
@@ -52,7 +53,8 @@ public final class ClientSetup {
         event.register(AssistantTargeting.PLOTS);
     }
 
-    public static class AssistantRenderer extends MobRenderer<AssistantEntity, HumanoidModel<AssistantEntity>> {
+    public static class AssistantRenderer<T extends AssistantEntity>
+            extends MobRenderer<T, HumanoidModel<T>> {
 
         /** One uniform per job, in StationTask order. A crew of ten should be
          *  readable from across a field without clicking anything. */
@@ -84,12 +86,12 @@ public final class ClientSetup {
         }
 
         @Override
-        public ResourceLocation getTextureLocation(AssistantEntity entity) {
+        public ResourceLocation getTextureLocation(T entity) {
             return UNIFORMS[Math.floorMod(entity.clientJobOrdinal(), UNIFORMS.length)];
         }
 
         @Override
-        public void render(AssistantEntity entity, float entityYaw, float partialTick,
+        public void render(T entity, float entityYaw, float partialTick,
                            PoseStack pose, MultiBufferSource buffer, int packedLight) {
             super.render(entity, entityYaw, partialTick, pose, buffer, packedLight);
 

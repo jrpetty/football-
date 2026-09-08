@@ -10,5 +10,7 @@
   "key.mc_assistant.orders": "Assistant Orders (look at one)",
   "key.mc_assistant.roster": "Assistant Crew Roster",
   "key.mc_assistant.crew": "Manage Crew (list)",
-  "key.mc_assistant.plots": "Plot Book (stake & crew ground)"
+  "key.mc_assistant.plots": "Plot Book (stake & crew ground)",
+  "entity.mc_assistant.village_folk": "Village Folk",
+  "item.mc_assistant.village_charter": "Village Charter"
 }
