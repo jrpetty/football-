@@ -296,10 +296,7 @@ public class VillageFolkEntity extends AssistantEntity {
             v = Villages.found(level(), blockPosition());
             say("There's good ground here. This'll do for a village.");
         }
-        this.villageCentre = v.centre();
-        adoptVillage(v.id());
-        setHome(v.centre());
-        setAutonomous(true);
+        joinVillage(v.id(), v.centre());
     }
 
     // ------------------------------ a trade ----------------------------------
@@ -763,7 +760,7 @@ public class VillageFolkEntity extends AssistantEntity {
             .create(server);
         if (child == null) return false;
         child.moveTo(getX(), getY(), getZ(), getYRot(), 0.0F);
-        child.rename(freeName(village));
+        child.rename(Names.freeFor(village));
         // Less than its parents spent on it — see childKit. A village that
         // could breed its way to a full larder would never have to farm.
         com.jrpetty.mcassistant.VillageSpawner.childKit(child);
@@ -790,17 +787,6 @@ public class VillageFolkEntity extends AssistantEntity {
         return true;
     }
 
-    /** A name nobody in this village is using yet. */
-    private String freeName(UUID village) {
-        java.util.Set<String> used = new java.util.HashSet<>();
-        for (AssistantEntity a : Villages.folkOf(village)) {
-            used.add(a.getAssistantName().toLowerCase());
-        }
-        for (String candidate : Names.POOL) {
-            if (!used.contains(candidate.toLowerCase())) return candidate;
-        }
-        return "folk_" + (used.size() + 1);
-    }
 
     private int tradeCheckTick = -100000;
 
@@ -901,15 +887,6 @@ public class VillageFolkEntity extends AssistantEntity {
         // Only a folk standing near the village heart takes the job on — the
         // buildings go up where people live, not wherever the volunteer was.
         if (villageCentre.distSqr(blockPosition()) > 32.0 * 32.0) return;
-        // A village taken over from the game's own owes itself one look round
-        // before it builds anything — done HERE, by a folk standing in the
-        // middle of it with the ground loaded, rather than at the instant its
-        // first chunk came in with the rest of the place not yet there.
-        if (Villages.claimSurvey(village)) {
-            com.jrpetty.mcassistant.VillagerTakeover.creditWhatStands(
-                (net.minecraft.server.level.ServerLevel) level(), village, villageCentre);
-            return;
-        }
         // Only the ATTEMPT is recorded here, which is what paces the projects.
         // Whether it actually went up is reported by the build itself — this
         // used to mark the storehouse "built" the moment somebody set off to

@@ -107,15 +107,7 @@ public final class Villages {
         return best;
     }
 
-    // A settlement that moved into somewhere already standing owes itself a
-    // look round — but not at the instant its first chunk loads, when the rest
-    // of the place is not there to be looked at yet.
-    private static final java.util.Set<UUID> UNSURVEYED = ConcurrentHashMap.newKeySet();
 
-    public static void markUnsurveyed(UUID villageId) { UNSURVEYED.add(villageId); }
-
-    /** True once, for the first caller; the survey is then that caller's. */
-    public static boolean claimSurvey(UUID villageId) { return UNSURVEYED.remove(villageId); }
 
     public static Village found(Level level, BlockPos centre) {
         Village v = new Village(UUID.randomUUID(), centre.immutable(), level.dimension());

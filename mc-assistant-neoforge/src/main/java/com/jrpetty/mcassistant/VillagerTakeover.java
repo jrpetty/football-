@@ -38,24 +38,10 @@ public final class VillagerTakeover {
 
     private static final org.slf4j.Logger LOGGER = com.mojang.logging.LogUtils.getLogger();
 
-    /** How far out we look for what the village already has. */
-    private static final int SURVEY = 48;
-
     /** How far a converted villager will look for a settlement to join. A
      *  vanilla village can be two hundred blocks across; the ninety-six a
      *  founded one uses would cut it into two or three rival settlements. */
     private static final int JOIN_RANGE = Villages.VILLAGE_RANGE * 2;
-
-    /**
-     * Names handed out this session, per village. A chunk's worth of
-     * villagers are all converted in the same tick, before any of them has
-     * ticked far enough to be on the register — so asking the register for a
-     * free name gave the same name to all ten, and the register is KEYED by
-     * name, so nine of them then vanished from it. The roll read one folk
-     * where ten stood.
-     */
-    private static final java.util.Map<java.util.UUID, java.util.Set<String>> HANDED_OUT =
-        new java.util.concurrent.ConcurrentHashMap<>();
 
     @SubscribeEvent
     public static void onEntityJoin(EntityJoinLevelEvent event) {
@@ -63,10 +49,13 @@ public final class VillagerTakeover {
         if (event.getLevel().isClientSide) return;
         if (!(event.getEntity() instanceof Villager villager)) return;
         if (!(event.getLevel() instanceof ServerLevel level)) return;
-        // A villager somebody has TRADED with, or named, is somebody's — a
-        // mending librarian or a cured-discount farmer is hours of a player's
-        // work, and this must never eat it. Only the ones standing about.
+        // A villager somebody has TRADED with, named, or CURED is somebody's —
+        // a mending librarian or a cured-discount farmer is hours of a
+        // player's work, and this must never eat it. A cure leaves no trade
+        // experience behind, only gossip, so gossip is checked too. Only the
+        // ones standing about become folk.
         if (villager.getVillagerXp() > 0 || villager.hasCustomName()) return;
+        if (!villager.getGossips().getGossipEntries().isEmpty()) return;
 
         // Take the villager off the board before it ever ticks, and stand a
         // folk up in its place on the next tick — adding an entity from
@@ -80,33 +69,25 @@ public final class VillagerTakeover {
 
         level.getServer().execute(() -> {
             // THE FOLK FIRST. The villager is already gone; anything that can
-            // throw runs after its replacement is safely standing, or a bad
-            // bed block somewhere in the village would have deleted every
-            // villager in it and stood nobody up in their place.
+            // throw runs after its replacement is safely standing.
             VillageFolkEntity folk = McAssistantMod.VILLAGE_FOLK.get().create(level);
             if (folk == null) return;
             folk.moveTo(where.getX() + 0.5, where.getY(), where.getZ() + 0.5, yaw, 0.0F);
 
             Villages.Village village = Villages.nearest(level, where, JOIN_RANGE);
-            if (village == null) {
-                // The first one converted founds the settlement where it
-                // stands, keeps the ground awake the way a founded village
-                // does, and books the look round for when the place is loaded.
-                village = Villages.found(level, where);
-                Villages.markUnsurveyed(village.id());
-            }
-            folk.rename(freeName(village.id()));
+            if (village == null) village = Villages.found(level, where);
+            // Named, then joined: joining files it on the register under that
+            // name at once, so the next villager converted in this same tick
+            // asks for a free name and does not get this one.
+            folk.rename(com.jrpetty.mcassistant.entity.Names.freeFor(village.id()));
             VillageSpawner.childKit(folk);
-            // Born into it, not left to go and look for it.
             folk.joinVillage(village.id(), village.centre());
             level.addFreshEntity(folk);
             Villages.recordBirth(village.id());
-            // Keep the ground awake the way a founded village does, re-taken
-            // as each villager converts so the ring grows with the roll.
-            // Tickets are idempotent, so this is one call per conversion and
-            // never a leak.
-            ChunkLoad.setLoaded(level, village.id(), village.centre(),
-                VillageSpawner.loadedRadiusFor(Villages.headcount(village.id())), true);
+            keepAwake(level, village);
+            // Its own chunk and the ones round it, read off NOW, while it is
+            // certainly loaded — each chunk once per village, ever.
+            creditWhatStands(level, village.id(), where);
             // A villager that had a trade keeps doing roughly what it did. One
             // that never picked one takes whatever the village is short of,
             // which is what every other folk does.
@@ -117,22 +98,19 @@ public final class VillagerTakeover {
         });
     }
 
-    /** A name nobody in this village has, counting the ones handed out in
-     *  this same tick that are not on the register yet. */
-    private static String freeName(java.util.UUID village) {
-        java.util.Set<String> used = HANDED_OUT.computeIfAbsent(
-            village, k -> java.util.concurrent.ConcurrentHashMap.newKeySet());
-        for (AssistantEntity a : Villages.folkOf(village)) {
-            used.add(a.getAssistantName().toLowerCase());
-        }
-        for (String candidate : com.jrpetty.mcassistant.entity.Names.POOL) {
-            if (used.add(candidate.toLowerCase())) return candidate;
-        }
-        for (int n = 2; n < 1000; n++) {
-            String candidate = com.jrpetty.mcassistant.entity.Names.POOL.get(0) + n;
-            if (used.add(candidate.toLowerCase())) return candidate;
-        }
-        return "folk_" + used.size();
+    /** The ring each village has been given so far, so a chunk's worth of
+     *  villagers converting at once do not each re-take eighty-one tickets. */
+    private static final java.util.Map<java.util.UUID, Integer> RING_TAKEN =
+        new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Keep the ground awake the way a founded village does — taken when the
+     *  ring first exists and again only when the roll has grown it. */
+    private static void keepAwake(ServerLevel level, Villages.Village village) {
+        int ring = VillageSpawner.loadedRadiusFor(Villages.headcount(village.id()));
+        Integer had = RING_TAKEN.get(village.id());
+        if (had != null && had >= ring) return;
+        ChunkLoad.setLoaded(level, village.id(), village.centre(), ring, true);
+        RING_TAKEN.put(village.id(), ring);
     }
 
     /**
@@ -155,65 +133,96 @@ public final class VillagerTakeover {
         return AssistantEntity.StationTask.NONE;
     }
 
+    /** Chunks already read for each village, so a chunk with ten villagers in
+     *  it is read once and not ten times. Memory only, and that is enough:
+     *  after a restart the villagers are already folk, so nothing converts
+     *  and nothing is read again. What was credited is on the folk's save. */
+    private static final java.util.Map<java.util.UUID, java.util.Set<Long>> READ =
+        new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Running totals per village — beds, chests, furnaces, and how many of
+     *  each building has been credited off them so far. */
+    private static final java.util.Map<java.util.UUID, int[]> TALLY =
+        new java.util.concurrent.ConcurrentHashMap<>();
+
     /**
-     * Read off what the village already has and write it down as built.
+     * Read off what stands around a converted villager and write it down as
+     * built.
      *
      * <p>Without this the plan looks at a finished village, sees nothing on
      * its own list, and sets about building a storehouse ten feet from the
-     * storehouse — then houses beside the houses. A settlement that moves into
-     * somewhere already standing should start from what is standing.
+     * storehouse. A settlement that moves into somewhere already standing
+     * should start from what is standing.
      *
-     * <p>Run from a folk's own agenda once it is stood in the middle of the
-     * place with the ground loaded — not at the instant the first chunk came
-     * in, when {@code isLoaded} would have skipped most of the village and
-     * credited it with two chunks' worth of beds. Chests and furnaces come
-     * out of each chunk's own block-entity map, which is a handful of entries
-     * per chunk; only the beds need the ground read.
+     * <p>Read chunk by chunk, around each villager as it converts, which is
+     * the one moment its ground is certainly loaded — a radius read from the
+     * heart at first-chunk-load saw two chunks of a twelve-chunk village, and
+     * one deferred to later could be lost to a restart. This way every chunk
+     * with a villager in it is read exactly once, whatever shape the village
+     * is, and a chunk with nobody in it was never going to have a house.
      */
-    public static void creditWhatStands(ServerLevel level, java.util.UUID village, BlockPos heart) {
-        int beds = 0, chests = 0, furnaces = 0;
-        long now = level.getGameTime();
+    public static void creditWhatStands(ServerLevel level, java.util.UUID village, BlockPos near) {
+        java.util.Set<Long> read = READ.computeIfAbsent(
+            village, k -> java.util.concurrent.ConcurrentHashMap.newKeySet());
+        int[] tally = TALLY.computeIfAbsent(village, k -> new int[6]);
+        // [0] beds, [1] chests, [2] furnaces, [3] houses credited,
+        // [4] storage+shelter credited, [5] smeltery credited
+        int cx0 = near.getX() >> 4, cz0 = near.getZ() >> 4;
         try {
-            int minCx = (heart.getX() - SURVEY) >> 4, maxCx = (heart.getX() + SURVEY) >> 4;
-            int minCz = (heart.getZ() - SURVEY) >> 4, maxCz = (heart.getZ() + SURVEY) >> 4;
-            for (int cx = minCx; cx <= maxCx; cx++) {
-                for (int cz = minCz; cz <= maxCz; cz++) {
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    int cx = cx0 + dx, cz = cz0 + dz;
                     if (!level.hasChunk(cx, cz)) continue;
+                    if (!read.add(net.minecraft.world.level.ChunkPos.asLong(cx, cz))) continue;
                     net.minecraft.world.level.chunk.LevelChunk chunk = level.getChunk(cx, cz);
                     for (BlockEntity be : new java.util.ArrayList<>(chunk.getBlockEntities().values())) {
-                        if (be instanceof AbstractFurnaceBlockEntity) furnaces++;
+                        if (be instanceof AbstractFurnaceBlockEntity) tally[2]++;
                         else if (be instanceof net.minecraft.world.level.block.entity.ChestBlockEntity
                             || be instanceof net.minecraft.world.level.block.entity.BarrelBlockEntity) {
-                            chests++;
+                            tally[1]++;
                         }
                     }
-                    // Beds have no block entity, so the ground is read — but
-                    // only this chunk's slice of it, and only the head, so a
-                    // bed is not counted twice.
+                    // Beds have no block entity, so the ground is read — this
+                    // chunk's slice, near the villager's own height, and only
+                    // the head so a bed is not counted twice.
                     int x0 = cx << 4, z0 = cz << 4;
                     for (BlockPos p : BlockPos.betweenClosed(
-                            x0, heart.getY() - 12, z0, x0 + 15, heart.getY() + 12, z0 + 15)) {
+                            x0, near.getY() - 12, z0, x0 + 15, near.getY() + 12, z0 + 15)) {
                         BlockState st = level.getBlockState(p);
                         if (!st.is(net.minecraft.tags.BlockTags.BEDS)) continue;
                         if (!st.hasProperty(net.minecraft.world.level.block.BedBlock.PART)) continue;
                         if (st.getValue(net.minecraft.world.level.block.BedBlock.PART)
                                 == net.minecraft.world.level.block.state.properties.BedPart.HEAD) {
-                            beds++;
+                            tally[0]++;
                         }
                     }
                 }
             }
         } catch (RuntimeException e) {
-            // A survey is a convenience. A village that cannot be surveyed
-            // builds from nothing, which is only what it would have done.
-            LOGGER.warn("Village survey at {} failed: {}", heart, e.toString());
+            // A survey is a convenience. A village that cannot be read builds
+            // from what it has already been credited with, which is only what
+            // it would have done.
+            LOGGER.warn("Village survey near {} failed: {}", near, e.toString());
         }
-        // Two beds is a house, by this mod's own blueprint.
-        for (int i = 0; i < beds / com.jrpetty.mcassistant.village.VillageMath.BEDS_PER_HOUSE; i++) {
+        long now = level.getGameTime();
+        // Two beds is a house, by this mod's own blueprint. Credited as the
+        // totals cross each line, so beds split across chunks still pair up.
+        int perHouse = com.jrpetty.mcassistant.village.VillageMath.BEDS_PER_HOUSE;
+        while (tally[0] / perHouse > tally[3]) {
             Villages.noteProject(village, "house", now);
+            tally[3]++;
         }
-        if (chests >= 2) Villages.noteProject(village, "storage", now);
-        if (chests >= 1) Villages.noteProject(village, "shelter", now);
-        if (furnaces >= 1) Villages.noteProject(village, "smeltery", now);
+        if (tally[4] == 0 && tally[1] >= 1) {
+            Villages.noteProject(village, "shelter", now);
+            tally[4] = 1;
+        }
+        if (tally[4] == 1 && tally[1] >= 2) {
+            Villages.noteProject(village, "storage", now);
+            tally[4] = 2;
+        }
+        if (tally[5] == 0 && tally[2] >= 1) {
+            Villages.noteProject(village, "smeltery", now);
+            tally[5] = 1;
+        }
     }
 }
