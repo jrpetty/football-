@@ -218,14 +218,22 @@ public class FarmGoal extends Goal {
                 targetPos = findTillableNear(water);
                 if (targetPos != null) { mode = Mode.TILL; claim(); return; }
             }
-            if (hasWaterBucket()
-                && assistant.can(AssistantEntity.Ability.FARM_IRRIGATE)) {
-                // Level 40, the waterwright's rung.
-                // Not just "no water anywhere": a bucket in hand gets spent
-                // wherever a big DRY patch of the field sits out of reach of
-                // every existing source — proper irrigation, not one hole.
-                targetPos = findIrrigationSpot();
-                if (targetPos != null) { mode = Mode.WATER; claim(); return; }
+            if (hasWaterBucket()) {
+                if (water == null) {
+                    // No water on this patch AT ALL. Sinking a one-block hole
+                    // and pouring the bucket into it is the oldest farming
+                    // trick there is, and it needs no skill worth gating: a
+                    // field with no water is a field that cannot exist. This
+                    // is what lets a farmer settle dry ground and make it wet.
+                    targetPos = findWaterSpot();
+                    if (targetPos != null) { mode = Mode.WATER; claim(); return; }
+                } else if (assistant.can(AssistantEntity.Ability.FARM_IRRIGATE)) {
+                    // Level 40, the waterwright's rung: with water already
+                    // here, the next source goes where it wets the MOST dry
+                    // ground rather than into the first hole to hand.
+                    targetPos = findIrrigationSpot();
+                    if (targetPos != null) { mode = Mode.WATER; claim(); return; }
+                }
             }
             // No dry-farming fallback. Farmland with no water within four
             // blocks dries out and reverts to dirt, so tilling it is work that

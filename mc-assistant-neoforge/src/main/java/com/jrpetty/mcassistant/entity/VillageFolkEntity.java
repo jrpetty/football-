@@ -65,6 +65,10 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     public boolean needsCharge() { return false; }
 
+    /** Look all you like — you just cannot give them orders. */
+    @Override
+    public boolean openToAnyone() { return true; }
+
     @Override
     protected boolean drawsWages() { return false; }
 
@@ -189,9 +193,18 @@ public class VillageFolkEntity extends AssistantEntity {
                 return true;
             }
             case FOOD -> {
-                // Nobody but a farmer grows food, so everyone else helps by
-                // making sure what HAS been grown reaches the stores.
+                // Get what has been grown into the stores first — it exists
+                // already, which beats anything that has to be made.
                 if (countItems() > 0) {
+                    enqueue(Job.deposit());
+                    return true;
+                }
+                // Then hunt. A field takes days; a herd on the doorstep is
+                // meat this afternoon, and a hungry village cannot wait for
+                // wheat. Farmers stay on the field — the crop is the long
+                // answer and somebody has to be planting it.
+                if (stationTask() != StationTask.FARM && adultAnimalsNearby(24) >= 2) {
+                    enqueue(Job.hunt(null, 3));
                     enqueue(Job.deposit());
                     return true;
                 }
