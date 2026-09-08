@@ -446,11 +446,17 @@ public class BuildGoal extends Goal {
                 out.add(new Placement(cell(center, right, facing, -1, 1), Part.CRAFTING_TABLE));
                 out.add(new Placement(cell(center, right, facing, 0, 1), Part.FURNACE));
                 out.add(new Placement(cell(center, right, facing, 1, 1), Part.CHEST));
-                out.add(new Placement(cell(center, right, facing, -1, -1), Part.TORCH));
-                out.add(new Placement(cell(center, right, facing, 1, -1), Part.TORCH));
-                // And somewhere to sleep. A village that builds houses nobody
-                // can sleep in has built sheds.
-                out.add(new Placement(cell(center, right, facing, -1, 0), Part.BED));
+                out.add(new Placement(cell(center, right, facing, 0, -1), Part.TORCH));
+                // And somewhere to sleep — TWO beds, laid along the side walls
+                // with their heads toward the back.
+                //
+                // There was one, and it was put where its head would land on
+                // the crafting table: a bed is two cells and this is the only
+                // part that is, so it kept finding the far half occupied and
+                // skipping itself. Nearly every house would have gone up with
+                // no bed in it and nothing to say why.
+                out.add(new Placement(cell(center, right, facing, -1, -1), Part.BED));
+                out.add(new Placement(cell(center, right, facing, 1, -1), Part.BED));
             }
             case "pen" -> {
                 BlockPos center = centered ? feet : feet.relative(facing, 5);

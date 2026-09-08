@@ -248,7 +248,11 @@ public final class VillageMath {
         return Math.max(8, 3 * Math.max(1, miners / 6));
     }
 
-    /** Roofs. A house sleeps about four. */
+    /** Beds the house blueprint actually lays. Two, along the side walls. */
+    public static final int BEDS_PER_HOUSE = 2;
+
+    /** Roofs. Two beds apiece, so the crowded target beds out most of a town
+     *  and the roomy one gets a young village started. */
     public static int housesWanted(int folk, boolean crowded) {
         return crowded ? Math.max(2, folk / 3) : Math.max(1, folk / 4);
     }

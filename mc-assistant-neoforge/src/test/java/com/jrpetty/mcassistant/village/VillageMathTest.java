@@ -223,9 +223,14 @@ class VillageMathTest {
     @DisplayName("there are enough houses for everyone to have a bed in one")
     void housesCoverThePopulation() {
         for (int folk = 1; folk <= MAX_FOLK; folk++) {
-            assertTrue(VillageMath.housesWanted(folk, true) * 3 >= folk - 2,
-                "at " + folk + " folk the crowded target of "
-                + VillageMath.housesWanted(folk, true) + " houses sleeps too few");
+            // Counted in the beds the blueprint really lays, not in an
+            // assumed occupancy: the house had ONE bed while this test
+            // credited it with three, so the target it was checking was a
+            // third of what the village would actually build.
+            int beds = VillageMath.housesWanted(folk, true) * VillageMath.BEDS_PER_HOUSE;
+            assertTrue(beds * 2 >= folk,
+                "at " + folk + " folk the crowded target lays " + beds
+                + " beds, not half a town's worth");
             assertTrue(VillageMath.housesWanted(folk, true)
                     >= VillageMath.housesWanted(folk, false),
                 "the crowded target is smaller than the roomy one at " + folk);

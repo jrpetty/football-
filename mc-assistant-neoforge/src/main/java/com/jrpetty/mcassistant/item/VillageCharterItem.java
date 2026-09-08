@@ -45,7 +45,14 @@ public class VillageCharterItem extends Item {
 
         Villages.Village village = Villages.nearest(level, spot);
         boolean founding = village == null;
-        if (founding) village = Villages.found(level, spot);
+        if (founding) {
+            village = Villages.found(level, spot);
+            // The same founding stores a world-grown settlement gets. Without
+            // this a chartered village began with nothing but what its people
+            // carried, and some of what is in that chest — string above all —
+            // is not something a village can ever make for itself.
+            com.jrpetty.mcassistant.VillageSpawner.supplyChest(level, spot);
+        }
 
         int headcount = Villages.headcount(village.id());
         // The cap that matters is how large a settlement may GROW to, not the

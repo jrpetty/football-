@@ -287,7 +287,12 @@ public final class VillageSpawner {
      * every other tool comes off. Deliberately not generous: no iron, no
      * furnace, no food beyond what they carry.
      */
-    private static void supplyChest(ServerLevel level, BlockPos ground) {
+    /** The founding stores. Left by a world-generated settlement, and now by a
+     *  chartered one too — a village founded by hand was starting with no
+     *  planks, no torches, no bench and no string, which made it materially
+     *  poorer than one the world grew and left its fisher unable to ever build
+     *  a rod. */
+    public static void supplyChest(ServerLevel level, BlockPos ground) {
         // groundAt() returns the first free block ABOVE the surface, so the
         // chest belongs exactly there — putting it one higher again left every
         // village's founding stores hovering with a gap underneath.

@@ -406,6 +406,9 @@ public final class Villages {
                     wants.add(new Need("more houses", Task.BUILD, 1));
                 }
                 if (built(villageId, "smeltery") < 1) wants.add(new Need("a smeltery", Task.BUILD, 1));
+                if (folk >= 14 && built(villageId, "pen") < 1) {
+                    wants.add(new Need("a pen for the animals", Task.BUILD, 1));
+                }
                 need(wants, level, v, "food in the stores", Task.FOOD, foodNow);
             }
             case IRON -> {
@@ -613,6 +616,10 @@ public final class Villages {
         if (built(villageId, "smeltery") < 1) return "smeltery";
         if (at == Age.STONE) return null;
 
+        // A pen, once the place is big enough to keep a rancher. It was never
+        // on this list at all, so the one trade that needs a fence around its
+        // animals worked an open field and watched them wander off.
+        if (folk >= 14 && built(villageId, "pen") < 1) return "pen";
         if (built(villageId, "workshop") < 1) return "workshop";
         if (folk >= 8 && built(villageId, "watchtower") < 1) return "watchtower";
         if (at == Age.IRON) return null;
