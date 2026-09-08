@@ -120,6 +120,8 @@ public class VillageFolkEntity extends AssistantEntity {
         if (peekJob() != null) return;                 // already busy
         if (resting()) return;                         // off the clock for a bit
         if (movedOnFromSpentGround()) return;          // this patch is finished
+        if (changedTrade()) return;                    // the village lost a trade
+
         if (workedOut() && lendAHand()) return;        // my trade has nothing: help
         considerVillageWork();
     }
@@ -601,6 +603,43 @@ public class VillageFolkEntity extends AssistantEntity {
         return true;
     }
 
+    private int tradeCheckTick = -100000;
+
+    /**
+     * A trade is not for life. A settlement decides its shape when its people
+     * arrive and then never revisits it — so the day its only smelter falls
+     * down a hole, the forge goes cold for good and the village sits at the
+     * age that forge was meant to carry it through. There are no newcomers to
+     * fill the gap: the ten who founded the place are the ten it has.
+     *
+     * <p>The rule is deliberately narrow. A hand only re-badges when its OWN
+     * trade has more people in it than the village's shape calls for AND some
+     * other trade has nobody left at all — so a spare farmer picks up the
+     * forge, and a village never strips a working trade to staff another. It
+     * finds the ground before it gives up the old plot, so a folk can never
+     * end up between trades with nowhere to stand.
+     */
+    private boolean changedTrade() {
+        UUID village = ownerId();
+        if (village == null) return false;
+        if (tickCount - tradeCheckTick < 6000) return false;      // once every five minutes
+        tradeCheckTick = tickCount;
+        StationTask mine = stationTask();
+        StationTask vacancy = Villages.vacancy(village);
+        if (vacancy == null || vacancy == mine) return false;
+        if (!Villages.overStaffed(village, mine)) return false;
+
+        avoidHere = workZone();          // do not simply re-stake my own field
+        BlockPos site = findSite(vacancy, radiusFor(vacancy));
+        avoidHere = null;
+        if (site == null) return false;
+        setStation(site, vacancy);
+        assignPlot(WorkZone.around(site, radiusFor(vacancy), depthFor(vacancy, site)),
+            patchNameFor(vacancy));
+        setAutonomous(true);
+        return true;
+    }
+
     private int spentSince;
     private int searchBearing;
     @Nullable private WorkZone avoidHere;
@@ -612,6 +651,18 @@ public class VillageFolkEntity extends AssistantEntity {
      * buys the thing that makes a settlement look inhabited rather than
      * operated: people who are sometimes just there.
      */
+    /**
+     * Off the clock, and the work brain is told so. The agenda only PLANS
+     * work; the station brain inherited from the assistant is what actually
+     * swings the hoe, and it runs from the tick regardless — so until this
+     * was wired through, a folk on a break carried on working and the break
+     * was a thing you could only see in the code.
+     */
+    @Override
+    protected boolean onBreak() {
+        return tickCount < restUntil;
+    }
+
     private boolean resting() {
         if (tickCount < restUntil) {
             if (getNavigation().isDone() && villageCentre != null

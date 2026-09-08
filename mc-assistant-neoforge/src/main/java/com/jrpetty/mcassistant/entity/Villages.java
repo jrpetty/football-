@@ -61,11 +61,18 @@ public final class Villages {
         new Slot(AssistantEntity.StationTask.MINE, 3, 2),
         new Slot(AssistantEntity.StationTask.WOOD, 2, 3),
         new Slot(AssistantEntity.StationTask.SMELT, 1, 6),
-        new Slot(AssistantEntity.StationTask.HAUL, 1, 11),
-        new Slot(AssistantEntity.StationTask.STORE, 1, 12),
+        // The watch comes BEFORE the carrier and the storekeeper. Settlements
+        // are founded at eight to twelve and there is no way for one to grow,
+        // so a guard at sixteen was a guard no village was ever going to have
+        // — which made the armour, the priority and the whole watch a thing
+        // that only existed on paper. The ten-folk shape is untouched by this:
+        // four farmers, three miners, two woodcutters and a smelter is exactly
+        // what ten still comes out as.
+        new Slot(AssistantEntity.StationTask.GUARD, 1, 11),
+        new Slot(AssistantEntity.StationTask.HAUL, 1, 12),
+        new Slot(AssistantEntity.StationTask.STORE, 1, 13),
         new Slot(AssistantEntity.StationTask.RANCH, 1, 14),
-        new Slot(AssistantEntity.StationTask.GUARD, 1, 16),
-        new Slot(AssistantEntity.StationTask.FISH, 1, 18));
+        new Slot(AssistantEntity.StationTask.FISH, 1, 16));
 
     public static void register(Village village) {
         ALL.put(village.id(), village);
@@ -172,6 +179,53 @@ public final class Villages {
             }
         }
         return best;
+    }
+
+    /**
+     * A trade this settlement has NOBODY left doing and is big enough to want.
+     * The one case worth asking a working hand to change trade over: a village
+     * whose only smelter died has a cold forge for ever otherwise, because the
+     * ten who founded the place are the ten it has.
+     */
+    @Nullable
+    public static AssistantEntity.StationTask vacancy(@Nullable UUID villageId) {
+        List<AssistantEntity> folk = folkOf(villageId);
+        int total = folk.size();
+        if (total <= 1) return null;                 // one pair of hands is not a shortage
+        Map<AssistantEntity.StationTask, Integer> have =
+            new EnumMap<>(AssistantEntity.StationTask.class);
+        for (AssistantEntity a : folk) {
+            if (a.stationTask() != AssistantEntity.StationTask.NONE) {
+                have.merge(a.stationTask(), 1, Integer::sum);
+            }
+        }
+        for (Slot slot : SLOTS) {
+            if (total < slot.from()) continue;       // too small to want one yet
+            if (have.getOrDefault(slot.trade(), 0) == 0) return slot.trade();
+        }
+        return null;
+    }
+
+    /**
+     * Is this trade carrying more hands than the village's shape calls for?
+     * The guard on re-badging: a village must never strip a trade that is
+     * merely busy to staff one that is empty.
+     */
+    public static boolean overStaffed(@Nullable UUID villageId, AssistantEntity.StationTask trade) {
+        if (trade == AssistantEntity.StationTask.NONE) return true;
+        List<AssistantEntity> folk = folkOf(villageId);
+        int total = folk.size();
+        if (total <= 0) return false;
+        int have = 0;
+        for (AssistantEntity a : folk) if (a.stationTask() == trade) have++;
+        for (Slot slot : SLOTS) {
+            if (slot.trade() != trade) continue;
+            double target = slot.weight() * total / (double) VILLAGE_SIZE;
+            // One over the share, and never below one: the last farmer in a
+            // village is not spare however the arithmetic reads.
+            return have > Math.max(1, (int) Math.ceil(target));
+        }
+        return have > 0;      // a trade the shape does not ask for at all
     }
 
     /**

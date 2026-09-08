@@ -64,6 +64,7 @@ public final class VillageSpawner {
         int cellZ = Math.floorDiv(chunk.getMinBlockZ(), spacing);
         long cellKey = (long) cellX * 4294967311L + cellZ;
         if (CONSIDERED.contains(cellKey)) return;
+        if (!inACluster(level, cellX, cellZ)) return;   // most of the map is empty on purpose
 
         BlockPos anchor = anchorFor(level, cellX, cellZ, spacing);
         // Only the chunk that actually contains the anchor does the work, so
@@ -89,6 +90,54 @@ public final class VillageSpawner {
             CONSIDERED.add(cellKey);
             found(level, ground);
         });
+    }
+
+    /** How many grid cells across a cluster's home region is. Villages come in
+     *  groups with real country between the groups, rather than one settlement
+     *  every so many blocks all the way to the world border. */
+    private static final int REGION_CELLS = 8;
+
+    /**
+     * Do settlements belong in this cell at all?
+     *
+     * <p>A flat grid puts a village every so many blocks for ever, which reads
+     * as wallpaper rather than as a place: walk in any direction and you find
+     * the same thing at the same interval. Villages come in GROUPS instead —
+     * three to five of them within a mile or so of each other, sharing a
+     * valley, with a long empty ride to the next group.
+     *
+     * <p>The whole thing is derived from the world seed, so it is stable: the
+     * same world always grows the same groups in the same places, and this
+     * answers identically no matter which chunk asks or when.
+     */
+    private static boolean inACluster(ServerLevel level, int cellX, int cellZ) {
+        int regionX = Math.floorDiv(cellX, REGION_CELLS);
+        int regionZ = Math.floorDiv(cellZ, REGION_CELLS);
+        RandomSource r = RandomSource.create(
+            level.getSeed() ^ (regionX * 4987142L + regionZ * 5947611L) ^ 0x5CE7L);
+        // Where the group sits inside its region, and how many settlements it
+        // runs to. Kept one cell clear of the region edge so two neighbouring
+        // groups cannot merge into one long smear.
+        int heartX = regionX * REGION_CELLS + 1 + r.nextInt(REGION_CELLS - 2);
+        int heartZ = regionZ * REGION_CELLS + 1 + r.nextInt(REGION_CELLS - 2);
+        int howMany = 3 + r.nextInt(3);                 // three to five
+        // The candidates are the cell itself and its eight neighbours: a group
+        // is a cluster, not a line. Which of the nine are used is drawn from
+        // the same seeded sequence, so every chunk that asks gets the same
+        // answer without anything being remembered between calls.
+        int dx = cellX - heartX;
+        int dz = cellZ - heartZ;
+        if (Math.abs(dx) > 1 || Math.abs(dz) > 1) return false;
+        int[] order = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
+        for (int i = order.length - 1; i > 0; i--) {    // seeded shuffle
+            int j = r.nextInt(i + 1);
+            int t = order[i]; order[i] = order[j]; order[j] = t;
+        }
+        int slot = (dz + 1) * 3 + (dx + 1);
+        for (int i = 0; i < howMany; i++) {
+            if (order[i] == slot) return true;
+        }
+        return false;
     }
 
     /** The candidate spot for a grid cell, fixed by the world seed. */
@@ -212,7 +261,12 @@ public final class VillageSpawner {
             new ItemStack(Items.CRAFTING_TABLE, 1),
             new ItemStack(Items.CHEST, 4),
             new ItemStack(Items.OAK_PLANKS, 32),
-            new ItemStack(Items.BREAD, 32));
+            new ItemStack(Items.BREAD, 32),
+            // Two lengths of string. Nothing a village does produces any, and
+            // a rod is three sticks and two string — so without this the one
+            // trade that feeds a settlement from water it already has could
+            // never make the only tool it needs.
+            new ItemStack(Items.STRING, 4));
         for (int i = 0; i < stores.size() && i < chest.getContainerSize(); i++) {
             chest.setItem(i, stores.get(i).copy());
         }
