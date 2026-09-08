@@ -220,6 +220,20 @@ public final class VillageSpawner {
     }
 
     /**
+     * What a child born in the village is sent out with, which is deliberately
+     * LESS than its parents spent raising it: two loaves against the four that
+     * went in, so a settlement cannot breed its way to a full larder. No tools
+     * — the village makes those, the same as it makes everything else — but a
+     * chest, because a plot fifty blocks from the stores cannot borrow one and
+     * a hand with nowhere to put its output never starts its trade at all.
+     */
+    public static void childKit(VillageFolkEntity folk) {
+        folk.insertItem(new ItemStack(Items.BREAD, 2));
+        folk.insertItem(new ItemStack(Items.CHEST));
+        folk.insertItem(new ItemStack(Items.WHEAT_SEEDS, 4));
+    }
+
+    /**
      * What a pair of hands needs to survive its first day and start work —
      * carried, not stored, because a folk's plot can be fifty blocks from the
      * founding chest and a bot only reaches the stores on its OWN ground.

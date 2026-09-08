@@ -38,6 +38,8 @@ public final class AssistantConfig {
     public static final ModConfigSpec.IntValue VILLAGE_SPACING;
     public static final ModConfigSpec.IntValue VILLAGE_MIN_FOLK;
     public static final ModConfigSpec.IntValue VILLAGE_MAX_FOLK;
+    public static final ModConfigSpec.BooleanValue VILLAGE_BREEDING;
+    public static final ModConfigSpec.IntValue VILLAGE_GROWTH_CAP;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -109,6 +111,16 @@ public final class AssistantConfig {
             .defineInRange("villageMinFolk", 8, 1, 60);
         VILLAGE_MAX_FOLK = b.comment("Most folk a new settlement is founded with.")
             .defineInRange("villageMaxFolk", 12, 1, 60);
+        VILLAGE_BREEDING = b.comment(
+                "Let settlements grow their own people. Two folk who are fed and in work",
+                "have a chance of raising a child, which costs them the food it takes.",
+                "Without this a village can only ever shrink.")
+            .define("villageBreeding", true);
+        VILLAGE_GROWTH_CAP = b.comment(
+                "How large a settlement may grow by raising children. The trade shares",
+                "keep scaling with it: a watch at eleven, a carrier at twelve, a",
+                "storekeeper at thirteen, a pen at fourteen and a boat at sixteen.")
+            .defineInRange("villageGrowthCap", 20, 2, 60);
         b.pop();
 
         SPEC = b.build();
@@ -133,6 +145,8 @@ public final class AssistantConfig {
     public static int villageSpacing() { return read(VILLAGE_SPACING, 768); }
     public static int villageMinFolk() { return read(VILLAGE_MIN_FOLK, 8); }
     public static int villageMaxFolk() { return read(VILLAGE_MAX_FOLK, 12); }
+    public static boolean villageBreeding() { return read(VILLAGE_BREEDING, true); }
+    public static int villageGrowthCap() { return read(VILLAGE_GROWTH_CAP, 20); }
 
     /** Config values throw if read before the file is loaded (early world gen,
      *  datagen, a dedicated server still booting) — fall back rather than crash. */

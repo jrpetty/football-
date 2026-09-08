@@ -121,6 +121,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (resting()) return;                         // off the clock for a bit
         if (movedOnFromSpentGround()) return;          // this patch is finished
         if (changedTrade()) return;                    // the village lost a trade
+        if (raisedAChild()) return;                    // the village grew
 
         if (workedOut() && lendAHand()) return;        // my trade has nothing: help
         considerVillageWork();
@@ -601,6 +602,94 @@ public class VillageFolkEntity extends AssistantEntity {
         assignPlot(zone, patchNameFor(trade));
         setAutonomous(true);
         return true;
+    }
+
+    private int breedTick = -100000;
+
+    /**
+     * How a settlement grows its own people.
+     *
+     * <p>Everything else about these villages scales with headcount — the
+     * watch at eleven, the carrier at twelve, the storekeeper at thirteen, the
+     * pen at fourteen — and none of it could ever happen, because a village
+     * was founded with eight to twelve folk and had no way on earth to reach
+     * thirteen. A settlement could only ever shrink. Every loss was permanent
+     * and every specialist trade was a rung nobody would ever stand on.
+     *
+     * <p>The bar is deliberately low, because a village that has to jump
+     * through hoops to grow is a village that does not grow: BE FED, and BE IN
+     * WORK. Two folk who are both eating and both doing a job have a chance of
+     * raising a child between them, and it costs them the food it takes — so a
+     * settlement that cannot feed itself stops growing on its own, without
+     * anybody having to write a rule about it. That is the whole check.
+     */
+    private boolean raisedAChild() {
+        if (!com.jrpetty.mcassistant.AssistantConfig.villageBreeding()) return false;
+        if (!(level() instanceof net.minecraft.server.level.ServerLevel server)) return false;
+        UUID village = ownerId();
+        if (village == null || villageCentre == null) return false;
+        if (tickCount - breedTick < 6000) return false;          // five minutes apiece
+        breedTick = tickCount;
+
+        if (stationTask() == StationTask.NONE) return false;      // in work
+        if (countFood() < 2) return false;                        // and fed
+        if (Villages.headcount(village)
+            >= com.jrpetty.mcassistant.AssistantConfig.villageGrowthCap()) {
+            return false;
+        }
+        // Somebody to raise it with, near enough to count as living together,
+        // in the same trade-less sense: fed, in work, and not this one.
+        VillageFolkEntity partner = null;
+        for (AssistantEntity mate : Villages.folkOf(village)) {
+            if (mate == this || !(mate instanceof VillageFolkEntity other)) continue;
+            if (other.stationTask() == StationTask.NONE) continue;
+            if (other.countFood() < 2) continue;
+            if (other.tickCount - other.breedTick < 6000) continue;
+            if (other.distanceToSqr(this) > 12.0 * 12.0) continue;
+            partner = other;
+            break;
+        }
+        if (partner == null) return false;
+        // A chance, not a certainty. Two fed hands in work who happen to be
+        // stood together, once every five minutes, one time in three: a
+        // settlement fills out over a few in-game days rather than doubling
+        // overnight.
+        if (getRandom().nextInt(3) != 0) return false;
+
+        // It costs what it costs. Both parents put the food in, which is what
+        // makes a hungry village stop growing by itself.
+        if (removeMatching(s -> s.get(net.minecraft.core.component.DataComponents.FOOD) != null, 2) < 2) {
+            return false;
+        }
+        partner.removeMatching(
+            s -> s.get(net.minecraft.core.component.DataComponents.FOOD) != null, 2);
+        partner.breedTick = partner.tickCount;
+
+        VillageFolkEntity child = com.jrpetty.mcassistant.McAssistantMod.VILLAGE_FOLK.get()
+            .create(server);
+        if (child == null) return false;
+        child.moveTo(getX(), getY(), getZ(), getYRot(), 0.0F);
+        child.rename(freeName(village));
+        // Less than its parents spent on it — see childKit. A village that
+        // could breed its way to a full larder would never have to farm.
+        com.jrpetty.mcassistant.VillageSpawner.childKit(child);
+        server.addFreshEntity(child);
+        // Settling, choosing whichever trade the village is now short of, and
+        // finding ground for it all happen on the child's own agenda a moment
+        // from now — exactly as they did for its parents.
+        return true;
+    }
+
+    /** A name nobody in this village is using yet. */
+    private String freeName(UUID village) {
+        java.util.Set<String> used = new java.util.HashSet<>();
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            used.add(a.getAssistantName().toLowerCase());
+        }
+        for (String candidate : Names.POOL) {
+            if (!used.contains(candidate.toLowerCase())) return candidate;
+        }
+        return "folk_" + (used.size() + 1);
     }
 
     private int tradeCheckTick = -100000;
