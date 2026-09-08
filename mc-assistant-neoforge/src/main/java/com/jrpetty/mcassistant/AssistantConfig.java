@@ -141,8 +141,9 @@ public final class AssistantConfig {
                 "furnaces and fields — instead of standing about. The settlement is",
                 "credited with the buildings it plainly already has.",
                 "THIS REMOVES TRADING with those villagers: they are gone, replaced by",
-                "people who work. Wandering traders are untouched. Turn it off to keep",
-                "vanilla villages as they are and use only settlements this mod founds.")
+                "people who work. Villagers you have TRADED WITH or NAMED are never",
+                "touched — a mending librarian is yours. Wandering traders are untouched.",
+                "Turn it off to keep vanilla villages exactly as they are.")
             .define("replaceVillagers", true);
         b.pop();
 

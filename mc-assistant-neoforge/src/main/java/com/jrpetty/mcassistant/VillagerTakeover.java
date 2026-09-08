@@ -36,8 +36,26 @@ public final class VillagerTakeover {
 
     private VillagerTakeover() {}
 
+    private static final org.slf4j.Logger LOGGER = com.mojang.logging.LogUtils.getLogger();
+
     /** How far out we look for what the village already has. */
     private static final int SURVEY = 48;
+
+    /** How far a converted villager will look for a settlement to join. A
+     *  vanilla village can be two hundred blocks across; the ninety-six a
+     *  founded one uses would cut it into two or three rival settlements. */
+    private static final int JOIN_RANGE = Villages.VILLAGE_RANGE * 2;
+
+    /**
+     * Names handed out this session, per village. A chunk's worth of
+     * villagers are all converted in the same tick, before any of them has
+     * ticked far enough to be on the register — so asking the register for a
+     * free name gave the same name to all ten, and the register is KEYED by
+     * name, so nine of them then vanished from it. The roll read one folk
+     * where ten stood.
+     */
+    private static final java.util.Map<java.util.UUID, java.util.Set<String>> HANDED_OUT =
+        new java.util.concurrent.ConcurrentHashMap<>();
 
     @SubscribeEvent
     public static void onEntityJoin(EntityJoinLevelEvent event) {
@@ -45,6 +63,10 @@ public final class VillagerTakeover {
         if (event.getLevel().isClientSide) return;
         if (!(event.getEntity() instanceof Villager villager)) return;
         if (!(event.getLevel() instanceof ServerLevel level)) return;
+        // A villager somebody has TRADED with, or named, is somebody's — a
+        // mending librarian or a cured-discount farmer is hours of a player's
+        // work, and this must never eat it. Only the ones standing about.
+        if (villager.getVillagerXp() > 0 || villager.hasCustomName()) return;
 
         // Take the villager off the board before it ever ticks, and stand a
         // folk up in its place on the next tick — adding an entity from
@@ -57,33 +79,60 @@ public final class VillagerTakeover {
         event.setCanceled(true);
 
         level.getServer().execute(() -> {
-            if (Villages.nearest(level, where) == null) {
-                // The first one to be converted founds the settlement where it
-                // stands, then reads off what the place already has.
-                Villages.Village village = Villages.found(level, where);
-                creditWhatStands(level, village.id(), where);
-            }
-            java.util.UUID id = village(level, where);
+            // THE FOLK FIRST. The villager is already gone; anything that can
+            // throw runs after its replacement is safely standing, or a bad
+            // bed block somewhere in the village would have deleted every
+            // villager in it and stood nobody up in their place.
             VillageFolkEntity folk = McAssistantMod.VILLAGE_FOLK.get().create(level);
             if (folk == null) return;
             folk.moveTo(where.getX() + 0.5, where.getY(), where.getZ() + 0.5, yaw, 0.0F);
-            folk.rename(com.jrpetty.mcassistant.entity.Names.freeFor(id));
+
+            Villages.Village village = Villages.nearest(level, where, JOIN_RANGE);
+            if (village == null) {
+                // The first one converted founds the settlement where it
+                // stands, keeps the ground awake the way a founded village
+                // does, and books the look round for when the place is loaded.
+                village = Villages.found(level, where);
+                Villages.markUnsurveyed(village.id());
+            }
+            folk.rename(freeName(village.id()));
             VillageSpawner.childKit(folk);
+            // Born into it, not left to go and look for it.
+            folk.joinVillage(village.id(), village.centre());
+            level.addFreshEntity(folk);
+            Villages.recordBirth(village.id());
+            // Keep the ground awake the way a founded village does, re-taken
+            // as each villager converts so the ring grows with the roll.
+            // Tickets are idempotent, so this is one call per conversion and
+            // never a leak.
+            ChunkLoad.setLoaded(level, village.id(), village.centre(),
+                VillageSpawner.loadedRadiusFor(Villages.headcount(village.id())), true);
             // A villager that had a trade keeps doing roughly what it did. One
             // that never picked one takes whatever the village is short of,
             // which is what every other folk does.
             AssistantEntity.StationTask took = tradeFor(trade);
-            level.addFreshEntity(folk);
             if (took != AssistantEntity.StationTask.NONE && !baby) {
                 folk.setStation(folk.blockPosition(), took);
             }
         });
     }
 
-    /** The settlement this spot belongs to, if any. */
-    private static java.util.UUID village(ServerLevel level, BlockPos where) {
-        Villages.Village v = Villages.nearest(level, where);
-        return v == null ? java.util.UUID.randomUUID() : v.id();
+    /** A name nobody in this village has, counting the ones handed out in
+     *  this same tick that are not on the register yet. */
+    private static String freeName(java.util.UUID village) {
+        java.util.Set<String> used = HANDED_OUT.computeIfAbsent(
+            village, k -> java.util.concurrent.ConcurrentHashMap.newKeySet());
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            used.add(a.getAssistantName().toLowerCase());
+        }
+        for (String candidate : com.jrpetty.mcassistant.entity.Names.POOL) {
+            if (used.add(candidate.toLowerCase())) return candidate;
+        }
+        for (int n = 2; n < 1000; n++) {
+            String candidate = com.jrpetty.mcassistant.entity.Names.POOL.get(0) + n;
+            if (used.add(candidate.toLowerCase())) return candidate;
+        }
+        return "folk_" + used.size();
     }
 
     /**
@@ -113,28 +162,51 @@ public final class VillagerTakeover {
      * its own list, and sets about building a storehouse ten feet from the
      * storehouse — then houses beside the houses. A settlement that moves into
      * somewhere already standing should start from what is standing.
+     *
+     * <p>Run from a folk's own agenda once it is stood in the middle of the
+     * place with the ground loaded — not at the instant the first chunk came
+     * in, when {@code isLoaded} would have skipped most of the village and
+     * credited it with two chunks' worth of beds. Chests and furnaces come
+     * out of each chunk's own block-entity map, which is a handful of entries
+     * per chunk; only the beds need the ground read.
      */
-    private static void creditWhatStands(ServerLevel level, java.util.UUID village, BlockPos heart) {
+    public static void creditWhatStands(ServerLevel level, java.util.UUID village, BlockPos heart) {
         int beds = 0, chests = 0, furnaces = 0;
         long now = level.getGameTime();
-        for (BlockPos p : BlockPos.betweenClosed(
-                heart.offset(-SURVEY, -12, -SURVEY), heart.offset(SURVEY, 12, SURVEY))) {
-            if (!level.isLoaded(p)) continue;
-            BlockState st = level.getBlockState(p);
-            if (st.is(net.minecraft.tags.BlockTags.BEDS)) {
-                // Only the head, so a bed is not counted twice.
-                if (st.getValue(net.minecraft.world.level.block.BedBlock.PART)
-                        == net.minecraft.world.level.block.state.properties.BedPart.HEAD) {
-                    beds++;
+        try {
+            int minCx = (heart.getX() - SURVEY) >> 4, maxCx = (heart.getX() + SURVEY) >> 4;
+            int minCz = (heart.getZ() - SURVEY) >> 4, maxCz = (heart.getZ() + SURVEY) >> 4;
+            for (int cx = minCx; cx <= maxCx; cx++) {
+                for (int cz = minCz; cz <= maxCz; cz++) {
+                    if (!level.hasChunk(cx, cz)) continue;
+                    net.minecraft.world.level.chunk.LevelChunk chunk = level.getChunk(cx, cz);
+                    for (BlockEntity be : new java.util.ArrayList<>(chunk.getBlockEntities().values())) {
+                        if (be instanceof AbstractFurnaceBlockEntity) furnaces++;
+                        else if (be instanceof net.minecraft.world.level.block.entity.ChestBlockEntity
+                            || be instanceof net.minecraft.world.level.block.entity.BarrelBlockEntity) {
+                            chests++;
+                        }
+                    }
+                    // Beds have no block entity, so the ground is read — but
+                    // only this chunk's slice of it, and only the head, so a
+                    // bed is not counted twice.
+                    int x0 = cx << 4, z0 = cz << 4;
+                    for (BlockPos p : BlockPos.betweenClosed(
+                            x0, heart.getY() - 12, z0, x0 + 15, heart.getY() + 12, z0 + 15)) {
+                        BlockState st = level.getBlockState(p);
+                        if (!st.is(net.minecraft.tags.BlockTags.BEDS)) continue;
+                        if (!st.hasProperty(net.minecraft.world.level.block.BedBlock.PART)) continue;
+                        if (st.getValue(net.minecraft.world.level.block.BedBlock.PART)
+                                == net.minecraft.world.level.block.state.properties.BedPart.HEAD) {
+                            beds++;
+                        }
+                    }
                 }
-                continue;
             }
-            BlockEntity be = level.getBlockEntity(p);
-            if (be instanceof AbstractFurnaceBlockEntity) furnaces++;
-            else if (be instanceof net.minecraft.world.level.block.entity.ChestBlockEntity
-                || be instanceof net.minecraft.world.level.block.entity.BarrelBlockEntity) {
-                chests++;
-            }
+        } catch (RuntimeException e) {
+            // A survey is a convenience. A village that cannot be surveyed
+            // builds from nothing, which is only what it would have done.
+            LOGGER.warn("Village survey at {} failed: {}", heart, e.toString());
         }
         // Two beds is a house, by this mod's own blueprint.
         for (int i = 0; i < beds / com.jrpetty.mcassistant.village.VillageMath.BEDS_PER_HOUSE; i++) {

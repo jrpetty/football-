@@ -99,6 +99,21 @@ public class VillageFolkEntity extends AssistantEntity {
         Villages.forget(village);
     }
 
+    /**
+     * Belong to this settlement, now, without going to look for one. Used for
+     * anyone who did not arrive by walking up: a child born on its parents'
+     * plot, a villager the mod has just taken over. Both used to be left to
+     * find the nearest village within ninety-six blocks, and both are routinely
+     * further than that from the heart of a big one — so they founded a rival
+     * settlement on top of the one they were already standing in.
+     */
+    public void joinVillage(UUID village, BlockPos centre) {
+        this.villageCentre = centre;
+        adoptVillage(village);
+        setHome(centre);
+        setAutonomous(true);
+    }
+
     /** Only a building that actually went up counts as built. */
     @Override
     public void noteBuilt(String structure) {
@@ -760,10 +775,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // FOUNDED A RIVAL VILLAGE on top of its own parents, split the
         // headcount, and set both halves back to the Wood Age. It is given the
         // village it was born into, and its agenda picks up from there.
-        child.villageCentre = villageCentre;
-        child.adoptVillage(village);
-        child.setHome(villageCentre);
-        child.setAutonomous(true);
+        child.joinVillage(village, villageCentre);
         server.addFreshEntity(child);
         Villages.recordBirth(village);
         // The settlement is bigger than it was, so it keeps more ground awake.
@@ -889,6 +901,15 @@ public class VillageFolkEntity extends AssistantEntity {
         // Only a folk standing near the village heart takes the job on — the
         // buildings go up where people live, not wherever the volunteer was.
         if (villageCentre.distSqr(blockPosition()) > 32.0 * 32.0) return;
+        // A village taken over from the game's own owes itself one look round
+        // before it builds anything — done HERE, by a folk standing in the
+        // middle of it with the ground loaded, rather than at the instant its
+        // first chunk came in with the rest of the place not yet there.
+        if (Villages.claimSurvey(village)) {
+            com.jrpetty.mcassistant.VillagerTakeover.creditWhatStands(
+                (net.minecraft.server.level.ServerLevel) level(), village, villageCentre);
+            return;
+        }
         // Only the ATTEMPT is recorded here, which is what paces the projects.
         // Whether it actually went up is reported by the build itself — this
         // used to mark the storehouse "built" the moment somebody set off to

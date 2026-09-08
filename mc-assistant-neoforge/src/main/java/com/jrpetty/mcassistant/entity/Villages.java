@@ -87,17 +87,35 @@ public final class Villages {
      *  enough to walk to. */
     @Nullable
     public static Village nearest(Level level, BlockPos pos) {
+        return nearest(level, pos, VILLAGE_RANGE);
+    }
+
+    /** The same, out to a range of the caller's choosing. A vanilla village
+     *  routinely spans more than the ninety-six blocks a founded one does, so
+     *  the takeover asks further out than anybody else. */
+    @Nullable
+    public static Village nearest(Level level, BlockPos pos, int range) {
         Village best = null;
         double bestDist = Double.MAX_VALUE;
         for (Village v : ALL.values()) {
             if (!v.dim().equals(level.dimension())) continue;   // not our world
             double d = v.centre().distSqr(pos);
-            if (d > (double) VILLAGE_RANGE * VILLAGE_RANGE || d >= bestDist) continue;
+            if (d > (double) range * range || d >= bestDist) continue;
             bestDist = d;
             best = v;
         }
         return best;
     }
+
+    // A settlement that moved into somewhere already standing owes itself a
+    // look round — but not at the instant its first chunk loads, when the rest
+    // of the place is not there to be looked at yet.
+    private static final java.util.Set<UUID> UNSURVEYED = ConcurrentHashMap.newKeySet();
+
+    public static void markUnsurveyed(UUID villageId) { UNSURVEYED.add(villageId); }
+
+    /** True once, for the first caller; the survey is then that caller's. */
+    public static boolean claimSurvey(UUID villageId) { return UNSURVEYED.remove(villageId); }
 
     public static Village found(Level level, BlockPos centre) {
         Village v = new Village(UUID.randomUUID(), centre.immutable(), level.dimension());
