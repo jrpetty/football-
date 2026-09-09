@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "R": "minecraft:rotten_flesh",
+    "D": "minecraft:diamond"
+  },
+  "pattern": [
+    "RRR",
+    "RDR",
+    "RRR"
+  ],
+  "result": {
+    "count": 1,
+    "id": "mc_assistant:assistant_spawner"
+  }
+}

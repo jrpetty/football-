@@ -1,0 +1,15 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_redstone": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": { "items": [ { "items": ["minecraft:redstone"] } ] }
+    },
+    "has_the_recipe": {
+      "trigger": "minecraft:recipe_unlocked",
+      "conditions": { "recipe": "mc_assistant:zone_marker" }
+    }
+  },
+  "requirements": [ ["has_redstone", "has_the_recipe"] ],
+  "rewards": { "recipes": ["mc_assistant:zone_marker"] }
+}

@@ -1,0 +1,9 @@
+{
+  "variants": {
+    "preset=auto": { "model": "mc_assistant:block/job_board" },
+    "preset=mining": { "model": "mc_assistant:block/job_board" },
+    "preset=balanced": { "model": "mc_assistant:block/job_board" },
+    "preset=food": { "model": "mc_assistant:block/job_board" },
+    "preset=build": { "model": "mc_assistant:block/job_board" }
+  }
+}
