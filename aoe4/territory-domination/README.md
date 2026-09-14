@@ -19,8 +19,8 @@ stay worth fighting over at every stage of the game.
 
 ## How it plays
 
-- ~20 circular zones on a grid. Cells over water or impassable terrain are
-  dropped, so expect 15–20 on most maps.
+- **Zone count scales with the map**: ~18 on a 1v1, ~36 on a 4-player map,
+  ~66 on an 8-player one, holding roughly 9 zones per player throughout.
 - **Every player starts owning the zone nearest their base**, already fully
   captured, so everyone opens on +10% rather than scrambling from zero.
 - **Standing in a zone captures it.** One unit takes exactly 20 seconds, two
@@ -57,6 +57,37 @@ protect. From `balance_sim.lua`:
 
 Total boost is capped at +200% so a player who has already taken most of the
 map cannot compound out of reach.
+
+### Zone count
+
+Zone count is not fixed. The target is the larger of a map-area figure and
+9 zones per player, then clamped — so a big 1v1 map still gets plenty, and a
+crowded small map still has enough to go round.
+
+| Players | Map size | Zones | Per player |
+|---|---|---|---|
+| 2 | 400 | 18 | 9.0 |
+| 3 | 480 | 26 | 8.7 |
+| 4 | 560 | 36 | 9.0 |
+| 6 | 690 | 54 | 9.0 |
+| 8 | 800 | 66 | 8.2 |
+
+Two things had to change to make this work:
+
+**The boost cap.** It used to be a fixed +200%, which was fine at 18 zones
+where it could never bind. On a 66-zone map it would bind at a 30% map share,
+making every zone past the twentieth worthless and breaking the mode in 4v4.
+It is now a fraction of the *whole map's* boost (default 0.75), so it means
+the same thing at every size.
+
+**Scan cost.** Every zone is checked against every player, so a 66-zone
+8-player map would be ~530 spatial queries per second. Zones are now scanned
+round-robin against a per-tick budget (default 24). This does **not** change
+capture speed: progress is credited by elapsed time since that zone was last
+examined, so a zone looked at every third tick gains three ticks' worth. The
+only cost is that a newly arrived enemy takes up to `zones / budget` ticks to
+be noticed. There is a test asserting a solo capture still takes 20 seconds on
+a 66-zone map.
 
 ### Kings
 
@@ -172,8 +203,8 @@ scar/
   td_visuals.scar            Ground rings, centre markers, minimap blips
 test/
   mock_engine.lua            Stubbed Scar engine for offline testing
-  run_tests.lua              98 logic tests
-  balance_sim.lua            Boost curves, capture times, starting zones
+  run_tests.lua              112 logic tests
+  balance_sim.lua            Boost curves, capture times, zone scaling
 ```
 
 ## IMPORTANT: read this before installing
@@ -247,8 +278,8 @@ Requires only a stock Lua 5.4 — no game files needed.
 
 ```sh
 cd aoe4/territory-domination
-lua5.4 test/run_tests.lua      # 98 logic tests
-lua5.4 test/balance_sim.lua    # boost curves, capture times, starting zones
+lua5.4 test/run_tests.lua      # 112 logic tests
+lua5.4 test/balance_sim.lua    # boost curves, capture times, zone scaling
 ```
 
 The tests stub out the engine entirely, so they verify the *mode's logic* —
@@ -256,7 +287,9 @@ capture and contest behaviour, that the boost is a true percentage of what was
 gathered, that spending does not zero out the measurement, that conquest
 transfers zones to the right player, that every player starts with exactly one
 zone and nobody is stranded far from it, that one unit captures in exactly 20
-seconds and a 40-unit army cannot do it instantly, that water zones are created
+seconds and a 40-unit army cannot do it instantly, that zone count scales with
+map and player count while a solo capture still takes 20 seconds on a staggered
+66-zone map, that water zones are created
 and capturable but never handed out as starting zones, that regicide eliminates
 its victim and feeds the conquest path, that the match ends only when one player
 remains, and that visuals stay within their opacity budget.
@@ -275,8 +308,11 @@ Everything worth changing during playtesting is in `td_config.scar`:
 - `startingZonePerPlayer` — whether everyone opens owning a zone.
 - `startingZoneFairnessBias` — how hard assignment trades distance for an
   average-weight zone. 0 is strictly nearest.
-- `zoneCountTarget` / `zoneRadius` — zone density and how much army it takes to
-  cover one.
+- `zonesPerPlayer` / `referenceZoneCount` / `maxZoneCount` — how zone count
+  scales. `zoneCountOverride` forces a fixed number.
+- `zoneRadius` — how much army it takes to cover a zone.
+- `zoneScanBudget` — per-tick scan cost ceiling on large maps.
+- `maxTotalBoostFraction` — share of the map at which the boost stops growing.
 - `captureThreshold` / `captureRatePerSquad` / `captureRateCap` — how long
   zones take to flip and how much a bigger army helps. The three together set
   the 20-second solo capture; change one and that figure drifts, so check

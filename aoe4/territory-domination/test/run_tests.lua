@@ -257,8 +257,121 @@ check("cumulative path ignores spending entirely", TD_Income.accrued[1].food == 
 Mock.Reset(2); loadMod(); TerritoryDomination_OnInit()
 for _, z in ipairs(TD_Zones.list) do z.owner = 1 end
 local capped = TD_Income.GetBoost(1)
-check("total boost is capped", capped <= TD_Config.maxTotalBoost + 1e-9,
-	string.format("got %.2f cap %.2f", capped, TD_Config.maxTotalBoost))
+local ceiling = TD_Zones.TotalWeight() * TD_Config.boostPerZone
+	* TD_Config.maxTotalBoostFraction
+check("total boost is capped", capped <= ceiling + 1e-9,
+	string.format("got %.2f cap %.2f", capped, ceiling))
+
+-- The cap is a share of the map, not a fixed percentage, so it must mean
+-- the same thing on a small map and a large one. A fixed cap would bind at
+-- a quarter of a 72 zone map and make most of it worthless.
+check("the cap scales with zone count rather than being fixed", (function()
+	local function capAtPlayerCount(players)
+		Mock.Reset(players); loadMod(); TerritoryDomination_OnInit()
+		for _, z in ipairs(TD_Zones.list) do z.owner = 1 end
+		-- Boost when holding the whole map, and the share at which it binds.
+		local whole = TD_Income.GetBoost(1)
+		return whole, #TD_Zones.list
+	end
+	local smallBoost, smallZones = capAtPlayerCount(2)
+	local bigBoost, bigZones = capAtPlayerCount(8)
+	if bigZones <= smallZones then return false end
+	-- A bigger map must allow a strictly bigger maximum boost.
+	return bigBoost > smallBoost
+end)(), "cap did not scale with map size")
+
+-----------------------------------------------------------------------------
+section("Zone count scales with map and players")
+-----------------------------------------------------------------------------
+
+local function zonesFor(players, mapSize)
+	Mock.Reset(players, mapSize); loadMod(); TerritoryDomination_OnInit()
+	return #TD_Zones.list
+end
+
+local zones2 = zonesFor(2, 400)
+local zones4 = zonesFor(4, 560)
+local zones8 = zonesFor(8, 800)
+
+check("a 1v1 map keeps the density the mode was balanced at",
+	zones2 >= 15 and zones2 <= 20, "got " .. zones2)
+check("a 4 player map has more zones than a 1v1", zones4 > zones2,
+	string.format("2p=%d 4p=%d", zones2, zones4))
+check("an 8 player map has more zones than a 4 player", zones8 > zones4,
+	string.format("4p=%d 8p=%d", zones4, zones8))
+check("8 players get roughly four times a 1v1", zones8 >= zones2 * 3,
+	string.format("2p=%d 8p=%d", zones2, zones8))
+
+check("zones per player stays roughly constant across sizes", (function()
+	local a, b = zones2 / 2, zones8 / 8
+	return math.abs(a - b) / a <= 0.35
+end)(), string.format("2p=%.1f/head 8p=%.1f/head", zones2 / 2, zones8 / 8))
+
+check("a big map gets more zones even with few players",
+	zonesFor(2, 800) > zones2,
+	string.format("small=%d big=%d", zones2, zonesFor(2, 800)))
+
+check("zone count is bounded for performance", (function()
+	return zonesFor(8, 4000) <= TD_Config.maxZoneCount
+end)())
+
+check("a tiny map still gets a playable number of zones", (function()
+	return zonesFor(2, 60) >= TD_Config.minZoneCount - 4
+end)(), "got " .. zonesFor(2, 60))
+
+check("zone count can be forced explicitly", (function()
+	Mock.Reset(4, 800); loadMod()
+	TD_Config.zoneCountOverride = 12
+	TerritoryDomination_OnInit()
+	-- Grid fitting and dropped cells mean this is approximate, not exact.
+	return #TD_Zones.list >= 8 and #TD_Zones.list <= 12
+end)())
+
+-----------------------------------------------------------------------------
+section("Large maps stagger scans without changing capture speed")
+-----------------------------------------------------------------------------
+
+-- The whole point of crediting capture by elapsed time: a zone on a big map
+-- is examined every few ticks, not every tick, and must still take 20s.
+local function soloCaptureSeconds(players, mapSize)
+	Mock.Reset(players, mapSize); loadMod(); TerritoryDomination_OnInit()
+	local z = TD_Zones.list[1]
+	Mock.PlaceSquads(1, z.position.x, z.position.z, 1)
+	local t = 0
+	while z.owner == nil and t < 400 do
+		t = t + TD_Config.scanInterval
+		TD_Zones.Update({ 1, 2 }, t)
+	end
+	return t, #TD_Zones.list
+end
+
+local smallTime, smallCount = soloCaptureSeconds(2, 400)
+local bigTime, bigCount = soloCaptureSeconds(8, 800)
+
+check("one unit still captures in 20s on a small map",
+	math.abs(smallTime - 20) <= TD_Config.scanInterval,
+	string.format("%.1fs over %d zones", smallTime, smallCount))
+check("one unit still captures in about 20s on a big staggered map",
+	math.abs(bigTime - 20) <= TD_Config.scanInterval * 3,
+	string.format("%.1fs over %d zones", bigTime, bigCount))
+
+check("the scan budget is actually being applied on a big map",
+	bigCount > TD_Config.zoneScanBudget,
+	string.format("%d zones vs budget %d", bigCount, TD_Config.zoneScanBudget))
+
+check("every zone gets scanned rather than only the first batch", (function()
+	Mock.Reset(8, 800); loadMod(); TerritoryDomination_OnInit()
+	local t = 0
+	-- Enough ticks to cycle the cursor right round the list several times.
+	for _ = 1, #TD_Zones.list * 3 do
+		t = t + TD_Config.scanInterval
+		TD_Zones.Update({ 1, 2, 3, 4, 5, 6, 7, 8 }, t)
+	end
+	for _, z in ipairs(TD_Zones.list) do
+		if z.lastScan == nil then return false end
+	end
+	return true
+end)(), "some zones were never examined")
 
 -----------------------------------------------------------------------------
 section("Conquest: killing a player takes their zones")

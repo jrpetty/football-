@@ -54,7 +54,7 @@ function TerritoryDomination_OnInit()
 		TerritoryDomination.alive[player] = true
 	end
 
-	local zoneCount = TD_Zones.Build()
+	local zoneCount = TD_Zones.Build(#TerritoryDomination.players)
 	if zoneCount == 0 then
 		print("[TerritoryDomination] No playable zones placed; mode will not start.")
 		return

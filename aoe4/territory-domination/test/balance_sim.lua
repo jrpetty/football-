@@ -66,6 +66,28 @@ for _, squads in ipairs({ 1, 2, 3, 4, 8, 20 }) do
 		(squads * TD_Config.captureRatePerSquad > TD_Config.captureRateCap) and "  (rate capped)" or ""))
 end
 
+-- Zone count scaling across the map sizes a skirmish supports.
+print("\nZONE COUNT SCALING (bigger maps and more players get more zones):")
+print("  players   map size   zones   per player   water")
+for _, case in ipairs({ { 2, 400 }, { 3, 480 }, { 4, 560 }, { 6, 690 }, { 8, 800 } }) do
+	local players, size = case[1], case[2]
+	Mock.Reset(players, size)
+	dofile("scar/td_config.scar"); dofile("scar/td_adapter.scar")
+	dofile("scar/td_visuals.scar"); dofile("scar/td_zones.scar")
+	dofile("scar/td_income.scar"); dofile("scar/td_king.scar")
+	dofile("scar/territorydomination.scar")
+	TD_API.verbose = false
+	TD_Config.visuals.enabled = false
+	TD_Zones.Build(players)
+
+	local waterCount = 0
+	for _, zone in ipairs(TD_Zones.list) do
+		if zone.isWater then waterCount = waterCount + 1 end
+	end
+	print(string.format("  %7d   %8.0f   %5d   %10.1f   %5d",
+		players, size, #TD_Zones.list, #TD_Zones.list / players, waterCount))
+end
+
 -- Starting zone assignment, across the player counts a skirmish supports.
 print("\nSTARTING ZONES (every player begins owning one):")
 for _, count in ipairs({ 2, 4, 8 }) do

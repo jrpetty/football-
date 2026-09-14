@@ -11,10 +11,35 @@ TD_Config = {
 	-- ZONES
 	-----------------------------------------------------------------------
 
-	-- Target number of zones. The layout is a grid, so the real count is the
-	-- nearest grid that fits (e.g. 20 -> 5x4). Unusable cells (water, cliff)
-	-- are dropped, so expect slightly fewer on awkward maps.
-	zoneCountTarget = 20,
+	-- ZONE COUNT scales with the map rather than being fixed, so an 8 player
+	-- map is not carved into the same handful of zones as a 1v1.
+	--
+	-- The target is the larger of two figures:
+	--   * map area, against the reference below
+	--   * zonesPerPlayer x the number of players
+	-- then clamped. Taking the larger means a big 1v1 map still gets plenty
+	-- of zones, and a crowded small map still gets enough to go round.
+	--
+	-- The layout is a grid, so the real count is the nearest grid that fits.
+	-- Unusable cells (cliffs) are dropped, so expect slightly fewer.
+	--
+	-- Set zoneCountOverride to a number to ignore all of this and force one.
+	zoneCountOverride = nil,
+
+	-- Reference point for area scaling: a map this size gets this many
+	-- zones. Calibrated so a standard 1v1 map lands on ~18 after cliffs are
+	-- dropped, which is the density the mode was balanced at.
+	referenceMapSize  = 400,
+	referenceZoneCount = 20,
+
+	-- Floor on zones per player, so a crowded map still has room to fight
+	-- over. 9 keeps an 8 player game at the same zones-per-head as a 1v1.
+	zonesPerPlayer = 9,
+
+	-- Absolute bounds. The upper bound is a performance guard as much as a
+	-- design one: every zone is checked against every player.
+	minZoneCount = 8,
+	maxZoneCount = 72,
 
 	-- Radius in world units within which units count as holding a zone.
 	zoneRadius = 20,
@@ -39,14 +64,17 @@ TD_Config = {
 	-- Progress points needed to flip a zone from neutral/enemy to yours.
 	captureThreshold = 200,
 
-	-- Progress gained per scan tick per unit present, up to the cap below.
+	-- Progress gained PER SECOND per unit present, up to the cap below.
 	--
-	-- With captureThreshold 200 and a 1 second scan, 10 per unit means a
-	-- SINGLE unit captures a zone in exactly 20 seconds. Change these three
-	-- together or that figure drifts; balance_sim.lua prints it.
+	-- With captureThreshold 200, 10 per unit means a SINGLE unit captures a
+	-- zone in exactly 20 seconds. These rates are per second rather than per
+	-- tick so that the figure holds however often zones actually get
+	-- scanned -- which varies once a big map staggers its scans across
+	-- ticks. Change these two together or the 20s drifts; balance_sim.lua
+	-- prints the real number.
 	captureRatePerSquad = 10,
 
-	-- Maximum capture progress per tick regardless of how many units you
+	-- Maximum capture progress per second regardless of how many units you
 	-- bring. Stops a 40-unit deathball from flipping zones instantly and
 	-- keeps lone scouts and small raiding parties relevant.
 	-- At 30, three units reach the cap: 20s solo, 10s with two, 6.7s with
@@ -54,8 +82,8 @@ TD_Config = {
 	-- forty times.
 	captureRateCap = 30,
 
-	-- Progress decayed per tick on an uncontested zone nobody is standing in.
-	-- Set to 0 to make captures permanent until contested.
+	-- Progress decayed per second on an uncontested zone nobody is standing
+	-- in. Set to 0 to make captures permanent until contested.
 	captureDecayPerTick = 2,
 
 	-- If true, an enemy present in your zone freezes its income boost even
@@ -88,9 +116,19 @@ TD_Config = {
 	-- zone any further from their base, and higher values buy nothing more.
 	startingZoneFairnessBias = 4.0,
 
-	-- Seconds between capture/ownership scans. Lower is more responsive but
-	-- costs more CPU: every zone queries every player on every scan.
+	-- Seconds between capture/ownership scan ticks.
 	scanInterval = 1.0,
+
+	-- Most zones to examine in a single tick. Every zone queries every
+	-- player, so on a 72 zone 8 player map an unbudgeted scan would be 576
+	-- spatial queries per second. Above this budget zones are scanned
+	-- round-robin across consecutive ticks instead.
+	--
+	-- This does NOT change capture speed: progress is credited by elapsed
+	-- time since that zone was last looked at, so a zone scanned every third
+	-- tick gains three ticks' worth. It only delays how quickly a newly
+	-- arrived enemy is noticed, by at most (zones / budget) ticks.
+	zoneScanBudget = 24,
 
 	-----------------------------------------------------------------------
 	-- INCOME BOOST
@@ -107,10 +145,16 @@ TD_Config = {
 	-- Holding 5 zones therefore pays +50% on everything you mined.
 	boostPerZone = 0.10,
 
-	-- Hard ceiling on the total boost, as a fraction. Stops a runaway
-	-- leader who owns most of the map from compounding out of control.
-	-- Set to nil for no cap.
-	maxTotalBoost = 2.00,  -- +200% maximum
+	-- Ceiling on total boost, as a FRACTION OF THE WHOLE MAP'S boost rather
+	-- than an absolute percentage. 0.75 means the boost stops growing once
+	-- you hold three quarters of the map's total zone weight.
+	--
+	-- This has to scale with zone count. A fixed +200% cap was fine at 18
+	-- zones, where it could never bind; on a 72 zone map it would bind at a
+	-- 28% map share, so every zone past the twentieth would be worthless and
+	-- the whole mode would stop working in 4v4.
+	-- Set to nil for no cap at all.
+	maxTotalBoostFraction = 0.75,
 
 	-- Seconds between income boost payouts. The boost is described as a
 	-- per-minute figure, so 60 keeps the display and the mechanic honest.

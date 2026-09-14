@@ -82,9 +82,18 @@ end
 function TD_Income.GetBoost(player)
 	local weight, owned, paying = TD_Zones.GetBoostWeight(player)
 	local boost = weight * TD_Config.boostPerZone
-	if TD_Config.maxTotalBoost ~= nil then
-		boost = math.min(boost, TD_Config.maxTotalBoost)
+
+	-- The cap is a share of the whole map's boost, not a fixed percentage,
+	-- so it means the same thing at 18 zones and at 72. See the note in
+	-- td_config: a fixed cap would bind at a quarter of a large map and make
+	-- every zone past the twentieth worthless.
+	if TD_Config.maxTotalBoostFraction ~= nil then
+		local ceiling = TD_Zones.TotalWeight()
+			* TD_Config.boostPerZone
+			* TD_Config.maxTotalBoostFraction
+		boost = math.min(boost, ceiling)
 	end
+
 	return boost, owned, paying
 end
 

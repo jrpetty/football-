@@ -14,6 +14,8 @@
 
 TD_Zones = {
 	list = {},
+	-- Round-robin position for staggered scanning on large maps.
+	scanCursor = 1,
 	-- ledger[victim][taker] = number of zones taken from victim by taker
 	ledger = {},
 	-- Mean raw weight before normalisation. Kept for diagnostics; after
@@ -67,13 +69,31 @@ local function _displayTier(weight, minWeight, maxWeight)
 	return math.min(tiers, math.floor(t * tiers) + 1)
 end
 
-function TD_Zones.Build()
+-- How many zones this map should carry. See the ZONE COUNT note in
+-- td_config for why it is the larger of area and per-player figures.
+function TD_Zones.TargetZoneCount(width, height, playerCount)
+	if TD_Config.zoneCountOverride ~= nil then
+		return TD_Config.zoneCountOverride
+	end
+
+	local referenceArea = TD_Config.referenceMapSize * TD_Config.referenceMapSize
+	local byArea = TD_Config.referenceZoneCount * ((width * height) / referenceArea)
+	local byPlayers = (playerCount or 2) * TD_Config.zonesPerPlayer
+
+	local target = math.max(byArea, byPlayers)
+	return math.max(TD_Config.minZoneCount,
+		math.min(TD_Config.maxZoneCount, math.floor(target + 0.5)))
+end
+
+function TD_Zones.Build(playerCount)
 	TD_Zones.list = {}
 	TD_Zones.ledger = {}
+	TD_Zones.scanCursor = 1
 
 	local width, height = TD_API.GetMapDimensions()
 	local margin = TD_Config.mapEdgeMargin
-	local cols, rows = _chooseGrid(TD_Config.zoneCountTarget)
+	local target = TD_Zones.TargetZoneCount(width, height, playerCount)
+	local cols, rows = _chooseGrid(target)
 
 	local usableWidth  = width  * (1 - margin * 2)
 	local usableHeight = height * (1 - margin * 2)
@@ -164,8 +184,10 @@ function TD_Zones.Build()
 	end
 
 	print(string.format(
-		"[TerritoryDomination] Built %d zones (%dx%d grid, %d water, %d skipped as unplayable)",
-		#TD_Zones.list, cols, rows, waterCount, skipped
+		"[TerritoryDomination] Built %d zones for %d players on a %.0fx%.0f map "
+			.. "(target %d, %dx%d grid, %d water, %d skipped as unplayable)",
+		#TD_Zones.list, playerCount or 2, width, height,
+		target, cols, rows, waterCount, skipped
 	))
 	return #TD_Zones.list
 end
@@ -407,7 +429,11 @@ local function _scanPresence(zone, players)
 	return presence, leader, presentCount
 end
 
-local function _updateZone(zone, players)
+-- `elapsed` is the time in seconds since THIS zone was last examined, which
+-- is not necessarily one tick: large maps stagger zone scans across ticks.
+-- Crediting by elapsed time rather than per tick is what keeps the 20 second
+-- solo capture true at every zone count.
+local function _updateZone(zone, players, elapsed)
 	local presence, leader, presentCount = _scanPresence(zone, players)
 	zone.contested = (presentCount > 1)
 
@@ -415,7 +441,7 @@ local function _updateZone(zone, players)
 		local gain = math.min(
 			presence[leader] * TD_Config.captureRatePerSquad,
 			TD_Config.captureRateCap
-		)
+		) * elapsed
 		zone.progress[leader] = (zone.progress[leader] or 0) + gain
 
 		for player, value in pairs(zone.progress) do
@@ -434,9 +460,10 @@ local function _updateZone(zone, players)
 	elseif presentCount == 0 and TD_Config.captureDecayPerTick > 0 then
 		-- Empty zone: challenger progress bleeds away, but an established
 		-- owner keeps the zone until someone actively takes it.
+		local decay = TD_Config.captureDecayPerTick * elapsed
 		for player, value in pairs(zone.progress) do
 			if player ~= zone.owner then
-				zone.progress[player] = math.max(0, value - TD_Config.captureDecayPerTick)
+				zone.progress[player] = math.max(0, value - decay)
 			end
 		end
 	end
@@ -449,9 +476,27 @@ local function _visualState(zone)
 	return tostring(zone.owner or "neutral") .. (zone.contested and ":contested" or "")
 end
 
+-- Scan a slice of the zone list, round-robin across ticks, so the per-tick
+-- cost stays bounded no matter how large the map is. Every zone is still
+-- credited for the full time since it was last looked at.
 function TD_Zones.Update(players, now)
-	for _, zone in ipairs(TD_Zones.list) do
-		local newOwner, previousOwner = _updateZone(zone, players)
+	local total = #TD_Zones.list
+	if total == 0 then
+		return
+	end
+
+	local budget = TD_Config.zoneScanBudget or total
+	local count = math.min(budget, total)
+
+	for _ = 1, count do
+		local zone = TD_Zones.list[TD_Zones.scanCursor]
+		TD_Zones.scanCursor = (TD_Zones.scanCursor % total) + 1
+
+		-- First look at a zone credits one tick rather than all of history.
+		local elapsed = now - (zone.lastScan or (now - TD_Config.scanInterval))
+		zone.lastScan = now
+
+		local newOwner, previousOwner = _updateZone(zone, players, elapsed)
 
 		if newOwner ~= nil then
 			zone.visualState = _visualState(zone)
@@ -478,6 +523,16 @@ function TD_Zones.Update(players, now)
 	end
 
 	TD_Visuals.Update(now)
+end
+
+-- Total zone weight on the map, used to express the boost cap as a share of
+-- the whole map rather than a fixed percentage.
+function TD_Zones.TotalWeight()
+	local total = 0
+	for _, zone in ipairs(TD_Zones.list) do
+		total = total + (TD_Config.valueScalesBoost and zone.weight or 1)
+	end
+	return total
 end
 
 -----------------------------------------------------------------------------
