@@ -152,6 +152,153 @@ function TD_Zones.Build()
 end
 
 -----------------------------------------------------------------------------
+-- STARTING ZONES
+--
+-- Every player begins owning the zone nearest their base, already fully
+-- captured.
+--
+-- Two things make this less trivial than "nearest wins". First, two players
+-- who start close together can both be nearest to the same zone, so the
+-- assignment has to be resolved globally rather than per player. Second, a
+-- player whose base happens to sit near the map centre would otherwise open
+-- with a materially bigger income boost than everyone else, through no
+-- decision of their own -- so candidate zones are filtered toward average
+-- weight before distance is considered.
+-----------------------------------------------------------------------------
+
+-- Cost of giving `zone` to a player starting at `start`. Lower is better.
+--
+-- Distance is the dominant term; weight drift only inflates it. That
+-- ordering is deliberate: a fair zone the player cannot defend is worse
+-- than a slightly richer or poorer zone on their doorstep.
+local function _startCost(zone, start)
+	local dx, dz = zone.position.x - start.x, zone.position.z - start.z
+	local distance = math.sqrt(dx * dx + dz * dz)
+	local bias = TD_Config.startingZoneFairnessBias or 0
+	return distance * (1 + bias * math.abs(zone.weight - 1.0))
+end
+
+-- Claim a zone for a player as though they had captured it outright.
+local function _grantZone(zone, player)
+	zone.owner = player
+	zone.contested = false
+	zone.progress = { [player] = TD_Config.captureThreshold }
+	zone.visualState = tostring(player)
+	TD_Visuals.Refresh(zone)
+end
+
+-- Assign starting zones by spreading players around the rim, used when the
+-- engine will not tell us where anyone actually starts. Picks the outermost
+-- zones that are furthest apart by bearing, so nobody opens on top of a
+-- neighbour or in the contested middle.
+local function _assignWithoutPositions(players)
+	local candidates = {}
+	for _, zone in ipairs(TD_Zones.list) do
+		table.insert(candidates, zone)
+	end
+	-- Outermost first: rim starts are the conventional RTS layout.
+	table.sort(candidates, function(a, b) return a.distance > b.distance end)
+
+	local chosen = {}
+	for _, player in ipairs(players) do
+		local best, bestScore = nil, -math.huge
+		for _, zone in ipairs(candidates) do
+			if zone.owner == nil then
+				-- Prefer zones far from every already-chosen start.
+				local score = math.huge
+				for _, taken in ipairs(chosen) do
+					local dx = zone.position.x - taken.position.x
+					local dz = zone.position.z - taken.position.z
+					score = math.min(score, math.sqrt(dx * dx + dz * dz))
+				end
+				if score == math.huge then
+					score = zone.distance  -- first pick: take the outermost
+				end
+				if score > bestScore then
+					best, bestScore = zone, score
+				end
+			end
+		end
+		if best ~= nil then
+			_grantZone(best, player)
+			table.insert(chosen, best)
+		end
+	end
+	return #chosen
+end
+
+-- Give each player the fairest zone near their start. Returns how many were
+-- assigned.
+function TD_Zones.AssignStartingZones(players)
+	if not TD_Config.startingZonePerPlayer or #TD_Zones.list == 0 then
+		return 0
+	end
+
+	local starts, haveAll = {}, true
+	for _, player in ipairs(players) do
+		local pos = TD_API.GetPlayerStartPosition(player)
+		if pos == nil then
+			haveAll = false
+			break
+		end
+		starts[player] = pos
+	end
+
+	if not haveAll then
+		print("[TerritoryDomination] Starting positions unavailable; "
+			.. "spreading starting zones around the map rim instead.")
+		return _assignWithoutPositions(players)
+	end
+
+	-- Every player/zone pairing, cheapest first. Assigning globally rather
+	-- than per player stops two close starts from both claiming one zone
+	-- and leaving the loser with whatever is left over.
+	local pairs_ = {}
+	for _, player in ipairs(players) do
+		for _, zone in ipairs(TD_Zones.list) do
+			table.insert(pairs_, {
+				player = player,
+				zone = zone,
+				cost = _startCost(zone, starts[player]),
+			})
+		end
+	end
+	table.sort(pairs_, function(a, b) return a.cost < b.cost end)
+
+	local assignedPlayers, assigned = {}, 0
+	for _, pair in ipairs(pairs_) do
+		if not assignedPlayers[pair.player] and pair.zone.owner == nil then
+			_grantZone(pair.zone, pair.player)
+			assignedPlayers[pair.player] = true
+			assigned = assigned + 1
+			if assigned == #players then
+				break
+			end
+		end
+	end
+
+	-- A player whose every nearby zone was taken still gets one, from
+	-- whatever remains.
+	if assigned < #players then
+		for _, player in ipairs(players) do
+			if not assignedPlayers[player] then
+				for _, zone in ipairs(TD_Zones.list) do
+					if zone.owner == nil then
+						_grantZone(zone, player)
+						assignedPlayers[player] = true
+						assigned = assigned + 1
+						break
+					end
+				end
+			end
+		end
+	end
+
+	print(string.format("[TerritoryDomination] Assigned %d starting zones.", assigned))
+	return assigned
+end
+
+-----------------------------------------------------------------------------
 -- CONQUEST LEDGER
 -----------------------------------------------------------------------------
 

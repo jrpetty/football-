@@ -18,6 +18,8 @@ stay worth fighting over at every stage of the game.
 
 - ~20 circular zones on a grid. Cells over water or impassable terrain are
   dropped, so expect 15–20 on most maps.
+- **Every player starts owning the zone nearest their base**, already fully
+  captured, so everyone opens on +10% rather than scrambling from zero.
 - **Standing in a zone captures it** — ~17 seconds with four squads, ~67
   seconds with one.
 - Capture rate is **capped**, so a 20-unit deathball takes a zone no faster
@@ -47,6 +49,37 @@ protect. From `balance_sim.lua`:
 
 Total boost is capped at +200% so a player who has already taken most of the
 map cannot compound out of reach.
+
+### Starting zones
+
+Each player begins owning one zone — the one on their doorstep. Assignment is
+resolved globally rather than per player, so two players who start close
+together cannot both claim the same zone and leave one of them with scraps.
+
+Zones are not all worth the same, so assignment applies a **soft fairness
+bias**: a zone closer to average weight is preferred over a merely closer one.
+It is deliberately a bias and not a filter. A hard "must be near average
+weight" rule shrank the candidate pool until, in an 8-player FFA, one player
+was stranded with a fair-but-distant zone 139 units from their base — a worse
+unfairness than the one it fixed. As a bias, distance always dominates and
+weight only breaks near-ties.
+
+The bias value (4.0) was picked by sweeping it rather than guessing. On a
+crowded 8-player layout it cuts the spread in starting income from 74% to 35%
+without pushing anyone's starting zone any further from base; higher values buy
+nothing more. From `balance_sim.lua`:
+
+| Players | Starting boost | Spread | Furthest start |
+|---|---|---|---|
+| 2 | 9.8% – 9.8% | 0% | 26 units |
+| 4 | 9.1% – 9.8% | 8% | 42 units |
+| 8 | 9.0% – 12.1% | 35% | 72 units |
+
+Eight players on an 18-zone map is the worst case — the map simply cannot give
+everyone an equally-valued zone close to home. Symmetric maps with more zones
+do better. Set `startingZonePerPlayer = false` to start everyone from zero
+instead, or `startingZoneFairnessBias = 0` to always take the strictly nearest
+zone and accept the variance.
 
 ### Who counts as your killer
 
@@ -94,8 +127,8 @@ scar/
   td_visuals.scar            Ground rings, centre markers, minimap blips
 test/
   mock_engine.lua            Stubbed Scar engine for offline testing
-  run_tests.lua              55 logic tests
-  balance_sim.lua            Boost curves and capture times
+  run_tests.lua              70 logic tests
+  balance_sim.lua            Boost curves, capture times, starting zones
 ```
 
 ## IMPORTANT: read this before installing
@@ -135,6 +168,9 @@ Most likely to need correcting, in rough priority order:
 - `World_SetPlayerWin` / `Player_IsAlive` — match end and elimination
   detection. If `Player_IsAlive` fails it assumes everyone is alive, so the
   match will never end.
+- `Player_GetStartingPosition` — starting zone placement. If it fails the mode
+  spreads starting zones around the map rim instead, which is playable but
+  will not match where players actually spawn. The log says when it falls back.
 - `Player_GetUIColour` — zone colours fall back to white.
 - `World_IsPointOverImpassableTerrain` — zones may land on water. Playable,
   just ugly.
@@ -156,15 +192,16 @@ Requires only a stock Lua 5.4 — no game files needed.
 
 ```sh
 cd aoe4/territory-domination
-lua5.4 test/run_tests.lua      # 55 logic tests
-lua5.4 test/balance_sim.lua    # boost curves and capture times
+lua5.4 test/run_tests.lua      # 70 logic tests
+lua5.4 test/balance_sim.lua    # boost curves, capture times, starting zones
 ```
 
 The tests stub out the engine entirely, so they verify the *mode's logic* —
 capture and contest behaviour, that the boost is a true percentage of what was
 gathered, that spending does not zero out the measurement, that conquest
-transfers zones to the right player, that the match ends only when one player
-remains, and that visuals stay within their opacity budget.
+transfers zones to the right player, that every player starts with exactly one
+zone and nobody is stranded far from it, that the match ends only when one
+player remains, and that visuals stay within their opacity budget.
 
 They **cannot** verify that the engine function names are right.
 
@@ -177,6 +214,9 @@ Everything worth changing during playtesting is in `td_config.scar`:
 - `centreZoneWeight` / `edgeZoneWeight` — how hard players are pulled toward
   the middle. Widening the gap makes the mode more aggressive. Weights are
   normalised so the average always lands on `boostPerZone`, whatever you set.
+- `startingZonePerPlayer` — whether everyone opens owning a zone.
+- `startingZoneFairnessBias` — how hard assignment trades distance for an
+  average-weight zone. 0 is strictly nearest.
 - `zoneCountTarget` / `zoneRadius` — zone density and how much army it takes to
   cover one.
 - `captureThreshold` / `captureRatePerSquad` / `captureRateCap` — how long

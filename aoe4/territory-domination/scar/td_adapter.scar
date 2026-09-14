@@ -141,6 +141,38 @@ function TD_API.IsPointPlayable(pos)
 	return not (impassable == true or impassable == 1)
 end
 
+-- Where a player begins the match. Used to give each player the zone on
+-- their doorstep at match start.
+--
+-- Falls back to the position of the player's first entity (their Town
+-- Centre, in practice) when no explicit starting position is exposed, and
+-- returns nil when neither works so the caller can use a positionless
+-- assignment instead.
+function TD_API.GetPlayerStartPosition(player)
+	local ok, pos = _tryAny(
+		{ "Player_GetStartingPosition", "Player_GetInitialPosition", "Player_GetTownCenterPosition" },
+		player
+	)
+	if ok and pos ~= nil then
+		return pos
+	end
+
+	-- Fallback: ask for the player's entities and take the first one's
+	-- position. At match start that is the Town Centre.
+	local gotGroup, egroup = _tryAny({ "Player_GetEntities", "Player_GetAllEntities" }, player)
+	if gotGroup and egroup ~= nil then
+		local gotEntity, entity = _try("EGroup_GetEntityAt", egroup, 1)
+		if gotEntity and entity ~= nil then
+			local gotPos, entityPos = _try("Entity_GetPosition", entity)
+			if gotPos and entityPos ~= nil then
+				return entityPos
+			end
+		end
+	end
+
+	return nil
+end
+
 -----------------------------------------------------------------------------
 -- UNIT PRESENCE
 --

@@ -59,6 +59,8 @@ function TerritoryDomination_OnInit()
 		return
 	end
 
+	TD_Zones.AssignStartingZones(TerritoryDomination.players)
+
 	TD_Income.Init(TerritoryDomination.players)
 
 	print(string.format(

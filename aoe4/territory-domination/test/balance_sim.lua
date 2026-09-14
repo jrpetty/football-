@@ -64,5 +64,37 @@ for _, squads in ipairs({ 1, 2, 4, 8, 20 }) do
 		(squads * TD_Config.captureRatePerSquad > TD_Config.captureRateCap) and "  (rate capped)" or ""))
 end
 
+-- Starting zone assignment, across the player counts a skirmish supports.
+print("\nSTARTING ZONES (every player begins owning one):")
+for _, count in ipairs({ 2, 4, 8 }) do
+	Mock.Reset(count)
+	dofile("scar/td_config.scar"); dofile("scar/td_adapter.scar")
+	dofile("scar/td_visuals.scar"); dofile("scar/td_zones.scar")
+	dofile("scar/td_income.scar"); dofile("scar/territorydomination.scar")
+	TD_API.verbose = false
+	TD_Config.visuals.enabled = false
+	Mock.SetSymmetricStarts(0.7)
+	TerritoryDomination_OnInit()
+
+	local lo, hi, maxDist, everyone = math.huge, -math.huge, 0, true
+	for player = 1, count do
+		if TD_Zones.CountOwned(player) ~= 1 then everyone = false end
+	end
+	for _, zone in ipairs(TD_Zones.list) do
+		if zone.owner ~= nil then
+			lo, hi = math.min(lo, zone.weight), math.max(hi, zone.weight)
+			local st = Mock.starts[zone.owner]
+			maxDist = math.max(maxDist, math.sqrt(
+				(zone.position.x - st.x) ^ 2 + (zone.position.z - st.z) ^ 2))
+		end
+	end
+	print(string.format(
+		"  %d players: starting boost %.1f%% - %.1f%%  (spread %2.0f%%), "
+			.. "furthest start %3.0f units%s",
+		count, lo * TD_Config.boostPerZone * 100, hi * TD_Config.boostPerZone * 100,
+		(hi / lo - 1) * 100, maxDist,
+		everyone and "" or "   <-- NOT EVERYONE GOT A ZONE"))
+end
+
 print(string.format("\nMATCH END: last player standing. No score cap, no timer."))
 print("CONQUEST: killing a player transfers all of their remaining zones to you.\n")

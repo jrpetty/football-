@@ -46,6 +46,32 @@ TD_Config = {
 	-- before they have captured it. This is what makes raiding worthwhile.
 	contestBlocksIncome = true,
 
+	-- Give every player the zone nearest their starting position at match
+	-- start, already fully captured. Without this the opening minutes are a
+	-- scramble from zero, and a player whose start is far from any zone is
+	-- quietly disadvantaged through no decision of their own.
+	startingZonePerPlayer = true,
+
+	-- How strongly starting-zone assignment prefers an average-weight zone
+	-- over a merely closer one, so a player whose base happens to sit near
+	-- the map centre does not open on a materially larger income boost.
+	--
+	-- This is a SOFT bias, not a filter. A hard "must be near average
+	-- weight" rule shrinks the candidate pool until, at high player counts,
+	-- somebody is stranded with a fair-but-distant zone they cannot defend
+	-- -- which is a worse unfairness than the one it fixes. As a bias,
+	-- distance always dominates and weight only breaks near-ties.
+	--
+	-- 0 picks the strictly nearest zone and ignores fairness entirely.
+	-- 4.0 means a zone one full weight-unit off average is treated as
+	-- though it were five times further away than it is.
+	--
+	-- 4.0 was chosen by sweeping the value (test/balance_sim.lua reports
+	-- the same figures): on a crowded 8-player layout it cuts the spread in
+	-- starting income from 74% to 35% without pushing anyone's starting
+	-- zone any further from their base, and higher values buy nothing more.
+	startingZoneFairnessBias = 4.0,
+
 	-- Seconds between capture/ownership scans. Lower is more responsive but
 	-- costs more CPU: every zone queries every player on every scan.
 	scanInterval = 1.0,

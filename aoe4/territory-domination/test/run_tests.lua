@@ -27,6 +27,9 @@ local function loadMod()
 	dofile("scar/td_income.scar")
 	dofile("scar/territorydomination.scar")
 	TD_API.verbose = false
+	-- Off by default so the mechanic sections below start from a clean,
+	-- fully neutral map. The starting-zone section switches it back on.
+	TD_Config.startingZonePerPlayer = false
 end
 
 -- Give a player uncontested ownership of a zone, the slow honest way.
@@ -339,6 +342,201 @@ captureFor(1, TD_Zones.list[1], { 1, 2 })
 Mock.AdvanceGathering(1800, 20, { 1, 2 })   -- 30 minutes of heavy gathering
 check("a 30 minute game with income flowing does not auto-end", Mock.winner == nil)
 check("the boosted player did receive income", Mock.stock[1].food > 0)
+
+-----------------------------------------------------------------------------
+section("Starting zones")
+-----------------------------------------------------------------------------
+
+Mock.Reset(4); loadMod()
+TD_Config.startingZonePerPlayer = true
+Mock.SetSymmetricStarts(0.7)
+TerritoryDomination_OnInit()
+
+check("every player starts owning exactly one zone", (function()
+	for _, p in ipairs({ 1, 2, 3, 4 }) do
+		if TD_Zones.CountOwned(p) ~= 1 then return false end
+	end
+	return true
+end)(), (function()
+	local t = {}
+	for _, p in ipairs({ 1, 2, 3, 4 }) do table.insert(t, TD_Zones.CountOwned(p)) end
+	return "owned: " .. table.concat(t, ",")
+end)())
+
+check("starting zones are all different", (function()
+	local owners = {}
+	for _, z in ipairs(TD_Zones.list) do
+		if z.owner ~= nil then
+			if owners[z.owner] then return false end
+			owners[z.owner] = true
+		end
+	end
+	return true
+end)())
+
+check("most of the map is still neutral at the start", (function()
+	local owned = 0
+	for _, z in ipairs(TD_Zones.list) do
+		if z.owner ~= nil then owned = owned + 1 end
+	end
+	return owned == 4
+end)())
+
+check("starting zones are fully captured, not half-taken", (function()
+	for _, z in ipairs(TD_Zones.list) do
+		if z.owner ~= nil and (z.progress[z.owner] or 0) < TD_Config.captureThreshold then
+			return false
+		end
+	end
+	return true
+end)())
+
+check("a starting zone cannot be walked into and flipped instantly", (function()
+	-- An opponent must still do the full capture work to take it.
+	local mine = nil
+	for _, z in ipairs(TD_Zones.list) do
+		if z.owner == 1 then mine = z end
+	end
+	Mock.PlaceSquads(2, mine.position.x, mine.position.z, 5)
+	TD_Zones.Update({ 1, 2, 3, 4 }, 0)
+	return mine.owner == 1
+end)())
+
+Mock.Reset(4); loadMod()
+TD_Config.startingZonePerPlayer = true
+Mock.SetSymmetricStarts(0.7)
+TerritoryDomination_OnInit()
+
+check("each player's starting zone is the nearest one to their base", (function()
+	for _, player in ipairs({ 1, 2, 3, 4 }) do
+		local mine, mineDist = nil, nil
+		local start = Mock.starts[player]
+		for _, z in ipairs(TD_Zones.list) do
+			if z.owner == player then
+				mine = z
+				mineDist = math.sqrt((z.position.x - start.x) ^ 2 + (z.position.z - start.z) ^ 2)
+			end
+		end
+		if mine == nil then return false end
+		-- No unowned zone may be dramatically closer than the one assigned.
+		for _, z in ipairs(TD_Zones.list) do
+			if z.owner == nil then
+				local d = math.sqrt((z.position.x - start.x) ^ 2 + (z.position.z - start.z) ^ 2)
+				if d < mineDist * 0.5 then return false end
+			end
+		end
+	end
+	return true
+end)(), "a player was given a zone far from their base")
+
+check("no player starts with a materially better zone than another", (function()
+	local lo, hi = math.huge, -math.huge
+	for _, z in ipairs(TD_Zones.list) do
+		if z.owner ~= nil then
+			lo, hi = math.min(lo, z.weight), math.max(hi, z.weight)
+		end
+	end
+	-- Within 25% of each other: starting income must not be a coin flip.
+	return hi / lo <= 1.25
+end)(), "starting zone weights are unfairly spread")
+
+check("everyone starts on roughly the same income boost", (function()
+	local lo, hi = math.huge, -math.huge
+	for _, p in ipairs({ 1, 2, 3, 4 }) do
+		local b = TD_Income.GetBoost(p)
+		lo, hi = math.min(lo, b), math.max(hi, b)
+	end
+	return lo > 0 and hi / lo <= 1.25
+end)())
+
+-- Nobody may be stranded with a zone they cannot realistically defend.
+-- This regressed once: a hard fairness filter shrank the candidate pool
+-- until one player was handed a fair-but-distant zone across the map.
+check("no player is stranded far from their starting zone", (function()
+	local distances = {}
+	for _, z in ipairs(TD_Zones.list) do
+		if z.owner ~= nil then
+			local st = Mock.starts[z.owner]
+			table.insert(distances,
+				math.sqrt((z.position.x - st.x) ^ 2 + (z.position.z - st.z) ^ 2))
+		end
+	end
+	table.sort(distances)
+	local median = distances[math.ceil(#distances / 2)]
+	return distances[#distances] <= median * 3
+end)(), "one player's starting zone is far outside the normal range")
+
+-- A crowded FFA is the hardest case for fair assignment; it must still
+-- give everyone exactly one zone and keep starting income comparable.
+Mock.Reset(8); loadMod()
+TD_Config.startingZonePerPlayer = true
+Mock.SetSymmetricStarts(0.7)
+TerritoryDomination_OnInit()
+check("an 8 player FFA still gives everyone exactly one zone", (function()
+	for p = 1, 8 do
+		if TD_Zones.CountOwned(p) ~= 1 then return false end
+	end
+	return true
+end)())
+check("starting income stays comparable even in a crowded FFA", (function()
+	local lo, hi = math.huge, -math.huge
+	for p = 1, 8 do
+		local b = TD_Income.GetBoost(p)
+		lo, hi = math.min(lo, b), math.max(hi, b)
+	end
+	return lo > 0 and hi / lo <= 1.5
+end)(), "starting boosts are too unevenly spread")
+
+-- Two players crammed into the same corner must still get one zone each.
+Mock.Reset(2); loadMod()
+TD_Config.startingZonePerPlayer = true
+Mock.SetStart(1, -100, -100)
+Mock.SetStart(2, -95, -100)   -- almost on top of player 1
+TerritoryDomination_OnInit()
+check("players starting close together still get separate zones",
+	TD_Zones.CountOwned(1) == 1 and TD_Zones.CountOwned(2) == 1,
+	string.format("P1=%d P2=%d", TD_Zones.CountOwned(1), TD_Zones.CountOwned(2)))
+
+-- With no starting positions available, fall back to spreading them out.
+Mock.Reset(4); loadMod()
+TD_Config.startingZonePerPlayer = true
+-- deliberately no Mock.SetSymmetricStarts
+TerritoryDomination_OnInit()
+check("falls back gracefully when starting positions are unavailable", (function()
+	for _, p in ipairs({ 1, 2, 3, 4 }) do
+		if TD_Zones.CountOwned(p) ~= 1 then return false end
+	end
+	return true
+end)())
+check("fallback spreads players apart rather than stacking them", (function()
+	local owned = {}
+	for _, z in ipairs(TD_Zones.list) do
+		if z.owner ~= nil then table.insert(owned, z) end
+	end
+	-- No two starting zones adjacent enough to share a capture radius.
+	for i = 1, #owned do
+		for j = i + 1, #owned do
+			local dx = owned[i].position.x - owned[j].position.x
+			local dz = owned[i].position.z - owned[j].position.z
+			if math.sqrt(dx * dx + dz * dz) < TD_Config.zoneRadius * 2 then
+				return false
+			end
+		end
+	end
+	return true
+end)())
+
+-- And the feature can be turned off entirely.
+Mock.Reset(4); loadMod()
+TD_Config.startingZonePerPlayer = false
+Mock.SetSymmetricStarts(0.7)
+TerritoryDomination_OnInit()
+check("starting zones can be disabled", (function()
+	for _, z in ipairs(TD_Zones.list) do
+		if z.owner ~= nil then return false end
+	end
+	return true
+end)())
 
 -----------------------------------------------------------------------------
 section("Visuals")

@@ -27,6 +27,7 @@ Mock = {
 	defeated = {},
 	mapSize = 400,
 	cumulativeStats = false,
+	starts = {},       -- [player] = {x=, z=}; unset means "engine cannot say"
 }
 
 local KEYS = { "food", "wood", "gold", "stone" }
@@ -38,6 +39,7 @@ function Mock.Reset(playerCount, mapSize)
 	Mock.time, Mock.winner, Mock.defeated = 0, nil, {}
 	Mock.mapSize = mapSize or 400
 	Mock.cumulativeStats = false
+	Mock.starts = {}
 	for i = 1, playerCount do
 		Mock.players[i] = i
 		Mock.squads[i] = {}
@@ -48,6 +50,21 @@ end
 
 function Mock.EnableCumulativeStats()
 	Mock.cumulativeStats = true
+end
+
+function Mock.SetStart(player, x, z)
+	Mock.starts[player] = { x = x, y = 0, z = z }
+end
+
+-- Place players evenly around a circle, the way a symmetric skirmish map
+-- would. Radius is a fraction of the map half-width.
+function Mock.SetSymmetricStarts(radiusFraction)
+	local radius = Mock.mapSize * 0.5 * (radiusFraction or 0.7)
+	local n = #Mock.players
+	for i, player in ipairs(Mock.players) do
+		local angle = (i - 1) / n * math.pi * 2
+		Mock.SetStart(player, math.cos(angle) * radius, math.sin(angle) * radius)
+	end
 end
 
 function Mock.PlaceSquads(player, x, z, count)
@@ -130,6 +147,16 @@ end
 
 -- Deliberately absent so the ledger path is exercised; see GetConqueror.
 -- function Player_GetLastAttacker(p) end
+
+-- Errors when a test has not set starting positions, so the positionless
+-- fallback in AssignStartingZones gets exercised too.
+function Player_GetStartingPosition(player)
+	local pos = Mock.starts[player]
+	if pos == nil then
+		error("no starting position set for player " .. tostring(player))
+	end
+	return pos
+end
 
 function World_GetWidth() return Mock.mapSize end
 function World_GetHeight() return Mock.mapSize end
