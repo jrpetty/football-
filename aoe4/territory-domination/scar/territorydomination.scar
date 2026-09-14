@@ -55,7 +55,22 @@ function TerritoryDomination_OnInit()
 		TerritoryDomination.alive[player] = true
 	end
 
-	local zoneCount = TD_Zones.Build(#TerritoryDomination.players)
+	-- Gather spawn positions first: cell size is derived from how far apart
+	-- players actually start, so the grid cannot be built without them.
+	--
+	-- A plain ARRAY, not a table keyed by player. Player ids are 1..n, so
+	-- keying by player and appending to the same table collide and the
+	-- array part comes out garbled -- which silently produced an empty list
+	-- and sent Build down its fallback path.
+	local startList = {}
+	for _, player in ipairs(TerritoryDomination.players) do
+		local pos = TD_API.GetPlayerStartPosition(player)
+		if pos ~= nil then
+			table.insert(startList, pos)
+		end
+	end
+
+	local zoneCount = TD_Zones.Build(#TerritoryDomination.players, startList)
 	if zoneCount == 0 then
 		print("[TerritoryDomination] No playable zones placed; mode will not start.")
 		return

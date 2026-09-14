@@ -11,8 +11,45 @@ TD_Config = {
 	-- ZONES
 	-----------------------------------------------------------------------
 
+	-----------------------------------------------------------------------
+	-- OPENING LAYOUT
+	--
+	-- Cell size is derived from where players actually spawn, so that the
+	-- opening reads the same on every map and at every player count. Along
+	-- the line between two neighbours:
+	--
+	--   [ base ][ home ring ][ neutral ][ their ring ][ their base ]
+	--
+	-- Each player owns their base tile and can take the ring around it
+	-- uncontested, because the nearest rival ring is a full tile away.
+	--
+	-- basesApartTiles is DERIVED, not configured:
+	--     2 * homeRingRadius + neutralGapTiles + 1  =  2 + 1 + 1  =  4
+	--
+	-- The separation that matters is CHEBYSHEV (king-move) distance, not
+	-- straight-line. "The tiles around you" on a square grid means the 8
+	-- neighbours, which is a Chebyshev radius of 1. Two bases four tiles
+	-- apart in straight-line distance but on a diagonal are only 2.83 apart
+	-- in king moves, which leaves 0.83 of a tile between their rings -- they
+	-- touch, and the neutral tile does not exist.
+	-----------------------------------------------------------------------
+
+	-- How many tiles out from a base a player can expect to take uncontested.
+	-- 1 is the ring of 8 tiles touching their base.
+	homeRingRadius = 1,
+
+	-- Neutral tiles between one player's home ring and the next player's.
+	neutralGapTiles = 1,
+
+	-- Derive cell size from the closest pair of spawns. Set false to size
+	-- the grid purely by map area and player count instead, ignoring the
+	-- opening layout above.
+	deriveGridFromSpawns = true,
+
 	-- ZONE COUNT scales with the map rather than being fixed, so an 8 player
 	-- map is not carved into the same handful of zones as a 1v1.
+	-- Used when deriveGridFromSpawns is off, or when spawn positions are
+	-- unavailable.
 	--
 	-- The target is the larger of two figures:
 	--   * map area, against the reference below
@@ -39,7 +76,12 @@ TD_Config = {
 	-- Absolute bounds. The upper bound is a performance guard as much as a
 	-- design one: every zone is checked against every player.
 	minZoneCount = 8,
-	maxZoneCount = 72,
+
+	-- Deriving cells from spawn spacing produces far more of them than a
+	-- fixed target would: an 8 player map lands near 17x17. The ceiling is
+	-- a performance guard, and hitting it means the opening layout above
+	-- cannot be honoured exactly -- the log says so when that happens.
+	maxZoneCount = 400,
 
 	-- Zones are SQUARE CELLS that tile the whole map edge to edge, so there
 	-- is no neutral ground between them and every unit on the map is always
@@ -140,6 +182,17 @@ TD_Config = {
 	-- arrived enemy is noticed, by at most (zones / budget) ticks.
 	zoneScanBudget = 24,
 
+	-- Scan the FRONTIER first. A tile whose neighbours all share its owner
+	-- cannot change hands until one of those neighbours does, because units
+	-- have to walk in across the border -- so spending the budget on tiles
+	-- that border somebody else keeps response times short on a large map.
+	-- On a settled 17x17 map this is the difference between noticing a raid
+	-- in 12 seconds and noticing it in 3.
+	--
+	-- Interior tiles are still swept, just less often: once every this many
+	-- passes. Set to 1 to scan everything equally.
+	interiorScanEveryNth = 4,
+
 	-----------------------------------------------------------------------
 	-- INCOME BOOST
 	--
@@ -153,7 +206,26 @@ TD_Config = {
 	-- Income boost granted per zone held, as a fraction.
 	-- 0.10 = each zone adds 10% to what you gathered this interval.
 	-- Holding 5 zones therefore pays +50% on everything you mined.
+	--
+	-- NOTE ON SCALE. Deriving the grid from spawn spacing means tile counts
+	-- vary a lot with player count: 36 on a 1v1, 289 on an 8 player map. At
+	-- a flat 10% per tile the home ring is always +90% -- it is always nine
+	-- tiles -- but a FAIR SHARE of the map is +180% in a 1v1 and +360% in an
+	-- 8 player game, and the map as a whole carries +360% against +2890%.
+	-- The same rule therefore produces very different economies.
+	--
+	-- Set boostAutoScale below to hold the map's total constant instead.
 	boostPerZone = 0.10,
+
+	-- Scale boostPerZone so the WHOLE MAP is always worth boostAtFullMap,
+	-- whatever the tile count. This trades the literal "10% per tile" for a
+	-- consistent economy across player counts.
+	--
+	-- Off by default: 10% per tile is a deliberate choice, and turning this
+	-- on silently would change what that number means. Turn it on if 8
+	-- player games feel like they are running on rocket fuel.
+	boostAutoScale = false,
+	boostAtFullMap = 4.00,  -- +400% if one player somehow held everything
 
 	-- Ceiling on total boost, as a FRACTION OF THE WHOLE MAP'S boost rather
 	-- than an absolute percentage. 0.75 means the boost stops growing once

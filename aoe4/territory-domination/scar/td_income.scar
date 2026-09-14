@@ -77,11 +77,28 @@ function TD_Income.Init(players)
 	))
 end
 
+-- Boost earned by one average tile.
+--
+-- Normally this is just TD_Config.boostPerZone -- the literal "10% per tile".
+-- With boostAutoScale on it is instead divided out of the map's total, so a
+-- 36 tile 1v1 and a 289 tile 8 player map carry the same overall economy
+-- rather than an eightfold difference.
+function TD_Income.BoostPerZone()
+	if not TD_Config.boostAutoScale then
+		return TD_Config.boostPerZone
+	end
+	local total = TD_Zones.TotalWeight()
+	if total <= 0 then
+		return TD_Config.boostPerZone
+	end
+	return TD_Config.boostAtFullMap / total
+end
+
 -- A player's current total boost fraction, capped.
 -- Returns (boost, owned, paying).
 function TD_Income.GetBoost(player)
 	local weight, owned, paying = TD_Zones.GetBoostWeight(player)
-	local boost = weight * TD_Config.boostPerZone
+	local boost = weight * TD_Income.BoostPerZone()
 
 	-- The cap is a share of the whole map's boost, not a fixed percentage,
 	-- so it means the same thing at 18 zones and at 72. See the note in
@@ -89,7 +106,7 @@ function TD_Income.GetBoost(player)
 	-- every zone past the twentieth worthless.
 	if TD_Config.maxTotalBoostFraction ~= nil then
 		local ceiling = TD_Zones.TotalWeight()
-			* TD_Config.boostPerZone
+			* TD_Income.BoostPerZone()
 			* TD_Config.maxTotalBoostFraction
 		boost = math.min(boost, ceiling)
 	end

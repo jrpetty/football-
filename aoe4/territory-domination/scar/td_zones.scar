@@ -18,6 +18,10 @@ TD_Zones = {
 	scanCursor = 1,
 	-- Grid dimensions and a col:row index, so neighbours are a lookup.
 	cols = 0, rows = 0, byCell = {},
+	-- True when cell size came from spawn spacing rather than a target count.
+	spawnDerived = false,
+	-- Pass counter, used to sweep interior tiles less often than frontier ones.
+	sweep = 0,
 	-- ledger[victim][taker] = number of zones taken from victim by taker
 	ledger = {},
 	-- Mean raw weight before normalisation. Kept for diagnostics; after
@@ -101,17 +105,82 @@ function TD_Zones.TargetZoneCount(width, height, playerCount)
 		math.min(TD_Config.maxZoneCount, math.floor(target + 0.5)))
 end
 
-function TD_Zones.Build(playerCount)
+-- Tiles between two players' base cells, so that each gets a home ring and
+-- exactly one neutral tile separates the two rings. Derived, not configured.
+function TD_Zones.BasesApartTiles()
+	return TD_Config.homeRingRadius * 2 + TD_Config.neutralGapTiles + 1
+end
+
+-- Cell size that puts the closest pair of spawns exactly basesApartTiles
+-- apart, measured in Chebyshev (king-move) distance.
+--
+-- Chebyshev rather than straight-line because a home ring is the eight tiles
+-- touching a base -- a Chebyshev radius of 1. Two bases four tiles apart in
+-- straight-line distance but diagonally placed are only 2.83 apart in king
+-- moves, so their rings would touch and the neutral tile would not exist.
+--
+-- Returns nil when there are not at least two known spawns.
+function TD_Zones.DeriveCellSize(starts)
+	local closest = nil
+	for i = 1, #starts do
+		for j = i + 1, #starts do
+			local a, b = starts[i], starts[j]
+			local chebyshev = math.max(math.abs(a.x - b.x), math.abs(a.z - b.z))
+			if closest == nil or chebyshev < closest then
+				closest = chebyshev
+			end
+		end
+	end
+
+	if closest == nil or closest <= 0 then
+		return nil
+	end
+	return closest / TD_Zones.BasesApartTiles(), closest
+end
+
+function TD_Zones.Build(playerCount, starts)
 	TD_Zones.list = {}
 	TD_Zones.ledger = {}
 	TD_Zones.scanCursor = 1
 
 	local width, height = TD_API.GetMapDimensions()
 	local margin = TD_Config.mapEdgeMargin
-	local target = TD_Zones.TargetZoneCount(width, height, playerCount)
 	local usableW = width * (1 - margin * 2)
 	local usableH = height * (1 - margin * 2)
-	local cols, rows = _chooseGrid(target, usableW, usableH)
+
+	local cols, rows
+	TD_Zones.spawnDerived = false
+
+	local cellSize, closestSpawns = nil, nil
+	if TD_Config.deriveGridFromSpawns and starts ~= nil and #starts >= 2 then
+		cellSize, closestSpawns = TD_Zones.DeriveCellSize(starts)
+	end
+
+	if cellSize ~= nil and cellSize > 0 then
+		-- Round the column count UP so cells come out no LARGER than ideal.
+		-- Rounding down would make cells bigger and drop the separation
+		-- below four tiles, collapsing the neutral gap.
+		cols = math.max(2, math.ceil(usableW / cellSize))
+		rows = math.max(2, math.ceil(usableH / cellSize))
+
+		if cols * rows > TD_Config.maxZoneCount then
+			-- Too fine to afford. Shrink proportionally and say so: the
+			-- opening layout cannot be honoured exactly at this size.
+			local scale = math.sqrt(TD_Config.maxZoneCount / (cols * rows))
+			cols = math.max(2, math.floor(cols * scale))
+			rows = math.max(2, math.floor(rows * scale))
+			print(string.format(
+				"[TerritoryDomination] Spawn spacing wants a finer grid than "
+					.. "maxZoneCount (%d) allows; falling back to %dx%d. Bases will "
+					.. "sit closer than %d tiles apart and home rings may touch.",
+				TD_Config.maxZoneCount, cols, rows, TD_Zones.BasesApartTiles()))
+		else
+			TD_Zones.spawnDerived = true
+		end
+	else
+		local target = TD_Zones.TargetZoneCount(width, height, playerCount)
+		cols, rows = _chooseGrid(target, usableW, usableH)
+	end
 
 	local usableWidth  = width  * (1 - margin * 2)
 	local usableHeight = height * (1 - margin * 2)
@@ -225,12 +294,20 @@ function TD_Zones.Build(playerCount)
 		end
 	end
 
-	print(string.format(
-		"[TerritoryDomination] Built %d zones for %d players on a %.0fx%.0f map "
-			.. "(target %d, %dx%d grid of %.0fx%.0f cells, %d water, %d impassable, %d skipped)",
-		#TD_Zones.list, playerCount or 2, width, height,
-		target, cols, rows, stepX, stepZ, waterCount, blockedCount, skipped
-	))
+	if TD_Zones.spawnDerived then
+		print(string.format(
+			"[TerritoryDomination] Built %d tiles for %d players: %dx%d grid of "
+				.. "%.0fx%.0f cells, sized from spawn spacing (%.0f apart = %.1f tiles). "
+				.. "%d water, %d impassable.",
+			#TD_Zones.list, playerCount or 2, cols, rows, stepX, stepZ,
+			closestSpawns or 0, (closestSpawns or 0) / stepX, waterCount, blockedCount))
+	else
+		print(string.format(
+			"[TerritoryDomination] Built %d tiles for %d players on a %.0fx%.0f map "
+				.. "(%dx%d grid of %.0fx%.0f cells, %d water, %d impassable, %d skipped)",
+			#TD_Zones.list, playerCount or 2, width, height,
+			cols, rows, stepX, stepZ, waterCount, blockedCount, skipped))
+	end
 	return #TD_Zones.list
 end
 
@@ -340,6 +417,41 @@ function TD_Zones.AssignStartingZones(players)
 		print("[TerritoryDomination] Starting positions unavailable; "
 			.. "spreading starting zones around the map rim instead.")
 		return _assignWithoutPositions(players)
+	end
+
+	-- When the grid was sized from spawn spacing, each player's base is the
+	-- cell their Town Centre physically stands in -- not merely a nearby one.
+	-- The whole opening layout is measured from that cell, so nudging a
+	-- player onto a neighbouring tile for fairness reasons would pull their
+	-- home ring off centre and collapse the neutral gap on one side.
+	if TD_Zones.spawnDerived then
+		local assigned = 0
+		for _, player in ipairs(players) do
+			local start = starts[player]
+			local base = nil
+			for _, zone in ipairs(TD_Zones.list) do
+				if zone.owner == nil
+					and math.abs(start.x - zone.position.x) <= zone.halfW
+					and math.abs(start.z - zone.position.z) <= zone.halfH then
+					base = zone
+					break
+				end
+			end
+			if base ~= nil then
+				_grantZone(base, player)
+				assigned = assigned + 1
+			end
+		end
+		if assigned == #players then
+			print(string.format(
+				"[TerritoryDomination] Assigned %d base tiles from spawn positions.",
+				assigned))
+			return assigned
+		end
+		-- Some player's spawn fell outside the grid; fall through to the
+		-- general assignment rather than leaving them without a tile.
+		print("[TerritoryDomination] Some spawns fell outside the grid; "
+			.. "using nearest-tile assignment instead.")
 	end
 
 	-- Every player/zone pairing, cheapest first. Assigning globally rather
@@ -522,18 +634,46 @@ end
 -- Scan a slice of the zone list, round-robin across ticks, so the per-tick
 -- cost stays bounded no matter how large the map is. Every zone is still
 -- credited for the full time since it was last looked at.
+-- A tile is on the frontier if it borders anything that is not its own
+-- owner. Interior tiles -- surrounded entirely by their owner's tiles --
+-- cannot change hands until a neighbour does, because units have to walk in
+-- across the border, so they can be swept far less often.
+local function _isFrontier(zone)
+	if zone.owner == nil or zone.contested then
+		return true
+	end
+	for _, neighbour in ipairs(TD_Zones.GetNeighbours(zone)) do
+		if neighbour.owner ~= zone.owner then
+			return true
+		end
+	end
+	return false
+end
+
 function TD_Zones.Update(players, now)
 	local total = #TD_Zones.list
 	if total == 0 then
 		return
 	end
 
-	local budget = TD_Config.zoneScanBudget or total
-	local count = math.min(budget, total)
+	local budget = math.min(TD_Config.zoneScanBudget or total, total)
+	local everyNth = math.max(1, TD_Config.interiorScanEveryNth or 1)
 
-	for _ = 1, count do
+	TD_Zones.sweep = (TD_Zones.sweep or 0) + 1
+	local sweepInterior = (TD_Zones.sweep % everyNth == 0)
+
+	local scanned, visited = 0, 0
+
+	-- Walk the list spending budget only on tiles worth looking at. The
+	-- visited cap stops the cursor spinning the whole list when almost
+	-- everything is interior and being skipped this pass.
+	while scanned < budget and visited < total do
 		local zone = TD_Zones.list[TD_Zones.scanCursor]
 		TD_Zones.scanCursor = (TD_Zones.scanCursor % total) + 1
+		visited = visited + 1
+
+		if sweepInterior or _isFrontier(zone) then
+		scanned = scanned + 1
 
 		-- First look at a zone credits one tick rather than all of history.
 		local elapsed = now - (zone.lastScan or (now - TD_Config.scanInterval))
@@ -562,6 +702,7 @@ function TD_Zones.Update(players, now)
 				zone.visualState = state
 				TD_Visuals.Refresh(zone)
 			end
+		end
 		end
 	end
 

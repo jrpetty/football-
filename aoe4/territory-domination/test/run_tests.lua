@@ -669,6 +669,11 @@ section("Capture timing: one unit, twenty seconds")
 -----------------------------------------------------------------------------
 
 Mock.Reset(2); loadMod(); TerritoryDomination_OnInit()
+-- Scan every tile every tick, so this measures the capture RULE rather than
+-- the scan scheduler. Staggered scanning is tested separately, and can only
+-- shift the result by one scan interval because progress is credited by
+-- elapsed time.
+TD_Config.zoneScanBudget = #TD_Zones.list
 
 -- The headline rule: a single unit walking in takes exactly 20 seconds.
 local timed = TD_Zones.list[1]
@@ -684,6 +689,7 @@ check("one unit captures a zone in exactly 20 seconds", math.abs(seconds - 20) <
 -- More units help, but within a bounded range.
 local function captureSeconds(squads)
 	Mock.Reset(2); loadMod(); TerritoryDomination_OnInit()
+	TD_Config.zoneScanBudget = #TD_Zones.list
 	local z = TD_Zones.list[1]
 	Mock.PlaceSquads(1, z.position.x, z.position.z, squads)
 	local t = 0
@@ -872,7 +878,8 @@ while sea.owner == nil and navalSeconds < 200 do
 	navalSeconds = navalSeconds + TD_Config.scanInterval
 end
 check("a unit in open water captures it on the same 20 second rule",
-	math.abs(navalSeconds - 20) < 1e-9, string.format("took %.1fs", navalSeconds))
+	math.abs(navalSeconds - 20) <= TD_Config.scanInterval,
+	string.format("took %.1fs", navalSeconds))
 check("captured water zones pay an income boost", TD_Income.GetBoost(2) > 0)
 
 check("nobody is given a water zone to start on", (function()
@@ -1089,6 +1096,201 @@ check("visuals can be disabled wholesale", (function()
 	TerritoryDomination_OnInit()
 	return #Mock.visuals == 0
 end)())
+
+-----------------------------------------------------------------------------
+section("Opening layout: base, home ring, one neutral tile, their ring")
+-----------------------------------------------------------------------------
+
+-- Build a match and return each player's base cell.
+local function openingFor(playerCount, mapSize)
+	Mock.Reset(playerCount, mapSize); loadMod()
+	TD_Config.startingZonePerPlayer = true
+	Mock.SetSymmetricStarts(0.7)
+	TerritoryDomination_OnInit()
+	local bases = {}
+	for _, z in ipairs(TD_Zones.list) do
+		if z.owner ~= nil then bases[z.owner] = z end
+	end
+	return bases
+end
+
+-- King-move distance between two cells, in tiles. This is the metric the
+-- whole layout is built on: a home ring is the 8 tiles touching a base,
+-- which is a Chebyshev radius of 1.
+local function cellDistance(a, b)
+	return math.max(math.abs(a.col - b.col), math.abs(a.row - b.row))
+end
+
+check("bases apart is derived, not guessed", TD_Zones.BasesApartTiles() == 4,
+	"got " .. TD_Zones.BasesApartTiles())
+
+check("the derivation follows from ring radius and gap", (function()
+	TD_Config.homeRingRadius = 2
+	TD_Config.neutralGapTiles = 3
+	local derived = TD_Zones.BasesApartTiles()   -- 2*2 + 3 + 1
+	TD_Config.homeRingRadius = 1
+	TD_Config.neutralGapTiles = 1
+	return derived == 8
+end)())
+
+for _, case in ipairs({ { 2, 400 }, { 3, 480 }, { 4, 560 }, { 6, 690 }, { 8, 800 } }) do
+	local count, size = case[1], case[2]
+	local bases = openingFor(count, size)
+	local label = count .. " players"
+
+	check(label .. ": everyone gets a base tile", (function()
+		for p = 1, count do
+			if bases[p] == nil then return false end
+		end
+		return true
+	end)())
+
+	check(label .. ": the base tile is the one their spawn stands in", (function()
+		for p = 1, count do
+			local st, b = Mock.starts[p], bases[p]
+			if math.abs(st.x - b.position.x) > b.halfW + 1e-6
+				or math.abs(st.z - b.position.z) > b.halfH + 1e-6 then
+				return false
+			end
+		end
+		return true
+	end)(), "a player's base is not the cell they spawned in")
+
+	check(label .. ": no two bases are closer than four tiles", (function()
+		for a = 1, count do
+			for b = a + 1, count do
+				if cellDistance(bases[a], bases[b]) < TD_Zones.BasesApartTiles() then
+					return false
+				end
+			end
+		end
+		return true
+	end)(), (function()
+		local worst = math.huge
+		for a = 1, count do
+			for b = a + 1, count do
+				worst = math.min(worst, cellDistance(bases[a], bases[b]))
+			end
+		end
+		return "closest pair is " .. worst .. " tiles"
+	end)())
+
+	check(label .. ": home rings never touch", (function()
+		for a = 1, count do
+			for b = a + 1, count do
+				-- Rings reach one tile out from each base, so they are clear
+				-- only if at least one tile separates them.
+				if cellDistance(bases[a], bases[b]) - 2 * TD_Config.homeRingRadius < 1 then
+					return false
+				end
+			end
+		end
+		return true
+	end)())
+
+	check(label .. ": every ring tile is nearer its own base than any rival",
+		(function()
+			for p = 1, count do
+				for _, ring in ipairs(TD_Zones.GetNeighbours(bases[p])) do
+					local mine = cellDistance(ring, bases[p])
+					for q = 1, count do
+						if q ~= p and cellDistance(ring, bases[q]) <= mine then
+							return false
+						end
+					end
+				end
+			end
+			return true
+		end)(), "a home ring tile is contestable from another base")
+end
+
+-- The neutral tile has to actually exist between two neighbours.
+local bases2 = openingFor(4, 560)
+check("there is neutral ground between the two nearest players", (function()
+	-- Find the closest pair, then look for a tile that belongs to neither
+	-- of their home rings but sits between them.
+	local pa, pb, best = nil, nil, math.huge
+	for a = 1, 4 do
+		for b = a + 1, 4 do
+			local d = cellDistance(bases2[a], bases2[b])
+			if d < best then best, pa, pb = d, a, b end
+		end
+	end
+	for _, z in ipairs(TD_Zones.list) do
+		local da, db = cellDistance(z, bases2[pa]), cellDistance(z, bases2[pb])
+		if da == 2 and db == 2 and z.owner == nil then
+			return true  -- equidistant, outside both rings, unowned
+		end
+	end
+	return false
+end)(), "no neutral tile sits between the closest pair")
+
+check("cell size comes from spawn spacing", TD_Zones.spawnDerived == true)
+
+check("cell size is the closest spawn pair divided by four", (function()
+	local starts = {}
+	for p = 1, 4 do table.insert(starts, Mock.starts[p]) end
+	local ideal = TD_Zones.DeriveCellSize(starts)
+	-- Cells are rounded no LARGER than ideal, or the gap would collapse.
+	return TD_Zones.list[1].halfW * 2 <= ideal + 1e-6
+end)(), "cells came out larger than the spacing allows")
+
+-- Falling back when spawns are unknown must not crash or produce nonsense.
+Mock.Reset(4, 560); loadMod()
+TerritoryDomination_OnInit()   -- no SetSymmetricStarts
+check("falls back to area sizing when spawns are unknown",
+	TD_Zones.spawnDerived == false and #TD_Zones.list >= TD_Config.minZoneCount,
+	#TD_Zones.list .. " tiles")
+
+-- A grid finer than the performance ceiling must degrade loudly, not silently.
+Mock.Reset(8, 800); loadMod()
+TD_Config.maxZoneCount = 64
+Mock.SetSymmetricStarts(0.7)
+TerritoryDomination_OnInit()
+check("an unaffordably fine grid is clamped and flagged",
+	#TD_Zones.list <= 64 and TD_Zones.spawnDerived == false,
+	#TD_Zones.list .. " tiles, spawnDerived=" .. tostring(TD_Zones.spawnDerived))
+
+-----------------------------------------------------------------------------
+section("Frontier-first scanning")
+-----------------------------------------------------------------------------
+
+Mock.Reset(2, 400); loadMod()
+Mock.SetSymmetricStarts(0.7)
+TerritoryDomination_OnInit()
+
+check("a large grid still captures in about 20 seconds", (function()
+	-- Frontier tiles are scanned every pass, and an unowned tile is always
+	-- frontier, so a capture must not be slowed by the interior budget.
+	local target = nil
+	for _, z in ipairs(TD_Zones.list) do
+		if z.owner == nil then target = z; break end
+	end
+	Mock.PlaceSquads(1, target.position.x, target.position.z, 1)
+	local t = 0
+	while target.owner == nil and t < 400 do
+		t = t + TD_Config.scanInterval
+		TD_Zones.Update({ 1, 2 }, t)
+	end
+	return math.abs(t - 20) <= TD_Config.scanInterval * 2
+end)(), "capture drifted from 20s on a spawn-derived grid")
+
+check("interior tiles are still swept eventually", (function()
+	Mock.Reset(2, 400); loadMod()
+	Mock.SetSymmetricStarts(0.7)
+	TerritoryDomination_OnInit()
+	-- Hand the whole map to one player so almost everything is interior.
+	for _, z in ipairs(TD_Zones.list) do z.owner = 1 end
+	local t = 0
+	for _ = 1, #TD_Zones.list * TD_Config.interiorScanEveryNth * 2 do
+		t = t + TD_Config.scanInterval
+		TD_Zones.Update({ 1, 2 }, t)
+	end
+	for _, z in ipairs(TD_Zones.list) do
+		if z.lastScan == nil then return false end
+	end
+	return true
+end)(), "some interior tiles were never looked at")
 
 -----------------------------------------------------------------------------
 section("No circles: everything is square")

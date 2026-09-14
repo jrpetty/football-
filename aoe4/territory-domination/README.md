@@ -20,8 +20,9 @@ stay worth fighting over at every stage of the game.
 
 ## How it plays
 
-- **Square cells tiling the whole map** — 4x4 on a 1v1, 6x6 on a 4-player
-  map, 8x8 on an 8-player one, around 8–9 zones per player throughout.
+- **Square cells tiling the whole map**, sized so every player opens with a
+  base tile, a home ring they can take uncontested, and exactly one neutral
+  tile between their ring and the next player's.
 - **No neutral ground.** Cells share every edge, so every unit on the map is
   always inside exactly one zone and the whole map is always worth something
   to somebody.
@@ -62,21 +63,94 @@ protect. From `balance_sim.lua`:
 Total boost is capped at +200% so a player who has already taken most of the
 map cannot compound out of reach.
 
-### The grid
+### The opening layout
 
-Zones are square cells that tile the map edge to edge. One zone's boundary is
-its neighbour's boundary, so there is no neutral ground anywhere — a unit is
-always inside exactly one zone.
+Cell size is not chosen — it is **derived from where players actually spawn**,
+so the opening reads the same on every map and at every player count. Along the
+line between two neighbours:
 
-Zone count scales with the map: the target is the larger of a map-area figure
-and 9 zones per player, then clamped.
+```
+[ base ][ home ring ][ neutral ][ their ring ][ their base ]
+```
 
-| Players | Map size | Grid | Zones | Cell | Per player |
-|---|---|---|---|---|---|
-| 2 | 400 | 4x4 | 16 | 100x100 | 8.0 |
-| 3 | 480 | 5x5 | 25 | 96x96 | 8.3 |
-| 4 | 560 | 6x6 | 36 | 93x93 | 9.0 |
-| 8 | 800 | 8x8 | 64 | 100x100 | 8.0 |
+You own your base tile and can take the ring around it uncontested, because the
+nearest rival ring is a full tile away. That puts bases **four tiles apart**:
+
+```
+basesApart = 2 x homeRingRadius + neutralGapTiles + 1 = 2 + 1 + 1 = 4
+```
+
+so `cellSize = (closest pair of spawns) / 4`.
+
+**The distance that matters is Chebyshev, not straight-line.** A home ring is
+the eight tiles touching your base — a king-move radius of 1. Two bases four
+tiles apart in *straight-line* distance but placed diagonally are only 2.83
+apart in king moves, which leaves 0.83 of a tile between their rings: they
+touch, and the neutral tile does not exist. Measuring in king moves gives a
+clean one-tile gap in every direction.
+
+| Players | Map | Grid | Tiles | Cell | Base sep | Neutral band | Per player |
+|---|---|---|---|---|---|---|---|
+| 2 | 400 | 6x6 | 36 | 66.7 | 5 | 2 | 18.0 |
+| 3 | 480 | 8x8 | 64 | 60.0 | 4 | 1 | 21.3 |
+| 4 | 560 | 12x12 | 144 | 46.7 | 4 | 1 | 36.0 |
+| 6 | 690 | 14x14 | 196 | 49.3 | 4 | 1 | 32.7 |
+| 8 | 800 | 17x17 | 289 | 47.1 | 4 | 1 | 36.1 |
+
+Column counts round **up**, so cells come out no larger than ideal — rounding
+down would make them bigger and drop the separation below four, collapsing the
+gap. The cost is that a map which does not divide evenly can end up with a
+slightly wider band than one tile, as the 1v1 row shows. It is never narrower.
+
+Each player's base is **the cell their Town Centre physically stands in**, not
+merely a nearby one — the fairness bias used elsewhere is skipped here, since
+nudging someone onto a neighbouring tile would pull their home ring off centre
+and collapse the neutral gap on one side.
+
+Where spawns are unknown, or where the grid this implies would exceed
+`maxZoneCount`, the mode falls back to sizing by map area and player count and
+**says so in the log** — the opening layout is not silently abandoned.
+
+### Scale, and what 10% per tile now means
+
+Deriving cells from spawn spacing means tile counts vary a lot: 36 on a 1v1,
+289 on an 8-player map. At a flat 10% per tile:
+
+| Players | Tiles | Home ring | Fair share | Whole map |
+|---|---|---|---|---|
+| 2 | 36 | +90% | +180% | +360% |
+| 4 | 144 | +90% | +360% | +1440% |
+| 8 | 289 | +90% | +361% | +2890% |
+
+**The home ring is always +90%** — it is always nine tiles, at every player
+count. That part is stable and is the uncontested opening economy.
+
+Everything past it is not. A fair share of an 8-player map is four times what
+it is in a 1v1, and the map as a whole carries eight times the boost. The rule
+is symmetric, so nobody is disadvantaged, but 8-player games run on a much
+richer economy than 1v1s.
+
+`boostAutoScale = true` holds the map's total constant at `boostAtFullMap`
+instead, trading the literal 10% for a consistent economy across player counts.
+It is **off by default**, because 10% per tile was a deliberate choice and
+turning this on silently would change what that number means.
+
+### Frontier-first scanning
+
+289 tiles against 8 players is over 2000 spatial queries per full sweep — at a
+budget of 24 a tick, twelve seconds before a new arrival is noticed.
+
+A tile whose neighbours all share its owner cannot change hands until one of
+those neighbours does, because units have to walk in across the border. So the
+budget goes to the **frontier** — tiles bordering somebody else, plus anything
+unowned or contested — and interior tiles are swept once every fourth pass. On
+a settled 17x17 map that is the difference between noticing a raid in twelve
+seconds and noticing it in three.
+
+This does not change capture speed. Progress is credited by elapsed time since
+that tile was last examined, so a tile looked at every third tick gains three
+ticks' worth. An unowned tile is always frontier, so a capture in open ground
+is never slowed by the interior budget.
 
 **The grid shape comes from the map's aspect ratio, not the target count.**
 Choosing cols and rows by count alone and squaring the cells afterwards left
@@ -234,8 +308,8 @@ scar/
   td_tally.scar              Per-player territory counts, named by colour
 test/
   mock_engine.lua            Stubbed Scar engine for offline testing
-  run_tests.lua              144 logic tests
-  balance_sim.lua            Boost curves, capture times, zone scaling
+  run_tests.lua              178 logic tests
+  balance_sim.lua            Opening layout, economy, boost curves, capture times
 ```
 
 ## IMPORTANT: read this before installing
@@ -321,7 +395,7 @@ Requires only a stock Lua 5.4 — no game files needed.
 
 ```sh
 cd aoe4/territory-domination
-lua5.4 test/run_tests.lua      # 144 logic tests
+lua5.4 test/run_tests.lua      # 178 logic tests
 lua5.4 test/balance_sim.lua    # boost curves, capture times, zone scaling
 ```
 
@@ -332,8 +406,12 @@ transfers zones to the right player, that every player starts with exactly one
 zone and nobody is stranded far from it, that one unit captures in exactly 20
 seconds and a 40-unit army cannot do it instantly, that cells tile with no gaps or overlaps and no point
 falls in two zones, that a unit in a neighbouring cell's corner does not count
-toward this one, that zone count scales with map and player count while a solo
-capture still takes 20 seconds on a staggered 64-zone map, that water zones are created
+toward this one, that every player's base is the cell they spawned
+in, that no two bases sit closer than four tiles and home rings never touch,
+that every ring tile is nearer its own base than any rival's, that a neutral
+tile really exists between the closest pair, that an unaffordably fine grid is
+clamped and flagged rather than silently abandoned, that a solo capture still
+takes about 20 seconds on a staggered grid and interior tiles are still swept, that water zones are created
 and capturable but never handed out as starting zones, that regicide eliminates
 its victim and feeds the conquest path, that the tally counts every player's tiles and
 names them by colour, that it redraws only when counts move and rate-limits its
@@ -356,6 +434,14 @@ Everything worth changing during playtesting is in `td_config.scar`:
   average-weight zone. 0 is strictly nearest.
 - `zonesPerPlayer` / `referenceZoneCount` / `maxZoneCount` — how zone count
   scales. `zoneCountOverride` forces a fixed number.
+- `homeRingRadius` / `neutralGapTiles` — the opening layout. Bases-apart is
+  derived from these, never set directly.
+- `deriveGridFromSpawns` — size cells from spawn spacing, or ignore the opening
+  layout and size by map area instead.
+- `boostAutoScale` / `boostAtFullMap` — hold the map's total boost constant
+  instead of the per-tile figure.
+- `interiorScanEveryNth` — how much cheaper interior tiles are than frontier
+  ones.
 - `squareCells` — prefer square cells over hitting the target count exactly.
 - `mapEdgeMargin` — fraction of the map left outside the grid; 0 tiles it all.
 - `zoneScanBudget` — per-tick scan cost ceiling on large maps.

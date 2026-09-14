@@ -66,6 +66,66 @@ for _, squads in ipairs({ 1, 2, 3, 4, 8, 20 }) do
 		(squads * TD_Config.captureRatePerSquad > TD_Config.captureRateCap) and "  (rate capped)" or ""))
 end
 
+-- The opening layout, which is what cell size is derived from.
+print("\nOPENING LAYOUT  (base -> home ring -> neutral -> their ring -> their base)")
+print("  players    grid    tiles     cell   base sep   neutral band   per head")
+for _, case in ipairs({ { 2, 400 }, { 3, 480 }, { 4, 560 }, { 6, 690 }, { 8, 800 } }) do
+	local players, size = case[1], case[2]
+	Mock.Reset(players, size)
+	dofile("scar/td_config.scar"); dofile("scar/td_adapter.scar")
+	dofile("scar/td_visuals.scar"); dofile("scar/td_zones.scar")
+	dofile("scar/td_income.scar"); dofile("scar/td_king.scar")
+	dofile("scar/td_tally.scar"); dofile("scar/territorydomination.scar")
+	TD_API.verbose = false
+	TD_Config.visuals.enabled = false
+	Mock.SetSymmetricStarts(0.7)
+	TerritoryDomination_OnInit()
+
+	local bases = {}
+	for _, zone in ipairs(TD_Zones.list) do
+		if zone.owner ~= nil then bases[zone.owner] = zone end
+	end
+	local closest = math.huge
+	for a = 1, players do
+		for b = a + 1, players do
+			if bases[a] and bases[b] then
+				closest = math.min(closest, math.max(
+					math.abs(bases[a].col - bases[b].col),
+					math.abs(bases[a].row - bases[b].row)))
+			end
+		end
+	end
+	print(string.format("  %7d  %3dx%-3d  %5d  %7.1f  %9d  %13d  %9.1f",
+		players, TD_Zones.cols, TD_Zones.rows, #TD_Zones.list,
+		TD_Zones.list[1].halfW * 2, closest,
+		closest - 2 * TD_Config.homeRingRadius - 1, #TD_Zones.list / players))
+end
+print(string.format("  (bases must sit %d tiles apart: 2 x ring %d + gap %d + 1)",
+	TD_Zones.BasesApartTiles(), TD_Config.homeRingRadius, TD_Config.neutralGapTiles))
+
+-- What that layout does to the economy.
+print("\nECONOMY AT " .. math.floor(TD_Config.boostPerZone * 100) .. "% PER TILE:")
+print("  players    tiles    home ring   fair share   whole map")
+for _, case in ipairs({ { 2, 400 }, { 4, 560 }, { 8, 800 } }) do
+	local players, size = case[1], case[2]
+	Mock.Reset(players, size)
+	dofile("scar/td_config.scar"); dofile("scar/td_adapter.scar")
+	dofile("scar/td_visuals.scar"); dofile("scar/td_zones.scar")
+	dofile("scar/td_income.scar"); dofile("scar/td_king.scar")
+	dofile("scar/td_tally.scar"); dofile("scar/territorydomination.scar")
+	TD_API.verbose = false
+	TD_Config.visuals.enabled = false
+	Mock.SetSymmetricStarts(0.7)
+	TerritoryDomination_OnInit()
+
+	local per, tiles = TD_Income.BoostPerZone(), #TD_Zones.list
+	print(string.format("  %7d  %7d  %10.0f%%  %10.0f%%  %9.0f%%",
+		players, tiles, 9 * per * 100, tiles / players * per * 100, tiles * per * 100))
+end
+print("  The home ring is always 9 tiles, so it is always the same boost.")
+print("  Everything past it is not: set boostAutoScale to hold the map total")
+print("  constant instead of the per-tile figure.")
+
 -- Zone count scaling across the map sizes a skirmish supports.
 print("\nZONE COUNT SCALING (bigger maps and more players get more zones):")
 print("  players   map size   zones   per player   water")
