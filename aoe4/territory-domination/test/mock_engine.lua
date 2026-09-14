@@ -231,18 +231,31 @@ local function _makeVisual(kind, pos, arg, colour, opacity)
 	table.insert(Mock.visuals, v)
 	return v
 end
--- Square cell outline. Signature matches TD_API.CreateGroundRect.
-function UI_CreateGroundDecalRect(pos, halfW, halfH, thickness, colour, opacity)
+-- Square cell outline and centre square share this signature; the adapter
+-- reaches it for both. Distinguished by the caller's half-extents.
+function UI_CreateGroundDecalRect(pos, halfW, halfH, colourOrThickness, colour, opacity)
+	-- CreateGroundRect passes (pos, hw, hh, thickness, colour, opacity);
+	-- CreateCentreSquare passes (pos, half, half, colour, opacity).
+	if type(colourOrThickness) == "table" then
+		return _makeVisual("centre", pos, halfW, colourOrThickness, colour)
+	end
 	return _makeVisual("decal", pos, halfW, colour, opacity)
 end
--- Centre marker. Signature matches TD_API.CreateCentreMarker.
--- UI_CreateGroundDecal is deliberately NOT defined, so the adapter falls
--- through to this one and each visual gets the arguments it expects.
-function UI_CreatePositionDecorator(pos, scale, colour, opacity)
-	return _makeVisual("centre", pos, scale, colour, opacity)
+-- Filled minimap tile covering the cell.
+function UI_CreateMinimapRect(pos, halfW, halfH, colour, opacity)
+	return _makeVisual("tile", pos, halfW, colour, opacity)
 end
-function UI_CreateMinimapBlip(pos, scale, colour)
-	return _makeVisual("blip", pos, scale, colour, 1.0)
+
+-- Persistent on-screen panel for the territory tally. Set
+-- Mock.blockHudPanel true to force the chat fallback.
+Mock.hudText = {}
+Mock.blockHudPanel = false
+function UI_SetPanelText(id, text)
+	if Mock.blockHudPanel then
+		error("no panel available")
+	end
+	Mock.hudText[id] = text
+	return true
 end
 function UI_SetDecalColour(handle, colour, opacity)
 	handle.colour, handle.opacity = colour, opacity

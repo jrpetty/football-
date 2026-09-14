@@ -1,0 +1,141 @@
+-----------------------------------------------------------------------------
+-- td_tally.scar
+--
+-- The territory tally: a running count of how many tiles each player holds.
+--
+-- Players talk about each other by colour -- "yellow has the middle" -- so
+-- every line this prints names the colour rather than the slot number.
+--
+-- Two delivery paths. If the engine gives us a persistent on-screen panel,
+-- the tally lives there and updates silently whenever the counts change. If
+-- it does not, it falls back to chat messages, which are rate limited so a
+-- hard-fought front does not bury the log. Either way the tally only
+-- redraws when the numbers actually move.
+-----------------------------------------------------------------------------
+
+TD_Tally = {
+	lastSignature = nil,
+	lastFallbackAt = -math.huge,
+	usingPanel = false,
+	probed = false,
+	rows = {},
+}
+
+-- Counts for one player: tiles held, share of the map, income boost.
+local function _row(player)
+	local boost, owned = TD_Income.GetBoost(player)
+	local total = #TD_Zones.list
+	return {
+		player = player,
+		name = TD_API.GetPlayerColourName(player),
+		owned = owned,
+		share = (total > 0) and (owned / total) or 0,
+		boost = boost,
+	}
+end
+
+-- Every living player, most territory first.
+function TD_Tally.GetRows(players)
+	local rows = {}
+	for _, player in ipairs(players) do
+		if TD_API.IsPlayerAlive(player) then
+			table.insert(rows, _row(player))
+		end
+	end
+	table.sort(rows, function(a, b)
+		if a.owned ~= b.owned then
+			return a.owned > b.owned
+		end
+		-- Stable ordering when tied, so the tally does not jitter.
+		return a.player < b.player
+	end)
+	return rows
+end
+
+-- One player's entry, e.g. "Yellow 14 (22%) +140%".
+local function _formatRow(row)
+	local text = string.format("%s %d", row.name, row.owned)
+	if TD_Config.tally.showPercentage then
+		text = text .. string.format(" (%d%%)", math.floor(row.share * 100 + 0.5))
+	end
+	if TD_Config.tally.showBoost then
+		text = text .. string.format(" +%d%%", math.floor(row.boost * 100 + 0.5))
+	end
+	return text
+end
+
+function TD_Tally.Format(rows)
+	local parts = {}
+	for _, row in ipairs(rows) do
+		table.insert(parts, _formatRow(row))
+	end
+	return table.concat(parts, "   ")
+end
+
+-- Counts only, used to decide whether anything actually changed. Deliberately
+-- excludes the boost, which drifts with contest state and would otherwise
+-- force a redraw every tick.
+local function _signature(rows)
+	local parts = {}
+	for _, row in ipairs(rows) do
+		table.insert(parts, row.player .. "=" .. row.owned)
+	end
+	return table.concat(parts, ",")
+end
+
+function TD_Tally.Update(players, now)
+	if not TD_Config.tally.enabled then
+		return
+	end
+
+	local rows = TD_Tally.GetRows(players)
+	TD_Tally.rows = rows
+
+	local signature = _signature(rows)
+	if signature == TD_Tally.lastSignature then
+		return
+	end
+	TD_Tally.lastSignature = signature
+
+	local text = TD_Tally.Format(rows)
+
+	-- Probe the panel once; if it works, it stays the delivery path.
+	if not TD_Tally.probed then
+		TD_Tally.probed = true
+		TD_Tally.usingPanel = TD_API.SetHudText("td_tally", text)
+		if not TD_Tally.usingPanel then
+			print("[TerritoryDomination] No on-screen panel available; "
+				.. "territory tally will use chat messages instead.")
+		end
+		return
+	end
+
+	if TD_Tally.usingPanel then
+		TD_API.SetHudText("td_tally", text)
+		return
+	end
+
+	-- Chat fallback: rate limited, because tiles change hands often.
+	if now - TD_Tally.lastFallbackAt >= TD_Config.tally.fallbackMinInterval then
+		TD_Tally.lastFallbackAt = now
+		TD_API.ShowMessage(text)
+	end
+end
+
+-- Force the tally out regardless of rate limiting. Used at moments that
+-- matter: a player eliminated, the match ending.
+function TD_Tally.Flush(players, now)
+	if not TD_Config.tally.enabled then
+		return
+	end
+	local rows = TD_Tally.GetRows(players)
+	TD_Tally.rows = rows
+	TD_Tally.lastSignature = _signature(rows)
+	local text = TD_Tally.Format(rows)
+	if TD_Tally.usingPanel then
+		TD_API.SetHudText("td_tally", text)
+	else
+		TD_Tally.lastFallbackAt = now or 0
+		TD_API.ShowMessage(text)
+	end
+end

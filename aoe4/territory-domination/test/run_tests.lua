@@ -26,6 +26,7 @@ local function loadMod()
 	dofile("scar/td_zones.scar")
 	dofile("scar/td_income.scar")
 	dofile("scar/td_king.scar")
+	dofile("scar/td_tally.scar")
 	dofile("scar/territorydomination.scar")
 	TD_API.verbose = false
 	-- Off by default so the mechanic sections below start from a clean,
@@ -1040,10 +1041,10 @@ Mock.Reset(2); loadMod(); TerritoryDomination_OnInit()
 local rings, blips = 0, 0
 for _, v in ipairs(Mock.visuals) do
 	if v.kind == "decal" then rings = rings + 1 end
-	if v.kind == "blip" then blips = blips + 1 end
+	if v.kind == "tile" then blips = blips + 1 end
 end
-check("every zone gets a minimap blip", blips == #TD_Zones.list,
-	string.format("%d blips for %d zones", blips, #TD_Zones.list))
+check("every zone gets a minimap tile", blips == #TD_Zones.list,
+	string.format("%d tiles for %d zones", blips, #TD_Zones.list))
 check("every zone gets ground visuals", rings >= #TD_Zones.list,
 	string.format("%d decals for %d zones", rings, #TD_Zones.list))
 
@@ -1087,6 +1088,174 @@ check("visuals can be disabled wholesale", (function()
 	TD_Config.visuals.enabled = false
 	TerritoryDomination_OnInit()
 	return #Mock.visuals == 0
+end)())
+
+-----------------------------------------------------------------------------
+section("No circles: everything is square")
+-----------------------------------------------------------------------------
+
+Mock.Reset(2); loadMod(); TerritoryDomination_OnInit()
+
+check("cell outlines are rectangles, not rings", (function()
+	for _, v in ipairs(Mock.visuals) do
+		if v.kind == "decal" then return true end
+	end
+	return false
+end)(), "no rectangular cell outline was created")
+
+check("centre markers are squares, not dots", (function()
+	local found = false
+	for _, v in ipairs(Mock.visuals) do
+		if v.kind == "centre" then found = true end
+	end
+	return found
+end)(), "centre marker did not use the square decal path")
+
+check("the minimap is filled tiles, not blips", (function()
+	for _, v in ipairs(Mock.visuals) do
+		if v.kind == "tile" then return true end
+	end
+	return false
+end)(), "minimap used a dot rather than a filled cell")
+
+check("held cells fill the minimap solidly enough to count", (function()
+	local z = TD_Zones.list[1]
+	z.owner = 1
+	TD_Visuals.Refresh(z)
+	return z.blip.opacity >= 0.5
+end)(), "held cells do not read as solid blocks on the minimap")
+
+check("unclaimed cells stay faint on the minimap", (function()
+	local z = TD_Zones.list[2]
+	z.owner = nil
+	TD_Visuals.Refresh(z)
+	return z.blip.opacity <= 0.2
+end)())
+
+-----------------------------------------------------------------------------
+section("Territory tally")
+-----------------------------------------------------------------------------
+
+Mock.Reset(3); loadMod()
+TD_Config.startingZonePerPlayer = true
+Mock.SetSymmetricStarts(0.7)
+TerritoryDomination_OnInit(); TerritoryDomination_Start()
+
+check("players are named by colour, not slot number", (function()
+	local names = {}
+	for p = 1, 3 do names[p] = TD_API.GetPlayerColourName(p) end
+	return names[1] == "Blue" and names[2] == "Red" and names[3] == "Green"
+end)(), "colour names did not resolve")
+
+check("colour names stay distinct across all eight slots", (function()
+	local seen = {}
+	for p = 1, 8 do
+		local n = TD_API.GetPlayerColourName(p)
+		if seen[n] then return false end
+		seen[n] = true
+	end
+	return true
+end)())
+
+-- The point of the tally: read anyone's tile count without hunting.
+-- Claim two genuinely NEUTRAL tiles for Red, rather than picking indices
+-- blind and clobbering somebody's starting tile.
+local claimed = 0
+for _, z in ipairs(TD_Zones.list) do
+	if z.owner == nil and claimed < 2 then
+		z.owner = 2
+		claimed = claimed + 1
+	end
+end
+TD_Tally.Update({ 1, 2, 3 }, 100)
+
+check("the tally counts every player's tiles", (function()
+	local rows = TD_Tally.GetRows({ 1, 2, 3 })
+	local byPlayer = {}
+	for _, r in ipairs(rows) do byPlayer[r.player] = r.owned end
+	return byPlayer[2] == 3 and byPlayer[1] == 1 and byPlayer[3] == 1
+end)(), (function()
+	local t = {}
+	for _, r in ipairs(TD_Tally.GetRows({1,2,3})) do
+		table.insert(t, r.name .. "=" .. r.owned)
+	end
+	return table.concat(t, " ")
+end)())
+
+check("the tally is ordered by territory held", (function()
+	local rows = TD_Tally.GetRows({ 1, 2, 3 })
+	for i = 2, #rows do
+		if rows[i-1].owned < rows[i].owned then return false end
+	end
+	return true
+end)())
+
+check("the tally names colours in its output", (function()
+	local text = TD_Tally.Format(TD_Tally.GetRows({ 1, 2, 3 }))
+	return text:find("Red") ~= nil and text:find("Blue") ~= nil
+end)(), TD_Tally.Format(TD_Tally.GetRows({ 1, 2, 3 })))
+
+check("the tally shows each player's share of the map", (function()
+	return TD_Tally.Format(TD_Tally.GetRows({ 1, 2, 3 })):find("%%") ~= nil
+end)())
+
+check("the tally reaches an on-screen panel when one exists",
+	Mock.hudText["td_tally"] ~= nil and Mock.hudText["td_tally"]:find("Red") ~= nil,
+	"panel text: " .. tostring(Mock.hudText["td_tally"]))
+
+check("the panel updates when tiles change hands", (function()
+	local before = Mock.hudText["td_tally"]
+	for _, z in ipairs(TD_Zones.list) do
+		if z.owner == nil then z.owner = 2; break end
+	end
+	TD_Tally.Update({ 1, 2, 3 }, 110)
+	return Mock.hudText["td_tally"] ~= before
+end)())
+
+check("the tally does not redraw when nothing changed", (function()
+	local before = Mock.hudText["td_tally"]
+	Mock.hudText["td_tally"] = "SENTINEL"
+	TD_Tally.Update({ 1, 2, 3 }, 120)
+	local unchanged = (Mock.hudText["td_tally"] == "SENTINEL")
+	Mock.hudText["td_tally"] = before
+	return unchanged
+end)(), "tally redrew despite identical counts")
+
+check("dead players drop out of the tally", (function()
+	Mock.Kill(3)
+	local rows = TD_Tally.GetRows({ 1, 2, 3 })
+	for _, r in ipairs(rows) do
+		if r.player == 3 then return false end
+	end
+	return true
+end)())
+
+-- Without a panel, fall back to chat but do not spam it.
+Mock.Reset(2); loadMod()
+Mock.blockHudPanel = true
+Mock.SetSymmetricStarts(0.7)
+TerritoryDomination_OnInit(); TerritoryDomination_Start()
+TD_Tally.Update({ 1, 2 }, 0)
+
+check("falls back to chat when no panel is available",
+	TD_Tally.usingPanel == false)
+
+local msgsBefore = #Mock.messages
+local function claimOneNeutral(player)
+	for _, z in ipairs(TD_Zones.list) do
+		if z.owner == nil then z.owner = player; return end
+	end
+end
+claimOneNeutral(1); TD_Tally.Update({ 1, 2 }, 1)
+claimOneNeutral(1); TD_Tally.Update({ 1, 2 }, 2)
+claimOneNeutral(1); TD_Tally.Update({ 1, 2 }, 3)
+check("the chat fallback is rate limited", #Mock.messages - msgsBefore <= 1,
+	string.format("%d messages for three rapid changes", #Mock.messages - msgsBefore))
+
+check("an elimination flushes the tally immediately", (function()
+	local before = #Mock.messages
+	TD_Tally.Flush({ 1, 2 }, 500)
+	return #Mock.messages > before
 end)())
 
 -----------------------------------------------------------------------------

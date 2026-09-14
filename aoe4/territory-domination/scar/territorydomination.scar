@@ -24,6 +24,7 @@ import("td_visuals.scar")
 import("td_zones.scar")
 import("td_income.scar")
 import("td_king.scar")
+import("td_tally.scar")
 
 TerritoryDomination = {
 	players = {},
@@ -92,6 +93,10 @@ function TerritoryDomination_Start()
 	Rule_AddInterval(TerritoryDomination_IncomePayout, TD_Config.incomeInterval)
 	Rule_AddInterval(TerritoryDomination_EliminationCheck, TD_Config.eliminationCheckInterval)
 
+	if TD_Config.tally.enabled then
+		Rule_AddInterval(TerritoryDomination_TallyRefresh, TD_Config.tally.refreshInterval)
+	end
+
 	if TD_Config.standingsAnnounceInterval > 0 then
 		Rule_AddInterval(TerritoryDomination_AnnounceStandings, TD_Config.standingsAnnounceInterval)
 	end
@@ -119,6 +124,12 @@ end
 
 function TerritoryDomination_AnnounceStandings()
 	TD_Income.Announce(TerritoryDomination.players)
+end
+
+-- Keep the territory tally current. It redraws only when the counts move,
+-- so this can tick briskly without becoming noise.
+function TerritoryDomination_TallyRefresh()
+	TD_Tally.Update(TerritoryDomination.players, TerritoryDomination.elapsed)
 end
 
 -----------------------------------------------------------------------------
@@ -195,6 +206,10 @@ function TerritoryDomination_OnPlayerDefeated(player)
 
 	local moved = TD_Zones.TransferZones(player, conqueror, TerritoryDomination.elapsed)
 
+	-- An elimination moves a lot of territory at once; show the new picture
+	-- immediately rather than waiting out the rate limit.
+	TD_Tally.Flush(TerritoryDomination.players, TerritoryDomination.elapsed)
+
 	if TD_Config.announceConquest and heldCount > 0 then
 		if conqueror ~= nil then
 			TD_API.ShowMessage(string.format(
@@ -225,11 +240,13 @@ function TerritoryDomination_End(winner)
 	Rule_RemoveGlobalEvent(TerritoryDomination_IncomePayout)
 	Rule_RemoveGlobalEvent(TerritoryDomination_EliminationCheck)
 	Rule_RemoveGlobalEvent(TerritoryDomination_AnnounceStandings)
+	Rule_RemoveGlobalEvent(TerritoryDomination_TallyRefresh)
 
 	if winner ~= nil then
 		TD_API.ShowMessage(string.format(
-			"%s is the last power standing, holding %d of %d zones.",
+			"%s (%s) is the last power standing, holding %d of %d tiles.",
 			TD_API.GetPlayerName(winner),
+			TD_API.GetPlayerColourName(winner),
 			TD_Zones.CountOwned(winner),
 			#TD_Zones.list
 		))

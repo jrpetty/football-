@@ -472,11 +472,14 @@ function TD_API.CreateGroundRect(pos, halfW, halfH, thickness, colour, opacity)
 	return nil
 end
 
--- Small decal at the zone centre. Returns a handle or nil.
-function TD_API.CreateCentreMarker(pos, scale, colour, opacity)
+-- Small filled SQUARE at the cell centre. Returns a handle or nil.
+-- Square rather than round: on a map made of square tiles a round marker is
+-- the one shape that does not belong to the grid.
+function TD_API.CreateCentreSquare(pos, halfSize, colour, opacity)
 	local ok, handle = _tryAny(
-		{ "UI_CreateGroundDecal", "World_CreateDecal", "UI_CreatePositionDecorator" },
-		pos, scale, colour, opacity
+		{ "UI_CreateGroundDecalRect", "UI_CreateGroundDecal", "World_CreateDecal",
+		  "UI_CreatePositionDecorator" },
+		pos, halfSize, halfSize, colour, opacity
 	)
 	if ok then
 		return handle
@@ -484,11 +487,17 @@ function TD_API.CreateCentreMarker(pos, scale, colour, opacity)
 	return nil
 end
 
--- Minimap dot. Returns a handle or nil.
-function TD_API.CreateMinimapBlip(pos, scale, colour)
+-- A filled square on the MINIMAP covering the whole cell, not a dot.
+--
+-- This is what lets a player count territory at a glance: filled cells in
+-- each player's colour turn the minimap into a territory readout, where a
+-- scatter of small blips would only mark centres and tell you nothing about
+-- how much ground anyone holds.
+function TD_API.CreateMinimapTile(pos, halfW, halfH, colour, opacity)
 	local ok, handle = _tryAny(
-		{ "UI_CreateMinimapBlip", "UI_CreateMinimapIcon", "Marker_Create" },
-		pos, scale, colour
+		{ "UI_CreateMinimapRect", "UI_CreateMinimapArea", "UI_CreateMinimapBlip",
+		  "UI_CreateMinimapIcon", "Marker_Create" },
+		pos, halfW, halfH, colour, opacity
 	)
 	if ok then
 		return handle
@@ -514,17 +523,60 @@ function TD_API.DestroyVisual(handle)
 	_tryAny({ "UI_DestroyDecal", "World_DestroyDecal", "UI_DestroyMinimapBlip", "Marker_Destroy" }, handle)
 end
 
+-- Standard player slot colours and, importantly, their NAMES. Players refer
+-- to each other by colour -- "yellow has the middle" -- so every readout
+-- this mode prints names the colour rather than a slot number.
+TD_API.PlayerColours = {
+	{ name = "Blue",   r =  70, g = 130, b = 220 },
+	{ name = "Red",    r = 210, g =  70, b =  60 },
+	{ name = "Green",  r =  80, g = 175, b =  90 },
+	{ name = "Yellow", r = 225, g = 190, b =  70 },
+	{ name = "Purple", r = 150, g = 110, b = 200 },
+	{ name = "Teal",   r =  60, g = 170, b = 165 },
+	{ name = "Orange", r = 220, g = 130, b =  60 },
+	{ name = "Pink",   r = 205, g = 105, b = 165 },
+}
+
+local function _slotColour(player)
+	local index = ((tonumber(player) or 1) - 1) % #TD_API.PlayerColours + 1
+	return TD_API.PlayerColours[index]
+end
+
 -- A player's UI colour, so zone visuals match the colour players already
--- associate with each opponent. Falls back to plain white.
+-- associate with each opponent. Falls back to this mode's own slot palette
+-- rather than to white, so colours stay distinguishable either way.
 function TD_API.GetPlayerColour(player)
 	local ok, colour = _tryAny(
 		{ "Player_GetUIColour", "Player_GetUIColor", "Player_GetTeamColour" },
 		player
 	)
-	if ok and type(colour) == "table" then
+	if ok and type(colour) == "table" and colour.r ~= nil then
 		return colour
 	end
-	return { r = 255, g = 255, b = 255 }
+	return _slotColour(player)
+end
+
+-- The NAME of a player's colour, for readouts. Tries the engine's own
+-- colour name first in case the player picked a non-default colour.
+function TD_API.GetPlayerColourName(player)
+	local ok, name = _tryAny(
+		{ "Player_GetUIColourName", "Player_GetColourName" },
+		player
+	)
+	if ok and type(name) == "string" and name ~= "" then
+		return name
+	end
+	return _slotColour(player).name
+end
+
+-- Persistent on-screen text, for the territory tally. Returns true if the
+-- engine actually took it; the HUD falls back to chat messages if not.
+function TD_API.SetHudText(id, text)
+	local ok = select(1, _tryAny(
+		{ "UI_SetPanelText", "UI_SetWorldPanelText", "UI_TitleSetText", "UI_SetHintText" },
+		id, text
+	))
+	return ok
 end
 
 -----------------------------------------------------------------------------

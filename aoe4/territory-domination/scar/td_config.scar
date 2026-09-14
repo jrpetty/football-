@@ -307,18 +307,24 @@ TD_Config = {
 		-- boundary, not as a spotlight.
 		ringOpacity = 0.35,
 
-		-- Small marker at the zone centre. Set false if the ring alone is
+		-- Small square at the cell centre. Set false if the outline alone is
 		-- enough and you want the ground completely clear.
+		-- Square, not round: on a map made of square tiles a circle is the
+		-- one shape that does not belong to the grid.
 		showCentreMarker = true,
 
-		-- Centre marker scale multiplier.
+		-- Centre square size, as a fraction of the cell.
 		centreMarkerScale = 0.7,
 
-		-- Minimap dot for each zone, coloured by owner.
+		-- Fill each cell on the minimap in its owner's colour, so territory
+		-- is countable at a glance rather than merely marked.
 		showMinimapBlip = true,
 
-		-- Minimap dot size multiplier. Small enough not to hide units.
-		minimapBlipScale = 0.6,
+		-- Minimap fill strength for held and unclaimed cells. Held cells
+		-- read as solid blocks of colour; unclaimed ground stays faint so it
+		-- does not compete with units on the minimap.
+		minimapOwnedFill = 0.72,
+		minimapNeutralFill = 0.10,
 
 		-- Pulse the ring briefly when a zone changes hands, then settle
 		-- back to the resting opacity. Draws the eye once rather than
@@ -341,6 +347,33 @@ TD_Config = {
 
 	-- Seconds between standings broadcasts. 0 disables them.
 	standingsAnnounceInterval = 90.0,
+
+	-----------------------------------------------------------------------
+	-- TERRITORY TALLY
+	--
+	-- A running count of how many tiles each player holds, named by colour
+	-- rather than slot number, because that is how players talk about each
+	-- other: "yellow has the middle".
+	-----------------------------------------------------------------------
+
+	tally = {
+		enabled = true,
+
+		-- Seconds between refreshes. The tally only redraws when the counts
+		-- actually change, so this can be brisk without being noisy.
+		refreshInterval = 2.0,
+
+		-- Show each player's share of the map alongside the raw count.
+		showPercentage = true,
+
+		-- Show each player's current income boost too.
+		showBoost = true,
+
+		-- When no persistent on-screen panel is available, fall back to
+		-- chat messages. Those are rate-limited to this many seconds so a
+		-- hard-fought front does not spam the log.
+		fallbackMinInterval = 20.0,
+	},
 
 	-- Announce when a zone changes hands.
 	announceCaptures = true,

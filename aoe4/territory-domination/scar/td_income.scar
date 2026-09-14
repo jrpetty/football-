@@ -193,8 +193,8 @@ function TD_Income.Announce(players)
 	end
 	local parts = {}
 	for _, entry in ipairs(standings) do
-		table.insert(parts, string.format("%s %d zones (+%d%%)",
-			TD_API.GetPlayerName(entry.player),
+		table.insert(parts, string.format("%s %d tiles (+%d%%)",
+			TD_API.GetPlayerColourName(entry.player),
 			entry.owned,
 			math.floor(entry.boost * 100 + 0.5)))
 	end

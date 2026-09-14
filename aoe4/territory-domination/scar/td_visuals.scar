@@ -61,13 +61,20 @@ function TD_Visuals.Create(zone)
 	end
 
 	if v.showCentreMarker then
-		zone.centreMarker = TD_API.CreateCentreMarker(
-			zone.position, v.centreMarkerScale, colour, opacity
+		-- A small square, sized off the cell so it scales with the grid.
+		zone.centreMarker = TD_API.CreateCentreSquare(
+			zone.position, zone.halfW * v.centreMarkerScale * 0.2, colour, opacity
 		)
 	end
 
 	if v.showMinimapBlip then
-		zone.blip = TD_API.CreateMinimapBlip(zone.position, v.minimapBlipScale, colour)
+		-- A filled tile covering the cell, not a dot. Owned cells read as
+		-- blocks of colour on the minimap, so territory is countable at a
+		-- glance rather than merely marked.
+		zone.blip = TD_API.CreateMinimapTile(
+			zone.position, zone.halfW, zone.halfH, colour,
+			zone.owner and v.minimapOwnedFill or v.minimapNeutralFill
+		)
 	end
 end
 
@@ -87,9 +94,11 @@ function TD_Visuals.Refresh(zone, opacityOverride)
 
 	TD_API.SetVisualColour(zone.ring, colour, opacity)
 	TD_API.SetVisualColour(zone.centreMarker, colour, opacity)
-	-- Minimap blips take colour but not opacity; a translucent minimap dot
-	-- would be harder to read, not less intrusive.
-	TD_API.SetVisualColour(zone.blip, colour, 1.0)
+	-- A held cell fills solidly on the minimap so blocks of territory are
+	-- countable; unclaimed ground stays faint so it does not compete.
+	local v = TD_Config.visuals
+	TD_API.SetVisualColour(zone.blip, colour,
+		zone.owner and v.minimapOwnedFill or v.minimapNeutralFill)
 end
 
 -- Flash a zone briefly on capture, then let it settle back.

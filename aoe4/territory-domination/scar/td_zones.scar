@@ -548,11 +548,11 @@ function TD_Zones.Update(players, now)
 			if TD_Config.announceCaptures then
 				if previousOwner == nil then
 					TD_API.ShowMessage(string.format("%s has claimed %s",
-						TD_API.GetPlayerName(newOwner), zone.name))
+						TD_API.GetPlayerColourName(newOwner), zone.name))
 				else
 					TD_API.ShowMessage(string.format("%s has taken %s from %s",
-						TD_API.GetPlayerName(newOwner), zone.name,
-						TD_API.GetPlayerName(previousOwner)))
+						TD_API.GetPlayerColourName(newOwner), zone.name,
+						TD_API.GetPlayerColourName(previousOwner)))
 				end
 			end
 		else

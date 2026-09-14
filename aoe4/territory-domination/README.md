@@ -230,10 +230,11 @@ scar/
   td_zones.scar              Zone layout, capture, ownership, conquest ledger
   td_income.scar             Gather-rate measurement and the boost payout
   td_king.scar               King spawning, tracking and regicide
-  td_visuals.scar            Ground rings, centre markers, minimap blips
+  td_visuals.scar            Cell outlines, centre squares, minimap tiles
+  td_tally.scar              Per-player territory counts, named by colour
 test/
   mock_engine.lua            Stubbed Scar engine for offline testing
-  run_tests.lua              126 logic tests
+  run_tests.lua              144 logic tests
   balance_sim.lua            Boost curves, capture times, zone scaling
 ```
 
@@ -269,8 +270,15 @@ Most likely to need correcting, in rough priority order:
 - **`SGroup_GetSpawnedSquadAt`** — lets the square cell test filter a circular
   query down to the actual rectangle. Without it captures bleed across cell
   corners; the log says once if it fell back.
-- **`UI_CreateGroundDecalRect`** — square cell outlines. Falls back to
-  whatever decal call exists, so cells may draw as circles.
+- **`UI_CreateGroundDecalRect`** — square cell outlines and centre squares.
+  Falls back to whatever decal call exists, so cells may draw as circles.
+- **`UI_CreateMinimapRect`** — filled minimap cells. Falls back to a blip,
+  which still marks each cell but makes territory much harder to count.
+- **`UI_SetPanelText`** — the on-screen tally. Falls back to rate-limited chat
+  messages; the log says once which path it took.
+- `Player_GetUIColourName` — colour names in readouts. Falls back to this
+  mode's own slot palette (Blue, Red, Green, Yellow, Purple, Teal, Orange,
+  Pink), which is correct unless a player picked a non-default colour.
 - **`TD_Config.kings.blueprint`** — not an API name but a *unit name*, and the
   default is a placeholder that will not resolve. See **Kings** above.
 - **`Squad_CreateAndSpawnToward`** — king spawning. If it fails no kings appear
@@ -313,7 +321,7 @@ Requires only a stock Lua 5.4 — no game files needed.
 
 ```sh
 cd aoe4/territory-domination
-lua5.4 test/run_tests.lua      # 126 logic tests
+lua5.4 test/run_tests.lua      # 144 logic tests
 lua5.4 test/balance_sim.lua    # boost curves, capture times, zone scaling
 ```
 
@@ -327,8 +335,10 @@ falls in two zones, that a unit in a neighbouring cell's corner does not count
 toward this one, that zone count scales with map and player count while a solo
 capture still takes 20 seconds on a staggered 64-zone map, that water zones are created
 and capturable but never handed out as starting zones, that regicide eliminates
-its victim and feeds the conquest path, that the match ends only when one player
-remains, and that visuals stay within their opacity budget.
+its victim and feeds the conquest path, that the tally counts every player's tiles and
+names them by colour, that it redraws only when counts move and rate-limits its
+chat fallback, that the match ends only when one player remains, and that no
+visual falls back to a circle.
 
 They **cannot** verify that the engine function names are right.
 
@@ -359,7 +369,10 @@ Everything worth changing during playtesting is in `td_config.scar`:
   one eliminates you.
 - `gatherSampleInterval` — how often gather rate is measured. Lower is more
   accurate when the engine lacks cumulative stats; see `td_income.scar`.
-- `visuals.*` — everything about how zones are drawn.
+- `visuals.*` — everything about how cells are drawn, including the minimap
+  fill strengths that make territory countable.
+- `tally.*` — the per-player tile count: refresh rate, whether to show share
+  and boost, and the chat fallback's rate limit.
 
 After changing anything, run `balance_sim.lua` to see what it did before you
 load the game.
