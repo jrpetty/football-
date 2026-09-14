@@ -1,0 +1,106 @@
+-----------------------------------------------------------------------------
+-- td_config.scar
+--
+-- All tunables for Territory Domination in one place. These are the numbers
+-- you will actually want to change during playtesting; nothing here depends
+-- on the engine, so it is safe to edit freely.
+-----------------------------------------------------------------------------
+
+TD_Config = {
+
+	-----------------------------------------------------------------------
+	-- ZONES
+	-----------------------------------------------------------------------
+
+	-- Target number of zones. The layout is a grid, so the real count is the
+	-- nearest grid that fits (e.g. 20 -> 5x4). Unusable cells (water, cliff)
+	-- are dropped, so expect slightly fewer on awkward maps.
+	zoneCountTarget = 20,
+
+	-- Radius in world units within which units count as holding a zone.
+	zoneRadius = 20,
+
+	-- Fraction of the map edge left free of zones. Keeps zones off the map
+	-- border where units cannot path properly.
+	mapEdgeMargin = 0.12,
+
+	-----------------------------------------------------------------------
+	-- CAPTURE
+	-----------------------------------------------------------------------
+
+	-- Progress points needed to flip a zone from neutral/enemy to yours.
+	captureThreshold = 200,
+
+	-- Progress gained per scan tick per squad present, up to the cap below.
+	captureRatePerSquad = 3,
+
+	-- Maximum capture progress per tick regardless of how many squads you
+	-- bring. Stops a 40-unit deathball from flipping zones instantly and
+	-- keeps small raiding parties relevant.
+	captureRateCap = 12,
+
+	-- Progress decayed per tick on an uncontested zone nobody is standing in.
+	-- Set to 0 to make captures permanent until contested.
+	captureDecayPerTick = 2,
+
+	-- If true, an enemy present in your zone freezes income even before they
+	-- have captured it. This is what makes raiding worthwhile.
+	contestBlocksIncome = true,
+
+	-- Seconds between capture/ownership scans. Lower is more responsive but
+	-- costs more CPU: every zone queries every player on every scan.
+	scanInterval = 1.0,
+
+	-----------------------------------------------------------------------
+	-- SCORING
+	-----------------------------------------------------------------------
+
+	-- First player to this score wins.
+	scoreCap = 6000,
+
+	-- Seconds between score/income ticks.
+	incomeInterval = 5.0,
+
+	-- Score awarded per tick per point of zone value.
+	scorePerZoneValue = 1,
+
+	-----------------------------------------------------------------------
+	-- ZONE VALUE TIERS
+	--
+	-- Zones closer to the map centre are worth more, which is what pulls
+	-- players into conflict instead of farming a safe corner. Value scales
+	-- both score and income.
+	-----------------------------------------------------------------------
+
+	-- Value multiplier at the exact map centre and at the outer edge.
+	-- Zones in between are interpolated linearly by distance from centre.
+	centreZoneValue = 5,
+	edgeZoneValue   = 1,
+
+	-----------------------------------------------------------------------
+	-- INCOME
+	--
+	-- Resources granted per income tick, per point of zone value.
+	-- A value-3 centre zone pays 3x these numbers.
+	-----------------------------------------------------------------------
+
+	incomePerValue = {
+		food  = 2,
+		wood  = 2,
+		gold  = 1,
+		stone = 1,
+	},
+
+	-----------------------------------------------------------------------
+	-- PRESENTATION
+	-----------------------------------------------------------------------
+
+	-- Seconds between score broadcast messages. 0 disables them.
+	scoreAnnounceInterval = 30.0,
+
+	-- Announce when a zone changes hands.
+	announceCaptures = true,
+
+	-- Announce when a player crosses these fractions of the score cap.
+	scoreMilestones = { 0.25, 0.5, 0.75, 0.9 },
+}

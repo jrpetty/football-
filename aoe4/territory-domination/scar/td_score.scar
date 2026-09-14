@@ -1,0 +1,142 @@
+-----------------------------------------------------------------------------
+-- td_score.scar
+--
+-- Income, scoring and the win condition.
+--
+-- Every income tick, each player receives resources and score proportional
+-- to the total value of the zones they hold. First player to the score cap
+-- wins. This is the whole point of the mode: the thing that earns you
+-- resources and the thing that wins you the game are the same thing, so
+-- there is no way to sit on an economy without fighting for it.
+-----------------------------------------------------------------------------
+
+TD_Score = {
+	scores = {},           -- [player] = score
+	milestonesHit = {},    -- [player] = { [milestoneIndex] = true }
+	winner = nil,
+}
+
+function TD_Score.Init(players)
+	TD_Score.scores = {}
+	TD_Score.milestonesHit = {}
+	TD_Score.winner = nil
+	for _, player in ipairs(players) do
+		TD_Score.scores[player] = 0
+		TD_Score.milestonesHit[player] = {}
+	end
+end
+
+-- Pay a player resources for the zone value they hold.
+local function _payIncome(player, heldValue)
+	if heldValue <= 0 then
+		return
+	end
+	local types = TD_API.ResourceTypes()
+	local rates = TD_Config.incomePerValue
+	TD_API.AddResource(player, types.food,  rates.food  * heldValue)
+	TD_API.AddResource(player, types.wood,  rates.wood  * heldValue)
+	TD_API.AddResource(player, types.gold,  rates.gold  * heldValue)
+	TD_API.AddResource(player, types.stone, rates.stone * heldValue)
+end
+
+-- Announce the first time a player crosses each configured milestone.
+local function _checkMilestones(player)
+	local score = TD_Score.scores[player] or 0
+	local hit = TD_Score.milestonesHit[player]
+	for i, fraction in ipairs(TD_Config.scoreMilestones) do
+		if not hit[i] and score >= TD_Config.scoreCap * fraction then
+			hit[i] = true
+			TD_API.ShowMessage(string.format(
+				"%s is at %d%% of the score needed to win (%d / %d)",
+				TD_API.GetPlayerName(player),
+				math.floor(fraction * 100 + 0.5),
+				math.floor(score),
+				TD_Config.scoreCap
+			))
+		end
+	end
+end
+
+-- One income/score tick for every living player.
+-- Returns the winning player if someone reached the cap this tick.
+function TD_Score.Tick(players)
+	if TD_Score.winner ~= nil then
+		return TD_Score.winner
+	end
+
+	-- Track the leader in case two players cross the cap on the same tick:
+	-- the higher score wins rather than whoever is first in the player list.
+	local topPlayer, topScore = nil, -1
+
+	for _, player in ipairs(players) do
+		if TD_API.IsPlayerAlive(player) then
+			local heldValue = TD_Zones.GetHeldValue(player)
+
+			_payIncome(player, heldValue)
+
+			TD_Score.scores[player] = (TD_Score.scores[player] or 0)
+				+ heldValue * TD_Config.scorePerZoneValue
+
+			_checkMilestones(player)
+
+			if TD_Score.scores[player] >= TD_Config.scoreCap
+				and TD_Score.scores[player] > topScore then
+				topPlayer, topScore = player, TD_Score.scores[player]
+			end
+		end
+	end
+
+	if topPlayer ~= nil then
+		TD_Score.winner = topPlayer
+	end
+	return TD_Score.winner
+end
+
+-- Players sorted by score, highest first.
+function TD_Score.GetStandings(players)
+	local standings = {}
+	for _, player in ipairs(players) do
+		if TD_API.IsPlayerAlive(player) then
+			table.insert(standings, {
+				player = player,
+				score  = TD_Score.scores[player] or 0,
+			})
+		end
+	end
+	table.sort(standings, function(a, b) return a.score > b.score end)
+	return standings
+end
+
+function TD_Score.Announce(players)
+	local standings = TD_Score.GetStandings(players)
+	if #standings == 0 then
+		return
+	end
+
+	local parts = {}
+	for _, entry in ipairs(standings) do
+		local heldValue, zoneCount = TD_Zones.GetHeldValue(entry.player)
+		table.insert(parts, string.format(
+			"%s %d (%d zones)",
+			TD_API.GetPlayerName(entry.player),
+			math.floor(entry.score),
+			zoneCount
+		))
+	end
+
+	TD_API.ShowMessage("Score to " .. TD_Config.scoreCap .. " -- " .. table.concat(parts, "  |  "))
+end
+
+function TD_Score.DeclareWinner(player, players)
+	TD_API.ShowMessage(string.format(
+		"%s controls the map and wins with %d points!",
+		TD_API.GetPlayerName(player),
+		math.floor(TD_Score.scores[player] or 0)
+	))
+	TD_API.DeclareWinner(player)
+	for _, other in ipairs(players) do
+		if other ~= player and TD_API.IsPlayerAlive(other) then
+			TD_API.EliminatePlayer(other)
+		end
+	end
+end

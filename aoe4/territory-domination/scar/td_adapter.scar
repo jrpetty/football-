@@ -1,0 +1,239 @@
+-----------------------------------------------------------------------------
+-- td_adapter.scar
+--
+-- ENGINE ADAPTER LAYER.
+--
+-- Every call into the AoE4 Scar API that this mod depends on lives here and
+-- nowhere else. The game logic in td_zones / td_score / territorydomination
+-- talks only to the TD_API.* functions below.
+--
+-- WHY: if an engine function has been renamed, or its signature differs from
+-- what this mod expects, the fix is a one-line change in this file rather
+-- than a hunt through the gameplay code. Each function is small enough to
+-- verify against the real API in isolation.
+--
+-- Every function here is wrapped in a guarded call, so a missing engine
+-- function degrades to a logged warning and a safe default instead of
+-- killing the whole script. Check the in-game log for "TD_API MISSING" to
+-- find the ones that need correcting.
+-----------------------------------------------------------------------------
+
+TD_API = {}
+
+-- Set true to print every adapter miss to the log.
+TD_API.verbose = true
+
+local function _warn(name)
+	if TD_API.verbose then
+		print("[TerritoryDomination] TD_API MISSING or FAILED: " .. tostring(name))
+	end
+end
+
+-- Call an engine function by name if it exists; return (ok, result).
+-- Never raises: a missing or throwing engine function returns ok == false.
+local function _try(fnName, ...)
+	local fn = _G[fnName]
+	if type(fn) ~= "function" then
+		_warn(fnName .. " (not defined)")
+		return false, nil
+	end
+	local ok, result = pcall(fn, ...)
+	if not ok then
+		_warn(fnName .. " (error: " .. tostring(result) .. ")")
+		return false, nil
+	end
+	return true, result
+end
+
+-- Try a list of candidate function names in order, first one that exists wins.
+-- Used where the exact engine name is uncertain between versions.
+local function _tryAny(fnNames, ...)
+	for _, name in ipairs(fnNames) do
+		if type(_G[name]) == "function" then
+			local ok, result = pcall(_G[name], ...)
+			if ok then
+				return true, result
+			end
+			_warn(name .. " (error: " .. tostring(result) .. ")")
+		end
+	end
+	_warn(table.concat(fnNames, " / ") .. " (none defined)")
+	return false, nil
+end
+
+-----------------------------------------------------------------------------
+-- PLAYERS
+-----------------------------------------------------------------------------
+
+-- Returns an array of player IDs for every human/AI player in the match.
+function TD_API.GetPlayers()
+	local players = {}
+	local ok, count = _try("World_GetPlayerCount")
+	if not ok or count == nil then
+		return players
+	end
+	for i = 0, count - 1 do
+		local gotPlayer, player = _try("World_GetPlayerAt", i)
+		if gotPlayer and player ~= nil then
+			table.insert(players, player)
+		end
+	end
+	return players
+end
+
+function TD_API.IsPlayerAlive(player)
+	local ok, alive = _tryAny({ "Player_IsAlive", "Player_IsActive" }, player)
+	if not ok then
+		return true -- assume alive rather than silently eliminating someone
+	end
+	return alive == true or alive == 1
+end
+
+function TD_API.GetPlayerName(player)
+	local ok, name = _tryAny({ "Player_GetDisplayName", "Player_GetName" }, player)
+	if ok and name ~= nil then
+		return tostring(name)
+	end
+	return "Player " .. tostring(player)
+end
+
+-----------------------------------------------------------------------------
+-- MAP GEOMETRY
+-----------------------------------------------------------------------------
+
+-- Playable map dimensions, in world units.
+function TD_API.GetMapDimensions()
+	local okW, width = _tryAny({ "World_GetWidth", "World_GetLength" })
+	local okH, height = _tryAny({ "World_GetHeight", "World_GetLength" })
+	-- Fall back to a conservative default so zone layout still produces
+	-- something usable on a map where the query fails.
+	return (okW and width) or 400, (okH and height) or 400
+end
+
+function TD_API.MakePosition(x, y, z)
+	local ok, pos = _try("World_Pos", x, y, z)
+	if ok and pos ~= nil then
+		return pos
+	end
+	-- Plain table fallback; the engine generally accepts {x,y,z} shaped
+	-- positions in most calls that take a Position.
+	return { x = x, y = y or 0, z = z }
+end
+
+-- Snap a position to walkable ground. Returns nil if the point is unusable
+-- (water, cliff, off-map), so zone layout can skip it.
+function TD_API.GetGroundPosition(pos)
+	local ok, ground = _tryAny({ "World_GetSpawnablePosition", "Util_GetPositionFromTable" }, pos)
+	if ok and ground ~= nil then
+		return ground
+	end
+	return pos
+end
+
+function TD_API.IsPointPlayable(pos)
+	local ok, impassable = _tryAny(
+		{ "World_IsPointOverImpassableTerrain", "World_IsPointOverWater" },
+		pos
+	)
+	if not ok then
+		return true -- can't tell, so allow it
+	end
+	return not (impassable == true or impassable == 1)
+end
+
+-----------------------------------------------------------------------------
+-- UNIT PRESENCE
+--
+-- This is the hot path: called once per zone per scan tick. Keep it cheap.
+-----------------------------------------------------------------------------
+
+-- Number of a player's military squads within radius of pos.
+-- Returns 0 on any failure so a broken query never hands someone a zone.
+function TD_API.CountPlayerSquadsNear(player, pos, radius)
+	local ok, sgroup = _tryAny(
+		{ "Player_GetSquadsNearPoint", "World_GetSquadsNearPoint" },
+		player, pos, radius
+	)
+	if not ok or sgroup == nil then
+		return 0
+	end
+	local okCount, count = _try("SGroup_CountSpawned", sgroup)
+	if not okCount or count == nil then
+		local okTotal, total = _try("SGroup_Count", sgroup)
+		return (okTotal and total) or 0
+	end
+	return count
+end
+
+-----------------------------------------------------------------------------
+-- RESOURCES
+-----------------------------------------------------------------------------
+
+-- Resource type constants, with fallbacks if the engine globals are absent.
+function TD_API.ResourceTypes()
+	return {
+		food  = _G["RT_Food"]  or 0,
+		wood  = _G["RT_Wood"]  or 1,
+		gold  = _G["RT_Gold"]  or 2,
+		stone = _G["RT_Stone"] or 3,
+	}
+end
+
+function TD_API.AddResource(player, resourceType, amount)
+	if amount == nil or amount <= 0 then
+		return
+	end
+	_tryAny({ "Player_AddResource", "Player_GiveResource" }, player, resourceType, amount)
+end
+
+-----------------------------------------------------------------------------
+-- PRESENTATION
+-----------------------------------------------------------------------------
+
+function TD_API.ShowMessage(text)
+	local shown = select(1, _tryAny(
+		{ "UI_SystemMessageShow", "Game_ShowNotification", "UI_CreateEventCue" },
+		text
+	))
+	if not shown then
+		print("[TerritoryDomination] " .. tostring(text))
+	end
+end
+
+-- Drop a persistent marker on the minimap/world for a zone.
+-- Returns a handle the caller stores, or nil if markers aren't available.
+function TD_API.CreateZoneMarker(pos, label)
+	local ok, marker = _tryAny(
+		{ "UI_CreateMinimapBlip", "Marker_Create", "UI_CreatePositionDecorator" },
+		pos, label
+	)
+	if ok then
+		return marker
+	end
+	return nil
+end
+
+function TD_API.SetZoneMarkerOwner(marker, player)
+	if marker == nil then
+		return
+	end
+	_tryAny({ "UI_SetMinimapBlipOwner", "Marker_SetOwner" }, marker, player)
+end
+
+-----------------------------------------------------------------------------
+-- MATCH END
+-----------------------------------------------------------------------------
+
+function TD_API.DeclareWinner(player)
+	local ok = select(1, _tryAny(
+		{ "World_SetPlayerWin", "Player_SetWin", "World_SetTeamWin" },
+		player
+	))
+	if not ok then
+		TD_API.ShowMessage(TD_API.GetPlayerName(player) .. " wins!")
+	end
+end
+
+function TD_API.EliminatePlayer(player)
+	_tryAny({ "World_SetPlayerLose", "Player_SetDefeated" }, player)
+end

@@ -1,0 +1,242 @@
+-----------------------------------------------------------------------------
+-- td_zones.scar
+--
+-- Zone layout, ownership and capture mechanics.
+--
+-- A zone is a circular area of the map with an owner (or nil for neutral),
+-- a value (how much score/income it pays), and per-player capture progress.
+-- Ownership changes when a player's capture progress crosses the threshold.
+-----------------------------------------------------------------------------
+
+TD_Zones = {
+	list = {},   -- array of zone tables
+}
+
+-----------------------------------------------------------------------------
+-- LAYOUT
+-----------------------------------------------------------------------------
+
+-- Choose grid dimensions (cols x rows) whose product is closest to target,
+-- preferring near-square grids so zones are evenly spread on square maps.
+local function _chooseGrid(target)
+	local bestCols, bestRows, bestError = 5, 4, math.huge
+	for cols = 2, 10 do
+		local rows = math.floor(target / cols + 0.5)
+		if rows >= 2 then
+			local count = cols * rows
+			-- Penalise both a bad count and a lopsided grid shape.
+			local countError = math.abs(count - target)
+			local shapeError = math.abs(cols - rows) * 0.5
+			local totalError = countError + shapeError
+			if totalError < bestError then
+				bestCols, bestRows, bestError = cols, rows, totalError
+			end
+		end
+	end
+	return bestCols, bestRows
+end
+
+-- Zone value from distance to map centre: centre zones pay the most.
+local function _valueForPosition(x, z, centreX, centreZ, maxDistance)
+	if maxDistance <= 0 then
+		return TD_Config.centreZoneValue
+	end
+	local dx, dz = x - centreX, z - centreZ
+	local distance = math.sqrt(dx * dx + dz * dz)
+	local t = math.min(distance / maxDistance, 1.0)
+	local value = TD_Config.centreZoneValue
+		+ (TD_Config.edgeZoneValue - TD_Config.centreZoneValue) * t
+	-- Round to a whole number so score maths stays readable in the UI.
+	return math.max(1, math.floor(value + 0.5))
+end
+
+-- Build the zone grid across the playable area of the map.
+function TD_Zones.Build()
+	TD_Zones.list = {}
+
+	local width, height = TD_API.GetMapDimensions()
+	local margin = TD_Config.mapEdgeMargin
+	local cols, rows = _chooseGrid(TD_Config.zoneCountTarget)
+
+	-- Usable span after trimming the edge margin on both sides.
+	local usableWidth  = width  * (1 - margin * 2)
+	local usableHeight = height * (1 - margin * 2)
+
+	-- World coordinates are centred on origin, so the playable area runs
+	-- from -width/2 to +width/2.
+	local originX = -usableWidth / 2
+	local originZ = -usableHeight / 2
+
+	-- Spacing puts zones at cell centres, not cell corners.
+	local stepX = usableWidth / cols
+	local stepZ = usableHeight / rows
+
+	local maxDistance = math.sqrt(usableWidth * usableWidth + usableHeight * usableHeight) / 2
+
+	local skipped = 0
+	for col = 0, cols - 1 do
+		for row = 0, rows - 1 do
+			local x = originX + stepX * (col + 0.5)
+			local z = originZ + stepZ * (row + 0.5)
+
+			local pos = TD_API.GetGroundPosition(TD_API.MakePosition(x, 0, z))
+
+			if TD_API.IsPointPlayable(pos) then
+				local index = #TD_Zones.list + 1
+				table.insert(TD_Zones.list, {
+					index    = index,
+					name     = "Zone " .. index,
+					position = pos,
+					value    = _valueForPosition(x, z, 0, 0, maxDistance),
+					owner    = nil,   -- player id, or nil for neutral
+					contested = false,
+					progress = {},    -- [player] = capture points
+					marker   = nil,
+				})
+			else
+				skipped = skipped + 1
+			end
+		end
+	end
+
+	-- Markers are cosmetic; failing to create them must not block the mode.
+	for _, zone in ipairs(TD_Zones.list) do
+		zone.marker = TD_API.CreateZoneMarker(zone.position, zone.name)
+	end
+
+	print(string.format(
+		"[TerritoryDomination] Built %d zones (%dx%d grid, %d skipped as unplayable)",
+		#TD_Zones.list, cols, rows, skipped
+	))
+
+	return #TD_Zones.list
+end
+
+-----------------------------------------------------------------------------
+-- CAPTURE
+-----------------------------------------------------------------------------
+
+-- Presence in a zone, as a map of [player] = squad count, plus the leading
+-- player and whether more than one player is present.
+local function _scanPresence(zone, players)
+	local presence = {}
+	local leader, leaderCount, presentCount = nil, 0, 0
+
+	for _, player in ipairs(players) do
+		local count = TD_API.CountPlayerSquadsNear(player, zone.position, TD_Config.zoneRadius)
+		if count > 0 then
+			presence[player] = count
+			presentCount = presentCount + 1
+			if count > leaderCount then
+				leader, leaderCount = player, count
+			end
+		end
+	end
+
+	-- A tie for the lead means nobody is winning the capture.
+	if leader ~= nil then
+		local tied = false
+		for player, count in pairs(presence) do
+			if player ~= leader and count == leaderCount then
+				tied = true
+				break
+			end
+		end
+		if tied then
+			leader = nil
+		end
+	end
+
+	return presence, leader, presentCount
+end
+
+-- Advance capture progress on one zone. Returns the new owner if it changed.
+local function _updateZone(zone, players)
+	local presence, leader, presentCount = _scanPresence(zone, players)
+
+	zone.contested = (presentCount > 1)
+
+	if leader ~= nil then
+		-- Leader gains progress, capped so deathballs don't flip instantly.
+		local gain = math.min(
+			presence[leader] * TD_Config.captureRatePerSquad,
+			TD_Config.captureRateCap
+		)
+		zone.progress[leader] = (zone.progress[leader] or 0) + gain
+
+		-- Everyone else's progress decays while they are losing the fight.
+		for player, _ in pairs(zone.progress) do
+			if player ~= leader then
+				zone.progress[player] = math.max(0, zone.progress[player] - gain)
+			end
+		end
+
+		if zone.progress[leader] >= TD_Config.captureThreshold and zone.owner ~= leader then
+			local previousOwner = zone.owner
+			zone.owner = leader
+			zone.progress[leader] = TD_Config.captureThreshold
+			TD_API.SetZoneMarkerOwner(zone.marker, leader)
+			return leader, previousOwner
+		end
+	elseif presentCount == 0 and TD_Config.captureDecayPerTick > 0 then
+		-- Empty zone: progress bleeds away, but an established owner keeps
+		-- the zone until someone actively takes it from them.
+		for player, value in pairs(zone.progress) do
+			if player ~= zone.owner then
+				zone.progress[player] = math.max(0, value - TD_Config.captureDecayPerTick)
+			end
+		end
+	end
+
+	return nil, nil
+end
+
+-- Run one capture scan across every zone.
+function TD_Zones.Update(players)
+	for _, zone in ipairs(TD_Zones.list) do
+		local newOwner, previousOwner = _updateZone(zone, players)
+		if newOwner ~= nil and TD_Config.announceCaptures then
+			local message
+			if previousOwner == nil then
+				message = string.format("%s has claimed %s",
+					TD_API.GetPlayerName(newOwner), zone.name)
+			else
+				message = string.format("%s has taken %s from %s",
+					TD_API.GetPlayerName(newOwner), zone.name,
+					TD_API.GetPlayerName(previousOwner))
+			end
+			TD_API.ShowMessage(message)
+		end
+	end
+end
+
+-----------------------------------------------------------------------------
+-- QUERIES
+-----------------------------------------------------------------------------
+
+-- Total zone value a player currently holds and pays out on.
+-- Contested zones pay nothing when contestBlocksIncome is set.
+function TD_Zones.GetHeldValue(player)
+	local total, count = 0, 0
+	for _, zone in ipairs(TD_Zones.list) do
+		if zone.owner == player then
+			count = count + 1
+			if not (zone.contested and TD_Config.contestBlocksIncome) then
+				total = total + zone.value
+			end
+		end
+	end
+	return total, count
+end
+
+-- Release every zone held by an eliminated player back to neutral.
+function TD_Zones.ReleasePlayer(player)
+	for _, zone in ipairs(TD_Zones.list) do
+		if zone.owner == player then
+			zone.owner = nil
+			zone.contested = false
+			TD_API.SetZoneMarkerOwner(zone.marker, nil)
+		end
+		zone.progress[player] = nil
+	end
+end
