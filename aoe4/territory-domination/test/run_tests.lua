@@ -54,7 +54,18 @@ Mock.Reset(2); loadMod(); TerritoryDomination_OnInit()
 local zoneCount = #TD_Zones.list
 check("places a reasonable number of zones", zoneCount >= 10 and zoneCount <= 20,
 	"got " .. zoneCount)
-check("skips unplayable terrain", zoneCount < 20, "got " .. zoneCount)
+-- Cells tile the map, so impassable ground is KEPT as a zone rather than
+-- punching a hole in the grid. It simply stays neutral, since nobody can
+-- stand in it.
+check("impassable cells stay in the grid rather than leaving holes",
+	zoneCount == TD_Zones.cols * TD_Zones.rows,
+	string.format("%d zones for a %dx%d grid", zoneCount, TD_Zones.cols, TD_Zones.rows))
+check("impassable cells are flagged", (function()
+	for _, z in ipairs(TD_Zones.list) do
+		if z.impassable then return true end
+	end
+	return false
+end)())
 
 local seen, minV, maxV = {}, math.huge, -1
 for _, z in ipairs(TD_Zones.list) do
@@ -632,7 +643,7 @@ check("fallback spreads players apart rather than stacking them", (function()
 		for j = i + 1, #owned do
 			local dx = owned[i].position.x - owned[j].position.x
 			local dz = owned[i].position.z - owned[j].position.z
-			if math.sqrt(dx * dx + dz * dz) < TD_Config.zoneRadius * 2 then
+			if math.sqrt(dx * dx + dz * dz) < owned[i].halfW * 2 then
 				return false
 			end
 		end
@@ -689,6 +700,147 @@ check("a 40 unit army is no faster than three", manyUnits == threeUnits,
 	string.format("40 units %.1fs vs 3 units %.1fs", manyUnits, threeUnits))
 check("even a huge army cannot capture instantly", manyUnits >= 5,
 	string.format("%.1fs", manyUnits))
+
+-----------------------------------------------------------------------------
+section("Square grid")
+-----------------------------------------------------------------------------
+
+Mock.Reset(2); loadMod(); TerritoryDomination_OnInit()
+
+check("every cell is the same size", (function()
+	local w, h = TD_Zones.list[1].halfW, TD_Zones.list[1].halfH
+	for _, z in ipairs(TD_Zones.list) do
+		if math.abs(z.halfW - w) > 1e-9 or math.abs(z.halfH - h) > 1e-9 then
+			return false
+		end
+	end
+	return true
+end)())
+
+check("cells are square, not oblong", (function()
+	local z = TD_Zones.list[1]
+	return math.abs(z.halfW - z.halfH) < 1e-9
+end)(), string.format("%.1f x %.1f", TD_Zones.list[1].halfW * 2, TD_Zones.list[1].halfH * 2))
+
+check("the grid covers every cell of its own dimensions",
+	#TD_Zones.list == TD_Zones.cols * TD_Zones.rows,
+	string.format("%d zones, %dx%d grid",
+		#TD_Zones.list, TD_Zones.cols, TD_Zones.rows))
+
+-- Tiling means neighbours share an edge exactly: centres are one full cell
+-- apart, no more (a gap) and no less (an overlap).
+check("horizontal neighbours share an edge exactly", (function()
+	for _, z in ipairs(TD_Zones.list) do
+		local right = TD_Zones.byCell[(z.col + 1) .. ":" .. z.row]
+		if right ~= nil then
+			if math.abs((right.position.x - z.position.x) - z.halfW * 2) > 1e-6 then
+				return false
+			end
+			if math.abs(right.position.z - z.position.z) > 1e-6 then return false end
+		end
+	end
+	return true
+end)(), "cells do not tile cleanly on the x axis")
+
+check("vertical neighbours share an edge exactly", (function()
+	for _, z in ipairs(TD_Zones.list) do
+		local below = TD_Zones.byCell[z.col .. ":" .. (z.row + 1)]
+		if below ~= nil then
+			if math.abs((below.position.z - z.position.z) - z.halfH * 2) > 1e-6 then
+				return false
+			end
+		end
+	end
+	return true
+end)(), "cells do not tile cleanly on the z axis")
+
+check("no point on the grid falls in two zones at once", (function()
+	-- Sample a lattice of points and count how many cells claim each.
+	local z0 = TD_Zones.list[1]
+	for _, probe in ipairs(TD_Zones.list) do
+		for _, off in ipairs({ { 0, 0 }, { 0.4, 0.4 }, { -0.4, 0.4 } }) do
+			local px = probe.position.x + off[1] * z0.halfW
+			local pz = probe.position.z + off[2] * z0.halfH
+			local claims = 0
+			for _, z in ipairs(TD_Zones.list) do
+				if math.abs(px - z.position.x) <= z.halfW + 1e-9
+					and math.abs(pz - z.position.z) <= z.halfH + 1e-9 then
+					claims = claims + 1
+				end
+			end
+			if claims ~= 1 then return false end
+		end
+	end
+	return true
+end)(), "cells overlap or leave gaps")
+
+check("an interior cell has four neighbours", (function()
+	for _, z in ipairs(TD_Zones.list) do
+		if z.col > 0 and z.col < TD_Zones.cols - 1
+			and z.row > 0 and z.row < TD_Zones.rows - 1 then
+			return #TD_Zones.GetNeighbours(z) == 4
+		end
+	end
+	return false
+end)())
+
+check("a corner cell has two neighbours", (function()
+	local corner = TD_Zones.byCell["0:0"]
+	return corner ~= nil and #TD_Zones.GetNeighbours(corner) == 2
+end)())
+
+check("friendly neighbours are counted for a held block", (function()
+	local centre = nil
+	for _, z in ipairs(TD_Zones.list) do
+		if z.col == 1 and z.row == 1 then centre = z end
+	end
+	if centre == nil then return false end
+	for _, n in ipairs(TD_Zones.GetNeighbours(centre)) do n.owner = 1 end
+	return TD_Zones.CountFriendlyNeighbours(centre, 1) == #TD_Zones.GetNeighbours(centre)
+end)())
+
+-- The square cell test must reject a unit standing in a neighbour's corner,
+-- which a plain circular query around the cell centre would wrongly include.
+Mock.Reset(2); loadMod(); TerritoryDomination_OnInit()
+local cellA = TD_Zones.byCell["1:1"]
+local cornerX = cellA.position.x + cellA.halfW * 1.6
+local cornerZ = cellA.position.z + cellA.halfH * 1.6
+Mock.PlaceSquads(1, cornerX, cornerZ, 3)
+check("a unit in a neighbouring cell does not count toward this one",
+	TD_API.CountPlayerSquadsInCell(1, cellA.position, cellA.halfW, cellA.halfH) == 0,
+	"circular bleed across the cell corner")
+check("a unit inside the cell does count", (function()
+	Mock.ClearSquads(1)
+	Mock.PlaceSquads(1, cellA.position.x + cellA.halfW * 0.8, cellA.position.z, 2)
+	return TD_API.CountPlayerSquadsInCell(1, cellA.position, cellA.halfW, cellA.halfH) == 2
+end)())
+
+check("falls back to a circular test when the group cannot be walked", (function()
+	Mock.ClearSquads(1)
+	Mock.PlaceSquads(1, cellA.position.x, cellA.position.z, 4)
+	Mock.blockSquadWalk = true
+	local n = TD_API.CountPlayerSquadsInCell(1, cellA.position, cellA.halfW, cellA.halfH)
+	Mock.blockSquadWalk = false
+	return n == 4
+end)(), "fallback path did not return a usable count")
+
+-- Tiling means there is no neutral ground: a unit anywhere is always in a
+-- zone, which is the whole point of the change.
+check("every point on the map belongs to some zone", (function()
+	local span = TD_Zones.cols * TD_Zones.list[1].halfW * 2
+	for _, frac in ipairs({ -0.45, -0.2, 0, 0.2, 0.45 }) do
+		local px, pz = span * frac, span * frac
+		local found = false
+		for _, z in ipairs(TD_Zones.list) do
+			if math.abs(px - z.position.x) <= z.halfW + 1e-9
+				and math.abs(pz - z.position.z) <= z.halfH + 1e-9 then
+				found = true; break
+			end
+		end
+		if not found then return false end
+	end
+	return true
+end)(), "found a point inside the grid that no zone covers")
 
 -----------------------------------------------------------------------------
 section("Water zones")

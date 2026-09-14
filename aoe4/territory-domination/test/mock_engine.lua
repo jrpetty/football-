@@ -42,6 +42,7 @@ function Mock.Reset(playerCount, mapSize)
 	Mock.cumulativeStats = false
 	Mock.starts = {}
 	Mock.units = {}
+	Mock.blockSquadWalk = false
 	for i = 1, playerCount do
 		Mock.players[i] = i
 		Mock.squads[i] = {}
@@ -179,17 +180,30 @@ function World_IsPointOverImpassableTerrain(pos)
 	return pos.x < -edge and pos.z < -edge
 end
 
+-- Returns a walkable group so the square-cell filter in the adapter can be
+-- exercised: each unit is a separate entry carrying its own position.
 function Player_GetSquadsNearPoint(player, pos, radius)
-	local total = 0
+	local found = {}
 	for _, group in ipairs(Mock.squads[player] or {}) do
 		local dx, dz = group.x - pos.x, group.z - pos.z
 		if math.sqrt(dx * dx + dz * dz) <= radius then
-			total = total + group.count
+			for _ = 1, group.count do
+				table.insert(found, { pos = { x = group.x, y = 0, z = group.z } })
+			end
 		end
 	end
-	return { _count = total }
+	return { _squads = found }
 end
-function SGroup_CountSpawned(sgroup) return sgroup._count or 0 end
+function SGroup_CountSpawned(sgroup)
+	if sgroup._squads then return #sgroup._squads end
+	return sgroup._count or 0
+end
+function SGroup_GetSpawnedSquadAt(sgroup, i)
+	if Mock.blockSquadWalk then
+		error("group iteration unavailable")
+	end
+	return sgroup._squads and sgroup._squads[i] or nil
+end
 
 RT_Food, RT_Wood, RT_Gold, RT_Stone = 0, 1, 2, 3
 
@@ -217,8 +231,15 @@ local function _makeVisual(kind, pos, arg, colour, opacity)
 	table.insert(Mock.visuals, v)
 	return v
 end
-function UI_CreateGroundDecal(pos, radius, thickness, colour, opacity)
-	return _makeVisual("decal", pos, radius, colour, opacity)
+-- Square cell outline. Signature matches TD_API.CreateGroundRect.
+function UI_CreateGroundDecalRect(pos, halfW, halfH, thickness, colour, opacity)
+	return _makeVisual("decal", pos, halfW, colour, opacity)
+end
+-- Centre marker. Signature matches TD_API.CreateCentreMarker.
+-- UI_CreateGroundDecal is deliberately NOT defined, so the adapter falls
+-- through to this one and each visual gets the arguments it expects.
+function UI_CreatePositionDecorator(pos, scale, colour, opacity)
+	return _makeVisual("centre", pos, scale, colour, opacity)
 end
 function UI_CreateMinimapBlip(pos, scale, colour)
 	return _makeVisual("blip", pos, scale, colour, 1.0)
@@ -238,6 +259,9 @@ end
 function Squad_IsAlive(handle) return handle.alive end
 function Squad_GetHealthPercentage(handle) return handle.health end
 function Squad_GetPosition(handle) return handle.pos end
+-- Set true to simulate an engine that will not let us walk a squad group,
+-- forcing the adapter's circular fallback.
+Mock.blockSquadWalk = false
 
 function Mock.KillKing(player)
 	for _, unit in ipairs(Mock.units) do

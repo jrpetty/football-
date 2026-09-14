@@ -55,8 +55,8 @@ function TD_Visuals.Create(zone)
 	local opacity = _opacityFor(zone)
 
 	if v.showGroundRing then
-		zone.ring = TD_API.CreateGroundRing(
-			zone.position, TD_Config.zoneRadius, v.ringThickness, colour, opacity
+		zone.ring = TD_API.CreateGroundRect(
+			zone.position, zone.halfW, zone.halfH, v.ringThickness, colour, opacity
 		)
 	end
 

@@ -41,12 +41,21 @@ TD_Config = {
 	minZoneCount = 8,
 	maxZoneCount = 72,
 
-	-- Radius in world units within which units count as holding a zone.
-	zoneRadius = 20,
+	-- Zones are SQUARE CELLS that tile the whole map edge to edge, so there
+	-- is no neutral ground between them and every unit on the map is always
+	-- inside exactly one zone. Cell size is derived from the map and the
+	-- zone count rather than configured directly.
+	--
+	-- Fraction of the map edge left outside the grid. 0 means the grid
+	-- covers the map corner to corner, which is the point of a tiling grid.
+	-- Raise it only if units cannot path near your map's border.
+	mapEdgeMargin = 0.0,
 
-	-- Fraction of the map edge left free of zones. Keeps zones off the map
-	-- border where units cannot path properly.
-	mapEdgeMargin = 0.12,
+	-- Prefer a grid shape whose cells come out square, even at the cost of
+	-- landing a zone or two off the target count. The grid still covers the
+	-- whole map either way -- this only decides the cols x rows split.
+	-- Set false to hit the target count exactly and accept oblong cells.
+	squareCells = true,
 
 	-- Place zones over water as well as land. Water zones are captured the
 	-- same way as any other -- by having a unit sit in them -- which in
@@ -121,7 +130,8 @@ TD_Config = {
 
 	-- Most zones to examine in a single tick. Every zone queries every
 	-- player, so on a 72 zone 8 player map an unbudgeted scan would be 576
-	-- spatial queries per second. Above this budget zones are scanned
+	-- spatial queries per second. Tiling makes this matter more, not less:
+	-- with no gaps between zones there is always something to find. Above this budget zones are scanned
 	-- round-robin across consecutive ticks instead.
 	--
 	-- This does NOT change capture speed: progress is credited by elapsed
@@ -284,10 +294,13 @@ TD_Config = {
 		-- Master switch for all zone visuals.
 		enabled = true,
 
-		-- Thin ring decal on the ground at the zone boundary.
+		-- Outline the square cell on the ground. Because cells tile, one
+		-- zone's edge is its neighbour's edge, so the map reads as a
+		-- continuous lattice rather than scattered rings.
 		showGroundRing = true,
 
-		-- Ring line thickness in world units. Keep this small.
+		-- Outline thickness in world units. Keep this small: with cells
+		-- sharing every edge, a heavy line turns the map into a mesh.
 		ringThickness = 0.6,
 
 		-- Ring opacity, 0..1. Low by design -- the ring should read as a

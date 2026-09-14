@@ -1,8 +1,9 @@
 # Territory Domination
 
-An Age of Empires IV game mode. The map is divided into ~20 zones, **land and
-sea alike**. Walk one unit into a zone for 20 seconds and it is yours. **Every
-zone you hold adds 10% to your gather rate.**
+An Age of Empires IV game mode. The map is a **grid of square zones**, tiling
+it corner to corner — land and sea alike, with no neutral ground between.
+Walk one unit into a zone for 20 seconds and it is yours. **Every zone you
+hold adds 10% to your gather rate.**
 
 Every player has a **king**. Lose it and you are out. The match runs until one
 player is left standing — no score cap, no timer.
@@ -19,8 +20,11 @@ stay worth fighting over at every stage of the game.
 
 ## How it plays
 
-- **Zone count scales with the map**: ~18 on a 1v1, ~36 on a 4-player map,
-  ~66 on an 8-player one, holding roughly 9 zones per player throughout.
+- **Square cells tiling the whole map** — 4x4 on a 1v1, 6x6 on a 4-player
+  map, 8x8 on an 8-player one, around 8–9 zones per player throughout.
+- **No neutral ground.** Cells share every edge, so every unit on the map is
+  always inside exactly one zone and the whole map is always worth something
+  to somebody.
 - **Every player starts owning the zone nearest their base**, already fully
   captured, so everyone opens on +10% rather than scrambling from zero.
 - **Standing in a zone captures it.** One unit takes exactly 20 seconds, two
@@ -58,36 +62,61 @@ protect. From `balance_sim.lua`:
 Total boost is capped at +200% so a player who has already taken most of the
 map cannot compound out of reach.
 
-### Zone count
+### The grid
 
-Zone count is not fixed. The target is the larger of a map-area figure and
-9 zones per player, then clamped — so a big 1v1 map still gets plenty, and a
-crowded small map still has enough to go round.
+Zones are square cells that tile the map edge to edge. One zone's boundary is
+its neighbour's boundary, so there is no neutral ground anywhere — a unit is
+always inside exactly one zone.
 
-| Players | Map size | Zones | Per player |
-|---|---|---|---|
-| 2 | 400 | 18 | 9.0 |
-| 3 | 480 | 26 | 8.7 |
-| 4 | 560 | 36 | 9.0 |
-| 6 | 690 | 54 | 9.0 |
-| 8 | 800 | 66 | 8.2 |
+Zone count scales with the map: the target is the larger of a map-area figure
+and 9 zones per player, then clamped.
 
-Two things had to change to make this work:
+| Players | Map size | Grid | Zones | Cell | Per player |
+|---|---|---|---|---|---|
+| 2 | 400 | 4x4 | 16 | 100x100 | 8.0 |
+| 3 | 480 | 5x5 | 25 | 96x96 | 8.3 |
+| 4 | 560 | 6x6 | 36 | 93x93 | 9.0 |
+| 8 | 800 | 8x8 | 64 | 100x100 | 8.0 |
+
+**The grid shape comes from the map's aspect ratio, not the target count.**
+Choosing cols and rows by count alone and squaring the cells afterwards left
+210 units of a 560-wide map outside the grid entirely, which defeats the point
+of tiling it. Cells now divide the usable map exactly.
+
+Squareness is weighted to win near-ties decisively. On a square map a 5x4 grid
+hits the target count exactly while 4x4 is two zones short, and the two scored
+within 1e-15 of each other — so which one won was down to floating-point
+noise. `squareCells = false` hits the target count exactly and accepts oblong
+cells.
+
+**Impassable cells stay in the grid.** Dropping cliff cells would punch holes
+in a grid whose whole point is to tile the map, so they are kept and simply
+stay neutral because nobody can stand in them.
+
+**The square cell test is not the engine's circular one.** The engine's
+spatial query is a radius, so the adapter asks for everything within a cell's
+circumradius and then keeps only what is really inside the rectangle. Without
+that filter a unit in a neighbour's corner would count for both cells — and
+with cells sharing every edge, that is constant rather than rare. If the
+engine will not let us walk the group, it falls back to the circular count and
+logs it once; captures then bleed slightly across corners.
+
+Two things also had to change to let zone count scale:
 
 **The boost cap.** It used to be a fixed +200%, which was fine at 18 zones
-where it could never bind. On a 66-zone map it would bind at a 30% map share,
+where it could never bind. On a 64-zone map it would bind at a 30% map share,
 making every zone past the twentieth worthless and breaking the mode in 4v4.
 It is now a fraction of the *whole map's* boost (default 0.75), so it means
 the same thing at every size.
 
-**Scan cost.** Every zone is checked against every player, so a 66-zone
-8-player map would be ~530 spatial queries per second. Zones are now scanned
+**Scan cost.** Every zone is checked against every player, so a 64-zone
+8-player map would be ~510 spatial queries per second. Zones are now scanned
 round-robin against a per-tick budget (default 24). This does **not** change
 capture speed: progress is credited by elapsed time since that zone was last
 examined, so a zone looked at every third tick gains three ticks' worth. The
 only cost is that a newly arrived enemy takes up to `zones / budget` ticks to
 be noticed. There is a test asserting a solo capture still takes 20 seconds on
-a 66-zone map.
+a 64-zone map.
 
 ### Kings
 
@@ -146,13 +175,14 @@ nothing more. From `balance_sim.lua`:
 
 | Players | Starting boost | Spread | Furthest start |
 |---|---|---|---|
-| 2 | 9.8% – 9.8% | 0% | 26 units |
-| 4 | 9.1% – 9.8% | 8% | 42 units |
-| 8 | 9.0% – 12.1% | 35% | 72 units |
+| 2 | 9.6% – 9.6% | 0% | 51 units |
+| 4 | 9.3% – 9.3% | 0% | 43 units |
+| 8 | 10.2% – 10.8% | 6% | 78 units |
 
-Eight players on an 18-zone map is the worst case — the map simply cannot give
-everyone an equally-valued zone close to home. Symmetric maps with more zones
-do better. Set `startingZonePerPlayer = false` to start everyone from zero
+A symmetric square grid gives symmetric starts, so the fairness spread that
+used to reach 35% in an 8-player FFA is now 6%.
+
+Set `startingZonePerPlayer = false` to start everyone from zero
 instead, or `startingZoneFairnessBias = 0` to always take the strictly nearest
 zone and accept the variance.
 
@@ -203,7 +233,7 @@ scar/
   td_visuals.scar            Ground rings, centre markers, minimap blips
 test/
   mock_engine.lua            Stubbed Scar engine for offline testing
-  run_tests.lua              112 logic tests
+  run_tests.lua              126 logic tests
   balance_sim.lua            Boost curves, capture times, zone scaling
 ```
 
@@ -236,6 +266,11 @@ Most likely to need correcting, in rough priority order:
 
 - **`Player_GetSquadsNearPoint`** — the unit-presence query. If this fails,
   nothing captures and the mode does nothing at all. Fix this one first.
+- **`SGroup_GetSpawnedSquadAt`** — lets the square cell test filter a circular
+  query down to the actual rectangle. Without it captures bleed across cell
+  corners; the log says once if it fell back.
+- **`UI_CreateGroundDecalRect`** — square cell outlines. Falls back to
+  whatever decal call exists, so cells may draw as circles.
 - **`TD_Config.kings.blueprint`** — not an API name but a *unit name*, and the
   default is a placeholder that will not resolve. See **Kings** above.
 - **`Squad_CreateAndSpawnToward`** — king spawning. If it fails no kings appear
@@ -278,7 +313,7 @@ Requires only a stock Lua 5.4 — no game files needed.
 
 ```sh
 cd aoe4/territory-domination
-lua5.4 test/run_tests.lua      # 112 logic tests
+lua5.4 test/run_tests.lua      # 126 logic tests
 lua5.4 test/balance_sim.lua    # boost curves, capture times, zone scaling
 ```
 
@@ -287,9 +322,10 @@ capture and contest behaviour, that the boost is a true percentage of what was
 gathered, that spending does not zero out the measurement, that conquest
 transfers zones to the right player, that every player starts with exactly one
 zone and nobody is stranded far from it, that one unit captures in exactly 20
-seconds and a 40-unit army cannot do it instantly, that zone count scales with
-map and player count while a solo capture still takes 20 seconds on a staggered
-66-zone map, that water zones are created
+seconds and a 40-unit army cannot do it instantly, that cells tile with no gaps or overlaps and no point
+falls in two zones, that a unit in a neighbouring cell's corner does not count
+toward this one, that zone count scales with map and player count while a solo
+capture still takes 20 seconds on a staggered 64-zone map, that water zones are created
 and capturable but never handed out as starting zones, that regicide eliminates
 its victim and feeds the conquest path, that the match ends only when one player
 remains, and that visuals stay within their opacity budget.
@@ -310,7 +346,8 @@ Everything worth changing during playtesting is in `td_config.scar`:
   average-weight zone. 0 is strictly nearest.
 - `zonesPerPlayer` / `referenceZoneCount` / `maxZoneCount` — how zone count
   scales. `zoneCountOverride` forces a fixed number.
-- `zoneRadius` — how much army it takes to cover a zone.
+- `squareCells` — prefer square cells over hitting the target count exactly.
+- `mapEdgeMargin` — fraction of the map left outside the grid; 0 tiles it all.
 - `zoneScanBudget` — per-tick scan cost ceiling on large maps.
 - `maxTotalBoostFraction` — share of the map at which the boost stops growing.
 - `captureThreshold` / `captureRatePerSquad` / `captureRateCap` — how long

@@ -194,7 +194,7 @@ end
 -- This is the hot path: called once per zone per scan tick. Keep it cheap.
 -----------------------------------------------------------------------------
 
--- Number of a player's military squads within radius of pos.
+-- Number of a player's squads within radius of pos.
 -- Returns 0 on any failure so a broken query never hands someone a zone.
 function TD_API.CountPlayerSquadsNear(player, pos, radius)
 	local ok, sgroup = _tryAny(
@@ -210,6 +210,68 @@ function TD_API.CountPlayerSquadsNear(player, pos, radius)
 		return (okTotal and total) or 0
 	end
 	return count
+end
+
+-- Number of a player's squads inside a SQUARE CELL centred on pos.
+--
+-- Zones tile the map as squares, but the engine's spatial query is circular,
+-- so this asks for everything within the cell's circumradius and then keeps
+-- only what is actually inside the rectangle. Without that filter a unit
+-- standing in a neighbouring cell's corner would be counted in both, and
+-- with cells sharing every edge that is a constant occurrence rather than a
+-- rare one.
+--
+-- If the engine will not let us walk the group and read positions, this
+-- falls back to the raw circular count and says so once. The mode still
+-- works; captures just bleed slightly across cell corners.
+local _rectFallbackWarned = false
+
+function TD_API.CountPlayerSquadsInCell(player, pos, halfW, halfH)
+	local circumradius = math.sqrt(halfW * halfW + halfH * halfH)
+
+	local ok, sgroup = _tryAny(
+		{ "Player_GetSquadsNearPoint", "World_GetSquadsNearPoint" },
+		player, pos, circumradius
+	)
+	if not ok or sgroup == nil then
+		return 0
+	end
+
+	local okCount, total = _try("SGroup_CountSpawned", sgroup)
+	if not okCount or total == nil or total == 0 then
+		return 0
+	end
+
+	-- Exact path: walk the group and test each squad against the rectangle.
+	if type(_G["SGroup_GetSpawnedSquadAt"]) == "function" then
+		local inside, walked = 0, true
+		for i = 1, total do
+			local gotSquad, squad = pcall(_G["SGroup_GetSpawnedSquadAt"], sgroup, i)
+			if not gotSquad or squad == nil then
+				walked = false
+				break
+			end
+			local squadPos = TD_API.GetUnitPosition(squad)
+			if squadPos == nil then
+				walked = false
+				break
+			end
+			if math.abs(squadPos.x - pos.x) <= halfW
+				and math.abs(squadPos.z - pos.z) <= halfH then
+				inside = inside + 1
+			end
+		end
+		if walked then
+			return inside
+		end
+	end
+
+	if not _rectFallbackWarned then
+		_rectFallbackWarned = true
+		_warn("SGroup_GetSpawnedSquadAt (square-cell test falling back to "
+			.. "circular; captures will bleed across cell corners)")
+	end
+	return total
 end
 
 -----------------------------------------------------------------------------
@@ -396,11 +458,13 @@ end
 --   minimap blip  : dot on the minimap, coloured by owner
 -----------------------------------------------------------------------------
 
--- Thin ring decal on the ground. Returns a handle or nil.
-function TD_API.CreateGroundRing(pos, radius, thickness, colour, opacity)
+-- Outline of a square cell on the ground. Returns a handle or nil.
+-- Cells tile, so neighbouring outlines share an edge and the map reads as
+-- one continuous lattice rather than a scatter of separate shapes.
+function TD_API.CreateGroundRect(pos, halfW, halfH, thickness, colour, opacity)
 	local ok, handle = _tryAny(
-		{ "UI_CreateGroundDecal", "World_CreateDecal", "UI_CreateRadiusDecorator" },
-		pos, radius, thickness, colour, opacity
+		{ "UI_CreateGroundDecalRect", "UI_CreateGroundDecal", "World_CreateDecal" },
+		pos, halfW, halfH, thickness, colour, opacity
 	)
 	if ok then
 		return handle
