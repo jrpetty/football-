@@ -1,8 +1,11 @@
 # Territory Domination
 
-An Age of Empires IV game mode. The map is divided into ~20 zones. **Every
-zone you hold adds 10% to your gather rate.** The match runs until one player
-is left standing — no score cap, no timer.
+An Age of Empires IV game mode. The map is divided into ~20 zones, **land and
+sea alike**. Walk one unit into a zone for 20 seconds and it is yours. **Every
+zone you hold adds 10% to your gather rate.**
+
+Every player has a **king**. Lose it and you are out. The match runs until one
+player is left standing — no score cap, no timer.
 
 When you eliminate a rival, **you inherit their zones.** Killing someone
 hands you their economy, so every elimination accelerates the endgame instead
@@ -20,10 +23,15 @@ stay worth fighting over at every stage of the game.
   dropped, so expect 15–20 on most maps.
 - **Every player starts owning the zone nearest their base**, already fully
   captured, so everyone opens on +10% rather than scrambling from zero.
-- **Standing in a zone captures it** — ~17 seconds with four squads, ~67
-  seconds with one.
-- Capture rate is **capped**, so a 20-unit deathball takes a zone no faster
-  than four squads do. Splitting your army is viable.
+- **Standing in a zone captures it.** One unit takes exactly 20 seconds, two
+  take 10, three take 6.7.
+- Capture rate is **capped at three units**, so a 40-unit deathball is three
+  times faster than a lone scout, not forty times. Splitting your army is
+  viable, and a single spare unit is always worth sending.
+- **Water counts.** Sea zones are placed and captured like any other, which in
+  practice means warships — naval control is worth real economy.
+- **Every player has a king**, spawned at their base. Lose it and you are
+  eliminated, and your zones pass to whoever took you down.
 - **Centre zones pay ~14%, edge zones ~7%**, with an average zone at exactly
   10%. The middle of the map is worth twice the rim.
 - An enemy in your zone **freezes its boost immediately**, before they have
@@ -49,6 +57,42 @@ protect. From `balance_sim.lua`:
 
 Total boost is capped at +200% so a player who has already taken most of the
 map cannot compound out of reach.
+
+### Kings
+
+Every player gets a king at their starting position. Losing it eliminates you
+immediately, and elimination routes through the ordinary defeat path — so a
+regicide kill hands your zones to your conqueror exactly like any other defeat.
+
+A king below 35% health warns its owner once, so losing a match to regicide is
+never a silent surprise.
+
+**This rule was inferred, not specified.** The brief said every player has a
+king but not what losing one does. Regicide is the conventional meaning and the
+only reading that does anything in a last-man-standing mode. Set
+`kings.kingDeathEliminates = false` to make kings decorative, or
+`kings.enabled = false` to remove them.
+
+**AoE4 has no stock king unit**, so `kings.blueprint` is a placeholder that
+*will* need changing in the Essence Editor. The Mongol Khan is the closest
+thing to a hero unit in the base game; any distinctive unit works, since the
+mode supplies the king behaviour itself. The startup log reports how many
+kings actually spawned.
+
+If kings spawn for only *some* players, the mode **disables regicide
+automatically** rather than run a match where one player is immune to it.
+
+### Water zones
+
+Zones are placed over water as well as land. A sea zone is captured on the same
+20-second rule, which in practice means a warship parked in it, so contesting
+the water is worth the same economy as contesting a hill.
+
+Water zones are never handed out as **starting** zones regardless of settings —
+a player given a sea zone they cannot reach until they have built a dock would
+open a boost behind everyone else through no decision of their own.
+
+Set `includeWaterZones = false` for a land-only map.
 
 ### Starting zones
 
@@ -124,10 +168,11 @@ scar/
   td_adapter.scar            Engine adapter -- see the warning below
   td_zones.scar              Zone layout, capture, ownership, conquest ledger
   td_income.scar             Gather-rate measurement and the boost payout
+  td_king.scar               King spawning, tracking and regicide
   td_visuals.scar            Ground rings, centre markers, minimap blips
 test/
   mock_engine.lua            Stubbed Scar engine for offline testing
-  run_tests.lua              70 logic tests
+  run_tests.lua              98 logic tests
   balance_sim.lua            Boost curves, capture times, starting zones
 ```
 
@@ -160,6 +205,10 @@ Most likely to need correcting, in rough priority order:
 
 - **`Player_GetSquadsNearPoint`** — the unit-presence query. If this fails,
   nothing captures and the mode does nothing at all. Fix this one first.
+- **`TD_Config.kings.blueprint`** — not an API name but a *unit name*, and the
+  default is a placeholder that will not resolve. See **Kings** above.
+- **`Squad_CreateAndSpawnToward`** — king spawning. If it fails no kings appear
+  and regicide disables itself; the mode still plays as pure conquest.
 - **`Player_GetResource` / `Player_GetResourceGathered`** — gather-rate
   measurement. If both fail, the boost measures zero and never pays out. The
   log line at startup tells you which path it chose.
@@ -172,8 +221,14 @@ Most likely to need correcting, in rough priority order:
   spreads starting zones around the map rim instead, which is playable but
   will not match where players actually spawn. The log says when it falls back.
 - `Player_GetUIColour` — zone colours fall back to white.
-- `World_IsPointOverImpassableTerrain` — zones may land on water. Playable,
+- `World_IsPointOverWater` — water classification. If it fails every zone is
+  treated as land, so sea zones may be placed where no ship can be told apart
+  from shore, and a player could be given one to start on.
+- `World_IsPointOverImpassableTerrain` — zones may land on cliffs. Playable,
   just ugly.
+- `Squad_IsAlive` / `Squad_GetHealthPercentage` — king death and the wounded
+  warning. A king that cannot be read is treated as alive, so a broken query
+  never eliminates someone by accident.
 
 Set `TD_API.verbose = false` in `td_adapter.scar` once you are done.
 
@@ -192,7 +247,7 @@ Requires only a stock Lua 5.4 — no game files needed.
 
 ```sh
 cd aoe4/territory-domination
-lua5.4 test/run_tests.lua      # 70 logic tests
+lua5.4 test/run_tests.lua      # 98 logic tests
 lua5.4 test/balance_sim.lua    # boost curves, capture times, starting zones
 ```
 
@@ -200,8 +255,11 @@ The tests stub out the engine entirely, so they verify the *mode's logic* —
 capture and contest behaviour, that the boost is a true percentage of what was
 gathered, that spending does not zero out the measurement, that conquest
 transfers zones to the right player, that every player starts with exactly one
-zone and nobody is stranded far from it, that the match ends only when one
-player remains, and that visuals stay within their opacity budget.
+zone and nobody is stranded far from it, that one unit captures in exactly 20
+seconds and a 40-unit army cannot do it instantly, that water zones are created
+and capturable but never handed out as starting zones, that regicide eliminates
+its victim and feeds the conquest path, that the match ends only when one player
+remains, and that visuals stay within their opacity budget.
 
 They **cannot** verify that the engine function names are right.
 
@@ -220,7 +278,12 @@ Everything worth changing during playtesting is in `td_config.scar`:
 - `zoneCountTarget` / `zoneRadius` — zone density and how much army it takes to
   cover one.
 - `captureThreshold` / `captureRatePerSquad` / `captureRateCap` — how long
-  zones take to flip and how much a bigger army helps.
+  zones take to flip and how much a bigger army helps. The three together set
+  the 20-second solo capture; change one and that figure drifts, so check
+  `balance_sim.lua` after touching any of them.
+- `includeWaterZones` — whether the sea is contestable.
+- `kings.*` — whether kings exist, what blueprint they use, and whether losing
+  one eliminates you.
 - `gatherSampleInterval` — how often gather rate is measured. Lower is more
   accurate when the engine lacks cumulative stats; see `td_income.scar`.
 - `visuals.*` — everything about how zones are drawn.

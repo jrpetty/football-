@@ -130,11 +130,26 @@ function TD_API.GetGroundPosition(pos)
 	return pos
 end
 
+-- Is this point over water? Used to classify zones as naval rather than to
+-- exclude them, since water zones are capturable by warships.
+-- Returns false when it cannot be determined, so an unreadable point is
+-- treated as ordinary land.
+function TD_API.IsPointOverWater(pos)
+	local ok, water = _tryAny({ "World_IsPointOverWater", "World_IsPointUnderWater" }, pos)
+	if ok and water ~= nil then
+		return water == true or water == 1
+	end
+	return false
+end
+
+-- Can units of any kind occupy this point? Cliffs and map edges cannot hold
+-- a zone at all; water can, and is reported separately by IsPointOverWater.
 function TD_API.IsPointPlayable(pos)
-	local ok, impassable = _tryAny(
-		{ "World_IsPointOverImpassableTerrain", "World_IsPointOverWater" },
-		pos
-	)
+	if TD_API.IsPointOverWater(pos) then
+		-- Water is playable for naval units.
+		return true
+	end
+	local ok, impassable = _try("World_IsPointOverImpassableTerrain", pos)
 	if not ok then
 		return true -- can't tell, so allow it
 	end
@@ -285,6 +300,88 @@ function TD_API.ShowMessage(text)
 	if not shown then
 		print("[TerritoryDomination] " .. tostring(text))
 	end
+end
+
+-----------------------------------------------------------------------------
+-- UNIT SPAWNING AND HEALTH
+--
+-- Used for kings. Everything here is best-effort: if spawning fails the
+-- mode logs it and plays on without kings rather than refusing to start.
+-----------------------------------------------------------------------------
+
+-- Spawn one unit of `blueprint` for `player` at `pos`.
+-- Returns a handle (squad or entity) or nil.
+function TD_API.SpawnUnit(player, blueprint, pos)
+	-- Resolve the blueprint name to whatever handle the spawn call wants.
+	local bp = blueprint
+	local okBP, resolved = _tryAny({ "BP_GetSquadBlueprint", "BP_GetEntityBlueprint" }, blueprint)
+	if okBP and resolved ~= nil then
+		bp = resolved
+	end
+
+	local ok, handle = _tryAny(
+		{ "Squad_CreateAndSpawnToward", "Util_CreateSquads", "Squad_Create", "Entity_Create" },
+		player, bp, pos
+	)
+	if ok and handle ~= nil then
+		return handle
+	end
+	_warn("SpawnUnit(" .. tostring(blueprint) .. ")")
+	return nil
+end
+
+-- Is a spawned unit still alive? Returns true when it cannot be determined,
+-- so an unreadable handle never silently eliminates a player.
+function TD_API.IsUnitAlive(handle)
+	if handle == nil then
+		return false
+	end
+
+	local ok, alive = _tryAny(
+		{ "Squad_IsAlive", "Entity_IsAlive", "Squad_IsValid", "Entity_IsValid" },
+		handle
+	)
+	if ok and alive ~= nil then
+		return alive == true or alive == 1
+	end
+
+	-- Fall back to a population count, which reads as 0 once the unit dies.
+	local okCount, count = _tryAny({ "SGroup_CountSpawned", "Squad_Count" }, handle)
+	if okCount and type(count) == "number" then
+		return count > 0
+	end
+
+	return true
+end
+
+-- Current health as a fraction 0..1, or nil if unreadable.
+function TD_API.GetUnitHealthFraction(handle)
+	if handle == nil then
+		return nil
+	end
+	local ok, fraction = _tryAny(
+		{ "Squad_GetHealthPercentage", "Entity_GetHealthPercentage", "Squad_GetHealth" },
+		handle
+	)
+	if ok and type(fraction) == "number" then
+		-- Some engine calls report 0..100 rather than 0..1.
+		if fraction > 1.0 then
+			return fraction / 100
+		end
+		return fraction
+	end
+	return nil
+end
+
+function TD_API.GetUnitPosition(handle)
+	if handle == nil then
+		return nil
+	end
+	local ok, pos = _tryAny({ "Squad_GetPosition", "Entity_GetPosition" }, handle)
+	if ok and pos ~= nil then
+		return pos
+	end
+	return nil
 end
 
 -----------------------------------------------------------------------------

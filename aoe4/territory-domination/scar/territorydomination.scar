@@ -23,6 +23,7 @@ import("td_adapter.scar")
 import("td_visuals.scar")
 import("td_zones.scar")
 import("td_income.scar")
+import("td_king.scar")
 
 TerritoryDomination = {
 	players = {},
@@ -60,6 +61,7 @@ function TerritoryDomination_OnInit()
 	end
 
 	TD_Zones.AssignStartingZones(TerritoryDomination.players)
+	TD_King.Init(TerritoryDomination.players)
 
 	TD_Income.Init(TerritoryDomination.players)
 
@@ -129,6 +131,21 @@ end
 function TerritoryDomination_EliminationCheck()
 	if TerritoryDomination.finished then
 		return
+	end
+
+	-- Regicide first: a king's death eliminates its owner through the normal
+	-- defeat path, so the loop below then handles their zones like any other
+	-- elimination.
+	if TD_Config.kings.kingDeathEliminates then
+		for _, player in ipairs(TD_King.Update()) do
+			if TerritoryDomination.alive[player] then
+				TD_King.AnnounceDeath(player)
+				TD_API.EliminatePlayer(player)
+			end
+		end
+	elseif TD_Config.kings.enabled then
+		-- Still track kings so warnings fire, even when death is harmless.
+		TD_King.Update()
 	end
 
 	for _, player in ipairs(TerritoryDomination.players) do

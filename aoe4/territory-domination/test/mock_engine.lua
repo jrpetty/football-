@@ -28,6 +28,7 @@ Mock = {
 	mapSize = 400,
 	cumulativeStats = false,
 	starts = {},       -- [player] = {x=, z=}; unset means "engine cannot say"
+	units = {},        -- spawned units (kings)
 }
 
 local KEYS = { "food", "wood", "gold", "stone" }
@@ -40,6 +41,7 @@ function Mock.Reset(playerCount, mapSize)
 	Mock.mapSize = mapSize or 400
 	Mock.cumulativeStats = false
 	Mock.starts = {}
+	Mock.units = {}
 	for i = 1, playerCount do
 		Mock.players[i] = i
 		Mock.squads[i] = {}
@@ -162,11 +164,19 @@ function World_GetWidth() return Mock.mapSize end
 function World_GetHeight() return Mock.mapSize end
 function World_Pos(x, y, z) return { x = x, y = y or 0, z = z } end
 function World_GetSpawnablePosition(pos) return pos end
-function World_IsPointOverImpassableTerrain(pos)
-	-- Lake in one corner, placed inside the outermost ring of zone centres
-	-- so it actually removes cells and the skip logic is tested.
+-- Two distinct terrain features, so both code paths are exercised:
+--   a lake in one corner  -> WATER, which still counts as a zone
+--   cliffs in the opposite corner -> impassable, which does not
+-- Both sit inside the outermost ring of zone centres so they actually
+-- affect the grid.
+function World_IsPointOverWater(pos)
 	local edge = Mock.mapSize * 0.15
 	return pos.x > edge and pos.z > edge
+end
+
+function World_IsPointOverImpassableTerrain(pos)
+	local edge = Mock.mapSize * 0.15
+	return pos.x < -edge and pos.z < -edge
 end
 
 function Player_GetSquadsNearPoint(player, pos, radius)
@@ -217,6 +227,39 @@ function UI_SetDecalColour(handle, colour, opacity)
 	handle.colour, handle.opacity = colour, opacity
 end
 function UI_DestroyDecal(handle) handle.destroyed = true end
+
+-- Unit spawning, for kings.
+function BP_GetSquadBlueprint(name) return name end
+function Squad_CreateAndSpawnToward(player, bp, pos)
+	local unit = { player = player, bp = bp, pos = pos, alive = true, health = 1.0 }
+	table.insert(Mock.units, unit)
+	return unit
+end
+function Squad_IsAlive(handle) return handle.alive end
+function Squad_GetHealthPercentage(handle) return handle.health end
+function Squad_GetPosition(handle) return handle.pos end
+
+function Mock.KillKing(player)
+	for _, unit in ipairs(Mock.units) do
+		if unit.player == player then unit.alive = false end
+	end
+end
+
+function Mock.SetKingHealth(player, fraction)
+	for _, unit in ipairs(Mock.units) do
+		if unit.player == player then unit.health = fraction end
+	end
+end
+
+-- Make spawning fail for one player, to test partial-spawn handling.
+Mock.spawnBlockedFor = nil
+local _realSpawn = Squad_CreateAndSpawnToward
+function Squad_CreateAndSpawnToward(player, bp, pos)
+	if Mock.spawnBlockedFor == player then
+		error("spawn blocked for player " .. tostring(player))
+	end
+	return _realSpawn(player, bp, pos)
+end
 
 function World_SetPlayerWin(player) Mock.winner = player end
 function World_SetPlayerLose(player) Mock.defeated[player] = true end

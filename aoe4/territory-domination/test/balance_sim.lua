@@ -9,19 +9,21 @@ dofile("scar/td_adapter.scar")
 dofile("scar/td_visuals.scar")
 dofile("scar/td_zones.scar")
 dofile("scar/td_income.scar")
+dofile("scar/td_king.scar")
 TD_API.verbose = false
 TD_Config.visuals.enabled = false
 
 TD_Zones.Build()
 
 local n = #TD_Zones.list
-local lo, hi = math.huge, -math.huge
+local lo, hi, water = math.huge, -math.huge, 0
 for _, z in ipairs(TD_Zones.list) do
 	lo, hi = math.min(lo, z.weight), math.max(hi, z.weight)
+	if z.isWater then water = water + 1 end
 end
 
-print(string.format("\nZONES: %d   weight range %.2f - %.2f   (mean 1.00 by construction)",
-	n, lo, hi))
+print(string.format("\nZONES: %d (%d land, %d water)   weight range %.2f - %.2f"
+	.. "   (mean 1.00 by construction)", n, n - water, water, lo, hi))
 print(string.format("  an edge zone is worth   %.1f%% boost", lo * TD_Config.boostPerZone * 100))
 print(string.format("  a centre zone is worth  %.1f%% boost", hi * TD_Config.boostPerZone * 100))
 
@@ -56,10 +58,10 @@ for _, held in ipairs({ 1, 3, 5, 8 }) do
 	end
 end
 
-print(string.format("\nCAPTURE TIMES (uncontested):"))
-for _, squads in ipairs({ 1, 2, 4, 8, 20 }) do
+print("\nCAPTURE TIMES (uncontested), land and water alike:")
+for _, squads in ipairs({ 1, 2, 3, 4, 8, 20 }) do
 	local rate = math.min(squads * TD_Config.captureRatePerSquad, TD_Config.captureRateCap)
-	print(string.format("  %2d squads -> %5.1f s%s", squads,
+	print(string.format("  %2d unit%s -> %5.1f s%s", squads, squads == 1 and " " or "s",
 		TD_Config.captureThreshold / rate * TD_Config.scanInterval,
 		(squads * TD_Config.captureRatePerSquad > TD_Config.captureRateCap) and "  (rate capped)" or ""))
 end
@@ -70,7 +72,8 @@ for _, count in ipairs({ 2, 4, 8 }) do
 	Mock.Reset(count)
 	dofile("scar/td_config.scar"); dofile("scar/td_adapter.scar")
 	dofile("scar/td_visuals.scar"); dofile("scar/td_zones.scar")
-	dofile("scar/td_income.scar"); dofile("scar/territorydomination.scar")
+	dofile("scar/td_income.scar"); dofile("scar/td_king.scar")
+	dofile("scar/territorydomination.scar")
 	TD_API.verbose = false
 	TD_Config.visuals.enabled = false
 	Mock.SetSymmetricStarts(0.7)
@@ -96,5 +99,9 @@ for _, count in ipairs({ 2, 4, 8 }) do
 		everyone and "" or "   <-- NOT EVERYONE GOT A ZONE"))
 end
 
-print(string.format("\nMATCH END: last player standing. No score cap, no timer."))
+print("\nMATCH END: last player standing. No score cap, no timer.")
+print(string.format("KINGS: %s%s",
+	TD_Config.kings.enabled and "one per player at their starting position"
+		or "disabled",
+	TD_Config.kings.kingDeathEliminates and "; losing yours eliminates you" or ""))
 print("CONQUEST: killing a player transfers all of their remaining zones to you.\n")

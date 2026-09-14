@@ -25,6 +25,7 @@ local function loadMod()
 	dofile("scar/td_visuals.scar")
 	dofile("scar/td_zones.scar")
 	dofile("scar/td_income.scar")
+	dofile("scar/td_king.scar")
 	dofile("scar/territorydomination.scar")
 	TD_API.verbose = false
 	-- Off by default so the mechanic sections below start from a clean,
@@ -537,6 +538,233 @@ check("starting zones can be disabled", (function()
 	end
 	return true
 end)())
+
+-----------------------------------------------------------------------------
+section("Capture timing: one unit, twenty seconds")
+-----------------------------------------------------------------------------
+
+Mock.Reset(2); loadMod(); TerritoryDomination_OnInit()
+
+-- The headline rule: a single unit walking in takes exactly 20 seconds.
+local timed = TD_Zones.list[1]
+Mock.PlaceSquads(1, timed.position.x, timed.position.z, 1)
+local seconds = 0
+while timed.owner == nil and seconds < 200 do
+	TD_Zones.Update({ 1, 2 }, seconds)
+	seconds = seconds + TD_Config.scanInterval
+end
+check("one unit captures a zone in exactly 20 seconds", math.abs(seconds - 20) < 1e-9,
+	string.format("took %.1fs", seconds))
+
+-- More units help, but within a bounded range.
+local function captureSeconds(squads)
+	Mock.Reset(2); loadMod(); TerritoryDomination_OnInit()
+	local z = TD_Zones.list[1]
+	Mock.PlaceSquads(1, z.position.x, z.position.z, squads)
+	local t = 0
+	while z.owner == nil and t < 200 do
+		TD_Zones.Update({ 1, 2 }, t)
+		t = t + TD_Config.scanInterval
+	end
+	return t
+end
+
+local twoUnits, threeUnits, manyUnits = captureSeconds(2), captureSeconds(3), captureSeconds(40)
+check("two units capture faster than one", twoUnits < 20,
+	string.format("%.1fs", twoUnits))
+check("a 40 unit army is no faster than three", manyUnits == threeUnits,
+	string.format("40 units %.1fs vs 3 units %.1fs", manyUnits, threeUnits))
+check("even a huge army cannot capture instantly", manyUnits >= 5,
+	string.format("%.1fs", manyUnits))
+
+-----------------------------------------------------------------------------
+section("Water zones")
+-----------------------------------------------------------------------------
+
+Mock.Reset(2); loadMod()
+TD_Config.startingZonePerPlayer = true
+Mock.SetSymmetricStarts(0.7)
+TerritoryDomination_OnInit()
+
+local waterZones, landZones = {}, {}
+for _, z in ipairs(TD_Zones.list) do
+	table.insert(z.isWater and waterZones or landZones, z)
+end
+
+check("water is turned into zones rather than skipped", #waterZones > 0,
+	"no water zones were created")
+check("land zones still exist alongside them", #landZones > 0)
+check("water zones are named distinctly", waterZones[1].name:find("Waters") ~= nil,
+	"name=" .. waterZones[1].name)
+
+-- A warship sitting in open water captures it exactly like a land zone.
+local sea = waterZones[1]
+Mock.PlaceSquads(2, sea.position.x, sea.position.z, 1)
+local navalSeconds = 0
+while sea.owner == nil and navalSeconds < 200 do
+	TD_Zones.Update({ 1, 2 }, navalSeconds)
+	navalSeconds = navalSeconds + TD_Config.scanInterval
+end
+check("a unit in open water captures it on the same 20 second rule",
+	math.abs(navalSeconds - 20) < 1e-9, string.format("took %.1fs", navalSeconds))
+check("captured water zones pay an income boost", TD_Income.GetBoost(2) > 0)
+
+check("nobody is given a water zone to start on", (function()
+	-- Fresh init: the naval capture above deliberately owns a sea zone, so
+	-- this has to look at a map nobody has played on yet.
+	Mock.Reset(4); loadMod()
+	TD_Config.startingZonePerPlayer = true
+	Mock.SetSymmetricStarts(0.7)
+	TerritoryDomination_OnInit()
+	local assigned = 0
+	for _, z in ipairs(TD_Zones.list) do
+		if z.owner ~= nil then
+			assigned = assigned + 1
+			if z.isWater then return false end
+		end
+	end
+	return assigned == 4
+end)(), "a player started on water they cannot reach")
+
+-- And water zones can be switched off entirely.
+Mock.Reset(2); loadMod()
+TD_Config.includeWaterZones = false
+TerritoryDomination_OnInit()
+check("water zones can be disabled", (function()
+	for _, z in ipairs(TD_Zones.list) do
+		if z.isWater then return false end
+	end
+	return true
+end)())
+
+-----------------------------------------------------------------------------
+section("Kings")
+-----------------------------------------------------------------------------
+
+Mock.Reset(3); loadMod()
+Mock.SetSymmetricStarts(0.7)
+TerritoryDomination_OnInit()
+
+check("every player gets a king", (function()
+	for p = 1, 3 do
+		if TD_King.kings[p] == nil then return false end
+	end
+	return true
+end)())
+check("kings belong to the right players", (function()
+	for p = 1, 3 do
+		if TD_King.kings[p].handle.player ~= p then return false end
+	end
+	return true
+end)())
+check("kings spawn near their owner's base", (function()
+	for p = 1, 3 do
+		local pos = TD_King.kings[p].handle.pos
+		local st = Mock.starts[p]
+		local d = math.sqrt((pos.x - st.x) ^ 2 + (pos.z - st.z) ^ 2)
+		if d > TD_Config.kings.spawnOffset * 2 then return false end
+	end
+	return true
+end)())
+check("all kings start alive", TD_King.IsAlive(1) and TD_King.IsAlive(2))
+
+-- Regicide: killing a king eliminates its owner.
+Mock.Reset(3); loadMod()
+TD_Config.startingZonePerPlayer = true
+Mock.SetSymmetricStarts(0.7)
+TerritoryDomination_OnInit(); TerritoryDomination_Start()
+
+check("player is alive before losing their king", TerritoryDomination.alive[2] == true)
+Mock.KillKing(2)
+TerritoryDomination_EliminationCheck()
+check("losing your king eliminates you", TerritoryDomination.alive[2] == false)
+check("a king's death is announced", (function()
+	for _, m in ipairs(Mock.messages) do
+		if m:find("king has fallen") then return true end
+	end
+	return false
+end)())
+check("the match does not end while two players remain", Mock.winner == nil)
+
+-- Regicide must feed the normal conquest path, not bypass it.
+Mock.Reset(3); loadMod(); Mock.SetSymmetricStarts(0.7)
+TerritoryDomination_OnInit(); TerritoryDomination_Start()
+local players3 = { 1, 2, 3 }
+for i = 1, 3 do captureFor(2, TD_Zones.list[i], players3) end
+captureFor(1, TD_Zones.list[1], players3)
+captureFor(1, TD_Zones.list[2], players3)
+local heldByVictim = TD_Zones.CountOwned(2)
+local heldByKiller = TD_Zones.CountOwned(1)
+Mock.KillKing(2)
+TerritoryDomination_EliminationCheck()
+check("regicide transfers the victim's zones to their conqueror",
+	TD_Zones.CountOwned(1) == heldByKiller + heldByVictim,
+	string.format("P1 %d -> %d, victim held %d",
+		heldByKiller, TD_Zones.CountOwned(1), heldByVictim))
+
+-- Last king standing wins the match.
+Mock.Reset(3); loadMod(); Mock.SetSymmetricStarts(0.7)
+TerritoryDomination_OnInit(); TerritoryDomination_Start()
+Mock.KillKing(2); Mock.KillKing(3)
+Mock.Advance(30)
+check("the last player with a king wins", Mock.winner == 1,
+	"winner=" .. tostring(Mock.winner))
+
+-- A wounded king warns its owner before it is too late.
+Mock.Reset(2); loadMod(); Mock.SetSymmetricStarts(0.7)
+TerritoryDomination_OnInit()
+Mock.SetKingHealth(1, TD_Config.kings.lowHealthWarning - 0.05)
+TD_King.Update()
+check("a badly wounded king warns its owner", (function()
+	for _, m in ipairs(Mock.messages) do
+		if m:find("gravely wounded") then return true end
+	end
+	return false
+end)())
+check("the warning fires only once", (function()
+	local count = 0
+	TD_King.Update(); TD_King.Update()
+	for _, m in ipairs(Mock.messages) do
+		if m:find("gravely wounded") then count = count + 1 end
+	end
+	return count == 1
+end)())
+
+-- Regicide can be turned off without removing kings.
+Mock.Reset(2); loadMod(); Mock.SetSymmetricStarts(0.7)
+TD_Config.kings.kingDeathEliminates = false
+TerritoryDomination_OnInit(); TerritoryDomination_Start()
+Mock.KillKing(2)
+TerritoryDomination_EliminationCheck()
+check("decorative kings do not eliminate their owner",
+	TerritoryDomination.alive[2] == true)
+
+-- Kings can be disabled entirely.
+Mock.Reset(2); loadMod(); Mock.SetSymmetricStarts(0.7)
+TD_Config.kings.enabled = false
+TerritoryDomination_OnInit()
+check("kings can be disabled", next(TD_King.kings) == nil)
+
+-- If kings only spawn for some players, regicide must switch itself off
+-- rather than run a match where one player is immune to it.
+Mock.Reset(3); loadMod()
+Mock.SetSymmetricStarts(0.7)
+Mock.spawnBlockedFor = 3
+TerritoryDomination_OnInit()
+check("partial king spawn disables regicide rather than playing unfairly",
+	TD_Config.kings.kingDeathEliminates == false)
+Mock.spawnBlockedFor = nil
+
+-- No starting positions means no kings, and regicide must then not be able
+-- to eliminate anybody. Found by four tests failing for exactly this reason.
+Mock.Reset(2); loadMod()
+-- deliberately no Mock.SetSymmetricStarts
+TerritoryDomination_OnInit(); TerritoryDomination_Start()
+check("no kings spawn when starting positions are unavailable",
+	next(TD_King.kings) == nil)
+Mock.Advance(30)
+check("a kingless match does not eliminate anyone by regicide",
+	TerritoryDomination.alive[1] and TerritoryDomination.alive[2])
 
 -----------------------------------------------------------------------------
 section("Visuals")

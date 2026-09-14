@@ -23,6 +23,15 @@ TD_Config = {
 	-- border where units cannot path properly.
 	mapEdgeMargin = 0.12,
 
+	-- Place zones over water as well as land. Water zones are captured the
+	-- same way as any other -- by having a unit sit in them -- which in
+	-- practice means warships, so naval control becomes worth something.
+	--
+	-- Water zones are excluded from STARTING zone assignment regardless of
+	-- this setting: a player handed a sea zone they cannot reach until they
+	-- have built a dock would be starting a boost behind everyone else.
+	includeWaterZones = true,
+
 	-----------------------------------------------------------------------
 	-- CAPTURE
 	-----------------------------------------------------------------------
@@ -30,13 +39,20 @@ TD_Config = {
 	-- Progress points needed to flip a zone from neutral/enemy to yours.
 	captureThreshold = 200,
 
-	-- Progress gained per scan tick per squad present, up to the cap below.
-	captureRatePerSquad = 3,
+	-- Progress gained per scan tick per unit present, up to the cap below.
+	--
+	-- With captureThreshold 200 and a 1 second scan, 10 per unit means a
+	-- SINGLE unit captures a zone in exactly 20 seconds. Change these three
+	-- together or that figure drifts; balance_sim.lua prints it.
+	captureRatePerSquad = 10,
 
-	-- Maximum capture progress per tick regardless of how many squads you
+	-- Maximum capture progress per tick regardless of how many units you
 	-- bring. Stops a 40-unit deathball from flipping zones instantly and
-	-- keeps small raiding parties relevant.
-	captureRateCap = 12,
+	-- keeps lone scouts and small raiding parties relevant.
+	-- At 30, three units reach the cap: 20s solo, 10s with two, 6.7s with
+	-- three or more. A deathball is three times faster than one unit, not
+	-- forty times.
+	captureRateCap = 30,
 
 	-- Progress decayed per tick on an uncontested zone nobody is standing in.
 	-- Set to 0 to make captures permanent until contested.
@@ -169,6 +185,48 @@ TD_Config = {
 
 	-- Seconds between checks for players having been eliminated.
 	eliminationCheckInterval = 5.0,
+
+	-----------------------------------------------------------------------
+	-- KINGS
+	--
+	-- Every player gets a king at their starting position. Lose your king
+	-- and you are eliminated, which hands your zones to your conqueror the
+	-- same as any other defeat.
+	--
+	-- This is the one rule here that was inferred rather than specified.
+	-- "Every player has a king" in an RTS conventionally means regicide, and
+	-- it is the only reading that does anything in a last-man-standing mode.
+	-- Set kingDeathEliminates = false to have kings be purely decorative.
+	-----------------------------------------------------------------------
+
+	kings = {
+		-- Spawn a king for every player at match start.
+		enabled = true,
+
+		-- Losing your king eliminates you immediately.
+		kingDeathEliminates = true,
+
+		-- The unit blueprint to spawn.
+		--
+		-- IMPORTANT: Age of Empires IV has no stock "king" unit, so this is
+		-- a placeholder that WILL need changing in the Essence Editor. Pick
+		-- a real blueprint: the Mongol Khan is the closest thing to a hero
+		-- unit in the base game, or use any distinctive unit and rely on the
+		-- mode treating it as a king. The startup log reports whether the
+		-- spawn succeeded.
+		blueprint = "unit_king_1",
+
+		-- How far from the player's starting position to place the king, in
+		-- world units. Far enough not to spawn inside the Town Centre.
+		spawnOffset = 8,
+
+		-- Warn a player once when their king is below this fraction of its
+		-- health, so a regicide loss is never a silent surprise.
+		lowHealthWarning = 0.35,
+
+		-- Announce to everyone when a king dies.
+		announceDeath = true,
+	},
 
 	-----------------------------------------------------------------------
 	-- VISUALS

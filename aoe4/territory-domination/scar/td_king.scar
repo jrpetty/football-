@@ -1,0 +1,132 @@
+-----------------------------------------------------------------------------
+-- td_king.scar
+--
+-- Kings. Every player gets one at their starting position; losing it
+-- eliminates them.
+--
+-- INFERRED RULE: the brief said every player has a king but not what losing
+-- one does. Regicide is the conventional meaning and the only reading that
+-- does anything in a last-man-standing mode, so that is what this
+-- implements. TD_Config.kings.kingDeathEliminates = false makes kings
+-- purely decorative without touching this file.
+--
+-- Elimination here routes through the ordinary defeat path, so a regicide
+-- kill transfers the dead player's zones to their conqueror exactly like
+-- any other defeat. Kings do not need their own conquest logic.
+-----------------------------------------------------------------------------
+
+TD_King = {
+	-- [player] = { handle = , alive = , warned = }
+	kings = {},
+	available = false,
+}
+
+-- Place the king a little away from the start point so it does not spawn
+-- inside the Town Centre footprint.
+local function _spawnPosition(start, offset)
+	return TD_API.MakePosition(start.x + offset, start.y or 0, start.z + offset)
+end
+
+function TD_King.Init(players)
+	TD_King.kings = {}
+	TD_King.available = false
+
+	local config = TD_Config.kings
+	if not config.enabled then
+		return 0
+	end
+
+	local spawned = 0
+	for _, player in ipairs(players) do
+		local start = TD_API.GetPlayerStartPosition(player)
+		if start ~= nil then
+			local handle = TD_API.SpawnUnit(
+				player, config.blueprint, _spawnPosition(start, config.spawnOffset)
+			)
+			if handle ~= nil then
+				TD_King.kings[player] = { handle = handle, alive = true, warned = false }
+				spawned = spawned + 1
+			end
+		end
+	end
+
+	TD_King.available = (spawned > 0)
+
+	if spawned < #players then
+		print(string.format(
+			"[TerritoryDomination] Only %d of %d kings spawned. Check that "
+				.. "TD_Config.kings.blueprint names a real unit -- AoE4 has no "
+				.. "stock king, so the default is a placeholder.",
+			spawned, #players
+		))
+	else
+		print(string.format("[TerritoryDomination] Spawned %d kings.", spawned))
+	end
+
+	-- Regicide must not be able to eliminate SOME players and not others.
+	-- If kings only partly spawned, disable the death rule rather than run
+	-- a match where one player is immune to it.
+	if TD_Config.kings.kingDeathEliminates and spawned > 0 and spawned < #players then
+		print("[TerritoryDomination] Kings did not spawn for every player; "
+			.. "disabling regicide elimination so the match stays fair.")
+		TD_Config.kings.kingDeathEliminates = false
+	end
+
+	return spawned
+end
+
+function TD_King.IsAlive(player)
+	local king = TD_King.kings[player]
+	if king == nil then
+		return true -- no king tracked: never eliminate on that basis
+	end
+	return king.alive
+end
+
+function TD_King.GetPosition(player)
+	local king = TD_King.kings[player]
+	if king == nil then
+		return nil
+	end
+	return TD_API.GetUnitPosition(king.handle)
+end
+
+-- Check every king. Returns a list of players whose king died this tick.
+function TD_King.Update()
+	local deaths = {}
+	if not TD_King.available then
+		return deaths
+	end
+
+	local config = TD_Config.kings
+
+	for player, king in pairs(TD_King.kings) do
+		if king.alive then
+			if not TD_API.IsUnitAlive(king.handle) then
+				king.alive = false
+				table.insert(deaths, player)
+			elseif not king.warned and config.lowHealthWarning ~= nil then
+				-- Warn the owner once when the king is badly hurt, so losing
+				-- a match to regicide is never a silent surprise.
+				local health = TD_API.GetUnitHealthFraction(king.handle)
+				if health ~= nil and health <= config.lowHealthWarning then
+					king.warned = true
+					TD_API.ShowMessage(string.format(
+						"%s's king is gravely wounded.", TD_API.GetPlayerName(player)
+					))
+				end
+			end
+		end
+	end
+
+	return deaths
+end
+
+function TD_King.AnnounceDeath(player)
+	if not TD_Config.kings.announceDeath then
+		return
+	end
+	TD_API.ShowMessage(string.format(
+		"%s's king has fallen.", TD_API.GetPlayerName(player)
+	))
+end

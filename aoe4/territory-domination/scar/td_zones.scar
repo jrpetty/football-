@@ -88,18 +88,30 @@ function TD_Zones.Build()
 		for row = 0, rows - 1 do
 			local x = originX + stepX * (col + 0.5)
 			local z = originZ + stepZ * (row + 0.5)
-			local pos = TD_API.GetGroundPosition(TD_API.MakePosition(x, 0, z))
+			local rawPos = TD_API.MakePosition(x, 0, z)
+			local isWater = TD_API.IsPointOverWater(rawPos)
 
-			if TD_API.IsPointPlayable(pos) then
+			-- Only snap to walkable ground on land. Snapping a sea zone
+			-- would drag it onto the nearest shore and quietly turn it into
+			-- a land zone.
+			local pos = isWater and rawPos or TD_API.GetGroundPosition(rawPos)
+
+			local include = TD_API.IsPointPlayable(pos)
+			if isWater and not TD_Config.includeWaterZones then
+				include = false
+			end
+
+			if include then
 				local index = #TD_Zones.list + 1
 				local distance = math.sqrt(x * x + z * z)
 				minDistance = math.min(minDistance, distance)
 				maxDistance = math.max(maxDistance, distance)
 				table.insert(TD_Zones.list, {
 					index     = index,
-					name      = "Zone " .. index,
+					name      = (isWater and "Waters " or "Zone ") .. index,
 					position  = pos,
 					distance  = distance,
+					isWater   = isWater,
 					weight    = 1,  -- assigned below, once the spread is known
 					value     = 1,  -- display tier, assigned below
 					owner     = nil,
@@ -144,9 +156,16 @@ function TD_Zones.Build()
 
 	TD_Visuals.CreateAll(TD_Zones.list)
 
+	local waterCount = 0
+	for _, zone in ipairs(TD_Zones.list) do
+		if zone.isWater then
+			waterCount = waterCount + 1
+		end
+	end
+
 	print(string.format(
-		"[TerritoryDomination] Built %d zones (%dx%d grid, %d skipped as unplayable)",
-		#TD_Zones.list, cols, rows, skipped
+		"[TerritoryDomination] Built %d zones (%dx%d grid, %d water, %d skipped as unplayable)",
+		#TD_Zones.list, cols, rows, waterCount, skipped
 	))
 	return #TD_Zones.list
 end
@@ -171,6 +190,13 @@ end
 -- Distance is the dominant term; weight drift only inflates it. That
 -- ordering is deliberate: a fair zone the player cannot defend is worse
 -- than a slightly richer or poorer zone on their doorstep.
+-- Water zones cannot be a starting zone: a player handed a sea zone they
+-- cannot reach until they have built a dock would open a boost behind
+-- everyone else, through no decision of their own.
+local function _canStartOn(zone)
+	return not zone.isWater
+end
+
 local function _startCost(zone, start)
 	local dx, dz = zone.position.x - start.x, zone.position.z - start.z
 	local distance = math.sqrt(dx * dx + dz * dz)
@@ -194,7 +220,9 @@ end
 local function _assignWithoutPositions(players)
 	local candidates = {}
 	for _, zone in ipairs(TD_Zones.list) do
-		table.insert(candidates, zone)
+		if _canStartOn(zone) then
+			table.insert(candidates, zone)
+		end
 	end
 	-- Outermost first: rim starts are the conventional RTS layout.
 	table.sort(candidates, function(a, b) return a.distance > b.distance end)
@@ -256,11 +284,13 @@ function TD_Zones.AssignStartingZones(players)
 	local pairs_ = {}
 	for _, player in ipairs(players) do
 		for _, zone in ipairs(TD_Zones.list) do
-			table.insert(pairs_, {
-				player = player,
-				zone = zone,
-				cost = _startCost(zone, starts[player]),
-			})
+			if _canStartOn(zone) then
+				table.insert(pairs_, {
+					player = player,
+					zone = zone,
+					cost = _startCost(zone, starts[player]),
+				})
+			end
 		end
 	end
 	table.sort(pairs_, function(a, b) return a.cost < b.cost end)
@@ -283,7 +313,7 @@ function TD_Zones.AssignStartingZones(players)
 		for _, player in ipairs(players) do
 			if not assignedPlayers[player] then
 				for _, zone in ipairs(TD_Zones.list) do
-					if zone.owner == nil then
+					if zone.owner == nil and _canStartOn(zone) then
 						_grantZone(zone, player)
 						assignedPlayers[player] = true
 						assigned = assigned + 1
