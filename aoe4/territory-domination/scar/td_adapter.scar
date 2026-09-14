@@ -212,6 +212,77 @@ function TD_API.CountPlayerSquadsNear(player, pos, radius)
 	return count
 end
 
+-- Shared machinery for "how many of this player's things are inside this
+-- square cell". Used for squads and for buildings, which differ only in
+-- which engine calls they go through.
+--
+-- Zones tile the map as squares, but the engine's spatial query is circular,
+-- so this asks for everything within the cell's circumradius and then keeps
+-- only what is actually inside the rectangle.
+local _cellFallbackWarned = {}
+
+local function _countInCell(kind, queryNames, countNames, atNames,
+		player, pos, halfW, halfH)
+	local circumradius = math.sqrt(halfW * halfW + halfH * halfH)
+
+	local ok, group = _tryAny(queryNames, player, pos, circumradius)
+	if not ok or group == nil then
+		return 0
+	end
+
+	local okCount, total = _tryAny(countNames, group)
+	if not okCount or total == nil or total == 0 then
+		return 0
+	end
+
+	-- Exact path: walk the group and test each member against the rectangle.
+	for _, atName in ipairs(atNames) do
+		if type(_G[atName]) == "function" then
+			local inside, walked = 0, true
+			for i = 1, total do
+				local gotItem, item = pcall(_G[atName], group, i)
+				if not gotItem or item == nil then
+					walked = false
+					break
+				end
+				local itemPos = TD_API.GetUnitPosition(item)
+				if itemPos == nil then
+					walked = false
+					break
+				end
+				if math.abs(itemPos.x - pos.x) <= halfW
+					and math.abs(itemPos.z - pos.z) <= halfH then
+					inside = inside + 1
+				end
+			end
+			if walked then
+				return inside
+			end
+		end
+	end
+
+	if not _cellFallbackWarned[kind] then
+		_cellFallbackWarned[kind] = true
+		_warn(table.concat(atNames, "/") .. " (" .. kind .. " square-cell test "
+			.. "falling back to circular; presence will bleed across cell corners)")
+	end
+	return total
+end
+
+-- Number of a player's BUILDINGS inside a square cell.
+--
+-- Buildings anchor a tile: an owner with anything still standing in a tile
+-- cannot be captured out of it, so this has to be counted separately from
+-- units rather than folded into the squad query, which never sees them.
+function TD_API.CountPlayerBuildingsInCell(player, pos, halfW, halfH)
+	return _countInCell("building",
+		{ "Player_GetEntitiesNearPoint", "World_GetEntitiesNearPoint",
+		  "Player_GetAllEntitiesNearPoint" },
+		{ "EGroup_CountSpawned", "EGroup_Count" },
+		{ "EGroup_GetSpawnedEntityAt", "EGroup_GetEntityAt" },
+		player, pos, halfW, halfH)
+end
+
 -- Number of a player's squads inside a SQUARE CELL centred on pos.
 --
 -- Zones tile the map as squares, but the engine's spatial query is circular,
@@ -224,54 +295,20 @@ end
 -- If the engine will not let us walk the group and read positions, this
 -- falls back to the raw circular count and says so once. The mode still
 -- works; captures just bleed slightly across cell corners.
-local _rectFallbackWarned = false
-
 function TD_API.CountPlayerSquadsInCell(player, pos, halfW, halfH)
-	local circumradius = math.sqrt(halfW * halfW + halfH * halfH)
-
-	local ok, sgroup = _tryAny(
+	return _countInCell("squad",
 		{ "Player_GetSquadsNearPoint", "World_GetSquadsNearPoint" },
-		player, pos, circumradius
-	)
-	if not ok or sgroup == nil then
-		return 0
-	end
+		{ "SGroup_CountSpawned", "SGroup_Count" },
+		{ "SGroup_GetSpawnedSquadAt", "SGroup_GetSquadAt" },
+		player, pos, halfW, halfH)
+end
 
-	local okCount, total = _try("SGroup_CountSpawned", sgroup)
-	if not okCount or total == nil or total == 0 then
-		return 0
-	end
-
-	-- Exact path: walk the group and test each squad against the rectangle.
-	if type(_G["SGroup_GetSpawnedSquadAt"]) == "function" then
-		local inside, walked = 0, true
-		for i = 1, total do
-			local gotSquad, squad = pcall(_G["SGroup_GetSpawnedSquadAt"], sgroup, i)
-			if not gotSquad or squad == nil then
-				walked = false
-				break
-			end
-			local squadPos = TD_API.GetUnitPosition(squad)
-			if squadPos == nil then
-				walked = false
-				break
-			end
-			if math.abs(squadPos.x - pos.x) <= halfW
-				and math.abs(squadPos.z - pos.z) <= halfH then
-				inside = inside + 1
-			end
-		end
-		if walked then
-			return inside
-		end
-	end
-
-	if not _rectFallbackWarned then
-		_rectFallbackWarned = true
-		_warn("SGroup_GetSpawnedSquadAt (square-cell test falling back to "
-			.. "circular; captures will bleed across cell corners)")
-	end
-	return total
+-- Everything a player has standing in a cell: units and buildings together.
+-- Returns (total, squads, buildings).
+function TD_API.CountPlayerPresenceInCell(player, pos, halfW, halfH)
+	local squads = TD_API.CountPlayerSquadsInCell(player, pos, halfW, halfH)
+	local buildings = TD_API.CountPlayerBuildingsInCell(player, pos, halfW, halfH)
+	return squads + buildings, squads, buildings
 end
 
 -----------------------------------------------------------------------------

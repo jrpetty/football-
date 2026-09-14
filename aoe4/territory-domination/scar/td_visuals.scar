@@ -26,6 +26,12 @@ TD_Visuals = {
 -- Resting opacity for a zone, given its state.
 local function _opacityFor(zone)
 	local v = TD_Config.visuals
+	if zone.defended then
+		-- A tile being held against an attacker is the loudest state on the
+		-- map: it is where a fight is actually being decided, and the
+		-- attacker needs to see that they are not making progress.
+		return v.defendedOpacity
+	end
 	if zone.contested then
 		return v.contestedOpacity
 	end

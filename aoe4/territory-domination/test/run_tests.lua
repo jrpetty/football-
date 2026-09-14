@@ -34,12 +34,24 @@ local function loadMod()
 	TD_Config.startingZonePerPlayer = false
 end
 
+-- One monotonic clock for every helper below.
+--
+-- Capture progress is credited by time elapsed since a tile was last looked
+-- at, so helpers that each start their own clock at zero hand the mod
+-- timestamps that run BACKWARDS, and progress unwinds. Game time only ever
+-- moves forward, so the harness has to as well.
+local CLOCK = 0
+local function tick()
+	CLOCK = CLOCK + TD_Config.scanInterval
+	return CLOCK
+end
+
 -- Give a player uncontested ownership of a zone, the slow honest way.
 local function captureFor(player, zone, players, squads)
 	Mock.PlaceSquads(player, zone.position.x, zone.position.z, squads or 5)
 	local ticks = 0
 	while zone.owner ~= player and ticks < 200 do
-		TD_Zones.Update(players, ticks)
+		TD_Zones.Update(players, tick())
 		ticks = ticks + 1
 	end
 	Mock.ClearSquads(player)
@@ -134,6 +146,156 @@ while contested.owner ~= 2 and flip < 200 do
 	TD_Zones.Update({ 1, 2 }, flip); flip = flip + 1
 end
 check("superior force flips the zone", contested.owner == 2, "ticks=" .. flip)
+
+-----------------------------------------------------------------------------
+section("A held tile must be cleared before it can be taken")
+-----------------------------------------------------------------------------
+
+-- Set up: player 1 owns a tile, player 2 wants it.
+local function heldTile(defenderUnits, defenderBuildings)
+	Mock.Reset(2); loadMod(); TerritoryDomination_OnInit()
+	local z = TD_Zones.list[1]
+	captureFor(1, z, { 1, 2 })
+	Mock.ClearSquads(1)
+	if (defenderUnits or 0) > 0 then
+		Mock.PlaceSquads(1, z.position.x, z.position.z, defenderUnits)
+	end
+	if (defenderBuildings or 0) > 0 then
+		Mock.PlaceBuildings(1, z.position.x, z.position.z, defenderBuildings)
+	end
+	return z
+end
+
+-- Attack a tile for a while and report whether it fell, and how long it took.
+local function assault(z, attacker, units, seconds)
+	Mock.PlaceSquads(attacker, z.position.x, z.position.z, units)
+	local elapsed = 0
+	while z.owner ~= attacker and elapsed < (seconds or 120) do
+		elapsed = elapsed + TD_Config.scanInterval
+		TD_Zones.Update({ 1, 2 }, tick())
+	end
+	return z.owner == attacker, elapsed
+end
+
+local defended = heldTile(2, 0)
+check("a defender's units stop the tile being taken",
+	select(1, assault(defended, 2, 20, 90)) == false,
+	"tile fell while its owner still had units in it")
+check("the tile is flagged as defended", defended.defended == true)
+check("even overwhelming numbers cannot capture past a defender", (function()
+	Mock.ClearSquads(2)
+	Mock.PlaceSquads(2, defended.position.x, defended.position.z, 200)
+	for _ = 1, 60 do TD_Zones.Update({ 1, 2 }, tick()) end
+	return defended.owner == 1
+end)())
+
+check("clearing the defenders lets the capture proceed", (function()
+	Mock.RazeCell(1, defended.position, defended.halfW, defended.halfH)
+	Mock.ClearSquads(2)
+	local took = select(1, assault(defended, 2, 1, 120))
+	return took
+end)(), "tile did not fall after its defenders were destroyed")
+
+-- A building with no garrison holds the tile on its own.
+local anchored = heldTile(0, 1)
+check("a building alone holds a tile with no units in it",
+	select(1, assault(anchored, 2, 30, 90)) == false,
+	"an undefended building failed to hold the tile")
+check("holding by building still flags the tile defended", anchored.defended == true)
+
+check("razing the last building releases the tile", (function()
+	Mock.ClearBuildings(1)
+	Mock.ClearSquads(2)
+	return select(1, assault(anchored, 2, 1, 120))
+end)(), "tile stayed held after its last building was destroyed")
+
+-- Once cleared, capture runs at the normal rate rather than a penalised one.
+check("a cleared tile captures at the usual 20 seconds", (function()
+	Mock.Reset(2); loadMod(); TerritoryDomination_OnInit()
+	TD_Config.zoneScanBudget = #TD_Zones.list
+	local z = TD_Zones.list[1]
+	captureFor(1, z, { 1, 2 })
+	Mock.ClearSquads(1)      -- owner walks away, nothing left behind
+	local took, seconds = assault(z, 2, 1, 120)
+	return took and math.abs(seconds - 20) <= TD_Config.scanInterval
+end)(), "a cleared tile did not capture in the usual time")
+
+-- Neutral ground is unaffected: there is no owner to clear.
+check("neutral tiles are still taken by walking in", (function()
+	Mock.Reset(2); loadMod(); TerritoryDomination_OnInit()
+	local z = nil
+	for _, zone in ipairs(TD_Zones.list) do
+		if zone.owner == nil then z = zone; break end
+	end
+	return select(1, assault(z, 2, 1, 120))
+end)())
+
+-- A stalled assault keeps its progress by default: the attacker is still
+-- standing there, they just are not winning yet.
+check("a blocked attacker keeps their progress by default", (function()
+	Mock.Reset(2); loadMod(); TerritoryDomination_OnInit()
+	local z = TD_Zones.list[1]
+	captureFor(1, z, { 1, 2 })
+	Mock.ClearSquads(1)
+	-- Attacker gets partway, then the owner returns and blocks them.
+	Mock.PlaceSquads(2, z.position.x, z.position.z, 1)
+	for _ = 1, 8 do TD_Zones.Update({ 1, 2 }, tick()) end
+	local partial = z.progress[2] or 0
+	Mock.PlaceSquads(1, z.position.x, z.position.z, 3)
+	for _ = 1, 22 do TD_Zones.Update({ 1, 2 }, tick()) end
+	return partial > 0 and math.abs((z.progress[2] or 0) - partial) < 1e-6
+end)(), "progress moved while the assault was blocked")
+
+check("defenceResetsProgress makes a failed assault start over", (function()
+	Mock.Reset(2); loadMod()
+	TD_Config.defenceResetsProgress = true
+	TerritoryDomination_OnInit()
+	local z = TD_Zones.list[1]
+	captureFor(1, z, { 1, 2 })
+	Mock.ClearSquads(1)
+	Mock.PlaceSquads(2, z.position.x, z.position.z, 1)
+	for _ = 1, 8 do TD_Zones.Update({ 1, 2 }, tick()) end
+	local partial = z.progress[2] or 0
+	Mock.PlaceSquads(1, z.position.x, z.position.z, 3)
+	for _ = 1, 52 do TD_Zones.Update({ 1, 2 }, tick()) end
+	return partial > 0 and (z.progress[2] or 0) < partial
+end)())
+
+-- Both halves of the rule can be switched off.
+check("buildingsHoldTiles off lets an empty building fall", (function()
+	Mock.Reset(2); loadMod()
+	TD_Config.buildingsHoldTiles = false
+	TerritoryDomination_OnInit()
+	local z = TD_Zones.list[1]
+	captureFor(1, z, { 1, 2 })
+	Mock.ClearSquads(1)
+	Mock.PlaceBuildings(1, z.position.x, z.position.z, 3)
+	return select(1, assault(z, 2, 1, 120))
+end)())
+
+check("mustClearDefendersToCapture off restores plain contest rules", (function()
+	Mock.Reset(2); loadMod()
+	TD_Config.mustClearDefendersToCapture = false
+	TerritoryDomination_OnInit()
+	local z = TD_Zones.list[1]
+	captureFor(1, z, { 1, 2 })
+	Mock.ClearSquads(1)
+	Mock.PlaceSquads(1, z.position.x, z.position.z, 1)
+	-- Outnumbered defender loses the tile under the old rules.
+	return select(1, assault(z, 2, 8, 150))
+end)())
+
+check("a defended tile is the loudest thing on the map", (function()
+	Mock.Reset(2); loadMod(); TerritoryDomination_OnInit()
+	local z = TD_Zones.list[1]
+	captureFor(1, z, { 1, 2 })
+	Mock.ClearSquads(1)
+	Mock.PlaceSquads(1, z.position.x, z.position.z, 2)
+	Mock.PlaceSquads(2, z.position.x, z.position.z, 2)
+	TD_Zones.Update({ 1, 2 }, tick())
+	TD_Visuals.Refresh(z)
+	return z.defended and z.ring.opacity > TD_Config.visuals.contestedOpacity
+end)(), "a defended tile does not stand out from an ordinary contest")
 
 -----------------------------------------------------------------------------
 section("Income boost is a percentage of what you gather")

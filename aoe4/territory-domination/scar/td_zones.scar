@@ -237,6 +237,9 @@ function TD_Zones.Build(playerCount, starts)
 					value     = 1,  -- display tier, assigned below
 					owner     = nil,
 					contested = false,
+					-- True while the owner is holding the tile against an
+					-- attacker who has not cleared them out yet.
+					defended  = false,
 					progress  = {},
 					-- Cached so visuals only refresh when state actually
 					-- changes, rather than every scan tick.
@@ -551,21 +554,44 @@ end
 -- CAPTURE
 -----------------------------------------------------------------------------
 
--- Presence in a zone: [player] = squad count, plus the clear leader (nil if
--- tied) and how many players are present at all.
+-- Presence in a zone.
+--
+-- Returns:
+--   presence     [player] = fighting strength present (squads)
+--   leader       the player with strictly the most squads, or nil if tied
+--   presentCount how many players are in the tile at all
+--   holding      [player] = anything at all standing here, units OR buildings
+--
+-- Squads and total presence are tracked separately because they answer
+-- different questions. Squads decide who is winning a capture; total
+-- presence decides whether the OWNER still holds the tile at all, and a
+-- building with no garrison counts for that even though it cannot fight.
 local function _scanPresence(zone, players)
-	local presence = {}
+	local presence, holding = {}, {}
 	local leader, leaderCount, presentCount = nil, 0, 0
 
 	for _, player in ipairs(players) do
 		if TD_API.IsPlayerAlive(player) then
-			local count = TD_API.CountPlayerSquadsInCell(
+			local squads = TD_API.CountPlayerSquadsInCell(
 				player, zone.position, zone.halfW, zone.halfH)
-			if count > 0 then
-				presence[player] = count
+
+			local total = squads
+			-- Only the owner's buildings matter, and only when they anchor
+			-- tiles. Querying buildings for every player in every tile would
+			-- double the spatial queries for information nothing reads.
+			if TD_Config.buildingsHoldTiles and player == zone.owner then
+				total = total + TD_API.CountPlayerBuildingsInCell(
+					player, zone.position, zone.halfW, zone.halfH)
+			end
+
+			if total > 0 then
+				holding[player] = total
+			end
+			if squads > 0 then
+				presence[player] = squads
 				presentCount = presentCount + 1
-				if count > leaderCount then
-					leader, leaderCount = player, count
+				if squads > leaderCount then
+					leader, leaderCount = player, squads
 				end
 			end
 		end
@@ -581,7 +607,7 @@ local function _scanPresence(zone, players)
 		end
 	end
 
-	return presence, leader, presentCount
+	return presence, leader, presentCount, holding
 end
 
 -- `elapsed` is the time in seconds since THIS zone was last examined, which
@@ -589,8 +615,41 @@ end
 -- Crediting by elapsed time rather than per tick is what keeps the 20 second
 -- solo capture true at every zone count.
 local function _updateZone(zone, players, elapsed)
-	local presence, leader, presentCount = _scanPresence(zone, players)
+	local presence, leader, presentCount, holding = _scanPresence(zone, players)
 	zone.contested = (presentCount > 1)
+
+	-- An owned tile is HELD while its owner still has anything standing in
+	-- it. Taking ground and taking a position are different things: empty
+	-- territory changes hands by walking into it, but a defended tile has to
+	-- be cleared first, and one surviving building holds it indefinitely.
+	local ownerHolding = (zone.owner ~= nil) and (holding[zone.owner] or 0) > 0
+	zone.defended = false
+
+	if TD_Config.mustClearDefendersToCapture and ownerHolding then
+		-- Somebody other than the owner is trying to take it.
+		local underAttack = false
+		for player, _ in pairs(presence) do
+			if player ~= zone.owner then
+				underAttack = true
+				break
+			end
+		end
+		zone.defended = underAttack
+
+		if underAttack and TD_Config.defenceResetsProgress then
+			for player, value in pairs(zone.progress) do
+				if player ~= zone.owner then
+					zone.progress[player] = math.max(0,
+						value - TD_Config.captureDecayPerTick * elapsed)
+				end
+			end
+		end
+
+		-- No capture progress for anyone while the owner still stands. The
+		-- attacker's progress is left where it is: they are still there,
+		-- they just are not winning yet.
+		return nil, nil
+	end
 
 	if leader ~= nil then
 		local gain = math.min(
@@ -628,7 +687,11 @@ end
 
 -- Visual state key, so visuals refresh only on a real change.
 local function _visualState(zone)
-	return tostring(zone.owner or "neutral") .. (zone.contested and ":contested" or "")
+	local state = tostring(zone.owner or "neutral")
+	if zone.defended then
+		return state .. ":defended"
+	end
+	return state .. (zone.contested and ":contested" or "")
 end
 
 -- Scan a slice of the zone list, round-robin across ticks, so the per-tick
@@ -676,7 +739,11 @@ function TD_Zones.Update(players, now)
 		scanned = scanned + 1
 
 		-- First look at a zone credits one tick rather than all of history.
-		local elapsed = now - (zone.lastScan or (now - TD_Config.scanInterval))
+		-- Clamped at zero: game time only moves forward, but a negative
+		-- elapsed would run capture progress backwards rather than simply
+		-- doing nothing, which is a bad way to find out the clock misbehaved.
+		local elapsed = math.max(0,
+			now - (zone.lastScan or (now - TD_Config.scanInterval)))
 		zone.lastScan = now
 
 		local newOwner, previousOwner = _updateZone(zone, players, elapsed)

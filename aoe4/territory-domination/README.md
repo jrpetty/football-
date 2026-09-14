@@ -30,6 +30,9 @@ stay worth fighting over at every stage of the game.
   captured, so everyone opens on +10% rather than scrambling from zero.
 - **Standing in a zone captures it.** One unit takes exactly 20 seconds, two
   take 10, three take 6.7.
+- **A held tile must be cleared first.** An owned tile cannot be taken while
+  its owner has anything still standing in it — every unit and building of
+  theirs inside the tile has to be destroyed before capture even begins.
 - Capture rate is **capped at three units**, so a 40-unit deathball is three
   times faster than a lone scout, not forty times. Splitting your army is
   viable, and a single spare unit is always worth sending.
@@ -192,6 +195,32 @@ only cost is that a newly arrived enemy takes up to `zones / budget` ticks to
 be noticed. There is a test asserting a solo capture still takes 20 seconds on
 a 64-zone map.
 
+### Taking ground vs taking a position
+
+Empty territory changes hands by walking into it. A **defended tile does not**:
+while its owner has anything still standing inside it, capture progress does
+not start at all, however many attackers are stood there. Two hundred units
+will not take a tile from one surviving spearman until that spearman is dead.
+
+Buildings count. A building with no garrison cannot fight, but it holds the
+ground it stands on, so **one surviving structure holds a tile indefinitely**.
+That is what makes a base a base rather than just another tile.
+
+A blocked attacker keeps their progress rather than losing it — they are still
+stood there, they just are not winning yet. Set `defenceResetsProgress = true`
+to make a failed assault start over instead.
+
+Neutral tiles are unaffected: there is no owner to clear.
+
+A tile being held against an attacker renders at the loudest opacity on the
+map (0.85, above ordinary contest at 0.55), because the attacker needs to see
+that they are making no progress rather than assume the capture bar is just
+slow.
+
+Both halves are switchable: `mustClearDefendersToCapture = false` restores
+plain contest rules, and `buildingsHoldTiles = false` lets an ungarrisoned
+building fall with the ground it stands on.
+
 ### Kings
 
 Every player gets a king at their starting position. Losing it eliminates you
@@ -308,7 +337,7 @@ scar/
   td_tally.scar              Per-player territory counts, named by colour
 test/
   mock_engine.lua            Stubbed Scar engine for offline testing
-  run_tests.lua              178 logic tests
+  run_tests.lua              192 logic tests
   balance_sim.lua            Opening layout, economy, boost curves, capture times
 ```
 
@@ -344,6 +373,10 @@ Most likely to need correcting, in rough priority order:
 - **`SGroup_GetSpawnedSquadAt`** — lets the square cell test filter a circular
   query down to the actual rectangle. Without it captures bleed across cell
   corners; the log says once if it fell back.
+- **`Player_GetEntitiesNearPoint`** / `EGroup_GetSpawnedEntityAt` — building
+  presence, which is what makes a held tile hold. If these fail, buildings
+  stop anchoring tiles and a base can be captured out from under its own Town
+  Centre.
 - **`UI_CreateGroundDecalRect`** — square cell outlines and centre squares.
   Falls back to whatever decal call exists, so cells may draw as circles.
 - **`UI_CreateMinimapRect`** — filled minimap cells. Falls back to a blip,
@@ -395,7 +428,7 @@ Requires only a stock Lua 5.4 — no game files needed.
 
 ```sh
 cd aoe4/territory-domination
-lua5.4 test/run_tests.lua      # 178 logic tests
+lua5.4 test/run_tests.lua      # 192 logic tests
 lua5.4 test/balance_sim.lua    # boost curves, capture times, zone scaling
 ```
 
@@ -409,7 +442,9 @@ falls in two zones, that a unit in a neighbouring cell's corner does not count
 toward this one, that every player's base is the cell they spawned
 in, that no two bases sit closer than four tiles and home rings never touch,
 that every ring tile is nearer its own base than any rival's, that a neutral
-tile really exists between the closest pair, that an unaffordably fine grid is
+tile really exists between the closest pair, that a defended tile cannot be
+taken by any number of attackers until its defenders are destroyed and that a
+lone building holds it, that an unaffordably fine grid is
 clamped and flagged rather than silently abandoned, that a solo capture still
 takes about 20 seconds on a staggered grid and interior tiles are still swept, that water zones are created
 and capturable but never handed out as starting zones, that regicide eliminates
@@ -446,6 +481,9 @@ Everything worth changing during playtesting is in `td_config.scar`:
 - `mapEdgeMargin` — fraction of the map left outside the grid; 0 tiles it all.
 - `zoneScanBudget` — per-tick scan cost ceiling on large maps.
 - `maxTotalBoostFraction` — share of the map at which the boost stops growing.
+- `mustClearDefendersToCapture` / `buildingsHoldTiles` /
+  `defenceResetsProgress` — whether a held tile must be cleared, whether
+  buildings count, and whether a failed assault loses its progress.
 - `captureThreshold` / `captureRatePerSquad` / `captureRateCap` — how long
   zones take to flip and how much a bigger army helps. The three together set
   the 20-second solo capture; change one and that figure drifts, so check

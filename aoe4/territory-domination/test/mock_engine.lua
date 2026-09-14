@@ -29,6 +29,7 @@ Mock = {
 	cumulativeStats = false,
 	starts = {},       -- [player] = {x=, z=}; unset means "engine cannot say"
 	units = {},        -- spawned units (kings)
+	buildings = {},    -- [player] = { {x=, z=, count=}, ... }
 }
 
 local KEYS = { "food", "wood", "gold", "stone" }
@@ -76,6 +77,33 @@ end
 
 function Mock.ClearSquads(player)
 	Mock.squads[player] = {}
+end
+
+-- Buildings hold a tile even with no garrison, so they are tracked
+-- separately from squads and queried through the entity calls.
+function Mock.PlaceBuildings(player, x, z, count)
+	table.insert(Mock.buildings[player], { x = x, z = z, count = count or 1 })
+end
+
+function Mock.ClearBuildings(player)
+	Mock.buildings[player] = {}
+end
+
+-- Destroy everything a player has in a cell, the way an attacker would.
+function Mock.RazeCell(player, pos, halfW, halfH)
+	local function outside(g)
+		return math.abs(g.x - pos.x) > halfW or math.abs(g.z - pos.z) > halfH
+	end
+	local keptSquads = {}
+	for _, g in ipairs(Mock.squads[player] or {}) do
+		if outside(g) then table.insert(keptSquads, g) end
+	end
+	Mock.squads[player] = keptSquads
+	local keptBuildings = {}
+	for _, g in ipairs(Mock.buildings[player] or {}) do
+		if outside(g) then table.insert(keptBuildings, g) end
+	end
+	Mock.buildings[player] = keptBuildings
 end
 
 -- Simulate a player mining resources: raises both stock and lifetime total.
@@ -198,6 +226,27 @@ function SGroup_CountSpawned(sgroup)
 	if sgroup._squads then return #sgroup._squads end
 	return sgroup._count or 0
 end
+function Player_GetEntitiesNearPoint(player, pos, radius)
+	local found = {}
+	for _, group in ipairs(Mock.buildings[player] or {}) do
+		local dx, dz = group.x - pos.x, group.z - pos.z
+		if math.sqrt(dx * dx + dz * dz) <= radius then
+			for _ = 1, group.count do
+				table.insert(found, { pos = { x = group.x, y = 0, z = group.z } })
+			end
+		end
+	end
+	return { _items = found }
+end
+function EGroup_CountSpawned(egroup) return #(egroup._items or {}) end
+function EGroup_GetSpawnedEntityAt(egroup, i)
+	if Mock.blockSquadWalk then
+		error("group iteration unavailable")
+	end
+	return egroup._items and egroup._items[i] or nil
+end
+function Entity_GetPosition(handle) return handle.pos end
+
 function SGroup_GetSpawnedSquadAt(sgroup, i)
 	if Mock.blockSquadWalk then
 		error("group iteration unavailable")

@@ -141,6 +141,28 @@ TD_Config = {
 	-- before they have captured it. This is what makes raiding worthwhile.
 	contestBlocksIncome = true,
 
+	-- An already-captured tile cannot be taken while its owner still has
+	-- ANYTHING standing in it. Every unit and building of theirs inside the
+	-- tile has to be destroyed first; only then does capture progress start.
+	--
+	-- This is what separates taking ground from taking a position. Empty
+	-- territory changes hands by walking into it, but a defended tile has to
+	-- be cleared, and a single surviving building holds it indefinitely.
+	--
+	-- Neutral tiles are unaffected -- there is no owner to clear.
+	mustClearDefendersToCapture = true,
+
+	-- Count buildings as presence, not just units. With this off, only
+	-- living units hold a tile and an undefended building falls with the
+	-- ground it stands on.
+	buildingsHoldTiles = true,
+
+	-- While a tile is being held against an attacker, the attacker's capture
+	-- progress neither advances nor decays -- they are still standing there,
+	-- they just are not winning yet. Set true to make progress bleed away
+	-- instead, so a failed assault has to start over.
+	defenceResetsProgress = false,
+
 	-- Give every player the zone nearest their starting position at match
 	-- start, already fully captured. Without this the opening minutes are a
 	-- scramble from zero, and a player whose start is far from any zone is
@@ -403,6 +425,11 @@ TD_Config = {
 		-- permanently.
 		pulseOnCapture = true,
 		pulseDuration = 2.0,
+
+		-- Opacity while the owner is holding a tile against an attacker who
+		-- has not cleared them out. Louder than plain contest, because the
+		-- attacker needs to see that they are making no progress.
+		defendedOpacity = 0.85,
 
 		-- Opacity used while a zone is contested, so a fight over a zone
 		-- is visible without being loud.
