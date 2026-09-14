@@ -186,6 +186,61 @@ function TD_API.AddResource(player, resourceType, amount)
 	_tryAny({ "Player_AddResource", "Player_GiveResource" }, player, resourceType, amount)
 end
 
+-- A player's current stock of one resource.
+function TD_API.GetResource(player, resourceType)
+	local ok, amount = _tryAny(
+		{ "Player_GetResource", "Player_GetResourceAmount" },
+		player, resourceType
+	)
+	if ok and type(amount) == "number" then
+		return amount
+	end
+	return 0
+end
+
+-- Lifetime total of a resource GATHERED by a player, if the engine exposes
+-- such a stat. This is what the income boost really wants to measure.
+--
+-- Returns (totals, isCumulative):
+--   isCumulative == true  -> totals only ever rise; spending does not affect
+--                            them, and resources we grant are not counted.
+--   isCumulative == false -> totals are current stock, which falls when the
+--                            player spends. The caller must compensate.
+--
+-- The distinction matters: with cumulative stats the boost measures real
+-- gathering exactly. With stock deltas it under-reads whenever a player
+-- spends more than they mine during an interval, which in AoE4 is most of
+-- the time. td_income.scar handles the fallback case explicitly.
+function TD_API.GetGatheredTotals(player)
+	local types = TD_API.ResourceTypes()
+
+	-- Preferred: a cumulative gathered stat.
+	for _, fnName in ipairs({ "Player_GetResourceGathered", "Player_GetTotalResourceGathered" }) do
+		if type(_G[fnName]) == "function" then
+			local totals, allOk = {}, true
+			for key, rtype in pairs(types) do
+				local ok, value = pcall(_G[fnName], player, rtype)
+				if ok and type(value) == "number" then
+					totals[key] = value
+				else
+					allOk = false
+					break
+				end
+			end
+			if allOk then
+				return totals, true
+			end
+		end
+	end
+
+	-- Fallback: current stock.
+	local totals = {}
+	for key, rtype in pairs(types) do
+		totals[key] = TD_API.GetResource(player, rtype)
+	end
+	return totals, false
+end
+
 -----------------------------------------------------------------------------
 -- PRESENTATION
 -----------------------------------------------------------------------------
@@ -200,24 +255,101 @@ function TD_API.ShowMessage(text)
 	end
 end
 
--- Drop a persistent marker on the minimap/world for a zone.
--- Returns a handle the caller stores, or nil if markers aren't available.
-function TD_API.CreateZoneMarker(pos, label)
-	local ok, marker = _tryAny(
-		{ "UI_CreateMinimapBlip", "Marker_Create", "UI_CreatePositionDecorator" },
-		pos, label
+-----------------------------------------------------------------------------
+-- ZONE VISUALS
+--
+-- Three independent layers, each optional. A zone stays fully playable if
+-- any or all of them fail to create -- they are presentation only, and the
+-- capture logic never reads them back.
+--
+--   ground ring   : thin circle decal on the terrain at the zone boundary
+--   centre marker : small decal at the zone centre
+--   minimap blip  : dot on the minimap, coloured by owner
+-----------------------------------------------------------------------------
+
+-- Thin ring decal on the ground. Returns a handle or nil.
+function TD_API.CreateGroundRing(pos, radius, thickness, colour, opacity)
+	local ok, handle = _tryAny(
+		{ "UI_CreateGroundDecal", "World_CreateDecal", "UI_CreateRadiusDecorator" },
+		pos, radius, thickness, colour, opacity
 	)
 	if ok then
-		return marker
+		return handle
 	end
 	return nil
 end
 
-function TD_API.SetZoneMarkerOwner(marker, player)
-	if marker == nil then
+-- Small decal at the zone centre. Returns a handle or nil.
+function TD_API.CreateCentreMarker(pos, scale, colour, opacity)
+	local ok, handle = _tryAny(
+		{ "UI_CreateGroundDecal", "World_CreateDecal", "UI_CreatePositionDecorator" },
+		pos, scale, colour, opacity
+	)
+	if ok then
+		return handle
+	end
+	return nil
+end
+
+-- Minimap dot. Returns a handle or nil.
+function TD_API.CreateMinimapBlip(pos, scale, colour)
+	local ok, handle = _tryAny(
+		{ "UI_CreateMinimapBlip", "UI_CreateMinimapIcon", "Marker_Create" },
+		pos, scale, colour
+	)
+	if ok then
+		return handle
+	end
+	return nil
+end
+
+-- Recolour any visual handle. Used when a zone changes owner.
+function TD_API.SetVisualColour(handle, colour, opacity)
+	if handle == nil then
 		return
 	end
-	_tryAny({ "UI_SetMinimapBlipOwner", "Marker_SetOwner" }, marker, player)
+	_tryAny(
+		{ "UI_SetDecalColour", "UI_SetDecalColor", "UI_SetMinimapBlipColour", "Marker_SetColour" },
+		handle, colour, opacity
+	)
+end
+
+function TD_API.DestroyVisual(handle)
+	if handle == nil then
+		return
+	end
+	_tryAny({ "UI_DestroyDecal", "World_DestroyDecal", "UI_DestroyMinimapBlip", "Marker_Destroy" }, handle)
+end
+
+-- A player's UI colour, so zone visuals match the colour players already
+-- associate with each opponent. Falls back to plain white.
+function TD_API.GetPlayerColour(player)
+	local ok, colour = _tryAny(
+		{ "Player_GetUIColour", "Player_GetUIColor", "Player_GetTeamColour" },
+		player
+	)
+	if ok and type(colour) == "table" then
+		return colour
+	end
+	return { r = 255, g = 255, b = 255 }
+end
+
+-----------------------------------------------------------------------------
+-- KILL ATTRIBUTION
+-----------------------------------------------------------------------------
+
+-- Who eliminated this player, if the engine can say. Returns nil when it
+-- cannot -- which is the common case, so td_zones keeps its own ledger of
+-- who has been taking territory from whom as the primary mechanism.
+function TD_API.GetPlayerKiller(player)
+	local ok, killer = _tryAny(
+		{ "Player_GetLastAttacker", "Player_GetDefeatedBy", "Player_GetKiller" },
+		player
+	)
+	if ok and killer ~= nil then
+		return killer
+	end
+	return nil
 end
 
 -----------------------------------------------------------------------------

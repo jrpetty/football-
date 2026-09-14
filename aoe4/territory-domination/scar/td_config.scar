@@ -1,9 +1,8 @@
 -----------------------------------------------------------------------------
 -- td_config.scar
 --
--- All tunables for Territory Domination in one place. These are the numbers
--- you will actually want to change during playtesting; nothing here depends
--- on the engine, so it is safe to edit freely.
+-- All tunables for Territory Domination in one place. Nothing here depends
+-- on the engine, so it is safe to edit freely between playtests.
 -----------------------------------------------------------------------------
 
 TD_Config = {
@@ -43,8 +42,8 @@ TD_Config = {
 	-- Set to 0 to make captures permanent until contested.
 	captureDecayPerTick = 2,
 
-	-- If true, an enemy present in your zone freezes income even before they
-	-- have captured it. This is what makes raiding worthwhile.
+	-- If true, an enemy present in your zone freezes its income boost even
+	-- before they have captured it. This is what makes raiding worthwhile.
 	contestBlocksIncome = true,
 
 	-- Seconds between capture/ownership scans. Lower is more responsive but
@@ -52,55 +51,159 @@ TD_Config = {
 	scanInterval = 1.0,
 
 	-----------------------------------------------------------------------
-	-- SCORING
+	-- INCOME BOOST
+	--
+	-- Zones do not hand out flat resources. Each zone you hold increases
+	-- your gather rate by a percentage of whatever you actually collected
+	-- over the last interval. A player with a big economy gets more out of
+	-- a zone than a player with a small one, so zones are worth taking at
+	-- every stage of the game rather than only when you are behind.
 	-----------------------------------------------------------------------
 
-	-- First player to this score wins.
-	scoreCap = 6000,
+	-- Income boost granted per zone held, as a fraction.
+	-- 0.10 = each zone adds 10% to what you gathered this interval.
+	-- Holding 5 zones therefore pays +50% on everything you mined.
+	boostPerZone = 0.10,
 
-	-- Seconds between score/income ticks.
-	incomeInterval = 5.0,
+	-- Hard ceiling on the total boost, as a fraction. Stops a runaway
+	-- leader who owns most of the map from compounding out of control.
+	-- Set to nil for no cap.
+	maxTotalBoost = 2.00,  -- +200% maximum
 
-	-- Score awarded per tick per point of zone value.
-	scorePerZoneValue = 1,
+	-- Seconds between income boost payouts. The boost is described as a
+	-- per-minute figure, so 60 keeps the display and the mechanic honest.
+	incomeInterval = 60.0,
+
+	-- Seconds between gather-rate samples. This is NOT the payout interval;
+	-- it is how often the mode measures what you are mining.
+	--
+	-- Sampling frequently matters when the engine only exposes current
+	-- resource stock rather than a lifetime-gathered stat. Gathering is a
+	-- continuous trickle while spending happens in discrete lumps, so
+	-- frequent samples catch the trickle between purchases. Sampling only
+	-- once per payout would score a player as having gathered nothing on any
+	-- minute they spent more than they mined -- which in AoE4 is most of
+	-- them. See td_income.scar for the full explanation.
+	gatherSampleInterval = 5.0,
+
+	-- Whether centre zones are worth more boost than edge zones.
+	--
+	-- Zone values are NORMALISED against the map average before being
+	-- applied, so an average zone is always worth exactly boostPerZone. A
+	-- centre zone comes out somewhat above that and an edge zone somewhat
+	-- below, typically a 1.3x / 0.7x spread. That keeps the pull toward the
+	-- middle without inflating the headline number -- scaling by raw value
+	-- instead would have made "10% per zone" mean 30% in practice.
+	--
+	-- Set false to make every zone a flat boostPerZone regardless of
+	-- position; centre zones then matter tactically but not economically.
+	valueScalesBoost = true,
 
 	-----------------------------------------------------------------------
-	-- ZONE VALUE TIERS
+	-- ZONE WEIGHTING
 	--
 	-- Zones closer to the map centre are worth more, which is what pulls
-	-- players into conflict instead of farming a safe corner. Value scales
-	-- both score and income.
-	-----------------------------------------------------------------------
-
-	-- Value multiplier at the exact map centre and at the outer edge.
-	-- Zones in between are interpolated linearly by distance from centre.
-	centreZoneValue = 5,
-	edgeZoneValue   = 1,
-
-	-----------------------------------------------------------------------
-	-- INCOME
+	-- players into conflict instead of farming a safe corner.
 	--
-	-- Resources granted per income tick, per point of zone value.
-	-- A value-3 centre zone pays 3x these numbers.
+	-- Weight is a continuous multiplier on boostPerZone, interpolated by
+	-- distance from the map centre and then normalised so the average zone
+	-- across the map comes out at exactly 1.0. A continuous weight matters
+	-- here: rounding zone worth to integer tiers collapses most of the map
+	-- into a single tier and leaves edge zones at half value, which made
+	-- rim zones barely worth taking.
 	-----------------------------------------------------------------------
 
-	incomePerValue = {
-		food  = 2,
-		wood  = 2,
-		gold  = 1,
-		stone = 1,
+	-- Weight at the exact map centre and at the outer edge. The gap between
+	-- them is how hard players are pulled toward the middle. Keep both
+	-- within about 0.6-1.5 so no zone becomes worthless or decisive alone.
+	centreZoneWeight = 1.40,
+	edgeZoneWeight   = 0.70,
+
+	-- Number of display tiers zones are bucketed into for messages and
+	-- visuals. Purely cosmetic; the boost always uses the exact weight.
+	displayTiers = 3,
+
+	-----------------------------------------------------------------------
+	-- CONQUEST
+	--
+	-- The match runs until one player remains. Standard AoE4 elimination
+	-- rules decide when a player dies; this mode decides what happens to
+	-- their territory afterwards.
+	-----------------------------------------------------------------------
+
+	-- When a player is eliminated, their zones transfer to whoever killed
+	-- them rather than reverting to neutral. Conquest compounds: taking
+	-- someone out hands you their whole economy.
+	inheritZonesOnKill = true,
+
+	-- If the killer cannot be identified, fall back to releasing the dead
+	-- player's zones to neutral instead of giving them to no one.
+	-- Set false to award them to the highest-value holder instead.
+	neutralOnUnknownKiller = true,
+
+	-- Seconds between checks for players having been eliminated.
+	eliminationCheckInterval = 5.0,
+
+	-----------------------------------------------------------------------
+	-- VISUALS
+	--
+	-- Zones must be readable at a glance without cluttering the screen.
+	-- The defaults are deliberately restrained: a thin ground ring and a
+	-- small minimap dot, nothing that obscures units or terrain.
+	-----------------------------------------------------------------------
+
+	visuals = {
+		-- Master switch for all zone visuals.
+		enabled = true,
+
+		-- Thin ring decal on the ground at the zone boundary.
+		showGroundRing = true,
+
+		-- Ring line thickness in world units. Keep this small.
+		ringThickness = 0.6,
+
+		-- Ring opacity, 0..1. Low by design -- the ring should read as a
+		-- boundary, not as a spotlight.
+		ringOpacity = 0.35,
+
+		-- Small marker at the zone centre. Set false if the ring alone is
+		-- enough and you want the ground completely clear.
+		showCentreMarker = true,
+
+		-- Centre marker scale multiplier.
+		centreMarkerScale = 0.7,
+
+		-- Minimap dot for each zone, coloured by owner.
+		showMinimapBlip = true,
+
+		-- Minimap dot size multiplier. Small enough not to hide units.
+		minimapBlipScale = 0.6,
+
+		-- Pulse the ring briefly when a zone changes hands, then settle
+		-- back to the resting opacity. Draws the eye once rather than
+		-- permanently.
+		pulseOnCapture = true,
+		pulseDuration = 2.0,
+
+		-- Opacity used while a zone is contested, so a fight over a zone
+		-- is visible without being loud.
+		contestedOpacity = 0.55,
+
+		-- Neutral zone colour, as RGB 0..255. Deliberately pale grey so
+		-- unclaimed zones recede and owned ones stand out.
+		neutralColour = { r = 160, g = 160, b = 160 },
 	},
 
 	-----------------------------------------------------------------------
 	-- PRESENTATION
 	-----------------------------------------------------------------------
 
-	-- Seconds between score broadcast messages. 0 disables them.
-	scoreAnnounceInterval = 30.0,
+	-- Seconds between standings broadcasts. 0 disables them.
+	standingsAnnounceInterval = 90.0,
 
 	-- Announce when a zone changes hands.
 	announceCaptures = true,
 
-	-- Announce when a player crosses these fractions of the score cap.
-	scoreMilestones = { 0.25, 0.5, 0.75, 0.9 },
+	-- Announce when a player is eliminated and their zones are inherited.
+	announceConquest = true,
 }

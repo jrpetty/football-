@@ -1,58 +1,68 @@
--- balance_sim.lua -- estimates match length and income rates for the current
--- config, so the tuning numbers can be sanity-checked without playing a game.
--- Run: lua5.4 test/balance_sim.lua
+-- balance_sim.lua -- reports what the current config actually does, so the
+-- tuning numbers can be sanity-checked without playing a game.
+-- Run from the mod root:  lua5.4 test/balance_sim.lua
 require("test.mock_engine")
 
 Mock.Reset(4)
 dofile("scar/td_config.scar")
 dofile("scar/td_adapter.scar")
+dofile("scar/td_visuals.scar")
 dofile("scar/td_zones.scar")
-dofile("scar/td_score.scar")
+dofile("scar/td_income.scar")
 TD_API.verbose = false
+TD_Config.visuals.enabled = false
 
 TD_Zones.Build()
 
-local total, byValue = 0, {}
+local n = #TD_Zones.list
+local lo, hi = math.huge, -math.huge
 for _, z in ipairs(TD_Zones.list) do
-	total = total + z.value
-	byValue[z.value] = (byValue[z.value] or 0) + 1
+	lo, hi = math.min(lo, z.weight), math.max(hi, z.weight)
 end
 
-print(string.format("Zones: %d   total map value: %d", #TD_Zones.list, total))
-local tiers = {}
-for v, n in pairs(byValue) do table.insert(tiers, { v = v, n = n }) end
-table.sort(tiers, function(a, b) return a.v > b.v end)
-for _, t in ipairs(tiers) do
-	print(string.format("  value %d : %2d zones", t.v, t.n))
+print(string.format("\nZONES: %d   weight range %.2f - %.2f   (mean 1.00 by construction)",
+	n, lo, hi))
+print(string.format("  an edge zone is worth   %.1f%% boost", lo * TD_Config.boostPerZone * 100))
+print(string.format("  a centre zone is worth  %.1f%% boost", hi * TD_Config.boostPerZone * 100))
+
+print("\nBOOST BY ZONES HELD (average-value zones):")
+for _, held in ipairs({ 1, 2, 3, 5, 8, 12, n }) do
+	if held <= n then
+		local raw = held * TD_Config.boostPerZone
+		local capped = TD_Config.maxTotalBoost and math.min(raw, TD_Config.maxTotalBoost) or raw
+		print(string.format("  %2d zones -> +%3.0f%% gather rate%s",
+			held, capped * 100,
+			(capped < raw) and string.format("  (capped from +%.0f%%)", raw * 100) or ""))
+	end
 end
 
-print("\nTime to reach score cap of " .. TD_Config.scoreCap .. ":")
-local perTick = TD_Config.incomeInterval
-for _, share in ipairs({ 0.15, 0.25, 0.40, 0.60, 0.80 }) do
-	local held = total * share
-	local scorePerTick = held * TD_Config.scorePerZoneValue
-	local secs = TD_Config.scoreCap / scorePerTick * perTick
-	print(string.format(
-		"  holding %3d%% of map value (%5.1f) -> %5.1f score/tick -> %4.1f min",
-		share * 100, held, scorePerTick, secs / 60
-	))
+print("\nWHAT THE BOOST IS WORTH, given a gather rate per minute:")
+print("  (boost is a percentage of what you actually mine, so this scales)")
+local header = "  zones "
+for _, rate in ipairs({ 500, 1000, 2000, 3000 }) do
+	header = header .. string.format("%9d/min", rate)
+end
+print(header)
+for _, held in ipairs({ 1, 3, 5, 8 }) do
+	if held <= n then
+		local boost = TD_Config.maxTotalBoost
+			and math.min(held * TD_Config.boostPerZone, TD_Config.maxTotalBoost)
+			or held * TD_Config.boostPerZone
+		local row = string.format("  %5d ", held)
+		for _, rate in ipairs({ 500, 1000, 2000, 3000 }) do
+			row = row .. string.format("%9.0f  ", rate * boost)
+		end
+		print(row)
+	end
 end
 
-print("\nResource income per minute at each map share:")
-local r = TD_Config.incomePerValue
-local ticksPerMin = 60 / TD_Config.incomeInterval
-for _, share in ipairs({ 0.15, 0.25, 0.40, 0.60 }) do
-	local held = total * share
-	print(string.format(
-		"  %3d%% -> food %5.0f  wood %5.0f  gold %5.0f  stone %5.0f  per min",
-		share * 100,
-		r.food * held * ticksPerMin, r.wood * held * ticksPerMin,
-		r.gold * held * ticksPerMin, r.stone * held * ticksPerMin
-	))
+print(string.format("\nCAPTURE TIMES (uncontested):"))
+for _, squads in ipairs({ 1, 2, 4, 8, 20 }) do
+	local rate = math.min(squads * TD_Config.captureRatePerSquad, TD_Config.captureRateCap)
+	print(string.format("  %2d squads -> %5.1f s%s", squads,
+		TD_Config.captureThreshold / rate * TD_Config.scanInterval,
+		(squads * TD_Config.captureRatePerSquad > TD_Config.captureRateCap) and "  (rate capped)" or ""))
 end
 
-print(string.format(
-	"\nCapture time for one zone (uncontested, %d squads): %.1f s",
-	4, TD_Config.captureThreshold
-		/ math.min(4 * TD_Config.captureRatePerSquad, TD_Config.captureRateCap)
-		* TD_Config.scanInterval))
+print(string.format("\nMATCH END: last player standing. No score cap, no timer."))
+print("CONQUEST: killing a player transfers all of their remaining zones to you.\n")

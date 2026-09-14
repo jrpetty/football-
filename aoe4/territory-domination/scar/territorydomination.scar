@@ -3,44 +3,43 @@
 --
 -- TERRITORY DOMINATION
 --
--- The map is divided into roughly 20 zones. Holding a zone pays you both
--- resources and score every few seconds; zones near the centre of the map
--- pay substantially more than those on the edge. There is no conventional
--- win condition -- no wonder, no landmark race, no killing every last
--- villager. The first player to reach the score cap wins.
+-- The map is divided into roughly 20 zones. Every zone you hold increases
+-- your gather rate by 10% of what you are actually mining. The match runs
+-- until one player is left standing -- no score cap, no timer.
 --
--- The design goal: make economy and combat the same action. You cannot boom
--- in a safe corner, because a safe corner is worth the least. You cannot
--- turtle on a lead, because holding the lead means holding contested ground.
--- Every fight is an economic decision and every economic decision is a fight.
+-- When a player is eliminated, their zones do not revert to neutral: they
+-- pass to whoever conquered them. Killing someone hands you their economy,
+-- so every elimination accelerates the endgame instead of resetting it.
 --
--- Entry point. Loads the other modules and drives the rule scheduler.
+-- The design goal: economy and combat are the same action. Edge zones are
+-- worth least, so booming in a safe corner is unprofitable. An enemy
+-- standing in your zone freezes its boost immediately, so a cheap raid has
+-- instant economic value. And because the boost is a percentage, zones stay
+-- worth fighting over at every stage of the game.
 -----------------------------------------------------------------------------
 
 import("td_config.scar")
 import("td_adapter.scar")
+import("td_visuals.scar")
 import("td_zones.scar")
-import("td_score.scar")
+import("td_income.scar")
 
 TerritoryDomination = {
 	players = {},
+	alive = {},
 	started = false,
+	finished = false,
+	elapsed = 0,
 }
-
------------------------------------------------------------------------------
--- MODULE REGISTRATION
---
--- AoE4 win conditions register with the Core module system, which then calls
--- the _OnInit / _Start hooks below at the right points in match setup.
--- If Core is unavailable the mod falls back to driving itself from
--- OnGameSetup, so it still runs in a plain scenario script.
------------------------------------------------------------------------------
 
 if type(Core_RegisterModule) == "function" then
 	Core_RegisterModule("TerritoryDomination")
 end
 
--- Called once when the match is being set up.
+-----------------------------------------------------------------------------
+-- SETUP
+-----------------------------------------------------------------------------
+
 function TerritoryDomination_OnInit()
 	TerritoryDomination.players = TD_API.GetPlayers()
 
@@ -49,40 +48,48 @@ function TerritoryDomination_OnInit()
 		return
 	end
 
-	TD_Score.Init(TerritoryDomination.players)
+	TerritoryDomination.alive = {}
+	for _, player in ipairs(TerritoryDomination.players) do
+		TerritoryDomination.alive[player] = true
+	end
 
 	local zoneCount = TD_Zones.Build()
 	if zoneCount == 0 then
-		print("[TerritoryDomination] No playable zones could be placed; mode will not start.")
+		print("[TerritoryDomination] No playable zones placed; mode will not start.")
 		return
 	end
 
+	TD_Income.Init(TerritoryDomination.players)
+
 	print(string.format(
-		"[TerritoryDomination] Initialised for %d players over %d zones, score cap %d.",
-		#TerritoryDomination.players, zoneCount, TD_Config.scoreCap
+		"[TerritoryDomination] Initialised for %d players over %d zones, %d%% boost per zone.",
+		#TerritoryDomination.players, zoneCount,
+		math.floor(TD_Config.boostPerZone * 100 + 0.5)
 	))
 end
 
--- Called once when the match actually begins.
 function TerritoryDomination_Start()
 	if TerritoryDomination.started then
 		return
 	end
 	if #TerritoryDomination.players == 0 or #TD_Zones.list == 0 then
-		return -- init failed; don't start rules that will only spam errors
+		return
 	end
 	TerritoryDomination.started = true
 
 	TD_API.ShowMessage(string.format(
-		"Territory Domination: hold zones to earn score and resources. First to %d wins.",
-		TD_Config.scoreCap
+		"Territory Domination: every zone you hold adds %d%% to your gather rate. "
+			.. "Eliminate a rival and you inherit their zones. Last player standing wins.",
+		math.floor(TD_Config.boostPerZone * 100 + 0.5)
 	))
 
 	Rule_AddInterval(TerritoryDomination_CaptureScan, TD_Config.scanInterval)
-	Rule_AddInterval(TerritoryDomination_IncomeTick, TD_Config.incomeInterval)
+	Rule_AddInterval(TerritoryDomination_GatherSample, TD_Config.gatherSampleInterval)
+	Rule_AddInterval(TerritoryDomination_IncomePayout, TD_Config.incomeInterval)
+	Rule_AddInterval(TerritoryDomination_EliminationCheck, TD_Config.eliminationCheckInterval)
 
-	if TD_Config.scoreAnnounceInterval > 0 then
-		Rule_AddInterval(TerritoryDomination_AnnounceScores, TD_Config.scoreAnnounceInterval)
+	if TD_Config.standingsAnnounceInterval > 0 then
+		Rule_AddInterval(TerritoryDomination_AnnounceStandings, TD_Config.standingsAnnounceInterval)
 	end
 end
 
@@ -90,43 +97,135 @@ end
 -- RULES
 -----------------------------------------------------------------------------
 
--- Fast tick: who is standing where, and does any zone change hands.
+-- Fast tick: who is standing where, does any zone change hands, settle pulses.
 function TerritoryDomination_CaptureScan()
-	TD_Zones.Update(TerritoryDomination.players)
+	TerritoryDomination.elapsed = TerritoryDomination.elapsed + TD_Config.scanInterval
+	TD_Zones.Update(TerritoryDomination.players, TerritoryDomination.elapsed)
 end
 
--- Slow tick: pay out resources and score, and check for a winner.
-function TerritoryDomination_IncomeTick()
-	local winner = TD_Score.Tick(TerritoryDomination.players)
-	if winner ~= nil then
-		TerritoryDomination_End(winner)
+-- Medium tick: measure what each player is gathering.
+function TerritoryDomination_GatherSample()
+	TD_Income.Sample(TerritoryDomination.players)
+end
+
+-- Slow tick: pay the percentage boost.
+function TerritoryDomination_IncomePayout()
+	TD_Income.Payout(TerritoryDomination.players)
+end
+
+function TerritoryDomination_AnnounceStandings()
+	TD_Income.Announce(TerritoryDomination.players)
+end
+
+-----------------------------------------------------------------------------
+-- ELIMINATION AND CONQUEST
+--
+-- Standard AoE4 rules decide WHEN a player dies. This mode only decides what
+-- becomes of their territory, and when the match is over.
+-----------------------------------------------------------------------------
+
+function TerritoryDomination_EliminationCheck()
+	if TerritoryDomination.finished then
+		return
+	end
+
+	for _, player in ipairs(TerritoryDomination.players) do
+		if TerritoryDomination.alive[player] and not TD_API.IsPlayerAlive(player) then
+			TerritoryDomination.alive[player] = false
+			TerritoryDomination_OnPlayerDefeated(player)
+		end
+	end
+
+	local survivors = {}
+	for _, player in ipairs(TerritoryDomination.players) do
+		if TerritoryDomination.alive[player] then
+			table.insert(survivors, player)
+		end
+	end
+
+	if #survivors <= 1 then
+		TerritoryDomination_End(survivors[1])
 	end
 end
 
-function TerritoryDomination_AnnounceScores()
-	TD_Score.Announce(TerritoryDomination.players)
-end
-
--- A player leaving or being defeated releases their zones back to neutral,
--- so their territory becomes contestable rather than frozen.
 function TerritoryDomination_OnPlayerDefeated(player)
-	TD_Zones.ReleasePlayer(player)
-	TD_API.ShowMessage(TD_API.GetPlayerName(player) .. " has been eliminated; their zones are now neutral.")
+	TerritoryDomination.alive[player] = false
+
+	local heldCount = TD_Zones.CountOwned(player)
+	local conqueror = nil
+
+	if TD_Config.inheritZonesOnKill then
+		conqueror = TD_Zones.GetConqueror(player, TerritoryDomination.players)
+
+		if conqueror == nil and not TD_Config.neutralOnUnknownKiller then
+			-- Nobody identifiable took them down (they resigned, or dropped).
+			-- Award their land to the strongest surviving player instead of
+			-- letting it evaporate.
+			local best, bestCount = nil, -1
+			for _, other in ipairs(TerritoryDomination.players) do
+				if other ~= player and TerritoryDomination.alive[other] then
+					local count = TD_Zones.CountOwned(other)
+					if count > bestCount then
+						best, bestCount = other, count
+					end
+				end
+			end
+			conqueror = best
+		end
+	end
+
+	local moved = TD_Zones.TransferZones(player, conqueror, TerritoryDomination.elapsed)
+
+	if TD_Config.announceConquest and heldCount > 0 then
+		if conqueror ~= nil then
+			TD_API.ShowMessage(string.format(
+				"%s has fallen. %s claims their %d zone%s.",
+				TD_API.GetPlayerName(player),
+				TD_API.GetPlayerName(conqueror),
+				moved, moved == 1 and "" or "s"
+			))
+		else
+			TD_API.ShowMessage(string.format(
+				"%s has fallen. Their %d zone%s %s now unclaimed.",
+				TD_API.GetPlayerName(player),
+				moved, moved == 1 and "" or "s",
+				moved == 1 and "is" or "are"
+			))
+		end
+	end
 end
 
 function TerritoryDomination_End(winner)
-	Rule_RemoveGlobalEvent(TerritoryDomination_CaptureScan)
-	Rule_RemoveGlobalEvent(TerritoryDomination_IncomeTick)
-	Rule_RemoveGlobalEvent(TerritoryDomination_AnnounceScores)
+	if TerritoryDomination.finished then
+		return
+	end
+	TerritoryDomination.finished = true
 
-	TD_Score.DeclareWinner(winner, TerritoryDomination.players)
+	Rule_RemoveGlobalEvent(TerritoryDomination_CaptureScan)
+	Rule_RemoveGlobalEvent(TerritoryDomination_GatherSample)
+	Rule_RemoveGlobalEvent(TerritoryDomination_IncomePayout)
+	Rule_RemoveGlobalEvent(TerritoryDomination_EliminationCheck)
+	Rule_RemoveGlobalEvent(TerritoryDomination_AnnounceStandings)
+
+	if winner ~= nil then
+		TD_API.ShowMessage(string.format(
+			"%s is the last power standing, holding %d of %d zones.",
+			TD_API.GetPlayerName(winner),
+			TD_Zones.CountOwned(winner),
+			#TD_Zones.list
+		))
+		TD_API.DeclareWinner(winner)
+	else
+		TD_API.ShowMessage("No players remain.")
+	end
+
+	TD_Visuals.DestroyAll(TD_Zones.list)
 end
 
 -----------------------------------------------------------------------------
 -- FALLBACK ENTRY POINT
 --
--- Scenario scripts call OnGameSetup / OnInit directly rather than going
--- through Core. Only define these if nothing else already has.
+-- Scenario scripts call OnInit directly rather than going through Core.
 -----------------------------------------------------------------------------
 
 if type(Core_RegisterModule) ~= "function" then

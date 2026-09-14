@@ -1,0 +1,131 @@
+-----------------------------------------------------------------------------
+-- td_visuals.scar
+--
+-- Zone visuals: a thin ground ring, an optional small centre marker, and a
+-- minimap dot, all coloured by owner.
+--
+-- Design brief was "visible but not intrusive", which drives every choice
+-- here:
+--   * A ring at the BOUNDARY rather than a filled disc, so the zone reads as
+--     an area without tinting the ground the player is trying to look at.
+--   * Low resting opacity. Neutral zones are paler still, so unclaimed
+--     ground recedes and contested ground stands out.
+--   * Colour comes from the owner's own player colour, so no new visual
+--     vocabulary has to be learned.
+--   * Capture pulses briefly and then settles, drawing the eye once instead
+--     of animating permanently in the corner of the screen.
+--
+-- Nothing in this file is read back by the capture logic. If every call in
+-- here fails, the mode still plays correctly -- it just looks plain.
+-----------------------------------------------------------------------------
+
+TD_Visuals = {
+	pulses = {},  -- active pulses: { zone = z, endsAt = t }
+}
+
+-- Resting opacity for a zone, given its state.
+local function _opacityFor(zone)
+	local v = TD_Config.visuals
+	if zone.contested then
+		return v.contestedOpacity
+	end
+	if zone.owner == nil then
+		-- Neutral zones sit at roughly two thirds of the owned opacity so
+		-- unclaimed ground stays quiet.
+		return v.ringOpacity * 0.65
+	end
+	return v.ringOpacity
+end
+
+local function _colourFor(zone)
+	if zone.owner == nil then
+		return TD_Config.visuals.neutralColour
+	end
+	return TD_API.GetPlayerColour(zone.owner)
+end
+
+-- Build the visual handles for one zone.
+function TD_Visuals.Create(zone)
+	local v = TD_Config.visuals
+	if not v.enabled then
+		return
+	end
+
+	local colour = _colourFor(zone)
+	local opacity = _opacityFor(zone)
+
+	if v.showGroundRing then
+		zone.ring = TD_API.CreateGroundRing(
+			zone.position, TD_Config.zoneRadius, v.ringThickness, colour, opacity
+		)
+	end
+
+	if v.showCentreMarker then
+		zone.centreMarker = TD_API.CreateCentreMarker(
+			zone.position, v.centreMarkerScale, colour, opacity
+		)
+	end
+
+	if v.showMinimapBlip then
+		zone.blip = TD_API.CreateMinimapBlip(zone.position, v.minimapBlipScale, colour)
+	end
+end
+
+function TD_Visuals.CreateAll(zones)
+	for _, zone in ipairs(zones) do
+		TD_Visuals.Create(zone)
+	end
+end
+
+-- Push a zone's current owner/contest state onto its visuals.
+function TD_Visuals.Refresh(zone, opacityOverride)
+	if not TD_Config.visuals.enabled then
+		return
+	end
+	local colour = _colourFor(zone)
+	local opacity = opacityOverride or _opacityFor(zone)
+
+	TD_API.SetVisualColour(zone.ring, colour, opacity)
+	TD_API.SetVisualColour(zone.centreMarker, colour, opacity)
+	-- Minimap blips take colour but not opacity; a translucent minimap dot
+	-- would be harder to read, not less intrusive.
+	TD_API.SetVisualColour(zone.blip, colour, 1.0)
+end
+
+-- Flash a zone briefly on capture, then let it settle back.
+function TD_Visuals.PulseCapture(zone, now)
+	if not (TD_Config.visuals.enabled and TD_Config.visuals.pulseOnCapture) then
+		TD_Visuals.Refresh(zone)
+		return
+	end
+	TD_Visuals.Refresh(zone, 1.0)
+	table.insert(TD_Visuals.pulses, {
+		zone = zone,
+		endsAt = now + TD_Config.visuals.pulseDuration,
+	})
+end
+
+-- Settle any pulses whose time is up. Called from the scan rule.
+function TD_Visuals.Update(now)
+	if #TD_Visuals.pulses == 0 then
+		return
+	end
+	-- Iterate backwards so removal during traversal is safe.
+	for i = #TD_Visuals.pulses, 1, -1 do
+		local pulse = TD_Visuals.pulses[i]
+		if now >= pulse.endsAt then
+			TD_Visuals.Refresh(pulse.zone)
+			table.remove(TD_Visuals.pulses, i)
+		end
+	end
+end
+
+function TD_Visuals.DestroyAll(zones)
+	for _, zone in ipairs(zones) do
+		TD_API.DestroyVisual(zone.ring)
+		TD_API.DestroyVisual(zone.centreMarker)
+		TD_API.DestroyVisual(zone.blip)
+		zone.ring, zone.centreMarker, zone.blip = nil, nil, nil
+	end
+	TD_Visuals.pulses = {}
+end

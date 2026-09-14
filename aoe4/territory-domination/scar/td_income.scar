@@ -1,0 +1,193 @@
+-----------------------------------------------------------------------------
+-- td_income.scar
+--
+-- The income boost.
+--
+-- Zones do not hand out flat resources. Each zone you hold adds a percentage
+-- to whatever you actually gathered. Ten percent per zone means five zones
+-- pay you +50% on everything you mined that minute.
+--
+-- This scales with the economy you already have, which is the point: a zone
+-- is worth taking whether you are ahead or behind, and a big economy has
+-- more to protect. Flat income would have done the opposite -- worth most to
+-- whoever is losing, and irrelevant by the late game.
+--
+-- MEASURING GATHER RATE
+--
+-- The hard part is knowing what a player actually gathered. Ideally the
+-- engine exposes a lifetime "resources gathered" stat, which only ever rises
+-- and ignores spending. TD_API.GetGatheredTotals tries for that first.
+--
+-- When only current stock is available, a naive implementation would sample
+-- stock once per payout and diff it. That fails badly: a player who mined
+-- 800 food and spent 900 on units shows a NEGATIVE delta and would be scored
+-- as having gathered nothing, so the boost would pay out only to players who
+-- sat on their resources -- exactly backwards for a mode about fighting.
+--
+-- The fix is to sample often and sum only the positive movements. Gathering
+-- is a continuous trickle; spending is discrete lumps. At a 5 second sample
+-- interval most windows contain trickle and no lump, so the sum of positive
+-- deltas closely tracks real gathering. A window containing a purchase loses
+-- that window's gathering, which slightly under-credits, but never inverts
+-- the incentive.
+--
+-- Resources this mode grants are subtracted before measuring, so the boost
+-- never compounds on itself.
+-----------------------------------------------------------------------------
+
+TD_Income = {
+	-- [player] = { food=, wood=, gold=, stone= } last sampled totals
+	lastSample = {},
+	-- [player] = accumulated gathered since last payout
+	accrued = {},
+	-- [player] = resources granted since last sample, to exclude from it
+	pendingGrant = {},
+	-- Whether the engine gave us a cumulative gathered stat.
+	usingCumulative = false,
+	-- Last computed boost per player, for display.
+	lastBoost = {},
+}
+
+local RESOURCE_KEYS = { "food", "wood", "gold", "stone" }
+
+local function _zeroed()
+	return { food = 0, wood = 0, gold = 0, stone = 0 }
+end
+
+function TD_Income.Init(players)
+	TD_Income.lastSample = {}
+	TD_Income.accrued = {}
+	TD_Income.pendingGrant = {}
+	TD_Income.lastBoost = {}
+
+	for _, player in ipairs(players) do
+		local totals, isCumulative = TD_API.GetGatheredTotals(player)
+		TD_Income.usingCumulative = isCumulative
+		TD_Income.lastSample[player] = totals
+		TD_Income.accrued[player] = _zeroed()
+		TD_Income.pendingGrant[player] = _zeroed()
+		TD_Income.lastBoost[player] = 0
+	end
+
+	print(string.format(
+		"[TerritoryDomination] Income tracking using %s.",
+		TD_Income.usingCumulative
+			and "cumulative gathered stats (exact)"
+			or "sampled stock deltas (approximate -- see td_income.scar)"
+	))
+end
+
+-- A player's current total boost fraction, capped.
+-- Returns (boost, owned, paying).
+function TD_Income.GetBoost(player)
+	local weight, owned, paying = TD_Zones.GetBoostWeight(player)
+	local boost = weight * TD_Config.boostPerZone
+	if TD_Config.maxTotalBoost ~= nil then
+		boost = math.min(boost, TD_Config.maxTotalBoost)
+	end
+	return boost, owned, paying
+end
+
+-- Sample gathering. Called frequently; must stay cheap.
+function TD_Income.Sample(players)
+	for _, player in ipairs(players) do
+		if TD_API.IsPlayerAlive(player) and TD_Income.lastSample[player] ~= nil then
+			local totals = TD_API.GetGatheredTotals(player)
+			local previous = TD_Income.lastSample[player]
+			local granted = TD_Income.pendingGrant[player]
+			local accrued = TD_Income.accrued[player]
+
+			for _, key in ipairs(RESOURCE_KEYS) do
+				local delta = (totals[key] or 0) - (previous[key] or 0)
+
+				-- Never count resources this mode just handed out.
+				if not TD_Income.usingCumulative then
+					delta = delta - (granted[key] or 0)
+				end
+
+				-- Only positive movement counts as gathering; a negative
+				-- delta means the player spent, which we ignore rather than
+				-- subtract from what they mined.
+				if delta > 0 then
+					accrued[key] = accrued[key] + delta
+				end
+			end
+
+			TD_Income.lastSample[player] = totals
+			TD_Income.pendingGrant[player] = _zeroed()
+		end
+	end
+end
+
+-- Pay out the boost and reset accrual. Returns a per-player summary table.
+function TD_Income.Payout(players)
+	local types = TD_API.ResourceTypes()
+	local summary = {}
+
+	for _, player in ipairs(players) do
+		if TD_API.IsPlayerAlive(player) and TD_Income.accrued[player] ~= nil then
+			local boost, owned, paying = TD_Income.GetBoost(player)
+			TD_Income.lastBoost[player] = boost
+
+			local accrued = TD_Income.accrued[player]
+			local granted = _zeroed()
+
+			if boost > 0 then
+				for _, key in ipairs(RESOURCE_KEYS) do
+					local amount = math.floor(accrued[key] * boost)
+					if amount > 0 then
+						TD_API.AddResource(player, types[key], amount)
+						granted[key] = amount
+					end
+				end
+			end
+
+			summary[player] = {
+				boost = boost,
+				owned = owned,
+				paying = paying,
+				gathered = accrued,
+				granted = granted,
+			}
+
+			-- Carry the grant forward so the next sample can exclude it,
+			-- then start a fresh accrual window.
+			TD_Income.pendingGrant[player] = granted
+			TD_Income.accrued[player] = _zeroed()
+		end
+	end
+
+	return summary
+end
+
+-----------------------------------------------------------------------------
+-- PRESENTATION
+-----------------------------------------------------------------------------
+
+-- Players ordered by zones held, most first.
+function TD_Income.GetStandings(players)
+	local standings = {}
+	for _, player in ipairs(players) do
+		if TD_API.IsPlayerAlive(player) then
+			local boost, owned = TD_Income.GetBoost(player)
+			table.insert(standings, { player = player, owned = owned, boost = boost })
+		end
+	end
+	table.sort(standings, function(a, b) return a.owned > b.owned end)
+	return standings
+end
+
+function TD_Income.Announce(players)
+	local standings = TD_Income.GetStandings(players)
+	if #standings == 0 then
+		return
+	end
+	local parts = {}
+	for _, entry in ipairs(standings) do
+		table.insert(parts, string.format("%s %d zones (+%d%%)",
+			TD_API.GetPlayerName(entry.player),
+			entry.owned,
+			math.floor(entry.boost * 100 + 0.5)))
+	end
+	TD_API.ShowMessage(table.concat(parts, "   |   "))
+end
