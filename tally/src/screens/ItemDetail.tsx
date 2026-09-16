@@ -123,8 +123,8 @@ export function ItemDetail({ all, code, name, book, stock, deliveries, stockCoun
           {onHand && (
             <StatTile
               label="In the cellar"
-              value={describeStock(Math.max(0, onHand.expectedBaseUnits), onHand.item)}
-              detail="what should be left right now"
+              value={onHand.counted ? describeStock(Math.max(0, onHand.expectedBaseUnits), onHand.item) : '—'}
+              detail={onHand.counted ? 'what should be left right now' : 'not on the last stock take'}
             />
           )}
           {profile.recentChangeBp !== null && (

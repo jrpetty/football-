@@ -99,6 +99,20 @@ function plural(servingName: string): string {
   return servingName === 'each' ? 'items' : `${servingName}s`
 }
 
+/**
+ * The trading day a stock take taken now belongs to.
+ *
+ * Cellars get counted in the morning, before the doors open, and a count
+ * taken then is the stock at the close of the night before. Dating it today
+ * would quietly leave today's whole trade out of the reconciliation. The
+ * trading day already rolls over at 5am; this carries the same idea through
+ * the morning, until the pub could plausibly have started selling.
+ */
+function countDate(): string {
+  const key = tradingDayKey()
+  return new Date().getHours() < 12 ? addDays(key, -1) : key
+}
+
 /** A stable id from a name, so re-running setup does not duplicate a line. */
 function idFor(name: string): string {
   return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'item'
@@ -154,24 +168,6 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
     setTimeout(() => setToast(''), 4000)
   }
 
-  /**
-   * Set what a container costs and what it holds.
-   *
-   * Both boxes are kept as typed while she works, because a half-entered "£95
-   * for " is not yet a cost and must not be stored as one. The item only gains
-   * a cost once both sides are real numbers; clearing either takes it away
-   * again, which is how a mistyped price is undone.
-   */
-  /**
-   * Set the unit a line arrives in and what it costs, together.
-   *
-   * Deliberately one function taking both boxes rather than two taking one
-   * each. The cost is a price *per container*, so neither figure means
-   * anything without the other — and handling them separately meant typing
-   * the price before the size silently threw the price away, because at that
-   * moment there was no size to attach it to. Reading both drafts on every
-   * keystroke means whichever is typed second completes the pair.
-   */
   /**
    * Change how a line is measured, and how much of it a serving is.
    *
@@ -290,6 +286,19 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
     onChanged()
   }
 
+  /**
+   * Set the unit a line arrives in and what it costs, together.
+   *
+   * Deliberately one function taking both boxes rather than two taking one
+   * each. The cost is a price *per container*, so neither figure means
+   * anything without the other — and handling them separately meant typing
+   * the price before the size silently threw the price away, because at that
+   * moment there was no size to attach it to. Reading both drafts on every
+   * keystroke means whichever is typed second completes the pair. Both boxes
+   * are kept as typed while she works: a half-entered "£95 for " is not yet a
+   * cost, and clearing either side takes the cost away again, which is how a
+   * mistyped price is undone.
+   */
   async function setLine(item: StockItem, patch: { name?: string; sizeText?: string; priceText?: string }) {
     const sizeKey = `${item.id}:size`
     const priceKey = `${item.id}:price`
@@ -507,7 +516,21 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
         </div>
         <div className="chip-row">
           {(['levels', 'delivery', 'count', 'costs', 'setup'] as const).map((p) => (
-            <button key={p} type="button" className="chip" aria-pressed={panel === p} onClick={() => { setPanel(p); setDrafts({}) }}>
+            <button
+              key={p}
+              type="button"
+              className="chip"
+              aria-pressed={panel === p}
+              onClick={() => {
+                setPanel(p)
+                setDrafts({})
+                // A delivery is dated the day it arrives. A stock take is dated
+                // the trading day it draws a line under, which for a count done
+                // before opening is last night's.
+                if (p === 'count') setSheetDate(countDate())
+                else if (p === 'delivery') setSheetDate(tradingDayKey())
+              }}
+            >
               {p === 'levels' ? 'What’s left' : p === 'delivery' ? 'Delivery in' : p === 'count' ? 'Stock take' : p === 'costs' ? 'What it costs' : 'Set up'}
             </button>
           ))}
@@ -550,12 +573,18 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
                   .map((l) => (
                     <tr key={l.item.id}>
                       <th scope="row">{l.item.name}</th>
-                      <td className="num">{formatServings(l.countedBaseUnits, l.item)}</td>
+                      <td className={l.counted ? 'num' : 'num faint'}>
+                        {l.counted ? formatServings(l.countedBaseUnits, l.item) : 'not counted'}
+                      </td>
                       <td className="num">{formatServings(l.deliveredBaseUnits, l.item)}</td>
                       <td className="num">{formatServings(l.pouredBaseUnits, l.item)}</td>
-                      <td className={`num delta ${l.expectedBaseUnits < 0 ? 'short' : ''}`} title={describeStock(l.expectedBaseUnits, l.item)}>
-                        {formatServings(l.expectedBaseUnits, l.item)}
-                      </td>
+                      {l.counted ? (
+                        <td className={`num delta ${l.expectedBaseUnits < 0 ? 'short' : ''}`} title={describeStock(l.expectedBaseUnits, l.item)}>
+                          {formatServings(l.expectedBaseUnits, l.item)}
+                        </td>
+                      ) : (
+                        <td className="num faint">—</td>
+                      )}
                     </tr>
                   ))}
               </tbody>
@@ -567,10 +596,16 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
               already knows what went out.
             </p>
           )}
-          {ledger.some((l) => l.expectedBaseUnits < 0) && (
+          {ledger.some((l) => l.counted && l.expectedBaseUnits < 0) && (
             <p className="note warn">
               A line has gone below zero, which means more was poured than was ever booked in. Either a
               delivery was missed or the pour is set wrong.
+            </p>
+          )}
+          {ledger.some((l) => !l.counted && (l.deliveredBaseUnits || l.pouredBaseUnits)) && (
+            <p className="note">
+              A line marked not counted was left blank on the last stock take, so what is left of it
+              cannot be said — only what has come in and gone out since.
             </p>
           )}
         </section>
@@ -586,6 +621,12 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
           <div className="field">
             <label htmlFor="sheet-date">Date</label>
             <input id="sheet-date" type="date" value={sheetDate} onChange={(e) => e.target.value && setSheetDate(e.target.value)} />
+            {panel === 'count' && (
+              <p className="help">
+                Dated by the trading day it closes. A count done in the morning, before opening, is
+                the stock at the end of last night — so before midday this starts on last night.
+              </p>
+            )}
           </div>
 
           {panel === 'delivery' && (

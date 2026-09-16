@@ -180,6 +180,10 @@ body {
   font-feature-settings: 'tnum' 1;
 }
 
+/* A figure that is not one — "not counted", a dash where a number would sit —
+   set back so it reads as an absence rather than a value. */
+.faint { color: var(--faint); font-weight: 400; }
+
 .icon { display: block; flex: none; }
 
 .app {

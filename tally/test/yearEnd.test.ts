@@ -96,7 +96,7 @@ function pack(over: Partial<YearEndInput> = {}): string {
     shifts: [on(kelly, '2026-01-05')],
     people: [kelly],
     cellar: cellarValue([
-      { item: taddy, countedBaseUnits: 0, deliveredBaseUnits: 0, pouredBaseUnits: 0, expectedBaseUnits: 72 * ML_PER_PINT },
+      { item: taddy, counted: true, countedBaseUnits: 0, deliveredBaseUnits: 0, pouredBaseUnits: 0, expectedBaseUnits: 72 * ML_PER_PINT },
     ]),
     ...over,
   })
@@ -145,7 +145,7 @@ test('uncosted stock is flagged so the valuation is not read as complete', () =>
   const uncosted: StockItem = { ...taddy, cost: undefined as never }
   const text = pack({
     cellar: cellarValue([
-      { item: uncosted, countedBaseUnits: 0, deliveredBaseUnits: 0, pouredBaseUnits: 0, expectedBaseUnits: 72 * ML_PER_PINT },
+      { item: uncosted, counted: true, countedBaseUnits: 0, deliveredBaseUnits: 0, pouredBaseUnits: 0, expectedBaseUnits: 72 * ML_PER_PINT },
     ]),
   })
   assert.match(text, /no cost entered, so the real figure is higher/)

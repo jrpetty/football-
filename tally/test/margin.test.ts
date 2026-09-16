@@ -126,7 +126,7 @@ test('the worst margin is listed first', () => {
 // --- the cellar ---------------------------------------------------------------
 
 function line(item: StockItem, expectedBaseUnits: number): StockLine {
-  return { item, countedBaseUnits: 0, deliveredBaseUnits: 0, pouredBaseUnits: 0, expectedBaseUnits }
+  return { item, counted: true, countedBaseUnits: 0, deliveredBaseUnits: 0, pouredBaseUnits: 0, expectedBaseUnits }
 }
 
 test('the cellar is valued at what the beer cost', () => {
@@ -146,4 +146,15 @@ test('a line that has run negative does not subtract from the valuation', () => 
   // A negative on-hand means the books are wrong, not that the cellar owes money.
   const v = cellarValue([line(taddy, -5 * ML_PER_PINT)])
   assert.equal(v.totalPence, 0)
+})
+
+test('an uncounted line is left out of the cellar’s value, and out of the costing gap', () => {
+  const counted = { ...line(taddy, 72 * ML_PER_PINT), counted: true }
+  const blank = { ...line(taddy, 72 * ML_PER_PINT), counted: false, item: { ...taddy, id: 'blank', cost: undefined } }
+  const value = cellarValue([counted, blank])
+  // The counted firkin is worth its cost; the blank line is neither money nor a
+  // "no cost entered" nag, because there is nothing there to cost.
+  assert.equal(value.totalPence, 9500)
+  assert.equal(value.unvaluedCount, 0)
+  assert.equal(value.lines.find((l) => l.item.id === 'blank')!.pence, null)
 })

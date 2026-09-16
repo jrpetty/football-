@@ -161,6 +161,9 @@ export function cellarValue(ledger: readonly StockLine[]): CellarValue {
   let unvaluedCount = 0
 
   const lines = ledger.map((line) => {
+    // Nothing to value without a count: an unknown quantity is not a zero
+    // one, and it must not drag the total down or pose as a costing gap.
+    if (!line.counted) return { item: line.item, baseUnits: 0, pence: null }
     const pence = costOf(line.item, Math.max(0, line.expectedBaseUnits))
     if (pence === null) {
       if (line.expectedBaseUnits > 0) unvaluedCount++

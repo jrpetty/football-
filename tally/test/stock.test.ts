@@ -6,6 +6,7 @@ import {
   DEFAULT_ML_PER_SHOT,
   buildLedger,
   compareToCount,
+  deadStock,
   formatServings,
   formatServingsSigned,
   guessPour,
@@ -353,4 +354,34 @@ test('what a sale takes is set in the line’s own measure', () => {
   const spirit: StockItem = { id: 'g', name: 'Gin', ...servingOf('shot', 30) }
   assert.equal(servingsToBase(2, spirit), 60, 'a double is two shots')
   assert.equal(servingsToBase(0.5, { id: 'b', name: 'Beer', ...servingOf('pint', 0) }), 284, 'a half')
+})
+
+// --- a line nobody counted ----------------------------------------------------
+
+const bag: StockItem = { id: 'crisps', name: 'Crisps', kind: 'count', servingBaseUnits: 1, servingName: 'each' }
+
+test('a line left off the count is marked as not counted, not as counted at nothing', () => {
+  const ledger = buildLedger([taddy, bag], new Map([['taddy', 10 * ML_PER_PINT]]), new Map(), new Map([['crisps', 5]]))
+  const t = ledger.find((l) => l.item.id === 'taddy')!
+  const c = ledger.find((l) => l.item.id === 'crisps')!
+  assert.equal(t.counted, true)
+  assert.equal(c.counted, false, 'blank on the sheet is not the same as none')
+  // The arithmetic still runs, but nothing downstream may treat it as a fact.
+  assert.equal(c.expectedBaseUnits, -5)
+})
+
+test('there is no verdict on a line missing from either count', () => {
+  // Crisps were not on the opening count. Whatever was found at the closing
+  // count, "short by the lot" would be a finding about the blank, not the crisps.
+  const ledger = buildLedger([taddy, bag], new Map([['taddy', 10 * ML_PER_PINT]]), new Map(), new Map([['crisps', 5]]))
+  const judged = compareToCount(ledger, new Map([['taddy', 8 * ML_PER_PINT], ['crisps', 40]]))
+  assert.equal(judged.find((v) => v.item.id === 'crisps')!.varianceBaseUnits, null)
+  assert.equal(judged.find((v) => v.item.id === 'taddy')!.varianceBaseUnits, -2 * ML_PER_PINT)
+})
+
+test('dead stock cannot be judged on a line with no count behind it', () => {
+  const ledger = buildLedger([taddy, bag], new Map([['taddy', 200 * ML_PER_PINT]]), new Map(), new Map())
+  const dead = deadStock(ledger, new Map(), 14, () => null)
+  assert.ok(dead.some((d) => d.item.id === 'taddy'), 'a counted line with nothing selling is dead stock')
+  assert.ok(!dead.some((d) => d.item.id === 'crisps'), 'an uncounted one has no on-hand figure to be sitting on')
 })

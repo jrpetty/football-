@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react'
 import { formatShort } from '../core/date.ts'
 import { formatMoney, formatSigned } from '../core/money.ts'
 import { reconcileDay } from '../core/reconcile.ts'
+import { dayStats } from '../core/analytics.ts'
 import type { DayRecord } from '../core/types.ts'
 import { listDays } from '../storage/db.ts'
 import { loadSettings } from '../storage/settings.ts'
@@ -64,14 +65,18 @@ export function History({ onOpen, onStart, refreshKey }: Props) {
       <div className="day-list">
         {days.map((day) => {
           const r = reconcileDay(day, tolerance)
-          const counted = day.card.pence !== null && day.cashPence !== null ? day.card.pence + day.cashPence : null
+          // What the till says the pub took — the same figure Trade and the
+          // year-end pack headline. This row once showed what was *counted*
+          // instead, so a night short by £12 read as having taken £12 less than
+          // every other screen said it had.
+          const took = dayStats(day, tolerance).takingsPence
           return (
             <button type="button" key={day.date} className="card day-row" onClick={() => onOpen(day.date)}>
               <span className="when">
                 <span className="date">{formatShort(day.date)}</span>
                 <br />
                 <span className="takings num">
-                  {counted === null ? 'Not finished' : `Took ${formatMoney(counted)}`}
+                  {took === null ? 'Not finished' : `Took ${formatMoney(took)}`}
                 </span>
               </span>
               <span className={`delta ${r.verdict}`}>

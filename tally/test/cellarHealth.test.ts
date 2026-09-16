@@ -120,3 +120,24 @@ test('a judged window that reconciled exactly is £0 out, not unknown', () => {
   assert.deepEqual(h.gapLines, [])
   assert.equal(h.gapPence, 0)
 })
+
+// --- before anybody has counted --------------------------------------------------
+
+test('with no count yet, the window opens where the records do, so an old delivery still counts', () => {
+  // A firkin booked in three weeks before today, and twenty pints poured since.
+  // An earlier version opened the window seven days back and lost the firkin.
+  const deliveries: Delivery[] = [{ id: 'd1', date: '2026-08-05', lines: [{ stockItemId: 'taddy', baseUnits: 72 * ML_PER_PINT }] }]
+  const h = health({ deliveries, days: [night('2026-08-10', 20)] })
+  assert.equal(h.since, '2026-08-04', 'the day before the first record')
+  const t = h.ledger.find((l) => l.item.id === 'taddy')!
+  assert.equal(t.counted, true, 'an uncounted cellar opens empty rather than unknowable')
+  assert.equal(t.deliveredBaseUnits, 72 * ML_PER_PINT)
+  assert.equal(t.expectedBaseUnits, 52 * ML_PER_PINT)
+})
+
+test('once a count exists, a line left off it is uncounted — not counted at nothing', () => {
+  const counts: StockCount[] = [{ date: '2026-08-20', lines: [{ stockItemId: 'taddy', baseUnits: 30 * ML_PER_PINT }] }]
+  const h = health({ items: [taddy, crisps], counts, days: [night('2026-08-22', 5)] })
+  assert.equal(h.ledger.find((l) => l.item.id === 'taddy')!.counted, true)
+  assert.equal(h.ledger.find((l) => l.item.id === 'crisps')!.counted, false)
+})

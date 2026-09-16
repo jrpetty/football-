@@ -12,6 +12,7 @@ import { formatMoney, parsePence, penceToInput } from '../core/money.ts'
 import {
   listDays,
   listDeliveries,
+  listStockCounts,
   listPeople,
   listShifts,
   loadStockConfig,
@@ -25,6 +26,7 @@ import {
 import { dayStats } from '../core/analytics.ts'
 import { addDays, tradingDayKey } from '../core/date.ts'
 import { cellarValue, costOf } from '../core/margin.ts'
+import { cellarHealth } from '../core/stock.ts'
 import { monthlyCsv, monthlyTakings, yearEndPack } from '../core/yearEnd.ts'
 import { describeRestored, downloadFile, parseBackup, toCsv, toJson } from '../storage/export.ts'
 import { testApiKey, type KeyCheck } from '../ocr/scanZRead.ts'
@@ -149,32 +151,33 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
     const from = addDays(to, -364)
     const tolerance = s.tolerancePence
 
-    const [days, shifts, people, stock, deliveries] = await Promise.all([
+    const [days, shifts, people, stock, deliveries, counts] = await Promise.all([
       listDays(),
       listShifts(),
       listPeople(),
       loadStockConfig(),
       listDeliveries(),
+      listStockCounts(),
     ])
     if (days.length === 0) return say('No nights recorded yet.')
 
     const stats = days.map((d) => dayStats(d, tolerance))
-    // Valued at what is on hand now, which is what a year end asks for.
-    const onHand = new Map<string, number>()
-    for (const delivery of deliveries) {
-      for (const line of delivery.lines) {
-        onHand.set(line.stockItemId, (onHand.get(line.stockItemId) ?? 0) + line.baseUnits)
-      }
-    }
+    // Valued at what should be on hand now — the last count, plus what came in
+    // since, less what the till poured — through the same cellarHealth the
+    // Cellar screen and the alerts read, so the pack cannot say one figure and
+    // the app another. An earlier version added up every delivery ever booked
+    // and called that the stock, which it stopped being on the first night.
     const cellar = stock.items.length
       ? cellarValue(
-          stock.items.map((item) => ({
-            item,
-            countedBaseUnits: 0,
-            deliveredBaseUnits: 0,
-            pouredBaseUnits: 0,
-            expectedBaseUnits: onHand.get(item.id) ?? 0,
-          })),
+          cellarHealth({
+            items: stock.items,
+            pours: stock.pours,
+            counts,
+            deliveries,
+            days: stats,
+            today: to,
+            costOfServing: costOf,
+          }).ledger,
         )
       : null
 

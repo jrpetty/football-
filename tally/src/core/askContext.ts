@@ -180,6 +180,10 @@ export function buildAskPack(data: AskData): AskPack {
     let worth = 0
     let valued = false
     for (const line of data.cellar.ledger) {
+      if (!line.counted) {
+        out.push([field(line.item.name, 40), 'not counted', ''].join('|'))
+        continue
+      }
       const value = costOf(line.item, Math.max(0, line.expectedBaseUnits))
       if (value !== null) {
         worth += value

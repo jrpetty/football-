@@ -196,11 +196,14 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
     const existing = shifts.find((s) => s.id === id)
     if (existing) {
       await deleteShift(id)
-      setShifts(shifts.filter((s) => s.id !== id))
+      setShifts((all) => all.filter((s) => s.id !== id))
     } else {
       const shift = shiftAt(person.id, date, nightHours)
       await saveShift(shift)
-      setShifts([...shifts, shift])
+      // Functional, so two chips tapped in quick succession both land: each
+      // tap waits on its own write, and the second must not overwrite the
+      // first with a list captured before it arrived.
+      setShifts((all) => (all.some((s) => s.id === shift.id) ? all : [...all, shift]))
     }
     onChanged()
   }
@@ -218,7 +221,7 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
     const moved = shifts.filter((s) => s.date === date).map((s) => ({ ...s, ...next }))
     for (const shift of moved) await saveShift(shift)
     if (moved.length > 0) {
-      setShifts(shifts.map((s) => moved.find((m) => m.id === s.id) ?? s))
+      setShifts((all) => all.map((s) => moved.find((m) => m.id === s.id) ?? s))
       onChanged()
     }
   }
@@ -226,7 +229,7 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
   async function setHours(shift: Shift, patch: Partial<Pick<Shift, 'startMin' | 'endMin'>>) {
     const next = { ...shift, ...patch }
     await saveShift(next)
-    setShifts(shifts.map((s) => (s.id === next.id ? next : s)))
+    setShifts((all) => all.map((s) => (s.id === next.id ? next : s)))
     onChanged()
   }
 
@@ -245,7 +248,7 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
       }
     }
     if (made.length === 0) return say('Nothing on last week’s rota to copy.')
-    setShifts([...shifts, ...made])
+    setShifts((all) => [...all, ...made.filter((m) => !all.some((s) => s.id === m.id))])
     onChanged()
     say(`Copied ${made.length} ${made.length === 1 ? 'shift' : 'shifts'} from last week.`)
   }
@@ -742,7 +745,13 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
                   <StatTile
                     label="Nights balanced"
                     value={judged === 0 ? '—' : `${stat.balancedNights}/${judged}`}
-                    detail={open.balancedBp === null ? 'none counted yet' : `${(open.balancedBp / 100).toFixed(0)}% of their nights`}
+                    detail={
+                      open.balancedBp === null
+                        ? 'none counted yet'
+                        : open.place === null
+                          ? 'too few nights to judge'
+                          : `${(open.balancedBp / 100).toFixed(0)}% of their nights`
+                    }
                     // Coloured only once there are enough nights to rank on.
                     // Painting one bad night red while the badge says "not
                     // enough nights" is the app contradicting itself.
@@ -840,8 +849,10 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
                         : ` · ${r.stat.balancedNights} of ${r.stat.balancedNights + r.stat.shortNights + r.stat.overNights} balanced`}
                     </small>
                   </span>
+                  {/* A rate only once there is a ranking behind it. "0%" beside
+                      "too soon" is a verdict and a refusal in the same breath. */}
                   <span className="num">
-                    {r.balancedBp === null ? '—' : `${(r.balancedBp / 100).toFixed(0)}%`}
+                    {r.place ? `${((r.balancedBp ?? 0) / 100).toFixed(0)}%` : '—'}
                   </span>
                   <span className="badge">{r.place ? `#${r.place}` : 'too soon'}</span>
                   <span className="chev" aria-hidden="true"><IconChevronRight size={16} /></span>

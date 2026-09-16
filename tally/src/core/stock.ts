@@ -275,11 +275,20 @@ function titleise(text: string): string {
 
 export interface StockLine {
   item: StockItem
-  /** Base units at the last physical count. */
+  /**
+   * Whether the line was on the opening count at all.
+   *
+   * A line left blank on the sheet was not counted, which is not the same as
+   * none — and everything downstream that would otherwise read the blank as
+   * a zero (a negative "left", a cellar valued short, a variance against
+   * nothing) has to know the difference.
+   */
+  counted: boolean
+  /** Base units at the last physical count; 0 when the line was not counted. */
   countedBaseUnits: number
   deliveredBaseUnits: number
   pouredBaseUnits: number
-  /** counted + delivered − poured. */
+  /** counted + delivered − poured. Meaningless when `counted` is false. */
   expectedBaseUnits: number
 }
 
@@ -290,11 +299,13 @@ export function buildLedger(
   poured: ReadonlyMap<string, number>,
 ): StockLine[] {
   return items.map((item) => {
+    const counted = opening.has(item.id)
     const countedBaseUnits = opening.get(item.id) ?? 0
     const deliveredBaseUnits = delivered.get(item.id) ?? 0
     const pouredBaseUnits = poured.get(item.id) ?? 0
     return {
       item,
+      counted,
       countedBaseUnits,
       deliveredBaseUnits,
       pouredBaseUnits,
@@ -316,10 +327,13 @@ export function compareToCount(
 ): StockVariance[] {
   return lines.map((line) => {
     const actualBaseUnits = actual.has(line.item.id) ? (actual.get(line.item.id) ?? 0) : null
+    // No verdict without both ends: a line missing from either count has
+    // nothing to be measured against, and "short by the lot" is not a finding.
+    const judged = line.counted && actualBaseUnits !== null
     return {
       ...line,
       actualBaseUnits,
-      varianceBaseUnits: actualBaseUnits === null ? null : actualBaseUnits - line.expectedBaseUnits,
+      varianceBaseUnits: judged ? (actualBaseUnits as number) - line.expectedBaseUnits : null,
     }
   })
 }
@@ -673,6 +687,9 @@ export function deadStock(
   const weeks = Math.max(1, days / 7)
 
   return ledger
+    // Weeks of cover needs something to divide: a line nobody has counted has
+    // no on-hand figure to be sitting on.
+    .filter((line) => line.counted)
     .map((line) => {
       const used = usedBaseUnits.get(line.item.id) ?? 0
       const servings = line.item.servingBaseUnits > 0 ? used / line.item.servingBaseUnits : 0
@@ -767,12 +784,30 @@ export function cellarHealth(args: {
   const latest = counts[0]
   const previous = counts[1]
 
-  // With no take yet, a week is enough history to say what is moving without
-  // averaging a line's whole life into its rate.
-  const since = latest?.date ?? addDaysKey(today, -7)
+  // With no take yet, the window opens where the records do: the day before
+  // the first delivery or the first night with an item list, whichever came
+  // first, so everything ever booked in and everything ever poured is in it.
+  // An earlier version used the last seven days here, which quietly dropped
+  // any delivery older than a week from a cellar nobody had counted yet — a
+  // firkin booked in a fortnight ago simply stopped existing.
+  const firstRecord = (): string | null => {
+    let first: string | null = null
+    for (const d of days) if (d.items.length > 0 && (first === null || d.date < first)) first = d.date
+    for (const d of deliveries) if (first === null || d.date < first) first = d.date
+    return first
+  }
+  const opened = firstRecord()
+  const since = latest?.date ?? (opened !== null ? addDaysKey(opened, -1) : addDaysKey(today, -7))
   const sinceDays = Math.max(1, Math.round((Date.parse(today) - Date.parse(since)) / 86_400_000))
 
-  const opening = new Map((latest?.lines ?? []).map((l) => [l.stockItemId, l.baseUnits]))
+  // Before any stock take exists, every line opens at nothing: a cellar that
+  // starts with a delivery is empty before it, and an app that could say
+  // nothing until the first count would never get to the first count. Once a
+  // count has been taken, a line left off it is genuinely uncounted — which is
+  // a different thing from none, and is carried through as such.
+  const opening = latest
+    ? new Map(latest.lines.map((l) => [l.stockItemId, l.baseUnits]))
+    : new Map(items.map((item) => [item.id, 0]))
   const openUsage = usageBetween(since)
   const ledger = buildLedger(items, opening, deliveredBetween(since), openUsage)
   const dead = deadStock(ledger, openUsage, sinceDays, costOfServing)

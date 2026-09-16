@@ -289,6 +289,14 @@ try {
   await page.waitForSelector('.day-row', { timeout: 5000 })
   check('the night is still there after a reload', (await page.locator('.day-row').count()) === 1)
   check('and still shows it was short', (await page.locator('.day-row .delta').innerText()).includes('−£90.00'))
+  // The row headlines what the till says was taken — the same figure Trade
+  // and the year-end pack use — not what was counted. A night £90 short once
+  // read as having taken £90 less than every other screen said it had.
+  check(
+    'and headlines what the till took, not what was counted',
+    (await page.locator('.day-row .takings').innerText()).includes('£4,212.30'),
+    `got "${await page.locator('.day-row .takings').innerText()}"`,
+  )
 
   console.log('\nAsking without a key')
   // Deliberately before any key is saved: the honest answer is a pointer to

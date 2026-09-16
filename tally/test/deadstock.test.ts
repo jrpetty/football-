@@ -12,7 +12,7 @@ const pint = (id: string, name: string): StockItem => ({
 
 const line = (item: StockItem, onHandServings: number): StockLine => ({
   item,
-  countedBaseUnits: 0,
+  counted: true, countedBaseUnits: 0,
   deliveredBaseUnits: 0,
   pouredBaseUnits: 0,
   expectedBaseUnits: onHandServings * ML_PER_PINT,
