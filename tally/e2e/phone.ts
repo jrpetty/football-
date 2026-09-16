@@ -1,0 +1,254 @@
+// ---------------------------------------------------------------------------
+// The app on a phone.
+//
+// The other suites prove the arithmetic and the flow. This one asks a
+// different question: does it actually fit, and can it be tapped?
+//
+// Two sizes, both smaller than the 390px the rest of the tests use: an iPhone
+// SE and a small Android, which is the narrowest anybody is likely to hand
+// this to. On every screen it checks three things that make an app unusable on
+// a phone and are invisible on a laptop:
+//
+//   - the page scrolls sideways, so half of every row is off the edge
+//   - something is drawn outside the window and cannot be reached
+//   - a control is too small to hit with a thumb
+//
+// The engine here is Chromium, because that is the only one this machine can
+// run. An iPhone runs WebKit, so this is a proxy for the layout and not for
+// Safari itself.
+// ---------------------------------------------------------------------------
+
+import { createServer } from 'node:http'
+import { readFile } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
+import { extname, join, normalize, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import type { Page } from 'playwright'
+import { launchChromium } from '../scripts/browser.ts'
+import { GARDENERS_ARMS } from '../test/fixtures/gardenersArms.ts'
+
+const here = dirname(fileURLToPath(import.meta.url))
+const dist = join(here, '..', 'dist')
+if (!existsSync(join(dist, 'index.html'))) {
+  console.error('No build found. Run `npm run build` first.')
+  process.exit(1)
+}
+
+const MIME: Record<string, string> = {
+  '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
+  '.json': 'application/json', '.webmanifest': 'application/manifest+json',
+  '.svg': 'image/svg+xml', '.png': 'image/png', '.map': 'application/json',
+}
+const server = createServer(async (req, res) => {
+  const url = new URL(req.url ?? '/', 'http://localhost')
+  const rel = normalize(decodeURIComponent(url.pathname)).replace(/^(\.\.[/\\])+/, '')
+  let file = join(dist, rel)
+  if (rel === '/' || rel === '\\' || !existsSync(file)) file = join(dist, 'index.html')
+  res.writeHead(200, { 'content-type': MIME[extname(file)] ?? 'application/octet-stream' })
+  res.end(await readFile(file))
+})
+await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+const address = server.address()
+const base = `http://127.0.0.1:${typeof address === 'object' && address ? address.port : 0}/`
+
+let failures = 0
+let checks = 0
+function check(label: string, ok: boolean, detail = ''): void {
+  checks++
+  if (ok) console.log(`  ok    ${label}`)
+  else {
+    failures++
+    console.log(`  FAIL  ${label}${detail ? `\n        ${detail}` : ''}`)
+  }
+}
+
+/** Anything deliberately small: a text link in a row, not a control to hit. */
+const TINY_BY_DESIGN = ['hours-change', 'shot-open', 'lb-close', 'lb-nav']
+
+interface Trouble {
+  sideways: number
+  offscreen: string[]
+  small: string[]
+}
+
+async function inspect(page: Page): Promise<Trouble> {
+  return await page.evaluate((tiny: string[]) => {
+    const doc = document.documentElement
+    const width = doc.clientWidth
+    const describe = (el: Element) => {
+      const cls = typeof el.className === 'string' ? el.className.split(' ').slice(0, 2).join('.') : ''
+      const text = (el.textContent ?? '').trim().slice(0, 24)
+      return `${el.tagName.toLowerCase()}${cls ? `.${cls}` : ''}${text ? ` “${text}”` : ''}`
+    }
+    // Something inside a sideways-scrolling table is meant to be wider than
+    // the screen; the page itself is not.
+    const scrollable = (el: Element): boolean => {
+      for (let p: Element | null = el; p; p = p.parentElement) {
+        if (p === doc) return false
+        const style = getComputedStyle(p)
+        if (style.overflowX === 'auto' || style.overflowX === 'scroll') return true
+      }
+      return false
+    }
+    const offscreen: string[] = []
+    const small: string[] = []
+    for (const el of Array.from(document.body.querySelectorAll('*'))) {
+      const r = el.getBoundingClientRect()
+      if (r.width === 0 || r.height === 0) continue
+      const style = getComputedStyle(el)
+      if (style.visibility === 'hidden' || style.display === 'none') continue
+      if (!scrollable(el) && (r.right > width + 1 || r.left < -1)) {
+        if (offscreen.length < 6) offscreen.push(`${describe(el)} [${Math.round(r.left)}…${Math.round(r.right)}] of ${width}`)
+      }
+      // A file picker hidden behind a button of its own is neither tapped nor
+      // typed into, so its size says nothing about using this on a phone.
+      const hidden = el.classList.contains('visually-hidden') ||
+        (el.tagName === 'INPUT' && ['file', 'hidden'].includes((el as HTMLInputElement).type))
+      if (hidden) continue
+      const tappable = el.tagName === 'BUTTON' || el.tagName === 'SELECT' ||
+        (el.tagName === 'INPUT' && !['checkbox', 'radio'].includes((el as HTMLInputElement).type))
+      if (tappable && r.height < 40 && !tiny.some((t) => (el.className ?? '').toString().includes(t))) {
+        if (small.length < 6) small.push(`${describe(el)} is ${Math.round(r.height)}px tall`)
+      }
+      // A box small enough to zoom the whole page when it is tapped.
+      if (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') {
+        const size = parseFloat(style.fontSize)
+        if (size < 16 && small.length < 6) small.push(`${describe(el)} has ${size}px text, which zooms the page on an iPhone`)
+      }
+    }
+    return { sideways: doc.scrollWidth - width, offscreen, small }
+  }, TINY_BY_DESIGN)
+}
+
+async function screen(page: Page, label: string): Promise<void> {
+  await page.waitForTimeout(220)
+  const t = await inspect(page)
+  check(`${label}: does not scroll sideways`, t.sideways <= 0, `${t.sideways}px of overhang`)
+  check(`${label}: nothing is drawn off the edge`, t.offscreen.length === 0, t.offscreen.join('\n        '))
+  check(`${label}: everything can be tapped`, t.small.length === 0, t.small.join('\n        '))
+}
+
+const browser = await launchChromium()
+const errors: string[] = []
+try {
+  for (const phone of [
+    { name: 'a small Android', width: 360, height: 640 },
+    { name: 'an iPhone SE', width: 375, height: 667 },
+  ]) {
+    console.log(`\nOn ${phone.name} (${phone.width}×${phone.height})`)
+    const context = await browser.newContext({
+      viewport: { width: phone.width, height: phone.height },
+      deviceScaleFactor: 2,
+      isMobile: true,
+      hasTouch: true,
+    })
+    await context.addInitScript(() => {
+      try {
+        localStorage.setItem('tally.engine', 'off')
+      } catch {
+        /* ignore */
+      }
+    })
+    const page = await context.newPage()
+    page.on('pageerror', (err) => errors.push(`${phone.name}: ${String(err)}`))
+    await page.goto(base, { waitUntil: 'networkidle' })
+
+    // A night to look at, so no screen is judged empty.
+    await page.evaluate(async (day) => {
+      await new Promise<void>((resolve, reject) => {
+        const req = indexedDB.open('tally')
+        req.onsuccess = () => {
+          const tx = req.result.transaction('days', 'readwrite')
+          tx.objectStore('days').put(day)
+          tx.oncomplete = () => resolve()
+          tx.onerror = () => reject(tx.error)
+        }
+        req.onerror = () => reject(req.error)
+      })
+    }, {
+      date: '2026-08-23',
+      till: { pence: 219280, source: 'vision', edited: false },
+      card: { pence: 184100, source: 'manual', edited: false },
+      cashPence: 33980, note: '', zRead: GARDENERS_ARMS, createdAt: 0, updatedAt: 0,
+    })
+    await page.reload({ waitUntil: 'networkidle' })
+
+    await screen(page, 'Tonight')
+    await page.click('button:has-text("Trade")')
+    await screen(page, 'Trade')
+    await page.click('button:has-text("Cellar")')
+    await page.click('button:has-text("Build the cellar from the till")')
+    await page.waitForTimeout(600)
+    await screen(page, 'the cellar')
+    for (const chip of ['Delivery in', 'Stock take', 'The scales', 'What it costs', 'Set up']) {
+      await page.click(`.chip:has-text("${chip}")`)
+      await screen(page, `the cellar — ${chip.toLowerCase()}`)
+    }
+    await page.click('.chip:has-text("Stock take")')
+    await page.click('button:has-text("Weigh a keg")')
+    await screen(page, 'the keg calculator')
+
+    await page.click('button:has-text("Rota")')
+    await page.waitForSelector('button:has-text("Add the first person")', { timeout: 5000 })
+    await page.click('button:has-text("Add the first person")')
+    await page.fill('#person-name', 'Kelly')
+    await page.fill('#person-rate', '12.21')
+    await page.click('button:has-text("Add to the rota")')
+    await page.waitForTimeout(300)
+    await screen(page, 'who works here')
+    await page.click('.chip:has-text("The week")')
+    await page.waitForSelector('.day-card', { timeout: 5000 })
+    await screen(page, 'the week by night')
+    await page.locator('.day-open').nth(5).click()
+    await page.waitForTimeout(250)
+    await page.locator('.day-edit .chip:has-text("Kelly")').click()
+    await screen(page, 'a night on the rota, open')
+    await page.click('.chip:has-text("By person")')
+    await screen(page, 'the week by person')
+    await page.click('.chip:has-text("Records")')
+    await screen(page, 'the records')
+
+    await page.click('button:has-text("Nights")')
+    await page.waitForSelector('.day-row', { timeout: 5000 })
+    await screen(page, 'the nights')
+    await page.click('.day-row')
+    await page.waitForSelector('.verdict', { timeout: 5000 })
+    await screen(page, 'one night')
+
+    await page.click('button:has-text("Settings")')
+    await page.waitForSelector('#apiKey', { timeout: 5000 })
+    await screen(page, 'settings')
+    await page.click('[data-testid="start-again"]')
+    await page.waitForSelector('[data-testid="confirm-clear"]', { timeout: 5000 })
+    await screen(page, 'settings — about to start again')
+
+    // The cellar has no signal, and that is where it gets used. After one
+    // visit it has to open with the network off and still hold the night.
+    await page.evaluate(() => navigator.serviceWorker.ready.then(() => undefined))
+    await context.setOffline(true)
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    const opened = await page
+      .waitForSelector('.main', { timeout: 10_000 })
+      .then(() => true)
+      .catch(() => false)
+    check('opens with the signal off', opened)
+    await page.click('button:has-text("Nights")').catch(() => undefined)
+    await page.waitForTimeout(700)
+    check(
+      'and the night is still there with no network at all',
+      (await page.locator('.day-row').count()) === 1,
+      await page.locator('.main').innerText().catch(() => 'nothing rendered'),
+    )
+    await context.setOffline(false)
+
+    await page.screenshot({ path: join(here, '..', 'shots', `phone-${phone.width}.png`), fullPage: false })
+    await context.close()
+  }
+  check('nothing threw along the way', errors.length === 0, errors.join('\n        '))
+} finally {
+  await browser.close()
+  server.close()
+}
+
+console.log(`\n${checks - failures}/${checks} checks passed`)
+process.exit(failures === 0 ? 0 : 1)

@@ -36,7 +36,7 @@ import {
 import { scanRota } from '../ocr/scanList.ts'
 import { describeZReadError } from '../ocr/scanZRead.ts'
 import { wagesCsv, wagesSummary, weekWages } from '../core/wagesWeek.ts'
-import { downloadFile } from '../storage/export.ts'
+import { saveFile } from '../storage/export.ts'
 import { seriesVar, StatTile } from '../components/charts.tsx'
 import { dayStats } from '../core/analytics.ts'
 import { crewRanking, crewStats, type CrewRank } from '../core/rota.ts'
@@ -146,7 +146,7 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
       // A cancelled share sheet is not a failure and must not look like one.
       if (err instanceof DOMException && err.name === 'AbortError') return
       try {
-        downloadFile(`wages-week-${monday}.txt`, text, 'text/plain')
+        void saveFile(`wages-week-${monday}.txt`, text, 'text/plain')
         setWagesSent('Saved as a file.')
       } catch {
         setWagesSent('Could not send the wages.')
@@ -157,7 +157,7 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
   }
 
   function saveWagesCsv() {
-    downloadFile(`wages-week-${monday}.csv`, wagesCsv(weekWages(monday, shifts, people ?? [])), 'text/csv')
+    void saveFile(`wages-week-${monday}.csv`, wagesCsv(weekWages(monday, shifts, people ?? [])), 'text/csv')
     setWagesSent('Spreadsheet saved.')
     setTimeout(() => setWagesSent(''), 4000)
   }

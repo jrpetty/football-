@@ -26,7 +26,7 @@ import { formatShort } from '../core/date.ts'
 import { IconTickSmall } from '../components/icons.tsx'
 import { crewFor, formatHours, formatTime, shiftMinutes, type Person, type Shift } from '../core/rota.ts'
 import { nightSummary, summaryFilename } from '../core/summary.ts'
-import { downloadFile } from '../storage/export.ts'
+import { saveFile } from '../storage/export.ts'
 import { loadSettings } from '../storage/settings.ts'
 import { Lightbox, type LightboxPhoto } from '../components/Lightbox.tsx'
 
@@ -205,7 +205,7 @@ export function DayDetail({ date, onBack, onEdit, onDeleted }: Props) {
       // A cancelled share sheet is not a failure and must not look like one.
       if (err instanceof DOMException && err.name === 'AbortError') return
       try {
-        downloadFile(summaryFilename(date), text, 'text/plain')
+        void saveFile(summaryFilename(date), text, 'text/plain')
         setShared('Saved as a file.')
       } catch {
         setShared('Could not share that night.')

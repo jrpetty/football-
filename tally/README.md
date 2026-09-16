@@ -42,9 +42,22 @@ a number would be trusted once and abandoned the moment it was wrong.
 
 ### Installing it on her phone
 
-It is a web app, so there is no app store. Open the link in Safari (iPhone) or
-Chrome (Android) and choose **Add to Home Screen**. After that it opens like any
-other app, full screen, and works with no signal.
+It is a web app, so there is no app store.
+
+- **iPhone.** Open the link in Safari, tap the share button at the bottom, then
+  **Add to Home Screen**. Worth doing rather than leaving it as a tab: Safari
+  clears an ordinary site's stored data after a week of not visiting it, and a
+  home-screen app is exempt.
+- **Android.** Open the link in Chrome, tap the three dots, then **Install app**.
+
+After that it opens like any other app, full screen, and works with no signal.
+Settings names these taps for whichever phone is holding it, and says so when it
+is already on the home screen.
+
+Getting a file back *out* of a phone is the other half of that. On an iPhone a
+download link inside an installed app can quietly do nothing, so every file the
+app produces — the backup, the spreadsheets, the year-end pack, the wages —
+goes to the share sheet there instead, and downloads everywhere else.
 
 ---
 
@@ -302,6 +315,7 @@ npm run dev        # development
 npm test           # the pure logic — money, dates, reconciliation, receipt parsing
 npm run build      # production build into dist/
 npm run test:e2e   # the whole flow in real Chromium (build first)
+npm run test:phone # does it fit, and can it be tapped (build first)
 npm run icons      # re-rasterise the PNGs after editing public/icon.svg
 ```
 
@@ -312,6 +326,15 @@ the verdict updates as she types, that a saved night comes back after a reload,
 that correcting a night updates rather than duplicates it, that a *failed* scan
 still leaves her able to finish, and that the dashboard's figures and percentages
 match the real receipt — seeded into storage and read back through the interface.
+
+`npm run test:phone` asks the question the other two cannot: whether it is
+usable on a phone. It walks every screen at 360×640 and 375×667 — narrower than
+anything else here tests — and fails on a page that scrolls sideways, an element
+drawn off the edge, a control under 40px, or a box whose text is under 16px,
+which is what makes an iPhone zoom into a form and not come back. It also pulls
+the network out from under the app and checks it still opens and still holds the
+night. The engine is Chromium, because that is what this machine can run: an
+iPhone runs WebKit, so it is a proxy for the layout and not for Safari itself.
 
 ### Deploying
 

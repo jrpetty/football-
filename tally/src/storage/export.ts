@@ -283,6 +283,56 @@ export function describeRestored(r: Restored): string {
  * mobile browsers will accept in a URL, and would fail silently at exactly the
  * point she was trying to make a backup.
  */
+/**
+ * Whether to hand a file to the share sheet rather than download it.
+ *
+ * An iPhone is the reason this exists. A download link works in Safari, but
+ * inside an app added to the home screen — which is how this is meant to be
+ * used — it can quietly do nothing at all, and a backup that silently fails is
+ * worse than no backup button. The share sheet is the way a file leaves an
+ * iPhone: Files, Mail, WhatsApp, AirDrop.
+ *
+ * Taken apart from the browser so it can be tested: an iPad has called itself
+ * a Macintosh since iPadOS 13, and is told apart by having a touch screen.
+ */
+export function prefersShareSheet(userAgent: string, maxTouchPoints: number): boolean {
+  if (/iPhone|iPad|iPod/.test(userAgent)) return true
+  return /Macintosh/.test(userAgent) && maxTouchPoints > 1
+}
+
+/** One file, sent the way this device sends files. */
+export function saveFile(filename: string, contents: string, mime: string): Promise<'shared' | 'downloaded'> {
+  return saveFiles([{ filename, contents, mime }])
+}
+
+/**
+ * Files out of the app: the share sheet where that is how it works, a download
+ * everywhere else, and a download anyway if sharing will not have them.
+ *
+ * Several at once go in one share, so a year-end pack is one tap rather than
+ * two sheets in a row.
+ */
+export async function saveFiles(
+  files: ReadonlyArray<{ filename: string; contents: string; mime: string }>,
+): Promise<'shared' | 'downloaded'> {
+  const nav = typeof navigator === 'undefined' ? undefined : navigator
+  if (nav && prefersShareSheet(nav.userAgent, nav.maxTouchPoints ?? 0) && typeof nav.canShare === 'function') {
+    const payload = files.map((f) => new File([f.contents], f.filename, { type: f.mime }))
+    if (nav.canShare({ files: payload })) {
+      try {
+        await nav.share({ files: payload, title: files[0]?.filename })
+        return 'shared'
+      } catch (err) {
+        // Thinking better of it is not a failure to route around: offering the
+        // file again as a download would be the app arguing with her.
+        if (err instanceof DOMException && err.name === 'AbortError') return 'shared'
+      }
+    }
+  }
+  for (const f of files) downloadFile(f.filename, f.contents, f.mime)
+  return 'downloaded'
+}
+
 export function downloadFile(filename: string, contents: string, mime: string): void {
   const blob = new Blob([contents], { type: `${mime};charset=utf-8` })
   const url = URL.createObjectURL(blob)

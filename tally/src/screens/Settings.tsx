@@ -31,7 +31,7 @@ import { addDays, tradingDayKey } from '../core/date.ts'
 import { cellarValue, costOf } from '../core/margin.ts'
 import { cellarHealth } from '../core/stock.ts'
 import { monthlyCsv, monthlyTakings, yearEndPack } from '../core/yearEnd.ts'
-import { describeRestored, downloadFile, parseBackup, toCsv, toJson } from '../storage/export.ts'
+import { describeRestored, parseBackup, saveFile, saveFiles, toCsv, toJson } from '../storage/export.ts'
 import { testApiKey, type KeyCheck } from '../ocr/scanZRead.ts'
 import { describeWeatherError, findPlace, type Place } from '../weather/openMeteo.ts'
 import { IconReceipt } from '../components/icons.tsx'
@@ -44,6 +44,29 @@ import {
   type EnginePreference,
   type Settings as SettingsShape,
 } from '../storage/settings.ts'
+
+/**
+ * Which phone this is, for telling her which buttons to press.
+ *
+ * "Add it to the home screen" is not an instruction anybody can follow: on an
+ * iPhone it is behind the share button, on an Android behind the three dots.
+ * Naming the actual taps is the difference between an app on the home screen
+ * and a bookmark she loses.
+ */
+function whichPhone(): 'ios' | 'android' | 'desktop' {
+  if (typeof navigator === 'undefined') return 'desktop'
+  const ua = navigator.userAgent
+  if (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && (navigator.maxTouchPoints ?? 0) > 1)) return 'ios'
+  if (/Android/.test(ua)) return 'android'
+  return 'desktop'
+}
+
+/** Whether this is the installed app rather than a tab in the browser. */
+function alreadyInstalled(): boolean {
+  if (typeof window === 'undefined' || !window.matchMedia) return false
+  const standalone = (window.navigator as { standalone?: boolean }).standalone
+  return window.matchMedia('(display-mode: standalone)').matches || standalone === true
+}
 
 const ENGINE_HELP: Record<EnginePreference, string> = {
   vision:
@@ -81,6 +104,8 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
   const [nudge, setNudge] = useState<NotificationPermission | 'unsupported'>(() =>
     typeof Notification === 'undefined' ? 'unsupported' : Notification.permission,
   )
+  const phone = useRef(whichPhone()).current
+  const installed = useRef(alreadyInstalled()).current
   const [placeQuery, setPlaceQuery] = useState('')
   const [places, setPlaces] = useState<Place[] | null>(null)
   const [findingPlace, setFindingPlace] = useState(false)
@@ -208,15 +233,23 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
       purchasesPence,
     })
 
-    downloadFile(`year-end-${to}.txt`, text, 'text/plain')
-    downloadFile(`takings-by-month-${to}.csv`, monthlyCsv(monthlyTakings(stats.filter((d) => d.date >= from && d.date <= to))), 'text/csv')
+    const how = await saveFiles([
+      { filename: `year-end-${to}.txt`, contents: text, mime: 'text/plain' },
+      {
+        filename: `takings-by-month-${to}.csv`,
+        contents: monthlyCsv(monthlyTakings(stats.filter((d) => d.date >= from && d.date <= to))),
+        mime: 'text/csv',
+      },
+    ])
+    say(how === 'shared' ? 'Both files sent — Mail or Files will keep them.' : 'Two files saved: the summary and the spreadsheet.')
     say('Year-end pack saved — the summary and the monthly figures.')
   }
 
   async function exportCsv() {
     const days = await listDays()
     if (days.length === 0) return say('Nothing to export yet.')
-    downloadFile(`tally-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(days, s.tolerancePence), 'text/csv')
+    const how = await saveFile(`tally-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(days, s.tolerancePence), 'text/csv')
+    say(how === 'shared' ? 'Spreadsheet sent.' : 'Spreadsheet saved.')
     say(`Exported ${days.length} nights.`)
   }
 
@@ -258,12 +291,16 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
     if (bundle.days.length === 0 && bundle.stock.items.length === 0 && bundle.people.length === 0) {
       return say('Nothing to back up yet.')
     }
-    downloadFile(
+    const how = await saveFile(
       `tally-${new Date().toISOString().slice(0, 10)}.tally.json`,
       toJson({ ...bundle, settings: settingsForBackup() }),
       'application/json',
     )
-    say('Saved. That one file is the whole app — keep it somewhere safe.')
+    say(
+      how === 'shared'
+        ? 'Sent. Put it in Files, or mail it to yourself — that one file is the whole app.'
+        : 'Saved. That one file is the whole app — keep it somewhere safe.',
+    )
   }
 
   async function importBackup(file: File) {
@@ -487,14 +524,19 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
             </div>
           ) : (
             <>
-              <input
-                id="place"
-                type="text"
-                placeholder="Tadcaster"
-                autoComplete="off"
-                value={placeQuery}
-                onChange={(e) => setPlaceQuery(e.target.value)}
-              />
+              {/* In a field of its own so it is the same box as every other
+                  one: a bare input gets the browser's 13px, which an iPhone
+                  zooms into. */}
+              <div className="field">
+                <input
+                  id="place"
+                  type="text"
+                  placeholder="Tadcaster"
+                  autoComplete="off"
+                  value={placeQuery}
+                  onChange={(e) => setPlaceQuery(e.target.value)}
+                />
+              </div>
               <div className="btn-row">
                 <button
                   type="button"
@@ -795,11 +837,29 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
       </section>
 
       <section className="card">
-        <div className="card-head"><h2>About</h2></div>
+        <div className="card-head">
+          <h2>About</h2>
+          {installed && <span className="badge good">on the home screen</span>}
+        </div>
         <p className="help" style={{ marginTop: 0 }}>
-          Tally v1 — till reconciliation for one pub. Add it to the home screen and it opens like any other app,
-          with or without a signal.
+          Tally v1 — till reconciliation for one pub. Everything is on this phone, so it works behind the
+          bar with no signal and nothing goes anywhere near a server.
         </p>
+        {installed ? (
+          <p className="help">
+            This is the installed app rather than a page in the browser, which is how it should be: it
+            opens straight to Tonight, and the phone will not clear its records.
+          </p>
+        ) : (
+          <p className="help">
+            <strong>Put it on the home screen.</strong>{' '}
+            {phone === 'ios'
+              ? 'Tap the share button at the bottom of Safari — the square with the arrow out of it — then “Add to Home Screen”. It then opens like any other app, and Safari stops clearing the records after a week of not looking at them.'
+              : phone === 'android'
+                ? 'Tap the three dots at the top right of Chrome, then “Install app” or “Add to home screen”. It then opens like any other app, with or without a signal.'
+                : 'In Chrome or Edge the install button sits at the right-hand end of the address bar. On a phone it is in the browser’s own menu — the share button on an iPhone, the three dots on an Android.'}
+          </p>
+        )}
         <div className="alts">
           <button
             type="button"

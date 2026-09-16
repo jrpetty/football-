@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { describeRestored, toCsv, toJson, parseBackup } from '../src/storage/export.ts'
+import { describeRestored, prefersShareSheet, toCsv, toJson, parseBackup } from '../src/storage/export.ts'
 import { emptyDay } from '../src/core/types.ts'
 import type { DayRecord } from '../src/core/types.ts'
 import { GARDENERS_ARMS } from './fixtures/gardenersArms.ts'
@@ -197,4 +197,24 @@ test('carries the void count as well as its value', () => {
   assert.ok(header?.includes('"Voids"') && header?.includes('"Void value"'))
   assert.ok(row?.includes('"12.50"'), 'the value')
   assert.ok(row?.includes('"5"'), 'the no-sale count')
+})
+
+// --- getting a file off the phone --------------------------------------------
+
+test('an iPhone gets the share sheet, because a download link can do nothing there', () => {
+  const iphone = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
+  assert.equal(prefersShareSheet(iphone, 5), true)
+})
+
+test('an iPad does too, even though it calls itself a Macintosh', () => {
+  const ipad = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15'
+  assert.equal(prefersShareSheet(ipad, 5), true, 'a Mac with a touch screen is an iPad')
+  assert.equal(prefersShareSheet(ipad, 0), false, 'a Mac without one is a Mac')
+})
+
+test('everything else downloads, which is what a download is for', () => {
+  const android = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Mobile Safari/537.36'
+  const laptop = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36'
+  assert.equal(prefersShareSheet(android, 5), false)
+  assert.equal(prefersShareSheet(laptop, 0), false)
 })

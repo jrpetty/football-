@@ -167,6 +167,16 @@ body {
 
 ::selection { background: color-mix(in srgb, var(--accent) 30%, transparent); }
 
+/* Every box in the app, whatever else is done to it: 16px at least.
+   An iPhone zooms the whole page in when a box smaller than that is tapped,
+   and does not zoom back out afterwards — one unstyled input is enough to
+   leave her pinching her way around a screen she was in the middle of using.
+   A floor rather than a look: the specific rules below still set their own. */
+input, select, textarea, button {
+  font-family: inherit;
+  font-size: 16px;
+}
+
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
@@ -877,7 +887,10 @@ input[type='checkbox'], input[type='radio'] { accent-color: var(--accent); }
 .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
 
 .chip {
-  min-height: 40px;
+  /* 44, which is the size of a thumb. At 40 it lands at 39-and-a-bit once the
+     screen has scaled it, and a filter that needs two goes is worse than one
+     that takes four more pixels. */
+  min-height: 44px;
   padding: 0 14px;
   border-radius: 999px;
   border: 1px solid var(--line);
@@ -1271,7 +1284,9 @@ table.data.crew th[scope='row'] { white-space: nowrap; }
 .pour-each { display: inline-flex; align-items: baseline; gap: 6px; justify-content: flex-end; }
 .pour-each input {
   font: inherit;
-  width: 64px;
+  font-size: 16px;
+  width: 68px;
+  min-height: 40px;
   text-align: right;
   padding: 5px 8px;
   border-radius: 8px;
@@ -1283,7 +1298,9 @@ table.data.crew th[scope='row'] { white-space: nowrap; }
 .stock-line-row select,
 .stock-line-row input {
   font: inherit;
-  font-size: 15px;
+  /* 16px, like every other box in the app: an iPhone zooms the whole page in
+     when a box smaller than that is tapped, and never zooms back out. */
+  font-size: 16px;
   min-height: 46px;
   padding: 6px 10px;
   border-radius: 10px;
@@ -1423,8 +1440,10 @@ tr.item-row { cursor: pointer; }
   font: inherit;
   background: none;
   border: 0;
-  padding: 0;
-  min-height: 0;
+  /* Padded to a thumb's worth of row even where the name is one short line:
+     these sit in a dense table, and a 19px tap target is a miss. */
+  padding: 10px 0;
+  min-height: 42px;
   color: inherit;
   text-align: left;
   text-decoration: underline;
