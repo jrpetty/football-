@@ -54,10 +54,10 @@ import { CashCount } from '../components/CashCount.tsx'
 import { splitDrawer, type Tally } from '../core/cash.ts'
 
 /** What each line counted in millilitres pours, so a count reads back in shots. */
-function measuresFrom(config: { items: StockItem[]; pours: Pour[]; mlPerShot: number } | null): Map<string, Measure> {
+function measuresFrom(config: { items: StockItem[]; pours: Pour[] } | null): Map<string, Measure> {
   const out = new Map<string, Measure>()
   for (const item of config?.items ?? []) {
-    const m = measureOf(item, config?.pours ?? [], config?.mlPerShot ?? 30)
+    const m = measureOf(item, config?.pours ?? [])
     if (m) out.set(item.id, m)
   }
   return out

@@ -383,7 +383,7 @@ test('a barrel is the same barrel however the line is counted', () => {
 // --- the shots, worked out of the millilitres ---------------------------------
 
 test('a count in millilitres reads back as the shots it pours', () => {
-  const m = measureOf(vodka, pours, 30)
+  const m = measureOf(vodka, pours)
   assert.deepEqual(m, { ml: 30, name: 'shot' })
   assert.equal(inMeasures(350, m!), '11.7 shots')
   assert.equal(inMeasures(30, m!), '1 shot')
@@ -397,20 +397,22 @@ test('the measure comes off what the till actually pours, not off a guess', () =
     { itemCode: 'b', itemName: '175ML ROSE', stockItemId: 'rose', baseUnits: 175 },
     { itemCode: 'c', itemName: '175ML ROSE LARGE', stockItemId: 'rose', baseUnits: 175 },
   ]
-  assert.deepEqual(measureOf(rose, wine, 30), { ml: 175, name: 'glass' }, 'the size it pours most often')
+  assert.deepEqual(measureOf(rose, wine), { ml: 175, name: 'glass' }, 'the size it pours most often')
   assert.equal(inMeasures(750, { ml: 175, name: 'glass' }), '4.3 glasses', 'a bottle is four glasses and a drop')
 })
 
-test('a line nothing has been sold off yet falls back to the house measure', () => {
-  const gin: StockItem = { id: 'gin', name: 'Gin', ...servingOf('ml') }
-  assert.deepEqual(measureOf(gin, [], 25), { ml: 25, name: 'shot' })
-  assert.deepEqual(measureOf(gin, [], 35), { ml: 35, name: 'shot' })
+test('a line the till has never sold stays in millilitres', () => {
+  // Reading a bottle of red back as shots, because the house pours 30ml of
+  // spirits, is a confident answer to a question nobody asked.
+  const red: StockItem = { id: 'red', name: 'Red wine', ...servingOf('ml') }
+  assert.equal(measureOf(red, []), null)
+  assert.equal(measureOf(red, [{ itemCode: 'x', itemName: 'CORKAGE', stockItemId: 'other', baseUnits: 175 }]), null)
 })
 
 test('nothing already counted in serves needs converting', () => {
-  assert.equal(measureOf(taddy, pours, 30), null, 'a pint is a pint')
+  assert.equal(measureOf(taddy, pours), null, 'a pint is a pint')
   const crisps: StockItem = { id: 'c', name: 'Crisps', ...servingOf('unit') }
-  assert.equal(measureOf(crisps, pours, 30), null)
+  assert.equal(measureOf(crisps, pours), null)
 })
 
 test('a measure is named by its size, the way the bar names it', () => {

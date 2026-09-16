@@ -206,6 +206,36 @@ const hasDate = (row: unknown): boolean =>
  * being malformed costs that section rather than the whole restore. Only a file
  * that is not a Tally backup at all is rejected outright.
  */
+/**
+ * A cellar restored onto a cellar, merged rather than swapped.
+ *
+ * Everything else in a restore adds to what is already there — that is the
+ * promise on the button — and the cellar has to behave the same way. A file
+ * carrying six lines must not take the other twenty away, and above all must
+ * not take the pours away: those are what tell the till what to subtract, and
+ * losing them is silent. So a line the file names replaces what the file says
+ * about that line and leaves the rest of it alone, which means a file with no
+ * costs in it cannot wipe the costs.
+ *
+ * The house measure is only taken from the file when there is no cellar yet:
+ * restoring a whole backup onto an empty app should bring it, and merging a
+ * few lines into a working cellar should not quietly re-pour every spirit.
+ */
+export function mergeStockConfig(current: StockConfig, incoming: StockConfig): StockConfig {
+  const items = new Map(current.items.map((i) => [i.id, i]))
+  for (const item of incoming.items) {
+    const existing = items.get(item.id)
+    items.set(item.id, existing ? { ...existing, ...item } : item)
+  }
+  const pours = new Map(current.pours.map((p) => [p.itemCode, p]))
+  for (const pour of incoming.pours) pours.set(pour.itemCode, pour)
+  return {
+    items: [...items.values()].sort((a, b) => a.name.localeCompare(b.name)),
+    pours: [...pours.values()],
+    mlPerShot: current.items.length === 0 ? incoming.mlPerShot : current.mlPerShot,
+  }
+}
+
 export function parseBackup(text: string): Restored {
   const parsed: unknown = JSON.parse(text)
   if (!parsed || typeof parsed !== 'object') throw new Error('That file is not a Tally backup.')

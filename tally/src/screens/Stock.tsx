@@ -31,7 +31,6 @@ import {
   pourUsage,
   measureOf,
   inMeasures,
-  DEFAULT_ML_PER_SHOT,
   type Measure,
   presetBaseUnits,
   presetsFor,
@@ -419,7 +418,7 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
   const measures = useMemo(() => {
     const out = new Map<string, Measure>()
     for (const item of config?.items ?? []) {
-      const m = measureOf(item, config?.pours ?? [], config?.mlPerShot ?? DEFAULT_ML_PER_SHOT)
+      const m = measureOf(item, config?.pours ?? [])
       if (m) out.set(item.id, m)
     }
     return out
@@ -987,9 +986,9 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
             </span>
             <p className="help">
               What a single spirit goes out as. Nothing in the cellar is held in shots, so changing
-              it moves no figure: it is where a newly guessed spirit line starts, and what a count in
-              millilitres is read back as on a line nothing has been sold off yet. A line the till
-              has sold reads back in whatever it takes off it, in the table below.
+              it moves no figure: it is where a line newly guessed off the till starts. What a count
+              in millilitres is read back as comes from whatever the till takes off that line, in
+              the table below — so a line the till has never sold stays in millilitres.
             </p>
           </div>
           <button type="button" onClick={() => void buildFromTill()}>

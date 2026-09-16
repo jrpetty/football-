@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { describeRestored, prefersShareSheet, toCsv, toJson, parseBackup } from '../src/storage/export.ts'
+import { describeRestored, mergeStockConfig, prefersShareSheet, toCsv, toJson, parseBackup } from '../src/storage/export.ts'
+import type { Pour, StockItem } from '../src/core/stock.ts'
 import { emptyDay } from '../src/core/types.ts'
 import type { DayRecord } from '../src/core/types.ts'
 import { GARDENERS_ARMS } from './fixtures/gardenersArms.ts'
@@ -217,4 +218,43 @@ test('everything else downloads, which is what a download is for', () => {
   const laptop = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36'
   assert.equal(prefersShareSheet(android, 5), false)
   assert.equal(prefersShareSheet(laptop, 0), false)
+})
+
+// --- a cellar restored onto a cellar ------------------------------------------
+
+const beer: StockItem = {
+  id: 'taddy-lager', name: 'Taddy Lager', kind: 'liquid', servingBaseUnits: 568, servingName: 'pint',
+  container: { name: 'firkin', baseUnits: 72 * 568 },
+  cost: { pence: 9500, baseUnits: 72 * 568 },
+}
+const gin: StockItem = { id: 'gin', name: 'Gin', kind: 'liquid', servingBaseUnits: 1, servingName: 'ml' }
+const pour: Pour = { itemCode: 'P1', itemName: 'PINT TADDY LAGER', stockItemId: 'taddy-lager', baseUnits: 568 }
+
+test('a file with a few lines in it does not take the rest of the cellar away', () => {
+  const current = { items: [beer, gin], pours: [pour], mlPerShot: 25 }
+  const cherry: StockItem = { id: 'cherry', name: 'Cherry', kind: 'count', servingBaseUnits: 1, servingName: 'bottle' }
+  const merged = mergeStockConfig(current, { items: [cherry], pours: [], mlPerShot: 30 })
+  assert.deepEqual(merged.items.map((i) => i.id).sort(), ['cherry', 'gin', 'taddy-lager'])
+  assert.deepEqual(merged.pours, [pour], 'the till still knows what a pint takes off')
+  assert.equal(merged.mlPerShot, 25, 'and the house measure is hers, not the file’s')
+})
+
+test('a line the file names keeps what the file says nothing about', () => {
+  // The whole point: a stock take carries no costs, and must not wipe them.
+  const current = { items: [beer], pours: [pour], mlPerShot: 30 }
+  const weighed: StockItem = {
+    ...beer, container: { name: 'large keg', baseUnits: 176 * 568, emptyKg: 22.4, fullKg: 123 },
+  }
+  const { cost: _cost, ...costless } = weighed
+  const merged = mergeStockConfig(current, { items: [costless as StockItem], pours: [], mlPerShot: 30 })
+  assert.deepEqual(merged.items[0]?.cost, beer.cost, 'the £95 firkin is still £95')
+  assert.equal(merged.items[0]?.container?.name, 'large keg', 'and the new size took')
+  assert.equal(merged.items[0]?.container?.emptyKg, 22.4)
+})
+
+test('a whole backup onto an empty app brings its own measure', () => {
+  const merged = mergeStockConfig({ items: [], pours: [], mlPerShot: 30 }, { items: [gin], pours: [pour], mlPerShot: 35 })
+  assert.equal(merged.mlPerShot, 35)
+  assert.deepEqual(merged.items, [gin])
+  assert.deepEqual(merged.pours, [pour])
 })

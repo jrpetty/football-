@@ -556,13 +556,17 @@ export function measureName(ml: number): string {
 /**
  * The serve a line counted in millilitres goes out in.
  *
- * Taken from what the till actually takes off it, because that is the pub's
- * own answer rather than a guess: whichever size it pours most often, and the
- * smaller one where two are level. A line nothing has been sold off yet falls
- * back to the house measure. Null for the lines that are already counted in
- * serves — a pint is a pint, and a bottle does not need converting.
+ * Taken from what the till actually takes off it, and from nothing else:
+ * whichever size it pours most often, and the smaller one where two are level.
+ * A line the till has never sold has no measure, and gets no conversion —
+ * reading a bottle of red back as "395.8 shots" because the house pours 30ml
+ * of spirits is a confident answer to a question nobody asked. It gets one the
+ * moment the till has a price on it.
+ *
+ * Null too for the lines already counted in serves: a pint is a pint, and a
+ * bottle off a shelf does not need converting.
  */
-export function measureOf(item: StockItem, pours: readonly Pour[], mlPerShot: number): Measure | null {
+export function measureOf(item: StockItem, pours: readonly Pour[]): Measure | null {
   if (item.kind !== 'liquid' || item.servingBaseUnits !== 1) return null
   const seen = new Map<number, number>()
   for (const p of pours) {
@@ -574,8 +578,7 @@ export function measureOf(item: StockItem, pours: readonly Pour[], mlPerShot: nu
     const bestTimes = best === null ? 0 : (seen.get(best) ?? 0)
     if (best === null || times > bestTimes || (times === bestTimes && ml < best)) best = ml
   }
-  const ml = best ?? Math.round(mlPerShot)
-  return ml > 1 ? { ml, name: measureName(ml) } : null
+  return best !== null && best > 1 ? { ml: best, name: measureName(best) } : null
 }
 
 /** "11.7 shots" — millilitres, as the serves they will go out in. */

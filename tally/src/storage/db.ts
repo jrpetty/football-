@@ -15,6 +15,7 @@
 import type { DayRecord } from '../core/types.ts'
 import type { PriceBookEntry } from '../core/priceBook.ts'
 import { normaliseItems } from '../core/stock.ts'
+import { mergeStockConfig } from './export.ts'
 import type { Delivery, Pour, StockCount, StockItem } from '../core/stock.ts'
 import type { Person, Shift } from '../core/rota.ts'
 import type { DayWeather } from '../core/forecast.ts'
@@ -485,7 +486,9 @@ export async function restoreBackup(bundle: {
 }): Promise<RestoreCounts> {
   for (const day of bundle.days ?? []) await saveDay(day)
   if (bundle.prices && bundle.prices.length > 0) await savePriceBook(bundle.prices)
-  if (bundle.stock) await saveStockConfig(bundle.stock)
+  // Merged, not swapped: a file with six lines in it must not take the other
+  // twenty away, nor the pours that tell the till what to subtract.
+  if (bundle.stock) await saveStockConfig(mergeStockConfig(await loadStockConfig(), bundle.stock))
   for (const delivery of bundle.deliveries ?? []) await saveDelivery(delivery)
   for (const count of bundle.stockCounts ?? []) await saveStockCount(count)
   for (const person of bundle.people ?? []) await savePerson(person)
