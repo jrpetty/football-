@@ -610,6 +610,45 @@ try {
   await page.waitForSelector('.day-card', { timeout: 5000 })
   check('the rota survives a restart', (await page.locator('.day-nobody').count()) === 6)
 
+  console.log('\nThe rota, person by person')
+  // The other way round: pick a person, tap the days they are on, and set the
+  // hours on each of those days. This week — whichever week next week is when
+  // this runs, so the dates come off the chips — has only the copied
+  // Saturday on it so far.
+  await page.click('.chip:has-text("By person")')
+  await page.waitForSelector('.person-week', { timeout: 5000 })
+  check('everyone on the books gets their own week', (await page.locator('.person-week').count()) === 2)
+  const kellyWeek = page.locator('.person-week:has-text("Kelly")')
+  const kellyChips = kellyWeek.locator('.day-chips .chip')
+  const wedDate = ((await kellyChips.nth(2).getAttribute('aria-label')) ?? '').replace('Kelly on ', '')
+  const satDate = ((await kellyChips.nth(5).getAttribute('aria-label')) ?? '').replace('Kelly on ', '')
+  check('the week runs Monday to Sunday, a chip a day', (await kellyChips.count()) === 7 && /^\d{4}-\d\d-\d\d$/.test(wedDate))
+  check('the night she is already on is ticked', (await kellyWeek.locator('.chip[aria-pressed="true"]').count()) === 1)
+  await kellyChips.nth(2).click()
+  await page.waitForTimeout(300)
+  check('tapping a day puts her on it', (await kellyWeek.locator('.chip[aria-pressed="true"]').count()) === 2)
+  check(
+    'at the hours the rota was last set to',
+    (await page.locator(`input[aria-label="Kelly starts on ${wedDate}"]`).inputValue()) === '18:00',
+  )
+  // A lunchtime instead: twelve till three, on that day alone.
+  await page.locator(`input[aria-label="Kelly starts on ${wedDate}"]`).fill('12:00')
+  await page.locator(`input[aria-label="Kelly finishes on ${wedDate}"]`).fill('15:00')
+  await page.waitForTimeout(400)
+  const kellyText = await kellyWeek.innerText()
+  check('the day’s hours are its own', /Wednesday\n[^\n]* · 3h\b/.test(kellyText), kellyText.slice(0, 200))
+  check('and her week is totted up', /2 nights · 8h 30m · £103\.79/.test(kellyText), kellyText.slice(0, 120))
+  check(
+    'the Saturday kept its own hours',
+    (await page.locator(`input[aria-label="Kelly starts on ${satDate}"]`).inputValue()) === '18:00',
+  )
+  // The night view shows the same thing, because it is the same shift.
+  await page.click('.chip:has-text("By night")')
+  await page.waitForSelector('.day-card', { timeout: 5000 })
+  const wedCard = await page.locator('.day-card').nth(2).innerText()
+  check('the night view agrees', wedCard.includes('Kelly') && /3h/.test(wedCard), wedCard.slice(0, 120))
+  check('and Wednesday is no longer empty', (await page.locator('.day-nobody').count()) === 5)
+
   // Back to the week of the seeded night, so the dashboard has a rostered
   // night to report on rather than a rota that never overlaps the trade.
   while ((await page.locator('.week-when strong').innerText()).trim() !== '17 Aug – 23 Aug') {

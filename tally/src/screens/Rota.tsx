@@ -31,6 +31,7 @@ import {
   type Person,
   type Shift,
   type ShiftProposal,
+  shiftCostPence,
 } from '../core/rota.ts'
 import { scanRota } from '../ocr/scanList.ts'
 import { describeZReadError } from '../ocr/scanZRead.ts'
@@ -66,6 +67,8 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
   const [panel, setPanel] = useState<Panel>('week')
   const [monday, setMonday] = useState(() => weekStart(tradingDayKey()))
   const [openDay, setOpenDay] = useState<string | null>(null)
+  /** The week laid out person by person rather than night by night. */
+  const [byPerson, setByPerson] = useState(false)
   /** The hours the night is being rostered at — what a tap puts somebody on for. */
   const [nightHours, setNightHours] = useState<Hours>(DEFAULT_SHIFT)
   /** Shifts whose own time boxes have been asked for, by shift id. */
@@ -191,14 +194,19 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
     if (date !== null) setNightHours(hoursFor(date, shifts))
   }
 
-  async function toggle(date: string, person: Person) {
+  /**
+   * Somebody on or off a night. From the night view they go on at the hours
+   * in the night's box; from the person view, at whatever that night is
+   * already on, or the last hours typed, or six until close.
+   */
+  async function toggle(date: string, person: Person, hours: Hours = nightHours) {
     const id = shiftId(date, person.id)
     const existing = shifts.find((s) => s.id === id)
     if (existing) {
       await deleteShift(id)
       setShifts((all) => all.filter((s) => s.id !== id))
     } else {
-      const shift = shiftAt(person.id, date, nightHours)
+      const shift = shiftAt(person.id, date, hours)
       await saveShift(shift)
       // Functional, so two chips tapped in quick succession both land: each
       // tap waits on its own write, and the second must not overwrite the
@@ -391,6 +399,24 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
                 </button>
               )}
             </div>
+            {/* The same week two ways round: a night and who is on it, or a
+                person and which nights they are on. Same shifts underneath. */}
+            <div className="chip-row rota-view" role="group" aria-label="How the week is laid out">
+              <button type="button" className="chip" aria-pressed={!byPerson} onClick={() => setByPerson(false)}>
+                By night
+              </button>
+              <button
+                type="button"
+                className="chip"
+                aria-pressed={byPerson}
+                onClick={() => {
+                  setByPerson(true)
+                  openNight(null)
+                }}
+              >
+                By person
+              </button>
+            </div>
             <input
               ref={photoRef}
               type="file"
@@ -498,7 +524,7 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
             </section>
           )}
 
-          {days.map((date) => {
+          {!byPerson && days.map((date) => {
             const crew = crewFor(date, shifts, people)
             const isOpen = openDay === date
             const today = date === tradingDayKey()
@@ -658,6 +684,83 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
               </section>
             )
           })}
+
+          {/* --- the week, person by person -------------------------------- */}
+          {byPerson &&
+            active.map((person) => {
+              const mine = days
+                .map((date) => shifts.find((s) => s.id === shiftId(date, person.id)))
+                .filter((s): s is Shift => s !== undefined)
+              const minutes = mine.reduce((sum, s) => sum + shiftMinutes(s), 0)
+              const cost = person.ratePencePerHour
+                ? mine.reduce((sum, s) => sum + (shiftCostPence(s, person) ?? 0), 0)
+                : null
+              return (
+                <section className="card person-week" key={person.id}>
+                  <div className="card-head">
+                    <h2>
+                      <span className="legend-dot" style={{ background: seriesVar(person.slot) }} aria-hidden="true" />
+                      {person.name}
+                    </h2>
+                    <span className="hint">
+                      {mine.length === 0
+                        ? 'not on this week'
+                        : `${mine.length} ${mine.length === 1 ? 'night' : 'nights'} · ${formatHours(minutes)}${cost !== null ? ` · ${formatMoney(cost)}` : ''}`}
+                    </span>
+                  </div>
+                  <div className="day-chips">
+                    {days.map((date) => {
+                      const on = shifts.some((s) => s.id === shiftId(date, person.id))
+                      return (
+                        <button
+                          key={date}
+                          type="button"
+                          className="chip"
+                          aria-pressed={on}
+                          aria-label={`${person.name} on ${date}`}
+                          onClick={() => void toggle(date, person, hoursFor(date, shifts))}
+                        >
+                          {weekdayOf(date).slice(0, 3)}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {mine.map((s) => (
+                    <div className="zrow" key={s.id}>
+                      <span className="zname">
+                        {weekdayOf(s.date)}
+                        <small>
+                          {formatShort(s.date).replace(/^\w+, /, '')} · {formatHours(shiftMinutes(s))}
+                        </small>
+                      </span>
+                      <input
+                        type="time"
+                        aria-label={`${person.name} starts on ${s.date}`}
+                        value={formatTime(s.startMin)}
+                        onChange={(e) => {
+                          const min = parseTime(e.target.value)
+                          if (min !== null) void setHours(s, { startMin: min })
+                        }}
+                      />
+                      <input
+                        type="time"
+                        aria-label={`${person.name} finishes on ${s.date}`}
+                        value={formatTime(s.endMin)}
+                        onChange={(e) => {
+                          const min = parseTime(e.target.value)
+                          if (min !== null) void setHours(s, { endMin: min })
+                        }}
+                      />
+                    </div>
+                  ))}
+                  <p className="note" style={{ marginBottom: 0 }}>
+                    {mine.length === 0
+                      ? `Tap the days ${person.name} is working. Each goes on at that night’s hours, which can be changed underneath.`
+                      : 'Each day’s hours are its own. Change them here and the night shows the same.'}
+                  </p>
+                </section>
+              )
+            })}
 
           <section className="card">
             <div className="card-head">

@@ -1146,6 +1146,14 @@ table.data.crew th[scope='row'] { white-space: nowrap; }
    so there is a full card width to spend on the pair. */
 .zrow input[type='time'] { width: 136px; padding: 6px 8px; }
 
+/* ---- the week, person by person ------------------------------------------ */
+
+.rota-view { margin-top: 10px; }
+/* Seven day chips sharing one line, so a person's week is read at a glance. */
+.day-chips { display: flex; gap: 6px; margin-bottom: 4px; }
+.day-chips .chip { flex: 1 1 0; min-width: 0; padding: 0 2px; font-size: 13px; text-align: center; }
+.person-week h2 { display: inline-flex; align-items: center; gap: 8px; }
+
 /* A person's row on the records list — a whole-width tap into their profile. */
 .person-row {
   width: 100%;
