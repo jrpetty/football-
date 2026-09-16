@@ -41,7 +41,7 @@ for (const scheme of ['dark', 'light'] as const) {
     hasTouch: true,
     colorScheme: scheme,
   })
-  await ctx.addInitScript(() => { try { localStorage.setItem('tally.engine', 'off') } catch {} })
+  await ctx.addInitScript(() => { try { localStorage.setItem('tally.engine', 'off'); localStorage.setItem('tally.seeded', 'cellar-2026-09-16') } catch {} })
   const page = await ctx.newPage()
   await page.goto(base, { waitUntil: 'networkidle' })
   await page.evaluate(async (day) => {

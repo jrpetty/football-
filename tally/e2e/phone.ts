@@ -145,6 +145,9 @@ try {
     await context.addInitScript(() => {
       try {
         localStorage.setItem('tally.engine', 'off')
+        // The cellar stock take is already in, as far as these tests are
+        // concerned: they build their own cellar and judge their own figures.
+        localStorage.setItem('tally.seeded', 'cellar-2026-09-16')
       } catch {
         /* ignore */
       }

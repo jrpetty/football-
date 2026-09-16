@@ -91,6 +91,9 @@ const context = await browser.newContext({
 await context.addInitScript(() => {
   try {
     localStorage.setItem('tally.engine', 'off')
+    // The cellar stock take is already in, as far as these tests are
+    // concerned: they build their own cellar and judge their own figures.
+    localStorage.setItem('tally.seeded', 'cellar-2026-09-16')
   } catch {
     /* ignore */
   }
@@ -357,6 +360,9 @@ try {
   await clean.addInitScript(() => {
     try {
       localStorage.setItem('tally.engine', 'off')
+      // The cellar stock take is already in, as far as these tests are
+      // concerned: they build their own cellar and judge their own figures.
+      localStorage.setItem('tally.seeded', 'cellar-2026-09-16')
     } catch {
       /* ignore */
     }
@@ -1369,6 +1375,9 @@ try {
   await fresh.addInitScript(() => {
     try {
       localStorage.setItem('tally.engine', 'off')
+      // The cellar stock take is already in, as far as these tests are
+      // concerned: they build their own cellar and judge their own figures.
+      localStorage.setItem('tally.seeded', 'cellar-2026-09-16')
     } catch {
       /* ignore */
     }
@@ -1418,6 +1427,9 @@ try {
   await older.addInitScript(() => {
     try {
       localStorage.setItem('tally.engine', 'off')
+      // The cellar stock take is already in, as far as these tests are
+      // concerned: they build their own cellar and judge their own figures.
+      localStorage.setItem('tally.seeded', 'cellar-2026-09-16')
     } catch {
       /* ignore */
     }
@@ -1553,6 +1565,51 @@ try {
     'and so are the settings',
     (await page.locator('.main').innerText()).includes('Start again'),
   )
+
+  console.log('\nThe cellar it opens with')
+  // Every other context above tells the app the stock take is already in, so
+  // that they can build and judge their own cellar. This one does not: a copy
+  // of the app opened for the first time has the pub's own count in it, with
+  // nothing to go and find.
+  const first = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+  await first.addInitScript(() => {
+    try {
+      localStorage.setItem('tally.engine', 'off')
+    } catch {
+      /* ignore */
+    }
+  })
+  const firstRun = await first.newPage()
+  firstRun.on('pageerror', (err) => pageErrors.push(String(err)))
+  await firstRun.goto(base, { waitUntil: 'networkidle' })
+  await firstRun.click('button:has-text("Cellar")')
+  await firstRun.waitForTimeout(900)
+  const opened = await firstRun.locator('.main').innerText()
+  check('a new copy opens with the stock take already in it', /Taddy Lager/.test(opened), opened.slice(0, 160))
+  check('the casks, as they were counted', /1056 pints/.test(opened) && /218\.2 pints/.test(opened), opened.slice(0, 400))
+  check('the wine, to the millilitre', /55875 ml/.test(opened))
+  check('and the bottles off the shelf', /107 units/.test(opened) && /46 bottles/.test(opened))
+  check(
+    'the spirits say they were not counted, rather than none',
+    /not counted/.test(opened) || !/Vodka/.test(opened),
+    'a line nobody counted must never read as zero',
+  )
+  // And it does not keep re-counting the cellar every time it is opened.
+  await firstRun.click('button:has-text("Cellar")')
+  await firstRun.click('.chip:has-text("Stock take")')
+  await firstRun.waitForSelector('input[aria-label="Taddy Lager large kegs counted"]', { timeout: 5000 })
+  await firstRun.fill('input[aria-label="Taddy Lager large kegs counted"]', '3')
+  await firstRun.click('button:has-text("Save the stock take")')
+  await firstRun.waitForTimeout(600)
+  await firstRun.reload({ waitUntil: 'networkidle' })
+  await firstRun.click('button:has-text("Cellar")')
+  await firstRun.waitForTimeout(900)
+  check(
+    'and re-opening it does not count the cellar again',
+    /528 pints/.test(await firstRun.locator('.main').innerText()),
+    'three kegs counted by hand must survive the next launch',
+  )
+  await first.close()
 
   check('nothing threw along the way', pageErrors.length === 0, pageErrors.join('\n        '))
 } finally {

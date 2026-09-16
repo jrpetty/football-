@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './App.tsx'
 import { requestPersistence } from './storage/db.ts'
+import { seedOnce } from './storage/seed.ts'
 // The display face, shipped with the app rather than fetched from a fonts
 // host: the till is counted at midnight on pub wifi, and the artifact build
 // must carry everything it needs.
@@ -9,7 +10,14 @@ import '@fontsource-variable/fraunces/opsz.css'
 import './styles.css'
 
 const root = document.getElementById('root')
-if (root) createRoot(root).render(<StrictMode><App /></StrictMode>)
+
+// The cellar stock take, put in before the first screen reads anything, so
+// nothing has to be loaded by hand and no screen renders a cellar it is about
+// to be given. It runs once and merges, so it cannot overwrite a working
+// cellar or run twice.
+void seedOnce().finally(() => {
+  if (root) createRoot(root).render(<StrictMode><App /></StrictMode>)
+})
 
 // Ask the browser not to evict a year of takings under storage pressure. It is
 // allowed to refuse, and often does until the app has been used a few times,
