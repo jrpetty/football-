@@ -1154,6 +1154,17 @@ table.data.crew th[scope='row'] { white-space: nowrap; }
 .day-chips .chip { flex: 1 1 0; min-width: 0; padding: 0 2px; font-size: 13px; text-align: center; }
 .person-week h2 { display: inline-flex; align-items: center; gap: 8px; }
 
+/* The only button in the app that destroys anything. Red, and never the
+   primary: it sits beside "leave it alone" and has to look like the graver of
+   the two without shouting from across the screen. */
+.btn-wipe {
+  border-color: color-mix(in srgb, var(--bad) 55%, var(--line));
+  background: var(--bad-bg);
+  color: var(--bad);
+  font-weight: 650;
+}
+.btn-wipe:disabled { opacity: 0.6; }
+
 /* A person's row on the records list — a whole-width tap into their profile. */
 .person-row {
   width: 100%;

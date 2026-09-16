@@ -388,6 +388,71 @@ export async function collectBackup(): Promise<{
   return { days, prices, stock, deliveries, stockCounts, people, shifts, weather }
 }
 
+/**
+ * Every store there is, so a wipe cannot quietly miss one added later.
+ *
+ * Listed once here rather than at each call site: the last thing a "clear
+ * everything" button should do is leave something behind.
+ */
+const ALL_STORES = [DAYS, PHOTOS, PRICES, STOCK, DELIVERIES, COUNTS, PEOPLE, SHIFTS, WEATHER, DIGEST]
+
+export interface StoredCounts {
+  days: number
+  photos: number
+  cellarLines: number
+  deliveries: number
+  stockCounts: number
+  people: number
+  shifts: number
+  prices: number
+}
+
+/** What is on this device now, for telling somebody what they are about to lose. */
+export async function countEverything(): Promise<StoredCounts> {
+  const [days, prices, stock, deliveries, stockCounts, people, shifts, photos] = await Promise.all([
+    run<number>(DAYS, 'readonly', (s) => s.count()),
+    loadPriceBook(),
+    loadStockConfig(),
+    run<number>(DELIVERIES, 'readonly', (s) => s.count()),
+    run<number>(COUNTS, 'readonly', (s) => s.count()),
+    run<number>(PEOPLE, 'readonly', (s) => s.count()),
+    run<number>(SHIFTS, 'readonly', (s) => s.count()),
+    run<number>(PHOTOS, 'readonly', (s) => s.count()),
+  ])
+  return {
+    days,
+    photos,
+    cellarLines: stock.items.length,
+    deliveries,
+    stockCounts,
+    people,
+    shifts,
+    prices: prices.length,
+  }
+}
+
+/**
+ * Empty every store: the nights, the photographs, the prices, the cellar, the
+ * deliveries, the counts, the people, the rota, the weather and the digest.
+ *
+ * One transaction across all of them, so it either all goes or none of it does
+ * — a half-cleared app, with a cellar but no nights to judge it against, would
+ * be worse than either. Settings and the API key live outside the database and
+ * are deliberately left alone.
+ */
+export async function clearEverything(): Promise<StoredCounts> {
+  const before = await countEverything()
+  const db = await open()
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(ALL_STORES, 'readwrite')
+    for (const name of ALL_STORES) tx.objectStore(name).clear()
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => reject(tx.error ?? new Error('The database would not clear.'))
+    tx.onabort = () => reject(tx.error ?? new Error('Clearing was aborted.'))
+  })
+  return before
+}
+
 export interface RestoreCounts {
   days: number
   prices: number

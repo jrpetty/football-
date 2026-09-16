@@ -22,6 +22,9 @@ import {
   requestPersistence,
   collectBackup,
   restoreBackup,
+  clearEverything,
+  countEverything,
+  type StoredCounts,
 } from '../storage/db.ts'
 import { dayStats } from '../core/analytics.ts'
 import { addDays, tradingDayKey } from '../core/date.ts'
@@ -67,6 +70,9 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
   const [keyState, setKeyState] = useState<KeyCheck | null>(null)
   const [checking, setChecking] = useState(false)
   const [restoring, setRestoring] = useState(false)
+  /** What is stored, counted when the wipe is asked for rather than kept fresh. */
+  const [wiping, setWiping] = useState<StoredCounts | null>(null)
+  const [wiped, setWiped] = useState(false)
   const [dragging, setDragging] = useState(false)
   const [floatTextSetting, setFloatTextSetting] = useState(() => {
     const f = loadSettings().standingFloatPence
@@ -222,6 +228,31 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
    * version of this saved only the nights, which meant moving to a new copy of
    * the app quietly threw most of the work away.
    */
+  /**
+   * What clearing would take, gathered before anything is offered.
+   *
+   * Counted rather than described in general terms, because "this cannot be
+   * undone" means nothing next to "seventeen nights and a rota".
+   */
+  async function askToClear() {
+    setWiping(await countEverything().catch(() => null))
+  }
+
+  /** The wipe itself. The reload is the point: no screen is left holding a
+      figure that no longer exists anywhere. */
+  async function clearAll() {
+    setWiped(true)
+    try {
+      const gone = await clearEverything()
+      say(`Cleared — ${gone.days} ${gone.days === 1 ? 'night' : 'nights'} and everything else. Starting again…`)
+      onChanged()
+      setTimeout(() => window.location.reload(), 900)
+    } catch (err) {
+      setWiped(false)
+      say(err instanceof Error ? err.message : 'Nothing was cleared.')
+    }
+  }
+
   async function exportBackup() {
     const bundle = await collectBackup()
     if (bundle.days.length === 0 && bundle.stock.items.length === 0 && bundle.people.length === 0) {
@@ -714,6 +745,52 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
             Tally is using about {megabytes} MB on this device.
             {usage && usage.quotaBytes > 0 && ` There is room for roughly ${Math.round(usage.quotaBytes / 1_048_576)} MB.`}
           </p>
+        )}
+      </section>
+
+      <section className="card">
+        <div className="card-head">
+          <h2>Start again</h2>
+          <span className="hint">this device only</span>
+        </div>
+        <p className="help" style={{ marginTop: 0 }}>
+          Empties the app: every night, the photographs, the price list, the cellar with its counts
+          and deliveries, the rota and everyone on it. Nothing is anywhere else, so there is nothing
+          to get it back from afterwards — save a copy first if there is any doubt. The settings and
+          the API key stay, so it is ready to use straight away.
+        </p>
+        {wiping === null ? (
+          <div className="alts" style={{ marginTop: 0 }}>
+            <button type="button" className="btn-small" data-testid="start-again" onClick={() => void askToClear()}>
+              Clear everything on this device
+            </button>
+          </div>
+        ) : (
+          <>
+            <p className="note bad" style={{ marginTop: 0 }} role="status">
+              This will delete {wiping.days} {wiping.days === 1 ? 'night' : 'nights'},{' '}
+              {wiping.cellarLines} cellar {wiping.cellarLines === 1 ? 'line' : 'lines'},{' '}
+              {wiping.stockCounts} stock {wiping.stockCounts === 1 ? 'take' : 'takes'},{' '}
+              {wiping.deliveries} {wiping.deliveries === 1 ? 'delivery' : 'deliveries'},{' '}
+              {wiping.prices} {wiping.prices === 1 ? 'price' : 'prices'}, {wiping.people}{' '}
+              {wiping.people === 1 ? 'person' : 'people'} with {wiping.shifts}{' '}
+              {wiping.shifts === 1 ? 'shift' : 'shifts'}, and {wiping.photos}{' '}
+              {wiping.photos === 1 ? 'photograph' : 'photographs'}. It cannot be undone.
+            </p>
+            <div className="btn-row" style={{ marginBottom: 10 }}>
+              <button type="button" className="btn-primary" onClick={() => void exportBackup()}>
+                Save a copy first
+              </button>
+            </div>
+            <div className="alts" style={{ marginTop: 0 }}>
+              <button type="button" className="btn-wipe" data-testid="confirm-clear" disabled={wiped} onClick={() => void clearAll()}>
+                {wiped ? 'Clearing…' : 'Yes, clear it all'}
+              </button>
+              <button type="button" className="btn-small" onClick={() => setWiping(null)}>
+                Leave it alone
+              </button>
+            </div>
+          </>
         )}
       </section>
 

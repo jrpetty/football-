@@ -1490,6 +1490,70 @@ try {
   check('read back as the shots it pours', /46\.7 shots/.test(oldLevels), oldLevels.slice(0, 200))
   await older.close()
 
+  console.log('\nStarting again')
+  // The one button in the app that destroys anything. It has to say what will
+  // go, offer a copy first, and take a second tap — this is the last thing
+  // anybody does by accident.
+  await page.click('button:has-text("Settings")')
+  await page.waitForSelector('[data-testid="start-again"]', { timeout: 5000 })
+  // A key in the box, to prove the wipe takes the records and not the setup.
+  await page.fill('#apiKey', 'sk-ant-not-a-real-key-for-testing-only')
+  await page.click('button:has-text("Save key")')
+  await page.waitForTimeout(250)
+  check('clearing is two taps, not one', (await page.locator('[data-testid="confirm-clear"]').count()) === 0)
+  await page.click('[data-testid="start-again"]')
+  await page.waitForSelector('[data-testid="confirm-clear"]', { timeout: 5000 })
+  const warning = await page.locator('.note.bad').first().innerText()
+  check(
+    'and says exactly what it will take, counted',
+    /\d+ nights/.test(warning) && /cellar lines/.test(warning) && /cannot be undone/.test(warning),
+    warning,
+  )
+  check('with a copy offered first', (await page.locator('button:has-text("Save a copy first")').count()) === 1)
+
+  // Thinking better of it leaves everything exactly where it was.
+  await page.click('button:has-text("Leave it alone")')
+  await page.waitForTimeout(200)
+  await page.click('button:has-text("Nights")')
+  await page.waitForSelector('.day-row', { timeout: 5000 })
+  check('backing out changes nothing', (await page.locator('.day-row').count()) >= 1)
+
+  await page.click('button:has-text("Settings")')
+  await page.waitForSelector('[data-testid="start-again"]', { timeout: 5000 })
+  await page.click('[data-testid="start-again"]')
+  await page.waitForSelector('[data-testid="confirm-clear"]', { timeout: 5000 })
+  await page.click('[data-testid="confirm-clear"]')
+  // It reloads itself once it is done, so no screen is left holding a figure
+  // that no longer exists anywhere.
+  await page.waitForTimeout(2600)
+  await page.click('button:has-text("Nights")')
+  await page.waitForTimeout(600)
+  check('afterwards there are no nights', (await page.locator('.day-row').count()) === 0)
+  await page.click('button:has-text("Cellar")')
+  await page.waitForTimeout(600)
+  check(
+    'and no cellar',
+    (await page.locator('button:has-text("Build the cellar from the till")').count()) === 1,
+    (await page.locator('.main').innerText()).slice(0, 120),
+  )
+  await page.click('button:has-text("Rota")')
+  await page.waitForTimeout(600)
+  check(
+    'and nobody on the books',
+    (await page.locator('button:has-text("Add the first person")').count()) === 1,
+  )
+  await page.click('button:has-text("Settings")')
+  await page.waitForSelector('#apiKey', { timeout: 5000 })
+  check(
+    'but the key is kept, because a key is not data',
+    (await page.inputValue('#apiKey')).startsWith('sk-ant-'),
+    `key box holds "${await page.inputValue('#apiKey')}"`,
+  )
+  check(
+    'and so are the settings',
+    (await page.locator('.main').innerText()).includes('Start again'),
+  )
+
   check('nothing threw along the way', pageErrors.length === 0, pageErrors.join('\n        '))
 } finally {
   await browser.close()
