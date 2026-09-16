@@ -108,7 +108,12 @@ export function KegCalculator({ items, onKeep }: Props) {
 
   const same = !!weights && !!stored && stored.emptyKg === weights.emptyKg && stored.fullKg === weights.fullKg
   const sameSize = line?.container ? lines.filter((l) => l.container?.name === line.container?.name) : []
-  const newSize = line && !line.container && perContainer > 0 ? { name: kegNameFor(perContainer), baseUnits: holdsBaseUnits } : undefined
+  // A keg is named by the beer in it, not by the line's own unit: 40,896ml is
+  // a firkin whether the line counts pints or millilitres.
+  const newSize =
+    line && !line.container && perContainer > 0
+      ? { name: kegNameFor(Math.round(holdsBaseUnits / ML_PER_PINT)), baseUnits: holdsBaseUnits }
+      : undefined
 
   async function keep(ids: string[]) {
     if (!weights || !onKeep || !line) return

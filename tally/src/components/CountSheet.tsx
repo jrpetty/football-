@@ -12,7 +12,15 @@
 // made of the reading, and the loose box stays hers to overrule.
 // ---------------------------------------------------------------------------
 
-import { kegReading, pluralServing, weighable, type StockItem } from '../core/stock.ts'
+import {
+  formatServings,
+  inMeasures,
+  kegReading,
+  pluralServing,
+  weighable,
+  type Measure,
+  type StockItem,
+} from '../core/stock.ts'
 
 interface Props {
   items: readonly StockItem[]
@@ -22,9 +30,15 @@ interface Props {
   word: string
   /** Whether the scales boxes are offered. A delivery is not weighed. */
   scales?: boolean
+  /**
+   * The serve each line counted in millilitres pours, so what is typed is
+   * read back in shots as it is typed. Nobody types a shot; the app works
+   * them out of the millilitres.
+   */
+  measures?: ReadonlyMap<string, Measure>
 }
 
-export function CountSheet({ items, drafts, onChange, word, scales = false }: Props) {
+export function CountSheet({ items, drafts, onChange, word, scales = false, measures }: Props) {
   return (
     <>
       {items.map((item) => {
@@ -34,13 +48,24 @@ export function CountSheet({ items, drafts, onChange, word, scales = false }: Pr
         const weighed = scales && counted && weighable(item)
         const kgText = drafts[`${item.id}:kg`] ?? ''
         const reading = weighed && kgText.trim() !== '' ? kegReading(item, Number(kgText)) : null
+        // What has been typed so far, read back in the serves it pours.
+        const measure = measures?.get(item.id)
+        const typed = Number(drafts[item.id] ?? '')
+        const full = Number(drafts[`${item.id}:full`] ?? '')
+        const countedBase =
+          (Number.isFinite(typed) ? typed : 0) * item.servingBaseUnits +
+          (Number.isFinite(full) ? full : 0) * (item.container?.baseUnits ?? 0)
+        const inServes =
+          measure && countedBase > 0 ? `${formatServings(countedBase, item)} is ${inMeasures(countedBase, measure)}` : null
         return (
           <div className={`zrow${weighed ? ' weighed' : ''}`} key={item.id}>
             <span className="zname">
               {item.name}
-              {counted && (
+              {(counted || inServes) && (
                 <small>
-                  {`a ${item.container!.name} is ${perContainer} ${pluralServing(item.servingName)}`}
+                  {counted && `a ${item.container!.name} is ${perContainer} ${pluralServing(item.servingName)}`}
+                  {counted && inServes && ' · '}
+                  {inServes}
                   {reading && (
                     <>
                       {' · '}

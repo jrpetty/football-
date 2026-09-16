@@ -14,6 +14,7 @@
 
 import type { DayRecord } from '../core/types.ts'
 import type { PriceBookEntry } from '../core/priceBook.ts'
+import { normaliseItems } from '../core/stock.ts'
 import type { Delivery, Pour, StockCount, StockItem } from '../core/stock.ts'
 import type { Person, Shift } from '../core/rota.ts'
 import type { DayWeather } from '../core/forecast.ts'
@@ -246,7 +247,10 @@ export async function loadStockConfig(): Promise<StockConfig> {
     () => undefined,
   )
   if (!row) return { ...EMPTY_STOCK }
-  return { items: row.items ?? [], pours: row.pours ?? [], mlPerShot: row.mlPerShot ?? 30 }
+  // Lines saved by an older copy are brought onto the four ways of counting as
+  // they are read. Everything is held in base units, so this changes what a
+  // line is spoken in and never how much of it there is.
+  return { items: normaliseItems(row.items ?? []), pours: row.pours ?? [], mlPerShot: row.mlPerShot ?? 30 }
 }
 
 export function saveStockConfig(config: StockConfig): Promise<unknown> {

@@ -1182,6 +1182,9 @@ table.data.crew th[scope='row'] { white-space: nowrap; }
 .stock-line-row select { min-width: 0; }
 .stock-line-row input { min-width: 0; text-align: right; }
 .stock-line-row .stock-cost { grid-column: 1 / -1; }
+/* What the container holds, across the width: it belongs with the container
+   above it, not paired with a keg weight beside it. */
+.stock-line-row .stock-size { grid-column: 1 / -1; }
 .stock-line-row input:disabled { color: var(--faint); background: var(--surface); }
 
 /* A number with its unit beside it, so a bare 30 or 23.33 says what it is
@@ -1246,7 +1249,12 @@ table.data.crew th[scope='row'] { white-space: nowrap; }
 @media (min-width: 520px) {
   .stock-line-row { grid-template-columns: 1.1fr 0.7fr 1.1fr 0.7fr 1fr; }
   .stock-line-row .stock-cost { grid-column: auto; }
+  .stock-line-row .stock-size { grid-column: auto; }
 }
+
+/* The same figure in the serves it pours, under the millilitres it is counted
+   in — the shots worked out, so nobody has to. */
+.in-serves { display: block; font-size: 11.5px; font-weight: 500; color: var(--muted); }
 
 /* What one sale takes, with the measure it is counted in beside the box. */
 .pour-each { display: inline-flex; align-items: baseline; gap: 6px; justify-content: flex-end; }

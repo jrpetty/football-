@@ -36,12 +36,32 @@ import {
 } from '../storage/db.ts'
 import { CountSheet } from '../components/CountSheet.tsx'
 import { KegCalculator } from '../components/KegCalculator.tsx'
-import { draftsFromCount, kegReading, sheetLines, withKegWeights, type KegWeights, type StockItem } from '../core/stock.ts'
+import {
+  draftsFromCount,
+  kegReading,
+  measureOf,
+  sheetLines,
+  withKegWeights,
+  type KegWeights,
+  type Measure,
+  type Pour,
+  type StockItem,
+} from '../core/stock.ts'
 import { loadSettings } from '../storage/settings.ts'
 import { makeThumbnail } from '../ocr/index.ts'
 import { IconTickSmall } from '../components/icons.tsx'
 import { CashCount } from '../components/CashCount.tsx'
 import { splitDrawer, type Tally } from '../core/cash.ts'
+
+/** What each line counted in millilitres pours, so a count reads back in shots. */
+function measuresFrom(config: { items: StockItem[]; pours: Pour[]; mlPerShot: number } | null): Map<string, Measure> {
+  const out = new Map<string, Measure>()
+  for (const item of config?.items ?? []) {
+    const m = measureOf(item, config?.pours ?? [], config?.mlPerShot ?? 30)
+    if (m) out.set(item.id, m)
+  }
+  return out
+}
 
 function figureFromCapture(capture: Capture, photo?: Blob): FigureState {
   const text = penceToInput(capture.pence)
@@ -95,6 +115,8 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
   const [note, setNote] = useState('')
   // The cellar, counted as the night is closed. Kept as typed until saved.
   const [stockItems, setStockItems] = useState<StockItem[]>([])
+  /** The serve each millilitre-counted line pours, so the sheet can say the shots. */
+  const [measures, setMeasures] = useState<ReadonlyMap<string, Measure>>(new Map())
   /** Whether the keg calculator is out above the count sheet. */
   const [weighOpen, setWeighOpen] = useState(false)
   const [cellarDrafts, setCellarDrafts] = useState<Record<string, string>>({})
@@ -118,6 +140,7 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
       if (cancelled) return
       const items = cfg?.items ?? []
       setStockItems(items)
+      setMeasures(measuresFrom(cfg))
       setHadCount(!!count)
       setCellarDrafts(count && items.length ? draftsFromCount(count, items) : {})
       setCellarOpen(!!count)
@@ -197,6 +220,7 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
     const next = { ...cfg, items: withKegWeights(cfg.items, itemIds, weights, size) }
     await saveStockConfig(next)
     setStockItems(next.items)
+    setMeasures(measuresFrom(next))
     const id = itemIds.length === 1 ? itemIds[0] : undefined
     if (grossKg !== null && id !== undefined) {
       const item = next.items.find((i) => i.id === id)
@@ -419,7 +443,14 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
                   </button>
                 </div>
               )}
-              <CountSheet items={stockItems} drafts={cellarDrafts} onChange={setCellarDrafts} word="counted" scales />
+              <CountSheet
+                items={stockItems}
+                drafts={cellarDrafts}
+                onChange={setCellarDrafts}
+                word="counted"
+                scales
+                measures={measures}
+              />
               <p className="note">
                 Whole containers in the first box, loose servings in the last. A keg that has been
                 weighed empty and full has a box for the scales too — the reading fills the count in.

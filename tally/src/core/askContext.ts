@@ -15,6 +15,7 @@
 
 import type { DayStats } from './analytics.ts'
 import type { PriceBookEntry } from './priceBook.ts'
+import { formatServings } from './stock.ts'
 import type { CellarHealth, StockItem } from './stock.ts'
 import type { DayWeather } from './forecast.ts'
 import { formatHours, shiftMinutes, type Person, type Shift } from './rota.ts'
@@ -61,12 +62,9 @@ function qty(qtyMilli: number): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(1)
 }
 
-/** How much stock is on hand, in the servings the bar thinks in. */
+/** How much stock is on hand, in the units the cellar counts it in. */
 function servings(baseUnits: number, item: StockItem): string {
-  if (item.servingBaseUnits <= 0) return String(baseUnits)
-  const n = baseUnits / item.servingBaseUnits
-  const rounded = Math.round(n * 10) / 10
-  return `${Number.isInteger(rounded) ? rounded : rounded.toFixed(1)} ${item.servingName}s`
+  return formatServings(baseUnits, item)
 }
 
 export function buildAskPack(data: AskData): AskPack {

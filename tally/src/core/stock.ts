@@ -14,9 +14,9 @@
 // cellar without going through the till at all.
 //
 // UNITS. Everything liquid is stored in whole millilitres, everything else as a
-// count of things. Pints and shots are how it is spoken about, never how it is
-// stored, because a pint of one beer and a shot of one spirit have to add up in
-// the same column. The conversions are fixed constants rather than measured:
+// count of things. Pints are how a cask is spoken about and shots are worked
+// out when they are wanted, but neither is how anything is stored, because a
+// pint of one beer and a shot of one spirit have to add up in the same column. The conversions are fixed constants rather than measured:
 // a pint is defined here as 568ml, so a cask entered as 72 pints and 72 pints
 // of sales cancel exactly. Using the true 568.26ml would leave a slow drift
 // that looks like shrinkage and is arithmetic.
@@ -52,11 +52,12 @@ export interface StockItem {
   name: string
   kind: StockKind
   /**
-   * What one serving is, in base units — 568 for a pint, 30 for a shot, 1 for
-   * a packet. How the on-hand figure is spoken about.
+   * What one serving is, in base units — 568 for a pint, 1 for a millilitre,
+   * 1 for a bottle off a shelf. How the line is counted and spoken about.
+   * Never a shot: shots are worked out of the millilitres.
    */
   servingBaseUnits: number
-  /** "pint", "shot", "packet". */
+  /** "pint", "ml", "bottle", "unit". */
   servingName: string
   /**
    * What one delivery container holds, in base units — and, for a keg that
@@ -234,8 +235,9 @@ export function guessPour(code: string, name: string, mlPerShot = DEFAULT_ML_PER
   if (measured?.[1] && measured[2]) {
     const ml = Number(measured[1])
     const rest = titleise(measured[2])
-    if (WINE_MEASURES.has(ml)) return base(rest, ml, 'liquid', `${ml}ml`, true)
-    if (ml <= SPIRIT_MEASURE_MAX_ML) return base(rest, ml, 'liquid', 'shot', true)
+    // Either way it is poured by the measure, so the line is counted in
+    // millilitres and the measure printed on the till is what one sale takes.
+    if (WINE_MEASURES.has(ml) || ml <= SPIRIT_MEASURE_MAX_ML) return base(rest, ml, 'liquid', 'ml', true)
     return base(rest, 1, 'count', 'bottle', true)
   }
 
@@ -251,7 +253,7 @@ export function guessPour(code: string, name: string, mlPerShot = DEFAULT_ML_PER
   // GIN AND TONIC pours gin, and the tonic in its name must not turn it into
   // something counted off a shelf.
   if (SPIRIT_WORDS.some((w) => new RegExp(`\\b${w}\\b`).test(upper))) {
-    return base(titleise(clean), mlPerShot, 'liquid', 'shot', true)
+    return base(titleise(clean), mlPerShot, 'liquid', 'ml', true)
   }
 
   // The juices, the mixers, the alcohol-free, the bottled beers: all sold one
@@ -261,7 +263,7 @@ export function guessPour(code: string, name: string, mlPerShot = DEFAULT_ML_PER
   }
 
   // Everything else — crisps, nuts, a dash, open food — is counted, not poured.
-  return base(titleise(clean), 1, 'count', 'each', false)
+  return base(titleise(clean), 1, 'count', 'unit', false)
 }
 
 /** "PINT TADDY LAGER" -> "Taddy Lager", leaving deliberate casing alone. */
@@ -344,9 +346,14 @@ export function compareToCount(
 
 // --- speaking about it -------------------------------------------------------
 
-/** "pints", "shots" — and "items", because "eachs" is not a word. */
+/** "pints", "glasses", "halves" — and "ml", which takes no s at all. */
 export function pluralServing(servingName: string): string {
-  return servingName === 'each' ? 'items' : `${servingName}s`
+  if (servingName === 'ml') return 'ml'
+  // 'each' is what older copies of this app called a unit.
+  if (servingName === 'each') return 'items'
+  if (servingName === 'half') return 'halves'
+  if (/(s|x|ch|sh)$/.test(servingName)) return `${servingName}es`
+  return `${servingName}s`
 }
 
 /** 40896 base units of a pint line -> "72 pints". */
@@ -366,9 +373,10 @@ export function formatServings(baseUnits: number, item: StockItem): string {
  * line already says what it is.
  */
 function pluralise(servingName: string, quantity: number): string {
+  if (servingName === 'ml') return ' ml'
   if (servingName === 'each') return ''
   if (/\d/.test(servingName)) return ` × ${servingName}`
-  return ` ${servingName}${Math.abs(quantity) === 1 ? '' : 's'}`
+  return ` ${Math.abs(quantity) === 1 ? servingName : pluralServing(servingName)}`
 }
 
 /** The same, signed, for a variance where the direction is the point. */
@@ -395,41 +403,67 @@ export function servingsToBase(servings: number, item: StockItem): number {
  * as the cellar cares. Offered as a list because "how many pints in a kil" is
  * obvious in the trade and looked up by everybody else.
  */
+export type PresetKind = 'keg' | 'bottle' | 'pack'
+
 export interface ContainerPreset {
   name: string
-  /** What it holds, counted in the servings of the line it is set on. */
-  servings?: number
   /**
-   * What it holds in millilitres, for the lines measured that way.
-   *
-   * A spirit bottle is 70cl whatever the house measure is; how many shots that
-   * comes to depends on the measure, so it is worked out from the line rather
-   * than written down here.
+   * What the size means: a keg is so many pints of beer, a bottle so many
+   * millilitres, a pack so many things. Held that way rather than in the
+   * line's own servings so a firkin is 40,896ml whether the line is counted
+   * in pints or in millilitres.
    */
-  ml?: number
+  kind: PresetKind
+  size: number
   hint: string
 }
 
 export const CONTAINER_SIZES: ContainerPreset[] = [
-  { name: 'firkin', servings: 72, hint: '9 gallons' },
-  { name: 'kil', servings: 144, hint: '18 gallons' },
-  { name: 'keg', servings: 88, hint: '11 gallons' },
-  { name: 'pin', servings: 36, hint: '4½ gallons' },
-  { name: 'case', servings: 24, hint: 'bottles' },
-  { name: 'box', servings: 12, hint: 'packets' },
-  { name: '70cl bottle', ml: 700, hint: 'spirits' },
-  { name: 'litre bottle', ml: 1000, hint: 'spirits' },
-  { name: 'wine bottle', ml: ML_PER_BOTTLE, hint: '75cl' },
+  { name: 'firkin', kind: 'keg', size: 72, hint: '9 gallons' },
+  { name: 'kil', kind: 'keg', size: 144, hint: '18 gallons' },
+  { name: 'keg', kind: 'keg', size: 88, hint: '11 gallons' },
+  { name: 'pin', kind: 'keg', size: 36, hint: '4½ gallons' },
+  { name: 'case', kind: 'pack', size: 24, hint: 'bottles' },
+  { name: 'box', kind: 'pack', size: 12, hint: 'packets' },
+  { name: '70cl bottle', kind: 'bottle', size: 700, hint: 'spirits' },
+  { name: 'litre bottle', kind: 'bottle', size: 1000, hint: 'spirits' },
+  { name: 'wine bottle', kind: 'bottle', size: ML_PER_BOTTLE, hint: '75cl' },
 ]
+
+/** The sizes worth offering a line: kegs and bottles hold liquid, packs hold things. */
+export function presetsFor(item: StockItem): ContainerPreset[] {
+  return CONTAINER_SIZES.filter((c) => (item.kind === 'liquid' ? c.kind !== 'pack' : c.kind === 'pack'))
+}
+
+/** What a preset holds, in this line's base units. */
+export function presetBaseUnits(preset: ContainerPreset, item: StockItem): number {
+  if (preset.kind === 'keg' && item.kind === 'liquid') return preset.size * ML_PER_PINT
+  return preset.size
+}
+
+/** How a preset says its size: "72 pints", "700ml", "24". */
+export function presetSizeText(preset: ContainerPreset): string {
+  return preset.kind === 'keg' ? `${preset.size} pints` : preset.kind === 'bottle' ? `${preset.size}ml` : String(preset.size)
+}
 
 // --- how a line is measured --------------------------------------------------
 //
-// The five ways this pub measures anything. The type is the user's to pick and
-// the size is the user's to set, because no amount of reading till names can
-// know that this cellar pours a 30ml measure rather than the 25ml most of the
-// country pours, or that the house white goes out in 175s.
+// Four ways to count, and no more, because a cellar only has four:
+//
+//   pints    the tap beers, at the app's fixed 568ml
+//   ml       anything poured out of a bottle by the measure — the spirits,
+//            the wine — counted in millilitres, which is what can actually be
+//            read off a bottle or a set of scales
+//   bottles  what is sold whole: the juices, the mixers, the alcohol-free
+//   units    everything else on a shelf: the crisps, the nuts
+//
+// Shots are deliberately not one of them. A shot is not a thing you count, it
+// is a thing you pour: the count is millilitres and the shots are worked out
+// from it, at whatever the bar's measure is. That way a half-empty bottle is
+// 350ml — exact — rather than "eleven and a bit", and changing the house
+// measure never quietly rewrites what is in the cellar.
 
-export type Basis = 'pint' | 'shot' | 'glass' | 'open' | 'bottle' | 'each'
+export type Basis = 'pint' | 'ml' | 'bottle' | 'unit'
 
 export interface Serving {
   kind: StockKind
@@ -437,53 +471,118 @@ export interface Serving {
   servingName: string
 }
 
-/** Whether the basis has a size of its own, or is a size already. */
-export function basisTakesAmount(basis: Basis): boolean {
-  return basis === 'shot' || basis === 'glass' || basis === 'open'
-}
-
-/** What one serving is, given the basis picked and the size set against it. */
-export function servingOf(basis: Basis, ml: number): Serving {
-  const size = Math.max(1, Math.round(ml))
+/** What one serving is, for each of the four. No sizes to set: they are sizes. */
+export function servingOf(basis: Basis): Serving {
   switch (basis) {
     case 'pint':
       // Fixed at the app's pint so deliveries and sales cancel exactly.
       return { kind: 'liquid', servingBaseUnits: ML_PER_PINT, servingName: 'pint' }
-    case 'shot':
-      return { kind: 'liquid', servingBaseUnits: size, servingName: 'shot' }
-    case 'glass':
-      // Named by its size, because "a 175ml" is what the board calls it.
-      return { kind: 'liquid', servingBaseUnits: size, servingName: `${size}ml` }
-    case 'open':
-      // A bottle that gets opened and poured out of — the wine. Counted in
-      // bottles like the juices, but a sale takes a glass rather than the lot.
-      return { kind: 'liquid', servingBaseUnits: size, servingName: 'bottle' }
+    case 'ml':
+      return { kind: 'liquid', servingBaseUnits: 1, servingName: 'ml' }
     case 'bottle':
       return { kind: 'count', servingBaseUnits: 1, servingName: 'bottle' }
-    case 'each':
-      return { kind: 'count', servingBaseUnits: 1, servingName: 'each' }
+    case 'unit':
+      return { kind: 'count', servingBaseUnits: 1, servingName: 'unit' }
   }
 }
 
-/** Which of the five a line is currently on. */
+/**
+ * Which of the four a line is counted in.
+ *
+ * Reads a line saved by an older copy of this app too — anything liquid that
+ * is not the pint was a shot or a glass or an opened bottle, and all of those
+ * are millilitres now.
+ */
 export function basisOf(item: StockItem): Basis {
-  if (item.kind === 'count') return item.servingName === 'bottle' ? 'bottle' : 'each'
-  if (item.servingName === 'pint') return 'pint'
-  if (item.servingName === 'shot') return 'shot'
-  if (item.servingName === 'bottle') return 'open'
-  return 'glass'
+  if (item.kind === 'liquid') return item.servingBaseUnits === ML_PER_PINT ? 'pint' : 'ml'
+  return item.servingName === 'bottle' ? 'bottle' : 'unit'
 }
 
 /**
- * Whether changing basis can keep the unit and the cost already set.
+ * A line as one of the four, whatever it was counted in before.
  *
- * Both are stored in base units, and base units mean millilitres on a poured
- * line and things on a counted one. Pints to shots is safe — still millilitres,
- * a firkin is still 40,896 of them. Shots to bottles is not: 700 would stop
+ * Safe to run over everything on every load because quantities are all held in
+ * base units: a spirit that used to be counted in 30ml shots holds exactly the
+ * same millilitres afterwards, and its barrel, its cost and every count ever
+ * taken of it are untouched. Only the unit it is spoken and typed in changes.
+ */
+export function normaliseItem(item: StockItem): StockItem {
+  const shape = servingOf(basisOf(item))
+  if (
+    shape.kind === item.kind &&
+    shape.servingBaseUnits === item.servingBaseUnits &&
+    shape.servingName === item.servingName
+  ) {
+    return item
+  }
+  return { ...item, ...shape }
+}
+
+export function normaliseItems(items: readonly StockItem[]): StockItem[] {
+  return items.map(normaliseItem)
+}
+
+/**
+ * Whether changing how a line is counted can keep the unit and the cost.
+ *
+ * Both are held in base units, and base units mean millilitres on a poured
+ * line and things on a counted one. Pints to millilitres is safe — a firkin is
+ * 40,896 of them either way. Millilitres to bottles is not: 700 would stop
  * meaning 700ml and start meaning 700 bottles.
  */
 export function basisKeepsUnit(from: Basis, to: Basis): boolean {
-  return servingOf(from, 1).kind === servingOf(to, 1).kind
+  return servingOf(from).kind === servingOf(to).kind
+}
+
+// --- working the shots out of the millilitres --------------------------------
+
+/** A serve poured off a line: its size, and what that size is called. */
+export interface Measure {
+  /** One serve, in millilitres. */
+  ml: number
+  /** shot, glass, half, pint, bottle — read off the size itself. */
+  name: string
+}
+
+/** What a measure of this size goes by behind the bar. */
+export function measureName(ml: number): string {
+  if (ml === ML_PER_PINT) return 'pint'
+  if (ml === ML_PER_HALF) return 'half'
+  if (ml <= SPIRIT_MEASURE_MAX_ML) return 'shot'
+  if (ml <= 300) return 'glass'
+  return 'bottle'
+}
+
+/**
+ * The serve a line counted in millilitres goes out in.
+ *
+ * Taken from what the till actually takes off it, because that is the pub's
+ * own answer rather than a guess: whichever size it pours most often, and the
+ * smaller one where two are level. A line nothing has been sold off yet falls
+ * back to the house measure. Null for the lines that are already counted in
+ * serves — a pint is a pint, and a bottle does not need converting.
+ */
+export function measureOf(item: StockItem, pours: readonly Pour[], mlPerShot: number): Measure | null {
+  if (item.kind !== 'liquid' || item.servingBaseUnits !== 1) return null
+  const seen = new Map<number, number>()
+  for (const p of pours) {
+    if (p.stockItemId !== item.id || p.baseUnits <= 1) continue
+    seen.set(p.baseUnits, (seen.get(p.baseUnits) ?? 0) + 1)
+  }
+  let best: number | null = null
+  for (const [ml, times] of seen) {
+    const bestTimes = best === null ? 0 : (seen.get(best) ?? 0)
+    if (best === null || times > bestTimes || (times === bestTimes && ml < best)) best = ml
+  }
+  const ml = best ?? Math.round(mlPerShot)
+  return ml > 1 ? { ml, name: measureName(ml) } : null
+}
+
+/** "11.7 shots" — millilitres, as the serves they will go out in. */
+export function inMeasures(baseUnits: number, measure: Measure): string {
+  const n = Math.round((baseUnits / measure.ml) * 10) / 10
+  const shown = Number.isInteger(n) ? String(n) : n.toFixed(1)
+  return `${shown} ${Math.abs(n) === 1 ? measure.name : pluralServing(measure.name)}`
 }
 
 /** The container a line comes in, in base units — null when none is set. */
@@ -651,7 +750,7 @@ export function withKegWeights(
 
 /** The name a keg of this many pints goes by, for a line given its size from the scales. */
 export function kegNameFor(pints: number): string {
-  return CONTAINER_SIZES.find((c) => c.servings === pints && c.hint.includes('gallon'))?.name ?? 'keg'
+  return CONTAINER_SIZES.find((c) => c.kind === 'keg' && c.size === pints)?.name ?? 'keg'
 }
 
 // --- the count sheet ---------------------------------------------------------
