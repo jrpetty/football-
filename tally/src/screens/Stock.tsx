@@ -23,7 +23,6 @@ import {
   basisOf,
   basisTakesAmount,
   cellarHealth,
-  containersToBase,
   CONTAINER_SIZES,
   DEFAULT_GLASS_ML,
   deliveryLinesFrom,
@@ -36,6 +35,9 @@ import {
   pourUsage,
   servingOf,
   servingsToBase,
+  pluralServing,
+  sheetLines,
+  weighable,
   type Delivery,
   type Basis,
   type Pour,
@@ -43,6 +45,7 @@ import {
   type DeliveryProposal,
   type StockItem,
 } from '../core/stock.ts'
+import { CountSheet } from '../components/CountSheet.tsx'
 import { bestMatch } from '../core/match.ts'
 import { record } from '../core/history.ts'
 import { scanDeliveryNote } from '../ocr/scanList.ts'
@@ -92,11 +95,6 @@ function servingFor(
   // Wine sold at three measures out of one bottle is stocked as bottles.
   if ((measures?.size ?? 1) > 1) return { kind: 'liquid', servingBaseUnits: ML_PER_BOTTLE, servingName: 'bottle' }
   return servingOf('glass', guess.baseUnits)
-}
-
-/** "pints", "shots" — and "items", because "eachs" is not a word. */
-function plural(servingName: string): string {
-  return servingName === 'each' ? 'items' : `${servingName}s`
 }
 
 /**
@@ -299,6 +297,42 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
    * cost, and clearing either side takes the cost away again, which is how a
    * mistyped price is undone.
    */
+  /**
+   * What a keg weighs empty and full, so a reading off the scales is pints.
+   *
+   * Weighed rather than assumed: a kil of stout and a kil of lager do not
+   * weigh the same, and the pub owns scales, not a hydrometer. Kept as typed
+   * until both are real numbers with full heavier than empty; a half-typed
+   * weight is left in the box rather than stored as a calibration.
+   */
+  async function setScales(item: StockItem, patch: { emptyText?: string; fullText?: string }) {
+    if (!config || !item.container) return
+    const emptyKey = `${item.id}:empty`
+    const fullKey = `${item.id}:fullkg`
+    const emptyText = patch.emptyText ?? drafts[emptyKey] ?? (item.container.emptyKg !== undefined ? String(item.container.emptyKg) : '')
+    const fullText = patch.fullText ?? drafts[fullKey] ?? (item.container.fullKg !== undefined ? String(item.container.fullKg) : '')
+    setDrafts((d) => ({ ...d, [emptyKey]: emptyText, [fullKey]: fullText }))
+
+    const empty = Number(emptyText.trim())
+    const full = Number(fullText.trim())
+    const valid = emptyText.trim() !== '' && fullText.trim() !== '' && Number.isFinite(empty) && Number.isFinite(full) && empty >= 0 && full > empty
+    const cleared = emptyText.trim() === '' && fullText.trim() === ''
+    if (!valid && !cleared) return
+
+    const next = {
+      ...config,
+      items: config.items.map((i) => {
+        if (i.id !== item.id || !i.container) return i
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { emptyKg: _e, fullKg: _f, ...bare } = i.container
+        return { ...i, container: valid ? { ...bare, emptyKg: empty, fullKg: full } : bare }
+      }),
+    }
+    setConfig(next)
+    await saveStockConfig(next)
+    onChanged()
+  }
+
   async function setLine(item: StockItem, patch: { name?: string; sizeText?: string; priceText?: string }) {
     const sizeKey = `${item.id}:size`
     const priceKey = `${item.id}:price`
@@ -337,9 +371,14 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
         const costs = hasPrice && hasSize
           ? record(i.costHistory ?? [], { date: tradingDayKey(), pence, baseUnits })
           : i.costHistory
+        // The scales weights ride along: a price edit must not lose them.
+        const weights = {
+          ...(i.container?.emptyKg !== undefined ? { emptyKg: i.container.emptyKg } : {}),
+          ...(i.container?.fullKg !== undefined ? { fullKg: i.container.fullKg } : {}),
+        }
         return {
           ...bare,
-          ...(hasSize ? { container: { name, baseUnits } } : {}),
+          ...(hasSize ? { container: { name, baseUnits, ...weights } } : {}),
           // A price with no size is not yet a cost; it waits in the box.
           ...(hasPrice && hasSize ? { cost: { pence, baseUnits } } : {}),
           // Kept whatever happens to the current cost: a line going uncosted
@@ -472,23 +511,9 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
 
   async function saveSheet(kind: 'delivery' | 'count') {
     // Each line can be entered as whole containers, as loose servings, or as
-    // both — "two kils and about thirty pints" is one line, not two.
-    const lines = (config?.items ?? [])
-      .map((item) => {
-        const fullText = drafts[`${item.id}:full`] ?? ''
-        const looseText = drafts[item.id] ?? ''
-        if (fullText.trim() === '' && looseText.trim() === '') return null
-
-        const full = fullText.trim() === '' ? 0 : Number(fullText)
-        const loose = looseText.trim() === '' ? 0 : Number(looseText)
-        if (!Number.isFinite(full) || !Number.isFinite(loose)) return null
-
-        const baseUnits = item.container
-          ? containersToBase(full, loose, item)
-          : servingsToBase(loose, item)
-        return { stockItemId: item.id, baseUnits }
-      })
-      .filter((l): l is { stockItemId: string; baseUnits: number } => l !== null)
+    // both — "two kils and about thirty pints" is one line, not two. The
+    // arithmetic is the core's, shared with the count Tonight takes.
+    const lines = sheetLines(config?.items ?? [], drafts)
 
     if (lines.length === 0) return say('Nothing entered yet.')
 
@@ -716,42 +741,20 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
             </div>
           )}
 
-          {config.items.map((item) => {
-            const perContainer = item.container
-              ? Math.round(item.container.baseUnits / item.servingBaseUnits)
-              : 0
-            // A container worth counting is one that holds more than a serving.
-            const counted = perContainer > 1
-            const word = panel === 'delivery' ? 'delivered' : 'counted'
-            return (
-              <div className="zrow" key={item.id}>
-                <span className="zname">
-                  {item.name}
-                  <small>
-                    {counted
-                      ? `${item.container!.name}s of ${perContainer}, then loose ${item.servingName}s`
-                      : `in ${item.servingName}s`}
-                  </small>
-                </span>
-                {counted && (
-                  <input
-                    aria-label={`${item.name} ${item.container!.name}s ${word}`}
-                    inputMode="decimal"
-                    placeholder={item.container!.name}
-                    value={drafts[`${item.id}:full`] ?? ''}
-                    onChange={(e) => setDrafts((d) => ({ ...d, [`${item.id}:full`]: e.target.value }))}
-                  />
-                )}
-                <input
-                  aria-label={`${item.name} ${word}`}
-                  inputMode="decimal"
-                  placeholder={counted ? item.servingName : '—'}
-                  value={drafts[item.id] ?? ''}
-                  onChange={(e) => setDrafts((d) => ({ ...d, [item.id]: e.target.value }))}
-                />
-              </div>
-            )
-          })}
+          <CountSheet
+            items={config.items}
+            drafts={drafts}
+            onChange={setDrafts}
+            word={panel === 'delivery' ? 'delivered' : 'counted'}
+            scales={panel === 'count'}
+          />
+          {panel === 'count' && config.items.some((i) => weighable(i)) && (
+            <p className="note">
+              A line with its keg weighed empty and full has a box for the scales: put the reading in
+              and it works out the {config.items.find((i) => weighable(i))?.servingName ?? 'serving'}s
+              for you. Weights are set per line under What it costs.
+            </p>
+          )}
           <button type="button" className="btn-primary" style={{ marginTop: 12 }} onClick={() => void saveSheet(panel)}>
             {panel === 'delivery' ? 'Book the delivery in' : 'Save the stock take'}
           </button>
@@ -870,8 +873,34 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
                       value={sizeText}
                       onChange={(e) => void setLine(item, { sizeText: e.target.value })}
                     />
-                    <small>{plural(item.servingName)}</small>
+                    <small>{pluralServing(item.servingName)}</small>
                   </span>
+                  {item.kind === 'liquid' && item.container && (
+                    <>
+                      <span className="stock-field">
+                        <small>empty</small>
+                        <input
+                          aria-label={`${item.name} empty keg weight`}
+                          inputMode="decimal"
+                          placeholder="kg"
+                          value={drafts[`${item.id}:empty`] ?? (item.container.emptyKg !== undefined ? String(item.container.emptyKg) : '')}
+                          onChange={(e) => void setScales(item, { emptyText: e.target.value })}
+                        />
+                        <small>kg</small>
+                      </span>
+                      <span className="stock-field">
+                        <small>full</small>
+                        <input
+                          aria-label={`${item.name} full keg weight`}
+                          inputMode="decimal"
+                          placeholder="kg"
+                          value={drafts[`${item.id}:fullkg`] ?? (item.container.fullKg !== undefined ? String(item.container.fullKg) : '')}
+                          onChange={(e) => void setScales(item, { fullText: e.target.value })}
+                        />
+                        <small>kg</small>
+                      </span>
+                    </>
+                  )}
                   <span className="stock-field stock-cost">
                     <small>£</small>
                     <input
@@ -899,6 +928,11 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
             pints, a firkin 72, a spirit bottle 70cl. Set it once and the cellar counts in barrels
             rather than in pints, and the invoice price divides itself down. Anything left blank
             simply has no margin figure; nothing is ever assumed to be free.
+          </p>
+          <p className="note">
+            Kegs can be weighed instead of guessed at. Put a full one and an empty one on the scales
+            once and type both weights against the line; from then on the stock take has a box for
+            the reading, and a keg at 45 kg comes out as the pints that are actually in it.
           </p>
         </section>
       )}

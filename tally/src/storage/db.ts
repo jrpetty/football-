@@ -275,6 +275,16 @@ export function saveStockCount(count: StockCount): Promise<unknown> {
   return run(COUNTS, 'readwrite', (s) => s.put(count))
 }
 
+/** A night's count taken back off, when its sheet was cleared on a correction. */
+export function deleteStockCount(date: string): Promise<unknown> {
+  return run(COUNTS, 'readwrite', (s) => s.delete(date))
+}
+
+/** The count taken on one trading day, if there was one — the night's own. */
+export function getStockCount(date: string): Promise<StockCount | undefined> {
+  return run<StockCount | undefined>(COUNTS, 'readonly', (s) => s.get(date))
+}
+
 
 // --- the rota ----------------------------------------------------------------
 

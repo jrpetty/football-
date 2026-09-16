@@ -72,9 +72,9 @@ test('a note cannot break the line format', () => {
     base([night('2026-08-21', 100)], { notes: new Map([['2026-08-21', 'pipe | in\nthe note']]) }),
   )
   assert.ok(pack.text.includes('pipe   in the note'))
-  // Still exactly eleven fields on the line.
+  // Still exactly twelve fields on the line.
   const line = pack.text.split('\n').find((l) => l.startsWith('2026-08-21|'))
-  assert.equal(line?.split('|').length, 11)
+  assert.equal(line?.split('|').length, 12)
 })
 
 // --- items and departments ---------------------------------------------------
@@ -153,4 +153,16 @@ test('nothing shaped like an API key can be in the pack', () => {
 test('the pack states its own limits so the model can respect them', () => {
   const pack = buildAskPack(base([night('2026-08-21', 100)]))
   assert.ok(pack.text.includes('END OF PACK. Nothing outside this pack is known about this pub.'))
+})
+
+test('a night with a cellar count carries its gap at cost; one without is blank', () => {
+  const pack = buildAskPack(
+    base([night('2026-08-21', 100), night('2026-08-22', 100)], {
+      nightGaps: new Map([['2026-08-21', -1250], ['2026-08-22', 0]]),
+    }),
+  )
+  assert.ok(pack.text.includes('2026-08-21|Fri|') && pack.text.split('\n').some((l) => l.startsWith('2026-08-21|') && l.endsWith('|−£12.50')))
+  assert.ok(pack.text.split('\n').some((l) => l.startsWith('2026-08-22|') && l.endsWith('|£0')))
+  const blank = buildAskPack(base([night('2026-08-23', 100)]))
+  assert.ok(blank.text.split('\n').some((l) => l.startsWith('2026-08-23|') && l.endsWith('|')))
 })

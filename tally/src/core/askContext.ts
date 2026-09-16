@@ -36,6 +36,8 @@ export interface AskData {
   people: readonly Person[]
   shifts: readonly Shift[]
   weather: readonly DayWeather[]
+  /** Each night's cellar count against the one before, at cost — by date. */
+  nightGaps?: ReadonlyMap<string, number | null>
   today: string
 }
 
@@ -75,6 +77,7 @@ export function buildAskPack(data: AskData): AskPack {
   out.push(`TALLY DATA PACK — a British pub's own till records, built ${data.today}.`)
   out.push('All money is GBP. A trading day runs to 5am, so a Friday night is dated Friday.')
   out.push('Variance is what was counted minus what the till says: negative means the drawer was short.')
+  out.push('Cellar gap is that night\'s stock count against the count before, valued at cost: negative means stock missing. Blank means the cellar was not counted that night.')
   out.push('')
 
   // --- every night, one line each -------------------------------------------
@@ -88,7 +91,7 @@ export function buildAskPack(data: AskData): AskPack {
         omitted > 0 ? `; the ${omitted} oldest are not in this pack` : ''
       })`,
     )
-    out.push('date|weekday|takings|cash|card|variance|verdict|sales|voids|weather|note')
+    out.push('date|weekday|takings|cash|card|variance|verdict|sales|voids|weather|note|cellar gap')
     for (const d of kept) {
       const w = weatherByDate.get(d.date)
       out.push(
@@ -104,6 +107,10 @@ export function buildAskPack(data: AskData): AskPack {
           d.voidCount ? `${d.voidCount} (${money(d.voidPence ?? 0)})` : '',
           w ? `${w.tempC}C ${w.rainMm}mm` : '',
           field(data.notes?.get(d.date) ?? ''),
+          (() => {
+            const gap = data.nightGaps?.get(d.date)
+            return gap === undefined || gap === null ? '' : gap === 0 ? '£0' : formatSigned(gap)
+          })(),
         ].join('|'),
       )
     }

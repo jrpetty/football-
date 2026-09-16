@@ -6,6 +6,12 @@ import {
   DEFAULT_ML_PER_SHOT,
   buildLedger,
   compareToCount,
+  cellarHealth,
+  nightCellar,
+  draftsFromCount,
+  sheetLines,
+  weighable,
+  kegReading,
   deadStock,
   formatServings,
   formatServingsSigned,
@@ -17,8 +23,10 @@ import {
   pourUsage,
   servingsToBase,
   type Pour,
+  type StockCount,
   type StockItem,
 } from '../src/core/stock.ts'
+import { costOf } from '../src/core/margin.ts'
 import { GARDENERS_ARMS } from './fixtures/gardenersArms.ts'
 
 const sold = GARDENERS_ARMS.plus.map((p) => ({ code: p.code, name: p.name, qtyMilli: p.qtyMilli }))
@@ -384,4 +392,113 @@ test('dead stock cannot be judged on a line with no count behind it', () => {
   const dead = deadStock(ledger, new Map(), 14, () => null)
   assert.ok(dead.some((d) => d.item.id === 'taddy'), 'a counted line with nothing selling is dead stock')
   assert.ok(!dead.some((d) => d.item.id === 'crisps'), 'an uncounted one has no on-hand figure to be sitting on')
+})
+
+// --- weighing a keg -------------------------------------------------------------
+
+const kegged: StockItem = {
+  ...taddy,
+  // A firkin of 72 pints: 10 kg of steel, 51 kg with the beer in.
+  container: { name: 'firkin', baseUnits: 72 * ML_PER_PINT, emptyKg: 10, fullKg: 51 },
+}
+
+test('a reading off the scales is the beer, not the steel', () => {
+  // 30.5 kg on the scales less the 10 kg keg is 20.5 kg of beer, half the
+  // 41 kg a full one holds — so 36 of the 72 pints.
+  const r = kegReading(kegged, 30.5)!
+  assert.equal(r.servings, 36)
+  assert.equal(r.baseUnits, 36 * ML_PER_PINT)
+  assert.equal(r.share, 0.5)
+  assert.equal(r.outside, null)
+})
+
+test('a full keg reads full and an empty one reads empty', () => {
+  assert.equal(kegReading(kegged, 51)!.servings, 72)
+  assert.equal(kegReading(kegged, 10)!.servings, 0)
+})
+
+test('a reading past either end is held at the end and flagged', () => {
+  // Lighter than an empty keg: the scales, or the calibration, are wrong.
+  const light = kegReading(kegged, 8)!
+  assert.equal(light.servings, 0)
+  assert.equal(light.outside, 'under')
+  const heavy = kegReading(kegged, 60)!
+  assert.equal(heavy.servings, 72)
+  assert.equal(heavy.outside, 'over')
+})
+
+test('a line cannot be weighed until both weights are set, the right way round', () => {
+  assert.equal(weighable(taddy), false, 'no weights at all')
+  assert.equal(weighable({ ...taddy, container: { name: 'firkin', baseUnits: 1, emptyKg: 10 } }), false, 'only one')
+  assert.equal(weighable({ ...taddy, container: { name: 'firkin', baseUnits: 1, emptyKg: 51, fullKg: 10 } }), false, 'backwards')
+  assert.equal(weighable(kegged), true)
+  assert.equal(kegReading(taddy, 30), null)
+})
+
+// --- the count sheet -----------------------------------------------------------
+
+test('a sheet turns boxes into lines, and a blank line is not on the sheet', () => {
+  const lines = sheetLines([kegged, bag], { 'taddy:full': '2', taddy: '30', crisps: '' })
+  assert.equal(lines.length, 1, 'crisps left blank is not counted, not zero')
+  assert.equal(lines[0]!.stockItemId, 'taddy')
+  assert.equal(lines[0]!.baseUnits, 2 * 72 * ML_PER_PINT + 30 * ML_PER_PINT)
+})
+
+test('a sheet reads loose servings alone, and refuses nonsense', () => {
+  assert.equal(sheetLines([kegged], { taddy: '12' })[0]!.baseUnits, 12 * ML_PER_PINT)
+  assert.equal(sheetLines([kegged], { taddy: 'a few' }).length, 0)
+  assert.equal(sheetLines([kegged], { 'taddy:full': '-1' }).length, 0)
+})
+
+test('a saved count comes back into the boxes it was typed in', () => {
+  const count: StockCount = { date: '2026-08-23', lines: [{ stockItemId: 'taddy', baseUnits: 2 * 72 * ML_PER_PINT + 30 * ML_PER_PINT }] }
+  const drafts = draftsFromCount(count, [kegged])
+  assert.equal(drafts['taddy:full'], '2')
+  assert.equal(drafts['taddy'], '30')
+  // And the round trip lands on the same figure.
+  assert.equal(sheetLines([kegged], drafts)[0]!.baseUnits, count.lines[0]!.baseUnits)
+})
+
+// --- a night's own count -------------------------------------------------------
+
+test('a night with a count is judged against the count before it', () => {
+  const counts: StockCount[] = [
+    { date: '2026-08-23', lines: [{ stockItemId: 'taddy', baseUnits: 20 * ML_PER_PINT }] },
+    { date: '2026-08-24', lines: [{ stockItemId: 'taddy', baseUnits: 12 * ML_PER_PINT }] },
+  ]
+  // Five pints went through the till on the 24th; eight are gone.
+  const night = nightCellar({
+    date: '2026-08-24',
+    items: [kegged],
+    pours: [{ itemCode: 'P00014', itemName: 'PINT TADDY LAGER', stockItemId: 'taddy', baseUnits: ML_PER_PINT }],
+    counts,
+    deliveries: [],
+    days: [{ date: '2026-08-24', items: [{ code: 'P00014', name: 'PINT TADDY LAGER', qtyMilli: 5000 }] }],
+    costOfServing: () => null,
+  })!
+  assert.equal(night.window!.since, '2026-08-23')
+  const t = night.window!.lines[0]!
+  assert.equal(t.expectedBaseUnits, 15 * ML_PER_PINT)
+  assert.equal(t.actualBaseUnits, 12 * ML_PER_PINT)
+  assert.equal(t.varianceBaseUnits, -3 * ML_PER_PINT)
+})
+
+test('the first count ever has nothing before it, and a night with no count has no card', () => {
+  const counts: StockCount[] = [{ date: '2026-08-23', lines: [{ stockItemId: 'taddy', baseUnits: 20 * ML_PER_PINT }] }]
+  const args = { items: [kegged], pours: [], counts, deliveries: [], days: [], costOfServing: () => null }
+  assert.equal(nightCellar({ ...args, date: '2026-08-23' })!.window, null)
+  assert.equal(nightCellar({ ...args, date: '2026-08-22' }), null)
+})
+
+test('the night’s gap is the same figure the cellar screen shows for its last take', () => {
+  const counts: StockCount[] = [
+    { date: '2026-08-23', lines: [{ stockItemId: 'taddy', baseUnits: 20 * ML_PER_PINT }] },
+    { date: '2026-08-24', lines: [{ stockItemId: 'taddy', baseUnits: 12 * ML_PER_PINT }] },
+  ]
+  const costed: StockItem = { ...kegged, cost: { pence: 9500, baseUnits: 72 * ML_PER_PINT } }
+  const shared = { items: [costed], pours: [], deliveries: [], days: [], costOfServing: costOf }
+  const night = nightCellar({ ...shared, date: '2026-08-24', counts })!
+  const health = cellarHealth({ ...shared, counts, today: '2026-08-26' })
+  assert.equal(night.window!.gapPence, health.gapPence)
+  assert.equal(night.window!.gapPence, Math.round((-8 * 9500) / 72), 'eight pints at the firkin price')
 })

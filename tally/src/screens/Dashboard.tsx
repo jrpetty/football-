@@ -42,7 +42,7 @@ import {
   EMPTY_STOCK,
   type StockConfig,
 } from '../storage/db.ts'
-import { cellarHealth, type Delivery, type StockCount } from '../core/stock.ts'
+import { cellarHealth, nightCellar, type Delivery, type StockCount } from '../core/stock.ts'
 import { searchItems } from '../core/itemHistory.ts'
 import { ItemDetail } from './ItemDetail.tsx'
 import { costOf } from '../core/margin.ts'
@@ -382,10 +382,30 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
     [selected, book],
   )
 
+  // Each counted night's cellar gap, so "which night was the cellar shortest"
+  // has an answer in the pack.
+  const nightGaps = useMemo(() => {
+    const gaps = new Map<string, number | null>()
+    if (all === null || stock.items.length === 0) return gaps
+    for (const count of stockCounts) {
+      const night = nightCellar({
+        date: count.date,
+        items: stock.items,
+        pours: stock.pours,
+        counts: stockCounts,
+        deliveries,
+        days: all,
+        costOfServing: costOf,
+      })
+      if (night?.window) gaps.set(count.date, night.window.gapPence)
+    }
+    return gaps
+  }, [all, stock, stockCounts, deliveries])
+
   // Everything the question box may be asked about, in one place.
   const askData = useMemo<AskData>(
-    () => ({ days: all ?? [], notes, book, cellar, people, shifts, weather, today: tradingDayKey() }),
-    [all, notes, book, cellar, people, shifts, weather],
+    () => ({ days: all ?? [], notes, book, cellar, people, shifts, weather, nightGaps, today: tradingDayKey() }),
+    [all, notes, book, cellar, people, shifts, weather, nightGaps],
   )
 
   if (error) return <div className="main"><p className="note bad">Could not read the saved nights: {error}</p></div>

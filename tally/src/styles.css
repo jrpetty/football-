@@ -990,6 +990,14 @@ table.data.crew th[scope='row'] { white-space: nowrap; }
 .zrow:has(input) { flex-wrap: wrap; justify-content: flex-end; row-gap: 6px; }
 .zrow:has(input) .zname { flex: 1 1 100%; }
 
+/* A count box with its unit written under it, so a row of 2 · 30.5 · 36 still
+   reads once the placeholders have gone: firkins, kg on the scales, loose
+   pints. A weighed row has three boxes; they shrink so all three sit on one
+   line of a 390px phone with the kg beside the pints it made. */
+.zcell { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.zcell small { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.zrow.weighed .zcell input { width: 94px; }
+
 /* ---- the roll drop area --------------------------------------------------- */
 
 .dropzone {

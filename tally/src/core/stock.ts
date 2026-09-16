@@ -58,8 +58,12 @@ export interface StockItem {
   servingBaseUnits: number
   /** "pint", "shot", "packet". */
   servingName: string
-  /** What one delivery container holds, in base units. */
-  container?: { name: string; baseUnits: number }
+  /**
+   * What one delivery container holds, in base units — and, for a keg that
+   * gets weighed rather than guessed at, what it weighs empty and full, so a
+   * reading off the scales turns into pints.
+   */
+  container?: { name: string; baseUnits: number; emptyKg?: number; fullKg?: number }
   /**
    * What the brewery charges, and what that buys — a firkin at £95 is
    * `{ pence: 9500, baseUnits: 72 * 568 }`.
@@ -340,6 +344,11 @@ export function compareToCount(
 
 // --- speaking about it -------------------------------------------------------
 
+/** "pints", "shots" — and "items", because "eachs" is not a word. */
+export function pluralServing(servingName: string): string {
+  return servingName === 'each' ? 'items' : `${servingName}s`
+}
+
 /** 40896 base units of a pint line -> "72 pints". */
 export function formatServings(baseUnits: number, item: StockItem): string {
   if (item.servingBaseUnits <= 0) return String(baseUnits)
@@ -538,6 +547,104 @@ export function containersToBase(full: number, partServings: number, item: Stock
   return Math.round(full * size + partServings * item.servingBaseUnits)
 }
 
+
+// --- weighing a keg ----------------------------------------------------------
+//
+// Nobody can see inside a keg. What they can do is put it on the bathroom
+// scales: a full one and an empty one weighed once give the weight of the
+// beer, and every reading after that is a share of it. Calibrated by weighing
+// rather than by assuming a density, because a kil of stout and a kil of
+// lager do not weigh the same and the pub has scales, not a hydrometer.
+
+export interface KegReading {
+  /** What the reading amounts to, in base units, held within the keg's size. */
+  baseUnits: number
+  /** The same in the line's servings, to a tenth. */
+  servings: number
+  /** How full: 0 empty, 1 full. */
+  share: number
+  /**
+   * A reading lighter than an empty keg or heavier than a full one is a wrong
+   * reading or a wrong calibration, and is said rather than silently clamped.
+   */
+  outside: 'under' | 'over' | null
+}
+
+/** Whether a line can be weighed: a container with both weights, full heavier than empty. */
+export function weighable(item: StockItem): boolean {
+  const c = item.container
+  return !!c && c.baseUnits > 0 && c.emptyKg !== undefined && c.fullKg !== undefined && c.fullKg > c.emptyKg
+}
+
+/** A reading off the scales, in kilograms of keg-and-all, as pints of beer. */
+export function kegReading(item: StockItem, grossKg: number): KegReading | null {
+  if (!weighable(item) || !Number.isFinite(grossKg)) return null
+  const c = item.container as { baseUnits: number; emptyKg: number; fullKg: number }
+  const liquidKg = c.fullKg - c.emptyKg
+  const raw = (grossKg - c.emptyKg) / liquidKg
+  const share = Math.min(1, Math.max(0, raw))
+  const baseUnits = Math.round(share * c.baseUnits)
+  const servings = item.servingBaseUnits > 0 ? Math.round((baseUnits / item.servingBaseUnits) * 10) / 10 : baseUnits
+  return { baseUnits, servings, share, outside: raw < 0 ? 'under' : raw > 1 ? 'over' : null }
+}
+
+// --- the count sheet ---------------------------------------------------------
+//
+// A sheet is a box or two per line: whole containers, and loose servings on
+// top. What is typed is kept as text until it is saved, so the arithmetic
+// that turns "2 kils and 30 pints" into base units lives here, tested, and
+// the two screens that show a sheet — the Cellar and Tonight — share it.
+
+/** The drafts a sheet holds, keyed `<item id>:full` and `<item id>`. */
+export type SheetDrafts = Readonly<Record<string, string>>
+
+export interface CountLine {
+  stockItemId: string
+  baseUnits: number
+}
+
+/**
+ * The lines a sheet amounts to. A line with both boxes blank is not on the
+ * sheet at all — not counted, which is not the same as none — and a box that
+ * does not hold a number leaves its line off rather than guessing at it.
+ */
+export function sheetLines(items: readonly StockItem[], drafts: SheetDrafts): CountLine[] {
+  const out: CountLine[] = []
+  for (const item of items) {
+    const fullText = (drafts[`${item.id}:full`] ?? '').trim()
+    const looseText = (drafts[item.id] ?? '').trim()
+    if (fullText === '' && looseText === '') continue
+    const full = fullText === '' ? 0 : Number(fullText)
+    const loose = looseText === '' ? 0 : Number(looseText)
+    if (!Number.isFinite(full) || !Number.isFinite(loose) || full < 0 || loose < 0) continue
+    out.push({
+      stockItemId: item.id,
+      baseUnits: item.container ? containersToBase(full, loose, item) : servingsToBase(loose, item),
+    })
+  }
+  return out
+}
+
+/**
+ * A saved count back into the boxes it was typed in, so a night being
+ * corrected shows the cellar as it was counted rather than an empty sheet.
+ */
+export function draftsFromCount(count: StockCount, items: readonly StockItem[]): Record<string, string> {
+  const drafts: Record<string, string> = {}
+  for (const line of count.lines) {
+    const item = items.find((i) => i.id === line.stockItemId)
+    if (!item) continue
+    const b = breakdown(line.baseUnits, item)
+    if (b) {
+      if (b.full > 0) drafts[`${item.id}:full`] = String(b.full)
+      drafts[item.id] = String(b.partServings)
+    } else {
+      const servings = item.servingBaseUnits > 0 ? line.baseUnits / item.servingBaseUnits : line.baseUnits
+      drafts[item.id] = String(Math.round(servings * 10) / 10)
+    }
+  }
+  return drafts
+}
 
 // --- reading a delivery note --------------------------------------------------
 
@@ -753,6 +860,122 @@ export interface CellarHealth {
   gapLines: StockVariance[]
 }
 
+// --- one window between two counts ------------------------------------------
+//
+// Every judgement the app makes about a cellar is a window: it opens on one
+// count, takes deliveries in and pours out, and closes on the next count. The
+// weekly picture and a single night's picture are the same arithmetic over
+// different pairs, so they share it here and cannot drift apart.
+
+function soldBetween(days: ReadonlyArray<{ date: string; items: readonly SoldLine[] }>, from: string, to?: string): SoldLine[] {
+  return days
+    .filter((d) => d.date > from && (to === undefined || d.date <= to))
+    .flatMap((d) => d.items as SoldLine[])
+}
+
+function deliveredBetween(deliveries: readonly Delivery[], from: string, to?: string): Map<string, number> {
+  const acc = new Map<string, number>()
+  for (const d of deliveries.filter((x) => x.date > from && (to === undefined || x.date <= to))) {
+    for (const line of d.lines) acc.set(line.stockItemId, (acc.get(line.stockItemId) ?? 0) + line.baseUnits)
+  }
+  return acc
+}
+
+export interface CellarWindow {
+  /** The count the window opens on. */
+  since: string
+  /** The count it closes on and is judged against. */
+  until: string
+  /** Every line judged, worst first. A line missing from either count is not judged. */
+  lines: StockVariance[]
+  /**
+   * The gap valued at cost. 0 when every judged line came out exact; null when
+   * nothing could be judged, or none of what was out could be valued.
+   */
+  gapPence: number | null
+}
+
+function windowBetween(
+  items: readonly StockItem[],
+  pours: readonly Pour[],
+  deliveries: readonly Delivery[],
+  days: ReadonlyArray<{ date: string; items: readonly SoldLine[] }>,
+  previous: StockCount,
+  latest: StockCount,
+  costOfServing: (item: StockItem, baseUnits: number) => number | null,
+): CellarWindow {
+  const opening = new Map(previous.lines.map((l) => [l.stockItemId, l.baseUnits]))
+  const closed = buildLedger(
+    items,
+    opening,
+    deliveredBetween(deliveries, previous.date, latest.date),
+    pourUsage(soldBetween(days, previous.date, latest.date), pours).used,
+  )
+  const lines = compareToCount(closed, new Map(latest.lines.map((l) => [l.stockItemId, l.baseUnits])))
+    .filter((v) => v.varianceBaseUnits !== null)
+    .sort((a, b) => (a.varianceBaseUnits ?? 0) - (b.varianceBaseUnits ?? 0))
+
+  let gapPence: number | null = null
+  if (lines.length > 0) {
+    const off = lines.filter((v) => v.varianceBaseUnits !== 0)
+    if (off.length === 0) {
+      // Judged and exact on every line: £0 out, which is an answer.
+      gapPence = 0
+    } else {
+      // Valued line by line at each line's own cost; lines with no cost cannot
+      // be valued and are left out. If none could be, the answer is unknown
+      // rather than a zero that reads as fine.
+      let valuedAny = false
+      let total = 0
+      for (const line of off) {
+        const pence = costOfServing(line.item, line.varianceBaseUnits as number)
+        if (pence === null) continue
+        valuedAny = true
+        total += pence
+      }
+      gapPence = valuedAny ? total : null
+    }
+  }
+  return { since: previous.date, until: latest.date, lines, gapPence }
+}
+
+export interface NightCellar {
+  /** The count taken that night. */
+  count: StockCount
+  /** How it compares with the count before it — null on the first count ever. */
+  window: CellarWindow | null
+}
+
+/**
+ * The cellar as counted on one night, judged against the count before.
+ *
+ * Counted nightly, every night closes a window: what the last count said,
+ * plus what came in, less what the till poured, against what was actually
+ * found. The first count has nothing before it and says so rather than being
+ * compared with an empty cellar.
+ */
+export function nightCellar(args: {
+  date: string
+  items: readonly StockItem[]
+  pours: readonly Pour[]
+  counts: readonly StockCount[]
+  deliveries: readonly Delivery[]
+  days: ReadonlyArray<{ date: string; items: readonly SoldLine[] }>
+  costOfServing: (item: StockItem, baseUnits: number) => number | null
+}): NightCellar | null {
+  const sorted = [...args.counts].sort((a, b) => a.date.localeCompare(b.date))
+  const count = sorted.find((c) => c.date === args.date)
+  if (!count) return null
+  let previous: StockCount | null = null
+  for (const c of sorted) if (c.date < args.date) previous = c
+  return {
+    count,
+    window: previous
+      ? windowBetween(args.items, args.pours, args.deliveries, args.days, previous, count, args.costOfServing)
+      : null,
+  }
+}
+
 export function cellarHealth(args: {
   items: readonly StockItem[]
   pours: readonly Pour[]
@@ -766,23 +989,12 @@ export function cellarHealth(args: {
 }): CellarHealth {
   const { items, pours, counts, deliveries, days, today, costOfServing } = args
 
-  const soldBetween = (from: string, to?: string): SoldLine[] =>
-    days
-      .filter((d) => d.date > from && (to === undefined || d.date <= to))
-      .flatMap((d) => d.items as SoldLine[])
+  const usageBetween = (from: string, to?: string) => pourUsage(soldBetween(days, from, to), pours).used
 
-  const usageBetween = (from: string, to?: string) => pourUsage(soldBetween(from, to), pours).used
-
-  const deliveredBetween = (from: string, to?: string) => {
-    const acc = new Map<string, number>()
-    for (const d of deliveries.filter((x) => x.date > from && (to === undefined || x.date <= to))) {
-      for (const line of d.lines) acc.set(line.stockItemId, (acc.get(line.stockItemId) ?? 0) + line.baseUnits)
-    }
-    return acc
-  }
-
-  const latest = counts[0]
-  const previous = counts[1]
+  // Newest first however they arrived, so "latest" means latest.
+  const byDate = [...counts].sort((a, b) => b.date.localeCompare(a.date))
+  const latest = byDate[0]
+  const previous = byDate[1]
 
   // With no take yet, the window opens where the records do: the day before
   // the first delivery or the first night with an item list, whichever came
@@ -809,41 +1021,17 @@ export function cellarHealth(args: {
     ? new Map(latest.lines.map((l) => [l.stockItemId, l.baseUnits]))
     : new Map(items.map((item) => [item.id, 0]))
   const openUsage = usageBetween(since)
-  const ledger = buildLedger(items, opening, deliveredBetween(since), openUsage)
+  const ledger = buildLedger(items, opening, deliveredBetween(deliveries, since), openUsage)
   const dead = deadStock(ledger, openUsage, sinceDays, costOfServing)
 
+  // The most recent closed window — the same one a night's own card shows
+  // for that night, through the same function.
   let gapPence: number | null = null
   let gapLines: StockVariance[] = []
   if (latest && previous) {
-    const closedOpening = new Map(previous.lines.map((l) => [l.stockItemId, l.baseUnits]))
-    const closed = buildLedger(
-      items,
-      closedOpening,
-      deliveredBetween(previous.date, latest.date),
-      usageBetween(previous.date, latest.date),
-    )
-    gapLines = compareToCount(closed, new Map(latest.lines.map((l) => [l.stockItemId, l.baseUnits])))
-      .filter((v) => v.varianceBaseUnits !== null && v.varianceBaseUnits !== 0)
-      .sort((a, b) => (a.varianceBaseUnits ?? 0) - (b.varianceBaseUnits ?? 0))
-
-    if (gapLines.length === 0) {
-      // A judged window where every line counted exactly as expected is a
-      // reconciled cellar — £0 out, which is an answer, not an unknown.
-      gapPence = 0
-    } else {
-      // Valued line by line at each line's own cost. Lines with no cost cannot
-      // be valued and are left out; if none of the discrepancies could be
-      // valued, the answer is "unknown" rather than a zero that reads as fine.
-      let valuedAny = false
-      let total = 0
-      for (const line of gapLines) {
-        const pence = costOfServing(line.item, line.varianceBaseUnits as number)
-        if (pence === null) continue
-        valuedAny = true
-        total += pence
-      }
-      gapPence = valuedAny ? total : null
-    }
+    const window = windowBetween(items, pours, deliveries, days, previous, latest, costOfServing)
+    gapLines = window.lines.filter((v) => v.varianceBaseUnits !== 0)
+    gapPence = window.gapPence
   }
 
   return { since, sinceDays, ledger, dead, gapPence, gapLines }

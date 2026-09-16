@@ -23,7 +23,9 @@ import { reconcileFull, tillExpectations } from '../core/reconcile.ts'
 import type { Capture, DayRecord } from '../core/types.ts'
 import { emptyDay } from '../core/types.ts'
 import { isZReadEmpty, type ZRead } from '../core/zread.ts'
-import { getDay, getPhoto, saveDay, savePhoto } from '../storage/db.ts'
+import { deleteStockCount, getDay, getPhoto, getStockCount, loadStockConfig, saveDay, savePhoto, saveStockCount } from '../storage/db.ts'
+import { CountSheet } from '../components/CountSheet.tsx'
+import { draftsFromCount, sheetLines, type StockItem } from '../core/stock.ts'
 import { loadSettings } from '../storage/settings.ts'
 import { makeThumbnail } from '../ocr/index.ts'
 import { IconTickSmall } from '../components/icons.tsx'
@@ -80,10 +82,43 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
   const [tally, setTally] = useState<Tally>({})
   const [counting, setCounting] = useState(false)
   const [note, setNote] = useState('')
+  // The cellar, counted as the night is closed. Kept as typed until saved.
+  const [stockItems, setStockItems] = useState<StockItem[]>([])
+  const [cellarDrafts, setCellarDrafts] = useState<Record<string, string>>({})
+  const [cellarOpen, setCellarOpen] = useState(false)
+  const [hadCount, setHadCount] = useState(false)
   const [existing, setExisting] = useState<DayRecord | null>(null)
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState('')
   const lateNight = useRef(isAfterMidnightForTradingDay()).current
+
+  useEffect(() => {
+    let cancelled = false
+    void loadStockConfig()
+      .then((cfg) => {
+        if (!cancelled) setStockItems(cfg.items)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  // The night's own cellar count, if one was taken — shown as it was counted,
+  // so a correction starts from the sheet rather than from nothing.
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const count = await getStockCount(date).catch(() => undefined)
+      if (cancelled) return
+      setHadCount(!!count)
+      setCellarDrafts(count && stockItems.length ? draftsFromCount(count, stockItems) : {})
+      setCellarOpen(!!count)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [date, stockItems])
 
   // Re-opening a night edits it rather than starting a second copy of it.
   useEffect(() => {
@@ -140,6 +175,7 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
   })
 
   const busy = roll.scanning || card.scanning
+  const cellarCounted = sheetLines(stockItems, cellarDrafts).length
 
   async function save() {
     setSaving(true)
@@ -169,6 +205,15 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
       if (photoIds.length) record.zPhotoIds = [...(base.zPhotoIds ?? []), ...photoIds]
 
       await saveDay(record)
+
+      // The cellar count is the night's own: dated the same trading day, so
+      // the night and its count are one record in all but storage. A sheet
+      // left entirely blank is no count at all — and a count cleared on a
+      // correction is taken off rather than quietly kept.
+      const cellarLines = sheetLines(stockItems, cellarDrafts)
+      if (cellarLines.length > 0) await saveStockCount({ date, lines: cellarLines })
+      else if (hadCount) await deleteStockCount(date)
+
       onSaved(date)
     } catch (err) {
       setSaving(false)
@@ -298,6 +343,49 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
         </section>
 
         <ItemisedLegs r={r} />
+
+        {/* The cellar, counted as the doors are locked. Optional, because a
+            night is complete without it — but done nightly it turns every
+            night into a closed window, judged against the night before. */}
+        <section className="card">
+          <div className="card-head">
+            <span className={`step-dot${cellarCounted ? ' done' : ''}`} aria-hidden="true">
+              {cellarCounted ? <IconTickSmall size={13} /> : 4}
+            </span>
+            <h2>The cellar</h2>
+            <span className="hint">{stockItems.length === 0 ? 'not set up yet' : cellarCounted ? `${cellarCounted} lines counted` : 'count it as you lock up'}</span>
+          </div>
+          {stockItems.length === 0 ? (
+            <p className="note" style={{ marginTop: 0 }}>
+              Once the cellar is set up on the Cellar tab, it can be counted here every night — and
+              each night then shows what should have been down there against what was.
+            </p>
+          ) : !cellarOpen ? (
+            <>
+              <button type="button" onClick={() => setCellarOpen(true)} data-testid="count-cellar">
+                Count the cellar
+              </button>
+              <p className="note" style={{ marginBottom: 0 }}>
+                Counted nightly, every night closes its own window: last night’s count, plus what came
+                in, less what the till poured, against what is actually there.
+              </p>
+            </>
+          ) : (
+            <>
+              <CountSheet items={stockItems} drafts={cellarDrafts} onChange={setCellarDrafts} word="counted" scales />
+              <p className="note">
+                Whole containers in the first box, loose servings in the last. A keg that has been
+                weighed empty and full has a box for the scales too — the reading fills the count in.
+                Anything left blank was not counted, which is not the same as none.
+              </p>
+              <div className="alts">
+                <button type="button" className="btn-small" onClick={() => setCellarOpen(false)}>
+                  {cellarCounted ? 'Hide the sheet' : 'Not tonight'}
+                </button>
+              </div>
+            </>
+          )}
+        </section>
 
         <section className="card">
           <div className="field" style={{ marginBottom: 0 }}>

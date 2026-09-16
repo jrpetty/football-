@@ -1060,6 +1060,93 @@ try {
     (await page.locator('.main').innerText()).includes('No nights match those filters'),
   )
 
+  console.log('\nCounting the cellar nightly')
+  // The routine: read the roll, then go down and count. A keg is weighed, not
+  // guessed at — a firkin of Taddy at 10 kg empty and 51 kg full.
+  await page.click('button:has-text("Cellar")')
+  await page.waitForSelector('.chip:has-text("What it costs")', { timeout: 5000 })
+  await page.click('.chip:has-text("What it costs")')
+  await page.waitForSelector('input[aria-label="Taddy Lager empty keg weight"]', { timeout: 5000 })
+  await page.fill('input[aria-label="Taddy Lager empty keg weight"]', '10')
+  await page.fill('input[aria-label="Taddy Lager full keg weight"]', '51')
+  await page.waitForTimeout(400)
+
+  // The count that opens the window: an ad-hoc take dated the 23rd, twenty pints.
+  await page.click('.chip:has-text("Stock take")')
+  await page.waitForSelector('#sheet-date', { timeout: 5000 })
+  await page.fill('#sheet-date', '2026-08-23')
+  await page.fill('input[aria-label="Taddy Lager counted"]', '20')
+  await page.click('button:has-text("Save the stock take")')
+  await page.waitForTimeout(500)
+
+  // The next night, counted as it is closed — from Tonight, under the cash.
+  await page.click('button:has-text("Tonight")')
+  await page.waitForSelector('#date', { timeout: 5000 })
+  await page.fill('#date', '2026-08-24')
+  await page.waitForTimeout(300)
+  await setFigure(page, 'figure-till', '500.00')
+  await setFigure(page, 'figure-card', '300.00')
+  await setFigure(page, 'figure-cash', '200.00')
+  await page.waitForSelector('[data-testid="count-cellar"]', { timeout: 5000 })
+  check('the night has a cellar step, after the cash', (await page.locator('[data-testid="count-cellar"]').count()) === 1)
+  await page.click('[data-testid="count-cellar"]')
+  await page.waitForSelector('input[aria-label="Taddy Lager on the scales"]', { timeout: 5000 })
+  // 30.5 kg on the scales: 20.5 kg of beer, half a firkin, 36 pints.
+  await page.fill('input[aria-label="Taddy Lager on the scales"]', '30.5')
+  await page.waitForTimeout(200)
+  check(
+    'a reading off the scales becomes pints in the count',
+    (await page.locator('input[aria-label="Taddy Lager counted"]').inputValue()) === '36',
+    `got "${await page.locator('input[aria-label="Taddy Lager counted"]').inputValue()}" — 20.5 kg of a 41 kg fill is half of 72`,
+  )
+  check(
+    'and says so beside the line',
+    /30\.5 kg on the scales is 36 pints/.test(await page.locator('.main').innerText()),
+  )
+  // A reading lighter than the empty keg is a wrong reading, and is said.
+  await page.fill('input[aria-label="Taddy Lager on the scales"]', '8')
+  await page.waitForTimeout(200)
+  check('a reading lighter than an empty keg is called out', /lighter than an empty one/.test(await page.locator('.main').innerText()))
+  // She overrules by hand: seventeen pints in the one on the stillage.
+  await page.fill('input[aria-label="Taddy Lager counted"]', '17')
+  await page.waitForTimeout(200)
+  check(
+    'typing the count by hand clears the reading',
+    (await page.locator('input[aria-label="Taddy Lager on the scales"]').inputValue()) === '',
+  )
+  await page.click('.verdict-bar .btn-primary')
+  await page.waitForSelector('.day-row', { timeout: 5000 })
+
+  // The night shows its own cellar: twenty should be there, seventeen were.
+  await page.click('.day-row:has-text("24 Aug")')
+  await page.waitForSelector('.verdict', { timeout: 5000 })
+  await page.waitForSelector('.card:has-text("The cellar that night") table.data', { timeout: 5000 })
+  const cellarNight = await page.locator('.card:has-text("The cellar that night")').innerText()
+  check('the night carries its count, judged against the night before', /since Sun, 23 Aug/.test(cellarNight), cellarNight.slice(0, 200))
+  check('should be twenty', /20 pints/.test(cellarNight))
+  check('was seventeen', /17 pints/.test(cellarNight))
+  check('three pints out', /−3 pints/.test(cellarNight), cellarNight.slice(0, 300))
+  // At the cost as it stands: the brewery put the firkin up to £108 earlier
+  // in this run, so three pints are £4.50 today, whatever they were in August.
+  check('valued at the firkin price as it stands', /−£4\.50/.test(cellarNight), cellarNight.slice(-320))
+
+  // The count comes back onto the sheet when the night is corrected.
+  await page.click('button:has-text("Edit")')
+  await page.waitForSelector('input[aria-label="Taddy Lager counted"]', { timeout: 5000 })
+  check(
+    'correcting the night shows the count as it was taken',
+    (await page.locator('input[aria-label="Taddy Lager counted"]').inputValue()) === '17',
+  )
+  // And a night with no count says so, now that counting is a thing here.
+  await page.click('button:has-text("Nights")')
+  await page.waitForSelector('.day-row', { timeout: 5000 })
+  await page.click('.day-row:has-text("23 Aug")')
+  await page.waitForSelector('.verdict', { timeout: 5000 })
+  check(
+    'the first count says it has nothing before it',
+    /nothing before it to compare with/.test(await page.locator('.main').innerText()),
+  )
+
   console.log('\nMoving to a new copy')
   // The whole point of a backup: everything set up here has to arrive intact
   // in an empty copy of the app. The version this replaced saved only the
