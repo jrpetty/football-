@@ -84,13 +84,13 @@ export function CountSheet({ items, drafts, onChange, word, scales = false, meas
             {counted && (
               <span className="zcell">
                 <input
-                  aria-label={`${item.name} ${item.container!.name}s ${word}`}
+                  aria-label={`${item.name} ${pluralServing(item.container!.name)} ${word}`}
                   inputMode="decimal"
                   placeholder="—"
                   value={drafts[`${item.id}:full`] ?? ''}
                   onChange={(e) => onChange({ ...drafts, [`${item.id}:full`]: e.target.value })}
                 />
-                <small>{item.container!.name}s</small>
+                <small>{pluralServing(item.container!.name)}</small>
               </span>
             )}
             {weighed && (
