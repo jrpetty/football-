@@ -1147,6 +1147,132 @@ try {
     /nothing before it to compare with/.test(await page.locator('.main').innerText()),
   )
 
+  console.log('\nThe keg calculator')
+  // The scales have a place of their own on the Cellar tab. Her own example:
+  // a full keg at 110 kg, an empty one at 10 kg, a hundred pints between them
+  // — so a keg reading 70 kg holds 60 pints, once its own 10 kg comes off.
+  await page.click('button:has-text("Cellar")')
+  await page.waitForSelector('.chip:has-text("The scales")', { timeout: 5000 })
+  await page.click('.chip:has-text("The scales")')
+  await page.waitForSelector('select[aria-label="Which keg"]', { timeout: 5000 })
+  await page.selectOption('select[aria-label="Which keg"]', '*')
+  await page.fill('input[aria-label="Pints the keg holds"]', '100')
+  await page.fill('input[aria-label="Empty keg weight"]', '10')
+  await page.fill('input[aria-label="Full keg weight"]', '110')
+  await page.fill('input[aria-label="Keg on the scales"]', '70')
+  await page.waitForTimeout(150)
+  let calc = await page.locator('.keg-result').innerText()
+  check('a keg reading 70 kg on a 10 kg keg holds 60 pints, not 70', /60 pints/.test(calc) && /60% full/.test(calc), `got "${calc}"`)
+  await page.fill('input[aria-label="Keg on the scales"]', '8')
+  await page.waitForTimeout(150)
+  calc = await page.locator('.keg-result').innerText()
+  check('a reading lighter than the empty keg is said, not rounded to nothing', /lighter than an empty keg/.test(calc), `got "${calc}"`)
+  await page.fill('input[aria-label="Full keg weight"]', '5')
+  await page.waitForTimeout(150)
+  check(
+    'a full keg lighter than an empty one is refused',
+    (await page.locator('.main').innerText()).includes('A full keg has to weigh more than an empty one'),
+  )
+
+  // Against a line: Taddy was weighed at 10 and 51 under What it costs earlier,
+  // and starts from those.
+  const taddyOption = await page.locator('select[aria-label="Which keg"] option', { hasText: 'Taddy Lager' }).getAttribute('value')
+  await page.selectOption('select[aria-label="Which keg"]', taddyOption ?? 'taddy-lager')
+  await page.waitForTimeout(150)
+  check(
+    'a line weighed before starts from its own weights',
+    (await page.locator('input[aria-label="Empty keg weight"]').inputValue()) === '10' &&
+      (await page.locator('input[aria-label="Full keg weight"]').inputValue()) === '51',
+  )
+  check('and says so rather than offering to keep them again', (await page.locator('.main').innerText()).includes('Taddy Lager has these weights'))
+  // Weighed again, a kilo heavier each way, and kept from here.
+  await page.fill('input[aria-label="Empty keg weight"]', '11')
+  await page.fill('input[aria-label="Full keg weight"]', '52')
+  await page.fill('input[aria-label="Keg on the scales"]', '31.5')
+  await page.waitForTimeout(150)
+  calc = await page.locator('.keg-result').innerText()
+  check('the reading is in the line’s own pints, of its own keg', /36 pints/.test(calc) && /of 72/.test(calc), `got "${calc}"`)
+  await page.click('button:has-text("Keep for Taddy Lager")')
+  await page.waitForTimeout(400)
+  check('kept, it says so', (await page.locator('.main').innerText()).includes('Kept — Taddy Lager'))
+  await page.click('.chip:has-text("What it costs")')
+  await page.waitForSelector('input[aria-label="Taddy Lager empty keg weight"]', { timeout: 5000 })
+  check(
+    'and those are the weights the line now carries',
+    (await page.locator('input[aria-label="Taddy Lager empty keg weight"]').inputValue()) === '11' &&
+      (await page.locator('input[aria-label="Taddy Lager full keg weight"]').inputValue()) === '52',
+  )
+
+  // A tap beer with no size set yet can be set up from the scales: the keg on
+  // them is the keg it comes in.
+  await page.click('.chip:has-text("The scales")')
+  await page.waitForSelector('select[aria-label="Which keg"]', { timeout: 5000 })
+  const stoutOption = await page.locator('select[aria-label="Which keg"] option', { hasText: 'Stout' }).getAttribute('value')
+  check('a tap beer with no size yet is still offered', stoutOption !== null)
+  await page.selectOption('select[aria-label="Which keg"]', stoutOption ?? 'stout')
+  await page.waitForTimeout(150)
+  await page.fill('input[aria-label="Pints the keg holds"]', '144')
+  await page.fill('input[aria-label="Empty keg weight"]', '15')
+  await page.fill('input[aria-label="Full keg weight"]', '97')
+  await page.waitForTimeout(150)
+  check(
+    'and keeping says what size that makes it',
+    (await page.locator('.main').innerText()).includes('Stout has no size yet: keeping this makes it a kil of 144 pints'),
+  )
+  await page.click('button:has-text("Keep for Stout")')
+  await page.waitForTimeout(400)
+  await page.click('.chip:has-text("What it costs")')
+  await page.waitForSelector('select[aria-label="Stout container"]', { timeout: 5000 })
+  check(
+    'a kil of 144 it is, weighed',
+    (await page.locator('select[aria-label="Stout container"]').inputValue()) === 'kil' &&
+      (await page.locator('input[aria-label="Stout servings per container"]').inputValue()) === '144' &&
+      (await page.locator('input[aria-label="Stout empty keg weight"]').inputValue()) === '15',
+    `container "${await page.locator('select[aria-label="Stout container"]').inputValue()}", size "${await page.locator('input[aria-label="Stout servings per container"]').inputValue()}"`,
+  )
+
+  // A different size of keg is a different keg. Moved to kils, the line needs
+  // weighing again — silently carrying a firkin's weights over would turn every
+  // reading into nonsense.
+  await page.selectOption('select[aria-label="Taddy Lager container"]', 'kil')
+  await page.waitForTimeout(400)
+  check(
+    'a line moved to another size of keg loses its weights',
+    (await page.locator('input[aria-label="Taddy Lager empty keg weight"]').inputValue()) === '' &&
+      (await page.locator('input[aria-label="Taddy Lager full keg weight"]').inputValue()) === '',
+  )
+  await page.selectOption('select[aria-label="Taddy Lager container"]', 'firkin')
+  await page.waitForTimeout(400)
+  check(
+    'and back in firkins it is 72 pints again, still unweighed',
+    (await page.locator('input[aria-label="Taddy Lager servings per container"]').inputValue()) === '72' &&
+      (await page.locator('input[aria-label="Taddy Lager empty keg weight"]').inputValue()) === '',
+  )
+
+  // On Tonight the scales sit above the sheet, and keeping the weights with a
+  // keg on them fills the row in — one tap sets the line up and counts it.
+  await page.click('button:has-text("Nights")')
+  await page.waitForSelector('.day-row', { timeout: 5000 })
+  await page.click('.day-row:has-text("24 Aug")')
+  await page.waitForSelector('button:has-text("Edit")', { timeout: 5000 })
+  await page.click('button:has-text("Edit")')
+  await page.waitForSelector('input[aria-label="Taddy Lager counted"]', { timeout: 5000 })
+  check('a keg not weighed has no scales box on the count', (await page.locator('input[aria-label="Taddy Lager on the scales"]').count()) === 0)
+  await page.click('button:has-text("Weigh a keg")')
+  await page.waitForSelector('select[aria-label="Which keg"]', { timeout: 5000 })
+  await page.selectOption('select[aria-label="Which keg"]', taddyOption ?? 'taddy-lager')
+  await page.fill('input[aria-label="Empty keg weight"]', '10')
+  await page.fill('input[aria-label="Full keg weight"]', '51')
+  await page.fill('input[aria-label="Keg on the scales"]', '30.5')
+  await page.click('button:has-text("Keep for Taddy Lager")')
+  await page.waitForSelector('input[aria-label="Taddy Lager on the scales"]', { timeout: 5000 })
+  check(
+    'kept from Tonight, the row grows its scales box with the reading already in it',
+    (await page.locator('input[aria-label="Taddy Lager on the scales"]').inputValue()) === '30.5' &&
+      (await page.locator('input[aria-label="Taddy Lager counted"]').inputValue()) === '36',
+    `scales "${await page.locator('input[aria-label="Taddy Lager on the scales"]').inputValue()}", counted "${await page.locator('input[aria-label="Taddy Lager counted"]').inputValue()}"`,
+  )
+
   console.log('\nMoving to a new copy')
   // The whole point of a backup: everything set up here has to arrive intact
   // in an empty copy of the app. The version this replaced saved only the

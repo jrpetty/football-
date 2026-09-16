@@ -23,9 +23,20 @@ import { reconcileFull, tillExpectations } from '../core/reconcile.ts'
 import type { Capture, DayRecord } from '../core/types.ts'
 import { emptyDay } from '../core/types.ts'
 import { isZReadEmpty, type ZRead } from '../core/zread.ts'
-import { deleteStockCount, getDay, getPhoto, getStockCount, loadStockConfig, saveDay, savePhoto, saveStockCount } from '../storage/db.ts'
+import {
+  deleteStockCount,
+  getDay,
+  getPhoto,
+  getStockCount,
+  loadStockConfig,
+  saveDay,
+  savePhoto,
+  saveStockConfig,
+  saveStockCount,
+} from '../storage/db.ts'
 import { CountSheet } from '../components/CountSheet.tsx'
-import { draftsFromCount, sheetLines, type StockItem } from '../core/stock.ts'
+import { KegCalculator } from '../components/KegCalculator.tsx'
+import { draftsFromCount, kegReading, sheetLines, withKegWeights, type KegWeights, type StockItem } from '../core/stock.ts'
 import { loadSettings } from '../storage/settings.ts'
 import { makeThumbnail } from '../ocr/index.ts'
 import { IconTickSmall } from '../components/icons.tsx'
@@ -84,6 +95,8 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
   const [note, setNote] = useState('')
   // The cellar, counted as the night is closed. Kept as typed until saved.
   const [stockItems, setStockItems] = useState<StockItem[]>([])
+  /** Whether the keg calculator is out above the count sheet. */
+  const [weighOpen, setWeighOpen] = useState(false)
   const [cellarDrafts, setCellarDrafts] = useState<Record<string, string>>({})
   const [cellarOpen, setCellarOpen] = useState(false)
   const [hadCount, setHadCount] = useState(false)
@@ -92,33 +105,27 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
   const [toast, setToast] = useState('')
   const lateNight = useRef(isAfterMidnightForTradingDay()).current
 
-  useEffect(() => {
-    let cancelled = false
-    void loadStockConfig()
-      .then((cfg) => {
-        if (!cancelled) setStockItems(cfg.items)
-      })
-      .catch(() => {})
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  // The night's own cellar count, if one was taken — shown as it was counted,
-  // so a correction starts from the sheet rather than from nothing.
+  // The cellar's lines, and the night's own count if one was taken — shown as
+  // it was counted, so a correction starts from the sheet rather than from
+  // nothing. Loaded together, on the date alone: the lines can change while
+  // the sheet is open (weights kept from the keg calculator), and that must
+  // not reload the count over what has been typed since.
   useEffect(() => {
     let cancelled = false
     void (async () => {
+      const cfg = await loadStockConfig().catch(() => null)
       const count = await getStockCount(date).catch(() => undefined)
       if (cancelled) return
+      const items = cfg?.items ?? []
+      setStockItems(items)
       setHadCount(!!count)
-      setCellarDrafts(count && stockItems.length ? draftsFromCount(count, stockItems) : {})
+      setCellarDrafts(count && items.length ? draftsFromCount(count, items) : {})
       setCellarOpen(!!count)
     })()
     return () => {
       cancelled = true
     }
-  }, [date, stockItems])
+  }, [date])
 
   // Re-opening a night edits it rather than starting a second copy of it.
   useEffect(() => {
@@ -175,6 +182,29 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
   })
 
   const busy = roll.scanning || card.scanning
+  /**
+   * Weights from the keg calculator, kept against the line so its row grows a
+   * box for the scales — and the reading that was on them at the time goes
+   * straight into that row, so one tap both sets the line up and counts it.
+   */
+  async function keepWeights(
+    weights: KegWeights,
+    itemIds: string[],
+    grossKg: number | null,
+    size?: { name: string; baseUnits: number },
+  ) {
+    const cfg = await loadStockConfig()
+    const next = { ...cfg, items: withKegWeights(cfg.items, itemIds, weights, size) }
+    await saveStockConfig(next)
+    setStockItems(next.items)
+    const id = itemIds.length === 1 ? itemIds[0] : undefined
+    if (grossKg !== null && id !== undefined) {
+      const item = next.items.find((i) => i.id === id)
+      const r = item ? kegReading(item, grossKg) : null
+      if (r) setCellarDrafts((d) => ({ ...d, [`${id}:kg`]: String(grossKg), [id]: String(r.servings) }))
+    }
+  }
+
   const cellarCounted = sheetLines(stockItems, cellarDrafts).length
 
   async function save() {
@@ -367,11 +397,28 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
               </button>
               <p className="note" style={{ marginBottom: 0 }}>
                 Counted nightly, every night closes its own window: last night’s count, plus what came
-                in, less what the till poured, against what is actually there.
+                in, less what the till poured, against what is actually there. Kegs go on the scales
+                rather than being guessed at.
               </p>
             </>
           ) : (
             <>
+              {weighOpen ? (
+                <div className="keg-inline">
+                  <KegCalculator items={stockItems} onKeep={keepWeights} />
+                  <div className="alts">
+                    <button type="button" className="btn-small" onClick={() => setWeighOpen(false)}>
+                      Put the scales away
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="alts" style={{ marginTop: 0, marginBottom: 12 }}>
+                  <button type="button" className="btn-small" onClick={() => setWeighOpen(true)}>
+                    Weigh a keg
+                  </button>
+                </div>
+              )}
               <CountSheet items={stockItems} drafts={cellarDrafts} onChange={setCellarDrafts} word="counted" scales />
               <p className="note">
                 Whole containers in the first box, loose servings in the last. A keg that has been

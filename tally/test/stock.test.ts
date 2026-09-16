@@ -12,6 +12,9 @@ import {
   sheetLines,
   weighable,
   kegReading,
+  readScales,
+  withKegWeights,
+  kegNameFor,
   deadStock,
   formatServings,
   formatServingsSigned,
@@ -433,6 +436,65 @@ test('a line cannot be weighed until both weights are set, the right way round',
   assert.equal(weighable({ ...taddy, container: { name: 'firkin', baseUnits: 1, emptyKg: 51, fullKg: 10 } }), false, 'backwards')
   assert.equal(weighable(kegged), true)
   assert.equal(kegReading(taddy, 30), null)
+})
+
+test('the keg’s own weight comes off before a reading is pints', () => {
+  // The example given for it: a full keg at 110 kg, an empty one at 10 kg, a
+  // hundred pints of beer between them. A keg reading 70 kg is 60 pints, not
+  // 70 — the 10 kg of keg is still on the scales.
+  const r = readScales({ emptyKg: 10, fullKg: 110 }, 100 * ML_PER_PINT, ML_PER_PINT, 70)!
+  assert.equal(r.servings, 60)
+  assert.equal(r.share, 0.6)
+  assert.equal(r.outside, null)
+})
+
+test('a spirit bottle weighs the same way, in shots', () => {
+  // A 70cl bottle at 0.5 kg empty and 1.2 kg full, reading 0.85: half a
+  // bottle, 350ml, 11.7 shots of 30.
+  const r = readScales({ emptyKg: 0.5, fullKg: 1.2 }, 700, 30, 0.85)!
+  assert.equal(r.baseUnits, 350)
+  assert.equal(r.servings, 11.7)
+})
+
+test('nonsense weights give no reading rather than a wrong one', () => {
+  assert.equal(readScales({ emptyKg: 51, fullKg: 10 }, 100, 1, 30), null, 'full lighter than empty')
+  assert.equal(readScales({ emptyKg: 10, fullKg: 10 }, 100, 1, 30), null, 'no beer between them')
+  assert.equal(readScales({ emptyKg: 10, fullKg: 51 }, 0, 1, 30), null, 'holds nothing')
+  assert.equal(readScales({ emptyKg: 10, fullKg: 51 }, 100, 1, NaN), null, 'no reading')
+})
+
+test('weights are kept on the lines named, and only those with a container', () => {
+  const stout: StockItem = { ...taddy, id: 'stout', name: 'Stout' }
+  const loose: StockItem = { id: 'loose', name: 'Loose', kind: 'liquid', servingBaseUnits: ML_PER_PINT, servingName: 'pint' }
+  const next = withKegWeights([taddy, stout, vodka, loose], ['taddy', 'stout', 'loose'], { emptyKg: 10, fullKg: 51 })
+  assert.deepEqual(next[0].container, { name: 'firkin', baseUnits: 72 * ML_PER_PINT, emptyKg: 10, fullKg: 51 })
+  assert.deepEqual(next[1].container, { name: 'firkin', baseUnits: 72 * ML_PER_PINT, emptyKg: 10, fullKg: 51 })
+  assert.equal(next[2], vodka, 'a line not named is the same object')
+  assert.equal(next[3], loose, 'a line with no container cannot carry weights')
+  assert.equal(weighable(next[0]), true)
+
+  const off = withKegWeights(next, ['taddy'], null)
+  assert.deepEqual(off[0].container, taddy.container)
+  assert.equal(off[1], next[1])
+})
+
+test('a line with no size yet can be given the keg on the scales along with its weights', () => {
+  const stout: StockItem = { id: 'stout', name: 'Stout', kind: 'liquid', servingBaseUnits: ML_PER_PINT, servingName: 'pint' }
+  const firkin = { name: 'firkin', baseUnits: 72 * ML_PER_PINT }
+  const next = withKegWeights([stout, taddy], ['stout', 'taddy'], { emptyKg: 10, fullKg: 51 }, firkin)
+  assert.deepEqual(next[0].container, { name: 'firkin', baseUnits: 72 * ML_PER_PINT, emptyKg: 10, fullKg: 51 })
+  assert.equal(next[1].container?.name, 'firkin')
+  assert.equal(next[1].container?.baseUnits, taddy.container?.baseUnits, 'a line with its own size keeps it')
+  assert.equal(withKegWeights([stout], ['stout'], { emptyKg: 10, fullKg: 51 }, { name: 'keg', baseUnits: 0 })[0], stout, 'a size of nothing is no size')
+})
+
+test('a keg is named by what it holds, and an odd size is just a keg', () => {
+  assert.equal(kegNameFor(72), 'firkin')
+  assert.equal(kegNameFor(144), 'kil')
+  assert.equal(kegNameFor(88), 'keg')
+  assert.equal(kegNameFor(36), 'pin')
+  assert.equal(kegNameFor(100), 'keg')
+  assert.equal(kegNameFor(24), 'keg', 'a case of 24 is not a keg')
 })
 
 // --- the count sheet -----------------------------------------------------------

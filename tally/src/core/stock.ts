@@ -570,22 +570,88 @@ export interface KegReading {
   outside: 'under' | 'over' | null
 }
 
+/** What a keg weighs empty and what it weighs full, in kilograms, keg and all. */
+export interface KegWeights {
+  emptyKg: number
+  fullKg: number
+}
+
+/** Whether a pair of weights can be used: both real, and full heavier than empty. */
+export function scalesUsable(w: Partial<KegWeights> | undefined): w is KegWeights {
+  return (
+    !!w &&
+    w.emptyKg !== undefined &&
+    w.fullKg !== undefined &&
+    Number.isFinite(w.emptyKg) &&
+    Number.isFinite(w.fullKg) &&
+    w.emptyKg >= 0 &&
+    w.fullKg > w.emptyKg
+  )
+}
+
+/**
+ * A reading off the scales for any keg: what one weighs empty and full, what
+ * it holds when full, and the serving it is counted in.
+ *
+ * The keg's own weight comes off first — a 10 kg firkin reading 70 kg holds
+ * 60 kg of beer, not 70 — and what is left is a share of a full one. The share
+ * is held between empty and full for the count, and a reading outside that is
+ * said, because it is a wrong reading or a wrong calibration.
+ */
+export function readScales(
+  weights: KegWeights,
+  holdsBaseUnits: number,
+  servingBaseUnits: number,
+  grossKg: number,
+): KegReading | null {
+  if (!scalesUsable(weights) || !(holdsBaseUnits > 0) || !Number.isFinite(grossKg)) return null
+  const raw = (grossKg - weights.emptyKg) / (weights.fullKg - weights.emptyKg)
+  const share = Math.min(1, Math.max(0, raw))
+  const baseUnits = Math.round(share * holdsBaseUnits)
+  const servings = servingBaseUnits > 0 ? Math.round((baseUnits / servingBaseUnits) * 10) / 10 : baseUnits
+  return { baseUnits, servings, share, outside: raw < 0 ? 'under' : raw > 1 ? 'over' : null }
+}
+
 /** Whether a line can be weighed: a container with both weights, full heavier than empty. */
 export function weighable(item: StockItem): boolean {
   const c = item.container
-  return !!c && c.baseUnits > 0 && c.emptyKg !== undefined && c.fullKg !== undefined && c.fullKg > c.emptyKg
+  return !!c && c.baseUnits > 0 && scalesUsable(c)
 }
 
-/** A reading off the scales, in kilograms of keg-and-all, as pints of beer. */
+/** A reading off the scales, in kilograms of keg-and-all, as the line's own servings. */
 export function kegReading(item: StockItem, grossKg: number): KegReading | null {
-  if (!weighable(item) || !Number.isFinite(grossKg)) return null
-  const c = item.container as { baseUnits: number; emptyKg: number; fullKg: number }
-  const liquidKg = c.fullKg - c.emptyKg
-  const raw = (grossKg - c.emptyKg) / liquidKg
-  const share = Math.min(1, Math.max(0, raw))
-  const baseUnits = Math.round(share * c.baseUnits)
-  const servings = item.servingBaseUnits > 0 ? Math.round((baseUnits / item.servingBaseUnits) * 10) / 10 : baseUnits
-  return { baseUnits, servings, share, outside: raw < 0 ? 'under' : raw > 1 ? 'over' : null }
+  const c = item.container
+  if (!c || !weighable(item)) return null
+  return readScales({ emptyKg: c.emptyKg as number, fullKg: c.fullKg as number }, c.baseUnits, item.servingBaseUnits, grossKg)
+}
+
+/**
+ * The lines named, with these weights kept against them — or, given null,
+ * with their weights taken off. The weights are the container's, so a line
+ * with no container is left as it is, unless a size is given for it: then
+ * the keg on the scales is what that line comes in, and it says so.
+ */
+export function withKegWeights(
+  items: readonly StockItem[],
+  itemIds: readonly string[],
+  weights: KegWeights | null,
+  sizeForUnsized?: { name: string; baseUnits: number },
+): StockItem[] {
+  const ids = new Set(itemIds)
+  return items.map((i) => {
+    if (!ids.has(i.id)) return i
+    const container: NonNullable<StockItem['container']> | undefined =
+      i.container ?? (sizeForUnsized && sizeForUnsized.baseUnits > 0 ? sizeForUnsized : undefined)
+    if (!container) return i
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { emptyKg: _e, fullKg: _f, ...bare } = container
+    return { ...i, container: weights ? { ...bare, emptyKg: weights.emptyKg, fullKg: weights.fullKg } : bare }
+  })
+}
+
+/** The name a keg of this many pints goes by, for a line given its size from the scales. */
+export function kegNameFor(pints: number): string {
+  return CONTAINER_SIZES.find((c) => c.servings === pints && c.hint.includes('gallon'))?.name ?? 'keg'
 }
 
 // --- the count sheet ---------------------------------------------------------

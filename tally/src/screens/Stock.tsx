@@ -38,6 +38,9 @@ import {
   pluralServing,
   sheetLines,
   weighable,
+  kegReading,
+  withKegWeights,
+  type KegWeights,
   type Delivery,
   type Basis,
   type Pour,
@@ -46,6 +49,7 @@ import {
   type StockItem,
 } from '../core/stock.ts'
 import { CountSheet } from '../components/CountSheet.tsx'
+import { KegCalculator } from '../components/KegCalculator.tsx'
 import { bestMatch } from '../core/match.ts'
 import { record } from '../core/history.ts'
 import { scanDeliveryNote } from '../ocr/scanList.ts'
@@ -67,7 +71,7 @@ import { cellarValue, costOf, margin } from '../core/margin.ts'
 import { buildIndex, lookup, type PriceBookEntry } from '../core/priceBook.ts'
 import { formatMoney, parsePence, penceToInput } from '../core/money.ts'
 
-type Panel = 'levels' | 'delivery' | 'count' | 'costs' | 'setup'
+type Panel = 'levels' | 'delivery' | 'count' | 'scales' | 'costs' | 'setup'
 
 /**
  * How a cellar line is counted, given every measure that draws on it.
@@ -133,6 +137,8 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
   const [scanNotes, setScanNotes] = useState('')
   const [proposals, setProposals] = useState<DeliveryProposal[] | null>(null)
   const [rejected, setRejected] = useState<Set<number>>(new Set())
+  /** Whether the keg calculator is out above the stock take. */
+  const [weighOpen, setWeighOpen] = useState(false)
   const noteRef = useRef<HTMLInputElement>(null)
   const abortRef = useRef<AbortController | null>(null)
 
@@ -319,18 +325,34 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
     const cleared = emptyText.trim() === '' && fullText.trim() === ''
     if (!valid && !cleared) return
 
-    const next = {
-      ...config,
-      items: config.items.map((i) => {
-        if (i.id !== item.id || !i.container) return i
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { emptyKg: _e, fullKg: _f, ...bare } = i.container
-        return { ...i, container: valid ? { ...bare, emptyKg: empty, fullKg: full } : bare }
-      }),
-    }
+    const next = { ...config, items: withKegWeights(config.items, [item.id], valid ? { emptyKg: empty, fullKg: full } : null) }
     setConfig(next)
     await saveStockConfig(next)
     onChanged()
+  }
+
+  /**
+   * Weights from the keg calculator, kept against one line or every line in
+   * that size of keg. The reading that was on the scales at the time goes
+   * straight into the stock take, if one is open.
+   */
+  async function keepWeights(
+    weights: KegWeights,
+    itemIds: string[],
+    grossKg: number | null,
+    size?: { name: string; baseUnits: number },
+  ) {
+    if (!config) return
+    const next = { ...config, items: withKegWeights(config.items, itemIds, weights, size) }
+    setConfig(next)
+    await saveStockConfig(next)
+    onChanged()
+    const id = itemIds.length === 1 ? itemIds[0] : undefined
+    if (panel === 'count' && grossKg !== null && id !== undefined) {
+      const item = next.items.find((i) => i.id === id)
+      const r = item ? kegReading(item, grossKg) : null
+      if (r) setDrafts((d) => ({ ...d, [`${id}:kg`]: String(grossKg), [id]: String(r.servings) }))
+    }
   }
 
   async function setLine(item: StockItem, patch: { name?: string; sizeText?: string; priceText?: string }) {
@@ -371,11 +393,17 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
         const costs = hasPrice && hasSize
           ? record(i.costHistory ?? [], { date: tradingDayKey(), pence, baseUnits })
           : i.costHistory
-        // The scales weights ride along: a price edit must not lose them.
-        const weights = {
-          ...(i.container?.emptyKg !== undefined ? { emptyKg: i.container.emptyKg } : {}),
-          ...(i.container?.fullKg !== undefined ? { fullKg: i.container.fullKg } : {}),
-        }
+        // The scales weights ride along: a price edit must not lose them. A
+        // different size of keg is a different keg, though — a kil does not
+        // weigh what a firkin does, empty or full — so a line moved to another
+        // container needs weighing again.
+        const sameKeg = patch.name === undefined || patch.name === i.container?.name
+        const weights = sameKeg
+          ? {
+              ...(i.container?.emptyKg !== undefined ? { emptyKg: i.container.emptyKg } : {}),
+              ...(i.container?.fullKg !== undefined ? { fullKg: i.container.fullKg } : {}),
+            }
+          : {}
         return {
           ...bare,
           ...(hasSize ? { container: { name, baseUnits, ...weights } } : {}),
@@ -540,7 +568,7 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
           <span className="badge">{config.items.length} lines</span>
         </div>
         <div className="chip-row">
-          {(['levels', 'delivery', 'count', 'costs', 'setup'] as const).map((p) => (
+          {(['levels', 'delivery', 'count', 'scales', 'costs', 'setup'] as const).map((p) => (
             <button
               key={p}
               type="button"
@@ -556,7 +584,7 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
                 else if (p === 'delivery') setSheetDate(tradingDayKey())
               }}
             >
-              {p === 'levels' ? 'What’s left' : p === 'delivery' ? 'Delivery in' : p === 'count' ? 'Stock take' : p === 'costs' ? 'What it costs' : 'Set up'}
+              {p === 'levels' ? 'What’s left' : p === 'delivery' ? 'Delivery in' : p === 'count' ? 'Stock take' : p === 'scales' ? 'The scales' : p === 'costs' ? 'What it costs' : 'Set up'}
             </button>
           ))}
         </div>
@@ -654,6 +682,24 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
             )}
           </div>
 
+          {panel === 'count' && weighOpen && (
+            <div className="keg-inline">
+              <KegCalculator items={config.items} onKeep={keepWeights} />
+              <div className="alts">
+                <button type="button" className="btn-small" onClick={() => setWeighOpen(false)}>
+                  Put the scales away
+                </button>
+              </div>
+            </div>
+          )}
+          {panel === 'count' && !weighOpen && (
+            <div className="alts" style={{ marginTop: 0, marginBottom: 12 }}>
+              <button type="button" className="btn-small" onClick={() => setWeighOpen(true)}>
+                Weigh a keg
+              </button>
+            </div>
+          )}
+
           {panel === 'delivery' && (
             <>
               <div className="alts">
@@ -748,11 +794,11 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
             word={panel === 'delivery' ? 'delivered' : 'counted'}
             scales={panel === 'count'}
           />
-          {panel === 'count' && config.items.some((i) => weighable(i)) && (
+          {panel === 'count' && (
             <p className="note">
-              A line with its keg weighed empty and full has a box for the scales: put the reading in
-              and it works out the {config.items.find((i) => weighable(i))?.servingName ?? 'serving'}s
-              for you. Weights are set per line under What it costs.
+              {config.items.some((i) => weighable(i))
+                ? 'A line with its keg weighed empty and full has a box for the scales: put the reading in and it works out the pints for you. Weigh a keg, above, to set another line up the same way.'
+                : 'Kegs can be weighed rather than guessed at. Weigh a keg, above: one empty and one full, kept against the line, and from then on its row has a box for the reading.'}
             </p>
           )}
           <button type="button" className="btn-primary" style={{ marginTop: 12 }} onClick={() => void saveSheet(panel)}>
@@ -768,6 +814,27 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
 
       {/* --- the pours ------------------------------------------------------- */}
       {/* --- what the brewery charges ---------------------------------------- */}
+      {/* --- the scales -------------------------------------------------------- */}
+      {panel === 'scales' && config.items.length > 0 && (
+        <section className="card">
+          <div className="card-head">
+            <h2>The scales</h2>
+            <span className="hint">what is really in a keg</span>
+          </div>
+          <p className="note" style={{ marginTop: 0 }}>
+            Weigh a keg empty and weigh one full — once each, for each size of keg. From then on
+            any keg on the scales is pints: its own weight comes off, and what is left is the share
+            of a full one.
+          </p>
+          <KegCalculator items={config.items} onKeep={keepWeights} />
+          <p className="note">
+            Keep the weights against a line and its row on the stock take — and on Tonight’s count —
+            has a box for the reading. A firkin, a kil and a keg each weigh their own, so a line that
+            changes size needs weighing again.
+          </p>
+        </section>
+      )}
+
       {panel === 'costs' && config.items.length > 0 && (
         <section className="card">
           <div className="card-head">
@@ -932,7 +999,8 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
           <p className="note">
             Kegs can be weighed instead of guessed at. Put a full one and an empty one on the scales
             once and type both weights against the line; from then on the stock take has a box for
-            the reading, and a keg at 45 kg comes out as the pints that are actually in it.
+            the reading, and a keg at 45 kg comes out as the pints that are actually in it. The scales, on their own chip, work the same sum
+            for any keg and keep the weights here.
           </p>
         </section>
       )}
