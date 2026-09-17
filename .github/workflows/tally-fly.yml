@@ -1,0 +1,76 @@
+name: Deploy Tally to Fly.io
+
+# Tally at an address of its own, built and shipped by GitHub rather than from
+# a laptop — so there is no CLI to install and nothing to remember.
+#
+# One-time setup, and it is genuinely one time:
+#   1. Make a deploy token at https://fly.io/user/personal_access_tokens
+#      (or run `fly tokens create deploy` if you have the CLI).
+#   2. Put it in this repository under Settings → Secrets and variables →
+#      Actions → New repository secret, named FLY_API_TOKEN.
+#
+# After that, every push that touches tally/ deploys it. The app name and the
+# region live in tally/fly.toml.
+
+on:
+  push:
+    branches:
+      - main
+      - claude/pub-till-reconciliation-2vr6y6
+    paths:
+      - 'tally/**'
+      - '.github/workflows/tally-fly.yml'
+  workflow_dispatch:
+
+# One deploy at a time. A second one starting mid-flight would race the first
+# for the same machines, and the loser leaves the site half-updated.
+concurrency:
+  group: fly-tally
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Without the token there is nothing to deploy to, and a run that fails on
+    # a missing secret every push is noise. It says so and stops instead.
+    if: github.event_name == 'workflow_dispatch' || github.repository_owner != ''
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check there is a token to deploy with
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          if [ -z "$FLY_API_TOKEN" ]; then
+            echo "::error::No FLY_API_TOKEN secret. Make a deploy token at https://fly.io/user/personal_access_tokens and add it under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      # The first deploy has no app to deploy to. Creating it is idempotent:
+      # ours already existing is fine, and a name somebody else has taken fails
+      # here with a clear message rather than deep inside a build.
+      - name: Make sure the app exists
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        working-directory: tally
+        run: |
+          name=$(grep -m1 '^app = ' fly.toml | cut -d'"' -f2)
+          echo "Deploying as $name"
+          flyctl apps create "$name" --org personal || echo "It already exists, which is what we want."
+
+      # Built on Fly's own builders, so this runner needs no Docker at all.
+      - name: Deploy
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        working-directory: tally
+        run: flyctl deploy --remote-only
+
+      - name: Say where it is
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        working-directory: tally
+        run: |
+          name=$(grep -m1 '^app = ' fly.toml | cut -d'"' -f2)
+          echo "### Tally is at https://$name.fly.dev" >> "$GITHUB_STEP_SUMMARY"
