@@ -1,0 +1,7 @@
+node_modules
+dist
+dist-single
+tally-single.html
+shots
+.git
+*.log

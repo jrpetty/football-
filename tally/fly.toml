@@ -1,0 +1,27 @@
+# Tally on Fly.io.
+#
+#   fly launch --copy-config --no-deploy   (once, to claim the name)
+#   fly deploy
+#
+# The machine stops when nobody is using it and starts again on the next
+# request, which for a pub that counts up once a night means it is asleep
+# nearly all the time.
+
+app = "tally-gardeners"
+primary_region = "lhr"
+
+[build]
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  # Nothing is stored on the server — the records live in the phone's own
+  # browser — so there is nothing to lose by letting it sleep.
+  min_machines_running = 0
+  processes = ["app"]
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

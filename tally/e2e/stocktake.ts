@@ -38,7 +38,7 @@ const expected: Record<string, number> = {
   'dark-mild': part(SMALL, 53),
   rose: 25 * BOTTLE_ML,
   'red-wine': 15 * BOTTLE_ML + 625,
-  'house-wine': 74 * BOTTLE_ML + 375,
+  'house-wine': 73 * BOTTLE_ML + 375,
   cherry: 46, raspberry: 22, chocolate: 39, apricot: 38, pear: 85, strawberry: 6,
   'nut-brown': 31, 'pure-brew-bottled': 30, 'alc-free': 29,
   'orange-juice': 53, 'apple-juice': 56, passion: 39, elderflower: 39,

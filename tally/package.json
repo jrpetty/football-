@@ -15,7 +15,9 @@
     "test:subpath": "node e2e/subpath.ts",
     "build:single": "TALLY_SINGLE=1 vite build && node scripts/build-single.ts",
     "test:phone": "node e2e/phone.ts",
-    "test:stocktake": "node e2e/stocktake.ts"
+    "test:stocktake": "node e2e/stocktake.ts",
+    "serve": "node serve.mjs",
+    "test:site": "node e2e/site.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",

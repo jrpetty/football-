@@ -317,6 +317,8 @@ npm run build      # production build into dist/
 npm run test:e2e   # the whole flow in real Chromium (build first)
 npm run test:phone # does it fit, and can it be tapped (build first)
 npm run test:stocktake # the cellar it ships with, against the sheet it came from
+npm run serve      # the site, as the container serves it (build first)
+npm run test:site  # the headers, the manifest, the worker and going offline
 npm run icons      # re-rasterise the PNGs after editing public/icon.svg
 ```
 
@@ -345,7 +347,34 @@ line back out of its own database. It is the check that the cellar in the app is
 the cellar in the building, and it runs against `dist/` or against any single
 file handed to it.
 
-### Deploying
+### Deploying as a website
+
+There is a `Dockerfile` and a `fly.toml` here, so it runs at an address of its
+own on [Fly.io](https://fly.io):
+
+```bash
+cd tally
+fly launch --copy-config --no-deploy   # once, to claim the name
+fly deploy
+```
+
+The image is two stages: Node builds the site, then a second image carries only
+the built files and `serve.mjs`, a dependency-free static server. It is
+dependency-free on purpose — a static site of twenty-odd files does not need a
+framework, and `npm run test:site` can then start the real server and check the
+real headers, so what is tested is what is deployed.
+
+The headers are the part that matters, because this is installed to a phone's
+home screen. The page and the service worker are revalidated every time, or a
+new version would never reach her; Vite's fingerprinted assets are held for a
+year, because their names change when their contents do.
+
+The machine sleeps when nobody is using it and wakes on the next request, which
+for a pub that counts up once a night is nearly always. Nothing is stored on the
+server — the records live in the phone's own browser — so a sleeping machine
+loses nothing, and a machine that is destroyed loses nothing either.
+
+### Deploying to GitHub Pages
 
 The repository's Pages workflow publishes this under `/tally/` on the default
 branch. The Vite base is relative, so the same build also works at a site root

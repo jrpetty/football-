@@ -66,8 +66,9 @@ const CASKS: Cask[] = [
 const WINES: Array<{ id: string; name: string; bottles: number; looseMl: number }> = [
   { id: 'rose', name: 'Rose', bottles: 25, looseMl: 0 },
   { id: 'red-wine', name: 'Red wine', bottles: 15, looseMl: 625 },
-  // The house wine the till already pours by the glass.
-  { id: 'house-wine', name: 'White wine', bottles: 74, looseMl: 375 },
+  // The house wine the till already pours by the glass. Seventy-four on the
+  // sheet, one off since: 73 whole bottles and the open one.
+  { id: 'house-wine', name: 'White wine', bottles: 73, looseMl: 375 },
 ]
 
 /** Sold whole, counted by the bottle. */

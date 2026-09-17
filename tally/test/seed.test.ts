@@ -36,8 +36,8 @@ test('a keg on the scales is the pints that are in it', () => {
 test('the wine is bottles and what is left in the open one', () => {
   assert.equal(found.get('rose'), 25 * 750)
   assert.equal(found.get('red-wine'), 15 * 750 + 625)
-  assert.equal(found.get('house-wine'), 74 * 750 + 375)
-  assert.equal(reads('house-wine'), '55875 ml')
+  assert.equal(found.get('house-wine'), 73 * 750 + 375)
+  assert.equal(reads('house-wine'), '55125 ml')
 })
 
 test('a wine bottle can be weighed, and a middle keg cannot yet', () => {

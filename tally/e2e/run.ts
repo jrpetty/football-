@@ -1587,7 +1587,7 @@ try {
   const opened = await firstRun.locator('.main').innerText()
   check('a new copy opens with the stock take already in it', /Taddy Lager/.test(opened), opened.slice(0, 160))
   check('the casks, as they were counted', /1056 pints/.test(opened) && /218\.2 pints/.test(opened), opened.slice(0, 400))
-  check('the wine, to the millilitre', /55875 ml/.test(opened))
+  check('the wine, to the millilitre', /55125 ml/.test(opened))
   check('and the bottles off the shelf', /107 units/.test(opened) && /46 bottles/.test(opened))
   check(
     'the spirits say they were not counted, rather than none',
