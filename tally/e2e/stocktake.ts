@@ -37,7 +37,7 @@ const expected: Record<string, number> = {
   // Dark mild: one keg at 53 kg.
   'dark-mild': part(SMALL, 53),
   rose: 25 * BOTTLE_ML,
-  'red-wine': 15 * BOTTLE_ML + 625,
+  'red-wine': 14 * BOTTLE_ML + 625,
   'house-wine': 73 * BOTTLE_ML + 375,
   cherry: 46, raspberry: 22, chocolate: 39, apricot: 38, pear: 85, strawberry: 6,
   'nut-brown': 31, 'pure-brew-bottled': 30, 'alc-free': 29,
