@@ -316,6 +316,7 @@ npm test           # the pure logic — money, dates, reconciliation, receipt pa
 npm run build      # production build into dist/
 npm run test:e2e   # the whole flow in real Chromium (build first)
 npm run test:phone # does it fit, and can it be tapped (build first)
+npm run test:stocktake # the cellar it ships with, against the sheet it came from
 npm run icons      # re-rasterise the PNGs after editing public/icon.svg
 ```
 
@@ -335,6 +336,14 @@ which is what makes an iPhone zoom into a form and not come back. It also pulls
 the network out from under the app and checks it still opens and still holds the
 night. The engine is Chromium, because that is what this machine can run: an
 iPhone runs WebKit, so it is a proxy for the layout and not for Safari itself.
+
+`npm run test:stocktake` checks the stock take the app opens with. The pub's
+own figures are typed into it a second time, from the sheet they came off, and
+the arithmetic is done a second time too, borrowing no constant and no function
+from the app. Then it opens the built app for the first time and reads every
+line back out of its own database. It is the check that the cellar in the app is
+the cellar in the building, and it runs against `dist/` or against any single
+file handed to it.
 
 ### Deploying
 
