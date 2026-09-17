@@ -35,7 +35,10 @@ interface Keg {
 // The three sizes, and what they weigh. The middle keg has not been weighed
 // empty yet, so it carries no weights and cannot be read off the scales.
 const LARGE: Keg = { name: 'large keg', pints: 176, emptyKg: 22.4, fullKg: 123 }
-const MIDDLE: Keg = { name: 'middle keg', pints: 144 }
+// Weighed full but not yet empty, so it keeps the one figure there is and
+// cannot be read off the scales until the other arrives. Typing the empty
+// weight against the line is then all it needs.
+const MIDDLE: Keg = { name: 'middle keg', pints: 144, fullKg: 103 }
 const SMALL: Keg = { name: 'small keg', pints: 88, emptyKg: 13.4, fullKg: 64.75 }
 
 /** A wine bottle, weighed empty and full, so a part bottle reads off the scales. */
@@ -100,11 +103,12 @@ const PACKETS: Array<[string, string, number, boolean]> = [
 ]
 
 function kegContainer(keg: Keg): NonNullable<StockItem['container']> {
+  // Each weight is kept on its own. A keg weighed full but not empty cannot be
+  // read off the scales — that needs both — but throwing away the one figure
+  // somebody has already taken would mean weighing it twice.
   const container: NonNullable<StockItem['container']> = { name: keg.name, baseUnits: keg.pints * ML_PER_PINT }
-  if (keg.emptyKg !== undefined && keg.fullKg !== undefined) {
-    container.emptyKg = keg.emptyKg
-    container.fullKg = keg.fullKg
-  }
+  if (keg.emptyKg !== undefined) container.emptyKg = keg.emptyKg
+  if (keg.fullKg !== undefined) container.fullKg = keg.fullKg
   return container
 }
 

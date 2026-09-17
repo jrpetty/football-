@@ -16,6 +16,7 @@ import {
   withKegWeights,
   kegNameFor,
   deadStock,
+  describeStock,
   formatServings,
   formatServingsSigned,
   guessPour,
@@ -641,4 +642,13 @@ test('the night’s gap is the same figure the cellar screen shows for its last 
   const health = cellarHealth({ ...shared, counts, today: '2026-08-26' })
   assert.equal(night.window!.gapPence, health.gapPence)
   assert.equal(night.window!.gapPence, Math.round((-8 * 9500) / 72), 'eight pints at the firkin price')
+})
+
+test('a cellar counted in boxes reads boxes, not boxs', () => {
+  const crisps: StockItem = {
+    id: 'c', name: 'Crisps', kind: 'count', servingBaseUnits: 1, servingName: 'unit',
+    container: { name: 'box', baseUnits: 25 },
+  }
+  assert.equal(describeStock(93, crisps), '3 boxes + 18 units')
+  assert.equal(describeStock(26, crisps), '1 box + 1 unit')
 })

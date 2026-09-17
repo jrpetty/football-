@@ -636,7 +636,7 @@ export function describeStock(baseUnits: number, item: StockItem): string {
   if (!b || (b.full === 0 && b.partServings === 0)) return formatServings(baseUnits, item)
 
   const parts: string[] = []
-  if (b.full > 0) parts.push(`${b.full} ${b.containerName}${b.full === 1 ? '' : 's'}`)
+  if (b.full > 0) parts.push(`${b.full} ${b.full === 1 ? b.containerName : pluralServing(b.containerName)}`)
   if (b.partServings > 0) parts.push(formatServings(servingsToBase(b.partServings, item), item))
   // A part-used barrel with nothing in it is not worth mentioning; a cellar
   // with nothing in it at all is.

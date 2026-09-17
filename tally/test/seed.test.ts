@@ -45,6 +45,7 @@ test('a wine bottle can be weighed, and a middle keg cannot yet', () => {
   assert.deepEqual(rose.container, { name: 'wine bottle', baseUnits: 750, emptyKg: 0.175, fullKg: 1.125 })
   const alpine = byId.get('alpine') as StockItem
   assert.equal(alpine.container?.emptyKg, undefined, 'nobody has weighed an empty one')
+  assert.equal(alpine.container?.fullKg, 103, 'but the full one was weighed, and that is kept')
   assert.equal(alpine.container?.baseUnits, 144 * ML_PER_PINT)
 })
 
