@@ -181,12 +181,15 @@ export function buildAskPack(data: AskData): AskPack {
   // --- the cellar ------------------------------------------------------------
   if (data.cellar && data.cellar.ledger.length > 0) {
     out.push(`CELLAR (expected on hand now, from the count on ${data.cellar.since} plus deliveries minus what the till sold)`)
-    out.push('name|on hand|worth at cost')
+    out.push('name|on hand|nights left|worth at cost')
     let worth = 0
     let valued = false
+    // Nights left comes from what the till has actually poured over the
+    // window, so "what should I order?" is answerable without anybody counting.
+    const nightsLeft = new Map(data.cellar.runway.map((r) => [r.item.id, r.nightsLeft]))
     for (const line of data.cellar.ledger) {
       if (!line.counted) {
-        out.push([field(line.item.name, 40), 'not counted', ''].join('|'))
+        out.push([field(line.item.name, 40), 'not counted', '', ''].join('|'))
         continue
       }
       const value = costOf(line.item, Math.max(0, line.expectedBaseUnits))
@@ -194,11 +197,33 @@ export function buildAskPack(data: AskData): AskPack {
         worth += value
         valued = true
       }
+      const left = nightsLeft.get(line.item.id)
       out.push(
-        [field(line.item.name, 40), servings(Math.max(0, line.expectedBaseUnits), line.item), value === null ? 'no cost set' : money(value)].join('|'),
+        [
+          field(line.item.name, 40),
+          servings(Math.max(0, line.expectedBaseUnits), line.item),
+          left === undefined ? '' : `${left}`,
+          value === null ? 'no cost set' : money(value),
+        ].join('|'),
       )
     }
     if (valued) out.push(`Total value at cost, where a cost is set: ${money(worth)}`)
+    out.push(`Nights left is at the rate that line has gone out over the ${data.cellar.readNights} night${data.cellar.readNights === 1 ? '' : 's'} of this window whose receipt has been read — nights of trade, not days on the calendar. Blank means nothing has been poured of it, so there is no rate.`)
+    // The figures are only as good as the mapping, and saying so beats being
+    // asked "why does it think we still have four firkins".
+    if (data.cellar.nightsWithoutItems > 0) {
+      out.push(
+        `WARNING: ${data.cellar.nightsWithoutItems} night${data.cellar.nightsWithoutItems === 1 ? '' : 's'} in this window ${data.cellar.nightsWithoutItems === 1 ? 'has' : 'have'} a receipt with no item list, so nothing came off the cellar for ${data.cellar.nightsWithoutItems === 1 ? 'it' : 'them'} and the on-hand figures above read high by that much trade.`,
+      )
+    }
+    if (data.cellar.unmapped.length > 0) {
+      out.push(
+        `WARNING: the till sold ${data.cellar.unmapped.length} line${data.cellar.unmapped.length === 1 ? '' : 's'} with no cellar pour set (${data.cellar.unmapped
+          .slice(0, 6)
+          .map((u) => u.name)
+          .join(', ')}), so nothing came off for ${data.cellar.unmapped.length === 1 ? 'it' : 'them'} and the on-hand figures above read high.`,
+      )
+    }
     if (data.cellar.gapPence !== null) {
       out.push(
         `Last stocktake window: the count disagreed with the till by ${money(Math.abs(data.cellar.gapPence))} at cost${

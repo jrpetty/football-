@@ -19,7 +19,8 @@
 import type { DayStats, LikeForLike } from './analytics.ts'
 import type { MarginMove } from './history.ts'
 import type { MarginReport } from './margin.ts'
-import type { DeadStockLine } from './stock.ts'
+import type { DeadStockLine, StockRunway } from './stock.ts'
+import { describeStock, LOW_NIGHTS } from './stock.ts'
 import { formatMoney } from './money.ts'
 
 export type AlertLevel = 'bad' | 'warn' | 'info'
@@ -66,6 +67,8 @@ export const STALE_COUNT_DAYS = 45
 const DEAD_STOCK_PENCE = 20000
 
 export interface AlertInput {
+  /** How long each line has left at the rate it is going, from the till. */
+  runway?: readonly StockRunway[]
   /** Every night, so a run of short drawers can be spotted. */
   recent: readonly DayStats[]
   yearOnYear?: LikeForLike | null
@@ -159,6 +162,32 @@ export function weeklyAlerts(input: AlertInput): Alert[] {
       headline: `The drawer has been short ${short.length} of the last ${judged.length}`,
       detail: `${formatMoney(total)} in total. One short night is a miscount; four is a pattern worth looking at.`,
       screen: 'nights',
+    })
+  }
+
+  // --- about to run out -----------------------------------------------------------
+  //
+  // The point of taking the till off the stock: not "the cellar is £40 light"
+  // three weeks after the fact, but "order the Taddy, it goes Thursday". Only
+  // lines with a level and a rate get here, so nothing is guessed at — and
+  // lines already at nothing are left out, because being told a line is empty
+  // after it ran dry is not an alert, it is a reproach. Counted in nights of
+  // trade rather than days, because that is what the rate is measured in.
+  const running = [...(input.runway ?? [])]
+    .filter((r) => r.nightsLeft > 0 && r.nightsLeft <= LOW_NIGHTS)
+    .sort((a, b) => a.nightsLeft - b.nightsLeft)
+  if (running.length > 0) {
+    const worst = running[0]!
+    const others = running.length - 1
+    out.push({
+      id: 'running-low',
+      level: running.length >= 3 || worst.nightsLeft <= 1 ? 'warn' : 'info',
+      headline:
+        others > 0
+          ? `${worst.item.name} and ${others} other ${others === 1 ? 'line' : 'lines'} are nearly out`
+          : `${worst.item.name} is nearly out`,
+      detail: `${describeStock(worst.leftBaseUnits, worst.item)} left — about ${worst.nightsLeft === 1 ? 'one more night' : `${worst.nightsLeft} more nights`} at the rate it has been going. Worked out from what the till has poured, so nothing has to be counted to know it.`,
+      screen: 'cellar',
     })
   }
 

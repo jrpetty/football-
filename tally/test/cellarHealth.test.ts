@@ -141,3 +141,160 @@ test('once a count exists, a line left off it is uncounted — not counted at no
   assert.equal(h.ledger.find((l) => l.item.id === 'taddy')!.counted, true)
   assert.equal(h.ledger.find((l) => l.item.id === 'crisps')!.counted, false)
 })
+
+
+// --- the cellar as the till leaves it ------------------------------------------
+//
+// Nobody is counting the cellar any more, so the running total off the till is
+// the only figure there is. Two things follow. It has to say how long each line
+// has left, because that is the whole reason to keep it. And it has to own up
+// to the sales it could not place, because those are exactly what make it wrong
+// while looking right.
+
+test('a line running down says how many nights it has left', () => {
+  // Opens at 300 pints on the 10th; four nights read, 200 pints out between
+  // them — fifty a night, 100 left, so two more nights.
+  const h = health({
+    counts: [{ date: '2026-08-10', lines: [{ stockItemId: 'taddy', baseUnits: 300 * ML_PER_PINT }] }],
+    days: [night('2026-08-15', 50), night('2026-08-16', 50), night('2026-08-17', 50), night('2026-08-18', 50)],
+    today: '2026-08-30',
+  })
+  const r = h.runway.find((x) => x.item.id === 'taddy')
+  assert.ok(r, 'a line with a level and a rate gets a runway')
+  assert.equal(r.leftBaseUnits, 100 * ML_PER_PINT)
+  assert.equal(h.readNights, 4)
+  assert.equal(r.nightsLeft, 2)
+})
+
+test('a receipt still waiting to be read does not stretch the rate out', () => {
+  // The killer error this is built against: measure per calendar day and four
+  // read nights out of twenty make a fortnight's stock look like months.
+  const days = [night('2026-08-15', 50), night('2026-08-16', 50), night('2026-08-17', 50), night('2026-08-18', 50)]
+  const soon = health({
+    counts: [{ date: '2026-08-10', lines: [{ stockItemId: 'taddy', baseUnits: 300 * ML_PER_PINT }] }],
+    days,
+    today: '2026-08-19',
+  })
+  const later = health({
+    counts: [{ date: '2026-08-10', lines: [{ stockItemId: 'taddy', baseUnits: 300 * ML_PER_PINT }] }],
+    days,
+    today: '2026-09-30',
+  })
+  assert.equal(
+    soon.runway[0]?.nightsLeft,
+    later.runway[0]?.nightsLeft,
+    'the same four nights of trade, so the same answer however long ago they were',
+  )
+})
+
+test('a line nothing has poured gets no runway rather than an infinite one', () => {
+  const h = health({
+    counts: [{ date: '2026-08-20', lines: [{ stockItemId: 'taddy', baseUnits: 72 * ML_PER_PINT }] }],
+    days: [],
+  })
+  assert.deepEqual(h.runway, [], 'no rate, so no figure — not "lasts forever"')
+})
+
+test('a line that was never counted gets no runway either', () => {
+  // Poured, so there is a rate — but nothing to run down, because the last
+  // stock take left the line blank and blank is not zero.
+  const h = health({
+    counts: [{ date: '2026-08-20', lines: [{ stockItemId: 'crisps', baseUnits: 40 }] }],
+    items: [taddy, crisps],
+    days: [night('2026-08-22', 100)],
+  })
+  assert.ok(!h.runway.some((r) => r.item.id === 'taddy'))
+})
+
+test('the shortest runway comes first, because that is the one to order', () => {
+  const h = health({
+    items: [taddy, crisps],
+    counts: [{ date: '2026-08-19', lines: [{ stockItemId: 'taddy', baseUnits: 300 * ML_PER_PINT }, { stockItemId: 'crisps', baseUnits: 80 }] }],
+    days: [
+      { date: '2026-08-22', items: [
+        { code: '1', name: 'PINT TADDY LAGER', qtyMilli: 70 * 1000 },
+        { code: '9', name: 'CRISPS', qtyMilli: 70 * 1000 },
+      ] },
+    ],
+  })
+  assert.equal(h.runway[0]?.item.id, 'crisps', 'ten packets left against 230 pints')
+  assert.ok((h.runway[0]?.nightsLeft ?? 99) < (h.runway[1]?.nightsLeft ?? 0))
+})
+
+test('a line already gone reads as no nights left rather than a negative', () => {
+  const h = health({
+    counts: [{ date: '2026-08-19', lines: [{ stockItemId: 'taddy', baseUnits: 10 * ML_PER_PINT }] }],
+    days: [night('2026-08-22', 40)],
+  })
+  const r = h.runway.find((x) => x.item.id === 'taddy')!
+  assert.equal(r.nightsLeft, 0)
+  assert.ok(r.leftBaseUnits < 0, 'the level itself still says how far past empty it went')
+})
+
+test('sales the cellar cannot place are named, because they are what makes it lie', () => {
+  const h = health({
+    counts: [{ date: '2026-08-19', lines: [{ stockItemId: 'taddy', baseUnits: 300 * ML_PER_PINT }] }],
+    days: [
+      { date: '2026-08-22', items: [
+        { code: '1', name: 'PINT TADDY LAGER', qtyMilli: 20 * 1000 },
+        { code: '7', name: 'PINT GUINNESS', qtyMilli: 30 * 1000 },
+      ] },
+      { date: '2026-08-23', items: [{ code: '7', name: 'PINT GUINNESS', qtyMilli: 10 * 1000 }] },
+    ],
+  })
+  assert.equal(h.unmapped.length, 1, 'one line, not one per night')
+  assert.equal(h.unmapped[0]?.name, 'PINT GUINNESS')
+  assert.equal(h.unmapped[0]?.qtyMilli, 40 * 1000, 'both nights added up')
+})
+
+test('sales from before the last stock take are not held against the cellar', () => {
+  const h = health({
+    counts: [{ date: '2026-08-22', lines: [{ stockItemId: 'taddy', baseUnits: 300 * ML_PER_PINT }] }],
+    days: [
+      { date: '2026-08-21', items: [{ code: '7', name: 'PINT GUINNESS', qtyMilli: 30 * 1000 }] },
+    ],
+  })
+  assert.deepEqual(h.unmapped, [], 'the count already accounted for that night')
+})
+
+test('the cellar says which night it has been read up to', () => {
+  const h = health({
+    counts: [{ date: '2026-08-19', lines: [{ stockItemId: 'taddy', baseUnits: 300 * ML_PER_PINT }] }],
+    days: [night('2026-08-22', 10), night('2026-08-24', 10)],
+  })
+  assert.equal(h.through, '2026-08-24')
+})
+
+test('with no receipt read since the last count, it says so rather than naming a date', () => {
+  const h = health({
+    counts: [{ date: '2026-08-19', lines: [{ stockItemId: 'taddy', baseUnits: 300 * ML_PER_PINT }] }],
+    days: [],
+  })
+  assert.equal(h.through, null)
+})
+
+test('a receipt read for its totals but with no item list is named, not ignored', () => {
+  // The quiet way the cellar goes wrong now: the department totals are easy to
+  // photograph, the item list runs to another frame, and a night captured
+  // without it takes nothing off the cellar at all.
+  const h = health({
+    counts: [{ date: '2026-08-19', lines: [{ stockItemId: 'taddy', baseUnits: 300 * ML_PER_PINT }] }],
+    days: [
+      night('2026-08-22', 40),
+      { date: '2026-08-23', items: [], hasZRead: true },
+      { date: '2026-08-24', items: [], hasZRead: true },
+      // No receipt at all — nothing to fix, so it is not counted here.
+      { date: '2026-08-25', items: [] },
+    ],
+  })
+  assert.equal(h.nightsWithoutItems, 2)
+  assert.equal(h.readNights, 1, 'only the night with an item list sets the rate')
+})
+
+test('a night before the last stock take is not held against the cellar either', () => {
+  const h = health({
+    counts: [{ date: '2026-08-24', lines: [{ stockItemId: 'taddy', baseUnits: 300 * ML_PER_PINT }] }],
+    days: [{ date: '2026-08-23', items: [], hasZRead: true }],
+  })
+  assert.equal(h.nightsWithoutItems, 0)
+})

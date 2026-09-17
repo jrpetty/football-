@@ -320,6 +320,73 @@ export function buildLedger(
   })
 }
 
+/**
+ * Below this many nights of cover, a line is worth putting on the order.
+ *
+ * Five rather than two or three: the brewery delivers on set days, so what
+ * matters is whether a line survives to the next drop, not whether it survives
+ * to tomorrow. It is the number that turns "two firkins left" into "order it".
+ */
+export const LOW_NIGHTS = 5
+
+export interface StockRunway {
+  item: StockItem
+  /** What is left now, in base units. */
+  leftBaseUnits: number
+  /** Going out per night of trade, in base units. */
+  perNightBaseUnits: number
+  /** Whole nights of trade left at that rate. Zero means it is out. */
+  nightsLeft: number
+}
+
+/**
+ * How long each line lasts at the rate it has been going out.
+ *
+ * This is the whole payoff of taking the till off the stock: not "what should
+ * be down there" — which is only interesting to somebody about to count it —
+ * but "order more Taddy, it goes on Thursday".
+ *
+ * Measured per NIGHT OF TRADE READ, not per day on the calendar, and that is
+ * the load-bearing decision. Nights go missing: a receipt photographed with no
+ * signal sits unread for a week, and the pub is shut on Mondays besides. Divide
+ * by calendar days and three read nights out of thirty make a keg that has a
+ * week in it look like it has two months — the one error that would get
+ * somebody to trust this and then run dry on a Saturday. Per night read, the
+ * rate is the rate however many nights are in.
+ *
+ * Only lines with both ends known are here. A line that was never counted has
+ * no level to run down, and a line nothing has poured has no rate, so neither
+ * gets a guess dressed up as a figure.
+ */
+export function runway(lines: readonly StockLine[], overNights: number): StockRunway[] {
+  const nights = Math.max(1, overNights)
+  const out: StockRunway[] = []
+  for (const line of lines) {
+    if (!line.counted || line.pouredBaseUnits <= 0) continue
+    const perNightBaseUnits = line.pouredBaseUnits / nights
+    const left = Math.max(0, line.expectedBaseUnits)
+    out.push({
+      item: line.item,
+      leftBaseUnits: line.expectedBaseUnits,
+      perNightBaseUnits,
+      nightsLeft: Math.floor(left / perNightBaseUnits),
+    })
+  }
+  return out.sort((a, b) => a.nightsLeft - b.nightsLeft)
+}
+
+/** One row per item the till could not place, with the quantities added up. */
+function mergeSold(sold: readonly SoldLine[]): SoldLine[] {
+  const acc = new Map<string, SoldLine>()
+  for (const line of sold) {
+    const key = `${line.code}\u0000${line.name.trim().toUpperCase()}`
+    const seen = acc.get(key)
+    if (seen) seen.qtyMilli += line.qtyMilli
+    else acc.set(key, { ...line })
+  }
+  return [...acc.values()].sort((a, b) => b.qtyMilli - a.qtyMilli)
+}
+
 export interface StockVariance extends StockLine {
   /** What was actually found, when someone has counted since. */
   actualBaseUnits: number | null
@@ -1016,6 +1083,31 @@ export interface CellarHealth {
   sinceDays: number
   /** The open window: what should be on hand now. */
   ledger: StockLine[]
+  /**
+   * Sales the till rang that no cellar line knows about.
+   *
+   * These are the reason the running total can be wrong without anything
+   * looking wrong: a pint sold against a line with no pour set comes off
+   * nothing, so the cellar reads high by exactly that much and says nothing.
+   * With nobody counting the cellar to catch it, naming them is the only
+   * defence there is.
+   */
+  unmapped: SoldLine[]
+  /** The last night folded in, so the figure can say how current it is. */
+  through: string | null
+  /** How long each line lasts at the rate it is going out, shortest first. */
+  runway: StockRunway[]
+  /** Nights in this window that have a receipt read — what the rate is per. */
+  readNights: number
+  /**
+   * Nights whose receipt was read for its totals but carries no item list.
+   *
+   * Nothing came off the cellar for them, and nothing is wrong with the night
+   * — the takings are as good as any other. But the cellar is short by an
+   * evening's trade for each one, so it has to say so rather than quietly
+   * reading high.
+   */
+  nightsWithoutItems: number
   /** Lines taking up space without earning it, over the open window. */
   dead: DeadStockLine[]
   /**
@@ -1150,14 +1242,18 @@ export function cellarHealth(args: {
   /** Most recent first, as listStockCounts returns them. */
   counts: readonly StockCount[]
   deliveries: readonly Delivery[]
-  /** Every night's sold lines, whatever order. */
-  days: ReadonlyArray<{ date: string; items: readonly SoldLine[] }>
+  /**
+   * Every night's sold lines, whatever order.
+   *
+   * `hasZRead` lets a night with a receipt but no item list be told apart from
+   * a night with no receipt at all. Both take nothing off the cellar, but only
+   * one of them is something to go and fix.
+   */
+  days: ReadonlyArray<{ date: string; items: readonly SoldLine[]; hasZRead?: boolean }>
   today: string
   costOfServing: (item: StockItem, baseUnits: number) => number | null
 }): CellarHealth {
   const { items, pours, counts, deliveries, days, today, costOfServing } = args
-
-  const usageBetween = (from: string, to?: string) => pourUsage(soldBetween(days, from, to), pours).used
 
   // Newest first however they arrived, so "latest" means latest.
   const byDate = [...counts].sort((a, b) => b.date.localeCompare(a.date))
@@ -1188,9 +1284,28 @@ export function cellarHealth(args: {
   const opening = latest
     ? new Map(latest.lines.map((l) => [l.stockItemId, l.baseUnits]))
     : new Map(items.map((item) => [item.id, 0]))
-  const openUsage = usageBetween(since)
+  const openSales = soldBetween(days, since)
+  const openPour = pourUsage(openSales, pours)
+  const openUsage = openPour.used
   const ledger = buildLedger(items, opening, deliveredBetween(deliveries, since), openUsage)
   const dead = deadStock(ledger, openUsage, sinceDays, costOfServing)
+
+  // The last night with an item list on it, and how many there are. Not simply
+  // "today" and "the days since": a cellar run off the till is only as current
+  // as the last receipt that was read, and the rate is per night read, not per
+  // day on the calendar.
+  let through: string | null = null
+  let readNights = 0
+  let nightsWithoutItems = 0
+  for (const d of days) {
+    if (d.date <= since) continue
+    if (d.items.length === 0) {
+      if (d.hasZRead) nightsWithoutItems++
+      continue
+    }
+    readNights++
+    if (through === null || d.date > through) through = d.date
+  }
 
   // The most recent closed window — the same one a night's own card shows
   // for that night, through the same function.
@@ -1202,5 +1317,17 @@ export function cellarHealth(args: {
     gapPence = window.gapPence
   }
 
-  return { since, sinceDays, ledger, dead, gapPence, gapLines }
+  return {
+    since,
+    sinceDays,
+    ledger,
+    unmapped: mergeSold(openPour.unmapped),
+    through,
+    readNights,
+    nightsWithoutItems,
+    runway: runway(ledger, readNights),
+    dead,
+    gapPence,
+    gapLines,
+  }
 }

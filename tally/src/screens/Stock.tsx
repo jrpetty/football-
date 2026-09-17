@@ -27,6 +27,7 @@ import {
   proposeDelivery,
   formatServings,
   formatServingsSigned,
+  LOW_NIGHTS,
   guessPour,
   pourUsage,
   measureOf,
@@ -429,6 +430,16 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
   const ledger = health?.ledger ?? []
   const result = health?.gapLines ?? []
 
+  /**
+   * The cellar as the till has left it, turned into the two things worth
+   * knowing: what to order, and how long everything else has.
+   */
+  const runwayLines = health?.runway ?? []
+  const runwayById = useMemo(() => new Map(runwayLines.map((r) => [r.item.id, r])), [runwayLines])
+  const lowLines = runwayLines.filter((r) => r.nightsLeft <= LOW_NIGHTS)
+  /** Sales in this window with no pour, which are what make the figures lie. */
+  const windowUnmapped = health?.unmapped ?? []
+
   const unmapped = useMemo(() => {
     if (!config) return []
     const sold = itemTotals(days).map((i) => ({ code: i.code, name: i.name, qtyMilli: i.qtyMilli }))
@@ -560,7 +571,7 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
                 else if (p === 'delivery') setSheetDate(tradingDayKey())
               }}
             >
-              {p === 'levels' ? 'What’s left' : p === 'delivery' ? 'Delivery in' : p === 'count' ? 'Stock take' : p === 'scales' ? 'The scales' : p === 'costs' ? 'What it costs' : 'Set up'}
+              {p === 'levels' ? 'What’s down there' : p === 'delivery' ? 'Delivery in' : p === 'count' ? 'Stock take' : p === 'scales' ? 'The scales' : p === 'costs' ? 'What it costs' : 'Set up'}
             </button>
           ))}
         </div>
@@ -578,69 +589,156 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
         </section>
       )}
 
-      {/* --- what should be left --------------------------------------------- */}
+      {/* --- the cellar as the till has left it ------------------------------ */}
       {panel === 'levels' && config.items.length > 0 && (
-        <section className="card">
-          <div className="card-head">
-            <h2>What should be left</h2>
-            <span className="hint">since {formatShort(since)}</span>
-          </div>
-          <div className="table-wrap">
-            <table className="data">
-              <thead>
-                <tr>
-                  <th scope="col">Line</th>
-                  <th scope="col">Counted</th>
-                  <th scope="col">In</th>
-                  <th scope="col">Poured</th>
-                  <th scope="col">Left</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ledger
-                  .filter((l) => l.countedBaseUnits || l.deliveredBaseUnits || l.pouredBaseUnits)
-                  .map((l) => (
-                    <tr key={l.item.id}>
-                      <th scope="row">{l.item.name}</th>
-                      <td className={l.counted ? 'num' : 'num faint'}>
-                        {l.counted ? formatServings(l.countedBaseUnits, l.item) : 'not counted'}
-                      </td>
-                      <td className="num">{formatServings(l.deliveredBaseUnits, l.item)}</td>
-                      <td className="num">{formatServings(l.pouredBaseUnits, l.item)}</td>
-                      {l.counted ? (
-                        <td className={`num delta ${l.expectedBaseUnits < 0 ? 'short' : ''}`} title={describeStock(l.expectedBaseUnits, l.item)}>
-                          {formatServings(l.expectedBaseUnits, l.item)}
-                          {measures.has(l.item.id) && (
-                            <small className="in-serves">{inMeasures(l.expectedBaseUnits, measures.get(l.item.id) as Measure)}</small>
+        <>
+          {lowLines.length > 0 && (
+            <section className="card">
+              <div className="card-head">
+                <h2>Worth ordering</h2>
+                <span className="hint">at the rate it is going</span>
+              </div>
+              <ul className="low-list">
+                {lowLines.map((r) => (
+                  <li key={r.item.id}>
+                    <span className="low-name">{r.item.name}</span>
+                    <span className="low-left num">
+                      {r.leftBaseUnits <= 0 ? 'out' : formatServings(r.leftBaseUnits, r.item)}
+                    </span>
+                    <span className={`low-days${r.nightsLeft <= 1 ? ' urgent' : ''}`}>
+                      {r.leftBaseUnits <= 0
+                        ? 'out — more has been poured than was booked in'
+                        : r.nightsLeft <= 0
+                          ? 'not enough for another night'
+                          : r.nightsLeft === 1
+                            ? 'about one more night'
+                            : `about ${r.nightsLeft} more nights`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="note" style={{ marginBottom: 0 }}>
+                Nights of trade, not days on the calendar — at the rate the till actually poured
+                over the {health?.readNights ?? 0}{' '}
+                {health?.readNights === 1 ? 'night' : 'nights'} read since {formatShort(since)}. A
+                receipt still waiting to be read leaves the rate alone rather than making a keg
+                look like it lasts a month.
+              </p>
+            </section>
+          )}
+
+          <section className="card">
+            <div className="card-head">
+              <h2>What’s down there now</h2>
+              <span className="hint">
+                {health?.through ? `till read to ${formatShort(health.through)}` : `since ${formatShort(since)}`}
+              </span>
+            </div>
+            <p className="note" style={{ marginTop: 0 }}>
+              The last stock take, plus everything booked in, less everything the till says was
+              poured. It moves on its own as each night’s receipt is read — nothing here has to be
+              counted.
+            </p>
+            <div className="table-wrap">
+              <table className="data">
+                {/* The answer first, the working after it. Six columns do not
+                    fit a phone, so something has to go behind the scroll —
+                    and it must not be what is left and how long it lasts. */}
+                <thead>
+                  <tr>
+                    <th scope="col">Line</th>
+                    <th scope="col">Left</th>
+                    <th scope="col">Nights</th>
+                    <th scope="col">Counted</th>
+                    <th scope="col">In</th>
+                    <th scope="col">Poured</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ledger
+                    .filter((l) => l.countedBaseUnits || l.deliveredBaseUnits || l.pouredBaseUnits)
+                    .map((l) => {
+                      const r = runwayById.get(l.item.id)
+                      return (
+                        <tr key={l.item.id}>
+                          <th scope="row">{l.item.name}</th>
+                          {l.counted ? (
+                            <td className={`num delta ${l.expectedBaseUnits < 0 ? 'short' : ''}`} title={describeStock(l.expectedBaseUnits, l.item)}>
+                              {formatServings(l.expectedBaseUnits, l.item)}
+                              {measures.has(l.item.id) && (
+                                <small className="in-serves">{inMeasures(l.expectedBaseUnits, measures.get(l.item.id) as Measure)}</small>
+                              )}
+                            </td>
+                          ) : (
+                            <td className="num faint">—</td>
                           )}
-                        </td>
-                      ) : (
-                        <td className="num faint">—</td>
-                      )}
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
-          {ledger.every((l) => !l.pouredBaseUnits) && (
-            <p className="note">
-              Nothing poured in this window yet. Usage fills in on its own as nights are saved — the roll
-              already knows what went out.
-            </p>
-          )}
-          {ledger.some((l) => l.counted && l.expectedBaseUnits < 0) && (
-            <p className="note warn">
-              A line has gone below zero, which means more was poured than was ever booked in. Either a
-              delivery was missed or the pour is set wrong.
-            </p>
-          )}
-          {ledger.some((l) => !l.counted && (l.deliveredBaseUnits || l.pouredBaseUnits)) && (
-            <p className="note">
-              A line marked not counted was left blank on the last stock take, so what is left of it
-              cannot be said — only what has come in and gone out since.
-            </p>
-          )}
-        </section>
+                          {/* No rate, no figure: a line nothing has poured is
+                              not "lasts forever", it is simply unknown. */}
+                          <td className={`num${r && r.nightsLeft <= LOW_NIGHTS ? ' short' : ' faint'}`}>
+                            {r === undefined
+                              ? '—'
+                              : r.leftBaseUnits <= 0
+                                ? 'out'
+                                : r.nightsLeft <= 0
+                                  ? '<1'
+                                  : `${r.nightsLeft}n`}
+                          </td>
+                          <td className={l.counted ? 'num' : 'num faint'}>
+                            {l.counted ? formatServings(l.countedBaseUnits, l.item) : 'not counted'}
+                          </td>
+                          <td className="num">{formatServings(l.deliveredBaseUnits, l.item)}</td>
+                          <td className="num">{formatServings(l.pouredBaseUnits, l.item)}</td>
+                        </tr>
+                      )
+                    })}
+                </tbody>
+              </table>
+            </div>
+            {(health?.nightsWithoutItems ?? 0) > 0 && (
+              <p className="note warn">
+                {health!.nightsWithoutItems}{' '}
+                {health!.nightsWithoutItems === 1 ? 'night has' : 'nights have'} a receipt with no
+                item list on it, so nothing came off the cellar for{' '}
+                {health!.nightsWithoutItems === 1 ? 'it' : 'them'}. The item list is the part of the
+                roll that names each drink — photograph that part too and these figures come right.
+              </p>
+            )}
+            {windowUnmapped.length > 0 && (
+              <>
+                <p className="note bad">
+                  The till sold {windowUnmapped.length}{' '}
+                  {windowUnmapped.length === 1 ? 'line' : 'lines'} the cellar knows nothing about, so
+                  nothing came off for {windowUnmapped.length === 1 ? 'it' : 'them'} and these figures
+                  read high: {windowUnmapped.slice(0, 4).map((u) => u.name).join(', ')}
+                  {windowUnmapped.length > 4 ? ` and ${windowUnmapped.length - 4} more` : ''}.
+                </p>
+                <div className="alts">
+                  <button type="button" className="btn-small" data-testid="fix-pours" onClick={() => setPanel('setup')}>
+                    Set what those pour
+                  </button>
+                </div>
+              </>
+            )}
+            {ledger.every((l) => !l.pouredBaseUnits) && (
+              <p className="note">
+                Nothing poured in this window yet. Usage fills in on its own as nights are saved — the roll
+                already knows what went out.
+              </p>
+            )}
+            {ledger.some((l) => l.counted && l.expectedBaseUnits < 0) && (
+              <p className="note warn">
+                A line has gone below zero, which means more was poured than was ever booked in. Either a
+                delivery was missed or the pour is set wrong.
+              </p>
+            )}
+            {ledger.some((l) => !l.counted && (l.deliveredBaseUnits || l.pouredBaseUnits)) && (
+              <p className="note">
+                A line marked not counted was left blank on the last stock take, so what is left of it
+                cannot be said — only what has come in and gone out since.
+              </p>
+            )}
+          </section>
+        </>
       )}
 
       {/* --- counting a delivery or a stock take ----------------------------- */}
@@ -1103,7 +1201,7 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
                     <th scope="col">Line</th>
                     <th scope="col">A week</th>
                     <th scope="col">On hand</th>
-                    <th scope="col">Lasts</th>
+                    <th scope="col">Nights</th>
                     <th scope="col">Tied up</th>
                   </tr>
                 </thead>

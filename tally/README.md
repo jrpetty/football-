@@ -56,6 +56,40 @@ is the roll, the card machine and the drawer; the cellar is an extra for whoever
 wants it, because a step that never gets ticked reads as a job left undone every
 single night.
 
+### The cellar runs itself off the receipts
+
+Whatever the roll says was poured comes off the stock. The Cellar's **What's
+down there** is the last stock take, plus everything booked in, less everything
+the till sold — moving on its own as each night's receipt is read, with nothing
+to count.
+
+Two things make that trustworthy rather than merely plausible.
+
+**It is measured in nights of trade, not days on the calendar.** A receipt
+photographed with no signal can sit unread for a week, and the pub is shut some
+days anyway. Divide what was poured by the days since and three read nights out
+of thirty make a keg with a week in it look like it has two months — the one
+error that would get somebody to trust this and then run dry on a Saturday. Per
+night read, the rate is the rate however many nights are in. So the figure is
+"about five more nights", and **Worth ordering** is the list that falls below
+five.
+
+**Sales the cellar cannot place are named.** A line the till rang with no pour
+set comes off nothing, so the cellar reads high by exactly that much and says
+nothing about it. With nobody counting to catch it, naming those lines — on the
+screen, in the weekly alerts, and in the data pack the question box is given —
+is the only defence there is. The warning says which lines, and offers the
+screen that fixes them.
+
+The same goes for a night photographed for its totals but not its item list —
+the department totals fit in one frame, the item list runs to another, and a
+night captured without it takes nothing off the cellar at all. Those nights are
+counted and named too.
+
+A line that was never counted has no level to run down, and a line nothing has
+poured has no rate. Neither gets a guess dressed up as a figure; both read as a
+dash.
+
 ### Installing it on her phone
 
 It is a web app, so there is no app store.

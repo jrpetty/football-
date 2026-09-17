@@ -252,3 +252,52 @@ test('an old stock take stops being news', () => {
 test('a reconciled cellar (£0) is never an alert', () => {
   assert.equal(weeklyAlerts({ ...nothing, cellarGapPence: 0, cellarCountAgeDays: 5 }).length, 0)
 })
+
+
+// --- about to run out ------------------------------------------------------------
+//
+// The point of taking the till off the stock is not a tidier ledger, it is
+// being told to order the Taddy before Thursday. So the rule has to fire on a
+// line that is nearly gone, and stay quiet on everything that only looks like
+// one.
+
+const taddy: StockItem = {
+  id: 'taddy', name: 'Taddy Lager', kind: 'liquid',
+  servingBaseUnits: ML_PER_PINT, servingName: 'pint',
+  container: { name: 'firkin', baseUnits: 72 * ML_PER_PINT },
+}
+const crisps: StockItem = { id: 'crisps', name: 'Crisps', kind: 'count', servingBaseUnits: 1, servingName: 'each' }
+
+const lasts = (item: StockItem, servings: number, nightsLeft: number) => ({
+  item,
+  leftBaseUnits: servings * item.servingBaseUnits,
+  perNightBaseUnits: nightsLeft > 0 ? (servings * item.servingBaseUnits) / nightsLeft : 0,
+  nightsLeft,
+})
+
+test('a line with a night or two left in it is worth ordering', () => {
+  const [alert] = weeklyAlerts({ recent: [], runway: [lasts(taddy, 24, 3)] })
+  assert.ok(alert)
+  assert.match(alert.headline, /Taddy Lager is nearly out/)
+  assert.match(alert.detail, /24 pints/)
+  assert.match(alert.detail, /about 3 more nights/)
+  assert.equal(alert.screen, 'cellar')
+})
+
+test('a comfortable line says nothing', () => {
+  assert.deepEqual(weeklyAlerts({ recent: [], runway: [lasts(taddy, 200, 25)] }), [])
+})
+
+test('a line already empty is not an alert, it is a reproach', () => {
+  assert.deepEqual(weeklyAlerts({ recent: [], runway: [lasts(taddy, 0, 0)] }), [])
+})
+
+test('several short lines are one alert naming the worst, not one each', () => {
+  const alerts = weeklyAlerts({
+    recent: [],
+    runway: [lasts(taddy, 24, 3), lasts(crisps, 9, 1)],
+  })
+  assert.equal(alerts.length, 1)
+  assert.match(alerts[0]!.headline, /Crisps and 1 other line are nearly out/)
+  assert.equal(alerts[0]!.level, 'warn', 'one night left is worth a warning, not a note')
+})

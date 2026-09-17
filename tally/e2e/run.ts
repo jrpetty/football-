@@ -955,7 +955,7 @@ try {
   )
 
   // The cellar is worth something now.
-  await page.click('.chip:has-text("What’s left")')
+  await page.click('.chip:has-text("What’s down there")')
   await page.waitForTimeout(400)
   const value = await page.locator('.main').innerText()
   check('the cellar is valued at what the stock cost', value.includes('Money in the cellar'), value.slice(0, 160))
@@ -963,6 +963,26 @@ try {
     'at the right figure, right through from the delivery',
     value.includes('£19.13'),
     '144 pints in less 129.5 poured is 14.5 left, at £95 the firkin',
+  )
+
+  // The cellar runs itself off the receipts: what the till poured comes off,
+  // and what is left is counted in nights of trade rather than left as a
+  // figure to be checked against a count nobody is taking.
+  check(
+    'the cellar says it is worked out from the till, not from a count',
+    /less everything the till says was poured/i.test(value),
+    value.slice(0, 260),
+  )
+  check('it says which night it has been read up to', /till read to/i.test(value), value.slice(0, 200))
+  check(
+    'a line that will not see another night is flagged for ordering',
+    /Worth ordering/.test(value) && /Taddy Lager/.test(value),
+    value.slice(0, 300),
+  )
+  check(
+    'and says so in nights of trade rather than days on the calendar',
+    /another night|more nights/.test(value),
+    value.slice(value.indexOf('Worth ordering'), value.indexOf('Worth ordering') + 200),
   )
 
   await page.click('button:has-text("Trade")')
@@ -1767,7 +1787,7 @@ try {
   )
   const oldCosts = await oldCopy.locator('.stock-line:has-text("Vodka")').innerText()
   check('and it still costs what it cost, priced by the shot', /£0\.60 a shot/.test(oldCosts), oldCosts.slice(0, 160))
-  await oldCopy.click('.chip:has-text("What’s left")')
+  await oldCopy.click('.chip:has-text("What’s down there")')
   await oldCopy.waitForTimeout(500)
   const oldLevels = await oldCopy.locator('.main').innerText()
   check(

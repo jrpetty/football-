@@ -121,8 +121,37 @@ test('the cellar lists what is on hand in servings, valued at cost', () => {
   })
   const pack = buildAskPack(base([night('2026-08-21', 100)], { cellar }))
   assert.ok(pack.text.includes('CELLAR'))
-  assert.ok(pack.text.includes('Taddy Lager|72 pints|£95.00'))
+  // Nothing has been poured of it, so there is no rate and the days-left
+  // column is blank rather than a guess.
+  assert.ok(pack.text.includes('Taddy Lager|72 pints||£95.00'))
   assert.ok(pack.text.includes('Total value at cost, where a cost is set: £95.00'))
+})
+
+test('the cellar says how many nights each line has left, and owns up when it cannot know', () => {
+  const taddy: StockItem = {
+    id: 't', name: 'Taddy Lager', kind: 'liquid', servingBaseUnits: 568, servingName: 'pint',
+    container: { name: 'firkin', baseUnits: 72 * 568 },
+    cost: { pence: 9500, baseUnits: 72 * 568 },
+  }
+  // Opens at 300 pints; two nights read between them, 200 pints out — so a
+  // hundred a night, a hundred left, one more night in it.
+  const cellar = cellarHealth({
+    items: [taddy],
+    pours: [{ itemCode: '1', itemName: 'PINT TADDY LAGER', stockItemId: 't', baseUnits: 568 }],
+    counts: [{ date: '2026-08-10', lines: [{ stockItemId: 't', baseUnits: 300 * 568 }] }],
+    deliveries: [],
+    days: [
+      { date: '2026-08-15', items: [{ code: '1', name: 'PINT TADDY LAGER', qtyMilli: 200_000 }] },
+      // A line the cellar knows nothing about: nothing comes off for it.
+      { date: '2026-08-16', items: [{ code: '9', name: 'PINT GUINNESS', qtyMilli: 40_000 }] },
+    ],
+    today: '2026-08-30',
+    costOfServing: costOf,
+  })
+  const pack = buildAskPack(base([night('2026-08-21', 100)], { cellar }))
+  assert.ok(pack.text.includes('Taddy Lager|100 pints|1|'), pack.text.slice(pack.text.indexOf('CELLAR'), pack.text.indexOf('CELLAR') + 300))
+  assert.match(pack.text, /over the 2 nights of this window whose receipt has been read/)
+  assert.match(pack.text, /WARNING: the till sold 1 line with no cellar pour set \(PINT GUINNESS\)/)
 })
 
 test('staff hours and rates are included, and an unset rate says so', () => {

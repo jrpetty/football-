@@ -362,6 +362,8 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
       gp: monthGp,
       moves,
       deadStock: cellar?.dead ?? [],
+      // What is nearly out, off the till rather than off a count.
+      runway: cellar?.runway ?? [],
       cellarGapPence: cellar?.gapPence ?? null,
       cellarCountAgeDays: cellar && stockCounts.length > 0 ? cellar.sinceDays : null,
       // Lines with no board price specifically — uncostedCount also counts
