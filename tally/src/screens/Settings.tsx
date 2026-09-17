@@ -21,6 +21,7 @@ import {
   prunePhotosBefore,
   requestPersistence,
   collectBackup,
+  collectBackupPhotos,
   restoreBackup,
   clearEverything,
   countEverything,
@@ -31,7 +32,7 @@ import { addDays, tradingDayKey } from '../core/date.ts'
 import { cellarValue, costOf } from '../core/margin.ts'
 import { cellarHealth } from '../core/stock.ts'
 import { monthlyCsv, monthlyTakings, yearEndPack } from '../core/yearEnd.ts'
-import { describeRestored, parseBackup, saveFile, saveFiles, toCsv, toJson } from '../storage/export.ts'
+import { backupParts, describeRestored, parseBackup, saveFile, saveFiles, toCsv } from '../storage/export.ts'
 import { testApiKey, type KeyCheck } from '../ocr/scanZRead.ts'
 import { describeWeatherError, findPlace, type Place } from '../weather/openMeteo.ts'
 import { IconReceipt } from '../components/icons.tsx'
@@ -106,6 +107,10 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
   )
   const phone = useRef(whichPhone()).current
   const installed = useRef(alreadyInstalled()).current
+  /** How many receipts are kept, so the photographs card can say rather than hint. */
+  const [kept, setKept] = useState<number | null>(null)
+  /** Which backup is being written, if either — the big one takes a moment. */
+  const [packing, setPacking] = useState<boolean | null>(null)
   const [placeQuery, setPlaceQuery] = useState('')
   const [places, setPlaces] = useState<Place[] | null>(null)
   const [findingPlace, setFindingPlace] = useState(false)
@@ -113,6 +118,9 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
 
   useEffect(() => {
     void estimateUsage().then(setUsage)
+    void countEverything()
+      .then((c) => setKept(c.photos))
+      .catch(() => setKept(0))
   }, [toast])
 
   function update(next: Partial<SettingsShape>) {
@@ -286,21 +294,46 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
     }
   }
 
-  async function exportBackup() {
+  /**
+   * The backup, with or without the receipts.
+   *
+   * Two buttons rather than one, because they are two different jobs. The small
+   * file is the one that gets mailed to herself every week and has to stay
+   * small enough to send. The big one carries the photographs the figures were
+   * read off, which is what makes a disputed night provable a year later — and
+   * it belongs in Files or on a laptop, not in an inbox.
+   */
+  async function exportBackup(withPhotos: boolean) {
     const bundle = await collectBackup()
     if (bundle.days.length === 0 && bundle.stock.items.length === 0 && bundle.people.length === 0) {
       return say('Nothing to back up yet.')
     }
-    const how = await saveFile(
-      `tally-${new Date().toISOString().slice(0, 10)}.tally.json`,
-      toJson({ ...bundle, settings: settingsForBackup() }),
-      'application/json',
-    )
-    say(
-      how === 'shared'
-        ? 'Sent. Put it in Files, or mail it to yourself — that one file is the whole app.'
-        : 'Saved. That one file is the whole app — keep it somewhere safe.',
-    )
+    setPacking(withPhotos)
+    try {
+      const photos = withPhotos ? await collectBackupPhotos() : []
+      const file = new Blob(backupParts({ ...bundle, settings: settingsForBackup() }, photos), {
+        type: 'application/json',
+      })
+      const stamp = new Date().toISOString().slice(0, 10)
+      const how = await saveFile(
+        `tally-${stamp}${withPhotos ? '-with-receipts' : ''}.tally.json`,
+        file,
+        'application/json',
+      )
+      const size = `${(file.size / 1_048_576).toFixed(1)} MB`
+      const what = withPhotos
+        ? `${size}, with ${photos.length} ${photos.length === 1 ? 'receipt' : 'receipts'} in it`
+        : size
+      say(
+        how === 'shared'
+          ? `Sent — ${what}. Put it in Files, or mail it to yourself.`
+          : `Saved — ${what}. Keep it somewhere safe.`,
+      )
+    } catch (err) {
+      say(err instanceof Error ? `Could not save that backup: ${err.message}` : 'Could not save that backup.')
+    } finally {
+      setPacking(null)
+    }
   }
 
   async function importBackup(file: File) {
@@ -676,12 +709,23 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
             onChange={(e) => update({ keepPhotos: e.target.checked })}
           />
         </div>
-        {megabytes && <p className="help">Using about {megabytes} MB on this phone.</p>}
+        <p className="help">
+          {kept === null
+            ? 'Counting what is kept…'
+            : kept === 0
+              ? 'No receipts kept yet.'
+              : `${kept} ${kept === 1 ? 'receipt' : 'receipts'} kept${megabytes ? `, in about ${megabytes} MB` : ''}.`}
+          {usage && usage.quotaBytes > 0 && ` This device has room for roughly ${Math.round(usage.quotaBytes / 1_048_576)} MB.`}
+        </p>
         <div className="alts">
           <button type="button" className="btn-small" onClick={() => void prune()}>
             Delete photographs over 90 days old
           </button>
         </div>
+        <p className="help">
+          The receipt is the record now, so these are worth keeping. If the phone ever runs short,
+          clear the old ones out — the figures read off them are untouched by it.
+        </p>
       </section>
 
       <section className="card">
@@ -712,10 +756,28 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
         </p>
 
         <div className="btn-row" style={{ marginBottom: 10 }}>
-          <button type="button" className="btn-primary" onClick={() => void exportBackup()}>
-            Save everything
+          <button
+            type="button"
+            className="btn-primary"
+            data-testid="backup-figures"
+            disabled={packing !== null}
+            onClick={() => void exportBackup(false)}
+          >
+            {packing === false ? 'Saving…' : 'Save everything'}
           </button>
           <button type="button" onClick={() => void exportCsv()}>Spreadsheet</button>
+        </div>
+
+        <div className="alts" style={{ marginTop: 0 }}>
+          <button
+            type="button"
+            className="btn-small"
+            data-testid="backup-receipts"
+            disabled={packing !== null}
+            onClick={() => void exportBackup(true)}
+          >
+            {packing === true ? 'Packing the receipts…' : 'Save everything, receipts and all'}
+          </button>
         </div>
 
         {/* Drag-and-drop as well as a file picker: on a laptop the file is
@@ -778,9 +840,15 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
           by the one in the file, and nothing else is touched.
         </p>
         <p className="help">
-          Two things it deliberately leaves out: the photographs, which are an audit trail rather than
-          figures and would make the file too big to email; and the API key, because a backup gets
-          sent about and a key is better typed in again.
+          <strong>Save everything</strong> is the small file — every figure, small enough to mail to
+          yourself. <strong>Receipts and all</strong> puts the photographs in too, so a night can be
+          proved rather than asserted; that one runs to tens of megabytes, so it wants Files or a
+          laptop rather than an inbox. Either file restores the same way, and the photographs come
+          back attached to the nights they belong to.
+        </p>
+        <p className="help">
+          The API key is left out of both, because a backup gets sent about and a key is better typed
+          in again.
         </p>
         {megabytes && (
           <p className="help">
@@ -820,8 +888,16 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
               {wiping.photos === 1 ? 'photograph' : 'photographs'}. It cannot be undone.
             </p>
             <div className="btn-row" style={{ marginBottom: 10 }}>
-              <button type="button" className="btn-primary" onClick={() => void exportBackup()}>
-                Save a copy first
+              {/* With the receipts: clearing takes the photographs too, and a
+                  copy that leaves out the thing about to be destroyed is not a
+                  copy. */}
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={packing !== null}
+                onClick={() => void exportBackup(true)}
+              >
+                {packing === true ? 'Saving a copy…' : 'Save a copy first'}
               </button>
             </div>
             <div className="alts" style={{ marginTop: 0 }}>

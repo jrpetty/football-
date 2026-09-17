@@ -15,7 +15,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { FigureCard, emptyFigure, type FigureState } from '../components/FigureCard.tsx'
 import { MoneyInput } from '../components/MoneyInput.tsx'
-import { TillRollCard, emptyRoll, rollTotalPence, type RollState } from '../components/TillRollCard.tsx'
+import {
+  TillRollCard,
+  emptyRoll,
+  rollTotalPence,
+  savedShot,
+  type RollShot,
+  type RollState,
+} from '../components/TillRollCard.tsx'
 import { ItemisedLegs, VerdictPanel } from '../components/Verdict.tsx'
 import { formatLong, formatShort, isAfterMidnightForTradingDay, tradingDayKey } from '../core/date.ts'
 import { formatMoney, parsePence, penceToInput } from '../core/money.ts'
@@ -25,6 +32,7 @@ import type { Capture, DayRecord } from '../core/types.ts'
 import { emptyDay } from '../core/types.ts'
 import { isZReadEmpty, type ZRead } from '../core/zread.ts'
 import {
+  deletePhoto,
   deleteStockCount,
   getDay,
   listDays,
@@ -33,6 +41,7 @@ import {
   getPhoto,
   getStockCount,
   loadStockConfig,
+  requestPersistence,
   saveDay,
   savePhoto,
   saveStockConfig,
@@ -59,7 +68,7 @@ import { CellarGap } from '../components/CellarGap.tsx'
 import { costOf } from '../core/margin.ts'
 import { loadSettings } from '../storage/settings.ts'
 import { makeThumbnail } from '../ocr/index.ts'
-import { IconTickSmall } from '../components/icons.tsx'
+import { IconBarrel, IconTickSmall } from '../components/icons.tsx'
 import { CashCount } from '../components/CashCount.tsx'
 import { splitDrawer, type Tally } from '../core/cash.ts'
 
@@ -146,7 +155,14 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
    * than trusting her to notice that the date has rolled over, the night that
    * is still waiting says so and offers itself back.
    */
-  const [unfinished, setUnfinished] = useState<{ date: string; missing: string } | null>(null)
+  const [unfinished, setUnfinished] = useState<{
+    date: string
+    missing: string
+    /** Photographed and saved, but nothing has read the roll yet. */
+    unreadRoll: boolean
+    /** How many more are waiting behind it. */
+    also: number
+  } | null>(null)
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState('')
   const lateNight = useRef(isAfterMidnightForTradingDay()).current
@@ -186,6 +202,12 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
 
   // Anything saved but not finished, so it can be offered back rather than
   // quietly waiting in the Nights list for somebody to remember it.
+  //
+  // A week away from a signal is a week of nights photographed and not read,
+  // so this counts them all rather than naming one and letting the rest queue
+  // up invisibly — and it says which kind of unfinished each one is, because
+  // "the roll is photographed but nothing has read it" is a different job from
+  // "the card machine figure is missing".
   useEffect(() => {
     let cancelled = false
     void (async () => {
@@ -193,16 +215,21 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
       if (cancelled) return
       const waiting = saved
         .map((d) => ({ day: d, stats: dayStats(d, settings.tolerancePence) }))
-        .find(({ day, stats }) => stats.takingsPence === null && day.date !== date)
+        .filter(({ day, stats }) => stats.takingsPence === null && day.date !== date)
+      // Oldest first: the one most likely to have been forgotten, and the
+      // right order to knock a backlog off in.
+      const first = waiting[waiting.length - 1]
       setUnfinished(
-        waiting
+        first
           ? {
-              date: waiting.day.date,
+              date: first.day.date,
+              unreadRoll: (first.day.zPhotoIds?.length ?? 0) > 0 && !first.day.zRead,
+              also: waiting.length - 1,
               missing: describeMissing(
                 reconcileFull({
-                  tillPence: waiting.day.till.pence,
-                  cardPence: waiting.day.card.pence,
-                  cashPence: waiting.day.cashPence,
+                  tillPence: first.day.till.pence,
+                  cardPence: first.day.card.pence,
+                  cashPence: first.day.cashPence,
                   tolerancePence: settings.tolerancePence,
                 }).overall.missing,
               ),
@@ -230,10 +257,26 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
         return
       }
       const cardPhoto = found.card.photoId ? await getPhoto(found.card.photoId).catch(() => undefined) : undefined
+      // The roll's own photographs, brought back with it. Coming back the next
+      // morning to finish a night, what she needs to see first is which parts
+      // of the receipt are already in — otherwise the only safe move is to
+      // photograph the whole roll again.
+      // A night saved with the roll photographed but nothing read off it is the
+      // ordinary case now: no signal at closing time, read in the morning. Its
+      // photographs come back marked unread, so the card offers to read them.
+      const wasRead = !!found.zRead
+      const shots: RollShot[] = []
+      for (const id of found.zPhotoIds ?? []) {
+        const blob = await getPhoto(id).catch(() => undefined)
+        if (blob) shots.push(savedShot(id, blob, shots.length, wasRead))
+      }
       if (cancelled) return
       setRoll({
         ...emptyRoll(),
-        ...(found.zRead ? { zRead: found.zRead } : {}),
+        // Both: `base` is what tonight's photographs fold on top of, so
+        // dropping one of them never takes the saved figures with it.
+        ...(found.zRead ? { zRead: found.zRead, base: found.zRead } : {}),
+        shots,
         totalText: found.zRead ? '' : penceToInput(found.till.pence),
         source: found.till.source,
         edited: found.till.edited,
@@ -333,15 +376,24 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
     setSaving(true)
     try {
       const base = existing ?? emptyDay(date)
+      // The photographs this night still has: the ones carried over from an
+      // earlier sitting, then tonight's. Written whole rather than appended,
+      // so a photograph thrown away on the card is actually gone.
       const photoIds: string[] = []
-      if (settings.keepPhotos) {
-        for (const photo of roll.photos) photoIds.push(await savePhoto(await makeThumbnail(photo)))
+      for (const shot of roll.shots) {
+        if (shot.id) photoIds.push(shot.id)
+        else if (settings.keepPhotos) photoIds.push(await savePhoto(await makeThumbnail(shot.blob)))
       }
+      const keptIds = new Set(photoIds)
 
       const record: DayRecord = {
         ...base,
         date,
         till: {
+          // ...base.till keeps the legacy single photograph of nights captured
+          // before the roll was photographed in pieces; without it a re-save
+          // would strand that picture in the database forever.
+          ...base.till,
           pence: rollTotalPence(roll),
           source: roll.source,
           edited: roll.edited,
@@ -354,9 +406,17 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
       if (floatPence > 0) record.floatPence = floatPence
       else delete record.floatPence
       if (zRead) record.zRead = zRead
-      if (photoIds.length) record.zPhotoIds = [...(base.zPhotoIds ?? []), ...photoIds]
+      if (photoIds.length) record.zPhotoIds = photoIds
+      else delete record.zPhotoIds
 
       await saveDay(record)
+
+      // Anything dropped on the card goes for good — after the record no
+      // longer points at it, so a failure halfway leaves a night with a
+      // missing picture rather than a picture with no night.
+      for (const id of base.zPhotoIds ?? []) {
+        if (!keptIds.has(id)) await deletePhoto(id).catch(() => undefined)
+      }
 
       // The cellar count is the night's own: dated the same trading day, so
       // the night and its count are one record in all but storage. A sheet
@@ -364,6 +424,12 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
       // correction is taken off rather than quietly kept.
       if (cellarLines.length > 0) await saveStockCount({ date, lines: cellarLines })
       else if (hadCount) await deleteStockCount(date)
+
+      // Now that the receipt is the record, ask the browser not to throw it
+      // away under storage pressure. Asked here rather than on first run
+      // because this is the moment it starts to matter, and it is her own
+      // action; it is a no-op where unsupported, and failing is not an error.
+      if (photoIds.length > 0) void requestPersistence().catch(() => undefined)
 
       onSaved(date)
     } catch (err) {
@@ -396,11 +462,22 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
         {unfinished && (
           <section className="card">
             <p className="note" style={{ marginTop: 0, marginBottom: 10 }}>
-              <strong>{formatLong(unfinished.date)} is still to finish.</strong> It is saved, with{' '}
-              {unfinished.missing} still to go in.
+              {unfinished.unreadRoll ? (
+                <>
+                  <strong>{formatLong(unfinished.date)} has its roll photographed but not read.</strong>{' '}
+                  Open it and the photographs are there waiting — one tap reads them.
+                </>
+              ) : (
+                <>
+                  <strong>{formatLong(unfinished.date)} is still to finish.</strong> It is saved, with{' '}
+                  {unfinished.missing} still to go in.
+                </>
+              )}
+              {unfinished.also > 0 &&
+                ` ${unfinished.also} other ${unfinished.also === 1 ? 'night is' : 'nights are'} waiting too.`}
             </p>
             <button type="button" className="btn-small" onClick={() => setDate(unfinished.date)}>
-              Finish that night
+              {unfinished.also > 0 ? 'Finish the oldest' : 'Finish that night'}
             </button>
           </section>
         )}
@@ -409,7 +486,9 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
           value={roll}
           onChange={setRoll}
           onReview={() => {
-            if (roll.zRead) onReviewRoll(roll.zRead, (next) => setRoll({ ...roll, zRead: next }))
+            // Set as the base too: figures corrected by hand are not undone by
+            // throwing a photograph away afterwards.
+            if (roll.zRead) onReviewRoll(roll.zRead, (next) => setRoll({ ...roll, zRead: next, base: next }))
           }}
           step={1}
           done={rollTotalPence(roll) !== null}
@@ -507,16 +586,25 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
 
         <ItemisedLegs r={r} />
 
-        {/* The cellar, counted as the doors are locked. Optional, because a
-            night is complete without it — but done nightly it turns every
-            night into a closed window, judged against the night before. */}
+        {/* The cellar. Deliberately outside the numbered walk: the night is the
+            roll, the card machine and the drawer, and those three are what a
+            step number should promise. Counting the cellar is a different job
+            on a different rhythm — some do it nightly, most do not — and a
+            step 4 that never gets ticked reads as a job left undone every
+            single night. It keeps its own dot once it has been counted. */}
         <section className="card">
           <div className="card-head">
-            <span className={`step-dot${cellarCounted ? ' done' : ''}`} aria-hidden="true">
-              {cellarCounted ? <IconTickSmall size={13} /> : 4}
+            <span className={`step-dot extra${cellarCounted ? ' done' : ''}`} aria-hidden="true">
+              {cellarCounted ? <IconTickSmall size={13} /> : <IconBarrel size={14} />}
             </span>
             <h2>The cellar</h2>
-            <span className="hint">{stockItems.length === 0 ? 'not set up yet' : cellarCounted ? `${cellarCounted} lines counted` : 'count it as you lock up'}</span>
+            <span className="hint">
+              {stockItems.length === 0
+                ? 'not set up yet'
+                : cellarCounted
+                  ? `${cellarCounted} lines counted`
+                  : 'optional'}
+            </span>
           </div>
           {stockItems.length === 0 ? (
             <p className="note" style={{ marginTop: 0 }}>
@@ -529,9 +617,10 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
                 Count the cellar
               </button>
               <p className="note" style={{ marginBottom: 0 }}>
-                Counted nightly, every night closes its own window: last night’s count, plus what came
-                in, less what the till poured, against what is actually there. Kegs go on the scales
-                rather than being guessed at.
+                Nothing here needs it — the roll, the card machine and the drawer make a complete
+                night on their own. But counted, a night closes its own window: last night’s count,
+                plus what came in, less what the till poured, against what is actually there. Kegs go
+                on the scales rather than being guessed at.
               </p>
             </>
           ) : (

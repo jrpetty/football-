@@ -1,6 +1,16 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { describeRestored, mergeStockConfig, prefersShareSheet, toCsv, toJson, parseBackup } from '../src/storage/export.ts'
+import {
+  backupParts,
+  base64ToBlob,
+  blobToBase64,
+  describeRestored,
+  mergeStockConfig,
+  prefersShareSheet,
+  toCsv,
+  toJson,
+  parseBackup,
+} from '../src/storage/export.ts'
 import type { Pour, StockItem } from '../src/core/stock.ts'
 import { emptyDay } from '../src/core/types.ts'
 import type { DayRecord } from '../src/core/types.ts'
@@ -257,4 +267,77 @@ test('a whole backup onto an empty app brings its own measure', () => {
   assert.equal(merged.mlPerShot, 35)
   assert.deepEqual(merged.items, [gin])
   assert.deepEqual(merged.pours, [pour])
+})
+
+
+// --- the receipts in the backup ------------------------------------------------
+//
+// The photographs used to be left out on the grounds that they were an audit
+// trail rather than data. The night the receipt became the whole record that
+// stopped being true: a backup of figures without the receipts they were read
+// off is a backup of somebody's word for it.
+
+/** Two bytes that are not valid UTF-8, so a text-only path would corrupt them. */
+const BYTES = new Uint8Array([0xff, 0xd8, 0x00, 0x41, 0xfe, 0x10])
+
+test('a photograph survives the trip out and back byte for byte', async () => {
+  const data = await blobToBase64(new Blob([BYTES], { type: 'image/jpeg' }))
+  const back = base64ToBlob(data, 'image/jpeg')
+  assert.equal(back.type, 'image/jpeg')
+  assert.deepEqual(new Uint8Array(await back.arrayBuffer()), BYTES)
+})
+
+test('the backup file is assembled in pieces and still parses as one', async () => {
+  const data = await blobToBase64(new Blob([BYTES], { type: 'image/jpeg' }))
+  const parts = backupParts({ ...EMPTY, days: [day()] }, [
+    { id: 'a', savedAt: 111, type: 'image/jpeg', data },
+    { id: 'b', savedAt: 222, type: 'image/jpeg', data },
+  ])
+  assert.ok(parts.length > 1, 'never one enormous string')
+
+  const r = parseBackup(parts.join(''))
+  assert.equal(r.days.length, 1, 'the nights are still there')
+  assert.equal(r.photos.length, 2)
+  assert.equal(r.photos[0]?.id, 'a', 'restored under the id the night points at')
+  assert.equal(r.photos[1]?.savedAt, 222)
+  assert.deepEqual(new Uint8Array(await r.photos[0]!.blob.arrayBuffer()), BYTES)
+})
+
+test('no photographs means the small file, unchanged', () => {
+  const parts = backupParts({ ...EMPTY, days: [day()] }, [])
+  assert.equal(parts.length, 1)
+  assert.equal(parseBackup(String(parts[0])).photos.length, 0)
+})
+
+test('one unreadable photograph costs that photograph, not the restore', () => {
+  const r = parseBackup(
+    JSON.stringify({
+      app: 'tally',
+      days: [day()],
+      photos: [
+        { id: 'a', savedAt: 1, type: 'image/jpeg', data: 'not base64 at all !!!' },
+        { id: 'b', savedAt: 2, type: 'image/jpeg', data: '' },
+        { id: 'c' },
+        null,
+      ],
+    }),
+  )
+  assert.equal(r.days.length, 1, 'the night is still restored')
+  // 'b' decodes to an empty image, which is honest; 'c' and null are not
+  // photographs at all and are dropped.
+  assert.ok(r.photos.length <= 2)
+  assert.ok(!r.photos.some((p) => p.id === 'c'))
+})
+
+test('a restore says how many receipts came back', () => {
+  const r = parseBackup(
+    JSON.stringify({ app: 'tally', days: [day()], photos: [{ id: 'a', savedAt: 1, type: 'image/jpeg', data: '' }] }),
+  )
+  assert.match(describeRestored(r), /1 receipt/)
+})
+
+test('an old backup with no photographs restores as before', () => {
+  const r = parseBackup(toJson({ ...EMPTY, days: [day()] }))
+  assert.deepEqual(r.photos, [])
+  assert.doesNotMatch(describeRestored(r), /receipt/)
 })

@@ -144,14 +144,19 @@ export function toCsv(days: readonly DayRecord[], tolerancePence?: number): stri
  * it. A backup that is missing most of the work is more dangerous than no
  * backup at all, because it is trusted.
  *
- * Two deliberate omissions, both stated in the interface rather than only here:
- * the photographs, which are an audit trail rather than data and would make the
- * file enormous; and the API key, because a backup gets emailed and a key in an
- * inbox is a key in the wrong place.
+ * The API key is the one deliberate omission, because a backup gets emailed and
+ * a key in an inbox is a key in the wrong place.
+ *
+ * The photographs used to be left out too, on the grounds that they were an
+ * audit trail rather than data. That stopped being true the night the receipt
+ * became the whole record: a backup of the figures without the receipts they
+ * were read off is a backup of somebody's word for it. So they can go in — but
+ * in their own file, because a year of them is far too big to email and the
+ * small file is the one that has to stay easy to send.
  */
 export interface Backup {
   app: 'tally'
-  version: 2
+  version: 3
   exportedAt: string
   days: DayRecord[]
   prices: PriceBookEntry[]
@@ -163,14 +168,72 @@ export interface Backup {
   weather: DayWeather[]
   /** Everything but the key. */
   settings: Record<string, unknown>
+  /** The receipts themselves, when the bigger backup was asked for. */
+  photos?: BackupPhoto[]
+}
+
+/** One photograph, carried as text because JSON cannot hold anything else. */
+export interface BackupPhoto {
+  id: string
+  savedAt: number
+  /** The image's media type, so it comes back as the same kind of file. */
+  type: string
+  /** Base64, without the `data:` prefix. */
+  data: string
 }
 
 export function toJson(backup: Omit<Backup, 'app' | 'version' | 'exportedAt'>): string {
   return JSON.stringify(
-    { app: 'tally', version: 2, exportedAt: new Date().toISOString(), ...backup },
+    { app: 'tally', version: 3, exportedAt: new Date().toISOString(), ...backup },
     null,
     2,
   )
+}
+
+/**
+ * The backup as pieces of a file rather than one string.
+ *
+ * A year of receipts runs to tens of megabytes. Built the obvious way that is a
+ * single JavaScript string of the whole thing, plus another copy inside the
+ * Blob — which is how a backup button becomes a crash on the phone it matters
+ * most on. Handing the browser the pieces lets it write them out one at a time.
+ */
+export function backupParts(
+  bundle: Omit<Backup, 'app' | 'version' | 'exportedAt' | 'photos'>,
+  photos: readonly BackupPhoto[],
+): BlobPart[] {
+  const head = toJson(bundle)
+  if (photos.length === 0) return [head]
+
+  const close = head.lastIndexOf('}')
+  // Only ever untrue for `{}`, which cannot happen — the app, version and date
+  // are always written. Checked anyway, because silently producing a broken
+  // backup is the one failure that is not noticed until it is needed.
+  if (close < 1) throw new Error('That backup could not be assembled.')
+
+  const parts: BlobPart[] = [`${head.slice(0, close).replace(/\s+$/, '')},\n  "photos": [`]
+  photos.forEach((photo, i) => parts.push(`${i ? ',' : ''}\n    ${JSON.stringify(photo)}`))
+  parts.push('\n  ]\n}')
+  return parts
+}
+
+/** A photograph as text. Chunked, because spreading a megabyte blows the stack. */
+export async function blobToBase64(blob: Blob): Promise<string> {
+  const bytes = new Uint8Array(await blob.arrayBuffer())
+  let binary = ''
+  const CHUNK = 0x8000
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK))
+  }
+  return btoa(binary)
+}
+
+/** And back again. */
+export function base64ToBlob(data: string, type: string): Blob {
+  const binary = atob(data)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+  return new Blob([bytes], { type: type || 'image/jpeg' })
 }
 
 /** What a restore actually found, so it can say rather than guess. */
@@ -183,6 +246,8 @@ export interface Restored {
   people: Person[]
   shifts: Shift[]
   weather: DayWeather[]
+  /** Decoded and ready to store under the ids the nights already point at. */
+  photos: Array<{ id: string; savedAt: number; blob: Blob }>
   settings: Record<string, unknown> | null
   /** True for a backup written before this file saved anything but nights. */
   nightsOnly: boolean
@@ -272,6 +337,22 @@ export function parseBackup(text: string): Restored {
     people: arrayOf<Person>(bundle.people, hasId),
     shifts: arrayOf<Shift>(bundle.shifts, hasId),
     weather: arrayOf<DayWeather>(bundle.weather, hasDate),
+    // Under their original ids, so the nights that reference them still find
+    // them. One unreadable photograph costs that photograph, not the restore.
+    photos: arrayOf<BackupPhoto>(
+      bundle.photos,
+      (row) =>
+        !!row &&
+        typeof row === 'object' &&
+        typeof (row as BackupPhoto).id === 'string' &&
+        typeof (row as BackupPhoto).data === 'string',
+    ).flatMap((p) => {
+      try {
+        return [{ id: p.id, savedAt: typeof p.savedAt === 'number' ? p.savedAt : Date.now(), blob: base64ToBlob(p.data, p.type) }]
+      } catch {
+        return []
+      }
+    }),
     settings:
       bundle.settings && typeof bundle.settings === 'object'
         ? (bundle.settings as Record<string, unknown>)
@@ -302,6 +383,7 @@ export function describeRestored(r: Restored): string {
   add(r.shifts.length, 'shift')
   add(r.deliveries.length, 'delivery', 'deliveries')
   add(r.stockCounts.length, 'stock take')
+  add(r.photos.length, 'receipt')
   if (bits.length === 0) return 'Nothing was in that file.'
   return `Restored ${bits.slice(0, -1).join(', ')}${bits.length > 1 ? ' and ' : ''}${bits[bits.length - 1]}.`
 }
@@ -330,8 +412,17 @@ export function prefersShareSheet(userAgent: string, maxTouchPoints: number): bo
   return /Macintosh/.test(userAgent) && maxTouchPoints > 1
 }
 
-/** One file, sent the way this device sends files. */
-export function saveFile(filename: string, contents: string, mime: string): Promise<'shared' | 'downloaded'> {
+/**
+ * One file, sent the way this device sends files.
+ *
+ * Contents may be a Blob as well as a string: a backup carrying a year of
+ * receipts is assembled in pieces and never exists as one string.
+ */
+export function saveFile(
+  filename: string,
+  contents: string | Blob,
+  mime: string,
+): Promise<'shared' | 'downloaded'> {
   return saveFiles([{ filename, contents, mime }])
 }
 
@@ -343,7 +434,7 @@ export function saveFile(filename: string, contents: string, mime: string): Prom
  * two sheets in a row.
  */
 export async function saveFiles(
-  files: ReadonlyArray<{ filename: string; contents: string; mime: string }>,
+  files: ReadonlyArray<{ filename: string; contents: string | Blob; mime: string }>,
 ): Promise<'shared' | 'downloaded'> {
   const nav = typeof navigator === 'undefined' ? undefined : navigator
   if (nav && prefersShareSheet(nav.userAgent, nav.maxTouchPoints ?? 0) && typeof nav.canShare === 'function') {
@@ -363,8 +454,10 @@ export async function saveFiles(
   return 'downloaded'
 }
 
-export function downloadFile(filename: string, contents: string, mime: string): void {
-  const blob = new Blob([contents], { type: `${mime};charset=utf-8` })
+export function downloadFile(filename: string, contents: string | Blob, mime: string): void {
+  // A Blob already knows its own type; only text needs the encoding stated.
+  const blob =
+    typeof contents === 'string' ? new Blob([contents], { type: `${mime};charset=utf-8` }) : contents
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url

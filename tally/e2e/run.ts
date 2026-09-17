@@ -193,12 +193,33 @@ try {
   check('clearing the float restores the plain count', (await verdictText(page)) === 'Balanced')
 
   console.log('\nA scan that cannot run')
+  // Said before the photographs are taken, not after three identical failures.
+  const preflight = await page.locator('[data-testid="roll-preflight"]').first().innerText()
+  check('says up front that nothing will read the roll', /switched off/i.test(preflight), `got "${preflight}"`)
+
   await page.setInputFiles('[data-testid="file-roll"]', join(here, '..', 'public', 'icon-192.png'))
-  await page.waitForSelector('.note.bad', { timeout: 5000 })
-  const scanNote = await page.locator('.note.bad').first().innerText()
-  check('says why it could not scan', /switched off/i.test(scanNote), `got "${scanNote}"`)
-  check('the typed figure survives a failed scan', (await page.inputValue('#figure-till')) === '4212.30')
+  await page.waitForSelector('.shots li', { timeout: 5000 })
+  // The picture of the receipt is the record whether or not anything could
+  // read it, so it is kept and said to be waiting rather than thrown away.
+  const kept = await page.locator('.shots li').first().innerText()
+  check('the photograph is kept anyway', /not read yet/i.test(kept), `got "${kept}"`)
+  check('the typed figure survives', (await page.inputValue('#figure-till')) === '4212.30')
   check('and the night can still be finished', (await verdictText(page)) === 'Balanced')
+
+  console.log('\nThrowing one photograph away')
+  await page.setInputFiles('[data-testid="file-roll"]', [
+    join(here, '..', 'public', 'icon-192.png'),
+    join(here, '..', 'public', 'icon-512.png'),
+  ])
+  await page.waitForTimeout(250)
+  check('all three are held', (await page.locator('.shots li').count()) === 3)
+  await page.click('[data-testid="drop-shot-1"]')
+  await page.waitForTimeout(200)
+  check('dropping one leaves the others', (await page.locator('.shots li').count()) === 2)
+  check('and the typed figure is untouched', (await page.inputValue('#figure-till')) === '4212.30')
+  await page.click('[data-testid="drop-shot-1"]')
+  await page.waitForTimeout(200)
+  check('down to one', (await page.locator('.shots li').count()) === 1)
 
   console.log('\nSaving and reading back')
   // Saved with a float on, so the round trip through storage is covered: the
@@ -1499,6 +1520,70 @@ try {
     (await page.locator('button:has-text("Finish that night")').count()) === 0,
   )
 
+  console.log('\nA roll photographed tonight, read in the morning')
+  // The shape of the job now: photograph the receipt at closing, when there may
+  // be no signal and nothing can read it, and pick it up in the morning. The
+  // photographs have to still be there, still be marked unread, and still be
+  // droppable one at a time.
+  await page.click('button:has-text("Tonight")')
+  await page.waitForSelector('#date', { timeout: 5000 })
+  await page.fill('#date', '2026-08-27')
+  await page.waitForTimeout(400)
+  await page.setInputFiles('[data-testid="file-roll"]', [
+    join(here, '..', 'public', 'icon-192.png'),
+    join(here, '..', 'public', 'icon-512.png'),
+  ])
+  await page.waitForSelector('.shots li', { timeout: 5000 })
+  check('both photographs are held', (await page.locator('.shots li').count()) === 2)
+  check(
+    'and the card counts them',
+    /2 photographs/.test(await page.locator('.card:has(.dropzone) .card-head').innerText()),
+    await page.locator('.card:has(.dropzone) .card-head').innerText(),
+  )
+  await page.click('.verdict-bar .btn-primary')
+  await page.waitForSelector('.day-row', { timeout: 5000 })
+
+  await page.click('button:has-text("Tonight")')
+  await page.waitForSelector('#date', { timeout: 5000 })
+  await page.fill('#date', '2026-08-28')
+  await page.waitForTimeout(600)
+  check(
+    'the morning after, it says the roll is photographed but not read',
+    /photographed but not read/i.test(await page.locator('.main').innerText()),
+    (await page.locator('.main').innerText()).slice(0, 260),
+  )
+  await page.click('button:has-text("Finish the oldest"), button:has-text("Finish that night")')
+  await page.waitForTimeout(700)
+  // The oldest unfinished night is the 25th, which has no photographs. Go to
+  // the photographed one directly.
+  await page.fill('#date', '2026-08-27')
+  await page.waitForTimeout(700)
+  check('the photographs are still on the night', (await page.locator('.shots li').count()) === 2)
+  check(
+    'and still say nothing has read them',
+    /not read yet/i.test(await page.locator('.shots li').first().innerText()),
+    await page.locator('.shots li').first().innerText(),
+  )
+
+  await page.click('[data-testid="drop-shot-0"]')
+  await page.waitForTimeout(250)
+  check('one can be thrown away on its own', (await page.locator('.shots li').count()) === 1)
+  await setFigure(page, 'figure-till', '810.00')
+  await setFigure(page, 'figure-card', '510.00')
+  await setFigure(page, 'figure-cash', '300.00')
+  await page.waitForTimeout(300)
+  await page.click('.verdict-bar .btn-primary')
+  await page.waitForSelector('.day-row', { timeout: 5000 })
+
+  await page.click('button:has-text("Tonight")')
+  await page.waitForSelector('#date', { timeout: 5000 })
+  await page.fill('#date', '2026-08-27')
+  await page.waitForTimeout(700)
+  check(
+    'and the one thrown away is gone for good, not back on the next visit',
+    (await page.locator('.shots li').count()) === 1,
+  )
+
   console.log('\nMoving to a new copy')
   // The whole point of a backup: everything set up here has to arrive intact
   // in an empty copy of the app. The version this replaced saved only the
@@ -1519,6 +1604,32 @@ try {
 
   const backupText = savedTo ? await readFile(savedTo, 'utf8') : '{}'
   check('it does not carry the API key', !backupText.includes('sk-ant') && !backupText.includes('apiKey'))
+  check('the small file leaves the photographs out', !/"photos"/.test(backupText))
+
+  // And the bigger one, which carries the receipts themselves. A backup of the
+  // figures without the receipts they were read off is a backup of somebody's
+  // word for it.
+  const [withShots] = await Promise.all([
+    page.waitForEvent('download'),
+    page.click('[data-testid="backup-receipts"]'),
+  ])
+  const shotsPath = await withShots.path()
+  check(
+    'the receipts file is named apart from the small one',
+    /-with-receipts\.tally\.json$/.test(withShots.suggestedFilename()),
+    withShots.suggestedFilename(),
+  )
+  const shotsText = shotsPath ? await readFile(shotsPath, 'utf8') : '{}'
+  check('it carries the photographs', /"photos"/.test(shotsText))
+  check('and is bigger for it', shotsText.length > backupText.length)
+  check('but still leaves the key out', !shotsText.includes('sk-ant') && !shotsText.includes('apiKey'))
+  check('and still parses as one file', (() => {
+    try {
+      return Array.isArray((JSON.parse(shotsText) as { photos?: unknown[] }).photos)
+    } catch {
+      return false
+    }
+  })())
 
   // A brand new copy of the app, with nothing in it at all.
   const fresh = await browser.newContext({
@@ -1546,14 +1657,24 @@ try {
 
   await newCopy.click('button:has-text("Settings")')
   await newCopy.waitForSelector('[data-testid="file-restore"]', { timeout: 5000 })
-  await newCopy.setInputFiles('[data-testid="file-restore"]', savedTo as string)
-  await newCopy.waitForTimeout(1800)
+  await newCopy.setInputFiles('[data-testid="file-restore"]', shotsPath as string)
+  await newCopy.waitForTimeout(2500)
   const said = await newCopy.locator('.toast').innerText().catch(() => '')
   check('it says what came back', /Restored/.test(said), said)
+  check('including how many receipts', /receipt/.test(said), said)
 
   await newCopy.click('button:has-text("Nights")')
   await newCopy.waitForSelector('.day-row', { timeout: 5000 })
   check('the nights came across', (await newCopy.locator('.day-row').count()) >= 1)
+
+  await newCopy.click('.day-row:has-text("27 Aug")')
+  await newCopy.waitForSelector('.verdict', { timeout: 5000 })
+  await newCopy.waitForTimeout(500)
+  check(
+    'and the receipt came with its night',
+    (await newCopy.locator('.photo-thumb').count()) === 1,
+    (await newCopy.locator('.main').innerText()).slice(0, 200),
+  )
 
   await newCopy.click('button:has-text("Cellar")')
   await newCopy.waitForTimeout(700)

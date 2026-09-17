@@ -372,6 +372,15 @@ input, select, textarea, button {
   transition: background 0.2s var(--ease), color 0.2s var(--ease), border-color 0.2s var(--ease);
 }
 
+/* Not part of the walk: the cellar, which is an extra rather than a step. It
+   keeps the shape so the page still lines up, and loses the colour that says
+   "there is something here still to do". */
+.step-dot.extra {
+  color: var(--muted);
+  background: var(--surface-2);
+  border-color: var(--line);
+}
+
 .step-dot.done {
   color: var(--good);
   background: var(--good-bg);
@@ -1064,8 +1073,30 @@ table.data.crew th[scope='row'] { white-space: nowrap; }
   background: var(--surface-2);
 }
 
-.shots .shot-what { min-width: 0; color: var(--muted); }
+.shots .shot-what { flex: 1; min-width: 0; color: var(--muted); }
 .shots .shot-bad { color: var(--bad); }
+
+/* Throwing one photograph away. Deliberately quiet — it sits next to every
+   shot, and a loud bin beside each one would read as a warning rather than an
+   option. It comes up to full contrast when reached for. */
+.shot-drop {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.shot-drop:hover:not(:disabled),
+.shot-drop:focus-visible { color: var(--bad); border-color: var(--bad); }
+.shot-drop:disabled { opacity: 0.4; cursor: default; }
 
 /* ---- motion discipline ---------------------------------------------------- */
 

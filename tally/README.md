@@ -31,14 +31,30 @@ card slip, count the drawer and type that in. The verdict updates as each figure
 lands, so a mistake shows up while the receipts are still in your hand rather
 than at the end. Save, and it joins the history.
 
-The roll is long, so it takes as many photographs as it needs — each one is
-merged into what is already held, and the summary can be photographed after the
-item list without wiping it.
+The roll is long, so it takes as many photographs as it needs — pick them all at
+once, and each is read on its own, says which sections it turned out to contain,
+and is folded into a single read. Order does not matter. One that comes out
+blurred can be thrown away on its own: the roll re-folds from the reads already
+in hand, so a retake costs one photograph rather than three, and is not paid for
+twice.
+
+**The photograph is the record.** It is kept whether or not anything could read
+it — no key, no signal, scanning switched off. The card says so before the
+pictures are taken rather than after three identical failures, the shots sit in
+the list marked *kept, not read yet*, and one tap reads them when the signal is
+back. So the nightly job survives a cellar with no reception: photograph at
+closing, read in the morning. A night saved that way says exactly that when it
+is offered back, and says how many others are waiting behind it.
 
 Every scanned figure lands in an ordinary editable box. **Nothing is ever locked
 to what the scanner read.** That is a deliberate design rule, not a fallback:
 receipt paper defeats scanners often enough that an app which merely *reported*
 a number would be trusted once and abandoned the moment it was wrong.
+
+Counting the cellar is deliberately **not** one of the numbered steps. The night
+is the roll, the card machine and the drawer; the cellar is an extra for whoever
+wants it, because a step that never gets ticked reads as a job left undone every
+single night.
 
 ### Installing it on her phone
 
@@ -298,7 +314,18 @@ reconciliation whose entire purpose is whether two numbers match.
 
 **The receipts are kept.** A shrunk copy of each photograph is stored with the
 night, because "why was Tuesday £20 short" gets asked three weeks later, and
-answering it is the one thing the paper ledger was genuinely good at.
+answering it is the one thing the paper ledger was genuinely good at. They live
+and die with the night: deleting one takes its photographs with it, clearing out
+old pictures clears the references too, and the first night saved with a
+photograph asks the browser not to evict the data.
+
+**A backup can carry them.** Two buttons, because they are two jobs. *Save
+everything* is the small file — every figure, small enough to mail to yourself.
+*Receipts and all* puts the photographs in too, which is what makes a disputed
+night provable rather than asserted; it runs to tens of megabytes, is assembled
+in pieces rather than as one enormous string, and belongs in Files rather than
+an inbox. Either file restores the same way, and the photographs come back
+attached to the nights they belong to. Neither carries the API key.
 
 **The API key lives in her browser** and goes straight to Anthropic with no
 server in between. That is the right trade for one person on a static host. It
@@ -326,9 +353,15 @@ npm run icons      # re-rasterise the PNGs after editing public/icon.svg
 including parsing the real Gardeners Arms roll and asserting it reproduces a
 hand transcription exactly. `npm run test:e2e` covers what unit tests cannot: that
 the verdict updates as she types, that a saved night comes back after a reload,
-that correcting a night updates rather than duplicates it, that a *failed* scan
-still leaves her able to finish, and that the dashboard's figures and percentages
-match the real receipt — seeded into storage and read back through the interface.
+that correcting a night updates rather than duplicates it, that a scan which
+*cannot run* still keeps the photographs and still leaves her able to finish,
+that one photograph of three can be thrown away without disturbing the others,
+that a roll photographed tonight is still there — and still marked unread — when
+the night is opened in the morning, that a photograph thrown away is gone for
+good rather than back on the next visit, that a backup carrying the receipts
+restores them onto the nights they belong to, and that the dashboard's figures
+and percentages match the real receipt — seeded into storage and read back
+through the interface.
 
 `npm run test:phone` asks the question the other two cannot: whether it is
 usable on a phone. It walks every screen at 360×640 and 375×667 — narrower than

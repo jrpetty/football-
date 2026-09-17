@@ -193,3 +193,14 @@ export function IconTickSmall({ size = 16 }: IconProps) {
     </svg>
   )
 }
+
+/** Throw this one away — a lid, a bin, and the two lines down the front. */
+export function IconTrash(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M4 7h16M9.5 7V5.2A1.2 1.2 0 0 1 10.7 4h2.6a1.2 1.2 0 0 1 1.2 1.2V7" />
+      <path d="M6.4 7.8 7.2 19a1.4 1.4 0 0 0 1.4 1.3h6.8a1.4 1.4 0 0 0 1.4-1.3l.8-11.2" />
+      <path d="M10.4 11v5.4M13.6 11v5.4" />
+    </Svg>
+  )
+}

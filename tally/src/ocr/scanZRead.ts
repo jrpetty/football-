@@ -237,6 +237,43 @@ export interface PhotoOutcome {
   rawText?: string
   confidence?: 'high' | 'medium' | 'low'
   notes?: string
+  /**
+   * What this one photograph read, before it was folded in with the others.
+   *
+   * Kept so a roll can be taken apart again. One photograph out of three comes
+   * out blurred often enough that redoing all three — and paying to read them
+   * again — is the wrong answer: drop that one, and what is left re-folds from
+   * what is already in hand.
+   */
+  parsed?: ZRead
+  /**
+   * Photographed and kept, but nothing has read it yet.
+   *
+   * A picture of the receipt is the record whether or not anything could read
+   * it — no key, no signal, scanning switched off. This is how a photograph
+   * waiting to be read is told apart from one that was read and came back
+   * blank, which is a retake rather than a wait.
+   */
+  unread?: boolean
+}
+
+/**
+ * Several photographs of one roll, folded into a single read.
+ *
+ * In photograph order, so a figure appearing on two of them settles the same
+ * way every time, whatever order they arrived in.
+ *
+ * `base` is whatever was read before these photographs — a night reopened the
+ * next morning, or figures corrected by hand. It goes underneath, so a later
+ * photograph of the same section still wins, and dropping one photograph never
+ * takes saved or corrected figures with it.
+ */
+export function mergeOutcomes(outcomes: readonly PhotoOutcome[], base?: ZRead): ZRead {
+  let zRead = base ?? emptyZRead()
+  for (const o of [...outcomes].sort((a, b) => a.index - b.index)) {
+    if (o.parsed) zRead = mergeZRead(zRead, o.parsed)
+  }
+  return zRead
 }
 
 export interface BatchResult {
@@ -300,7 +337,11 @@ export async function scanZReadBatch(req: BatchRequest): Promise<BatchResult> {
   let zRead = req.existing ?? emptyZRead()
   for (const r of results) zRead = mergeZRead(zRead, r.z)
 
-  return { zRead, verdict: crossfootVerdict(zRead), photos: results.map((r) => r.outcome) }
+  return {
+    zRead,
+    verdict: crossfootVerdict(zRead),
+    photos: results.map((r) => ({ ...r.outcome, parsed: r.z })),
+  }
 }
 
 

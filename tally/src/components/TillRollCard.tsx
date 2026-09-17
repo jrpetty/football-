@@ -1,17 +1,22 @@
 // ---------------------------------------------------------------------------
 // Capturing the till roll.
 //
-// The roll is longer than a phone's camera frame — the reference one took three
-// photographs — so this takes them all at once. Drop the lot in one place and
-// each is read separately, announces which sections it turned out to contain,
-// and is folded into a single read. Order does not matter, one bad photograph
-// does not take the others with it, and anything still missing is named rather
-// than silently absent.
+// This is now the whole of the nightly job: photograph the receipt, let it be
+// read, check the verdict. So the card is built around the photographs rather
+// than around the scan.
 //
-// There is always a way through without scanning. If the key is missing, the
-// signal is down, or a photograph is unreadable, the total can simply be typed,
-// and the night is still a complete record. The department detail is what makes
-// the dashboard possible, not what makes the night valid.
+// Three things follow from that. The roll is longer than a phone's camera
+// frame — the reference one took three photographs — so they are taken all at
+// once, read separately, and folded into one read. Each photograph can be
+// thrown away and retaken on its own, and what is left re-folds from the reads
+// already in hand: one blurred picture out of three costs one picture, not
+// three, and is not paid for twice. And a photograph is kept whether or not
+// anything could read it — no key, no signal, scanning switched off — because
+// the picture of the receipt is the record. It can be read later, in a tap.
+//
+// There is always a way through without scanning. The total can simply be
+// typed, and the night is still a complete record. The department detail is
+// what makes the dashboard possible, not what makes the night valid.
 // ---------------------------------------------------------------------------
 
 import { useEffect, useRef, useState } from 'react'
@@ -21,14 +26,37 @@ import { crossfootVerdict } from '../core/crossfoot.ts'
 import { formatMoney, parsePence } from '../core/money.ts'
 import { isZReadEmpty, sectionLabel, sectionsIn, type ZRead } from '../core/zread.ts'
 import type { CaptureConfidence, CaptureSource } from '../core/types.ts'
-import { scanZReadBatch, type PhotoOutcome } from '../ocr/scanZRead.ts'
-import { IconCamera, IconReceipt, IconTickSmall } from './icons.tsx'
+import { mergeOutcomes, scanZReadBatch, type PhotoOutcome } from '../ocr/scanZRead.ts'
+import { effectiveEngine, hasApiKey, loadSettings, type EnginePreference } from '../storage/settings.ts'
+import { IconCamera, IconReceipt, IconTickSmall, IconTrash } from './icons.tsx'
 import { Lightbox } from './Lightbox.tsx'
+
+/**
+ * One photograph of the roll.
+ *
+ * One list rather than "the saved ones" and "tonight's": a picture taken at
+ * closing with no signal and read the next morning has to be able to cross
+ * that line without becoming a different kind of thing. So every shot carries
+ * its image, where it is stored if it has been saved, and what it read.
+ */
+export interface RollShot {
+  blob: Blob
+  /** Where it already lives in the database, once the night has been saved. */
+  id?: string
+  /** What this one photograph read — or that nothing has read it yet. */
+  outcome: PhotoOutcome
+}
 
 export interface RollState {
   zRead?: ZRead
-  photos: Blob[]
-  photoOutcomes: PhotoOutcome[]
+  /**
+   * What had been read before this sitting's photographs — a night reopened,
+   * or figures corrected by hand. Everything else folds on top of it, so
+   * dropping a photograph never takes saved or corrected figures with it.
+   */
+  base?: ZRead
+  /** Every photograph of the roll, in the order they go together. */
+  shots: RollShot[]
   scanning: boolean
   progress?: { done: number; total: number }
   error: string
@@ -42,8 +70,7 @@ export interface RollState {
 
 export function emptyRoll(): RollState {
   return {
-    photos: [],
-    photoOutcomes: [],
+    shots: [],
     scanning: false,
     error: '',
     notes: '',
@@ -51,6 +78,21 @@ export function emptyRoll(): RollState {
     source: 'manual',
     edited: false,
   }
+}
+
+/** Renumber so a shot's outcome always states where it sits in the roll. */
+function renumber(shots: readonly RollShot[]): RollShot[] {
+  return shots.map((shot, index) => ({ ...shot, outcome: { ...shot.outcome, index } }))
+}
+
+/** A photograph just added: kept, and waiting for something to read it. */
+export function newShot(blob: Blob, index: number): RollShot {
+  return { blob, outcome: { index, sections: [], unread: true } }
+}
+
+/** A photograph already stored against this night, and already read. */
+export function savedShot(id: string, blob: Blob, index: number, read: boolean): RollShot {
+  return { id, blob, outcome: { index, sections: [], ...(read ? {} : { unread: true }) } }
 }
 
 /** The night's takings, whichever way they were captured. */
@@ -61,8 +103,48 @@ export function rollTotalPence(roll: RollState): number | null {
   return z?.deptTotal?.pence ?? z?.transaction.paidTotalPence ?? null
 }
 
+/** Photographs taken but not yet read — because there was no key, or no signal. */
+export function unreadShots(roll: RollState): number[] {
+  return roll.shots.flatMap((shot, i) => (shot.outcome.unread ? [i] : []))
+}
+
+const RANK: Record<CaptureConfidence, number> = { low: 0, medium: 1, high: 2 }
+
+/** The least confident reading of the lot — a warning is only useful at its worst. */
+function worstConfidence(outcomes: readonly PhotoOutcome[]): CaptureConfidence | undefined {
+  let worst: CaptureConfidence | undefined
+  for (const o of outcomes) {
+    if (!o.confidence) continue
+    if (!worst || RANK[o.confidence] < RANK[worst]) worst = o.confidence
+  }
+  return worst
+}
+
 /** What the roll should eventually contain, so a gap can be pointed at. */
 const WANTED = ['departments', 'totals'] as const
+
+/** Whether the reader can run at all, and why not when it cannot. */
+interface Readiness {
+  preference: EnginePreference
+  engine: EnginePreference
+  keyed: boolean
+}
+
+function readiness(): Readiness {
+  const s = loadSettings()
+  return { preference: s.engine, engine: effectiveEngine(s), keyed: hasApiKey(s) }
+}
+
+function preflightWords(r: Readiness): string | null {
+  if (r.engine !== 'off') return null
+  if (r.preference === 'off') {
+    return 'Scanning is switched off in Settings, so photographs are kept but not read. Type the session total below — the night is still a complete record.'
+  }
+  if (!r.keyed) {
+    return 'No API key yet, so nothing can read the roll. Photograph it anyway — the pictures are kept with the night, and one tap reads them once the key is in Settings.'
+  }
+  return 'No signal, so the roll cannot be read this minute. Photograph it anyway — the pictures are kept with the night and can be read the moment you are back on wifi.'
+}
 
 interface Props {
   value: RollState
@@ -81,99 +163,166 @@ export function TillRollCard({ value, onChange, onReview, step, done }: Props) {
   const [showChecks, setShowChecks] = useState(false)
   const [previews, setPreviews] = useState<string[]>([])
   const [viewing, setViewing] = useState<number | null>(null)
+  const [ready, setReady] = useState<Readiness>(readiness)
 
   useEffect(() => () => abortRef.current?.abort(), [])
 
+  // Whether the roll can be read is not fixed for the evening: the wifi drops,
+  // or she goes to Settings, pastes the key and comes back. Re-checked on the
+  // events that actually change it rather than on every keystroke.
   useEffect(() => {
-    const urls = value.photos.map((p) => URL.createObjectURL(p))
+    const refresh = () => setReady(readiness())
+    refresh()
+    const visible = () => document.visibilityState === 'visible' && refresh()
+    window.addEventListener('online', refresh)
+    window.addEventListener('offline', refresh)
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', visible)
+    return () => {
+      window.removeEventListener('online', refresh)
+      window.removeEventListener('offline', refresh)
+      window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', visible)
+    }
+  }, [])
+
+  const shots = value.shots
+
+  useEffect(() => {
+    const urls = shots.map((shot) => URL.createObjectURL(shot.blob))
     setPreviews(urls)
     // Revoked on replacement and unmount; a night of retaken photographs would
     // otherwise hold every one of them in memory.
     return () => urls.forEach((u) => URL.revokeObjectURL(u))
-  }, [value.photos])
+  }, [shots])
 
   const z = value.zRead
   const captured = !isZReadEmpty(z)
   const verdict = captured && z ? crossfootVerdict(z) : null
   const have = z ? sectionsIn(z) : []
   const missing = WANTED.filter((w) => !have.includes(w))
+  const unread = unreadShots(value)
+  const preflight = preflightWords(ready)
 
   // Every photograph failing for the same reason is one problem, not several.
-  const errors = value.photoOutcomes.map((p) => p.error).filter((e): e is string => !!e)
-  const sharedError =
-    errors.length > 1 && errors.length === value.photoOutcomes.length && new Set(errors).size === 1
+  const errors = shots.map((shot) => shot.outcome.error).filter((e): e is string => !!e)
+  const sharedError = errors.length > 1 && errors.length === shots.length && new Set(errors).size === 1
 
-  async function addFiles(files: File[]) {
-    if (files.length === 0) return
+  /**
+   * Read some of the photographs already in hand and fold them into the roll.
+   *
+   * Takes the indexes rather than the files, so a result always lands back on
+   * the photograph it came from. That is what lets one bad picture be retaken,
+   * or a whole roll be read later when the signal comes back, without
+   * disturbing anything already read.
+   */
+  async function scanShots(from: RollState, indices: number[]) {
+    if (indices.length === 0) return
     abortRef.current?.abort()
     const controller = new AbortController()
     abortRef.current = controller
 
-    const photos = [...value.photos, ...files]
     let working: RollState = {
-      ...value,
-      photos,
+      ...from,
       scanning: true,
       error: '',
-      progress: { done: 0, total: files.length },
+      progress: { done: 0, total: indices.length },
     }
     onChange(working)
 
     try {
       const result = await scanZReadBatch({
-        files,
+        files: indices.map((i) => from.shots[i]!.blob),
         signal: controller.signal,
-        ...(value.zRead ? { existing: value.zRead } : {}),
-        onProgress: (done, total) => {
-          working = { ...working, progress: { done, total } }
+        onProgress: (doneSoFar, total) => {
+          working = { ...working, progress: { done: doneSoFar, total } }
           onChange(working)
         },
       })
       if (controller.signal.aborted) return
 
-      const failures = result.photos.filter((p) => p.error)
-      const blanks = result.photos.filter((p) => !p.error && p.sections.length === 0)
-      const engineNotes = result.photos.map((p) => p.notes).filter((n): n is string => !!n && n.length > 0)
+      const next = [...from.shots]
+      result.photos.forEach((p, n) => {
+        const at = indices[n]!
+        next[at] = { ...next[at]!, outcome: { ...p, index: at } }
+      })
+      const outcomes = next.map((shot) => shot.outcome)
 
+      const merged = mergeOutcomes(outcomes, from.base)
       // Whether anything was actually read decides what may be thrown away. A
       // scan that failed must not take the figure she had already typed with
       // it — losing her work because the camera did not help is the worst
       // possible outcome of pressing a button marked "add photos".
-      const gotSomething = !isZReadEmpty(result.zRead)
+      const gotSomething = !isZReadEmpty(merged)
+
+      const failures = result.photos.filter((p) => p.error)
+      const blanks = result.photos.filter((p) => !p.error && p.sections.length === 0)
+      const engineNotes = result.photos.map((p) => p.notes).filter((n): n is string => !!n && n.length > 0)
 
       onChange({
-        ...value,
-        photos,
-        // Numbered from the start of the roll, not of this batch, so the list
-        // reads as one roll however many goes it took.
-        photoOutcomes: [
-          ...value.photoOutcomes,
-          ...result.photos.map((p) => ({ ...p, index: value.photoOutcomes.length + p.index })),
-        ],
+        ...from,
+        shots: next,
         scanning: false,
         progress: undefined,
-        error: failures.length === files.length ? (failures[0]?.error ?? 'Nothing could be read.') : '',
-        zRead: result.zRead,
-        confidence: result.photos.find((p) => p.confidence)?.confidence,
+        error: failures.length === indices.length ? (failures[0]?.error ?? 'Nothing could be read.') : '',
+        ...(gotSomething ? { zRead: merged } : {}),
+        confidence: worstConfidence(outcomes),
         notes: [
-          blanks.length ? `${blanks.length} photograph${blanks.length > 1 ? 's' : ''} read nothing — retake ${blanks.length > 1 ? 'them' : 'it'} or add the missing part.` : '',
+          blanks.length
+            ? `${blanks.length} photograph${blanks.length > 1 ? 's' : ''} read nothing — retake ${blanks.length > 1 ? 'them' : 'it'} or add the missing part.`
+            : '',
           ...engineNotes,
         ]
           .filter(Boolean)
           .join(' '),
-        totalText: gotSomething ? '' : value.totalText,
-        source: gotSomething ? 'vision' : value.source,
+        totalText: gotSomething ? '' : from.totalText,
+        source: gotSomething ? 'vision' : from.source,
       })
     } catch (err) {
       if (controller.signal.aborted) return
-      onChange({
-        ...value,
-        photos,
-        scanning: false,
-        progress: undefined,
-        error: err instanceof Error ? err.message : 'Could not read those photographs.',
-      })
+      const message = err instanceof Error ? err.message : 'Could not read those photographs.'
+      const next = [...from.shots]
+      for (const at of indices) next[at] = { ...next[at]!, outcome: { index: at, sections: [], error: message } }
+      onChange({ ...from, shots: next, scanning: false, progress: undefined, error: message })
     }
+  }
+
+  async function addFiles(files: File[]) {
+    if (files.length === 0) return
+    const at = shots.length
+    // Kept first, read second — deliberately in that order. The photograph is
+    // the record; reading it is a convenience on top.
+    const next: RollState = {
+      ...value,
+      shots: [...shots, ...files.map((f, i) => newShot(f, at + i))],
+      error: '',
+    }
+    const fresh = readiness()
+    setReady(fresh)
+    if (fresh.engine === 'off') {
+      onChange(next)
+      return
+    }
+    await scanShots(next, files.map((_, i) => at + i))
+  }
+
+  /** Throw one photograph away and re-fold the roll from what is left. */
+  function removeShot(at: number) {
+    const next = renumber(shots.filter((_, i) => i !== at))
+    const outcomes = next.map((shot) => shot.outcome)
+    const merged = mergeOutcomes(outcomes, value.base)
+    const gotSomething = !isZReadEmpty(merged)
+    const nextRoll: RollState = {
+      ...value,
+      shots: next,
+      error: '',
+      notes: '',
+      confidence: worstConfidence(outcomes),
+      source: gotSomething ? value.source : 'manual',
+    }
+    if (gotSomething) nextRoll.zRead = merged
+    else delete nextRoll.zRead
+    onChange(nextRoll)
   }
 
   const fromInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -184,6 +333,8 @@ export function TillRollCard({ value, onChange, onReview, step, done }: Props) {
 
   const takings = rollTotalPence(value)
   const t = z?.transaction
+  const total = shots.length
+  const saved = shots.filter((shot) => shot.id).length
 
   return (
     <section className="card">
@@ -194,7 +345,9 @@ export function TillRollCard({ value, onChange, onReview, step, done }: Props) {
           </span>
         )}
         <h2>Till roll</h2>
-        <span className="hint">Z read</span>
+        <span className="hint">
+          {total === 0 ? 'Z read' : `${total} photograph${total > 1 ? 's' : ''}`}
+        </span>
       </div>
 
       {/* --- the drop area ------------------------------------------------- */}
@@ -232,7 +385,7 @@ export function TillRollCard({ value, onChange, onReview, step, done }: Props) {
         ) : (
           <>
             <span className="dz-glyph" aria-hidden="true"><IconReceipt size={30} strokeWidth={1.5} /></span>
-            <strong>{value.photos.length ? 'Add more of the roll' : 'Add the till roll'}</strong>
+            <strong>{total ? 'Add more of the roll' : 'Add the till roll'}</strong>
             <span className="dz-hint">
               Tap to pick every photo at once — the roll takes two or three. It works out which is which.
             </span>
@@ -242,9 +395,20 @@ export function TillRollCard({ value, onChange, onReview, step, done }: Props) {
 
       <div className="alts">
         <button type="button" className="btn-small" onClick={() => cameraRef.current?.click()} disabled={value.scanning}>
-          <IconCamera size={17} /> Use the camera
+          <IconCamera size={17} /> {total ? 'Take another' : 'Use the camera'}
         </button>
-        {value.photos.length > 0 && (
+        {unread.length > 0 && ready.engine !== 'off' && (
+          <button
+            type="button"
+            className="btn-small"
+            data-testid="read-kept"
+            onClick={() => void scanShots(value, unread)}
+            disabled={value.scanning}
+          >
+            Read {unread.length === 1 ? 'that photograph' : `those ${unread.length} photographs`}
+          </button>
+        )}
+        {total > 0 && (
           <button
             type="button"
             className="btn-small"
@@ -278,37 +442,68 @@ export function TillRollCard({ value, onChange, onReview, step, done }: Props) {
         onChange={fromInput}
       />
 
+      {preflight && (
+        <p className="note warn" role="status" data-testid="roll-preflight">
+          {preflight}
+        </p>
+      )}
+
       {/* --- what each photograph turned out to be -------------------------- */}
-      {value.photoOutcomes.length > 0 && (
+      {total > 0 && (
         <ul className="shots">
-          {value.photoOutcomes.map((p, i) => (
-            <li key={p.index}>
-              {previews[i] ? (
+          {shots.map((shot, i) => {
+            const o = shot.outcome
+            return (
+              <li key={shot.id ?? `shot:${i}`}>
+                {previews[i] ? (
+                  <button
+                    type="button"
+                    className="shot-open"
+                    onClick={() => setViewing(i)}
+                    aria-label={`Open photograph ${i + 1} full screen`}
+                  >
+                    <img src={previews[i]} alt="" />
+                  </button>
+                ) : (
+                  <span className="shot-blank" aria-hidden="true" />
+                )}
+                <span className="shot-what">
+                  {o.error ? (
+                    // One shared cause is stated once, underneath, rather than
+                    // shouted next to every thumbnail.
+                    sharedError ? 'Not read' : <span className="shot-bad">{o.error}</span>
+                  ) : o.unread ? (
+                    'Kept — not read yet'
+                  ) : o.sections.length > 0 ? (
+                    o.sections.map(sectionLabel).join(' · ')
+                  ) : shot.id ? (
+                    'Saved with this night'
+                  ) : (
+                    <span className="shot-bad">Nothing readable — retake this one</span>
+                  )}
+                </span>
                 <button
                   type="button"
-                  className="shot-open"
-                  onClick={() => setViewing(i)}
-                  aria-label={`Open photograph ${i + 1} full screen`}
+                  className="shot-drop"
+                  data-testid={`drop-shot-${i}`}
+                  onClick={() => removeShot(i)}
+                  disabled={value.scanning}
+                  aria-label={`Throw away photograph ${i + 1}`}
+                  title="Throw this photograph away and keep the rest"
                 >
-                  <img src={previews[i]} alt="" />
+                  <IconTrash size={15} />
                 </button>
-              ) : (
-                <span className="shot-blank" aria-hidden="true" />
-              )}
-              <span className="shot-what">
-                {p.error ? (
-                  // One shared cause is stated once, underneath, rather than
-                  // shouted next to every thumbnail.
-                  sharedError ? 'Not read' : <span className="shot-bad">{p.error}</span>
-                ) : p.sections.length === 0 ? (
-                  <span className="shot-bad">Nothing readable — retake this one</span>
-                ) : (
-                  p.sections.map(sectionLabel).join(' · ')
-                )}
-              </span>
-            </li>
-          ))}
+              </li>
+            )
+          })}
         </ul>
+      )}
+
+      {saved > 0 && (
+        <p className="note">
+          Throwing away a photograph saved earlier removes the picture. Figures already read off it
+          stay until the roll is started again.
+        </p>
       )}
 
       {captured && missing.length > 0 && (
@@ -348,7 +543,11 @@ export function TillRollCard({ value, onChange, onReview, step, done }: Props) {
       ) : (
         !value.scanning && (
           <>
-            <p className="note">Or skip the photographs and type the session total:</p>
+            <p className="note">
+              {total > 0
+                ? 'Nothing read off the roll yet — type the session total and the night still stands:'
+                : 'Or skip the photographs and type the session total:'}
+            </p>
             <div className="figure">
               <MoneyInput
                 id="figure-till"

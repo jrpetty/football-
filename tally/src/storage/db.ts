@@ -15,7 +15,7 @@
 import type { DayRecord } from '../core/types.ts'
 import type { PriceBookEntry } from '../core/priceBook.ts'
 import { normaliseItems } from '../core/stock.ts'
-import { mergeStockConfig } from './export.ts'
+import { blobToBase64, mergeStockConfig, type BackupPhoto } from './export.ts'
 import type { Delivery, Pour, StockCount, StockItem } from '../core/stock.ts'
 import type { Person, Shift } from '../core/rota.ts'
 import type { DayWeather } from '../core/forecast.ts'
@@ -116,13 +116,19 @@ export async function listDays(): Promise<DayRecord[]> {
   return all.sort((a, b) => b.date.localeCompare(a.date))
 }
 
+/** Every photograph a night points at: the roll, the card slip, the old single. */
+export function photoIdsOf(day: DayRecord): string[] {
+  return [...(day.zPhotoIds ?? []), day.till.photoId, day.card.photoId].filter(
+    (id): id is string => !!id,
+  )
+}
+
 export async function deleteDay(date: string): Promise<void> {
   const day = await getDay(date)
-  if (day) {
-    for (const id of [day.till.photoId, day.card.photoId]) {
-      if (id) await deletePhoto(id)
-    }
-  }
+  // Every one of them, the roll included. A night deleted used to leave its
+  // roll photographs behind for good — nothing referenced them afterwards, so
+  // nothing would ever clear them.
+  if (day) for (const id of photoIdsOf(day)) await deletePhoto(id)
   await run(DAYS, 'readwrite', (s) => s.delete(date))
 }
 
@@ -146,6 +152,41 @@ export function deletePhoto(id: string): Promise<unknown> {
   return run(PHOTOS, 'readwrite', (s) => s.delete(id))
 }
 
+/** Put a photograph back under the id a restored night already points at. */
+export function putPhoto(id: string, blob: Blob, savedAt: number): Promise<unknown> {
+  return run(PHOTOS, 'readwrite', (s) => s.put({ id, blob, savedAt }))
+}
+
+/**
+ * Every receipt in the app, encoded for a backup file.
+ *
+ * Only the ones a night still points at. Anything else is a leftover from an
+ * older version or an interrupted save, and there is no sense carrying it into
+ * a file whose whole problem is its size.
+ */
+export async function collectBackupPhotos(): Promise<BackupPhoto[]> {
+  const days = await listDays()
+  const wanted = new Set(days.flatMap(photoIdsOf))
+  if (wanted.size === 0) return []
+
+  const rows = await run<Array<{ id: string; blob: Blob; savedAt?: number }>>(
+    PHOTOS,
+    'readonly',
+    (s) => s.getAll(),
+  )
+  const out: BackupPhoto[] = []
+  for (const row of rows) {
+    if (!wanted.has(row.id) || !row.blob) continue
+    out.push({
+      id: row.id,
+      savedAt: row.savedAt ?? Date.now(),
+      type: row.blob.type || 'image/jpeg',
+      data: await blobToBase64(row.blob),
+    })
+  }
+  return out
+}
+
 /**
  * Drop photographs older than a cutoff, leaving the figures untouched.
  *
@@ -164,7 +205,8 @@ export async function prunePhotosBefore(cutoffMs: number): Promise<number> {
   if (removedIds.size === 0) return 0
 
   // Clear the now-dangling references, so the day detail never offers a
-  // photograph that is no longer there.
+  // photograph that is no longer there. The roll's photographs are the ones
+  // that matter most now, and they are the ones there are most of.
   for (const day of await listDays()) {
     let touched = false
     if (day.till.photoId && removedIds.has(day.till.photoId)) {
@@ -173,6 +215,12 @@ export async function prunePhotosBefore(cutoffMs: number): Promise<number> {
     }
     if (day.card.photoId && removedIds.has(day.card.photoId)) {
       delete day.card.photoId
+      touched = true
+    }
+    if (day.zPhotoIds?.some((id) => removedIds.has(id))) {
+      const left = day.zPhotoIds.filter((id) => !removedIds.has(id))
+      if (left.length) day.zPhotoIds = left
+      else delete day.zPhotoIds
       touched = true
     }
     if (touched) await saveDay(day)
@@ -463,6 +511,7 @@ export interface RestoreCounts {
   people: number
   shifts: number
   weather: number
+  photos: number
 }
 
 /**
@@ -483,7 +532,11 @@ export async function restoreBackup(bundle: {
   people?: readonly Person[]
   shifts?: readonly Shift[]
   weather?: readonly DayWeather[]
+  photos?: ReadonlyArray<{ id: string; savedAt: number; blob: Blob }>
 }): Promise<RestoreCounts> {
+  // The receipts first, so no night is ever briefly pointing at a picture that
+  // is not there yet.
+  for (const photo of bundle.photos ?? []) await putPhoto(photo.id, photo.blob, photo.savedAt)
   for (const day of bundle.days ?? []) await saveDay(day)
   if (bundle.prices && bundle.prices.length > 0) await savePriceBook(bundle.prices)
   // Merged, not swapped: a file with six lines in it must not take the other
@@ -504,5 +557,6 @@ export async function restoreBackup(bundle: {
     people: bundle.people?.length ?? 0,
     shifts: bundle.shifts?.length ?? 0,
     weather: bundle.weather?.length ?? 0,
+    photos: bundle.photos?.length ?? 0,
   }
 }
