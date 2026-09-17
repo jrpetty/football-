@@ -9,7 +9,7 @@
 import { useEffect, useState } from 'react'
 import { formatShort } from '../core/date.ts'
 import { formatMoney, formatSigned } from '../core/money.ts'
-import { reconcileDay } from '../core/reconcile.ts'
+import { reconcileDay, describeMissing } from '../core/reconcile.ts'
 import { dayStats } from '../core/analytics.ts'
 import type { DayRecord } from '../core/types.ts'
 import { listDays } from '../storage/db.ts'
@@ -76,7 +76,9 @@ export function History({ onOpen, onStart, refreshKey }: Props) {
                 <span className="date">{formatShort(day.date)}</span>
                 <br />
                 <span className="takings num">
-                  {took === null ? 'Not finished' : `Took ${formatMoney(took)}`}
+                  {took === null
+                    ? `Still needs ${describeMissing(r.missing)}`
+                    : `Took ${formatMoney(took)}`}
                 </span>
               </span>
               <span className={`delta ${r.verdict}`}>

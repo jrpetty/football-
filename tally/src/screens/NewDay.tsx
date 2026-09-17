@@ -17,15 +17,19 @@ import { FigureCard, emptyFigure, type FigureState } from '../components/FigureC
 import { MoneyInput } from '../components/MoneyInput.tsx'
 import { TillRollCard, emptyRoll, rollTotalPence, type RollState } from '../components/TillRollCard.tsx'
 import { ItemisedLegs, VerdictPanel } from '../components/Verdict.tsx'
-import { formatLong, isAfterMidnightForTradingDay, tradingDayKey } from '../core/date.ts'
+import { formatLong, formatShort, isAfterMidnightForTradingDay, tradingDayKey } from '../core/date.ts'
 import { formatMoney, parsePence, penceToInput } from '../core/money.ts'
-import { reconcileFull, tillExpectations } from '../core/reconcile.ts'
+import { describeMissing, reconcileFull, tillExpectations } from '../core/reconcile.ts'
+import { dayStats } from '../core/analytics.ts'
 import type { Capture, DayRecord } from '../core/types.ts'
 import { emptyDay } from '../core/types.ts'
 import { isZReadEmpty, type ZRead } from '../core/zread.ts'
 import {
   deleteStockCount,
   getDay,
+  listDays,
+  listDeliveries,
+  listStockCounts,
   getPhoto,
   getStockCount,
   loadStockConfig,
@@ -40,13 +44,19 @@ import {
   draftsFromCount,
   kegReading,
   measureOf,
+  nightCellar,
+  pourUsage,
   sheetLines,
   withKegWeights,
+  type Delivery,
   type KegWeights,
   type Measure,
   type Pour,
+  type StockCount,
   type StockItem,
 } from '../core/stock.ts'
+import { CellarGap } from '../components/CellarGap.tsx'
+import { costOf } from '../core/margin.ts'
 import { loadSettings } from '../storage/settings.ts'
 import { makeThumbnail } from '../ocr/index.ts'
 import { IconTickSmall } from '../components/icons.tsx'
@@ -117,12 +127,26 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
   const [stockItems, setStockItems] = useState<StockItem[]>([])
   /** The serve each millilitre-counted line pours, so the sheet can say the shots. */
   const [measures, setMeasures] = useState<ReadonlyMap<string, Measure>>(new Map())
+  /** Everything the cellar needs to say what should be down there tonight. */
+  const [pours, setPours] = useState<Pour[]>([])
+  const [counts, setCounts] = useState<StockCount[]>([])
+  const [deliveries, setDeliveries] = useState<Delivery[]>([])
+  const [soldBefore, setSoldBefore] = useState<Array<{ date: string; items: { code: string; name: string; qtyMilli: number }[] }>>([])
   /** Whether the keg calculator is out above the count sheet. */
   const [weighOpen, setWeighOpen] = useState(false)
   const [cellarDrafts, setCellarDrafts] = useState<Record<string, string>>({})
   const [cellarOpen, setCellarOpen] = useState(false)
   const [hadCount, setHadCount] = useState(false)
   const [existing, setExisting] = useState<DayRecord | null>(null)
+  /**
+   * A night saved earlier with the receipt still to come.
+   *
+   * The cellar gets counted as the doors are locked and the roll is read the
+   * next morning, so the two halves of a night are often hours apart. Rather
+   * than trusting her to notice that the date has rolled over, the night that
+   * is still waiting says so and offers itself back.
+   */
+  const [unfinished, setUnfinished] = useState<{ date: string; missing: string } | null>(null)
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState('')
   const lateNight = useRef(isAfterMidnightForTradingDay()).current
@@ -141,6 +165,16 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
       const items = cfg?.items ?? []
       setStockItems(items)
       setMeasures(measuresFrom(cfg))
+      setPours(cfg?.pours ?? [])
+      const [savedCounts, savedDeliveries, savedDays] = await Promise.all([
+        listStockCounts().catch(() => []),
+        listDeliveries().catch(() => []),
+        listDays().catch(() => []),
+      ])
+      if (cancelled) return
+      setCounts(savedCounts)
+      setDeliveries(savedDeliveries)
+      setSoldBefore(savedDays.map((d) => ({ date: d.date, items: dayStats(d, settings.tolerancePence).items })))
       setHadCount(!!count)
       setCellarDrafts(count && items.length ? draftsFromCount(count, items) : {})
       setCellarOpen(!!count)
@@ -149,6 +183,37 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
       cancelled = true
     }
   }, [date])
+
+  // Anything saved but not finished, so it can be offered back rather than
+  // quietly waiting in the Nights list for somebody to remember it.
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const saved = await listDays().catch(() => [])
+      if (cancelled) return
+      const waiting = saved
+        .map((d) => ({ day: d, stats: dayStats(d, settings.tolerancePence) }))
+        .find(({ day, stats }) => stats.takingsPence === null && day.date !== date)
+      setUnfinished(
+        waiting
+          ? {
+              date: waiting.day.date,
+              missing: describeMissing(
+                reconcileFull({
+                  tillPence: waiting.day.till.pence,
+                  cardPence: waiting.day.card.pence,
+                  cashPence: waiting.day.cashPence,
+                  tolerancePence: settings.tolerancePence,
+                }).overall.missing,
+              ),
+            }
+          : null,
+      )
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [date, settings.tolerancePence, saving])
 
   // Re-opening a night edits it rather than starting a second copy of it.
   useEffect(() => {
@@ -229,7 +294,40 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
     }
   }
 
-  const cellarCounted = sheetLines(stockItems, cellarDrafts).length
+  const cellarLines = sheetLines(stockItems, cellarDrafts)
+  const cellarCounted = cellarLines.length
+
+  /** Tonight's sold lines, off the roll as it stands, before anything is saved. */
+  const soldTonight = useMemo(
+    () => (zRead ? zRead.plus.map((p) => ({ code: p.code, name: p.name, qtyMilli: p.qtyMilli })) : []),
+    [zRead],
+  )
+
+  /**
+   * What should be down there against what has been counted, worked out now
+   * rather than after saving.
+   *
+   * The same nightCellar the saved night uses, handed the count being typed
+   * and the roll being read, so the answer she sees standing in the cellar is
+   * the answer the night will show tomorrow. Until the roll's item list is in
+   * there is nothing to take off, so it says that instead of reporting a
+   * night's trade as stock that walked.
+   */
+  const gap = useMemo(() => {
+    if (cellarLines.length === 0 || soldTonight.length === 0) return null
+    return nightCellar({
+      date,
+      items: stockItems,
+      pours,
+      counts: [...counts.filter((c) => c.date !== date), { date, lines: cellarLines }],
+      deliveries,
+      days: [...soldBefore.filter((d) => d.date !== date), { date, items: soldTonight }],
+      costOfServing: costOf,
+    })
+  }, [date, stockItems, pours, counts, deliveries, soldBefore, soldTonight, cellarLines])
+
+  /** Sold lines the cellar knows nothing about, which the gap has to own up to. */
+  const unmapped = useMemo(() => pourUsage(soldTonight, pours).unmapped.length, [soldTonight, pours])
 
   async function save() {
     setSaving(true)
@@ -264,7 +362,6 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
       // the night and its count are one record in all but storage. A sheet
       // left entirely blank is no count at all — and a count cleared on a
       // correction is taken off rather than quietly kept.
-      const cellarLines = sheetLines(stockItems, cellarDrafts)
       if (cellarLines.length > 0) await saveStockCount({ date, lines: cellarLines })
       else if (hadCount) await deleteStockCount(date)
 
@@ -295,6 +392,18 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
             )}
           </div>
         </section>
+
+        {unfinished && (
+          <section className="card">
+            <p className="note" style={{ marginTop: 0, marginBottom: 10 }}>
+              <strong>{formatLong(unfinished.date)} is still to finish.</strong> It is saved, with{' '}
+              {unfinished.missing} still to go in.
+            </p>
+            <button type="button" className="btn-small" onClick={() => setDate(unfinished.date)}>
+              Finish that night
+            </button>
+          </section>
+        )}
 
         <TillRollCard
           value={roll}
@@ -456,6 +565,31 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
                 weighed empty and full has a box for the scales too — the reading fills the count in.
                 Anything left blank was not counted, which is not the same as none.
               </p>
+
+              {cellarCounted > 0 && (
+                <div className="cellar-gap">
+                  <div className="card-head">
+                    <h2>Against the till</h2>
+                    <span className="hint">
+                      {gap?.window ? `since ${formatShort(gap.window.since)}` : 'as you count'}
+                    </span>
+                  </div>
+                  {soldTonight.length === 0 ? (
+                    <p className="note" style={{ marginTop: 0, marginBottom: 0 }}>
+                      Photograph the till roll and this says what should be down there against what
+                      you have counted. Without the roll's own item list there is nothing to take
+                      off, and every pint sold tonight would read as a pint that walked.
+                    </p>
+                  ) : gap?.window ? (
+                    <CellarGap gap={gap.window} live unmapped={unmapped} />
+                  ) : (
+                    <p className="note" style={{ marginTop: 0, marginBottom: 0 }}>
+                      The first count there is, so nothing before it to compare with. From the next
+                      one on, this says what should have been down there against what was.
+                    </p>
+                  )}
+                </div>
+              )}
               <div className="alts">
                 <button type="button" className="btn-small" onClick={() => setCellarOpen(false)}>
                   {cellarCounted ? 'Hide the sheet' : 'Not tonight'}
@@ -463,6 +597,15 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
               </div>
             </>
           )}
+        </section>
+
+        <section className="card">
+          <p className="note" style={{ marginTop: 0, marginBottom: 0 }}>
+            Nothing has to be done in one go. Save it with whatever is filled in — the cellar counted
+            and the roll still on the bar, or the other way about — and open the same date again to
+            finish it. An unfinished night is left out of the takings and the averages until it has a
+            figure, so a half-done night never reads as a night that took nothing.
+          </p>
         </section>
 
         <section className="card">
@@ -482,7 +625,15 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
         <div className="inner">
           <VerdictPanel r={r.overall} />
           <button type="button" className="btn-primary" onClick={() => void save()} disabled={saving || busy}>
-            {saving ? 'Saving…' : busy ? 'Reading the photograph…' : existing ? 'Update this night' : 'Save this night'}
+            {saving
+              ? 'Saving…'
+              : busy
+                ? 'Reading the photograph…'
+                : existing
+                  ? 'Update this night'
+                  : r.overall.complete
+                    ? 'Save this night'
+                    : 'Save it as it is'}
           </button>
         </div>
       </div>

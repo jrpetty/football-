@@ -7,19 +7,8 @@
 // ---------------------------------------------------------------------------
 
 import { formatMoney, formatSigned } from '../core/money.ts'
-import { itemisedHeadline, type DayReconciliation, type LegResult, type Reconciliation } from '../core/reconcile.ts'
+import { describeMissing, itemisedHeadline, type DayReconciliation, type LegResult, type Reconciliation } from '../core/reconcile.ts'
 import { IconAlert, IconCheck, IconClock, IconTickSmall } from './icons.tsx'
-
-const MISSING_WORDS: Record<'till' | 'card' | 'cash', string> = {
-  till: 'the till roll total',
-  card: 'the card total',
-  cash: 'the cash counted',
-}
-
-function list(items: string[]): string {
-  if (items.length <= 1) return items[0] ?? ''
-  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`
-}
 
 export function VerdictPanel({ r }: { r: Reconciliation }) {
   const amount = formatMoney(Math.abs(r.variancePence))
@@ -46,7 +35,7 @@ export function VerdictPanel({ r }: { r: Reconciliation }) {
           : {
               icon: <IconClock size={22} strokeWidth={2} />,
               headline: 'Not finished',
-              detail: `Still need ${list(r.missing.map((m) => MISSING_WORDS[m]))}.`,
+              detail: `Still need ${describeMissing(r.missing)}. It saves as it is.`,
             }
 
   return (

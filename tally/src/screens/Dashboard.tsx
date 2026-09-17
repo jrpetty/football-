@@ -543,7 +543,9 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
       {/* --- the headline --------------------------------------------------- */}
       <section className="card hero">
         <StatTile
-          label={`Taken over ${t.nights} ${t.nights === 1 ? 'night' : 'nights'}`}
+          label={`Taken over ${t.nights} ${t.nights === 1 ? 'night' : 'nights'}${
+            t.unfinishedNights > 0 ? `, and ${t.unfinishedNights} still to finish` : ''
+          }`}
           value={formatMoney(t.takingsPence)}
           detail={t.guestCount > 0 ? `${t.guestCount.toLocaleString('en-GB')} sales, ${formatMoney(t.avePence ?? 0)} average` : undefined}
         />
@@ -569,7 +571,14 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
           value={formatQty(t.itemsMilli)}
           detail={t.itemsPerSale === null ? undefined : `${t.itemsPerSale} a round`}
         />
-        <StatTile label="Balanced" value={`${t.balancedNights}/${t.nights}`} detail={`${t.shortNights} short, ${t.overNights} over`} tone={t.balancedNights === t.nights ? 'good' : undefined} />
+        {/* Out of the nights that could be judged at all: a night still
+            waiting on its cash count is not a night that failed to balance. */}
+        <StatTile
+          label="Balanced"
+          value={`${t.balancedNights}/${t.reconciledNights}`}
+          detail={`${t.shortNights} short, ${t.overNights} over`}
+          tone={t.reconciledNights > 0 && t.balancedNights === t.reconciledNights ? 'good' : undefined}
+        />
       </div>
 
       {/* --- what next week might take --------------------------------------- */}

@@ -19,11 +19,11 @@ import { formatQty, shareBp, formatPercent } from '../core/zread.ts'
 import { seriesVar, ShareBar, Legend } from '../components/charts.tsx'
 import { reconcileFull } from '../core/reconcile.ts'
 import { deleteDay, getDay, getPhoto, listDays, listDeliveries, listPeople, listShifts, listStockCounts, loadStockConfig } from '../storage/db.ts'
-import { formatServings, formatServingsSigned, nightCellar, type NightCellar } from '../core/stock.ts'
+import { nightCellar, pourUsage, type NightCellar, type Pour } from '../core/stock.ts'
+import { CellarGap } from '../components/CellarGap.tsx'
 import { costOf } from '../core/margin.ts'
 import { dayStats } from '../core/analytics.ts'
 import { formatShort } from '../core/date.ts'
-import { IconTickSmall } from '../components/icons.tsx'
 import { crewFor, formatHours, formatTime, shiftMinutes, type Person, type Shift } from '../core/rota.ts'
 import { nightSummary, summaryFilename } from '../core/summary.ts'
 import { saveFile } from '../storage/export.ts'
@@ -81,6 +81,8 @@ export function DayDetail({ date, onBack, onEdit, onDeleted }: Props) {
   const [cellar, setCellar] = useState<NightCellar | null>(null)
   /** Whether counting is a thing this pub does at all, so an absence can be said. */
   const [anyCounts, setAnyCounts] = useState(false)
+  /** What the till sold off lines the cellar has no pour for. */
+  const [pours, setPours] = useState<Pour[]>([])
   const tolerance = loadSettings().tolerancePence
 
   // The night's own cellar window. Every night with a count closes one; this
@@ -92,6 +94,7 @@ export function DayDetail({ date, onBack, onEdit, onDeleted }: Props) {
       .then(([cfg, counts, deliveries, days]) => {
         if (cancelled) return
         setAnyCounts(counts.length > 0)
+        setPours(cfg.pours)
         setCellar(
           nightCellar({
             date,
@@ -365,54 +368,11 @@ export function DayDetail({ date, onBack, onEdit, onDeleted }: Props) {
               The first count there is, so nothing before it to compare with. From the next one on,
               every night shows what should have been down there against what was.
             </p>
-          ) : cellar.window.lines.length === 0 ? (
-            <p className="note" style={{ marginTop: 0 }}>
-              Nothing on this count was on the one before it, so nothing could be judged.
-            </p>
           ) : (
-            <>
-              <div className="table-wrap">
-                <table className="data">
-                  <thead>
-                    <tr>
-                      <th scope="col">Line</th>
-                      <th scope="col">Should be</th>
-                      <th scope="col">Was</th>
-                      <th scope="col">Out by</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cellar.window.lines.map((v) => {
-                      const out = v.varianceBaseUnits ?? 0
-                      return (
-                        <tr key={v.item.id}>
-                          <th scope="row">{v.item.name}</th>
-                          <td className="num">{formatServings(v.expectedBaseUnits, v.item)}</td>
-                          <td className="num">{formatServings(v.actualBaseUnits ?? 0, v.item)}</td>
-                          <td className={`num delta ${out < 0 ? 'short' : out > 0 ? 'over' : ''}`}>
-                            {out === 0 ? <IconTickSmall size={16} /> : formatServingsSigned(out, v.item)}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              <div className="zrow">
-                <span className="zname">
-                  At cost
-                  <small>what the gap comes to, on the lines with a cost set</small>
-                </span>
-                <strong className={`num ${cellar.window.gapPence !== null && cellar.window.gapPence < 0 ? 'short' : ''}`}>
-                  {cellar.window.gapPence === null ? '—' : cellar.window.gapPence === 0 ? 'nothing out' : formatSigned(cellar.window.gapPence)}
-                </strong>
-              </div>
-              <p className="note" style={{ marginBottom: 0 }}>
-                Short here is stock that left the cellar without going through the till. Before reading
-                it that way: spillage, line cleaning, a wrong pour setting and a missed delivery all land
-                in the same column, and all of them are commoner than the alternative.
-              </p>
-            </>
+            <CellarGap
+              gap={cellar.window}
+              unmapped={pourUsage(dayStats(day, tolerance).items, pours).unmapped.length}
+            />
           )}
         </section>
       ) : (

@@ -1344,6 +1344,161 @@ try {
     `scales "${await page.locator('input[aria-label="Taddy Lager on the scales"]').inputValue()}", counted "${await page.locator('input[aria-label="Taddy Lager counted"]').inputValue()}"`,
   )
 
+  console.log('\nThe cellar against the till, as it is counted')
+  // A night with a roll on it, so there is something to take off: three pints
+  // of Taddy sold against the seventeen counted the night before.
+  const tinyRoll = {
+    ...structuredClone(GARDENERS_ARMS),
+    plus: [{ ...(GARDENERS_ARMS.plus.find((p) => /TADDY/.test(p.name)) as (typeof GARDENERS_ARMS)['plus'][number]), qtyMilli: 3000 }],
+  }
+  await page.evaluate(async (day) => {
+    await new Promise<void>((resolve, reject) => {
+      const req = indexedDB.open('tally')
+      req.onsuccess = () => {
+        const tx = req.result.transaction('days', 'readwrite')
+        tx.objectStore('days').put(day)
+        tx.oncomplete = () => resolve()
+        tx.onerror = () => reject(tx.error)
+      }
+      req.onerror = () => reject(req.error)
+    })
+  }, {
+    date: '2026-08-26',
+    till: { pence: 1260, source: 'vision', edited: false },
+    card: { pence: 760, source: 'manual', edited: false },
+    cashPence: 500,
+    note: '',
+    zRead: tinyRoll,
+    createdAt: 0,
+    updatedAt: 0,
+  })
+  await page.reload({ waitUntil: 'networkidle' })
+  await page.click('button:has-text("Nights")')
+  await page.waitForSelector('.day-row', { timeout: 5000 })
+  await page.click('.day-row:has-text("26 Aug")')
+  await page.waitForSelector('button:has-text("Edit")', { timeout: 5000 })
+  await page.click('button:has-text("Edit")')
+  await page.waitForSelector('[data-testid="count-cellar"]', { timeout: 5000 })
+  await page.click('[data-testid="count-cellar"]')
+  await page.waitForSelector('input[aria-label="Taddy Lager counted"]', { timeout: 5000 })
+  // Seventeen were there on the 24th and three pints went through the till, so
+  // fourteen is exactly right.
+  await page.fill('input[aria-label="Taddy Lager counted"]', '14')
+  await page.waitForTimeout(500)
+  const live = await page.locator('.cellar-gap').innerText()
+  check('the count sheet says what it is against', /Against the till/i.test(live), live.slice(0, 140))
+  check('what should be down there', /14 pints/.test(live), live.slice(0, 300))
+  check(
+    'and nothing out when the count agrees with the roll',
+    /nothing out/i.test(live),
+    live.slice(0, 300),
+  )
+  // Two pints light, before anything is saved.
+  await page.fill('input[aria-label="Taddy Lager counted"]', '12')
+  await page.waitForTimeout(500)
+  const short = await page.locator('.cellar-gap').innerText()
+  check('it follows what is typed, with nothing saved yet', /−2 pints/.test(short), short.slice(0, 300))
+  check('and puts money against the gap', /−£/.test(short), short.slice(-160))
+  check(
+    'with every sold line accounted for, it does not warn about pours',
+    !/no pour set/.test(short),
+    short.slice(-260),
+  )
+  await page.fill('input[aria-label="Taddy Lager counted"]', '14')
+  await page.waitForTimeout(300)
+  await page.click('.verdict-bar .btn-primary')
+  await page.waitForSelector('.day-row', { timeout: 5000 })
+
+  console.log('\nA night done in two goes')
+  // The cellar gets counted as the doors are locked; the roll is read the next
+  // morning. So a night has to save half done, be findable again, and — until
+  // it has a figure — stay out of the takings rather than reading as a night
+  // that took nothing.
+  await page.click('button:has-text("Tonight")')
+  await page.waitForSelector('#date', { timeout: 5000 })
+  await page.fill('#date', '2026-08-25')
+  await page.waitForTimeout(400)
+  await page.click('[data-testid="count-cellar"]')
+  await page.waitForSelector('input[aria-label="Taddy Lager counted"]', { timeout: 5000 })
+  await page.fill('input[aria-label="Taddy Lager counted"]', '40')
+  await page.waitForTimeout(250)
+  check(
+    'with no roll in yet, it says so rather than calling a night’s trade a loss',
+    /Photograph the till roll/.test(await page.locator('.cellar-gap').innerText()),
+    (await page.locator('.cellar-gap').innerText()).slice(0, 200),
+  )
+  check(
+    'with nothing else filled in, the button offers to save it as it is',
+    (await page.locator('.verdict-bar .btn-primary').innerText()).trim() === 'Save it as it is',
+    await page.locator('.verdict-bar .btn-primary').innerText(),
+  )
+  await page.click('.verdict-bar .btn-primary')
+  await page.waitForSelector('.day-row', { timeout: 5000 })
+
+  const unfinishedRow = await page.locator('.day-row:has-text("25 Aug")').innerText()
+  check(
+    'the night is saved, and says what it is still waiting on',
+    /Still needs the till roll total, the card total and the cash counted/.test(unfinishedRow),
+    unfinishedRow.replace(/\n/g, ' | '),
+  )
+
+  await page.click('button:has-text("Trade")')
+  await page.waitForSelector('.kpi-row', { timeout: 5000 })
+  // Wide enough a window to take in a night from last month.
+  await page.click('.chip:has-text("90 nights")')
+  await page.waitForTimeout(400)
+  const trade = await page.locator('.main').innerText()
+  check('the trade figures say a night is still to finish', /still to finish/i.test(trade), trade.slice(0, 260))
+  const taken = /taken over (\d+) nights?/i.exec(trade)
+  check(
+    'and count it among the nights of trade only once it has a figure',
+    !!taken && !new RegExp(`taken over ${Number(taken[1]) + 1}`, 'i').test(trade),
+    taken?.[0] ?? trade.slice(0, 160),
+  )
+
+  // Coming back to it: Tonight offers the unfinished night rather than leaving
+  // it to be remembered.
+  await page.click('button:has-text("Tonight")')
+  await page.waitForSelector('#date', { timeout: 5000 })
+  await page.fill('#date', '2026-08-26')
+  await page.waitForTimeout(500)
+  check(
+    'a later night offers the unfinished one back',
+    (await page.locator('button:has-text("Finish that night")').count()) === 1,
+    (await page.locator('.main').innerText()).slice(0, 200),
+  )
+  await page.click('button:has-text("Finish that night")')
+  await page.waitForTimeout(600)
+  check('and opening it goes to that date', (await page.locator('#date').inputValue()) === '2026-08-25')
+  check(
+    'with the cellar count it was left with',
+    (await page.locator('input[aria-label="Taddy Lager counted"]').inputValue()) === '40',
+  )
+
+  // The receipt, at last.
+  await setFigure(page, 'figure-till', '900.00')
+  await setFigure(page, 'figure-card', '600.00')
+  await setFigure(page, 'figure-cash', '300.00')
+  await page.waitForTimeout(300)
+  check(
+    'once it is complete the button goes back to updating it',
+    (await page.locator('.verdict-bar .btn-primary').innerText()).trim() === 'Update this night',
+  )
+  await page.click('.verdict-bar .btn-primary')
+  await page.waitForSelector('.day-row', { timeout: 5000 })
+  check(
+    'and the night reads as a night of trade',
+    /Took £900\.00/.test(await page.locator('.day-row:has-text("25 Aug")').innerText()),
+    await page.locator('.day-row:has-text("25 Aug")').innerText(),
+  )
+  await page.click('button:has-text("Tonight")')
+  await page.waitForSelector('#date', { timeout: 5000 })
+  await page.waitForTimeout(500)
+  check(
+    'with nothing left unfinished, nothing is offered back',
+    (await page.locator('button:has-text("Finish that night")').count()) === 0,
+  )
+
   console.log('\nMoving to a new copy')
   // The whole point of a backup: everything set up here has to arrive intact
   // in an empty copy of the app. The version this replaced saved only the

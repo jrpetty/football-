@@ -38,6 +38,19 @@ export interface ReconcileInput {
   tolerancePence?: number
 }
 
+const MISSING_WORDS: Record<'till' | 'card' | 'cash', string> = {
+  till: 'the till roll total',
+  card: 'the card total',
+  cash: 'the cash counted',
+}
+
+/** "the till roll total and the cash counted" — what a night is still waiting on. */
+export function describeMissing(missing: ReadonlyArray<'till' | 'card' | 'cash'>): string {
+  const words = missing.map((m) => MISSING_WORDS[m])
+  if (words.length <= 1) return words[0] ?? ''
+  return `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`
+}
+
 export function reconcile(input: ReconcileInput): Reconciliation {
   const { tillPence, cardPence, cashPence } = input
   const tolerance = Math.max(0, input.tolerancePence ?? DEFAULT_TOLERANCE_PENCE)

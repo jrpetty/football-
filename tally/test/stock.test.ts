@@ -652,3 +652,13 @@ test('a cellar counted in boxes reads boxes, not boxs', () => {
   assert.equal(describeStock(93, crisps), '3 boxes + 18 units')
   assert.equal(describeStock(26, crisps), '1 box + 1 unit')
 })
+
+test('a sold line with no pour takes nothing off, which the cellar has to own up to', () => {
+  // The one that matters: beer that went through the till, with nothing set to
+  // take it off, looks exactly like beer that walked.
+  const sold = [{ code: 'P9', name: 'PINT SOMETHING NEW', qtyMilli: 3000 }]
+  const { used, unmapped } = pourUsage(sold, pours)
+  assert.equal(used.size, 0, 'nothing came off any line')
+  assert.equal(unmapped.length, 1)
+  assert.equal(unmapped[0]?.name, 'PINT SOMETHING NEW')
+})

@@ -146,7 +146,17 @@ export function lastNDays(today: string, days: number): string {
 // --- aggregates --------------------------------------------------------------
 
 export interface Totals {
+  /**
+   * Nights of trade: the ones with a takings figure on them.
+   *
+   * A night saved with the cellar counted but the receipt still to come is
+   * not one of these. It is a real night and it is safe in the app, but it
+   * has no takings yet, and averaging over it would read an unfinished night
+   * as a night that took nothing.
+   */
   nights: number
+  /** Saved, but with no takings figure yet — still to be finished. */
+  unfinishedNights: number
   takingsPence: number
   cashPence: number
   cardPence: number
@@ -173,6 +183,8 @@ export interface Totals {
 }
 
 export function totals(stats: DayStats[]): Totals {
+  let nights = 0
+  let unfinishedNights = 0
   let takingsPence = 0
   let cashPence = 0
   let cardPence = 0
@@ -189,6 +201,8 @@ export function totals(stats: DayStats[]): Totals {
   let noSaleCount = 0
 
   for (const s of stats) {
+    if (s.takingsPence === null) unfinishedNights++
+    else nights++
     takingsPence += s.takingsPence ?? 0
     cashPence += s.cashPence ?? 0
     cardPence += s.cardPence ?? 0
@@ -208,7 +222,8 @@ export function totals(stats: DayStats[]): Totals {
   }
 
   return {
-    nights: stats.length,
+    nights,
+    unfinishedNights,
     takingsPence,
     cashPence,
     cardPence,
@@ -338,7 +353,11 @@ const WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
 
 export function weekdayTotals(stats: DayStats[]): WeekdayStat[] {
   return WEEK.map((weekday) => {
-    const nights = stats.filter((s) => s.weekday === weekday)
+    // Only nights with a takings figure. A Wednesday saved with the cellar
+    // counted and the receipt still to come would otherwise drag every
+    // Wednesday average down as a Wednesday that took nothing — which is the
+    // same mistake as reading an uncounted cellar line as an empty one.
+    const nights = stats.filter((s) => s.weekday === weekday && s.takingsPence !== null)
     const reconciled = nights.filter((s) => s.variancePence !== null)
     const takingsPence = nights.reduce((a, s) => a + (s.takingsPence ?? 0), 0)
     const netVariancePence = reconciled.reduce((a, s) => a + (s.variancePence ?? 0), 0)

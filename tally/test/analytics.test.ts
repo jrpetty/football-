@@ -13,6 +13,7 @@ import {
   departmentsPresent,
 } from '../src/core/analytics.ts'
 import { emptyDay, type DayRecord } from '../src/core/types.ts'
+import { describeMissing, reconcile } from '../src/core/reconcile.ts'
 import { GARDENERS_ARMS } from './fixtures/gardenersArms.ts'
 
 /** A night built on the real receipt, with the counted figures varied. */
@@ -309,4 +310,36 @@ test('a night with no item list contributes none', () => {
   const d = emptyDay('2026-08-27', 0)
   d.till = { pence: 100000, source: 'manual', edited: false }
   assert.deepEqual(itemTotals([dayStats(d)]), [])
+})
+
+// --- a night done in two goes -------------------------------------------------
+
+/** Saved with the cellar counted and nothing else in it yet. */
+const halfDone = (date: string) => dayStats(emptyDay(date, 0))
+
+test('a night with no takings figure yet is not a night that took nothing', () => {
+  // The cellar counted at close, the roll still on the bar in the morning.
+  const t = totals([dayStats(night('2026-08-23')), halfDone('2026-08-24')])
+  assert.equal(t.nights, 1, 'one night of trade')
+  assert.equal(t.unfinishedNights, 1, 'and one still to finish')
+  assert.equal(t.takingsPence, 219280, 'which adds nothing to the takings')
+})
+
+test('and it does not drag the weekday average down', () => {
+  // 23 August 2026 was a Sunday; the 30th is the Sunday after.
+  const sundays = weekdayTotals([dayStats(night('2026-08-23')), halfDone('2026-08-30')])
+  const sunday = sundays.find((x) => x.weekday === 'Sunday')
+  assert.equal(sunday?.nights, 1, 'one Sunday has a figure')
+  assert.equal(sunday?.avgTakingsPence, 219280, 'so the average is that Sunday, not half of it')
+})
+
+test('a night still waiting on its cash count says which half is missing', () => {
+  const r = reconcile({ tillPence: 219280, cardPence: 184100, cashPence: null })
+  assert.equal(r.verdict, 'incomplete')
+  assert.equal(describeMissing(r.missing), 'the cash counted')
+  const nothing = reconcile({ tillPence: null, cardPence: null, cashPence: null })
+  assert.equal(
+    describeMissing(nothing.missing),
+    'the till roll total, the card total and the cash counted',
+  )
 })
