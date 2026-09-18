@@ -1,0 +1,15 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_bread": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": { "items": [ { "items": ["minecraft:bread"] } ] }
+    },
+    "has_the_recipe": {
+      "trigger": "minecraft:recipe_unlocked",
+      "conditions": { "recipe": "mc_assistant:village_folk_spawner" }
+    }
+  },
+  "requirements": [ ["has_bread", "has_the_recipe"] ],
+  "rewards": { "recipes": ["mc_assistant:village_folk_spawner"] }
+}

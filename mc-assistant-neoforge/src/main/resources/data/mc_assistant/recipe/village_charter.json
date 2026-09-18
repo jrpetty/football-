@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "P": "minecraft:paper",
+    "B": "minecraft:bread",
+    "G": "minecraft:gold_ingot",
+    "S": "minecraft:wheat_seeds",
+    "C": "minecraft:chest"
+  },
+  "pattern": [
+    "PPP",
+    "BGB",
+    "SCS"
+  ],
+  "result": {
+    "count": 1,
+    "id": "mc_assistant:village_charter"
+  }
+}
