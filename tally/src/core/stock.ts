@@ -1236,6 +1236,100 @@ export function nightCellar(args: {
   }
 }
 
+// ---------------------------------------------------------------------------
+// The weekly stock take.
+//
+// The rhythm the pub actually works to: the receipts run the cellar down night
+// by night, and once a week somebody goes down with a clipboard and settles it.
+// Each take closes a window, and the window is the only thing that can be
+// judged — everything between two takes is the till's word for it.
+//
+// Run over time, those windows are the single most useful series the app has.
+// One week £40 light is a miscount. Six weeks light in a row, worsening, is a
+// problem with a name.
+// ---------------------------------------------------------------------------
+
+/** How often a take is expected. A week, because that is the rhythm. */
+export const TAKE_EVERY_DAYS = 7
+
+export interface TakeDue {
+  /** The last take there was, if any. */
+  last: string | null
+  /** When the next one is expected. Null until there has been a first. */
+  dueOn: string | null
+  /** Days past due. Zero or less means it is not yet due. */
+  overdueDays: number
+  /** Days since the last take, for saying how long it has been. */
+  sinceDays: number | null
+}
+
+/** When the next stock take is due, and how late it is. */
+export function takeDue(counts: readonly StockCount[], today: string): TakeDue {
+  let last: string | null = null
+  for (const c of counts) if (last === null || c.date > last) last = c.date
+  if (last === null) return { last: null, dueOn: null, overdueDays: 0, sinceDays: null }
+  const dueOn = addDaysKey(last, TAKE_EVERY_DAYS)
+  const days = (from: string, to: string) => Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000)
+  return { last, dueOn, overdueDays: Math.max(0, days(dueOn, today)), sinceDays: Math.max(0, days(last, today)) }
+}
+
+export interface TakeWeek extends CellarWindow {
+  /** Days the window covers, so a fortnight's gap is not read as a week's. */
+  days: number
+  /** Nights in it whose receipt carried an item list — what was actually taken off. */
+  rollNights: number
+  /** Nights with a receipt but no item list: trade this window could not see. */
+  nightsWithoutItems: number
+  /** Sales in it with no cellar pour set: stock that left without being counted out. */
+  unmapped: SoldLine[]
+}
+
+/**
+ * Every window between two consecutive takes, newest first.
+ *
+ * Newest first because that is the order they are read in, and because the
+ * most recent one is the only one anybody can still do anything about.
+ *
+ * The blind spots travel with each window rather than being reported once for
+ * the cellar as a whole. A week where the item list went missing on the
+ * Saturday has a gap that is partly explained, and a week where it did not
+ * does not — and reading a variance without knowing which is which is how a
+ * clean cellar gets somebody accused.
+ */
+export function takeWeeks(args: {
+  items: readonly StockItem[]
+  pours: readonly Pour[]
+  counts: readonly StockCount[]
+  deliveries: readonly Delivery[]
+  days: ReadonlyArray<{ date: string; items: readonly SoldLine[]; hasZRead?: boolean }>
+  costOfServing: (item: StockItem, baseUnits: number) => number | null
+}): TakeWeek[] {
+  const sorted = [...args.counts].sort((a, b) => a.date.localeCompare(b.date))
+  const out: TakeWeek[] = []
+  for (let i = 1; i < sorted.length; i++) {
+    const previous = sorted[i - 1]!
+    const latest = sorted[i]!
+    const window = windowBetween(args.items, args.pours, args.deliveries, args.days, previous, latest, args.costOfServing)
+
+    let rollNights = 0
+    let nightsWithoutItems = 0
+    for (const d of args.days) {
+      if (d.date <= previous.date || d.date > latest.date) continue
+      if (d.items.length > 0) rollNights++
+      else if (d.hasZRead) nightsWithoutItems++
+    }
+
+    out.push({
+      ...window,
+      days: Math.max(1, Math.round((Date.parse(latest.date) - Date.parse(previous.date)) / 86_400_000)),
+      rollNights,
+      nightsWithoutItems,
+      unmapped: mergeSold(pourUsage(soldBetween(args.days, previous.date, latest.date), args.pours).unmapped),
+    })
+  }
+  return out.reverse()
+}
+
 export function cellarHealth(args: {
   items: readonly StockItem[]
   pours: readonly Pour[]

@@ -298,3 +298,109 @@ test('a night before the last stock take is not held against the cellar either',
   })
   assert.equal(h.nightsWithoutItems, 0)
 })
+
+
+// --- the weekly stock take -------------------------------------------------------
+//
+// The rhythm the pub works to: the receipts run the cellar down night by night,
+// and once a week somebody settles it with a clipboard. Each take closes a
+// window, and the run of windows is the series that says whether shrinkage is
+// getting better or worse.
+
+import { takeDue, takeWeeks, TAKE_EVERY_DAYS } from '../src/core/stock.ts'
+
+const take = (date: string, pints: number): StockCount => ({
+  date,
+  lines: [{ stockItemId: 'taddy', baseUnits: Math.round(pints * ML_PER_PINT) }],
+})
+
+function weeks(over: Partial<Parameters<typeof takeWeeks>[0]> = {}) {
+  return takeWeeks({ items: [taddy], pours, counts: [], deliveries: [], days: [], costOfServing: costOf, ...over })
+}
+
+test('one take is a starting point, not a window', () => {
+  assert.deepEqual(weeks({ counts: [take('2026-08-24', 300)] }), [])
+})
+
+test('two takes close a window, and it is judged', () => {
+  // 300 opening, 100 poured, so 200 expected — and 200 found.
+  const w = weeks({
+    counts: [take('2026-08-24', 300), take('2026-08-31', 200)],
+    days: [night('2026-08-26', 100)],
+  })
+  assert.equal(w.length, 1)
+  assert.equal(w[0]?.since, '2026-08-24')
+  assert.equal(w[0]?.until, '2026-08-31')
+  assert.equal(w[0]?.days, TAKE_EVERY_DAYS)
+  assert.equal(w[0]?.gapPence, 0, 'it reconciled exactly')
+  assert.equal(w[0]?.rollNights, 1)
+})
+
+test('a window short says how short, valued at what the stock cost', () => {
+  // 300 opening, 100 poured, 200 expected — 190 found, so ten pints walked.
+  const w = weeks({
+    counts: [take('2026-08-24', 300), take('2026-08-31', 190)],
+    days: [night('2026-08-26', 100)],
+  })
+  assert.equal(w[0]?.lines.length, 1)
+  assert.equal(w[0]?.lines[0]?.varianceBaseUnits, -10 * ML_PER_PINT)
+  // A £95 firkin is 72 pints, so ten pints is a shade over £13.
+  assert.ok((w[0]?.gapPence ?? 0) < 0)
+  assert.equal(w[0]?.gapPence, costOf(taddy, -10 * ML_PER_PINT))
+})
+
+test('the newest window comes first, because it is the only one still actionable', () => {
+  const w = weeks({
+    counts: [take('2026-08-17', 400), take('2026-08-24', 300), take('2026-08-31', 200)],
+    days: [night('2026-08-20', 100), night('2026-08-26', 100)],
+  })
+  assert.deepEqual(w.map((x) => x.until), ['2026-08-31', '2026-08-24'])
+})
+
+test('each window carries its own blind spots, not the cellar’s', () => {
+  // The Saturday of the second week went in without its item list, and a
+  // Guinness the cellar has never heard of sold in the first.
+  const w = weeks({
+    counts: [take('2026-08-17', 400), take('2026-08-24', 300), take('2026-08-31', 200)],
+    days: [
+      { date: '2026-08-20', items: [{ code: '7', name: 'PINT GUINNESS', qtyMilli: 30_000 }] },
+      night('2026-08-26', 100),
+      { date: '2026-08-29', items: [], hasZRead: true },
+    ],
+  })
+  const [newest, older] = w
+  assert.equal(newest?.nightsWithoutItems, 1, 'the Saturday of the second week')
+  assert.equal(newest?.unmapped.length, 0)
+  assert.equal(older?.nightsWithoutItems, 0)
+  assert.equal(older?.unmapped[0]?.name, 'PINT GUINNESS')
+})
+
+test('a fortnight between takes is not reported as a week', () => {
+  const w = weeks({ counts: [take('2026-08-17', 400), take('2026-08-31', 200)] })
+  assert.equal(w[0]?.days, 14)
+})
+
+// --- when the next one is due ------------------------------------------------------
+
+test('with no take ever, nothing is due and nothing is claimed', () => {
+  assert.deepEqual(takeDue([], '2026-09-01'), { last: null, dueOn: null, overdueDays: 0, sinceDays: null })
+})
+
+test('a take sets the next one a week later', () => {
+  const due = takeDue([take('2026-08-24', 300)], '2026-08-27')
+  assert.equal(due.last, '2026-08-24')
+  assert.equal(due.dueOn, '2026-08-31')
+  assert.equal(due.overdueDays, 0, 'not yet due is not overdue')
+  assert.equal(due.sinceDays, 3)
+})
+
+test('past the due date it says how late, by the day', () => {
+  const due = takeDue([take('2026-08-24', 300)], '2026-09-03')
+  assert.equal(due.overdueDays, 3)
+  assert.equal(due.sinceDays, 10)
+})
+
+test('the latest take is the one that counts, whatever order they arrive in', () => {
+  const due = takeDue([take('2026-08-31', 200), take('2026-08-17', 400), take('2026-08-24', 300)], '2026-09-01')
+  assert.equal(due.last, '2026-08-31')
+})

@@ -28,6 +28,9 @@ import {
   formatServings,
   formatServingsSigned,
   LOW_NIGHTS,
+  takeDue,
+  takeWeeks,
+  TAKE_EVERY_DAYS,
   guessPour,
   pourUsage,
   measureOf,
@@ -58,6 +61,7 @@ import { record } from '../core/history.ts'
 import { scanDeliveryNote } from '../ocr/scanList.ts'
 import { describeZReadError } from '../ocr/scanZRead.ts'
 import { IconCamera, IconTickSmall } from '../components/icons.tsx'
+import { ChartCard, VarianceChart } from '../components/charts.tsx'
 import {
   listDays,
   listDeliveries,
@@ -72,9 +76,9 @@ import { loadSettings } from '../storage/settings.ts'
 import { loadPriceBook } from '../storage/db.ts'
 import { cellarValue, costOf, margin } from '../core/margin.ts'
 import { buildIndex, lookup, type PriceBookEntry } from '../core/priceBook.ts'
-import { formatMoney, parsePence, penceToInput } from '../core/money.ts'
+import { formatMoney, formatSigned, parsePence, penceToInput } from '../core/money.ts'
 
-type Panel = 'levels' | 'delivery' | 'count' | 'scales' | 'costs' | 'setup'
+type Panel = 'levels' | 'weeks' | 'delivery' | 'count' | 'scales' | 'costs' | 'setup'
 
 /**
  * What one serving of a line built from the till is.
@@ -440,6 +444,38 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
   /** Sales in this window with no pour, which are what make the figures lie. */
   const windowUnmapped = health?.unmapped ?? []
 
+  /**
+   * The weekly rhythm: when the next take is due, and every window two takes
+   * have closed between them.
+   *
+   * The run of windows is the series worth having. One week £40 light is a
+   * miscount; six weeks light in a row, worsening, is a problem with a name.
+   */
+  const due = useMemo(() => takeDue(counts, tradingDayKey()), [counts])
+  const takes = useMemo(
+    () =>
+      config
+        ? takeWeeks({
+            items: config.items,
+            pours: config.pours,
+            counts,
+            deliveries,
+            days,
+            costOfServing: costOf,
+          })
+        : [],
+    [config, counts, deliveries, days],
+  )
+  /** Oldest first for the chart, so time runs left to right as it reads. */
+  const takeRun = useMemo(
+    () =>
+      [...takes]
+        .reverse()
+        .filter((w) => w.gapPence !== null)
+        .map((w) => ({ date: w.until, label: formatShort(w.until), variancePence: w.gapPence as number })),
+    [takes],
+  )
+
   const unmapped = useMemo(() => {
     if (!config) return []
     const sold = itemTotals(days).map((i) => ({ code: i.code, name: i.name, qtyMilli: i.qtyMilli }))
@@ -555,7 +591,7 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
           <span className="badge">{config.items.length} lines</span>
         </div>
         <div className="chip-row">
-          {(['levels', 'delivery', 'count', 'scales', 'costs', 'setup'] as const).map((p) => (
+          {(['levels', 'weeks', 'delivery', 'count', 'scales', 'costs', 'setup'] as const).map((p) => (
             <button
               key={p}
               type="button"
@@ -571,7 +607,7 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
                 else if (p === 'delivery') setSheetDate(tradingDayKey())
               }}
             >
-              {p === 'levels' ? 'What’s down there' : p === 'delivery' ? 'Delivery in' : p === 'count' ? 'Stock take' : p === 'scales' ? 'The scales' : p === 'costs' ? 'What it costs' : 'Set up'}
+              {p === 'levels' ? 'What’s down there' : p === 'weeks' ? 'Week by week' : p === 'delivery' ? 'Delivery in' : p === 'count' ? 'Stock take' : p === 'scales' ? 'The scales' : p === 'costs' ? 'What it costs' : 'Set up'}
             </button>
           ))}
         </div>
@@ -592,6 +628,25 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
       {/* --- the cellar as the till has left it ------------------------------ */}
       {panel === 'levels' && config.items.length > 0 && (
         <>
+          {/* The weekly take, where she is already looking. Between takes these
+              figures are the till's word for it, and that is worth saying at
+              the top of the screen that shows them rather than on a tab she
+              has to go and find. */}
+          {due.overdueDays > 0 && (
+            <section className="card">
+              <p className="note warn" style={{ marginTop: 0, marginBottom: 10 }}>
+                <strong>
+                  The stock take is {due.overdueDays} {due.overdueDays === 1 ? 'day' : 'days'} overdue.
+                </strong>{' '}
+                Everything below is what the till says should be down there. A take is what turns it
+                into what is.
+              </p>
+              <button type="button" className="btn-small" data-testid="take-due" onClick={() => setPanel('weeks')}>
+                Settle the week
+              </button>
+            </section>
+          )}
+
           {lowLines.length > 0 && (
             <section className="card">
               <div className="card-head">
@@ -738,6 +793,155 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
               </p>
             )}
           </section>
+        </>
+      )}
+
+      {/* --- the weekly rhythm ----------------------------------------------- */}
+      {panel === 'weeks' && config.items.length > 0 && (
+        <>
+          <section className="card">
+            <div className="card-head">
+              <h2>The stock take</h2>
+              <span className="hint">every {TAKE_EVERY_DAYS} days</span>
+            </div>
+            {due.last === null ? (
+              <p className="note" style={{ marginTop: 0, marginBottom: 10 }}>
+                No stock take yet. The first one is a starting point rather than a judgement —
+                nothing can be measured until there is a second.
+              </p>
+            ) : (
+              <p className="note" style={{ marginTop: 0, marginBottom: 10 }}>
+                <strong>
+                  {due.overdueDays > 0
+                    ? `Due ${due.overdueDays} ${due.overdueDays === 1 ? 'day' : 'days'} ago.`
+                    : `Next one due ${formatShort(due.dueOn as string)}.`}
+                </strong>{' '}
+                The last was {formatShort(due.last)}
+                {due.sinceDays !== null && `, ${due.sinceDays} ${due.sinceDays === 1 ? 'day' : 'days'} ago`}. Between
+                takes the cellar is the till’s word for it; a take is what settles it.
+              </p>
+            )}
+            <button type="button" className="btn-small" data-testid="do-take" onClick={() => { setPanel('count'); setDrafts({}); setSheetDate(countDate()) }}>
+              {due.last === null ? 'Take the first one' : 'Do this week’s'}
+            </button>
+          </section>
+
+          {takeRun.length > 0 && (
+            <ChartCard
+              title="Every week, settled"
+              subtitle="what the count said against what the till said, at cost"
+            >
+              <VarianceChart points={takeRun} />
+              <p className="note">
+                Below the line is stock that left without going through the till. One week out is a
+                miscount. A run of them, getting worse, is something else.
+              </p>
+            </ChartCard>
+          )}
+
+          {takes.length === 0 ? (
+            <section className="card">
+              <p className="note" style={{ marginTop: 0, marginBottom: 0 }}>
+                Two takes make a week that can be judged: what the first said, plus what came in,
+                less what the till poured, against what the second found. There{' '}
+                {counts.length === 1 ? 'is one take so far' : 'are no takes yet'}.
+              </p>
+            </section>
+          ) : (
+            // The most recent week in full, the ones behind it as a line each.
+            // Eight cards of tables is a scroll nobody finishes, and the chart
+            // above already carries the shape of the run.
+            takes.slice(0, 1).map((w) => (
+              <section className="card" key={w.until}>
+                <div className="card-head">
+                  <h2>{formatShort(w.since)} to {formatShort(w.until)}</h2>
+                  <span className="hint">
+                    {w.days === TAKE_EVERY_DAYS ? 'a week' : `${w.days} days`} · {w.rollNights}{' '}
+                    {w.rollNights === 1 ? 'night read' : 'nights read'}
+                  </span>
+                </div>
+                <div className="zrow">
+                  <span className="zname">
+                    Out by
+                    <small>at what the stock cost</small>
+                  </span>
+                  <strong className={`num ${w.gapPence === null ? '' : w.gapPence < 0 ? 'short' : 'over'}`}>
+                    {w.gapPence === null ? 'nothing to judge' : w.gapPence === 0 ? 'nothing — it settled' : formatSigned(w.gapPence)}
+                  </strong>
+                </div>
+                {w.lines.filter((v) => v.varianceBaseUnits !== 0).length > 0 && (
+                  <div className="table-wrap">
+                    <table className="data">
+                      <thead>
+                        <tr>
+                          <th scope="col">Line</th>
+                          <th scope="col">Should be</th>
+                          <th scope="col">Was</th>
+                          <th scope="col">Out by</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {w.lines.filter((v) => v.varianceBaseUnits !== 0).slice(0, 12).map((v) => (
+                          <tr key={v.item.id}>
+                            <th scope="row">{v.item.name}</th>
+                            <td className="num">{formatServings(v.expectedBaseUnits, v.item)}</td>
+                            <td className="num">{formatServings(v.actualBaseUnits ?? 0, v.item)}</td>
+                            <td className={`num delta ${(v.varianceBaseUnits ?? 0) < 0 ? 'short' : 'over'}`}>
+                              {formatServingsSigned(v.varianceBaseUnits ?? 0, v.item)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {/* Each week's own blind spots, not the cellar's. A week whose
+                    item list went missing has a gap that is partly explained,
+                    and one that did not has not — and reading a variance
+                    without knowing which is how a clean cellar gets somebody
+                    accused. */}
+                {(w.nightsWithoutItems > 0 || w.unmapped.length > 0) && (
+                  <p className="note warn">
+                    Part of this gap is not shrinkage but blindness:{' '}
+                    {w.nightsWithoutItems > 0 &&
+                      `${w.nightsWithoutItems} ${w.nightsWithoutItems === 1 ? 'night' : 'nights'} had a receipt with no item list on it`}
+                    {w.nightsWithoutItems > 0 && w.unmapped.length > 0 && ', and '}
+                    {w.unmapped.length > 0 &&
+                      `${w.unmapped.length} sold ${w.unmapped.length === 1 ? 'line has' : 'lines have'} no pour set (${w.unmapped.slice(0, 3).map((u) => u.name).join(', ')})`}
+                    . Nothing came off the cellar for{' '}
+                    {w.nightsWithoutItems > 0 && w.unmapped.length > 0 ? 'either' : 'that'}, so this
+                    week reads shorter than it was.
+                  </p>
+                )}
+              </section>
+            ))
+          )}
+
+          {takes.length > 1 && (
+            <section className="card">
+              <div className="card-head">
+                <h2>The weeks before</h2>
+                <span className="hint">{takes.length - 1} settled</span>
+              </div>
+              <div className="day-list">
+                {takes.slice(1, 14).map((w) => (
+                  <div className="zrow" key={w.until}>
+                    <span className="zname">
+                      {formatShort(w.since)} to {formatShort(w.until)}
+                      <small>
+                        {w.days === TAKE_EVERY_DAYS ? 'a week' : `${w.days} days`} · {w.rollNights}{' '}
+                        {w.rollNights === 1 ? 'night read' : 'nights read'}
+                        {(w.nightsWithoutItems > 0 || w.unmapped.length > 0) && ' · partly blind'}
+                      </small>
+                    </span>
+                    <strong className={`num ${w.gapPence === null ? '' : w.gapPence < 0 ? 'short' : 'over'}`}>
+                      {w.gapPence === null ? '—' : w.gapPence === 0 ? 'settled' : formatSigned(w.gapPence)}
+                    </strong>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
         </>
       )}
 

@@ -21,11 +21,14 @@ import type { DayWeather } from './forecast.ts'
 import { formatHours, shiftMinutes, type Person, type Shift } from './rota.ts'
 import { formatMoney, formatSigned } from './money.ts'
 import { costOf } from './margin.ts'
+import { categoryWeeks, movers, takingsWeeks } from './trends.ts'
 
 /** A year and a bit of nights — enough for any like-for-like question. */
 export const MAX_PACK_NIGHTS = 400
 export const MAX_PACK_ITEMS = 120
 export const MAX_PACK_BOOK = 150
+/** Weeks of per-category history carried, which is a quarter and a bit. */
+export const PACK_WEEKS = 14
 
 export interface AskData {
   /** Every saved night, any order. */
@@ -161,6 +164,49 @@ export function buildAskPack(data: AskData): AskPack {
     out.push('name|items sold|takings')
     for (const [, row] of [...deptTotals.entries()].sort((a, b) => b[1].pence - a[1].pence)) {
       out.push([field(row.label, 30), qty(row.qtyMilli), money(row.pence)].join('|'))
+    }
+    out.push('')
+  }
+
+  // --- week by week ----------------------------------------------------------
+  //
+  // Totals answer "how did we do". They cannot answer "what changed", and what
+  // changed is the question that leads to a decision. One row per category per
+  // week, plus the pub's own line, so a question about direction is answerable
+  // from the pack rather than guessed at from an average.
+  const weekly = categoryWeeks(data.days, data.today, PACK_WEEKS)
+  const houseWeeks = takingsWeeks(data.days, data.today, PACK_WEEKS)
+  if (houseWeeks.buckets.some((b) => b.pence > 0)) {
+    out.push(
+      `WEEK BY WEEK (Monday to Sunday, last ${PACK_WEEKS} weeks; "nights" is nights with a receipt read, "part" marks a week still filling up or missing a night's item list — never compare a part week with a whole one)`,
+    )
+    out.push('week beginning|category|takings|sold|nights|part')
+    const rows = [{ label: 'EVERYTHING', series: houseWeeks }, ...weekly.map((c) => ({ label: c.label, series: c }))]
+    for (const { label, series } of rows) {
+      for (const b of series.buckets) {
+        if (b.nights === 0) continue
+        out.push([b.start, field(label, 30), money(b.pence), qty(b.qtyMilli), String(b.rollNights), b.partial ? 'part' : ''].join('|'))
+      }
+    }
+    out.push('')
+  }
+
+  // --- what is moving ---------------------------------------------------------
+  const swings = movers(data.days)
+  if (swings.rising.length > 0 || swings.falling.length > 0) {
+    out.push('RISING AND FALLING (last four weeks of captured nights against the four before, by takings per night — lines too small or swings too small to act on are left out, and a brand new line has nothing to compare against)')
+    out.push('what|kind|change|before per night|now per night|nights each side')
+    for (const m of [...swings.falling.slice(0, 12), ...swings.rising.slice(0, 12)]) {
+      out.push(
+        [
+          field(m.label, 30),
+          m.kind,
+          `${m.changeBp > 0 ? '+' : ''}${Math.round(m.changeBp / 100)}%`,
+          money(m.beforePencePerNight),
+          money(m.nowPencePerNight),
+          `${m.beforeNights}/${m.nights}`,
+        ].join('|'),
+      )
     }
     out.push('')
   }

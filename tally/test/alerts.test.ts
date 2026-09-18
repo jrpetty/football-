@@ -301,3 +301,48 @@ test('several short lines are one alert naming the worst, not one each', () => {
   assert.match(alerts[0]!.headline, /Crisps and 1 other line are nearly out/)
   assert.equal(alerts[0]!.level, 'warn', 'one night left is worth a warning, not a note')
 })
+
+
+// --- the weekly take, and the mix changing -----------------------------------------
+
+test('a stock take a few days late is worth a nudge, not a telling-off', () => {
+  assert.deepEqual(weeklyAlerts({ recent: [], takeOverdueDays: 2 }), [], 'two days is slippage, not news')
+  const [alert] = weeklyAlerts({ recent: [], takeOverdueDays: 4 })
+  assert.match(alert!.headline, /4 days overdue/)
+  assert.equal(alert!.level, 'info')
+  assert.equal(alert!.screen, 'cellar')
+})
+
+test('a fortnight late is a warning, because nothing can be judged until it is done', () => {
+  assert.equal(weeklyAlerts({ recent: [], takeOverdueDays: 15 })[0]?.level, 'warn')
+})
+
+test('a line falling away over a month is worth a decision', () => {
+  const [alert] = weeklyAlerts({
+    recent: [],
+    falling: [{
+      kind: 'item', key: '1', label: 'PINT ALPINE', changeBp: -4200,
+      nowPencePerNight: 5800, beforePencePerNight: 10000,
+      nowQtyMilliPerNight: 11000, beforeQtyMilliPerNight: 20000,
+      nights: 24, beforeNights: 24, recentPence: 139200,
+    }],
+  })
+  assert.match(alert!.headline, /PINT ALPINE is down 42% a night/)
+  assert.match(alert!.detail, /£100\.00 a night over the 24 nights before/)
+  assert.equal(alert!.screen, 'trade')
+})
+
+test('a wobble is not a line falling away', () => {
+  assert.deepEqual(
+    weeklyAlerts({
+      recent: [],
+      falling: [{
+        kind: 'item', key: '1', label: 'PINT ALPINE', changeBp: -1800,
+        nowPencePerNight: 8200, beforePencePerNight: 10000,
+        nowQtyMilliPerNight: 16000, beforeQtyMilliPerNight: 20000,
+        nights: 24, beforeNights: 24, recentPence: 196800,
+      }],
+    }),
+    [],
+  )
+})

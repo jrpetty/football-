@@ -1053,6 +1053,43 @@ table.data.crew th[scope='row'] { white-space: nowrap; }
 .dz-hint { font-size: 13px; color: var(--muted); max-width: 32ch; line-height: 1.45; }
 
 /* Each photograph, and what it turned out to contain. */
+/* Rising and falling. Two columns on anything wide enough, stacked on a phone;
+   the name and the percentage on one row, the rate underneath, so the shape of
+   the list is readable before any of it is read. */
+.movers { display: grid; gap: 18px; }
+
+@media (min-width: 620px) {
+  .movers { grid-template-columns: 1fr 1fr; gap: 24px; }
+}
+
+.mover-group h3 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.mover-group ul { list-style: none; margin: 0; padding: 0; }
+
+.mover-group li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  column-gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.mover-group li:last-child { border-bottom: 0; }
+.mover-name { font-weight: 600; min-width: 0; }
+.mover-name small { display: block; font-weight: 400; font-size: 12px; color: var(--muted); }
+.mover-change { font-weight: 700; font-variant-numeric: tabular-nums; }
+.mover-change.short { color: var(--bad); }
+.mover-change.over { color: var(--good); }
+.mover-rate { grid-column: 1 / -1; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
 /* What to order. One line each, the name and what is left on the top row and
    how long it has underneath, so it reads at a glance on a phone rather than
    as a table to be studied. */

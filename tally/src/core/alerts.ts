@@ -20,6 +20,7 @@ import type { DayStats, LikeForLike } from './analytics.ts'
 import type { MarginMove } from './history.ts'
 import type { MarginReport } from './margin.ts'
 import type { DeadStockLine, StockRunway } from './stock.ts'
+import type { Mover } from './trends.ts'
 import { describeStock, LOW_NIGHTS } from './stock.ts'
 import { formatMoney } from './money.ts'
 
@@ -66,9 +67,19 @@ export const STALE_COUNT_DAYS = 45
 /** Money in slow stock worth mentioning. */
 const DEAD_STOCK_PENCE = 20000
 
+/** Days past due before the stock take is worth mentioning. */
+const TAKE_GRACE_DAYS = 3
+
+/** How far a line has to have fallen before it is news rather than a wobble. */
+const FALLING_BP = 3000
+
 export interface AlertInput {
   /** How long each line has left at the rate it is going, from the till. */
   runway?: readonly StockRunway[]
+  /** Days past due on the weekly stock take. */
+  takeOverdueDays?: number
+  /** Lines and categories going backwards, worst first. */
+  falling?: readonly Mover[]
   /** Every night, so a run of short drawers can be spotted. */
   recent: readonly DayStats[]
   yearOnYear?: LikeForLike | null
@@ -188,6 +199,39 @@ export function weeklyAlerts(input: AlertInput): Alert[] {
           : `${worst.item.name} is nearly out`,
       detail: `${describeStock(worst.leftBaseUnits, worst.item)} left — about ${worst.nightsLeft === 1 ? 'one more night' : `${worst.nightsLeft} more nights`} at the rate it has been going. Worked out from what the till has poured, so nothing has to be counted to know it.`,
       screen: 'cellar',
+    })
+  }
+
+  // --- the weekly take, not taken ---------------------------------------------------
+  //
+  // Three days' grace rather than one. The take is a weekly job and it slips —
+  // an app that complains on the Tuesday because the Monday was busy is an app
+  // that gets ignored by the Wednesday.
+  if ((input.takeOverdueDays ?? 0) >= TAKE_GRACE_DAYS) {
+    const late = input.takeOverdueDays as number
+    out.push({
+      id: 'take-overdue',
+      level: late >= 14 ? 'warn' : 'info',
+      headline: `The stock take is ${late} ${late === 1 ? 'day' : 'days'} overdue`,
+      detail:
+        'Between takes the cellar is the till’s word for it. A take settles it, and until one is done nothing can be judged — the figures carry on, but no variance can be worked out from them.',
+      screen: 'cellar',
+    })
+  }
+
+  // --- a line falling away ------------------------------------------------------------
+  //
+  // The mix changing is slower than a bad night and worth more: a line dying
+  // over a month is a decision — reprice it, move it, take it off — and it
+  // never shows up in a nightly total.
+  const worstFall = (input.falling ?? [])[0]
+  if (worstFall && Math.abs(worstFall.changeBp) >= FALLING_BP) {
+    out.push({
+      id: `falling-${worstFall.key}`,
+      level: 'info',
+      headline: `${worstFall.label} is down ${Math.round(Math.abs(worstFall.changeBp) / 100)}% a night`,
+      detail: `${formatMoney(worstFall.beforePencePerNight)} a night over the ${worstFall.beforeNights} nights before, ${formatMoney(worstFall.nowPencePerNight)} over the ${worstFall.nights} since. Off the receipts, so it is what actually went over the bar.`,
+      screen: 'trade',
     })
   }
 

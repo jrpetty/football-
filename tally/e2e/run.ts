@@ -1146,7 +1146,9 @@ try {
   await page.click('.chip:has-text("Draught beers")')
   await page.click('.chip:has-text("Wine")')
   await page.waitForTimeout(150)
-  const filtered = await page.locator('table.data').first().innerText()
+  // The department mix specifically. The Trade screen has several tables now,
+  // and "the first one" stopped meaning this one the moment another was added.
+  const filtered = await page.locator('[data-testid="mix-table"]').innerText()
   check('filtering keeps only the chosen departments', !filtered.includes('Spirits'), filtered.slice(0, 160))
   check(
     'and re-bases their percentages onto each other',
@@ -1158,7 +1160,7 @@ try {
   await page.waitForTimeout(150)
   check(
     'clearing the filter restores the full split',
-    (await page.locator('table.data').first().innerText()).includes('68.05%'),
+    (await page.locator('[data-testid="mix-table"]').innerText()).includes('68.05%'),
   )
 
   await page.click('.chip:has-text("Sun")')
@@ -1170,6 +1172,35 @@ try {
   check(
     'and a weekday with no trade empties the selection',
     (await page.locator('.main').innerText()).includes('No nights match those filters'),
+  )
+
+  console.log('\nWeek by week, and what is moving')
+  // The whole point of holding the item list: a category and a line followed
+  // through time, off the receipts, rather than one total for the window.
+  await page.click('button:has-text("Trade")')
+  await page.waitForSelector('.kpi-row', { timeout: 5000 })
+  await page.click('.chip:has-text("90 nights")')
+  await page.waitForTimeout(400)
+  const overTime = page.locator('[data-testid="over-time"]')
+  check('the trade screen plots whole weeks', (await overTime.count()) === 1)
+  const weeksText = await page.locator('[data-testid="weeks-table"]').innerText()
+  check(
+    'the week we are in is marked as still filling',
+    /still filling/i.test(weeksText),
+    weeksText.slice(0, 200),
+  )
+  check(
+    'and it says whole weeks run Monday to Sunday, off the receipts',
+    /Monday to Sunday/.test(await page.locator('.main').innerText()),
+  )
+  // Every category the till printed is pickable, by its readable name.
+  const options = await overTime.locator('option').allInnerTexts()
+  check('every category the till printed can be plotted', options.includes('Draught beers'), options.join(', '))
+  await overTime.selectOption({ label: 'Draught beers' })
+  await page.waitForTimeout(300)
+  check(
+    'and picking one re-plots that category alone',
+    (await page.locator('[data-testid="weeks-table"]').innerText()) !== weeksText,
   )
 
   console.log('\nCounting the cellar nightly')

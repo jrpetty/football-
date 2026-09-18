@@ -90,6 +90,58 @@ A line that was never counted has no level to run down, and a line nothing has
 poured has no rate. Neither gets a guess dressed up as a figure; both read as a
 dash.
 
+### Every category and every line, week by week
+
+The roll prints two levels of detail every night — the department totals, and
+the item list underneath them. Both are captured, and both are now followed
+through time. **Trade → Week by week** plots any category, or the pub as a
+whole, over the last twelve whole weeks; the item card does the same for one
+line; **Rising and falling** names what is growing and what is dying.
+
+Three rules run through all of it, and each exists because getting it wrong
+produces a confident, wrong answer.
+
+**Rates divide by nights with a roll.** A night entered without an item list did
+not sell nothing — it was simply not captured at that level. Counting it as a
+zero drags every rate towards the floor in exact proportion to how often the
+roll was skipped, which is worst precisely when the app is being used least
+carefully. Where a week reads "3 of 5 nights", two went in without an item list
+and the quantity is short by that much trade.
+
+**A part-finished week is not a week.** Three nights into Wednesday, this week is
+lower than last week and means nothing. Partial weeks are shown, because seeing
+one fill up is useful, and flagged, because comparing one is not — the
+week-on-week change always measures the last two *finished* weeks.
+
+**Too few nights is not a trend.** Two Saturdays against two Tuesdays is noise
+wearing a percentage. Below the floor the change is null and the interface says
+nothing rather than something plausible. Rising and falling goes further: a line
+too small to matter is left out, a swing under 15% is left out, and a line that
+is simply new has nothing to be compared against rather than being up by an
+infinite percentage.
+
+Categories and items count their nights separately, because the department
+section sits at the top of the roll and the item list runs to another frame. A
+pub that photographs only the first part gets its categories rather than being
+told nothing at all.
+
+### The weekly stock take
+
+The receipts run the cellar down night by night; once a week somebody goes down
+with a clipboard and settles it. **Cellar → Week by week** is that rhythm: when
+the next take is due, how late it is, and every window two takes have closed
+between them.
+
+Each window is what the first take said, plus what came in, less what the till
+poured, against what the second found — valued at what the stock cost. Run over
+time, that is the most useful series the app has: one week £40 light is a
+miscount, six weeks light in a row and worsening is a problem with a name.
+
+Each window carries **its own** blind spots rather than the cellar's: a week
+where the item list went missing on the Saturday has a gap that is partly
+explained, and a week where it did not has not. Reading a variance without
+knowing which is how a clean cellar gets somebody accused.
+
 ### Installing it on her phone
 
 It is a web app, so there is no app store.

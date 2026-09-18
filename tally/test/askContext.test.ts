@@ -195,3 +195,57 @@ test('a night with a cellar count carries its gap at cost; one without is blank'
   const blank = buildAskPack(base([night('2026-08-23', 100)]))
   assert.ok(blank.text.split('\n').some((l) => l.startsWith('2026-08-23|') && l.endsWith('|')))
 })
+
+
+// --- week by week, and what is moving ---------------------------------------------
+
+test('the pack carries each category week by week, and marks a part week as part', () => {
+  const week = (monday: string, nights: number, pounds: number) =>
+    Array.from({ length: nights }, (_, i) => {
+      const d = new Date(`${monday}T00:00:00`)
+      d.setDate(d.getDate() + i)
+      const date = d.toISOString().slice(0, 10)
+      const n = night(date, pounds)
+      return {
+        ...n,
+        departments: [{ code: 'D03', label: 'WINE', pence: pounds * 100, qtyMilli: 40_000 }],
+        items: [{ code: '1', name: 'GLASS HOUSE WHITE', qtyMilli: 40_000, pence: pounds * 100 }],
+      }
+    })
+  const pack = buildAskPack(
+    base([...week('2026-08-31', 5, 200), ...week('2026-09-07', 5, 300), ...week('2026-09-14', 2, 300)], { today: '2026-09-17' }),
+  )
+  assert.match(pack.text, /WEEK BY WEEK/)
+  assert.ok(pack.text.includes('2026-08-31|Wine|£1,000.00'), pack.text.slice(pack.text.indexOf('WEEK BY WEEK'), pack.text.indexOf('WEEK BY WEEK') + 400))
+  assert.ok(pack.text.includes('2026-09-14|Wine|£600.00|80|2|part'), 'the week we are in is still filling')
+  assert.ok(pack.text.includes('|EVERYTHING|'), 'the pub as a whole, to read the categories against')
+})
+
+test('the pack says what is rising and falling, never inventing a baseline', () => {
+  const run = (from: string, nights: number, lines: Array<{ code: string; name: string; pounds: number }>) =>
+    Array.from({ length: nights }, (_, i) => {
+      const d = new Date(`${from}T00:00:00`)
+      d.setDate(d.getDate() + i)
+      const date = d.toISOString().slice(0, 10)
+      const n = night(date, 100)
+      return {
+        ...n,
+        items: lines.map((l) => ({ code: l.code, name: l.name, qtyMilli: 40_000, pence: l.pounds * 100 })),
+      }
+    })
+  const pack = buildAskPack(
+    base(
+      [
+        ...run('2026-07-01', 24, [{ code: '1', name: 'PINT ALPINE', pounds: 200 }]),
+        ...run('2026-07-25', 24, [
+          { code: '1', name: 'PINT ALPINE', pounds: 100 },
+          { code: '2', name: 'PINT GUINNESS', pounds: 150 },
+        ]),
+      ],
+      { today: '2026-08-20' },
+    ),
+  )
+  assert.match(pack.text, /RISING AND FALLING/)
+  assert.ok(pack.text.includes('PINT ALPINE|item|-50%|£200.00|£100.00|24/24'))
+  assert.ok(!pack.text.includes('PINT GUINNESS|item'), 'new, so there is nothing to compare it against')
+})

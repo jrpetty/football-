@@ -11,6 +11,7 @@
 import { useMemo } from 'react'
 import type { DayStats } from '../core/analytics.ts'
 import { itemProfile, WEEKDAY_ORDER } from '../core/itemHistory.ts'
+import { itemWeeks, weekLabel } from '../core/trends.ts'
 import { formatMoney } from '../core/money.ts'
 import { formatQty } from '../core/zread.ts'
 import { formatShort } from '../core/date.ts'
@@ -41,6 +42,7 @@ interface Props {
 
 export function ItemDetail({ all, code, name, book, stock, deliveries, stockCounts, onBack }: Props) {
   const profile = useMemo(() => itemProfile(all, code, name), [all, code, name])
+  const weeks = useMemo(() => itemWeeks(all, tradingDayKey(), code, name), [all, code, name])
 
   const pour = useMemo(
     () =>
@@ -156,6 +158,56 @@ export function ItemDetail({ all, code, name, book, stock, deliveries, stockCoun
           seriesLabel="Sold"
         />
       </section>
+
+      {/* Nightly is noisy — a wet Tuesday looks like a collapse. The weekly
+          series is where a line's direction actually shows. */}
+      {weeks.buckets.some((b) => b.qtyMilli > 0) && (
+        <section className="card">
+          <div className="card-head">
+            <h2>Week by week</h2>
+            <span className="hint">
+              {weeks.changeBp === null
+                ? 'twelve weeks'
+                : `${weeks.changeBp >= 0 ? 'up' : 'down'} ${Math.abs(Math.round(weeks.changeBp / 100))}% a night on the week before`}
+            </span>
+          </div>
+          <TrendChart
+            points={weeks.buckets.map((b) => ({ date: b.start, label: weekLabel(b.start), pence: b.qtyMilli }))}
+            format={(v) => formatQty(v)}
+            axisFormat={(v) => formatQty(v)}
+            seriesLabel="Sold"
+          />
+          <div className="table-wrap">
+            <table className="data">
+              <thead>
+                <tr>
+                  <th scope="col">Week</th>
+                  <th scope="col">Sold</th>
+                  <th scope="col">Took</th>
+                  <th scope="col">Nights</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...weeks.buckets].reverse().slice(0, 6).map((b) => (
+                  <tr key={b.start}>
+                    <th scope="row">
+                      {weekLabel(b.start)}
+                      {b.partial && <small className="in-serves">still filling</small>}
+                    </th>
+                    <td className="num">{b.qtyMilli > 0 ? formatQty(b.qtyMilli) : '—'}</td>
+                    <td className="num">{formatMoney(b.pence)}</td>
+                    <td className="num">{b.rollNights}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="note">
+            Whole weeks, Monday to Sunday. A week still filling up is marked, and never what the
+            change is measured against — three nights into a week is always down on a finished one.
+          </p>
+        </section>
+      )}
 
       <section className="card">
         <div className="card-head">

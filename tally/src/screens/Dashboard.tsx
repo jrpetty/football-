@@ -42,7 +42,7 @@ import {
   EMPTY_STOCK,
   type StockConfig,
 } from '../storage/db.ts'
-import { cellarHealth, nightCellar, type Delivery, type StockCount } from '../core/stock.ts'
+import { cellarHealth, nightCellar, takeDue, type Delivery, type StockCount } from '../core/stock.ts'
 import { searchItems } from '../core/itemHistory.ts'
 import { ItemDetail } from './ItemDetail.tsx'
 import { costOf } from '../core/margin.ts'
@@ -66,6 +66,7 @@ import {
   type Shift,
 } from '../core/rota.ts'
 import { checkPrices, priceHeadline, type PriceBookEntry } from '../core/priceBook.ts'
+import { categoryWeeks, movers, takingsWeeks, weekLabel, type WeekSeries } from '../core/trends.ts'
 import { loadSettings } from '../storage/settings.ts'
 import { AskCard } from '../components/AskCard.tsx'
 import type { AskData } from '../core/askContext.ts'
@@ -236,6 +237,26 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
   const week = useMemo(() => weekdayTotals(selected), [selected])
   const clerks = useMemo(() => clerkTotals(selected), [selected])
   const items = useMemo(() => itemTotals(selected, itemSort), [selected, itemSort])
+
+  /**
+   * Week by week, off the roll's own figures.
+   *
+   * Deliberately NOT filtered by the chips above. A trend has to be read over a
+   * fixed run of whole weeks or it is not a trend — "the last 7 nights, week by
+   * week" is one bar, and filtering to Fridays would compare a Friday with a
+   * Friday and call it a week. The filters answer "how did we do"; this answers
+   * "what is changing", and they are different questions over different spans.
+   */
+  const weeksShown = 12
+  const catWeeks = useMemo(() => (all ? categoryWeeks(all, tradingDayKey(), weeksShown) : []), [all])
+  const allWeeks = useMemo(() => (all ? takingsWeeks(all, tradingDayKey(), weeksShown) : null), [all])
+  const swings = useMemo(() => (all ? movers(all) : { rising: [], falling: [] }), [all])
+  const [overTime, setOverTime] = useState('all')
+  const shownWeeks: WeekSeries | null = useMemo(
+    () => (overTime === 'all' ? allWeeks : (catWeeks.find((c) => c.key === overTime) ?? allWeeks)),
+    [overTime, allWeeks, catWeeks],
+  )
+  const showQty = (shownWeeks?.totalQtyMilli ?? 0) > 0
   const crew = useMemo(
     () =>
       crewStats(
@@ -364,6 +385,9 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
       deadStock: cellar?.dead ?? [],
       // What is nearly out, off the till rather than off a count.
       runway: cellar?.runway ?? [],
+      takeOverdueDays: takeDue(stockCounts, today).overdueDays,
+      // What the mix is doing, which no nightly total can show.
+      falling: swings.falling,
       cellarGapPence: cellar?.gapPence ?? null,
       cellarCountAgeDays: cellar && stockCounts.length > 0 ? cellar.sinceDays : null,
       // Lines with no board price specifically — uncostedCount also counts
@@ -701,6 +725,131 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
         </ChartCard>
       )}
 
+      {/* --- week by week, by category ---------------------------------------- */}
+      {allWeeks && allWeeks.buckets.some((b) => b.pence > 0) && (
+        <ChartCard
+          title="Week by week"
+          subtitle={
+            shownWeeks?.changeBp === null || shownWeeks?.changeBp === undefined
+              ? `${weeksShown} weeks, off the receipts`
+              : `${shownWeeks.changeBp >= 0 ? 'up' : 'down'} ${Math.abs(Math.round(shownWeeks.changeBp / 100))}% a night on the week before`
+          }
+        >
+          {/* A picker rather than another chip row. The filters above are
+              already chips carrying these same category names, and two rows of
+              identically-labelled chips doing two different jobs on one screen
+              is a trap — one narrows the whole page, this one only chooses
+              what is plotted here. */}
+          <div className="field" style={{ marginBottom: 12 }}>
+            <label htmlFor="over-time">Plotting</label>
+            <select
+              id="over-time"
+              data-testid="over-time"
+              value={overTime}
+              onChange={(e) => setOverTime(e.target.value)}
+            >
+              <option value="all">Everything the pub took</option>
+              {catWeeks.map((c) => (
+                <option key={c.key} value={c.key}>{c.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {shownWeeks && (
+            <TrendChart
+              points={shownWeeks.buckets.map((b) => ({
+                date: b.start,
+                label: weekLabel(b.start),
+                pence: b.pence,
+              }))}
+              seriesLabel="Took"
+            />
+          )}
+
+          <div className="table-wrap">
+            <table className="data" data-testid="weeks-table">
+              <thead>
+                {/* The quantity column only when there is a quantity: for the
+                    pub as a whole it is the sale count, which a roll captured
+                    for its totals alone does not carry, and a column of dashes
+                    reads as broken rather than as absent. */}
+                <tr>
+                  <th scope="col">Week</th>
+                  <th scope="col">Took</th>
+                  {showQty && <th scope="col">{overTime === 'all' ? 'Sales' : 'Sold'}</th>}
+                  <th scope="col">Nights</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...(shownWeeks?.buckets ?? [])].reverse().slice(0, 8).map((b) => (
+                  <tr key={b.start}>
+                    <th scope="row">
+                      {weekLabel(b.start)}
+                      {b.partial && <small className="in-serves">still filling</small>}
+                    </th>
+                    <td className="num">{formatMoney(b.pence)}</td>
+                    {showQty && <td className="num">{b.qtyMilli > 0 ? formatQty(b.qtyMilli) : '—'}</td>}
+                    <td className={b.rollNights === b.nights ? 'num' : 'num faint'}>
+                      {b.rollNights === b.nights ? b.nights : `${b.rollNights} of ${b.nights}`}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="note">
+            Whole weeks, Monday to Sunday, off the receipts rather than off the filters above — a
+            trend needs finished weeks, and "the last seven nights week by week" is one bar. A week
+            still filling up is marked, and never what the change is measured against. Where the
+            nights read "3 of 5", two of them went in without an item list, so the quantity is short
+            by that much trade.
+          </p>
+        </ChartCard>
+      )}
+
+      {/* --- what the mix is doing --------------------------------------------- */}
+      {(swings.rising.length > 0 || swings.falling.length > 0) && (
+        <ChartCard
+          title="Rising and falling"
+          subtitle="the last four weeks against the four before, per night"
+        >
+          <div className="movers">
+            {[
+              { rows: swings.falling.slice(0, 6), heading: 'Going backwards' },
+              { rows: swings.rising.slice(0, 6), heading: 'Picking up' },
+            ]
+              .filter((g) => g.rows.length > 0)
+              .map((group) => (
+                <div key={group.heading} className="mover-group">
+                  <h3>{group.heading}</h3>
+                  <ul>
+                    {group.rows.map((m) => (
+                      <li key={`${m.kind}:${m.key}`}>
+                        <span className="mover-name">
+                          {m.label}
+                          <small>{m.kind === 'category' ? 'category' : 'one line'}</small>
+                        </span>
+                        <span className={`mover-change ${m.changeBp < 0 ? 'short' : 'over'}`}>
+                          {m.changeBp > 0 ? '+' : '−'}
+                          {Math.abs(Math.round(m.changeBp / 100))}%
+                        </span>
+                        <span className="mover-rate">
+                          {formatMoney(m.beforePencePerNight)} → {formatMoney(m.nowPencePerNight)} a night
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+          </div>
+          <p className="note">
+            Per night with an item list, not per calendar night, so a fortnight shut does not read as
+            a beer dying. A line too small to matter or a swing too small to act on is left out, and
+            a line that is simply new has nothing to be compared against.
+          </p>
+        </ChartCard>
+      )}
+
       {/* --- trend ---------------------------------------------------------- */}
       <ChartCard title="Takings by night" subtitle={`${t.nights} nights`}>
         <TrendChart points={series.map((s) => ({ date: s.date, label: formatShort(s.date), pence: s.takingsPence ?? 0 }))} />
@@ -720,7 +869,7 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
             <ShareBar rows={shareRows} />
             <Legend items={shareRows.map((r) => ({ label: r.label, color: seriesVar(r.slot) }))} />
             <div className="table-wrap">
-              <table className="data">
+              <table className="data" data-testid="mix-table">
                 <thead>
                   <tr>
                     <th scope="col">Department</th>
