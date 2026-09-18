@@ -1,21 +1,35 @@
 name: Deploy to GitHub Pages
 
-# Builds both apps and publishes ./dist to GitHub Pages.
-# One-time setup: repo Settings → Pages → Build and deployment → Source: "GitHub Actions".
-# After that, every push to this branch (or main) redeploys automatically.
+# Builds all three apps and publishes ./dist to GitHub Pages.
 #
-# Only the default branch publishes. There is one Pages site, so a second
-# branch listed here would overwrite whatever the default branch last
-# published — and with the predictor updating its data daily, that would mean
-# a stray feature-branch push silently rolling the site back to older
-# forecasts. Use workflow_dispatch to preview a branch instead.
+# ONE-TIME SETUP, still outstanding: Settings → Pages → Build and deployment →
+# Source: "GitHub Actions". Until somebody does that, every deploy here fails
+# with "Failed to create deployment (status: 404) ... Ensure GitHub Pages has
+# been enabled" and nothing is published at all. Enabling it from a workflow
+# was tried and is refused by policy — see the note further down.
+#
+# EACH APP IS BUILT FROM THE BRANCH THAT OWNS IT, whichever branch this run was
+# started by. There is one Pages site and a publish replaces all of it, so the
+# earlier rule — only the default branch publishes — was really a way of saying
+# "a feature branch would roll the other apps back to whatever it happened to
+# have". Checking each app out from its own branch says that directly and
+# removes the reason, so Tally can publish from its own branch without taking
+# the predictor's forecasts backwards with it.
 
 on:
   push:
     branches:
       - main
       - claude/football-analysis-app-jj3vxi
+      - claude/pub-till-reconciliation-2vr6y6
   workflow_dispatch:
+
+env:
+  # The branch each app is published from. Changing one of these is how an app
+  # moves; nothing else in this file names a branch.
+  GAFFER_BRANCH: claude/football-analysis-app-jj3vxi
+  PREDICTOR_BRANCH: claude/football-analysis-app-jj3vxi
+  TALLY_BRANCH: claude/pub-till-reconciliation-2vr6y6
 
 permissions:
   contents: read
@@ -34,7 +48,20 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      # Gaffer at the site root, from its own branch.
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.GAFFER_BRANCH }}
+      # And the other two alongside it, each from the branch that owns it, so
+      # a publish started by any of them carries all three at their newest.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.PREDICTOR_BRANCH }}
+          path: .from-predictor
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TALLY_BRANCH }}
+          path: .from-tally
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -47,14 +74,14 @@ jobs:
       # The Premier League predictor is a separate app published under
       # /predictor/. Its vite base is relative, so it works from a sub-path.
       - name: Build the predictor
-        working-directory: predictor
+        working-directory: .from-predictor/predictor
         run: |
           npm ci
           npm run build
       - name: Place the predictor under /predictor
         run: |
           mkdir -p dist/predictor
-          cp -r predictor/dist/. dist/predictor/
+          cp -r .from-predictor/predictor/dist/. dist/predictor/
 
       # Tally, the pub till reconciliation app, is published under /tally/.
       # Its vite base is relative for the same reason the predictor's is, so it
@@ -62,14 +89,23 @@ jobs:
       # screen, that sub-path is also its permanent address. Moving it later
       # would orphan every installed copy.
       - name: Build Tally
-        working-directory: tally
+        working-directory: .from-tally/tally
         run: |
           npm ci
           npm run build
       - name: Place Tally under /tally
         run: |
           mkdir -p dist/tally
-          cp -r tally/dist/. dist/tally/
+          cp -r .from-tally/tally/dist/. dist/tally/
+
+      - name: Say what went up
+        run: |
+          {
+            echo "### Published"
+            echo "- Gaffer at \`/\` from \`$GAFFER_BRANCH\`"
+            echo "- Predictor at \`/predictor/\` from \`$PREDICTOR_BRANCH\`"
+            echo "- Tally at \`/tally/\` from \`$TALLY_BRANCH\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       # NOTE: actions/configure-pages with enablement: true was tried here and
       # cannot work on this repository — GITHUB_TOKEN gets "Resource not

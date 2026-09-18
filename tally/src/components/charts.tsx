@@ -268,21 +268,31 @@ export function TrendChart({
           <text x={padL} y={height - 8} className="chart-axis">{points[0]!.label}</text>
           <text x={width - padR} y={height - 8} textAnchor="end" className="chart-axis">{last.label}</text>
 
-          {/* Hit targets wider than the marks, so a fingertip finds them. */}
-          {points.map((p, i) => (
-            <rect
-              key={p.date}
-              x={x(i) - plotW / (points.length - 1) / 2}
-              y={padT}
-              width={Math.max(12, plotW / (points.length - 1))}
-              height={plotH}
-              fill="transparent"
-              onMouseEnter={() =>
-                setTip({ x: x(i), y: y(p.pence) + 12, title: p.label, rows: [{ label: seriesLabel, value: format(p.pence), color: 'var(--series-1)' }] })
-              }
-              onMouseLeave={() => setTip(null)}
-            />
-          ))}
+          {/* Hit targets wider than the marks, so a fingertip finds them —
+              and clamped to the chart. A few points make the step wide enough
+              that the first and last targets reach past both ends; the svg
+              clips them, so nothing shows, but the boxes really are out there
+              and anything measuring the page is right to say so. */}
+          {points.map((p, i) => {
+            const step = points.length > 1 ? plotW / (points.length - 1) : plotW
+            const want = Math.max(12, step)
+            const left = Math.max(0, x(i) - want / 2)
+            const right = Math.min(width, x(i) + want / 2)
+            return (
+              <rect
+                key={p.date}
+                x={left}
+                y={padT}
+                width={Math.max(0, right - left)}
+                height={plotH}
+                fill="transparent"
+                onMouseEnter={() =>
+                  setTip({ x: x(i), y: y(p.pence) + 12, title: p.label, rows: [{ label: seriesLabel, value: format(p.pence), color: 'var(--series-1)' }] })
+                }
+                onMouseLeave={() => setTip(null)}
+              />
+            )
+          })}
         </svg>
       )}
       <Tooltip tip={tip} width={width} />

@@ -128,6 +128,9 @@ async function screen(page: Page, label: string): Promise<void> {
   check(`${label}: everything can be tapped`, t.small.length === 0, t.small.join('\n        '))
 }
 
+/** Eight weeks, six nights a week: the pub is shut on Mondays. */
+const NIGHTS_SEEDED = 41
+
 const browser = await launchChromium()
 const errors: string[] = []
 try {
@@ -156,34 +159,71 @@ try {
     page.on('pageerror', (err) => errors.push(`${phone.name}: ${String(err)}`))
     await page.goto(base, { waitUntil: 'networkidle' })
 
-    // A night to look at, so no screen is judged empty.
-    await page.evaluate(async (day) => {
+    // Eight weeks of nights rather than one. A single night leaves the
+    // week-by-week views, the movers and every stock-take window unrendered —
+    // and a screen that never draws cannot be checked for fitting a phone,
+    // which is exactly how a layout bug ships.
+    await page.evaluate(async (roll) => {
+      const days: unknown[] = []
+      const d = new Date('2026-07-06T00:00:00')
+      for (let i = 0; i < 48; i++) {
+        if (d.getDay() !== 1) {
+          days.push({
+            date: d.toISOString().slice(0, 10),
+            till: { pence: 219280, source: 'vision', edited: false },
+            card: { pence: 184100, source: 'manual', edited: false },
+            cashPence: 33980,
+            note: '',
+            zRead: roll,
+            createdAt: 0,
+            updatedAt: 0,
+          })
+        }
+        d.setDate(d.getDate() + 1)
+      }
       await new Promise<void>((resolve, reject) => {
         const req = indexedDB.open('tally')
         req.onsuccess = () => {
-          const tx = req.result.transaction('days', 'readwrite')
-          tx.objectStore('days').put(day)
+          const tx = req.result.transaction(['days', 'stockcounts'], 'readwrite')
+          for (const day of days) tx.objectStore('days').put(day)
+          // Two takes a week apart, so the cellar has a settled window to show.
+          tx.objectStore('stockcounts').put({ date: '2026-08-10', lines: [] })
+          tx.objectStore('stockcounts').put({ date: '2026-08-17', lines: [] })
           tx.oncomplete = () => resolve()
           tx.onerror = () => reject(tx.error)
         }
         req.onerror = () => reject(req.error)
       })
-    }, {
-      date: '2026-08-23',
-      till: { pence: 219280, source: 'vision', edited: false },
-      card: { pence: 184100, source: 'manual', edited: false },
-      cashPence: 33980, note: '', zRead: GARDENERS_ARMS, createdAt: 0, updatedAt: 0,
-    })
+    }, GARDENERS_ARMS)
     await page.reload({ waitUntil: 'networkidle' })
+    await page.click('button:has-text("Nights")')
+    await page.waitForSelector('.day-row', { timeout: 8000 })
+    check('the seeded nights all landed', (await page.locator('.day-row').count()) === NIGHTS_SEEDED)
+    await page.click('button:has-text("Tonight")')
+    await page.waitForTimeout(300)
 
     await screen(page, 'Tonight')
     await page.click('button:has-text("Trade")')
+    await page.waitForTimeout(500)
     await screen(page, 'Trade')
+    // The whole of Trade, not just the window the chips open on: the weekly
+    // charts and the movers only draw over a longer range.
+    await page.click('.chip:has-text("90 nights")')
+    await page.waitForTimeout(600)
+    await screen(page, 'Trade over 90 nights')
+    // One line's own card, which carries its own weekly table.
+    await page.fill('input[aria-label="Find an item"]', 'TADDY')
+    await page.waitForTimeout(400)
+    await page.locator('.item-open').first().click()
+    await page.waitForTimeout(600)
+    await screen(page, 'one item')
+    await page.click('button:has-text("Back")')
+    await page.waitForTimeout(400)
     await page.click('button:has-text("Cellar")')
     await page.click('button:has-text("Build the cellar from the till")')
     await page.waitForTimeout(600)
     await screen(page, 'the cellar')
-    for (const chip of ['Delivery in', 'Stock take', 'The scales', 'What it costs', 'Set up']) {
+    for (const chip of ['Week by week', 'Delivery in', 'Stock take', 'The scales', 'What it costs', 'Set up']) {
       await page.click(`.chip:has-text("${chip}")`)
       await screen(page, `the cellar — ${chip.toLowerCase()}`)
     }
@@ -238,9 +278,9 @@ try {
     await page.click('button:has-text("Nights")').catch(() => undefined)
     await page.waitForTimeout(700)
     check(
-      'and the night is still there with no network at all',
-      (await page.locator('.day-row').count()) === 1,
-      await page.locator('.main').innerText().catch(() => 'nothing rendered'),
+      'and the nights are still there with no network at all',
+      (await page.locator('.day-row').count()) === NIGHTS_SEEDED,
+      (await page.locator('.main').innerText().catch(() => 'nothing rendered')).slice(0, 200),
     )
     await context.setOffline(false)
 
