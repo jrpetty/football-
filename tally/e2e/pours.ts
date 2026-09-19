@@ -225,6 +225,29 @@ for (const [id, open] of Object.entries(UNTOUCHED)) {
   )
 }
 
+// --- halves and pints come off the same line -------------------------------------
+//
+// Named on its own because it is the easiest thing in here to get quietly
+// wrong: a half that took a whole pint off, or took nothing off because the
+// till prints it as a separate line, would drain or inflate the cellar every
+// night without a single figure looking odd.
+await page.click('.chip:has-text("Set up")')
+await page.waitForTimeout(600)
+for (const [sold, takes] of [
+  ['PINT TADDY LAGER', '1'], ['HALF TADDY LAGER', '0.5'],
+  ['PINT ALPINE', '1'], ['HALF ALPINE', '0.5'],
+  ['PINT CIDER', '1'], ['HALF CIDER', '0.5'],
+] as const) {
+  // The figure lives in the box, not in the row's text.
+  const got = await page.locator(`input[aria-label="${sold} takes"]`).inputValue().catch(() => '')
+  say(got === takes, `${sold} takes ${takes} pint off the cellar`, `the app says "${got}"`)
+}
+// 120 pints and 19 halves is 129.5 pints, not 139 and not 120.
+say(
+  1056 - (120 * PINT + 19 * HALF) / PINT === 926.5,
+  'and 120 pints plus 19 halves is 129.5 pints off the Taddy',
+)
+
 // --- the lines nothing sells, and counting them the way they are sold ----------
 //
 // The mirror of an unmapped sale: a line no pour points at can never go down,
