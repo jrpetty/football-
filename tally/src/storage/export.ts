@@ -19,6 +19,7 @@ interface StockConfig {
   items: StockItem[]
   pours: Pour[]
   mlPerShot: number
+  notStock?: string[]
 }
 import { reconcileDay, verdictHeadline } from '../core/reconcile.ts'
 import { DEPARTMENTS, departmentLabel } from '../core/departments.ts'
@@ -294,10 +295,15 @@ export function mergeStockConfig(current: StockConfig, incoming: StockConfig): S
   }
   const pours = new Map(current.pours.map((p) => [p.itemCode, p]))
   for (const pour of incoming.pours) pours.set(pour.itemCode, pour)
+  // Added to rather than swapped, like everything else here: a file that says
+  // the coffee is not stock must not un-say it about the room hire.
+  const notStock = [...new Set([...(current.notStock ?? []), ...(incoming.notStock ?? [])])]
+
   return {
     items: [...items.values()].sort((a, b) => a.name.localeCompare(b.name)),
     pours: [...pours.values()],
     mlPerShot: current.items.length === 0 ? incoming.mlPerShot : current.mlPerShot,
+    ...(notStock.length > 0 ? { notStock } : {}),
   }
 }
 
@@ -322,6 +328,9 @@ export function parseBackup(text: string): Restored {
           items: stockRaw.items,
           pours: stockRaw.pours,
           mlPerShot: typeof stockRaw.mlPerShot === 'number' ? stockRaw.mlPerShot : 30,
+          ...(Array.isArray(stockRaw.notStock)
+            ? { notStock: stockRaw.notStock.filter((c): c is string => typeof c === 'string') }
+            : {}),
         }
       : null
 

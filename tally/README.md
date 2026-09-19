@@ -125,6 +125,32 @@ section sits at the top of the roll and the item list runs to another frame. A
 pub that photographs only the first part gets its categories rather than being
 told nothing at all.
 
+#### Tying the till to the cellar
+
+This is the join the whole thing hangs off, and it is the one step that cannot
+be guessed. Until a sold line knows which cellar line it draws on and how much
+it takes, a receipt takes nothing off the stock and the figures quietly read
+high.
+
+It matters most for a cellar counted onto paper first — which is how this one
+started. Those lines are called what the landlady calls them ("Taddy Lager"),
+and the till calls the same drink something longer ("PINT TADDY LAGER"), with
+no code in common. Building the cellar from the till instead would make a
+second set of lines beside the real ones and split the stock in two, which is
+worse than doing nothing.
+
+So **Cellar → Set up** lists every sold line that takes nothing off yet, each
+matched to the line it looks like, with what one sale removes in that line's own
+units — a pint takes 1, a large glass takes 175 millilitres, a single takes the
+house measure. Check them and save once. Candidates are filtered to the same
+*kind* before matching, never after: "BOT PURE BREW" and "PINT PURE BREW" are
+the same words and not the same stock, and matching them would take a bottle off
+a line counted in pints, which is nought pints, silently, for ever.
+
+Lines that are not cellar stock at all — the coffee, the room hire — are said so
+once and stop being reported as stock that walked. A warning that is always on
+is a warning nobody reads.
+
 ### The weekly stock take
 
 The receipts run the cellar down night by night; once a week somebody goes down

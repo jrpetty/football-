@@ -1938,6 +1938,102 @@ try {
   )
   await first.close()
 
+  console.log('\nTying the till to a cellar counted onto paper')
+  // The case that actually matters, in a copy of its own so it disturbs
+  // nothing: the cellar came off a handwritten sheet, so its lines are called
+  // what she calls them and nothing on it carries a till code. Until these are
+  // tied up a receipt takes nothing off the stock at all.
+  const paper = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 3,
+    isMobile: true,
+    hasTouch: true,
+  })
+  await paper.addInitScript(() => {
+    try {
+      localStorage.setItem('tally.engine', 'off')
+      localStorage.setItem('tally.seeded', 'cellar-2026-09-16')
+    } catch {
+      /* ignore */
+    }
+  })
+  const tied = await paper.newPage()
+  tied.on('pageerror', (err) => pageErrors.push(String(err)))
+  await tied.goto(base, { waitUntil: 'networkidle' })
+  await tied.evaluate(async (roll) => {
+    await new Promise<void>((resolve, reject) => {
+      const req = indexedDB.open('tally')
+      req.onsuccess = () => {
+        const tx = req.result.transaction(['stock', 'days'], 'readwrite')
+        // A cellar off the sheet: her own names, no till codes anywhere.
+        tx.objectStore('stock').put({
+          id: 'config',
+          items: [
+            { id: 'taddy-sheet', name: 'Taddy Lager', kind: 'liquid', servingBaseUnits: 568, servingName: 'pint',
+              container: { name: 'firkin', baseUnits: 72 * 568 } },
+          ],
+          pours: [],
+          mlPerShot: 30,
+          updatedAt: 0,
+        })
+        tx.objectStore('days').put({
+          date: '2026-08-23',
+          till: { pence: 219280, source: 'vision', edited: false },
+          card: { pence: 184100, source: 'manual', edited: false },
+          cashPence: 33980, note: '', zRead: roll, createdAt: 0, updatedAt: 0,
+        })
+        tx.oncomplete = () => resolve()
+        tx.onerror = () => reject(tx.error)
+      }
+      req.onerror = () => reject(req.error)
+    })
+  }, GARDENERS_ARMS)
+  await tied.reload({ waitUntil: 'networkidle' })
+  await tied.click('button:has-text("Cellar")')
+  await tied.click('.chip:has-text("Set up")')
+  await tied.waitForSelector('[data-testid="to-match"]', { timeout: 5000 })
+  check(
+    'it says plainly that nothing comes off the cellar yet',
+    /take[s]? nothing off/.test(await tied.locator('[data-testid="to-match"]').innerText()),
+    await tied.locator('[data-testid="to-match"]').innerText(),
+  )
+
+  // The till calls it "PINT TADDY LAGER"; the sheet calls it "Taddy Lager".
+  const taddyPick = tied.locator('select[aria-label="PINT TADDY LAGER comes off"]')
+  check('the till line is offered the line off the sheet', (await taddyPick.count()) === 1)
+  check(
+    'and is matched to it rather than to a second line invented beside it',
+    (await taddyPick.inputValue()) === 'taddy-sheet',
+    await taddyPick.inputValue(),
+  )
+  check(
+    'with what one sale takes, in that line’s own units',
+    (await tied.locator('input[aria-label="PINT TADDY LAGER takes"]').inputValue()) === '1',
+  )
+
+  await tied.click('[data-testid="keep-pours"]')
+  await tied.waitForTimeout(800)
+  check(
+    'saving says how many now come off the cellar',
+    /come off the cellar/.test(await tied.locator('.toast').innerText().catch(() => '')),
+    await tied.locator('.toast').innerText().catch(() => ''),
+  )
+  await tied.waitForTimeout(400)
+  check('and there is nothing left to tie up', (await tied.locator('[data-testid="to-match"]').count()) === 0)
+
+  await tied.click('.chip:has-text("What’s down there")')
+  await tied.waitForTimeout(700)
+  const afterTie = await tied.locator('.main').innerText()
+  check(
+    'and the receipt now comes off the line off the sheet',
+    /Taddy Lager/.test(afterTie) && !/knows nothing about/.test(afterTie),
+    afterTie.slice(0, 500),
+  )
+  // The Taddy row must show a poured figure now, which is the whole point.
+  const taddyRow = await tied.locator('tr:has-text("Taddy Lager")').first().innerText()
+  check('with what the till poured off it', /pints/.test(taddyRow), taddyRow.replace(/\n/g, ' | '))
+  await paper.close()
+
   check('nothing threw along the way', pageErrors.length === 0, pageErrors.join('\n        '))
 } finally {
   await browser.close()

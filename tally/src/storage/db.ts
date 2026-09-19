@@ -287,6 +287,11 @@ export interface StockConfig {
   pours: Pour[]
   /** The house measure, so changing it moves every spirit at once. */
   mlPerShot: number
+  /**
+   * Till lines that deliberately come off nothing — coffee, room hire, a
+   * bag of ice. Held so they stop being reported as stock that walked.
+   */
+  notStock?: string[]
 }
 
 export const EMPTY_STOCK: StockConfig = { items: [], pours: [], mlPerShot: 30 }

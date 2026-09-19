@@ -128,14 +128,25 @@ export interface SoldLine {
 export function pourUsage(
   sold: readonly SoldLine[],
   pours: readonly Pour[],
+  /**
+   * Till lines that deliberately come off nothing — the coffee, the crisps
+   * somebody buys off the counter, the room hire.
+   *
+   * Without this they sit in the "nothing came off for these" warning for
+   * ever, and a warning that is always on is a warning nobody reads. Said
+   * once, they stop being reported as a gap because they are not one.
+   */
+  notStock: readonly string[] = [],
 ): { used: Map<string, number>; unmapped: SoldLine[] } {
   const byCode = new Map(pours.map((p) => [p.itemCode.toUpperCase(), p]))
   const byName = new Map(pours.map((p) => [p.itemName.trim().toUpperCase(), p]))
+  const ignored = new Set(notStock.map((c) => c.trim().toUpperCase()))
 
   const used = new Map<string, number>()
   const unmapped: SoldLine[] = []
 
   for (const line of sold) {
+    if (ignored.has(line.code.trim().toUpperCase()) || ignored.has(line.name.trim().toUpperCase())) continue
     const pour = byCode.get(line.code.toUpperCase()) ?? byName.get(line.name.trim().toUpperCase())
     if (!pour) {
       unmapped.push(line)
@@ -978,6 +989,84 @@ export function proposeDelivery(
 }
 
 /** The delivery lines an accepted proposal would book in. */
+// ---------------------------------------------------------------------------
+// Tying the till's lines to the cellar's.
+//
+// This is the join that makes everything else work. Until a sold line knows
+// which cellar line it draws on and how much it takes, a receipt takes nothing
+// off the stock at all — the figures just sit there reading high.
+//
+// It matters most for a cellar that was counted onto paper first. Those lines
+// are called what the landlady calls them — "Taddy Lager", "Extra Stout" —
+// and the till calls the same drink "PINT TADDY LAGER". Building the cellar
+// from the till instead would make a second set of lines beside the real ones
+// and split the stock in two, which is worse than doing nothing.
+// ---------------------------------------------------------------------------
+
+/** How a sold line found its cellar line, so the interface can say. */
+export type PourMatch = 'matched' | 'ambiguous' | 'new'
+
+export interface PourProposal {
+  itemCode: string
+  itemName: string
+  /** What the till's own name says this is, and what one sale takes. */
+  guess: PourGuess
+  /** The cellar line it draws on, where one already fits. */
+  stockItemId: string | null
+  how: PourMatch
+  /** The lines it could not choose between, when it could not choose. */
+  between: StockItem[]
+  /** What one sale takes, in base units. */
+  baseUnits: number
+}
+
+/**
+ * Every sold line that takes nothing off the cellar yet, with a proposal.
+ *
+ * Candidates are filtered to the same KIND before matching, not after. "BOT
+ * PURE BREW" and "PINT PURE BREW" are the same words and not the same stock:
+ * one is counted off a shelf and one poured out of a cask, and matching them
+ * would take a bottle off a line counted in pints — which is nought pints,
+ * silently, for ever.
+ */
+export function proposePours(
+  sold: readonly SoldLine[],
+  items: readonly StockItem[],
+  pours: readonly Pour[],
+  mlPerShot: number,
+  match: <T>(written: string, candidates: readonly T[], label: (c: T) => string) =>
+    | { kind: 'matched'; value: T; score: number }
+    | { kind: 'ambiguous'; between: T[]; score: number }
+    | { kind: 'unmatched' },
+  notStock: readonly string[] = [],
+): PourProposal[] {
+  const byCode = new Set(pours.map((p) => p.itemCode.trim().toUpperCase()))
+  const byName = new Set(pours.map((p) => p.itemName.trim().toUpperCase()))
+  const ignored = new Set(notStock.map((c) => c.trim().toUpperCase()))
+
+  const out: PourProposal[] = []
+  for (const line of sold) {
+    const code = line.code.trim().toUpperCase()
+    const name = line.name.trim().toUpperCase()
+    if (byCode.has(code) || byName.has(name) || ignored.has(code) || ignored.has(name)) continue
+
+    const guess = guessPour(line.code, line.name, mlPerShot)
+    const shape = servingOf(guess.servingName as Basis)
+    const found = match(guess.stockName, items.filter((i) => i.kind === shape.kind), (i) => i.name)
+
+    out.push({
+      itemCode: line.code,
+      itemName: line.name,
+      guess,
+      stockItemId: found.kind === 'matched' ? found.value.id : null,
+      how: found.kind === 'matched' ? 'matched' : found.kind === 'ambiguous' ? 'ambiguous' : 'new',
+      between: found.kind === 'ambiguous' ? found.between : [],
+      baseUnits: guess.baseUnits,
+    })
+  }
+  return out
+}
+
 export function deliveryLinesFrom(proposals: readonly DeliveryProposal[]): Array<{ stockItemId: string; baseUnits: number }> {
   const out: Array<{ stockItemId: string; baseUnits: number }> = []
   for (const p of proposals) {
@@ -1163,13 +1252,14 @@ function windowBetween(
   previous: StockCount,
   latest: StockCount,
   costOfServing: (item: StockItem, baseUnits: number) => number | null,
+  notStock: readonly string[] = [],
 ): CellarWindow {
   const opening = new Map(previous.lines.map((l) => [l.stockItemId, l.baseUnits]))
   const closed = buildLedger(
     items,
     opening,
     deliveredBetween(deliveries, previous.date, latest.date),
-    pourUsage(soldBetween(days, previous.date, latest.date), pours).used,
+    pourUsage(soldBetween(days, previous.date, latest.date), pours, notStock).used,
   )
   const lines = compareToCount(closed, new Map(latest.lines.map((l) => [l.stockItemId, l.baseUnits])))
     .filter((v) => v.varianceBaseUnits !== null)
@@ -1222,6 +1312,8 @@ export function nightCellar(args: {
   deliveries: readonly Delivery[]
   days: ReadonlyArray<{ date: string; items: readonly SoldLine[] }>
   costOfServing: (item: StockItem, baseUnits: number) => number | null
+  /** Till lines that deliberately come off nothing. */
+  notStock?: readonly string[]
 }): NightCellar | null {
   const sorted = [...args.counts].sort((a, b) => a.date.localeCompare(b.date))
   const count = sorted.find((c) => c.date === args.date)
@@ -1231,7 +1323,7 @@ export function nightCellar(args: {
   return {
     count,
     window: previous
-      ? windowBetween(args.items, args.pours, args.deliveries, args.days, previous, count, args.costOfServing)
+      ? windowBetween(args.items, args.pours, args.deliveries, args.days, previous, count, args.costOfServing, args.notStock)
       : null,
   }
 }
@@ -1303,13 +1395,15 @@ export function takeWeeks(args: {
   deliveries: readonly Delivery[]
   days: ReadonlyArray<{ date: string; items: readonly SoldLine[]; hasZRead?: boolean }>
   costOfServing: (item: StockItem, baseUnits: number) => number | null
+  /** Till lines that deliberately come off nothing. */
+  notStock?: readonly string[]
 }): TakeWeek[] {
   const sorted = [...args.counts].sort((a, b) => a.date.localeCompare(b.date))
   const out: TakeWeek[] = []
   for (let i = 1; i < sorted.length; i++) {
     const previous = sorted[i - 1]!
     const latest = sorted[i]!
-    const window = windowBetween(args.items, args.pours, args.deliveries, args.days, previous, latest, args.costOfServing)
+    const window = windowBetween(args.items, args.pours, args.deliveries, args.days, previous, latest, args.costOfServing, args.notStock)
 
     let rollNights = 0
     let nightsWithoutItems = 0
@@ -1324,7 +1418,7 @@ export function takeWeeks(args: {
       days: Math.max(1, Math.round((Date.parse(latest.date) - Date.parse(previous.date)) / 86_400_000)),
       rollNights,
       nightsWithoutItems,
-      unmapped: mergeSold(pourUsage(soldBetween(args.days, previous.date, latest.date), args.pours).unmapped),
+      unmapped: mergeSold(pourUsage(soldBetween(args.days, previous.date, latest.date), args.pours, args.notStock).unmapped),
     })
   }
   return out.reverse()
@@ -1346,8 +1440,10 @@ export function cellarHealth(args: {
   days: ReadonlyArray<{ date: string; items: readonly SoldLine[]; hasZRead?: boolean }>
   today: string
   costOfServing: (item: StockItem, baseUnits: number) => number | null
+  /** Till lines that deliberately come off nothing. */
+  notStock?: readonly string[]
 }): CellarHealth {
-  const { items, pours, counts, deliveries, days, today, costOfServing } = args
+  const { items, pours, counts, deliveries, days, today, costOfServing, notStock } = args
 
   // Newest first however they arrived, so "latest" means latest.
   const byDate = [...counts].sort((a, b) => b.date.localeCompare(a.date))
@@ -1379,7 +1475,7 @@ export function cellarHealth(args: {
     ? new Map(latest.lines.map((l) => [l.stockItemId, l.baseUnits]))
     : new Map(items.map((item) => [item.id, 0]))
   const openSales = soldBetween(days, since)
-  const openPour = pourUsage(openSales, pours)
+  const openPour = pourUsage(openSales, pours, notStock)
   const openUsage = openPour.used
   const ledger = buildLedger(items, opening, deliveredBetween(deliveries, since), openUsage)
   const dead = deadStock(ledger, openUsage, sinceDays, costOfServing)
@@ -1406,7 +1502,7 @@ export function cellarHealth(args: {
   let gapPence: number | null = null
   let gapLines: StockVariance[] = []
   if (latest && previous) {
-    const window = windowBetween(items, pours, deliveries, days, previous, latest, costOfServing)
+    const window = windowBetween(items, pours, deliveries, days, previous, latest, costOfServing, notStock)
     gapLines = window.lines.filter((v) => v.varianceBaseUnits !== 0)
     gapPence = window.gapPence
   }

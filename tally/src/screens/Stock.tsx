@@ -25,14 +25,14 @@ import {
   deliveryLinesFrom,
   describeStock,
   proposeDelivery,
+  proposePours,
+  type PourProposal,
   formatServings,
   formatServingsSigned,
   LOW_NIGHTS,
   takeDue,
   takeWeeks,
   TAKE_EVERY_DAYS,
-  guessPour,
-  pourUsage,
   measureOf,
   inMeasures,
   type Measure,
@@ -108,6 +108,10 @@ function countDate(): string {
 }
 
 /** A stable id from a name, so re-running setup does not duplicate a line. */
+/** The two choices that are not a cellar line. */
+const NEW_LINE = '\u0000new'
+const NOT_STOCK = '\u0000none'
+
 function idFor(name: string): string {
   return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'item'
 }
@@ -407,6 +411,7 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
             days,
             today: tradingDayKey(),
             costOfServing: costOf,
+            ...(config.notStock ? { notStock: config.notStock } : {}),
           })
         : null,
     [config, counts, deliveries, days],
@@ -462,6 +467,7 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
             deliveries,
             days,
             costOfServing: costOf,
+            ...(config.notStock ? { notStock: config.notStock } : {}),
           })
         : [],
     [config, counts, deliveries, days],
@@ -476,11 +482,86 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
     [takes],
   )
 
-  const unmapped = useMemo(() => {
+  /**
+   * Every sold line that takes nothing off the cellar yet, with a proposal.
+   *
+   * The join the whole thing hangs off: until a sold line knows which cellar
+   * line it draws on, a receipt takes nothing off the stock and the figures
+   * quietly read high. A cellar counted onto paper first has no till codes on
+   * it at all, so every line starts here.
+   */
+  const toMatch = useMemo(() => {
     if (!config) return []
     const sold = itemTotals(days).map((i) => ({ code: i.code, name: i.name, qtyMilli: i.qtyMilli }))
-    return pourUsage(sold, config.pours).unmapped
+    return proposePours(sold, config.items, config.pours, config.mlPerShot, bestMatch, config.notStock)
   }, [config, days])
+
+  /** What each row has been set to, before any of it is saved. */
+  const [picks, setPicks] = useState<Record<string, string>>({})
+  const pickFor = (row: PourProposal): string =>
+    picks[row.itemCode] ?? (row.stockItemId ?? (row.how === 'new' ? NEW_LINE : ''))
+
+  /**
+   * Save the lot. One button rather than one per row: forty lines off a till
+   * roll is forty taps, and the proposals are right often enough that
+   * checking them and accepting them together is the honest shape of the job.
+   */
+  async function keepPours() {
+    if (!config) return
+    const items = new Map(config.items.map((i) => [i.id, i]))
+    const pours: Pour[] = [...config.pours]
+    const notStock = [...(config.notStock ?? [])]
+    let made = 0
+    let tied = 0
+
+    for (const row of toMatch) {
+      const pick = pickFor(row)
+      if (pick === '') continue
+      if (pick === NOT_STOCK) {
+        notStock.push(row.itemCode)
+        continue
+      }
+      const takes = parseFloat(drafts[`match:${row.itemCode}`] ?? '')
+      let id = pick
+      if (pick === NEW_LINE) {
+        const shape = servingFor(row.guess)
+        id = idFor(row.guess.stockName)
+        // A new line whose id is taken by a line counted another way gets its
+        // own, for the same reason the matcher will not cross kinds.
+        if (items.has(id) && items.get(id)!.kind !== shape.kind) {
+          id = `${id}-${shape.kind === 'count' ? 'bottled' : 'draught'}`
+        }
+        if (!items.has(id)) {
+          items.set(id, { id, name: row.guess.stockName, ...shape })
+          made++
+        }
+      }
+      const item = items.get(id)
+      // Typed in the line's own servings — "1" pint, "175" ml — and held in
+      // base units, which is the only place a unit is ever assumed.
+      const baseUnits =
+        Number.isFinite(takes) && takes > 0 && item ? Math.round(takes * item.servingBaseUnits) : row.baseUnits
+      pours.push({ itemCode: row.itemCode, itemName: row.itemName, stockItemId: id, baseUnits })
+      tied++
+    }
+
+    const next: StockConfig = {
+      ...config,
+      items: [...items.values()].sort((a, b) => a.name.localeCompare(b.name)),
+      pours,
+      ...(notStock.length > 0 ? { notStock } : {}),
+    }
+    setConfig(next)
+    await saveStockConfig(next)
+    setPicks({})
+    setDrafts({})
+    onChanged()
+    say(
+      tied === 0
+        ? 'Nothing tied up — every line was left blank.'
+        : `${tied} till ${tied === 1 ? 'line' : 'lines'} now come off the cellar${made > 0 ? `, ${made} of them on new lines` : ''}.`,
+    )
+  }
 
   if (config === null) return <div className="main"><p className="note"><span className="spinner" /> Loading…</p></div>
 
@@ -492,25 +573,26 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
     const items = new Map<string, StockItem>(config!.items.map((i) => [i.id, i]))
     const pours: Pour[] = [...config!.pours]
 
-    const guesses = seen
-      .filter((sold) => !pours.some((p) => p.itemCode === sold.code))
-      .map((sold) => ({ sold, guess: guessPour(sold.code, sold.name, config!.mlPerShot) }))
-
-    for (const { sold, guess } of guesses) {
-      const shape = servingFor(guess)
-      // "BOT PURE BREW" and "PINT PURE BREW" are the same words and not the
-      // same stock: one is counted off a shelf and the other poured out of a
-      // cask. Merging them would take a bottle off a line counted in pints,
-      // which is nought pints, silently, for ever.
-      const plain = idFor(guess.stockName)
-      const existing = items.get(plain)
-      const clash = existing !== undefined && existing.kind !== shape.kind
-      const id = clash ? `${plain}-${shape.kind === 'count' ? 'bottled' : 'draught'}` : plain
-      if (!items.has(id)) {
-        const name = clash ? `${guess.stockName} (${shape.kind === 'count' ? 'bottled' : 'draught'})` : guess.stockName
-        items.set(id, { id, name, ...shape })
+    // Matched against the cellar that already exists before anything is
+    // invented. A cellar counted onto paper calls the drink "Taddy Lager" and
+    // the till calls it "PINT TADDY LAGER"; making a second line for it would
+    // split the stock in two, which is worse than doing nothing.
+    for (const row of proposePours(seen, config!.items, pours, config!.mlPerShot, bestMatch, config!.notStock)) {
+      let id = row.stockItemId
+      if (id === null) {
+        const shape = servingFor(row.guess)
+        const plain = idFor(row.guess.stockName)
+        const existing = items.get(plain)
+        const clash = existing !== undefined && existing.kind !== shape.kind
+        id = clash ? `${plain}-${shape.kind === 'count' ? 'bottled' : 'draught'}` : plain
+        if (!items.has(id)) {
+          const name = clash
+            ? `${row.guess.stockName} (${shape.kind === 'count' ? 'bottled' : 'draught'})`
+            : row.guess.stockName
+          items.set(id, { id, name, ...shape })
+        }
       }
-      pours.push({ itemCode: sold.code, itemName: sold.name, stockItemId: id, baseUnits: guess.baseUnits })
+      pours.push({ itemCode: row.itemCode, itemName: row.itemName, stockItemId: id, baseUnits: row.baseUnits })
     }
 
     const next = { ...config!, items: [...items.values()].sort((a, b) => a.name.localeCompare(b.name)), pours }
@@ -1293,15 +1375,103 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
               the table below — so a line the till has never sold stays in millilitres.
             </p>
           </div>
-          <button type="button" onClick={() => void buildFromTill()}>
-            Add any new lines from the till
-          </button>
-          {unmapped.length > 0 && (
-            <p className="note warn">
-              {unmapped.length} sold {unmapped.length === 1 ? 'line has' : 'lines have'} no pour set, so
-              {unmapped.length === 1 ? ' it does' : ' they do'} not come off the cellar at all.
+          {/* The join the whole thing hangs off. A cellar counted onto paper
+              has no till codes on it, so until these are tied up a receipt
+              takes nothing off the stock at all. */}
+          {toMatch.length > 0 ? (
+            <div className="match-pours">
+              <div className="card-head" style={{ marginTop: 18 }}>
+                <h2>Tie the till to the cellar</h2>
+                <span className="hint">{toMatch.length} to go</span>
+              </div>
+              <p className="note warn" style={{ marginTop: 0 }} data-testid="to-match">
+                {toMatch.length} sold {toMatch.length === 1 ? 'line takes' : 'lines take'} nothing off
+                the cellar. Each one below has been matched to the line it looks like — check them and
+                save, and from then on every receipt comes off the stock on its own.
+              </p>
+              <ul className="match-list">
+                {toMatch.slice(0, 40).map((row) => {
+                  const chosen = pickFor(row)
+                  const item = config.items.find((i) => i.id === chosen)
+                  return (
+                    <li key={row.itemCode}>
+                      <span className="match-sold">
+                        {row.itemName}
+                        <small>
+                          {row.how === 'matched'
+                            ? 'matched to a line you already have'
+                            : row.how === 'ambiguous'
+                              ? `could be ${row.between.map((i) => i.name).join(' or ')}`
+                              : 'nothing like it in the cellar'}
+                        </small>
+                      </span>
+                      <select
+                        aria-label={`${row.itemName} comes off`}
+                        data-testid={`match-${row.itemCode}`}
+                        value={chosen}
+                        onChange={(e) => setPicks((p) => ({ ...p, [row.itemCode]: e.target.value }))}
+                      >
+                        <option value="">leave it for now</option>
+                        <option value={NEW_LINE}>new line — {row.guess.stockName}</option>
+                        <option value={NOT_STOCK}>not cellar stock</option>
+                        {config.items.map((i) => (
+                          <option key={i.id} value={i.id}>{i.name}</option>
+                        ))}
+                      </select>
+                      {chosen !== '' && chosen !== NOT_STOCK && (
+                        <span className="stock-field match-takes">
+                          <small>takes</small>
+                          <input
+                            aria-label={`${row.itemName} takes`}
+                            inputMode="decimal"
+                            value={
+                              drafts[`match:${row.itemCode}`] ??
+                              String(
+                                Math.round((row.baseUnits / (item?.servingBaseUnits ?? 1)) * 100) / 100,
+                              )
+                            }
+                            onChange={(e) =>
+                              setDrafts((d) => ({ ...d, [`match:${row.itemCode}`]: e.target.value }))
+                            }
+                          />
+                          <small>
+                            {pluralServing(
+                              item?.servingName ?? (chosen === NEW_LINE ? row.guess.servingName : 'unit'),
+                            )}
+                          </small>
+                        </span>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+              {toMatch.length > 40 && (
+                <p className="note">
+                  The forty biggest are shown. Save these and the rest come up next.
+                </p>
+              )}
+              <button type="button" className="btn-primary" data-testid="keep-pours" onClick={() => void keepPours()}>
+                Save these
+              </button>
+              <p className="note">
+                “Takes” is what one sale removes, in that line’s own units — a pint takes 1, a large
+                glass of wine takes 175 millilitres, a single takes {config.mlPerShot}. “Not cellar
+                stock” is for the coffee and the room hire: said once, they stop being reported as
+                stock that walked.
+              </p>
+            </div>
+          ) : (
+            <p className="note" style={{ marginTop: 14 }}>
+              Every line the till has sold comes off the cellar. Anything new it starts selling will
+              appear here to be tied up.
             </p>
           )}
+
+          <div className="alts">
+            <button type="button" className="btn-small" onClick={() => void buildFromTill()}>
+              Make a line for everything the till sells
+            </button>
+          </div>
           <div className="table-wrap">
             <table className="data">
               <thead>
