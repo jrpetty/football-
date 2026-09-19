@@ -20,7 +20,7 @@
 
 import { parseZRead } from './parseZRead.ts'
 import { crossfootVerdict, type CrossfootVerdict } from '../core/crossfoot.ts'
-import { emptyZRead, mergeZRead, sectionsIn, type ZRead, type ZReadSection } from '../core/zread.ts'
+import { addZRead, emptyZRead, mergeZRead, sectionsIn, type ZRead, type ZReadSection } from '../core/zread.ts'
 import { prepareForVision } from './image.ts'
 import { transcribeOnDevice } from './device.ts'
 import { loadSettings, effectiveEngine } from '../storage/settings.ts'
@@ -257,23 +257,74 @@ export interface PhotoOutcome {
   unread?: boolean
 }
 
+/** One receipt, and the photographs it was read from. */
+export interface Roll {
+  /** The Z counter off its header, when a photograph caught it. */
+  zNumber?: number
+  /** Indexes of the photographs that make it up, in order. */
+  photos: number[]
+  zRead: ZRead
+}
+
+export interface Rolls {
+  /** Every receipt found, in the order they were photographed. */
+  rolls: Roll[]
+  /** All of them together: pieces merged within a receipt, receipts added. */
+  zRead: ZRead
+}
+
 /**
- * Several photographs of one roll, folded into a single read.
+ * Sort a pile of photographs into receipts, and fold them the right way round.
  *
- * In photograph order, so a figure appearing on two of them settles the same
- * way every time, whatever order they arrived in.
+ * Two different jobs live here and the difference is the whole night's takings.
+ * Photographs of ONE roll are pieces of one record and MERGE — a department
+ * seen on two of them is the same money read twice. Separate Z reads are
+ * separate trade and ADD.
  *
- * `base` is whatever was read before these photographs — a night reopened the
- * next morning, or figures corrected by hand. It goes underneath, so a later
- * photograph of the same section still wins, and dropping one photograph never
- * takes saved or corrected figures with it.
+ * They are told apart by the Z counter, which increments once per Z read, so
+ * two photographs carrying different ones are certainly different receipts. A
+ * photograph with no Z number on it is the middle or the end of a roll — only
+ * the top carries the header — so it joins whichever receipt is open.
+ *
+ * `separate` forces every photograph to be its own receipt, for a till whose
+ * header never comes out legible. `together` forces one, for a roll
+ * photographed so that the header appears twice.
  */
-export function mergeOutcomes(outcomes: readonly PhotoOutcome[], base?: ZRead): ZRead {
-  let zRead = base ?? emptyZRead()
-  for (const o of [...outcomes].sort((a, b) => a.index - b.index)) {
-    if (o.parsed) zRead = mergeZRead(zRead, o.parsed)
+export function foldRolls(
+  outcomes: readonly PhotoOutcome[],
+  opts: { base?: ZRead; how?: 'auto' | 'separate' | 'together' } = {},
+): Rolls {
+  const how = opts.how ?? 'auto'
+  const ordered = [...outcomes].sort((a, b) => a.index - b.index).filter((o) => o.parsed)
+
+  const rolls: Roll[] = []
+  for (const o of ordered) {
+    const zNumber = o.parsed!.header.zNumber
+    const open = rolls[rolls.length - 1]
+    // A new receipt when the Z counter says so, when every photograph is being
+    // treated as its own, or when there is nothing open yet.
+    const starts =
+      open === undefined ||
+      how === 'separate' ||
+      (how === 'auto' && zNumber !== undefined && open.zNumber !== undefined && zNumber !== open.zNumber)
+
+    if (starts) {
+      rolls.push({ ...(zNumber !== undefined ? { zNumber } : {}), photos: [o.index], zRead: o.parsed! })
+    } else {
+      open.photos.push(o.index)
+      open.zRead = mergeZRead(open.zRead, o.parsed!)
+      if (open.zNumber === undefined && zNumber !== undefined) open.zNumber = zNumber
+    }
   }
-  return zRead
+
+  let zRead = opts.base ?? emptyZRead()
+  rolls.forEach((roll, i) => {
+    // The first receipt folds onto whatever was already read — a night
+    // reopened, or figures corrected by hand — and the rest add to it.
+    zRead = i === 0 ? mergeZRead(zRead, roll.zRead) : addZRead(zRead, roll.zRead)
+  })
+
+  return { rolls, zRead }
 }
 
 export interface BatchResult {

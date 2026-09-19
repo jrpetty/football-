@@ -197,6 +197,119 @@ export function sectionsIn(z: ZRead): ZReadSection[] {
  * and lists are merged by code so re-photographing one section does not wipe
  * another — the common case being the summary photographed after the PLU list.
  */
+// ---------------------------------------------------------------------------
+// Two receipts, or two photographs of one?
+//
+// These are opposite jobs and the difference is the whole night's takings.
+//
+// Three photographs of ONE roll are pieces of the same record: a department
+// seen on two of them is the same £1,492.25, and the later photograph simply
+// replaces the earlier reading of it. That is mergeZRead, below.
+//
+// Two SEPARATE Z reads — a lunchtime and an evening, or two tills cashed up
+// together — are two lots of trade. A department on both is two different
+// takings and they add. That is addZRead.
+//
+// Get it backwards and the day reads at a third of what was taken, or at
+// triple. Nothing else in the app is that far wrong that quietly, which is why
+// they are told apart by the Z counter rather than by anybody's judgement: it
+// increments once per Z read, so two photographs carrying different ones are
+// certainly different receipts.
+// ---------------------------------------------------------------------------
+
+/** Add two optional figures, keeping "neither was printed" as undefined. */
+function plus(a: number | undefined, b: number | undefined): number | undefined {
+  if (a === undefined) return b
+  if (b === undefined) return a
+  return a + b
+}
+
+/** Add two lists of coded lines, summing the quantities and the money. */
+function addList<T extends { code: string; qtyMilli?: number; pence?: number }>(a: T[], b: T[]): T[] {
+  const out = new Map<string, T>()
+  for (const item of a) out.set(item.code, { ...item })
+  for (const item of b) {
+    const seen = out.get(item.code)
+    if (!seen) {
+      out.set(item.code, { ...item })
+      continue
+    }
+    out.set(item.code, {
+      ...seen,
+      ...item,
+      qtyMilli: (seen.qtyMilli ?? 0) + (item.qtyMilli ?? 0),
+      pence: (seen.pence ?? 0) + (item.pence ?? 0),
+      // A share of one receipt means nothing once two are added; it is
+      // recomputed from the totals wherever it is shown.
+      ...(('percentBp' in seen || 'percentBp' in item) ? { percentBp: undefined } : {}),
+    } as T)
+  }
+  return [...out.values()]
+}
+
+function addTotal(a: TotalLine | undefined, b: TotalLine | undefined): TotalLine | undefined {
+  if (!a) return b
+  if (!b) return a
+  return { qtyMilli: a.qtyMilli + b.qtyMilli, pence: a.pence + b.pence }
+}
+
+/**
+ * Two separate receipts, added into one day.
+ *
+ * Every count and every amount adds. Two figures do not, and both would be
+ * wrong if they did: the average spend, which is a division and is recomputed
+ * from the summed totals; and the running grand totals in the header, which are
+ * the till's lifetime odometer — adding two readings of an odometer gives a
+ * number that has never been true.
+ */
+export function addZRead(a: ZRead, b: ZRead): ZRead {
+  const t = a.transaction
+  const u = b.transaction
+  return {
+    // The first receipt's header, less the odometer readings and the Z counter,
+    // neither of which means anything for a pair.
+    header: {
+      ...(a.header.receiptNo !== undefined ? { receiptNo: a.header.receiptNo } : {}),
+      ...(a.header.clerk !== undefined ? { clerk: a.header.clerk } : {}),
+      ...(a.header.printedAt !== undefined ? { printedAt: a.header.printedAt } : {}),
+    },
+    departments: addList(a.departments, b.departments),
+    groups: addList(a.groups, b.groups),
+    deptTotal: addTotal(a.deptTotal, b.deptTotal),
+    transaction: {
+      net1Pence: plus(t.net1Pence, u.net1Pence),
+      net2Pence: plus(t.net2Pence, u.net2Pence),
+      voidCount: plus(t.voidCount, u.voidCount),
+      voidPence: plus(t.voidPence, u.voidPence),
+      noSaleCount: plus(t.noSaleCount, u.noSaleCount),
+      guestCount: plus(t.guestCount, u.guestCount),
+      orderTotalPence: plus(t.orderTotalPence, u.orderTotalPence),
+      paidTotalPence: plus(t.paidTotalPence, u.paidTotalPence),
+      cashCount: plus(t.cashCount, u.cashCount),
+      cashPence: plus(t.cashPence, u.cashPence),
+      cardCount: plus(t.cardCount, u.cardCount),
+      cardPence: plus(t.cardPence, u.cardPence),
+      cidPence: plus(t.cidPence, u.cidPence),
+      caChkIdPence: plus(t.caChkIdPence, u.caChkIdPence),
+      // An average of two averages is not an average. Worked out again from
+      // what the two receipts came to between them.
+      ...(() => {
+        const paid = plus(t.paidTotalPence, u.paidTotalPence)
+        const guests = plus(t.guestCount, u.guestCount)
+        return paid !== undefined && guests !== undefined && guests > 0
+          ? { avePence: Math.round(paid / guests) }
+          : {}
+      })(),
+    },
+    clerks: addList(
+      a.clerks as Array<ClerkLine & { code: string }>,
+      b.clerks as Array<ClerkLine & { code: string }>,
+    ) as ClerkLine[],
+    plus: addList(a.plus, b.plus),
+    pluTotal: addTotal(a.pluTotal, b.pluTotal),
+  }
+}
+
 export function mergeZRead(base: ZRead, incoming: ZRead): ZRead {
   const mergeList = <T extends { code: string }>(a: T[], b: T[]): T[] => {
     const out = new Map<string, T>()

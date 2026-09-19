@@ -26,7 +26,7 @@ import { crossfootVerdict } from '../core/crossfoot.ts'
 import { formatMoney, parsePence } from '../core/money.ts'
 import { isZReadEmpty, sectionLabel, sectionsIn, type ZRead } from '../core/zread.ts'
 import type { CaptureConfidence, CaptureSource } from '../core/types.ts'
-import { mergeOutcomes, scanZReadBatch, type PhotoOutcome } from '../ocr/scanZRead.ts'
+import { foldRolls, scanZReadBatch, type PhotoOutcome, type Roll } from '../ocr/scanZRead.ts'
 import { effectiveEngine, hasApiKey, loadSettings, type EnginePreference } from '../storage/settings.ts'
 import { IconCamera, IconReceipt, IconTickSmall, IconTrash } from './icons.tsx'
 import { Lightbox } from './Lightbox.tsx'
@@ -62,6 +62,14 @@ export interface RollState {
   error: string
   notes: string
   confidence?: CaptureConfidence
+  /**
+   * Whether the photographs are pieces of one receipt or separate ones.
+   *
+   * 'auto' tells them apart by the Z counter, which increments once per Z
+   * read. The other two are for a till whose header never comes out legible,
+   * or a roll photographed so the header appears twice.
+   */
+  how: 'auto' | 'separate' | 'together'
   /** Used when the roll was not scanned — she just types the session total. */
   totalText: string
   source: CaptureSource
@@ -71,6 +79,7 @@ export interface RollState {
 export function emptyRoll(): RollState {
   return {
     shots: [],
+    how: 'auto',
     scanning: false,
     error: '',
     notes: '',
@@ -204,6 +213,26 @@ export function TillRollCard({ value, onChange, onReview, step, done }: Props) {
   const unread = unreadShots(value)
   const preflight = preflightWords(ready)
 
+  /**
+   * How the photographs were sorted into receipts.
+   *
+   * Said out loud because it is the one decision here that can be wrong by a
+   * whole night's takings: three photographs of one roll added together would
+   * treble the day, and two separate receipts merged would lose one of them.
+   */
+  const grouped: Roll[] = foldRolls(
+    shots.map((shot) => shot.outcome),
+    { how: value.how, ...(value.base ? { base: value.base } : {}) },
+  ).rolls
+  const setHow = (how: RollState['how']) => {
+    const outcomes = shots.map((shot) => shot.outcome)
+    const merged = foldRolls(outcomes, { how, ...(value.base ? { base: value.base } : {}) }).zRead
+    const gotSomething = !isZReadEmpty(merged)
+    const next: RollState = { ...value, how }
+    if (gotSomething) next.zRead = merged
+    onChange(next)
+  }
+
   // Every photograph failing for the same reason is one problem, not several.
   const errors = shots.map((shot) => shot.outcome.error).filter((e): e is string => !!e)
   const sharedError = errors.length > 1 && errors.length === shots.length && new Set(errors).size === 1
@@ -248,7 +277,7 @@ export function TillRollCard({ value, onChange, onReview, step, done }: Props) {
       })
       const outcomes = next.map((shot) => shot.outcome)
 
-      const merged = mergeOutcomes(outcomes, from.base)
+      const merged = foldRolls(outcomes, { how: from.how, ...(from.base ? { base: from.base } : {}) }).zRead
       // Whether anything was actually read decides what may be thrown away. A
       // scan that failed must not take the figure she had already typed with
       // it — losing her work because the camera did not help is the worst
@@ -310,7 +339,7 @@ export function TillRollCard({ value, onChange, onReview, step, done }: Props) {
   function removeShot(at: number) {
     const next = renumber(shots.filter((_, i) => i !== at))
     const outcomes = next.map((shot) => shot.outcome)
-    const merged = mergeOutcomes(outcomes, value.base)
+    const merged = foldRolls(outcomes, { how: value.how, ...(value.base ? { base: value.base } : {}) }).zRead
     const gotSomething = !isZReadEmpty(merged)
     const nextRoll: RollState = {
       ...value,
@@ -504,6 +533,46 @@ export function TillRollCard({ value, onChange, onReview, step, done }: Props) {
           Throwing away a photograph saved earlier removes the picture. Figures already read off it
           stay until the roll is started again.
         </p>
+      )}
+
+      {/* What it made of them: one receipt or several, and what they came to.
+          A day can be two tills or a lunchtime and an evening, and those add;
+          pieces of one roll do not. */}
+      {grouped.length > 1 && (
+        <div className="rolls" data-testid="rolls">
+          <p className="note" style={{ marginTop: 0 }}>
+            <strong>{grouped.length} separate receipts, added together.</strong>{' '}
+            {grouped
+              .map((r, i) => `${r.zNumber !== undefined ? `Z ${r.zNumber}` : `receipt ${i + 1}`} (${r.photos.length} ${r.photos.length === 1 ? 'photo' : 'photos'})`)
+              .join(', ')}
+            . Their takings, card and cash are all added.
+          </p>
+          <div className="alts" style={{ marginTop: 0 }}>
+            <button type="button" className="btn-small" data-testid="one-roll" onClick={() => setHow('together')}>
+              No — these are one receipt
+            </button>
+          </div>
+        </div>
+      )}
+      {grouped.length === 1 && shots.length > 1 && (
+        <div className="rolls">
+          <p className="note" style={{ marginTop: 0 }}>
+            {value.how === 'together'
+              ? 'Treated as one receipt, so a section photographed twice counts once.'
+              : `${shots.length} photographs of one receipt${grouped[0]?.zNumber !== undefined ? ` — Z ${grouped[0].zNumber}` : ''}, so nothing is counted twice.`}{' '}
+            If they are separate receipts from the same day, say so and their figures will add.
+          </p>
+          <div className="alts" style={{ marginTop: 0 }}>
+            <button type="button" className="btn-small" data-testid="separate-rolls" onClick={() => setHow('separate')}>
+              These are separate receipts
+            </button>
+            {value.how !== 'auto' && (
+              <button type="button" className="btn-small" onClick={() => setHow('auto')}>
+                Work it out again
+              </button>
+            )}
+          </div>
+        </div>
       )}
 
       {captured && missing.length > 0 && (

@@ -1148,6 +1148,19 @@ table.data.crew th[scope='row'] { white-space: nowrap; }
 .low-list .low-days { grid-column: 1 / -1; font-size: 13px; color: var(--muted); }
 .low-list .low-days.urgent { color: var(--bad); font-weight: 600; }
 
+/* What the photographs were made of: one receipt or several. Set apart from
+   the shots above it, because it is the one decision on this card that can be
+   wrong by a whole night's takings. */
+.rolls {
+  margin: 12px 0 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.rolls .note { margin-bottom: 8px; }
+
 .shots { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 
 .shots li {

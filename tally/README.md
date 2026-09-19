@@ -46,6 +46,29 @@ back. So the nightly job survives a cellar with no reception: photograph at
 closing, read in the morning. A night saved that way says exactly that when it
 is offered back, and says how many others are waiting behind it.
 
+**Several receipts on one day add up.** Two tills cashed up together, or a
+lunchtime Z and an evening one: photograph them all, and their takings, card,
+cash, items and departments are added into one day. This is the opposite job
+from folding three photographs of one long roll, where a department seen twice
+is the same money read twice and the later reading simply replaces the earlier.
+Get the two backwards and the day reads at a third of what was taken, or at
+triple — nothing else in the app is that far wrong that quietly.
+
+So they are told apart by the **Z counter** rather than by anybody's judgement:
+it increments once per Z read, so two photographs carrying different ones are
+certainly different receipts, and a photograph with no Z number on it is the
+middle or the end of a roll and joins whichever receipt is open. With no Z
+number anywhere it stays one receipt rather than guessing, because doubling a
+night over an unreadable header would be the worst way to be wrong. The card
+says which it decided and how many photographs went into each, and either
+answer can be overruled in a tap.
+
+Two figures do not add when receipts do, and both would be wrong if they did:
+the average spend, which is a division and is worked out again from the summed
+totals; and the running grand totals in the header, which are the till's
+lifetime odometer — adding two readings of an odometer gives a number that has
+never been true.
+
 Every scanned figure lands in an ordinary editable box. **Nothing is ever locked
 to what the scanner read.** That is a deliberate design rule, not a fallback:
 receipt paper defeats scanners often enough that an app which merely *reported*
