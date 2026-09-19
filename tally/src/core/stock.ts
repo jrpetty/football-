@@ -137,6 +137,17 @@ export function pourUsage(
    * once, they stop being reported as a gap because they are not one.
    */
   notStock: readonly string[] = [],
+  /**
+   * The cellar lines that actually exist.
+   *
+   * A pour can outlive the line it draws on — a restore that brings pours
+   * without their items, a line renamed away underneath one. The usage then
+   * lands on an id nothing maps over, and the sale comes off nothing at all
+   * while still counting as accounted for: the worst of both, because it is
+   * neither subtracted nor reported. Given the ids, those lines are reported
+   * as unmapped, which is what they are.
+   */
+  knownIds?: ReadonlySet<string>,
 ): { used: Map<string, number>; unmapped: SoldLine[] } {
   const byCode = new Map(pours.map((p) => [p.itemCode.toUpperCase(), p]))
   const byName = new Map(pours.map((p) => [p.itemName.trim().toUpperCase(), p]))
@@ -148,7 +159,7 @@ export function pourUsage(
   for (const line of sold) {
     if (ignored.has(line.code.trim().toUpperCase()) || ignored.has(line.name.trim().toUpperCase())) continue
     const pour = byCode.get(line.code.toUpperCase()) ?? byName.get(line.name.trim().toUpperCase())
-    if (!pour) {
+    if (!pour || (knownIds !== undefined && !knownIds.has(pour.stockItemId))) {
       unmapped.push(line)
       continue
     }
@@ -1052,7 +1063,15 @@ export function proposePours(
 
     const guess = guessPour(line.code, line.name, mlPerShot)
     const shape = servingOf(guess.servingName as Basis)
-    const found = match(guess.stockName, items.filter((i) => i.kind === shape.kind), (i) => i.name)
+    const sameKind = items.filter((i) => i.kind === shape.kind)
+    // On the name first. Failing that, on the line's own id, which is a slug
+    // of whatever it was first called — the house white is stored as
+    // `house-wine` and displayed as "White wine", and the till says "HOUSE
+    // WINE". Nothing else reaches that, and guessing it would be worse.
+    let found = match(guess.stockName, sameKind, (i) => i.name)
+    if (found.kind === 'unmatched') {
+      found = match(guess.stockName, sameKind, (i) => i.id.replace(/-/g, ' '))
+    }
 
     out.push({
       itemCode: line.code,
@@ -1259,7 +1278,7 @@ function windowBetween(
     items,
     opening,
     deliveredBetween(deliveries, previous.date, latest.date),
-    pourUsage(soldBetween(days, previous.date, latest.date), pours, notStock).used,
+    pourUsage(soldBetween(days, previous.date, latest.date), pours, notStock, new Set(items.map((i) => i.id))).used,
   )
   const lines = compareToCount(closed, new Map(latest.lines.map((l) => [l.stockItemId, l.baseUnits])))
     .filter((v) => v.varianceBaseUnits !== null)
@@ -1418,7 +1437,14 @@ export function takeWeeks(args: {
       days: Math.max(1, Math.round((Date.parse(latest.date) - Date.parse(previous.date)) / 86_400_000)),
       rollNights,
       nightsWithoutItems,
-      unmapped: mergeSold(pourUsage(soldBetween(args.days, previous.date, latest.date), args.pours, args.notStock).unmapped),
+      unmapped: mergeSold(
+        pourUsage(
+          soldBetween(args.days, previous.date, latest.date),
+          args.pours,
+          args.notStock,
+          new Set(args.items.map((i) => i.id)),
+        ).unmapped,
+      ),
     })
   }
   return out.reverse()
@@ -1475,7 +1501,7 @@ export function cellarHealth(args: {
     ? new Map(latest.lines.map((l) => [l.stockItemId, l.baseUnits]))
     : new Map(items.map((item) => [item.id, 0]))
   const openSales = soldBetween(days, since)
-  const openPour = pourUsage(openSales, pours, notStock)
+  const openPour = pourUsage(openSales, pours, notStock, new Set(items.map((i) => i.id)))
   const openUsage = openPour.used
   const ledger = buildLedger(items, opening, deliveredBetween(deliveries, since), openUsage)
   const dead = deadStock(ledger, openUsage, sinceDays, costOfServing)

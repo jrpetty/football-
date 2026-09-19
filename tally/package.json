@@ -16,6 +16,7 @@
     "build:single": "TALLY_SINGLE=1 vite build && node scripts/build-single.ts",
     "test:phone": "node e2e/phone.ts",
     "test:stocktake": "node e2e/stocktake.ts",
+    "test:pours": "node e2e/pours.ts",
     "serve": "node serve.mjs",
     "test:site": "node e2e/site.ts"
   },

@@ -51,6 +51,22 @@ function tokens(text: string): string[] {
  * "PINT TADDY LAGER" — with a smaller credit for the reverse, so that between
  * two candidates that both contain the written name, the tighter one wins.
  */
+/**
+ * Whether a token appears on the other side.
+ *
+ * Whole, or a prefix of a word at least four characters long — "LAG" for
+ * "LAGER", but never "GIN" for "GINGER", which is a prefix but not of a long
+ * enough stem to be safe.
+ */
+function covers(token: string, other: ReadonlySet<string>): boolean {
+  if (other.has(token)) return true
+  if (token.length < 3) return false
+  for (const o of other) {
+    if (o.length >= 4 && o.startsWith(token) && token.length >= o.length - 2) return true
+  }
+  return false
+}
+
 export function score(written: string, printed: string): number {
   const a = tokens(written)
   const b = tokens(printed)
@@ -59,21 +75,21 @@ export function score(written: string, printed: string): number {
   const bSet = new Set(b)
   const aSet = new Set(a)
 
-  // A token counts if it appears whole on the other side, or is a prefix of one
-  // at least four characters long — "LAG" for "LAGER", but never "GIN" for
-  // "GINGER", which is a prefix but not of a long enough stem to be safe.
-  const covers = (token: string, other: Set<string>): boolean => {
-    if (other.has(token)) return true
-    if (token.length < 3) return false
-    for (const o of other) {
-      if (o.length >= 4 && o.startsWith(token) && token.length >= o.length - 2) return true
-    }
-    return false
-  }
+  // EVERY word of the written name has to be accounted for. Partial credit is
+  // what let "Fruit Beer" match "Ginger Beer" — one shared generic word scored
+  // exactly the floor, and every fruit beer sold would have come off the
+  // ginger beer, silently, while the fruit beer sat there never moving.
+  // "Crisps — steak" against "Crisps — cheese" is the same trap with the
+  // shared word at the front.
+  //
+  // The printed side may say more: "Taddy Lager" is fully accounted for by
+  // "PINT TADDY LAGER", and how much MORE it says is what separates two
+  // candidates that both contain the name — so the tighter one wins and a
+  // genuine coin toss stays a coin toss.
+  if (a.some((t) => !covers(t, bSet))) return 0
 
-  const forward = a.filter((t) => covers(t, bSet)).length / a.length
   const back = b.filter((t) => covers(t, aSet)).length / b.length
-  return forward * 0.75 + back * 0.25
+  return 0.75 + back * 0.25
 }
 
 /**

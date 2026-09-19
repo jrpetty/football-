@@ -151,6 +151,24 @@ Lines that are not cellar stock at all — the coffee, the room hire — are sai
 once and stop being reported as stock that walked. A warning that is always on
 is a warning nobody reads.
 
+**A wrong match is far worse than no match**, and the matcher was caught
+breaking its own rule on this pub's real roll: "FRUIT BEER" matched "Ginger
+Beer" on the strength of the word *beer* and scored exactly the floor. Every
+fruit beer sold would have come off the ginger beer, silently, while the fruit
+beer sat there never moving. So every word of the name being matched must now
+be accounted for — partial credit is gone. The printed side may say more
+("Taddy Lager" is fully accounted for by "PINT TADDY LAGER"), and how much more
+is what separates two candidates that both contain the name, so a genuine coin
+toss stays a coin toss. Failing on the name, a line is tried against its own
+stored id, which is how the house white — stored `house-wine`, displayed
+"White wine", rung up as "HOUSE WINE" — finds itself.
+
+A pour can also outlive the line it draws on, after a restore that brings pours
+without their items. The usage then lands on an id nothing maps over, and the
+sale comes off nothing while still counting as accounted for — neither
+subtracted nor reported, the worst of both. Those are now reported as unmapped,
+which is what they are.
+
 ### The weekly stock take
 
 The receipts run the cellar down night by night; once a week somebody goes down
@@ -456,6 +474,7 @@ npm run build      # production build into dist/
 npm run test:e2e   # the whole flow in real Chromium (build first)
 npm run test:phone # does it fit, and can it be tapped (build first)
 npm run test:stocktake # the cellar it ships with, against the sheet it came from
+npm run test:pours # the till taken off that cellar, arithmetic redone by hand
 npm run serve      # the site, as the container serves it (build first)
 npm run test:site  # the headers, the manifest, the worker and going offline
 npm run icons      # re-rasterise the PNGs after editing public/icon.svg
@@ -483,6 +502,16 @@ which is what makes an iPhone zoom into a form and not come back. It also pulls
 the network out from under the app and checks it still opens and still holds the
 night. The engine is Chromium, because that is what this machine can run: an
 iPhone runs WebKit, so it is a proxy for the layout and not for Safari itself.
+
+`npm run test:pours` is the same discipline pointed at the subtraction. Her
+opening counts are typed in again from the sheet, the quantities are typed in
+again from the printed roll, and the subtraction is done again — no constant and
+no function borrowed from the app. Then the app is opened, the receipt put in,
+the till tied to the cellar through its own interface, and every line read back
+off the screen she reads. It also checks the lines the roll never sold have not
+moved, and that before anything is tied up the app owns up to taking nothing
+off. A cellar that is quietly not being reduced looks exactly like a cellar that
+is, which is why this one exists.
 
 `npm run test:stocktake` checks the stock take the app opens with. The pub's
 own figures are typed into it a second time, from the sheet they came off, and
