@@ -2,7 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './App.tsx'
 import { requestPersistence } from './storage/db.ts'
-import { seedOnce } from './storage/seed.ts'
+import { mergeCrispsOnce, seedOnce } from './storage/seed.ts'
 // The display face, shipped with the app rather than fetched from a fonts
 // host: the till is counted at midnight on pub wifi, and the artifact build
 // must carry everything it needs.
@@ -15,7 +15,9 @@ const root = document.getElementById('root')
 // nothing has to be loaded by hand and no screen renders a cellar it is about
 // to be given. It runs once and merges, so it cannot overwrite a working
 // cellar or run twice.
-void seedOnce().finally(() => {
+void seedOnce()
+  .then(() => mergeCrispsOnce())
+  .finally(() => {
   if (root) createRoot(root).render(<StrictMode><App /></StrictMode>)
 })
 

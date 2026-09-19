@@ -1074,6 +1074,21 @@ table.data.crew th[scope='row'] { white-space: nowrap; }
 .match-sold small { display: block; font-weight: 400; font-size: 12px; color: var(--muted); }
 .match-list select { min-width: 0; }
 .match-takes { justify-self: end; }
+
+/* Picking lines to count as one. A checkbox with its word beside it, big
+   enough to hit with a thumb. */
+.total-pick {
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.total-pick input { width: 22px; height: 22px; }
 .match-takes input { width: 4.5em; }
 
 /* Rising and falling. Two columns on anything wide enough, stacked on a phone;

@@ -163,6 +163,27 @@ toss stays a coin toss. Failing on the name, a line is tried against its own
 stored id, which is how the house white — stored `house-wine`, displayed
 "White wine", rung up as "HOUSE WINE" — finds itself.
 
+#### Counting things the way they are sold
+
+The till and the cellar do not always count at the same grain. Six flavours of
+crisp come into the cellar and go out through one button marked CRISPS; the
+fruit beers go out through FRUIT BEER. Counted apart, no sale can come off any
+of them without somebody guessing which flavour went — so the cellar counts them
+the way they are sold. The crisps arrive totalled (her six figures are still
+typed into the test and added up there, so the sheet is still what the app is
+checked against), and **Cellar → Set up** can total any other lines the same
+way: the counts, the deliveries and the pours all move together.
+
+A stock take only gets a total where *every* line folded in was counted on it.
+Adding up three counted flavours and three blank ones would turn a partial count
+into a whole one, and the difference would read as stock that walked.
+
+The same screen names **lines nothing sells** — the mirror of an unmapped sale,
+and just as quiet. A line no pour points at can never go down, so it sits at
+whatever it was last counted at, looking exactly like stock that never moves.
+Either the till sells it under a name not tied up yet, or the cellar counts it
+finer than the till sells it.
+
 A pour can also outlive the line it draws on, after a restore that brings pours
 without their items. The usage then lands on an id nothing maps over, and the
 sale comes off nothing while still counting as accounted for — neither

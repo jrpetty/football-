@@ -43,8 +43,10 @@ const expected: Record<string, number> = {
   'nut-brown': 31, 'pure-brew-bottled': 30, 'alc-free': 29,
   'orange-juice': 53, 'apple-juice': 56, passion: 39, elderflower: 39,
   'rasp-and-cran': 25, tonic: 41, 'ginger-beer': 58,
-  'crisps-sweet-chilli': 93, 'crisps-steak': 66, 'crisps-prawn-cocktail': 56,
-  'crisps-sea-salted': 97, 'crisps-vinegar': 106, 'crisps-cheese': 107,
+  // Her sheet counted the crisps by flavour; the till sells them through one
+  // button, so the cellar holds the total. The six figures are still typed in
+  // from the sheet and the addition is done here, not taken from the app.
+  crisps: 93 + 66 + 56 + 97 + 106 + 107,
   'salted-nuts': 68, 'dry-roast': 58,
 }
 
@@ -57,11 +59,17 @@ const containers: Record<string, { name: string; baseUnits: number; emptyKg?: nu
   rose: { name: 'wine bottle', baseUnits: 750, emptyKg: 0.175, fullKg: 1.125 },
   'red-wine': { name: 'wine bottle', baseUnits: 750, emptyKg: 0.175, fullKg: 1.125 },
   'house-wine': { name: 'wine bottle', baseUnits: 750, emptyKg: 0.175, fullKg: 1.125 },
-  'crisps-cheese': { name: 'box', baseUnits: 25 },
+  crisps: { name: 'box', baseUnits: 25 },
 }
 
 /** Nothing here was counted, so nothing here may carry a figure. */
-const NOT_COUNTED = ['vodka', 'gin', 'bourbon', 'spiced-rum', 'peach-schnapps', 'post-mix', 'crisps', 'fruit-beer']
+const NOT_COUNTED = ['vodka', 'gin', 'bourbon', 'spiced-rum', 'peach-schnapps', 'post-mix', 'fruit-beer']
+
+/** Counted by flavour on the sheet, totalled into one line by the app. */
+const FOLDED_IN = [
+  'crisps-sweet-chilli', 'crisps-steak', 'crisps-prawn-cocktail',
+  'crisps-sea-salted', 'crisps-vinegar', 'crisps-cheese',
+]
 
 // --- the shipped app ----------------------------------------------------------
 import { fileURLToPath } from 'node:url'
@@ -118,6 +126,7 @@ for (const [id, want] of Object.entries(expected)) {
 }
 say(got.size === Object.keys(expected).length, 'nothing extra was counted', `${got.size} counted, ${Object.keys(expected).length} expected`)
 for (const id of NOT_COUNTED) say(!got.has(id), `${id}: not counted, as it was not`)
+for (const id of FOLDED_IN) say(!items.has(id), `${id}: folded into the crisps total`)
 
 for (const [id, want] of Object.entries(containers)) {
   const c = items.get(id)?.container as Record<string, unknown> | undefined

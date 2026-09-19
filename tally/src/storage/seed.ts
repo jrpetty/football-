@@ -16,9 +16,16 @@
 // that tell the till what to subtract are untouched.
 // ---------------------------------------------------------------------------
 
-import { ML_PER_PINT, readScales, type StockCount, type StockItem } from '../core/stock.ts'
+import { combineStockLines, ML_PER_PINT, readScales, type StockCount, type StockItem } from '../core/stock.ts'
 import { mergeStockConfig } from './export.ts'
-import { loadStockConfig, saveStockConfig, saveStockCount } from './db.ts'
+import {
+  listDeliveries,
+  listStockCounts,
+  loadStockConfig,
+  saveDelivery,
+  saveStockConfig,
+  saveStockCount,
+} from './db.ts'
 
 /** Which stock take this is. Changing it makes the app take a new one in. */
 const MARKER = 'tally.seeded'
@@ -93,13 +100,27 @@ const BOTTLES: Array<[string, string, number]> = [
 ]
 
 /** Packets off a shelf. The crisps come twenty-five to a box. */
+/**
+ * The crisps, counted by flavour on her sheet and sold as one button.
+ *
+ * Kept as she wrote them so the arithmetic can be checked against the sheet,
+ * and then totalled — because the till has a single CRISPS line and no sale
+ * can come off six lines without somebody guessing which flavour went.
+ */
+export const CRISP_FLAVOURS: Array<[string, number]> = [
+  ['sweet chilli', 93],
+  ['steak', 66],
+  ['prawn cocktail', 56],
+  ['sea salted', 97],
+  ['vinegar', 106],
+  ['cheese', 107],
+]
+
+/** Everything the crisps come to, which is what the cellar holds. */
+export const CRISPS_TOTAL = CRISP_FLAVOURS.reduce((a, [, packets]) => a + packets, 0)
+
 const PACKETS: Array<[string, string, number, boolean]> = [
-  ['crisps-sweet-chilli', 'Crisps — sweet chilli', 93, true],
-  ['crisps-steak', 'Crisps — steak', 66, true],
-  ['crisps-prawn-cocktail', 'Crisps — prawn cocktail', 56, true],
-  ['crisps-sea-salted', 'Crisps — sea salted', 97, true],
-  ['crisps-vinegar', 'Crisps — vinegar', 106, true],
-  ['crisps-cheese', 'Crisps — cheese', 107, true],
+  ['crisps', 'Crisps', CRISPS_TOTAL, true],
   ['salted-nuts', 'Salted Nuts', 68, false],
   ['dry-roast', 'Dry Roast', 58, false],
 ]
@@ -185,6 +206,56 @@ export function seedCellar(): { items: StockItem[]; count: StockCount } {
  * Silent either way: a browser that will not let the app read its own marker
  * is not a reason to fail to start, and nor is a database that will not open.
  */
+/** What the crisps were called before they were totalled. */
+const OLD_CRISP_IDS = [
+  'crisps-sweet-chilli', 'crisps-steak', 'crisps-prawn-cocktail',
+  'crisps-sea-salted', 'crisps-vinegar', 'crisps-cheese',
+]
+
+const MERGED = 'tally.merged'
+const MERGE = 'crisps-1'
+
+/**
+ * Total the crisps on a cellar that was seeded before they were.
+ *
+ * The seed only ever runs once, so changing it does nothing for a copy of the
+ * app already in use. This moves the counts, the deliveries and the pours
+ * together — a count left behind would leave the total reading short and look
+ * like stock walking.
+ */
+export async function mergeCrispsOnce(): Promise<boolean> {
+  try {
+    if (localStorage.getItem(MERGED) === MERGE) return false
+  } catch {
+    return false
+  }
+  try {
+    const config = await loadStockConfig()
+    const has = config.items.filter((i) => OLD_CRISP_IDS.includes(i.id))
+    if (has.length === 0) {
+      localStorage.setItem(MERGED, MERGE)
+      return false
+    }
+    const counts = await listStockCounts()
+    const deliveries = await listDeliveries()
+    const out = combineStockLines({
+      items: config.items,
+      pours: config.pours,
+      counts,
+      deliveries,
+      into: { id: 'crisps', name: 'Crisps' },
+      from: [...OLD_CRISP_IDS, 'crisps'],
+    })
+    await saveStockConfig({ ...config, items: out.items, pours: out.pours })
+    for (const c of out.counts) await saveStockCount(c)
+    for (const d of out.deliveries) await saveDelivery(d)
+    localStorage.setItem(MERGED, MERGE)
+    return true
+  } catch {
+    return false
+  }
+}
+
 export async function seedOnce(): Promise<boolean> {
   try {
     if (localStorage.getItem(MARKER) === SEED) return false

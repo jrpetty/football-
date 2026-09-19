@@ -52,10 +52,20 @@ test('a wine bottle can be weighed, and a middle keg cannot yet', () => {
 test('the bottles and the packets are counted one by one', () => {
   assert.equal(reads('cherry'), '46 bottles')
   assert.equal(reads('tonic'), '41 bottles')
-  assert.equal(reads('crisps-cheese'), '107 units')
-  assert.equal(byId.get('crisps-cheese')?.container?.baseUnits, 25, 'twenty-five to a box')
   assert.equal(reads('salted-nuts'), '68 units')
   assert.equal(byId.get('salted-nuts')?.container, undefined, 'nuts come loose')
+})
+
+test('the crisps are counted as the till sells them — one line, six flavours in it', () => {
+  // Her sheet counted them by flavour; the till has a single CRISPS button.
+  // Counted apart, no sale could come off any of them without somebody
+  // guessing which flavour went.
+  assert.equal(reads('crisps'), '525 units')
+  assert.equal(93 + 66 + 56 + 97 + 106 + 107, 525, 'the sheet, added up here')
+  assert.equal(byId.get('crisps')?.container?.baseUnits, 25, 'twenty-five to a box')
+  for (const id of ['crisps-cheese', 'crisps-steak', 'crisps-vinegar', 'crisps-sea-salted', 'crisps-sweet-chilli', 'crisps-prawn-cocktail']) {
+    assert.ok(!byId.has(id), `${id} was folded into the total`)
+  }
 })
 
 test('nothing that was not counted is claimed to have been', () => {

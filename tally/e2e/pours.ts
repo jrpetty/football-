@@ -47,6 +47,9 @@ const opening: Record<string, number> = {
   'pure-brew-bottled': 30,
   'salted-nuts': 68,
   'dry-roast': 58,
+  // Counted by flavour on her sheet, totalled because the till sells them
+  // through one button. The six figures added up here, not taken from the app.
+  crisps: 93 + 66 + 56 + 97 + 106 + 107,
 }
 
 // --- what the roll says went out, typed again from the printed receipt ------------
@@ -71,6 +74,7 @@ const poured: Record<string, number> = {
   'pure-brew-bottled': 1,
   'salted-nuts': 3,
   'dry-roast': 4,
+  crisps: 79,
 }
 
 /** How the app says each line's name, so a row can be found on the screen. */
@@ -91,6 +95,7 @@ const shown: Record<string, string> = {
   'pure-brew-bottled': 'Pure Brew (bottled)',
   'salted-nuts': 'Salted Nuts',
   'dry-roast': 'Dry Roast',
+  crisps: 'Crisps',
 }
 
 /** Lines counted on the sheet that the roll never sold — they must not move. */
@@ -98,12 +103,13 @@ const UNTOUCHED: Record<string, number> = {
   'red-wine': 14 * BOTTLE_ML + 625,
   cherry: 46,
   pear: 85,
-  'crisps-cheese': 107,
+  'nut-brown': 31,
 }
 
 /** How the screen writes a figure, so the expectation can be compared as text. */
 function asShown(id: string, baseUnits: number): string {
   if (id === 'rose' || id === 'house-wine' || id === 'red-wine') return `${baseUnits} ml`
+  if (id === 'crisps') return String(baseUnits)
   if (['taddy-lager', 'alpine', 'stout', 'cider', 'dark-mild'].includes(id)) {
     const pints = Math.round((baseUnits / PINT) * 10) / 10
     return `${pints} pint`
@@ -208,7 +214,7 @@ for (const [id, open] of Object.entries(opening)) {
 
 for (const [id, open] of Object.entries(UNTOUCHED)) {
   const name = {
-    'red-wine': 'Red wine', cherry: 'Cherry', pear: 'Pear', 'crisps-cheese': 'Crisps — cheese',
+    'red-wine': 'Red wine', cherry: 'Cherry', pear: 'Pear', 'nut-brown': 'Nut Brown',
   }[id] as string
   const row = await page.locator(`tr:has(th:text-is("${name}"))`).first().innerText().catch(() => '')
   const cells = row.split('\t').map((c) => c.trim())
@@ -218,6 +224,60 @@ for (const [id, open] of Object.entries(UNTOUCHED)) {
     `the app says "${cells[1] ?? ''}"`,
   )
 }
+
+// --- the lines nothing sells, and counting them the way they are sold ----------
+//
+// The mirror of an unmapped sale: a line no pour points at can never go down,
+// so it sits at whatever it was last counted at looking like stock that never
+// moves. The fruit beers are the crisps all over again — several in the cellar,
+// one button on the till.
+await page.click('.chip:has-text("Set up")')
+await page.waitForTimeout(700)
+const orphanText = await page.locator('[data-testid="orphans"]').innerText().catch(() => '')
+say(/never moves/.test(orphanText), 'it names the lines nothing on the till sells', orphanText.slice(0, 200))
+
+const pageText = await page.locator('.main').innerText()
+for (const name of ['Cherry', 'Raspberry', 'Nut Brown', 'Red wine']) {
+  say(pageText.includes(name), `${name} is listed as a line nothing sells`)
+}
+say(!pageText.includes('Crisps — cheese'), 'and the crisps are not, because they were totalled')
+
+// Total two of them, as she would the fruit beers.
+await page.locator('input[aria-label="Total Cherry with others"]').check()
+await page.locator('input[aria-label="Total Raspberry with others"]').check()
+await page.fill('[data-testid="total-name"]', 'Fruit beer')
+await page.click('[data-testid="total-lines"]')
+await page.waitForTimeout(1200)
+say(
+  /counted as one/.test(await page.locator('.toast').innerText().catch(() => '')),
+  'totalling two lines says what it did',
+  await page.locator('.toast').innerText().catch(() => ''),
+)
+
+await page.click('.chip:has-text("What’s down there")')
+await page.waitForTimeout(900)
+const fruit = await page.locator('tr:has(th:text-is("Fruit beer"))').first().innerText().catch(() => '')
+const fruitCells = fruit.split('\t').map((c) => c.trim())
+// Line | Left | Nights | Counted | In | Poured
+say(
+  (fruitCells[3] ?? '').startsWith('68'),
+  'and 46 cherry plus 22 raspberry is counted as 68',
+  `the app says "${fruit.replace(/\t/g, ' | ')}"`,
+)
+// The till's own FRUIT BEER button now draws on the combined line, which is
+// the whole reason for totalling them.
+say(
+  (fruitCells[5] ?? '').startsWith('3'),
+  'and the three the till sold come off it',
+  `the app says "${fruit.replace(/\t/g, ' | ')}"`,
+)
+say(
+  (fruitCells[1] ?? '').startsWith('65'),
+  'leaving 65',
+  `the app says "${fruit.replace(/\t/g, ' | ')}"`,
+)
+const gone = await page.locator('.main').innerText()
+say(!/\bCherry\b/.test(gone) && !/\bRaspberry\b/.test(gone), 'with the two old lines gone')
 
 say(errors.length === 0, 'nothing threw along the way', errors.join('; '))
 

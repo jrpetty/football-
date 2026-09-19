@@ -26,6 +26,8 @@ import {
   describeStock,
   proposeDelivery,
   proposePours,
+  combineStockLines,
+  linesNothingSells,
   type PourProposal,
   formatServings,
   formatServingsSigned,
@@ -498,6 +500,54 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
 
   /** What each row has been set to, before any of it is saved. */
   const [picks, setPicks] = useState<Record<string, string>>({})
+
+  /**
+   * Cellar lines nothing on the till draws on.
+   *
+   * The mirror of an unmapped sale, and just as quiet: a line no pour points
+   * at can never go down, so it sits at whatever it was last counted at
+   * looking like stock that never moves.
+   */
+  const orphans = useMemo(() => (config ? linesNothingSells(config.items, config.pours) : []), [config])
+  const [totalling, setTotalling] = useState<Set<string>>(new Set())
+  const [totalName, setTotalName] = useState('')
+
+  /**
+   * Count several lines the way the till sells them.
+   *
+   * Six flavours of crisp come into the cellar and go out through one button;
+   * five fruit beers go out through FRUIT BEER. Counted apart, no sale can
+   * come off any of them without somebody guessing which one went.
+   */
+  async function totalLines() {
+    if (!config) return
+    const from = [...totalling]
+    if (from.length < 2) return say('Pick at least two lines to total together.')
+    const name = totalName.trim() || (config.items.find((i) => i.id === from[0])?.name ?? 'Total')
+    const kinds = new Set(from.map((id) => config.items.find((i) => i.id === id)?.kind))
+    if (kinds.size > 1) {
+      return say('Those are counted in different ways, so they cannot be totalled into one line.')
+    }
+    const out = combineStockLines({
+      items: config.items,
+      pours: config.pours,
+      counts,
+      deliveries,
+      into: { id: idFor(name), name },
+      from,
+    })
+    const next = { ...config, items: out.items, pours: out.pours }
+    setConfig(next)
+    await saveStockConfig(next)
+    for (const c of out.counts) await saveStockCount(c)
+    for (const d of out.deliveries) await saveDelivery(d)
+    setCounts(await listStockCounts().catch(() => counts))
+    setDeliveries(await listDeliveries().catch(() => deliveries))
+    setTotalling(new Set())
+    setTotalName('')
+    onChanged()
+    say(`${out.absorbed.length + 1} lines are now counted as one — “${name}”.`)
+  }
   const pickFor = (row: PourProposal): string =>
     picks[row.itemCode] ?? (row.stockItemId ?? (row.how === 'new' ? NEW_LINE : ''))
 
@@ -1465,6 +1515,70 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
               Every line the till has sold comes off the cellar. Anything new it starts selling will
               appear here to be tied up.
             </p>
+          )}
+
+          {orphans.length > 0 && (
+            <>
+              <div className="card-head" style={{ marginTop: 22 }}>
+                <h2>Nothing sells these</h2>
+                <span className="hint">{orphans.length} lines</span>
+              </div>
+              <p className="note warn" style={{ marginTop: 0 }} data-testid="orphans">
+                No sale comes off {orphans.length === 1 ? 'this line' : 'these lines'}, so{' '}
+                {orphans.length === 1 ? 'it' : 'they'} can only ever sit at whatever was last
+                counted — which looks exactly like stock that never moves. Either the till sells{' '}
+                {orphans.length === 1 ? 'it' : 'them'} under a name not tied up yet, or the cellar
+                counts {orphans.length === 1 ? 'it' : 'them'} finer than the till sells{' '}
+                {orphans.length === 1 ? 'it' : 'them'} — six flavours of crisp behind one button.
+              </p>
+              <ul className="match-list">
+                {orphans.map((i) => (
+                  <li key={i.id}>
+                    <span className="match-sold">
+                      {i.name}
+                      <small>counted in {pluralServing(i.servingName)}</small>
+                    </span>
+                    <label className="total-pick">
+                      <input
+                        type="checkbox"
+                        aria-label={`Total ${i.name} with others`}
+                        checked={totalling.has(i.id)}
+                        onChange={(e) => {
+                          const next = new Set(totalling)
+                          if (e.target.checked) next.add(i.id)
+                          else next.delete(i.id)
+                          setTotalling(next)
+                          if (next.size === 1 && totalName.trim() === '') {
+                            setTotalName(config.items.find((x) => x.id === [...next][0])?.name ?? '')
+                          }
+                        }}
+                      />
+                      <span>total</span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+              {totalling.size > 0 && (
+                <div className="field">
+                  <label htmlFor="total-name">Count those {totalling.size} as one line called</label>
+                  <input
+                    id="total-name"
+                    data-testid="total-name"
+                    value={totalName}
+                    placeholder="Fruit beer"
+                    onChange={(e) => setTotalName(e.target.value)}
+                  />
+                  <button type="button" className="btn-primary" data-testid="total-lines" onClick={() => void totalLines()}>
+                    Total them into one
+                  </button>
+                  <p className="help">
+                    The counts, the deliveries and the pours all move together. A stock take only
+                    gets a total where every one of them was counted on it — adding up three
+                    counted lines and three blank ones would turn a partial count into a whole one.
+                  </p>
+                </div>
+              )}
+            </>
           )}
 
           <div className="alts">

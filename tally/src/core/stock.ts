@@ -1086,6 +1086,114 @@ export function proposePours(
   return out
 }
 
+// ---------------------------------------------------------------------------
+// Totalling several cellar lines into one.
+//
+// The till and the cellar do not always count at the same grain. Six flavours
+// of crisp come into the cellar and go out through one button marked CRISPS;
+// five fruit beers go out through FRUIT BEER. Counted apart, no sale can come
+// off any of them without somebody guessing which — so the honest answer is to
+// count them the way they are sold.
+//
+// Everything moves together: the counts, the deliveries and the pours. A count
+// left behind would leave the total reading short and look like stock walking.
+// ---------------------------------------------------------------------------
+
+export interface Combined {
+  items: StockItem[]
+  pours: Pour[]
+  counts: StockCount[]
+  deliveries: Delivery[]
+  /** Lines that were folded in, so the interface can say what it did. */
+  absorbed: string[]
+}
+
+/**
+ * Fold several lines into one, moving every figure that mentions them.
+ *
+ * A stock take only gets a total where EVERY line being folded in was counted
+ * on it. Adding up three counted flavours and three blank ones would turn a
+ * partial count into a whole one, and the difference would read as stock that
+ * walked — the same "not counted is not none" rule the rest of the cellar
+ * keeps.
+ */
+export function combineStockLines(args: {
+  items: readonly StockItem[]
+  pours: readonly Pour[]
+  counts: readonly StockCount[]
+  deliveries: readonly Delivery[]
+  /** The line they all become. May be one of `from`, or a new one. */
+  into: { id: string; name: string }
+  from: readonly string[]
+}): Combined {
+  const from = new Set(args.from)
+  const folding = args.items.filter((i) => from.has(i.id))
+  if (folding.length === 0) {
+    return { items: [...args.items], pours: [...args.pours], counts: [...args.counts], deliveries: [...args.deliveries], absorbed: [] }
+  }
+
+  // The shape comes from the lines being folded, not from a guess: they are
+  // the same drink counted apart, so they already agree about what one is.
+  const first = folding[0]!
+  const combined: StockItem = {
+    id: args.into.id,
+    name: args.into.name,
+    kind: first.kind,
+    servingBaseUnits: first.servingBaseUnits,
+    servingName: first.servingName,
+  }
+  const container = folding.find((i) => i.container)?.container
+  if (container) combined.container = container
+  const cost = folding.find((i) => i.cost)?.cost
+  if (cost) combined.cost = cost
+  const history = folding.find((i) => i.costHistory?.length)?.costHistory
+  if (history) combined.costHistory = history
+
+  const items = args.items.filter((i) => !from.has(i.id) && i.id !== combined.id)
+  items.push(combined)
+  items.sort((a, b) => a.name.localeCompare(b.name))
+
+  const pours = args.pours.map((p) =>
+    from.has(p.stockItemId) ? { ...p, stockItemId: combined.id } : p,
+  )
+
+  const foldingIds = new Set(folding.map((i) => i.id))
+  const counts = args.counts.map((c) => {
+    const mine = c.lines.filter((l) => foldingIds.has(l.stockItemId))
+    if (mine.length === 0) return c
+    const rest = c.lines.filter((l) => !foldingIds.has(l.stockItemId) && l.stockItemId !== combined.id)
+    // Every one of them, or none: a partial total is not a total.
+    if (mine.length < foldingIds.size) return { ...c, lines: rest }
+    return { ...c, lines: [...rest, { stockItemId: combined.id, baseUnits: mine.reduce((a, l) => a + l.baseUnits, 0) }] }
+  })
+
+  const deliveries = args.deliveries.map((d) => {
+    if (!d.lines.some((l) => from.has(l.stockItemId))) return d
+    const rest = d.lines.filter((l) => !from.has(l.stockItemId) && l.stockItemId !== combined.id)
+    const mine = d.lines.filter((l) => from.has(l.stockItemId) || l.stockItemId === combined.id)
+    return { ...d, lines: [...rest, { stockItemId: combined.id, baseUnits: mine.reduce((a, l) => a + l.baseUnits, 0) }] }
+  })
+
+  return { items, pours, counts, deliveries, absorbed: folding.map((i) => i.id).filter((id) => id !== combined.id) }
+}
+
+/**
+ * Cellar lines that nothing on the till draws on.
+ *
+ * The mirror of an unmapped sale, and just as quiet: a line no pour points at
+ * can never go down, so it sits at whatever it was last counted at looking
+ * like stock that never moves. Either the till sells it under a name nothing
+ * has been tied to yet, or it is counted at a finer grain than it is sold —
+ * six flavours of crisp behind one button.
+ */
+export function linesNothingSells(
+  items: readonly StockItem[],
+  pours: readonly Pour[],
+): StockItem[] {
+  const drawn = new Set(pours.map((p) => p.stockItemId))
+  return items.filter((i) => !drawn.has(i.id))
+}
+
 export function deliveryLinesFrom(proposals: readonly DeliveryProposal[]): Array<{ stockItemId: string; baseUnits: number }> {
   const out: Array<{ stockItemId: string; baseUnits: number }> = []
   for (const p of proposals) {
