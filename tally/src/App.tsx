@@ -85,29 +85,12 @@ export function App() {
     setDeeper(null)
   }
 
-  const subtitle = reviewing
-    ? 'Checking the roll'
-    : deeper
-      ? DEEPER.find((d) => d.key === deeper)!.blurb
-      : tab === 'tonight'
-        ? editDate
-          ? 'Correcting a saved night'
-          : 'Tonight’s roll'
-        : tab === 'sold'
-          ? 'What went out, and what it took'
-          : tab === 'stock'
-            ? 'What is in the cellar'
-            : 'Everything else'
-
   return (
     <div className="app">
       <header className="header">
         <div className="brand">
-          <span className="brand-mark" aria-hidden="true"><TallyMark size={26} /></span>
-          <div>
-            <h1>Tally</h1>
-            <p className="sub">{subtitle}</p>
-          </div>
+          <span className="brand-mark" aria-hidden="true"><TallyMark size={20} /></span>
+          <h1>Tally</h1>
         </div>
         <nav className="tabs" aria-label="Sections">
           <button type="button" aria-current={tab === 'tonight' ? 'page' : undefined} onClick={() => go('tonight')}>
@@ -176,9 +159,6 @@ export function App() {
                   </button>
                 ))}
               </nav>
-              <p className="note">
-                Nothing in here is needed to count a night. It is all one tap away when it is wanted.
-              </p>
             </div>
           )}
 

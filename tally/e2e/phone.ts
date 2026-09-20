@@ -253,6 +253,13 @@ try {
     await goTab(page, 'Sold')
     await page.waitForTimeout(500)
     await screen(page, 'Trade')
+    // And the analysis behind "Everything else", which is by some way the
+    // longest screen in the app and so the likeliest to run off the side.
+    if ((await page.locator('[data-testid="sold-more"]').count()) > 0) {
+      await page.click('[data-testid="sold-more"]')
+      await page.waitForTimeout(600)
+    }
+    await screen(page, 'Trade, everything else')
     // The whole of Trade, not just the window the chips open on: the weekly
     // charts and the movers only draw over a longer range.
     await page.click('.chip:has-text("90 nights")')

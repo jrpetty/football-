@@ -108,6 +108,10 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
    * again the moment she switches the last one off.
    */
   const [narrowing, setNarrowing] = useState(false)
+  // Everything past what sold. Shut, this screen is the question she came
+  // with — took, cash, card, what went out — and it ends in the nights. Open,
+  // it is the whole analysis. Fourteen cards and the answer is card two.
+  const [deeper, setDeeper] = useState(false)
   const [itemSort, setItemSort] = useState<'value' | 'quantity'>('value')
   const [showAllItems, setShowAllItems] = useState(false)
   const [itemQuery, setItemQuery] = useState('')
@@ -499,77 +503,76 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
           departments, are questions somebody asks occasionally — and three rows
           of chips at the top of a screen make it look like all three have to be
           answered before anything can be read. So the range stays out and the
-          rest waits behind a word, with a count on it when something is on. */}
-      <section className="card">
-        <div className="card-head">
-          <h2>Show me</h2>
-          {narrowed > 0 && <span className="badge">{narrowed} narrowed</span>}
-        </div>
-        <div className="filters">
-          <div className="chip-row">
-            {RANGES.map((r) => (
-              <button
-                key={r.key}
-                type="button"
-                className="chip"
-                aria-pressed={range === r.key}
-                onClick={() => setRange(r.key)}
-              >
-                {r.label}
-              </button>
-            ))}
-            {!narrowing && (
-              <button
-                type="button"
-                className="chip"
-                onClick={() => setNarrowing(true)}
-                data-testid="narrow-it"
-              >
-                Narrow it down…
-              </button>
-            )}
-          </div>
+          rest waits behind a word, with a count on it when something is on.
 
-          {narrowing && <div className="chip-row">
-            {WEEKDAYS.map((d) => (
-              <button
-                key={d}
-                type="button"
-                className="chip"
-                aria-pressed={weekdays.includes(d)}
-                onClick={() => toggle(weekdays, d, setWeekdays)}
-              >
-                {d.slice(0, 3)}
-              </button>
-            ))}
+          The chips sit on the page rather than in a card with "Show me" over
+          them: a box whose whole content is four buttons is a box drawn round
+          nothing, and the heading said less than the buttons under it. */}
+      <div className="filters">
+        <div className="chip-row">
+          {RANGES.map((r) => (
+            <button
+              key={r.key}
+              type="button"
+              className="chip"
+              aria-pressed={range === r.key}
+              onClick={() => setRange(r.key)}
+            >
+              {r.label}
+            </button>
+          ))}
+          {!narrowing && (
             <button
               type="button"
               className="chip"
-              aria-pressed={onlyUnbalanced}
-              onClick={() => setOnlyUnbalanced((v) => !v)}
+              onClick={() => setNarrowing(true)}
+              data-testid="narrow-it"
             >
-              Didn’t balance
+              Narrow it down…
             </button>
-          </div>}
-
-          {narrowing && available.length > 0 && (
-            <div className="chip-row">
-              {available.map((d) => (
-                <button
-                  key={d.code}
-                  type="button"
-                  className="chip"
-                  aria-pressed={depts.includes(d.code)}
-                  onClick={() => toggle(depts, d.code, setDepts)}
-                >
-                  <span className="swatch" style={{ background: seriesVar(departmentSlot(d.code)) }} aria-hidden="true" />
-                  {d.label}
-                </button>
-              ))}
-            </div>
           )}
+          {narrowed > 0 && <span className="badge">{narrowed} narrowed</span>}
         </div>
-      </section>
+
+        {narrowing && <div className="chip-row">
+          {WEEKDAYS.map((d) => (
+            <button
+              key={d}
+              type="button"
+              className="chip"
+              aria-pressed={weekdays.includes(d)}
+              onClick={() => toggle(weekdays, d, setWeekdays)}
+            >
+              {d.slice(0, 3)}
+            </button>
+          ))}
+          <button
+            type="button"
+            className="chip"
+            aria-pressed={onlyUnbalanced}
+            onClick={() => setOnlyUnbalanced((v) => !v)}
+          >
+            Didn’t balance
+          </button>
+        </div>}
+
+        {narrowing && available.length > 0 && (
+          <div className="chip-row">
+            {available.map((d) => (
+              <button
+                key={d.code}
+                type="button"
+                className="chip"
+                aria-pressed={depts.includes(d.code)}
+                onClick={() => toggle(depts, d.code, setDepts)}
+              >
+                <span className="swatch" style={{ background: seriesVar(departmentSlot(d.code)) }} aria-hidden="true" />
+                {d.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* --- the headline --------------------------------------------------- */}
       <section className="card hero">
@@ -592,24 +595,32 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
           tone={t.netVariancePence === 0 ? 'good' : t.netVariancePence < 0 ? 'bad' : 'warn'}
         />
         <StatTile
-          label="Total out"
-          value={formatMoney(t.absVariancePence)}
-          detail="short and over added together"
-          tone={t.absVariancePence === 0 ? 'good' : undefined}
-        />
-        <StatTile
           label="Items sold"
           value={formatQty(t.itemsMilli)}
           detail={t.itemsPerSale === null ? undefined : `${t.itemsPerSale} a round`}
         />
-        {/* Out of the nights that could be judged at all: a night still
-            waiting on its cash count is not a night that failed to balance. */}
-        <StatTile
-          label="Balanced"
-          value={`${t.balancedNights}/${t.reconciledNights}`}
-          detail={`${t.shortNights} short, ${t.overNights} over`}
-          tone={t.reconciledNights > 0 && t.balancedNights === t.reconciledNights ? 'good' : undefined}
-        />
+        {/* Two more tiles used to sit here: the short and the over added
+            together, and how many nights balanced. Both are scoring the
+            cash-up rather than the trade, and they are down with the rest of
+            the analysis now. Out of the nights that could be judged at all: a
+            night still waiting on its cash count is not a night that failed to
+            balance. */}
+        {deeper && (
+          <>
+            <StatTile
+              label="Total out"
+              value={formatMoney(t.absVariancePence)}
+              detail="short and over added together"
+              tone={t.absVariancePence === 0 ? 'good' : undefined}
+            />
+            <StatTile
+              label="Balanced"
+              value={`${t.balancedNights}/${t.reconciledNights}`}
+              detail={`${t.shortNights} short, ${t.overNights} over`}
+              tone={t.reconciledNights > 0 && t.balancedNights === t.reconciledNights ? 'good' : undefined}
+            />
+          </>
+        )}
       </div>
 
       {/* What sold and what it took, straight off the roll — the two tables
@@ -770,6 +781,28 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
         )
       })()}
 
+      {/* Everything past this line is analysis: the alerts, the question box,
+          the forecast, the weeks, the weekdays, the margins, who was on, who
+          rang it up. All of it is real and none of it is what she opened the
+          app to see, so it is one tap rather than eleven cards of scroll.
+
+          The nights stay below it, always out, because tapping a night is how
+          she gets back into one — and a way in should not be behind a door. */}
+      {!deeper && (
+        <button
+          type="button"
+          className="shelf"
+          onClick={() => setDeeper(true)}
+          data-testid="sold-more"
+        >
+          <span className="shelf-icon" aria-hidden="true"><IconChart size={14} /></span>
+          <span className="shelf-text">Everything else</span>
+          <span className="shelf-hint">weeks, margins, who rang it up</span>
+        </button>
+      )}
+
+      {deeper && (
+      <>
       {/* Worth knowing, and the question box, below the figures rather than
           above them. A screen called Sold that opens on a warning and a text
           box makes her scroll past two cards to reach the one thing she came
@@ -1374,6 +1407,9 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
             drawer each could tell you that.
           </p>
         </ChartCard>
+      )}
+
+      </>
       )}
 
       {/* --- the nights themselves --------------------------------------------- */}

@@ -15,7 +15,7 @@ import { formatMoney, parsePence, penceToInput, isPlausibleTakings } from '../co
 import type { CaptureConfidence, CaptureSource } from '../core/types.ts'
 import type { ReceiptKind, TotalCandidate } from '../ocr/index.ts'
 import { describeScanError, scanReceipt } from '../ocr/index.ts'
-import { IconCamera, IconTickSmall } from './icons.tsx'
+import { IconCamera } from './icons.tsx'
 
 export interface FigureState {
   text: string
@@ -48,12 +48,9 @@ interface Props {
   kind: ReceiptKind
   value: FigureState
   onChange: (next: FigureState) => void
-  /** Where this sits in the nightly walk down the page: roll, card, drawer. */
-  step?: number
-  done?: boolean
 }
 
-export function FigureCard({ title, hint, kind, value, onChange, step, done }: Props) {
+export function FigureCard({ title, hint, kind, value, onChange }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [showRaw, setShowRaw] = useState(false)
@@ -128,11 +125,6 @@ export function FigureCard({ title, hint, kind, value, onChange, step, done }: P
   return (
     <section className="card">
       <div className="card-head">
-        {step !== undefined && (
-          <span className={`step-dot${done ? ' done' : ''}`} aria-hidden="true">
-            {done ? <IconTickSmall size={13} /> : step}
-          </span>
-        )}
         <h2>{title}</h2>
         <span className="hint">{hint}</span>
       </div>

@@ -28,7 +28,7 @@ import { isZReadEmpty, sectionLabel, sectionsIn, type ZRead } from '../core/zrea
 import type { CaptureConfidence, CaptureSource } from '../core/types.ts'
 import { foldRolls, scanZReadBatch, type PhotoOutcome, type Roll } from '../ocr/scanZRead.ts'
 import { effectiveEngine, hasApiKey, loadSettings, type EnginePreference } from '../storage/settings.ts'
-import { IconCamera, IconReceipt, IconTickSmall, IconTrash } from './icons.tsx'
+import { IconCamera, IconReceipt, IconTrash } from './icons.tsx'
 import { Lightbox } from './Lightbox.tsx'
 
 /**
@@ -164,12 +164,9 @@ interface Props {
   value: RollState
   onChange: (next: RollState) => void
   onReview: () => void
-  /** Where this sits in the nightly walk down the page. */
-  step?: number
-  done?: boolean
 }
 
-export function TillRollCard({ value, onChange, onReview, step, done }: Props) {
+export function TillRollCard({ value, onChange, onReview }: Props) {
   const pickRef = useRef<HTMLInputElement>(null)
   const cameraRef = useRef<HTMLInputElement>(null)
   const abortRef = useRef<AbortController | null>(null)
@@ -374,11 +371,6 @@ export function TillRollCard({ value, onChange, onReview, step, done }: Props) {
   return (
     <section className="card">
       <div className="card-head">
-        {step !== undefined && (
-          <span className={`step-dot${done ? ' done' : ''}`} aria-hidden="true">
-            {done ? <IconTickSmall size={13} /> : step}
-          </span>
-        )}
         <h2>Till roll</h2>
         <span className="hint">
           {total === 0 ? 'Z read' : `${total} photograph${total > 1 ? 's' : ''}`}

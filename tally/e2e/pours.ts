@@ -206,6 +206,17 @@ await page.waitForTimeout(1200)
 
 await page.click('.chip:has-text("What’s down there")')
 await page.waitForTimeout(1000)
+// Counted, in and poured are behind a tap: six columns do not fit a phone.
+// Open it only if it is shut — the screen remembers between panels, and a
+// second tap would close it again.
+async function showWorkings(): Promise<void> {
+  const button = page.locator('[data-testid="workings"]')
+  if ((await button.innerText().catch(() => '')).includes('Show')) {
+    await button.click()
+    await page.waitForTimeout(300)
+  }
+}
+await showWorkings()
 
 for (const [id, open] of Object.entries(opening)) {
   const want = open - (poured[id] ?? 0)
@@ -288,6 +299,7 @@ say(
 
 await page.click('.chip:has-text("What’s down there")')
 await page.waitForTimeout(900)
+await showWorkings()
 const fruit = await page.locator('tr:has(th:text-is("Fruit beer"))').first().innerText().catch(() => '')
 const fruitCells = fruit.split('\t').map((c) => c.trim())
 // Line | Left | Nights | Counted | In | Poured

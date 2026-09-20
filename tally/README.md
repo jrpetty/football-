@@ -31,6 +31,16 @@ bar is that loop: **Tonight** puts the pictures in, **Sold** is what they add up
 to, and the **Cellar** is what is left downstairs. The rota, the price list, the
 settings and the list of nights one by one all live behind **More**.
 
+The layout answers to the same rule. The header is the name and the four tabs,
+with no sentence under it saying which screen this is — the lit tab says that,
+and every row of pixels spent on chrome is a row of the receipt she cannot see.
+**Sold** opens on took, cash, card, what sold by category, what sold by button,
+and the list of nights; the fourteen cards of analysis behind that are one tap,
+under *Everything else*. The **Cellar** shows the line, what is left of it and
+how many nights that is — three columns, which is what fits a phone — with the
+sum it came from (counted, came in, poured) a tap underneath. Nothing has been
+taken away; it is a question of what is in front of her at eleven at night.
+
 Photograph the till roll and the app can already say what went out of the door
 and what it took — by category off the DEPT block, and line by line off the PLU
 block. Nothing is typed and nothing is estimated: both tables are the till's own
@@ -93,10 +103,12 @@ to what the scanner read.** That is a deliberate design rule, not a fallback:
 receipt paper defeats scanners often enough that an app which merely *reported*
 a number would be trusted once and abandoned the moment it was wrong.
 
-Counting the cellar is deliberately **not** one of the numbered steps. The night
-is the roll, the card machine and the drawer; the cellar is an extra for whoever
-wants it, because a step that never gets ticked reads as a job left undone every
-single night.
+Counting the cellar is deliberately **not** part of the night. The night is the
+roll, the card machine and the drawer; the cellar is an extra for whoever wants
+it, because a job that never gets ticked off reads as a job left undone every
+single night. (The page used to number those three like steps in a walk, with a
+coin in front of each heading. It is one job now, and a number in front of a
+heading that is not step two of anything is a picture of a rule that has gone.)
 
 ### The cellar runs itself off the receipts
 

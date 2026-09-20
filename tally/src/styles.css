@@ -214,33 +214,28 @@ input, select, textarea, button {
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--line-soft);
-  padding: max(10px, env(safe-area-inset-top)) var(--pad) 0;
+  padding: max(8px, env(safe-area-inset-top)) var(--pad) 0;
 }
 
-.brand { display: flex; align-items: center; gap: 10px; }
+/* One line, and it is only the name. It used to carry a sentence under it
+   saying which screen this was — which the lit tab already says, on a screen
+   where every row of pixels is a row of the receipt she cannot see. */
+.brand { display: flex; align-items: center; gap: 8px; }
 
 .brand-mark {
   color: var(--accent);
   display: flex;
   flex: none;
-  filter: drop-shadow(0 1px 4px color-mix(in srgb, var(--accent) 30%, transparent));
 }
 
 .header h1 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 22px;
+  font-size: 17px;
   font-weight: 650;
   letter-spacing: 0.005em;
-  line-height: 1.1;
+  line-height: 1.2;
   color: var(--text);
-}
-
-.header .sub {
-  margin: 1px 0 0;
-  font-size: 12.5px;
-  color: var(--muted);
-  line-height: 1.3;
 }
 
 /* Only the counting screen carries the fixed verdict bar; the others would
@@ -269,8 +264,8 @@ input, select, textarea, button {
   grid-auto-flow: column;
   grid-auto-columns: 1fr;
   gap: 2px;
-  padding: 8px 0 6px;
-  margin-top: 6px;
+  padding: 6px 0 6px;
+  margin-top: 2px;
 }
 
 .tabs button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -352,42 +347,12 @@ input, select, textarea, button {
 
 .card-head .hint { font-size: 12px; color: var(--muted); }
 
-/* The little numbered coin that walks her down the page: roll, card, drawer. */
-.step-dot {
-  flex: none;
-  width: 26px;
-  height: 26px;
-  margin-right: 10px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  font-size: 13px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 13%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--line));
-  transition: background 0.2s var(--ease), color 0.2s var(--ease), border-color 0.2s var(--ease);
-}
+/* There used to be a numbered coin in front of each card's title, walking her
+   down a three-step page: roll, card, drawer. The page is one job now, and a
+   number in front of a heading that is not step two of anything is a picture
+   of a rule that no longer exists. The headings stand on their own.
 
-/* Not part of the walk: the cellar, which is an extra rather than a step. It
-   keeps the shape so the page still lines up, and loses the colour that says
-   "there is something here still to do". */
-.step-dot.extra {
-  color: var(--muted);
-  background: var(--surface-2);
-  border-color: var(--line);
-}
-
-.step-dot.done {
-  color: var(--good);
-  background: var(--good-bg);
-  border-color: color-mix(in srgb, var(--good) 45%, var(--line));
-}
-
-.step-dot .icon { animation: tick-in 0.24s var(--ease) both; }
-
+   Kept: the tick-in, which the done marks elsewhere still use. */
 @keyframes tick-in {
   from { opacity: 0; transform: scale(0.6); }
   to { opacity: 1; transform: none; }

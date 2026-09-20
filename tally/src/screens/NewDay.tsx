@@ -617,7 +617,6 @@ export function NewDay({ onSaved, onReviewRoll, onOpenCellar, initialDate }: Pro
             // throwing a photograph away afterwards.
             if (roll.zRead) onReviewRoll(roll.zRead, (next) => setRoll({ ...roll, zRead: next, base: next }))
           }}
-          done={rollTotalPence(roll) !== null}
         />
 
         {/* The answer, the moment the photographs have been read: what went out
@@ -649,14 +648,10 @@ export function NewDay({ onSaved, onReviewRoll, onOpenCellar, initialDate }: Pro
           kind="card"
           value={card}
           onChange={setCard}
-          done={parsePence(card.text) !== null}
         />
 
         <section className="card">
           <div className="card-head">
-            <span className={`step-dot${drawerPence !== null ? ' done' : ''}`} aria-hidden="true">
-              {drawerPence !== null ? <IconTickSmall size={13} /> : <span className="num">£</span>}
-            </span>
             <h2>Cash counted</h2>
             <span className="hint">
               {expected.cashPence === undefined ? 'From the drawer' : `till says ${formatMoney(expected.cashPence)}`}
@@ -726,8 +721,8 @@ export function NewDay({ onSaved, onReviewRoll, onOpenCellar, initialDate }: Pro
             </p>
           ) : (
             <p className="note">
-              Count the whole drawer, float and all, and put the float in the second box — it is not
-              takings, so it comes off before anything is compared with the till.
+              Count the whole drawer, float and all. The float comes off before anything is
+              compared with the till.
             </p>
           )}
         </section>
@@ -770,9 +765,6 @@ export function NewDay({ onSaved, onReviewRoll, onOpenCellar, initialDate }: Pro
         ) : (
           <section className="card">
             <div className="card-head">
-              <span className={`step-dot extra${cellarCounted ? ' done' : ''}`} aria-hidden="true">
-                {cellarCounted ? <IconTickSmall size={13} /> : <IconBarrel size={14} />}
-              </span>
               <h2>The cellar</h2>
               <span className="hint">
                 {cellarCounted ? `${cellarCounted} lines counted` : 'optional'}
@@ -804,9 +796,8 @@ export function NewDay({ onSaved, onReviewRoll, onOpenCellar, initialDate }: Pro
                 measures={measures}
               />
               <p className="note">
-                Whole containers in the first box, loose servings in the last. A keg that has been
-                weighed empty and full has a box for the scales too — the reading fills the count in.
-                Anything left blank was not counted, which is not the same as none.
+                Whole containers first, loose servings last. Blank means not counted, which is not
+                the same as none.
               </p>
 
               {cellarCounted > 0 && (
@@ -819,16 +810,15 @@ export function NewDay({ onSaved, onReviewRoll, onOpenCellar, initialDate }: Pro
                   </div>
                   {soldTonight.length === 0 ? (
                     <p className="note" style={{ marginTop: 0, marginBottom: 0 }}>
-                      Photograph the till roll and this says what should be down there against what
-                      you have counted. Without the roll's own item list there is nothing to take
-                      off, and every pint sold tonight would read as a pint that walked.
+                      Photograph the till roll first. Without its item list there is nothing to
+                      take off, and every pint sold tonight would read as a pint that walked.
                     </p>
                   ) : gap?.window ? (
                     <CellarGap gap={gap.window} live unmapped={unmapped} />
                   ) : (
                     <p className="note" style={{ marginTop: 0, marginBottom: 0 }}>
-                      The first count there is, so nothing before it to compare with. From the next
-                      one on, this says what should have been down there against what was.
+                      The first count, so nothing yet to compare it with. From the next one on,
+                      this says what should have been down there against what was.
                     </p>
                   )}
                 </div>
@@ -865,8 +855,7 @@ export function NewDay({ onSaved, onReviewRoll, onOpenCellar, initialDate }: Pro
         )}
 
         <p className="note quiet">
-          Save it half done and finish it later — a night with no figure on it at all is kept out of
-          the takings, so it never reads as a night that took nothing.
+          Save it half done and finish later. A night with nothing on it stays out of the takings.
         </p>
       </div>
 

@@ -140,6 +140,10 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
   const [panel, setPanel] = useState<Panel>('levels')
   /** The four panels that are not a weekly job, kept behind one chip. */
   const [deeper, setDeeper] = useState(false)
+  // The workings behind what is left: counted, came in, poured. Three more
+  // columns, and six will not go on a phone — so the answer is on the screen
+  // and the sum behind it is a tap.
+  const [workings, setWorkings] = useState(false)
   const [config, setConfig] = useState<StockConfig | null>(null)
   const [deliveries, setDeliveries] = useState<Delivery[]>([])
   const [counts, setCounts] = useState<Array<{ date: string; lines: Array<{ stockItemId: string; baseUnits: number }> }>>([])
@@ -732,43 +736,40 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
 
   return (
     <div className="main">
-      <section className="card">
-        <div className="card-head">
-          <h2>The cellar</h2>
-          <span className="badge">{config.items.length} lines</span>
-        </div>
-        {/* Three chips, not seven. What is down there is the answer she came
-            for; the stock take and a delivery are the two things she does to
-            it. Week by week, the scales, the costs and the set-up are all real
-            — and all things she wants perhaps monthly, which is not a reason
-            to put them on the screen every time. */}
-        <div className="chip-row">
-          {PANELS.filter((p) => !p.deep || deeper || panel === p.key).map((p) => (
-            <button
-              key={p.key}
-              type="button"
-              className="chip"
-              aria-pressed={panel === p.key}
-              onClick={() => {
-                setPanel(p.key)
-                setDrafts({})
-                // A delivery is dated the day it arrives. A stock take is dated
-                // the trading day it draws a line under, which for a count done
-                // before opening is last night's.
-                if (p.key === 'count') setSheetDate(countDate())
-                else if (p.key === 'delivery') setSheetDate(tradingDayKey())
-              }}
-            >
-              {p.label}
-            </button>
-          ))}
-          {!deeper && (
-            <button type="button" className="chip" onClick={() => setDeeper(true)} data-testid="cellar-more">
-              More…
-            </button>
-          )}
-        </div>
-      </section>
+      {/* Three chips, not seven. What is down there is the answer she came
+          for; the stock take and a delivery are the two things she does to it.
+          Week by week, the scales, the costs and the set-up are all real — and
+          all things she wants perhaps monthly, which is not a reason to put
+          them on the screen every time.
+
+          They sit on the page rather than in a card headed "The cellar", which
+          is what the lit tab says already. */}
+      <div className="chip-row">
+        {PANELS.filter((p) => !p.deep || deeper || panel === p.key).map((p) => (
+          <button
+            key={p.key}
+            type="button"
+            className="chip"
+            aria-pressed={panel === p.key}
+            onClick={() => {
+              setPanel(p.key)
+              setDrafts({})
+              // A delivery is dated the day it arrives. A stock take is dated
+              // the trading day it draws a line under, which for a count done
+              // before opening is last night's.
+              if (p.key === 'count') setSheetDate(countDate())
+              else if (p.key === 'delivery') setSheetDate(tradingDayKey())
+            }}
+          >
+            {p.label}
+          </button>
+        ))}
+        {!deeper && (
+          <button type="button" className="chip" onClick={() => setDeeper(true)} data-testid="cellar-more">
+            More…
+          </button>
+        )}
+      </div>
 
       {config.items.length === 0 && (
         <section className="card">
@@ -830,9 +831,8 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
                 ))}
               </ul>
               <p className="note" style={{ marginBottom: 0 }}>
-                Nights of trade, not days on the calendar — at the rate poured over the{' '}
-                {health?.readNights ?? 0} {health?.readNights === 1 ? 'night' : 'nights'} read
-                since {formatShort(since)}.
+                Nights of trade, at the rate poured over the {health?.readNights ?? 0}{' '}
+                {health?.readNights === 1 ? 'night' : 'nights'} read since {formatShort(since)}.
               </p>
             </section>
           )}
@@ -841,26 +841,34 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
             <div className="card-head">
               <h2>What’s down there now</h2>
               <span className="hint">
+                {config.items.length} lines ·{' '}
                 {health?.through ? `till read to ${formatShort(health.through)}` : `since ${formatShort(since)}`}
               </span>
             </div>
             <p className="note" style={{ marginTop: 0 }}>
-              The last stock take, plus what came in, less what the till poured. Nothing here has
-              to be counted — it moves as each receipt is read.
+              Last stock take, plus what came in, less what the till poured. It moves as each
+              receipt is read.
             </p>
             <div className="table-wrap">
               <table className="data">
-                {/* The answer first, the working after it. Six columns do not
-                    fit a phone, so something has to go behind the scroll —
-                    and it must not be what is left and how long it lasts. */}
+                {/* Three columns, which is what fits: the line, what is
+                    left of it, and how many more nights that is. The sum it
+                    came from — counted, came in, poured — opens underneath.
+                    Six columns fit nothing but a laptop, and a sideways
+                    scrollbar across the one answer she came for is not a
+                    layout, it is a hiding place. */}
                 <thead>
                   <tr>
                     <th scope="col">Line</th>
                     <th scope="col">Left</th>
                     <th scope="col">Nights</th>
-                    <th scope="col">Counted</th>
-                    <th scope="col">In</th>
-                    <th scope="col">Poured</th>
+                    {workings && (
+                      <>
+                        <th scope="col">Counted</th>
+                        <th scope="col">In</th>
+                        <th scope="col">Poured</th>
+                      </>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -892,16 +900,30 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
                                   ? '<1'
                                   : `${r.nightsLeft}n`}
                           </td>
-                          <td className={l.counted ? 'num' : 'num faint'}>
-                            {l.counted ? formatServings(l.countedBaseUnits, l.item) : 'not counted'}
-                          </td>
-                          <td className="num">{formatServings(l.deliveredBaseUnits, l.item)}</td>
-                          <td className="num">{formatServings(l.pouredBaseUnits, l.item)}</td>
+                          {workings && (
+                            <>
+                              <td className={l.counted ? 'num' : 'num faint'}>
+                                {l.counted ? formatServings(l.countedBaseUnits, l.item) : 'not counted'}
+                              </td>
+                              <td className="num">{formatServings(l.deliveredBaseUnits, l.item)}</td>
+                              <td className="num">{formatServings(l.pouredBaseUnits, l.item)}</td>
+                            </>
+                          )}
                         </tr>
                       )
                     })}
                 </tbody>
               </table>
+            </div>
+            <div className="alts">
+              <button
+                type="button"
+                className="btn-small"
+                data-testid="workings"
+                onClick={() => setWorkings((v) => !v)}
+              >
+                {workings ? 'Hide the workings' : 'Show the workings'}
+              </button>
             </div>
             {(health?.nightsWithoutItems ?? 0) > 0 && (
               <p className="note warn">

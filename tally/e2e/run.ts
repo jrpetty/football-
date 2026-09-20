@@ -90,6 +90,24 @@ async function goTab(page: Page, name: string): Promise<void> {
 }
 
 /**
+ * Open the analysis on Sold.
+ *
+ * The screen opens on the job — took, cash, card, what sold, the nights — and
+ * everything past that is one tap behind "Everything else". Idempotent, so it
+ * can be called on a screen that is already open.
+ */
+async function showEverything(page: Page): Promise<void> {
+  // Wait for the screen itself first: asking whether the button is there
+  // before Sold has drawn would find nothing and quietly do nothing.
+  await page.waitForSelector('.kpi-row', { timeout: 5000 })
+  const more = page.locator('[data-testid="sold-more"]')
+  if ((await more.count()) > 0) {
+    await more.click()
+    await page.waitForTimeout(250)
+  }
+}
+
+/**
  * Get at the trading-day field.
  *
  * It is right on all but a handful of nights, so it now sits behind the date
@@ -409,6 +427,7 @@ try {
   // Deliberately before any key is saved: the honest answer is a pointer to
   // Settings, not a spinner that dies quietly.
   await goTab(page, 'Sold')
+  await showEverything(page)
   await page.waitForSelector('.card:has(h2:text("Ask the till"))', { timeout: 5000 })
   await page.fill('input[aria-label="Ask a question about the records"]', 'What did we take last night?')
   await page.click('.ask-row .btn-primary')
@@ -546,6 +565,17 @@ try {
   console.log('\nThe dashboard')
   await goTab(page, 'Sold')
   await page.waitForSelector('.kpi-row', { timeout: 5000 })
+  // Shut, the screen is the question she came with. Fourteen cards of analysis
+  // under the one she wanted is the same as not having it.
+  const shut = await page.locator('.main').innerText()
+  check('Sold opens on what was taken', shut.includes('£2,192.80'))
+  check('and on what sold', shut.includes('Draught beers') && shut.includes('PINT TADDY LAGER'))
+  check('with the analysis behind one tap, not under her thumb',
+    !shut.includes('Who rang it up') && !shut.includes('Week by week'), shut.slice(0, 200))
+  check('and a way back into a night still out', shut.includes('The nights'))
+  check('the tap is there to take', (await page.locator('[data-testid="sold-more"]').count()) === 1)
+
+  await showEverything(page)
   const dash = await page.locator('.main').innerText()
   check('leads with what was taken', dash.includes('£2,192.80'))
   check('splits cash and card as the till states them', dash.includes('£351.80') && dash.includes('£1,841.00'))
@@ -635,6 +665,10 @@ try {
   await page.fill('input[aria-label="Taddy Lager delivered"]', '144')
   await page.click('button:has-text("Book the delivery in")')
   await page.waitForTimeout(600)
+  // What came in and what was poured are the workings behind what is left, and
+  // the workings are one tap under the table.
+  await page.click('[data-testid="workings"]')
+  await page.waitForTimeout(250)
   const levels = await page.locator('.main').innerText()
   check('the delivery is booked in', /144 pints/.test(levels), levels.slice(0, 300))
   check(
@@ -805,6 +839,7 @@ try {
   await page.waitForTimeout(300)
 
   await goTab(page, 'Sold')
+  await showEverything(page)
   await page.waitForSelector('.kpi-row', { timeout: 5000 })
   const onTonight = await page.locator('.main').innerText()
   check('the dashboard reports who was on', onTonight.includes('Who was on'), onTonight.slice(0, 120))
@@ -847,6 +882,7 @@ try {
   )
 
   await goTab(page, 'Sold')
+  await showEverything(page)
   await page.waitForSelector('.kpi-row', { timeout: 5000 })
   const priced = await page.locator('.main').innerText()
   check('the dashboard reports what that cost over the night', priced.includes('£24.00'), '120 pints, 20p each')
@@ -1096,6 +1132,32 @@ try {
     /Worth ordering/.test(value) && /Taddy Lager/.test(value),
     value.slice(0, 300),
   )
+
+  // Six columns fit a laptop. On the phone this is actually used on, the
+  // answer must be readable without dragging the table sideways.
+  // The stylesheet sets these in capitals, so the words are what is compared.
+  const ledgerHead = page.locator('.card:has(h2:text("What’s down there now")) thead th')
+  const columns = async () =>
+    (await ledgerHead.allInnerTexts()).map((t) => t.trim().toLowerCase()).join('|')
+  const wasOpen = (await columns()).includes('poured')
+  if (wasOpen) {
+    await page.click('[data-testid="workings"]')
+    await page.waitForTimeout(250)
+  }
+  check(
+    'the cellar reads three columns wide: the line, what is left, how long it lasts',
+    (await columns()) === 'line|left|nights',
+    await columns(),
+  )
+  await page.click('[data-testid="workings"]')
+  await page.waitForTimeout(250)
+  check(
+    'and the sum behind it opens in one tap',
+    (await columns()) === 'line|left|nights|counted|in|poured',
+    await columns(),
+  )
+  await page.click('[data-testid="workings"]')
+  await page.waitForTimeout(200)
   check(
     'and says so in nights of trade rather than days on the calendar',
     /another night|more nights/.test(value),
@@ -1103,6 +1165,7 @@ try {
   )
 
   await goTab(page, 'Sold')
+  await showEverything(page)
   await page.waitForSelector('.kpi-row', { timeout: 5000 })
   const profit = await page.locator('.main').innerText()
   check('the dashboard reports gross profit', profit.includes('What it actually makes'))
@@ -1160,6 +1223,7 @@ try {
   check('a risen cost re-prices the pint', risen.includes('£1.50'), '£108 across 72 pints')
 
   await goTab(page, 'Sold')
+  await showEverything(page)
   await page.waitForSelector('.kpi-row', { timeout: 5000 })
   const changed = await page.locator('.main').innerText()
   check('the movement is reported', changed.includes('What changed underneath'), changed.slice(0, 140))
@@ -1334,6 +1398,7 @@ try {
   // The whole point of holding the item list: a category and a line followed
   // through time, off the receipts, rather than one total for the window.
   await goTab(page, 'Sold')
+  await showEverything(page)
   await page.waitForSelector('.kpi-row', { timeout: 5000 })
   await page.click('.chip:has-text("90 nights")')
   await page.waitForTimeout(400)
