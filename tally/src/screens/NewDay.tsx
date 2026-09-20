@@ -24,13 +24,15 @@ import {
   type RollState,
 } from '../components/TillRollCard.tsx'
 import { ItemisedLegs, VerdictPanel } from '../components/Verdict.tsx'
+import { WhatSold } from '../components/WhatSold.tsx'
+import { soldFrom } from '../core/sold.ts'
 import { formatLong, formatShort, isAfterMidnightForTradingDay, tradingDayKey } from '../core/date.ts'
 import { formatMoney, parsePence, penceToInput } from '../core/money.ts'
 import { describeMissing, reconcileFull, tillExpectations } from '../core/reconcile.ts'
 import { dayStats } from '../core/analytics.ts'
 import type { Capture, DayRecord } from '../core/types.ts'
 import { emptyDay } from '../core/types.ts'
-import { isZReadEmpty, type ZRead } from '../core/zread.ts'
+import { formatQty, isZReadEmpty, type ZRead } from '../core/zread.ts'
 import {
   deletePhoto,
   deleteStockCount,
@@ -139,6 +141,16 @@ export function NewDay({ onSaved, onReviewRoll, onOpenCellar, initialDate }: Pro
   const [noteOpen, setNoteOpen] = useState(false)
   /** The date is right almost every night, so it waits behind the date itself. */
   const [dateOpen, setDateOpen] = useState(false)
+  /**
+   * Whether the balance check is out.
+   *
+   * The roll is the night: photograph it and the app can say what sold and what
+   * it took. Counting the drawer against it is a second job, worth doing and
+   * not always done, so it opens on request — and opens by itself on a night
+   * that already has figures in it, because hiding numbers she has typed would
+   * be worse than any amount of tidiness.
+   */
+  const [moneyOpen, setMoneyOpen] = useState(false)
   // The cellar, counted as the night is closed. Kept as typed until saved.
   const [stockItems, setStockItems] = useState<StockItem[]>([])
   /** The serve each millilitre-counted line pours, so the sheet can say the shots. */
@@ -303,6 +315,9 @@ export function NewDay({ onSaved, onReviewRoll, onOpenCellar, initialDate }: Pro
   const zRead = roll.zRead && !isZReadEmpty(roll.zRead) ? roll.zRead : undefined
   const expected = tillExpectations(zRead)
 
+  /** What the roll says went out tonight, and what it took. */
+  const sold = useMemo(() => soldFrom([zRead]), [zRead])
+
   // The drawer holds the float as well as the takings, and only the takings
   // reconcile. Without this subtraction a £200 float reads as £200 over every
   // night — consistently enough to look like the pub doing well.
@@ -318,6 +333,16 @@ export function NewDay({ onSaved, onReviewRoll, onOpenCellar, initialDate }: Pro
     tolerancePence: settings.tolerancePence,
     ...(zRead ? { zRead } : {}),
   })
+
+  /**
+   * Whether the balance check is on the screen.
+   *
+   * Open once she has asked for it, and open regardless the moment there is a
+   * figure in it — a night reopened to be corrected must show what it already
+   * holds rather than hiding it behind a button she would have to think to press.
+   */
+  const moneyShown =
+    moneyOpen || parsePence(card.text) !== null || drawerPence !== null || floatPence > 0
 
   const busy = roll.scanning || card.scanning
   /**
@@ -510,24 +535,45 @@ export function NewDay({ onSaved, onReviewRoll, onOpenCellar, initialDate }: Pro
             // throwing a photograph away afterwards.
             if (roll.zRead) onReviewRoll(roll.zRead, (next) => setRoll({ ...roll, zRead: next, base: next }))
           }}
-          step={1}
           done={rollTotalPence(roll) !== null}
         />
 
+        {/* The answer, the moment the photographs have been read: what went out
+            of the door and what it took, by category and by button. Everything
+            here is the till's own statement — nothing is typed, nothing is
+            estimated, and nothing below this line is needed to get it. */}
+        {sold.reads > 0 && <WhatSold sold={sold} heading="Tonight" />}
+
+        {/* The balance check. It used to be steps 2 and 3 of a walk that could
+            not be finished without them, which said the night was not a night
+            until the drawer had been counted. It is a second job: worth doing,
+            not always done, and never the reason she opened the app. */}
+        {!moneyShown ? (
+          <button
+            type="button"
+            className="shelf"
+            onClick={() => setMoneyOpen(true)}
+            data-testid="check-money"
+          >
+            <span className="shelf-icon" aria-hidden="true">£</span>
+            <span className="shelf-text">Check the money balances</span>
+            <span className="shelf-hint">optional</span>
+          </button>
+        ) : (
+        <>
         <FigureCard
           title="Card machine"
           hint={expected.cardPence === undefined ? 'End-of-day slip' : `till says ${formatMoney(expected.cardPence)}`}
           kind="card"
           value={card}
           onChange={setCard}
-          step={2}
           done={parsePence(card.text) !== null}
         />
 
         <section className="card">
           <div className="card-head">
             <span className={`step-dot${drawerPence !== null ? ' done' : ''}`} aria-hidden="true">
-              {drawerPence !== null ? <IconTickSmall size={13} /> : 3}
+              {drawerPence !== null ? <IconTickSmall size={13} /> : <span className="num">£</span>}
             </span>
             <h2>Cash counted</h2>
             <span className="hint">
@@ -605,6 +651,8 @@ export function NewDay({ onSaved, onReviewRoll, onOpenCellar, initialDate }: Pro
         </section>
 
         <ItemisedLegs r={r} />
+        </>
+        )}
 
         {/* The cellar. Deliberately outside the numbered walk: the night is the
             roll, the card machine and the drawer, and those three are what a
@@ -735,14 +783,32 @@ export function NewDay({ onSaved, onReviewRoll, onOpenCellar, initialDate }: Pro
         )}
 
         <p className="note quiet">
-          Save it half done and finish it later — an unfinished night is kept out of the takings
-          until it has a figure, so it never reads as a night that took nothing.
+          Save it half done and finish it later — a night with no figure on it at all is kept out of
+          the takings, so it never reads as a night that took nothing.
         </p>
       </div>
 
+      {/* What the bar says depends on what she has asked of it. With the drawer
+          counted it is the verdict, because that is the question she asked. With
+          only the roll in, nagging for a count she has not asked for would be
+          the app telling her the night is unfinished when the night is right
+          there on the screen above — so it states what the till took instead. */}
       <div className="verdict-bar">
         <div className="inner">
-          <VerdictPanel r={r.overall} />
+          {moneyShown || sold.reads === 0 ? (
+            <VerdictPanel r={r.overall} />
+          ) : (
+            <div className="verdict took" role="status" aria-live="polite" data-testid="took">
+              <span className="verdict-icon" aria-hidden="true"><IconTickSmall size={20} /></span>
+              <span className="words">
+                <span className="headline">{formatMoney(sold.categories.pence || sold.items.pence)} taken</span>
+                <span className="detail">
+                  {' '}
+                  {formatQty(sold.categories.qtyMilli || sold.items.qtyMilli)} sold, off the roll.
+                </span>
+              </span>
+            </div>
+          )}
           <button type="button" className="btn-primary" onClick={() => void save()} disabled={saving || busy}>
             {saving
               ? 'Saving…'
@@ -750,7 +816,7 @@ export function NewDay({ onSaved, onReviewRoll, onOpenCellar, initialDate }: Pro
                 ? 'Reading the photograph…'
                 : existing
                   ? 'Update this night'
-                  : r.overall.complete
+                  : r.overall.complete || (!moneyShown && sold.reads > 0)
                     ? 'Save this night'
                     : 'Save it as it is'}
           </button>

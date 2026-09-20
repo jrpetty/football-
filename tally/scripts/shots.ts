@@ -35,7 +35,9 @@ const base = `http://127.0.0.1:${typeof addr === 'object' && addr ? addr.port : 
 
 /** The bar has three tabs; Trade, the rota and the settings live behind More. */
 async function goTab(page: Page, name: string): Promise<void> {
-  if (['Trade', 'Rota', 'Price list', 'Settings'].includes(name)) {
+  // Tonight, Sold and the Cellar are on the bar. The nights, the rota, the
+  // price list and the settings are behind More, so those cost two taps.
+  if (['Nights', 'Rota', 'Price list', 'Settings'].includes(name)) {
     await page.click('.tabs button:has-text("More")')
     await page.click(`.door:has-text("${name}")`)
   } else {
@@ -126,6 +128,9 @@ for (const scheme of ['dark', 'light'] as const) {
 
   // Tonight, part-filled so the steps and verdict show life.
   await page.fill('#figure-till', '2192.80')
+  // The balance check is behind a shelf now; the shots want it open.
+  await page.click('[data-testid="check-money"]')
+  await page.waitForSelector('#figure-card', { timeout: 5000 })
   await page.fill('#figure-card', '1841.00')
   await page.waitForTimeout(200)
   await page.screenshot({ path: join(out, `tonight-${scheme}.png`), fullPage: false })
@@ -149,7 +154,7 @@ for (const scheme of ['dark', 'light'] as const) {
   await page.waitForTimeout(200)
   await page.screenshot({ path: join(out, `more-${scheme}.png`), fullPage: false })
 
-  await goTab(page, 'Trade')
+  await goTab(page, 'Sold')
   await page.waitForSelector('.kpi-row', { timeout: 5000 })
   await page.waitForTimeout(250)
   await page.screenshot({ path: join(out, `trade-${scheme}.png`), fullPage: false })
@@ -255,7 +260,7 @@ for (const scheme of ['dark', 'light'] as const) {
   await page.reload({ waitUntil: 'networkidle' })
 
   // Trade again, now the rota covers the seeded night, so the crew card is there.
-  await goTab(page, 'Trade')
+  await goTab(page, 'Sold')
   await page.waitForSelector('.kpi-row', { timeout: 5000 })
   await page.waitForTimeout(300)
   await page.screenshot({ path: join(out, `trade-crew-${scheme}.png`), fullPage: true })
@@ -285,7 +290,7 @@ for (const scheme of ['dark', 'light'] as const) {
   await page.screenshot({ path: join(out, `people-${scheme}.png`), fullPage: false })
 
   // One item's card, reached through the search — which lives on Trade.
-  await goTab(page, 'Trade')
+  await goTab(page, 'Sold')
   await page.waitForSelector('input[aria-label="Find an item"]', { timeout: 5000 })
   await page.fill('input[aria-label="Find an item"]', 'taddy')
   await page.waitForTimeout(250)

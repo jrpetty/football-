@@ -122,6 +122,10 @@ try {
 
   // Enough of the app to prove it is alive, not merely painted.
   await page.fill('#figure-till', '4212.30')
+  // The balance check is behind a shelf: the roll is the night, counting the
+  // drawer against it is the second job.
+  await page.click('[data-testid="check-money"]')
+  await page.waitForSelector('#figure-card', { timeout: 5000 })
   await page.fill('#figure-card', '2321.75')
   await page.fill('#figure-cash', '1890.55')
   await page.waitForTimeout(120)
@@ -129,6 +133,7 @@ try {
   check('it reconciles under the sub-path', verdict === 'Balanced', `got "${verdict}"`)
 
   await page.click('.verdict-bar .btn-primary')
+  // Saving lands on Sold, which lists the nights it has.
   await page.waitForSelector('.day-row', { timeout: 5000 })
   check('and saves', (await page.locator('.day-row').count()) === 1)
 

@@ -77,7 +77,9 @@ function check(label: string, condition: boolean, detail = ''): void {
  * one. Routed through here so a test says where it is going and not how.
  */
 async function goTab(page: Page, name: string): Promise<void> {
-  if (['Trade', 'Rota', 'Price list', 'Settings'].includes(name)) {
+  // Tonight, Sold and the Cellar are on the bar. The nights, the rota, the
+  // price list and the settings are behind More, so those cost two taps.
+  if (['Nights', 'Rota', 'Price list', 'Settings'].includes(name)) {
     await page.click('.tabs button:has-text("More")')
     await page.click(`.door:has-text("${name}")`)
   } else {
@@ -97,6 +99,20 @@ async function openDate(page: Page): Promise<void> {
     await page.click('.daybar-date')
   }
   await page.waitForSelector('#date', { timeout: 5000 })
+}
+
+/**
+ * Get at the card and cash boxes.
+ *
+ * The roll is the night now: photograph it and the app says what sold and what
+ * it took. Counting the drawer against that is a second job, behind "Check the
+ * money balances" — open already on a night that has figures in it.
+ */
+async function openMoney(page: Page): Promise<void> {
+  if (!(await page.locator('#figure-card').isVisible().catch(() => false))) {
+    await page.click('[data-testid="check-money"]')
+    await page.waitForSelector('#figure-card', { timeout: 5000 })
+  }
 }
 
 /** Whatever the screen is currently confirming, or '' when it is silent. */
@@ -124,6 +140,7 @@ async function verdictText(page: Page): Promise<string> {
 }
 
 async function setFigure(page: Page, id: string, value: string): Promise<void> {
+  if (id === 'figure-card' || id === 'figure-cash' || id === 'figure-float') await openMoney(page)
   await page.fill(`#${id}`, value)
   // The verdict is derived on the next render; wait for it rather than sleeping.
   await page.waitForTimeout(60)
@@ -183,6 +200,7 @@ try {
     `got "${await verdictText(page)}" — the default tolerance should absorb this`)
 
   console.log('\nCounting the drawer out')
+  await openMoney(page)
   await page.click('button[aria-label="Count the drawer out in notes and coins"]')
   await page.waitForSelector('input[aria-label="How many £20"]', { timeout: 5000 })
   // Ninety-four twenties, a five, five pounds in coin, and some silver.
@@ -218,6 +236,7 @@ try {
   check('an unexplained float reads as over', (await verdictText(page)) === 'Over by £200.00',
     `got "${await verdictText(page)}"`)
 
+  await openMoney(page)
   await page.fill('#figure-float', '200')
   await page.waitForTimeout(200)
   check(
@@ -230,6 +249,7 @@ try {
     (await page.locator('.main').innerText()).includes('£2,090.55 counted, less £200.00 float'),
   )
 
+  await openMoney(page)
   await page.fill('#figure-float', '3000')
   await page.waitForTimeout(200)
   check(
@@ -237,6 +257,7 @@ try {
     (await page.locator('.note.bad').first().innerText()).includes('more than was counted'),
   )
 
+  await openMoney(page)
   await page.fill('#figure-float', '')
   await setFigure(page, 'figure-cash', '1890.52')
   await page.waitForTimeout(150)
@@ -275,6 +296,7 @@ try {
   // Saved with a float on, so the round trip through storage is covered: the
   // record keeps takings and float apart, and the night must come back showing
   // the drawer she actually counted.
+  await openMoney(page)
   await page.fill('#figure-float', '200')
   await setFigure(page, 'figure-cash', '2090.55')
   // The note waits behind a word now, which is most of the point of it.
@@ -351,6 +373,7 @@ try {
     `got "${await page.inputValue('#figure-cash')}" — the float must be added back for editing`,
   )
   // Float taken back out, so the rest of the run reads as it always did.
+  await openMoney(page)
   await page.fill('#figure-float', '')
   await setFigure(page, 'figure-cash', '1800.55')
   check('the verdict follows the correction', (await verdictText(page)) === 'Short by £90.00',
@@ -377,7 +400,7 @@ try {
   console.log('\nAsking without a key')
   // Deliberately before any key is saved: the honest answer is a pointer to
   // Settings, not a spinner that dies quietly.
-  await goTab(page, 'Trade')
+  await goTab(page, 'Sold')
   await page.waitForSelector('.card:has(h2:text("Ask the till"))', { timeout: 5000 })
   await page.fill('input[aria-label="Ask a question about the records"]', 'What did we take last night?')
   await page.click('.ask-row .btn-primary')
@@ -488,6 +511,23 @@ try {
   check('the department split is shown', rollDetail.includes('Draught beers'))
   check('with the percentage the till printed', rollDetail.includes('68.05%'))
   check('the takings match the roll', rollDetail.includes('£2,192.80'))
+
+  // What sold, per category and per button. The figures are the till's own, so
+  // they are checked against the receipt rather than against the app.
+  const mix = await page.locator('[data-testid="mix-table"]').innerText()
+  check('the category table counts the units sold', /406/.test(mix), mix.slice(0, 160))
+  check('and what they took', mix.includes('£1,492.25'), mix.slice(0, 160))
+  check('and what one went for', mix.includes('£3.68'), mix.slice(0, 200))
+  const byItem = await page.locator('[data-testid="sold-items"]').innerText()
+  check('a saved night breaks down to the buttons on the till', /TADDY/i.test(byItem), byItem.slice(0, 200))
+  check(
+    'with how many went and what they took',
+    /120/.test(byItem) && /£480\.00/.test(byItem),
+    byItem.slice(0, 240),
+  )
+  const headline = await page.locator('[data-testid="sold-headline"]').innerText()
+  check('and a headline of money and units', /£2,192\.80/.test(headline) && /689/.test(headline),
+    headline.replace(/\n/g, ' | '))
   check('the sales count comes across', /267 sales/.test(rollDetail))
   check('the shortfall is reported', /−£12\.00/.test(rollDetail), rollDetail.slice(0, 200))
   check(
@@ -496,7 +536,7 @@ try {
   )
 
   console.log('\nThe dashboard')
-  await goTab(page, 'Trade')
+  await goTab(page, 'Sold')
   await page.waitForSelector('.kpi-row', { timeout: 5000 })
   const dash = await page.locator('.main').innerText()
   check('leads with what was taken', dash.includes('£2,192.80'))
@@ -756,7 +796,7 @@ try {
   await page.locator('.day-edit .chip:has-text("Kelly")').click()
   await page.waitForTimeout(300)
 
-  await goTab(page, 'Trade')
+  await goTab(page, 'Sold')
   await page.waitForSelector('.kpi-row', { timeout: 5000 })
   const onTonight = await page.locator('.main').innerText()
   check('the dashboard reports who was on', onTonight.includes('Who was on'), onTonight.slice(0, 120))
@@ -798,7 +838,7 @@ try {
     (await page.locator('.main').innerText()).includes('under by £0.20'),
   )
 
-  await goTab(page, 'Trade')
+  await goTab(page, 'Sold')
   await page.waitForSelector('.kpi-row', { timeout: 5000 })
   const priced = await page.locator('.main').innerText()
   check('the dashboard reports what that cost over the night', priced.includes('£24.00'), '120 pints, 20p each')
@@ -1054,7 +1094,7 @@ try {
     value.slice(value.indexOf('Worth ordering'), value.indexOf('Worth ordering') + 200),
   )
 
-  await goTab(page, 'Trade')
+  await goTab(page, 'Sold')
   await page.waitForSelector('.kpi-row', { timeout: 5000 })
   const profit = await page.locator('.main').innerText()
   check('the dashboard reports gross profit', profit.includes('What it actually makes'))
@@ -1111,7 +1151,7 @@ try {
   const risen = await page.locator('.main').innerText()
   check('a risen cost re-prices the pint', risen.includes('£1.50'), '£108 across 72 pints')
 
-  await goTab(page, 'Trade')
+  await goTab(page, 'Sold')
   await page.waitForSelector('.kpi-row', { timeout: 5000 })
   const changed = await page.locator('.main').innerText()
   check('the movement is reported', changed.includes('What changed underneath'), changed.slice(0, 140))
@@ -1208,7 +1248,7 @@ try {
   check('and who was on', summary.includes('Kelly'))
 
   // Back to the dashboard, which is where the next block picks up.
-  await goTab(page, 'Trade')
+  await goTab(page, 'Sold')
   await page.waitForSelector('.kpi-row', { timeout: 5000 })
 
   console.log('\nFiltering')
@@ -1267,7 +1307,7 @@ try {
   // it. There is no way back to a chart quietly showing one weekday with the
   // control that did it put away.
   await goTab(page, 'Tonight')
-  await goTab(page, 'Trade')
+  await goTab(page, 'Sold')
   await page.waitForSelector('.kpi-row', { timeout: 5000 })
   check(
     'leaving Trade clears the filters with it',
@@ -1285,7 +1325,7 @@ try {
   console.log('\nWeek by week, and what is moving')
   // The whole point of holding the item list: a category and a line followed
   // through time, off the receipts, rather than one total for the window.
-  await goTab(page, 'Trade')
+  await goTab(page, 'Sold')
   await page.waitForSelector('.kpi-row', { timeout: 5000 })
   await page.click('.chip:has-text("90 nights")')
   await page.waitForTimeout(400)
@@ -1559,6 +1599,21 @@ try {
   await page.waitForSelector('button:has-text("Edit")', { timeout: 5000 })
   await page.click('button:has-text("Edit")')
   await page.waitForSelector('[data-testid="count-cellar"]', { timeout: 5000 })
+
+  // Tonight now answers the question the app is for, without anything typed:
+  // what went out of the door and what it took, off the roll alone.
+  const tonightSold = await page.locator('[data-testid="sold-headline"]').innerText()
+  check(
+    'tonight says what the roll took',
+    /£2,192\.80/.test(tonightSold),
+    tonightSold.replace(/\n/g, ' | '),
+  )
+  check('and how many units went', /689/.test(tonightSold), tonightSold.replace(/\n/g, ' | '))
+  const tonightMix = await page.locator('[data-testid="mix-table"]').innerText()
+  check('broken down by category on the night itself', /Draught beers/.test(tonightMix), tonightMix.slice(0, 140))
+  const tonightItems = await page.locator('[data-testid="sold-items"]').innerText()
+  check('and down to the button on the till', /TADDY/i.test(tonightItems), tonightItems.slice(0, 160))
+
   await page.click('[data-testid="count-cellar"]')
   await page.waitForSelector('input[aria-label="Taddy Lager counted"]', { timeout: 5000 })
   // Seventeen were there on the 24th and three pints went through the till, so
@@ -1614,6 +1669,10 @@ try {
   )
   await page.click('.verdict-bar .btn-primary')
   await page.waitForSelector('.day-row', { timeout: 5000 })
+  // Saving lands on Sold now, which lists the nights too. What a half-done
+  // night is still waiting on is spelled out on the Nights list, so go there.
+  await goTab(page, 'Nights')
+  await page.waitForSelector('.day-row', { timeout: 5000 })
 
   const unfinishedRow = await page.locator('.day-row:has-text("25 Aug")').innerText()
   check(
@@ -1622,7 +1681,7 @@ try {
     unfinishedRow.replace(/\n/g, ' | '),
   )
 
-  await goTab(page, 'Trade')
+  await goTab(page, 'Sold')
   await page.waitForSelector('.kpi-row', { timeout: 5000 })
   // Wide enough a window to take in a night from last month.
   await page.click('.chip:has-text("90 nights")')
@@ -1938,6 +1997,67 @@ try {
   )
   check('read back as the shots it pours', /46\.7 shots/.test(oldLevels), oldLevels.slice(0, 200))
   await older.close()
+
+  console.log('\nA night that is only the roll')
+  // The shape the app is actually for: the photographs go in and that is the
+  // night. Nothing typed, no drawer counted, and it is still a complete record
+  // of what sold — so the app must not call it half done.
+  await page.evaluate(async (roll) => {
+    await new Promise<void>((resolve, reject) => {
+      const req = indexedDB.open('tally')
+      req.onsuccess = () => {
+        const tx = req.result.transaction('days', 'readwrite')
+        tx.objectStore('days').put({
+          date: '2026-08-29',
+          till: { pence: 219280, source: 'vision', edited: false },
+          card: { pence: null, source: 'manual', edited: false },
+          cashPence: null,
+          note: '',
+          zRead: roll,
+          createdAt: 0,
+          updatedAt: 0,
+        })
+        tx.oncomplete = () => resolve()
+        tx.onerror = () => reject(tx.error)
+      }
+      req.onerror = () => reject(req.error)
+    })
+  }, GARDENERS_ARMS)
+  await page.reload({ waitUntil: 'networkidle' })
+  await goTab(page, 'Nights')
+  await page.waitForSelector('.day-row', { timeout: 5000 })
+  await page.click('.day-row:has-text("29 Aug")')
+  await page.waitForSelector('button:has-text("Edit")', { timeout: 5000 })
+  await page.click('button:has-text("Edit")')
+  await page.waitForSelector('[data-testid="sold-headline"]', { timeout: 5000 })
+
+  check(
+    'with only the roll in, the drawer is not asked for',
+    (await page.locator('[data-testid="check-money"]').count()) === 1 &&
+      (await page.locator('#figure-card').count()) === 0,
+  )
+  const bar = await page.locator('[data-testid="took"]').innerText()
+  check('the bar states what the till took', /£2,192\.80 taken/.test(bar), bar.replace(/\n/g, ' | '))
+  check('and how many units went out', /689 sold/.test(bar), bar.replace(/\n/g, ' | '))
+  check(
+    'and the night is a night, not a half-done one',
+    (await page.locator('.verdict-bar .btn-primary').innerText()).trim() === 'Update this night',
+    await page.locator('.verdict-bar .btn-primary').innerText(),
+  )
+
+  // Asking for the check brings it back, and with it the verdict.
+  await page.click('[data-testid="check-money"]')
+  await page.waitForSelector('#figure-card', { timeout: 5000 })
+  check(
+    'asking for the check puts the verdict back in the bar',
+    (await page.locator('[data-testid="took"]').count()) === 0 &&
+      (await page.locator('.verdict-bar .verdict').count()) === 1,
+  )
+  check(
+    'and it says what it is still waiting on rather than a false balance',
+    /Not finished/i.test(await verdictText(page)),
+    await verdictText(page),
+  )
 
   console.log('\nStarting again')
   // The one button in the app that destroys anything. It has to say what will

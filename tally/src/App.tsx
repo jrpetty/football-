@@ -6,12 +6,15 @@
 // router would need configuring for each and buy nothing a pub landlady would
 // ever notice.
 //
-// Why three. There are three jobs: tonight's count, the cellar, and looking a
-// night up again. Everything else the app can do — how trade is going, who is
-// on, the price list, the settings — is real work but it is not the work of a
-// Tuesday, and a bar of six evenly weighted tabs says otherwise every time she
-// opens it. So the other four live behind More: one tap away, and out of the
-// way of the job she actually came to do.
+// Why these three. The app is one loop: photograph the roll, and read off what
+// went out of the door and what it took. So the bar is that loop — Tonight puts
+// the pictures in, Sold is what they add up to, and the Cellar is what is left
+// downstairs. The rota, the price list, the settings and the list of nights are
+// all real work, and none of them is the work of a Tuesday, so they live behind
+// More: one tap away, and out of the way of the job she opened the app to do.
+//
+// Looking a night up again is not a fourth tab, because Sold already ends in a
+// list of the nights and tapping one opens it.
 // ---------------------------------------------------------------------------
 
 import { useState } from 'react'
@@ -33,8 +36,8 @@ import {
 } from './components/icons.tsx'
 
 /** The three that are on the bar, then the four that live behind More. */
-type Tab = 'tonight' | 'stock' | 'history' | 'more'
-type Deeper = 'dashboard' | 'rota' | 'prices' | 'settings'
+type Tab = 'tonight' | 'sold' | 'stock' | 'more'
+type Deeper = 'history' | 'rota' | 'prices' | 'settings'
 
 /** An open review, together with where to write the corrected roll back to. */
 interface Reviewing {
@@ -43,7 +46,7 @@ interface Reviewing {
 }
 
 const DEEPER: { key: Deeper; label: string; blurb: string; icon: React.ReactNode }[] = [
-  { key: 'dashboard', label: 'Trade', blurb: 'How the takings are going', icon: <IconChart /> },
+  { key: 'history', label: 'Nights', blurb: 'Every night, one by one', icon: <IconBook /> },
   { key: 'rota', label: 'Rota', blurb: 'Who is on, and what it costs', icon: <IconPeople /> },
   { key: 'prices', label: 'Price list', blurb: 'What everything sells for', icon: <IconReceipt /> },
   { key: 'settings', label: 'Settings', blurb: 'Backups, the float, the lot', icon: <IconSliders /> },
@@ -66,7 +69,11 @@ export function App() {
     bump()
     setEditDate(undefined)
     saySaved(`${formatShort(date)} saved`)
-    setTab('history')
+    // Saving lands on Sold, where the night she has just put in has become part
+    // of a total. Landing on a list of nights was right when the app was a
+    // ledger; it is the wrong answer to "what did we take".
+    setDeeper(null)
+    setTab('sold')
   }
 
   function go(next: Tab) {
@@ -85,11 +92,11 @@ export function App() {
       : tab === 'tonight'
         ? editDate
           ? 'Correcting a saved night'
-          : 'Tonight’s count'
-        : tab === 'stock'
-          ? 'What is in the cellar'
-          : tab === 'history'
-            ? 'Every night so far'
+          : 'Tonight’s roll'
+        : tab === 'sold'
+          ? 'What went out, and what it took'
+          : tab === 'stock'
+            ? 'What is in the cellar'
             : 'Everything else'
 
   return (
@@ -106,11 +113,11 @@ export function App() {
           <button type="button" aria-current={tab === 'tonight' ? 'page' : undefined} onClick={() => go('tonight')}>
             <IconMoon /><span>Tonight</span>
           </button>
+          <button type="button" aria-current={tab === 'sold' ? 'page' : undefined} onClick={() => go('sold')}>
+            <IconChart /><span>Sold</span>
+          </button>
           <button type="button" aria-current={tab === 'stock' ? 'page' : undefined} onClick={() => go('stock')}>
             <IconBarrel /><span>Cellar</span>
-          </button>
-          <button type="button" aria-current={tab === 'history' ? 'page' : undefined} onClick={() => go('history')}>
-            <IconBook /><span>Nights</span>
           </button>
           <button type="button" aria-current={tab === 'more' ? 'page' : undefined} onClick={() => go('more')}>
             <IconMore /><span>More</span>
@@ -141,26 +148,17 @@ export function App() {
             />
           )}
 
+          {tab === 'sold' && openDate === null && (
+            <Dashboard refreshKey={refreshKey} onOpen={setOpenDate} />
+          )}
+
           {tab === 'stock' && <Stock onChanged={bump} />}
 
-          {tab === 'history' && openDate === null && (
+          {tab === 'more' && deeper === 'history' && openDate === null && (
             <History
               refreshKey={refreshKey}
               onOpen={setOpenDate}
               onStart={() => { setEditDate(undefined); setTab('tonight') }}
-            />
-          )}
-
-          {tab === 'history' && openDate !== null && (
-            <DayDetail
-              date={openDate}
-              onBack={() => setOpenDate(null)}
-              onEdit={(date) => {
-                setEditDate(date === tradingDayKey() ? undefined : date)
-                setOpenDate(null)
-                setTab('tonight')
-              }}
-              onDeleted={() => { setOpenDate(null); bump() }}
             />
           )}
 
@@ -184,11 +182,9 @@ export function App() {
             </div>
           )}
 
-          {tab === 'more' && deeper === 'dashboard' && openDate === null && (
-            <Dashboard refreshKey={refreshKey} onOpen={setOpenDate} />
-          )}
-
-          {tab === 'more' && deeper === 'dashboard' && openDate !== null && (
+          {/* A night opens over whichever list she came from — the Sold screen's
+              own list of nights, or the one behind More. Both land here. */}
+          {(tab === 'sold' || (tab === 'more' && deeper === 'history')) && openDate !== null && (
             <DayDetail
               date={openDate}
               onBack={() => setOpenDate(null)}

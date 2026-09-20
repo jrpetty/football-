@@ -70,11 +70,27 @@ function check(label: string, ok: boolean, detail = ''): void {
  * one. Routed through here so a test says where it is going and not how.
  */
 async function goTab(page: Page, name: string): Promise<void> {
-  if (['Trade', 'Rota', 'Price list', 'Settings'].includes(name)) {
+  // Tonight, Sold and the Cellar are on the bar. The nights, the rota, the
+  // price list and the settings are behind More, so those cost two taps.
+  if (['Nights', 'Rota', 'Price list', 'Settings'].includes(name)) {
     await page.click('.tabs button:has-text("More")')
     await page.click(`.door:has-text("${name}")`)
   } else {
     await page.click(`.tabs button:has-text("${name}")`)
+  }
+}
+
+/**
+ * Get at the card and cash boxes.
+ *
+ * The roll is the night now: photograph it and the app says what sold and what
+ * it took. Counting the drawer against that is a second job, behind "Check the
+ * money balances" — open already on a night that has figures in it.
+ */
+async function openMoney(page: Page): Promise<void> {
+  if (!(await page.locator('#figure-card').isVisible().catch(() => false))) {
+    await page.click('[data-testid="check-money"]')
+    await page.waitForSelector('#figure-card', { timeout: 5000 })
   }
 }
 
@@ -234,7 +250,7 @@ try {
     await page.waitForTimeout(300)
 
     await screen(page, 'Tonight')
-    await goTab(page, 'Trade')
+    await goTab(page, 'Sold')
     await page.waitForTimeout(500)
     await screen(page, 'Trade')
     // The whole of Trade, not just the window the chips open on: the weekly

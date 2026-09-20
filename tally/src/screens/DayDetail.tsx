@@ -15,7 +15,9 @@ import { ItemisedLegs, VerdictPanel } from '../components/Verdict.tsx'
 import { CrossfootList, CrossfootSummary } from '../components/CrossfootPanel.tsx'
 import { crossfootVerdict } from '../core/crossfoot.ts'
 import { departmentLabel, departmentSlot } from '../core/departments.ts'
-import { formatQty, shareBp, formatPercent } from '../core/zread.ts'
+import { shareBp } from '../core/zread.ts'
+import { WhatSold } from '../components/WhatSold.tsx'
+import { soldFrom } from '../core/sold.ts'
 import { seriesVar, ShareBar, Legend } from '../components/charts.tsx'
 import { reconcileFull } from '../core/reconcile.ts'
 import { deleteDay, getDay, getPhoto, listDays, listDeliveries, listPeople, listShifts, listStockCounts, loadStockConfig } from '../storage/db.ts'
@@ -303,48 +305,6 @@ export function DayDetail({ date, onBack, onEdit, onDeleted }: Props) {
             <>
               <ShareBar rows={shareRows} />
               <Legend items={shareRows.map((x) => ({ label: x.label, color: seriesVar(x.slot) }))} />
-              <div className="table-wrap">
-                <table className="data">
-                  <thead>
-                    <tr>
-                      <th scope="col">Department</th>
-                      <th scope="col">Sold</th>
-                      <th scope="col">Taken</th>
-                      <th scope="col">Each</th>
-                      <th scope="col">Share</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {zRead.departments.map((d) => (
-                      <tr key={d.code}>
-                        <th scope="row">
-                          <span className="swatch" style={{ background: seriesVar(departmentSlot(d.code)) }} aria-hidden="true" />
-                          {departmentLabel(d.code, d.name)}
-                        </th>
-                        <td className="num">{formatQty(d.qtyMilli)}</td>
-                        <td className="num">{formatMoney(d.pence)}</td>
-                        <td className="num">
-                          {d.qtyMilli > 0 ? formatMoney(Math.round(d.pence / (d.qtyMilli / 1000))) : '—'}
-                        </td>
-                        <td className="num">{formatPercent(shareBp(d.pence, deptTotal))}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr>
-                      <td>Total</td>
-                      <td className="num">{formatQty(zRead.deptTotal?.qtyMilli ?? 0)}</td>
-                      <td className="num">{formatMoney(deptTotal)}</td>
-                      <td className="num">
-                        {(zRead.deptTotal?.qtyMilli ?? 0) > 0
-                          ? formatMoney(Math.round(deptTotal / ((zRead.deptTotal?.qtyMilli ?? 1) / 1000)))
-                          : '—'}
-                      </td>
-                      <td className="num">100.00%</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
             </>
           )}
           {zRead.transaction.guestCount !== undefined && (
@@ -356,6 +316,11 @@ export function DayDetail({ date, onBack, onEdit, onDeleted }: Props) {
           )}
         </section>
       )}
+
+      {/* The same two tables as tonight and as the trade screen, off the same
+          code: what she reads about a night must not change shape depending on
+          when she comes back to it. */}
+      {zRead && <WhatSold sold={soldFrom([zRead])} heading="That night" />}
 
       {cellar ? (
         <section className="card">

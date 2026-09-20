@@ -1938,3 +1938,14 @@ tr.item-row { cursor: pointer; }
 
 /* A closing remark, not a card. */
 .note.quiet { margin: 0 2px; text-align: center; }
+
+/* A night with only the roll in it has no verdict to give — it has a figure.
+   Same shape as the verdict so the bar does not jump when the drawer is
+   counted, in the quiet tone of a statement rather than a judgement. */
+.verdict.took {
+  color: var(--text);
+  background: var(--surface-2);
+  border-color: var(--line);
+}
+
+.verdict.took .verdict-icon { color: var(--good); background: var(--good-bg); }

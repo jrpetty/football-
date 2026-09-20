@@ -493,32 +493,6 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
 
   return (
     <div className="main">
-      {alerts.length > 0 && (
-        <section className="card alerts">
-          <div className="card-head">
-            <h2>Worth knowing</h2>
-            <span className="badge warn">{alerts.length}</span>
-          </div>
-          {alerts.map((a) => (
-            <div className={`alert ${a.level}`} key={a.id}>
-              <span className="alert-mark" aria-hidden="true">
-                <IconAlert size={16} strokeWidth={2} />
-              </span>
-              <span className="alert-words">
-                <strong>{a.headline}</strong>
-                <small>{a.detail}</small>
-              </span>
-            </div>
-          ))}
-          <p className="note">
-            Only things worth acting on appear here, and never more than five — a list nobody
-            finishes is a list nobody reads.
-          </p>
-        </section>
-      )}
-
-      <AskCard data={askData} />
-
       {/* --- filters, in one row above the charts ---------------------------
 
           How far back is the question everyone asks. Which weekdays, and which
@@ -637,6 +611,194 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
           tone={t.reconciledNights > 0 && t.balancedNights === t.reconciledNights ? 'good' : undefined}
         />
       </div>
+
+      {/* What sold and what it took, straight off the roll — the two tables
+          she came for. They used to be nine cards down, under the forecast and
+          the charts, which put the interesting-if-true a long way above the
+          simply-true. */}
+      {/* --- department mix -------------------------------------------------- */}
+      <ChartCard
+        title="What sold"
+        subtitle={withZRead === 0 ? 'needs a till roll' : `${withZRead} of ${selected.length} nights`}
+      >
+        {shareRows.length === 0 ? (
+          <p className="note">
+            Scan a full till roll and the department split appears here — draught, spirits, wine and the rest.
+          </p>
+        ) : (
+          <>
+            <ShareBar rows={shareRows} />
+            <Legend items={shareRows.map((r) => ({ label: r.label, color: seriesVar(r.slot) }))} />
+            <div className="table-wrap">
+              <table className="data" data-testid="mix-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Department</th>
+                    <th scope="col">Sold</th>
+                    <th scope="col">Taken</th>
+                    <th scope="col">Each</th>
+                    <th scope="col">Share</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {deptRows.map((d) => (
+                    <tr key={d.code}>
+                      <th scope="row">
+                        <span className="swatch" style={{ background: seriesVar(departmentSlot(d.code)) }} aria-hidden="true" />
+                        {d.label}
+                      </th>
+                      <td className="num">{formatQty(d.qtyMilli)}</td>
+                      <td className="num">{formatMoney(d.pence)}</td>
+                      <td className="num">{d.avgPencePerItem === null ? '—' : formatMoney(d.avgPencePerItem)}</td>
+                      <td className="num">{(d.percentBp / 100).toFixed(2)}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td>Total</td>
+                    <td className="num">{formatQty(deptItemsMilli)}</td>
+                    <td className="num">{formatMoney(deptTotalPence)}</td>
+                    <td className="num">
+                      {deptItemsMilli > 0 ? formatMoney(Math.round(deptTotalPence / (deptItemsMilli / 1000))) : '—'}
+                    </td>
+                    <td className="num">100.00%</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </>
+        )}
+      </ChartCard>
+
+      {items.length > 0 && (() => {
+        const matches = searchItems(items, itemQuery)
+        const shownItems = itemQuery.trim() !== '' ? matches : showAllItems ? items : items.slice(0, 12)
+        return (
+        <ChartCard
+          title="What people actually bought"
+          subtitle={`${items.length} lines on the till`}
+        >
+          {/* Type a drink, get its whole story. The search runs over every
+              line the till has ever sold, not just the rows on show. */}
+          <div className="item-search">
+            <input
+              aria-label="Find an item"
+              type="search"
+              placeholder="Find a drink — Taddy, wine, crisps…"
+              value={itemQuery}
+              onChange={(e) => setItemQuery(e.target.value)}
+            />
+          </div>
+
+          <div className="chip-row" style={{ marginBottom: 12 }}>
+            <button type="button" className="chip" aria-pressed={itemSort === 'value'} onClick={() => setItemSort('value')}>
+              By takings
+            </button>
+            <button type="button" className="chip" aria-pressed={itemSort === 'quantity'} onClick={() => setItemSort('quantity')}>
+              By how many
+            </button>
+          </div>
+
+          <BarChart
+            rows={items.slice(0, 8).map((i) => ({
+              key: i.code,
+              // Trimmed to what fits the column; the table below carries the
+              // full name, so nothing is lost by shortening it here.
+              label: i.name.length > 15 ? `${i.name.slice(0, 14)}…` : i.name,
+              value: itemSort === 'value' ? i.pence : i.qtyMilli / 1000,
+              detail: itemSort === 'value' ? 'Taken' : 'Sold',
+            }))}
+            format={itemSort === 'value' ? formatMoney : (v) => String(Math.round(v))}
+            labelWidth={112}
+          />
+
+          <div className="table-wrap">
+            <table className="data">
+              <thead>
+                <tr>
+                  <th scope="col">Item</th>
+                  <th scope="col">Sold</th>
+                  <th scope="col">Taken</th>
+                  <th scope="col">Each</th>
+                  <th scope="col">Share</th>
+                </tr>
+              </thead>
+              <tbody>
+                {shownItems.map((i) => (
+                  // The whole row opens the item's own card; the button in the
+                  // name cell is what a screen reader lands on.
+                  <tr
+                    key={i.code}
+                    className="item-row"
+                    onClick={() => setOpenItem({ code: i.code, name: i.name })}
+                  >
+                    <th scope="row">
+                      <button
+                        type="button"
+                        className="item-open"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setOpenItem({ code: i.code, name: i.name })
+                        }}
+                      >
+                        {i.name}
+                      </button>
+                    </th>
+                    <td className="num">{formatQty(i.qtyMilli)}</td>
+                    <td className="num">{formatMoney(i.pence)}</td>
+                    <td className="num">{i.avgPencePerItem === null ? '—' : formatMoney(i.avgPencePerItem)}</td>
+                    <td className="num">{(i.percentBp / 100).toFixed(2)}%</td>
+                  </tr>
+                ))}
+                {shownItems.length === 0 && (
+                  <tr>
+                    <td colSpan={5}>Nothing the till sells matches “{itemQuery}”.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          {itemQuery.trim() === '' && items.length > 12 && (
+            <div className="alts">
+              <button type="button" className="btn-small" onClick={() => setShowAllItems((v) => !v)}>
+                {showAllItems ? 'Show the top twelve' : `Show all ${items.length}`}
+              </button>
+            </div>
+          )}
+        </ChartCard>
+        )
+      })()}
+
+      {/* Worth knowing, and the question box, below the figures rather than
+          above them. A screen called Sold that opens on a warning and a text
+          box makes her scroll past two cards to reach the one thing she came
+          for. Neither is less true further down. */}
+      {alerts.length > 0 && (
+        <section className="card alerts">
+          <div className="card-head">
+            <h2>Worth knowing</h2>
+            <span className="badge warn">{alerts.length}</span>
+          </div>
+          {alerts.map((a) => (
+            <div className={`alert ${a.level}`} key={a.id}>
+              <span className="alert-mark" aria-hidden="true">
+                <IconAlert size={16} strokeWidth={2} />
+              </span>
+              <span className="alert-words">
+                <strong>{a.headline}</strong>
+                <small>{a.detail}</small>
+              </span>
+            </div>
+          ))}
+          <p className="note">
+            Only things worth acting on appear here, and never more than five — a list nobody
+            finishes is a list nobody reads.
+          </p>
+        </section>
+      )}
+
+      <AskCard data={askData} />
 
       {/* --- what next week might take --------------------------------------- */}
       {forecast && forecast.nightsUsed >= 3 && (
@@ -886,61 +1048,6 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
         <TrendChart points={series.map((s) => ({ date: s.date, label: formatShort(s.date), pence: s.takingsPence ?? 0 }))} />
       </ChartCard>
 
-      {/* --- department mix -------------------------------------------------- */}
-      <ChartCard
-        title="What sold"
-        subtitle={withZRead === 0 ? 'needs a till roll' : `${withZRead} of ${selected.length} nights`}
-      >
-        {shareRows.length === 0 ? (
-          <p className="note">
-            Scan a full till roll and the department split appears here — draught, spirits, wine and the rest.
-          </p>
-        ) : (
-          <>
-            <ShareBar rows={shareRows} />
-            <Legend items={shareRows.map((r) => ({ label: r.label, color: seriesVar(r.slot) }))} />
-            <div className="table-wrap">
-              <table className="data" data-testid="mix-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Department</th>
-                    <th scope="col">Sold</th>
-                    <th scope="col">Taken</th>
-                    <th scope="col">Each</th>
-                    <th scope="col">Share</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {deptRows.map((d) => (
-                    <tr key={d.code}>
-                      <th scope="row">
-                        <span className="swatch" style={{ background: seriesVar(departmentSlot(d.code)) }} aria-hidden="true" />
-                        {d.label}
-                      </th>
-                      <td className="num">{formatQty(d.qtyMilli)}</td>
-                      <td className="num">{formatMoney(d.pence)}</td>
-                      <td className="num">{d.avgPencePerItem === null ? '—' : formatMoney(d.avgPencePerItem)}</td>
-                      <td className="num">{(d.percentBp / 100).toFixed(2)}%</td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td>Total</td>
-                    <td className="num">{formatQty(deptItemsMilli)}</td>
-                    <td className="num">{formatMoney(deptTotalPence)}</td>
-                    <td className="num">
-                      {deptItemsMilli > 0 ? formatMoney(Math.round(deptTotalPence / (deptItemsMilli / 1000))) : '—'}
-                    </td>
-                    <td className="num">100.00%</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </>
-        )}
-      </ChartCard>
-
       {/* --- variance -------------------------------------------------------- */}
       <ChartCard title="How far out each night was" subtitle="short below the line, over above">
         <VarianceChart
@@ -1051,105 +1158,6 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
           </p>
         </ChartCard>
       )}
-
-      {items.length > 0 && (() => {
-        const matches = searchItems(items, itemQuery)
-        const shownItems = itemQuery.trim() !== '' ? matches : showAllItems ? items : items.slice(0, 12)
-        return (
-        <ChartCard
-          title="What people actually bought"
-          subtitle={`${items.length} lines on the till`}
-        >
-          {/* Type a drink, get its whole story. The search runs over every
-              line the till has ever sold, not just the rows on show. */}
-          <div className="item-search">
-            <input
-              aria-label="Find an item"
-              type="search"
-              placeholder="Find a drink — Taddy, wine, crisps…"
-              value={itemQuery}
-              onChange={(e) => setItemQuery(e.target.value)}
-            />
-          </div>
-
-          <div className="chip-row" style={{ marginBottom: 12 }}>
-            <button type="button" className="chip" aria-pressed={itemSort === 'value'} onClick={() => setItemSort('value')}>
-              By takings
-            </button>
-            <button type="button" className="chip" aria-pressed={itemSort === 'quantity'} onClick={() => setItemSort('quantity')}>
-              By how many
-            </button>
-          </div>
-
-          <BarChart
-            rows={items.slice(0, 8).map((i) => ({
-              key: i.code,
-              // Trimmed to what fits the column; the table below carries the
-              // full name, so nothing is lost by shortening it here.
-              label: i.name.length > 15 ? `${i.name.slice(0, 14)}…` : i.name,
-              value: itemSort === 'value' ? i.pence : i.qtyMilli / 1000,
-              detail: itemSort === 'value' ? 'Taken' : 'Sold',
-            }))}
-            format={itemSort === 'value' ? formatMoney : (v) => String(Math.round(v))}
-            labelWidth={112}
-          />
-
-          <div className="table-wrap">
-            <table className="data">
-              <thead>
-                <tr>
-                  <th scope="col">Item</th>
-                  <th scope="col">Sold</th>
-                  <th scope="col">Taken</th>
-                  <th scope="col">Each</th>
-                  <th scope="col">Share</th>
-                </tr>
-              </thead>
-              <tbody>
-                {shownItems.map((i) => (
-                  // The whole row opens the item's own card; the button in the
-                  // name cell is what a screen reader lands on.
-                  <tr
-                    key={i.code}
-                    className="item-row"
-                    onClick={() => setOpenItem({ code: i.code, name: i.name })}
-                  >
-                    <th scope="row">
-                      <button
-                        type="button"
-                        className="item-open"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setOpenItem({ code: i.code, name: i.name })
-                        }}
-                      >
-                        {i.name}
-                      </button>
-                    </th>
-                    <td className="num">{formatQty(i.qtyMilli)}</td>
-                    <td className="num">{formatMoney(i.pence)}</td>
-                    <td className="num">{i.avgPencePerItem === null ? '—' : formatMoney(i.avgPencePerItem)}</td>
-                    <td className="num">{(i.percentBp / 100).toFixed(2)}%</td>
-                  </tr>
-                ))}
-                {shownItems.length === 0 && (
-                  <tr>
-                    <td colSpan={5}>Nothing the till sells matches “{itemQuery}”.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-          {itemQuery.trim() === '' && items.length > 12 && (
-            <div className="alts">
-              <button type="button" className="btn-small" onClick={() => setShowAllItems((v) => !v)}>
-                {showAllItems ? 'Show the top twelve' : `Show all ${items.length}`}
-              </button>
-            </div>
-          )}
-        </ChartCard>
-        )
-      })()}
 
       {gp.costedCount > 0 && (
         <ChartCard

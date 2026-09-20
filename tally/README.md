@@ -26,14 +26,27 @@ two receipts, types one number, and gets a balance check she can trust.
 
 ## Using it
 
-**Three tabs and a More.** Tonight, the Cellar, the Nights you have already
-counted — those are the jobs. Trade, the rota, the price list and the settings
-are all real and all one tap away behind **More**, which is where a thing you
-want monthly belongs. A bar of six equal tabs said they were all as urgent as
-cashing up, and they are not.
+**Photographs in, units and money out.** That is the whole loop, and the tab
+bar is that loop: **Tonight** puts the pictures in, **Sold** is what they add up
+to, and the **Cellar** is what is left downstairs. The rota, the price list, the
+settings and the list of nights one by one all live behind **More**.
 
-Open it, and it is already on tonight. Photograph the till roll, photograph the
-card slip, count the drawer and type that in. The verdict updates as each figure
+Photograph the till roll and the app can already say what went out of the door
+and what it took — by category off the DEPT block, and line by line off the PLU
+block. Nothing is typed and nothing is estimated: both tables are the till's own
+statement, added up.
+
+The two are kept apart on purpose. A roll torn below the departments has
+categories and no items; a photograph that missed the top has items and no
+categories. Each table carries its own total and says how many receipts it was
+read off, because a table covering four of seven nights is not a week however
+much it looks like one. Nothing fills one side in from the other.
+
+**Counting the drawer is a second job.** It used to be steps 2 and 3 of a walk
+that could not be finished without them, which told her a night was not a night
+until the cash was counted. It is behind *Check the money balances* now — open
+already on any night that has figures in it — and the bar at the bottom states
+what the till took until she asks for a verdict. The verdict updates as each figure
 lands, so a mistake shows up while the receipts are still in your hand rather
 than at the end. Save, and it joins the history.
 
@@ -620,7 +633,12 @@ src/
 `App.tsx` is the whole of the navigation: three tabs, a More list, and no
 router. Screens behind More are reached through the list rather than the bar,
 which is why the end-to-end tests go through a `goTab` helper — it knows which
-ones cost two taps.
+ones cost two taps, and `openMoney` knows the balance check is behind a shelf.
+
+`core/sold.ts` is the one place the two breakdowns are worked out, and
+`components/WhatSold.tsx` the one place they are drawn. Tonight, a night looked
+up again, and a span of nights all use them, so the answer cannot change shape
+depending on where she is standing when she asks.
 
 The rule is that `core/` and `ocr/extractTotal.ts` know nothing about React,
 IndexedDB or any OCR engine. They are where the reasoning lives, so they are
