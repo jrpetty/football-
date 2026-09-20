@@ -117,6 +117,12 @@ async function openMoney(page: Page): Promise<void> {
   }
 }
 
+/** Whatever date the trading-day field is currently offering. */
+async function openDateValue(page: Page): Promise<string> {
+  await openDate(page)
+  return page.inputValue('#date')
+}
+
 /** Whatever the screen is currently confirming, or '' when it is silent. */
 async function toastText(page: Page): Promise<string> {
   return (await page.locator('.toast').first().innerText().catch(() => '')).trim()
@@ -1999,6 +2005,58 @@ try {
   )
   check('read back as the shots it pours', /46\.7 shots/.test(oldLevels), oldLevels.slice(0, 200))
   await older.close()
+
+  console.log('\nThe date comes off the receipt')
+  // She photographs Friday's roll on Saturday afternoon. The app used to offer
+  // her Saturday; the receipt says 18/09/2026, and a British till means the
+  // eighteenth of September, not the ninth of June.
+  await goTab(page, 'Tonight')
+  await page.waitForTimeout(300)
+  const beforeDating = await openDateValue(page)
+  check(
+    'with nothing read, it offers today',
+    beforeDating !== '2026-09-18',
+    `the trading day, not a receipt's: "${beforeDating}"`,
+  )
+
+  await page.evaluate(async (roll) => {
+    const w = window as unknown as { __tallySeedRoll?: unknown }
+    w.__tallySeedRoll = roll
+  }, DAY_SESSION)
+
+  // Put the night in as a saved record and reopen it, which is the path a
+  // photographed roll takes once it has been read.
+  await page.evaluate(async (roll) => {
+    await new Promise<void>((resolve, reject) => {
+      const req = indexedDB.open('tally')
+      req.onsuccess = () => {
+        const tx = req.result.transaction('days', 'readwrite')
+        tx.objectStore('days').put({
+          date: '2026-09-18',
+          till: { pence: 117475, source: 'vision', edited: false },
+          card: { pence: null, source: 'manual', edited: false },
+          cashPence: null, note: '', zRead: roll, createdAt: 0, updatedAt: 0,
+        })
+        tx.oncomplete = () => resolve()
+        tx.onerror = () => reject(tx.error)
+      }
+      req.onerror = () => reject(req.error)
+    })
+  }, DAY_SESSION)
+  await page.reload({ waitUntil: 'networkidle' })
+  await goTab(page, 'Nights')
+  await page.waitForSelector('.day-row', { timeout: 5000 })
+  const dayRows = await page.locator('.day-row').allInnerTexts()
+  check(
+    'a receipt printed 18/09/2026 files the night under 18 September',
+    dayRows.some((t) => /18 Sep/.test(t)),
+    dayRows.join(' | ').slice(0, 200),
+  )
+  check(
+    'and never under the ninth of June',
+    !dayRows.some((t) => /9 Jun/.test(t)),
+    dayRows.join(' | ').slice(0, 200),
+  )
 
   console.log('\nTwo cash-ups in one day')
   // Her night of 18 September: the day session rung off at 16:57 and the evening

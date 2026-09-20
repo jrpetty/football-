@@ -36,6 +36,41 @@ export function tradingDayKey(now: Date = new Date()): string {
   return dateKey(d)
 }
 
+/**
+ * The trading day a receipt belongs to, off the receipt's own printed stamp.
+ *
+ * The till prints "18/09/2026 22:46:49" and it is a British till, so that is the
+ * eighteenth of September. Day first, always. Nothing here ever hands the string
+ * to `new Date()`, which reads 05/09/2026 as the fifth of September in one
+ * browser and the ninth of May in another, and would file a third of the year
+ * under the wrong month without ever looking wrong on screen.
+ *
+ * The cutoff then does its usual job: a roll rung off at half past midnight
+ * belongs to the night before, which is what she would call it.
+ *
+ * Returns null on anything it cannot read, because a guessed date is worse than
+ * no date — it would file a night under a day she never worked.
+ */
+export function tradingDayFromPrinted(printedAt: string | undefined): string | null {
+  if (!printedAt) return null
+  const m = /^\s*(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})(?:\s+(\d{1,2}):(\d{2}))?/.exec(printedAt)
+  if (!m) return null
+  const day = Number(m[1])
+  const month = Number(m[2])
+  const year = Number(m[3])
+  // A till that printed a thirteenth month, or a 31st of February, has been
+  // misread. Saying so beats filing the night under whatever Date rolls it into.
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null
+  const hour = m[4] === undefined ? 12 : Number(m[4])
+  const minute = m[5] === undefined ? 0 : Number(m[5])
+  if (hour > 23 || minute > 59) return null
+
+  const d = new Date(year, month - 1, day, hour, minute)
+  if (d.getMonth() !== month - 1 || d.getDate() !== day) return null
+  if (hour < TRADING_DAY_CUTOFF_HOUR) d.setDate(d.getDate() - 1)
+  return dateKey(d)
+}
+
 /** True when the count is being entered in the small hours after that night. */
 export function isAfterMidnightForTradingDay(now: Date = new Date()): boolean {
   return now.getHours() < TRADING_DAY_CUTOFF_HOUR

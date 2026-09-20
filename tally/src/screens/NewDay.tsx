@@ -26,7 +26,13 @@ import {
 import { ItemisedLegs, VerdictPanel } from '../components/Verdict.tsx'
 import { WhatSold } from '../components/WhatSold.tsx'
 import { soldFrom } from '../core/sold.ts'
-import { formatLong, formatShort, isAfterMidnightForTradingDay, tradingDayKey } from '../core/date.ts'
+import {
+  formatLong,
+  formatShort,
+  isAfterMidnightForTradingDay,
+  tradingDayFromPrinted,
+  tradingDayKey,
+} from '../core/date.ts'
 import { formatMoney, parsePence, penceToInput } from '../core/money.ts'
 import { describeMissing, reconcileFull, tillExpectations } from '../core/reconcile.ts'
 import { dayStats } from '../core/analytics.ts'
@@ -126,6 +132,16 @@ interface Props {
 export function NewDay({ onSaved, onReviewRoll, onOpenCellar, initialDate }: Props) {
   const settings = useMemo(() => loadSettings(), [])
   const [date, setDate] = useState(initialDate ?? tradingDayKey())
+  /**
+   * Whether she has set the date herself.
+   *
+   * The receipt's own date wins over the app's guess at today, but never over
+   * a date she has chosen. Overwriting that would be the app arguing with her
+   * about a night she was there for.
+   */
+  const [dateIsHers, setDateIsHers] = useState(initialDate !== undefined)
+  /** The trading day the receipt says, once one has been read off it. */
+  const [datedFrom, setDatedFrom] = useState<string | null>(null)
   const [roll, setRoll] = useState<RollState>(emptyRoll)
   const [card, setCard] = useState<FigureState>(emptyFigure)
   /** What was in the drawer, float and all — the figure she actually counts. */
@@ -318,6 +334,37 @@ export function NewDay({ onSaved, onReviewRoll, onOpenCellar, initialDate }: Pro
   /** What the roll says went out tonight, and what it took. */
   const sold = useMemo(() => soldFrom([zRead]), [zRead])
 
+  /**
+   * File the night under the day the till printed on it.
+   *
+   * She photographs Friday's roll on Saturday afternoon, and before this the
+   * app offered her Saturday. The receipt knows: "18/09/2026 22:46:49", read
+   * day-first because it is a British till, with the small hours counted back
+   * to the night before.
+   */
+  const printedDay = tradingDayFromPrinted(zRead?.header.printedAt)
+  useEffect(() => {
+    if (printedDay === null) return
+    setDatedFrom(printedDay)
+    if (!dateIsHers) setDate(printedDay)
+  }, [printedDay, dateIsHers])
+
+  /**
+   * Receipts from two different nights, handed in together.
+   *
+   * They would add into one figure filed under one day, and the other night
+   * would simply not exist. Said out loud rather than quietly resolved, because
+   * only she knows whether it was a slip of the camera roll.
+   */
+  const daysOnTheRoll = useMemo(() => {
+    const days = new Set<string>()
+    for (const shot of roll.shots) {
+      const day = tradingDayFromPrinted(shot.outcome.parsed?.header.printedAt)
+      if (day) days.add(day)
+    }
+    return [...days].sort()
+  }, [roll.shots])
+
   // The drawer holds the float as well as the takings, and only the takings
   // reconcile. Without this subtraction a £200 float reads as £200 over every
   // night — consistently enough to look like the pub doing well.
@@ -490,11 +537,42 @@ export function NewDay({ onSaved, onReviewRoll, onOpenCellar, initialDate }: Pro
           {existing && <span className="badge">Already saved</span>}
         </div>
 
+        {/* Where the date came from. She photographs Friday's roll on Saturday,
+            so the app saying "Friday" out of nowhere needs a reason attached to
+            it — and a reason she can overrule. */}
+        {datedFrom !== null && !dateIsHers && daysOnTheRoll.length <= 1 && (
+          <p className="note quiet" data-testid="dated-from">
+            Dated {formatShort(datedFrom)} off the receipt — it was printed{' '}
+            {zRead?.header.printedAt ?? 'that day'}. Tap the date above to change it.
+          </p>
+        )}
+
+        {daysOnTheRoll.length > 1 && (
+          <section className="card">
+            <p className="note bad" style={{ marginTop: 0, marginBottom: 10 }} data-testid="two-days">
+              <strong>These receipts are from {daysOnTheRoll.length} different nights.</strong>{' '}
+              {daysOnTheRoll.map((d) => formatShort(d)).join(' and ')}. Saved together they
+              would add into one figure under one date, and the other{' '}
+              {daysOnTheRoll.length > 2 ? 'nights' : 'night'} would not exist. Put each night
+              in on its own.
+            </p>
+          </section>
+        )}
+
         {(dateOpen || initialDate || (lateNight && !initialDate)) && (
           <section className="card">
             <div className="field" style={{ marginBottom: 0 }}>
               <label htmlFor="date">Trading day</label>
-              <input id="date" type="date" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} />
+              <input
+                id="date"
+                type="date"
+                value={date}
+                onChange={(e) => {
+                  if (!e.target.value) return
+                  setDate(e.target.value)
+                  setDateIsHers(true)
+                }}
+              />
               {lateNight && !initialDate && (
                 <p className="help">
                   Past midnight, so this is last night's trade — the session you have just closed.
@@ -521,7 +599,11 @@ export function NewDay({ onSaved, onReviewRoll, onOpenCellar, initialDate }: Pro
               {unfinished.also > 0 &&
                 ` ${unfinished.also} other ${unfinished.also === 1 ? 'night is' : 'nights are'} waiting too.`}
             </p>
-            <button type="button" className="btn-small" onClick={() => setDate(unfinished.date)}>
+            <button
+              type="button"
+              className="btn-small"
+              onClick={() => { setDate(unfinished.date); setDateIsHers(true) }}
+            >
               {unfinished.also > 0 ? 'Finish the oldest' : 'Finish that night'}
             </button>
           </section>
