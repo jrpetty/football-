@@ -98,6 +98,16 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
   const [weekdays, setWeekdays] = useState<string[]>([])
   const [depts, setDepts] = useState<string[]>([])
   const [onlyUnbalanced, setOnlyUnbalanced] = useState(false)
+  /**
+   * Whether the weekday and department chips are out.
+   *
+   * Hiding a filter control is only safe because leaving this screen clears the
+   * filters with it — the whole screen unmounts. So there is no state in which
+   * a chart is quietly showing only Fridays with nothing on screen saying so,
+   * and no need for the chips to second-guess her and fold themselves away
+   * again the moment she switches the last one off.
+   */
+  const [narrowing, setNarrowing] = useState(false)
   const [itemSort, setItemSort] = useState<'value' | 'quantity'>('value')
   const [showAllItems, setShowAllItems] = useState(false)
   const [itemQuery, setItemQuery] = useState('')
@@ -479,6 +489,8 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
     )
   }
 
+  const narrowed = weekdays.length + depts.length + (onlyUnbalanced ? 1 : 0)
+
   return (
     <div className="main">
       {alerts.length > 0 && (
@@ -507,9 +519,18 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
 
       <AskCard data={askData} />
 
-      {/* --- filters, in one row above the charts --------------------------- */}
+      {/* --- filters, in one row above the charts ---------------------------
+
+          How far back is the question everyone asks. Which weekdays, and which
+          departments, are questions somebody asks occasionally — and three rows
+          of chips at the top of a screen make it look like all three have to be
+          answered before anything can be read. So the range stays out and the
+          rest waits behind a word, with a count on it when something is on. */}
       <section className="card">
-        <div className="card-head"><h2>Show me</h2></div>
+        <div className="card-head">
+          <h2>Show me</h2>
+          {narrowed > 0 && <span className="badge">{narrowed} narrowed</span>}
+        </div>
         <div className="filters">
           <div className="chip-row">
             {RANGES.map((r) => (
@@ -523,9 +544,19 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
                 {r.label}
               </button>
             ))}
+            {!narrowing && (
+              <button
+                type="button"
+                className="chip"
+                onClick={() => setNarrowing(true)}
+                data-testid="narrow-it"
+              >
+                Narrow it down…
+              </button>
+            )}
           </div>
 
-          <div className="chip-row">
+          {narrowing && <div className="chip-row">
             {WEEKDAYS.map((d) => (
               <button
                 key={d}
@@ -545,9 +576,9 @@ export function Dashboard({ refreshKey, onOpen }: { refreshKey: number; onOpen: 
             >
               Didn’t balance
             </button>
-          </div>
+          </div>}
 
-          {available.length > 0 && (
+          {narrowing && available.length > 0 && (
             <div className="chip-row">
               {available.map((d) => (
                 <button

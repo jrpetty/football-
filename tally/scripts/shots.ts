@@ -5,6 +5,7 @@ import { readFile, mkdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { extname, join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import type { Page } from 'playwright'
 import { launchChromium } from './browser.ts'
 import { GARDENERS_ARMS } from '../test/fixtures/gardenersArms.ts'
 
@@ -30,6 +31,26 @@ const server = createServer(async (req, res) => {
 await new Promise<void>((r) => server.listen(0, '127.0.0.1', r))
 const addr = server.address()
 const base = `http://127.0.0.1:${typeof addr === 'object' && addr ? addr.port : 0}/`
+
+
+/** The bar has three tabs; Trade, the rota and the settings live behind More. */
+async function goTab(page: Page, name: string): Promise<void> {
+  if (['Trade', 'Rota', 'Price list', 'Settings'].includes(name)) {
+    await page.click('.tabs button:has-text("More")')
+    await page.click(`.door:has-text("${name}")`)
+  } else {
+    await page.click(`.tabs button:has-text("${name}")`)
+  }
+}
+
+/** Four of the cellar's panels sit behind More… rather than on the screen. */
+async function cellarPanel(page: Page, label: string): Promise<void> {
+  await page.waitForSelector('.chip-row', { timeout: 5000 })
+  if ((await page.locator(`.chip:has-text("${label}")`).count()) === 0) {
+    await page.click('[data-testid="cellar-more"]')
+  }
+  await page.click(`.chip:has-text("${label}")`)
+}
 
 const browser = await launchChromium()
 
@@ -122,14 +143,20 @@ for (const scheme of ['dark', 'light'] as const) {
   await page.fill('#figure-float', '')
   await page.waitForTimeout(150)
 
-  await page.click('button:has-text("Trade")')
+  // The drawer behind the bar: everything that is not the job of a Tuesday.
+  await page.click('.tabs button:has-text("More")')
+  await page.waitForSelector('.door', { timeout: 5000 })
+  await page.waitForTimeout(200)
+  await page.screenshot({ path: join(out, `more-${scheme}.png`), fullPage: false })
+
+  await goTab(page, 'Trade')
   await page.waitForSelector('.kpi-row', { timeout: 5000 })
   await page.waitForTimeout(250)
   await page.screenshot({ path: join(out, `trade-${scheme}.png`), fullPage: false })
   await page.screenshot({ path: join(out, `trade-full-${scheme}.png`), fullPage: true })
 
   // The rota, with a crew on the week.
-  await page.click('button:has-text("Rota")')
+  await goTab(page, 'Rota')
   await page.waitForSelector('button:has-text("Add the first person")', { timeout: 5000 })
   await page.click('button:has-text("Add the first person")')
   await page.waitForSelector('#person-name', { timeout: 5000 })
@@ -228,7 +255,7 @@ for (const scheme of ['dark', 'light'] as const) {
   await page.reload({ waitUntil: 'networkidle' })
 
   // Trade again, now the rota covers the seeded night, so the crew card is there.
-  await page.click('button:has-text("Trade")')
+  await goTab(page, 'Trade')
   await page.waitForSelector('.kpi-row', { timeout: 5000 })
   await page.waitForTimeout(300)
   await page.screenshot({ path: join(out, `trade-crew-${scheme}.png`), fullPage: true })
@@ -243,7 +270,7 @@ for (const scheme of ['dark', 'light'] as const) {
   await page.screenshot({ path: join(out, `ask-${scheme}.png`), fullPage: false })
 
   // The staff record, with a couple of people on the books.
-  await page.click('button:has-text("Rota")')
+  await goTab(page, 'Rota')
   await page.waitForSelector('.chip:has-text("Records")', { timeout: 5000 })
   await page.click('.chip:has-text("Records")')
   await page.waitForTimeout(400)
@@ -258,7 +285,7 @@ for (const scheme of ['dark', 'light'] as const) {
   await page.screenshot({ path: join(out, `people-${scheme}.png`), fullPage: false })
 
   // One item's card, reached through the search — which lives on Trade.
-  await page.click('button:has-text("Trade")')
+  await goTab(page, 'Trade')
   await page.waitForSelector('input[aria-label="Find an item"]', { timeout: 5000 })
   await page.fill('input[aria-label="Find an item"]', 'taddy')
   await page.waitForTimeout(250)
@@ -269,35 +296,37 @@ for (const scheme of ['dark', 'light'] as const) {
   await page.click('button:has-text("Back to the trade")').catch(() => {})
   await page.waitForTimeout(200)
 
-  await page.click('button:has-text("Cellar")')
+  await goTab(page, 'Cellar')
   await page.waitForTimeout(300)
   await page.screenshot({ path: join(out, `cellar-${scheme}.png`), fullPage: false })
 
   // Costs: a firkin of Taddy, so the margin has something to say.
   await page.click('button:has-text("Build the cellar from the till")').catch(() => {})
   await page.waitForTimeout(500)
-  await page.click('.chip:has-text("What it costs")')
+  await cellarPanel(page, 'What it costs')
   await page.waitForSelector('input[aria-label="Taddy Lager cost"]', { timeout: 5000 })
   await page.fill('input[aria-label="Taddy Lager cost"]', '95.00')
   await page.fill('input[aria-label="Taddy Lager servings per container"]', '72')
   await page.waitForTimeout(400)
   await page.screenshot({ path: join(out, `costs-${scheme}.png`), fullPage: false })
 
-  await page.click('button:has-text("Nights")')
+  await goTab(page, 'Nights')
   await page.waitForSelector('.day-row', { timeout: 5000 })
   await page.waitForTimeout(200)
   await page.screenshot({ path: join(out, `nights-${scheme}.png`), fullPage: false })
 
-  await page.click('button:has-text("Settings")')
+  await goTab(page, 'Settings')
   await page.waitForTimeout(300)
   await page.screenshot({ path: join(out, `settings-${scheme}.png`), fullPage: false })
   await page.screenshot({ path: join(out, `settings-full-${scheme}.png`), fullPage: true })
-  await page.locator('button:has-text("Save everything")').scrollIntoViewIfNeeded()
+  // Two buttons carry that phrase — the small file and the one with the
+  // receipts in it — so say which, rather than tripping over strict mode.
+  await page.locator('[data-testid="backup-figures"]').scrollIntoViewIfNeeded()
   await page.waitForTimeout(300)
   await page.screenshot({ path: join(out, `moving-${scheme}.png`), fullPage: false })
 
   // The saved night, opened — and its photograph, full screen.
-  await page.click('button:has-text("Nights")')
+  await goTab(page, 'Nights')
   await page.waitForSelector('.day-row', { timeout: 5000 })
   await page.click('.day-row')
   await page.waitForSelector('.verdict', { timeout: 5000 })
@@ -321,7 +350,7 @@ for (const scheme of ['dark', 'light'] as const) {
   await page.screenshot({ path: join(out, `review-${scheme}.png`), fullPage: false })
 
   // The price list.
-  await page.click('button:has-text("Settings")')
+  await goTab(page, 'Settings')
   await page.waitForSelector('button:has-text("Open the price list")', { timeout: 5000 })
   await page.click('button:has-text("Open the price list")')
   await page.waitForTimeout(300)

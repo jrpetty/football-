@@ -62,6 +62,37 @@ function check(label: string, ok: boolean, detail = ''): void {
   }
 }
 
+/**
+ * Go to a section.
+ *
+ * The bar has three tabs and a More drawer: Trade, the rota, the price list and
+ * the settings live behind More, so reaching one of them is two taps rather than
+ * one. Routed through here so a test says where it is going and not how.
+ */
+async function goTab(page: Page, name: string): Promise<void> {
+  if (['Trade', 'Rota', 'Price list', 'Settings'].includes(name)) {
+    await page.click('.tabs button:has-text("More")')
+    await page.click(`.door:has-text("${name}")`)
+  } else {
+    await page.click(`.tabs button:has-text("${name}")`)
+  }
+}
+
+/**
+ * Open one of the cellar's panels.
+ *
+ * Three chips are on the screen — what is down there, the stock take, a
+ * delivery. Week by week, the scales, the costs and the set-up are behind
+ * More…, so a test asks for the panel and this finds it either way.
+ */
+async function cellarPanel(page: Page, label: string): Promise<void> {
+  await page.waitForSelector('.chip-row', { timeout: 5000 })
+  if ((await page.locator(`.chip:has-text("${label}")`).count()) === 0) {
+    await page.click('[data-testid="cellar-more"]')
+  }
+  await page.click(`.chip:has-text("${label}")`)
+}
+
 /** Anything deliberately small: a text link in a row, not a control to hit. */
 const TINY_BY_DESIGN = ['hours-change', 'shot-open', 'lb-close', 'lb-nav']
 
@@ -196,14 +227,14 @@ try {
       })
     }, GARDENERS_ARMS)
     await page.reload({ waitUntil: 'networkidle' })
-    await page.click('button:has-text("Nights")')
+    await goTab(page, 'Nights')
     await page.waitForSelector('.day-row', { timeout: 8000 })
     check('the seeded nights all landed', (await page.locator('.day-row').count()) === NIGHTS_SEEDED)
-    await page.click('button:has-text("Tonight")')
+    await goTab(page, 'Tonight')
     await page.waitForTimeout(300)
 
     await screen(page, 'Tonight')
-    await page.click('button:has-text("Trade")')
+    await goTab(page, 'Trade')
     await page.waitForTimeout(500)
     await screen(page, 'Trade')
     // The whole of Trade, not just the window the chips open on: the weekly
@@ -219,19 +250,19 @@ try {
     await screen(page, 'one item')
     await page.click('button:has-text("Back")')
     await page.waitForTimeout(400)
-    await page.click('button:has-text("Cellar")')
+    await goTab(page, 'Cellar')
     await page.click('button:has-text("Build the cellar from the till")')
     await page.waitForTimeout(600)
     await screen(page, 'the cellar')
     for (const chip of ['Week by week', 'Delivery in', 'Stock take', 'The scales', 'What it costs', 'Set up']) {
-      await page.click(`.chip:has-text("${chip}")`)
+      await cellarPanel(page, chip)
       await screen(page, `the cellar — ${chip.toLowerCase()}`)
     }
-    await page.click('.chip:has-text("Stock take")')
+    await cellarPanel(page, 'Stock take')
     await page.click('button:has-text("Weigh a keg")')
     await screen(page, 'the keg calculator')
 
-    await page.click('button:has-text("Rota")')
+    await goTab(page, 'Rota')
     await page.waitForSelector('button:has-text("Add the first person")', { timeout: 5000 })
     await page.click('button:has-text("Add the first person")')
     await page.fill('#person-name', 'Kelly')
@@ -251,14 +282,14 @@ try {
     await page.click('.chip:has-text("Records")')
     await screen(page, 'the records')
 
-    await page.click('button:has-text("Nights")')
+    await goTab(page, 'Nights')
     await page.waitForSelector('.day-row', { timeout: 5000 })
     await screen(page, 'the nights')
     await page.click('.day-row')
     await page.waitForSelector('.verdict', { timeout: 5000 })
     await screen(page, 'one night')
 
-    await page.click('button:has-text("Settings")')
+    await goTab(page, 'Settings')
     await page.waitForSelector('#apiKey', { timeout: 5000 })
     await screen(page, 'settings')
     await page.click('[data-testid="start-again"]')
@@ -275,7 +306,7 @@ try {
       .then(() => true)
       .catch(() => false)
     check('opens with the signal off', opened)
-    await page.click('button:has-text("Nights")').catch(() => undefined)
+    await goTab(page, 'Nights').catch(() => undefined)
     await page.waitForTimeout(700)
     check(
       'and the nights are still there with no network at all',

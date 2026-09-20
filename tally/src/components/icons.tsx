@@ -107,6 +107,17 @@ export function IconSliders(p: IconProps) {
   )
 }
 
+/** Everything else — the drawer the nightly job does not need open. */
+export function IconMore(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <circle cx="5" cy="12" r="1.6" />
+      <circle cx="12" cy="12" r="1.6" />
+      <circle cx="19" cy="12" r="1.6" />
+    </Svg>
+  )
+}
+
 /** The rota — two people, because a pub night is never one. */
 export function IconPeople(p: IconProps) {
   return (
@@ -115,6 +126,16 @@ export function IconPeople(p: IconProps) {
       <path d="M2.8 20.2a6.5 6.5 0 0 1 12.4 0" />
       <path d="M16.4 5.2a3.4 3.4 0 0 1 0 6.5" />
       <path d="M18.2 14.4a6.5 6.5 0 0 1 3.1 4.6" />
+    </Svg>
+  )
+}
+
+/** A note — the pencil behind the till. */
+export function IconPencil(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M4 20h4.2l9.1-9.1a2.1 2.1 0 0 0 0-3l-1.2-1.2a2.1 2.1 0 0 0-3 0L4 15.8V20z" />
+      <path d="M13.8 6.6 17.4 10.2" />
     </Svg>
   )
 }

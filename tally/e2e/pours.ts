@@ -158,6 +158,15 @@ await ctx.addInitScript(() => {
 const page = await ctx.newPage()
 const errors: string[] = []
 page.on('pageerror', (e) => errors.push(String(e)))
+/** Open a cellar panel, reaching through More… when it is not on the screen. */
+async function cellarPanel(label: string): Promise<void> {
+  await page.waitForSelector('.chip-row', { timeout: 5000 })
+  if ((await page.locator(`.chip:has-text("${label}")`).count()) === 0) {
+    await page.click('[data-testid="cellar-more"]')
+  }
+  await page.click(`.chip:has-text("${label}")`)
+}
+
 console.log(`checking ${single}\n`)
 await page.goto(base, { waitUntil: 'networkidle' })
 // The real stock take seeds itself on first run; give it a moment to land.
@@ -190,7 +199,7 @@ const before = await page.locator('.main').innerText()
 say(/knows nothing about/.test(before), 'before it is tied up, it owns up to taking nothing off')
 
 // Tie the till to the cellar through the interface, as she would.
-await page.click('.chip:has-text("Set up")')
+await cellarPanel('Set up')
 await page.waitForSelector('[data-testid="keep-pours"]', { timeout: 8000 })
 await page.click('[data-testid="keep-pours"]')
 await page.waitForTimeout(1200)
@@ -231,7 +240,7 @@ for (const [id, open] of Object.entries(UNTOUCHED)) {
 // wrong: a half that took a whole pint off, or took nothing off because the
 // till prints it as a separate line, would drain or inflate the cellar every
 // night without a single figure looking odd.
-await page.click('.chip:has-text("Set up")')
+await cellarPanel('Set up')
 await page.waitForTimeout(600)
 for (const [sold, takes] of [
   ['PINT TADDY LAGER', '1'], ['HALF TADDY LAGER', '0.5'],
@@ -254,7 +263,7 @@ say(
 // so it sits at whatever it was last counted at looking like stock that never
 // moves. The fruit beers are the crisps all over again — several in the cellar,
 // one button on the till.
-await page.click('.chip:has-text("Set up")')
+await cellarPanel('Set up')
 await page.waitForTimeout(700)
 const orphanText = await page.locator('[data-testid="orphans"]').innerText().catch(() => '')
 say(/never moves/.test(orphanText), 'it names the lines nothing on the till sells', orphanText.slice(0, 200))

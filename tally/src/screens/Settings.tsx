@@ -8,6 +8,7 @@
 // ---------------------------------------------------------------------------
 
 import { useEffect, useRef, useState } from 'react'
+import { useToast } from '../components/toast.ts'
 import { formatMoney, parsePence, penceToInput } from '../core/money.ts'
 import {
   listDays,
@@ -86,7 +87,7 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
     return h > 0 ? String(h) : ''
   })
   const [usage, setUsage] = useState<{ usedBytes: number; quotaBytes: number } | null>(null)
-  const [toast, setToast] = useState('')
+  const [toast, say] = useToast(5000)
   const [showKey, setShowKey] = useState(false)
   // The box holds its own text so "Save" means something. Saving on every
   // keystroke, as this did before, is indistinguishable from not saving at all.
@@ -128,11 +129,6 @@ export function Settings({ onChanged, onOpenPrices }: { onChanged: () => void; o
     setS(merged)
     saveSettings(merged)
     onChanged()
-  }
-
-  function say(message: string) {
-    setToast(message)
-    setTimeout(() => setToast(''), 5000)
   }
 
   /**

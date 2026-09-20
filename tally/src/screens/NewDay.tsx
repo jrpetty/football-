@@ -68,8 +68,9 @@ import { CellarGap } from '../components/CellarGap.tsx'
 import { costOf } from '../core/margin.ts'
 import { loadSettings } from '../storage/settings.ts'
 import { makeThumbnail } from '../ocr/index.ts'
-import { IconBarrel, IconTickSmall } from '../components/icons.tsx'
+import { IconBarrel, IconPencil, IconTickSmall } from '../components/icons.tsx'
 import { CashCount } from '../components/CashCount.tsx'
+import { useToast } from '../components/toast.ts'
 import { splitDrawer, type Tally } from '../core/cash.ts'
 
 /** What each line counted in millilitres pours, so a count reads back in shots. */
@@ -115,10 +116,12 @@ async function captureFromFigure(figure: FigureState, keepPhotos: boolean, exist
 interface Props {
   onSaved: (date: string) => void
   onReviewRoll: (zRead: ZRead, apply: (next: ZRead) => void) => void
+  /** Where to send her when the cellar has not been set up yet. */
+  onOpenCellar: () => void
   initialDate?: string
 }
 
-export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
+export function NewDay({ onSaved, onReviewRoll, onOpenCellar, initialDate }: Props) {
   const settings = useMemo(() => loadSettings(), [])
   const [date, setDate] = useState(initialDate ?? tradingDayKey())
   const [roll, setRoll] = useState<RollState>(emptyRoll)
@@ -132,6 +135,10 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
   const [tally, setTally] = useState<Tally>({})
   const [counting, setCounting] = useState(false)
   const [note, setNote] = useState('')
+  /** The note is blank almost every night, so it waits behind a word. */
+  const [noteOpen, setNoteOpen] = useState(false)
+  /** The date is right almost every night, so it waits behind the date itself. */
+  const [dateOpen, setDateOpen] = useState(false)
   // The cellar, counted as the night is closed. Kept as typed until saved.
   const [stockItems, setStockItems] = useState<StockItem[]>([])
   /** The serve each millilitre-counted line pours, so the sheet can say the shots. */
@@ -164,7 +171,7 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
     also: number
   } | null>(null)
   const [saving, setSaving] = useState(false)
-  const [toast, setToast] = useState('')
+  const [toast, say] = useToast(6000)
   const lateNight = useRef(isAfterMidnightForTradingDay()).current
 
   // The cellar's lines, and the night's own count if one was taken — shown as
@@ -434,30 +441,43 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
       onSaved(date)
     } catch (err) {
       setSaving(false)
-      setToast(err instanceof Error ? `Could not save: ${err.message}` : 'Could not save that night.')
-      setTimeout(() => setToast(''), 6000)
+      say(err instanceof Error ? `Could not save: ${err.message}` : 'Could not save that night.')
     }
   }
 
   return (
     <>
       <div className="main with-bar">
-        <section className="card">
-          <div className="card-head">
-            <h2>{formatLong(date)}</h2>
-            {existing && <span className="badge">Already saved</span>}
-          </div>
-          <div className="field" style={{ marginBottom: 0 }}>
-            <label htmlFor="date">Trading day</label>
-            <input id="date" type="date" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} />
-            {lateNight && !initialDate && (
-              <p className="help">
-                It is past midnight, so this has defaulted to last night's trade — the session you have just
-                closed. Change it above if that is not right.
-              </p>
-            )}
-          </div>
-        </section>
+        {/* The date is right on all but a handful of nights, so it is a line of
+            text she can tap rather than a card with a field in it. It opens by
+            itself on the nights where it is worth a second look: a night being
+            corrected, and the small hours, when the trading day is not the one
+            the calendar says. */}
+        <div className="daybar">
+          <button
+            type="button"
+            className="daybar-date"
+            aria-expanded={dateOpen || Boolean(initialDate) || (lateNight && !initialDate)}
+            onClick={() => setDateOpen((v) => !v)}
+          >
+            {formatLong(date)}
+          </button>
+          {existing && <span className="badge">Already saved</span>}
+        </div>
+
+        {(dateOpen || initialDate || (lateNight && !initialDate)) && (
+          <section className="card">
+            <div className="field" style={{ marginBottom: 0 }}>
+              <label htmlFor="date">Trading day</label>
+              <input id="date" type="date" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} />
+              {lateNight && !initialDate && (
+                <p className="help">
+                  Past midnight, so this is last night's trade — the session you have just closed.
+                </p>
+              )}
+            </div>
+          </section>
+        )}
 
         {unfinished && (
           <section className="card">
@@ -591,39 +611,43 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
             step number should promise. Counting the cellar is a different job
             on a different rhythm — some do it nightly, most do not — and a
             step 4 that never gets ticked reads as a job left undone every
-            single night. It keeps its own dot once it has been counted. */}
-        <section className="card">
-          <div className="card-head">
-            <span className={`step-dot extra${cellarCounted ? ' done' : ''}`} aria-hidden="true">
-              {cellarCounted ? <IconTickSmall size={13} /> : <IconBarrel size={14} />}
+            single night.
+
+            Shut, it is one line of text. There is no reason for a sheet of
+            eighty lines to be on the screen of a landlady who has come here to
+            cash up, and every reason for it to open in one tap when she has. */}
+        {stockItems.length === 0 ? (
+          <button type="button" className="shelf" onClick={onOpenCellar}>
+            <span className="shelf-icon" aria-hidden="true"><IconBarrel size={15} /></span>
+            <span className="shelf-text">Set the cellar up</span>
+            <span className="shelf-hint">not done yet</span>
+          </button>
+        ) : !cellarOpen ? (
+          <button
+            type="button"
+            className="shelf"
+            onClick={() => setCellarOpen(true)}
+            data-testid="count-cellar"
+          >
+            <span className={`shelf-icon${cellarCounted ? ' done' : ''}`} aria-hidden="true">
+              {cellarCounted ? <IconTickSmall size={13} /> : <IconBarrel size={15} />}
             </span>
-            <h2>The cellar</h2>
-            <span className="hint">
-              {stockItems.length === 0
-                ? 'not set up yet'
-                : cellarCounted
-                  ? `${cellarCounted} lines counted`
-                  : 'optional'}
+            <span className="shelf-text">Count the cellar</span>
+            <span className="shelf-hint">
+              {cellarCounted ? `${cellarCounted} lines counted` : 'optional'}
             </span>
-          </div>
-          {stockItems.length === 0 ? (
-            <p className="note" style={{ marginTop: 0 }}>
-              Once the cellar is set up on the Cellar tab, it can be counted here every night — and
-              each night then shows what should have been down there against what was.
-            </p>
-          ) : !cellarOpen ? (
-            <>
-              <button type="button" onClick={() => setCellarOpen(true)} data-testid="count-cellar">
-                Count the cellar
-              </button>
-              <p className="note" style={{ marginBottom: 0 }}>
-                Nothing here needs it — the roll, the card machine and the drawer make a complete
-                night on their own. But counted, a night closes its own window: last night’s count,
-                plus what came in, less what the till poured, against what is actually there. Kegs go
-                on the scales rather than being guessed at.
-              </p>
-            </>
-          ) : (
+          </button>
+        ) : (
+          <section className="card">
+            <div className="card-head">
+              <span className={`step-dot extra${cellarCounted ? ' done' : ''}`} aria-hidden="true">
+                {cellarCounted ? <IconTickSmall size={13} /> : <IconBarrel size={14} />}
+              </span>
+              <h2>The cellar</h2>
+              <span className="hint">
+                {cellarCounted ? `${cellarCounted} lines counted` : 'optional'}
+              </span>
+            </div>
             <>
               {weighOpen ? (
                 <div className="keg-inline">
@@ -685,29 +709,35 @@ export function NewDay({ onSaved, onReviewRoll, initialDate }: Props) {
                 </button>
               </div>
             </>
-          )}
-        </section>
+          </section>
+        )}
 
-        <section className="card">
-          <p className="note" style={{ marginTop: 0, marginBottom: 0 }}>
-            Nothing has to be done in one go. Save it with whatever is filled in — the cellar counted
-            and the roll still on the bar, or the other way about — and open the same date again to
-            finish it. An unfinished night is left out of the takings and the averages until it has a
-            figure, so a half-done night never reads as a night that took nothing.
-          </p>
-        </section>
+        {/* A note gets written on perhaps one night in twenty. Shut, it costs a
+            word; a textarea sitting empty under every night costs a card. */}
+        {noteOpen || note ? (
+          <section className="card">
+            <div className="field" style={{ marginBottom: 0 }}>
+              <label htmlFor="note">Note</label>
+              <textarea
+                id="note"
+                value={note}
+                placeholder="Anything worth remembering about tonight"
+                onChange={(e) => setNote(e.target.value)}
+              />
+            </div>
+          </section>
+        ) : (
+          <button type="button" className="shelf" onClick={() => setNoteOpen(true)}>
+            <span className="shelf-icon" aria-hidden="true"><IconPencil size={14} /></span>
+            <span className="shelf-text">Add a note</span>
+            <span className="shelf-hint">optional</span>
+          </button>
+        )}
 
-        <section className="card">
-          <div className="field" style={{ marginBottom: 0 }}>
-            <label htmlFor="note">Note (optional)</label>
-            <textarea
-              id="note"
-              value={note}
-              placeholder="Anything worth remembering about tonight"
-              onChange={(e) => setNote(e.target.value)}
-            />
-          </div>
-        </section>
+        <p className="note quiet">
+          Save it half done and finish it later — an unfinished night is kept out of the takings
+          until it has a figure, so it never reads as a night that took nothing.
+        </p>
       </div>
 
       <div className="verdict-bar">

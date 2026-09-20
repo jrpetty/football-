@@ -16,6 +16,7 @@
 // ---------------------------------------------------------------------------
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useToast } from '../components/toast.ts'
 import { dayStats, itemTotals } from '../core/analytics.ts'
 import { addDays, formatShort, tradingDayKey } from '../core/date.ts'
 import {
@@ -83,6 +84,23 @@ import { formatMoney, formatSigned, parsePence, penceToInput } from '../core/mon
 type Panel = 'levels' | 'weeks' | 'delivery' | 'count' | 'scales' | 'costs' | 'setup'
 
 /**
+ * The panels, and which of them earn a place on the screen every time.
+ *
+ * `deep` is not "advanced" — the scales and the costs are as plain as the rest.
+ * It means "not this week": a thing she reaches for now and then, which a row of
+ * seven equal chips turns into a thing she has to read past every time.
+ */
+const PANELS: { key: Panel; label: string; deep?: true }[] = [
+  { key: 'levels', label: 'What’s down there' },
+  { key: 'count', label: 'Stock take' },
+  { key: 'delivery', label: 'Delivery in' },
+  { key: 'weeks', label: 'Week by week', deep: true },
+  { key: 'scales', label: 'The scales', deep: true },
+  { key: 'costs', label: 'What it costs', deep: true },
+  { key: 'setup', label: 'Set up', deep: true },
+]
+
+/**
  * What one serving of a line built from the till is.
  *
  * The guess already says which of the four it is — a pint off a tap, a
@@ -120,12 +138,14 @@ function idFor(name: string): string {
 
 export function Stock({ onChanged }: { onChanged: () => void }) {
   const [panel, setPanel] = useState<Panel>('levels')
+  /** The four panels that are not a weekly job, kept behind one chip. */
+  const [deeper, setDeeper] = useState(false)
   const [config, setConfig] = useState<StockConfig | null>(null)
   const [deliveries, setDeliveries] = useState<Delivery[]>([])
   const [counts, setCounts] = useState<Array<{ date: string; lines: Array<{ stockItemId: string; baseUnits: number }> }>>([])
   const [days, setDays] = useState<ReturnType<typeof dayStats>[]>([])
   const [book, setBook] = useState<PriceBookEntry[]>([])
-  const [toast, setToast] = useState('')
+  const [toast, say] = useToast(4000)
 
   /** Draft numbers being typed into the delivery or count sheets. */
   const [drafts, setDrafts] = useState<Record<string, string>>({})
@@ -164,11 +184,6 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
       cancelled = true
     }
   }, [])
-
-  function say(message: string) {
-    setToast(message)
-    setTimeout(() => setToast(''), 4000)
-  }
 
   /**
    * Change how a line is counted: pints, millilitres, bottles or units.
@@ -722,26 +737,36 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
           <h2>The cellar</h2>
           <span className="badge">{config.items.length} lines</span>
         </div>
+        {/* Three chips, not seven. What is down there is the answer she came
+            for; the stock take and a delivery are the two things she does to
+            it. Week by week, the scales, the costs and the set-up are all real
+            — and all things she wants perhaps monthly, which is not a reason
+            to put them on the screen every time. */}
         <div className="chip-row">
-          {(['levels', 'weeks', 'delivery', 'count', 'scales', 'costs', 'setup'] as const).map((p) => (
+          {PANELS.filter((p) => !p.deep || deeper || panel === p.key).map((p) => (
             <button
-              key={p}
+              key={p.key}
               type="button"
               className="chip"
-              aria-pressed={panel === p}
+              aria-pressed={panel === p.key}
               onClick={() => {
-                setPanel(p)
+                setPanel(p.key)
                 setDrafts({})
                 // A delivery is dated the day it arrives. A stock take is dated
                 // the trading day it draws a line under, which for a count done
                 // before opening is last night's.
-                if (p === 'count') setSheetDate(countDate())
-                else if (p === 'delivery') setSheetDate(tradingDayKey())
+                if (p.key === 'count') setSheetDate(countDate())
+                else if (p.key === 'delivery') setSheetDate(tradingDayKey())
               }}
             >
-              {p === 'levels' ? 'What’s down there' : p === 'weeks' ? 'Week by week' : p === 'delivery' ? 'Delivery in' : p === 'count' ? 'Stock take' : p === 'scales' ? 'The scales' : p === 'costs' ? 'What it costs' : 'Set up'}
+              {p.label}
             </button>
           ))}
+          {!deeper && (
+            <button type="button" className="chip" onClick={() => setDeeper(true)} data-testid="cellar-more">
+              More…
+            </button>
+          )}
         </div>
       </section>
 
@@ -805,11 +830,9 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
                 ))}
               </ul>
               <p className="note" style={{ marginBottom: 0 }}>
-                Nights of trade, not days on the calendar — at the rate the till actually poured
-                over the {health?.readNights ?? 0}{' '}
-                {health?.readNights === 1 ? 'night' : 'nights'} read since {formatShort(since)}. A
-                receipt still waiting to be read leaves the rate alone rather than making a keg
-                look like it lasts a month.
+                Nights of trade, not days on the calendar — at the rate poured over the{' '}
+                {health?.readNights ?? 0} {health?.readNights === 1 ? 'night' : 'nights'} read
+                since {formatShort(since)}.
               </p>
             </section>
           )}
@@ -822,9 +845,8 @@ export function Stock({ onChanged }: { onChanged: () => void }) {
               </span>
             </div>
             <p className="note" style={{ marginTop: 0 }}>
-              The last stock take, plus everything booked in, less everything the till says was
-              poured. It moves on its own as each night’s receipt is read — nothing here has to be
-              counted.
+              The last stock take, plus what came in, less what the till poured. Nothing here has
+              to be counted — it moves as each receipt is read.
             </p>
             <div className="table-wrap">
               <table className="data">

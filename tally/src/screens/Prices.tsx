@@ -12,6 +12,7 @@
 // ---------------------------------------------------------------------------
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useToast } from '../components/toast.ts'
 import { formatMoney, parsePence, penceToInput } from '../core/money.ts'
 import { formatQty } from '../core/zread.ts'
 import {
@@ -36,7 +37,7 @@ export function Prices({ onChanged }: { onChanged: () => void }) {
   const [items, setItems] = useState<SoldItem[] | null>(null)
   const [book, setBook] = useState<PriceBookEntry[]>([])
   const [drafts, setDrafts] = useState<Record<string, string>>({})
-  const [toast, setToast] = useState('')
+  const [toast, say] = useToast(3500)
   const [onlyUnpriced, setOnlyUnpriced] = useState(false)
   const [scanning, setScanning] = useState(false)
   const [scanError, setScanError] = useState('')
@@ -105,11 +106,6 @@ export function Prices({ onChanged }: { onChanged: () => void }) {
     setDrafts(Object.fromEntries(next.map((e) => [e.code ?? `name:${e.name}`, penceToInput(e.pence)])))
     setProposals(null)
     say(`${taking.length} ${taking.length === 1 ? 'price' : 'prices'} taken off the board.`)
-  }
-
-  function say(message: string) {
-    setToast(message)
-    setTimeout(() => setToast(''), 3500)
   }
 
   async function commit(next: PriceBookEntry[]) {

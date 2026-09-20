@@ -26,6 +26,12 @@ two receipts, types one number, and gets a balance check she can trust.
 
 ## Using it
 
+**Three tabs and a More.** Tonight, the Cellar, the Nights you have already
+counted — those are the jobs. Trade, the rota, the price list and the settings
+are all real and all one tap away behind **More**, which is where a thing you
+want monthly belongs. A bar of six equal tabs said they were all as urgent as
+cashing up, and they are not.
+
 Open it, and it is already on tonight. Photograph the till roll, photograph the
 card slip, count the drawer and type that in. The verdict updates as each figure
 lands, so a mistake shows up while the receipts are still in your hand rather
@@ -610,6 +616,11 @@ src/
   components/  MoneyInput, FigureCard, TillRollCard, Verdict, charts
   screens/     NewDay, ZReadReview, Dashboard, History, DayDetail, Settings
 ```
+
+`App.tsx` is the whole of the navigation: three tabs, a More list, and no
+router. Screens behind More are reached through the list rather than the bar,
+which is why the end-to-end tests go through a `goTab` helper — it knows which
+ones cost two taps.
 
 The rule is that `core/` and `ocr/extractTotal.ts` know nothing about React,
 IndexedDB or any OCR engine. They are where the reasoning lives, so they are

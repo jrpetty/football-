@@ -69,6 +69,56 @@ function check(label: string, condition: boolean, detail = ''): void {
   }
 }
 
+/**
+ * Go to a section.
+ *
+ * The bar has three tabs and a More drawer: Trade, the rota, the price list and
+ * the settings live behind More, so reaching one of them is two taps rather than
+ * one. Routed through here so a test says where it is going and not how.
+ */
+async function goTab(page: Page, name: string): Promise<void> {
+  if (['Trade', 'Rota', 'Price list', 'Settings'].includes(name)) {
+    await page.click('.tabs button:has-text("More")')
+    await page.click(`.door:has-text("${name}")`)
+  } else {
+    await page.click(`.tabs button:has-text("${name}")`)
+  }
+}
+
+/**
+ * Get at the trading-day field.
+ *
+ * It is right on all but a handful of nights, so it now sits behind the date
+ * itself rather than in a card of its own. Correcting a saved night opens it
+ * already, hence the check rather than a blind tap.
+ */
+async function openDate(page: Page): Promise<void> {
+  if (!(await page.locator('#date').isVisible().catch(() => false))) {
+    await page.click('.daybar-date')
+  }
+  await page.waitForSelector('#date', { timeout: 5000 })
+}
+
+/** Whatever the screen is currently confirming, or '' when it is silent. */
+async function toastText(page: Page): Promise<string> {
+  return (await page.locator('.toast').first().innerText().catch(() => '')).trim()
+}
+
+/**
+ * Open one of the cellar's panels.
+ *
+ * Three chips are on the screen — what is down there, the stock take, a
+ * delivery. Week by week, the scales, the costs and the set-up are behind
+ * More…, so a test asks for the panel and this finds it either way.
+ */
+async function cellarPanel(page: Page, label: string): Promise<void> {
+  await page.waitForSelector('.chip-row', { timeout: 5000 })
+  if ((await page.locator(`.chip:has-text("${label}")`).count()) === 0) {
+    await page.click('[data-testid="cellar-more"]')
+  }
+  await page.click(`.chip:has-text("${label}")`)
+}
+
 async function verdictText(page: Page): Promise<string> {
   return (await page.locator('.verdict-bar .verdict .headline').first().innerText()).trim()
 }
@@ -227,6 +277,8 @@ try {
   // the drawer she actually counted.
   await page.fill('#figure-float', '200')
   await setFigure(page, 'figure-cash', '2090.55')
+  // The note waits behind a word now, which is most of the point of it.
+  await page.click('.shelf:has-text("Add a note")')
   await page.fill('#note', 'Quiz night, one card machine down')
   await page.click('.verdict-bar .btn-primary')
   await page.waitForSelector('.day-row', { timeout: 5000 })
@@ -309,7 +361,7 @@ try {
 
   console.log('\nSurviving a restart')
   await page.reload({ waitUntil: 'networkidle' })
-  await page.click('button:has-text("Nights")')
+  await goTab(page, 'Nights')
   await page.waitForSelector('.day-row', { timeout: 5000 })
   check('the night is still there after a reload', (await page.locator('.day-row').count()) === 1)
   check('and still shows it was short', (await page.locator('.day-row .delta').innerText()).includes('−£90.00'))
@@ -325,7 +377,7 @@ try {
   console.log('\nAsking without a key')
   // Deliberately before any key is saved: the honest answer is a pointer to
   // Settings, not a spinner that dies quietly.
-  await page.click('button:has-text("Trade")')
+  await goTab(page, 'Trade')
   await page.waitForSelector('.card:has(h2:text("Ask the till"))', { timeout: 5000 })
   await page.fill('input[aria-label="Ask a question about the records"]', 'What did we take last night?')
   await page.click('.ask-row .btn-primary')
@@ -338,7 +390,7 @@ try {
   )
 
   console.log('\nSaving a key')
-  await page.click('button:has-text("Settings")')
+  await goTab(page, 'Settings')
   await page.waitForSelector('#apiKey', { timeout: 5000 })
   check('the key box is on screen', (await page.locator('#apiKey').count()) === 1)
   check('and says there is no key yet', (await page.locator('.badge:has-text("No key yet")').count()) === 1)
@@ -353,7 +405,7 @@ try {
   check('and the badge confirms it', (await page.locator('.badge:has-text("Key saved")').count()) === 1)
 
   await page.reload({ waitUntil: 'networkidle' })
-  await page.click('button:has-text("Settings")')
+  await goTab(page, 'Settings')
   await page.waitForSelector('#apiKey', { timeout: 5000 })
   check('the key is still there after a reload', (await page.inputValue('#apiKey')).startsWith('sk-ant-'))
 
@@ -426,7 +478,7 @@ try {
   })
 
   await page.reload({ waitUntil: 'networkidle' })
-  await page.click('button:has-text("Nights")')
+  await goTab(page, 'Nights')
   await page.waitForSelector('.day-row', { timeout: 5000 })
   check('exactly the one seeded night is present', (await page.locator('.day-row').count()) === 1)
   await page.click('.day-row')
@@ -444,7 +496,7 @@ try {
   )
 
   console.log('\nThe dashboard')
-  await page.click('button:has-text("Trade")')
+  await goTab(page, 'Trade')
   await page.waitForSelector('.kpi-row', { timeout: 5000 })
   const dash = await page.locator('.main').innerText()
   check('leads with what was taken', dash.includes('£2,192.80'))
@@ -503,7 +555,7 @@ try {
   )
 
   console.log('\nThe cellar')
-  await page.click('button:has-text("Cellar")')
+  await goTab(page, 'Cellar')
   await page.waitForSelector('button:has-text("Build the cellar from the till")', { timeout: 5000 })
   await page.click('button:has-text("Build the cellar from the till")')
   await page.waitForTimeout(600)
@@ -511,7 +563,7 @@ try {
   check('the cellar is built from the till’s own item list', /cellar lines set up|lines/i.test(built))
   check('with the beers as their own lines', built.includes('Taddy Lager'))
 
-  await page.click('.chip:has-text("Set up")')
+  await cellarPanel(page, 'Set up')
   await page.waitForTimeout(300)
   const setup = page.locator('.card:has-text("What each sale pours") table.data')
   const pourText = await setup.innerText()
@@ -545,7 +597,7 @@ try {
   check('leaving what should be in the cellar', /14\.5 pints/.test(levels), '144 in, 129.5 out')
 
   console.log('\nThe rota')
-  await page.click('button:has-text("Rota")')
+  await goTab(page, 'Rota')
   await page.waitForSelector('button:has-text("Add the first person")', { timeout: 5000 })
   await page.click('button:has-text("Add the first person")')
   await page.waitForSelector('#person-name', { timeout: 5000 })
@@ -565,6 +617,23 @@ try {
   await page.click('button:has-text("Add to the rota")')
   await page.waitForTimeout(300)
   check('and a second', (await page.locator('.badge:has-text("2 people")').count()) === 1)
+  check('who is named in the confirmation', /Dave added/i.test(await toastText(page)))
+
+  // A message must not be rubbed out by the one before it. Dave's confirmation
+  // clears itself four seconds after Dave; if that timer is still running when
+  // the next message arrives, the next message disappears mid-sentence and the
+  // screen goes quiet on an action that did happen. Asking for a name is used
+  // here because it changes nothing, so the test can be about the timing alone.
+  await page.waitForTimeout(3600)
+  await page.fill('#person-name', '')
+  await page.click('button:has-text("Add to the rota")')
+  await page.waitForTimeout(1200)
+  check(
+    'and a message is not wiped out by the one before it',
+    /need a name/i.test(await toastText(page)),
+    `Dave's timer came due in between; the screen says "${await toastText(page)}"`,
+  )
+  check('with nobody added by it', (await page.locator('.badge:has-text("2 people")').count()) === 1)
 
   await page.click('.chip:has-text("The week")')
   await page.waitForSelector('.day-card', { timeout: 5000 })
@@ -633,7 +702,7 @@ try {
   check('and says how many it moved', (await page.locator('.toast').innerText()).includes('2 shifts'))
 
   await page.reload({ waitUntil: 'networkidle' })
-  await page.click('button:has-text("Rota")')
+  await goTab(page, 'Rota')
   await page.waitForSelector('.day-card', { timeout: 5000 })
   check('the rota survives a restart', (await page.locator('.day-nobody').count()) === 6)
 
@@ -687,7 +756,7 @@ try {
   await page.locator('.day-edit .chip:has-text("Kelly")').click()
   await page.waitForTimeout(300)
 
-  await page.click('button:has-text("Trade")')
+  await goTab(page, 'Trade')
   await page.waitForSelector('.kpi-row', { timeout: 5000 })
   const onTonight = await page.locator('.main').innerText()
   check('the dashboard reports who was on', onTonight.includes('Who was on'), onTonight.slice(0, 120))
@@ -699,7 +768,7 @@ try {
     'one night is nowhere near enough to compare anybody',
   )
 
-  await page.click('button:has-text("Nights")')
+  await goTab(page, 'Nights')
   await page.waitForSelector('.day-row', { timeout: 5000 })
   await page.click('.day-row')
   await page.waitForSelector('.verdict', { timeout: 5000 })
@@ -707,7 +776,7 @@ try {
   check('the night itself names who worked it', nightCrew.includes('Who was on') && nightCrew.includes('Kelly'))
 
   console.log('\nPrices')
-  await page.click('button:has-text("Settings")')
+  await goTab(page, 'Settings')
   await page.waitForSelector('button:has-text("Open the price list")', { timeout: 5000 })
   await page.click('button:has-text("Open the price list")')
   await page.waitForSelector('.zrow', { timeout: 5000 })
@@ -729,16 +798,16 @@ try {
     (await page.locator('.main').innerText()).includes('under by £0.20'),
   )
 
-  await page.click('button:has-text("Trade")')
+  await goTab(page, 'Trade')
   await page.waitForSelector('.kpi-row', { timeout: 5000 })
   const priced = await page.locator('.main').innerText()
   check('the dashboard reports what that cost over the night', priced.includes('£24.00'), '120 pints, 20p each')
   check('and names the innocent explanation', /discount/i.test(priced))
 
   console.log('\nWhat it costs, and what it makes')
-  await page.click('button:has-text("Cellar")')
-  await page.waitForSelector('.chip:has-text("What it costs")', { timeout: 5000 })
-  await page.click('.chip:has-text("What it costs")')
+  await goTab(page, 'Cellar')
+  await page.waitForSelector('.chip-row', { timeout: 5000 })
+  await cellarPanel(page, 'What it costs')
   await page.waitForSelector('input[aria-label="Taddy Lager cost"]', { timeout: 5000 })
 
   console.log('\nHow each kind of drink is counted')
@@ -799,7 +868,7 @@ try {
   // What the till takes off the line is the truth about the measure, so a line
   // the till pours 25ml of reads back in 25s — and not a millilitre in the
   // cellar moves when it changes.
-  await page.click('.chip:has-text("Set up")')
+  await cellarPanel(page, 'Set up')
   await page.waitForSelector('input[aria-label="VODKA takes"]', { timeout: 5000 })
   await page.fill('input[aria-label="VODKA takes"]', '25')
   await page.waitForTimeout(400)
@@ -812,7 +881,7 @@ try {
     /350 ml is 14 shots/.test(await page.locator('.main').innerText()),
     (await page.locator('.zrow:has-text("Vodka")').innerText()).slice(0, 120),
   )
-  await page.click('.chip:has-text("Set up")')
+  await cellarPanel(page, 'Set up')
   await page.waitForSelector('input[aria-label="VODKA takes"]', { timeout: 5000 })
   await page.fill('input[aria-label="VODKA takes"]', '30')
   await page.waitForTimeout(400)
@@ -820,9 +889,9 @@ try {
   await page.fill('input[aria-label="The house measure"]', '25')
   await page.waitForTimeout(400)
   await page.reload({ waitUntil: 'networkidle' })
-  await page.click('button:has-text("Cellar")')
-  await page.waitForSelector('.chip:has-text("Set up")', { timeout: 5000 })
-  await page.click('.chip:has-text("Set up")')
+  await goTab(page, 'Cellar')
+  await page.waitForSelector('.chip-row', { timeout: 5000 })
+  await cellarPanel(page, 'Set up')
   await page.waitForSelector('input[aria-label="The house measure"]', { timeout: 5000 })
   check(
     'the house measure is hers to set, and is kept',
@@ -830,7 +899,7 @@ try {
   )
   await page.fill('input[aria-label="The house measure"]', '30')
   await page.waitForTimeout(400)
-  await page.click('.chip:has-text("What it costs")')
+  await cellarPanel(page, 'What it costs')
   await page.waitForSelector('select[aria-label="Crisps measured in"]', { timeout: 5000 })
 
   console.log('\nChanging how a line is counted')
@@ -854,7 +923,7 @@ try {
   await page.waitForTimeout(400)
 
   console.log('\nWhat each sale takes off the cellar')
-  await page.click('.chip:has-text("Set up")')
+  await cellarPanel(page, 'Set up')
   await page.waitForSelector('input[aria-label="VODKA takes"]', { timeout: 5000 })
   check(
     'a single takes the house measure off the cellar, in millilitres',
@@ -872,9 +941,9 @@ try {
   await page.fill('input[aria-label="VODKA takes"]', '60')
   await page.waitForTimeout(400)
   await page.reload({ waitUntil: 'networkidle' })
-  await page.click('button:has-text("Cellar")')
-  await page.waitForSelector('.chip:has-text("Set up")', { timeout: 5000 })
-  await page.click('.chip:has-text("Set up")')
+  await goTab(page, 'Cellar')
+  await page.waitForSelector('.chip-row', { timeout: 5000 })
+  await cellarPanel(page, 'Set up')
   await page.waitForSelector('input[aria-label="VODKA takes"]', { timeout: 5000 })
   check(
     'a pour set by hand survives a restart',
@@ -886,7 +955,7 @@ try {
     'and can be put back',
     (await page.locator('input[aria-label="VODKA takes"]').inputValue()) === '30',
   )
-  await page.click('.chip:has-text("What it costs")')
+  await cellarPanel(page, 'What it costs')
   await page.waitForSelector('input[aria-label="Taddy Lager cost"]', { timeout: 5000 })
 
   // A firkin of Taddy: £95 for 72 pints, as the invoice charges it.
@@ -970,7 +1039,7 @@ try {
   // figure to be checked against a count nobody is taking.
   check(
     'the cellar says it is worked out from the till, not from a count',
-    /less everything the till says was poured/i.test(value),
+    /less what the till poured/i.test(value),
     value.slice(0, 260),
   )
   check('it says which night it has been read up to', /till read to/i.test(value), value.slice(0, 200))
@@ -985,7 +1054,7 @@ try {
     value.slice(value.indexOf('Worth ordering'), value.indexOf('Worth ordering') + 200),
   )
 
-  await page.click('button:has-text("Trade")')
+  await goTab(page, 'Trade')
   await page.waitForSelector('.kpi-row', { timeout: 5000 })
   const profit = await page.locator('.main').innerText()
   check('the dashboard reports gross profit', profit.includes('What it actually makes'))
@@ -1033,16 +1102,16 @@ try {
 
   // Now the cask goes up, and the board does not follow. Nothing anywhere
   // fails — the pint just makes less.
-  await page.click('button:has-text("Cellar")')
-  await page.waitForSelector('.chip:has-text("What it costs")', { timeout: 5000 })
-  await page.click('.chip:has-text("What it costs")')
+  await goTab(page, 'Cellar')
+  await page.waitForSelector('.chip-row', { timeout: 5000 })
+  await cellarPanel(page, 'What it costs')
   await page.waitForSelector('input[aria-label="Taddy Lager cost"]', { timeout: 5000 })
   await page.fill('input[aria-label="Taddy Lager cost"]', '108.00')
   await page.waitForTimeout(500)
   const risen = await page.locator('.main').innerText()
   check('a risen cost re-prices the pint', risen.includes('£1.50'), '£108 across 72 pints')
 
-  await page.click('button:has-text("Trade")')
+  await goTab(page, 'Trade')
   await page.waitForSelector('.kpi-row', { timeout: 5000 })
   const changed = await page.locator('.main').innerText()
   check('the movement is reported', changed.includes('What changed underneath'), changed.slice(0, 140))
@@ -1101,7 +1170,7 @@ try {
   await page.waitForTimeout(200)
 
   console.log('\nStaff records')
-  await page.click('button:has-text("Rota")')
+  await goTab(page, 'Rota')
   await page.waitForSelector('.chip:has-text("Records")', { timeout: 5000 })
   await page.click('.chip:has-text("Records")')
   await page.waitForTimeout(400)
@@ -1121,7 +1190,7 @@ try {
   check('and says it is not evidence', /not evidence/.test(profile))
 
   console.log('\nSending a night on')
-  await page.click('button:has-text("Nights")')
+  await goTab(page, 'Nights')
   await page.waitForSelector('.day-row', { timeout: 5000 })
   await page.click('.day-row')
   await page.waitForSelector('button:has-text("Share this night")', { timeout: 5000 })
@@ -1139,10 +1208,17 @@ try {
   check('and who was on', summary.includes('Kelly'))
 
   // Back to the dashboard, which is where the next block picks up.
-  await page.click('button:has-text("Trade")')
+  await goTab(page, 'Trade')
   await page.waitForSelector('.kpi-row', { timeout: 5000 })
 
   console.log('\nFiltering')
+  // Weekdays and departments live behind "Narrow it down…" now: the range is
+  // the question everyone asks, the other two are not.
+  await page.click('[data-testid="narrow-it"]')
+  check(
+    'the chips only come out when they are asked for',
+    (await page.locator('[data-testid="narrow-it"]').count()) === 0,
+  )
   await page.click('.chip:has-text("Draught beers")')
   await page.click('.chip:has-text("Wine")')
   await page.waitForTimeout(150)
@@ -1162,10 +1238,23 @@ try {
     'clearing the filter restores the full split',
     (await page.locator('[data-testid="mix-table"]').innerText()).includes('68.05%'),
   )
+  // Out is out. A control does not fold away under her finger the moment she
+  // switches the last chip off — she is plainly still using it.
+  check(
+    'and they stay out once she has opened them',
+    (await page.locator('[data-testid="narrow-it"]').count()) === 0,
+  )
 
   await page.click('.chip:has-text("Sun")')
   await page.waitForTimeout(150)
   check('a weekday filter keeps a Sunday night', (await page.locator('.day-row').count()) === 1)
+  check(
+    'and the head says how many are narrowing it',
+    // The badge is uppercased by the stylesheet, and innerText hands back what
+    // is on the screen rather than what the source says.
+    /1 narrowed/i.test(await page.locator('.main').innerText()),
+  )
+
   await page.click('.chip:has-text("Mon")')
   await page.click('.chip:has-text("Sun")')
   await page.waitForTimeout(150)
@@ -1174,10 +1263,29 @@ try {
     (await page.locator('.main').innerText()).includes('No nights match those filters'),
   )
 
+  // What makes hiding the chips safe: leaving the screen takes the filters with
+  // it. There is no way back to a chart quietly showing one weekday with the
+  // control that did it put away.
+  await goTab(page, 'Tonight')
+  await goTab(page, 'Trade')
+  await page.waitForSelector('.kpi-row', { timeout: 5000 })
+  check(
+    'leaving Trade clears the filters with it',
+    !(await page.locator('.main').innerText()).includes('narrowed'),
+  )
+  check(
+    'so the chips can fold away without hiding anything',
+    (await page.locator('[data-testid="narrow-it"]').count()) === 1,
+  )
+  check(
+    'and the full split is back',
+    (await page.locator('[data-testid="mix-table"]').innerText()).includes('68.05%'),
+  )
+
   console.log('\nWeek by week, and what is moving')
   // The whole point of holding the item list: a category and a line followed
   // through time, off the receipts, rather than one total for the window.
-  await page.click('button:has-text("Trade")')
+  await goTab(page, 'Trade')
   await page.waitForSelector('.kpi-row', { timeout: 5000 })
   await page.click('.chip:has-text("90 nights")')
   await page.waitForTimeout(400)
@@ -1206,9 +1314,9 @@ try {
   console.log('\nCounting the cellar nightly')
   // The routine: read the roll, then go down and count. A keg is weighed, not
   // guessed at — a firkin of Taddy at 10 kg empty and 51 kg full.
-  await page.click('button:has-text("Cellar")')
-  await page.waitForSelector('.chip:has-text("What it costs")', { timeout: 5000 })
-  await page.click('.chip:has-text("What it costs")')
+  await goTab(page, 'Cellar')
+  await page.waitForSelector('.chip-row', { timeout: 5000 })
+  await cellarPanel(page, 'What it costs')
   await page.waitForSelector('input[aria-label="Taddy Lager empty keg weight"]', { timeout: 5000 })
   await page.fill('input[aria-label="Taddy Lager empty keg weight"]', '10')
   await page.fill('input[aria-label="Taddy Lager full keg weight"]', '51')
@@ -1223,8 +1331,8 @@ try {
   await page.waitForTimeout(500)
 
   // The next night, counted as it is closed — from Tonight, under the cash.
-  await page.click('button:has-text("Tonight")')
-  await page.waitForSelector('#date', { timeout: 5000 })
+  await goTab(page, 'Tonight')
+  await openDate(page)
   await page.fill('#date', '2026-08-24')
   await page.waitForTimeout(300)
   await setFigure(page, 'figure-till', '500.00')
@@ -1281,7 +1389,7 @@ try {
     (await page.locator('input[aria-label="Taddy Lager counted"]').inputValue()) === '17',
   )
   // And a night with no count says so, now that counting is a thing here.
-  await page.click('button:has-text("Nights")')
+  await goTab(page, 'Nights')
   await page.waitForSelector('.day-row', { timeout: 5000 })
   await page.click('.day-row:has-text("23 Aug")')
   await page.waitForSelector('.verdict', { timeout: 5000 })
@@ -1294,9 +1402,9 @@ try {
   // The scales have a place of their own on the Cellar tab. Her own example:
   // a full keg at 110 kg, an empty one at 10 kg, a hundred pints between them
   // — so a keg reading 70 kg holds 60 pints, once its own 10 kg comes off.
-  await page.click('button:has-text("Cellar")')
-  await page.waitForSelector('.chip:has-text("The scales")', { timeout: 5000 })
-  await page.click('.chip:has-text("The scales")')
+  await goTab(page, 'Cellar')
+  await page.waitForSelector('.chip-row', { timeout: 5000 })
+  await cellarPanel(page, 'The scales')
   await page.waitForSelector('select[aria-label="Which keg"]', { timeout: 5000 })
   await page.selectOption('select[aria-label="Which keg"]', '*')
   await page.fill('input[aria-label="Pints the keg holds"]', '100')
@@ -1338,7 +1446,7 @@ try {
   await page.click('button:has-text("Keep for Taddy Lager")')
   await page.waitForTimeout(400)
   check('kept, it says so', (await page.locator('.main').innerText()).includes('Kept — Taddy Lager'))
-  await page.click('.chip:has-text("What it costs")')
+  await cellarPanel(page, 'What it costs')
   await page.waitForSelector('input[aria-label="Taddy Lager empty keg weight"]', { timeout: 5000 })
   check(
     'and those are the weights the line now carries',
@@ -1348,7 +1456,7 @@ try {
 
   // A tap beer with no size set yet can be set up from the scales: the keg on
   // them is the keg it comes in.
-  await page.click('.chip:has-text("The scales")')
+  await cellarPanel(page, 'The scales')
   await page.waitForSelector('select[aria-label="Which keg"]', { timeout: 5000 })
   const stoutOption = await page.locator('select[aria-label="Which keg"] option', { hasText: 'Stout' }).getAttribute('value')
   check('a tap beer with no size yet is still offered', stoutOption !== null)
@@ -1364,7 +1472,7 @@ try {
   )
   await page.click('button:has-text("Keep for Stout")')
   await page.waitForTimeout(400)
-  await page.click('.chip:has-text("What it costs")')
+  await cellarPanel(page, 'What it costs')
   await page.waitForSelector('select[aria-label="Stout container"]', { timeout: 5000 })
   check(
     'a kil of 144 it is, weighed',
@@ -1394,7 +1502,7 @@ try {
 
   // On Tonight the scales sit above the sheet, and keeping the weights with a
   // keg on them fills the row in — one tap sets the line up and counts it.
-  await page.click('button:has-text("Nights")')
+  await goTab(page, 'Nights')
   await page.waitForSelector('.day-row', { timeout: 5000 })
   await page.click('.day-row:has-text("24 Aug")')
   await page.waitForSelector('button:has-text("Edit")', { timeout: 5000 })
@@ -1445,7 +1553,7 @@ try {
     updatedAt: 0,
   })
   await page.reload({ waitUntil: 'networkidle' })
-  await page.click('button:has-text("Nights")')
+  await goTab(page, 'Nights')
   await page.waitForSelector('.day-row', { timeout: 5000 })
   await page.click('.day-row:has-text("26 Aug")')
   await page.waitForSelector('button:has-text("Edit")', { timeout: 5000 })
@@ -1486,8 +1594,8 @@ try {
   // morning. So a night has to save half done, be findable again, and — until
   // it has a figure — stay out of the takings rather than reading as a night
   // that took nothing.
-  await page.click('button:has-text("Tonight")')
-  await page.waitForSelector('#date', { timeout: 5000 })
+  await goTab(page, 'Tonight')
+  await openDate(page)
   await page.fill('#date', '2026-08-25')
   await page.waitForTimeout(400)
   await page.click('[data-testid="count-cellar"]')
@@ -1514,7 +1622,7 @@ try {
     unfinishedRow.replace(/\n/g, ' | '),
   )
 
-  await page.click('button:has-text("Trade")')
+  await goTab(page, 'Trade')
   await page.waitForSelector('.kpi-row', { timeout: 5000 })
   // Wide enough a window to take in a night from last month.
   await page.click('.chip:has-text("90 nights")')
@@ -1530,8 +1638,8 @@ try {
 
   // Coming back to it: Tonight offers the unfinished night rather than leaving
   // it to be remembered.
-  await page.click('button:has-text("Tonight")')
-  await page.waitForSelector('#date', { timeout: 5000 })
+  await goTab(page, 'Tonight')
+  await openDate(page)
   await page.fill('#date', '2026-08-26')
   await page.waitForTimeout(500)
   check(
@@ -1563,8 +1671,8 @@ try {
     /Took £900\.00/.test(await page.locator('.day-row:has-text("25 Aug")').innerText()),
     await page.locator('.day-row:has-text("25 Aug")').innerText(),
   )
-  await page.click('button:has-text("Tonight")')
-  await page.waitForSelector('#date', { timeout: 5000 })
+  await goTab(page, 'Tonight')
+  await openDate(page)
   await page.waitForTimeout(500)
   check(
     'with nothing left unfinished, nothing is offered back',
@@ -1576,8 +1684,8 @@ try {
   // be no signal and nothing can read it, and pick it up in the morning. The
   // photographs have to still be there, still be marked unread, and still be
   // droppable one at a time.
-  await page.click('button:has-text("Tonight")')
-  await page.waitForSelector('#date', { timeout: 5000 })
+  await goTab(page, 'Tonight')
+  await openDate(page)
   await page.fill('#date', '2026-08-27')
   await page.waitForTimeout(400)
   await page.setInputFiles('[data-testid="file-roll"]', [
@@ -1594,8 +1702,8 @@ try {
   await page.click('.verdict-bar .btn-primary')
   await page.waitForSelector('.day-row', { timeout: 5000 })
 
-  await page.click('button:has-text("Tonight")')
-  await page.waitForSelector('#date', { timeout: 5000 })
+  await goTab(page, 'Tonight')
+  await openDate(page)
   await page.fill('#date', '2026-08-28')
   await page.waitForTimeout(600)
   check(
@@ -1607,6 +1715,7 @@ try {
   await page.waitForTimeout(700)
   // The oldest unfinished night is the 25th, which has no photographs. Go to
   // the photographed one directly.
+  await openDate(page)
   await page.fill('#date', '2026-08-27')
   await page.waitForTimeout(700)
   check('the photographs are still on the night', (await page.locator('.shots li').count()) === 2)
@@ -1626,8 +1735,8 @@ try {
   await page.click('.verdict-bar .btn-primary')
   await page.waitForSelector('.day-row', { timeout: 5000 })
 
-  await page.click('button:has-text("Tonight")')
-  await page.waitForSelector('#date', { timeout: 5000 })
+  await goTab(page, 'Tonight')
+  await openDate(page)
   await page.fill('#date', '2026-08-27')
   await page.waitForTimeout(700)
   check(
@@ -1639,7 +1748,7 @@ try {
   // The whole point of a backup: everything set up here has to arrive intact
   // in an empty copy of the app. The version this replaced saved only the
   // nights and lost the prices, the cellar and the rota without a word.
-  await page.click('button:has-text("Settings")')
+  await goTab(page, 'Settings')
   await page.waitForSelector('button:has-text("Save everything")', { timeout: 5000 })
   const [download] = await Promise.all([
     page.waitForEvent('download'),
@@ -1702,11 +1811,11 @@ try {
   const newCopy = await fresh.newPage()
   newCopy.on('pageerror', (err) => pageErrors.push(String(err)))
   await newCopy.goto(base, { waitUntil: 'networkidle' })
-  await newCopy.click('button:has-text("Nights")')
+  await goTab(newCopy, 'Nights')
   await newCopy.waitForTimeout(400)
   check('the new copy starts empty', (await newCopy.locator('.day-row').count()) === 0)
 
-  await newCopy.click('button:has-text("Settings")')
+  await goTab(newCopy, 'Settings')
   await newCopy.waitForSelector('[data-testid="file-restore"]', { timeout: 5000 })
   await newCopy.setInputFiles('[data-testid="file-restore"]', shotsPath as string)
   await newCopy.waitForTimeout(2500)
@@ -1714,7 +1823,7 @@ try {
   check('it says what came back', /Restored/.test(said), said)
   check('including how many receipts', /receipt/.test(said), said)
 
-  await newCopy.click('button:has-text("Nights")')
+  await goTab(newCopy, 'Nights')
   await newCopy.waitForSelector('.day-row', { timeout: 5000 })
   check('the nights came across', (await newCopy.locator('.day-row').count()) >= 1)
 
@@ -1727,11 +1836,12 @@ try {
     (await newCopy.locator('.main').innerText()).slice(0, 200),
   )
 
-  await newCopy.click('button:has-text("Cellar")')
+  await goTab(newCopy, 'Cellar')
   await newCopy.waitForTimeout(700)
   const cellarBack = await newCopy.locator('.main').innerText()
   check('the cellar came across', cellarBack.includes('Taddy Lager'), cellarBack.slice(0, 120))
-  await newCopy.click('.chip:has-text("What it costs")')
+  await newCopy.click('[data-testid="cellar-more"]')
+  await cellarPanel(newCopy, 'What it costs')
   await newCopy.waitForTimeout(500)
   check(
     'with the barrel costs still on it',
@@ -1739,7 +1849,7 @@ try {
     'the £108 firkin, not a blank box',
   )
 
-  await newCopy.click('button:has-text("Rota")')
+  await goTab(newCopy, 'Rota')
   await newCopy.waitForTimeout(700)
   check('the people came across', /Kelly/.test(await newCopy.locator('.main').innerText()))
 
@@ -1797,8 +1907,8 @@ try {
   })
   await oldCopy.reload({ waitUntil: 'networkidle' })
   await oldCopy.click('button:has-text("Cellar")')
-  await oldCopy.waitForSelector('.chip:has-text("What it costs")', { timeout: 5000 })
-  await oldCopy.click('.chip:has-text("What it costs")')
+  await oldCopy.waitForSelector('.chip-row', { timeout: 5000 })
+  await cellarPanel(oldCopy, 'What it costs')
   await oldCopy.waitForSelector('select[aria-label="Vodka measured in"]', { timeout: 5000 })
   check(
     'a line saved in shots is counted in millilitres now',
@@ -1833,7 +1943,7 @@ try {
   // The one button in the app that destroys anything. It has to say what will
   // go, offer a copy first, and take a second tap — this is the last thing
   // anybody does by accident.
-  await page.click('button:has-text("Settings")')
+  await goTab(page, 'Settings')
   await page.waitForSelector('[data-testid="start-again"]', { timeout: 5000 })
   // A key in the box, to prove the wipe takes the records and not the setup.
   await page.fill('#apiKey', 'sk-ant-not-a-real-key-for-testing-only')
@@ -1853,11 +1963,11 @@ try {
   // Thinking better of it leaves everything exactly where it was.
   await page.click('button:has-text("Leave it alone")')
   await page.waitForTimeout(200)
-  await page.click('button:has-text("Nights")')
+  await goTab(page, 'Nights')
   await page.waitForSelector('.day-row', { timeout: 5000 })
   check('backing out changes nothing', (await page.locator('.day-row').count()) >= 1)
 
-  await page.click('button:has-text("Settings")')
+  await goTab(page, 'Settings')
   await page.waitForSelector('[data-testid="start-again"]', { timeout: 5000 })
   await page.click('[data-testid="start-again"]')
   await page.waitForSelector('[data-testid="confirm-clear"]', { timeout: 5000 })
@@ -1865,23 +1975,23 @@ try {
   // It reloads itself once it is done, so no screen is left holding a figure
   // that no longer exists anywhere.
   await page.waitForTimeout(2600)
-  await page.click('button:has-text("Nights")')
+  await goTab(page, 'Nights')
   await page.waitForTimeout(600)
   check('afterwards there are no nights', (await page.locator('.day-row').count()) === 0)
-  await page.click('button:has-text("Cellar")')
+  await goTab(page, 'Cellar')
   await page.waitForTimeout(600)
   check(
     'and no cellar',
     (await page.locator('button:has-text("Build the cellar from the till")').count()) === 1,
     (await page.locator('.main').innerText()).slice(0, 120),
   )
-  await page.click('button:has-text("Rota")')
+  await goTab(page, 'Rota')
   await page.waitForTimeout(600)
   check(
     'and nobody on the books',
     (await page.locator('button:has-text("Add the first person")').count()) === 1,
   )
-  await page.click('button:has-text("Settings")')
+  await goTab(page, 'Settings')
   await page.waitForSelector('#apiKey', { timeout: 5000 })
   check(
     'but the key is kept, because a key is not data',
@@ -1992,7 +2102,7 @@ try {
   }, GARDENERS_ARMS)
   await tied.reload({ waitUntil: 'networkidle' })
   await tied.click('button:has-text("Cellar")')
-  await tied.click('.chip:has-text("Set up")')
+  await cellarPanel(tied, 'Set up')
   await tied.waitForSelector('[data-testid="to-match"]', { timeout: 5000 })
   check(
     'it says plainly that nothing comes off the cellar yet',

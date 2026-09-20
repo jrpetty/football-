@@ -290,13 +290,12 @@ input, select, textarea, button {
   gap: 3px;
   min-width: 0;
   min-height: 52px;
-  /* Six tabs on a 390px phone. The label is allowed to shrink and the padding
-     with it, because losing a tab entirely is worse than tight type — and the
-     icon carries the meaning when the word gets small. */
-  font-size: 10.5px;
+  /* Four tabs on a 390px phone, where there used to be six. The label can be
+     read at arm's length again, which is the point of there being four. */
+  font-size: 11.5px;
   font-weight: 600;
   letter-spacing: 0;
-  padding: 6px 1px 5px;
+  padding: 6px 4px 5px;
   overflow: hidden;
   background: transparent;
   border: 0;
@@ -1818,3 +1817,124 @@ tr.item-row { cursor: pointer; }
 }
 
 .ask-turn.thinking { color: var(--muted); display: flex; align-items: center; gap: 8px; }
+
+/* ---- the quiet furniture ------------------------------------------------ */
+/*
+   Three shapes that exist to keep things off the screen until they are wanted.
+   A card announces a job; these announce that a job is available, which on a
+   night when it is not wanted costs one line instead of ten.
+*/
+
+/* The trading day, as a line of text she can tap rather than a card. */
+.daybar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 2px 2px -4px;
+}
+
+.daybar-date {
+  background: transparent;
+  border: 0;
+  padding: 2px 0;
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  text-align: left;
+}
+
+.daybar-date::after {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin: 0 0 2px 8px;
+  border: solid var(--muted);
+  border-width: 0 1.6px 1.6px 0;
+  transform: rotate(45deg);
+  transition: transform 0.16s var(--ease);
+}
+
+.daybar-date[aria-expanded='true']::after { transform: rotate(-135deg); margin-bottom: -1px; }
+
+/* A shut drawer: one row, the height of a line, that opens the real thing. */
+.shelf {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 13px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  box-shadow: var(--edge);
+  color: var(--text);
+  font-size: 14.5px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.shelf-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  color: var(--muted);
+}
+
+.shelf-icon.done { background: var(--good-bg); color: var(--good); }
+.shelf-text { flex: 1; min-width: 0; }
+.shelf-hint { font-size: 12px; font-weight: 500; color: var(--muted); }
+
+@media (hover: hover) {
+  .shelf:hover { border-color: var(--line); background: color-mix(in srgb, var(--text) 3%, var(--surface)); }
+}
+
+/* The More list: four doors, each saying what is behind it. */
+.doors { display: flex; flex-direction: column; gap: 10px; }
+
+.door {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  padding: 15px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  box-shadow: var(--edge), var(--shadow-1);
+  color: var(--text);
+  text-align: left;
+}
+
+.door-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+
+.door-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.door-text strong { font-size: 15.5px; font-weight: 650; }
+.door-text span { font-size: 12.5px; font-weight: 500; color: var(--muted); }
+.door .icon { color: var(--muted); flex: none; }
+
+@media (hover: hover) {
+  .door:hover { border-color: var(--line); transform: translateY(-1px); }
+}
+
+.door { transition: border-color 0.16s var(--ease), transform 0.16s var(--ease); }
+
+/* A closing remark, not a card. */
+.note.quiet { margin: 0 2px; text-align: center; }

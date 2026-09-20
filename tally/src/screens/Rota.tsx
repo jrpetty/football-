@@ -11,6 +11,7 @@
 // ---------------------------------------------------------------------------
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useToast } from '../components/toast.ts'
 import { addDays, formatLong, formatShort, tradingDayKey, weekdayOf } from '../core/date.ts'
 import { formatMoney, parsePence, penceToInput } from '../core/money.ts'
 import {
@@ -78,7 +79,7 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
   const [ranking, setRanking] = useState<CrewRank[]>([])
   /** Whose profile is open, if any. */
   const [openPerson, setOpenPerson] = useState<string | null>(null)
-  const [toast, setToast] = useState('')
+  const [toast, say] = useToast(4000)
   const [wagesSent, setWagesSent] = useState('')
   const [scanning, setScanning] = useState(false)
   const [scanError, setScanError] = useState('')
@@ -120,11 +121,6 @@ export function Rota({ onChanged }: { onChanged: () => void }) {
       cancelled = true
     }
   }, [people, shifts])
-
-  function say(message: string) {
-    setToast(message)
-    setTimeout(() => setToast(''), 4000)
-  }
 
   /**
    * The week's hours, handed to whoever runs payroll.
