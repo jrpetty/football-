@@ -1,0 +1,242 @@
+{
+ "items": [
+  {
+   "code": "P00014",
+   "name": "PINT TADDY LAGER",
+   "qty": 123,
+   "pence": 49200
+  },
+  {
+   "code": "P00011",
+   "name": "PINT OBB",
+   "qty": 85,
+   "pence": 30600
+  },
+  {
+   "code": "P00013",
+   "name": "PINT ALPINE",
+   "qty": 80,
+   "pence": 24000
+  },
+  {
+   "code": "P00069",
+   "name": "HALF POST MIX",
+   "qty": 49,
+   "pence": 9310
+  },
+  {
+   "code": "P00016",
+   "name": "PINT PURE BREW",
+   "qty": 41,
+   "pence": 21730
+  },
+  {
+   "code": "P00020",
+   "name": "HALF ALPINE",
+   "qty": 34,
+   "pence": 5100
+  },
+  {
+   "code": "P00021",
+   "name": "HALF TADDY LAGER",
+   "qty": 20,
+   "pence": 4000
+  },
+  {
+   "code": "P00029",
+   "name": "125ML HOUSE WINE",
+   "qty": 18,
+   "pence": 6750
+  },
+  {
+   "code": "P00017",
+   "name": "PINT STOUT",
+   "qty": 17,
+   "pence": 6800
+  },
+  {
+   "code": "P00001",
+   "name": "PINT DARK MILD",
+   "qty": 14,
+   "pence": 3920
+  },
+  {
+   "code": "P00002",
+   "name": "PINT CIDER",
+   "qty": 13,
+   "pence": 6890
+  },
+  {
+   "code": "P00041",
+   "name": "VODKA",
+   "qty": 12,
+   "pence": 3780
+  },
+  {
+   "code": "P00030",
+   "name": "175ML HOUSE WINE",
+   "qty": 11,
+   "pence": 5775
+  },
+  {
+   "code": "P00074",
+   "name": "CRISPS",
+   "qty": 11,
+   "pence": 1870
+  },
+  {
+   "code": "P00070",
+   "name": "DASH",
+   "qty": 10,
+   "pence": 600
+  },
+  {
+   "code": "P00038",
+   "name": "250ML ROSE",
+   "qty": 7,
+   "pence": 5250
+  },
+  {
+   "code": "P00024",
+   "name": "HALF STOUT",
+   "qty": 7,
+   "pence": 1400
+  },
+  {
+   "code": "P00064",
+   "name": "PEAR CIDER BTL",
+   "qty": 4,
+   "pence": 2480
+  },
+  {
+   "code": "P00059",
+   "name": "550ml alc free",
+   "qty": 4,
+   "pence": 1920
+  },
+  {
+   "code": "P00054",
+   "name": "ELDERFLOWER",
+   "qty": 4,
+   "pence": 1520
+  },
+  {
+   "code": "P00042",
+   "name": "DARK RUM",
+   "qty": 4,
+   "pence": 1260
+  },
+  {
+   "code": "P00023",
+   "name": "HALF PURE BREW",
+   "qty": 4,
+   "pence": 1060
+  },
+  {
+   "code": "P00080",
+   "name": "OPEN FOOD",
+   "qty": 3,
+   "pence": 1140
+  },
+  {
+   "code": "P00060",
+   "name": "ORANGE JUICE",
+   "qty": 3,
+   "pence": 1140
+  },
+  {
+   "code": "P00007",
+   "name": "HALF CIDER",
+   "qty": 3,
+   "pence": 795
+  },
+  {
+   "code": "P00018",
+   "name": "HALF OBB",
+   "qty": 3,
+   "pence": 540
+  },
+  {
+   "code": "P00031",
+   "name": "250ML HOUSE WINE",
+   "qty": 1,
+   "pence": 750
+  },
+  {
+   "code": "P00026",
+   "name": "175ML RED WINE",
+   "qty": 1,
+   "pence": 525
+  },
+  {
+   "code": "P00052",
+   "name": "TEQUILA",
+   "qty": 1,
+   "pence": 375
+  },
+  {
+   "code": "P00039",
+   "name": "WHISKY",
+   "qty": 1,
+   "pence": 315
+  },
+  {
+   "code": "P00076",
+   "name": "DRY ROAST",
+   "qty": 1,
+   "pence": 170
+  },
+  {
+   "code": "P00006",
+   "name": "HALF DARK MILD",
+   "qty": 1,
+   "pence": 140
+  }
+ ],
+ "categories": [
+  {
+   "code": "D01",
+   "name": "Draught beers",
+   "qty": 445,
+   "pence": 156175
+  },
+  {
+   "code": "D05",
+   "name": "Mixers",
+   "qty": 66,
+   "pence": 12570
+  },
+  {
+   "code": "D03",
+   "name": "Wine",
+   "qty": 38,
+   "pence": 19050
+  },
+  {
+   "code": "D02",
+   "name": "Spirits",
+   "qty": 18,
+   "pence": 5730
+  },
+  {
+   "code": "D07",
+   "name": "Sundries",
+   "qty": 12,
+   "pence": 2040
+  },
+  {
+   "code": "D04",
+   "name": "Bottled beers",
+   "qty": 8,
+   "pence": 4400
+  },
+  {
+   "code": "D08",
+   "name": "Open food",
+   "qty": 3,
+   "pence": 1140
+  }
+ ],
+ "totalPence": 201105,
+ "totalQty": 590
+}

@@ -39,6 +39,33 @@ and so on down all nineteen lines, including the two that sold nothing and must
 not move. A cellar that is quietly not being reduced looks exactly like one that
 is, so it is checked rather than assumed.
 
+## The one-sheet version
+
+`Gardeners Arms stock.xlsx` is what she asked for when the four-sheet one was
+still too much: **one tab**, one row per line, count on the left and what the
+till sold on the right.
+
+```
+python3 build-stock.py     # writes it
+python3 check-stock.py "Gardeners Arms stock.xlsx"
+```
+
+| Line | Counted in | Counted | Sold | Left | Money it took | A full one is |
+
+The Sold and Money columns come in filled with the real night of 18 September
+2026 — both cash-ups added, £1,174.75 at 16:57 and £836.30 at 22:46, £2,011.05
+over 590 items. They are worked out in `build-stock.py` from `night.json`, which
+is the app's own reading of her two receipts, converted into the units she
+counts in: 123 pints and 20 halves of Taddy is 133 pints.
+
+`TAKES` in the builder is the map from till button to cellar line. It holds only
+the certain ones. Nine things the till sells — OBB and Pure Brew on draught, the
+post mix, the spirits, open food — get a line of their own marked *not counted
+yet* rather than being pushed onto whichever counted line looks closest. The
+builder asserts that every one of the 32 buttons is accounted for and that the
+money foots to the receipt, so a new line on the till breaks the build rather
+than quietly vanishing.
+
 ## What is in it
 
 | Sheet | What it holds |
