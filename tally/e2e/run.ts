@@ -21,6 +21,8 @@ import { dirname } from 'node:path'
 import type { Page } from 'playwright'
 import { launchChromium } from '../scripts/browser.ts'
 import { GARDENERS_ARMS } from '../test/fixtures/gardenersArms.ts'
+import { DAY_SESSION, EVENING_SESSION } from '../test/fixtures/twoSessions.ts'
+import { foldRolls } from '../src/ocr/scanZRead.ts'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const dist = join(here, '..', 'dist')
@@ -1997,6 +1999,74 @@ try {
   )
   check('read back as the shots it pours', /46\.7 shots/.test(oldLevels), oldLevels.slice(0, 200))
   await older.close()
+
+  console.log('\nTwo cash-ups in one day')
+  // Her night of 18 September: the day session rung off at 16:57 and the evening
+  // at 22:46, photographed in six pieces and handed in together. The app must
+  // add them, and the tables must be the two sessions' trade in one.
+  const eighteenth = foldRolls(
+    [DAY_SESSION, EVENING_SESSION].map((parsed, index) => ({ index, sections: [], parsed })),
+  ).zRead
+  await page.evaluate(async (roll) => {
+    await new Promise<void>((resolve, reject) => {
+      const req = indexedDB.open('tally')
+      req.onsuccess = () => {
+        const tx = req.result.transaction('days', 'readwrite')
+        tx.objectStore('days').put({
+          date: '2026-09-18',
+          till: { pence: 201105, source: 'vision', edited: false },
+          card: { pence: null, source: 'manual', edited: false },
+          cashPence: null,
+          note: '',
+          zRead: roll,
+          createdAt: 0,
+          updatedAt: 0,
+        })
+        tx.oncomplete = () => resolve()
+        tx.onerror = () => reject(tx.error)
+      }
+      req.onerror = () => reject(req.error)
+    })
+  }, eighteenth)
+  await page.reload({ waitUntil: 'networkidle' })
+  await goTab(page, 'Nights')
+  await page.waitForSelector('.day-row', { timeout: 5000 })
+  await page.click('.day-row:has-text("18 Sep")')
+  await page.waitForSelector('[data-testid="sold-headline"]', { timeout: 5000 })
+
+  const bothHead = await page.locator('[data-testid="sold-headline"]').innerText()
+  check(
+    'the two cash-ups are added, not one of them shown',
+    /\u00a32,011\.05/.test(bothHead),
+    bothHead.replace(/\n/g, ' | '),
+  )
+  check('with the units of both', /590/.test(bothHead), bothHead.replace(/\n/g, ' | '))
+
+  const bothMix = await page.locator('[data-testid="mix-table"]').innerText()
+  // Draught beers: 273 in the day and 172 in the evening is 445, at \u00a3958.00 + \u00a3603.75.
+  check('a category adds across both', /445/.test(bothMix), bothMix.slice(0, 200))
+  check('and so does its money', /\u00a31,561\.75/.test(bothMix), bothMix.slice(0, 200))
+
+  const bothItems = await page.locator('[data-testid="sold-items"]').innerText()
+  // 88 pints of Taddy in the day, 35 in the evening: 123 at \u00a3492.00.
+  check('a button adds across both', /123/.test(bothItems), bothItems.slice(0, 260))
+  check('and so does its money', /\u00a3492\.00/.test(bothItems), bothItems.slice(0, 260))
+  // The item table shows the twelve biggest earners and folds the rest away, so
+  // the small lines that only one of the two sessions sold are behind the
+  // button. They must still be there, and still be whole.
+  await page.click('[data-testid="sold-items"] ~ .alts button, .card:has([data-testid="sold-items"]) .alts button')
+  await page.waitForTimeout(150)
+  const allItems = await page.locator('[data-testid="sold-items"]').innerText()
+  check(
+    'a line only the evening sold is still there, whole',
+    /VODKA/i.test(allItems) && /37\.80/.test(allItems),
+    allItems.slice(-400),
+  )
+  check(
+    'and one only the day sold',
+    /TEQUILA/i.test(allItems) && /3\.75/.test(allItems),
+    allItems.slice(-400),
+  )
 
   console.log('\nA night that is only the roll')
   // The shape the app is actually for: the photographs go in and that is the

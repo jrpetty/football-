@@ -332,6 +332,21 @@ export function parseZRead(text: string): ZRead {
     // section heading, both of which flush explicitly.
     if (!line.trim()) continue
 
+    // --- the Z counter -----------------------------------------------------
+    //
+    // Checked on every line, not only on the GT1 line. This till prints it both
+    // ways: "GT1  *0000140111.26   Z1 1685" on one roll, and on another a line
+    // of its own sitting above GT1. Looking for it only beside GT1 found it on
+    // the first and missed it on the second — and a receipt with no Z counter
+    // cannot be told apart from the one before it, so two separate sessions
+    // photographed together were folded into one and a whole session's takings
+    // disappeared. "*Z1*" on its own is the words "Z read" and has no digits
+    // after it, so it cannot be mistaken for a counter.
+    if (z.header.zNumber === undefined) {
+      const zc = /\bZ1\s+(\d+)\b/.exec(line)
+      if (zc?.[1]) z.header.zNumber = Number(zc[1])
+    }
+
     // --- header oddities, which do not fit the label/figures shape ---------
     const gt = /^\s*GT([123])\s+(-?)\s*\*?\s*([0-9][0-9.,]*)/.exec(line)
     if (gt) {
@@ -345,8 +360,6 @@ export function parseZRead(text: string): ZRead {
         if (gt[1] === '2') z.header.gt2Pence = pence
         if (gt[1] === '3') z.header.gt3Pence = pence
       }
-      const zc = /\bZ1\s+(\d+)/.exec(line)
-      if (zc?.[1]) z.header.zNumber = Number(zc[1])
       continue
     }
 

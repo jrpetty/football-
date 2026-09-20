@@ -112,6 +112,11 @@ export function rollTotalPence(roll: RollState): number | null {
   return z?.deptTotal?.pence ?? z?.transaction.paidTotalPence ?? null
 }
 
+/** What one receipt came to, for the line it gets in the addition. */
+function rollPence(z: ZRead): number | null {
+  return z.deptTotal?.pence ?? z.transaction.paidTotalPence ?? z.pluTotal?.pence ?? null
+}
+
 /** Photographs taken but not yet read — because there was no key, or no signal. */
 export function unreadShots(roll: RollState): number[] {
   return roll.shots.flatMap((shot, i) => (shot.outcome.unread ? [i] : []))
@@ -220,10 +225,11 @@ export function TillRollCard({ value, onChange, onReview, step, done }: Props) {
    * whole night's takings: three photographs of one roll added together would
    * treble the day, and two separate receipts merged would lose one of them.
    */
-  const grouped: Roll[] = foldRolls(
+  const folded = foldRolls(
     shots.map((shot) => shot.outcome),
     { how: value.how, ...(value.base ? { base: value.base } : {}) },
-  ).rolls
+  )
+  const grouped: Roll[] = folded.rolls
   const setHow = (how: RollState['how']) => {
     const outcomes = shots.map((shot) => shot.outcome)
     const merged = foldRolls(outcomes, { how, ...(value.base ? { base: value.base } : {}) }).zRead
@@ -538,15 +544,46 @@ export function TillRollCard({ value, onChange, onReview, step, done }: Props) {
       {/* What it made of them: one receipt or several, and what they came to.
           A day can be two tills or a lunchtime and an evening, and those add;
           pieces of one roll do not. */}
+      {/* The sum, written out. A sentence saying the receipts were added is not
+          the same as showing her the addition — she has the paper in her hand
+          and can check each line against it, which is the only way she is ever
+          going to trust the total. */}
       {grouped.length > 1 && (
         <div className="rolls" data-testid="rolls">
-          <p className="note" style={{ marginTop: 0 }}>
-            <strong>{grouped.length} separate receipts, added together.</strong>{' '}
-            {grouped
-              .map((r, i) => `${r.zNumber !== undefined ? `Z ${r.zNumber}` : `receipt ${i + 1}`} (${r.photos.length} ${r.photos.length === 1 ? 'photo' : 'photos'})`)
-              .join(', ')}
-            . Their takings, card and cash are all added.
-          </p>
+          <div className="sum">
+            {grouped.map((r, i) => {
+              const pence = rollPence(r.zRead)
+              return (
+                <div className="sum-row" key={r.zNumber ?? `r${i}`}>
+                  <span className="sum-name">
+                    {r.zNumber !== undefined ? `Z ${r.zNumber}` : `Receipt ${i + 1}`}
+                    <small>
+                      {r.zRead.header.printedAt ?? `${r.photos.length} ${r.photos.length === 1 ? 'photograph' : 'photographs'}`}
+                    </small>
+                  </span>
+                  <span className="num">{pence === null ? '—' : formatMoney(pence)}</span>
+                </div>
+              )
+            })}
+            <div className="sum-row total">
+              <span className="sum-name">
+                <strong>{grouped.length} receipts, added</strong>
+                <small>takings, card, cash and every line on them</small>
+              </span>
+              <strong className="num">
+                {rollTotalPence(value) === null ? '—' : formatMoney(rollTotalPence(value)!)}
+              </strong>
+            </div>
+          </div>
+          {folded.guessed && folded.guessed.length > 0 && (
+            <p className="note warn">
+              {folded.guessed.length === 1 ? 'One photograph gave' : `${folded.guessed.length} photographs gave`}{' '}
+              no total of {folded.guessed.length === 1 ? 'its' : 'their'} own, so{' '}
+              {folded.guessed.length === 1 ? 'it was' : 'they were'} put with the receipt
+              photographed before {folded.guessed.length === 1 ? 'it' : 'them'}. Worth a look if
+              the figures above are not what the paper says.
+            </p>
+          )}
           <div className="alts" style={{ marginTop: 0 }}>
             <button type="button" className="btn-small" data-testid="one-roll" onClick={() => setHow('together')}>
               No — these are one receipt

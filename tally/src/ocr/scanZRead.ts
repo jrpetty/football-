@@ -271,22 +271,102 @@ export interface Rolls {
   rolls: Roll[]
   /** All of them together: pieces merged within a receipt, receipts added. */
   zRead: ZRead
+  /**
+   * Photographs put with a receipt on nothing better than their position.
+   *
+   * Everything else here is placed on a figure that matched. These are the ones
+   * that stated no total of their own, so the screen can say which are a guess
+   * rather than letting a guess look like a reading.
+   */
+  guessed?: number[]
+}
+
+/** What the top of a printout says about which session it came off. */
+interface Stamp {
+  zNumber?: number
+  /** "18/09/2026 16:57:14" — the moment the session was rung off. */
+  printedAt?: string
 }
 
 /**
- * Sort a pile of photographs into receipts, and fold them the right way round.
+ * Whether two printouts are the same session.
  *
- * Two different jobs live here and the difference is the whole night's takings.
- * Photographs of ONE roll are pieces of one record and MERGE — a department
+ * The Z counter decides it when both carry one. Failing that the timestamp
+ * does: every printout of one Z read carries the moment it was rung off, so two
+ * that agree are the same session and two that differ are not.
+ *
+ * The receipt number is deliberately not consulted. It counts printouts, not
+ * sessions — on 18 September the department block of the day session is #4631
+ * and its clerk report is #4633, both of the same £1,174.75. Splitting on it
+ * would tear one session in two and then add it to itself.
+ *
+ * `undefined` means the two cannot be compared at all, which is not the same as
+ * being different and must not be treated as either.
+ */
+function sameSession(a: Stamp, b: Stamp): boolean | undefined {
+  if (a.zNumber !== undefined && b.zNumber !== undefined) return a.zNumber === b.zNumber
+  if (a.printedAt !== undefined && b.printedAt !== undefined) return a.printedAt === b.printedAt
+  return undefined
+}
+
+function stampOf(z: ZRead): Stamp {
+  return {
+    ...(z.header.zNumber !== undefined ? { zNumber: z.header.zNumber } : {}),
+    ...(z.header.printedAt !== undefined ? { printedAt: z.header.printedAt } : {}),
+  }
+}
+
+function hasStamp(s: Stamp): boolean {
+  return s.zNumber !== undefined || s.printedAt !== undefined
+}
+
+/** What a block of a roll claims it adds up to, whichever block it is. */
+function ownTotal(z: ZRead): { qtyMilli: number; pence: number } | undefined {
+  const t = z.pluTotal ?? z.deptTotal
+  if (t) return { qtyMilli: t.qtyMilli, pence: t.pence }
+  // A clerk report has no Q total, but it does state what the session paid.
+  const paid = z.transaction.paidTotalPence
+  return paid !== undefined ? { qtyMilli: -1, pence: paid } : undefined
+}
+
+/** Whether a headerless block's own total is a session's total. */
+function totalsAgree(block: ZRead, session: ZRead): boolean {
+  const a = ownTotal(block)
+  const b = ownTotal(session)
+  if (!a || !b) return false
+  if (a.pence !== b.pence) return false
+  // A clerk report brings no quantity, so money alone has to carry it there.
+  return a.qtyMilli < 0 || b.qtyMilli < 0 || a.qtyMilli === b.qtyMilli
+}
+
+/**
+ * Sort a pile of photographs into sessions, and fold them the right way round.
+ *
+ * Two different jobs live here and the difference is a whole session's takings.
+ * Photographs of ONE Z read are pieces of one record and MERGE — a department
  * seen on two of them is the same money read twice. Separate Z reads are
  * separate trade and ADD.
  *
- * They are told apart by the Z counter, which increments once per Z read, so
- * two photographs carrying different ones are certainly different receipts. A
- * photograph with no Z number on it is the middle or the end of a roll — only
- * the top carries the header — so it joins whichever receipt is open.
+ * A pub that cashes up twice in a day hands over six photographs, in whatever
+ * order they came out of the camera roll: two tops, two PLU lists, two clerk
+ * reports. Walking them in order and starting a new receipt whenever the Z
+ * counter changed was wrong in both directions. A PLU list photographed before
+ * its own top joined the session before it, overwriting that session's items;
+ * and when the counter could not be read at all, two sessions merged into one
+ * and a thousand pounds went missing without a word.
  *
- * `separate` forces every photograph to be its own receipt, for a till whose
+ * So they are sorted rather than walked:
+ *
+ *   1. Every photograph carrying a header starts or joins a session, matched on
+ *      the Z counter or the timestamp.
+ *   2. Every headerless block is put with the session whose total it states.
+ *      A PLU list adds to its own session's DEPT TL and no other's; a clerk
+ *      split adds to its own session's PAID TL. This is exact, not a guess.
+ *   3. Anything left over — a block that states no total of its own — goes to
+ *      the session photographed before it, which is the old behaviour and the
+ *      only guess in here. It is reported as such.
+ *
+ * `separate` forces every photograph to be its own session, for a till whose
  * header never comes out legible. `together` forces one, for a roll
  * photographed so that the header appears twice.
  */
@@ -297,34 +377,92 @@ export function foldRolls(
   const how = opts.how ?? 'auto'
   const ordered = [...outcomes].sort((a, b) => a.index - b.index).filter((o) => o.parsed)
 
-  const rolls: Roll[] = []
-  for (const o of ordered) {
-    const zNumber = o.parsed!.header.zNumber
-    const open = rolls[rolls.length - 1]
-    // A new receipt when the Z counter says so, when every photograph is being
-    // treated as its own, or when there is nothing open yet.
-    const starts =
-      open === undefined ||
-      how === 'separate' ||
-      (how === 'auto' && zNumber !== undefined && open.zNumber !== undefined && zNumber !== open.zNumber)
+  if (how === 'separate') {
+    const rolls = ordered.map((o) => ({
+      ...(o.parsed!.header.zNumber !== undefined ? { zNumber: o.parsed!.header.zNumber } : {}),
+      photos: [o.index],
+      zRead: o.parsed!,
+    }))
+    return { rolls, zRead: foldTogether(rolls, opts.base) }
+  }
 
-    if (starts) {
-      rolls.push({ ...(zNumber !== undefined ? { zNumber } : {}), photos: [o.index], zRead: o.parsed! })
+  if (how === 'together') {
+    if (ordered.length === 0) return { rolls: [], zRead: opts.base ?? emptyZRead() }
+    let zRead = ordered[0]!.parsed!
+    for (const o of ordered.slice(1)) zRead = mergeZRead(zRead, o.parsed!)
+    const one = {
+      ...(zRead.header.zNumber !== undefined ? { zNumber: zRead.header.zNumber } : {}),
+      photos: ordered.map((o) => o.index),
+      zRead,
+    }
+    return { rolls: [one], zRead: foldTogether([one], opts.base) }
+  }
+
+  // --- 1. the photographs that say which session they are ----------------------
+  const rolls: Roll[] = []
+  const loose: typeof ordered = []
+  for (const o of ordered) {
+    const stamp = stampOf(o.parsed!)
+    if (!hasStamp(stamp)) {
+      loose.push(o)
+      continue
+    }
+    const found = rolls.find((r) => sameSession(stampOf(r.zRead), stamp) === true)
+    if (found) {
+      found.photos.push(o.index)
+      found.zRead = mergeZRead(found.zRead, o.parsed!)
+      if (found.zNumber === undefined && stamp.zNumber !== undefined) found.zNumber = stamp.zNumber
     } else {
-      open.photos.push(o.index)
-      open.zRead = mergeZRead(open.zRead, o.parsed!)
-      if (open.zNumber === undefined && zNumber !== undefined) open.zNumber = zNumber
+      rolls.push({
+        ...(stamp.zNumber !== undefined ? { zNumber: stamp.zNumber } : {}),
+        photos: [o.index],
+        zRead: o.parsed!,
+      })
     }
   }
 
-  let zRead = opts.base ?? emptyZRead()
+  // --- 2. the headerless blocks, placed by what they add up to -----------------
+  const guessed: number[] = []
+  for (const o of loose) {
+    if (rolls.length === 0) {
+      rolls.push({ photos: [o.index], zRead: o.parsed! })
+      continue
+    }
+    // Only a total that fits ONE session says anything. Three sessions whose
+    // payment blocks all come to the same figure match each other perfectly and
+    // tell us nothing — taking the first would pile all three onto one.
+    const fits = rolls.filter((r) => totalsAgree(o.parsed!, r.zRead))
+    const match = fits.length === 1 ? fits[0] : undefined
+
+    // --- 3. or, failing that, with the session photographed before it ----------
+    const target = match ?? [...rolls].reverse().find((r) => Math.min(...r.photos) < o.index) ?? rolls[0]!
+    // One session is no choice at all, so it is not a guess. More than one, with
+    // nothing to tell them apart, is — and the screen says which.
+    if (!match && rolls.length > 1) guessed.push(o.index)
+    target.photos.push(o.index)
+    target.zRead = mergeZRead(target.zRead, o.parsed!)
+    if (target.zNumber === undefined && o.parsed!.header.zNumber !== undefined) {
+      target.zNumber = o.parsed!.header.zNumber
+    }
+  }
+
+  for (const r of rolls) r.photos.sort((a, b) => a - b)
+  rolls.sort((a, b) => Math.min(...a.photos) - Math.min(...b.photos))
+
+  return {
+    rolls,
+    zRead: foldTogether(rolls, opts.base),
+    ...(guessed.length > 0 ? { guessed: guessed.sort((a, b) => a - b) } : {}),
+  }
+}
+
+/** The first session folds onto what was already there; the rest add to it. */
+function foldTogether(rolls: readonly Roll[], base?: ZRead): ZRead {
+  let zRead = base ?? emptyZRead()
   rolls.forEach((roll, i) => {
-    // The first receipt folds onto whatever was already read — a night
-    // reopened, or figures corrected by hand — and the rest add to it.
     zRead = i === 0 ? mergeZRead(zRead, roll.zRead) : addZRead(zRead, roll.zRead)
   })
-
-  return { rolls, zRead }
+  return zRead
 }
 
 export interface BatchResult {
