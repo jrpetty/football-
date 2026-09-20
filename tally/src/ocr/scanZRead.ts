@@ -21,7 +21,7 @@
 import { parseZRead } from './parseZRead.ts'
 import { crossfootVerdict, type CrossfootVerdict } from '../core/crossfoot.ts'
 import { addZRead, emptyZRead, mergeZRead, sectionsIn, type ZRead, type ZReadSection } from '../core/zread.ts'
-import { prepareForVision } from './image.ts'
+import { joinSlices, prepareForVision } from './image.ts'
 import { transcribeOnDevice } from './device.ts'
 import { loadSettings, effectiveEngine } from '../storage/settings.ts'
 import type { EngineId } from './types.ts'
@@ -116,40 +116,61 @@ async function transcribeWithVision(file: Blob, signal?: AbortSignal): Promise<{
   const apiKey = settings.apiKey.trim()
   if (!apiKey) throw new Error('NO_KEY')
 
-  const { data, mediaType } = await prepareForVision(file)
+  // A tall photograph of a ribbon of paper comes back as several bands, each
+  // sent at a size the small print survives. One band for an ordinary shot.
+  const images = await prepareForVision(file)
   const { default: Anthropic } = await import('@anthropic-ai/sdk')
   const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true })
 
-  const message = await client.messages.create(
-    {
-      model: settings.model,
-      // A full roll with a PLU list runs long; truncating it mid-transcription
-      // would silently lose the sections that come last.
-      max_tokens: 8000,
-      // Deliberately left at the default effort rather than lowered. Copying a
-      // dense, multi-column roll accurately is not the trivial task it looks
-      // like, and a line missed here costs far more than the fraction of a
-      // penny that a cheaper setting would save.
-      system: SYSTEM,
-      tools: [TOOL],
-      tool_choice: { type: 'tool', name: 'report_till_roll' },
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'image', source: { type: 'base64', media_type: mediaType as 'image/jpeg', data } },
-            { type: 'text', text: 'Transcribe this till roll.' },
-          ],
-        },
-      ],
-    },
-    { signal },
-  )
+  const RANK = { low: 0, medium: 1, high: 2 } as const
+  const texts: string[] = []
+  const notes: string[] = []
+  let worst: 'high' | 'medium' | 'low' = 'high'
 
-  const block = message.content.find((c) => c.type === 'tool_use')
-  if (!block || block.type !== 'tool_use') throw new Error('NO_ANSWER')
-  const input = block.input as { transcription: string; confidence: 'high' | 'medium' | 'low'; notes: string }
-  return { text: input.transcription ?? '', confidence: input.confidence ?? 'medium', notes: input.notes ?? '' }
+  for (const [i, image] of images.entries()) {
+    const where =
+      images.length === 1
+        ? 'Transcribe this till roll.'
+        : `Transcribe this part of a till roll — band ${i + 1} of ${images.length}, reading down the roll. ` +
+          'The bands overlap, so the first and last lines may also appear on the band before or after. ' +
+          'Transcribe what is in front of you and do not try to guess what came before or after it.'
+
+    const message = await client.messages.create(
+      {
+        model: settings.model,
+        // A full roll with a PLU list runs long; truncating it mid-transcription
+        // would silently lose the sections that come last.
+        max_tokens: 8000,
+        // Deliberately left at the default effort rather than lowered. Copying a
+        // dense, multi-column roll accurately is not the trivial task it looks
+        // like, and a line missed here costs far more than the fraction of a
+        // penny that a cheaper setting would save.
+        system: SYSTEM,
+        tools: [TOOL],
+        tool_choice: { type: 'tool', name: 'report_till_roll' },
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'image', source: { type: 'base64', media_type: image.mediaType as 'image/jpeg', data: image.data } },
+              { type: 'text', text: where },
+            ],
+          },
+        ],
+      },
+      { signal },
+    )
+
+    const block = message.content.find((c) => c.type === 'tool_use')
+    if (!block || block.type !== 'tool_use') throw new Error('NO_ANSWER')
+    const input = block.input as { transcription: string; confidence: 'high' | 'medium' | 'low'; notes: string }
+    texts.push(input.transcription ?? '')
+    if (input.notes) notes.push(input.notes)
+    const said = input.confidence ?? 'medium'
+    if (RANK[said] < RANK[worst]) worst = said
+  }
+
+  return { text: joinSlices(texts), confidence: worst, notes: notes.join(' ') }
 }
 
 /**

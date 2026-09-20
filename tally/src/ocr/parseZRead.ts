@@ -281,7 +281,15 @@ export function parseZRead(text: string): ZRead {
       }
       case 'plu': {
         if (p.pence === undefined) return
-        z.plus.push({ code: p.code, name: p.name, qtyMilli: p.qtyMilli ?? 0, pence: p.pence })
+        // The till prints each button once, so a code seen twice in one
+        // transcription is the same line read twice — which happens where two
+        // bands of a tall photograph overlap. Appending it would double that
+        // drink for the night. The later reading wins, being the one nearer the
+        // middle of its own band.
+        const seen = z.plus.findIndex((x) => x.code === p.code)
+        const line = { code: p.code, name: p.name, qtyMilli: p.qtyMilli ?? 0, pence: p.pence }
+        if (seen >= 0) z.plus[seen] = line
+        else z.plus.push(line)
         return
       }
       case 'pluTotal': {

@@ -13,7 +13,7 @@
 // proposal, and the screens make applying it a deliberate act.
 // ---------------------------------------------------------------------------
 
-import { prepareForVision } from './image.ts'
+import { prepareOneForVision } from './image.ts'
 import { loadSettings, effectiveEngine } from '../storage/settings.ts'
 
 /** One line off the price board, as written. */
@@ -188,7 +188,7 @@ async function callVision<T>({ file, signal, system, tool, ask, read }: Call<T>)
     throw new Error('OFFLINE')
   }
 
-  const { data, mediaType } = await prepareForVision(file)
+  const { data, mediaType } = await prepareOneForVision(file)
   const { default: Anthropic } = await import('@anthropic-ai/sdk')
   const client = new Anthropic({ apiKey: settings.apiKey.trim(), dangerouslyAllowBrowser: true })
 

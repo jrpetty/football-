@@ -26,7 +26,7 @@
 import { parsePence } from '../core/money.ts'
 import type { ScanRequest, ScanResult } from './types.ts'
 import type { TotalCandidate } from './extractTotal.ts'
-import { prepareForVision } from './image.ts'
+import { prepareOneForVision } from './image.ts'
 import { loadSettings, supportsEffort } from '../storage/settings.ts'
 
 const SYSTEM = `You read the total off a photograph of a British pub's paper receipt.
@@ -112,7 +112,7 @@ export async function scanWithVision(req: ScanRequest): Promise<ScanResult> {
   const apiKey = settings.apiKey.trim()
   if (!apiKey) throw new Error('NO_KEY')
 
-  const { data, mediaType } = await prepareForVision(req.file)
+  const { data, mediaType } = await prepareOneForVision(req.file)
 
   // Imported on demand so a night spent typing the figures never downloads it.
   const { default: Anthropic } = await import('@anthropic-ai/sdk')

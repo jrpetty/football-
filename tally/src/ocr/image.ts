@@ -34,11 +34,128 @@ async function draw(
   return { canvas, ctx }
 }
 
-/** Base64 JPEG for the vision request, with the media type it needs. */
-export async function prepareForVision(file: Blob): Promise<{ data: string; mediaType: string }> {
+/**
+ * How many slices a photograph of this shape needs.
+ *
+ * A till roll is a ribbon, and a photograph of one is tall and thin. Squashing
+ * the long edge down to 1568 to fit the vision limit throws away most of the
+ * height, and the first thing to go is the smallest print on the roll — the
+ * item list. The department block is printed large and survives it, which is
+ * why a shrunken photograph reads as a roll with categories and no drinks on
+ * it, rather than as a photograph that failed.
+ *
+ * So a tall photograph is cut into overlapping bands instead, each sent at a
+ * size the small print survives. Three requests for a long roll rather than
+ * one, at a fraction of a penny each, to read the part of the receipt the whole
+ * cellar hangs off.
+ */
+export function slicesFor(width: number, height: number, _maxEdge = VISION_MAX_EDGE): number {
+  if (width <= 0 || height <= 0) return 1
+  const ratio = Math.max(width, height) / Math.min(width, height)
+  // A squarish photograph loses little by being sent whole, and an extra request
+  // for a few per cent more resolution is not worth making. Past about five to
+  // four it is, and an ordinary portrait snap of a receipt is four to three.
+  if (ratio < 1.25) return 1
+  return Math.max(2, Math.min(MAX_SLICES, Math.ceil(ratio)))
+}
+
+/** Beyond this a photograph is of something other than one till roll. */
+const MAX_SLICES = 4
+
+/** How much of each band repeats the one before, so no line falls down a join. */
+const OVERLAP = 0.12
+
+/**
+ * The photograph, ready to send: one image, or a tall one cut into bands.
+ *
+ * Each band is scaled so its own long edge is at most the vision limit, which
+ * for a tall photograph means the characters arrive several times the size they
+ * would whole.
+ */
+export async function prepareForVision(file: Blob): Promise<Array<{ data: string; mediaType: string }>> {
+  const bitmap = await createImageBitmap(file)
+  const { width, height } = bitmap
+  const slices = slicesFor(width, height)
+
+  if (slices === 1) {
+    bitmap.close?.()
+    const { canvas } = await draw(file, VISION_MAX_EDGE)
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.9)
+    return [{ data: dataUrl.slice(dataUrl.indexOf(',') + 1), mediaType: 'image/jpeg' }]
+  }
+
+  // Bands run down the long side, whichever way up the photograph is.
+  const tall = height >= width
+  const along = tall ? height : width
+  const across = tall ? width : height
+  const band = Math.ceil(along / slices)
+  const bleed = Math.round(band * OVERLAP)
+
+  const out: Array<{ data: string; mediaType: string }> = []
+  for (let i = 0; i < slices; i += 1) {
+    const from = Math.max(0, i * band - bleed)
+    const to = Math.min(along, (i + 1) * band + bleed)
+    const cutAlong = to - from
+    const scale = Math.min(1, VISION_MAX_EDGE / Math.max(across, cutAlong))
+    const w = Math.max(1, Math.round((tall ? across : cutAlong) * scale))
+    const h = Math.max(1, Math.round((tall ? cutAlong : across) * scale))
+
+    const canvas = document.createElement('canvas')
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('This browser would not open that photograph.')
+    ctx.drawImage(
+      bitmap,
+      tall ? 0 : from, tall ? from : 0,
+      tall ? across : cutAlong, tall ? cutAlong : across,
+      0, 0, w, h,
+    )
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.9)
+    out.push({ data: dataUrl.slice(dataUrl.indexOf(',') + 1), mediaType: 'image/jpeg' })
+  }
+  bitmap.close?.()
+  return out
+}
+
+/**
+ * One image, whatever shape the photograph is.
+ *
+ * For the card slip and the price board, which are not ribbons of paper and do
+ * not carry a column of small print that has to survive.
+ */
+export async function prepareOneForVision(file: Blob): Promise<{ data: string; mediaType: string }> {
   const { canvas } = await draw(file, VISION_MAX_EDGE)
   const dataUrl = canvas.toDataURL('image/jpeg', 0.9)
   return { data: dataUrl.slice(dataUrl.indexOf(',') + 1), mediaType: 'image/jpeg' }
+}
+
+/**
+ * Join the bands back into one transcription.
+ *
+ * The bands overlap on purpose, so the seam repeats lines. Left in, a repeated
+ * PLU line would be counted twice and the night would read high. The longest
+ * run of lines that ends one band and begins the next is the seam, and it is
+ * dropped from the second.
+ */
+export function joinSlices(parts: readonly string[]): string {
+  const clean = parts.map((p) => p.split(/\r?\n/).map((l) => l.trimEnd()))
+  let out: string[] = clean[0] ?? []
+  for (const next of clean.slice(1)) {
+    const most = Math.min(out.length, next.length, 60)
+    let seam = 0
+    for (let n = most; n > 0; n -= 1) {
+      const tail = out.slice(out.length - n).filter((l) => l.trim())
+      const head = next.slice(0, n).filter((l) => l.trim())
+      if (tail.length === 0 || tail.length !== head.length) continue
+      if (tail.every((l, i) => l.trim() === head[i]?.trim())) {
+        seam = n
+        break
+      }
+    }
+    out = [...out, ...next.slice(seam)]
+  }
+  return out.join('\n')
 }
 
 /**
