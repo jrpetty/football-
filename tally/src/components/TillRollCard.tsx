@@ -1,9 +1,9 @@
 // ---------------------------------------------------------------------------
 // Capturing the till roll.
 //
-// This is now the whole of the nightly job: photograph the receipt, let it be
-// read, check the verdict. So the card is built around the photographs rather
-// than around the scan.
+// This is now the whole of the nightly job: photograph the receipt and let it
+// be read. So the card is built around the photographs rather than around the
+// scan.
 //
 // Three things follow from that. The roll is longer than a phone's camera
 // frame — the reference one took three photographs — so they are taken all at
@@ -21,8 +21,6 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { MoneyInput } from './MoneyInput.tsx'
-import { CrossfootSummary, CrossfootList } from './CrossfootPanel.tsx'
-import { crossfootVerdict } from '../core/crossfoot.ts'
 import { formatMoney, parsePence } from '../core/money.ts'
 import { isZReadEmpty, sectionLabel, sectionsIn, type ZRead } from '../core/zread.ts'
 import type { CaptureConfidence, CaptureSource } from '../core/types.ts'
@@ -171,7 +169,6 @@ export function TillRollCard({ value, onChange, onReview }: Props) {
   const cameraRef = useRef<HTMLInputElement>(null)
   const abortRef = useRef<AbortController | null>(null)
   const [dragging, setDragging] = useState(false)
-  const [showChecks, setShowChecks] = useState(false)
   const [previews, setPreviews] = useState<string[]>([])
   const [viewing, setViewing] = useState<number | null>(null)
   const [ready, setReady] = useState<Readiness>(readiness)
@@ -209,7 +206,6 @@ export function TillRollCard({ value, onChange, onReview }: Props) {
 
   const z = value.zRead
   const captured = !isZReadEmpty(z)
-  const verdict = captured && z ? crossfootVerdict(z) : null
   const have = z ? sectionsIn(z) : []
   const missing = WANTED.filter((w) => !have.includes(w))
   const unread = unreadShots(value)
@@ -660,21 +656,21 @@ export function TillRollCard({ value, onChange, onReview }: Props) {
 
       {value.error && <p className="note bad" role="status">{value.error}</p>}
       {value.notes && !value.error && <p className="note warn" role="status">{value.notes}</p>}
-      {verdict && <CrossfootSummary verdict={verdict} />}
-      {verdict && !verdict.clean && <CrossfootList verdict={verdict} />}
 
+      {/* The roll's own arithmetic used to be reported here, every night: a
+          line saying so many of its figures disagreed, with the failing sums
+          under it. It is a proof-reader's tool and it sat on the one screen
+          she opens to count the takings. It lives on Check every figure now,
+          which is the screen you open when a figure looks wrong — and it is
+          all of it there, the sums that agree as well as the ones that do not.
+
+          Both halves went together on purpose. A panel that can only ever
+          say "adds up" is worse than no panel: it is a tick that cannot turn
+          red. */}
       {captured && (
-        <>
-          <div className="alts">
-            <button type="button" className="btn-small" onClick={onReview}>Check every figure</button>
-            {verdict && verdict.clean && (
-              <button type="button" className="btn-small" onClick={() => setShowChecks((v) => !v)}>
-                {showChecks ? 'Hide the sums' : `Show the ${verdict.checks.length} sums that agree`}
-              </button>
-            )}
-          </div>
-          {showChecks && verdict && <CrossfootList verdict={verdict} showPassing />}
-        </>
+        <div className="alts">
+          <button type="button" className="btn-small" onClick={onReview}>Check every figure</button>
+        </div>
       )}
 
       {viewing !== null && previews.length > 0 && (

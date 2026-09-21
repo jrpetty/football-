@@ -92,3 +92,83 @@ PINT OBB                      *151.20`)
   assert.equal(z.plus.length, 1)
   assert.equal(z.plus[0]?.pence, 15120)
 })
+
+// ---------------------------------------------------------------------------
+// The other half of band slicing: what happens to the text when it comes back.
+//
+// A tall photograph is read twice over — once whole, for the shape of the roll,
+// and again in close-up bands, for the small print. So the same lines arrive
+// more than once, and every block has to be keyed rather than appended. Get
+// this wrong on the departments and the night's takings come out double.
+// ---------------------------------------------------------------------------
+
+test('a department caught on two bands is one department, not two', () => {
+  // The trap. D01 read twice and added is £2,984.50 of draught beer, on a
+  // night that sold £1,492.25 of it.
+  const z = parseZRead(`DEPT./GROUP
+D01                            406.000 Q
+DRAUGHT BEERS                 *1492.25
+D01                            406.000 Q
+DRAUGHT BEERS                 *1492.25
+D03                             41.000 Q
+WINE                           *234.80`)
+  assert.equal(z.departments.length, 2)
+  assert.equal(z.departments.reduce((a, d) => a + d.pence, 0), 149225 + 23480)
+})
+
+test('a group line caught twice is one group', () => {
+  const z = parseZRead(`DEPT./GROUP
+D01                            406.000 Q
+DRAUGHT BEERS                 *1492.25
+GROUP01                        406.000 Q
+                              *1492.25
+GROUP01                        406.000 Q
+                              *1492.25`)
+  assert.equal(z.groups.length, 1)
+  assert.equal(z.groups[0]?.pence, 149225)
+})
+
+test('a clerk caught twice took the money once', () => {
+  const z = parseZRead(`CLK#0004  KELLY
+PAID TL                        267 Q
+                            *2192.80
+CLK#0004  KELLY
+PAID TL                        267 Q
+                            *2192.80`)
+  assert.equal(z.clerks.length, 1)
+})
+
+test('the whole roll then a band of it reads as one roll', () => {
+  // What the app actually sends: the whole photograph first, so the shape of
+  // the roll is read off a picture that has a top and a bottom, then a band of
+  // the same photograph close up so the item list can be read exactly. The
+  // second pass goes back to the top of the receipt, and nothing must double.
+  const whole = `#4631    18/09/2026 16:57:14
+DEPT./GROUP
+D01                            406.000 Q
+DRAUGHT BEERS                 *1492.25
+DEPT TL                        406.000 Q
+                              *1492.25
+PLU
+P00014                          88.000 Q
+PINT TADDY LAGER               *352.00
+TOTAL                           88.000 Q
+                               *352.00`
+  // The band goes back to the top of the same receipt and reads it closer.
+  const band = `#4631    18/09/2026 16:57:14
+DEPT./GROUP
+D01                            406.000 Q
+DRAUGHT BEERS                 *1492.25
+DEPT TL                        406.000 Q
+                              *1492.25`
+
+  const z = parseZRead(`${whole}\n${band}`)
+  assert.equal(z.departments.length, 1)
+  assert.equal(z.departments[0]?.pence, 149225)
+  assert.equal(z.deptTotal?.pence, 149225)
+  // The item list was read once and is still there, at its own figure — the
+  // second pass must not wipe what it did not reach.
+  assert.equal(z.plus.length, 1)
+  assert.equal(z.plus[0]?.pence, 35200)
+  assert.equal(z.pluTotal?.pence, 35200)
+})

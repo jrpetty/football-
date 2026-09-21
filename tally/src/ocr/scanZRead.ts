@@ -21,7 +21,7 @@
 import { parseZRead } from './parseZRead.ts'
 import { crossfootVerdict, type CrossfootVerdict } from '../core/crossfoot.ts'
 import { addZRead, emptyZRead, mergeZRead, sectionsIn, type ZRead, type ZReadSection } from '../core/zread.ts'
-import { joinSlices, prepareForVision } from './image.ts'
+import { joinSlices, prepareForVision, prepareOneForVision } from './image.ts'
 import { transcribeOnDevice } from './device.ts'
 import { loadSettings, effectiveEngine } from '../storage/settings.ts'
 import type { EngineId } from './types.ts'
@@ -116,9 +116,20 @@ async function transcribeWithVision(file: Blob, signal?: AbortSignal): Promise<{
   const apiKey = settings.apiKey.trim()
   if (!apiKey) throw new Error('NO_KEY')
 
-  // A tall photograph of a ribbon of paper comes back as several bands, each
-  // sent at a size the small print survives. One band for an ordinary shot.
-  const images = await prepareForVision(file)
+  // The whole photograph first, exactly as it was read before there were any
+  // bands. That one request is where the shape of the roll comes from: the
+  // header, the department block, the payments, the totals — all printed large
+  // enough to survive being scaled to fit, and all of it read from one picture
+  // that has a top and a bottom.
+  //
+  // The bands come after, and they are only ever an addition: each is a strip
+  // of the same photograph sent at a size the small print survives, which is
+  // how the item list gets in. A band cannot take anything away, because the
+  // whole roll has already been read and every block is keyed — a department
+  // or a button read twice is replaced, not added.
+  const whole = await prepareOneForVision(file)
+  const bands = await prepareForVision(file)
+  const images = bands.length > 1 ? [whole, ...bands] : [whole]
   const { default: Anthropic } = await import('@anthropic-ai/sdk')
   const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true })
 
@@ -128,12 +139,15 @@ async function transcribeWithVision(file: Blob, signal?: AbortSignal): Promise<{
   let worst: 'high' | 'medium' | 'low' = 'high'
 
   for (const [i, image] of images.entries()) {
+    // The first image is always the whole roll. The rest are bands of it.
     const where =
-      images.length === 1
+      i === 0
         ? 'Transcribe this till roll.'
-        : `Transcribe this part of a till roll — band ${i + 1} of ${images.length}, reading down the roll. ` +
-          'The bands overlap, so the first and last lines may also appear on the band before or after. ' +
-          'Transcribe what is in front of you and do not try to guess what came before or after it.'
+        : `Transcribe this part of a till roll — band ${i} of ${images.length - 1}, reading down the roll. ` +
+          'You have already been shown the whole roll; this is a closer look at one strip of it, ' +
+          'so the small print can be read exactly. The bands overlap, so the first and last lines may ' +
+          'also appear on the band before or after. Transcribe what is in front of you and do not try ' +
+          'to guess what came before or after it.'
 
     const message = await client.messages.create(
       {

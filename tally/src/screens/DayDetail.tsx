@@ -12,8 +12,6 @@ import { formatMoney, formatSigned } from '../core/money.ts'
 import { reconcileDay, verdictHeadline } from '../core/reconcile.ts'
 import type { Capture, DayRecord } from '../core/types.ts'
 import { ItemisedLegs, VerdictPanel } from '../components/Verdict.tsx'
-import { CrossfootList, CrossfootSummary } from '../components/CrossfootPanel.tsx'
-import { crossfootVerdict } from '../core/crossfoot.ts'
 import { departmentLabel, departmentSlot } from '../core/departments.ts'
 import { shareBp } from '../core/zread.ts'
 import { WhatSold } from '../components/WhatSold.tsx'
@@ -299,8 +297,6 @@ export function DayDetail({ date, onBack, onEdit, onDeleted }: Props) {
             <h2>What sold</h2>
             {zRead.header.zNumber !== undefined && <span className="badge">Z {zRead.header.zNumber}</span>}
           </div>
-          <CrossfootSummary verdict={crossfootVerdict(zRead)} />
-          <CrossfootList verdict={crossfootVerdict(zRead)} />
           {shareRows.length > 0 && (
             <>
               <ShareBar rows={shareRows} />

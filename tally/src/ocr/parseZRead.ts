@@ -184,7 +184,13 @@ export function parseZRead(text: string): ZRead {
   let ungrouped: DeptLine[] = []
 
   const closeClerk = () => {
-    if (clerk) z.clerks.push(clerk)
+    // One block per clerk per roll; a clerk caught on two overlapping bands is
+    // the same clerk, not two people who each took the same money.
+    if (clerk) {
+      const same = z.clerks.findIndex((c) => c.code === clerk!.code)
+      if (same >= 0) z.clerks[same] = clerk
+      else z.clerks.push(clerk)
+    }
     clerk = null
   }
 
@@ -253,18 +259,36 @@ export function parseZRead(text: string): ZRead {
           pence: p.pence,
         }
         if (p.percentBp !== undefined) entry.percentBp = p.percentBp
+        // The till prints each department once. A second D01 in one
+        // transcription is the same line read twice — which is what happens
+        // where two bands of a tall photograph overlap — and adding it would
+        // put the night's takings out by a whole category.
+        const already = z.departments.findIndex((d) => d.code === entry.code)
+        if (already >= 0) {
+          const old = z.departments[already] as DeptLine
+          if (old.group !== undefined) entry.group = old.group
+          z.departments[already] = entry
+          const wasUngrouped = ungrouped.findIndex((d) => d.code === entry.code)
+          if (wasUngrouped >= 0) ungrouped[wasUngrouped] = entry
+          else if (entry.group === undefined) ungrouped.push(entry)
+          return
+        }
         z.departments.push(entry)
         ungrouped.push(entry)
         return
       }
       case 'group': {
         if (p.pence === undefined) return
-        z.groups.push({
+        // Same rule as the departments: one group line per code per roll.
+        const group = {
           code: p.code,
           qtyMilli: p.qtyMilli ?? 0,
           pence: p.pence,
           ...(p.percentBp !== undefined ? { percentBp: p.percentBp } : {}),
-        })
+        }
+        const sameGroup = z.groups.findIndex((g) => g.code === group.code)
+        if (sameGroup >= 0) z.groups[sameGroup] = group
+        else z.groups.push(group)
         // Everything read since the last group belongs to this one.
         for (const d of ungrouped) d.group = p.code
         ungrouped = []
@@ -376,6 +400,12 @@ export function parseZRead(text: string): ZRead {
       flush()
       z.header.receiptNo = stamp[1]
       z.header.printedAt = stamp[2]
+      // A till only prints this line at the top of a receipt, so reaching one
+      // means the text has gone back to the top — which is what happens when a
+      // photograph is read whole and then again in close-up bands. Without
+      // this the reader would still be in the item list, and the department
+      // block's bare TOTAL would be filed as the item list's.
+      section = 'head'
       continue
     }
 

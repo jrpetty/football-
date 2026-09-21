@@ -534,7 +534,15 @@ try {
   await page.click('.day-row')
   await page.waitForSelector('.verdict', { timeout: 5000 })
   const rollDetail = await page.locator('.main').innerText()
-  check('the roll’s own sums are reported as agreeing', /Adds up/i.test(rollDetail))
+  // The roll's own arithmetic used to be reported here and on the counting
+  // screen, every night. It is a proof-reader's tool, and it lives on Check
+  // every figure now. Both halves went together: a panel that can only ever
+  // say "adds up" is a tick that cannot turn red.
+  check(
+    'a saved night does not lead with the roll’s own arithmetic',
+    !/Adds up/i.test(rollDetail) && !/figures? disagree/i.test(rollDetail),
+    rollDetail.slice(0, 200),
+  )
   check('the department split is shown', rollDetail.includes('Draught beers'))
   check('with the percentage the till printed', rollDetail.includes('68.05%'))
   check('the takings match the roll', rollDetail.includes('£2,192.80'))
