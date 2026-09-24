@@ -1,12 +1,14 @@
 /** Transcript viewer: each model call as chat bubbles with timing / tokens / cost. */
 import { memo, useState } from 'react';
-import type { TranscriptEntry } from '../types.ts';
+import type { ChatImage, TranscriptEntry } from '../types.ts';
 import { fmtCost, fmtMs, fmtTokens } from '../format.ts';
 import { CopyButton, cx } from './ui.tsx';
+import { VisionImage } from './VisionImage.tsx';
+import { testImageUrl } from '../vision.ts';
 
 const LONG = 1400;
 
-function Bubble({ role, text, label }: { role: 'user' | 'assistant' | 'system'; text: string; label?: string }) {
+function Bubble({ role, text, label, images }: { role: 'user' | 'assistant' | 'system'; text: string; label?: string; images?: ChatImage[] }) {
   const [expanded, setExpanded] = useState(text.length <= LONG);
   const shown = expanded ? text : `${text.slice(0, LONG)}…`;
   return (
@@ -15,6 +17,13 @@ function Bubble({ role, text, label }: { role: 'user' | 'assistant' | 'system'; 
         <span>{label ?? role}</span>
         <CopyButton text={text} iconOnly label={`Copy ${role} message`} />
       </div>
+      {images && images.length > 0 && (
+        <div className="vi-row" style={{ marginBottom: 8 }}>
+          {images.map((img, k) => (
+            <VisionImage key={k} src={img.path ? testImageUrl(img.path) : ''} name={img.name} width={img.width} height={img.height} size="sm" />
+          ))}
+        </div>
+      )}
       <pre className="bubble-text">{shown || <span className="muted">(empty)</span>}</pre>
       {text.length > LONG && (
         <button type="button" className="btn xs ghost" onClick={() => setExpanded((v) => !v)}>
@@ -65,7 +74,7 @@ export const TranscriptView = memo(function TranscriptView({ entries }: { entrie
             {sameThread && <div className="muted" style={{ fontSize: '0.78rem' }}>… {prev!.messages.length + 1} earlier messages in this conversation</div>}
             <div className="bubbles">
               {visible.map((m, j) => (
-                <Bubble key={j} role={m.role} text={m.content} />
+                <Bubble key={j} role={m.role} text={m.content} images={m.images} />
               ))}
               {e.error ? <div className="callout bad">{e.error}</div> : <Bubble role="assistant" text={e.response} label="response" />}
             </div>

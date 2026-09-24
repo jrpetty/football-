@@ -7,6 +7,7 @@ import { PROTOCOL_VERSION } from './version.ts';
 import { writeJsonAtomic, loadCategories } from './config.ts';
 import { JUDGE_PROMPT_FINGERPRINT } from '../scoring/judge-prompts.ts';
 import { PROGRAMS } from '../programs/index.ts';
+import { caseImageRefs, resolveTestImage, testBaseDir, testHasImages, testImageDigests, testsRelativePath, validateCaseImages } from './vision.ts';
 import type { PromptTest, PromptTestCase, ScorerSpec, Suite, TestDefinition } from './types.ts';
 
 export interface LoadedTest {
@@ -32,6 +33,8 @@ export interface TestSummary {
   source: 'builtin' | 'custom' | 'private';
   file: string;
   estimate: { inputTokens: number; outputTokens: number; calls: number };
+  /** Number of cases that show the model an image (vision tests). */
+  imageCases?: number;
 }
 
 export interface RenderedCase {
@@ -40,6 +43,8 @@ export interface RenderedCase {
   turns: string[];
   expected?: unknown;
   notes?: string;
+  /** Images shown with the given (0-based) turn; `path` is relative to the tests folder (UI: /api/test-files/<path>). */
+  images?: Array<{ turn: number; file: string; path?: string }>;
 }
 
 function walkJson(dir: string): string[] {
@@ -79,9 +84,13 @@ export function programSourceHash(programId: string): string {
   return hash;
 }
 
-/** Content hash of a test: definition + (for programs) program source code. */
-export function computeTestHash(def: TestDefinition): string {
+/**
+ * Content hash of a test: definition + (for programs) program source code + (for vision tests) the bytes of every
+ * image. `baseDir` is the folder of the test file (image paths are relative to it; default: tests/custom).
+ */
+export function computeTestHash(def: TestDefinition, baseDir?: string): string {
   if (def.kind === 'program') return contentHash({ def, program: programSourceHash(def.program) });
+  if (testHasImages(def)) return contentHash({ def, images: testImageDigests(def, baseDir ?? testBaseDir()) });
   return contentHash(def);
 }
 
@@ -97,7 +106,7 @@ export function loadTests(): LoadedTest[] {
     }
     out.push({
       definition,
-      hash: computeTestHash(definition),
+      hash: computeTestHash(definition, dirname(file)),
       file: relative(ROOT, file),
       source: file.startsWith(CUSTOM_TESTS_DIR) ? 'custom' : file.startsWith(PRIVATE_TESTS_DIR) ? 'private' : 'builtin',
     });
@@ -117,12 +126,20 @@ export function caseScorer(test: PromptTest, c: PromptTestCase): ScorerSpec {
   return c.scorer ?? test.scorer;
 }
 
-/** The exact prompts sent to every model for a prompt-test case. */
-export function renderCase(test: PromptTest, c: PromptTestCase): RenderedCase {
+/** The exact prompts sent to every model for a prompt-test case. `baseDir` (the test file's folder) adds image paths. */
+export function renderCase(test: PromptTest, c: PromptTestCase, baseDir?: string): RenderedCase {
   const turns = c.turns ? c.turns.slice() : [c.prompt ?? ''];
   if (test.preamble) turns[0] = `${test.preamble}\n\n${turns[0]}`;
   if (needsFinalAnswer(caseScorer(test, c))) turns[turns.length - 1] = `${turns[turns.length - 1]}\n\n${FINAL_ANSWER_INSTRUCTION}`;
-  return { caseId: c.id, system: test.system, turns, expected: c.expected, notes: c.notes };
+  const out: RenderedCase = { caseId: c.id, system: test.system, turns, expected: c.expected, notes: c.notes };
+  const refs = caseImageRefs(c);
+  if (refs.length) {
+    out.images = refs.map((r) => {
+      const abs = baseDir ? resolveTestImage(baseDir, r.file) : null;
+      return abs ? { ...r, path: testsRelativePath(abs) } : { ...r };
+    });
+  }
+  return out;
 }
 
 export function caseIds(def: TestDefinition): string[] {
@@ -167,6 +184,7 @@ export function summarize(t: LoadedTest): TestSummary {
     source: t.source,
     file: t.file,
     estimate: testEstimate(d),
+    ...(testHasImages(d) && d.kind === 'prompt' ? { imageCases: d.cases.filter((c) => caseImageRefs(c).length > 0).length } : {}),
   };
 }
 
@@ -272,7 +290,7 @@ function validateExpected(s: ScorerSpec, expected: unknown, where: string, error
   }
 }
 
-export function validateTest(def: TestDefinition, allTests?: LoadedTest[], opts: { selfFile?: string } = {}): string[] {
+export function validateTest(def: TestDefinition, allTests?: LoadedTest[], opts: { selfFile?: string; baseDir?: string } = {}): string[] {
   const errors: string[] = [];
   if (!def || typeof def !== 'object') return ['Test definition must be a JSON object'];
   if (!TEST_ID_RE.test(def.id ?? '')) errors.push('id must look like "<category>.<slug>" (lowercase letters, digits, hyphens)');
@@ -302,6 +320,7 @@ export function validateTest(def: TestDefinition, allTests?: LoadedTest[], opts:
       const scorer = c?.scorer ?? def.scorer;
       if (c?.scorer) validateScorer(c.scorer, where, errors);
       if (scorer && SCORER_TYPES.has(scorer.type)) validateExpected(scorer, c?.expected, where, errors);
+      if (c) validateCaseImages(c, opts.baseDir ?? testBaseDir(opts.selfFile), where, errors);
     });
   } else if (def.kind === 'program') {
     if (!PROGRAMS[def.program]) errors.push(`program "${def.program}" is not registered (see src/programs/index.ts)`);

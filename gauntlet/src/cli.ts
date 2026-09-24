@@ -2,7 +2,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline/promises';
-import { ROOT } from './core/paths.ts';
+import { ROOT, TESTS_DIR } from './core/paths.ts';
 import { getContestant, getProvider, hasApiKey, loadCategories, loadContestants, loadProviders, loadSettings, validateContestant } from './core/config.ts';
 import { fingerprint, getTest, loadSuites, loadTests, renderCase, resolveTests, summarize, validateTest } from './core/registry.ts';
 import { CANARY, HARNESS_VERSION, PROTOCOL_VERSION } from './core/version.ts';
@@ -67,8 +67,9 @@ Usage: node src/cli.ts <command> [options]
   serve [--port 7777] [--host 127.0.0.1]     Start the dashboard + API server
   run --models a,b [--suite core | --tests x,y] [--repeats 3] [--concurrency 6]
       [--max-cost 5] [--name "..."] [--judges j1,j2] [--notes "..."] [--yes]
-                                             Run a benchmark (shows a cost estimate first;
-                                             --max-cost is a hard USD spending cap)
+      [--force-vision]                       Run a benchmark (shows a cost estimate first;
+                                             --max-cost is a hard USD spending cap;
+                                             --force-vision sends image cases to text-only models)
   estimate --models a,b [--suite core | --tests x,y] [--repeats 3]
   costs [--suite core] [--models a,b] [--repeats 1] [--format table|md]
                                              Estimated cost of every test for every model
@@ -110,6 +111,7 @@ function runRequest(flags: Record<string, string | boolean>): RunRequest {
     judgeIds: list(flags.judges),
     maxCostUsd: num(flags['max-cost']),
     notes: typeof flags.notes === 'string' ? flags.notes : undefined,
+    forceVision: flags['force-vision'] === true ? true : undefined,
   };
 }
 
@@ -138,6 +140,8 @@ function attachManualTerminal(runId: string): () => void {
     console.log(c.cyan('----- COPY BELOW -----'));
     console.log(req.isContinuation ? req.latestUserMessage : req.combinedPrompt);
     console.log(c.cyan('----- COPY ABOVE -----'));
+    const images = req.messages.at(-1)?.images ?? [];
+    if (images.length) console.log(c.yellow(`Attach ${images.length === 1 ? 'this image' : 'these images'} to the message: ${images.map((img) => (img.path ? join(TESTS_DIR, img.path) : img.name)).join(', ')}`));
     console.log(c.dim('Paste the model reply, then a line containing only END (or FAIL to mark this case failed):'));
     const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: false });
     const lines: string[] = [];
@@ -168,7 +172,7 @@ function attachConsole(runId: string): void {
   subscribe(runId, (e: RunEvent) => {
     if (e.type === 'job.finished') {
       const s = e.score === null ? c.dim(' — ') : e.score >= 0.999 ? c.green((e.score * 100).toFixed(0).padStart(3)) : e.score > 0 ? c.yellow((e.score * 100).toFixed(0).padStart(3)) : c.red('  0');
-      const status = e.status === 'ok' ? '' : ` ${c.red(`[${e.status}]`)}`;
+      const status = e.status === 'ok' ? '' : e.status === 'skipped' ? ` ${c.dim('[skipped]')}` : ` ${c.red(`[${e.status}]`)}`;
       console.log(`${s}  ${(labels.get(e.contestantId) ?? e.contestantId).padEnd(22)} ${e.testId}/${e.caseId}${e.repeat ? ` r${e.repeat}` : ''}  ${c.dim(`${fmtMs(e.metrics.wallMs)} · ${fmtCost(e.metrics.costUsd)}`)}${status}  ${c.dim(e.summary.slice(0, 80))}`);
     } else if (e.type === 'run.progress') {
       if (e.completed % 10 === 0 || e.completed === e.total) console.log(c.cyan(`── ${e.completed}/${e.total} (${Math.round((e.completed / Math.max(1, e.total)) * 100)}%) · spent ${fmtCost(e.costUsd)}`));
@@ -323,6 +327,7 @@ async function main(): Promise<void> {
         console.log(c.cyan(`── case ${cs.id}`));
         if (r.system) console.log(c.dim(`[system] ${r.system}`));
         r.turns.forEach((turn, i) => console.log(`${r.turns.length > 1 ? `[turn ${i + 1}] ` : ''}${turn}`));
+        for (const img of r.images ?? []) console.log(c.yellow(`[image, turn ${img.turn + 1}] ${img.file}`));
         console.log(c.dim(`[expected] ${JSON.stringify(cs.expected)?.slice(0, 300)}`) + '\n');
       }
       return;
@@ -348,6 +353,7 @@ async function main(): Promise<void> {
           const r = renderCase(d, cs);
           out.push('', `### Case ${cs.id}`);
           if (r.system) out.push('', '**System**', '', '```text', r.system, '```');
+          for (const img of r.images ?? []) out.push('', `**Image (turn ${img.turn + 1}):** \`${img.file}\``);
           r.turns.forEach((turn, i) => out.push('', r.turns.length > 1 ? `**Turn ${i + 1}**` : '**Prompt**', '', '```text', turn, '```'));
           if (flags.answers) out.push('', `**Expected:** \`${JSON.stringify(cs.expected)?.slice(0, 500)}\``);
         }

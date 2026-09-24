@@ -49,6 +49,20 @@ interface TestSummary {
 interface RenderedCase { caseId: string; system?: string; turns: string[]; expected?: unknown; notes?: string }
 ```
 
+**Vision tests.** A case may list `images` (paths relative to the test file). `TestSummary.imageCases` counts
+the cases with images and `RenderedCase.images` is `Array<{ turn: number; file: string; path?: string }>` where
+`path` is relative to the tests folder.
+
+| Method | Path | Body | Returns |
+|---|---|---|---|
+| GET | `/api/test-files/<path>` | – | The PNG/JPEG at `tests/<path>` (images only; nothing outside the tests folder) |
+| POST | `/api/test-images` | `{ testId, name, data }` (`data` = base64 or a data URL) | `{ file, path, width, height, bytes, mediaType }` — saved as `tests/custom/images/<testId>/<name>`; put `file` in the case's `images` |
+| GET | `/api/manual/:requestId/images/:message/:image` | – | One image of a pending Manual Inbox request (listings leave out the bytes) |
+
+`RunRequest.forceVision: true` sends picture cases to models without `vision: true`; otherwise those cases are
+stored with `status: "skipped"`, `score: null`, and counted in `TestAggregate.skipped` / `LeaderboardRow.totals.skipped`.
+Stored transcripts keep image metadata (`name`, `sha256`, `width`, `height`, `path`) but not the bytes.
+
 For program tests, `rendered` lists one entry per seed with `turns: []` (prompts are generated at run time
 from the seed; the program description explains them).
 

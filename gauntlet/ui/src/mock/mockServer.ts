@@ -53,6 +53,7 @@ import {
   summaryOf,
 } from './fixtures.ts';
 import type { MockRun, RunSpec } from './fixtures.ts';
+import { mockTurnImages } from './vision.ts';
 
 const contestants: ContestantView[] = CONTESTANTS.map((c) => ({ ...c }));
 const tests: TestDefinition[] = [...TESTS];
@@ -200,7 +201,7 @@ function makeManualRequest(sim: Sim, contestantId: string, job: Job): ManualRequ
       messages = [{ role: 'user', content: 'Day 1 · Morning. You wake on a beach. Vitals: health 100, food 80, water 90. You see palms to the north and a stream to the east.\nChoose ONE action: move <dir> | forage | build | rest | drink.' }];
     }
   } else {
-    messages = (rendered?.turns ?? ['']).map((content) => ({ role: 'user' as const, content }));
+    messages = (rendered?.turns ?? ['']).map((content, i) => ({ role: 'user' as const, content, ...mockTurnImages(t, job.caseId, i) }));
     if (messages.length > 1) {
       const withReplies: ChatMessage[] = [];
       messages.forEach((m, i) => {

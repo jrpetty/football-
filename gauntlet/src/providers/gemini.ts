@@ -1,4 +1,4 @@
-import type { CompletionRequest, CompletionResult, StopReason } from '../core/types.ts';
+import type { ChatMessage, CompletionRequest, CompletionResult, StopReason } from '../core/types.ts';
 import { type AdapterContext, type ProviderAdapter, ProviderError, deepMerge, isAbortError, isRetryableStatus, parseRetryAfter } from './types.ts';
 
 const STOP_MAP: Record<string, StopReason> = {
@@ -48,7 +48,7 @@ export function createGeminiAdapter(ctx: AdapterContext): ProviderAdapter {
       if (opts.supportsTemperature && req.temperature !== undefined) generationConfig.temperature = opts.temperature ?? req.temperature;
       if (opts.effort && EFFORT_TO_LEVEL[opts.effort]) generationConfig.thinkingConfig = { thinkingLevel: EFFORT_TO_LEVEL[opts.effort] };
       const body: Record<string, unknown> = {
-        contents: req.messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
+        contents: req.messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: geminiParts(m) })),
         generationConfig,
       };
       if (req.system) body.systemInstruction = { parts: [{ text: req.system }] };
@@ -150,6 +150,13 @@ export function createGeminiAdapter(ctx: AdapterContext): ProviderAdapter {
       };
     },
   };
+}
+
+/** `inline_data` parts (base64) before the text part when images are attached. */
+export function geminiParts(m: ChatMessage): Array<Record<string, unknown>> {
+  const images = (m.images ?? []).filter((img) => img.data);
+  if (!images.length) return [{ text: m.content }];
+  return [...images.map((img) => ({ inline_data: { mime_type: img.mediaType, data: img.data } })), ...(m.content ? [{ text: m.content }] : [])];
 }
 
 export async function listGeminiModels(ctx: AdapterContext): Promise<string[]> {

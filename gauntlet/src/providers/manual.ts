@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { randomUUID } from 'node:crypto';
-import type { CompletionRequest, CompletionResult, ManualRequest, ManualSubmission } from '../core/types.ts';
+import type { ChatImage, CompletionRequest, CompletionResult, ManualRequest, ManualSubmission } from '../core/types.ts';
+import { estimateImageTokens, stripImageData } from '../core/vision.ts';
 import type { AdapterContext, ProviderAdapter } from './types.ts';
 
 /**
@@ -23,8 +24,18 @@ const pending = new Map<string, Pending>();
 export const manualEvents = new EventEmitter();
 manualEvents.setMaxListeners(200);
 
+/** Pending requests, oldest first. Image bytes are left out (fetch them with manualImage). */
 export function listManualRequests(runId?: string): ManualRequest[] {
-  return [...pending.values()].map((p) => p.request).filter((r) => !runId || r.runId === runId).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  return [...pending.values()]
+    .map((p) => p.request)
+    .filter((r) => !runId || r.runId === runId)
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    .map((r) => (r.messages.some((m) => m.images?.length) ? { ...r, messages: stripImageData(r.messages) } : r));
+}
+
+/** One image of a pending request (for the Manual Inbox's preview, download and copy buttons). */
+export function manualImage(id: string, messageIndex: number, imageIndex: number): ChatImage | undefined {
+  return pending.get(id)?.request.messages[messageIndex]?.images?.[imageIndex];
 }
 
 export function submitManual(id: string, submission: ManualSubmission): boolean {
@@ -92,7 +103,8 @@ export function createManualAdapter(ctx: AdapterContext): ProviderAdapter {
           request,
           resolve: (s) => {
             req.signal?.removeEventListener('abort', onAbort);
-            const input = s.inputTokens ?? estimateTokens((req.system ?? '') + req.messages.map((m) => m.content).join('\n'));
+            const imageTokens = req.messages.reduce((sum, m) => sum + (m.images ?? []).reduce((t, img) => t + estimateImageTokens(img.width ?? 0, img.height ?? 0, 'anthropic'), 0), 0);
+            const input = s.inputTokens ?? estimateTokens((req.system ?? '') + req.messages.map((m) => m.content).join('\n')) + imageTokens;
             const output = s.outputTokens ?? estimateTokens(s.text);
             req.onDelta?.(s.text);
             resolve({

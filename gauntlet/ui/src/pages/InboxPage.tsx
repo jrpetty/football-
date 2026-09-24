@@ -11,6 +11,8 @@ import { Callout, Empty, ErrorState, ModelChip, PageHead, Seg, SkeletonRows, cx 
 import { Icon } from '../components/icons.tsx';
 import { fmtInt, fmtRelative } from '../format.ts';
 import type { ContestantView, ManualReply, ManualRequest, RunListItem } from '../types.ts';
+import { VisionBadge, VisionImage } from '../components/VisionImage.tsx';
+import { manualImageUrl } from '../vision.ts';
 
 interface Draft {
   text: string;
@@ -73,6 +75,8 @@ function RequestCard({
   const [busy, setBusy] = useState(false);
   const copyRef = useRef<HTMLButtonElement>(null);
   const prompt = view === 'same' && req.isContinuation ? req.latestUserMessage : req.combinedPrompt;
+  // Images to attach: with "same chat" only the newest message's; otherwise every image in the conversation.
+  const images = req.messages.flatMap((m, mi) => (view === 'same' && req.isContinuation && mi !== req.messages.length - 1 ? [] : (m.images ?? []).map((img, ii) => ({ img, mi, ii }))));
 
   useEffect(() => {
     if (open && autoFocus) copyRef.current?.focus({ preventScroll: false });
@@ -125,6 +129,7 @@ function RequestCard({
         </span>
         <span className="badge accent">{req.label}</span>
         {req.isContinuation && <span className="badge outline">multi-turn</span>}
+        {req.messages.some((m) => m.images?.length) && <VisionBadge />}
         <span className="spacer" />
         <span className="muted nowrap" style={{ fontSize: '0.8rem' }} title={new Date(req.createdAt).toLocaleString()}>
           waiting {fmtRelative(req.createdAt).replace(' ago', '')}
@@ -173,6 +178,20 @@ function RequestCard({
                     {copied ? <Icon.Check /> : <Icon.Copy />} {copied ? 'Copied' : 'Copy prompt'}
                   </button>
                 </div>
+                {images.length > 0 && (
+                  <div className="vi-inbox">
+                    <div className="vi-inbox-head">
+                      <Icon.Upload style={{ width: 16, height: 16 }} />
+                      Attach {images.length === 1 ? 'this image' : `these ${images.length} images`} to the same message
+                      <span className="hint">— copy it and paste it into the chat box (or download it and use the app’s upload button), then paste the prompt and send.</span>
+                    </div>
+                    <div className="vi-row">
+                      {images.map(({ img, mi, ii }) => (
+                        <VisionImage key={`${mi}-${ii}`} src={manualImageUrl(req.id, mi, ii, img)} name={img.name} width={img.width} height={img.height} size="md" actions />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             <div className="step">

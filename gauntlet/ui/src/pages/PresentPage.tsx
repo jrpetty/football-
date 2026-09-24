@@ -34,6 +34,7 @@ function shortCost(usd: number | null | undefined): string {
 /** Singular or plural noun (no number). */
 const noun = (n: number, one: string, many = `${one}s`) => (n === 1 ? one : many);
 import type { CategoryInfo, Leaderboard, LeaderboardRow, ProgramInfo, RunDetail, TestAggregate, TestDefinition, TestDetail, TestSnapshot } from '../types.ts';
+import { VisionExplainerCard, examplePicture } from '../components/VisionPresenter.tsx';
 
 const W = 1920;
 const H = 1080;
@@ -536,6 +537,7 @@ function ExplainerSlide({ deck, test }: { deck: Deck; test: DeckTest }) {
   const program = test.detail?.program ?? (def?.kind === 'program' ? deck.programs.get(def.program) : undefined);
   const sc = friendlyScoring(def, program, deck.judgeCross);
   const example = examplePrompt(def, test.detail, test.snap);
+  const picture = examplePicture(test.detail, test.snap);
   const isPrivate = summary?.source === 'private';
   const n = test.snap.caseIds.length;
   const hook = def?.hook ?? summary?.hook;
@@ -600,6 +602,8 @@ function ExplainerSlide({ deck, test }: { deck: Deck; test: DeckTest }) {
               </div>
               <div className="x-note">Same seed = the exact same world for every model.</div>
             </div>
+          ) : picture ? (
+            <VisionExplainerCard pic={picture} />
           ) : example ? (
             <div className="x-card example">
               <div className="x-card-k">
@@ -672,7 +676,9 @@ function RaceRow({
   const summary = program && !e.baseline ? e.agg?.summary : undefined;
   const stats = e.baseline
     ? 'Picks answers at random'
-    : e.manual
+    : (e.agg?.skipped ?? 0) > 0 && !e.agg?.n
+      ? 'Left out of this model’s average, not scored as 0'
+      : e.manual
       ? 'Answers pasted by hand · time and cost not comparable'
       : `${fmtCost(e.agg?.costUsd)} for this test · ${fmtMs(e.agg?.medianCaseMs)} per ${unit}`;
   const href = `#${pathOf('runs', runId)}?tab=matrix&test=${encodeURIComponent(testId)}&c=${encodeURIComponent(e.id)}`;
@@ -694,7 +700,7 @@ function RaceRow({
             </i>
           )}
           {e.score === null ? (
-            <span className="rr-none">{nullNote}</span>
+            <span className="rr-none">{(e.agg?.skipped ?? 0) > 0 && !e.agg?.n ? 'Skipped: this model can’t see images' : nullNote}</span>
           ) : (
             <>
               <div className="rr-fill" style={{ width: `${v}%` }} />

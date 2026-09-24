@@ -71,6 +71,8 @@ export interface TestSummary {
   file: string;
   /** Per case. */
   estimate: { inputTokens: number; outputTokens: number; calls: number };
+  /** Number of cases that show the model an image (vision tests). */
+  imageCases?: number;
 }
 
 export interface RenderedCase {
@@ -79,6 +81,8 @@ export interface RenderedCase {
   turns: string[];
   expected?: unknown;
   notes?: string;
+  /** Images shown with the given (0-based) turn; `path` is relative to the tests folder. */
+  images?: Array<{ turn: number; file: string; path?: string }>;
 }
 
 export interface TestDetail {

@@ -2,6 +2,7 @@ import { computeCost, emptyUsage, addUsage } from '../core/cost.ts';
 import type { ChatMessage, ChatSession, CompletionRequest, CompletionResult, Contestant, ModelHandle, ModelReply, TokenUsage, TranscriptEntry } from '../core/types.ts';
 import { ProviderError, type ProviderAdapter } from '../providers/index.ts';
 import type { Semaphore } from './semaphore.ts';
+import { stripImageData } from '../core/vision.ts';
 
 export interface CallPolicy {
   maxRetries: number;
@@ -151,7 +152,7 @@ export function createRecorder(opts: {
       rec.transcript.push({
         label,
         system: req.system,
-        messages: req.messages.map((m) => ({ ...m })),
+        messages: stripImageData(req.messages),
         response: r.text,
         usage: r.usage,
         ttftMs: r.ttftMs,
@@ -166,7 +167,7 @@ export function createRecorder(opts: {
       rec.transcript.push({
         label,
         system: req.system,
-        messages: req.messages.map((m) => ({ ...m })),
+        messages: stripImageData(req.messages),
         response: '',
         usage: emptyUsage(),
         ttftMs: null,
@@ -188,7 +189,7 @@ export function createRecorder(opts: {
         return history as readonly ChatMessage[];
       },
       async send(userText, sendOpts) {
-        history.push({ role: 'user', content: userText });
+        history.push(sendOpts?.images?.length ? { role: 'user', content: userText, images: sendOpts.images } : { role: 'user', content: userText });
         const reply = await complete({ system, messages: history.slice(), maxOutputTokens: sendOpts?.maxOutputTokens, label: sendOpts?.label });
         history.push({ role: 'assistant', content: reply.text });
         return reply;

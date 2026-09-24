@@ -10,6 +10,9 @@ import { ArtifactView, ScoreBreakdownView } from '../components/ResultInspector.
 import { TranscriptView } from '../components/Transcript.tsx';
 import { fmtCost, fmtPct } from '../format.ts';
 import type { ContestantView, GradeResult, TestDetail, TestSummary } from '../types.ts';
+import { VisionBadge, VisionImage } from '../components/VisionImage.tsx';
+import { VisionResultPanel } from '../components/VisionResult.tsx';
+import { testImageUrl } from '../vision.ts';
 
 export default function GradePage() {
   const { query } = useRoute();
@@ -141,6 +144,7 @@ export default function GradePage() {
                   <div className="row wrap" style={{ gap: 8 }}>
                     <span className="badge outline">scorer: {scorerType}</span>
                     {rendered.turns.length > 1 && <span className="badge info">{rendered.turns.length} turns — paste them one at a time in the same chat</span>}
+                    {(rendered.images?.length ?? 0) > 0 && <VisionBadge label="Attach the image with the prompt" />}
                     <span className="spacer" />
                     <CopyButton text={rendered.turns.length > 1 ? rendered.turns[0] : fullPrompt} label={rendered.turns.length > 1 ? 'Copy turn 1' : 'Copy prompt'} small={false} />
                   </div>
@@ -155,6 +159,11 @@ export default function GradePage() {
                   {rendered.turns.map((turn, i) => (
                     <div key={i} className="code-wrap">
                       {rendered.turns.length > 1 && <div className="mini-title">Turn {i + 1}</div>}
+                      {(rendered.images ?? [])
+                        .filter((img) => img.turn === i)
+                        .map((img) => (
+                          <VisionImage key={img.file} src={img.path ? testImageUrl(img.path) : ''} name={img.file.split('/').pop() ?? img.file} size="fill" actions caption="Send this image to the model together with the text below." className="grade-image" />
+                        ))}
                       <pre className="code prompt-pre">{turn}</pre>
                       {rendered.turns.length > 1 && (
                         <div className="copy">
@@ -239,7 +248,14 @@ export default function GradePage() {
             </Link>
           </div>
           <div className="card-body stack loose">
-            <ScoreBreakdownView d={result.outcome.detail ?? {}} passed={result.outcome.passed} names={new Map((lists.data?.[1] ?? []).map((c) => [c.id, c.label]))} />
+            {(result.rendered.images?.length ?? 0) > 0 && (
+              <VisionResultPanel images={(result.rendered.images ?? []).map((img) => ({ name: img.file.split('/').pop() ?? img.file, mediaType: 'image/png', path: img.path }))} detail={result.outcome.detail ?? {}} passed={result.outcome.passed} />
+            )}
+            <ScoreBreakdownView
+              d={(result.rendered.images?.length ?? 0) > 0 ? { ...result.outcome.detail, extracted: undefined, expected: undefined } : result.outcome.detail ?? {}}
+              passed={result.outcome.passed}
+              names={new Map((lists.data?.[1] ?? []).map((c) => [c.id, c.label]))}
+            />
             {result.artifacts.length > 0 && (
               <div className="stack">
                 <div className="mini-title">Artifacts</div>

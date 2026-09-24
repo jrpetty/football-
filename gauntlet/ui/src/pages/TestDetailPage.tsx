@@ -8,6 +8,7 @@ import { Icon } from '../components/icons.tsx';
 import { SourceBadge } from './TestsPage.tsx';
 import { fmtInt, fmtTokens, prettyJson } from '../format.ts';
 import type { ScorerSpec, TestDetail } from '../types.ts';
+import { CaseImages, VisionBadge } from '../components/VisionImage.tsx';
 
 export function describeScorer(s: ScorerSpec | undefined): string {
   if (!s) return '—';
@@ -176,6 +177,7 @@ export default function TestDetailPage({ testId }: { testId: string }) {
             <span className="k">Estimate per case</span>
             <span className="v tnum">
               {fmtTokens(sum.estimate?.inputTokens)} in · {fmtTokens(sum.estimate?.outputTokens)} out · {sum.estimate?.calls ?? 1} call{(sum.estimate?.calls ?? 1) === 1 ? '' : 's'}
+              {(sum.imageCases ?? 0) > 0 && <span className="muted"> · plus image tokens, priced per vendor</span>}
             </span>
           </div>
           <div className="mf">
@@ -245,6 +247,7 @@ export default function TestDetailPage({ testId }: { testId: string }) {
               <li>Every prompt byte, the system prompt and preamble, each expected answer and the scorer config feed the test hash.</li>
               <li>Results record the hash they were produced with. If this test changes, older results are marked stale and excluded from the leaderboard.</li>
               <li>{isProgram ? 'Each seed generates an identical world for every model.' : 'Every model sees exactly these bytes — no per-model prompt tweaks.'}</li>
+              {(sum.imageCases ?? 0) > 0 && <li>The bytes of every image are hashed too: replacing or re-rendering a picture changes the hash. Models without image input are skipped on picture cases, not scored as 0.</li>}
               {sum.source === 'private' && <li>This is a held-out test: it lives in the git-ignored tests/private/ folder and is never published, so it cannot leak into training data.</li>}
             </ul>
           </div>
@@ -280,6 +283,7 @@ export default function TestDetailPage({ testId }: { testId: string }) {
                 <span className="mono case-id">{r.caseId}</span>
                 <span className="spacer" />
                 {r.turns.length > 1 && <span className="badge outline">{r.turns.length} turns</span>}
+                {(r.images?.length ?? 0) > 0 && <VisionBadge label={r.images!.length > 1 ? `${r.images!.length} images` : 'Image'} />}
               </header>
               {r.system && (
                 <details className="collapse">
@@ -293,11 +297,14 @@ export default function TestDetailPage({ testId }: { testId: string }) {
                 </details>
               )}
               {r.turns.map((turn, i) => (
-                <div key={i} className="code-wrap">
-                  {r.turns.length > 1 && <div className="mini-title">Turn {i + 1}</div>}
-                  <pre className="code">{turn}</pre>
-                  <div className="copy">
-                    <CopyButton text={turn} iconOnly label={`Copy ${r.turns.length > 1 ? `turn ${i + 1}` : 'prompt'}`} />
+                <div key={i} className="stack" style={{ gap: 10 }}>
+                  <CaseImages images={r.images} turn={i} caption="Sent to the model with this message, before the text. Click to enlarge." />
+                  <div className="code-wrap">
+                    {r.turns.length > 1 && <div className="mini-title">Turn {i + 1}</div>}
+                    <pre className="code">{turn}</pre>
+                    <div className="copy">
+                      <CopyButton text={turn} iconOnly label={`Copy ${r.turns.length > 1 ? `turn ${i + 1}` : 'prompt'}`} />
+                    </div>
                   </div>
                 </div>
               ))}

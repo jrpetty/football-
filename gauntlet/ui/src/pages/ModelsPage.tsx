@@ -7,6 +7,7 @@ import { Icon } from '../components/icons.tsx';
 import { SERIES_PALETTE } from '../components/charts/scale.ts';
 import { fmtCost, fmtDate, fmtMs, fmtPricePerM, fmtTokens, slugify } from '../format.ts';
 import type { Contestant, ContestantOptions, ContestantView, PingResult, ProviderView } from '../types.ts';
+import { VisionBadge } from '../components/VisionImage.tsx';
 
 const EFFORTS: Array<NonNullable<ContestantOptions['effort']>> = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'];
 
@@ -252,6 +253,9 @@ function ContestantForm({
               <label className="check" style={{ alignSelf: 'end', paddingBottom: 8 }}>
                 <input type="checkbox" checked={!!c.options?.supportsTemperature} onChange={(e) => setOpt({ supportsTemperature: e.target.checked })} /> Accepts temperature
               </label>
+              <label className="check" style={{ alignSelf: 'end', paddingBottom: 8 }} title="Vision tests are skipped (not scored as 0) for models that don’t accept images">
+                <input type="checkbox" checked={!!c.vision} onChange={(e) => set({ vision: e.target.checked })} /> Accepts images (vision tests)
+              </label>
               <Field label="Temperature" hint={c.options?.supportsTemperature ? 'Overrides the harness default.' : 'Only sent when accepted.'}>
                 <input className="input tnum" type="number" step={0.1} min={0} max={2} disabled={!c.options?.supportsTemperature} placeholder="harness default" value={c.options?.temperature ?? ''} onChange={(e) => setOpt({ temperature: numOrU(e.target.value) })} />
               </Field>
@@ -479,6 +483,11 @@ export default function ModelsPage() {
                       </td>
                       <td className="mono" style={{ fontSize: '0.8rem', maxWidth: 220, overflowWrap: 'anywhere' }}>
                         {c.model}
+                        {c.vision && (
+                          <div>
+                            <VisionBadge label="sees images" />
+                          </div>
+                        )}
                       </td>
                       <td>{c.options?.effort ?? <span className="muted">default</span>}</td>
                       <td className="num">{manual ? <span className="muted">—</span> : fmtPricePerM(c.pricing?.inputPerM)}</td>

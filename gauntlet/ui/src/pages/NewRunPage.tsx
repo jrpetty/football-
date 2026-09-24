@@ -239,6 +239,7 @@ export default function NewRunPage() {
   const [capTouched, setCapTouched] = useState(false);
   const [search, setSearch] = useState('');
   const [starting, setStarting] = useState(false);
+  const [forceVision, setForceVision] = useState(false);
 
   const enabled = useMemo(() => contestants.filter((c) => c.enabled), [contestants]);
   const suite = suites.find((s) => s.id === suiteId);
@@ -278,8 +279,9 @@ export default function NewRunPage() {
       judgeIds: judges ?? undefined,
       maxCostUsd: cap !== null && capValid ? cap : undefined,
       notes: notes.trim() || undefined,
+      forceVision: forceVision || undefined,
     };
-  }, [selected, enabled, name, mode, suiteId, picked, repeats, concurrency, temperature, judges, cap, capValid, notes]);
+  }, [selected, enabled, name, mode, suiteId, picked, repeats, concurrency, temperature, judges, cap, capValid, notes, forceVision]);
 
   // Estimate ignores name/notes/cap so typing there does not refetch.
   const estKey = request ? JSON.stringify({ ...request, name: undefined, notes: undefined, maxCostUsd: undefined }) : '';
@@ -627,6 +629,13 @@ export default function NewRunPage() {
                       />
                     </div>
                   </Field>
+                  {(forceVision || (est?.warnings ?? []).some((w) => /no image input/.test(w))) && (
+                    <Field label="Image cases" hint="Models not marked “Accepts images” are skipped on picture questions: not scored as 0, left out of their averages. Tick to send the pictures anyway." className="span-2">
+                      <label className="check">
+                        <input type="checkbox" checked={forceVision} onChange={(e) => setForceVision(e.target.checked)} /> Force image cases on text-only models
+                      </label>
+                    </Field>
+                  )}
                   <Field label="Run name" htmlFor="nr-name" className="span-2">
                     <input id="nr-name" className="input" placeholder={`${suite?.name ?? 'Custom'} · ${new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}`} value={name} onChange={(e) => setName(e.target.value)} />
                   </Field>

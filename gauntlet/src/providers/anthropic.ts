@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import type { CompletionRequest, CompletionResult, StopReason } from '../core/types.ts';
+import type { ChatMessage, CompletionRequest, CompletionResult, StopReason } from '../core/types.ts';
 import { type AdapterContext, type ProviderAdapter, ProviderError, deepMerge, isAbortError, isRetryableStatus, parseRetryAfter } from './types.ts';
 
 const STOP_MAP: Record<string, StopReason> = {
@@ -32,7 +32,7 @@ export function createAnthropicAdapter(ctx: AdapterContext): ProviderAdapter {
       const body: Record<string, unknown> = {
         model: ctx.contestant.model,
         max_tokens: req.maxOutputTokens,
-        messages: req.messages.map((m) => ({ role: m.role, content: m.content })),
+        messages: req.messages.map((m) => ({ role: m.role, content: anthropicContent(m) })),
       };
       if (req.system) body.system = req.system;
       const thinking = Boolean(opts.effort && opts.effort !== 'none' && opts.effort !== 'minimal');
@@ -97,6 +97,16 @@ export function createAnthropicAdapter(ctx: AdapterContext): ProviderAdapter {
       }
     },
   };
+}
+
+/** Plain string for text-only messages (unchanged wire format); image blocks first, then the text, when images are attached. */
+export function anthropicContent(m: ChatMessage): string | Array<Record<string, unknown>> {
+  const images = (m.images ?? []).filter((img) => img.data);
+  if (!images.length) return m.content;
+  return [
+    ...images.map((img) => ({ type: 'image', source: { type: 'base64', media_type: img.mediaType, data: img.data } })),
+    ...(m.content ? [{ type: 'text', text: m.content }] : []),
+  ];
 }
 
 export async function listAnthropicModels(ctx: AdapterContext): Promise<string[]> {
