@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { api } from '../api.ts';
-import { useAsync, useCountUp, useHotkeys, useInterval } from '../hooks.ts';
+import { useAsync, useCountUp, useElementSize, useHotkeys, useInterval } from '../hooks.ts';
 import { navigate, pathOf, setQuery, useRoute } from '../router.tsx';
 import { useMeta } from '../context.tsx';
 import { cx } from '../components/ui.tsx';
@@ -61,6 +61,8 @@ interface Deck {
   cats: CategoryInfo[];
   programs: Map<string, ProgramInfo>;
   hasManual: boolean;
+  /** Any held-out (never published) test in the run. */
+  hasPrivate: boolean;
 }
 
 type Slide =
@@ -197,6 +199,7 @@ function buildDeck(d: RunDetail, details: Map<string, TestDetail>, metaCats: Cat
     cats,
     programs: new Map(programs.map((p) => [p.id, p])),
     hasManual: contenders.some((c) => c.manual),
+    hasPrivate: [...details.values()].some((t) => t.summary?.source === 'private'),
   };
 }
 
@@ -261,8 +264,8 @@ function captionFor(slide: Slide, deck: Deck): Caption {
     }
     case 'final':
       return {
-        text: 'The final ranking. The Gauntlet Index combines every category into one score out of 100; the thin line shows the uncertainty and the squares show each category.',
-        fine: 'Uncertainty: 95% bootstrap CI · cost per point = total spend ÷ Index · * entered by hand, not comparable',
+        text: 'The final ranking: the Gauntlet Index combines every category into one score out of 100. Squares show each category; the thin line is the uncertainty.',
+        fine: `Uncertainty: 95% bootstrap CI · cost per point = spend ÷ Index${deck.hasManual ? ' · * pasted by hand' : ''}`,
       };
     case 'scatter':
       return {
@@ -276,7 +279,9 @@ function captionFor(slide: Slide, deck: Deck): Caption {
       };
     case 'outro':
       return {
-        text: 'Every prompt, answer key and scoring rule behind this episode is published. The fingerprint proves every model faced exactly the same tests.',
+        text: deck.hasPrivate
+          ? 'Every public prompt, answer key and scoring rule is published; held-out tests stay private. The fingerprint proves every model faced exactly the same tests.'
+          : 'Every prompt, answer key and scoring rule behind this episode is published. The fingerprint proves every model faced exactly the same tests.',
         fine: `Fingerprint = hash over every test hash, the judge prompts and protocol v${m.settings?.protocolVersion ?? '—'}`,
       };
   }
@@ -753,7 +758,7 @@ function FinalRow({ row, place, cats, baseline }: { row: LeaderboardRow; place: 
         <span className="rr-sw" aria-hidden="true" />
         <span className="fs-mt">
           <span className="fs-lbl">{baseline ? 'Random guessing' : row.label}</span>
-          <span className="fs-ven">{baseline ? 'Reference' : row.manual ? `${row.vendor} · pasted by hand` : row.vendor}</span>
+          <span className="fs-ven">{baseline ? 'Reference' : row.vendor}</span>
         </span>
       </span>
       <span className="fs-index">
@@ -795,10 +800,10 @@ function FinalSlide({ deck, reveal }: { deck: Deck; reveal: number }) {
           <span className="fs-rank">#</span>
           <span>Model</span>
           <span>Gauntlet Index</span>
-          <span className="fs-cats">
-            {cats.map((c) => (
-              <span key={c.id} className="fs-cat-h" title={c.name}>
-                {shortCat(c.id, c.name)}
+          <span className="fs-cats fs-cats-h">
+            {cats.map((c, i) => (
+              <span key={c.id} className={cx('fs-cat-h', i % 2 === 1 && 'lo')} title={c.name}>
+                <span>{shortCat(c.id, c.name)}</span>
               </span>
             ))}
           </span>
@@ -823,11 +828,15 @@ function FinalSlide({ deck, reveal }: { deck: Deck; reveal: number }) {
 }
 
 function ScatterSlide({ deck }: { deck: Deck }) {
+  const [ref, size] = useElementSize<HTMLDivElement>();
+  const unplotted = (deck.lb?.rows ?? []).some((r) => !isBaseline(r) && typeof r.index === 'number' && !(r.totals?.costUsd > 0));
+  // Leave room for the legend (and the "not plotted" note) under the plot.
+  const h = Math.max(320, size.height - 36 - 58 - (unplotted ? 34 : 0));
   return (
     <div className="s-scatter">
       <SlideHead eyebrow="Value for money" title="Score vs cost" sub="Is the most expensive model worth it?" />
-      <div className="sc-wrap">
-        <ScoreCostScatter rows={deck.lb?.rows ?? []} mode="total" fontScale={1.72} height={640} />
+      <div className="sc-wrap" ref={ref}>
+        {size.height > 0 && <ScoreCostScatter rows={deck.lb?.rows ?? []} mode="total" fontScale={1.72} height={h} />}
       </div>
     </div>
   );
@@ -888,12 +897,12 @@ function MedalsSlide({ deck }: { deck: Deck }) {
                   <span className="muted">—</span>
                 ) : (
                   <>
-                    {won.slice(0, 3).map((w) => (
+                    {fitChips(won, 52).map((w) => (
                       <span key={w} className="md-chip">
                         {w}
                       </span>
                     ))}
-                    {won.length > 3 && <span className="md-more">+{won.length - 3} more</span>}
+                    {won.length > fitChips(won, 52).length && <span className="md-more">+{won.length - fitChips(won, 52).length} more</span>}
                   </>
                 )}
               </span>
@@ -903,6 +912,18 @@ function MedalsSlide({ deck }: { deck: Deck }) {
       </div>
     </div>
   );
+}
+
+/** As many chip labels as fit in roughly `budget` characters (always at least one). */
+function fitChips(items: string[], budget: number): string[] {
+  const out: string[] = [];
+  let used = 0;
+  for (const it of items) {
+    if (out.length && used + it.length + 4 > budget) break;
+    out.push(it);
+    used += it.length + 4;
+  }
+  return out;
 }
 
 function OutroSlide({ deck }: { deck: Deck }) {
@@ -924,7 +945,9 @@ function OutroSlide({ deck }: { deck: Deck }) {
       <div className="o-fp mono">
         fingerprint {shortHash(m.fingerprint, 16)} · harness v{m.harnessVersion}
       </div>
-      <p className="o-note">Every prompt, answer key and scoring rule is published. Re-run the same fingerprint and you get the same test — for any model.</p>
+      <p className="o-note">
+        {deck.hasPrivate ? 'Every public prompt, answer key and scoring rule is published (held-out tests stay private).' : 'Every prompt, answer key and scoring rule is published.'} Re-run the same fingerprint and you get the same test — for any model.
+      </p>
     </div>
   );
 }

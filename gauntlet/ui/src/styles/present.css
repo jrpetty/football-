@@ -1113,7 +1113,7 @@
   gap: 22px;
 }
 .fs-table {
-  --fs-cols: 64px minmax(0, 1fr) 320px calc(var(--cats) * 56px) 164px 116px 124px;
+  --fs-cols: 64px minmax(0, 1fr) 290px calc(var(--cats) * 50px - 4px) 160px 104px 112px;
   flex: 1;
   min-height: 0;
   display: grid;
@@ -1123,9 +1123,9 @@
 .fs-row {
   display: grid;
   grid-template-columns: var(--fs-cols);
-  column-gap: 18px;
+  column-gap: 14px;
   align-items: center;
-  padding: 0 22px;
+  padding: 0 18px;
   border-radius: 14px;
   min-height: 0;
 }
@@ -1190,7 +1190,7 @@
   min-width: 0;
 }
 .fs-lbl {
-  font-size: 28px;
+  font-size: 27px;
   font-weight: 750;
   line-height: 1.15;
   white-space: nowrap;
@@ -1207,11 +1207,11 @@
 .fs-index {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 14px;
 }
 .fs-num {
-  width: 104px;
-  font-size: 44px;
+  width: 100px;
+  font-size: 42px;
   font-weight: 850;
   text-align: right;
   line-height: 1;
@@ -1255,7 +1255,7 @@
 }
 .fs-cats {
   display: grid;
-  grid-template-columns: repeat(var(--cats), 52px);
+  grid-template-columns: repeat(var(--cats), 46px);
   gap: 4px;
 }
 .fs-cell {
@@ -1272,15 +1272,27 @@
   color: var(--text-3);
   border: 1px dashed var(--border);
 }
+.fs-cats-h {
+  height: 44px;
+}
 .fs-cat-h {
-  font-size: 13px;
+  position: relative;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 0;
   text-transform: none;
-  text-align: center;
-  line-height: 1.1;
   color: var(--text-2);
-  overflow: hidden;
+}
+/* Staggered labels: alternate columns sit on two lines so each name has two cells of room. */
+.fs-cat-h > span {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+.fs-cat-h.lo > span {
+  top: 22px;
 }
 .fs-medals {
   display: flex;
