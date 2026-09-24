@@ -168,6 +168,23 @@ medal.
   temperature 0, and reasoning models are sampled. This is why Gauntlet uses repeats and reports
   intervals and consistency instead of single numbers.
 
+## 7a. Two tiers: Standard and Frontier
+
+The library has two difficulty tiers, run as separate suites and reported as separate leaderboards. Their
+Gauntlet Indexes are never mixed.
+
+* **Standard (`core`).** Hard for small models, solvable by strong ones. Calibrated so that scores spread out
+  across the whole field: in our blind audit, a frontier model scored 100% on every deterministic test,
+  a small model scored between 5% and 97%, and random filler scored 0–2%.
+* **Frontier (`frontier`).** Built for when the best models saturate Standard: larger deduction grids,
+  truth-teller puzzles with spies and alternators, olympiad maths, long-horizon shortest plans, multi-part
+  engineering tasks against hidden tests, stacked hard constraints, system prompts under attack, honesty under
+  social pressure, and the hard variant of every simulation (deducible but punishing schedules, volatile
+  markets, more liars, hyphen-proof Draw It Blind). Small models are expected to score close to zero here.
+
+Every answer key in both tiers is machine-checked (solvers and generators live in `verification/`), and each
+test was blind-played by models that saw only the prompt.
+
 ## 8. The random baseline
 
 `random-baseline` makes no API calls. It picks a random offered action in simulations, a random letter or
@@ -183,7 +200,7 @@ clear: a score close to the baseline means a test isn't measuring skill for that
   start. Cases already in flight finish, so the overshoot is at most one case per concurrent worker. Resume
   later with a higher cap. Nothing is lost.
 * **Cheap exploration.** Use the `quick` suite with 1 repeat to try new models, and the full `core` suite with 3
-  repeats for results you publish.
+  repeats for results you publish. Per-suite, per-model tables are in [COSTS.md](COSTS.md).
 
 ## 10. Publishing checklist
 

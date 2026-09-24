@@ -1,8 +1,8 @@
 {
   "id": "core",
   "version": "1.0.0",
-  "name": "Core Gauntlet",
-  "description": "The official benchmark: every built-in test across all 11 categories, fixed prompts and seeds. Use this (with 3 repeats) for published results.",
+  "name": "Core Gauntlet (Standard tier)",
+  "description": "The official standard benchmark: 21 tests across all 11 categories, fixed prompts and seeds, calibrated so that strong models spread out from weak ones. Use this (with 3 repeats) for published results; run Frontier on top when the best models bunch together near the ceiling.",
   "repeats": 3,
   "tests": [
     {

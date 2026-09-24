@@ -1,0 +1,54 @@
+{
+  "id": "frontier",
+  "version": "1.0.0",
+  "name": "Frontier Gauntlet",
+  "description": "The hardest tier, built to separate the very best models once they saturate Core: extreme logic grids and truth-teller puzzles, olympiad maths, long-horizon planning, frontier coding, adversarial system prompts, high-pressure honesty traps and the hard variants of every simulation. Expect small models to score near zero here. Use 3 repeats for published results.",
+  "repeats": 3,
+  "tests": [
+    {
+      "id": "reasoning.deduction-grid-extreme"
+    },
+    {
+      "id": "reasoning.truth-tellers-extreme"
+    },
+    {
+      "id": "reasoning.planning-extreme"
+    },
+    {
+      "id": "math.olympiad"
+    },
+    {
+      "id": "coding.frontier"
+    },
+    {
+      "id": "instruction.extreme-constraints"
+    },
+    {
+      "id": "instruction.adversarial-system"
+    },
+    {
+      "id": "honesty.pressure-traps"
+    },
+    {
+      "id": "visual.draw-it-blind-hard"
+    },
+    {
+      "id": "long-context.needle-haystack-hard"
+    },
+    {
+      "id": "long-context.chain-of-whispers-hard"
+    },
+    {
+      "id": "agentic.survival-island-hard"
+    },
+    {
+      "id": "agentic.escape-room-hard"
+    },
+    {
+      "id": "agentic.startup-sim-hard"
+    },
+    {
+      "id": "social.liars-table-hard"
+    }
+  ]
+}

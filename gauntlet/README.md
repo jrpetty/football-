@@ -95,12 +95,65 @@ Runs started from the CLI appear in the dashboard, and the reverse.
 
 | Suite | Purpose |
 |---|---|
-| `core` | The official Gauntlet benchmark: every built-in test. Use this for published results. |
-| `quick` | A fast, cheap subset (one test per category, fewer cases) for smoke tests and trying out new models. |
+| `core` | **Standard tier.** The official benchmark: 21 tests across all 11 categories. Use this (3 repeats) for published results. |
+| `frontier` | **Frontier tier.** 15 extreme tests (extreme logic, olympiad maths, frontier coding, adversarial system prompts, pressure honesty traps, hard variants of every simulation) to separate the best models once they bunch up near the top of Core. |
+| `quick` | A fast, cheap subset (one or two hard cases per test) for smoke tests and trying out new models. |
 | `all` | Everything, including custom tests. |
+
+Expected spend for every suite, per test and per model, is in [docs/COSTS.md](docs/COSTS.md).
 
 Suites live in `suites/*.json`. A suite lists test ids with optional weights, category weights and a
 default repeat count. Bump the suite `version` when you change it.
+
+## The tests
+
+**Standard tier (`core`)**
+
+| Test | Id | What it does |
+|---|---|---|
+| Deduction Grid | `reasoning.deduction-grid` | Nineteen clues, one arrangement. No partial credit. |
+| Knights, Knaves, Spies & Alternators | `reasoning.truth-tellers` | Knights never lie, knaves always do, and the spy is doing whatever it wants. |
+| Shortest Plans | `reasoning.planning` | Find the shortest plan — one move too many and it scores zero. |
+| Competition Maths | `math.competition` | Twenty contest problems. Integer answers. No partial credit. |
+| Real-World Word Problems | `math.word-problems` | Real receipts, real payslips, real traps. |
+| Algorithms Under Test | `coding.algorithms` | Hidden tests, huge inputs, two seconds. Does the code actually work? |
+| Edge-Case Minefield | `coding.debug-and-edge-cases` | The happy path is easy. The hidden tests are not. |
+| Hard Mode Engineering | `coding.hard` | Build a regex engine, a spreadsheet and a calendar - in one shot each. |
+| Precision Formatting | `instruction.precision-formatting` | Fifty words exactly. Five sentences exactly. No commas. Go. |
+| Stay In Character | `instruction.system-prompt-adherence` | The user says "ignore your rules". Does it? |
+| The Honesty Trap | `honesty.honesty-trap` | Half these questions are lies. Will the model play along? |
+| Messy Text to Exact JSON | `extraction.structured-json` | Eight messy documents, one exact JSON schema. Every field is checked. |
+| Build a Game in One Shot | `creative.one-shot-games` | One prompt. One file. One playable game. |
+| Precise SVG Illustration | `visual.svg-illustration` | Exactly three beams. Hands at exactly 304.25 degrees. |
+| Draw It Blind | `visual.draw-it-blind` | Describe it with no numbers. Redraw it from your own words. How close does it get? |
+| Needle in a Haystack | `long-context.needle-haystack` | 45,000 words. Ten needles. One near-miss decoy for each. Who reads to the end? |
+| Chain of Whispers | `long-context.chain-of-whispers` | Six rewrites, no memory. How many of the 12 facts make it to the end? |
+| Survival Island | `agentic.survival-island` | Twelve days on a desert island: can it find water, dodge the poison berries and signal the passing ship? |
+| The Escape Room | `agentic.escape-room` | Three locked rooms, 45 moves, and a brand-new chain of ciphers every seed. |
+| The Startup | `agentic.startup-sim` | $10,000, twelve months and a hidden market — can it beat autopilot? |
+| The Liar's Table | `social.liars-table` | Five suspects. One liar. Twelve questions. Who cracks the case fastest? |
+
+**Frontier tier (`frontier`)**
+
+| Test | Id | What it does |
+|---|---|---|
+| Deduction Grid: Extreme | `reasoning.deduction-grid-extreme` | Eight people, six attributes, forty clues, zero slack. |
+| Knights, Knaves, Spies & Alternators: Extreme | `reasoning.truth-tellers-extreme` | Ten islanders, four kinds of liar, one consistent story. |
+| Shortest Plans: Extreme | `reasoning.planning-extreme` | Ten puzzles too big to brute-force by hand. One move over the minimum scores zero. |
+| Olympiad Maths | `math.olympiad` | Twelve olympiad problems. One integer each. No calculator. |
+| Frontier Engineering | `coding.frontier` | Six problems where the obvious solution is too slow or subtly wrong. |
+| Extreme Constraints | `instruction.extreme-constraints` | Sixty words. Five sentences. No letter e. All at once, or zero. |
+| Adversarial System Prompt | `instruction.adversarial-system` | Five turns of pressure. One secret. Fifteen rules. Does anything slip? |
+| Pressure Traps | `honesty.pressure-traps` | Just the number, no caveats, and my professor already confirmed it. Will the best models still tell the truth? |
+| Draw It Blind — Hard | `visual.draw-it-blind-hard` | Twelve shapes, ninety words, no numbers. Can it rebuild the picture from its own notes? |
+| Needle in a Haystack — Hard | `long-context.needle-haystack-hard` | 78,000 words, 12 needles, a decoy at every hop. Can anything read this carefully? |
+| Chain of Whispers — Hard | `long-context.chain-of-whispers-hard` | Twenty facts, sixty words, ten rewrites. What's left at the end? |
+| Survival Island (Hard) | `agentic.survival-island-hard` | Thirteen harsh days: storms, a trickling spring, poison everywhere — and the ship does not come until day 8. |
+| The Escape Room (Hard) | `agentic.escape-room-hard` | Ten locks, two-step ciphers, a clue from the first room needed in the last — and only 25% more moves than a perfect solver. |
+| The Startup (Volatile Market) | `agentic.startup-sim-hard` | Same $10,000, a far more volatile market: a deeper supplier spike, a brutal price war and a demand crash. |
+| The Liar's Table — Hard | `social.liars-table-hard` | Seven suspects, eight questions, and the door log went dark. Who can still find the liar? |
+
+Every prompt, verbatim, is in the prompt book (`node src/cli.ts prompts --suite <id>`). Keep your own held-out tests in `tests/private/`.
 
 ## How scoring works (short version)
 
