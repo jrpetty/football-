@@ -1571,14 +1571,15 @@
   pointer-events: auto;
 }
 .deck-hint {
+  /* Bottom edge, in the slide margin: never covers the title or the caption in a recording. */
   position: fixed;
   left: 50%;
-  top: 14px;
+  bottom: 8px;
   transform: translateX(-50%);
   z-index: 5;
-  padding: 7px 16px;
+  padding: 4px 14px;
   border-radius: 999px;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-2);
   background: color-mix(in srgb, var(--surface-1) 92%, transparent);
   border: 1px solid var(--border-strong);
