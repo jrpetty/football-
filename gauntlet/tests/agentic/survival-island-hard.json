@@ -1,0 +1,58 @@
+{
+  "kind": "program",
+  "id": "agentic.survival-island-hard",
+  "version": "1.0.0",
+  "program": "survival-island",
+  "name": "Survival Island (Hard)",
+  "category": "agentic",
+  "description": "The extreme variant of Survival Island, on the same engine and rules. The ship only starts passing on day 8 or 9, so the castaway must survive most of the 13 days before any rescue is possible. The weather is harsher (more storms and rain, colder nights), the spring only trickles (+60 water per drink), three of five berry bushes are poisonous (−30 health) so fishing and cooking matter, and the crew still needs a campfire burning the night before as proof of life. Staying alive requires a sheltered camp, a campfire kept fuelled and a steady food and water routine; rescue is possible but far from guaranteed.",
+  "difficulty": "extreme",
+  "tags": [
+    "simulation",
+    "planning",
+    "long-horizon",
+    "memory",
+    "resource-management",
+    "seeded",
+    "hard-mode"
+  ],
+  "hook": "Thirteen harsh days: storms, a trickling spring, poison everywhere — and the ship does not come until day 8.",
+  "seeds": [
+    101,
+    202,
+    303
+  ],
+  "config": {
+    "maxDays": 13,
+    "inventoryCap": 12,
+    "shipFirstDay": [
+      8,
+      9
+    ],
+    "shipEveryDays": [
+      3,
+      4
+    ],
+    "signalsNeeded": 1,
+    "requireNightFire": true,
+    "stormChance": 0.16,
+    "rainChance": 0.24,
+    "nightCold": [
+      10,
+      22
+    ],
+    "drinkAmount": 60,
+    "berryBushes": 5,
+    "poisonBushes": 3,
+    "poisonDamage": 30
+  },
+  "maxOutputTokens": 16000,
+  "timeLimitSec": 5400,
+  "estimate": {
+    "inputTokens": 63000,
+    "outputTokens": 47000,
+    "calls": 39
+  },
+  "author": "Gauntlet Core",
+  "createdAt": "2026-09-24"
+}

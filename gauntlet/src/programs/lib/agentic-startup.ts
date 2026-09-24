@@ -43,6 +43,8 @@ export interface Market {
   supplierSpike: { start: number; months: number; factor: number };
   viral: { month: number; factor: number; boost: number };
   loan: { month: number; principal: number; rate: number };
+  /** Volatile markets only: a one-month demand shock (a safety scare in the category), announced as it hits. */
+  shock: { month: number; factor: number } | null;
   /** The pre-launch plan (the autopilot repeats it every month). */
   opening: Decisions;
 }
@@ -110,16 +112,32 @@ const PRODUCTS = ['insulated water bottle', 'desk lamp', 'yoga mat', 'coffee gri
  * over the autopilot are rejected (deterministically) so every case is
  * worth playing.
  */
-export function generateMarket(root: Rng, months = 12): Market {
+export function generateMarket(root: Rng, months = 12, opts: { volatile?: boolean } = {}): Market {
   let fallback: Market | null = null;
   for (let attempt = 0; attempt < 40; attempt++) {
-    const market = drawMarket(root.fork(`startup:market:${attempt}`), months);
+    const r = root.fork(`startup:market:${attempt}`);
+    const market = drawMarket(r, months);
+    if (opts.volatile) makeVolatile(market, r.fork('volatile'));
     fallback ??= market;
     const o = oracle(market);
     const base = Math.max(0, equityOf(market, simulate(market, autopilot)));
     if (!o.firm.bankrupt && o.equity >= 40000 && o.equity - base >= 20000) return market;
   }
   return fallback!;
+}
+
+/**
+ * The volatile variant: noisier demand, a deeper and longer supplier spike, a
+ * harsher price war and a one-month demand shock. Drawn from a separate
+ * stream so the base market stays identical to the standard variant's.
+ */
+function makeVolatile(m: Market, h: Rng): void {
+  m.noise = m.noise.map((v, i) => (i === 0 ? v : round(0.85 + h.next() * 0.3, 3)));
+  m.supplierSpike = { start: m.supplierSpike.start, months: 4, factor: round(1.5 + h.next() * 0.3, 2) };
+  m.priceWar = { ...m.priceWar, factor: 0.7 };
+  let month = h.int(3, m.months - 1);
+  if (month === m.viral.month) month = month === m.months - 1 ? month - 1 : month + 1;
+  m.shock = { month, factor: 0.6 };
 }
 
 function drawMarket(r: Rng, months: number): Market {
@@ -156,6 +174,7 @@ function drawMarket(r: Rng, months: number): Market {
     supplierSpike: { start: r.int(3, 10), months: 3, factor: round(1.3 + r.next() * 0.2, 2) },
     viral: { month: r.int(4, 11), factor: 1.8, boost: 0.2 },
     loan: { month: r.int(2, 6), principal: r.pick([10000, 15000, 20000]), rate: r.pick([0.01, 0.02, 0.04]) },
+    shock: null,
     opening: { price: 0, produce: 0, marketing: 1000, hire: 0, loan: false },
   };
   // The pre-launch plan: price at the market level, produce the first month's likely demand.
@@ -219,6 +238,7 @@ export function demandFor(market: Market, month: number, price: number, awarenes
   let d = market.baseDemand * season(market, month) * rel ** -market.elasticity * (0.2 + 0.8 * awareness) * reputation;
   if (withNoise) d *= market.noise[month] ?? 1;
   if (month === market.viral.month) d *= market.viral.factor;
+  if (market.shock && month === market.shock.month) d *= market.shock.factor;
   return Math.max(0, Math.round(d));
 }
 

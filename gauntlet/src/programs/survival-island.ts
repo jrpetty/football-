@@ -122,11 +122,11 @@ export const program: ProgramDefinition = {
   description:
     'A seeded castaway simulation on a 12×12 island with a day/night cycle, weather, cold nights, scarce regrowing resources, crafting (spear, campfire, shelter, signal pile) and hidden hazards such as poisonous berries. ' +
     'The model plays turn by turn (three actions per day) with only a compact observation and a 300-character self-written memo as long-term memory. ' +
-    'Surviving takes steady resource loops; getting rescued takes discovering the passing ship’s schedule (a logbook page in a bottle, the passes you witness), then lighting a signal fire on the summit at midday on two different passing days — surviving, rebuilding and timing in between.',
+    'Surviving takes steady resource loops; getting rescued takes discovering the passing ship’s schedule (a logbook page in a bottle, the passes you witness), keeping a campfire burning the night before as proof of life, and lighting a signal pile on the summit at midday on a passing day.',
   scoring:
     'Score = 0.7 × survival + 0.2 × rescue + 0.1 × building. Survival = (nights survived − nights an idle castaway survives on the same island) ÷ (days in the game − that idle baseline), clamped to 0–1; being rescued counts as surviving every day. ' +
-    'Rescue is 1 if the supply ship counted your blazing summit signal on the required number of midday passes (2 by default; the hard variant also requires a campfire burning the night before each pass), otherwise 0. Building is the fraction of the four milestones achieved (spear, campfire, shelter, signal pile). ' +
-    'Config knobs (days, ship schedule ranges, signals needed, night-fire proof, storm and rain odds, night cold, spring flow, poisonous bushes) only change the world, never the formula. Passed = rescued or alive at the end of the final day.',
+    'Rescue is 1 if the passing supply ship saw your signal fire blazing on the summit at midday — on the required number of passes, each one preceded by a night with a campfire burning on the island (the proof of life) — otherwise 0. Building is the fraction of the four milestones achieved (spear, campfire, shelter, signal pile). ' +
+    'Config knobs (days, ship schedule, signals needed, proof of life, storm and rain odds, night cold, spring flow, poisonous bushes) change only the world, never the formula. Passed = rescued or alive at the end of the final day.',
   defaults: DEFAULTS,
   async run(ctx: ProgramContext): Promise<ProgramResult> {
     const cfg = readConfig(ctx.config);

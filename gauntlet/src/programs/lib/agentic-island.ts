@@ -1186,7 +1186,7 @@ export function stepIsland(world: IslandWorld, s: IslandState, command: string |
       s.shipsSeen.push(s.day);
       const t = tileAt(s, s.pos).terrain;
       const see = t === 'beach' || t === 'palm' || t === 'rocks' || t === 'summit' || t === 'cave';
-      const pass = `Day ${s.day}, midday: the supply ship Albatross sails past the island${see ? ' — you can see her out at sea' : ' — you hear her horn from the sea'}.`;
+      const pass = `At midday the supply ship Albatross sails past the island${see ? ' — you can see her out at sea' : ' — you hear her horn from the sea'}.`;
       const blazing = s.signal === 'lit' && q <= s.signalLitAt + 1;
       if (!blazing) {
         events.push(`${pass} No signal fire is burning on the summit, so she sails on.`);

@@ -45,6 +45,10 @@ const ratio = (a: number, b: number) => (a <= 0 || b <= 0 ? 0 : Math.min(a, b) /
 export interface MatchOptions {
   /** Hard tier: a triangle pointing the wrong way loses part of its type credit. */
   orientation?: boolean;
+  /** Centre distance (px) at which the position score reaches 0 (default POSITION_FALLOFF). */
+  positionFalloff?: number;
+  /** Component weights (default WEIGHTS); should sum to 1. */
+  weights?: { type: number; color: number; position: number; size: number };
 }
 
 /** Smallest absolute difference between two angles in degrees. */
@@ -66,9 +70,10 @@ export function pairScore(t: SceneShape, d: DrawnShape, opts: MatchOptions = {})
   if (opts.orientation && t.type === 'triangle' && d.kind === 'triangle') type *= orientationFactor(t.angle, d.angle);
   const color = t.color === d.color ? 1 : 0;
   const distance = Math.hypot(t.cx - d.cx, t.cy - d.cy);
-  const position = Math.max(0, 1 - distance / POSITION_FALLOFF);
+  const position = Math.max(0, 1 - distance / (opts.positionFalloff ?? POSITION_FALLOFF));
   const size = (ratio(t.w, d.w) + ratio(t.h, d.h)) / 2;
-  const total = WEIGHTS.type * type + WEIGHTS.color * color + WEIGHTS.position * position + WEIGHTS.size * size;
+  const wt = opts.weights ?? WEIGHTS;
+  const total = wt.type * type + wt.color * color + wt.position * position + wt.size * size;
   return { total, type, color, position, size, distance };
 }
 

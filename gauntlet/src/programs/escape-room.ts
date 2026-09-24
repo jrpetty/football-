@@ -8,22 +8,35 @@
  */
 import type { ProgramContext, ProgramDefinition, ProgramResult, ReplayFrame } from '../core/types.ts';
 import { askTurn, clamp01, noteBlock, round, truncate } from './lib/agentic-common.ts';
-import { escapeFrame, escapeObservation, generateEscape, newEscState, stepEscape, type EscapeConfig } from './lib/agentic-escape.ts';
+import { ESCAPE_DEFAULTS, escapeFrame, escapeObservation, generateEscape, newEscState, stepEscape, type EscapeConfig } from './lib/agentic-escape.ts';
 
-const DEFAULTS = { locksPerRoom: [2, 2, 3], moveBudget: 45, recentEvents: 5 };
+const DEFAULTS = { ...ESCAPE_DEFAULTS, recentEvents: 5 };
 
 function readConfig(config: Record<string, unknown>): EscapeConfig & { recentEvents: number } {
-  const locks = Array.isArray(config.locksPerRoom) ? config.locksPerRoom : DEFAULTS.locksPerRoom;
+  const d = ESCAPE_DEFAULTS;
+  const num = (k: string, fallback: number, lo: number, hi: number): number => {
+    const v = Number(config[k] ?? fallback);
+    return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : fallback;
+  };
+  const locks = Array.isArray(config.locksPerRoom) ? config.locksPerRoom : d.locksPerRoom;
   const locksPerRoom = [0, 1, 2].map((i) => {
-    const v = Number(locks[i] ?? DEFAULTS.locksPerRoom[i]);
-    return Number.isFinite(v) ? Math.min(4, Math.max(1, Math.round(v))) : DEFAULTS.locksPerRoom[i]!;
+    const v = Number(locks[i] ?? d.locksPerRoom[i]);
+    return Number.isFinite(v) ? Math.min(4, Math.max(1, Math.round(v))) : d.locksPerRoom[i]!;
   });
-  const budget = Number(config.moveBudget ?? DEFAULTS.moveBudget);
-  const recent = Number(config.recentEvents ?? DEFAULTS.recentEvents);
+  const dec = Array.isArray(config.decoysPerRoom) && config.decoysPerRoom.length === 2 ? config.decoysPerRoom.map(Number) : d.decoysPerRoom;
+  const dMin = Number.isFinite(dec[0]) ? Math.min(4, Math.max(0, Math.round(dec[0]!))) : d.decoysPerRoom[0];
+  const dMax = Number.isFinite(dec[1]) ? Math.min(4, Math.max(dMin, Math.round(dec[1]!))) : Math.max(dMin, d.decoysPerRoom[1]);
+  const slack = config.budgetSlack === null || config.budgetSlack === undefined ? d.budgetSlack : num('budgetSlack', 0.25, 0.05, 3);
   return {
     locksPerRoom,
-    moveBudget: Number.isFinite(budget) ? Math.min(120, Math.max(10, Math.round(budget))) : DEFAULTS.moveBudget,
-    recentEvents: Number.isFinite(recent) ? Math.min(10, Math.max(1, Math.round(recent))) : DEFAULTS.recentEvents,
+    moveBudget: Math.round(num('moveBudget', d.moveBudget, 10, 120)),
+    budgetSlack: slack,
+    crossRoom: config.crossRoom === undefined ? d.crossRoom : config.crossRoom === true,
+    cipherDepth: Math.round(num('cipherDepth', d.cipherDepth, 1, 2)),
+    decoysPerRoom: [dMin, dMax],
+    redHerrings: config.redHerrings === undefined ? d.redHerrings : config.redHerrings === true,
+    emptySpots: Math.round(num('emptySpots', d.emptySpots, 0, 2)),
+    recentEvents: Math.round(num('recentEvents', DEFAULTS.recentEvents, 1, 10)),
   };
 }
 
@@ -63,7 +76,7 @@ export const program: ProgramDefinition = {
   scoring:
     'Score = 0.5 × (locks opened ÷ total locks) + 0.3 for escaping + 0.2 × efficiency, where efficiency = optimal moves ÷ moves used (capped at 1) and only counts when the model escapes. ' +
     'The optimal move count is computed from each generated world: the shortest command sequence for a first-time solver who reads every clue it relies on (including the lock’s own inscription) and never guesses. ' +
-    'Every command, valid or not, costs one move, and the case ends when the move budget runs out. Passed = escaped.',
+    'Every command, valid or not, costs one move, and the case ends when the move budget runs out: a fixed number (45 by default) or, when budgetSlack is set, the optimal count plus that fraction, rounded up (the hard variant uses +25%). Passed = escaped.',
   defaults: DEFAULTS,
   async run(ctx: ProgramContext): Promise<ProgramResult> {
     const cfg = readConfig(ctx.config);

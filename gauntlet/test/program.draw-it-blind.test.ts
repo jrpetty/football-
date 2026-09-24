@@ -6,6 +6,7 @@ import { CANVAS, generateScene, PALETTE, paletteHex, renderSceneSvg } from '../s
 import type { Scene, SceneShape } from '../src/programs/lib/draw-it-blind-scene.ts';
 import {
   classifyPolygon,
+  triangleApexAngle,
   extractSvg,
   nearestPalette,
   parseColor,
@@ -14,7 +15,9 @@ import {
   sanitizeSvg,
 } from '../src/programs/lib/draw-it-blind-svg.ts';
 import type { DrawnShape } from '../src/programs/lib/draw-it-blind-svg.ts';
-import { matchShapes, pairScore, MIN_PAIR } from '../src/programs/lib/draw-it-blind-match.ts';
+import { matchShapes, pairScore, MIN_PAIR, orientationFactor } from '../src/programs/lib/draw-it-blind-match.ts';
+import { oraclePolicy, qualitativePolicy } from './helpers/draw-it-blind-policies.ts';
+import { EXTENDED_PALETTE } from '../src/programs/lib/draw-it-blind-scene.ts';
 import {
   constantResponder,
   createFakeModel,
@@ -408,4 +411,130 @@ test('matcher: the DP assignment is optimal (equals brute force) where greedy is
     const got = matchShapes(ts, ds).pairs.reduce((a, p) => a + (p.score?.total ?? 0), 0);
     assert.ok(Math.abs(got - bestTotal) < 1e-9, `trial ${trial}: dp ${got} vs brute ${bestTotal}`);
   }
+});
+
+// ─── clarity rules + hard tier ─────────────────────────────────────────────
+
+const HARD = {
+  minShapes: 9,
+  maxShapes: 12,
+  descriptionWords: 90,
+  palette: 'extended',
+  overlap: true,
+  rotation: true,
+  positionFalloff: 60,
+  weights: { type: 0.2, color: 0.2, position: 0.4, size: 0.2 },
+};
+const hardScene = (seed: number) => buildScene({ rng: createRng(seed) }, readConfig({ ...program.defaults, ...HARD }));
+
+test('draw-it-blind: number rule — fractions up to tenths are fine; digits and numbers above ten are removed', () => {
+  const ok = checkDescription('A navy circle two-thirds across and seven-tenths down, half the size of a quarter-width square; three stars.', 120);
+  assert.deepEqual(ok.violations, []);
+  const bad = checkDescription('A dot eleven-twentieths across, three twelfths down, and twenty-five percent wide.', 120);
+  assert.deepEqual(bad.violations, ['eleven-twentieths', 'three twelfths', 'twenty-five']);
+  assert.equal(bad.delivered, 'A dot across, down, and percent wide.');
+});
+
+test('draw-it-blind: prompts state how words are counted and the exact number rule', async () => {
+  const s = sceneFor(101);
+  const { model } = await play(101, oraclePolicy(s));
+  const describe = model.calls[0]!.messages[0]!.content;
+  assert.ok(describe.includes('Words are counted by splitting on spaces, so a hyphenated word such as "top-left" counts as one word.'));
+  assert.ok(describe.includes('Numbers may only be spelled out, and only up to ten'));
+  assert.ok(!describe.includes('palette of'), 'standard prompt has no palette line');
+  assert.ok(describe.includes('No shapes overlap.'));
+});
+
+test('draw-it-blind hard: 9–12 shapes, 12-colour palette, rotated tall triangles, overlaps and nesting', () => {
+  let nested = 0;
+  let overlapping = 0;
+  const colours = new Set<string>();
+  const directions = new Set<string>();
+  for (let seed = 1; seed <= 80; seed++) {
+    const { shapes } = hardScene(seed);
+    assert.ok(shapes.length >= 9 && shapes.length <= 12);
+    assert.equal(new Set(shapes.map((x) => x.color)).size, shapes.length, 'distinct colours');
+    shapes.forEach((x, i) => {
+      colours.add(x.color);
+      assert.equal(x.id, i + 1);
+      if (i > 0) assert.ok(shapes[i - 1]!.w * shapes[i - 1]!.h >= x.w * x.h, 'listed back to front');
+      assert.ok(x.cx - x.w / 2 >= 0 && x.cx + x.w / 2 <= CANVAS && x.cy - x.h / 2 >= 0 && x.cy + x.h / 2 <= CANVAS);
+      if (x.type === 'triangle') {
+        directions.add(x.direction!);
+        assert.ok(triangleApexAngle(x.points!) !== null, 'clearly isosceles');
+      }
+      for (const y of shapes.slice(i + 1)) {
+        if (Math.abs(x.cx - y.cx) * 2 <= x.w - y.w && Math.abs(x.cy - y.cy) * 2 <= x.h - y.h) nested++;
+        else if (Math.abs(x.cx - y.cx) * 2 < x.w + y.w && Math.abs(x.cy - y.cy) * 2 < x.h + y.h) overlapping++;
+      }
+    });
+  }
+  assert.equal(colours.size, 12);
+  assert.equal(directions.size, 8);
+  assert.ok(nested >= 40 && overlapping >= 80, `nested ${nested}, overlapping ${overlapping}`);
+});
+
+test('draw-it-blind hard: targets parse back to themselves with the extended palette and orientation', () => {
+  for (let seed = 1; seed <= 60; seed++) {
+    const scene = hardScene(seed);
+    const parsed = parseSvg(renderSceneSvg(scene), { palette: 'extended' });
+    const m = matchShapes(scene.shapes, parsed.shapes, { orientation: true, positionFalloff: 60, weights: HARD.weights });
+    assert.ok(m.match > 0.99, `seed ${seed}: ${m.match}`);
+    assert.deepEqual(parsed.shapes.map((x) => x.color), scene.shapes.map((x) => x.color));
+  }
+});
+
+test('draw-it-blind hard: close colours are kept apart only in the extended palette', () => {
+  const cases: Record<string, string> = { navy: 'navy', darkblue: 'navy', blue: 'blue', royalblue: 'blue', teal: 'teal', turquoise: 'teal', green: 'green', brown: 'brown', saddlebrown: 'brown', gray: 'gray', silver: 'gray', black: 'black', orange: 'orange' };
+  for (const [css, want] of Object.entries(cases)) assert.equal(nearestPalette(parseColor(css)!.rgb, 'extended'), want, css);
+  for (const p of EXTENDED_PALETTE) assert.equal(nearestPalette(parseColor(p.anchors[0]!)!.rgb, 'extended'), p.name);
+  assert.equal(nearestPalette(parseColor('navy')!.rgb), 'blue', 'basic palette unchanged');
+  assert.equal(nearestPalette(parseColor('teal')!.rgb, 'basic') === 'teal', false);
+});
+
+test('draw-it-blind hard: triangle direction is detected and scored only when rotation is on', () => {
+  near(triangleApexAngle([[50, 0], [70, 80], [30, 80]])!, -90);
+  near(triangleApexAngle([[0, 50], [80, 30], [80, 70]])!, 180);
+  assert.equal(triangleApexAngle([[0, 0], [10, 0], [5, 8.66]]), null, 'equilateral has no clear apex');
+  assert.equal(orientationFactor(-90, -80), 1);
+  assert.equal(orientationFactor(-90, -45), 0.7);
+  assert.equal(orientationFactor(-90, 90), 0.4);
+  assert.equal(orientationFactor(undefined, 90), 1);
+  const t: SceneShape = { id: 1, type: 'triangle', color: 'red', cx: 100, cy: 100, w: 50, h: 70, angle: 90 };
+  const drawnUp = shape({ kind: 'triangle', w: 50, h: 70, angle: -90 });
+  assert.equal(pairScore(t, drawnUp).total, 1);
+  assert.ok(Math.abs(pairScore(t, drawnUp, { orientation: true }).total - (1 - 0.3 * 0.6)) < 1e-9);
+});
+
+test('draw-it-blind hard: prompts list the palette in words, overlap and direction rules, and keep the output format', async () => {
+  const scene = hardScene(101);
+  const { model, result } = await play(101, oraclePolicy(scene), HARD);
+  const [describe, draw] = model.calls.map((c) => c.messages[0]!.content) as [string, string];
+  assert.ok(describe.includes('a palette of twelve (red, orange, yellow, green, teal, blue, navy, purple, pink, brown, black, gray)'));
+  assert.ok(describe.includes('Shapes are listed from back to front'));
+  assert.ok(describe.includes('Say which way each triangle points.'));
+  assert.ok(describe.includes('at most 90 words'));
+  assert.match(describe, /\n\nReply with only the description: plain prose, at most 90 words, no digits\.$/);
+  assert.ok(draw.includes('similar names (navy and blue, teal and green) are different colours'));
+  assert.match(draw, /\n\nReply with a single ```svg code block and nothing else\.$/);
+  assert.ok(result.score >= 0.99);
+});
+
+test('draw-it-blind hard: ideal word-level redraws score well below the standard tier; baseline stays near 0', async () => {
+  const meanOf = async (config: Record<string, unknown>, mk: (s: Scene, limit: number) => Responder) => {
+    let total = 0;
+    for (let seed = 1; seed <= 25; seed++) {
+      const c = readConfig({ ...program.defaults, ...config });
+      const scene = buildScene({ rng: createRng(seed) }, c);
+      total += (await play(seed, mk(scene, c.descriptionWords), config)).result.score;
+    }
+    return total / 25;
+  };
+  const ideal = (s: Scene, limit: number) => qualitativePolicy(s, { grid: 5, wordsPerShape: 11, limit });
+  const std = await meanOf({}, ideal);
+  const hard = await meanOf(HARD, ideal);
+  const baseline = await meanOf(HARD, () => mockBaselineResponder('b'));
+  assert.ok(std > 0.88, `standard ${std}`);
+  assert.ok(hard < 0.75 && hard < std - 0.2, `hard ${hard} vs standard ${std}`);
+  assert.ok(baseline < 0.1, `baseline ${baseline}`);
 });

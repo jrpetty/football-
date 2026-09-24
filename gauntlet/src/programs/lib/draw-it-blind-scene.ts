@@ -229,9 +229,13 @@ function generateHardScene(rng: Rng, minShapes: number, maxShapes: number, opts:
     let cy = -1;
     const fits = (x: number, y: number) => x - d.w / 2 >= margin && x + d.w / 2 <= CANVAS - margin && y - d.h / 2 >= margin && y + d.h / 2 <= CANVAS - margin;
     if (mode === 'nest') {
-      const hosts = placed.filter((p) => (p.type === 'square' || p.type === 'rectangle' || p.type === 'circle') && Math.min(p.w, p.h) >= 2.1 * Math.max(d.w, d.h));
+      const hosts = placed.filter((p) => (p.type === 'square' || p.type === 'rectangle' || p.type === 'circle') && Math.min(p.w, p.h) >= 56);
       if (hosts.length > 0) {
         const host = rng.pick(hosts);
+        // Shrink the new shape so it sits well inside its host.
+        const f = Math.min(1, (0.45 * Math.min(host.w, host.h)) / Math.max(d.w, d.h));
+        d = { ...d, w: d.w * f, h: d.h * f, r: d.r === undefined ? undefined : d.r * f };
+        if (tri) tri = tri.map(([x, y]) => [x * f, y * f] as [number, number]);
         const slackX = ((host.w - d.w) / 2) * 0.35;
         const slackY = ((host.h - d.h) / 2) * 0.35;
         cx = round(host.cx + (rng.next() * 2 - 1) * slackX);

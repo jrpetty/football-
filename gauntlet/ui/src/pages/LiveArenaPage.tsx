@@ -433,9 +433,12 @@ function FinishLine({ lb, runId }: { lb: Leaderboard; runId: string }) {
           </li>
         ))}
       </ol>
-      <div className="row" style={{ justifyContent: 'center' }}>
+      <div className="row no-broadcast" style={{ justifyContent: 'center', gap: 8 }}>
         <Link to={pathOf('runs', runId)} className="btn">
           Open full results <Icon.ChevronRight />
+        </Link>
+        <Link to={pathOf('present', runId)} className="btn" title="Episode presenter: full-screen slides for recording">
+          <Icon.Present /> Present
         </Link>
       </div>
     </section>

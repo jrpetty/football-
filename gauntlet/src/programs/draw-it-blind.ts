@@ -8,7 +8,7 @@ import { extractCodeBlock } from '../core/extract.ts';
 import { CANVAS, generateScene, paletteOf, renderSceneSvg, sceneTable } from './lib/draw-it-blind-scene.ts';
 import type { PaletteId, Scene, SceneOptions } from './lib/draw-it-blind-scene.ts';
 import { extractSvg, parseSvg, sanitizeSvg } from './lib/draw-it-blind-svg.ts';
-import { matchShapes, where } from './lib/draw-it-blind-match.ts';
+import { matchShapes, WEIGHTS, where } from './lib/draw-it-blind-match.ts';
 import { countWords, truncateWords } from './lib/needle-haystack-normalize.ts';
 
 export interface DibConfig {
@@ -21,6 +21,10 @@ export interface DibConfig {
   overlap: boolean;
   /** Rotate triangles (and score their direction). */
   rotation: boolean;
+  /** Centre distance (px) at which a shape's position score reaches zero (default 160). */
+  positionFalloff: number;
+  /** Pair-score weights (default type 0.3, colour 0.3, position 0.25, size 0.15). */
+  weights: { type: number; color: number; position: number; size: number };
 }
 
 export function readConfig(raw: Record<string, unknown>): DibConfig {
@@ -36,7 +40,19 @@ export function readConfig(raw: Record<string, unknown>): DibConfig {
     palette: raw.palette === 'extended' ? 'extended' : 'basic',
     overlap: raw.overlap === true,
     rotation: raw.rotation === true,
+    positionFalloff: int(raw.positionFalloff, 160, 40, 400),
+    weights: readWeights(raw.weights),
   };
+}
+
+function readWeights(raw: unknown): DibConfig['weights'] {
+  const def = { ...WEIGHTS };
+  if (!raw || typeof raw !== 'object') return def;
+  const r = raw as Record<string, unknown>;
+  const w = { type: Number(r.type), color: Number(r.color), position: Number(r.position), size: Number(r.size) };
+  const sum = w.type + w.color + w.position + w.size;
+  if (Object.values(w).some((v) => !Number.isFinite(v) || v < 0) || Math.abs(sum - 1) > 1e-6) return def;
+  return w;
 }
 
 /**
@@ -90,23 +106,40 @@ export function checkDescription(text: string, limit: number): DescriptionCheck 
   return { violations, delivered, words, truncated, penalty: numberPenalty + (truncated ? 0.05 : 0) };
 }
 
-export function describePrompt(scene: Scene, limit: number): string {
+export type PromptOptions = SceneOptions;
+
+/** How words are counted — stated in the prompt and exactly what countWords() does. */
+export const WORD_RULE = 'Words are counted by splitting on spaces, so a hyphenated word such as "top-left" counts as one word.';
+
+export function describePrompt(scene: Scene, limit: number, opts: PromptOptions = {}): string {
+  const extra: string[] = [];
+  if ((opts.palette ?? 'basic') !== 'basic') {
+    const names = paletteOf(opts.palette ?? 'basic').map((p) => p.name);
+    const count = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'][names.length] ?? String(names.length);
+    extra.push(`- The colours come from a palette of ${count} (${names.join(', ')}), some of them similar, so name each colour exactly.`);
+  }
+  if (opts.overlap) extra.push('- Say which shapes overlap or sit inside others, and which are on top.');
+  if (opts.rotation) extra.push('- Say which way each triangle points.');
   return [
     'You are playing DRAW IT BLIND. Below is the exact layout of a picture. Describe it in plain English so that another artist, who will never see this layout, can redraw it as accurately as possible from your words alone.',
     '',
     'PICTURE',
-    sceneTable(scene),
+    sceneTable(scene, opts),
     '',
     'Rules:',
-    `- At most ${limit} words. Anything beyond ${limit} words is cut off.`,
-    '- Do not use any digits (0-9), and do not spell out large numbers (eleven or more, such as "one hundred and twenty"). Describe positions and sizes in words: "top-left corner", "a quarter of the way down", "about a fifth of the canvas wide". Digits and large numbers are deleted before the artist reads your description, and they cost points.',
+    `- At most ${limit} words. ${WORD_RULE} Anything beyond ${limit} words is cut off.`,
+    '- Numbers may only be spelled out, and only up to ten: "two", "a third", "two-thirds" or "seven-tenths" are fine. Digits (0-9) and any spelled-out number above ten (such as "eleven", "twenty", "hundred", "twelfths" or "eleven-twentieths") are deleted before the artist reads your description, and they cost points. Describe positions and sizes in words: "top-left corner", "a quarter of the way down", "about a fifth of the canvas wide".',
     '- Mention every shape with its colour.',
+    ...extra,
     '',
     `Reply with only the description: plain prose, at most ${limit} words, no digits.`,
   ].join('\n');
 }
 
-export function drawPrompt(description: string): string {
+export function drawPrompt(description: string, opts: PromptOptions = {}): string {
+  const extra: string[] = [];
+  if ((opts.palette ?? 'basic') !== 'basic') extra.push('- Use exactly the colour named for each shape: similar names (navy and blue, teal and green) are different colours.');
+  if (opts.overlap) extra.push('- Some shapes may overlap or sit inside others: draw the ones behind first.');
   return [
     'You are playing DRAW IT BLIND. Another artist looked at a picture and described it in words. Recreate the picture as an SVG image from the description alone.',
     '',
@@ -119,6 +152,7 @@ export function drawPrompt(description: string): string {
     `- One SVG with width="${CANVAS}" height="${CANVAS}" and viewBox="0 0 ${CANVAS} ${CANVAS}" (origin at the top-left, y grows downward) on a white background.`,
     '- Draw every described shape as one basic element (circle, rect, polygon, ellipse or path) filled with a solid colour.',
     '- No text, labels, outlines-only shapes or extra decoration.',
+    ...extra,
     '',
     'Reply with a single ```svg code block and nothing else.',
   ].join('\n');
@@ -136,18 +170,22 @@ const PLACEHOLDER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="${CANVAS
 const pct = (x: number) => Math.round(x * 100);
 const r1 = (x: number) => Math.round(x * 10) / 10;
 
+export function sceneOptions(cfg: DibConfig): SceneOptions {
+  return { palette: cfg.palette, overlap: cfg.overlap, rotation: cfg.rotation };
+}
+
 export function buildScene(ctx: Pick<ProgramContext, 'rng'>, cfg: DibConfig): Scene {
-  return generateScene(ctx.rng.fork('draw-it-blind'), cfg.minShapes, cfg.maxShapes);
+  return generateScene(ctx.rng.fork('draw-it-blind'), cfg.minShapes, cfg.maxShapes, sceneOptions(cfg));
 }
 
 export const program: ProgramDefinition = {
   id: 'draw-it-blind',
   name: 'Draw It Blind',
   description:
-    'The model sees a precise table of 5–7 coloured shapes on a 400×400 canvas and must describe it in at most 120 words without using digits. Then, in a fresh context, the same model redraws the picture as SVG from nothing but its own description. The drawing is parsed and matched shape-by-shape against the original.',
+    'The model sees a precise table of 5–7 coloured shapes on a 400×400 canvas and must describe it in at most 120 words, spelling out numbers only up to ten (no digits). Then, in a fresh context, the same model redraws the picture as SVG from nothing but its own description. The drawing is parsed and matched shape-by-shape against the original. The hard tier uses 9–12 shapes (some overlapping or nested), rotated triangles, a 12-colour palette with close pairs and a 90-word limit.',
   scoring:
-    'The drawn SVG is parsed into shapes, and each target shape is paired with at most one drawn shape using the best possible one-to-one assignment. A pair scores 30% for shape type, 30% for colour (mapped to the nearest of the eight palette colours), 25% for position (zero at 160 px away) and 15% for size; unmatched targets score 0 and each extra drawn shape costs 0.03 (up to 0.15). Digits or large number words in the description are deleted before the drawing step and cost 0.10 plus 0.02 per extra occurrence (up to 0.30), and going over 120 words costs 0.05.',
-  defaults: { minShapes: 5, maxShapes: 7, descriptionWords: 120 },
+    'The drawn SVG is parsed into shapes, and each target shape is paired with at most one drawn shape using the best possible one-to-one assignment. A pair scores 30% for shape type, 30% for colour (mapped to the nearest palette colour), 25% for position (zero at 160 px away) and 15% for size. The hard tier weights geometry more (20% type, 20% colour, 40% position reaching zero at 60 px, 20% size), and a triangle pointing the wrong way keeps only 70% (within 67.5°) or 40% of its type credit. Unmatched targets score 0 and each extra drawn shape costs 0.03 (up to 0.15). Digits, or spelled-out numbers above ten, in the description are deleted before the drawing step and cost 0.10 plus 0.02 per extra occurrence (up to 0.30); going over the word limit (words counted by spaces) costs 0.05.',
+  defaults: { minShapes: 5, maxShapes: 7, descriptionWords: 120, palette: 'basic', overlap: false, rotation: false, positionFalloff: 160 },
 
   async run(ctx: ProgramContext): Promise<ProgramResult> {
     const cfg = readConfig(ctx.config);
@@ -159,7 +197,7 @@ export const program: ProgramDefinition = {
 
     // Step 1 — describe.
     const d = await ctx.model.complete({
-      messages: [{ role: 'user', content: describePrompt(scene, cfg.descriptionWords) }],
+      messages: [{ role: 'user', content: describePrompt(scene, cfg.descriptionWords, sceneOptions(cfg)) }],
       maxOutputTokens: ctx.maxOutputTokens,
       label: 'describe',
     });
@@ -186,13 +224,13 @@ export const program: ProgramDefinition = {
     if (drawable) {
       // Step 2 — draw, in a fresh context, from the description alone.
       const r = await ctx.model.complete({
-        messages: [{ role: 'user', content: drawPrompt(check.delivered) }],
+        messages: [{ role: 'user', content: drawPrompt(check.delivered, sceneOptions(cfg)) }],
         maxOutputTokens: ctx.maxOutputTokens,
         label: 'draw',
       });
       const markup = r.stopReason === 'refusal' ? null : extractSvg(r.text);
       if (markup) {
-        const parsed = parseSvg(markup);
+        const parsed = parseSvg(markup, { palette: cfg.palette });
         svgFound = parsed.found;
         elements = parsed.elements;
         ignored = parsed.ignored;
@@ -202,7 +240,7 @@ export const program: ProgramDefinition = {
     }
     ctx.artifact('drawn.svg', 'svg', drawnSvg);
 
-    const m = matchShapes(scene.shapes, shapes);
+    const m = matchShapes(scene.shapes, shapes, { orientation: cfg.rotation, positionFalloff: cfg.positionFalloff, weights: cfg.weights });
     const score = drawable ? Math.round(Math.max(0, Math.min(1, m.match - check.penalty)) * 1000) / 1000 : 0;
 
     let summary: string;

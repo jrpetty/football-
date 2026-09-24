@@ -166,6 +166,17 @@ const DECOYS: Array<{ name: string; desc: string }> = [
   { name: 'HOURGLASS', desc: 'An hourglass. The sand has long since run out.' },
 ];
 
+const RED_HERRINGS: Array<{ name: string; desc: string }> = [
+  { name: 'CALENDAR', desc: 'A calendar from 1911, turned to March. The 14th is circled in red ink.' },
+  { name: 'DARTBOARD', desc: 'A dartboard with three darts stuck in it: in the 20, the 5 and the 1.' },
+  { name: 'THERMOMETER', desc: 'A brass wall thermometer. It reads 21 degrees.' },
+  { name: 'ABACUS', desc: 'A child’s abacus. On its top three rows the beads are pushed across to 3, 8 and 2.' },
+  { name: 'TELEPHONE', desc: 'An old rotary telephone. Someone has pencilled 5-2-7 on its dial.' },
+  { name: 'PAINT TINS', desc: 'Three tins of paint stacked up: green on the bottom, then red, then blue on top.' },
+  { name: 'GUEST BOOK', desc: 'A guest book. The last entry reads: "Room 406 — lovely stay, will return."' },
+  { name: 'SPOOLS OF THREAD', desc: 'Spools of thread in a row: yellow, white, black and orange.' },
+];
+
 interface ToolGate {
   tool: string;
   toolDesc: string;
@@ -358,6 +369,10 @@ function caesar(text: string, k: number): string {
   return text.replace(/[A-Z]/g, (c) => String.fromCharCode(((c.charCodeAt(0) - 65 + k) % 26) + 65));
 }
 
+function reverse(text: string): string {
+  return [...text].reverse().join('');
+}
+
 function withArticle(phrase: string): string {
   return `${/^[aeiou]/i.test(phrase) ? 'an' : 'a'} ${phrase}`;
 }
@@ -410,6 +425,11 @@ interface Gen {
   tools: ToolGate[];
   comboGates: ComboGate[];
   shift: { id: string; k: number; room: number } | null;
+  cfg: EscapeConfig;
+  /** Encoders kept back for a later room. */
+  reserved: Set<string>;
+  /** Encoders that must be used next if they fit the lock kind. */
+  force: string[] | null;
 }
 
 function slug(name: string): string {
@@ -456,8 +476,9 @@ function clueObject(g: Gen, room: number, asItem: boolean, name: string, desc: s
 function shiftSource(g: Gen, room: number): { id: string; k: number } {
   if (g.shift) return g.shift;
   const k = g.rng.int(2, 9);
-  // Half the time the shift is given in an earlier room: it must be remembered.
-  const where = room > 0 && g.rng.chance(0.5) ? g.rng.int(0, room - 1) : room;
+  // Half the time the shift is given in an earlier room (always room 1 in cross-room mode): it must be remembered.
+  const where = g.cfg.crossRoom ? 0 : room > 0 && g.rng.chance(0.5) ? g.rng.int(0, room - 1) : room;
+  const steps = g.cfg.cipherDepth >= 2 ? toRoman(k) : SMALL_WORDS[k];
   const obj = g.rng.chance(0.5)
     ? addObject(g, {
         name: 'CIPHER WHEEL',
@@ -471,7 +492,7 @@ function shiftSource(g: Gen, room: number): { id: string; k: number } {
         kind: 'fixture',
         rooms: [where],
         hidden: false,
-        desc: `A small engraved plaque: "In this house every secret letter walks ${SMALL_WORDS[k]} steps forward in the alphabet."`,
+        desc: `A small engraved plaque: "In this house every secret letter walks ${steps} steps forward in the alphabet."`,
       });
   g.shift = { id: obj.id, k, room: where };
   return g.shift;
@@ -584,10 +605,12 @@ const ENCODERS: Record<string, { kind: 'code' | 'word' | 'colour'; make: Encoder
     make(g, room, wantItem) {
       const src = shiftSource(g, room);
       const digits = [g.rng.int(1, 9), g.rng.int(0, 9), g.rng.int(0, 9)];
-      const coded = digits.map((d) => caesar(NUMBER_WORDS[d]!, src.k)).join(' - ');
+      const deep = g.cfg.cipherDepth >= 2;
+      const coded = digits.map((d) => (deep ? reverse : (x: string) => x)(caesar(NUMBER_WORDS[d]!, src.k))).join(' - ');
+      const how = deep ? 'capitals that make no sense, each word written back to front' : 'capitals that make no sense';
       const o = wantItem
-        ? clueObject(g, room, true, 'CIPHER NOTE', `A note written in capitals that make no sense: "${coded}".`)
-        : clueObject(g, room, false, 'SLATE', `A school slate. Chalked on it in capitals that make no sense: "${coded}".`);
+        ? clueObject(g, room, true, 'CIPHER NOTE', `A note written in ${how}: "${coded}".`)
+        : clueObject(g, room, false, 'SLATE', `A school slate. Chalked on it in ${how}: "${coded}".`);
       return {
         answer: digits.join(''),
         tag: '3-digit dial',
@@ -602,10 +625,12 @@ const ENCODERS: Record<string, { kind: 'code' | 'word' | 'colour'; make: Encoder
     make(g, room, wantItem) {
       const src = shiftSource(g, room);
       const word = g.rng.pick(CIPHER_WORDS);
-      const coded = caesar(word, src.k);
+      const deep = g.cfg.cipherDepth >= 2;
+      const coded = deep ? reverse(caesar(word, src.k)) : caesar(word, src.k);
+      const how = deep ? ', written back to front' : '';
       const o = wantItem
-        ? clueObject(g, room, true, 'TORN PAGE', `A page torn from a diary. One word is circled: "${coded}".`)
-        : clueObject(g, room, false, 'SCRAWLED WALL', `Someone has scrawled a single word across the wallpaper: "${coded}".`);
+        ? clueObject(g, room, true, 'TORN PAGE', `A page torn from a diary. One word is circled${how}: "${coded}".`)
+        : clueObject(g, room, false, 'SCRAWLED WALL', `Someone has scrawled a single word across the wallpaper${how}: "${coded}".`);
       return {
         answer: word,
         tag: `${word.length}-letter dial`,
@@ -715,11 +740,14 @@ function lockWith(g: Gen, room: number, target: EscObject, kind: 'key' | 'code' 
     target.desc += ` It is locked; the keyhole is ringed with ${ring}.`;
     return [key.id];
   }
-  const options = Object.entries(ENCODERS).filter(([name, e]) => e.kind === kind && !g.used.has(name));
+  let options = Object.entries(ENCODERS).filter(([name, e]) => e.kind === kind && !g.used.has(name) && !g.reserved.has(name));
+  const forced = g.force ? options.filter(([name]) => g.force!.includes(name)) : [];
+  if (forced.length) options = forced;
   for (const [name, enc] of g.rng.shuffle(options)) {
     const res = enc.make(g, room, wantItem);
     if (!res) continue;
     g.used.add(name);
+    if (forced.length) g.force = null;
     const tag = target.kind === 'door' && kind === 'code' ? res.tag.replace('dial', 'keypad') : res.tag;
     const what = kind === 'code' ? `a ${tag}` : kind === 'word' ? `a ${tag} (${res.answer.length} letter wheels)` : `a ${tag} with buttons marked ${COLOURS.join(', ')}; it takes a sequence of ${res.answer.split(' ').length} colours`;
     target.lock = {
@@ -805,8 +833,32 @@ function placeLoose(g: Gen, room: number, itemId: string): void {
 
 export interface EscapeConfig {
   locksPerRoom: number[];
+  /** Fixed move budget (used when budgetSlack is null). */
   moveBudget: number;
+  /** When set, the budget is the world's optimal move count × (1 + slack), rounded up. */
+  budgetSlack: number | null;
+  /** Force a genuine cross-room dependency: the cipher shift lives in room 1 and a cipher lock in room 3; one room-3 item waits in room 1. */
+  crossRoom: boolean;
+  /** 1 = plain Caesar clues; 2 = the cipher text is also written backwards and the shift may be given in Roman numerals. */
+  cipherDepth: number;
+  /** Harmless decoy objects per room, [min, max]. */
+  decoysPerRoom: [number, number];
+  /** Decoys that carry numbers or colours (never referenced by any lock). */
+  redHerrings: boolean;
+  /** Empty hiding places per room (examining them finds nothing). */
+  emptySpots: number;
 }
+
+export const ESCAPE_DEFAULTS: EscapeConfig = {
+  locksPerRoom: [2, 2, 3],
+  moveBudget: 45,
+  budgetSlack: null,
+  crossRoom: false,
+  cipherDepth: 1,
+  decoysPerRoom: [1, 2],
+  redHerrings: false,
+  emptySpots: 0,
+};
 
 export function generateEscape(root: Rng, cfg: EscapeConfig): EscWorld {
   for (let attempt = 0; attempt < 50; attempt++) {
@@ -831,7 +883,12 @@ function tryGenerate(rng: Rng, cfg: EscapeConfig): EscWorld | null {
     tools: rng.shuffle(TOOL_GATES),
     comboGates: rng.shuffle(COMBO_GATES),
     shift: null,
+    cfg,
+    // Cross-room mode keeps the cipher encoders for the last room, where the shift from room 1 is needed.
+    reserved: new Set(cfg.crossRoom ? ['cipherWord', 'cipherDigits'] : []),
+    force: null,
   };
+  const herrings = rng.shuffle(RED_HERRINGS);
   const rooms = rng.shuffle(THEMES).slice(0, 3);
   const doorNames = rng.shuffle(DOOR_NAMES);
   const doorKinds = rng.shuffle(['key', 'code', 'word', 'colour'] as const).slice(0, 3);
@@ -849,13 +906,19 @@ function tryGenerate(rng: Rng, cfg: EscapeConfig): EscWorld | null {
     });
     const locks = Math.max(1, cfg.locksPerRoom[r] ?? 2);
     let containersLeft = locks - 1;
+    if (cfg.crossRoom && exit) {
+      g.reserved.clear();
+      g.force = ['cipherWord', 'cipherDigits'];
+    }
     const queue = lockWith(g, r, door, doorKinds[r]!, containersLeft > 0);
     if (!queue) return null;
 
     while (containersLeft > 0 && queue.length > 0) {
       const itemId = queue.splice(rng.int(0, queue.length - 1), 1)[0]!;
       const wantItem = containersLeft > 1;
-      const kinds = rng.shuffle(['key', 'key', 'code', 'code', 'word', 'colour', 'tool', 'tool', 'combo'] as GateKind[]);
+      let kinds = rng.shuffle(['key', 'key', 'code', 'code', 'word', 'colour', 'tool', 'tool', 'combo'] as GateKind[]);
+      // A forced cipher lock still to place: try the lock kinds that can carry one first.
+      if (g.force) kinds = [...rng.shuffle(['word', 'code'] as GateKind[]), ...kinds];
       let needs: string[] | null = null;
       for (const kind of kinds) {
         needs = makeContainer(g, r, kind, [itemId], wantItem);
@@ -868,15 +931,22 @@ function tryGenerate(rng: Rng, cfg: EscapeConfig): EscWorld | null {
       containersLeft--;
     }
     if (containersLeft > 0) return null;
+    if (cfg.crossRoom && exit && g.force) return null; // the cross-room cipher could not be placed
     // Whatever still needs a home is left loose — sometimes in an earlier room, to be carried forward.
-    for (const itemId of queue) {
-      const home = r > 0 && rng.chance(0.25) ? r - 1 : r;
+    // In cross-room mode one item needed in the last room always waits back in room 1.
+    queue.forEach((itemId, i) => {
+      const home = cfg.crossRoom && exit && i === 0 ? 0 : r > 0 && rng.chance(0.25) ? r - 1 : r;
       placeLoose(g, home, itemId);
+    });
+    // Harmless decoys (some carrying numbers or colours that no lock asks for) and empty hiding places.
+    const [dMin, dMax] = cfg.decoysPerRoom;
+    for (let i = 0, n = rng.int(dMin, dMax); i < n; i++) {
+      const d = cfg.redHerrings && rng.chance(0.5) ? (takeFrom(herrings) ?? takeFrom(g.decoys)) : (takeFrom(g.decoys) ?? takeFrom(herrings));
+      if (d && nameFree(g, d.name)) addObject(g, { name: d.name, kind: 'fixture', rooms: [r], hidden: false, desc: d.desc });
     }
-    // One or two harmless decoys per room.
-    for (let i = 0; i < rng.int(1, 2); i++) {
-      const d = takeFrom(g.decoys);
-      if (d) addObject(g, { name: d.name, kind: 'fixture', rooms: [r], hidden: false, desc: d.desc });
+    for (let i = 0; i < cfg.emptySpots; i++) {
+      const spot = takeFrom(g.hides);
+      if (spot) addObject(g, { name: spot.name, kind: 'fixture', rooms: [r], hidden: false, desc: `${spot.desc} You search it thoroughly: nothing useful.` });
     }
   }
 
@@ -894,6 +964,7 @@ function tryGenerate(rng: Rng, cfg: EscapeConfig): EscWorld | null {
   if (!plan) return null;
   world.plan = plan;
   world.optimal = plan.length;
+  if (cfg.budgetSlack !== null) world.moveBudget = Math.ceil(plan.length * (1 + cfg.budgetSlack));
   return world;
 }
 

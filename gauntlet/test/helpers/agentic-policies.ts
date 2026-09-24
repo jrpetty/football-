@@ -5,7 +5,7 @@
 import { createRng } from '../../src/core/rng.ts';
 import type { Responder } from './fake-model.ts';
 import { generateIsland, type IslandConfig } from '../../src/programs/lib/agentic-island.ts';
-import { generateEscape } from '../../src/programs/lib/agentic-escape.ts';
+import { generateEscape, type EscapeConfig } from '../../src/programs/lib/agentic-escape.ts';
 import {
   competitorPrice,
   generateMarket,
@@ -28,7 +28,7 @@ export function islandResponder(seed: number, cfg: IslandConfig, rescue = true):
 }
 
 /** Escape Room: replays the generated world's optimal plan. */
-export function escapeResponder(seed: number, cfg: { locksPerRoom: number[]; moveBudget: number }): Responder {
+export function escapeResponder(seed: number, cfg: EscapeConfig): Responder {
   const world = generateEscape(createRng(seed), cfg);
   let i = 0;
   return () => `Following my plan.\nACTION: ${world.plan[i++] ?? 'LOOK'}`;
