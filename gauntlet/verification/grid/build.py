@@ -54,7 +54,7 @@ PICKS = [
  dict(id='c09', cfg='lockers', seed=1, d='hard', ask='owner',
       intro="Six lockers are arranged in two rows (top and bottom) and three columns (left, middle and right), giving the top-left, top-middle, top-right, bottom-left, bottom-middle and bottom-right lockers. Each locker belongs to a different person, who plays a different sport, and each locker has a padlock of a different colour.",
       labels={'owner': 'Owners', 'sport': 'Sports (fencer, rower, squash player, archer, judoka, curler)', 'lock': 'Padlock colours'},
-      defs="\"Directly above\" means in the same column and in the row immediately above. \"Immediately to the left of, in the same row\" means in the same row and in the column immediately to the left. \"Shares a side with\" means directly above, directly below, or immediately to the left or right in the same row (lockers that touch only at a corner do not share a side). \"The same row\" and \"the same column\" have their usual meaning.",
+      defs="\"Directly above\" means in the same column and in the row immediately above. \"Immediately to the left of, in the same row\" means in the same row and in the column immediately to the left. \"Shares a side with\" means directly above, directly below, or immediately to the left or right in the same row (lockers that touch only at a corner do not share a side).",
       q="Who owns each locker? List the six owners in this order: top-left, top-middle, top-right, bottom-left, bottom-middle, bottom-right.", pos=None),
  dict(id='c10', cfg='gallery', seed=1, d='hard', ask='artist',
       intro="Six paintings hang in a single row on a gallery wall, on hooks numbered 1 to 6 from left to right. Each painting is by a different artist, shows a different subject and has a different frame.",
@@ -64,31 +64,45 @@ PICKS = [
  dict(id='c11', cfg='lanes', seed=0, d='hard', ask='country',
       intro="Six runners line up in lanes numbered 1 to 6. Each runner is from a different country, wears shoes of a different colour and runs for a different club.",
       labels={'runner': 'Runners', 'country': 'Countries', 'shoes': 'Shoe colours', 'club': 'Clubs'},
-      defs="\"In a lower-numbered lane than\" means any lower lane number (not necessarily adjacent). \"In the lane numbered exactly one lower than\" means what it says. \"In a lane next to\" means the lane numbers differ by exactly 1. \"The lane numbers differ by exactly k\" means the absolute difference of the two lane numbers is k. \"Exactly one of these two statements is true\" means one of them is true and the other is false.",
+      defs="\"In a lower-numbered lane than\" means any lower lane number (not necessarily adjacent). \"In the lane numbered exactly one lower than\" means what it says. \"In a lane next to\" means the lane numbers differ by exactly 1. \"The lane numbers differ by exactly k\" means the absolute difference of the two lane numbers is k.",
       q="Which country is each lane's runner from? List the six countries for lanes 1 to 6, in that order.", pos=None),
  dict(id='c12', cfg='lab', seed=3, d='extreme', ask='scientist',
       intro="Six scientists have offices numbered 1 to 6 along one corridor. Each scientist keeps a different animal in the lab, works on a different project and has been at the institute for a different number of years.",
       labels={'scientist': 'Scientists', 'animal': 'Animals', 'project': 'Projects', 'years': 'Years at the institute'},
-      defs="\"Has a lower office number than\" means any lower office number (not necessarily adjacent). \"Has the office numbered exactly one lower than the office of\" means what it says. \"Has an office next to the office of\" means the office numbers differ by exactly 1. \"The office numbers differ by exactly k\" means the absolute difference of the two office numbers is k. \"Has been at the institute longer than\" compares years; \"exactly k years longer\" means the difference is exactly k years. \"If P, then Q\" is false only when P is true and Q is false; otherwise it is true. \"Of X and Y (two different scientists), one ... and the other ...\" means X and Y are different people, and one of them satisfies the first description while the other satisfies the second.",
+      defs="\"Has a lower office number than\" means any lower office number (not necessarily adjacent). \"Has the office numbered exactly one lower than the office of\" means what it says. \"Has an office next to the office of\" means the office numbers differ by exactly 1. \"The office numbers differ by exactly k\" means the absolute difference of the two office numbers is k. \"Has been at the institute longer than\" compares years; \"exactly k years longer\" means the difference is exactly k years.",
       q="Who has each office? List the six scientists for offices 1 to 6, in that order.", pos=None),
  dict(id='c13', cfg='ferries', seed=4, d='extreme', ask='island',
       intro="Six ferries are docked at piers numbered 1 to 6. Each ferry has a different captain, is bound for a different island, carries a different cargo and has a funnel painted a different colour.",
       labels={'captain': 'Captains', 'island': 'Islands', 'cargo': 'Cargoes', 'funnel': 'Funnel colours'},
-      defs="\"Docked at a lower-numbered pier than\" means any lower pier number (not necessarily adjacent). \"Docked at the pier numbered exactly one lower than\" means what it says. \"Docked at a pier next to\" means the pier numbers differ by exactly 1. \"The pier numbers differ by exactly k\" means the absolute difference of the two pier numbers is k. \"Exactly one of these two statements is true\" means one is true and the other is false. \"If P, then Q\" is false only when P is true and Q is false; otherwise it is true. \"Of X and Y (two different ferries), one ... and the other ...\" means X and Y are different ferries, and one of them satisfies the first description while the other satisfies the second.",
+      defs="\"Docked at a lower-numbered pier than\" means any lower pier number (not necessarily adjacent). \"Docked at the pier numbered exactly one lower than\" means what it says. \"Docked at a pier next to\" means the pier numbers differ by exactly 1. \"The pier numbers differ by exactly k\" means the absolute difference of the two pier numbers is k.",
       q="Which island is each ferry bound for? List the six islands for piers 1 to 6, in that order.", pos=None),
  dict(id='c14', cfg='chess', seed=3, d='extreme', ask='name',
       intro="Six chess club members sit around a round table with seats numbered 1 to 6 in clockwise order. Each member favours a different chess opening, drinks a different drink and comes from a different town.",
       labels={'name': 'Members', 'opening': 'Favourite openings', 'drink': 'Drinks', 'town': 'Towns'},
-      defs="Seat 2 is immediately clockwise from seat 1, seat 3 immediately clockwise from seat 2, and so on, and seat 1 is immediately clockwise from seat 6. \"Sits next to\" means in one of the two seats immediately clockwise or immediately counter-clockwise. \"Sits directly opposite\" means exactly three seats away (1 and 4, 2 and 5, 3 and 6). \"Exactly one of these two statements is true\" means one is true and the other is false. \"If P, then Q\" is false only when P is true and Q is false; otherwise it is true. \"Of X and Y (two different members), one ... and the other ...\" means X and Y are different people, and one of them satisfies the first description while the other satisfies the second.",
+      defs="Seat 2 is immediately clockwise from seat 1, seat 3 immediately clockwise from seat 2, and so on, and seat 1 is immediately clockwise from seat 6. \"Sits next to\" means in one of the two seats immediately clockwise or immediately counter-clockwise. \"Sits directly opposite\" means exactly three seats away (1 and 4, 2 and 5, 3 and 6).",
       q="Who sits in each seat? List the six members for seats 1 to 6, in that order.", pos=None),
  dict(id='c15', cfg='cabins', seed=0, d='extreme', ask='guest',
       intro="Six holiday cabins are arranged in three rows (north, middle and south) and two columns (west and east), giving the north-west, north-east, middle-west, middle-east, south-west and south-east cabins. Each cabin has a different guest, who chose a different activity and ordered a different breakfast, and each cabin has a door of a different colour.",
       labels={'guest': 'Guests', 'activity': 'Activities', 'breakfast': 'Breakfasts', 'door': 'Door colours'},
-      defs="\"Directly north of\" means in the same column and in the row immediately to the north. \"Directly west of, in the same row\" means in the same row and in the west column while the other is in the east column. \"Shares a wall with\" means directly north or south in the same column, or directly west or east in the same row (cabins touching only at a corner do not share a wall). \"The same row\", \"different rows\" and \"the same column\" have their usual meaning. \"Exactly one of these two statements is true\" means one is true and the other is false. \"If P, then Q\" is false only when P is true and Q is false; otherwise it is true. \"Of X and Y (two different cabins), one ... and the other ...\" means X and Y are different cabins, and one of them satisfies the first description while the other satisfies the second.",
+      defs="\"Directly north of\" means in the same column and in the row immediately to the north. \"Directly west of, in the same row\" means in the same row and in the west column while the other is in the east column. \"Shares a wall with\" means directly north or south in the same column, or directly west or east in the same row (cabins touching only at a corner do not share a wall).",
       q="Whose cabin is whose? List the six guests in this order: north-west, north-east, middle-west, middle-east, south-west, south-east.", pos=None),
 ]
 
-GENERIC_EXTRA = "\"Exactly one of these two statements is true\" means one is true and the other is false. \"If P, then Q\" is false only when P is true and Q is false; otherwise it is true."
+def conventions(kinds, people):
+    out = []
+    if 'notadj' in kinds:
+        out.append(f"A negative adjacency clue (one saying that X is not next to Y, or that X does not share a side or wall with Y) also tells you that X and Y are two different {people}.")
+    if 'samerow' in kinds or 'samecol' in kinds or 'diffrow' in kinds:
+        out.append(f"\"X and Y are two different {people} in the same row/column\" means exactly that; \"X and Y are in different rows\" means their rows differ.")
+    if 'xor' in kinds:
+        out.append("\"Exactly one of these two statements is true\" means one of the two statements is true and the other is false. Some of these clues pair two statements that could never both be true (for example because they name two different values from the same category); that is intentional, and such a clue then simply tells you that one of the two statements is true.")
+    if 'ifthen' in kinds:
+        out.append("\"If P, then Q\" is false only when P is true and Q is false; otherwise it is true (in particular it is true whenever P is false).")
+    if 'ofxy' in kinds:
+        out.append(f"\"Of X and Y (two different {people}), one ... and the other ...\" means X and Y are two different {people}, one of whom satisfies the first description while the other satisfies the second.")
+    if 'numgt' in kinds or 'numdiff' in kinds:
+        pass
+    return out
 
 
 def build_case(p):
@@ -122,10 +136,11 @@ def build_case(p):
     assert ans != disp(p['ask']) and ans != disp(p['ask'])[::-1], ('answer order leaks from listing', p['id'])
     defs = p['defs']
     kinds = {c.kind for c in clues}
-    if ('xor' in kinds or 'ifthen' in kinds) and 'Exactly one of these two' not in defs:
-        defs += ' ' + GENERIC_EXTRA
-    if 'ofxy' in kinds and 'Of X and Y' not in defs:
-        defs += " \"Of X and Y (two different ...), one ... and the other ...\" means X and Y are different, and one of them satisfies the first description while the other satisfies the second."
+    conv = conventions(kinds, th.extra.get('people', 'people'))
+    if conv:
+        defs += ' ' + ' '.join(conv)
+    for phrase in ['If P, then Q', 'Exactly one of these two', 'Of X and Y']:
+        assert defs.count(phrase) <= 1, (p['id'], phrase)
     unit = {'name': 'names', 'owner': 'names', 'dog': 'dog breeds', 'food': 'foods', 'topic': 'topics', 'destination': 'destinations',
             'age': 'ages', 'artist': 'names', 'country': 'countries', 'scientist': 'names', 'island': 'island names', 'guest': 'names'}[p['ask']]
     prompt = (

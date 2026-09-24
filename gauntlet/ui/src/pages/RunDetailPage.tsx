@@ -81,6 +81,11 @@ export default function RunDetailPage({ runId }: { runId: string }) {
                 <Icon.Broadcast /> {d.active ? 'Live arena' : 'Finish line'}
               </Link>
             )}
+            {d.results.length > 0 && (
+              <Link to={pathOf('present', runId)} className="btn" title="Episode presenter: full-screen slides for recording">
+                <Icon.Present /> Present
+              </Link>
+            )}
             {resumable && (
               <button className="btn primary" onClick={() => setResumeOpen(true)} disabled={busy}>
                 <Icon.Refresh /> Resume

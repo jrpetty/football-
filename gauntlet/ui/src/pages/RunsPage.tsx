@@ -212,6 +212,11 @@ export default function RunsPage() {
                               <Icon.Refresh /> Resume
                             </button>
                           )}
+                          {r.completedJobs > 0 && (
+                            <Link to={pathOf('present', r.id)} className="btn xs" title="Episode presenter: full-screen slides for recording" aria-label={`Present ${r.name}`}>
+                              <Icon.Present /> Present
+                            </Link>
+                          )}
                           <Link to={pathOf('runs', r.id)} className="btn xs">
                             Open
                           </Link>

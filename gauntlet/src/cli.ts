@@ -477,8 +477,13 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch(async (err) => {
-  console.error(c.red(`Error: ${(err as Error).message}`));
-  await closeBrowser();
-  process.exit(1);
-});
+main()
+  .then(async () => {
+    // The dashboard server keeps running; every other command must not be held open by the headless browser.
+    if (process.argv[2] !== 'serve') await closeBrowser();
+  })
+  .catch(async (err) => {
+    console.error(c.red(`Error: ${(err as Error).message}`));
+    await closeBrowser();
+    process.exit(1);
+  });

@@ -194,8 +194,8 @@ def t_lockers():
         'notadj': 'does not share a side with',
         'above': lambda X, Y: f"{X} is directly above {Y}.",
         'gimmleft': lambda X, Y: f"{X} is immediately to the left of {Y}, in the same row.",
-        'samerow': lambda X, Y: f"{X} and {Y} are in the same row.",
-        'samecol': lambda X, Y: f"{X} and {Y} are in the same column.",
+        'samerow': lambda X, Y: f"{X} and {Y} are two different lockers in the same row.",
+        'samecol': lambda X, Y: f"{X} and {Y} are two different lockers in the same column.",
         'diffrow': lambda X, Y: f"{X} and {Y} are in different rows.",
         'people': 'lockers',
     }
@@ -322,8 +322,8 @@ def t_cabins():
         'notadj': 'does not share a wall with',
         'above': lambda X, Y: f"{X} is directly north of {Y}.",
         'gimmleft': lambda X, Y: f"{X} is directly west of {Y}, in the same row.",
-        'samerow': lambda X, Y: f"{X} and {Y} are in the same row.",
-        'samecol': lambda X, Y: f"{X} and {Y} are in the same column.",
+        'samerow': lambda X, Y: f"{X} and {Y} are two different cabins in the same row.",
+        'samecol': lambda X, Y: f"{X} and {Y} are two different cabins in the same column.",
         'diffrow': lambda X, Y: f"{X} and {Y} are in different rows.",
         'people': 'cabins',
     }

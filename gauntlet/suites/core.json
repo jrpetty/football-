@@ -1,0 +1,72 @@
+{
+  "id": "core",
+  "version": "1.0.0",
+  "name": "Core Gauntlet",
+  "description": "The official benchmark: every built-in test across all 11 categories, fixed prompts and seeds. Use this (with 3 repeats) for published results.",
+  "repeats": 3,
+  "tests": [
+    {
+      "id": "reasoning.deduction-grid"
+    },
+    {
+      "id": "reasoning.truth-tellers"
+    },
+    {
+      "id": "reasoning.planning"
+    },
+    {
+      "id": "math.competition"
+    },
+    {
+      "id": "math.word-problems"
+    },
+    {
+      "id": "coding.algorithms"
+    },
+    {
+      "id": "coding.debug-and-edge-cases"
+    },
+    {
+      "id": "coding.hard"
+    },
+    {
+      "id": "instruction.precision-formatting"
+    },
+    {
+      "id": "instruction.system-prompt-adherence"
+    },
+    {
+      "id": "honesty.honesty-trap"
+    },
+    {
+      "id": "extraction.structured-json"
+    },
+    {
+      "id": "creative.one-shot-games"
+    },
+    {
+      "id": "visual.svg-illustration"
+    },
+    {
+      "id": "visual.draw-it-blind"
+    },
+    {
+      "id": "long-context.needle-haystack"
+    },
+    {
+      "id": "long-context.chain-of-whispers"
+    },
+    {
+      "id": "agentic.survival-island"
+    },
+    {
+      "id": "agentic.escape-room"
+    },
+    {
+      "id": "agentic.startup-sim"
+    },
+    {
+      "id": "social.liars-table"
+    }
+  ]
+}

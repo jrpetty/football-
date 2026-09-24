@@ -575,6 +575,11 @@ export default function LiveArenaPage({ runId }: { runId: string }) {
             <span className="k">ETA</span>
             <span className="v tnum">{eta === null ? '—' : fmtClock(eta)}</span>
           </div>
+          {s.completed > 0 && (
+            <Link to={pathOf('present', runId)} className="btn no-broadcast" title="Episode presenter: full-screen slides for recording">
+              <Icon.Present /> Present
+            </Link>
+          )}
           {active ? (
             <button className="btn danger no-broadcast" onClick={() => setConfirm(true)}>
               <Icon.Stop /> Cancel

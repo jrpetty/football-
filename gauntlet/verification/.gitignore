@@ -1,0 +1,6 @@
+# Large regenerated dumps (recreate them with the generators)
+**/fuzz.json
+**/cross.json
+coding/**/tests.json
+**/*.log
+__pycache__/

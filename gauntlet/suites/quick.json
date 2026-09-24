@@ -1,0 +1,124 @@
+{
+  "id": "quick",
+  "version": "1.0.0",
+  "name": "Quick Look",
+  "description": "A cheap first look at a model: one or two of the harder cases from almost every test, plus The Startup and The Liar’s Table (one seed each). Survival Island, Escape Room and the long-context haystack are left out to keep it cheap. Try new models here before a full Core run.",
+  "repeats": 1,
+  "tests": [
+    {
+      "id": "reasoning.deduction-grid",
+      "cases": [
+        "c10"
+      ]
+    },
+    {
+      "id": "reasoning.truth-tellers",
+      "cases": [
+        "c09"
+      ]
+    },
+    {
+      "id": "reasoning.planning",
+      "cases": [
+        "p11"
+      ]
+    },
+    {
+      "id": "math.competition",
+      "cases": [
+        "c14",
+        "c18"
+      ]
+    },
+    {
+      "id": "math.word-problems",
+      "cases": [
+        "w12",
+        "w16"
+      ]
+    },
+    {
+      "id": "coding.algorithms",
+      "cases": [
+        "a8"
+      ]
+    },
+    {
+      "id": "coding.debug-and-edge-cases",
+      "cases": [
+        "e4"
+      ]
+    },
+    {
+      "id": "coding.hard",
+      "cases": [
+        "h1"
+      ]
+    },
+    {
+      "id": "instruction.precision-formatting",
+      "cases": [
+        "f07",
+        "f13"
+      ]
+    },
+    {
+      "id": "instruction.system-prompt-adherence",
+      "cases": [
+        "s09",
+        "s11"
+      ]
+    },
+    {
+      "id": "honesty.honesty-trap",
+      "cases": [
+        "r09",
+        "r12",
+        "t11",
+        "t16"
+      ]
+    },
+    {
+      "id": "extraction.structured-json",
+      "cases": [
+        "e07"
+      ]
+    },
+    {
+      "id": "creative.one-shot-games",
+      "cases": [
+        "g02"
+      ]
+    },
+    {
+      "id": "visual.svg-illustration",
+      "cases": [
+        "v02"
+      ]
+    },
+    {
+      "id": "visual.draw-it-blind",
+      "cases": [
+        "seed-101"
+      ]
+    },
+    {
+      "id": "long-context.chain-of-whispers",
+      "cases": [
+        "seed-404"
+      ]
+    },
+    {
+      "id": "agentic.startup-sim",
+      "cases": [
+        "seed-101"
+      ]
+    },
+    {
+      "id": "social.liars-table",
+      "cases": [
+        "seed-303"
+      ]
+    }
+  ]
+}
