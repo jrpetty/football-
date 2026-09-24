@@ -1276,7 +1276,9 @@
   gap: 14px;
 }
 .fs-num {
-  width: 100px;
+  /* Wide enough for "100.0" at this size, so the number never runs into its bar. */
+  flex: none;
+  width: 132px;
   font-size: 42px;
   font-weight: 850;
   text-align: right;
