@@ -183,7 +183,7 @@ Gauntlet Indexes are never mixed.
   markets, more liars, hyphen-proof Draw It Blind). Small models are expected to score close to zero here.
 
 Every answer key in both tiers is machine-checked (solvers and generators live in `verification/`), and each
-test was blind-played by models that saw only the prompt.
+test was blind-played by models that saw only the prompt (results in [AUDIT.md](AUDIT.md)).
 
 ## 8. The random baseline
 

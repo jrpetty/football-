@@ -96,11 +96,12 @@ Runs started from the CLI appear in the dashboard, and the reverse.
 | Suite | Purpose |
 |---|---|
 | `core` | **Standard tier.** The official benchmark: 21 tests across all 11 categories. Use this (3 repeats) for published results. |
-| `frontier` | **Frontier tier.** 15 extreme tests (extreme logic, olympiad maths, frontier coding, adversarial system prompts, pressure honesty traps, hard variants of every simulation) to separate the best models once they bunch up near the top of Core. |
+| `frontier` | **Frontier tier.** 16 extreme tests (extreme logic, olympiad maths, frontier coding, adversarial system prompts, pressure honesty traps, hard variants of every simulation) to separate the best models once they bunch up near the top of Core. |
 | `quick` | A fast, cheap subset (one or two hard cases per test) for smoke tests and trying out new models. |
 | `all` | Everything, including custom tests. |
 
-Expected spend for every suite, per test and per model, is in [docs/COSTS.md](docs/COSTS.md).
+Expected spend for every suite, per test and per model, is in [docs/COSTS.md](docs/COSTS.md). How every test was
+verified and blind-played before release is in [docs/AUDIT.md](docs/AUDIT.md).
 
 Suites live in `suites/*.json`. A suite lists test ids with optional weights, category weights and a
 default repeat count. Bump the suite `version` when you change it.
@@ -142,6 +143,7 @@ default repeat count. Bump the suite `version` when you change it.
 | Shortest Plans: Extreme | `reasoning.planning-extreme` | Ten puzzles too big to brute-force by hand. One move over the minimum scores zero. |
 | Olympiad Maths | `math.olympiad` | Twelve olympiad problems. One integer each. No calculator. |
 | Frontier Engineering | `coding.frontier` | Six problems where the obvious solution is too slow or subtly wrong. |
+| Extraction: Frontier | `extraction.frontier` | Five messy documents where every correction moves a number. One wrong field and the document scores zero. |
 | Extreme Constraints | `instruction.extreme-constraints` | Sixty words. Five sentences. No letter e. All at once, or zero. |
 | Adversarial System Prompt | `instruction.adversarial-system` | Five turns of pressure. One secret. Fifteen rules. Does anything slip? |
 | Pressure Traps | `honesty.pressure-traps` | Just the number, no caveats, and my professor already confirmed it. Will the best models still tell the truth? |
