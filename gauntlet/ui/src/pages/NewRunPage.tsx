@@ -224,6 +224,7 @@ export default function NewRunPage() {
   const [picked, setPicked] = useState<Set<string>>(() => new Set(presetTests ? presetTests.split(',').filter(Boolean) : []));
   const [selected, setSelected] = useState<Set<string> | null>(null);
   const [repeats, setRepeats] = useState<number | null>(null);
+  const [repeatsTouched, setRepeatsTouched] = useState(false);
   const [concurrency, setConcurrency] = useState<number | null>(null);
   const [temperature, setTemperature] = useState<number | null>(null);
   const [judges, setJudges] = useState<string[] | null>(null);
@@ -249,9 +250,11 @@ export default function NewRunPage() {
       setJudges((v) => v ?? meta.settings.judges);
     }
   }, [meta]);
+  // Follow the suite's default repeats until the user picks a value.
   useEffect(() => {
-    setRepeats((v) => v ?? suite?.repeats ?? meta?.settings.defaultRepeats ?? 1);
-  }, [suite, meta]);
+    if (!data.data || repeatsTouched) return;
+    setRepeats(mode === 'suite' ? suite?.repeats ?? meta?.settings.defaultRepeats ?? 1 : meta?.settings.defaultRepeats ?? 1);
+  }, [data.data, suite, meta, mode, repeatsTouched]);
 
   const cap = capText.trim() === '' ? null : Number(capText);
   const capValid = cap === null || (Number.isFinite(cap) && cap > 0);
@@ -515,7 +518,8 @@ export default function NewRunPage() {
                             <strong className="ellipsis">{c.label}</strong>
                           </div>
                           <div className="muted ellipsis" style={{ fontSize: '0.78rem' }}>
-                            {c.vendor} · {c.providerLabel}
+                            {c.vendor}
+                            {c.providerLabel && c.providerLabel !== c.vendor ? ` · ${c.providerLabel}` : ''}
                           </div>
                           <div className="mono muted ellipsis" style={{ fontSize: '0.72rem' }}>
                             {c.model}
@@ -568,8 +572,23 @@ export default function NewRunPage() {
                 <div className="form-grid">
                   <Field label={`Repeats · ${repeats ?? 1}×`} hint="Each case runs this many times. 3+ gives meaningful 95% CIs." htmlFor="nr-repeats">
                     <div className="row">
-                      <input id="nr-repeats" type="range" min={1} max={10} value={repeats ?? 1} onChange={(e) => setRepeats(Number(e.target.value))} />
-                      <input className="input sm tnum" style={{ width: 64 }} type="number" min={1} max={10} value={repeats ?? 1} onChange={(e) => setRepeats(Math.max(1, Math.min(10, Number(e.target.value) || 1)))} aria-label="Repeats" />
+                      <input
+                        id="nr-repeats"
+                        type="range"
+                        min={1}
+                        max={10}
+                        value={repeats ?? 1}
+                        onChange={(e) => {
+                          setRepeatsTouched(true);
+                          setRepeats(Number(e.target.value));
+                        }}
+                      />
+                      <input className="input sm tnum" style={{ width: 64 }} type="number" min={1} max={10} value={repeats ?? 1} onChange={(e) => {
+                          setRepeatsTouched(true);
+                          setRepeats(Math.max(1, Math.min(10, Number(e.target.value) || 1)));
+                        }}
+                        aria-label="Repeats"
+                      />
                     </div>
                   </Field>
                   <Field label="Concurrency" hint="Parallel jobs across the run (providers also cap their own)." htmlFor="nr-conc">

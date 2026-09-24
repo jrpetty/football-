@@ -1,0 +1,322 @@
+{
+  "kind": "prompt",
+  "id": "extraction.structured-json",
+  "version": "1.0.0",
+  "name": "Messy Text to Exact JSON",
+  "category": "extraction",
+  "description": "Invoices, email threads, triage notes, cargo manifests, meeting notes, job ads, receipts and leases with the traps real documents contain: corrections, reschedules, retracted facts, DD/MM dates, unit conversions and relative dates. Each leaf field is scored, so careless readers lose points on exactly the details that matter in production.",
+  "difficulty": "medium",
+  "tags": [
+    "extraction",
+    "json",
+    "information-extraction",
+    "dates",
+    "units"
+  ],
+  "hook": "Eight messy documents, one exact JSON schema. Every field is checked.",
+  "maxOutputTokens": 8000,
+  "estimate": {
+    "inputTokens": 635,
+    "outputTokens": 2500
+  },
+  "author": "Gauntlet Core",
+  "createdAt": "2026-09-24",
+  "scorer": {
+    "type": "json",
+    "numberTolerance": 0.005
+  },
+  "cases": [
+    {
+      "id": "e01",
+      "prompt": "Extract the invoice below into JSON that follows the schema exactly.\n\nDocument:\n<<<\nNORTHWIND FABRICATION LTD.\nUnit 4, Harbour Trading Estate, Cardiff CF10 4XX\nVAT Reg: GB 294 1177 03\n\nTAX INVOICE                          Invoice No.: NF-2026-00417\nInvoice date: 03/08/2026             (all dates on this invoice are DD/MM/YYYY)\nPrinted: 05/08/2026 14:22\nCustomer: Bellweather Theatre Company\nAttn: Accounts Payable   -   Your PO ref: BTC-7781\nPayment terms: 30 days from invoice date\n\nItem  Description                      Qty   Unit price   Amount\n----  -------------------------------  ----  -----------  ---------\nA12   Steel stage brackets              24    £18.50       £444.00\nB07   Powder coating (per bracket)      24    £4.25        £102.00\nC33   Site installation (hours)          9    £45.00       £405.00 *\nD02   Delivery                           1    £35.00       £35.00\n\n* Correction: 1 hour of installation was waived, so only 8 hours are billed at the agreed rate. Corrected amount £360.00.\n\nSubtotal (after correction)                             £941.00\nVAT @ 20%                                               £188.20\nTOTAL DUE                                               £1,129.20\n\nPlease quote the invoice number with your remittance. Late payments incur interest of 2% per month.\n>>>\n\nSchema:\n{\n  \"invoice_number\": string,\n  \"invoice_date\": \"YYYY-MM-DD\",\n  \"due_date\": \"YYYY-MM-DD\",              // invoice date plus the payment-terms period\n  \"vendor_name\": string,                 // exactly as printed in the header\n  \"customer_name\": string,\n  \"purchase_order\": string or null,\n  \"currency\": string,                    // ISO 4217 code, e.g. \"EUR\"\n  \"line_items\": [                        // in the order they appear\n    { \"item_code\": string, \"quantity\": number, \"unit_price\": number, \"line_total\": number }\n  ],\n  \"subtotal\": number,\n  \"tax_rate_percent\": number,\n  \"tax_amount\": number,\n  \"total\": number\n}\n\nOutput rules: respond with ONLY the JSON object (you may wrap it in a ```json code block), with exactly the keys listed, in any key order. Use JSON numbers (not strings) for numeric fields, with no currency symbols, units or thousands separators. Use null where the schema allows it and the value is not given. Use ISO dates YYYY-MM-DD. Where the document states a correction or a change, use the corrected / final value. Do not add explanations.",
+      "expected": {
+        "invoice_number": "NF-2026-00417",
+        "invoice_date": "2026-08-03",
+        "due_date": "2026-09-02",
+        "vendor_name": "Northwind Fabrication Ltd.",
+        "customer_name": "Bellweather Theatre Company",
+        "purchase_order": "BTC-7781",
+        "currency": "GBP",
+        "line_items": [
+          {
+            "item_code": "A12",
+            "quantity": 24,
+            "unit_price": 18.5,
+            "line_total": 444.0
+          },
+          {
+            "item_code": "B07",
+            "quantity": 24,
+            "unit_price": 4.25,
+            "line_total": 102.0
+          },
+          {
+            "item_code": "C33",
+            "quantity": 8,
+            "unit_price": 45.0,
+            "line_total": 360.0
+          },
+          {
+            "item_code": "D02",
+            "quantity": 1,
+            "unit_price": 35.0,
+            "line_total": 35.0
+          }
+        ],
+        "subtotal": 941.0,
+        "tax_rate_percent": 20,
+        "tax_amount": 188.2,
+        "total": 1129.2
+      },
+      "notes": "[medium] Traps: DD/MM/YYYY dates, printed date vs invoice date, line C33 printed as 9 h = £405 but corrected to 8 h = £360 (use corrected quantity and total). Due date 2026-08-03+30 days = 2026-09-02. Subtotal/VAT/total recomputed in code (941.00 / 188.20 / 1129.20)."
+    },
+    {
+      "id": "e02",
+      "prompt": "Read the email thread below and extract the FINAL agreed meeting details into JSON that follows the schema exactly.\n\nDocument:\n<<<\nFrom: Priya Raman <priya.raman@kestrel-labs.io>\nTo: Tomasz Zielinski <t.zielinski@kestrel-labs.io>; Amara Okafor <amara@okafor-design.com>\nSent: Mon 14 Sep 2026 09:12 (UTC+2)\nSubject: Q4 roadmap review\n\nHi both - can we do the Q4 roadmap review on Tuesday 22 September, 15:00-16:30 my time (UTC+2)? Room: Atlas (3rd floor).\n\n----------\nFrom: Amara Okafor <amara@okafor-design.com>\nSent: Mon 14 Sep 2026 10:40 (UTC+1)\nSubject: RE: Q4 roadmap review\n\nTuesday doesn't work for me, sorry. Thursday the 24th at the same time Priya proposed would be fine.\n\n----------\nFrom: Priya Raman <priya.raman@kestrel-labs.io>\nSent: Mon 14 Sep 2026 11:05 (UTC+2)\nSubject: RE: Q4 roadmap review\n\nOK - not Tuesday but Thursday 24 September then, at the time I originally proposed. Atlas is booked that day, so we'll use the Juniper room (2nd floor) instead. Let's keep it to 60 minutes rather than 90. I'm also adding Wen Li (wen.li@kestrel-labs.io) as an optional attendee.\n\n----------\nFrom: Tomasz Zielinski <t.zielinski@kestrel-labs.io>\nSent: Mon 14 Sep 2026 11:30 (UTC+2)\nSubject: RE: Q4 roadmap review\n\nWorks for me. I'll dial in remotely from Warsaw.\n>>>\n\nSchema:\n{\n  \"title\": string,                     // the subject line without any \"RE:\" prefix\n  \"date\": \"YYYY-MM-DD\",\n  \"start_time_utc\": \"HH:MM\",           // 24-hour clock, UTC\n  \"end_time_utc\": \"HH:MM\",\n  \"duration_minutes\": number,\n  \"room\": string,                      // room name only, e.g. \"Atlas\"\n  \"organizer_email\": string,\n  \"required_attendees\": [string],      // email addresses of everyone expected (not optional), INCLUDING the organizer, sorted alphabetically\n  \"optional_attendees\": [string],      // email addresses, sorted alphabetically\n  \"remote_attendees\": [string]         // email addresses of people who said they will join remotely, sorted alphabetically\n}\n\nOutput rules: respond with ONLY the JSON object (you may wrap it in a ```json code block), with exactly the keys listed, in any key order. Use JSON numbers (not strings) for numeric fields, with no currency symbols, units or thousands separators. Use null where the schema allows it and the value is not given. Use ISO dates YYYY-MM-DD. Where the document states a correction or a change, use the corrected / final value. Do not add explanations.",
+      "expected": {
+        "title": "Q4 roadmap review",
+        "date": "2026-09-24",
+        "start_time_utc": "13:00",
+        "end_time_utc": "14:00",
+        "duration_minutes": 60,
+        "room": "Juniper",
+        "organizer_email": "priya.raman@kestrel-labs.io",
+        "required_attendees": [
+          "amara@okafor-design.com",
+          "priya.raman@kestrel-labs.io",
+          "t.zielinski@kestrel-labs.io"
+        ],
+        "optional_attendees": [
+          "wen.li@kestrel-labs.io"
+        ],
+        "remote_attendees": [
+          "t.zielinski@kestrel-labs.io"
+        ]
+      },
+      "notes": "[medium] Traps: 'not Tuesday but Thursday'; 'the time I originally proposed' = 15:00 UTC+2 = 13:00 UTC (Amara writes from UTC+1 but refers to Priya's time); 90 -> 60 minutes so end is 14:00 UTC; room changed Atlas -> Juniper; organizer included in required list; 2026-09-24 is a Thursday (checked)."
+    },
+    {
+      "id": "e03",
+      "prompt": "Extract the (fictional) triage note below into JSON that follows the schema exactly.\n\nDocument:\n<<<\nED triage note - 2026-07-19 23:48\nPt: 67 y/o male. Wt 176 lb (pt-reported); scale reading 81.2 kg - use scale value. Temp 101.3 F oral. HR 104, BP 142/88, SpO2 94% on room air.\nAllergies: penicillin (rash). NKFA. Pt initially said \"sulfa\" but his daughter clarified that is HER allergy, not his - removed.\nCurrent meds: metformin 500 mg twice daily; lisinopril 10 mg once daily; atorvastatin 40 mg at night.\nAspirin 81 mg daily was stopped two weeks ago on cardiology advice.\nPMH: T2DM, HTN.\nPlan: CXR, CBC, blood cultures x2. Admit to obs.\n>>>\n\nSchema:\n{\n  \"age_years\": number,\n  \"sex\": \"male\" or \"female\",\n  \"weight_kg\": number,                 // one decimal place\n  \"temperature_c\": number,             // degrees Celsius, one decimal place (convert if needed)\n  \"heart_rate_bpm\": number,\n  \"systolic_bp\": number,\n  \"diastolic_bp\": number,\n  \"spo2_percent\": number,\n  \"drug_allergies\": [string],          // lowercase generic names, in order of appearance\n  \"active_medications\": [              // medications the patient currently takes, in order of appearance\n    { \"name\": string, \"dose_mg\": number, \"times_per_day\": number }   // name in lowercase\n  ],\n  \"discontinued_medications\": [string] // lowercase names\n}\n\nOutput rules: respond with ONLY the JSON object (you may wrap it in a ```json code block), with exactly the keys listed, in any key order. Use JSON numbers (not strings) for numeric fields, with no currency symbols, units or thousands separators. Use null where the schema allows it and the value is not given. Use ISO dates YYYY-MM-DD. Where the document states a correction or a change, use the corrected / final value. Do not add explanations.",
+      "expected": {
+        "age_years": 67,
+        "sex": "male",
+        "weight_kg": 81.2,
+        "temperature_c": 38.5,
+        "heart_rate_bpm": 104,
+        "systolic_bp": 142,
+        "diastolic_bp": 88,
+        "spo2_percent": 94,
+        "drug_allergies": [
+          "penicillin"
+        ],
+        "active_medications": [
+          {
+            "name": "metformin",
+            "dose_mg": 500,
+            "times_per_day": 2
+          },
+          {
+            "name": "lisinopril",
+            "dose_mg": 10,
+            "times_per_day": 1
+          },
+          {
+            "name": "atorvastatin",
+            "dose_mg": 40,
+            "times_per_day": 1
+          }
+        ],
+        "discontinued_medications": [
+          "aspirin"
+        ]
+      },
+      "notes": "[medium] Traps: two weights (use scale 81.2 kg, not 176 lb = 79.8 kg); 101.3 F = 38.5 C exactly ((101.3-32)*5/9, checked in code); sulfa allergy retracted; NKFA is not a drug allergy; aspirin discontinued; 'at night' = once daily."
+    },
+    {
+      "id": "e04",
+      "prompt": "Extract the cargo manifest below into JSON that follows the schema exactly.\n\nDocument:\n<<<\nMANIFEST - MV CORAL DAWN - Voyage 26W11\nPort of loading: Valencia (ESVLC)      Port of discharge: Haifa (ILHFA)\nETD 2026-10-02     ETA 2026-10-07\n\nCntr No.        Type   Gross wt     Contents                   Haz\nMSKU 204113-7   40HC   18,450 kg    Ceramic tiles              N\nTGHU 551920-3   20GP   22,300 lb    Olive oil (drums)          N\nCAIU 778015-0   20GP   9,870 kg     Lithium batteries          Y (UN3480, class 9)\nMSKU 204114-2   40HC   -            EMPTY - repositioning      N\nTEMU 330671-9   40RF   26,000 lb    Frozen fish                N\n\nNote: the gross weight for TGHU 551920-3 was mis-keyed; the correct gross weight is 23,200 lb.\n>>>\n\nSchema:\n{\n  \"vessel_name\": string,                // without the \"MV\" prefix\n  \"voyage\": string,\n  \"port_of_loading\": string,            // UN/LOCODE, e.g. \"NLRTM\"\n  \"port_of_discharge\": string,          // UN/LOCODE\n  \"departure_date\": \"YYYY-MM-DD\",\n  \"arrival_date\": \"YYYY-MM-DD\",\n  \"containers\": [                       // in the order listed\n    {\n      \"container_number\": string,       // letters and digits only, no spaces or hyphens, e.g. \"ABCU1234567\"\n      \"type\": string,                   // e.g. \"20GP\"\n      \"empty\": boolean,\n      \"gross_weight_kg\": number or null,  // convert pounds with 1 lb = 0.45359237 kg and round to the nearest whole kg; null if no weight is given\n      \"hazardous\": boolean,\n      \"un_number\": string or null       // e.g. \"UN1234\", null if not hazardous\n    }\n  ],\n  \"total_gross_weight_kg\": number,      // sum of the rounded gross_weight_kg values of all containers that have a weight\n  \"hazardous_container_count\": number\n}\n\nOutput rules: respond with ONLY the JSON object (you may wrap it in a ```json code block), with exactly the keys listed, in any key order. Use JSON numbers (not strings) for numeric fields, with no currency symbols, units or thousands separators. Use null where the schema allows it and the value is not given. Use ISO dates YYYY-MM-DD. Where the document states a correction or a change, use the corrected / final value. Do not add explanations.",
+      "expected": {
+        "vessel_name": "Coral Dawn",
+        "voyage": "26W11",
+        "port_of_loading": "ESVLC",
+        "port_of_discharge": "ILHFA",
+        "departure_date": "2026-10-02",
+        "arrival_date": "2026-10-07",
+        "containers": [
+          {
+            "container_number": "MSKU2041137",
+            "type": "40HC",
+            "empty": false,
+            "gross_weight_kg": 18450,
+            "hazardous": false,
+            "un_number": null
+          },
+          {
+            "container_number": "TGHU5519203",
+            "type": "20GP",
+            "empty": false,
+            "gross_weight_kg": 10523,
+            "hazardous": false,
+            "un_number": null
+          },
+          {
+            "container_number": "CAIU7780150",
+            "type": "20GP",
+            "empty": false,
+            "gross_weight_kg": 9870,
+            "hazardous": true,
+            "un_number": "UN3480"
+          },
+          {
+            "container_number": "MSKU2041142",
+            "type": "40HC",
+            "empty": true,
+            "gross_weight_kg": null,
+            "hazardous": false,
+            "un_number": null
+          },
+          {
+            "container_number": "TEMU3306719",
+            "type": "40RF",
+            "empty": false,
+            "gross_weight_kg": 11793,
+            "hazardous": false,
+            "un_number": null
+          }
+        ],
+        "total_gross_weight_kg": 50636,
+        "hazardous_container_count": 1
+      },
+      "notes": "[hard] Traps: corrected TGHU weight 23,200 lb -> 10523 kg (22,300 lb would give 10115); 26,000 lb -> 11793 kg; empty container has no weight (null) and is excluded from the total; total = 18450+10523+9870+11793 = 50636 (computed with Decimal). Container numbers normalised by removing spaces/hyphens."
+    },
+    {
+      "id": "e05",
+      "prompt": "Extract the meeting notes below into JSON that follows the schema exactly.\n\nDate rules: resolve every relative date against the meeting date. \"Next <weekday>\" and a bare weekday name (e.g. \"Monday\") both mean the first such weekday strictly after the meeting date. \"End of this month\" means the last calendar day of the meeting's month. \"N weeks from today\" means the meeting date plus 7 x N days.\n\nDocument:\n<<<\nOps sync - Wednesday 2026-03-11 (notes: Dana Whitfield)\nPresent: Dana Whitfield, Marco Bellini, Ines Carvalho, Raj Patel (joined late)\nApologies: Tom Hughes\n\n1. Warehouse move - Marco to get three quotes by next Friday. Ines offered to help, but Marco owns this.\n2. Q1 audit - Raj will send the audit pack to Finance by end of this month.\n3. Onboarding doc - Ines to update it. Originally due tomorrow; pushed back to Monday.\n4. Offsite venue - Dana booked it during the meeting. DONE.\n5. Supplier contract renewal - owner TBD, due 2026-04-15.\n\nNext meeting: two weeks from today, same time.\n>>>\n\nSchema:\n{\n  \"meeting_date\": \"YYYY-MM-DD\",\n  \"note_taker\": string,                 // full name\n  \"attendees\": [string],                // full names of people present, in the order listed\n  \"action_items\": [                     // one per numbered item, in order\n    {\n      \"item\": number,                   // the item's number in the notes\n      \"owner\": string or null,          // full name, or null if no owner has been assigned\n      \"due_date\": \"YYYY-MM-DD\" or null, // null if no due date is given\n      \"status\": \"open\" or \"done\"\n    }\n  ],\n  \"next_meeting_date\": \"YYYY-MM-DD\"\n}\n\nOutput rules: respond with ONLY the JSON object (you may wrap it in a ```json code block), with exactly the keys listed, in any key order. Use JSON numbers (not strings) for numeric fields, with no currency symbols, units or thousands separators. Use null where the schema allows it and the value is not given. Use ISO dates YYYY-MM-DD. Where the document states a correction or a change, use the corrected / final value. Do not add explanations.",
+      "expected": {
+        "meeting_date": "2026-03-11",
+        "note_taker": "Dana Whitfield",
+        "attendees": [
+          "Dana Whitfield",
+          "Marco Bellini",
+          "Ines Carvalho",
+          "Raj Patel"
+        ],
+        "action_items": [
+          {
+            "item": 1,
+            "owner": "Marco Bellini",
+            "due_date": "2026-03-13",
+            "status": "open"
+          },
+          {
+            "item": 2,
+            "owner": "Raj Patel",
+            "due_date": "2026-03-31",
+            "status": "open"
+          },
+          {
+            "item": 3,
+            "owner": "Ines Carvalho",
+            "due_date": "2026-03-16",
+            "status": "open"
+          },
+          {
+            "item": 4,
+            "owner": "Dana Whitfield",
+            "due_date": null,
+            "status": "done"
+          },
+          {
+            "item": 5,
+            "owner": null,
+            "due_date": "2026-04-15",
+            "status": "open"
+          }
+        ],
+        "next_meeting_date": "2026-03-25"
+      },
+      "notes": "[hard] Traps: Tom Hughes sent apologies (not present); Ines helps but Marco owns item 1; item 3 moved from tomorrow to Monday = 2026-03-16; next Friday = 2026-03-13 per the stated rule; end of month = 2026-03-31; next meeting 2026-03-25. Weekdays checked with Python datetime."
+    },
+    {
+      "id": "e06",
+      "prompt": "Extract the job posting below into JSON that follows the schema exactly.\n\nDocument:\n<<<\n**Senior Data Engineer (Contract-to-Hire)** - Lumora Health\nLocation: Remote (US only) - occasional travel to our Denver HQ (at most twice a quarter)\nPay: $68-$82/hr during the 6-month contract; converts to salaried employment at $150k-$175k base.\nMust have: 5+ yrs Python; 3+ yrs Spark; SQL; Airflow.\nNice to have: dbt, Terraform.\nPosted Aug 30, 2026 - Applications close Sept 21, 2026\nPlease note we are unable to sponsor visas for this role.\n>>>\n\nSchema:\n{\n  \"job_title\": string,                  // the title only, without the employment-type text in parentheses\n  \"company\": string,\n  \"employment_type\": string,            // one of: \"full-time\", \"part-time\", \"contract\", \"contract-to-hire\", \"internship\"\n  \"remote_policy\": string,              // one of: \"remote\", \"hybrid\", \"onsite\"\n  \"contract_hourly_rate_min_usd\": number,\n  \"contract_hourly_rate_max_usd\": number,\n  \"salary_min_usd\": number,             // annual base salary after conversion, as a full number (e.g. 120000)\n  \"salary_max_usd\": number,\n  \"required_skills\": [string],          // skill names only, in the order listed\n  \"nice_to_have_skills\": [string],      // in the order listed\n  \"min_years_experience\": number,       // the largest minimum number of years stated for any single required skill\n  \"visa_sponsorship\": boolean,\n  \"posted_date\": \"YYYY-MM-DD\",\n  \"closing_date\": \"YYYY-MM-DD\"\n}\n\nOutput rules: respond with ONLY the JSON object (you may wrap it in a ```json code block), with exactly the keys listed, in any key order. Use JSON numbers (not strings) for numeric fields, with no currency symbols, units or thousands separators. Use null where the schema allows it and the value is not given. Use ISO dates YYYY-MM-DD. Where the document states a correction or a change, use the corrected / final value. Do not add explanations.",
+      "expected": {
+        "job_title": "Senior Data Engineer",
+        "company": "Lumora Health",
+        "employment_type": "contract-to-hire",
+        "remote_policy": "remote",
+        "contract_hourly_rate_min_usd": 68,
+        "contract_hourly_rate_max_usd": 82,
+        "salary_min_usd": 150000,
+        "salary_max_usd": 175000,
+        "required_skills": [
+          "Python",
+          "Spark",
+          "SQL",
+          "Airflow"
+        ],
+        "nice_to_have_skills": [
+          "dbt",
+          "Terraform"
+        ],
+        "min_years_experience": 5,
+        "visa_sponsorship": false,
+        "posted_date": "2026-08-30",
+        "closing_date": "2026-09-21"
+      },
+      "notes": "[medium] Traps: 'k' salaries -> 150000/175000; remote despite occasional travel; contract-to-hire; max of per-skill minimums = 5; visa sponsorship false."
+    },
+    {
+      "id": "e07",
+      "prompt": "Extract the supermarket receipt below into JSON that follows the schema exactly. Some of the receipt's own totals may be missing; compute them from the lines where the schema asks for them.\n\nDocument:\n<<<\nGREENLEAF MARKET  store #0217            02/05/2026 18:41\n(dates on this receipt are DD/MM/YYYY)\n------------------------------------------------------\nOrganic bananas 1.24 kg @ 2.40/kg                 2.98 F\nOat milk 1L  2 @ 2.15                             4.30 F\nSourdough loaf                                    4.50 F\nOlive oil 750ml                                  11.99 F\n   MEMBER DISCOUNT (olive oil)                   -2.00 F\nDish soap 500ml                                   3.49 T\nVOID  Sourdough loaf                             -4.50 F\nSourdough loaf, seeded                            5.10 F\nPaper towels 6pk                                  7.80 T\n------------------------------------------------------\nF = food, tax-exempt     T = taxable at 8%\nPAID  VISA ****4417\nThank you for shopping with us!\n>>>\n\nSchema:\n{\n  \"store_number\": string,               // digits exactly as printed, keep leading zeros\n  \"date\": \"YYYY-MM-DD\",\n  \"purchased_item_count\": number,       // number of product lines actually bought (exclude voided lines, the VOID line itself and discount lines)\n  \"voided_items\": [string],             // names of voided products exactly as printed on the VOID line\n  \"total_discounts\": number,            // positive number: sum of discount amounts\n  \"subtotal\": number,                   // sum of all line amounts after voids and discounts, before tax\n  \"taxable_amount\": number,             // sum of lines marked T\n  \"tax\": number,                        // 8% of taxable_amount, rounded to the nearest cent (half up)\n  \"total\": number,                      // subtotal + tax\n  \"payment_method\": string,             // one of: \"cash\", \"card\"\n  \"card_last4\": string or null\n}\n\nOutput rules: respond with ONLY the JSON object (you may wrap it in a ```json code block), with exactly the keys listed, in any key order. Use JSON numbers (not strings) for numeric fields, with no currency symbols, units or thousands separators. Use null where the schema allows it and the value is not given. Use ISO dates YYYY-MM-DD. Where the document states a correction or a change, use the corrected / final value. Do not add explanations.",
+      "expected": {
+        "store_number": "0217",
+        "date": "2026-05-02",
+        "purchased_item_count": 6,
+        "voided_items": [
+          "Sourdough loaf"
+        ],
+        "total_discounts": 2.0,
+        "subtotal": 33.66,
+        "taxable_amount": 11.29,
+        "tax": 0.9,
+        "total": 34.56,
+        "payment_method": "card",
+        "card_last4": "4417"
+      },
+      "notes": "[hard] Purchased lines: bananas, oat milk, olive oil, dish soap, seeded sourdough, paper towels = 6 (the plain sourdough was voided). Subtotal 33.66, taxable 11.29, tax 0.90 (0.9032 rounded), total 34.56 (Decimal arithmetic). DD/MM date 02/05/2026 = 2026-05-02."
+    },
+    {
+      "id": "e08",
+      "prompt": "Extract the lease summary below into JSON that follows the schema exactly. Apply the addendum to the original terms.\n\nDocument:\n<<<\nRESIDENTIAL LEASE - SUMMARY OF TERMS\nLandlord: Halvorsen Property Group LLC\nTenant(s): Joaquín Ruiz and Mei-Ling Chow\nPremises: 1428 Alder Street, Apt 3B, Portland, OR 97209\nTerm: 12 months commencing 1 October 2026\nMonthly rent: $2,150.00, due on the 1st of each month; late fee of $75 if unpaid by the 5th\nSecurity deposit: $4,300.00\nPets: one cat permitted, with a $300 non-refundable pet fee. No dogs.\nUtilities included in rent: water, sewer, trash. Tenant pays electricity and internet.\nParking: one assigned space (#14) at $85/month, billed together with the rent but not included in it.\n\nADDENDUM A (signed 10 September 2026): Monthly rent is reduced to $2,095.00 in exchange for the tenants handling lawn care. The term is extended to 13 months. All other terms are unchanged.\n>>>\n\nSchema:\n{\n  \"landlord\": string,\n  \"tenants\": [string],                  // full names exactly as written, in the order listed\n  \"unit\": string,                       // apartment identifier only, e.g. \"12A\"\n  \"postal_code\": string,\n  \"lease_start\": \"YYYY-MM-DD\",\n  \"lease_end\": \"YYYY-MM-DD\",            // the last day of the term\n  \"term_months\": number,\n  \"monthly_rent\": number,\n  \"security_deposit\": number,\n  \"late_fee\": number,\n  \"pet_fee\": number,\n  \"pets_allowed\": [string],             // lowercase singular animal names\n  \"utilities_included\": [string],       // lowercase, in the order listed\n  \"parking_fee_monthly\": number,\n  \"total_monthly_payment\": number       // monthly rent plus the monthly parking fee\n}\n\nOutput rules: respond with ONLY the JSON object (you may wrap it in a ```json code block), with exactly the keys listed, in any key order. Use JSON numbers (not strings) for numeric fields, with no currency symbols, units or thousands separators. Use null where the schema allows it and the value is not given. Use ISO dates YYYY-MM-DD. Where the document states a correction or a change, use the corrected / final value. Do not add explanations.",
+      "expected": {
+        "landlord": "Halvorsen Property Group LLC",
+        "tenants": [
+          "Joaquín Ruiz",
+          "Mei-Ling Chow"
+        ],
+        "unit": "3B",
+        "postal_code": "97209",
+        "lease_start": "2026-10-01",
+        "lease_end": "2027-10-31",
+        "term_months": 13,
+        "monthly_rent": 2095,
+        "security_deposit": 4300,
+        "late_fee": 75,
+        "pet_fee": 300,
+        "pets_allowed": [
+          "cat"
+        ],
+        "utilities_included": [
+          "water",
+          "sewer",
+          "trash"
+        ],
+        "parking_fee_monthly": 85,
+        "total_monthly_payment": 2180
+      },
+      "notes": "[medium] Traps: addendum changes rent (2150 -> 2095) and term (12 -> 13 months), so the lease runs 2026-10-01 .. 2027-10-31; deposit stated as a fixed amount (unchanged); parking not included in rent; dogs not allowed."
+    }
+  ]
+}

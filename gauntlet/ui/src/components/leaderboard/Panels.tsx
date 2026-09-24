@@ -150,7 +150,7 @@ export function Podium({ rows, big }: { rows: LeaderboardRow[]; big?: boolean })
   const order = [top[1], top[0], top[2]].filter(Boolean) as LeaderboardRow[];
   const kinds = ['gold', 'silver', 'bronze'] as const;
   return (
-    <div className={cx('podium', big && 'big')} role="list" aria-label="Top three">
+    <div className={cx('podium', big && 'big')} role="list" aria-label="Top three" style={{ gridTemplateColumns: `repeat(${order.length}, minmax(0, 1fr))`, maxWidth: order.length * 370 }}>
       {order.map((r) => {
         const place = top.indexOf(r);
         return (
@@ -228,11 +228,13 @@ export function ScatterPanel({ lb, tall }: { lb: Leaderboard; tall?: boolean }) 
 // ───────────────────────────── Speed ─────────────────────────────
 
 export function SpeedPanel({ lb }: { lb: Leaderboard }) {
-  const rows = lb.rows.filter((r) => !isBaseline(r));
+  const rows = lb.rows.filter((r) => !isBaseline(r) && !r.manual);
+  const manual = lb.rows.filter((r) => r.manual);
   return (
     <ChartCard
       title="Speed"
       desc="Median time to first token (lower is faster) and visible output throughput."
+      foot={manual.length ? `Not shown: ${manual.map((r) => r.label).join(', ')} — manual models are timed in human time, so speed isn’t comparable.` : undefined}
       table={
         <table className="table compact">
           <thead>

@@ -8,12 +8,12 @@ import { Icon } from '../components/icons.tsx';
 import { fmtInt, shortHash } from '../format.ts';
 import type { TestSummary } from '../types.ts';
 
-export function SourceBadge({ source }: { source: TestSummary['source'] | undefined }) {
+export function SourceBadge({ source, compact }: { source: TestSummary['source'] | undefined; compact?: boolean }) {
   if (source === 'custom') return <span className="badge info">custom</span>;
   if (source === 'private')
     return (
-      <span className="badge accent" title="Held-out test in tests/private/ — never published, used to detect contamination">
-        <Icon.Lock /> Held-out · never published
+      <span className="badge accent" title="Held-out · never published — lives in tests/private/ and is used to detect contamination">
+        <Icon.Lock /> {compact ? 'Held-out' : 'Held-out · never published'}
       </span>
     );
   return null;
@@ -27,7 +27,7 @@ export function TestCard({ t }: { t: TestSummary }) {
       <div className="tc-top">
         <DifficultyBadge difficulty={t.difficulty} />
         <span className="spacer" />
-        <SourceBadge source={t.source} />
+        <SourceBadge source={t.source} compact />
         <span className="badge outline">{t.kind === 'program' ? 'simulation' : 'prompt'}</span>
       </div>
       <h3>{t.name}</h3>
@@ -187,7 +187,8 @@ export default function TestsPage() {
           </Empty>
         </div>
       ) : (
-        groups.map(([catId, ts]) => {
+        <div className="test-groups">
+        {groups.map(([catId, ts]) => {
           const info = cat(catId);
           return (
             <section key={catId} className="test-group" style={{ ['--cat' as string]: info.color }}>
@@ -208,7 +209,8 @@ export default function TestsPage() {
               </div>
             </section>
           );
-        })
+        })}
+        </div>
       )}
     </div>
   );

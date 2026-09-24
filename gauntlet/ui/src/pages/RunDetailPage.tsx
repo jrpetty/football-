@@ -8,6 +8,7 @@ import { Icon } from '../components/icons.tsx';
 import { LeaderboardView } from '../components/leaderboard/LeaderboardView.tsx';
 import { ResultsMatrix } from '../components/ResultsMatrix.tsx';
 import { ResultInspector } from '../components/ResultInspector.tsx';
+import { ResumeDialog } from '../components/ResumeDialog.tsx';
 import type { InspectorTarget } from '../components/ResultInspector.tsx';
 import { durationBetween, fmtCost, fmtDateTime, fmtInt, fmtMs, fmtPricePerM, shortHash } from '../format.ts';
 import type { RunDetail } from '../types.ts';
@@ -20,6 +21,7 @@ export default function RunDetailPage({ runId }: { runId: string }) {
   const toast = useToast();
   const state = useAsync<RunDetail>(() => api.run(runId), [runId]);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [resumeOpen, setResumeOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const d = state.data;
   useInterval(() => state.reload(), d?.active ? 5000 : null);
@@ -58,18 +60,6 @@ export default function RunDetailPage({ runId }: { runId: string }) {
       setBusy(false);
     }
   };
-  const doResume = async () => {
-    setBusy(true);
-    try {
-      await api.resumeRun(runId);
-      navigate(pathOf('runs', runId, 'live'));
-    } catch (e) {
-      toast.error(e, 'Could not resume');
-    } finally {
-      setBusy(false);
-    }
-  };
-
   return (
     <div className="page">
       <PageHead
@@ -92,7 +82,7 @@ export default function RunDetailPage({ runId }: { runId: string }) {
               </Link>
             )}
             {resumable && (
-              <button className="btn" onClick={doResume} disabled={busy}>
+              <button className="btn primary" onClick={() => setResumeOpen(true)} disabled={busy}>
                 <Icon.Refresh /> Resume
               </button>
             )}
@@ -112,11 +102,17 @@ export default function RunDetailPage({ runId }: { runId: string }) {
       />
 
       {m.error && (
-        <div className="callout bad">
-          <Icon.Alert />
-          <div>
-            <strong>Run error:</strong> {m.error}
+        <div className={/budget|cap/i.test(m.error) ? 'callout warn run-error' : 'callout bad run-error'} role="alert">
+          {/budget|cap/i.test(m.error) ? <Icon.Dollar /> : <Icon.Alert />}
+          <div className="stack tight" style={{ flex: 1 }}>
+            <strong>{/budget|cap/i.test(m.error) ? 'Budget cap reached' : 'This run stopped with an error'}</strong>
+            <span>{m.error}</span>
           </div>
+          {resumable && (
+            <button className="btn sm" onClick={() => setResumeOpen(true)}>
+              <Icon.Refresh /> Resume{/budget|cap/i.test(m.error) ? ' with a higher cap' : ''}
+            </button>
+          )}
         </div>
       )}
 
@@ -132,8 +128,19 @@ export default function RunDetailPage({ runId }: { runId: string }) {
             </div>
           </div>
           <div className="mf">
-            <span className="k">Spend</span>
-            <span className="v tnum">{fmtCost(d.progress.costUsd)}</span>
+            <span className="k">Spend{m.settings?.maxCostUsd ? ' · cap' : ''}</span>
+            {m.settings?.maxCostUsd ? (
+              <div className="stack tight">
+                <span className="v tnum">
+                  {fmtCost(d.progress.costUsd)} <span className="muted">of {fmtCost(m.settings.maxCostUsd)}</span>
+                </span>
+                <Progress value={d.progress.costUsd / m.settings.maxCostUsd} color={d.progress.costUsd >= m.settings.maxCostUsd ? 'var(--warn)' : 'var(--good)'} label="Spend against cap" />
+              </div>
+            ) : (
+              <span className="v tnum">
+                {fmtCost(d.progress.costUsd)} <span className="muted">· no cap</span>
+              </span>
+            )}
           </div>
           <div className="mf">
             <span className="k">Duration</span>
@@ -318,7 +325,21 @@ export default function RunDetailPage({ runId }: { runId: string }) {
         initialKey={keyQ}
         onClose={() => setQuery({ test: null, c: null, key: null })}
         onSelectKey={(key) => setQuery({ key })}
+        names={new Map([...m.contestants, ...(m.judges ?? [])].map((c) => [c.id, c.label]))}
       />
+
+      {resumeOpen && (
+        <ResumeDialog
+          open
+          runId={runId}
+          runName={m.name || runId}
+          onClose={() => setResumeOpen(false)}
+          onResumed={() => {
+            setResumeOpen(false);
+            navigate(pathOf('runs', runId, 'live'));
+          }}
+        />
+      )}
 
       <ConfirmDialog
         open={confirmCancel}

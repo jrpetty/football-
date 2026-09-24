@@ -47,7 +47,7 @@ export function loadSettings(): Settings {
     defaultConcurrency: 6,
     temperature: 0,
     defaultMaxOutputTokens: 16000,
-    defaultTimeLimitSec: 600,
+    defaultTimeLimitSec: 1800,
     maxRetries: 4,
     judgeExcludeSameVendor: true,
   };

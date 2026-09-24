@@ -281,8 +281,11 @@ export interface Suite {
   version: string;
   name: string;
   description: string;
-  /** Test ids with optional weight (default 1). Use ["*"] to include every test. */
-  tests: Array<{ id: string; weight?: number }>;
+  /**
+   * Test ids with optional weight (default 1) and an optional subset of case ids
+   * (or "seed-<n>" for programs) — e.g. a cheap "quick" suite. Use [{ "id": "*" }] for every test.
+   */
+  tests: Array<{ id: string; weight?: number; cases?: string[] }>;
   /** Optional per-category weight overrides for the Gauntlet Index. */
   categoryWeights?: Record<string, number>;
   /** Default repeats per case when running this suite. */

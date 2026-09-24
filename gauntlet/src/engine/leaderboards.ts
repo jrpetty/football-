@@ -41,6 +41,7 @@ export function combinedLeaderboard(suiteId: string): Leaderboard {
   const tests = resolveTests({ suiteId }, all);
   const suite = getSuite(suiteId);
   const hashById = new Map(tests.map((t) => [t.definition.id, t.hash]));
+  const caseFilter = new Map(tests.filter((t) => t.caseFilter).map((t) => [t.definition.id, new Set(t.caseFilter)]));
   const contestants = loadContestants();
   const configHash = new Map(contestants.map((c) => [c.id, contestantConfigHash(c)]));
 
@@ -51,6 +52,7 @@ export function combinedLeaderboard(suiteId: string): Leaderboard {
       const currentTestHash = hashById.get(r.testId);
       const currentConfig = configHash.get(r.contestantId);
       if (currentTestHash === undefined || currentConfig === undefined) continue;
+      if (caseFilter.get(r.testId) && !caseFilter.get(r.testId)!.has(r.caseId)) continue;
       if (r.testHash !== currentTestHash || r.contestantHash !== currentConfig) {
         stale++;
         continue;

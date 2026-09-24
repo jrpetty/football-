@@ -25,9 +25,22 @@ test('every test definition validates', () => {
   assert.deepEqual(problems, []);
 });
 
-test('every suite references existing tests', () => {
-  const ids = new Set(all.map((t) => t.definition.id));
-  const missing = loadSuites().flatMap((s) => s.tests.filter((e) => e.id !== '*' && !ids.has(e.id)).map((e) => `${s.id} → ${e.id}`));
+test('every suite references existing tests and cases', () => {
+  const byId = new Map(all.map((t) => [t.definition.id, t]));
+  const missing: string[] = [];
+  for (const s of loadSuites()) {
+    for (const e of s.tests) {
+      if (e.id === '*') continue;
+      const t = byId.get(e.id);
+      if (!t) {
+        missing.push(`${s.id} → ${e.id}`);
+        continue;
+      }
+      const d = t.definition;
+      const known = d.kind === 'prompt' ? d.cases.map((c) => c.id) : d.seeds.map((x) => `seed-${x}`);
+      for (const cid of e.cases ?? []) if (!known.includes(cid)) missing.push(`${s.id} → ${e.id}/${cid}`);
+    }
+  }
   assert.deepEqual(missing, []);
 });
 

@@ -29,8 +29,8 @@
     ],
     "moveBudget": 45
   },
-  "maxOutputTokens": 8000,
-  "timeLimitSec": 3600,
+  "maxOutputTokens": 16000,
+  "timeLimitSec": 5400,
   "estimate": {
     "inputTokens": 47000,
     "outputTokens": 45000,

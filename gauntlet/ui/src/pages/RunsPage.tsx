@@ -5,6 +5,7 @@ import { Link, navigate, pathOf } from '../router.tsx';
 import { useToast } from '../context.tsx';
 import { ConfirmDialog, Empty, ErrorState, HashTag, ModelChip, PageHead, Progress, RunStatusBadge, SkeletonRows, cx } from '../components/ui.tsx';
 import { Icon } from '../components/icons.tsx';
+import { ResumeDialog } from '../components/ResumeDialog.tsx';
 import { fmtCost, fmtDateTime, fmtInt, fmtRelative } from '../format.ts';
 import type { RunListItem, RunStatus } from '../types.ts';
 
@@ -22,6 +23,7 @@ export default function RunsPage() {
   const runs = useAsync<RunListItem[]>(() => api.runs(), []);
   const toast = useToast();
   const [confirm, setConfirm] = useState<RunListItem | null>(null);
+  const [resuming, setResuming] = useState<RunListItem | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | RunStatus>('all');
   const [q, setQ] = useState('');
@@ -47,19 +49,6 @@ export default function RunsPage() {
       active: all.filter((r) => r.status === 'running' || r.status === 'queued').length,
     };
   }, [runs.data]);
-
-  const resume = async (r: RunListItem) => {
-    setBusy(r.id);
-    try {
-      await api.resumeRun(r.id);
-      toast.success(`Resuming “${r.name}” — only missing or errored jobs will run.`);
-      navigate(pathOf('runs', r.id, 'live'));
-    } catch (e) {
-      toast.error(e, 'Could not resume run');
-    } finally {
-      setBusy(null);
-    }
-  };
 
   const remove = async () => {
     if (!confirm) return;
@@ -219,7 +208,7 @@ export default function RunsPage() {
                             </Link>
                           )}
                           {RESUMABLE.includes(r.status) && (
-                            <button className="btn xs" onClick={() => resume(r)} disabled={busy === r.id} title="Re-run only missing or errored jobs">
+                            <button className="btn xs" onClick={() => setResuming(r)} disabled={busy === r.id} title="Re-run only missing or errored jobs (optionally with a new spending cap)">
                               <Icon.Refresh /> Resume
                             </button>
                           )}
@@ -245,6 +234,20 @@ export default function RunsPage() {
           </div>
         )}
       </section>
+
+      {resuming && (
+        <ResumeDialog
+          open
+          runId={resuming.id}
+          runName={resuming.name}
+          onClose={() => setResuming(null)}
+          onResumed={() => {
+            const id = resuming.id;
+            setResuming(null);
+            navigate(pathOf('runs', id, 'live'));
+          }}
+        />
+      )}
 
       <ConfirmDialog
         open={!!confirm}

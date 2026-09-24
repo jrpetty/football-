@@ -961,7 +961,7 @@ export const RUN_SPECS: RunSpec[] = [
     testIds: ['social.liars-table', 'honesty.honesty-trap', 'reasoning.knights-knaves'],
     repeats: 1,
     createdAt: '2026-09-23T19:30:00Z',
-    completedFrac: 0.35,
+    completedFrac: 0.15,
     concurrency: 1,
     notes: 'Manual contestant — every prompt is pasted into a fresh Orbit Chat conversation.',
   },

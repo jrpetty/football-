@@ -39,6 +39,29 @@ export function describeScorer(s: ScorerSpec | undefined): string {
   }
 }
 
+function ExpectedView({ value }: { value: unknown }) {
+  if (value === undefined) return <pre className="code">— (judged / human-scored)</pre>;
+  const isConstraints = Array.isArray(value) && value.length > 0 && value.every((v) => v && typeof v === 'object' && 'check' in (v as object));
+  if (isConstraints)
+    return (
+      <ul className="constraint-chips">
+        {(value as Array<Record<string, unknown>>).map((c, i) => (
+          <li key={i}>
+            <b className="mono">{String(c.check)}</b>
+            {Object.entries(c)
+              .filter(([k]) => k !== 'check')
+              .map(([k, v]) => (
+                <span key={k}>
+                  {k} <code>{Array.isArray(v) ? v.join(', ') : String(v)}</code>
+                </span>
+              ))}
+          </li>
+        ))}
+      </ul>
+    );
+  return <pre className="code">{prettyJson(value)}</pre>;
+}
+
 export default function TestDetailPage({ testId }: { testId: string }) {
   const { cat } = useMeta();
   const toast = useToast();
@@ -283,7 +306,7 @@ export default function TestDetailPage({ testId }: { testId: string }) {
                   <div className="mini-title">
                     <Icon.Key style={{ width: 12, height: 12 }} /> Expected
                   </div>
-                  <pre className="code">{r.expected === undefined ? '— (judged / human-scored)' : prettyJson(r.expected)}</pre>
+                  <ExpectedView value={r.expected} />
                   {r.notes && (
                     <>
                       <div className="mini-title" style={{ marginTop: 10 }}>

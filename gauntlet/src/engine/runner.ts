@@ -5,7 +5,7 @@ import { computeCost, emptyUsage } from '../core/cost.ts';
 import { createRng } from '../core/rng.ts';
 import { HARNESS_VERSION, PROTOCOL_VERSION } from '../core/version.ts';
 import { ROOT } from '../core/paths.ts';
-import { caseIds, caseScorer, computeTestHash, fingerprint, getSuite, loadTests, renderCase, resolveTests, testEstimate, type LoadedTest } from '../core/registry.ts';
+import { caseScorer, computeTestHash, fingerprint, getSuite, loadTests, renderCase, resolveTests, selectedCaseIds, testEstimate, type LoadedTest, type ResolvedTest } from '../core/registry.ts';
 import type {
   CaseResult,
   Contestant,
@@ -88,10 +88,10 @@ function seedOf(caseId: string): number | undefined {
 }
 
 /** Interleave jobs so every contestant works on the same test/case at the same time (fair + great for the live view). */
-function buildJobs(tests: LoadedTest[], contestants: ContestantSnapshot[], repeats: number): Job[] {
+function buildJobs(tests: Array<LoadedTest & { caseFilter?: string[] }>, contestants: ContestantSnapshot[], repeats: number): Job[] {
   const jobs: Job[] = [];
   for (const test of tests) {
-    for (const caseId of caseIds(test.definition)) {
+    for (const caseId of selectedCaseIds(test)) {
       for (let repeat = 0; repeat < repeats; repeat++) {
         for (const c of contestants) {
           jobs.push({ key: jobKey(c.id, test.definition.id, caseId, repeat), contestant: c, test, caseId, repeat, seed: seedOf(caseId) });
@@ -107,7 +107,7 @@ function buildJobs(tests: LoadedTest[], contestants: ContestantSnapshot[], repea
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface RunPlan {
-  tests: Array<LoadedTest & { weight: number }>;
+  tests: ResolvedTest[];
   contestants: Contestant[];
   judges: Contestant[];
   repeats: number;
@@ -265,7 +265,7 @@ export async function estimateRun(req: RunRequest): Promise<RunEstimate> {
     testId: t.definition.id,
     name: t.definition.name,
     category: t.definition.category,
-    cases: caseIds(t.definition).length,
+    cases: selectedCaseIds(t).length,
     perContestant: {},
     judgeUsd: 0,
     basis: 'definition',
@@ -277,7 +277,7 @@ export async function estimateRun(req: RunRequest): Promise<RunEstimate> {
     let cost = 0;
     let costHigh = 0;
     plan.tests.forEach((t, i) => {
-      const n = caseIds(t.definition).length * plan.repeats;
+      const n = selectedCaseIds(t).length * plan.repeats;
       const def = testEstimate(t.definition);
       const obs = observed.get(t.hash);
       const mine = obs?.byContestant.get(cfg);
@@ -350,7 +350,7 @@ export async function startRun(req: RunRequest): Promise<string> {
     name: t.definition.name,
     category: t.definition.category,
     kind: t.definition.kind,
-    caseIds: caseIds(t.definition),
+    caseIds: selectedCaseIds(t),
     weight: t.weight,
   }));
   const contestants = plan.contestants.map(snapshotContestant);
@@ -391,12 +391,12 @@ export function resumeRun(runId: string, opts: { maxCostUsd?: number | null } = 
   if (!manifest) throw new Error('Run not found');
   if (opts.maxCostUsd !== undefined) manifest.settings.maxCostUsd = opts.maxCostUsd === null ? undefined : opts.maxCostUsd;
   const loaded = loadTests();
-  const tests: LoadedTest[] = [];
+  const tests: Array<LoadedTest & { caseFilter?: string[] }> = [];
   const changed: string[] = [];
   for (const snap of manifest.tests) {
     const t = loaded.find((x) => x.definition.id === snap.id);
     if (!t || computeTestHash(t.definition) !== snap.hash) changed.push(snap.id);
-    else tests.push(t);
+    else tests.push({ ...t, caseFilter: snap.caseIds });
   }
   if (changed.length) throw new Error(`Cannot resume: these tests changed since the run started (results would not be comparable): ${changed.join(', ')}`);
   const done = new Set(readResults(runId).filter((r) => r.status !== 'error' && r.status !== 'cancelled').map((r) => r.key));
@@ -423,7 +423,7 @@ export function recoverInterruptedRuns(ids: string[]): void {
   }
 }
 
-function launch(manifest: RunManifest, tests: LoadedTest[], skip: Set<string>): void {
+function launch(manifest: RunManifest, tests: Array<LoadedTest & { caseFilter?: string[] }>, skip: Set<string>): void {
   const settings = loadSettings();
   const providers = loadProviders();
   const controller = new AbortController();

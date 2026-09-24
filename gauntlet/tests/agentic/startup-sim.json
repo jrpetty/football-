@@ -24,8 +24,8 @@
   "config": {
     "months": 12
   },
-  "maxOutputTokens": 8000,
-  "timeLimitSec": 1800,
+  "maxOutputTokens": 16000,
+  "timeLimitSec": 2400,
   "estimate": {
     "inputTokens": 16500,
     "outputTokens": 18000,

@@ -440,6 +440,7 @@ export function subscribe(runId: string, handlers: RunStreamHandlers): () => voi
 const JUDGED = new Set(['judge', 'judge-classify', 'artifact']);
 
 function measuredCasePrice(contestantId: string, testId: string): number | null {
+  if (PRIVATE_IDS.has(testId) || customIds.has(testId)) return null; // never run publicly: falls back to the definition
   const core = getRun('run-2026-09-21-core');
   const rs = core.results.filter((r) => r.contestantId === contestantId && r.testId === testId);
   if (!rs.length) return null;

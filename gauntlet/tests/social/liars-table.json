@@ -25,8 +25,8 @@
     "variant": "auto",
     "mistakenWitness": "auto"
   },
-  "maxOutputTokens": 8000,
-  "timeLimitSec": 1200,
+  "maxOutputTokens": 16000,
+  "timeLimitSec": 2400,
   "estimate": {
     "inputTokens": 18000,
     "outputTokens": 32000,

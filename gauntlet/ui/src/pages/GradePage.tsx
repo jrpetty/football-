@@ -239,7 +239,7 @@ export default function GradePage() {
             </Link>
           </div>
           <div className="card-body stack loose">
-            <ScoreBreakdownView d={result.outcome.detail ?? {}} passed={result.outcome.passed} />
+            <ScoreBreakdownView d={result.outcome.detail ?? {}} passed={result.outcome.passed} names={new Map((lists.data?.[1] ?? []).map((c) => [c.id, c.label]))} />
             {result.artifacts.length > 0 && (
               <div className="stack">
                 <div className="mini-title">Artifacts</div>

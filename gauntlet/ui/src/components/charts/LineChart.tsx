@@ -42,9 +42,18 @@ export function LineChart({ series, marker, height: hProp, xLabel, title }: { se
     const margin = { top: 14 * s, right: (endLabels ? maxLabelW + 16 * s : 12 * s), bottom: 30 * s, left: 44 * s };
     const x = linearScale([xMin, xMax === xMin ? xMin + 1 : xMax], [margin.left, width - margin.right]);
     const y = linearScale([yt.min, yt.max], [height - margin.bottom, margin.top]);
-    const xt = niceTicks(xMin, xMax, Math.max(3, Math.min(8, Math.floor(width / (90 * s)))));
+    const maxTicks = Math.max(3, Math.min(10, Math.floor(width / (70 * s))));
+    const span = xMax - xMin;
+    let xTicks: number[];
+    if (xs.every((v) => Number.isInteger(v)) && span > 0 && span <= 40) {
+      const step = Math.max(1, Math.ceil(span / maxTicks));
+      xTicks = [];
+      for (let v = xMin; v <= xMax; v += step) xTicks.push(v);
+    } else {
+      xTicks = niceTicks(xMin, xMax, maxTicks).ticks.filter((t) => t >= xMin && t <= xMax);
+    }
     const xs2 = Array.from(new Set(xs)).sort((a, b) => a - b);
-    return { x, y, yt, xt: xt.ticks.filter((t) => t >= xMin && t <= xMax), margin, xs: xs2, endLabels };
+    return { x, y, yt, xt: xTicks, margin, xs: xs2, endLabels };
   }, [colored, width, height, s]);
 
   const { x, y, yt, xt, margin, xs, endLabels } = geo;

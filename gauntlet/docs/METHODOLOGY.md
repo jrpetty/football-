@@ -31,8 +31,8 @@ published result, reproduce it, and judge whether two numbers are comparable.
 | Answer format | Tests with a single answer end with the standard instruction `FINAL ANSWER: <answer>`. The **last** such line is parsed; markdown, bold and one trailing period are ignored. Format compliance is tracked separately. |
 | Temperature | `0` for models that accept a temperature. Reasoning models that do not accept one use the provider default. |
 | Reasoning effort | Part of the contestant definition (e.g. `effort: high`). A different effort is a different contestant with its own id. |
-| Output limit | Per test (`maxOutputTokens`, default 16,000). Hitting it is recorded, not retried. |
-| Time limit | Per case (`timeLimitSec`, default 600 s). A timeout scores 0: speed is part of the test. |
+| Output limit | Per call (`maxOutputTokens`, default 16,000; up to 32,000 for hard reasoning). The limit includes hidden reasoning tokens on every provider. Hitting it is recorded, not retried. |
+| Time limit | Per case (`timeLimitSec`, default 1,800 s; long simulations allow more). Limits are generous so slow-but-thorough models are not punished, but a timeout scores 0. |
 | Retries | Transport failures only (HTTP 408/409/429/5xx, network). Exponential backoff with `Retry-After`, up to 4 retries. A model's *answer* is never retried. |
 | Refusals | Recorded as `refusal` and scored 0. **No fallbacks**: provider features that silently route a refused request to another model are disabled, because another model would be answering. |
 | Errors | Cases that still fail after retries are marked `error`, excluded from scores and shown as errors. Use **Resume** to re-run them. |

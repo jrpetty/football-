@@ -29,11 +29,11 @@ function sortValue(row: LeaderboardRow, key: SortKey): number | string | null {
     case 'cpp':
       return row.costPerPoint;
     case 'latency':
-      return row.speed?.medianCaseMs ?? null;
+      return row.manual ? null : row.speed?.medianCaseMs ?? null;
     case 'ttft':
-      return row.speed?.medianTtftMs ?? null;
+      return row.manual ? null : row.speed?.medianTtftMs ?? null;
     case 'tps':
-      return row.speed?.outputTokensPerSec ?? null;
+      return row.manual ? null : row.speed?.outputTokensPerSec ?? null;
     case 'coverage':
       return row.coverage;
     case 'reliability':
@@ -97,7 +97,18 @@ const Row = memo(function Row({
         <span className={cx('rank', !baseline && row.rank <= 3 && `r${row.rank}`)}>{baseline ? '–' : row.rank}</span>
       </td>
       <td className="c-model sticky-2">
-        <ModelCell label={row.label} vendor={baseline ? 'Reference · random answers' : row.vendor} color={row.color} />
+        <ModelCell
+          label={row.label}
+          vendor={baseline ? 'Reference · random answers' : row.vendor}
+          color={row.color}
+          tag={
+            row.manual ? (
+              <span className="badge info manual-tag" title="Replies pasted in by hand — speed is human time and cost is user-entered, so they are not comparable">
+                manual
+              </span>
+            ) : undefined
+          }
+        />
       </td>
       <td className="c-index">
         <IndexCell row={row} maxCi={maxCi} />
@@ -119,15 +130,30 @@ const Row = memo(function Row({
       </td>
       {show.economics && (
         <>
-          <td className="num">{fmtCost(row.totals?.costUsd)}</td>
+          <td className="num" title={row.manual ? 'User-entered cost (manual model)' : undefined}>
+            {fmtCost(row.totals?.costUsd)}
+            {row.manual ? <span className="muted">*</span> : null}
+          </td>
           <td className="num g-cpp">{fmtCost(row.costPerPoint)}</td>
         </>
       )}
       {show.speed && (
         <>
-          <td className="num g-speed">{fmtMs(row.speed?.medianCaseMs)}</td>
-          <td className="num g-speed">{fmtMs(row.speed?.medianTtftMs)}</td>
-          <td className="num g-speed">{fmtRate(row.speed?.outputTokensPerSec)}</td>
+          {row.manual ? (
+            <>
+              {[0, 1, 2].map((i) => (
+                <td key={i} className="num g-speed not-comparable" title="Human-entered, not comparable">
+                  —
+                </td>
+              ))}
+            </>
+          ) : (
+            <>
+              <td className="num g-speed">{fmtMs(row.speed?.medianCaseMs)}</td>
+              <td className="num g-speed">{fmtMs(row.speed?.medianTtftMs)}</td>
+              <td className="num g-speed">{fmtRate(row.speed?.outputTokensPerSec)}</td>
+            </>
+          )}
         </>
       )}
       {show.reliability && (

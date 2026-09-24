@@ -54,11 +54,11 @@ export function ArtifactView({ runId, art, height = 420, url: urlOverride }: { r
   );
 }
 
-function Breakdown({ r }: { r: CaseResult }) {
-  return <ScoreBreakdownView d={r.scoreDetail ?? {}} passed={r.passed} humanScores={r.humanScores} />;
+function Breakdown({ r, names }: { r: CaseResult; names?: Map<string, string> }) {
+  return <ScoreBreakdownView d={r.scoreDetail ?? {}} passed={r.passed} humanScores={r.humanScores} names={names} />;
 }
 
-export function ScoreBreakdownView({ d, passed, humanScores }: { d: ScoreDetail; passed: boolean | null; humanScores?: CaseResult['humanScores'] }) {
+export function ScoreBreakdownView({ d, passed, humanScores, names }: { d: ScoreDetail; passed: boolean | null; humanScores?: CaseResult['humanScores']; names?: Map<string, string> }) {
   const r = { passed, humanScores };
   const known = new Set(['extracted', 'expected', 'formatOk', 'items', 'judge', 'notes']);
   const extra = Object.entries(d).filter(([k]) => !known.has(k));
@@ -103,9 +103,8 @@ export function ScoreBreakdownView({ d, passed, humanScores }: { d: ScoreDetail;
             {d.judge.map((j, i) => (
               <div key={i} className="judge-card">
                 <div className="row">
-                  <span className="mono" style={{ fontSize: '0.8rem' }}>
-                    {j.contestantId}
-                  </span>
+                  <strong style={{ fontSize: '0.88rem' }}>{names?.get(j.contestantId) ?? j.contestantId}</strong>
+                  <span className="badge outline">judge</span>
                   {j.label && <span className="badge outline">{j.label}</span>}
                   <span className="spacer" />
                   <ScorePill score={j.score} />
@@ -179,7 +178,7 @@ function Metrics({ r }: { r: CaseResult }) {
   );
 }
 
-function ResultDetail({ runId, lite }: { runId: string; lite: CaseResultLite }) {
+function ResultDetail({ runId, lite, names }: { runId: string; lite: CaseResultLite; names?: Map<string, string> }) {
   const [res, setRes] = useState<CaseResult | null>(null);
   const [err, setErr] = useState<Error | null>(null);
   const [tab, setTab] = useState<Tab>('overview');
@@ -235,7 +234,7 @@ function ResultDetail({ runId, lite }: { runId: string; lite: CaseResultLite }) 
       />
       {tab === 'overview' && (
         <>
-          <Breakdown r={res} />
+          <Breakdown r={res} names={names} />
           <div>
             <div className="mini-title">Metrics</div>
             <Metrics r={res} />
@@ -266,6 +265,7 @@ export function ResultInspector({
   initialKey,
   onClose,
   onSelectKey,
+  names,
 }: {
   runId: string;
   target: InspectorTarget | null;
@@ -273,6 +273,8 @@ export function ResultInspector({
   initialKey?: string | null;
   onClose: () => void;
   onSelectKey?: (key: string | null) => void;
+  /** contestant id → label, used to name judges. */
+  names?: Map<string, string>;
 }) {
   const rows = useMemo(
     () => (target ? results.filter((r) => r.testId === target.testId && r.contestantId === target.contestantId).sort((a, b) => a.caseId.localeCompare(b.caseId) || a.repeat - b.repeat) : []),
@@ -338,7 +340,7 @@ export function ResultInspector({
             </button>
           ))}
         </div>
-        <div className="insp-detail">{selected ? <ResultDetail key={selected.key} runId={runId} lite={selected} /> : <div className="chart-empty">Select a case.</div>}</div>
+        <div className="insp-detail">{selected ? <ResultDetail key={selected.key} runId={runId} lite={selected} names={names} /> : <div className="chart-empty">Select a case.</div>}</div>
       </div>
     </Drawer>
   );

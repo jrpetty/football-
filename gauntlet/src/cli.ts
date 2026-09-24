@@ -428,9 +428,17 @@ async function main(): Promise<void> {
       }
       for (const s of loadSuites()) {
         for (const entry of s.tests) {
-          if (entry.id !== '*' && !all.some((t) => t.definition.id === entry.id)) {
+          const t = all.find((x) => x.definition.id === entry.id);
+          if (entry.id !== '*' && !t) {
             errors++;
             console.log(c.red(`✗ suite ${s.id}: unknown test "${entry.id}"`));
+          }
+          const known = t ? (t.definition.kind === 'prompt' ? t.definition.cases.map((x) => x.id) : t.definition.seeds.map((x) => `seed-${x}`)) : [];
+          for (const cid of entry.cases ?? []) {
+            if (t && !known.includes(cid)) {
+              errors++;
+              console.log(c.red(`✗ suite ${s.id}: test "${entry.id}" has no case "${cid}"`));
+            }
           }
         }
       }

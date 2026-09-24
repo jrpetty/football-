@@ -363,20 +363,28 @@ export function getSuite(id: string): Suite | undefined {
   return loadSuites().find((s) => s.id === id);
 }
 
-/** Resolve a suite (or explicit ids) to loaded tests with weights. */
-export function resolveTests(opts: { suiteId?: string; testIds?: string[] }, all = loadTests()): Array<LoadedTest & { weight: number }> {
+export type ResolvedTest = LoadedTest & { weight: number; caseFilter?: string[] };
+
+/** Case ids that a resolved test will run (the suite's subset, if any, in the test's own order). */
+export function selectedCaseIds(t: { definition: TestDefinition; caseFilter?: string[] }): string[] {
+  const ids = caseIds(t.definition);
+  return t.caseFilter ? ids.filter((id) => t.caseFilter!.includes(id)) : ids;
+}
+
+/** Resolve a suite (or explicit ids) to loaded tests with weights and optional case subsets. */
+export function resolveTests(opts: { suiteId?: string; testIds?: string[] }, all = loadTests()): ResolvedTest[] {
   const byId = new Map(all.map((t) => [t.definition.id, t]));
   if (opts.testIds && opts.testIds.length > 0) {
     return opts.testIds.map((id) => {
       const t = byId.get(id);
       if (!t) throw new Error(`Unknown test "${id}"`);
-      const suiteWeight = opts.suiteId ? getSuite(opts.suiteId)?.tests.find((x) => x.id === id)?.weight : undefined;
-      return { ...t, weight: suiteWeight ?? 1 };
+      const entry = opts.suiteId ? getSuite(opts.suiteId)?.tests.find((x) => x.id === id) : undefined;
+      return { ...t, weight: entry?.weight ?? 1, caseFilter: entry?.cases };
     });
   }
   const suite = getSuite(opts.suiteId ?? 'core');
   if (!suite) throw new Error(`Unknown suite "${opts.suiteId}"`);
-  const out: Array<LoadedTest & { weight: number }> = [];
+  const out: ResolvedTest[] = [];
   const seen = new Set<string>();
   for (const entry of suite.tests) {
     if (entry.id === '*') {
@@ -393,16 +401,16 @@ export function resolveTests(opts: { suiteId?: string; testIds?: string[] }, all
     }
     if (seen.has(entry.id)) continue;
     seen.add(entry.id);
-    out.push({ ...t, weight: entry.weight ?? 1 });
+    out.push({ ...t, weight: entry.weight ?? 1, caseFilter: entry.cases });
   }
   return out;
 }
 
 /** Fingerprint of a set of tests under the current protocol and judge prompts. */
-export function fingerprint(tests: Array<{ definition: TestDefinition; hash: string; weight?: number }>): string {
+export function fingerprint(tests: Array<{ definition: TestDefinition; hash: string; weight?: number; caseFilter?: string[] }>): string {
   return contentHash({
     protocol: PROTOCOL_VERSION,
     judge: JUDGE_PROMPT_FINGERPRINT,
-    tests: tests.map((t) => [t.definition.id, t.hash, t.weight ?? 1]).sort(),
+    tests: tests.map((t) => (t.caseFilter ? [t.definition.id, t.hash, t.weight ?? 1, [...t.caseFilter].sort()] : [t.definition.id, t.hash, t.weight ?? 1])).sort(),
   });
 }

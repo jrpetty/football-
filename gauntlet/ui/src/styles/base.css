@@ -319,6 +319,11 @@ hr {
   color: var(--accent-ink);
   font-weight: 700;
 }
+.nav .nav-cta[aria-current='page'] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--accent-line);
+}
 .nav .nav-cta:hover {
   background: var(--accent-strong);
   color: var(--accent-ink);

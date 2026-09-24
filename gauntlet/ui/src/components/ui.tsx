@@ -179,16 +179,20 @@ export function ModelChip({ label, color, pill, round, title }: { label: string;
   );
 }
 
-export function ModelCell({ label, vendor, color, extra }: { label: string; vendor?: string; color?: string; extra?: ReactNode }) {
+export function ModelCell({ label, vendor, color, tag }: { label: string; vendor?: string; color?: string; tag?: ReactNode }) {
   return (
     <div className="model-cell">
       <span className="bar" style={{ background: color || 'var(--text-3)' }} aria-hidden="true" />
       <div className="names">
         <span className="label" title={label}>
           {label}
-          {extra}
         </span>
-        {vendor && <span className="vendor">{vendor}</span>}
+        {(vendor || tag) && (
+          <span className="vendor-row">
+            {vendor && <span className="vendor">{vendor}</span>}
+            {tag}
+          </span>
+        )}
       </div>
     </div>
   );
