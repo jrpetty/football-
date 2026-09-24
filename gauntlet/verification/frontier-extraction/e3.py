@@ -94,7 +94,7 @@ Named User credentials active during June 2027: 321, of which 3 are Orbis suppor
 Incidents affecting the Production Service in June 2027:
 #1  Wed 2 June, 01:00-02:30 (90 min). Planned database upgrade. Notified to the Customer by email on Thu 20 May at 16:00.
 #2  Wed 9 June, 10:05-11:40 (95 min). Unplanned outage: storage cluster failure.
-#3  Thu 17 June, 00:30-02:30 (120 min). Emergency security patching. Notified to the Customer by email on Mon 14 June at 09:00.
+#3  Thu 17 June, 00:30-02:30 (120 min). Maintenance: security patching of the application servers. Notified to the Customer by email on Mon 14 June at 09:00.
 #4  Wed 23 June, 13:00-13:25 (25 min). Users unable to log in because the Customer's single sign-on certificate had expired on the Customer's side.
 #5  Mon 28 June, 14:10-14:52 (42 min). Unplanned outage: faulty configuration release.
 
@@ -192,7 +192,7 @@ def expected():
     }
 
 NOTES = ("Traps: Amendment 2 replaces clause 4.2 before the first anniversary, so the 2026 increase is the January 2026 CPI of 1.6% with no 2% floor "
-         "(21,000 -> 21,336); the side letter (February CPI 2.9%) was never countersigned; 2027: January CPI 4.6% capped at 4% (21,336 -> 22,188.. rounded 22,189). "
+         "(21,000 -> 21,336); the side letter (February CPI 2.9%) was never countersigned; 2027: January CPI 4.6% capped at 4% (21,336 x 1.04 = 22,189.44 -> 22,189). "
          "Forecasting fee indexed separately (2,400 -> 2,438) and deleted from 1 July 2026. Named Users exclude 3 Orbis support accounts (318; 18 x GBP 58). "
          "Downtime: #1 scheduled; #3 notified 63.5 h ahead, which satisfies the 48-hour rule that Amendment 1 put into clause 1.5 (Amendment 2 only reverted 5.2); "
          "#4 customer-caused; #5 corrected 42 -> 27 min; 95 + 27 = 122 min of 43,200 -> 99.71% (rounded down) -> original clause 5.2 reinstated -> 5%. "

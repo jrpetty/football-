@@ -2,7 +2,7 @@
   "id": "frontier",
   "version": "1.0.0",
   "name": "Frontier Gauntlet",
-  "description": "The hardest tier, built to separate the very best models once they saturate Core: extreme logic grids and truth-teller puzzles, olympiad maths, long-horizon planning, frontier coding, adversarial system prompts, high-pressure honesty traps and the hard variants of every simulation. Expect small models to score near zero here. Use 3 repeats for published results.",
+  "description": "The hardest tier, built to separate the very best models once they saturate Core: extreme logic grids and truth-teller puzzles, olympiad maths, long-horizon planning, frontier coding, contract-grade data extraction, adversarial system prompts, high-pressure honesty traps and the hard variants of every simulation. Expect small models to score near zero here. Use 3 repeats for published results.",
   "repeats": 3,
   "tests": [
     {
@@ -19,6 +19,9 @@
     },
     {
       "id": "coding.frontier"
+    },
+    {
+      "id": "extraction.frontier"
     },
     {
       "id": "instruction.extreme-constraints"
