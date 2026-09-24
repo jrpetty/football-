@@ -1,7 +1,7 @@
 {
   "kind": "program",
   "id": "visual.draw-it-blind",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "program": "draw-it-blind",
   "name": "Draw It Blind",
   "category": "visual",

@@ -18,7 +18,7 @@
   "maxOutputTokens": 32000,
   "estimate": {
     "inputTokens": 420,
-    "outputTokens": 20000
+    "outputTokens": 24000
   },
   "author": "Gauntlet Core",
   "createdAt": "2026-09-24",

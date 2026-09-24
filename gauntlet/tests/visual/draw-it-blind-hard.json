@@ -1,15 +1,27 @@
 {
   "kind": "program",
   "id": "visual.draw-it-blind-hard",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "program": "draw-it-blind",
   "name": "Draw It Blind — Hard",
   "category": "visual",
   "description": "The hard tier of Draw It Blind: 9–12 shapes, some overlapping and some nested inside others, with tall triangles pointing in any of eight directions and colours from a 12-colour palette that includes close pairs (navy/blue, teal/green, brown/orange, gray/black). The model must describe the scene in at most 90 words with no digits (numbers only spelled out up to ten), then redraw it as SVG from its own description in a fresh context. Scoring weights geometry heavily (40% position, reaching zero at 60 px; 20% size), and a triangle pointing the wrong way loses credit. With about seven words per shape, every word has to earn its place.",
   "difficulty": "extreme",
-  "tags": ["spatial", "svg", "description", "compression", "self-communication", "geometry", "seeded"],
+  "tags": [
+    "spatial",
+    "svg",
+    "description",
+    "compression",
+    "self-communication",
+    "geometry",
+    "seeded"
+  ],
   "hook": "Twelve shapes, ninety words, no numbers. Can it rebuild the picture from its own notes?",
-  "seeds": [101, 202, 303],
+  "seeds": [
+    101,
+    202,
+    303
+  ],
   "config": {
     "minShapes": 9,
     "maxShapes": 12,
@@ -18,11 +30,21 @@
     "overlap": true,
     "rotation": true,
     "positionFalloff": 60,
-    "weights": { "type": 0.2, "color": 0.2, "position": 0.4, "size": 0.2 }
+    "weights": {
+      "type": 0.2,
+      "color": 0.2,
+      "position": 0.4,
+      "size": 0.2
+    },
+    "hyphenSplit": true
   },
   "maxOutputTokens": 16000,
   "timeLimitSec": 900,
-  "estimate": { "inputTokens": 1400, "outputTokens": 18000, "calls": 2 },
+  "estimate": {
+    "inputTokens": 1400,
+    "outputTokens": 18000,
+    "calls": 2
+  },
   "author": "Gauntlet Core",
   "createdAt": "2026-09-24"
 }

@@ -538,3 +538,17 @@ test('draw-it-blind hard: ideal word-level redraws score well below the standard
   assert.ok(hard < 0.75 && hard < std - 0.2, `hard ${hard} vs standard ${std}`);
   assert.ok(baseline < 0.1, `baseline ${baseline}`);
 });
+
+test('hard tier: hyphenated compounds count as separate words (closes the "fifth-wide" loophole)', async () => {
+  const { checkDescription, describePrompt } = await import('../src/programs/draw-it-blind.ts');
+  const text = 'A navy fifth-wide square sits top-left; a teal quarter-tall triangle points down-left.';
+  assert.equal(checkDescription(text, 90, false).words, 12);
+  const split = checkDescription(text, 90, true);
+  assert.equal(split.words, 16);
+  assert.ok(!split.delivered.includes('-'), 'the drawer receives the same words the limit counted');
+  const cut = checkDescription(text, 10, true);
+  assert.equal(cut.truncated, true);
+  const prompt = describePrompt({ shapes: [] } as never, 90, { hyphenSplit: true, rotation: true });
+  assert.match(prompt, /splitting on spaces AND hyphens/);
+  assert.match(prompt, /tall isosceles triangle/);
+});

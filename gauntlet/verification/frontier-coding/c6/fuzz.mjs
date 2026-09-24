@@ -1,0 +1,10 @@
+import { rng, load, deepEqual, python } from '../lib.mjs';
+import { randomEvents } from './events.mjs';
+const ref = load('./c6/ref.js', 'runExchange');
+const R = rng(Number(process.argv[2] || 1)); const N = Number(process.argv[3] || 2000);
+const cases = [];
+for (let i = 0; i < N; i++) cases.push([randomEvents(R, R.int(1, Number(process.env.MAXE || 40)), { spread: R.int(2, 8) })]);
+const py = python('./c6/brute.py', cases);
+let bad = 0, trades = 0;
+cases.forEach((c, i) => { const r = ref(...c); trades += r.trades.length; if (!deepEqual(r, py[i])) { bad++; if (bad < 3) console.log('MISMATCH', JSON.stringify(c), '\nref', JSON.stringify(r), '\npy ', JSON.stringify(py[i])); } });
+console.log(`c6 fuzz: ${N - bad}/${N} agree (avg trades ${(trades / N).toFixed(1)})`);

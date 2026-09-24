@@ -1,0 +1,651 @@
+[
+ {
+  "id": "x01",
+  "expected": [
+   {
+    "check": "no_letter",
+    "letter": "e"
+   },
+   {
+    "check": "sentence_count",
+    "min": 5,
+    "max": 5
+   },
+   {
+    "check": "word_count",
+    "min": 60,
+    "max": 60
+   },
+   {
+    "check": "include",
+    "text": "storm",
+    "min": 2,
+    "max": 2
+   },
+   {
+    "check": "no_commas"
+   },
+   {
+    "check": "starts_with",
+    "text": "At ",
+    "caseSensitive": true
+   },
+   {
+    "check": "ends_with",
+    "text": "dawn.",
+    "caseSensitive": true
+   },
+   {
+    "check": "max_word_length",
+    "max": 9
+   }
+  ],
+  "samples": {
+   "pass": [
+    "At midnight a wild storm rolls in from a black and angry sky. Rain pounds on roofs and small boats rock hard at anchor. Lightning cracks and a loud boom jolts all windows along a quay. Fishing folk stay indoors by warm lamps as this storm howls on. It fails at last and a calm sky turns pink at dawn.",
+    "At midnight a wild storm rolls in from a black and angry sky. Rain pounds on roofs and small boats rock hard at anchor. Lightning cracks and a loud boom jolts all windows along a quay. Fishing folk stay indoors by warm lamps as this storm howls on. It fails at last and a calm sky turns pink at dawn.\n",
+    "\nAt midnight a wild storm rolls in from a black and angry sky. Rain pounds on roofs and small boats rock hard at anchor. Lightning cracks and a loud boom jolts all windows along a quay. Fishing folk stay indoors by warm lamps as this storm howls on. It fails at last and a calm sky turns pink at dawn.\n\n"
+   ],
+   "fail": [
+    "At midnight a wild storm rolls in from a black and angry sky. Rain pounds on roofs and small boats rock hard at anchor. Lightning cracks and a loud boom jolts all windows along a quay. Fishing folk stay indoors by warm lamps as this storm howls on. It fails at last and a calm sky turns pink and gold at dawn."
+   ]
+  }
+ },
+ {
+  "id": "x02",
+  "expected": [
+   {
+    "check": "acrostic",
+    "word": "LABYRINTHS"
+   },
+   {
+    "check": "line_count",
+    "min": 10,
+    "max": 10
+   },
+   {
+    "check": "word_count",
+    "min": 50,
+    "max": 50
+   },
+   {
+    "check": "regex",
+    "pattern": "^\\s*(?:[a-z]+(?: [a-z]+){4}[ \\t]*\\n[ \\t]*){9}[a-z]+(?: [a-z]+){4}\\s*$"
+   },
+   {
+    "check": "all_lowercase"
+   },
+   {
+    "check": "no_letter",
+    "letter": "e"
+   },
+   {
+    "check": "include",
+    "text": "path",
+    "min": 2,
+    "max": 2
+   },
+   {
+    "check": "include",
+    "text": "you",
+    "min": 4,
+    "max": 4
+   }
+  ],
+  "samples": {
+   "pass": [
+    "lost among tall dark shrubs\na narrow path turns again\nbut no way out shows\nyou walk for hours now\nround and round you go\nin cold dim moonlight still\nno map can aid you\ntry that path at last\nhark a bird calls out\nsunlight finds you at dawn",
+    "lost among tall dark shrubs\na narrow path turns again\nbut no way out shows\nyou walk for hours now\nround and round you go\nin cold dim moonlight still\nno map can aid you\ntry that path at last\nhark a bird calls out\nsunlight finds you at dawn\n",
+    "\nlost among tall dark shrubs\na narrow path turns again\nbut no way out shows\nyou walk for hours now\nround and round you go\nin cold dim moonlight still\nno map can aid you\ntry that path at last\nhark a bird calls out\nsunlight finds you at dawn\n\n"
+   ],
+   "fail": [
+    "lost among tall dark shrubs\na narrow path turns again\nbut no way out shows\nyou walk for hours now\nround and round you go\nin cold dim moonlight still\nno map can aid you\ntry that path at last\nhark a bird calls out\nsunlight finds you at dawn."
+   ]
+  }
+ },
+ {
+  "id": "x03",
+  "expected": [
+   {
+    "check": "json"
+   },
+   {
+    "check": "json_keys",
+    "keys": [
+     "island",
+     "population",
+     "towns",
+     "motto"
+    ]
+   },
+   {
+    "check": "regex",
+    "pattern": "^\\s*\\{\\s*\"island\"\\s*:\\s*\"[A-Z][a-z]{4}\"\\s*,\\s*\"population\"\\s*:\\s*\\d{4}\\s*,\\s*\"towns\"\\s*:\\s*\\[\\s*\"[A-Z][a-z]*\"\\s*,\\s*\"[A-Z][a-z]*\"\\s*,\\s*\"[A-Z][a-z]*\"\\s*\\]\\s*,\\s*\"motto\"\\s*:\\s*\"[a-z]+(?: [a-z]+){5}\"\\s*\\}\\s*$"
+   },
+   {
+    "check": "regex",
+    "pattern": "\"island\"\\s*:\\s*\"([a-z])([a-z])[a-z]\\2\\1\"",
+    "flags": "i"
+   },
+   {
+    "check": "regex",
+    "pattern": "\"population\"\\s*:\\s*(?=\\d{4}\\s*[,}])1?2?3?4?5?6?7?8?9?\\s*[,}]"
+   },
+   {
+    "check": "no_letter",
+    "letter": "e"
+   },
+   {
+    "check": "include",
+    "text": "sun",
+    "min": 1,
+    "max": 1
+   },
+   {
+    "check": "include",
+    "text": "wind",
+    "min": 1,
+    "max": 1
+   }
+  ],
+  "samples": {
+   "pass": [
+    "{\"island\": \"Nolon\", \"population\": 2468, \"towns\": [\"Korvik\", \"Dalby\", \"Mira\"], \"motto\": \"sun and wind will guard us\"}",
+    "{\"island\": \"Nolon\", \"population\": 2468, \"towns\": [\"Korvik\", \"Dalby\", \"Mira\"], \"motto\": \"sun and wind will guard us\"}\n",
+    "\n{\"island\": \"Nolon\", \"population\": 2468, \"towns\": [\"Korvik\", \"Dalby\", \"Mira\"], \"motto\": \"sun and wind will guard us\"}\n\n"
+   ],
+   "fail": [
+    "{\"island\": \"Nolon\", \"population\": 2486, \"towns\": [\"Korvik\", \"Dalby\", \"Mira\"], \"motto\": \"sun and wind will guard us\"}"
+   ]
+  }
+ },
+ {
+  "id": "x04",
+  "expected": [
+   {
+    "check": "line_count",
+    "min": 8,
+    "max": 8
+   },
+   {
+    "check": "each_line_starts_with",
+    "text": ">> "
+   },
+   {
+    "check": "title_case_lines"
+   },
+   {
+    "check": "no_letter",
+    "letter": "s"
+   },
+   {
+    "check": "max_word_length",
+    "max": 8
+   },
+   {
+    "check": "include",
+    "text": "Moon",
+    "caseSensitive": true,
+    "min": 3,
+    "max": 3
+   },
+   {
+    "check": "include",
+    "text": "moon",
+    "min": 3,
+    "max": 3
+   },
+   {
+    "check": "word_count",
+    "min": 44,
+    "max": 44
+   },
+   {
+    "check": "no_commas"
+   },
+   {
+    "check": "regex",
+    "pattern": "\\d",
+    "shouldMatch": false
+   }
+  ],
+  "samples": {
+   "pass": [
+    ">> Moon Camp Open For Work\n>> Crew Of Eight Land On Rim\n>> Robot Digger Hit Ice Under Crater\n>> Moon Ice Water Now On Tap\n>> Doctor Warn Of Low Gravity Pain\n>> Night Party Lit Dark Plain\n>> Fan Can Rent A Moon Room\n>> Rocket Due In June",
+    ">> Moon Camp Open For Work\n>> Crew Of Eight Land On Rim\n>> Robot Digger Hit Ice Under Crater\n>> Moon Ice Water Now On Tap\n>> Doctor Warn Of Low Gravity Pain\n>> Night Party Lit Dark Plain\n>> Fan Can Rent A Moon Room\n>> Rocket Due In June\n",
+    "\n>> Moon Camp Open For Work\n>> Crew Of Eight Land On Rim\n>> Robot Digger Hit Ice Under Crater\n>> Moon Ice Water Now On Tap\n>> Doctor Warn Of Low Gravity Pain\n>> Night Party Lit Dark Plain\n>> Fan Can Rent A Moon Room\n>> Rocket Due In June\n\n"
+   ],
+   "fail": [
+    ">> Moon Camp Open For Work\n>> Crew Of Eight Land On Rim\n>> Robot Digger Hit Ice Under Crater\n>> Moon Ice Water Now On Tap\n>> Doctor Warn Of Low Gravity Pain\n>> Night Party Lit Dark Plain\n>> Fan Can Rent A Moon Room\n>> Rocket Due Back In June"
+   ]
+  }
+ },
+ {
+  "id": "x05",
+  "expected": [
+   {
+    "check": "sentence_count",
+    "min": 6,
+    "max": 6
+   },
+   {
+    "check": "word_count",
+    "min": 42,
+    "max": 42
+   },
+   {
+    "check": "regex",
+    "pattern": "^\\s*(?:[^\\s.!?]+ ){6}[^\\s.!?]+\\.(?: (?:[^\\s.!?]+ ){6}[^\\s.!?]+\\.){5}\\s*$"
+   },
+   {
+    "check": "no_letter",
+    "letter": "a"
+   },
+   {
+    "check": "include",
+    "text": "light",
+    "min": 3,
+    "max": 3
+   },
+   {
+    "check": "starts_with",
+    "text": "Tonight ",
+    "caseSensitive": true
+   },
+   {
+    "check": "ends_with",
+    "text": "home.",
+    "caseSensitive": true
+   },
+   {
+    "check": "no_commas"
+   }
+  ],
+  "samples": {
+   "pass": [
+    "Tonight old Tom climbs up the lighthouse. He trims the wick for this night. The bright light sweeps over cold rocks. Ships drift by under his firm glow. By sunrise his long duty is over. He shuts the light then drives home.",
+    "Tonight old Tom climbs up the lighthouse. He trims the wick for this night. The bright light sweeps over cold rocks. Ships drift by under his firm glow. By sunrise his long duty is over. He shuts the light then drives home.\n",
+    "\nTonight old Tom climbs up the lighthouse. He trims the wick for this night. The bright light sweeps over cold rocks. Ships drift by under his firm glow. By sunrise his long duty is over. He shuts the light then drives home.\n\n"
+   ],
+   "fail": [
+    "Tonight old Tom climbs up the lighthouse. He trims the wick for this night. The bright light sweeps over cold rocks. Ships drift by under his firm glow. By sunrise his long duty is over. He shuts the light then walks home."
+   ]
+  }
+ },
+ {
+  "id": "x06",
+  "expected": [
+   {
+    "check": "bullet_count",
+    "min": 7,
+    "max": 7
+   },
+   {
+    "check": "each_line_starts_with",
+    "text": "- "
+   },
+   {
+    "check": "regex",
+    "pattern": "^(?!.*\\.\\s*$).*\\S.*$",
+    "flags": "m",
+    "shouldMatch": false
+   },
+   {
+    "check": "all_lowercase"
+   },
+   {
+    "check": "exclude",
+    "text": "the"
+   },
+   {
+    "check": "exclude",
+    "text": "and"
+   },
+   {
+    "check": "include",
+    "text": "because",
+    "min": 3,
+    "max": 3
+   },
+   {
+    "check": "word_count",
+    "min": 56,
+    "max": 56
+   },
+   {
+    "check": "max_word_length",
+    "max": 8
+   },
+   {
+    "check": "no_commas"
+   }
+  ],
+  "samples": {
+   "pass": [
+    "- water it only when top soil feels dry.\n- keep near a bright window because light helps.\n- pick a pot with holes because roots rot.\n- wipe dust off its leaves every few weeks.\n- feed it once a month during warm spring.\n- turn its pot often because stems lean sunward.\n- check for pests on stems every single week.",
+    "- water it only when top soil feels dry.\n- keep near a bright window because light helps.\n- pick a pot with holes because roots rot.\n- wipe dust off its leaves every few weeks.\n- feed it once a month during warm spring.\n- turn its pot often because stems lean sunward.\n- check for pests on stems every single week.\n",
+    "\n- water it only when top soil feels dry.\n- keep near a bright window because light helps.\n- pick a pot with holes because roots rot.\n- wipe dust off its leaves every few weeks.\n- feed it once a month during warm spring.\n- turn its pot often because stems lean sunward.\n- check for pests on stems every single week.\n\n"
+   ],
+   "fail": [
+    "- water only when the top soil feels dry.\n- keep near a bright window because light helps.\n- pick a pot with holes because roots rot.\n- wipe dust off its leaves every few weeks.\n- feed it once a month during warm spring.\n- turn its pot often because stems lean sunward.\n- check for pests on stems every single week."
+   ]
+  }
+ },
+ {
+  "id": "x07",
+  "expected": [
+   {
+    "check": "line_count",
+    "min": 8,
+    "max": 8
+   },
+   {
+    "check": "regex",
+    "pattern": "^\\s*A: [^\\n]*\\?[ \\t]*\\n[ \\t]*B: [^\\n]*\\.[ \\t]*\\n[ \\t]*A: [^\\n]*\\?[ \\t]*\\n[ \\t]*B: [^\\n]*\\.[ \\t]*\\n[ \\t]*A: [^\\n]*\\?[ \\t]*\\n[ \\t]*B: [^\\n]*\\.[ \\t]*\\n[ \\t]*A: [^\\n]*\\?[ \\t]*\\n[ \\t]*B: [^\\n]*\\.\\s*$"
+   },
+   {
+    "check": "exclude",
+    "text": "no"
+   },
+   {
+    "check": "include",
+    "text": "ticket",
+    "min": 3,
+    "max": 3
+   },
+   {
+    "check": "word_count",
+    "min": 64,
+    "max": 64
+   },
+   {
+    "check": "regex",
+    "pattern": "\\d",
+    "shouldMatch": false
+   },
+   {
+    "check": "no_commas"
+   },
+   {
+    "check": "exclude",
+    "text": "!"
+   }
+  ],
+  "samples": {
+   "pass": [
+    "A: Could I buy a ticket to Leeds for today?\nB: The last direct train leaves at six.\nA: How much will a return ticket cost me?\nB: It costs forty pounds.\nA: May I pay by card at this desk?\nB: Of course. Please tap your card on the reader.\nA: Where do I collect the printed ticket?\nB: It prints right here.",
+    "A: Could I buy a ticket to Leeds for today?\nB: The last direct train leaves at six.\nA: How much will a return ticket cost me?\nB: It costs forty pounds.\nA: May I pay by card at this desk?\nB: Of course. Please tap your card on the reader.\nA: Where do I collect the printed ticket?\nB: It prints right here.\n",
+    "\nA: Could I buy a ticket to Leeds for today?\nB: The last direct train leaves at six.\nA: How much will a return ticket cost me?\nB: It costs forty pounds.\nA: May I pay by card at this desk?\nB: Of course. Please tap your card on the reader.\nA: Where do I collect the printed ticket?\nB: It prints right here.\n\n"
+   ],
+   "fail": [
+    "A: Could I buy a ticket to Leeds for today?\nB: The last direct train leaves at six.\nA: How much will a return ticket cost me?\nB: It costs forty pounds.\nA: May I pay by card at this desk?\nB: Of course. Please tap your card on the reader.\nA: Where do I collect the printed ticket?\nB: It prints right now."
+   ]
+  }
+ },
+ {
+  "id": "x08",
+  "expected": [
+   {
+    "check": "line_count",
+    "min": 6,
+    "max": 6
+   },
+   {
+    "check": "bullet_count",
+    "min": 6,
+    "max": 6
+   },
+   {
+    "check": "regex",
+    "pattern": "^\\s*1\\. [A-Z][a-z]*(?: [a-z]+){5}\\.[ \\t]*\\n[ \\t]*2\\. [A-Z][a-z]*(?: [a-z]+){5}\\.[ \\t]*\\n[ \\t]*3\\. [A-Z][a-z]*(?: [a-z]+){5}\\.[ \\t]*\\n[ \\t]*4\\. [A-Z][a-z]*(?: [a-z]+){5}\\.[ \\t]*\\n[ \\t]*5\\. [A-Z][a-z]*(?: [a-z]+){5}\\.[ \\t]*\\n[ \\t]*6\\. [A-Z][a-z]*(?: [a-z]+){5}\\.\\s*$"
+   },
+   {
+    "check": "no_letter",
+    "letter": "t"
+   },
+   {
+    "check": "include",
+    "text": "mug",
+    "min": 2,
+    "max": 2
+   },
+   {
+    "check": "include",
+    "text": "brew",
+    "min": 2,
+    "max": 2
+   },
+   {
+    "check": "word_count",
+    "min": 42,
+    "max": 42
+   }
+  ],
+  "samples": {
+   "pass": [
+    "1. Boil a small pan of milk.\n2. Drop some black leaves in quickly.\n3. Brew on a low flame briefly.\n4. Pour your brew in a mug.\n5. Add honey or sugar as needed.\n6. Sip slowly from your warm mug.",
+    "1. Boil a small pan of milk.\n2. Drop some black leaves in quickly.\n3. Brew on a low flame briefly.\n4. Pour your brew in a mug.\n5. Add honey or sugar as needed.\n6. Sip slowly from your warm mug.\n",
+    "\n1. Boil a small pan of milk.\n2. Drop some black leaves in quickly.\n3. Brew on a low flame briefly.\n4. Pour your brew in a mug.\n5. Add honey or sugar as needed.\n6. Sip slowly from your warm mug.\n\n"
+   ],
+   "fail": [
+    "1. Boil a small pan of milk.\n2. Drop some tea leaves in quickly.\n3. Brew on a low flame briefly.\n4. Pour your brew in a mug.\n5. Add honey or sugar as needed.\n6. Sip slowly from your warm mug."
+   ]
+  }
+ },
+ {
+  "id": "x09",
+  "expected": [
+   {
+    "check": "no_letter",
+    "letter": "a"
+   },
+   {
+    "check": "no_letter",
+    "letter": "e"
+   },
+   {
+    "check": "sentence_count",
+    "min": 4,
+    "max": 4
+   },
+   {
+    "check": "word_count",
+    "min": 36,
+    "max": 36
+   },
+   {
+    "check": "starts_with",
+    "text": "You ",
+    "caseSensitive": true
+   },
+   {
+    "check": "include",
+    "text": "you",
+    "min": 5,
+    "max": 5
+   },
+   {
+    "check": "ends_with",
+    "text": "!"
+   },
+   {
+    "check": "no_commas"
+   },
+   {
+    "check": "max_word_length",
+    "max": 7
+   }
+  ],
+  "samples": {
+   "pass": [
+    "You will do good work in this job. Your skills brought you to this spot through long hours of study. Trust your gut in rough spots of this first month. Go on now: you will triumph!",
+    "You will do good work in this job. Your skills brought you to this spot through long hours of study. Trust your gut in rough spots of this first month. Go on now: you will triumph!\n",
+    "\nYou will do good work in this job. Your skills brought you to this spot through long hours of study. Trust your gut in rough spots of this first month. Go on now: you will triumph!\n\n"
+   ],
+   "fail": [
+    "You will do good work in this job. Your skills brought you to this spot through long hours of study. Trust your gut in rough spots of your first month. Go on now: you will triumph!"
+   ]
+  }
+ },
+ {
+  "id": "x10",
+  "expected": [
+   {
+    "check": "line_count",
+    "min": 9,
+    "max": 9
+   },
+   {
+    "check": "each_line_starts_with",
+    "text": "~ "
+   },
+   {
+    "check": "acrostic",
+    "word": "STREETCAR"
+   },
+   {
+    "check": "regex",
+    "pattern": "^\\s*(?:~ \\S+(?: \\S+){5}[ \\t]*\\n[ \\t]*){8}~ \\S+(?: \\S+){5}\\s*$"
+   },
+   {
+    "check": "word_count",
+    "min": 54,
+    "max": 54
+   },
+   {
+    "check": "title_case_lines"
+   },
+   {
+    "check": "no_letter",
+    "letter": "o"
+   },
+   {
+    "check": "include",
+    "text": "light",
+    "min": 2,
+    "max": 2
+   },
+   {
+    "check": "no_commas"
+   }
+  ],
+  "samples": {
+   "pass": [
+    "~ Street Lamps Fade As Day Begins\n~ Trams Rattle Past The Silent Bakery\n~ Red Light Slips Between Tall Cranes\n~ Every Market Stall Swings Its Shutters\n~ Early Buses Hum Past Sleepy Parks\n~ Taxis Queue Beside The Busy Square\n~ Cafe Glass Glitters With Fresh Light\n~ All The Bridges Fill With Traffic\n~ Rain Clears And The City Stirs",
+    "~ Street Lamps Fade As Day Begins\n~ Trams Rattle Past The Silent Bakery\n~ Red Light Slips Between Tall Cranes\n~ Every Market Stall Swings Its Shutters\n~ Early Buses Hum Past Sleepy Parks\n~ Taxis Queue Beside The Busy Square\n~ Cafe Glass Glitters With Fresh Light\n~ All The Bridges Fill With Traffic\n~ Rain Clears And The City Stirs\n",
+    "\n~ Street Lamps Fade As Day Begins\n~ Trams Rattle Past The Silent Bakery\n~ Red Light Slips Between Tall Cranes\n~ Every Market Stall Swings Its Shutters\n~ Early Buses Hum Past Sleepy Parks\n~ Taxis Queue Beside The Busy Square\n~ Cafe Glass Glitters With Fresh Light\n~ All The Bridges Fill With Traffic\n~ Rain Clears And The City Stirs\n\n"
+   ],
+   "fail": [
+    "~ Street Lamps Fade As Day Begins\n~ Trams Rattle Past The Silent Bakery\n~ Red Light Slips Between Tall Cranes\n~ Every Market Stall Swings Its Shutters\n~ Early Buses Hum Past Sleepy Parks\n~ Taxis Queue Beside The Busy Square\n~ Cafe Glass Glitters With Fresh Light\n~ All The Bridges Fill With Traffic\n~ Rain Clears And The Town Stirs"
+   ]
+  }
+ },
+ {
+  "id": "x11",
+  "expected": [
+   {
+    "check": "paragraph_count",
+    "min": 3,
+    "max": 3
+   },
+   {
+    "check": "sentence_count",
+    "min": 6,
+    "max": 6
+   },
+   {
+    "check": "regex",
+    "pattern": "^\\s*[^\\n.!?]+[.!?] [^\\n.!?]+[.!?][ \\t]*\\n[ \\t]*\\n[ \\t]*[^\\n.!?]+[.!?] [^\\n.!?]+[.!?][ \\t]*\\n[ \\t]*\\n[ \\t]*[^\\n.!?]+[.!?] [^\\n.!?]+[.!?]\\s*$"
+   },
+   {
+    "check": "word_count",
+    "min": 75,
+    "max": 75
+   },
+   {
+    "check": "include",
+    "text": "Zyloq",
+    "caseSensitive": true,
+    "min": 3,
+    "max": 3
+   },
+   {
+    "check": "exclude",
+    "text": "very"
+   },
+   {
+    "check": "exclude",
+    "text": "really"
+   },
+   {
+    "check": "regex",
+    "pattern": "\\d",
+    "shouldMatch": false
+   },
+   {
+    "check": "ends_with",
+    "text": "Zyloq.",
+    "caseSensitive": true
+   },
+   {
+    "check": "max_word_length",
+    "max": 10
+   }
+  ],
+  "samples": {
+   "pass": [
+    "Meet the Zyloq, a kettle that listens. Tell it the heat you want and it warms water to that exact point.\n\nA quiet base glows blue while it works and green when your drink is ready. Your phone gets a gentle alert from the Zyloq so tea never goes cold.\n\nA steel body keeps small hands safe and a filter traps scale before it reaches your cup. Mornings start calmly and quietly with the Zyloq.",
+    "Meet the Zyloq, a kettle that listens. Tell it the heat you want and it warms water to that exact point.\n\nA quiet base glows blue while it works and green when your drink is ready. Your phone gets a gentle alert from the Zyloq so tea never goes cold.\n\nA steel body keeps small hands safe and a filter traps scale before it reaches your cup. Mornings start calmly and quietly with the Zyloq.\n",
+    "\nMeet the Zyloq, a kettle that listens. Tell it the heat you want and it warms water to that exact point.\n\nA quiet base glows blue while it works and green when your drink is ready. Your phone gets a gentle alert from the Zyloq so tea never goes cold.\n\nA steel body keeps small hands safe and a filter traps scale before it reaches your cup. Mornings start calmly and quietly with the Zyloq.\n\n"
+   ],
+   "fail": [
+    "Meet the Zyloq, a kettle that listens. Tell it the heat you want and it warms water to that exact point.\n\nA quiet base glows blue while it works and green when your drink is ready. Your phone gets a gentle alert from the Zyloq so tea never goes cold.\n\nA steel body keeps every hand safe and a filter traps scale before it reaches your cup. Mornings start calmly and quietly with the Zyloq."
+   ]
+  }
+ },
+ {
+  "id": "x12",
+  "expected": [
+   {
+    "check": "json"
+   },
+   {
+    "check": "line_count",
+    "min": 7,
+    "max": 7
+   },
+   {
+    "check": "regex",
+    "pattern": "^\\s*\\[[ \\t]*\\n[ \\t]*\\{ *\"name\" *: *\"B[a-z]+ B[a-z]+\" *, *\"players\" *: *\"(?:1-[2-8]|2-[3-8]|3-[4-8]|4-[5-8]|5-[6-8]|6-[78]|7-8)\" *, *\"minutes\" *: *(?:15|30|45|60|75|90|105|120) *\\} *,[ \\t]*\\n[ \\t]*\\{ *\"name\" *: *\"R[a-z]+ R[a-z]+\" *, *\"players\" *: *\"(?:1-[2-8]|2-[3-8]|3-[4-8]|4-[5-8]|5-[6-8]|6-[78]|7-8)\" *, *\"minutes\" *: *(?:15|30|45|60|75|90|105|120) *\\} *,[ \\t]*\\n[ \\t]*\\{ *\"name\" *: *\"A[a-z]+ A[a-z]+\" *, *\"players\" *: *\"(?:1-[2-8]|2-[3-8]|3-[4-8]|4-[5-8]|5-[6-8]|6-[78]|7-8)\" *, *\"minutes\" *: *(?:15|30|45|60|75|90|105|120) *\\} *,[ \\t]*\\n[ \\t]*\\{ *\"name\" *: *\"V[a-z]+ V[a-z]+\" *, *\"players\" *: *\"(?:1-[2-8]|2-[3-8]|3-[4-8]|4-[5-8]|5-[6-8]|6-[78]|7-8)\" *, *\"minutes\" *: *(?:15|30|45|60|75|90|105|120) *\\} *,[ \\t]*\\n[ \\t]*\\{ *\"name\" *: *\"E[a-z]+ E[a-z]+\" *, *\"players\" *: *\"(?:1-[2-8]|2-[3-8]|3-[4-8]|4-[5-8]|5-[6-8]|6-[78]|7-8)\" *, *\"minutes\" *: *(?:15|30|45|60|75|90|105|120) *\\}[ \\t]*\\n[ \\t]*\\][ \\t]*\\s*$"
+   },
+   {
+    "check": "regex",
+    "pattern": "\"minutes\" *: *(\\d+)\\b[\\s\\S]*\"minutes\" *: *\\1\\b",
+    "shouldMatch": false
+   },
+   {
+    "check": "regex",
+    "pattern": "\"players\" *: *\"(\\d-\\d)\"[\\s\\S]*\"players\" *: *\"\\1\"",
+    "shouldMatch": false
+   },
+   {
+    "check": "no_letter",
+    "letter": "o"
+   },
+   {
+    "check": "exclude",
+    "text": "game"
+   }
+  ],
+  "samples": {
+   "pass": [
+    "[\n  {\"name\": \"Brass Bandits\", \"players\": \"2-4\", \"minutes\": 45},\n  {\"name\": \"Ruby Raiders\", \"players\": \"3-6\", \"minutes\": 60},\n  {\"name\": \"Amber Alleys\", \"players\": \"1-4\", \"minutes\": 30},\n  {\"name\": \"Velvet Vaults\", \"players\": \"2-5\", \"minutes\": 90},\n  {\"name\": \"Emerald Empires\", \"players\": \"4-8\", \"minutes\": 120}\n]",
+    "[\n  {\"name\": \"Brass Bandits\", \"players\": \"2-4\", \"minutes\": 45},\n  {\"name\": \"Ruby Raiders\", \"players\": \"3-6\", \"minutes\": 60},\n  {\"name\": \"Amber Alleys\", \"players\": \"1-4\", \"minutes\": 30},\n  {\"name\": \"Velvet Vaults\", \"players\": \"2-5\", \"minutes\": 90},\n  {\"name\": \"Emerald Empires\", \"players\": \"4-8\", \"minutes\": 120}\n]\n",
+    "\n[\n  {\"name\": \"Brass Bandits\", \"players\": \"2-4\", \"minutes\": 45},\n  {\"name\": \"Ruby Raiders\", \"players\": \"3-6\", \"minutes\": 60},\n  {\"name\": \"Amber Alleys\", \"players\": \"1-4\", \"minutes\": 30},\n  {\"name\": \"Velvet Vaults\", \"players\": \"2-5\", \"minutes\": 90},\n  {\"name\": \"Emerald Empires\", \"players\": \"4-8\", \"minutes\": 120}\n]\n\n"
+   ],
+   "fail": [
+    "[\n  {\"name\": \"Brass Barons\", \"players\": \"2-4\", \"minutes\": 45},\n  {\"name\": \"Ruby Raiders\", \"players\": \"3-6\", \"minutes\": 60},\n  {\"name\": \"Amber Alleys\", \"players\": \"1-4\", \"minutes\": 30},\n  {\"name\": \"Velvet Vaults\", \"players\": \"2-5\", \"minutes\": 90},\n  {\"name\": \"Emerald Empires\", \"players\": \"4-8\", \"minutes\": 120}\n]"
+   ]
+  }
+ }
+]

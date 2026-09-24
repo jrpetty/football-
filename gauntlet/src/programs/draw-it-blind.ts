@@ -25,6 +25,8 @@ export interface DibConfig {
   positionFalloff: number;
   /** Pair-score weights (default type 0.3, colour 0.3, position 0.25, size 0.15). */
   weights: { type: number; color: number; position: number; size: number };
+  /** Count each part of a hyphenated word as a word ("top-left" = 2), closing the compound-word loophole under tight limits. */
+  hyphenSplit: boolean;
 }
 
 export function readConfig(raw: Record<string, unknown>): DibConfig {
@@ -42,6 +44,7 @@ export function readConfig(raw: Record<string, unknown>): DibConfig {
     rotation: raw.rotation === true,
     positionFalloff: int(raw.positionFalloff, 160, 40, 400),
     weights: readWeights(raw.weights),
+    hyphenSplit: raw.hyphenSplit === true,
   };
 }
 
@@ -90,7 +93,9 @@ export interface DescriptionCheck {
 }
 
 /** Enforces the description rules: no digits, no large number words, word limit. */
-export function checkDescription(text: string, limit: number): DescriptionCheck {
+export function checkDescription(rawText: string, limit: number, hyphenSplit = false): DescriptionCheck {
+  // With hyphenSplit, hyphens act as word separators ("fifth-wide" is two words); the drawer receives the same words.
+  const text = hyphenSplit ? rawText.replace(/(\p{L})[-‐‑–](?=\p{L})/gu, '$1 ') : rawText;
   const words = countWords(text);
   const truncated = words > limit;
   const kept = truncated ? truncateWords(text, limit) : text;
@@ -106,10 +111,11 @@ export function checkDescription(text: string, limit: number): DescriptionCheck 
   return { violations, delivered, words, truncated, penalty: numberPenalty + (truncated ? 0.05 : 0) };
 }
 
-export type PromptOptions = SceneOptions;
+export type PromptOptions = SceneOptions & { hyphenSplit?: boolean };
 
 /** How words are counted — stated in the prompt and exactly what countWords() does. */
 export const WORD_RULE = 'Words are counted by splitting on spaces, so a hyphenated word such as "top-left" counts as one word.';
+export const WORD_RULE_SPLIT = 'Words are counted by splitting on spaces AND hyphens, so a hyphenated word such as "top-left" counts as two words.';
 
 export function describePrompt(scene: Scene, limit: number, opts: PromptOptions = {}): string {
   const extra: string[] = [];
@@ -119,7 +125,10 @@ export function describePrompt(scene: Scene, limit: number, opts: PromptOptions 
     extra.push(`- The colours come from a palette of ${count} (${names.join(', ')}), some of them similar, so name each colour exactly.`);
   }
   if (opts.overlap) extra.push('- Say which shapes overlap or sit inside others, and which are on top.');
-  if (opts.rotation) extra.push('- Say which way each triangle points.');
+  if (opts.rotation)
+    extra.push(
+      '- Every triangle is a tall isosceles triangle (two long equal sides and a sharp tip). Its direction is the way its sharp tip points, one of eight: up, up-right, right, down-right, down, down-left, left, up-left. Say which way each triangle points.',
+    );
   return [
     'You are playing DRAW IT BLIND. Below is the exact layout of a picture. Describe it in plain English so that another artist, who will never see this layout, can redraw it as accurately as possible from your words alone.',
     '',
@@ -127,7 +136,7 @@ export function describePrompt(scene: Scene, limit: number, opts: PromptOptions 
     sceneTable(scene, opts),
     '',
     'Rules:',
-    `- At most ${limit} words. ${WORD_RULE} Anything beyond ${limit} words is cut off.`,
+    `- At most ${limit} words. ${opts.hyphenSplit ? WORD_RULE_SPLIT : WORD_RULE} Anything beyond ${limit} words is cut off.`,
     '- Numbers may only be spelled out, and only up to ten: "two", "a third", "two-thirds" or "seven-tenths" are fine. Digits (0-9) and any spelled-out number above ten (such as "eleven", "twenty", "hundred", "twelfths" or "eleven-twentieths") are deleted before the artist reads your description, and they cost points. Describe positions and sizes in words: "top-left corner", "a quarter of the way down", "about a fifth of the canvas wide".',
     '- Mention every shape with its colour.',
     ...extra,
@@ -174,6 +183,10 @@ export function sceneOptions(cfg: DibConfig): SceneOptions {
   return { palette: cfg.palette, overlap: cfg.overlap, rotation: cfg.rotation };
 }
 
+function promptOptions(cfg: DibConfig): PromptOptions {
+  return { ...sceneOptions(cfg), hyphenSplit: cfg.hyphenSplit };
+}
+
 export function buildScene(ctx: Pick<ProgramContext, 'rng'>, cfg: DibConfig): Scene {
   return generateScene(ctx.rng.fork('draw-it-blind'), cfg.minShapes, cfg.maxShapes, sceneOptions(cfg));
 }
@@ -184,7 +197,7 @@ export const program: ProgramDefinition = {
   description:
     'The model sees a precise table of 5–7 coloured shapes on a 400×400 canvas and must describe it in at most 120 words, spelling out numbers only up to ten (no digits). Then, in a fresh context, the same model redraws the picture as SVG from nothing but its own description. The drawing is parsed and matched shape-by-shape against the original. The hard tier uses 9–12 shapes (some overlapping or nested), rotated triangles, a 12-colour palette with close pairs and a 90-word limit.',
   scoring:
-    'The drawn SVG is parsed into shapes, and each target shape is paired with at most one drawn shape using the best possible one-to-one assignment. A pair scores 30% for shape type, 30% for colour (mapped to the nearest palette colour), 25% for position (zero at 160 px away) and 15% for size. The hard tier weights geometry more (20% type, 20% colour, 40% position reaching zero at 60 px, 20% size), and a triangle pointing the wrong way keeps only 70% (within 67.5°) or 40% of its type credit. Unmatched targets score 0 and each extra drawn shape costs 0.03 (up to 0.15). Digits, or spelled-out numbers above ten, in the description are deleted before the drawing step and cost 0.10 plus 0.02 per extra occurrence (up to 0.30); going over the word limit (words counted by spaces) costs 0.05.',
+    'The drawn SVG is parsed into shapes, and each target shape is paired with at most one drawn shape using the best possible one-to-one assignment. A pair scores 30% for shape type, 30% for colour (mapped to the nearest palette colour), 25% for position (zero at 160 px away) and 15% for size. The hard tier weights geometry more (20% type, 20% colour, 40% position reaching zero at 60 px, 20% size), and a triangle pointing the wrong way keeps only 70% (within 67.5°) or 40% of its type credit. Unmatched targets score 0 and each extra drawn shape costs 0.03 (up to 0.15). Digits, or spelled-out numbers above ten, in the description are deleted before the drawing step and cost 0.10 plus 0.02 per extra occurrence (up to 0.30); going over the word limit (words counted by spaces; in the hard tier also by hyphens) costs 0.05.',
   defaults: { minShapes: 5, maxShapes: 7, descriptionWords: 120, palette: 'basic', overlap: false, rotation: false, positionFalloff: 160 },
 
   async run(ctx: ProgramContext): Promise<ProgramResult> {
@@ -197,12 +210,12 @@ export const program: ProgramDefinition = {
 
     // Step 1 — describe.
     const d = await ctx.model.complete({
-      messages: [{ role: 'user', content: describePrompt(scene, cfg.descriptionWords, sceneOptions(cfg)) }],
+      messages: [{ role: 'user', content: describePrompt(scene, cfg.descriptionWords, promptOptions(cfg)) }],
       maxOutputTokens: ctx.maxOutputTokens,
       label: 'describe',
     });
     const description = d.stopReason === 'refusal' ? '' : cleanDescription(d.text);
-    const check = checkDescription(description, cfg.descriptionWords);
+    const check = checkDescription(description, cfg.descriptionWords, cfg.hyphenSplit);
     const describeFrame: ReplayFrame = {
       step: 1,
       label: 'Step 1 · Describe',
