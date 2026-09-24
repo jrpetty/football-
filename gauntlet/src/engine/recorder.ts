@@ -30,6 +30,18 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
   });
 }
 
+/** Thrown when a model call exceeds its answer-time limit (time-pressure tests). Never retried. */
+export class OutOfTimeError extends Error {
+  readonly limitMs: number;
+  readonly elapsedMs: number;
+  constructor(limitMs: number, elapsedMs: number) {
+    super(`Out of time: no answer within ${Math.round(limitMs / 1000)} s`);
+    this.name = 'OutOfTimeError';
+    this.limitMs = limitMs;
+    this.elapsedMs = elapsedMs;
+  }
+}
+
 /**
  * One API call with the harness's uniform retry policy: retryable errors
  * (429, 5xx, network) back off exponentially (honouring Retry-After) up to
@@ -41,16 +53,38 @@ export async function callWithRetry(
   policy: CallPolicy,
   signal: AbortSignal,
   onRetry?: (attempt: number, waitMs: number, err: Error) => void,
+  /**
+   * Answer-time limit per attempt (ms). The clock starts when the request is sent, so queueing for a
+   * provider slot and retry back-off never count against the model. A slower attempt is aborted and
+   * throws OutOfTimeError (not retried).
+   */
+  attemptLimitMs?: number,
 ): Promise<CompletionResult> {
   const cap = target.contestant.options?.maxOutputTokensCap;
   const maxOutputTokens = cap ? Math.min(cap, req.maxOutputTokens) : req.maxOutputTokens;
   let attempt = 0;
   for (;;) {
     const release = await target.semaphore.acquire(signal);
+    const limiter = attemptLimitMs ? new AbortController() : null;
+    const onOuter = () => limiter?.abort();
+    let late = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const sentAt = Date.now();
+    if (limiter) {
+      signal.addEventListener('abort', onOuter, { once: true });
+      timer = setTimeout(() => {
+        late = true;
+        limiter.abort();
+      }, attemptLimitMs);
+    }
     try {
-      const r = await target.adapter.complete({ ...req, maxOutputTokens, signal });
+      const r = await target.adapter.complete({ ...req, maxOutputTokens, signal: limiter?.signal ?? signal });
+      // Adapters that cannot be interrupted still get judged on their measured time.
+      if (attemptLimitMs && (late || r.totalMs > attemptLimitMs)) throw new OutOfTimeError(attemptLimitMs, Math.max(r.totalMs, Date.now() - sentAt));
       return { ...r, retries: attempt };
     } catch (err) {
+      if (err instanceof OutOfTimeError) throw err;
+      if (late && !signal.aborted) throw new OutOfTimeError(attemptLimitMs!, Date.now() - sentAt);
       if (signal.aborted) throw err;
       const retryable = err instanceof ProviderError ? err.retryable : false;
       if (!retryable || attempt >= policy.maxRetries) throw err;
@@ -62,6 +96,8 @@ export async function callWithRetry(
       attempt++;
       continue;
     } finally {
+      if (timer) clearTimeout(timer);
+      signal.removeEventListener('abort', onOuter);
       release();
     }
   }
@@ -97,6 +133,8 @@ export function createRecorder(opts: {
   onRetry?: (attempt: number, waitMs: number, err: Error) => void;
   /** Identifies the job (for manual copy & paste requests). */
   callContext?: Omit<NonNullable<CompletionRequest['callContext']>, 'label'>;
+  /** Answer-time limit per model call in ms (time-pressure tests); see callWithRetry. */
+  attemptLimitMs?: number;
 }): CaseRecorder {
   const rec: CaseRecorder = {
     handle: null as unknown as ModelHandle,
@@ -139,6 +177,7 @@ export function createRecorder(opts: {
           rec.retries++;
           opts.onRetry?.(attempt, wait, err);
         },
+        opts.attemptLimitMs,
       );
       const cost = r.costUsd ?? computeCost(r.usage, opts.target.contestant.pricing);
       rec.usage = addUsage(rec.usage, r.usage);
@@ -170,9 +209,9 @@ export function createRecorder(opts: {
         response: '',
         usage: emptyUsage(),
         ttftMs: null,
-        totalMs: Date.now() - started,
+        totalMs: err instanceof OutOfTimeError ? err.elapsedMs : Date.now() - started,
         stopReason: 'other',
-        rawStopReason: 'error',
+        rawStopReason: err instanceof OutOfTimeError ? 'out_of_time' : 'error',
         costUsd: 0,
         retries: 0,
         error: (err as Error).message,

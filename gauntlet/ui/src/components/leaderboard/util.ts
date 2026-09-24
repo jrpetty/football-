@@ -17,6 +17,7 @@ const SHORT: Record<string, string> = {
   visual: 'Visual',
   creative: 'Creative',
   extraction: 'Extract',
+  trick: 'Fooled?',
 };
 
 /** Compact category label for dense table headers and chart axes. */

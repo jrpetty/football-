@@ -34,6 +34,7 @@ import type {
   TestSummary,
   TranscriptEntry,
 } from '../types.ts';
+import { TRICK_RUN_SPEC, TRICK_SUITE, TRICK_TESTS, decorateTrick, trickResponse } from './trick.ts';
 
 // ───────────────────────────── RNG ─────────────────────────────
 
@@ -613,6 +614,8 @@ TESTS.push(
   }),
 );
 
+TESTS.push(...TRICK_TESTS);
+
 const CUSTOM_IDS = new Set(['reasoning.calendar-puzzle']);
 export const PRIVATE_IDS = new Set(['reasoning.heldout-ciphers']);
 
@@ -660,6 +663,7 @@ export const SUITES: SuiteView[] = [
   { id: 'core', version: '2026.09', name: 'Core Gauntlet', description: 'The flagship suite: every category, fixed prompts, three repeats. This is the leaderboard we publish.', tests: [{ id: '*' }], repeats: 3, fingerprint: fakeHash('suite:core'), testCount: TESTS.length },
   { id: 'quick', version: '1.2.0', name: 'Quick Check', description: 'Five fast tests for smoke-testing a new model config in under two minutes.', tests: ['reasoning.knights-knaves', 'math.probability-traps', 'instruction.json-shapes', 'honesty.honesty-trap', 'extraction.invoice-json'].map((id) => ({ id })), repeats: 1, fingerprint: fakeHash('suite:quick'), testCount: 5 },
   { id: 'agents', version: '1.0.0', name: 'Agents Showdown', description: 'Only the multi-step simulations — the most watchable tests on video.', tests: ['agentic.survival-island', 'agentic.escape-room', 'agentic.startup-sim', 'social.liars-table', 'visual.draw-it-blind'].map((id) => ({ id })), repeats: 1, fingerprint: fakeHash('suite:agents'), testCount: 5 },
+  TRICK_SUITE,
 ];
 
 // ───────────────────────────── Score model ─────────────────────────────
@@ -739,7 +743,7 @@ function genLite(runId: string, c: ContestantView, t: TestDefinition, caseId: st
   if (type === 'human') artifacts.push({ name: 'page.html', kind: 'html', file: `${c.id}/${t.id}/${caseId}-r${repeat}.html`, bytes: 8000 + Math.round(r.next() * 9000) });
   if (t.kind === 'program' && t.program === 'draw-it-blind') artifacts.push({ name: 'reconstruction.svg', kind: 'svg', file: `${c.id}/${t.id}/${caseId}-r${repeat}.svg`, bytes: 2400 });
 
-  return {
+  return decorateTrick(t, {
     key,
     runId,
     contestantId: c.id,
@@ -762,7 +766,7 @@ function genLite(runId: string, c: ContestantView, t: TestDefinition, caseId: st
     finishedAt: finished,
     humanScores,
     hasReplay: t.kind === 'program',
-  };
+  });
 }
 
 function summaryText(t: TestDefinition, score: number | null, status: ResultStatus, u: number): string {
@@ -890,7 +894,7 @@ export const RUN_SPECS: RunSpec[] = [
     name: 'Core Gauntlet · September 2026',
     status: 'completed',
     contestantIds: ['meridian-atlas-4-ultra', 'kestrel-kite-reasoner', 'helios-nova-3-pro', 'manual-orbit-chat', 'obsidian-sable-large', 'helios-quill-flash', 'random-baseline'],
-    testIds: TESTS.map((t) => t.id),
+    testIds: TESTS.filter((t) => t.category !== 'trick').map((t) => t.id),
     repeats: 3,
     suiteId: 'core',
     createdAt: '2026-09-21T09:12:00Z',
@@ -965,6 +969,7 @@ export const RUN_SPECS: RunSpec[] = [
     concurrency: 1,
     notes: 'Manual contestant — every prompt is pasted into a fresh Orbit Chat conversation.',
   },
+  TRICK_RUN_SPEC,
 ];
 
 // ───────────────────────────── Aggregation ─────────────────────────────
@@ -1190,6 +1195,8 @@ const RESPONSES: Record<string, string[]> = {
 };
 
 export function responseFor(t: TestDefinition, caseId: string, score: number | null): string {
+  const trick = trickResponse(t, caseId, score);
+  if (trick !== null) return trick;
   if (t.kind === 'prompt' && t.scorer.type === 'code-js') {
     return "```js\nfunction mergeIntervals(list) {\n  const sorted = [...list].sort((a, b) => a[0] - b[0]);\n  const out = [];\n  for (const [s, e] of sorted) {\n    const last = out[out.length - 1];\n    if (last && s <= last[1]) last[1] = Math.max(last[1], e);\n    else out.push([s, e]);\n  }\n  return out;\n}\n```";
   }

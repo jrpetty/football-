@@ -47,6 +47,23 @@ This checks the install, the dashboard, the Live Arena and the replays without s
 * Games from **Build a Game in One Shot** are playable inside the result inspector, and there's a screenshot
   of each.
 
+## Making a "Can It Be Fooled?" Short
+
+1. **New Run → suite "Can It Be Fooled?"** (`trick`). Three tests, 71 short questions, 3 attempts each. It is
+   cheap (see the estimate before you start) and needs no judges: every answer is checked exactly.
+2. **Open the run in the Presenter.** After each trick test's results you get up to three extra slides: the
+   questions the models disagreed on most. Each slide has three steps (press → or Space):
+   the question on its own ("What would you answer?"), then every model's actual answer, then the verdicts: a
+   tick or a cross per model, "took the bait" when it gave the tempting answer, the tempting answer crossed
+   out next to the correct one, and how many models were fooled. A clock means the model ran out of time.
+3. **For Shorts (vertical video)** add `?vertical=1` to the Presenter address, e.g.
+   `#/present/<run id>?vertical=1`. You get only the trick slides on a 1080×1920 stage. Make the browser window
+   tall (or use full screen on a portrait monitor) and record it; the stage scales to fit.
+4. Press **A** for auto mode: each step waits 3.5 s, so a slide plays in about 16 s — a Short with three traps
+   is under a minute.
+5. Say it honestly on screen: the time limit is the same for every model, but API speed differs by provider,
+   so the score only counts right and wrong. Response times are shown under each model's name.
+
 ## 5. Review
 
 * **Blind Review**: rate the games and illustrations, and settle any case where the judges disagreed. Model

@@ -98,6 +98,7 @@ Runs started from the CLI appear in the dashboard, and the reverse.
 | `core` | **Standard tier.** The official benchmark: 21 tests across all 11 categories. Use this (3 repeats) for published results. |
 | `frontier` | **Frontier tier.** 16 extreme tests (extreme logic, olympiad maths, frontier coding, adversarial system prompts, pressure honesty traps, hard variants of every simulation) to separate the best models once they bunch up near the top of Core. |
 | `quick` | A fast, cheap subset (one or two hard cases per test) for smoke tests and trying out new models. |
+| `trick` | **Can It Be Fooled?** 71 short trick questions (changed classics, false premises, 30-second lightning traps) graded exactly, with no judges. Made for YouTube Shorts: see [docs/PLAYBOOK.md](docs/PLAYBOOK.md#making-a-can-it-be-fooled-short). |
 | `all` | Everything, including custom tests. |
 
 Expected spend for every suite, per test and per model, is in [docs/COSTS.md](docs/COSTS.md). How every test was
@@ -154,6 +155,14 @@ default repeat count. Bump the suite `version` when you change it.
 | The Escape Room (Hard) | `agentic.escape-room-hard` | Ten locks, two-step ciphers, a clue from the first room needed in the last — and only 25% more moves than a perfect solver. |
 | The Startup (Volatile Market) | `agentic.startup-sim-hard` | Same $10,000, a far more volatile market: a deeper supplier spike, a brutal price war and a demand crash. |
 | The Liar's Table — Hard | `social.liars-table-hard` | Seven suspects, eight questions, and the door log went dark. Who can still find the liar? |
+
+**Can It Be Fooled? (`trick`)**
+
+| Test | Id | What it does |
+|---|---|---|
+| Modified Classics | `trick.modified-classics` | It looks like a puzzle you know. It isn't. |
+| False Premise | `trick.false-premise` | Why did Einstein win his second Nobel Prize? |
+| Lightning Traps | `trick.lightning-traps` | 30 seconds. One line. Don't fall for it. |
 
 Every prompt, verbatim, is in the prompt book (`node src/cli.ts prompts --suite <id>`). Keep your own held-out tests in `tests/private/`.
 

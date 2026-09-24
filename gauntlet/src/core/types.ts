@@ -254,6 +254,12 @@ export interface PromptTestCase {
   weight?: number;
   /** Auditor notes: how the expected answer was derived, sources, etc. Never sent to the model. */
   notes?: string;
+  /** Answer-time limit for this case in seconds (overrides the test's answerWithinSec). Shown to the model and enforced per model call. */
+  answerWithinSec?: number;
+  /** The tempting wrong answer, for presentations ("Can It Be Fooled?" slides). Never sent to the model. */
+  lure?: string;
+  /** Human-readable correct answer for presentations when `expected` is not display-friendly (e.g. a regex). Never sent to the model. */
+  displayAnswer?: string;
 }
 
 export interface PromptTest extends TestBase {
@@ -263,6 +269,12 @@ export interface PromptTest extends TestBase {
   preamble?: string;
   scorer: ScorerSpec;
   cases: PromptTestCase[];
+  /**
+   * Time pressure: every case must be answered within this many seconds. The limit is stated in the
+   * prompt and enforced per model call (queueing and retry back-off excluded); a late reply scores 0
+   * with status "timeout" ("Out of time"). Not enforced for manual (copy & paste) contestants.
+   */
+  answerWithinSec?: number;
 }
 
 export interface ProgramTest extends TestBase {

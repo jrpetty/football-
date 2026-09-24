@@ -21,6 +21,8 @@ import { BrandMark } from '../components/Brand.tsx';
 import { ScoreCostScatter } from '../components/charts/ScoreCostScatter.tsx';
 import { isBaseline, olympicCompare, shortCat } from '../components/leaderboard/util.ts';
 import { fmtCost, fmtIndex, fmtMs, shortHash } from '../format.ts';
+import { TrickEmptySlide, TrickSlide, TRICK_REVEAL_STEPS } from '../components/present/TrickSlide.tsx';
+import { selectTrickHighlights, type TrickHighlight } from '../../../src/presenter/trick-highlights.ts';
 
 /** Compact money for big slide type: $52.57, $0.23, $0.0063, <$0.001. */
 function shortCost(usd: number | null | undefined): string {
@@ -37,7 +39,12 @@ import type { CategoryInfo, Leaderboard, LeaderboardRow, ProgramInfo, RunDetail,
 
 const W = 1920;
 const H = 1080;
+/** Shorts stage (?vertical=1): only the "Can It Be Fooled?" slides, 1080×1920. */
+const VW = 1080;
+const VH = 1920;
 const AUTO_REVEAL_MS = 1200;
+/** Auto mode pauses longer between the reveal steps of a trick slide. */
+const AUTO_TRICK_REVEAL_MS = 3500;
 const AUTO_ADVANCE_MS = 9000;
 
 // ───────────────────────────── Deck model ─────────────────────────────
@@ -72,6 +79,8 @@ interface Deck {
   hasManual: boolean;
   /** Any held-out (never published) test in the run. */
   hasPrivate: boolean;
+  /** "Can It Be Fooled?" highlight cases per test id (most divisive first). */
+  trick: Map<string, TrickHighlight[]>;
 }
 
 type Slide =
@@ -82,7 +91,9 @@ type Slide =
   | { kind: 'final' }
   | { kind: 'scatter' }
   | { kind: 'medals' }
-  | { kind: 'outro' };
+  | { kind: 'outro' }
+  | { kind: 'trick'; test: DeckTest; h: TrickHighlight; i: number; of: number }
+  | { kind: 'trick-empty' };
 
 interface Caption {
   text: string;
@@ -195,7 +206,7 @@ function brief(text: string | undefined, max: number): string {
   return out;
 }
 
-function buildDeck(d: RunDetail, details: Map<string, TestDetail>, metaCats: CategoryInfo[], cat: (id: string) => CategoryInfo, programs: ProgramInfo[], judgeCrossDefault: boolean | undefined, manualProviders: Set<string>): Deck {
+function buildDeck(d: RunDetail, details: Map<string, TestDetail>, metaCats: CategoryInfo[], cat: (id: string) => CategoryInfo, programs: ProgramInfo[], judgeCrossDefault: boolean | undefined, manualProviders: Set<string>, trapsPerTest = 3): Deck {
   const m = d.manifest;
   const lb = d.leaderboard;
   const rowsById = new Map((lb?.rows ?? []).map((r) => [r.contestantId, r]));
@@ -224,6 +235,10 @@ function buildDeck(d: RunDetail, details: Map<string, TestDetail>, metaCats: Cat
   const usedCats = new Set(m.tests.map((t) => t.category));
   const cats = [...usedCats].map((id) => cat(id)).sort((a, b) => (catOrder.get(a.id) ?? 999) - (catOrder.get(b.id) ?? 999));
 
+  const trick = new Map<string, TrickHighlight[]>();
+  const trickTests = ordered.filter((t) => t.detail?.definition).map((t) => ({ definition: t.detail!.definition, caseIds: t.snap.caseIds }));
+  for (const h of selectTrickHighlights({ tests: trickTests, results: d.results ?? [], contenders, perTest: trapsPerTest })) trick.set(h.testId, [...(trick.get(h.testId) ?? []), h]);
+
   return {
     d,
     lb,
@@ -236,12 +251,22 @@ function buildDeck(d: RunDetail, details: Map<string, TestDetail>, metaCats: Cat
     programs: new Map(programs.map((p) => [p.id, p])),
     hasManual: contenders.some((c) => c.manual),
     hasPrivate: [...details.values()].some((t) => t.summary?.source === 'private'),
+    trick,
   };
 }
 
-function buildSlides(deck: Deck): Slide[] {
+function trickSlides(deck: Deck, test: DeckTest): Slide[] {
+  const hs = deck.trick.get(test.snap.id) ?? [];
+  return hs.map((h, i) => ({ kind: 'trick', test, h, i: i + 1, of: hs.length }));
+}
+
+function buildSlides(deck: Deck, vertical = false): Slide[] {
+  if (vertical) {
+    const shorts = deck.tests.flatMap((t) => trickSlides(deck, t));
+    return shorts.length ? shorts : [{ kind: 'trick-empty' }];
+  }
   const slides: Slide[] = [{ kind: 'title' }, { kind: 'how' }];
-  for (const test of deck.tests) slides.push({ kind: 'explainer', test }, { kind: 'result', test });
+  for (const test of deck.tests) slides.push({ kind: 'explainer', test }, { kind: 'result', test }, ...trickSlides(deck, test));
   // Summary slides only when they have something to show (e.g. a baseline-only smoke test has none).
   const comps = standings(deck).filter((r) => typeof r.index === 'number');
   if (comps.length) slides.push({ kind: 'final' });
@@ -324,6 +349,15 @@ function captionFor(slide: Slide, deck: Deck): Caption {
         text: `Who won the most individual tests: first place on a test earns gold, second silver and third bronze — across all ${deck.tests.length} tests.`,
         fine: 'Ranked Olympic-style: most golds first, then silvers, then bronzes',
       };
+    case 'trick': {
+      const late = slide.h.models.some((m) => m.verdict === 'out-of-time');
+      return {
+        text: `One of the questions the models disagreed on most. Each model's most common answer is shown; a tick means it got it right, a cross means it was fooled${late ? ', and the clock means it ran out of time' : ''}.`,
+        fine: `${R > 1 ? `Verdict = majority of ${R} attempts · ` : ''}time = median response time; API speeds differ by provider, only correctness is scored`,
+      };
+    }
+    case 'trick-empty':
+      return { text: 'Shorts mode shows the “Can It Be Fooled?” questions the models disagreed on. This run has none.' };
     case 'outro':
       return {
         text: deck.hasPrivate
@@ -351,6 +385,10 @@ function sectionFor(slide: Slide, deck: Deck): string {
       return 'Medal table';
     case 'outro':
       return 'Methodology';
+    case 'trick':
+      return `Can it be fooled? · ${slide.test.snap.name}`;
+    case 'trick-empty':
+      return 'Can it be fooled?';
   }
 }
 
@@ -1015,8 +1053,12 @@ function OutroSlide({ deck }: { deck: Deck }) {
   );
 }
 
-function SlideView({ slide, deck, reveal }: { slide: Slide; deck: Deck; reveal: number }) {
+function SlideView({ slide, deck, reveal, vertical }: { slide: Slide; deck: Deck; reveal: number; vertical: boolean }) {
   switch (slide.kind) {
+    case 'trick':
+      return <TrickSlide h={slide.h} cat={slide.test.cat} reveal={reveal} index={slide.i} total={slide.of} vertical={vertical} />;
+    case 'trick-empty':
+      return <TrickEmptySlide />;
     case 'title':
       return <TitleSlide deck={deck} />;
     case 'how':
@@ -1038,14 +1080,15 @@ function SlideView({ slide, deck, reveal }: { slide: Slide; deck: Deck; reveal: 
 
 // ───────────────────────────── Page ─────────────────────────────
 
-function useStageScale(): number {
-  const calc = () => Math.min(window.innerWidth / W, window.innerHeight / H);
+function useStageScale(w = W, h = H): number {
+  const calc = () => Math.min(window.innerWidth / w, window.innerHeight / h);
   const [k, setK] = useState(calc);
   useEffect(() => {
     const on = () => setK(calc());
+    on();
     window.addEventListener('resize', on);
     return () => window.removeEventListener('resize', on);
-  }, []);
+  }, [w, h]);
   return k;
 }
 
@@ -1054,6 +1097,8 @@ const KEYS: Array<[string, string]> = [
   ['←', 'Back'],
   ['Home  End', 'First / last slide'],
   ['A', 'Auto: reveal rows every 1.2 s, then advance'],
+  ['?vertical=1', 'Shorts: only the “Can It Be Fooled?” slides, 1080×1920'],
+  ['?traps=5', 'How many “Can It Be Fooled?” slides per trick test (default 3)'],
   ['F', 'Full screen'],
   ['?', 'Show or hide this help'],
   ['Esc', 'Leave the presenter'],
@@ -1062,7 +1107,10 @@ const KEYS: Array<[string, string]> = [
 export default function PresentPage({ runId }: { runId: string }) {
   const { query } = useRoute();
   const { meta, categories, cat } = useMeta();
-  const scale = useStageScale();
+  const vertical = query.get('vertical') === '1';
+  // ?traps=N: how many "Can It Be Fooled?" highlight slides per trick test (default 3).
+  const traps = Math.max(0, Math.min(50, Number(query.get('traps') ?? 3) || 0));
+  const scale = useStageScale(vertical ? VW : W, vertical ? VH : H);
   const state = useAsync(async () => {
     const d = await api.run(runId);
     const settled = await Promise.allSettled(d.manifest.tests.map((t) => api.test(t.id)));
@@ -1075,15 +1123,17 @@ export default function PresentPage({ runId }: { runId: string }) {
 
   const manualProviders = useMemo(() => new Set((meta?.providers ?? []).filter((p) => p.type === 'manual').map((p) => p.id)), [meta]);
   const deck = useMemo(
-    () => (state.data ? buildDeck(state.data.d, state.data.details, categories, cat, meta?.programs ?? [], meta?.settings?.judgeExcludeSameVendor, manualProviders) : null),
-    [state.data, categories, cat, meta, manualProviders],
+    () => (state.data ? buildDeck(state.data.d, state.data.details, categories, cat, meta?.programs ?? [], meta?.settings?.judgeExcludeSameVendor, manualProviders, traps) : null),
+    [state.data, categories, cat, meta, manualProviders, traps],
   );
-  const slides = useMemo(() => (deck ? buildSlides(deck) : []), [deck]);
+  const slides = useMemo(() => (deck ? buildSlides(deck, vertical) : []), [deck, vertical]);
   const finalRows = deck ? standings(deck).length : 0;
 
   const requested = Math.max(1, Number(query.get('s')) || 1) - 1;
   const idx = slides.length ? Math.min(requested, slides.length - 1) : 0;
   const slide = slides[idx];
+  /** Reveal steps on this slide: final-standings rows, or question → answers → verdicts on a trick slide. */
+  const maxReveal = slide?.kind === 'final' ? finalRows : slide?.kind === 'trick' ? TRICK_REVEAL_STEPS : 0;
 
   const [reveal, setReveal] = useState(0);
   const [auto, setAuto] = useState(false);
@@ -1099,8 +1149,8 @@ export default function PresentPage({ runId }: { runId: string }) {
   if (prevIdx.current !== idx) {
     const forward = idx > prevIdx.current;
     prevIdx.current = idx;
-    if (slide?.kind === 'final') {
-      const want = forward ? 0 : finalRows;
+    if (maxReveal > 0) {
+      const want = forward ? 0 : maxReveal;
       if (reveal !== want) setReveal(want);
     }
   }
@@ -1118,7 +1168,7 @@ export default function PresentPage({ runId }: { runId: string }) {
 
   const next = useCallback(() => {
     setHint(false);
-    if (slide?.kind === 'final' && reveal < finalRows) {
+    if (reveal < maxReveal) {
       setReveal((r) => r + 1);
       return;
     }
@@ -1127,16 +1177,16 @@ export default function PresentPage({ runId }: { runId: string }) {
       return;
     }
     go(idx + 1);
-  }, [slide, reveal, finalRows, idx, slides.length, go]);
+  }, [reveal, maxReveal, idx, slides.length, go]);
 
   const prev = useCallback(() => {
     setHint(false);
-    if (slide?.kind === 'final' && reveal > 0) {
+    if (maxReveal > 0 && reveal > 0) {
       setReveal((r) => r - 1);
       return;
     }
     go(idx - 1);
-  }, [slide, reveal, idx, go]);
+  }, [maxReveal, reveal, idx, go]);
 
   const toggleFs = useCallback(() => {
     if (document.fullscreenElement) void document.exitFullscreen();
@@ -1175,7 +1225,7 @@ export default function PresentPage({ runId }: { runId: string }) {
   if (stepRef.current.key !== stepKey) stepRef.current = { key: stepKey, at: Date.now() };
   useInterval(
     () => {
-      const period = slide?.kind === 'final' && reveal < finalRows ? AUTO_REVEAL_MS : AUTO_ADVANCE_MS;
+      const period = reveal < maxReveal ? (slide?.kind === 'trick' ? AUTO_TRICK_REVEAL_MS : AUTO_REVEAL_MS) : AUTO_ADVANCE_MS;
       if (Date.now() - stepRef.current.at >= period) next();
     },
     auto ? 200 : null,
@@ -1241,7 +1291,7 @@ export default function PresentPage({ runId }: { runId: string }) {
 
   return (
     <div className={cx('deck', !ctrl && 'hide-cursor')}>
-      <div className="deck-stage" style={{ transform: `translate(-50%, -50%) scale(${scale})` }} data-slide={slide.kind}>
+      <div className={cx('deck-stage', vertical && 'vertical')} style={{ transform: `translate(-50%, -50%) scale(${scale})` }} data-slide={slide.kind}>
         <div className="deck-bg" aria-hidden="true">
           <div className="glow a" />
           <div className="glow b" />
@@ -1266,7 +1316,7 @@ export default function PresentPage({ runId }: { runId: string }) {
           </span>
         </header>
         <main className="d-body" key={idx} data-dir={dirRef.current > 0 ? 'fwd' : 'back'} aria-live="polite">
-          <SlideView slide={slide} deck={deck} reveal={reveal} />
+          <SlideView slide={slide} deck={deck} reveal={reveal} vertical={vertical} />
         </main>
         <footer className="d-cap" key={`cap-${idx}`}>
           <span className="d-cap-k">What you’re seeing</span>

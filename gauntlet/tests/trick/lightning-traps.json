@@ -1,0 +1,192 @@
+{
+  "kind": "prompt",
+  "id": "trick.lightning-traps",
+  "version": "1.0.0",
+  "name": "Lightning Traps",
+  "category": "trick",
+  "description": "Very short questions with a tempting fast wrong answer: cognitive-reflection classics, counting letters, decimal comparisons, fenceposts and clock chimes. The model has 30 seconds per answer (stated in the prompt and enforced by the harness) and must reply with a single FINAL ANSWER line; any extra text scores zero. It measures whether a model stops to think under pressure.",
+  "difficulty": "easy",
+  "tags": [
+    "trick",
+    "time-pressure",
+    "cognitive-reflection",
+    "brevity"
+  ],
+  "hook": "30 seconds. One line. Don't fall for it.",
+  "maxOutputTokens": 8000,
+  "estimate": {
+    "inputTokens": 171,
+    "outputTokens": 600
+  },
+  "author": "Gauntlet Core",
+  "createdAt": "2026-09-24",
+  "preamble": "LIGHTNING ROUND. Your entire reply must be ONE line, exactly in the form\nFINAL ANSWER: <answer>\nNo working, no explanation, nothing before or after that line: a reply containing anything else scores zero. Give exactly one answer.",
+  "answerWithinSec": 30,
+  "scorer": {
+    "type": "regex",
+    "fullText": true,
+    "flags": "i"
+  },
+  "cases": [
+    {
+      "id": "l01",
+      "prompt": "How many months of the year have at least 28 days?",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:12|twelve|all(?: 12| twelve)?(?: months)?(?: of them)?)[\\s*_\\\"'`.!]*$",
+      "lure": "1 (February)",
+      "displayAnswer": "12",
+      "notes": "Every month has at least 28 days. The phrase 'at least' removes the usual 'exactly 28' ambiguity."
+    },
+    {
+      "id": "l02",
+      "prompt": "A fair coin has just landed heads 9 times in a row. What is the probability, in percent, that the next toss lands heads?",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:50(?:\\.0+)?\\s*(?:%|percent)?)[\\s*_\\\"'`.!]*$",
+      "lure": "less than 50% (\"tails is due\")",
+      "displayAnswer": "50%",
+      "notes": "Tosses of a fair coin are independent: 50%. Gambler's fallacy trap."
+    },
+    {
+      "id": "l03",
+      "prompt": "It takes 20 minutes to hard-boil one egg. How many minutes does it take to hard-boil 4 eggs cooked together at the same time in one pot? Assume the cooking time does not depend on how many eggs are in the pot.",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:20(?:\\s*min(?:ute)?s?)?)[\\s*_\\\"'`.!]*$",
+      "lure": "80 minutes",
+      "displayAnswer": "20 minutes",
+      "notes": "Eggs cook in parallel; the prompt rules out the only physical objection."
+    },
+    {
+      "id": "l04",
+      "prompt": "A straight fence is 30 metres long, with a post every 3 metres including one at each end. How many posts are there?",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:(?:11|eleven)(?:\\s*posts?)?)[\\s*_\\\"'`.!]*$",
+      "lure": "10",
+      "displayAnswer": "11",
+      "notes": "Fencepost error: 30/3 = 10 gaps, 11 posts."
+    },
+    {
+      "id": "l05",
+      "prompt": "A clock chimes once for each hour. At 4 o'clock it chimes 4 times, and it takes 6 seconds from the start of the first chime to the start of the last chime. The chimes are evenly spaced. At 7 o'clock, how many seconds are there from the start of the first chime to the start of the last chime?",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:12(?:\\.0+)?(?:\\s*s(?:ec(?:ond)?s?)?)?)[\\s*_\\\"'`.!]*$",
+      "lure": "10.5 seconds",
+      "displayAnswer": "12 seconds",
+      "notes": "4 chimes = 3 gaps of 2 s; 7 chimes = 6 gaps = 12 s."
+    },
+    {
+      "id": "l06",
+      "prompt": "A doctor gives you 4 pills and tells you to take one now and then one every 30 minutes until they are all gone. How many minutes pass between taking the first pill and taking the last one?",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:90(?:\\s*min(?:ute)?s?)?)[\\s*_\\\"'`.!]*$",
+      "lure": "120 minutes",
+      "displayAnswer": "90 minutes",
+      "notes": "4 pills = 3 gaps of 30 minutes."
+    },
+    {
+      "id": "l07",
+      "prompt": "What is 3 + 3 × 3?",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:12)[\\s*_\\\"'`.!]*$",
+      "lure": "18",
+      "displayAnswer": "12",
+      "notes": "Standard operator precedence (multiplication before addition): 3 + 9 = 12. Left-to-right gives the lure 18."
+    },
+    {
+      "id": "l08",
+      "prompt": "Divide 30 by one half. Then add 10. What number do you get?",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:70)[\\s*_\\\"'`.!]*$",
+      "lure": "25",
+      "displayAnswer": "70",
+      "notes": "30 / (1/2) = 60; 60 + 10 = 70. 'Divide by one half' is not 'divide in half'."
+    },
+    {
+      "id": "l09",
+      "prompt": "In a running race, you overtake the runner who is in second place. What place are you in now?",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:2|2nd|second(?: place)?|2nd place)[\\s*_\\\"'`.!]*$",
+      "lure": "First",
+      "displayAnswer": "Second",
+      "notes": "Overtaking the runner in second place puts you in second place (the runner in first is still ahead)."
+    },
+    {
+      "id": "l10",
+      "prompt": "Which is heavier: a kilogram of feathers or a kilogram of steel? Answer feathers, steel or same.",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:same|the same|(?:they (?:weigh|are) )?(?:the )?same(?: weight)?|neither|equal)[\\s*_\\\"'`.!]*$",
+      "lure": "Steel",
+      "displayAnswer": "Same",
+      "notes": "Both weigh exactly one kilogram, so they weigh the same."
+    },
+    {
+      "id": "l11",
+      "prompt": "Mary's father has five daughters. Four of them are named Nana, Nene, Nini and Nono. What is the name of the fifth daughter?",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:mary)[\\s*_\\\"'`.!]*$",
+      "lure": "Nunu",
+      "displayAnswer": "Mary",
+      "notes": "The first words of the question name her: the fifth daughter is Mary. The vowel pattern suggests the lure Nunu."
+    },
+    {
+      "id": "l12",
+      "prompt": "What is 0.1 + 0.2? Give the exact value.",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:0?\\.30*)[\\s*_\\\"'`.!]*$",
+      "lure": "0.30000000000000004",
+      "displayAnswer": "0.3",
+      "notes": "Exact decimal arithmetic: 0.3 (the lure is the floating-point artefact)."
+    },
+    {
+      "id": "l13",
+      "prompt": "How many two-cent stamps are there in a dozen?",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:12|twelve)[\\s*_\\\"'`.!]*$",
+      "lure": "6",
+      "displayAnswer": "12",
+      "notes": "A dozen of anything is 12; the 'two-cent' detail invites a division (the lure 6)."
+    },
+    {
+      "id": "l14",
+      "prompt": "Which number is larger: 9.11 or 9.9? Answer with the number.",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:9\\.90*)[\\s*_\\\"'`.!]*$",
+      "lure": "9.11",
+      "displayAnswer": "9.9",
+      "notes": "Compare as decimals: 9.9 = 9.90 > 9.11. The lure comes from reading them like version numbers."
+    },
+    {
+      "id": "l15",
+      "prompt": "How many times does the letter r appear in the word strawberry?",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:3|three)[\\s*_\\\"'`.!]*$",
+      "lure": "2",
+      "displayAnswer": "3",
+      "notes": "s-t-R-a-w-b-e-R-R-y: 3 (checked in build.py)."
+    },
+    {
+      "id": "l16",
+      "prompt": "How many times does the letter e appear in the word excellence?",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:4|four)[\\s*_\\\"'`.!]*$",
+      "lure": "3",
+      "displayAnswer": "4",
+      "notes": "E-x-c-E-l-l-E-n-c-E: 4 (checked in build.py)."
+    },
+    {
+      "id": "l17",
+      "prompt": "If the day before yesterday was Thursday, what day of the week will the day after tomorrow be?",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:monday)[\\s*_\\\"'`.!]*$",
+      "lure": "Saturday",
+      "displayAnswer": "Monday",
+      "notes": "Today is Saturday; the day after tomorrow is Monday (checked in build.py)."
+    },
+    {
+      "id": "l18",
+      "prompt": "Is 91 a prime number? Answer yes or no.",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:no)[\\s*_\\\"'`.!]*$",
+      "lure": "Yes",
+      "displayAnswer": "No",
+      "notes": "91 = 7 x 13, so it is not prime (checked in build.py). It looks prime because it is odd and not divisible by 3 or 5."
+    },
+    {
+      "id": "l19",
+      "prompt": "What is 2 to the power of 10, minus 10 to the power of 3?",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:24)[\\s*_\\\"'`.!]*$",
+      "lure": "0",
+      "displayAnswer": "24",
+      "notes": "2^10 = 1024 and 10^3 = 1000, so the difference is 24 (checked in build.py)."
+    },
+    {
+      "id": "l20",
+      "prompt": "An analogue clock shows exactly 3:15. What is the smaller angle, in degrees, between the hour hand and the minute hand?",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:7\\.50*(?:\\s*(?:°|degrees?))?|7½)[\\s*_\\\"'`.!]*$",
+      "lure": "0°",
+      "displayAnswer": "7.5°",
+      "notes": "Minute hand at 90 degrees, hour hand a quarter of the way from 3 to 4: 90 + 7.5 = 97.5 degrees. Difference 7.5."
+    }
+  ]
+}

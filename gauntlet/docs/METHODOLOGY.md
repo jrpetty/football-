@@ -86,7 +86,7 @@ but only results recorded in runs count toward the leaderboard.
 | `exact` | 1 if the extracted answer equals an accepted answer after normalisation (`lower` or `alnum`), else 0. |
 | `number` | 1 if the parsed number is within the tolerance (absolute or relative), else 0. |
 | `choice` | 1 for the correct letter, else 0. |
-| `regex` | 1 if the pattern matches the answer (or the full text). |
+| `regex` | 1 if the pattern matches the answer (or the full text). Full-text patterns can demand a one-line reply, as in the Lightning Traps. |
 | `contains` | Fraction of required / forbidden phrases satisfied. |
 | `constraints` | Fraction of machine-verifiable constraints satisfied (or all-or-nothing). Definitions: a *word* is a whitespace-separated token containing a letter or digit; a *sentence* ends in `.`, `!` or `?` followed by whitespace or the end; *paragraphs* are separated by blank lines; *bullets* start with `-`, `*`, `•`, `1.` or `1)`. |
 | `json` | Fraction of expected leaf fields matched (strings trimmed and case-insensitive, numbers within tolerance, array lengths checked, missing keys equal `null`). |
@@ -96,6 +96,12 @@ but only results recorded in runs count toward the leaderboard.
 | `artifact` | `(1 − w) × automated checks + w × judge score`, where the checks run in headless Chromium (renders, no JavaScript errors, no network access, reacts to input) and `w` is the test's `judgeWeight`. |
 | `human` | Mean of human ratings (0–10 ÷ 10) from the Blind Review screen, where identities are hidden until rated. |
 | Programs | Each simulation documents its own formula (see the Methodology page in the app). |
+
+**Time pressure.** A test may set an answer-time limit (`answerWithinSec`), stated in the prompt. Each model call
+is timed from the moment the request is sent (queueing and retry back-off excluded); a reply that is not complete
+in time is aborted and the case scores 0 with the status *Out of time*. It counts as a wrong answer, not as an
+error. Latency differs by provider, so these tests are designed with limits that a normal answer fits easily,
+and response times are published next to the scores. Manual (copy & paste) contestants are not timed.
 
 ### 5.2 Aggregation
 

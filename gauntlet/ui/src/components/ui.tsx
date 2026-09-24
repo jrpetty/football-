@@ -88,7 +88,7 @@ export function RunStatusBadge({ status, lg }: { status: RunStatus | string | un
 const RESULT_STATUS: Record<ResultStatus, { cls: string; label: string }> = {
   ok: { cls: 'good', label: 'OK' },
   error: { cls: 'bad', label: 'Error' },
-  timeout: { cls: 'bad', label: 'Timeout' },
+  timeout: { cls: 'bad', label: 'Out of time' },
   refusal: { cls: 'warn', label: 'Refusal' },
   'pending-human': { cls: 'info', label: 'Awaiting review' },
   cancelled: { cls: '', label: 'Cancelled' },

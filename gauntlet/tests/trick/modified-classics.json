@@ -1,0 +1,232 @@
+{
+  "kind": "prompt",
+  "id": "trick.modified-classics",
+  "version": "1.0.0",
+  "name": "Modified Classics",
+  "category": "trick",
+  "description": "Famous riddles and puzzles (river crossing, Monty Hall, the bat and the ball, the surgeon riddle, the birthday paradox, lily pads, the portrait riddle) with one critical detail changed, so the answer every model has memorised is now wrong. Every key is recomputed by enumeration or search. It separates models that read the question from models that pattern-match it.",
+  "difficulty": "medium",
+  "tags": [
+    "trick",
+    "riddles",
+    "memorisation",
+    "careful-reading"
+  ],
+  "hook": "It looks like a puzzle you know. It isn't.",
+  "maxOutputTokens": 16000,
+  "estimate": {
+    "inputTokens": 167,
+    "outputTokens": 2500
+  },
+  "author": "Gauntlet Core",
+  "createdAt": "2026-09-24",
+  "scorer": {
+    "type": "number"
+  },
+  "cases": [
+    {
+      "id": "m01",
+      "prompt": "A farmer must get a wolf, a goat and a cabbage across a river. If they are left together without the farmer, the wolf will eat the goat and the goat will eat the cabbage. The farmer's boat is big enough to carry the farmer, the wolf, the goat and the cabbage all at the same time, and only the farmer can row it.\n\nWhat is the minimum number of one-way river crossings the farmer must make to get all three across? Give the answer as a whole number.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 1,
+      "lure": "7 crossings",
+      "displayAnswer": "1 crossing",
+      "notes": "The boat holds everyone, so one trip with all three on board. BFS in build.py: capacity 3 -> 1 (the memorised classic, capacity 1, gives 7: the lure)."
+    },
+    {
+      "id": "m02",
+      "prompt": "You are on a game show with three closed doors. Behind one door is a car; behind the other two are goats. You pick door 1. The host does NOT know where the car is: he opens one of the other two doors completely at random, and it happens to reveal a goat. He then offers you the chance to switch to the remaining closed door.\n\nWhat is the probability, in percent, that switching wins the car? Give the answer as a number of percent (for example 25).\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 50,
+      "lure": "66.7% (always switch)",
+      "displayAnswer": "50%",
+      "notes": "'Monty Fall' variant: the host is ignorant, so revealing a goat is evidence, not a guaranteed event. Exact enumeration in build.py: P(car behind door 2 | random door 3 shows goat) = 1/2. The famous 2/3 only holds when the host knowingly avoids the car."
+    },
+    {
+      "id": "m03",
+      "prompt": "A bat and a ball cost $1.10 in total. The bat costs $1.00. How much does the ball cost? Give the answer as a whole number of cents.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 10,
+      "lure": "5 cents",
+      "displayAnswer": "10 cents",
+      "notes": "The word 'more' is gone: the bat costs exactly $1.00, so the ball costs $0.10 = 10 cents. The memorised answer to the classic (\"$1.00 more than the ball\") is 5 cents."
+    },
+    {
+      "id": "m04",
+      "prompt": "A pen and its cap cost $2.40 together. The pen costs $2.00 more than the cap. How much does the cap cost? Give the answer as a whole number of cents.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 20,
+      "lure": "40 cents",
+      "displayAnswer": "20 cents",
+      "notes": "cap + (cap + 2.00) = 2.40 -> cap = 0.20. The fast answer 2.40 - 2.00 = 40 cents is the lure (then the pen would cost 2.40 and the total 2.80). Brute force over cents in build.py."
+    },
+    {
+      "id": "m05",
+      "prompt": "A young man is rushed to hospital after a cycling accident. The surgeon on duty, who is the young man's father, looks at him and says: \"I can't operate on this boy - he's my son.\"\n\nHow is the surgeon related to the young man?\n(A) The surgeon is his mother\n(B) The surgeon is his father\n(C) The surgeon is his grandfather\n(D) The surgeon is his uncle\n\nAnswer with the letter of the correct option.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": "B",
+      "scorer": {
+        "type": "choice"
+      },
+      "lure": "(A) his mother",
+      "displayAnswer": "(B) his father",
+      "notes": "The prompt states outright that the surgeon is the young man's father. The famous riddle (where the father died in the crash) has the answer 'his mother', which is the lure here."
+    },
+    {
+      "id": "m06",
+      "prompt": "Sally is a girl. She has 3 brothers. Each of her brothers has exactly 3 sisters. All of the children have the same two parents, and there are no other children in the family.\n\nHow many sisters does Sally have? Give the answer as a whole number.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 2,
+      "lure": "3 sisters",
+      "displayAnswer": "2 sisters",
+      "notes": "Each brother's 3 sisters are all the girls in the family, and Sally is one of them, so Sally has 3 - 1 = 2 sisters."
+    },
+    {
+      "id": "m07",
+      "prompt": "A farmer has 17 sheep. All but 9 of them die. The farmer then sells 4 of the living sheep.\n\nHow many living sheep does the farmer have now? Give the answer as a whole number.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 5,
+      "lure": "4 sheep (17 - 9 - 4)",
+      "displayAnswer": "5 sheep",
+      "notes": "'All but 9 die' leaves 9 alive (the classic answer is 9); selling 4 leaves 5. The subtraction 17 - 9 - 4 = 4 is the lure."
+    },
+    {
+      "id": "m08",
+      "prompt": "A patch of lily pads on a lake doubles in area every day. At the end of day 48 it covers the entire lake for the first time.\n\nAt the end of which day did the patch cover exactly one quarter of the lake? Give the answer as a whole number (the day number).\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 46,
+      "lure": "Day 12 (a quarter of 48)",
+      "displayAnswer": "Day 46",
+      "notes": "Halving backwards: end of day 47 = one half, end of day 46 = one quarter. Checked in build.py. The linear answer 48/4 = 12 is the lure."
+    },
+    {
+      "id": "m09",
+      "prompt": "If 5 machines take 5 minutes to make 5 widgets, how many minutes would 10 machines take to make 20 widgets? Every machine works independently at the same constant speed. Give the answer as a whole number of minutes.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 10,
+      "lure": "5 minutes (the classic answer)",
+      "displayAnswer": "10 minutes",
+      "notes": "Each machine makes 1 widget per 5 minutes; 10 machines make 10 widgets per 5 minutes, so 20 widgets take 10 minutes. The memorised classic ('100 machines, 100 widgets') answer is 5."
+    },
+    {
+      "id": "m10",
+      "prompt": "You are on a game show with three doors made of clear glass. You can plainly see a car behind door 2 and a goat behind each of doors 1 and 3. You pick door 2. The host opens door 3, showing its goat, and offers to let you switch to door 1.\n\nWhat is the probability, in percent, that switching wins the car? Give the answer as a number of percent.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 0,
+      "lure": "66.7% (always switch)",
+      "displayAnswer": "0%",
+      "notes": "You can see the car is behind the door you already picked, so switching to door 1 always loses: 0%."
+    },
+    {
+      "id": "m11",
+      "prompt": "Ignore 29 February and assume every one of the 365 days is equally likely to be anyone's birthday, independently.\n\nWhat is the smallest number of other people who must be in a room with you for the probability that at least one of them shares YOUR birthday to be at least 50%? Give the answer as a whole number.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 253,
+      "lure": "23 people (the birthday paradox)",
+      "displayAnswer": "253 people",
+      "notes": "Need 1 - (364/365)^n >= 1/2: n = 252 gives 0.4991, n = 253 gives 0.5005 (exact fractions in build.py). 23 is the answer to a different question (any two people sharing a birthday)."
+    },
+    {
+      "id": "m12",
+      "prompt": "A family has two children. Each child, independently, is a boy or a girl with probability 1/2. You are told that the OLDER child is a girl.\n\nWhat is the probability, in percent, that both children are girls? Give the answer as a number of percent.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 50,
+      "lure": "33.3%",
+      "displayAnswer": "50%",
+      "notes": "Knowing the specific (older) child is a girl leaves the younger child's sex at 1/2. The famous 1/3 applies to 'at least one is a girl'. Enumerated in build.py."
+    },
+    {
+      "id": "m13",
+      "prompt": "A farmer must get a wolf, a goat and a cabbage across a river. If they are left together without the farmer, the wolf will eat the goat and the goat will eat the cabbage. The farmer's boat can carry the farmer plus any TWO of the three, and only the farmer can row it.\n\nWhat is the minimum number of one-way river crossings the farmer must make to get all three across? Give the answer as a whole number.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 3,
+      "lure": "7 crossings",
+      "displayAnswer": "3 crossings",
+      "notes": "Take the wolf and cabbage over (goat safe alone), row back alone (wolf and cabbage are safe together), take the goat: 3. One or two crossings are impossible (two items per trip, and after 2 crossings the farmer is back at the start). BFS in build.py."
+    },
+    {
+      "id": "m14",
+      "prompt": "Which is heavier?\n(A) Two kilograms of feathers\n(B) One kilogram of steel\n(C) They weigh the same\n\nAnswer with the letter of the correct option.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": "A",
+      "scorer": {
+        "type": "choice"
+      },
+      "lure": "(C) they weigh the same",
+      "displayAnswer": "(A) two kilograms of feathers",
+      "notes": "2 kg > 1 kg. The memorised answer to 'a kilogram of feathers or a kilogram of steel' is 'the same', which is the lure."
+    },
+    {
+      "id": "m15",
+      "prompt": "A snail is at the bottom of a well that is 20 metres deep. Every day it climbs up 5 metres, and every night it slides back down 4 metres. It starts climbing on the morning of day 1.\n\nOn which day does the snail first reach the top of the well? Give the answer as a whole number (the day number).\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 16,
+      "lure": "Day 20 (1 metre per day)",
+      "displayAnswer": "Day 16",
+      "notes": "After the night of day n it is at n metres; on day 16 it starts at 15 m and climbs to 20 m, reaching the top before sliding back. Simulated in build.py."
+    },
+    {
+      "id": "m16",
+      "prompt": "You are on a game show with three closed doors: a car is behind one and goats are behind the other two. You pick door 1. The host knows where the car is and always opens one of the two doors you did not pick that hides a goat. When both of those doors hide goats, he ALWAYS opens the lower-numbered one. The host opens door 3 and offers you the chance to switch to door 2.\n\nWhat is the probability, in percent, that switching wins the car? Give the answer as a number of percent.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 100,
+      "lure": "66.7% (always switch)",
+      "displayAnswer": "100%",
+      "notes": "If the car were behind door 1 the host would have opened door 2 (the lower goat door). If it were behind door 3 he would have opened door 2. Only a car behind door 2 makes him open door 3, so switching wins with certainty. Exact enumeration in build.py."
+    },
+    {
+      "id": "m17",
+      "prompt": "A man points at a portrait and says: \"Brothers and sisters I have none, but that man's SON is my father's son.\"\n\nWho is the man in the portrait, relative to the speaker?\n(A) The speaker himself\n(B) The speaker's son\n(C) The speaker's father\n(D) The speaker's grandfather\n\nAnswer with the letter of the correct option.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": "C",
+      "scorer": {
+        "type": "choice"
+      },
+      "lure": "(B) the speaker's son",
+      "displayAnswer": "(C) the speaker's father",
+      "notes": "With no brothers, 'my father's son' is the speaker. So the portrait man's son is the speaker, making the portrait man his father. The classic riddle ('that man's FATHER is my father's son') has the answer 'his son', the lure here."
+    },
+    {
+      "id": "m18",
+      "prompt": "You stand in a corridor next to three light switches. Each switch controls one of three ordinary light bulbs in a room. The room has a large glass wall, and from the switches you can see all three bulbs clearly at all times.\n\nWhat is the minimum number of times you must enter the room to work out which switch controls which bulb? Give the answer as a whole number.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 0,
+      "lure": "1 visit (the warm-bulb trick)",
+      "displayAnswer": "0 visits",
+      "notes": "You can watch the bulbs while flipping the switches, so no visit is needed. The classic (no view of the bulbs) answer is 1 visit using bulb heat."
+    },
+    {
+      "id": "m19",
+      "prompt": "A farmer must get a wolf, a goat and a cabbage across a river. The ONLY danger is that the wolf will eat the goat if they are left together without the farmer; the goat has no interest in the cabbage. The boat can carry the farmer plus at most one of the three, and only the farmer can row it.\n\nWhat is the minimum number of one-way river crossings the farmer must make to get all three across? Give the answer as a whole number.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 5,
+      "lure": "7 crossings",
+      "displayAnswer": "5 crossings",
+      "notes": "Wolf over, back, cabbage over, back, goat over = 5 (never leaves wolf and goat alone). Fewer is impossible: 3 items one at a time need 3 forward trips and 2 returns. BFS in build.py confirms 5."
+    },
+    {
+      "id": "m20",
+      "prompt": "A drawer contains 10 black socks and 10 white socks, all mixed together. In complete darkness you take socks out one at a time without looking.\n\nWhat is the minimum number of socks you must take out to be certain of having at least two BLACK socks? Give the answer as a whole number.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 12,
+      "lure": "3 socks (the matching-pair answer)",
+      "displayAnswer": "12 socks",
+      "notes": "Worst case: all 10 white socks come first, then 2 black: 12. The classic question (any matching pair) has the answer 3."
+    },
+    {
+      "id": "m21",
+      "prompt": "You have an empty 3-litre jug, an empty 5-litre jug and a tap. The jugs have no markings. Each of these counts as one step: filling a jug from the tap, emptying a jug, or pouring from one jug into the other until one is empty or the other is full.\n\nWhat is the minimum number of steps needed to end up with exactly 3 litres of water in the 3-litre jug? Give the answer as a whole number.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 1,
+      "lure": "6 steps (the \"4 litres\" puzzle)",
+      "displayAnswer": "1 step",
+      "notes": "Fill the 3-litre jug from the tap: 1 step. BFS in build.py (the famous 4-litre target takes 6 steps: the lure)."
+    },
+    {
+      "id": "m22",
+      "prompt": "Two fathers and two sons went fishing. Each of them caught exactly one fish, and together they caught 4 fish.\n\nHow many people went fishing? Give the answer as a whole number.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 4,
+      "lure": "3 people (grandfather, father, son)",
+      "displayAnswer": "4 people",
+      "notes": "Each person caught exactly one fish and 4 fish were caught, so there were 4 people. The classic version (3 fish) has the answer 3."
+    },
+    {
+      "id": "m23",
+      "prompt": "When I was 6 years old, my sister was twice my age. Today I am 70 years old.\n\nHow old is my sister today? Give the answer as a whole number of years.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 76,
+      "lure": "140 (twice 70) or 67 (the classic \"half my age\")",
+      "displayAnswer": "76",
+      "notes": "At 6 my sister was 12, so she is 6 years older: 70 + 6 = 76. Checked in build.py."
+    },
+    {
+      "id": "m24",
+      "prompt": "Linda is 31 years old, single, outspoken and very bright. She majored in philosophy. As a student she was deeply concerned with discrimination and social justice, and she took part in anti-nuclear demonstrations.\n\nWhich statement is more probable?\n(A) Linda is a bank teller and is active in the feminist movement.\n(B) Linda is a bank teller, is active in the feminist movement, and plays the piano.\n\nAnswer with the letter of the correct option.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": "A",
+      "scorer": {
+        "type": "choice"
+      },
+      "lure": "(B) the more detailed description",
+      "displayAnswer": "(A) the shorter statement",
+      "notes": "Conjunction rule: B requires everything in A plus playing the piano, so P(B) <= P(A); B can never be the more probable one. Option A is the only defensible answer."
+    }
+  ]
+}
