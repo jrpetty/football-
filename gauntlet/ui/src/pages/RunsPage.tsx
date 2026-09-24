@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { api, exportUrl } from '../api.ts';
 import { useAsync, useInterval } from '../hooks.ts';
 import { Link, navigate, pathOf } from '../router.tsx';
-import { useToast } from '../context.tsx';
+import { useToast, useViewerCaption } from '../context.tsx';
 import { ConfirmDialog, Empty, ErrorState, HashTag, ModelChip, PageHead, Progress, RunStatusBadge, SkeletonRows, cx } from '../components/ui.tsx';
 import { Icon } from '../components/icons.tsx';
 import { ResumeDialog } from '../components/ResumeDialog.tsx';
@@ -20,6 +20,7 @@ const FILTERS: Array<{ id: 'all' | RunStatus; label: string }> = [
 ];
 
 export default function RunsPage() {
+  useViewerCaption('Every benchmark run we have recorded: which models took part, how far each run got and what it cost.', 'Each run is pinned by a fingerprint of its exact tests and settings');
   const runs = useAsync<RunListItem[]>(() => api.runs(), []);
   const toast = useToast();
   const [confirm, setConfirm] = useState<RunListItem | null>(null);

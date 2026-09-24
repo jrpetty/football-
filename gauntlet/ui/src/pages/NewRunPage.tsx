@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api.ts';
 import { useAsync, useDebounced } from '../hooks.ts';
 import { Link, navigate, pathOf, useRoute } from '../router.tsx';
-import { useMeta, useToast } from '../context.tsx';
+import { useMeta, useToast, useViewerCaption } from '../context.tsx';
 import { Callout, DifficultyBadge, Empty, ErrorState, Field, HashTag, LoadingPage, PageHead, Seg, Skeleton, cx } from '../components/ui.tsx';
 import { Icon } from '../components/icons.tsx';
 import { fmtCost, fmtInt, fmtPricePerM } from '../format.ts';
@@ -212,6 +212,7 @@ function EstimatePanel({
 }
 
 export default function NewRunPage() {
+  useViewerCaption('Setting up a new run: pick the tests and the models, see the estimated cost, then press start.', 'Estimates use real token usage from earlier runs where available');
   const { query } = useRoute();
   const { meta, cat, categories } = useMeta();
   const toast = useToast();

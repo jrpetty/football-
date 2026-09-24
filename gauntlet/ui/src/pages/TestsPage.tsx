@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { api } from '../api.ts';
 import { useAsync } from '../hooks.ts';
 import { Link, pathOf, setQuery, useRoute } from '../router.tsx';
-import { useMeta } from '../context.tsx';
+import { useMeta, useViewerCaption } from '../context.tsx';
 import { DifficultyBadge, Empty, ErrorState, PageHead, Seg, SkeletonRows, cx } from '../components/ui.tsx';
 import { Icon } from '../components/icons.tsx';
 import { fmtInt, shortHash } from '../format.ts';
@@ -48,6 +48,7 @@ export function TestCard({ t }: { t: TestSummary }) {
 }
 
 export default function TestsPage() {
+  useViewerCaption('The test library: every challenge the models face, grouped by the skill it measures, with how each one is scored.', 'Held-out tests are kept private so they can’t leak into training data');
   const { query } = useRoute();
   const { cat, categories } = useMeta();
   const tests = useAsync<TestSummary[]>(() => api.tests(), []);

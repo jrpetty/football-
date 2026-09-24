@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useMeta } from '../context.tsx';
+import { useMeta, useViewerCaption } from '../context.tsx';
 import { Link } from '../router.tsx';
 import { Icon } from '../components/icons.tsx';
 import { PageHead, Skeleton } from '../components/ui.tsx';
@@ -20,6 +20,7 @@ function Principle({ n, icon, title, children }: { n: number; icon: ReactNode; t
 }
 
 export default function MethodologyPage() {
+  useViewerCaption('How Gauntlet keeps the contest fair: identical prompts, repeated attempts, cross-company judges and published scoring rules.');
   const { meta, loading } = useMeta();
   const s = meta?.settings;
   return (

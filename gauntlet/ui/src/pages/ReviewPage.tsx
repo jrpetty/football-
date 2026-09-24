@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, artifactUrl } from '../api.ts';
 import { useAsync, useHotkeys, useLocalStorage } from '../hooks.ts';
 import { Link, setQuery, useRoute } from '../router.tsx';
-import { useToast } from '../context.tsx';
+import { useToast, useViewerCaption } from '../context.tsx';
 import { Callout, Empty, ErrorState, ModelChip, PageHead, ScorePill, SkeletonRows, cx } from '../components/ui.tsx';
 import { Icon } from '../components/icons.tsx';
 import type { CaseResult, ContestantView, ReviewItem, ReviewReason, TestDetail, TestSummary } from '../types.ts';
@@ -40,6 +40,7 @@ function BlindOutput({ result }: { result: CaseResult | null | 'error' }) {
 }
 
 export default function ReviewPage() {
+  useViewerCaption('Blind review: people score answers without knowing which model wrote them, so nobody’s favourite gets a head start.');
   const { query } = useRoute();
   const toast = useToast();
   const reasonF = (query.get('reason') ?? 'all') as 'all' | ReviewReason;

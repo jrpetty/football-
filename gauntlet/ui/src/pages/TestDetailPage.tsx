@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { api } from '../api.ts';
 import { useAsync } from '../hooks.ts';
 import { Link, navigate, pathOf } from '../router.tsx';
-import { useMeta, useToast } from '../context.tsx';
+import { useMeta, useToast, useViewerCaption } from '../context.tsx';
 import { CategoryChip, ConfirmDialog, CopyButton, DifficultyBadge, ErrorState, HashTag, LoadingPage, PageHead, Switch, cx } from '../components/ui.tsx';
 import { Icon } from '../components/icons.tsx';
 import { SourceBadge } from './TestsPage.tsx';
@@ -63,6 +63,7 @@ function ExpectedView({ value }: { value: unknown }) {
 }
 
 export default function TestDetailPage({ testId }: { testId: string }) {
+  useViewerCaption('One test up close: what the models are asked, how the answers are checked, and the exact prompts every model receives.', 'Answer keys stay hidden unless revealed');
   const { cat } = useMeta();
   const toast = useToast();
   const state = useAsync<TestDetail>(() => api.test(testId), [testId]);

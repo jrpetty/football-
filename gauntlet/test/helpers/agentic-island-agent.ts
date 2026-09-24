@@ -69,9 +69,23 @@ export interface IslandAgent {
 
 type Goal = 'water' | 'food' | 'pile' | 'firemats' | 'camp' | 'campfire' | null;
 
-export function createIslandAgent(world: IslandWorld, opts: { rescue: boolean }): IslandAgent {
-  const s = newIslandState(world);
+interface Memory {
+  goal: Goal;
+}
+
+/** Final-score estimate used to compare rollouts (mirrors the program's formula, plus tie-breakers). */
+function value(world: IslandWorld, s: IslandState): number {
+  const days = s.rescued ? world.maxDays : s.nightsSurvived;
+  const m = s.milestones;
+  const built = [m.spear, m.campfire, m.shelter, m.signalPile].filter((t) => t !== null).length;
+  return 0.7 * (days / world.maxDays) + 0.2 * (s.rescued ? 1 : 0) + 0.025 * built + 0.05 * s.sightings.length + 0.0005 * Math.max(0, s.health);
+}
+
+/** The base policy: committed goals, no lookahead. Returns a function deciding for (state, memory). */
+function basePolicy(world: IslandWorld, opts: { rescue: boolean }): (s: IslandState, mem: Memory) => string {
+  const probe = newIslandState(world);
   const safe = `${world.safeBerry}berry`;
+  let s = probe;
   const dist = (a: Pos, b: Pos): number => pathDistances(s.tiles, a)[b.y]![b.x]!;
   // Camp: the cave when it is close to the spring, else a shelter next to the spring.
   let camp: Pos = world.cave;
@@ -88,6 +102,7 @@ export function createIslandAgent(world: IslandWorld, opts: { rescue: boolean })
   const campIsCave = camp.x === world.cave.x && camp.y === world.cave.y;
   const harsh = world.drinkAmount < 100 || world.poisonDamage > 20;
   let goal: Goal = null;
+
 
   const inv = (k: string): number => s.inv[k] ?? 0;
   const terrainIs = (...t: string[]) => (x: number, y: number) => t.includes(s.tiles[y]![x]!.terrain);
@@ -228,10 +243,50 @@ export function createIslandAgent(world: IslandWorld, opts: { rescue: boolean })
     return 'REST';
   }
 
+  return (state: IslandState, mem: Memory): string => {
+    s = state;
+    goal = mem.goal;
+    const cmd = decide();
+    mem.goal = goal;
+    return cmd;
+  };
+}
+
+/**
+ * The test player. With lookahead (default) it improves the base policy by
+ * rollouts: every available action is tried on a cloned state and the rest of
+ * the game is played out with the base policy; the action with the best
+ * final score wins. The engine is deterministic, so this is exact.
+ */
+export function createIslandAgent(world: IslandWorld, opts: { rescue: boolean; lookahead?: boolean }): IslandAgent {
+  const s = newIslandState(world);
+  const mem: Memory = { goal: null };
+  const policy = basePolicy(world, opts);
+  const lookahead = opts.lookahead ?? true;
+  const rollout = (state: IslandState, m: Memory): number => {
+    while (!state.over) stepIsland(world, state, policy(state, m));
+    return value(world, state);
+  };
   return {
     state: s,
     next() {
-      const cmd = decide();
+      let cmd = policy(structuredClone(s), { ...mem });
+      if (lookahead) {
+        let best = -Infinity;
+        const baseline = policy(structuredClone(s), { ...mem });
+        for (const a of [baseline, ...availableActions(world, s).filter((x) => x !== baseline)]) {
+          const st = structuredClone(s);
+          const m: Memory = { ...mem, goal: a === baseline ? mem.goal : null };
+          stepIsland(world, st, a);
+          const v = rollout(st, m);
+          if (v > best + 1e-9) {
+            best = v;
+            cmd = a;
+          }
+        }
+      }
+      if (cmd !== policy(structuredClone(s), { ...mem })) mem.goal = null;
+      else policy(s, mem);
       stepIsland(world, s, cmd);
       return cmd;
     },

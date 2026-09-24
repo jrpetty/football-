@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { api } from '../api.ts';
 import { useAsync } from '../hooks.ts';
-import { useMeta, useToast } from '../context.tsx';
+import { useMeta, useToast, useViewerCaption } from '../context.tsx';
 import { Callout, ConfirmDialog, Drawer, Empty, ErrorState, Field, PageHead, SkeletonRows, Switch, cx } from '../components/ui.tsx';
 import { Icon } from '../components/icons.tsx';
 import { SERIES_PALETTE } from '../components/charts/scale.ts';
@@ -327,6 +327,7 @@ function DiscoverDrawer({ provider, existing, onClose, onAdd }: { provider: Prov
 }
 
 export default function ModelsPage() {
+  useViewerCaption('The contestants: every AI model in the lab, who makes it and what it costs per million tokens of text.', 'API keys are read from the environment and never shown');
   const { meta, reload: reloadMeta } = useMeta();
   const toast = useToast();
   const list = useAsync<ContestantView[]>(() => api.contestants(), []);
