@@ -1,0 +1,44 @@
+{
+  "kind": "program",
+  "id": "agentic.code-agent-hard",
+  "version": "1.0.0",
+  "program": "code-agent",
+  "name": "Fix the Bug (Hard)",
+  "category": "agentic",
+  "description": "The frontier variant of Fix the Bug, on the same tools and sandbox. Larger repositories (10–14 files: an inventory service with an async store, a Markdown converter, a meeting-room booking calendar), each with three interacting bugs whose symptoms point away from their cause: a race condition that only shows under concurrent orders, a shared default object that leaks options between orders, a module-level counter that makes output depend on what ran before, an operator-precedence slip that surfaces as a confusing validation error. The bug report describes symptoms, not causes. 40 actions and 250,000 output tokens; hidden tests check the same behaviour thoroughly, including concurrency invariants.",
+  "difficulty": "extreme",
+  "tags": [
+    "coding",
+    "agent",
+    "debugging",
+    "tool-use",
+    "multi-turn",
+    "hidden-tests",
+    "hard-mode"
+  ],
+  "hook": "Three bugs that hide behind each other, a bug report that points the wrong way, and hidden tests that check the concurrency too.",
+  "seeds": [
+    501,
+    602,
+    703
+  ],
+  "config": {
+    "maxActions": 40,
+    "tokenBudget": 250000,
+    "keepFull": 6,
+    "repos": {
+      "501": "inventory-service",
+      "602": "md-converter",
+      "703": "booking-calendar"
+    }
+  },
+  "maxOutputTokens": 16000,
+  "timeLimitSec": 5400,
+  "estimate": {
+    "inputTokens": 210000,
+    "outputTokens": 45000,
+    "calls": 26
+  },
+  "author": "Gauntlet Core",
+  "createdAt": "2026-09-24"
+}

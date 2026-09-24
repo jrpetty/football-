@@ -34,6 +34,7 @@ import type {
   TestSummary,
   TranscriptEntry,
 } from '../types.ts';
+import { CODE_AGENT_PROGRAM, CODE_AGENT_TEST, codeAgentReplay, codeAgentSummary } from './codeAgentMock.ts';
 
 // ───────────────────────────── RNG ─────────────────────────────
 
@@ -112,6 +113,7 @@ export const PROGRAMS: ProgramInfo[] = [
     description: 'The model describes a hidden SVG scene from a structured observation, then a second call rebuilds it from the description alone.',
     scoring: 'Mean intersection-over-union of matched shapes, penalised for colour and count errors.',
   },
+  CODE_AGENT_PROGRAM,
 ];
 
 const PROVIDERS: Meta['providers'] = [
@@ -613,6 +615,8 @@ TESTS.push(
   }),
 );
 
+TESTS.push(CODE_AGENT_TEST);
+
 const CUSTOM_IDS = new Set(['reasoning.calendar-puzzle']);
 export const PRIVATE_IDS = new Set(['reasoning.heldout-ciphers']);
 
@@ -783,6 +787,8 @@ function summaryText(t: TestDefinition, score: number | null, status: ResultStat
         return s > 0.6 ? `Named the liar in ${Math.round(4 + (1 - s) * 8)} questions` : 'Accused the wrong suspect';
       case 'draw-it-blind':
         return `Shape IoU ${(s * 0.9).toFixed(2)}`;
+      case 'code-agent':
+        return codeAgentSummary(s);
     }
   }
   if (t.kind === 'prompt') {
@@ -1354,6 +1360,7 @@ export function replayFor(t: TestDefinition, seed: number, score: number): Repla
   if (t.program === 'survival-island') return islandFrames(seed, score);
   if (t.program === 'liars-table') return liarFrames(seed, score);
   if (t.program === 'draw-it-blind') return drawFrames(seed, score);
+  if (t.program === 'code-agent') return codeAgentReplay(seed, score);
   return genericProgramFrames(t, seed, score);
 }
 

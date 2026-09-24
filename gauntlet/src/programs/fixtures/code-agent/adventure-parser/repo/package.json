@@ -1,0 +1,9 @@
+{
+  "name": "adventure-parser",
+  "version": "0.4.2",
+  "private": true,
+  "main": "src/index.js",
+  "scripts": {
+    "test": "node --test"
+  }
+}

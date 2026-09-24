@@ -1,0 +1,24 @@
+{
+  "id": "date-utils",
+  "title": "Date utility library",
+  "tier": "standard",
+  "par": 10,
+  "issue": "The billing calendar shows the wrong weekday for every date, the monthly renewal of a subscription started on 31 January produces an impossible date, and someone noticed that 29 February 2000 is rejected.",
+  "bugs": [
+    {
+      "file": "src/leap.js",
+      "kind": "date logic",
+      "summary": "isLeapYear misses the 400-year rule (2000 is a leap year)."
+    },
+    {
+      "file": "src/arith.js",
+      "kind": "date logic",
+      "summary": "addMonths does not clamp the day to the length of the target month."
+    },
+    {
+      "file": "src/weekday.js",
+      "kind": "off-by-one",
+      "summary": "getUTCDay() is 0 for Sunday but DAY_NAMES starts at Monday."
+    }
+  ]
+}

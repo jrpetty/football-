@@ -1,0 +1,19 @@
+{
+  "id": "adventure-parser",
+  "title": "Text-adventure command parser",
+  "tier": "standard",
+  "par": 8,
+  "issue": "Players report that 'take lamp' says there is no lamp even though 'take brass lamp' works, and that commands sometimes seem to remember things from the previous command.",
+  "bugs": [
+    {
+      "file": "src/matcher.js",
+      "kind": "off-by-one",
+      "summary": "The longest-match loop stops at len > 1, so one-word names never match."
+    },
+    {
+      "file": "src/parser.js",
+      "kind": "shared mutable state",
+      "summary": "parse() mutates and returns one shared EMPTY_COMMAND object instead of a fresh copy."
+    }
+  ]
+}

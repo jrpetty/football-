@@ -346,6 +346,28 @@ export interface ReplayFrame {
   /** Optional grid rendering. Each character in rows maps through legend. */
   grid?: { rows: string[]; legend?: Record<string, { label: string; color?: string; emoji?: string }> };
   tone?: 'good' | 'bad' | 'neutral';
+  /** Optional coding-agent view ("Fix the Bug"): file tree, diff and test bar. */
+  code?: CodeReplayFrame;
+}
+
+/** One step of a coding-agent replay (see src/programs/code-agent.ts). */
+export interface CodeReplayFrame {
+  /** What happened this step. */
+  kind: 'start' | 'list' | 'read' | 'search' | 'edit' | 'tests' | 'submit' | 'invalid' | 'rejected' | 'final';
+  /** Every file with its line count and state. */
+  files: Array<{ path: string; lines: number; state: 'clean' | 'modified' | 'added' | 'readonly' }>;
+  /** File(s) this step looked at or changed. */
+  touched?: string[];
+  /** Lines shown by a READ (first line number + text). */
+  view?: { path: string; start: number; lines: string[] };
+  /** Diff of an edit (' ' context, '+' added, '-' removed, '@' hunk header). */
+  diff?: { path: string; added: number; removed: number; rows: Array<{ op: ' ' | '+' | '-' | '@'; text: string; n?: number }> };
+  /** Latest visible test result (carried forward until the next run). */
+  tests?: { passed: number; total: number; failing: string[]; ranThisStep: boolean };
+  /** Hidden test result (final frame only). */
+  hidden?: { passed: number; total: number; before: number };
+  actions: { used: number; budget: number };
+  tokens: { used: number; budget: number };
 }
 
 export interface ReplayData {

@@ -90,3 +90,43 @@ export async function runCodeTests(code: string, functionName: string, tests: Co
   });
   return { passed, total: tests.length, items, loadError: parsed.loadError };
 }
+
+/**
+ * Run any sandbox worker script (e.g. the "Fix the Bug" project worker) with
+ * the same isolation as `runCodeTests`: Node permission model with read access
+ * to the worker file only, code generation from strings disabled, a 256 MB
+ * heap, an empty environment and a hard kill after `hardLimitMs`.
+ * Returns the raw stdout/stderr; the caller parses its own protocol.
+ */
+export async function runSandboxWorker(
+  workerFile: string,
+  input: unknown,
+  opts: { hardLimitMs: number; signal?: AbortSignal },
+): Promise<{ stdout: string; stderr: string; exitCode: number | null; killed: boolean }> {
+  const child = spawn(
+    process.execPath,
+    ['--permission', `--allow-fs-read=${workerFile}`, '--disallow-code-generation-from-strings', '--max-old-space-size=256', '--stack-size=4000', workerFile],
+    { stdio: ['pipe', 'pipe', 'pipe'], env: {}, windowsHide: true },
+  );
+  let stdout = '';
+  let stderr = '';
+  let killed = false;
+  child.stdout.setEncoding('utf8').on('data', (d: string) => {
+    if (stdout.length < 8_000_000) stdout += d;
+  });
+  child.stderr.setEncoding('utf8').on('data', (d: string) => {
+    if (stderr.length < 4000) stderr += d.slice(0, 4000);
+  });
+  const kill = () => {
+    killed = true;
+    child.kill('SIGKILL');
+  };
+  const killer = setTimeout(kill, opts.hardLimitMs);
+  opts.signal?.addEventListener('abort', kill, { once: true });
+  child.stdin.on('error', () => {});
+  child.stdin.end(JSON.stringify(input));
+  const exitCode: number | null = await new Promise((resolve) => child.on('close', resolve));
+  clearTimeout(killer);
+  opts.signal?.removeEventListener('abort', kill);
+  return { stdout, stderr, exitCode, killed };
+}

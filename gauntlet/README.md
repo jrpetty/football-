@@ -9,7 +9,7 @@ for screen-recording, so results can go straight into videos.
   comparable if and only if their fingerprints match.
 * **Many kinds of test.** Logic, maths, real code executed against hidden unit tests, instruction
   precision, the Honesty Trap, long-context needles, agent simulations (Survival Island, Escape Room,
-  The Startup), social deduction (The Liar's Table), Draw It Blind, and one-shot game building
+  The Startup), a coding agent that fixes bugs in a real repo (Fix the Bug), social deduction (The Liar's Table), Draw It Blind, and one-shot game building
   auto-tested in a headless browser.
 * **Multi-provider.** Anthropic, OpenAI, Google Gemini, xAI, DeepSeek, Mistral, OpenRouter, Groq,
   Together, Ollama and any other OpenAI-compatible endpoint. A zero-cost **Random Baseline** shows the floor.
@@ -96,7 +96,7 @@ Runs started from the CLI appear in the dashboard, and the reverse.
 | Suite | Purpose |
 |---|---|
 | `core` | **Standard tier.** The official benchmark: 21 tests across all 11 categories. Use this (3 repeats) for published results. |
-| `frontier` | **Frontier tier.** 16 extreme tests (extreme logic, olympiad maths, frontier coding, adversarial system prompts, pressure honesty traps, hard variants of every simulation) to separate the best models once they bunch up near the top of Core. |
+| `frontier` | **Frontier tier.** 17 extreme tests (extreme logic, olympiad maths, frontier coding, adversarial system prompts, pressure honesty traps, hard variants of every simulation, the Fix the Bug coding agent) to separate the best models once they bunch up near the top of Core. |
 | `quick` | A fast, cheap subset (one or two hard cases per test) for smoke tests and trying out new models. |
 | `all` | Everything, including custom tests. |
 
@@ -153,7 +153,12 @@ default repeat count. Bump the suite `version` when you change it.
 | Survival Island (Hard) | `agentic.survival-island-hard` | Thirteen harsh days: storms, a trickling spring, poison everywhere — and the ship does not come until day 8. |
 | The Escape Room (Hard) | `agentic.escape-room-hard` | Ten locks, two-step ciphers, a clue from the first room needed in the last — and only 25% more moves than a perfect solver. |
 | The Startup (Volatile Market) | `agentic.startup-sim-hard` | Same $10,000, a far more volatile market: a deeper supplier spike, a brutal price war and a demand crash. |
+| Fix the Bug (Hard) | `agentic.code-agent-hard` | Three bugs that hide behind each other, a bug report that points the wrong way, and hidden tests that check the concurrency too. |
 | The Liar's Table — Hard | `social.liars-table-hard` | Seven suspects, eight questions, and the door log went dark. Who can still find the liar? |
+
+**Also in the library (not in a suite, pick it in New Run):** **Fix the Bug** (`agentic.code-agent`): a coding
+agent dropped into a small real JavaScript repo with a red test suite. It reads, searches, edits and runs the tests
+one action at a time (30 actions), and hidden tests decide the score. See [docs/PLAYBOOK.md](docs/PLAYBOOK.md#coding-agent-episode-fix-the-bug).
 
 Every prompt, verbatim, is in the prompt book (`node src/cli.ts prompts --suite <id>`). Keep your own held-out tests in `tests/private/`.
 
@@ -209,7 +214,8 @@ and via the API (`docs/API.md`).
 * The server binds to `127.0.0.1` by default. It can spend your API credits, so only expose it
   (`--host 0.0.0.0`) on a trusted network.
 * Model-generated code runs in a separate Node process with the permission model (no file writes, no
-  child processes), string code generation disabled, a 256 MB heap and hard timeouts.
+  child processes), string code generation disabled, a 256 MB heap and hard timeouts. Fix the Bug projects
+  live only in memory inside that process; they can require their own files and nothing else.
 * Model-generated HTML/SVG is served with a sandbox CSP (opaque origin, no network, no forms) and embedded
   in sandboxed iframes. Headless browser checks block all network requests.
 * API keys come from the environment / `.env` and are never sent to the dashboard.

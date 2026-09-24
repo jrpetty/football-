@@ -1,0 +1,45 @@
+{
+  "kind": "program",
+  "id": "agentic.code-agent",
+  "version": "1.0.0",
+  "program": "code-agent",
+  "name": "Fix the Bug",
+  "category": "agentic",
+  "description": "A coding-agent test. The model is dropped into a small real JavaScript repository with a README, a failing visible test suite and two or three planted bugs (rounding, off-by-one, shared mutable state, date logic, async ordering, a lost `this`). Using one text action per turn (LIST, READ, SEARCH, WRITE, PATCH, RUN_TESTS, SUBMIT) it must investigate, edit files and make the tests pass within 30 actions and 150,000 output tokens. The tests are read-only and everything runs in the sandbox on an in-memory copy of the repo. After SUBMIT, hidden tests that check the same behaviour more thoroughly decide the score, so hard-coding the visible tests does not work. Four repos: an invoice calculator, a text-adventure parser, a date library and an LRU cache with an API client.",
+  "difficulty": "hard",
+  "tags": [
+    "coding",
+    "agent",
+    "debugging",
+    "tool-use",
+    "multi-turn",
+    "hidden-tests"
+  ],
+  "hook": "A real repo, a red test suite and 30 actions. Can it find the bugs — and do the hidden tests agree?",
+  "seeds": [
+    101,
+    202,
+    303,
+    404
+  ],
+  "config": {
+    "maxActions": 30,
+    "tokenBudget": 150000,
+    "keepFull": 6,
+    "repos": {
+      "101": "invoice-calc",
+      "202": "adventure-parser",
+      "303": "date-utils",
+      "404": "lru-client"
+    }
+  },
+  "maxOutputTokens": 16000,
+  "timeLimitSec": 3600,
+  "estimate": {
+    "inputTokens": 110000,
+    "outputTokens": 24000,
+    "calls": 16
+  },
+  "author": "Gauntlet Core",
+  "createdAt": "2026-09-24"
+}

@@ -31,7 +31,7 @@ for s in quick core frontier; do node src/cli.ts costs --suite $s --models <ids>
 | Check your setup for free | `quick` with `random-baseline` | $0 |
 | Head-to-head of two flagships | `core`, 3 repeats, 2 models | ~$100–$280 |
 | Full standard episode | `core`, 3 repeats, all 10 | ~$700 |
-| Frontier showdown (top 4 only) | `frontier`, 3 repeats, 4 flagships | ~$450 |
+| Frontier showdown (top 4 only) | `frontier`, 3 repeats, 4 flagships | ~$500 |
 | Themed episode (e.g. simulations only) | hand-picked tests in New Run | a few $ per model |
 
 Tips: iterate on `quick`, cut cheap models first, and set **Spending cap** to about 1.25× the estimate.
@@ -113,7 +113,8 @@ Grand total ≈ $236 (conservative upper bound $375).
 | Survival Island (Hard) | 3 | $3.60 | $1.80 | $0.90 | $5.21 | $2.60 | $1.04 | $2.08 | $1.56 | $1.24 | $0.23 | — |
 | The Escape Room (Hard) | 3 | $3.65 | $1.82 | $0.91 | $5.31 | $2.65 | $1.06 | $2.12 | $1.59 | $1.22 | $0.23 | — |
 | The Startup (Volatile Market) | 3 | $1.28 | $0.64 | $0.32 | $1.87 | $0.93 | $0.37 | $0.75 | $0.56 | $0.42 | $0.08 | — |
+| Fix the Bug (Hard) | 3 | $5.22 | $2.61 | $1.30 | $7.20 | $3.60 | $1.44 | $2.88 | $2.16 | $2.07 | $0.35 | — |
 | The Liar's Table — Hard | 3 | $2.34 | $1.17 | $0.58 | $3.45 | $1.73 | $0.69 | $1.38 | $1.03 | $0.75 | $0.14 | — |
-| **Total** | | **$47.23** | **$23.61** | **$11.81** | **$69.97** | **$34.99** | **$13.99** | **$27.99** | **$20.99** | **$14.86** | **$2.89** | **$15.68** |
+| **Total** | | **$52.45** | **$26.22** | **$13.11** | **$77.17** | **$38.59** | **$15.43** | **$30.87** | **$23.15** | **$16.93** | **$3.24** | **$15.68** |
 
-Grand total ≈ $284 (conservative upper bound $453).
+Grand total ≈ $313 (conservative upper bound $499).

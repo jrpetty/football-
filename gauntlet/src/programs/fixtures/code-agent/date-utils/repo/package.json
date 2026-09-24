@@ -1,0 +1,9 @@
+{
+  "name": "date-utils",
+  "version": "2.1.0",
+  "private": true,
+  "main": "src/index.js",
+  "scripts": {
+    "test": "node --test"
+  }
+}

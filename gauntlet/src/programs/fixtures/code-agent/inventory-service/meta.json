@@ -1,0 +1,24 @@
+{
+  "id": "inventory-service",
+  "title": "Inventory service",
+  "tier": "hard",
+  "par": 14,
+  "issue": "Finance says the sales report is wrong: revenue is too high and it claims almost every order was a priority order. Separately, the warehouse oversold glue during yesterday's flash sale.",
+  "bugs": [
+    {
+      "file": "src/reservations.js",
+      "kind": "async race",
+      "summary": "reserve() checks availability and then writes across awaits without serialisation, so concurrent orders oversell and lose updates."
+    },
+    {
+      "file": "src/pricing.js",
+      "kind": "wrong search order",
+      "summary": "tierFor uses find() on ascending tiers, so the lowest tier (0%) always wins."
+    },
+    {
+      "file": "src/orders.js",
+      "kind": "shared mutable default",
+      "summary": "Object.assign(DEFAULT_OPTIONS, options) mutates the shared defaults (and its tags array), leaking priority/bulk into later orders."
+    }
+  ]
+}
