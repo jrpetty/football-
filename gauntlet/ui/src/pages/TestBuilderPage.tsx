@@ -432,6 +432,9 @@ function ScorerConfig({ s, onChange }: { s: ScorerSpec; onChange: (s: ScorerSpec
           <label className="check">
             <input type="checkbox" checked={!!s.unorderedArrays} onChange={(e) => onChange({ ...s, unorderedArrays: e.target.checked || undefined })} /> Arrays are unordered
           </label>
+          <label className="check">
+            <input type="checkbox" checked={!!s.allOrNothing} onChange={(e) => onChange({ ...s, allOrNothing: e.target.checked || undefined })} /> All-or-nothing (otherwise partial credit per field)
+          </label>
           <Field label="Number tolerance">
             <input className="input tnum" type="number" step="any" min={0} value={s.numberTolerance ?? ''} onChange={(e) => onChange({ ...s, numberTolerance: e.target.value === '' ? undefined : Number(e.target.value) })} />
           </Field>

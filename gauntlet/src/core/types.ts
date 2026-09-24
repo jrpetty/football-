@@ -230,7 +230,7 @@ export type ScorerSpec =
   /** case.expected: Constraint[]. Partial credit = fraction of constraints satisfied. */
   | { type: 'constraints'; allOrNothing?: boolean }
   /** case.expected: object. Partial credit = fraction of expected leaf fields matched. */
-  | { type: 'json'; unorderedArrays?: boolean; numberTolerance?: number }
+  | { type: 'json'; unorderedArrays?: boolean; numberTolerance?: number; allOrNothing?: boolean }
   /** case.expected: { functionName, tests: [{ args, expected }] }. Generated code is executed in a sandbox. */
   | { type: 'code-js'; timeoutMs?: number }
   /** LLM-judge (or judge panel) grading against a rubric; case.expected is an optional reference answer. */

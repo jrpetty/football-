@@ -9,7 +9,7 @@ import e1, e2, e3, e4, e5
 
 JSON_RULES = ("Output rules: respond with ONLY the JSON object (you may wrap it in a ```json code block), with exactly the keys listed, in any key order. "
               "Use JSON numbers (not strings) for numeric fields, with no currency symbols, units or thousands separators. Use null where the schema allows it and the value is not given. "
-              "Use ISO dates YYYY-MM-DD. Where the document states a correction or a change, use the corrected / final value. Do not add explanations.")
+              "Use ISO dates YYYY-MM-DD. Where the document states a correction or a change, use the corrected / final value. Do not add explanations. Scoring: every field is checked, and the case only scores if every field is exactly right.")
 
 cases = []
 for i, m in enumerate([e1, e2, e3, e4, e5], 1):
@@ -26,14 +26,14 @@ meta = dict(
                  '(withdrawals, UTC flight times, minimum covers, deposit and cancellation dates), a multi-currency freight invoice whose credit note the model must '
                  'recalculate itself, a subscription contract with two amendments and an unsigned side letter (CPI indexation, SLA credits, termination fee), an air-cargo '
                  'manifest with lb/in conversions, volumetric weight and weight-break pricing, and AGM minutes with entitlement-weighted votes and corrections that flip '
-                 'three outcomes. Every schema is spelled out exactly and each leaf field is scored, so only a reader who tracks the whole document and does the '
-                 'arithmetic scores well.'),
+                 'three outcomes. Every schema is spelled out exactly and scoring is all-or-nothing: one wrong field scores the document zero, so only a reader who tracks the whole '
+                 'document and does every sum right scores.'),
     version='1.0.0', difficulty='extreme',
     tags=['extraction', 'json', 'information-extraction', 'multi-document', 'arithmetic', 'dates', 'units', 'frontier'],
-    hook='Five messy documents where every correction moves a number.',
+    hook='Five messy documents where every correction moves a number. One wrong field and the document scores zero.',
     maxOutputTokens=32000,
     estimate={'inputTokens': int(sum(tok(c['prompt']) for c in cases) / len(cases)) + 20, 'outputTokens': 14000},
-    scorer={'type': 'json', 'numberTolerance': 0.000001},
+    scorer={'type': 'json', 'numberTolerance': 0.000001, 'allOrNothing': True},
 )
 for c in cases:
     print(c['id'], len(c['prompt']), 'chars,', tok(c['prompt']), 'tokens est.')

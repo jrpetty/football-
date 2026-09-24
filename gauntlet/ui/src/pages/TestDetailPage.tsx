@@ -25,7 +25,7 @@ export function describeScorer(s: ScorerSpec | undefined): string {
     case 'constraints':
       return `Machine-checked constraints; ${s.allOrNothing ? 'all must pass' : 'partial credit = fraction satisfied'}.`;
     case 'json':
-      return `Structured JSON; partial credit per expected leaf field${s.unorderedArrays ? ', arrays unordered' : ''}${s.numberTolerance ? `, numbers ±${s.numberTolerance}` : ''}.`;
+      return `Structured JSON; ${s.allOrNothing ? 'all-or-nothing: every expected field must be exact' : 'partial credit per expected leaf field'}${s.unorderedArrays ? ', arrays unordered' : ''}${s.numberTolerance ? `, numbers ±${s.numberTolerance}` : ''}.`;
     case 'code-js':
       return `Generated JavaScript is executed against hidden unit tests in a sandbox (timeout ${s.timeoutMs ?? 2000} ms).`;
     case 'judge':

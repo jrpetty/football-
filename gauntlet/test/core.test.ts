@@ -193,3 +193,15 @@ test('leaderboard: index is the weighted mean of category means; medals and rank
   assert.equal(m1.medals.gold, 2); // math.a and coding.c
   assert.equal(m2.medals.gold, 1); // math.b
 });
+
+test('json scorer: allOrNothing scores 0 unless every field matches, but still reports the field tally', async () => {
+  const { scoreResponse } = await import('../src/scoring/index.ts');
+  const base = { expected: { a: 1, b: 'x' }, stopReason: 'end' as const, taskText: '', judges: { ids: [], ask: async () => [] }, saveArtifact: (name: string) => ({ name, kind: 'text' as const, file: name, bytes: 0 }), signal: new AbortController().signal };
+  const partial = await scoreResponse({ ...base, scorer: { type: 'json', allOrNothing: true }, response: '{"a":1,"b":"y"}' });
+  assert.equal(partial.score, 0);
+  assert.match(partial.summary, /1\/2 fields/);
+  const full = await scoreResponse({ ...base, scorer: { type: 'json', allOrNothing: true }, response: '{"a":1,"b":"x"}' });
+  assert.equal(full.score, 1);
+  const lenient = await scoreResponse({ ...base, scorer: { type: 'json' }, response: '{"a":1,"b":"y"}' });
+  assert.equal(lenient.score, 0.5);
+});
