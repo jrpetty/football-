@@ -7,6 +7,7 @@ import {
   cleanOutput,
   readConfig,
   truncateWords,
+  WORD_RULE,
 } from '../src/programs/chain-of-whispers.ts';
 import { factPresent, generateStory, STORY_IDS, survivingFacts } from '../src/programs/lib/chain-of-whispers-story.ts';
 import type { FactSpec, SourceStory } from '../src/programs/lib/chain-of-whispers-story.ts';
@@ -216,6 +217,87 @@ test('chain-of-whispers: helpers', () => {
   assert.equal(cleanOutput('```\nThe story.\n```'), 'The story.');
   assert.equal(cleanOutput('**Summary:** Marisol saved them.'), 'Marisol saved them.');
   assert.deepEqual(readConfig({ cycles: 99, story: 'museum' }), {
-    cycles: 3, summaryWords: 100, storyWords: 450, storyMaxWords: 500, storyMinWords: 300, story: 'museum',
+    cycles: 3, summaryWords: 100, storyWords: 450, storyMaxWords: 500, storyMinWords: 300, story: 'museum', facts: 12,
   });
+  assert.equal(readConfig({ facts: 20 }).facts, 20);
+  assert.equal(readConfig({ facts: 17 }).facts, 12);
+});
+
+test('chain-of-whispers: every prompt states how words are counted and that overflow is cut before the next step', async () => {
+  const s = storyFor(101);
+  const { model } = await play(101, oracle(s));
+  for (const c of model.calls) {
+    const p = c.messages[0]!.content;
+    assert.ok(p.includes(WORD_RULE));
+    assert.ok(p.includes('is cut off before the next step'));
+  }
+  assert.equal(countWords('A well-known sum: 4,457 coins — gone.'), 6, 'the stated rule matches the checker');
+});
+
+// ─── hard tier ──────────────────────────────────────────────────────────────
+
+const HARD = { cycles: 5, summaryWords: 60, facts: 20 };
+
+/** The tightest faithful summary: each fact's keywords as its own short sentence. */
+function compactOracle(story: SourceStory): Responder {
+  const compact = (keep: FactSpec[]) => keep.map((f) => f.groups.map((g) => g[0]).join(' ')).join('. ') + '.';
+  return (_s, userText) => {
+    const kept = story.facts.filter((f) => factPresent(userText, f));
+    if (isSummaryStep(userText)) return compact(kept);
+    let text = kept.map((f) => `${f.canonical}.`).join(' ');
+    while (countWords(text) < 320) text += ' The details were retold at every winter fireside for years afterwards.';
+    return text;
+  };
+}
+
+/** A faithful but wordy summariser: one full sentence per fact (overflows 60 words and gets cut). */
+function verboseOracle(story: SourceStory): Responder {
+  return (_s, userText) => {
+    const kept = story.facts.filter((f) => factPresent(userText, f));
+    let text = kept.map((f) => `${f.canonical}.`).join(' ');
+    if (!isSummaryStep(userText)) while (countWords(text) < 320) text += ' The details were retold at every winter fireside for years afterwards.';
+    return text;
+  };
+}
+
+test('chain-of-whispers hard: 20-fact stories, 5 cycles (10 calls), 60-word summaries; a lossless summariser keeps 20/20', async () => {
+  for (const seed of [404, 505, 606]) {
+    const s = storyFor(seed, HARD);
+    assert.equal(s.facts.length, 20);
+    assert.equal(survivingFacts(s.text, s.facts).length, 20);
+    const { result, model } = await play(seed, compactOracle(s), HARD);
+    assert.equal(model.calls.length, 10);
+    assert.equal(result.score, 1, JSON.stringify(result.detail));
+    assert.equal(result.summary, '20/20 facts survived 5 cycles');
+    assert.ok(model.calls[0]!.messages[0]!.content.startsWith('Summarise the story below in at most 60 words.'));
+    assert.equal(result.replay!.series![0]!.points.length, 11);
+  }
+});
+
+test('chain-of-whispers hard: the 60-word limit punishes wordy summaries (standard tier does not)', async () => {
+  const std = await play(404, verboseOracle(storyFor(404)));
+  assert.equal(std.result.score, 1, 'one sentence per fact fits in 100 words for 12 facts');
+  const hard = await play(404, verboseOracle(storyFor(404, HARD)), HARD);
+  const d = hard.result.detail as unknown as Detail;
+  assert.ok(d.survived < 14, `survived ${d.survived}`);
+  assert.ok(d.penalty.overLimit >= 1, 'the first wordy summary is cut at 60 words');
+  assert.ok(hard.result.score < 0.65);
+});
+
+test('chain-of-whispers hard: standard 12-fact stories are unchanged by the extension', () => {
+  for (const seed of [1, 2, 3, 404]) {
+    for (const id of STORY_IDS) {
+      const base = generateStory(createRng(seed), id);
+      const ext = generateStory(createRng(seed), id, 20);
+      assert.deepEqual(ext.facts.slice(0, 12).map((f) => f.canonical), base.facts.map((f) => f.canonical));
+      for (const para of base.text.split('\n\n')) assert.ok(ext.text.includes(para), 'every standard paragraph is kept verbatim');
+    }
+  }
+});
+
+test('chain-of-whispers hard: Random Baseline and garbage score ~0', async () => {
+  const { result } = await play(505, mockBaselineResponder(), HARD);
+  assert.ok(result.score <= 0.05);
+  const g = await play(505, constantResponder('lorem ipsum'), HARD);
+  assert.equal(g.result.score, 0);
 });

@@ -1,11 +1,11 @@
 {
   "kind": "program",
   "id": "long-context.chain-of-whispers",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "program": "chain-of-whispers",
   "name": "Chain of Whispers",
   "category": "long-context",
-  "description": "A seeded ~470-word story holding 12 checkable facts — names with their roles, numbers with their units, a date, places and one odd detail — is summarised to at most 100 words and then rebuilt into a ~450-word story, three times over. Every step runs in a fresh context that sees only the previous output, like a game of telephone. A fact survives only if its keywords still appear together in one sentence. Measures how precisely a model compresses and reconstructs meaning, and how fast its details decay.",
+  "description": "A seeded ~470-word story holding 12 checkable facts — names with their roles, numbers with their units, a date, places and one odd detail — is summarised to at most 100 words and then rebuilt into a ~450-word story, three times over. Every step runs in a fresh context that sees only the previous output, like a game of telephone. The model rewrites its own text on purpose, so the test measures self-consistent information retention: how precisely one model compresses and reconstructs meaning, and how fast its details decay. A fact survives only if its keywords still appear together in one sentence. Prompts state exactly how words are counted (split on spaces; hyphenated words and numbers like 4,457 count as one word) and that anything past the limit is cut off before the next step.",
   "difficulty": "medium",
   "tags": [
     "summarisation",

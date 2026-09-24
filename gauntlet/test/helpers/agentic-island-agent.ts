@@ -67,7 +67,7 @@ export interface IslandAgent {
   next(): string;
 }
 
-type Goal = 'water' | 'food' | 'pile' | 'firemats' | 'camp' | 'campfire' | null;
+type Goal = 'water' | 'food' | 'pile' | 'firemats' | 'camp' | 'campfire' | 'spear' | null;
 
 interface Memory {
   goal: Goal;
@@ -127,6 +127,12 @@ function basePolicy(world: IslandWorld, opts: { rescue: boolean }): (s: IslandSt
     });
     const palm = nearest(s, (x, y) => s.tiles[y]![x]!.terrain === 'palm' && s.tiles[y]![x]!.stock >= 1);
     const best = bush && (!palm || bush.dist <= palm.dist + 2) ? bush : palm;
+    if (s.spear) {
+      // Fishing: any beach or palm tile will do (all of them touch the sea).
+      if (avail.has('FISH') && (!best || best.dist > 0)) return 'FISH';
+      const shore = nearest(s, (x, y) => ['beach', 'palm'].includes(s.tiles[y]![x]!.terrain));
+      if (shore && (!best || shore.dist + 1 < best.dist)) return stepToward(s, shore.pos);
+    }
     if (!best) return null;
     return best.dist === 0 ? (avail.has('GATHER') ? 'GATHER' : null) : stepToward(s, best.pos);
   }
@@ -155,6 +161,12 @@ function basePolicy(world: IslandWorld, opts: { rescue: boolean }): (s: IslandSt
         if (inv('wood') < 4) return gatherAt(terrainIs('forest'), avail);
         if (inv('fibre') < 3) return gatherAt(terrainIs('grass'), avail);
         return s.pos.x === camp.x && s.pos.y === camp.y ? 'BUILD SHELTER' : stepToward(s, camp);
+      case 'spear':
+        if (s.spear) return null;
+        if (inv('wood') < 1) return gatherAt(terrainIs('forest'), avail);
+        if (inv('stone') < 1) return gatherAt(terrainIs('rocks', 'summit'), avail);
+        if (inv('fibre') < 1) return gatherAt(terrainIs('grass'), avail);
+        return 'CRAFT SPEAR';
       case 'campfire':
         if (campFuel() >= 2) return null;
         if (inv('wood') < 3 || inv('stone') < 1) return pursue('firemats', avail);
@@ -173,6 +185,7 @@ function basePolicy(world: IslandWorld, opts: { rescue: boolean }): (s: IslandSt
     if (opts.rescue && nextShip !== undefined && world.requireNightFire && !(inv('wood') >= 3 && inv('stone') >= 1)) return 'firemats';
     if (passSoon && foodUnits() < 2) return 'food';
     if (harsh && !campReady()) return 'camp';
+    if (harsh && !s.spear && s.day >= 2) return 'spear';
     if (harsh && campFuel() <= 1) return 'campfire';
     if (foodUnits() < 2) return 'food';
     if (s.water < 70) return 'water';
@@ -190,6 +203,7 @@ function basePolicy(world: IslandWorld, opts: { rescue: boolean }): (s: IslandSt
     const passTomorrow = opts.rescue && nextShip === s.day + 1;
     const fireTonight = Object.values(s.fires).some((f) => f > 0);
     const atCamp = s.pos.x === camp.x && s.pos.y === camp.y;
+    const toSummit = dist(s.pos, world.summit);
 
     // 1. The pass: be on the summit with the pile blazing at midday.
     if (opts.rescue && shipToday && s.phase <= 1) {
@@ -198,39 +212,52 @@ function basePolicy(world: IslandWorld, opts: { rescue: boolean }): (s: IslandSt
       if (!atSummit && inv('fibre') >= 1 && (s.signal === 'built' || (inv('wood') >= 5 && inv('fibre') >= 3 && s.phase === 0)))
         return stepToward(s, world.summit) ?? 'REST';
     }
-    if (opts.rescue && nextShip !== undefined && atSummit && s.signal === 'none' && avail.has('BUILD SIGNAL')) return 'BUILD SIGNAL';
 
-    // 2. Critical needs interrupt any goal.
+    // 2. Critical needs.
     if (s.water < 20) return avail.has('DRINK') ? 'DRINK' : (stepToward(s, world.spring) ?? 'REST');
     if (s.food < 30 && eat()) return eat()!;
     if (s.food < 15) return getFood(avail) ?? 'REST';
     if (s.energy < 12) return 'REST';
 
-    // 3. Cheap top-ups where we stand.
+    // 3. The evening before a pass: proof of life (a campfire) and sleep next to the summit.
+    if (passTomorrow && s.phase === 2 && s.signal === 'built') {
+      if (world.requireNightFire && !fireTonight && avail.has('BUILD FIRE')) return 'BUILD FIRE';
+      if (toSummit > 1) return stepToward(s, world.summit) ?? 'REST';
+    }
+
+    // 4. Rescue checklist for the next pass: pile, fire materials, tinder, then position.
+    if (opts.rescue && nextShip !== undefined) {
+      if (s.signal === 'none') {
+        if (atSummit && avail.has('BUILD SIGNAL')) return 'BUILD SIGNAL';
+        const step = pursue('pile', avail);
+        if (step) return step;
+      }
+      const fireLasts = Object.values(s.fires).some((f) => f >= nextShip - s.day);
+      if (world.requireNightFire && !fireLasts && !(inv('wood') >= 3 && inv('stone') >= 1)) {
+        const step = pursue('firemats', avail);
+        if (step) return step;
+      }
+      if (inv('fibre') < 1) {
+        const step = gatherAt(terrainIs('grass'), avail);
+        if (step) return step;
+      }
+      if (passTomorrow && s.phase >= 1 && toSummit > 1) return stepToward(s, world.summit) ?? 'REST';
+    }
+
+    // 5. Cheap top-ups where we stand.
     if (here.terrain === 'spring' && s.water < 85) return 'DRINK';
     if (s.food < 55 && eat()) return eat()!;
     const goodFood = (here.terrain === 'bush' && here.berry === world.safeBerry) || here.terrain === 'palm';
-    if (goodFood && here.stock > 0 && foodUnits() < 3 && avail.has('GATHER')) return 'GATHER';
+    if (goodFood && here.stock > 0 && foodUnits() < 2 && avail.has('GATHER')) return 'GATHER';
 
-    // 4. The day before a pass: tinder, then get next to the summit and (evening) light a campfire as proof of life.
-    if (opts.rescue && s.signal === 'built' && inv('fibre') < 1) {
-      const g = gatherAt(terrainIs('grass'), avail);
-      if (g) return g;
-    }
-    if (passTomorrow && s.signal === 'built') {
-      if (s.phase === 2 && world.requireNightFire && !fireTonight && avail.has('BUILD FIRE')) return 'BUILD FIRE';
-      if (s.phase >= 1 && dist(s.pos, world.summit) > 1) return stepToward(s, world.summit) ?? 'REST';
-      if (s.phase === 2 && world.requireNightFire && !fireTonight) return pursue('firemats', avail) ?? 'REST';
-    }
-
-    // 5. Evenings in harsh or wet weather: sleep at camp by a fire.
-    if (s.phase === 2 && campReady() && (harsh || s.warmth < 50 || weather === 'storm' || weather === 'rain')) {
-      if (!atCamp && dist(s.pos, camp) <= MAX_STEPS && !passTomorrow) return stepToward(s, camp) ?? 'REST';
+    // 6. Evenings in harsh or wet weather: sleep at camp by a fire.
+    if (s.phase === 2 && campReady() && !passTomorrow && (harsh || s.warmth < 50 || weather === 'storm' || weather === 'rain')) {
+      if (!atCamp && dist(s.pos, camp) <= MAX_STEPS) return stepToward(s, camp) ?? 'REST';
       if (atCamp && campFuel() <= 0 && avail.has('BUILD FIRE')) return 'BUILD FIRE';
       if (atCamp && avail.has('COOK FISH')) return 'COOK FISH';
     }
 
-    // 6. Committed goals (thirst and hunger pre-empt a long errand).
+    // 7. Committed goals (thirst and hunger pre-empt a long errand).
     const fresh = chooseGoal();
     if ((fresh === 'water' || fresh === 'food') && goal !== 'water' && goal !== 'food') goal = fresh;
     for (let tries = 0; tries < 3; tries++) {

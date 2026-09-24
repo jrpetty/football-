@@ -491,6 +491,22 @@
 .t-card.is-base .t-sw {
   background: repeating-linear-gradient(180deg, var(--text-3) 0 8px, transparent 8px 14px);
 }
+.t-cards.many {
+  gap: 12px;
+}
+.t-cards.many .t-card {
+  padding: 14px 16px 14px 26px;
+}
+.t-cards.many .t-lbl {
+  font-size: 24px;
+}
+.t-cards.many .t-ven {
+  font-size: 18px;
+}
+.t-cards.many .t-tag {
+  margin-top: 6px;
+  font-size: 14px;
+}
 .t-fine {
   font-size: 18px;
   color: var(--text-3);
@@ -1108,6 +1124,27 @@
 }
 .rr.is-base .rr-sw {
   background: repeating-linear-gradient(180deg, var(--text-3) 0 6px, transparent 6px 10px);
+}
+/* Big line-ups: drop secondary lines so every bar still fits the frame. */
+.race.dense .rr-sub,
+.race.dense .rr-stats,
+.race.dense .rr-link {
+  display: none;
+}
+.race.dense .rr-main {
+  gap: 10px;
+}
+.race.dense .rr-track {
+  height: 28px;
+}
+.race.dense .rr-lbl {
+  font-size: 24px;
+}
+.race.dense .rr-val {
+  font-size: 28px;
+}
+.race.dense .rr-sw {
+  height: 30px;
 }
 .rr.m-gold .rr-lbl {
   font-weight: 800;

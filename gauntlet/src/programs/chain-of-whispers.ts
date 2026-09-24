@@ -19,6 +19,8 @@ export interface CwConfig {
   storyMaxWords: number;
   storyMinWords: number;
   story: StoryId | 'auto';
+  /** 12 (standard) or 20 facts (hard tier: longer source story). */
+  facts: 12 | 20;
 }
 
 export function readConfig(raw: Record<string, unknown>): CwConfig {
@@ -35,6 +37,7 @@ export function readConfig(raw: Record<string, unknown>): CwConfig {
     storyMaxWords: Math.max(storyWords, int(raw.storyMaxWords, 500, 150, 2000)),
     storyMinWords: Math.min(storyWords, int(raw.storyMinWords, 300, 50, 1500)),
     story,
+    facts: Number(raw.facts) === 20 ? 20 : 12,
   };
 }
 
@@ -42,9 +45,13 @@ const PENALTY_OVER = 0.02;
 const PENALTY_SHORT = 0.04;
 const PENALTY_CAP = 0.15;
 
+/** How words are counted — stated in every prompt, and exactly what countWords() does. */
+export const WORD_RULE =
+  'Words are counted by splitting on spaces, so a hyphenated word (like "well-known") or a number (like "4,457") counts as one word; stand-alone punctuation does not count.';
+
 export function summaryPrompt(text: string, limit: number): string {
   return [
-    `Summarise the story below in at most ${limit} words. Keep as many of its specific details as you can: who each person is, names, numbers, dates, places and anything unusual. Anything beyond ${limit} words will be cut off before the next step.`,
+    `Summarise the story below in at most ${limit} words. Keep as many of its specific details as you can: who each person is, names, numbers, dates, places and anything unusual. Anything beyond ${limit} words is cut off before the next step. ${WORD_RULE}`,
     '',
     'STORY:',
     '"""',
@@ -57,7 +64,7 @@ export function summaryPrompt(text: string, limit: number): string {
 
 export function expandPrompt(text: string, target: number, max: number): string {
   return [
-    `Below is a short summary of a story. Write the full story it describes, about ${target} words long (never more than ${max}: anything beyond ${max} words will be cut off). Keep every specific detail in the summary exactly as given — names, who each person is, numbers, dates, places and unusual details — and do not change or contradict any of them. You may add atmosphere, dialogue and connecting action.`,
+    `Below is a short summary of a story. Write the full story it describes, about ${target} words long (never more than ${max}: anything beyond ${max} words is cut off before the next step). ${WORD_RULE} Keep every specific detail in the summary exactly as given — names, who each person is, numbers, dates, places and unusual details — and do not change or contradict any of them. You may add atmosphere, dialogue and connecting action.`,
     '',
     'SUMMARY:',
     '"""',
@@ -102,17 +109,17 @@ function factLabels(ids: string[], facts: readonly FactSpec[]): string {
 }
 
 export function buildStory(ctx: Pick<ProgramContext, 'rng'>, cfg: CwConfig): SourceStory {
-  return generateStory(ctx.rng.fork('chain-of-whispers'), cfg.story);
+  return generateStory(ctx.rng.fork('chain-of-whispers'), cfg.story, cfg.facts);
 }
 
 export const program: ProgramDefinition = {
   id: 'chain-of-whispers',
   name: 'Chain of Whispers',
   description:
-    'A seeded ~470-word story containing 12 checkable facts (names with roles, numbers with units, a date, places, unusual details) is summarised to at most 100 words, then expanded back into a ~450-word story — three times over, each step in a fresh context that sees only the previous output. Measures how much meaning survives repeated compression and reconstruction.',
+    'A seeded ~470-word story containing 12 checkable facts (names with roles, numbers with units, a date, places, unusual details) is summarised to at most 100 words, then expanded back into a ~450-word story — three times over, each step in a fresh context that sees only the previous output. The model rewrites its own text on purpose, so the test measures self-consistent information retention: how much meaning survives repeated compression and reconstruction by the same model. The hard tier uses 20 facts, a 60-word summary limit and five cycles.',
   scoring:
-    'After every step the text (cut to the word limit first) is checked for the 12 facts. A fact only counts when its keywords appear together in one sentence — a name next to its role, a number next to its unit — with digits and number words treated alike. Score = facts surviving in the final story ÷ 12, minus 0.02 for each output over its word limit and 0.04 for each story under 300 words (penalties capped at 0.15).',
-  defaults: { cycles: 3, summaryWords: 100, storyWords: 450, storyMaxWords: 500, storyMinWords: 300, story: 'auto' },
+    'After every step the text (cut to the word limit first; words are counted by splitting on spaces) is checked for the facts. A fact only counts when its keywords appear together in one sentence — a name next to its role, a number next to its unit — with digits and number words treated alike. Score = facts surviving in the final story ÷ number of facts, minus 0.02 for each output over its word limit and 0.04 for each story under 300 words (penalties capped at 0.15). Because the model only ever rewrites its own previous output, the score measures self-consistent information retention.',
+  defaults: { cycles: 3, summaryWords: 100, storyWords: 450, storyMaxWords: 500, storyMinWords: 300, story: 'auto', facts: 12 },
 
   async run(ctx: ProgramContext): Promise<ProgramResult> {
     const cfg = readConfig(ctx.config);

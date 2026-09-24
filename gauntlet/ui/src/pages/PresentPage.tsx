@@ -375,7 +375,9 @@ function SlideHead({ eyebrow, title, sub, right }: { eyebrow?: ReactNode; title:
 function TitleSlide({ deck }: { deck: Deck }) {
   const m = deck.d.manifest;
   const nModels = deck.contenders.filter((c) => !c.baseline).length;
-  const cols = Math.min(4, Math.max(2, deck.contenders.length <= 4 ? deck.contenders.length : Math.ceil(deck.contenders.length / 2)));
+  const n = deck.contenders.length;
+  // Up to 8 contenders in two rows of ≤4; bigger line-ups go to compact rows of up to 6.
+  const cols = n <= 4 ? Math.max(2, n) : n <= 8 ? Math.ceil(n / 2) : Math.min(6, Math.ceil(n / 3));
   // "Core Gauntlet · September 2026" → a title line and a gradient sub-line.
   const nameParts = (m.name || m.id).split(/\s+·\s+/);
   return (
@@ -406,7 +408,7 @@ function TitleSlide({ deck }: { deck: Deck }) {
           <b>{deck.repeats}</b> {noun(deck.repeats, 'repeat')}
         </span>
       </div>
-      <div className="t-cards" style={{ ['--cols' as string]: cols }}>
+      <div className={cx('t-cards', n > 8 && 'many')} style={{ ['--cols' as string]: cols }}>
         {deck.contenders.map((c, i) => (
           <div key={c.id} className={cx('t-card', c.baseline && 'is-base')} style={{ ['--c' as string]: c.baseline ? 'var(--text-3)' : c.color, ['--i' as string]: i }}>
             <span className="t-sw" aria-hidden="true" />
@@ -748,7 +750,7 @@ function ResultSlide({ deck, test }: { deck: Deck; test: DeckTest }) {
           <p>{pending ? 'Answers are waiting for human review in Blind Review.' : 'This test did not produce scored results in this run.'}</p>
         </div>
       ) : (
-        <div className={cx('race', program && 'with-sum')} style={{ ['--rows' as string]: ordered.length }}>
+        <div className={cx('race', program && 'with-sum', ordered.length > 8 && 'dense')} style={{ ['--rows' as string]: ordered.length }}>
           {ordered.map((e, i) => (
             <RaceRow key={e.id} e={e} i={i} program={program} runId={deck.d.manifest.id} testId={test.snap.id} nullNote={nullNote} baseLine={e.baseline ? null : baseLine} baseLabel={i === 0} unit={program ? 'run' : casesWord(test, 1)} />
           ))}
