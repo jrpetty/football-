@@ -70,6 +70,7 @@ The **Live Arena** streams every model's output side by side while it works.
 | **Viewer Challenge** | Import viewer questions (Google Form CSV), review them, write a private held-out test, present "submitted by @name" slides. |
 | **Publish** | Export a free static leaderboard website with your channel branding (GitHub Pages / Netlify Drop). |
 | **Studio** | Turn a run into video material: ranked highlights with deep links to the exact replay step, a narration script with Presenter cues, YouTube thumbnails and Shorts cards (PNG), and transparent OBS overlays (`/overlay/latest?view=scoreboard`). See [docs/PLAYBOOK.md](docs/PLAYBOOK.md#4b-making-the-video-studio). |
+| **Arena** | Head-to-head tournaments: models play **Connect Four** and **chess** against each other in a knockout bracket or round-robin. Live board with streaming "thinking", clocks and spend; a bracket that fills in as winners advance; move-by-move replays; full-screen match cards for the video. See [The Arena](#the-arena-head-to-head-games). |
 
 Press **B** anywhere for **Broadcast mode**: chrome hidden, large type, 16:9-friendly layout.
 
@@ -99,6 +100,42 @@ node src/cli.ts challenge import responses.csv     # viewer challenge -> review 
 ```
 
 Runs started from the CLI appear in the dashboard, and the reverse.
+
+## The Arena (head-to-head games)
+
+Instead of each model taking a test alone, two models **play each other**. Pick a game, 4, 8 or 16 models and a
+format, check the cost estimate, and press Start (dashboard: **Arena → New tournament**).
+
+* **Every move is a fresh prompt** with the full rules, the move history, the current position and (by default)
+  the list of legal moves. The model ends its reply with `MOVE: <move>` (chess accepts `e2e4`, `e7e8q` or `Nf3`,
+  `O-O`). Nothing carries over between moves, so every model sees exactly the same kind of prompt.
+* **Illegal or unreadable move** → one retry with the problem explained → then a random legal move is played for
+  the model and it gets a **strike**. Three strikes lose the game.
+* **Fair sides:** every pairing is a mini-match of 2 (or 4, 6) games with the sides swapped. A level knockout
+  match goes to sudden death (each sudden-death game starts after one random move per side, so two
+  deterministic models don't just replay game 1), then fewer illegal moves, then lower cost, then the higher seed.
+* **Chess rules** are fully enforced by Gauntlet's own move generator (castling, en passant, promotion, check,
+  checkmate, stalemate, 50-move rule, threefold repetition, insufficient material). At the move cap (120
+  half-moves) the game is decided on material: a lead of 3+ points wins, otherwise it's a draw.
+* **Seeding** by current Gauntlet Index (the top two can only meet in the final) or your own order. Byes go to
+  the top seeds when the field isn't a power of two.
+* **Cost:** an estimate per game and for the whole bracket before you start, and a hard spending cap checked
+  before every move. The Random Baseline and manual (copy & paste) models can play too.
+* Tournaments are stored in `data/arena/<id>/` (manifest + one line per game with every prompt and reply) and
+  can be cancelled and **resumed**; only unfinished games are replayed.
+
+```bash
+node src/cli.ts arena games
+node src/cli.ts arena new --game connect4 --models a,b,c,d --format knockout --max-cost 5
+node src/cli.ts arena new --game chess --models a,b,c,d,e,f,g,h --games 2 --seeding index --max-cost 25
+node src/cli.ts arena list
+node src/cli.ts arena show <id>
+node src/cli.ts arena resume <id> --max-cost 10
+```
+
+For the video: open the tournament and press **B** (broadcast) for the live board or the bracket, click any game
+for a replay (Space / ← → / F), and use **Match cards** for full-screen 1920×1080 cards of every match and the
+champion. Try it with no keys at `?mock=1`: a finished 8-model chess bracket and a Connect Four cup playing live.
 
 ## Suites
 

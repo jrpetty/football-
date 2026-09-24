@@ -96,6 +96,12 @@ Channel tools:
                                              New Model Day: add, ping, price, run and rank a new model
   challenge import <file.csv|json> [--season 2026-s1] | list | write [--category reasoning]
                                              Viewer challenge: review queue -> private test
+The Arena (head-to-head games between models):
+  arena games                                List the games (connect4, chess)
+  arena new --game connect4 --models a,b,c,d [--format knockout|round-robin] [--games 2|4|6]
+      [--seeding index|manual] [--max-cost 5] [--concurrency 2] [--yes]
+                                             Start a tournament (shows the cost estimate first)
+  arena estimate … | arena list | arena show <id> | arena resume <id> [--max-cost 10]
 
 API keys are read from the environment or gauntlet/.env (see .env.example).`;
 
@@ -477,6 +483,11 @@ async function main(): Promise<void> {
       const target = { contestant: m, adapter: createAdapter(m, p), semaphore: new Semaphore(1) };
       const r = await callWithRetry(target, { messages: [{ role: 'user', content: 'Reply with exactly one word: pong' }], maxOutputTokens: 2000, temperature: 0 }, { maxRetries: 1, temperature: 0, defaultMaxOutputTokens: 2000 }, new AbortController().signal);
       console.log(`${c.green('✓')} ${m.label}: "${r.text.trim().slice(0, 60)}"  ttft ${fmtMs(r.ttftMs)} · total ${fmtMs(r.totalMs)} · ${r.usage.inputTokens}+${r.usage.outputTokens} tokens · ${fmtCost(computeCost(r.usage, m.pricing))} · served by ${r.servedModel}`);
+      return;
+    }
+
+    case 'arena': {
+      await (await import('./arena/cli.ts')).arenaCommand(positional, flags);
       return;
     }
 

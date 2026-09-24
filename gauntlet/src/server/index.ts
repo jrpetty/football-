@@ -50,6 +50,8 @@ import { registerVisionRoutes } from './vision-routes.ts';
 import { testBaseDir } from '../core/vision.ts';
 import { registerChannelRoutes } from '../channel/routes.ts';
 import { overlayRedirect, registerStudioRoutes } from '../media/studio.ts';
+import { registerArenaRoutes } from '../arena/server.ts';
+import { recoverInterruptedTournaments } from '../arena/tournament.ts';
 
 class HttpError extends Error {
   status: number;
@@ -541,11 +543,14 @@ function serveStatic(pathname: string, res: ServerResponse): void {
 registerVisionRoutes({ route, httpError: (status, message) => new HttpError(status, message), streaming: STREAMING });
 // Channel tools: public site, New Model Day, history, viewer challenge (src/channel/).
 registerChannelRoutes(route, (status, message, details) => new HttpError(status, message, details), STREAMING);
+// The Arena (head-to-head games): routes live in src/arena/server.ts.
+registerArenaRoutes({ route, httpError: (status, message, details) => new HttpError(status, message, details), streaming: STREAMING });
 
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function startServer(opts: { port: number; host: string }): Promise<{ url: string; close: () => Promise<void> }> {
   recoverInterruptedRuns(listRunIds());
+  recoverInterruptedTournaments();
   const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', 'http://localhost');
     const method = req.method ?? 'GET';

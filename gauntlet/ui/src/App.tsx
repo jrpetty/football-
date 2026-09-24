@@ -7,6 +7,7 @@ import { Icon } from './components/icons.tsx';
 import { Callout, LoadingPage, cx } from './components/ui.tsx';
 import { useHotkeys, useNow } from './hooks.ts';
 import { MOCK, api } from './api.ts';
+import { ArenaIcon } from './arena/ArenaIcon.tsx';
 
 const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage.tsx'));
 const NewRunPage = lazy(() => import('./pages/NewRunPage.tsx'));
@@ -32,6 +33,11 @@ const ChallengePage = lazy(() => import('./channel/ChallengePage.tsx'));
 const ChannelSlidesPage = lazy(() => import('./channel/ChannelSlidesPage.tsx'));
 const StudioPage = lazy(() => import('./pages/StudioPage.tsx'));
 const OverlayPage = lazy(() => import('./pages/OverlayPage.tsx'));
+const ArenaPage = lazy(() => import('./pages/ArenaPage.tsx'));
+const ArenaNewPage = lazy(() => import('./pages/ArenaNewPage.tsx'));
+const ArenaTournamentPage = lazy(() => import('./pages/ArenaTournamentPage.tsx'));
+const ArenaGamePage = lazy(() => import('./pages/ArenaGamePage.tsx'));
+const ArenaCardPage = lazy(() => import('./pages/ArenaCardPage.tsx'));
 
 interface NavItem {
   to: string;
@@ -47,6 +53,7 @@ const NAV: NavItem[] = [
   { to: '/run/new', label: 'New Run', icon: Icon.Rocket, cta: true, match: (p) => p === '/run/new' },
   { to: '/', label: 'Leaderboard', icon: Icon.Trophy, match: (p) => p === '/' || p === '/leaderboard' },
   { to: '/runs', label: 'Runs', icon: Icon.History, match: (p) => p.startsWith('/runs') },
+  { to: '/arena', label: 'Arena', icon: ArenaIcon, match: (p) => p.startsWith('/arena') },
   { to: '/present', label: 'Presenter', icon: Icon.Present, match: (p) => p.startsWith('/present') },
   { to: '/studio', label: 'Studio', icon: Icon.Clapper, match: (p) => p.startsWith('/studio') },
   { to: '/inbox', label: 'Manual Inbox', icon: Icon.Inbox, badge: 'manual', match: (p) => p.startsWith('/inbox') },
@@ -123,6 +130,13 @@ function resolve(parts: string[]): Resolved {
   if (a === 'slides' && b) return { el: <ChannelSlidesPage key={b} kind={b} />, crumb: 'Presenter', bare: true };
   if (a === 'studio') return { el: <StudioPage key={b ?? 'pick'} runId={b} />, crumb: 'Studio' };
   if (a === 'overlay') return { el: <OverlayPage key={b ?? 'latest'} runId={b ?? 'latest'} />, crumb: 'Overlay', bare: true };
+  if (a === 'arena') {
+    if (!b) return { el: <ArenaPage />, crumb: 'The Arena' };
+    if (b === 'new') return { el: <ArenaNewPage />, crumb: 'New tournament' };
+    if (c === 'game' && parts[3]) return { el: <ArenaGamePage key={`${b}/${parts[3]}`} id={b} gameKey={parts[3]} />, crumb: 'Arena game' };
+    if (c === 'card') return { el: <ArenaCardPage key={b} id={b} />, crumb: 'Match cards', bare: true };
+    return { el: <ArenaTournamentPage key={b} id={b} />, crumb: 'Tournament' };
+  }
   if (a === 'present') {
     if (!b) return { el: <PresentPickerPage />, crumb: 'Presenter' };
     return { el: <PresentPage key={b} runId={b} />, crumb: 'Presenter', bare: true };
