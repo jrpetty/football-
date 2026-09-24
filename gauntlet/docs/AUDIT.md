@@ -65,6 +65,42 @@ solver side, so no strong model played it blind. Its keys are proven optimal by 
 
 The Startup is scored against a perfect-information oracle, so even excellent play stays well below 100%.
 
+## New tests (second release)
+
+Same method: the models saw only the rendered prompt (and the attached images), with no answer keys and no tools.
+
+| Test | Suite | Opus | Haiku | Random | Separates models? |
+|---|---|---:|---:|---:|---|
+| Modified Classics | `trick` | 100% | 46% | ≤10% | **Yes** |
+| False Premise | `trick` | 100% | 93% | ≤10% | Barely: even small models spot these |
+| Lightning Traps | `trick` | 100% | 95% | ≤10% | Barely |
+| Read the Chart | `vision` | 100% | 63% | 0% | **Yes** |
+| Spot the Difference | `vision` | 100% | 20% | 0% | **Yes** |
+| Count & Locate | `vision` | 100% | 50% | 0% | **Yes** |
+| Handwritten Maths | `vision` | 100% | 100% | 0% | No: small models read handwriting well too |
+| Fix the Bug (hard) | `frontier` | 98–99% | not measured* | 0% | See below |
+
+Opus answered every case correctly, which independently confirms every answer key.
+
+**False Premise, Lightning Traps and Handwritten Maths** were rebuilt once to be harder after the first audit, when Haiku scored
+100% on all three. Now-famous traps (months with 28 days, Einstein's "second Nobel") were replaced with obscure but checkable
+ones. Even so, today's small models still score above 90%. We did not keep tweaking them until the numbers looked good,
+because that would tune the test to the audit. They stay as fast, fun Shorts material. On real API runs their time limit can
+still catch slow, deep-thinking models. For separating models, use Modified Classics, the vision tests and the other suites.
+
+**Fix the Bug (hard)** was also rebuilt after the first audit (Opus scored 100% in about par actions):
+- The repos are now 800 lines and 25 files each.
+- One bug in each repo is caught only by hidden tests, and the README is the only way to find it.
+- Symptoms point at the wrong module, and each repo has red herrings and a 35-action budget.
+
+Opus still fixed all three repos: every hidden test passed, taking 18–22 actions against a par of 15–16. It found each
+hidden-only bug by reading the spec. A model that only makes the visible tests pass scores about 60%, so that is where
+weaker models separate.
+
+\*The small-model stand-in could not be measured fairly on this interactive test. Twice it edited the fixture files on disk
+instead of using the test's tools, so both runs were discarded and the files restored. A real model under test cannot do this:
+it only ever gets the in-memory tools. The test hash also covers every fixture file, so any tampering would make results stale.
+
 ## What the audit changed
 
 The blind play found real problems, and each was fixed before release:
@@ -80,3 +116,7 @@ The blind play found real problems, and each was fixed before release:
   Leaving out an article isn't a reasoning error, so both forms are now accepted.
 * **Extraction: Frontier gave too much partial credit.** Haiku got 89% of fields right but only 1 of 5
   documents fully right. The test is now all-or-nothing per document, and the prompt says so.
+* **Spot the Difference would have failed "color" for "colour".** The JSON scorer now accepts listed alternative
+  spellings (`aliases`).
+* **Can It Be Fooled?, Handwritten Maths and Fix the Bug (hard) were too easy in the first audit.** All were rebuilt
+  (see above).
