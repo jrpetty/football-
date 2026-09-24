@@ -134,7 +134,9 @@ export function friendlyScoring(def: TestDefinition | undefined, program: Progra
         ? { text: 'Every rule is checked automatically — break a single one and the answer scores zero.', tech: 'constraint checks (all or nothing)' }
         : { text: 'Every rule in the instructions is checked automatically: points for each rule followed.', tech: 'constraint checks (partial credit)' };
     case 'json':
-      return { text: 'The answer must be machine-readable data: points for every field that matches the answer key.', tech: 'JSON field match' };
+      return sc.allOrNothing
+        ? { text: 'The answer must be machine-readable data, and every single field must match the answer key: one wrong field scores zero.', tech: 'JSON field match (all or nothing)' }
+        : { text: 'The answer must be machine-readable data: points for every field that matches the answer key.', tech: 'JSON field match (partial credit)' };
     case 'judge': {
       const withRef = def.cases.some((c) => c.expected !== undefined);
       return { text: `Graded by ${panel} ${withRef ? 'against a reference answer' : 'using a written marking guide'}.`, tech: 'LLM judge panel (rubric)' };
