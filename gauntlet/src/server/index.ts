@@ -46,6 +46,8 @@ import { browserAvailable } from '../scoring/browser.ts';
 import { createAdapter, discoverModels } from '../providers/index.ts';
 import { callWithRetry } from '../engine/recorder.ts';
 import { Semaphore } from '../engine/semaphore.ts';
+import { registerArenaRoutes } from '../arena/server.ts';
+import { recoverInterruptedTournaments } from '../arena/tournament.ts';
 
 class HttpError extends Error {
   status: number;
@@ -531,10 +533,14 @@ function serveStatic(pathname: string, res: ServerResponse): void {
   res.end(readFileSync(file));
 }
 
+// The Arena (head-to-head games): routes live in src/arena/server.ts.
+registerArenaRoutes({ route, httpError: (status, message, details) => new HttpError(status, message, details), streaming: STREAMING });
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function startServer(opts: { port: number; host: string }): Promise<{ url: string; close: () => Promise<void> }> {
   recoverInterruptedRuns(listRunIds());
+  recoverInterruptedTournaments();
   const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', 'http://localhost');
     const method = req.method ?? 'GET';
