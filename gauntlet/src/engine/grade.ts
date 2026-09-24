@@ -7,7 +7,7 @@ import { caseScorer, getTest, renderCase, type RenderedCase } from '../core/regi
 import type { ArtifactKind, ArtifactRef, Contestant, TranscriptEntry } from '../core/types.ts';
 import { createAdapter } from '../providers/index.ts';
 import { scoreResponse, type ScoringOutcome } from '../scoring/index.ts';
-import { createJudgePanel, selectJudges } from './runner.ts';
+import { asJudge, createJudgePanel, selectJudges } from './runner.ts';
 import { Semaphore } from './semaphore.ts';
 import type { CallTarget } from './recorder.ts';
 
@@ -57,7 +57,7 @@ export async function gradePasted(req: GradeRequest): Promise<GradeResult> {
       return p ? hasApiKey(p) && p.type !== 'manual' : false;
     });
   const pseudo: Contestant = { id: 'pasted', label: 'Pasted reply', vendor: req.vendor ?? '', provider: 'manual', model: 'pasted', color: '#000000', enabled: true, pricing: { inputPerM: 0, outputPerM: 0 } };
-  const panelJudges = selectJudges(judges.map(snapshotContestant), pseudo, settings.judgeExcludeSameVendor);
+  const panelJudges = selectJudges(judges.map((j) => snapshotContestant(asJudge(j, settings.judgeEffort))), pseudo, settings.judgeExcludeSameVendor);
 
   const targets = new Map<string, CallTarget>();
   const targetFor = (m: Contestant): CallTarget => {

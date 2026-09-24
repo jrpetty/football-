@@ -1,8 +1,8 @@
 {
   "judges": [
-    "claude-opus-5",
-    "gpt-5.6-sol",
-    "gemini-3.1-pro"
+    "claude-sonnet-5",
+    "gpt-5.6-terra",
+    "gemini-3.5-flash"
   ],
   "defaultRepeats": 3,
   "defaultConcurrency": 6,
@@ -10,5 +10,6 @@
   "defaultMaxOutputTokens": 16000,
   "defaultTimeLimitSec": 1800,
   "maxRetries": 4,
-  "judgeExcludeSameVendor": true
+  "judgeExcludeSameVendor": true,
+  "judgeEffort": "medium"
 }

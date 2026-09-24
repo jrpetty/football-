@@ -109,7 +109,10 @@ function buildJobs(tests: Array<LoadedTest & { caseFilter?: string[] }>, contest
 export interface RunPlan {
   tests: ResolvedTest[];
   contestants: Contestant[];
+  /** Judges that will actually be used (configured and with an API key). */
   judges: Contestant[];
+  /** All configured judges, used for cost estimates even before their keys are set. */
+  plannedJudges: Contestant[];
   repeats: number;
   concurrency: number;
   temperature: number;
@@ -126,6 +129,15 @@ function usesJudges(t: LoadedTest): boolean {
     const s = caseScorer(d, c);
     return s.type === 'judge' || s.type === 'judge-classify' || (s.type === 'artifact' && (s.judgeWeight ?? 0) > 0);
   });
+}
+
+/**
+ * A judge is the configured model with the judge-specific effort applied. It gets
+ * its own id so it never shares an adapter/config with the same model competing.
+ */
+export function asJudge(c: Contestant, effort: 'low' | 'medium' | 'high' | null): Contestant {
+  if (!effort || !c.options?.effort) return { ...c, id: `${c.id}@judge` };
+  return { ...c, id: `${c.id}@judge`, options: { ...c.options, effort } };
 }
 
 export function planRun(req: RunRequest): RunPlan {
@@ -151,6 +163,7 @@ export function planRun(req: RunRequest): RunPlan {
   }
   const judgeNeeded = tests.some(usesJudges);
   const judges: Contestant[] = [];
+  const plannedJudges: Contestant[] = [];
   if (judgeNeeded) {
     for (const id of judgeIds) {
       const j = all.find((x) => x.id === id);
@@ -158,12 +171,13 @@ export function planRun(req: RunRequest): RunPlan {
         warnings.push(`Judge "${id}" is not a configured model — skipped`);
         continue;
       }
+      plannedJudges.push(asJudge(j, settings.judgeEffort));
       const p = providerOf(j);
       if (!p || !hasApiKey(p)) {
         warnings.push(`Judge ${j.label}: no API key — skipped (panel continues without it)`);
         continue;
       }
-      judges.push(j);
+      judges.push(asJudge(j, settings.judgeEffort));
     }
     if (judges.length === 0) warnings.push('No usable judge models: judge-scored tests will error. Configure judges in config/settings.json.');
     else if (new Set(judges.map((j) => j.vendor)).size === 1) warnings.push(`All judges are from ${judges[0]!.vendor}: consider a cross-vendor panel to avoid self-preference bias`);
@@ -177,6 +191,7 @@ export function planRun(req: RunRequest): RunPlan {
     tests,
     contestants,
     judges,
+    plannedJudges,
     repeats: Math.max(1, Math.min(20, req.repeats ?? getSuite(req.suiteId ?? 'core')?.repeats ?? settings.defaultRepeats)),
     concurrency: Math.max(1, Math.min(64, req.concurrency ?? settings.defaultConcurrency)),
     temperature: req.temperature ?? settings.temperature,
@@ -304,11 +319,14 @@ export async function estimateRun(req: RunRequest): Promise<RunEstimate> {
       costHigh += testCost * (basis === 'measured' ? 1.2 : 1.6);
       perTest[i]!.perContestant[c.id] = Math.round(testCost * 10000) / 10000;
       if (perTest[i]!.basis !== 'measured') perTest[i]!.basis = basis;
-      if (usesJudges(t) && plan.judges.length) {
-        const panel = plan.judgeExcludeSameVendor && plan.judges.some((j) => j.vendor !== c.vendor) ? plan.judges.filter((j) => j.vendor !== c.vendor) : plan.judges;
+      const judgePool = plan.plannedJudges;
+      if (usesJudges(t) && judgePool.length) {
+        const panel = plan.judgeExcludeSameVendor && judgePool.some((j) => j.vendor !== c.vendor) ? judgePool.filter((j) => j.vendor !== c.vendor) : judgePool;
         let jc = 0;
-        if (obs && obs.all.judgeUsd > 0) jc = (obs.all.judgeUsd / obs.all.n) * n * (panel.length / Math.max(1, plan.judges.length));
-        else for (const j of panel) jc += (n * ((Math.min(output, 20000) + 3000) * j.pricing.inputPerM + 2500 * j.pricing.outputPerM)) / 1e6;
+        if (obs && obs.all.judgeUsd > 0) jc = (obs.all.judgeUsd / obs.all.n) * n * (panel.length / Math.max(1, judgePool.length));
+        // Judge input = fixed prompt (~2.5k tokens incl. rubric/reference) + the visible part of the reply (reasoning
+        // tokens are never shown to judges; assume half of the output is visible). Judge output ≈ 1.5k at medium effort.
+        else for (const j of panel) jc += (n * ((2500 + Math.min(output, 40000) * 0.5) * j.pricing.inputPerM + 1500 * j.pricing.outputPerM)) / 1e6;
         calls += n * panel.length;
         judgeCost += jc;
         high += jc * 1.5;

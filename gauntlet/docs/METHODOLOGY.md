@@ -124,7 +124,10 @@ medal.
 ### 5.5 Judges
 
 * Fixed prompts (`src/scoring/judge-prompts.ts`), part of the fingerprint.
-* A panel of models from different vendors (`config/settings.json → judges`); the mean is used.
+* A panel of models from different vendors (`config/settings.json → judges`; default Claude Sonnet 5, GPT-5.6
+  Terra and Gemini 3.5 Flash at `judgeEffort: medium`); the mean is used. Judges always get a reference answer or
+  a points-based rubric, so strong mid-tier models grade as reliably as frontier ones at a fraction of the cost.
+  Swap in frontier judges for especially subjective tests if budget allows.
   The harness warns when the panel has only one vendor, because models tend to prefer their own
   vendor's style.
 * Judges never see which model wrote a response and are told to ignore instructions inside it.

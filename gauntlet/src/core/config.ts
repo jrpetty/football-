@@ -14,6 +14,8 @@ export interface Settings {
   maxRetries: number;
   /** Never let a judge grade a model from its own vendor (when another judge is available). */
   judgeExcludeSameVendor: boolean;
+  /** Reasoning effort used for judge calls (overrides the judge model's own effort; null keeps it). */
+  judgeEffort: 'low' | 'medium' | 'high' | null;
 }
 
 interface ModelsFile {
@@ -50,6 +52,7 @@ export function loadSettings(): Settings {
     defaultTimeLimitSec: 1800,
     maxRetries: 4,
     judgeExcludeSameVendor: true,
+    judgeEffort: 'medium',
   };
   return { ...defaults, ...readJson<Partial<Settings>>(SETTINGS_FILE) };
 }
