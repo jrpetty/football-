@@ -143,7 +143,7 @@ champion. Try it with no keys at `?mock=1`: a finished 8-model chess bracket and
 |---|---|
 | `core` | **Standard tier.** The official benchmark: 21 tests across the 11 text categories. Use this (3 repeats) for published results. |
 | `frontier` | **Frontier tier.** 17 extreme tests (extreme logic, olympiad maths, frontier coding, a Fix the Bug coding agent, adversarial system prompts, pressure honesty traps, hard variants of every simulation, the Fix the Bug coding agent) to separate the best models once they bunch up near the top of Core. |
-| `vision` | **Picture tests.** The model is shown an image: chart reading, spot the difference, handwritten maths, count & locate (21 cases). Models without image input are skipped, not scored as 0. Kept out of `core` so Core stays comparable. |
+| `vision` | **Picture tests.** The model is shown an image: chart reading, spot the difference, handwritten maths, count & locate (25 cases). Models without image input are skipped, not scored as 0. Kept out of `core` so Core stays comparable. |
 | `quick` | A fast, cheap subset (one or two hard cases per test) for smoke tests and trying out new models. |
 | `trick` | **Can It Be Fooled?** 71 short trick questions (changed classics, false premises, 30-second lightning traps) graded exactly, with no judges. Made for YouTube Shorts: see [docs/PLAYBOOK.md](docs/PLAYBOOK.md#making-a-can-it-be-fooled-short). |
 | `all` | Everything, including custom tests. |
@@ -208,9 +208,9 @@ default repeat count. Bump the suite `version` when you change it.
 
 | Test | Id | What it does |
 |---|---|---|
-| Read the Chart | `vision.read-the-chart` | Six charts. Read the numbers, do the maths, no labels to lean on. |
+| Read the Chart | `vision.read-the-chart` | Eight charts, including a log axis and a 100% stacked chart. Read the numbers, do the maths. |
 | Spot the Difference | `vision.spot-the-difference` | Find every difference. Miss one and it is zero. |
-| Handwritten Maths | `vision.handwritten-maths` | Messy handwriting, exact answers. |
+| Handwritten Maths | `vision.handwritten-maths` | Mark the homework: find the student's first wrong line, read crossed-out corrections and messy capitals. |
 | Count & Locate | `vision.count-and-locate` | How many? Where? Exactly. |
 
 **Can It Be Fooled? (`trick`)**
