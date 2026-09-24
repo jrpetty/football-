@@ -221,6 +221,10 @@ export default function NewRunPage() {
   const presetTests = query.get('tests');
   const [mode, setMode] = useState<Mode>(presetTests ? 'pick' : 'suite');
   const [suiteId, setSuiteId] = useState(query.get('suite') ?? 'core');
+  // Fall back to the first suite if the requested/default one doesn't exist on this server.
+  useEffect(() => {
+    if (suites.length && !suites.some((s) => s.id === suiteId)) setSuiteId(suites.some((s) => s.id === 'core') ? 'core' : suites[0].id);
+  }, [suites, suiteId]);
   const [picked, setPicked] = useState<Set<string>>(() => new Set(presetTests ? presetTests.split(',').filter(Boolean) : []));
   const [selected, setSelected] = useState<Set<string> | null>(null);
   const [repeats, setRepeats] = useState<number | null>(null);

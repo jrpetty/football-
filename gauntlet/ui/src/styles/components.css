@@ -105,6 +105,7 @@
 }
 .stack {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
 }
 .stack.tight {
@@ -543,7 +544,8 @@ kbd {
   user-select: none;
   font-size: 0.9rem;
 }
-.check input {
+.check > input[type='checkbox'],
+.check > input[type='radio'] {
   width: 16px;
   height: 16px;
   accent-color: var(--accent);
@@ -596,6 +598,9 @@ input[type='range'] {
 /* Segmented control */
 .seg {
   display: inline-flex;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
   padding: 3px;
   gap: 2px;
   border-radius: var(--r-md);
@@ -603,6 +608,7 @@ input[type='range'] {
   border: 1px solid var(--border);
 }
 .seg button {
+  flex: none;
   height: 28px;
   padding: 0 12px;
   border: 0;

@@ -15,11 +15,12 @@ const apiModel = (c: ContestantView) => c.enabled && c.providerType !== 'manual'
 export default function CostsPage() {
   const { query } = useRoute();
   const { cat } = useMeta();
-  const suiteId = query.get('suite') ?? 'core';
+  const requestedSuite = query.get('suite');
   const repeats = Math.max(1, Math.min(5, Number(query.get('repeats') ?? 1) || 1));
   const modelsParam = query.get('models');
   const lists = useAsync<[SuiteView[], ContestantView[]]>(() => Promise.all([api.suites(), api.contestants()]), []);
   const [suites, contestants] = lists.data ?? [[], []];
+  const suiteId = requestedSuite && (!suites.length || suites.some((s) => s.id === requestedSuite)) ? requestedSuite : suites.some((s) => s.id === 'core') ? 'core' : suites[0]?.id ?? 'core';
   const defaults = useMemo(() => contestants.filter(apiModel).map((c) => c.id), [contestants]);
   const models = modelsParam === null ? defaults : modelsParam === 'none' ? [] : modelsParam.split(',').filter(Boolean);
   const key = `${suiteId}|${repeats}|${modelsParam === null ? '*' : models.join(',')}`;
@@ -28,7 +29,7 @@ export default function CostsPage() {
 
   const est = useAsync<RunEstimate | null>(() => {
     const [s, r, m] = debKey.split('|');
-    if (!lists.data || m === '') return Promise.resolve(null);
+    if (!lists.data || m === '' || !lists.data[0].some((x) => x.id === s)) return Promise.resolve(null);
     return api.costs(s, Number(r), m === '*' ? undefined : m.split(','));
   }, [debKey, !!lists.data]);
 
@@ -45,9 +46,10 @@ export default function CostsPage() {
     setQuery({ models: [...set].join(',') || 'none' });
   };
 
+  const quickSuite = suites.find((s) => s.id === 'quick') ?? [...suites].sort((a, b) => a.testCount - b.testCount)[0];
   const cheapestStart = () => {
     const priced = contestants.filter(apiModel).sort((a, b) => a.pricing.inputPerM + a.pricing.outputPerM - (b.pricing.inputPerM + b.pricing.outputPerM));
-    setQuery({ suite: 'quick', repeats: 1, models: priced.slice(0, 3).map((c) => c.id).join(',') });
+    setQuery({ suite: quickSuite?.id ?? suiteId, repeats: 1, models: priced.slice(0, 3).map((c) => c.id).join(',') || 'none' });
   };
 
   return (
@@ -107,7 +109,7 @@ export default function CostsPage() {
       </section>
 
       <Callout tone="info" icon={<Icon.Sparkles />}>
-        <strong>Cheapest way to start:</strong> the <em>Quick Check</em> suite with 1 repeat on 2–3 inexpensive models — usually a few cents.{' '}
+        <strong>Cheapest way to start:</strong> the <em>{quickSuite?.name ?? 'Quick Check'}</em> suite with 1 repeat on 2–3 inexpensive models — usually a few cents.{' '}
         <button className="btn xs" onClick={cheapestStart}>
           Show me
         </button>

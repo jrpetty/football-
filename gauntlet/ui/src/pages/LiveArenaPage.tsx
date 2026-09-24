@@ -124,6 +124,13 @@ function buildStore(d: RunDetail, prev: Store | undefined, manualProviders: Set<
   };
 }
 
+/** A delta/step for a job we never saw start (e.g. connected mid-job): recover it from the key. */
+function adoptJob(l: Lane, key: string) {
+  if (l.inFlight.has(key) || l.ticker.some((x) => x.key === key)) return;
+  const [, testId = '', caseId = '', rep = 'r0'] = key.split('::');
+  l.inFlight.set(key, { testId, caseId, repeat: Number(rep.replace(/^r/, '')) || 0 });
+}
+
 function applyEvent(s: Store, e: RunEvent) {
   switch (e.type) {
     case 'run.progress':
@@ -173,6 +180,7 @@ function applyEvent(s: Store, e: RunEvent) {
     case 'job.delta': {
       const l = s.lanes.get(e.contestantId);
       if (!l) return;
+      adoptJob(l, e.key);
       l.buffers.set(e.key, trim((l.buffers.get(e.key) ?? '') + e.text));
       if (!l.focusKey || !l.inFlight.has(l.focusKey)) l.focusKey = e.key;
       return;
@@ -180,6 +188,7 @@ function applyEvent(s: Store, e: RunEvent) {
     case 'job.step': {
       const l = s.lanes.get(e.contestantId);
       if (!l) return;
+      adoptJob(l, e.key);
       l.frames.set(e.key, { frame: e.frame, label: e.label });
       return;
     }
@@ -297,7 +306,7 @@ function LaneCard({ lane, rank, testName, now, done }: { lane: Lane; rank: numbe
             {extra > 0 && <span className="badge outline">+{extra} in flight</span>}
           </>
         ) : (
-          <span className="muted">{done ? 'Stopped' : 'Queued…'}</span>
+          <span className="muted">{done ? 'Stopped' : lane.lastKey || lane.completed ? 'Next case starting…' : 'Queued…'}</span>
         )}
       </div>
       {lane.manual.size > 0 ? (
@@ -401,6 +410,8 @@ export default function LiveArenaPage({ runId }: { runId: string }) {
   const [busy, setBusy] = useState(false);
   const pending = useRef(false);
   const connectedRef = useRef(false);
+  /** Events that arrive before the first snapshot loads are replayed onto it. */
+  const early = useRef<RunEvent[]>([]);
 
   const schedule = useCallback(() => {
     if (pending.current) return;
@@ -413,9 +424,26 @@ export default function LiveArenaPage({ runId }: { runId: string }) {
 
   const resync = useCallback(async () => {
     try {
-      const d = await api.run(runId);
+      const [d, pendingManual] = await Promise.all([api.run(runId), api.manualQueue(runId).catch(() => null)]);
+      const first = !storeRef.current;
       storeRef.current = buildStore(d, storeRef.current ?? undefined, manualRef.current);
       storeRef.current.connected = connectedRef.current;
+      // Pending copy & paste requests are not replayed over SSE — load them from the queue.
+      if (pendingManual) {
+        for (const l of storeRef.current.lanes.values()) l.manual = new Map();
+        for (const req of pendingManual) {
+          const l = storeRef.current.lanes.get(req.contestantId);
+          if (!l) continue;
+          l.isManual = true;
+          l.manual.set(req.id, req);
+          adoptJob(l, req.key);
+          if (!l.focusKey) l.focusKey = req.key;
+        }
+      }
+      if (first && early.current.length) {
+        for (const ev of early.current) applyEvent(storeRef.current, ev);
+        early.current = [];
+      }
       if (!['running', 'queued'].includes(d.manifest.status) && d.leaderboard?.rows?.length) setFinal(d.leaderboard);
       setError(null);
       schedule();
@@ -430,7 +458,11 @@ export default function LiveArenaPage({ runId }: { runId: string }) {
     const unsub = subscribeRun(runId, {
       onEvent: (e) => {
         const s = storeRef.current;
-        if (!s || !alive) return;
+        if (!alive) return;
+        if (!s) {
+          if (early.current.length < 2000) early.current.push(e);
+          return;
+        }
         applyEvent(s, e);
         if (e.type === 'run.status' && !['running', 'queued'].includes(e.status)) void resync();
         schedule();

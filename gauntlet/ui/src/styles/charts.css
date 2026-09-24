@@ -300,3 +300,7 @@ html[data-broadcast='on'] .bl-bar {
     radial-gradient(farthest-side at 0 50%, rgba(0, 0, 0, 0.45), transparent) left / 14px 100% no-repeat scroll,
     radial-gradient(farthest-side at 100% 50%, rgba(0, 0, 0, 0.45), transparent) right / 14px 100% no-repeat scroll;
 }
+.leaders line {
+  stroke-width: 1.25;
+  stroke-opacity: 0.8;
+}

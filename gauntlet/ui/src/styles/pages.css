@@ -3106,3 +3106,24 @@ html[data-broadcast='on'] .broadcast-slate {
 .constraint-chips code {
   color: var(--text-1);
 }
+
+.review-context .badge.lg {
+  white-space: normal;
+  height: auto;
+  min-height: 28px;
+  padding: 4px 12px;
+}
+
+@media (max-width: 600px) {
+  .podium-list .pl-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+  .podium-list .pl-places {
+    flex-wrap: wrap;
+    gap: 4px 10px;
+  }
+  .step .n {
+    display: none;
+  }
+}

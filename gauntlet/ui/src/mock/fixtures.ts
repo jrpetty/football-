@@ -951,7 +951,7 @@ export const RUN_SPECS: RunSpec[] = [
     createdAt: '2026-08-30T08:00:00Z',
     completedFrac: 0.45,
     maxCostUsd: 1.8,
-    error: 'Budget cap reached: $1.82 spent of the $1.80 cap. Resume with a higher cap to finish the remaining 35 jobs.',
+    error: 'Budget cap reached: $1.82 spent of the $1.80 cap. Resume with a higher cap to finish the remaining jobs.',
   },
   {
     id: 'run-2026-09-23-manual',

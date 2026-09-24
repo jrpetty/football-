@@ -395,6 +395,7 @@ hr {
   max-width: 1720px;
   margin: 0 auto;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 22px;
   animation: page-in 260ms var(--ease-out);
 }

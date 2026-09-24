@@ -107,7 +107,8 @@ export function ScoreCostScatter({ rows, mode, tall }: { rows: LeaderboardRow[];
     });
     const frontier = pts.filter((p) => p.frontier).sort((a, b) => a.cost - b.cost);
 
-    // Greedy label placement, best models first.
+    // Greedy label placement, best models first. Points that (nearly) coincide
+    // share one stacked label so a name never sits beside someone else's dot.
     const r = 6.5 * s;
     const labelSize = 12.5 * s;
     const lh = labelSize * 1.2;
@@ -115,18 +116,35 @@ export function ScoreCostScatter({ rows, mode, tall }: { rows: LeaderboardRow[];
     const placed: Box[] = [];
     const dots: Box[] = pts.map((p) => ({ x: p.x - r - 2, y: p.y - r - 2, w: 2 * r + 4, h: 2 * r + 4 }));
     const bounds = { x0: margin.left + 2, x1: width - 4, y0: margin.top - 6 * s, y1: margin.top + plotH - 2 };
-    const labels = new Map<string, { x: number; y: number; anchor: 'start' | 'middle' | 'end' }>();
-    for (const p of [...pts].sort((a, b) => b.index - a.index)) {
-      const w = measureText(p.label, labelSize, 650);
+    const labels: Array<{ ids: string[]; lines: string[]; x: number; y: number; anchor: 'start' | 'middle' | 'end'; leader: [number, number, number, number] | null; color: string }> = [];
+
+    const order = [...pts].sort((a, b) => b.index - a.index);
+    const done = new Set<string>();
+    const clusters: Pt[][] = [];
+    for (const p of order) {
+      if (done.has(p.id)) continue;
+      const group = order.filter((q) => !done.has(q.id) && Math.hypot(q.x - p.x, q.y - p.y) <= r * 2.2);
+      group.forEach((q) => done.add(q.id));
+      clusters.push(group);
+    }
+
+    for (const group of clusters) {
+      const cx = group.reduce((a, q) => a + q.x, 0) / group.length;
+      const cy = group.reduce((a, q) => a + q.y, 0) / group.length;
+      const lines = group.map((q) => q.label);
+      const w = Math.max(...lines.map((l) => measureText(l, labelSize, 650)));
+      const h = lh * lines.length;
+      const own = new Set(group.map((q) => q.id));
       const cands: Array<{ box: Box; x: number; y: number; anchor: 'start' | 'middle' | 'end' }> = [
-        { box: { x: p.x + gap, y: p.y - lh / 2, w, h: lh }, x: p.x + gap, y: p.y, anchor: 'start' },
-        { box: { x: p.x - gap - w, y: p.y - lh / 2, w, h: lh }, x: p.x - gap, y: p.y, anchor: 'end' },
-        { box: { x: p.x - w / 2, y: p.y - gap - lh, w, h: lh }, x: p.x, y: p.y - gap - lh / 2, anchor: 'middle' },
-        { box: { x: p.x - w / 2, y: p.y + gap, w, h: lh }, x: p.x, y: p.y + gap + lh / 2, anchor: 'middle' },
-        { box: { x: p.x + gap * 0.7, y: p.y - gap - lh + 2, w, h: lh }, x: p.x + gap * 0.7, y: p.y - gap - lh / 2 + 2, anchor: 'start' },
-        { box: { x: p.x + gap * 0.7, y: p.y + gap - 2, w, h: lh }, x: p.x + gap * 0.7, y: p.y + gap + lh / 2 - 2, anchor: 'start' },
-        { box: { x: p.x - gap * 0.7 - w, y: p.y - gap - lh + 2, w, h: lh }, x: p.x - gap * 0.7, y: p.y - gap - lh / 2 + 2, anchor: 'end' },
-        { box: { x: p.x - gap * 0.7 - w, y: p.y + gap - 2, w, h: lh }, x: p.x - gap * 0.7, y: p.y + gap + lh / 2 - 2, anchor: 'end' },
+        // Side placements first, then diagonals (which stay visually attached to the dot), then centred above/below.
+        { box: { x: cx + gap, y: cy - h / 2, w, h }, x: cx + gap, y: cy, anchor: 'start' },
+        { box: { x: cx - gap - w, y: cy - h / 2, w, h }, x: cx - gap, y: cy, anchor: 'end' },
+        { box: { x: cx + gap * 0.7, y: cy - gap - h + 2, w, h }, x: cx + gap * 0.7, y: cy - gap - h / 2 + 2, anchor: 'start' },
+        { box: { x: cx + gap * 0.7, y: cy + gap - 2, w, h }, x: cx + gap * 0.7, y: cy + gap + h / 2 - 2, anchor: 'start' },
+        { box: { x: cx - gap * 0.7 - w, y: cy - gap - h + 2, w, h }, x: cx - gap * 0.7, y: cy - gap - h / 2 + 2, anchor: 'end' },
+        { box: { x: cx - gap * 0.7 - w, y: cy + gap - 2, w, h }, x: cx - gap * 0.7, y: cy + gap + h / 2 - 2, anchor: 'end' },
+        { box: { x: cx - w / 2, y: cy - gap - h, w, h }, x: cx, y: cy - gap - h / 2, anchor: 'middle' },
+        { box: { x: cx - w / 2, y: cy + gap, w, h }, x: cx, y: cy + gap + h / 2, anchor: 'middle' },
       ];
       let chosen: (typeof cands)[number] | null = null;
       let bestCost = Infinity;
@@ -135,7 +153,13 @@ export function ScoreCostScatter({ rows, mode, tall }: { rows: LeaderboardRow[];
         if (b.x < bounds.x0 || b.x + b.w > bounds.x1 || b.y < bounds.y0 || b.y + b.h > bounds.y1) continue;
         let cost = 0;
         for (const o of placed) cost += overlap(b, o);
-        for (const o of dots) cost += overlap(b, o) * 2;
+        pts.forEach((q, i) => {
+          if (own.has(q.id)) return;
+          cost += overlap(b, dots[i]) * 2;
+          // Keep clear of other dots' surroundings so a label never reads as a neighbour's.
+          const halo = { x: dots[i].x - 8 * s, y: dots[i].y - 4 * s, w: dots[i].w + 16 * s, h: dots[i].h + 8 * s };
+          cost += overlap(b, halo) * 0.35;
+        });
         if (cost < bestCost) {
           bestCost = cost;
           chosen = c;
@@ -143,9 +167,14 @@ export function ScoreCostScatter({ rows, mode, tall }: { rows: LeaderboardRow[];
         if (cost === 0) break;
       }
       // Drop labels that would collide; the legend + tooltip still carry identity.
-      if (chosen && bestCost < lh * 6) {
+      if (chosen && bestCost < lh * 1.5) {
         placed.push(chosen.box);
-        labels.set(p.id, { x: chosen.x, y: chosen.y, anchor: chosen.anchor });
+        const b = chosen.box;
+        const nx = Math.max(b.x, Math.min(cx, b.x + b.w));
+        const ny = Math.max(b.y + 2, Math.min(cy, b.y + b.h - 2));
+        const dist = Math.hypot(nx - cx, ny - cy);
+        const leader: [number, number, number, number] | null = dist > r + 4 ? [cx + ((nx - cx) / dist) * (r + 2), cy + ((ny - cy) / dist) * (r + 2), nx, ny] : null;
+        labels.push({ ids: group.map((q) => q.id), lines, x: chosen.x, y: chosen.y, anchor: chosen.anchor, leader, color: group[0].color });
       }
     }
 
@@ -231,7 +260,7 @@ export function ScoreCostScatter({ rows, mode, tall }: { rows: LeaderboardRow[];
             GAUNTLET INDEX
           </text>
           <text className="axis-title" x={margin.left + plotW / 2} y={height - 8 * s} textAnchor="middle" style={{ fontSize: tickSize }}>
-            {costLabel.toUpperCase()} (USD, LOG SCALE) →
+            {width < 560 ? 'SPEND (USD, LOG) →' : `${costLabel.toUpperCase()} (USD, LOG SCALE) →`}
           </text>
           <text className="better-hint" x={margin.left + 10 * s} y={margin.top + 16 * s} style={{ fontSize: tickSize }}>
             ↖ cheaper &amp; stronger
@@ -293,16 +322,19 @@ export function ScoreCostScatter({ rows, mode, tall }: { rows: LeaderboardRow[];
           </g>
 
           {/* Direct labels */}
+          <g className="leaders">
+            {labels.map((l) => (l.leader ? <line key={l.ids.join('|')} x1={l.leader[0]} y1={l.leader[1]} x2={l.leader[2]} y2={l.leader[3]} stroke={l.color} /> : null))}
+          </g>
           <g className="point-labels" style={{ fontSize: labelSize }}>
-            {pts.map((p) => {
-              const l = labels.get(p.id);
-              if (!l) return null;
-              return (
-                <text key={p.id} x={l.x} y={l.y} dy="0.35em" textAnchor={l.anchor}>
-                  {p.label}
-                </text>
-              );
-            })}
+            {labels.map((l) => (
+              <text key={l.ids.join('|')} x={l.x} y={l.y} textAnchor={l.anchor}>
+                {l.lines.map((line, i) => (
+                  <tspan key={line} x={l.x} dy={i === 0 ? `${0.35 - ((l.lines.length - 1) * 1.2) / 2}em` : '1.2em'}>
+                    {line}
+                  </tspan>
+                ))}
+              </text>
+            ))}
           </g>
         </svg>
       )}

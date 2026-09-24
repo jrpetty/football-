@@ -13,19 +13,23 @@ export default function LeaderboardPage() {
   const { query } = useRoute();
   const { meta } = useMeta();
   const runId = query.get('run');
-  const suiteId = query.get('suite') ?? 'core';
   const scope: 'suite' | 'run' = runId ? 'run' : 'suite';
 
   const suites = useAsync<SuiteView[]>(() => api.suites().catch(() => []), []);
   const runs = useAsync<RunListItem[]>(() => api.runs().catch(() => []), []);
-  const lbState = useAsync<Leaderboard>(() => (runId ? api.run(runId).then((d) => d.leaderboard) : api.leaderboard(suiteId)), [runId, suiteId]);
+  // Default to the flagship "core" suite when it exists, otherwise the first suite the server has.
+  const suiteId = query.get('suite') ?? (suites.data ? (suites.data.some((s) => s.id === 'core') ? 'core' : suites.data[0]?.id ?? 'core') : null);
+  const lbState = useAsync<Leaderboard | null>(
+    () => (runId ? api.run(runId).then((d) => d.leaderboard) : suiteId ? api.leaderboard(suiteId) : new Promise<null>(() => undefined)),
+    [runId, suiteId],
+  );
 
   const suite = suites.data?.find((s) => s.id === suiteId);
   const run = runs.data?.find((r) => r.id === runId);
   const runOptions = useMemo(() => (runs.data ?? []).filter((r) => r.completedJobs > 0), [runs.data]);
   const noKeys = meta && meta.providers.length > 0 && meta.providers.every((p) => !p.hasKey && p.apiKeyEnv);
 
-  const title = scope === 'run' ? run?.name ?? 'Run leaderboard' : suite?.name ?? (suiteId === 'core' ? 'Core Gauntlet' : suiteId);
+  const title = scope === 'run' ? run?.name ?? 'Run leaderboard' : suite?.name ?? (suiteId === 'core' ? 'Core Gauntlet' : suiteId ?? 'Leaderboard');
   const sub =
     scope === 'run'
       ? `Single-run standings${run ? ` · ${fmtDate(run.createdAt)}` : ''}.`
@@ -58,8 +62,8 @@ export default function LeaderboardPage() {
               ]}
             />
             {scope === 'suite' ? (
-              <select className="select" style={{ width: 200 }} aria-label="Suite" value={suiteId} onChange={(e) => setQuery({ suite: e.target.value, run: null })}>
-                {(suites.data ?? []).length === 0 && <option value={suiteId}>{suiteId}</option>}
+              <select className="select" style={{ width: 200 }} aria-label="Suite" value={suiteId ?? ''} onChange={(e) => setQuery({ suite: e.target.value, run: null })}>
+                {(suites.data ?? []).length === 0 && <option value={suiteId ?? ''}>{suiteId ?? '…'}</option>}
                 {(suites.data ?? []).map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name} ({s.testCount} tests)

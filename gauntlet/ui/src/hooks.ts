@@ -124,14 +124,33 @@ export function useRootFontSize(): number {
   return fs;
 }
 
+/**
+ * Call `fn` every `ms` (null = paused). A single ticker is created on mount and
+ * reads the latest `ms`/`fn` from refs, so pausing/resuming never depends on an
+ * effect re-running — robust against renders that commit without re-running
+ * effects (seen with lazily loaded routes).
+ */
 export function useInterval(fn: () => void, ms: number | null): void {
-  const ref = useRef(fn);
-  ref.current = fn;
+  const fnRef = useRef(fn);
+  fnRef.current = fn;
+  const msRef = useRef(ms);
+  msRef.current = ms;
   useEffect(() => {
-    if (ms === null) return;
-    const t = window.setInterval(() => ref.current(), ms);
+    let last = Date.now();
+    const t = window.setInterval(() => {
+      const period = msRef.current;
+      if (period === null) {
+        last = Date.now();
+        return;
+      }
+      const n = Date.now();
+      if (n - last >= period - 60) {
+        last = n;
+        fnRef.current();
+      }
+    }, 250);
     return () => window.clearInterval(t);
-  }, [ms]);
+  }, []);
 }
 
 /** Re-render every `ms` and return Date.now(). */

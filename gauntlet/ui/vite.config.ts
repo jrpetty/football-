@@ -12,7 +12,9 @@ const isEventStream = (req: IncomingMessage) => String(req.headers.accept ?? '')
 const apiProxy = {
   '/api': {
     target: API_TARGET,
-    changeOrigin: true,
+    // Keep the browser's Host header so the server's same-origin (CSRF) check
+    // sees Origin === Host for requests made through this proxy.
+    changeOrigin: false,
     // Long-lived SSE connections must never be timed out by the proxy.
     timeout: 0,
     proxyTimeout: 0,
