@@ -1,0 +1,144 @@
+{
+  "kind": "prompt",
+  "id": "math.word-problems",
+  "version": "1.0.0",
+  "name": "Real-World Word Problems",
+  "category": "math",
+  "description": "Multi-step quantitative problems from everyday settings (billing tiers, payroll, FIFO inventory, savings with monthly rounding, time zones, mixtures, relative motion, checkout rules) with explicit rounding rules and deliberate distractors. They reward careful reading and exact bookkeeping, and punish models that grab the wrong number or round at the wrong step.",
+  "difficulty": "medium",
+  "tags": [
+    "math",
+    "word-problems",
+    "arithmetic",
+    "distractors",
+    "rounding"
+  ],
+  "hook": "Real receipts, real payslips, real traps.",
+  "maxOutputTokens": 16000,
+  "estimate": {
+    "inputTokens": 275,
+    "outputTokens": 4000
+  },
+  "author": "Gauntlet Core",
+  "createdAt": "2026-09-24",
+  "scorer": {
+    "type": "number",
+    "tolerance": 0.001
+  },
+  "cases": [
+    {
+      "id": "w01",
+      "prompt": "A bakery charges $3.40 per croissant, $2.75 per muffin and $4.20 per coffee. On Tuesdays every pastry (croissants and muffins) is 15% off; drinks are never discounted. Sales tax of 8% is then added to the whole discounted subtotal. The bakery also sells day-old bread at $1.90 a loaf, but this customer buys none.\n\nOn a Tuesday a customer buys 3 croissants, 2 muffins and 2 coffees and pays with a single $50 note.\n\nRules: compute the 15% discount on the pastry total and round that discount to the nearest cent (half up); compute the tax on the discounted subtotal and round the tax to the nearest cent (half up).\n\nHow much change, in dollars, does the customer receive? Give the answer as a number with exactly two decimal places and no currency symbol (for example 12.34). Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 26.52,
+      "notes": "[easy] Expected 26.52. pastry subtotal 15.70; discount 2.36; discounted subtotal incl. coffee 21.74; tax 1.74; total 23.48; change 26.52. Distractor: day-old bread price. Computed with exact Decimal/Fraction arithmetic in math/word.py."
+    },
+    {
+      "id": "w02",
+      "prompt": "A rectangular pool has vertical walls and a flat bottom. It is 6 m long and 3.5 m wide, and it is to be filled to a water depth of exactly 1.2 m (the pool itself is 1.8 m deep). It already contains 4,000 litres of water. A hose adds water at a constant 14 litres per minute, and nothing leaks out. (1 cubic metre = 1,000 litres.)\n\nHow many whole minutes must the hose run so that the water reaches a depth of at least 1.2 m? Round up to the next whole minute. Give the answer as an integer number of minutes with no units. Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 1515,
+      "notes": "[easy] Expected 1515. target volume 25200.00 L; still needed 21200.00 L; 21200.00/14 = 1514.2857 -> ceil 1515. Distractor: 1.8 m pool depth. Computed with exact Decimal/Fraction arithmetic in math/word.py."
+    },
+    {
+      "id": "w03",
+      "prompt": "Two printers share one print job of exactly 3,000 pages; each page is printed by exactly one printer, and both work on the job at the same time whenever they are running. Both start at 9:00.\n- Printer A prints 45 pages per minute. At 9:20 it jams and is out of action for exactly 12 minutes, then resumes at full speed and never stops again.\n- Printer B prints 30 pages per minute, but after every 25 minutes of printing it pauses for exactly 5 minutes to cool down, then resumes (so it prints 9:00-9:25, pauses 9:25-9:30, prints 9:30-9:55, and so on).\n- A third printer, C, rated at 60 pages per minute, is out of paper all morning and prints nothing.\nPrinting rates are exactly constant while a printer is running, and partial pages are allowed in the arithmetic.\n\nHow many minutes after 9:00 is the last page of the job finished? Give the answer as a number of minutes, as an exact decimal rounded to two decimal places (for example 41.25). Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 49.2,
+      "notes": "[medium] Expected 49.20. Exact simulation minute by minute with exact fractions: finish at 246/5 = 49.2000 min after 9:00. Distractor: printer C. Computed with exact Decimal/Fraction arithmetic in math/word.py."
+    },
+    {
+      "id": "w04",
+      "prompt": "An electricity supplier bills monthly as follows.\n- Energy is charged in tiers on the month's consumption: the first 300 kWh at $0.12 per kWh, the next 500 kWh at $0.17 per kWh, and every kWh beyond 800 at $0.23 per kWh.\n- A fixed service charge of $18.50 is added.\n- Solar exports are credited at $0.09 per kWh exported; the credit is subtracted after the energy and service charges are added. Exports do not change the consumption used for the tiers.\n- Finally, 5% tax is applied to the amount after the solar credit; round the tax to the nearest cent (half up).\n\nThis month the meter read 48,215 kWh at the start and 49,555 kWh at the end. The household exported 210 kWh of solar energy. Last month's bill was $231.40, and the household's neighbour used 1,120 kWh this month.\n\nWhat is this month's total bill in dollars? Give the answer as a number with exactly two decimal places and no currency symbol. Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 257.04,
+      "notes": "[medium] Expected 257.04. consumption 1340 kWh; energy 245.20; +18.50 -18.90 credit = 244.80; tax 12.24; total 257.04. Distractors: last month's bill, neighbour usage. Computed with exact Decimal/Fraction arithmetic in math/word.py."
+    },
+    {
+      "id": "w05",
+      "prompt": "A tank holds 12 litres of a solution that is 30% acid by volume. The following operation is carried out three times in a row: 2.5 litres of the (well-mixed) solution are drained out, and then 2.5 litres of a 65% acid solution are added and mixed thoroughly. Assume volumes simply add (no contraction when mixing), and the drained liquid is discarded.\n\nWhat is the acid concentration of the solution in the tank after the three operations, as a percentage? Do not round until the end. Give the percentage rounded to two decimal places (half up), without the % sign (for example 41.07). Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 47.63,
+      "notes": "[medium] Expected 47.63. Exact fractions: after each op ['895/24', '24805/576', '658495/13824'] %; final 658495/13824 = 47.634187%. Computed with exact Decimal/Fraction arithmetic in math/word.py."
+    },
+    {
+      "id": "w06",
+      "prompt": "An overnight train leaves Station P at 22:45 local time. Station P's local time is UTC+1. The timetabled journey takes 9 hours 40 minutes, but on this night the train is delayed and arrives 35 minutes later than timetabled. Station Q's local time is UTC+3. Neither location changes its clocks (no daylight-saving change) during the journey. The train stops for 20 minutes at an intermediate station; this stop is already included in the timetabled 9 hours 40 minutes.\n\nAt what local time (at Station Q) does the train arrive? Give the answer in 24-hour HH:MM format (for example 07:05). Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": [
+        "11:00"
+      ],
+      "scorer": {
+        "type": "exact",
+        "normalize": "alnum"
+      },
+      "notes": "[medium] Expected 11:00. dep UTC 21:45; arrival UTC 08:00; local Q 11:00. Distractor: 20-minute stop already included. Computed with exact Decimal/Fraction arithmetic in math/word.py."
+    },
+    {
+      "id": "w07",
+      "prompt": "Kit is paid $24.00 per paid hour. The pay rules are:\n1. On any day with more than 6 hours on site, 30 minutes of that time is an unpaid break. On days with 6 hours or fewer on site there is no break deduction. Paid hours = hours on site minus any unpaid break.\n2. Monday to Friday: the first 8 paid hours of a day are at the normal rate; paid hours beyond 8 in that day are at 1.5 times the normal rate.\n3. Saturday: every paid hour is at 2 times the normal rate, and the 1.5x rule does not also apply.\n4. There are no other bonuses, weekly overtime rules or deductions.\n\nHours on site this week: Monday 9.5, Tuesday 7, Wednesday 10, Thursday 8, Friday 11, Saturday 5. (Kit also spent 3 hours on Sunday at a colleague's birthday party, which is not work.)\n\nWhat is Kit's total gross pay for the week in dollars? Give the answer as a number with exactly two decimal places and no currency symbol. Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 1332.0,
+      "notes": "[hard] Expected 1332.00. per day (paid h, pay): [('Mon', '9.0', '228.00'), ('Tue', '6.5', '156.0'), ('Wed', '9.5', '246.00'), ('Thu', '7.5', '180.0'), ('Fri', '10.5', '282.00'), ('Sat', '5', '240')]; total 1332.00. Distractor: Sunday party. Computed with exact Decimal/Fraction arithmetic in math/word.py."
+    },
+    {
+      "id": "w08",
+      "prompt": "A shop tracks one product using FIFO (first in, first out): each sale uses up the oldest units still in stock first, at the price those units were bought for.\n\nStart of the month: 40 units in stock, bought at $12.00 each.\nIn order, during the month:\n1. Bought 60 units at $13.50 each.\n2. Sold 70 units at $21.00 each.\n3. Bought 50 units at $14.20 each.\n4. Sold 45 units at $22.00 each.\n5. A supplier offered 100 units at $11.00 each; the shop declined and bought none.\n6. Bought 30 units at $15.00 each.\n7. Sold 55 units at $23.50 each.\n\nWhat is the total cost of goods sold (the total purchase cost of all units sold this month) under FIFO, in dollars? Give the answer as a number with exactly two decimal places and no currency symbol. Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 2300.0,
+      "notes": "[hard] Expected 2300.00. COGS 2300.00; revenue 3752.50; ending 10 units worth 150.00. Distractor: declined supplier offer; sale prices. Computed with exact Decimal/Fraction arithmetic in math/word.py."
+    },
+    {
+      "id": "w09",
+      "prompt": "A savings account starts with a balance of $2,500.00 at the beginning of month 1. At the END of every month, in this exact order:\n1. Interest for the month is added: the balance at that moment times 0.042/12 (4.2% per year divided by 12), rounded to the nearest cent (half up) before it is added.\n2. In months 12 and 24 only, an annual fee of $25.00 is subtracted.\n3. A deposit of $150.00 is added.\nNo other transactions occur.\n\nWhat is the balance immediately after the end-of-month steps for month 24? Give the answer in dollars as a number with exactly two decimal places and no currency symbol. Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 6416.29,
+      "notes": "[hard] Expected 6416.29. Month-by-month simulation with Decimal and half-up cent rounding each month. Balance after m12 4417.09, after m24 6416.29. Computed with exact Decimal/Fraction arithmetic in math/word.py."
+    },
+    {
+      "id": "w10",
+      "prompt": "Rhea is exactly 4 years older than three times her daughter Juno's age. Juno is exactly 5 years older than her brother Tev. In 6 years, Rhea's age will be exactly 20 more than the sum of Juno's and Tev's ages at that time. All ages are whole numbers of years, and Rhea's own mother is 71.\n\nWhat is the sum of the current ages of Rhea, Juno and Tev? Give the answer as an integer. Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 84,
+      "notes": "[medium] Expected 84. Brute force over integer ages: solutions [(55, 17, 12)]. Distractor: grandmother's age 71. Computed with exact Decimal/Fraction arithmetic in math/word.py."
+    },
+    {
+      "id": "w11",
+      "prompt": "A plane flies with the same airspeed (speed relative to the air) on every leg. On leg 1 it flies 1,260 km directly into a steady headwind and takes exactly 3 hours. On leg 2 it flies the same 1,260 km back with the same wind directly behind it (a tailwind) and takes exactly 2.5 hours. On leg 3 it flies 900 km in completely still air. The plane burns fuel at a constant 2.4 tonnes per hour of flight time, whatever the wind. Ignore take-off, landing and time on the ground. The plane's maximum range with full tanks is 5,000 km.\n\nHow many tonnes of fuel are burned in total over the three legs? Give the answer as a number rounded to two decimal places. Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 17.88,
+      "notes": "[hard] Expected 17.88. v-w=420, v+w=504 -> airspeed v=462 km/h, wind 42 km/h; leg3 time 150/77 h; fuel 6882/385 = 17.8753 t. Distractor: max range. Computed with exact Decimal/Fraction arithmetic in math/word.py."
+    },
+    {
+      "id": "w12",
+      "prompt": "A subscription bills a customer every 45 days. The first bill is issued on 17 January 2026, the second exactly 45 days later, and so on, forever (bills are issued on weekends and holidays too). Use the ordinary Gregorian calendar (2026 and 2027 are not leap years). The customer's card expires on 30 June 2027 but is automatically renewed, so billing never stops.\n\nOn what date is the last bill issued in calendar year 2027? Give the date in ISO format YYYY-MM-DD. Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": [
+        "2027-11-23"
+      ],
+      "scorer": {
+        "type": "exact",
+        "normalize": "alnum"
+      },
+      "notes": "[hard] Expected 2027-11-23. Python datetime: bills every 45 days from 2026-01-17; 2027 bills: ['2027-01-12', '2027-02-26', '2027-04-12', '2027-05-27', '2027-07-11', '2027-08-25', '2027-10-09', '2027-11-23']; last 2027-11-23. Distractor: card expiry. Computed with exact Decimal/Fraction arithmetic in math/word.py."
+    },
+    {
+      "id": "w13",
+      "prompt": "In the country of Veloria, annual income tax is computed as follows.\n1. Start from gross salary. Subtract the employee's pension contribution, which is 5% of gross salary.\n2. Subtract the standard deduction of 12,500. The result is taxable income.\n3. Tax is progressive on taxable income: the first 10,000 is taxed at 0%; the next 30,000 at 10%; the next 40,000 at 22%; everything above 80,000 at 35%. Each rate applies only to the part of taxable income inside its band.\n4. Subtract a family tax credit of 1,800 from the tax (the tax cannot go below zero).\n\nMara's gross salary is 86,400. She also received a one-off 2,000 gift from her aunt, which is not taxable and is not part of salary. Her employer's own pension contribution for her (a further 8% of salary) is also not part of this calculation.\n\nHow much income tax does Mara pay for the year? Give the answer as a number with exactly two decimal places and no currency symbol. Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 7707.6,
+      "notes": "[hard] Expected 7707.60. pension 4320.00; taxable 69580.00; tax before credit 9507.6000; after credit 7707.6000. Distractors: gift, employer pension. Computed with exact Decimal/Fraction arithmetic in math/word.py."
+    },
+    {
+      "id": "w14",
+      "prompt": "A pancake recipe that serves 6 people uses 250 g of flour, 1.5 cups of milk, 3 eggs and 40 g of butter. Ana wants to make enough for exactly 15 people by scaling every ingredient in proportion. Use 1 cup = 240 ml. Milk is sold only in whole cartons of 473 ml each, and Ana has no milk at home. Eggs come in boxes of 6.\n\nHow many cartons of milk must Ana buy (the minimum number that gives her at least enough milk)? Give the answer as an integer. Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 2,
+      "notes": "[easy] Expected 2. milk needed 1.5*240*15/6 = 900 ml -> 1.903 cartons -> 2. Distractors: flour, eggs boxes. Computed with exact Decimal/Fraction arithmetic in math/word.py."
+    },
+    {
+      "id": "w15",
+      "prompt": "A car uses 6.8 litres of fuel per 100 km driven. A trip covers 1,340 km in total, but 180 km of that distance is on a car-train, where the car is carried and not driven (it uses no fuel). The first 700 km that are actually driven are in Country A, where fuel costs 1.92 EUR per litre; all remaining driven kilometres are in Country B, where fuel costs 2.05 CHF per litre. Assume fuel is bought exactly as it is used, in the country where it is used. The exchange rate is 1 EUR = 0.94 CHF (so 1 CHF = 1/0.94 EUR). The car-train ticket costs 95 EUR.\n\nWhat is the total fuel cost of the trip in EUR? Do not include the car-train ticket. Round only the final answer to two decimal places and give it as a number without a currency symbol. Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 159.61,
+      "notes": "[hard] Expected 159.61. driven 1160 km; A 47.6 L -> 91.392 EUR; B 31.28 L -> 64.1240 CHF = 68.217021276595744680851063829787234042553191489362 EUR; total 159.60902127659574468085106382978723404255319148936 -> 159.61. Distractor: ticket. Computed with exact Decimal/Fraction arithmetic in math/word.py."
+    },
+    {
+      "id": "w16",
+      "prompt": "Towns P and Q are 90 km apart along a straight road. Cyclist 1 leaves P at 8:00 riding towards Q at a constant 24 km/h. When she reaches the 40 km mark (40 km from P) she stops for exactly 20 minutes, then continues towards Q at a constant 20 km/h. Cyclist 2 leaves Q at 8:30 riding towards P at a constant 18 km/h without stopping. A support van leaves P at 9:00 at 60 km/h but plays no part in the question.\n\nHow far from P (in km) are the two cyclists when they meet? Give the distance rounded to two decimal places (half up), as a number without units. Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 52.11,
+      "notes": "[hard] Expected 52.11. Piecewise-linear exact solve with fractions: meet at t=99/38 h after 8:00, distance 990/19 = 52.10526 km. Distractor: van. Computed with exact Decimal/Fraction arithmetic in math/word.py."
+    },
+    {
+      "id": "w17",
+      "prompt": "An online shop applies these rules at checkout, in this order:\n1. T-shirt promotion: for every 3 T-shirts in the cart, the cheapest of those 3 is free.\n2. Coupon: if the goods subtotal after step 1 is at least $100.00, take 10% off it; round this discount to the nearest cent (half up).\n3. Shipping: free if the goods subtotal after step 2 is at least $150.00; otherwise shipping costs $6.95.\n4. Tax: 7.5% of the goods subtotal after step 2 (shipping is not taxed); round the tax to the nearest cent (half up).\n5. Order total = goods subtotal after step 2 + tax + shipping.\n6. A $50.00 gift card is applied to the order total, and the rest is charged to a credit card.\n\nThe cart contains: one jacket at $89.00, three T-shirts at $19.50 each, one belt at $24.00, and one pair of socks at $7.25. The customer also looked at a $39.00 scarf but did not add it to the cart.\n\nHow much is charged to the credit card, in dollars? Give the answer as a number with exactly two decimal places and no currency symbol. Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 111.02,
+      "notes": "[hard] Expected 111.02. goods 178.75; after promo 159.25; coupon 15.93; after coupon 143.32; shipping 6.95 (threshold uses post-coupon subtotal); tax 10.75; total 161.02; charged 111.02. Distractor: scarf. Computed with exact Decimal/Fraction arithmetic in math/word.py."
+    }
+  ]
+}
