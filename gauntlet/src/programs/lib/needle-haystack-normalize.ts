@@ -130,3 +130,15 @@ export function countWords(text: string): number {
   const m = text.trim().match(/[^\s]+/g);
   return m ? m.filter((w) => /[\p{L}\p{N}]/u.test(w)).length : 0;
 }
+
+/** Keeps the first `n` words (as counted by countWords), preserving the original formatting. */
+export function truncateWords(text: string, n: number): string {
+  let count = 0;
+  const re = /\S+/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (/[\p{L}\p{N}]/u.test(m[0])) count++;
+    if (count === n) return text.slice(0, m.index + m[0].length);
+  }
+  return text;
+}

@@ -435,8 +435,8 @@ export function generateIsland(root: Rng, cfg: IslandConfig): IslandWorld {
     weather.push(w);
     nightCold.push(wr.int(8, 18));
   }
-  const shipFirst = wr.int(3, 5);
-  const shipPeriod = wr.int(3, 5);
+  const shipFirst = wr.int(3, 4);
+  const shipPeriod = wr.int(3, 4);
   const candidates: number[] = [];
   for (let d = shipFirst; d <= cfg.maxDays; d += shipPeriod) candidates.push(d);
   // The first ship always passes (so it can be noticed); later ones skip stormy days.

@@ -71,7 +71,7 @@ const CHURCHES: Array<[string, string]> = [
   ["St. Ursula's chapel", 'ursula'],
 ];
 const MOUNTAINS = ['Karvel', 'Ostrander', 'Mirelle', 'Vashti', 'Tamborine', 'Gallowcap'];
-const VILLAGES = ['Hollin Ghyll', 'Brisk', 'Upper Tarrow', 'Sennick', 'Dorn', 'Lesser Vey'];
+const VILLAGES = ['Hollin Ghyll', 'Briskow', 'Upper Tarrow', 'Sennick', 'Dorn', 'Lesser Vey'];
 const FOODS: Array<[string, string[]]> = [
   ['dried apricots', ['apricot', 'apricots']],
   ['dried figs', ['fig', 'figs']],
@@ -129,6 +129,7 @@ function lighthouse(rng: Rng): SourceStory {
     `A little after midnight she saw a ship in trouble beyond the reef. It was ${ship}, a ${shipType} bound for the southern ports, carrying ${p} passengers. Its mainmast had snapped, and the wind was pushing it steadily towards the rocks. ${kf} knew that the lifeboat crew could never launch in such a sea.`,
     `She ran down to the cottage of her brother, ${bro}, a ${broJob} who owned the only boat in ${town} heavy enough to survive the waves. Together they hauled ${rope} metres of rope out of the storehouse and carried it to the end of the stone pier. ${kf} also brought her strangest possession: a ${colour} umbrella with a handle carved in the shape of a ${animal}, which she swore had brought her luck since childhood. Her neighbours had laughed at it for years. That night nobody laughed.`,
     `${bro} rowed while ${kf} steered. When they reached ${ship}, they tied the rope to the stump of the mast and ran it back to the pier, where half the town had gathered with lanterns. One by one the passengers were pulled along the rope to safety, clinging to it with frozen hands. The last to leave was the captain, who refused to go until everyone else had crossed.`,
+    `The crossing took most of the night. Twice the rope went slack and ${kf} had to wade into the surf to haul it tight again, and once a wave tore the lantern out of her hand. The people on the pier took turns at the rope, the blacksmith beside the schoolteacher and the fishwives beside the vicar, and nobody went home until the work was done.`,
     `By dawn the storm had blown itself out. Every one of the ${p} passengers was alive, wrapped in blankets in the church hall and drinking tea that the baker had brewed in his largest pot. ${Ship} broke apart on the reef later that morning.`,
     `The shipping company offered a reward of ${reward} guineas to whoever had saved its passengers. ${kf} gave half of it to the lifeboat fund and spent the rest on a new lens for the lamp. The mayor, ${mayor}, made a long speech that nobody remembered afterwards. What people did remember was the vote at the next town meeting: from that day on, the lighthouse was renamed the ${kf} Light, and the ${animal}-handled umbrella was hung above its door.`,
   ].join('\n\n');
@@ -179,10 +180,11 @@ function museum(rng: Rng): SourceStory {
   const text = [
     `On the morning of ${day} ${month} ${year}, ${cf} ${cl}, the curator of the civic museum in ${city}, unlocked the east gallery and found an empty frame where the museum's most famous painting should have been. The missing picture was ${painting}, a small and rather strange canvas by the painter ${pf} ${pl}, and it was insured for ${commas(value)} crowns.`,
     `The night watchman, ${gf} ${gl}, swore that he had heard nothing. He admitted that he had dozed in his chair, but only, he insisted, for a moment. The museum's clockwork alarm told a different story: its log showed that the gallery door had stood open for ${minutes} minutes shortly before dawn, and no bell had rung.`,
+    `The mayor of ${city} demanded an arrest within the week. Detectives from the capital arrived on the evening train, measured every window, photographed every footprint and questioned every cleaner, porter and ticket-seller in the building. They found nothing useful. The only thing anyone agreed on was that the thief must have known the museum very well indeed, because nothing else in the gallery had been touched and not a single display case had been scratched.`,
     `The thief had been careful everywhere except in one respect. On the floor beneath the empty frame sat a jar of ${fruit} jam, unopened, with a paper label written in a neat, looping hand. Nobody in the museum could explain it. The police sergeant tasted a spoonful, declared it excellent, and filed it as evidence.`,
     `For a week there were no leads at all. The newspapers printed rumours that the painting had been smuggled out on a fishing boat, or cut into pieces, or sold to a collector overseas. Then a baker on the market square mentioned that he had seen a ${colour} ${vehicle} racing out of town in the grey light of that morning, ridden by two people in long coats, with a flat parcel strapped behind them.`,
     `The curator's niece, ${niece}, who spent her school holidays helping in the museum, took the clue seriously when the adults did not. She cycled from village to village asking about the ${colour} ${vehicle}, and at last she found it leaning against the wall of ${church}. Inside, wrapped in sacking and hidden in the bell tower, was ${painting}, completely unharmed.`,
-    `The thieves were never caught. The jar of ${fruit} jam stayed on display beside the painting for many years, with a small card explaining how it came to be there, and it became almost as famous as the picture itself. ${cf} ${cl} gave ${niece} a key to the museum and a promise that she could curate an exhibition of her own when she was old enough.`,
+    `The thieves were never caught. The jar of ${fruit} jam stayed on display beside the painting for many years, with a small card explaining how it came to be there, and it became almost as famous as the picture itself. Visitors still ask to see the jar before they ask to see the painting. ${cf} ${cl} gave ${niece} a key to the museum and a promise that she could curate an exhibition of her own when she was old enough.`,
   ].join('\n\n');
 
   const paintingCore = painting.replace(/^The /, '').toLowerCase();
@@ -227,8 +229,9 @@ function expedition(rng: Rng): SourceStory {
   const text = [
     `On ${day} ${month} ${year}, an expedition of ${n} climbers set out from the village of ${village} to attempt the unclimbed north face of Mount ${mountain}. Their leader was ${lf} ${ll}, a geologist who had spent most of her life studying the mountain from below and who was determined, at last, to see it from above.`,
     `The team's guide was ${guf} ${gul}, who had grown up in ${village} and knew every path on the lower slopes. For luck, the climbers brought a goat named ${goat}, which carried the heaviest packs without complaint and seemed to enjoy the climb more than anyone. ${lf} carried a brass telescope engraved with the names of her grandparents, and each evening she used it to study the ridges ahead.`,
+    `They climbed slowly, roped together in pairs, cutting steps into the ice wherever the old snow had hardened. At night they huddled around a small stove and argued cheerfully about the route, the weather and whose turn it was to fetch water. The guide taught them songs from the valley, and the leader taught them the names of the rocks beneath their boots, which most of them had forgotten by morning.`,
     `For the first week the weather was kind. They made steady progress and set up their highest camp at ${commas(height)} metres, on a narrow shelf of rock below the summit ridge. Then the wind changed. A storm settled over the mountain and refused to move, and the climbers were trapped in their tents for ${days} days, unable to climb higher or to retreat.`,
-    `Their food ran low. By the end they were living on nothing but ${food} and melted snow, rationed out by ${guf} one handful at a time. ${goat} the goat, sheltering behind the largest tent, seemed the least troubled of them all.`,
+    `Their food ran low. By the end they were living on nothing but ${food} and melted snow, rationed out by ${guf} one handful at a time. ${goat} the goat, sheltering behind the largest tent, seemed the least troubled of them all. Every morning the climbers looked up at the ridge, and every morning the cloud sat on it like a lid. Nobody complained, but nobody laughed very much either.`,
     `When the storm finally lifted, ${ll} made a decision that surprised everyone: rather than push for the summit, they would go down while they still could. On the way down they found that a rockfall had opened a cave that had not been there before. Inside, the walls glittered with blue crystals that ${lf} recognised at once as something no geologist had ever described.`,
     `The expedition never reached the summit, and for years afterwards its critics called it a failure. But the samples ${lf} carried home in her rucksack made her famous, the crystal cave was named after the village of ${village}, and the climbers always insisted that the real hero of the journey had been a goat called ${goat}.`,
   ].join('\n\n');
@@ -295,15 +298,14 @@ export function factPresent(text: string, f: FactSpec): boolean {
     const tokens = normalizeText(sentence).split(' ').filter(Boolean);
     const perGroup = f.groups.map((g) => g.flatMap((alias) => positions(tokens, alias)));
     if (perGroup.some((p) => p.length === 0)) continue;
-    // Brute force over one match per group (groups and matches per sentence are tiny).
+    if (perGroup.length === 1) return true;
+    // Choose one match per group so that all of them fit inside the window.
     const search = (gi: number, lo: number, hi: number): boolean => {
-      if (gi === perGroup.length) return hi - lo <= Math.max(f.window, 0) + (hi - lo === 0 ? 0 : 0);
+      if (gi === perGroup.length) return true;
       for (const [s, e] of perGroup[gi]!) {
         const nlo = Math.min(lo, s);
         const nhi = Math.max(hi, e);
-        if (nhi - nlo <= f.window || perGroup.length === 1) {
-          if (search(gi + 1, nlo, nhi)) return true;
-        }
+        if (nhi - nlo <= f.window && search(gi + 1, nlo, nhi)) return true;
       }
       return false;
     };

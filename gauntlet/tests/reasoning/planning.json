@@ -1,0 +1,119 @@
+{
+  "kind": "prompt",
+  "id": "reasoning.planning",
+  "version": "1.0.0",
+  "name": "Shortest Plans",
+  "category": "reasoning",
+  "description": "Custom shortest-plan puzzles (jugs, crossings, disks, sliding tiles, lamp panels, pancakes, a key-and-door maze and resource-constrained scheduling) where the answer is the proven minimum. Models must both find a plan and be sure no shorter plan exists, which separates genuine search from plausible-looking but suboptimal plans.",
+  "difficulty": "hard",
+  "tags": [
+    "planning",
+    "search",
+    "optimisation",
+    "bfs-verified"
+  ],
+  "hook": "Find the shortest plan — one move too many and it scores zero.",
+  "maxOutputTokens": 32000,
+  "estimate": {
+    "inputTokens": 344,
+    "outputTokens": 12000
+  },
+  "author": "Gauntlet Core",
+  "createdAt": "2026-09-24",
+  "scorer": {
+    "type": "number",
+    "tolerance": 0
+  },
+  "cases": [
+    {
+      "id": "p01",
+      "prompt": "You have two unmarked jugs: one holds exactly 4 litres and the other exactly 9 litres. Both start empty. You also have an unlimited water tap and a drain.\n\nEach step is exactly one of these actions:\n1. Fill one jug completely from the tap.\n2. Empty one jug completely into the drain.\n3. Pour water from one jug into the other until either the first jug is empty or the second jug is full, whichever happens first.\nYou cannot measure or estimate partial amounts in any other way.\n\nWhat is the minimum number of steps needed so that one of the jugs contains exactly 6 litres of water? (It does not matter what the other jug contains at that moment.)\n\nGive the answer as a single integer (digits only, no units). Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 8,
+      "notes": "[easy] Verified by exhaustive breadth-first search in planning/plan.py and re-verified by an independent JS BFS in planning/crosscheck.mjs. State (4 L jug, 9 L jug) path: [(0, 0), (0, 9), (4, 5), (0, 5), (4, 1), (0, 1), (1, 0), (1, 9), (4, 6)]."
+    },
+    {
+      "id": "p02",
+      "prompt": "Ten coins lie in a row. From left to right they show:\nH T T H H T T T H T\n(H = heads, T = tails.)\n\nIn one move you choose any three coins that are next to each other in the row (positions i, i+1, i+2) and turn all three of them over, so each head becomes a tail and each tail becomes a head. You may not move coins around or turn over any other number of coins.\n\nWhat is the minimum number of moves needed to make all ten coins show heads?\n\nGive the answer as a single integer (digits only, no units). Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 6,
+      "notes": "[easy] Verified by exhaustive breadth-first search in planning/plan.py and re-verified by an independent JS BFS in planning/crosscheck.mjs. Flips commute and each window is used at most once in an optimal solution; the left-to-right greedy solution is forced and uses 6 flips."
+    },
+    {
+      "id": "p03",
+      "prompt": "Six hikers must cross a narrow rope bridge at night: Oona takes 2 minutes to cross, Pavel 3 minutes, Quinn 7 minutes, Rosa 9 minutes, Sami 12 minutes and Tove 20 minutes.\n\nRules:\n- At most two people can be on the bridge at the same time.\n- The group has exactly one lantern, and every crossing (in either direction) must carry it. The lantern cannot be thrown across or left on the bridge; it can only get back to the start side by someone carrying it.\n- When two people cross together they move at the pace of the slower one.\n- Time spent on the banks is zero; only crossing time counts.\n\nWhat is the minimum total time, in minutes, for all six hikers to end up on the far side?\n\nGive the answer as a single integer (digits only, no units). Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 48,
+      "notes": "[medium] Verified by exhaustive breadth-first search in planning/plan.py and re-verified by an independent JS BFS in planning/crosscheck.mjs. Dijkstra over (who is on the start side, lantern side). One optimal plan: over 2+3; back 2; over 7+9; back 3; over 2+3; back 2; over 12+20; back 3; over 2+3 = 48 minutes."
+    },
+    {
+      "id": "p04",
+      "prompt": "A small gondola runs between a valley station and a summit station. Six people are at the valley station: Ulla (92 kg), Birk (81 kg), Carmen (68 kg), Deniz (57 kg), Eamon (44 kg) and Fifi (29 kg, a child).\n\nRules:\n- Each ride goes from one station to the other (up or down).\n- A ride can carry at most 3 people and at most 130 kg in total.\n- The gondola cannot move empty: every ride must have at least one person in it.\n- Fifi may never ride alone (she may ride with any other person or people).\n- Anyone may ride any number of times, in either direction.\n\nWhat is the minimum number of rides (counting every one-way ride, up or down) needed to get all six people to the summit station?\n\nGive the answer as a single integer (digits only, no units). Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 9,
+      "notes": "[medium] Verified by exhaustive breadth-first search in planning/plan.py and re-verified by an independent JS BFS in planning/crosscheck.mjs. Optimal plan (9 rides): up Birk+Eamon; down Birk; up Ulla; down Eamon; up Birk+Eamon; down Eamon; up Carmen+Deniz; down Deniz; up Deniz+Eamon+Fifi."
+    },
+    {
+      "id": "p05",
+      "prompt": "There are three pegs, A, B and C, and five disks of different sizes numbered 1 (smallest) to 5 (largest).\n\nCurrent position:\n- Peg A: disk 5 at the bottom with disk 3 on top of it.\n- Peg B: disk 4 at the bottom, then disk 2, then disk 1 on top.\n- Peg C: empty.\n\nA move consists of taking the top disk from any peg and placing it on top of another peg. A disk may never be placed on top of a smaller disk.\n\nWhat is the minimum number of moves needed to get all five disks onto peg C?\n\nGive the answer as a single integer (digits only, no units). Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 23,
+      "notes": "[medium] Verified by exhaustive breadth-first search in planning/plan.py and re-verified by an independent JS BFS in planning/crosscheck.mjs. BFS over all 3^5 disk placements."
+    },
+    {
+      "id": "p06",
+      "prompt": "A sliding puzzle has 2 rows and 3 columns: five numbered tiles and one empty square (shown as _).\n\nCurrent position:\n5 2 _\n4 3 1\n\nGoal position:\n1 2 3\n4 5 _\n\nOne move slides a single tile that is horizontally or vertically adjacent to the empty square into the empty square. Tiles cannot be lifted out or moved diagonally.\n\nWhat is the minimum number of moves needed to reach the goal position?\n\nGive the answer as a single integer (digits only, no units). Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 15,
+      "notes": "[medium] Verified by exhaustive breadth-first search in planning/plan.py and re-verified by an independent JS BFS in planning/crosscheck.mjs. BFS over all 360 reachable 2x3 states."
+    },
+    {
+      "id": "p07",
+      "prompt": "A panel has 12 lamps arranged in 3 rows and 4 columns. Pressing a lamp toggles that lamp and every lamp directly above, below, left or right of it (lamps on the edges have fewer neighbours; there is no wrap-around). Toggling turns an on lamp off and an off lamp on.\n\nCurrent state (1 = on, 0 = off), rows from top to bottom:\n0 1 1 0\n0 1 1 0\n1 0 0 0\n\nWhat is the minimum number of presses needed to turn every lamp off?\n\nGive the answer as a single integer (digits only, no units). Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 7,
+      "notes": "[hard] Verified by exhaustive breadth-first search in planning/plan.py and re-verified by an independent JS BFS in planning/crosscheck.mjs. The 12x12 toggle matrix over GF(2) has full rank (all 4096 states reachable), so the set of presses is unique; it has 7 presses. JS check enumerates all 4096 press subsets."
+    },
+    {
+      "id": "p08",
+      "prompt": "You have three unmarked jugs with capacities 7 litres, 11 litres and 18 litres. The 18-litre jug is completely full of water and the other two are empty. There is no tap and no drain, and no water may be spilled or added.\n\nThe only allowed step is a pour: pour water from one jug into another until either the jug you are pouring from is empty or the jug you are pouring into is full, whichever happens first.\n\nWhat is the minimum number of pours needed so that two of the jugs each contain exactly 9 litres?\n\nGive the answer as a single integer (digits only, no units). Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 17,
+      "notes": "[hard] Verified by exhaustive breadth-first search in planning/plan.py and re-verified by an independent JS BFS in planning/crosscheck.mjs. Optimal path (7L,11L,18L): [(0, 0, 18), (0, 11, 7), (7, 4, 7), (0, 4, 14), (4, 0, 14), (4, 11, 3), (7, 8, 3), (0, 8, 10), (7, 1, 10), (0, 1, 17), (1, 0, 17), (1, 11, 6), (7, 5, 6), (0, 5, 13), (5, 0, 13), (5, 11, 2), (7, 9, 2), (0, 9, 9)]."
+    },
+    {
+      "id": "p09",
+      "prompt": "Eight explorers must cross a fragile bridge in the dark. Their individual crossing times are: Aiko 2 minutes, Bram 5, Cato 7, Dara 11, Emil 13, Fern 16, Gus 20 and Hedda 24 minutes.\n\nRules:\n- At most three people can be on the bridge at the same time.\n- There is exactly one torch, and every crossing (in either direction) must carry it. It cannot be thrown or left on the bridge.\n- A group crossing together moves at the pace of its slowest member.\n- Only crossing time counts; time on the banks is zero.\n\nWhat is the minimum total time, in minutes, for all eight explorers to end up on the far side?\n\nGive the answer as a single integer (digits only, no units). Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 58,
+      "notes": "[hard] Verified by exhaustive breadth-first search in planning/plan.py and re-verified by an independent JS BFS in planning/crosscheck.mjs. Dijkstra over (who is on the start side, lantern side) with groups of 1-3. One optimal plan: over 2+5; back 2; over 16+20+24; back 5; over 2+5+7; back 2; over 2+11+13 = 58 minutes."
+    },
+    {
+      "id": "p10",
+      "prompt": "A stack of seven pancakes has sizes 1 (smallest) to 7 (largest). Reading from the top of the stack to the bottom, the sizes are currently:\n4, 1, 6, 3, 7, 2, 5\n\nOne flip means: slide a spatula under any pancake in the stack and turn over everything above the spatula in one go, so the order of those top pancakes is reversed (the pancakes below the spatula do not move).\n\nWhat is the minimum number of flips needed to arrange the stack as 1, 2, 3, 4, 5, 6, 7 from top to bottom?\n\nGive the answer as a single integer (digits only, no units). Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 7,
+      "notes": "[hard] Verified by exhaustive breadth-first search in planning/plan.py and re-verified by an independent JS BFS in planning/crosscheck.mjs. BFS over all 7! = 5040 stacks. One optimal sequence of stacks: [(4, 1, 6, 3, 7, 2, 5), (2, 7, 3, 6, 1, 4, 5), (7, 2, 3, 6, 1, 4, 5), (3, 2, 7, 6, 1, 4, 5), (1, 6, 7, 2, 3, 4, 5), (7, 6, 1, 2, 3, 4, 5), (5, 4, 3, 2, 1, 6, 7), (1, 2, 3, 4, 5, 6, 7)]."
+    },
+    {
+      "id": "p11",
+      "prompt": "A two-person crew must complete nine tasks, A to I. There are exactly 2 workers, and every task needs exactly 1 worker.\n\nTask | Duration (hours) | Prerequisites (must be finished first)\nA | 1 | none\nB | 4 | A\nC | 1 | B\nD | 6 | B\nE | 3 | C\nF | 5 | B\nG | 1 | A, D\nH | 4 | A, E, F\nI | 1 | B\n\nRules:\n- Workers are identical and interchangeable. A worker can work on only one task at a time.\n- Each task needs the stated number of workers for its whole duration; a task cannot be split, paused or sped up, and once started it runs to completion.\n- A task can start only when all of its prerequisites have finished; it may start at the exact moment its last prerequisite finishes.\n- Work starts at time 0. There is no set-up or travel time between tasks, and workers may stand idle.\n\nWhat is the minimum possible time, in hours from the start, at which all nine tasks are finished?\n\nGive the answer as a single integer (digits only, no units). Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 16,
+      "notes": "[hard] Exact optimum by two independent methods in planning/sched.py: event-driven exhaustive search over active schedules (16) and serial schedule generation over every precedence-feasible task order (16). Lower bounds are only 14 (critical path A-B-F-H) and 13 (26 worker-hours / 2), and critical-path-priority list scheduling gives 17. Optimal schedule: A@0-1, B@1-5, C@5-6, F@5-10, E@6-9, D@9-15, H@10-14, I@14-15, G@15-16."
+    },
+    {
+      "id": "p12",
+      "prompt": "A robot moves on this grid (each row is shown on one line; every row has 15 characters):\n\n###############\n#S....#.....#E#\n#.###.#.###.#B#\n#.#a#...#b#...#\n#.#.#####.#####\n#...#...A.....#\n###.#.#######.#\n#.....#.......#\n###############\n\nLegend:\n- # is a wall. The robot can never enter a wall square.\n- . is an open floor square.\n- S is the robot's starting square and E is the exit (both are open floor).\n- a and b are keys (open floor). The robot picks up a key automatically when it enters that square and keeps it forever; keys are never used up.\n- A and B are locked doors. The robot may enter door A only if it has already picked up key a, and door B only if it has already picked up key b. Once it has the matching key, a door square behaves like open floor.\n\nIn one step the robot moves exactly one square up, down, left or right (never diagonally). Revisiting squares is allowed.\n\nWhat is the minimum number of steps needed for the robot to go from S to E?\n\nGive the answer as a single integer (digits only, no units). Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 60,
+      "notes": "[hard] Verified by exhaustive breadth-first search in planning/plan.py and re-verified by an independent JS BFS in planning/crosscheck.mjs. BFS over (row, col, keys held). Both keys are required (removing either key makes E unreachable). Shortest route length 60."
+    },
+    {
+      "id": "p13",
+      "prompt": "A 3x3 sliding puzzle has eight numbered tiles and one empty square (shown as _).\n\nCurrent position:\n1 4 _\n7 2 6\n5 8 3\n\nGoal position:\n1 2 3\n4 5 6\n7 8 _\n\nOne move slides a single tile that is horizontally or vertically adjacent to the empty square into the empty square.\n\nWhat is the minimum number of moves needed to reach the goal position?\n\nGive the answer as a single integer (digits only, no units). Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 16,
+      "notes": "[extreme] Verified by exhaustive breadth-first search in planning/plan.py and re-verified by an independent JS BFS in planning/crosscheck.mjs. BFS over all 181,440 reachable 3x3 states (distance from goal)."
+    },
+    {
+      "id": "p14",
+      "prompt": "Three pegs stand in a row: A on the left, B in the middle, C on the right. There are four disks numbered 1 (smallest) to 4 (largest).\n\nCurrent position:\n- Peg A: disk 4 at the bottom with disk 1 on top of it.\n- Peg B: empty.\n- Peg C: disk 3 at the bottom with disk 2 on top of it.\n\nA move takes the top disk of one peg and places it on top of a neighbouring peg. Only these moves exist: A to B, B to A, B to C and C to B. A disk can never be moved directly between A and C. A disk may never be placed on a smaller disk.\n\nWhat is the minimum number of moves needed to get all four disks onto peg C?\n\nGive the answer as a single integer (digits only, no units). Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 56,
+      "notes": "[extreme] Verified by exhaustive breadth-first search in planning/plan.py and re-verified by an independent JS BFS in planning/crosscheck.mjs. BFS over 3^4 placements with only A<->B and B<->C moves (sanity check: the standard 3-disk A->C version gives 26 = 3^3 - 1)."
+    },
+    {
+      "id": "p15",
+      "prompt": "A workshop has exactly 3 workers and ten tasks, A to J. Some tasks need more than one worker at the same time.\n\nTask | Duration (hours) | Workers needed | Prerequisites (must be finished first)\nA | 3 | 1 | none\nB | 2 | 1 | none\nC | 4 | 1 | B\nD | 4 | 2 | A, C\nE | 5 | 1 | C, D\nF | 4 | 3 | none\nG | 3 | 3 | C, E, F\nH | 5 | 1 | C\nI | 4 | 2 | F\nJ | 3 | 1 | A\n\nRules:\n- Workers are identical and interchangeable. A worker can work on only one task at a time.\n- Each task needs the stated number of workers for its whole duration; a task cannot be split, paused or sped up, and once started it runs to completion.\n- A task can start only when all of its prerequisites have finished; it may start at the exact moment its last prerequisite finishes.\n- Work starts at time 0. There is no set-up or travel time between tasks, and workers may stand idle.\n- At no moment may the tasks in progress need more than 3 workers in total.\n\nWhat is the minimum possible time, in hours from the start, at which all ten tasks are finished?\n\nGive the answer as a single integer (digits only, no units). Give exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": 22,
+      "notes": "[extreme] Exact optimum by two independent methods in planning/sched.py (event-driven search over active schedules = 22; serial schedule generation over all precedence-feasible orders = 22). Lower bounds: work 59/3 -> 20, critical path 18; critical-path-priority list scheduling gives 26. Optimal schedule (task@start-end x workers): A@0-3x1, B@0-2x1, C@2-6x1, J@3-6x1, F@6-10x3, D@10-14x2, H@10-15x1, E@14-19x1, I@15-19x2, G@19-22x3."
+    }
+  ]
+}

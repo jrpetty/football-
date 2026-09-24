@@ -235,10 +235,13 @@ function observedTokenStats(): Map<string, { byContestant: Map<string, TokenStat
     t.judgeUsd += r.metrics.judgeCostUsd;
     t.n++;
   };
+  // Only real API models calibrate estimates (the random baseline and manual entries have no real token usage).
+  const providers = loadProviders();
+  const simulated = new Set(loadContestants().filter((c) => ['mock', 'manual'].includes(providers.find((p) => p.id === c.provider)?.type ?? '')).map((c) => c.id));
   for (const runId of listRunIds()) {
     for (const r of readResults(runId)) {
       if (r.status === 'error' || r.status === 'cancelled' || r.metrics.apiCalls === 0) continue;
-      if (r.transcript.some((e) => e.rawStopReason === 'manual')) continue;
+      if (simulated.has(r.contestantId) || r.transcript.some((e) => e.rawStopReason === 'manual')) continue;
       let entry = out.get(r.testHash);
       if (!entry) out.set(r.testHash, (entry = { byContestant: new Map(), all: { input: 0, output: 0, calls: 0, judgeUsd: 0, n: 0 } }));
       add(entry.all, r);

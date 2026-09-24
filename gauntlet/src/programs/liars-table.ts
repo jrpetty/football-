@@ -162,7 +162,7 @@ export const program: ProgramDefinition = {
   description:
     'A seeded dinner-party theft with five suspects, a hidden ground-truth timeline and four evidence files. The model interrogates suspects with enumerated questions under a strict budget, must find the one contradicted story, and accuse the thief with a reason.',
   scoring:
-    'Naming the thief is worth 60%; a wrong or missing accusation scores 0. A correct accusation earns up to 25% more for efficiency — (budget − questions used) ÷ (budget − 3) — but only if the thief\'s claim and a source contradicting it were actually uncovered (no efficiency credit for lucky guesses). The final 15% checks the stated reason deterministically: a third each for citing the theft time, the room the thief claimed, and the suspect or evidence that disproves it.',
+    'Naming the thief is worth 60%; a wrong or missing accusation scores 0. A correct accusation earns up to 25% more for efficiency — (budget − questions used) ÷ (budget − 3) — but only if the thief\'s claim and a source contradicting it were actually uncovered (no efficiency credit for lucky guesses). The final 15% checks the stated reason deterministically: a third each for citing the theft time, the room the thief claimed, and the suspect or evidence that disproves it. Only the first ACCUSE in a reply counts, and invalid commands still use up a question.',
   defaults: { questionBudget: 12, variant: 'auto', mistakenWitness: 'auto' },
 
   async run(ctx: ProgramContext): Promise<ProgramResult> {

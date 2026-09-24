@@ -14,7 +14,7 @@ import type {
   ProgramContext,
   StopReason,
 } from '../../src/core/types.ts';
-import { createRng } from '../../src/core/rng.ts';
+import { createRng, hashString } from '../../src/core/rng.ts';
 
 export type FakeResponse = string | { text: string; stopReason?: StopReason };
 
@@ -108,6 +108,45 @@ export function randomBacktickResponder(seed: number): Responder {
     const options = [...userText.matchAll(/(?<!`)`([^`\n]+)`(?!`)/g)].map((m) => m[1]!);
     if (options.length === 0) return 'FINAL ANSWER: 42';
     return rng.pick(options);
+  };
+}
+
+/**
+ * Mirrors the real Random Baseline (src/providers/mock.ts `respond`) without
+ * its artificial latency: backticked options → "ACTION: <random option>"
+ * (one pick per tag for "TAG: value" options), SVG prompts → a random gray
+ * circle, "A1:" prompts → "unknown" answers, FINAL ANSWER prompts → a random
+ * number, otherwise filler prose. Seeded from the full prompt, like the mock.
+ */
+export function mockBaselineResponder(contestantId = 'random-baseline'): Responder {
+  return (system, userText, history) => {
+    const all = (system ?? '') + '\n' + [...history.map((m) => m.content), userText].join('\n');
+    const rng = createRng(hashString(`${contestantId}\n${all}`));
+    const options = [...userText.matchAll(/`([^`\n]{1,120})`/g)].map((m) => m[1]!.trim()).filter(Boolean);
+    if (options.length > 0) {
+      const tagged = options.filter((o) => /^[A-Z][A-Z_ ]{1,24}:\s*\S/.test(o));
+      if (tagged.length > 0) {
+        const byTag = new Map<string, string[]>();
+        for (const o of tagged) {
+          const tag = o.slice(0, o.indexOf(':')).trim();
+          byTag.set(tag, [...(byTag.get(tag) ?? []), o]);
+        }
+        return [...byTag.values()].map((opts) => rng.pick(opts)).join('\n');
+      }
+      return `I will try this.\nACTION: ${rng.pick(options)}`;
+    }
+    if (/svg/i.test(userText) && /draw|illustrat|svg/i.test(userText)) {
+      const x = rng.int(20, 300);
+      const y = rng.int(20, 300);
+      return `\`\`\`svg\n<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><circle cx="${x}" cy="${y}" r="40" fill="gray"/></svg>\n\`\`\``;
+    }
+    if (/\bA\d+\s*:/.test(userText)) {
+      const n = Math.max(1, (userText.match(/\bQ\d+\b/g) ?? []).length);
+      return Array.from({ length: n }, (_, i) => `A${i + 1}: unknown`).join('\n');
+    }
+    if (/FINAL ANSWER/.test(userText)) return `FINAL ANSWER: ${rng.int(0, 100)}`;
+    const words = ['the', 'model', 'result', 'answer', 'benchmark', 'quickly', 'random', 'value', 'system', 'data', 'story', 'river', 'light'];
+    return Array.from({ length: 40 + rng.int(0, 40) }, () => rng.pick(words)).join(' ') + '.';
   };
 }
 

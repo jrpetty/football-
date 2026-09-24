@@ -3,6 +3,25 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, cpSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
+
+// A fake OpenAI-compatible API that answers "What is i + i?" correctly, so the full API path is exercised offline.
+const fakeApi = createServer(async (req, res) => {
+  let raw = '';
+  for await (const c of req) raw += c;
+  const body = JSON.parse(raw || '{}') as { messages?: Array<{ content: string }> };
+  const prompt = body.messages?.at(-1)?.content ?? '';
+  const i = Number(prompt.match(/What is (\d+) \+/)?.[1] ?? 0);
+  const chunk = (delta: unknown, finish: string | null = null) => `data: ${JSON.stringify({ id: 'x', object: 'chat.completion.chunk', created: 1, model: 'fake-1', choices: [{ index: 0, delta, finish_reason: finish }] })}\n\n`;
+  res.writeHead(200, { 'content-type': 'text/event-stream' });
+  res.write(chunk({ role: 'assistant', content: `FINAL ANSWER: ${2 * i}` }));
+  res.write(chunk({}, 'stop'));
+  res.write(`data: ${JSON.stringify({ id: 'x', object: 'chat.completion.chunk', created: 1, model: 'fake-1', choices: [], usage: { prompt_tokens: 1000, completion_tokens: 500 } })}\n\n`);
+  res.end('data: [DONE]\n\n');
+});
+await new Promise<void>((r) => fakeApi.listen(0, '127.0.0.1', r));
+process.env.FAKE_API_KEY = 'k';
 
 // Isolate the test library and run storage before any Gauntlet module is loaded.
 const sandbox = mkdtempSync(join(tmpdir(), 'gauntlet-engine-'));
@@ -15,6 +34,8 @@ cpSync(new URL('../config', import.meta.url), join(sandbox, 'config'), { recursi
 {
   const file = join(sandbox, 'config', 'models.json');
   const models = JSON.parse(readFileSync(file, 'utf8'));
+  models.providers.push({ id: 'fakeapi', type: 'openai-compatible', label: 'Fake API', baseUrl: `http://127.0.0.1:${(fakeApi.address() as AddressInfo).port}/v1`, apiKeyEnv: 'FAKE_API_KEY', maxConcurrency: 4 });
+  models.contestants.push({ id: 'fake-api', label: 'Fake API Model', vendor: 'FakeCo', provider: 'fakeapi', model: 'fake-1', color: '#654321', enabled: true, pricing: { inputPerM: 2, outputPerM: 10, verifiedAt: '2026-01-01' } });
   models.contestants.push({ id: 'mock-priced', label: 'Priced Mock', vendor: 'Test', provider: 'baseline', model: 'random', color: '#123456', enabled: true, pricing: { inputPerM: 1_000_000, outputPerM: 0, verifiedAt: '2026-01-01' } });
   writeFileSync(file, JSON.stringify(models));
 }
@@ -223,7 +244,16 @@ test('judges never grade their own vendor when another judge is available', () =
   assert.deepEqual(runner.selectJudges(panel, j('a1', 'Anthropic'), false).map((x) => x.id), ['o1', 'g1'], 'a model never judges itself');
 });
 
-test('estimates are calibrated from measured usage after a run', async () => {
-  const est = await runner.estimateRun({ contestantIds: ['random-baseline'], testIds: ['math.arith'], repeats: 1 });
-  assert.equal(est.perTest[0]!.basis, 'measured');
+test('an API model runs end to end and calibrates cost estimates (baseline/manual results never do)', async () => {
+  const before = await runner.estimateRun({ contestantIds: ['fake-api'], testIds: ['math.arith'], repeats: 1 });
+  assert.equal(before.perTest[0]!.basis, 'definition', 'random-baseline and manual results are ignored');
+  const runId = await runner.startRun({ contestantIds: ['fake-api'], testIds: ['math.arith'], repeats: 1 });
+  await runner.waitForRun(runId);
+  const results = store.readResults(runId);
+  assert.ok(results.every((r) => r.score === 1 && r.status === 'ok'));
+  assert.ok(results.every((r) => Math.abs(r.metrics.costUsd - (1000 * 2 + 500 * 10) / 1e6) < 1e-9), 'cost = tokens × pricing');
+  const after = await runner.estimateRun({ contestantIds: ['fake-api'], testIds: ['math.arith'], repeats: 1 });
+  assert.equal(after.perTest[0]!.basis, 'measured');
+  assert.ok(Math.abs(after.perContestant[0]!.estCostUsd - 6 * 0.007) < 1e-4, 'estimate equals measured cost per case × cases');
+  fakeApi.close();
 });

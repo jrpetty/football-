@@ -94,10 +94,15 @@ export function round(n: number, digits = 0): number {
   return Math.round(n * f) / f;
 }
 
+/** Thousands separators without relying on ICU locale data (identical bytes on every platform). */
+function groupDigits(n: number): string {
+  return String(Math.abs(Math.round(n))).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
 /** "$12,345" / "−$1,200". */
 export function money(n: number): string {
   const v = Math.round(n);
-  const s = `$${Math.abs(v).toLocaleString('en-US')}`;
+  const s = `$${groupDigits(v)}`;
   return v < 0 ? `−${s}` : s;
 }
 

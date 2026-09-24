@@ -22,7 +22,7 @@ import {
   type IslandConfig,
 } from './lib/agentic-island.ts';
 
-const DEFAULTS = { maxDays: 15, size: 12, inventoryCap: 12, recentEvents: 5 };
+const DEFAULTS = { maxDays: 12, size: 12, inventoryCap: 12, recentEvents: 5 };
 
 function readConfig(config: Record<string, unknown>): IslandConfig & { recentEvents: number } {
   const num = (k: keyof typeof DEFAULTS, lo: number, hi: number): number => {
@@ -75,7 +75,7 @@ MEMORY: each turn you see only the current situation, the last few events and yo
 
 OUTPUT: think briefly if you want, then end your reply with exactly one command line:
 ACTION: <command>
-You may put one NOTE: line just before it. Only listed commands work; anything else wastes the turn.`;
+You may put one NOTE: line just before it. If you write several ACTION lines, only the last one counts. Anything that is not a valid command wastes the turn.`;
 }
 
 export const program: ProgramDefinition = {

@@ -358,6 +358,10 @@ function caesar(text: string, k: number): string {
   return text.replace(/[A-Z]/g, (c) => String.fromCharCode(((c.charCodeAt(0) - 65 + k) % 26) + 65));
 }
 
+function withArticle(phrase: string): string {
+  return `${/^[aeiou]/i.test(phrase) ? 'an' : 'a'} ${phrase}`;
+}
+
 function listWords(items: string[]): string {
   if (items.length <= 1) return items.join('');
   return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
@@ -426,7 +430,7 @@ function nameFree(g: Gen, name: string): boolean {
   return !g.objects[slug(name)];
 }
 
-function takeFrom<T>(g: Gen, pool: T[], pred: (t: T) => boolean = () => true): T | null {
+function takeFrom<T>(pool: T[], pred: (t: T) => boolean = () => true): T | null {
   const idx = pool.findIndex(pred);
   if (idx < 0) return null;
   return pool.splice(idx, 1)[0]!;
@@ -442,7 +446,7 @@ interface Encoded {
   items: string[];
 }
 
-type Encoder = (g: Gen, room: number, wantItem: boolean, isDoor: boolean) => Encoded | null;
+type Encoder = (g: Gen, room: number, wantItem: boolean) => Encoded | null;
 
 /** Creates a clue object: a fixture in `room`, or an item the caller places. */
 function clueObject(g: Gen, room: number, asItem: boolean, name: string, desc: string): EscObject {
@@ -546,10 +550,10 @@ const ENCODERS: Record<string, { kind: 'code' | 'word' | 'colour'; make: Encoder
         room,
         false,
         'BOOKSHELF',
-        `A bookshelf with four books, each with a number on its spine: ${listWords(titles.map((t, i) => `a ${colours[i]} copy of "${t}" (No. ${numbers[i]})`))}.`,
+        `A bookshelf with four books, each with a number on its spine: ${listWords(titles.map((t, i) => `${withArticle(colours[i]!)} copy of '${t}' (No. ${numbers[i]})`))}.`,
       );
       const byColour = g.rng.chance(0.5);
-      const ref = byColour ? `the ${colours[target]} book` : `"${titles[target]}"`;
+      const ref = byColour ? `the ${colours[target]} book` : `'${titles[target]}'`;
       const text = `"Borrowed numbers open borrowed doors: read the spine number of ${ref}."`;
       const note = wantItem
         ? clueObject(g, room, true, 'BOOKMARK', `A leather bookmark. Written on it: ${text}`)
@@ -642,7 +646,7 @@ const ENCODERS: Record<string, { kind: 'code' | 'word' | 'colour'; make: Encoder
       const roman = g.rng.chance(0.5);
       const mark = (i: number): string => (roman ? toRoman(i + 1) : String(i + 1));
       const noun = wantItem ? ['block', 'blocks'] : g.rng.pick([['vase', 'vases'], ['flag', 'flags'], ['bottle', 'bottles']]);
-      const parts = g.rng.shuffle(colours.map((c, i) => ({ c, i }))).map(({ c, i }) => `a ${c.toLowerCase()} ${noun[0]} marked ${mark(i)}`);
+      const parts = g.rng.shuffle(colours.map((c, i) => ({ c, i }))).map(({ c, i }) => `${withArticle(`${c.toLowerCase()} ${noun[0]}`)} marked ${mark(i)}`);
       const text = `${SMALL_WORDS[n]![0]!.toUpperCase()}${SMALL_WORDS[n]!.slice(1)} ${noun[1]}: ${listWords(parts)}.`;
       const hint = `Label: "press them in the order the ${noun[1]} count".`;
       const name = wantItem ? 'WOODEN BLOCKS' : noun[0] === 'vase' ? 'VASES' : noun[0] === 'flag' ? 'FLAGS' : 'GLASS BOTTLES';
@@ -696,7 +700,7 @@ type GateKind = LockKind;
 /** Puts a lock of `kind` on `target`. Returns the item ids the solver will need (to be placed). */
 function lockWith(g: Gen, room: number, target: EscObject, kind: 'key' | 'code' | 'word' | 'colour', wantItem: boolean): string[] | null {
   if (kind === 'key') {
-    const metal = takeFrom(g, g.keyMetals);
+    const metal = takeFrom(g.keyMetals);
     if (!metal) return null;
     const key = addObject(g, { name: `${metal} KEY`, kind: 'item', rooms: [room], hidden: true, desc: `A small ${metal.toLowerCase()} key.` });
     const ring = metal.toLowerCase();
@@ -713,7 +717,7 @@ function lockWith(g: Gen, room: number, target: EscObject, kind: 'key' | 'code' 
   }
   const options = Object.entries(ENCODERS).filter(([name, e]) => e.kind === kind && !g.used.has(name));
   for (const [name, enc] of g.rng.shuffle(options)) {
-    const res = enc.make(g, room, wantItem, target.kind === 'door');
+    const res = enc.make(g, room, wantItem);
     if (!res) continue;
     g.used.add(name);
     const tag = target.kind === 'door' && kind === 'code' ? res.tag.replace('dial', 'keypad') : res.tag;
@@ -735,7 +739,7 @@ function lockWith(g: Gen, room: number, target: EscObject, kind: 'key' | 'code' 
 /** A new container in `room` holding `contents`, locked by a gate of `kind`. */
 function makeContainer(g: Gen, room: number, kind: GateKind, contents: string[], wantItem: boolean): string[] | null {
   if (kind === 'tool') {
-    const t = takeFrom(g, g.tools);
+    const t = takeFrom(g.tools);
     if (!t) return null;
     const tool = addObject(g, { name: t.tool, kind: 'item', rooms: [room], hidden: true, desc: t.toolDesc });
     addObject(g, {
@@ -751,7 +755,7 @@ function makeContainer(g: Gen, room: number, kind: GateKind, contents: string[],
     return [tool.id];
   }
   if (kind === 'combo') {
-    const c = takeFrom(g, g.comboGates);
+    const c = takeFrom(g.comboGates);
     if (!c) return null;
     const a = addObject(g, { name: c.a, kind: 'item', rooms: [room], hidden: true, desc: c.aDesc });
     const b = addObject(g, { name: c.b, kind: 'item', rooms: [room], hidden: true, desc: c.bDesc });
@@ -770,7 +774,7 @@ function makeContainer(g: Gen, room: number, kind: GateKind, contents: string[],
     return [a.id, b.id];
   }
   const pool = kind === 'key' ? g.keyBoxes : g.dialBoxes;
-  const name = takeFrom(g, pool);
+  const name = takeFrom(pool);
   if (!name) return null;
   const box = addObject(g, { name, kind: 'fixture', rooms: [room], hidden: false, desc: `A sturdy ${name.toLowerCase()}.`, contains: contents });
   box.openDesc = `The ${name.toLowerCase()} stands open.`;
@@ -788,7 +792,7 @@ function makeContainer(g: Gen, room: number, kind: GateKind, contents: string[],
 function placeLoose(g: Gen, room: number, itemId: string): void {
   const item = g.objects[itemId]!;
   item.rooms = [room];
-  const spot = g.rng.chance(0.6) ? takeFrom(g, g.hides) : null;
+  const spot = g.rng.chance(0.6) ? takeFrom(g.hides) : null;
   if (spot) {
     item.hidden = true;
     const obj = addObject(g, { name: spot.name, kind: 'fixture', rooms: [room], hidden: false, desc: spot.desc, hides: [itemId] });
@@ -855,12 +859,7 @@ function tryGenerate(rng: Rng, cfg: EscapeConfig): EscWorld | null {
       let needs: string[] | null = null;
       for (const kind of kinds) {
         needs = makeContainer(g, r, kind, [itemId], wantItem);
-        if (needs && (!wantItem || needs.length > 0)) break;
-        if (needs) {
-          // A gate that yields nothing to protect is fine only when no containers remain.
-          queue.push(...needs);
-          break;
-        }
+        if (needs) break;
       }
       if (!needs) return null;
       g.objects[itemId]!.hidden = true;
@@ -876,7 +875,7 @@ function tryGenerate(rng: Rng, cfg: EscapeConfig): EscWorld | null {
     }
     // One or two harmless decoys per room.
     for (let i = 0; i < rng.int(1, 2); i++) {
-      const d = takeFrom(g, g.decoys);
+      const d = takeFrom(g.decoys);
       if (d) addObject(g, { name: d.name, kind: 'fixture', rooms: [r], hidden: false, desc: d.desc });
     }
   }
@@ -1013,6 +1012,7 @@ export function parseEscCommand(raw: string): EscCommand | null {
   if ((m = s.match(/^(?:ENTER|TYPE|DIAL|INPUT|PRESS|SET) (.+?) (?:ON|INTO|IN|AT) (.+)$/))) return { kind: 'enter', value: m[1]!, target: m[2]! };
   if ((m = s.match(/^(?:GO|WALK|EXIT|LEAVE)(?: THROUGH| TO| INTO)? (.+)$/))) return { kind: 'go', target: m[1]! };
   if ((m = s.match(/^ENTER (.+)$/))) return { kind: 'go', target: m[1]! };
+  if (/^(EXIT|LEAVE|ESCAPE|GO OUT)$/.test(s)) return { kind: 'go', target: 'OUT' };
   return null;
 }
 

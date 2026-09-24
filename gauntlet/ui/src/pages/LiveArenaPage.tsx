@@ -7,13 +7,13 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { api, subscribeRun } from '../api.ts';
 import { useNow } from '../hooks.ts';
 import { Link, pathOf } from '../router.tsx';
-import { useToast } from '../context.tsx';
+import { useMeta, useToast } from '../context.tsx';
 import { ConfirmDialog, ErrorState, HashTag, LoadingPage, ModelCell, Progress, RunStatusBadge, ScorePill, cx } from '../components/ui.tsx';
 import { Icon } from '../components/icons.tsx';
 import { Podium } from '../components/leaderboard/Panels.tsx';
 import { isBaseline } from '../components/leaderboard/util.ts';
 import { fmtClock, fmtCost, fmtIndex, fmtInt, fmtPct, fmtTokens } from '../format.ts';
-import type { FinishedCase, Leaderboard, ReplayFrame, RunDetail, RunEvent, RunManifest, RunStatus } from '../types.ts';
+import type { FinishedCase, Leaderboard, ManualRequest, ReplayFrame, RunDetail, RunEvent, RunManifest, RunStatus } from '../types.ts';
 
 const STREAM_MAX = 1500;
 const TICKER_MAX = 40;
@@ -39,6 +39,9 @@ interface Lane {
   focusKey: string | null;
   lastKey: string | null;
   ticker: FinishedCase[];
+  /** Pending copy & paste requests for manual contestants. */
+  manual: Map<string, ManualRequest>;
+  isManual: boolean;
 }
 
 interface Store {
@@ -55,7 +58,7 @@ interface Store {
 const trim = (s: string) => (s.length > STREAM_MAX ? s.slice(s.length - STREAM_MAX) : s);
 const t = (iso: string | undefined) => (iso ? new Date(iso).getTime() : Date.now());
 
-function buildStore(d: RunDetail, prev?: Store): Store {
+function buildStore(d: RunDetail, prev: Store | undefined, manualProviders: Set<string>): Store {
   const m = d.manifest;
   const reps = m.settings?.repeats ?? 1;
   const perContestant = (m.tests ?? []).reduce((s, x) => s + x.caseIds.length, 0) * reps;
@@ -83,6 +86,8 @@ function buildStore(d: RunDetail, prev?: Store): Store {
       focusKey: old?.focusKey ?? null,
       lastKey: old?.lastKey ?? null,
       ticker: [],
+      manual: old?.manual ?? new Map(),
+      isManual: manualProviders.has(c.provider) || !!d.leaderboard?.rows?.find((r) => r.contestantId === c.id)?.manual,
     });
   }
   const sorted = [...(d.results ?? [])].sort((a, b) => t(a.finishedAt) - t(b.finishedAt));
@@ -134,13 +139,35 @@ function applyEvent(s: Store, e: RunEvent) {
       s.log.unshift({ level: e.level, message: e.message, at: e.at });
       s.log = s.log.slice(0, 20);
       return;
+    case 'manual.request': {
+      const l = s.lanes.get(e.request.contestantId);
+      if (!l) return;
+      l.isManual = true;
+      l.manual.set(e.request.id, e.request);
+      return;
+    }
+    case 'manual.resolved': {
+      for (const l of s.lanes.values()) l.manual.delete(e.requestId);
+      return;
+    }
     case 'job.started': {
       const l = s.lanes.get(e.contestantId);
       if (!l) return;
       l.inFlight.set(e.key, { testId: e.testId, caseId: e.caseId, repeat: e.repeat });
-      l.buffers.set(e.key, '');
       l.firstStart = l.firstStart ?? t(e.at);
-      if (!l.focusKey || !l.inFlight.has(l.focusKey)) l.focusKey = e.key;
+      if (!l.focusKey || !l.inFlight.has(l.focusKey)) {
+        // Keep the previous answer's tail on screen with a divider, so the window never goes blank.
+        const prev = l.focusKey ? l.buffers.get(l.focusKey) ?? '' : '';
+        const sep = `\n\n── next · ${e.caseId}${e.repeat > 0 ? ` r${e.repeat + 1}` : ''} ──\n\n`;
+        l.buffers.set(e.key, prev ? trim(prev + sep) : '');
+        if (l.focusKey) {
+          l.buffers.delete(l.focusKey);
+          l.frames.delete(l.focusKey);
+        }
+        l.focusKey = e.key;
+      } else {
+        l.buffers.set(e.key, '');
+      }
       return;
     }
     case 'job.delta': {
@@ -219,7 +246,7 @@ function LaneCard({ lane, rank, testName, now, done }: { lane: Lane; rank: numbe
         <span className={cx('lane-rank', rank !== null && rank <= 3 && `r${rank}`)} title="Live rank by mean score">
           {rank ?? '–'}
         </span>
-        <ModelCell label={lane.label} vendor={lane.vendor} color={lane.color} />
+        <ModelCell label={lane.label} vendor={lane.isManual ? `${lane.vendor} · manual` : lane.vendor} color={lane.color} />
         <div className="lane-score">
           <span className="tnum">{mean === null ? '—' : (mean * 100).toFixed(1)}</span>
           <small>mean score</small>
@@ -273,7 +300,25 @@ function LaneCard({ lane, rank, testName, now, done }: { lane: Lane; rank: numbe
           <span className="muted">{done ? 'Stopped' : 'Queued…'}</span>
         )}
       </div>
-      <StreamWindow text={text} active={!!cur && !finished} />
+      {lane.manual.size > 0 ? (
+        <div className="manual-wait" role="status">
+          <div className="mw-icon" aria-hidden="true">
+            <Icon.Copy />
+          </div>
+          <div className="mw-body">
+            <strong>Waiting for your pasted reply</strong>
+            <span className="muted">
+              {[...lane.manual.values()][0].testName} · {[...lane.manual.values()][0].label}
+              {lane.manual.size > 1 ? ` · +${lane.manual.size - 1} more` : ''}
+            </span>
+          </div>
+          <Link to={`/inbox?run=${encodeURIComponent([...lane.manual.values()][0].runId)}`} className="btn sm primary no-broadcast">
+            Open inbox <Icon.ChevronRight />
+          </Link>
+        </div>
+      ) : (
+        <StreamWindow text={text} active={!!cur && !finished} />
+      )}
       {frame || frameInfo?.label ? (
         <div className={cx('lane-frame', frame?.tone && `tone-${frame.tone}`)}>
           <div className="lf-label">{frame?.label ?? frameInfo?.label}</div>
@@ -344,6 +389,10 @@ function FinishLine({ lb, runId }: { lb: Leaderboard; runId: string }) {
 
 export default function LiveArenaPage({ runId }: { runId: string }) {
   const toast = useToast();
+  const { meta } = useMeta();
+  const manualProviders = useMemo(() => new Set((meta?.providers ?? []).filter((p) => p.type === 'manual').map((p) => p.id)), [meta]);
+  const manualRef = useRef(manualProviders);
+  manualRef.current = manualProviders;
   const storeRef = useRef<Store | null>(null);
   const [, setVersion] = useState(0);
   const [error, setError] = useState<Error | null>(null);
@@ -351,6 +400,7 @@ export default function LiveArenaPage({ runId }: { runId: string }) {
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const pending = useRef(false);
+  const connectedRef = useRef(false);
 
   const schedule = useCallback(() => {
     if (pending.current) return;
@@ -364,7 +414,8 @@ export default function LiveArenaPage({ runId }: { runId: string }) {
   const resync = useCallback(async () => {
     try {
       const d = await api.run(runId);
-      storeRef.current = buildStore(d, storeRef.current ?? undefined);
+      storeRef.current = buildStore(d, storeRef.current ?? undefined, manualRef.current);
+      storeRef.current.connected = connectedRef.current;
       if (!['running', 'queued'].includes(d.manifest.status) && d.leaderboard?.rows?.length) setFinal(d.leaderboard);
       setError(null);
       schedule();
@@ -385,11 +436,13 @@ export default function LiveArenaPage({ runId }: { runId: string }) {
         schedule();
       },
       onOpen: (reconnected) => {
+        connectedRef.current = true;
         if (storeRef.current) storeRef.current.connected = true;
         if (reconnected) void resync();
         schedule();
       },
       onDisconnect: () => {
+        connectedRef.current = false;
         if (storeRef.current) storeRef.current.connected = false;
         schedule();
       },

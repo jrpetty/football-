@@ -120,9 +120,19 @@ const PROVIDERS: Meta['providers'] = [
   { id: 'kestrel', type: 'anthropic', label: 'Kestrel', apiKeyEnv: 'KESTREL_API_KEY', maxConcurrency: 4, hasKey: true },
   { id: 'obsidian', type: 'openai-compatible', label: 'Obsidian Cloud', baseUrl: 'https://inference.obsidian.example/v1', apiKeyEnv: 'OBSIDIAN_API_KEY', maxConcurrency: 8, hasKey: false, maxTokensParam: 'max_tokens' },
   { id: 'local', type: 'mock', label: 'Local (built-in)', apiKeyEnv: null, hasKey: true },
+  { id: 'manual', type: 'manual', label: 'Manual (copy & paste)', apiKeyEnv: null, hasKey: true },
 ];
 
-export const SETTINGS: Meta['settings'] = { judges: ['meridian-atlas-4-ultra', 'helios-nova-3-pro'], defaultRepeats: 3, defaultConcurrency: 6, temperature: 0, defaultMaxOutputTokens: 16000 };
+export const SETTINGS: Meta['settings'] = {
+  judges: ['meridian-atlas-4-ultra', 'helios-nova-3-pro', 'kestrel-kite-reasoner'],
+  defaultRepeats: 3,
+  defaultConcurrency: 6,
+  temperature: 0,
+  defaultMaxOutputTokens: 16000,
+  defaultTimeLimitSec: 600,
+  maxRetries: 3,
+  judgeExcludeSameVendor: true,
+};
 
 export const META: Meta = {
   harnessVersion: '1.0.0',
@@ -154,7 +164,10 @@ const PERSONA: Record<string, Persona> = {
   'helios-quill-flash': { skill: 0.53, tps: 318, ttft: 260, verbosity: 0.7, thinking: 0, err: 0.012, bias: { extraction: 0.08, instruction: 0.05, agentic: -0.1 } },
   'random-baseline': { skill: 0.05, tps: 2000, ttft: 5, verbosity: 0.2, thinking: 0, err: 0, bias: {} },
   'meridian-atlas-4-mini': { skill: 0.62, tps: 190, ttft: 420, verbosity: 0.8, thinking: 0.2, err: 0.01, bias: {} },
+  'manual-orbit-chat': { skill: 0.69, tps: 9, ttft: 42000, verbosity: 1.1, thinking: 0, err: 0.004, bias: { creative: 0.08, social: 0.06, coding: -0.06 } },
 };
+
+export const isManualId = (id: string) => CONTESTANTS.find((c) => c.id === id)?.providerType === 'manual';
 
 const C = (c: Omit<ContestantView, 'configHash' | 'hasKey' | 'providerLabel' | 'providerType'>): ContestantView => {
   const p = PROVIDERS.find((x) => x.id === c.provider) ?? PROVIDERS[0];
@@ -240,10 +253,21 @@ export const CONTESTANTS: ContestantView[] = [
     vendor: 'Meridian AI',
     provider: 'meridian',
     model: 'atlas-4-mini',
-    color: '#9085e9',
+    color: '#e66767',
     enabled: false,
     pricing: { inputPerM: 0.4, outputPerM: 1.6, source: 'meridian.example/pricing', verifiedAt: '2026-09-02' },
     options: { effort: 'low', supportsTemperature: false },
+  }),
+  C({
+    id: 'manual-orbit-chat',
+    label: 'Orbit Chat (web)',
+    vendor: 'Orbit Labs',
+    provider: 'manual',
+    model: 'orbit.chat — default model, Sept 2026',
+    color: '#9085e9',
+    enabled: true,
+    pricing: { inputPerM: 0, outputPerM: 0, source: 'manual — subscription app, cost entered by hand', verifiedAt: '2026-09-20' },
+    notes: 'Consumer chat app with no API. Prompts are pasted by hand into a fresh chat.',
   }),
 ];
 
@@ -571,7 +595,26 @@ export const TESTS: TestDefinition[] = [
   }),
 ];
 
+TESTS.push(
+  prompt({
+    id: 'reasoning.heldout-ciphers',
+    name: 'Held-out Ciphers',
+    category: 'reasoning',
+    difficulty: 'hard',
+    description: 'Never-published substitution-cipher puzzles kept out of the public repo, used to detect training-data contamination.',
+    hook: 'Nobody has seen these. Not even the internet.',
+    preamble: FINAL,
+    scorer: { type: 'exact', normalize: 'alnum' },
+    estimate: { inputTokens: 350, outputTokens: 1600 },
+    cases: [
+      { id: 'c1', prompt: '[held-out prompt — stored in tests/private/, never published]', expected: 'redacted' },
+      { id: 'c2', prompt: '[held-out prompt — stored in tests/private/, never published]', expected: 'redacted' },
+    ],
+  }),
+);
+
 const CUSTOM_IDS = new Set(['reasoning.calendar-puzzle']);
+export const PRIVATE_IDS = new Set(['reasoning.heldout-ciphers']);
 
 export function scorerTypeOf(t: TestDefinition): string {
   return t.kind === 'program' ? `program:${t.program}` : t.scorer.type;
@@ -596,8 +639,8 @@ export function summaryOf(t: TestDefinition): TestSummary {
     tags: t.tags ?? [],
     caseCount: caseIdsOf(t).length,
     scorerType: scorerTypeOf(t),
-    source: CUSTOM_IDS.has(t.id) ? 'custom' : 'builtin',
-    file: CUSTOM_IDS.has(t.id) ? `tests/custom/${t.id}.json` : `tests/${t.category}/${t.id.split('.')[1] ?? t.id}.json`,
+    source: CUSTOM_IDS.has(t.id) ? 'custom' : PRIVATE_IDS.has(t.id) ? 'private' : 'builtin',
+    file: CUSTOM_IDS.has(t.id) ? `tests/custom/${t.id}.json` : PRIVATE_IDS.has(t.id) ? `tests/private/${t.id}.json` : `tests/${t.category}/${t.id.split('.')[1] ?? t.id}.json`,
     estimate: { inputTokens: est.inputTokens, outputTokens: est.outputTokens, calls: est.calls ?? 1 },
   };
 }
@@ -671,7 +714,7 @@ function genLite(runId: string, c: ContestantView, t: TestDefinition, caseId: st
   const ttft = c.id === 'random-baseline' ? 3 : Math.round(persona.ttft * (0.75 + r.next() * 0.6) * (1 + persona.thinking));
   const genMs = (outTok / persona.tps) * 1000;
   const wallMs = Math.round(ttft * calls + genMs + r.next() * 400);
-  const cost = priceOf(c, inTok, outTok);
+  const cost = c.providerType === 'manual' ? (r.next() < 0.3 ? 0.01 + r.next() * 0.02 : 0) : priceOf(c, inTok, outTok);
   const judgeCost = ['judge', 'judge-classify', 'artifact'].includes(type) ? 0.0021 + r.next() * 0.003 : 0;
   const metrics: CaseMetrics = {
     wallMs,
@@ -767,6 +810,7 @@ export interface RunSpec {
   notes?: string;
   error?: string;
   concurrency?: number;
+  maxCostUsd?: number;
 }
 
 export interface MockRun {
@@ -801,7 +845,7 @@ export function manifestOf(spec: RunSpec): RunManifest {
     tests: tests.map((t) => ({ id: t.id, version: t.version, hash: summaryOf(t).hash, name: t.name, category: t.category, kind: t.kind, caseIds: caseIdsOf(t), weight: 1 })),
     contestants: contestants.map(strip),
     judges: judges.map(strip),
-    settings: { repeats: spec.repeats, concurrency: spec.concurrency ?? 6, temperature: 0, protocolVersion: '2026.09' },
+    settings: { repeats: spec.repeats, concurrency: spec.concurrency ?? 6, temperature: 0, protocolVersion: '2026.09', maxCostUsd: spec.maxCostUsd, judgeExcludeSameVendor: true },
     totalJobs,
     notes: spec.notes,
     error: spec.error,
@@ -845,7 +889,7 @@ export const RUN_SPECS: RunSpec[] = [
     id: 'run-2026-09-21-core',
     name: 'Core Gauntlet · September 2026',
     status: 'completed',
-    contestantIds: ['meridian-atlas-4-ultra', 'kestrel-kite-reasoner', 'helios-nova-3-pro', 'obsidian-sable-large', 'helios-quill-flash', 'random-baseline'],
+    contestantIds: ['meridian-atlas-4-ultra', 'kestrel-kite-reasoner', 'helios-nova-3-pro', 'manual-orbit-chat', 'obsidian-sable-large', 'helios-quill-flash', 'random-baseline'],
     testIds: TESTS.map((t) => t.id),
     repeats: 3,
     suiteId: 'core',
@@ -856,7 +900,7 @@ export const RUN_SPECS: RunSpec[] = [
     id: 'run-2026-09-24-agents',
     name: 'Agents Showdown · live',
     status: 'running',
-    contestantIds: ['meridian-atlas-4-ultra', 'kestrel-kite-reasoner', 'helios-nova-3-pro', 'obsidian-sable-large', 'helios-quill-flash'],
+    contestantIds: ['meridian-atlas-4-ultra', 'kestrel-kite-reasoner', 'helios-nova-3-pro', 'obsidian-sable-large', 'helios-quill-flash', 'manual-orbit-chat'],
     testIds: ['agentic.survival-island', 'social.liars-table', 'reasoning.knights-knaves', 'math.probability-traps'],
     repeats: 1,
     suiteId: undefined,
@@ -906,6 +950,20 @@ export const RUN_SPECS: RunSpec[] = [
     suiteId: 'core',
     createdAt: '2026-08-30T08:00:00Z',
     completedFrac: 0.45,
+    maxCostUsd: 1.8,
+    error: 'Budget cap reached: $1.82 spent of the $1.80 cap. Resume with a higher cap to finish the remaining 35 jobs.',
+  },
+  {
+    id: 'run-2026-09-23-manual',
+    name: 'Orbit Chat by hand · social + honesty',
+    status: 'running',
+    contestantIds: ['manual-orbit-chat'],
+    testIds: ['social.liars-table', 'honesty.honesty-trap', 'reasoning.knights-knaves'],
+    repeats: 1,
+    createdAt: '2026-09-23T19:30:00Z',
+    completedFrac: 0.35,
+    concurrency: 1,
+    notes: 'Manual contestant — every prompt is pasted into a fresh Orbit Chat conversation.',
   },
 ];
 
@@ -1018,6 +1076,7 @@ export function buildLeaderboard(manifest: RunManifest, results: CaseResultLite[
     const errors = mine.filter((r) => r.status === 'error' || r.status === 'timeout').length;
     const refusals = mine.filter((r) => r.status === 'refusal').length;
     rows.push({
+      manual: isManualId(c.id) || undefined,
       contestantId: c.id,
       label: c.label,
       vendor: c.vendor,

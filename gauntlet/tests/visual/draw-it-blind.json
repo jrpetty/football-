@@ -1,0 +1,19 @@
+{
+  "kind": "program",
+  "id": "visual.draw-it-blind",
+  "version": "1.0.0",
+  "program": "draw-it-blind",
+  "name": "Draw It Blind",
+  "category": "visual",
+  "description": "The model sees an exact table of 5–7 coloured shapes on a 400×400 canvas and must describe the picture in at most 120 words without a single digit. Then, in a fresh context, the same model redraws the picture as SVG from nothing but its own words. The SVG is parsed and every shape is matched against the original on type, colour, position and size. Tests spatial language, precise-but-lossy communication and SVG construction in one loop — and makes a great side-by-side.",
+  "difficulty": "medium",
+  "tags": ["spatial", "svg", "description", "self-communication", "geometry", "seeded"],
+  "hook": "Describe it with no numbers. Redraw it from your own words. How close does it get?",
+  "seeds": [101, 202, 303],
+  "config": { "minShapes": 5, "maxShapes": 7, "descriptionWords": 120 },
+  "maxOutputTokens": 12000,
+  "timeLimitSec": 600,
+  "estimate": { "inputTokens": 1000, "outputTokens": 12000, "calls": 2 },
+  "author": "Gauntlet Core",
+  "createdAt": "2026-09-24"
+}

@@ -1,0 +1,36 @@
+{
+  "kind": "program",
+  "id": "agentic.startup-sim",
+  "version": "1.0.0",
+  "program": "startup-sim",
+  "name": "The Startup",
+  "category": "agentic",
+  "description": "Twelve monthly turns running a small consumer-product company from $10,000 and two staff. A hidden, seeded market decides the outcome: price elasticity, marketing with diminishing returns and carry-over brand awareness, seasonality, staff capacity, storage costs, stockouts that lose sales and reputation, and scripted events — a competitor price war, a supplier cost spike announced a month ahead, a viral review, and a loan offer whose terms may or may not be worth it. Each month the model sets price, production, marketing and hiring, then reads a P&L report, customer feedback and market news. Scores are normalised between an autopilot that repeats the pre-launch plan and an oracle that knows every hidden parameter, so it rewards models that learn the market from their own results and plan ahead for events.",
+  "difficulty": "hard",
+  "tags": [
+    "business",
+    "simulation",
+    "economics",
+    "planning",
+    "uncertainty",
+    "seeded"
+  ],
+  "hook": "$10,000, twelve months and a hidden market — can it beat autopilot?",
+  "seeds": [
+    101,
+    202,
+    303
+  ],
+  "config": {
+    "months": 12
+  },
+  "maxOutputTokens": 8000,
+  "timeLimitSec": 1800,
+  "estimate": {
+    "inputTokens": 16500,
+    "outputTokens": 18000,
+    "calls": 12
+  },
+  "author": "Gauntlet Core",
+  "createdAt": "2026-09-24"
+}

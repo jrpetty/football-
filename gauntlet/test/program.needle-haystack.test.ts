@@ -17,6 +17,7 @@ import {
   constantResponder,
   createFakeModel,
   createTestContext,
+  mockBaselineResponder,
   randomBacktickResponder,
 } from './helpers/fake-model.ts';
 import type { Responder } from './helpers/fake-model.ts';
@@ -90,6 +91,12 @@ test('needle-haystack: garbage, empty, refusal and random-backtick policies scor
   }
   const { result } = await play(202, constantResponder(''));
   assert.match(result.summary, /no answers given/);
+});
+
+test('needle-haystack: the real Random Baseline (all "unknown") scores 0', async () => {
+  const { result } = await play(101, mockBaselineResponder());
+  assert.equal(result.score, 0);
+  assert.equal((result.detail as { answered: number }).answered, 10);
 });
 
 test('needle-haystack: model errors propagate', async () => {

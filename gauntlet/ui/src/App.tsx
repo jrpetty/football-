@@ -5,7 +5,7 @@ import { MetaProvider, PrefsProvider, ToastProvider, useMeta, usePrefs } from '.
 import { Icon } from './components/icons.tsx';
 import { Callout, LoadingPage, cx } from './components/ui.tsx';
 import { useHotkeys, useNow } from './hooks.ts';
-import { MOCK } from './api.ts';
+import { MOCK, api } from './api.ts';
 
 const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage.tsx'));
 const NewRunPage = lazy(() => import('./pages/NewRunPage.tsx'));
@@ -18,12 +18,17 @@ const TestBuilderPage = lazy(() => import('./pages/TestBuilderPage.tsx'));
 const ModelsPage = lazy(() => import('./pages/ModelsPage.tsx'));
 const ReviewPage = lazy(() => import('./pages/ReviewPage.tsx'));
 const MethodologyPage = lazy(() => import('./pages/MethodologyPage.tsx'));
+const InboxPage = lazy(() => import('./pages/InboxPage.tsx'));
+const GradePage = lazy(() => import('./pages/GradePage.tsx'));
+const CostsPage = lazy(() => import('./pages/CostsPage.tsx'));
 
 interface NavItem {
   to: string;
   label: string;
   icon: ComponentType<{ className?: string }>;
   cta?: boolean;
+  badge?: 'manual';
+  section?: string;
   match: (path: string) => boolean;
 }
 
@@ -31,11 +36,40 @@ const NAV: NavItem[] = [
   { to: '/run/new', label: 'New Run', icon: Icon.Rocket, cta: true, match: (p) => p === '/run/new' },
   { to: '/', label: 'Leaderboard', icon: Icon.Trophy, match: (p) => p === '/' || p === '/leaderboard' },
   { to: '/runs', label: 'Runs', icon: Icon.History, match: (p) => p.startsWith('/runs') },
-  { to: '/tests', label: 'Tests', icon: Icon.Flask, match: (p) => p.startsWith('/tests') },
+  { to: '/inbox', label: 'Manual Inbox', icon: Icon.Inbox, badge: 'manual', match: (p) => p.startsWith('/inbox') },
+  { to: '/review', label: 'Blind Review', icon: Icon.Eye, match: (p) => p.startsWith('/review') },
+  { to: '/tests', label: 'Tests', icon: Icon.Flask, section: 'Lab', match: (p) => p.startsWith('/tests') },
+  { to: '/grade', label: 'Grader', icon: Icon.Target, match: (p) => p.startsWith('/grade') },
   { to: '/models', label: 'Models', icon: Icon.Cpu, match: (p) => p.startsWith('/models') },
-  { to: '/review', label: 'Review', icon: Icon.Eye, match: (p) => p.startsWith('/review') },
-  { to: '/methodology', label: 'Methodology', icon: Icon.Book, match: (p) => p.startsWith('/methodology') },
+  { to: '/costs', label: 'Cost Planner', icon: Icon.Dollar, match: (p) => p.startsWith('/costs') },
+  { to: '/methodology', label: 'Methodology', icon: Icon.Book, section: 'About', match: (p) => p.startsWith('/methodology') },
 ];
+
+/** Pending copy & paste requests (polls GET /api/manual every 2 s while the tab is visible). */
+function useManualCount(): number {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    let timer: number | undefined;
+    const tick = async () => {
+      if (document.visibilityState === 'visible') {
+        try {
+          const list = await api.manualQueue();
+          if (alive) setN(Array.isArray(list) ? list.length : 0);
+        } catch {
+          /* server offline: keep last count */
+        }
+      }
+      if (alive) timer = window.setTimeout(tick, 2000);
+    };
+    void tick();
+    return () => {
+      alive = false;
+      window.clearTimeout(timer);
+    };
+  }, []);
+  return n;
+}
 
 interface Resolved {
   el: ReactNode;
@@ -60,6 +94,9 @@ function resolve(parts: string[]): Resolved {
   if (a === 'models') return { el: <ModelsPage />, crumb: 'Models' };
   if (a === 'review') return { el: <ReviewPage />, crumb: 'Blind Review' };
   if (a === 'methodology') return { el: <MethodologyPage />, crumb: 'Methodology' };
+  if (a === 'inbox') return { el: <InboxPage />, crumb: 'Manual Inbox' };
+  if (a === 'grade') return { el: <GradePage />, crumb: 'Grader' };
+  if (a === 'costs') return { el: <CostsPage />, crumb: 'Cost Planner' };
   return {
     el: (
       <div className="page">
@@ -117,6 +154,7 @@ function Shell() {
   const [exitVisible, setExitVisible] = useState(false);
   const hideTimer = useRef<number | undefined>(undefined);
   const now = useNow(broadcast ? 1000 : null);
+  const manualCount = useManualCount();
 
   const { el, crumb } = resolve(route.parts);
 
@@ -170,11 +208,16 @@ function Shell() {
           {NAV.map((n) => {
             const I = n.icon;
             const active = n.match(route.path);
+            const count = n.badge === 'manual' ? manualCount : 0;
             return (
-              <Link key={n.to} to={n.to} className={cx(n.cta && 'nav-cta')} aria-current={active ? 'page' : undefined}>
-                <I />
-                {n.label}
-              </Link>
+              <div key={n.to} style={{ display: 'contents' }}>
+                {n.section && <div className="nav-section eyebrow">{n.section}</div>}
+                <Link to={n.to} className={cx(n.cta && 'nav-cta')} aria-current={active ? 'page' : undefined} aria-label={count ? `${n.label}, ${count} waiting` : undefined}>
+                  <I />
+                  {n.label}
+                  {count > 0 && <span className="nav-count">{count > 99 ? '99+' : count}</span>}
+                </Link>
+              </div>
             );
           })}
         </nav>

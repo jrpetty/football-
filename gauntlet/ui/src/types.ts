@@ -15,6 +15,9 @@ import type {
   TestDefinition,
   TokenUsage,
   ResultStatus,
+  ScoreDetail,
+  TranscriptEntry,
+  ArtifactRef,
 } from '../../src/core/types.ts';
 
 export type * from '../../src/core/types.ts';
@@ -25,6 +28,9 @@ export interface Settings {
   defaultConcurrency: number;
   temperature: number;
   defaultMaxOutputTokens: number;
+  defaultTimeLimitSec?: number;
+  maxRetries?: number;
+  judgeExcludeSameVendor?: boolean;
 }
 
 export interface ProgramInfo {
@@ -60,7 +66,8 @@ export interface TestSummary {
   caseCount: number;
   /** e.g. 'exact', 'code-js', or 'program:survival-island' */
   scorerType: string;
-  source: 'builtin' | 'custom';
+  /** private = held-out tests in git-ignored tests/private/ (never published). */
+  source: 'builtin' | 'custom' | 'private';
   file: string;
   /** Per case. */
   estimate: { inputTokens: number; outputTokens: number; calls: number };
@@ -89,14 +96,33 @@ export interface ValidateResult {
 
 export type SuiteView = Suite & { fingerprint: string; testCount: number };
 
-export interface EstimateResult {
+export type EstimateBasis = 'measured' | 'measured-other-models' | 'definition';
+
+export interface RunEstimate {
   jobs: number;
   calls: number;
-  perContestant: Array<{ contestantId: string; jobs: number; estCostUsd: number }>;
+  perContestant: Array<{ contestantId: string; jobs: number; estCostUsd: number; estCostUsdHigh: number; manual: boolean }>;
+  perTest: Array<{
+    testId: string;
+    name: string;
+    category: string;
+    cases: number;
+    /** USD for all cases × repeats, keyed by contestant id. */
+    perContestant: Record<string, number>;
+    judgeUsd: number;
+    basis: EstimateBasis;
+  }>;
+  judgeCostUsd: number;
+  /** Central estimate. */
   estCostUsd: number;
+  /** Conservative upper bound. */
+  estCostUsdHigh: number;
   fingerprint: string;
   warnings: string[];
 }
+
+/** @deprecated alias kept for older call sites. */
+export type EstimateResult = RunEstimate;
 
 export interface RunProgress {
   completed: number;
@@ -122,7 +148,10 @@ export interface PingResult {
   error?: string;
 }
 
+export type ReviewReason = 'human-scored' | 'judge-disagreement' | 'second-opinion';
+
 export interface ReviewItem {
+  reason?: ReviewReason;
   runId: string;
   key: string;
   testId: string;
@@ -151,4 +180,29 @@ export interface FinishedCase {
   score: number | null;
   summary: string;
   metrics?: CaseMetrics;
+}
+
+export interface ManualReply {
+  text: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  reasoningTokens?: number;
+  costUsd?: number;
+}
+
+export interface GradeRequest {
+  testId: string;
+  caseId: string;
+  response: string;
+  vendor?: string;
+  judgeIds?: string[];
+}
+
+export interface GradeResult {
+  outcome: { score: number | null; passed: boolean | null; summary: string; detail: ScoreDetail; pendingHuman?: boolean };
+  rendered: RenderedCase;
+  judgeCostUsd: number;
+  judgeTranscript: TranscriptEntry[];
+  artifacts: ArtifactRef[];
+  gradeId: string;
 }

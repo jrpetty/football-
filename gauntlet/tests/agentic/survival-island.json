@@ -1,0 +1,37 @@
+{
+  "kind": "program",
+  "id": "agentic.survival-island",
+  "version": "1.0.0",
+  "program": "survival-island",
+  "name": "Survival Island",
+  "category": "agentic",
+  "description": "A seeded castaway simulation on a 12×12 island: day/night cycle (three actions per day), weather and cold nights, five survival stats (health, food, water, energy, warmth), scarce regrowing resources, crafting (spear, campfire, shelter, signal pile) and hidden hazards such as poisonous berries that can only be recognised by their smell or by eating them. The model sees one compact observation per turn and keeps long-term memory only in a 300-character note it writes itself. Surviving takes steady resource loops; the top score takes discovering the passing ship's schedule (a message in a bottle, sightings) and lighting a signal fire on the summit at the right moment. It separates models that plan multi-day routines and remember discoveries from those that wander, forget, and die of thirst.",
+  "difficulty": "hard",
+  "tags": [
+    "simulation",
+    "planning",
+    "long-horizon",
+    "memory",
+    "resource-management",
+    "seeded"
+  ],
+  "hook": "Twelve days on a desert island: can it find water, dodge the poison berries and signal the passing ship?",
+  "seeds": [
+    101,
+    202,
+    303
+  ],
+  "config": {
+    "maxDays": 12,
+    "inventoryCap": 12
+  },
+  "maxOutputTokens": 8000,
+  "timeLimitSec": 3600,
+  "estimate": {
+    "inputTokens": 52000,
+    "outputTokens": 43000,
+    "calls": 36
+  },
+  "author": "Gauntlet Core",
+  "createdAt": "2026-09-24"
+}

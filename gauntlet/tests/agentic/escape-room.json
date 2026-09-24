@@ -1,0 +1,41 @@
+{
+  "kind": "program",
+  "id": "agentic.escape-room",
+  "version": "1.0.0",
+  "program": "escape-room",
+  "name": "The Escape Room",
+  "category": "agentic",
+  "description": "Three connected rooms of seeded, interlocking puzzles played as a text adventure: keys hidden in furniture, tools that open fixtures, items that must be combined, and code, word and colour locks whose answers are spread across clues — Roman numerals, stopped clocks, coloured counts, book spines, letter-number codes, Caesar ciphers whose shift is given in another room, acrostic poems and colour riddles. Every seed changes which puzzles appear, how each clue is encoded and where everything is, so the reasoning chain itself cannot be memorised. The model has a hard 45-move budget (every command counts) and only a short event log plus its own note as memory. The optimal solution length is computed from each generated world, so efficiency is measured, not guessed.",
+  "difficulty": "hard",
+  "tags": [
+    "puzzle",
+    "text-adventure",
+    "deduction",
+    "planning",
+    "memory",
+    "seeded"
+  ],
+  "hook": "Three locked rooms, 45 moves, and a brand-new chain of ciphers every seed.",
+  "seeds": [
+    101,
+    202,
+    303
+  ],
+  "config": {
+    "locksPerRoom": [
+      2,
+      2,
+      3
+    ],
+    "moveBudget": 45
+  },
+  "maxOutputTokens": 8000,
+  "timeLimitSec": 3600,
+  "estimate": {
+    "inputTokens": 47000,
+    "outputTokens": 45000,
+    "calls": 45
+  },
+  "author": "Gauntlet Core",
+  "createdAt": "2026-09-24"
+}

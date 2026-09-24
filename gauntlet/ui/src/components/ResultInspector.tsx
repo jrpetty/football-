@@ -1,7 +1,7 @@
 /** Drawer listing one contestant's cases for one test; clicking a case loads the full result. */
 import { useEffect, useMemo, useState } from 'react';
 import { api, artifactUrl } from '../api.ts';
-import type { ArtifactRef, CaseResult, CaseResultLite } from '../types.ts';
+import type { ArtifactRef, CaseResult, CaseResultLite, ScoreDetail } from '../types.ts';
 import { fmtBytes, fmtCost, fmtMs, fmtRate, fmtScore, fmtTokens, prettyJson } from '../format.ts';
 import { CopyButton, Drawer, ErrorState, ModelChip, ResultStatusBadge, ScorePill, SkeletonRows, Tabs, cx } from './ui.tsx';
 import { ReplayPlayer } from './ReplayPlayer.tsx';
@@ -18,8 +18,8 @@ export interface InspectorTarget {
 
 type Tab = 'overview' | 'transcript' | 'artifacts' | 'replay';
 
-export function ArtifactView({ runId, art, height = 420 }: { runId: string; art: ArtifactRef; height?: number }) {
-  const url = artifactUrl(runId, art.file);
+export function ArtifactView({ runId, art, height = 420, url: urlOverride }: { runId?: string; art: ArtifactRef; height?: number; url?: string }) {
+  const url = urlOverride ?? (runId ? artifactUrl(runId, art.file) : '');
   return (
     <figure className="artifact">
       <figcaption>
@@ -55,7 +55,11 @@ export function ArtifactView({ runId, art, height = 420 }: { runId: string; art:
 }
 
 function Breakdown({ r }: { r: CaseResult }) {
-  const d = r.scoreDetail ?? {};
+  return <ScoreBreakdownView d={r.scoreDetail ?? {}} passed={r.passed} humanScores={r.humanScores} />;
+}
+
+export function ScoreBreakdownView({ d, passed, humanScores }: { d: ScoreDetail; passed: boolean | null; humanScores?: CaseResult['humanScores'] }) {
+  const r = { passed, humanScores };
   const known = new Set(['extracted', 'expected', 'formatOk', 'items', 'judge', 'notes']);
   const extra = Object.entries(d).filter(([k]) => !known.has(k));
   return (

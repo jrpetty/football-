@@ -15,6 +15,7 @@ import {
   constantResponder,
   createFakeModel,
   createTestContext,
+  mockBaselineResponder,
   randomBacktickResponder,
 } from './helpers/fake-model.ts';
 import type { Responder } from './helpers/fake-model.ts';
@@ -142,6 +143,19 @@ test('liars-table: random-backtick policy scores low on average', async () => {
   }
   const mean = total / n;
   assert.ok(mean < 0.3, `random policy mean ${mean}`);
+});
+
+test('liars-table: the real Random Baseline (mock provider behaviour) scores low', async () => {
+  let total = 0;
+  let accused = 0;
+  const n = 30;
+  for (let seed = 1; seed <= n; seed++) {
+    const { result } = await play(seed, mockBaselineResponder(`baseline-${seed}`));
+    total += result.score;
+    if ((result.detail as { accused: string | null }).accused) accused++;
+  }
+  assert.ok(total / n < 0.3, `baseline mean ${total / n}`);
+  assert.equal(accused, n, 'the baseline can always play to an accusation');
 });
 
 test('liars-table: a correct blind guess earns no efficiency credit; a wrong one scores 0', async () => {

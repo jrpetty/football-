@@ -10,8 +10,11 @@ import type {
   CaseResultLite,
   Contestant,
   ContestantView,
-  EstimateResult,
+  GradeRequest,
+  GradeResult,
   Leaderboard,
+  ManualReply,
+  ManualRequest,
   Meta,
   PingResult,
   ReviewItem,
@@ -19,6 +22,7 @@ import type {
   RunDetail,
   RunEvent,
   RunListItem,
+  RunEstimate,
   RunRequest,
   SuiteView,
   TestDefinition,
@@ -110,17 +114,28 @@ export const api = {
   suites: () => request<SuiteView[]>('GET', '/api/suites'),
 
   // Runs
-  estimate: (req: RunRequest) => request<EstimateResult>('POST', '/api/estimate', req),
+  estimate: (req: RunRequest) => request<RunEstimate>('POST', '/api/estimate', req),
+  costs: (suiteId: string, repeats: number, models?: string[]) =>
+    request<RunEstimate>('GET', `/api/costs?suite=${enc(suiteId)}&repeats=${repeats}${models && models.length ? `&models=${models.map(enc).join(',')}` : ''}`),
   startRun: (req: RunRequest) => request<{ runId: string }>('POST', '/api/runs', req),
   runs: () => request<RunListItem[]>('GET', '/api/runs'),
   run: (id: string) => request<RunDetail>('GET', `/api/runs/${enc(id)}`),
   result: (runId: string, key: string) => request<CaseResult>('GET', `/api/runs/${enc(runId)}/results/${enc(key)}`),
   cancelRun: (id: string) => request<{ ok: true }>('POST', `/api/runs/${enc(id)}/cancel`),
-  resumeRun: (id: string) => request<{ ok: true }>('POST', `/api/runs/${enc(id)}/resume`),
+  /** `maxCostUsd`: undefined keeps the current cap, a number sets a new cap, null removes it. */
+  resumeRun: (id: string, maxCostUsd?: number | null) => request<{ ok: true }>('POST', `/api/runs/${enc(id)}/resume`, maxCostUsd === undefined ? {} : { maxCostUsd }),
   deleteRun: (id: string) => request<{ ok: true }>('DELETE', `/api/runs/${enc(id)}`),
 
   // Leaderboard
   leaderboard: (suiteId: string) => request<Leaderboard>('GET', `/api/leaderboard?suite=${enc(suiteId)}`),
+
+  // Manual (copy & paste) contestants
+  manualQueue: (runId?: string) => request<ManualRequest[]>('GET', `/api/manual${runId ? `?runId=${enc(runId)}` : ''}`),
+  manualSubmit: (requestId: string, reply: ManualReply) => request<{ ok: true }>('POST', `/api/manual/${enc(requestId)}`, reply),
+  manualFail: (requestId: string, reason?: string) => request<{ ok: true }>('POST', `/api/manual/${enc(requestId)}/fail`, { reason }),
+
+  // Grade a pasted reply (no run)
+  grade: (req: GradeRequest) => request<GradeResult>('POST', '/api/grade', req),
 
   // Human review
   reviewQueue: (testId?: string) => request<ReviewItem[]>('GET', `/api/review/queue${testId ? `?testId=${enc(testId)}` : ''}`),
@@ -131,6 +146,12 @@ export const api = {
 export function exportUrl(runId: string, format: 'csv' | 'json'): string {
   if (MOCK) return mockArtifactUrls.get(`export:${runId}:${format}`) ?? '#';
   return `/api/runs/${enc(runId)}/export.${format}`;
+}
+
+/** URL of an artifact produced by the Grader (`/api/graded/<file>`). */
+export function gradedUrl(file: string): string {
+  if (MOCK) return mockArtifactUrls.get(`graded/${file}`) ?? '';
+  return `/api/graded/${enc(file)}`;
 }
 
 /** URL of a stored artifact (HTML/SVG/PNG/…) for iframes and images. */
@@ -149,7 +170,7 @@ export interface RunStreamHandlers {
   onDisconnect?: () => void;
 }
 
-const EVENT_TYPES: RunEvent['type'][] = ['run.status', 'run.progress', 'job.started', 'job.delta', 'job.step', 'job.finished', 'log'];
+const EVENT_TYPES: RunEvent['type'][] = ['run.status', 'run.progress', 'job.started', 'job.delta', 'job.step', 'job.finished', 'log', 'manual.request', 'manual.resolved'];
 
 /**
  * Subscribe to `/api/runs/:id/events`. Reconnects automatically (EventSource

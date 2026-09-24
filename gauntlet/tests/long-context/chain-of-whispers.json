@@ -1,0 +1,19 @@
+{
+  "kind": "program",
+  "id": "long-context.chain-of-whispers",
+  "version": "1.0.0",
+  "program": "chain-of-whispers",
+  "name": "Chain of Whispers",
+  "category": "long-context",
+  "description": "A seeded ~470-word story holding 12 checkable facts — names with their roles, numbers with their units, a date, places and one odd detail — is summarised to at most 100 words and then rebuilt into a ~450-word story, three times over. Every step runs in a fresh context that sees only the previous output, like a game of telephone. A fact survives only if its keywords still appear together in one sentence. Measures how precisely a model compresses and reconstructs meaning, and how fast its details decay.",
+  "difficulty": "medium",
+  "tags": ["summarisation", "memory", "information-decay", "telephone", "seeded"],
+  "hook": "Six rewrites, no memory. How many of the 12 facts make it to the end?",
+  "seeds": [404, 505, 606],
+  "config": { "cycles": 3, "summaryWords": 100, "storyWords": 450, "storyMaxWords": 500, "storyMinWords": 300, "story": "auto" },
+  "maxOutputTokens": 8000,
+  "timeLimitSec": 900,
+  "estimate": { "inputTokens": 3600, "outputTokens": 15000, "calls": 6 },
+  "author": "Gauntlet Core",
+  "createdAt": "2026-09-24"
+}
