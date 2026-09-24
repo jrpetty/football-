@@ -64,6 +64,10 @@ The **Live Arena** streams every model's output side by side while it works.
 | **Cost Planner** | Estimated cost of every test for every model, before you spend anything. |
 | **Blind Review** | Rate open-ended outputs (games, illustrations) side by side with identities hidden, and arbitrate cases where the judges disagreed. |
 | **Methodology** | The scoring and reproducibility rules, generated from the live configuration. |
+| **New Model Day** | A model just launched: add it, ping it, see what each suite costs, run it under a cap, get its rank and video title ideas. |
+| **History** | Gauntlet Index against release date, one line per model family, with the biggest jumps. |
+| **Viewer Challenge** | Import viewer questions (Google Form CSV), review them, write a private held-out test, present "submitted by @name" slides. |
+| **Publish** | Export a free static leaderboard website with your channel branding (GitHub Pages / Netlify Drop). |
 
 Press **B** anywhere for **Broadcast mode**: chrome hidden, large type, 16:9-friendly layout.
 
@@ -87,6 +91,9 @@ node src/cli.ts leaderboard --suite core       # combined across all runs
 node src/cli.ts ping claude-opus-5             # smoke-test a model/key
 node src/cli.ts discover openai                # model ids available to your key
 node src/cli.ts validate                       # validate every test, suite and model
+node src/cli.ts publish --suite core,frontier --zip   # public leaderboard website (docs/PUBLISHING.md)
+node src/cli.ts newmodel --provider openai --model gpt-6 --label "GPT-6"   # New Model Day wizard
+node src/cli.ts challenge import responses.csv     # viewer challenge -> review queue -> private test
 ```
 
 Runs started from the CLI appear in the dashboard, and the reverse.
@@ -169,6 +176,11 @@ Index       = 100 × weighted mean of categories        (95% CI via cluster boot
 The full rules are in **[docs/METHODOLOGY.md](docs/METHODOLOGY.md)**: protocol, temperature/effort
 policy, retries, refusals (no silent fallbacks), judges, metrics definitions, reproducibility and a
 publishing checklist.
+
+## Channel tools
+
+New Model Day, model History, the Viewer Challenge and the public website are described in
+**[docs/CHANNEL.md](docs/CHANNEL.md)** and **[docs/PUBLISHING.md](docs/PUBLISHING.md)** (step by step, for Windows).
 
 ## Adding tests and models
 

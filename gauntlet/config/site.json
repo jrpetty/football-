@@ -1,0 +1,15 @@
+{
+  "channelName": "Gauntlet",
+  "tagline": "Independent AI model benchmarks: same tests, same seeds, every model.",
+  "logo": "",
+  "youtubeUrl": "",
+  "accentColor": "#6366F1",
+  "suites": [
+    "core",
+    "frontier"
+  ],
+  "siteUrl": "",
+  "submissionFormUrl": "",
+  "season": "2026-s1",
+  "footerNote": ""
+}

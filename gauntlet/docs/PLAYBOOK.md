@@ -56,6 +56,9 @@ This checks the install, the dashboard, the Live Arena and the replays without s
 
 ## 6. Publish
 
+* **Publish** (dashboard) or `node src/cli.ts publish --zip` exports your public leaderboard website; put it
+  online free with Netlify Drop or GitHub Pages ([PUBLISHING.md](PUBLISHING.md)). New model launched? Use
+  **New Model Day** ([CHANNEL.md](CHANNEL.md)).
 * `node src/cli.ts report <runId> --format md` produces a Markdown leaderboard for the video description.
 * **Export JSON** gives the full manifest, every prompt, response and score, and the fingerprint for anyone
   who wants to audit.

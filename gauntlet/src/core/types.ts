@@ -84,6 +84,12 @@ export interface Contestant {
   options?: ContestantOptions;
   contextWindow?: number;
   notes?: string;
+  /** Model family for the History page, e.g. "Claude", "GPT", "Gemini" (optional). */
+  family?: string;
+  /** Public release date (YYYY-MM-DD) for the History page (optional). */
+  releaseDate?: string;
+  /** Size tier within its family (optional). */
+  tier?: 'flagship' | 'mid' | 'small';
 }
 
 /** Contestant plus derived runtime info (never includes secrets). */
@@ -175,6 +181,11 @@ export interface TestBase {
   estimate?: { inputTokens: number; outputTokens: number; calls?: number };
   author?: string;
   createdAt?: string;
+  /**
+   * Public website: false hides this test's example prompt (the test is still listed). Held-out tests in
+   * tests/private/ are never published. Not part of the test hash, so toggling it keeps old results valid.
+   */
+  publishPrompts?: boolean;
 }
 
 export type NormalizeMode = 'none' | 'trim' | 'lower' | 'alnum';
@@ -290,6 +301,8 @@ export interface Suite {
   categoryWeights?: Record<string, number>;
   /** Default repeats per case when running this suite. */
   repeats?: number;
+  /** Public website: false hides the example prompts of every test in this suite. */
+  publishPrompts?: boolean;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

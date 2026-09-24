@@ -81,6 +81,11 @@ export function programSourceHash(programId: string): string {
 
 /** Content hash of a test: definition + (for programs) program source code. */
 export function computeTestHash(def: TestDefinition): string {
+  // publishPrompts only controls the public website, never what models see: keep it out of the hash.
+  if (def && typeof def === 'object' && 'publishPrompts' in def) {
+    const { publishPrompts: _publish, ...rest } = def;
+    def = rest as TestDefinition;
+  }
   if (def.kind === 'program') return contentHash({ def, program: programSourceHash(def.program) });
   return contentHash(def);
 }

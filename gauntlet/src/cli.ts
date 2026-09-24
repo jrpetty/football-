@@ -87,6 +87,15 @@ Usage: node src/cli.ts <command> [options]
   ping <modelId>                             Send a one-word request to check a model works
   discover <providerId>                      List model ids available to your API key
 
+Channel tools:
+  publish [--suite core,frontier] [--out ./site] [--zip]
+                                             Export the public leaderboard website (static files)
+  newmodel [--provider openai --model gpt-6 --label "GPT-6" --input-price 5 --output-price 20]
+           [--suites quick,core] [--max-cost 10] [--yes]
+                                             New Model Day: add, ping, price, run and rank a new model
+  challenge import <file.csv|json> [--season 2026-s1] | list | write [--category reasoning]
+                                             Viewer challenge: review queue -> private test
+
 API keys are read from the environment or gauntlet/.env (see .env.example).`;
 
 async function confirm(question: string): Promise<boolean> {
@@ -468,6 +477,14 @@ async function main(): Promise<void> {
     case 'discover': {
       const models = await discoverModels(positional[0] ?? '');
       console.log(models.join('\n'));
+      return;
+    }
+
+    case 'publish':
+    case 'newmodel':
+    case 'challenge': {
+      const { runChannelCommand } = await import('./channel/cli.ts');
+      await runChannelCommand(command, positional, flags);
       return;
     }
 

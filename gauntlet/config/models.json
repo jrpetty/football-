@@ -118,7 +118,9 @@
         "cacheWritePerM": 12.5,
         "source": "Anthropic API pricing (claude-api reference, 2026-06-24)",
         "verifiedAt": "2026-06-24"
-      }
+      },
+      "family": "Claude",
+      "tier": "flagship"
     },
     {
       "id": "claude-opus-5-5",
@@ -140,7 +142,9 @@
         "cacheWritePerM": 5,
         "source": "Anthropic API pricing (claude-api reference, 2026-06-24)",
         "verifiedAt": "2026-06-24"
-      }
+      },
+      "family": "Claude",
+      "tier": "flagship"
     },
     {
       "id": "claude-opus-5",
@@ -162,7 +166,9 @@
         "cacheWritePerM": 6.25,
         "source": "Anthropic API pricing (claude-api reference, 2026-06-24)",
         "verifiedAt": "2026-06-24"
-      }
+      },
+      "family": "Claude",
+      "tier": "flagship"
     },
     {
       "id": "claude-sonnet-5",
@@ -184,7 +190,9 @@
         "cacheWritePerM": 2.5,
         "source": "Anthropic API pricing (claude-api reference, 2026-06-24)",
         "verifiedAt": "2026-06-24"
-      }
+      },
+      "family": "Claude",
+      "tier": "mid"
     },
     {
       "id": "claude-haiku-4-5",
@@ -206,7 +214,10 @@
         "cacheWritePerM": 1.25,
         "source": "Anthropic API pricing (claude-api reference, 2026-06-24)",
         "verifiedAt": "2026-06-24"
-      }
+      },
+      "family": "Claude",
+      "tier": "small",
+      "releaseDate": "2025-10-15"
     },
     {
       "id": "gpt-5.6-sol",
@@ -227,7 +238,9 @@
         "source": "Third-party price trackers, Sep 2026 — verify on openai.com/api/pricing",
         "verifiedAt": null
       },
-      "notes": "Model id and price taken from third-party sources. Confirm with Models → Discover and OpenAI's pricing page before publishing results."
+      "notes": "Model id and price taken from third-party sources. Confirm with Models → Discover and OpenAI's pricing page before publishing results.",
+      "family": "GPT",
+      "tier": "flagship"
     },
     {
       "id": "gpt-5.6-terra",
@@ -248,7 +261,9 @@
         "source": "Third-party price trackers disagree ($2/$12 vs $2.50/$15) — verify on openai.com/api/pricing",
         "verifiedAt": null
       },
-      "notes": "Conflicting third-party prices. Verify before publishing cost figures."
+      "notes": "Conflicting third-party prices. Verify before publishing cost figures.",
+      "family": "GPT",
+      "tier": "mid"
     },
     {
       "id": "gpt-5.6-luna",
@@ -269,7 +284,9 @@
         "source": "Third-party price trackers disagree ($0.20/$1.20 vs $1/$6) — verify on openai.com/api/pricing",
         "verifiedAt": null
       },
-      "notes": "Conflicting third-party prices. Verify before publishing cost figures."
+      "notes": "Conflicting third-party prices. Verify before publishing cost figures.",
+      "family": "GPT",
+      "tier": "small"
     },
     {
       "id": "gemini-3.1-pro",
@@ -290,7 +307,9 @@
         "cachedInputPerM": 0.2,
         "source": "Third-party price trackers, Sep 2026 (≤200K-token prompts) — verify on ai.google.dev/pricing",
         "verifiedAt": null
-      }
+      },
+      "family": "Gemini",
+      "tier": "flagship"
     },
     {
       "id": "gemini-3.5-flash",
@@ -311,7 +330,9 @@
         "cachedInputPerM": 0.15,
         "source": "Third-party price trackers, Sep 2026 — verify on ai.google.dev/pricing",
         "verifiedAt": null
-      }
+      },
+      "family": "Gemini",
+      "tier": "mid"
     },
     {
       "id": "grok-4.7",
@@ -330,7 +351,9 @@
         "cachedInputPerM": 0.5,
         "source": "Third-party price trackers, Sep 2026 (<200K prompts) — verify on docs.x.ai",
         "verifiedAt": null
-      }
+      },
+      "family": "Grok",
+      "tier": "flagship"
     },
     {
       "id": "deepseek-v4-flash",
@@ -349,7 +372,9 @@
         "cachedInputPerM": 0.006,
         "source": "Third-party price trackers, Sep 2026 (peak-hour rate; off-peak is 50% less) — verify on api-docs.deepseek.com",
         "verifiedAt": null
-      }
+      },
+      "family": "DeepSeek",
+      "tier": "mid"
     },
     {
       "id": "claude-fable-5",
@@ -371,7 +396,9 @@
         "cacheWritePerM": 12.5,
         "source": "Anthropic API pricing (claude-api reference, 2026-06-24)",
         "verifiedAt": "2026-06-24"
-      }
+      },
+      "family": "Claude",
+      "tier": "flagship"
     },
     {
       "id": "claude-opus-4-8",
@@ -393,7 +420,9 @@
         "cacheWritePerM": 6.25,
         "source": "Anthropic API pricing (claude-api reference, 2026-06-24)",
         "verifiedAt": "2026-06-24"
-      }
+      },
+      "family": "Claude",
+      "tier": "flagship"
     },
     {
       "id": "claude-opus-4-7",
@@ -415,7 +444,9 @@
         "cacheWritePerM": 6.25,
         "source": "Anthropic API pricing (claude-api reference, 2026-06-24)",
         "verifiedAt": "2026-06-24"
-      }
+      },
+      "family": "Claude",
+      "tier": "flagship"
     },
     {
       "id": "claude-opus-4-6",
@@ -437,7 +468,10 @@
         "cacheWritePerM": 6.25,
         "source": "Anthropic API pricing (claude-api reference, 2026-06-24)",
         "verifiedAt": "2026-06-24"
-      }
+      },
+      "family": "Claude",
+      "tier": "flagship",
+      "releaseDate": "2026-02-05"
     },
     {
       "id": "claude-sonnet-4-6",
@@ -459,7 +493,9 @@
         "cacheWritePerM": 3.75,
         "source": "Anthropic API pricing (claude-api reference, 2026-06-24)",
         "verifiedAt": "2026-06-24"
-      }
+      },
+      "family": "Claude",
+      "tier": "mid"
     },
     {
       "id": "gpt-5.5",
@@ -479,7 +515,9 @@
         "cachedInputPerM": 0.5,
         "source": "Third-party price trackers, Sep 2026 — verify on openai.com/api/pricing",
         "verifiedAt": null
-      }
+      },
+      "family": "GPT",
+      "tier": "flagship"
     },
     {
       "id": "gpt-5",
@@ -499,7 +537,10 @@
         "cachedInputPerM": 0.125,
         "source": "OpenAI launch pricing (Aug 2025) — verify on openai.com/api/pricing",
         "verifiedAt": null
-      }
+      },
+      "family": "GPT",
+      "tier": "flagship",
+      "releaseDate": "2025-08-07"
     },
     {
       "id": "gpt-5-mini",
@@ -519,7 +560,10 @@
         "cachedInputPerM": 0.025,
         "source": "OpenAI launch pricing (Aug 2025) — verify on openai.com/api/pricing",
         "verifiedAt": null
-      }
+      },
+      "family": "GPT",
+      "tier": "mid",
+      "releaseDate": "2025-08-07"
     },
     {
       "id": "gpt-4o",
@@ -539,7 +583,10 @@
         "source": "OpenAI pricing (2024–2025) — verify on openai.com/api/pricing",
         "verifiedAt": null
       },
-      "notes": "Non-reasoning model from 2024: a useful historical reference point."
+      "notes": "Non-reasoning model from 2024: a useful historical reference point.",
+      "family": "GPT",
+      "tier": "flagship",
+      "releaseDate": "2024-05-13"
     },
     {
       "id": "gemini-2.5-pro",
@@ -560,7 +607,10 @@
         "source": "Google pricing 2025 (≤200K prompts) — verify on ai.google.dev/pricing",
         "verifiedAt": null
       },
-      "notes": "Uses Gemini 2.5's default dynamic thinking (thinkingLevel is a Gemini 3+ setting)."
+      "notes": "Uses Gemini 2.5's default dynamic thinking (thinkingLevel is a Gemini 3+ setting).",
+      "family": "Gemini",
+      "tier": "flagship",
+      "releaseDate": "2025-03-25"
     },
     {
       "id": "gemini-2.5-flash",
@@ -580,7 +630,10 @@
         "cachedInputPerM": 0.075,
         "source": "Google pricing 2025 — verify on ai.google.dev/pricing",
         "verifiedAt": null
-      }
+      },
+      "family": "Gemini",
+      "tier": "mid",
+      "releaseDate": "2025-04-17"
     },
     {
       "id": "grok-4",
@@ -599,7 +652,10 @@
         "cachedInputPerM": 0.75,
         "source": "xAI pricing 2025 — verify on docs.x.ai",
         "verifiedAt": null
-      }
+      },
+      "family": "Grok",
+      "tier": "flagship",
+      "releaseDate": "2025-07-09"
     },
     {
       "id": "manual-chat",

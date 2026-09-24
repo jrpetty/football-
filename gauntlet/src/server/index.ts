@@ -46,6 +46,7 @@ import { browserAvailable } from '../scoring/browser.ts';
 import { createAdapter, discoverModels } from '../providers/index.ts';
 import { callWithRetry } from '../engine/recorder.ts';
 import { Semaphore } from '../engine/semaphore.ts';
+import { registerChannelRoutes } from '../channel/routes.ts';
 
 class HttpError extends Error {
   status: number;
@@ -530,6 +531,9 @@ function serveStatic(pathname: string, res: ServerResponse): void {
   res.writeHead(200, { 'content-type': type, 'cache-control': immutable ? 'public, max-age=31536000, immutable' : 'no-cache' });
   res.end(readFileSync(file));
 }
+
+// Channel tools: public site, New Model Day, history, viewer challenge (src/channel/).
+registerChannelRoutes(route, (status, message, details) => new HttpError(status, message, details), STREAMING);
 
 // ─────────────────────────────────────────────────────────────────────────────
 

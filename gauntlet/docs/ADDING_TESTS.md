@@ -62,6 +62,10 @@ Rules that keep tests fair and reproducible:
 * Put the derivation of every answer in `notes`. Notes are never sent to models.
 * Prefer original problems. Anything that has appeared verbatim on the internet may have been memorised.
 * Aim for discrimination: include a hard tail that top models sometimes miss.
+* Want to keep using a test without models memorising it? Add `"publishPrompts": false` (to the test or to a
+  suite) and the public website shows no example prompt for it. This flag is not part of the test hash, so
+  adding it keeps your results. Tests in `tests/private/` are never published at all
+  ([PUBLISHING.md](PUBLISHING.md)).
 
 ### Scorer reference
 

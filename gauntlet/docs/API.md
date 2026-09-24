@@ -129,3 +129,30 @@ Show `combinedPrompt` for a **new** chat (it includes any system prompt and earl
 |---|---|---|---|
 | GET | `/api/review/queue?testId=` | – | `Array<{ runId, key, testId, caseId, contestantId, status, score, humanScores, reason: 'human-scored' \| 'judge-disagreement' \| 'second-opinion' }>` — `human` scorer tests, results where the judge panel disagreed (the human rating becomes the final score) and artifact tests (anonymise in UI) |
 | POST | `/api/review/score` | `{ runId, key, score: number /* 0..1 */, rater: string, note?: string }` | `CaseResultLite` |
+
+## Channel tools
+
+Shapes are in [`src/channel/types.ts`](../src/channel/types.ts). None of these routes calls a model: the
+New Model Day ping uses `POST /api/contestants/:id/ping` and runs use `POST /api/runs` (with `maxCostUsd`).
+
+| Method | Path | Body | Returns |
+|---|---|---|---|
+| GET | `/api/channel/site` | – | `SiteConfig` (`config/site.json` merged over defaults) |
+| PUT | `/api/channel/site` | `Partial<SiteConfig>` | `SiteConfig` |
+| POST | `/api/channel/publish` | `{ suites?: string[], zip?: boolean }` | `PublishResult` — writes the static site to `gauntlet/site` (and `site.zip`) |
+| GET | `/api/channel/publish.zip?suites=core,frontier` | – | the site as a zip download |
+| GET | `/api/channel/preview/<path>` | – | files of the last export (open `/api/channel/preview/index.html`) |
+| POST | `/api/channel/newmodel/prepare` | `NewModelInput` | `NewModelPrepared` — adds/updates the contestant, checks the id against the provider's model list |
+| GET | `/api/channel/newmodel/:id/costs?repeats=` | – | `NewModelSuiteCost[]` for quick, core, frontier |
+| GET | `/api/channel/newmodel/:id/headline?suite=core` | – | `NewModelHeadline` — rank on the combined leaderboard, neighbours, best/worst category, title ideas |
+| GET | `/api/channel/history?suite=core&metric=index&tiers=flagship` | – | `HistoryData` (`metric` = `index` or a category id) |
+| GET | `/api/channel/challenge?season=` | – | `{ seasons: string[], queue: ChallengeQueue }` |
+| POST | `/api/channel/challenge/:season/import` | `{ text: string, format?: 'csv' \| 'json' \| 'auto' }` | `ChallengeImportResult` |
+| PUT | `/api/channel/challenge/:season/items/:id` | `{ question?, answer?, answerType?, alternatives?, viewerName?, viewerHandle?, notes?, credit?, status? }` | `ChallengeQueue` (400 when approving an item with errors) |
+| DELETE | `/api/channel/challenge/:season/items/:id` | – | `ChallengeQueue` |
+| POST | `/api/channel/challenge/:season/write` | `{ category?: string }` | `ChallengeWriteResult` — writes `tests/private/viewer-challenge-<season>.json` |
+| GET | `/api/channel/challenge/:season/slides` | – | `ChallengeSlide[]` — approved questions with the latest outcome per model |
+
+Contestants accept three optional fields used by History and the public site: `family`, `releaseDate`
+(YYYY-MM-DD) and `tier` (`flagship` \| `mid` \| `small`). Tests and suites accept `publishPrompts: false`
+(hide example prompts on the public site; not part of the test hash).
