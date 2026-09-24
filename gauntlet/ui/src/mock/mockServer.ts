@@ -53,6 +53,7 @@ import {
   summaryOf,
 } from './fixtures.ts';
 import type { MockRun, RunSpec } from './fixtures.ts';
+import { mockExport, mockOverlay, mockPolish, mockPolishEstimate, mockStudio } from './studioMock.ts';
 
 const contestants: ContestantView[] = CONTESTANTS.map((c) => ({ ...c }));
 const tests: TestDefinition[] = [...TESTS];
@@ -875,6 +876,29 @@ export async function handle(method: string, fullPath: string, body: unknown): P
         }
       }
       return out;
+    }
+    case 'GET studio':
+    case 'POST studio':
+    case 'GET overlay': {
+      // Studio & OBS overlays (see studioMock.ts); "latest" = the live run, else the newest.
+      const all = [...specs.values()].sort((x, y) => y.createdAt.localeCompare(x.createdAt));
+      const id = b === 'latest' ? (all.find((s) => s.status === 'running') ?? all[0])?.id ?? '' : b;
+      const run = getRun(id);
+      if (a === 'overlay') {
+        if (run.manifest.status === 'running') ensureSim(id);
+        return mockOverlay(run, tests, !!sims.get(id)?.timer);
+      }
+      const payload = mockStudio(run, tests, contestants);
+      if (method === 'GET') return payload;
+      const req = (body ?? {}) as { modelId?: string; text?: string };
+      if (c === 'polish' && d === 'estimate') return mockPolishEstimate(contestants, req.modelId ?? '', req.text ?? '');
+      if (c === 'polish') {
+        await delay(1400);
+        return mockPolish(contestants, payload, req.modelId ?? '', req.text ?? '');
+      }
+      if (c === 'render') throw new ApiError('Demo mode: PNGs are rendered in your browser.', 409, { fallback: 'browser' });
+      if (c === 'export') return mockExport(payload);
+      throw new ApiError('Not found', 404);
     }
     case 'POST review': {
       const req = body as ReviewScoreRequest;

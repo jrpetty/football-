@@ -64,6 +64,7 @@ The **Live Arena** streams every model's output side by side while it works.
 | **Cost Planner** | Estimated cost of every test for every model, before you spend anything. |
 | **Blind Review** | Rate open-ended outputs (games, illustrations) side by side with identities hidden, and arbitrate cases where the judges disagreed. |
 | **Methodology** | The scoring and reproducibility rules, generated from the live configuration. |
+| **Studio** | Turn a run into video material: ranked highlights with deep links to the exact replay step, a narration script with Presenter cues, YouTube thumbnails and Shorts cards (PNG), and transparent OBS overlays (`/overlay/latest?view=scoreboard`). See [docs/PLAYBOOK.md](docs/PLAYBOOK.md#4b-making-the-video-studio). |
 
 Press **B** anywhere for **Broadcast mode**: chrome hidden, large type, 16:9-friendly layout.
 

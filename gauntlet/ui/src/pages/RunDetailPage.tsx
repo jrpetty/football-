@@ -99,6 +99,11 @@ export default function RunDetailPage({ runId }: { runId: string }) {
                 <Icon.Present /> Present
               </Link>
             )}
+            {d.results.length > 0 && (
+              <Link to={pathOf('studio', runId)} className="btn" title="Studio: highlights, video script, thumbnails and OBS overlays for this run">
+                <Icon.Clapper /> Studio
+              </Link>
+            )}
             {resumable && (
               <button className="btn primary" onClick={() => setResumeOpen(true)} disabled={busy}>
                 <Icon.Refresh /> Resume

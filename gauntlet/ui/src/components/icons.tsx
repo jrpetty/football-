@@ -328,4 +328,18 @@ export const Icon = {
       <circle cx="12" cy="12" r="1" />
     </Svg>
   ),
+  Clapper: (p: P) => (
+    <Svg {...p}>
+      <path d="M3 10h18v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-9Z" />
+      <path d="M3 10 4.2 5.6a2 2 0 0 1 2.4-1.4L20 7.8 21 10" />
+      <path d="m8 5 2.5 4.5M13.5 6.4 16 10.2" />
+    </Svg>
+  ),
+  Image: (p: P) => (
+    <Svg {...p}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <circle cx="9" cy="10" r="2" />
+      <path d="m21 16-5-5-9 9" />
+    </Svg>
+  ),
 };

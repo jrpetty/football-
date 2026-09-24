@@ -8,6 +8,7 @@ import { ReplayPlayer } from './ReplayPlayer.tsx';
 import { TranscriptView } from './Transcript.tsx';
 import { Icon } from './icons.tsx';
 import { useViewerCaption } from '../context.tsx';
+import { useRoute } from '../router.tsx';
 
 export interface InspectorTarget {
   testId: string;
@@ -184,6 +185,9 @@ function ResultDetail({ runId, lite, names, target }: { runId: string; lite: Cas
   const [err, setErr] = useState<Error | null>(null);
   const [tab, setTab] = useState<Tab>('overview');
   const [nonce, setNonce] = useState(0);
+  // Deep links from the Studio open a replay at a given step (?step=14).
+  const stepQ = Number(useRoute().query.get('step'));
+  const startStep = Number.isFinite(stepQ) && stepQ > 0 ? stepQ : undefined;
 
   useEffect(() => {
     let alive = true;
@@ -256,7 +260,9 @@ function ResultDetail({ runId, lite, names, target }: { runId: string; lite: Cas
       )}
       {tab === 'replay' && res.replay && (
         <ReplayPlayer
+          key={startStep ?? 0}
           replay={res.replay}
+          startStep={startStep}
           context={{
             testName: target?.testName ?? res.testId,
             modelLabel: target?.contestantLabel ?? res.contestantId,

@@ -30,6 +30,7 @@ import type {
   TestSummary,
   ValidateResult,
 } from './types.ts';
+import type { CardSpec, CardStyle, ExportResult, OverlayData, PolishEstimate, PolishResult, RenderResult, StudioPayload } from './types.ts';
 import { mockArtifactUrls } from './mock/registry.ts';
 
 export class ApiError extends Error {
@@ -140,6 +141,14 @@ export const api = {
   // Human review
   reviewQueue: (testId?: string) => request<ReviewItem[]>('GET', `/api/review/queue${testId ? `?testId=${enc(testId)}` : ''}`),
   reviewScore: (body: ReviewScoreRequest) => request<CaseResultLite>('POST', '/api/review/score', body),
+
+  // Studio (video kit) and OBS overlays — `runId` may be "latest"
+  studio: (runId: string) => request<StudioPayload>('GET', `/api/studio/${enc(runId)}`),
+  studioPolishEstimate: (runId: string, modelId: string, text: string) => request<PolishEstimate>('POST', `/api/studio/${enc(runId)}/polish/estimate`, { modelId, text }),
+  studioPolish: (runId: string, modelId: string, text: string, confirmCostUsd: number) => request<PolishResult>('POST', `/api/studio/${enc(runId)}/polish`, { modelId, text, confirmCostUsd }),
+  studioRender: (runId: string, spec: CardSpec) => request<RenderResult>('POST', `/api/studio/${enc(runId)}/render`, { spec }),
+  studioExport: (runId: string, body: { style?: CardStyle; headline?: string; markdown?: string; text?: string }) => request<ExportResult>('POST', `/api/studio/${enc(runId)}/export`, body),
+  overlay: (runId: string) => request<OverlayData>('GET', `/api/overlay/${enc(runId)}`),
 };
 
 /** Download link for a run export. */

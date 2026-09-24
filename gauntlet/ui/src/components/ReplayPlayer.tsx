@@ -140,11 +140,11 @@ export function FrameNarration({ frame, large }: { frame: ReplayFrame; large?: b
   );
 }
 
-export function ReplayPlayer({ replay, autoPlay = false, context }: { replay: ReplayData; autoPlay?: boolean; context?: ReplayContext }) {
+export function ReplayPlayer({ replay, autoPlay = false, context, startStep }: { replay: ReplayData; autoPlay?: boolean; context?: ReplayContext; startStep?: number }) {
   const frames = useMemo(() => replay.frames ?? [], [replay.frames]);
   const { broadcast } = usePrefs();
-  const [idx, setIdx] = useState(0);
-  const [playing, setPlaying] = useState((autoPlay || broadcast) && frames.length > 1);
+  const [idx, setIdx] = useState(() => (startStep === undefined ? 0 : Math.max(0, frames.findIndex((f) => f.step >= startStep))));
+  const [playing, setPlaying] = useState((autoPlay || broadcast) && frames.length > 1 && startStep === undefined);
   const [speed, setSpeed] = useState(1);
   const [isFs, setIsFs] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);

@@ -21,6 +21,7 @@ import type {
 } from '../../src/core/types.ts';
 
 export type * from '../../src/core/types.ts';
+export type * from '../../src/media/types.ts';
 
 export interface Settings {
   judges: string[];
