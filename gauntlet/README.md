@@ -69,6 +69,7 @@ The **Live Arena** streams every model's output side by side while it works.
 | **History** | Gauntlet Index against release date, one line per model family, with the biggest jumps. |
 | **Viewer Challenge** | Import viewer questions (Google Form CSV), review them, write a private held-out test, present "submitted by @name" slides. |
 | **Publish** | Export a free static leaderboard website with your channel branding (GitHub Pages / Netlify Drop). |
+| **Studio** | Turn a run into video material: ranked highlights with deep links to the exact replay step, a narration script with Presenter cues, YouTube thumbnails and Shorts cards (PNG), and transparent OBS overlays (`/overlay/latest?view=scoreboard`). See [docs/PLAYBOOK.md](docs/PLAYBOOK.md#4b-making-the-video-studio). |
 
 Press **B** anywhere for **Broadcast mode**: chrome hidden, large type, 16:9-friendly layout.
 

@@ -137,6 +137,23 @@ Show `combinedPrompt` for a **new** chat (it includes any system prompt and earl
 |---|---|---|
 | GET | `/api/leaderboard?suite=core` | `Leaderboard` combining the most recent valid result for every (contestant, test, case, repeat) across all runs. Results whose test hash or contestant config hash no longer match are excluded (`staleExcluded`). |
 
+## Studio (video kit) and OBS overlays
+
+`:runId` may be `latest` (the run in progress, else the newest run). Shapes are in
+[`src/media/types.ts`](../src/media/types.ts).
+
+| Method | Path | Body | Returns |
+|---|---|---|---|
+| GET | `/api/studio/:runId` | – | `StudioPayload`: ranked `highlights` (type, title, why, evidence, rule, deep `link`, `cue`, `clipSec`), Presenter `slides`, the template `script` (+ `markdown`, `text`), `cardData` for the card templates, `allowedNumbers` (every number the data backs up), `browser.available`, `exportDir` |
+| POST | `/api/studio/:runId/polish/estimate` | `{ modelId, text }` | `PolishEstimate` — tokens and cost (central + upper bound). No model call. |
+| POST | `/api/studio/:runId/polish` | `{ modelId, text, confirmCostUsd }` | `PolishResult` `{ text, costUsd, unverified: string[] }`. Refused (409) unless `confirmCostUsd` ≥ the estimate's upper bound, i.e. the cost was shown first. |
+| POST | `/api/studio/:runId/render` | `{ spec: CardSpec }` | `{ png: dataUrl, width, height, fileName }`; 409 when no Chrome/Edge/Chromium is available (render in the browser instead) |
+| POST | `/api/studio/:runId/export` | `{ style?, headline?, markdown?, text? }` | `ExportResult` — writes PNGs, `script.md`, `script.txt`, `highlights.json` to `data/runs/<id>/studio/` |
+| GET | `/api/overlay/:runId` | – | `OverlayData` — compact standings, latest-results ticker, "now testing", per-test winners, progress |
+
+`GET /overlay/<runId>?view=…` (outside `/api`) redirects to the dashboard's transparent overlay page
+(`/#/overlay/<runId>?view=…`), which live-updates from `/api/runs/:id/events`. `runId` may also be `demo`.
+
 ## Human review
 
 | Method | Path | Body | Returns |

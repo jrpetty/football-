@@ -1,5 +1,6 @@
 import { existsSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { posix, win32 } from 'node:path';
+import { homedir } from 'node:os';
 import { createHash } from 'node:crypto';
 
 /**
@@ -14,19 +15,76 @@ type Browser = Awaited<ReturnType<PlaywrightModule['chromium']['launch']>>;
 let browserPromise: Promise<Browser | null> | null = null;
 let unavailableReason: string | null = null;
 
-function findChromium(): string | undefined {
-  if (process.env.GAUNTLET_CHROMIUM && existsSync(process.env.GAUNTLET_CHROMIUM)) return process.env.GAUNTLET_CHROMIUM;
-  const roots = [process.env.PLAYWRIGHT_BROWSERS_PATH, '/opt/pw-browsers', join(process.env.HOME ?? '', '.cache', 'ms-playwright')].filter(Boolean) as string[];
+export interface ChromiumSearch {
+  env: Record<string, string | undefined>;
+  platform: string;
+  home: string;
+  /** Directory listing (for Playwright browser caches); return [] when missing. */
+  listDir: (dir: string) => string[];
+}
+
+const LINUX_BROWSERS = ['google-chrome', 'google-chrome-stable', 'chromium', 'chromium-browser', 'microsoft-edge', 'microsoft-edge-stable'];
+
+/**
+ * Every place a usable Chromium-family browser may live, most preferred first:
+ * GAUNTLET_CHROMIUM, Playwright's own downloads, then an installed Google
+ * Chrome / Microsoft Edge / Chromium (Windows Program Files and LOCALAPPDATA,
+ * macOS /Applications, Linux PATH). Pure, so it can be tested on any OS.
+ */
+export function chromiumCandidates(s: ChromiumSearch): string[] {
+  const win = s.platform === 'win32';
+  const pj = win ? win32.join : posix.join;
+  const out: string[] = [];
+  if (s.env.GAUNTLET_CHROMIUM) out.push(s.env.GAUNTLET_CHROMIUM);
+  const roots = [
+    s.env.PLAYWRIGHT_BROWSERS_PATH,
+    win ? undefined : '/opt/pw-browsers',
+    win && s.env.LOCALAPPDATA ? pj(s.env.LOCALAPPDATA, 'ms-playwright') : undefined,
+    s.platform === 'darwin' && s.home ? pj(s.home, 'Library', 'Caches', 'ms-playwright') : undefined,
+    s.home ? pj(s.home, '.cache', 'ms-playwright') : undefined,
+  ].filter((x): x is string => !!x);
+  const rels = [
+    'chrome-linux/chrome',
+    'chrome-linux64/chrome',
+    'chrome-mac/Chromium.app/Contents/MacOS/Chromium',
+    'chrome-mac-arm64/Chromium.app/Contents/MacOS/Chromium',
+    'chrome-win/chrome.exe',
+    'chrome-win64/chrome.exe',
+    'chrome-linux/headless_shell',
+  ];
   for (const root of roots) {
-    if (!existsSync(root)) continue;
-    for (const dir of readdirSync(root).filter((d) => d.startsWith('chromium')).sort().reverse()) {
-      for (const rel of ['chrome-linux/chrome', 'chrome-linux64/chrome', 'chrome-mac/Chromium.app/Contents/MacOS/Chromium', 'chrome-win/chrome.exe', 'chrome-linux/headless_shell']) {
-        const p = join(root, dir, rel);
-        if (existsSync(p)) return p;
-      }
+    for (const dir of s.listDir(root).filter((d) => d.startsWith('chromium')).sort().reverse()) {
+      for (const rel of rels) out.push(pj(root, dir, ...rel.split('/')));
     }
   }
-  return undefined;
+  if (win) {
+    const bases = [s.env.PROGRAMFILES ?? 'C:\\Program Files', s.env['PROGRAMFILES(X86)'] ?? 'C:\\Program Files (x86)', s.env.LOCALAPPDATA].filter((x): x is string => !!x);
+    for (const b of bases) out.push(pj(b, 'Google', 'Chrome', 'Application', 'chrome.exe'));
+    for (const b of bases) out.push(pj(b, 'Microsoft', 'Edge', 'Application', 'msedge.exe'));
+    for (const b of bases) out.push(pj(b, 'Chromium', 'Application', 'chrome.exe'));
+  } else if (s.platform === 'darwin') {
+    for (const apps of ['/Applications', ...(s.home ? [pj(s.home, 'Applications')] : [])]) {
+      out.push(pj(apps, 'Google Chrome.app', 'Contents', 'MacOS', 'Google Chrome'));
+      out.push(pj(apps, 'Microsoft Edge.app', 'Contents', 'MacOS', 'Microsoft Edge'));
+      out.push(pj(apps, 'Chromium.app', 'Contents', 'MacOS', 'Chromium'));
+    }
+  } else {
+    const dirs = (s.env.PATH ?? '').split(':').filter(Boolean);
+    for (const name of LINUX_BROWSERS) for (const d of dirs) out.push(pj(d, name));
+    for (const p of ['/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser', '/snap/bin/chromium', '/usr/bin/microsoft-edge', '/opt/google/chrome/chrome']) out.push(p);
+  }
+  return [...new Set(out)];
+}
+
+function findChromium(): string | undefined {
+  const listDir = (dir: string) => {
+    try {
+      return existsSync(dir) ? readdirSync(dir) : [];
+    } catch {
+      return [];
+    }
+  };
+  return chromiumCandidates({ env: process.env, platform: process.platform, home: homedir(), listDir }).find((p) => existsSync(p));
 }
 
 export async function getBrowser(): Promise<Browser | null> {

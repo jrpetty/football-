@@ -51,6 +51,48 @@ This checks the install, the dashboard, the Live Arena and the replays without s
 * Games from **Build a Game in One Shot** are playable inside the result inspector, and there's a screenshot
   of each.
 
+## 4b. Making the video (Studio)
+
+Open **Studio** in the sidebar (or the **Studio** button on a run's page). It reads the run you just finished and
+builds the raw material for the video. Nothing here calls a model or costs money unless you press *Polish with AI*.
+
+1. **Highlights** — the moments worth showing, ranked most dramatic first: upsets (a cheap model beating an
+   expensive one), photo finishes, clean sweeps, disasters (died on day 2, went bankrupt, accused the wrong
+   suspect), confident wrong answers and invented facts on the Honesty tests, the fastest right answer, the
+   priciest wrong one, the best value, and a model that gave different answers to the same question. Every card
+   shows the numbers behind the pick and, under *Why this was picked*, the rule that chose it.
+   * **Replay at step N / Open case / Open slide** jumps straight to the footage. Record it there.
+   * The grey cue (e.g. `[Replay: Survival Island, Opus, step 14]`) is for your edit notes; the copy button
+     copies it. The clip length is a suggestion.
+2. **Video script** — a narration draft in the Presenter's running order: a 10-second hook, the contestants and
+   their prices, one segment per test (what it is, who won, one highlight), a mid-video recap, the final reveal
+   (last place to first) and an outro. `[Slide 7]` means "cut to slide 7 of the Presenter"; open the Presenter
+   with `?s=7` to land on it.
+   * Edit it right in the box (your edits stay in this browser). **Copy**, **.md** and **.txt** export it; the
+     .txt version is clean for a teleprompter.
+   * The green bar confirms every number in the script exists in the run's data. If you type a number that
+     doesn't, it turns amber and lists it.
+   * **Polish with AI** (optional) rewrites the draft to sound more natural. Pick a model, press *Show the cost
+     first*, and only then *Polish*. The result is number-checked the same way; *Undo* brings your draft back.
+3. **Thumbnails & Shorts** — pick a format (YouTube thumbnail 1280×720, or a vertical 1080×1920 card:
+   final standings, one test's result, a "question" card built from the test's hook, or a highlight card) and a
+   style (Versus, Bold, Clean, Neon). Type your own headline if you like. **Download PNG** saves the picture;
+   **Export all** saves every thumbnail style, all cards, the script and `highlights.json` into the run's folder
+   (`data/runs/<run>/studio/`).
+   * PNGs are drawn by Google Chrome or Microsoft Edge running invisibly on your computer. Gauntlet finds an
+     installed Chrome or Edge automatically (Windows, macOS and Linux). If neither is installed, the PNGs are
+     drawn by your web browser instead and downloaded one by one — same pictures.
+4. **OBS overlays** — for live streams. Choose what to show (scoreboard, results ticker, "Now testing" lower
+   third, or a test-by-test board), the look and the corner, then copy the address. In OBS: **Sources → + →
+   Browser**, paste it as the URL, set **1920 × 1080**, and leave OBS's Custom CSS alone — the page background is
+   transparent, so only the panels appear over your scene. Tick *Refresh browser when scene becomes active*.
+   * Use **Always the latest** (`/overlay/latest?view=…`) and you never have to change the address: it follows
+     whatever run is going on. It updates live as results arrive.
+   * Use **Demo** (`/overlay/demo?view=…`) to position everything before you go live; it animates made-up data.
+   * Address options: `view=scoreboard|ticker|lower-third|bracket-lite`, `theme=glass|solid|light|minimal`,
+     `pos=tl|tr|bl|br` (or `top|bottom` for the ticker), `safe=0` to ignore the 5% TV-safe margin, `scale=1.3`
+     to make it bigger.
+
 ## 5. Review
 
 * **Blind Review**: rate the games and illustrations, and settle any case where the judges disagreed. Model

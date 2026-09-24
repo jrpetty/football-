@@ -49,6 +49,7 @@ import { Semaphore } from '../engine/semaphore.ts';
 import { registerVisionRoutes } from './vision-routes.ts';
 import { testBaseDir } from '../core/vision.ts';
 import { registerChannelRoutes } from '../channel/routes.ts';
+import { overlayRedirect, registerStudioRoutes } from '../media/studio.ts';
 
 class HttpError extends Error {
   status: number;
@@ -500,6 +501,9 @@ route('POST', '/api/review/score', async ({ body }) => {
   }
 });
 
+// Studio (highlights, video script, thumbnails) and OBS overlays — see src/media/.
+registerStudioRoutes(route, (status, message, details) => new HttpError(status, message, details));
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Static UI
 // ─────────────────────────────────────────────────────────────────────────────
@@ -548,6 +552,12 @@ export function startServer(opts: { port: number; host: string }): Promise<{ url
     try {
       if (!url.pathname.startsWith('/api/')) {
         if (method !== 'GET' && method !== 'HEAD') throw new HttpError(405, 'Method not allowed');
+        const overlay = overlayRedirect(url.pathname, url.search);
+        if (overlay) {
+          res.writeHead(302, { location: overlay, 'cache-control': 'no-store' });
+          res.end();
+          return;
+        }
         serveStatic(url.pathname, res);
         return;
       }

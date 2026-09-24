@@ -30,6 +30,8 @@ const NewModelPage = lazy(() => import('./channel/NewModelPage.tsx'));
 const HistoryPage = lazy(() => import('./channel/HistoryPage.tsx'));
 const ChallengePage = lazy(() => import('./channel/ChallengePage.tsx'));
 const ChannelSlidesPage = lazy(() => import('./channel/ChannelSlidesPage.tsx'));
+const StudioPage = lazy(() => import('./pages/StudioPage.tsx'));
+const OverlayPage = lazy(() => import('./pages/OverlayPage.tsx'));
 
 interface NavItem {
   to: string;
@@ -46,6 +48,7 @@ const NAV: NavItem[] = [
   { to: '/', label: 'Leaderboard', icon: Icon.Trophy, match: (p) => p === '/' || p === '/leaderboard' },
   { to: '/runs', label: 'Runs', icon: Icon.History, match: (p) => p.startsWith('/runs') },
   { to: '/present', label: 'Presenter', icon: Icon.Present, match: (p) => p.startsWith('/present') },
+  { to: '/studio', label: 'Studio', icon: Icon.Clapper, match: (p) => p.startsWith('/studio') },
   { to: '/inbox', label: 'Manual Inbox', icon: Icon.Inbox, badge: 'manual', match: (p) => p.startsWith('/inbox') },
   { to: '/review', label: 'Blind Review', icon: Icon.Eye, match: (p) => p.startsWith('/review') },
   { to: '/tests', label: 'Tests', icon: Icon.Flask, section: 'Lab', match: (p) => p.startsWith('/tests') },
@@ -118,6 +121,8 @@ function resolve(parts: string[]): Resolved {
   if (a === 'history') return { el: <HistoryPage />, crumb: 'Model history' };
   if (a === 'challenge') return { el: <ChallengePage />, crumb: 'Viewer Challenge' };
   if (a === 'slides' && b) return { el: <ChannelSlidesPage key={b} kind={b} />, crumb: 'Presenter', bare: true };
+  if (a === 'studio') return { el: <StudioPage key={b ?? 'pick'} runId={b} />, crumb: 'Studio' };
+  if (a === 'overlay') return { el: <OverlayPage key={b ?? 'latest'} runId={b ?? 'latest'} />, crumb: 'Overlay', bare: true };
   if (a === 'present') {
     if (!b) return { el: <PresentPickerPage />, crumb: 'Presenter' };
     return { el: <PresentPage key={b} runId={b} />, crumb: 'Presenter', bare: true };
