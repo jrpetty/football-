@@ -1,0 +1,22 @@
+{
+  "kind": "program",
+  "id": "long-context.needle-haystack-hard",
+  "version": "1.0.0",
+  "program": "needle-haystack",
+  "name": "Needle in a Haystack — Hard",
+  "category": "long-context",
+  "description": "COST WARNING: the most expensive test in Gauntlet, about 118k input tokens per case (≈107k with a typical tokenizer) plus long reasoning, so it has only 2 seeds. It needs a context window of at least ~130k tokens. The hard tier is a seeded ~78,000-word chronicle with twelve needles: three single facts, two 2-hop chains, three 3-hop chains with a near-miss decoy at every hop (the look-alike captain, master or ally leads to a different answer), two totals summed from five scattered mentions (with decoys for undelivered shipments, a different commodity from the same source and a look-alike source), and two values corrected later in the text, each shadowed by a look-alike entity. One call, twelve short answers, graded deterministically; hedged answers score zero.",
+  "difficulty": "extreme",
+  "tags": ["long-context", "retrieval", "multi-hop", "aggregation", "distractors", "expensive", "seeded"],
+  "hook": "78,000 words, 12 needles, a decoy at every hop. Can anything read this carefully?",
+  "seeds": [101, 202],
+  "config": {
+    "targetWords": 76000,
+    "mix": { "single": 3, "twoHop": 2, "threeHop": 3, "sum5": 2, "superseded": 2 }
+  },
+  "maxOutputTokens": 20000,
+  "timeLimitSec": 1200,
+  "estimate": { "inputTokens": 120000, "outputTokens": 24000, "calls": 1 },
+  "author": "Gauntlet Core",
+  "createdAt": "2026-09-24"
+}

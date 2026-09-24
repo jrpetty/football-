@@ -408,6 +408,15 @@
   margin: 0;
   max-width: 1650px;
 }
+.t-run-2 {
+  display: block;
+  width: fit-content;
+  background: var(--brand-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  padding-bottom: 0.06em;
+}
 .t-meta {
   display: flex;
   align-items: center;
@@ -626,8 +635,8 @@
 }
 .ci-vis .cv-ci {
   position: absolute;
-  left: 64%;
-  width: 12%;
+  left: 60%;
+  width: 20%;
   top: calc(100% + 7px);
   border-top: 3px solid var(--text-1);
 }
@@ -902,7 +911,8 @@
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-rows: repeat(var(--rows), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--rows), minmax(0, 112px));
+  align-content: center;
   row-gap: 4px;
 }
 .rr-bmark {
@@ -1117,7 +1127,8 @@
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-rows: auto repeat(var(--rows), minmax(0, 1fr));
+  grid-template-rows: auto repeat(var(--rows), minmax(0, 100px));
+  align-content: start;
   row-gap: 9px;
 }
 .fs-row {
@@ -1357,7 +1368,8 @@
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-rows: auto repeat(var(--rows), minmax(0, 1fr));
+  grid-template-rows: auto repeat(var(--rows), minmax(0, 100px));
+  align-content: start;
   row-gap: 9px;
 }
 .md-row {
@@ -1650,6 +1662,15 @@
 .pick-go {
   flex: none;
 }
+.pick-item:hover .pick-go,
+.pick-item:focus-visible .pick-go {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.deck-outline.card-body {
+  padding-left: 2.4rem;
+}
 .deck-outline {
   margin: 0;
   padding-left: 1.2rem;
@@ -1671,5 +1692,14 @@
   }
   .pick-item {
     flex-wrap: wrap;
+  }
+}
+@media (max-width: 640px) {
+  .pick-main {
+    flex-basis: 100%;
+  }
+  .deck-hint {
+    font-size: 11px;
+    padding: 5px 10px;
   }
 }

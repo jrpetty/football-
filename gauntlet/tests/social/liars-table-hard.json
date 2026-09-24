@@ -1,0 +1,27 @@
+{
+  "kind": "program",
+  "id": "social.liars-table-hard",
+  "version": "1.0.0",
+  "program": "liars-table",
+  "name": "The Liar's Table — Hard",
+  "category": "social",
+  "description": "The hard tier of The Liar's Table: seven suspects, four half-hour slots and only eight questions. The door keypad log was offline across two slots, so the theft time itself must be deduced. The thief's lie only shows up under cross-examination: they either name companions who will deny it, or claim a bar purchase the receipts don't show. Two honest guests misremember (and hedge) where they were, and one of those mistakes sits in the other possible theft slot as a decoy contradiction. The camera also has a gap in one of the two candidate slots. Every case is checked by a solver to have exactly one possible thief. Separates models that plan an efficient interrogation and chain two or three inferences from those that sweep, guess, or take the decoy.",
+  "difficulty": "extreme",
+  "tags": ["deduction", "multi-turn", "interrogation", "efficiency", "decoys", "seeded"],
+  "hook": "Seven suspects, eight questions, and the door log went dark. Who can still find the liar?",
+  "seeds": [101, 404, 606],
+  "config": {
+    "questionBudget": 8,
+    "suspects": 7,
+    "slots": 4,
+    "mistakenWitnesses": 2,
+    "doorLogGap": true,
+    "variant": "auto",
+    "variants": ["companion", "receipt"]
+  },
+  "maxOutputTokens": 12000,
+  "timeLimitSec": 1500,
+  "estimate": { "inputTokens": 20000, "outputTokens": 35000, "calls": 10 },
+  "author": "Gauntlet Core",
+  "createdAt": "2026-09-24"
+}

@@ -70,12 +70,18 @@ function findSuspect(token: string, w: LtWorld): string | null {
   return w.suspects.find((s) => s.name.toLowerCase() === t)?.name ?? null;
 }
 
-/** Maps "9:00", "9.00 pm", "21:00", "9pm", "half past eight" to a slot index. */
-export function parseSlot(topic: string): number | null {
+/** Maps "9:00", "9.00 pm", "21:00", "9pm", "half past eight" to a slot index (null if outside the window). */
+export function parseSlot(topic: string, slotCount = 3): number | null {
+  const idx = parseSlotAny(topic);
+  return idx !== null && idx < slotCount ? idx : null;
+}
+
+function parseSlotAny(topic: string): number | null {
   const t = topic.toLowerCase().trim();
   if (/half[\s-]past\s+eight|eight[\s-]thirty/.test(t)) return 0;
   if (/half[\s-]past\s+nine|nine[\s-]thirty/.test(t)) return 2;
   if (/^nine(\s*(pm|o'?clock))?$/.test(t)) return 1;
+  if (/^ten(\s*(pm|o'?clock))?$/.test(t)) return 3;
   const m = t.match(/^(\d{1,2})(?:\s*[:.h]\s*(\d{2}))?\s*(?:pm|p\.m\.|o'?clock)?$/);
   if (!m) return null;
   let h = Number(m[1]);
@@ -122,7 +128,7 @@ export function parseCommand(text: string, w: LtWorld): LtCommand {
     const topicRaw = ask[2]!.trim();
     const upper = topicRaw.toUpperCase();
     if (/^(HIS |HER |THEIR )?ALIBI$/.test(upper) || upper === 'WHEREABOUTS') return { kind: 'ask', suspect, topic: { kind: 'alibi' } };
-    const slot = parseSlot(topicRaw);
+    const slot = parseSlot(topicRaw, w.slotCount);
     if (slot !== null) return { kind: 'ask', suspect, topic: { kind: 'time', slot } };
     if (upper.includes(w.objectKey) || /^(THE )?(OBJECT|THEFT)$/.test(upper)) return { kind: 'ask', suspect, topic: { kind: 'object' } };
     const other = findSuspect(topicRaw, w);
@@ -140,6 +146,7 @@ const SLOT_WORDS: string[][] = [
   ['half past eight', 'half-past eight', 'eight thirty', 'eight-thirty'],
   ["nine o'clock", 'nine oclock', 'nine pm', 'nine p.m'],
   ['half past nine', 'half-past nine', 'nine thirty', 'nine-thirty'],
+  ["ten o'clock", 'ten oclock', 'ten pm', 'ten p.m'],
 ];
 
 /** True when the text mentions a clock time inside the given half-hour slot. */

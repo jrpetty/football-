@@ -3,12 +3,15 @@ import assert from 'node:assert/strict';
 import { createRng } from '../src/core/rng.ts';
 import { program, buildWorld, readConfig, buildMenu } from '../src/programs/liars-table.ts';
 import {
+  candidateTheftSlots,
   claimedCompanions,
+  evidenceText,
   generateWorld,
   LIE_VARIANTS,
   SLOTS,
   viableCulprits,
 } from '../src/programs/lib/liars-table-world.ts';
+import { examinerPolicy, oraclePolicy, sweepPolicy } from './helpers/liars-table-policies.ts';
 import type { LtWorld } from '../src/programs/lib/liars-table-world.ts';
 import { checkReason, parseCommand, parseSlot, mentionsSlot } from '../src/programs/lib/liars-table-parse.ts';
 import {
@@ -281,4 +284,109 @@ test('liars-table: reason check needs time, claimed room and a contradicting sou
   const partial = checkReason(`They lied about the ${w.claimedRoom}`, w);
   assert.equal(partial.score, 1 / 3);
   assert.equal(checkReason('gut feeling', w).score, 0);
+});
+
+// ─── hard tier ──────────────────────────────────────────────────────────────
+
+const HARD = {
+  questionBudget: 8,
+  suspects: 7,
+  slots: 4,
+  mistakenWitnesses: 2,
+  doorLogGap: true,
+  variant: 'auto',
+  variants: ['companion', 'receipt'],
+};
+
+async function mean(seeds: number[], policy: (w: LtWorld) => Responder, config: Record<string, unknown>) {
+  let total = 0;
+  for (const seed of seeds) total += (await play(seed, policy(worldFor(seed, config)), config)).result.score;
+  return total / seeds.length;
+}
+
+test('liars-table: standard worlds are unchanged by the hard-tier options (golden check)', () => {
+  const golden: Array<[number, string, string, number, string]> = [
+    [101, 'Gideon', 'cctv', 0, 'Orangery'],
+    [202, 'Felicity', 'cctv', 1, 'Conservatory'],
+    [303, 'Marguerite', 'companion', 1, 'Drawing Room'],
+  ];
+  for (const [seed, culprit, variant, slot, room] of golden) {
+    const w = worldFor(seed);
+    assert.deepEqual([w.culprit, w.variant, w.theftSlot, w.claimedRoom, w.suspects.length, w.slotCount, w.doorGap], [culprit, variant, slot, room, 5, 3, null]);
+  }
+});
+
+test('liars-table hard: every world has one viable thief, a door-log gap and a decoy in the other candidate slot', () => {
+  for (let seed = 1; seed <= 150; seed++) {
+    for (const variant of LIE_VARIANTS) {
+      const w = worldFor(seed, { ...HARD, variant });
+      assert.deepEqual(viableCulprits(w), [w.culprit], `seed ${seed} ${variant}`);
+      assert.equal(w.suspects.length, 7);
+      assert.equal(w.slotCount, 4);
+      const cands = candidateTheftSlots(w);
+      assert.equal(cands.length, 2);
+      assert.ok(cands.includes(w.theftSlot));
+      assert.equal(w.mistakes.length, 2);
+      const decoy = w.mistakes[0]!;
+      assert.deepEqual(cands.filter((c) => c !== w.theftSlot), [decoy.slot], 'decoy sits in the other candidate slot');
+      assert.equal(claimedCompanions(w, decoy.name, decoy.slot), null, 'decoy is hedged');
+      assert.ok(w.cctvGap.slot === cands[0] || w.cctvGap.slot === cands[1]);
+      const log = evidenceText(w, 'DOOR LOG');
+      assert.match(log, /LOG OFFLINE from .* pm to .* pm/);
+      assert.ok(!/pm opened · [\d:]+ pm closed/.test(log), 'the exact opening time is not revealed');
+    }
+  }
+});
+
+test('liars-table hard: the hard pool only uses cross-examination lies', () => {
+  const seen = new Set<string>();
+  for (let seed = 1; seed <= 40; seed++) seen.add(worldFor(seed, HARD).variant);
+  assert.deepEqual([...seen].sort(), ['companion', 'receipt']);
+});
+
+test('liars-table hard: prompt shows 7 suspects, 4 slots, the offline log after CHECK, and an 8-question budget', async () => {
+  const w = worldFor(101, HARD);
+  const { model } = await play(101, (_s, _u, _h, info) => (info.index === 0 ? 'ACTION: CHECK DOOR LOG' : `ACTION: ACCUSE ${w.culprit} BECAUSE x`), HARD);
+  const first = model.calls[0]!.messages[0]!.content;
+  assert.ok(first.includes('four half-hour slots: 8:30, 9:00, 9:30 and 10:00 pm'));
+  assert.ok(first.includes('At 10:30 pm'));
+  assert.ok(first.includes('Questions left: 8 of 8.'));
+  assert.equal([...first.matchAll(/`ACCUSE (\w+) BECAUSE/g)].length, 7);
+  assert.ok(first.includes(`\`ASK ${w.suspects[0]!.name} ABOUT 10:00\``));
+  assert.match(first, /ACTION: <command>\nExactly one command per reply\. If you write more than one ACCUSE, only the first counts\.$/);
+  assert.ok(model.calls[1]!.messages[0]!.content.includes('LOG OFFLINE'));
+});
+
+test('liars-table hard: 10:00 is a valid slot only in four-slot worlds', () => {
+  const hard = worldFor(101, HARD);
+  const std = worldFor(101);
+  const name = hard.suspects[0]!.name;
+  assert.deepEqual(parseCommand(`ACTION: ASK ${name} ABOUT 10:00 pm`, hard), { kind: 'ask', suspect: name, topic: { kind: 'time', slot: 3 } });
+  assert.equal(parseCommand(`ACTION: ASK ${std.suspects[0]!.name} ABOUT 10:00`, std).kind, 'invalid');
+  assert.equal(parseSlot('ten o\'clock', 4), 3);
+  assert.equal(parseSlot('ten o\'clock', 3), null);
+  assert.ok(mentionsSlot('at about 10:05 pm', 3));
+});
+
+test('liars-table hard: oracle ≥ 0.9; scripted detectives score far lower than on the standard tier', async () => {
+  const seeds = Array.from({ length: 40 }, (_, i) => i + 1);
+  for (const seed of seeds.slice(0, 12)) {
+    const { result } = await play(seed, oraclePolicy(worldFor(seed, HARD)), HARD);
+    assert.ok(result.score >= 0.9, `seed ${seed}: ${result.score}`);
+  }
+  const stdExaminer = await mean(seeds, (w) => examinerPolicy(w, 12), {});
+  const hardExaminer = await mean(seeds, (w) => examinerPolicy(w, 8), HARD);
+  const hardSweep = await mean(seeds, (w) => sweepPolicy(w, 8), HARD);
+  assert.ok(stdExaminer >= 0.85, `standard examiner ${stdExaminer}`);
+  assert.ok(hardExaminer >= 0.3 && hardExaminer <= 0.7, `hard examiner ${hardExaminer}`);
+  assert.ok(hardSweep < hardExaminer, `rigid sweep ${hardSweep} vs adaptive ${hardExaminer}`);
+});
+
+test('liars-table hard: garbage and the Random Baseline stay near zero', async () => {
+  const garbage = await play(404, constantResponder('no idea'), HARD);
+  assert.equal(garbage.result.score, 0);
+  assert.equal(garbage.model.calls.length, 8 + 2);
+  let total = 0;
+  for (let seed = 1; seed <= 30; seed++) total += (await play(seed, mockBaselineResponder(`h${seed}`), HARD)).result.score;
+  assert.ok(total / 30 < 0.2, `baseline ${total / 30}`);
 });

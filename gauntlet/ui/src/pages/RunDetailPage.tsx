@@ -37,7 +37,7 @@ export default function RunDetailPage({ runId }: { runId: string }) {
     !d
       ? null
       : tab === 'matrix'
-        ? `Every result in this run: one row per test, one column per model. Darker blue means a higher score; click any cell to see the model’s actual answers.`
+        ? `Every result in this run: one row per test, one column per model. The stronger the blue, the higher the score; any cell opens the model’s actual answers.`
         : tab === 'config'
           ? 'The exact tests and model settings used in this run — each one pinned by a hash, so anyone can re-run it and get the same test.'
           : `The results of this run: ${nModels} ${nModels === 1 ? 'model' : 'models'} on ${nTests} ${nTests === 1 ? 'test' : 'tests'}, ranked by the Gauntlet Index — the average score out of 100 across every category.`,
@@ -109,10 +109,10 @@ export default function RunDetailPage({ runId }: { runId: string }) {
                 <Icon.Stop /> Cancel
               </button>
             )}
-            <a className="btn" href={exportUrl(runId, 'csv')} download={`${runId}.csv`}>
+            <a className="btn no-broadcast" href={exportUrl(runId, 'csv')} download={`${runId}.csv`}>
               <Icon.Download /> CSV
             </a>
-            <a className="btn" href={exportUrl(runId, 'json')} download={`${runId}.json`}>
+            <a className="btn no-broadcast" href={exportUrl(runId, 'json')} download={`${runId}.json`}>
               <Icon.Download /> JSON
             </a>
           </>

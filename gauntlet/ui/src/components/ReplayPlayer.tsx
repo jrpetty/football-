@@ -380,8 +380,14 @@ export function ReplayPlayer({ replay, autoPlay = false, context }: { replay: Re
           )}
           {replay.series && replay.series.length > 0 && (
             <div className="replay-series">
-              <div className="mini-title">Over time</div>
-              <LineChart title={`${replay.title} series`} series={replay.series} marker={frame?.step ?? null} xLabel="step" />
+              <div className="mini-title">{replay.series.length === 1 ? `${replay.series[0].name} over the run` : 'Over the run'}</div>
+              <LineChart
+                title={`${replay.title}: ${replay.series.map((x) => x.name).join(', ')} by step`}
+                series={replay.series}
+                marker={frame?.step ?? null}
+                xLabel="step"
+                yLabel={replay.series.length === 1 ? replay.series[0].name : 'value'}
+              />
             </div>
           )}
         </div>

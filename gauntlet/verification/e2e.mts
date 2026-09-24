@@ -7,7 +7,7 @@ import { renderCase, needsFinalAnswer } from '../src/core/registry.ts';
 
 const ROOT = new URL('../tests', import.meta.url).pathname;
 const SCR = new URL('.', import.meta.url).pathname.replace(/\/$/, '');
-const mine = ['reasoning/deduction-grid', 'reasoning/truth-tellers', 'reasoning/planning', 'math/competition', 'math/word-problems',
+const mine = ['reasoning/deduction-grid', 'reasoning/truth-tellers', 'reasoning/deduction-grid-extreme', 'reasoning/truth-tellers-extreme', 'reasoning/planning', 'math/competition', 'math/word-problems',
   'coding/algorithms', 'coding/debug-and-edge-cases', 'coding/hard', 'instruction/precision-formatting', 'instruction/system-prompt-adherence',
   'extraction/structured-json'];
 const refDir: Record<string, string> = { 'coding.algorithms': 'coding/alg', 'coding.debug-and-edge-cases': 'coding/dbg', 'coding.hard': 'coding/hard' };

@@ -2012,8 +2012,10 @@ html[data-broadcast='on'] .broadcast-slate {
 }
 
 /* Live Arena — "now testing" card (broadcast) and per-lane test-finished flash */
-.arena-now {
+html[data-broadcast='on'] .arena-now {
   display: grid !important;
+}
+.arena-now {
   gap: 0.1rem;
   min-width: 0;
   padding-left: 0.9rem;
@@ -2068,7 +2070,7 @@ html[data-broadcast='on'] .broadcast-slate {
   line-height: 1.6;
 }
 .an-name {
-  font-size: 1.75rem;
+  font-size: 1.6rem;
   font-weight: 850;
   letter-spacing: -0.02em;
   line-height: 1.12;
@@ -2180,7 +2182,17 @@ html[data-broadcast='on'] .arena-head:has(.arena-now) .arena-title {
 /* Fit two rows of lanes plus the caption strip in a 1080p frame. */
 html[data-broadcast='on'] .stream,
 html[data-broadcast='on'] .manual-wait {
-  height: 4.4rem;
+  height: 3.9rem;
+}
+html[data-broadcast='on'] .arena:has(.arena-now) {
+  gap: 0.8rem;
+}
+html[data-broadcast='on'] .arena:has(.arena-now) .lanes {
+  gap: 0.8rem;
+}
+html[data-broadcast='on']:has(.arena-now) .broadcast-slate {
+  padding-top: 0.8vw;
+  padding-bottom: 0.5vw;
 }
 html[data-broadcast='on'] .lane-frame {
   grid-template-columns: auto minmax(0, 1fr);
@@ -2353,6 +2365,10 @@ html[data-broadcast='on'] .ticker .score-pill .ico {
   gap: 1px;
   min-width: 0;
   flex: 1;
+}
+.con-main .badge {
+  max-width: 100%;
+  white-space: normal;
 }
 .input-prefix {
   position: relative;

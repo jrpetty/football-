@@ -237,9 +237,82 @@ test('needle-haystack: number normalisation helpers', () => {
 });
 
 test('needle-haystack: config clamps and a lite variant stays cheap', () => {
-  assert.deepEqual(readConfig({}), { targetWords: 44_000, needles: 10 });
-  assert.deepEqual(readConfig({ targetWords: 50, needles: 99 }), { targetWords: 3000, needles: 10 });
+  assert.deepEqual(readConfig({}), { targetWords: 44_000, needles: 10, mix: null });
+  assert.deepEqual(readConfig({ targetWords: 50, needles: 99 }), { targetWords: 3000, needles: 10, mix: null });
+  assert.deepEqual(readConfig({ mix: { single: 99, threeHop: 2, bogus: 4 } }).mix, { single: 12, twoHop: 0, threeHop: 2, sum3: 0, sum5: 0, superseded: 0 });
+  assert.equal(readConfig({ mix: { single: 99, threeHop: 2 } }).needles, 14);
+  assert.equal(readConfig({ mix: {} }).mix, null);
   const lite = haystackFor(7, { targetWords: 15_000, needles: 8 });
   assert.equal(lite.needles.length, 8);
   assert.ok(lite.words < 17_000);
+});
+
+// ─── hard tier ──────────────────────────────────────────────────────────────
+
+const HARD = { targetWords: 76_000, mix: { single: 3, twoHop: 2, threeHop: 3, sum5: 2, superseded: 2 } };
+const HARD_LITE = { ...HARD, targetWords: 12_000 };
+
+test('needle-haystack hard: 12 needles — 3 single, 2 two-hop, 3 three-hop, 2 five-place sums, 2 corrections', () => {
+  for (const seed of [101, 202, 7]) {
+    const h = haystackFor(seed, HARD_LITE);
+    const count = (k: string) => h.needles.filter((n) => n.kind === k).length;
+    assert.deepEqual([count('single'), count('multi-hop'), count('three-hop'), count('aggregate'), count('superseded')], [3, 2, 3, 2, 2]);
+    for (const n of h.needles.filter((x) => x.kind === 'three-hop')) {
+      assert.equal(n.parts.length, 3);
+      assert.equal(n.distractors.length, 3, 'a near-miss decoy for every hop');
+    }
+    for (const n of h.needles.filter((x) => x.kind === 'aggregate')) {
+      assert.equal(n.parts.length, 5);
+      assert.ok(n.distractors.some((d) => /never arrived|cancelled/.test(d)), 'a promised-but-undelivered decoy');
+      assert.equal(n.numeric, n.parts.reduce((a, p) => a + extractNumbers(p)[0]!, 0));
+    }
+    for (const n of h.needles.filter((x) => x.kind === 'superseded')) {
+      assert.equal(n.distractors.length, 1, 'a look-alike decoy');
+      assert.ok(n.depths[0]! < n.depths[1]!);
+    }
+  }
+});
+
+test('needle-haystack hard: ~78k words (~118k tokens), every part planted once, answers unique to their needle', () => {
+  const h = haystackFor(101, HARD);
+  assert.ok(h.words > 76_000 && h.words < 80_000, `words ${h.words}`);
+  const tokens = buildPrompt(h).length / 3.8;
+  assert.ok(tokens > 110_000 && tokens < 125_000, `~${Math.round(tokens)} tokens`);
+  const sentences = h.text.split(/(?<=[.!?"])\s+/).map((x) => normalizeText(x));
+  for (const n of h.needles) {
+    for (const part of n.parts) {
+      const i = h.text.indexOf(part);
+      assert.ok(i >= 0 && h.text.indexOf(part, i + 1) === -1, `planted once: ${part}`);
+    }
+    if (n.numeric !== null) continue;
+    const planted = n.parts.map((x) => normalizeText(x)).filter((x) => containsPhrase(x, n.accept[0]!));
+    assert.equal(sentences.filter((x) => containsPhrase(x, n.accept[0]!)).length, planted.length, `"${n.accept[0]}" only in its needle`);
+    for (const r of n.reject) {
+      const hits = sentences.filter((x) => containsPhrase(x, r)).length;
+      assert.ok(hits >= 1 && hits <= n.distractors.length, `decoy "${r}"`);
+    }
+  }
+});
+
+test('needle-haystack hard: oracle scores 1.0; a missed 3-hop is named in the summary; prompt ends with 12 answer lines', async () => {
+  const h = haystackFor(202, HARD_LITE);
+  const { result, model } = await play(202, oracle(h), HARD_LITE);
+  assert.equal(result.score, 1);
+  assert.match(result.summary, /^12\/12 needles/);
+  const prompt = model.calls[0]!.messages[0]!.content;
+  assert.match(prompt, /two or three different places/);
+  assert.match(prompt, /Reply with exactly 12 lines and nothing else, one per question, in this form:\nA1: <answer>\n(?:A\d+: <answer>\n){10}A12: <answer>$/);
+  const hop3 = h.needles.find((n) => n.kind === 'three-hop')!;
+  const partial = await play(202, oracle(h, (n) => n === hop3), HARD_LITE);
+  assert.equal(partial.result.summary, `11/12 needles · missed the 3-hop at ${Math.round(hop3.depth)}% depth`);
+  const baseline = await play(202, mockBaselineResponder(), HARD_LITE);
+  assert.equal(baseline.result.score, 0);
+});
+
+test('needle-haystack hard: sums are wrong if they count the undelivered, other-commodity or look-alike decoys', () => {
+  const h = haystackFor(303, HARD_LITE);
+  for (const n of h.needles.filter((x) => x.kind === 'aggregate')) {
+    assert.equal(gradeAnswer(n, String(n.numeric)).correct, true);
+    for (const wrong of n.rejectNumbers) assert.deepEqual(gradeAnswer(n, String(wrong)), { correct: false, trap: 'distractor', hedged: false });
+  }
 });

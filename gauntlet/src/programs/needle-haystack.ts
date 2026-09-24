@@ -2,27 +2,45 @@
  * Needle in a Haystack — a seeded ~45,000-word chronicle of an invented city
  * with ten planted needles (single facts, 2-hop chains, a 3-way sum and a
  * later-corrected value) plus near-miss distractors. One call; answers are
- * graded deterministically and reported by depth for a heatmap.
+ * graded deterministically and reported by depth for a heatmap. The hard tier
+ * (config.mix) adds 3-hop chains, five-place sums with adversarial decoys and
+ * two corrected values in a ~120k-token document.
  */
 import type { ProgramContext, ProgramDefinition, ProgramResult, ReplayFrame, Rng } from '../core/types.ts';
 import { extractTagged } from '../core/extract.ts';
 import { buildCorpusWorld, generateChapters, NameForge, sentenceWords } from './lib/needle-haystack-corpus.ts';
 import type { Chapter } from './lib/needle-haystack-corpus.ts';
-import { buildNeedles, NeedleEnv } from './lib/needle-haystack-needles.ts';
-import type { NeedleKind, NeedleSpec } from './lib/needle-haystack-needles.ts';
+import { buildNeedleMix, buildNeedles, NeedleEnv } from './lib/needle-haystack-needles.ts';
+import type { NeedleKind, NeedleMix, NeedleSpec } from './lib/needle-haystack-needles.ts';
 import { containsPhrase, extractNumbers, normalizeText } from './lib/needle-haystack-normalize.ts';
 
 export interface NhConfig {
   targetWords: number;
   needles: number;
+  /** Explicit needle mix (hard tier). Null = the standard 6 single / 2 two-hop / 1 sum / 1 correction. */
+  mix: NeedleMix | null;
 }
+
+const MIX_KEYS: Array<keyof NeedleMix> = ['single', 'twoHop', 'threeHop', 'sum3', 'sum5', 'superseded'];
+const MIX_MAX: NeedleMix = { single: 12, twoHop: 4, threeHop: 3, sum3: 2, sum5: 2, superseded: 2 };
 
 export function readConfig(raw: Record<string, unknown>): NhConfig {
   const words = Number(raw.targetWords);
   const needles = Number(raw.needles);
+  let mix: NeedleMix | null = null;
+  if (raw.mix && typeof raw.mix === 'object') {
+    const src = raw.mix as Record<string, unknown>;
+    mix = { single: 0, twoHop: 0, threeHop: 0, sum3: 0, sum5: 0, superseded: 0 };
+    for (const key of MIX_KEYS) {
+      const v = Number(src[key]);
+      mix[key] = Number.isInteger(v) ? Math.max(0, Math.min(MIX_MAX[key], v)) : 0;
+    }
+    if (MIX_KEYS.every((key) => mix![key] === 0)) mix = null;
+  }
   return {
     targetWords: Number.isFinite(words) ? Math.round(Math.min(150_000, Math.max(3_000, words))) : 44_000,
-    needles: Number.isInteger(needles) ? Math.min(10, Math.max(5, needles)) : 10,
+    needles: mix ? MIX_KEYS.reduce((a, key) => a + mix![key], 0) : Number.isInteger(needles) ? Math.min(10, Math.max(5, needles)) : 10,
+    mix,
   };
 }
 
@@ -60,7 +78,8 @@ export function planDepths(rng: Rng, needles: NeedleSpec[]): { parts: number[][]
   const assigned: number[] = new Array(k);
   const multiIdx = needles.map((n, i) => (n.kind === 'single' ? -1 : i)).filter((i) => i >= 0);
   for (const i of multiIdx) {
-    const slot = deep.shift()!;
+    // More multi-part needles than deep slots (hard tier): fall back to the deepest free slot.
+    const slot = deep.shift() ?? Math.max(...slots);
     assigned[i] = slot;
     slots.splice(slots.indexOf(slot), 1);
   }
@@ -82,8 +101,19 @@ export function planDepths(rng: Rng, needles: NeedleSpec[]): { parts: number[][]
         // Alternate which half of the chain comes first.
         return multiSeen++ % 2 === 0 ? [early, anchor] : [anchor, early];
       }
-      case 'aggregate':
-        return [between(0.02, anchor / 2 - 0.05), between(anchor / 2, anchor - 0.08), anchor];
+      case 'three-hop': {
+        // Two early hops, the deepest hop at the anchor; which hop is deepest is random.
+        const early = [between(0.02, anchor - 0.2), between(0.02, anchor - 0.2)];
+        const deepest = rng.int(0, 2);
+        return [0, 1, 2].map((j) => (j === deepest ? anchor : early.pop()!));
+      }
+      case 'aggregate': {
+        if (n.parts.length === 3) return [between(0.02, anchor / 2 - 0.05), between(anchor / 2, anchor - 0.08), anchor];
+        // k-part sums: spread the earlier parts over [0.02, anchor − 0.08] in equal bands.
+        const k = n.parts.length;
+        const span = anchor - 0.1;
+        return [...Array.from({ length: k - 1 }, (_, j) => between(0.02 + (span * j) / (k - 1), 0.02 + (span * (j + 1)) / (k - 1))), anchor];
+      }
       case 'superseded':
         return [between(0.02, anchor - 0.2), anchor];
     }
@@ -160,7 +190,7 @@ export function buildHaystack(rng: Rng, cfg: NhConfig): Haystack {
     world.streets.map((s) => s.split(' ')[0]!),
     world.ships,
   );
-  const specs = rng.fork('order').shuffle(buildNeedles(env, cfg.needles));
+  const specs = rng.fork('order').shuffle(cfg.mix ? buildNeedleMix(env, cfg.mix) : buildNeedles(env, cfg.needles));
   world.villages = world.villages.filter((v) => !env.usedVillages.includes(v));
 
   const chapters = generateChapters(rng.fork('prose'), world, cfg.targetWords);
@@ -198,7 +228,9 @@ export function buildPrompt(h: Haystack): string {
     '</chronicle>',
     '',
     `Answer these ${k} questions using only the chronicle.`,
-    '- Some answers combine facts from two different places in the text, and one requires adding up figures mentioned in several places.',
+    h.needles.some((n) => n.kind === 'three-hop')
+      ? '- Some answers chain together facts found in two or three different places in the text, and some require adding up figures mentioned in several places. Read carefully: similar names, similar places and look-alike figures are everywhere.'
+      : '- Some answers combine facts from two different places in the text, and one requires adding up figures mentioned in several places.',
     '- If the chronicle later corrects an earlier statement, the correction is what counts.',
     '- Beware of similar-looking names and numbers; answer exactly what is asked.',
     '- Keep each answer short: just the name, word, street, village or number. If you cannot find it, write "unknown".',
@@ -266,10 +298,11 @@ export function gradeAnswer(n: NeedleSpec, raw: string | null): Grade {
 const KIND_LABEL: Record<NeedleKind, string> = {
   single: 'fact',
   'multi-hop': '2-hop',
+  'three-hop': '3-hop',
   aggregate: 'sum',
   superseded: 'correction',
 };
-const KIND_PRIORITY: NeedleKind[] = ['multi-hop', 'superseded', 'aggregate', 'single'];
+const KIND_PRIORITY: NeedleKind[] = ['three-hop', 'multi-hop', 'superseded', 'aggregate', 'single'];
 const BUCKETS = [0, 20, 40, 60, 80];
 
 export const program: ProgramDefinition = {

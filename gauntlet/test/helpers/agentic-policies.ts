@@ -4,7 +4,7 @@
  */
 import { createRng } from '../../src/core/rng.ts';
 import type { Responder } from './fake-model.ts';
-import { generateIsland } from '../../src/programs/lib/agentic-island.ts';
+import { generateIsland, type IslandConfig } from '../../src/programs/lib/agentic-island.ts';
 import { generateEscape } from '../../src/programs/lib/agentic-escape.ts';
 import {
   competitorPrice,
@@ -18,7 +18,7 @@ import {
 import { createIslandAgent } from './agentic-island-agent.ts';
 
 /** Survival Island: the full-knowledge agent, playing through the fake model. */
-export function islandResponder(seed: number, cfg: { maxDays: number; size: number; inventoryCap: number }, rescue = true): Responder {
+export function islandResponder(seed: number, cfg: IslandConfig, rescue = true): Responder {
   const world = generateIsland(createRng(seed), cfg);
   const agent = createIslandAgent(world, { rescue });
   return () => {

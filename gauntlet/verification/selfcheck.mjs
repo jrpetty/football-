@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 const ROOT = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
-const MINE = ['reasoning/deduction-grid', 'reasoning/truth-tellers', 'reasoning/planning', 'math/competition', 'math/word-problems',
+const MINE = ['reasoning/deduction-grid', 'reasoning/truth-tellers', 'reasoning/deduction-grid-extreme', 'reasoning/truth-tellers-extreme', 'reasoning/planning', 'math/competition', 'math/word-problems',
   'coding/algorithms', 'coding/debug-and-edge-cases', 'coding/hard', 'instruction/precision-formatting', 'instruction/system-prompt-adherence',
   'honesty/honesty-trap', 'extraction/structured-json', 'creative/one-shot-games', 'visual/svg-illustration'];
 const categories = JSON.parse(fs.readFileSync(path.join(ROOT, 'config/categories.json'), 'utf8')).map((c) => c.id);
@@ -22,7 +22,7 @@ for (const rel of MINE) {
   if (t.kind !== 'prompt') err(rel, 'kind must be prompt');
   if (t.id !== `${cat}.${slug}`) err(rel, `id ${t.id} != ${cat}.${slug}`);
   if (ids.has(t.id)) err(rel, 'duplicate test id'); ids.add(t.id);
-  if (t.version !== '1.0.0') err(rel, 'version');
+  if (!/^\d+\.\d+\.\d+$/.test(t.version)) err(rel, 'version');
   for (const k of ['name', 'description', 'hook', 'author', 'createdAt']) if (typeof t[k] !== 'string' || !t[k].trim()) err(rel, `missing ${k}`);
   if (t.category !== cat || !categories.includes(t.category)) err(rel, 'bad category');
   if (!['easy', 'medium', 'hard', 'extreme'].includes(t.difficulty)) err(rel, 'bad difficulty');

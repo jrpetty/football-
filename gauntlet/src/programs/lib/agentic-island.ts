@@ -36,7 +36,42 @@ export interface IslandConfig {
   maxDays: number;
   size: number;
   inventoryCap: number;
+  /** Range [min, max] for the ship's first passing day. */
+  shipFirstDay: [number, number];
+  /** Range [min, max] for the days between passings. */
+  shipEveryDays: [number, number];
+  /** Passes with a blazing signal needed; the last one brings the rescue boat. */
+  signalsNeeded: number;
+  /** A pass only counts if a campfire burned somewhere on the island the night before. */
+  requireNightFire: boolean;
+  stormChance: number;
+  rainChance: number;
+  /** Range [min, max] of the base night cold. */
+  nightCold: [number, number];
+  /** Water restored by DRINK at the spring (100 = drink your fill). */
+  drinkAmount: number;
+  berryBushes: number;
+  poisonBushes: number;
+  poisonDamage: number;
 }
+
+/** The standard island (Survival Island 1.1.0). */
+export const ISLAND_DEFAULTS: IslandConfig = {
+  maxDays: 12,
+  size: 12,
+  inventoryCap: 12,
+  shipFirstDay: [4, 5],
+  shipEveryDays: [3, 4],
+  signalsNeeded: 1,
+  requireNightFire: true,
+  stormChance: 0.1,
+  rainChance: 0.18,
+  nightCold: [8, 18],
+  drinkAmount: 100,
+  berryBushes: 4,
+  poisonBushes: 2,
+  poisonDamage: 20,
+};
 
 export interface IslandWorld {
   size: number;
@@ -57,6 +92,10 @@ export interface IslandWorld {
   shipPeriod: number;
   /** Days on which the ship actually passes (stormy days are skipped). */
   shipDays: number[];
+  signalsNeeded: number;
+  requireNightFire: boolean;
+  drinkAmount: number;
+  poisonDamage: number;
   safeBerry: string;
   poisonBerry: string;
   /** Root stream for in-play rolls (forked per labelled event). */
@@ -84,7 +123,12 @@ export interface IslandState {
   tiles: IslandTile[][];
   explored: boolean[][];
   bottleFound: boolean;
+  /** Days the ship passed (always noticed: seen or heard). */
   shipsSeen: number[];
+  /** Days the crew counted your signal. */
+  sightings: number[];
+  /** Nights (by day number) during which a campfire burned somewhere on the island. */
+  fireNights: number[];
   poisonEaten: number;
   alive: boolean;
   rescued: boolean;
@@ -293,7 +337,7 @@ interface MapLayout {
   poisonBerry: string;
 }
 
-function tryLayout(rng: Rng, n: number): MapLayout | null {
+function tryLayout(rng: Rng, n: number, bushCount: number, poisonCount: number): MapLayout | null {
   const c = (n - 1) / 2;
   const noise = valueNoise(rng, n, 3);
   const noise2 = valueNoise(rng, n, 3);
@@ -392,8 +436,8 @@ function tryLayout(rng: Rng, n: number): MapLayout | null {
   for (const p of palms) tiles[p.y]![p.x] = makeTile('palm');
 
   const grass = rest.filter((p) => tiles[p.y]![p.x]!.terrain === 'grass');
-  const bushes = spreadPick(rng, grass, 4, 2);
-  if (bushes.length < 4) return null;
+  const bushes = spreadPick(rng, grass, bushCount, 2);
+  if (bushes.length < bushCount) return null;
   const colours = rng.shuffle(BERRY_COLOURS);
   const safeBerry = colours[0]!;
   const poisonBerry = colours[1]!;
@@ -401,7 +445,7 @@ function tryLayout(rng: Rng, n: number): MapLayout | null {
   const nearSpring = bushes.slice().sort((a, b) => fromSpring[a.y]![a.x]! - fromSpring[b.y]![b.x]!);
   const safeFirst = rng.pick(nearSpring.slice(0, 2));
   const others = rng.shuffle(bushes.filter((p) => !same(p, safeFirst)));
-  const safeSet = [safeFirst, others[0]!];
+  const safeSet = [safeFirst, ...others.slice(0, Math.max(0, bushCount - poisonCount - 1))];
   for (const p of bushes) {
     tiles[p.y]![p.x] = { ...makeTile('bush'), berry: safeSet.some((q) => same(q, p)) ? safeBerry : poisonBerry };
   }
@@ -418,7 +462,9 @@ function tryLayout(rng: Rng, n: number): MapLayout | null {
 
 export function generateIsland(root: Rng, cfg: IslandConfig): IslandWorld {
   let layout: MapLayout | null = null;
-  for (let attempt = 0; attempt < 500 && !layout; attempt++) layout = tryLayout(root.fork(`island:map:${attempt}`), cfg.size);
+  const bushes = Math.max(2, Math.min(6, cfg.berryBushes));
+  const poison = Math.max(1, Math.min(bushes - 1, cfg.poisonBushes));
+  for (let attempt = 0; attempt < 500 && !layout; attempt++) layout = tryLayout(root.fork(`island:map:${attempt}`), cfg.size, bushes, poison);
   if (!layout) throw new Error('Survival Island: could not generate an island for this seed');
 
   const wr = root.fork('island:weather');
@@ -428,24 +474,25 @@ export function generateIsland(root: Rng, cfg: IslandConfig): IslandWorld {
     let w: Weather;
     if (d <= 2) w = wr.chance(0.6) ? 'clear' : 'cloudy';
     else {
+      // Fixed draw order: the same seed gives the same weather under any config thresholds.
       const r = wr.next();
-      w = r < 0.32 ? 'clear' : r < 0.58 ? 'cloudy' : r < 0.72 ? 'hot' : r < 0.9 ? 'rain' : 'storm';
+      const storm = cfg.stormChance;
+      const rain = storm + cfg.rainChance;
+      const fair = 1 - rain;
+      w = r < storm ? 'storm' : r < rain ? 'rain' : r < rain + fair * 0.14 ? 'hot' : r < rain + fair * 0.55 ? 'cloudy' : 'clear';
       if (w === 'storm' && weather[d - 1] === 'storm') w = 'rain';
     }
     weather.push(w);
-    nightCold.push(wr.int(8, 18));
+    nightCold.push(wr.int(cfg.nightCold[0], cfg.nightCold[1]));
   }
-  const shipFirst = wr.int(3, 4);
-  const shipPeriod = wr.int(3, 4);
+  const shipFirst = wr.int(cfg.shipFirstDay[0], cfg.shipFirstDay[1]);
+  const shipPeriod = wr.int(cfg.shipEveryDays[0], cfg.shipEveryDays[1]);
   const candidates: number[] = [];
   for (let d = shipFirst; d <= cfg.maxDays; d += shipPeriod) candidates.push(d);
-  // The first ship always passes (so it can be noticed); later ones skip stormy days.
-  if (weather[shipFirst] === 'storm') weather[shipFirst] = 'cloudy';
-  let shipDays = candidates.filter((d) => weather[d] !== 'storm');
-  if (shipDays.length < 2 && candidates.length >= 2) {
-    weather[candidates[1]!] = 'cloudy';
-    shipDays = candidates.filter((d) => weather[d] !== 'storm');
-  }
+  // Enough passes must actually happen for a rescue to be possible: calm the
+  // weather on the first `signalsNeeded` passing days; later ones skip storms.
+  for (const d of candidates.slice(0, Math.max(1, cfg.signalsNeeded))) if (weather[d] === 'storm') weather[d] = 'cloudy';
+  const shipDays = candidates.filter((d) => weather[d] !== 'storm');
 
   return {
     size: cfg.size,
@@ -462,6 +509,10 @@ export function generateIsland(root: Rng, cfg: IslandConfig): IslandWorld {
     shipFirst,
     shipPeriod,
     shipDays,
+    signalsNeeded: Math.max(1, cfg.signalsNeeded),
+    requireNightFire: cfg.requireNightFire,
+    drinkAmount: cfg.drinkAmount,
+    poisonDamage: cfg.poisonDamage,
     safeBerry: layout.safeBerry,
     poisonBerry: layout.poisonBerry,
     rolls: root.fork('island:rolls'),
@@ -493,6 +544,8 @@ export function newIslandState(world: IslandWorld): IslandState {
     explored: Array.from({ length: n }, () => Array.from({ length: n }, () => false)),
     bottleFound: false,
     shipsSeen: [],
+    sightings: [],
+    fireNights: [],
     poisonEaten: 0,
     alive: true,
     rescued: false,
@@ -753,9 +806,7 @@ function applyAction(world: IslandWorld, s: IslandState, cmd: IslandCommand): Ac
       let text = `You walk ${walked} tile${walked === 1 ? '' : 's'} ${DIR_WORD[cmd.dir]} to ${coordName(s.pos)} (${TERRAIN_NAME[dest.terrain]}).${stop}`;
       if (dest.terrain === 'summit') text += ' From the summit you can see the whole island.';
       if (found) {
-        text +=
-          ` You find a message in a bottle! It reads: "To anyone stranded here: the supply ship Albatross passes this island every ${world.shipPeriod} days, around midday — ` +
-          'though she stays in port on stormy days. A big fire blazing on the highest peak will bring her in."';
+        text += ` You find a message in a bottle! ${bottleMessage(world)}`;
         return { ok: true, text, tone: 'good' };
       }
       return { ok: true, text };
@@ -803,8 +854,9 @@ function applyAction(world: IslandWorld, s: IslandState, cmd: IslandCommand): Ac
       if (here.terrain === 'spring') {
         s.energy -= Math.min(s.energy, COST.drink);
         const before = s.water;
-        s.water = 100;
-        return { ok: true, text: `You drink your fill from the cold spring (water ${before} → ${s.water}).`, tone: 'good' };
+        s.water = Math.min(100, s.water + world.drinkAmount);
+        const how = world.drinkAmount >= 100 ? 'your fill from the cold spring' : 'from the spring — it only trickles';
+        return { ok: true, text: `You drink ${how} (water ${before} → ${s.water}).`, tone: 'good' };
       }
       if (weather === 'rain' || weather === 'storm') {
         s.energy -= Math.min(s.energy, COST.drink);
@@ -828,10 +880,10 @@ function applyAction(world: IslandWorld, s: IslandState, cmd: IslandCommand): Ac
         s.poisonEaten++;
         s.water = Math.max(0, s.water - 15);
         s.energy = Math.max(0, s.energy - 10);
-        hurt(s, 20, `poisonous ${world.poisonBerry} berries`);
+        hurt(s, world.poisonDamage, `poisonous ${world.poisonBerry} berries`);
         return {
           ok: true,
-          text: `Bitter! Minutes later you are violently sick — the ${world.poisonBerry} berries are poisonous (−20 health, −15 water, −10 energy).`,
+          text: `Bitter! Minutes later you are violently sick — the ${world.poisonBerry} berries are poisonous (−${world.poisonDamage} health, −15 water, −10 energy).`,
           tone: 'bad',
         };
       }
@@ -956,6 +1008,16 @@ function applyAction(world: IslandWorld, s: IslandState, cmd: IslandCommand): Ac
   }
 }
 
+/** The logbook page in the bottle: the ship's full schedule and what the crew looks for. */
+export function bottleMessage(world: IslandWorld): string {
+  const proof = world.requireNightFire ? ' and a campfire burning somewhere on the island the night before' : '';
+  const times = world.signalsNeeded === 1 ? 'we will send a boat' : `once we have seen it on ${world.signalsNeeded} passes, we will send a boat`;
+  return (
+    `It is a page torn from the logbook of the supply ship Albatross: "Kestrel Isle. We pass on day ${world.shipFirst} of the month and then every ${world.shipPeriod} days, around midday — ` +
+    `except in a storm, when we stay in port. Should anyone ever be stranded there: if we see a signal fire blazing on the peak${proof}, ${times}."`
+  );
+}
+
 function describeCommand(cmd: IslandCommand): string {
   switch (cmd.kind) {
     case 'move':
@@ -1027,6 +1089,13 @@ function nightTick(world: IslandWorld, s: IslandState, events: string[]): string
       fireNote = ' Your campfire keeps you warm.';
     }
   }
+  // Other campfires: a storm drowns any fire without a shelter over it.
+  for (const k of Object.keys(s.fires)) {
+    const [fx, fy] = k.split(',').map(Number);
+    const covered = s.shelters.includes(k) || s.tiles[fy!]![fx!]!.terrain === 'cave';
+    if (k !== here && s.fires[k]! > 0 && w === 'storm' && !covered) s.fires[k] = 0;
+  }
+  if (Object.values(s.fires).some((f) => f > 0)) s.fireNights.push(s.day);
   s.warmth += dWarm;
   s.energy += (sheltered ? 35 : w === 'storm' ? 10 : 22) + (fireNote.includes('warm') ? 5 : 0);
   clampStats(s);
@@ -1115,19 +1184,29 @@ export function stepIsland(world: IslandWorld, s: IslandState, command: string |
     const q = quarterIndex(s.day, s.phase);
     if (s.phase === 1 && world.shipDays.includes(s.day)) {
       s.shipsSeen.push(s.day);
-      if (s.signal === 'lit' && q <= s.signalLitAt + 1) {
-        s.rescued = true;
-        s.rescueDay = s.day;
-        s.over = true;
-        events.push('⛵ Around midday the supply ship spots your blazing signal fire! A boat rows ashore — you are RESCUED!');
-        tone = 'good';
+      const t = tileAt(s, s.pos).terrain;
+      const see = t === 'beach' || t === 'palm' || t === 'rocks' || t === 'summit' || t === 'cave';
+      const pass = `Day ${s.day}, midday: the supply ship Albatross sails past the island${see ? ' — you can see her out at sea' : ' — you hear her horn from the sea'}.`;
+      const blazing = s.signal === 'lit' && q <= s.signalLitAt + 1;
+      if (!blazing) {
+        events.push(`${pass} No signal fire is burning on the summit, so she sails on.`);
+      } else if (world.requireNightFire && !s.fireNights.includes(s.day - 1)) {
+        events.push(`${pass} The crew sees your signal, but no campfire burned on the island last night — the captain is not convinced anyone lives here, and she sails on.`);
       } else {
-        const t = tileAt(s, s.pos).terrain;
-        events.push(
-          t === 'beach' || t === 'palm' || t === 'rocks' || t === 'summit'
-            ? 'Around midday a ship sails past far out to sea. Nobody aboard notices you.'
-            : 'Around midday you hear a ship’s horn from the sea — a vessel is passing the island right now.',
-        );
+        s.sightings.push(s.day);
+        if (s.sightings.length >= world.signalsNeeded) {
+          s.rescued = true;
+          s.rescueDay = s.day;
+          s.over = true;
+          events.push(`${pass} The crew spots your signal fire again and lowers a boat — you are RESCUED!`);
+          tone = 'good';
+        } else {
+          const left = world.signalsNeeded - s.sightings.length;
+          events.push(
+            `${pass} Her horn sounds three times: the crew has seen your signal! She cannot stop today; they will send a boat once they see your signal ${left === 1 ? 'again on a later pass' : `on ${left} more passes`}.`,
+          );
+          tone = 'good';
+        }
       }
     }
     if (!s.over && !checkDeath(s) && s.phase === 2) {
@@ -1250,7 +1329,7 @@ function inventoryText(world: IslandWorld, s: IslandState): string {
   return `Inventory ${invCount(s)}/${world.inventoryCap}: ${items.length ? items.join(', ') : 'empty'} · Tools: ${s.spear ? 'spear' : 'none'}`;
 }
 
-function campText(s: IslandState): string {
+function campText(world: IslandWorld, s: IslandState): string {
   const fires = Object.entries(s.fires)
     .filter(([, f]) => f > 0)
     .map(([k, f]) => {
@@ -1262,7 +1341,10 @@ function campText(s: IslandState): string {
     return `shelter at ${coordName({ x: x!, y: y! })}`;
   });
   const signal = s.signal === 'none' ? 'signal pile: none' : s.signal === 'built' ? 'signal pile: built on the summit (unlit)' : 'signal fire: BLAZING on the summit';
-  return [...fires, ...shelters, signal].join(' · ');
+  const seen = `signal sightings by the ship: ${s.sightings.length} of ${world.signalsNeeded} needed`;
+  const parts = [...fires, ...shelters, signal, seen];
+  if (world.requireNightFire && s.day > 1) parts.push(`last night ${s.fireNights.includes(s.day - 1) ? 'a campfire burned on the island' : 'no campfire burned on the island'}`);
+  return parts.join(' · ');
 }
 
 function tileStatus(s: IslandState): string {
@@ -1302,7 +1384,7 @@ export function islandObservation(world: IslandWorld, s: IslandState, noteLine: 
   lines.push(`You: health ${s.health} · food ${s.food} · water ${s.water} · energy ${s.energy} · warmth ${s.warmth}`);
   lines.push(`You are at ${coordName(s.pos)} on ${tileStatus(s)}${isSheltered(s) ? ', sheltered' : ''}. Around you: ${surroundings(world, s)}.`);
   lines.push(inventoryText(world, s));
-  lines.push(`Camp: ${campText(s)}`);
+  lines.push(`Camp: ${campText(world, s)}`);
   lines.push(`Known places: ${knownPlaces(world, s)}`);
   lines.push(`Map (rows 1-${world.size} north→south, columns A-${COLS[world.size - 1]} west→east; @ = you, ? = unexplored):`);
   lines.push(`    ${COLS.slice(0, world.size)}`);

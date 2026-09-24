@@ -10,7 +10,7 @@ import type { RunListItem } from '../types.ts';
 
 const SLIDES: Array<[string, string]> = [
   ['Title card', 'Run name, date, line-up of contenders and the fingerprint'],
-  ['How scoring works', '0–100 scores, the Gauntlet Index, what the thin uncertainty lines mean'],
+  ['How scoring works', '0–100 scores, the Gauntlet Index, and what the uncertainty brackets mean'],
   ['Every test, twice', 'An explainer (the challenge, how it’s scored, an example) then an animated result race'],
   ['Final standings', 'Revealed last to first, one row per key press — or automatically with A'],
   ['Score vs cost · Medal table · Credits', 'Value for money, test-by-test medals, and the methodology fingerprint'],
@@ -18,7 +18,14 @@ const SLIDES: Array<[string, string]> = [
 
 export default function PresentPickerPage() {
   const runs = useAsync<RunListItem[]>(() => api.runs(), []);
-  const list = useMemo(() => (runs.data ?? []).filter((r) => r.completedJobs > 0).sort((a, b) => b.createdAt.localeCompare(a.createdAt)), [runs.data]);
+  // Finished runs first (they make complete episodes), newest first within each group.
+  const list = useMemo(
+    () =>
+      (runs.data ?? [])
+        .filter((r) => r.completedJobs > 0)
+        .sort((a, b) => Number(b.status === 'completed') - Number(a.status === 'completed') || b.createdAt.localeCompare(a.createdAt)),
+    [runs.data],
+  );
 
   return (
     <div className="page">
@@ -35,49 +42,51 @@ export default function PresentPickerPage() {
               <div className="desc">Runs with at least one finished result. The deck works for partial runs too — missing tests say so.</div>
             </div>
           </div>
-          {runs.loading && !runs.data ? (
-            <SkeletonRows rows={5} h={64} />
-          ) : runs.error && !runs.data ? (
-            <ErrorState error={runs.error} onRetry={runs.reload} title="Couldn’t load runs" />
-          ) : list.length === 0 ? (
-            <Empty
-              icon={<Icon.Present />}
-              title="Nothing to present yet"
-              actions={
-                <Link to="/run/new" className="btn primary">
-                  <Icon.Rocket /> Start a run
-                </Link>
-              }
-            >
-              Finish a run first — the presenter builds its slides from the results.
-            </Empty>
-          ) : (
-            <ul className="pick-list">
-              {list.map((r) => (
-                <li key={r.id}>
-                  <Link to={pathOf('present', r.id)} className="pick-item" aria-label={`Present ${r.name}`}>
-                    <div className="pick-main">
-                      <div className="row wrap" style={{ gap: 10 }}>
-                        <strong className="pick-name">{r.name || r.id}</strong>
-                        <RunStatusBadge status={r.status} />
-                      </div>
-                      <div className="muted pick-meta tnum">
-                        {fmtDate(r.createdAt)} · {pluralize(r.contestants.length, 'model')} · {pluralize(r.testCount, 'test')} · {fmtInt(r.completedJobs)}/{fmtInt(r.totalJobs)} jobs · {fmtCost(r.costUsd)}
-                      </div>
-                      <div className="chip-list">
-                        {r.contestants.slice(0, 8).map((c) => (
-                          <ModelChip key={c.id} label={c.label} color={c.color} pill />
-                        ))}
-                      </div>
-                    </div>
-                    <span className="btn primary pick-go">
-                      <Icon.Present /> Present
-                    </span>
+          <div className="card-body">
+            {runs.loading && !runs.data ? (
+              <SkeletonRows rows={5} h={64} />
+            ) : runs.error && !runs.data ? (
+              <ErrorState error={runs.error} onRetry={runs.reload} title="Couldn’t load runs" />
+            ) : list.length === 0 ? (
+              <Empty
+                icon={<Icon.Present />}
+                title="Nothing to present yet"
+                actions={
+                  <Link to="/run/new" className="btn primary">
+                    <Icon.Rocket /> Start a run
                   </Link>
-                </li>
-              ))}
-            </ul>
-          )}
+                }
+              >
+                Finish a run first — the presenter builds its slides from the results.
+              </Empty>
+            ) : (
+              <ul className="pick-list">
+                {list.map((r) => (
+                  <li key={r.id}>
+                    <Link to={pathOf('present', r.id)} className="pick-item" aria-label={`Present ${r.name}`}>
+                      <div className="pick-main">
+                        <div className="row wrap" style={{ gap: 10 }}>
+                          <strong className="pick-name">{r.name || r.id}</strong>
+                          <RunStatusBadge status={r.status} />
+                        </div>
+                        <div className="muted pick-meta tnum">
+                          {fmtDate(r.createdAt)} · {pluralize(r.contestants.length, 'model')} · {pluralize(r.testCount, 'test')} · {fmtInt(r.completedJobs)}/{fmtInt(r.totalJobs)} jobs · {fmtCost(r.costUsd)}
+                        </div>
+                        <div className="chip-list">
+                          {r.contestants.slice(0, 8).map((c) => (
+                            <ModelChip key={c.id} label={c.label} color={c.color} pill />
+                          ))}
+                        </div>
+                      </div>
+                      <span className="btn pick-go">
+                        <Icon.Present /> Present
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </section>
         <aside className="stack">
           <section className="card">
@@ -86,7 +95,7 @@ export default function PresentPickerPage() {
                 <h2>What’s in the deck</h2>
               </div>
             </div>
-            <ol className="deck-outline">
+            <ol className="deck-outline card-body">
               {SLIDES.map(([t, d]) => (
                 <li key={t}>
                   <strong>{t}</strong>
@@ -101,7 +110,7 @@ export default function PresentPickerPage() {
                 <h2>Keys</h2>
               </div>
             </div>
-            <dl className="kv keys-kv">
+            <dl className="kv keys-kv card-body">
               <dt>
                 <kbd>→</kbd> <kbd>Space</kbd>
               </dt>

@@ -39,8 +39,8 @@ export default function CostsPage() {
   const maxCell = useMemo(() => Math.max(1e-9, ...(e?.perTest ?? []).flatMap((t) => Object.values(t.perContestant))), [e]);
   const measuredCount = (e?.perTest ?? []).filter((t) => t.basis !== 'definition').length;
   useViewerCaption(
-    `What a run would cost before we press start: each model’s estimated bill for every test${repeats > 1 ? `, with each question asked ${repeats} times` : ''}. Darker cells are the expensive ones.`,
-    e ? `${measuredCount} of ${e.perTest.length} tests priced from real past usage; the rest from each test’s token estimate · judge fees included` : undefined,
+    `What a run would cost before we press start: each model’s estimated bill for every test${repeats > 1 ? `, asked ${repeats} times` : ''}. The stronger the blue, the more it costs.`,
+    e ? `${measuredCount} of ${e.perTest.length} tests priced from real past runs · judge fees included` : undefined,
   );
 
   const toggleModel = (id: string) => {

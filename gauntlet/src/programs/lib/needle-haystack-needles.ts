@@ -10,7 +10,7 @@ import type { Rng } from '../../core/types.ts';
 import { GUILDS, STREET_CORES, TEMPLES, VILLAGES, DISTRICTS, makeShips } from './needle-haystack-corpus.ts';
 import type { NameForge, Person } from './needle-haystack-corpus.ts';
 
-export type NeedleKind = 'single' | 'multi-hop' | 'aggregate' | 'superseded';
+export type NeedleKind = 'single' | 'multi-hop' | 'three-hop' | 'aggregate' | 'superseded';
 
 export interface NeedleSpec {
   kind: NeedleKind;
@@ -499,5 +499,212 @@ export function buildNeedles(e: NeedleEnv, count: number): NeedleSpec[] {
     ...multis.map((k) => MULTI_BUILDERS[k]!(e)),
     AGGREGATE_BUILDERS[agg]!(e),
     SUPERSEDED_BUILDERS[sup]!(e),
+  ];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hard tier: 3-hop chains, five-place sums, superseded values with look-alikes.
+// Every hop has a near-miss decoy (Daskwell vs Taskwell), so skimming fails.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function distinctInts(e: NeedleEnv, count: number, min: number, max: number): number[] {
+  return e.rng.shuffle(Array.from({ length: max - min + 1 }, (_, i) => i + min)).slice(0, count);
+}
+
+export const THREE_HOP_BUILDERS: Record<string, Builder> = {
+  ship3(e) {
+    const ship = e.take<string>('ship', []);
+    const captain = e.person();
+    const mate = e.person();
+    const captainN = e.forge.nearMiss(captain);
+    const mateN = e.forge.nearMiss(mate);
+    const other = e.person();
+    const [village, v2, v3] = [e.village(), e.village(), e.village()];
+    return {
+      ...base('three-hop', 'captain → first mate → birthplace', `In which village was the first mate of the captain of ${ship} on her maiden voyage born?`),
+      expected: village,
+      accept: [village],
+      reject: [v2, v3],
+      parts: [
+        `On her maiden voyage ${ship} was commanded by Captain ${captain.full}.`,
+        `Captain ${captain.full}'s first mate was ${mate.full}, a quiet sailor from the hills.`,
+        `${mate.full} had been born in the village of ${village}.`,
+      ],
+      distractors: [
+        `Captain ${captainN.full}'s first mate was ${other.full}, who never learned to swim.`,
+        `${mateN.full} had been born in the village of ${v2}.`,
+        `${other.full} was born in the village of ${v3}.`,
+      ],
+    };
+  },
+  architect3(e) {
+    const building = e.take('building', BUILDINGS);
+    const architect = e.person();
+    const master = e.person();
+    const architectN = e.forge.nearMiss(architect);
+    const masterN = e.forge.nearMiss(master);
+    const other = e.person();
+    const [d1, d2, d3] = [e.take('daughter', DAUGHTERS), e.take('daughter', DAUGHTERS), e.take('daughter', DAUGHTERS)];
+    const temple = e.take('temple', TEMPLES);
+    return {
+      ...base('three-hop', 'architect → master → daughter', `What was the first name of the only daughter of the master mason under whom the architect of ${building} trained?`),
+      expected: d1,
+      accept: [d1],
+      reject: [d2, d3],
+      parts: [
+        `${cap(building)} was designed by the architect ${architect.full}.`,
+        `As a young man ${architect.full} had trained under the master mason ${master.full}.`,
+        `${master.full}'s only daughter, ${d1}, later kept the city archives.`,
+      ],
+      distractors: [
+        `${architectN.full} trained under the master mason ${other.full}.`,
+        `${other.full}'s only daughter, ${d2}, became a ferrywoman.`,
+        `${masterN.full}'s only daughter, ${d3}, sang in the choir of ${temple}.`,
+      ],
+    };
+  },
+  guild3(e) {
+    const guild = e.take('guild', GUILDS);
+    const leader = e.person();
+    const ally = e.person();
+    const leaderN = e.forge.nearMiss(leader);
+    const allyN = e.forge.nearMiss(ally);
+    const other = e.person();
+    const year = e.startYear + e.rng.int(20, 90);
+    const [dy2, dy3] = distinctInts(e, 2, 2, 9);
+    const year2 = year + dy2!;
+    const year3 = year - dy3!;
+    return {
+      ...base('three-hop', 'guild leader → ally → death', `In which year did the closest ally of the leader of ${guild} die?`),
+      expected: String(year),
+      numeric: year,
+      rejectNumbers: [year2, year3],
+      parts: [
+        `In those years ${guild} was led by ${leader.full}.`,
+        `The closest ally of ${leader.full} on the council was the alderman ${ally.full}.`,
+        `${ally.full} died of a fever in the year ${year}.`,
+      ],
+      distractors: [
+        `The closest ally of ${leaderN.full} was the alderman ${other.full}.`,
+        `${other.full} died in the year ${year2}.`,
+        `${allyN.full} died in the year ${year3}.`,
+      ],
+    };
+  },
+};
+
+export const SUM5_BUILDERS: Record<string, Builder> = {
+  salt5(e) {
+    const [mine, near] = e.take('mine', MINES);
+    const [a, b, c, d, f, iron, other, promised] = distinctInts(e, 8, 11, 64) as [number, number, number, number, number, number, number, number];
+    const total = a + b + c + d + f;
+    return {
+      ...base('aggregate', 'salt wagons (sum of 5)', `According to the chronicle, how many wagons of salt in total actually arrived from the mines of ${mine}?`),
+      expected: String(total),
+      numeric: total,
+      rejectNumbers: [total + promised, total + iron, total + other],
+      parts: [
+        `That autumn ${a} wagons of salt came down from the mines of ${mine}.`,
+        `Before the passes closed, the mines of ${mine} sent another ${b} wagons of salt to the city.`,
+        `In the spring a further ${c} wagons of salt arrived from the mines of ${mine}.`,
+        `The mines of ${mine} delivered ${d} wagons of salt in time for the herring season.`,
+        `A late convoy brought ${f} wagons of salt down from the mines of ${mine} just before the first snow.`,
+      ],
+      distractors: [
+        `The same year ${iron} wagons of iron came down from the mines of ${mine}.`,
+        `The mines of ${near} sent ${other} wagons of salt, most of it spoiled by rain.`,
+        `A further ${promised} wagons of salt were promised by the mines of ${mine}, but the road collapsed and they never arrived.`,
+      ],
+    };
+  },
+  pitch5(e) {
+    const [forest, near] = e.take('forest', FORESTS);
+    const [a, b, c, d, f, tar, other, cancelled] = distinctInts(e, 8, 15, 84) as [number, number, number, number, number, number, number, number];
+    const total = a + b + c + d + f;
+    return {
+      ...base('aggregate', 'pitch barrels (sum of 5)', `According to the chronicle, how many barrels of pitch in total were actually delivered from the forest of ${forest}?`),
+      expected: String(total),
+      numeric: total,
+      rejectNumbers: [total + cancelled, total + tar, total + other],
+      parts: [
+        `The shipwrights bought ${a} barrels of pitch brought from the forest of ${forest}.`,
+        `Charcoal-burners from the forest of ${forest} delivered ${b} more barrels of pitch before the rains.`,
+        `A load of ${c} barrels of pitch came from the forest of ${forest} in the autumn.`,
+        `The navy yard took delivery of ${d} barrels of pitch from the forest of ${forest}.`,
+        `The last carts of the year carried ${f} barrels of pitch in from the forest of ${forest}.`,
+      ],
+      distractors: [
+        `The forest of ${forest} also sent ${tar} barrels of tar, which the ropemakers bought.`,
+        `The forest of ${near} supplied ${other} barrels of pitch, but the shipwrights judged it poor.`,
+        `The council ordered ${cancelled} more barrels of pitch from the forest of ${forest}, but the order was cancelled.`,
+      ],
+    };
+  },
+};
+
+export const SUPERSEDED_HARD_BUILDERS: Record<string, Builder> = {
+  clockTowerHard(e) {
+    const square = e.take('square', SQUARES);
+    const square2 = e.take('square', SQUARES);
+    const h1 = e.rng.int(40, 90);
+    const h2 = h1 + e.rng.pick([-1, 1]) * e.rng.int(3, 12);
+    let h3 = e.rng.int(40, 90);
+    if (h3 === h1 || h3 === h2) h3 += 17;
+    const surveyor = e.person();
+    return {
+      ...base('superseded', 'clock tower (corrected)', `How tall is the Clock Tower in ${square}, in cubits?`),
+      expected: String(h2),
+      numeric: h2,
+      rejectNumbers: [h1, h3],
+      parts: [
+        `The old charter records that the Clock Tower in ${square} stands ${h1} cubits high.`,
+        `A careful survey by ${surveyor.full} corrected the old charter: the Clock Tower in ${square} actually stands ${h2} cubits high.`,
+      ],
+      distractors: [`The Clock Tower in ${square2} stands ${h3} cubits high, exactly as its builders recorded.`],
+    };
+  },
+  censusHard(e) {
+    const year = e.startYear + e.rng.int(10, 60);
+    const year2 = year + e.rng.pick([-1, 1]) * e.rng.int(1, 4);
+    const p1 = e.rng.int(2000, 9000);
+    const p2 = p1 + e.rng.pick([-1, 1]) * e.rng.int(120, 900);
+    const p3 = p2 + e.rng.pick([-1, 1]) * e.rng.int(40, 300);
+    return {
+      ...base('superseded', 'census (corrected)', `According to the chronicle, how many households were there within the walls at the census of ${year}?`),
+      expected: String(p2),
+      numeric: p2,
+      rejectNumbers: [p1, p3],
+      parts: [
+        `The census of ${year} counted ${withCommas(p1)} households within the walls.`,
+        `Clerks later found an error in the census of ${year}: the true count was ${withCommas(p2)} households within the walls.`,
+      ],
+      distractors: [`The census of ${year2} counted ${withCommas(p3)} households within the walls.`],
+    };
+  },
+};
+
+export interface NeedleMix {
+  single: number;
+  twoHop: number;
+  threeHop: number;
+  sum3: number;
+  sum5: number;
+  superseded: number;
+}
+
+/** Builds an explicit needle mix (used by the hard tier; the standard tier uses buildNeedles). */
+export function buildNeedleMix(e: NeedleEnv, mix: NeedleMix): NeedleSpec[] {
+  const pick = (builders: Record<string, Builder>, n: number) =>
+    e.rng
+      .shuffle(Object.keys(builders))
+      .slice(0, Math.min(n, Object.keys(builders).length))
+      .map((k) => builders[k]!(e));
+  return [
+    ...pick(SINGLE_BUILDERS, mix.single),
+    ...pick(MULTI_BUILDERS, mix.twoHop),
+    ...pick(THREE_HOP_BUILDERS, mix.threeHop),
+    ...pick(AGGREGATE_BUILDERS, mix.sum3),
+    ...pick(SUM5_BUILDERS, mix.sum5),
+    ...pick(SUPERSEDED_HARD_BUILDERS, mix.superseded),
   ];
 }

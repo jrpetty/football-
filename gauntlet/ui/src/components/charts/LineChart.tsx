@@ -20,7 +20,22 @@ function fmtNum(v: number): string {
   return String(+v.toFixed(2));
 }
 
-export function LineChart({ series, marker, height: hProp, xLabel, title }: { series: LineSeries[]; marker?: number | null; height?: number; xLabel?: string; title: string }) {
+export function LineChart({
+  series,
+  marker,
+  height: hProp,
+  xLabel,
+  yLabel,
+  title,
+}: {
+  series: LineSeries[];
+  marker?: number | null;
+  height?: number;
+  xLabel?: string;
+  /** Short y-axis title drawn above the axis, e.g. "Facts surviving". */
+  yLabel?: string;
+  title: string;
+}) {
   const [ref, size] = useElementSize<HTMLDivElement>();
   const fs = useRootFontSize();
   const s = fs / 14;
@@ -39,7 +54,7 @@ export function LineChart({ series, marker, height: hProp, xLabel, title }: { se
     const yt = niceTicks(Math.min(0, ...ys), ys.length ? Math.max(...ys) : 1, 5);
     const endLabels = colored.length <= 4;
     const maxLabelW = endLabels ? Math.max(0, ...colored.map((sr) => measureText(sr.name, 11.5 * s, 600))) : 0;
-    const margin = { top: 14 * s, right: (endLabels ? maxLabelW + 16 * s : 12 * s), bottom: 30 * s, left: 44 * s };
+    const margin = { top: (yLabel ? 30 : 14) * s, right: endLabels ? maxLabelW + 16 * s : 12 * s, bottom: 30 * s, left: 44 * s };
     const x = linearScale([xMin, xMax === xMin ? xMin + 1 : xMax], [margin.left, width - margin.right]);
     const y = linearScale([yt.min, yt.max], [height - margin.bottom, margin.top]);
     const maxTicks = Math.max(3, Math.min(10, Math.floor(width / (70 * s))));
@@ -54,7 +69,7 @@ export function LineChart({ series, marker, height: hProp, xLabel, title }: { se
     }
     const xs2 = Array.from(new Set(xs)).sort((a, b) => a - b);
     return { x, y, yt, xt: xTicks, margin, xs: xs2, endLabels };
-  }, [colored, width, height, s]);
+  }, [colored, width, height, s, yLabel]);
 
   const { x, y, yt, xt, margin, xs, endLabels } = geo;
   if (!colored.some((sr) => sr.points.length)) {
@@ -115,7 +130,12 @@ export function LineChart({ series, marker, height: hProp, xLabel, title }: { se
         </g>
         {xLabel && (
           <text className="axis-title" x={width - margin.right} y={height - 2 * s} textAnchor="end" style={{ fontSize: 10.5 * s }}>
-            {xLabel.toUpperCase()}
+            {xLabel.toUpperCase()} →
+          </text>
+        )}
+        {yLabel && (
+          <text className="axis-title" x={margin.left - 7 * s} y={margin.top - 14 * s} style={{ fontSize: 10.5 * s }}>
+            {yLabel.toUpperCase()}
           </text>
         )}
         {marker !== undefined && marker !== null && Number.isFinite(marker) && (

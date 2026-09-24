@@ -87,3 +87,29 @@ test('rendered prompts of answer-format tests end with the standard answer instr
     }
   }
 });
+
+test('random filler scores near zero on every automatically graded test (tests measure skill, not luck)', async () => {
+  const { createRng } = await import('../src/core/rng.ts');
+  const words = 'the model result answer benchmark quickly random value system data story river light lamp order help please thanks store product price name city year'.split(' ');
+  const offenders: string[] = [];
+  for (const t of all) {
+    const d = t.definition;
+    if (d.kind !== 'prompt') continue;
+    let sum = 0;
+    let n = 0;
+    for (const c of d.cases) {
+      const scorer = caseScorer(d, c);
+      if (['judge', 'judge-classify', 'artifact', 'human', 'code-js'].includes(scorer.type)) continue;
+      for (let k = 0; k < 4; k++) {
+        const rng = createRng(1000 + k * 31 + n);
+        const filler = Array.from({ length: 20 + rng.int(0, 120) }, () => rng.pick(words)).join(' ') + '.';
+        const response = k % 2 ? filler : `${filler}\nFINAL ANSWER: ${rng.int(0, 99)}`;
+        const out = await scoreResponse({ scorer, expected: c.expected, response, stopReason: 'end', taskText: '', judges: noJudges, saveArtifact: noArtifacts, signal: new AbortController().signal });
+        sum += out.score ?? 0;
+        n++;
+      }
+    }
+    if (n && sum / n > 0.1) offenders.push(`${d.id}: ${((sum / n) * 100).toFixed(1)}%`);
+  }
+  assert.deepEqual(offenders, []);
+});

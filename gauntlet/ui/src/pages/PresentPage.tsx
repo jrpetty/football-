@@ -22,6 +22,15 @@ import { ScoreCostScatter } from '../components/charts/ScoreCostScatter.tsx';
 import { isBaseline, olympicCompare, shortCat } from '../components/leaderboard/util.ts';
 import { fmtCost, fmtIndex, fmtMs, shortHash } from '../format.ts';
 
+/** Compact money for big slide type: $52.57, $0.23, $0.0063, <$0.001. */
+function shortCost(usd: number | null | undefined): string {
+  if (typeof usd !== 'number' || !Number.isFinite(usd)) return '—';
+  if (usd === 0) return '$0';
+  if (usd < 0.001) return '<$0.001';
+  if (usd < 0.01) return `$${usd.toFixed(4).replace(/0+$/, '')}`;
+  return fmtCost(usd);
+}
+
 /** Singular or plural noun (no number). */
 const noun = (n: number, one: string, many = `${one}s`) => (n === 1 ? one : many);
 import type { CategoryInfo, Leaderboard, LeaderboardRow, ProgramInfo, RunDetail, TestAggregate, TestDefinition, TestDetail, TestSnapshot } from '../types.ts';
@@ -240,8 +249,8 @@ function captionFor(slide: Slide, deck: Deck): Caption {
       };
     case 'how':
       return {
-        text: 'The rules: every test is scored out of 100, the Gauntlet Index averages the categories into one number, and thin lines show how certain each score is.',
-        fine: `Uncertainty = 95% bootstrap confidence interval over test cases · temperature ${m.settings?.temperature ?? 0}${deck.hasManual ? ' · “pasted by hand” chatbots answered in their own apps' : ''}`,
+        text: 'The rules: every test is scored out of 100, the Gauntlet Index averages the categories into one number, and brackets show how certain each score is.',
+        fine: `Uncertainty = 95% bootstrap CI over test cases · temperature ${m.settings?.temperature ?? 0}${deck.hasManual ? ' · hand-pasted chatbots used their own apps' : ''}`,
       };
     case 'explainer': {
       const t = slide.test;
@@ -257,14 +266,20 @@ function captionFor(slide: Slide, deck: Deck): Caption {
       const base = baselineRow(deck)?.tests?.[t.snap.id]?.score;
       const program = t.snap.kind === 'program';
       const n = t.snap.caseIds.length;
+      const hasCi = deck.contenders.some((c) => {
+        const ci = deck.rowsById.get(c.id)?.tests?.[t.snap.id]?.ci95;
+        return !!ci && ci[1] - ci[0] > 0.002;
+      });
+      const baseNote = typeof base === 'number' ? (hasCi ? '; grey is random guessing' : ' Grey is random guessing') : '';
+      const unc = hasCi ? ` Brackets show uncertainty${baseNote}.` : baseNote ? `${baseNote}.` : '';
       return {
-        text: `Each model’s score on this test, out of 100 — longer is better. Brackets show the uncertainty${typeof base === 'number' ? '; grey is random guessing' : ''}.${program ? ' Under each bar: how that model’s typical run went.' : ''}`,
-        fine: `Average of ${n} ${casesWord(t, n)} × ${R} ${noun(R, 'attempt')} · uncertainty = 95% bootstrap CI · time = median per ${program ? 'run' : 'question'}`,
+        text: program ? `Each model’s score out of 100 — longer is better — with how its typical run went underneath.${unc}` : `Each model’s score on this test, out of 100 — longer is better.${unc}`,
+        fine: `Average of ${n} ${casesWord(t, n)} × ${R} ${noun(R, 'attempt')} · uncertainty = 95% bootstrap CI · time = median per ${program ? 'run' : casesWord(t, 1)}`,
       };
     }
     case 'final':
       return {
-        text: 'The final ranking: the Gauntlet Index combines every category into one score out of 100. Squares show each category; the thin line is the uncertainty.',
+        text: 'The final ranking: the Gauntlet Index combines every category into one score out of 100. Squares show each category; brackets show uncertainty.',
         fine: `Uncertainty: 95% bootstrap CI · cost per point = spend ÷ Index${deck.hasManual ? ' · * pasted by hand' : ''}`,
       };
     case 'scatter':
@@ -361,10 +376,21 @@ function TitleSlide({ deck }: { deck: Deck }) {
   const m = deck.d.manifest;
   const nModels = deck.contenders.filter((c) => !c.baseline).length;
   const cols = Math.min(4, Math.max(2, deck.contenders.length <= 4 ? deck.contenders.length : Math.ceil(deck.contenders.length / 2)));
+  // "Core Gauntlet · September 2026" → a title line and a gradient sub-line.
+  const nameParts = (m.name || m.id).split(/\s+·\s+/);
   return (
     <div className="s-title">
       <div className="p-eyebrow">Gauntlet · AI benchmark</div>
-      <h1 className="t-run">{m.name || m.id}</h1>
+      <h1 className="t-run">
+        {nameParts.length > 1 ? (
+          <>
+            {nameParts[0]}
+            <span className="t-run-2">{nameParts.slice(1).join(' · ')}</span>
+          </>
+        ) : (
+          m.name || m.id
+        )}
+      </h1>
       <div className="t-meta">
         <span>{longDate(m.startedAt ?? m.createdAt)}</span>
         <span className="dot" aria-hidden="true" />
@@ -443,10 +469,10 @@ function HowSlide({ deck }: { deck: Deck }) {
               <div className="cv-fill" />
               <div className="cv-ci" />
             </div>
-            <div className="cv-cap">somewhere between 64 and 76</div>
+            <div className="cv-cap">scored 70 — really somewhere from 60 to 80</div>
           </div>
-          <h2>Thin lines show uncertainty</h2>
-          <p>How far a score could move if we ran the tests again. When two models’ lines overlap, it’s too close to call.</p>
+          <h2>Brackets show uncertainty</h2>
+          <p>How far a score could move if we ran the tests again. When two models’ brackets overlap, it’s too close to call.</p>
         </section>
         <section className="how-card" style={{ ['--i' as string]: 3 }}>
           <div className="how-vis fair-vis" aria-hidden="true">
@@ -593,6 +619,7 @@ function RaceRow({
   nullNote,
   baseLine,
   baseLabel,
+  unit,
 }: {
   e: RaceEntry;
   i: number;
@@ -603,6 +630,8 @@ function RaceRow({
   /** Random-guessing score (0..1) marked on the track, or null. */
   baseLine: number | null;
   baseLabel: boolean;
+  /** Singular case noun: "question", "task", "run"… */
+  unit: string;
 }) {
   const target = e.score === null ? 0 : e.score * 100;
   const v = useCountUp(target, 1300, 280 + i * 120);
@@ -611,7 +640,7 @@ function RaceRow({
     ? 'Picks answers at random'
     : e.manual
       ? 'Answers pasted by hand · time and cost not comparable'
-      : `${fmtCost(e.agg?.costUsd)} for this test · ${fmtMs(e.agg?.medianCaseMs)} per ${program ? 'run' : 'question'}`;
+      : `${fmtCost(e.agg?.costUsd)} for this test · ${fmtMs(e.agg?.medianCaseMs)} per ${unit}`;
   const href = `#${pathOf('runs', runId)}?tab=matrix&test=${encodeURIComponent(testId)}&c=${encodeURIComponent(e.id)}`;
   return (
     <div className={cx('rr', e.baseline && 'is-base', e.score === null && 'is-null', e.medal && `m-${e.medal}`)} style={{ ['--c' as string]: e.baseline ? 'var(--text-3)' : e.color, ['--i' as string]: i }}>
@@ -625,7 +654,7 @@ function RaceRow({
       </div>
       <div className="rr-main">
         <div className="rr-track">
-          {baseLine !== null && (
+          {baseLine !== null && e.score !== null && (
             <i className="rr-bmark" style={{ left: `${baseLine * 100}%` }} aria-hidden="true">
               {baseLabel && <span>random guessing</span>}
             </i>
@@ -721,7 +750,7 @@ function ResultSlide({ deck, test }: { deck: Deck; test: DeckTest }) {
       ) : (
         <div className={cx('race', program && 'with-sum')} style={{ ['--rows' as string]: ordered.length }}>
           {ordered.map((e, i) => (
-            <RaceRow key={e.id} e={e} i={i} program={program} runId={deck.d.manifest.id} testId={test.snap.id} nullNote={nullNote} baseLine={e.baseline ? null : baseLine} baseLabel={i === 0} />
+            <RaceRow key={e.id} e={e} i={i} program={program} runId={deck.d.manifest.id} testId={test.snap.id} nullNote={nullNote} baseLine={e.baseline ? null : baseLine} baseLabel={i === 0} unit={program ? 'run' : casesWord(test, 1)} />
           ))}
         </div>
       )}
@@ -781,8 +810,8 @@ function FinalRow({ row, place, cats, baseline }: { row: LeaderboardRow; place: 
           ))
         )}
       </span>
-      <span className="fs-cost tnum">{row.manual ? 'by hand*' : fmtCost(row.totals?.costUsd)}</span>
-      <span className="fs-cpp tnum">{row.manual || baseline ? '—' : row.costPerPoint === null ? '—' : fmtCost(row.costPerPoint)}</span>
+      <span className="fs-cost tnum">{row.manual ? 'by hand*' : shortCost(row.totals?.costUsd)}</span>
+      <span className="fs-cpp tnum">{row.manual || baseline ? '—' : row.costPerPoint === null ? '—' : shortCost(row.costPerPoint)}</span>
     </div>
   );
 }

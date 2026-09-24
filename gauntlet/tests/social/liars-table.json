@@ -1,7 +1,7 @@
 {
   "kind": "program",
   "id": "social.liars-table",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "program": "liars-table",
   "name": "The Liar's Table",
   "category": "social",

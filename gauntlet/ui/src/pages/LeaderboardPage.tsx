@@ -39,7 +39,7 @@ export default function LeaderboardPage() {
   const nModels = (lb?.rows ?? []).length;
   useViewerCaption(
     lb && nModels
-      ? `The overall ranking${scope === 'run' ? ' for this run' : ''}: each model’s Gauntlet Index is its average score out of 100 across every category of tests. Thin lines show the uncertainty — overlapping lines are too close to call.`
+      ? `The overall ranking${scope === 'run' ? ' for this run' : ''}: the Gauntlet Index is each model’s average score out of 100 across every category. Thin lines show uncertainty — overlaps are too close to call.`
       : 'The Gauntlet leaderboard: AI models ranked by their average score across every category of tests.',
     'Index = weighted mean of category scores · whiskers = 95% bootstrap confidence interval',
   );

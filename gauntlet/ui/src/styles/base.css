@@ -664,7 +664,7 @@ html[data-broadcast='on'] .broadcast-slate {
   text-align: right;
 }
 html[data-caption='on'] .main {
-  padding-bottom: 6rem;
+  padding-bottom: 5.6rem;
 }
 html[data-caption='on'] .drawer-body {
   padding-bottom: 6rem;
