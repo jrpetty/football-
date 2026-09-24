@@ -16,7 +16,7 @@ cases = build_cases('dbg', DBG, TRAILER, NOTES)
 meta = dict(
     id='coding.debug-and-edge-cases', category='coding', name='Edge-Case Minefield',
     description='Small functions whose specifications are full of traps: exact big-decimal arithmetic without number conversion, code-point-aware truncation with emoji and ZWJ, stable competition ranking, strict CSV parsing, canonical Roman numerals and path normalisation. Hidden tests hammer the corner cases, so the score reflects how carefully a model reads a spec rather than whether it knows the textbook version.',
-    difficulty='medium', tags=['coding', 'javascript', 'edge-cases', 'unicode', 'hidden-tests'],
+    version='1.1.0', difficulty='medium', tags=['coding', 'javascript', 'edge-cases', 'unicode', 'hidden-tests'],
     hook='The happy path is easy. The hidden tests are not.',
     maxOutputTokens=32000,
     estimate={'inputTokens': mean_tokens(cases), 'outputTokens': 8000},

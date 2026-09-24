@@ -51,7 +51,7 @@ function readableOn(hex: string | undefined): string {
   return lum > 0.55 ? '#0b1220' : '#ffffff';
 }
 
-export function TileMap({ rows, legend, showLegend = true, tileMax = 60 }: { rows: string[]; legend?: Legend; showLegend?: boolean; tileMax?: number }) {
+export function TileMap({ rows, legend, showLegend = true, tileMax = 60, fit }: { rows: string[]; legend?: Legend; showLegend?: boolean; tileMax?: number; fit?: boolean }) {
   const cols = Math.max(1, ...rows.map((r) => Array.from(r).length));
   const used = useMemo(() => {
     const set = new Set<string>();
@@ -60,7 +60,7 @@ export function TileMap({ rows, legend, showLegend = true, tileMax = 60 }: { row
   }, [rows]);
   return (
     <div className="tilemap-wrap">
-      <div className="tilemap" style={{ ['--cols' as string]: cols, maxWidth: cols * tileMax }} role="img" aria-label={`Grid map, ${rows.length} by ${cols}`}>
+      <div className={cx('tilemap', fit && 'fit')} style={{ ['--cols' as string]: cols, ['--rows' as string]: Math.max(1, rows.length), maxWidth: fit ? undefined : cols * tileMax }} role="img" aria-label={`Grid map, ${rows.length} by ${cols}`}>
         {rows.map((row, y) =>
           Array.from(row.padEnd(cols, ' ')).map((ch, x) => {
             const l = legend?.[ch];
@@ -254,6 +254,25 @@ export function ReplayPlayer({ replay, autoPlay = false, context }: { replay: Re
           </button>
         </div>
       )}
+      {video && frame && (
+        <div className={cx('rp-outcome', frame.tone && `tone-${frame.tone}`)} key={idx}>
+          <span className="rp-o-k">{frame.label ?? `Turn ${idx + 1}`}</span>
+          <span className="rp-o-t">{plainTurn(frame, context?.modelLabel)}</span>
+        </div>
+      )}
+      {video && atEnd && context?.summary && (
+        <div className="rp-final" role="status">
+          <span className="rp-o-k">Final result</span>
+          <span className="rp-o-t">{context.summary}</span>
+          {typeof context.score === 'number' && (
+            <b className="tnum">
+              {Math.round(context.score * 100)}
+              <small>/100</small>
+            </b>
+          )}
+        </div>
+      )}
+
       <div className={cx('replay-head', video && 'hidden')}>
         <div className="stack tight" style={{ minWidth: 0 }}>
           <span className="eyebrow">Replay</span>
@@ -278,7 +297,7 @@ export function ReplayPlayer({ replay, autoPlay = false, context }: { replay: Re
         <div className={cx('replay-stage', hasGrid ? 'with-grid' : 'no-grid')}>
           {hasGrid && (
             <div className="stage-map">
-              {frame.grid?.rows?.length ? <TileMap rows={frame.grid.rows} legend={frame.grid.legend} tileMax={video ? 120 : 60} /> : <div className="chart-empty">No map this step.</div>}
+              {frame.grid?.rows?.length ? <TileMap rows={frame.grid.rows} legend={frame.grid.legend} fit={video} /> : <div className="chart-empty">No map this step.</div>}
             </div>
           )}
           <div className="stage-side">
@@ -304,25 +323,6 @@ export function ReplayPlayer({ replay, autoPlay = false, context }: { replay: Re
             )}
             <FrameNarration frame={frame} large={!hasGrid} />
           </div>
-        </div>
-      )}
-
-      {video && frame && (
-        <div className={cx('rp-outcome', frame.tone && `tone-${frame.tone}`)} key={idx}>
-          <span className="rp-o-k">{frame.label ?? `Turn ${idx + 1}`}</span>
-          <span className="rp-o-t">{plainTurn(frame, context?.modelLabel)}</span>
-        </div>
-      )}
-      {video && atEnd && context?.summary && (
-        <div className="rp-final" role="status">
-          <span className="rp-o-k">Final result</span>
-          <span className="rp-o-t">{context.summary}</span>
-          {typeof context.score === 'number' && (
-            <b className="tnum">
-              {Math.round(context.score * 100)}
-              <small>/100</small>
-            </b>
-          )}
         </div>
       )}
 

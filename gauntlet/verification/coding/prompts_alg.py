@@ -11,7 +11,7 @@ ALG['a1'] = dict(fn='coverageProfile', d='medium', examples=[
     ([[[0, 3, 1], [7, 9, 1]]], [[0, 3, 1], [7, 9, 1]]),
 ], prompt="""Write a JavaScript function `coverageProfile(intervals)`.
 
-Input: `intervals` is an array of `[start, end, weight]` triples of integers with `start < end` and `weight >= 1`. Each triple covers the half-open range [start, end): it includes `start` and excludes `end`. Coordinates can be as large as plus or minus 10^12 (they are exact integers in JavaScript numbers). There are at most 50,000 intervals, in no particular order.
+Input: `intervals` is an array of `[start, end, weight]` triples of integers with `start < end` and `1 <= weight <= 10^6`. Each triple covers the half-open range [start, end): it includes `start` and excludes `end`. Coordinates can be as large as plus or minus 10^12 (they are exact integers in JavaScript numbers). There are at most 50,000 intervals, in no particular order.
 
 Output: an array of segments `[a, b, total]` describing how much weight covers each point of the number line:
 - `total` is the sum of the weights of all intervals that contain the points of [a, b); every point of [a, b) has this same total;
@@ -35,7 +35,7 @@ There are `n` cities numbered 0 to n-1. `roads` is an array of `[u, v, cost]` tr
 
 You also hold `coupons` (an integer from 0 to 10) discount coupons. Each time you drive a road you may use at most one coupon on that drive, which reduces the price of that drive to floor(cost / 2). Each coupon can be used only once, and you do not have to use all of them.
 
-Return the minimum total price to get from city `start` to city `target`, or -1 if `target` cannot be reached. If `start === target`, return 0. Sizes: up to 20,000 cities and 50,000 roads.
+Return the minimum total price to get from city `start` to city `target`, or -1 if `target` cannot be reached. If `start === target`, return 0. Sizes: up to 20,000 cities and 50,000 roads (so every total fits exactly in a JavaScript number).
 
 Examples:
 {examples}
@@ -93,7 +93,7 @@ ALG['a5'] = dict(fn='componentsAfterCuts', d='medium', examples=[
 
 An undirected graph has `n` nodes numbered 0 to n-1 (1 <= n <= 20,000). `edges` is an array of `[u, v]` pairs (up to 50,000); the edge with array index i is edge i. Edges may repeat (parallel edges) and may be self-loops (u === v).
 
-`cuts` is an array of distinct edge indices. The edges are removed from the graph one at a time, in the order given in `cuts`. Return an array of the same length as `cuts` whose element k is the number of connected components of the graph immediately after the first k+1 cuts have been made. Every node counts, including isolated nodes (a node with no remaining edges is a component by itself).
+`cuts` is an array of distinct edge indices (at most 50,000 of them). The edges are removed from the graph one at a time, in the order given in `cuts`. Return an array of the same length as `cuts` whose element k is the number of connected components of the graph immediately after the first k+1 cuts have been made. Every node counts, including isolated nodes (a node with no remaining edges is a component by itself).
 
 Examples:
 {examples}
@@ -106,7 +106,7 @@ ALG['a6'] = dict(fn='longestWindow', d='medium', examples=[
     ([[5], 1, 4], 0),
 ], prompt="""Write a JavaScript function `longestWindow(nums, maxDistinct, maxSum)`.
 
-`nums` is an array of up to 200,000 integers, each between 0 and 10,000. `maxDistinct` and `maxSum` are integers >= 0.
+`nums` is an array of up to 200,000 integers, each between 0 and 10,000. `maxDistinct` is an integer from 0 to 200,000 and `maxSum` is an integer from 0 to 2,000,000,000.
 
 Return the length of the longest contiguous, non-empty subarray of `nums` that contains at most `maxDistinct` distinct values AND whose elements sum to at most `maxSum`. If no non-empty subarray qualifies (for example when `nums` is empty or `maxDistinct` is 0), return 0.
 
@@ -119,7 +119,7 @@ ALG['a7'] = dict(fn='topWords', d='easy', examples=[
     (['Hello hello HELLO world', 5], [['hello', 3], ['world', 1]]),
     (['b a c b a c', 2], [['a', 2], ['b', 2]]),
     (["Don't stop", 3], [['don', 1], ['stop', 1], ['t', 1]]),
-], prompt="""Write a JavaScript function `topWords(text, k)`.
+], prompt="""Write a JavaScript function `topWords(text, k)`. `text` has at most 1,000,000 characters and `k` is an integer from 0 to 100,000.
 
 A word is a maximal run of ASCII letters (A-Z or a-z). Every other character, including digits, apostrophes, hyphens, whitespace, punctuation and all non-ASCII characters (such as é or ï), separates words. Words are compared case-insensitively and reported in lowercase.
 

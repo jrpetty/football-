@@ -17,6 +17,10 @@ html {
 html[data-broadcast='on'] {
   font-size: clamp(15px, 1.02vw, 26px);
 }
+/* A full-screen replay scales its type like broadcast mode, so it reads well on video. */
+html:has(.replay.is-fs) {
+  font-size: clamp(15px, 1.02vw, 26px);
+}
 
 body {
   margin: 0;

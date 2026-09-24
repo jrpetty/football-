@@ -17,7 +17,7 @@ cases = build_cases('alg', ALG, TRAILER, NOTES)
 meta = dict(
     id='coding.algorithms', category='coding', name='Algorithms Under Test',
     description='Medium-to-hard algorithmic functions (sweep lines, layered shortest paths, implicit-string indexing, DP counting, offline union-find, two pointers, rectangle union) executed against hidden unit tests that include edge cases and large inputs with a ~2 s limit. Correct-but-slow and almost-correct solutions both lose points, which separates models that reason about complexity and corner cases from those that pattern-match a textbook answer.',
-    difficulty='hard', tags=['coding', 'javascript', 'algorithms', 'hidden-tests', 'performance'],
+    version='1.1.0', difficulty='hard', tags=['coding', 'javascript', 'algorithms', 'hidden-tests', 'performance'],
     hook='Hidden tests, huge inputs, two seconds. Does the code actually work?',
     maxOutputTokens=32000,
     estimate={'inputTokens': mean_tokens(cases), 'outputTokens': 10000},

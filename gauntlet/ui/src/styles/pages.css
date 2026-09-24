@@ -1403,6 +1403,13 @@ html[data-broadcast='on'] .table.lb .sticky-2 {
 .replay.video .replay-stage.with-grid {
   grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
 }
+/* Big tiles, but the whole map always fits on screen with the captions. */
+.tilemap.fit {
+  max-width: min(calc(var(--cols) * 120px), 100%, calc(50vh * var(--cols) / var(--rows)));
+}
+.replay.is-fs .tilemap.fit {
+  max-width: min(calc(var(--cols) * 130px), 100%, calc(66vh * var(--cols) / var(--rows)));
+}
 .replay.video .frame-title {
   font-size: 1.8rem;
 }

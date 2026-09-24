@@ -29,7 +29,7 @@ DBG['e2'] = dict(fn='smartTruncate', d='medium', examples=[
 
 Length is measured in Unicode code points, not UTF-16 code units: a character outside the Basic Multilingual Plane (for example most emoji, which JavaScript stores as a surrogate pair) counts as 1. Combining marks, variation selectors, skin-tone modifiers and zero-width joiners are separate code points and each count as 1; do not try to group code points into user-perceived characters, and never split a surrogate pair.
 
-Rules, where `maxLen` is an integer (possibly 0 or negative):
+Rules, where `text` has at most 200,000 code points and `maxLen` is an integer between -10^9 and 10^9 (possibly 0 or negative):
 1. If `text` has at most `maxLen` code points, return `text` unchanged.
 2. Otherwise, if `maxLen < 1`, return the empty string.
 3. Otherwise take the first `maxLen - 1` code points of `text`, remove any whitespace code points from the END of that prefix (whitespace means exactly the characters matched by JavaScript's `/\\s/`), and append the ellipsis character "…" (U+2026). Return the result.
@@ -45,7 +45,7 @@ DBG['e3'] = dict(fn='rankLeaderboard', d='medium', examples=[
     ([[]], []),
 ], prompt="""Write a JavaScript function `rankLeaderboard(entries)`.
 
-`entries` is an array (possibly empty, up to 100,000 items) of `[name, score, time]` triples: `name` is a string (names are not necessarily unique), and `score` and `time` are finite numbers (possibly negative or non-integer).
+`entries` is an array (possibly empty, up to 100,000 items) of `[name, score, time]` triples: `name` is a string (names are not necessarily unique), and `score` and `time` are finite numbers (possibly negative or non-integer) with absolute value at most 10^9.
 
 Return an array of `[rank, name]` pairs, one per entry, ordered as follows:
 - higher `score` first;
@@ -65,6 +65,8 @@ DBG['e4'] = dict(fn='parseCsvRecord', d='hard', examples=[
     ([''], ['']),
     (['"abc"d,e'], None),
 ], prompt="""Write a JavaScript function `parseCsvRecord(record)` that splits one CSV record into its fields, or returns `null` if the record is malformed.
+
+Records are at most 200,000 characters long.
 
 Rules (follow them exactly; whitespace is never trimmed):
 1. Fields are separated by commas. A record with k commas outside quoted fields has exactly k+1 fields. The empty string is a record with one empty field, and a trailing comma produces a trailing empty field.
@@ -89,7 +91,7 @@ Standard form, for values 1 to 3999:
 - The numeral is written from thousands down to units. Thousands: "", M, MM, MMM. Hundreds: "", C, CC, CCC, CD, D, DC, DCC, DCCC, CM. Tens: "", X, XX, XXX, XL, L, LX, LXX, LXXX, XC. Units: "", I, II, III, IV, V, VI, VII, VIII, IX. A standard numeral is the concatenation of one choice from each group, in that order, and is not empty.
 - Consequently the only subtractive pairs allowed are IV, IX, XL, XC, CD and CM, no symbol repeats more than three times in a row, and V, L and D never repeat.
 
-Return the integer value if `s` is a standard-form numeral, and `null` for anything else (the empty string, lowercase letters, spaces or other characters, non-standard forms such as "IIII", "VX", "IC", "XM" or "IIV", and values of 4000 or more).
+`s` is a string of at most 20 characters. Return the integer value if `s` is a standard-form numeral, and `null` for anything else (the empty string, lowercase letters, spaces or other characters, non-standard forms such as "IIII", "VX", "IC", "XM" or "IIV", and values of 4000 or more).
 
 Examples:
 {examples}
