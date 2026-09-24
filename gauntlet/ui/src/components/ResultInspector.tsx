@@ -7,6 +7,7 @@ import { CopyButton, Drawer, ErrorState, ModelChip, ResultStatusBadge, ScorePill
 import { ReplayPlayer } from './ReplayPlayer.tsx';
 import { TranscriptView } from './Transcript.tsx';
 import { Icon } from './icons.tsx';
+import { useViewerCaption } from '../context.tsx';
 
 export interface InspectorTarget {
   testId: string;
@@ -178,7 +179,7 @@ function Metrics({ r }: { r: CaseResult }) {
   );
 }
 
-function ResultDetail({ runId, lite, names }: { runId: string; lite: CaseResultLite; names?: Map<string, string> }) {
+function ResultDetail({ runId, lite, names, target }: { runId: string; lite: CaseResultLite; names?: Map<string, string>; target?: InspectorTarget | null }) {
   const [res, setRes] = useState<CaseResult | null>(null);
   const [err, setErr] = useState<Error | null>(null);
   const [tab, setTab] = useState<Tab>('overview');
@@ -253,7 +254,20 @@ function ResultDetail({ runId, lite, names }: { runId: string; lite: CaseResultL
           ))}
         </div>
       )}
-      {tab === 'replay' && res.replay && <ReplayPlayer replay={res.replay} />}
+      {tab === 'replay' && res.replay && (
+        <ReplayPlayer
+          replay={res.replay}
+          context={{
+            testName: target?.testName ?? res.testId,
+            modelLabel: target?.contestantLabel ?? res.contestantId,
+            modelColor: target?.contestantColor,
+            seed: res.seed,
+            caseId: res.caseId,
+            summary: res.summary,
+            score: res.score,
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -287,6 +301,10 @@ export function ResultInspector({
   }, [target?.testId, target?.contestantId]);
 
   const selected = rows.find((r) => r.key === key) ?? null;
+  useViewerCaption(
+    target ? `${target.contestantLabel} on “${target.testName}”: every question it was asked, the score it earned and the full conversation, exactly as recorded.` : null,
+    target ? 'Scores 0–100 per attempt · judges and checks shown under “Score”' : undefined,
+  );
   const scored = rows.filter((r) => typeof r.score === 'number');
   const mean = scored.length ? scored.reduce((s, r) => s + (r.score as number), 0) / scored.length : null;
 
@@ -340,7 +358,7 @@ export function ResultInspector({
             </button>
           ))}
         </div>
-        <div className="insp-detail">{selected ? <ResultDetail key={selected.key} runId={runId} lite={selected} names={names} /> : <div className="chart-empty">Select a case.</div>}</div>
+        <div className="insp-detail">{selected ? <ResultDetail key={selected.key} runId={runId} lite={selected} names={names} target={target} /> : <div className="chart-empty">Select a case.</div>}</div>
       </div>
     </Drawer>
   );

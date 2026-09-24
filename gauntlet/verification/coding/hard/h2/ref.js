@@ -23,7 +23,7 @@ function regexMatch(pattern, text) {
     if (c === '\\') { p += 2; return { t: 'ch', c: pattern[p - 1] }; }
     if (c === '[') {
       p++; let neg = false; if (pattern[p] === '^') { neg = true; p++; }
-      const start = p; while (pattern[p] !== ']') p++;
+      const start = p; if (pattern[p] === ']') p++; while (pattern[p] !== ']') p++;
       const body = pattern.slice(start, p); p++;
       const ranges = [];
       for (let i = 0; i < body.length; i++) {

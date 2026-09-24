@@ -33,7 +33,7 @@ def solve(cells):
         parsed[name] = e()
     def members(a, b):
         c1, c2 = sorted([a[0], b[0]]); r1, r2 = sorted([int(a[1:]), int(b[1:])])
-        return [n for n in cells if c1 <= n[0] <= c2 and r1 <= int(n[1:]) <= r2]
+        return sorted([n for n in cells if c1 <= n[0] <= c2 and r1 <= int(n[1:]) <= r2], key=lambda n: (n[0], int(n[1:])))
     def deps_of(node, acc, miss):
         k = node[0]
         if k == 'bin': deps_of(node[2], acc, miss); deps_of(node[3], acc, miss)
@@ -68,7 +68,10 @@ def solve(cells):
             k = node[0]
             if k == 'num': return node[1]
             if k == 'ref': return val(node[1])
-            if k == 'sum': return sum(val(m) for m in members(node[1], node[2]))
+            if k == 'sum':
+                t = 0.0
+                for m in members(node[1], node[2]): t += val(m)
+                return t
             if k == 'neg': return -ev(node[1])
             a = ev(node[2]); b = ev(node[3])
             if node[1] == '+': return a + b

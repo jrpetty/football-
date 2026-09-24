@@ -34,6 +34,7 @@ function evaluateSheet(cells) {
           const r1 = Math.min(rowOf(x.a), rowOf(x.b)), r2 = Math.max(rowOf(x.a), rowOf(x.b));
           x.members = [];
           for (const m of names) { const c = colOf(m), r = rowOf(m); if (c >= c1 && c <= c2 && r >= r1 && r <= r2) { x.members.push(m); deps[n].add(m); } }
+          x.members.sort((p, q) => colOf(p) - colOf(q) || rowOf(p) - rowOf(q)); // defined summation order
         }
       }
     } else ast[n] = { t: 'num', v: Number(raw) };

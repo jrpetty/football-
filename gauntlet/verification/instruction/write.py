@@ -22,7 +22,7 @@ out = []
 for c in S['cases']:
     ex = c['samples']['pass'][0]
     out.append({'id': c['id'], 'turns': c['turns'], 'expected': c['expected'],
-                'notes': f"[{c['d']}] {c['why']} Scored on the final reply only. Every case also re-checks the standing rules (exact sign-off line, at most 120 words, never '2291', never 'unfortunately'). A compliant final reply, verified against src/scoring/constraints.ts: <<<{ex}>>>"})
+                'notes': f"[{c['d']}] {c['why']} Scored all-or-nothing on the final reply only. Every case also re-checks the standing rules (exact sign-off line, at most 120 words, never '2291', never 'unfortunately'). A compliant final reply, verified against src/scoring/constraints.ts: <<<{ex}>>>"})
 n_calls = sum(len(c['turns']) for c in S['cases']) / len(S['cases'])
 avg_in = int(sum(tok(S['system']) * len(c['turns']) + sum(tok(t) for t in c['turns']) + 150 * (len(c['turns']) - 1) for c in S['cases']) / len(S['cases']))
 meta = dict(
@@ -33,6 +33,6 @@ meta = dict(
     maxOutputTokens=8000,
     estimate={'inputTokens': avg_in, 'outputTokens': 1500, 'calls': round(n_calls, 2)},
     system=S['system'],
-    scorer={'type': 'constraints'},
+    scorer={'type': 'constraints', 'allOrNothing': True},
 )
 print(write_test(meta, out))

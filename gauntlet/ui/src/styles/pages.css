@@ -1348,6 +1348,119 @@ html[data-broadcast='on'] .table.lb .sticky-2 {
   font-weight: 650;
   text-align: center;
 }
+/* Replay — video mode (broadcast or full screen) */
+.replay-head.hidden {
+  display: none;
+}
+.rp-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.rp-sw {
+  width: 6px;
+  height: 2.1rem;
+  border-radius: 3px;
+  flex: none;
+}
+.rp-t {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 0.6rem;
+  min-width: 0;
+  font-size: 1.35rem;
+  font-weight: 650;
+  color: var(--text-2);
+}
+.rp-test {
+  font-size: 1.6rem;
+  font-weight: 850;
+  letter-spacing: -0.02em;
+  color: var(--text-1);
+}
+.rp-dot {
+  color: var(--text-3);
+}
+.rp-seed {
+  font-size: 1.05rem;
+}
+.rp-turn {
+  font-size: 1.05rem;
+  color: var(--text-2);
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+.rp-turn b {
+  font-size: 1.35rem;
+  color: var(--text-1);
+}
+.replay.video .replay-stage.with-grid {
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+}
+.replay.video .frame-title {
+  font-size: 1.8rem;
+}
+.replay.video .tile-legend {
+  font-size: 0.9rem;
+}
+.rp-outcome,
+.rp-final {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.8rem 1.1rem;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  animation: fade-in 320ms ease-out;
+}
+.rp-outcome.tone-good {
+  border-left-color: var(--good);
+}
+.rp-outcome.tone-bad {
+  border-left-color: var(--bad);
+}
+.rp-o-k {
+  flex: none;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.rp-o-t {
+  flex: 1;
+  min-width: 0;
+  font-size: 1.15rem;
+  line-height: 1.4;
+  color: var(--text-1);
+}
+.rp-final {
+  align-items: center;
+  border-left-color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 8%, var(--surface-2));
+}
+.rp-final b {
+  font-size: 1.8rem;
+  font-weight: 850;
+  line-height: 1;
+}
+.rp-final b small {
+  font-size: 0.85rem;
+  color: var(--text-3);
+  margin-left: 2px;
+}
+html[data-broadcast='on'] .drawer {
+  width: min(calc(var(--drawer-w, 760px) * 1.4), 100vw);
+}
+
 .replay-hint {
   display: flex;
   gap: 6px;

@@ -9,9 +9,33 @@ import type { ReplayData, ReplayFrame } from '../types.ts';
 import { Icon } from './icons.tsx';
 import { cx } from './ui.tsx';
 import { LineChart } from './charts/LineChart.tsx';
+import { usePrefs, useViewerCaption } from '../context.tsx';
 
 const SPEEDS = [0.5, 1, 2, 4];
 const BASE_MS = 1100;
+/** Slower default pace in video mode so viewers can read each turn. */
+const VIDEO_MS = 1700;
+
+/** Who played what — shown as the title bar in broadcast / full-screen (video) mode. */
+export interface ReplayContext {
+  testName: string;
+  modelLabel: string;
+  modelColor?: string;
+  seed?: number;
+  caseId?: string;
+  summary?: string;
+  score?: number | null;
+}
+
+/** One plain-English sentence for the current turn. */
+function plainTurn(frame: ReplayFrame, model: string | undefined): string {
+  const parts: string[] = [];
+  if (frame.action) parts.push(`${model ?? 'The model'} chose “${frame.action.replace(/\s+/g, ' ').trim()}”.`);
+  if (frame.outcome) parts.push(frame.outcome.trim());
+  if (!parts.length && frame.observation) parts.push(frame.observation.trim());
+  const text = parts.join(' ');
+  return text.length > 220 ? `${text.slice(0, 217)}…` : text;
+}
 
 type Legend = NonNullable<ReplayFrame['grid']>['legend'];
 
@@ -27,7 +51,7 @@ function readableOn(hex: string | undefined): string {
   return lum > 0.55 ? '#0b1220' : '#ffffff';
 }
 
-export function TileMap({ rows, legend, showLegend = true }: { rows: string[]; legend?: Legend; showLegend?: boolean }) {
+export function TileMap({ rows, legend, showLegend = true, tileMax = 60 }: { rows: string[]; legend?: Legend; showLegend?: boolean; tileMax?: number }) {
   const cols = Math.max(1, ...rows.map((r) => Array.from(r).length));
   const used = useMemo(() => {
     const set = new Set<string>();
@@ -36,7 +60,7 @@ export function TileMap({ rows, legend, showLegend = true }: { rows: string[]; l
   }, [rows]);
   return (
     <div className="tilemap-wrap">
-      <div className="tilemap" style={{ ['--cols' as string]: cols, maxWidth: cols * 60 }} role="img" aria-label={`Grid map, ${rows.length} by ${cols}`}>
+      <div className="tilemap" style={{ ['--cols' as string]: cols, maxWidth: cols * tileMax }} role="img" aria-label={`Grid map, ${rows.length} by ${cols}`}>
         {rows.map((row, y) =>
           Array.from(row.padEnd(cols, ' ')).map((ch, x) => {
             const l = legend?.[ch];
@@ -116,16 +140,20 @@ export function FrameNarration({ frame, large }: { frame: ReplayFrame; large?: b
   );
 }
 
-export function ReplayPlayer({ replay, autoPlay = false }: { replay: ReplayData; autoPlay?: boolean }) {
+export function ReplayPlayer({ replay, autoPlay = false, context }: { replay: ReplayData; autoPlay?: boolean; context?: ReplayContext }) {
   const frames = useMemo(() => replay.frames ?? [], [replay.frames]);
+  const { broadcast } = usePrefs();
   const [idx, setIdx] = useState(0);
-  const [playing, setPlaying] = useState(autoPlay && frames.length > 1);
+  const [playing, setPlaying] = useState((autoPlay || broadcast) && frames.length > 1);
   const [speed, setSpeed] = useState(1);
   const [isFs, setIsFs] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const frame: ReplayFrame | undefined = frames[Math.min(idx, frames.length - 1)];
   const hasGrid = frames.some((f) => f.grid?.rows?.length);
   const gauges = replay.gauges ?? [];
+  /** Video mode: broadcast or full screen — title bar, big map, captions, auto-play. */
+  const video = broadcast || isFs;
+  const atEnd = frames.length > 0 && idx >= frames.length - 1;
 
   useEffect(() => {
     if (!playing) return;
@@ -133,9 +161,26 @@ export function ReplayPlayer({ replay, autoPlay = false }: { replay: ReplayData;
       setPlaying(false);
       return;
     }
-    const t = window.setTimeout(() => setIdx((i) => Math.min(frames.length - 1, i + 1)), BASE_MS / speed);
+    const t = window.setTimeout(() => setIdx((i) => Math.min(frames.length - 1, i + 1)), (video ? VIDEO_MS : BASE_MS) / speed);
     return () => window.clearTimeout(t);
-  }, [playing, idx, speed, frames.length]);
+  }, [playing, idx, speed, frames.length, video]);
+
+  // Entering video mode starts playback (from the top if it had finished).
+  const wasVideo = useRef(video);
+  useEffect(() => {
+    if (video && !wasVideo.current && frames.length > 1) {
+      setIdx((i) => (i >= frames.length - 1 ? 0 : i));
+      setPlaying(true);
+    }
+    wasVideo.current = video;
+  }, [video, frames.length]);
+
+  useViewerCaption(
+    broadcast && context
+      ? `A turn-by-turn replay of ${context.modelLabel} playing ${context.testName}${context.seed !== undefined ? ` in world #${context.seed}` : ''}. Every model faced exactly the same world.`
+      : null,
+    'Recorded during the run — nothing is re-simulated for the replay',
+  );
 
   useEffect(() => {
     const on = () => setIsFs(document.fullscreenElement === rootRef.current);
@@ -179,8 +224,37 @@ export function ReplayPlayer({ replay, autoPlay = false }: { replay: ReplayData;
   const pct = frames.length > 1 ? (idx / (frames.length - 1)) * 100 : 100;
 
   return (
-    <div className={cx('replay', isFs && 'is-fs')} ref={rootRef} tabIndex={0} onKeyDown={onKey} aria-label={`Replay: ${replay.title}`}>
-      <div className="replay-head">
+    <div className={cx('replay', isFs && 'is-fs', video && 'video')} ref={rootRef} tabIndex={0} onKeyDown={onKey} aria-label={`Replay: ${replay.title}`}>
+      {video && (
+        <div className="rp-title">
+          {context?.modelColor && <span className="rp-sw" style={{ background: context.modelColor }} aria-hidden="true" />}
+          <div className="rp-t">
+            <span className="rp-test">{context?.testName ?? replay.title}</span>
+            {context && (
+              <>
+                <span className="rp-dot">·</span>
+                <span>{context.modelLabel}</span>
+                {context.seed !== undefined && (
+                  <>
+                    <span className="rp-dot">·</span>
+                    <span className="mono rp-seed">seed {context.seed}</span>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+          <span className="spacer" />
+          {frames.length > 0 && (
+            <div className="rp-turn tnum" aria-live="off">
+              Turn <b>{idx + 1}</b> of {frames.length}
+            </div>
+          )}
+          <button type="button" className="btn ghost icon sm" onClick={toggleFs} aria-label={isFs ? 'Exit full screen' : 'Full screen'} title="Full screen (F)">
+            <Icon.Maximize />
+          </button>
+        </div>
+      )}
+      <div className={cx('replay-head', video && 'hidden')}>
         <div className="stack tight" style={{ minWidth: 0 }}>
           <span className="eyebrow">Replay</span>
           <h3 className="ellipsis">{replay.title}</h3>
@@ -204,7 +278,7 @@ export function ReplayPlayer({ replay, autoPlay = false }: { replay: ReplayData;
         <div className={cx('replay-stage', hasGrid ? 'with-grid' : 'no-grid')}>
           {hasGrid && (
             <div className="stage-map">
-              {frame.grid?.rows?.length ? <TileMap rows={frame.grid.rows} legend={frame.grid.legend} /> : <div className="chart-empty">No map this step.</div>}
+              {frame.grid?.rows?.length ? <TileMap rows={frame.grid.rows} legend={frame.grid.legend} tileMax={video ? 120 : 60} /> : <div className="chart-empty">No map this step.</div>}
             </div>
           )}
           <div className="stage-side">
@@ -230,6 +304,25 @@ export function ReplayPlayer({ replay, autoPlay = false }: { replay: ReplayData;
             )}
             <FrameNarration frame={frame} large={!hasGrid} />
           </div>
+        </div>
+      )}
+
+      {video && frame && (
+        <div className={cx('rp-outcome', frame.tone && `tone-${frame.tone}`)} key={idx}>
+          <span className="rp-o-k">{frame.label ?? `Turn ${idx + 1}`}</span>
+          <span className="rp-o-t">{plainTurn(frame, context?.modelLabel)}</span>
+        </div>
+      )}
+      {video && atEnd && context?.summary && (
+        <div className="rp-final" role="status">
+          <span className="rp-o-k">Final result</span>
+          <span className="rp-o-t">{context.summary}</span>
+          {typeof context.score === 'number' && (
+            <b className="tnum">
+              {Math.round(context.score * 100)}
+              <small>/100</small>
+            </b>
+          )}
         </div>
       )}
 

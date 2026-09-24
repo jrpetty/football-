@@ -38,6 +38,8 @@ add({ A1: '-2.5', A2: '=--A1', A3: '= 1 + 2 * ( 3 - 1 ) / 4 - -1', A4: '=A3*A2' 
 add({ Z999: '1', Y998: '=Z999*2', A1: '=SUM(Y998:Z999)', B1: '=Q5' });
 add({ A1: '=B1+1', B1: '=A1+1', C1: '=SUM(A1:A1)', D1: '3', E1: '=D1/(D1-3)' });
 add({ A1: '0.1', A2: '0.2', A3: '=A1+A2', A4: '=A3*10/3' });
+add({ A1: '1', B2: '2', C1: '=SUM(A5:B1)', C2: '=SUM(Q9:Q1)', C3: '=SUM(A1:A1) + Q3' });   // SUM corners are not references; a named missing cell is
+add({ B1: '-0.3', A2: '0.2', A1: '0.1', C1: '=SUM(A1:B2)', C2: '=1/SUM(A1:B2)', C3: '=SUM(B1:A2)*1000000' });   // column-major summation order matters in floating point
 { const s = randSheet(18); add(s); }
 { // long dependency chain of 3000 cells + a sheet-wide SUM
   const cells = {}; const names = [];

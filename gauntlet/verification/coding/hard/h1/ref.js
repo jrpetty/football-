@@ -8,7 +8,9 @@ function evaluate(expr) {
     if (c >= '0' && c <= '9') {
       let j = i; while (j < expr.length && expr[j] >= '0' && expr[j] <= '9') j++;
       if (expr[j] === '.') { const k = j + 1; let m = k; while (m < expr.length && expr[m] >= '0' && expr[m] <= '9') m++; if (m === k) return null; j = m; }
-      toks.push({ t: 'num', v: Number(expr.slice(i, j)) }); i = j; continue;
+      const v = Number(expr.slice(i, j));
+      if (!Number.isFinite(v)) return null; // literal too large to be a finite double
+      toks.push({ t: 'num', v }); i = j; continue;
     }
     if ('+-*/%^()'.includes(c)) { toks.push({ t: c }); i++; continue; }
     return null;

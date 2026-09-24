@@ -8,7 +8,7 @@ def translate(p):
         if c == '[':
             j = i + 1; neg = False
             if p[j] == '^': neg = True; j += 1
-            k = p.index(']', j)
+            k = p.index(']', j + 1 if p[j] == ']' else j)
             body = p[j:k]; items = []; m = 0
             while m < len(body):
                 if m + 2 < len(body) and body[m+1] == '-':
