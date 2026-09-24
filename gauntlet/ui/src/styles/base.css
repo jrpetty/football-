@@ -498,6 +498,25 @@ hr {
   h1 {
     font-size: 1.5rem;
   }
+  .topbar {
+    gap: 8px;
+  }
+  .topbar .brand-inline {
+    gap: 8px;
+  }
+  .topbar .brand-inline .brand-mark {
+    width: 28px;
+    height: 28px;
+  }
+  .topbar .brand-inline .brand-word {
+    font-size: 0.95rem;
+    letter-spacing: 0.18em;
+  }
+}
+@media (max-width: 480px) {
+  .demo-badge .txt {
+    display: none;
+  }
 }
 
 /* ───────────────────────── Broadcast mode ───────────────────────── */

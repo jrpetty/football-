@@ -253,8 +253,8 @@ function Shell() {
         </div>
         <div className="topbar-spacer" />
         {MOCK && (
-          <span className="badge warn" title="Serving bundled fixtures (?mock=1) — not real results">
-            <Icon.Layers /> Demo data
+          <span className="badge warn demo-badge" title="Serving bundled fixtures (?mock=1) — not real results">
+            <Icon.Layers /> <span className="txt">Demo data</span>
           </span>
         )}
         <span className="badge outline hide-mobile" title={error ? 'Server unreachable' : 'Connected to the Gauntlet server'}>
