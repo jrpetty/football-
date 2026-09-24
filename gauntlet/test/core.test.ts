@@ -205,3 +205,9 @@ test('json scorer: allOrNothing scores 0 unless every field matches, but still r
   const lenient = await scoreResponse({ ...base, scorer: { type: 'json' }, response: '{"a":1,"b":"y"}' });
   assert.equal(lenient.score, 0.5);
 });
+
+test('json compare: aliases accept alternative spellings of string answers', () => {
+  const r = compareJson({ change: 'colour' }, { change: 'Color' }, { aliases: { color: 'colour' } });
+  assert.equal(r.score, 1);
+  assert.equal(compareJson({ change: 'colour' }, { change: 'color' }).score, 0);
+});

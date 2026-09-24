@@ -23,7 +23,10 @@
   "scorer": {
     "type": "json",
     "unorderedArrays": true,
-    "allOrNothing": true
+    "allOrNothing": true,
+    "aliases": {
+      "color": "colour"
+    }
   },
   "cases": [
     {

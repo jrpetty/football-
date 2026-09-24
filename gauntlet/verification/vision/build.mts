@@ -57,7 +57,7 @@ const TESTS_META: Meta[] = [
     difficulty: 'hard',
     tags: ['vision', 'visual-comparison', 'attention-to-detail', 'generated'],
     hook: 'Find every difference. Miss one and it is zero.',
-    scorer: { type: 'json', unorderedArrays: true, allOrNothing: true },
+    scorer: { type: 'json', unorderedArrays: true, allOrNothing: true, aliases: { color: 'colour' } },
     outputTokens: 3000,
     cases: buildSpots(),
   },

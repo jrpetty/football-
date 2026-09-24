@@ -3,7 +3,11 @@ import type { ScoreBreakdownItem } from '../core/types.ts';
 export interface JsonCompareOptions {
   unorderedArrays?: boolean;
   numberTolerance?: number;
+  /** Accepted alternative spellings for string answers, e.g. { "color": "colour" } (case-insensitive). */
+  aliases?: Record<string, string>;
 }
+
+type Opts = Required<Omit<JsonCompareOptions, 'aliases'>> & Pick<JsonCompareOptions, 'aliases'>;
 
 interface Tally {
   matched: number;
@@ -15,7 +19,12 @@ function normStr(s: string): string {
   return s.trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
-function leafEqual(exp: unknown, act: unknown, tol: number): boolean {
+function leafEqual(exp: unknown, act: unknown, tol: number, aliases?: Record<string, string>): boolean {
+  if (typeof exp === 'string' && typeof act === 'string' && aliases) {
+    const given = normStr(act);
+    const alias = Object.entries(aliases).find(([k]) => normStr(k) === given);
+    if (alias) act = alias[1];
+  }
   if (exp === null) return act === null || act === undefined || act === '';
   if (typeof exp === 'number') {
     const a = typeof act === 'string' && act.trim() !== '' && Number.isFinite(Number(act)) ? Number(act) : act;
@@ -31,7 +40,7 @@ function fmt(v: unknown): string {
   return s === undefined ? 'missing' : s.length > 60 ? s.slice(0, 57) + '…' : s;
 }
 
-function compare(exp: unknown, act: unknown, path: string, opts: Required<JsonCompareOptions>, out: Tally): void {
+function compare(exp: unknown, act: unknown, path: string, opts: Opts, out: Tally): void {
   if (Array.isArray(exp)) {
     const arr = Array.isArray(act) ? act : [];
     // Length is one checkable fact of its own.
@@ -80,14 +89,14 @@ function compare(exp: unknown, act: unknown, path: string, opts: Required<JsonCo
     return;
   }
   out.total++;
-  const ok = leafEqual(exp, act, opts.numberTolerance);
+  const ok = leafEqual(exp, act, opts.numberTolerance, opts.aliases);
   if (ok) out.matched++;
   out.items.push({ label: path || '$', passed: ok, detail: ok ? undefined : `expected ${fmt(exp)}, got ${fmt(act)}` });
 }
 
 /** Field-level comparison: score = matched leaves / expected leaves. */
 export function compareJson(expected: unknown, actual: unknown, options: JsonCompareOptions = {}): { score: number; items: ScoreBreakdownItem[]; matched: number; total: number } {
-  const opts: Required<JsonCompareOptions> = { unorderedArrays: options.unorderedArrays ?? false, numberTolerance: options.numberTolerance ?? 1e-6 };
+  const opts: Opts = { unorderedArrays: options.unorderedArrays ?? false, numberTolerance: options.numberTolerance ?? 1e-6, aliases: options.aliases };
   const tally: Tally = { matched: 0, total: 0, items: [] };
   compare(expected, actual, '', opts, tally);
   return { score: tally.total ? tally.matched / tally.total : 0, items: tally.items, matched: tally.matched, total: tally.total };

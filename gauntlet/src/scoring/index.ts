@@ -166,7 +166,7 @@ export async function scoreResponse(input: ScoringInput): Promise<ScoringOutcome
     case 'json': {
       const parsed = parseJsonLoose(response);
       if (parsed === undefined) return { score: 0, passed: false, summary: 'No valid JSON found', detail: { formatOk: false, expected } };
-      const r = compareJson(expected, parsed, { unorderedArrays: scorer.unorderedArrays, numberTolerance: scorer.numberTolerance });
+      const r = compareJson(expected, parsed, { unorderedArrays: scorer.unorderedArrays, numberTolerance: scorer.numberTolerance, aliases: scorer.aliases });
       const all = r.matched === r.total;
       return {
         score: scorer.allOrNothing ? (all ? 1 : 0) : round(r.score),
