@@ -40,7 +40,7 @@ function oracle(w: LtWorld): Responder {
     evidence ? `ACTION: CHECK ${src}` : `ACTION: ASK ${src} ABOUT ${t}`,
     `The claim is contradicted.\nACTION: ACCUSE ${w.culprit} BECAUSE at ${t} ${w.culprit} claimed to be in the ${w.claimedRoom}, but ${evidence ? `the ${src}` : src} shows ${w.culprit} was not there.`,
   ];
-  return (_s, _u, history) => script[Math.min(history.length / 2, script.length - 1)]!;
+  return (_s, _u, _h, info) => script[Math.min(info.index, script.length - 1)]!;
 }
 
 test('liars-table: every generated world has exactly one viable culprit (the thief)', () => {
@@ -76,8 +76,8 @@ test('liars-table: determinism — same seed gives identical prompts and results
   const a = await play(101, oracle(w));
   const b = await play(101, oracle(w));
   assert.deepEqual(
-    a.model.calls.map((c) => [c.system, c.messages]),
-    b.model.calls.map((c) => [c.system, c.messages]),
+    a.model.calls.map((c) => c.messages),
+    b.model.calls.map((c) => c.messages),
   );
   assert.deepEqual(a.result, b.result);
   // Random policy with the same RNG seed also replays identically.
@@ -88,12 +88,12 @@ test('liars-table: determinism — same seed gives identical prompts and results
 });
 
 test('liars-table: different seeds produce different worlds', async () => {
-  const systems = new Set<string>();
+  const prompts = new Set<string>();
   for (const seed of [101, 202, 303, 404]) {
     const { model } = await play(seed, constantResponder('ACTION: ACCUSE Nobody'));
-    systems.add(model.calls[0]!.system!);
+    prompts.add(model.calls[0]!.messages[0]!.content);
   }
-  assert.equal(systems.size, 4);
+  assert.equal(prompts.size, 4);
 });
 
 test('liars-table: oracle policy scores >= 0.9 on many seeds and variants', async () => {
@@ -162,7 +162,7 @@ test('liars-table: efficiency decays with questions used', async () => {
   const reveal = ['CCTV', 'WITNESS', 'RECEIPT'].includes(src) ? `CHECK ${src}` : `ASK ${src} ABOUT ${t}`;
   const filler = w.suspects.map((s) => `ASK ${s.name} ABOUT ALIBI`);
   const script = [...filler, `ASK ${w.culprit} ABOUT ${t}`, reveal, `ACCUSE ${w.culprit} BECAUSE lied`].map((c) => `ACTION: ${c}`);
-  const { result } = await play(101, (_s, _u, h) => script[h.length / 2]!);
+  const { result } = await play(101, (_s, _u, _h, info) => script[info.index]!);
   const d = result.detail as { questionsUsed: number; efficiency: number };
   assert.equal(d.questionsUsed, 7);
   assert.equal(d.efficiency, Math.round(((12 - 7) / 9) * 1000) / 1000);
@@ -176,7 +176,7 @@ test('liars-table: forced accusation after the budget is spent', async () => {
   );
   assert.equal(model.calls.length, 13);
   assert.equal(result.passed, true);
-  const last = model.calls[12]!.messages.at(-1)!.content;
+  const last = model.calls[12]!.messages[0]!.content;
   assert.ok(!last.includes('`ASK '), 'forced turn only offers ACCUSE commands');
   assert.ok(last.includes('`ACCUSE '));
 });
@@ -191,15 +191,34 @@ test('liars-table: every prompt lists complete backticked commands, minus ones a
   }
 });
 
-test('liars-table: history carries earlier Q&A but only the latest turn carries the menu', async () => {
+test('liars-table: every call is one self-contained message with the full log and a format reminder', async () => {
   const w = worldFor(303);
   const script = ['ACTION: CHECK DOOR LOG', 'ACTION: CHECK CCTV', `ACTION: ACCUSE ${w.culprit} BECAUSE x`];
-  const { model } = await play(303, (_s, _u, h) => script[h.length / 2]!);
-  const third = model.calls[2]!.messages;
-  assert.equal(third.length, 5);
-  assert.ok(third[2]!.content.includes('keypad log'));
-  assert.ok(!third[0]!.content.includes('`ASK'));
-  assert.ok(third[4]!.content.includes('`ASK'));
+  const { model } = await play(303, (_s, _u, _h, info) => script[info.index]!);
+  for (const call of model.calls) {
+    assert.equal(call.system, undefined);
+    assert.equal(call.messages.length, 1);
+    assert.equal(call.messages[0]!.role, 'user');
+    assert.match(call.messages[0]!.content, /end with exactly one line:\nACTION: <command>\nExactly one command per reply\. If you write more than one ACCUSE, only the first counts\.$/);
+  }
+  const third = model.calls[2]!.messages[0]!.content;
+  assert.ok(third.includes('Q1 · CHECK DOOR LOG') && third.includes('keypad log'));
+  assert.ok(third.includes('Q2 · CHECK CCTV'));
+  assert.ok(third.includes('Questions left: 10 of 12.'));
+  assert.ok(!third.includes('`CHECK DOOR LOG`'), 'already-asked commands leave the menu');
+  // The case file never reveals the answer key.
+  assert.ok(!third.includes('thief is') && !new RegExp(`${w.culprit} (is|was) the thief`).test(third));
+});
+
+test('liars-table: only the first ACCUSE in a reply counts', () => {
+  const w = worldFor(101);
+  const innocent = w.suspects.find((s) => s.name !== w.culprit)!.name;
+  const hedge = parseCommand(`ACTION: ACCUSE ${innocent} BECAUSE maybe\nACTION: ACCUSE ${w.culprit} BECAUSE or maybe them`, w);
+  assert.deepEqual(hedge, { kind: 'accuse', suspect: innocent, reason: 'maybe' });
+  const mixed = parseCommand(`ACTION: CHECK CCTV\nACTION: ACCUSE ${innocent} BECAUSE x`, w);
+  assert.equal(mixed.kind, 'accuse');
+  const lastAsk = parseCommand('ACTION: CHECK CCTV\nOn reflection:\nACTION: CHECK DOOR LOG', w);
+  assert.deepEqual(lastAsk, { kind: 'check', evidence: 'DOOR LOG' });
 });
 
 test('liars-table: command parser is lenient about formatting', () => {

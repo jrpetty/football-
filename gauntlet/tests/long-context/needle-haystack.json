@@ -1,0 +1,19 @@
+{
+  "kind": "program",
+  "id": "long-context.needle-haystack",
+  "version": "1.0.0",
+  "program": "needle-haystack",
+  "name": "Needle in a Haystack",
+  "category": "long-context",
+  "description": "A seeded ~45,000-word chronicle of an invented city (≈60k tokens) with ten planted needles spread from 0% to 100% depth: six single facts, two 2-hop chains whose halves sit far apart, a total that must be summed from three scattered mentions, and a value that the text later corrects. Every needle is shadowed by a near-miss distractor (Daskwell vs Taskwell, 317 vs 371 arches). One call, ten short answers, graded deterministically. Separates models that truly track long context from those that skim, pattern-match the nearest name, or stop reading halfway.",
+  "difficulty": "hard",
+  "tags": ["long-context", "retrieval", "multi-hop", "aggregation", "distractors", "seeded"],
+  "hook": "45,000 words. Ten needles. One near-miss decoy for each. Who reads to the end?",
+  "seeds": [101, 202, 303],
+  "config": { "targetWords": 44000, "needles": 10 },
+  "maxOutputTokens": 16000,
+  "timeLimitSec": 600,
+  "estimate": { "inputTokens": 69000, "outputTokens": 16000, "calls": 1 },
+  "author": "Gauntlet Core",
+  "createdAt": "2026-09-24"
+}

@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
-import { CUSTOM_TESTS_DIR, PROGRAMS_DIR, ROOT, SUITES_DIR, TESTS_DIR } from './paths.ts';
+import { CUSTOM_TESTS_DIR, PRIVATE_TESTS_DIR, PROGRAMS_DIR, ROOT, SUITES_DIR, TESTS_DIR } from './paths.ts';
 import { contentHash, sha256 } from './hash.ts';
 import { FINAL_ANSWER_INSTRUCTION } from './extract.ts';
 import { PROTOCOL_VERSION } from './version.ts';
@@ -13,7 +13,7 @@ export interface LoadedTest {
   definition: TestDefinition;
   hash: string;
   file: string;
-  source: 'builtin' | 'custom';
+  source: 'builtin' | 'custom' | 'private';
 }
 
 export interface TestSummary {
@@ -29,7 +29,7 @@ export interface TestSummary {
   tags: string[];
   caseCount: number;
   scorerType: string;
-  source: 'builtin' | 'custom';
+  source: 'builtin' | 'custom' | 'private';
   file: string;
   estimate: { inputTokens: number; outputTokens: number; calls: number };
 }
@@ -99,7 +99,7 @@ export function loadTests(): LoadedTest[] {
       definition,
       hash: computeTestHash(definition),
       file: relative(ROOT, file),
-      source: file.startsWith(CUSTOM_TESTS_DIR) ? 'custom' : 'builtin',
+      source: file.startsWith(CUSTOM_TESTS_DIR) ? 'custom' : file.startsWith(PRIVATE_TESTS_DIR) ? 'private' : 'builtin',
     });
   }
   return out;

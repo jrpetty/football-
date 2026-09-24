@@ -44,6 +44,7 @@ export function MedalTable({ lb }: { lb: Leaderboard }) {
   }, [lb.rows]);
 
   const events = (lb.medals ?? []).filter((e) => e.gold || e.silver || e.bronze).length;
+  const byId = useMemo(() => new Map((lb.rows ?? []).map((r) => [r.contestantId, r])), [lb.rows]);
 
   return (
     <ChartCard title="Medal table" desc={`Per-test podiums across ${events} test${events === 1 ? '' : 's'} · sorted Olympic-style (gold, then silver, then bronze)`}>
@@ -96,6 +97,43 @@ export function MedalTable({ lb }: { lb: Leaderboard }) {
             </tbody>
           </table>
         </div>
+      )}
+      {events > 0 && (
+        <>
+          <div className="mini-title" style={{ marginTop: 18, marginBottom: 0 }}>
+            Podium by test
+          </div>
+          <div className="podium-list" role="list" aria-label="Podium per test">
+            {(lb.medals ?? [])
+              .filter((e) => e.gold || e.silver || e.bronze)
+              .map((e) => {
+                const t = (lb.tests ?? []).find((x) => x.id === e.testId);
+                const cat = (lb.categories ?? []).find((c) => c.id === t?.category);
+                return (
+                  <div className="pl-row" role="listitem" key={e.testId}>
+                    <div className="pl-test">
+                      <span className="cat-dot" style={{ background: cat?.color ?? 'var(--text-3)' }} aria-hidden="true" />
+                      <span className="ellipsis" title={t?.name ?? e.testId}>
+                        {t?.name ?? e.testId}
+                      </span>
+                    </div>
+                    <div className="pl-places">
+                      {(['gold', 'silver', 'bronze'] as const).map((k) => {
+                        const id = e[k];
+                        const r = id ? byId.get(id) : undefined;
+                        return (
+                          <span key={k} className="pl-place" title={r ? `${k}: ${r.label}` : `${k}: —`}>
+                            <Medal kind={k} />
+                            <span className="pl-name">{r ? r.label : '—'}</span>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </>
       )}
     </ChartCard>
   );

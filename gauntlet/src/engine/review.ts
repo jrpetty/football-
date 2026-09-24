@@ -12,9 +12,16 @@ export interface ReviewItem {
   status: CaseResult['status'];
   score: number | null;
   humanScores: NonNullable<CaseResult['humanScores']>;
+  /** Why it is in the queue: human-scored test, judge panel disagreement (human arbitrates), or optional second opinion. */
+  reason: 'human-scored' | 'judge-disagreement' | 'second-opinion';
 }
 
-/** Results that humans can rate: `human` scorer tests (required) and artifact tests (optional second opinion). */
+/**
+ * Results that humans can rate:
+ *  - `human` scorer tests (required before they count),
+ *  - any judge-scored result where the judge panel disagreed (a human arbitrates; their score becomes final),
+ *  - artifact tests (optional second opinion, stored alongside the automated score).
+ */
 export function reviewQueue(testId?: string): ReviewItem[] {
   const reviewable = new Set(
     loadTests()
@@ -24,9 +31,11 @@ export function reviewQueue(testId?: string): ReviewItem[] {
   const out: ReviewItem[] = [];
   for (const runId of listRunIds()) {
     for (const r of readResults(runId)) {
-      if (!reviewable.has(r.testId) || (testId && r.testId !== testId)) continue;
+      const disagreement = Boolean(r.scoreDetail.judgeDisagreement);
+      if ((!reviewable.has(r.testId) && !disagreement) || (testId && r.testId !== testId)) continue;
       if (r.status === 'error' || r.status === 'cancelled') continue;
-      out.push({ runId, key: r.key, testId: r.testId, caseId: r.caseId, contestantId: r.contestantId, status: r.status, score: r.score, humanScores: r.humanScores ?? [] });
+      const reason: ReviewItem['reason'] = r.status === 'pending-human' || r.scoreDetail.humanScored ? 'human-scored' : disagreement ? 'judge-disagreement' : 'second-opinion';
+      out.push({ runId, key: r.key, testId: r.testId, caseId: r.caseId, contestantId: r.contestantId, status: r.status, score: r.score, humanScores: r.humanScores ?? [], reason });
     }
   }
   return out;
@@ -42,7 +51,14 @@ export function submitHumanScore(input: { runId: string; key: string; score: num
   const humanScores = [...(current.humanScores ?? []).filter((h) => h.rater !== rater), { rater, score: input.score, at: new Date().toISOString(), note: input.note?.slice(0, 1000) }];
   const humanMean = mean(humanScores.map((h) => h.score))!;
   const updated: CaseResult = { ...current, humanScores, scoreDetail: { ...current.scoreDetail, humanScore: Math.round(humanMean * 10000) / 10000 } };
-  if (current.status === 'pending-human' || (current.scoreDetail as { humanScored?: boolean }).humanScored) {
+  if (current.scoreDetail.judgeDisagreement) {
+    // Judges disagreed: the human panel arbitrates and its mean becomes the score. The judges' verdicts stay on record.
+    const automated = (current.scoreDetail.automatedScore as number | undefined) ?? current.score;
+    updated.score = Math.round(humanMean * 10000) / 10000;
+    updated.passed = humanMean >= 0.7;
+    updated.summary = `Arbitrated by humans ${(humanMean * 10).toFixed(1)}/10 (judges disagreed; panel gave ${automated === null ? '—' : (automated * 10).toFixed(1)})`;
+    updated.scoreDetail = { ...updated.scoreDetail, automatedScore: automated, arbitrated: true };
+  } else if (current.status === 'pending-human' || (current.scoreDetail as { humanScored?: boolean }).humanScored) {
     // Human-scored tests: the human panel mean *is* the score.
     updated.status = 'ok';
     updated.score = Math.round(humanMean * 10000) / 10000;

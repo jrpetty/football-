@@ -420,7 +420,7 @@ function useFocusTrap(open: boolean) {
     if (!open) return;
     const prev = document.activeElement as HTMLElement | null;
     const el = ref.current;
-    const first = el?.querySelector<HTMLElement>('[data-autofocus], button, [href], input, select, textarea');
+    const first = el?.querySelector<HTMLElement>('[data-autofocus]') ?? el;
     first?.focus({ preventScroll: true });
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -458,7 +458,7 @@ export function Drawer({
   return createPortal(
     <div className="drawer-root" role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <div className="backdrop" onClick={onClose} />
-      <div className="drawer" ref={ref} style={{ ['--drawer-w' as string]: typeof width === 'number' ? `${width}px` : width }}>
+      <div className="drawer" ref={ref} tabIndex={-1} style={{ ['--drawer-w' as string]: typeof width === 'number' ? `${width}px` : width }}>
         <div className="drawer-head">
           <div className="t">
             <h2 id={titleId}>{title}</h2>
@@ -485,7 +485,7 @@ export function Modal({ open, onClose, title, children, foot, width }: { open: b
   return createPortal(
     <div className="modal-root" role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <div className="backdrop" onClick={onClose} />
-      <div className="modal" ref={ref} style={{ ['--modal-w' as string]: width ? `${width}px` : undefined }}>
+      <div className="modal" ref={ref} tabIndex={-1} style={{ ['--modal-w' as string]: width ? `${width}px` : undefined }}>
         <div className="modal-head">
           <h2 id={titleId}>{title}</h2>
         </div>

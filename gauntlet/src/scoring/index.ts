@@ -56,6 +56,24 @@ function round(n: number): number {
   return Math.round(n * 10000) / 10000;
 }
 
+/**
+ * Anti-hedging: an answer that offers alternatives ("42 or 43", "A/B",
+ * "either X or Y") is wrong, even if one alternative is right. Every prompt
+ * with a single expected answer states this rule.
+ */
+export function isHedged(answer: string, kind: 'number' | 'choice' | 'text'): boolean {
+  const a = answer.trim();
+  if (kind === 'choice') {
+    const letters = new Set((a.match(/\b[A-H]\b/g) ?? []).map((x) => x.toUpperCase()));
+    return letters.size > 1;
+  }
+  if (kind === 'number') {
+    const numbers = a.replace(/(\d),(\d{3})/g, '$1$2').match(/-?\d+(?:\.\d+)?/g) ?? [];
+    return numbers.length >= 2 && /\b(or|either|maybe|possibly|between)\b|±|\+\/-/i.test(a);
+  }
+  return /\b(either)\b/i.test(a) || /\s(or|and\/or)\s/i.test(a);
+}
+
 export async function scoreResponse(input: ScoringInput): Promise<ScoringOutcome> {
   const { scorer, expected, response } = input;
   switch (scorer.type) {
@@ -64,6 +82,9 @@ export async function scoreResponse(input: ScoringInput): Promise<ScoringOutcome
       const accepted = (Array.isArray(expected) ? expected : [expected]) as string[];
       const mode = scorer.normalize ?? 'lower';
       const ok = accepted.some((e) => normalize(answer, mode) === normalize(e, mode));
+      if (!ok && isHedged(answer, 'text') && accepted.some((e) => normalize(answer, 'lower').includes(normalize(e, 'lower')))) {
+        return { score: 0, passed: false, summary: `Hedged answer ${quote(answer)} (multiple answers are marked wrong)`, detail: { extracted: answer, expected, formatOk, hedged: true } };
+      }
       return {
         score: ok ? 1 : 0,
         passed: ok,
@@ -73,8 +94,11 @@ export async function scoreResponse(input: ScoringInput): Promise<ScoringOutcome
     }
     case 'number': {
       const { answer, formatOk } = extractFinalAnswer(response);
-      const value = parseNumber(answer);
       const exp = expected as number;
+      if (isHedged(answer, 'number')) {
+        return { score: 0, passed: false, summary: `Hedged answer ${quote(answer)} (multiple answers are marked wrong)`, detail: { extracted: answer, expected: exp, formatOk, hedged: true } };
+      }
+      const value = parseNumber(answer);
       const tol = scorer.tolerance ?? 1e-6;
       const ok = value !== null && (scorer.relative ? Math.abs(value - exp) <= tol * Math.max(1e-12, Math.abs(exp)) : Math.abs(value - exp) <= tol);
       return {
@@ -86,6 +110,9 @@ export async function scoreResponse(input: ScoringInput): Promise<ScoringOutcome
     }
     case 'choice': {
       const { answer, formatOk } = extractFinalAnswer(response);
+      if (isHedged(answer, 'choice')) {
+        return { score: 0, passed: false, summary: `Hedged answer ${quote(answer)} (multiple answers are marked wrong)`, detail: { extracted: answer, expected, formatOk, hedged: true } };
+      }
       const letter = answer.match(/\b([A-Z])\b/i)?.[1]?.toUpperCase() ?? answer.trim().charAt(0).toUpperCase();
       const ok = letter === String(expected).toUpperCase();
       return {
@@ -207,11 +234,12 @@ async function judgeRubric(input: ScoringInput, rubric: string, passThreshold: n
   const user = fill(JUDGE_RUBRIC_TEMPLATE, { task: clip(input.taskText, 30_000), reference: referenceText(input.expected), rubric, response: clip(input.response) });
   const { score, judge, errors } = await runRubricPanel(input, user, 'judge');
   if (score === null) throw new Error(`All judges failed: ${errors.join('; ') || 'no judges configured'}`);
+  const spread = judge.length > 1 ? Math.max(...judge.map((j) => j.score)) - Math.min(...judge.map((j) => j.score)) : 0;
   return {
     score: round(score),
     passed: score >= passThreshold,
-    summary: `Judge panel ${(score * 10).toFixed(1)}/10`,
-    detail: { judge, notes: errors.length ? `Judge issues: ${errors.join('; ')}` : undefined },
+    summary: `Judge panel ${(score * 10).toFixed(1)}/10${spread > 0.3 ? ' · judges disagree' : ''}`,
+    detail: { judge, judgeSpread: round(spread), judgeDisagreement: spread > 0.3 || undefined, notes: errors.length ? `Judge issues: ${errors.join('; ')}` : undefined },
   };
 }
 
@@ -248,11 +276,12 @@ async function judgeClassify(input: ScoringInput, instructions: string, labels: 
   const counts = new Map<string, number>();
   for (const j of judge) counts.set(j.label!, (counts.get(j.label!) ?? 0) + 1);
   const majority = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]![0];
+  const unanimous = counts.size === 1;
   return {
     score: round(score),
     passed: score >= 0.99,
-    summary: `${majority.replace(/_/g, ' ').toLowerCase()} (${judge.map((j) => j.label).join(' / ')})`,
-    detail: { judge, label: majority, notes: errors.length ? `Judge issues: ${errors.join('; ')}` : undefined },
+    summary: `${majority.replace(/_/g, ' ').toLowerCase()} (${judge.map((j) => j.label).join(' / ')})${unanimous ? '' : ' · judges disagree'}`,
+    detail: { judge, label: majority, judgeDisagreement: unanimous ? undefined : true, notes: errors.length ? `Judge issues: ${errors.join('; ')}` : undefined },
   };
 }
 
@@ -346,6 +375,10 @@ async function scoreArtifact(input: ScoringInput, format: 'html' | 'svg', checks
     const r = await runRubricPanel(input, user, 'judge');
     judgeScore = r.score;
     judgeDetail = r.judge;
+    if (r.judge.length > 1) {
+      const spread = Math.max(...r.judge.map((j) => j.score)) - Math.min(...r.judge.map((j) => j.score));
+      if (spread > 0.3) judgeNotes = `Judges disagree (spread ${(spread * 10).toFixed(1)} points) — flagged for human review`;
+    }
     if (r.errors.length) judgeNotes = `Judge issues: ${r.errors.join('; ')}`;
     if (judgeScore === null) throw new Error(`All judges failed: ${r.errors.join('; ') || 'no judges configured'}`);
   }
@@ -363,6 +396,7 @@ async function scoreArtifact(input: ScoringInput, format: 'html' | 'svg', checks
       judgeScore: judgeScore === null ? undefined : round(judgeScore),
       skippedChecks: skipped.length ? skipped : undefined,
       consoleErrors: probe?.consoleErrors.slice(0, 5),
+      judgeDisagreement: judgeNotes?.startsWith('Judges disagree') || undefined,
       notes: judgeNotes,
     },
   };

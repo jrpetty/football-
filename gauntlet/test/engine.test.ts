@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, cpSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -9,6 +9,15 @@ const sandbox = mkdtempSync(join(tmpdir(), 'gauntlet-engine-'));
 process.env.GAUNTLET_TESTS_DIR = join(sandbox, 'tests');
 process.env.GAUNTLET_DATA_DIR = join(sandbox, 'data');
 process.env.GAUNTLET_NO_BROWSER = '1';
+// A private copy of the config with an expensive mock model (for budget-cap tests).
+process.env.GAUNTLET_CONFIG_DIR = join(sandbox, 'config');
+cpSync(new URL('../config', import.meta.url), join(sandbox, 'config'), { recursive: true });
+{
+  const file = join(sandbox, 'config', 'models.json');
+  const models = JSON.parse(readFileSync(file, 'utf8'));
+  models.contestants.push({ id: 'mock-priced', label: 'Priced Mock', vendor: 'Test', provider: 'baseline', model: 'random', color: '#123456', enabled: true, pricing: { inputPerM: 1_000_000, outputPerM: 0, verifiedAt: '2026-01-01' } });
+  writeFileSync(file, JSON.stringify(models));
+}
 mkdirSync(join(sandbox, 'tests', 'math'), { recursive: true });
 mkdirSync(join(sandbox, 'tests', 'instruction'), { recursive: true });
 mkdirSync(join(sandbox, 'tests', 'creative'), { recursive: true });
@@ -55,6 +64,8 @@ const store = await import('../src/engine/store.ts');
 const boards = await import('../src/engine/leaderboards.ts');
 const review = await import('../src/engine/review.ts');
 const registry = await import('../src/core/registry.ts');
+const manual = await import('../src/providers/manual.ts');
+const grade = await import('../src/engine/grade.ts');
 
 test('a full run completes, persists a reproducible manifest and scores every job', async () => {
   const runId = await runner.startRun({ contestantIds: ['random-baseline'], suiteId: 'all', repeats: 2, name: 'engine test' });
@@ -152,4 +163,67 @@ test('estimates scale with repeats and include per-model costs', async () => {
   assert.equal(three.jobs, one.jobs * 3);
   assert.ok(Math.abs(three.estCostUsd - one.estCostUsd * 3) < 1e-3, "estimates are linear in repeats (up to rounding)");
   assert.equal(one.perContestant.find((p) => p.contestantId === 'random-baseline')!.estCostUsd, 0);
+});
+
+test('manual contestant: prompts wait in the inbox and pasted replies are graded like API replies', async () => {
+  const runId = await runner.startRun({ contestantIds: ['manual-chat'], testIds: ['math.arith'], repeats: 1 });
+  const seen = new Set<string>();
+  // Answer every pending request correctly (the prompt is "What is i + i?").
+  const deadline = Date.now() + 10_000;
+  while (seen.size < 6 && Date.now() < deadline) {
+    for (const req of manual.listManualRequests(runId)) {
+      if (seen.has(req.id)) continue;
+      seen.add(req.id);
+      assert.match(req.combinedPrompt, /FINAL ANSWER: <answer>/, 'the pasteable prompt includes the answer-format instruction');
+      assert.equal(req.isContinuation, false);
+      const i = Number(req.latestUserMessage.match(/What is (\d+) \+/)![1]);
+      assert.ok(manual.submitManual(req.id, { text: `Easy.\nFINAL ANSWER: ${2 * i}`, outputTokens: 12, costUsd: 0.001 }));
+    }
+    await new Promise((r) => setTimeout(r, 20));
+  }
+  await runner.waitForRun(runId);
+  const results = store.readResults(runId);
+  assert.equal(results.length, 6);
+  assert.ok(results.every((r) => r.score === 1), 'correct pasted answers score 100%');
+  assert.ok(results.every((r) => r.metrics.costUsd === 0.001), 'user-entered cost is recorded');
+  assert.ok(results.every((r) => r.metrics.ttftMs === null), 'no fake latency numbers for manual entries');
+  assert.equal(boards.runLeaderboard(runId)!.rows[0]!.manual, true);
+});
+
+test('budget cap stops a run before it overspends and resume can raise the cap', async () => {
+  const runId = await runner.startRun({ contestantIds: ['mock-priced'], testIds: ['math.arith'], repeats: 2, concurrency: 1, maxCostUsd: 50 });
+  await runner.waitForRun(runId);
+  const m = store.readManifest(runId)!;
+  assert.equal(m.status, 'cancelled');
+  assert.match(m.error ?? '', /Budget cap of \$50\.00 reached/);
+  const spent = store.readResults(runId).reduce((s, r) => s + r.metrics.costUsd, 0);
+  assert.ok(store.readResults(runId).length < 12, 'stopped early');
+  assert.ok(spent >= 50 && spent < 50 + 60, `spent ${spent}`);
+  runner.resumeRun(runId, { maxCostUsd: 1_000_000 });
+  await runner.waitForRun(runId);
+  assert.equal(store.readResults(runId).length, 12);
+  assert.equal(store.readManifest(runId)!.status, 'completed');
+});
+
+test('pasted replies can be graded directly; hedged answers are marked wrong', async () => {
+  const ok = await grade.gradePasted({ testId: 'math.arith', caseId: 'c3', response: 'Two plus two.\nFINAL ANSWER: 4' });
+  assert.equal(ok.outcome.score, 1);
+  const hedged = await grade.gradePasted({ testId: 'math.arith', caseId: 'c3', response: 'FINAL ANSWER: 4 or 5' });
+  assert.equal(hedged.outcome.score, 0);
+  assert.match(hedged.outcome.summary, /Hedged/);
+  await assert.rejects(grade.gradePasted({ testId: 'math.arith', caseId: 'nope', response: 'x' }), /Unknown case/);
+});
+
+test('judges never grade their own vendor when another judge is available', () => {
+  const j = (id: string, vendor: string) => ({ id, label: id, vendor, provider: 'p', model: id, color: '#000000', enabled: true, pricing: { inputPerM: 1, outputPerM: 1 }, configHash: 'x' });
+  const panel = [j('a1', 'Anthropic'), j('o1', 'OpenAI'), j('g1', 'Google')];
+  const contestant = { ...j('a2', 'Anthropic') };
+  assert.deepEqual(runner.selectJudges(panel, contestant, true).map((x) => x.id), ['o1', 'g1']);
+  assert.deepEqual(runner.selectJudges([j('a1', 'Anthropic')], contestant, true).map((x) => x.id), ['a1'], 'falls back rather than having no judge');
+  assert.deepEqual(runner.selectJudges(panel, j('a1', 'Anthropic'), false).map((x) => x.id), ['o1', 'g1'], 'a model never judges itself');
+});
+
+test('estimates are calibrated from measured usage after a run', async () => {
+  const est = await runner.estimateRun({ contestantIds: ['random-baseline'], testIds: ['math.arith'], repeats: 1 });
+  assert.equal(est.perTest[0]!.basis, 'measured');
 });

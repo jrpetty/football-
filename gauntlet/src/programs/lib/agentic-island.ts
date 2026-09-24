@@ -100,7 +100,7 @@ export interface IslandState {
 }
 
 export type IslandCommand =
-  | { kind: 'move'; dir: Dir }
+  | { kind: 'move'; dir: Dir; steps: number }
   | { kind: 'gather' }
   | { kind: 'drink' }
   | { kind: 'eat'; item: string }
@@ -163,7 +163,10 @@ const BERRY_COLOURS = ['red', 'blue', 'purple', 'yellow', 'white', 'black'] as c
 const DIRS: Record<Dir, Pos> = { N: { x: 0, y: -1 }, S: { x: 0, y: 1 }, E: { x: 1, y: 0 }, W: { x: -1, y: 0 } };
 const DIR_WORD: Record<Dir, string> = { N: 'north', S: 'south', E: 'east', W: 'west' };
 
-const COST = { move: 3, stormMove: 6, gather: 5, drink: 1, eat: 1, craft: 4, build: 8, light: 2, fish: 6, cook: 2 };
+/** Longest walk (tiles in a straight line) a single MOVE can make. */
+export const MAX_STEPS = 3;
+
+const COST = { move: 4, stormMove: 7, gather: 6, drink: 1, eat: 1, craft: 5, build: 10, light: 2, fish: 8, cook: 2 };
 
 const RECIPES = {
   spear: { wood: 1, stone: 1, fibre: 1 },
@@ -259,7 +262,7 @@ function makeTile(terrain: Terrain): IslandTile {
     case 'grass':
       return { terrain, stock: 4, max: 4, regrowDays: 1 }; // fibre
     case 'bush':
-      return { terrain, stock: 4, max: 4, regrowDays: 1 }; // berries
+      return { terrain, stock: 5, max: 5, regrowDays: 1 }; // berries
     case 'forest':
       return { terrain, stock: 4, max: 4, regrowDays: 1 }; // wood
     case 'rocks':
@@ -369,7 +372,7 @@ function tryLayout(rng: Rng, n: number): MapLayout | null {
 
   const springCands = rest.filter((p) => {
     const d = fromStart[p.y]![p.x]!;
-    return d >= 3 && d <= 7;
+    return d >= 3 && d <= 5;
   });
   if (springCands.length === 0) return null;
   const spring = rng.pick(springCands);
@@ -426,14 +429,14 @@ export function generateIsland(root: Rng, cfg: IslandConfig): IslandWorld {
     if (d <= 2) w = wr.chance(0.6) ? 'clear' : 'cloudy';
     else {
       const r = wr.next();
-      w = r < 0.28 ? 'clear' : r < 0.52 ? 'cloudy' : r < 0.66 ? 'hot' : r < 0.86 ? 'rain' : 'storm';
+      w = r < 0.32 ? 'clear' : r < 0.58 ? 'cloudy' : r < 0.72 ? 'hot' : r < 0.9 ? 'rain' : 'storm';
       if (w === 'storm' && weather[d - 1] === 'storm') w = 'rain';
     }
     weather.push(w);
-    nightCold.push(wr.int(12, 26));
+    nightCold.push(wr.int(8, 18));
   }
   const shipFirst = wr.int(3, 5);
-  const shipPeriod = wr.int(4, 6);
+  const shipPeriod = wr.int(3, 5);
   const candidates: number[] = [];
   for (let d = shipFirst; d <= cfg.maxDays; d += shipPeriod) candidates.push(d);
   // The first ship always passes (so it can be noticed); later ones skip stormy days.
@@ -477,7 +480,7 @@ export function newIslandState(world: IslandWorld): IslandState {
     pos: { ...world.start },
     health: 100,
     food: 60,
-    water: 50,
+    water: 60,
     energy: 80,
     warmth: 70,
     inv: {},
@@ -608,8 +611,11 @@ export function parseIslandCommand(raw: string): IslandCommand | null {
     case 'MOVE':
     case 'GO':
     case 'WALK': {
-      const dir = DIR_ALIASES[rest];
-      return dir ? { kind: 'move', dir } : null;
+      const m = rest.match(/^([A-Z]+)(?: ?([1-9]))?(?: (?:TILES?|STEPS?|SQUARES?))?$/);
+      const dir = m ? DIR_ALIASES[m[1]!] : undefined;
+      if (!m || !dir) return null;
+      const steps = m[2] ? Number(m[2]) : 1;
+      return steps >= 1 && steps <= MAX_STEPS ? { kind: 'move', dir, steps } : null;
     }
     case 'N':
     case 'S':
@@ -619,7 +625,7 @@ export function parseIslandCommand(raw: string): IslandCommand | null {
     case 'SOUTH':
     case 'EAST':
     case 'WEST':
-      return rest === '' ? { kind: 'move', dir: DIR_ALIASES[verb]! } : null;
+      return rest === '' ? { kind: 'move', dir: DIR_ALIASES[verb]!, steps: 1 } : null;
     case 'GATHER':
     case 'COLLECT':
     case 'FORAGE':
@@ -673,10 +679,11 @@ export function availableActions(world: IslandWorld, s: IslandState): string[] {
   const here = tileAt(s, s.pos);
   const weather = world.weather[s.day]!;
   const moveCost = weather === 'storm' ? COST.stormMove : COST.move;
-  if (s.energy >= moveCost) {
-    for (const d of ['N', 'S', 'E', 'W'] as Dir[]) {
-      const q = { x: s.pos.x + DIRS[d].x, y: s.pos.y + DIRS[d].y };
-      if (inBounds(world, q) && tileAt(s, q).terrain !== 'sea') out.push(`MOVE ${d}`);
+  for (const d of ['N', 'S', 'E', 'W'] as Dir[]) {
+    for (let k = 1; k <= MAX_STEPS; k++) {
+      const q = { x: s.pos.x + DIRS[d].x * k, y: s.pos.y + DIRS[d].y * k };
+      if (!inBounds(world, q) || tileAt(s, q).terrain === 'sea' || s.energy < moveCost * k) break;
+      out.push(k === 1 ? `MOVE ${d}` : `MOVE ${d} ${k}`);
     }
   }
   if (here.stock > 0 && invCount(s) < world.inventoryCap && s.energy >= COST.gather) out.push('GATHER');
@@ -716,19 +723,36 @@ function applyAction(world: IslandWorld, s: IslandState, cmd: IslandCommand): Ac
 
   switch (cmd.kind) {
     case 'move': {
-      const q = { x: s.pos.x + DIRS[cmd.dir].x, y: s.pos.y + DIRS[cmd.dir].y };
-      if (!inBounds(world, q) || tileAt(s, q).terrain === 'sea') return { ok: false, text: `The sea blocks the way ${DIR_WORD[cmd.dir]}.` };
       const cost = weather === 'storm' ? COST.stormMove : COST.move;
-      const t = tired(cost);
-      if (t) return t;
-      s.energy -= cost;
-      s.pos = q;
-      reveal(world, s);
-      const dest = tileAt(s, q);
-      let text = `You walk ${DIR_WORD[cmd.dir]} to ${coordName(q)} (${TERRAIN_NAME[dest.terrain]}).`;
+      let walked = 0;
+      let stop = '';
+      let found = false;
+      for (let i = 0; i < cmd.steps; i++) {
+        const q = { x: s.pos.x + DIRS[cmd.dir].x, y: s.pos.y + DIRS[cmd.dir].y };
+        if (!inBounds(world, q) || tileAt(s, q).terrain === 'sea') {
+          stop = ` The sea blocks the way further ${DIR_WORD[cmd.dir]}.`;
+          break;
+        }
+        if (s.energy < cost) {
+          stop = ' You are too exhausted to walk further.';
+          break;
+        }
+        s.energy -= cost;
+        s.pos = q;
+        walked++;
+        reveal(world, s);
+        if (!s.bottleFound && same(q, world.bottle)) {
+          s.bottleFound = true;
+          found = true;
+          if (i < cmd.steps - 1) stop = ' You stop to read it.';
+          break;
+        }
+      }
+      if (walked === 0) return { ok: false, text: stop.trim() || `You cannot walk ${DIR_WORD[cmd.dir]}.` };
+      const dest = tileAt(s, s.pos);
+      let text = `You walk ${walked} tile${walked === 1 ? '' : 's'} ${DIR_WORD[cmd.dir]} to ${coordName(s.pos)} (${TERRAIN_NAME[dest.terrain]}).${stop}`;
       if (dest.terrain === 'summit') text += ' From the summit you can see the whole island.';
-      if (!s.bottleFound && same(q, world.bottle)) {
-        s.bottleFound = true;
+      if (found) {
         text +=
           ` You find a message in a bottle! It reads: "To anyone stranded here: the supply ship Albatross passes this island every ${world.shipPeriod} days, around midday — ` +
           'though she stays in port on stormy days. A big fire blazing on the highest peak will bring her in."';
@@ -779,8 +803,8 @@ function applyAction(world: IslandWorld, s: IslandState, cmd: IslandCommand): Ac
       if (here.terrain === 'spring') {
         s.energy -= Math.min(s.energy, COST.drink);
         const before = s.water;
-        s.water = Math.min(100, s.water + 60);
-        return { ok: true, text: `You drink deeply from the cold spring (water ${before} → ${s.water}).`, tone: 'good' };
+        s.water = 100;
+        return { ok: true, text: `You drink your fill from the cold spring (water ${before} → ${s.water}).`, tone: 'good' };
       }
       if (weather === 'rain' || weather === 'storm') {
         s.energy -= Math.min(s.energy, COST.drink);
@@ -935,7 +959,7 @@ function applyAction(world: IslandWorld, s: IslandState, cmd: IslandCommand): Ac
 function describeCommand(cmd: IslandCommand): string {
   switch (cmd.kind) {
     case 'move':
-      return `MOVE ${cmd.dir}`;
+      return cmd.steps > 1 ? `MOVE ${cmd.dir} ${cmd.steps}` : `MOVE ${cmd.dir}`;
     case 'eat':
       return `EAT ${itemCommand(cmd.item)}`;
     case 'craft':
@@ -969,17 +993,17 @@ function checkDeath(s: IslandState): boolean {
 
 function daytimeTick(world: IslandWorld, s: IslandState): void {
   const w = world.weather[s.day]!;
-  s.food -= 3;
-  s.water -= w === 'hot' ? 8 : 5;
+  s.food -= 2;
+  s.water -= w === 'hot' ? 7 : 4;
   const sheltered = isSheltered(s);
   const table: Record<Weather, number> = sheltered
     ? { clear: 6, hot: 8, cloudy: 2, rain: 0, storm: -2 }
-    : { clear: 8, hot: 10, cloudy: 2, rain: -6, storm: -12 };
+    : { clear: 8, hot: 10, cloudy: 3, rain: -4, storm: -8 };
   s.warmth += table[w] + (fireHere(s) ? 8 : 0);
   clampStats(s);
   if (s.water === 0) hurt(s, 10, 'dehydration');
   if (s.food === 0) hurt(s, 5, 'starvation');
-  if (s.warmth === 0) hurt(s, 6, 'hypothermia');
+  if (s.warmth === 0) hurt(s, 5, 'hypothermia');
   if (s.energy === 0) hurt(s, 4, 'exhaustion');
 }
 
@@ -988,11 +1012,11 @@ function nightTick(world: IslandWorld, s: IslandState, events: string[]): string
   s.lastHurt = null;
   const sheltered = isSheltered(s);
   const here = key(s.pos);
-  s.food -= 6;
-  s.water -= 6;
-  const exposure = world.nightCold[s.day]! + (w === 'rain' ? 8 : w === 'storm' ? 18 : 0);
+  s.food -= 5;
+  s.water -= 5;
+  const exposure = world.nightCold[s.day]! + (w === 'rain' ? 5 : w === 'storm' ? 12 : 0);
   let dWarm = -exposure;
-  if (sheltered) dWarm += 14 + (w === 'storm' ? 18 : w === 'rain' ? 8 : 0);
+  if (sheltered) dWarm += 12 + (w === 'storm' ? 12 : w === 'rain' ? 5 : 0);
   let fireNote = '';
   if ((s.fires[here] ?? 0) > 0) {
     if (w === 'storm' && !sheltered) {
@@ -1004,7 +1028,7 @@ function nightTick(world: IslandWorld, s: IslandState, events: string[]): string
     }
   }
   s.warmth += dWarm;
-  s.energy += (sheltered ? 40 : w === 'storm' ? 12 : 28) + (fireNote.includes('warm') ? 5 : 0);
+  s.energy += (sheltered ? 35 : w === 'storm' ? 10 : 22) + (fireNote.includes('warm') ? 5 : 0);
   clampStats(s);
   const hurts: string[] = [];
   const before = s.health;
@@ -1017,7 +1041,7 @@ function nightTick(world: IslandWorld, s: IslandState, events: string[]): string
     hurts.push('starving');
   }
   if (s.warmth === 0) {
-    hurt(s, 15, 'hypothermia');
+    hurt(s, 12, 'hypothermia');
     hurts.push('freezing');
   }
   if (w === 'storm' && !sheltered) {
@@ -1031,7 +1055,7 @@ function nightTick(world: IslandWorld, s: IslandState, events: string[]): string
     for (const t of row) if (t.regrowDays > 0 && t.stock < t.max && s.day % t.regrowDays === 0) t.stock++;
   clampStats(s);
   const where = sheltered ? (tileAt(s, s.pos).terrain === 'cave' ? 'in the cave' : 'in your shelter') : 'in the open';
-  const weatherNight = w === 'storm' ? 'A storm rages all night.' : w === 'rain' ? 'Cold rain falls all night.' : exposure >= 22 ? 'A bitterly cold night.' : 'A cool night.';
+  const weatherNight = w === 'storm' ? 'A storm rages all night.' : w === 'rain' ? 'Cold rain falls all night.' : exposure >= 15 ? 'A bitterly cold night.' : 'A cool night.';
   const delta = s.health - before;
   const report = `Night ${s.day}: ${weatherNight} You sleep ${where}.${fireNote}${hurts.length ? ` You are ${hurts.join(', ')}.` : ''} Health ${delta >= 0 ? '+' : ''}${delta} → ${s.health}, warmth ${s.warmth}, energy ${s.energy}.`;
   events.push(report);

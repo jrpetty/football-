@@ -20,7 +20,7 @@ export function Radar({ categories, series }: { categories: CategoryInfo[]; seri
   const [hover, setHover] = useState<{ sid: string; cid: string; x: number; y: number } | null>(null);
 
   const width = Math.max(260, size.width);
-  const height = Math.round(Math.min(width * 0.86, 560 * s));
+  const height = Math.round(Math.min(width * 0.78, 400 * s));
 
   const geo = useMemo(() => {
     const n = categories.length;
@@ -63,9 +63,9 @@ export function Radar({ categories, series }: { categories: CategoryInfo[]; seri
             return <line key={c.id} x1={cx} y1={cy} x2={x} y2={y} />;
           })}
         </g>
-        <g className="tick-labels" style={{ fontSize: 10 * s }}>
-          {[25, 50, 75, 100].map((v) => (
-            <text key={v} x={cx + 4 * s} y={cy - (R * v) / 100 - 3 * s}>
+        <g className="tick-labels ring-labels" style={{ fontSize: 9.5 * s }}>
+          {[50, 100].map((v) => (
+            <text key={v} x={cx + 5 * s} y={cy - (R * v) / 100 + 11 * s}>
               {v}
             </text>
           ))}

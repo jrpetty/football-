@@ -3,6 +3,7 @@ import type { Contestant, ProviderConfig } from '../core/types.ts';
 import { createAnthropicAdapter, listAnthropicModels } from './anthropic.ts';
 import { createGeminiAdapter, listGeminiModels } from './gemini.ts';
 import { createMockAdapter } from './mock.ts';
+import { createManualAdapter } from './manual.ts';
 import { createOpenAICompatibleAdapter, listOpenAICompatibleModels } from './openai-compatible.ts';
 import type { AdapterContext, ProviderAdapter } from './types.ts';
 
@@ -27,6 +28,8 @@ export function createAdapter(contestant: Contestant, provider: ProviderConfig =
       return createGeminiAdapter(ctx);
     case 'mock':
       return createMockAdapter(ctx);
+    case 'manual':
+      return createManualAdapter(ctx);
   }
 }
 
@@ -53,5 +56,7 @@ export async function discoverModels(providerId: string): Promise<string[]> {
       return listGeminiModels(ctx);
     case 'mock':
       return ['random'];
+    case 'manual':
+      return [];
   }
 }

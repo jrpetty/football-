@@ -7,13 +7,31 @@
   "category": "social",
   "description": "A seeded dinner-party theft: five suspects, a hidden ground-truth timeline, and four evidence files (door log, a staff witness, bar receipts, CCTV with gaps). Exactly one suspect is the thief and lies about where they were during the theft; everyone else tells the truth, and on hard seeds one honest guest misremembers (and hedges) an irrelevant detail. The model interrogates with enumerated questions under a 12-question budget and must find the contradiction. It separates models that cross-check testimony systematically from those that guess, over-ask, or chase red herrings.",
   "difficulty": "hard",
-  "tags": ["deduction", "multi-turn", "interrogation", "efficiency", "seeded"],
+  "tags": [
+    "deduction",
+    "multi-turn",
+    "interrogation",
+    "efficiency",
+    "seeded"
+  ],
   "hook": "Five suspects. One liar. Twelve questions. Who cracks the case fastest?",
-  "seeds": [303, 606, 808],
-  "config": { "questionBudget": 12, "variant": "auto", "mistakenWitness": "auto" },
+  "seeds": [
+    303,
+    606,
+    808
+  ],
+  "config": {
+    "questionBudget": 12,
+    "variant": "auto",
+    "mistakenWitness": "auto"
+  },
   "maxOutputTokens": 8000,
   "timeLimitSec": 1200,
-  "estimate": { "inputTokens": 15000, "outputTokens": 8000, "calls": 9 },
+  "estimate": {
+    "inputTokens": 18000,
+    "outputTokens": 32000,
+    "calls": 12
+  },
   "author": "Gauntlet Core",
   "createdAt": "2026-09-24"
 }

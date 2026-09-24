@@ -39,6 +39,9 @@ import { activeProgress, cancelRun, estimateRun, isActive, recoverInterruptedRun
 import { reviewQueue, submitHumanScore } from '../engine/review.ts';
 import { artifactPath, deleteRun, listRunIds, listRuns, readManifest, readResults, toLite } from '../engine/store.ts';
 import { PROGRAMS } from '../programs/index.ts';
+import { failManual, listManualRequests, submitManual } from '../providers/manual.ts';
+import { gradePasted } from '../engine/grade.ts';
+import { DATA_DIR } from '../core/paths.ts';
 import { browserAvailable } from '../scoring/browser.ts';
 import { createAdapter, discoverModels } from '../providers/index.ts';
 import { callWithRetry } from '../engine/recorder.ts';
@@ -295,10 +298,12 @@ route('POST', '/api/runs/:id/cancel', ({ params }) => {
   return { ok: true };
 });
 
-route('POST', '/api/runs/:id/resume', ({ params }) => {
+route('POST', '/api/runs/:id/resume', async ({ params, body }) => {
   requireRun(params.id!);
+  const { maxCostUsd } = ((await body()) ?? {}) as { maxCostUsd?: number | null };
+  if (maxCostUsd !== undefined && maxCostUsd !== null && !(maxCostUsd > 0)) throw new HttpError(400, 'maxCostUsd must be a positive number or null');
   try {
-    resumeRun(params.id!);
+    resumeRun(params.id!, { maxCostUsd });
   } catch (err) {
     throw new HttpError(409, (err as Error).message);
   }
@@ -399,6 +404,81 @@ route('GET', '/api/runs/:id/artifacts/(.+)', ({ res, params }) => {
   });
   createReadStream(full).pipe(res);
   return STREAMING;
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Manual (copy & paste) contestants and pasted-reply grading
+// ─────────────────────────────────────────────────────────────────────────────
+
+route('GET', '/api/manual', ({ query }) => listManualRequests(query.get('runId') || undefined));
+
+route('POST', '/api/manual/:id', async ({ params, body }) => {
+  const b = (await body()) as { text?: unknown; inputTokens?: unknown; outputTokens?: unknown; reasoningTokens?: unknown; costUsd?: unknown };
+  if (typeof b.text !== 'string') throw new HttpError(400, 'Paste the model reply into "text"');
+  const optNum = (v: unknown, name: string) => {
+    if (v === undefined || v === null || v === '') return undefined;
+    const n = Number(v);
+    if (!Number.isFinite(n) || n < 0) throw new HttpError(400, `${name} must be a non-negative number`);
+    return n;
+  };
+  const ok = submitManual(decodeURIComponent(params.id!), {
+    text: b.text,
+    inputTokens: optNum(b.inputTokens, 'inputTokens'),
+    outputTokens: optNum(b.outputTokens, 'outputTokens'),
+    reasoningTokens: optNum(b.reasoningTokens, 'reasoningTokens'),
+    costUsd: optNum(b.costUsd, 'costUsd'),
+  });
+  if (!ok) throw new HttpError(404, 'This request is no longer waiting (answered, cancelled or timed out)');
+  return { ok: true };
+});
+
+route('POST', '/api/manual/:id/fail', async ({ params, body }) => {
+  const { reason } = ((await body()) ?? {}) as { reason?: string };
+  if (!failManual(decodeURIComponent(params.id!), String(reason ?? ''))) throw new HttpError(404, 'This request is no longer waiting');
+  return { ok: true };
+});
+
+route('POST', '/api/grade', async ({ body }) => {
+  try {
+    return await gradePasted((await body()) as Parameters<typeof gradePasted>[0]);
+  } catch (err) {
+    throw new HttpError(400, (err as Error).message);
+  }
+});
+
+route('GET', '/api/graded/(.+)', ({ res, params }) => {
+  const rel = decodeURIComponent(params['1'] ?? '');
+  const base = join(DATA_DIR, 'graded');
+  const full = normalize(join(base, rel));
+  if (!full.startsWith(base + sep) || !existsSync(full)) throw new HttpError(404, 'Artifact not found');
+  res.writeHead(200, {
+    'content-type': ARTIFACT_TYPES[extname(full).toLowerCase()] ?? 'application/octet-stream',
+    'content-security-policy': "sandbox allow-scripts; default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' data: blob:; style-src 'unsafe-inline' data:; img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'none'; form-action 'none'",
+    'x-content-type-options': 'nosniff',
+    'cache-control': 'no-store',
+  });
+  createReadStream(full).pipe(res);
+  return STREAMING;
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Cost planning
+// ─────────────────────────────────────────────────────────────────────────────
+
+route('GET', '/api/costs', async ({ query }) => {
+  const providers = loadProviders();
+  const requested = (query.get('models') ?? '').split(',').map((x) => x.trim()).filter(Boolean);
+  const contestantIds = requested.length
+    ? requested
+    : loadContestants()
+        .filter((c) => c.enabled && providers.find((p) => p.id === c.provider)?.type !== 'manual' && providers.find((p) => p.id === c.provider)?.type !== 'mock')
+        .map((c) => c.id);
+  const repeats = Number(query.get('repeats') ?? 1);
+  try {
+    return await estimateRun({ suiteId: query.get('suite') || 'core', contestantIds, repeats: Number.isFinite(repeats) && repeats > 0 ? repeats : 1 });
+  } catch (err) {
+    throw new HttpError(400, (err as Error).message);
+  }
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

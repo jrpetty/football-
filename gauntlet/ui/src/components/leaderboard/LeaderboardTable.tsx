@@ -68,7 +68,7 @@ function IndexCell({ row, maxCi }: { row: LeaderboardRow; maxCi: number }) {
 
 function heatStyle(score: number | null | undefined, cat: CategoryInfo): CSSProperties | undefined {
   if (typeof score !== 'number' || !Number.isFinite(score)) return undefined;
-  const pct = Math.round(6 + Math.max(0, Math.min(1, score)) * 58);
+  const pct = Math.round(5 + Math.max(0, Math.min(1, score)) * 40);
   return { background: `color-mix(in srgb, ${cat.color} ${pct}%, transparent)` };
 }
 
@@ -97,7 +97,7 @@ const Row = memo(function Row({
         <span className={cx('rank', !baseline && row.rank <= 3 && `r${row.rank}`)}>{baseline ? '–' : row.rank}</span>
       </td>
       <td className="c-model sticky-2">
-        <ModelCell label={row.label} vendor={row.vendor} color={row.color} extra={baseline ? <span className="badge outline baseline-tag">baseline</span> : undefined} />
+        <ModelCell label={row.label} vendor={baseline ? 'Reference · random answers' : row.vendor} color={row.color} />
       </td>
       <td className="c-index">
         <IndexCell row={row} maxCi={maxCi} />
@@ -120,22 +120,22 @@ const Row = memo(function Row({
       {show.economics && (
         <>
           <td className="num">{fmtCost(row.totals?.costUsd)}</td>
-          <td className="num">{fmtCost(row.costPerPoint)}</td>
+          <td className="num g-cpp">{fmtCost(row.costPerPoint)}</td>
         </>
       )}
       {show.speed && (
         <>
-          <td className="num">{fmtMs(row.speed?.medianCaseMs)}</td>
-          <td className="num">{fmtMs(row.speed?.medianTtftMs)}</td>
-          <td className="num">{fmtRate(row.speed?.outputTokensPerSec)}</td>
+          <td className="num g-speed">{fmtMs(row.speed?.medianCaseMs)}</td>
+          <td className="num g-speed">{fmtMs(row.speed?.medianTtftMs)}</td>
+          <td className="num g-speed">{fmtRate(row.speed?.outputTokensPerSec)}</td>
         </>
       )}
       {show.reliability && (
         <>
-          <td className="num">
+          <td className="num g-rel">
             <span className={cx(row.coverage < 0.999 && 'warn-text')}>{fmtPct(row.coverage)}</span>
           </td>
-          <td className="num" title={`Errors ${fmtPct(row.reliability?.errorRate, 1)} · refusals ${fmtPct(row.reliability?.refusalRate, 1)}${row.reliability?.formatCompliance != null ? ` · format ${fmtPct(row.reliability.formatCompliance)}` : ''}`}>
+          <td className="num g-rel" title={`Errors ${fmtPct(row.reliability?.errorRate, 1)} · refusals ${fmtPct(row.reliability?.refusalRate, 1)}${row.reliability?.formatCompliance != null ? ` · format ${fmtPct(row.reliability.formatCompliance)}` : ''}`}>
             <span className={cx('rel', err >= 0.05 ? 'bad' : err > 0 ? 'mid' : 'good')}>
               <i aria-hidden="true" />
               {fmtPct(err, 1)}
@@ -227,7 +227,7 @@ export function LeaderboardTable({
           Category cells: mean score ×100 · tinted by category · <span className="best-key">outlined</span> = category leader
         </span>
       </div>
-      <div className="table-wrap">
+      <div className="table-wrap scroll-shadow">
         <table className="table lb">
           <thead>
             <tr>
@@ -246,20 +246,20 @@ export function LeaderboardTable({
               {show.economics && (
                 <>
                   <th className="num">{S('cost', 'Cost', 'Total contestant spend (judge cost excluded)')}</th>
-                  <th className="num">{S('cpp', '$/pt', 'USD per Gauntlet Index point (lower is better)')}</th>
+                  <th className="num g-cpp">{S('cpp', '$/pt', 'USD per Gauntlet Index point (lower is better)')}</th>
                 </>
               )}
               {show.speed && (
                 <>
-                  <th className="num">{S('latency', 'Latency', 'Median wall time per case')}</th>
-                  <th className="num">{S('ttft', 'TTFT', 'Median time to first token')}</th>
-                  <th className="num">{S('tps', 'Tok/s', 'Output tokens per second')}</th>
+                  <th className="num g-speed">{S('latency', 'Latency', 'Median wall time per case')}</th>
+                  <th className="num g-speed">{S('ttft', 'TTFT', 'Median time to first token')}</th>
+                  <th className="num g-speed">{S('tps', 'Tok/s', 'Output tokens per second')}</th>
                 </>
               )}
               {show.reliability && (
                 <>
-                  <th className="num">{S('coverage', 'Coverage', 'Share of suite tests with at least one scored result')}</th>
-                  <th className="num">{S('reliability', 'Err/Ref', 'Error + refusal rate (lower is better)')}</th>
+                  <th className="num g-rel">{S('coverage', 'Coverage', 'Share of suite tests with at least one scored result')}</th>
+                  <th className="num g-rel">{S('reliability', 'Err/Ref', 'Error + refusal rate (lower is better)')}</th>
                 </>
               )}
             </tr>

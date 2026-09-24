@@ -24,7 +24,7 @@ export interface CategoryInfo {
 // Models (providers + contestants)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type ProviderType = 'anthropic' | 'openai-compatible' | 'gemini' | 'mock';
+export type ProviderType = 'anthropic' | 'openai-compatible' | 'gemini' | 'mock' | 'manual';
 
 export interface ProviderConfig {
   id: string;
@@ -112,6 +112,8 @@ export interface CompletionRequest {
   signal?: AbortSignal;
   /** Streaming text callback (visible text only, never reasoning). */
   onDelta?: (text: string) => void;
+  /** Where this call comes from (used by the manual copy & paste provider to label requests). */
+  callContext?: { runId: string; key: string; testId: string; testName: string; caseId: string; label: string };
 }
 
 export interface TokenUsage {
@@ -140,6 +142,10 @@ export interface CompletionResult {
   servedModel: string;
   requestId?: string;
   retries: number;
+  /** Explicit cost (manual entries where the user knows the real cost). Overrides pricing × usage. */
+  costUsd?: number;
+  /** True when the reply was pasted in by a human (manual contestant). Token counts may be estimates. */
+  manual?: boolean;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -504,6 +510,8 @@ export interface RunRequest {
   temperature?: number;
   /** Judge contestant ids (default: settings.judges). */
   judgeIds?: string[];
+  /** Hard spending cap in USD (contestant + judge cost). The run stops starting new cases once reached. */
+  maxCostUsd?: number;
   notes?: string;
 }
 
@@ -545,6 +553,8 @@ export interface RunManifest {
     concurrency: number;
     temperature: number;
     protocolVersion: string;
+    maxCostUsd?: number;
+    judgeExcludeSameVendor?: boolean;
   };
   totalJobs: number;
   notes?: string;
@@ -627,6 +637,8 @@ export interface LeaderboardRow {
   };
   /** Mean std-dev of scores across repeats of the same case (lower = more consistent). */
   consistency: number | null;
+  /** True when this contestant's results were entered manually (copy & paste); speed/cost figures are not API measurements. */
+  manual?: boolean;
 }
 
 export interface MedalEntry {
@@ -660,4 +672,41 @@ export type RunEvent =
   | { type: 'job.delta'; runId: string; key: string; contestantId: string; text: string; label?: string }
   | { type: 'job.step'; runId: string; key: string; contestantId: string; label: string; frame?: ReplayFrame }
   | { type: 'job.finished'; runId: string; key: string; contestantId: string; testId: string; caseId: string; repeat: number; status: ResultStatus; score: number | null; summary: string; metrics: CaseMetrics; at: string }
-  | { type: 'log'; runId: string; level: 'info' | 'warn' | 'error'; message: string; at: string };
+  | { type: 'log'; runId: string; level: 'info' | 'warn' | 'error'; message: string; at: string }
+  | { type: 'manual.request'; runId: string; request: ManualRequest }
+  | { type: 'manual.resolved'; runId: string; requestId: string };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Manual (copy & paste) contestants
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** A model call waiting for a human to paste the reply from any chatbot. */
+export interface ManualRequest {
+  id: string;
+  runId: string;
+  key: string;
+  contestantId: string;
+  contestantLabel: string;
+  testId: string;
+  testName: string;
+  caseId: string;
+  /** Call label, e.g. "response", "turn 2", "Day 3". */
+  label: string;
+  system?: string;
+  messages: ChatMessage[];
+  /** Everything above as one block, ready to paste into a chat UI that has no system-prompt field. */
+  combinedPrompt: string;
+  /** Only the newest user message (for chat UIs where the earlier turns are already in the conversation). */
+  latestUserMessage: string;
+  /** True when earlier turns exist: paste into the SAME conversation, or use combinedPrompt in a NEW one. */
+  isContinuation: boolean;
+  createdAt: string;
+}
+
+export interface ManualSubmission {
+  text: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  reasoningTokens?: number;
+  costUsd?: number;
+}

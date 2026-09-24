@@ -355,7 +355,7 @@ hr {
 .topbar .brand-inline {
   display: none;
 }
-.menu-btn {
+.btn.menu-btn {
   display: none;
 }
 
@@ -457,7 +457,7 @@ hr {
     z-index: 55;
     background: var(--overlay);
   }
-  .menu-btn {
+  .btn.menu-btn {
     display: inline-flex;
   }
   .topbar .brand-inline {

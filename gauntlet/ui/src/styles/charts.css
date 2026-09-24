@@ -284,3 +284,19 @@ html[data-broadcast='on'] .bl-bar {
 .scale-legend .ramp span {
   flex: 1;
 }
+
+.ring-labels text {
+  paint-order: stroke;
+  stroke: var(--chart-surface);
+  stroke-width: 3px;
+  opacity: 0.8;
+}
+
+/* Horizontal scroll affordance: shadows appear only where more content exists. */
+.scroll-shadow {
+  background:
+    linear-gradient(to right, var(--surface-1) 30%, transparent) left / 40px 100% no-repeat local,
+    linear-gradient(to left, var(--surface-1) 30%, transparent) right / 40px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, rgba(0, 0, 0, 0.45), transparent) left / 14px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, rgba(0, 0, 0, 0.45), transparent) right / 14px 100% no-repeat scroll;
+}

@@ -35,11 +35,13 @@ export function createAnthropicAdapter(ctx: AdapterContext): ProviderAdapter {
         messages: req.messages.map((m) => ({ role: m.role, content: m.content })),
       };
       if (req.system) body.system = req.system;
-      if (opts.effort && opts.effort !== 'none' && opts.effort !== 'minimal') {
+      const thinking = Boolean(opts.effort && opts.effort !== 'none' && opts.effort !== 'minimal');
+      if (thinking) {
         body.thinking = { type: 'adaptive' };
         body.output_config = { effort: opts.effort };
       }
-      if (opts.supportsTemperature && req.temperature !== undefined) body.temperature = opts.temperature ?? req.temperature;
+      // Extended thinking is incompatible with a custom temperature, so it is only sent to non-thinking configurations.
+      if (opts.supportsTemperature && !thinking && req.temperature !== undefined) body.temperature = opts.temperature ?? req.temperature;
       deepMerge(body, opts.extraBody);
 
       const startedAt = Date.now();

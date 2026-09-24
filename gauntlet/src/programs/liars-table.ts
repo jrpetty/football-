@@ -3,7 +3,7 @@
  * suspects with enumerated questions, checks evidence, and must name the one
  * suspect whose story is contradicted, using as few questions as possible.
  */
-import type { ChatMessage, ProgramContext, ProgramDefinition, ProgramResult, ReplayFrame } from '../core/types.ts';
+import type { ProgramContext, ProgramDefinition, ProgramResult, ReplayFrame } from '../core/types.ts';
 import {
   answerAbout,
   answerAlibi,
@@ -25,8 +25,6 @@ const PAR = 3;
 const W_ACCUSE = 0.6;
 const W_EFFICIENCY = 0.25;
 const W_REASON = 0.15;
-/** Assistant turns are capped in the running history to keep cost bounded. */
-const MAX_HISTORY_REPLY_CHARS = 2000;
 
 export interface LtConfig {
   questionBudget: number;
@@ -52,7 +50,8 @@ export function buildWorld(ctx: Pick<ProgramContext, 'rng'>, cfg: LtConfig): LtW
   });
 }
 
-export function buildSystemPrompt(w: LtWorld, budget: number): string {
+/** The case file and rules — the first part of every (self-contained) turn prompt. */
+export function buildBriefing(w: LtWorld, budget: number): string {
   const roomNotes = w.rooms
     .map((r) => {
       const notes: string[] = [];
@@ -63,7 +62,7 @@ export function buildSystemPrompt(w: LtWorld, budget: number): string {
     .join(', ');
   const suspects = w.suspects.map((s) => `- ${s.name}, ${s.blurb}`).join('\n');
   return [
-    `You are the detective in THE LIAR'S TABLE, an interrogation game. Every answer is fixed in advance, so asking the same question twice gives the same answer.`,
+    `You are the detective in THE LIAR'S TABLE, an interrogation game. Every answer is fixed in advance, so asking the same question twice gives the same answer. Each message gives you the full case file and a log of everything asked so far.`,
     ``,
     `THE CASE`,
     `${w.host} held a dinner party at ${w.venue}. At 8:00 pm ${w.hostShort} showed every guest ${w.object} in the ${w.objectRoom}, then locked the room. At 10:00 pm ${w.object} was gone.`,
@@ -80,7 +79,7 @@ export function buildSystemPrompt(w: LtWorld, budget: number): string {
     `- You have ${budget} questions. Every ASK or CHECK uses one, and so does an invalid command.`,
     `- ACCUSE ends the game. Naming the thief matters most. Fewer questions, and a reason that cites the exact contradiction (who, where, at what time, disproved by whom or what), earn the rest. A wrong accusation scores zero.`,
     ``,
-    `COMMANDS (exactly one per reply)`,
+    `COMMANDS (exactly one per reply; if you write more than one ACCUSE, only the first counts)`,
     `ASK <suspect> ABOUT <topic>, where <topic> is one of:`,
     `  ALIBI: where they were at 8:30, 9:00 and 9:30`,
     `  8:30 | 9:00 | 9:30: where they were at that time and who was with them`,
@@ -88,14 +87,40 @@ export function buildSystemPrompt(w: LtWorld, budget: number): string {
     `  THE ${w.objectKey}: what they know about ${w.object}`,
     `CHECK <evidence>: DOOR LOG (${w.objectRoom} door keypad log) | WITNESS (statement from ${w.staff.title}) | RECEIPT (bar receipts) | CCTV (camera stills)`,
     `ACCUSE <suspect> BECAUSE <reason>`,
-    ``,
-    `Think briefly (a few short sentences at most), then end every reply with exactly one line:`,
-    `ACTION: <command>`,
+  ].join('\n');
+}
+
+export interface LogEntry {
+  n: number;
+  command: string;
+  answer: string;
+  valid: boolean;
+}
+
+/** One self-contained turn: case file, full Q&A log, budget, menu, then the exact output format. */
+export function buildTurnPrompt(w: LtWorld, budget: number, log: readonly LogEntry[], asked: ReadonlySet<string>, notice = ''): string {
+  const used = log.length;
+  const left = budget - used;
+  const forced = left <= 0;
+  const logText = log.length === 0 ? '(nothing asked yet)' : log.map((e) => `Q${e.n} · ${e.command}\n${e.answer}`).join('\n\n');
+  return [
+    buildBriefing(w, budget),
+    '',
+    'CASE LOG (every question so far, with its answer)',
+    logText,
+    '',
+    `Questions left: ${left} of ${budget}.${forced ? ' You have no questions left: you must ACCUSE now.' : ''}${notice ? ` ${notice}` : ''}`,
+    '',
+    buildMenu(w, asked, forced),
+    '',
+    'Reply with a few short sentences of reasoning at most, then end with exactly one line:',
+    forced ? 'ACTION: ACCUSE <suspect> BECAUSE <reason>' : 'ACTION: <command>',
+    'Exactly one command per reply. If you write more than one ACCUSE, only the first counts.',
   ].join('\n');
 }
 
 export function buildMenu(w: LtWorld, asked: ReadonlySet<string>, accuseOnly: boolean): string {
-  const lines: string[] = ['Commands you can send now (reply with ACTION: <command>):'];
+  const lines: string[] = ['Commands you can send now:'];
   const names = w.suspects.map((s) => s.name);
   if (!accuseOnly) {
     for (const s of names) {
@@ -126,11 +151,6 @@ export function answerFor(cmd: LtCommand, w: LtWorld): string {
   return `${who}: ${body}`;
 }
 
-function trimReply(text: string): string {
-  if (text.length <= MAX_HISTORY_REPLY_CHARS) return text;
-  return `[…earlier reasoning trimmed…]\n${text.slice(-MAX_HISTORY_REPLY_CHARS)}`;
-}
-
 function verdictLine(w: LtWorld): string {
   const t = SLOTS[w.theftSlot]!;
   return `${w.culprit} was ${roomPhrase(w.objectRoom)} at ${t}, not ${roomPhrase(w.claimedRoom)}.`;
@@ -149,11 +169,9 @@ export const program: ProgramDefinition = {
     const cfg = readConfig(ctx.config);
     const w = buildWorld(ctx, cfg);
     const budget = cfg.questionBudget;
-    const system = buildSystemPrompt(w, budget);
 
-    const turns: ChatMessage[] = [];
     const asked = new Set<string>();
-    const log: Array<{ n: number; command: string; valid: boolean }> = [];
+    const log: LogEntry[] = [];
     const frames: ReplayFrame[] = [
       {
         step: 0,
@@ -163,26 +181,22 @@ export const program: ProgramDefinition = {
         tone: 'neutral',
       },
     ];
-    let used = 0;
     let invalid = 0;
     let accusation: { suspect: string; reason: string } | null = null;
     let forcedAttempts = 0;
-    let pending = `The interrogation begins. Questions left: ${budget} of ${budget}.`;
+    let notice = '';
 
     while (accusation === null) {
-      const forced = used >= budget;
+      const forced = log.length >= budget;
       if (forced && forcedAttempts >= 2) break;
-      const menu = buildMenu(w, asked, forced);
-      const messages: ChatMessage[] = [...turns, { role: 'user', content: `${pending}\n\n${menu}` }];
       const reply = await ctx.model.complete({
-        system,
-        messages,
+        messages: [{ role: 'user', content: buildTurnPrompt(w, budget, log, asked, notice) }],
         maxOutputTokens: ctx.maxOutputTokens,
-        label: forced ? `accuse ${forcedAttempts + 1}` : `question ${used + 1}`,
+        label: forced ? `accuse ${forcedAttempts + 1}` : `question ${log.length + 1}`,
       });
       const text = reply.stopReason === 'refusal' ? '' : reply.text;
       const cmd: LtCommand = text.trim() ? parseCommand(text, w) : { kind: 'invalid', raw: '', why: 'empty or refused reply' };
-      turns.push({ role: 'user', content: pending }, { role: 'assistant', content: text.trim() ? trimReply(text) : '(no reply)' });
+      notice = '';
 
       if (cmd.kind === 'accuse') {
         accusation = { suspect: cmd.suspect, reason: cmd.reason };
@@ -190,12 +204,12 @@ export const program: ProgramDefinition = {
       }
       if (forced) {
         forcedAttempts++;
-        pending = `That was not a valid accusation (${cmd.kind === 'invalid' ? cmd.why : 'no questions left'}). You must ACCUSE a suspect now.`;
+        notice = `Your last reply was not a valid accusation (${cmd.kind === 'invalid' ? cmd.why : 'no questions left'}).`;
         continue;
       }
 
-      used++;
-      const left = budget - used;
+      const n = log.length + 1;
+      const left = budget - n;
       let answer: string;
       if (cmd.kind === 'invalid') {
         invalid++;
@@ -204,21 +218,19 @@ export const program: ProgramDefinition = {
         answer = answerFor(cmd, w);
         asked.add(canonical(cmd, w));
       }
-      const label = canonical(cmd, w);
-      log.push({ n: used, command: label, valid: cmd.kind !== 'invalid' });
+      const label = cmd.kind === 'invalid' ? `(invalid) ${canonical(cmd, w)}` : canonical(cmd, w);
+      log.push({ n, command: label, answer, valid: cmd.kind !== 'invalid' });
       frames.push({
-        step: used,
-        label: `Q${used} · ${label}`,
+        step: n,
+        label: `Q${n} · ${label}`,
         action: label,
         outcome: answer,
         stats: { budget: Math.round((left / budget) * 100), 'Questions left': left },
         tone: cmd.kind === 'invalid' ? 'bad' : 'neutral',
       });
-      pending = `Q${used} · ${label}\n${answer}\n\nQuestions left: ${left} of ${budget}.`;
-      if (left === 0) pending += ' You have no questions left: you must ACCUSE now.';
     }
 
-    return score(w, budget, used, invalid, asked, accusation, frames, log);
+    return score(w, budget, log.length, invalid, asked, accusation, frames, log);
   },
 };
 
@@ -230,7 +242,7 @@ function score(
   asked: ReadonlySet<string>,
   accusation: { suspect: string; reason: string } | null,
   frames: ReplayFrame[],
-  log: Array<{ n: number; command: string; valid: boolean }>,
+  log: readonly LogEntry[],
 ): ProgramResult {
   const correct = accusation?.suspect === w.culprit;
   const informed = wasInformed(asked, w);
@@ -287,7 +299,7 @@ function score(
         hardCase: w.mistaken !== null,
         mistaken: w.mistaken,
       },
-      questions: log,
+      questions: log.map((e) => ({ n: e.n, command: e.command, valid: e.valid })),
     },
     replay: {
       title: `The Liar's Table — ${w.object} at ${w.venue}`,

@@ -41,21 +41,28 @@ function clean(s: string): string {
   return s.replace(/[`*_"“”]/g, '').replace(/\s+/g, ' ').trim();
 }
 
-/** Finds the command in a model reply (the last ACTION: line, else the last bare command line). */
+const ACTION_LINE = /^[\s>*_`#-]*ACTION\s*[:：]/i;
+
+/**
+ * Finds the command in a model reply. Only ACTION: lines count when present
+ * (otherwise bare command lines). The FIRST accusation wins — a reply cannot
+ * hedge by accusing several suspects; without an accusation the last command
+ * is used (models reason first, then act).
+ */
 export function locateCommand(text: string): { line: string; rest: string } | null {
   const lines = text.split(/\r?\n/);
-  const tagged = extractTagged(text, 'ACTION');
-  if (tagged !== null) {
-    for (let i = lines.length - 1; i >= 0; i--) {
-      if (/ACTION\s*[:：]/i.test(lines[i]!)) return { line: tagged, rest: lines.slice(i + 1).join(' ') };
-    }
-    return { line: tagged, rest: '' };
-  }
-  for (let i = lines.length - 1; i >= 0; i--) {
-    const m = lines[i]!.match(COMMAND_LINE);
-    if (m) return { line: `${m[1]}${m[2]}`, rest: lines.slice(i + 1).join(' ') };
-  }
-  return null;
+  const tagged = lines.map((l, i) => (ACTION_LINE.test(l) ? i : -1)).filter((i) => i >= 0);
+  const candidates = tagged.length > 0 ? tagged : lines.map((l, i) => (COMMAND_LINE.test(l) ? i : -1)).filter((i) => i >= 0);
+  if (candidates.length === 0) return null;
+  const commandAt = (i: number): string => {
+    if (tagged.length > 0) return extractTagged(lines[i]!, 'ACTION') ?? '';
+    const m = lines[i]!.match(COMMAND_LINE)!;
+    return `${m[1]}${m[2]}`;
+  };
+  const idx = candidates.find((i) => /^ACCUSE\b/i.test(commandAt(i).replace(/[`*_]/g, '').trim())) ?? candidates[candidates.length - 1]!;
+  // An accusation's reason may continue on following lines, up to the next command.
+  const next = candidates.find((i) => i > idx) ?? lines.length;
+  return { line: commandAt(idx), rest: lines.slice(idx + 1, next).join(' ') };
 }
 
 function findSuspect(token: string, w: LtWorld): string | null {

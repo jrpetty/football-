@@ -1371,3 +1371,8 @@ details.collapse > .inner {
 .difficulty.extreme .pips i.on {
   background: var(--accent-2);
 }
+.drawer:focus,
+.modal:focus {
+  outline: none;
+  box-shadow: var(--shadow-2);
+}

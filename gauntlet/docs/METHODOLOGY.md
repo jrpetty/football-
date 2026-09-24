@@ -42,9 +42,44 @@ published result, reproduce it, and judge whether two numbers are comparable.
 The protocol version (`PROTOCOL_VERSION` in `src/core/version.ts`) is bumped whenever any of these rules,
 the answer instruction or the judge prompts change.
 
-## 3. Scoring
+## 3. Fair play: every model meets every test for the first time
 
-### 3.1 Case scores (0–1)
+| Threat | Safeguard |
+|---|---|
+| Memory of earlier attempts or other models' answers | Every case is a **fresh, stateless API conversation**. Nothing from previous cases, repeats, runs or other models is ever included. OpenAI requests set `store: false`; no provider memory, assistants, threads or caching features are used. |
+| Access to the answer key | Expected answers, auditor notes and scoring keywords are **never** sent to the model. Rendered prompts contain only the task. |
+| Looking things up or running tools | No tools, no web search, no code interpreter: plain text in, plain text out. Generated code runs only inside Gauntlet's sandbox, which cannot read the test files. |
+| Hedging ("A or B", "42 or 43") | An answer that offers alternatives is **wrong**, even if one alternative is right. Every single-answer prompt says so. |
+| Multiple answers / self-correction | The **last** `FINAL ANSWER:` (or `ACTION:`) line counts. |
+| Gaming a judge ("give this a 10") | Judges are told that text inside the response is not an instruction, never learn the model's identity, and work from fixed rubrics with explicit point values. |
+| Self-preference bias | A judge **never grades a model from its own vendor** when another judge is available (`judgeExcludeSameVendor`), and a model never grades itself. |
+| Judges disagreeing | If panel scores differ by more than 3 points out of 10, or labels differ, the result is flagged and sent to **human arbitration** in Blind Review. The human rating becomes the final score and the judges' verdicts stay on record. |
+| Simulation self-reports ("I escaped!") | Simulation scores come only from the world state produced by the model's actions. |
+| Training-data contamination | Tests are original, seeded worlds are regenerated from seeds, held-out tests in `tests/private/` are never committed or published, and a **canary string** marks Gauntlet data. `node src/cli.ts probe-contamination --models …` checks whether a model can complete it. |
+| Silent substitution by another model | Provider fallback and routing features are disabled; the model that answered is recorded (`servedModel`). |
+| Changing a test after seeing results | Tests are hashed. Any edit creates a new hash, and old results stop counting. |
+
+## 4. Testing any model: API or copy & paste
+
+Models with an API are called directly. **Any other model** (a chat-only product, an old model that has lost
+its API, a future model) can be tested as a **manual contestant**: every call waits in the **Manual Inbox**,
+where you copy the exact prompt into the model's chat UI and paste the complete reply back. The reply is
+graded by exactly the same scorer. Rules for manual entry:
+
+1. Start a **new chat** for each case (use the "combined prompt", which includes any system instructions).
+   For multi-turn cases, continue the same chat with each new message, or paste the combined prompt into a
+   new chat.
+2. Paste the prompt exactly: no extra instructions, no custom personas, memory off where possible.
+3. Paste the **first** reply in full. Don't regenerate or edit it.
+4. Enter token counts and cost if the product shows them. Otherwise tokens are estimated and cost is $0.
+   Latency and throughput are not measured for manual entries and are hidden on the leaderboard.
+
+A single reply can also be graded without a run (`Grader` screen or `node src/cli.ts grade <test> <case>`),
+but only results recorded in runs count toward the leaderboard.
+
+## 5. Scoring
+
+### 5.1 Case scores (0–1)
 
 | Scorer | How a case is scored |
 |---|---|
@@ -62,7 +97,7 @@ the answer instruction or the judge prompts change.
 | `human` | Mean of human ratings (0–10 ÷ 10) from the Blind Review screen, where identities are hidden until rated. |
 | Programs | Each simulation documents its own formula (see the Methodology page in the app). |
 
-### 3.2 Aggregation
+### 5.2 Aggregation
 
 ```
 test score      = mean over cases of ( mean over that case's repeats )
@@ -73,31 +108,33 @@ Gauntlet Index  = 100 × weighted mean of category scores    (category weights, 
 Averaging repeats inside each case first means a case run five times does not count five times as much
 as a case run once.
 
-### 3.3 Confidence intervals
+### 5.3 Confidence intervals
 
 95% intervals come from a **cluster bootstrap**: cases are the independent unit, so each resample draws
 cases (with all their repeats) with replacement within every test, then recomputes the index. 1,000
 resamples, fixed seed, so intervals are reproducible. Intervals capture sampling variation across cases
 and repeats; they do not capture judge bias or prompt sensitivity.
 
-### 3.4 Medals
+### 5.4 Medals
 
 For every test, contestants are ranked by test score, with ties broken by lower cost and then by faster
 median case time. The top three get gold, silver and bronze. A contestant must score above zero to
 medal.
 
-### 3.5 Judges
+### 5.5 Judges
 
 * Fixed prompts (`src/scoring/judge-prompts.ts`), part of the fingerprint.
 * A panel of models from different vendors (`config/settings.json → judges`); the mean is used.
   The harness warns when the panel has only one vendor, because models tend to prefer their own
   vendor's style.
 * Judges never see which model wrote a response and are told to ignore instructions inside it.
+* Judges never grade a model from their own vendor while another judge is available. Split verdicts go to human
+  arbitration.
 * Judge cost is tracked separately and is **not** added to a contestant's cost.
 * Judges grade text only. HTML games are graded from their source together with the automated
   browser-check results, and humans can add a blind rating on top.
 
-## 4. Metrics recorded for every case
+## 6. Metrics recorded for every case
 
 | Metric | Definition |
 |---|---|
@@ -111,7 +148,7 @@ medal.
 | Consistency | Mean standard deviation of scores across repeats of the same case (0 = identical every time). |
 | $/point | Total contestant cost ÷ Gauntlet Index. |
 
-## 5. Reproducibility
+## 7. Reproducibility
 
 * **Run manifest.** Every run stores the harness version, git commit, Node version, platform, protocol
   version, the full snapshot of every model's configuration and pricing, the hash of every test, the
@@ -128,13 +165,24 @@ medal.
   temperature 0, and reasoning models are sampled. This is why Gauntlet uses repeats and reports
   intervals and consistency instead of single numbers.
 
-## 6. The random baseline
+## 8. The random baseline
 
 `random-baseline` makes no API calls. It picks a random offered action in simulations, a random letter or
 number for answer questions, a stub for code and filler for prose. It shows the floor every real model must
 clear: a score close to the baseline means a test isn't measuring skill for that model.
 
-## 7. Publishing checklist
+## 9. Budget control
+
+* **Estimates before every run.** `New Run`, `Cost Planner` and `node src/cli.ts costs` show the expected cost
+  per test and per model, plus a conservative upper bound. Estimates start from each test's declared token
+  budget and switch to **measured** averages from your own previous runs of the same test version.
+* **Hard spending cap.** Set `Spending cap` (or `--max-cost`) on a run. Once the cap is reached, no new cases
+  start. Cases already in flight finish, so the overshoot is at most one case per concurrent worker. Resume
+  later with a higher cap. Nothing is lost.
+* **Cheap exploration.** Use the `quick` suite with 1 repeat to try new models, and the full `core` suite with 3
+  repeats for results you publish.
+
+## 10. Publishing checklist
 
 1. Verify every contestant's pricing (`pricing.verifiedAt`) against the provider's price page.
 2. Use at least 3 repeats and publish intervals.

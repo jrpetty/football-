@@ -48,6 +48,8 @@ export function createOpenAICompatibleAdapter(ctx: AdapterContext): ProviderAdap
         [maxTokensParam]: req.maxOutputTokens,
       };
       if (opts.effort) body.reasoning_effort = opts.effort;
+      // Never let the provider retain benchmark prompts/completions (no stored conversations, no memory between cases).
+      if (isOpenAI) body.store = false;
       if (opts.supportsTemperature && req.temperature !== undefined) body.temperature = opts.temperature ?? req.temperature;
       deepMerge(body, opts.extraBody);
 

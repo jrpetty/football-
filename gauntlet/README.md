@@ -16,6 +16,14 @@ for screen-recording, so results can go straight into videos.
 * **Everything is measured.** Wall time, time to first token, output tokens/sec, input/cached/output/
   reasoning tokens, dollar cost from a pricing snapshot, retries, errors, refusals, format compliance, and
   consistency across repeats. Confidence intervals come from a cluster bootstrap.
+* **Test any model, even without an API.** A *manual* contestant turns every prompt into an item in the
+  **Manual Inbox**: copy it into any chatbot (old, current or future), paste the reply back, and it is graded
+  by the same scorer. Single replies can also be graded on the spot (**Grader** or `node src/cli.ts grade`).
+* **Fair play.** Fresh stateless conversation per case, no tools, answer keys never sent, hedged answers
+  marked wrong, judges blind to identity and never grading their own vendor, split verdicts sent to human
+  arbitration, held-out private tests, and a contamination canary.
+* **Budget control.** Per-test × per-model cost tables (**Cost Planner**, `node src/cli.ts costs`), estimates
+  that calibrate from your own runs, and a hard spending cap per run (`--max-cost`).
 * **Extensible.** Add tests in the dashboard's Test Builder, as JSON files, or as TypeScript programs.
   Add models from the dashboard, with live model discovery.
 
@@ -51,7 +59,10 @@ The **Live Arena** streams every model's output side by side while it works.
 | **Runs / Run detail** | History with resume/export/delete. Results matrix (tests × models). The inspector shows every case's transcript, timing, tokens, cost, score breakdown, judge rationales, artifacts (playable games, SVGs, screenshots) and the **Replay player** for simulations. |
 | **Tests / Test Builder** | Browse the library with the exact prompts. Create, duplicate, validate and save new tests without writing code. |
 | **Models** | Add or edit models, pricing and effort. API key status per provider, ping a model, discover the model ids your key can access. |
-| **Blind Review** | Rate open-ended outputs (games, illustrations) side by side with identities hidden. |
+| **Manual Inbox** | Prompts waiting for copy & paste models: copy, paste the reply, submit. |
+| **Grader** | Paste any model's reply to one case and get it graded instantly (doesn't touch the leaderboard). |
+| **Cost Planner** | Estimated cost of every test for every model, before you spend anything. |
+| **Blind Review** | Rate open-ended outputs (games, illustrations) side by side with identities hidden, and arbitrate cases where the judges disagreed. |
 | **Methodology** | The scoring and reproducibility rules, generated from the live configuration. |
 
 Press **B** anywhere for **Broadcast mode**: chrome hidden, large type, 16:9-friendly layout.
@@ -63,8 +74,13 @@ node src/cli.ts models                         # configured models + API key sta
 node src/cli.ts tests                          # the test library with versions and hashes
 node src/cli.ts suites                         # suites and their fingerprints
 node src/cli.ts show honesty.honesty-trap      # the exact prompts every model receives
+node src/cli.ts costs --suite core                # cost of every test for every enabled model
 node src/cli.ts estimate --models claude-opus-5,gpt-5.6-sol --suite core --repeats 3
-node src/cli.ts run --models claude-opus-5,gpt-5.6-sol,gemini-3.1-pro --suite core --repeats 3 --name "September showdown"
+node src/cli.ts run --models claude-opus-5,gpt-5.6-sol,gemini-3.1-pro --suite core --repeats 3 --max-cost 40 --name "September showdown"
+node src/cli.ts run --models manual-chat --suite quick --repeats 1   # copy & paste mode in the terminal
+node src/cli.ts grade math.competition c04 --file reply.txt          # grade one pasted reply
+node src/cli.ts probe-contamination --models claude-opus-5           # has the model seen Gauntlet data?
+node src/cli.ts prompts --suite core > prompt-book.md                # every exact prompt, for publishing
 node src/cli.ts resume <runId>                 # finish an interrupted/cancelled run (only if tests are unchanged)
 node src/cli.ts report <runId> --format md     # Markdown leaderboard for descriptions/blogs
 node src/cli.ts leaderboard --suite core       # combined across all runs

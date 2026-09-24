@@ -1,5 +1,5 @@
 import { computeCost, emptyUsage, addUsage } from '../core/cost.ts';
-import type { ChatMessage, ChatSession, CompletionResult, Contestant, ModelHandle, ModelReply, TokenUsage, TranscriptEntry } from '../core/types.ts';
+import type { ChatMessage, ChatSession, CompletionRequest, CompletionResult, Contestant, ModelHandle, ModelReply, TokenUsage, TranscriptEntry } from '../core/types.ts';
 import { ProviderError, type ProviderAdapter } from '../providers/index.ts';
 import type { Semaphore } from './semaphore.ts';
 
@@ -37,7 +37,7 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
  */
 export async function callWithRetry(
   target: CallTarget,
-  req: { system?: string; messages: ChatMessage[]; maxOutputTokens: number; temperature: number; onDelta?: (t: string) => void },
+  req: { system?: string; messages: ChatMessage[]; maxOutputTokens: number; temperature: number; onDelta?: (t: string) => void; callContext?: CompletionRequest['callContext'] },
   policy: CallPolicy,
   signal: AbortSignal,
   onRetry?: (attempt: number, waitMs: number, err: Error) => void,
@@ -95,6 +95,8 @@ export function createRecorder(opts: {
   onDelta?: (text: string, label?: string) => void;
   onCall?: (label: string) => void;
   onRetry?: (attempt: number, waitMs: number, err: Error) => void;
+  /** Identifies the job (for manual copy & paste requests). */
+  callContext?: Omit<NonNullable<CompletionRequest['callContext']>, 'label'>;
 }): CaseRecorder {
   const rec: CaseRecorder = {
     handle: null as unknown as ModelHandle,
@@ -129,6 +131,7 @@ export function createRecorder(opts: {
           maxOutputTokens: req.maxOutputTokens ?? opts.maxOutputTokens,
           temperature: opts.policy.temperature,
           onDelta: opts.onDelta ? (t) => opts.onDelta!(t, label) : undefined,
+          callContext: opts.callContext ? { ...opts.callContext, label } : undefined,
         },
         opts.policy,
         opts.signal,
@@ -137,7 +140,7 @@ export function createRecorder(opts: {
           opts.onRetry?.(attempt, wait, err);
         },
       );
-      const cost = computeCost(r.usage, opts.target.contestant.pricing);
+      const cost = r.costUsd ?? computeCost(r.usage, opts.target.contestant.pricing);
       rec.usage = addUsage(rec.usage, r.usage);
       rec.costUsd += cost;
       rec.apiCalls++;

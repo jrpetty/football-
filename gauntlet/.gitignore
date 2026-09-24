@@ -4,3 +4,5 @@ data/runs/*
 !data/runs/.gitkeep
 .env
 *.log
+tests/private/
+data/graded/

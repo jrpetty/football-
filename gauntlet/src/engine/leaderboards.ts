@@ -1,15 +1,22 @@
-import { contestantConfigHash, loadCategories, loadContestants } from '../core/config.ts';
+import { contestantConfigHash, loadCategories, loadContestants, loadProviders } from '../core/config.ts';
 import { fingerprint, getSuite, loadTests, resolveTests } from '../core/registry.ts';
 import type { CaseResult, Contestant, Leaderboard } from '../core/types.ts';
 import { buildLeaderboard, type AggregateTest } from './aggregate.ts';
 import { listRunIds, readManifest, readResults } from './store.ts';
+
+function markManual(board: Leaderboard, contestants: Contestant[]): Leaderboard {
+  const providers = loadProviders();
+  const manual = new Set(contestants.filter((c) => providers.find((p) => p.id === c.provider)?.type === 'manual').map((c) => c.id));
+  for (const row of board.rows) if (manual.has(row.contestantId)) row.manual = true;
+  return board;
+}
 
 export function runLeaderboard(runId: string): Leaderboard | null {
   const manifest = readManifest(runId);
   if (!manifest) return null;
   const tests: AggregateTest[] = manifest.tests.map((t) => ({ id: t.id, name: t.name, category: t.category, weight: t.weight, version: t.version, hash: t.hash }));
   const suite = manifest.suiteId ? getSuite(manifest.suiteId) : undefined;
-  return buildLeaderboard({
+  return markManual(buildLeaderboard({
     scope: { kind: 'run', runId },
     fingerprint: manifest.fingerprint,
     categories: loadCategories(),
@@ -17,7 +24,7 @@ export function runLeaderboard(runId: string): Leaderboard | null {
     tests,
     contestants: manifest.contestants,
     results: readResults(runId),
-  });
+  }), manifest.contestants);
 }
 
 /**
@@ -61,7 +68,7 @@ export function combinedLeaderboard(suiteId: string): Leaderboard {
   }));
   const withResults = new Set(results.map((r) => r.contestantId));
   const board: Contestant[] = contestants.filter((c) => withResults.has(c.id));
-  return buildLeaderboard({
+  return markManual(buildLeaderboard({
     scope: { kind: 'combined', suiteId },
     fingerprint: fingerprint(tests),
     categories: loadCategories(),
@@ -70,5 +77,5 @@ export function combinedLeaderboard(suiteId: string): Leaderboard {
     contestants: board,
     results,
     staleExcluded: stale,
-  });
+  }), board);
 }

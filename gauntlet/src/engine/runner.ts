@@ -21,14 +21,16 @@ import type {
   RunRequest,
   ScoreDetail,
   TestSnapshot,
+  TranscriptEntry,
 } from '../core/types.ts';
 import { createAdapter } from '../providers/index.ts';
+import { manualEvents } from '../providers/manual.ts';
 import { PROGRAMS } from '../programs/index.ts';
 import { scoreResponse, type JudgePanel } from '../scoring/index.ts';
 import { browserAvailable } from '../scoring/browser.ts';
 import { Semaphore } from './semaphore.ts';
 import { callWithRetry, createRecorder, type CallPolicy, type CallTarget } from './recorder.ts';
-import { appendResult, createRunFolder, newRunId, readManifest, readResults, saveArtifact, writeManifest } from './store.ts';
+import { appendResult, createRunFolder, listRunIds, newRunId, readManifest, readResults, saveArtifact, writeManifest } from './store.ts';
 
 interface Job {
   key: string;
@@ -111,6 +113,8 @@ export interface RunPlan {
   repeats: number;
   concurrency: number;
   temperature: number;
+  maxCostUsd?: number;
+  judgeExcludeSameVendor: boolean;
   fingerprint: string;
   warnings: string[];
 }
@@ -164,6 +168,9 @@ export function planRun(req: RunRequest): RunPlan {
     if (judges.length === 0) warnings.push('No usable judge models: judge-scored tests will error. Configure judges in config/settings.json.');
     else if (new Set(judges.map((j) => j.vendor)).size === 1) warnings.push(`All judges are from ${judges[0]!.vendor}: consider a cross-vendor panel to avoid self-preference bias`);
   }
+  const manual = contestants.filter((c) => providerOf(c)?.type === 'manual');
+  if (manual.length) warnings.push(`${manual.map((c) => c.label).join(', ')}: manual contestant — every prompt waits in the Manual Inbox for you to paste the model's reply`);
+  if (req.maxCostUsd !== undefined && !(req.maxCostUsd > 0)) throw new Error('maxCostUsd must be a positive number');
   const humanTests = tests.filter((t) => t.definition.kind === 'prompt' && t.definition.cases.some((c) => caseScorer(t.definition as PromptTest, c).type === 'human'));
   if (humanTests.length) warnings.push(`${humanTests.length} test(s) need human scoring in Blind Review before they count`);
   return {
@@ -173,53 +180,154 @@ export function planRun(req: RunRequest): RunPlan {
     repeats: Math.max(1, Math.min(20, req.repeats ?? getSuite(req.suiteId ?? 'core')?.repeats ?? settings.defaultRepeats)),
     concurrency: Math.max(1, Math.min(64, req.concurrency ?? settings.defaultConcurrency)),
     temperature: req.temperature ?? settings.temperature,
+    maxCostUsd: req.maxCostUsd,
+    judgeExcludeSameVendor: settings.judgeExcludeSameVendor,
     fingerprint: fingerprint(tests),
     warnings,
   };
 }
 
+export interface TestCostEstimate {
+  testId: string;
+  name: string;
+  category: string;
+  cases: number;
+  /** Estimated USD per contestant for this test (all cases × repeats). */
+  perContestant: Record<string, number>;
+  judgeUsd: number;
+  /** Where the token figures came from. */
+  basis: 'measured' | 'measured-other-models' | 'definition';
+}
+
 export interface RunEstimate {
   jobs: number;
   calls: number;
-  perContestant: Array<{ contestantId: string; jobs: number; estCostUsd: number }>;
+  perContestant: Array<{ contestantId: string; jobs: number; estCostUsd: number; estCostUsdHigh: number; manual: boolean }>;
+  perTest: TestCostEstimate[];
   judgeCostUsd: number;
+  /** Central estimate (contestants + judges). */
   estCostUsd: number;
+  /** Conservative upper estimate: +20% where measured, +60% where only the test's own estimate is known. */
+  estCostUsdHigh: number;
   fingerprint: string;
   warnings: string[];
 }
 
+interface TokenStats {
+  input: number;
+  output: number;
+  calls: number;
+  judgeUsd: number;
+  n: number;
+}
+
+/**
+ * Average per-case token usage observed in previous runs, keyed by test hash
+ * (so only the identical test version counts) and contestant config hash.
+ * Estimates therefore get more accurate every time you run something.
+ */
+function observedTokenStats(): Map<string, { byContestant: Map<string, TokenStats>; all: TokenStats }> {
+  const out = new Map<string, { byContestant: Map<string, TokenStats>; all: TokenStats }>();
+  const add = (t: TokenStats, r: CaseResult) => {
+    t.input += r.metrics.inputTokens + r.metrics.cachedInputTokens;
+    t.output += r.metrics.outputTokens;
+    t.calls += r.metrics.apiCalls;
+    t.judgeUsd += r.metrics.judgeCostUsd;
+    t.n++;
+  };
+  for (const runId of listRunIds()) {
+    for (const r of readResults(runId)) {
+      if (r.status === 'error' || r.status === 'cancelled' || r.metrics.apiCalls === 0) continue;
+      if (r.transcript.some((e) => e.rawStopReason === 'manual')) continue;
+      let entry = out.get(r.testHash);
+      if (!entry) out.set(r.testHash, (entry = { byContestant: new Map(), all: { input: 0, output: 0, calls: 0, judgeUsd: 0, n: 0 } }));
+      add(entry.all, r);
+      const k = r.contestantHash;
+      let c = entry.byContestant.get(k);
+      if (!c) entry.byContestant.set(k, (c = { input: 0, output: 0, calls: 0, judgeUsd: 0, n: 0 }));
+      add(c, r);
+    }
+  }
+  return out;
+}
+
 export async function estimateRun(req: RunRequest): Promise<RunEstimate> {
   const plan = planRun(req);
+  const providers = loadProviders();
+  const observed = observedTokenStats();
   let calls = 0;
   let judgeCost = 0;
+  let high = 0;
+  const perTest: TestCostEstimate[] = plan.tests.map((t) => ({
+    testId: t.definition.id,
+    name: t.definition.name,
+    category: t.definition.category,
+    cases: caseIds(t.definition).length,
+    perContestant: {},
+    judgeUsd: 0,
+    basis: 'definition',
+  }));
   const perContestant = plan.contestants.map((c) => {
+    const isManual = providers.find((p) => p.id === c.provider)?.type === 'manual';
+    const cfg = contestantConfigHash(c);
     let jobs = 0;
     let cost = 0;
-    for (const t of plan.tests) {
+    let costHigh = 0;
+    plan.tests.forEach((t, i) => {
       const n = caseIds(t.definition).length * plan.repeats;
-      const e = testEstimate(t.definition);
-      jobs += n;
-      calls += n * e.calls;
-      cost += (n * (e.inputTokens * c.pricing.inputPerM + e.outputTokens * c.pricing.outputPerM)) / 1e6;
-      if (usesJudges(t)) {
-        for (const j of plan.judges) {
-          judgeCost += (n * ((Math.min(e.outputTokens, 20000) + 2500) * j.pricing.inputPerM + 1500 * j.pricing.outputPerM)) / 1e6;
-          calls += n;
-        }
+      const def = testEstimate(t.definition);
+      const obs = observed.get(t.hash);
+      const mine = obs?.byContestant.get(cfg);
+      let input = def.inputTokens;
+      let output = def.outputTokens;
+      let perCaseCalls = def.calls;
+      let basis: TestCostEstimate['basis'] = 'definition';
+      if (mine && mine.n > 0) {
+        input = mine.input / mine.n;
+        output = mine.output / mine.n;
+        perCaseCalls = mine.calls / mine.n;
+        basis = 'measured';
+      } else if (obs && obs.all.n > 0) {
+        // Other models' measured usage: keep the measured input, and use the larger of measured/declared output (models differ most in output).
+        input = obs.all.input / obs.all.n;
+        output = Math.max(def.outputTokens, obs.all.output / obs.all.n);
+        perCaseCalls = obs.all.calls / obs.all.n;
+        basis = 'measured-other-models';
       }
-    }
-    return { contestantId: c.id, jobs, estCostUsd: Math.round(cost * 10000) / 10000 };
+      const testCost = isManual ? 0 : (n * (input * c.pricing.inputPerM + output * c.pricing.outputPerM)) / 1e6;
+      jobs += n;
+      calls += n * perCaseCalls;
+      cost += testCost;
+      costHigh += testCost * (basis === 'measured' ? 1.2 : 1.6);
+      perTest[i]!.perContestant[c.id] = Math.round(testCost * 10000) / 10000;
+      if (perTest[i]!.basis !== 'measured') perTest[i]!.basis = basis;
+      if (usesJudges(t) && plan.judges.length) {
+        const panel = plan.judgeExcludeSameVendor && plan.judges.some((j) => j.vendor !== c.vendor) ? plan.judges.filter((j) => j.vendor !== c.vendor) : plan.judges;
+        let jc = 0;
+        if (obs && obs.all.judgeUsd > 0) jc = (obs.all.judgeUsd / obs.all.n) * n * (panel.length / Math.max(1, plan.judges.length));
+        else for (const j of panel) jc += (n * ((Math.min(output, 20000) + 3000) * j.pricing.inputPerM + 2500 * j.pricing.outputPerM)) / 1e6;
+        calls += n * panel.length;
+        judgeCost += jc;
+        high += jc * 1.5;
+        perTest[i]!.judgeUsd = Math.round((perTest[i]!.judgeUsd + jc) * 10000) / 10000;
+      }
+    });
+    high += costHigh;
+    return { contestantId: c.id, jobs, estCostUsd: Math.round(cost * 10000) / 10000, estCostUsdHigh: Math.round(costHigh * 10000) / 10000, manual: isManual };
   });
   const warnings = plan.warnings.slice();
   const needsBrowser = plan.tests.some((t) => t.definition.kind === 'prompt' && t.definition.scorer.type === 'artifact');
   if (needsBrowser && !(await browserAvailable())) warnings.push('Headless Chromium not available: browser checks for game/SVG tests will be skipped');
   const total = perContestant.reduce((s, p) => s + p.estCostUsd, 0) + judgeCost;
+  if (plan.maxCostUsd !== undefined && total > plan.maxCostUsd) warnings.push(`Estimated cost ${total.toFixed(2)} USD exceeds your cap of ${plan.maxCostUsd.toFixed(2)} USD: the run will stop early when the cap is reached`);
   return {
     jobs: perContestant.reduce((s, p) => s + p.jobs, 0),
-    calls,
+    calls: Math.round(calls),
     perContestant,
+    perTest,
     judgeCostUsd: Math.round(judgeCost * 10000) / 10000,
     estCostUsd: Math.round(total * 10000) / 10000,
+    estCostUsdHigh: Math.round(high * 10000) / 10000,
     fingerprint: plan.fingerprint,
     warnings,
   };
@@ -258,7 +366,14 @@ export async function startRun(req: RunRequest): Promise<string> {
     tests,
     contestants,
     judges: plan.judges.map(snapshotContestant),
-    settings: { repeats: plan.repeats, concurrency: plan.concurrency, temperature: plan.temperature, protocolVersion: PROTOCOL_VERSION },
+    settings: {
+      repeats: plan.repeats,
+      concurrency: plan.concurrency,
+      temperature: plan.temperature,
+      protocolVersion: PROTOCOL_VERSION,
+      maxCostUsd: plan.maxCostUsd,
+      judgeExcludeSameVendor: plan.judgeExcludeSameVendor,
+    },
     totalJobs: tests.reduce((s, t) => s + t.caseIds.length, 0) * plan.repeats * contestants.length,
     notes: req.notes,
   };
@@ -267,10 +382,11 @@ export async function startRun(req: RunRequest): Promise<string> {
   return id;
 }
 
-export function resumeRun(runId: string): void {
+export function resumeRun(runId: string, opts: { maxCostUsd?: number | null } = {}): void {
   if (active.has(runId)) throw new Error('Run is already active');
   const manifest = readManifest(runId);
   if (!manifest) throw new Error('Run not found');
+  if (opts.maxCostUsd !== undefined) manifest.settings.maxCostUsd = opts.maxCostUsd === null ? undefined : opts.maxCostUsd;
   const loaded = loadTests();
   const tests: LoadedTest[] = [];
   const changed: string[] = [];
@@ -310,7 +426,11 @@ function launch(manifest: RunManifest, tests: LoadedTest[], skip: Set<string>): 
   const controller = new AbortController();
   const events = new EventEmitter();
   events.setMaxListeners(100);
-  const jobs = buildJobs(tests, manifest.contestants, manifest.settings.repeats).filter((j) => !skip.has(j.key));
+  const isManual = (c: Contestant) => providers.find((p) => p.id === c.provider)?.type === 'manual';
+  const allJobs = buildJobs(tests, manifest.contestants, manifest.settings.repeats).filter((j) => !skip.has(j.key));
+  // Manual (copy & paste) jobs get their own queue so a person working through the inbox never blocks API models.
+  const apiJobs = allJobs.filter((j) => !isManual(j.contestant));
+  const manualJobs = allJobs.filter((j) => isManual(j.contestant));
   const previous = readResults(manifest.id).filter((r) => skip.has(r.key));
   const progress = {
     completed: previous.length,
@@ -320,6 +440,14 @@ function launch(manifest: RunManifest, tests: LoadedTest[], skip: Set<string>): 
   const run: ActiveRun = { manifest, controller, events, progress, done: Promise.resolve() };
   active.set(manifest.id, run);
   const emit = (e: RunEvent) => events.emit('event', e);
+  const onManualRequest = (request: import('../core/types.ts').ManualRequest) => {
+    if (request.runId === manifest.id) emit({ type: 'manual.request', runId: manifest.id, request });
+  };
+  const onManualResolved = (request: import('../core/types.ts').ManualRequest) => {
+    if (request.runId === manifest.id) emit({ type: 'manual.resolved', runId: manifest.id, requestId: request.id });
+  };
+  manualEvents.on('request', onManualRequest);
+  manualEvents.on('resolved', onManualResolved);
 
   run.done = (async () => {
     manifest.status = 'running';
@@ -359,12 +487,26 @@ function launch(manifest: RunManifest, tests: LoadedTest[], skip: Set<string>): 
       deltas.clear();
     }, 100);
 
-    let cursor = 0;
-    const worker = async () => {
+    const cap = manifest.settings.maxCostUsd;
+    let budgetHit = false;
+    const queues = [
+      { jobs: apiJobs, cursor: 0, workers: Math.min(manifest.settings.concurrency, Math.max(1, apiJobs.length)) },
+      { jobs: manualJobs, cursor: 0, workers: Math.min(200, manualJobs.length) },
+    ];
+    const worker = async (queue: (typeof queues)[number]) => {
       while (!controller.signal.aborted) {
-        const job = jobs[cursor++];
+        if (cap !== undefined && progress.costUsd >= cap) {
+          if (!budgetHit) {
+            budgetHit = true;
+            manifest.error = `Budget cap of $${cap.toFixed(2)} reached ($${progress.costUsd.toFixed(4)} spent). Resume with a higher cap to finish.`;
+            emit({ type: 'log', runId: manifest.id, level: 'warn', message: manifest.error, at: now() });
+          }
+          return;
+        }
+        const job = queue.jobs[queue.cursor++];
         if (!job) return;
         const result = await executeJob(job, {
+          isManual,
           manifest,
           settings,
           policy,
@@ -408,14 +550,16 @@ function launch(manifest: RunManifest, tests: LoadedTest[], skip: Set<string>): 
     };
 
     try {
-      await Promise.all(Array.from({ length: Math.min(manifest.settings.concurrency, Math.max(1, jobs.length)) }, () => worker()));
-      manifest.status = controller.signal.aborted ? 'cancelled' : 'completed';
+      await Promise.all(queues.flatMap((q) => Array.from({ length: q.workers }, () => worker(q))));
+      manifest.status = controller.signal.aborted || budgetHit ? 'cancelled' : 'completed';
     } catch (err) {
       manifest.status = 'failed';
       manifest.error = (err as Error).message;
       emit({ type: 'log', runId: manifest.id, level: 'error', message: (err as Error).message, at: now() });
     } finally {
       clearInterval(flush);
+      manualEvents.off('request', onManualRequest);
+      manualEvents.off('resolved', onManualResolved);
       manifest.finishedAt = now();
       writeManifest(manifest);
       emit({ type: 'run.status', runId: manifest.id, status: manifest.status, at: now(), error: manifest.error });
@@ -431,6 +575,7 @@ export async function waitForRun(runId: string): Promise<void> {
 }
 
 interface JobEnv {
+  isManual: (c: Contestant) => boolean;
   manifest: RunManifest;
   settings: ReturnType<typeof loadSettings>;
   policy: CallPolicy;
@@ -451,7 +596,16 @@ async function executeJob(job: Job, env: JobEnv): Promise<CaseResult> {
   const controller = new AbortController();
   const onRunAbort = () => controller.abort();
   env.signal.addEventListener('abort', onRunAbort, { once: true });
-  const timeLimitMs = (def.timeLimitSec ?? settings.defaultTimeLimitSec) * 1000;
+  let target: CallTarget | null = null;
+  let targetError: Error | null = null;
+  try {
+    target = env.targetFor(job.contestant);
+  } catch (e) {
+    targetError = e as Error;
+  }
+  const manual = env.isManual(job.contestant);
+  // Humans pasting replies get a week; API models get the test's time limit.
+  const timeLimitMs = manual ? 7 * 24 * 3600 * 1000 : (def.timeLimitSec ?? settings.defaultTimeLimitSec) * 1000;
   let timedOut = false;
   const timer = setTimeout(() => {
     timedOut = true;
@@ -479,9 +633,10 @@ async function executeJob(job: Job, env: JobEnv): Promise<CaseResult> {
 
   let recorder: ReturnType<typeof createRecorder> | null = null;
   try {
-    const target = env.targetFor(job.contestant);
+    if (targetError || !target) throw targetError ?? new Error('No target');
     recorder = createRecorder({
       target,
+      callContext: { runId: manifest.id, key: job.key, testId: def.id, testName: def.name, caseId: job.caseId },
       policy: env.policy,
       signal: controller.signal,
       maxOutputTokens: def.maxOutputTokens ?? settings.defaultMaxOutputTokens,
@@ -491,7 +646,13 @@ async function executeJob(job: Job, env: JobEnv): Promise<CaseResult> {
         env.emit({ type: 'log', runId: manifest.id, level: 'warn', message: `${job.contestant.label} · ${def.id}/${job.caseId}: retry ${attempt} in ${(wait / 1000).toFixed(1)}s (${err.message.slice(0, 160)})`, at: now() }),
     });
     const rec = recorder;
-    const judges = judgePanel(manifest.judges, env, rec, controller.signal);
+    const judges = createJudgePanel({
+      judges: selectJudges(manifest.judges, job.contestant, manifest.settings.judgeExcludeSameVendor ?? true),
+      targetFor: env.targetFor,
+      policy: env.policy,
+      signal: controller.signal,
+      record: (entry) => rec.recordJudge(entry),
+    });
 
     if (def.kind === 'prompt') {
       const tc = def.cases.find((c) => c.id === job.caseId);
@@ -611,7 +772,27 @@ async function executeJob(job: Job, env: JobEnv): Promise<CaseResult> {
   };
 }
 
-function judgePanel(judges: ContestantSnapshot[], env: JobEnv, rec: ReturnType<typeof createRecorder>, signal: AbortSignal): JudgePanel {
+/**
+ * Judges for one case. With `excludeSameVendor`, a judge never grades a model
+ * from its own vendor (self-preference bias) as long as another judge is
+ * available; a model never grades itself.
+ */
+export function selectJudges(judges: ContestantSnapshot[], contestant: Contestant, excludeSameVendor: boolean): ContestantSnapshot[] {
+  const notSelf = judges.filter((j) => j.model !== contestant.model || j.provider !== contestant.provider);
+  const pool = notSelf.length ? notSelf : judges;
+  if (!excludeSameVendor) return pool;
+  const otherVendors = pool.filter((j) => j.vendor.toLowerCase() !== contestant.vendor.toLowerCase());
+  return otherVendors.length ? otherVendors : pool;
+}
+
+export function createJudgePanel(opts: {
+  judges: Contestant[];
+  targetFor: (c: Contestant) => CallTarget;
+  policy: CallPolicy;
+  signal: AbortSignal;
+  record: (entry: TranscriptEntry) => void;
+}): JudgePanel {
+  const { judges, signal } = opts;
   return {
     ids: judges.map((j) => j.id),
     async ask(system, user, label) {
@@ -620,10 +801,10 @@ function judgePanel(judges: ContestantSnapshot[], env: JobEnv, rec: ReturnType<t
         judges.map(async (j) => {
           const started = Date.now();
           try {
-            const target = env.targetFor(j);
-            const r = await callWithRetry(target, { system, messages: [{ role: 'user', content: user }], maxOutputTokens: 16000, temperature: 0 }, env.policy, signal);
+            const target = opts.targetFor(j);
+            const r = await callWithRetry(target, { system, messages: [{ role: 'user', content: user }], maxOutputTokens: 16000, temperature: 0 }, opts.policy, signal);
             const cost = computeCost(r.usage, j.pricing);
-            rec.recordJudge({
+            opts.record({
               label: `${label} · ${j.label}`,
               judge: true,
               system,
@@ -640,7 +821,7 @@ function judgePanel(judges: ContestantSnapshot[], env: JobEnv, rec: ReturnType<t
             return { judgeId: j.id, text: r.text };
           } catch (err) {
             if (signal.aborted) throw err;
-            rec.recordJudge({
+            opts.record({
               label: `${label} · ${j.label}`,
               judge: true,
               system,

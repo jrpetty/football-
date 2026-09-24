@@ -12,6 +12,8 @@ export interface Settings {
   defaultMaxOutputTokens: number;
   defaultTimeLimitSec: number;
   maxRetries: number;
+  /** Never let a judge grade a model from its own vendor (when another judge is available). */
+  judgeExcludeSameVendor: boolean;
 }
 
 interface ModelsFile {
@@ -47,6 +49,7 @@ export function loadSettings(): Settings {
     defaultMaxOutputTokens: 16000,
     defaultTimeLimitSec: 600,
     maxRetries: 4,
+    judgeExcludeSameVendor: true,
   };
   return { ...defaults, ...readJson<Partial<Settings>>(SETTINGS_FILE) };
 }
@@ -85,7 +88,7 @@ export function contestantConfigHash(c: Contestant): string {
 }
 
 export function hasApiKey(provider: ProviderConfig): boolean {
-  if (provider.type === 'mock' || provider.apiKeyEnv === null) return true;
+  if (provider.type === 'mock' || provider.type === 'manual' || provider.apiKeyEnv === null) return true;
   return Boolean(process.env[provider.apiKeyEnv]);
 }
 

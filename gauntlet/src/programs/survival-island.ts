@@ -22,7 +22,7 @@ import {
   type IslandConfig,
 } from './lib/agentic-island.ts';
 
-const DEFAULTS = { maxDays: 20, size: 12, inventoryCap: 12, recentEvents: 5 };
+const DEFAULTS = { maxDays: 15, size: 12, inventoryCap: 12, recentEvents: 5 };
 
 function readConfig(config: Record<string, unknown>): IslandConfig & { recentEvents: number } {
   const num = (k: keyof typeof DEFAULTS, lo: number, hi: number): number => {
@@ -45,18 +45,18 @@ TIME
 - After the Evening turn the night resolves automatically wherever you are standing.
 
 STATS (0-100, higher is better): health, food, water, energy, warmth.
-- Each daytime turn costs 3 food and 5 water (8 water on hot days). Each night costs 6 food and 6 water.
+- Each daytime turn costs 2 food and 4 water (7 water on hot days). Each night costs 5 food and 5 water.
 - If food, water or warmth reaches 0 you lose health every turn (thirst is the fastest killer). At 0 health you die.
 - Warmth rises in sunshine, falls in rain and storms, and drops sharply at night. At night a shelter (or the cave) protects you from cold and wet, and a campfire on your tile adds a lot of warmth. Sleeping in the open during a storm hurts.
-- Energy is spent by actions (move 3, gather 5, fish 6, build 8, …) and restored by sleep (more when sheltered) and REST. With enough food, water and warmth you heal at night.
+- Energy is spent by actions (4 per tile walked, gather 6, fish 8, build 10, …) and restored by sleep (more when sheltered) and REST. With enough food, water and warmth you heal at night.
 
 MAP LETTERS: ~ sea (impassable) · . beach (driftwood) · P palm (coconuts) · , grass (fibre) · * berry bush (berries) · T forest (wood) · ^ rocks (stone) · A summit, the highest point (stone) · S spring (fresh water) · C cave (natural shelter) · F your campfire · H your shelter · # signal pile · @ you · ? unexplored.
 Coordinates are column letter + row number (e.g. F7). North is up (row numbers decrease going north). Gathered spots run out and regrow slowly (stone and driftwood never regrow).
 
 COMMANDS
-MOVE N | MOVE S | MOVE E | MOVE W — walk one tile.
+MOVE <N|S|E|W> [1-3] — walk 1 to 3 tiles in a straight line, e.g. MOVE N or MOVE E 3 (you stop early at the sea).
 GATHER — collect what this tile offers (wood, stone, fibre, coconuts, berries, driftwood).
-DRINK — drink at the spring. In rain or storms you can catch a little rainwater anywhere.
+DRINK — drink your fill at the spring (water to 100). In rain or storms you can catch a little rainwater anywhere.
 EAT <item> — eat that food until you are full, e.g. EAT COCONUT, EAT COOKED FISH, EAT RED BERRIES.
 CRAFT SPEAR — 1 wood + 1 stone + 1 fibre. Needed to fish.
 BUILD FIRE — 3 wood + 1 stone: a campfire on this tile that burns for 3 nights (building again refuels it). Lets you cook.

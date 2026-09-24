@@ -1,98 +1,640 @@
 {
   "providers": [
-    { "id": "anthropic",  "type": "anthropic",         "label": "Anthropic",  "apiKeyEnv": "ANTHROPIC_API_KEY", "maxConcurrency": 8 },
-    { "id": "openai",     "type": "openai-compatible", "label": "OpenAI",     "baseUrl": "https://api.openai.com/v1", "apiKeyEnv": "OPENAI_API_KEY", "maxConcurrency": 8 },
-    { "id": "google",     "type": "gemini",            "label": "Google Gemini", "baseUrl": "https://generativelanguage.googleapis.com/v1beta", "apiKeyEnv": "GEMINI_API_KEY", "maxConcurrency": 8 },
-    { "id": "xai",        "type": "openai-compatible", "label": "xAI",        "baseUrl": "https://api.x.ai/v1", "apiKeyEnv": "XAI_API_KEY", "maxConcurrency": 6 },
-    { "id": "deepseek",   "type": "openai-compatible", "label": "DeepSeek",   "baseUrl": "https://api.deepseek.com", "apiKeyEnv": "DEEPSEEK_API_KEY", "maxConcurrency": 6 },
-    { "id": "mistral",    "type": "openai-compatible", "label": "Mistral",    "baseUrl": "https://api.mistral.ai/v1", "apiKeyEnv": "MISTRAL_API_KEY", "maxConcurrency": 4 },
-    { "id": "openrouter", "type": "openai-compatible", "label": "OpenRouter", "baseUrl": "https://openrouter.ai/api/v1", "apiKeyEnv": "OPENROUTER_API_KEY", "maxConcurrency": 8, "headers": { "X-Title": "Gauntlet Benchmark" } },
-    { "id": "groq",       "type": "openai-compatible", "label": "Groq",       "baseUrl": "https://api.groq.com/openai/v1", "apiKeyEnv": "GROQ_API_KEY", "maxConcurrency": 4 },
-    { "id": "together",   "type": "openai-compatible", "label": "Together AI", "baseUrl": "https://api.together.xyz/v1", "apiKeyEnv": "TOGETHER_API_KEY", "maxConcurrency": 4 },
-    { "id": "ollama",     "type": "openai-compatible", "label": "Ollama (local)", "baseUrl": "http://localhost:11434/v1", "apiKeyEnv": null, "maxConcurrency": 1 },
-    { "id": "baseline",   "type": "mock",              "label": "Gauntlet Baseline", "apiKeyEnv": null, "maxConcurrency": 16 }
+    {
+      "id": "anthropic",
+      "type": "anthropic",
+      "label": "Anthropic",
+      "apiKeyEnv": "ANTHROPIC_API_KEY",
+      "maxConcurrency": 8
+    },
+    {
+      "id": "openai",
+      "type": "openai-compatible",
+      "label": "OpenAI",
+      "baseUrl": "https://api.openai.com/v1",
+      "apiKeyEnv": "OPENAI_API_KEY",
+      "maxConcurrency": 8
+    },
+    {
+      "id": "google",
+      "type": "gemini",
+      "label": "Google Gemini",
+      "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
+      "apiKeyEnv": "GEMINI_API_KEY",
+      "maxConcurrency": 8
+    },
+    {
+      "id": "xai",
+      "type": "openai-compatible",
+      "label": "xAI",
+      "baseUrl": "https://api.x.ai/v1",
+      "apiKeyEnv": "XAI_API_KEY",
+      "maxConcurrency": 6
+    },
+    {
+      "id": "deepseek",
+      "type": "openai-compatible",
+      "label": "DeepSeek",
+      "baseUrl": "https://api.deepseek.com",
+      "apiKeyEnv": "DEEPSEEK_API_KEY",
+      "maxConcurrency": 6
+    },
+    {
+      "id": "mistral",
+      "type": "openai-compatible",
+      "label": "Mistral",
+      "baseUrl": "https://api.mistral.ai/v1",
+      "apiKeyEnv": "MISTRAL_API_KEY",
+      "maxConcurrency": 4
+    },
+    {
+      "id": "openrouter",
+      "type": "openai-compatible",
+      "label": "OpenRouter",
+      "baseUrl": "https://openrouter.ai/api/v1",
+      "apiKeyEnv": "OPENROUTER_API_KEY",
+      "maxConcurrency": 8,
+      "headers": {
+        "X-Title": "Gauntlet Benchmark"
+      }
+    },
+    {
+      "id": "groq",
+      "type": "openai-compatible",
+      "label": "Groq",
+      "baseUrl": "https://api.groq.com/openai/v1",
+      "apiKeyEnv": "GROQ_API_KEY",
+      "maxConcurrency": 4
+    },
+    {
+      "id": "together",
+      "type": "openai-compatible",
+      "label": "Together AI",
+      "baseUrl": "https://api.together.xyz/v1",
+      "apiKeyEnv": "TOGETHER_API_KEY",
+      "maxConcurrency": 4
+    },
+    {
+      "id": "ollama",
+      "type": "openai-compatible",
+      "label": "Ollama (local)",
+      "baseUrl": "http://localhost:11434/v1",
+      "apiKeyEnv": null,
+      "maxConcurrency": 1
+    },
+    {
+      "id": "baseline",
+      "type": "mock",
+      "label": "Gauntlet Baseline",
+      "apiKeyEnv": null,
+      "maxConcurrency": 16
+    },
+    {
+      "id": "manual",
+      "type": "manual",
+      "label": "Manual (copy & paste)",
+      "apiKeyEnv": null,
+      "maxConcurrency": 1000
+    }
   ],
   "contestants": [
     {
-      "id": "claude-fable-5-1", "label": "Claude Fable 5.1", "vendor": "Anthropic", "provider": "anthropic", "model": "claude-fable-5-1",
-      "color": "#D97757", "enabled": true, "contextWindow": 1000000,
-      "options": { "effort": "high", "supportsTemperature": false },
-      "pricing": { "inputPerM": 10, "outputPerM": 50, "cachedInputPerM": 0.25, "cacheWritePerM": 12.5, "source": "Anthropic API pricing (claude-api reference, 2026-06-24)", "verifiedAt": "2026-06-24" }
+      "id": "claude-fable-5-1",
+      "label": "Claude Fable 5.1",
+      "vendor": "Anthropic",
+      "provider": "anthropic",
+      "model": "claude-fable-5-1",
+      "color": "#D97757",
+      "enabled": true,
+      "contextWindow": 1000000,
+      "options": {
+        "effort": "high",
+        "supportsTemperature": false
+      },
+      "pricing": {
+        "inputPerM": 10,
+        "outputPerM": 50,
+        "cachedInputPerM": 0.25,
+        "cacheWritePerM": 12.5,
+        "source": "Anthropic API pricing (claude-api reference, 2026-06-24)",
+        "verifiedAt": "2026-06-24"
+      }
     },
     {
-      "id": "claude-opus-5-5", "label": "Claude Opus 5.5", "vendor": "Anthropic", "provider": "anthropic", "model": "claude-opus-5-5",
-      "color": "#C4623F", "enabled": true, "contextWindow": 1000000,
-      "options": { "effort": "high", "supportsTemperature": false },
-      "pricing": { "inputPerM": 4, "outputPerM": 20, "cachedInputPerM": 0.2, "cacheWritePerM": 5, "source": "Anthropic API pricing (claude-api reference, 2026-06-24)", "verifiedAt": "2026-06-24" }
+      "id": "claude-opus-5-5",
+      "label": "Claude Opus 5.5",
+      "vendor": "Anthropic",
+      "provider": "anthropic",
+      "model": "claude-opus-5-5",
+      "color": "#C4623F",
+      "enabled": true,
+      "contextWindow": 1000000,
+      "options": {
+        "effort": "high",
+        "supportsTemperature": false
+      },
+      "pricing": {
+        "inputPerM": 4,
+        "outputPerM": 20,
+        "cachedInputPerM": 0.2,
+        "cacheWritePerM": 5,
+        "source": "Anthropic API pricing (claude-api reference, 2026-06-24)",
+        "verifiedAt": "2026-06-24"
+      }
     },
     {
-      "id": "claude-opus-5", "label": "Claude Opus 5", "vendor": "Anthropic", "provider": "anthropic", "model": "claude-opus-5",
-      "color": "#E8A27C", "enabled": true, "contextWindow": 1000000,
-      "options": { "effort": "high", "supportsTemperature": false },
-      "pricing": { "inputPerM": 5, "outputPerM": 25, "cachedInputPerM": 0.5, "cacheWritePerM": 6.25, "source": "Anthropic API pricing (claude-api reference, 2026-06-24)", "verifiedAt": "2026-06-24" }
+      "id": "claude-opus-5",
+      "label": "Claude Opus 5",
+      "vendor": "Anthropic",
+      "provider": "anthropic",
+      "model": "claude-opus-5",
+      "color": "#E8A27C",
+      "enabled": true,
+      "contextWindow": 1000000,
+      "options": {
+        "effort": "high",
+        "supportsTemperature": false
+      },
+      "pricing": {
+        "inputPerM": 5,
+        "outputPerM": 25,
+        "cachedInputPerM": 0.5,
+        "cacheWritePerM": 6.25,
+        "source": "Anthropic API pricing (claude-api reference, 2026-06-24)",
+        "verifiedAt": "2026-06-24"
+      }
     },
     {
-      "id": "claude-sonnet-5", "label": "Claude Sonnet 5", "vendor": "Anthropic", "provider": "anthropic", "model": "claude-sonnet-5",
-      "color": "#F0B999", "enabled": true, "contextWindow": 1000000,
-      "options": { "effort": "high", "supportsTemperature": false },
-      "pricing": { "inputPerM": 2, "outputPerM": 10, "cachedInputPerM": 0.2, "cacheWritePerM": 2.5, "source": "Anthropic API pricing (claude-api reference, 2026-06-24)", "verifiedAt": "2026-06-24" }
+      "id": "claude-sonnet-5",
+      "label": "Claude Sonnet 5",
+      "vendor": "Anthropic",
+      "provider": "anthropic",
+      "model": "claude-sonnet-5",
+      "color": "#F0B999",
+      "enabled": true,
+      "contextWindow": 1000000,
+      "options": {
+        "effort": "high",
+        "supportsTemperature": false
+      },
+      "pricing": {
+        "inputPerM": 2,
+        "outputPerM": 10,
+        "cachedInputPerM": 0.2,
+        "cacheWritePerM": 2.5,
+        "source": "Anthropic API pricing (claude-api reference, 2026-06-24)",
+        "verifiedAt": "2026-06-24"
+      }
     },
     {
-      "id": "claude-haiku-4-5", "label": "Claude Haiku 4.5", "vendor": "Anthropic", "provider": "anthropic", "model": "claude-haiku-4-5",
-      "color": "#F6D5C2", "enabled": true, "contextWindow": 200000,
-      "options": { "supportsTemperature": true, "maxOutputTokensCap": 64000 },
-      "pricing": { "inputPerM": 1, "outputPerM": 5, "cachedInputPerM": 0.1, "cacheWritePerM": 1.25, "source": "Anthropic API pricing (claude-api reference, 2026-06-24)", "verifiedAt": "2026-06-24" }
+      "id": "claude-haiku-4-5",
+      "label": "Claude Haiku 4.5",
+      "vendor": "Anthropic",
+      "provider": "anthropic",
+      "model": "claude-haiku-4-5",
+      "color": "#F6D5C2",
+      "enabled": true,
+      "contextWindow": 200000,
+      "options": {
+        "supportsTemperature": true,
+        "maxOutputTokensCap": 64000
+      },
+      "pricing": {
+        "inputPerM": 1,
+        "outputPerM": 5,
+        "cachedInputPerM": 0.1,
+        "cacheWritePerM": 1.25,
+        "source": "Anthropic API pricing (claude-api reference, 2026-06-24)",
+        "verifiedAt": "2026-06-24"
+      }
     },
     {
-      "id": "gpt-5.6-sol", "label": "GPT-5.6 Sol", "vendor": "OpenAI", "provider": "openai", "model": "gpt-5.6-sol",
-      "color": "#10A37F", "enabled": true,
-      "options": { "effort": "high", "supportsTemperature": false },
-      "pricing": { "inputPerM": 5, "outputPerM": 30, "cachedInputPerM": 0.5, "source": "Third-party price trackers, Sep 2026 — verify on openai.com/api/pricing", "verifiedAt": null },
+      "id": "gpt-5.6-sol",
+      "label": "GPT-5.6 Sol",
+      "vendor": "OpenAI",
+      "provider": "openai",
+      "model": "gpt-5.6-sol",
+      "color": "#10A37F",
+      "enabled": true,
+      "options": {
+        "effort": "high",
+        "supportsTemperature": false
+      },
+      "pricing": {
+        "inputPerM": 5,
+        "outputPerM": 30,
+        "cachedInputPerM": 0.5,
+        "source": "Third-party price trackers, Sep 2026 — verify on openai.com/api/pricing",
+        "verifiedAt": null
+      },
       "notes": "Model id and price taken from third-party sources. Confirm with Models → Discover and OpenAI's pricing page before publishing results."
     },
     {
-      "id": "gpt-5.6-terra", "label": "GPT-5.6 Terra", "vendor": "OpenAI", "provider": "openai", "model": "gpt-5.6-terra",
-      "color": "#34C49A", "enabled": true,
-      "options": { "effort": "high", "supportsTemperature": false },
-      "pricing": { "inputPerM": 2.5, "outputPerM": 15, "cachedInputPerM": 0.25, "source": "Third-party price trackers disagree ($2/$12 vs $2.50/$15) — verify on openai.com/api/pricing", "verifiedAt": null },
+      "id": "gpt-5.6-terra",
+      "label": "GPT-5.6 Terra",
+      "vendor": "OpenAI",
+      "provider": "openai",
+      "model": "gpt-5.6-terra",
+      "color": "#34C49A",
+      "enabled": true,
+      "options": {
+        "effort": "high",
+        "supportsTemperature": false
+      },
+      "pricing": {
+        "inputPerM": 2.5,
+        "outputPerM": 15,
+        "cachedInputPerM": 0.25,
+        "source": "Third-party price trackers disagree ($2/$12 vs $2.50/$15) — verify on openai.com/api/pricing",
+        "verifiedAt": null
+      },
       "notes": "Conflicting third-party prices. Verify before publishing cost figures."
     },
     {
-      "id": "gpt-5.6-luna", "label": "GPT-5.6 Luna", "vendor": "OpenAI", "provider": "openai", "model": "gpt-5.6-luna",
-      "color": "#7FDBBE", "enabled": true,
-      "options": { "effort": "high", "supportsTemperature": false },
-      "pricing": { "inputPerM": 1, "outputPerM": 6, "cachedInputPerM": 0.1, "source": "Third-party price trackers disagree ($0.20/$1.20 vs $1/$6) — verify on openai.com/api/pricing", "verifiedAt": null },
+      "id": "gpt-5.6-luna",
+      "label": "GPT-5.6 Luna",
+      "vendor": "OpenAI",
+      "provider": "openai",
+      "model": "gpt-5.6-luna",
+      "color": "#7FDBBE",
+      "enabled": true,
+      "options": {
+        "effort": "high",
+        "supportsTemperature": false
+      },
+      "pricing": {
+        "inputPerM": 1,
+        "outputPerM": 6,
+        "cachedInputPerM": 0.1,
+        "source": "Third-party price trackers disagree ($0.20/$1.20 vs $1/$6) — verify on openai.com/api/pricing",
+        "verifiedAt": null
+      },
       "notes": "Conflicting third-party prices. Verify before publishing cost figures."
     },
     {
-      "id": "gemini-3.1-pro", "label": "Gemini 3.1 Pro", "vendor": "Google", "provider": "google", "model": "gemini-3.1-pro-preview",
-      "color": "#4285F4", "enabled": true, "contextWindow": 1000000,
-      "options": { "effort": "high", "supportsTemperature": true },
-      "pricing": { "inputPerM": 2, "outputPerM": 12, "cachedInputPerM": 0.2, "source": "Third-party price trackers, Sep 2026 (≤200K-token prompts) — verify on ai.google.dev/pricing", "verifiedAt": null }
+      "id": "gemini-3.1-pro",
+      "label": "Gemini 3.1 Pro",
+      "vendor": "Google",
+      "provider": "google",
+      "model": "gemini-3.1-pro-preview",
+      "color": "#4285F4",
+      "enabled": true,
+      "contextWindow": 1000000,
+      "options": {
+        "effort": "high",
+        "supportsTemperature": true
+      },
+      "pricing": {
+        "inputPerM": 2,
+        "outputPerM": 12,
+        "cachedInputPerM": 0.2,
+        "source": "Third-party price trackers, Sep 2026 (≤200K-token prompts) — verify on ai.google.dev/pricing",
+        "verifiedAt": null
+      }
     },
     {
-      "id": "gemini-3.5-flash", "label": "Gemini 3.5 Flash", "vendor": "Google", "provider": "google", "model": "gemini-3.5-flash",
-      "color": "#8AB4F8", "enabled": true, "contextWindow": 1000000,
-      "options": { "effort": "high", "supportsTemperature": true },
-      "pricing": { "inputPerM": 1.5, "outputPerM": 9, "cachedInputPerM": 0.15, "source": "Third-party price trackers, Sep 2026 — verify on ai.google.dev/pricing", "verifiedAt": null }
+      "id": "gemini-3.5-flash",
+      "label": "Gemini 3.5 Flash",
+      "vendor": "Google",
+      "provider": "google",
+      "model": "gemini-3.5-flash",
+      "color": "#8AB4F8",
+      "enabled": true,
+      "contextWindow": 1000000,
+      "options": {
+        "effort": "high",
+        "supportsTemperature": true
+      },
+      "pricing": {
+        "inputPerM": 1.5,
+        "outputPerM": 9,
+        "cachedInputPerM": 0.15,
+        "source": "Third-party price trackers, Sep 2026 — verify on ai.google.dev/pricing",
+        "verifiedAt": null
+      }
     },
     {
-      "id": "grok-4.7", "label": "Grok 4.7", "vendor": "xAI", "provider": "xai", "model": "grok-4.7",
-      "color": "#A1A1AA", "enabled": true,
-      "options": { "supportsTemperature": true },
-      "pricing": { "inputPerM": 2, "outputPerM": 6, "cachedInputPerM": 0.5, "source": "Third-party price trackers, Sep 2026 (<200K prompts) — verify on docs.x.ai", "verifiedAt": null }
+      "id": "grok-4.7",
+      "label": "Grok 4.7",
+      "vendor": "xAI",
+      "provider": "xai",
+      "model": "grok-4.7",
+      "color": "#A1A1AA",
+      "enabled": true,
+      "options": {
+        "supportsTemperature": true
+      },
+      "pricing": {
+        "inputPerM": 2,
+        "outputPerM": 6,
+        "cachedInputPerM": 0.5,
+        "source": "Third-party price trackers, Sep 2026 (<200K prompts) — verify on docs.x.ai",
+        "verifiedAt": null
+      }
     },
     {
-      "id": "deepseek-v4-flash", "label": "DeepSeek V4 Flash", "vendor": "DeepSeek", "provider": "deepseek", "model": "deepseek-v4-flash",
-      "color": "#4D6BFE", "enabled": true,
-      "options": { "supportsTemperature": true },
-      "pricing": { "inputPerM": 0.3, "outputPerM": 1.2, "cachedInputPerM": 0.006, "source": "Third-party price trackers, Sep 2026 (peak-hour rate; off-peak is 50% less) — verify on api-docs.deepseek.com", "verifiedAt": null }
+      "id": "deepseek-v4-flash",
+      "label": "DeepSeek V4 Flash",
+      "vendor": "DeepSeek",
+      "provider": "deepseek",
+      "model": "deepseek-v4-flash",
+      "color": "#4D6BFE",
+      "enabled": true,
+      "options": {
+        "supportsTemperature": true
+      },
+      "pricing": {
+        "inputPerM": 0.3,
+        "outputPerM": 1.2,
+        "cachedInputPerM": 0.006,
+        "source": "Third-party price trackers, Sep 2026 (peak-hour rate; off-peak is 50% less) — verify on api-docs.deepseek.com",
+        "verifiedAt": null
+      }
     },
     {
-      "id": "random-baseline", "label": "Random Baseline", "vendor": "Gauntlet", "provider": "baseline", "model": "random",
-      "color": "#71717A", "enabled": true,
-      "options": { "supportsTemperature": false },
-      "pricing": { "inputPerM": 0, "outputPerM": 0, "source": "Local mock — no API calls", "verifiedAt": "2026-09-24" },
+      "id": "claude-fable-5",
+      "label": "Claude Fable 5",
+      "vendor": "Anthropic",
+      "provider": "anthropic",
+      "model": "claude-fable-5",
+      "color": "#B8583A",
+      "enabled": true,
+      "contextWindow": 1000000,
+      "options": {
+        "effort": "high",
+        "supportsTemperature": false
+      },
+      "pricing": {
+        "inputPerM": 10,
+        "outputPerM": 50,
+        "cachedInputPerM": 1,
+        "cacheWritePerM": 12.5,
+        "source": "Anthropic API pricing (claude-api reference, 2026-06-24)",
+        "verifiedAt": "2026-06-24"
+      }
+    },
+    {
+      "id": "claude-opus-4-8",
+      "label": "Claude Opus 4.8",
+      "vendor": "Anthropic",
+      "provider": "anthropic",
+      "model": "claude-opus-4-8",
+      "color": "#A0522D",
+      "enabled": true,
+      "contextWindow": 1000000,
+      "options": {
+        "effort": "high",
+        "supportsTemperature": false
+      },
+      "pricing": {
+        "inputPerM": 5,
+        "outputPerM": 25,
+        "cachedInputPerM": 0.5,
+        "cacheWritePerM": 6.25,
+        "source": "Anthropic API pricing (claude-api reference, 2026-06-24)",
+        "verifiedAt": "2026-06-24"
+      }
+    },
+    {
+      "id": "claude-opus-4-7",
+      "label": "Claude Opus 4.7",
+      "vendor": "Anthropic",
+      "provider": "anthropic",
+      "model": "claude-opus-4-7",
+      "color": "#8B4726",
+      "enabled": true,
+      "contextWindow": 1000000,
+      "options": {
+        "effort": "high",
+        "supportsTemperature": false
+      },
+      "pricing": {
+        "inputPerM": 5,
+        "outputPerM": 25,
+        "cachedInputPerM": 0.5,
+        "cacheWritePerM": 6.25,
+        "source": "Anthropic API pricing (claude-api reference, 2026-06-24)",
+        "verifiedAt": "2026-06-24"
+      }
+    },
+    {
+      "id": "claude-opus-4-6",
+      "label": "Claude Opus 4.6",
+      "vendor": "Anthropic",
+      "provider": "anthropic",
+      "model": "claude-opus-4-6",
+      "color": "#7A3E22",
+      "enabled": true,
+      "contextWindow": 1000000,
+      "options": {
+        "effort": "high",
+        "supportsTemperature": true
+      },
+      "pricing": {
+        "inputPerM": 5,
+        "outputPerM": 25,
+        "cachedInputPerM": 0.5,
+        "cacheWritePerM": 6.25,
+        "source": "Anthropic API pricing (claude-api reference, 2026-06-24)",
+        "verifiedAt": "2026-06-24"
+      }
+    },
+    {
+      "id": "claude-sonnet-4-6",
+      "label": "Claude Sonnet 4.6",
+      "vendor": "Anthropic",
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-6",
+      "color": "#E9C4A8",
+      "enabled": true,
+      "contextWindow": 1000000,
+      "options": {
+        "effort": "high",
+        "supportsTemperature": true
+      },
+      "pricing": {
+        "inputPerM": 3,
+        "outputPerM": 15,
+        "cachedInputPerM": 0.3,
+        "cacheWritePerM": 3.75,
+        "source": "Anthropic API pricing (claude-api reference, 2026-06-24)",
+        "verifiedAt": "2026-06-24"
+      }
+    },
+    {
+      "id": "gpt-5.5",
+      "label": "GPT-5.5",
+      "vendor": "OpenAI",
+      "provider": "openai",
+      "model": "gpt-5.5",
+      "color": "#0E8A6C",
+      "enabled": true,
+      "options": {
+        "effort": "high",
+        "supportsTemperature": false
+      },
+      "pricing": {
+        "inputPerM": 5,
+        "outputPerM": 30,
+        "cachedInputPerM": 0.5,
+        "source": "Third-party price trackers, Sep 2026 — verify on openai.com/api/pricing",
+        "verifiedAt": null
+      }
+    },
+    {
+      "id": "gpt-5",
+      "label": "GPT-5",
+      "vendor": "OpenAI",
+      "provider": "openai",
+      "model": "gpt-5",
+      "color": "#0B6E56",
+      "enabled": true,
+      "options": {
+        "effort": "high",
+        "supportsTemperature": false
+      },
+      "pricing": {
+        "inputPerM": 1.25,
+        "outputPerM": 10,
+        "cachedInputPerM": 0.125,
+        "source": "OpenAI launch pricing (Aug 2025) — verify on openai.com/api/pricing",
+        "verifiedAt": null
+      }
+    },
+    {
+      "id": "gpt-5-mini",
+      "label": "GPT-5 mini",
+      "vendor": "OpenAI",
+      "provider": "openai",
+      "model": "gpt-5-mini",
+      "color": "#5FCFAE",
+      "enabled": true,
+      "options": {
+        "effort": "high",
+        "supportsTemperature": false
+      },
+      "pricing": {
+        "inputPerM": 0.25,
+        "outputPerM": 2,
+        "cachedInputPerM": 0.025,
+        "source": "OpenAI launch pricing (Aug 2025) — verify on openai.com/api/pricing",
+        "verifiedAt": null
+      }
+    },
+    {
+      "id": "gpt-4o",
+      "label": "GPT-4o",
+      "vendor": "OpenAI",
+      "provider": "openai",
+      "model": "gpt-4o",
+      "color": "#9BE3CC",
+      "enabled": true,
+      "options": {
+        "supportsTemperature": true
+      },
+      "pricing": {
+        "inputPerM": 2.5,
+        "outputPerM": 10,
+        "cachedInputPerM": 1.25,
+        "source": "OpenAI pricing (2024–2025) — verify on openai.com/api/pricing",
+        "verifiedAt": null
+      },
+      "notes": "Non-reasoning model from 2024: a useful historical reference point."
+    },
+    {
+      "id": "gemini-2.5-pro",
+      "label": "Gemini 2.5 Pro",
+      "vendor": "Google",
+      "provider": "google",
+      "model": "gemini-2.5-pro",
+      "color": "#3367D6",
+      "enabled": true,
+      "contextWindow": 1000000,
+      "options": {
+        "supportsTemperature": true
+      },
+      "pricing": {
+        "inputPerM": 1.25,
+        "outputPerM": 10,
+        "cachedInputPerM": 0.31,
+        "source": "Google pricing 2025 (≤200K prompts) — verify on ai.google.dev/pricing",
+        "verifiedAt": null
+      },
+      "notes": "Uses Gemini 2.5's default dynamic thinking (thinkingLevel is a Gemini 3+ setting)."
+    },
+    {
+      "id": "gemini-2.5-flash",
+      "label": "Gemini 2.5 Flash",
+      "vendor": "Google",
+      "provider": "google",
+      "model": "gemini-2.5-flash",
+      "color": "#AECBFA",
+      "enabled": true,
+      "contextWindow": 1000000,
+      "options": {
+        "supportsTemperature": true
+      },
+      "pricing": {
+        "inputPerM": 0.3,
+        "outputPerM": 2.5,
+        "cachedInputPerM": 0.075,
+        "source": "Google pricing 2025 — verify on ai.google.dev/pricing",
+        "verifiedAt": null
+      }
+    },
+    {
+      "id": "grok-4",
+      "label": "Grok 4",
+      "vendor": "xAI",
+      "provider": "xai",
+      "model": "grok-4",
+      "color": "#71717A",
+      "enabled": true,
+      "options": {
+        "supportsTemperature": true
+      },
+      "pricing": {
+        "inputPerM": 3,
+        "outputPerM": 15,
+        "cachedInputPerM": 0.75,
+        "source": "xAI pricing 2025 — verify on docs.x.ai",
+        "verifiedAt": null
+      }
+    },
+    {
+      "id": "manual-chat",
+      "label": "Manual entry (any chatbot)",
+      "vendor": "Manual",
+      "provider": "manual",
+      "model": "any",
+      "color": "#EAB308",
+      "enabled": true,
+      "options": {},
+      "pricing": {
+        "inputPerM": 0,
+        "outputPerM": 0,
+        "source": "Manual entry — enter real token counts/costs in the Manual Inbox if you know them",
+        "verifiedAt": "2026-09-24"
+      },
+      "notes": "Duplicate this for each model you test by copy & paste (e.g. 'ChatGPT app (manual)', 'Future Model X (manual)'). Set vendor correctly so judges from the same company are excluded."
+    },
+    {
+      "id": "random-baseline",
+      "label": "Random Baseline",
+      "vendor": "Gauntlet",
+      "provider": "baseline",
+      "model": "random",
+      "color": "#71717A",
+      "enabled": true,
+      "options": {
+        "supportsTemperature": false
+      },
+      "pricing": {
+        "inputPerM": 0,
+        "outputPerM": 0,
+        "source": "Local mock — no API calls",
+        "verifiedAt": "2026-09-24"
+      },
       "notes": "Picks a random offered option / answer. Shows the floor every real model must beat."
     }
   ]

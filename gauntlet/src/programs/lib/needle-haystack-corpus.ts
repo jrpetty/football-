@@ -289,14 +289,34 @@ const FILLERS: Filler[] = [
   (g) => `It was, by all accounts, a quiet ${g.pick(SEASONS)} in ${g.D()}.`,
   (g) => `The old men of ${g.D()} still spoke of that ${g.pick(SEASONS)} decades later.`,
   (g) => `A dispute over a stolen ${g.pick(['goat', 'rowing boat', 'ledger', 'cask of wine', 'weathervane'])} between two families of ${g.D()} occupied the magistrates for ${g.N(2, 9)} weeks.`,
-  (g) => `${g.P()} and ${g.P()} were seen arguing on ${g.ST()} about the price of ${g.pick(COMMODITIES)}, to the delight of the passers-by.`,
+  (g) => {
+    const a = g.P();
+    const b = g.pick(g.w.cast.filter((c) => c.full !== a)).full;
+    return `${a} and ${b} were seen arguing on ${g.ST()} about the price of ${g.pick(COMMODITIES)}, to the delight of the passers-by.`;
+  },
   (g) => `The ${g.pick(OCCUPATIONS)}s of ${g.D()} complained that the new regulations of ${g.G()} were written only to ruin them.`,
 ];
 
 const CONNECTORS = ['Meanwhile, ', 'Later that year, ', 'In the same season, ', 'It is also recorded that ', 'Around this time, ', 'According to the guild rolls, '];
 
+const OPENERS = [
+  'a hard frost that lasted into spring',
+  'heavy rains and a swollen river',
+  'a fair wind from the south and a harbour full of ships',
+  'rumours of war beyond the mountains',
+  'a bitter quarrel in the council',
+  'the death of an old alderman and a crowded funeral',
+  'a mild winter and cheap bread',
+  'a sickness among the cattle of the valley',
+];
+
+/** Sentences that already start with a time phrase never get a connector. */
+function canConnect(s: string): boolean {
+  return !/^(In the|That|It was|Nothing)\b/.test(s);
+}
+
 function lowerLead(s: string): string {
-  return /^(The|A|An|In|That|It|Rain|Nothing|Wolves|Fever|Pilgrims|Ships|Merchants|Many)\b/.test(s) ? s.charAt(0).toLowerCase() + s.slice(1) : s;
+  return /^(The|A|An|Rain|Wolves|Fever|Pilgrims|Ships|Merchants|Many)\b/.test(s) ? s.charAt(0).toLowerCase() + s.slice(1) : s;
 }
 
 function chapterTitle(g: Gen): string {
@@ -327,9 +347,8 @@ export function generateChapters(rng: Rng, w: CorpusWorld, targetWords: number):
       const sentences: Sentence[] = [];
       const nSent = rng.int(4, 7);
       for (let s = 0; s < nSent; s++) {
-        let text = rng.pick(FILLERS)(g);
-        if (s > 0 && rng.chance(0.2)) text = rng.pick(CONNECTORS) + lowerLead(text);
-        if (p === 0 && s === 0) text = `In the year ${g.year}, ${lowerLead(text)}`;
+        let text = p === 0 && s === 0 ? `The year ${g.year} opened with ${rng.pick(OPENERS)}.` : rng.pick(FILLERS)(g);
+        if (s > 0 && canConnect(text) && rng.chance(0.2)) text = rng.pick(CONNECTORS) + lowerLead(text);
         sentences.push({ text });
         words += sentenceWords(text);
       }

@@ -1383,7 +1383,11 @@ export function detailFor(lite: CaseResultLite): CaseResult {
       detail.expected = c?.expected;
       detail.extracted = score && score >= 1 ? String(Array.isArray(c?.expected) ? c?.expected[0] : c?.expected) : '11';
     } else if (type === 'constraints' && Array.isArray(c?.expected)) {
-      detail.items = (c?.expected as Array<{ check: string }>).map((k, i) => ({ label: k.check.replace(/_/g, ' '), passed: (score ?? 0) >= (i + 1) / ((c?.expected as unknown[]).length + 0.01), detail: i === 1 && (score ?? 0) < 1 ? 'found 2 violations: "sleep", "the"' : undefined }));
+      const n = (c?.expected as unknown[]).length;
+      detail.items = (c?.expected as Array<{ check: string }>).map((k, i) => {
+        const passed = (score ?? 0) >= (i + 1) / (n + 0.01);
+        return { label: k.check.replace(/_/g, ' '), passed, detail: passed ? undefined : `failed: ${k.check === 'line_count' ? 'found 6 lines, expected 5' : 'found 2 violations ("sleep", "the")'}` };
+      });
     } else if (type === 'code-js') {
       detail.items = Array.from({ length: 5 }, (_, i) => ({ label: `unit test ${i + 1}`, passed: i < Math.round((score ?? 0) * 5), detail: i >= Math.round((score ?? 0) * 5) ? 'expected [[1,5]] but got [[1,4],[4,5]]' : undefined }));
     } else if (type === 'json') {
