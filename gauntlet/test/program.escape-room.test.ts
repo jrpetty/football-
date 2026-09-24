@@ -1,8 +1,10 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { createRng } from '../src/core/rng.ts';
 import { program } from '../src/programs/escape-room.ts';
 import {
+  ESCAPE_DEFAULTS,
   escapeActions,
   escapeObservation,
   generateEscape,
@@ -15,12 +17,18 @@ import {
 import { constantResponder, createFakeModel, createTestContext, randomBacktickResponder, type Responder } from './helpers/fake-model.ts';
 import { escapeResponder } from './helpers/agentic-policies.ts';
 
-const SEEDS = [101, 202, 303];
-const CFG = program.defaults as unknown as EscapeConfig;
+function testDef(file: string): { seeds: number[]; config: Record<string, unknown> } {
+  return JSON.parse(readFileSync(new URL(`../tests/agentic/${file}.json`, import.meta.url), 'utf8'));
+}
+const STD = testDef('escape-room');
+const HARD = testDef('escape-room-hard');
+const SEEDS = STD.seeds;
+const CFG: EscapeConfig = { ...ESCAPE_DEFAULTS, ...(STD.config as Partial<EscapeConfig>) };
+const HARD_CFG: EscapeConfig = { ...ESCAPE_DEFAULTS, ...(HARD.config as Partial<EscapeConfig>) };
 
-async function play(seed: number, responder: Responder) {
+async function play(seed: number, responder: Responder, config: Record<string, unknown> = STD.config) {
   const model = createFakeModel(responder);
-  const { ctx } = createTestContext({ seed, model, defaults: program.defaults });
+  const { ctx } = createTestContext({ seed, model, defaults: program.defaults, config });
   const result = await program.run(ctx);
   return { result, model };
 }
@@ -125,6 +133,55 @@ describe('escape-room: scoring rewards competence', () => {
     });
     const { ctx } = createTestContext({ seed: 101, model, defaults: program.defaults });
     await assert.rejects(program.run(ctx), /socket hang up/);
+  });
+});
+
+describe('escape-room: hard variant', () => {
+  it('every hard world is solvable, has a genuine cross-room dependency and a budget of optimal + 25%', () => {
+    for (let seed = 1; seed <= 80; seed++) {
+      const w = generateEscape(createRng(seed), HARD_CFG);
+      assert.equal(w.locks.length, 10);
+      assert.equal(w.moveBudget, Math.ceil(w.optimal * 1.25), `seed ${seed}`);
+      // A lock in the last room needs a clue that lives in the first room.
+      const crossClue = w.locks.some(
+        (id) => w.objects[id]!.rooms.includes(2) && w.objects[id]!.lock!.needs.some((n) => w.objects[n]!.kind !== 'door' && w.objects[n]!.rooms[0] === 0),
+      );
+      assert.ok(crossClue, `seed ${seed}: no room-1 clue needed in room 3`);
+      // The plan picks something up in room 1 and uses it in room 3.
+      const s = newEscState(w);
+      for (const cmd of w.plan) assert.equal(stepEscape(w, s, cmd).valid, true, `seed ${seed}: ${cmd}`);
+      assert.equal(s.escaped, true);
+      assert.equal(s.unlocked.length, w.locks.length);
+    }
+  });
+
+  it('hard ciphers take two steps: written backwards, with the shift given elsewhere', () => {
+    let seen = 0;
+    for (let seed = 1; seed <= 20; seed++) {
+      const w = generateEscape(createRng(seed), HARD_CFG);
+      for (const o of Object.values(w.objects)) if (/back to front/.test(o.desc)) seen++;
+    }
+    assert.ok(seen >= 20, `${seen}`);
+  });
+
+  it('the optimal player scores 1; a player 30% over optimal runs out of moves; garbage and random score ~0', async () => {
+    for (const seed of HARD.seeds) {
+      const w = generateEscape(createRng(seed), HARD_CFG);
+      const { result } = await play(seed, escapeResponder(seed, HARD_CFG), HARD.config);
+      assert.equal(result.score, 1, result.summary);
+      assert.equal(result.detail.moveBudget, Math.ceil(w.optimal * 1.25));
+
+      const waste = Math.ceil(w.optimal * 0.3);
+      let i = 0;
+      const slow = await play(seed, () => (i++ < waste ? 'ACTION: LOOK' : `ACTION: ${w.plan[i - waste - 1]}`), HARD.config);
+      assert.equal(slow.result.detail.escaped, false);
+      assert.ok((slow.result.score as number) <= 0.5, `${slow.result.score}`);
+
+      const garbage = await play(seed, constantResponder('Hmm, let me think about the painting.'), HARD.config);
+      assert.equal(garbage.result.score, 0);
+      const random = await play(seed, randomBacktickResponder(seed), HARD.config);
+      assert.ok((random.result.score as number) <= 0.1, random.result.summary);
+    }
   });
 });
 

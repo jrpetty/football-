@@ -17,9 +17,9 @@ import { startupHeuristicResponder, startupOracleResponder } from './helpers/age
 
 const SEEDS = [101, 202, 303];
 
-async function play(seed: number, responder: Responder) {
+async function play(seed: number, responder: Responder, config: Record<string, unknown> = {}) {
   const model = createFakeModel(responder);
-  const { ctx } = createTestContext({ seed, model, defaults: program.defaults });
+  const { ctx } = createTestContext({ seed, model, defaults: program.defaults, config });
   const result = await program.run(ctx);
   return { result, model };
 }
@@ -63,6 +63,11 @@ describe('startup-sim: scoring rewards competence', () => {
       assert.match(result.summary, /^Month 12: \$[\d,]+ equity \(oracle \$[\d,]+/);
       assert.equal(result.replay!.series!.length, 3);
       assert.equal(result.replay!.series![0]!.points.length, 13);
+      // The last frame shows the final result next to the oracle and the autopilot.
+      const last = result.replay!.frames[result.replay!.frames.length - 1]!;
+      assert.equal(last.label, 'Final result');
+      assert.match(last.outcome!, /Final equity \$[\d,]+ .* oracle \$[\d,]+ · autopilot/);
+      assert.equal(last.stats!.equity, Math.round(result.detail.finalEquity as number));
     }
   });
 
@@ -105,6 +110,29 @@ describe('startup-sim: scoring rewards competence', () => {
     });
     const { ctx } = createTestContext({ seed: 101, model, defaults: program.defaults });
     await assert.rejects(program.run(ctx), /rate limited/);
+  });
+});
+
+describe('startup-sim: volatile variant', () => {
+  it('keeps the base market, adds a shock, and still normalises oracle = 1, garbage = 0, random ≈ 0', async () => {
+    for (const seed of SEEDS) {
+      const base = generateMarket(createRng(seed));
+      const vol = generateMarket(createRng(seed), 12, { volatile: true });
+      assert.ok(vol.shock && vol.shock.month >= 3 && vol.shock.month !== vol.viral.month);
+      assert.equal(base.shock, null);
+      assert.ok(vol.supplierSpike.factor >= 1.5 && vol.supplierSpike.months === 4);
+      const oracleRun = await play(seed, startupOracleResponder(seed, 12, true), { volatile: true });
+      assert.equal(oracleRun.result.score, 1);
+      const garbage = await play(seed, constantResponder('Thinking about the market...'), { volatile: true });
+      assert.equal(garbage.result.score, 0);
+      const random = await play(seed, randomBacktickResponder(seed), { volatile: true });
+      assert.ok((random.result.score as number) <= 0.15);
+      // The shock is announced in the month it hits, never before.
+      for (const [i, c] of oracleRun.model.calls.entries()) {
+        const hit = /safety scare/.test(c.messages[0]!.content);
+        assert.equal(hit, vol.shock!.month === i + 1, `month ${i + 1}`);
+      }
+    }
   });
 });
 
@@ -168,6 +196,16 @@ describe('startup-sim: rules', () => {
         assert.equal(c.system, STARTUP_SYSTEM);
       }
     }
+  });
+
+  it('equity uses the base unit cost, and unsold stock is flagged like a sell-out', async () => {
+    assert.match(STARTUP_SYSTEM, /valued at the BASE unit cost/);
+    const m = generateMarket(createRng(101));
+    const f = newFirm(m);
+    playMonth(m, f, { price: m.refPrice * 1.6, produce: 400, marketing: 0, hire: 0, loan: false });
+    const obs = startupObservation(m, f, 'Your note: (empty)', null);
+    assert.match(obs, /base unit cost \$\d+\.\d\d, used to value unsold stock/);
+    assert.match(obs, /UNSOLD — \d+ units left on the shelf, costing \$[\d,]+ in storage this month/);
   });
 
   it('observation shows backticked example decision lines for the Random Baseline', () => {

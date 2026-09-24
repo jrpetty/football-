@@ -1,9 +1,12 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { createRng } from '../src/core/rng.ts';
 import { program } from '../src/programs/survival-island.ts';
 import {
+  ISLAND_DEFAULTS,
   availableActions,
+  bottleMessage,
   generateIsland,
   idleNights,
   islandObservation,
@@ -16,12 +19,17 @@ import { parseActionLine } from '../src/programs/lib/agentic-common.ts';
 import { constantResponder, createFakeModel, createTestContext, randomBacktickResponder, type Responder } from './helpers/fake-model.ts';
 import { islandResponder } from './helpers/agentic-policies.ts';
 
-const SEEDS = [101, 202, 303];
-const CFG = program.defaults as unknown as IslandConfig;
+function testDef(file: string): { seeds: number[]; config: Record<string, unknown> } {
+  return JSON.parse(readFileSync(new URL(`../tests/agentic/${file}.json`, import.meta.url), 'utf8'));
+}
+const STD = testDef('survival-island');
+const HARD = testDef('survival-island-hard');
+const CFG: IslandConfig = { ...ISLAND_DEFAULTS, ...(STD.config as Partial<IslandConfig>) };
+const HARD_CFG: IslandConfig = { ...ISLAND_DEFAULTS, ...(HARD.config as Partial<IslandConfig>) };
 
-async function play(seed: number, responder: Responder) {
+async function play(seed: number, responder: Responder, config: Record<string, unknown> = STD.config) {
   const model = createFakeModel(responder);
-  const { ctx } = createTestContext({ seed, model, defaults: program.defaults });
+  const { ctx } = createTestContext({ seed, model, defaults: program.defaults, config });
   const result = await program.run(ctx);
   return { result, model };
 }
@@ -39,47 +47,68 @@ describe('survival-island: determinism', () => {
   });
 
   it('different seeds ⇒ different islands', () => {
-    const maps = SEEDS.map((seed) => {
+    const maps = STD.seeds.map((seed) => {
       const w = generateIsland(createRng(seed), CFG);
       return JSON.stringify([w.tiles.map((r) => r.map((t) => t.terrain)), w.start, w.shipDays, w.safeBerry]);
     });
-    assert.equal(new Set(maps).size, SEEDS.length);
+    assert.equal(new Set(maps).size, STD.seeds.length);
   });
 
-  it('every generated island is well formed', () => {
-    for (let seed = 1; seed <= 60; seed++) {
-      const w = generateIsland(createRng(seed), CFG);
-      const kinds = new Set(w.tiles.flat().map((t) => t.terrain));
-      for (const k of ['sea', 'beach', 'forest', 'grass', 'rocks', 'summit', 'spring', 'cave', 'palm', 'bush']) assert.ok(kinds.has(k as never), `seed ${seed} lacks ${k}`);
-      assert.notEqual(w.safeBerry, w.poisonBerry);
-      assert.ok(w.shipDays.length >= 2, `seed ${seed} has too few ship passings`);
-      assert.ok(w.shipDays[0]! <= 4);
-      const idle = idleNights(w);
-      assert.ok(idle >= 3 && idle <= 7, `idle baseline ${idle}`);
+  it('every generated island is well formed, in both variants', () => {
+    for (const [cfg, first] of [
+      [CFG, CFG.shipFirstDay],
+      [HARD_CFG, HARD_CFG.shipFirstDay],
+    ] as const) {
+      for (let seed = 1; seed <= 40; seed++) {
+        const w = generateIsland(createRng(seed), cfg);
+        const kinds = new Set(w.tiles.flat().map((t) => t.terrain));
+        for (const k of ['sea', 'beach', 'forest', 'grass', 'rocks', 'summit', 'spring', 'cave', 'palm', 'bush']) assert.ok(kinds.has(k as never), `seed ${seed} lacks ${k}`);
+        const bushes = w.tiles.flat().filter((t) => t.terrain === 'bush');
+        assert.equal(bushes.length, cfg.berryBushes);
+        assert.equal(bushes.filter((t) => t.berry === w.poisonBerry).length, cfg.poisonBushes);
+        assert.ok(w.shipDays.length >= cfg.signalsNeeded, `seed ${seed} has too few ship passings`);
+        assert.ok(w.shipDays[0]! >= first[0] && w.shipDays[0]! <= first[1]);
+        // The bottle states the full schedule: the first day and the interval.
+        assert.match(bottleMessage(w), new RegExp(`day ${w.shipFirst} of the month and then every ${w.shipPeriod} days`));
+        const idle = idleNights(w);
+        assert.ok(idle >= 3 && idle <= 7, `idle baseline ${idle}`);
+      }
     }
   });
 });
 
 describe('survival-island: scoring rewards competence', () => {
-  it('a full-knowledge survivor plays through the harness and scores high', async () => {
-    const scores: number[] = [];
-    let rescued = 0;
-    for (const seed of SEEDS) {
-      const { result, model } = await play(seed, islandResponder(seed, CFG));
-      scores.push(result.score);
-      if (result.detail.rescued) rescued++;
-      assert.ok(result.score >= 0.7, `seed ${seed}: ${result.summary} (${result.score})`);
-      assert.equal(result.passed, true);
-      assert.equal(result.detail.invalidActions, 0);
-      assert.ok(model.calls.length <= CFG.maxDays * 3);
-      assert.match(result.summary, /Rescued by ship on day \d+|Survived all \d+ days/);
+  it('a full-knowledge player survives every test seed of both variants and scores high', async () => {
+    for (const [def, cfg] of [
+      [STD, CFG],
+      [HARD, HARD_CFG],
+    ] as const) {
+      for (const seed of def.seeds) {
+        const { result, model } = await play(seed, islandResponder(seed, cfg), def.config);
+        assert.ok(result.score >= 0.7, `seed ${seed}: ${result.summary} (${result.score})`);
+        assert.equal(result.passed, true);
+        assert.equal(result.detail.invalidActions, 0);
+        assert.ok(model.calls.length <= cfg.maxDays * 3);
+        assert.match(result.summary, /Rescued by ship on day \d+|Survived all \d+ days/);
+      }
     }
-    assert.ok(rescued >= 1, 'the rescue path must be reachable');
-    assert.ok(Math.max(...scores) >= 0.9);
+  });
+
+  it('rescue is reachable by skill: signal at midday after a night with a campfire', async () => {
+    // Seeds where the scripted player completes the full rescue chain (found by search; see the helper).
+    for (const [seed, config, cfg] of [
+      [1, STD.config, CFG],
+      [4, STD.config, CFG],
+      [25, HARD.config, HARD_CFG],
+    ] as const) {
+      const { result } = await play(seed, islandResponder(seed, cfg), config);
+      assert.equal(result.detail.rescued, true, `seed ${seed}: ${result.summary}`);
+      assert.ok(result.score >= 0.9, `${result.score}`);
+    }
   });
 
   it('the survival-only strategy survives every test seed without rescue', async () => {
-    for (const seed of SEEDS) {
+    for (const seed of STD.seeds) {
       const { result } = await play(seed, islandResponder(seed, CFG, false));
       assert.equal(result.detail.alive, true, result.summary);
       assert.ok(result.score >= 0.7 && result.score < 0.9, `${result.score}`);
@@ -87,12 +116,14 @@ describe('survival-island: scoring rewards competence', () => {
   });
 
   it('garbage output scores ~0 without crashing and every turn counts as invalid', async () => {
-    for (const seed of SEEDS) {
-      const { result, model } = await play(seed, constantResponder('I think I should look around a bit first.'));
-      assert.ok(result.score <= 0.05, `${result.score}`);
-      assert.equal(result.detail.invalidActions, model.calls.length);
-      assert.equal(result.passed, false);
-      assert.match(result.summary, /^Day \d+: died of /);
+    for (const config of [STD.config, HARD.config]) {
+      for (const seed of STD.seeds) {
+        const { result, model } = await play(seed, constantResponder('I think I should look around a bit first.'), config);
+        assert.ok(result.score <= 0.05, `${result.score}`);
+        assert.equal(result.detail.invalidActions, model.calls.length);
+        assert.equal(result.passed, false);
+        assert.match(result.summary, /^Day \d+: died of /);
+      }
     }
   });
 
@@ -106,10 +137,12 @@ describe('survival-island: scoring rewards competence', () => {
   });
 
   it('a random-backticked-action player scores low', async () => {
-    for (const seed of SEEDS) {
-      const { result } = await play(seed, randomBacktickResponder(seed));
-      assert.ok(result.score <= 0.15, `${seed}: ${result.summary} ${result.score}`);
-      assert.equal(result.detail.invalidActions, 0, 'every listed action must be a valid command');
+    for (const config of [STD.config, HARD.config]) {
+      for (const seed of STD.seeds) {
+        const { result } = await play(seed, randomBacktickResponder(seed), config);
+        assert.ok(result.score <= 0.15, `${seed}: ${result.summary} ${result.score}`);
+        assert.equal(result.detail.invalidActions, 0, 'every listed action must be a valid command');
+      }
     }
   });
 
@@ -141,71 +174,112 @@ describe('survival-island: rules', () => {
   });
 
   it('every listed action is valid and accepted by the engine', () => {
-    for (const seed of SEEDS) {
-      const w = generateIsland(createRng(seed), CFG);
-      const s = newIslandState(w);
-      const rng = createRng(seed);
-      for (let t = 0; t < 30 && !s.over; t++) {
-        const acts = availableActions(w, s);
-        for (const a of acts) assert.ok(parseIslandCommand(a), `unparseable listed action ${a}`);
-        const step = stepIsland(w, s, rng.pick(acts));
-        assert.equal(step.valid, true);
-        assert.doesNotMatch(step.outcome, /Unrecognised|too exhausted|blocks the way/);
+    for (const cfg of [CFG, HARD_CFG]) {
+      for (const seed of STD.seeds) {
+        const w = generateIsland(createRng(seed), cfg);
+        const s = newIslandState(w);
+        const rng = createRng(seed);
+        for (let t = 0; t < 30 && !s.over; t++) {
+          const acts = availableActions(w, s);
+          for (const a of acts) assert.ok(parseIslandCommand(a), `unparseable listed action ${a}`);
+          const step = stepIsland(w, s, rng.pick(acts));
+          assert.equal(step.valid, true);
+          assert.doesNotMatch(step.outcome, /Unrecognised|too exhausted|blocks the way/);
+        }
       }
     }
   });
 
-  it('poisonous berries hurt; the spring fills water to 100', () => {
-    const w = generateIsland(createRng(101), CFG);
-    const s = newIslandState(w);
-    s.inv[`${w.poisonBerry}berry`] = 2;
-    const before = s.health;
-    stepIsland(w, s, `EAT ${w.poisonBerry.toUpperCase()} BERRIES`);
-    assert.ok(s.health <= before - 20);
-    assert.equal(s.poisonEaten, 1);
-    s.pos = { ...w.spring };
-    s.water = 10;
-    stepIsland(w, s, 'DRINK');
-    assert.ok(s.water >= 90, 'drinking fills water (minus one turn of thirst)');
-  });
-
-  it('a lit signal fire on a ship day means rescue; otherwise the ship sails by', () => {
-    const w = generateIsland(createRng(202), CFG);
-    const shipDay = w.shipDays[0]!;
-    const setup = () => {
+  it('poisonous berries hurt (harder in the hard variant); the spring refills water', () => {
+    for (const [cfg, dmg, drink] of [
+      [CFG, 20, 100],
+      [HARD_CFG, 30, 60],
+    ] as const) {
+      const w = generateIsland(createRng(101), cfg);
       const s = newIslandState(w);
-      s.day = shipDay;
-      s.phase = 0;
-      s.pos = { ...w.summit };
-      s.signal = 'built';
-      s.inv.fibre = 1;
-      return s;
-    };
-    const lit = setup();
-    stepIsland(w, lit, 'LIGHT SIGNAL');
-    stepIsland(w, lit, 'REST');
-    assert.equal(lit.rescued, true);
-    assert.equal(lit.over, true);
-    const unlit = setup();
-    stepIsland(w, unlit, 'REST');
-    const step = stepIsland(w, unlit, 'REST');
-    assert.equal(unlit.rescued, false);
-    assert.ok(step.events.some((e) => /ship/i.test(e)));
-  });
-
-  it('observations never reveal the ship schedule or the poisonous colour up front, and end with the output format', () => {
-    for (const seed of SEEDS) {
-      const w = generateIsland(createRng(seed), CFG);
-      const s = newIslandState(w);
-      const obs = islandObservation(w, s, 'Your note: (empty)', []);
-      assert.doesNotMatch(obs, /every \d+ days/);
-      assert.doesNotMatch(obs, /poison/i);
-      assert.match(obs.split('\n').pop()!, /ACTION: <command>/);
+      s.inv[`${w.poisonBerry}berry`] = 2;
+      stepIsland(w, s, `EAT ${w.poisonBerry.toUpperCase()} BERRIES`);
+      assert.equal(s.health, 100 - dmg);
+      assert.equal(s.poisonEaten, 1);
+      s.pos = { ...w.spring };
+      s.water = 10;
+      stepIsland(w, s, 'DRINK');
+      assert.ok(s.water >= Math.min(100, 10 + drink) - 7, `water ${s.water}`);
     }
   });
 
-  it('each turn is a fresh, bounded prompt (no growing history)', async () => {
+  it('a signal counts only when it blazes at midday after a night with a campfire', () => {
+    // Find a pass whose previous night is calm enough for a fire on the summit.
+    let seed = 1;
+    let w = generateIsland(createRng(seed), CFG);
+    while (w.weather[w.shipDays[0]! - 1] === 'storm') w = generateIsland(createRng(++seed), CFG);
+    const pass = w.shipDays[0]!;
+    const setup = (withFire: boolean) => {
+      const s = newIslandState(w);
+      s.day = pass - 1;
+      s.phase = 2;
+      s.pos = { ...w.summit };
+      s.signal = 'built';
+      s.inv.fibre = 1;
+      if (withFire) s.fires[`${w.summit.x},${w.summit.y}`] = 2;
+      stepIsland(w, s, 'REST'); // evening; the night resolves
+      return s;
+    };
+    const ok = setup(true);
+    stepIsland(w, ok, 'LIGHT SIGNAL');
+    const okPass = stepIsland(w, ok, 'REST');
+    assert.equal(ok.rescued, true, okPass.events.join(' '));
+    assert.equal(ok.over, true);
+
+    const noFire = setup(false);
+    stepIsland(w, noFire, 'LIGHT SIGNAL');
+    const noFirePass = stepIsland(w, noFire, 'REST');
+    assert.equal(noFire.rescued, false);
+    assert.ok(noFirePass.events.some((e) => /no campfire burned/.test(e)));
+
+    const unlit = setup(true);
+    stepIsland(w, unlit, 'REST');
+    const unlitPass = stepIsland(w, unlit, 'REST');
+    assert.equal(unlit.rescued, false);
+    // Every pass is reported, wherever the castaway stands.
+    assert.ok(unlitPass.events.some((e) => /supply ship Albatross sails past/.test(e)));
+  });
+
+  it('a lit pile burns out after the next turn and must be rebuilt', () => {
+    const w = generateIsland(createRng(202), CFG);
+    const s = newIslandState(w);
+    const notPass = [1, 2, 3].find((d) => !w.shipDays.includes(d) && w.weather[d] !== 'storm')!;
+    s.day = notPass;
+    s.phase = 0;
+    s.pos = { ...w.summit };
+    s.signal = 'built';
+    s.inv.fibre = 1;
+    stepIsland(w, s, 'LIGHT SIGNAL');
+    assert.equal(s.signal, 'lit');
+    stepIsland(w, s, 'REST');
+    assert.equal(s.signal, 'none');
+  });
+
+  it('observations never reveal the ship schedule or the poisonous colour up front, and end with the output format', () => {
+    for (const cfg of [CFG, HARD_CFG]) {
+      for (const seed of STD.seeds) {
+        const w = generateIsland(createRng(seed), cfg);
+        const s = newIslandState(w);
+        const obs = islandObservation(w, s, 'Your note: (empty)', []);
+        assert.doesNotMatch(obs, /every \d+ days|of the month/);
+        assert.doesNotMatch(obs, /poison/i);
+        assert.match(obs.split('\n').pop()!, /ACTION: <command>/);
+      }
+    }
+  });
+
+  it('the rules define midday, pile burn-out, storms and proof of life; each turn is a fresh, bounded prompt', async () => {
     const { model } = await play(101, islandResponder(101, CFG));
+    const sys = model.calls[0]!.system!;
+    assert.match(sys, /Midday is the end of the Afternoon turn/);
+    assert.match(sys, /then burns out and the pile is gone/);
+    assert.match(sys, /Impossible during a storm \(rain is fine\)/);
+    assert.match(sys, /campfire you built was burning somewhere on the island during the previous night/);
     for (const c of model.calls) {
       const chars = (c.system?.length ?? 0) + c.messages.reduce((a, m) => a + m.content.length, 0);
       assert.ok(chars / 3.8 < 2500, `turn prompt ≈ ${Math.round(chars / 3.8)} tokens`);
