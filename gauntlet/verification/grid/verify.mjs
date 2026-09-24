@@ -169,7 +169,7 @@ function verify(c) {
         if (i > 0 && !(k === 'adj' && cl.includes(' not '))) {
           const a = S(cl.slice(0, i)), b = S(cl.slice(i + phrase.length + 2));
           if (k === 'adj') return (w) => adj(where(w, a), where(w, b));
-          if (k === 'notadj') return (w) => !adj(where(w, a), where(w, b));
+          if (k === 'notadj') return (w) => where(w, a) !== where(w, b) && !adj(where(w, a), where(w, b)); // stated: X and Y are different
           if (k === 'left') return (w) => left(where(w, a), where(w, b));
           if (k === 'immleft') return (w) => immleft(where(w, a), where(w, b));
           if (k === 'cw') return (w) => cw(where(w, a), where(w, b)); // "A sits immediately clockwise from B"
@@ -202,10 +202,10 @@ function verify(c) {
       const a = S(m[1]), b = S(m[2]); f = (w) => above(where(w, a), where(w, b));
     } else if (th.gleft && (m = cl.match(th.gleft))) {
       const a = S(m[1]), b = S(m[2]); f = (w) => gleft(where(w, a), where(w, b));
-    } else if ((m = cl.match(/^(.+) and (.+) are in the same row$/)) && samerow) {
-      const a = S(m[1]), b = S(m[2]); f = (w) => samerow(where(w, a), where(w, b));
-    } else if ((m = cl.match(/^(.+) and (.+) are in the same column$/)) && samecol) {
-      const a = S(m[1]), b = S(m[2]); f = (w) => samecol(where(w, a), where(w, b));
+    } else if ((m = cl.match(/^(.+) and (.+) are two different (?:lockers|cabins) in the same row$/)) && samerow) {
+      const a = S(m[1]), b = S(m[2]); f = (w) => where(w, a) !== where(w, b) && samerow(where(w, a), where(w, b));
+    } else if ((m = cl.match(/^(.+) and (.+) are two different (?:lockers|cabins) in the same column$/)) && samecol) {
+      const a = S(m[1]), b = S(m[2]); f = (w) => where(w, a) !== where(w, b) && samecol(where(w, a), where(w, b));
     } else if ((m = cl.match(/^(.+) and (.+) are in different rows$/)) && samerow) {
       const a = S(m[1]), b = S(m[2]); f = (w) => !samerow(where(w, a), where(w, b));
     } else {

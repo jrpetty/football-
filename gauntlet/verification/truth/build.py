@@ -78,6 +78,8 @@ def build_case(cid, cfgname, seed, diff):
         "- \"X and Y are the same type\" / \"different types\" compare the two people's types.",
         "- \"Among X, Y and me, exactly two are knights\" counts only the people named (\"me\" is the speaker).",
     ]
+    if 'alternator' in types:
+        conv.append("- All alternators count as the same type, whichever truth value their first statement has. So \"X and Y are the same type\" is true when X and Y are both alternators, and counts of alternators include every alternator.")
     if has_meta:
         conv.append("- A statement such as \"Ada's second statement is true\" refers to that person's statement with that number in the list below (\"Ada's statement\" when she made only one), and is true exactly when that statement is true.")
     types_words = ', '.join(types)

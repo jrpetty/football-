@@ -6,6 +6,7 @@ import './styles/base.css';
 import './styles/components.css';
 import './styles/charts.css';
 import './styles/pages.css';
+import './styles/present.css';
 
 const root = document.getElementById('root');
 if (root) {
