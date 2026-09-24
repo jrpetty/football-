@@ -1,0 +1,9 @@
+{
+  "name": "fx-ledger",
+  "version": "2.7.1",
+  "private": true,
+  "main": "src/index.js",
+  "scripts": {
+    "test": "node --test"
+  }
+}

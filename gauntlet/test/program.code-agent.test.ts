@@ -52,8 +52,16 @@ describe('code-agent: fixture repos', () => {
       const repo = loadRepo(id);
       const files = Object.keys(repo.files).length;
       const lines = Object.values(repo.files).reduce((n, c) => n + c.split('\n').length, 0);
-      assert.ok(files >= 5 && files <= 15, `${id}: ${files} files`);
-      assert.ok(lines >= 150 && lines <= 800, `${id}: ${lines} lines`);
+      const hard = repo.meta.tier === 'hard';
+      if (hard) {
+        assert.ok(files >= 15 && files <= 25, `${id}: ${files} files`);
+        assert.ok(lines >= 800 && lines <= 1500, `${id}: ${lines} lines`);
+        assert.ok((repo.meta.hiddenOnly ?? []).length >= 1, `${id}: at least one bug only the hidden tests catch`);
+        for (const b of repo.meta.bugs) assert.ok(b.spec && b.symptom && b.visibility, `${id}: bug in ${b.file} documents its spec, symptom and visibility`);
+      } else {
+        assert.ok(files >= 5 && files <= 15, `${id}: ${files} files`);
+        assert.ok(lines >= 150 && lines <= 800, `${id}: ${lines} lines`);
+      }
       assert.ok(repo.meta.bugs.length >= 1 && repo.meta.bugs.length <= 3, `${id}: ${repo.meta.bugs.length} bugs`);
       assert.ok(repo.files['README.md'], `${id} has a README`);
       assert.ok(testFilesOf(repo.files).length >= 1, `${id} has visible tests`);
@@ -96,6 +104,30 @@ describe('code-agent: fixture repos', () => {
         const r = await hiddenResult(partial, id);
         assert.ok(r.passed < r.total, `${id}: fixing only ${f} passes every hidden test`);
       }
+    });
+  }
+
+  for (const id of ids.filter((x) => loadRepo(x).meta.tier === 'hard')) {
+    it(`${id}: the hidden-only bug survives a green visible suite`, async () => {
+      const repo = loadRepo(id);
+      const hiddenOnly = new Set(repo.meta.hiddenOnly ?? []);
+      const files = { ...repo.files };
+      for (const [f, c] of Object.entries(repo.fix)) if (!hiddenOnly.has(f)) files[f] = c;
+      const vis = await runProjectTests(files, testFilesOf(files));
+      assert.equal(vis.passed, vis.total, `${id}: visible tests pass without the hidden-only fix ${JSON.stringify(vis.tests.filter((t) => !t.ok))}`);
+      const hid = await hiddenResult(files, id);
+      assert.ok(hid.total - hid.passed >= 3, `${id}: at least 3 hidden tests still fail (${hid.passed}/${hid.total})`);
+    });
+
+    it(`${id}: the first bug masks the second (fixing only the first keeps the visible suite red)`, async () => {
+      const repo = loadRepo(id);
+      const first = repo.meta.bugs[0]!.file;
+      const files = { ...repo.files, [first]: repo.fix[first]! };
+      const vis = await runProjectTests(files, testFilesOf(files));
+      assert.ok(vis.passed < vis.total, `${id}: visible suite is green after fixing only ${first}`);
+      const orig = await runProjectTests(repo.files, testFilesOf(repo.files));
+      const failing = (r: typeof vis) => r.tests.filter((t) => !t.ok).map((t) => `${t.name}: ${t.error}`).join('\n');
+      assert.notEqual(failing(vis), failing(orig), `${id}: fixing ${first} changes the failure the model sees`);
     });
   }
 

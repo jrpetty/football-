@@ -1,0 +1,42 @@
+{
+  "id": "payroll-engine",
+  "title": "Payroll engine",
+  "tier": "hard",
+  "par": 16,
+  "issue": "Finance reports that biweekly staff are being over-taxed on their payslips, and an hourly employee says his pay for a fortnight with weekend shifts is wrong. The test suite is red.",
+  "hiddenOnly": [
+    "src/proration.js"
+  ],
+  "bugs": [
+    {
+      "file": "src/config.js",
+      "kind": "wrong constant",
+      "visibility": "visible, misleading",
+      "summary": "PERIODS_PER_YEAR.biweekly is 24; biweekly means 26 periods a year.",
+      "symptom": "The failing test is \"biweekly payslip: income tax\" (tax 43333 instead of 40000), which points at tax.js; tax.js is correct and the wrong number comes from config.js (gross is wrong too).",
+      "spec": "README, Pay periods: \"biweekly (every two weeks, 26 periods a year)\"."
+    },
+    {
+      "file": "src/dates.js",
+      "kind": "week boundary",
+      "visibility": "visible only after the first fix (masked)",
+      "summary": "weekStart() returns the Sunday before a date; weeks must start on Monday, so weekend hours land in the wrong overtime week.",
+      "symptom": "The \"biweekly payroll run\" total is also wrong because of config.js; after fixing that the total is still off, now because of overtime. overtime.test.js passes (weekday-only timesheets), which points away from overtime.",
+      "spec": "README, Pay periods: \"Weeks run Monday to Sunday\"; Gross pay: \"Within each Monday–Sunday week, the first 40 hours are regular\"."
+    },
+    {
+      "file": "src/proration.js",
+      "kind": "spec violation",
+      "visibility": "hidden tests only",
+      "summary": "Mid-period starters are prorated by calendar days instead of working days (Mon–Fri minus company holidays).",
+      "symptom": "No visible test has a mid-period starter.",
+      "spec": "README, Gross pay: \"working days from the start date to the period end ÷ working days in the whole period (both counts inclusive). Starting on a weekend or holiday simply means the first paid day is the next working day.\" Working days are defined under Pay periods."
+    }
+  ],
+  "distractors": [
+    "legacy-tax.js is an unused, deliberately \"wrong\" 2019 estimator marked do-not-fix (a hidden test checks it is unchanged)",
+    "TODO about banker's rounding in money.js (README says half-up)",
+    "TODO about the 2026 tax threshold in config.js",
+    "payrun.test.js \"arrive out of order\" test looks timing-dependent but is deterministic and correct"
+  ]
+}
