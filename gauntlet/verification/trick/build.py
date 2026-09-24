@@ -350,10 +350,298 @@ mc('m24',
    CHOICE)
 
 
-# ─────────────────────────────── False Premise ───────────────────────────────
+# ─────────────────────────────── Modified Classics v2 ───────────────────────────────
+# v2.0.0: the famous textbook variants that every model now gets right were replaced by
+# lesser-known classics with a subtle twist. Kept from v1: the cases a small model failed
+# in the blind audit (m02, m05, m15, m19, m22) and three uncommon twists (m11, m16, m17).
 
-FP_PRE = ("Some questions in this set are based on a false premise: they assume something that is not true or never happened. "
-          "If the question is based on a false premise, your final answer must be exactly the two words FALSE PREMISE and nothing else. "
+KEEP_V1 = {'m02', 'm05', 'm11', 'm15', 'm16', 'm17', 'm19', 'm22'}
+MC = [c for c in MC if c['id'] in KEEP_V1]
+
+
+# Bertrand's box paradox with FOUR boxes (GG, SS, GS, GS).
+def boxes_other_gold(boxes):
+    num = den = Fraction(0)
+    for box in boxes:
+        for i, coin in enumerate(box):
+            p = Fraction(1, len(boxes)) * Fraction(1, 2)
+            if coin == 'G':
+                den += p
+                if box[1 - i] == 'G':
+                    num += p
+    return num / den
+
+
+assert boxes_other_gold(['GG', 'SS', 'GS']) == Fraction(2, 3)  # the classic (lure)
+assert boxes_other_gold(['GG', 'SS', 'GS', 'GS']) == Fraction(1, 2)
+
+
+def josephus(n, k):
+    people = list(range(1, n + 1))
+    i = 0
+    while len(people) > 1:
+        i = (i + k - 1) % len(people)
+        people.pop(i)
+    return people[0]
+
+
+assert josephus(7, 3) == 4 and josephus(7, 2) == 7
+
+
+def lockers(n):
+    state = [False] * (n + 1)
+    for s in range(1, n + 1):
+        for j in range(s, n + 1, s):
+            state[j] = not state[j]
+    return sum(state)
+
+
+assert lockers(150) == 12 and lockers(100) == 10
+
+
+def halmos(other_couples):
+    """Brute force: host (0) and wife (1) plus other couples; all 2n-1 people other than the host report distinct counts."""
+    import numpy as np
+    n = 2 * (other_couples + 1)
+    spouse = {i: i ^ 1 for i in range(n)}
+    edges = [(a, b) for a in range(n) for b in range(a + 1, n) if spouse[a] != b]
+    m = len(edges)
+    masks = np.arange(1 << m, dtype=np.uint32)
+    deg = np.zeros((n, 1 << m), dtype=np.uint8)
+    for e, (a, b) in enumerate(edges):
+        bit = ((masks >> e) & 1).astype(np.uint8)
+        deg[a] += bit
+        deg[b] += bit
+    others = np.sort(deg[1:], axis=0)
+    distinct = np.all(others[1:] != others[:-1], axis=0)
+    return set(int(x) for x in np.unique(deg[1][distinct]))
+
+
+assert halmos(3) == {3}
+
+
+# Offset curve of a square: straight sides plus four quarter circles of radius r.
+assert abs((4 * 100 + 2 * math.pi * 1) - 400 - 6.28) < 0.005
+# Fly: closing speed 50 km/h, closes 90 km -> 1.8 h at 60 km/h.
+assert Fraction(90, 50) * 60 == 108
+
+
+def domino_tileable(removed):
+    """Bipartite matching of the remaining board squares (Kuhn's algorithm)."""
+    cells = [(r, c) for r in range(8) for c in range(8) if (r, c) not in removed]
+    black = [x for x in cells if (x[0] + x[1]) % 2 == 0]
+    white = set(x for x in cells if (x[0] + x[1]) % 2 == 1)
+    if len(black) != len(white):
+        return False
+    match = {}
+
+    def aug(u, seen):
+        r, c = u
+        for v in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):
+            if v in white and v not in seen:
+                seen.add(v)
+                if v not in match or aug(match[v], seen):
+                    match[v] = u
+                    return True
+        return False
+
+    return all(aug(u, set()) for u in black)
+
+
+assert domino_tileable({(0, 0), (0, 7)}) is True  # adjacent corners (a1, h1): the twist
+assert domino_tileable({(0, 0), (7, 7)}) is False  # opposite corners: the classic (lure)
+
+
+def monty4_random_switch():
+    total = Fraction(0)
+    for car in range(4):
+        p_car = Fraction(1, 4)
+        goats = [d for d in (1, 2, 3) if d != car]
+        for opened in goats:
+            p_open = Fraction(1, len(goats))
+            remaining = [d for d in (1, 2, 3) if d != opened]
+            for pick in remaining:
+                if pick == car:
+                    total += p_car * p_open * Fraction(1, len(remaining))
+    return total
+
+
+assert monty4_random_switch() == Fraction(3, 8)
+assert -60 + 70 - 80 + 75 == 5  # horse trading
+
+
+def wine_water():
+    a_water, a_wine = Fraction(200), Fraction(0)
+    b_wine, b_water = Fraction(100), Fraction(0)
+    b_wine -= 10
+    a_wine += 10
+    total = a_water + a_wine
+    back_water, back_wine = 10 * a_water / total, 10 * a_wine / total
+    a_water -= back_water
+    a_wine -= back_wine
+    b_water += back_water
+    b_wine += back_wine
+    return a_wine, b_water
+
+
+w_in_a, water_in_b = wine_water()
+assert w_in_a == water_in_b
+
+
+def first_pattern_prob(p1, p2):
+    """P(pattern p1 appears before p2) for fair coin tosses, by value iteration over suffix states (exact enough, then rounded)."""
+    states = [''] + [p[:i] for p in (p1, p2) for i in range(1, len(p))]
+    states = sorted(set(states), key=len)
+
+    def step(s, t):
+        s = s + t
+        if s.endswith(p1):
+            return 'W'
+        if s.endswith(p2):
+            return 'L'
+        while s and not any(p.startswith(s) for p in (p1, p2)):
+            s = s[1:]
+        return s
+
+    v = {s: Fraction(0) for s in states}
+    for _ in range(200):
+        v = {s: sum(Fraction(1, 2) * (1 if step(s, t) == 'W' else 0 if step(s, t) == 'L' else v[step(s, t)]) for t in 'HT') for s in states}
+    return float(v[''])
+
+
+assert abs(first_pattern_prob('HHT', 'HTH') - 2 / 3) < 1e-9
+
+
+def bridge(times):
+    import heapq
+    everyone = frozenset(range(len(times)))
+    start = (everyone, 0)
+    dist = {start: 0}
+    pq = [(0, 0, everyone)]
+    while pq:
+        d, side, left = heapq.heappop(pq)
+        if not left:
+            return d
+        if dist.get((left, side), 1e9) < d:
+            continue
+        here = left if side == 0 else everyone - left
+        for k in (1, 2):
+            for grp in itertools.combinations(sorted(here), k):
+                cost = max(times[i] for i in grp)
+                nl = left - set(grp) if side == 0 else left | set(grp)
+                st = (frozenset(nl), 1 - side)
+                if d + cost < dist.get(st, 1e9):
+                    dist[st] = d + cost
+                    heapq.heappush(pq, (d + cost, 1 - side, frozenset(nl)))
+
+
+assert bridge([1, 4, 5, 10]) == 21
+assert bridge([1, 2, 5, 10]) == 17  # the classic (lure territory)
+
+
+def expected_tosses(pattern):
+    # Solve E[s] for prefix states by iteration.
+    states = [pattern[:i] for i in range(len(pattern))]
+
+    def nxt(s, t):
+        s = s + t
+        while s and not pattern.startswith(s):
+            s = s[1:]
+        return s
+
+    e = {s: 0.0 for s in states}
+    for _ in range(5000):
+        e = {s: 1 + sum(0.5 * (0 if nxt(s, t) == pattern else e[nxt(s, t)]) for t in 'HT') for s in states}
+    return e['']
+
+
+assert abs(expected_tosses('HT') - 4) < 1e-9 and abs(expected_tosses('HH') - 6) < 1e-9
+# Slow clock: 50 clock-minutes per real hour; 360 clock-minutes -> 432 real minutes -> 7:12 pm.
+assert Fraction(360 * 60, 50) - 360 == 72
+# Coins: second pile of k flipped coins has k - h2 heads; first pile has 5 - h2. Only k = 5 works for every h2.
+assert [k for k in range(21) if all(k - h2 == 5 - h2 for h2 in range(0, min(k, 5) + 1))] == [5]
+# Weighing: w weighings distinguish at most 3^w candidates.
+assert min(w for w in range(5) if 3 ** w >= 10) == 3
+
+mc('m25',
+   "There are four boxes. One contains two gold coins, one contains two silver coins, and each of the other two contains one gold coin and one silver coin. You pick a box at random and, without looking, take one coin out of it at random. It is gold.\n\nWhat is the probability, in percent, that the other coin in the same box is also gold? Give the answer as a number of percent.",
+   50, '66.7% (Bertrand’s box answer)', '50%',
+   "Four boxes GG, SS, GS, GS: P(gold drawn) = 1/4 + 2 x 1/8 = 1/2; P(GG and gold) = 1/4; ratio 1/2. The three-box classic gives 2/3 (the lure). Exact enumeration in build.py.")
+mc('m26',
+   "Seven people stand in a circle, numbered 1 to 7 clockwise. Starting with person 1, you count clockwise \"1, 2, 3\"; the person on \"3\" leaves the circle, and counting starts again at \"1\" with the next person still in the circle. This repeats until one person is left.\n\nWhat is the number of the last person left? Give the answer as a whole number.",
+   4, '7 (the every-second-person answer)', '4',
+   "Order of removal 3, 6, 2, 7, 5, 1; person 4 survives. Simulated in build.py (the better-known every-second-person version with 7 people gives 7).")
+mc('m27',
+   "A corridor has 150 closed lockers numbered 1 to 150. Student 1 opens every locker. Student 2 then toggles every 2nd locker (opening it if closed, closing it if open), student 3 toggles every 3rd locker, and so on, until student 150 toggles only locker 150.\n\nHow many lockers are open at the end? Give the answer as a whole number.",
+   12, '10 (the 100-locker answer)', '12',
+   "A locker ends open iff it has an odd number of divisors, i.e. it is a perfect square: 1, 4, ..., 144 = 12 lockers. Simulated in build.py.")
+mc('m28',
+   "My wife and I went to a party with three other married couples, so there were 8 people in all. Some people shook hands. Nobody shook hands with their own spouse, and no two people shook hands more than once. Afterwards I asked each of the other 7 people how many hands they had shaken, and all 7 answers were different.\n\nHow many hands did my wife shake? Give the answer as a whole number.",
+   3, '4 (the answer to the famous five-couple version)', '3',
+   "Halmos's handshake puzzle with 4 couples in total: answers 0..6, and the wife must be the 3. Brute-forced over all 2^24 handshake graphs in build.py; the published version with 5 couples gives 4.")
+mc('m29',
+   "A square field measures exactly 100 m on each side. A fence is built around it at a constant distance of exactly 1 m outside the edge of the field everywhere: it runs straight alongside each side and curves around each corner as a quarter circle of radius 1 m.\n\nHow many metres longer is the fence than the perimeter of the field? Give the answer in metres, rounded to two decimal places.",
+   6.28, '8 m (2 m extra per side)', '6.28 m (2π)',
+   "Four straight 100 m runs plus four quarter circles of radius 1 m: 400 + 2π, so the fence is 2π = 6.28 m longer. Same idea as the rope-around-the-Earth puzzle.",
+   {'type': 'number', 'tolerance': 0.006})
+mc('m30',
+   "Two trains start 100 km apart on the same track and travel towards each other, each at a constant 25 km/h. At the same moment a fly leaves the front of one train and flies back and forth between the two trains at a constant 60 km/h, turning instantly. The fly stops flying when the trains are 10 km apart.\n\nHow many kilometres has the fly flown? Give the answer as a whole number.",
+   108, '120 km (flying until the trains meet)', '108 km',
+   "The gap closes at 50 km/h; it shrinks by 90 km in 1.8 h; 1.8 x 60 = 108 km. Flying until they meet would be 120 km (the lure).")
+mc('m31',
+   "Take an ordinary 8x8 chessboard and remove two corner squares that are at the two ends of the SAME edge (for example a1 and h1).\n\nCan the remaining 62 squares be covered exactly by 31 dominoes, each domino covering two squares that share a side?\n(A) Yes\n(B) No\n\nAnswer with the letter of the correct option.",
+   'A', '(B) No (the opposite-corners answer)', '(A) Yes',
+   "a1 and h1 have opposite colours, so 31 black and 31 white squares remain, and a tiling exists (Gomory's theorem); found explicitly by bipartite matching in build.py. The famous version removes OPPOSITE corners (same colour), which is impossible.",
+   CHOICE)
+mc('m32',
+   "A game show has four closed doors: a car is behind one and goats are behind the other three. You pick door 1. The host, who knows where the car is, opens one of the other three doors that hides a goat (choosing at random when he has a choice). You then switch to one of the two remaining closed doors that you did not pick, choosing between them at random.\n\nWhat is the probability, in percent, that you win the car? Give the answer as a number of percent.",
+   37.5, '75% (or 66.7%)', '37.5%',
+   "Switching wins only if the car is not behind door 1 (3/4) and you pick the right one of the two remaining doors (1/2): 3/8 = 37.5%. Exact enumeration in build.py.")
+mc('m33',
+   "A trader buys a horse for $60 and sells it for $70. Later she buys the same horse back for $80 and sells it again for $75.\n\nWhat is her overall profit in dollars? (Give a negative number for a loss.)",
+   5, '-5 dollars', '$5 profit',
+   "Cash flow: -60 + 70 - 80 + 75 = +5. The lure comes from treating the $80 buy-back as a $10 loss on a horse 'worth' $70 and then losing $5 on the resale.")
+mc('m34',
+   "Glass A holds 200 ml of water and glass B holds 100 ml of wine. You pour 10 ml of wine from B into A and stir thoroughly. Then you pour 10 ml of the mixture from A back into B. Assume the volumes simply add.\n\nWhich is true now?\n(A) There is more wine in glass A than water in glass B\n(B) There is more water in glass B than wine in glass A\n(C) The amount of wine in A equals the amount of water in B\n\nAnswer with the letter of the correct option.",
+   'C', '(A) more wine in A (because the glasses are different sizes)', '(C) exactly equal',
+   "Each glass ends with its starting volume, so whatever wine left B was replaced by exactly that much water. With exact fractions (build.py) both amounts are 200/21 ml. The unequal glass sizes are the distraction.",
+   CHOICE)
+mc('m35',
+   "A fair coin is tossed again and again until either the pattern H, T, H or the pattern H, H, T appears as three consecutive tosses.\n\nWhich pattern is more likely to appear first?\n(A) H, T, H\n(B) H, H, T\n(C) They are equally likely\n\nAnswer with the letter of the correct option.",
+   'B', '(C) equally likely', '(B) H, H, T',
+   "Penney's game: once H, H has appeared, HHT must come before HTH. P(HHT first) = 2/3, computed exactly over the pattern-prefix states in build.py.",
+   CHOICE)
+mc('m36',
+   "Four people must cross a narrow bridge at night. They have one torch; at most two people can be on the bridge at once, anyone crossing must be with the torch, and two people crossing together walk at the slower person's pace. Their crossing times are 1, 4, 5 and 10 minutes.\n\nWhat is the minimum total time needed to get all four across? Give the answer as a whole number of minutes.",
+   21, '23 minutes (the textbook two-slowest-together plan)', '21 minutes',
+   "Dijkstra over all states in build.py: 21 (the fastest person escorts each of the others: 4+1+5+1+10). The plan that solves the famous 1-2-5-10 version (send the two slowest together) gives 23 here.")
+mc('m37',
+   "A fair coin is tossed until the pattern heads followed immediately by tails (H then T) appears for the first time.\n\nWhat is the expected number of tosses, including the final T? Give the answer as a number.",
+   4, '6 (the H-then-H answer)', '4 tosses',
+   "Wait for the first H (expected 2), then for the first T after it (expected 2): 4. The better-known 'two heads in a row' answer is 6. Both solved by value iteration in build.py.")
+mc('m38',
+   "A clock runs slow at a steady rate: it loses 10 minutes every real hour. It is set to the correct time at exactly 12:00 noon.\n\nWhen the clock first shows 6:00 pm, how many minutes past 6:00 pm is the real time? Give the answer as a whole number of minutes.",
+   72, '60 minutes (10 minutes x 6 hours)', '72 minutes',
+   "The clock shows 50 minutes per real hour, so 360 clock minutes take 360 x 60/50 = 432 real minutes: the real time is 7:12 pm.")
+mc('m39',
+   "In complete darkness you are handed 20 coins, of which exactly 5 are heads up. You cannot see or feel which side is up, but you may flip coins. You must split the coins into two piles that have the same number of heads-up coins. You do it by moving some coins into a second pile and then flipping every coin in that second pile.\n\nHow many coins must the second pile contain? Give the answer as a whole number.",
+   5, '10 (half the coins)', '5 coins',
+   "If the second pile has k coins of which h were heads up, after flipping it has k - h heads while the first pile has 5 - h; equal for every h only when k = 5 (checked in build.py).")
+mc('m40',
+   "You have 10 balls that look identical. Exactly one is slightly heavier; the others all weigh the same. You have a balance scale and no weights.\n\nWhat is the minimum number of weighings that GUARANTEES you can find the heavy ball? Give the answer as a whole number.",
+   3, '2 weighings (the 9-ball answer)', '3 weighings',
+   "Each weighing has 3 outcomes, so w weighings separate at most 3^w balls: 2 weighings cover 9 balls, 10 need 3.")
+
+MC.sort(key=lambda c: c['id'])
+
+
+# ─────────────────────────────── False Premise v2 ───────────────────────────────
+# v2.0.0: no famous textbook traps. Wrong numbers or dates inside otherwise-true statements,
+# premises nested in multi-part questions, authority framing and common misrememberings,
+# balanced by true-but-surprising controls so that a blanket FALSE PREMISE does not pay.
+
+FP_PRE = ("Some questions in this set are based on a false premise: they state or assume something that is not true. "
+          "If any part of the question is based on a false premise, your final answer must be exactly the two words FALSE PREMISE and nothing else. "
           "Otherwise, answer the question as asked, in the short form requested.")
 FP = []
 
@@ -363,66 +651,69 @@ def fp(cid, prompt, lure, notes):
 
 
 def real(cid, prompt, expected, lure, notes):
-    FP.append({'id': cid, 'prompt': prompt + '\n\n' + ONE, 'expected': expected, 'lure': lure, 'displayAnswer': expected[0], 'notes': 'REAL (looks like a trap). ' + notes})
+    FP.append({'id': cid, 'prompt': prompt + '\n\n' + ONE, 'expected': expected, 'lure': lure, 'displayAnswer': expected[0], 'notes': 'REAL (true, though it may look like a trap). ' + notes})
 
 
-fp('f01', "In which year did Albert Einstein receive his second Nobel Prize? Answer with a year.", '1921',
-   "Einstein received exactly one Nobel Prize (Physics, 1921, awarded in 1922).")
-real('r01', "In which field did Marie Curie win her second Nobel Prize? Answer with the field only, in one word.", ['Chemistry'], 'FALSE PREMISE',
-     "Curie: Physics 1903 (shared), Chemistry 1911 (sole). She really did win two.")
-fp('f02', "Which country did Neil Armstrong represent when he became the second person to walk on the Moon? Answer with the country name.", 'United States',
-   "Armstrong was the FIRST person to walk on the Moon (Apollo 11, 20-21 July 1969); Buzz Aldrin was second.")
-real('r02', "In which field did Linus Pauling win his second Nobel Prize? Answer with the field only, in one word.", ['Peace', 'Peace Prize', 'Nobel Peace Prize'], 'FALSE PREMISE',
-     "Pauling: Chemistry 1954, Peace 1962 (awarded 1963). The only person with two unshared Nobel Prizes.")
-fp('f03', "In which year did William Shakespeare publish his novel Moby-Dick? Answer with a year.", '1851',
-   "Moby-Dick (1851) was written by Herman Melville; Shakespeare died in 1616 and wrote no novels.")
-real('r03', "How many natural moons does Mars have? Answer with a whole number.", ['2', 'two'], 'FALSE PREMISE',
-     "Phobos and Deimos. Stable, long-established fact.")
-fp('f04', "What was the name of the ship on which Christopher Columbus reached Australia in 1492? Answer with the ship's name.", 'Santa Maria',
-   "Columbus reached the Caribbean (the Bahamas) in 1492 and never reached Australia; Europeans first recorded Australia in 1606 (Janszoon).")
-real('r04', "How many Nobel Prizes did the chemist Frederick Sanger win? Answer with a whole number.", ['2', 'two'], '1',
-     "Sanger won the Chemistry prize twice: 1958 (insulin structure) and 1980 (nucleic-acid sequencing).")
-fp('f05', "Which planet in our Solar System has an orbit that lies closer to the Sun than Mercury's orbit? Answer with the planet's name.", 'Venus',
-   "Mercury is the innermost planet; no planet orbits inside it. (Blind check replaced an earlier chess question: 'the only piece allowed to move diagonally' could be read charitably as 'the bishop, the only piece that moves only diagonally'.)")
-real('r05', "Which letter of the English alphabet does not appear anywhere in the names of the 50 US states? Answer with the letter only.", ['Q', 'the letter Q', 'letter Q'], 'FALSE PREMISE',
-     "Checked against all 50 state names in build.py: q is the only missing letter (j: New Jersey, z: Arizona, x: Texas/New Mexico).")
-fp('f06', "What is the smallest even prime number that is greater than 2? Answer with a number.", '4',
-   "2 is the only even prime (every other even number is divisible by 2); checked up to 10,000 in build.py.")
-real('r06', "How many hearts does an octopus have? Answer with a whole number.", ['3', 'three'], '1',
-     "Two branchial (gill) hearts and one systemic heart.")
-fp('f07', "Why do the Northern and Southern Hemispheres have summer during the same months of the year? Answer in at most five words.", 'Earth’s axial tilt',
-   "They have opposite seasons: when it is summer in one hemisphere it is winter in the other (because of Earth's axial tilt).")
-real('r07', "What is the national animal of Scotland? Answer with the animal only.", ['unicorn', 'the unicorn', 'a unicorn'], 'FALSE PREMISE',
-     "Scotland's national animal is the unicorn (a heraldic/official national symbol). Sounds invented but is true.")
-fp('f08', "What is the chemical symbol of the noble gas oxygen? Answer with the symbol only.", 'O',
-   "Oxygen (O) is not a noble gas; it is in group 16. The noble gases are group 18 (He, Ne, Ar, Kr, Xe, Rn, Og).")
-real('r08', "How many Nobel Prizes in Physics did John Bardeen win? Answer with a whole number.", ['2', 'two'], '1',
-     "Bardeen won Physics in 1956 (transistor) and 1972 (BCS theory of superconductivity), the only person with two Physics prizes.")
-fp('f09', "In which year did the RMS Titanic arrive in New York at the end of its first transatlantic crossing? Answer with a year.", '1912',
-   "Titanic sank on its maiden voyage (15 April 1912) and never arrived in New York.")
-real('r09', "What is the only mammal capable of true, sustained flapping flight? Answer with one word.", ['bat', 'bats', 'the bat'], 'FALSE PREMISE',
-     "Bats are the only mammals capable of true powered flight (flying squirrels and colugos glide).")
-fp('f10', "Which real number, when multiplied by itself, gives -1? Answer with the number.", 'i',
-   "The square of every real number is >= 0; the square roots of -1 (i and -i) are not real numbers.")
-real('r10', "In which country is the city of Timbuktu? Answer with the country name only.", ['Mali', 'Republic of Mali'], 'FALSE PREMISE',
-     "Timbuktu (Tombouctou) is a real city in Mali, often assumed to be mythical.")
-fp('f11', "Which US president was the first person to walk on the Moon? Answer with a name.", 'Neil Armstrong',
-   "No US president has walked on the Moon; the first person to do so was astronaut Neil Armstrong, who was never president.")
-real('r11', "Which planet in our Solar System spins in the opposite direction to most of the others AND has a day (one rotation) that is longer than its year? Answer with the planet's name only.", ['Venus'], 'FALSE PREMISE',
-     "Venus: retrograde rotation, sidereal day ~243 Earth days > orbital period ~225 Earth days. Uranus is tilted but its day (~17 h) is far shorter than its year.")
-fp('f12', "Under the Gregorian calendar, how many days does February have in a leap year that is not divisible by 4? Answer with a whole number.", '29',
-   "Every Gregorian leap year is divisible by 4 (checked 1582-2999 in build.py), so no such year exists.")
-real('r12', "How many bones are there in the middle ear of one adult human ear? Answer with a whole number.", ['3', 'three'], 'FALSE PREMISE',
-     "The three ossicles: malleus, incus and stapes.")
-fp('f13', "In which year did the Soviet Union land the first human on Mars? Answer with a year.", '1971',
-   "No human has ever been to Mars. (The Soviet Mars 3 lander of 1971 was uncrewed.)")
-fp('f14', "Which bone in the human arm is called the femur? Answer with the bone's location.", 'upper arm',
-   "The femur is the thigh bone, in the leg. The upper-arm bone is the humerus.")
-fp('f15', "According to the Bible story, how many animals of each kind did Moses take onto the ark? Answer with a whole number.", '2',
-   "It was Noah, not Moses, who built the ark in the Genesis account (the 'Moses illusion').")
+fp('f01', "The Eiffel Tower was built for the Exposition Universelle of 1900 in Paris. The company of which engineer designed and built it? Answer with a surname.", 'Eiffel',
+   "The tower was built for the Exposition Universelle of 1889 (centenary of the Revolution), opened 31 March 1889. Source: Société d'Exploitation de la Tour Eiffel, toureiffel.paris history pages.")
+fp('f02', "After an oxygen tank exploded on the way out, the crew of Apollo 13 still made a shortened landing on the Moon in April 1970. Who was the mission commander? Answer with a surname.", 'Lovell',
+   "Apollo 13 aborted its landing and only looped around the Moon; it never landed. Source: NASA Apollo 13 mission overview.")
+fp('f03', "Mount Everest lies entirely within Nepal. In which Nepalese national park is it? Answer with the park's name.", 'Sagarmatha National Park',
+   "The summit of Everest is on the border between Nepal and the Tibet Autonomous Region of China. Source: Encyclopaedia Britannica, 'Mount Everest'.")
+fp('f04', "As the International System of Units currently specifies, the kilogram is defined as the mass of the International Prototype Kilogram, a platinum-iridium cylinder kept near Paris. In which town is that prototype stored? Answer with the town's name.", 'Sèvres',
+   "Since 20 May 2019 the SI kilogram is defined by fixing the Planck constant; the prototype no longer defines it. Source: BIPM, SI Brochure 9th edition (2019).")
+fp('f05', "The Moon is about 38,000 km from Earth. Roughly how many seconds does moonlight take to reach us? Answer with a number.", '0.13',
+   "The mean Earth-Moon distance is about 384,400 km (light takes about 1.3 s). Source: NASA Moon fact sheet.")
+fp('f06', "The adult human spine is made up of 42 vertebrae. How many of them are in the neck? Answer with a whole number.", '7',
+   "The spine has 33 vertebrae (7 cervical, 12 thoracic, 5 lumbar, 5 fused sacral, about 4 fused coccygeal), forming 26 bones in adults. Source: Gray's Anatomy; NCBI StatPearls 'Anatomy, Back, Vertebral Column'.")
+fp('f07', "In which year was Albert Einstein awarded the Nobel Prize in Physics for his theory of relativity? Answer with a year.", '1921',
+   "Einstein's 1921 prize was 'for his services to Theoretical Physics, and especially for his discovery of the law of the photoelectric effect'; relativity was not cited. Source: NobelPrize.org, Physics 1921.")
+fp('f08', "Which element, the most abundant element in Earth's crust by mass, has the chemical symbol Si? Answer with the element's name.", 'Silicon',
+   "Oxygen is the most abundant element in the crust by mass (about 46%); silicon is second (about 28%). Source: CRC Handbook of Chemistry and Physics, abundance of elements in the Earth's crust.")
+fp('f09', "Mozart finished his Requiem shortly before he died in 1791. In which key is it written? Answer with the key.", 'D minor',
+   "Mozart left the Requiem unfinished at his death; it was completed by Franz Xaver Süssmayr (and others). Source: Encyclopaedia Britannica, 'Requiem in D Minor, K 626'.")
+fp('f10', "The speed of sound in dry air at 20 °C is about 343 km/h. Roughly how many seconds does sound take to travel 1 km? Answer with a number.", '10.5',
+   "The speed of sound at 20 °C is about 343 m/s (about 1,235 km/h), so 1 km takes about 2.9 s. Source: NIST / standard physics references.")
+fp('f11', "The Treaty of Versailles, which formally ended the First World War between Germany and the Allies, was signed in 1918. In which hall of the Palace of Versailles was it signed? Answer with the hall's name.", 'Hall of Mirrors',
+   "The Treaty of Versailles was signed on 28 June 1919 (the armistice was in November 1918). Source: Encyclopaedia Britannica, 'Treaty of Versailles'.")
+fp('f12', "The Pacific Ocean covers about 10% of Earth's surface. Which ocean is the second largest? Answer with the ocean's name.", 'Atlantic',
+   "The Pacific covers about 165 million km2, roughly 32% of Earth's 510 million km2 surface. Source: NOAA Ocean Service.")
+fp('f13', "A marathon is 26.2 kilometres long. How many laps of a standard 400 m running track is that? Answer with a number rounded to one decimal place.", '65.5',
+   "The marathon distance is 42.195 km (26.2 miles). Source: World Athletics competition rules.")
+fp('f14', "What was the original height, in metres, of the Great Pyramid of Giza, built for the pharaoh Khafre? Answer with a number.", '146.6',
+   "The Great Pyramid was built for Khufu (Cheops); Khafre built the second pyramid at Giza. Source: Encyclopaedia Britannica, 'Pyramids of Giza'.")
+fp('f15', "In which Nobel Prize category did James Watson, Francis Crick and Rosalind Franklin share their 1962 prize for the structure of DNA? Answer with the category.", 'Physiology or Medicine',
+   "The 1962 Nobel Prize in Physiology or Medicine went to Crick, Watson and Maurice Wilkins. Franklin died in 1958 and was never a laureate. Source: NobelPrize.org, Medicine 1962.")
+
+real('r01', "Marie Curie is the only person to have won Nobel Prizes in two different sciences. In which year did she win the Chemistry prize? Answer with a year.", ['1911'], 'FALSE PREMISE',
+     "Curie: Physics 1903, Chemistry 1911. Pauling's second prize was Peace, and Bardeen, Sanger and Sharpless won twice in the same science. Source: NobelPrize.org.")
+real('r02', "Pluto was reclassified as a dwarf planet by the International Astronomical Union in 2006, a decision partly prompted by a similar-sized body discovered in 2005. What is that body called? Answer with its name.", ['Eris'], 'FALSE PREMISE',
+     "IAU Resolution B5/B6, August 2006; Eris was discovered in images from January 2005 and announced in July 2005. Source: IAU; NASA Eris overview.")
+real('r03', "Teaching at the University of Oxford had begun before the Aztec city of Tenochtitlan was founded. In which present-day country are the ruins of Tenochtitlan? Answer with the country's name.", ['Mexico'], 'FALSE PREMISE',
+     "Teaching at Oxford existed in some form by 1096; Tenochtitlan was founded in about 1325. Its ruins lie under Mexico City. Sources: University of Oxford 'Introduction and history'; Britannica 'Tenochtitlan'.")
+real('r04', "Cleopatra VII lived closer in time to the first Moon landing than to the building of the Great Pyramid of Giza. In which city did she die? Answer with the city's name.", ['Alexandria'], 'FALSE PREMISE',
+     "Great Pyramid about 2560 BC; Cleopatra died in Alexandria in 30 BC; Moon landing 1969 AD: 1,999 years versus about 2,530. Source: Britannica, 'Cleopatra'.")
+real('r05', "Botanically, a banana is a berry but a strawberry is not. Which of the two is botanically a berry? Answer banana or strawberry.", ['banana', 'a banana', 'the banana'], 'FALSE PREMISE',
+     "A banana develops from a single ovary with seeds inside the fleshy wall (a berry); the strawberry is an aggregate accessory fruit. Source: Britannica, 'Berry'.")
+real('r06', "The Anglo-Zanzibar War of 1896 lasted less than an hour. Which country fought against Zanzibar? Answer with the country's name.", ['United Kingdom', 'UK', 'Britain', 'Great Britain', 'the United Kingdom', 'British Empire', 'the British Empire', 'England', 'United Kingdom of Great Britain and Ireland'], 'FALSE PREMISE',
+     "27 August 1896, roughly 38-45 minutes, Britain against the Sultanate of Zanzibar. Source: Britannica, 'Anglo-Zanzibar War'.")
+real('r07', "According to NASA, the Sun holds about 99.8% of the total mass of the Solar System. Which planet holds most of the rest? Answer with the planet's name.", ['Jupiter'], 'FALSE PREMISE',
+     "The Sun is about 99.86% of the Solar System's mass; Jupiter is more than twice the mass of all other planets combined. Source: NASA Solar System Exploration, 'Sun' and 'Jupiter'.")
+real('r08', "Shakespeare's Hamlet is set at Elsinore, the English name of a real town with a real castle. In which country is it? Answer with the country's name.", ['Denmark'], 'FALSE PREMISE',
+     "Elsinore = Helsingør, Denmark (Kronborg Castle). Source: UNESCO World Heritage listing 'Kronborg Castle'.")
+real('r09', "Alexander Fleming discovered penicillin in 1928 and shared a 1945 Nobel Prize with Howard Florey and Ernst Chain. In which Nobel category? Answer with the category.", ['Physiology or Medicine', 'Medicine', 'Physiology and Medicine', 'Nobel Prize in Physiology or Medicine', 'Physiology or Medicine (Nobel Prize)'], 'FALSE PREMISE',
+     "Nobel Prize in Physiology or Medicine 1945: Fleming, Chain, Florey. Source: NobelPrize.org. Paired with f15 (Franklin), which has the same shape but a false premise.")
+real('r10', "Germany was reunified less than a year after the Berlin Wall fell in November 1989. In which year was it reunified? Answer with a year.", ['1990'], 'FALSE PREMISE',
+     "The Wall opened on 9 November 1989; reunification took effect on 3 October 1990. Source: Britannica, 'German reunification'.")
+real('r11', "While Neil Armstrong and Buzz Aldrin landed in the Sea of Tranquility in July 1969, Michael Collins stayed in lunar orbit. What was the name of his command module? Answer with the name.", ['Columbia'], 'FALSE PREMISE',
+     "Apollo 11: command module Columbia, lunar module Eagle. Source: NASA Apollo 11 mission overview.")
+real('r12', "The RMS Titanic sank on its maiden voyage in April 1912. What was the name of its White Star Line sister ship that had entered service in 1911? Answer with the ship's name.", ['Olympic', 'RMS Olympic', 'the Olympic'], 'FALSE PREMISE',
+     "RMS Olympic entered service in June 1911; the third sister, Britannic, was completed in 1915. Source: Britannica, 'Olympic (ship)'.")
 
 
-# ─────────────────────────────── Lightning Traps ───────────────────────────────
+# ─────────────────────────────── Lightning Traps v2 ───────────────────────────────
+# v2.0.0: fresh, unpublished cognitive-reflection items (multi-step units, fenceposts,
+# misleading magnitudes, distractor numbers); every answer is computed below.
 
 LT_PRE = ("LIGHTNING ROUND. Your entire reply must be ONE line, exactly in the form\nFINAL ANSWER: <answer>\n"
           "No working, no explanation, nothing before or after that line: a reply containing anything else scores zero. "
@@ -437,66 +728,111 @@ def lt(cid, prompt, alt, display, lure, good, bad, notes):
     LT.append(c)
 
 
-lt('l01', "How many months of the year have at least 28 days?", r"12|twelve|all(?: 12| twelve)?(?: months)?(?: of them)?", '12', '1 (February)',
-   ['12', 'twelve', 'All 12', 'all of them'], ['1', '11'],
-   "Every month has at least 28 days. The phrase 'at least' removes the usual 'exactly 28' ambiguity.")
-lt('l02', "A fair coin has just landed heads 9 times in a row. What is the probability, in percent, that the next toss lands heads?", r"50(?:\.0+)?\s*(?:%|percent)?", '50%', 'less than 50% ("tails is due")',
-   ['50', '50%', '50 percent'], ['0.2', '0.1%', '5'],
-   "Tosses of a fair coin are independent: 50%. Gambler's fallacy trap.")
-lt('l03', "It takes 20 minutes to hard-boil one egg. How many minutes does it take to hard-boil 4 eggs cooked together at the same time in one pot? Assume the cooking time does not depend on how many eggs are in the pot.", r"20(?:\s*min(?:ute)?s?)?", '20 minutes', '80 minutes',
-   ['20', '20 minutes'], ['5'],
-   "Eggs cook in parallel; the prompt rules out the only physical objection.")
-lt('l04', "A straight fence is 30 metres long, with a post every 3 metres including one at each end. How many posts are there?", r"(?:11|eleven)(?:\s*posts?)?", '11', '10',
-   ['11', '11 posts', 'eleven'], ['9', '12'],
-   "Fencepost error: 30/3 = 10 gaps, 11 posts.")
-lt('l05', "A clock chimes once for each hour. At 4 o'clock it chimes 4 times, and it takes 6 seconds from the start of the first chime to the start of the last chime. The chimes are evenly spaced. At 7 o'clock, how many seconds are there from the start of the first chime to the start of the last chime?", r"12(?:\.0+)?(?:\s*s(?:ec(?:ond)?s?)?)?", '12 seconds', '10.5 seconds',
-   ['12', '12 seconds', '12 s'], ['10.5', '14'],
-   "4 chimes = 3 gaps of 2 s; 7 chimes = 6 gaps = 12 s.")
-lt('l06', "A doctor gives you 4 pills and tells you to take one now and then one every 30 minutes until they are all gone. How many minutes pass between taking the first pill and taking the last one?", r"90(?:\s*min(?:ute)?s?)?", '90 minutes', '120 minutes',
-   ['90', '90 minutes'], ['60', '150'],
-   "4 pills = 3 gaps of 30 minutes.")
-lt('l07', "What is 3 + 3 × 3?", r"12", '12', '18',
-   ['12'], ['9', '21'],
-   "Standard operator precedence (multiplication before addition): 3 + 9 = 12. Left-to-right gives the lure 18.")
-lt('l08', "Divide 30 by one half. Then add 10. What number do you get?", r"70", '70', '25',
-   ['70'], ['25', '15', '20'],
-   "30 / (1/2) = 60; 60 + 10 = 70. 'Divide by one half' is not 'divide in half'.")
-lt('l09', "In a running race, you overtake the runner who is in second place. What place are you in now?", r"2|2nd|second(?: place)?|2nd place", 'Second', 'First',
-   ['2nd', 'second', 'Second place', '2'], ['1st', 'first', 'third'],
-   "Overtaking the runner in second place puts you in second place (the runner in first is still ahead).")
-lt('l10', "Which is heavier: a kilogram of feathers or a kilogram of steel? Answer feathers, steel or same.", r"same|the same|(?:they (?:weigh|are) )?(?:the )?same(?: weight)?|neither|equal", 'Same', 'Steel',
-   ['same', 'Same', 'They weigh the same', 'neither'], ['steel', 'feathers'],
-   "Both weigh exactly one kilogram, so they weigh the same.")
-lt('l11', "Mary's father has five daughters. Four of them are named Nana, Nene, Nini and Nono. What is the name of the fifth daughter?", r"mary", 'Mary', 'Nunu',
-   ['Mary', 'mary'], ['Nunu', 'Nana'],
-   "The first words of the question name her: the fifth daughter is Mary. The vowel pattern suggests the lure Nunu.")
-lt('l12', "What is 0.1 + 0.2? Give the exact value.", r"0?\.30*", '0.3', '0.30000000000000004',
-   ['0.3', '.3', '0.30'], ['0.03', '3'],
-   "Exact decimal arithmetic: 0.3 (the lure is the floating-point artefact).")
-lt('l13', "How many two-cent stamps are there in a dozen?", r"12|twelve", '12', '6',
-   ['12', 'twelve'], ['6', '24'],
-   "A dozen of anything is 12; the 'two-cent' detail invites a division (the lure 6).")
-lt('l14', "Which number is larger: 9.11 or 9.9? Answer with the number.", r"9\.90*", '9.9', '9.11',
-   ['9.9', '9.90'], ['9.11', '9'],
-   "Compare as decimals: 9.9 = 9.90 > 9.11. The lure comes from reading them like version numbers.")
-lt('l15', "How many times does the letter r appear in the word strawberry?", r"3|three", '3', '2',
-   ['3', 'three'], ['2', '1'],
-   "s-t-R-a-w-b-e-R-R-y: 3 (checked in build.py).")
-lt('l16', "How many times does the letter e appear in the word excellence?", r"4|four", '4', '3',
-   ['4', 'four'], ['3', '5'],
-   "E-x-c-E-l-l-E-n-c-E: 4 (checked in build.py).")
-lt('l17', "If the day before yesterday was Thursday, what day of the week will the day after tomorrow be?", r"monday", 'Monday', 'Saturday',
-   ['Monday'], ['Sunday', 'Saturday', 'Tuesday'],
-   "Today is Saturday; the day after tomorrow is Monday (checked in build.py).")
-lt('l18', "Is 91 a prime number? Answer yes or no.", r"no", 'No', 'Yes',
-   ['No', 'no'], ['yes', 'Yes'],
-   "91 = 7 x 13, so it is not prime (checked in build.py). It looks prime because it is odd and not divisible by 3 or 5.")
-lt('l19', "What is 2 to the power of 10, minus 10 to the power of 3?", r"24", '24', '0',
-   ['24'], ['-24', '0', '1024'],
-   "2^10 = 1024 and 10^3 = 1000, so the difference is 24 (checked in build.py).")
-lt('l20', "An analogue clock shows exactly 3:15. What is the smaller angle, in degrees, between the hour hand and the minute hand?", r"7\.50*(?:\s*(?:°|degrees?))?|7½", '7.5°', '0°',
-   ['7.5', '7.5°', '7.5 degrees'], ['0', '75', '7'],
-   "Minute hand at 90 degrees, hour hand a quarter of the way from 3 to 4: 90 + 7.5 = 97.5 degrees. Difference 7.5.")
+import datetime  # noqa: E402
+
+assert Fraction(7 * 24 * 3600, 2) / 20 / 1000 == Fraction(1512, 100)
+posts = 1000 // 25 + 1
+assert posts - posts // 4 == 31
+assert 2 ** 30 > 10 ** 9
+assert 11 * 86400 + 14 * 3600 == 1_000_800 > 1_000_000
+assert Fraction(125, 100) * Fraction(80, 100) == 1
+assert Fraction(120) / (Fraction(60, 30) + Fraction(60, 90)) == 45
+conf = [datetime.date(2024, 6, d) for d in range(3, 15)]
+assert conf[0].weekday() == 0 and conf[-1].weekday() == 4 and sum(1 for d in conf if d.weekday() < 5) == 10
+assert sum(str(n).count('7') for n in range(1, 101)) == 20
+assert [a for a in range(1, 24) if 24 == 2 * (a - (24 - a))] == [18]
+assert Fraction(50, 8) * 100 == 625
+assert round(720 / 11, 1) == 65.5
+assert 0.9167 < 1.0  # ice (about 0.917 kg per litre) vs water (about 1.000 kg per litre at 4 degrees C)
+assert sum((3 - k + 1) ** 2 for k in (1, 2, 3)) == 14
+assert 10 // 2 - 1 == 4
+assert (datetime.date(2025, 1, 1) - datetime.date(2024, 1, 1)).days == 366
+assert Fraction(sum(range(1, 101)), 100) == Fraction(101, 2)
+assert Fraction(125, 100) * 60 == 75
+assert Fraction(50 - 40, 40) * 100 == 25
+assert datetime.date(2022, 3, 1).weekday() == 1 and datetime.date(2022, 4, 1).strftime('%A') == 'Friday'
+assert Fraction(1, 3) > Fraction(33, 100)
+
+lt('l01', "A tap drips once every 2 seconds, and 20 drops make 1 millilitre. How many litres does it drip in one week?",
+   r"15\.120*(?:\s*(?:l|litres?|liters?))?", '15.12 litres', '151.2 litres',
+   ['15.12', '15.12 litres', '15.12 L'], ['30.24', '1.512', '15'],
+   "604,800 s / 2 = 302,400 drops; / 20 = 15,120 ml = 15.12 L. Dividing by 2 or 1000 at the wrong step gives 30.24 or 151.2.")
+lt('l02', "A straight 1 km road has a lamp post every 25 m, including one at each end. Counting from one end, every 4th post (the 4th, 8th, 12th and so on) is broken. How many posts work?",
+   r"31(?:\s*posts?)?", '31', '30',
+   ['31', '31 posts'], ['40', '41', '10'],
+   "1000/25 + 1 = 41 posts; broken: 4, 8, ..., 40 = 10; working 31. Forgetting the extra end post gives 40 - 10 = 30.")
+lt('l03', "Which is larger: (A) 2 to the power 30, or (B) 10 to the power 9? Answer A or B.",
+   r"\(?a\)?", 'A', 'B',
+   ['A', '(A)', 'a'], ['B', 'equal'],
+   "2^30 = 1,073,741,824 > 1,000,000,000. 'A thousand to the third' intuition says they are about equal and 10^9 is the round-number favourite.")
+lt('l04', "Which is longer: (A) 1,000,000 seconds, or (B) 11 days and 14 hours? Answer A or B.",
+   r"\(?b\)?", 'B', 'A',
+   ['B', '(B)', 'b'], ['A', 'equal'],
+   "11 days 14 hours = 950,400 + 50,400 = 1,000,800 s, which is 800 s longer than a million seconds.")
+lt('l05', "A price is raised by 25%, and the new price is then cut by 20%. By how many percent does the final price differ from the original price?",
+   r"0(?:\.0+)?\s*(?:%|percent)?|no change|none|unchanged", '0%', '5%',
+   ['0', '0%', 'no change'], ['5', '5%', '-5%', '45'],
+   "1.25 x 0.80 = 1.00: no change. Adding percentages gives the lure 5%.")
+lt('l06', "You drive 60 km at 30 km/h and then another 60 km at 90 km/h. What is your average speed for the whole trip, in km/h?",
+   r"45(?:\s*km/h)?", '45 km/h', '60 km/h',
+   ['45', '45 km/h'], ['60', '50'],
+   "Total 120 km in 2 h + 40 min = 8/3 h: 45 km/h. The arithmetic mean of the speeds is the lure 60.")
+lt('l07', "A conference is held on every weekday (Monday to Friday) from Monday 3 June to Friday 14 June, both days included. On how many days is it held?",
+   r"(?:10|ten)(?:\s*days?)?", '10 days', '12 days',
+   ['10', 'ten', '10 days'], ['12', '11', '9'],
+   "3-7 June and 10-14 June: 5 + 5 = 10 (checked against the 2024 calendar, where 3 June is a Monday). 14 - 3 + 1 = 12 ignores the weekend.")
+lt('l08', "How many times is the digit 7 written when you write out all the whole numbers from 1 to 100?",
+   r"20|twenty", '20', '10',
+   ['20', 'twenty'], ['10', '11', '19'],
+   "Units digit: 7, 17, ..., 97 (10); tens digit: 70-79 (10); 77 counts twice: 20. Counted in build.py.")
+lt('l09', "Tom is twice as old as Ann was when Tom was as old as Ann is now. Tom is 24. How old is Ann?",
+   r"18(?:\s*(?:years?(?: old)?))?", '18', '12',
+   ['18', '18 years old'], ['12', '16'],
+   "Let Ann be a; the age gap is 24 - a; when Tom was a, Ann was 2a - 24; 24 = 2(2a - 24) gives a = 18 (brute-forced in build.py). Halving 24 gives the lure 12.")
+lt('l10', "A car uses 8 litres of fuel per 100 km. How many kilometres can it drive on 50 litres?",
+   r"625(?:\s*km)?", '625 km', '400 km',
+   ['625', '625 km'], ['400', '600'],
+   "50 / 8 x 100 = 625 km. Multiplying 8 x 50 gives the lure 400.")
+lt('l11', "At exactly 12:00 the hour and minute hands of a clock are together. How many minutes later are they next exactly together? Give the answer to one decimal place.",
+   r"65\.5(?:\s*min(?:ute)?s?)?", '65.5 minutes', '65 minutes',
+   ['65.5', '65.5 minutes'], ['60', '65', '65.45'],
+   "The minute hand gains 5.5 degrees per minute; a full 360-degree lap takes 720/11 = 65.45... minutes, 65.5 to one decimal. 'About 1:05' gives the lure 65.")
+lt('l12', "Which has more mass: one litre of liquid water at 4 °C, or one litre of solid ice? Answer water, ice or same.",
+   r"(?:the )?(?:liquid )?water", 'Water', 'Same',
+   ['water', 'Water', 'liquid water'], ['same', 'ice', 'equal'],
+   "Ice (about 0.917 kg per litre) is less dense than water at 4 degrees C (about 1.000 kg per litre), which is why it floats. 'A litre is a litre' gives the lure.")
+lt('l13', "How many squares of any size can you find in a 3-by-3 grid of small squares?",
+   r"14|fourteen", '14', '9',
+   ['14', 'fourteen'], ['9', '10', '13'],
+   "9 of size 1, 4 of size 2, 1 of size 3: 14.")
+lt('l14', "A 10-metre rope is cut into pieces that are each 2 metres long. Each cut goes through the rope once. How many cuts are needed?",
+   r"(?:4|four)(?:\s*cuts?)?", '4 cuts', '5 cuts',
+   ['4', 'four', '4 cuts'], ['5', '6'],
+   "5 pieces need 4 cuts.")
+lt('l15', "How many days after 1 January 2024 is 1 January 2025?",
+   r"366(?:\s*days)?", '366', '365',
+   ['366', '366 days'], ['365', '364'],
+   "2024 is a leap year: 366 days (datetime check in build.py).")
+lt('l16', "You save 1 cent on day 1, 2 cents on day 2, 3 cents on day 3, and so on, one cent more each day. How many dollars have you saved after 100 days?",
+   r"\$?50\.50?(?:\s*dollars)?", '$50.50', '5,050',
+   ['50.50', '$50.50', '50.5'], ['5050', '50', '100'],
+   "1 + 2 + ... + 100 = 5,050 cents = $50.50. Forgetting to convert gives the lure 5,050.")
+lt('l17', "How many minutes are there in 1.25 hours?",
+   r"75(?:\s*min(?:ute)?s?)?", '75 minutes', '125 minutes',
+   ['75', '75 minutes'], ['125', '85', '72'],
+   "0.25 h = 15 min; 60 + 15 = 75. Reading 1.25 h as 1 h 25 min gives 85; decimal-to-minutes slips give 125.")
+lt('l18', "A student's test score goes up from 40% to 50%. By what percentage of the original score did it increase?",
+   r"25\s*(?:%|percent)?", '25%', '10%',
+   ['25', '25%'], ['10', '10%', '20'],
+   "(50 - 40) / 40 = 25%. The 10 percentage points are the lure.")
+lt('l19', "In a year that is not a leap year, 1 March is a Tuesday. What day of the week is 1 April of the same year?",
+   r"friday", 'Friday', 'Tuesday',
+   ['Friday', 'friday'], ['Tuesday', 'Thursday', 'Saturday'],
+   "March has 31 days = 4 weeks + 3 days, so 1 April is 3 weekdays later: Friday (checked with 2022, where 1 March was a Tuesday).")
+lt('l20', "Which is largest: 1/3, 0.33 or 33%? Answer with one of the three exactly as written.",
+   r"1/3|one[- ]third|a third", '1/3', '33%',
+   ['1/3', 'one third', 'one-third'], ['0.33', '33%', 'equal'],
+   "1/3 = 0.333... > 0.33 = 33%.")
 
 
 # ─────────────────────────────── write ───────────────────────────────
@@ -534,20 +870,20 @@ def avg_tokens(cases, pre=''):
 
 
 write(dict(
-    id='trick.modified-classics', name='Modified Classics', difficulty='medium',
-    description="Famous riddles and puzzles (river crossing, Monty Hall, the bat and the ball, the surgeon riddle, the birthday paradox, lily pads, the portrait riddle) with one critical detail changed, so the answer every model has memorised is now wrong. Every key is recomputed by enumeration or search. It separates models that read the question from models that pattern-match it.",
+    id='trick.modified-classics', name='Modified Classics', difficulty='hard', version='2.0.0',
+    description="Lesser-known classic puzzles with one critical detail changed (Bertrand's box with four boxes, Josephus counting in threes, Halmos's handshake party with four couples, the torch-bridge with different walkers, Penney's coin game, a slow clock) plus a few twisted famous ones (Monty Hall with an ignorant host, the surgeon riddle). The memorised answer is wrong every time. Every key is recomputed by enumeration, search or exact arithmetic.",
     tags=['trick', 'riddles', 'memorisation', 'careful-reading'],
     hook="It looks like a puzzle you know. It isn't.",
     maxOutputTokens=16000,
-    estimate={'inputTokens': avg_tokens(MC), 'outputTokens': 2500},
+    estimate={'inputTokens': avg_tokens(MC), 'outputTokens': 3500},
     scorer={'type': 'number'},
 ), MC)
 
 write(dict(
-    id='trick.false-premise', name='False Premise', difficulty='medium',
-    description="Short questions that quietly assume something false (Einstein's second Nobel Prize, Shakespeare's novel Moby-Dick, the noble gas oxygen) mixed with true facts that sound invented (Curie's and Bardeen's second prizes, Scotland's unicorn, the octopus's three hearts). The model must answer FALSE PREMISE exactly when the question is built on a falsehood and answer normally otherwise, so both gullibility and blanket suspicion lose points. Graded by exact match: no judge needed.",
-    tags=['trick', 'false-premise', 'hallucination', 'calibration'],
-    hook="Why did Einstein win his second Nobel Prize?",
+    id='trick.false-premise', name='False Premise', difficulty='hard', version='2.0.0',
+    description="Questions with one wrong detail slipped into an otherwise true statement (the Eiffel Tower built for 1900, a 42-vertebra spine, a 26.2 km marathon, the kilogram still defined by a metal cylinder, Franklin's Nobel Prize), set beside true facts that sound wrong (Cleopatra is closer in time to the Moon landing than to the Great Pyramid; Oxford is older than the Aztec capital). The model must answer FALSE PREMISE exactly when any part of the question is false, and answer normally otherwise, so both gullibility and blanket suspicion lose points. Graded by exact match: no judge needed.",
+    tags=['trick', 'false-premise', 'hallucination', 'calibration', 'careful-reading'],
+    hook="The Eiffel Tower was built for the 1900 World's Fair. Who built it?",
     maxOutputTokens=8000,
     preamble=FP_PRE,
     estimate={'inputTokens': avg_tokens(FP, FP_PRE), 'outputTokens': 900},
@@ -555,8 +891,8 @@ write(dict(
 ), FP)
 
 write(dict(
-    id='trick.lightning-traps', name='Lightning Traps', difficulty='easy',
-    description="Very short questions with a tempting fast wrong answer: cognitive-reflection classics, counting letters, decimal comparisons, fenceposts and clock chimes. The model has 30 seconds per answer (stated in the prompt and enforced by the harness) and must reply with a single FINAL ANSWER line; any extra text scores zero. It measures whether a model stops to think under pressure.",
+    id='trick.lightning-traps', name='Lightning Traps', difficulty='medium', version='2.0.0',
+    description="Short, freshly written questions with a tempting fast wrong answer: multi-step unit conversions, fencepost counts, misleading magnitudes, average-speed and percentage traps, calendar arithmetic. The model has 30 seconds per answer (stated in the prompt and enforced by the harness) and must reply with a single FINAL ANSWER line; any extra text scores zero. It measures whether a model stops to think under pressure.",
     tags=['trick', 'time-pressure', 'cognitive-reflection', 'brevity'],
     hook="30 seconds. One line. Don't fall for it.",
     maxOutputTokens=8000,

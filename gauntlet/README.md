@@ -180,7 +180,7 @@ default repeat count. Bump the suite `version` when you change it.
 | Test | Id | What it does |
 |---|---|---|
 | Modified Classics | `trick.modified-classics` | It looks like a puzzle you know. It isn't. |
-| False Premise | `trick.false-premise` | Why did Einstein win his second Nobel Prize? |
+| False Premise | `trick.false-premise` | The Eiffel Tower was built for the 1900 World's Fair. Who built it? |
 | Lightning Traps | `trick.lightning-traps` | 30 seconds. One line. Don't fall for it. |
 
 Every prompt, verbatim, is in the prompt book (`node src/cli.ts prompts --suite <id>`). Keep your own held-out tests in `tests/private/`.

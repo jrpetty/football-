@@ -1,8 +1,8 @@
 {
   "id": "trick",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "name": "Can It Be Fooled?",
-  "description": "Short, punchy trick questions made for YouTube Shorts: famous riddles with one detail changed, false-premise questions mixed with true facts that sound fake, and 30-second lightning traps. Every answer is graded exactly (no judges), so it is cheap and objective. Open the run in the Presenter for the 'who got fooled' slides; add ?vertical=1 for a 1080×1920 Shorts version.",
+  "description": "Short, punchy trick questions made for YouTube Shorts: lesser-known puzzles with one detail changed, questions with one wrong detail hidden among true facts, and 30-second lightning traps. Every answer is graded exactly (no judges), so it is cheap and objective. Open the run in the Presenter for the 'who got fooled' slides; add ?vertical=1 for a 1080×1920 Shorts version.",
   "repeats": 3,
   "tests": [
     { "id": "trick.modified-classics" },

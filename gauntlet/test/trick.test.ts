@@ -163,23 +163,26 @@ test('highlights pick the cases with the most disagreement, ignore the baseline 
     for (const [id, correctReps] of Object.entries(pattern))
       for (let r = 0; r < 3; r++) results.push(R(id, caseId, r, r < correctReps ? 1 : 0, r < correctReps ? 'right' : 'wrong'));
   };
-  put('m01', { a: 3, b: 3, c: 3, rb: 0 }); // everyone right (baseline wrong): not a highlight
-  put('m02', { a: 3, b: 0, c: 3 }); // 2 v 1
-  put('m03', { a: 3, b: 0, c: 0 }); // 1 v 2, same disagreement as m02, more fooled
-  put('m04', { a: 0, b: 0, c: 0 }); // everyone fooled: zero disagreement but still fun
-  put('m05', { a: 3, b: 2, c: 3 }); // everyone right by majority, small disagreement
+  const [c1, c2, c3, c4, c5] = mc.cases.map((c) => c.id);
+  put(c1!, { a: 3, b: 3, c: 3, rb: 0 }); // everyone right (baseline wrong): not a highlight
+  put(c2!, { a: 3, b: 0, c: 3 }); // 2 v 1
+  put(c3!, { a: 3, b: 0, c: 0 }); // 1 v 2, same disagreement as c2, more fooled
+  put(c4!, { a: 0, b: 0, c: 0 }); // everyone fooled: zero disagreement but still fun
+  put(c5!, { a: 3, b: 2, c: 3 }); // everyone right by majority, small disagreement
   const hs = selectTrickHighlights({ tests: [{ definition: mc }], results, contenders, perTest: 3 });
-  assert.deepEqual(hs.map((h) => h.caseId), ['m03', 'm02', 'm05']);
-  assert.ok(!hs.some((h) => h.caseId === 'm01'), 'baseline failures do not make a case divisive');
+  assert.deepEqual(hs.map((h) => h.caseId), [c3, c2, c5]);
+  assert.ok(!hs.some((h) => h.caseId === c1), 'baseline failures do not make a case divisive');
   assert.equal(hs[0]!.fooled, 2);
-  assert.equal(hs[0]!.correct, '10 cents');
-  assert.equal(hs[0]!.lure, '5 cents');
-  assert.equal(hs[0]!.question, 'A bat and a ball cost $1.10 in total. The bat costs $1.00. How much does the ball cost?');
+  const case3 = mc.cases[2]!;
+  assert.equal(hs[0]!.correct, case3.displayAnswer);
+  assert.equal(hs[0]!.lure, case3.lure);
+  assert.equal(hs[0]!.question, displayQuestion(case3.prompt!));
+  assert.doesNotMatch(hs[0]!.question, /Give exactly one answer/);
   const all = selectTrickHighlights({ tests: [{ definition: mc }], results, contenders, perTest: 10 });
-  assert.deepEqual(all.map((h) => h.caseId), ['m03', 'm02', 'm05', 'm04']);
+  assert.deepEqual(all.map((h) => h.caseId), [c3, c2, c5, c4]);
   // Non-trick tests and unselected cases are ignored.
   assert.equal(selectTrickHighlights({ tests: [{ definition: { ...mc, category: 'math', cases: mc.cases.map(({ lure: _l, ...c }) => c) } }], results, contenders }).length, 0);
-  assert.deepEqual(selectTrickHighlights({ tests: [{ definition: mc, caseIds: ['m02'] }], results, contenders }).map((h) => h.caseId), ['m02']);
+  assert.deepEqual(selectTrickHighlights({ tests: [{ definition: mc, caseIds: [c2!] }], results, contenders }).map((h) => h.caseId), [c2]);
 });
 
 test('highlight helpers: disagreement, question clean-up and rules', () => {
