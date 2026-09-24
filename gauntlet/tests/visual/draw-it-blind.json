@@ -1,11 +1,11 @@
 {
   "kind": "program",
   "id": "visual.draw-it-blind",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "program": "draw-it-blind",
   "name": "Draw It Blind",
   "category": "visual",
-  "description": "The model sees an exact table of 5–7 coloured shapes on a 400×400 canvas and must describe the picture in at most 120 words without a single digit. Then, in a fresh context, the same model redraws the picture as SVG from nothing but its own words. The SVG is parsed and every shape is matched against the original on type, colour, position and size. Tests spatial language, precise-but-lossy communication and SVG construction in one loop — and makes a great side-by-side.",
+  "description": "The model sees an exact table of 5–7 coloured shapes on a 400×400 canvas and must describe the picture in at most 120 words, spelling numbers out only up to ten (fractions such as \"two-thirds\" or \"seven-tenths\" are fine; digits and larger numbers are deleted and cost points; words are counted by spaces, so \"top-left\" is one word). Then, in a fresh context, the same model redraws the picture as SVG from nothing but its own words. The SVG is parsed and every shape is matched against the original on type, colour, position and size. Tests spatial language, precise-but-lossy communication and SVG construction in one loop — and makes a great side-by-side.",
   "difficulty": "medium",
   "tags": [
     "spatial",

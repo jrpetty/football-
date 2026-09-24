@@ -48,7 +48,7 @@
   "maxOutputTokens": 16000,
   "timeLimitSec": 5400,
   "estimate": {
-    "inputTokens": 52000,
+    "inputTokens": 60000,
     "outputTokens": 43000,
     "calls": 36
   },

@@ -1,7 +1,7 @@
 {
   "kind": "program",
   "id": "agentic.escape-room",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "program": "escape-room",
   "name": "The Escape Room",
   "category": "agentic",
@@ -27,12 +27,21 @@
       2,
       3
     ],
-    "moveBudget": 45
+    "moveBudget": 45,
+    "budgetSlack": null,
+    "crossRoom": false,
+    "cipherDepth": 1,
+    "decoysPerRoom": [
+      1,
+      2
+    ],
+    "redHerrings": false,
+    "emptySpots": 0
   },
   "maxOutputTokens": 16000,
   "timeLimitSec": 5400,
   "estimate": {
-    "inputTokens": 47000,
+    "inputTokens": 50000,
     "outputTokens": 45000,
     "calls": 45
   },

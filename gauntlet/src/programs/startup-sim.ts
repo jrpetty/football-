@@ -33,7 +33,7 @@ import {
   type MonthReport,
 } from './lib/agentic-startup.ts';
 
-const DEFAULTS = { months: 12, gapFloor: 5000 };
+const DEFAULTS = { months: 12, gapFloor: 5000, volatile: false };
 
 export const STARTUP_SYSTEM = `You are playing THE STARTUP. You run a small company that makes and sells one consumer product. You start with $10,000 in cash and 2 staff. The game lasts 12 monthly turns; each turn you set this month's decisions and then receive the month's results.
 
@@ -50,7 +50,7 @@ THE MARKET (the exact numbers are hidden — learn them from your results)
 - Each staff member can produce a fixed number of units per month; production is capped by staff capacity. New hires work from the month they are hired.
 - Demand is seasonal, and news, customer feedback and events (competitors, suppliers, reviews, bank offers) arrive as the year goes on.
 
-YOUR GOAL: finish month 12 with as much equity as possible. Equity = cash + unsold inventory valued at the normal unit cost − any loan balance still owed. Going bankrupt scores zero.
+YOUR GOAL: finish month 12 with as much equity as possible. Equity = cash + every unsold unit valued at the BASE unit cost (the regular supplier price, ignoring any temporary surcharge; shown every month) − any loan balance still owed. Going bankrupt scores zero.
 
 DECISIONS (one per line)
 PRICE: <selling price in dollars, e.g. 24.99>
@@ -176,6 +176,8 @@ function news(market: Market, firm: Firm): string[] {
     );
   else if (spikeActive(market, m)) out.push(`Supplier surcharge in effect: unit cost ${price2(unitCostAt(market, m))} (normally ${price2(market.unitCost)}).`);
   else if (m === sp.start + sp.months) out.push('Supplier prices are back to normal.');
+  if (market.shock && m === market.shock.month)
+    out.push(`Bad news: a safety scare about products like yours is all over the news this month — the whole category expects demand to fall by roughly ${Math.round((1 - market.shock.factor) * 100)}%.`);
   if (m === market.viral.month - 1) out.push('A popular online reviewer has asked for a sample; her review goes live next month.');
   if (m === market.viral.month) out.push('The review is live and people are talking about your product.');
   if (m === market.loan.month && !firm.loanTaken) {
@@ -202,7 +204,12 @@ function historyLines(firm: Firm): string[] {
 
 function lastMonthLines(market: Market, r: MonthReport): string[] {
   const lines = [`Last month (month ${r.month}, ${r.calendar}):`];
-  const stock = r.missed > 0 ? `SOLD OUT — about ${Math.max(10, Math.round(r.missed / 10) * 10)} more customers wanted one` : `${r.inventory} units left over`;
+  const stock =
+    r.missed > 0
+      ? `SOLD OUT — about ${Math.max(10, Math.round(r.missed / 10) * 10)} more customers wanted one`
+      : r.inventory > 0
+        ? `UNSOLD — ${r.inventory} units left on the shelf, costing ${money(r.holding)} in storage this month`
+        : 'sold exactly what you had';
   lines.push(`  Price ${price2(r.price)} · made ${r.produced} · sold ${r.sold} (${stock}) · marketing ${money(r.marketing)} · staff ${r.staff}`);
   lines.push(
     `  Revenue ${money(r.revenue)} − production ${money(r.cogs)} − marketing ${money(r.marketing)} − salaries ${money(r.salaries)} − rent ${money(r.rent)} − storage ${money(r.holding)} − hiring/severance ${money(r.staffFees)} − loan instalment ${money(r.loanPayment)} = net ${signedMoney(r.net)}${r.loanIn ? ` (plus ${money(r.loanIn)} borrowed)` : ''}`,
@@ -247,7 +254,7 @@ export function startupObservation(market: Market, firm: Firm, noteLine: string,
     `Cash ${money(firm.cash)} · Inventory ${firm.inventory} units · Staff ${firm.staff} (can make up to ${firm.staff * market.capacityPerStaff} units/month; ${market.capacityPerStaff} per person) · ${loan} · Equity ${money(equityOf(market, firm))}`,
   );
   lines.push(
-    `Costs: unit cost this month ${price2(unitCostAt(market, m))} · rent ${money(market.rent)}/month · salary ${money(market.salary)} per staff member/month · hiring fee ${money(market.hireFee)} per hire · severance ${money(market.severance)} per person let go · storage ${price2(market.holdingCost)} per unsold unit at month end`,
+    `Costs: unit cost this month ${price2(unitCostAt(market, m))} (base unit cost ${price2(market.unitCost)}, used to value unsold stock) · rent ${money(market.rent)}/month · salary ${money(market.salary)} per staff member/month · hiring fee ${money(market.hireFee)} per hire · severance ${money(market.severance)} per person let go · storage ${price2(market.holdingCost)} per unsold unit at month end`,
   );
   lines.push(
     `Market: competitors charge about ${price2(Math.round(competitorPrice(market, m) * 2) / 2)} · Brand awareness: ${awarenessLabel(firm.awareness)} · Reputation: ${reputationLabel(firm.reputation)}`,
@@ -284,14 +291,14 @@ export const program: ProgramDefinition = {
     'Twelve monthly turns running a small consumer-product company from $10,000. A hidden, seeded market decides the outcome: price elasticity, marketing with diminishing returns and carry-over brand awareness, seasonality, staff capacity, storage costs, stockouts that lose sales and reputation, and events such as a competitor price war, a supplier cost spike, a viral review and a loan offer. ' +
     'Each month the model sets price, production, marketing and hiring, then reads a P&L report, customer feedback and market news. Bankruptcy ends the game.',
   scoring:
-    'Score = (final equity − autopilot equity) ÷ (oracle equity − autopilot equity), clamped to 0–1; bankruptcy scores 0. Equity = cash + unsold inventory at the normal unit cost − loan balance. ' +
+    'Score = (final equity − autopilot equity) ÷ (oracle equity − autopilot equity), clamped to 0–1; bankruptcy scores 0. Equity = cash + unsold units valued at the base unit cost (ignoring supplier surcharges) − loan balance. ' +
     'The autopilot is the do-nothing baseline: it repeats the pre-launch plan every month (floored at $0). The oracle is a reference policy that knows every hidden market parameter and event and is tuned by grid search plus month-by-month coordinate descent. ' +
-    'The gap is floored at $5,000. Passed = score ≥ 0.5 (closed at least half the gap between autopilot and oracle).',
+    'The gap is floored at $5,000. The volatile variant (config volatile: true) only changes the market (noisier demand, a deeper supplier spike, a harsher price war, a one-month demand shock). Passed = score ≥ 0.5 (closed at least half the gap between autopilot and oracle).',
   defaults: DEFAULTS,
   async run(ctx: ProgramContext): Promise<ProgramResult> {
     const months = Math.min(24, Math.max(3, Math.round(Number(ctx.config.months ?? DEFAULTS.months)) || DEFAULTS.months));
     const gapFloor = Math.max(1, Number(ctx.config.gapFloor ?? DEFAULTS.gapFloor) || DEFAULTS.gapFloor);
-    const market = generateMarket(ctx.rng, months);
+    const market = generateMarket(ctx.rng, months, { volatile: ctx.config.volatile === true });
     const firm = newFirm(market);
     const auto = simulate(market, autopilot);
     const ref = oracle(market);
@@ -363,6 +370,24 @@ export const program: ProgramDefinition = {
     }
 
     const equity = equityOf(market, firm);
+    frames.push({
+      step: frames.length,
+      label: firm.bankrupt ? 'Bankrupt' : 'Final result',
+      outcome: firm.bankrupt
+        ? `Bankrupt in month ${firm.history.length}. Oracle ${money(ref.equity)} · autopilot ${money(autoEquity)}.`
+        : `Final equity ${money(equity)} (cash ${money(firm.cash)} + ${firm.inventory} units at ${price2(market.unitCost)}${firm.loanBalance > 0.5 ? ` − loan ${money(firm.loanBalance)}` : ''}) · oracle ${money(ref.equity)} · autopilot ${money(autoEquity)}.`,
+      stats: {
+        cash: Math.round(firm.cash),
+        equity: Math.round(equity),
+        oracle: Math.round(ref.equity),
+        autopilot: Math.round(autoEquity),
+        staff: firm.staff,
+        awareness: Math.round(firm.awareness * 100),
+        reputation: Math.round((firm.reputation / 1.1) * 100),
+        month: firm.history.length,
+      },
+      tone: firm.bankrupt ? 'bad' : equity > Math.max(0, autoEquity) ? 'good' : 'neutral',
+    });
     const gap = Math.max(gapFloor, ref.equity - baseline);
     const score = firm.bankrupt ? 0 : round(clamp01((equity - baseline) / gap), 4);
     const monthsPlayed = firm.history.length;
@@ -414,6 +439,7 @@ export const program: ProgramDefinition = {
             supplierSpike: `months ${market.supplierSpike.start}–${market.supplierSpike.start + market.supplierSpike.months - 1} (×${market.supplierSpike.factor})`,
             viralReview: `month ${market.viral.month}`,
             loanOffer: `month ${market.loan.month}: ${money(market.loan.principal)} at ${(market.loan.rate * 100).toFixed(1)}%/month`,
+            demandShock: market.shock ? `month ${market.shock.month} (×${market.shock.factor})` : null,
           },
         },
         finalNote: note,

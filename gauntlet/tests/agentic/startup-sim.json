@@ -1,7 +1,7 @@
 {
   "kind": "program",
   "id": "agentic.startup-sim",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "program": "startup-sim",
   "name": "The Startup",
   "category": "agentic",
@@ -22,7 +22,8 @@
     303
   ],
   "config": {
-    "months": 12
+    "months": 12,
+    "volatile": false
   },
   "maxOutputTokens": 16000,
   "timeLimitSec": 2400,

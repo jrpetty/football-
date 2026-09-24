@@ -39,8 +39,8 @@ function decisionBlock(d: Decisions): string {
 }
 
 /** Startup: replays the oracle's decisions (full knowledge of the hidden market). */
-export function startupOracleResponder(seed: number, months = 12): Responder {
-  const market = generateMarket(createRng(seed), months);
+export function startupOracleResponder(seed: number, months = 12, volatile = false): Responder {
+  const market = generateMarket(createRng(seed), months, { volatile });
   const plan = oracle(market).plan;
   let i = 0;
   return () => {
@@ -54,8 +54,8 @@ export function startupOracleResponder(seed: number, months = 12): Responder {
  * (sales, sold-out signals, leftover stock, capacity, competitor price and
  * the seasonal outlook). Keeps a mirror firm to track its own results.
  */
-export function startupHeuristicResponder(seed: number, months = 12): Responder {
-  const market = generateMarket(createRng(seed), months);
+export function startupHeuristicResponder(seed: number, months = 12, volatile = false): Responder {
+  const market = generateMarket(createRng(seed), months, { volatile });
   const firm = newFirm(market);
   let price = 0;
   return () => {

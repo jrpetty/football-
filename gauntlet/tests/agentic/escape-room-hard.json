@@ -1,0 +1,51 @@
+{
+  "kind": "program",
+  "id": "agentic.escape-room-hard",
+  "version": "1.0.0",
+  "program": "escape-room",
+  "name": "The Escape Room (Hard)",
+  "category": "agentic",
+  "description": "The extreme variant of The Escape Room, on the same engine and command language. Ten locks across three rooms (3/3/4), and a genuine cross-room dependency in every seed: the cipher shift is engraved in the first room but needed for a cipher lock in the third, and an item needed in the third room waits back in the first. Ciphers take two steps (the text is written backwards, the shift may be a Roman numeral), each room holds more decoys — some carrying numbers and colours that no lock asks for — and empty hiding places. The move budget is the world's optimal solution length plus 25%, so the model must read every clue once, remember what matters in its note, carry the right items forward and never guess.",
+  "difficulty": "extreme",
+  "tags": [
+    "puzzle",
+    "text-adventure",
+    "deduction",
+    "planning",
+    "memory",
+    "seeded",
+    "hard-mode"
+  ],
+  "hook": "Ten locks, two-step ciphers, a clue from the first room needed in the last — and only 25% more moves than a perfect solver.",
+  "seeds": [
+    101,
+    202,
+    303
+  ],
+  "config": {
+    "locksPerRoom": [
+      3,
+      3,
+      4
+    ],
+    "moveBudget": 45,
+    "budgetSlack": 0.25,
+    "crossRoom": true,
+    "cipherDepth": 2,
+    "decoysPerRoom": [
+      2,
+      3
+    ],
+    "redHerrings": true,
+    "emptySpots": 1
+  },
+  "maxOutputTokens": 16000,
+  "timeLimitSec": 5400,
+  "estimate": {
+    "inputTokens": 54000,
+    "outputTokens": 50000,
+    "calls": 42
+  },
+  "author": "Gauntlet Core",
+  "createdAt": "2026-09-24"
+}
