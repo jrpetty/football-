@@ -218,7 +218,7 @@ default repeat count. Bump the suite `version` when you change it.
 | Test | Id | What it does |
 |---|---|---|
 | Modified Classics | `trick.modified-classics` | It looks like a puzzle you know. It isn't. |
-| False Premise | `trick.false-premise` | Why did Einstein win his second Nobel Prize? |
+| False Premise | `trick.false-premise` | The Eiffel Tower was built for the 1900 World's Fair. Who built it? |
 | Lightning Traps | `trick.lightning-traps` | 30 seconds. One line. Don't fall for it. |
 
 **Also in the library (not in a suite, pick it in New Run):** **Fix the Bug** (`agentic.code-agent`): a coding

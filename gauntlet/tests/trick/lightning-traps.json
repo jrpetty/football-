@@ -1,11 +1,11 @@
 {
   "kind": "prompt",
   "id": "trick.lightning-traps",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "name": "Lightning Traps",
   "category": "trick",
-  "description": "Very short questions with a tempting fast wrong answer: cognitive-reflection classics, counting letters, decimal comparisons, fenceposts and clock chimes. The model has 30 seconds per answer (stated in the prompt and enforced by the harness) and must reply with a single FINAL ANSWER line; any extra text scores zero. It measures whether a model stops to think under pressure.",
-  "difficulty": "easy",
+  "description": "Short, freshly written questions with a tempting fast wrong answer: multi-step unit conversions, fencepost counts, misleading magnitudes, average-speed and percentage traps, calendar arithmetic. The model has 30 seconds per answer (stated in the prompt and enforced by the harness) and must reply with a single FINAL ANSWER line; any extra text scores zero. It measures whether a model stops to think under pressure.",
+  "difficulty": "medium",
   "tags": [
     "trick",
     "time-pressure",
@@ -15,7 +15,7 @@
   "hook": "30 seconds. One line. Don't fall for it.",
   "maxOutputTokens": 8000,
   "estimate": {
-    "inputTokens": 171,
+    "inputTokens": 174,
     "outputTokens": 600
   },
   "author": "Gauntlet Core",
@@ -30,163 +30,163 @@
   "cases": [
     {
       "id": "l01",
-      "prompt": "How many months of the year have at least 28 days?",
-      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:12|twelve|all(?: 12| twelve)?(?: months)?(?: of them)?)[\\s*_\\\"'`.!]*$",
-      "lure": "1 (February)",
-      "displayAnswer": "12",
-      "notes": "Every month has at least 28 days. The phrase 'at least' removes the usual 'exactly 28' ambiguity."
+      "prompt": "A tap drips once every 2 seconds, and 20 drops make 1 millilitre. How many litres does it drip in one week?",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:15\\.120*(?:\\s*(?:l|litres?|liters?))?)[\\s*_\\\"'`.!]*$",
+      "lure": "151.2 litres",
+      "displayAnswer": "15.12 litres",
+      "notes": "604,800 s / 2 = 302,400 drops; / 20 = 15,120 ml = 15.12 L. Dividing by 2 or 1000 at the wrong step gives 30.24 or 151.2."
     },
     {
       "id": "l02",
-      "prompt": "A fair coin has just landed heads 9 times in a row. What is the probability, in percent, that the next toss lands heads?",
-      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:50(?:\\.0+)?\\s*(?:%|percent)?)[\\s*_\\\"'`.!]*$",
-      "lure": "less than 50% (\"tails is due\")",
-      "displayAnswer": "50%",
-      "notes": "Tosses of a fair coin are independent: 50%. Gambler's fallacy trap."
+      "prompt": "A straight 1 km road has a lamp post every 25 m, including one at each end. Counting from one end, every 4th post (the 4th, 8th, 12th and so on) is broken. How many posts work?",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:31(?:\\s*posts?)?)[\\s*_\\\"'`.!]*$",
+      "lure": "30",
+      "displayAnswer": "31",
+      "notes": "1000/25 + 1 = 41 posts; broken: 4, 8, ..., 40 = 10; working 31. Forgetting the extra end post gives 40 - 10 = 30."
     },
     {
       "id": "l03",
-      "prompt": "It takes 20 minutes to hard-boil one egg. How many minutes does it take to hard-boil 4 eggs cooked together at the same time in one pot? Assume the cooking time does not depend on how many eggs are in the pot.",
-      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:20(?:\\s*min(?:ute)?s?)?)[\\s*_\\\"'`.!]*$",
-      "lure": "80 minutes",
-      "displayAnswer": "20 minutes",
-      "notes": "Eggs cook in parallel; the prompt rules out the only physical objection."
+      "prompt": "Which is larger: (A) 2 to the power 30, or (B) 10 to the power 9? Answer A or B.",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:\\(?a\\)?)[\\s*_\\\"'`.!]*$",
+      "lure": "B",
+      "displayAnswer": "A",
+      "notes": "2^30 = 1,073,741,824 > 1,000,000,000. 'A thousand to the third' intuition says they are about equal and 10^9 is the round-number favourite."
     },
     {
       "id": "l04",
-      "prompt": "A straight fence is 30 metres long, with a post every 3 metres including one at each end. How many posts are there?",
-      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:(?:11|eleven)(?:\\s*posts?)?)[\\s*_\\\"'`.!]*$",
-      "lure": "10",
-      "displayAnswer": "11",
-      "notes": "Fencepost error: 30/3 = 10 gaps, 11 posts."
+      "prompt": "Which is longer: (A) 1,000,000 seconds, or (B) 11 days and 14 hours? Answer A or B.",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:\\(?b\\)?)[\\s*_\\\"'`.!]*$",
+      "lure": "A",
+      "displayAnswer": "B",
+      "notes": "11 days 14 hours = 950,400 + 50,400 = 1,000,800 s, which is 800 s longer than a million seconds."
     },
     {
       "id": "l05",
-      "prompt": "A clock chimes once for each hour. At 4 o'clock it chimes 4 times, and it takes 6 seconds from the start of the first chime to the start of the last chime. The chimes are evenly spaced. At 7 o'clock, how many seconds are there from the start of the first chime to the start of the last chime?",
-      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:12(?:\\.0+)?(?:\\s*s(?:ec(?:ond)?s?)?)?)[\\s*_\\\"'`.!]*$",
-      "lure": "10.5 seconds",
-      "displayAnswer": "12 seconds",
-      "notes": "4 chimes = 3 gaps of 2 s; 7 chimes = 6 gaps = 12 s."
+      "prompt": "A price is raised by 25%, and the new price is then cut by 20%. By how many percent does the final price differ from the original price?",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:0(?:\\.0+)?\\s*(?:%|percent)?|no change|none|unchanged)[\\s*_\\\"'`.!]*$",
+      "lure": "5%",
+      "displayAnswer": "0%",
+      "notes": "1.25 x 0.80 = 1.00: no change. Adding percentages gives the lure 5%."
     },
     {
       "id": "l06",
-      "prompt": "A doctor gives you 4 pills and tells you to take one now and then one every 30 minutes until they are all gone. How many minutes pass between taking the first pill and taking the last one?",
-      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:90(?:\\s*min(?:ute)?s?)?)[\\s*_\\\"'`.!]*$",
-      "lure": "120 minutes",
-      "displayAnswer": "90 minutes",
-      "notes": "4 pills = 3 gaps of 30 minutes."
+      "prompt": "You drive 60 km at 30 km/h and then another 60 km at 90 km/h. What is your average speed for the whole trip, in km/h?",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:45(?:\\s*km/h)?)[\\s*_\\\"'`.!]*$",
+      "lure": "60 km/h",
+      "displayAnswer": "45 km/h",
+      "notes": "Total 120 km in 2 h + 40 min = 8/3 h: 45 km/h. The arithmetic mean of the speeds is the lure 60."
     },
     {
       "id": "l07",
-      "prompt": "What is 3 + 3 × 3?",
-      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:12)[\\s*_\\\"'`.!]*$",
-      "lure": "18",
-      "displayAnswer": "12",
-      "notes": "Standard operator precedence (multiplication before addition): 3 + 9 = 12. Left-to-right gives the lure 18."
+      "prompt": "A conference is held on every weekday (Monday to Friday) from Monday 3 June to Friday 14 June, both days included. On how many days is it held?",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:(?:10|ten)(?:\\s*days?)?)[\\s*_\\\"'`.!]*$",
+      "lure": "12 days",
+      "displayAnswer": "10 days",
+      "notes": "3-7 June and 10-14 June: 5 + 5 = 10 (checked against the 2024 calendar, where 3 June is a Monday). 14 - 3 + 1 = 12 ignores the weekend."
     },
     {
       "id": "l08",
-      "prompt": "Divide 30 by one half. Then add 10. What number do you get?",
-      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:70)[\\s*_\\\"'`.!]*$",
-      "lure": "25",
-      "displayAnswer": "70",
-      "notes": "30 / (1/2) = 60; 60 + 10 = 70. 'Divide by one half' is not 'divide in half'."
+      "prompt": "How many times is the digit 7 written when you write out all the whole numbers from 1 to 100?",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:20|twenty)[\\s*_\\\"'`.!]*$",
+      "lure": "10",
+      "displayAnswer": "20",
+      "notes": "Units digit: 7, 17, ..., 97 (10); tens digit: 70-79 (10); 77 counts twice: 20. Counted in build.py."
     },
     {
       "id": "l09",
-      "prompt": "In a running race, you overtake the runner who is in second place. What place are you in now?",
-      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:2|2nd|second(?: place)?|2nd place)[\\s*_\\\"'`.!]*$",
-      "lure": "First",
-      "displayAnswer": "Second",
-      "notes": "Overtaking the runner in second place puts you in second place (the runner in first is still ahead)."
+      "prompt": "Tom is twice as old as Ann was when Tom was as old as Ann is now. Tom is 24. How old is Ann?",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:18(?:\\s*(?:years?(?: old)?))?)[\\s*_\\\"'`.!]*$",
+      "lure": "12",
+      "displayAnswer": "18",
+      "notes": "Let Ann be a; the age gap is 24 - a; when Tom was a, Ann was 2a - 24; 24 = 2(2a - 24) gives a = 18 (brute-forced in build.py). Halving 24 gives the lure 12."
     },
     {
       "id": "l10",
-      "prompt": "Which is heavier: a kilogram of feathers or a kilogram of steel? Answer feathers, steel or same.",
-      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:same|the same|(?:they (?:weigh|are) )?(?:the )?same(?: weight)?|neither|equal)[\\s*_\\\"'`.!]*$",
-      "lure": "Steel",
-      "displayAnswer": "Same",
-      "notes": "Both weigh exactly one kilogram, so they weigh the same."
+      "prompt": "A car uses 8 litres of fuel per 100 km. How many kilometres can it drive on 50 litres?",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:625(?:\\s*km)?)[\\s*_\\\"'`.!]*$",
+      "lure": "400 km",
+      "displayAnswer": "625 km",
+      "notes": "50 / 8 x 100 = 625 km. Multiplying 8 x 50 gives the lure 400."
     },
     {
       "id": "l11",
-      "prompt": "Mary's father has five daughters. Four of them are named Nana, Nene, Nini and Nono. What is the name of the fifth daughter?",
-      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:mary)[\\s*_\\\"'`.!]*$",
-      "lure": "Nunu",
-      "displayAnswer": "Mary",
-      "notes": "The first words of the question name her: the fifth daughter is Mary. The vowel pattern suggests the lure Nunu."
+      "prompt": "At exactly 12:00 the hour and minute hands of a clock are together. How many minutes later are they next exactly together? Give the answer to one decimal place.",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:65\\.5(?:\\s*min(?:ute)?s?)?)[\\s*_\\\"'`.!]*$",
+      "lure": "65 minutes",
+      "displayAnswer": "65.5 minutes",
+      "notes": "The minute hand gains 5.5 degrees per minute; a full 360-degree lap takes 720/11 = 65.45... minutes, 65.5 to one decimal. 'About 1:05' gives the lure 65."
     },
     {
       "id": "l12",
-      "prompt": "What is 0.1 + 0.2? Give the exact value.",
-      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:0?\\.30*)[\\s*_\\\"'`.!]*$",
-      "lure": "0.30000000000000004",
-      "displayAnswer": "0.3",
-      "notes": "Exact decimal arithmetic: 0.3 (the lure is the floating-point artefact)."
+      "prompt": "Which has more mass: one litre of liquid water at 4 °C, or one litre of solid ice? Answer water, ice or same.",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:(?:the )?(?:liquid )?water)[\\s*_\\\"'`.!]*$",
+      "lure": "Same",
+      "displayAnswer": "Water",
+      "notes": "Ice (about 0.917 kg per litre) is less dense than water at 4 degrees C (about 1.000 kg per litre), which is why it floats. 'A litre is a litre' gives the lure."
     },
     {
       "id": "l13",
-      "prompt": "How many two-cent stamps are there in a dozen?",
-      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:12|twelve)[\\s*_\\\"'`.!]*$",
-      "lure": "6",
-      "displayAnswer": "12",
-      "notes": "A dozen of anything is 12; the 'two-cent' detail invites a division (the lure 6)."
+      "prompt": "How many squares of any size can you find in a 3-by-3 grid of small squares?",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:14|fourteen)[\\s*_\\\"'`.!]*$",
+      "lure": "9",
+      "displayAnswer": "14",
+      "notes": "9 of size 1, 4 of size 2, 1 of size 3: 14."
     },
     {
       "id": "l14",
-      "prompt": "Which number is larger: 9.11 or 9.9? Answer with the number.",
-      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:9\\.90*)[\\s*_\\\"'`.!]*$",
-      "lure": "9.11",
-      "displayAnswer": "9.9",
-      "notes": "Compare as decimals: 9.9 = 9.90 > 9.11. The lure comes from reading them like version numbers."
+      "prompt": "A 10-metre rope is cut into pieces that are each 2 metres long. Each cut goes through the rope once. How many cuts are needed?",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:(?:4|four)(?:\\s*cuts?)?)[\\s*_\\\"'`.!]*$",
+      "lure": "5 cuts",
+      "displayAnswer": "4 cuts",
+      "notes": "5 pieces need 4 cuts."
     },
     {
       "id": "l15",
-      "prompt": "How many times does the letter r appear in the word strawberry?",
-      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:3|three)[\\s*_\\\"'`.!]*$",
-      "lure": "2",
-      "displayAnswer": "3",
-      "notes": "s-t-R-a-w-b-e-R-R-y: 3 (checked in build.py)."
+      "prompt": "How many days after 1 January 2024 is 1 January 2025?",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:366(?:\\s*days)?)[\\s*_\\\"'`.!]*$",
+      "lure": "365",
+      "displayAnswer": "366",
+      "notes": "2024 is a leap year: 366 days (datetime check in build.py)."
     },
     {
       "id": "l16",
-      "prompt": "How many times does the letter e appear in the word excellence?",
-      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:4|four)[\\s*_\\\"'`.!]*$",
-      "lure": "3",
-      "displayAnswer": "4",
-      "notes": "E-x-c-E-l-l-E-n-c-E: 4 (checked in build.py)."
+      "prompt": "You save 1 cent on day 1, 2 cents on day 2, 3 cents on day 3, and so on, one cent more each day. How many dollars have you saved after 100 days?",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:\\$?50\\.50?(?:\\s*dollars)?)[\\s*_\\\"'`.!]*$",
+      "lure": "5,050",
+      "displayAnswer": "$50.50",
+      "notes": "1 + 2 + ... + 100 = 5,050 cents = $50.50. Forgetting to convert gives the lure 5,050."
     },
     {
       "id": "l17",
-      "prompt": "If the day before yesterday was Thursday, what day of the week will the day after tomorrow be?",
-      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:monday)[\\s*_\\\"'`.!]*$",
-      "lure": "Saturday",
-      "displayAnswer": "Monday",
-      "notes": "Today is Saturday; the day after tomorrow is Monday (checked in build.py)."
+      "prompt": "How many minutes are there in 1.25 hours?",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:75(?:\\s*min(?:ute)?s?)?)[\\s*_\\\"'`.!]*$",
+      "lure": "125 minutes",
+      "displayAnswer": "75 minutes",
+      "notes": "0.25 h = 15 min; 60 + 15 = 75. Reading 1.25 h as 1 h 25 min gives 85; decimal-to-minutes slips give 125."
     },
     {
       "id": "l18",
-      "prompt": "Is 91 a prime number? Answer yes or no.",
-      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:no)[\\s*_\\\"'`.!]*$",
-      "lure": "Yes",
-      "displayAnswer": "No",
-      "notes": "91 = 7 x 13, so it is not prime (checked in build.py). It looks prime because it is odd and not divisible by 3 or 5."
+      "prompt": "A student's test score goes up from 40% to 50%. By what percentage of the original score did it increase?",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:25\\s*(?:%|percent)?)[\\s*_\\\"'`.!]*$",
+      "lure": "10%",
+      "displayAnswer": "25%",
+      "notes": "(50 - 40) / 40 = 25%. The 10 percentage points are the lure."
     },
     {
       "id": "l19",
-      "prompt": "What is 2 to the power of 10, minus 10 to the power of 3?",
-      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:24)[\\s*_\\\"'`.!]*$",
-      "lure": "0",
-      "displayAnswer": "24",
-      "notes": "2^10 = 1024 and 10^3 = 1000, so the difference is 24 (checked in build.py)."
+      "prompt": "In a year that is not a leap year, 1 March is a Tuesday. What day of the week is 1 April of the same year?",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:friday)[\\s*_\\\"'`.!]*$",
+      "lure": "Tuesday",
+      "displayAnswer": "Friday",
+      "notes": "March has 31 days = 4 weeks + 3 days, so 1 April is 3 weekdays later: Friday (checked with 2022, where 1 March was a Tuesday)."
     },
     {
       "id": "l20",
-      "prompt": "An analogue clock shows exactly 3:15. What is the smaller angle, in degrees, between the hour hand and the minute hand?",
-      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:7\\.50*(?:\\s*(?:°|degrees?))?|7½)[\\s*_\\\"'`.!]*$",
-      "lure": "0°",
-      "displayAnswer": "7.5°",
-      "notes": "Minute hand at 90 degrees, hour hand a quarter of the way from 3 to 4: 90 + 7.5 = 97.5 degrees. Difference 7.5."
+      "prompt": "Which is largest: 1/3, 0.33 or 33%? Answer with one of the three exactly as written.",
+      "expected": "^[\\s*_#>]*final\\s+answer[\\s*_]*[:：][\\s*_\\\"'`]*(?:1/3|one[- ]third|a third)[\\s*_\\\"'`.!]*$",
+      "lure": "33%",
+      "displayAnswer": "1/3",
+      "notes": "1/3 = 0.333... > 0.33 = 33%."
     }
   ]
 }

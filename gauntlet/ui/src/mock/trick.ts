@@ -15,7 +15,7 @@ export const TRICK_TESTS = [modifiedClassics, falsePremise, lightningTraps] as u
 
 export const TRICK_SUITE: SuiteView = {
   id: 'trick',
-  version: '1.0.0',
+  version: '2.0.0',
   name: 'Can It Be Fooled?',
   description: 'Short, punchy trick questions made for YouTube Shorts: famous riddles with one detail changed, false premises and 30-second lightning traps. Graded exactly, no judges.',
   tests: TRICK_TESTS.map((t) => ({ id: t.id })),
