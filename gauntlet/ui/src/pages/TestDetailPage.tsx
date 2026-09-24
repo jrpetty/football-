@@ -184,6 +184,7 @@ export default function TestDetailPage({ testId }: { testId: string }) {
             <span className="k">Limits</span>
             <span className="v tnum">
               {fmtInt(def.maxOutputTokens ?? 16000)} max output tokens · {def.timeLimitSec ?? 600} s per case
+              {def.kind === 'prompt' && def.answerWithinSec ? ` · ${def.answerWithinSec} s to answer (late = 0)` : ''}
             </span>
           </div>
           {(def.tags?.length ?? 0) > 0 && (

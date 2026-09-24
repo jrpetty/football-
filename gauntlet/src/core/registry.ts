@@ -131,10 +131,22 @@ export function caseScorer(test: PromptTest, c: PromptTestCase): ScorerSpec {
   return c.scorer ?? test.scorer;
 }
 
+/** Answer-time limit (seconds) of a prompt-test case: the case's own value, else the test's, else none. */
+export function answerTimeLimitSec(test: PromptTest, c: PromptTestCase): number | undefined {
+  return c.answerWithinSec ?? test.answerWithinSec;
+}
+
+/** Time-pressure line added to the prompt of time-limited cases. Changing it changes what models see: bump those tests' versions. */
+export function timeLimitNotice(sec: number): string {
+  return `TIME LIMIT: you must answer within ${sec} ${sec === 1 ? 'second' : 'seconds'}. A reply that arrives later scores zero.`;
+}
+
 /** The exact prompts sent to every model for a prompt-test case. `baseDir` (the test file's folder) adds image paths. */
 export function renderCase(test: PromptTest, c: PromptTestCase, baseDir?: string): RenderedCase {
   const turns = c.turns ? c.turns.slice() : [c.prompt ?? ''];
   if (test.preamble) turns[0] = `${test.preamble}\n\n${turns[0]}`;
+  const within = answerTimeLimitSec(test, c);
+  if (within) turns[turns.length - 1] = `${turns[turns.length - 1]}\n\n${timeLimitNotice(within)}`;
   if (needsFinalAnswer(caseScorer(test, c))) turns[turns.length - 1] = `${turns[turns.length - 1]}\n\n${FINAL_ANSWER_INSTRUCTION}`;
   const out: RenderedCase = { caseId: c.id, system: test.system, turns, expected: c.expected, notes: c.notes };
   const refs = caseImageRefs(c);
@@ -312,6 +324,9 @@ export function validateTest(def: TestDefinition, allTests?: LoadedTest[], opts:
 
   if (def.kind === 'prompt') {
     validateScorer(def.scorer, 'scorer', errors);
+    const okWithin = (v: unknown) => v === undefined || (typeof v === 'number' && Number.isFinite(v) && v >= 1 && v <= 3600);
+    if (!okWithin(def.answerWithinSec)) errors.push('answerWithinSec must be a number of seconds within 1..3600');
+    for (const c of def.cases ?? []) if (c && !okWithin(c.answerWithinSec)) errors.push(`case ${c.id}: answerWithinSec must be a number of seconds within 1..3600`);
     if (!Array.isArray(def.cases) || def.cases.length === 0) errors.push('cases must be a non-empty array');
     const ids = new Set<string>();
     (def.cases ?? []).forEach((c, i) => {

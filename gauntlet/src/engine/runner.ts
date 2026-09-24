@@ -5,7 +5,7 @@ import { computeCost, emptyUsage } from '../core/cost.ts';
 import { createRng } from '../core/rng.ts';
 import { HARNESS_VERSION, PROTOCOL_VERSION } from '../core/version.ts';
 import { ROOT } from '../core/paths.ts';
-import { caseScorer, fingerprint, getSuite, loadTests, renderCase, resolveTests, selectedCaseIds, testEstimate, type LoadedTest, type ResolvedTest } from '../core/registry.ts';
+import { answerTimeLimitSec, caseScorer, fingerprint, getSuite, loadTests, renderCase, resolveTests, selectedCaseIds, testEstimate, type LoadedTest, type ResolvedTest } from '../core/registry.ts';
 import type {
   CaseResult,
   ChatImage,
@@ -31,7 +31,7 @@ import { PROGRAMS } from '../programs/index.ts';
 import { scoreResponse, type JudgePanel } from '../scoring/index.ts';
 import { browserAvailable } from '../scoring/browser.ts';
 import { Semaphore } from './semaphore.ts';
-import { callWithRetry, createRecorder, type CallPolicy, type CallTarget } from './recorder.ts';
+import { callWithRetry, createRecorder, OutOfTimeError, type CallPolicy, type CallTarget } from './recorder.ts';
 import { appendResult, createRunFolder, listRunIds, newRunId, readManifest, readResults, saveArtifact, writeManifest } from './store.ts';
 import { caseImageRefs, caseImageSizes, estimateImageTokens, loadTestImage, supportsVision, testBaseDir } from '../core/vision.ts';
 
@@ -701,6 +701,11 @@ async function executeJob(job: Job, env: JobEnv): Promise<CaseResult> {
   const manual = env.isManual(job.contestant);
   // Humans pasting replies get a week; API models get the test's time limit.
   const timeLimitMs = manual ? 7 * 24 * 3600 * 1000 : (def.timeLimitSec ?? settings.defaultTimeLimitSec) * 1000;
+  // Time-pressure tests: a per-answer limit shown in the prompt and enforced per model call (API models only).
+  const answerSec = def.kind === 'prompt' && !manual ? (() => {
+    const tc = def.cases.find((c) => c.id === job.caseId);
+    return tc ? answerTimeLimitSec(def, tc) : undefined;
+  })() : undefined;
   let timedOut = false;
   const timer = setTimeout(() => {
     timedOut = true;
@@ -736,6 +741,7 @@ async function executeJob(job: Job, env: JobEnv): Promise<CaseResult> {
       signal: controller.signal,
       maxOutputTokens: def.maxOutputTokens ?? settings.defaultMaxOutputTokens,
       onDelta: env.onDelta,
+      attemptLimitMs: answerSec ? answerSec * 1000 : undefined,
       onCall: (label) => env.emit({ type: 'job.step', runId: manifest.id, key: job.key, contestantId: job.contestant.id, label }),
       onRetry: (attempt, wait, err) =>
         env.emit({ type: 'log', runId: manifest.id, level: 'warn', message: `${job.contestant.label} · ${def.id}/${job.caseId}: retry ${attempt} in ${(wait / 1000).toFixed(1)}s (${err.message.slice(0, 160)})`, at: now() }),
@@ -786,6 +792,10 @@ async function executeJob(job: Job, env: JobEnv): Promise<CaseResult> {
         if (outcome.pendingHuman) status = 'pending-human';
         if (reply!.stopReason === 'max_tokens') detail.notes = `${detail.notes ? detail.notes + ' · ' : ''}Response hit the output token limit`;
       }
+      if (answerSec) {
+        detail.timeLimitSec = answerSec;
+        detail.responseMs = reply!.totalMs;
+      }
     } else {
       const pdef = def as ProgramTest;
       const program = PROGRAMS[pdef.program];
@@ -810,7 +820,13 @@ async function executeJob(job: Job, env: JobEnv): Promise<CaseResult> {
       replay = out.replay;
     }
   } catch (err) {
-    if (timedOut) {
+    if (err instanceof OutOfTimeError && !env.signal.aborted) {
+      status = 'timeout';
+      score = 0;
+      passed = false;
+      summary = `Out of time: no answer within ${Math.round(err.limitMs / 1000)} s`;
+      detail = { outOfTime: true, timeLimitSec: Math.round(err.limitMs / 1000), responseMs: err.elapsedMs, formatOk: false };
+    } else if (timedOut) {
       status = 'timeout';
       score = 0;
       passed = false;

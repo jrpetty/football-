@@ -108,6 +108,7 @@ Runs started from the CLI appear in the dashboard, and the reverse.
 | `frontier` | **Frontier tier.** 16 extreme tests (extreme logic, olympiad maths, frontier coding, adversarial system prompts, pressure honesty traps, hard variants of every simulation) to separate the best models once they bunch up near the top of Core. |
 | `vision` | **Picture tests.** The model is shown an image: chart reading, spot the difference, handwritten maths, count & locate (21 cases). Models without image input are skipped, not scored as 0. Kept out of `core` so Core stays comparable. |
 | `quick` | A fast, cheap subset (one or two hard cases per test) for smoke tests and trying out new models. |
+| `trick` | **Can It Be Fooled?** 71 short trick questions (changed classics, false premises, 30-second lightning traps) graded exactly, with no judges. Made for YouTube Shorts: see [docs/PLAYBOOK.md](docs/PLAYBOOK.md#making-a-can-it-be-fooled-short). |
 | `all` | Everything, including custom tests. |
 
 Expected spend for every suite, per test and per model, is in [docs/COSTS.md](docs/COSTS.md). How every test was
@@ -173,6 +174,14 @@ default repeat count. Bump the suite `version` when you change it.
 | Spot the Difference | `vision.spot-the-difference` | Find every difference. Miss one and it is zero. |
 | Handwritten Maths | `vision.handwritten-maths` | Messy handwriting, exact answers. |
 | Count & Locate | `vision.count-and-locate` | How many? Where? Exactly. |
+
+**Can It Be Fooled? (`trick`)**
+
+| Test | Id | What it does |
+|---|---|---|
+| Modified Classics | `trick.modified-classics` | It looks like a puzzle you know. It isn't. |
+| False Premise | `trick.false-premise` | Why did Einstein win his second Nobel Prize? |
+| Lightning Traps | `trick.lightning-traps` | 30 seconds. One line. Don't fall for it. |
 
 Every prompt, verbatim, is in the prompt book (`node src/cli.ts prompts --suite <id>`). Keep your own held-out tests in `tests/private/`.
 

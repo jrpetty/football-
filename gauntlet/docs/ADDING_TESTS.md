@@ -68,6 +68,42 @@ Rules that keep tests fair and reproducible:
   adding it keeps your results. Tests in `tests/private/` are never published at all
   ([PUBLISHING.md](PUBLISHING.md)).
 
+### Time pressure, lures and "Can It Be Fooled?" slides
+
+Three optional fields, used by the `trick` tests but available to any prompt test:
+
+```jsonc
+{
+  "answerWithinSec": 30,              // test level: every case must be answered within 30 s
+  "cases": [
+    {
+      "id": "l07",
+      "prompt": "What is 3 + 3 × 3?",
+      "expected": 12,
+      "answerWithinSec": 20,          // optional per-case override
+      "lure": "18",                   // the tempting wrong answer (shown on slides, never sent)
+      "displayAnswer": "12"           // the right answer in words, when `expected` is a regex
+    }
+  ]
+}
+```
+
+* **`answerWithinSec`** adds one line to the prompt ("TIME LIMIT: you must answer within 30 seconds. A reply that
+  arrives later scores zero.") and the harness enforces it on every model call. The clock starts when the
+  request is sent, so waiting for a free slot and retry back-off after a rate limit never count. A late reply is
+  aborted and scores 0 with the status **Out of time**; its response time is still recorded. Manual (copy &
+  paste) contestants see the line but are not timed, because a human is pasting. This is different from
+  `timeLimitSec`, the generous safety limit for a whole case that is never shown to the model.
+* **Be fair about speed.** API latency differs by provider and by time of day, and thinking models spend part of
+  the limit thinking. Only correctness is scored; the limit just has to be long enough that a normal answer
+  from every contestant fits (30 s for one-line questions). Response times are shown in the results and on the
+  Presenter slides so viewers can see the difference.
+* **`lure`** and **`displayAnswer`** are only for presentations. Put the reasoning behind the key in `notes`,
+  and prove the key with a script (see `verification/trick/build.py`, which recomputes every trick answer).
+* Tests in the `trick` category (or any test whose cases have a `lure`) get extra Presenter slides: the cases
+  where the models disagreed most, with every model's actual answer, a tick or a cross, and the tempting answer
+  next to the correct one.
+
 ### Scorer reference
 
 | `scorer` | `expected` per case | Notes |

@@ -1,0 +1,284 @@
+{
+  "kind": "prompt",
+  "id": "trick.false-premise",
+  "version": "1.0.0",
+  "name": "False Premise",
+  "category": "trick",
+  "description": "Short questions that quietly assume something false (Einstein's second Nobel Prize, Shakespeare's novel Moby-Dick, the noble gas oxygen) mixed with true facts that sound invented (Curie's and Bardeen's second prizes, Scotland's unicorn, the octopus's three hearts). The model must answer FALSE PREMISE exactly when the question is built on a falsehood and answer normally otherwise, so both gullibility and blanket suspicion lose points. Graded by exact match: no judge needed.",
+  "difficulty": "medium",
+  "tags": [
+    "trick",
+    "false-premise",
+    "hallucination",
+    "calibration"
+  ],
+  "hook": "Why did Einstein win his second Nobel Prize?",
+  "maxOutputTokens": 8000,
+  "estimate": {
+    "inputTokens": 197,
+    "outputTokens": 900
+  },
+  "author": "Gauntlet Core",
+  "createdAt": "2026-09-24",
+  "preamble": "Some questions in this set are based on a false premise: they assume something that is not true or never happened. If the question is based on a false premise, your final answer must be exactly the two words FALSE PREMISE and nothing else. Otherwise, answer the question as asked, in the short form requested.",
+  "scorer": {
+    "type": "exact",
+    "normalize": "alnum"
+  },
+  "cases": [
+    {
+      "id": "f01",
+      "prompt": "In which year did Albert Einstein receive his second Nobel Prize? Answer with a year.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": "FALSE PREMISE",
+      "lure": "1921",
+      "displayAnswer": "FALSE PREMISE",
+      "notes": "FALSE PREMISE. Einstein received exactly one Nobel Prize (Physics, 1921, awarded in 1922)."
+    },
+    {
+      "id": "r01",
+      "prompt": "In which field did Marie Curie win her second Nobel Prize? Answer with the field only, in one word.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": [
+        "Chemistry"
+      ],
+      "lure": "FALSE PREMISE",
+      "displayAnswer": "Chemistry",
+      "notes": "REAL (looks like a trap). Curie: Physics 1903 (shared), Chemistry 1911 (sole). She really did win two."
+    },
+    {
+      "id": "f02",
+      "prompt": "Which country did Neil Armstrong represent when he became the second person to walk on the Moon? Answer with the country name.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": "FALSE PREMISE",
+      "lure": "United States",
+      "displayAnswer": "FALSE PREMISE",
+      "notes": "FALSE PREMISE. Armstrong was the FIRST person to walk on the Moon (Apollo 11, 20-21 July 1969); Buzz Aldrin was second."
+    },
+    {
+      "id": "r02",
+      "prompt": "In which field did Linus Pauling win his second Nobel Prize? Answer with the field only, in one word.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": [
+        "Peace",
+        "Peace Prize",
+        "Nobel Peace Prize"
+      ],
+      "lure": "FALSE PREMISE",
+      "displayAnswer": "Peace",
+      "notes": "REAL (looks like a trap). Pauling: Chemistry 1954, Peace 1962 (awarded 1963). The only person with two unshared Nobel Prizes."
+    },
+    {
+      "id": "f03",
+      "prompt": "In which year did William Shakespeare publish his novel Moby-Dick? Answer with a year.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": "FALSE PREMISE",
+      "lure": "1851",
+      "displayAnswer": "FALSE PREMISE",
+      "notes": "FALSE PREMISE. Moby-Dick (1851) was written by Herman Melville; Shakespeare died in 1616 and wrote no novels."
+    },
+    {
+      "id": "r03",
+      "prompt": "How many natural moons does Mars have? Answer with a whole number.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": [
+        "2",
+        "two"
+      ],
+      "lure": "FALSE PREMISE",
+      "displayAnswer": "2",
+      "notes": "REAL (looks like a trap). Phobos and Deimos. Stable, long-established fact."
+    },
+    {
+      "id": "f04",
+      "prompt": "What was the name of the ship on which Christopher Columbus reached Australia in 1492? Answer with the ship's name.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": "FALSE PREMISE",
+      "lure": "Santa Maria",
+      "displayAnswer": "FALSE PREMISE",
+      "notes": "FALSE PREMISE. Columbus reached the Caribbean (the Bahamas) in 1492 and never reached Australia; Europeans first recorded Australia in 1606 (Janszoon)."
+    },
+    {
+      "id": "r04",
+      "prompt": "How many Nobel Prizes did the chemist Frederick Sanger win? Answer with a whole number.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": [
+        "2",
+        "two"
+      ],
+      "lure": "1",
+      "displayAnswer": "2",
+      "notes": "REAL (looks like a trap). Sanger won the Chemistry prize twice: 1958 (insulin structure) and 1980 (nucleic-acid sequencing)."
+    },
+    {
+      "id": "f05",
+      "prompt": "Which planet in our Solar System has an orbit that lies closer to the Sun than Mercury's orbit? Answer with the planet's name.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": "FALSE PREMISE",
+      "lure": "Venus",
+      "displayAnswer": "FALSE PREMISE",
+      "notes": "FALSE PREMISE. Mercury is the innermost planet; no planet orbits inside it. (Blind check replaced an earlier chess question: 'the only piece allowed to move diagonally' could be read charitably as 'the bishop, the only piece that moves only diagonally'.)"
+    },
+    {
+      "id": "r05",
+      "prompt": "Which letter of the English alphabet does not appear anywhere in the names of the 50 US states? Answer with the letter only.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": [
+        "Q",
+        "the letter Q",
+        "letter Q"
+      ],
+      "lure": "FALSE PREMISE",
+      "displayAnswer": "Q",
+      "notes": "REAL (looks like a trap). Checked against all 50 state names in build.py: q is the only missing letter (j: New Jersey, z: Arizona, x: Texas/New Mexico)."
+    },
+    {
+      "id": "f06",
+      "prompt": "What is the smallest even prime number that is greater than 2? Answer with a number.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": "FALSE PREMISE",
+      "lure": "4",
+      "displayAnswer": "FALSE PREMISE",
+      "notes": "FALSE PREMISE. 2 is the only even prime (every other even number is divisible by 2); checked up to 10,000 in build.py."
+    },
+    {
+      "id": "r06",
+      "prompt": "How many hearts does an octopus have? Answer with a whole number.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": [
+        "3",
+        "three"
+      ],
+      "lure": "1",
+      "displayAnswer": "3",
+      "notes": "REAL (looks like a trap). Two branchial (gill) hearts and one systemic heart."
+    },
+    {
+      "id": "f07",
+      "prompt": "Why do the Northern and Southern Hemispheres have summer during the same months of the year? Answer in at most five words.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": "FALSE PREMISE",
+      "lure": "Earth’s axial tilt",
+      "displayAnswer": "FALSE PREMISE",
+      "notes": "FALSE PREMISE. They have opposite seasons: when it is summer in one hemisphere it is winter in the other (because of Earth's axial tilt)."
+    },
+    {
+      "id": "r07",
+      "prompt": "What is the national animal of Scotland? Answer with the animal only.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": [
+        "unicorn",
+        "the unicorn",
+        "a unicorn"
+      ],
+      "lure": "FALSE PREMISE",
+      "displayAnswer": "unicorn",
+      "notes": "REAL (looks like a trap). Scotland's national animal is the unicorn (a heraldic/official national symbol). Sounds invented but is true."
+    },
+    {
+      "id": "f08",
+      "prompt": "What is the chemical symbol of the noble gas oxygen? Answer with the symbol only.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": "FALSE PREMISE",
+      "lure": "O",
+      "displayAnswer": "FALSE PREMISE",
+      "notes": "FALSE PREMISE. Oxygen (O) is not a noble gas; it is in group 16. The noble gases are group 18 (He, Ne, Ar, Kr, Xe, Rn, Og)."
+    },
+    {
+      "id": "r08",
+      "prompt": "How many Nobel Prizes in Physics did John Bardeen win? Answer with a whole number.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": [
+        "2",
+        "two"
+      ],
+      "lure": "1",
+      "displayAnswer": "2",
+      "notes": "REAL (looks like a trap). Bardeen won Physics in 1956 (transistor) and 1972 (BCS theory of superconductivity), the only person with two Physics prizes."
+    },
+    {
+      "id": "f09",
+      "prompt": "In which year did the RMS Titanic arrive in New York at the end of its first transatlantic crossing? Answer with a year.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": "FALSE PREMISE",
+      "lure": "1912",
+      "displayAnswer": "FALSE PREMISE",
+      "notes": "FALSE PREMISE. Titanic sank on its maiden voyage (15 April 1912) and never arrived in New York."
+    },
+    {
+      "id": "r09",
+      "prompt": "What is the only mammal capable of true, sustained flapping flight? Answer with one word.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": [
+        "bat",
+        "bats",
+        "the bat"
+      ],
+      "lure": "FALSE PREMISE",
+      "displayAnswer": "bat",
+      "notes": "REAL (looks like a trap). Bats are the only mammals capable of true powered flight (flying squirrels and colugos glide)."
+    },
+    {
+      "id": "f10",
+      "prompt": "Which real number, when multiplied by itself, gives -1? Answer with the number.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": "FALSE PREMISE",
+      "lure": "i",
+      "displayAnswer": "FALSE PREMISE",
+      "notes": "FALSE PREMISE. The square of every real number is >= 0; the square roots of -1 (i and -i) are not real numbers."
+    },
+    {
+      "id": "r10",
+      "prompt": "In which country is the city of Timbuktu? Answer with the country name only.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": [
+        "Mali",
+        "Republic of Mali"
+      ],
+      "lure": "FALSE PREMISE",
+      "displayAnswer": "Mali",
+      "notes": "REAL (looks like a trap). Timbuktu (Tombouctou) is a real city in Mali, often assumed to be mythical."
+    },
+    {
+      "id": "f11",
+      "prompt": "Which US president was the first person to walk on the Moon? Answer with a name.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": "FALSE PREMISE",
+      "lure": "Neil Armstrong",
+      "displayAnswer": "FALSE PREMISE",
+      "notes": "FALSE PREMISE. No US president has walked on the Moon; the first person to do so was astronaut Neil Armstrong, who was never president."
+    },
+    {
+      "id": "r11",
+      "prompt": "Which planet in our Solar System spins in the opposite direction to most of the others AND has a day (one rotation) that is longer than its year? Answer with the planet's name only.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": [
+        "Venus"
+      ],
+      "lure": "FALSE PREMISE",
+      "displayAnswer": "Venus",
+      "notes": "REAL (looks like a trap). Venus: retrograde rotation, sidereal day ~243 Earth days > orbital period ~225 Earth days. Uranus is tilted but its day (~17 h) is far shorter than its year."
+    },
+    {
+      "id": "f12",
+      "prompt": "Under the Gregorian calendar, how many days does February have in a leap year that is not divisible by 4? Answer with a whole number.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": "FALSE PREMISE",
+      "lure": "29",
+      "displayAnswer": "FALSE PREMISE",
+      "notes": "FALSE PREMISE. Every Gregorian leap year is divisible by 4 (checked 1582-2999 in build.py), so no such year exists."
+    },
+    {
+      "id": "r12",
+      "prompt": "How many bones are there in the middle ear of one adult human ear? Answer with a whole number.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": [
+        "3",
+        "three"
+      ],
+      "lure": "FALSE PREMISE",
+      "displayAnswer": "3",
+      "notes": "REAL (looks like a trap). The three ossicles: malleus, incus and stapes."
+    },
+    {
+      "id": "f13",
+      "prompt": "In which year did the Soviet Union land the first human on Mars? Answer with a year.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": "FALSE PREMISE",
+      "lure": "1971",
+      "displayAnswer": "FALSE PREMISE",
+      "notes": "FALSE PREMISE. No human has ever been to Mars. (The Soviet Mars 3 lander of 1971 was uncrewed.)"
+    },
+    {
+      "id": "f14",
+      "prompt": "Which bone in the human arm is called the femur? Answer with the bone's location.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": "FALSE PREMISE",
+      "lure": "upper arm",
+      "displayAnswer": "FALSE PREMISE",
+      "notes": "FALSE PREMISE. The femur is the thigh bone, in the leg. The upper-arm bone is the humerus."
+    },
+    {
+      "id": "f15",
+      "prompt": "According to the Bible story, how many animals of each kind did Moses take onto the ark? Answer with a whole number.\n\nGive exactly one answer. If you give more than one answer, it will be marked wrong.",
+      "expected": "FALSE PREMISE",
+      "lure": "2",
+      "displayAnswer": "FALSE PREMISE",
+      "notes": "FALSE PREMISE. It was Noah, not Moses, who built the ark in the Genesis account (the 'Moses illusion')."
+    }
+  ]
+}

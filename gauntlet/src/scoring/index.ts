@@ -127,6 +127,17 @@ export async function scoreResponse(input: ScoringInput): Promise<ScoringOutcome
       const re = new RegExp(pattern, scorer.flags);
       const { answer, formatOk } = scorer.fullText ? { answer: response, formatOk: true } : extractFinalAnswer(response);
       const ok = re.test(answer);
+      if (scorer.fullText && /final\s+answer\s*[:：]/i.test(response)) {
+        // Whole-reply patterns (e.g. "one line only" lightning rounds): report the stated answer, not the regex.
+        const stated = extractFinalAnswer(response).answer;
+        const oneLine = response.trim().split(/\n/).filter((l) => l.trim()).length === 1;
+        return {
+          score: ok ? 1 : 0,
+          passed: ok,
+          summary: ok ? `Correct: ${quote(stated)}` : `Answered ${quote(stated)}${oneLine ? '' : ' · reply was not a single line'}`,
+          detail: { extracted: stated, expected: pattern, formatOk: true, oneLine },
+        };
+      }
       return {
         score: ok ? 1 : 0,
         passed: ok,
