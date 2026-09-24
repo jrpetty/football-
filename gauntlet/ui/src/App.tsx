@@ -7,6 +7,7 @@ import { Icon } from './components/icons.tsx';
 import { Callout, LoadingPage, cx } from './components/ui.tsx';
 import { useHotkeys, useNow } from './hooks.ts';
 import { MOCK, api } from './api.ts';
+import { ArenaIcon } from './arena/ArenaIcon.tsx';
 
 const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage.tsx'));
 const NewRunPage = lazy(() => import('./pages/NewRunPage.tsx'));
@@ -24,6 +25,11 @@ const GradePage = lazy(() => import('./pages/GradePage.tsx'));
 const CostsPage = lazy(() => import('./pages/CostsPage.tsx'));
 const PresentPage = lazy(() => import('./pages/PresentPage.tsx'));
 const PresentPickerPage = lazy(() => import('./pages/PresentPickerPage.tsx'));
+const ArenaPage = lazy(() => import('./pages/ArenaPage.tsx'));
+const ArenaNewPage = lazy(() => import('./pages/ArenaNewPage.tsx'));
+const ArenaTournamentPage = lazy(() => import('./pages/ArenaTournamentPage.tsx'));
+const ArenaGamePage = lazy(() => import('./pages/ArenaGamePage.tsx'));
+const ArenaCardPage = lazy(() => import('./pages/ArenaCardPage.tsx'));
 
 interface NavItem {
   to: string;
@@ -39,6 +45,7 @@ const NAV: NavItem[] = [
   { to: '/run/new', label: 'New Run', icon: Icon.Rocket, cta: true, match: (p) => p === '/run/new' },
   { to: '/', label: 'Leaderboard', icon: Icon.Trophy, match: (p) => p === '/' || p === '/leaderboard' },
   { to: '/runs', label: 'Runs', icon: Icon.History, match: (p) => p.startsWith('/runs') },
+  { to: '/arena', label: 'Arena', icon: ArenaIcon, match: (p) => p.startsWith('/arena') },
   { to: '/present', label: 'Presenter', icon: Icon.Present, match: (p) => p.startsWith('/present') },
   { to: '/inbox', label: 'Manual Inbox', icon: Icon.Inbox, badge: 'manual', match: (p) => p.startsWith('/inbox') },
   { to: '/review', label: 'Blind Review', icon: Icon.Eye, match: (p) => p.startsWith('/review') },
@@ -103,6 +110,13 @@ function resolve(parts: string[]): Resolved {
   if (a === 'inbox') return { el: <InboxPage />, crumb: 'Manual Inbox' };
   if (a === 'grade') return { el: <GradePage />, crumb: 'Grader' };
   if (a === 'costs') return { el: <CostsPage />, crumb: 'Cost Planner' };
+  if (a === 'arena') {
+    if (!b) return { el: <ArenaPage />, crumb: 'The Arena' };
+    if (b === 'new') return { el: <ArenaNewPage />, crumb: 'New tournament' };
+    if (c === 'game' && parts[3]) return { el: <ArenaGamePage key={`${b}/${parts[3]}`} id={b} gameKey={parts[3]} />, crumb: 'Arena game' };
+    if (c === 'card') return { el: <ArenaCardPage key={b} id={b} />, crumb: 'Match cards', bare: true };
+    return { el: <ArenaTournamentPage key={b} id={b} />, crumb: 'Tournament' };
+  }
   if (a === 'present') {
     if (!b) return { el: <PresentPickerPage />, crumb: 'Presenter' };
     return { el: <PresentPage key={b} runId={b} />, crumb: 'Presenter', bare: true };

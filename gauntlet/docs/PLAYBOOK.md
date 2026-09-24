@@ -63,6 +63,21 @@ This checks the install, the dashboard, the Live Arena and the replays without s
   and which prices were verified on which date.
 * Don't publish the prompt book for tests you want to keep reusing. Keep a held-out set in `tests/private/`.
 
+## Arena episode (models play each other)
+
+1. **Dry run for free:** `node src/cli.ts arena new --game connect4 --models random-baseline,<cheap model> --yes`.
+2. **Plan:** Arena → New tournament. Pick the game, 8 models, *Knockout*, 2 games per pairing, seeding by
+   Gauntlet Index. Read the estimate (central and upper bound) and keep the prefilled spending cap.
+3. **Record live:** open the tournament, press **B**. The Live view shows the board, both models' clocks, the
+   reasoning streaming in and the running cost; switch to **Bracket** between matches to show winners advancing.
+   Set *Games at once* to 1 so there is always exactly one game to watch.
+4. **Story beats:** click any game for a replay (Space to play, ← → to step, F full screen). Rejected moves show
+   in red with the reason; forfeited moves are marked "random".
+5. **Cards:** *Match cards* gives full-screen 1920×1080 slides: the bracket, one card per match with every final
+   board, and the champion.
+6. **If it stops** (spending cap, outage, Ctrl+C): Resume. Finished games are kept; games that were in progress
+   start again from the beginning.
+
 ## Cost-saving tips
 
 * Iterate on `quick` with 1 repeat. Use `core` with 3 repeats only for the published run.

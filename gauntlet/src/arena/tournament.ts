@@ -482,6 +482,10 @@ function launch(manifest: TournamentManifest): void {
     controller.signal.addEventListener('abort', onAbort, { once: true });
     const startedAt = now();
     const [p0, p1] = slot.players;
+    // A hung API call must not stall the bracket: each move gets the per-case time limit (humans pasting replies get a week).
+    const moveLimitMs = slot.players.some((p) => entrant.get(p)?.manual) ? 7 * 24 * 3600 * 1000 : settings.defaultTimeLimitSec * 1000;
+    let moveTimer: ReturnType<typeof setTimeout> | undefined;
+    let timedOut = false;
     const liveGame: LiveGame = {
       key: slot.key,
       matchId: slot.matchId,
@@ -540,6 +544,11 @@ function launch(manifest: TournamentManifest): void {
           }
         },
         onTurn: (side, _ply, attempt) => {
+          clearTimeout(moveTimer);
+          moveTimer = setTimeout(() => {
+            timedOut = true;
+            ctrl.abort();
+          }, moveLimitMs);
           const d = thinking.get(slot.key);
           if (d) emit({ type: 'game.thinking', tournamentId: manifest.id, key: slot.key, side: d.side, text: d.text, attempt: d.attempt });
           thinking.delete(slot.key);
@@ -576,7 +585,8 @@ function launch(manifest: TournamentManifest): void {
         finishedAt: now(),
       };
     } catch (err) {
-      const aborted = ctrl.signal.aborted || err instanceof BudgetReached;
+      const aborted = (ctrl.signal.aborted && !timedOut) || err instanceof BudgetReached;
+      if (timedOut) err = new Error(`No reply within ${Math.round(moveLimitMs / 1000)} s for one move`);
       if (!aborted) log('error', `${slot.key}: ${(err as Error).message}`);
       record = {
         key: slot.key,
@@ -599,6 +609,7 @@ function launch(manifest: TournamentManifest): void {
         finishedAt: now(),
       };
     } finally {
+      clearTimeout(moveTimer);
       controller.signal.removeEventListener('abort', onAbort);
       for (const r of recorders) inFlightRecorders.delete(r);
       live.delete(slot.key);

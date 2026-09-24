@@ -202,6 +202,28 @@ clear: a score close to the baseline means a test isn't measuring skill for that
 * **Cheap exploration.** Use the `quick` suite with 1 repeat to try new models, and the full `core` suite with 3
   repeats for results you publish. Per-suite, per-model tables are in [COSTS.md](COSTS.md).
 
+## 9a. The Arena (head-to-head games)
+
+Arena tournaments are separate from the Gauntlet Index: they rank models by playing each other, not by score.
+The same fair-play rules apply.
+
+* **Stateless moves.** Every move is one fresh prompt: the full rules, the move history, the position (from the
+  moving side's point of view) and, by default, the legal moves. The reply must end with `MOVE: <move>`.
+* **One retry, then a strike.** An unreadable or illegal move is rejected with the reason and the model gets one
+  more try. If that fails too, a random legal move (from the tournament's seeded random stream) is played for it
+  and it receives a strike; 3 strikes lose the game. Every attempt is recorded and shown in the replay.
+* **Both sides.** Each pairing plays 2, 4 or 6 games with the sides swapped every game, so the first-move
+  advantage cancels out. Colour-swapped games share a seed.
+* **Tie-breaks (knockout):** sudden-death games (sides keep alternating; each starts after one seeded random move
+  per side), then fewer illegal moves, then lower cost, then the higher seed. Round-robin standings: points
+  (win 1, draw ½), then head-to-head points, then fewer illegal moves, then lower cost.
+* **Rules enforced by the harness.** Connect Four and chess legality are checked by Gauntlet's own engines; the
+  chess move generator is verified against the published perft node counts. Chess games that reach the move cap
+  are decided on material (P1 N3 B3 R5 Q9; a lead of 3+ wins, otherwise a draw).
+* **Reproducible.** The tournament manifest stores the model snapshots, the settings and a fingerprint over the
+  game code, the prompt template and the settings. Resume refuses to continue if the game code or a model's
+  configuration changed.
+
 ## 10. Publishing checklist
 
 1. Verify every contestant's pricing (`pricing.verifiedAt`) against the provider's price page.

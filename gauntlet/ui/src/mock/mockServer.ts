@@ -684,6 +684,7 @@ export async function handle(method: string, fullPath: string, body: unknown): P
   const parts = path.replace(/^\/api\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
   const [a, b, c, d] = parts;
   const route = `${method} ${a ?? ''}`;
+  if (a === 'arena') return (await import('./arenaMock.ts')).handleArena(method, parts.slice(1), body);
 
   switch (route) {
     case 'GET meta':

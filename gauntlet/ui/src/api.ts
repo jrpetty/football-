@@ -59,7 +59,8 @@ type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
 
 const loadMock = () => import('./mock/mockServer.ts');
 
-async function request<T>(method: Method, path: string, body?: unknown): Promise<T> {
+/** Exported for feature modules with their own typed clients (e.g. ui/src/arena/client.ts). */
+export async function request<T>(method: Method, path: string, body?: unknown): Promise<T> {
   if (MOCK) {
     const mock = await loadMock();
     return (await mock.handle(method, path, body)) as T;

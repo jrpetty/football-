@@ -129,3 +129,58 @@ Show `combinedPrompt` for a **new** chat (it includes any system prompt and earl
 |---|---|---|---|
 | GET | `/api/review/queue?testId=` | – | `Array<{ runId, key, testId, caseId, contestantId, status, score, humanScores, reason: 'human-scored' \| 'judge-disagreement' \| 'second-opinion' }>` — `human` scorer tests, results where the judge panel disagreed (the human rating becomes the final score) and artifact tests (anonymise in UI) |
 | POST | `/api/review/score` | `{ runId, key, score: number /* 0..1 */, rater: string, note?: string }` | `CaseResultLite` |
+
+## Arena (head-to-head tournaments)
+
+Shapes are defined in [`src/arena/types.ts`](../src/arena/types.ts). Tournaments are stored in
+`data/arena/<id>/` (`manifest.json` + append-only `games.jsonl`, latest line per game key wins).
+
+| Method | Path | Body | Returns |
+|---|---|---|---|
+| GET | `/api/arena/games` | – | `Array<{ id, name, version, tagline, description, sides, rules, moveHelp, capRule, defaults: { maxPlies, listLegalMoves }, estimate }>` |
+| POST | `/api/arena/estimate` | `ArenaRequest` | `ArenaEstimate`: games, moves, central and upper-bound USD, per-model cost per game, first-round pairings, fingerprint, warnings |
+| POST | `/api/arena/tournaments` | `ArenaRequest` | `{ tournamentId }`, starts immediately |
+| GET | `/api/arena/tournaments` | – | `TournamentListItem[]` (newest first) |
+| GET | `/api/arena/tournaments/:id` | – | `TournamentDetail` = `{ manifest, state: TournamentState, games: ArenaGameLite[], active, live: LiveGame[] }` |
+| GET | `/api/arena/tournaments/:id/games/:key` | – | `ArenaGameRecord` (every move with its board snapshot, every attempt, both transcripts) |
+| POST | `/api/arena/tournaments/:id/cancel` | – | `{ ok: true }`: games in progress stop at their next move |
+| POST | `/api/arena/tournaments/:id/resume` | `{ maxCostUsd?: number \| null }` | `{ ok: true }`: plays only missing games; 409 if the game code or a model's config changed |
+| DELETE | `/api/arena/tournaments/:id` | – | `{ ok: true }` |
+| GET | `/api/arena/tournaments/:id/export.json` | – | `{ manifest, state, games: ArenaGameRecord[] }` |
+| GET | `/api/arena/tournaments/:id/events` | – | **Server-Sent Events** stream of `ArenaEvent`. On connect: `tournament.progress`, `tournament.status` and a `game.started` (with the moves so far) for every game in progress. |
+
+```ts
+interface ArenaRequest {
+  game: 'connect4' | 'chess';
+  contestantIds: string[];                 // 2–16
+  format?: 'knockout' | 'round-robin';     // default knockout
+  seeding?: 'index' | 'manual';            // Gauntlet Index (default) or the order given
+  gamesPerMatch?: 2 | 4 | 6;               // sides swap every game (default 2)
+  suddenDeath?: number;                    // knockout tie-break games (default 2)
+  maxStrikes?: number;                     // default 3
+  maxPlies?: number;                       // move cap (chess default 120)
+  listLegalMoves?: boolean;                // default true
+  concurrency?: number;                    // games at once (default 2)
+  maxCostUsd?: number;                     // hard cap, checked before every model call
+  seed?: number; name?: string; notes?: string;
+}
+
+type ArenaEvent =
+  | { type: 'tournament.status'; status; error? }
+  | { type: 'tournament.progress'; gamesDone; gamesTotal; costUsd }
+  | { type: 'game.started'; game: LiveGame }                 // players, initial board, moves so far
+  | { type: 'game.turn'; key; side; at }                     // a seat starts thinking (its clock starts)
+  | { type: 'game.thinking'; key; side; text; attempt }      // streamed reply text (append), ~7/s
+  | { type: 'game.move'; key; move: ArenaMove; strikes; metrics }
+  | { type: 'game.finished'; game: ArenaGameLite }
+  | { type: 'match.finished'; match: MatchState }
+  | { type: 'log'; level; message }
+  | { type: 'manual.request'; request } | { type: 'manual.resolved'; requestId };
+```
+
+`TournamentState.matches[]` is derived from the finished games every time (never stored), so it is always
+consistent after a crash. Each `MatchState` has `players` (null = decided by an earlier match), `games` (one
+slot per game, with sudden-death slots added as they become necessary), `score` (win 1, draw ½), `illegal`,
+`cost`, `winner`, `decidedBy` (`games` · `sudden-death` · `fewer illegal moves` · `lower cost` · `higher seed` ·
+`bye`) and a one-line `summary`. Manual (copy & paste) contestants' moves appear in `GET /api/manual` with
+`runId` = the tournament id.

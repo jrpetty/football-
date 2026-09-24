@@ -238,7 +238,7 @@ function RequestCard({
                 </button>
                 <span className="spacer" />
                 {runName && (
-                  <Link to={pathOf('runs', req.runId, 'live')} className="muted" style={{ fontSize: '0.8rem' }}>
+                  <Link to={req.runId.startsWith('arena-') ? pathOf('arena', req.runId) : pathOf('runs', req.runId, 'live')} className="muted" style={{ fontSize: '0.8rem' }}>
                     {runName}
                   </Link>
                 )}

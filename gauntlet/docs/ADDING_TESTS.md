@@ -179,7 +179,69 @@ Program guidelines:
 
 ---
 
-## 3. Adding models and providers
+## 3. Adding an Arena game
+
+Arena games are head-to-head: two models play each other through the match engine in `src/arena/match.ts`,
+which handles the prompt, the `MOVE:` line, the retry, strikes, cost, streaming and recording. A game only
+describes the rules. Put it in `src/arena/games/<id>.ts`, export an `ArenaGame` (see `src/arena/types.ts`) and
+register it in `src/arena/games/index.ts`. Use `connect4.ts` (about 170 lines) as the template.
+
+```ts
+export const myGame: ArenaGame<MyState> = {
+  id: 'my-game', name: 'My Game', version: '1.0.0',
+  tagline: 'One line for cards.', description: 'What it tests, in two or three sentences.',
+  sides: [{ name: 'Blue', color: '#3b82f6' }, { name: 'Orange', color: '#f97316' }],
+  rules: 'Full rules, sent verbatim in every prompt. Never use backticks (they mark legal moves).',
+  moveHelp: 'a card name, for example "MOVE: Ace"',   // completes "where <your move> is …"
+  capRule: 'What happens at the move cap, in one sentence.',
+  defaults: { maxPlies: 60, listLegalMoves: true },
+  estimate: { pliesPerGame: 40, inputTokensPerMove: 800, outputTokensPerMove: 1500 },  // honest numbers!
+  setup(rng, config) { … },          // initial state; ONLY rng for randomness (shuffles, deals)
+  toMove(s) { … },                   // 0 or 1
+  legalMoves(s) { … },               // canonical move ids; non-empty until the game is over
+  parseMove(s, text) { … },          // text after "MOVE:" → { ok: true, move } or { ok: false, error }
+  play(s, move) { … },               // returns a NEW state (never mutate)
+  outcome(s) { … },                  // null, or { winner: 0 | 1 | null, reason }
+  adjudicate(s) { … },               // the result when the move cap is reached
+  label(s, move) { … },              // display form of a move (called before play)
+  formatHistory(labels) { … },       // "1. e4 e5 2. Nf3" for the prompt
+  view(s, side) { … },               // the position as text FOR THIS SEAT (hide private information here)
+  snapshot(s) { … },                 // JSON the dashboard draws; stored after every move
+};
+```
+
+Rules of thumb:
+
+* **`parseMove` must never throw** and should explain every rejection in plain words ("Column 8 does not exist.
+  Columns are numbered 1 to 7."). The explanation goes back to the model on its retry.
+* **Be generous with notation, strict with legality.** Strip markdown and punctuation, accept obvious synonyms,
+  never accept an illegal move.
+* **`legalMoves` doubles as the Random Baseline's menu** (each move is listed as a backticked `MOVE: x`) and as the
+  pool for the random move after two failed attempts.
+* The game's source file (and every arena module it imports) is part of the tournament fingerprint, so a code
+  change starts a new comparable series and blocks resuming old tournaments.
+* Add tests to `test/arena.test.ts` (or a new `test/arena.<id>.test.ts`): win and draw detection, illegal-move
+  errors, messy move text, and a full game between two scripted fake models (`test/helpers/fake-model.ts`).
+* The dashboard draws boards in `ui/src/arena/boards.tsx`: add a component for your `snapshot` shape and a case in
+  `GameBoard`, then a scripted policy in `ui/src/mock/arenaSim.ts` so the game works in mock mode (`?mock=1`).
+
+**Poker (hidden information and chance).** Deal the whole deck in `setup(rng)`. Colour-swapped games share a
+seed, so both models get the same cards from each seat (duplicate poker). Keep hole cards in the state and show
+each seat only its own in `view(state, side)`. `toMove` may return the same seat twice in a row; moves are ids
+like `fold`, `call`, `raise 40`. `outcome` ends the game on chip count after N hands. Keep hole cards out of
+`snapshot` until showdown if you want the replay to keep the suspense.
+
+**Debate / Courtroom (free-text moves, judged).** Return a single placeholder such as `SPEAK` from
+`legalMoves`, accept any non-empty text in `parseMove` (store the speech in the state; `label` can be its first
+few words) and let `outcome` return a result only after the last round. The verdict needs judges, which the
+match engine does not call yet: add an optional `judge?(state, ask)` hook to `ArenaGame`, call it from
+`playGame` when the rounds are over, and give it the existing judge panel (`createJudgePanel` in
+`src/engine/runner.ts`, which already keeps judges away from their own vendor). Include the judges' cost in
+`estimate` and in the spending-cap check.
+
+---
+
+## 4. Adding models and providers
 
 * **New model on an existing provider:** `Models → Add model` in the dashboard, or add a contestant to
   `config/models.json`. Use `Discover models` to see the exact ids your key can access. Fill in pricing
