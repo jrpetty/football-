@@ -1,0 +1,1 @@
+{"functionName": "parseCsvRecord", "tests": [{"args": ["a,,c,"], "expected": ["a", "", "c", ""]}, {"args": ["\"she said \"\"hi\"\"\",ok"], "expected": ["she said \"hi\"", "ok"]}, {"args": [""], "expected": [""]}, {"args": ["\"abc\"d,e"], "expected": null}]}

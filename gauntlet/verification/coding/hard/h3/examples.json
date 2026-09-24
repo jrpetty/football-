@@ -1,0 +1,1 @@
+{"functionName": "meridianAddDays", "tests": [{"args": ["2026-03-12", 20], "expected": "2026-04-04"}, {"args": ["2028-06-28", 1], "expected": "2028-LD"}, {"args": ["2026-13-28", 1], "expected": "2026-YD"}, {"args": ["2026-YD", 1], "expected": "2027-01-01"}, {"args": ["90-06-28", 1], "expected": "90-07-01"}]}

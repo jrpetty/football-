@@ -1,7 +1,8 @@
-import { Suspense, lazy, useEffect, useId, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import type { ComponentType, ReactNode } from 'react';
 import { useRoute, Link } from './router.tsx';
-import { MetaProvider, PrefsProvider, ToastProvider, useMeta, usePrefs } from './context.tsx';
+import { CaptionProvider, MetaProvider, PrefsProvider, ToastProvider, useCurrentCaption, useMeta, usePrefs } from './context.tsx';
+import { BrandMark, Wordmark } from './components/Brand.tsx';
 import { Icon } from './components/icons.tsx';
 import { Callout, LoadingPage, cx } from './components/ui.tsx';
 import { useHotkeys, useNow } from './hooks.ts';
@@ -21,6 +22,8 @@ const MethodologyPage = lazy(() => import('./pages/MethodologyPage.tsx'));
 const InboxPage = lazy(() => import('./pages/InboxPage.tsx'));
 const GradePage = lazy(() => import('./pages/GradePage.tsx'));
 const CostsPage = lazy(() => import('./pages/CostsPage.tsx'));
+const PresentPage = lazy(() => import('./pages/PresentPage.tsx'));
+const PresentPickerPage = lazy(() => import('./pages/PresentPickerPage.tsx'));
 
 interface NavItem {
   to: string;
@@ -36,6 +39,7 @@ const NAV: NavItem[] = [
   { to: '/run/new', label: 'New Run', icon: Icon.Rocket, cta: true, match: (p) => p === '/run/new' },
   { to: '/', label: 'Leaderboard', icon: Icon.Trophy, match: (p) => p === '/' || p === '/leaderboard' },
   { to: '/runs', label: 'Runs', icon: Icon.History, match: (p) => p.startsWith('/runs') },
+  { to: '/present', label: 'Presenter', icon: Icon.Present, match: (p) => p.startsWith('/present') },
   { to: '/inbox', label: 'Manual Inbox', icon: Icon.Inbox, badge: 'manual', match: (p) => p.startsWith('/inbox') },
   { to: '/review', label: 'Blind Review', icon: Icon.Eye, match: (p) => p.startsWith('/review') },
   { to: '/tests', label: 'Tests', icon: Icon.Flask, section: 'Lab', match: (p) => p.startsWith('/tests') },
@@ -74,6 +78,8 @@ function useManualCount(): number {
 interface Resolved {
   el: ReactNode;
   crumb: string;
+  /** Full-screen route: no sidebar, top bar or broadcast chrome. */
+  bare?: boolean;
 }
 
 function resolve(parts: string[]): Resolved {
@@ -97,6 +103,10 @@ function resolve(parts: string[]): Resolved {
   if (a === 'inbox') return { el: <InboxPage />, crumb: 'Manual Inbox' };
   if (a === 'grade') return { el: <GradePage />, crumb: 'Grader' };
   if (a === 'costs') return { el: <CostsPage />, crumb: 'Cost Planner' };
+  if (a === 'present') {
+    if (!b) return { el: <PresentPickerPage />, crumb: 'Presenter' };
+    return { el: <PresentPage key={b} runId={b} />, crumb: 'Presenter', bare: true };
+  }
   return {
     el: (
       <div className="page">
@@ -120,43 +130,17 @@ function resolve(parts: string[]): Resolved {
   };
 }
 
-export function BrandMark({ className }: { className?: string }) {
-  const gid = `gm-${useId().replace(/:/g, '')}`;
-  return (
-    <svg className={className} viewBox="0 0 36 36" aria-hidden="true">
-      <defs>
-        <linearGradient id={gid} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#22d3ee" />
-          <stop offset="1" stopColor="#a78bfa" />
-        </linearGradient>
-      </defs>
-      <rect x="1" y="1" width="34" height="34" rx="9" fill="#0a0f16" stroke={`url(#${gid})`} strokeOpacity="0.55" />
-      <path d="M9.5 25 L18 9 L26.5 25" fill="none" stroke={`url(#${gid})`} strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M13.4 19.6 H22.6" stroke="#eef3fa" strokeWidth="3" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function Wordmark({ tagline = true }: { tagline?: boolean }) {
-  return (
-    <div>
-      <div className="brand-word">GAUNTLET</div>
-      {tagline && <div className="brand-tag">AI Benchmark Lab</div>}
-    </div>
-  );
-}
-
 function Shell() {
   const route = useRoute();
   const { meta, error, reload, loading } = useMeta();
-  const { theme, setTheme, broadcast, setBroadcast } = usePrefs();
+  const { theme, setTheme, broadcast, setBroadcast, captions, setCaptions } = usePrefs();
   const [navOpen, setNavOpen] = useState(false);
   const [exitVisible, setExitVisible] = useState(false);
   const hideTimer = useRef<number | undefined>(undefined);
   const now = useNow(broadcast ? 1000 : null);
   const manualCount = useManualCount();
 
-  const { el, crumb } = resolve(route.parts);
+  const { el, crumb, bare } = resolve(route.parts);
 
   useEffect(() => {
     setNavOpen(false);
@@ -167,16 +151,22 @@ function Shell() {
     document.title = `${crumb} · Gauntlet`;
   }, [crumb]);
 
-  useHotkeys({
-    b: () => setBroadcast(!broadcast),
-    Escape: () => {
-      if (broadcast && !document.querySelector('.drawer-root, .modal-root')) setBroadcast(false);
+  useHotkeys(
+    {
+      b: () => setBroadcast(!broadcast),
+      c: () => {
+        if (broadcast) setCaptions(!captions);
+      },
+      Escape: () => {
+        if (broadcast && !document.querySelector('.drawer-root, .modal-root')) setBroadcast(false);
+      },
     },
-  });
+    !bare,
+  );
 
   // In broadcast mode, reveal the exit control only while the pointer moves.
   useEffect(() => {
-    if (!broadcast) return;
+    if (!broadcast || bare) return;
     const show = () => {
       setExitVisible(true);
       window.clearTimeout(hideTimer.current);
@@ -187,7 +177,15 @@ function Shell() {
       window.removeEventListener('pointermove', show);
       window.clearTimeout(hideTimer.current);
     };
-  }, [broadcast]);
+  }, [broadcast, bare]);
+
+  if (bare) {
+    return (
+      <Suspense fallback={<LoadingPage />}>
+        <div className="bare-root">{el}</div>
+      </Suspense>
+    );
+  }
 
   return (
     <div className={cx('app', navOpen && 'nav-open')}>
@@ -314,10 +312,37 @@ function Shell() {
       </main>
 
       {broadcast && (
-        <button className={cx('btn sm broadcast-exit', exitVisible && 'visible')} onClick={() => setBroadcast(false)} aria-label="Exit broadcast mode">
-          <Icon.X /> Exit broadcast <kbd>B</kbd>
-        </button>
+        <div className={cx('broadcast-exit', exitVisible && 'visible')}>
+          <button className="btn sm" onClick={() => setCaptions(!captions)} aria-pressed={captions} aria-label={captions ? 'Hide viewer captions' : 'Show viewer captions'}>
+            <Icon.Captions /> {captions ? 'Hide captions' : 'Show captions'} <kbd>C</kbd>
+          </button>
+          <button className="btn sm" onClick={() => setBroadcast(false)} aria-label="Exit broadcast mode">
+            <Icon.X /> Exit broadcast <kbd>B</kbd>
+          </button>
+        </div>
       )}
+      <ViewerCaptionStrip visible={broadcast && captions} />
+    </div>
+  );
+}
+
+/** Slim "What you're seeing" strip for screen recordings (broadcast mode only; toggle with C). */
+function ViewerCaptionStrip({ visible }: { visible: boolean }) {
+  const cap = useCurrentCaption();
+  const show = visible && !!cap;
+  useEffect(() => {
+    if (show) document.documentElement.setAttribute('data-caption', 'on');
+    else document.documentElement.removeAttribute('data-caption');
+    return () => document.documentElement.removeAttribute('data-caption');
+  }, [show]);
+  if (!show || !cap) return null;
+  return (
+    <div className="viewer-caption" role="note" aria-label="Viewer caption">
+      <span className="vc-k">What you’re seeing</span>
+      <span className="vc-t" key={cap.text}>
+        {cap.text}
+      </span>
+      {cap.fine && <span className="vc-f">{cap.fine}</span>}
     </div>
   );
 }
@@ -327,7 +352,9 @@ export default function App() {
     <PrefsProvider>
       <ToastProvider>
         <MetaProvider>
-          <Shell />
+          <CaptionProvider>
+            <Shell />
+          </CaptionProvider>
         </MetaProvider>
       </ToastProvider>
     </PrefsProvider>

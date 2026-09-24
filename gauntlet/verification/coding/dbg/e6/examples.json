@@ -1,0 +1,1 @@
+{"functionName": "normalizePath", "tests": [{"args": ["/home//user/./docs/../pics/"], "expected": "/home/user/pics"}, {"args": ["a/b/c/../../../../d"], "expected": "../d"}, {"args": ["/../../x"], "expected": "/x"}, {"args": [""], "expected": "."}]}

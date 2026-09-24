@@ -1,0 +1,1 @@
+{"functionName": "countSplits", "tests": [{"args": ["1234", 34], "expected": 5}, {"args": ["10", 10], "expected": 1}, {"args": ["1010", 10], "expected": 1}, {"args": ["0", 5], "expected": 0}]}

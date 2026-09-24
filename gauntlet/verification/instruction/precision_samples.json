@@ -1,0 +1,586 @@
+[
+ {
+  "id": "f01",
+  "expected": [
+   {
+    "check": "line_count",
+    "min": 3,
+    "max": 3
+   },
+   {
+    "check": "all_lowercase"
+   },
+   {
+    "check": "no_commas"
+   },
+   {
+    "check": "include",
+    "text": "umbrella",
+    "min": 1,
+    "max": 1
+   },
+   {
+    "check": "word_count",
+    "min": 9,
+    "max": 24
+   }
+  ],
+  "samples": {
+   "pass": [
+    "soft rain taps the tin roof\nmy red umbrella waits beside the door\nthe street drinks the grey sky slowly"
+   ],
+   "fail": [
+    "Soft rain, soft rain\nmy umbrella and your umbrella\nthe end"
+   ]
+  }
+ },
+ {
+  "id": "f02",
+  "expected": [
+   {
+    "check": "bullet_count",
+    "min": 5,
+    "max": 5
+   },
+   {
+    "check": "line_count",
+    "min": 5,
+    "max": 5
+   },
+   {
+    "check": "starts_with",
+    "text": "- "
+   },
+   {
+    "check": "include",
+    "text": "budget",
+    "min": 2,
+    "max": 2
+   },
+   {
+    "check": "word_count",
+    "min": 30,
+    "max": 60
+   }
+  ],
+  "samples": {
+   "pass": [
+    "- Write a weekly budget every Sunday evening.\n- Track small purchases in a notes app.\n- Cook at home three nights a week.\n- Review the budget after each payday.\n- Move spare cash into savings at once."
+   ],
+   "fail": [
+    "Here are my tips:\n- Budget.\n- Budget more.\n- Plan meals.\n- Buy in bulk.\n- Compare prices."
+   ]
+  }
+ },
+ {
+  "id": "f03",
+  "expected": [
+   {
+    "check": "no_letter",
+    "letter": "e"
+   },
+   {
+    "check": "sentence_count",
+    "min": 4,
+    "max": 4
+   },
+   {
+    "check": "word_count",
+    "min": 40,
+    "max": 60
+   },
+   {
+    "check": "ends_with",
+    "text": "."
+   }
+  ],
+  "samples": {
+   "pass": [
+    "At dawn a busy crowd walks along a long row of stalls. Fishing folk shout loud calls and hold up bright shiny cod on thick frost. A small boy runs past with a pail full of crabs and clams. Gulls wait high up in a cold sky for scraps to fall from a cart."
+   ],
+   "fail": [
+    "The market opens at dawn. Traders shout. Gulls circle overhead while buyers haggle over fresh fish."
+   ]
+  }
+ },
+ {
+  "id": "f04",
+  "expected": [
+   {
+    "check": "acrostic",
+    "word": "GAUNTLET"
+   },
+   {
+    "check": "line_count",
+    "min": 8,
+    "max": 8
+   },
+   {
+    "check": "no_commas"
+   },
+   {
+    "check": "include",
+    "text": "arena",
+    "min": 1
+   },
+   {
+    "check": "word_count",
+    "min": 40,
+    "max": 72
+   }
+  ],
+  "samples": {
+   "pass": [
+    "Gates swing open as the evening crowd pours in\nAll around the arena the banners start to rise\nUnder bright lights the young players stretch and wait\nNervous fans lean forward in their narrow seats\nThe whistle sounds and the long hush breaks\nLoud chants roll down from the upper stands\nEvery pass and tackle pulls a roar from the crowd\nThousands sing together as they drift into the night"
+   ],
+   "fail": [
+    "Gates open,\nAll cheer\nUnder lights\nNow\nThe game\nEnds\nLate\nTonight"
+   ]
+  }
+ },
+ {
+  "id": "f05",
+  "expected": [
+   {
+    "check": "json"
+   },
+   {
+    "check": "json_keys",
+    "keys": [
+     "title",
+     "year",
+     "tags",
+     "rating"
+    ]
+   },
+   {
+    "check": "regex",
+    "pattern": "\"year\"\\s*:\\s*199\\d\\s*[,}\\n]"
+   },
+   {
+    "check": "regex",
+    "pattern": "\"tags\"\\s*:\\s*\\[\\s*\"[a-z]+\"\\s*,\\s*\"[a-z]+\"\\s*,\\s*\"[a-z]+\"\\s*\\]"
+   },
+   {
+    "check": "regex",
+    "pattern": "\"rating\"\\s*:\\s*(10\\.0|\\d\\.\\d)\\s*[,}\\n]"
+   },
+   {
+    "check": "regex",
+    "pattern": "^\\s*\\{[\\s\\S]*\\}\\s*$"
+   }
+  ],
+  "samples": {
+   "pass": [
+    "{\"title\": \"The Lantern Keeper\", \"year\": 1996, \"tags\": [\"drama\", \"coastal\", \"family\"], \"rating\": 7.8}"
+   ],
+   "fail": [
+    "```json\n{\"title\": \"X\", \"year\": \"1996\", \"tags\": [\"Drama\", \"sea\"], \"rating\": 8}\n```"
+   ]
+  }
+ },
+ {
+  "id": "f06",
+  "expected": [
+   {
+    "check": "paragraph_count",
+    "min": 3,
+    "max": 3
+   },
+   {
+    "check": "starts_with",
+    "text": "Yesterday",
+    "caseSensitive": true
+   },
+   {
+    "check": "include",
+    "text": "however",
+    "min": 1,
+    "max": 1
+   },
+   {
+    "check": "word_count",
+    "min": 90,
+    "max": 130
+   },
+   {
+    "check": "ends_with",
+    "text": "?"
+   }
+  ],
+  "samples": {
+   "pass": [
+    "Yesterday I left my green umbrella on the number twelve bus. It had followed me through three winters and one very windy wedding, and I only noticed it was gone when the first drops hit my collar.\n\nI called the depot the next morning. A patient woman searched the lost property shelf while I listened to the hum of the office radio. She found gloves, a trombone case and forty single socks. There was, however, no green umbrella.\n\nNow I walk to work under a borrowed black one that refuses to close properly. Somewhere a stranger is staying dry under my old friend. Is it wrong to hope the handle squeaks for them too?"
+   ],
+   "fail": [
+    "Yesterday I lost my umbrella. However, I found it. However, it broke.\n\nThe end."
+   ]
+  }
+ },
+ {
+  "id": "f07",
+  "expected": [
+   {
+    "check": "line_count",
+    "min": 6,
+    "max": 6
+   },
+   {
+    "check": "each_line_starts_with",
+    "text": "> "
+   },
+   {
+    "check": "include",
+    "text": "orbit",
+    "min": 2
+   },
+   {
+    "check": "exclude",
+    "text": "star"
+   },
+   {
+    "check": "no_commas"
+   },
+   {
+    "check": "word_count",
+    "min": 36,
+    "max": 66
+   }
+  ],
+  "samples": {
+   "pass": [
+    "> A small grey satellite hums above the clouds\n> It follows the same quiet orbit every ninety minutes\n> Its solar wings catch the light of the rising sun\n> Far below the oceans turn from black to blue\n> Engineers on the ground watch its orbit on a glowing map\n> Each pass sends home pictures of rivers and roads"
+   ],
+   "fail": [
+    "> The satellite starts its orbit, slowly.\n> It is a star in the sky.\n> Orbit."
+   ]
+  }
+ },
+ {
+  "id": "f08",
+  "expected": [
+   {
+    "check": "max_word_length",
+    "max": 6
+   },
+   {
+    "check": "sentence_count",
+    "min": 4,
+    "max": 6
+   },
+   {
+    "check": "word_count",
+    "min": 50,
+    "max": 80
+   },
+   {
+    "check": "include",
+    "text": "sun",
+    "min": 1
+   }
+  ],
+  "samples": {
+   "pass": [
+    "Plants are like tiny cooks. They drink water up from the soil with their roots. Their green leaves soak up light from the sun and take in air too. Deep in each leaf the plant mixes the light with the water and the air to make a sweet food. That food helps the plant grow tall and green, and it lets out fresh air for us to use."
+   ],
+   "fail": [
+    "Photosynthesis is the process by which plants convert sunlight into chemical energy. It happens in chloroplasts. The sun is important."
+   ]
+  }
+ },
+ {
+  "id": "f09",
+  "expected": [
+   {
+    "check": "all_uppercase"
+   },
+   {
+    "check": "line_count",
+    "min": 4,
+    "max": 4
+   },
+   {
+    "check": "regex",
+    "pattern": "^(?!.*STOP\\s*$).*\\S.*$",
+    "flags": "m",
+    "shouldMatch": false
+   },
+   {
+    "check": "regex",
+    "pattern": "\\d",
+    "shouldMatch": false
+   },
+   {
+    "check": "include",
+    "text": "ARRIVE",
+    "caseSensitive": true,
+    "min": 1
+   },
+   {
+    "check": "word_count",
+    "min": 16,
+    "max": 32
+   }
+  ],
+  "samples": {
+   "pass": [
+    "TRAIN DELAYED BY SNOW NEAR THE BORDER STOP\nWILL ARRIVE TOMORROW AT NOON STOP\nPLEASE TELL AUNT MARGIT STOP\nKEEP THE SOUP WARM STOP"
+   ],
+   "fail": [
+    "Train delayed STOP\nWILL ARRIVE AT 12 STOP.\nLOVE"
+   ]
+  }
+ },
+ {
+  "id": "f10",
+  "expected": [
+   {
+    "check": "bullet_count",
+    "min": 7,
+    "max": 7
+   },
+   {
+    "check": "line_count",
+    "min": 7,
+    "max": 7
+   },
+   {
+    "check": "title_case_lines"
+   },
+   {
+    "check": "regex",
+    "pattern": "^\\s*1\\. \\S[^\\n]*\\n2\\. \\S[^\\n]*\\n3\\. \\S[^\\n]*\\n4\\. \\S[^\\n]*\\n5\\. \\S[^\\n]*\\n6\\. \\S[^\\n]*\\n7\\. \\S[^\\n]*\\s*$"
+   },
+   {
+    "check": "no_commas"
+   },
+   {
+    "check": "word_count",
+    "min": 28,
+    "max": 49
+   }
+  ],
+  "samples": {
+   "pass": [
+    "1. The Silence Of The Salt Marsh\n2. A Key Beneath The Lighthouse\n3. Murder At The Winter Fair\n4. The Clockmaker And The Crow\n5. Seven Letters From Nowhere\n6. Death In A Borrowed Coat\n7. The Last Train To Harrow Point"
+   ],
+   "fail": [
+    "1. The Silence of the Marsh\n2. A Key, Beneath\n3. Murder\n4. Crow\n5. Letters\n6. Death\n8. Train"
+   ]
+  }
+ },
+ {
+  "id": "f11",
+  "expected": [
+   {
+    "check": "acrostic",
+    "word": "CLOUD"
+   },
+   {
+    "check": "line_count",
+    "min": 5,
+    "max": 5
+   },
+   {
+    "check": "all_lowercase"
+   },
+   {
+    "check": "no_letter",
+    "letter": "e"
+   },
+   {
+    "check": "no_commas"
+   },
+   {
+    "check": "word_count",
+    "min": 25,
+    "max": 45
+   }
+  ],
+  "samples": {
+   "pass": [
+    "calm air brings a soft gray mist\nlow drifts roll across a still hill\nour kids point and laugh at its forms\nuntil a warm wind blows it apart\nday turns bright and a hot sun glows"
+   ],
+   "fail": [
+    "Clouds are here\nLovely\nOver\nUp\nDrifting, gently"
+   ]
+  }
+ },
+ {
+  "id": "f12",
+  "expected": [
+   {
+    "check": "word_count",
+    "min": 50,
+    "max": 50
+   },
+   {
+    "check": "sentence_count",
+    "min": 5,
+    "max": 5
+   },
+   {
+    "check": "starts_with",
+    "text": "Once",
+    "caseSensitive": true
+   },
+   {
+    "check": "ends_with",
+    "text": "again.",
+    "caseSensitive": true
+   },
+   {
+    "check": "include",
+    "text": "lantern",
+    "min": 2,
+    "max": 2
+   },
+   {
+    "check": "no_commas"
+   }
+  ],
+  "samples": {
+   "pass": [
+    "Once a year the keeper climbed the tower to polish the lantern. Storms had cracked the glass twice before. Ships still trusted the light that swept across the black water. One night the lantern failed and she carried a candle up the stairs. By dawn the bay was safe again."
+   ],
+   "fail": [
+    "Once upon a time, a keeper lit a lantern. The end."
+   ]
+  }
+ },
+ {
+  "id": "f13",
+  "expected": [
+   {
+    "check": "json"
+   },
+   {
+    "check": "json_keys",
+    "keys": [
+     "cities",
+     "count",
+     "source"
+    ]
+   },
+   {
+    "check": "include",
+    "text": "\"name\"",
+    "min": 4,
+    "max": 4
+   },
+   {
+    "check": "include",
+    "text": "\"population\"",
+    "min": 4,
+    "max": 4
+   },
+   {
+    "check": "regex",
+    "pattern": "\"population\"\\s*:\\s*[1-9]\\d*\\s*[,}\\n]"
+   },
+   {
+    "check": "regex",
+    "pattern": "\"count\"\\s*:\\s*4\\s*[,}\\n]"
+   },
+   {
+    "check": "regex",
+    "pattern": "\"source\"\\s*:\\s*null\\s*[,}\\n]"
+   },
+   {
+    "check": "regex",
+    "pattern": "^\\s*\\{[\\s\\S]*\\}\\s*$"
+   }
+  ],
+  "samples": {
+   "pass": [
+    "{\"cities\": [{\"name\": \"Varrowmere\", \"population\": 48210}, {\"name\": \"Quellstone\", \"population\": 1203}, {\"name\": \"Ostrava Nuova\", \"population\": 350000}, {\"name\": \"Lindqvist Harbour\", \"population\": 7755}], \"count\": 4, \"source\": null}"
+   ],
+   "fail": [
+    "Here you go:\n{\"cities\": [{\"name\": \"A\", \"population\": \"100\"}], \"count\": \"4\", \"source\": \"none\"}"
+   ]
+  }
+ },
+ {
+  "id": "f14",
+  "expected": [
+   {
+    "check": "line_count",
+    "min": 6,
+    "max": 6
+   },
+   {
+    "check": "regex",
+    "pattern": "^\\s*ANA: [^\\n]+\\nBEN: [^\\n]+\\nANA: [^\\n]+\\nBEN: [^\\n]+\\nANA: [^\\n]+\\nBEN: [^\\n]+\\s*$"
+   },
+   {
+    "check": "exclude",
+    "text": "?"
+   },
+   {
+    "check": "include",
+    "text": "tomorrow",
+    "min": 1,
+    "max": 1
+   },
+   {
+    "check": "word_count",
+    "min": 30,
+    "max": 70
+   }
+  ],
+  "samples": {
+   "pass": [
+    "ANA: The forecast says sunshine all day tomorrow.\nBEN: Then we should grab the big blanket and the red basket.\nANA: I will bake lemon bars tonight.\nBEN: Great. I can bring sandwiches and cold juice.\nANA: Let us meet by the fountain at noon.\nBEN: Perfect. I will bring the frisbee too."
+   ],
+   "fail": [
+    "ANA: Picnic tomorrow?\nBEN: Sure, tomorrow works.\nANA: Great."
+   ]
+  }
+ },
+ {
+  "id": "f15",
+  "expected": [
+   {
+    "check": "paragraph_count",
+    "min": 2,
+    "max": 2
+   },
+   {
+    "check": "sentence_count",
+    "min": 5,
+    "max": 5
+   },
+   {
+    "check": "word_count",
+    "min": 60,
+    "max": 80
+   },
+   {
+    "check": "include",
+    "text": "kettle",
+    "min": 3
+   },
+   {
+    "check": "no_letter",
+    "letter": "z"
+   },
+   {
+    "check": "exclude",
+    "text": "very"
+   },
+   {
+    "check": "ends_with",
+    "text": "Boil smarter.",
+    "caseSensitive": true
+   }
+  ],
+  "samples": {
+   "pass": [
+    "Meet the Tidewater One, a quiet kettle that brings a full litre of water to the boil in under three minutes. Its brushed steel body stays cool to the touch while the water inside reaches a rolling boil.\n\nChoose from five preset temperatures for green tea, coffee or baby formula with a single tap. This kettle remembers your last setting and switches itself off when the kettle runs dry. Boil smarter."
+   ],
+   "fail": [
+    "The Zenith kettle is very fast. Every morning it boils. Boil smarter."
+   ]
+  }
+ }
+]

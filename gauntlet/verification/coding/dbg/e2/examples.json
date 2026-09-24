@@ -1,0 +1,1 @@
+{"functionName": "smartTruncate", "tests": [{"args": ["hello world", 8], "expected": "hello w\u2026"}, {"args": ["hello world", 7], "expected": "hello\u2026"}, {"args": ["hello", 5], "expected": "hello"}, {"args": ["\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00", 3], "expected": "\ud83d\ude00\ud83d\ude00\u2026"}]}

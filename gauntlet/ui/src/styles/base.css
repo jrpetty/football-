@@ -588,8 +588,10 @@ html[data-broadcast='on'] .broadcast-slate {
 .broadcast-exit {
   position: fixed;
   right: 18px;
-  bottom: 18px;
+  top: 18px;
   z-index: 90;
+  display: flex;
+  gap: 8px;
   opacity: 0;
   transform: translateY(8px);
   pointer-events: none;
@@ -601,6 +603,79 @@ html[data-broadcast='on'] .broadcast-slate {
   opacity: 1;
   transform: none;
   pointer-events: auto;
+}
+
+/* Viewer caption strip ("What you're seeing: …") for screen recordings. */
+.viewer-caption {
+  position: fixed;
+  left: 50%;
+  bottom: 1.1rem;
+  transform: translateX(-50%);
+  z-index: 85;
+  width: min(92vw, 78rem);
+  display: flex;
+  align-items: baseline;
+  gap: 0.9rem;
+  padding: 0.7rem 1.2rem 0.75rem;
+  border-radius: 0.8rem;
+  background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+  animation: caption-in 420ms var(--ease-out) both;
+}
+.viewer-caption::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.7rem;
+  bottom: 0.7rem;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--brand-grad);
+}
+.viewer-caption .vc-k {
+  flex: none;
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.viewer-caption .vc-t {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.98rem;
+  line-height: 1.4;
+  color: var(--text-1);
+  animation: fade-in 360ms ease-out both;
+}
+.viewer-caption .vc-f {
+  flex: none;
+  max-width: 30%;
+  font-size: 0.7rem;
+  line-height: 1.35;
+  color: var(--text-3);
+  text-align: right;
+}
+html[data-caption='on'] .main {
+  padding-bottom: calc(2.4vw + 5.2rem);
+}
+html[data-caption='on'] .drawer-body {
+  padding-bottom: 6rem;
+}
+@keyframes caption-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .viewer-caption,
+  .viewer-caption .vc-t {
+    animation: none;
+  }
 }
 
 /* Animated backdrop — slow, subtle, disabled for reduced motion. */

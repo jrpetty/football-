@@ -1,0 +1,1 @@
+{"functionName": "regexMatch", "tests": [{"args": ["(ab|cd)*e", "abcdabe"], "expected": true}, {"args": ["colou?r", "colouur"], "expected": false}, {"args": ["[a-cx-z]+", "abzyx"], "expected": true}, {"args": ["a{2}", "a{2}"], "expected": true}, {"args": ["\\.\\*", ".*"], "expected": true}]}

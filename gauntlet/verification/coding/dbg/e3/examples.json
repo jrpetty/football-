@@ -1,0 +1,1 @@
+{"functionName": "rankLeaderboard", "tests": [{"args": [[["a", 10, 50], ["b", 20, 60], ["c", 20, 40]]], "expected": [[1, "c"], [2, "b"], [3, "a"]]}, {"args": [[["ann", 7, 30], ["bob", 9, 30], ["cat", 7, 30], ["dan", 7, 25], ["eve", 9, 30]]], "expected": [[1, "bob"], [1, "eve"], [3, "dan"], [4, "ann"], [4, "cat"]]}, {"args": [[]], "expected": []}]}

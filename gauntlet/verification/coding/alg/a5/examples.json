@@ -1,0 +1,1 @@
+{"functionName": "componentsAfterCuts", "tests": [{"args": [3, [[0, 1], [1, 2]], [0, 1]], "expected": [2, 3]}, {"args": [3, [[0, 1], [0, 1], [1, 2]], [0, 1, 2]], "expected": [1, 2, 3]}, {"args": [4, [[0, 1], [2, 2]], [1]], "expected": [3]}]}

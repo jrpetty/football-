@@ -148,6 +148,19 @@ export const Icon = {
       <rect x="6" y="6" width="12" height="12" rx="2" />
     </Svg>
   ),
+  Present: (p: P) => (
+    <Svg {...p}>
+      <rect x="3" y="4" width="18" height="12" rx="2" />
+      <path d="M12 16v4M8 20h8" />
+      <path d="M10.5 7.8v4.4L14 10l-3.5-2.2Z" fill="currentColor" stroke="none" />
+    </Svg>
+  ),
+  Captions: (p: P) => (
+    <Svg {...p}>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="M7 13h4M13 13h4M7 16h7" />
+    </Svg>
+  ),
   Play: (p: P) => (
     <Svg {...p}>
       <path d="M7 4.5v15l12-7.5-12-7.5Z" fill="currentColor" stroke="none" />

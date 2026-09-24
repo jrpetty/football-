@@ -1,0 +1,1 @@
+{"functionName": "unionArea", "tests": [{"args": [[[0, 0, 2, 2], [1, 1, 3, 3]]], "expected": 7}, {"args": [[[0, 0, 4, 4], [1, 1, 2, 2]]], "expected": 16}, {"args": [[]], "expected": 0}]}
