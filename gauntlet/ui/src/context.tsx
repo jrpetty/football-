@@ -78,6 +78,9 @@ interface PrefsCtx {
   setTheme: (t: Theme) => void;
   broadcast: boolean;
   setBroadcast: (b: boolean) => void;
+  /** Viewer caption strip in broadcast mode (toggle with C). */
+  captions: boolean;
+  setCaptions: (b: boolean) => void;
 }
 
 const PrefsContext = createContext<PrefsCtx | null>(null);
@@ -102,9 +105,26 @@ function readBroadcast(): boolean {
   }
 }
 
+function readCaptions(): boolean {
+  try {
+    return window.localStorage.getItem('gauntlet.captions') !== '0';
+  } catch {
+    return true;
+  }
+}
+
 export function PrefsProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(readTheme);
   const [broadcast, setBroadcastState] = useState<boolean>(readBroadcast);
+  const [captions, setCaptionsState] = useState<boolean>(readCaptions);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('gauntlet.captions', captions ? '1' : '0');
+    } catch {
+      /* ignore */
+    }
+  }, [captions]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -125,7 +145,10 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
     }
   }, [broadcast]);
 
-  const value = useMemo<PrefsCtx>(() => ({ theme, setTheme: setThemeState, broadcast, setBroadcast: setBroadcastState }), [theme, broadcast]);
+  const value = useMemo<PrefsCtx>(
+    () => ({ theme, setTheme: setThemeState, broadcast, setBroadcast: setBroadcastState, captions, setCaptions: setCaptionsState }),
+    [theme, broadcast, captions],
+  );
   return <PrefsContext.Provider value={value}>{children}</PrefsContext.Provider>;
 }
 
@@ -133,6 +156,64 @@ export function usePrefs(): PrefsCtx {
   const ctx = useContext(PrefsContext);
   if (!ctx) throw new Error('usePrefs outside PrefsProvider');
   return ctx;
+}
+
+// ───────────────────────────── Viewer captions ─────────────────────────────
+
+/**
+ * One-sentence "What you're seeing" captions for screen recordings. Screens
+ * register a caption with useViewerCaption(); the most recently mounted one
+ * wins (so an open replay drawer overrides the page underneath). The strip is
+ * only drawn in broadcast mode with captions on.
+ */
+export interface ViewerCaptionEntry {
+  text: string;
+  /** Precise terminology in small print, e.g. "Whiskers: 95% bootstrap confidence interval". */
+  fine?: string;
+}
+
+interface CaptionCtx {
+  set: (id: number, e: ViewerCaptionEntry | null) => void;
+  current: ViewerCaptionEntry | null;
+}
+
+const CaptionContext = createContext<CaptionCtx | null>(null);
+let captionSeq = 0;
+
+export function CaptionProvider({ children }: { children: ReactNode }) {
+  const [entries, setEntries] = useState<Array<[number, ViewerCaptionEntry]>>([]);
+  const set = useCallback((id: number, e: ViewerCaptionEntry | null) => {
+    setEntries((xs) => {
+      const rest = xs.filter(([k]) => k !== id);
+      if (!e) return rest.length === xs.length ? xs : rest;
+      const old = xs.find(([k]) => k === id)?.[1];
+      if (old && old.text === e.text && old.fine === e.fine) return xs;
+      return [...rest, [id, e] as [number, ViewerCaptionEntry]].sort((a, b) => a[0] - b[0]);
+    });
+  }, []);
+  const current = entries.length ? entries[entries.length - 1][1] : null;
+  const value = useMemo<CaptionCtx>(() => ({ set, current }), [set, current]);
+  return <CaptionContext.Provider value={value}>{children}</CaptionContext.Provider>;
+}
+
+export function useViewerCaption(text: string | null | undefined, fine?: string): void {
+  const ctx = useContext(CaptionContext);
+  const idRef = useRef(0);
+  if (!idRef.current) idRef.current = ++captionSeq;
+  const set = ctx?.set;
+  useEffect(() => {
+    if (!set) return;
+    const id = idRef.current;
+    set(id, text ? { text, fine } : null);
+  }, [set, text, fine]);
+  useEffect(() => {
+    const id = idRef.current;
+    return () => set?.(id, null);
+  }, [set]);
+}
+
+export function useCurrentCaption(): ViewerCaptionEntry | null {
+  return useContext(CaptionContext)?.current ?? null;
 }
 
 // ───────────────────────────── Toasts ─────────────────────────────

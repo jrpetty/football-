@@ -3,7 +3,7 @@
  * a labelled dot in its own colour, with 95% CI whiskers, the Pareto frontier
  * and the random baseline as a reference line.
  */
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import type { PointerEvent as RPointerEvent } from 'react';
 import type { LeaderboardRow } from '../../types.ts';
 import { useElementSize, useRootFontSize } from '../../hooks.ts';
@@ -36,14 +36,29 @@ export function costOf(row: LeaderboardRow, mode: CostMode): number {
   return cases > 0 ? total / cases : 0;
 }
 
-export function ScoreCostScatter({ rows, mode, tall }: { rows: LeaderboardRow[]; mode: CostMode; tall?: boolean }) {
+export function ScoreCostScatter({
+  rows,
+  mode,
+  tall,
+  fontScale,
+  height: fixedHeight,
+}: {
+  rows: LeaderboardRow[];
+  mode: CostMode;
+  tall?: boolean;
+  /** Overrides the root-font-derived scale (the presenter renders on a fixed 1920×1080 stage). */
+  fontScale?: number;
+  /** Fixed SVG height in px. */
+  height?: number;
+}) {
   const [ref, size] = useElementSize<HTMLDivElement>();
   const fs = useRootFontSize();
   const [hover, setHover] = useState<{ id: string; x: number; y: number } | null>(null);
+  const uid = useId().replace(/:/g, '');
 
-  const s = fs / 14;
+  const s = fontScale ?? fs / 14;
   const width = Math.max(280, size.width);
-  const height = Math.round(clamp(width * (tall ? 0.6 : 0.52), 300 * s, tall ? 820 : 560 * s));
+  const height = fixedHeight ?? Math.round(clamp(width * (tall ? 0.6 : 0.52), 300 * s, tall ? 820 : 560 * s));
 
   const model = useMemo(() => {
     const scored = rows.filter((r) => typeof r.index === 'number' && Number.isFinite(r.index));
@@ -218,17 +233,17 @@ export function ScoreCostScatter({ rows, mode, tall }: { rows: LeaderboardRow[];
           width={width}
           height={height}
           role="img"
-          aria-labelledby="scatter-title scatter-desc"
+          aria-labelledby={`${uid}-t ${uid}-d`}
           onPointerMove={onMove}
           onPointerLeave={() => setHover(null)}
           style={{ ['--s' as string]: s }}
         >
-          <title id="scatter-title">Gauntlet Index versus cost</title>
-          <desc id="scatter-desc">
+          <title id={`${uid}-t`}>Gauntlet Index versus cost</title>
+          <desc id={`${uid}-d`}>
             {pts.map((p) => `${p.label}: index ${fmtIndex(p.index)}, cost ${fmtCost(p.cost)}`).join('; ')}
           </desc>
           <defs>
-            <linearGradient id="frontier-wash" x1="0" y1="0" x2="0" y2="1">
+            <linearGradient id={`${uid}-wash`} x1="0" y1="0" x2="0" y2="1">
               <stop offset="0" stopColor="var(--accent)" stopOpacity="0.13" />
               <stop offset="1" stopColor="var(--accent)" stopOpacity="0" />
             </linearGradient>
@@ -279,7 +294,7 @@ export function ScoreCostScatter({ rows, mode, tall }: { rows: LeaderboardRow[];
           {/* Pareto frontier */}
           {frontier.length > 1 && (
             <g className="frontier">
-              <path d={frontierArea} fill="url(#frontier-wash)" stroke="none" />
+              <path d={frontierArea} fill={`url(#${uid}-wash)`} stroke="none" />
               <path className="frontier-line" d={frontierPath} pathLength={1} />
             </g>
           )}
@@ -349,7 +364,7 @@ export function ScoreCostScatter({ rows, mode, tall }: { rows: LeaderboardRow[];
         {frontier.length > 1 && (
           <span className="lg-item">
             <span className="lg-line accent" />
-            Pareto frontier
+            Best value (Pareto frontier)
           </span>
         )}
         {baseline && (
@@ -360,7 +375,7 @@ export function ScoreCostScatter({ rows, mode, tall }: { rows: LeaderboardRow[];
         )}
         <span className="lg-item">
           <span className="lg-whisker" />
-          95% CI
+          Uncertainty (95% CI)
         </span>
       </div>
       {unplotted.length > 0 && (

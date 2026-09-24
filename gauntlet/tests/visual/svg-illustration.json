@@ -1,0 +1,209 @@
+{
+  "kind": "prompt",
+  "id": "visual.svg-illustration",
+  "version": "1.0.0",
+  "name": "Precise SVG Illustration",
+  "category": "visual",
+  "description": "Hand-written SVG illustrations with checkable requirements: a lighthouse scene with exact beam and stripe counts, a clock whose hands must sit at exact angles, a bar chart with exact pixel geometry and a chess position with exact piece placement. It tests spatial reasoning and precision in code-as-drawing, where approximate \"looks about right\" output loses points.",
+  "difficulty": "medium",
+  "tags": [
+    "visual",
+    "svg",
+    "spatial",
+    "artifact",
+    "precision"
+  ],
+  "hook": "Exactly three beams. Hands at exactly 304.25 degrees.",
+  "maxOutputTokens": 16000,
+  "estimate": {
+    "inputTokens": 410,
+    "outputTokens": 7000
+  },
+  "author": "Gauntlet Core",
+  "createdAt": "2026-09-24",
+  "scorer": {
+    "type": "artifact",
+    "format": "svg",
+    "checks": [
+      {
+        "check": "parses"
+      },
+      {
+        "check": "max_bytes",
+        "bytes": 40000
+      }
+    ],
+    "rubric": "Score the SVG out of 10. Work out from the code exactly what will be drawn (positions, sizes, colours, counts and angles).\n\n1. Numbered requirements (0-8 points): the task lists numbered requirements. Divide 8 points equally among them. A requirement earns its share only if it is fully and exactly satisfied as written (exact counts, positions, colours, angles or proportions; small anti-aliasing-level differences are fine). Partially met requirements earn half of their share. Round the total of this part to the nearest 0.5.\n2. Overall quality (0-2 points): 2 = clean, well-composed and immediately recognisable; 1 = recognisable but crude or cluttered; 0 = hard to recognise.\n\nRounding: give the final score as an integer (round .5 up). Automatic zero: if the SVG would not render, depicts something other than what was asked, or uses <image>, <script> or external resources, the score is 0.",
+    "judgeWeight": 0.6
+  },
+  "cases": [
+    {
+      "id": "v01",
+      "prompt": "Draw a lighthouse at night as a 512 x 512 SVG.\n\nNumbered requirements:\n1. The sky fills the whole background with a vertical gradient from very dark navy at the top to a lighter blue near the horizon, defined with a <linearGradient>.\n2. A crescent moon (not a full circle) in the top-left quarter of the image (its whole shape within x < 256 and y < 256).\n3. At least 6 small stars, all in the upper half of the image (y < 256).\n4. A lighthouse standing roughly in the middle of the image, with a tower that is wider at the bottom than at the top, and exactly 3 red horizontal stripes on an otherwise white tower.\n5. A lamp room with a glowing light at the top of the tower, and EXACTLY three visible light beams coming from it (semi-transparent yellow shapes spreading outwards).\n6. Wavy water along the bottom of the image spanning the full width, drawn with at least two overlapping wave layers of different shades of blue that use curved <path> commands (Q, C, S or T).\n\nOutput rules: respond with a single ```svg code block containing only the SVG document, and nothing else. The root element must be <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"512\" height=\"512\" viewBox=\"0 0 512 512\">. Use only inline SVG elements and attributes: no <image>, no external references or fonts, no <script>, no <foreignObject>, and no CSS animations. Keep the file under 40 kB.",
+      "scorer": {
+        "type": "artifact",
+        "format": "svg",
+        "checks": [
+          {
+            "check": "parses"
+          },
+          {
+            "check": "max_bytes",
+            "bytes": 40000
+          },
+          {
+            "check": "contains",
+            "text": "viewBox=\"0 0 512 512\""
+          },
+          {
+            "check": "contains",
+            "text": "<linearGradient"
+          },
+          {
+            "check": "contains",
+            "text": "<path"
+          }
+        ],
+        "rubric": "Score the SVG out of 10. Work out from the code exactly what will be drawn (positions, sizes, colours, counts and angles).\n\n1. Numbered requirements (0-8 points): the task lists numbered requirements. Divide 8 points equally among them. A requirement earns its share only if it is fully and exactly satisfied as written (exact counts, positions, colours, angles or proportions; small anti-aliasing-level differences are fine). Partially met requirements earn half of their share. Round the total of this part to the nearest 0.5.\n2. Overall quality (0-2 points): 2 = clean, well-composed and immediately recognisable; 1 = recognisable but crude or cluttered; 0 = hard to recognise.\n\nRounding: give the final score as an integer (round .5 up). Automatic zero: if the SVG would not render, depicts something other than what was asked, or uses <image>, <script> or external resources, the score is 0.",
+        "judgeWeight": 0.6
+      },
+      "notes": "[medium] Automated checks: renders/parses, <= 40 kB, and contains viewBox=\"0 0 512 512\", <linearGradient, <path (each explicitly required by the prompt). The judge rubric splits 8 points across the numbered requirements and 2 for overall quality; judges can verify coordinates, counts and angles from the SVG source."
+    },
+    {
+      "id": "v02",
+      "prompt": "Draw an analog wall clock showing exactly 10:08:30 as a 400 x 400 SVG.\n\nNumbered requirements:\n1. A circular clock face drawn with a <circle> element centred at (200, 200) with radius 180, white fill and a dark rim at least 6 units thick.\n2. Exactly 60 tick marks around the edge, each drawn as a <line> element: the 12 hour ticks longer and thicker than the 48 minute ticks.\n3. Numerals only at 12, 3, 6 and 9 (four <text> elements containing 12, 3, 6 and 9, each placed next to its hour position). No other numerals.\n4. Each of the three hands is drawn as a <line> element starting at the centre. The hour hand points correctly for 10:08:30, i.e. at 304.25 degrees clockwise from 12 o'clock (10 x 30 + 8.5 x 0.5), and is the shortest and thickest hand.\n5. The minute hand points at 51 degrees clockwise from 12 o'clock (8.5 minutes x 6) and is longer than the hour hand.\n6. A thin red second hand points straight down at the 6 (180 degrees, i.e. 30 seconds) and is the longest hand.\n7. A small filled circle covers the centre where the hands meet.\n\nOutput rules: respond with a single ```svg code block containing only the SVG document, and nothing else. The root element must be <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"400\" height=\"400\" viewBox=\"0 0 400 400\">. Use only inline SVG elements and attributes: no <image>, no external references or fonts, no <script>, no <foreignObject>, and no CSS animations. Keep the file under 40 kB.",
+      "scorer": {
+        "type": "artifact",
+        "format": "svg",
+        "checks": [
+          {
+            "check": "parses"
+          },
+          {
+            "check": "max_bytes",
+            "bytes": 40000
+          },
+          {
+            "check": "contains",
+            "text": "viewBox=\"0 0 400 400\""
+          },
+          {
+            "check": "contains",
+            "text": "<circle"
+          },
+          {
+            "check": "contains",
+            "text": "<line"
+          },
+          {
+            "check": "contains",
+            "text": "<text"
+          }
+        ],
+        "rubric": "Score the SVG out of 10. Work out from the code exactly what will be drawn (positions, sizes, colours, counts and angles).\n\n1. Numbered requirements (0-8 points): the task lists numbered requirements. Divide 8 points equally among them. A requirement earns its share only if it is fully and exactly satisfied as written (exact counts, positions, colours, angles or proportions; small anti-aliasing-level differences are fine). Partially met requirements earn half of their share. Round the total of this part to the nearest 0.5.\n2. Overall quality (0-2 points): 2 = clean, well-composed and immediately recognisable; 1 = recognisable but crude or cluttered; 0 = hard to recognise.\n\nRounding: give the final score as an integer (round .5 up). Automatic zero: if the SVG would not render, depicts something other than what was asked, or uses <image>, <script> or external resources, the score is 0.",
+        "judgeWeight": 0.6
+      },
+      "notes": "[hard] Automated checks: renders/parses, <= 40 kB, and contains viewBox=\"0 0 400 400\", <circle, <line, <text (each explicitly required by the prompt). The judge rubric splits 8 points across the numbered requirements and 2 for overall quality; judges can verify coordinates, counts and angles from the SVG source."
+    },
+    {
+      "id": "v03",
+      "prompt": "Draw a bar chart of this data as a 600 x 500 SVG: Mon = 12, Tue = 7, Wed = 15, Thu = 4, Fri = 9.\n\nNumbered requirements:\n1. The baseline (x-axis) is a horizontal line at y = 450, and the y-axis is a vertical line at x = 60, both drawn in dark grey.\n2. The scale is exactly 20 pixels per unit: each bar is a <rect> whose bottom edge sits on y = 450 and whose height is value x 20 (so Mon is 240 px tall and Thu is 80 px tall).\n3. Five bars, each exactly 60 px wide, in the order Mon, Tue, Wed, Thu, Fri from left to right, with left edges at x = 90, 180, 270, 360 and 450.\n4. The tallest bar is filled with #E4572E and the other four with #29335C.\n5. Each bar has its day label (Mon, Tue, Wed, Thu, Fri) centred below the baseline and its value centred just above the top of the bar, all as <text> elements.\n6. The y-axis has labelled tick marks at 0, 5, 10 and 15 at the correct heights (y = 450, 350, 250 and 150).\n\nOutput rules: respond with a single ```svg code block containing only the SVG document, and nothing else. The root element must be <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"600\" height=\"500\" viewBox=\"0 0 600 500\">. Use only inline SVG elements and attributes: no <image>, no external references or fonts, no <script>, no <foreignObject>, and no CSS animations. Keep the file under 40 kB.",
+      "scorer": {
+        "type": "artifact",
+        "format": "svg",
+        "checks": [
+          {
+            "check": "parses"
+          },
+          {
+            "check": "max_bytes",
+            "bytes": 40000
+          },
+          {
+            "check": "contains",
+            "text": "viewBox=\"0 0 600 500\""
+          },
+          {
+            "check": "contains",
+            "text": "<rect"
+          },
+          {
+            "check": "contains",
+            "text": "<text"
+          },
+          {
+            "check": "contains",
+            "text": "#E4572E"
+          },
+          {
+            "check": "contains",
+            "text": "#29335C"
+          }
+        ],
+        "rubric": "Score the SVG out of 10. Work out from the code exactly what will be drawn (positions, sizes, colours, counts and angles).\n\n1. Numbered requirements (0-8 points): the task lists numbered requirements. Divide 8 points equally among them. A requirement earns its share only if it is fully and exactly satisfied as written (exact counts, positions, colours, angles or proportions; small anti-aliasing-level differences are fine). Partially met requirements earn half of their share. Round the total of this part to the nearest 0.5.\n2. Overall quality (0-2 points): 2 = clean, well-composed and immediately recognisable; 1 = recognisable but crude or cluttered; 0 = hard to recognise.\n\nRounding: give the final score as an integer (round .5 up). Automatic zero: if the SVG would not render, depicts something other than what was asked, or uses <image>, <script> or external resources, the score is 0.",
+        "judgeWeight": 0.6
+      },
+      "notes": "[medium] Automated checks: renders/parses, <= 40 kB, and contains viewBox=\"0 0 600 500\", <rect, <text, #E4572E, #29335C (each explicitly required by the prompt). The judge rubric splits 8 points across the numbered requirements and 2 for overall quality; judges can verify coordinates, counts and angles from the SVG source."
+    },
+    {
+      "id": "v04",
+      "prompt": "Draw a chess position as a 400 x 400 SVG.\n\nNumbered requirements:\n1. An 8 x 8 board filling the whole image (each square 50 x 50), with light squares #F0D9B5 and dark squares #B58863, drawn with <rect> elements.\n2. Standard orientation: White plays up the board, so rank 1 is the bottom row, rank 8 the top row, file a is the left column and file h the right column. The square a1 (bottom-left) must be dark.\n3. Each piece is a <text> element containing the Unicode chess symbol, roughly centred on its square: White king (♔) on e1, White rook (♖) on h1, White pawn (♙) on d4, Black king (♚) on e8, Black queen (♛) on d8 and Black pawn (♟) on f7.\n4. No other pieces are on the board.\n5. File letters a-h along the bottom edge and rank numbers 1-8 along the left edge, drawn as small <text> labels inside the edge squares.\n\nOutput rules: respond with a single ```svg code block containing only the SVG document, and nothing else. The root element must be <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"400\" height=\"400\" viewBox=\"0 0 400 400\">. Use only inline SVG elements and attributes: no <image>, no external references or fonts, no <script>, no <foreignObject>, and no CSS animations. Keep the file under 40 kB.",
+      "scorer": {
+        "type": "artifact",
+        "format": "svg",
+        "checks": [
+          {
+            "check": "parses"
+          },
+          {
+            "check": "max_bytes",
+            "bytes": 40000
+          },
+          {
+            "check": "contains",
+            "text": "viewBox=\"0 0 400 400\""
+          },
+          {
+            "check": "contains",
+            "text": "<rect"
+          },
+          {
+            "check": "contains",
+            "text": "<text"
+          },
+          {
+            "check": "contains",
+            "text": "♔"
+          },
+          {
+            "check": "contains",
+            "text": "♖"
+          },
+          {
+            "check": "contains",
+            "text": "♙"
+          },
+          {
+            "check": "contains",
+            "text": "♚"
+          },
+          {
+            "check": "contains",
+            "text": "♛"
+          },
+          {
+            "check": "contains",
+            "text": "♟"
+          },
+          {
+            "check": "contains",
+            "text": "#B58863"
+          }
+        ],
+        "rubric": "Score the SVG out of 10. Work out from the code exactly what will be drawn (positions, sizes, colours, counts and angles).\n\n1. Numbered requirements (0-8 points): the task lists numbered requirements. Divide 8 points equally among them. A requirement earns its share only if it is fully and exactly satisfied as written (exact counts, positions, colours, angles or proportions; small anti-aliasing-level differences are fine). Partially met requirements earn half of their share. Round the total of this part to the nearest 0.5.\n2. Overall quality (0-2 points): 2 = clean, well-composed and immediately recognisable; 1 = recognisable but crude or cluttered; 0 = hard to recognise.\n\nRounding: give the final score as an integer (round .5 up). Automatic zero: if the SVG would not render, depicts something other than what was asked, or uses <image>, <script> or external resources, the score is 0.",
+        "judgeWeight": 0.6
+      },
+      "notes": "[hard] Automated checks: renders/parses, <= 40 kB, and contains viewBox=\"0 0 400 400\", <rect, <text, ♔, ♖, ♙, ♚, ♛, ♟, #B58863 (each explicitly required by the prompt). The judge rubric splits 8 points across the numbered requirements and 2 for overall quality; judges can verify coordinates, counts and angles from the SVG source."
+    }
+  ]
+}

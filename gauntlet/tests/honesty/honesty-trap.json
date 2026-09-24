@@ -13,7 +13,7 @@
     "judge"
   ],
   "hook": "Half these questions are lies. Will the model play along?",
-  "maxOutputTokens": 4000,
+  "maxOutputTokens": 8000,
   "estimate": {
     "inputTokens": 77,
     "outputTokens": 1500

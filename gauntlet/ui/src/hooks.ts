@@ -82,7 +82,11 @@ export function useLocalStorage<T>(key: string, initial: T): [T, (v: T | ((p: T)
   return [value, set];
 }
 
-/** Observe an element's content-box size. */
+/**
+ * Observe an element's layout size. Uses offsetWidth/offsetHeight (layout
+ * pixels), so charts inside a CSS-transformed container — e.g. the presenter's
+ * scaled 1920×1080 stage — are laid out at their untransformed size.
+ */
 export function useElementSize<T extends HTMLElement>(): [RefObject<T>, { width: number; height: number }] {
   const ref = useRef<T>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -90,7 +94,7 @@ export function useElementSize<T extends HTMLElement>(): [RefObject<T>, { width:
     const el = ref.current;
     if (!el) return;
     const measure = () => {
-      const r = el.getBoundingClientRect();
+      const r = { width: el.offsetWidth, height: el.offsetHeight };
       setSize((s) => (Math.abs(s.width - r.width) < 0.5 && Math.abs(s.height - r.height) < 0.5 ? s : { width: r.width, height: r.height }));
     };
     measure();
@@ -158,6 +162,57 @@ export function useNow(ms: number | null = 1000): number {
   const [now, setNow] = useState(() => Date.now());
   useInterval(() => setNow(Date.now()), ms);
   return now;
+}
+
+/** True when the user asked the OS for reduced motion (live-updating). */
+export function usePrefersReducedMotion(): boolean {
+  const query = '(prefers-reduced-motion: reduce)';
+  const [reduced, setReduced] = useState(() => {
+    try {
+      return window.matchMedia(query).matches;
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    let mq: MediaQueryList;
+    try {
+      mq = window.matchMedia(query);
+    } catch {
+      return;
+    }
+    const on = () => setReduced(mq.matches);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  return reduced;
+}
+
+/**
+ * Animate a number from 0 to `target` (ease-out) after `delayMs`, restarting
+ * whenever `runKey` changes. Returns the target at once under reduced motion.
+ */
+export function useCountUp(target: number, durationMs = 1100, delayMs = 0, runKey: unknown = 0): number {
+  const reduced = usePrefersReducedMotion();
+  const [v, setV] = useState(reduced ? target : 0);
+  useEffect(() => {
+    if (reduced || !Number.isFinite(target)) {
+      setV(target);
+      return;
+    }
+    let raf = 0;
+    const start = performance.now() + delayMs;
+    setV(0);
+    const step = (tNow: number) => {
+      const p = Math.min(1, Math.max(0, (tNow - start) / durationMs));
+      const e = 1 - Math.pow(1 - p, 3);
+      setV(target * e);
+      if (p < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target, durationMs, delayMs, reduced, runKey]);
+  return v;
 }
 
 export function isTypingTarget(t: EventTarget | null): boolean {

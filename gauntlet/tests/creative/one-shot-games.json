@@ -1,0 +1,69 @@
+{
+  "kind": "prompt",
+  "id": "creative.one-shot-games",
+  "version": "1.0.0",
+  "name": "Build a Game in One Shot",
+  "category": "creative",
+  "description": "The model must ship a complete, polished browser game in a single HTML file with no external assets: a Flappy-style game with a burning bird and a heat mechanic, a top-down penalty shootout against an adaptive goalkeeper AI, and Snake with teleporting portals. Headless-browser checks catch crashes and dead input, and a judge rubric scores playability, fidelity and polish, so it separates models that can engineer a working interactive system from those that sketch one.",
+  "difficulty": "hard",
+  "tags": [
+    "creative",
+    "html",
+    "canvas",
+    "game",
+    "artifact",
+    "one-shot"
+  ],
+  "hook": "One prompt. One file. One playable game.",
+  "maxOutputTokens": 32000,
+  "estimate": {
+    "inputTokens": 665,
+    "outputTokens": 24000
+  },
+  "author": "Gauntlet Core",
+  "createdAt": "2026-09-24",
+  "scorer": {
+    "type": "artifact",
+    "format": "html",
+    "checks": [
+      {
+        "check": "parses"
+      },
+      {
+        "check": "no_external_requests"
+      },
+      {
+        "check": "max_bytes",
+        "bytes": 300000
+      },
+      {
+        "check": "runs_without_errors"
+      },
+      {
+        "check": "has_canvas_or_svg"
+      },
+      {
+        "check": "responds_to_input"
+      }
+    ],
+    "rubric": "Score the artifact out of 10 using these criteria. Reason about how the code will actually behave in a browser.\n\n1. Runs and core loop works (0-3 points): 3 = loads without errors and the full loop works (start screen -> play -> game over -> restart); 2 = full loop works but with a noticeable bug; 1 = playable but the loop is incomplete (e.g. no working restart); 0 = does not start, throws an error that stops play, or is not a game.\n2. Fidelity to the game-specific numbered requirements (0-3 points): start from 3 and subtract 1 for each numbered game requirement (1, 2, 3, ...) in the task that is missing or clearly broken, minimum 0.\n3. Controls (0-1 point): 1 only if keyboard AND mouse/touch controls are both implemented as the task specifies; otherwise 0.\n4. Game feel and difficulty (0-1 point): 1 if controls feel responsive and the difficulty is fair and increases sensibly; 0 if it is trivially easy, unfair, or unplayable.\n5. Visual polish and UI clarity (0-1 point): 1 if the visuals are coherent and animated and the score/UI text is readable; 0 if it looks like placeholder boxes or the UI is unreadable.\n6. Technical requirements A-F (0-1 point): 1 if all of A-F are met (self-contained, both input types, score and best score, start/game-over screens with clean restart, requestAnimationFrame with frame-rate-independent timing, scales to the window); 0 if any is missing.\n\nAutomatic caps: if the file loads ANY external resource (CDN, font, image or audio URL), the total may not exceed 3. If the artifact is not the requested game, the total is 0. Do not award points for features that are described in comments but not implemented.",
+    "judgeWeight": 0.5
+  },
+  "cases": [
+    {
+      "id": "g01",
+      "prompt": "Build \"Ember Wing\": a Flappy-Bird-style browser game in which the bird is ON FIRE.\n\nGame requirements:\n1. The player controls a small bird that is visibly on fire: animated flames or ember particles must stream from it at all times while playing.\n2. Gravity pulls the bird down; flapping (Space, Arrow Up, mouse click or screen tap) gives it an upward boost.\n3. Pairs of obstacles (pipes or chimneys) with a gap scroll in from the right at regular intervals, with the gap height varying randomly. Passing through a gap scores 1 point.\n4. A HEAT meter is shown on screen. Heat rises steadily while flying. Water droplets float through some of the gaps; collecting one lowers the heat. If heat reaches 100%, the bird burns out and the game ends.\n5. Touching an obstacle, the ground or the top of the screen ends the game.\n6. The game gets gradually harder as the score rises (for example faster scrolling or smaller gaps), within fair limits.\n\nTechnical requirements (all mandatory):\nA. Deliver ONE self-contained HTML file. Everything (HTML, CSS, JavaScript, graphics, sounds) must be inline. No external resources of any kind: no CDNs, libraries, web fonts, image or audio URLs, and no network requests. Draw graphics with <canvas> (or inline SVG) and generate any sounds with the Web Audio API.\nB. Controls must work with the keyboard AND with the mouse, and with touch on phones.\nC. Show the current score on screen at all times during play, and the best score of the session.\nD. Show a start screen with the controls explained, and a game-over screen with the final score. The player must be able to restart from the game-over screen (by key and by click/tap) without reloading the page, and a restart must fully reset the game state.\nE. Animate with requestAnimationFrame and make movement speed independent of the monitor's frame rate (use the elapsed time between frames).\nF. The game must fit and scale to the browser window (desktop and phone), keeping the playfield fully visible.\n\nRespond with a single ```html code block containing the complete file, and nothing else.",
+      "notes": "[hard] Checks: flame particles on the bird, gravity+flap, scrolling gaps with scoring, heat meter with cooling droplets and burn-out, collision rules, difficulty ramp, plus technical requirements A-F. Scored by automated browser checks (50%) and the judge rubric (50%); also eligible for human Blind Review."
+    },
+    {
+      "id": "g02",
+      "prompt": "Build \"Spot Kick\": a top-down penalty-shootout browser game against a goalkeeper AI.\n\nGame requirements:\n1. Show a top-down view of the penalty area: the goal (posts and net) at the top of the screen, a goalkeeper on the goal line, and the ball on the penalty spot.\n2. Aiming and power: with the mouse or touch, the player aims by pointing/dragging and sets power by how long they hold (a visible power bar fills while holding) and shoots on release. With the keyboard, Arrow Left/Right aim, holding Space fills the power bar and releasing Space shoots. The current aim direction must be visible.\n3. The ball travels along a visible path. Too much power makes the shot less accurate (for example random spread grows with power), and shots can miss wide of the posts.\n4. The goalkeeper AI decides where to dive after a short reaction delay, reading the shot direction with imperfect accuracy, and it gets better after every goal the player scores. It can save shots by touching the ball.\n5. A match is 5 penalties. Show \"GOAL!\", \"SAVED!\" or \"MISSED!\" after every kick, and a tally of goals and kicks taken (for example 3/5). After the fifth kick, show the final result.\n6. The keeper must be beatable: a well-placed shot near a post with moderate power should usually score.\n\nTechnical requirements (all mandatory):\nA. Deliver ONE self-contained HTML file. Everything (HTML, CSS, JavaScript, graphics, sounds) must be inline. No external resources of any kind: no CDNs, libraries, web fonts, image or audio URLs, and no network requests. Draw graphics with <canvas> (or inline SVG) and generate any sounds with the Web Audio API.\nB. Controls must work with the keyboard AND with the mouse, and with touch on phones.\nC. Show the current score on screen at all times during play, and the best score of the session.\nD. Show a start screen with the controls explained, and a game-over screen with the final score. The player must be able to restart from the game-over screen (by key and by click/tap) without reloading the page, and a restart must fully reset the game state.\nE. Animate with requestAnimationFrame and make movement speed independent of the monitor's frame rate (use the elapsed time between frames).\nF. The game must fit and scale to the browser window (desktop and phone), keeping the playfield fully visible.\n\nRespond with a single ```html code block containing the complete file, and nothing else.",
+      "notes": "[hard] Checks: top-down layout, mouse+keyboard aim/power mechanics, trajectory and accuracy trade-off, adaptive keeper AI, 5-kick match with outcome messages and tally, fairness, plus technical requirements A-F. Scored by automated browser checks (50%) and the judge rubric (50%); also eligible for human Blind Review."
+    },
+    {
+      "id": "g03",
+      "prompt": "Build \"Portal Snake\": a Snake browser game with teleporting portals.\n\nGame requirements:\n1. Classic grid-based Snake: the snake moves one cell per tick; Arrow keys and WASD steer it; on phones, swiping steers it (also offer on-screen arrow buttons for mouse users).\n2. A 180-degree reversal must be ignored (pressing the opposite direction does nothing), and quick successive key presses must not be lost (queue at least two turns) or cause the snake to run into itself.\n3. Eating food makes the snake grow by one cell and adds 1 point; the snake speeds up slightly every few points.\n4. There are TWO pairs of portals on the board, each pair in its own colour. When the snake's head enters a portal cell, it exits from the other portal of the same pair, keeping its direction of travel, and the body follows through the portal.\n5. Portals and food never spawn on the snake, on each other or on the border. All portals move to new random positions every time the snake has eaten 5 food items.\n6. The border is a solid wall: hitting the wall or the snake's own body ends the game. Pressing P pauses and resumes the game.\n\nTechnical requirements (all mandatory):\nA. Deliver ONE self-contained HTML file. Everything (HTML, CSS, JavaScript, graphics, sounds) must be inline. No external resources of any kind: no CDNs, libraries, web fonts, image or audio URLs, and no network requests. Draw graphics with <canvas> (or inline SVG) and generate any sounds with the Web Audio API.\nB. Controls must work with the keyboard AND with the mouse, and with touch on phones.\nC. Show the current score on screen at all times during play, and the best score of the session.\nD. Show a start screen with the controls explained, and a game-over screen with the final score. The player must be able to restart from the game-over screen (by key and by click/tap) without reloading the page, and a restart must fully reset the game state.\nE. Animate with requestAnimationFrame and make movement speed independent of the monitor's frame rate (use the elapsed time between frames).\nF. The game must fit and scale to the browser window (desktop and phone), keeping the playfield fully visible.\n\nRespond with a single ```html code block containing the complete file, and nothing else.",
+      "notes": "[hard] Checks: grid movement with keyboard, swipe and on-screen buttons, reversal guard and input queue, growth and speed-up, two colour-coded portal pairs with direction-preserving teleport, safe spawning and relocation every 5 foods, walls/self-collision and pause, plus technical requirements A-F. Scored by automated browser checks (50%) and the judge rubric (50%); also eligible for human Blind Review."
+    }
+  ]
+}
