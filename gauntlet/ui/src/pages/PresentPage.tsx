@@ -218,7 +218,10 @@ function baselineRow(deck: Deck): LeaderboardRow | null {
 function casesWord(t: DeckTest, n: number): string {
   if (t.snap.kind === 'program') return noun(n, 'world');
   const def = t.detail?.definition;
-  if (def?.kind === 'prompt' && def.cases.some((c) => (c.turns?.length ?? 0) > 1)) return noun(n, 'conversation');
+  if (def?.kind === 'prompt') {
+    if (def.cases.some((c) => (c.turns?.length ?? 0) > 1)) return noun(n, 'conversation');
+    if (def.scorer.type === 'code-js' || def.scorer.type === 'artifact' || def.scorer.type === 'human') return noun(n, 'task');
+  }
   return noun(n, 'question');
 }
 
@@ -252,7 +255,7 @@ function captionFor(slide: Slide, deck: Deck): Caption {
       const program = t.snap.kind === 'program';
       const n = t.snap.caseIds.length;
       return {
-        text: `Each model’s score on this test, out of 100 — longer is better. The thin bracket under each bar shows the uncertainty${typeof base === 'number' ? '; grey is random guessing' : ''}.${program ? ' Captions: how each model’s typical run went.' : ''}`,
+        text: `Each model’s score on this test, out of 100 — longer is better. Brackets show the uncertainty${typeof base === 'number' ? '; grey is random guessing' : ''}.${program ? ' Under each bar: how that model’s typical run went.' : ''}`,
         fine: `Average of ${n} ${casesWord(t, n)} × ${R} ${noun(R, 'attempt')} · uncertainty = 95% bootstrap CI · time = median per ${program ? 'run' : 'question'}`,
       };
     }
@@ -505,7 +508,7 @@ function ExplainerSlide({ deck, test }: { deck: Deck; test: DeckTest }) {
             </div>
             <div>
               <b className="tnum">{deck.repeats * n}</b>
-              <span>scored answers per model</span>
+              <span>scored per model</span>
             </div>
           </div>
         </div>
@@ -537,7 +540,7 @@ function ExplainerSlide({ deck, test }: { deck: Deck; test: DeckTest }) {
               <div className="x-card-k">
                 <Icon.Inbox /> Example {casesWord(test, 1)}
               </div>
-              <pre className="x-prompt">{example}</pre>
+              <pre className={cx('x-prompt', example.length > 200 && 'faded')}>{example}</pre>
               <div className="x-format">
                 {finalLine ? (
                   <>
@@ -576,7 +579,26 @@ interface RaceEntry {
   agg: TestAggregate | undefined;
 }
 
-function RaceRow({ e, i, program, runId, testId, nullNote }: { e: RaceEntry; i: number; program: boolean; runId: string; testId: string; nullNote: string }) {
+function RaceRow({
+  e,
+  i,
+  program,
+  runId,
+  testId,
+  nullNote,
+  baseLine,
+  baseLabel,
+}: {
+  e: RaceEntry;
+  i: number;
+  program: boolean;
+  runId: string;
+  testId: string;
+  nullNote: string;
+  /** Random-guessing score (0..1) marked on the track, or null. */
+  baseLine: number | null;
+  baseLabel: boolean;
+}) {
   const target = e.score === null ? 0 : e.score * 100;
   const v = useCountUp(target, 1300, 280 + i * 120);
   const summary = program && !e.baseline ? e.agg?.summary : undefined;
@@ -598,6 +620,11 @@ function RaceRow({ e, i, program, runId, testId, nullNote }: { e: RaceEntry; i: 
       </div>
       <div className="rr-main">
         <div className="rr-track">
+          {baseLine !== null && (
+            <i className="rr-bmark" style={{ left: `${baseLine * 100}%` }} aria-hidden="true">
+              {baseLabel && <span>random guessing</span>}
+            </i>
+          )}
           {e.score === null ? (
             <span className="rr-none">{nullNote}</span>
           ) : (
@@ -688,13 +715,8 @@ function ResultSlide({ deck, test }: { deck: Deck; test: DeckTest }) {
         </div>
       ) : (
         <div className={cx('race', program && 'with-sum')} style={{ ['--rows' as string]: ordered.length }}>
-          {baseLine !== null && (
-            <div className="race-base" style={{ ['--b' as string]: baseLine }} aria-hidden="true">
-              <span>random guessing</span>
-            </div>
-          )}
           {ordered.map((e, i) => (
-            <RaceRow key={e.id} e={e} i={i} program={program} runId={deck.d.manifest.id} testId={test.snap.id} nullNote={nullNote} />
+            <RaceRow key={e.id} e={e} i={i} program={program} runId={deck.d.manifest.id} testId={test.snap.id} nullNote={nullNote} baseLine={e.baseline ? null : baseLine} baseLabel={i === 0} />
           ))}
         </div>
       )}
