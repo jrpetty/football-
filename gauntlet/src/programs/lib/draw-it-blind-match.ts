@@ -42,8 +42,28 @@ export interface PairScore {
 
 const ratio = (a: number, b: number) => (a <= 0 || b <= 0 ? 0 : Math.min(a, b) / Math.max(a, b));
 
-export function pairScore(t: SceneShape, d: DrawnShape): PairScore {
-  const type = TYPE_SIMILARITY[t.type][d.kind] ?? 0;
+export interface MatchOptions {
+  /** Hard tier: a triangle pointing the wrong way loses part of its type credit. */
+  orientation?: boolean;
+}
+
+/** Smallest absolute difference between two angles in degrees. */
+export function angleDiff(a: number, b: number): number {
+  const d = Math.abs(((a - b) % 360) + 360) % 360;
+  return d > 180 ? 360 - d : d;
+}
+
+/** Type credit for a triangle's direction: right way 1, roughly right 0.7, wrong way 0.4, unknown 0.7. */
+export function orientationFactor(target: number | undefined, drawn: number | undefined): number {
+  if (target === undefined) return 1;
+  if (drawn === undefined) return 0.7;
+  const d = angleDiff(target, drawn);
+  return d <= 30 ? 1 : d <= 67.5 ? 0.7 : 0.4;
+}
+
+export function pairScore(t: SceneShape, d: DrawnShape, opts: MatchOptions = {}): PairScore {
+  let type = TYPE_SIMILARITY[t.type][d.kind] ?? 0;
+  if (opts.orientation && t.type === 'triangle' && d.kind === 'triangle') type *= orientationFactor(t.angle, d.angle);
   const color = t.color === d.color ? 1 : 0;
   const distance = Math.hypot(t.cx - d.cx, t.cy - d.cy);
   const position = Math.max(0, 1 - distance / POSITION_FALLOFF);
@@ -70,11 +90,11 @@ export interface MatchResult {
 }
 
 /** Exact maximum-weight assignment via DP over target subsets. */
-export function matchShapes(targets: readonly SceneShape[], drawnAll: readonly DrawnShape[]): MatchResult {
+export function matchShapes(targets: readonly SceneShape[], drawnAll: readonly DrawnShape[], opts: MatchOptions = {}): MatchResult {
   const drawn = drawnAll.length <= MAX_DRAWN ? [...drawnAll] : [...drawnAll].sort((a, b) => b.w * b.h - a.w * a.h).slice(0, MAX_DRAWN);
   const n = targets.length;
   const M = 1 << n;
-  const sim = targets.map((t) => drawn.map((d) => pairScore(t, d)));
+  const sim = targets.map((t) => drawn.map((d) => pairScore(t, d, opts)));
 
   let best = new Float64Array(M).fill(-Infinity);
   best[0] = 0;

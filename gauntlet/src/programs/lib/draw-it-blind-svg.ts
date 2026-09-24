@@ -9,8 +9,8 @@
  * reduced to a kind (circle, square, triangle, star, ...), a colour and a
  * bounding box in 400×400 canvas coordinates. It never throws.
  */
-import { CANVAS, PALETTE } from './draw-it-blind-scene.ts';
-import type { PaletteName } from './draw-it-blind-scene.ts';
+import { CANVAS, EXTENDED_PALETTE, PALETTE } from './draw-it-blind-scene.ts';
+import type { PaletteId, PaletteName } from './draw-it-blind-scene.ts';
 
 export type RGB = [number, number, number];
 export type Point = [number, number];
@@ -28,6 +28,13 @@ export interface DrawnShape {
   cy: number;
   w: number;
   h: number;
+  /** Triangles only: apex direction in degrees (SVG axes), when the triangle is clearly isosceles. */
+  angle?: number;
+}
+
+export interface ParseOptions {
+  /** Which palette drawn colours are mapped onto (default 'basic'). */
+  palette?: PaletteId;
 }
 
 export interface ParsedSvg {
@@ -137,14 +144,16 @@ export function rgbToLab([r, g, b]: RGB): Lab {
   return [116 * f(y) - 16, 500 * (f(x) - f(y)), 200 * (f(y) - f(z))];
 }
 
-const ANCHORS: Array<{ name: PaletteName; lab: Lab }> = PALETTE.flatMap((p) => p.anchors.map((hex) => ({ name: p.name, lab: rgbToLab(hexToRgb(hex)!) })));
+const anchorsOf = (palette: typeof PALETTE) => palette.flatMap((p) => p.anchors.map((hex) => ({ name: p.name, lab: rgbToLab(hexToRgb(hex)!) })));
+const ANCHORS: Record<PaletteId, Array<{ name: PaletteName; lab: Lab }>> = { basic: anchorsOf(PALETTE), extended: anchorsOf(EXTENDED_PALETTE) };
 
 /** Name of the palette colour whose nearest anchor is closest (CIE76 ΔE). */
-export function nearestPalette(rgb: RGB): PaletteName {
+export function nearestPalette(rgb: RGB, palette: PaletteId = 'basic'): PaletteName {
   const lab = rgbToLab(rgb);
-  let best = ANCHORS[0]!;
+  const anchors = ANCHORS[palette];
+  let best = anchors[0]!;
   let bestD = Infinity;
-  for (const a of ANCHORS) {
+  for (const a of anchors) {
     const d = (a.lab[0] - lab[0]) ** 2 + (a.lab[1] - lab[1]) ** 2 + (a.lab[2] - lab[2]) ** 2;
     if (d < bestD) {
       bestD = d;
@@ -552,6 +561,28 @@ export function classifyPolygon(raw: Point[]): DrawnKind | null {
   return 'polygon';
 }
 
+/**
+ * Apex direction of an isosceles triangle (degrees, SVG axes: -90 = up), or
+ * null when no vertex is clearly the apex (e.g. near-equilateral).
+ */
+export function triangleApexAngle(raw: Point[]): number | null {
+  const pts = dropCollinear(dedupe(raw));
+  if (pts.length !== 3) return null;
+  const len = (a: Point, b: Point) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+  // The apex is the vertex whose two sides are (most nearly) equal.
+  const scores = pts.map((p, i) => {
+    const a = len(p, pts[(i + 1) % 3]!);
+    const b = len(p, pts[(i + 2) % 3]!);
+    return { i, diff: Math.abs(a - b) / Math.max(a, b) };
+  });
+  scores.sort((x, y) => x.diff - y.diff);
+  if (scores[1]!.diff - scores[0]!.diff < 0.08) return null;
+  const apex = pts[scores[0]!.i]!;
+  const cx = (pts[0]![0] + pts[1]![0] + pts[2]![0]) / 3;
+  const cy = (pts[0]![1] + pts[1]![1] + pts[2]![1]) / 3;
+  return (Math.atan2(apex[1] - cy, apex[0] - cx) * 180) / Math.PI;
+}
+
 function classifyCurved(points: Point[]): DrawnKind {
   const { cv, aspect } = roundness(points);
   if (cv < 0.08) return aspect >= 0.85 ? 'circle' : 'ellipse';
@@ -641,17 +672,17 @@ export function extractSvg(text: string): string | null {
   return null;
 }
 
-export function parseSvg(markup: string): ParsedSvg {
+export function parseSvg(markup: string, opts: ParseOptions = {}): ParsedSvg {
   const result: ParsedSvg = { found: false, elements: 0, shapes: [], ignored: [] };
   try {
-    walk(markup, result);
+    walk(markup, result, opts.palette ?? 'basic');
   } catch (err) {
     result.ignored.push({ tag: 'svg', reason: `parse error: ${(err as Error).message}` });
   }
   return result;
 }
 
-function walk(markup: string, result: ParsedSvg): void {
+function walk(markup: string, result: ParsedSvg, palette: PaletteId): void {
   let src = markup.replace(/<!--[\s\S]*?-->/g, '').replace(/<\?[\s\S]*?\?>/g, '').replace(/<!DOCTYPE[^>]*>/gi, '');
   const css: string[] = [];
   src = src.replace(/<style[^>]*>([\s\S]*?)<\/style\s*>/gi, (_, body: string) => {
@@ -748,7 +779,12 @@ function walk(markup: string, result: ParsedSvg): void {
         result.ignored.push({ tag, reason: 'white' });
         continue;
       }
-      result.shapes.push({ kind, tag, rgb: paint, color: nearestPalette(paint), cx: (b.x0 + b.x1) / 2, cy: (b.y0 + b.y1) / 2, w, h });
+      const shape: DrawnShape = { kind, tag, rgb: paint, color: nearestPalette(paint, palette), cx: (b.x0 + b.x1) / 2, cy: (b.y0 + b.y1) / 2, w, h };
+      if (kind === 'triangle') {
+        const angle = triangleApexAngle(g.vertices.map((p) => apply(matrix, p)));
+        if (angle !== null) shape.angle = angle;
+      }
+      result.shapes.push(shape);
     }
   }
 }

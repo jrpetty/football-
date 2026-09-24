@@ -160,12 +160,37 @@ function examplePrompt(def: TestDefinition | undefined, detail: TestDetail | nul
   if (!def || def.kind !== 'prompt') return null;
   const first = def.cases.find((c) => snap.caseIds.includes(c.id)) ?? def.cases[0];
   const raw = first?.prompt ?? first?.turns?.[0] ?? detail?.rendered?.[0]?.turns?.[0] ?? '';
-  const text = raw.trim();
+  const text = raw.trim().replace(/\n{3,}/g, '\n\n');
   if (!text) return null;
-  if (text.length <= 320) return text;
-  const cut = text.slice(0, 320);
-  const sp = cut.lastIndexOf(' ');
-  return `${cut.slice(0, sp > 240 ? sp : 320)}…`;
+  // At most ~320 characters and 8 lines, cut at a word boundary.
+  const lines = text.split('\n');
+  let out = lines.slice(0, 8).join('\n');
+  let cut = lines.length > 8;
+  if (out.length > 320) {
+    const head = out.slice(0, 320);
+    const sp = head.lastIndexOf(' ');
+    out = head.slice(0, sp > 240 ? sp : 320);
+    cut = true;
+  }
+  return cut ? `${out.trimEnd()}…` : out;
+}
+
+/** Whole sentences up to about `max` characters (at least one sentence, hard-cut if needed). */
+function brief(text: string | undefined, max: number): string {
+  const t = (text ?? '').replace(/\s+/g, ' ').trim();
+  if (t.length <= max) return t;
+  const sentences = t.match(/[^.!?]+[.!?]+(\s|$)/g) ?? [t];
+  let out = '';
+  for (const sn of sentences) {
+    if (out && (out + sn).length > max) break;
+    out += sn;
+  }
+  out = out.trim();
+  if (out.length > max + 40) {
+    const head = out.slice(0, max);
+    out = `${head.slice(0, Math.max(head.lastIndexOf(' '), max - 30))}…`;
+  }
+  return out;
 }
 
 function buildDeck(d: RunDetail, details: Map<string, TestDetail>, metaCats: CategoryInfo[], cat: (id: string) => CategoryInfo, programs: ProgramInfo[], judgeCrossDefault: boolean | undefined, manualProviders: Set<string>): Deck {
@@ -215,7 +240,12 @@ function buildDeck(d: RunDetail, details: Map<string, TestDetail>, metaCats: Cat
 function buildSlides(deck: Deck): Slide[] {
   const slides: Slide[] = [{ kind: 'title' }, { kind: 'how' }];
   for (const test of deck.tests) slides.push({ kind: 'explainer', test }, { kind: 'result', test });
-  slides.push({ kind: 'final' }, { kind: 'scatter' }, { kind: 'medals' }, { kind: 'outro' });
+  // Summary slides only when they have something to show (e.g. a baseline-only smoke test has none).
+  const comps = standings(deck).filter((r) => typeof r.index === 'number');
+  if (comps.length) slides.push({ kind: 'final' });
+  if (comps.some((r) => (r.totals?.costUsd ?? 0) > 0)) slides.push({ kind: 'scatter' });
+  if (comps.length && (deck.lb?.medals ?? []).some((e) => e.gold || e.silver || e.bronze)) slides.push({ kind: 'medals' });
+  slides.push({ kind: 'outro' });
   return slides;
 }
 
@@ -524,11 +554,11 @@ function ExplainerSlide({ deck, test }: { deck: Deck; test: DeckTest }) {
         <div className="x-left">
           <section>
             <h3>The challenge</h3>
-            <p>{description || 'No description provided for this test.'}</p>
+            <p className="x-desc">{brief(description, 300) || 'No description provided for this test.'}</p>
           </section>
           <section>
             <h3>How it’s scored</h3>
-            <p>{sc.text}</p>
+            <p className="x-score">{def?.kind === 'program' ? brief(sc.text, 200) : sc.text}</p>
           </section>
           <div className="x-facts">
             <div>
@@ -558,7 +588,7 @@ function ExplainerSlide({ deck, test }: { deck: Deck; test: DeckTest }) {
               <div className="x-card-k">
                 <Icon.Layers /> The world
               </div>
-              <p>{program?.description ?? 'A simulated environment the model plays turn by turn.'}</p>
+              <p className="x-world">{brief(program?.description, 300) || 'A simulated environment the model plays turn by turn.'}</p>
               <div className="x-seeds">
                 {def.seeds.slice(0, 6).map((sd) => (
                   <span key={sd} className="mono">
@@ -580,7 +610,7 @@ function ExplainerSlide({ deck, test }: { deck: Deck; test: DeckTest }) {
                     Every answer ends with <code>FINAL ANSWER: …</code>
                   </>
                 ) : (
-                  <>One of {n} {casesWord(test, n)} — the rest stay off screen.</>
+                  <>{n > 1 ? `One of ${n} ${casesWord(test, n)} — the rest stay off screen.` : `The only ${casesWord(test, 1)} in this test.`}</>
                 )}
               </div>
             </div>

@@ -5,8 +5,8 @@
  */
 import type { ProgramContext, ProgramDefinition, ProgramResult, ReplayFrame } from '../core/types.ts';
 import { extractCodeBlock } from '../core/extract.ts';
-import { CANVAS, generateScene, renderSceneSvg, sceneTable } from './lib/draw-it-blind-scene.ts';
-import type { Scene } from './lib/draw-it-blind-scene.ts';
+import { CANVAS, generateScene, paletteOf, renderSceneSvg, sceneTable } from './lib/draw-it-blind-scene.ts';
+import type { PaletteId, Scene, SceneOptions } from './lib/draw-it-blind-scene.ts';
 import { extractSvg, parseSvg, sanitizeSvg } from './lib/draw-it-blind-svg.ts';
 import { matchShapes, where } from './lib/draw-it-blind-match.ts';
 import { countWords, truncateWords } from './lib/needle-haystack-normalize.ts';
@@ -15,6 +15,12 @@ export interface DibConfig {
   minShapes: number;
   maxShapes: number;
   descriptionWords: number;
+  /** 'basic' (8 colours) or 'extended' (12 colours with close pairs such as navy/blue, teal/green). */
+  palette: PaletteId;
+  /** Allow overlapping and nested shapes. */
+  overlap: boolean;
+  /** Rotate triangles (and score their direction). */
+  rotation: boolean;
 }
 
 export function readConfig(raw: Record<string, unknown>): DibConfig {
@@ -22,26 +28,39 @@ export function readConfig(raw: Record<string, unknown>): DibConfig {
     const n = Number(v);
     return Number.isInteger(n) && n >= min && n <= max ? n : def;
   };
-  const minShapes = int(raw.minShapes, 5, 2, 8);
+  const minShapes = int(raw.minShapes, 5, 2, 12);
   return {
     minShapes,
-    maxShapes: Math.max(minShapes, int(raw.maxShapes, 7, 2, 8)),
+    maxShapes: Math.max(minShapes, int(raw.maxShapes, 7, 2, 12)),
     descriptionWords: int(raw.descriptionWords, 120, 30, 400),
+    palette: raw.palette === 'extended' ? 'extended' : 'basic',
+    overlap: raw.overlap === true,
+    rotation: raw.rotation === true,
   };
 }
 
-const NUMBER_WORDS = [
-  'eleven', 'eleventh', 'twelve', 'twelfth', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen',
-  'thirteenth', 'fourteenth', 'fifteenth', 'sixteenth', 'seventeenth', 'eighteenth', 'nineteenth',
-  'twenty', 'thirty', 'forty', 'fourty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety',
-  'twentieth', 'thirtieth', 'fortieth', 'fiftieth', 'sixtieth', 'seventieth', 'eightieth', 'ninetieth',
-  'hundred', 'hundreds', 'hundredth', 'hundredths', 'thousand', 'thousands', 'thousandth', 'dozen', 'dozens',
+/**
+ * The number rule, stated in the prompt: numbers may only be spelled out and
+ * must be ten or smaller (fractions with denominators up to ten are fine).
+ * Digits and any spelled-out number above ten are deleted and cost points.
+ */
+const LARGE_CARDINALS = [
+  'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen',
+  'twenty', 'thirty', 'forty', 'fourty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety', 'hundred', 'thousand', 'dozen',
 ];
-const SMALL_NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+const LARGE_ORDINALS = [
+  'eleventh', 'twelfth', 'thirteenth', 'fourteenth', 'fifteenth', 'sixteenth', 'seventeenth', 'eighteenth', 'nineteenth',
+  'twentieth', 'thirtieth', 'fortieth', 'fiftieth', 'sixtieth', 'seventieth', 'eightieth', 'ninetieth', 'hundredth', 'thousandth',
+];
+const NUMBER_WORDS = [...LARGE_CARDINALS, ...LARGE_ORDINALS].map((w) => `${w}s?`);
+const SMALL_NUMBER_WORDS = [
+  'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
+  'halfs?', 'halves', 'thirds?', 'quarters?', 'fourths?', 'fifths?', 'sixths?', 'sevenths?', 'eighths?', 'ninths?', 'tenths?',
+];
 const DIGITS_RE = /\d+(?:[.,:/]\d+)*%?/g;
 const LARGE_RE = new RegExp(`\\b(?:${NUMBER_WORDS.join('|')})\\b`, 'i');
 const NUM = `(?:${[...SMALL_NUMBER_WORDS, ...NUMBER_WORDS].join('|')})`;
-/** A run of number words ("one hundred and twenty", "twenty-five"); it violates the rules if any word is ≥ 11. */
+/** A run of number words ("one hundred and twenty", "eleven-twentieths"); it violates the rules if any word is above ten. */
 const NUMBER_PHRASE_RE = new RegExp(`\\b${NUM}(?:(?:[\\s-]+and)?[\\s-]+${NUM})*\\b`, 'gi');
 
 export interface DescriptionCheck {
