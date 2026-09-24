@@ -24,6 +24,12 @@ const GradePage = lazy(() => import('./pages/GradePage.tsx'));
 const CostsPage = lazy(() => import('./pages/CostsPage.tsx'));
 const PresentPage = lazy(() => import('./pages/PresentPage.tsx'));
 const PresentPickerPage = lazy(() => import('./pages/PresentPickerPage.tsx'));
+// Channel tools (ui/src/channel/)
+const PublishPage = lazy(() => import('./channel/PublishPage.tsx'));
+const NewModelPage = lazy(() => import('./channel/NewModelPage.tsx'));
+const HistoryPage = lazy(() => import('./channel/HistoryPage.tsx'));
+const ChallengePage = lazy(() => import('./channel/ChallengePage.tsx'));
+const ChannelSlidesPage = lazy(() => import('./channel/ChannelSlidesPage.tsx'));
 
 interface NavItem {
   to: string;
@@ -46,6 +52,10 @@ const NAV: NavItem[] = [
   { to: '/grade', label: 'Grader', icon: Icon.Target, match: (p) => p.startsWith('/grade') },
   { to: '/models', label: 'Models', icon: Icon.Cpu, match: (p) => p.startsWith('/models') },
   { to: '/costs', label: 'Cost Planner', icon: Icon.Dollar, match: (p) => p.startsWith('/costs') },
+  { to: '/newmodel', label: 'New Model Day', icon: Icon.Sparkles, section: 'Channel', match: (p) => p.startsWith('/newmodel') },
+  { to: '/history', label: 'History', icon: Icon.Chart, match: (p) => p.startsWith('/history') },
+  { to: '/challenge', label: 'Viewer Challenge', icon: Icon.Flag, match: (p) => p.startsWith('/challenge') },
+  { to: '/publish', label: 'Publish', icon: Icon.Upload, match: (p) => p.startsWith('/publish') },
   { to: '/methodology', label: 'Methodology', icon: Icon.Book, section: 'About', match: (p) => p.startsWith('/methodology') },
 ];
 
@@ -103,6 +113,11 @@ function resolve(parts: string[]): Resolved {
   if (a === 'inbox') return { el: <InboxPage />, crumb: 'Manual Inbox' };
   if (a === 'grade') return { el: <GradePage />, crumb: 'Grader' };
   if (a === 'costs') return { el: <CostsPage />, crumb: 'Cost Planner' };
+  if (a === 'publish') return { el: <PublishPage />, crumb: 'Publish' };
+  if (a === 'newmodel') return { el: <NewModelPage />, crumb: 'New Model Day' };
+  if (a === 'history') return { el: <HistoryPage />, crumb: 'Model history' };
+  if (a === 'challenge') return { el: <ChallengePage />, crumb: 'Viewer Challenge' };
+  if (a === 'slides' && b) return { el: <ChannelSlidesPage key={b} kind={b} />, crumb: 'Presenter', bare: true };
   if (a === 'present') {
     if (!b) return { el: <PresentPickerPage />, crumb: 'Presenter' };
     return { el: <PresentPage key={b} runId={b} />, crumb: 'Presenter', bare: true };

@@ -89,6 +89,11 @@ export function programSourceHash(programId: string): string {
  * image. `baseDir` is the folder of the test file (image paths are relative to it; default: tests/custom).
  */
 export function computeTestHash(def: TestDefinition, baseDir?: string): string {
+  // publishPrompts only controls the public website, never what models see: keep it out of the hash.
+  if (def && typeof def === 'object' && 'publishPrompts' in def) {
+    const { publishPrompts: _publish, ...rest } = def;
+    def = rest as TestDefinition;
+  }
   if (def.kind === 'program') return contentHash({ def, program: programSourceHash(def.program) });
   if (testHasImages(def)) return contentHash({ def, images: testImageDigests(def, baseDir ?? testBaseDir()) });
   return contentHash(def);

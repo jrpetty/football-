@@ -48,6 +48,7 @@ import { callWithRetry } from '../engine/recorder.ts';
 import { Semaphore } from '../engine/semaphore.ts';
 import { registerVisionRoutes } from './vision-routes.ts';
 import { testBaseDir } from '../core/vision.ts';
+import { registerChannelRoutes } from '../channel/routes.ts';
 
 class HttpError extends Error {
   status: number;
@@ -534,6 +535,8 @@ function serveStatic(pathname: string, res: ServerResponse): void {
 }
 
 registerVisionRoutes({ route, httpError: (status, message) => new HttpError(status, message), streaming: STREAMING });
+// Channel tools: public site, New Model Day, history, viewer challenge (src/channel/).
+registerChannelRoutes(route, (status, message, details) => new HttpError(status, message, details), STREAMING);
 
 // ─────────────────────────────────────────────────────────────────────────────
 

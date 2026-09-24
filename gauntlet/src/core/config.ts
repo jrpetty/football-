@@ -123,6 +123,8 @@ export function validateContestant(c: Contestant): string[] {
   const pr = c.pricing;
   if (!pr || !(pr.inputPerM >= 0) || !(pr.outputPerM >= 0)) errors.push('pricing.inputPerM and pricing.outputPerM must be numbers ≥ 0');
   if (c.vision !== undefined && typeof c.vision !== 'boolean') errors.push('vision must be true or false');
+  if (c.releaseDate !== undefined && c.releaseDate !== '' && !/^\d{4}-\d{2}-\d{2}$/.test(c.releaseDate)) errors.push('releaseDate must be YYYY-MM-DD');
+  if (c.tier !== undefined && !['flagship', 'mid', 'small'].includes(c.tier)) errors.push('tier must be flagship, mid or small');
   if (c.options?.extraBody !== undefined && (typeof c.options.extraBody !== 'object' || Array.isArray(c.options.extraBody))) errors.push('options.extraBody must be an object');
   return errors;
 }
