@@ -1,5 +1,5 @@
 """Builds reasoning.deduction-grid-extreme cases: generate (gen.py), render to English, store with metadata."""
-import sys, json, time, os
+import sys, json, time, os, re
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 from common import ONE
 from themes import T
@@ -154,6 +154,8 @@ def build(entry):
     sep = '; '
     expected = [', '.join(ans[0]) + sep + ', '.join(ans[1]),
                 f"{ask[0]}: " + ', '.join(ans[0]) + sep + f"{ask[1]}: " + ', '.join(ans[1])]
+    # Values like "a volcano" are also accepted without their article ("volcano"): leaving it out is not a reasoning error.
+    expected += [e2 for e2 in (re.sub(r'(^|(?<=[,;:] ))(a|an|the) ', '', e) for e in expected) if e2 not in expected]
     notes = (f"[extreme] {n} positions x {len(pz.names)} categories, {len(clues)} clues (config {theme}, seed {seed}). "
              f"Uniqueness: OR-tools CP-SAT proves that no arrangement other than the intended one satisfies the clues, and minimality is proved clue by clue "
              f"(removing any single clue admits a second arrangement). Independently re-verified by grid_extreme/verify_sat.py, which parses the English "
