@@ -152,7 +152,7 @@ Org. no. 912 448 305
 
 and send them by email to faktura@halvorsen-maritime.no (not to me personally), quoting our purchase order number PO-HM-26-0418.
 
-Our internal budget for the offsite is NOK 140,000 including everything the hotel will charge us. For budget purposes we convert at EUR 1 = NOK 11.62. Could you also confirm whether the tourist tax is part of the contract value on which the 30% deposit is calculated?
+Our internal budget for the offsite is NOK 128,500 including everything the hotel will charge us. For budget purposes we convert at EUR 1 = NOK 11.62. Could you also confirm whether the tourist tax is part of the contract value on which the 30% deposit is calculated?
 
 Kind regards,
 Tomas Berg
@@ -228,8 +228,8 @@ Hi Duarte,
 
 Two updates to the list:
 
-- Petter Rod has had to withdraw, so he will not travel.
-- Elin Sather from our London office will join us instead. She flies BA 478 London Heathrow to Porto, scheduled landing 17:20 UTC, and needs a Superior room. Jonas Vik will now travel via London and take the same BA 478 flight as Elin, so he is no longer on TP 1957.
+- Petter Rod has had to withdraw, so he will not travel and his room is no longer needed.
+- Elin Sather from our London office will join us instead. She flies BA 478 London Heathrow to Porto, scheduled landing 17:20 UTC, and needs her own Superior room. Jonas Vik will now travel via London and take the same BA 478 flight as Elin, so he is no longer on TP 1957.
 
 Elin is vegetarian and also needs gluten-free meals.
 
@@ -418,7 +418,7 @@ def expected():
         'grand_total_eur': f(total), 'deposit_eur': f(deposit), 'deposit_due_date': (signed + dt.timedelta(days=7)).isoformat(),
         'balance_eur': f(balance), 'balance_due_date': (arrival - dt.timedelta(days=21)).isoformat(),
         'free_cancellation_until': (arrival - dt.timedelta(days=30)).isoformat(),
-        'grand_total_nok': f(nok), 'within_budget': nok <= D('140000'),
+        'grand_total_nok': f(nok), 'within_budget': nok <= D('128500'),
         'purchase_order': 'PO-HM-26-0481', 'invoice_email': 'faktura@halvorsen-maritime.no',
         'vegetarian_count': len(veg), 'gluten_free_count': len(gf),
     }
@@ -428,7 +428,7 @@ NOTES = ("Traps: the 10:14 extra-night email is retracted at 10:31; Liv Brekke (
          "but a 20-cover minimum; PO number corrected 0418 -> 0481; vegetarian list corrected (Kari not Hanne) plus Elin; BA 478 retimed 17:20 -> 18:00 UTC; "
          "booking-tool times are UTC and Portugal is UTC+1, pickup = landing + 45 min; 17 people on departure day need a coach; VAT per service rounded to the cent; "
          "tourist tax not discounted and not subject to VAT; deposit = 30% of the grand total rounded to the cent, due signature + 7 days; balance due arrival - 21 days; "
-         "free cancellation until arrival - 30 days. All derived values computed with Decimal in extraction/e1.py.")
+         "free cancellation until arrival - 30 days. All derived values computed with Decimal in verification/frontier-extraction/e1.py.")
 
 if __name__ == '__main__':
     import json; e = expected(); print(json.dumps(e, indent=1)); print(len(DOC.split()), 'words')
