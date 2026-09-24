@@ -5,15 +5,17 @@ import { computeCost, emptyUsage } from '../core/cost.ts';
 import { createRng } from '../core/rng.ts';
 import { HARNESS_VERSION, PROTOCOL_VERSION } from '../core/version.ts';
 import { ROOT } from '../core/paths.ts';
-import { caseScorer, computeTestHash, fingerprint, getSuite, loadTests, renderCase, resolveTests, selectedCaseIds, testEstimate, type LoadedTest, type ResolvedTest } from '../core/registry.ts';
+import { caseScorer, fingerprint, getSuite, loadTests, renderCase, resolveTests, selectedCaseIds, testEstimate, type LoadedTest, type ResolvedTest } from '../core/registry.ts';
 import type {
   CaseResult,
+  ChatImage,
   Contestant,
   ContestantSnapshot,
   ProgramContext,
   ProgramTest,
   PromptTest,
   ProviderConfig,
+  ProviderType,
   ReplayData,
   ResultStatus,
   RunEvent,
@@ -31,6 +33,7 @@ import { browserAvailable } from '../scoring/browser.ts';
 import { Semaphore } from './semaphore.ts';
 import { callWithRetry, createRecorder, type CallPolicy, type CallTarget } from './recorder.ts';
 import { appendResult, createRunFolder, listRunIds, newRunId, readManifest, readResults, saveArtifact, writeManifest } from './store.ts';
+import { caseImageRefs, caseImageSizes, estimateImageTokens, loadTestImage, supportsVision, testBaseDir } from '../core/vision.ts';
 
 interface Job {
   key: string;
@@ -118,8 +121,21 @@ export interface RunPlan {
   temperature: number;
   maxCostUsd?: number;
   judgeExcludeSameVendor: boolean;
+  forceVision: boolean;
   fingerprint: string;
   warnings: string[];
+}
+
+/** Case ids of a test that show the model an image (programs flagged `requiresVision`: every case). */
+function visionCaseIds(t: LoadedTest & { caseFilter?: string[] }): Set<string> {
+  const d = t.definition;
+  if (d.kind === 'program') return new Set(PROGRAMS[d.program]?.requiresVision ? selectedCaseIds(t) : []);
+  return new Set(d.cases.filter((c) => caseImageRefs(c).length > 0).map((c) => c.id));
+}
+
+function needsVision(t: LoadedTest & { caseFilter?: string[] }): boolean {
+  const ids = visionCaseIds(t);
+  return selectedCaseIds(t).some((id) => ids.has(id));
 }
 
 function usesJudges(t: LoadedTest): boolean {
@@ -182,6 +198,12 @@ export function planRun(req: RunRequest): RunPlan {
     if (judges.length === 0) warnings.push('No usable judge models: judge-scored tests will error. Configure judges in config/settings.json.');
     else if (new Set(judges.map((j) => j.vendor)).size === 1) warnings.push(`All judges are from ${judges[0]!.vendor}: consider a cross-vendor panel to avoid self-preference bias`);
   }
+  const visionTests = tests.filter((t) => needsVision(t));
+  if (visionTests.length) {
+    const blind = contestants.filter((c) => !supportsVision(c, providerOf(c)?.type));
+    if (blind.length && req.forceVision) warnings.push(`${blind.map((c) => c.label).join(', ')}: not marked as accepting images, but image cases are forced on — the API may reject them`);
+    else if (blind.length) warnings.push(`${blind.map((c) => c.label).join(', ')}: no image input — ${visionTests.length} vision test(s) will be skipped for ${blind.length === 1 ? 'this model' : 'these models'} (not scored as 0, left out of the means)`);
+  }
   const manual = contestants.filter((c) => providerOf(c)?.type === 'manual');
   if (manual.length) warnings.push(`${manual.map((c) => c.label).join(', ')}: manual contestant — every prompt waits in the Manual Inbox for you to paste the model's reply`);
   if (req.maxCostUsd !== undefined && !(req.maxCostUsd > 0)) throw new Error('maxCostUsd must be a positive number');
@@ -197,6 +219,7 @@ export function planRun(req: RunRequest): RunPlan {
     temperature: req.temperature ?? settings.temperature,
     maxCostUsd: req.maxCostUsd,
     judgeExcludeSameVendor: settings.judgeExcludeSameVendor,
+    forceVision: Boolean(req.forceVision),
     fingerprint: fingerprint(tests),
     warnings,
   };
@@ -286,17 +309,34 @@ export async function estimateRun(req: RunRequest): Promise<RunEstimate> {
     basis: 'definition',
   }));
   const perContestant = plan.contestants.map((c) => {
-    const isManual = providers.find((p) => p.id === c.provider)?.type === 'manual';
+    const providerType = providers.find((p) => p.id === c.provider)?.type;
+    const isManual = providerType === 'manual';
+    const sees = plan.forceVision || supportsVision(c, providerType);
     const cfg = contestantConfigHash(c);
     let jobs = 0;
     let cost = 0;
     let costHigh = 0;
     plan.tests.forEach((t, i) => {
-      const n = selectedCaseIds(t).length * plan.repeats;
+      const selected = selectedCaseIds(t);
+      const visionIds = visionCaseIds(t);
+      // Skipped image cases cost nothing; the ones that run pay for their image tokens (see estimateImageTokens).
+      const runnable = sees ? selected : selected.filter((id) => !visionIds.has(id));
+      const n = runnable.length * plan.repeats;
+      let imageTokens = 0;
+      if (sees && t.definition.kind === 'prompt' && visionIds.size) {
+        const base = testBaseDir(t.file);
+        const d = t.definition;
+        for (const id of runnable) {
+          const tc = d.cases.find((x) => x.id === id);
+          if (!tc) continue;
+          for (const size of caseImageSizes(tc, base)) imageTokens += estimateImageTokens(size.width, size.height, providerType, c.model);
+        }
+        imageTokens /= Math.max(1, runnable.length);
+      }
       const def = testEstimate(t.definition);
       const obs = observed.get(t.hash);
       const mine = obs?.byContestant.get(cfg);
-      let input = def.inputTokens;
+      let input = def.inputTokens + imageTokens;
       let output = def.outputTokens;
       let perCaseCalls = def.calls;
       let basis: TestCostEstimate['basis'] = 'definition';
@@ -313,7 +353,7 @@ export async function estimateRun(req: RunRequest): Promise<RunEstimate> {
         basis = 'measured-other-models';
       }
       const testCost = isManual ? 0 : (n * (input * c.pricing.inputPerM + output * c.pricing.outputPerM)) / 1e6;
-      jobs += n;
+      jobs += selected.length * plan.repeats;
       calls += n * perCaseCalls;
       cost += testCost;
       costHigh += testCost * (basis === 'measured' ? 1.2 : 1.6);
@@ -394,6 +434,7 @@ export async function startRun(req: RunRequest): Promise<string> {
       protocolVersion: PROTOCOL_VERSION,
       maxCostUsd: plan.maxCostUsd,
       judgeExcludeSameVendor: plan.judgeExcludeSameVendor,
+      ...(plan.forceVision ? { forceVision: true } : {}),
     },
     totalJobs: tests.reduce((s, t) => s + t.caseIds.length, 0) * plan.repeats * contestants.length,
     notes: req.notes,
@@ -413,7 +454,7 @@ export function resumeRun(runId: string, opts: { maxCostUsd?: number | null } = 
   const changed: string[] = [];
   for (const snap of manifest.tests) {
     const t = loaded.find((x) => x.definition.id === snap.id);
-    if (!t || computeTestHash(t.definition) !== snap.hash) changed.push(snap.id);
+    if (!t || t.hash !== snap.hash) changed.push(snap.id);
     else tests.push({ ...t, caseFilter: snap.caseIds });
   }
   if (changed.length) throw new Error(`Cannot resume: these tests changed since the run started (results would not be comparable): ${changed.join(', ')}`);
@@ -528,6 +569,7 @@ function launch(manifest: RunManifest, tests: Array<LoadedTest & { caseFilter?: 
         if (!job) return;
         const result = await executeJob(job, {
           isManual,
+          providerTypeOf: (c) => providers.find((p) => p.id === c.provider)?.type,
           manifest,
           settings,
           policy,
@@ -597,6 +639,7 @@ export async function waitForRun(runId: string): Promise<void> {
 
 interface JobEnv {
   isManual: (c: Contestant) => boolean;
+  providerTypeOf: (c: Contestant) => ProviderType | undefined;
   manifest: RunManifest;
   settings: ReturnType<typeof loadSettings>;
   policy: CallPolicy;
@@ -610,9 +653,40 @@ function clamp01(n: number): number {
   return Number.isFinite(n) ? Math.max(0, Math.min(1, n)) : 0;
 }
 
+/** A vision case for a model without image input: recorded as skipped (not scored, excluded from means). */
+function skippedResult(job: Job, manifest: RunManifest): CaseResult {
+  const at = now();
+  return {
+    key: job.key,
+    runId: manifest.id,
+    contestantId: job.contestant.id,
+    testId: job.test.definition.id,
+    testVersion: job.test.definition.version,
+    testHash: job.test.hash,
+    contestantHash: job.contestant.configHash ?? contestantConfigHash(job.contestant),
+    caseId: job.caseId,
+    repeat: job.repeat,
+    seed: job.seed,
+    status: 'skipped',
+    score: null,
+    passed: null,
+    summary: 'Skipped — model has no image input',
+    scoreDetail: { notes: 'This case shows the model an image. The model is not marked as accepting images (vision: true in config/models.json), so the case was not sent and is left out of every mean. Start the run with "Force image cases" to send it anyway.' },
+    metrics: { wallMs: 0, ttftMs: null, apiCalls: 0, inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cachedInputTokens: 0, costUsd: 0, judgeCostUsd: 0, outputTokensPerSec: null, retries: 0, responseChars: 0 },
+    transcript: [],
+    artifacts: [],
+    startedAt: at,
+    finishedAt: at,
+  };
+}
+
 async function executeJob(job: Job, env: JobEnv): Promise<CaseResult> {
   const { manifest, settings } = env;
   const def = job.test.definition;
+  if (!manifest.settings.forceVision && !supportsVision(job.contestant, env.providerTypeOf(job.contestant)) && visionCaseIds(job.test).has(job.caseId)) {
+    env.emit({ type: 'job.started', runId: manifest.id, key: job.key, contestantId: job.contestant.id, testId: def.id, caseId: job.caseId, repeat: job.repeat, at: now() });
+    return skippedResult(job, manifest);
+  }
   const startedAt = new Date();
   const controller = new AbortController();
   const onRunAbort = () => controller.abort();
@@ -679,10 +753,13 @@ async function executeJob(job: Job, env: JobEnv): Promise<CaseResult> {
       const tc = def.cases.find((c) => c.id === job.caseId);
       if (!tc) throw new Error(`Case ${job.caseId} no longer exists`);
       const rendered = renderCase(def, tc);
+      const imageBase = testBaseDir(job.test.file);
+      const imagesByTurn = new Map<number, ChatImage[]>();
+      for (const ref of caseImageRefs(tc)) imagesByTurn.set(ref.turn, [...(imagesByTurn.get(ref.turn) ?? []), loadTestImage(imageBase, ref.file)]);
       const chat = rec.handle.chat(rendered.system);
       let reply = null as Awaited<ReturnType<typeof chat.send>> | null;
       for (let i = 0; i < rendered.turns.length; i++) {
-        reply = await chat.send(rendered.turns[i]!, { label: rendered.turns.length > 1 ? `turn ${i + 1}` : 'response' });
+        reply = await chat.send(rendered.turns[i]!, { label: rendered.turns.length > 1 ? `turn ${i + 1}` : 'response', images: imagesByTurn.get(i) });
       }
       const history = chat.history.slice(0, -1);
       const taskText = [rendered.system ? `[System prompt]\n${rendered.system}` : '', ...history.map((m) => `[${m.role === 'user' ? 'User' : 'Assistant'}]\n${m.content}`)].filter(Boolean).join('\n\n');

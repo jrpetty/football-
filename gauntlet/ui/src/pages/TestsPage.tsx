@@ -7,6 +7,7 @@ import { DifficultyBadge, Empty, ErrorState, PageHead, Seg, SkeletonRows, cx } f
 import { Icon } from '../components/icons.tsx';
 import { fmtInt, shortHash } from '../format.ts';
 import type { TestSummary } from '../types.ts';
+import { VisionBadge } from '../components/VisionImage.tsx';
 
 export function SourceBadge({ source, compact }: { source: TestSummary['source'] | undefined; compact?: boolean }) {
   if (source === 'custom') return <span className="badge info">custom</span>;
@@ -28,6 +29,7 @@ export function TestCard({ t }: { t: TestSummary }) {
         <DifficultyBadge difficulty={t.difficulty} />
         <span className="spacer" />
         <SourceBadge source={t.source} compact />
+        {(t.imageCases ?? 0) > 0 && <VisionBadge />}
         <span className="badge outline">{t.kind === 'program' ? 'simulation' : 'prompt'}</span>
       </div>
       <h3>{t.name}</h3>

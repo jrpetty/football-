@@ -53,7 +53,8 @@ function aggregateTest(testId: string, results: CaseResult[]): TestAggregate {
     repeatStdDev: perCaseSd.length ? round(mean(perCaseSd)!) : null,
     errors: results.filter((r) => r.status === 'error').length,
     pendingHuman: results.filter((r) => r.status === 'pending-human').length,
-    summary: mid?.summary,
+    ...(results.some((r) => r.status === 'skipped') ? { skipped: results.filter((r) => r.status === 'skipped').length } : {}),
+    summary: mid?.summary ?? (results.length && results.every((r) => r.status === 'skipped') ? 'Skipped — model has no image input' : undefined),
   };
 }
 
@@ -170,6 +171,7 @@ export function buildLeaderboard(opts: {
         errors: mine.filter((r) => r.status === 'error').length,
         refusals: mine.filter((r) => r.status === 'refusal').length,
         wallMs: mine.reduce((s, r) => s + r.metrics.wallMs, 0),
+        ...(mine.some((r) => r.status === 'skipped') ? { skipped: mine.filter((r) => r.status === 'skipped').length } : {}),
       },
       speed: {
         medianTtftMs: median(scored.map((r) => r.metrics.ttftMs).filter((v): v is number => v !== null)),
@@ -178,8 +180,8 @@ export function buildLeaderboard(opts: {
       },
       costPerPoint: index && index > 0 ? round(totalCost / index, 6) : null,
       reliability: {
-        errorRate: round(mine.filter((r) => r.status === 'error').length / mine.length),
-        refusalRate: round(mine.filter((r) => r.status === 'refusal').length / mine.length),
+        errorRate: round(mine.filter((r) => r.status === 'error').length / Math.max(1, mine.filter((r) => r.status !== 'skipped').length)),
+        refusalRate: round(mine.filter((r) => r.status === 'refusal').length / Math.max(1, mine.filter((r) => r.status !== 'skipped').length)),
         formatCompliance: withFormat.length ? round(withFormat.filter((r) => r.scoreDetail.formatOk).length / withFormat.length) : null,
       },
       consistency: sds.length ? round(mean(sds)!) : null,

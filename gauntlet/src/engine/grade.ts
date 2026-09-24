@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { hasApiKey, loadContestants, loadProviders, loadSettings, snapshotContestant } from '../core/config.ts';
 import { DATA_DIR } from '../core/paths.ts';
 import { caseScorer, getTest, renderCase, type RenderedCase } from '../core/registry.ts';
+import { testBaseDir } from '../core/vision.ts';
 import type { ArtifactKind, ArtifactRef, Contestant, TranscriptEntry } from '../core/types.ts';
 import { createAdapter } from '../providers/index.ts';
 import { scoreResponse, type ScoringOutcome } from '../scoring/index.ts';
@@ -75,7 +76,7 @@ export async function gradePasted(req: GradeRequest): Promise<GradeResult> {
   const gradeId = randomUUID();
   const artifacts: ArtifactRef[] = [];
   const dir = join(DATA_DIR, 'graded', gradeId);
-  const rendered = renderCase(d, c);
+  const rendered = renderCase(d, c, testBaseDir(test.file));
   try {
     const outcome = await scoreResponse({
       scorer: caseScorer(d, c),

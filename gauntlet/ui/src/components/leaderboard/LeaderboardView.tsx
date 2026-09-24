@@ -7,6 +7,7 @@ import { Icon } from '../icons.tsx';
 import { LeaderboardTable } from './LeaderboardTable.tsx';
 import { CategoryPanel, MedalTable, Podium, ScatterPanel, SpeedPanel } from './Panels.tsx';
 import { isBaseline } from './util.ts';
+import { ImageGlyph } from '../VisionImage.tsx';
 
 export function LeaderboardSummary({ lb }: { lb: Leaderboard }) {
   const stats = useMemo(() => {
@@ -73,6 +74,18 @@ export function LeaderboardView({ lb, podium = true }: { lb: Leaderboard; podium
           </Callout>
         </div>
       )}
+      {lb.rows.some((r) => (r.totals.skipped ?? 0) > 0) && (() => {
+        const blind = lb.rows.filter((r) => (r.totals.skipped ?? 0) > 0).map((r) => r.label);
+        const one = blind.length === 1;
+        return (
+          <div className="no-broadcast">
+            <Callout tone="info" icon={<ImageGlyph />}>
+              <strong>Picture questions skipped for {blind.join(', ')}.</strong> {one ? 'This model can’t' : 'These models can’t'} see images, so the vision cases were not sent to{' '}
+              {one ? 'it' : 'them'}. They are not scored as 0 and are left out of {one ? 'its' : 'their'} averages.
+            </Callout>
+          </div>
+        );
+      })()}
       <section className="card lb-card">
         <LeaderboardTable lb={lb} />
       </section>

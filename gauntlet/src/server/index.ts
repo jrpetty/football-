@@ -46,6 +46,8 @@ import { browserAvailable } from '../scoring/browser.ts';
 import { createAdapter, discoverModels } from '../providers/index.ts';
 import { callWithRetry } from '../engine/recorder.ts';
 import { Semaphore } from '../engine/semaphore.ts';
+import { registerVisionRoutes } from './vision-routes.ts';
+import { testBaseDir } from '../core/vision.ts';
 
 class HttpError extends Error {
   status: number;
@@ -182,7 +184,7 @@ route('GET', '/api/tests/:id', ({ params }) => {
   const d = t.definition;
   const rendered =
     d.kind === 'prompt'
-      ? d.cases.map((c) => renderCase(d, c))
+      ? d.cases.map((c) => renderCase(d, c, testBaseDir(t.file)))
       : d.seeds.map((s) => ({ caseId: `seed-${s}`, turns: [] as string[], notes: `World generated from seed ${s}; prompts are produced by the "${d.program}" program at run time.` }));
   const program = d.kind === 'program' ? PROGRAMS[d.program] : undefined;
   return {
@@ -530,6 +532,8 @@ function serveStatic(pathname: string, res: ServerResponse): void {
   res.writeHead(200, { 'content-type': type, 'cache-control': immutable ? 'public, max-age=31536000, immutable' : 'no-cache' });
   res.end(readFileSync(file));
 }
+
+registerVisionRoutes({ route, httpError: (status, message) => new HttpError(status, message), streaming: STREAMING });
 
 // ─────────────────────────────────────────────────────────────────────────────
 

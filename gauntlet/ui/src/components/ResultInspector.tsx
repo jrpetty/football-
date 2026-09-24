@@ -8,6 +8,7 @@ import { ReplayPlayer } from './ReplayPlayer.tsx';
 import { TranscriptView } from './Transcript.tsx';
 import { Icon } from './icons.tsx';
 import { useViewerCaption } from '../context.tsx';
+import { VisionResultPanel, resultImages } from './VisionResult.tsx';
 
 export interface InspectorTarget {
   testId: string;
@@ -206,6 +207,7 @@ function ResultDetail({ runId, lite, names, target }: { runId: string; lite: Cas
   if (!res) return <SkeletonRows rows={8} h={34} />;
 
   const arts = res.artifacts ?? [];
+  const images = resultImages(res);
   return (
     <div className="stack loose">
       <div className="result-head">
@@ -235,7 +237,12 @@ function ResultDetail({ runId, lite, names, target }: { runId: string; lite: Cas
       />
       {tab === 'overview' && (
         <>
-          <Breakdown r={res} names={names} />
+          {images.length > 0 && <VisionResultPanel images={images} detail={res.scoreDetail ?? {}} passed={res.passed} />}
+          {images.length > 0 ? (
+            <ScoreBreakdownView d={{ ...res.scoreDetail, extracted: undefined, expected: undefined }} passed={res.passed} humanScores={res.humanScores} names={names} />
+          ) : (
+            <Breakdown r={res} names={names} />
+          )}
           <div>
             <div className="mini-title">Metrics</div>
             <Metrics r={res} />

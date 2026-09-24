@@ -9,6 +9,7 @@ import { Callout, CopyButton, ErrorState, Field, LoadingPage, Modal, PageHead, S
 import { Icon } from '../components/icons.tsx';
 import { slugify } from '../format.ts';
 import type { ArtifactCheck, Constraint, Difficulty, JudgeLabel, PromptTest, PromptTestCase, ScorerSpec, ValidateResult } from '../types.ts';
+import { CaseImageEditor, rebaseImages } from '../components/VisionBuilder.tsx';
 
 const FINAL_ANSWER = 'When you are finished, write your final answer on its own line, exactly in the form:\nFINAL ANSWER: <answer>';
 
@@ -589,6 +590,7 @@ function clean(t: PromptTest): PromptTest {
     if (!c.notes?.trim()) delete cc.notes;
     if (c.weight === undefined || c.weight === 1) delete cc.weight;
     if (c.expected === undefined) delete cc.expected;
+    if (!c.images?.length) delete cc.images;
     return cc;
   });
   return out as unknown as PromptTest;
@@ -651,6 +653,8 @@ export default function TestBuilderPage({ editId }: { editId?: string }) {
         originalHash.current = editId ? d.summary.hash : null;
         const def = structuredClone(d.definition);
         if (from) {
+          // Image paths are relative to the source test's folder; the copy is saved in tests/custom/.
+          def.cases = def.cases.map((c) => (c.images?.length ? { ...c, images: rebaseImages(d.summary.file, c.images) } : c));
           def.id = `${def.id}-copy`;
           def.name = `${def.name} (copy)`;
           def.version = '1.0.0';
@@ -986,6 +990,7 @@ export default function TestBuilderPage({ editId }: { editId?: string }) {
                     ) : (
                       <textarea className="textarea" rows={4} value={c.prompt ?? ''} placeholder="The user message for this case…" aria-label={`Case ${i + 1} prompt`} onChange={(e) => setCase(i, { prompt: e.target.value })} />
                     )}
+                    <CaseImageEditor testId={draft.id} images={c.images} turns={c.turns?.length ?? 1} onChange={(images) => setCase(i, { images })} />
                     <ExpectedEditor scorer={c.scorer ?? draft.scorer} value={c.expected} onChange={(v) => setCase(i, { expected: v })} />
                     <div className="form-grid">
                       <Field label="Weight">

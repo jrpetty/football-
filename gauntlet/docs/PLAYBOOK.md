@@ -9,6 +9,10 @@ A practical checklist for running a benchmark you can put on video and defend in
    * a head-to-head across everything: `core`;
    * a themed episode: hand-pick tests (e.g. all simulations for "AI Survivor");
    * a cheap first look: `quick`.
+   * "Can it see?": the `vision` suite (charts, spot the difference, handwriting, counting). Check each model's
+     *Accepts images* switch on the Models page: models without it are skipped on picture questions, and the
+     leaderboard and Presenter say so on screen. For chat apps, the Manual Inbox has **Copy image** and
+     **Download** buttons next to the prompt.
 2. **Pick the models.** Include at least one reference point people know, and the **Random Baseline** (it's
    free and shows the floor).
 3. **Check the price** in **Cost Planner** or with `node src/cli.ts costs --suite core --models a,b,c`. The

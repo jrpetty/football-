@@ -122,6 +122,7 @@ export function validateContestant(c: Contestant): string[] {
   if (!/^#[0-9a-fA-F]{6}$/.test(c.color ?? '')) errors.push('color must be a #RRGGBB hex colour');
   const pr = c.pricing;
   if (!pr || !(pr.inputPerM >= 0) || !(pr.outputPerM >= 0)) errors.push('pricing.inputPerM and pricing.outputPerM must be numbers ≥ 0');
+  if (c.vision !== undefined && typeof c.vision !== 'boolean') errors.push('vision must be true or false');
   if (c.options?.extraBody !== undefined && (typeof c.options.extraBody !== 'object' || Array.isArray(c.options.extraBody))) errors.push('options.extraBody must be an object');
   return errors;
 }

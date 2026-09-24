@@ -34,6 +34,7 @@ import type {
   TestSummary,
   TranscriptEntry,
 } from '../types.ts';
+import { VISION_RUN_SPECS, VISION_SUITE, VISION_TESTS, applyMockVisionFlags, mockLeaderboardSkips, mockRenderedImages, mockTurnImages, mockVisionSkip } from './vision.ts';
 
 // ───────────────────────────── RNG ─────────────────────────────
 
@@ -642,6 +643,7 @@ export function summaryOf(t: TestDefinition): TestSummary {
     source: CUSTOM_IDS.has(t.id) ? 'custom' : PRIVATE_IDS.has(t.id) ? 'private' : 'builtin',
     file: CUSTOM_IDS.has(t.id) ? `tests/custom/${t.id}.json` : PRIVATE_IDS.has(t.id) ? `tests/private/${t.id}.json` : `tests/${t.category}/${t.id.split('.')[1] ?? t.id}.json`,
     estimate: { inputTokens: est.inputTokens, outputTokens: est.outputTokens, calls: est.calls ?? 1 },
+    ...(t.kind === 'prompt' && t.cases.some((c) => c.images?.length) ? { imageCases: t.cases.filter((c) => c.images?.length).length } : {}),
   };
 }
 
@@ -650,7 +652,7 @@ export function renderedOf(t: TestDefinition): RenderedCase[] {
   return t.cases.map((c) => {
     const turns = c.turns?.length ? [...c.turns] : [c.prompt ?? ''];
     if (t.preamble) turns[0] = `${t.preamble}\n\n${turns[0]}`;
-    return { caseId: c.id, system: t.system, turns, expected: c.expected, notes: c.notes };
+    return { caseId: c.id, system: t.system, turns, expected: c.expected, notes: c.notes, images: mockRenderedImages(t, c.id) };
   });
 }
 
@@ -739,7 +741,7 @@ function genLite(runId: string, c: ContestantView, t: TestDefinition, caseId: st
   if (type === 'human') artifacts.push({ name: 'page.html', kind: 'html', file: `${c.id}/${t.id}/${caseId}-r${repeat}.html`, bytes: 8000 + Math.round(r.next() * 9000) });
   if (t.kind === 'program' && t.program === 'draw-it-blind') artifacts.push({ name: 'reconstruction.svg', kind: 'svg', file: `${c.id}/${t.id}/${caseId}-r${repeat}.svg`, bytes: 2400 });
 
-  return {
+  return mockVisionSkip({
     key,
     runId,
     contestantId: c.id,
@@ -762,7 +764,7 @@ function genLite(runId: string, c: ContestantView, t: TestDefinition, caseId: st
     finishedAt: finished,
     humanScores,
     hasReplay: t.kind === 'program',
-  };
+  }, c, t);
 }
 
 function summaryText(t: TestDefinition, score: number | null, status: ResultStatus, u: number): string {
@@ -1136,7 +1138,7 @@ export function buildLeaderboard(manifest: RunManifest, results: CaseResultLite[
     inc(e.bronze, 'bronze');
   }
 
-  return {
+  return mockLeaderboardSkips({
     generatedAt: new Date().toISOString(),
     scope,
     fingerprint: manifest.fingerprint,
@@ -1146,7 +1148,7 @@ export function buildLeaderboard(manifest: RunManifest, results: CaseResultLite[
     rows,
     medals,
     staleExcluded,
-  };
+  }, results);
 }
 
 export function runListItem(run: MockRun): RunListItem {
@@ -1380,12 +1382,12 @@ export function detailFor(lite: CaseResultLite): CaseResult {
   const transcript: TranscriptEntry[] = [];
   const usage = (inT: number, outT: number) => ({ inputTokens: inT, outputTokens: outT, reasoningTokens: Math.round(outT * (PERSONA[lite.contestantId]?.thinking ?? 0)), cachedInputTokens: 0, cacheWriteTokens: 0 });
   const m = lite.metrics;
-  if (t && t.kind === 'prompt') {
+  if (t && t.kind === 'prompt' && lite.status !== 'skipped') {
     const rc = renderedOf(t).find((x) => x.caseId === lite.caseId);
     const turns = rc?.turns ?? [''];
     const messages: TranscriptEntry['messages'] = [];
     turns.forEach((turn, i) => {
-      messages.push({ role: 'user', content: turn });
+      messages.push({ role: 'user', content: turn, ...mockTurnImages(t, lite.caseId, i) });
       const last = i === turns.length - 1;
       const resp = last ? responseFor(t, lite.caseId, score) : 'Understood — noted. Continue.';
       transcript.push({
@@ -1476,3 +1478,9 @@ export function detailFor(lite: CaseResultLite): CaseResult {
     artifacts,
   };
 }
+
+// Vision tests (added after the core fixtures so the existing demo runs keep their test lists).
+TESTS.push(...VISION_TESTS);
+SUITES.push(VISION_SUITE);
+RUN_SPECS.push(...VISION_RUN_SPECS);
+applyMockVisionFlags(CONTESTANTS);

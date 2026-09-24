@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import type { CompletionRequest, CompletionResult, StopReason } from '../core/types.ts';
+import type { ChatMessage, CompletionRequest, CompletionResult, StopReason } from '../core/types.ts';
 import { type AdapterContext, type ProviderAdapter, ProviderError, deepMerge, isAbortError, isRetryableStatus, parseRetryAfter } from './types.ts';
 
 const STOP_MAP: Record<string, StopReason> = {
@@ -36,9 +36,9 @@ export function createOpenAICompatibleAdapter(ctx: AdapterContext): ProviderAdap
 
   return {
     async complete(req: CompletionRequest): Promise<Omit<CompletionResult, 'retries'>> {
-      const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [];
+      const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string | Array<Record<string, unknown>> }> = [];
       if (req.system) messages.push({ role: 'system', content: req.system });
-      for (const m of req.messages) messages.push({ role: m.role, content: m.content });
+      for (const m of req.messages) messages.push({ role: m.role, content: openAIContent(m) });
 
       const body: Record<string, unknown> = {
         model: ctx.contestant.model,
@@ -123,6 +123,16 @@ export function createOpenAICompatibleAdapter(ctx: AdapterContext): ProviderAdap
       };
     },
   };
+}
+
+/** Plain string for text-only messages; `image_url` parts (base64 data URLs, detail "high") before the text when images are attached. */
+export function openAIContent(m: ChatMessage): string | Array<Record<string, unknown>> {
+  const images = (m.images ?? []).filter((img) => img.data);
+  if (!images.length) return m.content;
+  return [
+    ...images.map((img) => ({ type: 'image_url', image_url: { url: `data:${img.mediaType};base64,${img.data}`, detail: 'high' } })),
+    ...(m.content ? [{ type: 'text', text: m.content }] : []),
+  ];
 }
 
 export async function listOpenAICompatibleModels(ctx: AdapterContext): Promise<string[]> {

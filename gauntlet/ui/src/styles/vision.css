@@ -1,0 +1,301 @@
+/* Vision tests: framed test images, lightbox, badges. */
+
+.vision-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--accent-2);
+  border-color: color-mix(in srgb, var(--accent-2) 45%, transparent);
+  background: color-mix(in srgb, var(--accent-2) 12%, transparent);
+}
+.vi-glyph {
+  width: 13px;
+  height: 13px;
+  flex: none;
+}
+.vi-glyph-lg {
+  width: 28px;
+  height: 28px;
+}
+
+.vi-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.vi-figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+.vi-sm {
+  width: 280px;
+}
+.vi-md {
+  width: min(560px, 100%);
+}
+.vi-lg {
+  width: min(880px, 100%);
+}
+.vi-fill {
+  width: 100%;
+}
+.vi-frame {
+  all: unset;
+  box-sizing: border-box;
+  display: block;
+  cursor: zoom-in;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border-strong);
+  background: #ffffff;
+  padding: 6px;
+  box-shadow: var(--shadow-1);
+  transition: border-color var(--t-fast) var(--ease-out), transform var(--t-fast) var(--ease-out);
+}
+.vi-frame:hover {
+  border-color: var(--accent-line);
+}
+.vi-frame:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.vi-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: calc(var(--r-md) - 4px);
+}
+.vi-missing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 140px;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+.vi-cap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  font-size: 0.78rem;
+  color: var(--text-2);
+}
+.vi-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.vi-name .mono {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vi-caption {
+  flex-basis: 100%;
+  color: var(--text-3);
+}
+.vi-actions {
+  display: inline-flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.vi-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(2, 5, 9, 0.88);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 32px;
+  cursor: zoom-out;
+}
+.vi-lightbox img {
+  max-width: 100%;
+  max-height: calc(100vh - 110px);
+  border-radius: var(--r-md);
+  background: #ffffff;
+  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.8);
+}
+.vi-lightbox-cap {
+  color: #cbd5e1;
+  font-size: 0.85rem;
+}
+
+/* Result inspector: the image next to the answer and the key */
+.vi-inspect {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.vi-inspect-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.vi-answer {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  padding: 12px 14px;
+}
+.vi-answer .k {
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 6px;
+}
+.vi-answer .v {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  color: var(--text-1);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.vi-answer.good {
+  border-color: color-mix(in srgb, var(--good) 55%, transparent);
+  background: var(--good-soft);
+}
+.vi-answer.bad {
+  border-color: color-mix(in srgb, var(--bad) 55%, transparent);
+  background: var(--bad-soft);
+}
+@media (max-width: 1100px) {
+  .vi-inspect {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Skipped-case note */
+.vi-skip-note {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  color: var(--text-2);
+  background: var(--surface-2);
+}
+
+/* Test Builder */
+.vi-builder {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.vi-builder-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.vi-builder-item {
+  position: relative;
+}
+.vi-builder-item .vi-remove {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+.vi-drop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  color: var(--text-2);
+  font-size: 0.85rem;
+  cursor: pointer;
+  background: var(--surface-2);
+}
+.vi-drop:hover,
+.vi-drop.over {
+  border-color: var(--accent-line);
+  color: var(--text-1);
+}
+.vi-drop input {
+  display: none;
+}
+
+/* Manual Inbox */
+.vi-inbox {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid color-mix(in srgb, var(--accent-2) 40%, transparent);
+  background: color-mix(in srgb, var(--accent-2) 7%, transparent);
+  border-radius: var(--r-lg);
+  padding: 14px;
+}
+.vi-inbox-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.vi-inbox-head .hint {
+  font-weight: 400;
+  color: var(--text-2);
+  font-size: 0.85rem;
+}
+
+/* Broadcast mode: bigger captions, no buttons */
+html[data-broadcast='on'] .vi-cap {
+  font-size: 0.95rem;
+}
+html[data-broadcast='on'] .vi-actions {
+  display: none;
+}
+
+/* Presenter: test-intro slide for vision tests (1920x1080 stage) */
+.x-card.x-vision {
+  gap: 14px;
+  padding: 22px 26px;
+}
+.x-vision .x-card-k svg {
+  width: 22px;
+  height: 22px;
+}
+.x-vision-frame {
+  flex: 0 1 auto;
+  min-height: 0;
+  display: flex;
+  justify-content: center;
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 10px;
+  border: 1px solid var(--border-strong);
+}
+.x-vision-frame img {
+  display: block;
+  max-width: 100%;
+  max-height: 400px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+.x-card p.x-vision-q {
+  flex: none;
+  font-size: 23px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+.x-vision .x-format {
+  flex: none;
+}

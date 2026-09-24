@@ -84,6 +84,8 @@ export interface Contestant {
   options?: ContestantOptions;
   contextWindow?: number;
   notes?: string;
+  /** Accepts image input (vision tests). Missing = unknown, treated as text-only for API models. */
+  vision?: boolean;
 }
 
 /** Contestant plus derived runtime info (never includes secrets). */
@@ -98,9 +100,26 @@ export interface ContestantView extends Contestant {
 // Model calls
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** An image attached to a user message (vision tests). */
+export interface ChatImage {
+  /** Display / file name, e.g. "chart-01.png". */
+  name: string;
+  mediaType: 'image/png' | 'image/jpeg';
+  /** Base64 bytes. Present when sending; stripped from stored transcripts to keep results small. */
+  data?: string;
+  sha256?: string;
+  bytes?: number;
+  width?: number;
+  height?: number;
+  /** Path relative to the tests folder when the image comes from a test file (lets the UI show it). */
+  path?: string;
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+  /** Images sent with this (user) message, before its text. */
+  images?: ChatImage[];
 }
 
 export interface CompletionRequest {
@@ -254,6 +273,12 @@ export interface PromptTestCase {
   weight?: number;
   /** Auditor notes: how the expected answer was derived, sources, etc. Never sent to the model. */
   notes?: string;
+  /**
+   * PNG/JPEG files shown to the model (vision tests), relative to the test JSON's folder
+   * (e.g. "images/chart-01.png"). Attached to the first user turn unless `turn` (0-based) says otherwise.
+   * The image bytes are part of the test hash.
+   */
+  images?: Array<string | { file: string; turn?: number }>;
 }
 
 export interface PromptTest extends TestBase {
@@ -319,7 +344,7 @@ export interface ModelReply {
 
 export interface ChatSession {
   /** Send a user message and get the assistant reply; history is kept. */
-  send(userText: string, opts?: { maxOutputTokens?: number; label?: string }): Promise<ModelReply>;
+  send(userText: string, opts?: { maxOutputTokens?: number; label?: string; images?: ChatImage[] }): Promise<ModelReply>;
   /** Current conversation history. */
   readonly history: readonly ChatMessage[];
 }
@@ -388,6 +413,8 @@ export interface ProgramDefinition {
   description: string;
   /** Human-readable description of how the score is computed. */
   scoring: string;
+  /** The program sends images: contestants without image input are skipped (like vision prompt tests). */
+  requiresVision?: boolean;
   /** Default config merged under the test's config. */
   defaults?: Record<string, unknown>;
   run(ctx: ProgramContext): Promise<ProgramResult>;
@@ -425,7 +452,8 @@ export interface TranscriptEntry {
   judge?: boolean;
 }
 
-export type ResultStatus = 'ok' | 'error' | 'timeout' | 'refusal' | 'pending-human' | 'cancelled';
+/** `skipped`: the case needs image input and the model has none; not scored, excluded from means. */
+export type ResultStatus = 'ok' | 'error' | 'timeout' | 'refusal' | 'pending-human' | 'cancelled' | 'skipped';
 
 export interface ScoreBreakdownItem {
   label: string;
@@ -516,6 +544,8 @@ export interface RunRequest {
   /** Hard spending cap in USD (contestant + judge cost). The run stops starting new cases once reached. */
   maxCostUsd?: number;
   notes?: string;
+  /** Send image cases to models not marked `vision: true` instead of skipping them. */
+  forceVision?: boolean;
 }
 
 export interface TestSnapshot {
@@ -558,6 +588,7 @@ export interface RunManifest {
     protocolVersion: string;
     maxCostUsd?: number;
     judgeExcludeSameVendor?: boolean;
+    forceVision?: boolean;
   };
   totalJobs: number;
   notes?: string;
@@ -596,6 +627,8 @@ export interface TestAggregate {
   repeatStdDev: number | null;
   errors: number;
   pendingHuman: number;
+  /** Cases skipped because the model has no image input (not scored, excluded from the mean). */
+  skipped?: number;
   /** Best one-line summary (for program tests: of the median case). */
   summary?: string;
 }
@@ -625,6 +658,8 @@ export interface LeaderboardRow {
     errors: number;
     refusals: number;
     wallMs: number;
+    /** Vision cases skipped (no image input); excluded from every mean. */
+    skipped?: number;
   };
   speed: {
     medianTtftMs: number | null;

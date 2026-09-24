@@ -92,6 +92,7 @@ const RESULT_STATUS: Record<ResultStatus, { cls: string; label: string }> = {
   refusal: { cls: 'warn', label: 'Refusal' },
   'pending-human': { cls: 'info', label: 'Awaiting review' },
   cancelled: { cls: '', label: 'Cancelled' },
+  skipped: { cls: '', label: 'Skipped · no image input' },
 };
 
 export function ResultStatusBadge({ status }: { status: ResultStatus | string | undefined }) {
@@ -107,8 +108,8 @@ export function ResultStatusBadge({ status }: { status: ResultStatus | string | 
 /** Score with status colour + icon + value (never colour alone). */
 export function ScorePill({ score, status, mode = 'pct', title }: { score: number | null | undefined; status?: ResultStatus; mode?: 'pct' | 'dec'; title?: string }) {
   if (status && status !== 'ok' && (score === null || score === undefined)) {
-    const map: Partial<Record<ResultStatus, string>> = { error: 'ERR', timeout: 'T/O', refusal: 'REF', 'pending-human': 'HUMAN', cancelled: 'CXL' };
-    const tone = status === 'pending-human' || status === 'cancelled' ? 'none' : 'bad';
+    const map: Partial<Record<ResultStatus, string>> = { error: 'ERR', timeout: 'T/O', refusal: 'REF', 'pending-human': 'HUMAN', cancelled: 'CXL', skipped: 'SKIP' };
+    const tone = status === 'pending-human' || status === 'cancelled' || status === 'skipped' ? 'none' : 'bad';
     return (
       <span className={cx('score-pill', tone)} title={title ?? status}>
         <span className="ico" aria-hidden="true">
