@@ -1,0 +1,13 @@
+[
+  { "id": "reasoning",    "name": "Logic & Reasoning",      "color": "#6366F1", "weight": 1.0, "description": "Multi-step deduction, constraint puzzles and planning problems written fresh for Gauntlet, so they cannot have been memorised." },
+  { "id": "math",         "name": "Mathematics",            "color": "#0EA5E9", "weight": 1.0, "description": "Competition-style arithmetic, algebra, combinatorics and probability with a single verifiable numeric answer." },
+  { "id": "coding",       "name": "Coding",                 "color": "#10B981", "weight": 1.0, "description": "Write real functions that are executed against hidden unit tests in a sandbox. Only passing tests count." },
+  { "id": "instruction",  "name": "Instruction Following",  "color": "#F59E0B", "weight": 1.0, "description": "Precise, machine-verifiable formatting and content constraints (word counts, forbidden letters, acrostics, JSON shapes)." },
+  { "id": "honesty",      "name": "Honesty & Calibration",  "color": "#EF4444", "weight": 1.0, "description": "The Honesty Trap: false premises, fabricated entities and unanswerable questions mixed with real ones. Confident nonsense is punished." },
+  { "id": "long-context", "name": "Long Context & Memory",  "color": "#8B5CF6", "weight": 1.0, "description": "Needles in a generated novel, multi-hop recall across tens of thousands of tokens, and information decay across rewrites." },
+  { "id": "agentic",      "name": "Agents & Planning",      "color": "#14B8A6", "weight": 1.0, "description": "Seeded simulations — Survival Island, Escape Room, Startup — where the model acts turn by turn and lives with its decisions." },
+  { "id": "social",       "name": "Social Deduction",       "color": "#EC4899", "weight": 1.0, "description": "The Liar's Table: interrogate suspects, find the contradiction, name the liar with the fewest questions." },
+  { "id": "visual",       "name": "Visual & Spatial",       "color": "#F97316", "weight": 1.0, "description": "Draw It Blind and SVG construction: describe and rebuild scenes, scored geometrically." },
+  { "id": "creative",     "name": "Creative Building",      "color": "#84CC16", "weight": 1.0, "description": "One-shot playable games and interactive pages, auto-tested in a headless browser and judged against a rubric." },
+  { "id": "extraction",   "name": "Data Extraction",        "color": "#64748B", "weight": 1.0, "description": "Turn messy real-world text into exact structured JSON. Every field is checked." }
+]

@@ -1,0 +1,667 @@
+import { EventEmitter } from 'node:events';
+import { execSync } from 'node:child_process';
+import { loadCategories, loadContestants, loadProviders, loadSettings, hasApiKey, snapshotContestant, contestantConfigHash } from '../core/config.ts';
+import { computeCost, emptyUsage } from '../core/cost.ts';
+import { createRng } from '../core/rng.ts';
+import { HARNESS_VERSION, PROTOCOL_VERSION } from '../core/version.ts';
+import { ROOT } from '../core/paths.ts';
+import { caseIds, caseScorer, computeTestHash, fingerprint, getSuite, loadTests, renderCase, resolveTests, testEstimate, type LoadedTest } from '../core/registry.ts';
+import type {
+  CaseResult,
+  Contestant,
+  ContestantSnapshot,
+  ProgramContext,
+  ProgramTest,
+  PromptTest,
+  ProviderConfig,
+  ReplayData,
+  ResultStatus,
+  RunEvent,
+  RunManifest,
+  RunRequest,
+  ScoreDetail,
+  TestSnapshot,
+} from '../core/types.ts';
+import { createAdapter } from '../providers/index.ts';
+import { PROGRAMS } from '../programs/index.ts';
+import { scoreResponse, type JudgePanel } from '../scoring/index.ts';
+import { browserAvailable } from '../scoring/browser.ts';
+import { Semaphore } from './semaphore.ts';
+import { callWithRetry, createRecorder, type CallPolicy, type CallTarget } from './recorder.ts';
+import { appendResult, createRunFolder, newRunId, readManifest, readResults, saveArtifact, writeManifest } from './store.ts';
+
+interface Job {
+  key: string;
+  contestant: ContestantSnapshot;
+  test: LoadedTest;
+  caseId: string;
+  repeat: number;
+  seed?: number;
+}
+
+interface ActiveRun {
+  manifest: RunManifest;
+  controller: AbortController;
+  events: EventEmitter;
+  progress: { completed: number; total: number; costUsd: number };
+  done: Promise<void>;
+}
+
+const active = new Map<string, ActiveRun>();
+
+export function isActive(runId: string): boolean {
+  return active.has(runId);
+}
+
+export function activeProgress(runId: string): ActiveRun['progress'] | null {
+  return active.get(runId)?.progress ?? null;
+}
+
+export function subscribe(runId: string, listener: (e: RunEvent) => void): () => void {
+  const run = active.get(runId);
+  if (!run) return () => {};
+  run.events.on('event', listener);
+  return () => run.events.off('event', listener);
+}
+
+function gitCommit(): string | undefined {
+  try {
+    return execSync('git rev-parse --short HEAD', { cwd: ROOT, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function now(): string {
+  return new Date().toISOString();
+}
+
+export function jobKey(contestantId: string, testId: string, caseId: string, repeat: number): string {
+  return `${contestantId}::${testId}::${caseId}::r${repeat}`;
+}
+
+function seedOf(caseId: string): number | undefined {
+  const m = caseId.match(/^seed-(\d+)$/);
+  return m ? Number(m[1]) : undefined;
+}
+
+/** Interleave jobs so every contestant works on the same test/case at the same time (fair + great for the live view). */
+function buildJobs(tests: LoadedTest[], contestants: ContestantSnapshot[], repeats: number): Job[] {
+  const jobs: Job[] = [];
+  for (const test of tests) {
+    for (const caseId of caseIds(test.definition)) {
+      for (let repeat = 0; repeat < repeats; repeat++) {
+        for (const c of contestants) {
+          jobs.push({ key: jobKey(c.id, test.definition.id, caseId, repeat), contestant: c, test, caseId, repeat, seed: seedOf(caseId) });
+        }
+      }
+    }
+  }
+  return jobs;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Planning & estimates
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface RunPlan {
+  tests: Array<LoadedTest & { weight: number }>;
+  contestants: Contestant[];
+  judges: Contestant[];
+  repeats: number;
+  concurrency: number;
+  temperature: number;
+  fingerprint: string;
+  warnings: string[];
+}
+
+function usesJudges(t: LoadedTest): boolean {
+  const d = t.definition;
+  if (d.kind !== 'prompt') return false;
+  return d.cases.some((c) => {
+    const s = caseScorer(d, c);
+    return s.type === 'judge' || s.type === 'judge-classify' || (s.type === 'artifact' && (s.judgeWeight ?? 0) > 0);
+  });
+}
+
+export function planRun(req: RunRequest): RunPlan {
+  const settings = loadSettings();
+  const all = loadContestants();
+  const providers = loadProviders();
+  const tests = resolveTests({ suiteId: req.suiteId, testIds: req.testIds });
+  if (tests.length === 0) throw new Error('No tests selected');
+  if (!req.contestantIds?.length) throw new Error('Select at least one model');
+  const contestants = req.contestantIds.map((id) => {
+    const c = all.find((x) => x.id === id);
+    if (!c) throw new Error(`Unknown model "${id}"`);
+    return c;
+  });
+  const judgeIds = req.judgeIds ?? settings.judges;
+  const warnings: string[] = [];
+  const providerOf = (c: Contestant) => providers.find((p) => p.id === c.provider);
+  for (const c of contestants) {
+    const p = providerOf(c);
+    if (!p) warnings.push(`${c.label}: provider "${c.provider}" is not configured`);
+    else if (!hasApiKey(p)) warnings.push(`${c.label}: ${p.apiKeyEnv} is not set — its jobs will fail`);
+    if (!c.pricing.verifiedAt) warnings.push(`${c.label}: pricing is unverified — cost figures may be wrong`);
+  }
+  const judgeNeeded = tests.some(usesJudges);
+  const judges: Contestant[] = [];
+  if (judgeNeeded) {
+    for (const id of judgeIds) {
+      const j = all.find((x) => x.id === id);
+      if (!j) {
+        warnings.push(`Judge "${id}" is not a configured model — skipped`);
+        continue;
+      }
+      const p = providerOf(j);
+      if (!p || !hasApiKey(p)) {
+        warnings.push(`Judge ${j.label}: no API key — skipped (panel continues without it)`);
+        continue;
+      }
+      judges.push(j);
+    }
+    if (judges.length === 0) warnings.push('No usable judge models: judge-scored tests will error. Configure judges in config/settings.json.');
+    else if (new Set(judges.map((j) => j.vendor)).size === 1) warnings.push(`All judges are from ${judges[0]!.vendor}: consider a cross-vendor panel to avoid self-preference bias`);
+  }
+  const humanTests = tests.filter((t) => t.definition.kind === 'prompt' && t.definition.cases.some((c) => caseScorer(t.definition as PromptTest, c).type === 'human'));
+  if (humanTests.length) warnings.push(`${humanTests.length} test(s) need human scoring in Blind Review before they count`);
+  return {
+    tests,
+    contestants,
+    judges,
+    repeats: Math.max(1, Math.min(20, req.repeats ?? getSuite(req.suiteId ?? 'core')?.repeats ?? settings.defaultRepeats)),
+    concurrency: Math.max(1, Math.min(64, req.concurrency ?? settings.defaultConcurrency)),
+    temperature: req.temperature ?? settings.temperature,
+    fingerprint: fingerprint(tests),
+    warnings,
+  };
+}
+
+export interface RunEstimate {
+  jobs: number;
+  calls: number;
+  perContestant: Array<{ contestantId: string; jobs: number; estCostUsd: number }>;
+  judgeCostUsd: number;
+  estCostUsd: number;
+  fingerprint: string;
+  warnings: string[];
+}
+
+export async function estimateRun(req: RunRequest): Promise<RunEstimate> {
+  const plan = planRun(req);
+  let calls = 0;
+  let judgeCost = 0;
+  const perContestant = plan.contestants.map((c) => {
+    let jobs = 0;
+    let cost = 0;
+    for (const t of plan.tests) {
+      const n = caseIds(t.definition).length * plan.repeats;
+      const e = testEstimate(t.definition);
+      jobs += n;
+      calls += n * e.calls;
+      cost += (n * (e.inputTokens * c.pricing.inputPerM + e.outputTokens * c.pricing.outputPerM)) / 1e6;
+      if (usesJudges(t)) {
+        for (const j of plan.judges) {
+          judgeCost += (n * ((Math.min(e.outputTokens, 20000) + 2500) * j.pricing.inputPerM + 1500 * j.pricing.outputPerM)) / 1e6;
+          calls += n;
+        }
+      }
+    }
+    return { contestantId: c.id, jobs, estCostUsd: Math.round(cost * 10000) / 10000 };
+  });
+  const warnings = plan.warnings.slice();
+  const needsBrowser = plan.tests.some((t) => t.definition.kind === 'prompt' && t.definition.scorer.type === 'artifact');
+  if (needsBrowser && !(await browserAvailable())) warnings.push('Headless Chromium not available: browser checks for game/SVG tests will be skipped');
+  const total = perContestant.reduce((s, p) => s + p.estCostUsd, 0) + judgeCost;
+  return {
+    jobs: perContestant.reduce((s, p) => s + p.jobs, 0),
+    calls,
+    perContestant,
+    judgeCostUsd: Math.round(judgeCost * 10000) / 10000,
+    estCostUsd: Math.round(total * 10000) / 10000,
+    fingerprint: plan.fingerprint,
+    warnings,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Execution
+// ─────────────────────────────────────────────────────────────────────────────
+
+export async function startRun(req: RunRequest): Promise<string> {
+  const plan = planRun(req);
+  const id = newRunId();
+  const tests: TestSnapshot[] = plan.tests.map((t) => ({
+    id: t.definition.id,
+    version: t.definition.version,
+    hash: t.hash,
+    name: t.definition.name,
+    category: t.definition.category,
+    kind: t.definition.kind,
+    caseIds: caseIds(t.definition),
+    weight: t.weight,
+  }));
+  const contestants = plan.contestants.map(snapshotContestant);
+  const manifest: RunManifest = {
+    id,
+    name: req.name?.trim() || `${plan.contestants.length} models × ${plan.tests.length} tests`,
+    status: 'queued',
+    createdAt: now(),
+    harnessVersion: HARNESS_VERSION,
+    gitCommit: gitCommit(),
+    node: process.version,
+    platform: `${process.platform}-${process.arch}`,
+    suiteId: req.testIds?.length ? undefined : (req.suiteId ?? 'core'),
+    suiteVersion: req.testIds?.length ? undefined : getSuite(req.suiteId ?? 'core')?.version,
+    fingerprint: plan.fingerprint,
+    tests,
+    contestants,
+    judges: plan.judges.map(snapshotContestant),
+    settings: { repeats: plan.repeats, concurrency: plan.concurrency, temperature: plan.temperature, protocolVersion: PROTOCOL_VERSION },
+    totalJobs: tests.reduce((s, t) => s + t.caseIds.length, 0) * plan.repeats * contestants.length,
+    notes: req.notes,
+  };
+  createRunFolder(manifest);
+  launch(manifest, plan.tests, new Set());
+  return id;
+}
+
+export function resumeRun(runId: string): void {
+  if (active.has(runId)) throw new Error('Run is already active');
+  const manifest = readManifest(runId);
+  if (!manifest) throw new Error('Run not found');
+  const loaded = loadTests();
+  const tests: LoadedTest[] = [];
+  const changed: string[] = [];
+  for (const snap of manifest.tests) {
+    const t = loaded.find((x) => x.definition.id === snap.id);
+    if (!t || computeTestHash(t.definition) !== snap.hash) changed.push(snap.id);
+    else tests.push(t);
+  }
+  if (changed.length) throw new Error(`Cannot resume: these tests changed since the run started (results would not be comparable): ${changed.join(', ')}`);
+  const done = new Set(readResults(runId).filter((r) => r.status !== 'error' && r.status !== 'cancelled').map((r) => r.key));
+  manifest.error = undefined;
+  launch(manifest, tests, done);
+}
+
+export function cancelRun(runId: string): boolean {
+  const run = active.get(runId);
+  if (!run) return false;
+  run.controller.abort();
+  return true;
+}
+
+/** Mark runs left "running" by a crashed process as interrupted so they can be resumed. */
+export function recoverInterruptedRuns(ids: string[]): void {
+  for (const id of ids) {
+    if (active.has(id)) continue;
+    const m = readManifest(id);
+    if (m && (m.status === 'running' || m.status === 'queued')) {
+      m.status = 'interrupted';
+      writeManifest(m);
+    }
+  }
+}
+
+function launch(manifest: RunManifest, tests: LoadedTest[], skip: Set<string>): void {
+  const settings = loadSettings();
+  const providers = loadProviders();
+  const controller = new AbortController();
+  const events = new EventEmitter();
+  events.setMaxListeners(100);
+  const jobs = buildJobs(tests, manifest.contestants, manifest.settings.repeats).filter((j) => !skip.has(j.key));
+  const previous = readResults(manifest.id).filter((r) => skip.has(r.key));
+  const progress = {
+    completed: previous.length,
+    total: manifest.totalJobs,
+    costUsd: previous.reduce((s, r) => s + r.metrics.costUsd + r.metrics.judgeCostUsd, 0),
+  };
+  const run: ActiveRun = { manifest, controller, events, progress, done: Promise.resolve() };
+  active.set(manifest.id, run);
+  const emit = (e: RunEvent) => events.emit('event', e);
+
+  run.done = (async () => {
+    manifest.status = 'running';
+    manifest.startedAt ??= now();
+    manifest.finishedAt = undefined;
+    writeManifest(manifest);
+    emit({ type: 'run.status', runId: manifest.id, status: 'running', at: now() });
+
+    const semaphores = new Map<string, Semaphore>();
+    const semFor = (p: ProviderConfig) => {
+      let s = semaphores.get(p.id);
+      if (!s) semaphores.set(p.id, (s = new Semaphore(p.maxConcurrency ?? 8)));
+      return s;
+    };
+    const targets = new Map<string, CallTarget | Error>();
+    const targetFor = (c: Contestant): CallTarget => {
+      let t = targets.get(c.id);
+      if (!t) {
+        try {
+          const p = providers.find((x) => x.id === c.provider);
+          if (!p) throw new Error(`Provider "${c.provider}" is not configured`);
+          t = { contestant: c, adapter: createAdapter(c, p), semaphore: semFor(p) };
+        } catch (e) {
+          t = e as Error;
+        }
+        targets.set(c.id, t);
+      }
+      if (t instanceof Error) throw t;
+      return t;
+    };
+    const policy: CallPolicy = { maxRetries: settings.maxRetries, temperature: manifest.settings.temperature, defaultMaxOutputTokens: settings.defaultMaxOutputTokens };
+
+    // Throttled streaming deltas (≈10 events/s per job).
+    const deltas = new Map<string, { contestantId: string; text: string; label?: string }>();
+    const flush = setInterval(() => {
+      for (const [key, d] of deltas) emit({ type: 'job.delta', runId: manifest.id, key, contestantId: d.contestantId, text: d.text, label: d.label });
+      deltas.clear();
+    }, 100);
+
+    let cursor = 0;
+    const worker = async () => {
+      while (!controller.signal.aborted) {
+        const job = jobs[cursor++];
+        if (!job) return;
+        const result = await executeJob(job, {
+          manifest,
+          settings,
+          policy,
+          targetFor,
+          signal: controller.signal,
+          emit,
+          onDelta: (text, label) => {
+            const d = deltas.get(job.key);
+            if (d) {
+              d.text += text;
+              d.label = label;
+            } else deltas.set(job.key, { contestantId: job.contestant.id, text, label });
+          },
+        });
+        // Flush this job's last streamed text before announcing that it finished.
+        const pending = deltas.get(job.key);
+        if (pending) {
+          emit({ type: 'job.delta', runId: manifest.id, key: job.key, contestantId: pending.contestantId, text: pending.text, label: pending.label });
+          deltas.delete(job.key);
+        }
+        if (result.status === 'cancelled' && controller.signal.aborted) return;
+        appendResult(result);
+        progress.completed++;
+        progress.costUsd += result.metrics.costUsd + result.metrics.judgeCostUsd;
+        emit({
+          type: 'job.finished',
+          runId: manifest.id,
+          key: result.key,
+          contestantId: result.contestantId,
+          testId: result.testId,
+          caseId: result.caseId,
+          repeat: result.repeat,
+          status: result.status,
+          score: result.score,
+          summary: result.summary,
+          metrics: result.metrics,
+          at: now(),
+        });
+        emit({ type: 'run.progress', runId: manifest.id, completed: progress.completed, total: progress.total, costUsd: progress.costUsd, at: now() });
+      }
+    };
+
+    try {
+      await Promise.all(Array.from({ length: Math.min(manifest.settings.concurrency, Math.max(1, jobs.length)) }, () => worker()));
+      manifest.status = controller.signal.aborted ? 'cancelled' : 'completed';
+    } catch (err) {
+      manifest.status = 'failed';
+      manifest.error = (err as Error).message;
+      emit({ type: 'log', runId: manifest.id, level: 'error', message: (err as Error).message, at: now() });
+    } finally {
+      clearInterval(flush);
+      manifest.finishedAt = now();
+      writeManifest(manifest);
+      emit({ type: 'run.status', runId: manifest.id, status: manifest.status, at: now(), error: manifest.error });
+      active.delete(manifest.id);
+      events.emit('end');
+    }
+  })();
+}
+
+/** Wait for an active run to finish (CLI). */
+export async function waitForRun(runId: string): Promise<void> {
+  await active.get(runId)?.done;
+}
+
+interface JobEnv {
+  manifest: RunManifest;
+  settings: ReturnType<typeof loadSettings>;
+  policy: CallPolicy;
+  targetFor: (c: Contestant) => CallTarget;
+  signal: AbortSignal;
+  emit: (e: RunEvent) => void;
+  onDelta: (text: string, label?: string) => void;
+}
+
+function clamp01(n: number): number {
+  return Number.isFinite(n) ? Math.max(0, Math.min(1, n)) : 0;
+}
+
+async function executeJob(job: Job, env: JobEnv): Promise<CaseResult> {
+  const { manifest, settings } = env;
+  const def = job.test.definition;
+  const startedAt = new Date();
+  const controller = new AbortController();
+  const onRunAbort = () => controller.abort();
+  env.signal.addEventListener('abort', onRunAbort, { once: true });
+  const timeLimitMs = (def.timeLimitSec ?? settings.defaultTimeLimitSec) * 1000;
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeLimitMs);
+
+  env.emit({ type: 'job.started', runId: manifest.id, key: job.key, contestantId: job.contestant.id, testId: def.id, caseId: job.caseId, repeat: job.repeat, at: now() });
+
+  const artifacts: CaseResult['artifacts'] = [];
+  const save = (name: string, kind: CaseResult['artifacts'][number]['kind'], content: string | Buffer) => {
+    const ref = saveArtifact(manifest.id, job.key, name, kind, content);
+    const i = artifacts.findIndex((a) => a.name === ref.name);
+    if (i >= 0) artifacts[i] = ref;
+    else artifacts.push(ref);
+    return ref;
+  };
+
+  let status: ResultStatus = 'ok';
+  let score: number | null = null;
+  let passed: boolean | null = null;
+  let summary = '';
+  let detail: ScoreDetail = {};
+  let replay: ReplayData | undefined;
+  let error: string | undefined;
+
+  let recorder: ReturnType<typeof createRecorder> | null = null;
+  try {
+    const target = env.targetFor(job.contestant);
+    recorder = createRecorder({
+      target,
+      policy: env.policy,
+      signal: controller.signal,
+      maxOutputTokens: def.maxOutputTokens ?? settings.defaultMaxOutputTokens,
+      onDelta: env.onDelta,
+      onCall: (label) => env.emit({ type: 'job.step', runId: manifest.id, key: job.key, contestantId: job.contestant.id, label }),
+      onRetry: (attempt, wait, err) =>
+        env.emit({ type: 'log', runId: manifest.id, level: 'warn', message: `${job.contestant.label} · ${def.id}/${job.caseId}: retry ${attempt} in ${(wait / 1000).toFixed(1)}s (${err.message.slice(0, 160)})`, at: now() }),
+    });
+    const rec = recorder;
+    const judges = judgePanel(manifest.judges, env, rec, controller.signal);
+
+    if (def.kind === 'prompt') {
+      const tc = def.cases.find((c) => c.id === job.caseId);
+      if (!tc) throw new Error(`Case ${job.caseId} no longer exists`);
+      const rendered = renderCase(def, tc);
+      const chat = rec.handle.chat(rendered.system);
+      let reply = null as Awaited<ReturnType<typeof chat.send>> | null;
+      for (let i = 0; i < rendered.turns.length; i++) {
+        reply = await chat.send(rendered.turns[i]!, { label: rendered.turns.length > 1 ? `turn ${i + 1}` : 'response' });
+      }
+      const history = chat.history.slice(0, -1);
+      const taskText = [rendered.system ? `[System prompt]\n${rendered.system}` : '', ...history.map((m) => `[${m.role === 'user' ? 'User' : 'Assistant'}]\n${m.content}`)].filter(Boolean).join('\n\n');
+      if (reply!.stopReason === 'refusal' && !reply!.text.trim()) {
+        status = 'refusal';
+        score = 0;
+        passed = false;
+        summary = 'Refused to answer';
+      } else {
+        const outcome = await scoreResponse({
+          scorer: caseScorer(def, tc),
+          expected: tc.expected,
+          response: reply!.text,
+          stopReason: reply!.stopReason,
+          taskText,
+          judges,
+          saveArtifact: save,
+          signal: controller.signal,
+        });
+        score = outcome.score === null ? null : clamp01(outcome.score);
+        passed = outcome.passed;
+        summary = outcome.summary;
+        detail = outcome.detail;
+        if (outcome.pendingHuman) status = 'pending-human';
+        if (reply!.stopReason === 'max_tokens') detail.notes = `${detail.notes ? detail.notes + ' · ' : ''}Response hit the output token limit`;
+      }
+    } else {
+      const pdef = def as ProgramTest;
+      const program = PROGRAMS[pdef.program];
+      if (!program) throw new Error(`Program "${pdef.program}" is not registered`);
+      const seed = job.seed ?? 0;
+      const ctx: ProgramContext = {
+        seed,
+        rng: createRng(seed),
+        config: { ...(program.defaults ?? {}), ...(pdef.config ?? {}) },
+        model: rec.handle,
+        maxOutputTokens: def.maxOutputTokens ?? settings.defaultMaxOutputTokens,
+        signal: controller.signal,
+        artifact: (name, kind, content) => {
+          save(name, kind, content);
+        },
+      };
+      const out = await program.run(ctx);
+      score = clamp01(out.score);
+      passed = out.passed ?? score >= 0.5;
+      summary = out.summary;
+      detail = { ...out.detail };
+      replay = out.replay;
+    }
+  } catch (err) {
+    if (timedOut) {
+      status = 'timeout';
+      score = 0;
+      passed = false;
+      summary = `Timed out after ${Math.round(timeLimitMs / 1000)} s`;
+    } else if (env.signal.aborted) {
+      status = 'cancelled';
+      summary = 'Cancelled';
+    } else {
+      status = 'error';
+      error = (err as Error).message;
+      summary = `Error: ${error.slice(0, 120)}`;
+    }
+  } finally {
+    clearTimeout(timer);
+    env.signal.removeEventListener('abort', onRunAbort);
+  }
+
+  const rec = recorder;
+  const usage = rec?.usage ?? emptyUsage();
+  const wallMs = Date.now() - startedAt.getTime();
+  return {
+    key: job.key,
+    runId: manifest.id,
+    contestantId: job.contestant.id,
+    testId: def.id,
+    testVersion: def.version,
+    testHash: job.test.hash,
+    contestantHash: job.contestant.configHash ?? contestantConfigHash(job.contestant),
+    caseId: job.caseId,
+    repeat: job.repeat,
+    seed: job.seed,
+    status,
+    score,
+    passed,
+    summary,
+    scoreDetail: detail,
+    metrics: {
+      wallMs,
+      ttftMs: rec?.firstTtftMs ?? null,
+      apiCalls: rec?.apiCalls ?? 0,
+      inputTokens: usage.inputTokens,
+      outputTokens: usage.outputTokens,
+      reasoningTokens: usage.reasoningTokens,
+      cachedInputTokens: usage.cachedInputTokens,
+      costUsd: Math.round((rec?.costUsd ?? 0) * 1e8) / 1e8,
+      judgeCostUsd: Math.round((rec?.judgeCostUsd ?? 0) * 1e8) / 1e8,
+      outputTokensPerSec: rec && rec.generationMs > 0 && usage.outputTokens > 0 ? Math.round((usage.outputTokens / (rec.generationMs / 1000)) * 10) / 10 : null,
+      retries: rec?.retries ?? 0,
+      responseChars: rec?.responseChars ?? 0,
+    },
+    transcript: rec?.transcript ?? [],
+    artifacts,
+    replay,
+    error,
+    startedAt: startedAt.toISOString(),
+    finishedAt: now(),
+  };
+}
+
+function judgePanel(judges: ContestantSnapshot[], env: JobEnv, rec: ReturnType<typeof createRecorder>, signal: AbortSignal): JudgePanel {
+  return {
+    ids: judges.map((j) => j.id),
+    async ask(system, user, label) {
+      if (judges.length === 0) return [];
+      return Promise.all(
+        judges.map(async (j) => {
+          const started = Date.now();
+          try {
+            const target = env.targetFor(j);
+            const r = await callWithRetry(target, { system, messages: [{ role: 'user', content: user }], maxOutputTokens: 16000, temperature: 0 }, env.policy, signal);
+            const cost = computeCost(r.usage, j.pricing);
+            rec.recordJudge({
+              label: `${label} · ${j.label}`,
+              judge: true,
+              system,
+              messages: [{ role: 'user', content: user }],
+              response: r.text,
+              usage: r.usage,
+              ttftMs: r.ttftMs,
+              totalMs: r.totalMs,
+              stopReason: r.stopReason,
+              rawStopReason: r.rawStopReason,
+              costUsd: cost,
+              retries: r.retries,
+            });
+            return { judgeId: j.id, text: r.text };
+          } catch (err) {
+            if (signal.aborted) throw err;
+            rec.recordJudge({
+              label: `${label} · ${j.label}`,
+              judge: true,
+              system,
+              messages: [{ role: 'user', content: user }],
+              response: '',
+              usage: emptyUsage(),
+              ttftMs: null,
+              totalMs: Date.now() - started,
+              stopReason: 'other',
+              rawStopReason: 'error',
+              costUsd: 0,
+              retries: 0,
+              error: (err as Error).message,
+            });
+            return { judgeId: j.id, text: '', error: (err as Error).message };
+          }
+        }),
+      );
+    },
+  };
+}
+
+/** Category metadata passthrough for callers that only import the runner. */
+export { loadCategories };

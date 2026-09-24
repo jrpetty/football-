@@ -144,6 +144,12 @@ src/
 - The sample data is generated deterministically — clearing it (Data → Reset)
   restores the same demo team.
 
+## Also in this repository: Gauntlet (AI benchmark lab)
+
+[`gauntlet/`](gauntlet/) is a separate, self-contained project: a reproducible, multi-provider
+benchmarking lab that runs the same fixed, versioned tests on every AI model and measures score, cost,
+latency and reliability, with a live arena view for video. See [`gauntlet/README.md`](gauntlet/README.md).
+
 ---
 
 *Built for coaches and analysts. Swap in your own squad, footage and matches

@@ -1,0 +1,6 @@
+node_modules/
+ui/dist/
+data/runs/*
+!data/runs/.gitkeep
+.env
+*.log

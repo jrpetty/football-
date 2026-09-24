@@ -1,0 +1,172 @@
+/*
+ * Gauntlet design tokens.
+ * Every colour in the UI is a variable defined here. Dark is the default
+ * ("broadcast studio"); light is selected via <html data-theme="light">.
+ * Chart colours follow the validated reference palette (see dataviz notes in
+ * src/components/charts/palette.ts).
+ */
+
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* Planes & surfaces */
+  --bg: #05080d;
+  --bg-glow-1: rgba(34, 211, 238, 0.075);
+  --bg-glow-2: rgba(167, 139, 250, 0.065);
+  --surface-1: #0c1118;
+  --surface-2: #111823;
+  --surface-3: #18212e;
+  --surface-4: #202b3b;
+  --surface-inset: #080c12;
+  --overlay: rgba(2, 5, 9, 0.72);
+  --border: rgba(150, 175, 210, 0.11);
+  --border-strong: rgba(150, 175, 210, 0.2);
+  --hairline: rgba(255, 255, 255, 0.04);
+
+  /* Ink */
+  --text-1: #eef3fa;
+  --text-2: #a8b4c6;
+  --text-3: #7f8b9d;
+  --text-inverse: #05080d;
+
+  /* Brand */
+  --accent: #22d3ee;
+  --accent-strong: #67e8f9;
+  --accent-ink: #03141a;
+  --accent-soft: rgba(34, 211, 238, 0.13);
+  --accent-line: rgba(34, 211, 238, 0.45);
+  --accent-2: #a78bfa;
+  --brand-grad: linear-gradient(100deg, #22d3ee 0%, #7dd3fc 38%, #a78bfa 100%);
+  --live: #ff3b4e;
+  --live-soft: rgba(255, 59, 78, 0.16);
+
+  /* Status (fixed scale; always paired with icon + label) */
+  --good: #0ca30c;
+  --good-text: #2fd158;
+  --good-soft: rgba(12, 163, 12, 0.16);
+  --warn: #fab219;
+  --warn-text: #fbc54a;
+  --warn-soft: rgba(250, 178, 25, 0.14);
+  --serious: #ec835a;
+  --bad: #d03b3b;
+  --bad-text: #ff7070;
+  --bad-soft: rgba(208, 59, 59, 0.17);
+  --info-soft: rgba(57, 135, 229, 0.16);
+
+  /* Medals */
+  --gold: #f2c14e;
+  --gold-deep: #b8871b;
+  --silver: #cfd6e0;
+  --silver-deep: #8792a3;
+  --bronze: #d38b55;
+  --bronze-deep: #94552a;
+
+  /* Chart chrome */
+  --chart-surface: var(--surface-1);
+  --grid: #1c2533;
+  --axis: #2f3b4d;
+  --chart-label: #8d99ab;
+
+  /* Sequential (blue ramp, anchor flipped for dark: low recedes into the surface) */
+  --seq-0: #0d2a4d;
+  --seq-1: #104281;
+  --seq-2: #184f95;
+  --seq-3: #1c5cab;
+  --seq-4: #256abf;
+  --seq-5: #2a78d6;
+  --seq-6: #3987e5;
+  --seq-7: #5598e7;
+  --seq-8: #86b6ef;
+
+  --shadow-1: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 10px 30px -12px rgba(0, 0, 0, 0.6);
+  --shadow-2: 0 24px 60px -20px rgba(0, 0, 0, 0.75), 0 0 0 1px var(--border);
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --bg: #eef1f5;
+  --bg-glow-1: rgba(8, 145, 178, 0.07);
+  --bg-glow-2: rgba(124, 58, 237, 0.05);
+  --surface-1: #ffffff;
+  --surface-2: #f7f9fb;
+  --surface-3: #eef2f6;
+  --surface-4: #e3e8ef;
+  --surface-inset: #f3f5f8;
+  --overlay: rgba(15, 23, 42, 0.42);
+  --border: rgba(15, 30, 55, 0.11);
+  --border-strong: rgba(15, 30, 55, 0.2);
+  --hairline: rgba(15, 30, 55, 0.05);
+
+  --text-1: #0b1220;
+  --text-2: #465266;
+  --text-3: #5f6b7e;
+  --text-inverse: #ffffff;
+
+  --accent: #0891b2;
+  --accent-strong: #0e7490;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(8, 145, 178, 0.1);
+  --accent-line: rgba(8, 145, 178, 0.45);
+  --accent-2: #7c3aed;
+  --brand-grad: linear-gradient(100deg, #0891b2 0%, #0284c7 40%, #7c3aed 100%);
+  --live: #e11d48;
+  --live-soft: rgba(225, 29, 72, 0.1);
+
+  --good-text: #006300;
+  --good-soft: rgba(12, 163, 12, 0.12);
+  --warn-text: #8a5a00;
+  --warn-soft: rgba(250, 178, 25, 0.18);
+  --bad-text: #b42323;
+  --bad-soft: rgba(208, 59, 59, 0.12);
+  --info-soft: rgba(42, 120, 214, 0.1);
+
+  --gold: #e0a91e;
+  --gold-deep: #9a6d06;
+  --silver: #aab4c2;
+  --silver-deep: #6b7686;
+  --bronze: #c47a43;
+  --bronze-deep: #7f4520;
+
+  --chart-surface: var(--surface-1);
+  --grid: #e6e9ee;
+  --axis: #c3c9d3;
+  --chart-label: #5f6b7e;
+
+  --seq-0: #e6f0fc;
+  --seq-1: #cde2fb;
+  --seq-2: #b7d3f6;
+  --seq-3: #9ec5f4;
+  --seq-4: #86b6ef;
+  --seq-5: #5598e7;
+  --seq-6: #2a78d6;
+  --seq-7: #1c5cab;
+  --seq-8: #104281;
+
+  --shadow-1: 0 1px 2px rgba(15, 30, 55, 0.06), 0 8px 24px -14px rgba(15, 30, 55, 0.18);
+  --shadow-2: 0 24px 60px -24px rgba(15, 30, 55, 0.35), 0 0 0 1px var(--border);
+}
+
+:root {
+  --font-sans: 'Inter', 'InterVariable', 'SF Pro Text', system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, 'Cascadia Code', Menlo, Consolas, 'Liberation Mono',
+    monospace;
+  --font-emoji: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 20px;
+
+  --sidebar-w: 232px;
+  --topbar-h: 58px;
+  --page-pad: 28px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --t-fast: 120ms;
+  --t-med: 220ms;
+}

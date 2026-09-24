@@ -1,0 +1,38 @@
+{
+  "name": "gauntlet-benchmark",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Gauntlet — a reproducible, multi-provider AI model benchmarking lab",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "start": "npm run build:ui && node src/cli.ts serve",
+    "serve": "node src/cli.ts serve",
+    "dev": "node src/cli.ts serve --dev",
+    "dev:ui": "vite --config ui/vite.config.ts",
+    "build:ui": "vite build --config ui/vite.config.ts",
+    "gauntlet": "node src/cli.ts",
+    "validate": "node src/cli.ts validate",
+    "test": "node --test test/*.test.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p ui/tsconfig.json"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0",
+    "openai": "^7.23.0"
+  },
+  "optionalDependencies": {
+    "playwright-core": "^1.56.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.9.0",
+    "vite": "^5.4.6"
+  }
+}
