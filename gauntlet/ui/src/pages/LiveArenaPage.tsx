@@ -5,15 +5,15 @@
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { api, subscribeRun } from '../api.ts';
-import { useNow } from '../hooks.ts';
+import { useAsync, useNow } from '../hooks.ts';
 import { Link, pathOf } from '../router.tsx';
-import { useMeta, useToast } from '../context.tsx';
+import { useMeta, useToast, useViewerCaption } from '../context.tsx';
 import { ConfirmDialog, ErrorState, HashTag, LoadingPage, ModelCell, Progress, RunStatusBadge, ScorePill, cx } from '../components/ui.tsx';
 import { Icon } from '../components/icons.tsx';
 import { Podium } from '../components/leaderboard/Panels.tsx';
 import { isBaseline } from '../components/leaderboard/util.ts';
 import { fmtClock, fmtCost, fmtIndex, fmtInt, fmtPct, fmtTokens } from '../format.ts';
-import type { FinishedCase, Leaderboard, ManualRequest, ReplayFrame, RunDetail, RunEvent, RunManifest, RunStatus } from '../types.ts';
+import type { FinishedCase, Leaderboard, ManualRequest, ReplayFrame, RunDetail, RunEvent, RunManifest, RunStatus, TestSummary } from '../types.ts';
 
 const STREAM_MAX = 1500;
 const TICKER_MAX = 40;
@@ -42,6 +42,10 @@ interface Lane {
   /** Pending copy & paste requests for manual contestants. */
   manual: Map<string, ManualRequest>;
   isManual: boolean;
+  /** Finished cases per test (to spot the moment a model completes a whole test). */
+  testDone: Map<string, { n: number; sum: number; scored: number }>;
+  /** Brief on-lane announcement when the model finishes every case of a test. */
+  flash: { testId: string; score: number | null; at: number } | null;
 }
 
 interface Store {
@@ -53,6 +57,8 @@ interface Store {
   lanes: Map<string, Lane>;
   connected: boolean;
   log: Array<{ level: string; message: string; at: string }>;
+  /** Most recently started test (tie-break for the "now testing" card). */
+  lastTest: string | null;
 }
 
 const trim = (s: string) => (s.length > STREAM_MAX ? s.slice(s.length - STREAM_MAX) : s);
@@ -88,6 +94,8 @@ function buildStore(d: RunDetail, prev: Store | undefined, manualProviders: Set<
       ticker: [],
       manual: old?.manual ?? new Map(),
       isManual: manualProviders.has(c.provider) || !!d.leaderboard?.rows?.find((r) => r.contestantId === c.id)?.manual,
+      testDone: new Map(),
+      flash: old?.flash ?? null,
     });
   }
   const sorted = [...(d.results ?? [])].sort((a, b) => t(a.finishedAt) - t(b.finishedAt));
@@ -103,6 +111,7 @@ function buildStore(d: RunDetail, prev: Store | undefined, manualProviders: Set<
       l.scored++;
     }
     if (r.status === 'error' || r.status === 'timeout') l.errors++;
+    countTest(l, r.testId, r.score);
     const st = t(r.startedAt);
     const fin = t(r.finishedAt);
     l.firstStart = l.firstStart === null ? st : Math.min(l.firstStart, st);
@@ -121,7 +130,19 @@ function buildStore(d: RunDetail, prev: Store | undefined, manualProviders: Set<
     lanes,
     connected: prev?.connected ?? false,
     log: prev?.log ?? [],
+    lastTest: prev?.lastTest ?? null,
   };
+}
+
+function countTest(l: Lane, testId: string, score: number | null) {
+  const td = l.testDone.get(testId) ?? { n: 0, sum: 0, scored: 0 };
+  td.n++;
+  if (typeof score === 'number') {
+    td.sum += score;
+    td.scored++;
+  }
+  l.testDone.set(testId, td);
+  return td;
 }
 
 /** A delta/step for a job we never saw start (e.g. connected mid-job): recover it from the key. */
@@ -162,6 +183,7 @@ function applyEvent(s: Store, e: RunEvent) {
       if (!l) return;
       l.inFlight.set(e.key, { testId: e.testId, caseId: e.caseId, repeat: e.repeat });
       l.firstStart = l.firstStart ?? t(e.at);
+      s.lastTest = e.testId;
       if (!l.focusKey || !l.inFlight.has(l.focusKey)) {
         // Keep the previous answer's tail on screen with a divider, so the window never goes blank.
         const prev = l.focusKey ? l.buffers.get(l.focusKey) ?? '' : '';
@@ -205,6 +227,12 @@ function applyEvent(s: Store, e: RunEvent) {
         l.scored++;
       }
       if (e.status === 'error' || e.status === 'timeout') l.errors++;
+      {
+        const td = countTest(l, e.testId, e.score);
+        const snap = s.manifest?.tests.find((x) => x.id === e.testId);
+        const need = snap ? snap.caseIds.length * (s.manifest?.settings?.repeats ?? 1) : Infinity;
+        if (td.n === need) l.flash = { testId: e.testId, score: td.scored ? td.sum / td.scored : null, at: Date.now() };
+      }
       l.lastFinish = t(e.at);
       l.ticker.unshift({ key: e.key, testId: e.testId, caseId: e.caseId, repeat: e.repeat, status: e.status, score: e.score, summary: e.summary, metrics: e.metrics });
       l.ticker = l.ticker.slice(0, TICKER_MAX);
@@ -221,6 +249,14 @@ function applyEvent(s: Store, e: RunEvent) {
       return;
     }
   }
+}
+
+/** First sentence of a description, for one-line broadcast captions. */
+function firstSentence(text: string | undefined): string {
+  if (!text) return '';
+  const m = /^(.+?[.!?])(\s|$)/.exec(text.trim());
+  const out = m ? m[1] : text.trim();
+  return out.length > 180 ? `${out.slice(0, 177)}…` : out;
 }
 
 function StreamWindow({ text, active }: { text: string; active: boolean }) {
@@ -249,8 +285,18 @@ function LaneCard({ lane, rank, testName, now, done }: { lane: Lane; rank: numbe
   const finished = lane.total > 0 && lane.completed >= lane.total;
   const extra = lane.inFlight.size - (cur ? 1 : 0);
 
+  const flash = lane.flash && Date.now() - lane.flash.at < 3800 ? lane.flash : null;
   return (
-    <article className={cx('lane', finished && 'finished')} style={{ ['--c' as string]: lane.color }} aria-label={`${lane.label} lane`}>
+    <article className={cx('lane', finished && 'finished', flash && 'flashing')} style={{ ['--c' as string]: lane.color }} aria-label={`${lane.label} lane`}>
+      {flash && (
+        <div className="lane-flash" key={flash.at} role="status">
+          <span className="lfl-k">Finished · {testName(flash.testId)}</span>
+          <span className="lfl-v tnum">
+            {flash.score === null ? '—' : Math.round(flash.score * 100)}
+            <small>/100</small>
+          </span>
+        </div>
+      )}
       <header className="lane-head">
         <span className={cx('lane-rank', rank !== null && rank <= 3 && `r${rank}`)} title="Live rank by mean score">
           {rank ?? '–'}
@@ -398,7 +444,7 @@ function FinishLine({ lb, runId }: { lb: Leaderboard; runId: string }) {
 
 export default function LiveArenaPage({ runId }: { runId: string }) {
   const toast = useToast();
-  const { meta } = useMeta();
+  const { meta, cat } = useMeta();
   const manualProviders = useMemo(() => new Set((meta?.providers ?? []).filter((p) => p.type === 'manual').map((p) => p.id)), [meta]);
   const manualRef = useRef(manualProviders);
   manualRef.current = manualProviders;
@@ -488,6 +534,17 @@ export default function LiveArenaPage({ runId }: { runId: string }) {
   const s = storeRef.current;
   const active = !!s && (s.status === 'running' || s.status === 'queued');
   const now = useNow(active ? 1000 : null);
+  const testInfo = useAsync(() => api.tests().catch(() => [] as TestSummary[]), []);
+  const infoById = useMemo(() => new Map((testInfo.data ?? []).map((x) => [x.id, x])), [testInfo.data]);
+  const laneCount = s?.lanes.size ?? 0;
+  useViewerCaption(
+    !s
+      ? null
+      : active
+        ? `Live: ${laneCount} AI ${laneCount === 1 ? 'model takes' : 'models take'} the same tests side by side. Each lane shows a model’s answer as it’s written and its average score so far, out of 100.`
+        : 'The finish line: the final standings for this run, ranked by the Gauntlet Index — each model’s average score out of 100 across every category.',
+    active ? 'Every model gets identical prompts · scores update as each answer is graded' : 'Index whiskers = 95% bootstrap confidence interval',
+  );
 
   const testNames = useMemo(() => new Map((s?.manifest?.tests ?? []).map((x) => [x.id, x.name])), [s?.manifest]);
   const testName = useCallback((id: string) => testNames.get(id) ?? id, [testNames]);
@@ -523,6 +580,23 @@ export default function LiveArenaPage({ runId }: { runId: string }) {
 
   const cols = lanes.length <= 2 ? lanes.length : lanes.length === 4 ? 2 : 3;
 
+  // "Now testing": the test most lanes are working on (ties → the most recently started).
+  const counts = new Map<string, number>();
+  for (const l of lanes) for (const j of l.inFlight.values()) counts.set(j.testId, (counts.get(j.testId) ?? 0) + 1);
+  let current: string | null = null;
+  let best = 0;
+  for (const [id, n] of counts) {
+    if (n > best || (n === best && id === s.lastTest)) {
+      best = n;
+      current = id;
+    }
+  }
+  const curSnap = current ? m.tests.find((x) => x.id === current) : undefined;
+  const curInfo = current ? infoById.get(current) : undefined;
+  const curCat = curSnap ? cat(curSnap.category) : null;
+  const curIndex = curSnap ? m.tests.indexOf(curSnap) + 1 : 0;
+  const nowCard = active && !!curSnap;
+
   return (
     <div className="page arena">
       <header className="arena-head">
@@ -544,9 +618,33 @@ export default function LiveArenaPage({ runId }: { runId: string }) {
             <span className="muted mono no-broadcast" style={{ fontSize: '0.78rem' }}>
               {m.id}
             </span>
+            {nowCard && <span className="an-run only-broadcast">{m.name || m.id}</span>}
+            {nowCard && (
+              <span className="an-eyebrow only-broadcast flex" style={{ ['--cc' as string]: curCat?.color }}>
+                Test {curIndex} of {m.tests.length}
+                {curCat && (
+                  <span className="an-cat">
+                    <i />
+                    {curCat.name}
+                  </span>
+                )}
+              </span>
+            )}
           </div>
-          <h1 className="ellipsis">{m.name || m.id}</h1>
-          <div className="row wrap" style={{ gap: 8 }}>
+          <h1 className={cx('ellipsis', nowCard && 'no-broadcast')}>{m.name || m.id}</h1>
+          {nowCard && curSnap && (
+            <div className="arena-now only-broadcast" key={curSnap.id} style={{ ['--cc' as string]: curCat?.color }} aria-live="polite">
+              <div className="an-name">
+                <span className="an-now">Now testing</span>
+                {curSnap.name}
+              </div>
+              {curInfo?.hook && <div className="an-hook">{curInfo.hook}</div>}
+              <div className="an-desc">
+                <b>What it measures:</b> {firstSentence(curInfo?.description) || curCat?.description || '—'}
+              </div>
+            </div>
+          )}
+          <div className={cx('row wrap', nowCard && 'no-broadcast')} style={{ gap: 8 }}>
             <span className="muted" style={{ fontSize: '0.85rem' }}>
               {m.tests.length} tests · {m.contestants.length} models · {m.settings?.repeats ?? 1}× repeats
             </span>

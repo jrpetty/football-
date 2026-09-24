@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { api } from '../api.ts';
 import { useAsync } from '../hooks.ts';
 import { Link, setQuery, useRoute } from '../router.tsx';
-import { useMeta } from '../context.tsx';
+import { useMeta, useViewerCaption } from '../context.tsx';
 import { Empty, ErrorState, HashTag, LoadingPage, PageHead, Seg } from '../components/ui.tsx';
 import { Icon } from '../components/icons.tsx';
 import { LeaderboardView } from '../components/leaderboard/LeaderboardView.tsx';
@@ -36,6 +36,13 @@ export default function LeaderboardPage() {
       : suite?.description ?? 'Combined standings: the most recent valid result for every model, test, case and repeat across all runs.';
 
   const lb = lbState.data;
+  const nModels = (lb?.rows ?? []).length;
+  useViewerCaption(
+    lb && nModels
+      ? `The overall ranking${scope === 'run' ? ' for this run' : ''}: each model’s Gauntlet Index is its average score out of 100 across every category of tests. Thin lines show the uncertainty — overlapping lines are too close to call.`
+      : 'The Gauntlet leaderboard: AI models ranked by their average score across every category of tests.',
+    'Index = weighted mean of category scores · whiskers = 95% bootstrap confidence interval',
+  );
 
   return (
     <div className="page leaderboard-page">

@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { api } from '../api.ts';
 import { useAsync, useDebounced } from '../hooks.ts';
 import { Link, setQuery, useRoute } from '../router.tsx';
-import { useMeta } from '../context.tsx';
+import { useMeta, useViewerCaption } from '../context.tsx';
 import { Callout, ErrorState, PageHead, Seg, SkeletonRows, cx } from '../components/ui.tsx';
 import { Icon } from '../components/icons.tsx';
 import { fmtCost, fmtInt } from '../format.ts';
@@ -38,6 +38,10 @@ export default function CostsPage() {
   const cols = e?.perContestant ?? [];
   const maxCell = useMemo(() => Math.max(1e-9, ...(e?.perTest ?? []).flatMap((t) => Object.values(t.perContestant))), [e]);
   const measuredCount = (e?.perTest ?? []).filter((t) => t.basis !== 'definition').length;
+  useViewerCaption(
+    `What a run would cost before we press start: each model’s estimated bill for every test${repeats > 1 ? `, with each question asked ${repeats} times` : ''}. Darker cells are the expensive ones.`,
+    e ? `${measuredCount} of ${e.perTest.length} tests priced from real past usage; the rest from each test’s token estimate · judge fees included` : undefined,
+  );
 
   const toggleModel = (id: string) => {
     const set = new Set(models);

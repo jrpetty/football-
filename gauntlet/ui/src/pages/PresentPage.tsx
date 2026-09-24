@@ -1054,6 +1054,7 @@ export default function PresentPage({ runId }: { runId: string }) {
   );
 
   const next = useCallback(() => {
+    setHint(false);
     if (slide?.kind === 'final' && reveal < finalRows) {
       setReveal((r) => r + 1);
       return;
@@ -1066,6 +1067,7 @@ export default function PresentPage({ runId }: { runId: string }) {
   }, [slide, reveal, finalRows, idx, slides.length, go]);
 
   const prev = useCallback(() => {
+    setHint(false);
     if (slide?.kind === 'final' && reveal > 0) {
       setReveal((r) => r - 1);
       return;

@@ -653,14 +653,14 @@ html[data-broadcast='on'] .broadcast-slate {
 }
 .viewer-caption .vc-f {
   flex: none;
-  max-width: 30%;
+  max-width: 24%;
   font-size: 0.7rem;
   line-height: 1.35;
   color: var(--text-3);
   text-align: right;
 }
 html[data-caption='on'] .main {
-  padding-bottom: calc(2.4vw + 5.2rem);
+  padding-bottom: 6rem;
 }
 html[data-caption='on'] .drawer-body {
   padding-bottom: 6rem;

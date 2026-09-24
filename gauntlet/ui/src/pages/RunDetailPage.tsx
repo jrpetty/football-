@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { api, exportUrl } from '../api.ts';
 import { useAsync, useInterval } from '../hooks.ts';
 import { Link, navigate, pathOf, setQuery, useRoute } from '../router.tsx';
-import { useMeta, useToast } from '../context.tsx';
+import { useMeta, useToast, useViewerCaption } from '../context.tsx';
 import { CategoryChip, ConfirmDialog, ErrorState, HashTag, LoadingPage, ModelChip, PageHead, Progress, RunStatusBadge, Tabs } from '../components/ui.tsx';
 import { Icon } from '../components/icons.tsx';
 import { LeaderboardView } from '../components/leaderboard/LeaderboardView.tsx';
@@ -30,6 +30,19 @@ export default function RunDetailPage({ runId }: { runId: string }) {
   const testQ = query.get('test');
   const conQ = query.get('c');
   const keyQ = query.get('key');
+
+  const nModels = d?.manifest.contestants.length ?? 0;
+  const nTests = d?.manifest.tests.length ?? 0;
+  useViewerCaption(
+    !d
+      ? null
+      : tab === 'matrix'
+        ? `Every result in this run: one row per test, one column per model. Darker blue means a higher score; click any cell to see the model’s actual answers.`
+        : tab === 'config'
+          ? 'The exact tests and model settings used in this run — each one pinned by a hash, so anyone can re-run it and get the same test.'
+          : `The results of this run: ${nModels} ${nModels === 1 ? 'model' : 'models'} on ${nTests} ${nTests === 1 ? 'test' : 'tests'}, ranked by the Gauntlet Index — the average score out of 100 across every category.`,
+    tab === 'matrix' ? 'Cells: mean score over all attempts, 0–100' : tab === 'config' ? `Fingerprint ${shortHash(d?.manifest.fingerprint, 12)}` : 'Whiskers = 95% bootstrap confidence interval',
+  );
 
   const target: InspectorTarget | null = useMemo(() => {
     if (!d || !testQ || !conQ) return null;

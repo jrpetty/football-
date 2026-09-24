@@ -1113,7 +1113,7 @@
   gap: 22px;
 }
 .fs-table {
-  --fs-cols: 64px minmax(0, 1fr) 290px calc(var(--cats) * 50px - 4px) 160px 104px 112px;
+  --fs-cols: 64px minmax(0, 1fr) 272px calc(var(--cats) * 50px - 4px) 184px 104px 112px;
   flex: 1;
   min-height: 0;
   display: grid;

@@ -8,21 +8,25 @@
     "max": 3
    },
    {
-    "check": "all_lowercase"
-   },
-   {
-    "check": "no_commas"
-   },
-   {
     "check": "include",
     "text": "umbrella",
     "min": 1,
     "max": 1
    },
    {
+    "check": "include",
+    "text": "rain",
+    "min": 1
+   },
+   {
     "check": "word_count",
     "min": 9,
     "max": 24
+   },
+   {
+    "check": "regex",
+    "pattern": "^(?=[\\s\\S]*rain)(?![\\s\\S]*[,\\uFF0C])(?![\\s\\S]*[\\p{Lu}\\p{Lt}])",
+    "flags": "u"
    }
   ],
   "samples": {
@@ -48,7 +52,7 @@
     "max": 5
    },
    {
-    "check": "starts_with",
+    "check": "each_line_starts_with",
     "text": "- "
    },
    {
@@ -58,14 +62,19 @@
     "max": 2
    },
    {
+    "check": "include",
+    "text": "grocer",
+    "min": 1
+   },
+   {
     "check": "word_count",
-    "min": 30,
-    "max": 60
+    "min": 24,
+    "max": 39
    }
   ],
   "samples": {
    "pass": [
-    "- Write a weekly budget every Sunday evening.\n- Track small purchases in a notes app.\n- Cook at home three nights a week.\n- Review the budget after each payday.\n- Move spare cash into savings at once."
+    "- Plan a weekly grocery budget on Sunday.\n- Buy store brands instead of big names.\n- Freeze leftover bread and fruit.\n- Check your budget after every payday.\n- Shop with a written list."
    ],
    "fail": [
     "Here are my tips:\n- Budget.\n- Budget more.\n- Plan meals.\n- Buy in bulk.\n- Compare prices."
@@ -76,8 +85,9 @@
   "id": "f03",
   "expected": [
    {
-    "check": "no_letter",
-    "letter": "e"
+    "check": "regex",
+    "pattern": "^(?=[\\s\\S]*fish)(?![\\s\\S]*e)[\\s\\S]*\\.\\s*$",
+    "flags": "i"
    },
    {
     "check": "sentence_count",
@@ -85,18 +95,19 @@
     "max": 4
    },
    {
-    "check": "word_count",
-    "min": 40,
-    "max": 60
+    "check": "include",
+    "text": "fish",
+    "min": 2
    },
    {
-    "check": "ends_with",
-    "text": "."
+    "check": "word_count",
+    "min": 28,
+    "max": 39
    }
   ],
   "samples": {
    "pass": [
-    "At dawn a busy crowd walks along a long row of stalls. Fishing folk shout loud calls and hold up bright shiny cod on thick frost. A small boy runs past with a pail full of crabs and clams. Gulls wait high up in a cold sky for scraps to fall from a cart."
+    "At dawn a crowd walks along a row of fish stalls. Fishing folk shout loud calls and hold up shiny cod. A small boy runs past with a pail of crabs. Gulls wait high up for scraps of fish."
    ],
    "fail": [
     "The market opens at dawn. Traders shout. Gulls circle overhead while buyers haggle over fresh fish."
@@ -116,22 +127,34 @@
     "max": 8
    },
    {
-    "check": "no_commas"
-   },
-   {
     "check": "include",
     "text": "arena",
     "min": 1
    },
    {
+    "check": "include",
+    "text": "crowd",
+    "min": 1
+   },
+   {
+    "check": "include",
+    "text": "whistle",
+    "min": 1
+   },
+   {
     "check": "word_count",
-    "min": 40,
-    "max": 72
+    "min": 24,
+    "max": 39
+   },
+   {
+    "check": "regex",
+    "pattern": "^(?=[\\s\\S]*arena)(?![\\s\\S]*[,\\uFF0C])",
+    "flags": "i"
    }
   ],
   "samples": {
    "pass": [
-    "Gates swing open as the evening crowd pours in\nAll around the arena the banners start to rise\nUnder bright lights the young players stretch and wait\nNervous fans lean forward in their narrow seats\nThe whistle sounds and the long hush breaks\nLoud chants roll down from the upper stands\nEvery pass and tackle pulls a roar from the crowd\nThousands sing together as they drift into the night"
+    "Gates swing open wide\nAll the crowd pours in\nUnder bright arena lights\nNervous fans lean forward\nThe whistle breaks the hush\nLate goals decide it\nEvery tackle draws a roar\nThousands sing on"
    ],
    "fail": [
     "Gates open,\nAll cheer\nUnder lights\nNow\nThe game\nEnds\nLate\nTonight"
@@ -141,9 +164,6 @@
  {
   "id": "f05",
   "expected": [
-   {
-    "check": "json"
-   },
    {
     "check": "json_keys",
     "keys": [
@@ -167,7 +187,7 @@
    },
    {
     "check": "regex",
-    "pattern": "^\\s*\\{[\\s\\S]*\\}\\s*$"
+    "pattern": "^\\s*\\{(?=[\\s\\S]*\"title\")[\\s\\S]*\\}\\s*$"
    }
   ],
   "samples": {
@@ -197,6 +217,11 @@
     "text": "however",
     "min": 1,
     "max": 1
+   },
+   {
+    "check": "include",
+    "text": "umbrella",
+    "min": 2
    },
    {
     "check": "word_count",
@@ -235,21 +260,24 @@
     "min": 2
    },
    {
-    "check": "exclude",
-    "text": "star"
+    "check": "include",
+    "text": "satellite",
+    "min": 1
    },
    {
-    "check": "no_commas"
+    "check": "regex",
+    "pattern": "^(?=[\\s\\S]*orbit)(?![\\s\\S]*star)(?![\\s\\S]*[,\\uFF0C])",
+    "flags": "i"
    },
    {
     "check": "word_count",
-    "min": 36,
-    "max": 66
+    "min": 24,
+    "max": 39
    }
   ],
   "samples": {
    "pass": [
-    "> A small grey satellite hums above the clouds\n> It follows the same quiet orbit every ninety minutes\n> Its solar wings catch the light of the rising sun\n> Far below the oceans turn from black to blue\n> Engineers on the ground watch its orbit on a glowing map\n> Each pass sends home pictures of rivers and roads"
+    "> A small satellite hums above the clouds\n> It keeps a steady orbit\n> Its wings catch the sunrise\n> Oceans turn from black to blue\n> Its orbit crosses the map again\n> It sends home pictures"
    ],
    "fail": [
     "> The satellite starts its orbit, slowly.\n> It is a star in the sky.\n> Orbit."
@@ -270,18 +298,28 @@
    },
    {
     "check": "word_count",
-    "min": 50,
-    "max": 80
+    "min": 28,
+    "max": 39
    },
    {
     "check": "include",
     "text": "sun",
     "min": 1
+   },
+   {
+    "check": "include",
+    "text": "leaf",
+    "min": 1
+   },
+   {
+    "check": "include",
+    "text": "water",
+    "min": 1
    }
   ],
   "samples": {
    "pass": [
-    "Plants are like tiny cooks. They drink water up from the soil with their roots. Their green leaves soak up light from the sun and take in air too. Deep in each leaf the plant mixes the light with the water and the air to make a sweet food. That food helps the plant grow tall and green, and it lets out fresh air for us to use."
+    "Plants are like tiny cooks. Roots drink water from the soil. Each green leaf soaks up light from the sun. The plant mixes light and water and air to make food. That food helps it grow."
    ],
    "fail": [
     "Photosynthesis is the process by which plants convert sunlight into chemical energy. It happens in chloroplasts. The sun is important."
@@ -307,8 +345,8 @@
    },
    {
     "check": "regex",
-    "pattern": "\\d",
-    "shouldMatch": false
+    "pattern": "^(?=[\\s\\S]*STOP)(?![\\s\\S]*\\d)",
+    "flags": ""
    },
    {
     "check": "include",
@@ -352,17 +390,19 @@
     "pattern": "^\\s*1\\. \\S[^\\n]*\\n2\\. \\S[^\\n]*\\n3\\. \\S[^\\n]*\\n4\\. \\S[^\\n]*\\n5\\. \\S[^\\n]*\\n6\\. \\S[^\\n]*\\n7\\. \\S[^\\n]*\\s*$"
    },
    {
-    "check": "no_commas"
+    "check": "regex",
+    "pattern": "^(?=[\\s\\S]*^\\s*1\\. )(?![\\s\\S]*[,\\uFF0C])",
+    "flags": ""
    },
    {
     "check": "word_count",
-    "min": 28,
-    "max": 49
+    "min": 21,
+    "max": 39
    }
   ],
   "samples": {
    "pass": [
-    "1. The Silence Of The Salt Marsh\n2. A Key Beneath The Lighthouse\n3. Murder At The Winter Fair\n4. The Clockmaker And The Crow\n5. Seven Letters From Nowhere\n6. Death In A Borrowed Coat\n7. The Last Train To Harrow Point"
+    "1. The Silent Marsh\n2. A Key Below\n3. Murder At Dawn\n4. The Crow Knows\n5. Seven Letters\n6. Death In Blue\n7. The Last Train"
    ],
    "fail": [
     "1. The Silence of the Marsh\n2. A Key, Beneath\n3. Murder\n4. Crow\n5. Letters\n6. Death\n8. Train"
@@ -382,24 +422,24 @@
     "max": 5
    },
    {
-    "check": "all_lowercase"
-   },
-   {
-    "check": "no_letter",
-    "letter": "e"
-   },
-   {
-    "check": "no_commas"
+    "check": "include",
+    "text": "sky",
+    "min": 1
    },
    {
     "check": "word_count",
-    "min": 25,
-    "max": 45
+    "min": 20,
+    "max": 39
+   },
+   {
+    "check": "regex",
+    "pattern": "^(?=[\\s\\S]*sky)(?![\\s\\S]*[eE])(?![\\s\\S]*[,\\uFF0C])(?![\\s\\S]*[\\p{Lu}\\p{Lt}])",
+    "flags": "u"
    }
   ],
   "samples": {
    "pass": [
-    "calm air brings a soft gray mist\nlow drifts roll across a still hill\nour kids point and laugh at its forms\nuntil a warm wind blows it apart\nday turns bright and a hot sun glows"
+    "calm sky brings a soft gray mist\nlow drifts roll by\nour kids point at its forms\nuntil a warm wind blows\ndays turn bright"
    ],
    "fail": [
     "Clouds are here\nLovely\nOver\nUp\nDrifting, gently"
@@ -436,7 +476,9 @@
     "max": 2
    },
    {
-    "check": "no_commas"
+    "check": "regex",
+    "pattern": "^(?=[\\s\\S]*lantern)(?![\\s\\S]*[,\\uFF0C])",
+    "flags": "i"
    }
   ],
   "samples": {
@@ -451,9 +493,6 @@
  {
   "id": "f13",
   "expected": [
-   {
-    "check": "json"
-   },
    {
     "check": "json_keys",
     "keys": [
@@ -488,7 +527,7 @@
    },
    {
     "check": "regex",
-    "pattern": "^\\s*\\{[\\s\\S]*\\}\\s*$"
+    "pattern": "^\\s*\\{(?=[\\s\\S]*\"cities\")[\\s\\S]*\\}\\s*$"
    }
   ],
   "samples": {
@@ -513,8 +552,9 @@
     "pattern": "^\\s*ANA: [^\\n]+\\nBEN: [^\\n]+\\nANA: [^\\n]+\\nBEN: [^\\n]+\\nANA: [^\\n]+\\nBEN: [^\\n]+\\s*$"
    },
    {
-    "check": "exclude",
-    "text": "?"
+    "check": "regex",
+    "pattern": "^(?=[\\s\\S]*ANA: )(?![\\s\\S]*\\?)(?![\\s\\S]*\\uFF1F)",
+    "flags": ""
    },
    {
     "check": "include",
@@ -523,14 +563,19 @@
     "max": 1
    },
    {
+    "check": "include",
+    "text": "picnic",
+    "min": 1
+   },
+   {
     "check": "word_count",
-    "min": 30,
-    "max": 70
+    "min": 24,
+    "max": 39
    }
   ],
   "samples": {
    "pass": [
-    "ANA: The forecast says sunshine all day tomorrow.\nBEN: Then we should grab the big blanket and the red basket.\nANA: I will bake lemon bars tonight.\nBEN: Great. I can bring sandwiches and cold juice.\nANA: Let us meet by the fountain at noon.\nBEN: Perfect. I will bring the frisbee too."
+    "ANA: A picnic tomorrow sounds lovely.\nBEN: I will bring the blanket.\nANA: I can bake lemon bars.\nBEN: Great. Juice is on me.\nANA: Meet at the fountain at noon.\nBEN: Perfect. See you there."
    ],
    "fail": [
     "ANA: Picnic tomorrow?\nBEN: Sure, tomorrow works.\nANA: Great."
@@ -552,8 +597,8 @@
    },
    {
     "check": "word_count",
-    "min": 60,
-    "max": 80
+    "min": 85,
+    "max": 110
    },
    {
     "check": "include",
@@ -561,12 +606,9 @@
     "min": 3
    },
    {
-    "check": "no_letter",
-    "letter": "z"
-   },
-   {
-    "check": "exclude",
-    "text": "very"
+    "check": "regex",
+    "pattern": "^(?=[\\s\\S]*kettle)(?![\\s\\S]*z)(?![\\s\\S]*very)",
+    "flags": "i"
    },
    {
     "check": "ends_with",
@@ -576,7 +618,7 @@
   ],
   "samples": {
    "pass": [
-    "Meet the Tidewater One, a quiet kettle that brings a full litre of water to the boil in under three minutes. Its brushed steel body stays cool to the touch while the water inside reaches a rolling boil.\n\nChoose from five preset temperatures for green tea, coffee or baby formula with a single tap. This kettle remembers your last setting and switches itself off when the kettle runs dry. Boil smarter."
+    "Meet the Tidewater One, a quiet electric kettle that brings a full litre of water to a rolling boil in under three minutes on a standard household socket. Its brushed steel body stays cool to the touch while the water inside it heats, so little hands and busy cooks can grab it safely.\n\nChoose from five preset temperatures for green tea, black tea, coffee or baby formula with a single tap on the glowing panel. This kettle remembers your last setting and switches itself off the moment the kettle runs dry, which saves both power and worry. Boil smarter."
    ],
    "fail": [
     "The Zenith kettle is very fast. Every morning it boils. Boil smarter."
