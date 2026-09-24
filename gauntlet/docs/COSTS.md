@@ -96,21 +96,21 @@ Grand total ≈ $236 (conservative upper bound $375).
 
 ## Vision (`vision`)
 
-21 picture cases. Estimates include each vendor's **image tokens** (about 1,100–1,300 per picture, see
+25 picture cases. Estimates include each vendor's **image tokens** (about 1,100–1,300 per picture, see
 [METHODOLOGY.md](METHODOLOGY.md#7b-vision-tests-pictures)). Models without image input (`vision: false`, e.g. Grok 4.7
 and DeepSeek V4 Flash as configured) are skipped and cost $0. One repeat, before any measured runs:
 
 | Model | Cost |
 |---|---:|
-| Claude Fable 5.1 | $3.02 |
-| Claude Opus 5.5 | $1.21 |
-| Claude Sonnet 5 | $0.60 |
-| Claude Haiku 4.5 | $0.30 |
-| GPT-5.6 Sol | $1.77 |
-| GPT-5.6 Terra | $0.88 |
-| GPT-5.6 Luna | $0.35 |
-| Gemini 3.1 Pro | $0.71 |
-| Gemini 3.5 Flash | $0.54 |
+| Claude Fable 5.1 | $4.18 |
+| Claude Opus 5.5 | $1.67 |
+| Claude Sonnet 5 | $0.84 |
+| Claude Haiku 4.5 | $0.42 |
+| GPT-5.6 Sol | $2.46 |
+| GPT-5.6 Terra | $1.23 |
+| GPT-5.6 Luna | $0.49 |
+| Gemini 3.1 Pro | $0.99 |
+| Gemini 3.5 Flash | $0.74 |
 
 Per-test numbers: `node src/cli.ts costs --suite vision --format md`.
 

@@ -130,7 +130,7 @@ test('validation catches missing, escaping and non-image files; rendering lists 
 });
 
 test('image headers: PNG and JPEG sizes are read from the file itself', () => {
-  assert.deepEqual(vision.imageInfo(PNG_A), { mediaType: 'image/png', width: 1200, height: 420 });
+  assert.deepEqual(vision.imageInfo(PNG_A), { mediaType: 'image/png', width: 1200, height: 560 });
   // Minimal JPEG: SOI, an APP0 segment, then SOF0 with height 300 and width 500.
   const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x04, 0x00, 0x00, 0xff, 0xc0, 0x00, 0x11, 0x08, 0x01, 0x2c, 0x01, 0xf4, 0x03, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
   assert.deepEqual(vision.imageInfo(jpeg), { mediaType: 'image/jpeg', width: 500, height: 300 });
@@ -281,7 +281,7 @@ test('cost estimates add image tokens for vision models and nothing for skipped 
   assert.ok(eyes.estCostUsd > blind.estCostUsd, `vision model pays for image tokens (${eyes.estCostUsd} vs ${blind.estCostUsd})`);
   // Definition-based estimate for the vision model: (text + half the image tokens per case) × price.
   const text = registry.testEstimate(visionTest as never);
-  const imageTokens = vision.estimateImageTokens(1200, 420, 'openai-compatible') / 2;
+  const imageTokens = vision.estimateImageTokens(1200, 560, 'openai-compatible') / 2;
   const expected = (2 * ((text.inputTokens + imageTokens) * 2 + text.outputTokens * 10)) / 1e6;
   assert.ok(Math.abs(eyes.estCostUsd - expected) < 1e-3 || est.perTest[0]!.basis !== 'definition', `${eyes.estCostUsd} ≈ ${expected}`);
 });
@@ -340,7 +340,7 @@ test('every built-in vision case attaches exactly one committed image and states
       assert.equal(c.images.length, 1, `${def.id}/${c.id}`);
       const buf = readFileSync(new URL(`vision/${c.images[0]}`, REPO_TESTS));
       assert.equal(vision.imageInfo(buf)?.mediaType, 'image/png');
-      assert.match(c.prompt, /JSON object|single integer|separated by a space/, `${def.id}/${c.id} says what form the answer takes`);
+      assert.match(c.prompt, /JSON object|single integer|single number|separated by a space/, `${def.id}/${c.id} says what form the answer takes`);
       assert.match(c.notes, /\[(standard|hard)\]/);
     }
   }

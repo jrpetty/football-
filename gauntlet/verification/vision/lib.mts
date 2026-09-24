@@ -140,6 +140,12 @@ export const GLYPHS: Record<string, Glyph> = {
   '.': { w: 0.14, strokes: [dot(0.06, 0.96)] },
   ',': { w: 0.14, strokes: [[[0.08, 0.9], [0.02, 1.12]]] },
   ':': { w: 0.14, strokes: [dot(0.06, 0.45), dot(0.06, 0.95)] },
+  // Variants: European 1 (long flag, no foot), crossed 7, closed 4.
+  '1e': { w: 0.44, strokes: [[[0.02, 0.4], [0.36, 0], [0.3, 1]]] },
+  '7e': { w: 0.6, strokes: [[[0.02, 0.02], [0.6, 0], [0.24, 1]], [[0.16, 0.5], [0.56, 0.5]]] },
+  '4c': { w: 0.62, strokes: [[[0.44, 1], [0.44, 0], [0.02, 0.66], [0.62, 0.66]]] },
+  a: { w: 0.52, strokes: [arc(0.26, 0.76, 0.21, 0.24, -10, 350, 14), [[0.48, 0.52], [0.48, 1]]] },
+  n: { w: 0.5, strokes: [[[0.06, 0.5], [0.06, 1]], [[0.06, 0.68], ...arc(0.27, 0.72, 0.21, 0.2, 180, 360, 8), [0.48, 1]]] },
   A: { w: 0.62, strokes: [[[0, 1], [0.31, 0], [0.62, 1]], [[0.13, 0.62], [0.49, 0.62]]] },
   B: { w: 0.58, strokes: [[[0.05, 1], [0.05, 0]], [[0.05, 0], [0.32, 0], ...arc(0.32, 0.24, 0.2, 0.24, -90, 90, 8), [0.05, 0.48]], [[0.05, 0.48], [0.34, 0.48], ...arc(0.34, 0.74, 0.22, 0.26, -90, 90, 8), [0.05, 1]]] },
   C: { w: 0.6, strokes: [arc(0.33, 0.5, 0.31, 0.5, 320, 40, 16)] },
@@ -190,6 +196,12 @@ export interface Hand {
   mess: number;
   ink: string;
   strokeWidth: number;
+  /** Per-writer glyph choices, e.g. { '1': '1e', '7': '7e' } for a European 1 and a crossed 7. */
+  variants?: Record<string, string>;
+  /** Gap between glyphs in cap heights (default 0.2; below 0 letters touch or overlap). */
+  gap?: number;
+  /** Forward slant (default 0.12). */
+  slant?: number;
 }
 
 /** Split long straight segments so per-point wobble bends them a little, like a real pen line. */
@@ -207,14 +219,14 @@ function densify(stroke: Pt[]): Pt[] {
 /** Draw one glyph with its box's top-left at (x, y) and cap height `size`. Returns [svg, advance]. */
 export function glyph(h: Hand, ch: string, x: number, y: number, size: number): [string, number] {
   if (ch === ' ') return ['', size * 0.42];
-  const g = GLYPHS[ch];
+  const g = GLYPHS[h.variants?.[ch] ?? ch];
   if (!g) throw new Error(`No handwriting glyph for "${ch}"`);
   const m = h.mess;
   const rot = ((h.rng.next() * 2 - 1) * (4 + 6 * m) * Math.PI) / 180;
   const sc = size * (1 + (h.rng.next() * 2 - 1) * (0.04 + 0.08 * m));
   const dx = (h.rng.next() * 2 - 1) * size * 0.03 * (1 + m);
   const dy = (h.rng.next() * 2 - 1) * size * (0.03 + 0.05 * m);
-  const slant = 0.12 + (h.rng.next() * 2 - 1) * 0.05;
+  const slant = (h.slant ?? 0.12) + (h.rng.next() * 2 - 1) * 0.05;
   const cxg = g.w / 2;
   // Smooth wobble: a low-frequency displacement field (neighbouring points move together, so lines bend instead of
   // kinking), plus a tiny independent tremor.
@@ -234,7 +246,7 @@ export function glyph(h: Hand, ch: string, x: number, y: number, size: number): 
     const width = h.strokeWidth * (0.9 + h.rng.next() * 0.25);
     paths.push(`<path d="${smoothPath(pts)}" fill="none" stroke="${h.ink}" stroke-width="${r1(width)}" stroke-linecap="round" stroke-linejoin="round"/>`);
   }
-  return [paths.join(''), (g.w + 0.2 + (h.rng.next() * 2 - 1) * 0.04 * (1 + m)) * size];
+  return [paths.join(''), (g.w + (h.gap ?? 0.2) + (h.rng.next() * 2 - 1) * 0.04 * (1 + m)) * size];
 }
 
 /** Handwrite a string left-to-right; returns [svg, width]. Use "*" for ×, "/" for ÷, "-" for minus. */
@@ -294,4 +306,10 @@ export async function renderAll(images: ImageSpec[], outDir: string): Promise<vo
   }
   await context.close();
   await browser.close();
+}
+
+/** Cross out a region with two pen strokes (a strike-through a price, a word or a whole line). */
+export function crossOut(h: Hand, x1: number, y1: number, x2: number, y2: number): string {
+  const mid = (y1 + y2) / 2;
+  return handLine(h, x1 - 4, mid + 4, x2 + 4, mid - 4) + handLine(h, x1 - 2, mid - 6, x2 + 6, mid + 3);
 }
