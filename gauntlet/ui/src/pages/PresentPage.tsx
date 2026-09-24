@@ -20,7 +20,10 @@ import { Icon } from '../components/icons.tsx';
 import { BrandMark } from '../components/Brand.tsx';
 import { ScoreCostScatter } from '../components/charts/ScoreCostScatter.tsx';
 import { isBaseline, olympicCompare, shortCat } from '../components/leaderboard/util.ts';
-import { fmtCost, fmtIndex, fmtMs, pluralize, shortHash } from '../format.ts';
+import { fmtCost, fmtIndex, fmtMs, shortHash } from '../format.ts';
+
+/** Singular or plural noun (no number). */
+const noun = (n: number, one: string, many = `${one}s`) => (n === 1 ? one : many);
 import type { CategoryInfo, Leaderboard, LeaderboardRow, ProgramInfo, RunDetail, TestAggregate, TestDefinition, TestDetail, TestSnapshot } from '../types.ts';
 
 const W = 1920;
@@ -213,10 +216,10 @@ function baselineRow(deck: Deck): LeaderboardRow | null {
 }
 
 function casesWord(t: DeckTest, n: number): string {
-  if (t.snap.kind === 'program') return pluralize(n, 'world');
+  if (t.snap.kind === 'program') return noun(n, 'world');
   const def = t.detail?.definition;
-  if (def?.kind === 'prompt' && def.cases.some((c) => (c.turns?.length ?? 0) > 1)) return pluralize(n, 'conversation');
-  return pluralize(n, 'question');
+  if (def?.kind === 'prompt' && def.cases.some((c) => (c.turns?.length ?? 0) > 1)) return noun(n, 'conversation');
+  return noun(n, 'question');
 }
 
 function captionFor(slide: Slide, deck: Deck): Caption {
@@ -226,7 +229,7 @@ function captionFor(slide: Slide, deck: Deck): Caption {
   switch (slide.kind) {
     case 'title':
       return {
-        text: `Meet the contenders: ${nModels} AI ${pluralize(nModels, 'model')} take on the same ${m.tests.length} ${pluralize(m.tests.length, 'test')}${R > 1 ? `, with ${R} attempts at every question` : ''}.${deck.contenders.some((c) => c.baseline) ? ' A random-guessing player sets the floor.' : ''}`,
+        text: `Meet the contenders: ${nModels} AI ${noun(nModels, 'model')} take on the same ${m.tests.length} ${noun(m.tests.length, 'test')}${R > 1 ? `, with ${R} attempts at every question` : ''}.${deck.contenders.some((c) => c.baseline) ? ' A random-guessing player sets the floor.' : ''}`,
         fine: `Fingerprint ${shortHash(m.fingerprint, 12)} identifies the exact prompts, answer keys and scoring rules used`,
       };
     case 'how':
@@ -240,7 +243,7 @@ function captionFor(slide: Slide, deck: Deck): Caption {
       const n = t.snap.caseIds.length;
       return {
         text: `Challenge ${t.n} of ${deck.tests.length}: what we ask the models in “${t.snap.name}”, and how the answers are checked.`,
-        fine: `Scorer: ${sc.tech} · ${n} ${casesWord(t, n)} × ${R} ${pluralize(R, 'attempt')} · test v${t.snap.version}`,
+        fine: `Scorer: ${sc.tech} · ${n} ${casesWord(t, n)} × ${R} ${noun(R, 'attempt')} · test v${t.snap.version}`,
       };
     }
     case 'result': {
@@ -249,8 +252,8 @@ function captionFor(slide: Slide, deck: Deck): Caption {
       const program = t.snap.kind === 'program';
       const n = t.snap.caseIds.length;
       return {
-        text: `Scores on “${t.snap.name}”, out of 100 — a longer bar is better, and the thin line on each bar shows the uncertainty.${typeof base === 'number' ? ' The grey bar is random guessing.' : ''}${program ? ' Under each bar: how that model’s typical run went.' : ''}`,
-        fine: `Average of ${n} ${casesWord(t, n)} × ${R} ${pluralize(R, 'attempt')} · uncertainty = 95% bootstrap CI · time = median per ${program ? 'run' : 'question'}`,
+        text: `Each model’s score on this test, out of 100 — longer is better. The thin bracket under each bar shows the uncertainty${typeof base === 'number' ? '; grey is random guessing' : ''}.${program ? ' Captions: how each model’s typical run went.' : ''}`,
+        fine: `Average of ${n} ${casesWord(t, n)} × ${R} ${noun(R, 'attempt')} · uncertainty = 95% bootstrap CI · time = median per ${program ? 'run' : 'question'}`,
       };
     }
     case 'final':
@@ -358,15 +361,15 @@ function TitleSlide({ deck }: { deck: Deck }) {
         <span>{longDate(m.startedAt ?? m.createdAt)}</span>
         <span className="dot" aria-hidden="true" />
         <span>
-          <b>{nModels}</b> {pluralize(nModels, 'model')}
+          <b>{nModels}</b> {noun(nModels, 'model')}
         </span>
         <span className="dot" aria-hidden="true" />
         <span>
-          <b>{m.tests.length}</b> {pluralize(m.tests.length, 'test')}
+          <b>{m.tests.length}</b> {noun(m.tests.length, 'test')}
         </span>
         <span className="dot" aria-hidden="true" />
         <span>
-          <b>{deck.repeats}</b> {pluralize(deck.repeats, 'repeat')}
+          <b>{deck.repeats}</b> {noun(deck.repeats, 'repeat')}
         </span>
       </div>
       <div className="t-cards" style={{ ['--cols' as string]: cols }}>
@@ -407,7 +410,7 @@ function HowSlide({ deck }: { deck: Deck }) {
               <span>100</span>
             </div>
           </div>
-          <h2>Every test is scored 0 – 100</h2>
+          <h2>Every test is scored 0–100</h2>
           <p>Right answers, working code or a finished task earn points. Some tests give partial credit.</p>
         </section>
         <section className="how-card" style={{ ['--i' as string]: 1 }}>
@@ -420,8 +423,8 @@ function HowSlide({ deck }: { deck: Deck }) {
               ))}
               {deck.cats.length > shown.length && <span className="more">+{deck.cats.length - shown.length}</span>}
             </div>
-            <span className="iv-arrow">→</span>
-            <span className="iv-index">Index</span>
+            <span className="iv-arrow">↓</span>
+            <span className="iv-index">Gauntlet Index</span>
           </div>
           <h2>One number: the Gauntlet Index</h2>
           <p>We average the tests in each category, then average the categories — so every skill counts {equal ? 'equally' : 'by its published weight'}, no matter how many tests it has.</p>
@@ -469,6 +472,7 @@ function ExplainerSlide({ deck, test }: { deck: Deck; test: DeckTest }) {
   const n = test.snap.caseIds.length;
   const hook = def?.hook ?? summary?.hook;
   const description = def?.description ?? summary?.description;
+  const finalLine = def?.kind === 'prompt' && /FINAL ANSWER/.test(`${def.preamble ?? ''}\n${def.system ?? ''}`);
   return (
     <div className="s-exp">
       <div className="x-top">
@@ -493,11 +497,11 @@ function ExplainerSlide({ deck, test }: { deck: Deck; test: DeckTest }) {
           <div className="x-facts">
             <div>
               <b className="tnum">{n}</b>
-              <span>{test.snap.kind === 'program' ? `seeded ${pluralize(n, 'world')}` : casesWord(test, n)}</span>
+              <span>{test.snap.kind === 'program' ? `seeded ${noun(n, 'world')}` : casesWord(test, n)}</span>
             </div>
             <div>
               <b className="tnum">×{deck.repeats}</b>
-              <span>{pluralize(deck.repeats, 'attempt')} each</span>
+              <span>{noun(deck.repeats, 'attempt')} each</span>
             </div>
             <div>
               <b className="tnum">{deck.repeats * n}</b>
@@ -531,9 +535,18 @@ function ExplainerSlide({ deck, test }: { deck: Deck; test: DeckTest }) {
           ) : example ? (
             <div className="x-card example">
               <div className="x-card-k">
-                <Icon.Inbox /> Example question
+                <Icon.Inbox /> Example {casesWord(test, 1)}
               </div>
               <pre className="x-prompt">{example}</pre>
+              <div className="x-format">
+                {finalLine ? (
+                  <>
+                    Every answer ends with <code>FINAL ANSWER: …</code>
+                  </>
+                ) : (
+                  <>One of {n} {casesWord(test, n)} — the rest stay off screen.</>
+                )}
+              </div>
             </div>
           ) : (
             <div className="x-card">
@@ -633,14 +646,11 @@ function ResultSlide({ deck, test }: { deck: Deck; test: DeckTest }) {
       agg,
     };
   });
-  const competitors = entries.filter((e) => !e.baseline).sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
-  let rank = 0;
-  let prev: number | null = null;
+  const medalOrder = (e: RaceEntry) => (e.medal === 'gold' ? 0 : e.medal === 'silver' ? 1 : e.medal === 'bronze' ? 2 : 3);
+  // Ties are broken the way the server awarded medals, so positions and medals always agree.
+  const competitors = entries.filter((e) => !e.baseline).sort((a, b) => (b.score ?? -1) - (a.score ?? -1) || medalOrder(a) - medalOrder(b) || a.label.localeCompare(b.label));
   competitors.forEach((e, i) => {
-    if (e.score === null) return;
-    if (prev === null || e.score !== prev) rank = i + 1;
-    prev = e.score;
-    e.rank = rank;
+    if (e.score !== null) e.rank = i + 1;
   });
   const base = entries.find((e) => e.baseline) ?? null;
   const ordered = base ? [...competitors, base] : competitors;

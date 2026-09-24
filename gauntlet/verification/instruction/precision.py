@@ -4,7 +4,11 @@ sys.path.insert(0, '..')
 OUT = "Output only the requested text: no title, preamble, explanation, notes or closing remarks, and no code fences."
 COUNTING = ("How the checker counts: a word is any run of characters between spaces or line breaks that contains at least one letter or digit "
             "(so '-' alone is not a word, but '1.' is); a sentence ends with '.', '!' or '?' followed by a space, a line break or the end of the text; "
-            "a line is any non-empty line; a paragraph is a block of text separated from the next by a blank line.")
+            "a line is any non-empty line; a paragraph is a block of text separated from the next by a blank line. "
+            "Every range written as 'between A and B' includes both A and B. "
+            "When a rule says a word or letter sequence must (or must not) appear, the checker counts every occurrence of that exact sequence of characters "
+            "in the raw text, in ANY capitalisation unless the rule says otherwise, including occurrences inside longer words "
+            "(for example 'Orbiting' contains 'orbit' and 'every' contains 'very').")
 
 C = []
 def case(cid, d, prompt, constraints, passing, failing, why):
@@ -17,7 +21,7 @@ Rules:
 1. Exactly 3 lines, with no blank lines between them.
 2. Use only lowercase letters: no capital letters anywhere.
 3. Do not use any commas.
-4. The word "umbrella" must appear exactly once.
+4. The letter sequence "umbrella" must appear exactly once (any capitalisation; it would also be counted inside a longer word such as "umbrellas").
 5. The whole poem must be between 9 and 24 words long.
 """, [
     {'check': 'line_count', 'min': 3, 'max': 3},
@@ -33,7 +37,7 @@ Give five practical tips for saving money on groceries.
 Rules:
 1. Write exactly 5 lines, and every line must be a bullet point that starts with a hyphen followed by a space ("- ").
 2. Nothing else: no heading, no introduction and no closing line.
-3. The letter sequence "budget" must appear exactly twice in the whole answer (words such as "budgeting" also count).
+3. The letter sequence "budget" must appear exactly twice in the whole answer (any capitalisation; occurrences inside longer words such as "budgeting" or "Budgets" also count).
 4. The whole answer must be between 30 and 60 words long.
 """, [
     {'check': 'bullet_count', 'min': 5, 'max': 5},
@@ -65,7 +69,7 @@ Rules:
 1. Exactly 8 lines, with no blank lines.
 2. The first letters of the lines, read from top to bottom, must spell GAUNTLET (line 1 starts with G, line 2 with A, and so on). Start each line directly with its word: no numbers, bullets or symbols in front.
 3. Do not use any commas.
-4. The word "arena" must appear at least once.
+4. The letter sequence "arena" must appear at least once (any capitalisation).
 5. The whole poem must be between 40 and 72 words long.
 """, [
     {'check': 'acrostic', 'word': 'GAUNTLET'},
@@ -97,7 +101,7 @@ Write a short piece about a lost umbrella.
 Rules:
 1. Exactly 3 paragraphs, separated by a single blank line.
 2. The very first word of your answer must be "Yesterday" (with a capital Y).
-3. The word "however" (in any capitalisation) must appear exactly once in the whole answer.
+3. The letter sequence "however" must appear exactly once in the whole answer (any capitalisation, so "However" counts too).
 4. The whole answer must be between 90 and 130 words long.
 5. The answer must end with a question mark.
 """, [
@@ -114,7 +118,7 @@ Write a six-line description of a satellite circling the Earth.
 Rules:
 1. Exactly 6 lines, with no blank lines.
 2. Every line must begin with a greater-than sign followed by a space ("> ").
-3. The word "orbit" must appear at least 2 times (words such as "orbiting" also count).
+3. The letter sequence "orbit" must appear at least 2 times (any capitalisation; occurrences inside longer words such as "orbiting" or "Orbital" also count).
 4. The letter sequence "star" must not appear anywhere, not even inside other words (so "start", "stare" and "starlight" are forbidden too), in any capitalisation.
 5. Do not use any commas.
 6. The whole answer must be between 36 and 66 words long.
@@ -134,7 +138,7 @@ Rules:
 1. No word may be longer than 6 letters. (Punctuation such as commas and periods is not counted; apostrophes and hyphens ARE counted, so "plant's" has 7 characters and is too long.)
 2. Write between 4 and 6 sentences.
 3. The whole answer must be between 50 and 80 words long.
-4. The word "sun" must appear at least once.
+4. The letter sequence "sun" must appear at least once (any capitalisation; it also counts inside longer words such as "sunlight").
 """, [
     {'check': 'max_word_length', 'max': 6},
     {'check': 'sentence_count', 'min': 4, 'max': 6},
@@ -150,7 +154,7 @@ Rules:
 2. Exactly 4 lines, with no blank lines.
 3. Every line must end with the word STOP (nothing may follow STOP on a line, not even punctuation).
 4. Do not use any digits (write numbers as words).
-5. The word "ARRIVE" must appear at least once.
+5. The word "ARRIVE" must appear at least once, in capital letters (it also counts inside a longer word such as "ARRIVES").
 6. The whole telegram must be between 16 and 32 words long (each STOP counts as a word).
 """, [
     {'check': 'all_uppercase'},
@@ -166,7 +170,7 @@ case('f10', 'hard', """
 Invent titles for seven fictional mystery novels.
 Rules:
 1. Write exactly 7 lines, numbered "1. " to "7. " in order (the number, a period, a space, then the title), with no blank lines and nothing else.
-2. Every word in every title must start with a capital letter, including short words such as "of", "the", "and", "in" and "a".
+2. Every word in every title must start with a capital letter, including short words such as "of", "the", "and", "in" and "a". The check looks at the first letter of each space-separated token: tokens without letters (such as the "1." labels) are ignored, a hyphenated word only needs its first letter capitalised (e.g. "Well-kept"), and a token that starts with digits must still have a capital as its first letter (so avoid tokens like "2nd").
 3. Do not use any commas.
 4. Including the numbers (each "1." etc. counts as one word), the whole list must be between 28 and 49 words long.
 """, [
@@ -205,7 +209,7 @@ Rules:
 2. It must have exactly 5 sentences.
 3. The first word must be "Once" (capital O).
 4. The story must end with the word "again" immediately followed by a period, i.e. the final characters are "again.".
-5. The word "lantern" must appear exactly twice (words such as "lanterns" also count).
+5. The letter sequence "lantern" must appear exactly twice (any capitalisation; occurrences inside longer words such as "lanterns" also count).
 6. Do not use any commas.
 """, [
     {'check': 'word_count', 'min': 50, 'max': 50},
@@ -225,7 +229,7 @@ Rules:
 3. "cities" is an array of exactly 4 objects. Each object has exactly two keys: "name" (a string) and "population" (a positive integer, not in quotes).
 4. "count" is the integer 4 (not in quotes).
 5. "source" is null (the JSON value null, not a string).
-6. The key "name" must appear exactly 4 times in total and the key "population" exactly 4 times in total.
+6. This rule is checked on the raw text: the quoted string "name" (including its double quotes) must occur exactly 4 times and the quoted string "population" (including its double quotes) exactly 4 times. So do not use the words name or population, in double quotes, anywhere else (for example as a value).
 """, [
     {'check': 'json'},
     {'check': 'json_keys', 'keys': ['cities', 'count', 'source']},
@@ -244,7 +248,7 @@ Rules:
 1. Exactly 6 lines, with no blank lines and nothing before or after the dialogue.
 2. The lines alternate speakers, starting with ANA: lines 1, 3 and 5 begin with "ANA: " and lines 2, 4 and 6 begin with "BEN: " (the name in capitals, a colon, then a space).
 3. Do not use any question marks.
-4. The word "tomorrow" (in any capitalisation) must appear exactly once.
+4. The letter sequence "tomorrow" must appear exactly once (any capitalisation).
 5. The whole dialogue, including the speaker labels, must be between 30 and 70 words long.
 """, [
     {'check': 'line_count', 'min': 6, 'max': 6},
@@ -261,8 +265,8 @@ Rules:
 1. Exactly 2 paragraphs, separated by a single blank line.
 2. Exactly 5 sentences in total.
 3. The whole description must be between 60 and 80 words long.
-4. The word "kettle" must appear at least 3 times (words such as "kettles" also count).
-5. Never use the letter "z" (in any capitalisation).
+4. The letter sequence "kettle" must appear at least 3 times (any capitalisation; occurrences inside longer words such as "kettles" also count).
+5. Never use the letter "z" (neither "z" nor "Z").
 6. Never use the word "very" (the letter sequence "very" must not appear anywhere, so words such as "every" and "delivery" are forbidden too).
 7. The description must end with exactly this sentence: Boil smarter.
 """, [

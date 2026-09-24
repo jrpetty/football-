@@ -62,7 +62,7 @@ export default function PresentPickerPage() {
                         <RunStatusBadge status={r.status} />
                       </div>
                       <div className="muted pick-meta tnum">
-                        {fmtDate(r.createdAt)} · {r.contestants.length} {pluralize(r.contestants.length, 'model')} · {r.testCount} {pluralize(r.testCount, 'test')} · {fmtInt(r.completedJobs)}/{fmtInt(r.totalJobs)} jobs · {fmtCost(r.costUsd)}
+                        {fmtDate(r.createdAt)} · {pluralize(r.contestants.length, 'model')} · {pluralize(r.testCount, 'test')} · {fmtInt(r.completedJobs)}/{fmtInt(r.totalJobs)} jobs · {fmtCost(r.costUsd)}
                       </div>
                       <div className="chip-list">
                         {r.contestants.slice(0, 8).map((c) => (

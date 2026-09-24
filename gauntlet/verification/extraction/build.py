@@ -49,8 +49,8 @@ Please quote the invoice number with your remittance. Late payments incur intere
   "invoice_number": string,
   "invoice_date": "YYYY-MM-DD",
   "due_date": "YYYY-MM-DD",              // invoice date plus the payment-terms period
-  "vendor_name": string,                 // exactly as printed in the header
-  "customer_name": string,
+  "vendor_name": string,                 // copy it exactly as printed in the header, including punctuation (letter case is not checked)
+  "customer_name": string,               // copy it exactly as printed
   "purchase_order": string or null,
   "currency": string,                    // ISO 4217 code, e.g. "EUR"
   "line_items": [                        // in the order they appear
@@ -63,7 +63,7 @@ Please quote the invoice number with your remittance. Late payments incur intere
 }
 """, {
     'invoice_number': 'NF-2026-00417', 'invoice_date': '2026-08-03', 'due_date': due.isoformat(),
-    'vendor_name': 'Northwind Fabrication Ltd.', 'customer_name': 'Bellweather Theatre Company', 'purchase_order': 'BTC-7781', 'currency': 'GBP',
+    'vendor_name': 'NORTHWIND FABRICATION LTD.', 'customer_name': 'Bellweather Theatre Company', 'purchase_order': 'BTC-7781', 'currency': 'GBP',
     'line_items': [{'item_code': c, 'quantity': q, 'unit_price': float(p), 'line_total': float(q * p)} for c, q, p in items],
     'subtotal': float(sub), 'tax_rate_percent': 20, 'tax_amount': float(vat), 'total': float(tot)},
     f"Traps: DD/MM/YYYY dates, printed date vs invoice date, line C33 printed as 9 h = £405 but corrected to 8 h = £360 (use corrected quantity and total). Due date {inv_date}+30 days = {due}. Subtotal/VAT/total recomputed in code (941.00 / 188.20 / 1129.20).")
@@ -89,7 +89,7 @@ From: Priya Raman <priya.raman@kestrel-labs.io>
 Sent: Mon 14 Sep 2026 11:05 (UTC+2)
 Subject: RE: Q4 roadmap review
 
-OK - not Tuesday but Thursday 24 September then, at the time I originally proposed. Atlas is booked that day, so we'll use the Juniper room (2nd floor) instead. Let's keep it to 60 minutes rather than 90. I'm also adding Wen Li (wen.li@kestrel-labs.io) as an optional attendee.
+OK - not Tuesday but Thursday 24 September then, at the start time I originally proposed: 15:00 my time (UTC+2). Atlas is booked that day, so we'll use the Juniper room (2nd floor) instead. Let's keep it to 60 minutes rather than 90. I'm also adding Wen Li (wen.li@kestrel-labs.io) as an optional attendee.
 
 ----------
 From: Tomasz Zielinski <t.zielinski@kestrel-labs.io>
@@ -101,7 +101,7 @@ Works for me. I'll dial in remotely from Warsaw.
 {
   "title": string,                     // the subject line without any "RE:" prefix
   "date": "YYYY-MM-DD",
-  "start_time_utc": "HH:MM",           // 24-hour clock, UTC
+  "start_time_utc": "HH:MM",           // 24-hour clock, converted to UTC
   "end_time_utc": "HH:MM",
   "duration_minutes": number,
   "room": string,                      // room name only, e.g. "Atlas"
@@ -171,7 +171,7 @@ TEMU 330671-9   40RF   26,000 lb    Frozen fish                N
 Note: the gross weight for TGHU 551920-3 was mis-keyed; the correct gross weight is 23,200 lb.
 """, """
 {
-  "vessel_name": string,                // without the "MV" prefix
+  "vessel_name": string,                // copied as printed but without the "MV" prefix (letter case is not checked)
   "voyage": string,
   "port_of_loading": string,            // UN/LOCODE, e.g. "NLRTM"
   "port_of_discharge": string,          // UN/LOCODE
@@ -191,7 +191,7 @@ Note: the gross weight for TGHU 551920-3 was mis-keyed; the correct gross weight
   "hazardous_container_count": number
 }
 """, {
-    'vessel_name': 'Coral Dawn', 'voyage': '26W11', 'port_of_loading': 'ESVLC', 'port_of_discharge': 'ILHFA', 'departure_date': '2026-10-02', 'arrival_date': '2026-10-07',
+    'vessel_name': 'CORAL DAWN', 'voyage': '26W11', 'port_of_loading': 'ESVLC', 'port_of_discharge': 'ILHFA', 'departure_date': '2026-10-02', 'arrival_date': '2026-10-07',
     'containers': [
         {'container_number': 'MSKU2041137', 'type': '40HC', 'empty': False, 'gross_weight_kg': 18450, 'hazardous': False, 'un_number': None},
         {'container_number': 'TGHU5519203', 'type': '20GP', 'empty': False, 'gross_weight_kg': int(w2), 'hazardous': False, 'un_number': None},
@@ -226,11 +226,11 @@ Next meeting: two weeks from today, same time.
 {
   "meeting_date": "YYYY-MM-DD",
   "note_taker": string,                 // full name
-  "attendees": [string],                // full names of people present, in the order listed
+  "attendees": [string],                // full names of everyone listed as present (including anyone who joined late; not people who sent apologies), in the order listed
   "action_items": [                     // one per numbered item, in order
     {
       "item": number,                   // the item's number in the notes
-      "owner": string or null,          // full name, or null if no owner has been assigned
+      "owner": string or null,          // full name of the ONE person the notes make responsible for the item (someone who only offers to help is not the owner); null if no owner has been assigned
       "due_date": "YYYY-MM-DD" or null, // null if no due date is given
       "status": "open" or "done"
     }
@@ -262,7 +262,7 @@ Please note we are unable to sponsor visas for this role.
   "job_title": string,                  // the title only, without the employment-type text in parentheses
   "company": string,
   "employment_type": string,            // one of: "full-time", "part-time", "contract", "contract-to-hire", "internship"
-  "remote_policy": string,              // one of: "remote", "hybrid", "onsite"
+  "remote_policy": string,              // one of: "remote" (work can be done from anywhere allowed; occasional travel does not change this), "hybrid" (regular scheduled days at an office are required), "onsite" (work is done at the employer's premises)
   "contract_hourly_rate_min_usd": number,
   "contract_hourly_rate_max_usd": number,
   "salary_min_usd": number,             // annual base salary after conversion, as a full number (e.g. 120000)
@@ -309,9 +309,9 @@ Thank you for shopping with us!
 {
   "store_number": string,               // digits exactly as printed, keep leading zeros
   "date": "YYYY-MM-DD",
-  "purchased_item_count": number,       // number of product lines actually bought (exclude voided lines, the VOID line itself and discount lines)
+  "purchased_item_count": number,       // number of PRODUCT LINES actually bought: a line with a quantity such as "2 @ 2.15" counts as one line; exclude voided product lines, the VOID line itself and discount lines
   "voided_items": [string],             // names of voided products exactly as printed on the VOID line
-  "total_discounts": number,            // positive number: sum of discount amounts
+  "total_discounts": number,            // positive number: sum of the lines labelled DISCOUNT (a VOID is not a discount)
   "subtotal": number,                   // sum of all line amounts after voids and discounts, before tax
   "taxable_amount": number,             // sum of lines marked T
   "tax": number,                        // 8% of taxable_amount, rounded to the nearest cent (half up)
@@ -370,7 +370,7 @@ ADDENDUM A (signed 10 September 2026): Monthly rent is reduced to $2,095.00 in e
 meta = dict(
     id='extraction.structured-json', category='extraction', name='Messy Text to Exact JSON',
     description='Invoices, email threads, triage notes, cargo manifests, meeting notes, job ads, receipts and leases with the traps real documents contain: corrections, reschedules, retracted facts, DD/MM dates, unit conversions and relative dates. Each leaf field is scored, so careless readers lose points on exactly the details that matter in production.',
-    difficulty='medium', tags=['extraction', 'json', 'information-extraction', 'dates', 'units'],
+    version='1.1.0', difficulty='medium', tags=['extraction', 'json', 'information-extraction', 'dates', 'units'],
     hook='Eight messy documents, one exact JSON schema. Every field is checked.',
     maxOutputTokens=8000,
     estimate={'inputTokens': int(sum(tok(c['prompt']) for c in cases) / len(cases)) + 20, 'outputTokens': 2500},
