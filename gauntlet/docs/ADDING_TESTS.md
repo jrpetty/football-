@@ -284,6 +284,20 @@ src/programs/fixtures/code-agent/<repo-id>/
   You can also check a repo with the real runner: copy `repo/` somewhere, overlay `fix/`, and run `node --test`.
 * The fixture files are part of the test hash, so editing a repo invalidates old results (bump the version).
 
+**Hard-tier repos** (`"tier": "hard"`) must also: have 15–25 files and 800–1,500 lines; list in `hiddenOnly` the
+fix file(s) of at least one bug that **only** the hidden tests catch (`npm test` checks that the visible suite goes
+green without that fix while at least 3 hidden tests still fail); put first in `bugs` a bug whose fix changes but
+does not end the visible failures (so it masks another bug); and give every bug a `visibility`, a `symptom` (what
+the failing test suggests) and a `spec` note that quotes where the README fixes the correct behaviour. A hidden
+test must never check anything the README does not determine.
+
+**Integrity.** The fixtures, including the hidden tests and the reference fix, are committed in this repository.
+A model called through an API cannot see them: it only gets the prompt and acts through the tool protocol on an
+in-memory copy of `repo/`. But an agent with access to your disk (a coding assistant, a local tool-using harness)
+could read `hidden/` or `fix/`. So don't play Fix the Bug through anything with file-system access. And because
+the test hash covers every fixture file, results produced after anyone edits a fixture (to cheat or by accident)
+carry a different hash and are left out of the leaderboard.
+
 ---
 
 ## 3. Adding an Arena game

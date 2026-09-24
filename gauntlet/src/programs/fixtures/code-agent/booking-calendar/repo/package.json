@@ -1,9 +1,0 @@
-{
-  "name": "booking-calendar",
-  "version": "2.0.3",
-  "private": true,
-  "main": "src/index.js",
-  "scripts": {
-    "test": "node --test"
-  }
-}

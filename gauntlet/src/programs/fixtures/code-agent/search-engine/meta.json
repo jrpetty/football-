@@ -1,0 +1,42 @@
+{
+  "id": "search-engine",
+  "title": "Help-centre search engine",
+  "tier": "hard",
+  "par": 15,
+  "issue": "Users say search highlights look broken on words like \"don't\", and support noticed that identical FAQ entries come back in a different order after every re-index. The test suite is red.",
+  "hiddenOnly": [
+    "src/bm25.js"
+  ],
+  "bugs": [
+    {
+      "file": "src/tokenizer.js",
+      "kind": "off-by-n offsets",
+      "visibility": "visible, misleading",
+      "summary": "A token's end offset uses the normalised word length (apostrophes removed), so highlights and snippets cut words with apostrophes short.",
+      "symptom": "The failing tests are in highlight.test.js and point at highlight.js, which is correct.",
+      "spec": "README, Analysis: \"start / end: character offsets of the original word in the original text, end exclusive (text.slice(start, end) is exactly the word as written, apostrophes included)\"."
+    },
+    {
+      "file": "src/ranking.js",
+      "kind": "missing tie-break",
+      "visibility": "visible only after the first fix (masked)",
+      "summary": "Equal scores keep insertion order instead of being ordered by document id.",
+      "symptom": "The FAQ test first checks the highlighted snippet (fails because of tokenizer.js) and only then the id order. A comment claims the stable sort makes this fine.",
+      "spec": "README, Ranking: \"equal scores are ordered by document id (ascending string order), so results and pages are stable no matter in which order documents were added\"."
+    },
+    {
+      "file": "src/bm25.js",
+      "kind": "wrong formula",
+      "visibility": "hidden tests only",
+      "summary": "idf is ln((N − df + 0.5)/(df + 0.5)) instead of ln(1 + (N − df + 0.5)/(df + 0.5)); it goes negative for words in more than half the documents, which inverts their ranking.",
+      "symptom": "Visible tests only compare the order of rare words, where both formulas agree.",
+      "spec": "README, Ranking: \"idf(t) = ln(1 + (N − df + 0.5) / (df + 0.5))\"."
+    }
+  ],
+  "distractors": [
+    "stemmer.js TODO says \"news\" → \"new\" is too aggressive; the README documents it and a hidden test checks it",
+    "suggest.js TODO calls a correct early exit wrong",
+    "indexing.test.js indexes concurrently with varying delays and looks flaky; it is correct",
+    "query-parser.js TODO about OR/parentheses (out of scope by design)"
+  ]
+}

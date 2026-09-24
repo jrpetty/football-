@@ -1,0 +1,42 @@
+{
+  "id": "fx-ledger",
+  "title": "Multi-currency ledger",
+  "tier": "hard",
+  "par": 15,
+  "issue": "A customer in Germany says her statement shows far more euros than she was sent from the US. Operations also say the FX-fee figures in the new fee report don't reconcile with what customers received. The test suite is red.",
+  "hiddenOnly": [
+    "src/idempotency.js"
+  ],
+  "bugs": [
+    {
+      "file": "src/fx.js",
+      "kind": "inverted rate",
+      "visibility": "visible, misleading",
+      "summary": "When only the reverse pair is quoted (B/A), hop() multiplies by the rate instead of dividing.",
+      "symptom": "The failing test is the EUR statement in statement.test.js, which points at statements.js; statements.js is correct.",
+      "spec": "README, Exchange rates: \"if A/B is quoted, multiply by it; if only B/A is quoted, divide by it\"."
+    },
+    {
+      "file": "src/fees.js",
+      "kind": "wrong base amount",
+      "visibility": "visible only after the first fix (masked)",
+      "summary": "The FX fee is 0.5% of the amount sent (sender currency) instead of 0.5% of the converted amount (receiver currency).",
+      "symptom": "After fixing fx.js the EUR statement is still a few cents off. A comment in fees.js argues for the wrong behaviour.",
+      "spec": "README, Transfers: \"Cross-currency transfers pay 0.5% of the converted amount (in the receiver's currency, rounded half-up to its minor unit)\"."
+    },
+    {
+      "file": "src/idempotency.js",
+      "kind": "async race",
+      "visibility": "hidden tests only",
+      "summary": "A retry that arrives while the first attempt is still running is not recognised (the key is only recorded after the operation finishes), so the transfer happens twice.",
+      "symptom": "The visible idempotency tests retry sequentially, which works.",
+      "spec": "README, Transfers: \"A retry returns the original result — also when the retry arrives while the first attempt is still being processed. A transfer that failed does not use up its key\"."
+    }
+  ],
+  "distractors": [
+    "concurrency.test.js fires 20 transfers at once and looks flaky; the per-account locks make it deterministic",
+    "TODO in accounts.js about negative balances (overdrafts are allowed by design)",
+    "TODO in interest.js about leap years (Actual/365 Fixed is intended)",
+    "the lock manager in locks.js looks intricate but is correct"
+  ]
+}

@@ -1,11 +1,11 @@
 {
   "kind": "program",
   "id": "agentic.code-agent-hard",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "program": "code-agent",
   "name": "Fix the Bug (Hard)",
   "category": "agentic",
-  "description": "The frontier variant of Fix the Bug, on the same tools and sandbox. Larger repositories (10–14 files: an inventory service with an async store, a Markdown converter, a meeting-room booking calendar), each with three interacting bugs whose symptoms point away from their cause: a race condition that only shows under concurrent orders, a shared default object that leaks options between orders, a module-level counter that makes output depend on what ran before, an operator-precedence slip that surfaces as a confusing validation error. The bug report describes symptoms, not causes. 40 actions and 250,000 output tokens; hidden tests check the same behaviour thoroughly, including concurrency invariants.",
+  "description": "The frontier variant of Fix the Bug, on the same tools and sandbox. Three larger repositories (23-25 files, 800+ lines each: a payroll engine, a multi-currency ledger with async storage, a help-centre search engine with BM25 ranking) full of plausible distractors: deprecated modules marked do-not-fix, TODO comments that look like bugs but are not, and tests that look flaky but are correct. Each repo has three bugs. The first is visible but its failing test points at the wrong module; the second only shows up after the first is fixed; the third is caught ONLY by the hidden tests, so the model must read the README spec carefully and check the code against it, not just make the visible tests green. The bug report describes symptoms, not causes. 35 actions and 250,000 output tokens, not enough to read everything.",
   "difficulty": "extreme",
   "tags": [
     "coding",
@@ -16,27 +16,27 @@
     "hidden-tests",
     "hard-mode"
   ],
-  "hook": "Three bugs that hide behind each other, a bug report that points the wrong way, and hidden tests that check the concurrency too.",
+  "hook": "Green visible tests are not enough: one bug per repo is only caught by the hidden tests, and the failing test points at the wrong file.",
   "seeds": [
-    501,
-    602,
-    703
+    811,
+    922,
+    1033
   ],
   "config": {
-    "maxActions": 40,
+    "maxActions": 35,
     "tokenBudget": 250000,
     "keepFull": 6,
     "repos": {
-      "501": "inventory-service",
-      "602": "md-converter",
-      "703": "booking-calendar"
+      "811": "payroll-engine",
+      "922": "fx-ledger",
+      "1033": "search-engine"
     }
   },
   "maxOutputTokens": 16000,
   "timeLimitSec": 5400,
   "estimate": {
-    "inputTokens": 210000,
-    "outputTokens": 45000,
+    "inputTokens": 230000,
+    "outputTokens": 50000,
     "calls": 26
   },
   "author": "Gauntlet Core",

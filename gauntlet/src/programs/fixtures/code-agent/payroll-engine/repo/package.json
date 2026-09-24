@@ -1,0 +1,9 @@
+{
+  "name": "payroll-engine",
+  "version": "4.2.0",
+  "private": true,
+  "main": "src/index.js",
+  "scripts": {
+    "test": "node --test"
+  }
+}

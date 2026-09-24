@@ -20,6 +20,12 @@ export interface RepoBug {
   file: string;
   kind: string;
   summary: string;
+  /** How the bug shows itself: "visible, misleading", "visible only after the first fix (masked)", "hidden tests only". */
+  visibility?: string;
+  /** What the failing test suggests, and why that is misleading. */
+  symptom?: string;
+  /** Where the README/spec defines the correct behaviour (fairness note). */
+  spec?: string;
 }
 
 export interface RepoMeta {
@@ -32,6 +38,10 @@ export interface RepoMeta {
   issue: string;
   /** Answer key. Never sent to the model. */
   bugs: RepoBug[];
+  /** Reference-fix files of the bugs that ONLY the hidden tests catch (the visible suite passes without them). */
+  hiddenOnly?: string[];
+  /** Deliberate red herrings in the repo (documentation only). */
+  distractors?: string[];
 }
 
 export interface FixtureRepo {

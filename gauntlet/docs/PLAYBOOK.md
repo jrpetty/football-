@@ -147,8 +147,8 @@ builds the raw material for the video. Nothing here calls a model or costs money
 ## Coding-agent episode: Fix the Bug
 
 **What it is.** Each case drops the model into a small, real JavaScript project (an invoice calculator, a
-text-adventure parser, a date library, an API client with a cache; the hard tier has an inventory service, a
-Markdown converter and a booking calendar). The project's tests are red because of two or three planted bugs.
+text-adventure parser, a date library, an API client with a cache; the hard tier has a payroll engine, a
+multi-currency ledger and a help-centre search engine). The project's tests are red because of two or three planted bugs.
 The model works like a developer in a terminal, one action per turn: list files, read a file, search, edit
 (rewrite a file or patch a few lines), run the tests, and finally submit. It never sees the answer.
 
@@ -162,9 +162,15 @@ refused and costs points. Doing nothing scores 0, which is exactly what the Rand
 
 * Standard: hand-pick **Fix the Bug** (`agentic.code-agent`) in New Run: 4 repos, 30 actions each. It's not in
   `core`, so it doesn't change the published Index.
-* Hard: **Fix the Bug (Hard)** (`agentic.code-agent-hard`) is part of `frontier`: 3 bigger repos, 40 actions.
+* Hard: **Fix the Bug (Hard)** (`agentic.code-agent-hard`) is part of `frontier`: 3 repos of about 25 files and
+  800+ lines, 35 actions (not enough to read everything). Each repo has three bugs. The first one's failing test
+  points at the wrong file. The second only appears once the first is fixed. The third is caught **only by the
+  hidden tests**: the visible suite goes green without fixing it, so only a model that checks the code against the
+  README finds it. The repos are full of red herrings (a deprecated module marked "do not fix", TODOs that look like
+  bugs, tests that look flaky but aren't). A model that just makes the visible tests green scores about 0.6, and one
+  that fixes everything about 0.98. For the story on screen: "all green… and the hidden tests still fail".
 * Cost: roughly 15–25 model calls per case with a growing (but capped) conversation, about 110k input tokens
-  per standard case and 210k per hard case. Check the Cost Planner before a big run.
+  per standard case and 230k per hard case. Check the Cost Planner before a big run.
 * Manual models work too: every turn appears in the **Manual Inbox**. Paste each new message into the same
   chat (or use the combined prompt in a new chat) and paste the reply back, including its `ACTION:` line.
 
