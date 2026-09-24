@@ -45,7 +45,7 @@ This checks the install, the dashboard, the Live Arena and the replays without s
   landing.
 * **Run detail → a simulation case → Replay** for the story beats: the Survival Island map, the Escape Room
   moves, The Startup's cash curve against the oracle, the Liar's Table interrogation, the Draw It Blind
-  side-by-side.
+  side-by-side, and Fix the Bug's file tree, diffs and test bar going from red to green.
 * **Leaderboard** for the reveal: Index with confidence intervals, category heatmap, medal table, and the
   score-vs-cost chart with the Pareto frontier.
 * Games from **Build a Game in One Shot** are playable inside the result inspector, and there's a screenshot
@@ -143,6 +143,37 @@ builds the raw material for the video. Nothing here calls a model or costs money
    board, and the champion.
 6. **If it stops** (spending cap, outage, Ctrl+C): Resume. Finished games are kept; games that were in progress
    start again from the beginning.
+
+## Coding-agent episode: Fix the Bug
+
+**What it is.** Each case drops the model into a small, real JavaScript project (an invoice calculator, a
+text-adventure parser, a date library, an API client with a cache; the hard tier has an inventory service, a
+Markdown converter and a booking calendar). The project's tests are red because of two or three planted bugs.
+The model works like a developer in a terminal, one action per turn: list files, read a file, search, edit
+(rewrite a file or patch a few lines), run the tests, and finally submit. It never sees the answer.
+
+**How it's scored.** After it submits, a second, larger set of **hidden tests** that it never saw checks the
+same behaviour more thoroughly, so hard-coding the visible tests doesn't work. The score is mostly "what share
+of the broken hidden tests now pass" (breaking code that used to work counts against it), a bit for the visible
+tests, and a small bonus for using fewer actions and tokens. Test files are locked: trying to edit them is
+refused and costs points. Doing nothing scores 0, which is exactly what the Random Baseline gets.
+
+**Running it.**
+
+* Standard: hand-pick **Fix the Bug** (`agentic.code-agent`) in New Run: 4 repos, 30 actions each. It's not in
+  `core`, so it doesn't change the published Index.
+* Hard: **Fix the Bug (Hard)** (`agentic.code-agent-hard`) is part of `frontier`: 3 bigger repos, 40 actions.
+* Cost: roughly 15–25 model calls per case with a growing (but capped) conversation, about 110k input tokens
+  per standard case and 210k per hard case. Check the Cost Planner before a big run.
+* Manual models work too: every turn appears in the **Manual Inbox**. Paste each new message into the same
+  chat (or use the combined prompt in a new chat) and paste the reply back, including its `ACTION:` line.
+
+**Filming it.** Open a case's **Replay** and press **F** (or **B** for Broadcast mode). The left panel is the
+repository: the file the model is touching lights up, and changed files get an **M**. The centre shows what it
+did this turn: the lines it read, or a red/green diff of its edit. On the right, the **visible tests** bar goes
+from red to green each time it runs the tests, with its action and token budgets underneath. The last frame is
+the verdict: how many hidden tests pass. The **changes.diff** artifact in the inspector is the model's full
+patch, and the score breakdown lists the planted bugs (the answer key) so you can explain them on screen.
 
 ## Cost-saving tips
 

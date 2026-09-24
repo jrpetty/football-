@@ -73,6 +73,17 @@ export function programSourceHash(programId: string): string {
       // Only hash program code, not the shared core (core changes are covered by the protocol version).
       if (target.startsWith(PROGRAMS_DIR)) visit(target);
     }
+    // Data a program loads at run time: `new URL('./worker.mjs', import.meta.url)` or a fixture folder.
+    for (const m of src.matchAll(/new URL\(\s*['"](\.{1,2}\/[^'"]*)['"]\s*,\s*import\.meta\.url\s*\)/g)) {
+      const target = resolve(dirname(file), m[1]!);
+      if (target.startsWith(PROGRAMS_DIR)) visitData(target);
+    }
+  };
+  const visitData = (target: string) => {
+    if (!existsSync(target)) return;
+    if (statSync(target).isDirectory()) {
+      for (const name of readdirSync(target).sort()) visitData(join(target, name));
+    } else files.add(target);
   };
   visit(entry);
   const sorted = [...files].sort();

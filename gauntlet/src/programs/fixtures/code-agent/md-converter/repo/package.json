@@ -1,0 +1,9 @@
+{
+  "name": "md-converter",
+  "version": "1.8.0",
+  "private": true,
+  "main": "src/index.js",
+  "scripts": {
+    "test": "node --test"
+  }
+}

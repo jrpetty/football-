@@ -10,6 +10,7 @@ import { Icon } from './icons.tsx';
 import { cx } from './ui.tsx';
 import { LineChart } from './charts/LineChart.tsx';
 import { usePrefs, useViewerCaption } from '../context.tsx';
+import { CodeAgentStage } from './CodeAgentReplay.tsx';
 
 const SPEEDS = [0.5, 1, 2, 4];
 const BASE_MS = 1100;
@@ -293,7 +294,8 @@ export function ReplayPlayer({ replay, autoPlay = false, context, startStep }: {
         <div className="chart-empty">This replay has no frames.</div>
       ) : null}
 
-      {frame && (
+      {frame?.code && <CodeAgentStage frame={frame} video={video} />}
+      {frame && !frame.code && (
         <div className={cx('replay-stage', hasGrid ? 'with-grid' : 'no-grid')}>
           {hasGrid && (
             <div className="stage-map">

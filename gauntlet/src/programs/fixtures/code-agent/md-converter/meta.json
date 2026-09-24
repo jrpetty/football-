@@ -1,0 +1,24 @@
+{
+  "id": "md-converter",
+  "title": "Markdown to HTML converter",
+  "tier": "hard",
+  "par": 13,
+  "issue": "After a deploy, table-of-contents links stopped working on some pages of the docs site (the anchors no longer match), bold text looks broken in the changelog, and some pages end with a strange extra bullet list.",
+  "bugs": [
+    {
+      "file": "src/inline.js",
+      "kind": "greedy regex",
+      "summary": "Strong/emphasis regexes are greedy, so two spans on one line merge."
+    },
+    {
+      "file": "src/slug.js",
+      "kind": "shared mutable state",
+      "summary": "The heading-id counter is module-level and never reset, so ids drift between documents and between toHtml and toc."
+    },
+    {
+      "file": "src/blocks.js",
+      "kind": "off-by-one",
+      "summary": "collectList stops at tokens.length - 1, splitting a list that ends the document."
+    }
+  ]
+}

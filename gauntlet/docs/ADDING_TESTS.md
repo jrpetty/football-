@@ -260,6 +260,30 @@ Program guidelines:
 * The program's source code is part of the test hash, so a code change invalidates old results like a
   prompt change does.
 
+### Adding a repo to Fix the Bug
+
+Fix the Bug (`src/programs/code-agent.ts`) plays committed fixture repos, so adding a case needs no program code:
+
+```
+src/programs/fixtures/code-agent/<repo-id>/
+  meta.json   { "id", "title", "tier": "standard" | "hard", "par", "issue", "bugs": [{ "file", "kind", "summary" }] }
+  repo/       what the model sees: README.md, package.json, src/*.js, tests/*.test.js (CommonJS, node:test + node:assert/strict)
+  hidden/     hidden tests, e.g. hidden/foo.hidden.test.js (run as tests/foo.test.js, requiring ../src/…)
+  fix/        the reference fix: only the files you changed, at the same paths as in repo/
+```
+
+* `issue` is the bug report the model reads (symptoms, not causes). `bugs` is the answer key: it is shown in
+  results, never to the model. `par` is how many actions a competent engineer needs (explore, fix, re-run,
+  submit); it only affects the 10% efficiency bonus.
+* Keep repos to 5–15 files and 1–3 bugs. Hidden tests should check the **same behaviour** as the visible
+  ones, more thoroughly (other inputs, edge cases, invariants), so hard-coding visible outputs fails. Include a
+  few that pass on the original code, so a sloppy rewrite that breaks working code loses points.
+* Map a seed to the repo in the test JSON: `"config": { "repos": { "808": "<repo-id>" } }`.
+* `npm test` then proves, for every repo, that the original fails, the reference fix passes every visible and
+  hidden test, fixing only one of the changed files is not enough, and a scripted engineer scores ≥ 0.95.
+  You can also check a repo with the real runner: copy `repo/` somewhere, overlay `fix/`, and run `node --test`.
+* The fixture files are part of the test hash, so editing a repo invalidates old results (bump the version).
+
 ---
 
 ## 3. Adding an Arena game

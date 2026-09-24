@@ -1,0 +1,24 @@
+{
+  "id": "lru-client",
+  "title": "LRU cache + API client",
+  "tier": "standard",
+  "par": 10,
+  "issue": "The dashboard hammers the backend: the same user is fetched several times at once, popular entries keep getting evicted from the cache, and getUsers() crashes.",
+  "bugs": [
+    {
+      "file": "src/lru.js",
+      "kind": "wrong behaviour",
+      "summary": "get() does not move the entry to most-recently-used."
+    },
+    {
+      "file": "src/client.js",
+      "kind": "async ordering",
+      "summary": "The in-flight request is registered only after it has been awaited, so concurrent calls are never de-duplicated."
+    },
+    {
+      "file": "src/client.js",
+      "kind": "lost this binding",
+      "summary": "getUsers passes this.getUser unbound to map()."
+    }
+  ]
+}

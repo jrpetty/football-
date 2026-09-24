@@ -1,0 +1,19 @@
+{
+  "id": "invoice-calc",
+  "title": "Invoice calculator",
+  "tier": "standard",
+  "par": 8,
+  "issue": "Customers report that some invoices are a cent or more off, and that orders with a discount seem to be charged too much tax. The test suite is red. Make the library follow its README.",
+  "bugs": [
+    {
+      "file": "src/money.js",
+      "kind": "rounding",
+      "summary": "toCents truncates with Math.floor, so 19.99 becomes 1998 cents; it must round to the nearest cent."
+    },
+    {
+      "file": "src/invoice.js",
+      "kind": "wrong order of operations",
+      "summary": "Tax is computed on the undiscounted subtotal; it must be charged on subtotal minus discount."
+    }
+  ]
+}
