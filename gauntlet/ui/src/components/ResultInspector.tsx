@@ -66,7 +66,7 @@ function Breakdown({ r, names }: { r: CaseResult; names?: Map<string, string> })
 export function ScoreBreakdownView({ d, passed, humanScores, names }: { d: ScoreDetail; passed: boolean | null; humanScores?: CaseResult['humanScores']; names?: Map<string, string> }) {
   const r = { passed, humanScores };
   const known = new Set(['extracted', 'expected', 'formatOk', 'items', 'judge', 'notes']);
-  const extra = Object.entries(d).filter(([k]) => !known.has(k));
+  const extra = Object.entries(d).filter(([k, v]) => !known.has(k) && v !== undefined);
   return (
     <div className="stack loose">
       {(d.extracted !== undefined || d.expected !== undefined) && (
