@@ -182,6 +182,42 @@ from red to green each time it runs the tests, with its action and token budgets
 the verdict: how many hidden tests pass. The **changes.diff** artifact in the inspector is the model's full
 patch, and the score breakdown lists the planted bugs (the answer key) so you can explain them on screen.
 
+## Long-context, drawing and picture tests on screen
+
+Open a run, click a cell and pick the **Replay** tab (programs) or the **Score** tab (everything else). Every view
+starts with a big headline that says what happened, coloured green (right), amber (nearly / fooled) or red
+(wrong), with the key number on the right. Use ← → to step, Space to play, the speed menu for 0.5×–4× and **F**
+for full screen; press **B** for Broadcast mode.
+
+* **Needle in a Haystack.** The whole document is one long bar, start to end. Each pin is a hidden fact at the
+  point where it becomes answerable; pins turn green (found), amber (took the look-alike decoy or the old,
+  corrected value) or red (wrong / gave up) as the replay reaches them. The current question's clues are joined
+  by an arc and its decoys are amber diamonds. Below: the model's answer next to the correct one, the actual
+  sentences zoomed in (with the decoy sentence), and **Who reads to the end?**, the found-rate at the start,
+  middle and end of the document.
+* **Chain of Whispers.** Every fact is a lane flowing through the rewrites (short summary, long story, again…).
+  Solid green = still intact, dashed amber = the wording drifted so it no longer counts (the box shows *Was* and
+  *Now*), a red cross = gone. Under it is the text of that rewrite with every surviving fact highlighted, a word
+  meter, and the running "still alive" list, which becomes **What survived** on the last step.
+* **Draw It Blind.** Step 1 shows the original with numbered shapes next to the model's description; hover a
+  highlighted phrase to find its shape (and see deleted numbers struck out). Step 2 compares the pictures three
+  ways: side by side with a line and a score between each matched pair, **Onion skin** (drag to blend) and
+  **Difference** (black = identical). Then one step per shape with its type / colour / position / size bars.
+* **Precise SVG Illustration and Build a Game in One Shot.** A gallery card: the big render, every automatic
+  check, the judges as bars with their reasons. SVGs get the prompt's requirements as dashed guides (where the
+  clock hands must point, where each bar or chess piece must be) and a table of values the app measured from the
+  SVG code; the measurements are for viewers only and never change the score. Games show the checker's
+  screenshot, a **Does it work?** list and a big **Play it** button that runs the game in a locked-down frame.
+* **Vision tests.** The model's answer is drawn on the picture it saw: for spot-the-difference and board
+  questions, the cells it named (green right, red wrong) and the ones it missed (dashed); for counting, every
+  shape that should be counted, numbered; for charts, the bars or points the question is about; for handwriting,
+  the truly wrong line and the one the model blamed. Its answer sits next to the answer key.
+
+In the **Presenter**, each of these tests gets an extra **answer vs truth** slide after its results: every
+model's document strip, the "what survived" grid, the original next to every redrawing, every SVG or game side
+by side, or the picture with the answer key and each model's answer. Try it with no keys: open the dashboard
+with `?mock=1` and the run *Long context & drawing · replays* (or *Vision · picture questions*).
+
 ## Arena episode: poker, debates and mock trials
 
 1. **Poker:** Arena → New tournament → *Heads-up Poker*, 4 or 8 models, *Hands per match* 20 (40 for a closer

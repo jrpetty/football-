@@ -195,6 +195,11 @@ What you need to know:
   drawn by `verification/vision/build.mts` from seeded data and rendered to PNG in headless Chromium, so every
   answer key is computed from the same numbers that drew the picture. Run `node verification/vision/build.mts`
   only when you mean to publish a new version: a different Chromium or font set can change the image bytes.
+* **Answer overlays.** The generators also report where things are in each picture (grids, the shapes being
+  counted, the chart bars a question is about, the numbered lines of handwriting). After changing a generator,
+  run `node verification/vision/layouts.mts`: it rewrites `ui/src/components/viz/vision-layouts.json`, which the
+  result inspector and the Presenter use to draw the model's answer and the answer key on the picture. It refuses
+  to write anything if a regenerated prompt or answer key no longer matches the committed test file.
 
 ---
 
@@ -257,6 +262,13 @@ Program guidelines:
   every program a meaningful floor.
 * **Replays.** Return frames with `grid`, `stats`, `series` or `svgCompare` data. The dashboard animates
   them and they look good on video.
+* **Richer replay views.** A program can also return `replay.visual = { kind, data }`: extra, display-only data
+  for a custom stage (Needle in a Haystack sends the planted passages, Chain of Whispers the text of every rewrite
+  with where each fact sits, Draw It Blind its word limit). It is never sent to the model or scored. Custom
+  stages live in `ui/src/components/viz/` and are picked in `viz/replayStages.tsx`; they must still draw
+  something sensible for older results that lack `visual`. Adding it changes the program's source hash, so bump
+  the test's patch version and add a test proving prompts and scores are byte-identical (see
+  `test/visual-pass-long-context.test.ts`).
 * The program's source code is part of the test hash, so a code change invalidates old results like a
   prompt change does.
 
