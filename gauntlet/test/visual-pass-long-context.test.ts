@@ -17,6 +17,7 @@ import { program as needle, buildHaystack, readConfig as readNhConfig } from '..
 import { program as whispers, buildStory, readConfig as readCwConfig } from '../src/programs/chain-of-whispers.ts';
 import { program as draw, buildScene, readConfig as readDibConfig } from '../src/programs/draw-it-blind.ts';
 import { factPresent } from '../src/programs/lib/chain-of-whispers-story.ts';
+import { traceFact } from '../src/programs/lib/chain-of-whispers-trace.ts';
 import type { SourceStory } from '../src/programs/lib/chain-of-whispers-story.ts';
 import { countWords } from '../src/programs/lib/needle-haystack-normalize.ts';
 import { createFakeModel, createTestContext, mockBaselineResponder } from './helpers/fake-model.ts';
@@ -111,4 +112,52 @@ test('visual pass: prompts and scores are byte-identical to before the visual da
   const all = await runAll();
   if (process.env.PRINT_FINGERPRINTS) console.log(JSON.stringify(Object.fromEntries(Object.entries(all).map(([k, v]) => [k, `${v.fp} · ${v.result.summary}`])), null, 2));
   for (const [name, fp] of Object.entries(BEFORE)) assert.equal(all[name]!.fp, fp, name);
+});
+
+// ───────────────────────────── New replay data (display only) ─────────────────────────────
+
+test('visual pass: needle replay carries every planted sentence and decoy with its depth', async () => {
+  const cfg = { targetWords: 12_000 };
+  const h = buildHaystack(createRng(101).fork('needle-haystack'), readNhConfig({ ...needle.defaults, ...cfg }));
+  const { result } = await play(needle, 101, needlePlayer(101, cfg), cfg);
+  const v = result.replay?.visual;
+  assert.equal(v?.kind, 'needle-haystack');
+  const data = v!.data as { words: number; needles: Array<{ id: string; parts: Array<{ text: string; depth: number }>; decoys: Array<{ text: string; depth: number }> }> };
+  assert.equal(data.words, h.words);
+  assert.equal(data.needles.length, h.needles.length);
+  for (const n of h.needles) {
+    const d = data.needles.find((x) => x.id === `Q${n.n}`)!;
+    assert.deepEqual(d.parts.map((p) => p.text), n.parts);
+    assert.deepEqual(d.parts.map((p) => p.depth), n.depths);
+    assert.deepEqual(d.decoys.map((p) => p.text), n.distractors);
+    for (const p of [...d.parts, ...d.decoys]) assert.ok(h.text.includes(p.text), 'passage is in the document');
+  }
+});
+
+test('visual pass: whispers trace marks facts kept, drifted and lost', async () => {
+  const story = buildStory({ rng: createRng(404) }, readCwConfig(whispers.defaults ?? {}));
+  const numeric = story.facts.find((f) => f.groups.length === 2 && f.groups[0]!.every((a) => /^\d+$/.test(a)))!;
+  const num = Number(numeric.groups[0]![0]);
+  const unit = numeric.groups[1]![0]!;
+  assert.equal(traceFact(`The ship came in. It carried ${num} ${unit} that night.`, numeric).status, 'kept');
+  const drift = traceFact(`It carried ${num + 9} ${unit} that night. Nobody slept.`, numeric);
+  assert.equal(drift.status, 'changed');
+  assert.match(drift.sentence!, new RegExp(String(num + 9)));
+  assert.equal(traceFact('People would tell the story for years.', numeric).status, 'lost');
+  const { result } = await play(whispers, 404, whispersPlayer(story), {});
+  const data = result.replay!.visual!.data as { facts: unknown[]; source: { trace: Record<string, { status: string }> }; rounds: Array<{ trace: Record<string, { status: string }> }> };
+  assert.equal(data.facts.length, story.facts.length);
+  assert.ok(Object.values(data.source.trace).every((t) => t.status === 'kept'), 'every fact is in the source');
+  const detail = result.detail as { rounds: Array<{ facts: number }> };
+  data.rounds.forEach((r, i) => assert.equal(Object.values(r.trace).filter((t) => t.status === 'kept').length, detail.rounds[i]!.facts, 'kept = the scorer’s count'));
+});
+
+test('visual pass: Draw It Blind replay records the word limit and unmatched shapes', async () => {
+  const { result } = await play(draw, 202, drawPlayer(202, DIB_HARD), DIB_HARD);
+  const data = result.replay!.visual!.data as { limit: number; hyphenSplit: boolean; canvas: number; extras: unknown[]; angles: Array<number | null> };
+  assert.equal(data.limit, 90);
+  assert.equal(data.hyphenSplit, true);
+  assert.equal(data.canvas, 400);
+  assert.equal(data.extras.length, (result.detail as { extras: number }).extras);
+  assert.equal(data.angles.length, (result.detail as { scene: unknown[] }).scene.length);
 });

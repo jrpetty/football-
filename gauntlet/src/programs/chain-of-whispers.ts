@@ -8,6 +8,7 @@ import type { ProgramContext, ProgramDefinition, ProgramResult, ReplayFrame } fr
 import { extractCodeBlock } from '../core/extract.ts';
 import { generateStory, STORY_IDS, survivingFacts } from './lib/chain-of-whispers-story.ts';
 import type { FactSpec, SourceStory, StoryId } from './lib/chain-of-whispers-story.ts';
+import { traceFacts } from './lib/chain-of-whispers-trace.ts';
 import { countWords, truncateWords } from './lib/needle-haystack-normalize.ts';
 
 export { truncateWords };
@@ -258,6 +259,14 @@ export const program: ProgramDefinition = {
         gauges: ['survival'],
         frames,
         series: [{ name: 'Facts surviving', points }],
+        visual: {
+          kind: 'chain-of-whispers',
+          data: {
+            facts: facts.map((f) => ({ id: f.id, label: f.label, canonical: f.canonical })),
+            source: { text: story.text, trace: traceFacts(story.text, facts) },
+            rounds: rounds.map((r) => ({ round: r.round, kind: r.kind, text: r.text, trace: r.failed ? {} : traceFacts(r.text, facts) })),
+          },
+        },
       },
     };
   },

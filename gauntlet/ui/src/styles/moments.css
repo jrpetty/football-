@@ -1,0 +1,335 @@
+/* Presenter "answer vs truth" slides (components/present/MomentSlide.tsx). The stage is a fixed 1920×1080, so sizes are px. */
+.s-moment {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-height: 0;
+}
+.mo-head {
+  display: grid;
+  gap: 8px;
+}
+.mo-title {
+  margin: 4px 0 0;
+  font-size: 58px;
+  font-weight: 850;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+}
+.mo-sub {
+  font-size: 24px;
+  line-height: 1.35;
+  color: var(--text-2);
+  max-width: 1500px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.mo-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.mo-who i {
+  width: 8px;
+  height: 34px;
+  border-radius: 4px;
+  background: var(--c);
+  flex: none;
+}
+.mo-who b {
+  font-size: 26px;
+  font-weight: 750;
+  line-height: 1.1;
+}
+.mo-none {
+  font-size: 22px;
+  color: var(--text-3);
+}
+
+/* Needle rows */
+.mo-rows {
+  display: grid;
+  gap: 10px;
+  flex: 1;
+  align-content: center;
+}
+.mo-row {
+  display: grid;
+  grid-template-columns: 330px minmax(0, 1fr) 150px;
+  align-items: center;
+  gap: 24px;
+  padding: 10px 18px;
+  border-radius: 14px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+}
+.mo-row.base,
+.mo-grow.base,
+.mo-ans.base {
+  opacity: 0.7;
+}
+.mo-stat {
+  display: grid;
+  justify-items: end;
+}
+.mo-stat b {
+  font-size: 40px;
+  font-weight: 850;
+  line-height: 1;
+}
+.mo-stat small {
+  font-size: 18px;
+  color: var(--text-2);
+}
+.mo-axis {
+  display: grid;
+  grid-template-columns: 330px minmax(0, 1fr) 150px;
+  gap: 24px;
+  padding: 0 18px;
+  margin-top: -8px;
+  font-size: 20px;
+  color: var(--text-3);
+}
+.mo-axis > span {
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Whispers grid */
+.mo-grid {
+  display: grid;
+  grid-template-columns: 300px repeat(var(--n), minmax(0, 1fr)) 110px;
+  align-items: end;
+  gap: 8px 4px;
+  flex: 1;
+  align-content: center;
+}
+.mo-fact {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-2);
+  text-align: center;
+  line-height: 1.15;
+  padding-bottom: 8px;
+  overflow-wrap: anywhere;
+}
+.mo-fact.total {
+  color: var(--text-1);
+}
+.mo-grow {
+  display: contents;
+}
+.mo-grow > * {
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.mo-cell {
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  font-weight: 850;
+}
+.mo-cell .vz-ic {
+  width: 30px;
+  height: 30px;
+}
+
+/* Galleries */
+.mo-gallery {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  gap: 26px;
+}
+.mo-gallery.with-target {
+  grid-template-columns: 420px minmax(0, 1fr);
+  align-items: start;
+}
+.mo-tiles {
+  display: grid;
+  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+  gap: 20px;
+  align-content: start;
+}
+.mo-tile {
+  margin: 0;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  min-width: 0;
+}
+.mo-tile img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 10px;
+}
+.mo-gallery:not(.with-target) .mo-tile img {
+  max-height: 300px;
+}
+.mo-tile.wide img {
+  aspect-ratio: 3 / 2;
+  background: #000;
+}
+.mo-tile.target {
+  border-color: var(--accent-line);
+}
+.mo-tile figcaption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+.mo-tile figcaption > b {
+  font-size: 26px;
+}
+.mo-score {
+  font-size: 40px;
+  font-weight: 850;
+}
+.mo-score.good {
+  color: var(--good-text);
+}
+.mo-score.warn {
+  color: var(--warn-text);
+}
+.mo-score.bad {
+  color: var(--bad-text);
+}
+.mo-fails {
+  display: grid;
+  gap: 4px;
+  font-size: 19px;
+  color: var(--text-2);
+}
+.mo-fails span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Vision */
+.mo-vision {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 30px;
+  align-items: start;
+}
+.mo-vfig {
+  position: relative;
+  margin: 0;
+  width: min(100%, calc(570px * var(--ar, 1.5)));
+  justify-self: center;
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.mo-vfig img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.mo-vfig:not([style]) img {
+  position: static;
+  height: auto;
+}
+.mo-answers {
+  display: grid;
+  gap: 10px;
+}
+.mo-key {
+  display: grid;
+  gap: 4px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  border: 2px solid var(--accent-line);
+  background: var(--accent-soft);
+}
+.mo-key b {
+  font-size: 32px;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+.mo-ans {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-left: 6px solid var(--text-3);
+}
+.mo-ans.good {
+  border-left-color: var(--good);
+}
+.mo-ans.bad {
+  border-left-color: var(--bad);
+}
+.mo-ans.skip {
+  opacity: 0.6;
+}
+.mo-said {
+  font-size: 26px;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.mo-ans .vz-ic {
+  width: 34px;
+  height: 34px;
+}
+.mo-ans .vz-chip {
+  font-size: 22px;
+}
+.mo-gallery {
+  overflow: hidden;
+}
+.mo-tiles .mo-tile img {
+  max-height: 470px;
+}
+.mo-tiles.two-rows .mo-tile img {
+  max-height: 210px;
+}
+.mo-tile .mo-who b {
+  font-size: 22px;
+}
+.mo-tiles.two-rows .mo-tile img {
+  max-height: 236px;
+}
+.mo-tile .mo-who b {
+  white-space: normal;
+  overflow: visible;
+}
+.mo-tiles.two-rows .mo-tile img {
+  height: 172px;
+  width: auto;
+  max-width: 100%;
+  aspect-ratio: auto;
+  justify-self: center;
+}
+.mo-tiles.two-rows .mo-tile.wide img {
+  aspect-ratio: 3 / 2;
+}
+.mo-tiles .mo-tile .mo-none {
+  min-height: 120px;
+}
+.mo-vfig:not([style]) img {
+  max-height: 570px;
+  object-fit: contain;
+}

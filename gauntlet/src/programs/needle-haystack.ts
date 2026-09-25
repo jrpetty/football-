@@ -54,12 +54,21 @@ export interface PlantedNeedle extends NeedleSpec {
   distractorDepths: number[];
 }
 
+/** A planted sentence with its neighbours, for the replay's "zoom into the passage" view (display only). */
+export interface Passage {
+  before?: string;
+  text: string;
+  after?: string;
+}
+
 export interface Haystack {
   city: string;
   text: string;
   words: number;
   chapters: number;
   needles: PlantedNeedle[];
+  /** Planted sentence (tag n<i>p<j> / n<i>d<j>) → the sentence with its neighbours. */
+  passages?: Map<string, Passage>;
 }
 
 interface Insertion {
@@ -155,28 +164,32 @@ export function plant(chapters: Chapter[], insertions: Insertion[]): void {
 }
 
 /** Renders the document and measures the depth (% of words before it) of every tagged sentence. */
-export function render(city: string, firstYear: number, chapters: Chapter[]): { text: string; words: number; depthOf: Map<string, number> } {
+export function render(city: string, firstYear: number, chapters: Chapter[]): { text: string; words: number; depthOf: Map<string, number>; passages: Map<string, Passage> } {
   const lastYear = chapters.length ? Number(chapters[chapters.length - 1]!.title.match(/\((\d+)\)$/)?.[1] ?? firstYear) : firstYear;
   const blocks: string[] = [
     `THE CHRONICLE OF ${city.toUpperCase()}`,
     `Being an account of the city of ${city} from the year ${firstYear} to the year ${lastYear}, set down by its chroniclers.`,
   ];
   const offsets = new Map<string, number>();
+  const passages = new Map<string, Passage>();
   let words = blocks.reduce((a, b) => a + sentenceWords(b), 0);
   for (const ch of chapters) {
     blocks.push(ch.title);
     words += sentenceWords(ch.title);
     for (const para of ch.paragraphs) {
-      for (const s of para) {
-        if (s.tag) offsets.set(s.tag, words);
+      para.forEach((s, k) => {
+        if (s.tag) {
+          offsets.set(s.tag, words);
+          passages.set(s.tag, { before: para[k - 1]?.text, text: s.text, after: para[k + 1]?.text });
+        }
         words += sentenceWords(s.text);
-      }
+      });
       blocks.push(para.map((s) => s.text).join(' '));
     }
   }
   const depthOf = new Map<string, number>();
   for (const [tag, off] of offsets) depthOf.set(tag, round1((off / words) * 100));
-  return { text: blocks.join('\n\n'), words, depthOf };
+  return { text: blocks.join('\n\n'), words, depthOf, passages };
 }
 
 export function buildHaystack(rng: Rng, cfg: NhConfig): Haystack {
@@ -201,7 +214,7 @@ export function buildHaystack(rng: Rng, cfg: NhConfig): Haystack {
     n.distractors.forEach((text, j) => insertions.push({ tag: `n${i}d${j}`, text, depth: plan.distractors[i]![j]! }));
   });
   plant(chapters, insertions);
-  const { text, words, depthOf } = render(world.city, world.startYear, chapters);
+  const { text, words, depthOf, passages } = render(world.city, world.startYear, chapters);
 
   const needles: PlantedNeedle[] = specs.map((n, i) => {
     const depths = n.parts.map((_, j) => depthOf.get(`n${i}p${j}`)!);
@@ -213,7 +226,7 @@ export function buildHaystack(rng: Rng, cfg: NhConfig): Haystack {
       distractorDepths: n.distractors.map((_, j) => depthOf.get(`n${i}d${j}`)!),
     };
   });
-  return { city: world.city, text, words, chapters: chapters.length, needles };
+  return { city: world.city, text, words, chapters: chapters.length, needles, passages };
 }
 
 export function buildPrompt(h: Haystack): string {
@@ -304,6 +317,19 @@ const KIND_LABEL: Record<NeedleKind, string> = {
 };
 const KIND_PRIORITY: NeedleKind[] = ['three-hop', 'multi-hop', 'superseded', 'aggregate', 'single'];
 const BUCKETS = [0, 20, 40, 60, 80];
+
+/** Replay-only data for the document strip and passage zoom: every planted sentence and decoy with its neighbours. */
+export function visualData(h: Haystack): Record<string, unknown> {
+  const at = (tag: string, depth: number | undefined) => ({ depth: depth ?? null, ...(h.passages?.get(tag) ?? { text: '' }) });
+  return {
+    words: h.words,
+    needles: h.needles.map((n) => ({
+      id: `Q${n.n}`,
+      parts: n.parts.map((_, j) => at(`n${n.n - 1}p${j}`, n.depths[j])),
+      decoys: n.distractors.map((_, j) => at(`n${n.n - 1}d${j}`, n.distractorDepths[j])),
+    })),
+  };
+}
 
 export const program: ProgramDefinition = {
   id: 'needle-haystack',
@@ -418,6 +444,7 @@ export const program: ProgramDefinition = {
             points: byDepth.filter((b) => b.total > 0).map((b) => ({ x: b.from + 10, y: Math.round((b.correct / b.total) * 100) })),
           },
         ],
+        visual: { kind: 'needle-haystack', data: visualData(h) },
       },
     };
   },

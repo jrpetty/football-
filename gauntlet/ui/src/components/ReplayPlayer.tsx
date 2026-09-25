@@ -11,6 +11,7 @@ import { cx } from './ui.tsx';
 import { LineChart } from './charts/LineChart.tsx';
 import { usePrefs, useViewerCaption } from '../context.tsx';
 import { CodeAgentStage } from './CodeAgentReplay.tsx';
+import { CustomReplayStage, stageKind } from './viz/replayStages.tsx';
 
 const SPEEDS = [0.5, 1, 2, 4];
 const BASE_MS = 1100;
@@ -26,6 +27,8 @@ export interface ReplayContext {
   caseId?: string;
   summary?: string;
   score?: number | null;
+  /** The result's score detail: lets test-specific stages (viz/replayStages.tsx) draw richer views. */
+  detail?: unknown;
 }
 
 /** One plain-English sentence for the current turn. */
@@ -155,6 +158,8 @@ export function ReplayPlayer({ replay, autoPlay = false, context, startStep }: {
   /** Video mode: broadcast or full screen — title bar, big map, captions, auto-play. */
   const video = broadcast || isFs;
   const atEnd = frames.length > 0 && idx >= frames.length - 1;
+  /** A richer test-specific view (needle strip, fact river, drawing overlay) when the result supports one. */
+  const custom = useMemo(() => stageKind(replay, context?.detail), [replay, context?.detail]);
 
   useEffect(() => {
     if (!playing) return;
@@ -255,7 +260,7 @@ export function ReplayPlayer({ replay, autoPlay = false, context, startStep }: {
           </button>
         </div>
       )}
-      {video && frame && (
+      {video && frame && !custom && (
         <div className={cx('rp-outcome', frame.tone && `tone-${frame.tone}`)} key={idx}>
           <span className="rp-o-k">{frame.label ?? `Turn ${idx + 1}`}</span>
           <span className="rp-o-t">{plainTurn(frame, context?.modelLabel)}</span>
@@ -295,7 +300,8 @@ export function ReplayPlayer({ replay, autoPlay = false, context, startStep }: {
       ) : null}
 
       {frame?.code && <CodeAgentStage frame={frame} video={video} />}
-      {frame && !frame.code && (
+      {frame && !frame.code && custom && <CustomReplayStage kind={custom} replay={replay} frames={frames} idx={Math.min(idx, frames.length - 1)} video={video} detail={context?.detail} />}
+      {frame && !frame.code && !custom && (
         <div className={cx('replay-stage', hasGrid ? 'with-grid' : 'no-grid')}>
           {hasGrid && (
             <div className="stage-map">
@@ -368,7 +374,7 @@ export function ReplayPlayer({ replay, autoPlay = false, context, startStep }: {
         </div>
       )}
 
-      {(!!replay.svgCompare || !!replay.series?.length) && (
+      {!custom && (!!replay.svgCompare || !!replay.series?.length) && (
         <div className={cx('replay-extras', !!replay.svgCompare && !!replay.series?.length && 'two')}>
           {replay.svgCompare && (
             <div className="svg-compare">

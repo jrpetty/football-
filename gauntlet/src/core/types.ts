@@ -429,6 +429,11 @@ export interface ReplayData {
   svgCompare?: { left: { title: string; svg: string }; right: { title: string; svg: string } };
   /** Optional series to chart (e.g. fact survival per round, cash per month). */
   series?: Array<{ name: string; points: Array<{ x: number; y: number }> }>;
+  /**
+   * Optional test-specific data for a richer replay view (e.g. needle passages, the whispers fact trace).
+   * Display only: never sent to the model or used for scoring. Older results lack it and fall back to the frames.
+   */
+  visual?: { kind: string; data: Record<string, unknown> };
 }
 
 export interface ProgramContext {

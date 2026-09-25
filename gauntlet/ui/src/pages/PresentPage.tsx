@@ -22,6 +22,7 @@ import { ScoreCostScatter } from '../components/charts/ScoreCostScatter.tsx';
 import { isBaseline, olympicCompare, shortCat } from '../components/leaderboard/util.ts';
 import { fmtCost, fmtIndex, fmtMs, shortHash } from '../format.ts';
 import { TrickEmptySlide, TrickSlide, TRICK_REVEAL_STEPS } from '../components/present/TrickSlide.tsx';
+import { MomentSlide, momentCaption, momentKindFor, type MomentKind } from '../components/present/MomentSlide.tsx';
 import { selectTrickHighlights, type TrickHighlight } from '../../../src/presenter/trick-highlights.ts';
 
 /** Compact money for big slide type: $52.57, $0.23, $0.0063, <$0.001. */
@@ -94,7 +95,8 @@ type Slide =
   | { kind: 'medals' }
   | { kind: 'outro' }
   | { kind: 'trick'; test: DeckTest; h: TrickHighlight; i: number; of: number }
-  | { kind: 'trick-empty' };
+  | { kind: 'trick-empty' }
+  | { kind: 'moment'; test: DeckTest; moment: MomentKind };
 
 interface Caption {
   text: string;
@@ -261,13 +263,19 @@ function trickSlides(deck: Deck, test: DeckTest): Slide[] {
   return hs.map((h, i) => ({ kind: 'trick', test, h, i: i + 1, of: hs.length }));
 }
 
+/** The "answer vs truth" slide of a long-context, drawing or picture test (components/present/MomentSlide.tsx). */
+function momentSlides(deck: Deck, test: DeckTest): Slide[] {
+  const moment = momentKindFor({ id: test.snap.id, name: test.snap.name, kind: test.snap.kind, caseIds: test.snap.caseIds }, test.detail, deck.d.results ?? []);
+  return moment ? [{ kind: 'moment', test, moment }] : [];
+}
+
 function buildSlides(deck: Deck, vertical = false): Slide[] {
   if (vertical) {
     const shorts = deck.tests.flatMap((t) => trickSlides(deck, t));
     return shorts.length ? shorts : [{ kind: 'trick-empty' }];
   }
   const slides: Slide[] = [{ kind: 'title' }, { kind: 'how' }];
-  for (const test of deck.tests) slides.push({ kind: 'explainer', test }, { kind: 'result', test }, ...trickSlides(deck, test));
+  for (const test of deck.tests) slides.push({ kind: 'explainer', test }, { kind: 'result', test }, ...momentSlides(deck, test), ...trickSlides(deck, test));
   // Summary slides only when they have something to show (e.g. a baseline-only smoke test has none).
   const comps = standings(deck).filter((r) => typeof r.index === 'number');
   if (comps.length) slides.push({ kind: 'final' });
@@ -359,6 +367,8 @@ function captionFor(slide: Slide, deck: Deck): Caption {
     }
     case 'trick-empty':
       return { text: 'Shorts mode shows the “Can It Be Fooled?” questions the models disagreed on. This run has none.' };
+    case 'moment':
+      return momentCaption(slide.moment);
     case 'outro':
       return {
         text: deck.hasPrivate
@@ -377,6 +387,7 @@ function sectionFor(slide: Slide, deck: Deck): string {
       return 'How it works';
     case 'explainer':
     case 'result':
+    case 'moment':
       return `Test ${slide.test.n} of ${deck.tests.length} · ${slide.test.cat.name}`;
     case 'final':
       return 'Final standings';
@@ -1073,6 +1084,18 @@ function SlideView({ slide, deck, reveal, vertical }: { slide: Slide; deck: Deck
       return <ExplainerSlide deck={deck} test={slide.test} />;
     case 'result':
       return <ResultSlide deck={deck} test={slide.test} />;
+    case 'moment':
+      return (
+        <MomentSlide
+          kind={slide.moment}
+          test={{ id: slide.test.snap.id, name: slide.test.snap.name, kind: slide.test.snap.kind, caseIds: slide.test.snap.caseIds }}
+          cat={slide.test.cat}
+          detail={slide.test.detail}
+          results={deck.d.results ?? []}
+          contenders={deck.contenders}
+          runId={deck.d.manifest.id}
+        />
+      );
     case 'final':
       return <FinalSlide deck={deck} reveal={reveal} />;
     case 'scatter':

@@ -37,6 +37,7 @@ import type {
 import { VISION_RUN_SPECS, VISION_SUITE, VISION_TESTS, applyMockVisionFlags, mockLeaderboardSkips, mockRenderedImages, mockTurnImages, mockVisionSkip } from './vision.ts';
 import { TRICK_RUN_SPEC, TRICK_SUITE, TRICK_TESTS, decorateTrick, trickResponse } from './trick.ts';
 import { CODE_AGENT_PROGRAM, CODE_AGENT_TEST, codeAgentReplay, codeAgentSummary } from './codeAgentMock.ts';
+import { VISUAL_PASS_PROGRAMS, VISUAL_PASS_RUN_SPEC, VISUAL_PASS_TESTS, decorateVisualPass, visualPassDetail } from './visualPassMock.ts';
 
 // ───────────────────────────── RNG ─────────────────────────────
 
@@ -748,7 +749,7 @@ function genLite(runId: string, c: ContestantView, t: TestDefinition, caseId: st
   if (type === 'human') artifacts.push({ name: 'page.html', kind: 'html', file: `${c.id}/${t.id}/${caseId}-r${repeat}.html`, bytes: 8000 + Math.round(r.next() * 9000) });
   if (t.kind === 'program' && t.program === 'draw-it-blind') artifacts.push({ name: 'reconstruction.svg', kind: 'svg', file: `${c.id}/${t.id}/${caseId}-r${repeat}.svg`, bytes: 2400 });
 
-  return mockVisionSkip(decorateTrick(t, {
+  return decorateVisualPass(t, mockVisionSkip(decorateTrick(t, {
     key,
     runId,
     contestantId: c.id,
@@ -771,7 +772,7 @@ function genLite(runId: string, c: ContestantView, t: TestDefinition, caseId: st
     finishedAt: finished,
     humanScores,
     hasReplay: t.kind === 'program',
-  }), c, t);
+  }), c, t));
 }
 
 function summaryText(t: TestDefinition, score: number | null, status: ResultStatus, u: number): string {
@@ -1483,13 +1484,13 @@ export function detailFor(lite: CaseResultLite): CaseResult {
   }
 
   const artifacts = lite.artifacts;
-  return {
+  return visualPassDetail({
     ...lite,
     scoreDetail: detail,
     transcript,
     replay: t && t.kind === 'program' ? replayFor(t, lite.seed ?? 1, score ?? 0.2) : undefined,
     artifacts,
-  };
+  }, lite);
 }
 
 // Vision tests (added after the core fixtures so the existing demo runs keep their test lists).
@@ -1497,3 +1498,8 @@ TESTS.push(...VISION_TESTS);
 SUITES.push(VISION_SUITE);
 RUN_SPECS.push(...VISION_RUN_SPECS);
 applyMockVisionFlags(CONTESTANTS);
+
+// Long-context, drawing and game visuals (recorded replays; see visualPassMock.ts).
+TESTS.push(...VISUAL_PASS_TESTS.filter((t) => !TESTS.some((x) => x.id === t.id)));
+PROGRAMS.push(...VISUAL_PASS_PROGRAMS);
+RUN_SPECS.push(VISUAL_PASS_RUN_SPEC);

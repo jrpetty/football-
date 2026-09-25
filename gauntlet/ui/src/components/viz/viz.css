@@ -1,0 +1,1225 @@
+/*
+ * Visual building blocks for the long-context, drawing and picture tests
+ * (ui/src/components/viz/). Sizes are in rem so Broadcast mode (B) and full
+ * screen scale them up; SVG text is in viewBox units and scales with width.
+ * Colours come from tokens.css only.
+ */
+
+/* ───────────── Headline ───────────── */
+.vz-head {
+  --tone: var(--accent);
+  --tone-soft: var(--accent-soft);
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.85rem 1.1rem;
+  border-radius: var(--r-md, 10px);
+  background: linear-gradient(90deg, var(--tone-soft), transparent 75%), var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 5px solid var(--tone);
+  animation: vz-in 280ms ease-out;
+}
+.vz-head.tone-good {
+  --tone: var(--good);
+  --tone-soft: var(--good-soft);
+}
+.vz-head.tone-bad {
+  --tone: var(--bad);
+  --tone-soft: var(--bad-soft);
+}
+.vz-head.tone-warn {
+  --tone: var(--warn);
+  --tone-soft: var(--warn-soft);
+}
+.vz-head-ic {
+  width: 2.1rem;
+  height: 2.1rem;
+  flex: none;
+}
+.vz-head-t {
+  flex: 1;
+  min-width: 0;
+}
+.vz-eyebrow {
+  font-size: 0.86rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+.vz-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  color: var(--text-1);
+  overflow-wrap: anywhere;
+}
+.vz-big {
+  flex: none;
+  display: grid;
+  justify-items: end;
+  font-size: 2.6rem;
+  font-weight: 850;
+  line-height: 1;
+  color: var(--text-1);
+}
+.vz-big small {
+  font-size: 0.8rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  color: var(--text-2);
+  margin-top: 0.25rem;
+}
+
+/* ───────────── Icons & legend ───────────── */
+.vz-ic {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: none;
+  vertical-align: -0.2em;
+}
+.vz-ic circle {
+  fill: var(--text-3);
+}
+.vz-ic path {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.vz-ic-good circle {
+  fill: var(--good);
+}
+.vz-ic-bad circle {
+  fill: var(--bad);
+}
+.vz-ic-warn circle {
+  fill: var(--warn);
+}
+.vz-ic-warn path {
+  stroke: #1b1300;
+}
+.vz-ic-neutral circle {
+  fill: var(--surface-4);
+}
+.vz-ic-neutral path {
+  stroke: var(--text-1);
+}
+.vz-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.95rem;
+  color: var(--text-2);
+}
+.vz-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.vz-sw {
+  width: 1rem;
+  height: 1rem;
+  flex: none;
+}
+.vz-sw-box {
+  display: inline-block;
+  border-radius: 4px;
+}
+.vz-sw-good {
+  background: var(--good);
+}
+.vz-sw-bad {
+  background: var(--bad);
+}
+.vz-sw-warn {
+  background: var(--warn);
+}
+.vz-sw-accent {
+  background: var(--accent);
+}
+.vz-sw-muted {
+  background: transparent;
+  border: 2px solid var(--text-3);
+  border-radius: 50%;
+}
+.vz-sw-decoy {
+  fill: var(--warn);
+  stroke: var(--surface-1);
+}
+.vz-sw-missed,
+.vz-sw-guide {
+  fill: none;
+  stroke-width: 2.2;
+  stroke-dasharray: 3 2.5;
+}
+.vz-sw-missed {
+  stroke: var(--warn);
+}
+.vz-sw-guide {
+  stroke: var(--accent);
+}
+
+/* ───────────── Layout ───────────── */
+.vz-stage,
+.vz-showcase,
+.vz-vision {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+.vz-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 1.1rem;
+  align-items: start;
+}
+.vz-cols.wide-left {
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+}
+.vz-cols.even {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.vz-col {
+  display: grid;
+  gap: 0.9rem;
+  min-width: 0;
+  align-content: start;
+}
+@media (max-width: 1100px) {
+  .vz-cols,
+  .vz-cols.wide-left,
+  .vz-cols.even {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.vz-card {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--r-md, 10px);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  min-width: 0;
+}
+.vz-card-k,
+.vz-k {
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.vz-k {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.vz-missing {
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--r-sm, 8px);
+  border: 1px dashed var(--border-strong);
+  color: var(--text-2);
+  font-size: 1rem;
+  line-height: 1.45;
+}
+.vz-fine {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-3);
+}
+.vz-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.95rem;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+/* ───────────── Answer vs truth, meter, bars ───────────── */
+.vz-avt {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.7rem;
+}
+.vz-avt-card {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--r-md, 10px);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--text-3);
+  min-width: 0;
+}
+.vz-avt-card.good {
+  border-top-color: var(--good);
+  background: color-mix(in srgb, var(--good) 9%, var(--surface-2));
+}
+.vz-avt-card.bad {
+  border-top-color: var(--bad);
+  background: color-mix(in srgb, var(--bad) 9%, var(--surface-2));
+}
+.vz-avt-card.truth {
+  border-top-color: var(--accent);
+}
+.vz-v {
+  font-size: 1.35rem;
+  font-weight: 750;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  color: var(--text-1);
+}
+.vz-avt-card.bad .vz-v {
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--bad) 70%, transparent);
+  text-decoration-thickness: 2px;
+}
+.vz-avt-note {
+  grid-column: 1 / -1;
+  font-size: 1rem;
+  color: var(--warn-text);
+}
+.vz-meter {
+  display: grid;
+  gap: 0.35rem;
+}
+.vz-meter-h {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  font-size: 0.95rem;
+  color: var(--text-2);
+}
+.vz-meter-h b {
+  font-size: 1.15rem;
+  color: var(--text-1);
+}
+.vz-meter-warn {
+  color: var(--bad-text);
+  font-weight: 700;
+}
+.vz-meter-track {
+  height: 0.7rem;
+  border-radius: 99px;
+  background: var(--surface-4);
+  overflow: hidden;
+}
+.vz-meter-track i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--accent);
+  transition: width 500ms ease-out;
+}
+.vz-meter.over .vz-meter-track i {
+  background: var(--bad);
+}
+.vz-bars {
+  display: grid;
+  gap: 0.55rem;
+}
+.vz-bar {
+  --tone: var(--accent);
+  display: grid;
+  grid-template-columns: minmax(5.5rem, auto) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.2rem 0.7rem;
+  font-size: 1rem;
+}
+.vz-bar.tone-good {
+  --tone: var(--good);
+}
+.vz-bar.tone-bad {
+  --tone: var(--bad);
+}
+.vz-bar.tone-warn {
+  --tone: var(--warn);
+}
+.vz-bar-l {
+  color: var(--text-1);
+  font-weight: 650;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.vz-bar-t {
+  height: 0.8rem;
+  border-radius: 99px;
+  background: var(--surface-4);
+  overflow: hidden;
+}
+.vz-bar-t i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--tone);
+  transition: width 600ms ease-out;
+}
+.vz-bar-v {
+  font-size: 1.05rem;
+  color: var(--text-1);
+}
+.vz-bar-n {
+  grid-column: 1 / -1;
+  font-size: 0.9rem;
+  color: var(--text-2);
+  line-height: 1.4;
+}
+
+/* ───────────── Needle strip ───────────── */
+.vz-strip {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+.vz-strip-doc {
+  fill: var(--surface-3);
+  stroke: var(--border-strong);
+}
+.vz-strip-para {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+.vz-strip-readfill {
+  fill: var(--accent-soft);
+  transition: width 500ms ease-out;
+}
+.vz-strip-cursor {
+  transition: transform 500ms ease-out;
+}
+.vz-strip-cursor line {
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+.vz-strip-tick {
+  fill: var(--text-2);
+  font-size: 18px;
+  font-weight: 600;
+}
+.vz-pin line {
+  stroke: var(--text-3);
+  stroke-width: 2;
+}
+.vz-pin circle {
+  fill: var(--tone, var(--text-3));
+  stroke: var(--surface-1);
+  stroke-width: 3;
+  transition: fill 300ms, r 300ms;
+}
+.vz-pin text {
+  fill: var(--text-2);
+  font-size: 17px;
+  font-weight: 700;
+}
+.vz-pin.good {
+  --tone: var(--good);
+}
+.vz-pin.bad {
+  --tone: var(--bad);
+}
+.vz-pin.warn {
+  --tone: var(--warn);
+}
+.vz-pin.hidden circle {
+  fill: var(--surface-1);
+  stroke: var(--text-3);
+  stroke-width: 2;
+}
+.vz-pin.hidden text {
+  fill: var(--text-3);
+}
+.vz-pin.current line {
+  stroke: var(--text-1);
+  stroke-width: 3;
+}
+.vz-pin.current text {
+  fill: var(--text-1);
+  font-size: 20px;
+}
+.vz-strip.compact .vz-pin line {
+  stroke-width: 1.5;
+}
+.vz-part {
+  stroke: var(--surface-1);
+  stroke-width: 3;
+  fill: var(--accent);
+}
+.vz-part.good {
+  fill: var(--good);
+}
+.vz-part.bad {
+  fill: var(--bad);
+}
+.vz-part.warn {
+  fill: var(--warn);
+}
+.vz-chain {
+  fill: none;
+  stroke: var(--text-2);
+  stroke-width: 2.5;
+  stroke-dasharray: 6 5;
+}
+.vz-decoy path {
+  fill: var(--warn);
+  stroke: var(--surface-1);
+  stroke-width: 3;
+}
+.vz-decoy text {
+  fill: var(--warn-text);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+/* Question, passages */
+.vz-q p {
+  margin: 0.2rem 0 0;
+  font-size: 1.25rem;
+  font-weight: 650;
+  line-height: 1.4;
+}
+.vz-passages {
+  display: grid;
+  gap: 0.6rem;
+}
+.vz-passage {
+  margin: 0;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--r-md, 10px);
+  background: var(--surface-inset);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--good);
+}
+.vz-passage.decoy {
+  border-left-color: var(--warn);
+}
+.vz-passage figcaption {
+  font-size: 0.85rem;
+  font-weight: 750;
+  color: var(--text-2);
+  margin-bottom: 0.3rem;
+}
+.vz-passage p {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.55;
+}
+.vz-passage mark {
+  background: var(--good-soft);
+  color: var(--text-1);
+  font-weight: 650;
+  padding: 0.05em 0.2em;
+  border-radius: 4px;
+}
+.vz-passage.decoy mark {
+  background: var(--warn-soft);
+}
+.vz-ctx {
+  color: var(--text-3);
+}
+
+/* ───────────── Whispers river ───────────── */
+.vz-river {
+  width: 100%;
+  height: auto;
+  max-height: 46vh;
+  display: block;
+}
+.vz-river.compact {
+  max-height: none;
+}
+.vz-rcol-bg {
+  fill: transparent;
+}
+.vz-rcol.current .vz-rcol-bg {
+  fill: var(--accent-soft);
+  stroke: var(--accent-line);
+}
+.vz-rcol-t {
+  fill: var(--text-1);
+  font-size: 20px;
+  font-weight: 800;
+}
+.vz-rcol-s {
+  fill: var(--text-3);
+  font-size: 17px;
+  font-weight: 600;
+}
+.vz-rcol.future text {
+  opacity: 0.4;
+}
+.vz-rlabel {
+  fill: var(--text-1);
+  font-size: 20px;
+  font-weight: 600;
+}
+.vz-rfact.is-lost .vz-rlabel {
+  fill: var(--text-3);
+  text-decoration: line-through;
+}
+.vz-rfact.is-changed .vz-rlabel {
+  fill: var(--warn-text);
+}
+.vz-rlane {
+  stroke: var(--good);
+  stroke-width: 10;
+  stroke-linecap: round;
+  transition: opacity 300ms;
+}
+.vz-river.compact .vz-rlane {
+  stroke-width: 6;
+}
+.vz-rlane.changed {
+  stroke: var(--warn);
+  stroke-dasharray: 10 8;
+  stroke-linecap: butt;
+}
+.vz-rlane.future,
+.vz-rdeath.future {
+  opacity: 0.12;
+}
+.vz-rdeath path {
+  stroke: var(--bad);
+  stroke-width: 4;
+  stroke-linecap: round;
+  fill: none;
+}
+.vz-rsrc {
+  fill: var(--text-2);
+}
+
+/* Round text */
+.vz-text {
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: var(--text-2);
+  padding: 0.8rem 1rem;
+  border-radius: var(--r-md, 10px);
+  background: var(--surface-inset);
+  border: 1px solid var(--border);
+  max-height: 34rem;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+.vz-text p {
+  margin: 0 0 0.6rem;
+}
+.vz-text mark {
+  color: var(--text-1);
+  background: var(--good-soft);
+  border-bottom: 2px solid var(--good);
+  padding: 0 0.15em;
+  border-radius: 3px;
+}
+.vz-text mark.changed {
+  background: var(--warn-soft);
+  border-bottom: 2px dashed var(--warn);
+}
+.vz-text mark sup {
+  font-size: 0.7rem;
+  font-weight: 800;
+  margin-left: 0.3em;
+  color: var(--good-text);
+  white-space: nowrap;
+}
+.vz-text mark.changed sup {
+  color: var(--warn-text);
+}
+.vz-drift {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--r-md, 10px);
+  background: color-mix(in srgb, var(--warn) 8%, var(--surface-2));
+  border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent);
+  font-size: 1rem;
+  line-height: 1.45;
+}
+.vz-drift s {
+  color: var(--text-3);
+}
+.vz-drift em {
+  font-style: normal;
+  color: var(--warn-text);
+  font-weight: 650;
+}
+.vz-survived ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.4rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.vz-survived li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.02rem;
+  min-width: 0;
+}
+.vz-sv-l {
+  font-weight: 650;
+  color: var(--text-1);
+}
+.vz-survived li.is-lost .vz-sv-l {
+  color: var(--text-3);
+  text-decoration: line-through;
+}
+.vz-sv-r {
+  margin-left: auto;
+  font-size: 0.88rem;
+  color: var(--text-2);
+  text-align: right;
+}
+
+/* ───────────── Draw It Blind ───────────── */
+.vz-draw {
+  display: grid;
+  gap: 0.6rem;
+}
+.vz-seg {
+  display: inline-flex;
+  justify-self: start;
+  padding: 3px;
+  gap: 3px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+}
+.vz-seg button {
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.vz-seg button.on {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.vz-draw-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+.vz-draw-svg.single {
+  max-width: 34rem;
+}
+.vz-draw-cap {
+  fill: var(--text-1);
+  font-size: 22px;
+  font-weight: 800;
+}
+.vz-draw-frame {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 2;
+}
+.vz-extra {
+  fill: none;
+  stroke: var(--warn);
+  stroke-width: 3;
+  stroke-dasharray: 8 6;
+}
+.vz-pair {
+  --tone: var(--accent);
+  cursor: pointer;
+  transition: opacity 250ms;
+}
+.vz-pair.tone-good {
+  --tone: var(--good);
+}
+.vz-pair.tone-warn {
+  --tone: var(--warn);
+}
+.vz-pair.tone-bad {
+  --tone: var(--bad);
+}
+.vz-pair polyline {
+  stroke-linejoin: round;
+  fill: none;
+  stroke: var(--tone);
+  stroke-width: 3;
+  opacity: 0.75;
+}
+.vz-pair > circle {
+  fill: var(--tone);
+  stroke: #fff;
+  stroke-width: 2;
+}
+.vz-pair.on polyline {
+  stroke-width: 6;
+  opacity: 1;
+}
+.vz-pair.dim {
+  opacity: 0.18;
+}
+.vz-pair.missing circle {
+  fill: none;
+  stroke: var(--bad);
+  stroke-width: 4;
+  stroke-dasharray: 10 7;
+}
+.vz-pair.missing text {
+  fill: var(--bad);
+  font-size: 20px;
+  font-weight: 800;
+  paint-order: stroke;
+  stroke: #fff;
+  stroke-width: 4;
+}
+.vz-pair-badge rect {
+  fill: var(--tone);
+  stroke: #fff;
+  stroke-width: 2;
+}
+.vz-pair-badge text {
+  fill: #fff;
+  font-size: 18px;
+  font-weight: 850;
+}
+.vz-pair.tone-warn .vz-pair-badge text {
+  fill: #1b1300;
+}
+.vz-num circle {
+  fill: #0b1220;
+  stroke: #fff;
+  stroke-width: 2;
+}
+.vz-num text {
+  fill: #fff;
+  font-size: 15px;
+  font-weight: 800;
+}
+.vz-shape-hit rect {
+  fill: transparent;
+  stroke: transparent;
+  stroke-width: 3;
+}
+.vz-shape-hit.on rect {
+  stroke: var(--accent);
+  fill: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.vz-shape-hit.dim {
+  opacity: 0.45;
+}
+.vz-onion {
+  display: grid;
+  gap: 0.6rem;
+  justify-items: center;
+}
+.vz-onion-stack {
+  position: relative;
+  width: min(100%, 30rem);
+  aspect-ratio: 1;
+  border: 2px solid var(--border-strong);
+  background: #fff;
+}
+.vz-onion-stack img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.vz-onion-stack.diff img:last-child {
+  mix-blend-mode: difference;
+}
+.vz-onion-ctl {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: min(100%, 30rem);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-2);
+}
+.vz-onion-ctl input {
+  flex: 1;
+}
+.vz-onion-note {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-2);
+}
+.vz-desc {
+  margin: 0;
+  font-size: 1.12rem;
+  line-height: 1.75;
+  color: var(--text-1);
+}
+.vz-link {
+  background: var(--accent-soft);
+  color: var(--text-1);
+  border-bottom: 2px solid var(--accent-line);
+  border-radius: 4px;
+  padding: 0.05em 0.2em;
+  cursor: pointer;
+  outline: none;
+}
+.vz-link.on,
+.vz-link:focus-visible {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.vz-link sup {
+  font-size: 0.7rem;
+  font-weight: 850;
+  margin-right: 0.2em;
+}
+.vz-desc del {
+  color: var(--bad-text);
+  text-decoration-thickness: 2px;
+}
+.vz-quote {
+  margin: 0;
+  font-size: 1.1rem;
+  line-height: 1.5;
+  color: var(--text-1);
+}
+
+/* ───────────── Artifact showcase ───────────── */
+.vz-render {
+  margin: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+.vz-render-stage {
+  position: relative;
+  width: min(100%, 44rem, calc(62vh * var(--ar, 1)));
+  justify-self: center;
+  background: #fff;
+  border-radius: var(--r-md, 10px);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.vz-render-stage img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.vz-render figcaption {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.vz-guides {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.vz-guides line,
+.vz-guides rect {
+  fill: none;
+  stroke: #0891b2;
+  stroke-width: 3;
+  stroke-dasharray: 8 6;
+}
+.vz-guides rect {
+  fill: rgba(8, 145, 178, 0.08);
+}
+.vz-guides text {
+  fill: #0e7490;
+  font-size: 15px;
+  font-weight: 800;
+  paint-order: stroke;
+  stroke: #fff;
+  stroke-width: 4px;
+}
+.vz-game {
+  display: grid;
+  gap: 0.6rem;
+}
+.vz-game img,
+.vz-game iframe {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md, 10px);
+  background: #000;
+  object-fit: contain;
+}
+.vz-game-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  font-size: 0.95rem;
+}
+.btn.vz-play {
+  font-size: 1.15rem;
+  padding: 0.6rem 1.4rem;
+}
+.vz-checks {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.vz-checks li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.1rem 0.55rem;
+  font-size: 1rem;
+}
+.vz-checks.big li {
+  font-size: 1.15rem;
+  font-weight: 650;
+}
+.vz-checks.big .vz-ic {
+  width: 1.45rem;
+  height: 1.45rem;
+}
+.vz-checks li.fail span {
+  color: var(--bad-text);
+}
+.vz-checks em {
+  grid-column: 2;
+  font-style: normal;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--text-2);
+  overflow-wrap: anywhere;
+}
+.vz-checks em:empty {
+  display: none;
+}
+.vz-measure {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 1rem;
+}
+.vz-measure th {
+  text-align: left;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  padding: 0 0.4rem 0.35rem 0;
+}
+.vz-measure td {
+  padding: 0.35rem 0.4rem 0.35rem 0;
+  border-top: 1px solid var(--border);
+  vertical-align: top;
+}
+.vz-measure tr.fail td:last-child {
+  color: var(--bad-text);
+  font-weight: 700;
+}
+.vz-measure tr.pass td:last-child {
+  color: var(--good-text);
+  font-weight: 700;
+}
+
+/* ───────────── Vision overlay ───────────── */
+.vz-vfig {
+  position: relative;
+  margin: 0;
+  width: min(100%, calc(64vh * var(--ar, 1.5)));
+  justify-self: center;
+  background: #fff;
+  border-radius: var(--r-md, 10px);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.vz-vfig img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.vz-vov {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.vz-vfig-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.4rem;
+}
+.vz-cell rect {
+  fill: none;
+  stroke-width: 7;
+}
+.vz-cell.correct rect {
+  stroke: #0ca30c;
+  fill: rgba(12, 163, 12, 0.12);
+}
+.vz-cell.wrong rect {
+  stroke: #d03b3b;
+  fill: rgba(208, 59, 59, 0.16);
+}
+.vz-cell.missed rect {
+  stroke: #d97706;
+  stroke-dasharray: 14 9;
+}
+.vz-cell-x {
+  stroke: #d03b3b;
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+.vz-cell text {
+  font-size: 17px;
+  font-weight: 800;
+  fill: #0b1220;
+  paint-order: stroke;
+  stroke: #fff;
+  stroke-width: 4px;
+}
+.vz-target {
+  animation: vz-pop 380ms ease-out both;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.vz-target > circle {
+  fill: none;
+  stroke: #0891b2;
+  stroke-width: 5;
+}
+.vz-target g circle {
+  fill: #0891b2;
+  stroke: #fff;
+  stroke-width: 2.5;
+}
+.vz-target text {
+  fill: #fff;
+  font-size: 26px;
+  font-weight: 850;
+}
+.vz-hl rect:not(.vz-hl-tag),
+.vz-hl > circle {
+  fill: rgba(8, 145, 178, 0.14);
+  stroke: #0891b2;
+
+}
+.vz-hl-tag {
+  fill: #0e7490;
+  stroke: none;
+}
+.vz-hl text {
+  fill: #fff;
+
+  font-weight: 800;
+}
+.vz-line rect {
+  fill: rgba(12, 163, 12, 0.1);
+  stroke: #0ca30c;
+  stroke-width: 5;
+}
+.vz-line.model rect {
+  fill: rgba(208, 59, 59, 0.1);
+  stroke: #d03b3b;
+  stroke-dasharray: 14 9;
+}
+.vz-line text {
+  font-size: 22px;
+  font-weight: 800;
+  fill: #0a5c0a;
+  paint-order: stroke;
+  stroke: #fff;
+  stroke-width: 5px;
+}
+.vz-line.model text {
+  fill: #a11f1f;
+}
+
+/* ───────────── Video (broadcast / full screen) ───────────── */
+.replay.video .vz-title {
+  font-size: 1.75rem;
+}
+.replay.video .vz-big {
+  font-size: 3rem;
+}
+.replay.video .vz-text {
+  max-height: 26rem;
+}
+
+@keyframes vz-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes vz-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vz-head,
+  .vz-target {
+    animation: none;
+  }
+  .vz-strip-readfill,
+  .vz-strip-cursor,
+  .vz-meter-track i,
+  .vz-bar-t i,
+  .vz-pin circle,
+  .vz-rlane,
+  .vz-pair {
+    transition: none;
+  }
+}
+.vz-fold summary {
+  cursor: pointer;
+}
+.vz-fold:not([open]) {
+  gap: 0;
+}
+.vz-avt-card.no-strike .vz-v {
+  text-decoration: none;
+}
+.vz-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.vz-chip {
+  display: inline-block;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  border: 2px solid var(--border-strong);
+  background: var(--surface-3);
+}
+.vz-chip.good {
+  border-color: var(--good);
+  background: var(--good-soft);
+}
+.vz-chip.bad {
+  border-color: var(--bad);
+  background: var(--bad-soft);
+  text-decoration: line-through;
+}
+.vz-chip.missed {
+  border-style: dashed;
+  border-color: var(--warn);
+}
+.vz-chip.key {
+  border-color: var(--accent-line);
+}

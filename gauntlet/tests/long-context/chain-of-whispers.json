@@ -1,7 +1,7 @@
 {
   "kind": "program",
   "id": "long-context.chain-of-whispers",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "program": "chain-of-whispers",
   "name": "Chain of Whispers",
   "category": "long-context",

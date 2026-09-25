@@ -326,6 +326,17 @@ export const program: ProgramDefinition = {
           left: { title: 'Original', svg: targetSvg },
           right: { title: 'Redrawn from its own description', svg: drawnSvg },
         },
+        visual: {
+          kind: 'draw-it-blind',
+          data: {
+            canvas: CANVAS,
+            limit: cfg.descriptionWords,
+            hyphenSplit: cfg.hyphenSplit,
+            angles: scene.shapes.map((s) => (s.angle === undefined ? null : s.angle)),
+            drawnAngles: m.pairs.map((p) => (p.drawn?.angle === undefined ? null : r1(p.drawn.angle))),
+            extras: m.extras.map((e) => ({ kind: e.kind, color: e.color, cx: r1(e.cx), cy: r1(e.cy), w: r1(e.w), h: r1(e.h) })),
+          },
+        },
       },
     };
   },

@@ -13,6 +13,10 @@ import chartC05 from '../../tests/vision/images/chart-c05.png?url';
 import spotS01 from '../../tests/vision/images/spot-s01.png?url';
 import handH05 from '../../tests/vision/images/hand-h05.png?url';
 import countK02 from '../../tests/vision/images/count-k02.png?url';
+import chartC03 from '../../tests/vision/images/chart-c03.png?url';
+import spotS04 from '../../tests/vision/images/spot-s04.png?url';
+import handH01 from '../../tests/vision/images/hand-h01.png?url';
+import countK01 from '../../tests/vision/images/count-k01.png?url';
 
 const enc = encodeURIComponent;
 
@@ -23,6 +27,10 @@ export const MOCK_TEST_IMAGES: Record<string, string> = {
   'vision/images/spot-s01.png': spotS01,
   'vision/images/hand-h05.png': handH05,
   'vision/images/count-k02.png': countK02,
+  'vision/images/chart-c03.png': chartC03,
+  'vision/images/spot-s04.png': spotS04,
+  'vision/images/hand-h01.png': handH01,
+  'vision/images/count-k01.png': countK01,
 };
 
 /** Images uploaded in mock mode (object URLs), keyed by their would-be path. */
