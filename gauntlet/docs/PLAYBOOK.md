@@ -181,6 +181,23 @@ from red to green each time it runs the tests, with its action and token budgets
 the verdict: how many hidden tests pass. The **changes.diff** artifact in the inspector is the model's full
 patch, and the score breakdown lists the planted bugs (the answer key) so you can explain them on screen.
 
+## Arena episode: poker, debates and mock trials
+
+1. **Poker:** Arena → New tournament → *Heads-up Poker*, 4 or 8 models, *Hands per match* 20 (40 for a closer
+   result). The note on screen says it: each deal is played twice with cards swapped, so luck cancels out. On the
+   live table the viewer sees both hands (each model only saw its own), the board street by street, the pot, the
+   stacks and every action with the model's one-line reason. Matches are won on total chips.
+2. **Debate / Courtroom:** pick a motion (or a case) or leave it on *a different one for every pairing*. Check the
+   judge panel in the estimate: judges never judge a debater from their own vendor, so a pairing may only get one
+   or two judges. The live stage shows the two lecterns, the speech streaming into a bubble with a word counter,
+   the round indicator and, when the judges have decided, their scorecards one by one (held on screen for a few
+   seconds before the next debate starts).
+3. **No judge keys?** The debates still run; each game waits with *Awaiting judges*. Open **Judge** on the
+   tournament page, read the blinded transcript (Side A / Side B), score it and pick a winner. The model names are
+   revealed after you submit, and the tournament continues by itself.
+4. **Cards:** *Match cards* show chips per hand for poker and the motion, the sides and each judge's pick for
+   debates.
+
 ## Cost-saving tips
 
 * Iterate on `quick` with 1 repeat. Use `core` with 3 repeats only for the published run.

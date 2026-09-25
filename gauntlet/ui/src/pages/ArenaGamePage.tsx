@@ -13,9 +13,9 @@ import { TranscriptView } from '../components/Transcript.tsx';
 import { fmtCost, fmtTokens } from '../format.ts';
 import { arenaApi } from '../arena/client.ts';
 import { GameBoard } from '../arena/boards.tsx';
-import { LivePanel } from '../arena/LivePanel.tsx';
-import { MoveList, MoveReasoning, Versus, secs, sidesOf } from '../arena/parts.tsx';
-import { entrantMap, pts, useTournament } from '../arena/useTournament.ts';
+import { LivePanel, gameLine } from '../arena/LivePanel.tsx';
+import { MoveList, MoveReasoning, Versus, engineOf, fmtScore, playsWord, seatPlayers, secs, sidesOf } from '../arena/parts.tsx';
+import { entrantMap, useTournament } from '../arena/useTournament.ts';
 import type { ArenaGameRecord, TournamentDetail } from '../arena/types.ts';
 import '../arena/arena.css';
 
@@ -32,7 +32,7 @@ function Replay({ d, g }: { d: TournamentDetail; g: ArenaGameRecord }) {
   const [playing, setPlaying] = useState(broadcast && n > 0);
   const [speed, setSpeed] = useState(1);
   const [tab, setTab] = useState<'move' | 'transcript'>('move');
-  const [tSide, setTSide] = useState<'0' | '1'>('0');
+  const [tSide, setTSide] = useState<'0' | '1' | 'j'>('0');
   const rootRef = useRef<HTMLDivElement>(null);
   const [isFs, setIsFs] = useState(false);
 
@@ -87,7 +87,17 @@ function Replay({ d, g }: { d: TournamentDetail; g: ArenaGameRecord }) {
     return out;
   }, [upTo]);
   const strikesAt: [number, number] = [upTo.filter((m) => m.side === 0 && m.forfeit).length, upTo.filter((m) => m.side === 1 && m.forfeit).length];
-  const result = g.status !== 'ok' ? `Game ${g.status}` : g.winner === null ? 'Draw' : `${ents.get(g.players[g.winner])?.label} wins`;
+  const gameId = d.manifest.game.id;
+  const engine = engineOf(gameId);
+  const players = seatPlayers(ents, g.players);
+  const result =
+    g.status === 'awaiting-judges'
+      ? 'Awaiting human judging'
+      : g.status !== 'ok'
+        ? `Game ${g.status}`
+        : g.winner === null
+          ? 'Draw'
+          : `${ents.get(g.players[g.winner])?.label} wins${g.margin ? ` ${fmtScore(g.margin[g.winner], 'chips')} chips` : ''}`;
   const pct = n ? (idx / n) * 100 : 100;
   const moverName = move ? (ents.get(g.players[move.side])?.label ?? '') : '';
 
@@ -107,15 +117,15 @@ function Replay({ d, g }: { d: TournamentDetail; g: ArenaGameRecord }) {
         center={
           <div className="vs-mid">
             <span className="vs-round">{match?.roundName ?? g.matchId}</span>
-            <span className="vs-game">{g.gameNo > planned ? 'Sudden death' : `Game ${g.gameNo} of ${planned}`}</span>
-            {atEnd ? <span className="vs-result">{result}</span> : <span className="vs-series tnum">Move {idx}/{n}</span>}
+            <span className="vs-game">{gameLine(gameId, g.gameNo, planned)}</span>
+            {atEnd ? <span className="vs-result">{result}</span> : <span className="vs-series tnum">{engine === 'debate' ? 'Step' : engine === 'turns' ? 'Action' : 'Move'} {idx}/{n}</span>}
           </div>
         }
       />
-      <div className="ar-live-grid">
+      <div className={cx('ar-live-grid', engine === 'debate' && 'db-grid')}>
         <div className="ar-stage">
-          <GameBoard gameId={d.manifest.game.id} snap={snap} colors={[sides[0]!.color, sides[1]!.color]} className="big" />
-          {atEnd && g.status === 'ok' && (
+          <GameBoard gameId={gameId} snap={snap} colors={[sides[0]!.color, sides[1]!.color]} players={players} judgeHref={pathOf('arena', d.manifest.id, 'judge')} className="big" />
+          {atEnd && g.status === 'ok' && engine === 'board' && (
             <div className="ar-final" role="status">
               <span className="eyebrow">Final result</span>
               <b>{result}</b>
@@ -123,7 +133,7 @@ function Replay({ d, g }: { d: TournamentDetail; g: ArenaGameRecord }) {
             </div>
           )}
           <div className="replay-controls">
-            <button type="button" className="btn icon sm" onClick={() => (setPlaying(false), setIdx((i) => Math.max(0, i - 1)))} aria-label="Previous move" disabled={idx === 0}>
+            <button type="button" className="btn icon sm" onClick={() => (setPlaying(false), setIdx((i) => Math.max(0, i - 1)))} aria-label={`Previous ${playsWord(gameId).move}`} disabled={idx === 0}>
               <Icon.StepBack />
             </button>
             <button type="button" className="btn icon primary play-btn" onClick={togglePlay} aria-label={playing ? 'Pause' : 'Play'} disabled={n === 0}>
@@ -156,8 +166,8 @@ function Replay({ d, g }: { d: TournamentDetail; g: ArenaGameRecord }) {
           <div className="card ar-movecard">
             <div className="card-head">
               <div className="t">
-                <h2>{move ? (move.move ? `${moverName}: ${move.label}` : `${moverName}: strike`) : 'Starting position'}</h2>
-                {move && !move.opening && (
+                <h2>{move ? (move.kind === 'verdict' ? move.label : move.move ? `${moverName}: ${move.label}` : `${moverName}: ${engine === 'debate' ? move.label : 'strike'}`) : engine === 'debate' ? 'Before the first speech' : engine === 'turns' ? 'Hand 1 dealt' : 'Starting position'}</h2>
+                {move && !move.opening && move.kind !== 'verdict' && (
                   <div className="desc tnum">
                     {secs(move.ms)} · {fmtCost(move.costUsd)} · {fmtTokens(move.inputTokens)} in / {fmtTokens(move.outputTokens)} out
                   </div>
@@ -170,13 +180,26 @@ function Replay({ d, g }: { d: TournamentDetail; g: ArenaGameRecord }) {
                 move ? (
                   <MoveReasoning move={move} label={moverName} />
                 ) : (
-                  <p className="muted">Press play (Space) or step through the moves (← →). Each move shows the model's own reasoning, any rejected attempts and why they were rejected.</p>
+                  <p className="muted">
+                    Press play (Space) or step through the {playsWord(gameId).moves} (← →). Each {playsWord(gameId).move} shows the model&apos;s own reply, any rejected attempts and why they were rejected.
+                    {engine === 'turns' ? ' The viewer sees both hands; each model only saw its own cards.' : ''}
+                  </p>
                 )
               ) : (
                 <div className="stack">
-                  <Seg small label="Player" value={tSide} onChange={setTSide} options={[{ value: '0', label: ents.get(g.players[0])?.label ?? 'Player 1' }, { value: '1', label: ents.get(g.players[1])?.label ?? 'Player 2' }]} />
+                  <Seg
+                    small
+                    label="Player"
+                    value={tSide}
+                    onChange={setTSide}
+                    options={[
+                      { value: '0', label: ents.get(g.players[0])?.label ?? 'Player 1' },
+                      { value: '1', label: ents.get(g.players[1])?.label ?? 'Player 2' },
+                      ...(g.judging?.transcript?.length ? [{ value: 'j' as const, label: 'Judges (blinded)' }] : []),
+                    ]}
+                  />
                   <div className="ar-transcript">
-                    <TranscriptView entries={g.transcripts[Number(tSide) as 0 | 1]} />
+                    <TranscriptView entries={tSide === 'j' ? (g.judging?.transcript ?? []) : g.transcripts[Number(tSide) as 0 | 1]} />
                   </div>
                 </div>
               )}
@@ -185,11 +208,11 @@ function Replay({ d, g }: { d: TournamentDetail; g: ArenaGameRecord }) {
           <div className="card ar-moves">
             <div className="card-head">
               <div className="t">
-                <h2>Moves</h2>
+                <h2>{engine === 'debate' ? 'Speeches' : engine === 'turns' ? 'Actions' : 'Moves'}</h2>
               </div>
               <span className="badge outline tnum">{n}</span>
             </div>
-            <MoveList gameId={d.manifest.game.id} moves={g.moves} current={idx - 1} onSelect={(i) => (setPlaying(false), setIdx(i + 1))} />
+            <MoveList gameId={gameId} moves={g.moves} current={idx - 1} onSelect={(i) => (setPlaying(false), setIdx(i + 1))} />
           </div>
         </div>
       </div>
@@ -211,7 +234,15 @@ export default function ArenaGamePage({ id, gameKey }: { id: string; gameKey: st
   const liveGame = live.find((x) => x.key === gameKey);
   const players = g?.players ?? liveGame?.players;
   useViewerCaption(
-    d && players ? `${isLive ? 'Live' : 'Replay'}: ${ents.get(players[0])?.label} against ${ents.get(players[1])?.label} at ${d.manifest.game.name}. Every move was a fresh prompt with the full rules and the position; the harness checked it for legality.` : null,
+    d && players
+      ? `${isLive ? 'Live' : 'Replay'}: ${ents.get(players[0])?.label} against ${ents.get(players[1])?.label} at ${d.manifest.game.name}. ${
+          engineOf(d.manifest.game.id) === 'turns'
+            ? 'Each model sees only its own cards; the viewer sees both. Each deal is played twice with cards swapped, so luck cancels out.'
+            : engineOf(d.manifest.game.id) === 'debate'
+              ? 'Word limits are enforced by the harness; a blinded panel of judges from other AI companies picks the winner.'
+              : 'Every move was a fresh prompt with the full rules and the position; the harness checked it for legality.'
+        }`
+      : null,
     d ? `Recorded during the tournament — nothing is re-simulated · fingerprint ${d.manifest.fingerprint}` : undefined,
   );
 
@@ -234,7 +265,8 @@ export default function ArenaGamePage({ id, gameKey }: { id: string; gameKey: st
           match ? (
             <span>
               {d.manifest.game.name} · game {slot?.gameNo ?? '?'}
-              {slot?.suddenDeath ? ' (sudden death: starts after one random move each)' : ''} · match: {ents.get(match.players[0] ?? '')?.label} {pts(match.score[0])} – {pts(match.score[1])} {ents.get(match.players[1] ?? '')?.label}
+              {slot?.suddenDeath ? (engineOf(d.manifest.game.id) === 'board' ? ' (sudden death: starts after one random move each)' : ' (sudden death)') : ''} · match: {ents.get(match.players[0] ?? '')?.label} {fmtScore(match.score[0], match.unit)} – {fmtScore(match.score[1], match.unit)} {ents.get(match.players[1] ?? '')?.label}
+              {match.unit ? ` ${match.unit}` : ''}
             </span>
           ) : undefined
         }

@@ -248,6 +248,22 @@ The same fair-play rules apply.
 * **Reproducible.** The tournament manifest stores the model snapshots, the settings and a fingerprint over the
   game code, the prompt template and the settings. Resume refuses to continue if the game code or a model's
   configuration changed.
+* **Poker: duplicate format.** Every hand is dealt from the game seed; the two games of a pairing share the seed
+  with the seats swapped, so each model plays every deal from both seats. With identical play the pair nets exactly
+  zero chips (a unit test checks this), so the chip total measures decisions, not cards. Blinds 1/2, stacks reset
+  to 200 every hand (there are no side pots beyond the all-in cap), minimum-raise rules enforced, showdowns
+  evaluated by the harness. Each prompt shows only the acting seat's cards. An illegal or unreadable action gets
+  one retry, then check (or fold if there is a bet) and a strike; strikes never end the session.
+* **Debate and Courtroom: blind judging.** The judges are the configured cross-vendor panel minus every judge
+  from either debater's vendor (strict: no exceptions, a game with no eligible judge waits for a human). Judges
+  see "Side A" / "Side B" only; which seat is Side A is random per judge (seeded), and every model label, model
+  id, vendor and well-known product name is removed from the material before it is sent. Each judge scores
+  argument quality, rebuttal, use of evidence, clarity and rule-following (1–10) and must pick a winner. Majority
+  decides; a tied vote goes to the side with more rubric points; still level is a draw. Word limits are enforced
+  by cutting the speech, and the judges see the cut. Judges are called one at a time, each after a spending-cap
+  check, so judged games keep the cap's guarantee (see below).
+* **Spending cap.** Checked before every model call (players and judges). Each game has at most one call in
+  flight, so a tournament can go over its cap by at most one call per game running at the same time.
 
 ## 10. Publishing checklist
 

@@ -15,7 +15,7 @@ import { cx } from '../components/ui.tsx';
 import { fmtCost } from '../format.ts';
 import { GameBoard } from '../arena/boards.tsx';
 import { Bracket, RoundRobin } from '../arena/Bracket.tsx';
-import { sidesOf } from '../arena/parts.tsx';
+import { engineOf, fmtScore, playsWord, seatPlayers, sidesOf } from '../arena/parts.tsx';
 import { entrantMap, formatName, pts, useTournament } from '../arena/useTournament.ts';
 import type { ArenaEntrant, MatchState, TournamentDetail } from '../arena/types.ts';
 import '../arena/arena.css';
@@ -36,7 +36,7 @@ function useStageScale(): number {
   return k;
 }
 
-function PlayerPanel({ e, score, won, side }: { e: ArenaEntrant | undefined; score: number; won: boolean; side: 'left' | 'right' }) {
+function PlayerPanel({ e, score, won, side, unit }: { e: ArenaEntrant | undefined; score: number; won: boolean; side: 'left' | 'right'; unit?: string }) {
   return (
     <div className={cx('mc-player', side, won && 'won')} style={{ ['--c' as string]: e?.color ?? 'var(--text-3)' } as CSSProperties}>
       <span className="mc-bar" aria-hidden="true" />
@@ -45,7 +45,10 @@ function PlayerPanel({ e, score, won, side }: { e: ArenaEntrant | undefined; sco
         <strong>{e?.label}</strong>
         <span className="mc-vendor">{e?.vendor}</span>
       </div>
-      <b className="mc-score tnum">{pts(score)}</b>
+      <b className={cx('mc-score tnum', unit && 'margin')}>
+        {fmtScore(score, unit)}
+        {unit && <span className="mc-unit">{unit}</span>}
+      </b>
       {won && <span className="mc-adv">{side === 'left' ? 'WINS ▸' : '◂ WINS'}</span>}
     </div>
   );
@@ -56,16 +59,17 @@ function MatchCard({ d, m }: { d: TournamentDetail; m: MatchState }) {
   const sides = sidesOf(d.manifest.game.id);
   const [a, b] = m.players as [string, string];
   const games = m.games.filter((s) => s.game);
+  const engine = engineOf(d.manifest.game.id);
   return (
-    <div className="mc">
+    <div className={cx('mc', engine !== 'board' && `mc-${engine}`)}>
       <div className="mc-head">
         <span className="mc-round">{m.roundName}</span>
         <span className="mc-game">{d.manifest.game.name}</span>
       </div>
       <div className="mc-versus">
-        <PlayerPanel e={ents.get(a)} score={m.score[0]} won={m.winner === a} side="left" />
+        <PlayerPanel e={ents.get(a)} score={m.score[0]} won={m.winner === a} side="left" unit={m.unit} />
         <span className="mc-vs">VS</span>
-        <PlayerPanel e={ents.get(b)} score={m.score[1]} won={m.winner === b} side="right" />
+        <PlayerPanel e={ents.get(b)} score={m.score[1]} won={m.winner === b} side="right" unit={m.unit} />
       </div>
       <div className="mc-games" style={{ gridTemplateColumns: `repeat(${Math.min(games.length, 4)}, minmax(0, 1fr))` }}>
         {games.slice(0, 4).map((s) => {
@@ -74,16 +78,19 @@ function MatchCard({ d, m }: { d: TournamentDetail; m: MatchState }) {
           return (
             <div key={s.key} className="mc-g">
               <div className="mc-g-board">
-                <GameBoard gameId={d.manifest.game.id} snap={g.lastSnapshot} colors={[sides[0]!.color, sides[1]!.color]} />
+                <GameBoard gameId={d.manifest.game.id} snap={g.lastSnapshot} colors={[sides[0]!.color, sides[1]!.color]} players={seatPlayers(ents, g.players)} summary />
               </div>
               <div className="mc-g-t">
                 <span className="mc-g-n">{s.suddenDeath ? 'Sudden death' : `Game ${s.gameNo}`}</span>
                 <span className="mc-g-p">
                   {sides[0]!.name}: {ents.get(g.players[0])?.label}
                 </span>
-                <b style={{ color: w?.color }}>{w ? `${w.label} wins` : 'Draw'}</b>
+                <b style={{ color: w?.color }}>
+                  {g.status === 'awaiting-judges' ? 'Awaiting judges' : w ? `${w.label} wins` : 'Draw'}
+                  {g.margin && g.winner !== null ? ` ${fmtScore(g.margin[g.winner], 'chips')}` : ''}
+                </b>
                 <span className="mc-g-r">
-                  {g.reason} · {g.plies} moves
+                  {g.reason} · {g.plies} {playsWord(d.manifest.game.id).moves}
                 </span>
               </div>
             </div>
@@ -93,7 +100,7 @@ function MatchCard({ d, m }: { d: TournamentDetail; m: MatchState }) {
       <div className="mc-foot">
         <span>{m.summary}</span>
         <span className="tnum">
-          Illegal moves {m.illegal[0]} / {m.illegal[1]} · cost {fmtCost(m.cost[0])} / {fmtCost(m.cost[1])}
+          {engineOf(d.manifest.game.id) === 'debate' ? 'Rejected replies' : `Illegal ${playsWord(d.manifest.game.id).moves}`} {m.illegal[0]} / {m.illegal[1]} · cost {fmtCost(m.cost[0])} / {fmtCost(m.cost[1])}
         </span>
       </div>
     </div>
@@ -125,7 +132,7 @@ function ChampionCard({ d }: { d: TournamentDetail }) {
                 beat <b style={{ color: opp?.color }}>{opp?.label}</b>
               </span>
               <b className="tnum">
-                {pts(m.score[idx])}–{pts(m.score[1 - idx]!)}
+                {m.unit ? fmtScore(m.score[idx], m.unit) + ' ' + m.unit : `${pts(m.score[idx])}–${pts(m.score[1 - idx]!)}`}
               </b>
             </div>
           );
@@ -133,6 +140,11 @@ function ChampionCard({ d }: { d: TournamentDetail }) {
       </div>
       {row && (
         <div className="champ-stats tnum">
+          {row.margin !== undefined && (
+            <span>
+              <b>{fmtScore(row.margin, 'chips')}</b> chips
+            </span>
+          )}
           <span>
             <b>{row.wins}</b> wins
           </span>
@@ -157,14 +169,23 @@ function ChampionCard({ d }: { d: TournamentDetail }) {
 function caption(slide: Slide, d: TournamentDetail): { text: string; fine: string } {
   const ents = entrantMap(d);
   const G = d.manifest.settings.gamesPerMatch;
+  const engine = engineOf(d.manifest.game.id);
   if (slide.kind === 'bracket')
     return {
-      text: `${d.manifest.entrants.length} AI models, one ${d.manifest.game.name} ${d.manifest.settings.format === 'knockout' ? 'knockout' : 'round-robin'}. Every pairing played ${G} games with the sides swapped, so neither model got the first move twice.`,
+      text: `${d.manifest.entrants.length} AI models, one ${d.manifest.game.name} ${d.manifest.settings.format === 'knockout' ? 'knockout' : 'round-robin'}. ${
+        engine === 'turns'
+          ? 'Every deal was played twice with the cards swapped, so luck cancels out; the most chips wins.'
+          : engine === 'debate'
+            ? `Every pairing argued both sides of the same ${d.manifest.game.id === 'courtroom' ? 'case' : 'motion'}; blinded judges from other AI companies decided each game.`
+            : `Every pairing played ${G} games with the sides swapped, so neither model got the first move twice.`
+      }`,
       fine: `Seeded by ${d.manifest.settings.seeding === 'index' ? 'Gauntlet Index' : 'manual order'} · fingerprint ${d.manifest.fingerprint}`,
     };
   if (slide.kind === 'match') {
     const m = slide.m;
-    const how = m.decidedBy === 'sudden-death' ? 'The match was level, so it went to a sudden-death game.' : m.decidedBy && m.decidedBy !== 'games' ? `The games were level, so it was decided on ${m.decidedBy}.` : 'Win = 1 point, draw = ½.';
+    const how = m.decidedBy === 'sudden-death' ? 'The match was level, so it went to a sudden-death game.' : m.decidedBy && m.decidedBy !== 'games' && m.decidedBy !== 'margin' ? `It was level, so it was decided on ${m.decidedBy}.` : engine === 'board' ? 'Win = 1 point, draw = ½.' : '';
+    if (engine === 'turns') return { text: `${m.summary}. Each panel is one game: chips won per hand. Both games used the same deals with the cards swapped. ${how}`, fine: 'Illegal actions get one retry, then check (or fold) and a strike' };
+    if (engine === 'debate') return { text: `${m.summary}. Each panel is one debate and the judges’ decision; the models swapped sides for game 2. ${how}`, fine: 'Judges saw “Side A” and “Side B” only, never a model name; no judge from a debater’s vendor' };
     return { text: `${m.summary}. Each board is the final position of one game. ${how}`, fine: `Illegal moves get one retry, then a random legal move and a strike; ${d.manifest.settings.maxStrikes} strikes lose` };
   }
   const champ = d.state.champion ? ents.get(d.state.champion)?.label : '';

@@ -10,12 +10,15 @@ import {
   estimateTournament,
   gameRecord,
   isTournamentActive,
+  judgingPackets,
+  submitHumanVerdict,
   listTournaments,
   resumeTournament,
   startTournament,
   subscribeTournament,
   tournamentDetail,
 } from './tournament.ts';
+import type { HumanVerdictInput } from './tournament.ts';
 import type { ArenaEvent, ArenaRequest } from './types.ts';
 
 type Handler = (ctx: { req: IncomingMessage; res: ServerResponse; params: Record<string, string>; query: URLSearchParams; body: () => Promise<unknown> }) => unknown | Promise<unknown>;
@@ -42,6 +45,11 @@ export function gameInfos() {
     capRule: g.capRule,
     defaults: g.defaults,
     estimate: g.estimate,
+    engine: g.engine ?? 'board',
+    gamesPerMatchOptions: g.gamesPerMatchOptions ?? [2, 4, 6],
+    options: g.options ?? [],
+    judged: Boolean(g.judge),
+    unit: g.unit,
   }));
 }
 
@@ -79,6 +87,22 @@ export function registerArenaRoutes({ route, httpError, streaming }: ArenaRouteD
     const g = gameRecord(params.id!, decodeURIComponent(params.key!));
     if (!g) throw httpError(404, 'Game not found');
     return g;
+  });
+
+  // Human judging (judged games with no eligible judge panel): blinded packets, then a verdict per game.
+  route('GET', '/api/arena/tournaments/:id/judging', ({ params }) => {
+    need(params.id!);
+    return judgingPackets(params.id!);
+  });
+
+  route('POST', '/api/arena/tournaments/:id/games/:key/verdict', async ({ params, body }) => {
+    need(params.id!);
+    try {
+      const { record, resumed } = submitHumanVerdict(params.id!, decodeURIComponent(params.key!), (await body()) as HumanVerdictInput);
+      return { ok: true, winner: record.winner, decision: record.judging?.decision, resumed };
+    } catch (err) {
+      throw httpError(400, (err as Error).message);
+    }
   });
 
   route('POST', '/api/arena/tournaments/:id/cancel', ({ params }) => {

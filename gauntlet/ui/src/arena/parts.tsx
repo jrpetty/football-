@@ -7,6 +7,7 @@ import { fmtClock, fmtCost } from '../format.ts';
 import { useNow } from '../hooks.ts';
 import { SideToken } from './boards.tsx';
 import type { ArenaEntrant, ArenaMove, SideMetrics } from './types.ts';
+import type { TablePlayer } from './poker.tsx';
 
 /** Compact per-move time: 0.8s, 7.2s, 42s, 3m05s. */
 export function secs(ms: number | null | undefined): string {
@@ -28,7 +29,43 @@ export function gameName(gameId: string): string {
   return GAMES[gameId]?.name ?? gameId;
 }
 
-function Strikes({ n, max }: { n: number; max: number }) {
+/** Engine of a game: 'board' (Connect Four, chess), 'turns' (poker) or 'debate' (debate, courtroom). */
+export function engineOf(gameId: string): 'board' | 'turns' | 'debate' {
+  return GAMES[gameId]?.engine ?? 'board';
+}
+
+/** Names and colours per seat for tables and lecterns. */
+export function seatPlayers(ents: Map<string, ArenaEntrant>, players: readonly [string, string] | readonly (string | null)[]): [TablePlayer, TablePlayer] {
+  const one = (id: string | null | undefined, i: number): TablePlayer => {
+    const e = id ? ents.get(id) : undefined;
+    return { label: e?.label ?? id ?? `Seat ${i + 1}`, color: e?.color ?? (i ? '#a855f7' : '#22c55e') };
+  };
+  return [one(players[0], 0), one(players[1], 1)];
+}
+
+/** Match score: "1½" for points, "+34" for margin games (chips). */
+export function fmtScore(x: number, unit?: string): string {
+  if (!unit) {
+    const w = Math.floor(x);
+    return x - w ? `${w || ''}½` : String(w);
+  }
+  return x > 0 ? `+${x}` : String(x);
+}
+
+/** What one game is called on screen. */
+export function playsWord(gameId: string): { move: string; moves: string } {
+  const e = engineOf(gameId);
+  return e === 'turns' ? { move: 'action', moves: 'actions' } : e === 'debate' ? { move: 'speech', moves: 'speeches' } : { move: 'move', moves: 'moves' };
+}
+
+function Strikes({ n, max, lose = true }: { n: number; max: number; lose?: boolean }) {
+  if (!lose) {
+    return (
+      <span className={cx('vs-strike-n tnum', n > 0 && 'on')} title="Strikes: decisions where both attempts failed (a check or fold was played instead)">
+        ✕ {n}
+      </span>
+    );
+  }
   return (
     <span className="vs-strikes" title={`${n} of ${max} strikes (a strike = two failed attempts at one move; ${max} lose the game)`} aria-label={`${n} of ${max} strikes`}>
       {Array.from({ length: max }, (_, i) => (
@@ -97,7 +134,7 @@ export function Versus(p: VersusProps) {
           <span className="vs-stat" title="Spent by this model in this game">
             <b className="tnum">{fmtCost(m?.costUsd ?? 0)}</b>
           </span>
-          <Strikes n={p.strikes?.[i] ?? 0} max={p.maxStrikes} />
+          <Strikes n={p.strikes?.[i] ?? 0} max={p.maxStrikes} lose={GAMES[p.gameId]?.strikesLose !== false} />
         </div>
       </div>
     );
@@ -124,13 +161,23 @@ export function MoveList({ gameId, moves, current, onSelect, live }: { gameId: s
     <ol className={cx('mv-list', gameId === 'chess' && 'pairs')} ref={ref}>
       {moves.map((m, i) => {
         const rejected = m.attempts.filter((a) => a.error).length;
+        if (m.kind === 'verdict') {
+          return (
+            <li key={m.ply} className={cx('mv verdict', i === current && 'on')}>
+              <button type="button" onClick={() => onSelect?.(i)} disabled={!onSelect}>
+                <span className="mv-n">⚖</span>
+                <span className="mv-l">{m.label}</span>
+              </button>
+            </li>
+          );
+        }
         return (
           <li key={m.ply} className={cx('mv', i === current && 'on', m.forfeit && 'forfeit', m.opening && 'opening', m.side === 1 && 'second')}>
             <button type="button" onClick={() => onSelect?.(i)} disabled={!onSelect} title={m.opening ? 'Random opening move played by the harness (sudden-death game)' : m.forfeit ? 'Both attempts failed: a random legal move was played and a strike given' : rejected ? `${rejected} rejected attempt(s) before this move` : undefined}>
               {(gameId !== 'chess' || m.side === 0) && <span className="mv-n tnum">{gameId === 'chess' ? `${Math.ceil(m.ply / 2)}.` : `${m.ply}.`}</span>}
               <span className="mv-dot" style={{ background: sides[m.side]!.color }} aria-hidden="true" />
               <span className="mv-l">{m.move ? m.label : '✕ strike'}</span>
-              {m.forfeit && m.move && <span className="mv-tag bad">random</span>}
+              {m.forfeit && (m.move || engineOf(gameId) !== 'board') && <span className="mv-tag bad">{engineOf(gameId) === 'board' ? 'random' : 'strike'}</span>}
               {!m.forfeit && rejected > 0 && <span className="mv-tag warn">retry</span>}
               {m.opening && <span className="mv-tag">opening</span>}
               <span className="mv-t tnum">{m.opening ? '' : secs(m.ms)}</span>
@@ -144,9 +191,15 @@ export function MoveList({ gameId, moves, current, onSelect, live }: { gameId: s
 
 /** The move's reasoning: rejected attempts in red with the reason, then the accepted reply. */
 export function MoveReasoning({ move, label }: { move: ArenaMove; label: string }) {
+  if (move.kind === 'verdict') return <div className="mv-reason muted">The judges’ decision is shown on the stage: each judge’s scorecard, pick and reasons. Judges saw a blinded transcript (Side A / Side B, no model names).</div>;
   if (move.opening) return <div className="mv-reason muted">Random opening move played by the harness so the sudden-death game does not replay game 1. Both models face the same opening.</div>;
   return (
     <div className="mv-reason">
+      {move.note && (
+        <div className="mv-note">
+          <span className="eyebrow">In one line</span> {move.note}
+        </div>
+      )}
       {move.attempts.map((a, i) => (
         <div key={i} className={cx('mv-attempt', a.error && 'rejected')}>
           <div className="mv-a-head">
@@ -163,7 +216,15 @@ export function MoveReasoning({ move, label }: { move: ArenaMove; label: string 
           )}
         </div>
       ))}
-      {move.forfeit && <div className="mv-err">Both attempts failed, so a random legal move {move.move ? `(${move.label}) ` : ''}was played and a strike was given.</div>}
+      {move.forfeit && (
+        <div className="mv-err">
+          {/^H\d+ /.test(move.label)
+            ? `Both attempts failed, so the harness played "${move.label.replace(/^H\d+ [^:]+: /, '')}" (check if free, otherwise fold) and gave a strike.`
+            : move.kind === undefined && !move.move && move.label.includes('no speech')
+              ? 'Both attempts failed, so this speech is missing (the judges see the gap) and a strike was given.'
+              : `Both attempts failed, so a random legal move ${move.move ? `(${move.label}) ` : ''}was played and a strike was given.`}
+        </div>
+      )}
     </div>
   );
 }

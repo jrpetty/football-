@@ -12,6 +12,7 @@ import { arenaApi } from '../arena/client.ts';
 import type { ArenaEstimate, ArenaFormat, ArenaRequest, ArenaSeeding } from '../arena/types.ts';
 import { GameGlyph } from '../arena/ArenaIcon.tsx';
 import '../arena/arena.css';
+import '../arena/formats.css';
 
 export default function ArenaNewPage() {
   const toast = useToast();
@@ -28,6 +29,7 @@ export default function ArenaNewPage() {
   const [concurrency, setConcurrency] = useState(2);
   const [legal, setLegal] = useState(true);
   const [maxPlies, setMaxPlies] = useState<number | null>(null);
+  const [opts, setOpts] = useState<Record<string, string>>({});
   const [est, setEst] = useState<ArenaEstimate | null>(null);
   const [estErr, setEstErr] = useState<string | null>(null);
   const [estLoading, setEstLoading] = useState(false);
@@ -36,11 +38,34 @@ export default function ArenaNewPage() {
 
   const enabled = useMemo(() => (cons.data ?? []).filter((c) => c.enabled), [cons.data]);
   const game = games.data?.find((g) => g.id === gameId);
+  const engine = game?.engine ?? 'board';
+  const gpmChoices = game?.gamesPerMatchOptions ?? [2, 4, 6];
+  const gameOpts = game?.options ?? [];
+  const optionValues = Object.fromEntries(gameOpts.map((o) => [o.key, opts[o.key] ?? o.default]));
+  const pickGame = (id: string) => {
+    const g = games.data?.find((x) => x.id === id);
+    setGameId(id);
+    setMaxPlies(null);
+    setOpts({});
+    const choices = g?.gamesPerMatchOptions ?? [2, 4, 6];
+    if (!choices.includes(Number(gpm))) setGpm(String(choices[0]));
+  };
   const cap = capText.trim() === '' ? null : Number(capText);
   const capValid = cap === null || (Number.isFinite(cap) && cap > 0);
 
   const req: ArenaRequest | null = picked.length >= 2 && capValid
-    ? { game: gameId, contestantIds: picked, format, gamesPerMatch: Number(gpm), seeding, maxCostUsd: cap ?? undefined, name: name.trim() || undefined, concurrency, listLegalMoves: legal, maxPlies: maxPlies ?? undefined }
+    ? {
+        game: gameId,
+        contestantIds: picked,
+        format,
+        gamesPerMatch: gpmChoices.includes(Number(gpm)) ? Number(gpm) : gpmChoices[0],
+        seeding,
+        maxCostUsd: cap ?? undefined,
+        name: name.trim() || undefined,
+        concurrency,
+        ...(engine === 'board' ? { listLegalMoves: legal, maxPlies: maxPlies ?? undefined } : {}),
+        ...(gameOpts.length ? { options: optionValues } : {}),
+      }
     : null;
   const reqKey = useDebounced(JSON.stringify(req), 250);
 
@@ -108,7 +133,7 @@ export default function ArenaNewPage() {
             <div className="card-body">
               <div className="ar-games" role="radiogroup" aria-label="Game">
                 {games.data.map((g) => (
-                  <button key={g.id} type="button" role="radio" aria-checked={g.id === gameId} className={cx('ar-game', g.id === gameId && 'on')} onClick={() => (setGameId(g.id), setMaxPlies(null))}>
+                  <button key={g.id} type="button" role="radio" aria-checked={g.id === gameId} className={cx('ar-game', g.id === gameId && 'on')} onClick={() => pickGame(g.id)}>
                     <GameGlyph gameId={g.id} />
                     <span className="stack tight" style={{ textAlign: 'left' }}>
                       <strong>{g.name}</strong>
@@ -116,8 +141,22 @@ export default function ArenaNewPage() {
                       <span className="ar-game-desc">{g.description}</span>
                       <span className="row wrap" style={{ gap: 6, marginTop: 4 }}>
                         <span className="badge outline">v{g.version}</span>
-                        <span className="badge">~{g.estimate.pliesPerGame} moves per game</span>
-                        <span className="badge">cap {g.defaults.maxPlies} moves</span>
+                        {g.engine === 'turns' ? (
+                          <>
+                            <span className="badge">hidden cards · duplicate deals</span>
+                            <span className="badge">blinds 1/2 · 200 chips</span>
+                          </>
+                        ) : g.engine === 'debate' ? (
+                          <>
+                            <span className="badge">3 rounds · 180/150/120 words</span>
+                            <span className="badge">blind judge panel</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="badge">~{g.estimate.pliesPerGame} moves per game</span>
+                            <span className="badge">cap {g.defaults.maxPlies} moves</span>
+                          </>
+                        )}
                       </span>
                     </span>
                   </button>
@@ -129,7 +168,8 @@ export default function ArenaNewPage() {
                   <div className="inner">
                     <pre className="ar-rules">{game.rules}</pre>
                     <p className="muted" style={{ fontSize: '0.84rem' }}>
-                      Moves are written as {game.moveHelp}. {game.capRule}
+                      {engine === 'debate' ? `Each move is ${game.moveHelp}. ` : `Moves are written as ${game.moveHelp}. `}
+                      {game.capRule}
                     </p>
                   </div>
                 </details>
@@ -205,12 +245,58 @@ export default function ArenaNewPage() {
             </div>
             <div className="card-body">
               <div className="form-grid">
-                <Field label="Format" hint={format === 'knockout' ? 'Lose a match and you are out. Level matches go to sudden death.' : 'Everyone plays everyone; most points wins.'}>
+                <Field
+                  label="Format"
+                  hint={
+                    format === 'knockout'
+                      ? engine === 'turns'
+                        ? 'Lose a match and you are out. Level on chips: fewer illegal actions, then lower cost.'
+                        : 'Lose a match and you are out. Level matches go to sudden death.'
+                      : engine === 'turns'
+                        ? 'Everyone plays everyone; most chips wins.'
+                        : 'Everyone plays everyone; most points wins.'
+                  }
+                >
                   <Seg label="Format" value={format} onChange={setFormat} options={[{ value: 'knockout', label: 'Knockout' }, { value: 'round-robin', label: 'Round-robin' }]} />
                 </Field>
-                <Field label="Games per pairing" hint="Sides swap every game.">
-                  <Seg label="Games per pairing" value={gpm} onChange={setGpm} options={['2', '4', '6'].map((v) => ({ value: v, label: v }))} />
-                </Field>
+                {gpmChoices.length > 1 ? (
+                  <Field label="Games per pairing" hint="Sides swap every game.">
+                    <Seg label="Games per pairing" value={gpm} onChange={setGpm} options={gpmChoices.map((v) => ({ value: String(v), label: String(v) }))} />
+                  </Field>
+                ) : (
+                  <Field label="Games per pairing" hint={engine === 'turns' ? 'The same deals twice, cards swapped.' : 'Both models argue both sides.'}>
+                    <div className="ar-fixed">{gpmChoices[0]} games · sides swapped</div>
+                  </Field>
+                )}
+                {gameOpts.map((o) => (
+                  <Field key={o.key} label={o.label} hint={o.choices.find((c) => c.value === optionValues[o.key])?.hint ?? o.hint} className={o.choices.length > 5 ? 'span-2' : undefined} htmlFor={`ar-opt-${o.key}`}>
+                    {o.choices.length <= 5 ? (
+                      <Seg label={o.label} value={optionValues[o.key]!} onChange={(v) => setOpts((x) => ({ ...x, [o.key]: v }))} options={o.choices.map((c) => ({ value: c.value, label: c.label }))} />
+                    ) : (
+                      <select id={`ar-opt-${o.key}`} className="select" value={optionValues[o.key]} onChange={(e) => setOpts((x) => ({ ...x, [o.key]: e.target.value }))}>
+                        {o.choices.map((c) => (
+                          <option key={c.value} value={c.value}>
+                            {c.label}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </Field>
+                ))}
+                {engine === 'turns' && (
+                  <div className="span-2">
+                    <Callout tone="info" icon={<span aria-hidden="true">♠</span>}>
+                      <b>Each deal is played twice with cards swapped, so luck cancels out.</b> Game 1 and game 2 of every pairing use the same shuffled decks with the seats swapped; the match goes to whoever wins more chips in total. Blinds 1/2, 200-chip stacks reset every hand.
+                    </Callout>
+                  </div>
+                )}
+                {engine === 'debate' && (
+                  <div className="span-2">
+                    <Callout tone="info" icon={<span aria-hidden="true">⚖</span>}>
+                      <b>Judged blind by other AI companies.</b> The judges in Settings read each transcript as “Side A” and “Side B” (random order, model names removed) and never judge a debater from their own vendor. With no judge available, games wait for you on the human judging screen.
+                    </Callout>
+                  </div>
+                )}
                 <Field label="Seeding" hint={seeding === 'index' ? 'By current Gauntlet Index: the top two can only meet in the final.' : 'In the order you ticked the models (#1 = top seed).'}>
                   <Seg label="Seeding" value={seeding} onChange={setSeeding} options={[{ value: 'index', label: 'Gauntlet Index' }, { value: 'manual', label: 'My order' }]} />
                 </Field>
@@ -232,12 +318,16 @@ export default function ArenaNewPage() {
                 <Field label="Games at once" hint="Parallel games. 1 is easiest to follow live on video." htmlFor="ar-conc">
                   <input id="ar-conc" className="input" type="number" min={1} max={16} value={concurrency} onChange={(e) => setConcurrency(Math.max(1, Math.min(16, Number(e.target.value) || 1)))} />
                 </Field>
-                <Field label="Move cap" hint={game?.capRule} htmlFor="ar-plies">
-                  <input id="ar-plies" className="input" type="number" min={2} max={1000} value={maxPlies ?? game?.defaults.maxPlies ?? ''} onChange={(e) => setMaxPlies(Math.max(2, Math.min(1000, Number(e.target.value) || 2)))} />
-                </Field>
-                <Field label="List the legal moves in each prompt" hint="On: models pick from the list (and the Random Baseline can play). Off: harder — models must find legal moves themselves." className="span-2">
-                  <Switch checked={legal} onChange={setLegal} label="List legal moves" />
-                </Field>
+                {engine === 'board' && (
+                  <>
+                    <Field label="Move cap" hint={game?.capRule} htmlFor="ar-plies">
+                      <input id="ar-plies" className="input" type="number" min={2} max={1000} value={maxPlies ?? game?.defaults.maxPlies ?? ''} onChange={(e) => setMaxPlies(Math.max(2, Math.min(1000, Number(e.target.value) || 2)))} />
+                    </Field>
+                    <Field label="List the legal moves in each prompt" hint="On: models pick from the list (and the Random Baseline can play). Off: harder — models must find legal moves themselves." className="span-2">
+                      <Switch checked={legal} onChange={setLegal} label="List legal moves" />
+                    </Field>
+                  </>
+                )}
                 <Field label="Name" htmlFor="ar-name" className="span-2">
                   <input id="ar-name" className="input" placeholder={`${game?.name ?? 'Arena'} ${format === 'knockout' ? 'knockout' : 'round-robin'} · ${new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}`} value={name} onChange={(e) => setName(e.target.value)} />
                 </Field>
@@ -279,7 +369,7 @@ export default function ArenaNewPage() {
                     </div>
                     <div>
                       <b className="tnum">~{fmtInt(est.moves)}</b>
-                      <span>moves</span>
+                      <span>{engine === 'turns' ? 'decisions' : engine === 'debate' ? 'speeches' : 'moves'}</span>
                     </div>
                     <div>
                       <b className="tnum">{cap && capValid ? fmtCost(cap) : '—'}</b>
@@ -308,6 +398,29 @@ export default function ArenaNewPage() {
                       </div>
                     ))}
                   </div>
+                  {est.judgeCalls !== undefined && (
+                    <div className="est-rows">
+                      <div className="mini-title">Judges (cost included above)</div>
+                      {est.judges && est.judges.length ? (
+                        <>
+                          <div className="row wrap" style={{ gap: 6 }}>
+                            {est.judges.map((j) => (
+                              <span key={j.id} className="badge outline">
+                                {j.label} <span className="muted">· {j.vendor}</span>
+                              </span>
+                            ))}
+                          </div>
+                          <div className="muted tnum" style={{ fontSize: '0.8rem' }}>
+                            {fmtInt(est.judgeCalls)} judge calls · ~{fmtCost(est.judgeCostUsd ?? 0)}. A judge never judges a debater from its own vendor.
+                          </div>
+                        </>
+                      ) : (
+                        <div className="muted" style={{ fontSize: '0.82rem' }}>
+                          No judge models with API keys: every game will wait for human judging.
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {r1.length > 0 && (
                     <div className="ar-preview">
                       <div className="mini-title">{format === 'knockout' ? `${r1[0]!.roundName}` : 'Round 1'}</div>

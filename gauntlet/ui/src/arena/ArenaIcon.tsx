@@ -19,6 +19,21 @@ export function ArenaIcon(p: SVGProps<SVGSVGElement>) {
 
 /** Big game glyph for cards: a disc grid for Connect Four, a knight for chess. */
 export function GameGlyph({ gameId, className }: { gameId: string; className?: string }) {
+  if (gameId === 'poker') {
+    return (
+      <span className={`game-glyph gg-poker ${className ?? ''}`} aria-hidden="true">
+        <i>A♠</i>
+        <i className="red">K♥</i>
+      </span>
+    );
+  }
+  if (gameId === 'debate' || gameId === 'courtroom') {
+    return (
+      <span className={`game-glyph gg-${gameId} ${className ?? ''}`} aria-hidden="true">
+        {gameId === 'courtroom' ? '⚖' : '❝'}
+      </span>
+    );
+  }
   if (gameId === 'chess') {
     return (
       <span className={`game-glyph gg-chess ${className ?? ''}`} aria-hidden="true">

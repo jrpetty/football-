@@ -25,6 +25,10 @@ import type {
   TournamentManifest,
 } from '../arena/types.ts';
 import type { ContestantView } from '../types.ts';
+import type { PokerState } from '../../../src/arena/games/poker.ts';
+import { countWords, type DebateState } from '../../../src/arena/games/debate.ts';
+import { verdictSnapshot } from '../../../src/arena/judged.ts';
+import { pokerChoice, simulateJudging, speechFor } from './arenaFormatsSim.ts';
 
 /** How strong each demo model plays (0 = random). */
 export const STRENGTH: Record<string, number> = {
@@ -137,8 +141,14 @@ export function simulateGame(opts: {
   slot: GameSlot & { matchId: string };
   contestants: Map<string, ContestantView>;
   fast: boolean;
+  /** Spending cap: checked before every model call, exactly like the real engine. */
+  budget?: { spent: number; cap: number };
+  /** Judge pool for judged games (debate, courtroom). */
+  judgePool?: ContestantView[];
+  noJudges?: boolean;
 }): SimGame {
   const { game, settings, slot } = opts;
+  if ((game.engine ?? 'board') !== 'board') return simulateFormatGame(opts);
   const rng = createRng(hashString(`${opts.tournamentId}|${slot.key}`));
   let state = game.setup(createRng(slot.seed).fork('setup'), settings.game);
   const initial = game.snapshot(state);
@@ -163,9 +173,14 @@ export function simulateGame(opts: {
       outcome = game.outcome(state);
     }
   }
+  let stopped = false;
   while (!outcome) {
     if (moves.length >= settings.game.maxPlies) {
       outcome = game.adjudicate(state);
+      break;
+    }
+    if (opts.budget && opts.budget.spent >= opts.budget.cap) {
+      stopped = true;
       break;
     }
     const side = game.toMove(state);
@@ -215,6 +230,7 @@ export function simulateGame(opts: {
     const price = c?.pricing ?? { inputPerM: 0, outputPerM: 0 };
     const manual = c?.providerType === 'manual';
     const cost = manual ? 0 : (calls * inTok * price.inputPerM + calls * outTok * price.outputPerM) / 1e6;
+    if (opts.budget) opts.budget.spent += cost;
     const totalMs = attempts.reduce((sum, a) => sum + a.ms, 0);
     state = game.play(state, choice.move);
     labels.push(label);
@@ -238,9 +254,9 @@ export function simulateGame(opts: {
     gameNo: slot.gameNo,
     seed: slot.seed,
     players: slot.players,
-    status: 'ok',
-    winner: outcome.winner,
-    reason: outcome.reason,
+    status: stopped ? 'cancelled' : 'ok',
+    winner: stopped ? null : outcome!.winner,
+    reason: stopped ? 'Stopped: budget cap reached' : outcome!.reason,
     moves,
     initial,
     strikes,
@@ -249,6 +265,134 @@ export function simulateGame(opts: {
     transcripts: [[], []],
     startedAt: '',
     finishedAt: '',
+  };
+  return { record, pace };
+}
+
+/** Poker, debate and courtroom: the same records the 'turns' and 'debate' engines write. */
+function simulateFormatGame(opts: Parameters<typeof simulateGame>[0]): SimGame {
+  const { game, settings, slot } = opts;
+  const engine = game.engine!;
+  const rng = createRng(hashString(`${opts.tournamentId}|${slot.key}`));
+  let state = game.setup(createRng(slot.seed).fork('setup'), settings.game);
+  const initial = game.snapshot(state);
+  const moves: ArenaMove[] = [];
+  const pace: number[] = [];
+  const strikes: [number, number] = [0, 0];
+  const illegal: [number, number] = [0, 0];
+  const metrics: [SideMetrics, SideMetrics] = [emptyMetrics(), emptyMetrics()];
+  let stopped = false;
+  while (!game.outcome(state) && moves.length < settings.game.maxPlies) {
+    if (opts.budget && opts.budget.spent >= opts.budget.cap) {
+      stopped = true;
+      break;
+    }
+    const side = game.toMove(state);
+    const who = slot.players[side];
+    const c = opts.contestants.get(who);
+    const strength = strengthOf(who);
+    const attempts: ArenaMove['attempts'] = [];
+    let move: string;
+    let note: string | undefined;
+    let inTok: number;
+    let outTok: number;
+    let ms: number;
+    let display: number;
+    if (engine === 'turns') {
+      const choice = pokerChoice(state as PokerState, strength, rng);
+      // Weaker models sometimes size a raise below the minimum first (and fix it on the retry).
+      if (strength > 0 && choice.move.startsWith('raise') && rng.chance((1 - strength) * 0.15)) {
+        const p = game.parseMove(state, 'raise 1');
+        if (!p.ok) {
+          attempts.push({ text: `I want to raise a little.\nACTION: raise 1`, extracted: 'raise 1', error: p.error, ms: 1500 + Math.round(rng.next() * 3000) });
+          illegal[side]++;
+        }
+      }
+      move = choice.move;
+      note = strength === 0 ? undefined : choice.note;
+      ms = Math.round((1500 + rng.next() * 6000) * (0.4 + strength));
+      attempts.push({ text: choice.text, extracted: choice.text.split('ACTION: ').pop() ?? move, ms });
+      inTok = 1150 + (state as PokerState).results.length * 6;
+      outTok = strength === 0 ? 10 : Math.round(120 + strength * 900 * (0.5 + rng.next()));
+      display = opts.fast ? 900 + Math.round(rng.next() * 900) : ms;
+    } else {
+      const text = speechFor(state as DebateState, strength, rng);
+      const p = game.parseMove(state, text);
+      move = p.ok ? p.move : '';
+      ms = Math.round((9000 + rng.next() * 20000) * (0.5 + strength));
+      attempts.push({ text, extracted: null, ms });
+      inTok = (game.id === 'courtroom' ? 1500 : 800) + (state as DebateState).speeches.length * 230;
+      outTok = Math.round(countWords(text) * 1.4 + strength * 700 * rng.next());
+      display = opts.fast ? 5200 + Math.round(rng.next() * 2600) : ms;
+    }
+    const calls = attempts.length;
+    const price = c?.pricing ?? { inputPerM: 0, outputPerM: 0 };
+    const cost = c?.providerType === 'manual' ? 0 : (calls * inTok * price.inputPerM + calls * outTok * price.outputPerM) / 1e6;
+    if (opts.budget) opts.budget.spent += cost;
+    const label = game.label(state, move);
+    state = game.play(state, move);
+    const totalMs = attempts.reduce((a, x) => a + x.ms, 0);
+    moves.push({ ply: moves.length + 1, side, move, label, attempts, forfeit: false, ms: opts.fast ? display : totalMs, costUsd: Math.round(cost * 1e8) / 1e8, inputTokens: inTok * calls, outputTokens: outTok * calls, snapshot: game.snapshot(state), ...(note ? { note } : {}) });
+    pace.push(display);
+    const m = metrics[side];
+    m.costUsd += cost;
+    m.inputTokens += inTok * calls;
+    m.outputTokens += outTok * calls;
+    m.reasoningTokens += Math.round(outTok * calls * 0.5);
+    m.apiCalls += calls;
+    m.ms += opts.fast ? display : totalMs;
+  }
+  for (const m of metrics) m.costUsd = Math.round(m.costUsd * 1e6) / 1e6;
+  let winner: Side | null = null;
+  let reason = 'Stopped: budget cap reached';
+  let judging: ArenaGameRecord['judging'];
+  if (!stopped && engine === 'debate') {
+    const players = slot.players.map((p) => opts.contestants.get(p)!) as [ContestantView, ContestantView];
+    judging = simulateJudging({ game, state: state as DebateState, seed: slot.seed, players, strengths: [strengthOf(slot.players[0]), strengthOf(slot.players[1])], pool: opts.judgePool ?? [], rng: rng.fork('judges'), noJudges: opts.noJudges });
+    if (opts.budget) opts.budget.spent += judging.costUsd;
+    winner = judging.status === 'judged' ? judging.winner : null;
+    const votes = `${Math.max(...judging.votes)}–${Math.min(...judging.votes)}`;
+    reason = judging.status !== 'judged' ? 'Awaiting human judging' : winner === null ? judging.decision : `${judging.decision}${judging.verdicts.length > 1 ? ` (${votes})` : ''}`;
+    moves.push({
+      ply: moves.length + 1,
+      side: winner ?? 0,
+      move: 'verdict',
+      label: judging.status === 'judged' ? `Verdict: ${judging.decision}` : 'Awaiting human judging',
+      attempts: [],
+      forfeit: false,
+      ms: opts.fast ? 6000 : 45000,
+      costUsd: 0,
+      inputTokens: 0,
+      outputTokens: 0,
+      snapshot: { ...(game.snapshot(state) as object), verdict: verdictSnapshot(judging) },
+      kind: 'verdict',
+    });
+    pace.push(opts.fast ? 6000 : 45000);
+  } else if (!stopped) {
+    const out = game.outcome(state) ?? game.adjudicate(state);
+    winner = out.winner;
+    reason = out.reason;
+  }
+  const record: ArenaGameRecord = {
+    key: slot.key,
+    tournamentId: opts.tournamentId,
+    matchId: slot.matchId,
+    gameNo: slot.gameNo,
+    seed: slot.seed,
+    players: slot.players,
+    status: stopped ? 'cancelled' : judging?.status === 'awaiting-human' ? 'awaiting-judges' : 'ok',
+    winner,
+    reason,
+    moves,
+    initial,
+    strikes,
+    illegal,
+    metrics,
+    transcripts: [[], []],
+    startedAt: '',
+    finishedAt: '',
+    ...(!stopped && game.margin ? { margin: game.margin(state) } : {}),
+    ...(judging ? { judging } : {}),
   };
   return { record, pace };
 }
@@ -263,7 +407,9 @@ export function transcriptsFor(record: ArenaGameRecord, gameId: string, settings
     if (!mv.opening) {
       mv.attempts.forEach((a, i) => {
         const prev = mv.attempts[i - 1];
-        const prompt = buildMovePrompt({ game, state, side: mv.side, config: settings.game, labels, strikes: [0, 0], maxStrikes: settings.maxStrikes, retry: prev ? { reply: prev.text, extracted: prev.extracted, error: prev.error ?? '' } : undefined });
+        const prompt = game.prompt
+          ? game.prompt(state, mv.side, { config: settings.game, strikes: [0, 0], maxStrikes: settings.maxStrikes })
+          : buildMovePrompt({ game, state, side: mv.side, config: settings.game, labels, strikes: [0, 0], maxStrikes: settings.maxStrikes, retry: prev ? { reply: prev.text, extracted: prev.extracted, error: prev.error ?? '' } : undefined });
         const c = contestants.get(record.players[mv.side]);
         const n = mv.attempts.length;
         out[mv.side].push({
@@ -280,7 +426,7 @@ export function transcriptsFor(record: ArenaGameRecord, gameId: string, settings
         });
       });
     }
-    if (mv.move) {
+    if (mv.kind !== 'verdict' && (mv.move || game.engine === 'debate')) {
       state = game.play(state, mv.move);
       labels.push(mv.label);
     }
@@ -299,11 +445,16 @@ export interface SimTournament {
   t0: number;
   contestants: Map<string, ContestantView>;
   cancelledAt?: number;
+  /** The simulated spend reached the cap: the tournament stops like the real engine does. */
+  budgetStopped?: boolean;
+  /** How it was built (to rebuild on resume with a new cap). */
+  build?: Parameters<typeof buildSimTournament>[0];
 }
 
 export function lite(r: ArenaGameRecord): ArenaGameLite {
   const { transcripts: _t, moves, ...rest } = r;
-  return { ...rest, plies: moves.filter((m) => m.move).length, lastSnapshot: moves.length ? moves[moves.length - 1]!.snapshot : r.initial };
+  if (rest.judging) rest.judging = { ...rest.judging, transcript: [] };
+  return { ...rest, plies: moves.filter((m) => m.move && m.kind !== 'verdict').length, lastSnapshot: moves.length ? moves[moves.length - 1]!.snapshot : r.initial };
 }
 
 export function buildSimTournament(opts: {
@@ -318,20 +469,25 @@ export function buildSimTournament(opts: {
   fast: boolean;
   maxCostUsd?: number;
   seeding?: 'index' | 'manual';
+  options?: Record<string, string>;
+  judgePool?: ContestantView[];
+  noJudges?: boolean;
 }): SimTournament {
   const game = GAMES[opts.gameId]!;
+  let gameCfg = { ...game.defaults };
+  if (game.configure) gameCfg = game.configure(gameCfg, Object.fromEntries((game.options ?? []).map((o) => [o.key, opts.options?.[o.key] ?? o.default])));
   const entrants: ArenaEntrant[] = opts.entrants.map((c, i) => ({ ...c, seed: i + 1, index: opts.seeding === 'manual' ? null : Math.round(strengthOf(c.id) * 800) / 10, manual: c.providerType === 'manual' || undefined, baseline: c.providerType === 'mock' || c.id === 'random-baseline' || undefined }));
   const settings: ArenaSettings = {
     format: opts.format,
     seeding: opts.seeding ?? 'index',
     gamesPerMatch: opts.gamesPerMatch,
-    suddenDeath: opts.format === 'knockout' ? 2 : 0,
+    suddenDeath: opts.format === 'knockout' && game.suddenDeath !== false ? 2 : 0,
     maxStrikes: 3,
     concurrency: 1,
     temperature: 0,
     maxOutputTokens: 16000,
     maxCostUsd: opts.maxCostUsd,
-    game: { ...game.defaults },
+    game: gameCfg,
     protocolVersion: '2026.09',
   };
   const matches = opts.format === 'knockout' ? buildKnockout(entrants.map((e) => e.id)) : buildRoundRobin(entrants.map((e) => e.id));
@@ -345,7 +501,7 @@ export function buildSimTournament(opts: {
     gitCommit: 'a1b2c3d',
     node: 'v24.4.0',
     platform: 'win32-x64',
-    game: { id: game.id, name: game.name, version: game.version, hash: `${game.id === 'chess' ? '7c1e' : '3f9a'}d2b8e04c` },
+    game: { id: game.id, name: game.name, version: game.version, hash: `${({ chess: '7c1e', connect4: '3f9a', poker: '51ad', debate: 'd3b8', courtroom: 'c0a7' } as Record<string, string>)[game.id] ?? '0000'}d2b8e04c` },
     fingerprint: hashString(`${opts.gameId}|${opts.format}|${opts.gamesPerMatch}`).toString(16).padStart(8, '0') + '4e1a',
     seed: 1,
     entrants,
@@ -355,12 +511,24 @@ export function buildSimTournament(opts: {
   const contestants = new Map(opts.entrants.map((c) => [c.id, c]));
   const games: SimGame[] = [];
   const spec = { seed: 1, entrants, settings, matches };
+  // Same budget rule as the real engine: checked before every call, so at most one call goes over.
+  const budget = opts.maxCostUsd !== undefined ? { spent: 0, cap: opts.maxCostUsd } : undefined;
+  let budgetStopped = false;
   for (let guard = 0; guard < 200; guard++) {
     const state = computeState(spec, games.map((g) => lite(g.record)));
     if (state.complete) break;
+    if (budget && budget.spent >= budget.cap) {
+      budgetStopped = true;
+      break;
+    }
     const next = playableSlots(state, new Set())[0];
     if (!next) break;
-    games.push(simulateGame({ game, settings, tournamentId: opts.id, slot: next, contestants, fast: opts.fast }));
+    const g = simulateGame({ game, settings, tournamentId: opts.id, slot: next, contestants, fast: opts.fast, budget, judgePool: opts.judgePool, noJudges: opts.noJudges });
+    games.push(g);
+    if (g.record.status === 'cancelled') {
+      budgetStopped = true;
+      break;
+    }
   }
   const timeline: SimTournament['timeline'] = [];
   let t = 0;
@@ -380,7 +548,7 @@ export function buildSimTournament(opts: {
     g.record.startedAt = iso(timeline[i]!.start);
     g.record.finishedAt = iso(timeline[i]!.end);
   });
-  return { manifest, games, timeline, t0: opts.t0, contestants };
+  return { manifest, games, timeline, t0: opts.t0, contestants, budgetStopped, build: opts };
 }
 
 export interface SimView {
@@ -434,6 +602,7 @@ export function viewAt(sim: SimTournament, now: number): SimView {
         metrics,
         startedAt: new Date(sim.t0 + tl.start).toISOString(),
         turnStartedAt: new Date(sim.t0 + tl.start + turnStart).toISOString(),
+        ...(nextMove?.kind === 'verdict' ? { phase: 'judging' } : {}),
       };
     }
   });

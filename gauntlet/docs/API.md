@@ -195,7 +195,7 @@ Shapes are defined in [`src/arena/types.ts`](../src/arena/types.ts). Tournaments
 
 | Method | Path | Body | Returns |
 |---|---|---|---|
-| GET | `/api/arena/games` | – | `Array<{ id, name, version, tagline, description, sides, rules, moveHelp, capRule, defaults: { maxPlies, listLegalMoves }, estimate }>` |
+| GET | `/api/arena/games` | – | `Array<{ id, name, version, tagline, description, sides, rules, moveHelp, capRule, defaults: { maxPlies, listLegalMoves }, estimate, engine: 'board' \| 'turns' \| 'debate', gamesPerMatchOptions, options: ArenaOptionSpec[], judged, unit? }>` |
 | POST | `/api/arena/estimate` | `ArenaRequest` | `ArenaEstimate`: games, moves, central and upper-bound USD, per-model cost per game, first-round pairings, fingerprint, warnings |
 | POST | `/api/arena/tournaments` | `ArenaRequest` | `{ tournamentId }`, starts immediately |
 | GET | `/api/arena/tournaments` | – | `TournamentListItem[]` (newest first) |
@@ -204,12 +204,14 @@ Shapes are defined in [`src/arena/types.ts`](../src/arena/types.ts). Tournaments
 | POST | `/api/arena/tournaments/:id/cancel` | – | `{ ok: true }`: games in progress stop at their next move |
 | POST | `/api/arena/tournaments/:id/resume` | `{ maxCostUsd?: number \| null }` | `{ ok: true }`: plays only missing games; 409 if the game code or a model's config changed |
 | DELETE | `/api/arena/tournaments/:id` | – | `{ ok: true }` |
+| GET | `/api/arena/tournaments/:id/judging` | – | Judged games waiting for a human verdict: `Array<{ key, matchId, roundName, gameNo, gameId, material, rubric, note? }>`. `material` is the blinded judge packet (Side A / Side B, no model names). |
+| POST | `/api/arena/tournaments/:id/games/:key/verdict` | `{ winner: 'A' \| 'B', scores?: { side_a, side_b }, rationale? }` | `{ ok, winner, decision, resumed }`: records a human verdict (A/B as shown in the packet); the tournament continues when nothing else is waiting |
 | GET | `/api/arena/tournaments/:id/export.json` | – | `{ manifest, state, games: ArenaGameRecord[] }` |
 | GET | `/api/arena/tournaments/:id/events` | – | **Server-Sent Events** stream of `ArenaEvent`. On connect: `tournament.progress`, `tournament.status` and a `game.started` (with the moves so far) for every game in progress. |
 
 ```ts
 interface ArenaRequest {
-  game: 'connect4' | 'chess';
+  game: 'connect4' | 'chess' | 'poker' | 'debate' | 'courtroom';
   contestantIds: string[];                 // 2–16
   format?: 'knockout' | 'round-robin';     // default knockout
   seeding?: 'index' | 'manual';            // Gauntlet Index (default) or the order given
@@ -221,6 +223,7 @@ interface ArenaRequest {
   concurrency?: number;                    // games at once (default 2)
   maxCostUsd?: number;                     // hard cap, checked before every model call
   seed?: number; name?: string; notes?: string;
+  options?: Record<string, string>;        // poker { hands: '10'|'20'|'40'|'60' }; debate / courtroom { topic: 'random' | <id> }
 }
 
 type ArenaEvent =
@@ -228,6 +231,7 @@ type ArenaEvent =
   | { type: 'tournament.progress'; gamesDone; gamesTotal; costUsd }
   | { type: 'game.started'; game: LiveGame }                 // players, initial board, moves so far
   | { type: 'game.turn'; key; side; at }                     // a seat starts thinking (its clock starts)
+  | { type: 'game.phase'; key; phase; at }                   // e.g. 'judging' after the last speech
   | { type: 'game.thinking'; key; side; text; attempt }      // streamed reply text (append), ~7/s
   | { type: 'game.move'; key; move: ArenaMove; strikes; metrics }
   | { type: 'game.finished'; game: ArenaGameLite }
@@ -235,6 +239,11 @@ type ArenaEvent =
   | { type: 'log'; level; message }
   | { type: 'manual.request'; request } | { type: 'manual.resolved'; requestId };
 ```
+
+Poker and judged games add optional fields: `ArenaGameRecord.margin` (chips per seat), `ArenaGameRecord.judging`
+(`{ status, verdicts[], winner, votes, decision, split, excludedVendors, costUsd, transcript }`, judge cost counts
+towards the cap), `ArenaMove.note` (the model's one-line `REASON:`) and `kind: 'verdict'` for the judges' step,
+`MatchState.unit` ('chips') when a match is scored on margin, and game status `'awaiting-judges'`.
 
 `TournamentState.matches[]` is derived from the finished games every time (never stored), so it is always
 consistent after a crash. Each `MatchState` has `players` (null = decided by an earlier match), `games` (one

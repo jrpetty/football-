@@ -38,6 +38,7 @@ const ArenaNewPage = lazy(() => import('./pages/ArenaNewPage.tsx'));
 const ArenaTournamentPage = lazy(() => import('./pages/ArenaTournamentPage.tsx'));
 const ArenaGamePage = lazy(() => import('./pages/ArenaGamePage.tsx'));
 const ArenaCardPage = lazy(() => import('./pages/ArenaCardPage.tsx'));
+const ArenaJudgePage = lazy(() => import('./pages/ArenaJudgePage.tsx'));
 
 interface NavItem {
   to: string;
@@ -135,6 +136,7 @@ function resolve(parts: string[]): Resolved {
     if (b === 'new') return { el: <ArenaNewPage />, crumb: 'New tournament' };
     if (c === 'game' && parts[3]) return { el: <ArenaGamePage key={`${b}/${parts[3]}`} id={b} gameKey={parts[3]} />, crumb: 'Arena game' };
     if (c === 'card') return { el: <ArenaCardPage key={b} id={b} />, crumb: 'Match cards', bare: true };
+    if (c === 'judge') return { el: <ArenaJudgePage key={b} id={b} />, crumb: 'Human judging' };
     return { el: <ArenaTournamentPage key={b} id={b} />, crumb: 'Tournament' };
   }
   if (a === 'present') {

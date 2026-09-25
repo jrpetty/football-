@@ -3,7 +3,7 @@
  * With `?mock=1` every call is served by ui/src/mock/arenaMock.ts.
  */
 import { MOCK, request } from '../api.ts';
-import type { ArenaEstimate, ArenaEvent, ArenaGameRecord, ArenaRequest, TournamentDetail, TournamentListItem } from './types.ts';
+import type { ArenaEstimate, ArenaEvent, ArenaGameRecord, ArenaOptionSpec, ArenaRequest, TournamentDetail, TournamentListItem } from './types.ts';
 
 export interface GameInfo {
   id: string;
@@ -17,6 +17,30 @@ export interface GameInfo {
   capRule: string;
   defaults: { maxPlies: number; listLegalMoves: boolean };
   estimate: { pliesPerGame: number; inputTokensPerMove: number; outputTokensPerMove: number };
+  /** Added with poker and debate (older servers omit them). */
+  engine?: 'board' | 'turns' | 'debate';
+  gamesPerMatchOptions?: number[];
+  options?: ArenaOptionSpec[];
+  judged?: boolean;
+  unit?: string;
+}
+
+/** A judged game waiting for a human verdict: blinded material (Side A / Side B, no model names). */
+export interface JudgingPacket {
+  key: string;
+  matchId: string;
+  roundName: string;
+  gameNo: number;
+  gameId: string;
+  material: string;
+  rubric: Array<{ key: string; label: string; help: string }>;
+  note?: string;
+}
+
+export interface HumanVerdict {
+  winner: 'A' | 'B';
+  scores?: { side_a?: Record<string, number>; side_b?: Record<string, number> };
+  rationale?: string;
 }
 
 const enc = encodeURIComponent;
@@ -31,6 +55,8 @@ export const arenaApi = {
   cancel: (id: string) => request<{ ok: true }>('POST', `/api/arena/tournaments/${enc(id)}/cancel`),
   resume: (id: string, maxCostUsd?: number | null) => request<{ ok: true }>('POST', `/api/arena/tournaments/${enc(id)}/resume`, maxCostUsd === undefined ? {} : { maxCostUsd }),
   remove: (id: string) => request<{ ok: true }>('DELETE', `/api/arena/tournaments/${enc(id)}`),
+  judging: (id: string) => request<JudgingPacket[]>('GET', `/api/arena/tournaments/${enc(id)}/judging`),
+  verdict: (id: string, key: string, v: HumanVerdict) => request<{ ok: true; winner: 0 | 1 | null; decision?: string; resumed: boolean }>('POST', `/api/arena/tournaments/${enc(id)}/games/${enc(key)}/verdict`, v),
 };
 
 export function exportTournamentUrl(id: string): string | null {

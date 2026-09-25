@@ -5,7 +5,9 @@
  */
 import type { CSSProperties } from 'react';
 import { cx } from '../components/ui.tsx';
-import type { C4Snapshot, ChessSnapshot } from './types.ts';
+import type { C4Snapshot, ChessSnapshot, DebateSnapshot, PokerSnapshot } from './types.ts';
+import { PokerSummary, PokerTable, type TablePlayer } from './poker.tsx';
+import { DebateStage, DebateSummary, type DebateLiveInfo } from './debate.tsx';
 
 // ─────────────────────────────── Connect Four ───────────────────────────────
 
@@ -96,13 +98,38 @@ export function ChessBoard({ snap, className }: { snap: ChessSnapshot; className
   );
 }
 
-export function GameBoard({ gameId, snap, colors, toMove, thinking, className }: { gameId: string; snap: unknown; colors: [string, string]; toMove?: 0 | 1 | null; thinking?: boolean; className?: string }) {
+export interface GameBoardProps {
+  gameId: string;
+  snap: unknown;
+  colors: [string, string];
+  toMove?: 0 | 1 | null;
+  thinking?: boolean;
+  className?: string;
+  /** Player names and colours per seat (poker table, debate lecterns). */
+  players?: [TablePlayer, TablePlayer];
+  /** Compact result instead of the full board (match cards, latest result). */
+  summary?: boolean;
+  /** Debate: the speech being streamed right now. */
+  live?: DebateLiveInfo;
+  judgeHref?: string;
+}
+
+export function GameBoard({ gameId, snap, colors, toMove, thinking, className, players, summary, live, judgeHref }: GameBoardProps) {
+  const who: [TablePlayer, TablePlayer] = players ?? [
+    { label: 'Seat 1', color: colors[0] },
+    { label: 'Seat 2', color: colors[1] },
+  ];
+  const kind = (snap as { kind?: string } | null)?.kind;
+  if (kind === 'poker') return summary ? <PokerSummary snap={snap as PokerSnapshot} players={who} /> : <PokerTable snap={snap as PokerSnapshot} players={who} thinking={thinking} className={className} />;
+  if (kind === 'debate') return summary ? <DebateSummary snap={snap as DebateSnapshot} players={who} /> : <DebateStage snap={snap as DebateSnapshot} players={who} live={live} className={className} judgeHref={judgeHref} />;
   if (gameId === 'chess') return <ChessBoard snap={snap as ChessSnapshot} className={className} />;
   return <Connect4Board snap={snap as C4Snapshot} colors={colors} toMove={toMove} thinking={thinking} className={className} />;
 }
 
-/** Small side token: a disc (Connect Four) or a king glyph (chess). */
+/** Small side token: a disc (Connect Four), a king glyph (chess), a chip (poker) or a side badge (debate). */
 export function SideToken({ gameId, side, color }: { gameId: string; side: 0 | 1; color: string }) {
+  if (gameId === 'poker') return <span className="side-token chip" style={{ ['--c' as string]: color } as CSSProperties} aria-hidden="true" />;
+  if (gameId === 'debate' || gameId === 'courtroom') return <span className="side-token badge-side" style={{ background: color }} aria-hidden="true">{gameId === 'courtroom' ? (side === 0 ? 'P' : 'D') : side === 0 ? '+' : '−'}</span>;
   if (gameId === 'chess') return <span className={cx('side-token chess', side === 0 ? 'w' : 'b')} aria-hidden="true">♚</span>;
   return <span className="side-token disc" style={{ background: color }} aria-hidden="true" />;
 }

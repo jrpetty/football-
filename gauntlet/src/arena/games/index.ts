@@ -6,11 +6,16 @@
 import type { ArenaGame } from '../types.ts';
 import { chess } from './chess.ts';
 import { connect4 } from './connect4.ts';
+import { courtroom, debate } from './debate.ts';
+import { poker } from './poker.ts';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const GAMES: Record<string, ArenaGame<any>> = {
   connect4,
   chess,
+  poker,
+  debate,
+  courtroom,
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

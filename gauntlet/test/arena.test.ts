@@ -473,7 +473,7 @@ test('tournament: the spending cap stops mid-game and resume with a higher cap c
 });
 
 test('tournament: invalid requests are refused with clear errors', () => {
-  assert.throws(() => tournament.planTournament({ game: 'poker', contestantIds: ['bot-0', 'bot-1'] }), /Unknown arena game/);
+  assert.throws(() => tournament.planTournament({ game: 'go', contestantIds: ['bot-0', 'bot-1'] }), /Unknown arena game/);
   assert.throws(() => tournament.planTournament({ game: 'chess', contestantIds: ['bot-0'] }), /at least 2/);
   assert.throws(() => tournament.planTournament({ game: 'chess', contestantIds: ['bot-0', 'bot-1'], gamesPerMatch: 3 }), /2, 4 or 6/);
   assert.throws(() => tournament.planTournament({ game: 'chess', contestantIds: ['bot-0', 'nope'] }), /Unknown model/);

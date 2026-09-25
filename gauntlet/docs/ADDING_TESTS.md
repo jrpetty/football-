@@ -346,19 +346,25 @@ Rules of thumb:
 * The dashboard draws boards in `ui/src/arena/boards.tsx`: add a component for your `snapshot` shape and a case in
   `GameBoard`, then a scripted policy in `ui/src/mock/arenaSim.ts` so the game works in mock mode (`?mock=1`).
 
-**Poker (hidden information and chance).** Deal the whole deck in `setup(rng)`. Colour-swapped games share a
-seed, so both models get the same cards from each seat (duplicate poker). Keep hole cards in the state and show
-each seat only its own in `view(state, side)`. `toMove` may return the same seat twice in a row; moves are ids
-like `fold`, `call`, `raise 40`. `outcome` ends the game on chip count after N hands. Keep hole cards out of
-`snapshot` until showdown if you want the replay to keep the suspense.
+**Other engines.** A game can set `engine` to use a different match engine (all hooks are optional fields on
+`ArenaGame`, so existing games are untouched):
 
-**Debate / Courtroom (free-text moves, judged).** Return a single placeholder such as `SPEAK` from
-`legalMoves`, accept any non-empty text in `parseMove` (store the speech in the state; `label` can be its first
-few words) and let `outcome` return a result only after the last round. The verdict needs judges, which the
-match engine does not call yet: add an optional `judge?(state, ask)` hook to `ArenaGame`, call it from
-`playGame` when the rounds are over, and give it the existing judge panel (`createJudgePanel` in
-`src/engine/runner.ts`, which already keeps judges away from their own vendor). Include the judges' cost in
-`estimate` and in the spending-cap check.
+* `engine: 'turns'` (`src/arena/turns.ts`, used by poker): the game writes the whole prompt in `prompt(state, side)`
+  (show only that seat's private information), picks the answer keyword with `answerKey` (e.g. `ACTION`), the move
+  played after two failed attempts with `fallbackMove` (poker: check, else fold), and can set `strikesLose: false`.
+  A `REASON:` line in the reply is stored as the move's `note` and shown to viewers. For chip-style scoring set
+  `defaults.scoring = 'margin'` and return per-seat results from `margin(state)`: the match is then won on the total.
+* `engine: 'debate'` (`src/arena/judged.ts`, used by debate and courtroom): free-text moves (`parseMove` cleans the
+  reply, `play` enforces limits), then the **judge step** (`src/arena/judge.ts`). Give the game a `judge` spec:
+  the rubric, the judge system prompt, `material(state, sideA)` (the transcript written with "Side A"/"Side B"
+  labels, never model names; the engine also redacts names) and a per-judge token `estimate` (added to the cost
+  estimate). The engine picks the panel (no judge from either player's vendor), randomises Side A per judge,
+  parses the JSON scorecards and decides by majority. No eligible judge → the game is saved as
+  `awaiting-judges` and a person judges it on the Judge screen.
+* Game-specific settings go in `options` (shown on the New tournament page) and `configure(config, options)`;
+  `gamesPerMatchOptions`, `suddenDeath: false` and `estimateFor(config)` adjust the format and the estimate.
+* Chance: deal everything in `setup(rng)`. Colour-swapped games share a seed, so both models get the same cards
+  from each seat (that is what makes poker "duplicate").
 
 ---
 

@@ -56,7 +56,10 @@ export function useTournament(id: string): TournamentLive {
           setLive((m) => new Map(m).set(e.game.key, e.game));
           break;
         case 'game.turn':
-          patch(e.key, (g) => ({ ...g, toMove: e.side, thinking: '', turnStartedAt: e.at }));
+          patch(e.key, (g) => ({ ...g, toMove: e.side, thinking: '', turnStartedAt: e.at, phase: undefined }));
+          break;
+        case 'game.phase':
+          patch(e.key, (g) => ({ ...g, phase: e.phase }));
           break;
         case 'game.thinking':
           patch(e.key, (g) => ({ ...g, thinking: (g.thinking + e.text).slice(-THINK_MAX) }));

@@ -29,7 +29,54 @@ export interface GameConfig {
   maxPlies: number;
   /** List every legal move in each prompt (also what lets the Random Baseline play). */
   listLegalMoves: boolean;
+  /**
+   * How a match is scored: 'points' (default: win 1, draw ½) or 'margin' (the sum of each game's
+   * `margin`, e.g. poker chips; the higher total wins the match).
+   */
+  scoring?: 'points' | 'margin';
   [key: string]: unknown;
+}
+
+/** A game-specific option on the New tournament page (e.g. hands per match, motion). */
+export interface ArenaOptionSpec {
+  key: string;
+  label: string;
+  hint?: string;
+  choices: Array<{ value: string; label: string; hint?: string }>;
+  default: string;
+}
+
+/** Context the 'turns' engine passes to `ArenaGame.prompt`. */
+export interface TurnPromptContext {
+  config: GameConfig;
+  strikes: [number, number];
+  maxStrikes: number;
+}
+
+/** A judged game's rubric criterion (scored 1–10 per side by every judge). */
+export interface RubricItem {
+  key: string;
+  label: string;
+  /** What the judge should look for, in one sentence. */
+  help: string;
+}
+
+/**
+ * Judge step (generic; used by debate and courtroom). The engine blinds the
+ * transcript ("Side A"/"Side B", random per judge, model names redacted),
+ * asks every eligible judge for rubric scores and a winner, and decides by
+ * majority.
+ */
+export interface JudgeSpec<S = unknown> {
+  rubric: RubricItem[];
+  /** Judge system prompt. */
+  system: string;
+  /** The blinded material for the judges. `sideA` is the seat shown as "Side A". Never include model names. */
+  material(state: S, sideA: Side): string;
+  /** Extra judging instructions, e.g. "the verdict turns on the use of the exhibits". */
+  instructions: string;
+  /** Per-judge token estimate for one game. */
+  estimate: { inputTokens: number; outputTokens: number };
 }
 
 export type ParsedMove = { ok: true; move: string } | { ok: false; error: string };
@@ -82,6 +129,40 @@ export interface ArenaGame<S = unknown> {
   view(state: S, side: Side): string;
   /** JSON the dashboard draws the board from. */
   snapshot(state: S): unknown;
+
+  // ── Optional extensions (all backwards compatible) ─────────────────────────
+  /** Source file under src/arena/games/ when it is not `<id>.ts` (several games in one module). */
+  module?: string;
+  /**
+   * Which match engine plays the game: 'board' (match.ts, the default), 'turns' (turns.ts: the game
+   * writes its own prompt, hidden information, custom answer keyword, e.g. poker) or 'debate'
+   * (debate.ts: free-text speeches, then the judge step).
+   */
+  engine?: 'board' | 'turns' | 'debate';
+  /** Allowed games per pairing (default [2, 4, 6]). */
+  gamesPerMatchOptions?: number[];
+  /** Sudden-death games make sense for this game (default true). */
+  suddenDeath?: boolean;
+  /** Game-specific options shown on the New tournament page. */
+  options?: ArenaOptionSpec[];
+  /** Apply the chosen options to a copy of the config; throw a plain-English Error when invalid. */
+  configure?(config: GameConfig, options: Record<string, string>): GameConfig;
+  /** Token estimate for a given config (e.g. more hands = more decisions). Falls back to `estimate`. */
+  estimateFor?(config: GameConfig): ArenaGame['estimate'];
+  /** 'turns' engine: the whole prompt for the seat to act (only what that seat may see). */
+  prompt?(state: S, side: Side, ctx: TurnPromptContext): string;
+  /** 'turns' engine: the answer keyword, e.g. "ACTION" (default "MOVE"). */
+  answerKey?: string;
+  /** 'turns' engine: the move played after two failed attempts (default: a seeded-random legal move). */
+  fallbackMove?(state: S): string;
+  /** False: strikes never lose the game (the fallback move is the penalty). Default true. */
+  strikesLose?: boolean;
+  /** Per-seat score of a finished game for 'margin' scoring (e.g. chips won). */
+  margin?(state: S): [number, number];
+  /** Unit of `margin`, e.g. "chips". */
+  unit?: string;
+  /** Judged games: the judge step (debate engine). */
+  judge?: JudgeSpec<S>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -118,6 +199,10 @@ export interface ArenaMove {
   outputTokens: number;
   /** Board after the move. */
   snapshot: unknown;
+  /** The model's one-line reason for the move ("REASON:" line), when given. */
+  note?: string;
+  /** 'verdict' = the judges' decision (judged games), not a player move. */
+  kind?: 'verdict';
 }
 
 export interface SideMetrics {
@@ -131,7 +216,50 @@ export interface SideMetrics {
   ms: number;
 }
 
-export type GameStatus = 'ok' | 'error' | 'cancelled';
+/** 'awaiting-judges': a judged game whose play is finished but no judge could decide it yet. */
+export type GameStatus = 'ok' | 'error' | 'cancelled' | 'awaiting-judges';
+
+export interface JudgeScores {
+  [criterion: string]: number;
+}
+
+/** One judge's decision, already mapped back from "Side A/B" to seats. */
+export interface JudgeVerdict {
+  judgeId: string;
+  judgeLabel: string;
+  vendor: string;
+  /** The seat this judge saw as "Side A" (randomised per judge). */
+  sideA: Side;
+  /** Winning seat, or null for a draw / no decision. */
+  winner: Side | null;
+  /** Rubric scores per seat (1–10 each). */
+  scores?: [JudgeScores, JudgeScores];
+  rationale: string;
+  error?: string;
+  costUsd: number;
+  /** Judged by a person on the human judging screen. */
+  human?: boolean;
+}
+
+export interface ArenaJudging {
+  status: 'judged' | 'awaiting-human';
+  verdicts: JudgeVerdict[];
+  /** Majority winner (seat), or null for a draw. */
+  winner: Side | null;
+  /** Judge votes per seat. */
+  votes: [number, number];
+  /** "Unanimous decision", "Split decision", "Majority decision", "Draw", "Awaiting human judging". */
+  decision: string;
+  split: boolean;
+  /** Why the game is waiting for a human (no eligible judges, all judges failed, …). */
+  note?: string;
+  /** Vendors kept off the panel because a debater comes from them. */
+  excludedVendors: string[];
+  costUsd: number;
+  metrics: SideMetrics;
+  /** Every judge prompt and reply (blinded), for auditing. */
+  transcript: TranscriptEntry[];
+}
 
 export interface ArenaGameRecord {
   /** `${matchId}-g${gameNo}` */
@@ -157,6 +285,12 @@ export interface ArenaGameRecord {
   error?: string;
   startedAt: string;
   finishedAt: string;
+  /** 'margin' games: per-seat result (e.g. chips won; sums to zero in poker). */
+  margin?: [number, number];
+  /** Judged games: the panel's decision (its cost counts towards the spending cap). */
+  judging?: ArenaJudging;
+  /** This line re-states an earlier record of the same game (a human verdict was added); its cost was already counted. */
+  amends?: boolean;
 }
 
 /** Record without transcripts and board snapshots, for lists. */
@@ -190,6 +324,8 @@ export interface ArenaRequest {
   maxCostUsd?: number;
   seed?: number;
   notes?: string;
+  /** Game-specific options (see `ArenaGame.options`), e.g. { hands: '20' } or { motion: 'random' }. */
+  options?: Record<string, string>;
 }
 
 export type MatchSource = { entrant: string } | { winnerOf: string } | { bye: true };
@@ -248,7 +384,7 @@ export interface TournamentManifest {
   error?: string;
 }
 
-export type MatchDecision = 'games' | 'sudden-death' | 'fewer illegal moves' | 'lower cost' | 'higher seed' | 'bye' | 'walkover';
+export type MatchDecision = 'games' | 'margin' | 'sudden-death' | 'fewer illegal moves' | 'lower cost' | 'higher seed' | 'bye' | 'walkover';
 
 export interface GameSlot {
   key: string;
@@ -276,6 +412,10 @@ export interface MatchState {
   decidedBy?: MatchDecision;
   /** One-line result, e.g. "Claude wins 1½–½". */
   summary: string;
+  /** Set for 'margin' games: `score` holds the margin totals (e.g. chips) in this unit. */
+  unit?: string;
+  /** Games waiting for (human) judges. */
+  awaiting?: number;
 }
 
 export interface StandingRow {
@@ -289,6 +429,8 @@ export interface StandingRow {
   illegal: number;
   costUsd: number;
   rank: number;
+  /** 'margin' games: total margin (e.g. chips won); `points` then holds the same number. */
+  margin?: number;
 }
 
 export interface TournamentState {
@@ -301,6 +443,8 @@ export interface TournamentState {
   /** Planned games (sudden-death games are added as they become necessary). */
   gamesTotal: number;
   costUsd: number;
+  /** Judged games waiting for a human verdict. */
+  awaitingJudges?: number;
 }
 
 export interface TournamentListItem {
@@ -342,6 +486,8 @@ export interface LiveGame {
   startedAt: string;
   /** When the seat to move started thinking. */
   turnStartedAt: string;
+  /** e.g. 'judging' while the judges deliberate (judged games). */
+  phase?: string;
 }
 
 export interface ArenaEstimate {
@@ -357,6 +503,11 @@ export interface ArenaEstimate {
   warnings: string[];
   entrants: Array<{ id: string; seed: number; index: number | null }>;
   matches: MatchSpec[];
+  /** Judged games: judge calls and their share of `estCostUsd`. */
+  judgeCalls?: number;
+  judgeCostUsd?: number;
+  /** The judge panel (before per-match vendor exclusion). */
+  judges?: Array<{ id: string; label: string; vendor: string }>;
 }
 
 export type ArenaEvent =
@@ -365,6 +516,7 @@ export type ArenaEvent =
   | { type: 'game.started'; tournamentId: string; game: LiveGame; at: string }
   | { type: 'game.thinking'; tournamentId: string; key: string; side: Side; text: string; attempt: number }
   | { type: 'game.turn'; tournamentId: string; key: string; side: Side; at: string }
+  | { type: 'game.phase'; tournamentId: string; key: string; phase: string; at: string }
   | { type: 'game.move'; tournamentId: string; key: string; move: ArenaMove; strikes: [number, number]; metrics: [SideMetrics, SideMetrics]; at: string }
   | { type: 'game.finished'; tournamentId: string; game: ArenaGameLite; at: string }
   | { type: 'match.finished'; tournamentId: string; match: MatchState; at: string }
