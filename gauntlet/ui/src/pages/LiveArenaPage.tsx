@@ -13,6 +13,10 @@ import { Icon } from '../components/icons.tsx';
 import { Podium } from '../components/leaderboard/Panels.tsx';
 import { isBaseline } from '../components/leaderboard/util.ts';
 import { fmtClock, fmtCost, fmtIndex, fmtInt, fmtPct, fmtTokens } from '../format.ts';
+import { RaceTrack } from '../components/viz/RaceTrack.tsx';
+import { TweenNumber } from '../components/viz/TweenNumber.tsx';
+import { FinishMoment } from '../components/viz/FinishMoment.tsx';
+import '../styles/live-visual.css';
 import type { FinishedCase, Leaderboard, ManualRequest, ReplayFrame, RunDetail, RunEvent, RunManifest, RunStatus, TestSummary } from '../types.ts';
 
 const STREAM_MAX = 1500;
@@ -46,6 +50,8 @@ interface Lane {
   testDone: Map<string, { n: number; sum: number; scored: number }>;
   /** Brief on-lane announcement when the model finishes every case of a test. */
   flash: { testId: string; score: number | null; at: number } | null;
+  /** Change of the mean score caused by the latest graded case (score ticker). */
+  delta: { v: number; at: number } | null;
 }
 
 interface Store {
@@ -96,6 +102,7 @@ function buildStore(d: RunDetail, prev: Store | undefined, manualProviders: Set<
       isManual: manualProviders.has(c.provider) || !!d.leaderboard?.rows?.find((r) => r.contestantId === c.id)?.manual,
       testDone: new Map(),
       flash: old?.flash ?? null,
+      delta: old?.delta ?? null,
     });
   }
   const sorted = [...(d.results ?? [])].sort((a, b) => t(a.finishedAt) - t(b.finishedAt));
@@ -223,8 +230,10 @@ function applyEvent(s: Store, e: RunEvent) {
       l.inTok += e.metrics?.inputTokens ?? 0;
       l.outTok += e.metrics?.outputTokens ?? 0;
       if (typeof e.score === 'number') {
+        const before = l.scored ? l.scoreSum / l.scored : null;
         l.scoreSum += e.score;
         l.scored++;
+        if (before !== null) l.delta = { v: l.scoreSum / l.scored - before, at: Date.now() };
       }
       if (e.status === 'error' || e.status === 'timeout') l.errors++;
       {
@@ -273,7 +282,7 @@ function StreamWindow({ text, active }: { text: string; active: boolean }) {
   );
 }
 
-function LaneCard({ lane, rank, testName, now, done }: { lane: Lane; rank: number | null; testName: (id: string) => string; now: number; done: boolean }) {
+function LaneCard({ lane, rank, testName, now, done, leader }: { lane: Lane; rank: number | null; testName: (id: string) => string; now: number; done: boolean; leader: boolean }) {
   const focus = lane.focusKey;
   const cur = focus ? lane.inFlight.get(focus) : undefined;
   const text = focus ? lane.buffers.get(focus) ?? '' : '';
@@ -286,8 +295,9 @@ function LaneCard({ lane, rank, testName, now, done }: { lane: Lane; rank: numbe
   const extra = lane.inFlight.size - (cur ? 1 : 0);
 
   const flash = lane.flash && Date.now() - lane.flash.at < 3800 ? lane.flash : null;
+  const delta = lane.delta && Date.now() - lane.delta.at < 6000 && Math.abs(lane.delta.v) >= 0.0005 ? lane.delta : null;
   return (
-    <article className={cx('lane', finished && 'finished', flash && 'flashing')} style={{ ['--c' as string]: lane.color }} aria-label={`${lane.label} lane`}>
+    <article className={cx('lane', finished && 'finished', flash && 'flashing', leader && 'leader')} style={{ ['--c' as string]: lane.color }} aria-label={`${lane.label} lane`}>
       {flash && (
         <div className="lane-flash" key={flash.at} role="status">
           <span className="lfl-k">Finished · {testName(flash.testId)}</span>
@@ -301,10 +311,24 @@ function LaneCard({ lane, rank, testName, now, done }: { lane: Lane; rank: numbe
         <span className={cx('lane-rank', rank !== null && rank <= 3 && `r${rank}`)} title="Live rank by mean score">
           {rank ?? '–'}
         </span>
+        {leader && (
+          <span className="lane-leader" title="Highest mean score so far">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5Z" fill="currentColor" />
+            </svg>
+            Leader
+          </span>
+        )}
         <ModelCell label={lane.label} vendor={lane.isManual ? `${lane.vendor} · manual` : lane.vendor} color={lane.color} />
         <div className="lane-score">
-          <span className="tnum">{mean === null ? '—' : (mean * 100).toFixed(1)}</span>
-          <small>mean score</small>
+          <span className="tnum">{mean === null ? '—' : <TweenNumber value={mean * 100} decimals={1} />}</span>
+          {delta ? (
+            <small key={delta.at} className={cx('lane-delta tnum', delta.v > 0 ? 'up' : 'down')} title="Change after the latest graded case">
+              {delta.v > 0 ? '▲' : '▼'} {Math.abs(delta.v * 100).toFixed(1)}
+            </small>
+          ) : (
+            <small>mean score</small>
+          )}
         </div>
       </header>
       <div className="lane-progress">
@@ -408,7 +432,7 @@ function LaneCard({ lane, rank, testName, now, done }: { lane: Lane; rank: numbe
   );
 }
 
-function FinishLine({ lb, runId }: { lb: Leaderboard; runId: string }) {
+function FinishLine({ lb, runId, onReplay }: { lb: Leaderboard; runId: string; onReplay?: () => void }) {
   const rows = [...lb.rows].sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99));
   return (
     <section className="finish">
@@ -440,6 +464,11 @@ function FinishLine({ lb, runId }: { lb: Leaderboard; runId: string }) {
         <Link to={pathOf('present', runId)} className="btn" title="Episode presenter: full-screen slides for recording">
           <Icon.Present /> Present
         </Link>
+        {onReplay && (
+          <button type="button" className="btn" onClick={onReplay} title="Play the finish-line moment again (for recording)">
+            <Icon.Flag /> Replay the finish
+          </button>
+        )}
       </div>
     </section>
   );
@@ -456,6 +485,9 @@ export default function LiveArenaPage({ runId }: { runId: string }) {
   const [error, setError] = useState<Error | null>(null);
   const [final, setFinal] = useState<Leaderboard | null>(null);
   const [confirm, setConfirm] = useState(false);
+  /** The finish-line moment: shown when the run completes while watching, or on request (?finish=1). */
+  const [moment, setMoment] = useState(() => /[?&]finish=1/.test(window.location.hash));
+  const wasActive = useRef<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const pending = useRef(false);
   const connectedRef = useRef(false);
@@ -548,6 +580,13 @@ export default function LiveArenaPage({ runId }: { runId: string }) {
         : 'The finish line: the final standings for this run, ranked by the Gauntlet Index — each model’s average score out of 100 across every category.',
     active ? 'Every model gets identical prompts · scores update as each answer is graded' : 'Index whiskers = 95% bootstrap confidence interval',
   );
+
+  useEffect(() => {
+    if (!s) return;
+    if (wasActive.current && !active && s.status === 'completed') setMoment(true);
+    wasActive.current = active;
+  }, [active, s]);
+  const closeMoment = useCallback(() => setMoment(false), []);
 
   const testNames = useMemo(() => new Map((s?.manifest?.tests ?? []).map((x) => [x.id, x.name])), [s?.manifest]);
   const testName = useCallback((id: string) => testNames.get(id) ?? id, [testNames]);
@@ -661,7 +700,32 @@ export default function LiveArenaPage({ runId }: { runId: string }) {
               {fmtInt(s.completed)} / {fmtInt(s.total)} jobs
             </span>
           </div>
-          <Progress value={frac} lg striped={active} label="Overall progress" />
+          <Progress value={frac} striped={active} label="Overall progress" />
+          {lanes.length > 1 && (
+            <RaceTrack
+              compact
+              finished={done}
+              fmtCost={fmtCost}
+              title={`The race · ${Math.floor(frac * 100)}% of all jobs done`}
+              lanes={lanes.map((l) => {
+                const r = ranking.indexOf(l.id);
+                const cur = l.focusKey ? l.inFlight.get(l.focusKey) : undefined;
+                return {
+                  id: l.id,
+                  label: l.label,
+                  color: l.color,
+                  progress: l.total ? l.completed / l.total : 0,
+                  done: l.completed,
+                  total: l.total,
+                  score: l.scored ? l.scoreSum / l.scored : null,
+                  rank: r >= 0 ? r + 1 : null,
+                  now: cur ? testName(cur.testId) : undefined,
+                  finished: l.total > 0 && l.completed >= l.total,
+                  baseline: isBaseline({ contestantId: l.id, vendor: l.vendor, label: l.label }),
+                };
+              })}
+            />
+          )}
         </div>
         <div className="arena-stats">
           <div className="astat">
@@ -693,7 +757,18 @@ export default function LiveArenaPage({ runId }: { runId: string }) {
         </div>
       </header>
 
-      {final && done && <FinishLine lb={final} runId={runId} />}
+      {final && done && <FinishLine lb={final} runId={runId} onReplay={() => setMoment(true)} />}
+      {moment && final && done && (
+        <FinishMoment
+          podium={[...final.rows]
+            .filter((r) => !isBaseline(r))
+            .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99))
+            .slice(0, 3)
+            .map((r) => ({ label: r.label, color: r.color, value: `Gauntlet Index ${fmtIndex(r.index)}` }))}
+          caption={`${m.name || m.id}: ${m.tests.length} tests, ${m.contestants.length} models, identical prompts for every model.`}
+          onDone={closeMoment}
+        />
+      )}
       {done && s.status !== 'completed' && (
         <div className="callout warn">
           <Icon.Alert />
@@ -707,7 +782,7 @@ export default function LiveArenaPage({ runId }: { runId: string }) {
       <div className="lanes" style={{ ['--lane-cols' as string]: cols }}>
         {lanes.map((l) => {
           const r = ranking.indexOf(l.id);
-          return <LaneCard key={l.id} lane={l} rank={r >= 0 ? r + 1 : null} testName={testName} now={now} done={done} />;
+          return <LaneCard key={l.id} lane={l} rank={r >= 0 ? r + 1 : null} testName={testName} now={now} done={done} leader={r === 0 && lanes.length > 1} />;
         })}
       </div>
 

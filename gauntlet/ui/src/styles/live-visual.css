@@ -1,0 +1,109 @@
+/* Live Arena visual pass: the race in the header, the leader's lane, the score ticker. */
+
+.arena-progress .race {
+  margin-top: 4px;
+}
+.arena-head {
+  grid-template-columns: minmax(0, 1.1fr) minmax(340px, 1.15fr) auto;
+}
+html[data-broadcast='on'] .arena-head:has(.arena-now) {
+  grid-template-columns: minmax(0, 1.25fr) minmax(360px, 1.1fr) auto;
+}
+html[data-broadcast='on'] .arena-progress .race-lanes {
+  gap: 2px;
+}
+html[data-broadcast='on'] .arena-progress .race-lane {
+  padding: 0 6px;
+}
+/* Broadcast: the race carries progress, score and spend per model, so the header and lanes slim down to fit 1080p. */
+html[data-broadcast='on'] .arena-progress .ap-top {
+  display: none;
+}
+html[data-broadcast='on'] .arena-progress {
+  gap: 4px;
+}
+html[data-broadcast='on'] .arena-progress .race-key {
+  font-size: 0.66rem;
+}
+html[data-broadcast='on'] .arena-progress .race-lane {
+  grid-template-columns: minmax(110px, 11rem) minmax(0, 1fr) 6.4rem 3.6rem;
+}
+html[data-broadcast='on'] .arena:has(.arena-progress .race) .lane-stats {
+  display: none;
+}
+
+/* Leader: gold frame and a crown badge next to the rank. */
+.lane.leader {
+  border-color: color-mix(in srgb, var(--gold) 75%, var(--border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--gold) 55%, transparent), 0 10px 40px -18px var(--gold);
+}
+.lane-leader {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 2px 6px;
+  border-radius: 999px;
+  background: var(--gold);
+  color: #1b1405;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  flex: none;
+  animation: lane-leader-in 520ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.lane-leader svg {
+  width: 13px;
+  height: 13px;
+}
+@keyframes lane-leader-in {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+}
+
+/* Score ticker: the change caused by the latest graded case. */
+.lane-delta {
+  font-size: 0.86rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0 !important;
+  animation: lane-delta 6s ease-out both;
+}
+.lane-delta.up {
+  color: var(--good-text) !important;
+}
+.lane-delta.down {
+  color: var(--bad-text) !important;
+}
+@keyframes lane-delta {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  8%,
+  80% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0.35;
+  }
+}
+
+/* Run detail while a run is live: the race above the tabs. */
+.rd-race {
+  padding: 14px 18px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border);
+  background: linear-gradient(100deg, color-mix(in srgb, var(--live) 8%, transparent), transparent 45%), var(--surface-1);
+  margin-bottom: 16px;
+  display: grid;
+  gap: 8px;
+}
+.rd-race-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}

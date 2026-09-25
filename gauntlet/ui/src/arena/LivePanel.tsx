@@ -1,9 +1,9 @@
 /** The live board for one game in progress: versus header with clocks, the board, streaming reasoning and the move list. */
 import { pathOf } from '../router.tsx';
-import { GameBoard } from './boards.tsx';
-import { HandLog } from './poker.tsx';
+import { Connect4Legend, GameBoard } from './boards.tsx';
+import { MoveCaption } from './MoveCaption.tsx';
 import { MoveList, Thinking, Versus, engineOf, fmtScore, playsWord, seatPlayers, secs, sidesOf } from './parts.tsx';
-import type { LiveGame, MatchState, PokerSnapshot, TournamentDetail } from './types.ts';
+import type { C4Snapshot, LiveGame, MatchState, TournamentDetail } from './types.ts';
 import { entrantMap } from './useTournament.ts';
 
 /** "Game 1 of 2", "Sudden death", or the format-specific line for poker and debates. */
@@ -67,7 +67,16 @@ export function LivePanel({ d, game, match }: { d: TournamentDetail; game: LiveG
       {versus}
       <div className="ar-live-grid">
         <div className="ar-stage">
+          <MoveCaption
+            gameId={gameId}
+            move={last}
+            prev={game.moves.length > 1 ? game.moves[game.moves.length - 2]!.snapshot : game.initial}
+            names={[players[0].label, players[1].label]}
+            color={last ? players[last.side].color : undefined}
+            idle={engine === 'turns' ? 'Hand 1 dealt' : 'Starting position'}
+          />
           <GameBoard gameId={gameId} snap={snap} colors={[sides[0]!.color, sides[1]!.color]} toMove={game.toMove} thinking players={players} className="big" />
+          {gameId === 'connect4' && <Connect4Legend colors={[sides[0]!.color, sides[1]!.color]} names={[players[0].label, players[1].label]} snap={snap as C4Snapshot} />}
           <div className="ar-stage-foot">
             <span>
               {engine === 'turns' ? 'Decision' : 'Move'} <b className="tnum">{game.moves.filter((m) => m.move).length + 1}</b>
@@ -82,27 +91,15 @@ export function LivePanel({ d, game, match }: { d: TournamentDetail; game: LiveG
         </div>
         <div className="ar-side">
           <Thinking text={game.thinking} who={mover?.label ?? game.players[game.toMove]} color={mover?.color} />
-          {engine === 'turns' && (snap as PokerSnapshot)?.kind === 'poker' ? (
-            <div className="card ar-moves">
-              <div className="card-head">
-                <div className="t">
-                  <h2>This hand</h2>
-                </div>
-                <span className="badge outline tnum">Hand {(snap as PokerSnapshot).handNo}</span>
+          <div className="card ar-moves">
+            <div className="card-head">
+              <div className="t">
+                <h2>{words.moves[0]!.toUpperCase() + words.moves.slice(1)}</h2>
               </div>
-              <HandLog snap={snap as PokerSnapshot} players={players} />
+              <span className="badge outline tnum">{game.moves.length}</span>
             </div>
-          ) : (
-            <div className="card ar-moves">
-              <div className="card-head">
-                <div className="t">
-                  <h2>{words.moves[0]!.toUpperCase() + words.moves.slice(1)}</h2>
-                </div>
-                <span className="badge outline tnum">{game.moves.length}</span>
-              </div>
-              <MoveList gameId={gameId} moves={game.moves} live />
-            </div>
-          )}
+            <MoveList gameId={gameId} moves={game.moves} live />
+          </div>
         </div>
       </div>
     </div>

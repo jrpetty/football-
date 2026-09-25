@@ -294,7 +294,7 @@ export function ReplayPlayer({ replay, autoPlay = false, context, startStep }: {
         <div className="chart-empty">This replay has no frames.</div>
       ) : null}
 
-      {frame?.code && <CodeAgentStage frame={frame} video={video} />}
+      {frame?.code && <CodeAgentStage frame={frame} video={video} frames={frames} index={idx} onSeek={(i) => (setPlaying(false), setIdx(i))} />}
       {frame && !frame.code && (
         <div className={cx('replay-stage', hasGrid ? 'with-grid' : 'no-grid')}>
           {hasGrid && (

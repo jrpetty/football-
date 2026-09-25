@@ -15,10 +15,13 @@ import { cx } from '../components/ui.tsx';
 import { fmtCost } from '../format.ts';
 import { GameBoard } from '../arena/boards.tsx';
 import { Bracket, RoundRobin } from '../arena/Bracket.tsx';
+import { TieBreakNote } from '../arena/debate.tsx';
+import { TrophySvg } from '../components/viz/TrophySvg.tsx';
 import { engineOf, fmtScore, playsWord, seatPlayers, sidesOf } from '../arena/parts.tsx';
 import { entrantMap, formatName, pts, useTournament } from '../arena/useTournament.ts';
 import type { ArenaEntrant, MatchState, TournamentDetail } from '../arena/types.ts';
 import '../arena/arena.css';
+import '../arena/card-visual.css';
 
 const W = 1920;
 const H = 1080;
@@ -36,7 +39,7 @@ function useStageScale(): number {
   return k;
 }
 
-function PlayerPanel({ e, score, won, side, unit }: { e: ArenaEntrant | undefined; score: number; won: boolean; side: 'left' | 'right'; unit?: string }) {
+function PlayerPanel({ e, score, won, side, unit, stats }: { e: ArenaEntrant | undefined; score: number; won: boolean; side: 'left' | 'right'; unit?: string; stats?: string }) {
   return (
     <div className={cx('mc-player', side, won && 'won')} style={{ ['--c' as string]: e?.color ?? 'var(--text-3)' } as CSSProperties}>
       <span className="mc-bar" aria-hidden="true" />
@@ -44,6 +47,7 @@ function PlayerPanel({ e, score, won, side, unit }: { e: ArenaEntrant | undefine
         <span className="mc-seed">Seed {e?.seed}</span>
         <strong>{e?.label}</strong>
         <span className="mc-vendor">{e?.vendor}</span>
+        {stats && <span className="mc-stats tnum">{stats}</span>}
       </div>
       <b className={cx('mc-score tnum', unit && 'margin')}>
         {fmtScore(score, unit)}
@@ -60,6 +64,8 @@ function MatchCard({ d, m }: { d: TournamentDetail; m: MatchState }) {
   const [a, b] = m.players as [string, string];
   const games = m.games.filter((s) => s.game);
   const engine = engineOf(d.manifest.game.id);
+  const bad = engine === 'debate' ? 'rejected replies' : `illegal ${playsWord(d.manifest.game.id).moves}`;
+  const statLine = (i: 0 | 1) => `${m.illegal[i]} ${bad} · ${fmtCost(m.cost[i])} spent`;
   return (
     <div className={cx('mc', engine !== 'board' && `mc-${engine}`)}>
       <div className="mc-head">
@@ -67,16 +73,31 @@ function MatchCard({ d, m }: { d: TournamentDetail; m: MatchState }) {
         <span className="mc-game">{d.manifest.game.name}</span>
       </div>
       <div className="mc-versus">
-        <PlayerPanel e={ents.get(a)} score={m.score[0]} won={m.winner === a} side="left" unit={m.unit} />
+        <PlayerPanel e={ents.get(a)} score={m.score[0]} won={m.winner === a} side="left" unit={m.unit} stats={statLine(0)} />
         <span className="mc-vs">VS</span>
-        <PlayerPanel e={ents.get(b)} score={m.score[1]} won={m.winner === b} side="right" unit={m.unit} />
+        <PlayerPanel e={ents.get(b)} score={m.score[1]} won={m.winner === b} side="right" unit={m.unit} stats={statLine(1)} />
       </div>
+      <ol className="mc-pips" aria-label="Game by game">
+        {games.map((s, i) => {
+          const g = s.game!;
+          const w = g.status === 'awaiting-judges' ? undefined : g.winner === null ? null : ents.get(g.players[g.winner]);
+          return (
+            <li key={s.key} style={{ ['--c' as string]: w?.color ?? 'var(--text-3)', animationDelay: `${700 + i * 220}ms` } as CSSProperties}>
+              <span className="mc-pip-n">{s.suddenDeath ? 'Sudden death' : `Game ${s.gameNo}`}</span>
+              <i aria-hidden="true" />
+              <b>{w === undefined ? 'awaiting judges' : w ? w.label : 'draw'}</b>
+              {g.margin && g.winner !== null && <span className="tnum">{fmtScore(g.margin[g.winner], 'chips')}</span>}
+            </li>
+          );
+        })}
+      </ol>
+      <TieBreakNote match={m} labelOf={(id) => ({ label: (id && ents.get(id)?.label) || '—', color: (id && ents.get(id)?.color) || 'var(--text-3)' })} />
       <div className="mc-games" style={{ gridTemplateColumns: `repeat(${Math.min(games.length, 4)}, minmax(0, 1fr))` }}>
         {games.slice(0, 4).map((s) => {
           const g = s.game!;
           const w = g.winner === null ? null : ents.get(g.players[g.winner]);
           return (
-            <div key={s.key} className="mc-g">
+            <div key={s.key} className="mc-g" style={{ ['--c' as string]: w?.color ?? 'var(--border)' } as CSSProperties}>
               <div className="mc-g-board">
                 <GameBoard gameId={d.manifest.game.id} snap={g.lastSnapshot} colors={[sides[0]!.color, sides[1]!.color]} players={seatPlayers(ents, g.players)} summary />
               </div>
@@ -99,9 +120,6 @@ function MatchCard({ d, m }: { d: TournamentDetail; m: MatchState }) {
       </div>
       <div className="mc-foot">
         <span>{m.summary}</span>
-        <span className="tnum">
-          {engineOf(d.manifest.game.id) === 'debate' ? 'Rejected replies' : `Illegal ${playsWord(d.manifest.game.id).moves}`} {m.illegal[0]} / {m.illegal[1]} · cost {fmtCost(m.cost[0])} / {fmtCost(m.cost[1])}
-        </span>
       </div>
     </div>
   );
@@ -116,7 +134,8 @@ function ChampionCard({ d }: { d: TournamentDetail }) {
   return (
     <div className="champ-card" style={{ ['--c' as string]: champ.color } as CSSProperties}>
       <div className="champ-trophy" aria-hidden="true">
-        🏆
+        <span className="champ-rays" />
+        <TrophySvg />
       </div>
       <span className="champ-k">{d.manifest.game.name} champion</span>
       <strong className="champ-name">{champ.label}</strong>

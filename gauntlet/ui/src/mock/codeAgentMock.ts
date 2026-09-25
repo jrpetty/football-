@@ -33,6 +33,18 @@ const FULL = (recorded as unknown as { replay: ReplayData }).replay;
 /** The recorded replay; low scores get a plausible partial run that ran out of ideas. */
 export function codeAgentReplay(seed: number, score: number): ReplayData {
   if (score >= 0.85) return { ...FULL, title: `${FULL.title} · seed ${seed}` };
+  if (score >= 0.7) {
+    // Every visible test green, but two hidden tests still fail: the "bug the visible tests didn't show" case.
+    const frames = FULL.frames.map((f) => ({ ...f }));
+    const last = frames[frames.length - 1]!;
+    frames[frames.length - 1] = {
+      ...last,
+      outcome: 'Submitted. Hidden tests: 11 of 13 pass (4 passed before). Visible: 9/9.',
+      tone: 'neutral',
+      code: { ...last.code!, hidden: { passed: 11, total: 13, before: 4 } },
+    };
+    return { ...FULL, title: `${FULL.title} · seed ${seed}`, frames };
+  }
   const frames: ReplayFrame[] = FULL.frames.slice(0, 5).map((f) => ({ ...f }));
   const last = FULL.frames[FULL.frames.length - 1]!;
   const lastCode = last.code!;
@@ -54,5 +66,7 @@ export function codeAgentReplay(seed: number, score: number): ReplayData {
 }
 
 export function codeAgentSummary(score: number): string {
-  return score >= 0.85 ? `Fixed it: all 13 hidden tests pass · ${10 + Math.round((1 - score) * 20)} actions (par 8)` : `Hidden tests ${Math.round(4 + score * 9)}/13 (was 4) · visible 8/9 · 30 actions`;
+  if (score >= 0.85) return `Fixed it: all 13 hidden tests pass · ${10 + Math.round((1 - score) * 20)} actions (par 8)`;
+  if (score >= 0.7) return 'Hidden tests 11/13 (was 4) · visible 9/9 · 10 actions';
+  return `Hidden tests 8/13 (was 4) · visible 8/9 · 30 actions`;
 }

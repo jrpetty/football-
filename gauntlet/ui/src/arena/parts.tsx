@@ -152,9 +152,14 @@ export function MoveList({ gameId, moves, current, onSelect, live }: { gameId: s
   const ref = useRef<HTMLOListElement>(null);
   const sides = sidesOf(gameId);
   useEffect(() => {
-    const el = ref.current?.querySelector('.on');
-    if (el) el.scrollIntoView({ block: 'nearest' });
-    else if (live && ref.current) ref.current.scrollTop = ref.current.scrollHeight;
+    // Scroll only the list (scrollIntoView would also scroll the page, which jumps the video frame).
+    const box = ref.current;
+    const el = box?.querySelector<HTMLElement>('.on');
+    if (box && el) {
+      const top = el.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop;
+      if (top < box.scrollTop) box.scrollTop = top - 4;
+      else if (top + el.offsetHeight > box.scrollTop + box.clientHeight) box.scrollTop = top + el.offsetHeight - box.clientHeight + 4;
+    } else if (live && box) box.scrollTop = box.scrollHeight;
   }, [current, moves.length, live]);
   if (!moves.length) return <div className="mv-empty muted">No moves yet.</div>;
   return (

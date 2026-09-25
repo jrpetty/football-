@@ -12,11 +12,16 @@ import { Icon } from '../components/icons.tsx';
 import { TranscriptView } from '../components/Transcript.tsx';
 import { fmtCost, fmtTokens } from '../format.ts';
 import { arenaApi } from '../arena/client.ts';
-import { GameBoard } from '../arena/boards.tsx';
+import { Connect4Legend, GameBoard } from '../arena/boards.tsx';
 import { LivePanel, gameLine } from '../arena/LivePanel.tsx';
 import { MoveList, MoveReasoning, Versus, engineOf, fmtScore, playsWord, seatPlayers, secs, sidesOf } from '../arena/parts.tsx';
 import { entrantMap, useTournament } from '../arena/useTournament.ts';
-import type { ArenaGameRecord, TournamentDetail } from '../arena/types.ts';
+import type { ArenaGameRecord, C4Snapshot, ChessSnapshot, PokerSnapshot, TournamentDetail } from '../arena/types.ts';
+import { MoveCaption } from '../arena/MoveCaption.tsx';
+import { chessMaterial } from '../arena/analysis.ts';
+import { TieBreakNote } from '../arena/debate.tsx';
+import { PokerPairChart } from '../arena/PokerPairChart.tsx';
+import { BalanceTimeline } from '../components/viz/BalanceTimeline.tsx';
 import '../arena/arena.css';
 
 const SPEEDS = [0.5, 1, 2, 4];
@@ -64,8 +69,8 @@ function Replay({ d, g }: { d: TournamentDetail; g: ArenaGameRecord }) {
     k: () => togglePlay(),
     ArrowRight: (e) => (e.preventDefault(), setPlaying(false), setIdx((i) => Math.min(n, i + 1))),
     ArrowLeft: (e) => (e.preventDefault(), setPlaying(false), setIdx((i) => Math.max(0, i - 1))),
-    Home: () => (setPlaying(false), setIdx(0)),
-    End: () => (setPlaying(false), setIdx(n)),
+    Home: (e) => (e.preventDefault(), setPlaying(false), setIdx(0)),
+    End: (e) => (e.preventDefault(), setPlaying(false), setIdx(n)),
     f: () => toggleFs(),
   });
 
@@ -100,6 +105,8 @@ function Replay({ d, g }: { d: TournamentDetail; g: ArenaGameRecord }) {
           : `${ents.get(g.players[g.winner])?.label} wins${g.margin ? ` ${fmtScore(g.margin[g.winner], 'chips')} chips` : ''}`;
   const pct = n ? (idx / n) * 100 : 100;
   const moverName = move ? (ents.get(g.players[move.side])?.label ?? '') : '';
+  const labelOf = (id: string | null) => ({ label: (id && ents.get(id)?.label) || id || '—', color: (id && ents.get(id)?.color) || 'var(--text-3)' });
+  const materialSeries = useMemo(() => (gameId === 'chess' ? [g.initial, ...g.moves.map((m) => m.snapshot)].map((s) => chessMaterial(s as ChessSnapshot).diff) : []), [gameId, g]);
 
   return (
     <div className={cx('ar-replay', isFs && 'is-fs')} ref={rootRef}>
@@ -122,9 +129,21 @@ function Replay({ d, g }: { d: TournamentDetail; g: ArenaGameRecord }) {
           </div>
         }
       />
+      {match && engine === 'debate' && <TieBreakNote match={match} labelOf={labelOf} />}
       <div className={cx('ar-live-grid', engine === 'debate' && 'db-grid')}>
         <div className="ar-stage">
+          {!(engine === 'debate' && move?.kind === 'verdict') && (
+            <MoveCaption
+              gameId={gameId}
+              move={move}
+              prev={idx > 1 ? g.moves[idx - 2]!.snapshot : g.initial}
+              names={[players[0].label, players[1].label]}
+              color={move ? players[move.side].color : undefined}
+              idle={engine === 'debate' ? 'Before the first speech' : engine === 'turns' ? `Hand 1 dealt · ${players[0].label} vs ${players[1].label}` : `Starting position · ${sides[0]!.name}: ${players[0].label}`}
+            />
+          )}
           <GameBoard gameId={gameId} snap={snap} colors={[sides[0]!.color, sides[1]!.color]} players={players} judgeHref={pathOf('arena', d.manifest.id, 'judge')} className="big" />
+          {gameId === 'connect4' && <Connect4Legend colors={[sides[0]!.color, sides[1]!.color]} names={[players[0].label, players[1].label]} snap={snap as C4Snapshot} />}
           {atEnd && g.status === 'ok' && engine === 'board' && (
             <div className="ar-final" role="status">
               <span className="eyebrow">Final result</span>
@@ -162,7 +181,33 @@ function Replay({ d, g }: { d: TournamentDetail; g: ArenaGameRecord }) {
             </button>
           </div>
         </div>
-        <div className="ar-side">
+        <div className={cx('ar-side', `eng-${engine}`)}>
+          {gameId === 'chess' && (
+            <div className="card">
+              <div className="ar-insight">
+                <BalanceTimeline
+                  title="Material over time"
+                  values={materialSeries}
+                  at={idx}
+                  sides={[
+                    { label: `${players[0].label} (White)`, color: '#e8e2d2' },
+                    { label: `${players[1].label} (Black)`, color: '#5b6270' },
+                  ]}
+                  unit="points"
+                  onSeek={(i) => (setPlaying(false), setIdx(i))}
+                  height={84}
+                />
+                <span className="muted" style={{ fontSize: '0.78rem' }}>
+                  Material = pieces left on the board (pawn 1, knight 3, bishop 3, rook 5, queen 9). It is a count, not an engine evaluation. Click the chart to jump.
+                </span>
+              </div>
+            </div>
+          )}
+          {gameId === 'poker' && match && (snap as PokerSnapshot)?.kind === 'poker' && (
+            <div className="card">
+              <PokerPairChart match={match} gameKey={g.key} snap={snap as PokerSnapshot} labelOf={(id) => ({ label: ents.get(id)?.label ?? id, color: ents.get(id)?.color ?? 'var(--accent)' })} />
+            </div>
+          )}
           <div className="card ar-movecard">
             <div className="card-head">
               <div className="t">

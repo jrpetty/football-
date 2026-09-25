@@ -1,0 +1,290 @@
+/* Debate / Courtroom visual pass: sides line, round progress, word meters, exhibit links, evidence panel, dramatic verdict. */
+
+.db-sides-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 0.95rem;
+  color: var(--text-2);
+}
+.db-sides-line > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.db-sides-line i {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--c);
+}
+.db-sides-line b {
+  color: var(--text-1);
+}
+
+/* Round progress bar: one tick per speech (coloured by the side that speaks), then the judges. */
+.db-progress {
+  position: relative;
+  width: min(760px, 100%);
+  height: 10px;
+  margin: 6px auto 16px;
+  border-radius: 999px;
+  background: var(--surface-3);
+}
+.db-progress > i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--gold));
+  transition: width 600ms var(--ease-out);
+}
+.db-progress > u {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  background: var(--surface-1);
+  box-shadow: inset 0 0 0 2px var(--c);
+}
+.db-progress > u.done {
+  background: var(--c);
+}
+.db-progress-t {
+  position: absolute;
+  top: 13px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+/* Word-limit meter with a tick at the limit. */
+.db-wm {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.86rem;
+  color: var(--text-2);
+}
+.db-wm-track {
+  position: relative;
+  width: 150px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  overflow: visible;
+}
+.db-wm-track i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  background: var(--good);
+  transition: width 300ms var(--ease-out);
+}
+.db-wm-track u {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--text-1);
+  opacity: 0.8;
+}
+.db-wm.near .db-wm-track i {
+  background: var(--warn);
+}
+.db-wm.over .db-wm-track i {
+  background: var(--bad);
+}
+.db-wm.over .db-wm-n {
+  color: var(--bad-text);
+  font-weight: 700;
+}
+.db-wm-n b {
+  color: var(--text-1);
+}
+.db-b-role b {
+  color: var(--c);
+}
+
+/* Exhibits: links in speeches and the evidence panel. */
+.db-cite {
+  all: unset;
+  cursor: pointer;
+  padding: 0 3px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--gold) 38%, transparent);
+  color: var(--text-1);
+  font-weight: 700;
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--gold) 80%, transparent);
+}
+.db-cite:hover,
+.db-cite.sel {
+  background: var(--gold);
+  color: #1b1405;
+}
+.db-cite:focus-visible {
+  outline: 2px solid var(--accent);
+}
+button.db-ex {
+  font: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.db-ex.sel {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+}
+.db-ex-n {
+  display: inline-flex;
+  gap: 2px;
+}
+.db-ex-n i {
+  font-style: normal;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+  color: #fff;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+}
+.db-evidence {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 900px;
+  margin: 8px auto 0;
+  padding: 8px 14px;
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--gold) 10%, var(--surface-2));
+  border: 1px solid color-mix(in srgb, var(--gold) 45%, var(--border));
+  text-align: left;
+  animation: mcap-in 300ms var(--ease-out) both;
+}
+.db-evidence.empty {
+  background: var(--surface-2);
+  border-color: var(--border);
+  font-size: 0.85rem;
+  text-align: center;
+}
+.db-ev-k {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.db-ev-t {
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: var(--text-1);
+}
+
+/* Verdict: votes appear as each card turns over, then the banner lands. */
+.db-v-left {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: stretch;
+}
+.db-tally {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.db-tally-k {
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.db-tally-dots {
+  display: flex;
+  gap: 10px;
+}
+.db-tally-dots i {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--c);
+  box-shadow: 0 0 0 3px var(--surface-1), 0 0 0 5px var(--c);
+  animation: db-vote 420ms var(--ease-out) both;
+}
+@keyframes db-vote {
+  from {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  60% {
+    transform: scale(1.25);
+  }
+}
+.db-card-row {
+  animation: db-row 320ms var(--ease-out) both;
+  animation-delay: var(--rd, 0ms);
+}
+@keyframes db-row {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+}
+.db-card-row .r {
+  text-align: right;
+}
+.db-card-names {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+.db-card-names span {
+  max-width: 48%;
+}
+.db-card-pick {
+  animation: db-stamp 420ms var(--ease-out) both;
+  animation-delay: var(--pd, 0ms);
+  padding: 6px 10px;
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--c) 16%, transparent);
+  border: 2px solid var(--c);
+  text-align: center;
+  font-weight: 700;
+}
+@keyframes db-stamp {
+  from {
+    opacity: 0;
+    transform: scale(1.6) rotate(-4deg);
+  }
+  70% {
+    transform: scale(0.96);
+  }
+}
+.db-v-banner strong {
+  font-size: 2.2rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .db-card,
+  .db-card-row,
+  .db-card-pick,
+  .db-tally-dots i,
+  .db-v-banner {
+    animation-delay: 0ms !important;
+  }
+}

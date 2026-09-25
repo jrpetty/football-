@@ -1,0 +1,336 @@
+/* Poker visual pass: chip piles, bets on the felt, pot, betting timeline and showdown. */
+
+/* ───────────── Chip piles ───────────── */
+.pk-pile {
+  display: inline-flex;
+  align-items: flex-end;
+  flex: none;
+}
+.pk-pile-chips {
+  position: relative;
+  display: block;
+  width: 26px;
+  transition: height 380ms var(--ease-out);
+}
+.pk-pile-chips i {
+  position: absolute;
+  left: 1px;
+  width: 24px;
+  height: 9px;
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 255, 255, 0.92);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+  animation: pk-chip-in 360ms var(--ease-out) both;
+}
+@keyframes pk-chip-in {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+}
+.pk-pile.t-pot .pk-pile-chips {
+  width: 30px;
+}
+.pk-pile.t-pot .pk-pile-chips i {
+  width: 28px;
+  height: 10px;
+}
+
+/* Bets in front of each seat, between the seats and the pot. */
+.pk-bets {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 34px;
+  padding: 0 6px;
+}
+.pk-bet {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 6px;
+  animation: pk-bet-in 360ms var(--ease-out) both;
+}
+.pk-bet.right {
+  flex-direction: row-reverse;
+}
+.pk-bet b {
+  font-size: 0.95rem;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 0 0 2px var(--c);
+}
+.pk-bet.empty {
+  visibility: hidden;
+}
+@keyframes pk-bet-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.9);
+  }
+}
+.pk-pot {
+  align-items: flex-end;
+}
+.pk-pot-n {
+  font-size: 1rem;
+}
+.pk-pot-n b {
+  font-size: 1.35rem;
+}
+.pk-hole {
+  align-items: flex-end;
+}
+.pk-hole .pk-pile {
+  margin-left: 6px;
+}
+.pk-seat.right .pk-hole {
+  flex-direction: row-reverse;
+}
+.pk-seat.right .pk-hole .pk-pile {
+  margin: 0 6px 0 0;
+}
+/* Broadcast: the betting timeline under the table replaces the long action list. */
+html[data-broadcast='on'] .ar-side.eng-turns .ar-moves {
+  display: none;
+}
+
+/* ───────────── Showdown ───────────── */
+.pk-sd {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--r-lg);
+  background: var(--surface-2);
+  border: 1px solid color-mix(in srgb, var(--gold) 45%, var(--border));
+  animation: pk-pop 420ms var(--ease-out) both;
+}
+.pk-sd-k {
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.pk-sd-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+}
+.pk-sd-line .pk-sd-hand:nth-child(2) {
+  grid-column: 3;
+  grid-row: 1;
+  text-align: right;
+  align-items: flex-end;
+}
+.pk-sd-vs {
+  grid-column: 2;
+  grid-row: 1;
+  font-weight: 900;
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+  white-space: nowrap;
+}
+.pk-sd-hand {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: var(--r-md);
+  border-left: 4px solid var(--c);
+  background: var(--surface-1);
+}
+.pk-sd-line .pk-sd-hand:nth-child(2) {
+  border-left: 0;
+  border-right: 4px solid var(--c);
+}
+.pk-sd-hand.win {
+  box-shadow: 0 0 0 2px var(--gold);
+}
+.pk-sd-hand.lose {
+  opacity: 0.7;
+}
+.pk-sd-name {
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+.pk-sd-cards {
+  display: flex;
+  gap: 4px;
+  margin-top: 2px;
+}
+.pk-sd-hand .pk-card.sm {
+  --cw: 30px;
+}
+.pk-ladder {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  gap: 3px;
+}
+.pk-ladder li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 2px 6px;
+  border-radius: 6px;
+  background: var(--surface-3);
+  color: var(--text-3);
+  font-size: 0.72rem;
+  font-weight: 650;
+  text-align: center;
+  line-height: 1.15;
+}
+.pk-ladder li.on {
+  color: var(--text-1);
+  background: color-mix(in srgb, var(--gold) 22%, var(--surface-3));
+}
+.pk-ladder li i {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--surface-1);
+}
+
+/* ───────────── Betting timeline ───────────── */
+.pk-tl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.pk-tl-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  min-width: 0;
+  transition: opacity var(--t-med), border-color var(--t-med);
+}
+.pk-tl-col.on {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.pk-tl-col.future {
+  opacity: 0.45;
+}
+.pk-tl-h {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  min-height: 30px;
+}
+.pk-tl-cards {
+  display: flex;
+  gap: 2px;
+}
+.pk-tl-cards .pk-card.sm {
+  --cw: 22px;
+}
+.pk-tl-acts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.pk-tl-a {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.84rem;
+  animation: ar-fade-up 260ms var(--ease-out) both;
+}
+.pk-tl-a i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--c);
+}
+.pk-tl-a b {
+  max-width: 9rem;
+  font-weight: 700;
+}
+.pk-tl-a span {
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.pk-tl-a.allin span {
+  color: var(--bad-text);
+  font-weight: 800;
+}
+.pk-tl-a.fold span {
+  color: var(--text-3);
+  text-decoration: line-through;
+}
+.pk-tl-none {
+  font-size: 0.8rem;
+  color: var(--text-3);
+}
+.pk-tl-end {
+  grid-column: 1 / -1;
+  padding: 6px 12px;
+  border-radius: var(--r-md);
+  font-weight: 800;
+  background: color-mix(in srgb, var(--c) 18%, var(--surface-2));
+  border-left: 4px solid var(--c);
+}
+html[data-broadcast='on'] .pk-tl-a {
+  font-size: 0.8rem;
+}
+@media (max-width: 900px) {
+  .pk-tl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .pk-ladder {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.pk-plate {
+  max-width: 310px;
+}
+.pk-stack .pk-net {
+  font-size: 0.8rem;
+}
+/* Broadcast: the cards are already on the felt, so the showdown panel keeps only the hand names and the ladder. */
+html[data-broadcast='on'] .pk-sd-cards {
+  display: none;
+}
+html[data-broadcast='on'] .pk-sd {
+  padding: 8px 14px;
+  gap: 6px;
+}
+html[data-broadcast='on'] .pk-sd-hand {
+  padding: 4px 10px;
+}
+html[data-broadcast='on'] .ar-stage .pk-card {
+  --cw: 54px;
+}
+html[data-broadcast='on'] .ar-stage .pk-felt {
+  min-height: 300px;
+  padding-top: 12px;
+  padding-bottom: 18px;
+}
+/* Broadcast showdown: the panel below spells out both hands, so the banner on the felt steps aside to keep everything in frame. */
+html[data-broadcast='on'] .pk-table:has(.pk-sd) .pk-banner {
+  display: none;
+}

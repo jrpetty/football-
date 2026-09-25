@@ -12,6 +12,7 @@ import { ResumeDialog } from '../components/ResumeDialog.tsx';
 import type { InspectorTarget } from '../components/ResultInspector.tsx';
 import { durationBetween, fmtCost, fmtDateTime, fmtInt, fmtMs, fmtPricePerM, shortHash } from '../format.ts';
 import type { RunDetail } from '../types.ts';
+import { LiveRaceCard } from '../components/LiveRaceCard.tsx';
 
 type Tab = 'leaderboard' | 'matrix' | 'config';
 
@@ -218,6 +219,7 @@ export default function RunDetailPage({ runId }: { runId: string }) {
         </div>
       </section>
 
+      {d.active && <LiveRaceCard d={d} />}
       <Tabs
         value={tab}
         onChange={(t) => setQuery({ tab: t })}
