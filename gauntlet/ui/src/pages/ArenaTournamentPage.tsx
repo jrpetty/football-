@@ -377,7 +377,7 @@ export default function ArenaTournamentPage({ id }: { id: string }) {
               {engine === 'turns'
                 ? `Each pairing plays the same deals twice with the cards swapped (${(Number(m.settings.game.hands) || 10) * 2} hands); the most chips wins${m.settings.format === 'knockout' ? '; level on chips: fewer illegal actions, then lower cost' : ''}.`
                 : engine === 'debate'
-                  ? `Each pairing debates the same ${m.game.id === 'courtroom' ? 'case' : 'motion'} twice with the sides swapped; each game is decided by the judges${m.settings.format === 'knockout' ? '; a level match goes to a sudden-death debate' : ''}.`
+                  ? `Each pairing debates the same ${m.game.id === 'courtroom' ? 'case' : 'motion'} twice with the sides swapped; each game is decided by the judges${m.settings.format === 'knockout' ? '; level on games: the judges’ total points, then the judges’ picks, then a sudden-death debate' : ''}.`
                   : `Each pairing plays ${m.settings.gamesPerMatch} games with the sides swapped${m.settings.format === 'knockout' ? '; a level match goes to sudden death, then fewer illegal moves, then lower cost' : ''}.`}
             </span>
           </div>

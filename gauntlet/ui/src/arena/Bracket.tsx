@@ -58,7 +58,7 @@ export function MatchBox({ m, d, liveKeys, compact }: { m: MatchState; d: Tourna
     <>
       <PlayerRow e={m.players[0] ? ents.get(m.players[0]) : undefined} m={m} idx={0} liveKeys={liveKeys} />
       <PlayerRow e={m.players[1] ? ents.get(m.players[1]) : undefined} m={m} idx={1} liveKeys={liveKeys} />
-      {!compact && m.decidedBy && m.decidedBy !== 'games' && m.decidedBy !== 'margin' && m.decidedBy !== 'bye' && <div className="bk-note">{m.decidedBy === 'sudden-death' ? 'won in sudden death' : `tie-break: ${m.decidedBy}`}</div>}
+      {!compact && m.decidedBy && m.decidedBy !== 'games' && m.decidedBy !== 'margin' && m.decidedBy !== 'bye' && <div className="bk-note">{m.decidedBy === 'sudden-death' ? 'won in sudden death' : m.decidedBy === "judges' points" || m.decidedBy === "judges' picks" ? `Level on games, decided on ${m.decidedBy}` : `tie-break: ${m.decidedBy}`}</div>}
     </>
   );
   const cls = cx('bk-match', isLive && 'live', m.status === 'done' && 'done', m.status === 'bye' && 'bye', m.status === 'waiting' && 'waiting');

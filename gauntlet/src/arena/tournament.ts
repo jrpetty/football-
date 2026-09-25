@@ -660,6 +660,7 @@ function launch(manifest: TournamentManifest): void {
       const engine = game.engine === 'turns' ? playTurnGame : game.engine === 'debate' ? playJudgedGame : playGame;
       const played: PlayedGameExt = await engine({
         judge: game.judge ? judge : undefined,
+        gameNo: slot.gameNo,
         onPhase: (phase: string) => {
           liveGame.phase = phase;
           clearTimeout(moveTimer);

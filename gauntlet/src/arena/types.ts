@@ -391,7 +391,7 @@ export interface TournamentManifest {
   error?: string;
 }
 
-export type MatchDecision = 'games' | 'margin' | 'sudden-death' | 'fewer illegal moves' | 'lower cost' | 'higher seed' | 'bye' | 'walkover';
+export type MatchDecision = 'games' | 'margin' | "judges' points" | "judges' picks" | 'sudden-death' | 'fewer illegal moves' | 'lower cost' | 'higher seed' | 'bye' | 'walkover';
 
 export interface GameSlot {
   key: string;
@@ -423,6 +423,9 @@ export interface MatchState {
   unit?: string;
   /** Games waiting for (human) judges. */
   awaiting?: number;
+  /** Judged formats: rubric points and judges' picks per player across the match (the first tie-breaks). */
+  judgePoints?: [number, number];
+  judgePicks?: [number, number];
 }
 
 export interface StandingRow {

@@ -114,6 +114,8 @@ export function computeState(spec: BracketSpec, games: ArenaGameLite[], spentUsd
   const byKey = new Map(games.filter((g) => g.status === 'ok' || g.status === 'awaiting-judges').map((g) => [g.key, g]));
   const counted = (s: GameSlot) => s.game?.status === 'ok';
   const byMargin = spec.settings.game?.scoring === 'margin';
+  // Judged formats (debate, courtroom): a level match is decided on the judges' rubric points, then their picks, before sudden death.
+  const judgeTiebreak = spec.settings.game?.tiebreak === 'judges';
   const unit = spec.unit ?? (typeof spec.settings.game?.unit === 'string' ? spec.settings.game.unit : 'points');
   const seedOf = new Map(spec.entrants.map((e) => [e.id, e.seed]));
   const G = spec.settings.gamesPerMatch;
@@ -177,6 +179,25 @@ export function computeState(spec: BracketSpec, games: ArenaGameLite[], spentUsd
     for (let n = 1; n <= G; n++) st.games.push(slot(n));
     st.games.forEach(tally);
     const plannedDone = st.games.every(counted);
+    if (judgeTiebreak) {
+      // Both players argued both sides, so the judges' totals over the pair are a fair tie-break (before sudden death).
+      const pts: [number, number] = [0, 0];
+      const picks: [number, number] = [0, 0];
+      for (const s of st.games) {
+        const g = s.game;
+        if (!g || !counted(s) || !g.judging) continue;
+        for (const v of g.judging.verdicts) {
+          if (v.error) continue;
+          for (const seat of [0, 1] as const) {
+            const who = g.players[seat] === pa ? 0 : 1;
+            pts[who] += v.scores ? Object.values(v.scores[seat]).reduce((a, b) => a + b, 0) : 0;
+            if (v.winner === seat) picks[who]++;
+          }
+        }
+      }
+      st.judgePoints = pts;
+      st.judgePicks = picks;
+    }
     const waiting = st.games.filter((s) => s.game?.status === 'awaiting-judges').length;
     if (waiting) st.awaiting = waiting;
     st.status = st.games.some((s) => s.game) ? 'playing' : 'ready';
@@ -188,6 +209,8 @@ export function computeState(spec: BracketSpec, games: ArenaGameLite[], spentUsd
       st.status = 'done';
     };
     if (st.score[0] !== st.score[1]) winnerBy(byMargin ? 'margin' : 'games', st.score[0] > st.score[1] ? 0 : 1);
+    else if (judgeTiebreak && st.judgePoints && st.judgePoints[0] !== st.judgePoints[1]) winnerBy("judges' points", st.judgePoints[0] > st.judgePoints[1] ? 0 : 1);
+    else if (judgeTiebreak && st.judgePicks && st.judgePicks[0] !== st.judgePicks[1]) winnerBy("judges' picks", st.judgePicks[0] > st.judgePicks[1] ? 0 : 1);
     else if (!knockout) {
       st.status = 'done';
       st.decidedBy = 'games';
@@ -229,7 +252,16 @@ export function computeState(spec: BracketSpec, games: ArenaGameLite[], spentUsd
       else {
         const wIdx = st.winner === pa ? 0 : 1;
         const s = `${half(st.score[wIdx])}–${half(st.score[1 - wIdx]!)}`;
-        const how = st.decidedBy === 'games' ? '' : st.decidedBy === 'sudden-death' ? ' in sudden death' : ` on ${st.decidedBy}`;
+        const how =
+          st.decidedBy === 'games'
+            ? ''
+            : st.decidedBy === 'sudden-death'
+              ? ' in sudden death'
+              : st.decidedBy === "judges' points"
+                ? ` (level on games, decided on judges' points ${st.judgePoints![wIdx]}–${st.judgePoints![1 - wIdx]})`
+                : st.decidedBy === "judges' picks"
+                  ? ` (level on games, decided on judges' picks ${st.judgePicks![wIdx]}–${st.judgePicks![1 - wIdx]})`
+                  : ` on ${st.decidedBy}`;
         st.summary = `${labelOf.get(st.winner) ?? st.winner} wins ${s}${how}`;
       }
     }
