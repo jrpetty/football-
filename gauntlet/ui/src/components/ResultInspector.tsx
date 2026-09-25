@@ -11,6 +11,7 @@ import { useViewerCaption } from '../context.tsx';
 import { VisionResultPanel, resultImages } from './VisionResult.tsx';
 import { useRoute } from '../router.tsx';
 import { CaseVisualPanel } from './viz/CaseVisualPanel.tsx';
+import { ArtifactShowcase, showcaseArtifact } from './viz/ArtifactShowcase.tsx';
 
 export interface InspectorTarget {
   testId: string;
@@ -213,6 +214,7 @@ function ResultDetail({ runId, lite, names, target }: { runId: string; lite: Cas
 
   const arts = res.artifacts ?? [];
   const images = resultImages(res);
+  const showcase = !!showcaseArtifact(res) && (res.scoreDetail?.items?.length ?? 0) > 0;
   return (
     <div className="stack loose">
       <div className="result-head">
@@ -244,7 +246,10 @@ function ResultDetail({ runId, lite, names, target }: { runId: string; lite: Cas
         <>
           <CaseVisualPanel res={res} modelLabel={target?.contestantLabel} names={names} />
           {images.length > 0 && <VisionResultPanel images={images} detail={res.scoreDetail ?? {}} passed={res.passed} />}
-          {images.length > 0 ? (
+          {showcase && <ArtifactShowcase runId={runId} result={res} testId={res.testId} caseId={res.caseId} names={names} />}
+          {showcase ? (
+            <ScoreBreakdownView d={{ ...res.scoreDetail, items: undefined, judge: undefined, consoleErrors: undefined }} passed={res.passed} humanScores={res.humanScores} names={names} />
+          ) : images.length > 0 ? (
             <ScoreBreakdownView d={{ ...res.scoreDetail, extracted: undefined, expected: undefined }} passed={res.passed} humanScores={res.humanScores} names={names} />
           ) : (
             <Breakdown r={res} names={names} />
@@ -280,6 +285,7 @@ function ResultDetail({ runId, lite, names, target }: { runId: string; lite: Cas
             caseId: res.caseId,
             summary: res.summary,
             score: res.score,
+            detail: res.scoreDetail,
           }}
         />
       )}

@@ -1,0 +1,546 @@
+{
+ "vision/images/chart-c01.png": {
+  "width": 1200,
+  "height": 800,
+  "highlights": [
+   {
+    "shape": "rect",
+    "x": 732.3,
+    "y": 565.5,
+    "w": 55.5,
+    "h": 144.5,
+    "label": "Aug"
+   },
+   {
+    "shape": "rect",
+    "x": 818.9,
+    "y": 494.7,
+    "w": 55.5,
+    "h": 215.4,
+    "label": "Sep +72"
+   }
+  ]
+ },
+ "vision/images/chart-c02.png": {
+  "width": 1200,
+  "height": 800,
+  "highlights": [
+   {
+    "shape": "dot",
+    "x": 590.5,
+    "y": 257.4,
+    "label": "Small: Rent 5%"
+   },
+   {
+    "shape": "dot",
+    "x": 547.8,
+    "y": 644.6,
+    "label": "Small: Utilities 6%"
+   },
+   {
+    "shape": "dot",
+    "x": 405.9,
+    "y": 474.4,
+    "label": "Largest: Savings 37%"
+   }
+  ]
+ },
+ "vision/images/chart-c03.png": {
+  "width": 1200,
+  "height": 800,
+  "highlights": [
+   {
+    "shape": "rect",
+    "x": 460.2,
+    "y": 130,
+    "w": 72.1,
+    "h": 560,
+    "label": "May"
+   },
+   {
+    "shape": "rect",
+    "x": 546,
+    "y": 130,
+    "w": 72.1,
+    "h": 560,
+    "label": "Jun"
+   },
+   {
+    "shape": "rect",
+    "x": 631.9,
+    "y": 130,
+    "w": 72.1,
+    "h": 560,
+    "label": "Jul"
+   },
+   {
+    "shape": "rect",
+    "x": 717.7,
+    "y": 130,
+    "w": 72.1,
+    "h": 560,
+    "label": "Aug"
+   }
+  ]
+ },
+ "vision/images/chart-c04.png": {
+  "width": 1200,
+  "height": 800,
+  "highlights": [
+   {
+    "shape": "rect",
+    "x": 135.8,
+    "y": 378.9,
+    "w": 77.3,
+    "h": 155.6,
+    "label": "50"
+   },
+   {
+    "shape": "rect",
+    "x": 264.5,
+    "y": 441.1,
+    "w": 77.3,
+    "h": 155.6,
+    "label": "50"
+   },
+   {
+    "shape": "rect",
+    "x": 393.3,
+    "y": 378.9,
+    "w": 77.3,
+    "h": 186.7,
+    "label": "60"
+   },
+   {
+    "shape": "rect",
+    "x": 522,
+    "y": 534.4,
+    "w": 77.3,
+    "h": 62.2,
+    "label": "20"
+   },
+   {
+    "shape": "rect",
+    "x": 650.8,
+    "y": 472.2,
+    "w": 77.3,
+    "h": 124.4,
+    "label": "40"
+   },
+   {
+    "shape": "rect",
+    "x": 779.5,
+    "y": 410,
+    "w": 77.3,
+    "h": 93.3,
+    "label": "30"
+   },
+   {
+    "shape": "rect",
+    "x": 908.3,
+    "y": 410,
+    "w": 77.3,
+    "h": 93.3,
+    "label": "30"
+   },
+   {
+    "shape": "rect",
+    "x": 1037,
+    "y": 441.1,
+    "w": 77.3,
+    "h": 93.3,
+    "label": "30"
+   }
+  ]
+ },
+ "vision/images/chart-c05.png": {
+  "width": 1200,
+  "height": 800,
+  "highlights": [
+   {
+    "shape": "rect",
+    "x": 927.5,
+    "y": 186,
+    "w": 47.5,
+    "h": 504,
+    "label": "Wettest: Nov"
+   },
+   {
+    "shape": "rect",
+    "x": 294.2,
+    "y": 634,
+    "w": 47.5,
+    "h": 56,
+    "label": "Driest: Mar"
+   },
+   {
+    "shape": "dot",
+    "x": 951.3,
+    "y": 522,
+    "label": "9°"
+   },
+   {
+    "shape": "dot",
+    "x": 317.9,
+    "y": 410,
+    "label": "15°"
+   }
+  ]
+ },
+ "vision/images/chart-c06.png": {
+  "width": 1200,
+  "height": 800,
+  "highlights": [
+   {
+    "shape": "rect",
+    "x": 190,
+    "y": 259.7,
+    "w": 139,
+    "h": 24.9,
+    "label": "Riverside 2023: 68"
+   },
+   {
+    "shape": "rect",
+    "x": 190,
+    "y": 317.4,
+    "w": 216.7,
+    "h": 24.9,
+    "label": "Riverside 2025: 106"
+   }
+  ]
+ },
+ "vision/images/chart-c07.png": {
+  "width": 1200,
+  "height": 800,
+  "highlights": [
+   {
+    "shape": "dot",
+    "x": 298.3,
+    "y": 550,
+    "label": "2018: 100"
+   },
+   {
+    "shape": "dot",
+    "x": 971.7,
+    "y": 227.9,
+    "label": "2024: 20,000"
+   }
+  ]
+ },
+ "vision/images/chart-c08.png": {
+  "width": 1200,
+  "height": 800,
+  "highlights": [
+   {
+    "shape": "rect",
+    "x": 164.9,
+    "y": 204,
+    "w": 114.2,
+    "h": 378,
+    "label": "168"
+   },
+   {
+    "shape": "rect",
+    "x": 368.9,
+    "y": 258,
+    "w": 114.2,
+    "h": 270,
+    "label": "205"
+   },
+   {
+    "shape": "rect",
+    "x": 572.9,
+    "y": 312,
+    "w": 114.2,
+    "h": 216,
+    "label": "192"
+   },
+   {
+    "shape": "rect",
+    "x": 776.9,
+    "y": 366,
+    "w": 114.2,
+    "h": 216,
+    "label": "192"
+   },
+   {
+    "shape": "rect",
+    "x": 980.9,
+    "y": 258,
+    "w": 114.2,
+    "h": 216,
+    "label": "132"
+   }
+  ]
+ },
+ "vision/images/spot-s01.png": {
+  "width": 1400,
+  "height": 760,
+  "grids": [
+   {
+    "id": "LEFT",
+    "x0": 110,
+    "y0": 100,
+    "size": 560,
+    "n": 4
+   },
+   {
+    "id": "RIGHT",
+    "x0": 820,
+    "y0": 100,
+    "size": 560,
+    "n": 4
+   }
+  ]
+ },
+ "vision/images/spot-s02.png": {
+  "width": 1400,
+  "height": 760,
+  "grids": [
+   {
+    "id": "LEFT",
+    "x0": 110,
+    "y0": 100,
+    "size": 560,
+    "n": 5
+   },
+   {
+    "id": "RIGHT",
+    "x0": 820,
+    "y0": 100,
+    "size": 560,
+    "n": 5
+   }
+  ]
+ },
+ "vision/images/spot-s03.png": {
+  "width": 1400,
+  "height": 760,
+  "grids": [
+   {
+    "id": "LEFT",
+    "x0": 110,
+    "y0": 100,
+    "size": 560,
+    "n": 6
+   },
+   {
+    "id": "RIGHT",
+    "x0": 820,
+    "y0": 100,
+    "size": 560,
+    "n": 6
+   }
+  ]
+ },
+ "vision/images/spot-s04.png": {
+  "width": 1400,
+  "height": 760,
+  "grids": [
+   {
+    "id": "LEFT",
+    "x0": 110,
+    "y0": 100,
+    "size": 560,
+    "n": 7
+   },
+   {
+    "id": "RIGHT",
+    "x0": 820,
+    "y0": 100,
+    "size": 560,
+    "n": 7
+   }
+  ]
+ },
+ "vision/images/spot-s05.png": {
+  "width": 1400,
+  "height": 760,
+  "grids": [
+   {
+    "id": "LEFT",
+    "x0": 110,
+    "y0": 100,
+    "size": 560,
+    "n": 8
+   },
+   {
+    "id": "RIGHT",
+    "x0": 820,
+    "y0": 100,
+    "size": 560,
+    "n": 8
+   }
+  ]
+ },
+ "vision/images/hand-h01.png": {
+  "width": 1200,
+  "height": 560,
+  "lines": [
+   {
+    "key": "1",
+    "y": 76,
+    "h": 80
+   },
+   {
+    "key": "2",
+    "y": 156,
+    "h": 80
+   },
+   {
+    "key": "3",
+    "y": 236,
+    "h": 80
+   },
+   {
+    "key": "4",
+    "y": 316,
+    "h": 80
+   },
+   {
+    "key": "5",
+    "y": 396,
+    "h": 80
+   }
+  ]
+ },
+ "vision/images/hand-h02.png": {
+  "width": 1200,
+  "height": 560,
+  "lines": [
+   {
+    "key": "1",
+    "y": 76,
+    "h": 80
+   },
+   {
+    "key": "2",
+    "y": 156,
+    "h": 80
+   },
+   {
+    "key": "3",
+    "y": 236,
+    "h": 80
+   },
+   {
+    "key": "4",
+    "y": 316,
+    "h": 80
+   },
+   {
+    "key": "5",
+    "y": 396,
+    "h": 80
+   }
+  ]
+ },
+ "vision/images/count-k01.png": {
+  "width": 1200,
+  "height": 800,
+  "targets": [
+   {
+    "x": 259,
+    "y": 512,
+    "r": 30
+   },
+   {
+    "x": 698,
+    "y": 384,
+    "r": 30
+   },
+   {
+    "x": 455,
+    "y": 689,
+    "r": 30
+   },
+   {
+    "x": 273,
+    "y": 341,
+    "r": 30
+   },
+   {
+    "x": 969,
+    "y": 131,
+    "r": 30
+   },
+   {
+    "x": 825,
+    "y": 479,
+    "r": 30
+   },
+   {
+    "x": 210,
+    "y": 657,
+    "r": 30
+   }
+  ]
+ },
+ "vision/images/count-k02.png": {
+  "width": 820,
+  "height": 800,
+  "grids": [
+   {
+    "id": "BOARD",
+    "x0": 90,
+    "y0": 100,
+    "size": 640,
+    "n": 8
+   }
+  ]
+ },
+ "vision/images/count-k03.png": {
+  "width": 1200,
+  "height": 860,
+  "targets": [
+   {
+    "x": 395,
+    "y": 591,
+    "r": 26
+   },
+   {
+    "x": 150,
+    "y": 124,
+    "r": 20
+   },
+   {
+    "x": 520,
+    "y": 760,
+    "r": 19
+   },
+   {
+    "x": 98,
+    "y": 292,
+    "r": 34
+   },
+   {
+    "x": 1069,
+    "y": 617,
+    "r": 30
+   },
+   {
+    "x": 244,
+    "y": 708,
+    "r": 28
+   },
+   {
+    "x": 303,
+    "y": 335,
+    "r": 18
+   }
+  ]
+ },
+ "vision/images/count-k04.png": {
+  "width": 900,
+  "height": 880,
+  "grids": [
+   {
+    "id": "BOARD",
+    "x0": 90,
+    "y0": 100,
+    "size": 720,
+    "n": 9
+   }
+  ]
+ }
+}

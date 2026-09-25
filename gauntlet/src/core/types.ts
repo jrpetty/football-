@@ -435,6 +435,11 @@ export interface ReplayData {
   series?: Array<{ name: string; points: Array<{ x: number; y: number }> }>;
   /** Static world for the simulation view (pairs with ReplayFrame.sim). */
   sim?: SimWorld;
+  /**
+   * Optional test-specific data for a richer replay view (e.g. needle passages, the whispers fact trace).
+   * Display only: never sent to the model or used for scoring. Older results lack it and fall back to the frames.
+   */
+  visual?: { kind: string; data: Record<string, unknown> };
 }
 
 export interface ProgramContext {

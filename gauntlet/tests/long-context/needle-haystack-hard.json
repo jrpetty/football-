@@ -1,7 +1,7 @@
 {
   "kind": "program",
   "id": "long-context.needle-haystack-hard",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "program": "needle-haystack",
   "name": "Needle in a Haystack — Hard",
   "category": "long-context",

@@ -22,6 +22,7 @@ import { ScoreCostScatter } from '../components/charts/ScoreCostScatter.tsx';
 import { isBaseline, olympicCompare, shortCat } from '../components/leaderboard/util.ts';
 import { fmtCost, fmtIndex, fmtMs, shortHash } from '../format.ts';
 import { TrickEmptySlide, TrickSlide, TRICK_REVEAL_STEPS } from '../components/present/TrickSlide.tsx';
+import { MomentSlide, momentCaption, momentKindFor, type MomentKind } from '../components/present/MomentSlide.tsx';
 import { selectTrickHighlights, type TrickHighlight } from '../../../src/presenter/trick-highlights.ts';
 import { TruthSlide } from '../components/present/TruthSlide.tsx';
 import { pickInterestingCase, type InterestPick } from '../../../src/presenter/visuals/interest.ts';
@@ -102,7 +103,8 @@ type Slide =
   | { kind: 'trick'; test: DeckTest; h: TrickHighlight; i: number; of: number }
   | { kind: 'trick-empty' }
   | { kind: 'truth'; test: DeckTest; pick: InterestPick }
-  | { kind: 'sim'; test: DeckTest; pick: CaseResultLite };
+  | { kind: 'sim'; test: DeckTest; pick: CaseResultLite }
+  | { kind: 'moment'; test: DeckTest; moment: MomentKind };
 
 interface Caption {
   text: string;
@@ -289,6 +291,12 @@ function simSlides(deck: Deck, test: DeckTest): Slide[] {
   return pick ? [{ kind: 'sim', test, pick }] : [];
 }
 
+/** The "answer vs truth" slide of a long-context, drawing or picture test (components/present/MomentSlide.tsx). */
+function momentSlides(deck: Deck, test: DeckTest): Slide[] {
+  const moment = momentKindFor({ id: test.snap.id, name: test.snap.name, kind: test.snap.kind, caseIds: test.snap.caseIds }, test.detail, deck.d.results ?? []);
+  return moment ? [{ kind: 'moment', test, moment }] : [];
+}
+
 function buildSlides(deck: Deck, vertical = false): Slide[] {
   if (vertical) {
     const shorts = deck.tests.flatMap((t) => trickSlides(deck, t));
@@ -296,7 +304,7 @@ function buildSlides(deck: Deck, vertical = false): Slide[] {
   }
   const slides: Slide[] = [{ kind: 'title' }, { kind: 'how' }];
   for (const test of deck.tests) {
-    slides.push({ kind: 'explainer', test }, { kind: 'result', test }, ...simSlides(deck, test), ...trickSlides(deck, test));
+    slides.push({ kind: 'explainer', test }, { kind: 'result', test }, ...simSlides(deck, test), ...momentSlides(deck, test), ...trickSlides(deck, test));
     const pick = deck.truth.get(test.snap.id);
     if (pick) slides.push({ kind: 'truth', test, pick });
   }
@@ -407,6 +415,8 @@ function captionFor(slide: Slide, deck: Deck): Caption {
         fine: `Case ${slide.pick.caseId}: the one where the models’ scores differed most · right column = each model’s score on this case${R > 1 ? ` (mean of ${R} attempts)` : ''}`,
       };
     }
+    case 'moment':
+      return momentCaption(slide.moment);
     case 'outro':
       return {
         text: deck.hasPrivate
@@ -425,6 +435,7 @@ function sectionFor(slide: Slide, deck: Deck): string {
       return 'How it works';
     case 'explainer':
     case 'result':
+    case 'moment':
       return `Test ${slide.test.n} of ${deck.tests.length} · ${slide.test.cat.name}`;
     case 'final':
       return 'Final standings';
@@ -1131,6 +1142,18 @@ function SlideView({ slide, deck, reveal, vertical }: { slide: Slide; deck: Deck
       const who = deck.contenders.find((c) => c.id === slide.pick.contestantId);
       return <SimMomentSlide runId={deck.d.manifest.id} pick={slide.pick} modelLabel={who?.baseline ? 'Random guessing' : (who?.label ?? slide.pick.contestantId)} modelColor={who?.color} />;
     }
+    case 'moment':
+      return (
+        <MomentSlide
+          kind={slide.moment}
+          test={{ id: slide.test.snap.id, name: slide.test.snap.name, kind: slide.test.snap.kind, caseIds: slide.test.snap.caseIds }}
+          cat={slide.test.cat}
+          detail={slide.test.detail}
+          results={deck.d.results ?? []}
+          contenders={deck.contenders}
+          runId={deck.d.manifest.id}
+        />
+      );
     case 'final':
       return <FinalSlide deck={deck} reveal={reveal} />;
     case 'scatter':

@@ -838,6 +838,7 @@ export async function handle(method: string, fullPath: string, body: unknown): P
         if (!lite) throw new ApiError(`Result not found: ${d}`, 404);
         const full = detailFor(lite);
         for (const art of full.artifacts) {
+          if (mockArtifactUrls.has(`${b}/${art.file}`)) continue; // recorded fixtures register their own URLs
           const content = artifactContent(art);
           const mime = art.kind === 'svg' ? 'image/svg+xml' : art.kind === 'html' ? 'text/html' : 'text/plain';
           mockArtifactUrls.set(`${b}/${art.file}`, `data:${mime};charset=utf-8,${encodeURIComponent(content)}`);

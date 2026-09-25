@@ -39,6 +39,7 @@ import { TRICK_RUN_SPEC, TRICK_SUITE, TRICK_TESTS, decorateTrick, trickResponse 
 import { CODE_AGENT_PROGRAM, CODE_AGENT_TEST, codeAgentReplay, codeAgentSummary } from './codeAgentMock.ts';
 import { VISUAL_RUN_SPEC, VISUAL_TESTS, decorateVisual, visualDetail } from './caseVisualsMock.ts';
 import { simReplay } from './simReplayMock.ts';
+import { VISUAL_PASS_PROGRAMS, VISUAL_PASS_RUN_SPEC, VISUAL_PASS_TESTS, decorateVisualPass, visualPassDetail } from './visualPassMock.ts';
 
 // ───────────────────────────── RNG ─────────────────────────────
 
@@ -750,7 +751,7 @@ function genLite(runId: string, c: ContestantView, t: TestDefinition, caseId: st
   if (type === 'human') artifacts.push({ name: 'page.html', kind: 'html', file: `${c.id}/${t.id}/${caseId}-r${repeat}.html`, bytes: 8000 + Math.round(r.next() * 9000) });
   if (t.kind === 'program' && t.program === 'draw-it-blind') artifacts.push({ name: 'reconstruction.svg', kind: 'svg', file: `${c.id}/${t.id}/${caseId}-r${repeat}.svg`, bytes: 2400 });
 
-  return mockVisionSkip(decorateVisual(t, decorateTrick(t, {
+  return decorateVisualPass(t, mockVisionSkip(decorateVisual(t, decorateTrick(t, {
     key,
     runId,
     contestantId: c.id,
@@ -773,7 +774,7 @@ function genLite(runId: string, c: ContestantView, t: TestDefinition, caseId: st
     finishedAt: finished,
     humanScores,
     hasReplay: t.kind === 'program',
-  }), SETTINGS.judges), c, t);
+  }), SETTINGS.judges), c, t));
 }
 
 function summaryText(t: TestDefinition, score: number | null, status: ResultStatus, u: number): string {
@@ -1489,13 +1490,13 @@ export function detailFor(lite: CaseResultLite): CaseResult {
   }
 
   const artifacts = lite.artifacts;
-  return {
+  return visualPassDetail({
     ...lite,
     scoreDetail: detail,
     transcript,
     replay: t && t.kind === 'program' ? replayFor(t, lite.seed ?? 1, score ?? 0.2) : undefined,
     artifacts,
-  };
+  }, lite);
 }
 
 // Vision tests (added after the core fixtures so the existing demo runs keep their test lists).
@@ -1507,3 +1508,7 @@ applyMockVisionFlags(CONTESTANTS);
 // "Answer vs truth" visual demo (added last so the existing demo runs keep their test lists).
 TESTS.push(...VISUAL_TESTS);
 RUN_SPECS.push(VISUAL_RUN_SPEC);
+// Long-context, drawing and game visuals (recorded replays; see visualPassMock.ts).
+TESTS.push(...VISUAL_PASS_TESTS.filter((t) => !TESTS.some((x) => x.id === t.id)));
+PROGRAMS.push(...VISUAL_PASS_PROGRAMS);
+RUN_SPECS.push(VISUAL_PASS_RUN_SPEC);

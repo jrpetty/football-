@@ -5,6 +5,7 @@ import { cx } from './ui.tsx';
 import { Icon } from './icons.tsx';
 import { VisionImage } from './VisionImage.tsx';
 import { testImageUrl } from '../vision.ts';
+import { VisionAnswerOverlay, overlayPlan, visionLayout } from './viz/VisionAnswerOverlay.tsx';
 
 /** Images sent to the contestant in a result (from its transcript; judge calls excluded). */
 export function resultImages(r: Pick<CaseResult, 'transcript'>): ChatImage[] {
@@ -32,6 +33,9 @@ function show(v: unknown): string {
 
 export function VisionResultPanel({ images, detail, passed }: { images: ChatImage[]; detail: ScoreDetail; passed: boolean | null }) {
   if (!images.length) return null;
+  // Pictures with known geometry get the answer drawn on top (viz/VisionAnswerOverlay.tsx).
+  const layout = images.length === 1 ? visionLayout(images[0]) : null;
+  if (layout && overlayPlan(layout, detail, passed)) return <VisionAnswerOverlay image={images[0]!} layout={layout} detail={detail} passed={passed} />;
   return (
     <div className="vi-inspect">
       <div className="stack tight">
