@@ -8,7 +8,7 @@
  * catch on day 4 afternoon), so the same action at the same moment has the
  * same result for every model.
  */
-import type { ReplayFrame, Rng } from '../../core/types.ts';
+import type { IslandEventTag, IslandSimFrame, IslandSimWorld, ReplayFrame, Rng, XY } from '../../core/types.ts';
 import { clamp, truncate } from './agentic-common.ts';
 
 export type Terrain = 'sea' | 'beach' | 'palm' | 'grass' | 'bush' | 'forest' | 'rocks' | 'summit' | 'spring' | 'cave';
@@ -1428,5 +1428,130 @@ export function islandFrame(
       inventory: inv || 'empty',
     },
     grid: { rows, legend: islandLegend(rows) },
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Visual replay data (ReplayData.sim / ReplayFrame.sim) — never shown to the model
+// ─────────────────────────────────────────────────────────────────────────────
+
+const xy = (p: Pos): XY => [p.x, p.y];
+
+/** The static island for the illustrated replay. */
+export function islandSimWorld(world: IslandWorld): IslandSimWorld {
+  const bushes: IslandSimWorld['bushes'] = [];
+  for (let y = 0; y < world.size; y++)
+    for (let x = 0; x < world.size; x++) {
+      const t = world.tiles[y]![x]!;
+      if (t.terrain === 'bush' && t.berry) bushes.push({ at: [x, y], colour: t.berry, poison: t.berry === world.poisonBerry });
+    }
+  return {
+    kind: 'island',
+    size: world.size,
+    maxDays: world.maxDays,
+    terrain: world.tiles.map((row) => row.map((t) => TERRAIN_CHAR[t.terrain]).join('')),
+    start: xy(world.start),
+    summit: xy(world.summit),
+    spring: xy(world.spring),
+    cave: xy(world.cave),
+    bottle: xy(world.bottle),
+    weather: world.weather.slice(0, world.maxDays + 1),
+    bushes,
+    shipDays: world.shipDays.slice(),
+    signalsNeeded: world.signalsNeeded,
+    requireNightFire: world.requireNightFire,
+    inventoryCap: world.inventoryCap,
+  };
+}
+
+/** What the replay compares before and after a turn to tag its events. */
+export interface IslandSnap {
+  springKnown: boolean;
+  poison: number;
+  milestones: IslandState['milestones'];
+  ships: number;
+  sightings: number;
+  bottle: boolean;
+  alive: boolean;
+  health: number;
+  fish: number;
+  signal: IslandState['signal'];
+}
+
+export function islandSnap(world: IslandWorld, s: IslandState): IslandSnap {
+  return {
+    springKnown: s.explored[world.spring.y]![world.spring.x]!,
+    poison: s.poisonEaten,
+    milestones: { ...s.milestones },
+    ships: s.shipsSeen.length,
+    sightings: s.sightings.length,
+    bottle: s.bottleFound,
+    alive: s.alive,
+    health: s.health,
+    fish: s.inv.rawfish ?? 0,
+    signal: s.signal,
+  };
+}
+
+/** Event tags for a played turn: `day` for the action frame, `night` for the night frame that follows it (if any). */
+export function islandEvents(world: IslandWorld, before: IslandSnap, s: IslandState, step: IslandStep): { day: IslandEventTag[]; night: IslandEventTag[] } {
+  const day: IslandEventTag[] = [];
+  const night: IslandEventTag[] = [];
+  const cmd = step.valid ? parseIslandCommand(step.action) : null;
+  const ok = step.valid && step.tone !== 'bad';
+  if (!step.valid) day.push('invalid');
+  if (!before.springKnown && s.explored[world.spring.y]![world.spring.x]!) day.push('found-water');
+  if (cmd?.kind === 'drink' && ok) day.push('drink');
+  if (s.poisonEaten > before.poison) day.push('poison');
+  else if (cmd?.kind === 'eat' && ok) day.push('eat');
+  if (cmd?.kind === 'fish' && (s.inv.rawfish ?? 0) > before.fish) day.push('fish');
+  const m = s.milestones;
+  const b = before.milestones;
+  if (m.spear !== null && b.spear === null) day.push('spear');
+  if (m.campfire !== null && b.campfire === null) day.push('campfire');
+  if (m.shelter !== null && b.shelter === null) day.push('shelter');
+  if (m.signalPile !== null && b.signalPile === null) day.push('signal-built');
+  if (cmd?.kind === 'light' && before.signal === 'built' && s.signal !== 'built') day.push('signal-lit');
+  if (s.bottleFound && !before.bottle) day.push('bottle');
+  if (s.shipsSeen.length > before.ships) day.push('ship-pass');
+  if (s.rescued) day.push('rescued');
+  else if (s.sightings.length > before.sightings) day.push('ship-ack');
+  const nightDeath = !s.alive && before.alive && step.night !== null;
+  if (!s.alive && before.alive && !nightDeath) day.push('died');
+  if (nightDeath) night.push('died');
+  const mid = step.preNight?.health ?? s.health;
+  if (before.health - mid >= 10 && !day.includes('poison') && !day.includes('died')) day.push('hurt');
+  if (step.night && mid - s.health >= 10 && !nightDeath) night.push('hurt');
+  if (s.over && s.alive && !s.rescued) (step.night ? night : day).push('survived');
+  return { day, night };
+}
+
+/** The per-step island view (position, fog of war, camp, inventory, events). */
+export function islandSimFrame(s: IslandState, day: number, phase: number, events: IslandEventTag[]): IslandSimFrame {
+  return {
+    kind: 'island',
+    day,
+    phase,
+    pos: xy(s.pos),
+    explored: s.explored.map((row) => row.map((v) => (v ? '1' : '0')).join('')),
+    inventory: { ...s.inv },
+    spear: s.spear,
+    fires: Object.entries(s.fires)
+      .filter(([, f]) => f > 0)
+      .map(([k, f]): [number, number, number] => {
+        const [x, y] = k.split(',').map(Number);
+        return [x!, y!, f];
+      }),
+    shelters: s.shelters.map((k): XY => {
+      const [x, y] = k.split(',').map(Number);
+      return [x!, y!];
+    }),
+    signal: s.signal,
+    bottleFound: s.bottleFound,
+    sightings: s.sightings.length,
+    alive: s.alive,
+    rescued: s.rescued,
+    cause: s.alive ? null : s.cause,
+    events,
   };
 }

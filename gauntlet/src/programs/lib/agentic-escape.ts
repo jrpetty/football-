@@ -18,7 +18,7 @@
  * of a clue it must read (including the lock's own inscription), and the
  * three GO moves — no guessing, no wasted moves.
  */
-import type { ReplayFrame, Rng } from '../../core/types.ts';
+import type { EscapeSimFrame, EscapeSimLock, EscapeSimWorld, ReplayFrame, Rng } from '../../core/types.ts';
 import { truncate } from './agentic-common.ts';
 
 export type LockKind = 'key' | 'code' | 'word' | 'colour' | 'tool' | 'combo';
@@ -1382,5 +1382,85 @@ export function escapeFrame(world: EscWorld, s: EscState, step: number, frame: O
       inventory: inventoryText(world, s),
     },
     grid: escapeGrid(world, s),
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Visual replay data (ReplayData.sim / ReplayFrame.sim) — never shown to the model
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** The static floor plan: rooms, every lock with its answer and clues, the optimal plan. */
+export function escapeSimWorld(world: EscWorld): EscapeSimWorld {
+  const clues: EscapeSimWorld['clues'] = {};
+  const locks = world.locks.map((id): EscapeSimLock => {
+    const o = world.objects[id]!;
+    const l = o.lock!;
+    const room = o.kind === 'door' ? Math.min(...o.rooms) : Math.max(0, o.rooms[0] ?? 0);
+    for (const n of l.needs) {
+      const c = world.objects[n];
+      if (c && !clues[n]) clues[n] = { name: c.name, text: c.desc };
+    }
+    return {
+      id,
+      name: o.name,
+      room,
+      kind: l.kind,
+      tag: l.tag,
+      door: o.kind === 'door',
+      ...(o.kind === 'door' ? { to: o.door!.leadsTo[room] } : {}),
+      ...(l.answer !== undefined ? { answer: l.answer } : {}),
+      ...(l.item ? { item: world.objects[l.item]?.name ?? l.item } : {}),
+      clues: l.needs.slice(),
+    };
+  });
+  return { kind: 'escape', rooms: world.rooms.map((r) => r.name), locks, clues, budget: world.moveBudget, optimal: world.optimal, plan: world.plan.slice() };
+}
+
+/** Which object a command's target names in this state (read-only; used before the step is applied). */
+export function escapeTargetId(world: EscWorld, s: EscState, text: string): string | null {
+  const r = resolve(world, s, text);
+  return 'obj' in r ? r.obj.id : null;
+}
+
+/** Tag what one move did, by comparing the state before and after it. */
+export function escapeEvent(world: EscWorld, before: EscState, s: EscState, command: string | null, step: EscStep): EscapeSimFrame['event'] {
+  if (!step.valid || !command) return { type: 'invalid' };
+  const cmd = parseEscCommand(command);
+  if (!cmd) return { type: 'invalid' };
+  const opened = s.unlocked.filter((id) => !before.unlocked.includes(id));
+  if (s.escaped) return { type: 'escape', target: opened[0] };
+  if (opened.length) {
+    const lock = world.objects[opened[0]!]!.lock!;
+    return { type: 'unlock', target: opened[0], ...(cmd.kind === 'enter' && lock.answer !== undefined ? { value: lock.answer } : {}) };
+  }
+  if (cmd.kind === 'enter' && s.wrongEntries > before.wrongEntries) {
+    const target = escapeTargetId(world, before, cmd.target) ?? undefined;
+    const kind = target ? world.objects[target]?.lock?.kind : undefined;
+    return { type: 'wrong', target, value: kind ? normAnswer(kind, cmd.value) || cmd.value : cmd.value };
+  }
+  if (step.tone === 'bad') return { type: 'fail', target: 'target' in cmd ? (escapeTargetId(world, before, cmd.target) ?? undefined) : undefined };
+  const gained = s.inventory.filter((id) => !before.inventory.includes(id)).map((id) => world.objects[id]!.name);
+  if (cmd.kind === 'use' && s.gone.length > before.gone.length && gained.length) return { type: 'combine', items: gained };
+  if (cmd.kind === 'take' && gained.length) return { type: 'take', items: gained };
+  if (cmd.kind === 'go' && s.room !== before.room) return { type: 'go', target: String(s.room) };
+  const found = s.revealed.filter((id) => !before.revealed.includes(id)).map((id) => world.objects[id]!.name);
+  if (cmd.kind === 'examine') {
+    const target = escapeTargetId(world, before, cmd.target) ?? undefined;
+    return found.length ? { type: 'found', target, items: found } : { type: 'examine', target };
+  }
+  return { type: 'look' };
+}
+
+export function escapeSimFrame(world: EscWorld, s: EscState, event: EscapeSimFrame['event']): EscapeSimFrame {
+  return {
+    kind: 'escape',
+    move: s.moves,
+    room: s.room,
+    visited: s.visited.slice(),
+    unlocked: s.unlocked.slice(),
+    inventory: s.inventory.map((id) => world.objects[id]!.name),
+    examined: s.examined.slice(),
+    escaped: s.escaped,
+    event,
   };
 }

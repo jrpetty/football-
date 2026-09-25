@@ -37,6 +37,7 @@ import type {
 import { VISION_RUN_SPECS, VISION_SUITE, VISION_TESTS, applyMockVisionFlags, mockLeaderboardSkips, mockRenderedImages, mockTurnImages, mockVisionSkip } from './vision.ts';
 import { TRICK_RUN_SPEC, TRICK_SUITE, TRICK_TESTS, decorateTrick, trickResponse } from './trick.ts';
 import { CODE_AGENT_PROGRAM, CODE_AGENT_TEST, codeAgentReplay, codeAgentSummary } from './codeAgentMock.ts';
+import { simReplay } from './simReplayMock.ts';
 
 // ───────────────────────────── RNG ─────────────────────────────
 
@@ -1365,6 +1366,8 @@ function genericProgramFrames(t: ProgramTest, seed: number, score: number): Repl
 
 export function replayFor(t: TestDefinition, seed: number, score: number): ReplayData | undefined {
   if (t.kind !== 'program') return undefined;
+  const sim = simReplay(t.program, seed, score);
+  if (sim) return sim;
   if (t.program === 'survival-island') return islandFrames(seed, score);
   if (t.program === 'liars-table') return liarFrames(seed, score);
   if (t.program === 'draw-it-blind') return drawFrames(seed, score);

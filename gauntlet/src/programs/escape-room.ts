@@ -8,7 +8,19 @@
  */
 import type { ProgramContext, ProgramDefinition, ProgramResult, ReplayFrame } from '../core/types.ts';
 import { askTurn, clamp01, noteBlock, round, truncate } from './lib/agentic-common.ts';
-import { ESCAPE_DEFAULTS, escapeFrame, escapeObservation, generateEscape, newEscState, stepEscape, type EscapeConfig } from './lib/agentic-escape.ts';
+import {
+  cloneEscState,
+  ESCAPE_DEFAULTS,
+  escapeEvent,
+  escapeFrame,
+  escapeObservation,
+  escapeSimFrame,
+  escapeSimWorld,
+  generateEscape,
+  newEscState,
+  stepEscape,
+  type EscapeConfig,
+} from './lib/agentic-escape.ts';
 
 const DEFAULTS = { ...ESCAPE_DEFAULTS, recentEvents: 5 };
 
@@ -87,7 +99,7 @@ export const program: ProgramDefinition = {
     let note = '';
     const recent: string[] = [];
     const frames: ReplayFrame[] = [
-      escapeFrame(world, s, 0, { label: 'Start', outcome: `Locked in ${world.rooms[0]!.name}.`, tone: 'neutral' }),
+      { ...escapeFrame(world, s, 0, { label: 'Start', outcome: `Locked in ${world.rooms[0]!.name}.`, tone: 'neutral' }), sim: escapeSimFrame(world, s, { type: 'start' }) },
     ];
 
     while (!s.escaped && s.moves < world.moveBudget) {
@@ -96,18 +108,20 @@ export const program: ProgramDefinition = {
       const turn = await askTurn(ctx, system, observation, `Move ${s.moves + 1}`);
       if (turn.note !== null) note = turn.note;
       const roomBefore = world.rooms[s.room]!.name;
+      const before = cloneEscState(s);
       const step = stepEscape(world, s, turn.action, turn.failure);
       recent.push(`Move ${step.move}: ${step.action} → ${step.outcome}`);
       while (recent.length > cfg.recentEvents) recent.shift();
-      frames.push(
-        escapeFrame(world, s, frames.length, {
+      frames.push({
+        ...escapeFrame(world, s, frames.length, {
           label: `Move ${step.move}`,
           observation: roomBefore,
           action: step.action,
           outcome: truncate(step.outcome, 220),
           tone: step.tone,
         }),
-      );
+        sim: escapeSimFrame(world, s, escapeEvent(world, before, s, turn.failure ? null : turn.action, step)),
+      });
     }
 
     const total = world.locks.length;
@@ -148,6 +162,7 @@ export const program: ProgramDefinition = {
         title: `The Escape Room · seed ${ctx.seed}`,
         gauges: ['progress', 'budget'],
         frames,
+        sim: escapeSimWorld(world),
       },
     };
   },

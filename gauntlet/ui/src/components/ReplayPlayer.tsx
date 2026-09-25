@@ -11,6 +11,7 @@ import { cx } from './ui.tsx';
 import { LineChart } from './charts/LineChart.tsx';
 import { usePrefs, useViewerCaption } from '../context.tsx';
 import { CodeAgentStage } from './CodeAgentReplay.tsx';
+import { SimStage, hasSimStage } from './viz/SimStage.tsx';
 
 const SPEEDS = [0.5, 1, 2, 4];
 const BASE_MS = 1100;
@@ -155,6 +156,8 @@ export function ReplayPlayer({ replay, autoPlay = false, context, startStep }: {
   /** Video mode: broadcast or full screen — title bar, big map, captions, auto-play. */
   const video = broadcast || isFs;
   const atEnd = frames.length > 0 && idx >= frames.length - 1;
+  /** Purpose-built simulation stage (island, escape room, startup, liar's table): it draws its own headline and finale. */
+  const sim = hasSimStage(replay);
 
   useEffect(() => {
     if (!playing) return;
@@ -255,13 +258,13 @@ export function ReplayPlayer({ replay, autoPlay = false, context, startStep }: {
           </button>
         </div>
       )}
-      {video && frame && (
+      {video && frame && !sim && (
         <div className={cx('rp-outcome', frame.tone && `tone-${frame.tone}`)} key={idx}>
           <span className="rp-o-k">{frame.label ?? `Turn ${idx + 1}`}</span>
           <span className="rp-o-t">{plainTurn(frame, context?.modelLabel)}</span>
         </div>
       )}
-      {video && atEnd && context?.summary && (
+      {video && atEnd && context?.summary && !sim && (
         <div className="rp-final" role="status">
           <span className="rp-o-k">Final result</span>
           <span className="rp-o-t">{context.summary}</span>
@@ -295,7 +298,21 @@ export function ReplayPlayer({ replay, autoPlay = false, context, startStep }: {
       ) : null}
 
       {frame?.code && <CodeAgentStage frame={frame} video={video} />}
-      {frame && !frame.code && (
+      {frame && sim && (
+        <SimStage
+          replay={replay}
+          idx={Math.min(idx, frames.length - 1)}
+          video={video}
+          moveMs={Math.round(Math.min(700, ((video ? VIDEO_MS : BASE_MS) / speed) * 0.6))}
+          onSeek={(i) => {
+            setPlaying(false);
+            setIdx(Math.max(0, Math.min(frames.length - 1, i)));
+          }}
+          model={context?.modelLabel ?? 'The model'}
+          score={context?.score}
+        />
+      )}
+      {frame && !frame.code && !sim && (
         <div className={cx('replay-stage', hasGrid ? 'with-grid' : 'no-grid')}>
           {hasGrid && (
             <div className="stage-map">
@@ -368,7 +385,7 @@ export function ReplayPlayer({ replay, autoPlay = false, context, startStep }: {
         </div>
       )}
 
-      {(!!replay.svgCompare || !!replay.series?.length) && (
+      {!sim && (!!replay.svgCompare || !!replay.series?.length) && (
         <div className={cx('replay-extras', !!replay.svgCompare && !!replay.series?.length && 'two')}>
           {replay.svgCompare && (
             <div className="svg-compare">

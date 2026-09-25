@@ -23,6 +23,7 @@ import {
 import type { LieVariant, LtWorld } from './lib/liars-table-world.ts';
 import { canonical, checkReason, parseCommand, wasInformed } from './lib/liars-table-parse.ts';
 import type { LtCommand, ReasonCheck } from './lib/liars-table-parse.ts';
+import { liarsSimFrame, liarsSimWorld } from './lib/liars-table-replay.ts';
 
 /** Questions at or below this count earn full efficiency credit. */
 const PAR = 3;
@@ -209,6 +210,7 @@ export const program: ProgramDefinition = {
         observation: `${w.object} vanished from the ${w.objectRoom} at ${w.venue}. Suspects: ${w.suspects.map((s) => s.name).join(', ')}.`,
         stats: { budget: 100, 'Questions left': budget },
         tone: 'neutral',
+        sim: { kind: 'liars', used: 0, facts: [] },
       },
     ];
     let invalid = 0;
@@ -257,6 +259,7 @@ export const program: ProgramDefinition = {
         outcome: answer,
         stats: { budget: Math.round((left / budget) * 100), 'Questions left': left },
         tone: cmd.kind === 'invalid' ? 'bad' : 'neutral',
+        sim: liarsSimFrame(cmd, w, n),
       });
     }
 
@@ -301,6 +304,12 @@ function score(
       : `Wrong — the thief was ${w.culprit}. ${verdictLine(w)}`,
     stats: { budget: Math.round(((budget - used) / budget) * 100), 'Questions used': used, Reason: `${Math.round(reason.score * 3)}/3` },
     tone: correct ? 'good' : 'bad',
+    sim: {
+      kind: 'liars',
+      used,
+      facts: [],
+      ...(accusation ? { accuse: { who: accusation.suspect, reason: accusation.reason.slice(0, 400), correct, reasonScore: Math.round(reason.score * 3) } } : {}),
+    },
   });
 
   return {
@@ -339,6 +348,7 @@ function score(
       title: `The Liar's Table — ${w.object} at ${w.venue}`,
       gauges: ['budget'],
       frames,
+      sim: liarsSimWorld(w, budget),
     },
   };
 }

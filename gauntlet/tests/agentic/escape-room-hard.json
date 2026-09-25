@@ -1,7 +1,7 @@
 {
   "kind": "program",
   "id": "agentic.escape-room-hard",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "program": "escape-room",
   "name": "The Escape Room (Hard)",
   "category": "agentic",

@@ -1,7 +1,7 @@
 {
   "kind": "program",
   "id": "agentic.survival-island-hard",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "program": "survival-island",
   "name": "Survival Island (Hard)",
   "category": "agentic",

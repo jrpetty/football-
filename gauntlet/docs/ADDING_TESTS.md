@@ -257,6 +257,13 @@ Program guidelines:
   every program a meaningful floor.
 * **Replays.** Return frames with `grid`, `stats`, `series` or `svgCompare` data. The dashboard animates
   them and they look good on video.
+* **Illustrated replays.** Survival Island, The Escape Room, The Startup and The Liar's Table also record
+  optional scene data: `replay.sim` for what never changes (the island, the locks and answers, the oracle's
+  months, the suspects and the truth), and `frame.sim` for each step (position and fog, events, decisions,
+  facts learned). The types are in `src/core/sim-replay.ts`. The drawing components live in
+  `ui/src/components/viz/`, and `simStory.ts` there turns the data into headlines, timelines, the finale and the
+  Presenter's best moment. The scene data is only written into the result and is never sent to the model.
+  `test/agent-replay.test.ts` checks that prompts and scores stayed byte-identical when it was added.
 * The program's source code is part of the test hash, so a code change invalidates old results like a
   prompt change does.
 

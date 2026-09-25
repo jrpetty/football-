@@ -5,6 +5,8 @@
  * results, API payloads) is defined here so the engine, the programs, the
  * server and the UI all agree on one shape.
  */
+import type { SimFrame, SimWorld } from './sim-replay.ts';
+export type * from './sim-replay.ts';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Categories
@@ -398,6 +400,8 @@ export interface ReplayFrame {
   tone?: 'good' | 'bad' | 'neutral';
   /** Optional coding-agent view ("Fix the Bug"): file tree, diff and test bar. */
   code?: CodeReplayFrame;
+  /** Optional simulation view (island, escape room, startup, liar's table); see sim-replay.ts. */
+  sim?: SimFrame;
 }
 
 /** One step of a coding-agent replay (see src/programs/code-agent.ts). */
@@ -429,6 +433,8 @@ export interface ReplayData {
   svgCompare?: { left: { title: string; svg: string }; right: { title: string; svg: string } };
   /** Optional series to chart (e.g. fact survival per round, cash per month). */
   series?: Array<{ name: string; points: Array<{ x: number; y: number }> }>;
+  /** Static world for the simulation view (pairs with ReplayFrame.sim). */
+  sim?: SimWorld;
 }
 
 export interface ProgramContext {
