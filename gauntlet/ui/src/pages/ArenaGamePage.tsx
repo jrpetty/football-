@@ -209,7 +209,7 @@ function Replay({ d, g }: { d: TournamentDetail; g: ArenaGameRecord }) {
             </div>
           )}
           <div className="card ar-movecard">
-            <div className="card-head">
+            <div className="card-head" style={{ flexWrap: 'wrap', rowGap: 8 }}>
               <div className="t">
                 <h2>{move ? (move.kind === 'verdict' ? move.label : move.move ? `${moverName}: ${move.label}` : `${moverName}: ${engine === 'debate' ? move.label : 'strike'}`) : engine === 'debate' ? 'Before the first speech' : engine === 'turns' ? 'Hand 1 dealt' : 'Starting position'}</h2>
                 {move && !move.opening && move.kind !== 'verdict' && (
@@ -218,7 +218,9 @@ function Replay({ d, g }: { d: TournamentDetail; g: ArenaGameRecord }) {
                   </div>
                 )}
               </div>
-              <Seg small label="Panel" value={tab} onChange={setTab} options={[{ value: 'move', label: 'Reasoning' }, { value: 'transcript', label: 'Transcript' }]} />
+              <div style={{ flex: 'none' }}>
+                <Seg small label="Panel" value={tab} onChange={setTab} options={[{ value: 'move', label: 'Reasoning' }, { value: 'transcript', label: 'Transcript' }]} />
+              </div>
             </div>
             <div className="card-body">
               {tab === 'move' ? (

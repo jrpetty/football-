@@ -2117,7 +2117,7 @@ html[data-broadcast='on'] .arena-now {
   padding: 0.7rem 1.2rem 0.8rem;
   border-radius: 14px;
   text-align: center;
-  background: color-mix(in srgb, var(--surface-1) 94%, transparent);
+  background: var(--surface-1);
   border: 1px solid color-mix(in srgb, var(--c) 65%, transparent);
   box-shadow:
     0 0 0 4px color-mix(in srgb, var(--c) 16%, transparent),
