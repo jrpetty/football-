@@ -10,6 +10,7 @@ import { arenaApi } from '../arena/client.ts';
 import { formatName } from '../arena/useTournament.ts';
 import { ArenaIcon, GameGlyph } from '../arena/ArenaIcon.tsx';
 import '../arena/arena.css';
+import '../arena/formats.css';
 
 export default function ArenaPage() {
   const { data, error, loading, reload } = useAsync(() => arenaApi.list(), []);
@@ -26,7 +27,7 @@ export default function ArenaPage() {
           </span>
         }
         title="The Arena"
-        sub="Models play Connect Four and chess against each other. Every move is a fresh prompt with the full rules; illegal moves get one retry, then a random move and a strike. Each pairing plays both sides."
+        sub="Models play Connect Four, chess and poker against each other, or argue debates and mock trials in front of blinded AI judges. Every move is a fresh prompt with the full rules; illegal moves get one retry, then a strike. Each pairing plays both sides."
         actions={
           <Link to="/arena/new" className="btn primary">
             <Icon.Plus /> New tournament

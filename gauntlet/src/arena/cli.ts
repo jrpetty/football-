@@ -35,11 +35,21 @@ export const ARENA_HELP = `  arena games                                List the
   arena new --game connect4 --models a,b,c,d [--format knockout|round-robin] [--games 2|4|6]
       [--seeding index|manual] [--max-cost 5] [--concurrency 2] [--max-plies 120] [--yes]
                                              Start a tournament (shows the cost estimate first)
+      Poker: --hands 10|20|40|60 · Debate: --motion <id>|random · Courtroom: --case <id>|random
   arena list | arena show <id> | arena resume <id> [--max-cost 10]`;
 
 const str = (v: string | boolean | undefined) => (typeof v === 'string' ? v : undefined);
 const num = (v: string | boolean | undefined) => (typeof v === 'string' && v.trim() !== '' ? Number(v) : undefined);
 const fmtUsd = (n: number) => (n === 0 ? '$0' : n < 0.01 ? `$${n.toFixed(4)}` : `$${n.toFixed(2)}`);
+
+/** Game-specific options: --hands 20 (poker), --motion <id>|random (debate), --case <id>|random (courtroom). */
+function gameOptions(flags: Flags): Record<string, string> | undefined {
+  const out: Record<string, string> = {};
+  if (str(flags.hands)) out.hands = str(flags.hands)!;
+  const topic = str(flags.motion) ?? str(flags.case);
+  if (topic) out.topic = topic;
+  return Object.keys(out).length ? out : undefined;
+}
 
 function request(flags: Flags): ArenaRequest {
   const models = str(flags.models)?.split(',').map((s) => s.trim()).filter(Boolean);
@@ -60,6 +70,7 @@ function request(flags: Flags): ArenaRequest {
     seed: num(flags.seed),
     listLegalMoves: flags['no-legal-moves'] ? false : undefined,
     name: str(flags.name),
+    options: gameOptions(flags),
   };
 }
 
@@ -72,6 +83,7 @@ function printEstimate(req: ArenaRequest): void {
   for (const p of est.perContestant)
     console.log(`  ${(labels.get(p.contestantId) ?? p.contestantId).padEnd(28)} ${p.manual ? 'manual (you paste the replies)' : `~${fmtUsd(p.perGameUsd)} per game  (${fmtUsd(p.perMoveUsd)}/move, ${p.basis})`}`);
   console.log(`  ${c.bold('Total'.padEnd(28))} ${est.games} games (up to ${est.maxGames} with sudden death), ~${est.moves} moves: ~${c.bold(fmtUsd(est.estCostUsd))} (up to ${fmtUsd(est.estCostUsdHigh)}) · fingerprint ${est.fingerprint}`);
+  if (est.judgeCalls !== undefined) console.log(`  ${'Judges (included above)'.padEnd(28)} ${est.judgeCalls} judge calls, ~${fmtUsd(est.judgeCostUsd ?? 0)} · panel: ${(est.judges ?? []).map((j) => j.label).join(', ') || 'none (human judging)'}`);
   for (const w of est.warnings) console.log(c.yellow(`  ⚠ ${w}`));
 }
 
@@ -183,7 +195,10 @@ export async function arenaCommand(positional: string[], flags: Flags): Promise<
   const [sub, arg] = positional;
   switch (sub) {
     case 'games':
-      for (const g of Object.values(GAMES)) console.log(`${c.bold(g.id.padEnd(10))} ${g.name} v${g.version} — ${g.tagline}`);
+      for (const g of Object.values(GAMES)) {
+        console.log(`${c.bold(g.id.padEnd(10))} ${g.name} v${g.version} — ${g.tagline}`);
+        for (const o of g.options ?? []) console.log(c.dim(`           ${o.label}: ${o.choices.map((x) => x.value).join(' | ')} (default ${o.default})`));
+      }
       return;
     case 'estimate':
       printEstimate(request(flags));

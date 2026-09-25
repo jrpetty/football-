@@ -71,7 +71,7 @@ function load(id: string): Cached {
     if (!line.trim()) continue;
     try {
       const g = JSON.parse(line) as ArenaGameRecord;
-      spent += g.metrics[0].costUsd + g.metrics[1].costUsd;
+      if (!g.amends) spent += g.metrics[0].costUsd + g.metrics[1].costUsd + (g.judging?.costUsd ?? 0);
       byKey.delete(g.key);
       byKey.set(g.key, g);
     } catch {
@@ -94,7 +94,8 @@ export function spentUsd(id: string): number {
 
 export function toGameLite(g: ArenaGameRecord): ArenaGameLite {
   const { transcripts: _t, moves, ...rest } = g;
-  return { ...rest, plies: moves.filter((m) => m.move).length, lastSnapshot: moves.length ? moves[moves.length - 1]!.snapshot : g.initial };
+  if (rest.judging) rest.judging = { ...rest.judging, transcript: [] };
+  return { ...rest, plies: moves.filter((m) => m.move && m.kind !== 'verdict').length, lastSnapshot: moves.length ? moves[moves.length - 1]!.snapshot : g.initial };
 }
 
 export function listTournamentIds(): string[] {

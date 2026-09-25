@@ -8,10 +8,12 @@ import { cx } from '../components/ui.tsx';
 import { fmtCost } from '../format.ts';
 import type { ArenaEntrant, GameSlot, MatchState, TournamentDetail } from './types.ts';
 import { entrantMap, pts } from './useTournament.ts';
+import { fmtScore } from './parts.tsx';
 
 function gameMark(slot: GameSlot, player: string): { cls: string; label: string } {
   const g = slot.game;
   if (!g) return { cls: 'todo', label: 'not played yet' };
+  if (g.status === 'awaiting-judges') return { cls: 'todo await', label: 'awaiting judges' };
   if (g.winner === null) return { cls: 'draw', label: 'draw' };
   return g.players[g.winner] === player ? { cls: 'win', label: 'win' } : { cls: 'loss', label: 'loss' };
 }
@@ -43,7 +45,7 @@ function PlayerRow({ e, m, idx, liveKeys }: { e: ArenaEntrant | undefined; m: Ma
           })}
         </span>
       )}
-      {m.status !== 'bye' && m.games.some((s) => s.game) && <b className="bk-score tnum">{pts(m.score[idx])}</b>}
+      {m.status !== 'bye' && m.games.some((s) => s.game?.status === 'ok') && <b className={cx('bk-score tnum', m.unit && 'margin')}>{fmtScore(m.score[idx], m.unit)}</b>}
     </div>
   );
 }
@@ -56,7 +58,7 @@ export function MatchBox({ m, d, liveKeys, compact }: { m: MatchState; d: Tourna
     <>
       <PlayerRow e={m.players[0] ? ents.get(m.players[0]) : undefined} m={m} idx={0} liveKeys={liveKeys} />
       <PlayerRow e={m.players[1] ? ents.get(m.players[1]) : undefined} m={m} idx={1} liveKeys={liveKeys} />
-      {!compact && m.decidedBy && m.decidedBy !== 'games' && m.decidedBy !== 'bye' && <div className="bk-note">{m.decidedBy === 'sudden-death' ? 'won in sudden death' : `tie-break: ${m.decidedBy}`}</div>}
+      {!compact && m.decidedBy && m.decidedBy !== 'games' && m.decidedBy !== 'margin' && m.decidedBy !== 'bye' && <div className="bk-note">{m.decidedBy === 'sudden-death' ? 'won in sudden death' : `tie-break: ${m.decidedBy}`}</div>}
     </>
   );
   const cls = cx('bk-match', isLive && 'live', m.status === 'done' && 'done', m.status === 'bye' && 'bye', m.status === 'waiting' && 'waiting');
@@ -122,7 +124,7 @@ export function RoundRobin({ d }: { d: TournamentDetail }) {
     const m = d.state.matches.find((x) => x.players.includes(a) && x.players.includes(b));
     if (!m || !m.games.some((s) => s.game)) return null;
     const idx = m.players[0] === a ? 0 : 1;
-    return { m, mine: m.score[idx], theirs: m.score[1 - idx]! };
+    return { m, mine: m.score[idx], theirs: m.score[1 - idx]!, unit: m.unit };
   };
   return (
     <div className="rr">
@@ -136,7 +138,7 @@ export function RoundRobin({ d }: { d: TournamentDetail }) {
               <th className="num">W</th>
               <th className="num">D</th>
               <th className="num">L</th>
-              <th className="num">Points</th>
+              <th className="num">{rows.some((r) => r.margin !== undefined) ? 'Chips' : 'Points'}</th>
               <th className="num">Illegal</th>
               <th className="num">Cost</th>
               {rows.map((r) => (
@@ -163,7 +165,7 @@ export function RoundRobin({ d }: { d: TournamentDetail }) {
                   <td className="num tnum">{r.draws}</td>
                   <td className="num tnum">{r.losses}</td>
                   <td className="num tnum">
-                    <b>{pts(r.points)}</b>
+                    <b>{r.margin !== undefined ? fmtScore(r.margin, 'chips') : pts(r.points)}</b>
                   </td>
                   <td className="num tnum">{r.illegal}</td>
                   <td className="num tnum">{fmtCost(r.costUsd)}</td>
@@ -173,7 +175,7 @@ export function RoundRobin({ d }: { d: TournamentDetail }) {
                     const tone = !c ? '' : c.mine > c.theirs ? 'win' : c.mine < c.theirs ? 'loss' : 'draw';
                     return (
                       <td key={o.contestantId} className={cx('num tnum rr-c', tone)}>
-                        {c ? `${pts(c.mine)}–${pts(c.theirs)}` : '·'}
+                        {c ? (c.unit ? fmtScore(c.mine, c.unit) : `${pts(c.mine)}–${pts(c.theirs)}`) : '·'}
                       </td>
                     );
                   })}

@@ -11,7 +11,7 @@
  * then lower cost, then the higher seed.
  */
 import { hashString } from '../core/rng.ts';
-import type { ArenaEntrant, ArenaGameLite, ArenaSettings, GameSlot, MatchDecision, MatchSource, MatchSpec, MatchState, StandingRow, TournamentState } from './types.ts';
+import type { ArenaEntrant, ArenaGameLite, ArenaSettings, GameConfig, GameSlot, MatchDecision, MatchSource, MatchSpec, MatchState, StandingRow, TournamentState } from './types.ts';
 
 export function nextPow2(n: number): number {
   let p = 1;
@@ -91,9 +91,13 @@ export const gameKey = (matchId: string, gameNo: number) => `${matchId}-g${gameN
 export interface BracketSpec {
   seed: number;
   entrants: ArenaEntrant[];
-  settings: Pick<ArenaSettings, 'format' | 'gamesPerMatch' | 'suddenDeath'>;
+  settings: Pick<ArenaSettings, 'format' | 'gamesPerMatch' | 'suddenDeath'> & { game?: Pick<GameConfig, 'scoring'> & Record<string, unknown> };
   matches: MatchSpec[];
+  /** Unit of 'margin' scoring, e.g. "chips" (display only). */
+  unit?: string;
 }
+
+const signed = (n: number) => (n > 0 ? `+${n}` : String(n));
 
 const half = (x: number) => {
   const whole = Math.floor(x);
@@ -106,7 +110,11 @@ const half = (x: number) => {
  * `games` = latest record per game key (any status; only 'ok' games count).
  */
 export function computeState(spec: BracketSpec, games: ArenaGameLite[], spentUsd?: number): TournamentState {
-  const byKey = new Map(games.filter((g) => g.status === 'ok').map((g) => [g.key, g]));
+  // Finished games, plus judged games waiting for a human verdict (played, but not counted yet).
+  const byKey = new Map(games.filter((g) => g.status === 'ok' || g.status === 'awaiting-judges').map((g) => [g.key, g]));
+  const counted = (s: GameSlot) => s.game?.status === 'ok';
+  const byMargin = spec.settings.game?.scoring === 'margin';
+  const unit = spec.unit ?? (typeof spec.settings.game?.unit === 'string' ? spec.settings.game.unit : 'points');
   const seedOf = new Map(spec.entrants.map((e) => [e.id, e.seed]));
   const G = spec.settings.gamesPerMatch;
   const knockout = spec.settings.format === 'knockout';
@@ -153,20 +161,24 @@ export function computeState(spec: BracketSpec, games: ArenaGameLite[], spentUsd
       const key = gameKey(m.id, n);
       return { key, gameNo: n, seed: gameSeed(spec.seed, m.id, n, G), players, suddenDeath: n > G, game: byKey.get(key) };
     };
+    if (byMargin) st.unit = unit;
     const tally = (s: GameSlot) => {
       const g = s.game;
-      if (!g) return;
+      if (!g || !counted(s)) return;
       for (const seat of [0, 1] as const) {
         const who = g.players[seat] === pa ? 0 : 1;
         st.illegal[who] += g.illegal[seat];
         st.cost[who] += g.metrics[seat].costUsd;
-        if (g.winner === null) st.score[who] += 0.5;
+        if (byMargin) st.score[who] += g.margin?.[seat] ?? 0;
+        else if (g.winner === null) st.score[who] += 0.5;
         else if (g.winner === seat) st.score[who] += 1;
       }
     };
     for (let n = 1; n <= G; n++) st.games.push(slot(n));
     st.games.forEach(tally);
-    const plannedDone = st.games.every((s) => s.game);
+    const plannedDone = st.games.every(counted);
+    const waiting = st.games.filter((s) => s.game?.status === 'awaiting-judges').length;
+    if (waiting) st.awaiting = waiting;
     st.status = st.games.some((s) => s.game) ? 'playing' : 'ready';
     if (!plannedDone) continue;
 
@@ -175,7 +187,7 @@ export function computeState(spec: BracketSpec, games: ArenaGameLite[], spentUsd
       st.decidedBy = decidedBy;
       st.status = 'done';
     };
-    if (st.score[0] !== st.score[1]) winnerBy('games', st.score[0] > st.score[1] ? 0 : 1);
+    if (st.score[0] !== st.score[1]) winnerBy(byMargin ? 'margin' : 'games', st.score[0] > st.score[1] ? 0 : 1);
     else if (!knockout) {
       st.status = 'done';
       st.decidedBy = 'games';
@@ -185,7 +197,7 @@ export function computeState(spec: BracketSpec, games: ArenaGameLite[], spentUsd
       for (let n = G + 1; n <= G + spec.settings.suddenDeath; n++) {
         const s = slot(n);
         st.games.push(s);
-        if (!s.game) break;
+        if (!s.game || !counted(s)) break;
         tally(s);
         if (s.game.winner !== null) {
           winnerBy('sudden-death', s.game.players[s.game.winner] === pa ? 0 : 1);
@@ -193,14 +205,23 @@ export function computeState(spec: BracketSpec, games: ArenaGameLite[], spentUsd
           break;
         }
       }
-      const sdDone = st.games.every((s) => s.game);
+      const sdDone = st.games.every(counted);
       if (!decided && sdDone) {
         if (st.illegal[0] !== st.illegal[1]) winnerBy('fewer illegal moves', st.illegal[0] < st.illegal[1] ? 0 : 1);
         else if (Math.abs(st.cost[0] - st.cost[1]) > 1e-9) winnerBy('lower cost', st.cost[0] < st.cost[1] ? 0 : 1);
         else winnerBy('higher seed', (seedOf.get(pa) ?? 99) <= (seedOf.get(pb) ?? 99) ? 0 : 1);
       }
     }
-    if (st.status === 'done') {
+    if (st.status === 'done' && byMargin) {
+      const la = labelOf.get(pa) ?? pa;
+      const lb = labelOf.get(pb) ?? pb;
+      if (!st.winner) st.summary = `${la} and ${lb} finish level (${signed(st.score[0])} ${unit})`;
+      else {
+        const wIdx = st.winner === pa ? 0 : 1;
+        const how = st.decidedBy === 'margin' ? '' : ` (level on ${unit}; decided on ${st.decidedBy})`;
+        st.summary = `${labelOf.get(st.winner) ?? st.winner} wins by ${Math.abs(st.score[wIdx])} ${unit}${how}`;
+      }
+    } else if (st.status === 'done') {
       const la = labelOf.get(pa) ?? pa;
       const lb = labelOf.get(pb) ?? pb;
       const score = `${half(st.score[0])}–${half(st.score[1])}`;
@@ -219,19 +240,21 @@ export function computeState(spec: BracketSpec, games: ArenaGameLite[], spentUsd
 
   // Standings
   const rows = new Map<string, StandingRow>();
-  for (const e of spec.entrants) rows.set(e.id, { contestantId: e.id, seed: e.seed, played: 0, wins: 0, draws: 0, losses: 0, points: 0, illegal: 0, costUsd: 0, rank: 0 });
+  for (const e of spec.entrants) rows.set(e.id, { contestantId: e.id, seed: e.seed, played: 0, wins: 0, draws: 0, losses: 0, points: 0, illegal: 0, costUsd: 0, rank: 0, ...(byMargin ? { margin: 0 } : {}) });
   const h2h = new Map<string, number>();
   for (const m of matches) {
     for (const s of m.games) {
       const g = s.game;
-      if (!g) continue;
+      if (!g || !counted(s)) continue;
       for (const seat of [0, 1] as const) {
         const r = rows.get(g.players[seat]);
         if (!r) continue;
         r.played++;
         r.illegal += g.illegal[seat];
         r.costUsd += g.metrics[seat].costUsd;
-        const pts = g.winner === null ? 0.5 : g.winner === seat ? 1 : 0;
+        // 'margin' games rank on the margin (e.g. chips); points = margin so every table sorts the same way.
+        const pts = byMargin ? (g.margin?.[seat] ?? 0) : g.winner === null ? 0.5 : g.winner === seat ? 1 : 0;
+        if (byMargin) r.margin = (r.margin ?? 0) + pts;
         r.points += pts;
         if (g.winner === null) r.draws++;
         else if (g.winner === seat) r.wins++;
@@ -287,8 +310,9 @@ export function computeState(spec: BracketSpec, games: ArenaGameLite[], spentUsd
     gamesDone += m.games.filter((s) => s.game).length;
     gamesTotal += Math.max(G, m.games.length);
   }
-  const costUsd = spentUsd ?? games.reduce((s, g) => s + g.metrics[0].costUsd + g.metrics[1].costUsd, 0);
-  return { matches, standings, champion, runnerUp, complete, gamesDone, gamesTotal, costUsd: Math.round(costUsd * 1e6) / 1e6 };
+  const costUsd = spentUsd ?? games.reduce((s, g) => s + g.metrics[0].costUsd + g.metrics[1].costUsd + (g.judging?.costUsd ?? 0), 0);
+  const awaitingJudges = games.filter((g) => g.status === 'awaiting-judges').length;
+  return { matches, standings, champion, runnerUp, complete, gamesDone, gamesTotal, costUsd: Math.round(costUsd * 1e6) / 1e6, ...(awaitingJudges ? { awaitingJudges } : {}) };
 }
 
 /** Games that can start now: both players known, match undecided, no finished record, not already running. */

@@ -70,7 +70,7 @@ The **Live Arena** streams every model's output side by side while it works.
 | **Viewer Challenge** | Import viewer questions (Google Form CSV), review them, write a private held-out test, present "submitted by @name" slides. |
 | **Publish** | Export a free static leaderboard website with your channel branding (GitHub Pages / Netlify Drop). |
 | **Studio** | Turn a run into video material: ranked highlights with deep links to the exact replay step, a narration script with Presenter cues, YouTube thumbnails and Shorts cards (PNG), and transparent OBS overlays (`/overlay/latest?view=scoreboard`). See [docs/PLAYBOOK.md](docs/PLAYBOOK.md#4b-making-the-video-studio). |
-| **Arena** | Head-to-head tournaments: models play **Connect Four** and **chess** against each other in a knockout bracket or round-robin. Live board with streaming "thinking", clocks and spend; a bracket that fills in as winners advance; move-by-move replays; full-screen match cards for the video. See [The Arena](#the-arena-head-to-head-games). |
+| **Arena** | Head-to-head tournaments: models play **Connect Four**, **chess** and **heads-up poker** against each other, or argue **debates** and **mock trials** in front of a blinded cross-vendor judge panel, in a knockout bracket or round-robin. Live board with streaming "thinking", clocks and spend; a bracket that fills in as winners advance; move-by-move replays; full-screen match cards for the video. See [The Arena](#the-arena-head-to-head-games). |
 
 Press **B** anywhere for **Broadcast mode**: chrome hidden, large type, 16:9-friendly layout.
 
@@ -136,6 +136,27 @@ node src/cli.ts arena resume <id> --max-cost 10
 For the video: open the tournament and press **B** (broadcast) for the live board or the bracket, click any game
 for a replay (Space / ← → / F), and use **Match cards** for full-screen 1920×1080 cards of every match and the
 champion. Try it with no keys at `?mock=1`: a finished 8-model chess bracket and a Connect Four cup playing live.
+
+### Poker, debates and mock trials
+
+* **Heads-up Poker** (No-Limit Hold'em, blinds 1/2, 200-chip stacks reset every hand). Each model sees only its own
+  cards and answers `ACTION: fold | check | call | raise <amount> | all-in` plus a one-line `REASON:` that viewers
+  see. **Duplicate format:** each deal is played twice with the cards swapped (same shuffled decks, seats swapped),
+  so luck cancels out; a pairing is won on total chips. Choose 10, 20, 40 or 60 hands per match. An unreadable or
+  illegal action gets one retry, then the model checks (or folds) and gets a strike.
+* **Debate** and **Courtroom**: two models argue opposite sides (opening, rebuttal, closing; 180/150/120 words,
+  anything longer is cut and the judges see a penalty), then swap sides. 14 balanced, non-political motions and 6
+  fictional case files with evidence exhibits whose facts cut both ways. A **blind judge panel** decides: the judges
+  from `config/settings.json`, never one from either debater's vendor, read the transcript as "Side A" / "Side B"
+  (random order, every model name removed), score a rubric and pick a winner; majority decides and a split panel is
+  shown as a split decision. Judge cost is included in the estimate and the spending cap. With no usable judge,
+  games wait for you on the **Judge** screen (same blind conventions as Blind Review).
+
+```bash
+node src/cli.ts arena new --game poker --models a,b,c,d --hands 20 --max-cost 10
+node src/cli.ts arena new --game debate --models a,b,c,d --motion random --max-cost 5
+node src/cli.ts arena new --game courtroom --models a,b --case missing-violin
+```
 
 ## Suites
 
