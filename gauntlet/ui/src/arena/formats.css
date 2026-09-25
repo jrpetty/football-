@@ -1033,6 +1033,12 @@
   color: var(--text-2);
   font-style: italic;
   line-height: 1.45;
+  /* Long rationales end in an ellipsis instead of being cut mid-word; the full text is in the tooltip. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 8;
+  line-clamp: 8;
+  overflow: hidden;
 }
 .db-card-err {
   font-size: 0.84rem;

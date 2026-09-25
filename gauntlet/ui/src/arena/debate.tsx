@@ -112,7 +112,7 @@ function Scorecard({ v, players, i }: { v: JudgeVerdict; players: [TablePlayer, 
               </div>
             </div>
           )}
-          {v.rationale && <p className="db-card-why">“{v.rationale}”</p>}
+          {v.rationale && <p className="db-card-why" title={v.rationale}>“{v.rationale}”</p>}
         </>
       )}
     </div>
