@@ -101,6 +101,19 @@ weaker models separate.
 instead of using the test's tools, so both runs were discarded and the files restored. A real model under test cannot do this:
 it only ever gets the in-memory tools. The test hash also covers every fixture file, so any tampering would make results stale.
 
+## The Arena (head-to-head), real matches
+
+Real models played through the Manual Inbox. Each move was a fresh prompt, and the players saw only what an API model sees.
+
+| Format | Match | Result | What the match changed |
+|---|---|---|---|
+| Connect Four | Opus vs Haiku, 2 games (colours swapped) | **Opus 2–0**, no illegal moves | Nothing needed |
+| Heads-up poker | Opus vs Haiku, 10 hands (duplicate: each deal played twice with cards swapped) | **Opus by 63 chips**, no illegal actions | Game 2 of a duplicate pair now starts only after game 1 finishes, so a player with memory (a human pasting into a chat app) can't learn the opponent's cards. Also: per-player decision counter, "You check" grammar, bet/raise wording, previous-hand result shown |
+| Courtroom ("The Missing Violin") | Opus vs Haiku, both sides each, blinded judge | 1–1: Defence won both games | Case was lopsided. Now: advocacy framing, a stronger prosecution file, a points tie-break before sudden death, fabrication penalty in the rubric, word-count rule stated, prompt typo fixed |
+
+The Courtroom judge's packet contained no model names. Opus lost the prosecution game mainly for going over the word limit
+twice (it was cut off, and the judge marked "rules" down), which is the rubric working as intended.
+
 ## What the audit changed
 
 The blind play found real problems, and each was fixed before release:
