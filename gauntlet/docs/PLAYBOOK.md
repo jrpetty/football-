@@ -208,6 +208,43 @@ from red to green each time it runs the tests, with its action and token budgets
 the verdict: how many hidden tests pass. The **changes.diff** artifact in the inspector is the model's full
 patch, and the score breakdown lists the planted bugs (the answer key) so you can explain them on screen.
 
+## Filming the simulations: island, escape room, startup, liar's table
+
+Open **Run detail → a Survival Island / Escape Room / Startup / Liar's Table case → Replay**, then press **F**
+(full screen) or **B** (Broadcast mode). Space plays and pauses, ← → step one move, and the speed menu goes from
+0.5× to 4×. Every step has a big headline ("Day 5 · Afternoon: finds fresh water"), green for a good move and red
+for a setback, and one plain sentence underneath quoting what the model typed and what happened. Everything on
+screen comes from the recorded run. Nothing is re-simulated or made up.
+
+* **Survival Island.** An illustrated map of the island. The castaway walks along a dotted trail, and unexplored
+  land stays under fog until the model sees it. Night darkens the map and rain falls across it. The campfire,
+  shelter and signal pile appear where they were built, and the ship shows up on the horizon on the days it
+  passes. The five stats are meters that flash red when they drop to 20 or below. The inventory is drawn as
+  icons. The strip under the map has a column per day with icons for the key events (found water, poison
+  berries, shelter, signal fire, ship, rescue). Click an icon to jump to that moment. The last step lifts the fog,
+  marks the poisonous bushes and shows the verdict card: "Rescued on day 7", or what went wrong.
+* **The Escape Room.** A floor plan of the three rooms. Locks are red while shut and turn green as they open, and
+  the doors between the rooms work the same way. The moves meter has a **par** marker (the shortest possible
+  solution) and turns amber once the model goes over par. Next to each lock you see every code the model tried:
+  wrong codes are struck through in red, with the wrong characters highlighted, and the correct answer appears
+  beside them as soon as the lock opens (or at the end).
+* **The Startup.** A business dashboard. Market events such as a price war or a supplier price rise appear as
+  banners. Cash, equity and the gap to the oracle for the same month are shown as big numbers. The month's price,
+  production, marketing and hiring each get a card with an arrow for the change since last month and the oracle's
+  choice underneath. A bar shows how many customers wanted the product, how many were sold, how many were turned
+  away (sold out) and how many were left on the shelf. The cash chart shows the model against the oracle and the
+  autopilot, with the event months shaded.
+* **The Liar's Table.** The suspects sit around a table as drawn portraits. The one being questioned lights up
+  and answers in a speech bubble. Opened evidence files appear as a folder on the table. Below is the deduction
+  board: who says they were where at each time. A cell turns **red** the moment the model's questions expose a
+  contradiction. Amber cells are guests who admitted they might be misremembering. The theft time is marked once
+  the door log pins it down. At the verdict, the accused and the real thief appear side by side.
+
+**Presenter.** For each of these tests, the deck adds a **Best moment** slide right after the results. It shows
+the best-scoring model's run frozen at its turning point (the rescue, the escape, the moment the lie broke, or the
+bankruptcy) next to that run's finale card. Runs recorded before this feature still replay in the older
+tile-map view, and they get no best-moment slide.
+
 ## Arena episode: poker, debates and mock trials
 
 1. **Poker:** Arena → New tournament → *Heads-up Poker*, 4 or 8 models, *Hands per match* 20 (40 for a closer

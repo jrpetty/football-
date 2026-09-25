@@ -38,8 +38,9 @@ function shortCost(usd: number | null | undefined): string {
 
 /** Singular or plural noun (no number). */
 const noun = (n: number, one: string, many = `${one}s`) => (n === 1 ? one : many);
-import type { CategoryInfo, Leaderboard, LeaderboardRow, ProgramInfo, RunDetail, TestAggregate, TestDefinition, TestDetail, TestSnapshot } from '../types.ts';
+import type { CaseResultLite, CategoryInfo, Leaderboard, LeaderboardRow, ProgramInfo, RunDetail, TestAggregate, TestDefinition, TestDetail, TestSnapshot } from '../types.ts';
 import { VisionExplainerCard, examplePicture } from '../components/VisionPresenter.tsx';
+import { SIM_PROGRAMS, SimMomentSlide, pickSimCase } from '../components/present/SimMomentSlide.tsx';
 
 const W = 1920;
 const H = 1080;
@@ -100,7 +101,8 @@ type Slide =
   | { kind: 'outro' }
   | { kind: 'trick'; test: DeckTest; h: TrickHighlight; i: number; of: number }
   | { kind: 'trick-empty' }
-  | { kind: 'truth'; test: DeckTest; pick: InterestPick };
+  | { kind: 'truth'; test: DeckTest; pick: InterestPick }
+  | { kind: 'sim'; test: DeckTest; pick: CaseResultLite };
 
 interface Caption {
   text: string;
@@ -279,6 +281,14 @@ function trickSlides(deck: Deck, test: DeckTest): Slide[] {
   return hs.map((h, i) => ({ kind: 'trick', test, h, i: i + 1, of: hs.length }));
 }
 
+/** A best-moment slide for the simulation tests (island, escape room, startup, liar's table). */
+function simSlides(deck: Deck, test: DeckTest): Slide[] {
+  const def = test.detail?.definition;
+  if (!def || def.kind !== 'program' || !SIM_PROGRAMS.has(def.program)) return [];
+  const pick = pickSimCase(deck.d.results ?? [], test.snap.id, deck.contenders.map((c) => c.id), new Set(deck.contenders.filter((c) => c.baseline).map((c) => c.id)));
+  return pick ? [{ kind: 'sim', test, pick }] : [];
+}
+
 function buildSlides(deck: Deck, vertical = false): Slide[] {
   if (vertical) {
     const shorts = deck.tests.flatMap((t) => trickSlides(deck, t));
@@ -286,7 +296,7 @@ function buildSlides(deck: Deck, vertical = false): Slide[] {
   }
   const slides: Slide[] = [{ kind: 'title' }, { kind: 'how' }];
   for (const test of deck.tests) {
-    slides.push({ kind: 'explainer', test }, { kind: 'result', test }, ...trickSlides(deck, test));
+    slides.push({ kind: 'explainer', test }, { kind: 'result', test }, ...simSlides(deck, test), ...trickSlides(deck, test));
     const pick = deck.truth.get(test.snap.id);
     if (pick) slides.push({ kind: 'truth', test, pick });
   }
@@ -379,6 +389,13 @@ function captionFor(slide: Slide, deck: Deck): Caption {
         fine: `${R > 1 ? `Verdict = majority of ${R} attempts · ` : ''}time = median response time; API speeds differ by provider, only correctness is scored`,
       };
     }
+    case 'sim': {
+      const who = deck.contenders.find((c) => c.id === slide.pick.contestantId);
+      return {
+        text: `The moment that decided it: ${who?.baseline ? 'the random player' : (who?.label ?? 'the best model')}’s run of “${slide.test.snap.name}”, replayed from the recorded game — and how it ended.`,
+        fine: `Best-scoring run · ${slide.pick.caseId} · drawn from the recorded replay, nothing re-simulated`,
+      };
+    }
     case 'trick-empty':
       return { text: 'Shorts mode shows the “Can It Be Fooled?” questions the models disagreed on. This run has none.' };
     case 'truth': {
@@ -423,6 +440,8 @@ function sectionFor(slide: Slide, deck: Deck): string {
       return 'Can it be fooled?';
     case 'truth':
       return `Answer vs truth · ${slide.test.snap.name}`;
+    case 'sim':
+      return `Test ${slide.test.n} of ${deck.tests.length} · Best moment`;
   }
 }
 
@@ -1108,6 +1127,10 @@ function SlideView({ slide, deck, reveal, vertical }: { slide: Slide; deck: Deck
       return <ExplainerSlide deck={deck} test={slide.test} />;
     case 'result':
       return <ResultSlide deck={deck} test={slide.test} />;
+    case 'sim': {
+      const who = deck.contenders.find((c) => c.id === slide.pick.contestantId);
+      return <SimMomentSlide runId={deck.d.manifest.id} pick={slide.pick} modelLabel={who?.baseline ? 'Random guessing' : (who?.label ?? slide.pick.contestantId)} modelColor={who?.color} />;
+    }
     case 'final':
       return <FinalSlide deck={deck} reveal={reveal} />;
     case 'scatter':

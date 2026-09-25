@@ -11,7 +11,7 @@
  * holding fees; stockouts lose the sale and dent reputation. All numbers
  * are seeded; nothing depends on the model except its own decisions.
  */
-import type { Rng } from '../../core/types.ts';
+import type { Rng, StartupSimFrame, StartupSimMonth, StartupSimWorld } from '../../core/types.ts';
 import { clamp, money, round } from './agentic-common.ts';
 
 export const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -485,5 +485,86 @@ export function oracle(market: Market): OracleResult {
     equity: equityOf(market, firm),
     firm,
     plan: firm.history.map((h) => ({ month: h.month, price: h.price, produce: h.produced, marketing: h.marketing, hire: h.hires, loan: h.loanIn > 0 })),
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Visual replay data (ReplayData.sim / ReplayFrame.sim) — never shown to the model
+// ─────────────────────────────────────────────────────────────────────────────
+
+function monthsOf(market: Market, f: Firm): StartupSimMonth[] {
+  return [{ month: 0, cash: market.cash0, equity: market.cash0 }, ...f.history.map((h) => ({ month: h.month, cash: Math.round(h.cash), equity: Math.round(h.equity) }))];
+}
+
+/** The static dashboard data: the oracle and autopilot runs month by month, and the scripted events. */
+export function startupSimWorld(market: Market, ref: OracleResult, auto: Firm): StartupSimWorld {
+  const o = market.opening;
+  return {
+    kind: 'startup',
+    product: market.product,
+    months: market.months,
+    cash0: market.cash0,
+    staff0: market.staff0,
+    unitCost: market.unitCost,
+    capacityPerStaff: market.capacityPerStaff,
+    opening: { price: o.price, produce: o.produce, marketing: o.marketing, hire: o.hire },
+    oracle: monthsOf(market, ref.firm),
+    autopilot: monthsOf(market, auto),
+    oraclePlan: ref.plan.map((p) => ({ ...p })),
+    oracleEquity: Math.round(ref.equity),
+    autopilotEquity: Math.round(equityOf(market, auto)),
+    events: {
+      priceWar: { ...market.priceWar },
+      supplierSpike: { ...market.supplierSpike },
+      viral: market.viral.month,
+      loan: market.loan.month,
+      shock: market.shock ? { ...market.shock } : null,
+    },
+  };
+}
+
+/** Market events that shaped month `m` (for the dashboard banners). */
+export function startupNews(market: Market, r: MonthReport): StartupSimFrame['news'] {
+  const m = r.month;
+  const out: StartupSimFrame['news'] = [];
+  const w = market.priceWar;
+  if (priceWarActive(market, m)) out.push({ type: 'price-war', text: `Price war: rivals ${Math.round((1 - w.factor) * 100)}% cheaper` });
+  else if (m === w.start + w.months) out.push({ type: 'price-war-end', text: 'Price war over' });
+  const sp = market.supplierSpike;
+  if (spikeActive(market, m)) out.push({ type: 'supplier-spike', text: `Supplier spike: unit cost ×${sp.factor}` });
+  else if (m === sp.start - 1) out.push({ type: 'supplier-notice', text: 'Supplier warns: costs rise next month' });
+  else if (m === sp.start + sp.months) out.push({ type: 'supplier-end', text: 'Supplier prices back to normal' });
+  if (market.shock && m === market.shock.month) out.push({ type: 'shock', text: `Safety scare: demand down ~${Math.round((1 - market.shock.factor) * 100)}%` });
+  if (m === market.viral.month - 1) out.push({ type: 'viral-soon', text: 'A reviewer asks for a sample' });
+  if (m === market.viral.month) out.push({ type: 'viral', text: 'Viral review goes live' });
+  if (m === market.loan.month) out.push(r.loanIn > 0 ? { type: 'loan-taken', text: `Took the bank loan (${money(r.loanIn)})` } : { type: 'loan', text: 'Bank loan offered (declined)' });
+  return out;
+}
+
+export function startupSimFrame(market: Market, firm: Firm, r: MonthReport): StartupSimFrame {
+  const req = r.produceRequested !== r.produced || r.marketingRequested !== r.marketing ? { requested: { produce: r.produceRequested, marketing: r.marketingRequested } } : {};
+  return {
+    kind: 'startup',
+    month: r.month,
+    calendar: r.calendar,
+    decisions: { price: r.price, produce: r.produced, marketing: r.marketing, hire: r.hires, loan: r.loanIn > 0 },
+    ...req,
+    demand: r.demand,
+    sold: r.sold,
+    missed: r.missed,
+    produced: r.produced,
+    capacity: r.capacity,
+    inventory: r.inventory,
+    staff: r.staff,
+    competitor: round(competitorPrice(market, r.month), 2),
+    unitCost: r.unitCost,
+    revenue: Math.round(r.revenue),
+    net: Math.round(r.net),
+    cash: Math.round(r.cash),
+    equity: Math.round(r.equity),
+    awareness: Math.round(r.awareness * 100),
+    bankrupt: firm.bankrupt,
+    news: startupNews(market, r),
+    adjustments: r.adjustments.slice(),
   };
 }

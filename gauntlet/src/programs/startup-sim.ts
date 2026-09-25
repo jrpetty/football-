@@ -26,6 +26,8 @@ import {
   priceWarActive,
   simulate,
   spikeActive,
+  startupSimFrame,
+  startupSimWorld,
   unitCostAt,
   type Decisions,
   type Firm,
@@ -366,6 +368,7 @@ export const program: ProgramDefinition = {
           month: report.month,
         },
         tone: firm.bankrupt ? 'bad' : good ? 'good' : 'neutral',
+        sim: startupSimFrame(market, firm, report),
       });
     }
 
@@ -453,6 +456,7 @@ export const program: ProgramDefinition = {
           { name: 'Oracle cash', points: cashSeries(ref.firm) },
           { name: 'Autopilot cash', points: cashSeries(auto) },
         ],
+        sim: startupSimWorld(market, ref, auto),
       },
     };
   },

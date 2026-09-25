@@ -15,8 +15,12 @@ import {
   coordName,
   generateIsland,
   idleNights,
+  islandEvents,
   islandFrame,
   islandObservation,
+  islandSimFrame,
+  islandSimWorld,
+  islandSnap,
   newIslandState,
   PHASES,
   stepIsland,
@@ -138,11 +142,14 @@ export const program: ProgramDefinition = {
     let note = '';
     const recent: string[] = [];
     const frames: ReplayFrame[] = [
-      islandFrame(world, s, 0, {
-        label: 'Day 1 · Dawn',
-        outcome: `Washed up on the beach at ${coordName(world.start)}.`,
-        tone: 'neutral',
-      }),
+      {
+        ...islandFrame(world, s, 0, {
+          label: 'Day 1 · Dawn',
+          outcome: `Washed up on the beach at ${coordName(world.start)}.`,
+          tone: 'neutral',
+        }),
+        sim: islandSimFrame(s, 1, -1, []),
+      },
     ];
     const pushEvent = (e: string): void => {
       recent.push(e);
@@ -155,7 +162,9 @@ export const program: ProgramDefinition = {
       const label = `Turn ${s.turn + 1} · Day ${s.day} ${PHASES[s.phase]}`;
       const turn = await askTurn(ctx, system, observation, label);
       if (turn.note !== null) note = turn.note;
+      const before = islandSnap(world, s);
       const step = stepIsland(world, s, turn.action, turn.failure);
+      const tags = islandEvents(world, before, s, step);
 
       const when = `Day ${step.day} ${PHASES[step.phase]}`;
       const nightIdx = step.night ? step.events.indexOf(step.night) : -1;
@@ -165,8 +174,8 @@ export const program: ProgramDefinition = {
       for (const e of dayEvents) pushEvent(`${when}: ${e}`);
       for (const e of nightEvents) pushEvent(e === step.night ? e : `Night ${step.day}: ${e}`);
 
-      frames.push(
-        islandFrame(
+      frames.push({
+        ...islandFrame(
           world,
           s,
           frames.length,
@@ -179,16 +188,18 @@ export const program: ProgramDefinition = {
           },
           step.preNight,
         ),
-      );
+        sim: islandSimFrame(s, step.day, step.phase, tags.day),
+      });
       if (step.night) {
         const rough = /battered|freezing|parched|starving|drowns/.test(step.night);
-        frames.push(
-          islandFrame(world, s, frames.length, {
+        frames.push({
+          ...islandFrame(world, s, frames.length, {
             label: `Day ${step.day} · Night`,
             outcome: truncate(nightEvents.join(' '), 240),
             tone: !s.alive || rough ? 'bad' : nightEvents.some((e) => e.startsWith('You have survived')) ? 'good' : 'neutral',
           }),
-        );
+          sim: islandSimFrame(s, step.day, 3, tags.night),
+        });
       }
     }
 
@@ -245,6 +256,7 @@ export const program: ProgramDefinition = {
         title: `Survival Island · seed ${ctx.seed}`,
         gauges: ['health', 'food', 'water', 'energy', 'warmth'],
         frames,
+        sim: islandSimWorld(world),
       },
     };
   },

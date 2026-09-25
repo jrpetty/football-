@@ -1,0 +1,194 @@
+{
+  "survival-island/101/scripted": {
+    "calls": 36,
+    "prompts": "795011815db4cc930dc06a3097bf44cb4035b45a45c5932deb9fc513bf12c7f4",
+    "score": 0.75,
+    "passed": true,
+    "summary": "Survived all 12 days · not rescued",
+    "detail": "8a933fb71bfec801ea6a87aef2cc314e650d6280e04c11e683cf751cd3879fd6"
+  },
+  "survival-island/101/baseline": {
+    "calls": 20,
+    "prompts": "1c0a60d2fded320d7769c21ae2e3779f026b39f95fbe388275d78080541d9f59",
+    "score": 0.1,
+    "passed": false,
+    "summary": "Day 7: died of dehydration",
+    "detail": "156f22400b32515810f1a87db5b23cb37cd182f43a69879a0c02b8840c983805"
+  },
+  "survival-island-hard/101/scripted": {
+    "calls": 39,
+    "prompts": "5cb39ba18d66ca19da465af60b8f09c16b8bae0676c4e77d8b1dbb0a5a3f12d7",
+    "score": 0.75,
+    "passed": true,
+    "summary": "Survived all 13 days · not rescued",
+    "detail": "6513a66055b957f95f5bf7517374ecd9d6ff4d00e005ca550f41b5a2b43ae406"
+  },
+  "survival-island-hard/101/baseline": {
+    "calls": 15,
+    "prompts": "07867e70dc0c38afd1125a8b677ad963ed9e24864026c8d135cb74f01b1a04bb",
+    "score": 0,
+    "passed": false,
+    "summary": "Day 5: died of dehydration",
+    "detail": "238151d9a9451b7a999205a5839f9fd3eed4bd20a5dbebcd05a5edb91996bd5f"
+  },
+  "escape-room/101/scripted": {
+    "calls": 25,
+    "prompts": "d25740e82c7511018a4659b2cb7ea3195a2414597045467a17783436efb82b99",
+    "score": 1,
+    "passed": true,
+    "summary": "Escaped in 25 moves (optimal 25)",
+    "detail": "cf8add340b29c228768dd9040362de8268fedf1cd49a81c7906e06f73bd94385"
+  },
+  "escape-room/101/baseline": {
+    "calls": 45,
+    "prompts": "09d586ac3783dda271501aea3c8c31d2d92824e79361aff7aa3e15cd9e5b6979",
+    "score": 0,
+    "passed": false,
+    "summary": "Trapped in The Study · 0/7 locks · 45 moves (optimal 25)",
+    "detail": "8015dad809f058c2cddd534af6fc9c669bc8588a57de409b235fba59077af77b"
+  },
+  "escape-room-hard/101/scripted": {
+    "calls": 32,
+    "prompts": "9c0ec2037997b3f1db21983c8c11b110a13751d7a74ad7d60399b70f2e3ab187",
+    "score": 1,
+    "passed": true,
+    "summary": "Escaped in 32 moves (optimal 32)",
+    "detail": "2f42620e5ff9570f0a0a258fb8539d5258742c14ae63a9001414016d1a875e08"
+  },
+  "escape-room-hard/101/baseline": {
+    "calls": 40,
+    "prompts": "462b240ea625e64c5c0f7a729439639da4789c6f1bd45c72a38dee9cffaf12ee",
+    "score": 0.05,
+    "passed": false,
+    "summary": "Trapped in The Study · 1/10 locks · 40 moves (optimal 32)",
+    "detail": "58c1739abd66a83df7a8f0569e35b3cf7e93d20047ad146ee9f2fe3884824c3e"
+  },
+  "startup-sim/101/scripted": {
+    "calls": 12,
+    "prompts": "e1464449d1ab3ba86560f706fb6919d87e81e319ad0fe92c0c358305fc6972e0",
+    "score": 0.2374,
+    "passed": false,
+    "summary": "Month 12: $45,351 equity (oracle $110,695, autopilot $25,013)",
+    "detail": "406b6b8301e820672a74e2c9a665ae9e2f4ed244edb97881c836e2455fb78283"
+  },
+  "startup-sim/101/baseline": {
+    "calls": 3,
+    "prompts": "b3c2c5487efaf6f1bcbbc747b10e36179f7a8a9c7a8006244509f10ce2650ec2",
+    "score": 0,
+    "passed": false,
+    "summary": "Bankrupt in month 3 (oracle $110,695)",
+    "detail": "fa8f2ead986c881cb52be7a8e5372473a0c6600909cfed7dd6e9aada560816c8"
+  },
+  "startup-sim-hard/101/scripted": {
+    "calls": 4,
+    "prompts": "184f02878a230caa350fa30438a6e928e2b424f30a693f5a37ecee3de6155d7e",
+    "score": 0,
+    "passed": false,
+    "summary": "Bankrupt in month 4 (oracle $96,318)",
+    "detail": "836e63752a6d044a7c2f9cf1e71b718f1504b8436200ef6a5a2b7cd99c0a4b6e"
+  },
+  "startup-sim-hard/101/baseline": {
+    "calls": 3,
+    "prompts": "721ef00a0ace5d76064f4fdb8702bb5635a8bf16f32ce98e199ef1a8e1f4f871",
+    "score": 0,
+    "passed": false,
+    "summary": "Bankrupt in month 3 (oracle $96,318)",
+    "detail": "0a13f83a087da29dc971572a2476bd6a51af98d7c9ddeb12179dcb131aec5ecd"
+  },
+  "liars-table/303/scripted": {
+    "calls": 6,
+    "prompts": "d48ffbe23a0ad9f4919167256e90468417f04f83b79619303606edcc6d5a7104",
+    "score": 0.944,
+    "passed": true,
+    "summary": "Caught Marguerite after 5 questions",
+    "detail": "5b47388f8a8c295a8f1386e2c4f21a921940e88ab54f6b1e2726c3a4265b8851"
+  },
+  "liars-table/303/baseline": {
+    "calls": 13,
+    "prompts": "38620390eb40a71246afbbf3b8a54dd6d34a3952b20050f40e0fc45b3aa81f8e",
+    "score": 0,
+    "passed": false,
+    "summary": "Accused the wrong person (Delphine)",
+    "detail": "1e68a44c7b2aae4025cd30b26381a3cd037630e91debeb180b98335d81254be5"
+  },
+  "liars-table/606/scripted": {
+    "calls": 5,
+    "prompts": "dad7f7653d72c11573bd5dc076fd4ed75e5966e70ea8d0bf6726d4bcc9847d1b",
+    "score": 0.972,
+    "passed": true,
+    "summary": "Caught Silas after 4 questions",
+    "detail": "7d7c4f16c00675c1b5e2f47cc61053b099ec251375b004a0bdc08e8871bff5b2"
+  },
+  "liars-table/606/baseline": {
+    "calls": 3,
+    "prompts": "2bf7dfd94998f9638717b031fe96e8f57c8ad78ba31659b1bd9e9abeb0fc60f5",
+    "score": 0,
+    "passed": false,
+    "summary": "Accused the wrong person (Rosalind)",
+    "detail": "e5ef71014c7a29dc8bab652becfb3710b271c247056f47810c75a45315c02180"
+  },
+  "liars-table/808/scripted": {
+    "calls": 8,
+    "prompts": "3e2155bf7f1f6aa94ad329e25238470ec5220dd36b18f092baa50959981fa2aa",
+    "score": 0.889,
+    "passed": true,
+    "summary": "Caught Cyril after 7 questions",
+    "detail": "b72e7717c517b598c5257e2ae9fed471827f07a28fae6396b9ad0d0cb6a1db3c"
+  },
+  "liars-table/808/baseline": {
+    "calls": 6,
+    "prompts": "b4debe76871bd05131f38a552b82ea4ec2777f3060c9e3fca3239c39c75f084f",
+    "score": 0,
+    "passed": false,
+    "summary": "Accused the wrong person (Ada)",
+    "detail": "96a262cf0f8fddec76aab0140712077e4abc99ed3cf5c5c806459cfa2aba1ad7"
+  },
+  "liars-table-hard/101/scripted": {
+    "calls": 9,
+    "prompts": "a14bfa69bc6df785f95cc025de4b5e36231ca58bbf04fa4811952cf2ef05f8aa",
+    "score": 0,
+    "passed": false,
+    "summary": "Accused the wrong person (Delphine)",
+    "detail": "0891c9a98f7e84821a5c1e9a75cd7d7959489ca163d263c818b755508e31f579"
+  },
+  "liars-table-hard/101/baseline": {
+    "calls": 9,
+    "prompts": "f5ccaec2c0732ad8be00a2b0c9bbf120ed46653d4c95350b14e4f3d927ef98f0",
+    "score": 0,
+    "passed": false,
+    "summary": "Accused the wrong person (Harriet)",
+    "detail": "1d62512e20e9a05f828db4da5bb1d895cde476a3f3b922dda754cc55d6b3e1d3"
+  },
+  "liars-table-hard/404/scripted": {
+    "calls": 9,
+    "prompts": "0a6a6548286e7ac424441b0cadd36664b6d4a8bbde30280b065eabc714c40490",
+    "score": 0.75,
+    "passed": true,
+    "summary": "Caught Rosalind after 8 questions",
+    "detail": "73265a6e59f30fdcb154df3879ebae41ac6f4bb288a98ea4c03c11632a2322d8"
+  },
+  "liars-table-hard/404/baseline": {
+    "calls": 4,
+    "prompts": "0654584c2ee1aa0a9921bb28bff4ee3da52887be04afd378d21bfc63385d54a7",
+    "score": 0,
+    "passed": false,
+    "summary": "Accused the wrong person (Delphine)",
+    "detail": "87dd4d1d842b1017e053ba15f8051c825d9b5c046b87573e31176d309d700405"
+  },
+  "liars-table-hard/606/scripted": {
+    "calls": 8,
+    "prompts": "3b90d1f82855dd749a1cd396b9f66c84d8464ada407c002c5ae5941a10be3740",
+    "score": 0.8,
+    "passed": true,
+    "summary": "Caught Gideon after 7 questions",
+    "detail": "7a2db6380ca18c13d510d5f5546039ba38068d45a89dd306d66deec80fdeb574"
+  },
+  "liars-table-hard/606/baseline": {
+    "calls": 6,
+    "prompts": "2b362990901afe0c8d75987a9f65d9678de06b7a145e779bb0995466c7bc5c17",
+    "score": 0.6,
+    "passed": true,
+    "summary": "Caught Gideon after 5 questions",
+    "detail": "7d89f8d1a7e99b3b74e14de8b76f774d86f3e35b48e77706a881d6017926c774"
+  }
+}
