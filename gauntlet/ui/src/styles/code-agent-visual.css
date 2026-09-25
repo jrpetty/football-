@@ -1,0 +1,250 @@
+/* Fix the Bug visual pass: story strip spacing, kind icons, diff key, budget spend, verdict reveal, missed-bug flag. */
+
+.ca-wrap > .st-strip {
+  margin-bottom: 8px;
+}
+.ca-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.ca-kind-ico svg {
+  width: 13px;
+  height: 13px;
+  display: block;
+}
+
+/* Diff: a short key and a light entrance for changed lines. */
+.ca-difflegend {
+  margin-left: 10px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-3);
+}
+.ca-difflegend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin: 0 3px 0 6px;
+  vertical-align: -1px;
+}
+.ca-difflegend i.add {
+  background: color-mix(in srgb, var(--good) 55%, transparent);
+}
+.ca-difflegend i.del {
+  background: color-mix(in srgb, var(--bad) 55%, transparent);
+}
+.ca-line.add,
+.ca-line.del {
+  animation: ca-line-in 420ms var(--ease-out) both;
+  animation-delay: calc(min(var(--li, 0), 20) * 30ms);
+}
+@keyframes ca-line-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+}
+.ca-line.del .ca-txt {
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--bad) 70%, transparent);
+}
+
+/* Test bar: segments change colour one after another (transition-delay per segment). */
+.ca-segs i {
+  transition: background 380ms var(--ease-out);
+}
+
+/* How the action budget was spent. */
+.ca-spend {
+  display: grid;
+  gap: 6px;
+}
+.ca-spend-bar {
+  display: grid;
+  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+  gap: 2px;
+  height: 14px;
+}
+.ca-spend-bar i {
+  border-radius: 2px;
+  animation: ca-pop 300ms var(--ease-out) both;
+}
+.ca-spend-bar i.free {
+  background: var(--surface-4);
+  animation: none;
+}
+.ca-spend-bar i.unseen,
+.ca-spend-key i.unseen {
+  background: repeating-linear-gradient(135deg, var(--text-3) 0 2px, transparent 2px 4px);
+}
+@keyframes ca-pop {
+  from {
+    transform: scaleY(0.2);
+  }
+}
+.ca-spend-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font-size: 0.74rem;
+  color: var(--text-2);
+}
+.ca-spend-key span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.ca-spend-key i {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+}
+
+/* The verdict: a big count-up, a stamp, before → after bars. */
+.ca-reveal {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 22px 20px;
+  border-radius: var(--r-md);
+  text-align: center;
+  background: var(--surface-3);
+  animation: ca-reveal-in 520ms var(--ease-out) both;
+}
+.ca-reveal.good {
+  background: radial-gradient(circle at 50% 20%, color-mix(in srgb, var(--good) 26%, transparent), transparent 70%), var(--good-soft);
+}
+.ca-reveal.mid {
+  background: var(--warn-soft);
+}
+.ca-reveal.bad {
+  background: var(--bad-soft);
+}
+@keyframes ca-reveal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+.ca-reveal-num {
+  font-size: 5rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.ca-reveal-num small {
+  font-size: 1.8rem;
+  color: var(--text-3);
+}
+.ca-reveal-stamp {
+  font-size: 1.1rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 4px 16px;
+  border-radius: 6px;
+  border: 3px solid currentColor;
+  transform: rotate(-3deg);
+  animation: ca-stamp 520ms var(--ease-out) 1500ms both;
+}
+.ca-reveal.good .ca-reveal-stamp {
+  color: var(--good-text);
+}
+.ca-reveal.mid .ca-reveal-stamp {
+  color: var(--warn-text);
+}
+.ca-reveal.bad .ca-reveal-stamp {
+  color: var(--bad-text);
+}
+@keyframes ca-stamp {
+  from {
+    opacity: 0;
+    transform: scale(2) rotate(-10deg);
+  }
+  70% {
+    transform: scale(0.95) rotate(-3deg);
+  }
+}
+.ca-reveal-bars {
+  display: grid;
+  gap: 6px;
+  width: min(420px, 100%);
+}
+.ca-rb {
+  display: grid;
+  grid-template-columns: 3.6rem minmax(0, 1fr) 2rem;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-2);
+}
+.ca-rb-track {
+  height: 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bad) 45%, var(--surface-4));
+  overflow: hidden;
+}
+.ca-rb-track i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--text-3);
+}
+.ca-rb.after .ca-rb-track i {
+  background: var(--good);
+  animation: ca-grow 1400ms var(--ease-out) 250ms both;
+}
+@keyframes ca-grow {
+  from {
+    width: 0;
+  }
+}
+.ca-rb b {
+  color: var(--text-1);
+  text-align: right;
+}
+
+/* A bug the visible tests didn't show. */
+.ca-missed {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: 520px;
+  padding: 10px 14px;
+  border-radius: var(--r-md);
+  background: var(--bad-soft);
+  border: 2px solid var(--bad);
+  text-align: left;
+  font-size: 0.92rem;
+  animation: ca-stamp 520ms var(--ease-out) 1900ms both;
+}
+.ca-missed-ico {
+  color: var(--bad-text);
+  flex: none;
+}
+.ca-missed-ico svg {
+  width: 20px;
+  height: 20px;
+}
+.ca-missed b {
+  color: var(--bad-text);
+}
+
+.ca-stage.video .ca-reveal-num {
+  font-size: 6rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ca-reveal-stamp,
+  .ca-missed,
+  .ca-line.add,
+  .ca-line.del,
+  .ca-rb.after .ca-rb-track i {
+    animation-delay: 0ms !important;
+  }
+  .ca-segs i {
+    transition-delay: 0ms !important;
+  }
+}

@@ -1,0 +1,122 @@
+/* Bracket visual pass: winners advance round by round, a gold sweep marks each winner, the champion is revealed last. */
+
+/* Rows fill in round by round (--rd is set per column). */
+.bracket .bk-row:not(.tbd) {
+  animation: bk-in 520ms var(--ease-out) var(--rd, 0ms) both;
+}
+/* A player who reached a later round slides in from the left, like moving along the bracket line. */
+.bracket .bk-row.arrived:not(.tbd) {
+  animation: bk-arrive 640ms var(--ease-out) var(--rd, 0ms) both;
+}
+@keyframes bk-arrive {
+  0% {
+    opacity: 0;
+    transform: translateX(-40px);
+    box-shadow: inset 0 0 0 2px var(--gold);
+  }
+  60% {
+    opacity: 1;
+    transform: translateX(4px);
+  }
+  100% {
+    transform: none;
+    box-shadow: inset 0 0 0 0 transparent;
+  }
+}
+/* The winner of each match gets a gold sweep once the row is in place. */
+.bk-row.won {
+  position: relative;
+  overflow: hidden;
+}
+.bk-row.won::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 20%, color-mix(in srgb, var(--gold) 45%, transparent) 50%, transparent 80%);
+  transform: translateX(-100%);
+  animation: bk-sweep 900ms ease-out calc(var(--rd, 0ms) + 420ms) both;
+  pointer-events: none;
+}
+@keyframes bk-sweep {
+  to {
+    transform: translateX(100%);
+  }
+}
+.bk-row.won .bk-score {
+  color: var(--good-text);
+}
+
+/* Champion reveal: rays turn behind a trophy that lands with a bounce. */
+.bk-champ {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.bracket .bk-champ.crowned {
+  animation: bk-crown 900ms var(--ease-out) var(--rd, 0ms) both;
+}
+@keyframes bk-crown {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+  100% {
+    transform: none;
+  }
+}
+.bk-rays {
+  position: absolute;
+  left: 50%;
+  top: 34%;
+  width: 260%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--gold) 22%, transparent) 0deg 8deg, transparent 8deg 24deg);
+  mask: radial-gradient(circle, #000 18%, transparent 60%);
+  -webkit-mask: radial-gradient(circle, #000 18%, transparent 60%);
+  z-index: -1;
+  animation: bk-rays 18s linear infinite;
+  opacity: 0.9;
+}
+@keyframes bk-rays {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+.bk-trophy {
+  display: inline-grid;
+  place-items: center;
+}
+.bk-trophy svg {
+  display: block;
+}
+.bk-champ.crowned .bk-trophy svg {
+  filter: drop-shadow(0 0 14px color-mix(in srgb, var(--gold) 70%, transparent));
+  animation: bk-trophy 900ms cubic-bezier(0.34, 1.56, 0.64, 1) calc(var(--rd, 0ms) + 350ms) both;
+}
+@keyframes bk-trophy {
+  from {
+    opacity: 0;
+    transform: translateY(-30px) scale(0.5) rotate(-12deg);
+  }
+}
+.bk-champ.crowned strong {
+  animation: mcap-in 500ms var(--ease-out) calc(var(--rd, 0ms) + 700ms) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bracket .bk-row,
+  .bk-row.won::after,
+  .bk-champ.crowned,
+  .bk-champ.crowned .bk-trophy svg,
+  .bk-champ.crowned strong {
+    animation-delay: 0ms !important;
+  }
+  .bk-rays {
+    animation: none;
+  }
+}

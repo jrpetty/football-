@@ -1,0 +1,174 @@
+/* Match cards (1920×1080 stage): entrances, game-by-game pips, per-player stats, champion reveal. */
+
+.mc-player {
+  animation: mc-in-l 620ms var(--ease-out) 80ms both;
+}
+.mc-player.right {
+  animation-name: mc-in-r;
+}
+@keyframes mc-in-l {
+  from {
+    opacity: 0;
+    transform: translateX(-60px);
+  }
+}
+@keyframes mc-in-r {
+  from {
+    opacity: 0;
+    transform: translateX(60px);
+  }
+}
+.mc-vs {
+  animation: mc-vs 520ms cubic-bezier(0.34, 1.56, 0.64, 1) 300ms both;
+}
+@keyframes mc-vs {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+.mc-adv {
+  animation: mc-stamp 480ms var(--ease-out) 1400ms both;
+}
+@keyframes mc-stamp {
+  from {
+    opacity: 0;
+    transform: scale(1.8) rotate(-6deg);
+  }
+}
+.mc-player.won {
+  animation: mc-in-l 620ms var(--ease-out) 80ms both, mc-glow 1200ms ease-out 1400ms both;
+}
+.mc-player.right.won {
+  animation: mc-in-r 620ms var(--ease-out) 80ms both, mc-glow 1200ms ease-out 1400ms both;
+}
+@keyframes mc-glow {
+  0% {
+    box-shadow: 0 0 0 0 var(--gold);
+  }
+  40% {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--gold) 40%, transparent), 0 0 90px -10px var(--gold);
+  }
+  100% {
+    box-shadow: 0 0 60px -18px var(--gold);
+  }
+}
+.mc-stats {
+  margin-top: 4px;
+  font-size: 18px;
+  color: var(--text-3);
+}
+
+/* Game-by-game result pips. */
+.mc-pips {
+  list-style: none;
+  margin: -6px 0 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.mc-pips li {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: var(--surface-1);
+  border: 2px solid color-mix(in srgb, var(--c) 70%, var(--border));
+  font-size: 22px;
+  animation: mc-pip 420ms var(--ease-out) both;
+}
+.mc-pips li i {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--c);
+}
+.mc-pip-n {
+  color: var(--text-3);
+  font-size: 18px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+}
+@keyframes mc-pip {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+.mc-g {
+  border-top: 5px solid var(--c) !important;
+  animation: mc-pip 500ms var(--ease-out) 500ms both;
+}
+.ar-deck .ar-tiebreak {
+  justify-content: center;
+  font-size: 22px;
+  padding: 14px 22px;
+}
+.ar-deck .ar-tiebreak .ar-tb-score b {
+  font-size: 32px;
+}
+
+/* Champion: rays behind a gold trophy that lands with a bounce. */
+.champ-trophy {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 190px;
+  height: 190px;
+  isolation: isolate;
+}
+.champ-trophy svg {
+  width: 150px;
+  height: 150px;
+  animation: bk-trophy 1000ms cubic-bezier(0.34, 1.56, 0.64, 1) 200ms both;
+}
+.champ-rays {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 560px;
+  height: 560px;
+  transform: translate(-50%, -50%);
+  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--gold) 26%, transparent) 0deg 7deg, transparent 7deg 20deg);
+  mask: radial-gradient(circle, #000 12%, transparent 62%);
+  -webkit-mask: radial-gradient(circle, #000 12%, transparent 62%);
+  z-index: -1;
+  animation: bk-rays 22s linear infinite, mcap-in 900ms ease-out both;
+}
+.champ-name {
+  animation: mc-stamp 600ms var(--ease-out) 700ms both;
+}
+.champ-step {
+  animation: mc-pip 420ms var(--ease-out) both;
+}
+.champ-step:nth-child(1) {
+  animation-delay: 1100ms;
+}
+.champ-step:nth-child(2) {
+  animation-delay: 1300ms;
+}
+.champ-step:nth-child(3) {
+  animation-delay: 1500ms;
+}
+.champ-step:nth-child(4) {
+  animation-delay: 1700ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mc-player,
+  .mc-vs,
+  .mc-adv,
+  .mc-pips li,
+  .mc-g,
+  .champ-trophy svg,
+  .champ-name,
+  .champ-step {
+    animation-delay: 0ms !important;
+  }
+  .champ-rays {
+    animation: none;
+  }
+}

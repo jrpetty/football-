@@ -199,6 +199,51 @@ patch, and the score breakdown lists the planted bugs (the answer key) so you ca
 4. **Cards:** *Match cards* show chips per hand for poker and the motion, the sides and each judge's pick for
    debates.
 
+## What viewers see: Arena, Fix the Bug and the live race
+
+Everything below is drawn from what was recorded during the run. Nothing is re-simulated or made up. When a model gave
+no reason line, the screen says *not recorded*.
+
+* **Every Arena replay (and the live board)** has a coloured headline above the board that says what just happened
+  in one sentence: green for a good move, red for a mistake, blue otherwise. Under it is the model's own one-line
+  reason, in quotes. When a move needed a retry, an amber strip shows each rejected try and why it was rejected. It
+  turns red when both tries failed and the model got a strike.
+* **Connect Four:** a white **WIN** badge sits over any column where a disc would win on the next move, coloured by
+  who would win. The empty landing spot in that column has a dashed ring. The headline tells the story: "blocks",
+  "misses a win in column 4", "threatens to win". When someone gets four in a row, a line sweeps through the
+  winning discs. The key under the board says what each mark means.
+* **Chess:** the pieces are drawn by the app, so they look the same on Windows. An orange arrow shows the last
+  move. A king in check gets a red glow and a **CHECK** tag. The rail beside the board shows what each side has
+  captured and a **material bar**, which counts the pieces left on the board (pawn 1, knight 3, bishop 3, rook 5,
+  queen 9). It is not an engine evaluation. The **Material over time** chart on the right follows the replay, and
+  you can click it to jump to that point.
+* **Poker:** the chip piles for each stack, bet and pot grow and shrink as chips move, and the pot counts up. Under the
+  table, the **betting timeline** shows every action street by street, with the cards dealt on each street. At
+  a showdown it is replaced by both hands spelled out, with **BEATS** between them, on a hand-rank ladder from
+  *High card* to *Straight flush*. In game 2 of a pair, the chips chart shows game 1 (same deals, cards swapped)
+  in grey next to game 2, so viewers can see whether the cards or the decisions decided it.
+* **Debate / Courtroom:** the stage names both sides. A progress bar has one dot per speech. Each speech has a
+  word meter with a tick at the limit, which turns amber near the limit and red over it. In a courtroom, every
+  "Exhibit B" in a speech is a link. Click it (or an exhibit chip) and the evidence panel shows that exhibit's
+  exact text and how often each side has cited it. At the verdict, the judges' cards turn over one by one, each
+  vote dot drops in, and the decision banner lands last. If a level match was settled on the judges' points, a
+  gold **Tie-break used** strip shows the totals.
+* **Bracket and match cards:** winners slide into the next round one round at a time, and the champion is revealed
+  last with a trophy. Match cards slide both players in. They add a pip per game with its winner, and show each
+  model's illegal moves and spend. They also show the tie-break strip when it was used.
+* **Fix the Bug replay:** a strip of icons across the top tells the whole story (read, search, edit, run tests,
+  submit, verdict). Click any tile to jump to it. Diffs are syntax-coloured, and the visible-test bar turns green
+  one test at a time. **Actions used** shows the action budget as one block per action, coloured by kind. The
+  verdict counts up to the hidden-test score, stamps *Fixed*, *Partly fixed* or *Not fixed*, and shows before
+  and after bars. If every visible test was green but hidden tests still fail, a red **A bug the visible tests
+  didn't show** box appears (demo: `?mock=1`, Core run, Fix the Bug, *seed-202 r1*).
+* **Live Arena:** the header shows **the race**. Each model has a track, its runner sits at the share of cases it
+  has finished, and its mean score is on the right. The leader's track and lane card are gold and carry a crown.
+  Each lane's score ticks up or down (▲ / ▼) after every graded case. When a run you are watching finishes, a
+  checkered-flag **Finish** moment shows the winner and the podium. Replay it with *Replay the finish* on the
+  finish-line page, or open the live page with `?finish=1`. A running run's detail page shows the same race above
+  the tabs.
+
 ## Cost-saving tips
 
 * Iterate on `quick` with 1 repeat. Use `core` with 3 repeats only for the published run.

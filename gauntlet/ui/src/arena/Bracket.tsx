@@ -9,6 +9,8 @@ import { fmtCost } from '../format.ts';
 import type { ArenaEntrant, GameSlot, MatchState, TournamentDetail } from './types.ts';
 import { entrantMap, pts } from './useTournament.ts';
 import { fmtScore } from './parts.tsx';
+import { TrophySvg } from '../components/viz/TrophySvg.tsx';
+import './bracket-visual.css';
 
 function gameMark(slot: GameSlot, player: string): { cls: string; label: string } {
   const g = slot.game;
@@ -31,7 +33,7 @@ function PlayerRow({ e, m, idx, liveKeys }: { e: ArenaEntrant | undefined; m: Ma
     );
   }
   return (
-    <div className={cx('bk-row', winner && 'won', loser && 'lost')} key={id}>
+    <div className={cx('bk-row', winner && 'won', loser && 'lost', m.round > 1 && 'arrived')}>
       <span className="bk-seed tnum">{e?.seed ?? ''}</span>
       <span className="bk-bar" style={{ background: e?.color }} aria-hidden="true" />
       <span className="bk-name" title={e?.label ?? id}>
@@ -56,8 +58,8 @@ export function MatchBox({ m, d, liveKeys, compact }: { m: MatchState; d: Tourna
   const firstGame = m.games.find((s) => s.game) ?? null;
   const body = (
     <>
-      <PlayerRow e={m.players[0] ? ents.get(m.players[0]) : undefined} m={m} idx={0} liveKeys={liveKeys} />
-      <PlayerRow e={m.players[1] ? ents.get(m.players[1]) : undefined} m={m} idx={1} liveKeys={liveKeys} />
+      <PlayerRow key={m.players[0] ?? 'tbd-0'} e={m.players[0] ? ents.get(m.players[0]) : undefined} m={m} idx={0} liveKeys={liveKeys} />
+      <PlayerRow key={m.players[1] ?? 'tbd-1'} e={m.players[1] ? ents.get(m.players[1]) : undefined} m={m} idx={1} liveKeys={liveKeys} />
       {!compact && m.decidedBy && m.decidedBy !== 'games' && m.decidedBy !== 'margin' && m.decidedBy !== 'bye' && <div className="bk-note">{m.decidedBy === 'sudden-death' ? 'won in sudden death' : m.decidedBy === "judges' points" || m.decidedBy === "judges' picks" ? `Level on games, decided on ${m.decidedBy}` : `tie-break: ${m.decidedBy}`}</div>}
     </>
   );
@@ -87,7 +89,7 @@ export function Bracket({ d, liveKeys }: { d: TournamentDetail; liveKeys: Set<st
       {rounds.map((r) => {
         const ms = d.state.matches.filter((m) => m.round === r).sort((a, b) => a.slot - b.slot);
         return (
-          <div key={r} className={cx('bk-col', r === rounds[rounds.length - 1] && 'final')}>
+          <div key={r} className={cx('bk-col', r === rounds[rounds.length - 1] && 'final')} style={{ ['--rd' as string]: `${(r - 1) * 450}ms` } as CSSProperties}>
             <div className="bk-round eyebrow">{ms[0]?.roundName}</div>
             <div className="bk-cells" style={{ gridTemplateRows: `repeat(${ms.length}, 1fr)` }}>
               {ms.map((m, i) => (
@@ -99,13 +101,14 @@ export function Bracket({ d, liveKeys }: { d: TournamentDetail; liveKeys: Set<st
           </div>
         );
       })}
-      <div className="bk-col champ-col">
+      <div className="bk-col champ-col" style={{ ['--rd' as string]: `${rounds.length * 450}ms` } as CSSProperties}>
         <div className="bk-round eyebrow">Champion</div>
         <div className="bk-cells" style={{ gridTemplateRows: '1fr' }}>
           <div className="bk-cell fed">
             <div className={cx('bk-champ', champ && 'crowned')} style={{ ['--c' as string]: champ?.color ?? 'var(--border-strong)' } as CSSProperties} key={champ?.id ?? 'none'}>
+              {champ && <span className="bk-rays" aria-hidden="true" />}
               <span className="bk-trophy" aria-hidden="true">
-                🏆
+                <TrophySvg />
               </span>
               <strong>{champ?.label ?? 'to be decided'}</strong>
               {champ && <span className="muted">{champ.vendor}</span>}

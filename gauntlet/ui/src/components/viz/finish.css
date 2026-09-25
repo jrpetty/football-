@@ -1,0 +1,139 @@
+/* FinishMoment: full-screen checkered-flag sweep with the winner. */
+.fin {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: blur(6px);
+  animation: fin-in 420ms var(--ease-out) both;
+  cursor: pointer;
+  overflow: hidden;
+}
+@keyframes fin-in {
+  from {
+    opacity: 0;
+  }
+}
+.fin-flag {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  height: 96px;
+  background: conic-gradient(#f4f4f5 25%, #111 0 50%, #f4f4f5 0 75%, #111 0) 0 0 / 48px 48px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  animation: fin-sweep 1100ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.fin-flag.top {
+  top: 6%;
+  transform: rotate(-3deg);
+}
+.fin-flag.bottom {
+  bottom: 6%;
+  transform: rotate(-3deg);
+  animation-delay: 150ms;
+  animation-name: fin-sweep-r;
+}
+@keyframes fin-sweep {
+  from {
+    translate: -110% 0;
+  }
+}
+@keyframes fin-sweep-r {
+  from {
+    translate: 110% 0;
+  }
+}
+.fin-body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  padding: 0 24px;
+  max-width: 100%;
+}
+.fin-k {
+  font-size: clamp(2.4rem, 7vw, 6.5rem);
+  font-weight: 900;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  line-height: 1;
+  color: var(--text-1);
+  text-shadow: 0 6px 30px rgba(0, 0, 0, 0.5);
+  animation: fin-pop 700ms cubic-bezier(0.34, 1.56, 0.64, 1) 500ms both;
+}
+.fin-trophy {
+  font-size: clamp(4rem, 9vw, 8rem);
+  line-height: 1;
+  filter: drop-shadow(0 0 30px color-mix(in srgb, var(--gold) 70%, transparent));
+  animation: fin-pop 800ms cubic-bezier(0.34, 1.56, 0.64, 1) 800ms both;
+}
+.fin-name {
+  font-size: clamp(2rem, 4.6vw, 4.4rem);
+  font-weight: 900;
+  line-height: 1.05;
+  color: var(--c);
+  max-width: 90vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  animation: fin-pop 600ms var(--ease-out) 1000ms both;
+}
+.fin-v {
+  font-size: clamp(1.4rem, 2.6vw, 2.4rem);
+  font-weight: 800;
+  color: var(--gold);
+  animation: fin-pop 500ms var(--ease-out) 1200ms both;
+}
+@keyframes fin-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+.fin-rest {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.fin-rest li {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  font-size: 1.05rem;
+  animation: fin-pop 420ms var(--ease-out) both;
+}
+.fin-rest i {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--c);
+}
+.fin-rank {
+  font-weight: 900;
+  color: var(--text-3);
+}
+.fin-cap {
+  margin-top: 6px;
+  font-size: 0.95rem;
+  color: var(--text-2);
+  max-width: 60ch;
+  animation: fin-in 600ms ease-out 1800ms both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fin *,
+  .fin {
+    animation-delay: 0ms !important;
+  }
+}
