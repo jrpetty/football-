@@ -38,7 +38,7 @@ const setJudges = (ids: string[]) => {
 
 const { bestHand, evaluate5, compareScores, showdown, fullDeck, pretty } = await import('../src/arena/games/poker-eval.ts');
 const { poker, parsePokerAction } = await import('../src/arena/games/poker.ts');
-const { debate, courtroom, cutWords, countWords, cleanSpeech, RUBRIC } = await import('../src/arena/games/debate.ts');
+const { debate, courtroom, cutWords, countWords, cleanSpeech, RUBRIC, WORD_RULE } = await import('../src/arena/games/debate.ts');
 const { MOTIONS, CASES } = await import('../src/arena/games/debate-bank.ts');
 const { playTurnGame, extractAnswer } = await import('../src/arena/turns.ts');
 const { playJudgedGame } = await import('../src/arena/judged.ts');
@@ -732,4 +732,86 @@ test('manual inbox: listing a pending request twice returns the same id and neve
   assert.equal((await p).text, 'ACTION: call');
   assert.equal(manual.listManualRequests('dup-check').length, 0);
   assert.equal(manual.submitManual(one[0]!.id, { text: 'again' }), false, 'a stale id is refused, not re-queued');
+});
+
+// ─────────────────────────────── Fixes from a real blind courtroom trial ───────────────────────────────
+
+test('judged formats: a 1–1 match is decided on judges’ points, then picks, and only then sudden death', () => {
+  const entrants = [ent('a', 1), ent('b', 2)];
+  const spec = { seed: 1, entrants, settings: { format: 'knockout' as const, gamesPerMatch: 2, suddenDeath: 2, game: { tiebreak: 'judges' } }, matches: buildKnockout(['a', 'b']) };
+  const verdict = (winner: 0 | 1, s0: number, s1: number): JudgeVerdict => ({ judgeId: `j${s0}${s1}${winner}`, judgeLabel: 'J', vendor: 'V', sideA: 0, winner, scores: [{ x: s0 }, { x: s1 }], rationale: '', costUsd: 0 });
+  const judged = (key: string, gameNo: number, players: [string, string], winner: 0 | 1, verdicts: JudgeVerdict[]) =>
+    lite(key, 'R1-M1', gameNo, players, [0, 0], { winner, margin: undefined, judging: judge.judgingFrom(verdicts) });
+  // Each player wins the game where it defends (seat 1), 1–1 on games. a has more rubric points over the pair.
+  const g1 = judged('R1-M1-g1', 1, ['a', 'b'], 1, [verdict(1, 30, 31), verdict(1, 29, 30)]);
+  const g2 = judged('R1-M1-g2', 2, ['b', 'a'], 1, [verdict(1, 25, 40), verdict(1, 26, 38)]);
+  const m = computeState(spec, [g1, g2]).matches[0]!;
+  assert.deepEqual(m.score, [1, 1]);
+  assert.equal(m.winner, 'a');
+  assert.equal(m.decidedBy, "judges' points");
+  assert.deepEqual(m.judgePoints, [59 + 78, 61 + 51]);
+  assert.match(m.summary, /level on games, decided on judges' points 137–112/);
+  assert.equal(m.games.length, 2, 'no sudden-death game is scheduled');
+  // Equal points: the number of judges' picks decides (a got 2 picks in game 2, b got 1 in game 1).
+  const p1 = judged('R1-M1-g1', 1, ['a', 'b'], 1, [verdict(1, 30, 30)]);
+  const p2 = judged('R1-M1-g2', 2, ['b', 'a'], 1, [verdict(1, 30, 30), verdict(1, 30, 30)]);
+  const mp = computeState(spec, [p1, p2]).matches[0]!;
+  assert.equal(mp.decidedBy, "judges' picks");
+  assert.equal(mp.winner, 'a');
+  // Equal on both: only then a sudden-death debate.
+  const e1 = judged('R1-M1-g1', 1, ['a', 'b'], 1, [verdict(1, 30, 30)]);
+  const e2 = judged('R1-M1-g2', 2, ['b', 'a'], 1, [verdict(1, 30, 30)]);
+  const me = computeState(spec, [e1, e2]).matches[0]!;
+  assert.equal(me.winner, null);
+  assert.equal(me.games.length, 3);
+  assert.ok(me.games[2]!.suddenDeath);
+  // Board games are unchanged: a level chess-style match still goes to sudden death.
+  const board = computeState({ ...spec, settings: { ...spec.settings, game: {} } }, [lite('R1-M1-g1', 'R1-M1', 1, ['a', 'b'], [0, 0], { winner: 1, margin: undefined }), lite('R1-M1-g2', 'R1-M1', 2, ['b', 'a'], [0, 0], { winner: 1, margin: undefined })]).matches[0]!;
+  assert.equal(board.games.length, 3);
+});
+
+test('courtroom prompts: round-name template, no jury, word-count rule, fairness and fabrication rules', () => {
+  let s = courtroom.setup(createRng(1), { ...courtroom.defaults, topic: 'missing-violin' });
+  const ctx = { config: courtroom.defaults, strikes: [0, 0] as [number, number], maxStrikes: 3 };
+  s = courtroom.play(s, 'Opening for the prosecution.');
+  s = courtroom.play(s, 'Opening for the defence.');
+  const p = courtroom.prompt!(s, 0, ctx);
+  assert.match(p, /Now give your speech: The evidence \(round 2 of 3\), at most 150 words\./);
+  assert.ok(!/Write your/.test(p));
+  assert.match(debate.prompt!(debate.setup(createRng(1), debate.defaults), 0, { ...ctx, config: debate.defaults }), /Now give your speech: Opening \(round 1 of 3\), at most 180 words\./);
+  assert.match(p, /Address the judges\. There is no jury\./);
+  assert.ok(p.includes(WORD_RULE));
+  assert.match(p, /both models argue both sides/);
+  assert.match(p, /judges decide which side argued better from the evidence, not which side would legally win/);
+  assert.match(p, /Do not invent facts or misquote exhibits/);
+  assert.ok(!/must prove the charge beyond reasonable doubt/.test(p));
+  // The Missing Violin states both previously ambiguous facts.
+  assert.match(p, /The 20:02 entry in Exhibit A was made with the replacement card/);
+  assert.match(p, /disappeared between 20:45 on 14 March and 07:30 on 15 March/);
+  // Judges: evidence rubric and instructions call out invented facts; no burden-of-proof head start.
+  const spec = courtroom.judge!;
+  assert.match(spec.rubric.find((r) => r.key === 'evidence')!.help, /not in the case file/);
+  assert.match(spec.instructions, /name any invented fact or misquoted exhibit/);
+  assert.match(spec.instructions, /do not give the defence a head start/);
+  assert.equal(courtroom.version, '1.1.0');
+  assert.equal(debate.version, '1.1.0');
+});
+
+test('word limits: counting is whitespace tokens, exactly as the prompt says', () => {
+  assert.equal(countWords('£700 22:47–22:51 well-known'), 3);
+  assert.equal(countWords('  Exhibit   A\n(keycard log)  '), 4);
+  const words = Array.from({ length: 185 }, (_, i) => (i % 3 === 0 ? '£700' : i % 3 === 1 ? '22:47–22:51' : 'well-known')).join(' ');
+  let s = courtroom.setup(createRng(1), { ...courtroom.defaults, topic: 'missing-violin' });
+  s = courtroom.play(s, words);
+  assert.equal(s.speeches[0]!.words, 185);
+  assert.equal(s.speeches[0]!.cut, 5);
+  assert.equal(countWords(s.speeches[0]!.text), 180);
+});
+
+test('judged games: Manual Inbox labels are per game, side and round', async () => {
+  const a = createFakeModel(() => 'A short speech.');
+  const b = createFakeModel(() => 'Another short speech.');
+  await playJudgedGame({ game: courtroom, config: { ...courtroom.defaults, topic: 'missing-violin' }, seed: 4, seats: seats(a, b), maxStrikes: 3, gameNo: 2 });
+  assert.deepEqual(a.calls.map((c) => c.label), ['Game 2 · Prosecution · Opening statement (round 1 of 3)', 'Game 2 · Prosecution · The evidence (round 2 of 3)', 'Game 2 · Prosecution · Closing argument (round 3 of 3)']);
+  assert.deepEqual(b.calls.map((c) => c.label), ['Game 2 · Defence · Opening statement (round 1 of 3)', 'Game 2 · Defence · The evidence (round 2 of 3)', 'Game 2 · Defence · Closing argument (round 3 of 3)']);
 });

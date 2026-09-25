@@ -183,7 +183,7 @@ function caption(slide: Slide, d: TournamentDetail): { text: string; fine: strin
     };
   if (slide.kind === 'match') {
     const m = slide.m;
-    const how = m.decidedBy === 'sudden-death' ? 'The match was level, so it went to a sudden-death game.' : m.decidedBy && m.decidedBy !== 'games' && m.decidedBy !== 'margin' ? `It was level, so it was decided on ${m.decidedBy}.` : engine === 'board' ? 'Win = 1 point, draw = ½.' : '';
+    const how = m.decidedBy === 'sudden-death' ? 'The match was level, so it went to a sudden-death game.' : m.decidedBy === "judges' points" || m.decidedBy === "judges' picks" ? `Level on games, decided on ${m.decidedBy}: both models argued both sides, so the judges' totals over the pair settle it.` : m.decidedBy && m.decidedBy !== 'games' && m.decidedBy !== 'margin' ? `It was level, so it was decided on ${m.decidedBy}.` : engine === 'board' ? 'Win = 1 point, draw = ½.' : '';
     if (engine === 'turns') return { text: `${m.summary}. Each panel is one game: chips won per hand. Both games used the same deals with the cards swapped. ${how}`, fine: 'Illegal actions get one retry, then check (or fold) and a strike' };
     if (engine === 'debate') return { text: `${m.summary}. Each panel is one debate and the judges’ decision; the models swapped sides for game 2. ${how}`, fine: 'Judges saw “Side A” and “Side B” only, never a model name; no judge from a debater’s vendor' };
     return { text: `${m.summary}. Each board is the final position of one game. ${how}`, fine: `Illegal moves get one retry, then a random legal move and a strike; ${d.manifest.settings.maxStrikes} strikes lose` };

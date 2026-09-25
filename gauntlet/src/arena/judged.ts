@@ -19,6 +19,8 @@ const KEEP_CHARS = 6000;
 export interface JudgedGameOptions extends PlayGameOptions {
   /** Runs the judge panel on the finished game state. Absent = wait for human judging. */
   judge?: (state: unknown) => Promise<ArenaJudging>;
+  /** Game number within the match (for call labels in the Manual Inbox: "Game 2 · Defence · Opening (round 1 of 3)"). */
+  gameNo?: number;
   /** Phase changes, e.g. 'judging'. */
   onPhase?: (phase: string) => void;
 }
@@ -62,7 +64,7 @@ export async function playJudgedGame(o: JudgedGameOptions): Promise<PlayedGameEx
       const reply = await seat.handle.complete({
         messages: [{ role: 'user', content: prompt }],
         maxOutputTokens: o.maxOutputTokens,
-        label: `${game.sides[side].name} · speech ${moves.length + 1}${attempt > 1 ? ' · retry' : ''}`,
+        label: `${o.gameNo ? `Game ${o.gameNo} · ` : ''}${game.turnLabel?.(state) ?? `${game.sides[side].name} · speech ${moves.length + 1}`}${attempt > 1 ? ' · retry' : ''}`,
       });
       const ms = Date.now() - t0;
       let error: string | undefined;

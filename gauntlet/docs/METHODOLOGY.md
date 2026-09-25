@@ -266,7 +266,13 @@ The same fair-play rules apply.
   id, vendor and well-known product name is removed from the material before it is sent. Each judge scores
   argument quality, rebuttal, use of evidence, clarity and rule-following (1–10) and must pick a winner. Majority
   decides; a tied vote goes to the side with more rubric points; still level is a draw. Word limits are enforced
-  by cutting the speech, and the judges see the cut. Judges are called one at a time, each after a spending-cap
+  by cutting the speech (words = whitespace-separated tokens, so "£700" or "22:47–22:51" is one word, as the
+  prompt says), and the judges see the cut. Courtroom judges decide which side *argued better from the evidence*,
+  not the legal verdict, so the defence gets no "reasonable doubt" head start; both models argue both sides, so
+  any lean in a case cancels out over the pair. Judges check claims against the case file and name invented
+  facts or misquoted exhibits, which count heavily against "use of the exhibits". A knockout pairing that is 1–1
+  on games is decided on the judges' total rubric points over both games, then on the number of judges' picks,
+  and only then by a sudden-death debate (shown as "Level on games, decided on judges' points"). Judges are called one at a time, each after a spending-cap
   check, so judged games keep the cap's guarantee (see below).
 * **Spending cap.** Checked before every model call (players and judges). Each game has at most one call in
   flight, so a tournament can go over its cap by at most one call per game running at the same time.
