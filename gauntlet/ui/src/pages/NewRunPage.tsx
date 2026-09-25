@@ -513,6 +513,14 @@ export default function NewRunPage() {
                 </div>
               </div>
               <div className="card-body">
+                {enabled.some((c) => !c.hasKey && !isManual(c) && c.providerType !== 'mock') && (
+                  <div style={{ marginBottom: 14 }}>
+                    <Callout tone="warn" icon={<Icon.Key />}>
+                      {enabled.filter((c) => !c.hasKey && !isManual(c) && c.providerType !== 'mock').length} models can’t run yet because their company isn’t connected.{' '}
+                      <Link to="/keys">Add API keys</Link> (paste, save, done: no files to edit).
+                    </Callout>
+                  </div>
+                )}
                 <div className="con-grid">
                   {enabled.map((c) => {
                     const on = sel.has(c.id);

@@ -34,12 +34,21 @@ for screen-recording, so results can go straight into videos.
 
 Requirements: **Node.js ≥ 22.18** (runs TypeScript natively; no build step for the engine).
 
+**On Windows:** double-click **`start-gauntlet.bat`** in the `gauntlet` folder. The first time, it installs and builds
+everything (a minute or two), then opens the dashboard. Keep its window open while you use Gauntlet.
+
+**Anywhere else (or from a terminal):**
+
 ```bash
 cd gauntlet
 npm install
-cp .env.example .env          # add the API keys for the providers you want to test
 npm start                     # builds the dashboard and serves it on http://localhost:7777
 ```
+
+**Add your API keys in the dashboard:** open **API Keys** in the sidebar. For each company, click the link, create a key,
+paste it and press **Save**. Gauntlet checks the key for free on the spot and only saves it if the company accepts it. It
+works immediately, with no files to edit and no restart. Prefer the terminal? `node src/cli.ts keys setup` does the same, one
+company at a time. (Keys are stored in `gauntlet/.env`, which is never committed.)
 
 A first run that needs no API keys, useful for checking the install:
 

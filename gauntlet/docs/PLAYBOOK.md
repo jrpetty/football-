@@ -18,7 +18,8 @@ A practical checklist for running a benchmark you can put on video and defend in
 3. **Check the price** in **Cost Planner** or with `node src/cli.ts costs --suite core --models a,b,c`. The
    table shows every test × model and a conservative upper bound.
 4. **Verify pricing** for every model you'll show costs for (Models → edit → set *verified* date).
-5. **Test your keys**: `node src/cli.ts ping <model>` for each model (costs a fraction of a cent).
+5. **Connect and test your keys** on the dashboard's **API Keys** page: paste, Save (checked free), and optionally
+   *Send a test message* (costs a fraction of a cent). From a terminal: `node src/cli.ts keys setup`, `node src/cli.ts keys test`.
 
 ## 2. Dry run (free)
 

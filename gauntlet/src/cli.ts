@@ -2,7 +2,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline/promises';
-import { ROOT, TESTS_DIR } from './core/paths.ts';
+import { TESTS_DIR } from './core/paths.ts';
 import { getContestant, getProvider, hasApiKey, loadCategories, loadContestants, loadProviders, loadSettings, validateContestant } from './core/config.ts';
 import { fingerprint, getTest, loadSuites, loadTests, renderCase, resolveTests, summarize, validateTest } from './core/registry.ts';
 import { CANARY, HARNESS_VERSION, PROTOCOL_VERSION } from './core/version.ts';
@@ -20,10 +20,11 @@ import { startServer } from './server/index.ts';
 import { manualEvents, submitManual, failManual } from './providers/manual.ts';
 import { gradePasted } from './engine/grade.ts';
 import { readFileSync } from 'node:fs';
+import { ENV_FILE } from './core/keys.ts';
 import type { ManualRequest } from './core/types.ts';
 
 // Load API keys from gauntlet/.env when present (never overrides real env vars).
-const envFile = join(ROOT, '.env');
+const envFile = ENV_FILE;
 if (existsSync(envFile)) {
   try {
     process.loadEnvFile(envFile);
@@ -65,6 +66,8 @@ const HELP = `${c.bold('GAUNTLET')} — AI Benchmark Lab  ${c.dim(`harness ${HAR
 Usage: node src/cli.ts <command> [options]
 
   serve [--port 7777] [--host 127.0.0.1]     Start the dashboard + API server
+  keys [setup | set <provider> <key> | test [provider] | remove <provider>]
+                                             Add and check API keys (or use the dashboard → API Keys)
   run --models a,b [--suite core | --tests x,y] [--repeats 3] [--concurrency 6]
       [--max-cost 5] [--name "..."] [--judges j1,j2] [--notes "..."] [--yes]
       [--force-vision]                       Run a benchmark (shows a cost estimate first;
@@ -236,6 +239,7 @@ async function main(): Promise<void> {
       console.log(`${c.bold('GAUNTLET')} dashboard → ${c.cyan(url)}${flags.dev ? c.dim('  (dev: run `npm run dev:ui` for the hot-reloading UI on :5173)') : ''}`);
       const keys = loadProviders().filter((p) => p.apiKeyEnv && hasApiKey(p)).map((p) => p.label);
       console.log(c.dim(`API keys found for: ${keys.length ? keys.join(', ') : 'none (only the Random Baseline can run)'}`));
+      if (!keys.length) console.log(`Add your API keys here → ${c.cyan(`${url.replace(/\/$/, '')}/#/keys`)}  (paste, save, done)`);
       if (host === '0.0.0.0') console.log(c.yellow('⚠ Listening on all interfaces. Anyone who can reach this port can spend your API credits.'));
       return;
     }
@@ -483,6 +487,11 @@ async function main(): Promise<void> {
       const target = { contestant: m, adapter: createAdapter(m, p), semaphore: new Semaphore(1) };
       const r = await callWithRetry(target, { messages: [{ role: 'user', content: 'Reply with exactly one word: pong' }], maxOutputTokens: 2000, temperature: 0 }, { maxRetries: 1, temperature: 0, defaultMaxOutputTokens: 2000 }, new AbortController().signal);
       console.log(`${c.green('✓')} ${m.label}: "${r.text.trim().slice(0, 60)}"  ttft ${fmtMs(r.ttftMs)} · total ${fmtMs(r.totalMs)} · ${r.usage.inputTokens}+${r.usage.outputTokens} tokens · ${fmtCost(computeCost(r.usage, m.pricing))} · served by ${r.servedModel}`);
+      return;
+    }
+
+    case 'keys': {
+      await (await import('./keys-cli.ts')).keysCommand(positional);
       return;
     }
 

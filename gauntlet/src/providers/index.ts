@@ -33,8 +33,8 @@ export function createAdapter(contestant: Contestant, provider: ProviderConfig =
   }
 }
 
-/** Live list of model ids available to the configured key. */
-export async function discoverModels(providerId: string): Promise<string[]> {
+/** List a provider's models (free on every supported API). `apiKey` checks a candidate key without applying it. */
+export async function discoverModels(providerId: string, apiKey?: string): Promise<string[]> {
   const provider = getProvider(providerId);
   const stub: Contestant = {
     id: 'discover',
@@ -46,7 +46,7 @@ export async function discoverModels(providerId: string): Promise<string[]> {
     enabled: true,
     pricing: { inputPerM: 0, outputPerM: 0 },
   };
-  const ctx = contextFor(provider, stub);
+  const ctx = apiKey !== undefined ? { provider, contestant: stub, apiKey } : contextFor(provider, stub);
   switch (provider.type) {
     case 'anthropic':
       return listAnthropicModels(ctx);

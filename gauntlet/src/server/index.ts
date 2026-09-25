@@ -49,6 +49,7 @@ import { Semaphore } from '../engine/semaphore.ts';
 import { registerVisionRoutes } from './vision-routes.ts';
 import { testBaseDir } from '../core/vision.ts';
 import { registerChannelRoutes } from '../channel/routes.ts';
+import { registerKeyRoutes } from './keys-routes.ts';
 import { overlayRedirect, registerStudioRoutes } from '../media/studio.ts';
 import { registerArenaRoutes } from '../arena/server.ts';
 import { recoverInterruptedTournaments } from '../arena/tournament.ts';
@@ -144,13 +145,9 @@ route('DELETE', '/api/contestants/:id', ({ params }) => {
   return { ok: true };
 });
 
-route('POST', '/api/contestants/:id/ping', async ({ params }) => {
-  let c;
-  try {
-    c = getContestant(params.id!);
-  } catch {
-    throw new HttpError(404, 'Model not found');
-  }
+/** One-word test message to a model ("pong"): Models page ping and the API Keys page test. Costs a fraction of a cent. */
+async function pingContestant(id: string) {
+  const c = getContestant(id);
   try {
     const provider = getProvider(c.provider);
     const target = { contestant: c, adapter: createAdapter(c, provider), semaphore: new Semaphore(1) };
@@ -166,6 +163,15 @@ route('POST', '/api/contestants/:id/ping', async ({ params }) => {
   } catch (err) {
     return { ok: false, error: (err as Error).message };
   }
+}
+
+route('POST', '/api/contestants/:id/ping', async ({ params }) => {
+  try {
+    getContestant(params.id!);
+  } catch {
+    throw new HttpError(404, 'Model not found');
+  }
+  return pingContestant(params.id!);
 });
 
 route('GET', '/api/providers/:id/models', async ({ params }) => {
@@ -543,6 +549,8 @@ function serveStatic(pathname: string, res: ServerResponse): void {
 registerVisionRoutes({ route, httpError: (status, message) => new HttpError(status, message), streaming: STREAMING });
 // Channel tools: public site, New Model Day, history, viewer challenge (src/channel/).
 registerChannelRoutes(route, (status, message, details) => new HttpError(status, message, details), STREAMING);
+// API Keys page: save, test and remove provider keys (gauntlet/.env), applied without a restart.
+registerKeyRoutes({ route, httpError: (status, message) => new HttpError(status, message), ping: pingContestant });
 // The Arena (head-to-head games): routes live in src/arena/server.ts.
 registerArenaRoutes({ route, httpError: (status, message, details) => new HttpError(status, message, details), streaming: STREAMING });
 

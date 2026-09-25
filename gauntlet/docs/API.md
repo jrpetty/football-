@@ -16,6 +16,17 @@ with a 4xx/5xx status.
 `LeaderboardRow.manual === true` marks contestants whose replies were pasted in by hand: show a "manual" badge and
 treat their latency/throughput as not comparable (human time), and their cost as user-entered.
 
+## API keys
+
+Keys are stored in `gauntlet/.env` (git-ignored) and applied immediately; the full key is never returned.
+
+| Method | Path | Body | Returns |
+|---|---|---|---|
+| GET | `/api/keys` | – | `{ file, keys: KeyStatus[] }`: every provider that needs a key (`set`, `source`: `file` \| `system` \| null, `masked`, `getKeyUrl`, `steps`, `models`) |
+| PUT | `/api/keys/:provider` | `{ key }` | `{ ok, saved, warning?, check: { ok, models?, error?, rejected? }, status }`. The key is checked for free first (listing models); a key the provider rejects is **not** saved. Accepts pasted `NAME=value` lines and quotes. Loopback only. |
+| DELETE | `/api/keys/:provider` | – | `{ ok, status }`: removes a key saved in `.env` (keys from the system environment are left alone). Loopback only. |
+| POST | `/api/keys/:provider/test` | `{ send?: boolean, model? }` | Free check by default; `send: true` sends a one-word message to the cheapest enabled model of that provider (a fraction of a cent) |
+
 ## Contestants (models)
 
 | Method | Path | Body | Returns |

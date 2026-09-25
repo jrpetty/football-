@@ -31,6 +31,7 @@ const NewModelPage = lazy(() => import('./channel/NewModelPage.tsx'));
 const HistoryPage = lazy(() => import('./channel/HistoryPage.tsx'));
 const ChallengePage = lazy(() => import('./channel/ChallengePage.tsx'));
 const ChannelSlidesPage = lazy(() => import('./channel/ChannelSlidesPage.tsx'));
+const KeysPage = lazy(() => import('./keys/KeysPage.tsx'));
 const StudioPage = lazy(() => import('./pages/StudioPage.tsx'));
 const OverlayPage = lazy(() => import('./pages/OverlayPage.tsx'));
 const ArenaPage = lazy(() => import('./pages/ArenaPage.tsx'));
@@ -61,6 +62,7 @@ const NAV: NavItem[] = [
   { to: '/review', label: 'Blind Review', icon: Icon.Eye, match: (p) => p.startsWith('/review') },
   { to: '/tests', label: 'Tests', icon: Icon.Flask, section: 'Lab', match: (p) => p.startsWith('/tests') },
   { to: '/grade', label: 'Grader', icon: Icon.Target, match: (p) => p.startsWith('/grade') },
+  { to: '/keys', label: 'API Keys', icon: Icon.Key, match: (p) => p.startsWith('/keys') },
   { to: '/models', label: 'Models', icon: Icon.Cpu, match: (p) => p.startsWith('/models') },
   { to: '/costs', label: 'Cost Planner', icon: Icon.Dollar, match: (p) => p.startsWith('/costs') },
   { to: '/newmodel', label: 'New Model Day', icon: Icon.Sparkles, section: 'Channel', match: (p) => p.startsWith('/newmodel') },
@@ -119,6 +121,7 @@ function resolve(parts: string[]): Resolved {
     return { el: <TestDetailPage key={b} testId={b} />, crumb: 'Test detail' };
   }
   if (a === 'models') return { el: <ModelsPage />, crumb: 'Models' };
+  if (a === 'keys') return { el: <KeysPage />, crumb: 'API Keys' };
   if (a === 'review') return { el: <ReviewPage />, crumb: 'Blind Review' };
   if (a === 'methodology') return { el: <MethodologyPage />, crumb: 'Methodology' };
   if (a === 'inbox') return { el: <InboxPage />, crumb: 'Manual Inbox' };
