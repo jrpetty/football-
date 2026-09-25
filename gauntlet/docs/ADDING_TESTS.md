@@ -196,6 +196,29 @@ What you need to know:
   answer key is computed from the same numbers that drew the picture. Run `node verification/vision/build.mts`
   only when you mean to publish a new version: a different Chromium or font set can change the image bytes.
 
+### Getting an "answer vs truth" picture for your test
+
+The Result Inspector and the Presenter (`?truth=1`) draw a picture for a case when its test id (or its scorer
+type) has a visual in `ui/src/components/viz/caseVisuals.tsx`. The parsers live in `src/presenter/visuals/`
+(one file per family, tested in `test/case-visuals.test.ts`) and return nothing unless the case reads cleanly,
+so a test they don't understand just shows the plain view. Without code changes you get:
+
+* `code-js` tests: the hidden-test board and the coloured code.
+* `constraints` tests: the rule checklist, exact highlights and counters. For multi-turn cases, list the
+  tactics in the notes in brackets, one per user turn (e.g. "(rapport, fake staff identity, emergency)"), and
+  each turn is labelled with its tactic.
+* `json` tests: the field-by-field diff. Put the source text between `<<<` and `>>>` in the prompt to get the
+  document view.
+* `judge-classify` tests in the `honesty` category with `expected: { "type": "trap" | "real", "reference": "…" }`.
+  Start the reference with the trap kind in capitals ("FALSE PREMISE (unit error). …") and write the false
+  detail as "not X" so it can be highlighted.
+* `number` tests in the `math` category: the problem card.
+
+Logic grids need `Full solution by position: 1: …, … | 2: …` in the notes; planning puzzles in the formats of
+`tests/reasoning/planning*.json` are re-solved in the browser, and other puzzles show `One optimal plan: …` from
+the notes. Mock mode shows a demo run of every visual (`node verification/case_visual_fixtures.mjs` rebuilds its
+fixtures; `node verification/case_visual_screens.mts <server url>` retakes the screenshots).
+
 ---
 
 ## 2. Programs (simulations and pipelines)

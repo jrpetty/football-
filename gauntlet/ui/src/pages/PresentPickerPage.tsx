@@ -135,6 +135,10 @@ export default function PresentPickerPage() {
                 <kbd>Esc</kbd>
               </dt>
               <dd>Leave the presenter</dd>
+              <dt>
+                <code>?truth=1</code>
+              </dt>
+              <dd>Add an “answer vs truth” slide per test (the question the models disagreed on most)</dd>
             </dl>
           </section>
         </aside>

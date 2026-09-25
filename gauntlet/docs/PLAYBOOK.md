@@ -111,6 +111,32 @@ builds the raw material for the video. Nothing here calls a model or costs money
 5. Say it honestly on screen: the time limit is the same for every model, but API speed differs by provider,
    so the score only counts right and wrong. Response times are shown under each model's name.
 
+## Answer vs truth: showing one answer on screen
+
+Most prompt tests now draw the model's answer against the answer key, so a viewer can see *why* it scored what
+it scored. Open a run, click any cell in the results table, and the **Score** tab starts with the picture:
+
+| Test | What the viewer sees |
+|---|---|
+| Deduction Grid (+ Extreme) | The whole solution as a row of houses/rooms/seats. The rows the question asked for show the model's answer: green = right, red = its wrong value struck out with the correct one underneath ("Swapped rooms 1 and 2: one swap scores zero"). |
+| Knights, Knaves, Spies & Alternators (+ Extreme) | Every islander drawn with their statements in speech bubbles, their true role (colour + badge) and the role the model gave them, ticked or crossed. |
+| Shortest Plans (+ Extreme) | "Model said 9 / True minimum 8" in big numbers, then the puzzle itself (jugs, coins, bridge or gondola, Hanoi, sliding tiles, lights out, pancakes, key-and-door maze, traffic jam) playing one optimal plan step by step. Space plays, ←/→ step, 0.5×–4× speed, F for full screen. Puzzles without a drawing (scheduling, the jeep, …) show the plan written in the answer key's notes. |
+| Competition / Olympiad Maths, Word Problems | The question typeset (powers, fractions, √), the model's final number against the key, and the working behind a "Show" link. Money problems look like a receipt, payslip or bill. |
+| Precision Formatting, Stay In Character, Extreme Constraints, Adversarial System Prompt | The reply with every rule as a checklist beside it. The exact letters that broke a rule are marked red (the banned "e", the comma, the leaked code word, the words past the limit); point at a rule to see its marks. Word/sentence counts are bars against their targets. Multi-turn attacks show as chat bubbles with each pressure turn labelled. |
+| Messy Text to JSON, Extraction: Frontier | Answer key vs model field by field (wrong values struck through), and the document beside it with the traps (corrections, cancellations, changes) in amber and the lines holding the model's wrong values in red. |
+| Honesty Trap, Pressure Traps | The question with the false claim highlighted (only when the key names it word for word), a big verdict ("Played along with “26.2 km”"), what the model said, and each judge's label and reason. |
+| Can It Be Fooled? | The question, the tempting wrong answer, the correct answer and what this model said. |
+| Coding tests | A board of hidden tests (green passed, red wrong or crashed, amber too slow), split into small inputs and large stress inputs; click a tile for its input, expected and actual output. The model's code is shown with colours. |
+
+**In the Presenter** add `?truth=1` to the address (e.g. `#/present/<run id>?truth=1`). After each test's
+results you get one extra slide: the question the models disagreed on most, drawn the same way for the
+strongest model that still got it wrong, with every model's score on that question down the side.
+
+**Honest by design.** The pictures only use what was recorded (the prompt, the reply, the scorer's checks) and
+the published answer key. Anything worked out in the browser (the full grid solution, the optimal plan) is
+checked against the answer key first and left out if it doesn't match. If anything can't be read cleanly, you
+simply get the plain score view, as before. Add `?plain=1` to the address to see the plain view on purpose.
+
 ## 5. Review
 
 * **Blind Review**: rate the games and illustrations, and settle any case where the judges disagreed. Model

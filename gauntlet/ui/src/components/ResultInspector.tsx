@@ -10,6 +10,7 @@ import { Icon } from './icons.tsx';
 import { useViewerCaption } from '../context.tsx';
 import { VisionResultPanel, resultImages } from './VisionResult.tsx';
 import { useRoute } from '../router.tsx';
+import { CaseVisualPanel } from './viz/CaseVisualPanel.tsx';
 
 export interface InspectorTarget {
   testId: string;
@@ -241,6 +242,7 @@ function ResultDetail({ runId, lite, names, target }: { runId: string; lite: Cas
       />
       {tab === 'overview' && (
         <>
+          <CaseVisualPanel res={res} modelLabel={target?.contestantLabel} names={names} />
           {images.length > 0 && <VisionResultPanel images={images} detail={res.scoreDetail ?? {}} passed={res.passed} />}
           {images.length > 0 ? (
             <ScoreBreakdownView d={{ ...res.scoreDetail, extracted: undefined, expected: undefined }} passed={res.passed} humanScores={res.humanScores} names={names} />

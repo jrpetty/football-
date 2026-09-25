@@ -23,6 +23,9 @@ import { isBaseline, olympicCompare, shortCat } from '../components/leaderboard/
 import { fmtCost, fmtIndex, fmtMs, shortHash } from '../format.ts';
 import { TrickEmptySlide, TrickSlide, TRICK_REVEAL_STEPS } from '../components/present/TrickSlide.tsx';
 import { selectTrickHighlights, type TrickHighlight } from '../../../src/presenter/trick-highlights.ts';
+import { TruthSlide } from '../components/present/TruthSlide.tsx';
+import { pickInterestingCase, type InterestPick } from '../../../src/presenter/visuals/interest.ts';
+import { visualEntry, visualFamilyFor } from '../components/viz/caseVisuals.tsx';
 
 /** Compact money for big slide type: $52.57, $0.23, $0.0063, <$0.001. */
 function shortCost(usd: number | null | undefined): string {
@@ -82,6 +85,8 @@ interface Deck {
   hasPrivate: boolean;
   /** "Can It Be Fooled?" highlight cases per test id (most divisive first). */
   trick: Map<string, TrickHighlight[]>;
+  /** "Answer vs truth" picks per test id (only with ?truth=1). */
+  truth: Map<string, InterestPick>;
 }
 
 type Slide =
@@ -94,7 +99,8 @@ type Slide =
   | { kind: 'medals' }
   | { kind: 'outro' }
   | { kind: 'trick'; test: DeckTest; h: TrickHighlight; i: number; of: number }
-  | { kind: 'trick-empty' };
+  | { kind: 'trick-empty' }
+  | { kind: 'truth'; test: DeckTest; pick: InterestPick };
 
 interface Caption {
   text: string;
@@ -207,7 +213,7 @@ function brief(text: string | undefined, max: number): string {
   return out;
 }
 
-function buildDeck(d: RunDetail, details: Map<string, TestDetail>, metaCats: CategoryInfo[], cat: (id: string) => CategoryInfo, programs: ProgramInfo[], judgeCrossDefault: boolean | undefined, manualProviders: Set<string>, trapsPerTest = 3): Deck {
+function buildDeck(d: RunDetail, details: Map<string, TestDetail>, metaCats: CategoryInfo[], cat: (id: string) => CategoryInfo, programs: ProgramInfo[], judgeCrossDefault: boolean | undefined, manualProviders: Set<string>, trapsPerTest = 3, truthSlides = false): Deck {
   const m = d.manifest;
   const lb = d.leaderboard;
   const rowsById = new Map((lb?.rows ?? []).map((r) => [r.contestantId, r]));
@@ -240,6 +246,17 @@ function buildDeck(d: RunDetail, details: Map<string, TestDetail>, metaCats: Cat
   const trickTests = ordered.filter((t) => t.detail?.definition).map((t) => ({ definition: t.detail!.definition, caseIds: t.snap.caseIds }));
   for (const h of selectTrickHighlights({ tests: trickTests, results: d.results ?? [], contenders, perTest: trapsPerTest })) trick.set(h.testId, [...(trick.get(h.testId) ?? []), h]);
 
+  const truth = new Map<string, InterestPick>();
+  if (truthSlides) {
+    for (const t of ordered) {
+      const def = t.detail?.definition;
+      const scorer = def?.kind === 'prompt' ? def.scorer.type : undefined;
+      if (!visualFamilyFor(t.snap.id, scorer, t.snap.category)) continue;
+      const pick = pickInterestingCase(t.snap.id, d.results ?? [], contenders);
+      if (pick) truth.set(t.snap.id, pick);
+    }
+  }
+
   return {
     d,
     lb,
@@ -253,6 +270,7 @@ function buildDeck(d: RunDetail, details: Map<string, TestDetail>, metaCats: Cat
     hasManual: contenders.some((c) => c.manual),
     hasPrivate: [...details.values()].some((t) => t.summary?.source === 'private'),
     trick,
+    truth,
   };
 }
 
@@ -267,7 +285,11 @@ function buildSlides(deck: Deck, vertical = false): Slide[] {
     return shorts.length ? shorts : [{ kind: 'trick-empty' }];
   }
   const slides: Slide[] = [{ kind: 'title' }, { kind: 'how' }];
-  for (const test of deck.tests) slides.push({ kind: 'explainer', test }, { kind: 'result', test }, ...trickSlides(deck, test));
+  for (const test of deck.tests) {
+    slides.push({ kind: 'explainer', test }, { kind: 'result', test }, ...trickSlides(deck, test));
+    const pick = deck.truth.get(test.snap.id);
+    if (pick) slides.push({ kind: 'truth', test, pick });
+  }
   // Summary slides only when they have something to show (e.g. a baseline-only smoke test has none).
   const comps = standings(deck).filter((r) => typeof r.index === 'number');
   if (comps.length) slides.push({ kind: 'final' });
@@ -359,6 +381,15 @@ function captionFor(slide: Slide, deck: Deck): Caption {
     }
     case 'trick-empty':
       return { text: 'Shorts mode shows the “Can It Be Fooled?” questions the models disagreed on. This run has none.' };
+    case 'truth': {
+      const def = slide.test.detail?.definition;
+      const fam = visualFamilyFor(slide.test.snap.id, def?.kind === 'prompt' ? def.scorer.type : undefined, slide.test.snap.category);
+      const who = deck.contenders.find((c) => c.id === slide.pick.featuredContestantId)?.label ?? 'one model';
+      return {
+        text: `${fam ? visualEntry(fam).caption : 'One answer against the answer key.'} Shown: ${who}’s answer.`,
+        fine: `Case ${slide.pick.caseId}: the one where the models’ scores differed most · right column = each model’s score on this case${R > 1 ? ` (mean of ${R} attempts)` : ''}`,
+      };
+    }
     case 'outro':
       return {
         text: deck.hasPrivate
@@ -390,6 +421,8 @@ function sectionFor(slide: Slide, deck: Deck): string {
       return `Can it be fooled? · ${slide.test.snap.name}`;
     case 'trick-empty':
       return 'Can it be fooled?';
+    case 'truth':
+      return `Answer vs truth · ${slide.test.snap.name}`;
   }
 }
 
@@ -1065,6 +1098,8 @@ function SlideView({ slide, deck, reveal, vertical }: { slide: Slide; deck: Deck
       return <TrickSlide h={slide.h} cat={slide.test.cat} reveal={reveal} index={slide.i} total={slide.of} vertical={vertical} />;
     case 'trick-empty':
       return <TrickEmptySlide />;
+    case 'truth':
+      return <TruthSlide runId={deck.d.manifest.id} testName={slide.test.snap.name} cat={slide.test.cat} detail={slide.test.detail} pick={slide.pick} contenders={deck.contenders} />;
     case 'title':
       return <TitleSlide deck={deck} />;
     case 'how':
@@ -1105,6 +1140,7 @@ const KEYS: Array<[string, string]> = [
   ['A', 'Auto: reveal rows every 1.2 s, then advance'],
   ['?vertical=1', 'Shorts: only the “Can It Be Fooled?” slides, 1080×1920'],
   ['?traps=5', 'How many “Can It Be Fooled?” slides per trick test (default 3)'],
+  ['?truth=1', 'Add an “answer vs truth” slide per test: the case the models disagreed on most'],
   ['F', 'Full screen'],
   ['?', 'Show or hide this help'],
   ['Esc', 'Leave the presenter'],
@@ -1116,6 +1152,8 @@ export default function PresentPage({ runId }: { runId: string }) {
   const vertical = query.get('vertical') === '1';
   // ?traps=N: how many "Can It Be Fooled?" highlight slides per trick test (default 3).
   const traps = Math.max(0, Math.min(50, Number(query.get('traps') ?? 3) || 0));
+  // ?truth=1: one "answer vs truth" slide per test that has a case visual.
+  const truthOn = query.get('truth') === '1';
   const scale = useStageScale(vertical ? VW : W, vertical ? VH : H);
   const state = useAsync(async () => {
     const d = await api.run(runId);
@@ -1129,8 +1167,8 @@ export default function PresentPage({ runId }: { runId: string }) {
 
   const manualProviders = useMemo(() => new Set((meta?.providers ?? []).filter((p) => p.type === 'manual').map((p) => p.id)), [meta]);
   const deck = useMemo(
-    () => (state.data ? buildDeck(state.data.d, state.data.details, categories, cat, meta?.programs ?? [], meta?.settings?.judgeExcludeSameVendor, manualProviders, traps) : null),
-    [state.data, categories, cat, meta, manualProviders, traps],
+    () => (state.data ? buildDeck(state.data.d, state.data.details, categories, cat, meta?.programs ?? [], meta?.settings?.judgeExcludeSameVendor, manualProviders, traps, truthOn) : null),
+    [state.data, categories, cat, meta, manualProviders, traps, truthOn],
   );
   const slides = useMemo(() => (deck ? buildSlides(deck, vertical) : []), [deck, vertical]);
   const finalRows = deck ? standings(deck).length : 0;
