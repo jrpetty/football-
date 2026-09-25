@@ -521,7 +521,7 @@ export function buildSimTournament(opts: {
       budgetStopped = true;
       break;
     }
-    const next = playableSlots(state, new Set())[0];
+    const next = playableSlots(state, new Set(), { pairsInOrder: game.sequentialPairs })[0];
     if (!next) break;
     const g = simulateGame({ game, settings, tournamentId: opts.id, slot: next, contestants, fast: opts.fast, budget, judgePool: opts.judgePool, noJudges: opts.noJudges });
     games.push(g);

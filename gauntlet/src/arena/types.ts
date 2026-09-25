@@ -151,6 +151,8 @@ export interface ArenaGame<S = unknown> {
   estimateFor?(config: GameConfig): ArenaGame['estimate'];
   /** 'turns' engine: the whole prompt for the seat to act (only what that seat may see). */
   prompt?(state: S, side: Side, ctx: TurnPromptContext): string;
+  /** 'turns' engine: where the game is, for call labels and the Manual Inbox, e.g. "hand 3 of 10, flop". */
+  turnLabel?(state: S): string;
   /** 'turns' engine: the answer keyword, e.g. "ACTION" (default "MOVE"). */
   answerKey?: string;
   /** 'turns' engine: the move played after two failed attempts (default: a seeded-random legal move). */
@@ -159,6 +161,11 @@ export interface ArenaGame<S = unknown> {
   strikesLose?: boolean;
   /** Per-seat score of a finished game for 'margin' scoring (e.g. chips won). */
   margin?(state: S): [number, number];
+  /**
+   * Hidden information shared across the seat-swapped pair (duplicate poker): game 2 of a pair never starts
+   * before game 1 has finished.
+   */
+  sequentialPairs?: boolean;
   /** Unit of `margin`, e.g. "chips". */
   unit?: string;
   /** Judged games: the judge step (debate engine). */

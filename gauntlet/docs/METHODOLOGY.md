@@ -252,7 +252,13 @@ The same fair-play rules apply.
   with the seats swapped, so each model plays every deal from both seats. With identical play the pair nets exactly
   zero chips (a unit test checks this), so the chip total measures decisions, not cards. Blinds 1/2, stacks reset
   to 200 every hand (there are no side pots beyond the all-in cap), minimum-raise rules enforced, showdowns
-  evaluated by the harness. Each prompt shows only the acting seat's cards. An illegal or unreadable action gets
+  evaluated by the harness. Each prompt shows only the acting seat's cards, plus how the previous hand ended
+  (a fold, or the showdown with both revealed hands, which is public information in real poker). Game 2 of a
+  pair never starts before game 1 has finished, so a player can never see a deal from one seat while the same
+  deal is still being played from the other. API models are stateless per call anyway; for **manual (copy &
+  paste) contestants use a brand-new chat for every decision**: a chat that remembers game 1 knows the
+  opponent's cards in game 2, which breaks the duplicate format (the New tournament page and every Manual Inbox
+  item say so). An illegal or unreadable action gets
   one retry, then check (or fold if there is a bet) and a strike; strikes never end the session.
 * **Debate and Courtroom: blind judging.** The judges are the configured cross-vendor panel minus every judge
   from either debater's vendor (strict: no exceptions, a game with no eligible judge waits for a human). Judges

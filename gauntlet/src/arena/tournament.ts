@@ -792,7 +792,7 @@ function launch(manifest: TournamentManifest): void {
         if (!controller.signal.aborted && !budgetHit) {
           if (cap !== undefined && state.costUsd >= cap) budgetHit = true;
           else {
-            const ready = playableSlots(state, new Set([...inFlight.keys(), ...failed]));
+            const ready = playableSlots(state, new Set([...inFlight.keys(), ...failed]), { pairsInOrder: game.sequentialPairs });
             while (inFlight.size < manifest.settings.concurrency && ready.length) {
               const slot = ready.shift()!;
               const p = runGame(slot).then(
@@ -1025,7 +1025,7 @@ export function submitHumanVerdict(id: string, key: string, input: HumanVerdictI
   } else if (state.awaitingJudges) {
     manifest.error = awaitingMessage(state.awaitingJudges);
     writeTournament(manifest);
-  } else if (manifest.status === 'interrupted' && playableSlots(state, new Set()).length) {
+  } else if (manifest.status === 'interrupted' && playableSlots(state, new Set(), { pairsInOrder: game.sequentialPairs }).length) {
     resumeTournament(id);
     resumed = true;
   }
