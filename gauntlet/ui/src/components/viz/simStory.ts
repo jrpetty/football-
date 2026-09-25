@@ -53,6 +53,15 @@ export function clip(text: string, max: number): string {
   return t.length > max ? `${t.slice(0, max - 1).trimEnd()}…` : t;
 }
 
+/** Like clip, but prefers to end at a full sentence so a narration line never stops mid-thought. */
+export function clipSentence(text: string, max: number): string {
+  const t = text.replace(/\s+/g, ' ').trim();
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max);
+  const end = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('! '), cut.lastIndexOf('? '));
+  return end > max * 0.45 ? cut.slice(0, end + 1) : clip(t, max);
+}
+
 export function money(n: number): string {
   const v = Math.round(n);
   const s = `$${Math.abs(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
@@ -71,11 +80,11 @@ function andList(items: string[]): string {
   return items.length <= 1 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
 }
 
-function quoted(model: string, action: string | undefined, consequence: string | undefined, max = 210): string {
+function quoted(model: string, action: string | undefined, consequence: string | undefined, max = 300): string {
   const parts: string[] = [];
   if (action) parts.push(`${model} chose “${clip(action, 70)}”.`);
   if (consequence) parts.push(consequence.trim());
-  return clip(parts.join(' '), max);
+  return clipSentence(parts.join(' '), max);
 }
 
 /** Frames with sim data of one kind, keeping their index in the replay. */
@@ -163,7 +172,7 @@ export function islandStory(world: IslandSimWorld, frame: ReplayFrame, model: st
     tone = frame.tone ?? 'neutral';
   } else phrase = islandVerb(frame.action);
   const consequence = frame.outcome ?? '';
-  return { headline: `${when}: ${phrase}`, line: s.phase === 3 || s.phase < 0 ? clip(consequence, 210) : quoted(model, frame.action, consequence), tone };
+  return { headline: `${when}: ${phrase}`, line: s.phase === 3 || s.phase < 0 ? clipSentence(consequence, 300) : quoted(model, frame.action, consequence), tone };
 }
 
 export interface TimelineMark {

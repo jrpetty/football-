@@ -609,6 +609,12 @@ html[data-broadcast='on'] .broadcast-slate {
   pointer-events: auto;
 }
 
+/* In Broadcast mode the caption strip floats over the bottom of the screen: leave room for it in drawers
+   (result inspector, replays) so it never covers content. */
+html[data-broadcast='on'] .drawer-body {
+  padding-bottom: 150px;
+}
+
 /* Viewer caption strip ("What you're seeing: …") for screen recordings. */
 .viewer-caption {
   position: fixed;
