@@ -13,6 +13,11 @@ import { fmtInt, fmtRelative } from '../format.ts';
 import type { ContestantView, ManualReply, ManualRequest, RunListItem } from '../types.ts';
 import { VisionBadge, VisionImage } from '../components/VisionImage.tsx';
 import { manualImageUrl } from '../vision.ts';
+import { GAMES } from '../../../src/arena/games/index.ts';
+
+/** Arena games whose seat-swapped pair shares hidden cards (duplicate poker): a remembering chat would leak them. */
+const needsFreshChat = (req: ManualRequest) => req.testId.startsWith('arena.') && Boolean(GAMES[req.testId.slice(6)]?.sequentialPairs);
+const FRESH_CHAT_WARNING = 'Use a brand-new chat for every decision. Remembering the other game’s cards breaks the duplicate format.';
 
 interface Draft {
   text: string;
@@ -139,6 +144,13 @@ function RequestCard({
 
       {open && (
         <div className="inbox-body">
+          {needsFreshChat(req) && (
+            <div style={{ marginBottom: 12 }}>
+              <Callout tone="warn" icon={<Icon.Alert />}>
+                <b>{FRESH_CHAT_WARNING}</b> The same deals are played in both games of the pairing with the seats swapped, so a chat that remembers one game knows the opponent’s cards in the other.
+              </Callout>
+            </div>
+          )}
           <div className="inbox-steps">
             <div className="step">
               <span className="n">1</span>

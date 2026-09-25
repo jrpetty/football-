@@ -79,6 +79,8 @@ export async function playTurnGame(o: PlayGameOptions): Promise<PlayedGameExt> {
   const fallback = rng.fork('fallback');
   const initial = game.snapshot(state);
   const moves: ArenaMove[] = [];
+  // Decisions per seat in this game, so each player's counter runs 1, 2, 3… on its own.
+  const decisions: [number, number] = [0, 0];
   const strikes: [number, number] = [0, 0];
   const illegal: [number, number] = [0, 0];
   const zero = { costUsd: 0, inputTokens: 0, outputTokens: 0 };
@@ -98,6 +100,8 @@ export async function playTurnGame(o: PlayGameOptions): Promise<PlayedGameExt> {
     const attempts: MoveAttempt[] = [];
     let accepted: string | null = null;
     let note: string | undefined;
+    decisions[side]++;
+    const where = game.turnLabel?.(state);
 
     for (let attempt = 1; attempt <= 2 && accepted === null; attempt++) {
       abortIfNeeded(o.signal);
@@ -110,7 +114,7 @@ export async function playTurnGame(o: PlayGameOptions): Promise<PlayedGameExt> {
       const reply = await seat.handle.complete({
         messages: [{ role: 'user', content: prompt }],
         maxOutputTokens: o.maxOutputTokens,
-        label: `${game.sides[side].name} · decision ${moves.length + 1}${attempt > 1 ? ' · retry' : ''}`,
+        label: `${game.sides[side].name} · ${where ? `${where} · ` : ''}your decision ${decisions[side]}${attempt > 1 ? ' · retry' : ''}`,
       });
       const ms = Date.now() - t0;
       const extracted = extractAnswer(reply.text, key);

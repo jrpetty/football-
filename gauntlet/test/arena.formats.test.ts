@@ -36,14 +36,14 @@ const setJudges = (ids: string[]) => {
   writeFileSync(sfile, JSON.stringify(settings));
 };
 
-const { bestHand, evaluate5, compareScores, showdown, fullDeck } = await import('../src/arena/games/poker-eval.ts');
+const { bestHand, evaluate5, compareScores, showdown, fullDeck, pretty } = await import('../src/arena/games/poker-eval.ts');
 const { poker, parsePokerAction } = await import('../src/arena/games/poker.ts');
 const { debate, courtroom, cutWords, countWords, cleanSpeech, RUBRIC } = await import('../src/arena/games/debate.ts');
 const { MOTIONS, CASES } = await import('../src/arena/games/debate-bank.ts');
 const { playTurnGame, extractAnswer } = await import('../src/arena/turns.ts');
 const { playJudgedGame } = await import('../src/arena/judged.ts');
 const judge = await import('../src/arena/judge.ts');
-const { computeState, buildKnockout, buildRoundRobin, gameSeed } = await import('../src/arena/bracket.ts');
+const { computeState, buildKnockout, buildRoundRobin, gameSeed, playableSlots } = await import('../src/arena/bracket.ts');
 const { createRng } = await import('../src/core/rng.ts');
 const { createFakeModel } = await import('./helpers/fake-model.ts');
 const tournament = await import('../src/arena/tournament.ts');
@@ -652,4 +652,84 @@ test('spending cap: overspend is bounded by one in-flight call per concurrent ga
   const biggest = Math.max(...calls.map((c) => c.costUsd));
   assert.ok(d.state.costUsd >= cap, 'the cap was reached');
   assert.ok(d.state.costUsd <= cap + 2 * biggest + 1e-9, `spent ${d.state.costUsd} with a ${cap} cap: at most one call per concurrent game over`);
+});
+
+// ─────────────────────────────── Fixes from a real manual poker match ───────────────────────────────
+
+test('duplicate poker: game 2 of a pair is never scheduled before game 1 has finished', async () => {
+  const entrants = [ent('a', 1), ent('b', 2)];
+  const spec = { seed: 1, entrants, settings: { format: 'knockout' as const, gamesPerMatch: 2, suddenDeath: 0, game: { scoring: 'margin' as const } }, matches: buildKnockout(['a', 'b']) };
+  const empty = computeState(spec, []);
+  assert.deepEqual(playableSlots(empty, new Set(), { pairsInOrder: true }).map((s) => s.key), ['R1-M1-g1']);
+  assert.equal(playableSlots(empty, new Set()).length, 2, 'board games may still run both at once');
+  const after = computeState(spec, [lite('R1-M1-g1', 'R1-M1', 1, ['a', 'b'], [4, -4])]);
+  assert.deepEqual(playableSlots(after, new Set(), { pairsInOrder: true }).map((s) => s.key), ['R1-M1-g2']);
+  // End to end with 4 games allowed at once: every game-2 decision comes after game 1 of its pair has finished.
+  const log: string[] = [];
+  const id = tournament.startTournament({ game: 'poker', contestantIds: ['pbot-0', 'pbot-1', 'pbot-2', 'pbot-3'], seeding: 'manual', concurrency: 4, options: { hands: '10' } });
+  tournament.subscribeTournament(id, (e) => {
+    if (e.type === 'game.turn') log.push(`turn ${e.key}`);
+    if (e.type === 'game.started') log.push(`start ${e.game.key}`);
+    if (e.type === 'game.finished') log.push(`done ${e.game.key}`);
+  });
+  await tournament.waitForTournament(id);
+  assert.equal(tournament.tournamentDetail(id)!.manifest.status, 'completed');
+  for (const m of ['R1-M1', 'R1-M2', 'R2-M1']) {
+    const done1 = log.indexOf(`done ${m}-g1`);
+    const first2 = log.findIndex((x) => x.endsWith(`${m}-g2`));
+    assert.ok(done1 >= 0 && first2 > done1, `${m}: game 2 starts only after game 1 finished`);
+  }
+});
+
+test('poker prompts: per-player decision counter, "You" grammar, bet wording, previous hand result', async () => {
+  const a = pokerBot('tight');
+  const b = pokerBot('loose');
+  await playTurnGame({ game: poker, config: cfg(4), seed: 42, seats: seats(a, b), maxStrikes: 3 });
+  for (const m of [a, b]) {
+    const nums = m.calls.map((c) => Number(c.label!.match(/your decision (\d+)/)![1]));
+    assert.deepEqual(nums, nums.map((_, i) => i + 1), 'each player counts its own decisions 1, 2, 3…');
+    assert.match(m.calls[0]!.label!, /^Seat \d · hand 1 of 4, pre-flop · your decision 1$/);
+  }
+  const all = [...a.calls, ...b.calls].map((c) => c.messages[0]!.content).join('\n');
+  assert.ok(!/You (posts|checks|raises|calls|bets|folds)\b/.test(all), 'no "You posts"');
+  assert.match(all, /You post the (small|big) blind/);
+  assert.match(all, /Opponent posts the (small|big) blind/);
+  assert.match(all, /Use "bet <amount>" to open the betting/);
+  // Flop, nobody has bet: the menu says bet, and "bet N" is accepted.
+  let s = fresh();
+  s = act(s, 'call');
+  s = act(s, 'check');
+  const flop = poker.prompt!(s, 1, { config: cfg(4), strikes: [0, 0], maxStrikes: 3 });
+  assert.match(flop, /`ACTION: bet 2`/);
+  assert.ok(!/`ACTION: raise/.test(flop));
+  assert.deepEqual(parsePokerAction(s.hand!, 1, 2, 'bet 6'), { ok: true, move: 'raise 6' });
+  const tiny = parsePokerAction(s.hand!, 1, 2, 'bet 1');
+  assert.ok(!tiny.ok && /minimum bet is 2/.test(tiny.error));
+  s = act(s, 'bet 6');
+  assert.match(poker.prompt!(s, 0, { config: cfg(4), strikes: [0, 0], maxStrikes: 3 }), /Opponent bets 6/);
+  // Previous hand: a fold shows no cards; a showdown shows both hands.
+  s = act(s, 'fold');
+  const afterFold = poker.prompt!(s, 0, { config: cfg(4), strikes: [0, 0], maxStrikes: 3 });
+  assert.match(afterFold, /Previous hand \(hand 1\): you folded on the flop; no cards were shown\. You lost 2 chips\./);
+  s = act(s, 'all-in');
+  s = act(s, 'call');
+  const r = s.results[1]!;
+  const view = poker.prompt!(s, 0, { config: cfg(4), strikes: [0, 0], maxStrikes: 3 });
+  assert.match(view, /Previous hand \(hand 2\): showdown on /);
+  assert.ok(view.includes(`opponent's cards ${pretty(r.hole[1])}`));
+  assert.ok(view.includes(r.hands![0].name));
+});
+
+test('manual inbox: listing a pending request twice returns the same id and never duplicates it', async () => {
+  const manual = await import('../src/providers/manual.ts');
+  const adapter = manual.createManualAdapter({ contestant: { id: 'm', label: 'M', vendor: 'V', provider: 'manual', model: 'm', color: '#000', enabled: true, pricing: { inputPerM: 0, outputPerM: 0 } } } as never);
+  const p = adapter.complete({ messages: [{ role: 'user', content: 'hi' }], maxOutputTokens: 10, temperature: 0, callContext: { runId: 'dup-check', key: 'k', testId: 'arena.poker', testName: 't', caseId: 'c', label: 'l' } } as never);
+  const one = manual.listManualRequests('dup-check');
+  const two = manual.listManualRequests('dup-check');
+  assert.equal(one.length, 1);
+  assert.deepEqual(two.map((r) => r.id), one.map((r) => r.id));
+  assert.ok(manual.submitManual(one[0]!.id, { text: 'ACTION: call' }));
+  assert.equal((await p).text, 'ACTION: call');
+  assert.equal(manual.listManualRequests('dup-check').length, 0);
+  assert.equal(manual.submitManual(one[0]!.id, { text: 'again' }), false, 'a stale id is refused, not re-queued');
 });

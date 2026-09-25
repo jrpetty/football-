@@ -106,6 +106,7 @@ function attachManual(tournamentId: string): () => void {
     busy = true;
     console.log(c.bold(`\n━━━ MANUAL MOVE · ${req.contestantLabel} · ${req.caseId} · ${req.label} ━━━`));
     console.log(c.dim('Open a NEW chat with the model and paste this prompt exactly:'));
+    if (req.testId.startsWith('arena.') && GAMES[req.testId.slice(6)]?.sequentialPairs) console.log(c.yellow('Use a brand-new chat for every decision. Remembering the other game’s cards breaks the duplicate format.'));
     console.log(c.cyan('----- COPY BELOW -----'));
     console.log(req.combinedPrompt);
     console.log(c.cyan('----- COPY ABOVE -----'));

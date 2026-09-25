@@ -149,22 +149,25 @@ export function minRaiseTo(h: PokerHand, side: Side, bb: number): number {
 
 const pot = (h: PokerHand) => h.committed[0] + h.committed[1];
 
-function actionText(a: PokerAction): string {
+/** "posts / folds / checks / calls 4 / bets 6 / raises to 12"; `you` = second person ("You post", "You raise to 12"). */
+export function actionText(a: PokerAction, you = false): string {
+  const v = (third: string, second: string) => (you ? second : third);
+  const allIn = a.allIn ? ' (all-in)' : '';
   switch (a.kind) {
     case 'sb':
-      return `posts small blind ${a.amount}`;
+      return `${v('posts', 'post')} the small blind ${a.amount}`;
     case 'bb':
-      return `posts big blind ${a.amount}`;
+      return `${v('posts', 'post')} the big blind ${a.amount}`;
     case 'fold':
-      return 'folds';
+      return v('folds', 'fold');
     case 'check':
-      return 'checks';
+      return v('checks', 'check');
     case 'call':
-      return a.allIn ? `calls ${a.amount} (all-in)` : `calls ${a.amount}`;
+      return `${v('calls', 'call')} ${a.amount}${allIn}`;
     case 'bet':
-      return a.allIn ? `bets ${a.to} (all-in)` : `bets ${a.to}`;
+      return `${v('bets', 'bet')} ${a.to}${allIn}`;
     case 'raise':
-      return a.allIn ? `raises to ${a.to} (all-in)` : `raises to ${a.to}`;
+      return `${v('raises', 'raise')} to ${a.to}${allIn}`;
   }
 }
 
@@ -218,6 +221,7 @@ export function parsePokerAction(h: PokerHand, side: Side, bb: number, text: str
   const lo = minRaiseTo(h, side, bb);
   const menu = legalSummary(h, side, bb);
   if (!t) return { ok: false, error: `The ACTION line was empty. ${menu}` };
+  const verb = maxBet(h) === 0 ? 'bet' : 'raise';
   if (/^(all[\s-]?in|allin|shove|jam|push)\b/.test(t)) {
     if (!canRaise(h, side)) return { ok: true, move: owe > 0 ? 'call' : 'check' };
     return { ok: true, move: `raise ${hi}` };
@@ -233,19 +237,26 @@ export function parsePokerAction(h: PokerHand, side: Side, bb: number, text: str
   if (/^call/.test(t)) return { ok: true, move: owe > 0 ? 'call' : 'check' };
   const m = t.match(/^(raise|bet|re-?raise|3-?bet|4-?bet|min-?raise)\b\s*(by|to)?\s*\$?(\d+(?:\.\d+)?)?/);
   if (m) {
-    if (!canRaise(h, side)) return { ok: false, error: `You cannot raise now (${h.stacks[1 - side] === 0 ? 'your opponent is all-in' : 'you do not have enough chips'}). ${menu}` };
+    if (!canRaise(h, side)) return { ok: false, error: `You cannot ${verb} now (${h.stacks[1 - side] === 0 ? 'your opponent is all-in' : 'you do not have enough chips'}). ${menu}` };
     if (!m[3]) {
       if (/min/.test(m[1]!)) return { ok: true, move: `raise ${lo}` };
-      return { ok: false, error: `Say how much: "raise <amount>" where <amount> is your total bet for this street (from ${lo} to ${hi}). ${menu}` };
+      return { ok: false, error: `Say how much: "${verb} <amount>" where <amount> is your total bet for this street (from ${lo} to ${hi}). ${menu}` };
     }
     const n = Number(m[3]);
     if (!Number.isInteger(n)) return { ok: false, error: `Chip amounts are whole numbers; "${m[3]}" is not. ${menu}` };
     const to = m[2] === 'by' ? maxBet(h) + n : n;
-    if (to > hi) return { ok: false, error: `You only have ${h.stacks[side]} chips behind: the largest raise is to ${hi} (all-in). ${menu}` };
-    if (to < lo) return { ok: false, error: `A raise to ${to} is too small: the minimum is to ${lo} (the current bet ${maxBet(h)} plus at least ${Math.max(h.lastRaise, bb)}). "raise <amount>" is your TOTAL bet for this street. ${menu}` };
+    if (to > hi) return { ok: false, error: `You only have ${h.stacks[side]} chips behind: ${verb === 'bet' ? `the largest bet is ${hi}` : `the largest raise is to ${hi}`} (all-in). ${menu}` };
+    if (to < lo)
+      return {
+        ok: false,
+        error:
+          verb === 'bet'
+            ? `A bet of ${to} is too small: the minimum bet is ${lo} (the big blind). ${menu}`
+            : `A raise to ${to} is too small: the minimum is to ${lo} (the current bet ${maxBet(h)} plus at least ${Math.max(h.lastRaise, bb)}). "raise <amount>" is your TOTAL bet for this street. ${menu}`,
+      };
     return { ok: true, move: `raise ${to}` };
   }
-  return { ok: false, error: `"${text.trim().slice(0, 40)}" is not an action. Write one of: fold, check, call, raise <amount>, all-in. ${menu}` };
+  return { ok: false, error: `"${text.trim().slice(0, 40)}" is not an action. Write one of: fold, check, call, bet <amount>, raise <amount>, all-in. ${menu}` };
 }
 
 function legalSummary(h: PokerHand, side: Side, bb: number): string {
@@ -254,7 +265,7 @@ function legalSummary(h: PokerHand, side: Side, bb: number): string {
   if (canRaise(h, side)) {
     const lo = minRaiseTo(h, side, bb);
     const hi = maxTo(h, side);
-    parts.push(lo < hi ? `raise to any amount from ${lo} to ${hi}` : `all-in (${hi})`);
+    parts.push(lo < hi ? (maxBet(h) === 0 ? `bet any amount from ${lo} to ${hi}` : `raise to any amount from ${lo} to ${hi}`) : `all-in (${hi})`);
     if (lo < hi) parts.push(`all-in (${hi})`);
   }
   return `Legal now: ${parts.join(', ')}.`;
@@ -342,7 +353,7 @@ function handHistory(h: PokerHand, side: Side): string {
   for (let st = 0; st <= h.street; st++) {
     const acts = h.actions.filter((a) => a.street === st);
     const cards = st === 0 ? '' : ` [${pretty(h.board.slice(0, BOARD_AT[st]))}]`;
-    lines.push(`${STREETS[st]}${cards}: ${acts.length ? acts.map((a) => `${who(a.side)} ${actionText(a)}`).join('; ') : '(no action yet)'}`);
+    lines.push(`${STREETS[st]}${cards}: ${acts.length ? acts.map((a) => `${who(a.side)} ${actionText(a, a.side === side)}`).join('; ') : '(no action yet)'}`);
   }
   return lines.join('\n');
 }
@@ -353,19 +364,36 @@ const RULES = (hands: number, cfg: PokerState['cfg']) =>
     `Blinds are ${cfg.sb}/${cfg.bb}. The button posts the small blind (${cfg.sb}) and the other player the big blind (${cfg.bb}). The button alternates every hand.`,
     'Each player gets two private hole cards. Five community cards are dealt face up: the flop (3 cards), the turn (1) and the river (1). There is a betting round before the flop and after each of those streets.',
     'Before the flop the button acts first; on the flop, turn and river the big blind acts first.',
-    'Actions: fold, check (only when there is nothing to call), call, raise <amount>, all-in. "raise <amount>" means raise TO that total bet for the current street (an opening bet is written the same way). The minimum raise is to the current bet plus the size of the last bet or raise on this street (at least the big blind). You can always go all-in.',
+    'Actions: fold, check (only when there is nothing to call), call, bet <amount>, raise <amount>, all-in. Use "bet <amount>" to open the betting on a street when nobody has bet yet, and "raise <amount>" when facing a bet (before the flop the big blind counts as a bet). In both, <amount> is your TOTAL bet for the current street, not the extra chips; either word is accepted in either case. The minimum is the current bet plus the size of the last bet or raise on this street (at least the big blind). You can always go all-in.',
     'If nobody folds, the best five-card hand made from your two hole cards and the five community cards wins the pot at showdown; equal hands split the pot. Hand ranks from high to low: straight flush, four of a kind, full house, flush, straight, three of a kind, two pair, one pair, high card. A-2-3-4-5 is the lowest straight.',
     'Fairness: every deal is also played in another game with the seats and cards swapped, so both players get exactly the same cards over the match. Luck cancels out; only your decisions count.',
   ].join('\n');
 
+/** How the previous hand ended, from this seat's point of view (showdown cards are public, as in real poker). */
+export function previousHandText(r: PokerResult, side: Side): string {
+  const won = r.delta[side];
+  const result = won > 0 ? `you won ${won} chips` : won < 0 ? `you lost ${-won} chips` : 'the pot was split';
+  const head = `Previous hand (hand ${r.no + 1}): `;
+  if (r.how === 'fold') {
+    const folder = r.winner === side ? 'your opponent' : 'you';
+    return `${head}${folder === 'you' ? 'you folded' : 'your opponent folded'} ${STREETS[r.street] === 'Pre-flop' ? 'before the flop' : `on the ${STREETS[r.street]!.toLowerCase()}`}; no cards were shown. ${cap(result)}.`;
+  }
+  const hs = r.hands!;
+  return `${head}showdown on ${pretty(r.board)}. Your cards ${pretty(r.hole[side])} (${hs[side].name}); opponent's cards ${pretty(r.hole[1 - side]!)} (${hs[1 - side]!.name}). ${cap(result)}.`;
+}
+
+const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
+
 function seatView(s: PokerState, side: Side): string {
   const h = s.hand;
   const played = s.results.length;
-  const head = `Hand ${played + 1} of ${s.cfg.hands} · your result so far: ${signed(s.net[side])} chips${s.results.length ? ` (last hand: ${signed(s.results[s.results.length - 1]!.delta[side])})` : ''}`;
+  const last = s.results[s.results.length - 1];
+  const head = `Hand ${played + 1} of ${s.cfg.hands} · your result so far: ${signed(s.net[side])} chips`;
   if (!h) return `${head}\nThe session is over.`;
   const owe = toCall(h, side);
   return [
     head,
+    ...(last ? [previousHandText(last, side), ''] : []),
     `You are ${h.button === side ? 'the button (small blind)' : 'the big blind'}.`,
     `Your hole cards: ${pretty(h.hole[side])}   (${h.hole[side].join(' ')})`,
     `Board: ${h.street === 0 ? '(no community cards yet: pre-flop)' : `${pretty(h.board.slice(0, BOARD_AT[h.street]))} (${STREETS[h.street]!.toLowerCase()})`}`,
@@ -384,9 +412,10 @@ export function pokerPrompt(s: PokerState, side: Side, ctx: Pick<TurnPromptConte
   const menu: string[] = owe > 0 ? ['fold', 'call'] : ['check'];
   const sizes = raiseMenu(h, side, bb);
   const hi = maxTo(h, side);
-  for (const x of sizes) if (x !== hi) menu.push(`raise ${x}`);
+  const verb = maxBet(h) === 0 ? 'bet' : 'raise';
+  for (const x of sizes) if (x !== hi) menu.push(`${verb} ${x}`);
   if (sizes.length) menu.push('all-in');
-  const range = canRaise(h, side) && minRaiseTo(h, side, bb) < hi ? `\nAny raise from ${minRaiseTo(h, side, bb)} to ${hi} is legal (${hi} = all-in); the sizes above are only examples.` : '';
+  const range = canRaise(h, side) && minRaiseTo(h, side, bb) < hi ? `\nAny ${verb === 'bet' ? 'bet' : 'raise to a total'} from ${minRaiseTo(h, side, bb)} to ${hi} is legal (${hi} = all-in); the sizes above are only examples.` : '';
   return [
     `You are playing poker against another AI model in the Gauntlet Arena.`,
     `== RULES ==\n${RULES(cfgOf(ctx.config).hands, s.cfg)}`,
@@ -394,7 +423,7 @@ export function pokerPrompt(s: PokerState, side: Side, ctx: Pick<TurnPromptConte
       '== HOW TO ANSWER ==',
       'Think briefly, then end your reply with exactly these two lines:',
       'REASON: <one short sentence explaining your decision; viewers see it>',
-      'ACTION: <fold | check | call | raise <amount> | all-in>',
+      'ACTION: <fold | check | call | bet <amount> | raise <amount> | all-in>',
       'If your action is illegal or cannot be read, you get one retry with the problem explained. If the retry also fails, you check if that is free, otherwise you fold, and you receive a strike.',
     ].join('\n'),
     `== YOUR SITUATION ==\n${seatView(s, side)}`,
@@ -447,7 +476,7 @@ export const HAND_CHOICES = ['10', '20', '40', '60'];
 export const poker: ArenaGame<PokerState> = {
   id: 'poker',
   name: 'Heads-up Poker',
-  version: '1.0.0',
+  version: '1.1.0',
   tagline: "No-Limit Hold'em. Same cards for both. Only decisions count.",
   description:
     "Heads-up No-Limit Texas Hold'em with hidden cards. Every deal is played twice with the cards swapped, so luck cancels out: it tests reading a situation, sizing bets and bluffing under uncertainty.",
@@ -456,7 +485,7 @@ export const poker: ArenaGame<PokerState> = {
     { name: 'Seat 2', color: '#a855f7' },
   ],
   rules: RULES(10, { hands: 10, sb: 1, bb: 2, stack: 200 }),
-  moveHelp: 'an action: fold, check, call, raise <amount> (your total bet for the street) or all-in, for example "ACTION: raise 6"',
+  moveHelp: 'an action: fold, check, call, bet <amount> or raise <amount> (your total bet for the street) or all-in, for example "ACTION: raise 6"',
   defaults: { maxPlies: 400, listLegalMoves: true, scoring: 'margin', unit: 'chips', hands: 10, sb: 1, bb: 2, stack: 200 } as PokerConfig,
   estimate: { pliesPerGame: 45, inputTokensPerMove: 1150, outputTokensPerMove: 900 },
   capRule: 'Every hand ends by itself; the safety cap of 400 actions is never reached in practice.',
@@ -464,6 +493,11 @@ export const poker: ArenaGame<PokerState> = {
   gamesPerMatchOptions: [2],
   suddenDeath: false,
   answerKey: 'ACTION',
+  sequentialPairs: true,
+  turnLabel(s) {
+    const h = s.hand;
+    return h ? `hand ${h.no + 1} of ${s.cfg.hands}, ${STREETS[h.street]!.toLowerCase()}` : '';
+  },
   strikesLose: false,
   unit: 'chips',
   options: [

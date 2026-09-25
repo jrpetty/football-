@@ -226,6 +226,13 @@ export default function ArenaNewPage() {
                   );
                 })}
               </div>
+              {engine === 'turns' && picked.some((id) => enabled.find((c) => c.id === id)?.providerType === 'manual') && (
+                <div style={{ marginTop: 12 }}>
+                  <Callout tone="warn" icon={<Icon.Alert />}>
+                    <b>Use a brand-new chat for every decision. Remembering the other game’s cards breaks the duplicate format.</b> Both games of a pairing use the same deals with the seats swapped. Game 2 only starts after game 1 has finished, but a chat that remembers game 1 would still know the opponent’s cards.
+                  </Callout>
+                </div>
+              )}
               {picked.some((id) => enabled.find((c) => c.id === id)?.providerType === 'manual') && (
                 <div style={{ marginTop: 12 }}>
                   <Callout tone="info" icon={<Icon.Inbox />}>

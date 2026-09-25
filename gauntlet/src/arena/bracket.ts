@@ -315,12 +315,24 @@ export function computeState(spec: BracketSpec, games: ArenaGameLite[], spentUsd
   return { matches, standings, champion, runnerUp, complete, gamesDone, gamesTotal, costUsd: Math.round(costUsd * 1e6) / 1e6, ...(awaitingJudges ? { awaitingJudges } : {}) };
 }
 
-/** Games that can start now: both players known, match undecided, no finished record, not already running. */
-export function playableSlots(state: TournamentState, exclude: Set<string>): Array<GameSlot & { matchId: string }> {
+/**
+ * Games that can start now: both players known, match undecided, no finished record, not already running.
+ * `pairsInOrder` (hidden-information games such as duplicate poker): the second game of a seat-swapped pair
+ * only starts once the first has finished, so nobody can see a deal from one seat while the same deal is still
+ * being played from the other (which would leak the opponent's cards to anyone with a memory).
+ */
+export function playableSlots(state: TournamentState, exclude: Set<string>, opts: { pairsInOrder?: boolean } = {}): Array<GameSlot & { matchId: string }> {
   const out: Array<GameSlot & { matchId: string }> = [];
   for (const m of state.matches) {
     if (m.status !== 'ready' && m.status !== 'playing') continue;
-    for (const s of m.games) if (!s.game && !exclude.has(s.key)) out.push({ ...s, matchId: m.id });
+    for (const s of m.games) {
+      if (s.game || exclude.has(s.key)) continue;
+      if (opts.pairsInOrder && !s.suddenDeath && s.gameNo % 2 === 0) {
+        const first = m.games.find((x) => x.gameNo === s.gameNo - 1);
+        if (!first?.game || first.game.status !== 'ok') continue;
+      }
+      out.push({ ...s, matchId: m.id });
+    }
   }
   return out;
 }
