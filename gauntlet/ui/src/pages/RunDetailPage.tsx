@@ -6,6 +6,7 @@ import { useMeta, useToast, useViewerCaption } from '../context.tsx';
 import { CategoryChip, ConfirmDialog, ErrorState, HashTag, LoadingPage, ModelChip, PageHead, Progress, RunStatusBadge, Tabs } from '../components/ui.tsx';
 import { Icon } from '../components/icons.tsx';
 import { LeaderboardView } from '../components/leaderboard/LeaderboardView.tsx';
+import { Jargon } from '../components/clarity/Jargon.tsx';
 import { ResultsMatrix } from '../components/ResultsMatrix.tsx';
 import { ResultInspector } from '../components/ResultInspector.tsx';
 import { ResumeDialog } from '../components/ResumeDialog.tsx';
@@ -38,11 +39,11 @@ export default function RunDetailPage({ runId }: { runId: string }) {
     !d
       ? null
       : tab === 'matrix'
-        ? `Every result in this run: one row per test, one column per model. The stronger the blue, the higher the score; any cell opens the model’s actual answers.`
+        ? `Every result in this run: one row per test, one column per model. Green is mostly right, amber partly right, red mostly wrong; any cell opens the model’s actual answers.`
         : tab === 'config'
           ? 'The exact tests and model settings used in this run — each one pinned by a hash, so anyone can re-run it and get the same test.'
           : `The results of this run: ${nModels} ${nModels === 1 ? 'model' : 'models'} on ${nTests} ${nTests === 1 ? 'test' : 'tests'}, ranked by the Gauntlet Index — the average score out of 100 across every category.`,
-    tab === 'matrix' ? 'Cells: mean score over all attempts, 0–100' : tab === 'config' ? `Fingerprint ${shortHash(d?.manifest.fingerprint, 12)}` : 'Whiskers = 95% bootstrap confidence interval',
+    tab === 'matrix' ? 'Cells: average score out of 100 over every question and try' : tab === 'config' ? `Fingerprint ${shortHash(d?.manifest.fingerprint, 12)}` : 'Scores out of 100 · thin brackets = likely range',
   );
 
   const target: InspectorTarget | null = useMemo(() => {
@@ -79,7 +80,7 @@ export default function RunDetailPage({ runId }: { runId: string }) {
       <PageHead
         eyebrow={
           <span className="row" style={{ gap: 8 }}>
-            <Link to="/runs">Runs</Link> <Icon.ChevronRight style={{ width: 12, height: 12 }} /> <span className="mono">{m.id}</span>
+            <Link to="/runs">Runs</Link> <Icon.ChevronRight data-dev style={{ width: 12, height: 12 }} /> <span className="mono" data-dev>{m.id}</span>
           </span>
         }
         title={
@@ -146,7 +147,7 @@ export default function RunDetailPage({ runId }: { runId: string }) {
             <span className="k">Progress</span>
             <div className="stack tight">
               <span className="v tnum">
-                {fmtInt(d.progress.completed)} / {fmtInt(d.progress.total)} jobs
+                {fmtInt(d.progress.completed)} / {fmtInt(d.progress.total)} <Jargon dev="jobs" plain="answers" />
               </span>
               <Progress value={d.progress.total ? d.progress.completed / d.progress.total : 0} striped={d.active} />
             </div>
@@ -170,7 +171,7 @@ export default function RunDetailPage({ runId }: { runId: string }) {
             <span className="k">Duration</span>
             <span className="v tnum">{fmtMs(dur)}</span>
           </div>
-          <div className="mf">
+          <div className="mf" data-dev>
             <span className="k">Fingerprint</span>
             <span className="v">
               <HashTag value={m.fingerprint} label="Fingerprint" n={12} />
@@ -180,17 +181,17 @@ export default function RunDetailPage({ runId }: { runId: string }) {
             <span className="k">Suite</span>
             <span className="v">{m.suiteId ? `${m.suiteId}${m.suiteVersion ? ` @ ${m.suiteVersion}` : ''}` : 'hand-picked tests'}</span>
           </div>
-          <div className="mf">
+          <div className="mf" data-dev>
             <span className="k">Harness</span>
             <span className="v mono">
               v{m.harnessVersion} · protocol {m.settings?.protocolVersion ?? '—'}
             </span>
           </div>
-          <div className="mf">
+          <div className="mf" data-dev>
             <span className="k">Git commit</span>
             <span className="v mono">{m.gitCommit ? shortHash(m.gitCommit, 10) : '—'}</span>
           </div>
-          <div className="mf">
+          <div className="mf" data-dev>
             <span className="k">Environment</span>
             <span className="v mono">
               {m.node ?? '—'} · {m.platform ?? '—'}
@@ -199,10 +200,10 @@ export default function RunDetailPage({ runId }: { runId: string }) {
           <div className="mf">
             <span className="k">Settings</span>
             <span className="v">
-              {m.settings?.repeats ?? 1}× repeats · concurrency {m.settings?.concurrency ?? '—'} · temp {m.settings?.temperature ?? 0}
+              <Jargon dev={`${m.settings?.repeats ?? 1}× repeats · concurrency ${m.settings?.concurrency ?? '—'} · temp ${m.settings?.temperature ?? 0}`} plain={`Every question asked ${m.settings?.repeats ?? 1} ${(m.settings?.repeats ?? 1) === 1 ? 'time' : 'times'}`} />
             </span>
           </div>
-          <div className="mf">
+          <div className="mf" data-dev>
             <span className="k">Created</span>
             <span className="v">{fmtDateTime(m.createdAt)}</span>
           </div>

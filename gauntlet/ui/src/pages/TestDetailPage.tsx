@@ -8,6 +8,8 @@ import { Icon } from '../components/icons.tsx';
 import { SourceBadge } from './TestsPage.tsx';
 import { fmtInt, fmtTokens, prettyJson } from '../format.ts';
 import type { ScorerSpec, TestDetail } from '../types.ts';
+import { Jargon } from '../components/clarity/Jargon.tsx';
+import { plainCaseName } from '../components/clarity/plain.ts';
 import { CaseImages, VisionBadge } from '../components/VisionImage.tsx';
 
 export function describeScorer(s: ScorerSpec | undefined): string {
@@ -146,11 +148,11 @@ export default function TestDetailPage({ testId }: { testId: string }) {
 
       <section className="card manifest">
         <div className="manifest-grid">
-          <div className="mf">
+          <div className="mf" data-dev>
             <span className="k">Id</span>
             <span className="v mono">{def.id}</span>
           </div>
-          <div className="mf">
+          <div className="mf" data-dev>
             <span className="k">Version · hash</span>
             <span className="v row" style={{ gap: 8 }}>
               <span className="mono">v{def.version}</span>
@@ -168,19 +170,19 @@ export default function TestDetailPage({ testId }: { testId: string }) {
             <span className="k">Source</span>
             <span className="v row wrap" style={{ gap: 8 }}>
               {sum.source === 'builtin' ? 'built-in' : <SourceBadge source={sum.source} />}
-              <span className="mono muted" style={{ fontSize: '0.76rem' }}>
+              <span className="mono muted" style={{ fontSize: '0.76rem' }} data-dev>
                 {sum.file}
               </span>
             </span>
           </div>
-          <div className="mf">
+          <div className="mf" data-dev>
             <span className="k">Estimate per case</span>
             <span className="v tnum">
               {fmtTokens(sum.estimate?.inputTokens)} in · {fmtTokens(sum.estimate?.outputTokens)} out · {sum.estimate?.calls ?? 1} call{(sum.estimate?.calls ?? 1) === 1 ? '' : 's'}
               {(sum.imageCases ?? 0) > 0 && <span className="muted"> · plus image tokens, priced per vendor</span>}
             </span>
           </div>
-          <div className="mf">
+          <div className="mf" data-dev>
             <span className="k">Limits</span>
             <span className="v tnum">
               {fmtInt(def.maxOutputTokens ?? 16000)} max output tokens · {def.timeLimitSec ?? 600} s per case
@@ -188,7 +190,7 @@ export default function TestDetailPage({ testId }: { testId: string }) {
             </span>
           </div>
           {(def.tags?.length ?? 0) > 0 && (
-            <div className="mf">
+            <div className="mf" data-dev>
               <span className="k">Tags</span>
               <span className="v chip-list">
                 {def.tags!.map((t) => (
@@ -228,7 +230,7 @@ export default function TestDetailPage({ testId }: { testId: string }) {
                 </div>
               </>
             )}
-            <div className="code-wrap">
+            <div className="code-wrap" data-dev>
               <pre className="code">{prettyJson(def.kind === 'prompt' ? def.scorer : { program: def.program, config: def.config ?? {}, seeds: def.seeds })}</pre>
               <div className="copy">
                 <CopyButton text={prettyJson(def.kind === 'prompt' ? def.scorer : { program: def.program, config: def.config, seeds: def.seeds })} iconOnly label="Copy config" />
@@ -236,7 +238,7 @@ export default function TestDetailPage({ testId }: { testId: string }) {
             </div>
           </div>
         </section>
-        <section className="card">
+        <section className="card" data-dev>
           <div className="card-head">
             <div className="t">
               <h2>Reproducibility</h2>
@@ -281,7 +283,9 @@ export default function TestDetailPage({ testId }: { testId: string }) {
           {d.rendered.map((r) => (
             <article key={r.caseId} className="case-block">
               <header className="row">
-                <span className="mono case-id">{r.caseId}</span>
+                <span className="mono case-id">
+                  <Jargon dev={r.caseId} plain={plainCaseName(r.caseId)} />
+                </span>
                 <span className="spacer" />
                 {r.turns.length > 1 && <span className="badge outline">{r.turns.length} turns</span>}
                 {(r.images?.length ?? 0) > 0 && <VisionBadge label={r.images!.length > 1 ? `${r.images!.length} images` : 'Image'} />}

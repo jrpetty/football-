@@ -44,7 +44,7 @@ export function LeaderboardSummary({ lb }: { lb: Leaderboard }) {
         <span className="v">{fmtCost(stats.spend)}</span>
         <span className="s">+ {fmtCost(stats.judge)} judges</span>
       </div>
-      <div className="stat">
+      <div className="stat" data-dev>
         <span className="k">Suite fingerprint</span>
         <span className="v" style={{ fontSize: '1.1rem', paddingTop: 4 }}>
           <HashTag value={lb.fingerprint} label="Fingerprint" n={12} />

@@ -5,6 +5,7 @@ import type { CategoryInfo, Leaderboard, LeaderboardRow } from '../../types.ts';
 import { fmtCost, fmtIndex, fmtMs, fmtPct, fmtRate, fmtScore100 } from '../../format.ts';
 import { MedalsInline, ModelCell, SortHeader, cx } from '../ui.tsx';
 import { errorRate, isBaseline, olympicCompare, shortCat } from './util.ts';
+import { ScoreHint, ScoreScale } from '../clarity/Jargon.tsx';
 
 type Group = 'categories' | 'economics' | 'speed' | 'reliability';
 type SortKey = string;
@@ -98,6 +99,7 @@ const Row = memo(function Row({
       </td>
       <td className="c-model sticky-2">
         <ModelCell
+          baseline={baseline}
           label={row.label}
           vendor={baseline ? 'Reference · random answers' : row.vendor}
           color={row.color}
@@ -253,13 +255,16 @@ export function LeaderboardTable({
           Category cells: mean score ×100 · tinted by category · <span className="best-key">outlined</span> = category leader
         </span>
       </div>
+      <ScoreScale className="lb-scale" what="full marks on every test in every category" baseline={lb.rows.find(isBaseline)?.index} />
       <div className="table-wrap scroll-shadow">
         <table className="table lb">
           <thead>
             <tr>
               <th className="c-rank sticky-1">{S('rank', '#', 'Rank by Gauntlet Index')}</th>
               <th className="c-model sticky-2">{S('label', 'Model')}</th>
-              <th className="c-index">{S('index', 'Gauntlet Index', 'Weighted mean of category scores × 100, with 95% bootstrap CI')}</th>
+              <th className="c-index">{S('index', 'Gauntlet Index', 'Weighted mean of category scores × 100, with 95% bootstrap CI')}
+                <ScoreHint text="The overall score out of 100: the average of the category scores. 100 would mean full marks on every test. The thin bracket shows how much the score could move by chance." />
+              </th>
               {show.categories &&
                 cats.map((c) => (
                   <th key={c.id} className="c-heat num" title={`${c.name} (weight ${lb.categoryWeights?.[c.id] ?? c.weight})`}>

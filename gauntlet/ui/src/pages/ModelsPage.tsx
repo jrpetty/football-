@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import { Jargon } from '../components/clarity/Jargon.tsx';
+import { ModelMonogram } from '../components/viz/ModelBadge.tsx';
 import { api } from '../api.ts';
 import { useAsync } from '../hooks.ts';
 import { useMeta, useToast, useViewerCaption } from '../context.tsx';
@@ -445,14 +447,26 @@ export default function ModelsPage() {
                 <tr>
                   <th>Model</th>
                   <th>Provider</th>
-                  <th>Model id</th>
-                  <th>Effort</th>
-                  <th className="num">In / 1M</th>
-                  <th className="num">Out / 1M</th>
-                  <th>Price verified</th>
-                  <th className="center">Key</th>
-                  <th className="center">Enabled</th>
-                  <th className="num">Actions</th>
+                  <th data-dev>Model id</th>
+                  <th>
+                    <Jargon dev="Effort" plain="Thinking effort" />
+                  </th>
+                  <th className="num">
+                    <Jargon dev="In / 1M" plain="Price to read 1M tokens" />
+                  </th>
+                  <th className="num">
+                    <Jargon dev="Out / 1M" plain="Price to write 1M tokens" />
+                  </th>
+                  <th data-dev>Price verified</th>
+                  <th className="center" data-dev>
+                    Key
+                  </th>
+                  <th className="center" data-dev>
+                    Enabled
+                  </th>
+                  <th className="num" data-dev>
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -464,11 +478,15 @@ export default function ModelsPage() {
                     <tr key={c.id} className={cx(!c.enabled && 'disabled-row')}>
                       <td>
                         <div className="model-cell">
-                          <span className="bar" style={{ background: c.color }} />
+                          <ModelMonogram label={c.label} color={c.color} baseline={c.providerType === 'mock' && /random|baseline/i.test(c.id)} />
                           <div className="names">
                             <span className="label">{c.label}</span>
                             <span className="vendor">
-                              {c.vendor} · <span className="mono">{c.id}</span>
+                              {c.vendor}
+                              <span data-dev>
+                                {' '}
+                                · <span className="mono">{c.id}</span>
+                              </span>
                             </span>
                           </div>
                         </div>
@@ -481,7 +499,7 @@ export default function ModelsPage() {
                           </div>
                         )}
                       </td>
-                      <td className="mono" style={{ fontSize: '0.8rem', maxWidth: 220, overflowWrap: 'anywhere' }}>
+                      <td className="mono" data-dev style={{ fontSize: '0.8rem', maxWidth: 220, overflowWrap: 'anywhere' }}>
                         {c.model}
                         {c.vision && (
                           <div>
@@ -492,7 +510,7 @@ export default function ModelsPage() {
                       <td>{c.options?.effort ?? <span className="muted">default</span>}</td>
                       <td className="num">{manual ? <span className="muted">—</span> : fmtPricePerM(c.pricing?.inputPerM)}</td>
                       <td className="num">{manual ? <span className="muted">—</span> : fmtPricePerM(c.pricing?.outputPerM)}</td>
-                      <td>
+                      <td data-dev>
                         {manual ? (
                           <span className="muted">n/a</span>
                         ) : c.pricing?.verifiedAt ? (
@@ -505,7 +523,7 @@ export default function ModelsPage() {
                           </span>
                         )}
                       </td>
-                      <td className="center">
+                      <td className="center" data-dev>
                         {manual || !p?.apiKeyEnv ? (
                           <span className="muted" title="No API key needed">
                             —
@@ -520,10 +538,10 @@ export default function ModelsPage() {
                           </span>
                         )}
                       </td>
-                      <td className="center">
+                      <td className="center" data-dev>
                         <Switch checked={c.enabled} onChange={(v) => toggle(c, v)} label={`${c.enabled ? 'Disable' : 'Enable'} ${c.label}`} />
                       </td>
-                      <td className="num">
+                      <td className="num" data-dev>
                         <div className="row" style={{ justifyContent: 'flex-end', gap: 4 }}>
                           {!manual && (
                             <button className="btn xs" onClick={() => ping(c)} disabled={pr === 'loading'} title="Send a tiny test request">
@@ -589,7 +607,7 @@ export default function ModelsPage() {
         )}
       </section>
 
-      <section className="card">
+      <section className="card" data-dev>
         <div className="card-head">
           <div className="t">
             <h2>Providers</h2>

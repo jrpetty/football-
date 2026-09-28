@@ -50,9 +50,15 @@ function ItemCard({ item, season, onQueue }: { item: ChallengeItem; season: stri
         <strong className="ch-credit">{item.viewerHandle || item.viewerName || 'anonymous'}</strong>
         {item.viewerName && item.viewerHandle && <span className="muted">{item.viewerName}</span>}
         <span className="muted small">submitted {fmtDate(item.submittedAt)}</span>
-        {item.caseId && <span className="badge outline mono">case {item.caseId}</span>}
+        {item.caseId && (
+          <span className="badge outline mono" data-dev>
+            case {item.caseId}
+          </span>
+        )}
         <span className="spacer" />
-        <span className="muted small mono">#{item.id}</span>
+        <span className="muted small mono" data-dev>
+          #{item.id}
+        </span>
       </header>
       <div className="ch-item-body">
         <Field label="Question (exactly what every model will see)">

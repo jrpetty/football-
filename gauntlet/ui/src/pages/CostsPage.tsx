@@ -1,4 +1,5 @@
 /** Cost Planner — test × model cost table for a suite before you spend anything. */
+import { Jargon } from '../components/clarity/Jargon.tsx';
 import { useMemo, useState } from 'react';
 import { api } from '../api.ts';
 import { useAsync, useDebounced } from '../hooks.ts';
@@ -139,9 +140,13 @@ export default function CostsPage() {
               <span className="s">a sensible spending cap</span>
             </div>
             <div className="stat">
-              <span className="k">Jobs · API calls</span>
+              <span className="k">
+                <Jargon dev="Jobs · API calls" plain="Answers to collect" />
+              </span>
               <span className="v">{fmtInt(e.jobs)}</span>
-              <span className="s">{fmtInt(e.calls)} calls</span>
+              <span className="s">
+                {fmtInt(e.calls)} <Jargon dev="calls" plain="messages to the models" />
+              </span>
             </div>
             <div className="stat">
               <span className="k">Measured tests</span>

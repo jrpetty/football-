@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api, artifactUrl } from '../api.ts';
 import type { ArtifactRef, CaseResult, CaseResultLite, ScoreDetail } from '../types.ts';
 import { fmtBytes, fmtCost, fmtMs, fmtRate, fmtScore, fmtTokens, prettyJson } from '../format.ts';
-import { CopyButton, Drawer, ErrorState, ModelChip, ResultStatusBadge, ScorePill, SkeletonRows, Tabs, cx } from './ui.tsx';
+import { CopyButton, Drawer, ErrorState, ResultStatusBadge, ScorePill, SkeletonRows, Tabs, cx } from './ui.tsx';
 import { ReplayPlayer } from './ReplayPlayer.tsx';
 import { TranscriptView } from './Transcript.tsx';
 import { Icon } from './icons.tsx';
@@ -12,6 +12,9 @@ import { VisionResultPanel, resultImages } from './VisionResult.tsx';
 import { useRoute } from '../router.tsx';
 import { CaseVisualPanel } from './viz/CaseVisualPanel.tsx';
 import { ArtifactShowcase, showcaseArtifact } from './viz/ArtifactShowcase.tsx';
+import { Jargon } from './clarity/Jargon.tsx';
+import { plainAttempt, plainCaseName, plainKey, plainValue } from './clarity/plain.ts';
+import { ModelBadge } from './viz/ModelBadge.tsx';
 
 export interface InspectorTarget {
   testId: string;
@@ -72,12 +75,16 @@ export function ScoreBreakdownView({ d, passed, humanScores, names }: { d: Score
       {(d.extracted !== undefined || d.expected !== undefined) && (
         <div className="grid cols-2 answer-compare">
           <div>
-            <div className="mini-title">Extracted answer</div>
+            <div className="mini-title">
+              <Jargon dev="Extracted answer" plain="Model’s answer" />
+            </div>
             <pre className={cx('code', r.passed ? 'ok-border' : 'bad-border')}>{d.extracted ?? '—'}</pre>
             {d.formatOk === false && <div className="warn-text" style={{ fontSize: '0.8rem', marginTop: 6 }}>⚠ Answer format not followed (fallback extraction used)</div>}
           </div>
           <div>
-            <div className="mini-title">Expected</div>
+            <div className="mini-title">
+              <Jargon dev="Expected" plain="Correct answer" />
+            </div>
             <pre className="code">{prettyJson(d.expected) || '—'}</pre>
           </div>
         </div>
@@ -144,8 +151,12 @@ export function ScoreBreakdownView({ d, passed, humanScores, names }: { d: Score
           <dl className="kv">
             {extra.map(([k, v]) => (
               <div key={k} style={{ display: 'contents' }}>
-                <dt>{k}</dt>
-                <dd className="mono">{typeof v === 'object' ? JSON.stringify(v) : String(v)}</dd>
+                <dt>
+                  <Jargon dev={k} plain={plainKey(k)} />
+                </dt>
+                <dd className="mono">
+                  <Jargon dev={typeof v === 'object' ? JSON.stringify(v) : String(v)} plain={plainValue(k, v)} />
+                </dd>
               </div>
             ))}
           </dl>
@@ -157,25 +168,28 @@ export function ScoreBreakdownView({ d, passed, humanScores, names }: { d: Score
 
 function Metrics({ r }: { r: CaseResult }) {
   const m = r.metrics;
-  const items: Array<[string, string]> = [
-    ['Wall time', fmtMs(m?.wallMs)],
-    ['Time to first token', fmtMs(m?.ttftMs)],
-    ['API calls', String(m?.apiCalls ?? '—')],
-    ['Input tokens', fmtTokens(m?.inputTokens)],
-    ['Output tokens', fmtTokens(m?.outputTokens)],
-    ['Reasoning tokens', fmtTokens(m?.reasoningTokens)],
-    ['Cached input', fmtTokens(m?.cachedInputTokens)],
-    ['Cost', fmtCost(m?.costUsd)],
-    ['Judge cost', fmtCost(m?.judgeCostUsd)],
-    ['Output speed', fmtRate(m?.outputTokensPerSec)],
-    ['Retries', String(m?.retries ?? 0)],
-    ['Response length', `${(m?.responseChars ?? 0).toLocaleString()} chars`],
+  // [owner label, value, metric key for the plain label, owner-only?] — owner-only rows are hidden in Broadcast mode.
+  const items: Array<[string, string, string, boolean?]> = [
+    ['Wall time', fmtMs(m?.wallMs), 'wallMs'],
+    ['Time to first token', fmtMs(m?.ttftMs), 'ttftMs', true],
+    ['API calls', String(m?.apiCalls ?? '—'), 'apiCalls', true],
+    ['Input tokens', fmtTokens(m?.inputTokens), 'inputTokens'],
+    ['Output tokens', fmtTokens(m?.outputTokens), 'outputTokens'],
+    ['Reasoning tokens', fmtTokens(m?.reasoningTokens), 'reasoningTokens'],
+    ['Cached input', fmtTokens(m?.cachedInputTokens), 'cachedInputTokens', true],
+    ['Cost', fmtCost(m?.costUsd), 'costUsd'],
+    ['Judge cost', fmtCost(m?.judgeCostUsd), 'judgeCostUsd', true],
+    ['Output speed', fmtRate(m?.outputTokensPerSec), 'outputTokensPerSec', true],
+    ['Retries', String(m?.retries ?? 0), 'retries', true],
+    ['Response length', `${(m?.responseChars ?? 0).toLocaleString()} chars`, 'responseChars', true],
   ];
   return (
     <div className="metric-grid">
-      {items.map(([k, v]) => (
-        <div key={k} className="metric">
-          <span>{k}</span>
+      {items.map(([k, v, key, dev]) => (
+        <div key={k} className="metric" data-dev={dev || undefined}>
+          <span>
+            <Jargon dev={k} plain={plainKey(key)} />
+          </span>
           <b className="tnum">{v}</b>
         </div>
       ))}
@@ -222,7 +236,9 @@ function ResultDetail({ runId, lite, names, target }: { runId: string; lite: Cas
         <ResultStatusBadge status={res.status} />
         <span className="result-summary">{res.summary || '—'}</span>
         <span className="spacer" />
-        <CopyButton text={res.key} label="Copy key" />
+        <span data-dev>
+          <CopyButton text={res.key} label="Copy key" />
+        </span>
       </div>
       {res.error && (
         <div className="callout bad">
@@ -258,7 +274,7 @@ function ResultDetail({ runId, lite, names, target }: { runId: string; lite: Cas
             <div className="mini-title">Metrics</div>
             <Metrics r={res} />
           </div>
-          <div className="muted mono" style={{ fontSize: '0.74rem' }}>
+          <div className="muted mono" style={{ fontSize: '0.74rem' }} data-dev>
             test {res.testId}@{res.testVersion} · hash {res.testHash?.slice(0, 12)} · model config {res.contestantHash?.slice(0, 12)}
             {res.seed !== undefined ? ` · seed ${res.seed}` : ''}
           </div>
@@ -337,13 +353,20 @@ export function ResultInspector({
       title={
         <span className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
           {target?.testName}
-          {target && <ModelChip label={target.contestantLabel} color={target.contestantColor} pill />}
+          {target && <ModelBadge label={target.contestantLabel} color={target.contestantColor} size="sm" />}
         </span>
       }
       sub={
         target && (
           <>
-            <span className="mono">{target.testId}</span> · {rows.length} case run{rows.length === 1 ? '' : 's'} · mean {fmtScore(mean, 'pct')}
+            <Jargon
+              dev={
+                <>
+                  <span className="mono">{target.testId}</span> · {rows.length} case run{rows.length === 1 ? '' : 's'} · mean {fmtScore(mean, 'pct')}
+                </>
+              }
+              plain={`${rows.length} ${rows.length === 1 ? 'answer' : 'answers'} · average score ${mean === null ? '—' : Math.round(mean * 100)} out of 100`}
+            />
           </>
         )
       }
@@ -364,9 +387,11 @@ export function ResultInspector({
               }}
             >
               <div className="row" style={{ gap: 8 }}>
-                <span className="mono insp-case">{r.caseId}</span>
+                <span className="mono insp-case">
+                  <Jargon dev={r.caseId} plain={plainCaseName(r.caseId)} />
+                </span>
                 <span className="muted" style={{ fontSize: '0.76rem' }}>
-                  r{r.repeat + 1}
+                  <Jargon dev={`r${r.repeat + 1}`} plain={plainAttempt(r.repeat)} />
                 </span>
                 <span className="spacer" />
                 {r.hasReplay && <span className="badge outline" title="Has replay">▶</span>}

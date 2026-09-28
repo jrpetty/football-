@@ -41,7 +41,7 @@ export default function LeaderboardPage() {
     lb && nModels
       ? `The overall ranking${scope === 'run' ? ' for this run' : ''}: the Gauntlet Index is each model’s average score out of 100 across every category. Thin lines show uncertainty — overlaps are too close to call.`
       : 'The Gauntlet leaderboard: AI models ranked by their average score across every category of tests.',
-    'Index = weighted mean of category scores · whiskers = 95% bootstrap confidence interval',
+    'Index = average of the category scores, out of 100 · thin brackets = likely range',
   );
 
   return (
@@ -97,10 +97,10 @@ export default function LeaderboardPage() {
         <div className="only-broadcast flex broadcast-meta">
           <span className="badge lg accent">{fmtInt(lb.rows.length)} models</span>
           <span className="badge lg">{fmtInt(lb.tests?.length ?? 0)} tests</span>
-          <span className="badge lg">
+          <span className="badge lg" data-dev>
             <Icon.Fingerprint /> fingerprint <HashTag value={lb.fingerprint} n={10} />
           </span>
-          {meta && <span className="badge lg">protocol {meta.protocolVersion}</span>}
+          {meta && <span className="badge lg" data-dev>protocol {meta.protocolVersion}</span>}
         </div>
       )}
 

@@ -3,6 +3,7 @@ import { useMeta, useViewerCaption } from '../context.tsx';
 import { Link } from '../router.tsx';
 import { Icon } from '../components/icons.tsx';
 import { PageHead, Skeleton } from '../components/ui.tsx';
+import { Jargon } from '../components/clarity/Jargon.tsx';
 
 function Principle({ n, icon, title, children }: { n: number; icon: ReactNode; title: string; children: ReactNode }) {
   return (
@@ -45,14 +46,22 @@ export default function MethodologyPage() {
           <div className="pipeline" role="img" aria-label="Case scores average into test scores, test scores into category scores, and the weighted category mean times 100 is the Gauntlet Index">
             <div className="pl-step">
               <span className="pl-k">Case</span>
-              <b>score 0–1</b>
-              <span>one reply, scored by its test’s scorer</span>
+              <b>
+                <Jargon dev="score 0–1" plain="one question, scored" />
+              </b>
+              <span>
+                <Jargon dev="one reply, scored by its test’s scorer" plain="0 = wrong, 1 = fully right" />
+              </span>
             </div>
             <span className="pl-arrow">→</span>
             <div className="pl-step">
               <span className="pl-k">Test</span>
-              <b>mean of cases × repeats</b>
-              <span>every repeat of every case counts equally</span>
+              <b>
+                <Jargon dev="mean of cases × repeats" plain="average of its questions" />
+              </b>
+              <span>
+                <Jargon dev="every repeat of every case counts equally" plain="every try of every question counts the same" />
+              </span>
             </div>
             <span className="pl-arrow">→</span>
             <div className="pl-step">
@@ -63,8 +72,12 @@ export default function MethodologyPage() {
             <span className="pl-arrow">→</span>
             <div className="pl-step hero">
               <span className="pl-k">Gauntlet Index</span>
-              <b>100 × Σ wᶜ · catᶜ ⁄ Σ wᶜ</b>
-              <span>weighted mean of category means</span>
+              <b>
+                <Jargon dev="100 × Σ wᶜ · catᶜ ⁄ Σ wᶜ" plain="average of the categories" />
+              </b>
+              <span>
+                <Jargon dev="weighted mean of category means" plain="shown out of 100" />
+              </span>
             </div>
           </div>
           <p className="dim" style={{ marginTop: 16, maxWidth: '90ch' }}>

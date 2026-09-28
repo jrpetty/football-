@@ -44,7 +44,7 @@ function HighlightCard({ h, rank, onCard }: { h: Highlight; rank: number; onCard
         <div className="hl-top">
           <span className="hl-type">{HIGHLIGHT_LABELS[h.type]}</span>
           <span className="hl-meta" title="How dramatic the moment is, 0–100 (used for ranking)">
-            <Icon.Zap /> {h.drama}
+            <Icon.Zap /> drama {h.drama}/100
           </span>
           <span className="hl-meta" title="Suggested clip length">
             <Icon.Clock /> ~{h.clipSec} s clip
@@ -184,8 +184,8 @@ function Studio({ runId }: { runId: string }) {
       <PageHead
         eyebrow={
           <span className="row" style={{ gap: 8 }}>
-            <Icon.Clapper style={{ width: 14, height: 14 }} /> Studio <Icon.ChevronRight style={{ width: 12, height: 12 }} />
-            <Link to={pathOf('runs', s.runId)} className="mono">
+            <Icon.Clapper style={{ width: 14, height: 14 }} /> Studio <Icon.ChevronRight data-dev style={{ width: 12, height: 12 }} />
+            <Link to={pathOf('runs', s.runId)} className="mono" data-dev>
               {s.runId}
             </Link>
           </span>
