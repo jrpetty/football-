@@ -76,6 +76,10 @@ function defs(seed: number, quality: MockQuality): string {
 }
 
 function finish(body: string, seed: number, quality: MockQuality, extras = ''): string {
+  // Each artist's palette drifts a little (hue and saturation), so the same commission looks like different hands.
+  const hue = (seed % 37) - 18;
+  const sat = 0.85 + ((seed >> 3) % 30) / 100;
+  body = `<filter id="hand"><feColorMatrix type="hueRotate" values="${hue}"/><feColorMatrix type="saturate" values="${sat.toFixed(2)}"/></filter><g filter="url(#hand)">${body}</g>`;
   const texture = quality === 'crude' ? '' : `<rect width="${W}" height="${H}" filter="url(#grain)" opacity="${quality === 'master' ? 0.5 : 0.35}" style="mix-blend-mode:multiply"/>`;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${defs(seed, quality)}<g filter="${quality === 'crude' ? '' : 'url(#brush)'}">${body}</g>${texture}<rect width="${W}" height="${H}" fill="url(#vignette)"/>${extras}</svg>`;
 }

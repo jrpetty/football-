@@ -236,7 +236,7 @@ export default function ReviewPage() {
           <section className="card review-context">
             <div className="card-body stack">
               <div className="row wrap" style={{ gap: 10 }}>
-                {reason && <span className={cx('badge lg', REASONS[reason].tone)}>{REASONS[reason].long}</span>}
+                {reason && <span className={cx('badge lg', REASONS[reason].tone)}>{gallery && reason !== 'judge-disagreement' ? 'Your artistry rating replaces the AI judges’' : gallery ? 'Judges disagreed on this painting — your artistry rating replaces theirs' : REASONS[reason].long}</span>}
                 <strong style={{ fontSize: '1.05rem' }}>{testName.get(sides[0].item.testId) ?? 'Test'}</strong>
                 <span className="muted">· case {sides[0].item.caseId}</span>
                 <span className="spacer" />

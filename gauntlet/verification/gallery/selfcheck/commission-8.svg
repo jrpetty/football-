@@ -1,0 +1,173 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1536" height="1024" viewBox="0 0 1536 1024">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7d9dc2"/>
+      <stop offset="0.38" stop-color="#c8c4b6"/>
+      <stop offset="0.62" stop-color="#f4d49a"/>
+      <stop offset="0.86" stop-color="#f7b889"/>
+      <stop offset="1" stop-color="#f2a57c"/>
+    </linearGradient>
+    <linearGradient id="river" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f6c894"/>
+      <stop offset="0.3" stop-color="#e9c69c"/>
+      <stop offset="0.7" stop-color="#b7c1c7"/>
+      <stop offset="1" stop-color="#7e9cb8"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#fff5d8" stop-opacity="0.95"/>
+      <stop offset="0.4" stop-color="#ffe0a6" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#ffd08a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="cloudLit" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff6de"/>
+      <stop offset="0.55" stop-color="#f9d9a6"/>
+      <stop offset="1" stop-color="#d9a6a0"/>
+    </linearGradient>
+    <linearGradient id="bank" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6d7a3e"/>
+      <stop offset="1" stop-color="#3b4524"/>
+    </linearGradient>
+    <filter id="brush" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018 0.05" numOctaves="3" seed="8" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="9" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="cloud" x="-30%" y="-40%" width="160%" height="180%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="4" seed="12" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="60" xChannelSelector="R" yChannelSelector="G" result="d"/>
+      <feGaussianBlur in="d" stdDeviation="5"/>
+    </filter>
+    <filter id="ripple" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.005 0.12" numOctaves="2" seed="5" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="22" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="shimmer" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.01 0.18" numOctaves="3" seed="27" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 1  0 0 0 0 0.9  0 0 0 0 0.72  0 0 0 2.4 -1.35" result="l"/>
+      <feComposite in="l" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <filter id="leaves" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.06" numOctaves="3" seed="3" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="30" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="smoke" x="-60%" y="-20%" width="220%" height="140%"><feGaussianBlur stdDeviation="7"/></filter>
+    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="24"/></filter>
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="17"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.38  0 0 0 0 0.3  0 0 0 0 0.22  0 0 0 0.35 0"/>
+    </filter>
+  </defs>
+
+  <!-- golden-hour sky -->
+  <rect width="1536" height="600" fill="url(#sky)"/>
+  <circle cx="860" cy="520" r="260" fill="url(#glow)"/>
+
+  <!-- glowing cumulus -->
+  <g filter="url(#cloud)">
+    <ellipse cx="520" cy="210" rx="210" ry="70" fill="url(#cloudLit)"/>
+    <ellipse cx="640" cy="170" rx="150" ry="80" fill="url(#cloudLit)"/>
+    <ellipse cx="430" cy="240" rx="150" ry="50" fill="#e9b8a0"/>
+    <ellipse cx="1060" cy="250" rx="240" ry="64" fill="url(#cloudLit)"/>
+    <ellipse cx="1180" cy="210" rx="140" ry="70" fill="url(#cloudLit)"/>
+    <ellipse cx="1320" cy="300" rx="180" ry="40" fill="#efbfa2"/>
+    <ellipse cx="800" cy="340" rx="200" ry="26" fill="#f6cf9c" opacity="0.8"/>
+  </g>
+
+  <!-- distant blue mountains, fading with distance -->
+  <g filter="url(#brush)">
+    <path d="M0 470 C120 420 220 400 330 430 C420 380 520 360 640 420 C740 386 820 400 900 440 C1020 390 1140 360 1260 410 C1360 380 1450 400 1536 430 L1536 600 L0 600 Z" fill="#9aa9c6" opacity="0.85"/>
+    <path d="M0 520 C160 480 260 470 380 500 C500 470 600 460 700 500 C860 470 980 480 1100 510 C1240 470 1380 480 1536 500 L1536 600 L0 600 Z" fill="#7f8fb0"/>
+  </g>
+
+  <!-- the calm, mirror-like river -->
+  <rect y="592" width="1536" height="432" fill="url(#river)"/>
+  <g filter="url(#ripple)" opacity="0.55">
+    <path d="M820 600 L900 600 L950 1024 L770 1024 Z" fill="#fff0cc" opacity="0.55"/>
+    <path d="M0 600 C160 640 260 640 380 610 C500 640 600 650 700 610 C860 640 980 640 1100 612 C1240 640 1380 640 1536 610 L1536 640 L0 640 Z" fill="#8a96b3" opacity="0.6"/>
+    <ellipse cx="560" cy="760" rx="220" ry="40" fill="#fbe2b8" opacity="0.6"/>
+    <ellipse cx="1120" cy="780" rx="240" ry="36" fill="#f6d2a6" opacity="0.6"/>
+  </g>
+  <rect y="600" width="1536" height="424" fill="#fff" filter="url(#shimmer)" opacity="0.75"/>
+
+  <!-- far banks -->
+  <g filter="url(#brush)">
+    <path d="M0 590 C160 578 300 596 460 588 C560 584 640 600 700 606 L700 626 C600 618 480 612 360 618 C220 626 100 620 0 630 Z" fill="#55643a"/>
+    <path d="M1536 580 C1400 586 1280 596 1160 592 C1060 590 980 600 930 610 L930 632 C1040 626 1160 624 1280 628 C1380 632 1460 626 1536 628 Z" fill="#4e5d36"/>
+    <g fill="#3f4d2c">
+      <ellipse cx="90" cy="584" rx="40" ry="26"/><ellipse cx="160" cy="580" rx="34" ry="30"/><ellipse cx="240" cy="586" rx="46" ry="24"/><ellipse cx="380" cy="584" rx="40" ry="22"/>
+      <ellipse cx="1480" cy="574" rx="44" ry="30"/><ellipse cx="1400" cy="580" rx="38" ry="24"/><ellipse cx="1110" cy="588" rx="36" ry="20"/>
+    </g>
+  </g>
+
+  <!-- log cabin on the right bank with a thread of smoke -->
+  <g filter="url(#brush)">
+    <path d="M1276 548 C1270 500 1300 470 1286 430 C1276 400 1300 372 1292 340" stroke="#efe6dc" stroke-width="18" fill="none" opacity="0.55" filter="url(#smoke)"/>
+    <rect x="1208" y="566" width="150" height="54" fill="#6a4629"/>
+    <g stroke="#452c17" stroke-width="3"><line x1="1208" y1="578" x2="1358" y2="578"/><line x1="1208" y1="592" x2="1358" y2="592"/><line x1="1208" y1="606" x2="1358" y2="606"/></g>
+    <path d="M1196 568 L1283 522 L1370 568 Z" fill="#5a3b22"/>
+    <path d="M1196 568 L1283 522 L1370 568" stroke="#f3cf93" stroke-width="3" fill="none" opacity="0.7"/>
+    <rect x="1268" y="518" width="14" height="36" fill="#5b4b3f"/>
+    <rect x="1236" y="586" width="20" height="18" fill="#f8c56e"/>
+    <rect x="1300" y="586" width="16" height="34" fill="#3a2414"/>
+    <rect x="1200" y="626" width="170" height="10" fill="#6a4629" opacity="0.35" filter="url(#ripple)"/>
+  </g>
+
+  <!-- canoe with two paddlers -->
+  <g filter="url(#brush)" transform="translate(-492 -456) scale(1.6)">
+    <path d="M700 760 Q820 782 940 760 Q820 772 700 760 Z" fill="#8c4526" stroke="#5a2a14" stroke-width="3"/>
+    <path d="M708 760 Q820 778 932 760" stroke="#b5673c" stroke-width="3" fill="none"/>
+    <g>
+      <path d="M760 760 L758 728 C758 718 776 718 776 728 L776 762 Z" fill="#2f3c56"/>
+      <circle cx="767" cy="712" r="10" fill="#3a2a22"/>
+      <line x1="740" y1="790" x2="792" y2="708" stroke="#3a2a22" stroke-width="4"/>
+      <path d="M862 762 L860 730 C860 720 878 720 878 730 L878 764 Z" fill="#8a3b2a"/>
+      <circle cx="869" cy="714" r="10" fill="#3a2a22"/>
+      <line x1="890" y1="792" x2="846" y2="712" stroke="#3a2a22" stroke-width="4"/>
+    </g>
+    <path d="M700 772 Q820 800 940 772" stroke="#6a3a22" stroke-width="10" opacity="0.25" fill="none" filter="url(#ripple)"/>
+  </g>
+
+  <!-- near shore with a deer drinking -->
+  <g filter="url(#brush)">
+    <path d="M-10 1034 L-10 850 C160 830 300 846 460 872 C560 890 640 900 720 930 C800 960 880 1000 940 1034 Z" fill="url(#bank)"/>
+    <path d="M460 872 C560 890 640 900 720 930" stroke="#c9a064" stroke-width="5" fill="none" opacity="0.6"/>
+    <g transform="translate(560 876)">
+      <ellipse cx="0" cy="-6" rx="66" ry="26" fill="#9a6a3e"/>
+      <ellipse cx="4" cy="-20" rx="52" ry="12" fill="#c28b52" opacity="0.7"/>
+      <path d="M-44 10 l-6 56 M-24 14 l-2 56 M42 12 l4 56 M26 14 l0 56" stroke="#7a522e" stroke-width="8" stroke-linecap="round"/>
+      <path d="M-52 -14 C-80 -2 -96 24 -108 46" stroke="#9a6a3e" stroke-width="22" stroke-linecap="round" fill="none"/>
+      <ellipse cx="-114" cy="52" rx="20" ry="12" fill="#8a5a32"/>
+      <path d="M-104 36 l-6 -16 l10 6 Z" fill="#8a5a32"/>
+      <path d="M62 -14 q12 -4 10 8" stroke="#f1e6d4" stroke-width="7" fill="none"/>
+      <ellipse cx="-118" cy="70" rx="30" ry="5" fill="#f2d7a8" opacity="0.6"/>
+    </g>
+    <g stroke="#7f8f46" stroke-width="3" fill="none" opacity="0.9">
+      <path d="M200 900 q6 -40 -4 -70"/><path d="M220 904 q-2 -44 12 -76"/><path d="M340 910 q4 -34 -8 -60"/><path d="M780 980 q6 -40 -4 -70"/><path d="M820 990 q-2 -40 12 -66"/>
+    </g>
+  </g>
+
+  <!-- the white birch in the left foreground -->
+  <g filter="url(#brush)">
+    <path d="M150 1034 C160 820 140 560 176 60 L204 60 C194 560 214 820 216 1034 Z" fill="#f3efe6"/>
+    <path d="M150 1034 C160 820 140 560 176 60 L184 60 C170 560 172 820 168 1034 Z" fill="#c9c3b6"/>
+    <g fill="#2a2622">
+      <rect x="160" y="900" width="30" height="6"/><rect x="170" y="820" width="22" height="5"/><rect x="158" y="740" width="26" height="6"/><rect x="176" y="660" width="20" height="5"/>
+      <rect x="164" y="580" width="24" height="5"/><rect x="172" y="500" width="18" height="5"/><rect x="170" y="420" width="22" height="5"/><rect x="178" y="340" width="16" height="4"/>
+      <rect x="176" y="260" width="18" height="4"/><rect x="182" y="180" width="14" height="4"/>
+    </g>
+    <path d="M196 420 C260 380 320 360 380 300" stroke="#e9e3d7" stroke-width="10" fill="none"/>
+    <path d="M186 300 C130 250 90 230 40 200" stroke="#e9e3d7" stroke-width="9" fill="none"/>
+    <path d="M198 220 C250 170 300 150 350 110" stroke="#e9e3d7" stroke-width="7" fill="none"/>
+  </g>
+  <g filter="url(#leaves)" opacity="0.95">
+    <ellipse cx="320" cy="300" rx="120" ry="70" fill="#b7a43a"/>
+    <ellipse cx="90" cy="210" rx="110" ry="64" fill="#9fae47"/>
+    <ellipse cx="300" cy="130" rx="130" ry="70" fill="#c9ad3e"/>
+    <ellipse cx="200" cy="60" rx="150" ry="70" fill="#a8b24c"/>
+    <ellipse cx="380" cy="220" rx="70" ry="44" fill="#e0c25a"/>
+    <ellipse cx="60" cy="110" rx="90" ry="60" fill="#c2b34c"/>
+  </g>
+
+  <!-- warm light over everything -->
+  <rect width="1536" height="1024" fill="url(#glow)" opacity="0.25"/>
+  <rect width="1536" height="1024" filter="url(#grain)" opacity="0.5"/>
+</svg>

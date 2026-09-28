@@ -259,22 +259,22 @@ export function galleryDetail(full: CaseResult): CaseResult {
 
 const answered = new Set<string>();
 
-/** A picture request waiting in the Manual Inbox (a chat app painting commission No. 3). */
+/** A picture request waiting in the Manual Inbox (a chat app painting commission No. 2). */
 export function galleryManualRequests(): ManualRequest[] {
   const id = 'gallery-demo-request';
   if (answered.has(id)) return [];
-  const b = briefForSeed(3);
+  const b = briefForSeed(2);
   const prompt = imagePrompt(b);
   return [
     {
       id,
       runId: 'run-2026-09-28-gallery-live',
-      key: `manual-orbit-chat::${IMAGE_TEST}::seed-3::r0`,
+      key: `manual-orbit-chat::${IMAGE_TEST}::seed-2::r0`,
       contestantId: 'manual-orbit-chat',
       contestantLabel: 'Orbit Chat (web)',
       testId: IMAGE_TEST,
       testName: 'The Gallery Masterpiece',
-      caseId: 'seed-3',
+      caseId: 'seed-2',
       label: 'painting',
       messages: [{ role: 'user', content: prompt }],
       combinedPrompt: prompt,

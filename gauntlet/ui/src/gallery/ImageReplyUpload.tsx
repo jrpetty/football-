@@ -128,7 +128,7 @@ export function ImageReplyUpload({ req, onDone }: { req: ManualRequest; onDone: 
   };
 
   return (
-    <div className="stack tight" style={{ minWidth: 0, flex: 1 }}>
+    <div className="stack tight" style={{ minWidth: 0, flex: 1, alignContent: 'start' }}>
       <span className="step-title">Upload the picture it made</span>
       <div className="gp-upload">
         <div

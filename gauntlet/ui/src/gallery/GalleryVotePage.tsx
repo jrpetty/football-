@@ -108,7 +108,8 @@ export default function GalleryVotePage({ runId }: { runId: string }) {
   if (error) return <ErrorState error={error} onRetry={reload} title="Couldn’t load this run" />;
   if (!run || !brief) return <ErrorState error={new Error('This run has no Gallery paintings')} />;
 
-  const cols = wallColumns(paintings.length);
+  // Up to five paintings hang in one row so a live audience sees them all at once.
+  const cols = paintings.length <= 5 ? Math.max(1, paintings.length) : wallColumns(paintings.length);
   const leaders = paintings.filter((e) => max > 0 && (votes[e.key] ?? 0) === max);
   return (
     <div className="page gallery-page vote-page">

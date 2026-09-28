@@ -102,6 +102,11 @@ export default function RunDetailPage({ runId }: { runId: string }) {
                 <Icon.Eye /> Watch it think
               </Link>
             )}
+            {m.tests.some((t) => t.id.startsWith('art.gallery-')) && (
+              <Link to={pathOf('gallery', runId)} className="btn" title="The Gallery: every painting of each commission on a museum wall">
+                <Icon.Image /> The Gallery
+              </Link>
+            )}
             {d.results.length > 0 && (
               <Link to={pathOf('present', runId)} className="btn" title="Episode presenter: full-screen slides for recording">
                 <Icon.Present /> Present

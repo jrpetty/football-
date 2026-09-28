@@ -678,7 +678,7 @@
 }
 .ar-row {
   display: grid;
-  grid-template-columns: 11.5em 1fr 2.4em;
+  grid-template-columns: 9.6em minmax(0, 1fr) 2.4em;
   align-items: center;
   gap: 10px;
 }
@@ -736,7 +736,7 @@
 }
 .ar-scale {
   grid-template-columns: repeat(4, 1fr);
-  padding-left: calc(11.5em + 10px);
+  padding-left: calc(9.6em + 10px);
   padding-right: calc(2.4em + 10px);
 }
 .ar-scale span:nth-child(2) {
@@ -796,12 +796,12 @@
 /* ───────────────────────── Inspector panel ───────────────────────── */
 
 .gal-result {
-  padding: 34px 30px 26px;
+  padding: 34px 24px 26px;
 }
 .gal-result-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 1fr);
-  gap: 30px;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 26px;
   align-items: start;
 }
 .gal-result-left {
@@ -825,7 +825,12 @@
 }
 .gal-result-right {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
+  min-width: 0;
+}
+.gal-result-left {
+  min-width: 0;
 }
 .gal-toolbar {
   display: flex;

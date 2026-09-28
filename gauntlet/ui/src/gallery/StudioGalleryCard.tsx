@@ -49,10 +49,10 @@ const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 
 export function galleryThumbHtml(headline: string, sub: string, items: Array<{ src: string; label: string; color: string; title: string; score: number }>): string {
   const n = items.length;
-  const w = n === 1 ? 640 : n === 2 ? 470 : 350;
+  const w = n === 1 ? 640 : n === 2 ? 500 : 368;
   const frames = items
     .map(
-      (it, i) => `<div class="slot${i === 0 ? ' first' : ''}"><div class="spot"></div><div class="frame" style="width:${w}px"><div class="liner"><img src="${it.src}" style="width:100%;aspect-ratio:3/2;object-fit:cover;display:block"></div></div><div class="plac"><i>${esc(it.title)}</i><b><span style="background:${esc(it.color)}"></span>${esc(it.label)}</b><em>${Math.round(it.score * 100)}/100</em></div>${i === 0 ? '<div class="ros">★</div>' : ''}</div>`,
+      (it, i) => `<div class="slot${i === 0 ? ' first' : ''}"><div class="spot"></div><div class="frame" style="width:${w}px"><div class="liner"><img src="${it.src}" style="width:100%;aspect-ratio:3/2;object-fit:cover;display:block"></div></div><div class="plac"><i>${esc(it.title)}</i><div class="pr"><b><span style="background:${esc(it.color)}"></span>${esc(it.label)}</b><em>${Math.round(it.score * 100)}/100</em></div></div>${i === 0 ? '<div class="ros">★</div>' : ''}</div>`,
     )
     .join('');
   return `<!doctype html><html><head><meta charset="utf-8"><style>
@@ -67,9 +67,9 @@ body{font-family:'Palatino Linotype',Palatino,'Book Antiqua',Charter,'Bitstream 
 .frame{position:relative;padding:16px;background:repeating-linear-gradient(90deg,rgba(90,60,10,.12) 0 2px,transparent 2px 7px),linear-gradient(135deg,#6f501b,#d6b460 16%,#f7e3a2 27%,#b48b3a 44%,#e8c979 60%,#8c6926 78%,#dcb962 92%,#7a5a20);box-shadow:0 26px 40px -18px rgba(0,0,0,.85),inset 0 2px 1px rgba(255,255,255,.3)}
 .liner{padding:5px;background:linear-gradient(135deg,#efe4c8,#d8c9a4)}
 .first .frame{transform:scale(1.06);transform-origin:bottom center}
-.plac{position:relative;display:grid;gap:1px;min-width:240px;padding:8px 14px;background:#f4efe4;color:#231d16;font-size:18px;box-shadow:0 10px 18px -10px rgba(0,0,0,.7)}
+.plac{position:relative;display:grid;gap:1px;width:100%;max-width:340px;padding:8px 14px;background:#f4efe4;color:#231d16;font-size:18px;box-shadow:0 10px 18px -10px rgba(0,0,0,.7)}
 .plac i{font-size:17px}.plac b{font-family:system-ui,sans-serif;font-size:19px;display:flex;align-items:center;gap:8px}.plac b span{width:12px;height:12px;border-radius:50%}
-.plac em{position:absolute;right:12px;bottom:8px;font-style:normal;font-family:system-ui,sans-serif;font-weight:800;font-size:22px}
+.pr{display:flex;justify-content:space-between;align-items:baseline;gap:16px}.plac em{font-style:normal;font-family:system-ui,sans-serif;font-weight:800;font-size:22px;white-space:nowrap}
 .ros{position:absolute;top:-26px;right:-18px;width:62px;height:62px;border-radius:50%;display:grid;place-items:center;font-size:30px;color:#8a5f10;background:radial-gradient(circle,#f8dc84 55%,#b8871b 57%);box-shadow:0 6px 12px rgba(0,0,0,.5)}
 </style></head><body><div class="h"><b>${esc(headline)}</b><small>${esc(sub)}</small></div><div class="row">${frames}</div></body></html>`;
 }
