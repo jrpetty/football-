@@ -104,28 +104,47 @@ function bidirectionalBfs(start, goal, R, C) {
   }
   return null;
 }
-function idaManhattan(start, R, C) {
+// Linear conflict, computed independently of sliding.py: two tiles in their goal row (or column) whose
+// order is reversed must spend two extra moves. Counted as (tiles in line) - (longest increasing run).
+function conflicts(goals) {
+  const tails = [];
+  for (const g of goals) {
+    let lo = 0, hi = tails.length;
+    while (lo < hi) { const m = (lo + hi) >> 1; if (tails[m] < g) lo = m + 1; else hi = m; }
+    tails[lo] = g;
+  }
+  return goals.length - tails.length;
+}
+function lcHeuristic(b, R, C) {
+  let h = manhattan(b, R, C);
+  for (let r = 0; r < R; r++) {
+    const g = [];
+    for (let c = 0; c < C; c++) { const v = b[r * C + c]; if (v && Math.floor((v - 1) / C) === r) g.push((v - 1) % C); }
+    h += 2 * conflicts(g);
+  }
+  for (let c = 0; c < C; c++) {
+    const g = [];
+    for (let r = 0; r < R; r++) { const v = b[r * C + c]; if (v && (v - 1) % C === c) g.push(Math.floor((v - 1) / C)); }
+    h += 2 * conflicts(g);
+  }
+  return h;
+}
+function idaStar(start, R, C) {
   const b = start.slice();
   let z = b.indexOf(0);
-  let bound = manhattan(b, R, C);
-  let h = bound;
-  let nodes = 0;
+  let bound = lcHeuristic(b, R, C);
+  let found = -1;
   const search = (g, prevZ) => {
-    nodes++;
-    const f = g + h;
-    if (f > bound) return f;
-    if (h === 0) return -1;
+    const h = lcHeuristic(b, R, C);
+    if (g + h > bound) return g + h;
+    if (h === 0) { found = g; return -1; }
     let min = Infinity;
     for (const t of moves(z, R, C)) {
       if (t === prevZ) continue;
-      const tile = b[t];
-      const gr = Math.floor((tile - 1) / C), gc = (tile - 1) % C;
-      const before = Math.abs(gr - Math.floor(t / C)) + Math.abs(gc - (t % C));
-      const after = Math.abs(gr - Math.floor(z / C)) + Math.abs(gc - (z % C));
-      const oz = z;
-      b[z] = tile; b[t] = 0; z = t; h += after - before;
+      const tile = b[t], oz = z;
+      b[z] = tile; b[t] = 0; z = t;
       const res = search(g + 1, oz);
-      b[t] = tile; b[oz] = 0; z = oz; h -= after - before;
+      b[t] = tile; b[oz] = 0; z = oz;
       if (res === -1) return -1;
       if (res < min) min = res;
     }
@@ -133,7 +152,7 @@ function idaManhattan(start, R, C) {
   };
   for (;;) {
     const res = search(0, -1);
-    if (res === -1) return { length: bound, nodes };
+    if (res === -1) return found;
     bound = res;
   }
 }
@@ -148,7 +167,7 @@ function idaManhattan(start, R, C) {
     const start = sb.flat(), goal = gb.flat();
     const goalOk = goal.every((v, i) => v === (i === R * C - 1 ? 0 : i + 1));
     const promptOk = JSON.stringify(start) === JSON.stringify(c.expected.start) && R === c.expected.rows && C === c.expected.cols;
-    const opt = R * C <= 9 ? bidirectionalBfs(start, goal, R, C) : idaManhattan(start, R, C).length;
+    const opt = R * C <= 9 ? bidirectionalBfs(start, goal, R, C) : idaStar(start, R, C);
     // replay the stored optimal plan
     const b = start.slice();
     let legal = true;

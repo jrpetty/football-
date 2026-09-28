@@ -20,7 +20,7 @@ import random
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 # level -> (digits of m, digits of e)
-DIGITS = {1: (3, 2), 2: (4, 3), 3: (5, 4), 4: (6, 5), 5: (8, 6), 6: (10, 8), 7: (12, 10), 8: (15, 12), 9: (18, 15), 10: (24, 20)}
+DIGITS = {1: (8, 7), 2: (10, 8), 3: (12, 10), 4: (14, 12), 5: (16, 14), 6: (20, 17), 7: (24, 20), 8: (30, 25), 9: (36, 30), 10: (44, 36)}
 SMALL_PRIMES = [p for p in range(3, 200) if all(p % q for q in range(2, int(p ** 0.5) + 1))]
 
 

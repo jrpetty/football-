@@ -1,7 +1,7 @@
 """Horizon: The Sliding Ladder (horizon.sliding-ladder).
 
 Ten sliding-tile puzzles (3x3, 3x4 and 4x4 boards) with a proven minimum number of moves that grows every
-level: 8, 12, 16, 20, 24, 28 (3x3), 32, 38 (3x4), 44, 50 (4x4). The model must give a complete plan (the
+level: 20, 24, 27, 30 (3x3), 36, 42 (3x4), 46, 50, 53, 56 (4x4). The model must give a complete plan (the
 tile numbers in the order they slide). The scorer replays the plan: an optimal plan scores full marks, any
 other plan that really solves the puzzle scores a little.
 
@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import os
 import random
+import subprocess
 import sys
 import time
 from collections import deque
@@ -24,8 +25,8 @@ from collections import deque
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 # level -> (rows, cols, optimal length)
-LEVELS = {1: (3, 3, 8), 2: (3, 3, 12), 3: (3, 3, 16), 4: (3, 3, 20), 5: (3, 3, 24), 6: (3, 3, 28),
-          7: (3, 4, 32), 8: (3, 4, 38), 9: (4, 4, 44), 10: (4, 4, 50)}
+LEVELS = {1: (3, 3, 20), 2: (3, 3, 24), 3: (3, 3, 27), 4: (3, 3, 30), 5: (3, 4, 36), 6: (3, 4, 42),
+          7: (4, 4, 46), 8: (4, 4, 50), 9: (4, 4, 53), 10: (4, 4, 56)}
 
 
 def goal(r: int, c: int) -> tuple:
@@ -158,15 +159,21 @@ def make(level, rng, dist3):
         assert len(plan) == target == dist3[start]
     else:
         tries = 0
+        fast = os.environ.get('HORIZON_SLIDE15')  # optional: compiled slide15.c, to find candidates faster
         while True:
             tries += 1
             start = solvable_scramble(r, c, rng.randint(target, target * 4), rng)
             if heuristic(start, r, c) < target - 12 or heuristic(start, r, c) > target:
                 continue
             t0 = time.time()
+            if fast:
+                out = subprocess.run([fast, str(r), str(c), *map(str, start), str(target)], capture_output=True, text=True, check=True).stdout.split()
+                if int(out[0]) != target:
+                    continue
+                print(f'  L{level}: candidate after {tries} scrambles (C search {time.time() - t0:.1f}s); proving in Python...', flush=True)
             plan = ida_star(start, r, c, limit=target)
             if plan is not None and len(plan) == target:
-                print(f'  L{level}: found after {tries} scrambles, IDA* {time.time() - t0:.1f}s', flush=True)
+                print(f'  L{level}: found after {tries} scrambles, Python IDA* {time.time() - t0:.1f}s', flush=True)
                 break
     assert apply(start, r, c, plan) == goal(r, c)
     return {'level': level, 'rows': r, 'cols': c, 'start': list(start), 'optimal': len(plan), 'plan': plan}

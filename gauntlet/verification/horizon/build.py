@@ -59,13 +59,13 @@ def mind_runner():
         'category': 'horizon',
         'description': ('Ten generated JavaScript programs that the model must execute in its head and '
                         'report the exact number printed. Level N executes about twice as many statements as level N-1 '
-                        '(about 20 up to about 11,000). Every loop iteration feeds the next (a 16-bit xorshift register, a '
+                        '(about 150 up to about 73,000). Every loop iteration feeds the next (a 16-bit xorshift register, a '
                         'linear congruential counter, array cells picked by them and a running hash), so nothing can be skipped '
                         'or pattern-matched: one wrong bit anywhere changes the answer. Keys come from actually running every '
                         'program in two languages.'),
         'difficulty': 'extreme',
         'tags': ['horizon', 'ladder', 'program-tracing', 'execution-verified'],
-        'hook': 'Can it run a program for 10,000 steps in its head?',
+        'hook': 'Can it run a program for 70,000 steps in its head?',
         'maxOutputTokens': 64000, 'timeLimitSec': 3600,
         'estimate': {'inputTokens': 2400, 'outputTokens': 30000},
         'author': 'Gauntlet Horizon', 'createdAt': CREATED,
@@ -94,13 +94,13 @@ def modpow():
     return {
         'kind': 'prompt', 'id': 'horizon.modpow-ladder', 'version': VERSION, 'name': 'Horizon: No Calculator',
         'category': 'horizon',
-        'description': ('Ten exact modular powers a^e mod m, from a 3-digit modulus to a 24-digit one with a 20-digit exponent. '
+        'description': ('Ten exact modular powers a^e mod m, from an 8-digit modulus to a 44-digit one with a 36-digit exponent. '
                         'There is no trick: the only way is square-and-multiply, dozens of long multiplications and long divisions '
                         'done exactly. Every level has longer numbers and more steps. A single wrong digit anywhere gives a '
                         'different answer. Keys are computed by two independent big-integer implementations.'),
         'difficulty': 'extreme',
         'tags': ['horizon', 'ladder', 'arithmetic', 'number-theory', 'exact'],
-        'hook': 'Can it do 24-digit arithmetic in its head, with no mistakes?',
+        'hook': 'Can it do 44-digit arithmetic in its head, with no mistakes?',
         'maxOutputTokens': 64000, 'timeLimitSec': 3600,
         'estimate': {'inputTokens': 250, 'outputTokens': 30000},
         'author': 'Gauntlet Horizon', 'createdAt': CREATED,
@@ -138,13 +138,13 @@ def sliding():
     return {
         'kind': 'prompt', 'id': 'horizon.sliding-ladder', 'version': VERSION, 'name': 'Horizon: The Sliding Ladder',
         'category': 'horizon',
-        'description': ('Ten sliding-tile puzzles on 3x3, 3x4 and 4x4 boards whose proven minimum grows every level: 8, 12, 16, '
-                        '20, 24, 28, 32, 38, 44 and 50 moves. The model writes the whole plan; the scorer replays it tile by tile. '
+        'description': ('Ten sliding-tile puzzles on 3x3, 3x4 and 4x4 boards whose proven minimum grows every level: 20, 24, 27, '
+                        '30, 36, 42, 46, 50, 53 and 56 moves. The model writes the whole plan; the scorer replays it tile by tile. '
                         'Only a plan of exactly the minimum length scores full marks, so the model has to search deep and be sure '
                         'nothing shorter exists. Every minimum is proven by exhaustive search in two languages.'),
         'difficulty': 'extreme',
         'tags': ['horizon', 'ladder', 'planning', 'search', 'bfs-verified'],
-        'hook': 'Can it find the shortest solution when the answer is 50 moves long?',
+        'hook': 'Can it find the shortest solution when the answer is 56 moves long?',
         'maxOutputTokens': 64000, 'timeLimitSec': 3600,
         'estimate': {'inputTokens': 400, 'outputTokens': 30000},
         'author': 'Gauntlet Horizon', 'createdAt': CREATED,
@@ -173,20 +173,21 @@ def nonogram():
             'id': f"L{c['level']:02d}",
             'prompt': prompt,
             'expected': c['solution'],
-            'notes': (f"[level {c['level']}] {R}x{C}, {sum(r.count('#') for r in c['solution'])} filled cells. Uniqueness proven by "
+            'notes': (f"[level {c['level']}] {R}x{C}, {sum(r.count('#') for r in c['solution'])} filled cells; {c['undecidedByLineLogic']} cells stay open after pure row/column logic. Uniqueness proven by "
                       'OR-Tools CP-SAT (automaton constraints; the found solution is excluded and the solver proves infeasibility) and '
                       'independently by a JavaScript line-solver with backtracking that counts solutions (verify.mjs).'),
         })
     return {
         'kind': 'prompt', 'id': 'horizon.nonogram-ladder', 'version': VERSION, 'name': 'Horizon: The Picture Logic Ladder',
         'category': 'horizon',
-        'description': ('Ten nonograms (paint-by-numbers logic puzzles) from 5x5 up to 25x25, 625 cells, each with exactly one '
+        'description': ('Ten nonograms (paint-by-numbers logic puzzles) from 8x8 up to 35x35, 1,225 cells, each with exactly one '
                         'solution. The pictures are random, so nothing can be guessed from a shape: every cell has to be deduced from '
-                        'the row and column clues, and the big ones need long chains of deductions and case analysis. The whole grid '
+                        'the row and column clues. From level 3 on, looking at one row or column at a time is not enough: a growing '
+                        'share of the grid can only be settled by case analysis (try a cell, follow it to a contradiction). The whole grid '
                         'must be exactly right. Uniqueness is proven by two independent solvers.'),
         'difficulty': 'extreme',
         'tags': ['horizon', 'ladder', 'constraint-puzzle', 'nonogram', 'sat-verified'],
-        'hook': 'Can it deduce a 625-cell picture from numbers alone?',
+        'hook': 'Can it deduce a 1,225-cell picture from numbers alone?',
         'maxOutputTokens': 64000, 'timeLimitSec': 3600,
         'estimate': {'inputTokens': 700, 'outputTokens': 30000},
         'author': 'Gauntlet Horizon', 'createdAt': CREATED,
@@ -219,13 +220,13 @@ def tilings():
     return {
         'kind': 'prompt', 'id': 'horizon.tiling-count', 'version': VERSION, 'name': 'Horizon: Count Every Tiling',
         'category': 'horizon',
-        'description': ('Ten boards with holes, from 4x4 to 10x12. The task: the exact number of ways to cover each board with '
-                        'dominoes, a count that grows from a couple of dozen to over a billion. It can be done by hand, column by '
-                        'column, but only by keeping perfect books over hundreds of partial patterns. Keys are computed by two '
+        'description': ('Ten boards with holes, from 6x6 to 16x14. The task: the exact number of ways to cover each board with '
+                        'dominoes, a count that grows from 110 to a 22-digit number. It can be done by hand, column by '
+                        'column, but only by keeping perfect books over thousands of partial patterns. Keys are computed by two '
                         'different exact algorithms.'),
         'difficulty': 'extreme',
         'tags': ['horizon', 'ladder', 'combinatorics', 'counting', 'exact'],
-        'hook': 'Can it count a billion domino tilings without missing one?',
+        'hook': 'Can it count every domino tiling when the answer has 22 digits?',
         'maxOutputTokens': 64000, 'timeLimitSec': 3600,
         'estimate': {'inputTokens': 350, 'outputTokens': 30000},
         'author': 'Gauntlet Horizon', 'createdAt': CREATED,

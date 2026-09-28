@@ -2,7 +2,7 @@
 
 Ten boards with holes; the task is the exact number of ways to cover every remaining square with
 dominoes (1x2 tiles, either orientation, no overlaps, nothing sticking out). The boards grow every level,
-from 4x4 to 10x12, so the count grows from tens to about 10^14.
+from 6x6 to 16x14, so the count grows from tens to astronomically large numbers.
 
 Pencil-and-paper method: a column-by-column count (a "transfer matrix"), keeping for every pattern of
 dominoes that stick into the next column how many ways lead to it. That is exactly the method used here
@@ -21,8 +21,8 @@ from collections import deque
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 # level -> (rows, cols, holes)
-LEVELS = {1: (4, 4, 2), 2: (4, 6, 2), 3: (5, 6, 2), 4: (6, 6, 4), 5: (6, 8, 4), 6: (7, 8, 4),
-          7: (8, 8, 6), 8: (8, 10, 6), 9: (9, 10, 8), 10: (10, 12, 8)}
+LEVELS = {1: (6, 6, 4), 2: (6, 8, 4), 3: (8, 7, 4), 4: (8, 8, 6), 5: (10, 8, 6), 6: (10, 10, 6),
+          7: (12, 10, 8), 8: (12, 12, 8), 9: (14, 12, 10), 10: (16, 14, 12)}
 
 
 def count_tilings(board: list[str]) -> int:

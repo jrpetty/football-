@@ -26,7 +26,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 MASK = 65535
 
 # Level -> (target executed statements, lower, upper). Roughly doubles per level.
-TARGETS = {1: 20, 2: 40, 3: 80, 4: 160, 5: 320, 6: 640, 7: 1280, 8: 2560, 9: 5120, 10: 10240}
+TARGETS = {1: 160, 2: 320, 3: 640, 4: 1280, 5: 2560, 6: 5120, 7: 10240, 8: 20480, 9: 40960, 10: 81920}
 
 
 # ─── syntax tree ─────────────────────────────────────────────────────────────
@@ -357,7 +357,7 @@ def make(level: int, seed: int):
         rng = random.Random(seed * 1000 + attempt)
         g = Gen(rng, level)
         base = g.program()
-        for factor in [1, 1.5, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256]:
+        for factor in [1.25 ** k for k in range(0, 60)]:
             parts = g.scale(base, factor)
             counted = render(*parts, g.scalars, 'py', count=True)
             value, steps = map(int, run([sys.executable], counted, '.py').split())
