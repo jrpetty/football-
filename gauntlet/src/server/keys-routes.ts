@@ -34,7 +34,7 @@ function providerModels(providerId: string): Array<{ id: string; label: string }
 
 /** The cheapest enabled model of a provider: the one used for the optional test message. */
 function cheapestModel(providerId: string): string | undefined {
-  const list = loadContestants().filter((c) => c.provider === providerId && c.enabled);
+  const list = loadContestants().filter((c) => c.provider === providerId && c.enabled && !c.imageOnly);
   list.sort((a, b) => a.pricing.inputPerM + a.pricing.outputPerM * 4 - (b.pricing.inputPerM + b.pricing.outputPerM * 4));
   return list[0]?.id;
 }

@@ -29,12 +29,14 @@ import type {
 import { createAdapter } from '../providers/index.ts';
 import { manualEvents } from '../providers/manual.ts';
 import { PROGRAMS } from '../programs/index.ts';
-import { scoreResponse, type JudgePanel } from '../scoring/index.ts';
+import { scoreResponse, type JudgePanel, type JudgeAskOptions } from '../scoring/index.ts';
 import { browserAvailable } from '../scoring/browser.ts';
 import { Semaphore } from './semaphore.ts';
 import { callWithRetry, createRecorder, effectiveMaxOutputTokens, OutOfTimeError, type CallPolicy, type CallTarget } from './recorder.ts';
 import { appendResult, createRunFolder, listRunIds, newRunId, readManifest, readResults, saveArtifact, writeManifest } from './store.ts';
 import { caseImageRefs, caseImageSizes, estimateImageTokens, loadTestImage, stripImageData, supportsVision, testBaseDir } from '../core/vision.ts';
+import { SKIP_NO_IMAGE_OUTPUT, SKIP_PICTURE_ONLY, estimateImageUsd, plannedImageSettings, supportsImageOutput } from '../core/image-output.ts';
+import type { ChatImage as JudgeImage, ProgramDefinition } from '../core/types.ts';
 
 interface Job {
   key: string;
@@ -139,9 +141,36 @@ function needsVision(t: LoadedTest & { caseFilter?: string[] }): boolean {
   return selectedCaseIds(t).some((id) => ids.has(id));
 }
 
+/** The program behind a program test (undefined for prompt tests). */
+function programOf(t: LoadedTest): ProgramDefinition | undefined {
+  const d = t.definition;
+  return d.kind === 'program' ? PROGRAMS[d.program] : undefined;
+}
+
+/** Tests whose cases ask the model for pictures (The Gallery Masterpiece). */
+function needsImageOutput(t: LoadedTest): boolean {
+  return !!programOf(t)?.requiresImageOutput;
+}
+
+/** Why a job is skipped because of image output (null = it runs): no image output, or a picture-only model on a text test. */
+function imageOutputSkip(t: LoadedTest, c: Contestant, providerType: ProviderType | undefined): string | null {
+  if (needsImageOutput(t)) return supportsImageOutput(c, providerType) ? null : SKIP_NO_IMAGE_OUTPUT;
+  return c.imageOnly ? SKIP_PICTURE_ONLY : null;
+}
+
+/**
+ * Judges for a program that declares judge rules: `vision` keeps only judges that accept images, `strictVendor`
+ * drops every judge from the contestant's vendor (no fallback) and the contestant's own model.
+ */
+export function programJudgePool(judges: ContestantSnapshot[], contestant: Contestant, rules: NonNullable<ProgramDefinition['judges']>, providerTypeOf: (c: Contestant) => ProviderType | undefined, excludeSameVendor = true): ContestantSnapshot[] {
+  const pool = judges.filter((j) => !rules.vision || supportsVision(j, providerTypeOf(j)));
+  if (rules.strictVendor) return pool.filter((j) => j.vendor.toLowerCase() !== contestant.vendor.toLowerCase() && !(j.model === contestant.model && j.provider === contestant.provider));
+  return selectJudges(pool, contestant, excludeSameVendor);
+}
+
 function usesJudges(t: LoadedTest): boolean {
   const d = t.definition;
-  if (d.kind !== 'prompt') return false;
+  if (d.kind === 'program') return !!PROGRAMS[d.program]?.judges;
   return d.cases.some((c) => {
     const s = caseScorer(d, c);
     return s.type === 'judge' || s.type === 'judge-classify' || (s.type === 'artifact' && (s.judgeWeight ?? 0) > 0);
@@ -204,6 +233,20 @@ export function planRun(req: RunRequest): RunPlan {
     const blind = contestants.filter((c) => !supportsVision(c, providerOf(c)?.type));
     if (blind.length && req.forceVision) warnings.push(`${blind.map((c) => c.label).join(', ')}: not marked as accepting images, but image cases are forced on — the API may reject them`);
     else if (blind.length) warnings.push(`${blind.map((c) => c.label).join(', ')}: no image input — ${visionTests.length} vision test(s) will be skipped for ${blind.length === 1 ? 'this model' : 'these models'} (not scored as 0, left out of the means)`);
+  }
+  const pictureTests = tests.filter((t) => needsImageOutput(t));
+  if (pictureTests.length) {
+    const noPictures = contestants.filter((c) => !supportsImageOutput(c, providerOf(c)?.type));
+    if (noPictures.length) warnings.push(`${noPictures.map((c) => c.label).join(', ')}: no image output — ${pictureTests.length} picture-making test(s) will be skipped for ${noPictures.length === 1 ? 'this model' : 'these models'} (not scored as 0, left out of the means)`);
+  }
+  const pictureOnly = contestants.filter((c) => c.imageOnly);
+  if (pictureOnly.length && tests.some((t) => !needsImageOutput(t))) warnings.push(`${pictureOnly.map((c) => c.label).join(', ')}: picture-only ${pictureOnly.length === 1 ? 'model' : 'models'} — text tests are skipped for ${pictureOnly.length === 1 ? 'it' : 'them'}`);
+  for (const t of tests) {
+    const rules = programOf(t)?.judges;
+    if (!rules || !judgeNeeded) continue;
+    const snaps = judges.map((j) => snapshotContestant(j));
+    const short = contestants.filter((c) => !imageOutputSkip(t, c, providerOf(c)?.type) && programJudgePool(snaps, c, rules, (j) => providerOf(j)?.type).length < 2);
+    if (short.length) warnings.push(`${t.definition.name}: fewer than 2 eligible judges${rules.vision ? ' that can see images' : ''}${rules.strictVendor ? ' from another company' : ''} for ${short.map((c) => c.label).join(', ')} — ${short.length === 1 ? 'its' : 'their'} paintings will wait for your own rating in Blind Review`);
   }
   const manual = contestants.filter((c) => providerOf(c)?.type === 'manual');
   if (manual.length) warnings.push(`${manual.map((c) => c.label).join(', ')}: manual contestant — every prompt waits in the Manual Inbox for you to paste the model's reply`);
@@ -313,6 +356,7 @@ export async function estimateRun(req: RunRequest): Promise<RunEstimate> {
     const providerType = providers.find((p) => p.id === c.provider)?.type;
     const isManual = providerType === 'manual';
     const sees = plan.forceVision || supportsVision(c, providerType);
+    const provider = providers.find((p) => p.id === c.provider);
     const cfg = contestantConfigHash(c);
     let jobs = 0;
     let cost = 0;
@@ -321,7 +365,7 @@ export async function estimateRun(req: RunRequest): Promise<RunEstimate> {
       const selected = selectedCaseIds(t);
       const visionIds = visionCaseIds(t);
       // Skipped image cases cost nothing; the ones that run pay for their image tokens (see estimateImageTokens).
-      const runnable = sees ? selected : selected.filter((id) => !visionIds.has(id));
+      const runnable = imageOutputSkip(t, c, providerType) ? [] : sees ? selected : selected.filter((id) => !visionIds.has(id));
       const n = runnable.length * plan.repeats;
       let imageTokens = 0;
       if (sees && t.definition.kind === 'prompt' && visionIds.size) {
@@ -355,7 +399,9 @@ export async function estimateRun(req: RunRequest): Promise<RunEstimate> {
       }
       // A model cannot write more than its own output limit (a Game Jam game hits it; see Contestant.maxOutputTokens).
       output = Math.min(output, effectiveMaxOutputTokens(c, Math.max(output, 1)));
-      const testCost = isManual ? 0 : (n * (input * c.pricing.inputPerM + output * c.pricing.outputPerM)) / 1e6;
+      const pictures = programOf(t)?.imagesPerCase ?? 0;
+      // Picture-making programs are billed per image (plus the prompt text), not per output token.
+      const testCost = isManual ? 0 : pictures > 0 ? n * estimateImageUsd(c, pictures, input, plannedImageSettings(c, provider?.baseUrl, providerType)) : (n * (input * c.pricing.inputPerM + output * c.pricing.outputPerM)) / 1e6;
       jobs += selected.length * plan.repeats;
       calls += n * perCaseCalls;
       cost += testCost;
@@ -363,7 +409,23 @@ export async function estimateRun(req: RunRequest): Promise<RunEstimate> {
       perTest[i]!.perContestant[c.id] = Math.round(testCost * 10000) / 10000;
       if (perTest[i]!.basis !== 'measured') perTest[i]!.basis = basis;
       const judgePool = plan.plannedJudges;
-      if (usesJudges(t) && judgePool.length) {
+      const rules = programOf(t)?.judges;
+      if (rules && judgePool.length) {
+        // Program judges (e.g. the Gallery): the declared per-judge usage, plus each judge's image tokens.
+        const panel = programJudgePool(judgePool.map((j) => snapshotContestant(j)), c, rules, (j) => providers.find((p) => p.id === j.provider)?.type, plan.judgeExcludeSameVendor);
+        let jc = 0;
+        if (obs && obs.all.judgeUsd > 0) jc = (obs.all.judgeUsd / obs.all.n) * n;
+        else
+          for (const j of panel) {
+            const jType = providers.find((p) => p.id === j.provider)?.type;
+            const imgTok = (rules.perCase.images ?? 0) * estimateImageTokens(rules.perCase.imageSize?.width ?? 1536, rules.perCase.imageSize?.height ?? 1024, jType, j.model);
+            jc += (n * ((rules.perCase.inputTokens + imgTok) * j.pricing.inputPerM + rules.perCase.outputTokens * j.pricing.outputPerM)) / 1e6;
+          }
+        calls += n * panel.length;
+        judgeCost += jc;
+        high += jc * 1.5;
+        perTest[i]!.judgeUsd = Math.round((perTest[i]!.judgeUsd + jc) * 10000) / 10000;
+      } else if (usesJudges(t) && judgePool.length) {
         const panel = plan.judgeExcludeSameVendor && judgePool.some((j) => j.vendor !== c.vendor) ? judgePool.filter((j) => j.vendor !== c.vendor) : judgePool;
         let jc = 0;
         if (obs && obs.all.judgeUsd > 0) jc = (obs.all.judgeUsd / obs.all.n) * n * (panel.length / Math.max(1, judgePool.length));
@@ -673,7 +735,7 @@ function clamp01(n: number): number {
 }
 
 /** A vision case for a model without image input: recorded as skipped (not scored, excluded from means). */
-function skippedResult(job: Job, manifest: RunManifest): CaseResult {
+function skippedResult(job: Job, manifest: RunManifest, reason?: string): CaseResult {
   const at = now();
   return {
     key: job.key,
@@ -689,8 +751,15 @@ function skippedResult(job: Job, manifest: RunManifest): CaseResult {
     status: 'skipped',
     score: null,
     passed: null,
-    summary: 'Skipped — model has no image input',
-    scoreDetail: { notes: 'This case shows the model an image. The model is not marked as accepting images (vision: true in config/models.json), so the case was not sent and is left out of every mean. Start the run with "Force image cases" to send it anyway.' },
+    summary: reason ?? 'Skipped — model has no image input',
+    scoreDetail: {
+      notes:
+        reason === SKIP_NO_IMAGE_OUTPUT
+          ? 'This test asks the model to make a picture. The model is not marked as making images (imageOutput: true in config/models.json), so the case was not sent and is left out of every mean. Chat apps can still take part through a Manual (copy & paste) contestant.'
+          : reason === SKIP_PICTURE_ONLY
+            ? 'This model only makes pictures (imageOnly: true in config/models.json), so text tests are not sent to it and are left out of every mean.'
+            : 'This case shows the model an image. The model is not marked as accepting images (vision: true in config/models.json), so the case was not sent and is left out of every mean. Start the run with "Force image cases" to send it anyway.',
+    },
     metrics: { wallMs: 0, ttftMs: null, apiCalls: 0, inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cachedInputTokens: 0, costUsd: 0, judgeCostUsd: 0, outputTokensPerSec: null, retries: 0, responseChars: 0 },
     transcript: [],
     artifacts: [],
@@ -702,6 +771,11 @@ function skippedResult(job: Job, manifest: RunManifest): CaseResult {
 async function executeJob(job: Job, env: JobEnv): Promise<CaseResult> {
   const { manifest, settings } = env;
   const def = job.test.definition;
+  const pictureSkip = imageOutputSkip(job.test, job.contestant, env.providerTypeOf(job.contestant));
+  if (pictureSkip) {
+    env.emit({ type: 'job.started', runId: manifest.id, key: job.key, contestantId: job.contestant.id, testId: def.id, caseId: job.caseId, repeat: job.repeat, at: now() });
+    return skippedResult(job, manifest, pictureSkip);
+  }
   if (!manifest.settings.forceVision && !supportsVision(job.contestant, env.providerTypeOf(job.contestant)) && visionCaseIds(job.test).has(job.caseId)) {
     env.emit({ type: 'job.started', runId: manifest.id, key: job.key, contestantId: job.contestant.id, testId: def.id, caseId: job.caseId, repeat: job.repeat, at: now() });
     return skippedResult(job, manifest);
@@ -821,6 +895,15 @@ async function executeJob(job: Job, env: JobEnv): Promise<CaseResult> {
       const program = PROGRAMS[pdef.program];
       if (!program) throw new Error(`Program "${pdef.program}" is not registered`);
       const seed = job.seed ?? 0;
+      const programJudges = program.judges
+        ? createJudgePanel({
+            judges: programJudgePool(manifest.judges, job.contestant, program.judges, env.providerTypeOf, manifest.settings.judgeExcludeSameVendor ?? true),
+            targetFor: env.targetFor,
+            policy: env.policy,
+            signal: controller.signal,
+            record: (entry) => rec.recordJudge(entry),
+          })
+        : undefined;
       const ctx: ProgramContext = {
         seed,
         rng: createRng(seed),
@@ -831,10 +914,20 @@ async function executeJob(job: Job, env: JobEnv): Promise<CaseResult> {
         artifact: (name, kind, content) => {
           save(name, kind, content);
         },
+        artifactBytes: (name, kind, content) => {
+          save(name, kind, Buffer.from(content));
+        },
+        ...(programJudges ? { judges: programJudges } : {}),
       };
       const out = await program.run(ctx);
       score = clamp01(out.score);
       passed = out.passed ?? score >= 0.5;
+      if (out.status === 'refusal') status = 'refusal';
+      if (out.status === 'pending-human') {
+        status = 'pending-human';
+        score = null;
+        passed = null;
+      }
       summary = out.summary;
       detail = { ...out.detail };
       replay = out.replay;
@@ -930,8 +1023,11 @@ export function createJudgePanel(opts: {
   const providers = loadProviders();
   return {
     ids: judges.map((j) => j.id),
-    async ask(system, user, label, extra) {
+    async ask(system, user, label, extraOrImages?: JudgeAskOptions | JudgeImage[]) {
+      // Pictures come either as a list (program judges, e.g. the Gallery) or as ask options (e.g. The Game Jam).
+      const extra: JudgeAskOptions | undefined = Array.isArray(extraOrImages) ? { images: extraOrImages } : extraOrImages;
       if (judges.length === 0) return [];
+      // Images go with the text in one message; transcripts keep only their names and sizes.
       return Promise.all(
         judges.map(async (j) => {
           const started = Date.now();

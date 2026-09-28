@@ -14,6 +14,7 @@ import type { ContestantView, ManualReply, ManualRequest, RunListItem } from '..
 import { VisionBadge, VisionImage } from '../components/VisionImage.tsx';
 import { manualImageUrl } from '../vision.ts';
 import { GAMES } from '../../../src/arena/games/index.ts';
+import { ImageReplyUpload } from '../gallery/ImageReplyUpload.tsx';
 
 /** Arena games whose seat-swapped pair shares hidden cards (duplicate poker): a remembering chat would leak them. */
 const needsFreshChat = (req: ManualRequest) => req.testId.startsWith('arena.') && Boolean(GAMES[req.testId.slice(6)]?.sequentialPairs);
@@ -80,6 +81,8 @@ function RequestCard({
   const [busy, setBusy] = useState(false);
   const copyRef = useRef<HTMLButtonElement>(null);
   const prompt = view === 'same' && req.isContinuation ? req.latestUserMessage : req.combinedPrompt;
+  // The Gallery Masterpiece: the reply is a picture, uploaded instead of pasted.
+  const picture = req.expects === 'image';
   // Images to attach: with "same chat" only the newest message's; otherwise every image in the conversation.
   const images = req.messages.flatMap((m, mi) => (view === 'same' && req.isContinuation && mi !== req.messages.length - 1 ? [] : (m.images ?? []).map((img, ii) => ({ img, mi, ii }))));
 
@@ -135,6 +138,7 @@ function RequestCard({
         <span className="badge accent">{req.label}</span>
         {req.isContinuation && <span className="badge outline">multi-turn</span>}
         {req.messages.some((m) => m.images?.length) && <VisionBadge />}
+        {picture && <span className="badge gold-badge">picture reply</span>}
         <span className="spacer" />
         <span className="muted nowrap" style={{ fontSize: '0.8rem' }} title={new Date(req.createdAt).toLocaleString()}>
           waiting {fmtRelative(req.createdAt).replace(' ago', '')}
@@ -156,7 +160,7 @@ function RequestCard({
               <span className="n">1</span>
               <div className="stack tight" style={{ minWidth: 0, flex: 1 }}>
                 <div className="row wrap" style={{ gap: 10 }}>
-                  <strong className="step-title">{view === 'same' && req.isContinuation ? 'Continue the SAME chat' : 'Paste into a NEW chat'}</strong>
+                  <strong className="step-title">{picture ? 'Paste into a NEW chat in any picture-making app' : view === 'same' && req.isContinuation ? 'Continue the SAME chat' : 'Paste into a NEW chat'}</strong>
                   {req.isContinuation && (
                     <Seg
                       small
@@ -208,6 +212,9 @@ function RequestCard({
             </div>
             <div className="step">
               <span className="n">2</span>
+              {picture ? (
+                <ImageReplyUpload req={req} onDone={onDone} />
+              ) : (
               <div className="stack tight" style={{ minWidth: 0, flex: 1 }}>
                 <label className="step-title" htmlFor={`reply-${req.id}`}>
                   Paste the model’s full reply
@@ -249,6 +256,7 @@ function RequestCard({
                   </div>
                 </details>
               </div>
+              )}
             </div>
           </div>
           <div className="inbox-actions">
@@ -273,12 +281,16 @@ function RequestCard({
                     {runName}
                   </Link>
                 )}
-                <span className="muted hide-mobile" style={{ fontSize: '0.78rem' }}>
-                  <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd>
-                </span>
-                <button className="btn primary" onClick={submit} disabled={busy || !draft.text.trim()}>
-                  <Icon.Check /> Submit reply
-                </button>
+                {!picture && (
+                  <>
+                    <span className="muted hide-mobile" style={{ fontSize: '0.78rem' }}>
+                      <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd>
+                    </span>
+                    <button className="btn primary" onClick={submit} disabled={busy || !draft.text.trim()}>
+                      <Icon.Check /> Submit reply
+                    </button>
+                  </>
+                )}
               </>
             )}
           </div>

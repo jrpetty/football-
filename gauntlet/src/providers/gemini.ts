@@ -1,4 +1,5 @@
 import type { ChatMessage, CompletionRequest, CompletionResult, StopReason } from '../core/types.ts';
+import { geminiImageGenerate } from './image-gen.ts';
 import { type AdapterContext, type ProviderAdapter, ProviderError, deepMerge, isAbortError, isRetryableStatus, parseRetryAfter } from './types.ts';
 
 const STOP_MAP: Record<string, StopReason> = {
@@ -43,6 +44,7 @@ export function createGeminiAdapter(ctx: AdapterContext): ProviderAdapter {
   const opts = ctx.contestant.options ?? {};
 
   return {
+    generateImage: (req) => geminiImageGenerate(ctx, req),
     async complete(req: CompletionRequest): Promise<Omit<CompletionResult, 'retries'>> {
       const generationConfig: Record<string, unknown> = { maxOutputTokens: req.maxOutputTokens };
       if (opts.supportsTemperature && req.temperature !== undefined) generationConfig.temperature = opts.temperature ?? req.temperature;

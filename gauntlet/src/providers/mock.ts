@@ -1,6 +1,7 @@
 import { createRng, hashString } from '../core/rng.ts';
 import type { CompletionRequest, CompletionResult } from '../core/types.ts';
 import type { AdapterContext, ProviderAdapter } from './types.ts';
+import { baselineImage } from './image-gen.ts';
 
 /**
  * The Random Baseline. Makes no network calls. It answers the way a
@@ -12,6 +13,7 @@ import type { AdapterContext, ProviderAdapter } from './types.ts';
  */
 export function createMockAdapter(ctx: AdapterContext): ProviderAdapter {
   return {
+    generateImage: (req) => baselineImage(ctx, req),
     async complete(req: CompletionRequest): Promise<Omit<CompletionResult, 'retries'>> {
       const last = [...req.messages].reverse().find((m) => m.role === 'user')?.content ?? '';
       const all = (req.system ?? '') + '\n' + req.messages.map((m) => m.content).join('\n');

@@ -1,6 +1,7 @@
 import { createRng } from '../core/rng.ts';
 import { bootstrapCi, clusterMean, mean, median, stdDev } from '../core/stats.ts';
 import type { CaseResult, CategoryInfo, Contestant, Leaderboard, LeaderboardRow, MedalEntry, TestAggregate } from '../core/types.ts';
+import { isImageOutputSkip } from '../core/image-output.ts';
 
 export interface AggregateTest {
   id: string;
@@ -54,7 +55,7 @@ function aggregateTest(testId: string, results: CaseResult[]): TestAggregate {
     errors: results.filter((r) => r.status === 'error').length,
     pendingHuman: results.filter((r) => r.status === 'pending-human').length,
     ...(results.some((r) => r.status === 'skipped') ? { skipped: results.filter((r) => r.status === 'skipped').length } : {}),
-    summary: mid?.summary ?? (results.length && results.every((r) => r.status === 'skipped') ? 'Skipped — model has no image input' : undefined),
+    summary: mid?.summary ?? (results.length && results.every((r) => r.status === 'skipped') ? results[0]!.summary || 'Skipped — model has no image input' : undefined),
   };
 }
 
@@ -173,6 +174,7 @@ export function buildLeaderboard(opts: {
         refusals: mine.filter((r) => r.status === 'refusal').length,
         wallMs: mine.reduce((s, r) => s + r.metrics.wallMs, 0),
         ...(mine.some((r) => r.status === 'skipped') ? { skipped: mine.filter((r) => r.status === 'skipped').length } : {}),
+        ...(mine.some((r) => r.status === 'skipped' && isImageOutputSkip(r.summary)) ? { skippedImageOutput: mine.filter((r) => r.status === 'skipped' && isImageOutputSkip(r.summary)).length } : {}),
       },
       speed: {
         medianTtftMs: median(scored.map((r) => r.metrics.ttftMs).filter((v): v is number => v !== null)),

@@ -98,7 +98,7 @@ function panel(text: string | null, calls: string[] = []): JudgePanel {
       calls.push(user);
       if (text === null) return [{ judgeId: 'a@judge', text: '', error: 'HTTP 500' }];
       return [
-        { judgeId: 'a@judge', text, sawImages: Boolean(opts?.images?.length) },
+        { judgeId: 'a@judge', text, sawImages: Boolean((Array.isArray(opts) ? opts : opts?.images)?.length) },
         { judgeId: 'b@judge', text: text.replace('CREATIVITY: 9', 'CREATIVITY: 2').replace(/PASS/g, 'FAIL'), sawImages: false },
       ];
     },

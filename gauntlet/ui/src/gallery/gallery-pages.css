@@ -1,0 +1,420 @@
+/* The Gallery pages: rooms, blind vote, the Manual Inbox picture upload. */
+
+.gallery-page {
+  display: grid;
+  gap: 18px;
+}
+
+.gal-rooms {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.gal-room-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  padding: 7px 14px 7px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  color: var(--text-2);
+  font: inherit;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+.gal-room-tab:hover {
+  color: var(--text-1);
+  border-color: var(--border-strong);
+}
+.gal-room-tab.active {
+  color: var(--text-1);
+  border-color: color-mix(in srgb, #e7c979 70%, transparent);
+  background: color-mix(in srgb, #e7c979 14%, var(--surface-1));
+}
+.grt-n {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--surface-3);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+.gal-room-tab.active .grt-n {
+  background: #c9a24a;
+  color: #1b1408;
+}
+.grt-t {
+  font-family: var(--gal-serif);
+  font-style: italic;
+  white-space: nowrap;
+}
+
+.gal-hall {
+  padding: 30px 0 26px;
+}
+.gal-hall.is-full,
+.gal-hall:fullscreen {
+  border-radius: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  font-size: clamp(15px, 1.05vw, 26px);
+}
+.gal-hall:fullscreen .gal-hall-tools {
+  opacity: 0.25;
+}
+.gal-hall:fullscreen .gal-hall-tools:hover {
+  opacity: 1;
+}
+.gal-hall-tools {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  display: flex;
+  gap: 6px;
+  z-index: 3;
+  transition: opacity 0.2s;
+}
+.gal-hall-tools kbd {
+  font-size: 0.68rem;
+}
+.gal-room-head {
+  text-align: center;
+  padding: 0 40px;
+  color: var(--gal-ink);
+}
+.grh-eyebrow {
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gal-ink-3);
+}
+.grh-title {
+  margin: 4px 0 2px;
+  font-family: var(--gal-serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 2.3rem;
+  letter-spacing: 0.005em;
+  color: var(--gal-ink);
+}
+.grh-medium {
+  font-family: var(--gal-serif);
+  font-size: 1rem;
+  color: var(--gal-ink-2);
+}
+.grh-elements {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 8px;
+  max-width: 1200px;
+  margin: 14px auto 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: el;
+}
+.grh-elements li {
+  counter-increment: el;
+  padding: 3px 12px 3px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--gal-card-line);
+  background: var(--gal-card);
+  font-size: 0.8rem;
+  color: var(--gal-ink-2);
+}
+.grh-elements li::before {
+  content: counter(el);
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: color-mix(in srgb, #e7c979 30%, transparent);
+  color: var(--gal-ink);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+.gal-hall-note,
+.gal-hall-legend {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 32px;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--gal-ink-3);
+}
+.gal-hall-note {
+  margin-bottom: 8px;
+  color: var(--gal-ink-2);
+}
+.gal-hall-legend b {
+  color: var(--gal-ink-2);
+}
+
+.gal-detail {
+  scroll-margin-top: 20px;
+}
+
+.gal-best {
+  display: grid;
+  grid-template-columns: minmax(0, 520px) 1fr;
+  gap: 36px;
+  align-items: center;
+  padding: 44px 44px 36px;
+}
+.gal-best-art {
+  position: relative;
+}
+.gal-best-art::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -60px;
+  width: 150%;
+  height: 130%;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse 50% 58% at 50% 12%, var(--gal-spot) 0%, transparent 70%);
+  z-index: -1;
+}
+.gal-best-text {
+  color: var(--gal-ink);
+}
+.gal-best-by {
+  font-size: 1rem;
+  color: var(--gal-ink-2);
+}
+.gal-best-by b {
+  color: var(--gal-ink);
+}
+
+.gal-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 12px;
+}
+.gal-pick {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  padding: 16px 18px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  color: var(--text-1);
+  font: inherit;
+  cursor: pointer;
+}
+.gal-pick:hover {
+  border-color: color-mix(in srgb, #e7c979 60%, transparent);
+}
+.gal-pick-name {
+  font-family: var(--gal-serif);
+  font-style: italic;
+  font-size: 1.15rem;
+}
+.gal-pick-meta {
+  font-size: 0.8rem;
+  color: var(--text-3);
+}
+
+/* ───────── Blind vote ───────── */
+.vote-hall {
+  padding-top: 34px;
+}
+.vote-slot {
+  gap: 14px;
+}
+.vote-letter {
+  position: absolute;
+  top: -22px;
+  left: -14px;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: #f4efe4;
+  color: #231d16;
+  font-family: var(--gal-serif);
+  font-size: 1.5rem;
+  font-weight: 700;
+  box-shadow: 0 6px 12px -4px rgba(0, 0, 0, 0.6), 0 0 0 2px #c9a24a;
+}
+.vote-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(100%, 330px);
+}
+.vote-meter {
+  position: relative;
+  flex: 1;
+  height: 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--gal-ink) 12%, transparent);
+  overflow: hidden;
+}
+.vote-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(90deg, #2f5fb3, #8fb8ff);
+  transition: width 0.3s ease;
+}
+.vote-count {
+  min-width: 2ch;
+  text-align: right;
+  font-size: 1.3rem;
+  color: var(--gal-ink);
+}
+.vote-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--gal-card-line);
+  background: var(--gal-card);
+  color: var(--gal-ink);
+  font: inherit;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.vote-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.vote-slot.is-lead .gal-frame {
+  box-shadow:
+    0 0 0 3px rgba(143, 184, 255, 0.75),
+    0 28px 44px -22px rgba(0, 0, 0, 0.75);
+}
+.vote-foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 40px 12px;
+  color: var(--gal-ink);
+}
+.vote-total {
+  font-family: var(--gal-serif);
+  font-size: 1.3rem;
+  font-style: italic;
+}
+@media (prefers-reduced-motion: reduce) {
+  .vote-fill {
+    transition: none;
+  }
+}
+
+/* ───────── Manual Inbox picture upload ───────── */
+.badge.gold-badge {
+  background: color-mix(in srgb, #e7c979 22%, transparent);
+  border-color: color-mix(in srgb, #c9a24a 60%, transparent);
+  color: var(--text-1);
+}
+.gp-upload {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(240px, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.gp-drop {
+  display: grid;
+  place-items: center;
+  min-height: 230px;
+  padding: 18px;
+  border: 2px dashed var(--border-strong);
+  border-radius: 12px;
+  background: var(--surface-inset);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.gp-drop.is-over,
+.gp-drop:hover {
+  border-color: #c9a24a;
+  background: color-mix(in srgb, #e7c979 8%, var(--surface-inset));
+}
+.gp-drop:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.gp-drop.has-picture {
+  border-style: solid;
+  padding: 26px 30px;
+}
+.gp-drop .gal-art {
+  max-width: 440px;
+}
+.gp-drop-empty {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  text-align: center;
+  color: var(--text-2);
+  font-size: 0.86rem;
+}
+.gp-drop-empty svg {
+  width: 30px;
+  height: 30px;
+  color: #c9a24a;
+}
+.gp-drop-empty b {
+  font-size: 1rem;
+  color: var(--text-1);
+}
+.gp-upload-side {
+  display: grid;
+  gap: 10px;
+}
+.gp-facts-list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 12px;
+  margin: 0;
+  font-size: 0.86rem;
+}
+.gp-facts-list dt {
+  color: var(--text-3);
+}
+.gp-facts-list dd {
+  margin: 0;
+}
+.gp-warn {
+  margin: 0;
+  font-size: 0.8rem;
+}
+@media (max-width: 900px) {
+  .gp-upload,
+  .gal-best {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Broadcast (B): the room fills the screen; paintings sized so wall, placards and caption fit at 1920×1080. */
+html[data-broadcast='on'] .gal-hall .gal-wall {
+  padding-top: 44px;
+  padding-bottom: 150px;
+}
+.gal-wall.is-one-row {
+  --gap: 34px;
+  padding-left: 34px;
+  padding-right: 34px;
+}
+.gal-wall.is-one-row > .gal-slot {
+  max-width: 520px;
+}
+.gal-wall.is-one-row .gal-placard {
+  width: 100%;
+  font-size: 0.82rem;
+}
+html[data-broadcast='on'] .gal-hall .grh-title {
+  font-size: 2.1rem;
+}

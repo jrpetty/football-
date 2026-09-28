@@ -39,6 +39,7 @@ import { TRICK_RUN_SPEC, TRICK_SUITE, TRICK_TESTS, decorateTrick, trickResponse 
 import { CODE_AGENT_PROGRAM, CODE_AGENT_TEST, codeAgentReplay, codeAgentSummary } from './codeAgentMock.ts';
 import { VISUAL_RUN_SPEC, VISUAL_TESTS, decorateVisual, visualDetail } from './caseVisualsMock.ts';
 import { simReplay } from './simReplayMock.ts';
+import { GALLERY_CONTESTANTS, GALLERY_PROGRAMS, GALLERY_RUN_SPEC, GALLERY_TESTS, decorateGallery, galleryDetail } from './galleryMock.ts';
 import { VISUAL_PASS_PROGRAMS, VISUAL_PASS_RUN_SPEC, VISUAL_PASS_TESTS, decorateVisualPass, visualPassDetail } from './visualPassMock.ts';
 import { GAME_JAM_RUN_SPEC, GAME_JAM_SUITE, GAME_JAM_TESTS, decorateGameJam, gameJamDetail } from './gameJamMock.ts';
 
@@ -752,7 +753,7 @@ function genLite(runId: string, c: ContestantView, t: TestDefinition, caseId: st
   if (type === 'human') artifacts.push({ name: 'page.html', kind: 'html', file: `${c.id}/${t.id}/${caseId}-r${repeat}.html`, bytes: 8000 + Math.round(r.next() * 9000) });
   if (t.kind === 'program' && t.program === 'draw-it-blind') artifacts.push({ name: 'reconstruction.svg', kind: 'svg', file: `${c.id}/${t.id}/${caseId}-r${repeat}.svg`, bytes: 2400 });
 
-  return decorateGameJam(t, decorateVisualPass(t, mockVisionSkip(decorateVisual(t, decorateTrick(t, {
+  return decorateGallery(t, decorateGameJam(t, decorateVisualPass(t, mockVisionSkip(decorateVisual(t, decorateTrick(t, {
     key,
     runId,
     contestantId: c.id,
@@ -775,7 +776,7 @@ function genLite(runId: string, c: ContestantView, t: TestDefinition, caseId: st
     finishedAt: finished,
     humanScores,
     hasReplay: t.kind === 'program',
-  }), SETTINGS.judges), c, t)));
+  }), SETTINGS.judges), c, t))));
 }
 
 function summaryText(t: TestDefinition, score: number | null, status: ResultStatus, u: number): string {
@@ -1408,6 +1409,7 @@ export function artifactContent(ref: ArtifactRef): string {
 
 export function detailFor(lite: CaseResultLite): CaseResult {
   const t = testById(lite.testId);
+  if (t && t.category === 'art') return galleryDetail({ ...lite, transcript: [], artifacts: lite.artifacts } as CaseResult);
   const vis = t && lite.status !== 'skipped' ? visualDetail(t, lite, renderedOf(t).find((x) => x.caseId === lite.caseId)?.turns ?? [''], SETTINGS.judges) : null;
   if (vis) return vis;
   const r = rngFrom(`detail|${lite.key}`);
@@ -1530,3 +1532,9 @@ RUN_SPECS.push(VISUAL_PASS_RUN_SPEC);
 TESTS.push(...GAME_JAM_TESTS.filter((t) => !TESTS.some((x) => x.id === t.id)));
 SUITES.push(GAME_JAM_SUITE);
 RUN_SPECS.push(GAME_JAM_RUN_SPEC);
+// The Gallery (paintings, judges' checklists, blind votes; see galleryMock.ts).
+TESTS.push(...GALLERY_TESTS);
+PROGRAMS.push(...GALLERY_PROGRAMS);
+CONTESTANTS.push(...GALLERY_CONTESTANTS);
+RUN_SPECS.push(GALLERY_RUN_SPEC);
+SUITES.push({ id: 'art', version: '1.0.0', name: 'Art', description: 'The Gallery Masterpiece and Painted in Code: museum commissions judged for brief and artistry.', tests: GALLERY_TESTS.map((t) => ({ id: t.id })), repeats: 1, fingerprint: 'fp-art-suite', testCount: GALLERY_TESTS.length });

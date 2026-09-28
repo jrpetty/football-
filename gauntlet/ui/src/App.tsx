@@ -47,6 +47,9 @@ const ViewerGuidePage = lazy(() => import('./pages/ViewerGuidePage.tsx'));
 // Head to Head (ui/src/versus/)
 const VersusPage = lazy(() => import('./versus/VersusPage.tsx'));
 const VersusDeckPage = lazy(() => import('./versus/VersusDeckPage.tsx'));
+// The Gallery (ui/src/gallery/)
+const GalleryPage = lazy(() => import('./gallery/GalleryPage.tsx'));
+const GalleryVotePage = lazy(() => import('./gallery/GalleryVotePage.tsx'));
 
 interface NavItem {
   to: string;
@@ -66,6 +69,7 @@ const NAV: NavItem[] = [
   { to: '/versus', label: 'Head to Head', icon: VersusIcon, match: (p) => p.startsWith('/versus') },
   { to: '/present', label: 'Presenter', icon: Icon.Present, match: (p) => p.startsWith('/present') },
   { to: '/studio', label: 'Studio', icon: Icon.Clapper, match: (p) => p.startsWith('/studio') },
+  { to: '/gallery', label: 'The Gallery', icon: Icon.Image, match: (p) => p.startsWith('/gallery') },
   { to: '/inbox', label: 'Manual Inbox', icon: Icon.Inbox, badge: 'manual', match: (p) => p.startsWith('/inbox') },
   { to: '/review', label: 'Blind Review', icon: Icon.Eye, match: (p) => p.startsWith('/review') },
   { to: '/tests', label: 'Tests', icon: Icon.Flask, section: 'Lab', match: (p) => p.startsWith('/tests') },
@@ -136,6 +140,10 @@ function resolve(parts: string[]): Resolved {
   if (a === 'review') return { el: <ReviewPage />, crumb: 'Blind Review' };
   if (a === 'methodology') return { el: <MethodologyPage />, crumb: 'Methodology' };
   if (a === 'guide') return b === 'show' ? { el: <ViewerGuidePage show />, crumb: 'Viewer guide', bare: true } : { el: <ViewerGuidePage />, crumb: 'Viewer guide' };
+  if (a === 'gallery') {
+    if (b && c === 'vote') return { el: <GalleryVotePage key={b} runId={b} />, crumb: 'Blind vote' };
+    return { el: <GalleryPage key={b ?? 'all'} runId={b} />, crumb: 'The Gallery' };
+  }
   if (a === 'inbox') return { el: <InboxPage />, crumb: 'Manual Inbox' };
   if (a === 'grade') return { el: <GradePage />, crumb: 'Grader' };
   if (a === 'costs') return { el: <CostsPage />, crumb: 'Cost Planner' };

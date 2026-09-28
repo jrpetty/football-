@@ -47,6 +47,7 @@ export const EXPLAIN_ICONS = [
   'cards',
   'mic',
   'gavel',
+  'palette',
   // Step icons
   'ask',
   'check',
@@ -347,6 +348,36 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     ],
     goodScore: '70 or more is a strong game; a frozen or blank game can never score above 30.',
     icon: 'gamepad',
+  },
+
+  // ─────────────── Art ───────────────
+  'art.gallery-masterpiece': {
+    hook: 'A museum commissions a painting. Can the AI paint a masterpiece to the brief?',
+    whatItTests: 'Making a picture that follows a precise brief (subject, six must-have details, style, palette, mood) and is also beautiful.',
+    whyHard: 'Image models love to drop details, add stray lettering or frames, and drift from the requested art style.',
+    howScored: [
+      { icon: 'eye', text: 'Two or more AI judges from other companies look at it' },
+      { icon: 'check', text: 'Half: every line of the brief, yes / partly / no' },
+      { icon: 'star', text: 'Half: artistry, six criteria scored 1–10' },
+      { icon: 'scale', text: 'Artistry is subjective: judge spread is shown' },
+    ],
+    goodScore: '70 or more is a strong painting; 100 needs every brief line met and a perfect 10 for artistry.',
+    icon: 'palette',
+    opening: 'A written commission from a museum: the subject and composition, six required elements, a medium and art style, the palette, the mood, what the artist may choose freely and three things that must not appear.',
+  },
+  'art.gallery-painted-in-code': {
+    hook: 'No brush, no image model: can it paint a museum commission in pure code?',
+    whatItTests: 'Painting the same museum briefs by writing SVG drawing code, turned into a picture and judged like a painting.',
+    whyHard: 'It has to build light, texture and figures out of shapes and gradients it can never see while it writes.',
+    howScored: [
+      { icon: 'code', text: 'The model writes one SVG; a browser renders it' },
+      { icon: 'check', text: 'Half: every line of the brief, yes / partly / no' },
+      { icon: 'star', text: 'Half: artistry, six criteria scored 1–10' },
+      { icon: 'eye', text: 'Two or more AI judges from other companies' },
+    ],
+    goodScore: '70 or more is a remarkable code painting; broken or missing SVG scores 0.',
+    icon: 'palette',
+    opening: 'The same written museum commission as The Gallery Masterpiece, with one extra rule: the painting must be a single SVG file, 1536 × 1024, with no text, images or scripts.',
   },
 
   // ─────────────── Extraction ───────────────

@@ -100,6 +100,33 @@ export interface Contestant {
    * not part of the config hash: it only turns would-be API errors into valid calls, never changes a successful one.
    */
   maxOutputTokens?: number;
+  /** Can generate images (The Gallery Masterpiece). Missing = no; models without it are skipped on image-output tests. */
+  imageOutput?: boolean;
+  /** Makes pictures only (e.g. gpt-image-1): every text test is skipped for it instead of failing. */
+  imageOnly?: boolean;
+  /** Per-image prices for image generation (see src/core/image-output.ts). */
+  imagePricing?: ImagePricing;
+  /** Image-generation request options (size, quality, …); see src/providers/image-gen.ts. */
+  imageOptions?: ImageOptions;
+}
+
+/**
+ * USD per generated image. `perImage[size][quality]`; "*" matches any size or quality (e.g. Gemini's flat price).
+ * Sizes are "WIDTHxHEIGHT" as sent to the API. Prompt text is billed on top at `pricing.inputPerM`.
+ */
+export interface ImagePricing {
+  perImage: Record<string, Record<string, number>>;
+  source?: string;
+  verifiedAt?: string | null;
+}
+
+export interface ImageOptions {
+  /** OpenAI-style size sent to /images/generations (null = don't send one, e.g. xAI). Default "1536x1024" on api.openai.com. */
+  size?: string | null;
+  /** OpenAI-style quality (low | medium | high; null = don't send). Default "high" on api.openai.com. */
+  quality?: string | null;
+  /** OpenAI-compatible only: response_format to request (xAI and DALL·E need "b64_json"; gpt-image models always return base64). */
+  responseFormat?: string | null;
 }
 
 /** Contestant plus derived runtime info (never includes secrets). */
@@ -159,6 +186,44 @@ export interface TokenUsage {
 }
 
 export type StopReason = 'end' | 'max_tokens' | 'refusal' | 'content_filter' | 'other';
+
+/** One image-generation call (The Gallery Masterpiece). */
+export interface ImageGenRequest {
+  prompt: string;
+  /** Wanted aspect ratio, e.g. "3:2" (mapped to each API's size / aspect setting). */
+  aspectRatio: string;
+  signal?: AbortSignal;
+  callContext?: CompletionRequest['callContext'];
+}
+
+export interface GeneratedImage {
+  mediaType: 'image/png' | 'image/jpeg';
+  /** Base64 bytes. */
+  data: string;
+  width: number;
+  height: number;
+  bytes: number;
+}
+
+export interface ImageGenResult {
+  /** Empty when the provider refused or returned no picture. */
+  images: GeneratedImage[];
+  /** Any text that came back (a refusal, a caption, a revised prompt). */
+  text: string;
+  usage: TokenUsage;
+  startedAt: number;
+  totalMs: number;
+  stopReason: StopReason;
+  rawStopReason: string;
+  servedModel: string;
+  requestId?: string;
+  /** Size and quality that were requested (they set the per-image price). */
+  size?: string;
+  quality?: string;
+  /** Explicit cost (manual entries). */
+  costUsd?: number;
+  manual?: boolean;
+}
 
 export interface CompletionResult {
   text: string;
@@ -414,6 +479,24 @@ export interface ModelHandle {
   complete(req: { system?: string; messages: ChatMessage[]; maxOutputTokens?: number; label?: string }): Promise<ModelReply>;
   /** Stateful chat with a fixed system prompt. */
   chat(system?: string): ChatSession;
+  /** Image generation (only for contestants with image output; see ProgramDefinition.requiresImageOutput). */
+  generateImage?(req: { prompt: string; aspectRatio?: string; label?: string }): Promise<ImageReply>;
+}
+
+export interface ImageReply {
+  /** The first returned picture, or null (refused / none returned). */
+  image: GeneratedImage | null;
+  text: string;
+  stopReason: StopReason;
+  totalMs: number;
+  costUsd: number;
+}
+
+/** Judge models for programs that declare `judges` (see ProgramDefinition). Images go to every judge in the same message. */
+export interface ProgramJudges {
+  /** Judge contestant ids on the panel (already filtered by the program's judge rules). */
+  ids: string[];
+  ask(system: string, user: string, label: string, images?: ChatImage[]): Promise<Array<{ judgeId: string; text: string; error?: string }>>;
 }
 
 export interface ReplayFrame {
@@ -485,6 +568,10 @@ export interface ProgramContext {
   signal: AbortSignal;
   /** Save a file artifact (HTML/SVG/text) shown in the UI. */
   artifact(name: string, kind: ArtifactKind, content: string): void;
+  /** Save a binary artifact (e.g. a generated picture). Optional: older harnesses and test helpers lack it. */
+  artifactBytes?(name: string, kind: ArtifactKind, content: Uint8Array): void;
+  /** The judge panel, for programs that declare `judges` (undefined otherwise). */
+  judges?: ProgramJudges;
 }
 
 export interface ProgramResult {
@@ -496,6 +583,8 @@ export interface ProgramResult {
   /** Structured metrics specific to the program (shown in the UI detail panel). */
   detail: Record<string, unknown>;
   replay?: ReplayData;
+  /** "refusal": the model refused (score 0, status refusal). "pending-human": not scorable yet (e.g. too few judges); a person rates it in Blind Review. */
+  status?: 'refusal' | 'pending-human';
 }
 
 export interface ProgramDefinition {
@@ -506,6 +595,16 @@ export interface ProgramDefinition {
   scoring: string;
   /** The program sends images: contestants without image input are skipped (like vision prompt tests). */
   requiresVision?: boolean;
+  /** The program asks the model for pictures (ModelHandle.generateImage): contestants without image output are skipped. */
+  requiresImageOutput?: boolean;
+  /**
+   * The program is judged by the judge panel (ctx.judges). `vision`: only judges that accept images;
+   * `strictVendor`: never a judge from the contestant's vendor (no fallback). `perCase` is the per-judge,
+   * per-case usage for cost estimates.
+   */
+  judges?: { vision?: boolean; strictVendor?: boolean; perCase: { inputTokens: number; outputTokens: number; images?: number; imageSize?: { width: number; height: number } } };
+  /** Pictures generated per case (image-output programs), for cost estimates. */
+  imagesPerCase?: number;
   /** Default config merged under the test's config. */
   defaults?: Record<string, unknown>;
   run(ctx: ProgramContext): Promise<ProgramResult>;
@@ -515,7 +614,7 @@ export interface ProgramDefinition {
 // Results
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type ArtifactKind = 'html' | 'svg' | 'text' | 'png' | 'json';
+export type ArtifactKind = 'html' | 'svg' | 'text' | 'png' | 'json' | 'jpg';
 
 export interface ArtifactRef {
   name: string;
@@ -751,6 +850,8 @@ export interface LeaderboardRow {
     wallMs: number;
     /** Vision cases skipped (no image input); excluded from every mean. */
     skipped?: number;
+    /** Of `skipped`: cases skipped because the model can't make pictures (image-output tests), or is picture-only. */
+    skippedImageOutput?: number;
   };
   speed: {
     medianTtftMs: number | null;
@@ -831,10 +932,16 @@ export interface ManualRequest {
   /** True when earlier turns exist: paste into the SAME conversation, or use combinedPrompt in a NEW one. */
   isContinuation: boolean;
   createdAt: string;
+  /** "image": the reply is a picture (upload or paste it; The Gallery Masterpiece). Missing = text. */
+  expects?: 'text' | 'image';
+  /** Image replies: the wanted aspect ratio, e.g. "3:2". */
+  aspectRatio?: string;
 }
 
 export interface ManualSubmission {
   text: string;
+  /** Image reply (requests with expects "image"). */
+  image?: GeneratedImage;
   inputTokens?: number;
   outputTokens?: number;
   reasoningTokens?: number;

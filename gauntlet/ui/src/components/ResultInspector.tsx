@@ -16,6 +16,8 @@ import { Jargon } from './clarity/Jargon.tsx';
 import { plainAttempt, plainCaseName, plainKey, plainValue } from './clarity/plain.ts';
 import { ModelBadge } from './viz/ModelBadge.tsx';
 import { AboutTestPanel } from './ExplainerCard.tsx';
+import { GalleryResultPanel } from './viz/GalleryResultPanel.tsx';
+import { briefForCase, isGalleryTest } from './viz/galleryModel.ts';
 
 export interface InspectorTarget {
   testId: string;
@@ -229,12 +231,13 @@ function ResultDetail({ runId, lite, names, target }: { runId: string; lite: Cas
 
   const arts = res.artifacts ?? [];
   const images = resultImages(res);
-  const showcase = !!showcaseArtifact(res) && (res.scoreDetail?.items?.length ?? 0) > 0;
+  const gallery = isGalleryTest(res.testId);
+  const showcase = !gallery && !!showcaseArtifact(res) && (res.scoreDetail?.items?.length ?? 0) > 0;
   return (
     <div className="stack loose">
       <div className="result-head">
         <ScorePill score={res.score} status={res.status} mode="pct" />
-        <ResultStatusBadge status={res.status} />
+        <ResultStatusBadge status={res.status} summary={res.summary} />
         <span className="result-summary">{res.summary || '—'}</span>
         <span className="spacer" />
         <span data-dev>
@@ -262,9 +265,12 @@ function ResultDetail({ runId, lite, names, target }: { runId: string; lite: Cas
       {tab === 'overview' && (
         <>
           <CaseVisualPanel res={res} modelLabel={target?.contestantLabel} names={names} />
+          {gallery && <GalleryResultPanel res={res} modelLabel={target?.contestantLabel} modelColor={target?.contestantColor} names={names} manual={res.transcript?.some((t) => t.rawStopReason === 'manual')} />}
           {images.length > 0 && <VisionResultPanel images={images} detail={res.scoreDetail ?? {}} passed={res.passed} />}
           {showcase && <ArtifactShowcase runId={runId} result={res} testId={res.testId} caseId={res.caseId} names={names} />}
-          {showcase ? (
+          {gallery ? (
+            <ScoreBreakdownView d={{ notes: res.scoreDetail?.notes }} passed={res.passed} humanScores={res.humanScores} names={names} />
+          ) : showcase ? (
             <ScoreBreakdownView d={{ ...res.scoreDetail, items: undefined, judge: undefined, consoleErrors: undefined, gameJam: undefined }} passed={res.passed} humanScores={res.humanScores} names={names} />
           ) : images.length > 0 ? (
             <ScoreBreakdownView d={{ ...res.scoreDetail, extracted: undefined, expected: undefined }} passed={res.passed} humanScores={res.humanScores} names={names} />
@@ -395,7 +401,7 @@ export function ResultInspector({
             >
               <div className="row" style={{ gap: 8 }}>
                 <span className="mono insp-case">
-                  <Jargon dev={r.caseId} plain={plainCaseName(r.caseId)} />
+                  {isGalleryTest(r.testId) && briefForCase(r.caseId) ? `No. ${briefForCase(r.caseId)!.n} · ${briefForCase(r.caseId)!.title}` : <Jargon dev={r.caseId} plain={plainCaseName(r.caseId)} />}
                 </span>
                 <span className="muted" style={{ fontSize: '0.76rem' }}>
                   <Jargon dev={`r${r.repeat + 1}`} plain={plainAttempt(r.repeat)} />

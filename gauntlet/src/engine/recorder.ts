@@ -3,6 +3,7 @@ import type { ChatMessage, ChatSession, CompletionRequest, CompletionResult, Con
 import { ProviderError, type ProviderAdapter } from '../providers/index.ts';
 import type { Semaphore } from './semaphore.ts';
 import { stripImageData } from '../core/vision.ts';
+import { recordedImageCall } from './image-recorder.ts';
 
 export interface CallPolicy {
   maxRetries: number;
@@ -266,5 +267,7 @@ export function createRecorder(opts: {
   };
 
   rec.handle = { complete, chat };
+  // Image generation (The Gallery Masterpiece) for providers that have an image API.
+  if (opts.target.adapter.generateImage) rec.handle.generateImage = recordedImageCall(rec, opts, () => `call ${++callNo}`);
   return rec;
 }

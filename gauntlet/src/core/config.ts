@@ -87,7 +87,9 @@ export function getContestant(id: string): Contestant {
 
 /** Hash of everything that affects model behaviour or cost (not label/colour). */
 export function contestantConfigHash(c: Contestant): string {
-  return contentHash({ provider: c.provider, model: c.model, options: c.options ?? {}, pricing: { i: c.pricing.inputPerM, o: c.pricing.outputPerM, c: c.pricing.cachedInputPerM, w: c.pricing.cacheWritePerM } });
+  const base = { provider: c.provider, model: c.model, options: c.options ?? {}, pricing: { i: c.pricing.inputPerM, o: c.pricing.outputPerM, c: c.pricing.cachedInputPerM, w: c.pricing.cacheWritePerM } };
+  // Picture settings only count for picture-making contestants, so every other contestant keeps its hash.
+  return contentHash(c.imageOutput ? { ...base, image: { options: c.imageOptions ?? {}, perImage: c.imagePricing?.perImage ?? null } } : base);
 }
 
 export function hasApiKey(provider: ProviderConfig): boolean {
@@ -123,6 +125,13 @@ export function validateContestant(c: Contestant): string[] {
   const pr = c.pricing;
   if (!pr || !(pr.inputPerM >= 0) || !(pr.outputPerM >= 0)) errors.push('pricing.inputPerM and pricing.outputPerM must be numbers ≥ 0');
   if (c.vision !== undefined && typeof c.vision !== 'boolean') errors.push('vision must be true or false');
+  if (c.imageOutput !== undefined && typeof c.imageOutput !== 'boolean') errors.push('imageOutput must be true or false');
+  if (c.imageOnly !== undefined && typeof c.imageOnly !== 'boolean') errors.push('imageOnly must be true or false');
+  if (c.imagePricing !== undefined) {
+    const t = c.imagePricing?.perImage;
+    const ok = t && typeof t === 'object' && Object.values(t).every((row) => row && typeof row === 'object' && Object.values(row).every((v) => typeof v === 'number' && v >= 0));
+    if (!ok) errors.push('imagePricing.perImage must map sizes to { quality: USD per image } (use "*" for any size or quality)');
+  }
   if (c.releaseDate !== undefined && c.releaseDate !== '' && !/^\d{4}-\d{2}-\d{2}$/.test(c.releaseDate)) errors.push('releaseDate must be YYYY-MM-DD');
   if (c.tier !== undefined && !['flagship', 'mid', 'small'].includes(c.tier)) errors.push('tier must be flagship, mid or small');
   if (c.maxOutputTokens !== undefined && !(Number.isInteger(c.maxOutputTokens) && c.maxOutputTokens > 0)) errors.push('maxOutputTokens must be a positive whole number');

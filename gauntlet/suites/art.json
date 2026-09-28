@@ -1,0 +1,15 @@
+{
+  "id": "art",
+  "version": "1.0.0",
+  "name": "Art",
+  "description": "The Gallery Masterpiece: eight museum commissions painted by image models (The Gallery Masterpiece) and, separately, by text models writing SVG (Painted in Code). Vision judges from other companies check every line of the brief and score the artistry; the owner can rate the artistry in Blind Review. Models that cannot make pictures are skipped on the image test, not scored 0. One attempt per brief: art is expensive and judged, so repeats add cost more than certainty.",
+  "repeats": 1,
+  "tests": [
+    {
+      "id": "art.gallery-masterpiece"
+    },
+    {
+      "id": "art.gallery-painted-in-code"
+    }
+  ]
+}

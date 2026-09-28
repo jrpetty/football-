@@ -26,7 +26,8 @@ export interface JudgeAskOptions {
 /** A panel of judge models. `ask` calls every judge in parallel. */
 export interface JudgePanel {
   ids: string[];
-  ask(system: string, user: string, label: string, opts?: JudgeAskOptions): Promise<JudgeCall[]>;
+  /** Pictures go as ask options, or as a plain list (program judges, e.g. the Gallery). */
+  ask(system: string, user: string, label: string, opts?: JudgeAskOptions | ChatImage[]): Promise<JudgeCall[]>;
 }
 
 export interface ScoringInput {

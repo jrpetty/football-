@@ -53,6 +53,7 @@ async function captureOpening(run: (model: ModelHandle, signal: AbortSignal) => 
         send: async (userText: string): Promise<ModelReply> => stop(system, [...history, { role: 'user', content: userText }]),
       };
     },
+    generateImage: async (req) => stop(undefined, [{ role: 'user', content: req.prompt }]),
   };
   let timer: ReturnType<typeof setTimeout> | undefined;
   const limit = new Promise<void>((resolve) => {

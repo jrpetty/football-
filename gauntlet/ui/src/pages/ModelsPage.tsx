@@ -258,6 +258,12 @@ function ContestantForm({
               <label className="check" style={{ alignSelf: 'end', paddingBottom: 8 }} title="Vision tests are skipped (not scored as 0) for models that don’t accept images">
                 <input type="checkbox" checked={!!c.vision} onChange={(e) => set({ vision: e.target.checked })} /> Accepts images (vision tests)
               </label>
+              <label className="check" style={{ alignSelf: 'end', paddingBottom: 8 }} title="The Gallery Masterpiece is skipped (not scored as 0) for models that can’t make pictures">
+                <input type="checkbox" checked={!!c.imageOutput} onChange={(e) => set({ imageOutput: e.target.checked || undefined })} /> Makes images (The Gallery)
+              </label>
+              <label className="check" style={{ alignSelf: 'end', paddingBottom: 8 }} title="Picture-only models (e.g. gpt-image-1) are skipped on every text test">
+                <input type="checkbox" checked={!!c.imageOnly} onChange={(e) => set({ imageOnly: e.target.checked || undefined })} /> Pictures only
+              </label>
               <Field label="Temperature" hint={c.options?.supportsTemperature ? 'Overrides the harness default.' : 'Only sent when accepted.'}>
                 <input className="input tnum" type="number" step={0.1} min={0} max={2} disabled={!c.options?.supportsTemperature} placeholder="harness default" value={c.options?.temperature ?? ''} onChange={(e) => setOpt({ temperature: numOrU(e.target.value) })} />
               </Field>
@@ -504,6 +510,13 @@ export default function ModelsPage() {
                         {c.vision && (
                           <div>
                             <VisionBadge label="sees images" />
+                          </div>
+                        )}
+                        {c.imageOutput && (
+                          <div>
+                            <span className="badge outline" title={c.imagePricing ? 'Per-image prices in config/models.json → imagePricing' : 'No per-image price set: billed by tokens'}>
+                              {c.imageOnly ? 'paints only' : 'paints'}
+                            </span>
                           </div>
                         )}
                       </td>

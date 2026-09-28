@@ -174,6 +174,7 @@ node src/cli.ts arena new --game courtroom --models a,b --case missing-violin
 | `core` | **Standard tier.** The official benchmark: 21 tests across the 11 text categories. Use this (3 repeats) for published results. |
 | `frontier` | **Frontier tier.** 17 extreme tests (extreme logic, olympiad maths, frontier coding, a Fix the Bug coding agent, adversarial system prompts, pressure honesty traps, hard variants of every simulation, the Fix the Bug coding agent) to separate the best models once they bunch up near the top of Core. |
 | `vision` | **Picture tests.** The model is shown an image: chart reading, spot the difference, handwritten maths, count & locate (25 cases). Models without image input are skipped, not scored as 0. Kept out of `core` so Core stays comparable. |
+| `art` | **The Gallery Masterpiece.** Eight museum commissions painted by image models (and, separately, by text models writing SVG: *Painted in Code*). Vision judges from other companies check every line of the brief and score the artistry; see [PLAYBOOK.md](docs/PLAYBOOK.md#running-the-gallery-test-ai-art). Models without image output are skipped. |
 | `quick` | A fast, cheap subset (one or two hard cases per test) for smoke tests and trying out new models. |
 | `trick` | **Can It Be Fooled?** 71 short trick questions (changed classics, false premises, 30-second lightning traps) graded exactly, with no judges. Made for YouTube Shorts: see [docs/PLAYBOOK.md](docs/PLAYBOOK.md#making-a-can-it-be-fooled-short). |
 | `all` | Everything, including custom tests. |

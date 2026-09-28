@@ -74,8 +74,16 @@ export function LeaderboardView({ lb, podium = true }: { lb: Leaderboard; podium
           </Callout>
         </div>
       )}
-      {lb.rows.some((r) => (r.totals.skipped ?? 0) > 0) && (() => {
-        const blind = lb.rows.filter((r) => (r.totals.skipped ?? 0) > 0).map((r) => r.label);
+      {lb.rows.some((r) => (r.totals.skippedImageOutput ?? 0) > 0) && (
+        <div className="no-broadcast">
+          <Callout tone="info" icon={<ImageGlyph />}>
+            <strong>Painting tests skipped for {lb.rows.filter((r) => (r.totals.skippedImageOutput ?? 0) > 0).map((r) => r.label).join(', ')}.</strong> A model that can’t make pictures is not asked to paint (and a picture-only model is not asked text
+            questions). Those cases are not scored as 0 and are left out of the averages.
+          </Callout>
+        </div>
+      )}
+      {lb.rows.some((r) => (r.totals.skipped ?? 0) > (r.totals.skippedImageOutput ?? 0)) && (() => {
+        const blind = lb.rows.filter((r) => (r.totals.skipped ?? 0) > (r.totals.skippedImageOutput ?? 0)).map((r) => r.label);
         const one = blind.length === 1;
         return (
           <div className="no-broadcast">

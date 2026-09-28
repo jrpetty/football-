@@ -55,6 +55,7 @@ import type { MockRun, RunSpec } from './fixtures.ts';
 import { mockTurnImages } from './vision.ts';
 import { mockExport, mockOverlay, mockPolish, mockPolishEstimate, mockStudio } from './studioMock.ts';
 import { finalizeLive, liveAnswerText, thinkTicks } from './liveMock.ts';
+import { answerGalleryRequest, galleryManualRequests } from './galleryMock.ts';
 
 const contestants: ContestantView[] = CONTESTANTS.map((c) => ({ ...c }));
 const tests: TestDefinition[] = [...TESTS];
@@ -786,9 +787,10 @@ export async function handle(method: string, fullPath: string, body: unknown): P
     case 'GET manual': {
       for (const [id, spec] of specs) if (spec.status === 'running') ensureSim(id);
       const runId = q.get('runId');
-      return [...manualPending.values()].map((p) => p.req).filter((r) => !runId || r.runId === runId).sort((x, y) => x.createdAt.localeCompare(y.createdAt));
+      return [...manualPending.values()].map((p) => p.req).concat(galleryManualRequests()).filter((r) => !runId || r.runId === runId).sort((x, y) => x.createdAt.localeCompare(y.createdAt));
     }
     case 'POST manual': {
+      if (c === 'image') return answerGalleryRequest(b);
       if (c === 'fail') {
         resolveManual(b, null, (body as { reason?: string })?.reason);
         return { ok: true };
@@ -885,6 +887,11 @@ export async function handle(method: string, fullPath: string, body: unknown): P
         const run = getRun(id);
         for (const r of run.results) {
           const t = tests.find((x) => x.id === r.testId);
+          if (t && t.category === 'art' && (r.status === 'ok' || r.status === 'pending-human') && (!testId || r.testId === testId)) {
+            const reason: ReviewItem['reason'] = r.scoreDetail?.humanScored ? 'human-scored' : r.scoreDetail?.judgeDisagreement ? 'judge-disagreement' : 'second-opinion';
+            out.push({ runId: id, key: r.key, testId: r.testId, caseId: r.caseId, contestantId: r.contestantId, status: r.status, score: r.score, humanScores: r.humanScores, reason });
+            continue;
+          }
           if (!t || t.kind !== 'prompt') continue;
           if (testId && r.testId !== testId) continue;
           let reason: ReviewItem['reason'] | null = null;

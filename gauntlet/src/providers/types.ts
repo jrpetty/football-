@@ -1,8 +1,10 @@
-import type { CompletionRequest, CompletionResult, Contestant, ProviderConfig } from '../core/types.ts';
+import type { CompletionRequest, CompletionResult, Contestant, ImageGenRequest, ImageGenResult, ProviderConfig } from '../core/types.ts';
 
 /** A single attempt at a completion. Retries are handled by the engine so every provider is retried identically. */
 export interface ProviderAdapter {
   complete(req: CompletionRequest): Promise<Omit<CompletionResult, 'retries'>>;
+  /** Image generation (src/providers/image-gen.ts); missing when the provider has no image API. */
+  generateImage?(req: ImageGenRequest): Promise<ImageGenResult>;
 }
 
 export interface AdapterContext {

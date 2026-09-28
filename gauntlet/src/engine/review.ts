@@ -2,6 +2,7 @@ import { mean } from '../core/stats.ts';
 import type { CaseResult, CaseResultLite } from '../core/types.ts';
 import { appendResult, listRunIds, readManifest, readResults, toLite } from './store.ts';
 import { loadTests } from '../core/registry.ts';
+import { applyGalleryHumanScores, isGalleryResult } from './gallery-review.ts';
 
 export interface ReviewItem {
   runId: string;
@@ -32,7 +33,8 @@ export function reviewQueue(testId?: string): ReviewItem[] {
   for (const runId of listRunIds()) {
     for (const r of readResults(runId)) {
       const disagreement = Boolean(r.scoreDetail.judgeDisagreement);
-      if ((!reviewable.has(r.testId) && !disagreement) || (testId && r.testId !== testId)) continue;
+      // Gallery paintings are always open to the owner's artistry rating.
+      if ((!reviewable.has(r.testId) && !disagreement && !isGalleryResult(r)) || (testId && r.testId !== testId)) continue;
       if (r.status === 'error' || r.status === 'cancelled') continue;
       const reason: ReviewItem['reason'] = r.status === 'pending-human' || r.scoreDetail.humanScored ? 'human-scored' : disagreement ? 'judge-disagreement' : 'second-opinion';
       out.push({ runId, key: r.key, testId: r.testId, caseId: r.caseId, contestantId: r.contestantId, status: r.status, score: r.score, humanScores: r.humanScores ?? [], reason });
@@ -51,6 +53,12 @@ export function submitHumanScore(input: { runId: string; key: string; score: num
   const humanScores = [...(current.humanScores ?? []).filter((h) => h.rater !== rater), { rater, score: input.score, at: new Date().toISOString(), note: input.note?.slice(0, 1000) }];
   const humanMean = mean(humanScores.map((h) => h.score))!;
   const updated: CaseResult = { ...current, humanScores, scoreDetail: { ...current.scoreDetail, humanScore: Math.round(humanMean * 10000) / 10000 } };
+  if (isGalleryResult(current)) {
+    // Gallery: named raters rate artistry (it replaces the judges'); blind votes are recorded only (src/engine/gallery-review.ts).
+    const g = applyGalleryHumanScores(updated);
+    appendResult(g);
+    return toLite(g);
+  }
   if (current.scoreDetail.judgeDisagreement) {
     // Judges disagreed: the human panel arbitrates and its mean becomes the score. The judges' verdicts stay on record.
     const automated = (current.scoreDetail.automatedScore as number | undefined) ?? current.score;

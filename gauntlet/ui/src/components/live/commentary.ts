@@ -178,7 +178,7 @@ function finish(st: CommentaryState, f: FinishedCaseLike, ctx: CommentaryContext
     if (f.status === 'timeout') say(`${who} runs out of time on ${test} ${q}`, 'bad', 'verdict');
     else if (f.status === 'error') say(`${who} hits an error on ${test} ${q} (not counted)`, 'warn', 'verdict');
     else if (f.status === 'refusal') say(`${who} refuses to answer ${test} ${q}`, 'bad', 'verdict');
-    else if (f.status === 'skipped') say(`${who} skips ${test} ${q}: it can’t see images`, 'info', 'verdict');
+    else if (f.status === 'skipped') say(`${who} skips ${test} ${q}: ${/image output/.test(f.summary ?? '') ? 'it can’t make pictures' : /picture-only/.test(f.summary ?? '') ? 'it only makes pictures' : 'it can’t see images'}`, 'info', 'verdict');
     else if (f.status === 'pending-human') say(`${who}’s answer to ${test} ${q} goes to a human judge`, 'info', 'verdict');
     else if (graded && perfect) {
       if (t?.kind === 'program' && extra) say(`${who} aces ${test} ${q}: ${extra}`, 'good', 'verdict');

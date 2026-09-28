@@ -25,7 +25,7 @@ export function verdictInfo(v: Pick<WatchVerdict, 'status' | 'score'>, program =
   if (v.status === 'timeout') return { tone: 'bad', mark: <Icon.Clock />, word: 'Out of time', score: '0' };
   if (v.status === 'error') return { tone: 'neutral', mark: <Icon.Alert />, word: 'Error · not counted', score: null };
   if (v.status === 'refusal') return { tone: 'bad', mark: X, word: 'Refused', score: '0' };
-  if (v.status === 'skipped') return { tone: 'neutral', mark: <Icon.EyeOff />, word: 'Skipped · no image input', score: null };
+  if (v.status === 'skipped') return { tone: 'neutral', mark: <Icon.EyeOff />, word: 'Skipped · not scored', score: null };
   if (v.status === 'pending-human') return { tone: 'neutral', mark: <Icon.Eye />, word: 'Sent to a human judge', score: null };
   if (v.score === null) return { tone: 'neutral', mark: <Icon.Info />, word: 'Not scored', score: null };
   const s = Math.round(v.score * 100);
