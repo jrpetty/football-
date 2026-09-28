@@ -575,6 +575,71 @@ to line it up before a real run.
 * The viewer caption strip (press **C** in Broadcast mode) explains the screen in one sentence. The tiles make room
   for it.
 
+## Running the Game Jam
+
+**The Game Jam** (`creative.game-jam`, in its own `games` suite) gives every model five full game design briefs and
+asks for a complete browser game for each, in one reply, as one HTML file: a juicy **Flappy Bird remake**, a
+**Command & Conquer-style RTS**, a **top-down action RPG**, a deliberately hardest **zombie survival** game (with
+balanced base building) and a **racer**. Each brief has 14 to 19 numbered requirements, controls, screens, feel
+targets and a "definition of done", and tells the model plainly that creativity is the biggest part of the score.
+
+**What it costs.** Games are long: each reply may use up to 64,000 output tokens (including thinking), about
+43,000 on average. For the whole jam (5 games, 1 repeat) the Cost Planner estimates, per model: Claude Fable 5.1
+about $10.90, Claude Opus 5.5 $4.35, Claude Sonnet 5 $2.20, GPT-5.6 Sol $6.50, GPT-5.6 Terra $3.25, Gemini 3.1 Pro
+$2.60, Gemini 3.5 Flash $1.95, Grok 4.7 $1.30, DeepSeek V4 Flash $0.26, plus about $1.25 of judges per model. Run
+`node src/cli.ts costs --suite games` for your exact prices, and use `--max-cost`.
+
+**How to run it.**
+
+```bash
+node src/cli.ts run --models claude-opus-5-5,gpt-5.6-sol,gemini-3.1-pro --suite games --repeats 1 --max-cost 40
+```
+
+Or **New Run → suite "The Game Jam"**. It runs once per model by default (a game costs dollars, not cents). Each
+case may take up to an hour (a 64k-token reply at 30 tokens/s is 35 minutes).
+
+**How it's scored.** Every game is played by a scripted "robot player" for its genre for 15 seconds in a headless
+browser (flaps; box-select and right-click orders; walking and attacking; WASD, aiming and shooting; accelerating
+and steering), on a fixed clock with fixed randomness, so a re-run of the same file gives the same screenshots.
+Five screenshots are kept (0.5, 3, 6, 10 and 15 s) and compared with an untouched copy of the page.
+
+* A quarter of the score: 10 automatic checks. The usual ones (it loads, no downloads from the internet, under
+  500 kB, no JavaScript errors, draws a canvas, reacts to input) plus four playtest checks (it shows a picture,
+  it keeps moving, it is still running after 15 s, no errors while playing).
+* Three quarters: two or three AI judges from other companies (never the model's own), who read the whole file
+  and, when they accept images, see the five screenshots. Each judge marks every numbered requirement PASS,
+  PARTIAL or FAIL and scores five things out of 10 against written anchors. The judge total weights:
+  **creativity & originality 30%**, requirement checklist 25%, does it actually play 15%, game feel 10%,
+  visual & audio polish 10%, ambition & depth 10%. Strong but different interpretations score as well as literal
+  ones; the zombie round's "base is balanced, not a win button" requirement only passes if the code enforces it.
+* A game that **froze** or showed a **blank screen**, or that downloads files, can never score above 30.
+* A reply that **ran out of output space** (hit the model's output limit, so the file is cut off) is still saved,
+  tested and shown, and says so in plain words; the judges are not asked, so it scores the automatic quarter at most.
+* Models whose API cannot write 64,000 tokens get their own limit instead (set `maxOutputTokens` on the model in
+  `config/models.json`; GPT-4o has 16,384), so they are not rejected by the API, and the Cost Planner uses that limit.
+
+**Your override.** Every game lands in **Blind Review** for an optional human rating; when the judges disagree by
+more than 3 points out of 10, your rating becomes the score. In the **Grader** you can paste any chatbot's reply to
+a round and get the same playtest, checks and judge card.
+
+**On screen.**
+
+* **Run detail → Game Jam**: the cabinet wall. One shelf per model, one arcade cabinet per genre; each screen flips
+  through the recorded playtest screenshots, a crown marks the best game of each genre, and the banner names the
+  **Game of the Jam** (best average; ties go to creativity). Click a cabinet for the full card.
+* The **card** (also in the result inspector and the Grader): **Play it** runs the game in a locked-down frame; the
+  filmstrip shows what the robot player saw with "moved" and "input" bars; "How the score adds up"; the judges'
+  scorecard with a dot per judge (so a split panel is visible) and each judge's one-line verdict; and the brief's
+  numbered requirements with ticks, dashes and crosses.
+* The **Presenter** adds one slide per genre, every model's game side by side as cabinets, then the Game of the Jam.
+* Try it all with no keys: `?mock=1` → Runs → "The Game Jam · five genres". The demo games are hand-written samples
+  (two complete entries, smaller ones and deliberately broken ones) that went through the real playtest; only the
+  demo judges were scripted.
+
+**Checking the checker.** `node verification/game-jam/e2e.mts` runs the sample games (working, syntax error,
+endless loop, blank canvas, cut-off reply) through the real scorer and asserts each is caught.
+`node verification/game-jam/briefs.mts` rebuilds the test file from the briefs.
+
 ## Cost-saving tips
 
 * Iterate on `quick` with 1 repeat. Use `core` with 3 repeats only for the published run.

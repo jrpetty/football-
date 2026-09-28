@@ -203,6 +203,7 @@ default repeat count. Bump the suite `version` when you change it.
 | The Honesty Trap | `honesty.honesty-trap` | Half these questions are lies. Will the model play along? |
 | Messy Text to Exact JSON | `extraction.structured-json` | Eight messy documents, one exact JSON schema. Every field is checked. |
 | Build a Game in One Shot | `creative.one-shot-games` | One prompt. One file. One playable game. |
+| The Game Jam (own `games` suite) | `creative.game-jam` | Five genres. One prompt each. Build the whole game. |
 | Precise SVG Illustration | `visual.svg-illustration` | Exactly three beams. Hands at exactly 304.25 degrees. |
 | Draw It Blind | `visual.draw-it-blind` | Describe it with no numbers. Redraw it from your own words. How close does it get? |
 | Needle in a Haystack | `long-context.needle-haystack` | 45,000 words. Ten needles. One near-miss decoy for each. Who reads to the end? |

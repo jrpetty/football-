@@ -31,6 +31,18 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
   });
 }
 
+/**
+ * Output-token limit actually sent for one call: the requested value, lowered to the contestant's configured cap
+ * (options.maxOutputTokensCap) and to the model's own API limit (maxOutputTokens), whichever is smallest.
+ */
+export function effectiveMaxOutputTokens(c: Pick<Contestant, 'options' | 'maxOutputTokens'>, requested: number): number {
+  let n = requested;
+  const cap = c.options?.maxOutputTokensCap;
+  if (cap) n = Math.min(n, cap);
+  if (c.maxOutputTokens && c.maxOutputTokens > 0) n = Math.min(n, c.maxOutputTokens);
+  return n;
+}
+
 /** Thrown when a model call exceeds its answer-time limit (time-pressure tests). Never retried. */
 export class OutOfTimeError extends Error {
   readonly limitMs: number;
@@ -61,8 +73,7 @@ export async function callWithRetry(
    */
   attemptLimitMs?: number,
 ): Promise<CompletionResult> {
-  const cap = target.contestant.options?.maxOutputTokensCap;
-  const maxOutputTokens = cap ? Math.min(cap, req.maxOutputTokens) : req.maxOutputTokens;
+  const maxOutputTokens = effectiveMaxOutputTokens(target.contestant, req.maxOutputTokens);
   let attempt = 0;
   for (;;) {
     const release = await target.semaphore.acquire(signal);

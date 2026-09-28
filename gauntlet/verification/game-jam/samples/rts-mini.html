@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Rust Frontier (mini)</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#1a1510}canvas{display:block;width:100vw;height:100vh}</style></head>
+<body><canvas id="c"></canvas><script>
+'use strict';
+// A deliberately SMALL RTS sample for the Game Jam demo set: harvesters, a refinery, box-select, right-click
+// orders, fog of war, a minimap and an enemy that attacks. It meets only part of the brief on purpose.
+const TILE = 32, MW = 60, MH = 44, SIDEBAR = 200;
+const c = document.getElementById('c'), x = c.getContext('2d');
+let W, H; function fit() { W = c.width = innerWidth; H = c.height = innerHeight; } addEventListener('resize', fit); fit();
+let seed = 5; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const map = []; for (let j = 0; j < MH; j++) { map.push([]); for (let i = 0; i < MW; i++) { const r = rnd(); map[j].push(r < 0.06 ? 1 : 0); } }
+const ore = []; for (let k = 0; k < 5; k++) { const ox = 8 + Math.floor(rnd() * 44), oy = 6 + Math.floor(rnd() * 32); for (let d = 0; d < 14; d++) { const i = ox + Math.floor(rnd() * 5), j = oy + Math.floor(rnd() * 4); if (map[j] && map[j][i] === 0) { map[j][i] = 2; ore.push([i, j]); } } }
+const seen = Array.from({ length: MH }, () => new Array(MW).fill(0));
+let mode = 'title', credits = 1200, cam = { x: 0, y: 0 }, units = [], builds = [], shots = [], sel = [], drag = null, t = 0, msg = '', msgT = 0;
+function unit(kind, team, px, py) { const u = { kind, team, x: px, y: py, hp: kind === 'tank' ? 160 : kind === 'harv' ? 200 : 60, max: 0, tx: px, ty: py, target: null, cargo: 0, cd: 0 }; u.max = u.hp; units.push(u); return u; }
+function start() {
+  mode = 'play'; units = []; builds = [];
+  builds.push({ kind: 'yard', team: 0, x: 5 * TILE, y: 30 * TILE, hp: 600 }, { kind: 'refinery', team: 0, x: 9 * TILE, y: 31 * TILE, hp: 400 });
+  builds.push({ kind: 'yard', team: 1, x: 50 * TILE, y: 8 * TILE, hp: 600 }, { kind: 'refinery', team: 1, x: 46 * TILE, y: 9 * TILE, hp: 400 });
+  unit('harv', 0, 10 * TILE, 28 * TILE); unit('harv', 1, 46 * TILE, 12 * TILE);
+  for (let i = 0; i < 4; i++) unit(i % 2 ? 'tank' : 'rifle', 0, (8 + i) * TILE, 26 * TILE);
+  cam = { x: 0, y: 30 * TILE - H / 2 };
+}
+const keys = {};
+addEventListener('keydown', (e) => { keys[e.code] = true; if (mode === 'title' && (e.code === 'Enter' || e.code === 'Space')) start(); });
+addEventListener('keyup', (e) => { keys[e.code] = false; });
+let mouse = { x: 0, y: 0 };
+c.addEventListener('contextmenu', (e) => e.preventDefault());
+c.addEventListener('mousemove', (e) => { mouse = { x: e.clientX, y: e.clientY }; if (drag) { drag.x2 = e.clientX; drag.y2 = e.clientY; } });
+c.addEventListener('mousedown', (e) => {
+  if (mode === 'title') { start(); return; }
+  if (e.clientX > W - SIDEBAR) { const row = Math.floor((e.clientY - 200) / 60); const opts = [['rifle', 100], ['tank', 400], ['harv', 600]]; const o = opts[row]; if (o && credits >= o[1]) { credits -= o[1]; unit(o[0], 0, 7 * TILE, 28 * TILE); say(`${o[0]} ready`); } else if (o) say('Insufficient funds'); return; }
+  if (e.button === 2) { const wx = e.clientX + cam.x, wy = e.clientY + cam.y; const enemy = units.find((u) => u.team === 1 && Math.hypot(u.x - wx, u.y - wy) < 18); sel.forEach((u, i) => { u.target = enemy || null; u.tx = wx + (i % 3) * 20; u.ty = wy + Math.floor(i / 3) * 20; }); shots.push({ x: wx, y: wy, marker: 0.5 }); return; }
+  drag = { x1: e.clientX, y1: e.clientY, x2: e.clientX, y2: e.clientY };
+});
+c.addEventListener('mouseup', () => { if (!drag) return; const a = Math.min(drag.x1, drag.x2) + cam.x, b = Math.min(drag.y1, drag.y2) + cam.y, a2 = Math.max(drag.x1, drag.x2) + cam.x, b2 = Math.max(drag.y1, drag.y2) + cam.y; sel = units.filter((u) => u.team === 0 && u.x > a - 12 && u.x < a2 + 12 && u.y > b - 12 && u.y < b2 + 12); drag = null; });
+function say(m) { msg = m; msgT = 2; }
+function update(dt) {
+  t += dt; msgT -= dt;
+  if (mode !== 'play') return;
+  const sp = 500 * dt; if (keys.ArrowLeft || mouse.x < 4) cam.x -= sp; if (keys.ArrowRight || (mouse.x > W - 4)) cam.x += sp; if (keys.ArrowUp || mouse.y < 4) cam.y -= sp; if (keys.ArrowDown || mouse.y > H - 4) cam.y += sp;
+  cam.x = Math.max(0, Math.min(MW * TILE - W + SIDEBAR, cam.x)); cam.y = Math.max(0, Math.min(MH * TILE - H, cam.y));
+  for (const u of units) {
+    if (u.kind === 'harv') { const home = builds.find((b) => b.team === u.team && b.kind === 'refinery'); if (u.cargo >= 100 && home) { u.tx = home.x; u.ty = home.y; if (Math.hypot(u.x - home.x, u.y - home.y) < 30) { if (u.team === 0) credits += u.cargo; u.cargo = 0; } } else { const o = ore.reduce((best, p) => { const d = Math.hypot(p[0] * TILE - u.x, p[1] * TILE - u.y); return d < best.d ? { p, d } : best; }, { p: null, d: 1e9 }); if (o.p) { u.tx = o.p[0] * TILE + 16; u.ty = o.p[1] * TILE + 16; if (o.d < 24) u.cargo += 30 * dt; } } }
+    if (u.target && u.target.hp <= 0) u.target = null;
+    const foe = u.target || units.find((v) => v.team !== u.team && v.kind !== 'harv' && Math.hypot(v.x - u.x, v.y - u.y) < 160);
+    u.cd -= dt;
+    if (foe && u.kind !== 'harv' && Math.hypot(foe.x - u.x, foe.y - u.y) < 160) { if (u.cd <= 0) { u.cd = u.kind === 'tank' ? 1.2 : 0.5; foe.hp -= u.kind === 'tank' ? (foe.kind === 'rifle' ? 40 : 25) : (foe.kind === 'rifle' ? 12 : 4); shots.push({ x1: u.x, y1: u.y, x2: foe.x, y2: foe.y, life: 0.12 }); } }
+    else { const dx = u.tx - u.x, dy = u.ty - u.y, d = Math.hypot(dx, dy); if (d > 3) { const v = (u.kind === 'tank' ? 70 : u.kind === 'harv' ? 60 : 90) * dt; let nx = u.x + dx / d * v, ny = u.y + dy / d * v; const ti = Math.floor(nx / TILE), tj = Math.floor(ny / TILE); if (map[tj] && map[tj][ti] === 1) { nx = u.x + dy / d * v; ny = u.y - dx / d * v; } u.x = nx; u.y = ny; } }
+  }
+  units = units.filter((u) => u.hp > 0); sel = sel.filter((u) => u.hp > 0);
+  for (const s of shots) { if (s.life !== undefined) s.life -= dt; if (s.marker !== undefined) s.marker -= dt; }
+  shots = shots.filter((s) => (s.life ?? s.marker) > 0);
+  if (Math.floor(t) % 40 === 0 && Math.floor(t - dt) % 40 !== 0 && t > 5) { for (let i = 0; i < 3; i++) { const e = unit(i ? 'rifle' : 'tank', 1, (48 + i) * TILE, 12 * TILE); e.tx = 8 * TILE; e.ty = 30 * TILE; } say('Base under attack!'); }
+  for (const u of units) if (u.team === 0) { const ci = Math.floor(u.x / TILE), cj = Math.floor(u.y / TILE); for (let j = -5; j <= 5; j++) for (let i = -5; i <= 5; i++) if (seen[cj + j] && i * i + j * j < 26) seen[cj + j][ci + i] = 2; }
+  for (const b of builds) if (b.team === 0) { const ci = Math.floor(b.x / TILE), cj = Math.floor(b.y / TILE); for (let j = -6; j <= 6; j++) for (let i = -6; i <= 6; i++) if (seen[cj + j] && seen[cj + j][ci + i] !== undefined) seen[cj + j][ci + i] = 2; }
+}
+function draw() {
+  x.fillStyle = '#1a1510'; x.fillRect(0, 0, W, H);
+  if (mode === 'title') { x.fillStyle = '#e8b04a'; x.font = '900 72px system-ui'; x.textAlign = 'center'; x.fillText('RUST FRONTIER', W / 2, H / 2 - 40); x.font = '24px system-ui'; x.fillStyle = '#fff'; x.fillText('Press Enter to command', W / 2, H / 2 + 20); return; }
+  const i0 = Math.floor(cam.x / TILE), j0 = Math.floor(cam.y / TILE);
+  for (let j = j0; j < j0 + H / TILE + 2; j++) for (let i = i0; i < i0 + W / TILE + 2; i++) { if (!map[j] || map[j][i] === undefined) continue; const px = i * TILE - cam.x, py = j * TILE - cam.y; x.fillStyle = map[j][i] === 1 ? '#4a4038' : map[j][i] === 2 ? '#c9a227' : ((i + j) % 2 ? '#6b7f3a' : '#667a37'); x.fillRect(px, py, TILE, TILE); }
+  for (const b of builds) { x.fillStyle = b.team ? '#8e2f2f' : '#2f5f8e'; x.fillRect(b.x - cam.x - 32, b.y - cam.y - 32, 64, 64); x.fillStyle = '#fff'; x.font = '12px system-ui'; x.textAlign = 'center'; x.fillText(b.kind, b.x - cam.x, b.y - cam.y); }
+  for (const u of units) { const px = u.x - cam.x, py = u.y - cam.y; const vis = u.team === 0 || (seen[Math.floor(u.y / TILE)] || [])[Math.floor(u.x / TILE)] === 2; if (!vis) continue; x.fillStyle = u.team ? '#e0524c' : '#4cc3e0'; if (u.kind === 'tank') x.fillRect(px - 10, py - 8, 20, 16); else if (u.kind === 'harv') { x.fillStyle = u.team ? '#b56b2d' : '#d9a441'; x.fillRect(px - 12, py - 10, 24, 20); } else { x.beginPath(); x.arc(px, py, 6, 0, 7); x.fill(); } if (sel.includes(u)) { x.strokeStyle = '#7fff7f'; x.strokeRect(px - 13, py - 13, 26, 26); } x.fillStyle = '#0c0'; x.fillRect(px - 10, py - 16, 20 * u.hp / u.max, 3); }
+  for (const s of shots) { if (s.life !== undefined) { x.strokeStyle = '#ffe066'; x.beginPath(); x.moveTo(s.x1 - cam.x, s.y1 - cam.y); x.lineTo(s.x2 - cam.x, s.y2 - cam.y); x.stroke(); } else { x.strokeStyle = '#7fff7f'; x.beginPath(); x.arc(s.x - cam.x, s.y - cam.y, 10 * s.marker * 2, 0, 7); x.stroke(); } }
+  for (let j = j0; j < j0 + H / TILE + 2; j++) for (let i = i0; i < i0 + W / TILE + 2; i++) { const v = (seen[j] || [])[i]; if (v === 2) continue; x.fillStyle = v === 1 ? 'rgba(0,0,0,0.5)' : '#000'; x.fillRect(i * TILE - cam.x, j * TILE - cam.y, TILE, TILE); }
+  for (const row of seen) for (let i = 0; i < row.length; i++) if (row[i] === 2) row[i] = 1;
+  if (drag) { x.strokeStyle = '#7fff7f'; x.strokeRect(drag.x1, drag.y1, drag.x2 - drag.x1, drag.y2 - drag.y1); }
+  x.fillStyle = '#231d16'; x.fillRect(W - SIDEBAR, 0, SIDEBAR, H);
+  const mm = SIDEBAR - 20, k = mm / (MW * TILE); x.fillStyle = '#000'; x.fillRect(W - SIDEBAR + 10, 10, mm, MH * TILE * k);
+  for (const u of units) { x.fillStyle = u.team ? '#e0524c' : '#4cc3e0'; x.fillRect(W - SIDEBAR + 10 + u.x * k, 10 + u.y * k, 3, 3); }
+  x.strokeStyle = '#fff'; x.strokeRect(W - SIDEBAR + 10 + cam.x * k, 10 + cam.y * k, (W - SIDEBAR) * k, H * k);
+  x.fillStyle = '#e8b04a'; x.font = '700 20px system-ui'; x.textAlign = 'left'; x.fillText(`$ ${Math.floor(credits)}`, W - SIDEBAR + 14, 180);
+  [['Rifleman', 100], ['Tank', 400], ['Harvester', 600]].forEach(([n, p], i) => { x.fillStyle = credits >= p ? '#3d5a2a' : '#333'; x.fillRect(W - SIDEBAR + 10, 200 + i * 60, SIDEBAR - 20, 50); x.fillStyle = '#fff'; x.font = '16px system-ui'; x.fillText(`${n}  $${p}`, W - SIDEBAR + 20, 230 + i * 60); });
+  if (msgT > 0) { x.fillStyle = '#fff'; x.font = '700 22px system-ui'; x.textAlign = 'center'; x.fillText(msg, (W - SIDEBAR) / 2, 40); }
+}
+let last = performance.now(); function loop(now) { const dt = Math.min(0.05, (now - last) / 1000); last = now; update(dt); draw(); requestAnimationFrame(loop); } requestAnimationFrame(loop);
+</script></body></html>

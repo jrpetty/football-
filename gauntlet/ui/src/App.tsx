@@ -36,6 +36,7 @@ const KeysPage = lazy(() => import('./keys/KeysPage.tsx'));
 const StudioPage = lazy(() => import('./pages/StudioPage.tsx'));
 const OverlayPage = lazy(() => import('./pages/OverlayPage.tsx'));
 const WatchPage = lazy(() => import('./pages/WatchPage.tsx'));
+const GameJamPage = lazy(() => import('./pages/GameJamPage.tsx'));
 const ArenaPage = lazy(() => import('./pages/ArenaPage.tsx'));
 const ArenaNewPage = lazy(() => import('./pages/ArenaNewPage.tsx'));
 const ArenaTournamentPage = lazy(() => import('./pages/ArenaTournamentPage.tsx'));
@@ -124,6 +125,7 @@ function resolve(parts: string[]): Resolved {
     if (!b) return { el: <RunsPage />, crumb: 'Runs' };
     if (c === 'live') return { el: <LiveArenaPage key={b} runId={b} />, crumb: 'Live Arena' };
     if (c === 'watch') return { el: <WatchPage key={b} runId={b} />, crumb: 'Watch it think' };
+    if (c === 'jam') return { el: <GameJamPage key={b} runId={b} />, crumb: 'The Game Jam' };
     return { el: <RunDetailPage key={b} runId={b} />, crumb: 'Run detail' };
   }
   if (a === 'tests') {

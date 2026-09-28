@@ -18,6 +18,8 @@ import { ToneIcon, VizLegend } from './VizLegend.tsx';
 import type { Tone } from './vizModel.ts';
 import type { Guide } from './svgRequirements.ts';
 import { scanSvg, svgCaseSpec } from './svgRequirements.ts';
+import { GameJamShowcase } from './GameJamShowcase.tsx';
+import { hasJam } from './gameJamModel.ts';
 import './viz.css';
 
 /** The artifact the showcase is about, when this result has one (prompt tests with an artifact scorer). */
@@ -98,7 +100,13 @@ function gameChecks(r: CaseResult): Array<{ label: string; state: 'pass' | 'fail
   ];
 }
 
-export function ArtifactShowcase({ runId, result, testId, caseId, names }: { runId: string; result: CaseResult; testId: string; caseId: string; names?: Map<string, string> }) {
+export function ArtifactShowcase(props: { runId: string; result: CaseResult; testId: string; caseId: string; names?: Map<string, string> }) {
+  // The Game Jam has its own card (filmstrip, scorecard, requirement ticks); everything else keeps this one.
+  if (hasJam(props.result)) return <GameJamShowcase result={props.result} urlFor={(file) => artifactUrl(props.runId, file)} names={props.names} />;
+  return <ClassicArtifactShowcase {...props} />;
+}
+
+function ClassicArtifactShowcase({ runId, result, testId, caseId, names }: { runId: string; result: CaseResult; testId: string; caseId: string; names?: Map<string, string> }) {
   const art = showcaseArtifact(result);
   const isGame = art?.kind === 'html';
   const url = art ? artifactUrl(runId, art.file) : '';

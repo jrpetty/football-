@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Mossbell (mini)</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#10141a}canvas{display:block;width:100vw;height:100vh;image-rendering:pixelated}</style></head>
+<body><canvas id="c"></canvas><script>
+'use strict';
+// A deliberately SMALL top-down RPG sample for the Game Jam demo set: one village area and a forest, an NPC
+// with typewriter dialogue, slimes that chase, a sword with knockback and i-frames, XP and levels. No dungeon,
+// boss, shop or saving: it meets only part of the brief on purpose.
+const T = 40, COLS = 32, ROWS = 18;
+const c = document.getElementById('c'), x = c.getContext('2d');
+let W, H, S; function fit() { W = c.width = innerWidth; H = c.height = innerHeight; S = Math.min(W / (COLS * T), H / (ROWS * T)); } addEventListener('resize', fit); fit();
+let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const world = []; for (let j = 0; j < ROWS; j++) { world.push([]); for (let i = 0; i < COLS; i++) { const edge = i === 0 || j === 0 || i === COLS - 1 || j === ROWS - 1; world[j].push(edge ? 1 : i > 18 && rnd() < 0.12 ? 1 : (i > 6 && i < 10 && j > 3 && j < 7) ? 3 : 0); } }
+for (let j = 8; j < 11; j++) world[j][COLS - 1] = 0;
+let mode = 'title', hero, slimes, talk = null, t = 0, pops = [];
+function start() { mode = 'play'; hero = { x: 4 * T, y: 9 * T, dir: [1, 0], hp: 6, max: 6, xp: 0, lvl: 1, atk: 2, swing: 0, inv: 0, kx: 0, ky: 0 }; slimes = []; for (let i = 0; i < 6; i++) slimes.push({ x: (20 + i * 1.7) * T, y: (4 + (i * 5) % 10) * T, hp: 4, kx: 0, ky: 0, hop: rnd() * 6, kind: i % 3 }); }
+const keys = {};
+const DIALOGUE = ['Elder Wren: The bells in the Moss Wood have gone silent.', 'Elder Wren: Slimes swarm the path east. Clear them, hero!'];
+addEventListener('keydown', (e) => {
+  keys[e.code] = true; if (e.repeat) return;
+  if (mode === 'title' && (e.code === 'Enter' || e.code === 'Space')) { start(); return; }
+  if (mode !== 'play') return;
+  if (talk) { if (['Space', 'Enter', 'KeyE'].includes(e.code)) { if (talk.shown < DIALOGUE[talk.i].length) talk.shown = 999; else if (++talk.i >= DIALOGUE.length) talk = null; else talk.shown = 0; } return; }
+  if (['Space', 'KeyJ', 'KeyZ'].includes(e.code) && hero.swing <= 0) hero.swing = 0.25;
+  if ((e.code === 'KeyE' || e.code === 'Enter') && Math.hypot(hero.x - 8 * T, hero.y - 8 * T) < 90) talk = { i: 0, shown: 0 };
+});
+addEventListener('keyup', (e) => { keys[e.code] = false; });
+c.addEventListener('pointerdown', () => { if (mode === 'title') start(); });
+function solid(px, py) { const i = Math.floor(px / T), j = Math.floor(py / T); return !world[j] || world[j][i] === 1 || world[j][i] === 3; }
+function update(dt) {
+  t += dt; if (mode !== 'play') return;
+  if (talk) { talk.shown += dt * 40; return; }
+  const h = hero; let dx = (keys.ArrowRight || keys.KeyD ? 1 : 0) - (keys.ArrowLeft || keys.KeyA ? 1 : 0), dy = (keys.ArrowDown || keys.KeyS ? 1 : 0) - (keys.ArrowUp || keys.KeyW ? 1 : 0);
+  if (dx || dy) h.dir = [dx, dy];
+  const sp = 170 * dt, nx = h.x + dx * sp + h.kx * dt, ny = h.y + dy * sp + h.ky * dt;
+  if (!solid(nx, h.y)) h.x = nx; if (!solid(h.x, ny)) h.y = ny;
+  h.kx *= 0.85; h.ky *= 0.85; h.swing -= dt; h.inv -= dt;
+  if (h.x > (COLS - 1) * T) h.x = T * 1.5;
+  for (const s of slimes) {
+    s.hop += dt * 4; const d = Math.hypot(h.x - s.x, h.y - s.y), spd = s.kind === 1 ? 110 : 60;
+    if (d < 320) { const mx = s.x + (h.x - s.x) / d * spd * dt + s.kx * dt, my = s.y + (h.y - s.y) / d * spd * dt + s.ky * dt; if (!solid(mx, s.y)) s.x = mx; if (!solid(s.x, my)) s.y = my; }
+    s.kx *= 0.85; s.ky *= 0.85;
+    if (h.swing > 0 && d < 60 && ((s.x - h.x) * h.dir[0] + (s.y - h.y) * h.dir[1]) > -10 && !s.hitAt || (s.hitAt && t - s.hitAt > 0.3 && h.swing > 0 && d < 60)) { s.hp -= h.atk; s.hitAt = t; s.kx = (s.x - h.x) / d * 600; s.ky = (s.y - h.y) / d * 600; pops.push({ x: s.x, y: s.y, n: h.atk, life: 0.8 }); }
+    if (d < 28 && h.inv <= 0) { h.hp -= 1; h.inv = 1; h.kx = (h.x - s.x) / d * 500; h.ky = (h.y - s.y) / d * 500; pops.push({ x: h.x, y: h.y, n: 1, life: 0.8, bad: true }); }
+  }
+  const before = slimes.length; slimes = slimes.filter((s) => s.hp > 0); h.xp += (before - slimes.length) * 5;
+  if (h.xp >= h.lvl * 10) { h.xp = 0; h.lvl++; h.atk++; h.max++; h.hp = h.max; pops.push({ x: h.x, y: h.y - 30, n: 'LEVEL UP!', life: 1.5 }); }
+  if (h.hp <= 0) mode = 'over';
+  for (const p of pops) { p.life -= dt; p.y -= 30 * dt; } pops = pops.filter((p) => p.life > 0);
+}
+function draw() {
+  x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = '#10141a'; x.fillRect(0, 0, W, H);
+  if (mode === 'title' || mode === 'over') { x.textAlign = 'center'; x.fillStyle = '#9fe870'; x.font = '900 64px Georgia'; x.fillText(mode === 'title' ? 'MOSSBELL' : 'YOU FELL', W / 2, H / 2 - 30); x.fillStyle = '#fff'; x.font = '22px Georgia'; x.fillText(mode === 'title' ? 'Press Enter to begin your legend' : 'Press Enter to try again', W / 2, H / 2 + 20); if (mode === 'over' && keys.Enter) start(); return; }
+  x.setTransform(S, 0, 0, S, (W - COLS * T * S) / 2, (H - ROWS * T * S) / 2);
+  for (let j = 0; j < ROWS; j++) for (let i = 0; i < COLS; i++) { const v = world[j][i]; x.fillStyle = v === 1 ? (i > 18 ? '#1f4d2b' : '#5a4a3a') : v === 3 ? '#8b5a3c' : i > 18 ? ((i + j) % 2 ? '#3f7a3a' : '#437f3d') : ((i + j) % 2 ? '#7cae5a' : '#80b35e'); x.fillRect(i * T, j * T, T, T); if (v === 1 && i > 18) { x.fillStyle = '#2e6b3a'; x.beginPath(); x.arc(i * T + 20, j * T + 18, 17, 0, 7); x.fill(); } }
+  x.fillStyle = '#b04632'; x.fillRect(7 * T, 3 * T, 3 * T, T); // roof
+  x.fillStyle = '#e8d6b0'; x.beginPath(); x.arc(8 * T, 8 * T + Math.sin(t * 2) * 2, 13, 0, 7); x.fill(); x.fillStyle = '#6a4fa0'; x.fillRect(8 * T - 12, 8 * T + 10, 24, 16);
+  for (const s of slimes) { const b = Math.abs(Math.sin(s.hop)) * 6; x.fillStyle = ['#63d471', '#e0c341', '#58a6ff'][s.kind]; x.beginPath(); x.ellipse(s.x, s.y - b, 16 + (s.hitAt && t - s.hitAt < 0.15 ? 4 : 0), 12, 0, 0, 7); x.fill(); x.fillStyle = '#123'; x.fillRect(s.x - 6, s.y - b - 4, 3, 4); x.fillRect(s.x + 3, s.y - b - 4, 3, 4); }
+  const h = hero; if (!(h.inv > 0 && Math.floor(t * 20) % 2)) { x.fillStyle = '#2c6fbb'; x.fillRect(h.x - 12, h.y - 10, 24, 22); x.fillStyle = '#f2c99b'; x.beginPath(); x.arc(h.x, h.y - 16, 10, 0, 7); x.fill(); x.fillStyle = '#7a3b1e'; x.fillRect(h.x - 10, h.y - 27, 20, 6); }
+  if (h.swing > 0) { const a = Math.atan2(h.dir[1], h.dir[0]); x.strokeStyle = 'rgba(255,255,255,0.9)'; x.lineWidth = 6; x.beginPath(); x.arc(h.x, h.y, 44, a - 1 + (0.25 - h.swing) * 6, a - 0.4 + (0.25 - h.swing) * 6); x.stroke(); }
+  for (const p of pops) { x.fillStyle = p.bad ? '#ff6b6b' : '#fff'; x.font = '700 18px Georgia'; x.textAlign = 'center'; x.fillText(String(p.n), p.x, p.y - 20); }
+  x.setTransform(1, 0, 0, 1, 0, 0);
+  for (let i = 0; i < h.max; i++) { x.fillStyle = i < h.hp ? '#e5484d' : '#444'; x.beginPath(); x.arc(30 + i * 28, 30, 10, 0, 7); x.fill(); }
+  x.fillStyle = '#fff'; x.font = '700 18px Georgia'; x.textAlign = 'left'; x.fillText(`Lv ${h.lvl}  XP ${h.xp}/${h.lvl * 10}  Slimes left ${slimes.length}`, 20, 64);
+  if (talk) { x.fillStyle = 'rgba(10,10,30,0.85)'; x.fillRect(W * 0.1, H - 160, W * 0.8, 120); x.fillStyle = '#fff'; x.font = '22px Georgia'; x.fillText(DIALOGUE[talk.i].slice(0, talk.shown), W * 0.1 + 24, H - 100); }
+}
+let last = performance.now(); function loop(now) { const dt = Math.min(0.05, (now - last) / 1000); last = now; update(dt); draw(); requestAnimationFrame(loop); } requestAnimationFrame(loop);
+</script></body></html>
