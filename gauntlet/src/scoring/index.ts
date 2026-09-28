@@ -1,22 +1,33 @@
-import type { ArtifactCheck, ArtifactKind, ArtifactRef, JudgeLabel, ScoreBreakdownItem, ScoreDetail, ScorerSpec, StopReason } from '../core/types.ts';
+import type { ArtifactCheck, ArtifactKind, ArtifactRef, ChatImage, JudgeLabel, ScoreBreakdownItem, ScoreDetail, ScorerSpec, StopReason } from '../core/types.ts';
 import { extractCodeBlock, extractFinalAnswer, extractTagged, normalize, parseJsonLoose, parseNumber } from '../core/extract.ts';
 import { checkConstraints } from './constraints.ts';
 import { compareJson } from './json-compare.ts';
 import { runCodeTests, type CodeTest } from './code-sandbox.ts';
 import { probeHtml, renderSvg } from './browser.ts';
 import { scoreLadder } from './ladder.ts';
+import { scoreGameJam } from './game-jam.ts';
 import { JUDGE_ARTIFACT_TEMPLATE, JUDGE_CLASSIFY_TEMPLATE, JUDGE_RUBRIC_TEMPLATE, JUDGE_SYSTEM, fill } from './judge-prompts.ts';
 
 export interface JudgeCall {
   judgeId: string;
   text: string;
   error?: string;
+  /** True when this judge was sent the images of `JudgeAskOptions` (it accepts image input). */
+  sawImages?: boolean;
+}
+
+/** Optional extras for one judge question. */
+export interface JudgeAskOptions {
+  /** Pictures shown to judges that accept image input (e.g. The Game Jam's playtest screenshots). */
+  images?: ChatImage[];
+  /** The question for judges without image input (defaults to the same text). */
+  textOnlyUser?: string;
 }
 
 /** A panel of judge models. `ask` calls every judge in parallel. */
 export interface JudgePanel {
   ids: string[];
-  ask(system: string, user: string, label: string): Promise<JudgeCall[]>;
+  ask(system: string, user: string, label: string, opts?: JudgeAskOptions): Promise<JudgeCall[]>;
 }
 
 export interface ScoringInput {
@@ -206,6 +217,7 @@ export async function scoreResponse(input: ScoringInput): Promise<ScoringOutcome
     case 'judge-classify':
       return judgeClassify(input, scorer.instructions, scorer.labels);
     case 'artifact':
+      if (scorer.playtest) return scoreGameJam(input, scorer);
       return scoreArtifact(input, scorer.format, scorer.checks ?? [{ check: 'parses' }], scorer.rubric, scorer.judgeWeight ?? 0);
     case 'human':
       return { score: null, passed: null, summary: 'Awaiting human review', detail: { notes: scorer.rubric }, pendingHuman: true };

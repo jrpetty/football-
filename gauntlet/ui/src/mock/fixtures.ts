@@ -41,6 +41,7 @@ import { VISUAL_RUN_SPEC, VISUAL_TESTS, decorateVisual, visualDetail } from './c
 import { simReplay } from './simReplayMock.ts';
 import { HORIZON_RUN_SPEC, HORIZON_SUITE, HORIZON_TESTS, decorateHorizon, horizonDetail } from './horizonMock.ts';
 import { VISUAL_PASS_PROGRAMS, VISUAL_PASS_RUN_SPEC, VISUAL_PASS_TESTS, decorateVisualPass, visualPassDetail } from './visualPassMock.ts';
+import { GAME_JAM_RUN_SPEC, GAME_JAM_SUITE, GAME_JAM_TESTS, decorateGameJam, gameJamDetail } from './gameJamMock.ts';
 
 // ───────────────────────────── RNG ─────────────────────────────
 
@@ -752,7 +753,7 @@ function genLite(runId: string, c: ContestantView, t: TestDefinition, caseId: st
   if (type === 'human') artifacts.push({ name: 'page.html', kind: 'html', file: `${c.id}/${t.id}/${caseId}-r${repeat}.html`, bytes: 8000 + Math.round(r.next() * 9000) });
   if (t.kind === 'program' && t.program === 'draw-it-blind') artifacts.push({ name: 'reconstruction.svg', kind: 'svg', file: `${c.id}/${t.id}/${caseId}-r${repeat}.svg`, bytes: 2400 });
 
-  return decorateHorizon(t, decorateVisualPass(t, mockVisionSkip(decorateVisual(t, decorateTrick(t, {
+  return decorateHorizon(t, decorateGameJam(t, decorateVisualPass(t, mockVisionSkip(decorateVisual(t, decorateTrick(t, {
     key,
     runId,
     contestantId: c.id,
@@ -775,7 +776,7 @@ function genLite(runId: string, c: ContestantView, t: TestDefinition, caseId: st
     finishedAt: finished,
     humanScores,
     hasReplay: t.kind === 'program',
-  }), SETTINGS.judges), c, t)));
+  }), SETTINGS.judges), c, t))));
 }
 
 function summaryText(t: TestDefinition, score: number | null, status: ResultStatus, u: number): string {
@@ -1505,13 +1506,13 @@ export function detailFor(lite: CaseResultLite): CaseResult {
   }
 
   const artifacts = lite.artifacts;
-  return visualPassDetail({
+  return gameJamDetail(visualPassDetail({
     ...lite,
     scoreDetail: detail,
     transcript,
     replay: t && t.kind === 'program' ? replayFor(t, lite.seed ?? 1, score ?? 0.2) : undefined,
     artifacts,
-  }, lite);
+  }, lite), lite);
 }
 
 // Vision tests (added after the core fixtures so the existing demo runs keep their test lists).
@@ -1527,6 +1528,12 @@ RUN_SPECS.push(VISUAL_RUN_SPEC);
 TESTS.push(...VISUAL_PASS_TESTS.filter((t) => !TESTS.some((x) => x.id === t.id)));
 PROGRAMS.push(...VISUAL_PASS_PROGRAMS);
 RUN_SPECS.push(VISUAL_PASS_RUN_SPEC);
+
+// The Game Jam demo (recorded sample games; see gameJamMock.ts).
+TESTS.push(...GAME_JAM_TESTS.filter((t) => !TESTS.some((x) => x.id === t.id)));
+SUITES.push(GAME_JAM_SUITE);
+RUN_SPECS.push(GAME_JAM_RUN_SPEC);
+
 // Horizon tier: the five real ladders and a demo climb (see horizonMock.ts).
 TESTS.push(...HORIZON_TESTS);
 SUITES.push(HORIZON_SUITE);

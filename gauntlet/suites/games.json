@@ -1,0 +1,12 @@
+{
+  "id": "games",
+  "version": "1.0.0",
+  "name": "The Game Jam",
+  "description": "Five genres, one prompt each: a Flappy Bird remake, a Command & Conquer-style RTS, a top-down action RPG, a zombie survival game with base building and a racer, each built as one self-contained web page, played by a scripted player in a headless browser and rated by a cross-vendor judge panel that weights creativity most. Expensive (every game is up to 64,000 output tokens), so it runs once per model by default; check the Cost Planner first.",
+  "repeats": 1,
+  "tests": [
+    {
+      "id": "creative.game-jam"
+    }
+  ]
+}

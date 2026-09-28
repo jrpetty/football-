@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Last Light (mini)</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#07080b}canvas{display:block;width:100vw;height:100vh}</style></head>
+<body><canvas id="c"></canvas><script>
+'use strict';
+// A deliberately SMALL zombie-survival sample for the Game Jam demo set: a seeded block town, a flashlight cone
+// at night, walkers and runners drawn to gunshot noise, ammo and reloading, a barricade you can place (B) that
+// zombies break. No crafting, survivors or scavenging: it meets only part of the brief on purpose.
+const c = document.getElementById('c'), x = c.getContext('2d');
+let W, H; function fit() { W = c.width = innerWidth; H = c.height = innerHeight; } addEventListener('resize', fit); fit();
+let seed = 42; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const WORLD = 2400, houses = []; for (let i = 0; i < 16; i++) houses.push({ x: 200 + (i % 4) * 520 + rnd() * 100, y: 200 + Math.floor(i / 4) * 520 + rnd() * 100, w: 180 + rnd() * 80, h: 140 + rnd() * 80 });
+let mode = 'title', p, zs, walls, noiseRings, bullets, t, clock, msg = '';
+function start() { mode = 'play'; t = 0; clock = 0.55; p = { x: 1200, y: 1250, hp: 100, ammo: 12, mag: 12, reserve: 36, reload: 0, cd: 0, wood: 4 }; zs = []; walls = []; noiseRings = []; bullets = []; for (let i = 0; i < 40; i++) spawn(); }
+function spawn() { const a = rnd() * 6.28; zs.push({ x: 1200 + Math.cos(a) * (600 + rnd() * 600), y: 1200 + Math.sin(a) * (600 + rnd() * 600), hp: 3, run: rnd() < 0.25, tx: null, ty: null }); }
+const keys = {}; let mouse = { x: 0, y: 0, down: false };
+addEventListener('keydown', (e) => { keys[e.code] = true; if (mode !== 'play' && (e.code === 'Enter' || e.code === 'Space')) start(); if (mode === 'play' && e.code === 'KeyR' && p.reserve > 0) p.reload = 1.2; if (mode === 'play' && e.code === 'KeyB' && p.wood > 0) { p.wood--; walls.push({ x: p.x + Math.cos(aim()) * 60, y: p.y + Math.sin(aim()) * 60, hp: 30 }); } });
+addEventListener('keyup', (e) => { keys[e.code] = false; });
+addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; });
+addEventListener('mousedown', () => { mouse.down = true; if (mode !== 'play') start(); }); addEventListener('mouseup', () => { mouse.down = false; });
+const aim = () => Math.atan2(mouse.y - H / 2, mouse.x - W / 2);
+function inHouse(px, py) { return houses.some((h) => px > h.x && px < h.x + h.w && py > h.y && py < h.y + h.h && !(py > h.y + h.h - 30 && Math.abs(px - (h.x + h.w / 2)) < 26)); }
+function noise(px, py, r) { noiseRings.push({ x: px, y: py, r: 0, max: r }); for (const z of zs) if (Math.hypot(z.x - px, z.y - py) < r) { z.tx = px; z.ty = py; } }
+function update(dt) {
+  if (mode !== 'play') return; t += dt; clock = (clock + dt / 120) % 1;
+  const night = clock > 0.6 || clock < 0.1;
+  const sp = (keys.ShiftLeft ? 260 : 170) * dt; let nx = p.x + ((keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0)) * sp, ny = p.y + ((keys.KeyS || keys.ArrowDown ? 1 : 0) - (keys.KeyW || keys.ArrowUp ? 1 : 0)) * sp;
+  if (!inHouse(nx, p.y)) p.x = nx; if (!inHouse(p.x, ny)) p.y = ny;
+  p.cd -= dt; if (p.reload > 0) { p.reload -= dt; if (p.reload <= 0) { const n = Math.min(p.mag - p.ammo, p.reserve); p.ammo += n; p.reserve -= n; } }
+  if (mouse.down && p.cd <= 0 && p.reload <= 0 && p.ammo > 0) { p.cd = 0.25; p.ammo--; const a = aim() + (rnd() - 0.5) * 0.08; bullets.push({ x: p.x, y: p.y, vx: Math.cos(a) * 1400, vy: Math.sin(a) * 1400, life: 0.4 }); noise(p.x, p.y, 700); }
+  for (const b of bullets) { b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt; for (const z of zs) if (Math.hypot(z.x - b.x, z.y - b.y) < 16) { z.hp -= 2; b.life = 0; } }
+  bullets = bullets.filter((b) => b.life > 0);
+  for (const z of zs) {
+    const d = Math.hypot(p.x - z.x, p.y - z.y), sees = d < (night ? 180 : 360);
+    const tx = sees ? p.x : z.tx ?? z.x + Math.sin(t + z.y) * 30, ty = sees ? p.y : z.ty ?? z.y + Math.cos(t + z.x) * 30;
+    const dd = Math.hypot(tx - z.x, ty - z.y) || 1, v = (z.run ? 150 : 60) * (night ? 1.3 : 1) * dt;
+    let mx = z.x + (tx - z.x) / dd * v, my = z.y + (ty - z.y) / dd * v;
+    for (const o of zs) { if (o === z) continue; const od = Math.hypot(o.x - mx, o.y - my); if (od < 20 && od > 0) { mx += (mx - o.x) / od * 2; my += (my - o.y) / od * 2; } }
+    const wall = walls.find((w) => Math.hypot(w.x - mx, w.y - my) < 30);
+    if (wall) wall.hp -= dt * 5; else if (!inHouse(mx, my)) { z.x = mx; z.y = my; }
+    if (d < 22) p.hp -= 15 * dt;
+  }
+  walls = walls.filter((w) => w.hp > 0); zs = zs.filter((z) => z.hp > 0); if (zs.length < (night ? 60 : 30)) spawn();
+  for (const r of noiseRings) r.r += 900 * dt; noiseRings = noiseRings.filter((r) => r.r < r.max);
+  if (p.hp <= 0) { mode = 'dead'; msg = `You lasted ${t.toFixed(0)} s`; }
+}
+function draw() {
+  x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = '#07080b'; x.fillRect(0, 0, W, H);
+  if (mode !== 'play') { x.textAlign = 'center'; x.fillStyle = '#d64545'; x.font = '900 70px Impact, system-ui'; x.fillText(mode === 'title' ? 'LAST LIGHT' : 'YOU DIED', W / 2, H / 2 - 30); x.fillStyle = '#ccc'; x.font = '22px system-ui'; x.fillText(mode === 'title' ? 'Press Enter. Every shot is heard.' : `${msg} · Enter to retry`, W / 2, H / 2 + 20); return; }
+  x.setTransform(1, 0, 0, 1, W / 2 - p.x, H / 2 - p.y);
+  x.fillStyle = '#39402f'; x.fillRect(0, 0, WORLD, WORLD);
+  x.fillStyle = '#55524a'; for (let i = 0; i < 5; i++) { x.fillRect(i * 520 + 120, 0, 60, WORLD); x.fillRect(0, i * 520 + 120, WORLD, 60); }
+  for (const h of houses) { x.fillStyle = '#6d4c3d'; x.fillRect(h.x, h.y, h.w, h.h); x.fillStyle = '#3a2a22'; x.fillRect(h.x + 8, h.y + 8, h.w - 16, h.h - 16); x.fillStyle = '#39402f'; x.fillRect(h.x + h.w / 2 - 22, h.y + h.h - 12, 44, 12); }
+  for (const w of walls) { x.fillStyle = w.hp > 15 ? '#a07a4a' : '#6e4f2c'; x.fillRect(w.x - 26, w.y - 10, 52, 20); }
+  for (const z of zs) { x.fillStyle = z.run ? '#8fb34a' : '#5f7d3a'; x.beginPath(); x.arc(z.x, z.y, 12, 0, 7); x.fill(); }
+  x.fillStyle = '#ffe066'; for (const b of bullets) x.fillRect(b.x - 2, b.y - 2, 4, 4);
+  x.strokeStyle = 'rgba(255,255,255,0.25)'; for (const r of noiseRings) { x.beginPath(); x.arc(r.x, r.y, r.r, 0, 7); x.stroke(); }
+  x.fillStyle = '#d9d2c5'; x.beginPath(); x.arc(p.x, p.y, 13, 0, 7); x.fill();
+  x.setTransform(1, 0, 0, 1, 0, 0);
+  const dark = clock > 0.6 || clock < 0.1 ? 0.88 : clock > 0.5 ? (clock - 0.5) * 8.8 : 0;
+  if (dark > 0) { const g = x.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, 420); g.addColorStop(0, `rgba(0,0,10,${dark * 0.2})`); g.addColorStop(1, `rgba(0,0,10,${dark})`); x.fillStyle = g; x.beginPath(); x.rect(0, 0, W, H); const a = aim(); x.moveTo(W / 2, H / 2); x.arc(W / 2, H / 2, 420, a + 0.35, a - 0.35, true); x.closePath(); x.fill('evenodd'); x.fillStyle = `rgba(0,0,10,${dark * 0.95})`; x.beginPath(); x.moveTo(W / 2, H / 2); x.arc(W / 2, H / 2, 2000, a + 0.35, a + 6.28 - 0.35); x.closePath(); x.fill(); }
+  x.fillStyle = '#fff'; x.font = '700 18px system-ui'; x.textAlign = 'left';
+  x.fillText(`HP ${Math.ceil(p.hp)}   AMMO ${p.ammo}/${p.reserve}${p.reload > 0 ? ' (reloading)' : ''}   WOOD ${p.wood}   ${dark > 0.5 ? 'NIGHT' : 'DAY'} ${Math.floor(clock * 24)}:00   ZOMBIES ${zs.length}`, 20, 30);
+}
+let last = performance.now(); function loop(now) { const dt = Math.min(0.05, (now - last) / 1000); last = now; update(dt); draw(); requestAnimationFrame(loop); } requestAnimationFrame(loop);
+</script></body></html>

@@ -267,7 +267,7 @@ function ResultDetail({ runId, lite, names, target }: { runId: string; lite: Cas
           {images.length > 0 && <VisionResultPanel images={images} detail={res.scoreDetail ?? {}} passed={res.passed} />}
           {showcase && <ArtifactShowcase runId={runId} result={res} testId={res.testId} caseId={res.caseId} names={names} />}
           {showcase ? (
-            <ScoreBreakdownView d={{ ...res.scoreDetail, items: undefined, judge: undefined, consoleErrors: undefined }} passed={res.passed} humanScores={res.humanScores} names={names} />
+            <ScoreBreakdownView d={{ ...res.scoreDetail, items: undefined, judge: undefined, consoleErrors: undefined, gameJam: undefined }} passed={res.passed} humanScores={res.humanScores} names={names} />
           ) : images.length > 0 ? (
             <ScoreBreakdownView d={{ ...res.scoreDetail, extracted: undefined, expected: undefined }} passed={res.passed} humanScores={res.humanScores} names={names} />
           ) : (

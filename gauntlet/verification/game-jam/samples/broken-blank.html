@@ -1,0 +1,9 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Broken: blank canvas</title><style>html,body{margin:0;background:#000}canvas{display:block}</style></head>
+<body><canvas id="c" width="1280" height="720"></canvas><script>
+// Runs without errors, but the "player" is drawn black on black: the screen stays one flat colour whatever you press.
+const cv = document.getElementById('c'), x = cv.getContext('2d');
+const player = { x: 100, y: 100 };
+addEventListener('keydown', (e) => { if (e.code === 'ArrowRight' || e.code === 'KeyD') player.x += 10; });
+function loop() { x.fillStyle = '#000'; x.fillRect(0, 0, cv.width, cv.height); x.fillStyle = '#000'; x.fillRect(player.x, player.y, 40, 40); requestAnimationFrame(loop); }
+requestAnimationFrame(loop);
+</script></body></html>

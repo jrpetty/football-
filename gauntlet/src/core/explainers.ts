@@ -344,6 +344,20 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     icon: 'gamepad',
   },
 
+  'creative.game-jam': {
+    hook: 'Five genres, one prompt each: can it build the whole game?',
+    whatItTests: 'Designing and coding five complete browser games from detailed briefs: Flappy Bird, a strategy game, an RPG, zombie survival and a racer.',
+    whyHard: 'Each brief asks for a dozen or more working systems in one file with no second attempt, and the most original game wins.',
+    howScored: [
+      { icon: 'play', text: 'A robot player tries every game for 15 seconds' },
+      { icon: 'check', text: 'A quarter: 10 automatic checks (runs, reacts, no freeze)' },
+      { icon: 'scale', text: 'Three quarters: AI judges tick every requirement' },
+      { icon: 'star', text: 'Creativity is the biggest single part of the score' },
+    ],
+    goodScore: '70 or more is a strong game; a frozen or blank game can never score above 30.',
+    icon: 'gamepad',
+  },
+
   // ─────────────── Extraction ───────────────
   'extraction.structured-json': {
     hook: 'Can it turn messy invoices and emails into exact, machine-readable data?',
