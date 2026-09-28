@@ -9,6 +9,7 @@ import { answerTimeLimitSec, caseScorer, fingerprint, getSuite, loadTests, rende
 import type {
   CaseResult,
   ChatImage,
+  ChatMessage,
   Contestant,
   ContestantSnapshot,
   ProgramContext,
@@ -31,9 +32,9 @@ import { PROGRAMS } from '../programs/index.ts';
 import { scoreResponse, type JudgePanel } from '../scoring/index.ts';
 import { browserAvailable } from '../scoring/browser.ts';
 import { Semaphore } from './semaphore.ts';
-import { callWithRetry, createRecorder, OutOfTimeError, type CallPolicy, type CallTarget } from './recorder.ts';
+import { callWithRetry, createRecorder, effectiveMaxOutputTokens, OutOfTimeError, type CallPolicy, type CallTarget } from './recorder.ts';
 import { appendResult, createRunFolder, listRunIds, newRunId, readManifest, readResults, saveArtifact, writeManifest } from './store.ts';
-import { caseImageRefs, caseImageSizes, estimateImageTokens, loadTestImage, supportsVision, testBaseDir } from '../core/vision.ts';
+import { caseImageRefs, caseImageSizes, estimateImageTokens, loadTestImage, stripImageData, supportsVision, testBaseDir } from '../core/vision.ts';
 
 interface Job {
   key: string;
@@ -352,6 +353,8 @@ export async function estimateRun(req: RunRequest): Promise<RunEstimate> {
         perCaseCalls = obs.all.calls / obs.all.n;
         basis = 'measured-other-models';
       }
+      // A model cannot write more than its own output limit (a Game Jam game hits it; see Contestant.maxOutputTokens).
+      output = Math.min(output, effectiveMaxOutputTokens(c, Math.max(output, 1)));
       const testCost = isManual ? 0 : (n * (input * c.pricing.inputPerM + output * c.pricing.outputPerM)) / 1e6;
       jobs += selected.length * plan.repeats;
       calls += n * perCaseCalls;
@@ -366,7 +369,13 @@ export async function estimateRun(req: RunRequest): Promise<RunEstimate> {
         if (obs && obs.all.judgeUsd > 0) jc = (obs.all.judgeUsd / obs.all.n) * n * (panel.length / Math.max(1, judgePool.length));
         // Judge input = fixed prompt (~2.5k tokens incl. rubric/reference) + the visible part of the reply (reasoning
         // tokens are never shown to judges; assume half of the output is visible). Judge output ≈ 1.5k at medium effort.
-        else for (const j of panel) jc += (n * ((2500 + Math.min(output, 40000) * 0.5) * j.pricing.inputPerM + 1500 * j.pricing.outputPerM)) / 1e6;
+        // Tests can declare their own judge load (e.g. The Game Jam: whole game file + screenshots).
+        else {
+          const est = t.definition.estimate;
+          const jin = est?.judgeInputTokens ?? 2500 + Math.min(output, 40000) * 0.5;
+          const jout = est?.judgeOutputTokens ?? 1500;
+          for (const j of panel) jc += (n * (jin * j.pricing.inputPerM + jout * j.pricing.outputPerM)) / 1e6;
+        }
         calls += n * panel.length;
         judgeCost += jc;
         high += jc * 1.5;
@@ -918,22 +927,26 @@ export function createJudgePanel(opts: {
   record: (entry: TranscriptEntry) => void;
 }): JudgePanel {
   const { judges, signal } = opts;
+  const providers = loadProviders();
   return {
     ids: judges.map((j) => j.id),
-    async ask(system, user, label) {
+    async ask(system, user, label, extra) {
       if (judges.length === 0) return [];
       return Promise.all(
         judges.map(async (j) => {
           const started = Date.now();
+          // Pictures only go to judges that accept image input; the others get the text-only version of the question.
+          const sees = Boolean(extra?.images?.length) && supportsVision(j, providers.find((p) => p.id === j.provider)?.type);
+          const messages: ChatMessage[] = [sees ? { role: 'user', content: user, images: extra!.images } : { role: 'user', content: extra?.textOnlyUser ?? user }];
           try {
             const target = opts.targetFor(j);
-            const r = await callWithRetry(target, { system, messages: [{ role: 'user', content: user }], maxOutputTokens: 16000, temperature: 0 }, opts.policy, signal);
+            const r = await callWithRetry(target, { system, messages, maxOutputTokens: 16000, temperature: 0 }, opts.policy, signal);
             const cost = computeCost(r.usage, j.pricing);
             opts.record({
               label: `${label} · ${j.label}`,
               judge: true,
               system,
-              messages: [{ role: 'user', content: user }],
+              messages: stripImageData(messages),
               response: r.text,
               usage: r.usage,
               ttftMs: r.ttftMs,
@@ -943,14 +956,14 @@ export function createJudgePanel(opts: {
               costUsd: cost,
               retries: r.retries,
             });
-            return { judgeId: j.id, text: r.text };
+            return { judgeId: j.id, text: r.text, sawImages: sees };
           } catch (err) {
             if (signal.aborted) throw err;
             opts.record({
               label: `${label} · ${j.label}`,
               judge: true,
               system,
-              messages: [{ role: 'user', content: user }],
+              messages: stripImageData(messages),
               response: '',
               usage: emptyUsage(),
               ttftMs: null,

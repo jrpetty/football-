@@ -55,6 +55,8 @@ import type { CaseResultLite, CategoryInfo, Leaderboard, LeaderboardRow, Program
 import { VisionExplainerCard, examplePicture } from '../components/VisionPresenter.tsx';
 import { SIM_PROGRAMS, SimMomentSlide, pickSimCase } from '../components/present/SimMomentSlide.tsx';
 import { IntroSlide, introCaption } from '../components/present/IntroSlide.tsx';
+import { JAM_WINNER_CAPTION, JamGenreSlide, JamWinnerSlide, jamGenreCaption, jamSlideCases } from '../components/present/GameJamSlides.tsx';
+import { JAM_TEST_ID, entryOf } from '../components/viz/gameJamModel.ts';
 
 const W = 1920;
 const H = 1080;
@@ -125,7 +127,9 @@ type Slide =
   | { kind: 'sim'; test: DeckTest; pick: CaseResultLite }
   | { kind: 'moment'; test: DeckTest; moment: MomentKind }
   | { kind: 'standings'; test: DeckTest; step: number }
-  | { kind: 'podium' };
+  | { kind: 'podium' }
+  | { kind: 'jam-genre'; test: DeckTest; caseId: string }
+  | { kind: 'jam-winner'; test: DeckTest };
 
 interface Caption {
   text: string;
@@ -319,6 +323,12 @@ function momentSlides(deck: Deck, test: DeckTest): Slide[] {
   return moment ? [{ kind: 'moment', test, moment }] : [];
 }
 
+/** The Game Jam: one arcade-cabinet slide per genre, then the Game of the Jam (components/present/GameJamSlides.tsx). */
+function jamSlides(deck: Deck, test: DeckTest): Slide[] {
+  const ids = jamSlideCases(deck.d.results ?? [], test.snap.caseIds);
+  return ids.length ? [...ids.map((caseId): Slide => ({ kind: 'jam-genre', test, caseId })), { kind: 'jam-winner', test }] : [];
+}
+
 /** "What this test is" intro when the test has a hand-written explainer; the classic explainer slide otherwise. */
 function introOrExplainer(test: DeckTest): Slide {
   const x = test.detail?.explainer;
@@ -342,7 +352,7 @@ function buildSlides(deck: Deck, vertical = false, show: ShowOpts = { race: true
   }
   const slides: Slide[] = [{ kind: 'title' }, { kind: 'how' }];
   for (const test of deck.tests) {
-    slides.push(introOrExplainer(test), { kind: 'result', test }, ...simSlides(deck, test), ...momentSlides(deck, test), ...trickSlides(deck, test));
+    slides.push(introOrExplainer(test), { kind: 'result', test }, ...simSlides(deck, test), ...(test.snap.id === JAM_TEST_ID ? jamSlides(deck, test) : momentSlides(deck, test)), ...trickSlides(deck, test));
     const pick = deck.truth.get(test.snap.id);
     if (pick) slides.push({ kind: 'truth', test, pick });
     const step = deck.standings.findIndex((st) => st.testId === test.snap.id);
@@ -460,6 +470,12 @@ function captionFor(slide: Slide, deck: Deck): Caption {
     }
     case 'moment':
       return momentCaption(slide.moment);
+    case 'jam-genre': {
+      const r = (deck.d.results ?? []).find((x) => x.testId === slide.test.snap.id && x.caseId === slide.caseId);
+      return jamGenreCaption(r ? entryOf(r).genre : 'flappy');
+    }
+    case 'jam-winner':
+      return JAM_WINNER_CAPTION;
     case 'standings': {
       const st = deck.standings[slide.step]!;
       const base = typeof st.baseline === 'number';
@@ -493,6 +509,8 @@ function sectionFor(slide: Slide, deck: Deck): string {
     case 'intro':
     case 'result':
     case 'moment':
+    case 'jam-genre':
+    case 'jam-winner':
       return `Test ${slide.test.n} of ${deck.tests.length} · ${slide.test.cat.name}`;
     case 'final':
       return 'Final standings';
@@ -1207,6 +1225,10 @@ function SlideView({ slide, deck, reveal, vertical }: { slide: Slide; deck: Deck
       const who = deck.contenders.find((c) => c.id === slide.pick.contestantId);
       return <SimMomentSlide runId={deck.d.manifest.id} pick={slide.pick} modelLabel={who?.baseline ? 'Random guessing' : (who?.label ?? slide.pick.contestantId)} modelColor={who?.color} />;
     }
+    case 'jam-genre':
+      return <JamGenreSlide runId={deck.d.manifest.id} caseId={slide.caseId} results={deck.d.results ?? []} contenders={deck.contenders} cat={slide.test.cat} testName={slide.test.snap.name} />;
+    case 'jam-winner':
+      return <JamWinnerSlide runId={deck.d.manifest.id} results={deck.d.results ?? []} contenders={deck.contenders} testName={slide.test.snap.name} />;
     case 'moment':
       return (
         <MomentSlide

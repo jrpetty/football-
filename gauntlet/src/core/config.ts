@@ -125,6 +125,7 @@ export function validateContestant(c: Contestant): string[] {
   if (c.vision !== undefined && typeof c.vision !== 'boolean') errors.push('vision must be true or false');
   if (c.releaseDate !== undefined && c.releaseDate !== '' && !/^\d{4}-\d{2}-\d{2}$/.test(c.releaseDate)) errors.push('releaseDate must be YYYY-MM-DD');
   if (c.tier !== undefined && !['flagship', 'mid', 'small'].includes(c.tier)) errors.push('tier must be flagship, mid or small');
+  if (c.maxOutputTokens !== undefined && !(Number.isInteger(c.maxOutputTokens) && c.maxOutputTokens > 0)) errors.push('maxOutputTokens must be a positive whole number');
   if (c.options?.extraBody !== undefined && (typeof c.options.extraBody !== 'object' || Array.isArray(c.options.extraBody))) errors.push('options.extraBody must be an object');
   return errors;
 }

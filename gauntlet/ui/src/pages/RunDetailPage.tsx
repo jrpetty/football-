@@ -102,6 +102,11 @@ export default function RunDetailPage({ runId }: { runId: string }) {
                 <Icon.Eye /> Watch it think
               </Link>
             )}
+            {d.results.some((r) => r.testId === 'creative.game-jam') && (
+              <Link to={pathOf('runs', runId, 'jam')} className="btn" title="The Game Jam: every model's games as a wall of arcade cabinets">
+                <Icon.Play /> Game Jam
+              </Link>
+            )}
             {d.results.length > 0 && (
               <Link to={pathOf('present', runId)} className="btn" title="Episode presenter: full-screen slides for recording">
                 <Icon.Present /> Present

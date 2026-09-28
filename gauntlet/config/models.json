@@ -593,6 +593,7 @@
       "model": "gpt-4o",
       "color": "#9BE3CC",
       "enabled": true,
+      "maxOutputTokens": 16384,
       "vision": true,
       "options": {
         "supportsTemperature": true
