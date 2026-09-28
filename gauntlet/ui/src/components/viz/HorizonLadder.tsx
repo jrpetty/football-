@@ -1,6 +1,7 @@
 /**
  * "How far up the ladder": the Horizon tier's signature visual. A mountain with a ten-rung ladder up its
- * face; every model is a climber token parked on the highest level it solved reliably, and each rung shows
+ * face; every model is a climber token parked on its ladder height (every level up to it solved
+ * reliably; see ladderClimbs), and each rung shows
  * one dot per model (filled = solved reliably, ring = solved sometimes / partial credit, empty = failed).
  * The summit is level 10: built for models that do not exist yet.
  *
@@ -55,11 +56,12 @@ export function HorizonLadder({
 
   // Geometry (SVG user units). Ladder runs bottom (level 1) to top (level N).
   const W = 1000;
-  const H = mode === 'slide' ? 700 : 560;
-  const top = 70;
+  const H = mode === 'slide' ? 720 : 620;
+  const top = 96; // the summit
   const ground = H - 58;
-  const step = (ground - 40 - top) / levels;
-  const yOf = (level: number) => (level === 0 ? ground : ground - 40 - (level - 0.5) * step);
+  const ladderTop = top + 104; // the top rung sits just below the snow line
+  const step = (ground - 30 - ladderTop) / levels;
+  const yOf = (level: number) => (level === 0 ? ground : ground - 30 - (level - 0.5) * step);
   const ladderX = 250;
   const ladderW = Math.max(220, Math.min(460, 70 + climbers.length * 62));
   const colX = (i: number) => ladderX + 40 + ((ladderW - 80) * (climbers.length === 1 ? 0.5 : i / (climbers.length - 1)));
@@ -95,10 +97,10 @@ export function HorizonLadder({
         {/* far range */}
         <path d={`M0 ${ground} L90 ${H * 0.42} L190 ${H * 0.55} L300 ${H * 0.3} L420 ${H * 0.48} L560 ${H * 0.36} L700 ${H * 0.52} L820 ${H * 0.28} L1000 ${H * 0.46} L1000 ${ground} Z`} fill="url(#hz-rock2)" opacity="0.8" />
         {/* the mountain the ladder climbs */}
-        <path d={`M40 ${ground} L${summitX - 150} ${top + 160} L${summitX - 60} ${top + 90} L${summitX} ${top - 12} L${summitX + 70} ${top + 110} L${summitX + 170} ${top + 70} L${summitX + 330} ${ground - 120} L${W - 30} ${ground} Z`} fill="url(#hz-rock)" />
-        <path d={`M${summitX - 60} ${top + 90} L${summitX} ${top - 12} L${summitX + 70} ${top + 110} L${summitX + 36} ${top + 84} L${summitX + 8} ${top + 104} L${summitX - 22} ${top + 76} Z`} className="hz-snow" />
+        <path d={`M20 ${ground} L${summitX - 250} ${top + 250} L${summitX - 120} ${top + 130} L${summitX} ${top} L${summitX + 110} ${top + 120} L${summitX + 210} ${top + 90} L${summitX + 380} ${ground - 130} L${W - 20} ${ground} Z`} fill="url(#hz-rock)" />
+        <path d={`M${summitX - 62} ${top + 66} L${summitX} ${top} L${summitX + 58} ${top + 63} L${summitX + 30} ${top + 50} L${summitX + 6} ${top + 68} L${summitX - 24} ${top + 48} Z`} className="hz-snow" />
         {/* summit flag: level N */}
-        <g transform={`translate(${summitX} ${top - 12})`}>
+        <g transform={`translate(${summitX} ${top})`}>
           <line x1="0" y1="0" x2="0" y2="-46" className="hz-pole" />
           <path d="M0 -46 L40 -36 L0 -26 Z" className={cx('hz-flag', topHeight >= levels && 'won')} />
         </g>
@@ -135,7 +137,7 @@ export function HorizonLadder({
         <text x={ladderX - 18} y={ground + 34} textAnchor="end" className="hz-lv base">
           start
         </text>
-        <text x={summitX} y={top - 70} textAnchor="middle" className="hz-summit">
+        <text x={summitX} y={top - 58} textAnchor="middle" className="hz-summit">
           Level {levels}: the horizon
         </text>
 
@@ -154,7 +156,7 @@ export function HorizonLadder({
           );
         })}
       </svg>
-      <ol className="hz-board" aria-label="Highest level solved reliably">
+      <ol className="hz-board" aria-label="Ladder height: highest level reached without missing a rung">
         {[...climbers]
           .sort((a, b) => Number(!!a.baseline) - Number(!!b.baseline) || b.climb.height - a.climb.height || (b.climb.score ?? 0) - (a.climb.score ?? 0))
           .map((c) => (

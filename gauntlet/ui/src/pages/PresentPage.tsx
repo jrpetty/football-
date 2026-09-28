@@ -471,8 +471,8 @@ function captionFor(slide: Slide, deck: Deck): Caption {
       return momentCaption(slide.moment);
     case 'ladder':
       return {
-        text: 'How far up the ladder: ten levels, each harder than the last. Every model sits on the highest level it solved reliably; the dots show how it did on every level.',
-        fine: `Solved reliably = full marks on ${R > 1 ? 'at least 2 in 3 attempts' : 'its attempt'} · the levels are frozen, so future models climb the very same ladder`,
+        text: 'How far up the ladder: ten levels, each harder than the last. Each model stands on the highest rung it reached without missing one below; the dots show every level’s result.',
+        fine: `Solved reliably = full marks on ${R > 1 ? 'at least 2 in 3 attempts' : 'its attempt'} · a lucky solve higher up is listed but does not lift the climber · the levels are frozen, so future models climb the same ladder`,
       };
     case 'standings': {
       const st = deck.standings[slide.step]!;

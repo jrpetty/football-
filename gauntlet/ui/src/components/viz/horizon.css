@@ -374,6 +374,7 @@
 .hz-board-mini {
   display: grid;
   gap: 0.18em;
+  width: max-content;
 }
 .hz-board-mini i {
   font-style: normal;

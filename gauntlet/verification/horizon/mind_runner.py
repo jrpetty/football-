@@ -365,6 +365,10 @@ def make(level: int, seed: int):
                 break
         if not (lo <= steps <= hi):
             continue
+        # drop helper functions the random program never calls (no dead code in what the model reads)
+        funcs, decls, arrays, main_, fin = parts
+        used = json.dumps(main_)
+        parts = ([f for f in funcs if f'"call", "{f[0]}"' in used], decls, arrays, main_, fin)
         js = render(*parts, g.scalars, 'js')
         py = render(*parts, g.scalars, 'py')
         v_js = int(run(['node'], js, '.js'))

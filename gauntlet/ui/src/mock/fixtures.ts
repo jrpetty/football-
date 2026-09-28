@@ -39,6 +39,7 @@ import { TRICK_RUN_SPEC, TRICK_SUITE, TRICK_TESTS, decorateTrick, trickResponse 
 import { CODE_AGENT_PROGRAM, CODE_AGENT_TEST, codeAgentReplay, codeAgentSummary } from './codeAgentMock.ts';
 import { VISUAL_RUN_SPEC, VISUAL_TESTS, decorateVisual, visualDetail } from './caseVisualsMock.ts';
 import { simReplay } from './simReplayMock.ts';
+import { HORIZON_RUN_SPEC, HORIZON_SUITE, HORIZON_TESTS, decorateHorizon, horizonDetail } from './horizonMock.ts';
 import { VISUAL_PASS_PROGRAMS, VISUAL_PASS_RUN_SPEC, VISUAL_PASS_TESTS, decorateVisualPass, visualPassDetail } from './visualPassMock.ts';
 
 // ───────────────────────────── RNG ─────────────────────────────
@@ -751,7 +752,7 @@ function genLite(runId: string, c: ContestantView, t: TestDefinition, caseId: st
   if (type === 'human') artifacts.push({ name: 'page.html', kind: 'html', file: `${c.id}/${t.id}/${caseId}-r${repeat}.html`, bytes: 8000 + Math.round(r.next() * 9000) });
   if (t.kind === 'program' && t.program === 'draw-it-blind') artifacts.push({ name: 'reconstruction.svg', kind: 'svg', file: `${c.id}/${t.id}/${caseId}-r${repeat}.svg`, bytes: 2400 });
 
-  return decorateVisualPass(t, mockVisionSkip(decorateVisual(t, decorateTrick(t, {
+  return decorateHorizon(t, decorateVisualPass(t, mockVisionSkip(decorateVisual(t, decorateTrick(t, {
     key,
     runId,
     contestantId: c.id,
@@ -774,7 +775,7 @@ function genLite(runId: string, c: ContestantView, t: TestDefinition, caseId: st
     finishedAt: finished,
     humanScores,
     hasReplay: t.kind === 'program',
-  }), SETTINGS.judges), c, t));
+  }), SETTINGS.judges), c, t)));
 }
 
 function summaryText(t: TestDefinition, score: number | null, status: ResultStatus, u: number): string {
@@ -1407,6 +1408,8 @@ export function artifactContent(ref: ArtifactRef): string {
 
 export function detailFor(lite: CaseResultLite): CaseResult {
   const t = testById(lite.testId);
+  const hz = t && lite.status !== 'skipped' ? horizonDetail(t, lite, renderedOf(t).find((x) => x.caseId === lite.caseId)?.turns ?? ['']) : null;
+  if (hz) return hz;
   const vis = t && lite.status !== 'skipped' ? visualDetail(t, lite, renderedOf(t).find((x) => x.caseId === lite.caseId)?.turns ?? [''], SETTINGS.judges) : null;
   if (vis) return vis;
   const r = rngFrom(`detail|${lite.key}`);
@@ -1524,3 +1527,7 @@ RUN_SPECS.push(VISUAL_RUN_SPEC);
 TESTS.push(...VISUAL_PASS_TESTS.filter((t) => !TESTS.some((x) => x.id === t.id)));
 PROGRAMS.push(...VISUAL_PASS_PROGRAMS);
 RUN_SPECS.push(VISUAL_PASS_RUN_SPEC);
+// Horizon tier: the five real ladders and a demo climb (see horizonMock.ts).
+TESTS.push(...HORIZON_TESTS);
+SUITES.push(HORIZON_SUITE);
+RUN_SPECS.push(HORIZON_RUN_SPEC);

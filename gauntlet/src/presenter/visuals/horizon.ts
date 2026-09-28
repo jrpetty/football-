@@ -4,7 +4,9 @@
  *
  * Every Horizon test is a ladder of frozen levels with case ids L01, L02, … (L01 easiest). A level
  * counts as SOLVED RELIABLY when at least two thirds of its attempts scored full marks (with one
- * attempt: that attempt). The headline number is the highest level solved reliably.
+ * attempt: that attempt). The headline number, the ladder HEIGHT, is the highest level reached without
+ * falling off: every level from 1 up to it solved reliably. A lucky solve higher up is reported
+ * separately (`best`), so one fluke never lifts a model past a rung it could not climb.
  */
 import type { CaseVisualInput } from './common.ts';
 import { replayPlan, parsePlan, parseGrid, parseBigInteger, type PlanKey } from '../../scoring/ladder.ts';
@@ -45,7 +47,7 @@ export interface Climb {
   contestantId: string;
   /** One entry per level 1..levels (attempts 0 = not run). */
   rungs: Rung[];
-  /** Highest level solved reliably (0 = none). */
+  /** Ladder height: every level from 1 up to this one solved reliably (0 = none). */
   height: number;
   /** Highest level with at least one full-marks attempt (0 = none). */
   best: number;
@@ -76,10 +78,12 @@ export function ladderClimbs(results: LadderResultLike[], testId: string, levels
       rungs.push({ level, attempts: s.length, full, mean, reliable: s.length > 0 && full / s.length >= LADDER_RELIABLE_SHARE - 1e-9 });
     }
     const run = rungs.filter((r) => r.attempts > 0);
+    let height = 0;
+    while (height < rungs.length && rungs[height]!.reliable) height++;
     out.push({
       contestantId,
       rungs,
-      height: Math.max(0, ...rungs.filter((r) => r.reliable).map((r) => r.level)),
+      height,
       best: Math.max(0, ...rungs.filter((r) => r.full > 0).map((r) => r.level)),
       score: run.length ? run.reduce((a, r) => a + r.mean, 0) / run.length : null,
     });
@@ -128,6 +132,8 @@ export interface IntegerCompare {
   firstDiff: number;
   /** Number of digit positions (of the key) that match. */
   sameDigits: number;
+  /** Same length as the key: how many positions differ (else -1). */
+  wrongDigits: number;
 }
 
 export interface PlanCompare {
@@ -181,7 +187,8 @@ export function horizonVisual(input: CaseVisualInput): RungModel | null {
       }
     }
     const ok = got === exp;
-    return { testId: input.testId, level, caption, score: input.score, verdict: got === null ? 'no-answer' : ok ? 'correct' : 'wrong', compare: { kind: 'integer', want: exp, got, firstDiff: ok ? -1 : firstDiff, sameDigits: same } };
+    const wrongDigits = got !== null && got.length === exp.length ? got.length - same : -1;
+    return { testId: input.testId, level, caption, score: input.score, verdict: got === null ? 'no-answer' : ok ? 'correct' : 'wrong', compare: { kind: 'integer', want: exp, got, firstDiff: ok ? -1 : firstDiff, sameDigits: same, wrongDigits } };
   }
   if (exp && typeof exp === 'object' && !Array.isArray(exp) && 'start' in exp) {
     const key = exp as PlanKey;
@@ -227,7 +234,8 @@ export function rungHeadline(m: RungModel, who = 'The model'): string {
       return `Level ${m.level}: ${who} gave no readable answer`;
     case 'wrong':
       if (c.kind === 'grid') return `Level ${m.level}: ${c.wrong} of ${c.want.length * c.want[0]!.length} cells wrong`;
-      if (c.kind === 'integer') return c.firstDiff === 0 ? `Level ${m.level}: wrong from the very first digit` : `Level ${m.level}: right for ${c.firstDiff} ${c.firstDiff === 1 ? 'digit' : 'digits'}, then wrong`;
+      if (c.kind === 'integer' && c.wrongDigits > 0 && c.wrongDigits <= 3) return `Level ${m.level}: ${c.wrongDigits} of ${c.want.length} digits wrong`;
+      if (c.kind === 'integer') return c.firstDiff === 0 ? `Level ${m.level}: wrong from the very first digit` : c.firstDiff === 1 ? `Level ${m.level}: right for the first digit, then wrong` : `Level ${m.level}: right for ${c.firstDiff} digits, then wrong`;
       return `Level ${m.level}: wrong`;
   }
 }

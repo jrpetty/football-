@@ -47,7 +47,7 @@ function Digits({ c }: { c: IntegerCompare }) {
         ) : (
           <div className="hz-digits" aria-label={`Model answered ${c.got}`}>
             {[...c.got].map((d, i) => (
-              <i key={i} className={c.firstDiff < 0 || i < c.firstDiff ? 'ok' : 'no'}>
+              <i key={i} className={(c.wrongDigits >= 0 ? d === c.want[i] : c.firstDiff < 0 || i < c.firstDiff) ? 'ok' : 'no'}>
                 {d}
               </i>
             ))}
@@ -67,7 +67,9 @@ function Digits({ c }: { c: IntegerCompare }) {
       {c.got !== null && c.firstDiff >= 0 && (
         <div className="hz-note">
           {c.got.length !== c.want.length ? `The key has ${c.want.length} digits; the model gave ${c.got.length}. ` : ''}
-          {c.firstDiff === 0 ? 'Wrong from the very first digit.' : `The first ${c.firstDiff} ${c.firstDiff === 1 ? 'digit matches' : 'digits match'}, then the answers part ways.`}
+          {c.wrongDigits > 0 && c.wrongDigits <= 3
+            ? `${c.want.length - c.wrongDigits} of ${c.want.length} digits are in the right place, but one slip anywhere makes the whole answer wrong.`
+            : c.firstDiff === 0 ? 'Wrong from the very first digit.' : c.firstDiff === 1 ? 'Only the first digit matches; after that the answers part ways.' : `The first ${c.firstDiff} digits match, then the answers part ways.`}
         </div>
       )}
     </>
@@ -176,8 +178,8 @@ export function HorizonRungCard({ m, mode, levels = 10, modelLabel }: { m: RungM
   const legend =
     c.kind === 'integer'
       ? [
-          { tone: 'good', label: 'Digits that match the key' },
-          { tone: 'bad', label: 'From the first wrong digit' },
+          { tone: 'good', label: 'Digit matches the key' },
+          { tone: 'bad', label: 'Digit differs from the key' },
         ]
       : c.kind === 'grid'
         ? [
