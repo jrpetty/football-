@@ -22,7 +22,7 @@ export function outputFilesFor(r: CaseResult, opts: { runId?: string; replayCont
   if (r.replay) out.push({ id: 'replay', name: r.replay.title || 'Replay', hint: 'replay', role: 'Replay', replay: r.replay, replayContext: opts.replayContext });
 
   const arts = r.artifacts ?? [];
-  const shots = arts.filter((a) => a.kind === 'png' && /screenshot|render|frame|shot/i.test(a.name));
+  const shots = arts.filter((a) => a.kind === 'png' && /screenshot|render|frame|shot|playtest/i.test(a.name));
   const main = arts.filter((a) => !shots.includes(a));
   const shotFiles: ViewerFile[] = shots.map((a) => ({ id: `art:${a.file}`, name: a.name, url: urlFor(a.file), size: a.bytes, role: 'Screenshot' }));
   const hasHtml = main.some((a) => a.kind === 'html');

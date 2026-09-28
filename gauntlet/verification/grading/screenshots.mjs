@@ -39,7 +39,7 @@ const shots = [
   ['inspector-summary', `${base}/?mock=1#/runs/run-2026-09-12-creative?tab=matrix&test=creative.one-shot-game&c=helios-nova-3-pro`, 'dark', [{ wait: 800 }]],
   ['presenter-summaries', `${base}/?mock=1#/present/run-2026-09-12-creative`, 'dark', [{ key: 'ArrowRight' }, { wait: 300 }, { key: 'ArrowRight' }, { wait: 300 }, { key: 'ArrowRight' }, { wait: 2600 }]],
   ['presenter-summaries-light', `${base}/?mock=1#/present/run-2026-09-12-creative`, 'light', [{ key: 'ArrowRight' }, { wait: 300 }, { key: 'ArrowRight' }, { wait: 300 }, { key: 'ArrowRight' }, { wait: 2600 }]],
-  ['studio-facts', `${base}/?mock=1#/studio/run-2026-09-12-creative`, 'dark', [{ wait: 800 }]],
+  ['studio-facts', `${base}/?mock=1#/studio/run-2026-09-12-creative`, 'dark', [{ click: 'button[role="tab"]:has-text("Video script")' }, { wait: 800 }]],
   ['inbox-attach-files', `${base}/?mock=1#/inbox`, 'dark', [{ wait: 800 }]],
 ];
 

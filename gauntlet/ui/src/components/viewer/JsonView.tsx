@@ -22,7 +22,8 @@ export default function JsonView({ file, content, height }: ViewerProps) {
     }
   }, [text]);
   const hasKey = file.compareTo !== undefined && 'value' in parsed;
-  const [tab, setTab] = useState<'diff' | 'pretty'>(hasKey ? 'diff' : 'pretty');
+  const [chosen, setTab] = useState<'diff' | 'pretty' | null>(null);
+  const tab = chosen ?? (hasKey ? 'diff' : 'pretty');
   const rows = useMemo(() => (hasKey && 'value' in parsed ? jsonDiff(file.compareTo, parsed.value) : []), [hasKey, parsed, file.compareTo]);
   if ('error' in parsed) {
     return (

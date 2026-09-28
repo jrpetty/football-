@@ -76,6 +76,9 @@ export function applyOfficial(r: CaseResult, spec: GradingSpec, policy: Official
   if (human !== null) d.humanScore = r4(human);
   d.official = { source: off.source, policy, why: off.why };
   if (off.score === null) return out;
+  // A cap the scorer applied (a Game Jam game that froze, stayed blank or loads from the internet) still holds.
+  const cap = /capped at (\d+)/.exec(String((d.gameJam as { cap?: string } | undefined)?.cap ?? ''))?.[1];
+  if (cap !== undefined) off.score = Math.min(off.score, Number(cap) / 100);
   out.score = off.score;
   out.passed = off.score >= spec.passThreshold;
   if (r.status === 'pending-human' || judgeFailed(r)) {

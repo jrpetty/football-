@@ -433,18 +433,21 @@ async function aiGradeOne(runId: string, key: string, targetFor: (j: Contestant)
   const perJudge = new Map<string, { cost: number; images: number }>();
   const panel: JudgePanel = {
     ids: judges.map((j) => j.id),
-    ask: (system, user, label) =>
+    ask: (system, user, label, opts) =>
       Promise.all(
         judges.map(async (j) => {
           const vision = supportsVision(j, providerTypeOf(j));
-          const imgs = vision ? images : [];
-          const messages = [{ role: 'user' as const, content: user, images: imgs.length ? imgs : undefined }];
+          // The scorer's own pictures (e.g. Game Jam playtest frames) win; otherwise the test images and screenshots.
+          const own = (opts?.images ?? []).filter((im): im is GradeImage => !!im.data);
+          const imgs = vision ? (own.length ? own : images) : [];
+          const text = !vision && opts?.textOnlyUser ? opts.textOnlyUser : user;
+          const messages = [{ role: 'user' as const, content: text, images: imgs.length ? imgs : undefined }];
           try {
             const res = await callWithRetry(targetFor(j), { system, messages, maxOutputTokens: 16000, temperature: 0 }, { maxRetries, temperature: 0, defaultMaxOutputTokens: 16000 }, signal);
             const cost = computeCost(res.usage, j.pricing);
             perJudge.set(j.id, { cost: (perJudge.get(j.id)?.cost ?? 0) + cost, images: imgs.length });
             transcript.push({ label: `station ${label} · ${j.label}`, judge: true, system, messages: stripImageData(messages), response: res.text, usage: res.usage, ttftMs: res.ttftMs, totalMs: res.totalMs, stopReason: res.stopReason, rawStopReason: res.rawStopReason, costUsd: cost, retries: res.retries });
-            return { judgeId: j.id, text: res.text };
+            return { judgeId: j.id, text: res.text, sawImages: imgs.length > 0 };
           } catch (err) {
             if (signal.aborted) throw err;
             transcript.push({ label: `station ${label} · ${j.label}`, judge: true, system, messages: stripImageData(messages), response: '', usage: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cachedInputTokens: 0, cacheWriteTokens: 0 }, ttftMs: null, totalMs: 0, stopReason: 'other', rawStopReason: 'error', costUsd: 0, retries: 0, error: (err as Error).message });

@@ -47,7 +47,7 @@ writeFileSync(settingsFile, JSON.stringify({ ...settings, judges: [] }, null, 2)
 
 const PORT = 7900 + Math.floor(Math.random() * 90);
 const env = { ...process.env, GAUNTLET_CONFIG_DIR: config, GAUNTLET_DATA_DIR: join(sandbox, 'data') };
-const server = spawn(process.execPath, [join(ROOT, 'src', 'cli.ts'), 'serve', '--port', String(PORT)], { env, stdio: 'pipe' });
+const server = spawn(process.execPath, [join(ROOT, 'src', 'cli.ts'), 'serve', '--port', String(PORT)], { env, stdio: 'ignore' });
 const BASE = `http://127.0.0.1:${PORT}`;
 const api = async (method, path, body) => {
   const r = await fetch(BASE + path, { method, headers: body ? { 'content-type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
@@ -163,3 +163,5 @@ try {
 } finally {
   server.kill();
 }
+// Exit explicitly: nothing else should keep the process alive after the checks.
+process.exit(process.exitCode ?? 0);

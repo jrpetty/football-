@@ -207,6 +207,24 @@ test('gradingSpecFor reads real rubrics: criteria, anchors, requirement lists, c
   assert.ok(applies(trap.id).includes('HALLUCINATED') && !applies(trap.id).includes('CORRECT'));
 });
 
+test('Game Jam (artifact with playtest): checklist + five weighted criteria with the rubric anchors', () => {
+  const jam = JSON.parse(readFileSync(new URL('../tests/creative/game-jam.json', import.meta.url), 'utf8'));
+  const c = jam.cases[0];
+  const s = spec.gradingSpecFor(jam, { caseId: c.id });
+  assert.equal(s.kind, 'artifact');
+  assert.equal(s.criteria.length, 6);
+  assert.equal(Math.round(s.criteria.reduce((t, x) => t + x.weight, 0) * 100), 100);
+  const check = s.criteria.find((x) => x.id === 'fidelity')!;
+  assert.equal(check.requirements!.items.length, c.expected.requirements.length);
+  const plays = s.criteria.find((x) => x.id === 'plays')!;
+  assert.deepEqual(plays.anchors.map((a) => a.value).slice(0, 3), [10, 7, 4]);
+  assert.ok(s.rules.some((r) => /Hard rules/.test(r)));
+  // All tens → 1; creativity alone (weight 0.3) → 0.3.
+  const all = Object.fromEntries(s.criteria.map((x) => [x.id, 10]));
+  assert.equal(spec.scoreFromGrade(s, { criteria: all }), 1);
+  assert.equal(spec.scoreFromGrade(s, { criteria: { ...Object.fromEntries(s.criteria.map((x) => [x.id, 0])), creativity: 10 } }), 0.3);
+});
+
 test('gradingSpecFor works for every test in the library', async () => {
   const { loadTests } = await import('../src/core/registry.ts');
   // The real library (not the sandbox): read the repository's tests folder directly.

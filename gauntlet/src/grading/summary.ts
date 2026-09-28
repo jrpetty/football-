@@ -22,7 +22,9 @@ export interface SummaryResult {
   scoreDetail?: ScoreDetail;
   metrics?: Partial<CaseMetrics>;
   error?: string;
-  humanScores?: Array<{ score: number }>;
+  humanScores?: Array<{ score: number; note?: string }>;
+  /** Grading Station AI verdicts (their rationales explain a lost point too). */
+  aiGrades?: Array<{ score: number; label?: string; rationale: string }>;
 }
 
 export interface SummaryInput {
@@ -120,6 +122,8 @@ export function missReason(r: SummaryResult): string {
   if (r.status === 'error') return 'hit an error';
   if (d.hedged) return 'hedged between two answers';
   if (typeof d.label === 'string' && d.label) return `judged ${d.label.replace(/_/g, ' ').toLowerCase()}`;
+  const aiWorst = (r.aiGrades ?? []).reduce<{ score: number; label?: string } | null>((a, b) => (!a || b.score < a.score ? b : a), null);
+  if (aiWorst?.label) return `judged ${aiWorst.label.replace(/_/g, ' ').toLowerCase()}`;
   const expected = Array.isArray(d.expected) && d.expected.every((x) => typeof x === 'string') ? d.expected[0] : d.expected;
   const scalar = (v: unknown) => typeof v === 'string' || typeof v === 'number';
   if (scalar(d.extracted) && String(d.extracted).trim() && scalar(expected) && !looksLikePattern(expected) && String(d.extracted).length <= 80) {
@@ -131,7 +135,7 @@ export function missReason(r: SummaryResult): string {
     const label = quoteSnippet(failed[0]!.label, 5);
     return failed.length === 1 ? `failed ${label}` : `failed ${failed.length} checks, e.g. ${label}`;
   }
-  const judges = (d.judge ?? []).filter((j) => j.rationale?.trim());
+  const judges = [...(d.judge ?? []), ...(r.aiGrades ?? [])].filter((j) => j.rationale?.trim());
   if (judges.length) {
     const worst = judges.reduce((a, b) => (b.score < a.score ? b : a));
     return `a judge noted "${firstSentence(worst.rationale, 9)}"`;
@@ -194,7 +198,7 @@ export function templateSummary(input: SummaryInput): string {
   const binary = scored.every((r) => r.score === 0 || r.score === 1);
   const repeats = scored.length > cases.length;
   // "Judges scored it" only when the judges are the whole score (artifact tests mix in automated checks).
-  const judged = scored.some((r) => (r.scoreDetail?.judge?.length ?? 0) > 0) && !scored.some((r) => (r.scoreDetail?.items?.length ?? 0) > 0);
+  const judged = scored.some((r) => (r.scoreDetail?.judge?.length ?? 0) > 0 || (r.aiGrades?.length ?? 0) > 0) && !scored.some((r) => (r.scoreDetail?.items?.length ?? 0) > 0);
   const official = scored.map((r) => (r.scoreDetail?.official as { source?: string } | undefined)?.source).find(Boolean);
   const human = official === 'human' || official === 'arbitration' || scored.some((r) => r.scoreDetail?.humanScored);
 

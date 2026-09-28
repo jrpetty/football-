@@ -16,6 +16,7 @@
 import type { ArtifactCheck, Constraint, JudgeLabel, PromptTestCase, ScorerSpec, TestDefinition } from '../core/types.ts';
 import { explainerForDefinition, type ExplainStep, type TestExplainer } from '../core/explainers.ts';
 import { checkConstraints } from '../scoring/constraints.ts';
+import { JAM_CRITERIA, JAM_WEIGHTS } from '../scoring/game-jam-shared.ts';
 
 /**
  *  - objective: scored against an answer key or by machine (exact, number, JSON, code, constraints…); people may only dispute.
@@ -249,15 +250,48 @@ export function scoreFromGrade(spec: Pick<GradingSpec, 'criteria' | 'labels'>, g
     return l ? l.score : null;
   }
   if (!spec.criteria.length) return null;
+  // Weighted mean of each criterion's share of its range. For parsed rubrics the weight is the criterion's share of
+  // the points, so this equals "points earned ÷ points available"; the Game Jam gives its own weights.
   let got = 0;
   let total = 0;
   for (const c of spec.criteria) {
     const v = grade.criteria?.[c.id];
     if (typeof v !== 'number' || !Number.isFinite(v)) return null;
-    got += Math.min(c.max, Math.max(c.min, v)) - c.min;
-    total += c.max - c.min;
+    const w = c.weight > 0 ? c.weight : c.max - c.min;
+    got += (w * (Math.min(c.max, Math.max(c.min, v)) - c.min)) / (c.max - c.min || 1);
+    total += w;
   }
   return total > 0 ? Math.round((got / total) * 10000) / 10000 : null;
+}
+
+/**
+ * Game Jam rubric (artifact scorer with `playtest`, src/scoring/game-jam.ts): the requirement checklist (PASS 1,
+ * PARTIAL ½, FAIL 0 per numbered requirement from case.expected.requirements) plus five 0–10 criteria, with the
+ * scorer's own weights and the anchors written in the test's rubric ("PLAYS (0-10): … 10 = … 7 = …").
+ */
+function jamRubric(rubric: string | undefined, expected: unknown): { criteria: RubricCriterion[]; rules: string[] } {
+  const text = rubric ?? '';
+  const reqs = Array.isArray((expected as { requirements?: unknown })?.requirements) ? ((expected as { requirements: string[] }).requirements) : [];
+  const criteria: RubricCriterion[] = [];
+  for (const k of JAM_CRITERIA) {
+    const weight = JAM_WEIGHTS[k.id];
+    if (!k.key) {
+      criteria.push({ id: k.id, label: k.label, help: 'PASS = implemented and working; PARTIAL = present but incomplete or buggy (half credit); FAIL = missing or broken.', min: 0, max: 10, step: 0.5, weight, anchors: [{ value: 10, text: 'Every requirement passes' }, { value: 5, text: 'About half the checklist' }, { value: 0, text: 'Nothing on the checklist works' }], requirements: reqs.length ? { mode: 'share', items: reqs.map((r, i) => ({ id: String(i + 1), text: r })) } : undefined });
+      continue;
+    }
+    const para = new RegExp(`^${k.key}\\s*\\(0-10\\):\\s*([^\\n]*)\\n?([^\\n]*)`, 'm').exec(text);
+    const help = para?.[1]?.trim();
+    const anchors: RubricAnchor[] = [];
+    for (const piece of (para?.[2] ?? '').split(/\s(?=\d{1,2} = )/)) {
+      const m = /^(\d{1,2}) = (.+?)\.?\s*$/.exec(piece.trim());
+      if (m && Number(m[1]) <= 10 && !anchors.some((a) => a.value === Number(m[1]))) anchors.push({ value: Number(m[1]), text: m[2]!.split(/\.\s(?=[A-Z])/)[0]! });
+    }
+    if (!anchors.some((a) => a.value === 10)) anchors.push({ value: 10, text: 'Outstanding' });
+    if (!anchors.some((a) => a.value === 0)) anchors.push({ value: 0, text: 'None at all' });
+    criteria.push({ id: k.id, label: k.label, help, min: 0, max: 10, step: 0.5, weight, anchors: anchors.sort((a, b) => b.value - a.value) });
+  }
+  const rules = text.split('\n').filter((l) => /^hard rules?:/i.test(l.trim()));
+  return { criteria, rules };
 }
 
 function overallCriterion(help?: string): RubricCriterion {
@@ -486,7 +520,7 @@ export function gradingSpecFor(def: TestDefinition, opts: SpecOptions = {}): Gra
 
   // Artifact: automated checks, plus a rubric the judges (and people) grade when judgeWeight > 0.
   const w = sc.judgeWeight ?? 0;
-  const parsed = parseRubric(sc.rubric, prompt);
+  const parsed = sc.playtest ? jamRubric(sc.rubric, c?.expected) : parseRubric(sc.rubric, prompt);
   const criteria = sc.rubric ? (parsed.criteria.length ? parsed.criteria : [overallCriterion(sc.rubric)]) : [overallCriterion('How good is the build? There is no rubric for this test, so this rating is a second opinion only.')];
   return {
     ...common,
