@@ -46,6 +46,8 @@ const ViewerGuidePage = lazy(() => import('./pages/ViewerGuidePage.tsx'));
 // Head to Head (ui/src/versus/)
 const VersusPage = lazy(() => import('./versus/VersusPage.tsx'));
 const VersusDeckPage = lazy(() => import('./versus/VersusDeckPage.tsx'));
+// Grading Station (ui/src/grading/)
+const GradingStationPage = lazy(() => import('./grading/GradingStationPage.tsx'));
 
 interface NavItem {
   to: string;
@@ -66,6 +68,7 @@ const NAV: NavItem[] = [
   { to: '/present', label: 'Presenter', icon: Icon.Present, match: (p) => p.startsWith('/present') },
   { to: '/studio', label: 'Studio', icon: Icon.Clapper, match: (p) => p.startsWith('/studio') },
   { to: '/inbox', label: 'Manual Inbox', icon: Icon.Inbox, badge: 'manual', match: (p) => p.startsWith('/inbox') },
+  { to: '/grading', label: 'Grading Station', icon: Icon.Target, match: (p) => p.startsWith('/grading') },
   { to: '/review', label: 'Blind Review', icon: Icon.Eye, match: (p) => p.startsWith('/review') },
   { to: '/tests', label: 'Tests', icon: Icon.Flask, section: 'Lab', match: (p) => p.startsWith('/tests') },
   { to: '/grade', label: 'Grader', icon: Icon.Target, match: (p) => p.startsWith('/grade') },
@@ -132,6 +135,7 @@ function resolve(parts: string[]): Resolved {
   if (a === 'models') return { el: <ModelsPage />, crumb: 'Models' };
   if (a === 'keys') return { el: <KeysPage />, crumb: 'API Keys' };
   if (a === 'review') return { el: <ReviewPage />, crumb: 'Blind Review' };
+  if (a === 'grading') return { el: <GradingStationPage />, crumb: 'Grading Station' };
   if (a === 'methodology') return { el: <MethodologyPage />, crumb: 'Methodology' };
   if (a === 'guide') return b === 'show' ? { el: <ViewerGuidePage show />, crumb: 'Viewer guide', bare: true } : { el: <ViewerGuidePage />, crumb: 'Viewer guide' };
   if (a === 'inbox') return { el: <InboxPage />, crumb: 'Manual Inbox' };

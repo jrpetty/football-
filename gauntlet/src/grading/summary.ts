@@ -190,7 +190,8 @@ export function templateSummary(input: SummaryInput): string {
   const testScore = cases.reduce((s, c) => s + c.score, 0) / cases.length;
   const binary = scored.every((r) => r.score === 0 || r.score === 1);
   const repeats = scored.length > cases.length;
-  const judged = scored.some((r) => (r.scoreDetail?.judge?.length ?? 0) > 0);
+  // "Judges scored it" only when the judges are the whole score (artifact tests mix in automated checks).
+  const judged = scored.some((r) => (r.scoreDetail?.judge?.length ?? 0) > 0) && !scored.some((r) => (r.scoreDetail?.items?.length ?? 0) > 0);
   const official = scored.map((r) => (r.scoreDetail?.official as { source?: string } | undefined)?.source).find(Boolean);
   const human = official === 'human' || official === 'arbitration' || scored.some((r) => r.scoreDetail?.humanScored);
 

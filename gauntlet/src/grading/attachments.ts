@@ -107,7 +107,7 @@ function base64Bytes(b64: string): number {
 
 /** Every file inside a reply: fenced blocks (with or without a "File:" line) and data-URL links. */
 export function extractAttachments(reply: string): ReplyAttachment[] {
-  const out: ReplyAttachment[] = [];
+  const out: Array<ReplyAttachment & { at: number }> = [];
   // Fenced blocks: ```lang … ``` (3+ backticks; the closing fence must match the opening length).
   const fence = /(?:^|\n)(?:File:\s*([^\n]+)\n)?(`{3,})([\w+#.-]*)[^\n]*\n([\s\S]*?)\n\2(?=\n|$)/g;
   let n = 0;
@@ -116,13 +116,14 @@ export function extractAttachments(reply: string): ReplyAttachment[] {
     const lang = (m[3] || '').toLowerCase();
     const text = m[4] ?? '';
     const name = m[1]?.trim() || `block-${n}.${extForLang(lang)}`;
-    out.push({ name, lang: lang || langForFile(name) || 'text', text, bytes: new TextEncoder().encode(text).length });
+    out.push({ at: m.index ?? 0, name, lang: lang || langForFile(name) || 'text', text, bytes: new TextEncoder().encode(text).length });
   }
   // Data URLs in Markdown links / images.
   for (const m of reply.matchAll(/!?\[([^\]\n]{0,200})\]\((data:([\w.+-]+\/[\w.+-]+)(?:;[\w=.+-]+)*;base64,([A-Za-z0-9+/=\s]+))\)/g)) {
-    out.push({ name: m[1] || `file.${m[3]!.split('/')[1]}`, mime: m[3], dataUrl: m[2]!.replace(/\s+/g, ''), bytes: base64Bytes(m[4]!) });
+    out.push({ at: m.index ?? 0, name: m[1] || `file.${m[3]!.split('/')[1]}`, mime: m[3], dataUrl: m[2]!.replace(/\s+/g, ''), bytes: base64Bytes(m[4]!) });
   }
-  return out;
+  // In the order they appear in the reply.
+  return out.sort((a, b) => a.at - b.at).map(({ at: _at, ...rest }) => rest);
 }
 
 function extForLang(lang: string): string {

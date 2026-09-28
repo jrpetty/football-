@@ -343,10 +343,10 @@ test('uploaded files travel as fenced blocks or data URLs, and come back out', (
   assert.match(png, /^!\[pic _1_\.png\]\(data:image\/png;base64,/);
   const pdf = att.binaryFileToReply('doc.pdf', 'application/pdf', 'JVBERi0x');
   const got = att.extractAttachments(`Here you go.\n\n${html}\n\n${png}\n${pdf}\n\n\`\`\`python\nprint(1)\n\`\`\``);
-  assert.deepEqual(got.map((a) => a.name), ['game.html', 'block-2.py', 'pic _1_.png', 'doc.pdf']);
+  assert.deepEqual(got.map((a) => a.name), ['game.html', 'pic _1_.png', 'doc.pdf', 'block-2.py'], 'in the order they appear');
   assert.equal(got[0]!.lang, 'html');
-  assert.equal(got[2]!.mime, 'image/png');
-  assert.equal(got[3]!.bytes, 6);
+  assert.equal(got[1]!.mime, 'image/png');
+  assert.equal(got[2]!.bytes, 6);
   // A file containing a fence gets a longer fence and survives the round trip.
   const md = att.textFileToReply('notes.md', 'Look:\n```js\nx()\n```\n');
   assert.equal(att.extractAttachments(md)[0]!.text, 'Look:\n```js\nx()\n```');

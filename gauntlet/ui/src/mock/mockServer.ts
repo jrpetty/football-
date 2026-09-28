@@ -77,6 +77,15 @@ function getRun(id: string): MockRun {
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** Read-only access for feature mocks (e.g. gradingMock.ts): a run's manifest and results, or null. */
+export function mockRunForFeatures(id: string): MockRun | null {
+  try {
+    return getRun(id);
+  } catch {
+    return null;
+  }
+}
+
 function registerExports(run: MockRun) {
   const id = run.manifest.id;
   const json = JSON.stringify({ manifest: run.manifest, results: run.results }, null, 2);
@@ -700,6 +709,7 @@ export async function handle(method: string, fullPath: string, body: unknown): P
   const route = `${method} ${a ?? ''}`;
   if (a === 'arena') return (await import('./arenaMock.ts')).handleArena(method, parts.slice(1), body);
   if (a === 'versus') return (await import('./versusMock.ts')).handleVersus(method, parts.slice(1), q, body);
+  if (a === 'grading') return (await import('./gradingMock.ts')).handleGrading(method, parts.slice(1), q, body);
 
   switch (route) {
     case 'GET meta':

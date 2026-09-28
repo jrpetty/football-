@@ -11,10 +11,6 @@ export default function ImageView({ file, content, height }: ViewerProps) {
   const blobUrl = useMemo(() => (!file.url && content.bytes ? URL.createObjectURL(new Blob([content.bytes as BlobPart], { type: file.mime || 'image/png' })) : null), [file.url, content.bytes, file.mime]);
   useEffect(() => () => void (blobUrl && URL.revokeObjectURL(blobUrl)), [blobUrl]);
   const src = file.url ?? blobUrl ?? '';
-  useEffect(() => {
-    setDims(null);
-    setFailed(false);
-  }, [src]);
   return (
     <div className="uv-media">
       <div className={cx('uv-canvas bg-check', zoom === 'actual' && 'scroll')} style={{ height: Math.max(220, height - 46) }}>
@@ -22,6 +18,7 @@ export default function ImageView({ file, content, height }: ViewerProps) {
           <div className="uv-empty">This browser can’t display this image format. Download it to open it in another app.</div>
         ) : (
           <img
+            key={src}
             src={src}
             alt={file.name}
             className={cx(zoom === 'actual' && 'actual', (dims?.w ?? 99) < 64 && 'pixel')}
