@@ -143,6 +143,36 @@ test('openai-compatible adapter: streams, normalises cached/reasoning usage, use
   assert.equal(requests.at(-1)!.headers.authorization, 'Bearer test-key');
 });
 
+test('openai-compatible adapter: Groq-style usage on x_groq in the last chunk is counted', async () => {
+  const provider: ProviderConfig = { id: 'g', type: 'openai-compatible', label: 'Groq', baseUrl: `${base}/openai/v1`, apiKeyEnv: 'FAKE_KEY' };
+  const chunk = (extra: Record<string, unknown>) => `data: ${JSON.stringify({ id: 'c', object: 'chat.completion.chunk', created: 1, model: 'llama', ...extra })}\n\n`;
+  handler = (_req, _body, res) =>
+    void sse(res, [
+      chunk({ choices: [{ index: 0, delta: { content: 'hi' }, finish_reason: null }] }),
+      chunk({ choices: [{ index: 0, delta: {}, finish_reason: 'stop' }], x_groq: { id: 'req', usage: { prompt_tokens: 33, completion_tokens: 7, total_tokens: 40 } } }),
+      'data: [DONE]\n\n',
+    ], 5);
+  const r = await createAdapter(contestant('g'), provider).complete({ messages: [{ role: 'user', content: 'hi' }], maxOutputTokens: 16 });
+  assert.equal(r.text, 'hi');
+  assert.equal(r.usage.inputTokens, 33);
+  assert.equal(r.usage.outputTokens, 7);
+});
+
+test('openai-compatible adapter: Mistral gets no stream_options (its API rejects include_usage) and usage still comes from the last chunk', async () => {
+  const provider: ProviderConfig = { id: 'mi', type: 'openai-compatible', label: 'Mistral', baseUrl: `${base}/api.mistral.ai/v1`, apiKeyEnv: 'FAKE_KEY' };
+  handler = (_req, _body, res) =>
+    void sse(res, [
+      `data: ${JSON.stringify({ id: 'c', object: 'chat.completion.chunk', created: 1, model: 'mistral-large', choices: [{ index: 0, delta: { content: 'ok' }, finish_reason: 'stop' }], usage: { prompt_tokens: 12, completion_tokens: 3, total_tokens: 15 } })}\n\n`,
+      'data: [DONE]\n\n',
+    ], 5);
+  const r = await createAdapter(contestant('mi'), provider).complete({ messages: [{ role: 'user', content: 'hi' }], maxOutputTokens: 16 });
+  const sent = requests.at(-1)!.body;
+  assert.equal(sent.stream_options, undefined);
+  assert.equal(sent.max_tokens, 16);
+  assert.equal(r.usage.inputTokens, 12);
+  assert.equal(r.usage.outputTokens, 3);
+});
+
 test('openai-compatible adapter: DeepSeek-style cache fields, reasoning_content TTFT, max_tokens elsewhere, length stop', async () => {
   const provider: ProviderConfig = { id: 'd', type: 'openai-compatible', label: 'DeepSeek', baseUrl: `${base}/v1`, apiKeyEnv: 'FAKE_KEY' };
   const chunk = (delta: unknown, finish: string | null = null) => `data: ${JSON.stringify({ id: 'c', object: 'chat.completion.chunk', created: 1, model: 'ds', choices: [{ index: 0, delta, finish_reason: finish }] })}\n\n`;

@@ -33,6 +33,9 @@ export function createOpenAICompatibleAdapter(ctx: AdapterContext): ProviderAdap
   const opts = ctx.contestant.options ?? {};
   const isOpenAI = (ctx.provider.baseUrl ?? '').includes('api.openai.com');
   const maxTokensParam = ctx.provider.maxTokensParam ?? (isOpenAI ? 'max_completion_tokens' : 'max_tokens');
+  // Mistral's strict request validation rejects `stream_options.include_usage` with a 422; it sends usage in the
+  // final stream chunk without being asked.
+  const isMistral = (ctx.provider.baseUrl ?? '').includes('api.mistral.ai');
 
   return {
     async complete(req: CompletionRequest): Promise<Omit<CompletionResult, 'retries'>> {
@@ -44,9 +47,9 @@ export function createOpenAICompatibleAdapter(ctx: AdapterContext): ProviderAdap
         model: ctx.contestant.model,
         messages,
         stream: true,
-        stream_options: { include_usage: true },
         [maxTokensParam]: req.maxOutputTokens,
       };
+      if (!isMistral) body.stream_options = { include_usage: true };
       if (opts.effort) body.reasoning_effort = opts.effort;
       // Never let the provider retain benchmark prompts/completions (no stored conversations, no memory between cases).
       if (isOpenAI) body.store = false;
@@ -69,6 +72,9 @@ export function createOpenAICompatibleAdapter(ctx: AdapterContext): ProviderAdap
         for await (const chunk of stream) {
           if (chunk.model) servedModel = chunk.model;
           if (chunk.usage) usage = chunk.usage as UsageLike;
+          // Groq reports streamed usage on its own extension field of the last chunk.
+          const groq = (chunk as { x_groq?: { usage?: UsageLike } }).x_groq;
+          if (!chunk.usage && groq?.usage) usage = groq.usage;
           const choice = chunk.choices?.[0];
           if (!choice) continue;
           const delta = choice.delta as { content?: string | null; refusal?: string | null; reasoning_content?: string | null; reasoning?: string | null };
