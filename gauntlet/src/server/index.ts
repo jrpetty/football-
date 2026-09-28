@@ -52,6 +52,8 @@ import { registerChannelRoutes } from '../channel/routes.ts';
 import { registerKeyRoutes } from './keys-routes.ts';
 import { overlayRedirect, registerStudioRoutes } from '../media/studio.ts';
 import { registerArenaRoutes } from '../arena/server.ts';
+import { registerExplainRoutes } from './explain-routes.ts';
+import { explainerForDefinition } from '../core/explainers.ts';
 import { recoverInterruptedTournaments } from '../arena/tournament.ts';
 
 class HttpError extends Error {
@@ -202,6 +204,7 @@ route('GET', '/api/tests/:id', ({ params }) => {
     summary: summarize(t),
     rendered,
     program: program ? { id: program.id, name: program.name, description: program.description, scoring: program.scoring } : undefined,
+    explainer: explainerForDefinition(d, program?.scoring),
   };
 });
 
@@ -553,6 +556,8 @@ registerChannelRoutes(route, (status, message, details) => new HttpError(status,
 registerKeyRoutes({ route, httpError: (status, message) => new HttpError(status, message), ping: pingContestant });
 // The Arena (head-to-head games): routes live in src/arena/server.ts.
 registerArenaRoutes({ route, httpError: (status, message, details) => new HttpError(status, message, details), streaming: STREAMING });
+
+registerExplainRoutes({ route, httpError: (status, message) => new HttpError(status, message) });
 
 // ─────────────────────────────────────────────────────────────────────────────
 

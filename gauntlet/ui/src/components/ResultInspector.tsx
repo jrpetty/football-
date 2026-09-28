@@ -12,6 +12,7 @@ import { VisionResultPanel, resultImages } from './VisionResult.tsx';
 import { useRoute } from '../router.tsx';
 import { CaseVisualPanel } from './viz/CaseVisualPanel.tsx';
 import { ArtifactShowcase, showcaseArtifact } from './viz/ArtifactShowcase.tsx';
+import { AboutTestPanel } from './ExplainerCard.tsx';
 
 export interface InspectorTarget {
   testId: string;
@@ -328,6 +329,11 @@ export function ResultInspector({
   );
   const scored = rows.filter((r) => typeof r.score === 'number');
   const mean = scored.length ? scored.reduce((s, r) => s + (r.score as number), 0) / scored.length : null;
+  const randomMean = useMemo(() => {
+    if (!target) return null;
+    const base = results.filter((r) => r.testId === target.testId && /(^|[-_.])(random|baseline)([-_.]|$)/i.test(r.contestantId) && typeof r.score === 'number');
+    return base.length ? base.reduce((s, r) => s + (r.score as number), 0) / base.length : null;
+  }, [results, target]);
 
   return (
     <Drawer
@@ -348,6 +354,7 @@ export function ResultInspector({
         )
       }
     >
+      {target && <AboutTestPanel testId={target.testId} model={{ label: target.contestantLabel, color: target.contestantColor, score: mean }} randomScore={randomMean} />}
       <div className="inspector">
         <div className="insp-list" role="listbox" aria-label="Cases">
           {rows.length === 0 && <div className="chart-empty">No results for this cell.</div>}

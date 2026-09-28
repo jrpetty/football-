@@ -7,6 +7,7 @@ import { Link, pathOf, setQuery, useRoute } from '../router.tsx';
 import { usePrefs, useToast, useViewerCaption } from '../context.tsx';
 import { useNow } from '../hooks.ts';
 import { Callout, ConfirmDialog, ErrorState, HashTag, LoadingPage, PageHead, RunStatusBadge, Seg, cx } from '../components/ui.tsx';
+import { AboutTestPanel } from '../components/ExplainerCard.tsx';
 import { Icon } from '../components/icons.tsx';
 import { fmtCost, fmtDateTime } from '../format.ts';
 import { arenaApi, exportTournamentUrl } from '../arena/client.ts';
@@ -313,6 +314,7 @@ export default function ArenaTournamentPage({ id }: { id: string }) {
           <Callout tone={m.status === 'failed' ? 'bad' : 'warn'}>{m.error}</Callout>
         </div>
       )}
+      <AboutTestPanel testId={`arena.${m.game.id}`} label="About this game" />
       {engine === 'turns' && (
         <div className="ar-format-note">
           <span aria-hidden="true">♠</span> <b>Duplicate poker:</b> each deal is played twice with the cards swapped, so luck cancels out. Matches are won on total chips.
