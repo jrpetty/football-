@@ -109,6 +109,19 @@ function factLabels(ids: string[], facts: readonly FactSpec[]): string {
   return ids.map((id) => facts.find((f) => f.id === id)?.label ?? id).join(', ');
 }
 
+/**
+ * The round from which a lost fact never came back (the start of its final absent streak). A fact can drop out of a
+ * 60-word summary and reappear in the next story, so the first round it was missing is not when it died.
+ */
+export function diedAtRound(rounds: ReadonlyArray<Pick<RoundRecord, 'round' | 'facts'>>, factId: string): number | null {
+  let died: number | null = null;
+  for (const r of rounds) {
+    if (r.facts.includes(factId)) died = null;
+    else if (died === null) died = r.round;
+  }
+  return died;
+}
+
 export function buildStory(ctx: Pick<ProgramContext, 'rng'>, cfg: CwConfig): SourceStory {
   return generateStory(ctx.rng.fork('chain-of-whispers'), cfg.story, cfg.facts);
 }
@@ -232,14 +245,8 @@ export const program: ProgramDefinition = {
         penalty: { total: penalty, overLimit: over, tooShort: short },
         broken,
         facts: facts.map((f) => {
-          const diedAt = rounds.find((r) => !r.facts.includes(f.id));
-          return {
-            id: f.id,
-            label: f.label,
-            canonical: f.canonical,
-            survived: finalFacts.includes(f.id),
-            diedAtRound: diedAt ? diedAt.round : null,
-          };
+          const survived = finalFacts.includes(f.id);
+          return { id: f.id, label: f.label, canonical: f.canonical, survived, diedAtRound: survived ? null : diedAtRound(rounds, f.id) };
         }),
         rounds: rounds.map((r) => ({
           round: r.round,

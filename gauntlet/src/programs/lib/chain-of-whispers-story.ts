@@ -260,7 +260,7 @@ function expedition(rng: Rng, extended = false): SourceStory {
       fact('trapped', 'days trapped', `They were trapped for ${days} days`, [String(days), ['days', 'day']], 2),
       fact('food', 'last food', `They lived on ${food}`, [foodAliases], 0),
       fact('village', 'home village', `They set out from the village of ${village}`, [village], 0),
-      fact('cave', 'crystal cave', `They discovered a cave of blue crystals`, [['crystal', 'crystals'], ['cave', 'cavern', 'caves']], 8),
+      fact('cave', 'crystal cave', `They discovered a cave of blue crystals`, [['crystal', 'crystals'], ['cave', 'cavern', 'caves']], 12),
       ...(extra?.facts ?? []),
     ],
   };

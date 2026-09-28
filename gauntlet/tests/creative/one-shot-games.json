@@ -1,7 +1,7 @@
 {
   "kind": "prompt",
   "id": "creative.one-shot-games",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "Build a Game in One Shot",
   "category": "creative",
   "description": "The model must ship a complete, polished browser game in a single HTML file with no external assets: a Flappy-style game with a burning bird and a heat mechanic, a top-down penalty shootout against an adaptive goalkeeper AI, and Snake with teleporting portals. Headless-browser checks catch crashes and dead input, and a judge rubric scores playability, fidelity and polish, so it separates models that can engineer a working interactive system from those that sketch one.",
@@ -47,7 +47,8 @@
       }
     ],
     "rubric": "Score the artifact out of 10 using these criteria. Reason about how the code will actually behave in a browser.\n\n1. Runs and core loop works (0-3 points): 3 = loads without errors and the full loop works (start screen -> play -> game over -> restart); 2 = full loop works but with a noticeable bug; 1 = playable but the loop is incomplete (e.g. no working restart); 0 = does not start, throws an error that stops play, or is not a game.\n2. Fidelity to the game-specific numbered requirements (0-3 points): start from 3 and subtract 1 for each numbered game requirement (1, 2, 3, ...) in the task that is missing or clearly broken, minimum 0.\n3. Controls (0-1 point): 1 only if keyboard AND mouse/touch controls are both implemented as the task specifies; otherwise 0.\n4. Game feel and difficulty (0-1 point): 1 if controls feel responsive and the difficulty is fair and increases sensibly; 0 if it is trivially easy, unfair, or unplayable.\n5. Visual polish and UI clarity (0-1 point): 1 if the visuals are coherent and animated and the score/UI text is readable; 0 if it looks like placeholder boxes or the UI is unreadable.\n6. Technical requirements A-F (0-1 point): 1 if all of A-F are met (self-contained, both input types, score and best score, start/game-over screens with clean restart, requestAnimationFrame with frame-rate-independent timing, scales to the window); 0 if any is missing.\n\nAutomatic caps: if the file loads ANY external resource (CDN, font, image or audio URL), the total may not exceed 3. If the artifact is not the requested game, the total is 0. Do not award points for features that are described in comments but not implemented.",
-    "judgeWeight": 0.5
+    "judgeWeight": 0.5,
+    "zeroIfJudgedZero": true
   },
   "cases": [
     {

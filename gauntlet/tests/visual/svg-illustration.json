@@ -1,7 +1,7 @@
 {
   "kind": "prompt",
   "id": "visual.svg-illustration",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "Precise SVG Illustration",
   "category": "visual",
   "description": "Hand-written SVG illustrations with checkable requirements: a lighthouse scene with exact beam and stripe counts, a clock whose hands must sit at exact angles, a bar chart with exact pixel geometry and a chess position with exact piece placement. It tests spatial reasoning and precision in code-as-drawing, where approximate \"looks about right\" output loses points.",
@@ -34,7 +34,8 @@
       }
     ],
     "rubric": "Score the SVG out of 10. Work out from the code exactly what will be drawn (positions, sizes, colours, counts and angles).\n\n1. Numbered requirements (0-8 points): the task lists numbered requirements. Divide 8 points equally among them. A requirement earns its share only if it is fully and exactly satisfied as written (exact counts, positions, colours, angles or proportions; small anti-aliasing-level differences are fine). Partially met requirements earn half of their share. Round the total of this part to the nearest 0.5.\n2. Overall quality (0-2 points): 2 = clean, well-composed and immediately recognisable; 1 = recognisable but crude or cluttered; 0 = hard to recognise.\n\nRounding: give the final score as an integer (round .5 up). Automatic zero: if the SVG would not render, depicts something other than what was asked, or uses <image>, <script> or external resources, the score is 0.",
-    "judgeWeight": 0.6
+    "judgeWeight": 0.6,
+    "zeroIfJudgedZero": true
   },
   "cases": [
     {
@@ -53,7 +54,7 @@
           },
           {
             "check": "contains",
-            "text": "viewBox=\"0 0 512 512\""
+            "text": "0 0 512 512"
           },
           {
             "check": "contains",
@@ -65,9 +66,10 @@
           }
         ],
         "rubric": "Score the SVG out of 10. Work out from the code exactly what will be drawn (positions, sizes, colours, counts and angles).\n\n1. Numbered requirements (0-8 points): the task lists numbered requirements. Divide 8 points equally among them. A requirement earns its share only if it is fully and exactly satisfied as written (exact counts, positions, colours, angles or proportions; small anti-aliasing-level differences are fine). Partially met requirements earn half of their share. Round the total of this part to the nearest 0.5.\n2. Overall quality (0-2 points): 2 = clean, well-composed and immediately recognisable; 1 = recognisable but crude or cluttered; 0 = hard to recognise.\n\nRounding: give the final score as an integer (round .5 up). Automatic zero: if the SVG would not render, depicts something other than what was asked, or uses <image>, <script> or external resources, the score is 0.",
-        "judgeWeight": 0.6
+        "judgeWeight": 0.6,
+        "zeroIfJudgedZero": true
       },
-      "notes": "[medium] Automated checks: renders/parses, <= 40 kB, and contains viewBox=\"0 0 512 512\", <linearGradient, <path (each explicitly required by the prompt). The judge rubric splits 8 points across the numbered requirements and 2 for overall quality; judges can verify coordinates, counts and angles from the SVG source."
+      "notes": "[medium] Automated checks: renders/parses, <= 40 kB, and contains the viewBox numbers \"0 0 512 512\" (either quote style), <linearGradient, <path (each explicitly required by the prompt). A 0/10 from the judges zeroes the whole score. The judge rubric splits 8 points across the numbered requirements and 2 for overall quality; judges can verify coordinates, counts and angles from the SVG source."
     },
     {
       "id": "v02",
@@ -85,7 +87,7 @@
           },
           {
             "check": "contains",
-            "text": "viewBox=\"0 0 400 400\""
+            "text": "0 0 400 400"
           },
           {
             "check": "contains",
@@ -101,9 +103,10 @@
           }
         ],
         "rubric": "Score the SVG out of 10. Work out from the code exactly what will be drawn (positions, sizes, colours, counts and angles).\n\n1. Numbered requirements (0-8 points): the task lists numbered requirements. Divide 8 points equally among them. A requirement earns its share only if it is fully and exactly satisfied as written (exact counts, positions, colours, angles or proportions; small anti-aliasing-level differences are fine). Partially met requirements earn half of their share. Round the total of this part to the nearest 0.5.\n2. Overall quality (0-2 points): 2 = clean, well-composed and immediately recognisable; 1 = recognisable but crude or cluttered; 0 = hard to recognise.\n\nRounding: give the final score as an integer (round .5 up). Automatic zero: if the SVG would not render, depicts something other than what was asked, or uses <image>, <script> or external resources, the score is 0.",
-        "judgeWeight": 0.6
+        "judgeWeight": 0.6,
+        "zeroIfJudgedZero": true
       },
-      "notes": "[hard] Automated checks: renders/parses, <= 40 kB, and contains viewBox=\"0 0 400 400\", <circle, <line, <text (each explicitly required by the prompt). The judge rubric splits 8 points across the numbered requirements and 2 for overall quality; judges can verify coordinates, counts and angles from the SVG source."
+      "notes": "[hard] Automated checks: renders/parses, <= 40 kB, and contains the viewBox numbers \"0 0 400 400\" (either quote style), <circle, <line, <text (each explicitly required by the prompt). A 0/10 from the judges zeroes the whole score. The judge rubric splits 8 points across the numbered requirements and 2 for overall quality; judges can verify coordinates, counts and angles from the SVG source."
     },
     {
       "id": "v03",
@@ -121,7 +124,7 @@
           },
           {
             "check": "contains",
-            "text": "viewBox=\"0 0 600 500\""
+            "text": "0 0 600 500"
           },
           {
             "check": "contains",
@@ -141,9 +144,10 @@
           }
         ],
         "rubric": "Score the SVG out of 10. Work out from the code exactly what will be drawn (positions, sizes, colours, counts and angles).\n\n1. Numbered requirements (0-8 points): the task lists numbered requirements. Divide 8 points equally among them. A requirement earns its share only if it is fully and exactly satisfied as written (exact counts, positions, colours, angles or proportions; small anti-aliasing-level differences are fine). Partially met requirements earn half of their share. Round the total of this part to the nearest 0.5.\n2. Overall quality (0-2 points): 2 = clean, well-composed and immediately recognisable; 1 = recognisable but crude or cluttered; 0 = hard to recognise.\n\nRounding: give the final score as an integer (round .5 up). Automatic zero: if the SVG would not render, depicts something other than what was asked, or uses <image>, <script> or external resources, the score is 0.",
-        "judgeWeight": 0.6
+        "judgeWeight": 0.6,
+        "zeroIfJudgedZero": true
       },
-      "notes": "[medium] Automated checks: renders/parses, <= 40 kB, and contains viewBox=\"0 0 600 500\", <rect, <text, #E4572E, #29335C (each explicitly required by the prompt). The judge rubric splits 8 points across the numbered requirements and 2 for overall quality; judges can verify coordinates, counts and angles from the SVG source."
+      "notes": "[medium] Automated checks: renders/parses, <= 40 kB, and contains the viewBox numbers \"0 0 600 500\" (either quote style), <rect, <text, #E4572E, #29335C (each explicitly required by the prompt). A 0/10 from the judges zeroes the whole score. The judge rubric splits 8 points across the numbered requirements and 2 for overall quality; judges can verify coordinates, counts and angles from the SVG source."
     },
     {
       "id": "v04",
@@ -161,7 +165,7 @@
           },
           {
             "check": "contains",
-            "text": "viewBox=\"0 0 400 400\""
+            "text": "0 0 400 400"
           },
           {
             "check": "contains",
@@ -201,9 +205,10 @@
           }
         ],
         "rubric": "Score the SVG out of 10. Work out from the code exactly what will be drawn (positions, sizes, colours, counts and angles).\n\n1. Numbered requirements (0-8 points): the task lists numbered requirements. Divide 8 points equally among them. A requirement earns its share only if it is fully and exactly satisfied as written (exact counts, positions, colours, angles or proportions; small anti-aliasing-level differences are fine). Partially met requirements earn half of their share. Round the total of this part to the nearest 0.5.\n2. Overall quality (0-2 points): 2 = clean, well-composed and immediately recognisable; 1 = recognisable but crude or cluttered; 0 = hard to recognise.\n\nRounding: give the final score as an integer (round .5 up). Automatic zero: if the SVG would not render, depicts something other than what was asked, or uses <image>, <script> or external resources, the score is 0.",
-        "judgeWeight": 0.6
+        "judgeWeight": 0.6,
+        "zeroIfJudgedZero": true
       },
-      "notes": "[hard] Automated checks: renders/parses, <= 40 kB, and contains viewBox=\"0 0 400 400\", <rect, <text, ♔, ♖, ♙, ♚, ♛, ♟, #B58863 (each explicitly required by the prompt). The judge rubric splits 8 points across the numbered requirements and 2 for overall quality; judges can verify coordinates, counts and angles from the SVG source."
+      "notes": "[hard] Automated checks: renders/parses, <= 40 kB, and contains the viewBox numbers \"0 0 400 400\" (either quote style), <rect, <text, ♔, ♖, ♙, ♚, ♛, ♟, #B58863 (each explicitly required by the prompt). A 0/10 from the judges zeroes the whole score. The judge rubric splits 8 points across the numbered requirements and 2 for overall quality; judges can verify coordinates, counts and angles from the SVG source."
     }
   ]
 }

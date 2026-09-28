@@ -270,7 +270,15 @@ export type ScorerSpec =
   /** LLM-judge classifies the response into one of the labels; each label maps to a score. */
   | { type: 'judge-classify'; instructions: string; labels: JudgeLabel[] }
   /** Extracts an HTML/SVG artifact, runs automated checks, optionally judges it. */
-  | { type: 'artifact'; format: 'html' | 'svg'; checks?: ArtifactCheck[]; rubric?: string; judgeWeight?: number }
+  | {
+      type: 'artifact';
+      format: 'html' | 'svg';
+      checks?: ArtifactCheck[];
+      rubric?: string;
+      judgeWeight?: number;
+      /** The judges' 0/10 ("automatic zero" in the rubric) zeroes the whole score, so passing hygiene checks alone earns nothing. */
+      zeroIfJudgedZero?: boolean;
+    }
   /** Scored by humans in the Blind Review screen. */
   | { type: 'human'; rubric: string };
 
