@@ -126,7 +126,11 @@ function ClassicArtifactShowcase({ runId, result, testId, caseId, names }: { run
   const tone: Tone = result.score === null ? 'neutral' : score >= 0.7 ? 'good' : score >= 0.4 ? 'warn' : 'bad';
   if (!art) return null;
 
-  const title = isGame
+  // Tests that opt in score 0 when the judges give 0/10, however many hygiene checks pass: say so, not "N checks passed".
+  const zeroed = result.score === 0 && (d.zeroedByJudges === true || /judged 0\/10, so 0/.test(result.summary ?? ''));
+  const title = zeroed
+    ? `Judged 0/10: not what was asked, so it scores 0 (${passed} of ${items.length} automatic checks passed)`
+    : isGame
     ? (() => {
         const rows = gameChecks(result);
         const broke = rows.filter((r) => r.state === 'fail').map((r) => r.label.toLowerCase());

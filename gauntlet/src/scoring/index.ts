@@ -217,7 +217,7 @@ export async function scoreResponse(input: ScoringInput): Promise<ScoringOutcome
       return judgeClassify(input, scorer.instructions, scorer.labels);
     case 'artifact':
       if (scorer.playtest) return scoreGameJam(input, scorer);
-      return scoreArtifact(input, scorer.format, scorer.checks ?? [{ check: 'parses' }], scorer.rubric, scorer.judgeWeight ?? 0);
+      return scoreArtifact(input, scorer.format, scorer.checks ?? [{ check: 'parses' }], scorer.rubric, scorer.judgeWeight ?? 0, scorer.zeroIfJudgedZero ?? false);
     case 'human':
       return { score: null, passed: null, summary: 'Awaiting human review', detail: { notes: scorer.rubric }, pendingHuman: true };
   }
@@ -326,7 +326,7 @@ export function extractArtifact(response: string, format: 'html' | 'svg'): strin
   return m ? m[0] : null;
 }
 
-async function scoreArtifact(input: ScoringInput, format: 'html' | 'svg', checks: ArtifactCheck[], rubric: string | undefined, judgeWeight: number): Promise<ScoringOutcome> {
+async function scoreArtifact(input: ScoringInput, format: 'html' | 'svg', checks: ArtifactCheck[], rubric: string | undefined, judgeWeight: number, zeroIfJudgedZero = false): Promise<ScoringOutcome> {
   const artifact = extractArtifact(input.response, format);
   if (!artifact) {
     return { score: 0, passed: false, summary: `No ${format.toUpperCase()} artifact found`, detail: { formatOk: false } };
@@ -406,12 +406,15 @@ async function scoreArtifact(input: ScoringInput, format: 'html' | 'svg', checks
     if (r.errors.length) judgeNotes = `Judge issues: ${r.errors.join('; ')}`;
     if (judgeScore === null) throw new Error(`All judges failed: ${r.errors.join('; ') || 'no judges configured'}`);
   }
-  const score = judgeScore === null ? checkScore : (1 - judgeWeight) * checkScore + judgeWeight * judgeScore;
+  // A 0/10 from the judges is the rubric's "automatic zero" (not the thing asked for, or unusable): the hygiene checks
+  // (renders, size, a canvas exists…) must not earn points on their own, or an empty page would beat the floor.
+  const gated = zeroIfJudgedZero && judgeScore !== null && judgeScore <= 0.05;
+  const score = gated ? 0 : judgeScore === null ? checkScore : (1 - judgeWeight) * checkScore + judgeWeight * judgeScore;
   const passedChecks = items.filter((i) => i.passed).length;
   return {
     score: round(score),
     passed: score >= 0.7,
-    summary: `${passedChecks}/${items.length} checks${judgeScore !== null ? ` · judges ${(judgeScore * 10).toFixed(1)}/10` : ''}${skipped.length ? ' · browser checks skipped' : ''}`,
+    summary: `${passedChecks}/${items.length} checks${judgeScore !== null ? ` · judges ${(judgeScore * 10).toFixed(1)}/10` : ''}${gated ? ' · judged 0/10, so 0' : ''}${skipped.length ? ' · browser checks skipped' : ''}`,
     detail: {
       items,
       judge: judgeDetail,
@@ -419,6 +422,7 @@ async function scoreArtifact(input: ScoringInput, format: 'html' | 'svg', checks
       checkScore: round(checkScore),
       judgeScore: judgeScore === null ? undefined : round(judgeScore),
       skippedChecks: skipped.length ? skipped : undefined,
+      zeroedByJudges: gated || undefined,
       consoleErrors: probe?.consoleErrors.slice(0, 5),
       judgeDisagreement: judgeNotes?.startsWith('Judges disagree') || undefined,
       notes: judgeNotes,

@@ -262,9 +262,10 @@ export function parseAnswers(text: string, k: number): Array<string | null> {
   for (let i = 1; i <= k; i++) {
     let a = extractTagged(text, `A${i}`);
     if (a === null) {
-      const re = new RegExp(`^[\\s>*_#-]*(?:Q|A|Answer\\s*)?${i}\\s*[.):：-]\\s*(.+)$`, 'gim');
+      // Also accepts a Markdown table row such as "| A3 | 879 |".
+      const re = new RegExp(`^[\\s>*_#|-]*(?:Q|A|Answer\\s*)?${i}\\s*[*_]*\\s*[.):：|-]\\s*(.+)$`, 'gim');
       let m: RegExpExecArray | null;
-      while ((m = re.exec(text)) !== null) a = m[1]!.replace(/\*\*|__|`/g, '').trim();
+      while ((m = re.exec(text)) !== null) a = m[1]!.replace(/\*\*|__|`/g, '').replace(/\s*\|\s*$/, '').trim();
     }
     out.push(a && a.trim() ? a.trim() : null);
   }

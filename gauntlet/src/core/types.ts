@@ -288,7 +288,16 @@ export type ScorerSpec =
    * game is also played by a scripted player for its genre (case.expected.genre) and the judges grade a numbered
    * requirement checklist plus fixed criteria, seeing the playtest screenshots (see src/scoring/game-jam.ts).
    */
-  | { type: 'artifact'; format: 'html' | 'svg'; checks?: ArtifactCheck[]; rubric?: string; judgeWeight?: number; playtest?: PlaytestSpec }
+  | {
+      type: 'artifact';
+      format: 'html' | 'svg';
+      checks?: ArtifactCheck[];
+      rubric?: string;
+      judgeWeight?: number;
+      /** The judges' 0/10 ("automatic zero" in the rubric) zeroes the whole score, so passing hygiene checks alone earns nothing. */
+      zeroIfJudgedZero?: boolean;
+      playtest?: PlaytestSpec;
+    }
   /** Scored by humans in the Blind Review screen. */
   | { type: 'human'; rubric: string };
 

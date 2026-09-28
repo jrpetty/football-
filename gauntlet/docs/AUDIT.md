@@ -41,22 +41,22 @@ the API, so read the numbers as a calibration check, not as a leaderboard.
 | Deduction Grid: Extreme | 100% | 0% | 0% |
 | Knights, Knaves, Spies & Alternators: Extreme | 100% | 0% | 0% |
 | Olympiad Maths | 100% | 0% | 0% |
-| Shortest Plans: Extreme | not blind-played (see below) | 0% | — |
+| Shortest Plans: Extreme | 90% (third release, see below) | 0% | 0% |
 | Frontier Engineering | 100% | 13% | 0% |
 | Extraction: Frontier | 100% | 20% | 0% |
 | Extreme Constraints | 100% | 17% | 0% |
 | Adversarial System Prompt | 100% | 50% | 0% |
 | Pressure Traps (judge-graded) | 100% | 63% | — |
 
-*Shortest Plans: Extreme.* The long hand-solving transcripts kept tripping an automated filter on the
+*Shortest Plans: Extreme.* In the first audit the long hand-solving transcripts kept tripping an automated filter on the
 solver side, so no strong model played it blind. Its keys are proven optimal by two independent searches
-(Python and JavaScript) that agree on all 10 cases.
+(Python and JavaScript) that agree on all 10 cases. It was blind-played in the third release (see below).
 
 ## Simulations (Opus only, one seed each)
 
 | Simulation | Opus | Random | | Hard variant | Opus | Random |
 |---|---:|---:|---|---|---:|---:|
-| Survival Island | 92% | 10% | | Survival Island (Hard) | — | — |
+| Survival Island | 92% | 10% | | Survival Island (Hard) | 73% (third release) | 0% |
 | The Escape Room | 98% | 0% | | The Escape Room (Hard) | 98% | 5% |
 | The Startup | 55% | 0% | | The Startup (Volatile Market) | 35% | 0% |
 | The Liar's Table | 97% | 0% | | The Liar's Table — Hard | 80% | 0% |
@@ -113,6 +113,76 @@ Real models played through the Manual Inbox. Each move was a fresh prompt, and t
 
 The Courtroom judge's packet contained no model names. Opus lost the prosecution game mainly for going over the word limit
 twice (it was cut off, and the judge marked "rules" down), which is the rubric working as intended.
+
+## Third release: closing the gaps
+
+The first two audits left eight tests without a blind play or with an untested scoring path. This pass closed them.
+
+**How it was run, and its limits.** No separate player models were available in this session, so the auditor (an
+Opus-class model) played every test itself. It used only the rendered prompts, through the Manual Inbox or the copy &
+paste grader, and never read answer keys, seeds or generator output. **No small model played, so there are no Haiku
+numbers in this section.** The separation claims rest on Opus against the Random Baseline, plus the check that filler
+earns nothing. Two further caveats:
+- For the two judge-graded artifact tests, the auditor had already read the automatic checks before drawing, and it
+  then graded its own work as the blinded judge, using the exact judge prompt and rubric. Treat those two numbers as a
+  sanity check that the pipeline works, not as a calibration.
+- Chain of Whispers was played by a player who remembers earlier rounds. A real API contestant sees only the previous
+  text, so a real run is at least as hard.
+
+`git status` was clean after every interactive session, so no fixture was touched.
+
+| Test | Opus (auditor) | Random | Separates? | Notes |
+|---|---:|---:|---|---|
+| Needle in a Haystack | 100% (10/10) | 0% | Yes | Every needle answer was also re-derived by hand from the text: keys correct |
+| Needle in a Haystack — Hard | 100% (12/12) | 0% | Yes | 78k words, 3-hop needles; keys correct |
+| Chain of Whispers — Hard | 83% (17/20) | 0% | Yes | 18/20 under the fixed scorer; the two real losses were details the player dropped |
+| Survival Island (Hard) | 73% | 0% | Yes | Survived all 13 days but was not rescued: too little wood to light the signal on day 13 |
+| Fix the Bug | 98% | 0% | Yes | All 13 hidden tests pass; 12 actions against a par of 8 |
+| Shortest Plans: Extreme | 90% (9/10) | 0% | Yes | The one miss (151 moves against a proven 149) was the player's error; the other 9 keys were matched independently |
+| Precise SVG Illustration | 94% (4 cases) | 0% | Yes | Self-judged (see above): 8, 10, 10, 8 out of 10. The misses were a moon that didn't render and rank labels one row off |
+| Build a Game in One Shot | 95% (1 of 3 cases) | 0% | Yes | Portal Snake only; played in a real browser; self-judged 9/10 |
+
+**What this pass fixed** (each fix has a regression test in `test/audit2.test.ts` or `test/providers.test.ts`):
+
+* **Placeholder artifacts earned points.** On One-Shot Games and SVG Illustration the automatic checks are only
+  hygiene checks (it renders, it's small, a canvas exists). An empty canvas passed 5 of the 6 game checks and one grey
+  circle passed 2–3 of the SVG checks. So even with the judges giving 0/10, the Random Baseline would have scored 42% on
+  every game and 7–20% on the SVGs. Now the rubric's "automatic zero" holds: a 0/10
+  from the judges zeroes the whole score (`zeroIfJudgedZero`, opt-in per test, so other stored results are unchanged).
+  The inspector headline now says "Judged 0/10 … so it scores 0" instead of "Ships a game, but fails …".
+* **SVG checks failed valid single-quoted XML.** `viewBox='0 0 512 512'` failed a check written for double quotes.
+  The checks now look for the numbers, so either quote style passes.
+* **Chain of Whispers missed facts that were really there.** "a cave in the mountainside, its walls glittering with
+  blue crystals" is 9 words apart, beyond the 8-word window, so the fact was marked lost in round 1. The window is now
+  12. Compressed ages ("oldest Brenna Brodsky, 59") are also accepted, tested across 40 seeds.
+* **Chain of Whispers reported the wrong "died at" round.** A fact that dropped out of one 60-word summary and came
+  back later showed as dead from the first gap. It now shows the start of the final absence.
+* **Needle answers in a Markdown table were not read.** Rows such as `| A3 | 879 |` scored as unanswered. They are
+  now parsed.
+* **Provider adapters** (checked against the public docs as far as this sandbox allowed):
+  - Groq returns streamed usage in `x_groq.usage`, which is now read.
+  - Mistral does not document `stream_options`, so it is no longer sent there. Mistral sends usage in the final chunk anyway.
+
+Version bumps, because the model's view or the scoring changed: One-Shot Games 1.1.0, SVG Illustration 1.1.0, Chain of
+Whispers 1.2.0, Chain of Whispers — Hard 1.1.0, Needle in a Haystack 1.2.0, Needle — Hard 1.1.0. Stored results for
+these tests are shown as stale, which is intended.
+
+**End-to-end smoke.** All 46 tests were run through the real run engine with the Random Baseline and the mock
+contestant: 840 results, all finished, 0 errors. The judge-graded tests went through a blinded manual judge. Every
+result of both contestants, plus the blind-play run, was then opened in the dashboard in headless Chromium, and every
+inspector tab was clicked (Score, Transcript, Artifacts, Replay): 102 results, 0 page or console errors. The Random
+Baseline scored 0% on every test except two. Survival Island scored 10% (days survived while idle). The Liar's Table —
+Hard scored 20%, from one lucky accusation in three cases: guessing one of five suspects is inherent to the format.
+
+**Not verified here (needs the owner's API keys):** no live provider call could be made from this sandbox, and the docs
+sites for Groq and Mistral were unreachable. These are unconfirmed:
+- that Mistral streams usage without `stream_options`;
+- where Groq, Together, OpenRouter, xAI and DeepSeek report usage and reasoning tokens in streams today;
+- which `thinkingLevel` values each Gemini 3 model accepts;
+- which OpenAI models accept `reasoning_effort` on Chat Completions;
+- how real judge models apply the new automatic-zero rule.
+
+A one-case run per provider with real keys would settle all of these.
 
 ## What the audit changed
 
