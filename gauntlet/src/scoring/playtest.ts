@@ -7,7 +7,7 @@ import type { JamGenre, PlaytestFrameInfo, PlaytestSummary } from './game-jam-sh
  *
  * The game is opened twice in headless Chromium at 1280×720 on a *fake clock* (Playwright's clock API drives
  * Date, performance.now, timers and requestAnimationFrame), with Math.random seeded:
- *  - "played": a scripted player sends the genre's controls for 15 seconds of game time;
+ *  - "played": a scripted player sends the genre's controls for 30 seconds of game time (plus a six-frame motion strip);
  *  - "untouched": the same page with no input at all.
  * Because time and randomness are fixed, the two runs differ only because of the input, and a re-run of the same
  * file gives the same screenshots: the checks are repeatable. Screenshots are taken at fixed moments, compared
@@ -18,16 +18,19 @@ import type { JamGenre, PlaytestFrameInfo, PlaytestSummary } from './game-jam-sh
  * the game starts from Enter / Space / a click (which every brief asks for) and changes on screen when played.
  */
 
-export const VIEWPORT = { width: 1280, height: 720 };
-/** Game time of each screenshot (ms after the page loaded). */
-export const SHOT_TIMES = [500, 3000, 6000, 10000, 15000];
-const PLAY_MS = 15000;
+/** Full HD, the size the games are judged and recorded at. */
+export const VIEWPORT = { width: 1920, height: 1080 };
+/** Game time of each screenshot (ms after the page loaded): the title screen, then mid-action moments. */
+export const SHOT_TIMES = [500, 3000, 6000, 10000, 14000, 19000, 24000, 30000];
+/** The motion strip: six frames 0.1 s apart in the middle of the action, so judges can see animation. */
+export const MOTION_TIMES = [16000, 16100, 16200, 16300, 16400, 16500];
+const PLAY_MS = 30000;
 /** When the scripted player starts sending input. */
 export const INPUT_START_MS = 800;
 /** A screenshot pair "changed" when at least this share of pixels differs (0.2 % ≈ a small sprite moving). */
 export const MOVE_THRESHOLD = 0.002;
-/** Input "changed the game" when the played and untouched copies differ in at least this share of pixels. */
-export const REACT_THRESHOLD = 0.01;
+/** Input "changed the game" when the played and untouched copies differ in at least this share of pixels (0.5 % of a full-HD screen; with a frozen clock the untouched copy differs by ~0). */
+export const REACT_THRESHOLD = 0.005;
 /** A frame is "blank" when fewer than this share of pixels differ from its most common colour. */
 export const BLANK_THRESHOLD = 0.003;
 /** Real-time budget for one step of the page (a longer wait means an endless loop froze it). */
@@ -67,15 +70,15 @@ class Script {
     return this;
   }
   click(at: number, x: number, y: number, button: Button = 'left'): this {
-    this.steps.push({ at, act: { k: 'move', x, y } }, { at, act: { k: 'mdown', button } }, { at: at + 60, act: { k: 'mup', button } });
+    this.steps.push({ at, act: { k: 'move', x: px(x), y: py(y) } }, { at, act: { k: 'mdown', button } }, { at: at + 60, act: { k: 'mup', button } });
     return this;
   }
   move(at: number, x: number, y: number): this {
-    this.steps.push({ at, act: { k: 'move', x, y } });
+    this.steps.push({ at, act: { k: 'move', x: px(x), y: py(y) } });
     return this;
   }
   drag(at: number, from: [number, number], to: [number, number], ms = 300): this {
-    this.steps.push({ at, act: { k: 'move', x: from[0], y: from[1] } }, { at, act: { k: 'mdown', button: 'left' } });
+    this.steps.push({ at, act: { k: 'move', x: px(from[0]), y: py(from[1]) } }, { at, act: { k: 'mdown', button: 'left' } });
     const n = 6;
     for (let i = 1; i <= n; i++) this.move(at + (ms * i) / n, from[0] + ((to[0] - from[0]) * i) / n, from[1] + ((to[1] - from[1]) * i) / n);
     this.steps.push({ at: at + ms + 20, act: { k: 'mup', button: 'left' } });
@@ -90,10 +93,15 @@ class Script {
   }
 }
 
-const W = VIEWPORT.width;
-const H = VIEWPORT.height;
+// Scripts are written in a 1280×720 design space and scaled to the real viewport when played.
+const W = 1280;
+const H = 720;
 const CX = W / 2;
 const CY = H / 2;
+const SX = VIEWPORT.width / W;
+const SY = VIEWPORT.height / H;
+const px = (x: number) => Math.round(x * SX);
+const py = (y: number) => Math.round(y * SY);
 
 /** Every game is started the same way: Enter (the brief's required start key), a click in the middle, then Space. */
 function start(s: Script, at = INPUT_START_MS): Script {
@@ -118,7 +126,7 @@ export const GENRES: Record<JamGenre, GenreInfo> = {
   flappy: {
     label: 'Flappy Bird remake',
     short: 'Flappy',
-    inputs: 'Enter, a click and Space to start, then a flap (Space, sometimes a click or Arrow Up) every 0.38 s for 15 seconds',
+    inputs: 'Enter, a click and Space to start, then a flap (Space, sometimes a click or Arrow Up) every 0.38 s for 30 seconds',
     reacts: 'flap presses',
     liveKey: 'Space',
     script: () => {
@@ -235,7 +243,7 @@ export const GENRES: Record<JamGenre, GenreInfo> = {
     label: 'Racing',
     short: 'Racing',
     inputs:
-      'Enter, a click and Space to start, then holding accelerate (Arrow Up + W) for the rest of the 15 seconds while steering left and right in turn (arrows + A/D), with a tap of Shift now and then',
+      'Enter, a click and Space to start, then holding accelerate (Arrow Up + W) for the rest of the 30 seconds while steering left and right in turn (arrows + A/D), with a tap of Shift now and then',
     reacts: 'accelerating and steering',
     liveKey: 'ArrowUp',
     script: () => {
@@ -279,7 +287,8 @@ async function within<T>(p: Promise<T>, ms: number, atMs: number, phase: string)
 }
 
 interface Session {
-  shots: Array<{ t: number; png: Buffer }>;
+  /** Screenshots (SHOT_TIMES and, in the played run, MOTION_TIMES); `jpg` is a high-quality copy for the judges. */
+  shots: Array<{ t: number; png: Buffer; jpg?: Buffer }>;
   /** One extra frame 0.5 s after the last screenshot (with input in the played run), for the "still running" check. */
   tail: Buffer | null;
   loadErrors: string[];
@@ -363,7 +372,7 @@ async function session(html: string, steps: Step[] | null, liveKey?: string): Pr
       }
       return prev;
     };
-    const shotQueue = [...SHOT_TIMES];
+    const shotQueue = [...new Set([...SHOT_TIMES, ...(steps ? MOTION_TIMES : [])])].sort((a, b) => a - b);
     const actions = steps ?? [];
     let ai = 0;
     const perform = async (a: Act) => {
@@ -389,7 +398,10 @@ async function session(html: string, steps: Step[] | null, liveKey?: string): Pr
             'checking the page',
           );
         }
-        out.shots.push({ t: nextShot, png: await shoot() });
+        const png = await shoot();
+        // Time is frozen, so a JPEG taken now shows exactly the same moment (smaller for the judges' image limits).
+        const jpg = steps && SHOT_TIMES.includes(nextShot) ? await within(page.screenshot({ type: 'jpeg', quality: 90, timeout: STEP_TIMEOUT_MS }), STEP_TIMEOUT_MS + 1000, now, 'drawing a frame') : undefined;
+        out.shots.push({ t: nextShot, png, jpg });
         shotQueue.shift();
       } else {
         await advance(nextAct, 'playing');
@@ -475,12 +487,51 @@ async function analyse(pngs: Buffer[], pairs: Array<[number, number]>): Promise<
   }
 }
 
+/** Artifact name of the motion strip. */
+/** Size of the motion strip image. */
+export const MOTION_SIZE = { width: 1920, height: 720 };
+
+export const MOTION_NAME = 'playtest-motion.png';
+
+/** Six frames as one 3×2 contact sheet, 1920×720 (each frame 640×360, labelled +0.0 s … +0.5 s). */
+async function contactSheet(pngs: Buffer[]): Promise<{ png: Buffer; jpg: Buffer } | null> {
+  const browser = await getBrowser();
+  if (!browser) return null;
+  const context = await browser.newContext({ viewport: { width: 400, height: 300 } });
+  try {
+    const page = await context.newPage();
+    const arg = JSON.stringify(pngs.map((b) => b.toString('base64')));
+    const [png, jpg] = (await page.evaluate(
+      `(async (list) => {
+        const c = document.createElement('canvas'); c.width = 1920; c.height = 720;
+        const x = c.getContext('2d');
+        x.fillStyle = '#000'; x.fillRect(0, 0, 1920, 720);
+        for (let i = 0; i < list.length; i++) {
+          const img = new Image(); img.src = 'data:image/png;base64,' + list[i]; await img.decode();
+          const cx = (i % 3) * 640, cy = Math.floor(i / 3) * 360;
+          x.drawImage(img, cx, cy, 640, 360);
+          x.fillStyle = 'rgba(0,0,0,0.7)'; x.fillRect(cx + 8, cy + 8, 104, 34);
+          x.fillStyle = '#fff'; x.font = 'bold 22px sans-serif'; x.fillText('+' + (i / 10).toFixed(1) + ' s', cx + 18, cy + 33);
+        }
+        return [c.toDataURL('image/png').split(',')[1], c.toDataURL('image/jpeg', 0.9).split(',')[1]];
+      })(${arg})`,
+    )) as [string, string];
+    return { png: Buffer.from(png, 'base64'), jpg: Buffer.from(jpg, 'base64') };
+  } catch {
+    return null;
+  } finally {
+    await context.close().catch(() => {});
+  }
+}
+
 // ───────────────────────────── The playtest ─────────────────────────────
 
 export interface PlaytestResult {
   summary: PlaytestSummary;
-  /** Screenshots of the played run, in SHOT_TIMES order (missing when the page froze first). */
-  frames: Array<{ t: number; png: Buffer }>;
+  /** Screenshots of the played run, in SHOT_TIMES order (missing when the page froze first); `jpg` = judge copy. */
+  frames: Array<{ t: number; png: Buffer; jpg?: Buffer }>;
+  /** The motion strip as one 3×2 contact sheet (six frames 0.1 s apart), when all six were captured. */
+  motion: { png: Buffer; jpg: Buffer } | null;
   loadErrors: string[];
   playErrors: string[];
   consoleErrors: string[];
@@ -505,14 +556,22 @@ export async function runPlaytest(html: string, genre: JamGenre): Promise<Playte
   const g = GENRES[genre];
   const played = await session(html, g.script(), g.liveKey);
   const idle = played.hung && played.hung.atMs === 0 ? null : await session(html, null);
-  const frames = played.shots;
-  const idleShots = idle?.shots ?? [];
+  const frames = played.shots.filter((f) => SHOT_TIMES.includes(f.t));
+  const motionShots = played.shots.filter((f) => MOTION_TIMES.includes(f.t));
+  const idleShots = (idle?.shots ?? []).filter((f) => SHOT_TIMES.includes(f.t));
   // Pairs: consecutive played frames, played vs untouched at the same moment, and last frame vs tail.
   const list: Buffer[] = [...frames.map((f) => f.png), ...idleShots.map((f) => f.png), ...(played.tail ? [played.tail] : [])];
   const consecutive: Array<[number, number]> = frames.slice(1).map((_, i) => [i, i + 1]);
   const vsIdle: Array<[number, number]> = frames.map((f, i) => [i, idleShots.findIndex((s) => s.t === f.t)]).filter((p) => p[1] >= 0).map(([a, b]) => [a, frames.length + b]);
   const tailPair: Array<[number, number]> = played.tail && frames.length ? [[frames.length - 1, list.length - 1]] : [];
-  const a = list.length ? await analyse(list, [...consecutive, ...vsIdle, ...tailPair]) : { detail: [], diffs: [] };
+  // Motion strip frames go last, compared pairwise (how much moves in a tenth of a second).
+  const motionStart = list.length;
+  list.push(...motionShots.map((f) => f.png));
+  const motionPairs: Array<[number, number]> = motionShots.slice(1).map((_, i) => [motionStart + i, motionStart + i + 1]);
+  const a = list.length ? await analyse(list, [...consecutive, ...vsIdle, ...tailPair, ...motionPairs]) : { detail: [], diffs: [] };
+  const motionDiffs = motionPairs.length ? a.diffs.slice(a.diffs.length - motionPairs.length) : [];
+  if (motionPairs.length) a.diffs = a.diffs.slice(0, a.diffs.length - motionPairs.length);
+  const motion = motionShots.length === MOTION_TIMES.length ? await contactSheet(motionShots.map((f) => f.png)) : null;
   const change = a.diffs.slice(0, consecutive.length);
   const react = a.diffs.slice(consecutive.length, consecutive.length + vsIdle.length);
   const tailChange = tailPair.length ? a.diffs[a.diffs.length - 1]! : null;
@@ -538,6 +597,9 @@ export async function runPlaytest(html: string, genre: JamGenre): Promise<Playte
   const summary: PlaytestSummary = {
     genre,
     inputs: g.inputs,
+    motion: motion
+      ? { name: MOTION_NAME, times: [...MOTION_TIMES], changed: round4(motionDiffs.reduce((x, y) => x + y, 0) / Math.max(1, motionDiffs.length)) }
+      : null,
     viewport: { ...VIEWPORT },
     seconds: PLAY_MS / 1000,
     frames: infos,
@@ -563,6 +625,7 @@ export async function runPlaytest(html: string, genre: JamGenre): Promise<Playte
     consoleErrors: [...new Set([...played.consoleErrors, ...(idle?.consoleErrors ?? [])])],
     externalRequests: [...new Set([...played.externalRequests, ...(idle?.externalRequests ?? [])])],
     hasCanvasOrSvg: played.hasCanvasOrSvg || Boolean(idle?.hasCanvasOrSvg),
+    motion,
   };
 }
 

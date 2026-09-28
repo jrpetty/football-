@@ -30,7 +30,7 @@ export const GAME_JAM_SUITE: SuiteView = {
   id: 'games',
   version: '1.0.0',
   name: 'The Game Jam',
-  description: 'Five genres, one prompt each: Flappy Bird, an RTS, an action RPG, zombie survival with base building and a racer, played by a scripted player and rated by a cross-vendor judge panel that weights creativity most.',
+  description: 'Five genres, one prompt each: Flappy Bird, an RTS, an action RPG, zombie survival with base building and a racer, played by a scripted player and rated by a cross-vendor judge panel that weights visual quality and creativity most.',
   repeats: 1,
   tests: [{ id: 'creative.game-jam' }],
 };
@@ -44,6 +44,9 @@ export const GAME_JAM_RUN_SPEC: RunSpec = {
   repeats: 1,
   suiteId: 'games',
   createdAt: '2026-09-28T09:00:00Z',
+  // Disclosed on the run page and the Presenter: each model's own maximum output, with a £30 whole-run limit.
+  maxCostUsd: 39.9,
+  limits: { maxCostUsd: 39.9, currency: { code: 'GBP', usdPerUnit: 1.33 } },
   notes: 'Demo run for The Game Jam: open "Game Jam" for the cabinet wall, any cell for a game card, or the Presenter for the genre slides.',
 };
 

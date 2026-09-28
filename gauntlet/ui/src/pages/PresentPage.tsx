@@ -55,6 +55,7 @@ import type { CaseResultLite, CategoryInfo, Leaderboard, LeaderboardRow, Program
 import { VisionExplainerCard, examplePicture } from '../components/VisionPresenter.tsx';
 import { SIM_PROGRAMS, SimMomentSlide, pickSimCase } from '../components/present/SimMomentSlide.tsx';
 import { IntroSlide, introCaption } from '../components/present/IntroSlide.tsx';
+import { limitsSummary } from '../components/SpendLimits.tsx';
 import { JAM_WINNER_CAPTION, JamGenreSlide, JamWinnerSlide, jamGenreCaption, jamSlideCases } from '../components/present/GameJamSlides.tsx';
 import { JAM_TEST_ID, entryOf } from '../components/viz/gameJamModel.ts';
 import { GalleryBriefSlide, GalleryWinnerSlide, galleryCaseIds, type GallerySlideData } from '../components/present/GallerySlide.tsx';
@@ -1232,6 +1233,8 @@ function OutroSlide({ deck }: { deck: Deck }) {
       <div className="o-fp mono">
         fingerprint {shortHash(m.fingerprint, 16)} · harness v{m.harnessVersion}
       </div>
+      {/* Disclose the output and spending limits the run used (money limits give models different token room). */}
+      <div className="o-fp o-limits">Limits: {limitsSummary(m.settings?.limits, m.settings?.maxCostUsd).map((c) => c.text).join(' · ')}</div>
       <p className="o-note">
         {deck.hasPrivate ? 'Every public prompt, answer key and scoring rule is published (held-out tests stay private).' : 'Every prompt, answer key and scoring rule is published.'} Re-run the same fingerprint and you get the same test — for any model.
       </p>

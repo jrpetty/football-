@@ -141,6 +141,7 @@ export const SETTINGS: Meta['settings'] = {
   defaultTimeLimitSec: 600,
   maxRetries: 3,
   judgeExcludeSameVendor: true,
+  currency: { code: 'GBP', usdPerUnit: 1.33, rateDate: '2026-09-28' },
 };
 
 export const META: Meta = {
@@ -195,6 +196,8 @@ export const CONTESTANTS: ContestantView[] = [
     pricing: { inputPerM: 15, outputPerM: 75, cachedInputPerM: 1.5, source: 'meridian.example/pricing', verifiedAt: '2026-09-02' },
     options: { effort: 'high', supportsTemperature: false },
     contextWindow: 400000,
+    maxOutputTokens: 128000,
+    maxOutputTokensSource: 'meridian.example/models (demo)',
   }),
   C({
     id: 'kestrel-kite-reasoner',
@@ -207,6 +210,8 @@ export const CONTESTANTS: ContestantView[] = [
     pricing: { inputPerM: 3, outputPerM: 15, cachedInputPerM: 0.3, cacheWritePerM: 3.75, source: 'kestrel.example/docs/pricing', verifiedAt: null },
     options: { effort: 'max', supportsTemperature: false },
     contextWindow: 1000000,
+    maxOutputTokens: 65536,
+    maxOutputTokensSource: 'unverified (demo)',
     notes: 'Extended thinking enabled via effort=max.',
   }),
   C({
@@ -244,6 +249,8 @@ export const CONTESTANTS: ContestantView[] = [
     pricing: { inputPerM: 0.15, outputPerM: 0.6, source: 'helios.example/pricing', verifiedAt: '2026-08-28' },
     options: { effort: 'none', temperature: 0, supportsTemperature: true },
     contextWindow: 1000000,
+    maxOutputTokens: 32768,
+    maxOutputTokensSource: 'helios.example/models (demo)',
   }),
   C({
     id: 'random-baseline',
@@ -827,6 +834,9 @@ export interface RunSpec {
   error?: string;
   concurrency?: number;
   maxCostUsd?: number;
+  /** Spend and output limits recorded with the run (Game Jam demo). */
+  limits?: RunManifest['settings']['limits'];
+  stopReason?: RunManifest['stopReason'];
 }
 
 export interface MockRun {
@@ -861,10 +871,11 @@ export function manifestOf(spec: RunSpec): RunManifest {
     tests: tests.map((t) => ({ id: t.id, version: t.version, hash: summaryOf(t).hash, name: t.name, category: t.category, kind: t.kind, caseIds: caseIdsOf(t), weight: 1 })),
     contestants: contestants.map(strip),
     judges: judges.map(strip),
-    settings: { repeats: spec.repeats, concurrency: spec.concurrency ?? 6, temperature: 0, protocolVersion: '2026.09', maxCostUsd: spec.maxCostUsd, judgeExcludeSameVendor: true },
+    settings: { repeats: spec.repeats, concurrency: spec.concurrency ?? 6, temperature: 0, protocolVersion: '2026.09', maxCostUsd: spec.maxCostUsd, judgeExcludeSameVendor: true, ...(spec.limits ? { limits: spec.limits } : {}) },
     totalJobs,
     notes: spec.notes,
     error: spec.error,
+    ...(spec.stopReason ? { stopReason: spec.stopReason } : {}),
   };
 }
 
@@ -967,7 +978,9 @@ export const RUN_SPECS: RunSpec[] = [
     createdAt: '2026-08-30T08:00:00Z',
     completedFrac: 0.45,
     maxCostUsd: 1.8,
-    error: 'Budget cap reached: $1.82 spent of the $1.80 cap. Resume with a higher cap to finish the remaining jobs.',
+    limits: { maxCostUsd: 1.8, currency: { code: 'GBP', usdPerUnit: 1.33 } },
+    stopReason: 'spend-limit',
+    error: 'Stopped: spend limit of $1.80 reached ($1.79 spent). Every finished result is kept; resume with a higher limit to finish.',
   },
   {
     id: 'run-2026-09-23-manual',
@@ -992,6 +1005,9 @@ export const RUN_SPECS: RunSpec[] = [
     createdAt: new Date(Date.now() - 64_000).toISOString(),
     completedFrac: 0.12,
     concurrency: 8,
+    // A £10 whole-run spending limit (shown in pounds on the run page, Watch it think and the overlay).
+    maxCostUsd: 13.3,
+    limits: { maxCostUsd: 13.3, currency: { code: 'GBP', usdPerUnit: 1.33 } },
   },
   TRICK_RUN_SPEC,
 ];

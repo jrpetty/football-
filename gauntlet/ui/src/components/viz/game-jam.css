@@ -593,3 +593,5 @@ html[data-broadcast='on'] .jam-crit-l { font-size: 1.1rem; }
   white-space: normal;
   overflow: visible;
 }
+
+.jam-motion { display: block; width: 100%; border-radius: 6px; background: #000; }

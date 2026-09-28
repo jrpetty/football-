@@ -111,7 +111,7 @@ async function programSample(def: ProgramTest, opts: { reveal?: boolean; program
           rng: createRng(seed),
           config: { ...(program.defaults ?? {}), ...(def.config ?? {}) },
           model,
-          maxOutputTokens: def.maxOutputTokens ?? 16000,
+          maxOutputTokens: typeof def.maxOutputTokens === 'number' ? def.maxOutputTokens : 16000,
           signal,
           artifact: () => undefined,
         }),

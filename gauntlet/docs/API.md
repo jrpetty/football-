@@ -11,7 +11,7 @@ with a 4xx/5xx status.
 |---|---|---|
 | GET | `/api/meta` | `{ harnessVersion, protocolVersion, categories: CategoryInfo[], providers: Array<ProviderConfig & { hasKey: boolean }>, settings: Settings, programs: Array<{ id, name, description, scoring }>, browserChecks: boolean }` |
 
-`Settings` = `{ judges: string[], defaultRepeats: number, defaultConcurrency: number, temperature: number, defaultMaxOutputTokens: number, defaultTimeLimitSec: number, maxRetries: number, judgeExcludeSameVendor: boolean }`.
+`Settings` = `{ judges: string[], defaultRepeats: number, defaultConcurrency: number, temperature: number, defaultMaxOutputTokens: number, defaultTimeLimitSec: number, maxRetries: number, judgeExcludeSameVendor: boolean, currency?: { code, usdPerUnit, rateDate? } }` (costs are always USD; `currency` is for display, GBP by default).
 
 `LeaderboardRow.manual === true` marks contestants whose replies were pasted in by hand: show a "manual" badge and
 treat their latency/throughput as not comparable (human time), and their cost as user-entered.
@@ -96,8 +96,22 @@ from the seed; the program description explains them).
 | GET | `/api/runs/:id/export.json` | – | `{ manifest, leaderboard, results: CaseResult[] }` |
 | GET | `/api/runs/:id/artifacts/:file` | – | Artifact file. HTML is served with a strict sandbox CSP; embed it in `<iframe sandbox="allow-scripts">`. |
 
-`RunRequest.maxCostUsd` is a hard budget cap (USD, contestant + judge cost). When reached, the run stops starting
-new cases, ends with status `cancelled` and `manifest.error` explains why; resume with a higher cap to finish.
+`RunRequest.maxCostUsd` is a hard spending limit (USD, contestant + judge cost). Every call reserves its worst case
+first, so it is never exceeded. When the money left cannot pay for the next call, the run ends with status
+`cancelled`, `manifest.stopReason: 'spend-limit'` and a plain `manifest.error`; half-finished cases are not stored
+(their spend goes to `manifest.unrecordedCostUsd`); resume with a higher limit to finish.
+
+`RunRequest.limits` (optional): `{ perAnswerUsd?: number; sameOutputTokens?: number; currency?: { code, usdPerUnit } }`.
+`perAnswerUsd` lowers each model call's output limit to what that money buys at the model's price;
+`sameOutputTokens` replaces "model's maximum" for every model; `currency` records what the owner typed the limits
+in. The limits used are stored in `manifest.settings.limits`. The estimate's `perContestant[]` rows carry
+`maxOutputTokens` and `outputLimitBy` (`'model-max' | 'same-tokens' | 'per-answer'`) and `estCostUsdMax` (the
+upper bound if every "model's maximum" reply used its whole allowance).
+
+| Method | Path | Body | Returns |
+|---|---|---|---|
+| GET | `/api/settings/currency` | – | `{ code: 'GBP' \| 'USD' \| 'EUR', usdPerUnit: number, rateDate?: string }` |
+| PUT | `/api/settings/currency` | `{ code, usdPerUnit }` | the saved setting (from this computer only). The rate is typed by the owner; nothing is fetched. |
 
 ```ts
 interface RunEstimate {

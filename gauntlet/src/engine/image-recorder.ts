@@ -3,6 +3,7 @@ import { imageCallCost } from '../core/image-output.ts';
 import type { CompletionRequest, ImageGenResult, ImageReply } from '../core/types.ts';
 import { ProviderError } from '../providers/index.ts';
 import type { CallPolicy, CallTarget, CaseRecorder } from './recorder.ts';
+import { SpendLimitError } from './spend-guard.ts';
 
 /**
  * ModelHandle.generateImage for one case: the harness's uniform retry policy (429 / 5xx / network back off,
@@ -77,6 +78,11 @@ export function recordedImageCall(
     const started = Date.now();
     const messages = [{ role: 'user' as const, content: req.prompt }];
     try {
+      // A spend limit: pictures are billed per image, so a picture is only started while money is left.
+      if (opts.policy.spend && !opts.policy.spend.hasRoom()) {
+        opts.policy.spend.hit = true;
+        throw new SpendLimitError(`Spend limit reached: $${opts.policy.spend.spentUsd.toFixed(2)} of $${opts.policy.spend.capUsd.toFixed(2)} spent. Resume with a higher limit to finish.`);
+      }
       const r = await imageWithRetry(
         opts.target,
         { prompt: req.prompt, aspectRatio: req.aspectRatio ?? '3:2', callContext: opts.callContext ? { ...opts.callContext, label } : undefined },
@@ -88,6 +94,7 @@ export function recordedImageCall(
         },
       );
       const cost = imageCallCost(opts.target.contestant, r);
+      opts.policy.spend?.addSpent(cost);
       const img = r.images[0] ?? null;
       rec.usage = addUsage(rec.usage, r.usage);
       rec.costUsd += cost;

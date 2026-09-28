@@ -642,7 +642,7 @@ test('tournament: planned judge warnings when every judge shares a debater’s v
   setJudges([]);
 });
 
-test('spending cap: overspend is bounded by one in-flight call per concurrent game', async () => {
+test('spending cap: never exceeded, even with games running at the same time', async () => {
   const cap = 3;
   const id = tournament.startTournament({ game: 'connect4', contestantIds: ['pp-0', 'pp-1', 'pp-2', 'pp-3'], seeding: 'manual', concurrency: 2, maxCostUsd: cap });
   await tournament.waitForTournament(id);
@@ -650,8 +650,9 @@ test('spending cap: overspend is bounded by one in-flight call per concurrent ga
   assert.equal(d.manifest.status, 'cancelled');
   const calls = store.readGames(id).flatMap((g) => [...g.transcripts[0], ...g.transcripts[1]]);
   const biggest = Math.max(...calls.map((c) => c.costUsd));
-  assert.ok(d.state.costUsd >= cap, 'the cap was reached');
-  assert.ok(d.state.costUsd <= cap + 2 * biggest + 1e-9, `spent ${d.state.costUsd} with a ${cap} cap: at most one call per concurrent game over`);
+  // Each call reserves its worst case before it is sent, counting calls in flight in the other game.
+  assert.ok(d.state.costUsd <= cap + 1e-9, `spent ${d.state.costUsd} with a ${cap} cap`);
+  assert.ok(d.state.costUsd > 0 && biggest > 0, 'games were played until the money left could not pay for the next move');
 });
 
 // ─────────────────────────────── Fixes from a real manual poker match ───────────────────────────────

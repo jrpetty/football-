@@ -4,12 +4,20 @@ import { ProviderError, type ProviderAdapter } from '../providers/index.ts';
 import type { Semaphore } from './semaphore.ts';
 import { stripImageData } from '../core/vision.ts';
 import { recordedImageCall } from './image-recorder.ts';
+import { estimateInputTokens, perAnswerOutputTokens, type SpendGuard } from './spend-guard.ts';
 
 export interface CallPolicy {
   maxRetries: number;
   temperature: number;
   defaultMaxOutputTokens: number;
+  /** Whole-run spend limit: every call reserves its worst case first and may get a lower output limit (spend-guard.ts). */
+  spend?: SpendGuard;
+  /** Per-answer spend limit in USD (contestant calls only, never judges): lowers each call's output limit to what it buys. */
+  perAnswerUsd?: number;
 }
+
+/** Why a call's output limit was lowered below what the test asked for (shown when a reply is cut off). */
+export type OutputLimitBy = 'spend-limit' | 'per-answer';
 
 export interface CallTarget {
   contestant: Contestant;
@@ -30,6 +38,25 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
     };
     signal.addEventListener('abort', onAbort, { once: true });
   });
+}
+
+/** Output limit used for "model-max" tests when a model does not declare its own maximum (a common API ceiling). */
+export const MODEL_MAX_FALLBACK = 65_536;
+
+/**
+ * A test's output budget for one contestant: its number, the settings default, or, for "model-max", the model's
+ * own maximum. The result still goes through effectiveMaxOutputTokens (a configured cap can only lower it).
+ */
+export function resolveOutputBudget(
+  requested: number | 'model-max' | undefined,
+  c: Pick<Contestant, 'maxOutputTokens'>,
+  fallbackDefault: number,
+  /** The run's "same token limit for every model" choice: replaces "model-max" (a model's own lower maximum still applies). */
+  sameOutputTokens?: number,
+): number {
+  if (requested === 'model-max' && sameOutputTokens && sameOutputTokens > 0) return sameOutputTokens;
+  if (requested === 'model-max') return c.maxOutputTokens && c.maxOutputTokens > 0 ? c.maxOutputTokens : MODEL_MAX_FALLBACK;
+  return requested ?? fallbackDefault;
 }
 
 /**
@@ -73,11 +100,35 @@ export async function callWithRetry(
    * throws OutOfTimeError (not retried).
    */
   attemptLimitMs?: number,
-): Promise<CompletionResult> {
-  const maxOutputTokens = effectiveMaxOutputTokens(target.contestant, req.maxOutputTokens);
+): Promise<CompletionResult & { outputLimitBy?: OutputLimitBy; maxOutputTokensSent?: number }> {
+  let maxOutputTokens = effectiveMaxOutputTokens(target.contestant, req.maxOutputTokens);
+  let limitBy: OutputLimitBy | undefined;
+  const pricing = target.contestant.pricing;
+  const inputTokens = policy.spend || policy.perAnswerUsd ? estimateInputTokens(req.system, req.messages) : 0;
+  if (policy.perAnswerUsd && pricing) {
+    // Never below a small floor: a limit that cannot even pay for the prompt still sends a (short) request.
+    const n = Math.max(256, perAnswerOutputTokens(policy.perAnswerUsd, inputTokens, pricing));
+    if (n < maxOutputTokens) {
+      maxOutputTokens = n;
+      limitBy = 'per-answer';
+    }
+  }
   let attempt = 0;
   for (;;) {
     const release = await target.semaphore.acquire(signal);
+    // Whole-run spend limit: claim this attempt's worst case (waiting for running calls, or lowering the limit).
+    let reservation: Awaited<ReturnType<SpendGuard['reserve']>> | null = null;
+    if (policy.spend && pricing) {
+      try {
+        reservation = await policy.spend.reserve({ inputTokens, maxOutputTokens, pricing, signal, what: `a call to ${target.contestant.label}` });
+      } catch (err) {
+        release();
+        throw err;
+      }
+    }
+    const sent = reservation ? reservation.maxOutputTokens : maxOutputTokens;
+    const sentBy: OutputLimitBy | undefined = reservation?.clamped ? 'spend-limit' : limitBy;
+    let billed = 0;
     const limiter = attemptLimitMs ? new AbortController() : null;
     const onOuter = () => limiter?.abort();
     let late = false;
@@ -91,10 +142,11 @@ export async function callWithRetry(
       }, attemptLimitMs);
     }
     try {
-      const r = await target.adapter.complete({ ...req, maxOutputTokens, signal: limiter?.signal ?? signal });
+      const r = await target.adapter.complete({ ...req, maxOutputTokens: sent, signal: limiter?.signal ?? signal });
+      billed = r.costUsd ?? (pricing ? computeCost(r.usage, pricing) : 0);
       // Adapters that cannot be interrupted still get judged on their measured time.
       if (attemptLimitMs && (late || r.totalMs > attemptLimitMs)) throw new OutOfTimeError(attemptLimitMs, Math.max(r.totalMs, Date.now() - sentAt));
-      return { ...r, retries: attempt };
+      return { ...r, retries: attempt, ...(sentBy ? { outputLimitBy: sentBy } : {}), maxOutputTokensSent: sent };
     } catch (err) {
       if (err instanceof OutOfTimeError) throw err;
       if (late && !signal.aborted) throw new OutOfTimeError(attemptLimitMs!, Date.now() - sentAt);
@@ -104,6 +156,7 @@ export async function callWithRetry(
       const base = err instanceof ProviderError && err.retryAfterMs !== undefined ? err.retryAfterMs : Math.min(60_000, 1500 * 2 ** attempt);
       const wait = Math.round(base + Math.random() * 500);
       onRetry?.(attempt + 1, wait, err as Error);
+      reservation?.settle(0);
       release();
       await sleep(wait, signal);
       attempt++;
@@ -111,6 +164,8 @@ export async function callWithRetry(
     } finally {
       if (timer) clearTimeout(timer);
       signal.removeEventListener('abort', onOuter);
+      // A failed attempt is not billed by the providers we support; a finished one settles at its real cost.
+      reservation?.settle(billed);
       release();
     }
   }
@@ -230,8 +285,9 @@ export function createRecorder(opts: {
         rawStopReason: r.rawStopReason,
         costUsd: cost,
         retries: r.retries,
+        ...(r.outputLimitBy ? { outputLimitBy: r.outputLimitBy, maxOutputTokens: r.maxOutputTokensSent } : {}),
       });
-      return { text: r.text, stopReason: r.stopReason, totalMs: r.totalMs, ttftMs: r.ttftMs, outputTokens: r.usage.outputTokens };
+      return { text: r.text, stopReason: r.stopReason, totalMs: r.totalMs, ttftMs: r.ttftMs, outputTokens: r.usage.outputTokens, ...(r.outputLimitBy ? { outputLimitBy: r.outputLimitBy } : {}) };
     } catch (err) {
       rec.transcript.push({
         label,

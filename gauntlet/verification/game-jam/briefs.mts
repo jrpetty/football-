@@ -24,13 +24,28 @@ const INTRO = (n: number, title: string) =>
 You are one of several AI developers entering a game jam: five rounds, five genres, one prompt each, and no second attempt. You write the complete game in a single reply. Everyone gets exactly this brief.`;
 
 const CREATIVE = `## Your creative brief (this is where you win)
-The art direction, theme, setting, story, twist and extra mechanics are yours: surprise us. The numbered requirements below are the skeleton every entry shares; your identity is what makes your game the one people remember. Creativity and originality is the single largest part of the judges' score, and game feel, visual and audio polish and depth count too, so a faithful but generic clone will lose to an equally complete game with a memorable idea. A twist must never cost a requirement: deliver both.`;
+The art direction, theme, setting, story, twist and extra mechanics are yours: surprise us. The numbered requirements below are the skeleton every entry shares; your identity is what makes your game the one people remember. Visual quality and creativity are the two largest parts of the judges' score, so a faithful but plain-looking clone will lose to an equally complete game that looks stunning and has a memorable idea. A twist must never cost a requirement: deliver both.`;
+
+const VISUAL_BAR = `## The visual bar (the largest part of the score, with creativity)
+The target is a game that could pass for a screenshot of a polished commercial indie game on Steam. Flat rectangles on a plain background score at the bottom of the scale, however well they play. Deliver all of these:
+V1. Art direction first: open the file with a short comment stating your art direction, mood and colour palette (5-8 named colours), then follow it everywhere, so backgrounds, characters, UI and effects belong to one visual world.
+V2. Crisp at any size: render at devicePixelRatio (backing store = CSS size × DPR, capped at 2), fill the whole window at 1920×1080 and resize gracefully, with no blurry upscaling.
+V3. Depth: several parallax layers (or real 3D), atmospheric perspective and a sense of place.
+V4. Light: dynamic lighting and shadows, such as light maps, glow and bloom (offscreen canvases with blend modes like "lighter" or "screen", or shaders), and colour grading that changes with time of day or mood.
+V5. Particles: real particle systems with hundreds of particles (sparks, smoke, dust, rain, debris, and blood or ichor where the genre fits), pooled so they cost nothing.
+V6. Living characters: every character and creature is drawn procedurally with several animation frames or procedural animation (walk cycles, wing beats, idle breathing) and squash and stretch; never a static rectangle or circle.
+V7. Camera: smooth follow with look-ahead, shake on impact, and zoom where it helps.
+V8. Post effects: at least a vignette and a colour grade; CRT, scanlines, chromatic aberration or film grain where they suit the style.
+V9. UI: a polished HUD and menus with well-styled type, panels and icons drawn in code, animated transitions, and a title screen that looks like a real game's title screen (logo treatment, animated background, clear call to action).
+V10. Juice everywhere: hit-stop, flashes, screen shake, easing on every movement and UI change, satisfying feedback for every action.
+V11. Performance: a steady 60 fps at 1920×1080 with all of the above.
+WebGL and WebGL2 are allowed and encouraged: hand-written shaders, a real 3D scene, lit 2.5D, post-processing passes. Everything must still live in the one file, with no libraries or downloads; you may write and inline your own engine code.`;
 
 const TECH = `## Technical rules (all mandatory)
-T1. One self-contained HTML file with all HTML, CSS and JavaScript inline. No external resources of any kind: no libraries, CDNs, web fonts, image or audio files, and no network requests. Draw every graphic in code (Canvas 2D, WebGL or inline SVG) and synthesise every sound with the Web Audio API.
-T2. Keep the file under 500 kB.
-T3. Animate with requestAnimationFrame and a frame-rate-independent update (delta time, clamped so a stalled tab cannot teleport anything).
-T4. Fill the browser window and stay fully playable from 1280×720 up to full HD, handling resizes; nothing important may be cut off. Phones get the touch controls described above.
+T1. One self-contained HTML file with all HTML, CSS and JavaScript inline. No external resources of any kind: no libraries, CDNs, web fonts, image or audio files, and no network requests. Draw every graphic in code (Canvas 2D, WebGL/WebGL2 with your own shaders, or inline SVG) and synthesise every sound with the Web Audio API.
+T2. There is no size limit and no artificial length limit: use as much of your reply as the game needs (the file is only checked against a 20 MB safety net for runaway output).
+T3. Animate with requestAnimationFrame and a frame-rate-independent update (delta time, clamped so a stalled tab cannot teleport anything), holding 60 fps.
+T4. Render at devicePixelRatio and fill the browser window; the game is judged at 1920×1080 and must stay fully playable down to 1280×720, handling resizes, with nothing important cut off. Phones get the touch controls described above.
 T5. The game opens on a title screen. Pressing Enter there must start a new game with default settings. A click, a tap or Space should start it too; if the title screen offers choices (difficulty, seed, options), they may be picked first by mouse or keys, but Enter always starts immediately with the defaults.
 T6. Create or resume the AudioContext on the first key press, click or tap (browsers block sound before that). M toggles mute, with an on-screen indicator.
 T7. The game may run in a sandboxed frame where localStorage is missing or throws: wrap every storage access in try/catch and keep the game fully working (just without saving) when it fails.
@@ -38,12 +53,14 @@ T8. No alert, confirm or prompt dialogs, no pointer lock, no fullscreen requests
 T9. Organise the code in clear sections with named constants for every tuning value. Comments are welcome, but a feature that exists only in a comment or a menu label earns nothing.`;
 
 const TESTED = (inputs: string) => `## How your game will be tested
-1. It is opened in a desktop browser at 1280×720 and played automatically for 15 seconds: ${inputs}. Screenshots are taken along the way and compared with an untouched copy. The scripted player is not skilled: it only proves that the game starts, draws, keeps running, reacts to its controls and throws no errors.
-2. A panel of AI judges from other companies then reads your entire file, looks at the screenshots, marks every numbered requirement PASS, PARTIAL or FAIL, and scores: does it actually play, game feel, creativity and originality (the largest share), visual and audio polish, and ambition and depth.
-3. People will also play it, on camera.`;
+1. It is opened in a desktop browser at 1920×1080 and played automatically for 30 seconds: ${inputs}. Eight full-HD screenshots (the title screen, then moments in the middle of the action) and a motion strip of six frames 0.1 s apart are taken, and compared with an untouched copy. The scripted player is not skilled: it only proves that the game starts, draws, keeps running, reacts to its controls and throws no errors.
+2. A panel of AI judges from other companies then reads your entire file, studies the screenshots, marks every numbered requirement PASS, PARTIAL or FAIL, and scores: visual quality and art direction (the largest share), creativity and originality (the next largest), does it actually play, game feel and juice (including audio), and ambition and depth.
+3. People will also play it, on camera, in full screen.`;
 
 const DELIVERY = `## Delivery
-Respond with a single \`\`\`html code block containing the complete file, and nothing else: no explanation before or after it. Your reply has a hard output limit (about 64,000 tokens for most models, including any hidden reasoning), and a file that is cut off cannot run, so plan a scope you can finish: a complete, polished game beats an unfinished bigger one.`;
+Respond with a single \`\`\`html code block containing the complete file, and nothing else: no explanation before or after it. There is no artificial length limit: you may use your model's entire output allowance. Only your model's own maximum applies, and a file that is cut off cannot run, so plan a scope you can finish: a complete, gorgeous game beats an unfinished bigger one.`;
+
+const VISUAL_DONE = 'It meets the whole visual bar (V1-V11): one clear art direction, crisp full-HD rendering, depth, light, particles, animated characters, camera, post effects, polished UI and juice. A screenshot could pass for a commercial indie game.';
 
 interface Brief {
   id: string;
@@ -51,6 +68,8 @@ interface Brief {
   title: string;
   /** Everything between the intro and the creative brief: the pitch. */
   pitch: string;
+  /** This round's art direction targets (on top of the shared visual bar). */
+  art: string;
   controls: string;
   screens: string;
   /** Numbered requirements, in order, each with the short label shown in the UI and to the judges. */
@@ -70,6 +89,8 @@ const FLAPPY: Brief = {
   title: 'The Flappy Remake',
   pitch: `## The pitch
 Rebuild **Flappy Bird**, the one-button classic, as a faithful, juicy remake. A small hero flaps through an endless course of gaps: one input, instant restarts, a score you want to beat. The original's genius was feel: a precise arc, fair gaps and a death that makes you tap "retry" at once. Match that feel exactly, then add the juice and personality the original never had.`,
+  art: `## Art direction for this round
+Make it look like a premium mobile hit remastered for Steam. The hero is a character, not a sprite: several wing-beat frames, blinking, a squash on every flap, a trail. The world is a painted scene in several parallax layers (distant silhouettes, mid-ground detail, a textured foreground), with light that changes through the day/night cycle: warm rim light by day, glowing windows, lanterns or stars at night, bloom on every light source. Obstacles have material, texture and shading, not flat pipes. Weather or ambient particles drift through the scene, and the death is a proper cinematic moment. The medal panel and title screen should look designed, with a logo treatment and animated background.`,
   controls: `## Controls
 - Flap: Space, Arrow Up, W, a left mouse click, or a tap anywhere.
 - Start and restart: Enter, Space, a click or a tap (restart only once the game-over panel has appeared).
@@ -108,12 +129,12 @@ Rebuild **Flappy Bird**, the one-button classic, as a faithful, juicy remake. A 
     'Parallax, day/night, particles, the flash and the shake are visible in normal play.',
     'Difficulty ramps within the stated limits.',
     'Every sound plays after the first input, and M mutes.',
-    'It works without storage, logs no console errors and is under 500 kB.',
+    'It works without storage, logs no console errors and holds 60 fps at 1920×1080.',
     'It has an identity of its own: a theme, an art direction and at least one twist.',
   ],
   estimate: 20000,
   notes:
-    '[extreme] Round 1 of The Game Jam: Flappy Bird remake. The smallest round: expect 8-20k tokens of code plus reasoning (estimate 20k). Checks: the numbered requirements R1-R14 (judge checklist), the technical rules T1-T9, and the genre playtest (flap presses every 0.38 s). Scored 25% by automatic browser checks and 75% by the cross-vendor judge panel (creativity weighs most).',
+    '[extreme] Round 1 of The Game Jam: Flappy Bird remake. The smallest round: expect 8-20k tokens of code plus reasoning (estimate 20k). Checks: the numbered requirements R1-R14 (judge checklist), the technical rules T1-T9, and the genre playtest (flap presses every 0.38 s). Scored 25% by automatic browser checks and 75% by the cross-vendor judge panel (visual quality and creativity weigh most).',
 };
 
 // ───────────────────────────── Round 2: RTS ─────────────────────────────
@@ -124,6 +145,8 @@ const RTS: Brief = {
   title: 'Command & Construct',
   pitch: `## The pitch
 Build a small but complete **real-time strategy game in the spirit of Command & Conquer**. Harvest a resource to fund a base, grow that base on a grid, raise an army whose units counter one another, and destroy an AI opponent that plays by exactly the same rules. Everything a classic RTS needs, the economy, the build sidebar, fog of war, the minimap, pathfinding and a real enemy commander, in one HTML file.`,
+  art: `## Art direction for this round
+Aim for the look of a modern indie RTS. Terrain is lit and textured, with blended tile edges, height shading, water that moves and ore fields that sparkle. Buildings are detailed, cast shadows, animate (spinning radar, smoking stacks, blinking lights) and play a construction animation when placed. Units have readable silhouettes and animate: infantry walk cycles, tank turrets that rotate to aim, tracks that leave marks, harvesters that visibly fill and unload. Combat is spectacular: muzzle flashes that light the ground, tracers, explosions with shockwaves, smoke plumes and scorch decals that stay. The fog of war has soft edges, and the sidebar and minimap look like a real command interface with bevelled panels and animated build progress.`,
   controls: `## Controls
 - Left click: select a unit or building. Drag: box-select with a visible rectangle. Shift + click or drag: add to the selection. Double-click: select every visible unit of that type.
 - Right click: the context order: move on open ground, attack on an enemy, harvest on ore (harvesters), or set the rally point when a production building is selected.
@@ -167,12 +190,12 @@ Build a small but complete **real-time strategy game in the spirit of Command & 
     'Units path around terrain and around each other.',
     'The fog of war and the minimap agree.',
     'The AI builds, harvests and attacks on its own, and beats a passive player.',
-    'It logs no console errors, works without storage and is under 500 kB.',
+    'It logs no console errors, works without storage and holds 60 fps at 1920×1080.',
     'It has an identity of its own: a setting, factions, an art style or a twist.',
   ],
   estimate: 50000,
   notes:
-    '[extreme] Round 2 of The Game Jam: Command & Conquer-style RTS. One of the two largest rounds: a credible entry is 30-50k tokens of code plus reasoning, and some models will hit the 64k output cap (estimate 50k). Checks: R1-R15 (judge checklist), T1-T9, and the genre playtest (box-select, right-click orders, sidebar clicks, arrow/edge scrolling).',
+    '[extreme] Round 2 of The Game Jam: Command & Conquer-style RTS. One of the two largest rounds: a credible entry is 30-50k tokens of code plus reasoning, (estimate 50k; each model may use its full output allowance). Checks: R1-R15 (judge checklist), T1-T9, and the genre playtest (box-select, right-click orders, sidebar clicks, arrow/edge scrolling).',
 };
 
 // ───────────────────────────── Round 3: RPG ─────────────────────────────
@@ -183,6 +206,8 @@ const RPG: Brief = {
   title: 'The Little Legend',
   pitch: `## The pitch
 Build a small **top-down action RPG** with the feel of classic Zelda and early Pokémon: a village to start in, a wilderness to explore, a dungeon to conquer and a boss at the bottom of it. Talk to people, take on a quest, fight with a sword, grow stronger, gear up, save your progress, and see it through to an ending.`,
+  art: `## Art direction for this round
+Aim for a lovingly crafted pixel-art or painterly RPG. Tiles are detailed and autotiled (grass meets path, water meets shore), with animated water, swaying grass, flickering torches and drifting leaves. Characters have four-direction walk cycles, idle animations and an attack animation with a motion smear. The dungeon is dark and lit by torches and spells through a light map, with shadows. Dialogue boxes have portraits drawn in code, typewriter text with a subtle bounce, and a designed frame. The boss is big, animated, and telegraphs its attacks with clear visual effects. Area transitions, level-ups and item pickups each get their own visual moment.`,
   controls: `## Controls
 - Move: the arrow keys or WASD (four or eight directions, your choice).
 - Attack: Space, J or Z. A secondary item or skill, if you add one: K or X.
@@ -222,7 +247,7 @@ Build a small **top-down action RPG** with the feel of classic Zelda and early P
     'Dialogue, the quest log, inventory, equipment, the shop and levelling all work together.',
     'The three enemy AIs and the boss\'s patterns are distinct and fair.',
     'Save and Continue work where storage exists, and the game still runs where it does not.',
-    'It logs no console errors and is under 500 kB.',
+    'It logs no console errors and holds 60 fps at 1920×1080.',
     'It is an original world: a setting, characters, a story and at least one mechanic of your own.',
   ],
   estimate: 48000,
@@ -238,6 +263,8 @@ const ZOMBIE: Brief = {
   title: 'The Long Night (the hardest round)',
   pitch: `## The pitch
 This is the ambitious one. Build a **top-down (or isometric) zombie survival game** in a procedurally generated town overrun by the dead. Scavenge by day, craft what you need, fortify a safehouse, rescue survivors, and live through nights that keep getting worse, until the evacuation helicopter comes. The systems must feed each other: noise draws the hordes, light keeps you alive but gives you away, and the base buys you time but never wins on its own.`,
+  art: `## Art direction for this round
+This round is about atmosphere. Night must be genuinely dark, lit by a volumetric flashlight cone, muzzle flashes, fires and floodlights, with real shadow casting from walls and buildings. Add rain or fog, puddles, flickering street lights and a colour grade that shifts from dusty daylight to cold blue night and a red emergency tint at low health. Zombies shamble with distinct silhouettes and animations per type; hits spray ichor that stays as decals; fire spreads light and smoke. Barricades show cracks and splinters as they take damage. The HUD should look like a survival game's: worn panels, clear icons, a readable materials count and a clock that feels threatening at dusk.`,
   controls: `## Controls
 - Move: WASD (or the arrow keys). Sprint: Shift. Aim: the mouse (the character faces the cursor).
 - Attack or shoot: left click. Reload: R. Throw (a molotov, a decoy…): Q or right click.
@@ -287,12 +314,12 @@ This is the ambitious one. Build a **top-down (or isometric) zombie survival gam
     'Base building: at least five buildable structure types, a build mode with a placement preview and red/green validity, structures that visibly take damage and can be destroyed, and a readable materials HUD.',
     'The base helps but never wins alone: scarce materials, limited traps, noise-driven hordes, and breaches happen.',
     'Survivors can be rescued, follow you, fight and die.',
-    '60 fps with 100+ zombies; no console errors; it works without storage and is under 500 kB.',
+    '60 fps at 1920×1080 with 100+ zombies; no console errors; it works without storage.',
     'A distinct identity: a setting, a tone, an art direction and a twist of your own.',
   ],
   estimate: 58000,
   notes:
-    '[extreme] Round 4 of The Game Jam: zombie survival, the deliberately hardest round (19 requirements, including base building and an explicit base-balance requirement, R13, that judges must only PASS when the code enforces it). Most models will spend close to the whole 64k output budget (estimate 58k); some will be cut off, which scores the automatic checks only. Playtest: WASD movement, mouse aim sweeps, left-click bursts, R and E.',
+    '[extreme] Round 4 of The Game Jam: zombie survival, the deliberately hardest round (19 requirements, including base building and an explicit base-balance requirement, R13, that judges must only PASS when the code enforces it). Expect the longest replies (estimate 58k typical; each model may use its full output allowance); a reply cut off at the model limit scores the automatic checks only. Playtest: WASD movement, mouse aim sweeps, left-click bursts, R and E.',
 };
 
 // ───────────────────────────── Round 5: Racing ─────────────────────────────
@@ -306,6 +333,8 @@ Build an **arcade racing game** with a real sense of speed. Choose one of two cl
 - A. Pseudo-3D road projection in the style of OutRun and the Mode-7 racers: road segments projected onto the screen, curves, hills, and roadside sprites scaled by distance.
 - B. Top-down, with real physics: a vehicle model with grip and slip, weight transfer, drifting and skid marks.
 Either way: six cars, one circuit, three laps, and a finish you remember.`,
+  art: `## Art direction for this round
+Consider a real 3D racer in WebGL: a lit 3D track, car models and a chase camera. If you choose pseudo-3D instead, it must still look premium: a painted sky with a setting sun, layered mountains or city skylines, detailed roadside objects scaled smoothly, and cars drawn with shading, reflections and brake lights. Either way sell the speed: motion blur or speed lines, camera shake and a widening field of view on nitro, tyre smoke on drifts, sparks on contact, lens flare or bloom on the sun and headlights. The HUD should look like a real racing game's: an animated speedometer dial, a slick position and lap display, and a designed results screen.`,
   controls: `## Controls
 - Accelerate: Arrow Up or W. Brake and reverse: Arrow Down or S. Steer: Arrow Left and Right, or A and D.
 - Drift or handbrake: Space. Nitro: Shift (or N).
@@ -346,7 +375,7 @@ Either way: six cars, one circuit, three laps, and a finish you remember.`,
     'Laps, lap times, best lap, position, speedometer and minimap all update live.',
     'Drift or nitro (ideally both) with clear feedback.',
     'Collisions with cars and with scenery.',
-    'It logs no console errors, works without storage and is under 500 kB.',
+    'It logs no console errors, works without storage and holds 60 fps at 1920×1080.',
     'A world and a style of your own: a setting, vehicles, a time of day, a twist.',
   ],
   estimate: 38000,
@@ -361,20 +390,22 @@ export function renderBrief(b: Brief, round: number): string {
     INTRO(round, b.title),
     b.pitch,
     CREATIVE,
+    VISUAL_BAR,
+    b.art,
     b.controls,
     b.screens,
     `## Numbered requirements (the judges check every one)\n${b.requirements.map(([, text], i) => `${i + 1}. ${text}`).join('\n')}`,
     b.feel,
     TECH,
     TESTED(GENRES[b.genre].inputs),
-    `## Definition of done\n${b.done.map((d) => `- [ ] ${d}`).join('\n')}`,
+    `## Definition of done\n${[...b.done, VISUAL_DONE].map((d) => `- [ ] ${d}`).join('\n')}`,
     DELIVERY,
   ].join('\n\n');
 }
 
 // ───────────────────────────── The judges' rubric ─────────────────────────────
 
-export const RUBRIC = `Grade six things. Strong but different interpretations of the brief must score as well as literal ones: reward what the game actually does, not how closely it matches the picture in your head. Judge from the code, and use the playtest measurements and screenshots to confirm what really happens on screen.
+export const RUBRIC = `Grade six things. Strong but different interpretations of the brief must score as well as literal ones: reward what the game actually does and shows, not how closely it matches the picture in your head. Use the full-HD screenshots and the motion strip for what the game really looks like, and the code for what it does. Be honest and use the whole scale: most games are not a 10.
 
 REQUIREMENT CHECKLIST: one line per numbered requirement.
 - PASS: implemented and working as described; a different but reasonable interpretation counts.
@@ -382,22 +413,22 @@ REQUIREMENT CHECKLIST: one line per numbered requirement.
 - FAIL: missing, only in comments or menu text, or broken so it cannot work.
 When a requirement asks for balance or fairness (fair gaps, bounded rubber-banding, a zombie base that is not a win button), only PASS it when the code's numbers and rules actually enforce it, not merely when the text claims it.
 
+VISUALS (0-10): visual quality and art direction, the largest part of the score.
+10 = could pass for a screenshot of a polished commercial indie game: one cohesive art direction, crisp full-HD rendering, depth, dynamic light, rich particles, animated characters, post effects and a designed UI. 7 = clearly art-directed, lit, animated and cohesive, with a few rough edges. 5 = clean but simple: flat shapes, little light or animation. 3 = basic shapes with little animation. 1 = placeholder rectangles. 0 = nothing visible. With the screenshots, judge what they show: code that would draw something never seen on screen earns nothing. Without them, judge what the drawing code would really produce, and be conservative.
+
+CREATIVITY (0-10): creativity and originality.
+10 = a memorable identity: a fresh theme or art direction and a twist that changes how the genre plays, with extra mechanics that fit together; you would remember it tomorrow. 7 = a clear theme of its own plus at least one meaningful mechanic nobody asked for. 4 = a competent but generic clone, or a cosmetic reskin. 1 = the bare minimum. 0 = none. Never mark a creative twist down for departing from the classic game as long as the numbered requirements are still met. Creativity cannot rescue a game that does not run: if PLAYS is 2 or less, CREATIVITY is at most 4.
+
 PLAYS (0-10): does it actually play?
-10 = starts from the title screen and the whole loop works (title → play → lose or win → restart) with every system connected. 7 = plays through with minor bugs. 4 = plays, but a major system is broken or the loop cannot be completed. 1 = barely interactive. 0 = does not start. If the playtest shows the page froze, crashed or stayed blank, PLAYS is at most 2.
+10 = starts from the title screen and the whole loop works (title → play → lose or win → restart) with every system connected. 7 = plays through with minor bugs. 4 = plays, but a major system is broken or the loop cannot be completed. 1 = barely interactive. 0 = does not start. If the playtest shows the page froze, crashed or stayed blank, PLAYS is at most 2 and VISUALS at most 2.
 
-FEEL (0-10): game feel and balance.
-10 = tight, responsive and satisfying, like a polished indie game: tuned physics and timing, fair difficulty, clear feedback for every hit, pickup and score. 5 = functional but floaty, unfair or samey. 0 = unplayable.
-
-CREATIVITY (0-10): creativity and originality, the deciding factor of this jam.
-10 = a memorable identity: a fresh theme or art direction, and a twist that changes how the genre plays, with extra mechanics that fit together; you would remember it tomorrow. 7 = a clear theme of its own plus at least one meaningful mechanic nobody asked for. 4 = a competent but generic clone, or a cosmetic reskin. 1 = the bare minimum. 0 = none. Never mark a creative twist down for departing from the classic game as long as the numbered requirements are still met. Creativity cannot rescue a game that does not run: if PLAYS is 2 or less, CREATIVITY is at most 4.
-
-POLISH (0-10): visual and audio polish.
-10 = looks and sounds like a finished product: cohesive art drawn in code, animation, particles and lighting, clean readable UI and typography, screen transitions, and rich Web Audio sound design. 5 = consistent but plain. 0 = placeholder boxes and no sound.
+FEEL (0-10): game feel and juice, including audio.
+10 = tight, responsive and satisfying like a polished indie game: tuned physics and timing, fair difficulty, hit-stop, shake, flashes and easing on every action, and rich Web Audio sound design. 7 = responsive with good feedback and sound, a little uneven. 5 = functional but floaty, unfair or quiet. 3 = sluggish with little feedback. 0 = unplayable.
 
 AMBITION (0-10): ambition and depth.
 10 = clearly more than the brief asked for, and all of it works: content, variety and systems that interact. 5 = what was asked. 0 = a small fraction of it. Weigh this against the size of the brief: the zombie round asks for more than the Flappy round.
 
-Hard rules: never award anything for features that exist only in comments, menu labels or text. If the file loads any external resource, POLISH and AMBITION are at most 3.`;
+Hard rules: never award anything for features that exist only in comments, menu labels or text. If the file loads any external resource, VISUALS and AMBITION are at most 3.`;
 
 // ───────────────────────────── Write the test ─────────────────────────────
 
@@ -417,21 +448,24 @@ if (import.meta.main) {
   const test = {
     kind: 'prompt',
     id: 'creative.game-jam',
-    version: '1.0.0',
+    version: '2.0.0',
     name: 'The Game Jam',
     category: 'creative',
     description:
-      'Five full game design briefs, one per genre, each built from a single prompt as one self-contained HTML file: a juicy Flappy Bird remake, a Command & Conquer-style real-time strategy game, a top-down action RPG, a deliberately hardest zombie survival game with base building, and a racer. Each game is played by a scripted player for its genre in a headless browser (screenshots, freeze and error checks), then graded by a cross-vendor judge panel that sees the code and the screenshots, ticks every numbered requirement and weights creativity and originality most, so it separates models that can design and engineer a whole game from those that sketch one.',
+      'Five full game design briefs, one per genre, each built from a single prompt as one self-contained HTML file with a commercial-indie visual bar: a Flappy Bird remake, a Command & Conquer-style real-time strategy game, a top-down action RPG, a deliberately hardest zombie survival game with base building, and a racer (WebGL welcome). Each model may use its full output. Each game is played by a scripted player for its genre in a headless browser at 1920×1080 (eight screenshots and a motion strip, freeze and error checks), then graded by a cross-vendor judge panel that sees the code and the screenshots, ticks every numbered requirement and weights visual quality and creativity most, so it separates models that can design, draw and engineer a whole game from those that sketch one.',
     difficulty: 'extreme',
     tags: ['creative', 'html', 'canvas', 'game', 'artifact', 'one-shot', 'game-jam', 'playtest'],
     hook: 'Five genres. One prompt each. Build the whole game.',
-    maxOutputTokens: 64000,
-    timeLimitSec: 3600,
+    // No artificial cap: each model may write up to its own maximum output (Contestant.maxOutputTokens).
+    maxOutputTokens: 'model-max',
+    // Long generations stream for an hour or more; one retry at most, since a retry restarts a paid reply.
+    timeLimitSec: 10800,
+    maxRetries: 1,
     estimate: {
       inputTokens: inputAvg,
       outputTokens: outputAvg,
-      // Each judge reads the brief, the rubric and the whole game (≈ the visible output) plus five screenshots.
-      judgeInputTokens: 42000,
+      // Each judge reads the brief, the rubric and the whole game (≈ the visible output) plus nine full-HD pictures.
+      judgeInputTokens: 56000,
       judgeOutputTokens: 3000,
     },
     author: 'Gauntlet Core',
@@ -439,7 +473,7 @@ if (import.meta.main) {
     scorer: {
       type: 'artifact',
       format: 'html',
-      checks: [{ check: 'parses' }, { check: 'no_external_requests' }, { check: 'max_bytes', bytes: 500000 }, { check: 'runs_without_errors' }, { check: 'has_canvas_or_svg' }, { check: 'responds_to_input' }],
+      checks: [{ check: 'parses' }, { check: 'no_external_requests' }, { check: 'max_bytes', bytes: 20000000 }, { check: 'runs_without_errors' }, { check: 'has_canvas_or_svg' }, { check: 'responds_to_input' }],
       rubric: RUBRIC,
       judgeWeight: 0.75,
       playtest: { protocol: GAME_JAM_PROTOCOL },

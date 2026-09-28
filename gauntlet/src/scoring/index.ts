@@ -36,6 +36,8 @@ export interface ScoringInput {
   /** Final reply text. */
   response: string;
   stopReason: StopReason;
+  /** Set when a spend limit lowered the reply's output limit, so a cut-off reply can say who stopped it. */
+  outputLimitBy?: 'spend-limit' | 'per-answer';
   /** The task as the model saw it (for judges). */
   taskText: string;
   judges: JudgePanel;

@@ -1,5 +1,5 @@
 /**
- * The playtest as a filmstrip: the five recorded screenshots in time order, each with how much of the picture
+ * The playtest as a filmstrip: the recorded screenshots in time order (five on protocol 1 results, eight since v2), each with how much of the picture
  * changed since the one before (a small "motion" bar) and whether the controls made a difference compared with
  * an untouched copy. A plain legend explains both bars. Recorded data only.
  */
@@ -18,7 +18,7 @@ export function PlaytestFilmstrip({ entry, urlFor, selected, onSelect }: { entry
   }
   return (
     <div className="jam-film">
-      <ol className="jam-film-strip">
+      <ol className="jam-film-strip" style={{ gridTemplateColumns: `repeat(${entry.frames.length > 5 ? 4 : 5}, minmax(0, 1fr))` }}>
         {entry.frames.map((f, i) => {
           const info = infos.find((x) => x.t === f.t);
           return (

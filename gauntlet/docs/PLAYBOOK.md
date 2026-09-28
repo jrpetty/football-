@@ -569,17 +569,48 @@ to line it up before a real run.
 
 ## Running the Game Jam
 
-**The Game Jam** (`creative.game-jam`, in its own `games` suite) gives every model five full game design briefs and
-asks for a complete browser game for each, in one reply, as one HTML file: a juicy **Flappy Bird remake**, a
-**Command & Conquer-style RTS**, a **top-down action RPG**, a deliberately hardest **zombie survival** game (with
-balanced base building) and a **racer**. Each brief has 14 to 19 numbered requirements, controls, screens, feel
-targets and a "definition of done", and tells the model plainly that creativity is the biggest part of the score.
+**The Game Jam** (`creative.game-jam`, version 2, in its own `games` suite) gives every model five full game
+design briefs and asks for a complete browser game for each, in one reply, as one HTML file: a **Flappy Bird
+remake**, a **Command & Conquer-style RTS**, a **top-down action RPG**, a deliberately hardest **zombie survival**
+game (with balanced base building: structures cost scarce materials, get damaged and broken, hordes grow with the
+size and noise of your base, and the base is never a win button) and a **racer**. Each brief has 14 to 19 numbered
+requirements, controls, screens, feel targets and a "definition of done".
 
-**What it costs.** Games are long: each reply may use up to 64,000 output tokens (including thinking), about
-43,000 on average. For the whole jam (5 games, 1 repeat) the Cost Planner estimates, per model: Claude Fable 5.1
-about $10.90, Claude Opus 5.5 $4.35, Claude Sonnet 5 $2.20, GPT-5.6 Sol $6.50, GPT-5.6 Terra $3.25, Gemini 3.1 Pro
-$2.60, Gemini 3.5 Flash $1.95, Grok 4.7 $1.30, DeepSeek V4 Flash $0.26, plus about $1.25 of judges per model. Run
-`node src/cli.ts costs --suite games` for your exact prices, and use `--max-cost`.
+**The visual bar.** Version 2 asks for games that "look like a polished commercial indie game on Steam". Every brief
+now carries the same eleven-point visual bar (a stated art direction and palette, crisp full-HD rendering at the
+screen's pixel density, parallax depth, dynamic light and glow, particle systems with hundreds of particles,
+characters with real animation and squash and stretch, a camera with follow, shake and zoom, post effects, a
+designed HUD and title screen, juice, and a steady 60 fps) plus art direction for its genre. WebGL and hand-written
+shaders are explicitly encouraged (a real 3D racer is welcome); it must still be one file with no libraries or
+downloads. The "surprise us" invitation stays: the setting, story and twist are the model's.
+
+**No artificial limits.** Every model may write up to its **own maximum output** (the test asks for `"model-max"`),
+not a fixed 64k: 128,000 tokens for the current Claude and GPT-5.x models, 65,536 for Gemini, 393,216 for DeepSeek
+V4 Flash, a conservative 128,000 for Grok (xAI publishes no cap). The numbers, and where each came from, are in
+`config/models.json` (`maxOutputTokens` and `maxOutputTokensSource`; "unverified" means we could not check the
+provider's own page). There is no file-size cap either, only a 20 MB safety net against runaway output. A case may
+run for up to 3 hours, network timeouts are switched off for these long streams, and a failed call is retried once
+at most (a retry restarts a paid reply from scratch).
+
+**What it costs.** About 43,000 output tokens per game is typical; the ceiling is every game using the model's
+whole allowance. For the whole jam (5 games, 1 repeat), from `node src/cli.ts costs --suite games`, at
+£1 = $1.33:
+
+| Model | Typical | Upper bound (every reply at its maximum) |
+|---|---:|---:|
+| Claude Fable 5.1 | £8.20 ($10.93) | £24.20 ($32.18) |
+| Claude Opus 5.5 | £3.30 ($4.37) | £9.70 ($12.87) |
+| Claude Sonnet 5 | £1.65 ($2.19) | £4.85 ($6.44) |
+| GPT-5.6 Sol | £4.90 ($6.54) | £14.50 ($19.29) |
+| GPT-5.6 Terra | £2.45 ($3.27) | £7.25 ($9.64) |
+| Gemini 3.1 Pro | £1.95 ($2.62) | £3.00 ($3.97) |
+| Gemini 3.5 Flash | £1.45 ($1.96) | £2.25 ($2.98) |
+| Grok 4.7 | £1.00 ($1.33) | £2.90 ($3.88) |
+| DeepSeek V4 Flash | £0.20 ($0.26) | £1.75 ($2.36) |
+
+Add roughly £1 ($1.30) of judges per model (more at the upper bound, because the judges read the whole file).
+New Run and the Cost Planner show both numbers for your exact selection, in pounds. If the upper bound is more than
+you want to risk, set a spending limit (next section): the run can then never spend more.
 
 **How to run it.**
 
@@ -587,28 +618,38 @@ $2.60, Gemini 3.5 Flash $1.95, Grok 4.7 $1.30, DeepSeek V4 Flash $0.26, plus abo
 node src/cli.ts run --models claude-opus-5-5,gpt-5.6-sol,gemini-3.1-pro --suite games --repeats 1 --max-cost 40
 ```
 
-Or **New Run → suite "The Game Jam"**. It runs once per model by default (a game costs dollars, not cents). Each
-case may take up to an hour (a 64k-token reply at 30 tokens/s is 35 minutes).
+Or **New Run → suite "The Game Jam"**, and pick a spending limit in **4 · Spending limits** (for example £30).
+It runs once per model by default.
 
-**How it's scored.** Every game is played by a scripted "robot player" for its genre for 15 seconds in a headless
-browser (flaps; box-select and right-click orders; walking and attacking; WASD, aiming and shooting; accelerating
-and steering), on a fixed clock with fixed randomness, so a re-run of the same file gives the same screenshots.
-Five screenshots are kept (0.5, 3, 6, 10 and 15 s) and compared with an untouched copy of the page.
+**How it's scored.** Every game is played by a scripted "robot player" for its genre for **30 seconds** in a
+headless browser at **1920×1080** (flaps; box-select and right-click orders; walking and attacking; WASD, aiming
+and shooting; accelerating and steering), on a fixed clock with fixed randomness, so a re-run of the same file gives
+the same screenshots. **Eight** full-HD screenshots are kept (the title screen at 0.5 s, then 3, 6, 10, 14, 19, 24
+and 30 s, in the middle of the action) plus a **motion strip**: six frames a tenth of a second apart at 16 s, so the
+judges can see how things animate.
 
-* A quarter of the score: 10 automatic checks. The usual ones (it loads, no downloads from the internet, under
-  500 kB, no JavaScript errors, draws a canvas, reacts to input) plus four playtest checks (it shows a picture,
-  it keeps moving, it is still running after 15 s, no errors while playing).
-* Three quarters: two or three AI judges from other companies (never the model's own), who read the whole file
-  and, when they accept images, see the five screenshots. Each judge marks every numbered requirement PASS,
-  PARTIAL or FAIL and scores five things out of 10 against written anchors. The judge total weights:
-  **creativity & originality 30%**, requirement checklist 25%, does it actually play 15%, game feel 10%,
-  visual & audio polish 10%, ambition & depth 10%. Strong but different interpretations score as well as literal
-  ones; the zombie round's "base is balanced, not a win button" requirement only passes if the code enforces it.
+* A quarter of the score: 10 automatic checks (it loads, no downloads from the internet, under the 20 MB safety net,
+  no JavaScript errors, draws a canvas, reacts to input, shows a picture, keeps moving, still running after 30 s,
+  no errors while playing).
+* Three quarters: two or three AI judges from other companies (never the model's own), who read the whole file and,
+  when they accept images, see all nine pictures (high-quality JPEGs). Each judge marks every numbered requirement
+  PASS, PARTIAL or FAIL and scores five things out of 10 against written anchors. The judge total weights:
+  **visual quality & art direction 30%**, **creativity & originality 25%**, requirement checklist 20%, does it
+  actually play 10%, game feel & juice (incl. audio) 10%, ambition & depth 5%.
+* The visual scale is anchored hard: 10 = could pass for a screenshot of a polished commercial indie game;
+  7 = clearly art-directed, lit, animated and cohesive; 5 = clean but simple flat shapes; 3 = basic shapes, little
+  animation; 1 = placeholder rectangles. Most games are not a 10.
+* A judge that cannot see images grades visuals from the drawing code and is told to be conservative. On the visual
+  score, a judge who saw the pictures counts **three times** as much as a text-only judge (other criteria are a
+  plain average). The scorecard marks text-only judges "read the code only".
 * A game that **froze** or showed a **blank screen**, or that downloads files, can never score above 30.
-* A reply that **ran out of output space** (hit the model's output limit, so the file is cut off) is still saved,
-  tested and shown, and says so in plain words; the judges are not asked, so it scores the automatic quarter at most.
-* Models whose API cannot write 64,000 tokens get their own limit instead (set `maxOutputTokens` on the model in
-  `config/models.json`; GPT-4o has 16,384), so they are not rejected by the API, and the Cost Planner uses that limit.
+* A reply that **ran out of output space** (hit its output limit, so the file is cut off) is still saved, tested and
+  shown, and says so in plain words; the judges are not asked, so it scores the automatic quarter at most. When one
+  of your spending limits set that output limit, it says "stopped by your per-answer spend limit" (or "by your run
+  spend limit") instead, so nobody blames the model.
+
+Results from version 1 (the 64k cap, 15-second playtest, creativity-first weights) keep their own weights on the
+scorecard and are not mixed with version 2 on the leaderboard (a new test version has a new hash).
 
 **Your override.** Every game lands in **Blind Review** for an optional human rating; when the judges disagree by
 more than 3 points out of 10, your rating becomes the score. In the **Grader** you can paste any chatbot's reply to
@@ -618,19 +659,62 @@ a round and get the same playtest, checks and judge card.
 
 * **Run detail → Game Jam**: the cabinet wall. One shelf per model, one arcade cabinet per genre; each screen flips
   through the recorded playtest screenshots, a crown marks the best game of each genre, and the banner names the
-  **Game of the Jam** (best average; ties go to creativity). Click a cabinet for the full card.
+  **Game of the Jam** (best average; ties go to the better visuals, then creativity). Click a cabinet for the card.
 * The **card** (also in the result inspector and the Grader): **Play it** runs the game in a locked-down frame; the
-  filmstrip shows what the robot player saw with "moved" and "input" bars; "How the score adds up"; the judges'
-  scorecard with a dot per judge (so a split panel is visible) and each judge's one-line verdict; and the brief's
-  numbered requirements with ticks, dashes and crosses.
+  filmstrip shows what the robot player saw with "moved" and "input" bars; the motion strip; "How the score adds
+  up"; the judges' scorecard with the six criteria and their weights, a dot per judge and each judge's verdict; and
+  the brief's numbered requirements with ticks, dashes and crosses.
 * The **Presenter** adds one slide per genre, every model's game side by side as cabinets, then the Game of the Jam.
+  Its closing methods slide lists the run's limits (see below).
 * Try it all with no keys: `?mock=1` → Runs → "The Game Jam · five genres". The demo games are hand-written samples
-  (two complete entries, smaller ones and deliberately broken ones) that went through the real playtest; only the
-  demo judges were scripted.
+  that went through the real version 2 playtest; only the demo judges were scripted. The samples are deliberately
+  simple, so they score low on visuals, which is what the new scale is for.
 
 **Checking the checker.** `node verification/game-jam/e2e.mts` runs the sample games (working, syntax error,
 endless loop, blank canvas, cut-off reply) through the real scorer and asserts each is caught.
 `node verification/game-jam/briefs.mts` rebuilds the test file from the briefs.
+
+## Setting a spending limit (in pounds)
+
+Nothing is capped by default: models use their full output and a run finishes whatever it costs. When you want a
+ceiling, you have three optional controls, all under **New Run → 4 · Spending limits**.
+
+**Your currency.** Costs are shown in **pounds** everywhere (New Run, the Cost Planner, the run page, Watch it
+think, the OBS overlay, the Presenter). Next to the limit you see the rate, e.g. "£1 = $1.33 · edit". Click
+**edit** to type today's rate from your bank (or switch to dollars or euros); Gauntlet never looks the rate up
+online. Underneath, everything is still measured and stored in US dollars, the unit providers bill in, so changing
+the rate never changes a result. The setting lives in `config/settings.json` (`currency`).
+
+**1. Spending limit for the whole run.** Pick **No limit, £5, £10, £30, £50 or Custom**. Models and judges together
+never spend more than this:
+
+* Before every call, Gauntlet reserves that call's worst case (its prompt plus its whole output allowance, at the
+  model's prices), including calls running at the same time. If the full request does not fit, it waits for
+  running calls to finish (they usually cost far less than their worst case); if it still does not fit, it lowers
+  that call's output allowance to what the money left can buy, and if not even a short reply is affordable it does
+  not start the call.
+* **Judges count** towards the limit. The run page shows "Spend · limit" with a bar.
+* When the money runs out, the run stops cleanly and says **"Stopped: spend limit"** (amber, not a failure). Every
+  finished result is kept; a case that was stopped half-way is not stored (so no model is marked down for it), but
+  what it spent is still counted. Press **Resume with a higher limit** to finish.
+* In the Arena the same presets are under **Spending limit** when you set up a tournament.
+
+**2. Per-answer limit (optional).** "Any single game may cost at most £2." Pick **Off, £0.50, £1, £2, £5 or Custom**.
+Each model's output allowance per reply becomes what that money buys at its own output price, and the estimate
+shows the resulting "Output limit per reply" for every model. A reply cut off by it is labelled **"stopped by your
+per-answer spend limit"**.
+
+**3. Output limit: each model's own maximum, or the same for every model.** The fair alternative to a money limit.
+
+**Fairness, in one sentence:** a money limit gives models different room (£2 buys about 80,000 output tokens of
+Claude Opus 5.5 but about 800,000 of a budget model), so for a like-for-like comparison turn the per-answer limit
+off and choose **Same token limit for every model** (e.g. 64,000 tokens; a model whose own maximum is lower keeps
+its maximum). A whole-run limit is fair as long as the run finishes; if it stops early, the unfinished models have
+fewer results. Whatever you choose is recorded with the run (`settings.limits` in the manifest), shown as chips on
+the run page, and printed on the Presenter's closing methods slide, so your video can disclose it.
+
+From the command line: `--max-cost 40` (US dollars), `--per-answer 2.5` (US dollars per reply) and
+`--same-tokens 64000`.
 
 ## Cost-saving tips
 

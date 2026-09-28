@@ -115,7 +115,10 @@ export default function WatchPage({ runId }: { runId: string }) {
           <div className="wh-stat">
             <span className="k">Spent so far</span>
             <span className="v tnum">{fmtCost(w.costUsd)}</span>
-            <span className="s tnum">{fmtClock(elapsed)} elapsed</span>
+            <span className="s tnum">
+              {m?.settings?.maxCostUsd ? `of a ${fmtCost(m.settings.maxCostUsd)} limit · ` : ''}
+              {fmtClock(elapsed)} elapsed
+            </span>
           </div>
         </div>
         <div className="wh-tools no-broadcast">

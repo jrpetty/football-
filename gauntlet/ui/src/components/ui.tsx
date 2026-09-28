@@ -76,8 +76,9 @@ const RUN_STATUS: Record<RunStatus, { cls: string; label: string }> = {
   interrupted: { cls: 'warn', label: 'Interrupted' },
 };
 
-export function RunStatusBadge({ status, lg }: { status: RunStatus | string | undefined; lg?: boolean }) {
-  const s = RUN_STATUS[status as RunStatus] ?? { cls: '', label: String(status ?? 'Unknown') };
+export function RunStatusBadge({ status, lg, stopReason }: { status: RunStatus | string | undefined; lg?: boolean; stopReason?: string }) {
+  // A run stopped by its spend limit is not a failure: it says so, and can be resumed with a higher limit.
+  const s = stopReason === 'spend-limit' && status === 'cancelled' ? { cls: 'warn', label: 'Stopped: spend limit' } : RUN_STATUS[status as RunStatus] ?? { cls: '', label: String(status ?? 'Unknown') };
   return (
     <span className={cx('badge', s.cls, lg && 'lg')}>
       <span className="dot" aria-hidden="true" />

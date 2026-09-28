@@ -1,8 +1,8 @@
 import type { ChatImage, ScoreBreakdownItem, ScoreDetail, ScorerSpec } from '../core/types.ts';
 import { extractArtifact, type JudgeCall, type ScoringInput, type ScoringOutcome } from './index.ts';
 import { JUDGE_SYSTEM, fill } from './judge-prompts.ts';
-import { GENRES, runPlaytest, type PlaytestResult } from './playtest.ts';
-import { GAME_JAM_PROTOCOL, JAM_CRITERIA, JAM_WEIGHTS, jamCaseSpec, numberedRequirements, validateGameJamCase, type GameJamDetail, type JamCaseSpec, type JamCriterion, type JamGenre, type JamJudgeCard, type JamRequirement, type RequirementVerdict } from './game-jam-shared.ts';
+import { GENRES, MOTION_SIZE, runPlaytest, type PlaytestResult } from './playtest.ts';
+import { GAME_JAM_PROTOCOL, JAM_CRITERIA, JAM_WEIGHTS, VISION_JUDGE_VISUAL_WEIGHT, criteriaOf, jamCaseSpec, numberedRequirements, validateGameJamCase, type GameJamDetail, type JamCaseSpec, type JamCriterion, type JamGenre, type JamJudgeCard, type JamRequirement, type RequirementVerdict } from './game-jam-shared.ts';
 export { GAME_JAM_PROTOCOL, JAM_CRITERIA, JAM_WEIGHTS, jamCaseSpec, numberedRequirements, validateGameJamCase };
 
 /**
@@ -16,8 +16,9 @@ export { GAME_JAM_PROTOCOL, JAM_CRITERIA, JAM_WEIGHTS, jamCaseSpec, numberedRequ
  *  3. A judge panel (never the contestant's own vendor) reads the brief, the whole file, the playtest results and,
  *     when the judge accepts images, the five playtest screenshots. Each judge marks every numbered requirement
  *     PASS / PARTIAL / FAIL and scores five criteria 0-10 against anchored descriptions in the test's rubric.
- *  4. Score = (1 − judgeWeight) × checks + judgeWeight × judges, where a judge's total weights creativity highest
- *     (the owner's "deciding factor"). A game that froze or stayed blank, or that loads outside files, is capped at 30.
+ *  4. Score = (1 − judgeWeight) × checks + judgeWeight × judges. Judge weights (protocol 2): visual quality & art
+ *     direction 30%, creativity 25%, requirement checklist 20%, plays 10%, feel & juice 10%, ambition 5%. On
+ *     VISUALS a judge who saw the screenshots counts VISION_JUDGE_VISUAL_WEIGHT (3) times a text-only judge. A game that froze or stayed blank, or that loads outside files, is capped at 30.
  *
  * GAME_JAM_PROTOCOL versions the playtest script, the weights and the judge format below; the test JSON repeats it
  * (scorer.playtest.protocol), so changing any of them forces a test version bump (and a new test hash).
@@ -25,8 +26,8 @@ export { GAME_JAM_PROTOCOL, JAM_CRITERIA, JAM_WEIGHTS, jamCaseSpec, numberedRequ
 
 /** Highest total a broken game (froze, blank, or loads outside files) can reach. */
 export const BROKEN_CAP = 0.3;
-/** Characters of game code a judge reads (≈ 70k tokens; a 64k-token reply always fits). */
-const MAX_JUDGE_CODE_CHARS = 260_000;
+/** Characters of game code a judge reads (≈ 300k tokens): a model's full 128k-token reply always fits; only a runaway 384k-token file is trimmed in the middle. */
+const MAX_JUDGE_CODE_CHARS = 1_100_000;
 
 // ───────────────────────────── Extraction ─────────────────────────────
 
@@ -66,10 +67,10 @@ export const GAME_JAM_JUDGE_TEMPLATE = `## The game-jam brief given to the model
 
 Grade the game. Think it through first if you need to, then end your reply with exactly these lines and nothing after them:
 {{format}}
+VISUALS: <integer 0-10>
+CREATIVITY: <integer 0-10>
 PLAYS: <integer 0-10>
 FEEL: <integer 0-10>
-CREATIVITY: <integer 0-10>
-POLISH: <integer 0-10>
 AMBITION: <integer 0-10>
 VERDICT: <one plain-English sentence for a viewer, at most 20 words>`;
 
@@ -87,9 +88,10 @@ function playtestText(r: PlaytestResult | null, genre: JamGenre, items: ScoreBre
     );
     lines.push(
       withImages
-        ? `Screenshots attached in order: ${s.frames.map((f) => f.label).join(', ')}.`
-        : `Screenshots were taken at ${s.frames.map((f) => f.label).join(', ')}, but you receive text only: rely on the code and these measurements.`,
+        ? `Full-HD screenshots attached in order: ${s.frames.map((f) => f.label).join(', ')}.${s.motion ? ` The last image is a motion strip: six frames 0.1 s apart from ${(s.motion.times[0]! / 1000).toFixed(0)} s, left to right then top to bottom, so you can judge animation.` : ''} Grade VISUALS mainly from these pictures.`
+        : `Screenshots were taken at ${s.frames.map((f) => f.label).join(', ')}, but you receive text only: grade VISUALS from what the drawing code would produce, and be conservative. Your visual score counts less than a judge who saw the pictures.`,
     );
+    if (s.motion) lines.push(`Motion strip: on average ${pct(s.motion.changed)} of the screen changes every tenth of a second.`);
     lines.push('Measurements per screenshot (share of pixels that changed since the previous one / that differ from the untouched copy):');
     for (const f of s.frames) lines.push(`- ${f.label}: ${f.blank ? 'BLANK (one flat colour)' : 'shows a picture'}; changed ${f.changed === null ? '—' : pct(f.changed)}; vs untouched ${f.vsIdle === null ? '—' : pct(f.vsIdle)}`);
     if (s.hung) lines.push(`The page STOPPED RESPONDING at ${(s.hung.atMs / 1000).toFixed(1)} s (${s.hung.phase}).`);
@@ -123,7 +125,7 @@ export function buildJudgePrompt(o: { task: string; rubric: string; spec: JamCas
 
 export interface ParsedJamVerdict {
   requirements: Array<{ verdict: RequirementVerdict; reason?: string } | null>;
-  criteria: Record<Exclude<JamCriterion, 'fidelity'>, number>;
+  criteria: Record<'visual' | 'creativity' | 'plays' | 'feel' | 'ambition', number>;
   verdict?: string;
 }
 
@@ -145,20 +147,20 @@ export function parseJamVerdict(text: string, nRequirements: number): ParsedJamV
       if (i >= 0 && i < nRequirements) reqs[i] = { verdict: r[2]!.toLowerCase() as RequirementVerdict, reason: r[3]?.trim().slice(0, 140) || undefined };
       continue;
     }
-    const c = line.match(/^(PLAYS|FEEL|CREATIVITY|POLISH|AMBITION)\s*[:=]\s*(\d+(?:\.\d+)?)\s*(?:\/\s*10)?\b/i);
+    const c = line.match(/^(VISUALS?|PLAYS|FEEL|CREATIVITY|AMBITION)\s*[:=]\s*(\d+(?:\.\d+)?)\s*(?:\/\s*10)?\b/i);
     if (c) {
-      crit[c[1]!.toUpperCase()] = Number(c[2]);
+      crit[c[1]!.toUpperCase().replace(/^VISUAL$/, 'VISUALS')] = Number(c[2]);
       continue;
     }
     const v = line.match(/^VERDICT\s*:\s*(.+)$/i);
     if (v) verdict = v[1]!.trim().replace(/^["“]|["”]$/g, '').slice(0, 220);
   }
-  const missing = JAM_CRITERIA.filter((c) => c.key && !(typeof crit[c.key] === 'number' && crit[c.key]! >= 0 && crit[c.key]! <= 10)).map((c) => c.key);
+  const missing = ['VISUALS', 'CREATIVITY', 'PLAYS', 'FEEL', 'AMBITION'].filter((key) => !(typeof crit[key] === 'number' && crit[key]! >= 0 && crit[key]! <= 10));
   if (missing.length) return `missing or invalid ${missing.join(', ')}`;
   const graded = reqs.filter(Boolean).length;
   if (graded < Math.ceil(nRequirements * 0.6)) return `graded only ${graded} of ${nRequirements} requirements`;
   const k = (key: string) => crit[key]! / 10;
-  return { requirements: reqs, criteria: { plays: k('PLAYS'), feel: k('FEEL'), creativity: k('CREATIVITY'), polish: k('POLISH'), ambition: k('AMBITION') }, verdict };
+  return { requirements: reqs, criteria: { visual: k('VISUALS'), creativity: k('CREATIVITY'), plays: k('PLAYS'), feel: k('FEEL'), ambition: k('AMBITION') }, verdict };
 }
 
 const VALUE: Record<RequirementVerdict, number> = { pass: 1, partial: 0.5, fail: 0 };
@@ -169,8 +171,29 @@ export function fidelityOf(reqs: ParsedJamVerdict['requirements']): number {
   return graded.length ? graded.reduce((s, r) => s + VALUE[r.verdict], 0) / graded.length : 0;
 }
 
-export function jamTotal(criteria: Record<JamCriterion, number>): number {
-  return (Object.keys(JAM_WEIGHTS) as JamCriterion[]).reduce((s, k) => s + JAM_WEIGHTS[k] * criteria[k], 0);
+export function jamTotal(criteria: Partial<Record<JamCriterion, number | null>>, weights: Partial<Record<JamCriterion, number>> = JAM_WEIGHTS): number {
+  return (Object.keys(weights) as JamCriterion[]).reduce((s, k) => s + (weights[k] ?? 0) * (criteria[k] ?? 0), 0);
+}
+
+/**
+ * The panel's score per criterion: the mean over judges, except VISUALS, where a judge who saw the screenshots
+ * counts VISION_JUDGE_VISUAL_WEIGHT times as much as a judge who only read the code (text-only judges still count).
+ */
+export function panelCriteria(cards: Array<{ criteria: Partial<Record<JamCriterion, number>>; sawImages: boolean }>): Partial<Record<JamCriterion, number>> {
+  const out: Partial<Record<JamCriterion, number>> = {};
+  for (const id of criteriaOf(JAM_WEIGHTS)) {
+    let sum = 0;
+    let wsum = 0;
+    for (const c of cards) {
+      const v = c.criteria[id];
+      if (typeof v !== 'number') continue;
+      const w = id === 'visual' && c.sawImages ? VISION_JUDGE_VISUAL_WEIGHT : 1;
+      sum += v * w;
+      wsum += w;
+    }
+    if (wsum > 0) out[id] = sum / wsum;
+  }
+  return out;
 }
 
 /** Panel consensus per requirement. */
@@ -198,8 +221,15 @@ export function consensus(labels: string[], cards: Array<{ judgeId: string; pars
 const round = (n: number) => Math.round(n * 10000) / 10000;
 const kb = (bytes: number) => `${(bytes / 1000).toFixed(1)} kB`;
 
-function emptyCriteria(): Record<JamCriterion, number | null> {
-  return { fidelity: null, plays: null, feel: null, creativity: null, polish: null, ambition: null };
+function emptyCriteria(): Partial<Record<JamCriterion, number | null>> {
+  return Object.fromEntries(criteriaOf(JAM_WEIGHTS).map((id) => [id, null]));
+}
+
+/** The "ran out of output space" line, naming a spend limit when one set the output limit (not the model's fault). */
+export function outOfSpaceWords(by: 'spend-limit' | 'per-answer' | undefined): string {
+  if (by === 'per-answer') return 'Ran out of output space: stopped by your per-answer spend limit (the reply hit the output limit that money buys)';
+  if (by === 'spend-limit') return 'Ran out of output space: stopped by your run spend limit (the money left lowered the output limit)';
+  return 'Ran out of output space: the reply hit the output-token limit';
 }
 
 export async function scoreGameJam(input: ScoringInput, scorer: Extract<ScorerSpec, { type: 'artifact' }>): Promise<ScoringOutcome> {
@@ -211,6 +241,7 @@ export async function scoreGameJam(input: ScoringInput, scorer: Extract<ScorerSp
     genre: spec.genre,
     genreLabel: g.label,
     truncated,
+    ...(truncated && input.outputLimitBy ? { truncatedBy: input.outputLimitBy } : {}),
     playtest: null,
     requirements: spec.requirements.map((label, i) => ({ id: `R${i + 1}`, label, verdict: null, votes: {}, split: false })),
     judges: [],
@@ -221,7 +252,7 @@ export async function scoreGameJam(input: ScoringInput, scorer: Extract<ScorerSp
     judgeScore: null,
     spread: null,
   };
-  const outOfSpace = 'Ran out of output space: the reply hit the output-token limit, so the game file is unfinished';
+  const outOfSpace = `${outOfSpaceWords(truncated ? input.outputLimitBy : undefined)}, so the game file is unfinished`;
   const artifact = extractJamHtml(input.response, truncated);
   if (!artifact) {
     const summary = truncated ? `${outOfSpace} and no game code arrived` : 'No HTML game found in the reply';
@@ -236,6 +267,7 @@ export async function scoreGameJam(input: ScoringInput, scorer: Extract<ScorerSp
     const key = playtest.frames.find((f) => f.t === 10000) ?? playtest.frames[playtest.frames.length - 1];
     if (key) input.saveArtifact('screenshot.png', 'png', key.png);
     for (const f of playtest.frames) input.saveArtifact(playtest.summary.frames.find((x) => x.t === f.t)!.name, 'png', f.png);
+    if (playtest.motion && playtest.summary.motion) input.saveArtifact(playtest.summary.motion.name, 'png', playtest.motion.png);
   }
 
   // ── Automatic checks ──
@@ -251,7 +283,8 @@ export async function scoreGameJam(input: ScoringInput, scorer: Extract<ScorerSp
         items.push({ label: `contains "${c.text}"`, passed: artifact.toLowerCase().includes(c.text.toLowerCase()) });
         break;
       case 'max_bytes':
-        items.push({ label: `≤ ${Math.round(c.bytes / 1000)} kB`, passed: bytes <= c.bytes, detail: kb(bytes) });
+        // A safety net against runaway output, not a design limit (the jam allows 20 MB).
+        items.push({ label: c.bytes >= 1_000_000 ? `under ${Math.round(c.bytes / 1_000_000)} MB (runaway-output safety net)` : `≤ ${Math.round(c.bytes / 1000)} kB`, passed: bytes <= c.bytes, detail: kb(bytes) });
         break;
       case 'no_external_requests':
         if (playtest) items.push({ label: 'no external requests', passed: playtest.externalRequests.length === 0, detail: playtest.externalRequests.slice(0, 3).join(', ') || undefined });
@@ -312,7 +345,10 @@ export async function scoreGameJam(input: ScoringInput, scorer: Extract<ScorerSp
   let judgeScore: number | null = null;
   let notes: string | undefined;
   if (scorer.rubric && judgeWeight > 0) {
-    const images: ChatImage[] = (playtest?.frames ?? []).map((f) => ({ name: s!.frames.find((x) => x.t === f.t)!.name, mediaType: 'image/png', data: f.png.toString('base64'), bytes: f.png.length, width: s!.viewport.width, height: s!.viewport.height }));
+    // Judges get high-quality JPEGs (the same frozen moments as the PNGs, within every provider's per-image size limit).
+    const pic = (name: string, buf: Buffer, jpg: boolean, size = s!.viewport): ChatImage => ({ name, mediaType: jpg ? 'image/jpeg' : 'image/png', data: buf.toString('base64'), bytes: buf.length, width: size.width, height: size.height });
+    const images: ChatImage[] = (playtest?.frames ?? []).map((f) => pic(s!.frames.find((x) => x.t === f.t)!.name.replace(/\.png$/, f.jpg ? '.jpg' : '.png'), f.jpg ?? f.png, Boolean(f.jpg)));
+    if (playtest?.motion) images.push(pic('playtest-motion.jpg', playtest.motion.jpg, true, MOTION_SIZE));
     const promptArgs = { task: input.taskText, rubric: scorer.rubric, spec, artifact, playtest, items };
     const withImages = buildJudgePrompt({ ...promptArgs, withImages: images.length > 0 });
     const textOnly = buildJudgePrompt({ ...promptArgs, withImages: false });
@@ -331,16 +367,19 @@ export async function scoreGameJam(input: ScoringInput, scorer: Extract<ScorerSp
     if (!cards.length) throw new Error(`All judges failed: ${errors.join('; ') || 'no judges configured'}`);
     const judgeCards: JamJudgeCard[] = cards.map((c) => {
       const criteria = { fidelity: fidelityOf(c.parsed.requirements), ...c.parsed.criteria };
-      return { judgeId: c.judgeId, criteria: Object.fromEntries(Object.entries(criteria).map(([k, v]) => [k, round(v)])) as Record<JamCriterion, number>, total: round(jamTotal(criteria)), verdict: c.parsed.verdict, sawImages: c.sawImages };
+      return { judgeId: c.judgeId, criteria: Object.fromEntries(Object.entries(criteria).map(([k, v]) => [k, round(v)])) as Partial<Record<JamCriterion, number>>, total: round(jamTotal(criteria)), verdict: c.parsed.verdict, sawImages: c.sawImages };
     });
-    judgeScore = judgeCards.reduce((a, j) => a + j.total, 0) / judgeCards.length;
+    // The panel total comes from the panel's criteria, so a judge who saw the pictures weighs more on VISUALS.
+    const panel = panelCriteria(judgeCards);
+    judgeScore = jamTotal(panel);
     const spread = judgeCards.length > 1 ? Math.max(...judgeCards.map((j) => j.total)) - Math.min(...judgeCards.map((j) => j.total)) : 0;
     gj.judges = judgeCards;
     gj.requirements = consensus(spec.requirements, cards);
-    gj.criteria = Object.fromEntries(JAM_CRITERIA.map((c) => [c.id, round(judgeCards.reduce((a, j) => a + j.criteria[c.id], 0) / judgeCards.length)])) as Record<JamCriterion, number>;
+    gj.criteria = Object.fromEntries(Object.entries(panel).map(([k, v]) => [k, round(v!)]));
     gj.judgeScore = round(judgeScore);
     gj.spread = round(spread);
-    detailBase.judge = judgeCards.map((j) => ({ contestantId: j.judgeId, score: j.total, rationale: [j.verdict, `Creativity ${(j.criteria.creativity * 10).toFixed(0)}/10 · plays ${(j.criteria.plays * 10).toFixed(0)} · feel ${(j.criteria.feel * 10).toFixed(0)} · polish ${(j.criteria.polish * 10).toFixed(0)} · ambition ${(j.criteria.ambition * 10).toFixed(0)} · checklist ${Math.round(j.criteria.fidelity * 100)}%`].filter(Boolean).join(' ') }));
+    const ten = (v: number | undefined) => ((v ?? 0) * 10).toFixed(0);
+    detailBase.judge = judgeCards.map((j) => ({ contestantId: j.judgeId, score: j.total, rationale: [j.verdict, `Visuals ${ten(j.criteria.visual)}/10${j.sawImages ? '' : ' (code only)'} · creativity ${ten(j.criteria.creativity)} · plays ${ten(j.criteria.plays)} · feel ${ten(j.criteria.feel)} · ambition ${ten(j.criteria.ambition)} · checklist ${Math.round((j.criteria.fidelity ?? 0) * 100)}%`].filter(Boolean).join(' ') }));
     detailBase.judgeScore = round(judgeScore);
     detailBase.judgeSpread = round(spread);
     if (spread > 0.3) {
@@ -357,10 +396,11 @@ export async function scoreGameJam(input: ScoringInput, scorer: Extract<ScorerSp
   }
   const passedChecks = items.filter((i) => i.passed).length;
   const creative = gj.criteria.creativity;
+  const visual = gj.criteria.visual;
   return {
     score: round(score),
     passed: score >= 0.7,
-    summary: `${passedChecks}/${items.length} checks${judgeScore !== null ? ` · judges ${(judgeScore * 10).toFixed(1)}/10` : ''}${creative !== null ? ` · creativity ${(creative * 10).toFixed(1)}` : ''}${gj.cap ? ` · capped (${capReason})` : ''}${skipped.length ? ' · browser checks skipped' : ''}`,
+    summary: `${passedChecks}/${items.length} checks${judgeScore !== null ? ` · judges ${(judgeScore * 10).toFixed(1)}/10` : ''}${typeof visual === 'number' ? ` · visuals ${(visual * 10).toFixed(1)}` : ''}${typeof creative === 'number' ? ` · creativity ${(creative * 10).toFixed(1)}` : ''}${gj.cap ? ` · capped (${capReason})` : ''}${skipped.length ? ' · browser checks skipped' : ''}`,
     detail: { ...detailBase, notes: [gj.cap, notes].filter(Boolean).join(' · ') || undefined, gameJam: gj },
   };
 }

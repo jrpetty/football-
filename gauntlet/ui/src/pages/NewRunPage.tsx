@@ -8,6 +8,15 @@ import { Icon } from '../components/icons.tsx';
 import { fmtCost, fmtInt, fmtPricePerM } from '../format.ts';
 import type { ContestantView, RunEstimate, RunRequest, SuiteView, TestSummary } from '../types.ts';
 import { isBaseline } from '../components/leaderboard/util.ts';
+import { SpendLimitsSection, parseSameTokens, type OutputChoice } from '../components/SpendLimits.tsx';
+import { displayCurrency } from '../money.ts';
+
+const ALLOW_WORDS: Record<string, string> = {
+  'model-max': 'its own maximum',
+  'same-tokens': 'same for every model',
+  'per-answer': 'set by your per-answer limit',
+  test: 'set by the test',
+};
 
 type Mode = 'suite' | 'pick';
 
@@ -80,6 +89,12 @@ function EstimatePanel({
               <span className="muted" style={{ fontSize: '0.8rem' }}>
                 central estimate – conservative upper bound · incl. {fmtCost(est.judgeCostUsd)} judges
               </span>
+              {est.estCostUsdMax !== undefined && (
+                <span className="muted" style={{ fontSize: '0.8rem' }}>
+                  Upper bound {fmtCost(est.estCostUsdMax)}: this run has a “no limit” test (The Game Jam), priced here as if every reply used its model’s whole output allowance, judges included.{' '}
+                  {cap !== null ? `Your spending limit of ${fmtCost(cap)} still holds: the run can never spend more.` : 'Set a spending limit below if that is more than you want to risk.'}
+                </span>
+              )}
             </div>
             <div className="est-kpis">
               <div>
@@ -91,13 +106,13 @@ function EstimatePanel({
                 <span>API calls</span>
               </div>
               <div>
-                <b className="tnum">{cap ? fmtCost(cap) : '—'}</b>
-                <span>spending cap</span>
+                <b className="tnum">{cap ? fmtCost(cap) : 'none'}</b>
+                <span>spending limit</span>
               </div>
             </div>
             {cap !== null && cap < est.estCostUsd && (
               <Callout tone="warn">
-                The cap is below the central estimate — the run will probably stop early (status <em>cancelled</em>). You can resume later with a higher cap.
+                The limit is below the central estimate: the run will probably stop early (“stopped: spend limit”). Every finished result is kept, and you can resume later with a higher limit.
               </Callout>
             )}
             <div className="est-rows">
@@ -127,7 +142,13 @@ function EstimatePanel({
                         </div>
                         <span className="tnum">
                           {fmtCost(p.estCostUsd)} – {fmtCost(p.estCostUsdHigh)}
+                          {p.estCostUsdMax !== undefined && <span className="muted" title={`Every “no limit” reply at this model's full output (${p.maxOutputTokens?.toLocaleString('en-US') ?? '?'} tokens)`}> · up to {fmtCost(p.estCostUsdMax)}</span>}
                         </span>
+                      </div>
+                    )}
+                    {!p.manual && p.maxOutputTokens !== undefined && (
+                      <div className={cx('est-allow', p.outputLimitBy === 'per-answer' && 'per-answer')}>
+                        Output limit per reply: <b className="tnum">{p.maxOutputTokens.toLocaleString('en-US')} tokens</b> ({ALLOW_WORDS[p.outputLimitBy ?? 'model-max']})
                       </div>
                     )}
                   </div>
@@ -235,8 +256,11 @@ export default function NewRunPage() {
   const [judges, setJudges] = useState<string[] | null>(null);
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
-  const [capText, setCapText] = useState('');
-  const [capTouched, setCapTouched] = useState(false);
+  // Spend limits: off by default ("just let it do its thing"); amounts are kept in USD, typed in pounds.
+  const [capUsd, setCapUsd] = useState<number | null>(null);
+  const [perAnswerUsd, setPerAnswerUsd] = useState<number | null>(null);
+  const [outputChoice, setOutputChoice] = useState<OutputChoice>('model-max');
+  const [sameTokens, setSameTokens] = useState('64000');
   const [search, setSearch] = useState('');
   const [starting, setStarting] = useState(false);
   const [forceVision, setForceVision] = useState(false);
@@ -262,8 +286,10 @@ export default function NewRunPage() {
     setRepeats(mode === 'suite' ? suite?.repeats ?? meta?.settings.defaultRepeats ?? 1 : meta?.settings.defaultRepeats ?? 1);
   }, [data.data, suite, meta, mode, repeatsTouched]);
 
-  const cap = capText.trim() === '' ? null : Number(capText);
-  const capValid = cap === null || (Number.isFinite(cap) && cap > 0);
+  const cap = capUsd;
+  const capValid = true;
+  const sameOutputTokens = outputChoice === 'same' ? parseSameTokens(sameTokens) : null;
+  const sameValid = outputChoice !== 'same' || sameOutputTokens !== null;
 
   const request: RunRequest | null = useMemo(() => {
     if (!selected) return null;
@@ -278,13 +304,18 @@ export default function NewRunPage() {
       temperature: temperature ?? undefined,
       judgeIds: judges ?? undefined,
       maxCostUsd: cap !== null && capValid ? cap : undefined,
+      ...(perAnswerUsd !== null || sameOutputTokens !== null
+        ? { limits: { ...(perAnswerUsd !== null ? { perAnswerUsd } : {}), ...(sameOutputTokens !== null ? { sameOutputTokens } : {}), currency: { code: displayCurrency().code, usdPerUnit: displayCurrency().usdPerUnit } } }
+        : cap !== null
+          ? { limits: { currency: { code: displayCurrency().code, usdPerUnit: displayCurrency().usdPerUnit } } }
+          : {}),
       notes: notes.trim() || undefined,
       forceVision: forceVision || undefined,
     };
-  }, [selected, enabled, name, mode, suiteId, picked, repeats, concurrency, temperature, judges, cap, capValid, notes, forceVision]);
+  }, [selected, enabled, name, mode, suiteId, picked, repeats, concurrency, temperature, judges, cap, capValid, perAnswerUsd, sameOutputTokens, notes, forceVision]);
 
   // Estimate ignores name/notes/cap so typing there does not refetch.
-  const estKey = request ? JSON.stringify({ ...request, name: undefined, notes: undefined, maxCostUsd: undefined }) : '';
+  const estKey = request ? JSON.stringify({ ...request, name: undefined, notes: undefined, maxCostUsd: undefined, limits: request.limits ? { ...request.limits, currency: undefined } : undefined }) : '';
   const debouncedKey = useDebounced(estKey, 400);
   const [est, setEst] = useState<RunEstimate | null>(null);
   const [estErr, setEstErr] = useState<Error | null>(null);
@@ -312,13 +343,6 @@ export default function NewRunPage() {
     };
   }, [debouncedKey]);
 
-  // Prefill the spending cap at ~1.25× the estimate until the user edits it.
-  useEffect(() => {
-    if (!capTouched && est && est.estCostUsd > 0) {
-      const v = est.estCostUsd * 1.25;
-      setCapText(v >= 10 ? String(Math.ceil(v)) : v >= 1 ? v.toFixed(2) : v.toFixed(3));
-    }
-  }, [est, capTouched]);
 
   const groups = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -341,7 +365,7 @@ export default function NewRunPage() {
   const blockers: string[] = [];
   if (!selectedCons.length) blockers.push('Pick at least one contestant.');
   if (mode === 'pick' && picked.size === 0) blockers.push('Pick at least one test (or switch to a suite).');
-  if (!capValid) blockers.push('The spending cap must be a positive number (or empty for no cap).');
+  if (!sameValid) blockers.push('The same-for-every-model output limit must be a whole number of tokens (256 to 1,000,000).');
   const canStart = blockers.length === 0 && !!request;
   const noKeys = enabled.length > 0 && enabled.every((c) => !c.hasKey && !isManual(c) && !isBaseline({ contestantId: c.id, vendor: c.vendor, label: c.label }));
 
@@ -580,7 +604,7 @@ export default function NewRunPage() {
               <div className="card-head">
                 <div className="t">
                   <h2>3 · Settings</h2>
-                  <div className="desc">Repeats power the confidence intervals; the cap protects your wallet.</div>
+                  <div className="desc">Repeats power the confidence intervals.</div>
                 </div>
               </div>
               <div className="card-body">
@@ -611,31 +635,6 @@ export default function NewRunPage() {
                   </Field>
                   <Field label="Temperature" hint="Sent only to models that accept it; others use the provider default." htmlFor="nr-temp">
                     <input id="nr-temp" className="input" type="number" min={0} max={2} step={0.1} value={temperature ?? 0} onChange={(e) => setTemperature(Number(e.target.value))} />
-                  </Field>
-                  <Field
-                    label={
-                      <>
-                        <Icon.Dollar style={{ width: 13, height: 13 }} /> Spending cap (USD)
-                      </>
-                    }
-                    hint={capTouched ? 'Hard stop for contestant + judge spend. Leave empty for no cap.' : 'Prefilled at ~1.25× the estimate. Leave empty for no cap.'}
-                    error={!capValid ? 'Enter a positive number, or leave empty.' : undefined}
-                    htmlFor="nr-cap"
-                  >
-                    <div className="input-prefix">
-                      <span>$</span>
-                      <input
-                        id="nr-cap"
-                        className={cx('input tnum', !capValid && 'invalid')}
-                        inputMode="decimal"
-                        placeholder="no cap"
-                        value={capText}
-                        onChange={(e) => {
-                          setCapTouched(true);
-                          setCapText(e.target.value);
-                        }}
-                      />
-                    </div>
                   </Field>
                   {(forceVision || (est?.warnings ?? []).some((w) => /no image input/.test(w))) && (
                     <Field label="Image cases" hint="Models not marked “Accepts images” are skipped on picture questions: not scored as 0, left out of their averages. Tick to send the pictures anyway." className="span-2">
@@ -686,6 +685,29 @@ export default function NewRunPage() {
                     <textarea id="nr-notes" className="textarea" rows={2} placeholder="Why this run exists (e.g. “September leaderboard video”)" value={notes} onChange={(e) => setNotes(e.target.value)} />
                   </Field>
                 </div>
+              </div>
+            </section>
+
+            {/* Spending limits (in the display currency, pounds by default) */}
+            <section className="card">
+              <div className="card-head">
+                <div className="t">
+                  <h2>4 · Spending limits</h2>
+                  <div className="desc">Optional. By default nothing is capped: every model may use its full output.</div>
+                </div>
+              </div>
+              <div className="card-body">
+                <SpendLimitsSection
+                  capUsd={capUsd}
+                  onCap={setCapUsd}
+                  perAnswerUsd={perAnswerUsd}
+                  onPerAnswer={setPerAnswerUsd}
+                  outputChoice={outputChoice}
+                  onOutputChoice={setOutputChoice}
+                  sameTokens={sameTokens}
+                  onSameTokens={setSameTokens}
+                  hasModelMaxTest={est?.estCostUsdMax !== undefined}
+                />
               </div>
             </section>
           </div>

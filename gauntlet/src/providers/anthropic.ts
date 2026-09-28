@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { ChatMessage, CompletionRequest, CompletionResult, StopReason } from '../core/types.ts';
 import { type AdapterContext, type ProviderAdapter, ProviderError, deepMerge, isAbortError, isRetryableStatus, parseRetryAfter } from './types.ts';
+import { relaxFetchTimeouts } from './long-requests.ts';
 
 const STOP_MAP: Record<string, StopReason> = {
   end_turn: 'end',
@@ -22,13 +23,15 @@ export function createAnthropicAdapter(ctx: AdapterContext): ProviderAdapter {
     apiKey: ctx.apiKey,
     baseURL: ctx.provider.baseUrl,
     maxRetries: 0, // the engine retries uniformly across providers
-    timeout: 30 * 60 * 1000,
+    // Long generations (The Game Jam streams a model's full output) must never be cut off by the client.
+    timeout: 3 * 60 * 60 * 1000,
     defaultHeaders: ctx.provider.headers,
   });
   const opts = ctx.contestant.options ?? {};
 
   return {
     async complete(req: CompletionRequest): Promise<Omit<CompletionResult, 'retries'>> {
+      await relaxFetchTimeouts();
       const body: Record<string, unknown> = {
         model: ctx.contestant.model,
         max_tokens: req.maxOutputTokens,

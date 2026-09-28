@@ -33,6 +33,8 @@ export interface Settings {
   defaultTimeLimitSec?: number;
   maxRetries?: number;
   judgeExcludeSameVendor?: boolean;
+  /** Display currency (GBP by default); costs are always stored in USD. */
+  currency?: import('../../src/core/currency.ts').CurrencySettings;
 }
 
 export interface ProgramInfo {
@@ -109,7 +111,7 @@ export type EstimateBasis = 'measured' | 'measured-other-models' | 'definition';
 export interface RunEstimate {
   jobs: number;
   calls: number;
-  perContestant: Array<{ contestantId: string; jobs: number; estCostUsd: number; estCostUsdHigh: number; manual: boolean }>;
+  perContestant: Array<{ contestantId: string; jobs: number; estCostUsd: number; estCostUsdHigh: number; manual: boolean; /** Ceiling if every "no limit" reply used the model's full output. */ estCostUsdMax?: number; maxOutputTokens?: number; /** What set that output limit. */ outputLimitBy?: 'test' | 'model-max' | 'same-tokens' | 'per-answer' }>;
   perTest: Array<{
     testId: string;
     name: string;
@@ -119,10 +121,15 @@ export interface RunEstimate {
     perContestant: Record<string, number>;
     judgeUsd: number;
     basis: EstimateBasis;
+    /** "No limit" tests: USD per contestant at the model's full output. */
+    maxPerContestant?: Record<string, number>;
+    maxJudgeUsd?: number;
   }>;
   judgeCostUsd: number;
   /** Central estimate. */
   estCostUsd: number;
+  /** Absolute ceiling for runs with a "no limit" test (every such reply at the model's maximum, judges included). */
+  estCostUsdMax?: number;
   /** Conservative upper bound. */
   estCostUsdHigh: number;
   fingerprint: string;

@@ -6,6 +6,7 @@ import { fmtCost, fmtInt } from '../format.ts';
 import type { RunDetail } from '../types.ts';
 import { Callout, Modal, cx } from './ui.tsx';
 import { Icon } from './icons.tsx';
+import { currencySymbol, displayToUsd, usdToDisplay } from '../money.ts';
 
 type CapMode = 'keep' | 'set' | 'remove';
 
@@ -26,9 +27,10 @@ export function ResumeDialog({ runId, runName, open, onClose, onResumed }: { run
         if (!alive) return;
         setDetail(d);
         const cap = d.manifest.settings?.maxCostUsd;
-        const budgetHit = /budget|cap/i.test(d.manifest.error ?? '');
+        const budgetHit = d.manifest.stopReason === 'spend-limit' || /budget|cap|spend limit/i.test(d.manifest.error ?? '');
         setMode(cap ? (budgetHit ? 'set' : 'keep') : 'keep');
-        const suggestion = cap ? Math.max(cap * 2, d.progress.costUsd * 1.5) : 0;
+        // Suggested in the display currency (pounds by default).
+        const suggestion = cap ? usdToDisplay(Math.max(cap * 2, d.progress.costUsd * 1.5)) : 0;
         setCapText(suggestion ? (suggestion >= 10 ? String(Math.ceil(suggestion)) : suggestion.toFixed(2)) : '');
       })
       .catch(() => alive && setDetail(null));
@@ -40,8 +42,9 @@ export function ResumeDialog({ runId, runName, open, onClose, onResumed }: { run
   const cap = detail?.manifest.settings?.maxCostUsd;
   const spent = detail?.progress.costUsd ?? 0;
   const remaining = detail ? Math.max(0, detail.progress.total - detail.progress.completed) : 0;
-  const newCap = Number(capText);
-  const capValid = mode !== 'set' || (Number.isFinite(newCap) && newCap > 0);
+  const newCapShown = Number(capText);
+  const newCap = displayToUsd(newCapShown);
+  const capValid = mode !== 'set' || (Number.isFinite(newCapShown) && newCapShown > 0);
 
   const go = async () => {
     setBusy(true);
@@ -90,33 +93,33 @@ export function ResumeDialog({ runId, runName, open, onClose, onResumed }: { run
             </span>
           </div>
           <div className="stat">
-            <span className="k">Current cap</span>
+            <span className="k">Current spending limit</span>
             <span className="v" style={{ fontSize: '1.2rem' }}>
               {cap ? fmtCost(cap) : 'none'}
             </span>
           </div>
         </div>
         <fieldset className="fieldset">
-          <legend>Spending cap</legend>
+          <legend>Spending limit</legend>
           <div className="stack tight">
             <label className="check">
-              <input type="radio" name="cap" checked={mode === 'keep'} onChange={() => setMode('keep')} /> Keep {cap ? `the ${fmtCost(cap)} cap` : 'no cap'}
+              <input type="radio" name="cap" checked={mode === 'keep'} onChange={() => setMode('keep')} /> Keep {cap ? `the ${fmtCost(cap)} limit` : 'no limit'}
             </label>
             <label className="check">
-              <input type="radio" name="cap" checked={mode === 'set'} onChange={() => setMode('set')} /> Set a new cap
+              <input type="radio" name="cap" checked={mode === 'set'} onChange={() => setMode('set')} /> Set a new limit
               <span className="input-prefix" style={{ width: 130, marginLeft: 6 }}>
-                <span>$</span>
-                <input className={cx('input sm tnum', !capValid && 'invalid')} inputMode="decimal" value={capText} onFocus={() => setMode('set')} onChange={(e) => setCapText(e.target.value)} aria-label="New spending cap in USD" />
+                <span>{currencySymbol()}</span>
+                <input className={cx('input sm tnum', !capValid && 'invalid')} inputMode="decimal" value={capText} onFocus={() => setMode('set')} onChange={(e) => setCapText(e.target.value)} aria-label="New spending limit" />
               </span>
             </label>
             {cap ? (
               <label className="check">
-                <input type="radio" name="cap" checked={mode === 'remove'} onChange={() => setMode('remove')} /> Remove the cap
+                <input type="radio" name="cap" checked={mode === 'remove'} onChange={() => setMode('remove')} /> Remove the limit
               </label>
             ) : null}
           </div>
         </fieldset>
-        {mode === 'set' && capValid && newCap <= spent && <Callout tone="warn">The new cap is not above what has already been spent — the run will stop again immediately.</Callout>}
+        {mode === 'set' && capValid && newCap <= spent && <Callout tone="warn">The new limit is not above what has already been spent: the run will stop again immediately.</Callout>}
       </div>
     </Modal>
   );

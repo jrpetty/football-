@@ -1,0 +1,136 @@
+/* Spend limits (New Run, Arena, Cost Planner): presets in the display currency, the rate line and the fairness note. */
+.sl-section {
+  gap: 18px;
+}
+.sl-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sl-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.sl-head .label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+.sl-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.sl-picker .seg button {
+  min-width: 48px;
+  justify-content: center;
+}
+.sl-custom {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.sl-custom .input {
+  width: 110px;
+}
+.sl-sym {
+  font-weight: 700;
+  color: var(--text-2);
+}
+.sl-rate {
+  font-size: 0.82rem;
+  color: var(--text-2);
+}
+.sl-rate.compact {
+  font-size: 0.78rem;
+}
+.sl-link {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.sl-rate-edit {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+}
+.sl-rate-hint {
+  flex-basis: 100%;
+  font-size: 0.76rem;
+}
+.sl-fair {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: var(--text-1);
+}
+.sl-fair svg {
+  flex: none;
+  margin-top: 2px;
+}
+.sl-fair.warn {
+  background: var(--warn-soft);
+  border: 1px solid var(--warn);
+}
+.sl-fair.good {
+  background: var(--good-soft);
+  border: 1px solid var(--good);
+}
+/* The per-model output allowance line in the New Run estimate. */
+.est-allow {
+  font-size: 0.76rem;
+  color: var(--text-3);
+}
+.est-allow b {
+  color: var(--text-2);
+  font-weight: 600;
+}
+.est-allow.per-answer b {
+  color: var(--warn-text);
+}
+/* The limits line on the run page. */
+.run-limits {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.86rem;
+  color: var(--text-2);
+}
+.run-limits .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--surface-inset);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  font-weight: 600;
+}
+.run-limits .chip.warn {
+  border-color: var(--warn);
+  background: var(--warn-soft);
+}
+.run-limits .chip.bad {
+  border-color: var(--bad);
+  background: var(--bad-soft);
+}

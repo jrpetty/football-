@@ -72,6 +72,8 @@ Usage: node src/cli.ts <command> [options]
       [--max-cost 5] [--name "..."] [--judges j1,j2] [--notes "..."] [--yes]
       [--force-vision]                       Run a benchmark (shows a cost estimate first;
                                              --max-cost is a hard USD spending cap;
+                                             --per-answer 2 caps each reply at $2 (output limit per model = what $2 buys);
+                                             --same-tokens 64000 gives every model the same output limit on "model maximum" tests;
                                              --force-vision sends image cases to text-only models)
   estimate --models a,b [--suite core | --tests x,y] [--repeats 3]
   costs [--suite core] [--models a,b] [--repeats 1] [--format table|md]
@@ -128,6 +130,8 @@ function runRequest(flags: Record<string, string | boolean>): RunRequest {
     name: typeof flags.name === 'string' ? flags.name : undefined,
     judgeIds: list(flags.judges),
     maxCostUsd: num(flags['max-cost']),
+    // Optional: --per-answer 2.5 (USD per reply) and --same-tokens 64000 (the same output limit for every model).
+    ...(num(flags['per-answer']) !== undefined || num(flags['same-tokens']) !== undefined ? { limits: { perAnswerUsd: num(flags['per-answer']), sameOutputTokens: num(flags['same-tokens']) } } : {}),
     notes: typeof flags.notes === 'string' ? flags.notes : undefined,
     forceVision: flags['force-vision'] === true ? true : undefined,
   };
@@ -138,7 +142,7 @@ async function printEstimate(req: RunRequest): Promise<void> {
   const labels = new Map(loadContestants().map((x) => [x.id, x.label]));
   console.log(c.bold('Estimate'));
   for (const p of est.perContestant)
-    console.log(`  ${(labels.get(p.contestantId) ?? p.contestantId).padEnd(26)} ${String(p.jobs).padStart(5)} cases   ${p.manual ? 'manual (you paste the replies)' : `~${fmtCost(p.estCostUsd)}  (up to ${fmtCost(p.estCostUsdHigh)})`}`);
+    console.log(`  ${(labels.get(p.contestantId) ?? p.contestantId).padEnd(26)} ${String(p.jobs).padStart(5)} cases   ${p.manual ? 'manual (you paste the replies)' : `~${fmtCost(p.estCostUsd)}  (up to ${fmtCost(p.estCostUsdHigh)}${p.estCostUsdMax !== undefined ? `; ceiling ${fmtCost(p.estCostUsdMax)} at ${p.maxOutputTokens?.toLocaleString('en-US')} output tokens` : ''})`}`);
   if (est.judgeCostUsd) console.log(`  ${'Judge panel'.padEnd(26)} ${''.padStart(5)}         ~${fmtCost(est.judgeCostUsd)}`);
   console.log(`  ${c.bold('Total'.padEnd(26))} ${String(est.jobs).padStart(5)} cases   ~${c.bold(fmtCost(est.estCostUsd))}  (up to ${fmtCost(est.estCostUsdHigh)}; ${est.calls} API calls; fingerprint ${est.fingerprint})`);
   for (const w of est.warnings) console.log(c.yellow(`  ⚠ ${w}`));
@@ -394,14 +398,16 @@ async function main(): Promise<void> {
         console.log(`|---|---|${models.map(() => '---:').join('|')}|---:|`);
         for (const t of est.perTest) console.log(`| ${t.name} | ${t.cases} | ${models.map((m) => fmtCost(t.perContestant[m.id])).join(' | ')} | ${t.judgeUsd ? fmtCost(t.judgeUsd) : '—'} |`);
         console.log(`| **Total** | | ${models.map((m) => `**${fmtCost(est.perContestant.find((p) => p.contestantId === m.id)?.estCostUsd)}**`).join(' | ')} | **${fmtCost(est.judgeCostUsd)}** |`);
-        console.log(`\nGrand total ≈ ${fmtCost(est.estCostUsd)} (conservative upper bound ${fmtCost(est.estCostUsdHigh)}).`);
+        if (est.estCostUsdMax !== undefined) console.log(`| *Ceiling (every "no limit" reply at the model maximum)* | | ${models.map((m) => { const p = est.perContestant.find((x) => x.contestantId === m.id); return p?.estCostUsdMax !== undefined ? fmtCost(p.estCostUsdMax) : '—'; }).join(' | ')} | |`);
+        console.log(`\nGrand total ≈ ${fmtCost(est.estCostUsd)} (conservative upper bound ${fmtCost(est.estCostUsdHigh)}${est.estCostUsdMax !== undefined ? `; absolute ceiling ${fmtCost(est.estCostUsdMax)}` : ''}).`);
       } else {
         const w = Math.max(...est.perTest.map((t) => t.name.length), 10);
         console.log(c.bold(`Estimated cost per test · suite ${suiteId} · ${repeats} repeat(s)`));
         console.log(`${'Test'.padEnd(w)}  ${models.map((m) => m.label.slice(0, 12).padStart(12)).join(' ')}  ${'Judges'.padStart(9)}`);
         for (const t of est.perTest) console.log(`${t.name.padEnd(w)}  ${models.map((m) => fmtCost(t.perContestant[m.id]).padStart(12)).join(' ')}  ${(t.judgeUsd ? fmtCost(t.judgeUsd) : '—').padStart(9)}${t.basis !== 'definition' ? c.dim(' ✓ measured') : ''}`);
         console.log(`${c.bold('Total'.padEnd(w))}  ${models.map((m) => c.bold(fmtCost(est.perContestant.find((p) => p.contestantId === m.id)?.estCostUsd).padStart(12))).join(' ')}  ${fmtCost(est.judgeCostUsd).padStart(9)}`);
-        console.log(c.dim(`Grand total ≈ ${fmtCost(est.estCostUsd)} · conservative upper bound ${fmtCost(est.estCostUsdHigh)}. Estimates use measured token usage from your previous runs where available (✓), otherwise each test's declared estimate.`));
+        if (est.estCostUsdMax !== undefined) console.log(`${'Ceiling'.padEnd(w)}  ${models.map((m) => { const p = est.perContestant.find((x) => x.contestantId === m.id); return (p?.estCostUsdMax !== undefined ? fmtCost(p.estCostUsdMax) : '—').padStart(12); }).join(' ')}  ${c.dim('(every "no limit" reply at the model maximum)')}`);
+        console.log(c.dim(`Grand total ≈ ${fmtCost(est.estCostUsd)} · conservative upper bound ${fmtCost(est.estCostUsdHigh)}${est.estCostUsdMax !== undefined ? ` · absolute ceiling ${fmtCost(est.estCostUsdMax)} (judges included)` : ''}. Estimates use measured token usage from your previous runs where available (✓), otherwise each test's declared estimate.`));
       }
       return;
     }

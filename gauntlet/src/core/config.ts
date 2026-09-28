@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import { CONFIG_DIR } from './paths.ts';
 import { contentHash } from './hash.ts';
+import { normalizeCurrency, type CurrencySettings } from './currency.ts';
 import type { CategoryInfo, Contestant, ContestantSnapshot, ContestantView, ProviderConfig } from './types.ts';
 
 export interface Settings {
@@ -16,6 +17,8 @@ export interface Settings {
   judgeExcludeSameVendor: boolean;
   /** Reasoning effort used for judge calls (overrides the judge model's own effort; null keeps it). */
   judgeEffort: 'low' | 'medium' | 'high' | null;
+  /** Display currency and exchange rate (GBP by default); every cost is still measured and stored in USD. */
+  currency?: CurrencySettings;
 }
 
 interface ModelsFile {
@@ -54,7 +57,8 @@ export function loadSettings(): Settings {
     judgeExcludeSameVendor: true,
     judgeEffort: 'medium',
   };
-  return { ...defaults, ...readJson<Partial<Settings>>(SETTINGS_FILE) };
+  const stored = readJson<Partial<Settings>>(SETTINGS_FILE);
+  return { ...defaults, ...stored, currency: normalizeCurrency(stored.currency) };
 }
 
 export function saveSettings(settings: Settings): void {

@@ -6,6 +6,7 @@ import { useAsync, useDebounced } from '../hooks.ts';
 import { Link, navigate, pathOf } from '../router.tsx';
 import { useToast, useViewerCaption } from '../context.tsx';
 import { Callout, ErrorState, Field, LoadingPage, PageHead, Seg, Switch, cx } from '../components/ui.tsx';
+import { CurrencyRate, MoneyLimitPicker } from '../components/SpendLimits.tsx';
 import { Icon } from '../components/icons.tsx';
 import { fmtCost, fmtInt, fmtPricePerM } from '../format.ts';
 import { arenaApi } from '../arena/client.ts';
@@ -23,8 +24,8 @@ export default function ArenaNewPage() {
   const [format, setFormat] = useState<ArenaFormat>('knockout');
   const [gpm, setGpm] = useState('2');
   const [seeding, setSeeding] = useState<ArenaSeeding>('index');
-  const [capText, setCapText] = useState('');
-  const [capTouched, setCapTouched] = useState(false);
+  // Spending limit presets in the display currency (pounds by default); kept in USD. No limit by default.
+  const [capUsd, setCapUsd] = useState<number | null>(null);
   const [name, setName] = useState('');
   const [concurrency, setConcurrency] = useState(2);
   const [legal, setLegal] = useState(true);
@@ -50,8 +51,8 @@ export default function ArenaNewPage() {
     const choices = g?.gamesPerMatchOptions ?? [2, 4, 6];
     if (!choices.includes(Number(gpm))) setGpm(String(choices[0]));
   };
-  const cap = capText.trim() === '' ? null : Number(capText);
-  const capValid = cap === null || (Number.isFinite(cap) && cap > 0);
+  const cap = capUsd;
+  const capValid = true;
 
   const req: ArenaRequest | null = picked.length >= 2 && capValid
     ? {
@@ -83,15 +84,13 @@ export default function ArenaNewPage() {
         if (!alive) return;
         setEst(e);
         setEstErr(null);
-        // Prefill the cap at ~1.25× the estimate until the user edits it.
-        if (!capTouched && e.estCostUsd > 0) setCapText(String(Math.max(0.5, Math.ceil(e.estCostUsd * 1.25 * 100) / 100)));
       })
       .catch((err: unknown) => alive && setEstErr((err as Error).message))
       .finally(() => alive && setEstLoading(false));
     return () => {
       alive = false;
     };
-  }, [reqKey, capTouched]);
+  }, [reqKey]);
 
   const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : p.length >= 16 ? p : [...p, id]));
   const labelOf = (id: string) => enabled.find((c) => c.id === id)?.label ?? id;
@@ -308,19 +307,15 @@ export default function ArenaNewPage() {
                   <Seg label="Seeding" value={seeding} onChange={setSeeding} options={[{ value: 'index', label: 'Gauntlet Index' }, { value: 'manual', label: 'My order' }]} />
                 </Field>
                 <Field
+                  className="span-2"
                   label={
                     <>
-                      <Icon.Dollar style={{ width: 13, height: 13 }} /> Spending cap (USD)
+                      <Icon.Dollar style={{ width: 13, height: 13 }} /> Spending limit <CurrencyRate compact />
                     </>
                   }
-                  hint={capTouched ? 'Hard stop, checked before every move. Empty = no cap.' : 'Prefilled at ~1.25× the estimate.'}
-                  error={!capValid ? 'Enter a positive number, or leave empty.' : undefined}
-                  htmlFor="ar-cap"
+                  hint={cap === null ? 'No limit: the tournament finishes whatever it costs.' : `Players and judges never spend more than ${fmtCost(cap)}: every move reserves its worst case first, and the tournament stops cleanly when the money left cannot pay for one.`}
                 >
-                  <div className="input-prefix">
-                    <span>$</span>
-                    <input id="ar-cap" className={cx('input tnum', !capValid && 'invalid')} inputMode="decimal" placeholder="no cap" value={capText} onChange={(e) => (setCapTouched(true), setCapText(e.target.value))} />
-                  </div>
+                  <MoneyLimitPicker idBase="ar-cap" label="Spending limit" valueUsd={capUsd} onChange={setCapUsd} presets={[5, 10, 30, 50]} />
                 </Field>
                 <Field label="Games at once" hint="Parallel games. 1 is easiest to follow live on video." htmlFor="ar-conc">
                   <input id="ar-conc" className="input" type="number" min={1} max={16} value={concurrency} onChange={(e) => setConcurrency(Math.max(1, Math.min(16, Number(e.target.value) || 1)))} />
@@ -380,7 +375,7 @@ export default function ArenaNewPage() {
                     </div>
                     <div>
                       <b className="tnum">{cap && capValid ? fmtCost(cap) : '—'}</b>
-                      <span>cap</span>
+                      <span>limit</span>
                     </div>
                   </div>
                   <div className="est-rows">

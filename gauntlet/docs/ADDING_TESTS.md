@@ -39,8 +39,9 @@ across models that can't see images. Custom tests are always available through t
   "difficulty": "medium",              // easy | medium | hard | extreme
   "tags": ["word-problems"],
   "hook": "Two trains, one answer, zero excuses.",   // optional, for overlays
-  "maxOutputTokens": 16000,            // per call, optional
-  "timeLimitSec": 600,                 // per case, optional
+  "maxOutputTokens": 16000,            // per call, optional; "model-max" = each model's own maximum (no artificial cap)
+  "timeLimitSec": 600,                 // per case, optional (up to 14400 for hour-long generations)
+  "maxRetries": 1,                     // optional: fewer retries for very long, expensive replies
   "estimate": { "inputTokens": 300, "outputTokens": 2500 },  // per case, for cost estimates
   "system": "You are a careful mathematician.",               // optional
   "preamble": "Solve the problem.",                           // optional, prepended to every case

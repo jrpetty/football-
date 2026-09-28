@@ -212,14 +212,18 @@ test('manual contestant: prompts wait in the inbox and pasted replies are graded
 });
 
 test('budget cap stops a run before it overspends and resume can raise the cap', async () => {
-  const runId = await runner.startRun({ contestantIds: ['mock-priced'], testIds: ['math.arith'], repeats: 2, concurrency: 1, maxCostUsd: 50 });
+  const runId = await runner.startRun({ contestantIds: ['mock-priced'], testIds: ['math.arith'], repeats: 2, concurrency: 1, maxCostUsd: 400 });
   await runner.waitForRun(runId);
   const m = store.readManifest(runId)!;
   assert.equal(m.status, 'cancelled');
-  assert.match(m.error ?? '', /Budget cap of \$50\.00 reached/);
+  assert.equal(m.stopReason, 'spend-limit', 'marked "stopped: spend limit", not a failure');
+  assert.match(m.error ?? '', /spend limit of \$400\.00 reached/);
+  assert.equal(m.settings.limits?.maxCostUsd, 400, 'the limit is recorded with the run');
   const spent = store.readResults(runId).reduce((s, r) => s + r.metrics.costUsd, 0);
   assert.ok(store.readResults(runId).length < 12, 'stopped early');
-  assert.ok(spent >= 50 && spent < 50 + 60, `spent ${spent}`);
+  assert.ok(store.readResults(runId).every((r) => r.status === 'ok'), 'no case is recorded as a failure');
+  // Every call reserves its worst case first, so the cap is never exceeded (it used to overshoot by up to one case).
+  assert.ok(spent > 0 && spent <= 400, `spent ${spent}`);
   runner.resumeRun(runId, { maxCostUsd: 1_000_000 });
   await runner.waitForRun(runId);
   assert.equal(store.readResults(runId).length, 12);

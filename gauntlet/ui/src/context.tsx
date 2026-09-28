@@ -1,4 +1,5 @@
 /** App-wide state: server meta, theme, broadcast mode, toasts. */
+import { setDisplayCurrency } from './money.ts';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { api } from './api.ts';
@@ -37,6 +38,8 @@ export function MetaProvider({ children }: { children: ReactNode }) {
       .meta()
       .then((m) => {
         if (!alive) return;
+        // Pounds (or whichever display currency is set) everywhere, before anything renders a cost.
+        setDisplayCurrency(m.settings?.currency);
         setMeta(m);
         setError(null);
       })
