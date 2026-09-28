@@ -3,6 +3,7 @@
  * Includes a live-run simulator that emits the same RunEvent stream the real
  * server sends over SSE, so the Live Arena can be demoed without a server.
  */
+import { outputAllowance } from '../../../src/engine/spend-guard.ts';
 import type {
   ArtifactRef,
   CaseResultLite,
@@ -469,7 +470,9 @@ function estimateRun(req: RunRequest): RunEstimate {
   const cons = req.contestantIds.map((id) => contestants.find((c) => c.id === id)).filter((c): c is ContestantView => !!c);
   const warnings: string[] = [];
   const perTest: RunEstimate['perTest'] = [];
-  const perCon = new Map<string, { jobs: number; est: number; high: number }>();
+  const perCon = new Map<string, { jobs: number; est: number; high: number; max: number; maxTokens?: number; by?: 'test' | 'model-max' | 'same-tokens' | 'per-answer' }>();
+  const limits = req.limits ?? {};
+  let anyModelMax = false;
   let judgeTotal = 0;
   for (const t of ts) {
     const cases = caseIdsOf(t).length;
@@ -483,15 +486,26 @@ function estimateRun(req: RunRequest): RunEstimate {
       const measured = manual ? null : measuredCasePrice(c.id, t.id);
       const est = t.estimate ?? { inputTokens: 500, outputTokens: 800 };
       const fromDef = (est.inputTokens * c.pricing.inputPerM + est.outputTokens * c.pricing.outputPerM) / 1e6;
-      const perCase = manual ? 0 : measured ?? fromDef;
+      // "Model's maximum" tests (The Game Jam): the typical cost stops at the allowance, and a ceiling at the full allowance.
+      const modelMax = t.maxOutputTokens === 'model-max';
+      const allow = outputAllowance({ requested: t.maxOutputTokens, contestant: c, defaultMaxOutputTokens: 16000, limits, inputTokens: est.inputTokens });
+      const typicalOut = Math.min(est.outputTokens, allow.tokens);
+      const fromDefCapped = (est.inputTokens * c.pricing.inputPerM + typicalOut * c.pricing.outputPerM) / 1e6;
+      const perCase = manual ? 0 : modelMax ? fromDefCapped : measured ?? fromDef;
       if (measured !== null) anyMeasured = true;
       else if (!manual) allMeasured = false;
       const usd = perCase * n;
       row[c.id] = usd;
-      const acc = perCon.get(c.id) ?? { jobs: 0, est: 0, high: 0 };
+      const acc = perCon.get(c.id) ?? { jobs: 0, est: 0, high: 0, max: 0 };
       acc.jobs += n;
       acc.est += usd;
       acc.high += usd * (measured !== null ? 1.25 : 1.8);
+      acc.max += manual ? 0 : modelMax ? (n * (est.inputTokens * c.pricing.inputPerM + allow.tokens * c.pricing.outputPerM)) / 1e6 : usd;
+      if (modelMax) {
+        anyModelMax = true;
+        acc.maxTokens ??= allow.tokens;
+        acc.by ??= allow.by;
+      }
       perCon.set(c.id, acc);
     }
     if (anyMeasured) basis = allMeasured ? 'measured' : 'measured-other-models';
@@ -507,8 +521,10 @@ function estimateRun(req: RunRequest): RunEstimate {
   if (ts.some((t) => t.id.startsWith('long-context'))) warnings.push('Long-context tests send ~92k input tokens per case.');
   const per = cons.map((c) => {
     const acc = perCon.get(c.id) ?? { jobs: 0, est: 0, high: 0 };
-    return { contestantId: c.id, jobs: acc.jobs, estCostUsd: acc.est, estCostUsdHigh: acc.high, manual: c.providerType === 'manual' };
+    const acc2 = acc as typeof acc & { max?: number; maxTokens?: number; by?: 'test' | 'model-max' | 'same-tokens' | 'per-answer' };
+    return { contestantId: c.id, jobs: acc.jobs, estCostUsd: acc.est, estCostUsdHigh: acc.high, manual: c.providerType === 'manual', ...(anyModelMax && c.providerType !== 'manual' && acc2.maxTokens ? { estCostUsdMax: acc2.max, maxOutputTokens: acc2.maxTokens, outputLimitBy: acc2.by } : {}) };
   });
+  if (limits.perAnswerUsd) warnings.push('Per-answer spend limit: each model gets as many output tokens per reply as that money buys at its own price, so cheaper models get more room (not token-fair; see Methodology)');
   const jobs = per.reduce((s, p) => s + p.jobs, 0);
   const calls = ts.reduce((s, t) => s + caseIdsOf(t).length * repeats * (t.estimate?.calls ?? 1), 0) * cons.length;
   const est = per.reduce((s, p) => s + p.estCostUsd, 0) + judgeTotal;
@@ -521,6 +537,7 @@ function estimateRun(req: RunRequest): RunEstimate {
     judgeCostUsd: judgeTotal,
     estCostUsd: est,
     estCostUsdHigh: high,
+    ...(anyModelMax ? { estCostUsdMax: per.reduce((s, p) => s + (p.estCostUsdMax ?? p.estCostUsd), 0) + judgeTotal * 1.6 } : {}),
     fingerprint: `${(req.suiteId ?? ids.join(',')).length.toString(16).padStart(4, '0')}a3f19c0de42b7781`,
     warnings,
   };
@@ -705,6 +722,12 @@ export async function handle(method: string, fullPath: string, body: unknown): P
   switch (route) {
     case 'GET meta':
       return META;
+    case 'PUT settings': {
+      // Display currency (mock mode keeps it for this tab only).
+      const x = body as { code: 'GBP' | 'USD' | 'EUR'; usdPerUnit: number };
+      META.settings.currency = { code: x.code, usdPerUnit: x.code === 'USD' ? 1 : x.usdPerUnit, rateDate: new Date().toISOString().slice(0, 10) };
+      return META.settings.currency;
+    }
     case 'GET contestants':
       return contestants;
     case 'PUT contestants': {

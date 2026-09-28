@@ -6,6 +6,7 @@ import { useAsync, useDebounced } from '../hooks.ts';
 import { Link, setQuery, useRoute } from '../router.tsx';
 import { useMeta, useViewerCaption } from '../context.tsx';
 import { Callout, ErrorState, PageHead, Seg, SkeletonRows, cx } from '../components/ui.tsx';
+import { CurrencyRate } from '../components/SpendLimits.tsx';
 import { Icon } from '../components/icons.tsx';
 import { fmtCost, fmtInt } from '../format.ts';
 import { isBaseline } from '../components/leaderboard/util.ts';
@@ -92,6 +93,10 @@ export default function CostsPage() {
               <span className="label">Repeats</span>
               <Seg label="Repeats" value={String(repeats)} onChange={(v) => setQuery({ repeats: v })} options={[1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: `${n}×` }))} />
             </div>
+            <div className="field">
+              <span className="label">Currency</span>
+              <CurrencyRate />
+            </div>
             <span className="spacer" />
             <button className="btn sm ghost" onClick={() => setQuery({ models: null })} disabled={modelsParam === null}>
               Reset models
@@ -137,13 +142,13 @@ export default function CostsPage() {
             <div className="stat">
               <span className="k">Conservative upper bound</span>
               <span className="v">{fmtCost(e.estCostUsdHigh)}</span>
-              <span className="s">a sensible spending cap</span>
+              <span className="s">a sensible spending limit</span>
             </div>
             {e.estCostUsdMax !== undefined && (
               <div className="stat" title="Tests without an output cap (The Game Jam): the cost if every reply used each model's full output limit, and the judges read all of it">
-                <span className="k">Absolute ceiling</span>
+                <span className="k">Upper bound (no-limit tests)</span>
                 <span className="v">{fmtCost(e.estCostUsdMax)}</span>
-                <span className="s">every “no limit” reply at the model’s maximum</span>
+                <span className="s">every “no limit” reply at the model’s full output, judges included</span>
               </div>
             )}
             <div className="stat">
@@ -246,7 +251,7 @@ export default function CostsPage() {
                         {!p.manual && <div className="muted" style={{ fontSize: '0.72rem' }}>≤ {fmtCost(p.estCostUsdHigh)}</div>}
                         {!p.manual && p.estCostUsdMax !== undefined && (
                           <div className="muted" style={{ fontSize: '0.72rem' }} title={`If every “no limit” reply used this model's full output (${p.maxOutputTokens?.toLocaleString('en-US') ?? '?'} tokens)`}>
-                            max {fmtCost(p.estCostUsdMax)}
+                            up to {fmtCost(p.estCostUsdMax)} · {Math.round((p.maxOutputTokens ?? 0) / 1000)}k tokens
                           </div>
                         )}
                       </td>
@@ -261,7 +266,7 @@ export default function CostsPage() {
                       </div>
                       {e.estCostUsdMax !== undefined && (
                         <div className="muted" style={{ fontSize: '0.72rem' }}>
-                          max {fmtCost(e.estCostUsdMax)}
+                          up to {fmtCost(e.estCostUsdMax)}
                         </div>
                       )}
                     </td>

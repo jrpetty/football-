@@ -1,12 +1,15 @@
 /** Number / date formatting helpers. Every helper tolerates null/undefined/NaN and returns an em dash. */
 
+import { currencySymbol, displayCurrency, money, usdToDisplay } from './money.ts';
+
 export const DASH = '—';
 
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
-/** `$0.0042`, `$0.052`, `$1.23`, `$1,234` */
+/** `$0.0042`, `$0.052`, `$1.23`, `$1,234`, or the same in the display currency (`£0.97`, see money.ts). */
 export function fmtCost(usd: number | null | undefined): string {
   if (!isNum(usd)) return DASH;
+  if (displayCurrency().code !== 'USD') return money(usd);
   if (usd === 0) return '$0.00';
   const sign = usd < 0 ? '-' : '';
   const v = Math.abs(usd);
@@ -21,6 +24,12 @@ export function fmtCost(usd: number | null | undefined): string {
 
 /** Compact cost for axis ticks: `$0.01`, `$1`, `$10`, `$1k`. */
 export function fmtCostTick(usd: number): string {
+  if (displayCurrency().code !== 'USD') {
+    const sym = currencySymbol();
+    const v = usdToDisplay(usd);
+    if (v >= 1000) return `${sym}${+(v / 1000).toFixed(1)}k`;
+    return v >= 1 ? `${sym}${+v.toFixed(2)}` : `${sym}${+v.toPrecision(1)}`;
+  }
   if (usd >= 1000) return `$${+(usd / 1000).toFixed(1)}k`;
   if (usd >= 1) return `$${+usd.toFixed(2)}`;
   return `$${+usd.toPrecision(1)}`;

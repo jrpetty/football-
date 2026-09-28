@@ -44,6 +44,9 @@ export const GAME_JAM_RUN_SPEC: RunSpec = {
   repeats: 1,
   suiteId: 'games',
   createdAt: '2026-09-28T09:00:00Z',
+  // Disclosed on the run page and the Presenter: each model's own maximum output, with a £30 whole-run limit.
+  maxCostUsd: 39.9,
+  limits: { maxCostUsd: 39.9, currency: { code: 'GBP', usdPerUnit: 1.33 } },
   notes: 'Demo run for The Game Jam: open "Game Jam" for the cabinet wall, any cell for a game card, or the Presenter for the genre slides.',
 };
 

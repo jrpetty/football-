@@ -4,6 +4,7 @@ import { useAsync, useInterval } from '../hooks.ts';
 import { Link, navigate, pathOf, setQuery, useRoute } from '../router.tsx';
 import { useMeta, useToast, useViewerCaption } from '../context.tsx';
 import { CategoryChip, ConfirmDialog, ErrorState, HashTag, LoadingPage, ModelChip, PageHead, Progress, RunStatusBadge, Tabs } from '../components/ui.tsx';
+import { RunLimitsChips } from '../components/SpendLimits.tsx';
 import { Icon } from '../components/icons.tsx';
 import { LeaderboardView } from '../components/leaderboard/LeaderboardView.tsx';
 import { Jargon } from '../components/clarity/Jargon.tsx';
@@ -61,6 +62,7 @@ export default function RunDetailPage({ runId }: { runId: string }) {
 
   const m = d.manifest;
   const resumable = ['interrupted', 'cancelled', 'failed'].includes(m.status);
+  const spendStop = m.stopReason === 'spend-limit' || /budget|spend limit/i.test(m.error ?? '');
   const dur = durationBetween(m.startedAt, m.finishedAt ?? (d.active ? new Date().toISOString() : undefined));
 
   const doCancel = async () => {
@@ -86,7 +88,7 @@ export default function RunDetailPage({ runId }: { runId: string }) {
         }
         title={
           <span className="row wrap" style={{ gap: 14 }}>
-            {m.name || m.id} <RunStatusBadge status={m.status} lg />
+            {m.name || m.id} <RunStatusBadge status={m.status} stopReason={m.stopReason} lg />
           </span>
         }
         sub={m.notes}
@@ -143,15 +145,15 @@ export default function RunDetailPage({ runId }: { runId: string }) {
       />
 
       {m.error && (
-        <div className={/budget|cap/i.test(m.error) ? 'callout warn run-error' : 'callout bad run-error'} role="alert">
-          {/budget|cap/i.test(m.error) ? <Icon.Dollar /> : <Icon.Alert />}
+        <div className={spendStop ? 'callout warn run-error' : 'callout bad run-error'} role="alert">
+          {spendStop ? <Icon.Dollar /> : <Icon.Alert />}
           <div className="stack tight" style={{ flex: 1 }}>
-            <strong>{/budget|cap/i.test(m.error) ? 'Budget cap reached' : 'This run stopped with an error'}</strong>
-            <span>{m.error}</span>
+            <strong>{spendStop ? 'Stopped: your spending limit was reached (not a model failure)' : 'This run stopped with an error'}</strong>
+            <span>{spendStop && m.settings?.maxCostUsd ? `The run had spent ${fmtCost(d.progress.costUsd)} of its ${fmtCost(m.settings.maxCostUsd)} limit and the money left could not pay for the next reply. Every finished result is kept; unfinished cases are not counted against any model.` : m.error}</span>
           </div>
           {resumable && (
             <button className="btn sm" onClick={() => setResumeOpen(true)}>
-              <Icon.Refresh /> Resume{/budget|cap/i.test(m.error) ? ' with a higher cap' : ''}
+              <Icon.Refresh /> Resume{spendStop ? ' with a higher limit' : ''}
             </button>
           )}
         </div>
@@ -169,17 +171,17 @@ export default function RunDetailPage({ runId }: { runId: string }) {
             </div>
           </div>
           <div className="mf">
-            <span className="k">Spend{m.settings?.maxCostUsd ? ' · cap' : ''}</span>
+            <span className="k">Spend{m.settings?.maxCostUsd ? ' · limit' : ''}</span>
             {m.settings?.maxCostUsd ? (
               <div className="stack tight">
                 <span className="v tnum">
                   {fmtCost(d.progress.costUsd)} <span className="muted">of {fmtCost(m.settings.maxCostUsd)}</span>
                 </span>
-                <Progress value={d.progress.costUsd / m.settings.maxCostUsd} color={d.progress.costUsd >= m.settings.maxCostUsd ? 'var(--warn)' : 'var(--good)'} label="Spend against cap" />
+                <Progress value={d.progress.costUsd / m.settings.maxCostUsd} color={d.progress.costUsd >= m.settings.maxCostUsd ? 'var(--warn)' : 'var(--good)'} label="Spend against limit" />
               </div>
             ) : (
               <span className="v tnum">
-                {fmtCost(d.progress.costUsd)} <span className="muted">· no cap</span>
+                {fmtCost(d.progress.costUsd)} <span className="muted">· no limit</span>
               </span>
             )}
           </div>
@@ -218,6 +220,10 @@ export default function RunDetailPage({ runId }: { runId: string }) {
             <span className="v">
               <Jargon dev={`${m.settings?.repeats ?? 1}× repeats · concurrency ${m.settings?.concurrency ?? '—'} · temp ${m.settings?.temperature ?? 0}`} plain={`Every question asked ${m.settings?.repeats ?? 1} ${(m.settings?.repeats ?? 1) === 1 ? 'time' : 'times'}`} />
             </span>
+          </div>
+          <div className="mf">
+            <span className="k">Limits</span>
+            <RunLimitsChips limits={m.settings?.limits} maxCostUsd={m.settings?.maxCostUsd} />
           </div>
           <div className="mf" data-dev>
             <span className="k">Created</span>

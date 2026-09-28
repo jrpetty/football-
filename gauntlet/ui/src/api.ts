@@ -99,6 +99,8 @@ const enc = encodeURIComponent;
 export const api = {
   // Meta
   meta: () => request<Meta>('GET', '/api/meta'),
+  /** Display currency and exchange rate (config/settings.json); costs stay in USD underneath. */
+  setCurrency: (c: { code: 'GBP' | 'USD' | 'EUR'; usdPerUnit: number }) => request<import('../../src/core/currency.ts').CurrencySettings>('PUT', '/api/settings/currency', c),
 
   // Contestants
   contestants: () => request<ContestantView[]>('GET', '/api/contestants'),
