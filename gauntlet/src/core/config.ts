@@ -16,6 +16,8 @@ export interface Settings {
   judgeExcludeSameVendor: boolean;
   /** Reasoning effort used for judge calls (overrides the judge model's own effort; null keeps it). */
   judgeEffort: 'low' | 'medium' | 'high' | null;
+  /** Which grade counts when a person and/or AI judges grade a result (src/grading/policy.ts). Default "methodology". */
+  gradingOfficial?: 'methodology' | 'human' | 'ai' | 'average';
 }
 
 interface ModelsFile {
