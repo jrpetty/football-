@@ -43,7 +43,8 @@ This checks the install, the dashboard, the Live Arena and the replays without s
 
 * Press **B** for Broadcast mode (no chrome, big type, 16:9 friendly).
 * **Live Arena** while the run is going: every model streaming side by side, spend ticking up, scores
-  landing.
+  landing. For a close-up of every answer typing in, with a verdict flash and live commentary, use **Watch it
+  think** (see [Recording a run live](#recording-a-run-live)).
 * **Run detail → a simulation case → Replay** for the story beats: the Survival Island map, the Escape Room
   moves, The Startup's cash curve against the oracle, the Liar's Table interrogation, the Draw It Blind
   side-by-side, and Fix the Bug's file tree, diffs and test bar going from red to green.
@@ -441,6 +442,66 @@ no reason line, the screen says *not recorded*.
   checkered-flag **Finish** moment shows the winner and the podium. Replay it with *Replay the finish* on the
   finish-line page, or open the live page with `?finish=1`. A running run's detail page shows the same race above
   the tabs.
+
+## Recording a run live
+
+Use this when you want to film a run while it is happening, not just the results afterwards. Nothing here calls a
+model or costs extra: every word and number on screen comes from the run itself.
+
+**Before you start**
+
+1. Start the run as normal (New Run → Start). On the run's page, the **Watch it think** panel appears straight away,
+   with a live commentary feed beside it.
+2. Click **Watch it think** (or *Full screen for recording*) to open the recording view: `…/#/runs/<run id>/watch`.
+3. Press **B** for Broadcast mode. Pick the commentary style at the top before you press B:
+   * **Feed**: a column on the right, newest line on top.
+   * **Crawl**: a TV-style strip scrolling along the bottom.
+   * **Off**: tiles only.
+4. Want to rehearse with no API keys? Open the app with `?mock=1` and choose the run *Eight-model quiz · live*
+   (8 models) or *Agents Showdown · live* (6 models). The mock run types, thinks, grades and comments on a timer, just
+   like a real one.
+
+**What viewers see**
+
+* **One box per model**, with the model's colour along the top and its average score so far on the right. A gold
+  crown marks the leader.
+* **What it is working on**, in words: "Question 3 of 5", or "Game 2 of 3 · Day 4" for a simulation. The big heading
+  at the top names the test most models are on ("Now testing: Knights & Knaves") with its one-line hook.
+* **The answer typing in**, in large monospace text. It scrolls by itself, and the newest two lines are bright while
+  older lines fade.
+* **"Thinking…"** while a model has not written anything yet. Reasoning models often think before they write. Their
+  hidden reasoning is never shown, because the providers don't send it.
+* **A clock** for the current case, **a token counter** and **a cost ticker**. While the model types, tokens and cost are
+  estimates, marked **≈** (about 4 characters per token, times the model's output price). When the case is graded,
+  they switch to the exact recorded numbers.
+* **The verdict** flashes on the box for about two seconds: a green tick and *Correct 100/100*, a red cross and
+  *Wrong 0/100*, or amber for partly right. Under it is the grader's own summary, for example *Chose B · expected D*.
+  Then the box moves on to the next case.
+* **Live commentary**, written by the app from the results (no AI involved). For example: "Nova 3 Pro gets Knights &
+  Knaves Q4 right, in 12.3 s", "Quill Flash misses Probability Traps Q2: said 0.5, answer 0.375", "Kite takes the
+  lead from Nova 3 Pro", "3 of 5 models have finished Logic Grid". The random-guessing baseline is left out of the
+  commentary and never "leads".
+
+**The OBS overlay for a live run**
+
+If you record your own screen or camera in OBS, add the **Live run** band as a Browser source:
+`http://localhost:7777/overlay/live` (it follows whatever run is going on), or `…/overlay/live?run=<run id>` for one
+run. Set width 1920 and height 1080. The background is transparent, so only the band shows. The band has the
+Gauntlet logo, the **leader** and their average, a **progress bar** ("62% · 148 of 240 answers graded"), the **money
+spent so far**, and the **commentary crawl**. Add `&theme=light`, `&theme=solid` or `&pos=top` to change its look
+or position. Studio → OBS overlays → **Live run** builds the address and previews it for you. Use `…/overlay/demo?view=live`
+to line it up before a real run.
+
+**Good to know**
+
+* Up to 8 models fit on one 1080p screen (4 × 2). More models still work; the boxes just get smaller.
+* If a provider cannot stream, its box shows "Thinking…" and then the whole answer at once when it arrives.
+* If a call fails and is retried, the half-written text from the failed try is removed, because the recorded result
+  only keeps the final answer.
+* Watching never changes a run. The live view only shows the text; the prompts, recorded results and scores are
+  exactly the same with or without anyone watching (this is covered by an automated test).
+* The viewer caption strip (press **C** in Broadcast mode) explains the screen in one sentence. The tiles make room
+  for it.
 
 ## Cost-saving tips
 

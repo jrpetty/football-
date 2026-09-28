@@ -47,7 +47,6 @@ import {
   newLiveResult,
   renderedOf,
   replayFor,
-  responseFor,
   rngFrom,
   runListItem,
   summaryOf,
@@ -55,6 +54,7 @@ import {
 import type { MockRun, RunSpec } from './fixtures.ts';
 import { mockTurnImages } from './vision.ts';
 import { mockExport, mockOverlay, mockPolish, mockPolishEstimate, mockStudio } from './studioMock.ts';
+import { finalizeLive, liveAnswerText, thinkTicks } from './liveMock.ts';
 
 const contestants: ContestantView[] = CONTESTANTS.map((c) => ({ ...c }));
 const tests: TestDefinition[] = [...TESTS];
@@ -148,6 +148,10 @@ interface Job {
   frameIdx: number;
   ticksPerFrame: number;
   tick: number;
+  /** Watch it think: ticks of "thinking" before the first word, and the verdict decided up front. */
+  think?: number;
+  lite?: CaseResultLite | null;
+  startedMs?: number;
 }
 
 interface Sim {
@@ -338,10 +342,11 @@ function tickSim(sim: Sim) {
       const r = rngFrom(`sim|${sim.runId}|${c.id}|${next.testId}|${next.caseId}|${next.repeat}`);
       const persona = c.id.includes('quill') ? 3 : c.id.includes('sable') ? 2.4 : c.id.includes('nova') ? 1.6 : 1;
       const frames = t.kind === 'program' ? (replayFor(t, Number(next.caseId.replace('seed-', '')) || 1, 0.3 + r.next() * 0.7)?.frames ?? []).slice(0, 7) : [];
+      const lite = newLiveResult(sim.runId, c.id, next.testId, next.caseId, next.repeat);
       const text =
         t.kind === 'program'
           ? frames.map((f) => `[${f.label}] ${f.observation ?? ''}\nACTION: ${f.action ?? 'wait'}\nREASON: ${r.pick(['Safest option given current vitals.', 'Gather information before committing.', 'The storm makes shelter the priority.', 'Maximise expected value this turn.'])}\n`).join('\n')
-          : responseFor(t, next.caseId, r.next() < 0.7 ? 1 : 0);
+          : liveAnswerText(t, next.caseId, lite, `${c.id}|${next.caseId}|${next.repeat}`);
       job = {
         key: `${c.id}::${next.testId}::${next.caseId}::r${next.repeat}`,
         testId: next.testId,
@@ -354,6 +359,9 @@ function tickSim(sim: Sim) {
         frameIdx: 0,
         ticksPerFrame: Math.max(3, Math.round(7 / persona)),
         tick: 0,
+        think: t.kind === 'program' ? 0 : thinkTicks(c.id, r.next()),
+        lite,
+        startedMs: Date.now(),
       };
       sim.current.set(c.id, job);
       emit(sim, { type: 'job.started', runId: sim.runId, key: job.key, contestantId: c.id, testId: job.testId, caseId: job.caseId, repeat: job.repeat, at: new Date().toISOString() });
@@ -367,6 +375,7 @@ function tickSim(sim: Sim) {
     anyWork = true;
     if (isManualId(c.id)) continue; // waits for a pasted reply in the Manual Inbox
     job.tick++;
+    if (job.tick <= (job.think ?? 0)) continue; // "thinking": no text yet
     if (job.frames.length) {
       if (job.tick % job.ticksPerFrame === 0 && job.frameIdx < job.frames.length) {
         const f = job.frames[job.frameIdx++];
@@ -383,7 +392,9 @@ function tickSim(sim: Sim) {
     }
     const finished = job.frames.length ? job.frameIdx >= job.frames.length && job.tick % job.ticksPerFrame === 0 : job.emitted >= job.text.length;
     if (finished) {
-      const lite = newLiveResult(sim.runId, c.id, job.testId, job.caseId, job.repeat);
+      const t = tests.find((x) => x.id === job.testId);
+      const base = job.lite === undefined ? newLiveResult(sim.runId, c.id, job.testId, job.caseId, job.repeat) : job.lite;
+      const lite = base && t ? finalizeLive(base, t, job.text, job.startedMs ?? Date.now()) : base;
       sim.current.delete(c.id);
       if (lite) {
         run.results.push(lite);
@@ -397,6 +408,7 @@ function tickSim(sim: Sim) {
           repeat: lite.repeat,
           status: lite.status,
           score: lite.score,
+          passed: lite.passed,
           summary: lite.summary,
           metrics: lite.metrics,
           at: new Date().toISOString(),

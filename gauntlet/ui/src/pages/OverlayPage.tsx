@@ -1,7 +1,8 @@
 /**
  * OBS overlay — a transparent 1920×1080 page to add as an OBS "Browser" source.
  *
- *   /overlay/<runId|latest|demo>?view=scoreboard|ticker|lower-third|bracket-lite
+ *   /overlay/<runId|latest|demo>?view=scoreboard|ticker|lower-third|bracket-lite|live
+ *   /overlay/live?run=<runId|latest|demo>   (the live-run band: leader, progress, spend, commentary crawl)
  *                                &theme=glass|solid|light|minimal&pos=tl|tr|bl|br|top|bottom&safe=0&scale=1.2
  *
  * Live-updates from the run's Server-Sent Events stream; "latest" follows the
@@ -17,6 +18,7 @@ import { cx } from '../components/ui.tsx';
 import type { OverlayData, RunEvent } from '../types.ts';
 import { OVERLAY_VIEWS } from '../components/studio/overlayOptions.ts';
 import type { OverlayPos, OverlayTheme, OverlayView } from '../components/studio/overlayOptions.ts';
+import { LiveOverlay } from '../components/live/LiveOverlay.tsx';
 import '../styles/overlay.css';
 
 const W = 1920;
@@ -318,9 +320,12 @@ function TestBoard({ d }: { d: OverlayData }) {
 
 // ───────────────────────────── Page ─────────────────────────────
 
-export default function OverlayPage({ runId }: { runId: string }) {
+export default function OverlayPage({ runId: routeId }: { runId: string }) {
   const { query } = useRoute();
-  const view = (OVERLAY_VIEWS.find((v) => v.id === query.get('view'))?.id ?? 'scoreboard') as OverlayView;
+  // /overlay/live?run=… is the live-run band for a run (default: the latest).
+  const liveAlias = routeId === 'live';
+  const runId = liveAlias ? query.get('run') || 'latest' : routeId;
+  const view = (liveAlias ? 'live' : OVERLAY_VIEWS.find((v) => v.id === query.get('view'))?.id ?? 'scoreboard') as OverlayView;
   const theme = (['glass', 'solid', 'light', 'minimal'].includes(query.get('theme') ?? '') ? query.get('theme') : 'glass') as OverlayTheme;
   const pos = (['tl', 'tr', 'bl', 'br', 'top', 'bottom'].includes(query.get('pos') ?? '') ? query.get('pos') : OVERLAY_VIEWS.find((v) => v.id === view)!.pos) as OverlayPos;
   const safe = query.get('safe') !== '0';
@@ -344,6 +349,8 @@ export default function OverlayPage({ runId }: { runId: string }) {
         return <LowerThird d={data} />;
       case 'bracket-lite':
         return <TestBoard d={data} />;
+      case 'live':
+        return <LiveOverlay data={data} demo={demo} />;
       default:
         return <Scoreboard d={data} flash={flash} />;
     }
@@ -353,7 +360,7 @@ export default function OverlayPage({ runId }: { runId: string }) {
   return (
     <div className="ov-root">
       <div className={cx('ov-stage', `ov-theme-${theme}`, safe && 'safe')} style={{ transform: `translate(-50%, -50%) scale(${scale})` }} data-view={view}>
-        <div className={cx('ov-slot', `pos-${view === 'ticker' ? (pos === 'top' || pos === 'tl' || pos === 'tr' ? 'top' : 'bottom') : bar ? (pos === 'top' ? 'tl' : 'bl') : pos}`)} style={{ '--k': size } as CSSProperties}>
+        <div className={cx('ov-slot', `pos-${view === 'ticker' || view === 'live' ? (pos === 'top' || pos === 'tl' || pos === 'tr' ? 'top' : 'bottom') : bar ? (pos === 'top' ? 'tl' : 'bl') : pos}`)} style={{ '--k': size } as CSSProperties}>
           {body}
           {!data && error && <div className="ov-panel ov-error">Overlay: {error}</div>}
         </div>

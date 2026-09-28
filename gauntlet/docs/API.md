@@ -89,7 +89,7 @@ from the seed; the program description explains them).
 | POST | `/api/runs/:id/cancel` | – | `{ ok: true }` |
 | POST | `/api/runs/:id/resume` | `{ maxCostUsd?: number \| null }` (optional new budget cap; `null` removes it) | `{ ok: true }` — re-runs only the missing / errored jobs |
 | DELETE | `/api/runs/:id` | – | `{ ok: true }` |
-| GET | `/api/runs/:id/events` | – | **Server-Sent Events** stream of `RunEvent` JSON (`data: {...}\n\n`). Sends a `run.progress` snapshot on connect. `job.delta` events are throttled (~10/s per job). |
+| GET | `/api/runs/:id/events` | – | **Server-Sent Events** stream of `RunEvent` JSON (`data: {...}\n\n`). Sends a `run.progress` snapshot on connect. `job.delta` events are throttled (~10/s per job); each carries one model call's text (`label`), and `reset: true` means drop what that call streamed so far (a failed attempt is being retried). Providers that cannot stream send the whole answer as one `job.delta` when it arrives. `job.finished` also carries `passed`. Streamed text is display-only: it never changes what is recorded. |
 | GET | `/api/runs/:id/export.csv` | – | CSV of every case result |
 | GET | `/api/runs/:id/export.json` | – | `{ manifest, leaderboard, results: CaseResult[] }` |
 | GET | `/api/runs/:id/artifacts/:file` | – | Artifact file. HTML is served with a strict sandbox CSP; embed it in `<iframe sandbox="allow-scripts">`. |

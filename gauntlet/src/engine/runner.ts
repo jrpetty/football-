@@ -543,9 +543,10 @@ function launch(manifest: RunManifest, tests: Array<LoadedTest & { caseFilter?: 
     const policy: CallPolicy = { maxRetries: settings.maxRetries, temperature: manifest.settings.temperature, defaultMaxOutputTokens: settings.defaultMaxOutputTokens };
 
     // Throttled streaming deltas (≈10 events/s per job).
-    const deltas = new Map<string, { contestantId: string; text: string; label?: string }>();
+    const deltas = new Map<string, { contestantId: string; text: string; label?: string; reset?: boolean }>();
+    const deltaEvent = (key: string, d: { contestantId: string; text: string; label?: string; reset?: boolean }): RunEvent => ({ type: 'job.delta', runId: manifest.id, key, contestantId: d.contestantId, text: d.text, label: d.label, ...(d.reset ? { reset: true } : {}) });
     const flush = setInterval(() => {
-      for (const [key, d] of deltas) emit({ type: 'job.delta', runId: manifest.id, key, contestantId: d.contestantId, text: d.text, label: d.label });
+      for (const [key, d] of deltas) emit(deltaEvent(key, d));
       deltas.clear();
     }, 100);
 
@@ -578,16 +579,23 @@ function launch(manifest: RunManifest, tests: Array<LoadedTest & { caseFilter?: 
           emit,
           onDelta: (text, label) => {
             const d = deltas.get(job.key);
-            if (d) {
-              d.text += text;
-              d.label = label;
-            } else deltas.set(job.key, { contestantId: job.contestant.id, text, label });
+            if (d && d.label === label) d.text += text;
+            else {
+              // A new call: send the previous call's tail first, so each event belongs to one call.
+              if (d) emit(deltaEvent(job.key, d));
+              deltas.set(job.key, { contestantId: job.contestant.id, text, label });
+            }
+          },
+          onDeltaReset: (label) => {
+            const d = deltas.get(job.key);
+            if (d && d.label !== label) emit(deltaEvent(job.key, d));
+            deltas.set(job.key, { contestantId: job.contestant.id, text: '', label, reset: true });
           },
         });
         // Flush this job's last streamed text before announcing that it finished.
         const pending = deltas.get(job.key);
         if (pending) {
-          emit({ type: 'job.delta', runId: manifest.id, key: job.key, contestantId: pending.contestantId, text: pending.text, label: pending.label });
+          emit(deltaEvent(job.key, pending));
           deltas.delete(job.key);
         }
         if (result.status === 'cancelled' && controller.signal.aborted) return;
@@ -604,6 +612,7 @@ function launch(manifest: RunManifest, tests: Array<LoadedTest & { caseFilter?: 
           repeat: result.repeat,
           status: result.status,
           score: result.score,
+          passed: result.passed,
           summary: result.summary,
           metrics: result.metrics,
           at: now(),
@@ -647,6 +656,7 @@ interface JobEnv {
   signal: AbortSignal;
   emit: (e: RunEvent) => void;
   onDelta: (text: string, label?: string) => void;
+  onDeltaReset?: (label: string) => void;
 }
 
 function clamp01(n: number): number {
@@ -741,6 +751,7 @@ async function executeJob(job: Job, env: JobEnv): Promise<CaseResult> {
       signal: controller.signal,
       maxOutputTokens: def.maxOutputTokens ?? settings.defaultMaxOutputTokens,
       onDelta: env.onDelta,
+      onDeltaReset: env.onDeltaReset,
       attemptLimitMs: answerSec ? answerSec * 1000 : undefined,
       onCall: (label) => env.emit({ type: 'job.step', runId: manifest.id, key: job.key, contestantId: job.contestant.id, label }),
       onRetry: (attempt, wait, err) =>

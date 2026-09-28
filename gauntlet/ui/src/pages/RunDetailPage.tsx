@@ -14,6 +14,7 @@ import type { InspectorTarget } from '../components/ResultInspector.tsx';
 import { durationBetween, fmtCost, fmtDateTime, fmtInt, fmtMs, fmtPricePerM, shortHash } from '../format.ts';
 import type { RunDetail } from '../types.ts';
 import { LiveRaceCard } from '../components/LiveRaceCard.tsx';
+import { LiveWatchPanel } from '../components/live/LiveWatchPanel.tsx';
 
 type Tab = 'leaderboard' | 'matrix' | 'config';
 
@@ -94,6 +95,11 @@ export default function RunDetailPage({ runId }: { runId: string }) {
             {(d.active || m.status === 'completed') && (
               <Link to={pathOf('runs', runId, 'live')} className={d.active ? 'btn live' : 'btn'}>
                 <Icon.Broadcast /> {d.active ? 'Live arena' : 'Finish line'}
+              </Link>
+            )}
+            {(d.active || m.status === 'running') && (
+              <Link to={pathOf('runs', runId, 'watch')} className="btn" title="Every model's answer typing in live, with commentary: built for recording">
+                <Icon.Eye /> Watch it think
               </Link>
             )}
             {d.results.length > 0 && (
@@ -221,6 +227,7 @@ export default function RunDetailPage({ runId }: { runId: string }) {
       </section>
 
       {d.active && <LiveRaceCard d={d} />}
+      {(d.active || m.status === 'running' || m.status === 'queued') && <LiveWatchPanel runId={runId} />}
       <Tabs
         value={tab}
         onChange={(t) => setQuery({ tab: t })}
