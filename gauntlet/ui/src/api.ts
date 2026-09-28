@@ -138,6 +138,8 @@ export const api = {
   manualQueue: (runId?: string) => request<ManualRequest[]>('GET', `/api/manual${runId ? `?runId=${enc(runId)}` : ''}`),
   manualSubmit: (requestId: string, reply: ManualReply) => request<{ ok: true }>('POST', `/api/manual/${enc(requestId)}`, reply),
   manualFail: (requestId: string, reason?: string) => request<{ ok: true }>('POST', `/api/manual/${enc(requestId)}/fail`, { reason }),
+  /** The Gallery Masterpiece: answer a picture request with an image (base64 or a data: URL). */
+  manualImage: (requestId: string, body: { data: string; costUsd?: number; note?: string }) => request<{ ok: true; width: number; height: number }>('POST', `/api/manual/${enc(requestId)}/image`, body),
 
   // Grade a pasted reply (no run)
   grade: (req: GradeRequest) => request<GradeResult>('POST', '/api/grade', req),

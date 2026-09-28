@@ -1,0 +1,880 @@
+/*
+ * The Gallery: museum walls, frames, placards, the brief checklist and the artistry panel.
+ * Dark theme: a deep, quiet museum wall under warm spotlights. Light theme: a warm limestone wall.
+ */
+
+:root,
+:root[data-theme='dark'] {
+  --gal-serif: 'Palatino Linotype', Palatino, 'Book Antiqua', 'Iowan Old Style', Charter, 'Bitstream Charter', Georgia, 'Liberation Serif', serif;
+  --gal-wall-1: #1b2422;
+  --gal-wall-2: #121917;
+  --gal-wall-edge: #0b100f;
+  --gal-spot: rgba(255, 228, 184, 0.2);
+  --gal-spot-core: rgba(255, 236, 205, 0.1);
+  --gal-floor: #0e1110;
+  --gal-rail: rgba(214, 186, 120, 0.35);
+  --gal-ink: #efe8da;
+  --gal-ink-2: #b9b09f;
+  --gal-ink-3: #8f887b;
+  --gal-card: rgba(255, 248, 235, 0.04);
+  --gal-card-line: rgba(233, 214, 170, 0.16);
+  --placard-bg: #f4efe4;
+  --placard-ink: #231d16;
+  --placard-ink-2: #5b5246;
+  --placard-line: rgba(60, 45, 25, 0.16);
+  --gal-yes: #3fb76a;
+  --gal-partly: #e5a93a;
+  --gal-no: #e25b4f;
+  --gal-none: #7c8577;
+}
+
+:root[data-theme='light'] {
+  --gal-wall-1: #ece6dc;
+  --gal-wall-2: #ddd4c5;
+  --gal-wall-edge: #cfc5b3;
+  --gal-spot: rgba(255, 252, 240, 0.95);
+  --gal-spot-core: rgba(255, 255, 250, 0.7);
+  --gal-floor: #b9ab94;
+  --gal-rail: rgba(120, 92, 40, 0.3);
+  --gal-ink: #231d16;
+  --gal-ink-2: #574d40;
+  --gal-ink-3: #75695a;
+  --gal-card: rgba(255, 255, 255, 0.55);
+  --gal-card-line: rgba(90, 70, 40, 0.16);
+  --placard-bg: #fffdf8;
+  --placard-ink: #231d16;
+  --placard-ink-2: #5b5246;
+  --placard-line: rgba(60, 45, 25, 0.14);
+  --gal-yes: #1f8a4c;
+  --gal-partly: #b97a0e;
+  --gal-no: #c23a2f;
+  --gal-none: #8a8f86;
+}
+
+/* ───────────────────────── The wall ───────────────────────── */
+
+.gal-room {
+  position: relative;
+  color: var(--gal-ink);
+  background:
+    radial-gradient(120% 70% at 50% -10%, var(--gal-spot-core), transparent 60%),
+    linear-gradient(180deg, var(--gal-wall-1) 0%, var(--gal-wall-2) 88%, var(--gal-wall-edge) 100%);
+  border-radius: 14px;
+  overflow: hidden;
+  isolation: isolate;
+}
+.gal-room::after {
+  /* the picture rail and the soft floor shadow */
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, var(--gal-rail) 0 1px, transparent 1px) 0 34px / 100% 40px no-repeat,
+    linear-gradient(0deg, color-mix(in srgb, var(--gal-floor) 70%, transparent) 0, transparent 90px);
+  z-index: -1;
+}
+
+.gal-wall {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
+  gap: 56px 44px;
+  align-items: start;
+  justify-items: center;
+  padding: 64px 48px 56px;
+}
+.gal-wall.cols-1 {
+  grid-template-columns: minmax(0, 720px);
+  justify-content: center;
+}
+.gal-wall.cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 560px));
+  justify-content: center;
+}
+
+.gal-slot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  width: 100%;
+  max-width: 560px;
+}
+.gal-slot::before {
+  /* the spotlight falling on each painting */
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -64px;
+  width: 150%;
+  height: 118%;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse 50% 58% at 50% 12%, var(--gal-spot) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: -1;
+}
+.gal-slot.is-selected .gal-frame {
+  outline: 2px solid var(--accent);
+  outline-offset: 6px;
+}
+.gal-slot.is-baseline .gal-art {
+  opacity: 0.92;
+}
+
+/* ───────────────────────── Frames ───────────────────────── */
+
+.gal-art {
+  --fw: 16px;
+  position: relative;
+  margin: 0;
+  width: 100%;
+}
+.gal-sm {
+  --fw: 11px;
+}
+.gal-lg {
+  --fw: 22px;
+}
+.gal-xl {
+  --fw: 30px;
+}
+.gal-art.is-clickable {
+  cursor: pointer;
+}
+.gal-art.is-clickable:hover .gal-frame {
+  transform: translateY(-2px);
+}
+.gal-frame {
+  position: relative;
+  padding: var(--fw);
+  border-radius: 2px;
+  transition: transform 0.25s ease;
+  box-shadow:
+    0 28px 44px -22px rgba(0, 0, 0, 0.75),
+    0 8px 16px -6px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.35),
+    inset 0 2px 1px rgba(255, 255, 255, 0.28),
+    inset 0 -3px 3px rgba(0, 0, 0, 0.35);
+}
+.gal-frame::before {
+  /* carved inner bevel */
+  content: '';
+  position: absolute;
+  inset: calc(var(--fw) * 0.42);
+  border-radius: 1px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 244, 214, 0.35),
+    0 0 0 1px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+}
+.gal-liner {
+  position: relative;
+  padding: calc(var(--fw) * 0.3);
+  background: linear-gradient(135deg, #efe4c8, #d8c9a4);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.25),
+    inset 0 2px 5px rgba(0, 0, 0, 0.35);
+}
+.gal-canvas {
+  position: relative;
+  aspect-ratio: var(--ar, 1.5);
+  background: #151515;
+  overflow: hidden;
+  box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.45);
+}
+.gal-canvas img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+}
+
+/* Gilt: warm gold with a fine carved rhythm */
+.gal-frame-gilt .gal-frame {
+  background:
+    repeating-linear-gradient(90deg, rgba(90, 60, 10, 0.12) 0 2px, transparent 2px 7px),
+    repeating-linear-gradient(0deg, rgba(90, 60, 10, 0.12) 0 2px, transparent 2px 7px),
+    linear-gradient(135deg, #6f501b 0%, #d6b460 16%, #f7e3a2 27%, #b48b3a 44%, #e8c979 60%, #8c6926 78%, #dcb962 92%, #7a5a20 100%);
+}
+/* Ebony: black lacquer with a thin gold fillet (Dutch cabinet frames) */
+.gal-frame-ebony .gal-frame {
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 4px),
+    linear-gradient(135deg, #070606 0%, #2c2825 30%, #0d0c0b 52%, #28231f 76%, #080707 100%);
+}
+.gal-frame-ebony .gal-liner {
+  background: linear-gradient(135deg, #c9a24a, #f3d98a 45%, #9a7428);
+  padding: calc(var(--fw) * 0.16);
+}
+/* Walnut: warm wood grain */
+.gal-frame-walnut .gal-frame {
+  background:
+    repeating-linear-gradient(8deg, rgba(0, 0, 0, 0.12) 0 2px, transparent 2px 9px),
+    linear-gradient(135deg, #3a2314 0%, #6f4628 30%, #4a2e19 52%, #7b5131 78%, #3a2314 100%);
+}
+.gal-frame-walnut .gal-liner {
+  background: linear-gradient(135deg, #c9a24a, #e9cf85 50%, #9a7428);
+  padding: calc(var(--fw) * 0.14);
+}
+/* Oak with a wide cream mat: how prints are hung */
+.gal-frame-oak .gal-frame {
+  padding: calc(var(--fw) * 0.62);
+  background:
+    repeating-linear-gradient(90deg, rgba(90, 60, 20, 0.14) 0 1px, transparent 1px 5px),
+    linear-gradient(135deg, #9b7447 0%, #cfa66f 40%, #a57c4d 70%, #c69c64 100%);
+}
+.gal-frame-oak .gal-liner {
+  padding: calc(var(--fw) * 1.25);
+  background: linear-gradient(180deg, #f6f1e6, #ece4d2);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.18),
+    inset 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.gal-frame-oak .gal-canvas {
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.25),
+    inset 0 0 6px rgba(0, 0, 0, 0.2);
+}
+
+.gal-badge {
+  position: absolute;
+  top: calc(var(--fw) * -1.1);
+  right: calc(var(--fw) * -0.6);
+  z-index: 2;
+  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.45));
+}
+.gal-rosette {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+}
+.gal-rosette-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+/* Empty frames: why there is no painting */
+.gal-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8%;
+  text-align: center;
+  color: #6b604e;
+  background:
+    repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.025) 0 2px, transparent 2px 5px),
+    linear-gradient(180deg, #ede3cd, #dccfb2);
+}
+.gal-empty strong {
+  font-family: var(--gal-serif);
+  font-size: 1.12rem;
+  color: #3f362a;
+  font-style: italic;
+}
+.gal-empty span {
+  font-size: 0.8rem;
+  line-height: 1.35;
+  max-width: 30ch;
+}
+.gal-sm .gal-empty strong {
+  font-size: 0.95rem;
+}
+.gal-sm .gal-empty span {
+  font-size: 0.72rem;
+}
+.gal-sm .gal-empty svg {
+  width: 30px;
+  height: 30px;
+}
+.gal-empty.is-no-output {
+  color: #756c5e;
+}
+.gal-awaiting {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(20, 16, 10, 0.72);
+  color: #f4e8cc;
+  font-size: 0.74rem;
+  letter-spacing: 0.02em;
+}
+
+/* ───────────────────────── Placards ───────────────────────── */
+
+.gal-placard {
+  position: relative;
+  width: min(100%, 330px);
+  padding: 12px 16px 11px;
+  background: linear-gradient(180deg, var(--placard-bg), color-mix(in srgb, var(--placard-bg) 94%, #b8a37a));
+  color: var(--placard-ink);
+  border-radius: 2px;
+  box-shadow:
+    0 10px 18px -10px rgba(0, 0, 0, 0.6),
+    0 0 0 1px var(--placard-line);
+  text-align: left;
+  line-height: 1.3;
+}
+.gal-placard-lg {
+  width: min(100%, 420px);
+  padding: 16px 20px 14px;
+}
+.gal-placard-sm {
+  width: min(100%, 300px);
+  padding: 9px 12px 8px;
+}
+.gp-title {
+  font-family: var(--gal-serif);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 1.12rem;
+  letter-spacing: 0.005em;
+}
+.gal-placard-lg .gp-title {
+  font-size: 1.45rem;
+}
+.gal-placard-sm .gp-title {
+  font-size: 0.98rem;
+}
+.gp-artist {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 3px;
+  font-size: 0.86rem;
+}
+.gp-artist b {
+  font-weight: 650;
+}
+.gp-dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+.gp-tag {
+  color: var(--placard-ink-2);
+}
+.gp-medium {
+  margin-top: 2px;
+  font-family: var(--gal-serif);
+  font-size: 0.82rem;
+  color: var(--placard-ink-2);
+}
+.gp-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 8px;
+  padding-top: 7px;
+  border-top: 1px solid var(--placard-line);
+}
+.gp-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+.gp-k {
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--placard-ink-2);
+}
+.gp-fact b {
+  font-size: 1.12rem;
+  font-weight: 700;
+}
+.gp-fact b small {
+  font-size: 0.72em;
+  font-weight: 600;
+  color: var(--placard-ink-2);
+}
+.gal-placard-sm .gp-fact b {
+  font-size: 1rem;
+}
+.gal-placard-lg .gp-fact b {
+  font-size: 1.4rem;
+}
+.gp-cost {
+  margin-left: auto;
+  text-align: right;
+}
+.gp-foot {
+  margin-top: 6px;
+  font-size: 0.78rem;
+  color: var(--placard-ink-2);
+}
+.gp-foot b {
+  color: var(--placard-ink);
+}
+.gp-spread {
+  color: #8a4b12;
+}
+
+/* ───────────────────────── Checklist ───────────────────────── */
+
+.brief-checklist {
+  color: var(--gal-ink);
+  background: var(--gal-card);
+  border: 1px solid var(--gal-card-line);
+  border-radius: 12px;
+  padding: 14px 16px 12px;
+}
+.bc-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.bc-title {
+  font-family: var(--gal-serif);
+  font-size: 1.1rem;
+  font-style: italic;
+}
+.bc-count {
+  font-size: 0.86rem;
+  color: var(--gal-ink-2);
+}
+.bc-count b {
+  font-size: 1.2rem;
+  color: var(--gal-ink);
+}
+.bc-group + .bc-group {
+  margin-top: 8px;
+}
+.bc-group-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gal-ink-3);
+  margin: 4px 0 4px;
+}
+.brief-checklist ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.bc-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 6px 0;
+  border-top: 1px solid var(--gal-card-line);
+}
+.bc-item:first-child {
+  border-top: 0;
+}
+.bc-body {
+  min-width: 0;
+  flex: 1;
+}
+.bc-text {
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+.bc-item.is-no .bc-text {
+  color: var(--gal-ink-2);
+}
+.bc-reasons {
+  margin-top: 3px !important;
+  display: grid;
+  gap: 1px;
+}
+.bc-reasons li {
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--gal-ink-2);
+}
+.bc-judge {
+  font-weight: 600;
+  color: var(--gal-ink);
+}
+.bc-v {
+  display: inline-block;
+  min-width: 46px;
+  margin-right: 6px;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+  color: #fff;
+}
+.bc-v.is-yes {
+  background: var(--gal-yes);
+}
+.bc-v.is-partly {
+  background: var(--gal-partly);
+}
+.bc-v.is-no {
+  background: var(--gal-no);
+}
+.bc-none {
+  color: var(--gal-ink-3);
+}
+.bc-splitnote {
+  margin-top: 2px;
+  font-size: 0.74rem;
+  color: var(--gal-partly);
+}
+.is-compact .bc-item {
+  padding: 4px 0;
+}
+.is-compact .bc-text {
+  font-size: 0.86rem;
+}
+
+.bc-mark {
+  flex: none;
+  margin-top: 1px;
+}
+.bc-mark circle {
+  stroke-width: 1.6;
+}
+.bc-mark path {
+  fill: none;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.bc-mark.is-yes circle {
+  fill: var(--gal-yes);
+  stroke: var(--gal-yes);
+}
+.bc-mark.is-yes path {
+  stroke: #fff;
+}
+.bc-mark.is-partly circle {
+  fill: transparent;
+  stroke: var(--gal-partly);
+}
+.bc-mark.is-partly path.bc-half {
+  fill: var(--gal-partly);
+  stroke: none;
+}
+.bc-mark.is-no circle {
+  fill: var(--gal-no);
+  stroke: var(--gal-no);
+}
+.bc-mark.is-no path {
+  stroke: #fff;
+}
+.bc-mark.is-none circle {
+  fill: transparent;
+  stroke: var(--gal-none);
+}
+.bc-mark.is-none path {
+  stroke: var(--gal-none);
+}
+.bc-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--gal-card-line);
+  font-size: 0.76rem;
+  color: var(--gal-ink-2);
+}
+.bc-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.bc-legend .bc-mark {
+  margin: 0;
+}
+
+/* marks pinned over a painting's corner */
+.bc-ribbon {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  display: flex;
+  gap: 3px;
+  padding: 4px 6px;
+  border-radius: 999px;
+  background: rgba(14, 12, 9, 0.66);
+  backdrop-filter: blur(3px);
+}
+.bc-ribbon .bc-mark {
+  margin: 0;
+}
+.bc-ribbon .bc-mark.is-partly circle {
+  fill: rgba(255, 255, 255, 0.08);
+}
+
+/* ───────────────────────── Artistry ───────────────────────── */
+
+.artistry {
+  color: var(--gal-ink);
+  background: var(--gal-card);
+  border: 1px solid var(--gal-card-line);
+  border-radius: 12px;
+  padding: 14px 16px 12px;
+}
+.ar-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.ar-title {
+  font-family: var(--gal-serif);
+  font-size: 1.1rem;
+  font-style: italic;
+}
+.ar-score {
+  font-size: 0.9rem;
+  color: var(--gal-ink-2);
+}
+.ar-score b {
+  font-size: 1.5rem;
+  color: var(--gal-ink);
+}
+.ar-sub {
+  font-size: 0.8rem;
+  color: var(--gal-ink-3);
+}
+.ar-rows {
+  display: grid;
+  gap: 7px;
+}
+.ar-row {
+  display: grid;
+  grid-template-columns: 11.5em 1fr 2.4em;
+  align-items: center;
+  gap: 10px;
+}
+.ar-label {
+  font-size: 0.86rem;
+  color: var(--gal-ink-2);
+}
+.ar-track {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--gal-ink) 10%, transparent);
+}
+.ar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #8c6926, #e7c979);
+}
+.ar-dot {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  border: 2px solid var(--gal-wall-2);
+  background: #f4efe4;
+}
+.ar-dot.static {
+  position: static;
+  display: inline-block;
+  margin: 0;
+  flex: none;
+}
+.ar-dot.j1 {
+  background: #7fb2ff;
+}
+.ar-dot.j2 {
+  background: #d58bff;
+}
+.ar-dot.j3 {
+  background: #6ee7b7;
+}
+.ar-val {
+  text-align: right;
+  font-size: 0.92rem;
+}
+.ar-scale {
+  display: grid;
+  grid-template-columns: 11.5em 1fr 2.4em;
+  gap: 10px;
+  font-size: 0.66rem;
+  color: var(--gal-ink-3);
+}
+.ar-scale {
+  grid-template-columns: repeat(4, 1fr);
+  padding-left: calc(11.5em + 10px);
+  padding-right: calc(2.4em + 10px);
+}
+.ar-scale span:nth-child(2) {
+  text-align: center;
+}
+.ar-scale span:nth-child(3) {
+  text-align: center;
+}
+.ar-scale span:last-child {
+  text-align: right;
+}
+.ar-judges {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 10px 0 0;
+  border-top: 1px solid var(--gal-card-line);
+  display: grid;
+  gap: 5px;
+}
+.ar-judges li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  font-size: 0.82rem;
+  color: var(--gal-ink-2);
+}
+.ar-judges b {
+  color: var(--gal-ink);
+}
+.ar-quote {
+  flex-basis: 100%;
+  padding-left: 22px;
+  font-family: var(--gal-serif);
+  font-style: italic;
+  color: var(--gal-ink-2);
+}
+.ar-err {
+  color: var(--gal-no);
+}
+.ar-spread {
+  margin: 10px 0 0;
+  font-size: 0.82rem;
+  color: var(--gal-ink-2);
+}
+.ar-spread.is-wide {
+  color: var(--gal-partly);
+  font-weight: 600;
+}
+.ar-note {
+  margin: 8px 0 0;
+  font-size: 0.76rem;
+  color: var(--gal-ink-3);
+  line-height: 1.45;
+}
+
+/* ───────────────────────── Inspector panel ───────────────────────── */
+
+.gal-result {
+  padding: 34px 30px 26px;
+}
+.gal-result-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 1fr);
+  gap: 30px;
+  align-items: start;
+}
+.gal-result-left {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+}
+.gal-result-left::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -70px;
+  width: 140%;
+  height: 100%;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse 50% 60% at 50% 10%, var(--gal-spot) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: -1;
+}
+.gal-result-right {
+  display: grid;
+  gap: 14px;
+}
+.gal-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+}
+.gal-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--gal-card-line);
+  background: var(--gal-card);
+  color: var(--gal-ink);
+  font: inherit;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+.gal-toggle[aria-pressed='true'] {
+  background: color-mix(in srgb, #e7c979 22%, transparent);
+  border-color: color-mix(in srgb, #e7c979 60%, transparent);
+}
+.gal-toggle:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+.gal-headline {
+  text-align: center;
+  font-family: var(--gal-serif);
+  color: var(--gal-ink);
+}
+.gal-headline .gh-eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gal-ink-3);
+}
+.gal-headline .gh-title {
+  font-size: 1.6rem;
+  font-style: italic;
+  margin-top: 2px;
+}
+.gal-headline .gh-sub {
+  font-size: 0.92rem;
+  color: var(--gal-ink-2);
+}
+.gal-muted {
+  color: var(--gal-ink-3);
+  font-size: 0.8rem;
+}
+
+@media (max-width: 1100px) {
+  .gal-result-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 900px) {
+  .gal-wall {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)) !important;
+    padding: 48px 20px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gal-frame {
+    transition: none;
+  }
+}

@@ -96,8 +96,10 @@ const RESULT_STATUS: Record<ResultStatus, { cls: string; label: string }> = {
   skipped: { cls: '', label: 'Skipped · no image input' },
 };
 
-export function ResultStatusBadge({ status }: { status: ResultStatus | string | undefined }) {
-  const s = RESULT_STATUS[status as ResultStatus] ?? { cls: '', label: String(status ?? '?') };
+export function ResultStatusBadge({ status, summary }: { status: ResultStatus | string | undefined; summary?: string }) {
+  let s = RESULT_STATUS[status as ResultStatus] ?? { cls: '', label: String(status ?? '?') };
+  // Picture-making tests skip models without image output (and picture-only models skip text tests).
+  if (status === 'skipped' && summary && /image output|picture-only/.test(summary)) s = { cls: '', label: /picture-only/.test(summary) ? 'Skipped · picture-only model' : 'Skipped · no image output' };
   return (
     <span className={cx('badge', s.cls)}>
       <span className="dot" aria-hidden="true" />
