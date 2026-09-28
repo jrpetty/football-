@@ -430,7 +430,7 @@ export async function estimateRun(req: RunRequest): Promise<RunEstimate> {
       if (pictures === 0) output = Math.min(output, allow.tokens * Math.max(1, perCaseCalls));
       // Picture-making programs are billed per image (plus the prompt text), not per output token.
       const testCost = isManual ? 0 : pictures > 0 ? n * estimateImageUsd(c, pictures, input, plannedImageSettings(c, provider?.baseUrl, providerType)) : (n * (input * c.pricing.inputPerM + output * c.pricing.outputPerM)) / 1e6;
-      const modelMax = t.definition.maxOutputTokens === 'model-max' && pictures === 0;
+      const modelMax = t.definition.maxOutputTokens === 'model-max' && pictures === 0 && n > 0;
       const maxOut = modelMax ? allow.tokens : 0;
       if (modelMax && !firstMax) firstMax = allow;
       const testMax = !modelMax || isManual ? testCost : (n * (input * c.pricing.inputPerM + maxOut * perCaseCalls * c.pricing.outputPerM)) / 1e6;
@@ -442,7 +442,8 @@ export async function estimateRun(req: RunRequest): Promise<RunEstimate> {
       jobs += selected.length * plan.repeats;
       calls += n * perCaseCalls;
       cost += testCost;
-      costHigh += testCost * (basis === 'measured' ? 1.2 : 1.6);
+      // The conservative bound never exceeds the true ceiling of a "model's maximum" test.
+      costHigh += Math.min(testCost * (basis === 'measured' ? 1.2 : 1.6), modelMax ? Math.max(testCost, testMax) : Infinity);
       perTest[i]!.perContestant[c.id] = Math.round(testCost * 10000) / 10000;
       if (perTest[i]!.basis !== 'measured') perTest[i]!.basis = basis;
       const judgePool = plan.plannedJudges;

@@ -6,6 +6,8 @@ import { useAsync, useDebounced } from '../hooks.ts';
 import { Link, setQuery, useRoute } from '../router.tsx';
 import { useMeta, useViewerCaption } from '../context.tsx';
 import { Callout, ErrorState, PageHead, Seg, SkeletonRows, cx } from '../components/ui.tsx';
+import { displayCurrency } from '../money.ts';
+import { CURRENCIES } from '../../../src/core/currency.ts';
 import { CurrencyRate } from '../components/SpendLimits.tsx';
 import { Icon } from '../components/icons.tsx';
 import { fmtCost, fmtInt } from '../format.ts';
@@ -148,7 +150,7 @@ export default function CostsPage() {
               <div className="stat" title="Tests without an output cap (The Game Jam): the cost if every reply used each model's full output limit, and the judges read all of it">
                 <span className="k">Upper bound (no-limit tests)</span>
                 <span className="v">{fmtCost(e.estCostUsdMax)}</span>
-                <span className="s">every “no limit” reply at the model’s full output, judges included</span>
+                <span className="s">every no-limit reply at its full output</span>
               </div>
             )}
             <div className="stat">
@@ -174,7 +176,7 @@ export default function CostsPage() {
               <div className="t">
                 <h2>Test × model</h2>
                 <div className="desc">
-                  USD for all cases × {repeats} repeat{repeats === 1 ? '' : 's'}. <span className="basis measured">measured ✓</span> = based on real token usage from previous runs of this exact test version; estimates get more accurate after
+                  {CURRENCIES[displayCurrency().code].name} for all cases × {repeats} repeat{repeats === 1 ? '' : 's'}. <span className="basis measured">measured ✓</span> = based on real token usage from previous runs of this exact test version; estimates get more accurate after
                   every run.
                 </div>
               </div>

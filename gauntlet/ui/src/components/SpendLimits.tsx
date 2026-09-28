@@ -110,7 +110,7 @@ export function MoneyLimitPicker({
         {presets.map((p) => (
           <button key={p} type="button" className="tnum" aria-pressed={!custom && shown !== null && Math.abs(p - shown) < 0.005} onClick={() => (setCustom(false), onChange(displayToUsd(p)))}>
             {sym}
-            {p}
+            {Number.isInteger(p) ? p : p.toFixed(2)}
           </button>
         ))}
         <button type="button" aria-pressed={custom} onClick={() => (setCustom(true), onChange(Number.isFinite(num) && num > 0 ? displayToUsd(num) : null))}>
@@ -229,9 +229,9 @@ export function SpendLimitsSection({
  */
 export function limitsSummary(limits: RunLimits | undefined, maxCostUsd: number | undefined): Array<{ text: string; tone: '' | 'warn' | 'good' }> {
   const out: Array<{ text: string; tone: '' | 'warn' | 'good' }> = [];
-  if (!limits) out.push({ text: 'Output: each test’s own setting', tone: '' });
+  if (!limits) out.push({ text: 'Each test’s own output setting', tone: '' });
   else if (limits.sameOutputTokens) out.push({ text: `Same output limit for every model: ${limits.sameOutputTokens.toLocaleString('en-US')} tokens`, tone: 'good' });
-  else out.push({ text: 'Output: each model’s own maximum', tone: '' });
+  else out.push({ text: 'Each model’s own output maximum', tone: '' });
   if (limits?.perAnswerUsd) out.push({ text: `Per-answer limit ${fmtCost(limits.perAnswerUsd)} (token room differs by model price)`, tone: 'warn' });
   const cap = maxCostUsd ?? limits?.maxCostUsd;
   out.push({ text: cap ? `Run spending limit ${fmtCost(cap)} (judges included)` : 'No run spending limit', tone: '' });

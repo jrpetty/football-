@@ -488,9 +488,12 @@ async function analyse(pngs: Buffer[], pairs: Array<[number, number]>): Promise<
 }
 
 /** Artifact name of the motion strip. */
+/** Size of the motion strip image. */
+export const MOTION_SIZE = { width: 1920, height: 720 };
+
 export const MOTION_NAME = 'playtest-motion.png';
 
-/** Six frames as one 3×2 contact sheet at full HD (each frame 640×360, labelled +0.0 s … +0.5 s). */
+/** Six frames as one 3×2 contact sheet, 1920×720 (each frame 640×360, labelled +0.0 s … +0.5 s). */
 async function contactSheet(pngs: Buffer[]): Promise<{ png: Buffer; jpg: Buffer } | null> {
   const browser = await getBrowser();
   if (!browser) return null;
@@ -500,12 +503,12 @@ async function contactSheet(pngs: Buffer[]): Promise<{ png: Buffer; jpg: Buffer 
     const arg = JSON.stringify(pngs.map((b) => b.toString('base64')));
     const [png, jpg] = (await page.evaluate(
       `(async (list) => {
-        const c = document.createElement('canvas'); c.width = 1920; c.height = 1080;
+        const c = document.createElement('canvas'); c.width = 1920; c.height = 720;
         const x = c.getContext('2d');
-        x.fillStyle = '#000'; x.fillRect(0, 0, 1920, 1080);
+        x.fillStyle = '#000'; x.fillRect(0, 0, 1920, 720);
         for (let i = 0; i < list.length; i++) {
           const img = new Image(); img.src = 'data:image/png;base64,' + list[i]; await img.decode();
-          const cx = (i % 3) * 640, cy = Math.floor(i / 3) * 540 + 90;
+          const cx = (i % 3) * 640, cy = Math.floor(i / 3) * 360;
           x.drawImage(img, cx, cy, 640, 360);
           x.fillStyle = 'rgba(0,0,0,0.7)'; x.fillRect(cx + 8, cy + 8, 104, 34);
           x.fillStyle = '#fff'; x.font = 'bold 22px sans-serif'; x.fillText('+' + (i / 10).toFixed(1) + ' s', cx + 18, cy + 33);

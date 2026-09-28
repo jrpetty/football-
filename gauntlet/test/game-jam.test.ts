@@ -231,6 +231,10 @@ test('real playtest: repeatable, and it tells a moving game from a frozen one', 
     assert.deepEqual(a.frames.map((f) => f.png.equals(b.frames.find((g) => g.t === f.t)!.png)), a.frames.map(() => true), 'same file → same screenshots (fixed clock and seed)');
     assert.equal(a.frames.length, 8);
     assert.ok(a.motion && a.summary.motion && a.summary.motion.changed > 0, 'motion strip recorded, and it moves');
+    assert.deepEqual([a.motion.png.readUInt32BE(16), a.motion.png.readUInt32BE(20)], [1920, 720], 'six 640×360 frames on one 3×2 sheet');
+    assert.deepEqual(a.summary.motion.times, [16000, 16100, 16200, 16300, 16400, 16500], 'six frames 0.1 s apart');
+    assert.deepEqual([a.frames[0]!.png.readUInt32BE(16), a.frames[0]!.png.readUInt32BE(20)], [1920, 1080], 'full-HD screenshots');
+    assert.equal(a.frames[0]!.t, 500, 'the first frame is the title screen, before any input');
     assert.ok(a.frames.every((f) => f.jpg && f.jpg[0] === 0xff), 'high-quality JPEG copies for the judges');
     for (const k of ['drawsPicture', 'keepsMoving', 'reacts', 'stillRunning', 'noPlayErrors'] as const) assert.ok(a.summary[k].passed, k);
     const frozen = await runPlaytest(game.replace("if(e.code==='Enter')started=true;", "if(e.code==='Enter'){started=true;while(true){}}"), 'flappy');

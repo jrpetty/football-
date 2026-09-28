@@ -1,7 +1,7 @@
 import type { ChatImage, ScoreBreakdownItem, ScoreDetail, ScorerSpec } from '../core/types.ts';
 import { extractArtifact, type JudgeCall, type ScoringInput, type ScoringOutcome } from './index.ts';
 import { JUDGE_SYSTEM, fill } from './judge-prompts.ts';
-import { GENRES, runPlaytest, type PlaytestResult } from './playtest.ts';
+import { GENRES, MOTION_SIZE, runPlaytest, type PlaytestResult } from './playtest.ts';
 import { GAME_JAM_PROTOCOL, JAM_CRITERIA, JAM_WEIGHTS, VISION_JUDGE_VISUAL_WEIGHT, criteriaOf, jamCaseSpec, numberedRequirements, validateGameJamCase, type GameJamDetail, type JamCaseSpec, type JamCriterion, type JamGenre, type JamJudgeCard, type JamRequirement, type RequirementVerdict } from './game-jam-shared.ts';
 export { GAME_JAM_PROTOCOL, JAM_CRITERIA, JAM_WEIGHTS, jamCaseSpec, numberedRequirements, validateGameJamCase };
 
@@ -346,9 +346,9 @@ export async function scoreGameJam(input: ScoringInput, scorer: Extract<ScorerSp
   let notes: string | undefined;
   if (scorer.rubric && judgeWeight > 0) {
     // Judges get high-quality JPEGs (the same frozen moments as the PNGs, within every provider's per-image size limit).
-    const pic = (name: string, buf: Buffer, jpg: boolean): ChatImage => ({ name, mediaType: jpg ? 'image/jpeg' : 'image/png', data: buf.toString('base64'), bytes: buf.length, width: s!.viewport.width, height: s!.viewport.height });
+    const pic = (name: string, buf: Buffer, jpg: boolean, size = s!.viewport): ChatImage => ({ name, mediaType: jpg ? 'image/jpeg' : 'image/png', data: buf.toString('base64'), bytes: buf.length, width: size.width, height: size.height });
     const images: ChatImage[] = (playtest?.frames ?? []).map((f) => pic(s!.frames.find((x) => x.t === f.t)!.name.replace(/\.png$/, f.jpg ? '.jpg' : '.png'), f.jpg ?? f.png, Boolean(f.jpg)));
-    if (playtest?.motion) images.push(pic('playtest-motion.jpg', playtest.motion.jpg, true));
+    if (playtest?.motion) images.push(pic('playtest-motion.jpg', playtest.motion.jpg, true, MOTION_SIZE));
     const promptArgs = { task: input.taskText, rubric: scorer.rubric, spec, artifact, playtest, items };
     const withImages = buildJudgePrompt({ ...promptArgs, withImages: images.length > 0 });
     const textOnly = buildJudgePrompt({ ...promptArgs, withImages: false });

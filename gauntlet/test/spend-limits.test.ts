@@ -1,4 +1,5 @@
-import { test } from 'node:test';
+import { after, test } from 'node:test';
+import { closeBrowser } from '../src/scoring/browser.ts';
 import assert from 'node:assert/strict';
 import { CURRENCIES, DEFAULT_CURRENCY, formatMoney, fromUsd, normalizeCurrency, rateLabel, toUsd } from '../src/core/currency.ts';
 import { MIN_AFFORDABLE_OUTPUT, SpendGuard, SpendLimitError, affordableOutputTokens, checkedLimits, describeLimits, estimateInputTokens, outputAllowance, perAnswerOutputTokens, worstCaseUsd } from '../src/engine/spend-guard.ts';
@@ -150,9 +151,34 @@ test('calls: the run limit lowers a call’s output limit and settles at the rea
   assert.equal(q.outputLimitBy, undefined);
 });
 
+test('New Run estimate: each model’s output limit under the run’s limits, and a ceiling that never falls below the typical cost', async () => {
+  const { estimateRun } = await import('../src/engine/runner.ts');
+  const ids = ['claude-opus-5-5', 'gemini-3.1-pro'];
+  const free = await estimateRun({ testIds: ['creative.game-jam'], contestantIds: ids, repeats: 1 });
+  const opus = free.perContestant.find((p) => p.contestantId === 'claude-opus-5-5')!;
+  assert.equal(opus.maxOutputTokens, 128_000);
+  assert.equal(opus.outputLimitBy, 'model-max');
+  assert.ok(opus.estCostUsdHigh <= opus.estCostUsdMax! + 1e-9, 'the conservative bound stays under the true ceiling');
+  const capped = await estimateRun({ testIds: ['creative.game-jam'], contestantIds: ids, repeats: 1, limits: { perAnswerUsd: 0.5 } });
+  const o2 = capped.perContestant.find((p) => p.contestantId === 'claude-opus-5-5')!;
+  assert.equal(o2.outputLimitBy, 'per-answer');
+  assert.ok(o2.maxOutputTokens! < 128_000 && o2.estCostUsdMax! <= 5 * 0.5 + 1e-6, `five games at most $0.50 each (${o2.estCostUsdMax})`);
+  assert.ok(capped.warnings.some((w) => /not token-fair/.test(w)), 'the fairness warning is shown');
+  const same = await estimateRun({ testIds: ['creative.game-jam'], contestantIds: ids, repeats: 1, limits: { sameOutputTokens: 100_000 } });
+  assert.deepEqual(
+    same.perContestant.map((p) => [p.maxOutputTokens, p.outputLimitBy]),
+    [
+      [100_000, 'same-tokens'],
+      [65_536, 'model-max'],
+    ],
+  );
+});
+
 test('the recorded limits read as one plain line for the run page and the Presenter', () => {
   assert.equal(describeLimits(undefined), 'output: each model’s own maximum · no run spend limit');
   const gbp = (u: number) => formatMoney(u, { code: 'GBP', usdPerUnit: 1.25 });
   assert.equal(describeLimits({ maxCostUsd: 12.5, perAnswerUsd: 2.5 }, gbp), 'output: each model’s own maximum · per-answer spend limit £2.00 (token allowance differs by model price) · run spend limit £10.00');
   assert.match(describeLimits({ sameOutputTokens: 64000 }), /same output limit for every model: 64,000 tokens/);
 });
+
+after(() => closeBrowser());

@@ -1005,6 +1005,9 @@ export const RUN_SPECS: RunSpec[] = [
     createdAt: new Date(Date.now() - 64_000).toISOString(),
     completedFrac: 0.12,
     concurrency: 8,
+    // A £10 whole-run spending limit (shown in pounds on the run page, Watch it think and the overlay).
+    maxCostUsd: 13.3,
+    limits: { maxCostUsd: 13.3, currency: { code: 'GBP', usdPerUnit: 1.33 } },
   },
   TRICK_RUN_SPEC,
 ];

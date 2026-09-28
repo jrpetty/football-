@@ -487,11 +487,13 @@ function estimateRun(req: RunRequest): RunEstimate {
       const est = t.estimate ?? { inputTokens: 500, outputTokens: 800 };
       const fromDef = (est.inputTokens * c.pricing.inputPerM + est.outputTokens * c.pricing.outputPerM) / 1e6;
       // "Model's maximum" tests (The Game Jam): the typical cost stops at the allowance, and a ceiling at the full allowance.
-      const modelMax = t.maxOutputTokens === 'model-max';
+      // Picture-only models are skipped on text tests (as in a real run).
+      const pictureOnly = Boolean(c.imageOnly) && t.kind === 'prompt';
+      const modelMax = t.maxOutputTokens === 'model-max' && !pictureOnly;
       const allow = outputAllowance({ requested: t.maxOutputTokens, contestant: c, defaultMaxOutputTokens: 16000, limits, inputTokens: est.inputTokens });
       const typicalOut = Math.min(est.outputTokens, allow.tokens);
       const fromDefCapped = (est.inputTokens * c.pricing.inputPerM + typicalOut * c.pricing.outputPerM) / 1e6;
-      const perCase = manual ? 0 : modelMax ? fromDefCapped : measured ?? fromDef;
+      const perCase = manual || pictureOnly ? 0 : modelMax ? fromDefCapped : measured ?? fromDef;
       if (measured !== null) anyMeasured = true;
       else if (!manual) allMeasured = false;
       const usd = perCase * n;
@@ -499,8 +501,9 @@ function estimateRun(req: RunRequest): RunEstimate {
       const acc = perCon.get(c.id) ?? { jobs: 0, est: 0, high: 0, max: 0 };
       acc.jobs += n;
       acc.est += usd;
-      acc.high += usd * (measured !== null ? 1.25 : 1.8);
-      acc.max += manual ? 0 : modelMax ? (n * (est.inputTokens * c.pricing.inputPerM + allow.tokens * c.pricing.outputPerM)) / 1e6 : usd;
+      const ceiling = manual ? 0 : modelMax ? (n * (est.inputTokens * c.pricing.inputPerM + allow.tokens * c.pricing.outputPerM)) / 1e6 : usd;
+      acc.high += Math.min(usd * (measured !== null ? 1.25 : 1.8), modelMax ? Math.max(usd, ceiling) : Infinity);
+      acc.max += ceiling;
       if (modelMax) {
         anyModelMax = true;
         acc.maxTokens ??= allow.tokens;

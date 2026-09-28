@@ -31,7 +31,7 @@ published result, reproduce it, and judge whether two numbers are comparable.
 | Answer format | Tests with a single answer end with the standard instruction `FINAL ANSWER: <answer>`. The **last** such line is parsed; markdown, bold and one trailing period are ignored. Format compliance is tracked separately. |
 | Temperature | `0` for models that accept a temperature. Reasoning models that do not accept one use the provider default. |
 | Reasoning effort | Part of the contestant definition (e.g. `effort: high`). A different effort is a different contestant with its own id. |
-| Output limit | Per call (`maxOutputTokens`, default 16,000; up to 32,000 for hard reasoning). The limit includes hidden reasoning tokens on every provider. Hitting it is recorded, not retried. |
+| Output limit | Per call (`maxOutputTokens`, default 16,000; up to 32,000 for hard reasoning). A test may instead ask for `"model-max"`, each model's own documented maximum (The Game Jam), so no model is held back by an artificial cap; see §9b. The limit includes hidden reasoning tokens on every provider. Hitting it is recorded, not retried. |
 | Time limit | Per case (`timeLimitSec`, default 1,800 s; long simulations allow more). Limits are generous so slow-but-thorough models are not punished, but a timeout scores 0. |
 | Retries | Transport failures only (HTTP 408/409/429/5xx, network). Exponential backoff with `Retry-After`, up to 4 retries. A model's *answer* is never retried. |
 | Refusals | Recorded as `refusal` and scored 0. **No fallbacks**: provider features that silently route a refused request to another model are disabled, because another model would be answering. |
@@ -241,11 +241,41 @@ clear: a score close to the baseline means a test isn't measuring skill for that
 * **Estimates before every run.** `New Run`, `Cost Planner` and `node src/cli.ts costs` show the expected cost
   per test and per model, plus a conservative upper bound. Estimates start from each test's declared token
   budget and switch to **measured** averages from your own previous runs of the same test version.
-* **Hard spending cap.** Set `Spending cap` (or `--max-cost`) on a run. Once the cap is reached, no new cases
-  start. Cases already in flight finish, so the overshoot is at most one case per concurrent worker. Resume
-  later with a higher cap. Nothing is lost.
+* **Hard spending limit.** Set a spending limit (New Run presets in pounds, or `--max-cost` in dollars). Before
+  every model or judge call, the call's worst case (prompt plus full output allowance at the model's prices) is
+  reserved against the money left, counting calls already running; a call that does not fit waits for running
+  calls, then gets a lower output allowance, and is not started when not even 2,000 output tokens are affordable.
+  The limit therefore cannot be overshot (up to the accuracy of the published prices). The run then stops as
+  "stopped: spend limit": finished results are kept, a half-finished case is not stored (so it is never scored as
+  a model failure) but its spend is counted, and the run resumes with a higher limit. Details in §9b.
 * **Cheap exploration.** Use the `quick` suite with 1 repeat to try new models, and the full `core` suite with 3
   repeats for results you publish. Per-suite, per-model tables are in [COSTS.md](COSTS.md).
+
+## 9b. Output and spending limits, and fairness
+
+**Default: no artificial limits.** Tests that ask for `"model-max"` (The Game Jam) let every model write up to its
+own maximum output, taken from the provider's documentation and recorded per model in `config/models.json`
+(`maxOutputTokens`, with `maxOutputTokensSource` saying where the number came from, or "unverified"). These
+maxima differ (for example 128,000 tokens for current Claude and GPT-5.x models, 65,536 for Gemini): that is part
+of what each model is, the same way its speed or price is. The maximum is not part of a model's configuration hash,
+because it only turns would-be API errors into valid calls.
+
+**Optional limits, recorded with the run.** The owner may add, per run:
+
+| Limit | What it does | Fair between models? |
+|---|---|---|
+| Whole-run spending limit | Models and judges together never spend more than the amount. | Yes, if the run finishes. If it stops early, unfinished models have fewer results: resume before comparing. |
+| Per-answer spending limit | Each reply may cost at most the amount, so each model's output allowance is what that buys at its own output price. | **No.** A cheap model gets many times the tokens of an expensive one. Useful to protect a budget, not for a like-for-like comparison. |
+| Same token limit for every model | "Model's maximum" tests give every model the same output allowance (or its own maximum, if that is lower). | Yes: the fair alternative to a money limit. |
+
+The limits used are stored in the run manifest (`settings.limits`, with the display currency and exchange rate
+they were typed in), shown as chips on the run page and printed on the Presenter's closing methods slide, so a video
+can disclose them. A reply cut off by a spending limit is labelled as such ("stopped by your per-answer spend
+limit"), never as the model's own failure to finish.
+
+**Currency.** Costs are measured and stored in US dollars, the unit providers bill in. The display currency
+(pounds by default) and its exchange rate are a display setting typed in by the owner (`config/settings.json`);
+they never change a stored result and are never fetched from the internet.
 
 ## 9a. The Arena (head-to-head games)
 
@@ -294,8 +324,8 @@ The same fair-play rules apply.
   on games is decided on the judges' total rubric points over both games, then on the number of judges' picks,
   and only then by a sudden-death debate (shown as "Level on games, decided on judges' points"). Judges are called one at a time, each after a spending-cap
   check, so judged games keep the cap's guarantee (see below).
-* **Spending cap.** Checked before every model call (players and judges). Each game has at most one call in
-  flight, so a tournament can go over its cap by at most one call per game running at the same time.
+* **Spending limit.** Enforced per call exactly as in §9: every move and judge call reserves its worst case first,
+  so a tournament does not go over its limit.
 
 ## 10. Publishing checklist
 

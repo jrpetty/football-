@@ -460,10 +460,11 @@ test('tournament: the spending cap stops mid-game and resume with a higher cap c
   await tournament.waitForTournament(id);
   const d = tournament.tournamentDetail(id)!;
   assert.equal(d.manifest.status, 'cancelled');
-  assert.match(d.manifest.error ?? '', /Budget cap of \$0\.50 reached/);
+  assert.match(d.manifest.error ?? '', /spend limit of \$0\.50 reached/);
   assert.equal(d.state.gamesDone, 0);
-  assert.ok(d.state.costUsd > 0.5, 'the partial game spend is counted');
-  assert.equal(store.readGames(id)[0]!.status, 'cancelled');
+  // Every move reserves its worst case first, so the limit is never exceeded (it used to overshoot by one call).
+  assert.ok(d.state.costUsd <= 0.5 + 1e-9, `spent ${d.state.costUsd}`);
+  assert.ok(store.readGames(id).every((g) => g.status === 'cancelled'), 'a stopped game is never a result');
   // Changing the game code would block resume; unchanged code resumes.
   tournament.resumeTournament(id, { maxCostUsd: null });
   await tournament.waitForTournament(id);

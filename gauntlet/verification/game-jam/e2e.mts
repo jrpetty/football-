@@ -63,10 +63,10 @@ function verdictText(s: Scripted, harsh: boolean): string {
   return [
     'I read the whole file and compared it with the playtest.',
     ...lines,
+    `VISUALS: ${drop(s.visuals)}`,
+    `CREATIVITY: ${s.creativity}`,
     `PLAYS: ${drop(s.plays)}`,
     `FEEL: ${drop(s.feel)}`,
-    `CREATIVITY: ${s.creativity}`,
-    `POLISH: ${drop(s.polish)}`,
     `AMBITION: ${s.ambition}`,
     `VERDICT: ${s.verdict}`,
   ].join('\n');
@@ -162,14 +162,14 @@ for (const e of ENTRIES) {
     check(Boolean(gj.playtest?.motion) && 'playtest-motion.png' in saved, 'motion strip saved');
     check(lastImages === 9, 'vision judge got 8 screenshots + the motion strip');
     check(gj.judges.length === 2 && gj.requirements.every((r) => r.verdict !== null), 'both judges parsed, every requirement has a verdict');
-    check(prompts[0]?.includes('Screenshots attached in order') ?? false, 'judges are told about the attached screenshots');
+    check(/screenshots attached in order/i.test(prompts[0] ?? ''), 'judges are told about the attached screenshots');
   } else if (e.expect === 'syntax') {
     check(item(/JavaScript errors/)?.passed === false, 'syntax error caught by "runs without JavaScript errors"');
     check(item(/not blank/)?.passed === false, 'nothing is drawn');
     check(out.score! <= 0.3, 'capped at 30 or less');
   } else if (e.expect === 'frozen') {
     check(gj.playtest?.hung !== null, 'the endless loop is detected as a frozen page');
-    check(item(/still running/)?.passed === false, '"still running after 15 s" fails');
+    check(item(/still running/)?.passed === false, '"still running after 30 s" fails');
     check(out.score! <= 0.3 && Boolean(gj.cap), 'capped at 30 with a plain reason');
   } else if (e.expect === 'blank') {
     check(item(/not blank/)?.passed === false, 'the blank canvas is caught');
