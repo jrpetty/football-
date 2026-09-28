@@ -330,9 +330,10 @@ export function validateTest(def: TestDefinition, allTests?: LoadedTest[], opts:
   if (!categories.some((c) => c.id === def.category)) errors.push(`category "${def.category}" is not defined in config/categories.json`);
   if (def.id && def.category && !def.id.startsWith(`${def.category}.`)) errors.push(`id should start with "${def.category}."`);
   if (!['easy', 'medium', 'hard', 'extreme'].includes(def.difficulty)) errors.push('difficulty must be easy | medium | hard | extreme');
-  if (def.maxOutputTokens !== undefined && !(Number.isInteger(def.maxOutputTokens) && def.maxOutputTokens >= 16 && def.maxOutputTokens <= 256000))
-    errors.push('maxOutputTokens must be an integer between 16 and 256000');
-  if (def.timeLimitSec !== undefined && !(def.timeLimitSec > 0 && def.timeLimitSec <= 7200)) errors.push('timeLimitSec must be within 1..7200');
+  if (def.maxOutputTokens !== undefined && def.maxOutputTokens !== 'model-max' && !(typeof def.maxOutputTokens === 'number' && Number.isInteger(def.maxOutputTokens) && def.maxOutputTokens >= 16 && def.maxOutputTokens <= 256000))
+    errors.push('maxOutputTokens must be an integer between 16 and 256000, or "model-max" (each model\'s own maximum)');
+  if (def.timeLimitSec !== undefined && !(def.timeLimitSec > 0 && def.timeLimitSec <= 14400)) errors.push('timeLimitSec must be within 1..14400 (4 hours)');
+  if (def.maxRetries !== undefined && !(Number.isInteger(def.maxRetries) && def.maxRetries >= 0 && def.maxRetries <= 10)) errors.push('maxRetries must be a whole number within 0..10');
 
   if (def.kind === 'prompt') {
     validateScorer(def.scorer, 'scorer', errors);

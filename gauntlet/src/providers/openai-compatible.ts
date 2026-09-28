@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import type { ChatMessage, CompletionRequest, CompletionResult, StopReason } from '../core/types.ts';
 import { openAIImageGenerate } from './image-gen.ts';
 import { type AdapterContext, type ProviderAdapter, ProviderError, deepMerge, isAbortError, isRetryableStatus, parseRetryAfter } from './types.ts';
+import { relaxFetchTimeouts } from './long-requests.ts';
 
 const STOP_MAP: Record<string, StopReason> = {
   stop: 'end',
@@ -28,7 +29,8 @@ export function createOpenAICompatibleAdapter(ctx: AdapterContext): ProviderAdap
     apiKey: ctx.apiKey ?? 'not-needed',
     baseURL: ctx.provider.baseUrl,
     maxRetries: 0,
-    timeout: 30 * 60 * 1000,
+    // Long generations (The Game Jam streams a model's full output) must never be cut off by the client.
+    timeout: 3 * 60 * 60 * 1000,
     defaultHeaders: ctx.provider.headers,
   });
   const opts = ctx.contestant.options ?? {};
@@ -41,6 +43,7 @@ export function createOpenAICompatibleAdapter(ctx: AdapterContext): ProviderAdap
   return {
     generateImage: (req) => openAIImageGenerate(ctx, req),
     async complete(req: CompletionRequest): Promise<Omit<CompletionResult, 'retries'>> {
+      await relaxFetchTimeouts();
       const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string | Array<Record<string, unknown>> }> = [];
       if (req.system) messages.push({ role: 'system', content: req.system });
       for (const m of req.messages) messages.push({ role: m.role, content: openAIContent(m) });

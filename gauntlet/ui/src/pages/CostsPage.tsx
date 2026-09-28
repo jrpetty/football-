@@ -139,6 +139,13 @@ export default function CostsPage() {
               <span className="v">{fmtCost(e.estCostUsdHigh)}</span>
               <span className="s">a sensible spending cap</span>
             </div>
+            {e.estCostUsdMax !== undefined && (
+              <div className="stat" title="Tests without an output cap (The Game Jam): the cost if every reply used each model's full output limit, and the judges read all of it">
+                <span className="k">Absolute ceiling</span>
+                <span className="v">{fmtCost(e.estCostUsdMax)}</span>
+                <span className="s">every “no limit” reply at the model’s maximum</span>
+              </div>
+            )}
             <div className="stat">
               <span className="k">
                 <Jargon dev="Jobs · API calls" plain="Answers to collect" />
@@ -237,6 +244,11 @@ export default function CostsPage() {
                       <td key={p.contestantId} className="num">
                         <strong>{p.manual ? '—' : fmtCost(p.estCostUsd)}</strong>
                         {!p.manual && <div className="muted" style={{ fontSize: '0.72rem' }}>≤ {fmtCost(p.estCostUsdHigh)}</div>}
+                        {!p.manual && p.estCostUsdMax !== undefined && (
+                          <div className="muted" style={{ fontSize: '0.72rem' }} title={`If every “no limit” reply used this model's full output (${p.maxOutputTokens?.toLocaleString('en-US') ?? '?'} tokens)`}>
+                            max {fmtCost(p.estCostUsdMax)}
+                          </div>
+                        )}
                       </td>
                     ))}
                     <td className="num">
@@ -247,6 +259,11 @@ export default function CostsPage() {
                       <div className="muted" style={{ fontSize: '0.72rem' }}>
                         ≤ {fmtCost(e.estCostUsdHigh)}
                       </div>
+                      {e.estCostUsdMax !== undefined && (
+                        <div className="muted" style={{ fontSize: '0.72rem' }}>
+                          max {fmtCost(e.estCostUsdMax)}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 </tfoot>

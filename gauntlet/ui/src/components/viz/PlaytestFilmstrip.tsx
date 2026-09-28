@@ -18,7 +18,7 @@ export function PlaytestFilmstrip({ entry, urlFor, selected, onSelect }: { entry
   }
   return (
     <div className="jam-film">
-      <ol className="jam-film-strip">
+      <ol className="jam-film-strip" style={{ gridTemplateColumns: `repeat(${entry.frames.length > 5 ? 4 : 5}, minmax(0, 1fr))` }}>
         {entry.frames.map((f, i) => {
           const info = infos.find((x) => x.t === f.t);
           return (

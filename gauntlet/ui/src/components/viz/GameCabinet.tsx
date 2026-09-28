@@ -65,7 +65,7 @@ export function GameCabinet({
   delayMs?: number;
 }) {
   const frames = entry?.frames ?? [];
-  const i = useFlipbook(frames.length, playing, 1100 + (delayMs % 400));
+  const i = useFlipbook(frames.length, playing, 1100 + (delayMs % 400), frames.length > 5 ? 4 : 3);
   const f = frames[i];
   const state = entry?.state ?? 'no-game';
   const stamp = entry ? STATE_WORDS[state].stamp : 'NO ENTRY';

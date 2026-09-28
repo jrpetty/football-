@@ -11,7 +11,7 @@ import { Icon } from '../icons.tsx';
 import { VizHeadline } from './VizHeadline.tsx';
 import { ToneIcon } from './VizLegend.tsx';
 import type { Tone } from './vizModel.ts';
-import { JAM_CRITERIA, jamGenreInfo, type RequirementVerdict } from '../../../../src/scoring/game-jam-shared.ts';
+import { JAM_CRITERIA, VISION_JUDGE_VISUAL_WEIGHT, criteriaOf, jamGenreInfo, type RequirementVerdict } from '../../../../src/scoring/game-jam-shared.ts';
 import { STATE_WORDS, entryOf, judgeName, type JamEntry, type JamResult } from './gameJamModel.ts';
 import { PlaytestFilmstrip } from './PlaytestFilmstrip.tsx';
 import './game-jam.css';
@@ -46,18 +46,21 @@ export function JamScorecard({ entry, names }: { entry: JamEntry; names?: Map<st
         {d.spread !== null && d.spread > 0.3 && <span className="jam-split">judges disagree: {tenths(d.spread)} points apart</span>}
       </div>
       <div className="jam-crit">
-        {JAM_CRITERIA.map((c) => {
+        {/* The criteria and weights recorded with this result (older results used protocol 1's weights). */}
+        {JAM_CRITERIA.filter((c) => criteriaOf(d.weights).includes(c.id)).map((c) => {
           const v = d.criteria[c.id];
+          const w = d.weights[c.id] ?? 0;
+          const top = Math.max(...Object.values(d.weights).map((x) => x ?? 0));
           return (
-            <div key={c.id} className={cx('jam-crit-row', c.id === 'creativity' && 'lead')}>
+            <div key={c.id} className={cx('jam-crit-row', w >= top - 0.051 && 'lead')}>
               <span className="jam-crit-l">
                 {c.label}
-                <em>{Math.round(d.weights[c.id] * 100)}%</em>
+                <em>{Math.round(w * 100)}%</em>
               </span>
               <span className="jam-crit-bar">
                 <i style={{ width: `${Math.round((v ?? 0) * 100)}%` }} />
                 {judges.map((j, k) => (
-                  <b key={j.judgeId} style={{ left: `${Math.round(j.criteria[c.id] * 100)}%`, background: colors[k % 3] } as CSSProperties} title={`${judgeName(j.judgeId, names)}: ${tenths(j.criteria[c.id])}/10`} />
+                  <b key={j.judgeId} style={{ left: `${Math.round((j.criteria[c.id] ?? 0) * 100)}%`, background: colors[k % 3] } as CSSProperties} title={`${judgeName(j.judgeId, names)}: ${tenths(j.criteria[c.id])}/10`} />
                 ))}
               </span>
               <span className="jam-crit-v tnum">{tenths(v)}</span>
@@ -77,7 +80,9 @@ export function JamScorecard({ entry, names }: { entry: JamEntry; names?: Map<st
           </figure>
         ))}
       </div>
-      <p className="vz-fine">Bar = panel average (out of 10); dots = each judge. Creativity carries the most weight, as the owner asked.</p>
+      <p className="vz-fine">
+        Bar = panel score (out of 10); dots = each judge. {d.weights.visual ? `Visual quality and creativity weigh most. On visuals, a judge who saw the screenshots counts ${VISION_JUDGE_VISUAL_WEIGHT}× a judge who only read the code.` : 'Creativity carries the most weight (scored with the first version of the rules).'}
+      </p>
     </div>
   );
 }
@@ -125,7 +130,7 @@ export function GameJamShowcase({ result, urlFor, names, eyebrowPrefix }: { resu
   const entry = entryOf(result);
   const d = entry.detail;
   const g = jamGenreInfo(entry.genre);
-  const [sel, setSel] = useState(Math.min(3, Math.max(0, entry.frames.length - 1)));
+  const [sel, setSel] = useState(Math.min(entry.frames.length > 5 ? 4 : 3, Math.max(0, entry.frames.length - 1)));
   const [playing, setPlaying] = useState(false);
   const score = result.score;
   const tone: Tone = score === null ? 'neutral' : score >= 0.7 ? 'good' : score >= 0.4 ? 'warn' : 'bad';
@@ -134,11 +139,12 @@ export function GameJamShowcase({ result, urlFor, names, eyebrowPrefix }: { resu
     entry.state !== 'ok'
       ? STATE_WORDS[entry.state].line
       : d && d.requirements.some((r) => r.verdict)
-        ? `It plays · ${d.requirements.filter((r) => r.verdict === 'pass').length} of ${d.requirements.length} requirements met${typeof creative === 'number' ? ` · creativity ${tenths(creative)}/10` : ''}`
+        ? `It plays · ${d.requirements.filter((r) => r.verdict === 'pass').length} of ${d.requirements.length} requirements met${typeof d.criteria.visual === 'number' ? ` · visuals ${tenths(d.criteria.visual)}/10` : ''}${typeof creative === 'number' ? ` · creativity ${tenths(creative)}/10` : ''}`
         : result.summary;
   const url = entry.html ? urlFor(entry.html.file) : '';
   const frame = entry.frames[sel];
   const auto = d?.automatedScore;
+  const motionArt = d?.playtest?.motion ? (result.artifacts ?? []).find((a) => a.name === d.playtest!.motion!.name) : undefined;
   return (
     <div className="vz-showcase jam-showcase">
       <VizHeadline eyebrow={`${eyebrowPrefix ?? 'The Game Jam'} · Round ${g?.round ?? '?'}: ${g?.label ?? entry.genre}`} title={title} tone={tone} big={score === null ? '—' : Math.round(score * 100)} bigSub="/100" />
@@ -176,10 +182,17 @@ export function GameJamShowcase({ result, urlFor, names, eyebrowPrefix }: { resu
             <span className="muted">{playing ? 'Running in a locked-down frame: no network, no storage, no access to this app.' : 'Screenshots from the automatic playtest; press Play it to try the game yourself.'}</span>
           </div>
           <div className="vz-card jam-card">
-            <div className="vz-card-k">The playtest · {d?.playtest ? `15 seconds of scripted play` : 'not run'}</div>
+            <div className="vz-card-k">The playtest · {d?.playtest ? `${d.playtest.seconds} seconds of scripted play at ${d.playtest.viewport.width}×${d.playtest.viewport.height}` : 'not run'}</div>
             {d?.playtest && <p className="jam-note">What the robot player did: {d.playtest.inputs}.</p>}
             <PlaytestFilmstrip entry={entry} urlFor={urlFor} selected={playing ? -1 : sel} onSelect={(i) => { setPlaying(false); setSel(i); }} />
           </div>
+          {motionArt && d?.playtest?.motion && (
+            <div className="vz-card jam-card">
+              <div className="vz-card-k">Motion strip · six frames 0.1 s apart, {(d.playtest.motion.times[0]! / 1000).toFixed(0)} s in</div>
+              <img className="jam-motion" src={urlFor(motionArt.file)} alt="Six consecutive frames a tenth of a second apart" loading="lazy" />
+              <p className="vz-fine">Shows the judges how the game animates: about {Math.round(d.playtest.motion.changed * 100)}% of the screen changes every tenth of a second.</p>
+            </div>
+          )}
         </div>
         <div className="vz-col narrow">
           <div className="vz-card jam-card jam-sum">

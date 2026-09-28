@@ -106,6 +106,8 @@
       "model": "claude-fable-5-1",
       "color": "#D97757",
       "enabled": true,
+      "maxOutputTokens": 128000,
+      "maxOutputTokensSource": "platform.claude.com model page (max output, synchronous Messages API), checked 2026-09-28",
       "vision": true,
       "contextWindow": 1000000,
       "options": {
@@ -131,6 +133,8 @@
       "model": "claude-opus-5-5",
       "color": "#C4623F",
       "enabled": true,
+      "maxOutputTokens": 128000,
+      "maxOutputTokensSource": "platform.claude.com model page (max output, synchronous Messages API), checked 2026-09-28",
       "vision": true,
       "contextWindow": 1000000,
       "options": {
@@ -156,6 +160,8 @@
       "model": "claude-opus-5",
       "color": "#E8A27C",
       "enabled": true,
+      "maxOutputTokens": 128000,
+      "maxOutputTokensSource": "platform.claude.com model page (max output, synchronous Messages API), checked 2026-09-28",
       "vision": true,
       "contextWindow": 1000000,
       "options": {
@@ -181,6 +187,8 @@
       "model": "claude-sonnet-5",
       "color": "#F0B999",
       "enabled": true,
+      "maxOutputTokens": 128000,
+      "maxOutputTokensSource": "platform.claude.com model page (max output, synchronous Messages API), checked 2026-09-28",
       "vision": true,
       "contextWindow": 1000000,
       "options": {
@@ -206,6 +214,8 @@
       "model": "claude-haiku-4-5",
       "color": "#F6D5C2",
       "enabled": true,
+      "maxOutputTokens": 64000,
+      "maxOutputTokensSource": "platform.claude.com model page (max output, synchronous Messages API), checked 2026-09-28",
       "vision": true,
       "contextWindow": 200000,
       "options": {
@@ -232,6 +242,8 @@
       "model": "gpt-5.6-sol",
       "color": "#10A37F",
       "enabled": true,
+      "maxOutputTokens": 128000,
+      "maxOutputTokensSource": "unverified: third-party listings, 2026-09-28 (OpenAI docs not reachable from the build machine)",
       "vision": true,
       "options": {
         "effort": "high",
@@ -256,6 +268,8 @@
       "model": "gpt-5.6-terra",
       "color": "#34C49A",
       "enabled": true,
+      "maxOutputTokens": 128000,
+      "maxOutputTokensSource": "unverified: third-party listings, 2026-09-28 (OpenAI docs not reachable from the build machine)",
       "vision": true,
       "options": {
         "effort": "high",
@@ -280,6 +294,8 @@
       "model": "gpt-5.6-luna",
       "color": "#7FDBBE",
       "enabled": true,
+      "maxOutputTokens": 128000,
+      "maxOutputTokensSource": "unverified: third-party listings, 2026-09-28 (OpenAI docs not reachable from the build machine)",
       "vision": true,
       "options": {
         "effort": "high",
@@ -304,6 +320,8 @@
       "model": "gemini-3.1-pro-preview",
       "color": "#4285F4",
       "enabled": true,
+      "maxOutputTokens": 65536,
+      "maxOutputTokensSource": "unverified: Vertex AI model page via search, 2026-09-28",
       "vision": true,
       "contextWindow": 1000000,
       "options": {
@@ -328,6 +346,8 @@
       "model": "gemini-3.5-flash",
       "color": "#8AB4F8",
       "enabled": true,
+      "maxOutputTokens": 65536,
+      "maxOutputTokensSource": "unverified: third-party listings (65k), 2026-09-28",
       "vision": true,
       "contextWindow": 1000000,
       "options": {
@@ -352,6 +372,8 @@
       "model": "grok-4.7",
       "color": "#A1A1AA",
       "enabled": true,
+      "maxOutputTokens": 128000,
+      "maxOutputTokensSource": "unverified: third-party listings claim up to 450K; conservative 128K until checked on docs.x.ai",
       "vision": false,
       "options": {
         "supportsTemperature": true
@@ -374,6 +396,8 @@
       "model": "deepseek-v4-flash",
       "color": "#4D6BFE",
       "enabled": true,
+      "maxOutputTokens": 384000,
+      "maxOutputTokensSource": "unverified: search snippet citing official DeepSeek services (384K), 2026-09-28",
       "vision": false,
       "options": {
         "supportsTemperature": true
@@ -396,6 +420,8 @@
       "model": "claude-fable-5",
       "color": "#B8583A",
       "enabled": true,
+      "maxOutputTokens": 128000,
+      "maxOutputTokensSource": "platform.claude.com model page (max output, synchronous Messages API), checked 2026-09-28",
       "vision": true,
       "contextWindow": 1000000,
       "options": {
@@ -421,6 +447,8 @@
       "model": "claude-opus-4-8",
       "color": "#A0522D",
       "enabled": true,
+      "maxOutputTokens": 128000,
+      "maxOutputTokensSource": "platform.claude.com model page (max output, synchronous Messages API), checked 2026-09-28",
       "vision": true,
       "contextWindow": 1000000,
       "options": {
@@ -446,6 +474,8 @@
       "model": "claude-opus-4-7",
       "color": "#8B4726",
       "enabled": true,
+      "maxOutputTokens": 128000,
+      "maxOutputTokensSource": "platform.claude.com model page (max output, synchronous Messages API), checked 2026-09-28",
       "vision": true,
       "contextWindow": 1000000,
       "options": {
@@ -471,6 +501,8 @@
       "model": "claude-opus-4-6",
       "color": "#7A3E22",
       "enabled": true,
+      "maxOutputTokens": 128000,
+      "maxOutputTokensSource": "platform.claude.com model page (max output, synchronous Messages API), checked 2026-09-28",
       "vision": true,
       "contextWindow": 1000000,
       "options": {
@@ -497,6 +529,8 @@
       "model": "claude-sonnet-4-6",
       "color": "#E9C4A8",
       "enabled": true,
+      "maxOutputTokens": 128000,
+      "maxOutputTokensSource": "platform.claude.com model page (max output, synchronous Messages API), checked 2026-09-28",
       "vision": true,
       "contextWindow": 1000000,
       "options": {
@@ -522,6 +556,8 @@
       "model": "gpt-5.5",
       "color": "#0E8A6C",
       "enabled": true,
+      "maxOutputTokens": 128000,
+      "maxOutputTokensSource": "unverified: GPT-5 family documented limit, not rechecked",
       "vision": true,
       "options": {
         "effort": "high",
@@ -545,6 +581,8 @@
       "model": "gpt-5",
       "color": "#0B6E56",
       "enabled": true,
+      "maxOutputTokens": 128000,
+      "maxOutputTokensSource": "unverified: OpenAI model page value (128,000), not rechecked 2026-09-28",
       "vision": true,
       "options": {
         "effort": "high",
@@ -569,6 +607,8 @@
       "model": "gpt-5-mini",
       "color": "#5FCFAE",
       "enabled": true,
+      "maxOutputTokens": 128000,
+      "maxOutputTokensSource": "unverified: OpenAI model page value (128,000), not rechecked 2026-09-28",
       "vision": true,
       "options": {
         "effort": "high",
@@ -594,6 +634,7 @@
       "color": "#9BE3CC",
       "enabled": true,
       "maxOutputTokens": 16384,
+      "maxOutputTokensSource": "unverified: OpenAI model page value (16,384), not rechecked 2026-09-28",
       "vision": true,
       "options": {
         "supportsTemperature": true
@@ -618,6 +659,8 @@
       "model": "gemini-2.5-pro",
       "color": "#3367D6",
       "enabled": true,
+      "maxOutputTokens": 65536,
+      "maxOutputTokensSource": "unverified: Gemini API documented value, not rechecked",
       "vision": true,
       "contextWindow": 1000000,
       "options": {
@@ -643,6 +686,8 @@
       "model": "gemini-2.5-flash",
       "color": "#AECBFA",
       "enabled": true,
+      "maxOutputTokens": 65536,
+      "maxOutputTokensSource": "unverified: Gemini API documented value, not rechecked",
       "vision": true,
       "contextWindow": 1000000,
       "options": {
@@ -667,6 +712,8 @@
       "model": "grok-4",
       "color": "#71717A",
       "enabled": true,
+      "maxOutputTokens": 128000,
+      "maxOutputTokensSource": "unverified: third-party listings claim 256K (now redirected to a newer Grok); conservative 128K",
       "vision": true,
       "options": {
         "supportsTemperature": true

@@ -32,6 +32,18 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
   });
 }
 
+/** Output limit used for "model-max" tests when a model does not declare its own maximum (a common API ceiling). */
+export const MODEL_MAX_FALLBACK = 65_536;
+
+/**
+ * A test's output budget for one contestant: its number, the settings default, or, for "model-max", the model's
+ * own maximum. The result still goes through effectiveMaxOutputTokens (a configured cap can only lower it).
+ */
+export function resolveOutputBudget(requested: number | 'model-max' | undefined, c: Pick<Contestant, 'maxOutputTokens'>, fallbackDefault: number): number {
+  if (requested === 'model-max') return c.maxOutputTokens && c.maxOutputTokens > 0 ? c.maxOutputTokens : MODEL_MAX_FALLBACK;
+  return requested ?? fallbackDefault;
+}
+
 /**
  * Output-token limit actually sent for one call: the requested value, lowered to the contestant's configured cap
  * (options.maxOutputTokensCap) and to the model's own API limit (maxOutputTokens), whichever is smallest.

@@ -80,6 +80,11 @@ function EstimatePanel({
               <span className="muted" style={{ fontSize: '0.8rem' }}>
                 central estimate – conservative upper bound · incl. {fmtCost(est.judgeCostUsd)} judges
               </span>
+              {est.estCostUsdMax !== undefined && (
+                <span className="muted" style={{ fontSize: '0.8rem' }}>
+                  Absolute ceiling {fmtCost(est.estCostUsdMax)}: this run has a “no limit” test (The Game Jam), priced here as if every reply used the model’s full output. Set a spending cap below to be safe.
+                </span>
+              )}
             </div>
             <div className="est-kpis">
               <div>
@@ -127,6 +132,7 @@ function EstimatePanel({
                         </div>
                         <span className="tnum">
                           {fmtCost(p.estCostUsd)} – {fmtCost(p.estCostUsdHigh)}
+                          {p.estCostUsdMax !== undefined && <span className="muted" title={`Every “no limit” reply at this model's full output (${p.maxOutputTokens?.toLocaleString('en-US') ?? '?'} tokens)`}> · max {fmtCost(p.estCostUsdMax)}</span>}
                         </span>
                       </div>
                     )}

@@ -28,14 +28,14 @@ export function jamSlideCases(results: CaseResultLite[], caseIds: string[]): str
 export function jamGenreCaption(genre: string): { text: string; fine: string } {
   const g = jamGenreInfo(genre);
   return {
-    text: `Round ${g?.round ?? ''}: ${g?.label ?? genre}. Every model got the same detailed brief. Each screen replays what the robot player saw in its 15-second playtest; the number is the game’s score out of 100, and the crown marks the best game.`,
-    fine: 'Score = 25% automatic checks + 75% judges from other companies · creativity weighs most · a frozen or blank game scores at most 30',
+    text: `Round ${g?.round ?? ''}: ${g?.label ?? genre}. Every model got the same detailed brief. Each screen replays what the robot player saw in its 30-second full-HD playtest; the number is the game’s score out of 100, and the crown marks the best game.`,
+    fine: 'Score = 25% automatic checks + 75% judges from other companies · visual quality and creativity weigh most · a frozen or blank game scores at most 30',
   };
 }
 
 export const JAM_WINNER_CAPTION = {
-  text: 'The Game of the Jam: the model whose five games scored best on average. Ties go to creativity, the deciding factor of the jam.',
-  fine: 'Average of the five game scores · crowns = genre wins · creativity = judges’ average out of 10',
+  text: 'The Game of the Jam: the model whose five games scored best on average. Ties go to the better visuals, then creativity: the two biggest parts of the score.',
+  fine: 'Average of the five game scores · crowns = genre wins · visuals and creativity = judges’ scores out of 10',
 };
 
 export function JamGenreSlide({ runId, caseId, results, contenders, cat, testName }: { runId: string; caseId: string; results: CaseResultLite[]; contenders: JamContender[]; cat: CategoryInfo; testName: string }) {
@@ -108,7 +108,8 @@ export function JamWinnerSlide({ runId, results, contenders, testName }: { runId
             <div className="k">Average score</div>
             <div className="big tnum">{pct100(board.totals.get(goty.model)!.score)}</div>
             <div className="why">
-              {board.totals.get(goty.model)!.wins} of 5 genre crowns · creativity {((board.totals.get(goty.model)!.creativity ?? 0) * 10).toFixed(1)}/10
+              {board.totals.get(goty.model)!.wins} of 5 genre crowns
+              {board.totals.get(goty.model)!.visual !== null ? ` · visuals ${((board.totals.get(goty.model)!.visual ?? 0) * 10).toFixed(1)}/10` : ''} · creativity {((board.totals.get(goty.model)!.creativity ?? 0) * 10).toFixed(1)}/10
             </div>
             <div className="s-jam-table">
               {ranked.map((m, i) => {

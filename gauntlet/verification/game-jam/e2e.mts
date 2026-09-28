@@ -27,7 +27,7 @@ interface Scripted {
   plays: number;
   feel: number;
   creativity: number;
-  polish: number;
+  visuals: number;
   ambition: number;
   verdict: string;
 }
@@ -44,17 +44,17 @@ interface Entry {
 }
 
 const ENTRIES: Entry[] = [
-  { file: 'flappy-full.html', genre: 'flappy', expect: 'works', model: 'meridian-atlas-4-ultra', judge: { reqs: 'PPPPPPPPPPPHPP', plays: 9, feel: 8, creativity: 8, polish: 8, ambition: 7, verdict: 'A moth in a lantern festival with a firefly shield: charming, tight and complete.' } },
-  { file: 'rts-mini.html', genre: 'rts', expect: 'works', model: 'meridian-atlas-4-ultra', judge: { reqs: 'PHFFHHHFHPHHFHF', plays: 5, feel: 4, creativity: 4, polish: 3, ambition: 3, verdict: 'Harvesting, box-select and fog work, but there is no base building, power or tech tree.' } },
-  { file: 'rpg-mini.html', genre: 'rpg', expect: 'works', model: 'meridian-atlas-4-ultra', judge: { reqs: 'HHHFFHPHFFFFHHF', plays: 6, feel: 6, creativity: 5, polish: 4, ambition: 3, verdict: 'Crisp sword combat with knockback, but only two areas, no boss, shop or saving.' } },
-  { file: 'zombie-mini.html', genre: 'zombie', expect: 'works', model: 'meridian-atlas-4-ultra', judge: { reqs: 'HPHHHPHFHHFHFFHFFHH', plays: 6, feel: 6, creativity: 5, polish: 4, ambition: 3, verdict: 'Tense flashlight nights and noise that draws the dead, but most survival systems are missing.' } },
-  { file: 'racing-full.html', genre: 'racing', expect: 'works', model: 'meridian-atlas-4-ultra', judge: { reqs: 'PPPPPPPPPPPPPHP', plays: 9, feel: 8, creativity: 7, polish: 8, ambition: 8, verdict: 'A sunset coastal OutRun with slipstream boost and a race that turns to dusk: superb.' } },
-  { file: 'ember-wing.html', genre: 'flappy', expect: 'works', model: 'kestrel-kite-reasoner', judge: { reqs: 'HPPHFPHFFHHHFH', plays: 7, feel: 6, creativity: 6, polish: 4, ambition: 3, verdict: 'A burning bird with a heat meter is a fun twist, but medals, parallax and sound are missing.' } },
-  { file: 'broken-frozen.html', genre: 'rts', expect: 'frozen', model: 'kestrel-kite-reasoner', judge: { reqs: 'FFFFFFFFFFFFFFF', plays: 1, feel: 0, creativity: 2, polish: 1, ambition: 1, verdict: 'The title draws, then starting a match locks the page in an endless loop.' } },
-  { file: 'broken-syntax.html', genre: 'rpg', expect: 'syntax', model: 'kestrel-kite-reasoner', judge: { reqs: 'FFFFFFFFFFFFFFF', plays: 0, feel: 0, creativity: 1, polish: 0, ambition: 1, verdict: 'A missing bracket stops the script from parsing: nothing ever appears.' } },
+  { file: 'flappy-full.html', genre: 'flappy', expect: 'works', model: 'meridian-atlas-4-ultra', judge: { reqs: 'PPPPPPPPPPPHPP', plays: 9, feel: 8, creativity: 8, visuals: 5, ambition: 7, verdict: 'Charming moth theme and tight feel, but flat shapes and simple lighting look like a prototype.' } },
+  { file: 'rts-mini.html', genre: 'rts', expect: 'works', model: 'meridian-atlas-4-ultra', judge: { reqs: 'PHFFHHHFHPHHFHF', plays: 5, feel: 4, creativity: 4, visuals: 2, ambition: 3, verdict: 'Harvesting, box-select and fog work, but there is no base building, power or tech tree.' } },
+  { file: 'rpg-mini.html', genre: 'rpg', expect: 'works', model: 'meridian-atlas-4-ultra', judge: { reqs: 'HHHFFHPHFFFFHHF', plays: 6, feel: 6, creativity: 5, visuals: 3, ambition: 3, verdict: 'Crisp sword combat with knockback, but only two areas, no boss, shop or saving.' } },
+  { file: 'zombie-mini.html', genre: 'zombie', expect: 'works', model: 'meridian-atlas-4-ultra', judge: { reqs: 'HPHHHPHFHHFHFFHFFHH', plays: 6, feel: 6, creativity: 5, visuals: 4, ambition: 3, verdict: 'Tense flashlight nights and noise that draws the dead, but most survival systems are missing.' } },
+  { file: 'racing-full.html', genre: 'racing', expect: 'works', model: 'meridian-atlas-4-ultra', judge: { reqs: 'PPPPPPPPPPPPPHP', plays: 9, feel: 8, creativity: 7, visuals: 6, ambition: 8, verdict: 'A coastal OutRun that turns to dusk with slipstream boost; solid, but flat sprites fall short of commercial.' } },
+  { file: 'ember-wing.html', genre: 'flappy', expect: 'works', model: 'kestrel-kite-reasoner', judge: { reqs: 'HPPHFPHFFHHHFH', plays: 7, feel: 6, creativity: 6, visuals: 3, ambition: 3, verdict: 'A burning bird with a heat meter is a fun twist, but medals, parallax and sound are missing.' } },
+  { file: 'broken-frozen.html', genre: 'rts', expect: 'frozen', model: 'kestrel-kite-reasoner', judge: { reqs: 'FFFFFFFFFFFFFFF', plays: 1, feel: 0, creativity: 2, visuals: 1, ambition: 1, verdict: 'The title draws, then starting a match locks the page in an endless loop.' } },
+  { file: 'broken-syntax.html', genre: 'rpg', expect: 'syntax', model: 'kestrel-kite-reasoner', judge: { reqs: 'FFFFFFFFFFFFFFF', plays: 0, feel: 0, creativity: 1, visuals: 0, ambition: 1, verdict: 'A missing bracket stops the script from parsing: nothing ever appears.' } },
   { file: 'zombie-mini.html', genre: 'zombie', expect: 'truncated', truncateAt: 0.55, model: 'kestrel-kite-reasoner' },
-  { file: 'racing-topdown-mini.html', genre: 'racing', expect: 'works', model: 'kestrel-kite-reasoner', judge: { reqs: 'HHFHHHFFHHHFFFH', plays: 6, feel: 6, creativity: 4, polish: 3, ambition: 3, verdict: 'A slidey little top-down rally with skid marks, but the rivals just circle and there is no HUD to speak of.' } },
-  { file: 'broken-blank.html', genre: 'flappy', expect: 'blank', model: 'helios-quill-flash', judge: { reqs: 'FFFFFFFFFFFFFF', plays: 1, feel: 0, creativity: 1, polish: 0, ambition: 0, verdict: 'Runs without errors but draws black on black: there is nothing to see.' } },
+  { file: 'racing-topdown-mini.html', genre: 'racing', expect: 'works', model: 'kestrel-kite-reasoner', judge: { reqs: 'HHFHHHFFHHHFFFH', plays: 6, feel: 6, creativity: 4, visuals: 2, ambition: 3, verdict: 'A slidey little top-down rally with skid marks, but the rivals just circle and there is no HUD to speak of.' } },
+  { file: 'broken-blank.html', genre: 'flappy', expect: 'blank', model: 'helios-quill-flash', judge: { reqs: 'FFFFFFFFFFFFFF', plays: 1, feel: 0, creativity: 1, visuals: 0, ambition: 0, verdict: 'Runs without errors but draws black on black: there is nothing to see.' } },
 ];
 
 function verdictText(s: Scripted, harsh: boolean): string {
@@ -85,9 +85,10 @@ function panel(s: Scripted | undefined, prompts: string[], model: string): Judge
     ids: [a, b],
     async ask(_system, user, _label, opts): Promise<JudgeCall[]> {
       prompts.push(user);
+      lastImages = Array.isArray(opts) ? opts.length : (opts?.images?.length ?? 0);
       if (!s) return [];
       return [
-        { judgeId: a, text: verdictText(s, false), sawImages: Boolean(opts?.images?.length) },
+        { judgeId: a, text: verdictText(s, false), sawImages: Boolean(Array.isArray(opts) ? opts.length : opts?.images?.length) },
         { judgeId: b, text: verdictText(s, true), sawImages: false },
       ];
     },
@@ -114,6 +115,7 @@ async function toJpeg(png: Buffer, width = 640): Promise<string> {
   return url;
 }
 
+let lastImages = 0;
 const record = process.argv.includes('--record');
 const recorded: Record<string, unknown> = {};
 let failures = 0;
@@ -156,7 +158,9 @@ for (const e of ENTRIES) {
   for (const i of d.items ?? []) if (!i.passed) console.log(`   · failed: ${i.label}${i.detail ? ` (${i.detail})` : ''}`);
   if (e.expect === 'works') {
     check((d.items ?? []).every((i) => i.passed), 'a working game passes every automatic check');
-    check(gj.playtest?.frames.length === 5 && Object.keys(saved).filter((n) => n.startsWith('playtest-')).length === 5, '5 playtest screenshots saved');
+    check(gj.playtest?.frames.length === 8 && Object.keys(saved).filter((n) => /^playtest-\d+ms\.png$/.test(n)).length === 8, '8 full-HD playtest screenshots saved');
+    check(Boolean(gj.playtest?.motion) && 'playtest-motion.png' in saved, 'motion strip saved');
+    check(lastImages === 9, 'vision judge got 8 screenshots + the motion strip');
     check(gj.judges.length === 2 && gj.requirements.every((r) => r.verdict !== null), 'both judges parsed, every requirement has a verdict');
     check(prompts[0]?.includes('Screenshots attached in order') ?? false, 'judges are told about the attached screenshots');
   } else if (e.expect === 'syntax') {
@@ -178,7 +182,7 @@ for (const e of ENTRIES) {
   }
   if (record) {
     const frames: Record<string, string> = {};
-    for (const [name, v] of Object.entries(saved)) if (v.kind === 'png' && name.startsWith('playtest-')) frames[name] = await toJpeg(v.content as Buffer, 560);
+    for (const [name, v] of Object.entries(saved)) if (v.kind === 'png' && name.startsWith('playtest-')) frames[name] = await toJpeg(v.content as Buffer, name === 'playtest-motion.png' ? 960 : 640);
     recorded[`creative.game-jam|${e.model}|${c.id}`] = {
       score: out.score,
       passed: out.passed,

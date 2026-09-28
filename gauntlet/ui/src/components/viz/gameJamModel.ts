@@ -23,6 +23,8 @@ export interface JamEntry {
   html: ArtifactRef | null;
   score: number | null;
   creativity: number | null;
+  /** Panel visual score (protocol 2 results; older results have none). */
+  visual: number | null;
   detail: GameJamDetail | null;
   /** One plain line for captions, e.g. "12 of 14 requirements met". */
   line: string;
@@ -80,15 +82,16 @@ export function entryOf(r: JamResult): JamEntry {
     html: arts.find((a) => a.kind === 'html') ?? null,
     score: r.score,
     creativity: d?.criteria.creativity ?? null,
+    visual: d?.criteria.visual ?? null,
     detail: d,
     line: state === 'ok' ? reqLine || r.summary : STATE_WORDS[state].line,
     quote: d?.judges.find((j) => j.verdict)?.verdict ?? null,
   };
 }
 
-/** Higher score wins; a tie goes to the more creative game (the jam's deciding factor). */
+/** Higher score wins; a tie goes to the better-looking game, then the more creative one (the two biggest criteria). */
 export function compareEntries(a: JamEntry, b: JamEntry): number {
-  return (b.score ?? -1) - (a.score ?? -1) || (b.creativity ?? -1) - (a.creativity ?? -1);
+  return (b.score ?? -1) - (a.score ?? -1) || (b.visual ?? -1) - (a.visual ?? -1) || (b.creativity ?? -1) - (a.creativity ?? -1);
 }
 
 export interface JamBoard {
@@ -97,7 +100,7 @@ export interface JamBoard {
   /** entries[model][genre] (first repeat). */
   entries: Map<string, Map<JamGenre, JamEntry>>;
   /** Per model: mean jam score and mean creativity over its recorded games. */
-  totals: Map<string, { score: number | null; creativity: number | null; games: number; wins: number }>;
+  totals: Map<string, { score: number | null; creativity: number | null; visual: number | null; games: number; wins: number }>;
   genreWinner: Map<JamGenre, string | null>;
   /** Model with the best mean score (ties: mean creativity). Null when nothing was scored. */
   gameOfTheJam: { model: string; entry: JamEntry } | null;
@@ -124,17 +127,18 @@ export function jamBoard(results: CaseResultLite[], modelOrder: string[]): JamBo
     genreWinner.set(g.id, best ? best.result.contestantId : null);
     if (best) wins.set(best.result.contestantId, (wins.get(best.result.contestantId) ?? 0) + 1);
   }
-  const totals = new Map<string, { score: number | null; creativity: number | null; games: number; wins: number }>();
+  const totals = new Map<string, { score: number | null; creativity: number | null; visual: number | null; games: number; wins: number }>();
   for (const m of models) {
     const row = [...entries.get(m)!.values()];
     totals.set(m, {
       score: mean(row.filter((e) => e.score !== null).map((e) => e.score!)),
       creativity: mean(row.filter((e) => e.creativity !== null).map((e) => e.creativity!)),
+      visual: mean(row.filter((e) => e.visual !== null).map((e) => e.visual!)),
       games: row.filter((e) => e.state === 'ok').length,
       wins: wins.get(m) ?? 0,
     });
   }
-  const ranked = models.filter((m) => totals.get(m)!.score !== null && totals.get(m)!.score! > 0).sort((a, b) => (totals.get(b)!.score! - totals.get(a)!.score!) || ((totals.get(b)!.creativity ?? 0) - (totals.get(a)!.creativity ?? 0)));
+  const ranked = models.filter((m) => totals.get(m)!.score !== null && totals.get(m)!.score! > 0).sort((a, b) => (totals.get(b)!.score! - totals.get(a)!.score!) || ((totals.get(b)!.visual ?? 0) - (totals.get(a)!.visual ?? 0)) || ((totals.get(b)!.creativity ?? 0) - (totals.get(a)!.creativity ?? 0)));
   const top = ranked[0];
   const topEntry = top ? [...entries.get(top)!.values()].sort(compareEntries)[0] : undefined;
   return { genres: JAM_GENRES, models, entries, totals, genreWinner, gameOfTheJam: top && topEntry ? { model: top, entry: topEntry } : null };

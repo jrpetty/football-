@@ -32,7 +32,7 @@ import { PROGRAMS } from '../programs/index.ts';
 import { scoreResponse, type JudgePanel, type JudgeAskOptions } from '../scoring/index.ts';
 import { browserAvailable } from '../scoring/browser.ts';
 import { Semaphore } from './semaphore.ts';
-import { callWithRetry, createRecorder, effectiveMaxOutputTokens, OutOfTimeError, type CallPolicy, type CallTarget } from './recorder.ts';
+import { callWithRetry, createRecorder, effectiveMaxOutputTokens, resolveOutputBudget, OutOfTimeError, type CallPolicy, type CallTarget } from './recorder.ts';
 import { appendResult, createRunFolder, listRunIds, newRunId, readManifest, readResults, saveArtifact, writeManifest } from './store.ts';
 import { caseImageRefs, caseImageSizes, estimateImageTokens, loadTestImage, stripImageData, supportsVision, testBaseDir } from '../core/vision.ts';
 import { SKIP_NO_IMAGE_OUTPUT, SKIP_PICTURE_ONLY, estimateImageUsd, plannedImageSettings, supportsImageOutput } from '../core/image-output.ts';
@@ -279,18 +279,27 @@ export interface TestCostEstimate {
   judgeUsd: number;
   /** Where the token figures came from. */
   basis: 'measured' | 'measured-other-models' | 'definition';
+  /**
+   * Tests that ask for each model's maximum output ("model-max", e.g. The Game Jam): USD per contestant if every
+   * case used the model's full output limit (the true ceiling). Absent for other tests.
+   */
+  maxPerContestant?: Record<string, number>;
+  /** Judge cost when every reply is that long (judges read the whole file). */
+  maxJudgeUsd?: number;
 }
 
 export interface RunEstimate {
   jobs: number;
   calls: number;
-  perContestant: Array<{ contestantId: string; jobs: number; estCostUsd: number; estCostUsdHigh: number; manual: boolean }>;
+  perContestant: Array<{ contestantId: string; jobs: number; estCostUsd: number; estCostUsdHigh: number; manual: boolean; /** Ceiling when "model's maximum" tests use the full output limit (only when the run has such a test). */ estCostUsdMax?: number; /** The model's output limit used for that ceiling. */ maxOutputTokens?: number }>;
   perTest: TestCostEstimate[];
   judgeCostUsd: number;
   /** Central estimate (contestants + judges). */
   estCostUsd: number;
   /** Conservative upper estimate: +20% where measured, +60% where only the test's own estimate is known. */
   estCostUsdHigh: number;
+  /** Absolute ceiling for runs with "model's maximum" tests: every such reply at the model's full output limit, judges included. */
+  estCostUsdMax?: number;
   fingerprint: string;
   warnings: string[];
 }
@@ -343,6 +352,10 @@ export async function estimateRun(req: RunRequest): Promise<RunEstimate> {
   let calls = 0;
   let judgeCost = 0;
   let high = 0;
+  // "Model's maximum" tests: extra cost if every reply used the model's full output limit (contestants + judges).
+  let maxExtra = 0;
+  let judgeMax = 0;
+  const settingsNow = loadSettings();
   const perTest: TestCostEstimate[] = plan.tests.map((t) => ({
     testId: t.definition.id,
     name: t.definition.name,
@@ -361,6 +374,9 @@ export async function estimateRun(req: RunRequest): Promise<RunEstimate> {
     let jobs = 0;
     let cost = 0;
     let costHigh = 0;
+    let costMax = 0;
+    let anyModelMax = false;
+    const budgetFor = (t: (typeof plan.tests)[number]) => effectiveMaxOutputTokens(c, resolveOutputBudget(t.definition.maxOutputTokens, c, settingsNow.defaultMaxOutputTokens));
     plan.tests.forEach((t, i) => {
       const selected = selectedCaseIds(t);
       const visionIds = visionCaseIds(t);
@@ -402,6 +418,14 @@ export async function estimateRun(req: RunRequest): Promise<RunEstimate> {
       const pictures = programOf(t)?.imagesPerCase ?? 0;
       // Picture-making programs are billed per image (plus the prompt text), not per output token.
       const testCost = isManual ? 0 : pictures > 0 ? n * estimateImageUsd(c, pictures, input, plannedImageSettings(c, provider?.baseUrl, providerType)) : (n * (input * c.pricing.inputPerM + output * c.pricing.outputPerM)) / 1e6;
+      const modelMax = t.definition.maxOutputTokens === 'model-max' && pictures === 0;
+      const maxOut = modelMax ? budgetFor(t) : 0;
+      const testMax = !modelMax || isManual ? testCost : (n * (input * c.pricing.inputPerM + maxOut * perCaseCalls * c.pricing.outputPerM)) / 1e6;
+      costMax += testMax;
+      if (modelMax) {
+        anyModelMax = true;
+        (perTest[i]!.maxPerContestant ??= {})[c.id] = Math.round(testMax * 10000) / 10000;
+      }
       jobs += selected.length * plan.repeats;
       calls += n * perCaseCalls;
       cost += testCost;
@@ -437,6 +461,14 @@ export async function estimateRun(req: RunRequest): Promise<RunEstimate> {
           const jin = est?.judgeInputTokens ?? 2500 + Math.min(output, 40000) * 0.5;
           const jout = est?.judgeOutputTokens ?? 1500;
           for (const j of panel) jc += (n * (jin * j.pricing.inputPerM + jout * j.pricing.outputPerM)) / 1e6;
+          if (modelMax) {
+            // At the ceiling the judges read a reply of up to the model's full output (minus nothing: assume all visible).
+            const jinMax = jin + Math.max(0, maxOut - output);
+            let jm = 0;
+            for (const j of panel) jm += (n * (jinMax * j.pricing.inputPerM + jout * j.pricing.outputPerM)) / 1e6;
+            judgeMax += jm - jc;
+            perTest[i]!.maxJudgeUsd = Math.round(((perTest[i]!.maxJudgeUsd ?? perTest[i]!.judgeUsd) + jm) * 10000) / 10000;
+          }
         }
         calls += n * panel.length;
         judgeCost += jc;
@@ -445,7 +477,16 @@ export async function estimateRun(req: RunRequest): Promise<RunEstimate> {
       }
     });
     high += costHigh;
-    return { contestantId: c.id, jobs, estCostUsd: Math.round(cost * 10000) / 10000, estCostUsdHigh: Math.round(costHigh * 10000) / 10000, manual: isManual };
+    maxExtra += costMax - cost;
+    const maxTests = plan.tests.filter((t) => t.definition.maxOutputTokens === 'model-max');
+    return {
+      contestantId: c.id,
+      jobs,
+      estCostUsd: Math.round(cost * 10000) / 10000,
+      estCostUsdHigh: Math.round(costHigh * 10000) / 10000,
+      manual: isManual,
+      ...(anyModelMax ? { estCostUsdMax: Math.round(costMax * 10000) / 10000, maxOutputTokens: budgetFor(maxTests[0]!) } : {}),
+    };
   });
   const warnings = plan.warnings.slice();
   const needsBrowser = plan.tests.some((t) => t.definition.kind === 'prompt' && t.definition.scorer.type === 'artifact');
@@ -460,6 +501,7 @@ export async function estimateRun(req: RunRequest): Promise<RunEstimate> {
     judgeCostUsd: Math.round(judgeCost * 10000) / 10000,
     estCostUsd: Math.round(total * 10000) / 10000,
     estCostUsdHigh: Math.round(high * 10000) / 10000,
+    ...(perContestant.some((p) => p.estCostUsdMax !== undefined) ? { estCostUsdMax: Math.round((total + maxExtra + judgeMax) * 10000) / 10000 } : {}),
     fingerprint: plan.fingerprint,
     warnings,
   };
@@ -830,9 +872,9 @@ async function executeJob(job: Job, env: JobEnv): Promise<CaseResult> {
     recorder = createRecorder({
       target,
       callContext: { runId: manifest.id, key: job.key, testId: def.id, testName: def.name, caseId: job.caseId },
-      policy: env.policy,
+      policy: def.maxRetries !== undefined ? { ...env.policy, maxRetries: Math.min(env.policy.maxRetries, def.maxRetries) } : env.policy,
       signal: controller.signal,
-      maxOutputTokens: def.maxOutputTokens ?? settings.defaultMaxOutputTokens,
+      maxOutputTokens: resolveOutputBudget(def.maxOutputTokens, job.contestant, settings.defaultMaxOutputTokens),
       onDelta: env.onDelta,
       onDeltaReset: env.onDeltaReset,
       attemptLimitMs: answerSec ? answerSec * 1000 : undefined,
@@ -909,7 +951,7 @@ async function executeJob(job: Job, env: JobEnv): Promise<CaseResult> {
         rng: createRng(seed),
         config: { ...(program.defaults ?? {}), ...(pdef.config ?? {}) },
         model: rec.handle,
-        maxOutputTokens: def.maxOutputTokens ?? settings.defaultMaxOutputTokens,
+        maxOutputTokens: resolveOutputBudget(def.maxOutputTokens, job.contestant, settings.defaultMaxOutputTokens),
         signal: controller.signal,
         artifact: (name, kind, content) => {
           save(name, kind, content);

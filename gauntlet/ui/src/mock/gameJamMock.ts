@@ -30,7 +30,7 @@ export const GAME_JAM_SUITE: SuiteView = {
   id: 'games',
   version: '1.0.0',
   name: 'The Game Jam',
-  description: 'Five genres, one prompt each: Flappy Bird, an RTS, an action RPG, zombie survival with base building and a racer, played by a scripted player and rated by a cross-vendor judge panel that weights creativity most.',
+  description: 'Five genres, one prompt each: Flappy Bird, an RTS, an action RPG, zombie survival with base building and a racer, played by a scripted player and rated by a cross-vendor judge panel that weights visual quality and creativity most.',
   repeats: 1,
   tests: [{ id: 'creative.game-jam' }],
 };

@@ -63,7 +63,7 @@ export default function GameJamPage({ runId }: { runId: string }) {
             <div>
               <h2>{goty && gotyPerson ? `Game of the Jam: ${gotyPerson.label}` : 'No game scored yet'}</h2>
               <p>
-                Each game: a quarter automatic checks (it starts, draws, reacts, never freezes), three quarters AI judges from other companies, who tick every numbered requirement and weigh creativity most. A crown marks the best game in each genre.
+                Each game: a quarter automatic checks (it starts, draws, reacts, never freezes), three quarters AI judges from other companies, who study the screenshots, tick every numbered requirement and weigh visual quality and creativity most. A crown marks the best game in each genre.
               </p>
             </div>
             {goty && gotyPerson && gotyTotals && (
@@ -74,7 +74,9 @@ export default function GameJamPage({ runId }: { runId: string }) {
                   {gotyPerson.label} · {pct100(gotyTotals.score)}
                 </span>
                 <span className="why">
-                  {gotyTotals.wins} genre {gotyTotals.wins === 1 ? 'win' : 'wins'} · {gotyTotals.games} of 5 games working · creativity {gotyTotals.creativity === null ? '—' : (gotyTotals.creativity * 10).toFixed(1)}/10
+                  {gotyTotals.wins} genre {gotyTotals.wins === 1 ? 'win' : 'wins'} · {gotyTotals.games} of 5 games working
+                  {gotyTotals.visual !== null ? ` · visuals ${(gotyTotals.visual * 10).toFixed(1)}/10` : ''}
+                  {gotyTotals.creativity !== null ? ` · creativity ${(gotyTotals.creativity * 10).toFixed(1)}/10` : ''}
                 </span>
               </div>
             )}
@@ -122,7 +124,7 @@ export default function GameJamPage({ runId }: { runId: string }) {
             })}
           </section>
           <p className="muted" style={{ margin: 0 }}>
-            Screens show the recorded playtest screenshots (0.5, 3, 6, 10 and 15 seconds). “FROZE”, “BLANK SCREEN” and “RAN OUT OF SPACE” mark games the automatic checks caught; those score at most 30 (or only the automatic quarter when the file was cut off).
+            Screens show the recorded full-HD playtest screenshots, from the title screen to 30 seconds in. “FROZE”, “BLANK SCREEN” and “RAN OUT OF SPACE” mark games the automatic checks caught; those score at most 30 (or only the automatic quarter when the file was cut off).
           </p>
         </>
       )}

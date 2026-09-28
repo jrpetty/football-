@@ -40,6 +40,8 @@ export interface PlaytestSummary {
   /** Set when the page stopped responding (an endless loop). */
   hung: { atMs: number; phase: string } | null;
   inputsSent: number;
+  /** The motion strip (six frames 0.1 s apart, one contact-sheet image) and the mean share of pixels changing per tenth of a second. Absent on protocol 1 results. */
+  motion?: { name: string; times: number[]; changed: number } | null;
   drawsPicture: PlaytestCheck;
   keepsMoving: PlaytestCheck;
   reacts: PlaytestCheck;
@@ -62,12 +64,13 @@ export interface JamRequirement {
   split: boolean;
 }
 
-export type JamCriterion = 'fidelity' | 'plays' | 'feel' | 'creativity' | 'polish' | 'ambition';
+/** Judge criteria. Protocol 1 results used 'polish' (visual & audio polish) where protocol 2 has 'visual'. */
+export type JamCriterion = 'fidelity' | 'plays' | 'feel' | 'creativity' | 'visual' | 'ambition' | 'polish';
 
 export interface JamJudgeCard {
   judgeId: string;
   /** Criterion scores 0..1 (fidelity = share of the checklist met; the others = the judge's 0-10 ÷ 10). */
-  criteria: Record<JamCriterion, number>;
+  criteria: Partial<Record<JamCriterion, number>>;
   /** Weighted total 0..1. */
   total: number;
   /** The judge's one-sentence verdict, quoted. */
@@ -85,9 +88,9 @@ export interface GameJamDetail {
   playtest: PlaytestSummary | null;
   requirements: JamRequirement[];
   judges: JamJudgeCard[];
-  /** Panel mean per criterion (0..1), null when no judge graded. */
-  criteria: Record<JamCriterion, number | null>;
-  weights: Record<JamCriterion, number>;
+  /** Panel mean per criterion (0..1), null when no judge graded. The visual criterion counts judges who saw the screenshots VISION_JUDGE_VISUAL_WEIGHT times. */
+  criteria: Partial<Record<JamCriterion, number | null>>;
+  weights: Partial<Record<JamCriterion, number>>;
   /** Share of the automatic checks passed (0..1). */
   automatedScore: number;
   /** Weight of the judges in the final score (the rest is the automatic checks). */
@@ -101,25 +104,37 @@ export interface GameJamDetail {
   judgesSkipped?: string;
 }
 
-/** Weight of each criterion in a judge's total. Creativity weighs most: the owner's "deciding factor". */
-export const JAM_WEIGHTS: Record<JamCriterion, number> = {
-  fidelity: 0.25,
-  plays: 0.15,
+/**
+ * Weight of each criterion in a judge's total (protocol 2). Visual quality and creativity weigh most, as the owner
+ * asked. The weights used for a result are recorded with it (GameJamDetail.weights), so older results keep theirs.
+ */
+export const JAM_WEIGHTS: Partial<Record<JamCriterion, number>> = {
+  visual: 0.3,
+  creativity: 0.25,
+  fidelity: 0.2,
+  plays: 0.1,
   feel: 0.1,
-  creativity: 0.3,
-  polish: 0.1,
-  ambition: 0.1,
+  ambition: 0.05,
 };
+
+/** The criteria a weight table uses, in display order. */
+export function criteriaOf(weights: Partial<Record<JamCriterion, number>>): JamCriterion[] {
+  return JAM_CRITERIA.map((c) => c.id).filter((id) => (weights[id] ?? 0) > 0);
+}
 
 /** Criteria in display order; `key` is the line a judge writes (fidelity comes from the checklist). */
 export const JAM_CRITERIA: Array<{ id: JamCriterion; label: string; short: string; key: string | null }> = [
+  { id: 'visual', label: 'Visual quality & art direction', short: 'Visuals', key: 'VISUALS' },
   { id: 'creativity', label: 'Creativity & originality', short: 'Creativity', key: 'CREATIVITY' },
   { id: 'fidelity', label: 'Requirement checklist', short: 'Checklist', key: null },
   { id: 'plays', label: 'Does it actually play', short: 'Plays', key: 'PLAYS' },
-  { id: 'feel', label: 'Game feel', short: 'Feel', key: 'FEEL' },
-  { id: 'polish', label: 'Visual & audio polish', short: 'Polish', key: 'POLISH' },
+  { id: 'feel', label: 'Game feel & juice (incl. audio)', short: 'Feel', key: 'FEEL' },
   { id: 'ambition', label: 'Ambition & depth', short: 'Ambition', key: 'AMBITION' },
+  { id: 'polish', label: 'Visual & audio polish', short: 'Polish', key: 'POLISH' },
 ];
+
+/** How much a judge's visual score counts when it saw the screenshots, relative to a text-only judge. */
+export const VISION_JUDGE_VISUAL_WEIGHT = 3;
 
 /** Viewer-facing genre names, in round order. */
 export const JAM_GENRES: Array<{ id: JamGenre; round: number; label: string; short: string; marquee: string }> = [
@@ -153,7 +168,7 @@ export function isJamGenre(g: unknown): g is JamGenre {
 }
 
 /** Version of the playtest script, weights and judge format (src/scoring/game-jam.ts); the test JSON repeats it. */
-export const GAME_JAM_PROTOCOL = 1;
+export const GAME_JAM_PROTOCOL = 2;
 
 export interface JamCaseSpec {
   genre: JamGenre;

@@ -100,6 +100,8 @@ export interface Contestant {
    * not part of the config hash: it only turns would-be API errors into valid calls, never changes a successful one.
    */
   maxOutputTokens?: number;
+  /** Where maxOutputTokens comes from, e.g. "platform.claude.com model page, checked 2026-09-28" or "unverified: …". Display only. */
+  maxOutputTokensSource?: string;
   /** Can generate images (The Gallery Masterpiece). Missing = no; models without it are skipped on image-output tests. */
   imageOutput?: boolean;
   /** Makes pictures only (e.g. gpt-image-1): every text test is skipped for it instead of failing. */
@@ -265,10 +267,18 @@ export interface TestBase {
   tags?: string[];
   /** One-line "hook" for broadcast / YouTube overlays. */
   hook?: string;
-  /** Max output tokens per model call (default 16000). */
-  maxOutputTokens?: number;
+  /**
+   * Max output tokens per model call (default 16000). "model-max" asks for each model's own maximum
+   * (Contestant.maxOutputTokens, or MODEL_MAX_FALLBACK when a model does not declare one): no artificial cap.
+   */
+  maxOutputTokens?: number | 'model-max';
   /** Wall-clock limit per case in seconds (default 600). */
   timeLimitSec?: number;
+  /**
+   * Retries for this test's model calls after a network or server error (default: settings.maxRetries). Very long
+   * generations (The Game Jam) use fewer, because each retry starts a paid hour-long reply from scratch.
+   */
+  maxRetries?: number;
   /** Rough per-case token estimate used for pre-run cost estimates. */
   estimate?: {
     inputTokens: number;
