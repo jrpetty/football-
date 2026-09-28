@@ -365,6 +365,8 @@ export interface ArenaSettings {
   temperature: number;
   maxOutputTokens: number;
   maxCostUsd?: number;
+  /** Set when the monthly budget's hard stop lowered the spending limit ("Limited to £12.40: what's left of …"). */
+  budgetNote?: string;
   game: GameConfig;
   protocolVersion: string;
 }

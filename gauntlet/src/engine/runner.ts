@@ -38,6 +38,7 @@ import { appendResult, createRunFolder, listRunIds, newRunId, readManifest, read
 import { caseImageRefs, caseImageSizes, estimateImageTokens, loadTestImage, stripImageData, supportsVision, testBaseDir } from '../core/vision.ts';
 import { SKIP_NO_IMAGE_OUTPUT, SKIP_PICTURE_ONLY, estimateImageUsd, plannedImageSettings, supportsImageOutput } from '../core/image-output.ts';
 import type { ChatImage as JudgeImage, ProgramDefinition } from '../core/types.ts';
+import { gateResume, gateStart, runSpentUsd } from '../budget/spend.ts';
 
 interface Job {
   key: string;
@@ -527,6 +528,9 @@ export async function estimateRun(req: RunRequest): Promise<RunEstimate> {
 
 export async function startRun(req: RunRequest): Promise<string> {
   const plan = planRun(req);
+  // "My budget": the hard stop refuses to start when the month's budget is used up, and lowers the limit to what is left.
+  const budgetGate = gateStart(plan.maxCostUsd, 'run');
+  plan.maxCostUsd = budgetGate.capUsd;
   const id = newRunId();
   const tests: TestSnapshot[] = plan.tests.map((t) => ({
     id: t.definition.id,
@@ -560,7 +564,7 @@ export async function startRun(req: RunRequest): Promise<string> {
       temperature: plan.temperature,
       protocolVersion: PROTOCOL_VERSION,
       maxCostUsd: plan.maxCostUsd,
-      limits: { ...(plan.maxCostUsd !== undefined ? { maxCostUsd: plan.maxCostUsd } : {}), ...plan.limits, ...(req.limits?.currency ? { currency: req.limits.currency } : {}) },
+      limits: { ...(plan.maxCostUsd !== undefined ? { maxCostUsd: plan.maxCostUsd } : {}), ...plan.limits, ...(req.limits?.currency ? { currency: req.limits.currency } : {}), ...(budgetGate.clamped ? { budgetNote: budgetGate.message } : {}) },
       judgeExcludeSameVendor: plan.judgeExcludeSameVendor,
       ...(plan.forceVision ? { forceVision: true } : {}),
     },
@@ -583,6 +587,12 @@ export function resumeRun(runId: string, opts: { maxCostUsd?: number | null } = 
       const { maxCostUsd: _old, ...rest } = manifest.settings.limits;
       manifest.settings.limits = { ...rest, ...(manifest.settings.maxCostUsd !== undefined ? { maxCostUsd: manifest.settings.maxCostUsd } : {}) };
     }
+  }
+  // "My budget": resuming is also held to the monthly budget (the limit covers what the run already spent).
+  const budgetGate = gateResume(manifest.settings.maxCostUsd, runSpentUsd(runId), 'run');
+  if (budgetGate.clamped) {
+    manifest.settings.maxCostUsd = budgetGate.capUsd;
+    manifest.settings.limits = { ...manifest.settings.limits, maxCostUsd: budgetGate.capUsd, budgetNote: budgetGate.message };
   }
   const loaded = loadTests();
   const tests: Array<LoadedTest & { caseFilter?: string[] }> = [];

@@ -4,6 +4,7 @@
  * polishes the script with a model (after showing the cost), and registers
  * the /api/studio and /api/overlay routes.
  */
+import { recordSpend } from '../budget/spend.ts';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { getProvider, hasApiKey, loadCategories, loadContestants, loadProviders } from '../core/config.ts';
@@ -244,7 +245,9 @@ export function registerStudioRoutes(route: RouteFn, fail: Fail): void {
     if (typeof b.confirmCostUsd !== 'number' || b.confirmCostUsd + 1e-9 < est.costUsdHigh) throw fail(409, 'Confirm the estimated cost first', est);
     const payload = studioPayload(inp);
     try {
-      return await polishScript(c, b.text, new Set(payload.allowedNumbers));
+      const polished = await polishScript(c, b.text, new Set(payload.allowedNumbers));
+      recordSpend({ kind: 'polish', name: `Script polish (${c.label})`, costUsd: polished.costUsd });
+      return polished;
     } catch (e) {
       throw fail(502, `Polishing failed: ${(e as Error).message}`);
     }
