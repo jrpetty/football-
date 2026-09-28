@@ -13,6 +13,7 @@ import type { ContestantView, GradeResult, TestDetail, TestSummary } from '../ty
 import { VisionBadge, VisionImage } from '../components/VisionImage.tsx';
 import { VisionResultPanel } from '../components/VisionResult.tsx';
 import { testImageUrl } from '../vision.ts';
+import { GameJamShowcase } from '../components/viz/GameJamShowcase.tsx';
 
 export default function GradePage() {
   const { query } = useRoute();
@@ -251,8 +252,16 @@ export default function GradePage() {
             {(result.rendered.images?.length ?? 0) > 0 && (
               <VisionResultPanel images={(result.rendered.images ?? []).map((img) => ({ name: img.file.split('/').pop() ?? img.file, mediaType: 'image/png', path: img.path }))} detail={result.outcome.detail ?? {}} passed={result.outcome.passed} />
             )}
+            {result.outcome.detail?.gameJam !== undefined && (
+              <GameJamShowcase
+                eyebrowPrefix="Grader"
+                result={{ key: result.gradeId, runId: '', contestantId: 'pasted', testId, testVersion: '', testHash: '', contestantHash: '', caseId, repeat: 0, status: 'ok', score: result.outcome.score, passed: result.outcome.passed, summary: result.outcome.summary, scoreDetail: result.outcome.detail, metrics: { wallMs: 0, ttftMs: null, apiCalls: 0, inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cachedInputTokens: 0, costUsd: 0, judgeCostUsd: result.judgeCostUsd, outputTokensPerSec: null, retries: 0, responseChars: 0 }, artifacts: result.artifacts, startedAt: '', finishedAt: '' }}
+                urlFor={gradedUrl}
+                names={new Map((lists.data?.[1] ?? []).map((c) => [c.id, c.label]))}
+              />
+            )}
             <ScoreBreakdownView
-              d={(result.rendered.images?.length ?? 0) > 0 ? { ...result.outcome.detail, extracted: undefined, expected: undefined } : result.outcome.detail ?? {}}
+              d={(result.rendered.images?.length ?? 0) > 0 ? { ...result.outcome.detail, extracted: undefined, expected: undefined } : { ...(result.outcome.detail ?? {}), gameJam: undefined }}
               passed={result.outcome.passed}
               names={new Map((lists.data?.[1] ?? []).map((c) => [c.id, c.label]))}
             />

@@ -72,15 +72,23 @@ function verdictText(s: Scripted, harsh: boolean): string {
   ].join('\n');
 }
 
-function panel(s: Scripted | undefined, prompts: string[]): JudgePanel {
+/** The demo's judge pair for each demo model: two of the mock judges, never the contestant's own vendor. */
+const JUDGES: Record<string, [string, string]> = {
+  'meridian-atlas-4-ultra': ['helios-nova-3-pro', 'kestrel-kite-reasoner'],
+  'kestrel-kite-reasoner': ['helios-nova-3-pro', 'meridian-atlas-4-ultra'],
+  'helios-quill-flash': ['meridian-atlas-4-ultra', 'kestrel-kite-reasoner'],
+};
+
+function panel(s: Scripted | undefined, prompts: string[], model: string): JudgePanel {
+  const [a, b] = JUDGES[model]!;
   return {
-    ids: ['helios-nova-3-pro@judge', 'obsidian-sable-large@judge'],
+    ids: [a, b],
     async ask(_system, user, _label, opts): Promise<JudgeCall[]> {
       prompts.push(user);
       if (!s) return [];
       return [
-        { judgeId: 'helios-nova-3-pro@judge', text: verdictText(s, false), sawImages: Boolean(opts?.images?.length) },
-        { judgeId: 'obsidian-sable-large@judge', text: verdictText(s, true), sawImages: false },
+        { judgeId: a, text: verdictText(s, false), sawImages: Boolean(opts?.images?.length) },
+        { judgeId: b, text: verdictText(s, true), sawImages: false },
       ];
     },
   };
@@ -134,7 +142,7 @@ for (const e of ENTRIES) {
     response,
     stopReason,
     taskText: `[User]\n${rendered.turns[0]}`,
-    judges: panel(e.judge, prompts),
+    judges: panel(e.judge, prompts, e.model),
     saveArtifact: (name, kind, content) => {
       saved[name] = { kind, content };
       return { name, kind, file: name, bytes: typeof content === 'string' ? content.length : content.length };
