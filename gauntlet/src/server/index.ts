@@ -56,6 +56,7 @@ import { registerExplainRoutes } from './explain-routes.ts';
 import { explainerForDefinition } from '../core/explainers.ts';
 import { recoverInterruptedTournaments } from '../arena/tournament.ts';
 import { registerVersusRoutes } from '../versus/server.ts';
+import { registerGalleryRoutes } from './gallery-routes.ts';
 
 class HttpError extends Error {
   status: number;
@@ -151,6 +152,7 @@ route('DELETE', '/api/contestants/:id', ({ params }) => {
 /** One-word test message to a model ("pong"): Models page ping and the API Keys page test. Costs a fraction of a cent. */
 async function pingContestant(id: string) {
   const c = getContestant(id);
+  if (c.imageOnly) return { ok: false, error: 'Picture-only model: it cannot answer a text message. Check it with a one-painting Gallery run instead (a test picture costs a few cents).' };
   try {
     const provider = getProvider(c.provider);
     const target = { contestant: c, adapter: createAdapter(c, provider), semaphore: new Semaphore(1) };
@@ -401,6 +403,7 @@ const ARTIFACT_TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
+  '.jpg': 'image/jpeg',
   '.json': 'application/json; charset=utf-8',
   '.js': 'text/plain; charset=utf-8',
   '.txt': 'text/plain; charset=utf-8',
@@ -437,13 +440,19 @@ route('POST', '/api/manual/:id', async ({ params, body }) => {
     if (!Number.isFinite(n) || n < 0) throw new HttpError(400, `${name} must be a non-negative number`);
     return n;
   };
-  const ok = submitManual(decodeURIComponent(params.id!), {
-    text: b.text,
-    inputTokens: optNum(b.inputTokens, 'inputTokens'),
-    outputTokens: optNum(b.outputTokens, 'outputTokens'),
-    reasoningTokens: optNum(b.reasoningTokens, 'reasoningTokens'),
-    costUsd: optNum(b.costUsd, 'costUsd'),
-  });
+  let ok: boolean;
+  try {
+    ok = submitManual(decodeURIComponent(params.id!), {
+      text: b.text,
+      inputTokens: optNum(b.inputTokens, 'inputTokens'),
+      outputTokens: optNum(b.outputTokens, 'outputTokens'),
+      reasoningTokens: optNum(b.reasoningTokens, 'reasoningTokens'),
+      costUsd: optNum(b.costUsd, 'costUsd'),
+    });
+  } catch (err) {
+    if (err instanceof HttpError) throw err;
+    throw new HttpError(400, (err as Error).message);
+  }
   if (!ok) throw new HttpError(404, 'This request is no longer waiting (answered, cancelled or timed out)');
   return { ok: true };
 });
@@ -561,6 +570,8 @@ registerArenaRoutes({ route, httpError: (status, message, details) => new HttpEr
 registerVersusRoutes({ route, httpError: (status, message, details) => new HttpError(status, message, details) });
 
 registerExplainRoutes({ route, httpError: (status, message) => new HttpError(status, message) });
+// The Gallery Masterpiece: picture replies in the Manual Inbox (src/server/gallery-routes.ts).
+registerGalleryRoutes({ route, httpError: (status, message) => new HttpError(status, message) });
 
 // ─────────────────────────────────────────────────────────────────────────────
 

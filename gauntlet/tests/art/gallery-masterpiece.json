@@ -1,0 +1,38 @@
+{
+  "kind": "program",
+  "id": "art.gallery-masterpiece",
+  "version": "1.0.0",
+  "program": "gallery-masterpiece",
+  "name": "The Gallery Masterpiece",
+  "category": "art",
+  "description": "A museum commissions a painting. Each of the 8 briefs names a very specific subject and composition, 6 required elements, a medium and art-historical style (Dutch Golden Age interior, Impressionist harbour, Romantic sublime landscape, ukiyo-e print, Art Nouveau panel, Renaissance fresco, Pre-Raphaelite woodland, Hudson River School river valley), a palette and light, a mood, explicit room for interpretation and 3 things that must not appear (text, a drawn-in frame, modern objects). The model paints it with its own image generator. At least two vision judges from other companies check every line of the brief and score the artistry on anchored scales. Models without image output are skipped; chat apps take part through the Manual Inbox.",
+  "difficulty": "hard",
+  "tags": [
+    "image-generation",
+    "art",
+    "judged",
+    "vision-judges",
+    "subjective"
+  ],
+  "hook": "Eight museum commissions. One brush each. Who paints the masterpiece?",
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "config": {},
+  "maxOutputTokens": 4000,
+  "timeLimitSec": 1200,
+  "estimate": {
+    "inputTokens": 480,
+    "outputTokens": 0,
+    "calls": 1
+  },
+  "author": "Gauntlet Core",
+  "createdAt": "2026-09-28"
+}

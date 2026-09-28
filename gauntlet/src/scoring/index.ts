@@ -1,4 +1,4 @@
-import type { ArtifactCheck, ArtifactKind, ArtifactRef, JudgeLabel, ScoreBreakdownItem, ScoreDetail, ScorerSpec, StopReason } from '../core/types.ts';
+import type { ChatImage, ArtifactCheck, ArtifactKind, ArtifactRef, JudgeLabel, ScoreBreakdownItem, ScoreDetail, ScorerSpec, StopReason } from '../core/types.ts';
 import { extractCodeBlock, extractFinalAnswer, extractTagged, normalize, parseJsonLoose, parseNumber } from '../core/extract.ts';
 import { checkConstraints } from './constraints.ts';
 import { compareJson } from './json-compare.ts';
@@ -15,7 +15,7 @@ export interface JudgeCall {
 /** A panel of judge models. `ask` calls every judge in parallel. */
 export interface JudgePanel {
   ids: string[];
-  ask(system: string, user: string, label: string): Promise<JudgeCall[]>;
+  ask(system: string, user: string, label: string, images?: ChatImage[]): Promise<JudgeCall[]>;
 }
 
 export interface ScoringInput {

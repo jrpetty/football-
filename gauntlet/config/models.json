@@ -682,6 +682,143 @@
       "releaseDate": "2025-07-09"
     },
     {
+      "id": "gpt-image-1",
+      "label": "GPT Image 1",
+      "vendor": "OpenAI",
+      "provider": "openai",
+      "model": "gpt-image-1",
+      "color": "#1FB58F",
+      "enabled": true,
+      "imageOutput": true,
+      "imageOnly": true,
+      "imageOptions": {
+        "size": "1536x1024",
+        "quality": "high"
+      },
+      "options": {},
+      "pricing": {
+        "inputPerM": 5,
+        "outputPerM": 40,
+        "source": "OpenAI API pricing for gpt-image-1: text input $5 / 1M tokens, image output $40 / 1M tokens (published April 2025). Check platform.openai.com/docs/pricing before a paid run.",
+        "verifiedAt": null
+      },
+      "imagePricing": {
+        "perImage": {
+          "1024x1024": {
+            "low": 0.011,
+            "medium": 0.042,
+            "high": 0.167
+          },
+          "1024x1536": {
+            "low": 0.016,
+            "medium": 0.063,
+            "high": 0.25
+          },
+          "1536x1024": {
+            "low": 0.016,
+            "medium": 0.063,
+            "high": 0.25
+          }
+        },
+        "source": "OpenAI per-image price table for gpt-image-1 (published April 2025). Edit here if OpenAI changes it.",
+        "verifiedAt": null
+      },
+      "family": "GPT Image",
+      "notes": "Picture-only model for The Gallery Masterpiece (OpenAI Images API). Text tests are skipped for it. Quality 'high' at 1536x1024 costs about $0.25 per painting; set imageOptions.quality to 'medium' (about $0.063) to save money."
+    },
+    {
+      "id": "gemini-2.5-flash-image",
+      "label": "Gemini 2.5 Flash Image",
+      "vendor": "Google",
+      "provider": "google",
+      "model": "gemini-2.5-flash-image",
+      "color": "#5B9BF8",
+      "enabled": true,
+      "imageOutput": true,
+      "imageOnly": true,
+      "options": {},
+      "pricing": {
+        "inputPerM": 0.3,
+        "outputPerM": 30,
+        "source": "Google Gemini API pricing for gemini-2.5-flash-image: input $0.30 / 1M tokens, image output $30 / 1M tokens (1,290 tokens per image), published August 2025. Check ai.google.dev/pricing before a paid run.",
+        "verifiedAt": null
+      },
+      "imagePricing": {
+        "perImage": {
+          "*": {
+            "*": 0.039
+          }
+        },
+        "source": "Google: $0.039 per image up to 1024 px (1,290 output tokens × $30 / 1M), published August 2025.",
+        "verifiedAt": null
+      },
+      "family": "Gemini Image",
+      "notes": "Picture-only model for The Gallery Masterpiece (generateContent with image output). Text tests are skipped for it."
+    },
+    {
+      "id": "gemini-3-pro-image",
+      "label": "Gemini 3 Pro Image",
+      "vendor": "Google",
+      "provider": "google",
+      "model": "gemini-3-pro-image-preview",
+      "color": "#1A5FD6",
+      "enabled": true,
+      "imageOutput": true,
+      "imageOnly": true,
+      "options": {},
+      "pricing": {
+        "inputPerM": 2,
+        "outputPerM": 120,
+        "source": "Google Gemini API pricing for gemini-3-pro-image-preview: input $2 / 1M tokens, image output $120 / 1M tokens (published November 2025). Check ai.google.dev/pricing before a paid run.",
+        "verifiedAt": null
+      },
+      "imagePricing": {
+        "perImage": {
+          "*": {
+            "*": 0.134
+          }
+        },
+        "source": "Google: $0.134 per 1K/2K image (1,120 output tokens × $120 / 1M), published November 2025. 4K images cost $0.24.",
+        "verifiedAt": null
+      },
+      "family": "Gemini Image",
+      "notes": "Picture-only model for The Gallery Masterpiece. Preview model id: change 'model' when Google publishes the stable one."
+    },
+    {
+      "id": "grok-2-image",
+      "label": "Grok 2 Image",
+      "vendor": "xAI",
+      "provider": "xai",
+      "model": "grok-2-image-1212",
+      "color": "#52525B",
+      "enabled": true,
+      "imageOutput": true,
+      "imageOnly": true,
+      "imageOptions": {
+        "size": null,
+        "quality": null,
+        "responseFormat": "b64_json"
+      },
+      "options": {},
+      "pricing": {
+        "inputPerM": 0,
+        "outputPerM": 0,
+        "source": "xAI bills image generation per image only (see imagePricing).",
+        "verifiedAt": null
+      },
+      "imagePricing": {
+        "perImage": {
+          "*": {
+            "*": 0.07
+          }
+        },
+        "source": "xAI API pricing for grok-2-image-1212: $0.07 per image (published early 2025). Check docs.x.ai before a paid run.",
+        "verifiedAt": null
+      },
+      "family": "Grok Image",
+      "notes": "Picture-only model for The Gallery Masterpiece (xAI's OpenAI-compatible /images/generations). xAI does not take a size or quality, so it paints at its own fixed size."
+    },
+    {
       "id": "manual-chat",
       "label": "Manual entry (any chatbot)",
       "vendor": "Manual",

@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events';
 import { randomUUID } from 'node:crypto';
-import type { ChatImage, CompletionRequest, CompletionResult, ManualRequest, ManualSubmission } from '../core/types.ts';
+import type { ChatImage, CompletionRequest, CompletionResult, ImageGenRequest, ImageGenResult, ManualRequest, ManualSubmission } from '../core/types.ts';
 import { estimateImageTokens, stripImageData } from '../core/vision.ts';
 import type { AdapterContext, ProviderAdapter } from './types.ts';
 
@@ -38,10 +38,16 @@ export function manualImage(id: string, messageIndex: number, imageIndex: number
   return pending.get(id)?.request.messages[messageIndex]?.images?.[imageIndex];
 }
 
+/** The request behind a pending id (to check what kind of reply it expects). */
+export function manualRequest(id: string): ManualRequest | undefined {
+  return pending.get(id)?.request;
+}
+
 export function submitManual(id: string, submission: ManualSubmission): boolean {
   const p = pending.get(id);
   if (!p) return false;
   if (typeof submission.text !== 'string') throw new Error('text is required');
+  if (p.request.expects === 'image' && !submission.image) throw new Error('This request expects a picture: upload the image file');
   pending.delete(id);
   manualEvents.emit('resolved', p.request);
   p.resolve(submission);
@@ -70,6 +76,62 @@ const estimateTokens = (text: string) => Math.ceil(text.length / 4);
 
 export function createManualAdapter(ctx: AdapterContext): ProviderAdapter {
   return {
+    /** The Gallery Masterpiece: a person makes the picture in any app and uploads it in the Manual Inbox. */
+    generateImage(req: ImageGenRequest): Promise<ImageGenResult> {
+      const startedAt = Date.now();
+      const id = randomUUID();
+      const cc = req.callContext;
+      const request: ManualRequest = {
+        id,
+        runId: cc?.runId ?? 'adhoc',
+        key: cc?.key ?? id,
+        contestantId: ctx.contestant.id,
+        contestantLabel: ctx.contestant.label,
+        testId: cc?.testId ?? '',
+        testName: cc?.testName ?? '',
+        caseId: cc?.caseId ?? '',
+        label: cc?.label ?? 'painting',
+        messages: [{ role: 'user', content: req.prompt }],
+        combinedPrompt: req.prompt,
+        latestUserMessage: req.prompt,
+        isContinuation: false,
+        createdAt: new Date().toISOString(),
+        expects: 'image',
+        aspectRatio: req.aspectRatio,
+      };
+      return new Promise((resolve, reject) => {
+        const onAbort = () => {
+          if (pending.delete(id)) manualEvents.emit('resolved', request);
+          reject(Object.assign(new Error('Aborted'), { name: 'AbortError' }));
+        };
+        if (req.signal?.aborted) return onAbort();
+        req.signal?.addEventListener('abort', onAbort, { once: true });
+        pending.set(id, {
+          request,
+          resolve: (s) => {
+            req.signal?.removeEventListener('abort', onAbort);
+            resolve({
+              images: s.image ? [s.image] : [],
+              text: s.text,
+              usage: { inputTokens: s.inputTokens ?? estimateTokens(req.prompt), outputTokens: 0, reasoningTokens: 0, cachedInputTokens: 0, cacheWriteTokens: 0 },
+              startedAt,
+              totalMs: Date.now() - startedAt,
+              stopReason: s.image ? 'end' : 'other',
+              rawStopReason: 'manual',
+              servedModel: `manual/${ctx.contestant.model}`,
+              costUsd: s.costUsd ?? 0,
+              manual: true,
+            });
+          },
+          reject: (e) => {
+            req.signal?.removeEventListener('abort', onAbort);
+            reject(e);
+          },
+        });
+        manualEvents.emit('request', request);
+      });
+    },
+
     complete(req: CompletionRequest): Promise<Omit<CompletionResult, 'retries'>> {
       const startedAt = Date.now();
       const id = randomUUID();

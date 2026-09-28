@@ -1,0 +1,39 @@
+{
+  "kind": "program",
+  "id": "art.gallery-painted-in-code",
+  "version": "1.0.0",
+  "program": "gallery-code",
+  "name": "The Gallery Masterpiece: Painted in Code",
+  "category": "art",
+  "description": "The same 8 museum commission briefs as The Gallery Masterpiece, for models that write instead of paint: the model paints each brief as a single hand-written SVG (1536 × 1024; shapes, gradients and filters, no text, images or scripts). Headless Chromium renders it to a picture, and at least two vision judges from other companies judge that picture exactly like a generated painting: every line of the brief, then the artistry on anchored scales. Its own test and leaderboard column, never mixed with the image-generation test.",
+  "difficulty": "extreme",
+  "tags": [
+    "svg",
+    "art",
+    "judged",
+    "vision-judges",
+    "subjective",
+    "code-as-drawing"
+  ],
+  "hook": "No brush, no image model: can it paint a museum commission in pure SVG code?",
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "config": {},
+  "maxOutputTokens": 32000,
+  "timeLimitSec": 1800,
+  "estimate": {
+    "inputTokens": 620,
+    "outputTokens": 16000,
+    "calls": 1
+  },
+  "author": "Gauntlet Core",
+  "createdAt": "2026-09-28"
+}

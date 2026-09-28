@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import type { ChatMessage, CompletionRequest, CompletionResult, StopReason } from '../core/types.ts';
+import { openAIImageGenerate } from './image-gen.ts';
 import { type AdapterContext, type ProviderAdapter, ProviderError, deepMerge, isAbortError, isRetryableStatus, parseRetryAfter } from './types.ts';
 
 const STOP_MAP: Record<string, StopReason> = {
@@ -35,6 +36,7 @@ export function createOpenAICompatibleAdapter(ctx: AdapterContext): ProviderAdap
   const maxTokensParam = ctx.provider.maxTokensParam ?? (isOpenAI ? 'max_completion_tokens' : 'max_tokens');
 
   return {
+    generateImage: (req) => openAIImageGenerate(ctx, req),
     async complete(req: CompletionRequest): Promise<Omit<CompletionResult, 'retries'>> {
       const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string | Array<Record<string, unknown>> }> = [];
       if (req.system) messages.push({ role: 'system', content: req.system });
