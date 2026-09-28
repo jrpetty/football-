@@ -53,6 +53,7 @@ import { registerKeyRoutes } from './keys-routes.ts';
 import { overlayRedirect, registerStudioRoutes } from '../media/studio.ts';
 import { registerArenaRoutes } from '../arena/server.ts';
 import { recoverInterruptedTournaments } from '../arena/tournament.ts';
+import { registerVersusRoutes } from '../versus/server.ts';
 
 class HttpError extends Error {
   status: number;
@@ -553,6 +554,8 @@ registerChannelRoutes(route, (status, message, details) => new HttpError(status,
 registerKeyRoutes({ route, httpError: (status, message) => new HttpError(status, message), ping: pingContestant });
 // The Arena (head-to-head games): routes live in src/arena/server.ts.
 registerArenaRoutes({ route, httpError: (status, message, details) => new HttpError(status, message, details), streaming: STREAMING });
+// Head to Head: two models compared round by round on stored results (src/versus/server.ts).
+registerVersusRoutes({ route, httpError: (status, message, details) => new HttpError(status, message, details) });
 
 // ─────────────────────────────────────────────────────────────────────────────
 

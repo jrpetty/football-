@@ -1,0 +1,1326 @@
+/*
+ * Head to Head (/versus and /present/versus). Page sizes are in rem so
+ * Broadcast mode scales them; the deck (.vxd) overrides in px on the fixed
+ * 1920×1080 stage. Corner colours arrive as --c (per element) or --vx-a/--vx-b.
+ * Every animation carries meaning (fighters enter, bars fill to the score, the
+ * winner is stamped, the running score ticks) and is removed under reduced motion.
+ */
+
+/* ───────────── Page ───────────── */
+.vx-page {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.vx-title {
+  overflow-wrap: anywhere;
+}
+.vx-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+.vx-pick {
+  display: grid;
+  gap: 6px;
+  min-width: 220px;
+  flex: 1 1 240px;
+  max-width: 340px;
+}
+.vx-pick.wide {
+  max-width: 380px;
+}
+.vx-pick > span {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.vx-swap {
+  margin-bottom: 1px;
+}
+.vx-section-h {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+.vx-section-h h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  letter-spacing: -0.01em;
+}
+.vx-section-h p {
+  margin: 0;
+  color: var(--text-2);
+  max-width: 70ch;
+}
+.vx-skipped {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  color: var(--text-2);
+  font-size: 0.92rem;
+  margin: 0;
+}
+.vx-skipped svg {
+  width: 1.1em;
+  height: 1.1em;
+  flex: none;
+  margin-top: 0.15em;
+}
+.vx-studio {
+  margin-top: 18px;
+}
+
+/* ───────────── Hero: face-off + tale of the tape ───────────── */
+.vx-hero {
+  position: relative;
+  display: grid;
+  gap: 22px;
+  padding: 26px 26px 22px;
+  border-radius: var(--r-xl);
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+}
+.vx-hero-foot {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.vx-face {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  min-height: 9rem;
+}
+.vx-face-side {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding: 1.2rem 2.4rem;
+  border-radius: var(--r-lg);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--c) 34%, transparent), color-mix(in srgb, var(--c) 6%, transparent));
+  animation: vx-in-l 700ms var(--ease-out) both;
+}
+.vx-face-side.vx-a {
+  clip-path: polygon(0 0, 100% 0, calc(100% - 2.2rem) 100%, 0 100%);
+}
+.vx-face-side.vx-b {
+  justify-content: flex-end;
+  background: linear-gradient(270deg, color-mix(in srgb, var(--c) 34%, transparent), color-mix(in srgb, var(--c) 6%, transparent));
+  clip-path: polygon(2.2rem 0, 100% 0, 100% 100%, 0 100%);
+  animation-name: vx-in-r;
+}
+.vx-vs {
+  position: relative;
+  z-index: 2;
+  width: 5.2rem;
+  height: 5.2rem;
+  margin: 0 -1.6rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--text-1);
+  color: var(--bg);
+  font-weight: 900;
+  font-size: 1.9rem;
+  letter-spacing: -0.02em;
+  box-shadow: 0 0 0 0.35rem var(--surface-1), 0 14px 34px -10px rgba(0, 0, 0, 0.6);
+  animation: vx-stamp 520ms var(--ease-out) 520ms both;
+}
+.vx-vs span {
+  transform: rotate(-8deg);
+}
+@keyframes vx-in-l {
+  from {
+    opacity: 0;
+    transform: translateX(-12%);
+  }
+}
+@keyframes vx-in-r {
+  from {
+    opacity: 0;
+    transform: translateX(12%);
+  }
+}
+@keyframes vx-stamp {
+  from {
+    opacity: 0;
+    transform: scale(2.2);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(0.92);
+  }
+}
+
+/* Fighter badge */
+.vx-badge {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+}
+.vx-badge.vx-b {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+.vx-plate {
+  position: relative;
+  flex: none;
+  width: 4.4rem;
+  height: 4.4rem;
+  border-radius: 1.1rem;
+  display: grid;
+  place-items: center;
+  background: var(--c);
+  color: var(--ink);
+  font-weight: 900;
+  font-size: 1.7rem;
+  letter-spacing: -0.03em;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 30%, transparent), 0 12px 26px -12px var(--c);
+}
+.vx-plate-trophy {
+  position: absolute;
+  top: -0.9em;
+  right: -0.6em;
+  font-size: 0.9em;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
+}
+.vx-id {
+  min-width: 0;
+}
+.vx-name {
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.015em;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.vx-vendor {
+  margin-top: 4px;
+  color: var(--text-2);
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vx-badge.vx-sm .vx-plate {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.8rem;
+  font-size: 1.15rem;
+}
+.vx-badge.vx-sm .vx-name {
+  font-size: 1.15rem;
+}
+.vx-badge.vx-sm .vx-vendor {
+  font-size: 0.85rem;
+}
+.vx-badge.is-lost .vx-plate {
+  filter: saturate(0.4) brightness(0.8);
+}
+.vx-badge.is-lost .vx-name {
+  color: var(--text-2);
+}
+
+/* Tale of the tape */
+.vx-tape {
+  width: min(100%, 860px);
+  margin: 0 auto;
+  display: grid;
+}
+.vx-tape-h {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--border-strong);
+  font-weight: 800;
+}
+.vx-tape-h span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vx-tape-h span:last-child {
+  text-align: right;
+}
+.vx-tape-h b {
+  font-size: 0.8rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.vx-tape-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 15rem) minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  animation: fade-in 420ms ease-out both;
+  animation-delay: calc(700ms + var(--i) * 110ms);
+}
+.vx-tape-k {
+  display: grid;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.vx-tape-k small {
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-3);
+}
+.vx-tape-v {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.vx-tape-v.r {
+  text-align: right;
+}
+.vx-tape-v {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vx-tape-v.best {
+  color: var(--text-1);
+  font-weight: 800;
+}
+.vx-tape-v.best::after {
+  content: ' ★';
+  color: var(--gold);
+  font-size: 0.8em;
+}
+.vx-tape-v.r.best::after {
+  content: '';
+}
+.vx-tape-v.r.best::before {
+  content: '★ ';
+  color: var(--gold);
+  font-size: 0.8em;
+}
+.vx-tape-v.nr,
+.vx-stat-v.nr {
+  font-size: 1rem;
+  font-weight: 500;
+  font-style: italic;
+  color: var(--text-3);
+}
+
+/* ───────────── Round strip ───────────── */
+.vx-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.vx-dot {
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 50%;
+  background: var(--surface-4);
+  border: 2px solid var(--surface-1);
+  box-shadow: 0 0 0 1px var(--border-strong);
+}
+.vx-dot.tie {
+  background: repeating-linear-gradient(45deg, var(--text-3) 0 3px, var(--surface-3) 3px 6px);
+}
+.vx-dot.future {
+  background: var(--surface-3) !important;
+  opacity: 0.6;
+}
+.vx-dot.now {
+  box-shadow: 0 0 0 2px var(--text-1);
+  animation: vx-stamp 480ms var(--ease-out) 1100ms both;
+}
+
+/* ───────────── Round cards ───────────── */
+.vx-rounds {
+  display: grid;
+  gap: 16px;
+}
+@media (min-width: 1500px) {
+  .vx-rounds {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+.vx-tape-note {
+  margin-top: 8px;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-3);
+}
+.vx-tape-note span {
+  color: var(--gold);
+}
+.vx-round {
+  display: grid;
+  gap: 16px;
+  padding: 20px 22px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-1);
+  min-width: 0;
+}
+.vx-round-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.vx-round-h {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  min-width: 0;
+  flex: 1 1 360px;
+}
+.vx-cat {
+  flex: none;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.8rem;
+  display: grid;
+  place-items: center;
+  font-size: 1.6rem;
+  color: var(--cc);
+  background: color-mix(in srgb, var(--cc) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cc) 40%, transparent);
+}
+.vx-round-t {
+  min-width: 0;
+}
+.vx-round-k {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.vx-round-name {
+  margin: 2px 0 0;
+  font-size: 1.35rem;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.vx-round-hook {
+  color: var(--text-2);
+  margin-top: 2px;
+}
+.vx-round-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+  color: var(--text-3);
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Facing bars */
+.vx-bars {
+  display: grid;
+  grid-template-columns: 4.2rem minmax(0, 1fr) 4px minmax(0, 1fr) 4.2rem;
+  align-items: center;
+  gap: 10px;
+}
+.vx-track {
+  height: 1.15rem;
+  border-radius: 999px;
+  background: var(--surface-3);
+  display: flex;
+  overflow: hidden;
+}
+.vx-track.l {
+  justify-content: flex-end;
+}
+.vx-fill {
+  height: 100%;
+  border-radius: 999px;
+  animation: vx-grow 900ms var(--ease-out) 150ms both;
+}
+.vx-fill.dim {
+  opacity: 0.42;
+}
+.vx-mid {
+  height: 2rem;
+  background: var(--border-strong);
+  border-radius: 2px;
+}
+.vx-num {
+  font-size: 1.9rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: var(--text-1);
+}
+.vx-num.l {
+  text-align: right;
+}
+.vx-num.lose {
+  color: var(--text-3);
+}
+@keyframes vx-grow {
+  from {
+    width: 0;
+  }
+}
+
+/* Winner badge */
+.vx-winner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  max-width: 100%;
+  padding: 7px 14px 7px 10px;
+  border-radius: 999px;
+  font-weight: 800;
+  background: color-mix(in srgb, var(--c) 18%, var(--surface-1));
+  border: 2px solid var(--c);
+  color: var(--text-1);
+  animation: vx-stamp 480ms var(--ease-out) 950ms both;
+}
+.vx-winner svg {
+  width: 1.3em;
+  height: 1.3em;
+  flex: none;
+}
+.vx-winner.tie {
+  background: var(--surface-3);
+  border-color: var(--border-strong);
+  color: var(--text-2);
+}
+
+/* Decisive moment */
+.vx-moment {
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px;
+  border-radius: var(--r-md);
+  background: var(--surface-inset);
+  border: 1px solid var(--border);
+  animation: fade-in 500ms ease-out 1200ms both;
+}
+.vx-moment.none {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--text-2);
+  font-size: 0.95rem;
+}
+.vx-moment.none svg {
+  width: 1.2em;
+  height: 1.2em;
+  flex: none;
+  margin-top: 0.1em;
+}
+.vx-moment-h {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 14px;
+}
+.vx-moment-k {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--warn-text);
+}
+.vx-moment-k svg {
+  width: 1.1em;
+  height: 1.1em;
+}
+.vx-moment-line {
+  font-weight: 700;
+}
+.vx-moment-q {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 4px 24px;
+  color: var(--text-2);
+}
+.vx-moment-q .vx-key {
+  grid-column: 2;
+  grid-row: 1;
+  white-space: nowrap;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--good) 60%, transparent);
+  background: var(--good-soft);
+}
+.vx-moment-q .vx-key:only-child {
+  grid-column: 1;
+  justify-self: start;
+}
+.vx-moment-q p {
+  margin: 0;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.vx-moment-q span {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-right: 6px;
+}
+.vx-moment-q .vx-key b {
+  color: var(--good-text);
+}
+.vx-moment-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.vx-ans {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  border: 2px solid;
+  min-width: 0;
+}
+.vx-ans.right {
+  border-color: color-mix(in srgb, var(--good) 75%, transparent);
+  background: var(--good-soft);
+}
+.vx-ans.wrong {
+  border-color: color-mix(in srgb, var(--bad) 75%, transparent);
+  background: var(--bad-soft);
+}
+.vx-ans-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+.vx-ans-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vx-ans-who i {
+  flex: none;
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 3px;
+  background: var(--c);
+}
+.vx-ans-v {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  font-size: 0.8rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 10px 3px 6px;
+  border-radius: 999px;
+  color: #fff;
+}
+.vx-ans-v svg {
+  width: 1.1em;
+  height: 1.1em;
+  stroke-width: 3;
+}
+.vx-ans.right .vx-ans-v {
+  background: var(--good);
+}
+.vx-ans.wrong .vx-ans-v {
+  background: var(--bad);
+}
+.vx-ans-final {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.vx-ans-final span {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  flex: none;
+}
+.vx-ans-final b {
+  font-size: 1.25rem;
+  overflow-wrap: anywhere;
+}
+.vx-ans.right .vx-ans-final b {
+  color: var(--good-text);
+}
+.vx-ans.wrong .vx-ans-final b {
+  color: var(--bad-text);
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}
+.vx-ans-q {
+  margin: 0;
+  padding: 0 0 0 10px;
+  border-left: 3px solid var(--border-strong);
+  color: var(--text-2);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.vx-moment.compact .vx-ans-q {
+  -webkit-line-clamp: 4;
+}
+.vx-ans-q.nr {
+  font-style: italic;
+  color: var(--text-3);
+}
+.vx-ell {
+  color: var(--text-3);
+}
+.vx-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  font-size: 0.8rem;
+  color: var(--text-3);
+}
+.vx-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.vx-legend i {
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 3px;
+  border: 2px solid;
+}
+.vx-legend .ok i {
+  border-color: var(--good);
+  background: var(--good-soft);
+}
+.vx-legend .bad i {
+  border-color: var(--bad);
+  background: var(--bad-soft);
+}
+
+/* ───────────── Scoreboard ───────────── */
+.vx-board {
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+  border-radius: var(--r-xl);
+  border: 1px solid var(--border-strong);
+  background: radial-gradient(60% 120% at 0% 0%, color-mix(in srgb, var(--vx-a, transparent) 12%, transparent), transparent 60%), radial-gradient(60% 120% at 100% 0%, color-mix(in srgb, var(--vx-b, transparent) 12%, transparent), transparent 60%), var(--surface-1);
+  box-shadow: var(--shadow-1);
+}
+.vx-board-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+}
+.vx-board-top .vx-badge.vx-b {
+  justify-self: end;
+}
+.vx-board-score {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 4.2rem;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+}
+.vx-board-score .lose {
+  opacity: 0.45;
+}
+.vx-board-score i {
+  font-style: normal;
+  color: var(--text-3);
+}
+.vx-board-head {
+  text-align: center;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+}
+.vx-board-trophy {
+  font-size: 3rem;
+  animation: vx-stamp 600ms var(--ease-out) 1300ms both;
+}
+.vx-board-head h2 {
+  margin: 0;
+  font-size: 2.1rem;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+.vx-board-head p {
+  margin: 0;
+  color: var(--text-2);
+}
+.vx-stats {
+  width: min(100%, 900px);
+  margin: 0 auto;
+  display: grid;
+}
+.vx-stat {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 16rem) minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  animation: fade-in 420ms ease-out both;
+  animation-delay: calc(1400ms + var(--i) * 120ms);
+}
+.vx-stat-k {
+  display: grid;
+  text-align: center;
+  font-weight: 800;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+.vx-stat-k small {
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-3);
+}
+.vx-stat-v {
+  font-size: 1.5rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+}
+.vx-stat-v.r {
+  text-align: right;
+}
+.vx-stat-v.best {
+  color: var(--text-1);
+}
+.vx-stat-v.l.best::after,
+.vx-stat-v.r.best::before {
+  content: '★';
+  color: var(--gold);
+  font-size: 0.7em;
+  margin: 0 0.35em;
+  vertical-align: 0.15em;
+}
+
+/* ───────────── Shorts card ───────────── */
+.vx-card-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.vx-card-box {
+  width: 100%;
+}
+.vx-card-frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  box-shadow: 0 20px 50px -24px rgba(0, 0, 0, 0.7);
+  background: #070a10;
+}
+.vx-card-frame iframe {
+  border: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
+  display: block;
+}
+.vx-card-side {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  justify-items: start;
+}
+.vx-card-side p {
+  margin: 0;
+  color: var(--text-2);
+  max-width: 52ch;
+}
+.vx-card-side .small {
+  font-size: 0.85rem;
+  word-break: break-all;
+}
+@media (max-width: 760px) {
+  .vx-card-panel {
+    grid-template-columns: 1fr;
+  }
+  .vx-face {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .vx-vs {
+    margin: -1rem auto;
+  }
+  .vx-moment-cols {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ───────────── Presenter deck (1920×1080 stage, px) ───────────── */
+.vxd .deck-stage {
+  font-size: 24px;
+}
+.vxd-bg .glow.a {
+  background: radial-gradient(circle, color-mix(in srgb, var(--vx-a) 22%, transparent) 0%, transparent 62%);
+  top: -700px;
+  left: -620px;
+  right: auto;
+}
+.vxd-bg .glow.b {
+  background: radial-gradient(circle, color-mix(in srgb, var(--vx-b) 22%, transparent) 0%, transparent 62%);
+  top: -700px;
+  right: -620px;
+  left: auto;
+  bottom: auto;
+}
+.vxd-body {
+  display: flex;
+  flex-direction: column;
+}
+.vxd-body > * {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Intro */
+.vxd-intro {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 26px;
+}
+.vxd-intro .p-eyebrow {
+  text-align: center;
+}
+.vxd .vx-face {
+  min-height: 240px;
+}
+.vxd .vx-face-side {
+  padding: 34px 70px;
+  border-radius: 24px;
+}
+.vxd .vx-face-side.vx-a {
+  clip-path: polygon(0 0, 100% 0, calc(100% - 60px) 100%, 0 100%);
+}
+.vxd .vx-face-side.vx-b {
+  clip-path: polygon(60px 0, 100% 0, 100% 100%, 0 100%);
+}
+.vxd .vx-vs {
+  width: 150px;
+  height: 150px;
+  margin: 0 -44px;
+  font-size: 56px;
+  box-shadow: 0 0 0 10px var(--bg), 0 20px 50px -14px rgba(0, 0, 0, 0.7);
+}
+.vxd .vx-badge {
+  gap: 28px;
+}
+.vxd .vx-lg .vx-plate {
+  width: 140px;
+  height: 140px;
+  border-radius: 34px;
+  font-size: 58px;
+}
+.vxd .vx-lg .vx-name {
+  font-size: 54px;
+}
+.vxd .vx-lg .vx-vendor {
+  font-size: 26px;
+}
+.vxd .vx-md .vx-plate {
+  width: 96px;
+  height: 96px;
+  border-radius: 24px;
+  font-size: 40px;
+}
+.vxd .vx-md .vx-name {
+  font-size: 38px;
+}
+.vxd .vx-md .vx-vendor {
+  font-size: 22px;
+}
+.vxd .vx-tape {
+  width: 1180px;
+}
+.vxd .vx-tape-h {
+  font-size: 28px;
+}
+.vxd .vx-tape-h b {
+  font-size: 20px;
+}
+.vxd .vx-tape-row {
+  grid-template-columns: minmax(0, 1fr) 380px minmax(0, 1fr);
+  padding: 12px 0;
+}
+.vxd .vx-tape-k {
+  font-size: 22px;
+}
+.vxd .vx-tape-k small {
+  font-size: 18px;
+}
+.vxd .vx-tape-v {
+  font-size: 34px;
+}
+.vxd .vx-tape-v.nr,
+.vxd .vx-stat-v.nr {
+  font-size: 24px;
+}
+.vxd-rule {
+  text-align: center;
+  font-size: 28px;
+  color: var(--text-2);
+}
+.vxd-rule b {
+  color: var(--text-1);
+}
+
+/* Round */
+.vxd-round {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.vxd-round-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 40px;
+}
+.vxd .vx-round-h {
+  gap: 24px;
+  flex: 1 1 auto;
+}
+.vxd .vx-cat {
+  width: 88px;
+  height: 88px;
+  border-radius: 24px;
+  font-size: 54px;
+  border-width: 2px;
+}
+.vxd .vx-round-k {
+  font-size: 19px;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+}
+.vxd .vx-round-name {
+  font-size: 54px;
+  letter-spacing: -0.02em;
+  line-height: 1.04;
+  margin-top: 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.vxd .vx-round-hook {
+  font-size: 26px;
+  margin-top: 6px;
+}
+.vxd-running {
+  flex: none;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 16px 24px;
+  border-radius: 20px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-strong);
+  max-width: 640px;
+}
+.vxd-running-k {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.vxd-running-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: 100%;
+}
+.vxd-rn {
+  font-size: 22px;
+  font-weight: 800;
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vxd-rv {
+  font-size: 64px;
+  line-height: 1;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  display: inline-block;
+}
+.vxd-rv.bump {
+  animation: vx-bump 620ms var(--ease-out);
+}
+.vxd-running-row i {
+  font-style: normal;
+  font-size: 40px;
+  color: var(--text-3);
+}
+.vxd .vx-strip {
+  gap: 8px;
+  justify-content: center;
+}
+.vxd .vx-dot {
+  width: 18px;
+  height: 18px;
+  border-width: 2px;
+}
+.vxd-running .vx-strip {
+  gap: 6px;
+  max-width: 560px;
+}
+.vxd .vx-tape-note {
+  font-size: 18px;
+}
+.vxd .vx-legend {
+  display: none;
+}
+@keyframes vx-bump {
+  40% {
+    transform: scale(1.45);
+  }
+}
+.vxd-bars {
+  display: grid;
+  gap: 10px;
+}
+.vxd-bars-names {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: end;
+  gap: 20px;
+  font-size: 28px;
+  font-weight: 800;
+}
+.vxd-bars-names span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vxd-bars-names span:last-child {
+  text-align: right;
+}
+.vxd-bars-names .vxd-out {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.vx-bars.big {
+  grid-template-columns: 150px minmax(0, 1fr) 6px minmax(0, 1fr) 150px;
+  gap: 18px;
+}
+.vx-bars.big .vx-track {
+  height: 40px;
+}
+.vx-bars.big .vx-mid {
+  height: 64px;
+}
+.vx-bars.big .vx-num {
+  font-size: 68px;
+  line-height: 1;
+}
+.vxd-verdict {
+  display: flex;
+  justify-content: center;
+}
+.vxd .vx-winner {
+  font-size: 28px;
+  padding: 6px 24px 6px 16px;
+  border-width: 3px;
+}
+.vxd .vx-moment {
+  gap: 10px;
+  padding: 16px 24px;
+  border-radius: 20px;
+  font-size: 22px;
+}
+.vxd .vx-moment.none {
+  font-size: 24px;
+  flex: none;
+}
+.vxd .vx-moment-k {
+  font-size: 18px;
+}
+.vxd .vx-moment-h {
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+.vxd .vx-moment-k {
+  flex: none;
+}
+.vxd .vx-moment-line {
+  font-size: 26px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vxd .vx-moment-q p {
+  -webkit-line-clamp: 2;
+  font-size: 22px;
+}
+.vxd .vx-moment-q span {
+  font-size: 16px;
+}
+.vxd .vx-moment-cols {
+  gap: 20px;
+}
+.vxd .vx-ans {
+  padding: 14px 18px;
+  border-width: 3px;
+  border-radius: 16px;
+}
+.vxd .vx-ans-who {
+  font-size: 24px;
+}
+.vxd .vx-ans-v {
+  font-size: 18px;
+}
+.vxd .vx-ans-final span {
+  font-size: 16px;
+}
+.vxd .vx-ans-final b {
+  font-size: 32px;
+}
+.vxd .vx-moment .vx-ans-q {
+  font-size: 21px;
+  -webkit-line-clamp: 2;
+}
+.vxd .vx-ans {
+  gap: 4px;
+}
+.vxd .vx-legend {
+  font-size: 17px;
+}
+.vxd .vx-round-meta {
+  display: none;
+}
+
+/* Final */
+.vxd-final {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
+}
+.vxd .vx-board {
+  padding: 22px 40px 16px;
+  gap: 10px;
+  border-radius: 28px;
+}
+.vxd .vx-board-score {
+  font-size: 120px;
+  gap: 26px;
+}
+.vxd .vx-board-trophy {
+  font-size: 54px;
+}
+.vxd .vx-board-head h2 {
+  font-size: 64px;
+}
+.vxd .vx-board-head p {
+  font-size: 26px;
+}
+.vxd .vx-stats {
+  width: 1260px;
+}
+.vxd .vx-stat {
+  grid-template-columns: minmax(0, 1fr) 420px minmax(0, 1fr);
+  padding: 3px 0;
+}
+.vxd .vx-stat-k {
+  font-size: 20px;
+}
+.vxd .vx-stat-k small {
+  font-size: 16px;
+}
+.vxd .vx-stat-v {
+  font-size: 32px;
+}
+
+/* ───────────── Reduced motion ───────────── */
+@media (prefers-reduced-motion: reduce) {
+  .vx-face-side,
+  .vx-vs,
+  .vx-tape-row,
+  .vx-dot.now,
+  .vx-fill,
+  .vx-winner,
+  .vx-moment,
+  .vx-board-trophy,
+  .vx-stat,
+  .vxd-rv.bump {
+    animation: none !important;
+  }
+}
+
+/* Long model names: smaller result headline so the final slide never overflows. */
+.vx-board-head h2.long {
+  font-size: 1.6rem;
+}
+.vxd .vx-board-head h2.long {
+  font-size: 44px;
+}
