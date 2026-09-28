@@ -476,3 +476,8 @@ html[data-broadcast='on'] .guide-card h3 {
   -webkit-box-orient: vertical;
   line-height: 1.2;
 }
+
+/* When an "answer vs truth" visual is on screen it already shows both answers; drop the raw repeat on camera. */
+html[data-broadcast='on'] .vz ~ .stack > .answer-compare {
+  display: none;
+}
