@@ -92,6 +92,11 @@ export function meterTone(fraction: number | null): BudgetStatus['tone'] {
   return 'ok';
 }
 
+/** Money for budget messages: "£50" for whole amounts, "£12.40" otherwise. */
+export function budgetMoney(usd: number, c: CurrencySettings): string {
+  return formatMoney(usd, c).replace(/(\d)\.00$/, '$1');
+}
+
 const round = (x: number) => Math.round(x * 1e6) / 1e6;
 /** Round money down to a whole cent (a clamped limit must never exceed what is left). */
 export const floorCents = (usd: number) => Math.floor(usd * 100 + 1e-9) / 100;
@@ -182,7 +187,7 @@ export interface BudgetGate {
 export function gateLimit(requestedCapUsd: number | undefined, status: Pick<BudgetStatus, 'settings' | 'availableUsd' | 'remainingUsd' | 'spentUsd' | 'month'>, currency: CurrencySettings, alreadySpentUsd = 0, what = 'run', resuming = alreadySpentUsd > 0): BudgetGate {
   const s = status.settings;
   if (s.monthlyUsd === undefined || status.availableUsd === null) return { capUsd: requestedCapUsd, clamped: false };
-  const fmt = (usd: number) => formatMoney(usd, currency);
+  const fmt = (usd: number) => budgetMoney(usd, currency);
   const avail = status.availableUsd;
   const monthly = fmt(s.monthlyUsd);
   if (!s.hardStop) {
@@ -201,9 +206,10 @@ export function gateLimit(requestedCapUsd: number | undefined, status: Pick<Budg
 
 /** "This month: £12.40 of £50 spent · this run up to £8.20" (the compact New Run / Arena line). */
 export function budgetLine(status: Pick<BudgetStatus, 'settings' | 'spentUsd' | 'availableUsd'>, currency: CurrencySettings, runCapUsd: number | null | undefined, what = 'run'): string {
-  const fmt = (usd: number) => formatMoney(usd, currency);
+  const fmt = (usd: number) => budgetMoney(usd, currency);
   const m = status.settings.monthlyUsd;
   const head = m === undefined ? `This month: ${fmt(status.spentUsd)} spent` : `This month: ${fmt(status.spentUsd)} of ${fmt(m)} spent`;
+  if (status.settings.hardStop && status.availableUsd !== null && status.availableUsd < MIN_BUDGET_LEFT_USD) return `${head} · used up, so the hard stop blocks this ${what}`;
   let cap = runCapUsd ?? undefined;
   if (status.settings.hardStop && status.availableUsd !== null) cap = cap === undefined ? floorCents(status.availableUsd) : Math.min(cap, floorCents(status.availableUsd));
   return `${head} · this ${what} ${cap === undefined ? 'has no limit' : `up to ${fmt(cap)}`}`;

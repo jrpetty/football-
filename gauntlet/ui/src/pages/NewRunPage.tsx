@@ -731,7 +731,7 @@ export default function NewRunPage() {
           </div>
 
           <div className="sticky-col">
-            <EstimatePanel est={est} loading={estLoading} error={estErr} contestants={contestants} cap={cap !== null && capValid ? cap : null} canStart={canStart} starting={starting} onStart={start} blockers={blockers} extra={<BudgetRunLine status={budget} capUsd={cap} upperUsd={est ? (est.estCostUsdMax ?? est.estCostUsdHigh) : null} />} />
+            <EstimatePanel est={est} loading={estLoading} error={estErr} contestants={contestants} cap={cap !== null && capValid ? cap : null} canStart={canStart} starting={starting} onStart={start} blockers={blockers} extra={<BudgetRunLine status={budget} capUsd={cap} upperUsd={est ? (est.estCostUsdMax ?? est.estCostUsdHigh) : null} showBlocked={false} />} />
           </div>
         </div>
       )}

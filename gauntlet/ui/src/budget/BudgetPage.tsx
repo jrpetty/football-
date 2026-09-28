@@ -8,9 +8,8 @@ import { Card, ErrorState, FloatingTip, PageHead, SkeletonRows, Switch, cx } fro
 import { Icon } from '../components/icons.tsx';
 import { Link, pathOf } from '../router.tsx';
 import { CurrencyRate, MoneyLimitPicker } from '../components/SpendLimits.tsx';
-import { money } from '../money.ts';
 import { budgetApi, useBudget, type BudgetItem, type BudgetSettings, type BudgetStatus } from './budgetApi.ts';
-import { BudgetMeter, BudgetToneChip } from './BudgetParts.tsx';
+import { BudgetMeter, BudgetToneChip, money } from './BudgetParts.tsx';
 import './budget.css';
 
 const KIND: Record<BudgetItem['kind'], string> = { run: 'Run', arena: 'Arena', grade: 'Judges', polish: 'Script', other: 'Other' };
@@ -83,7 +82,7 @@ function MonthCard({ status }: { status: BudgetStatus }) {
       </div>
       {status.blocked && (
         <div className="bud-note bad" role="alert">
-          <Icon.Stop /> <span>The budget is used up: the hard stop blocks new runs and tournaments until {status.month.nextResetLabel}. Raise the monthly budget or turn the hard stop off to carry on now.</span>
+          <Icon.Alert /> <span>The budget is used up: the hard stop blocks new runs and tournaments until {status.month.nextResetLabel}. Raise the monthly budget or turn the hard stop off to carry on now.</span>
         </div>
       )}
       <DayBars status={status} />
@@ -126,7 +125,7 @@ function DayBars({ status }: { status: BudgetStatus }) {
       </div>
       <div className="bud-days-axis tnum" aria-hidden="true">
         {days.map((d) => (
-          <span key={d}>{d === 1 || d % 7 === 1 || d === daysIn ? d : ''}</span>
+          <span key={d}>{d % 7 === 1 ? d : ''}</span>
         ))}
       </div>
       {tip && (

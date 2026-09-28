@@ -6,10 +6,12 @@ import type { SVGProps } from 'react';
 import { Link } from '../router.tsx';
 import { Icon } from '../components/icons.tsx';
 import { cx } from '../components/ui.tsx';
-import { money } from '../money.ts';
-import { budgetLine, floorCents, type BudgetStatus } from '../../../src/budget/budget.ts';
+import { budgetLine, budgetMoney, floorCents, type BudgetStatus } from '../../../src/budget/budget.ts';
 import { displayCurrency } from '../money.ts';
 import './budget.css';
+
+/** Budget amounts in the display currency: "£50" for whole amounts, "£12.40" otherwise. */
+export const money = (usd: number): string => budgetMoney(usd, displayCurrency());
 
 /** A wallet: the Budget nav item (same 24×24 stroke style as components/icons.tsx). */
 export function BudgetIcon(p: SVGProps<SVGSVGElement>) {
@@ -61,14 +63,14 @@ export function budgetClamp(status: BudgetStatus | null, capUsd: number | null):
 /** A New Run / Arena blocker when the hard stop applies (null otherwise). */
 export function budgetBlocker(status: BudgetStatus | null): string | null {
   if (!status?.blocked || status.settings.monthlyUsd === undefined) return null;
-  return `Your ${money(status.settings.monthlyUsd)} monthly budget is used up. The hard stop blocks new runs until ${status.month.nextResetLabel}; raise the budget or turn the hard stop off on the Budget page.`;
+  return `Your ${money(status.settings.monthlyUsd)} monthly budget is used up. The hard stop blocks new runs and tournaments until ${status.month.nextResetLabel}; raise the budget or turn the hard stop off on the Budget page.`;
 }
 
 /**
  * The compact budget line for New Run and the Arena: the month so far, what this run may spend, and a warning when
  * the run's upper-bound estimate is more than what is left. Owner-only information, so hidden in Broadcast mode.
  */
-export function BudgetRunLine({ status, capUsd, upperUsd, what = 'run' }: { status: BudgetStatus | null; capUsd: number | null; upperUsd?: number | null; what?: 'run' | 'tournament' }) {
+export function BudgetRunLine({ status, capUsd, upperUsd, what = 'run', showBlocked = true }: { status: BudgetStatus | null; capUsd: number | null; upperUsd?: number | null; what?: 'run' | 'tournament'; /** False when the page lists the block elsewhere (New Run's blockers). */ showBlocked?: boolean }) {
   if (!status) return null;
   const s = status.settings;
   const clamp = budgetClamp(status, capUsd);
@@ -86,9 +88,9 @@ export function BudgetRunLine({ status, capUsd, upperUsd, what = 'run' }: { stat
         </Link>
       </div>
       <BudgetMeter status={status} />
-      {status.blocked && s.monthlyUsd !== undefined && (
+      {showBlocked && status.blocked && s.monthlyUsd !== undefined && (
         <div className="bud-note bad" role="alert">
-          <Icon.Stop /> <span>{budgetBlocker(status)}</span>
+          <Icon.Alert /> <span>{budgetBlocker(status)}</span>
         </div>
       )}
       {clamp !== null && s.monthlyUsd !== undefined && (

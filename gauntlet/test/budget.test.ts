@@ -125,7 +125,7 @@ test('clamping a run limit to what is left, the hard stop and warnings', () => {
   const g = B.gateLimit(undefined, s, GBP);
   assert.equal(g.capUsd, 15.5);
   assert.ok(g.clamped);
-  assert.equal(g.message, "Limited to £12.40: what's left of your £50.00 monthly budget.");
+  assert.equal(g.message, "Limited to £12.40: what's left of your £50 monthly budget.");
   assert.equal(B.gateLimit(30, s, GBP).capUsd, 15.5, 'a limit above what is left is lowered');
   assert.deepEqual(B.gateLimit(5, s, GBP), { capUsd: 5, clamped: false }, 'a limit below what is left is kept');
   // Clamps round down to whole cents so they never exceed the money left.
@@ -141,12 +141,12 @@ test('clamping a run limit to what is left, the hard stop and warnings', () => {
   const w = B.gateLimit(undefined, status({ monthlyUsd: 62.5 }, 70), GBP);
   assert.equal(w.capUsd, undefined);
   assert.match(w.message!, /used up.*starts anyway/);
-  assert.match(B.gateLimit(30, status({ monthlyUsd: 62.5 }, 50), GBP).message!, /more than the £10.00 left/);
+  assert.match(B.gateLimit(30, status({ monthlyUsd: 62.5 }, 50), GBP).message!, /more than the £10 left/);
   assert.equal(B.gateLimit(5, status({ monthlyUsd: 62.5 }, 50), GBP).message, undefined);
   // The compact New Run line.
-  assert.equal(B.budgetLine(s, GBP, null), 'This month: £37.60 of £50.00 spent · this run up to £12.40');
-  assert.equal(B.budgetLine(s, GBP, 5), 'This month: £37.60 of £50.00 spent · this run up to £4.00');
-  assert.equal(B.budgetLine(status({}, 5), GBP, null, 'tournament'), 'This month: £4.00 spent · this tournament has no limit');
+  assert.equal(B.budgetLine(s, GBP, null), 'This month: £37.60 of £50 spent · this run up to £12.40');
+  assert.equal(B.budgetLine(s, GBP, 5), 'This month: £37.60 of £50 spent · this run up to £4');
+  assert.equal(B.budgetLine(status({}, 5), GBP, null, 'tournament'), 'This month: £4 spent · this tournament has no limit');
 });
 
 test('spend this month: sums runs, re-tries, Arena, judges and one-off calls; Manual and Random cost nothing', () => {

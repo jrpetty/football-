@@ -180,7 +180,7 @@
 }
 .bud-items li {
   display: grid;
-  grid-template-columns: 96px 64px minmax(0, 1fr) 90px 80px;
+  grid-template-columns: 7.4em 5.6em minmax(0, 1fr) 90px 6em;
   align-items: center;
   gap: 12px;
   padding: 9px 0;
@@ -191,6 +191,7 @@
   border-bottom: 0;
 }
 .bud-item-date {
+  white-space: nowrap;
   color: var(--text-3);
   font-size: 0.8rem;
 }
