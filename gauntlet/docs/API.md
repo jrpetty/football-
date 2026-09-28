@@ -165,6 +165,18 @@ Show `combinedPrompt` for a **new** chat (it includes any system prompt and earl
 `GET /overlay/<runId>?view=…` (outside `/api`) redirects to the dashboard's transparent overlay page
 (`/#/overlay/<runId>?view=…`), which live-updates from `/api/runs/:id/events`. `runId` may also be `demo`.
 
+## Head to Head (versus)
+
+Read-only; no model is called. Shapes are in [`src/versus/types.ts`](../src/versus/types.ts).
+Without `run`, every stored result whose test hash and model config still match is pooled (same rule as the
+combined leaderboard); `suite` optionally limits the tests.
+
+| Method | Path | Body | Returns |
+|---|---|---|---|
+| GET | `/api/versus?a=<id>&b=<id>[&run=<runId>][&suite=<id>]` | – | `VersusData`: both fighters (label, vendor, colour, price per 1M tokens, context), `rounds` (per test: both scores on the cases both answered, samples, cost and time for one pass, `winner` `a`/`b`/`tie`, `margin`, `moment` = a case one got right and the other wrong with truncated quotes), `skipped` tests, `totals` (rounds won, average score, cost, time, tokens/s, value = points per $), `winner`, `tieMargin` (2 points). 404 when a model is not in the run / config, 400 for the same model twice. |
+| GET | `/api/versus/options[?run=<runId>]` | – | `VersusOptions`: models with results in that scope (+ test count), a `suggested` pair, and runs with results |
+| POST | `/api/versus/render` | `{ a, b, run? }` | The vertical 1080×1920 Shorts card: `{ png: dataUrl, width, height, fileName }`; 409 when no Chrome/Edge/Chromium is available (render in the browser instead) |
+
 ## Human review
 
 | Method | Path | Body | Returns |

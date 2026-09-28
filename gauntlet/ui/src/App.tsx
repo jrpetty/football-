@@ -8,6 +8,7 @@ import { Callout, LoadingPage, cx } from './components/ui.tsx';
 import { useHotkeys, useNow } from './hooks.ts';
 import { MOCK, api } from './api.ts';
 import { ArenaIcon } from './arena/ArenaIcon.tsx';
+import { VersusIcon } from './versus/VersusIcon.tsx';
 
 const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage.tsx'));
 const NewRunPage = lazy(() => import('./pages/NewRunPage.tsx'));
@@ -40,6 +41,9 @@ const ArenaTournamentPage = lazy(() => import('./pages/ArenaTournamentPage.tsx')
 const ArenaGamePage = lazy(() => import('./pages/ArenaGamePage.tsx'));
 const ArenaCardPage = lazy(() => import('./pages/ArenaCardPage.tsx'));
 const ArenaJudgePage = lazy(() => import('./pages/ArenaJudgePage.tsx'));
+// Head to Head (ui/src/versus/)
+const VersusPage = lazy(() => import('./versus/VersusPage.tsx'));
+const VersusDeckPage = lazy(() => import('./versus/VersusDeckPage.tsx'));
 
 interface NavItem {
   to: string;
@@ -56,6 +60,7 @@ const NAV: NavItem[] = [
   { to: '/', label: 'Leaderboard', icon: Icon.Trophy, match: (p) => p === '/' || p === '/leaderboard' },
   { to: '/runs', label: 'Runs', icon: Icon.History, match: (p) => p.startsWith('/runs') },
   { to: '/arena', label: 'Arena', icon: ArenaIcon, match: (p) => p.startsWith('/arena') },
+  { to: '/versus', label: 'Head to Head', icon: VersusIcon, match: (p) => p.startsWith('/versus') },
   { to: '/present', label: 'Presenter', icon: Icon.Present, match: (p) => p.startsWith('/present') },
   { to: '/studio', label: 'Studio', icon: Icon.Clapper, match: (p) => p.startsWith('/studio') },
   { to: '/inbox', label: 'Manual Inbox', icon: Icon.Inbox, badge: 'manual', match: (p) => p.startsWith('/inbox') },
@@ -142,6 +147,8 @@ function resolve(parts: string[]): Resolved {
     if (c === 'judge') return { el: <ArenaJudgePage key={b} id={b} />, crumb: 'Human judging' };
     return { el: <ArenaTournamentPage key={b} id={b} />, crumb: 'Tournament' };
   }
+  if (a === 'versus') return { el: <VersusPage />, crumb: 'Head to Head' };
+  if (a === 'present' && b === 'versus') return { el: <VersusDeckPage />, crumb: 'Presenter', bare: true };
   if (a === 'present') {
     if (!b) return { el: <PresentPickerPage />, crumb: 'Presenter' };
     return { el: <PresentPage key={b} runId={b} />, crumb: 'Presenter', bare: true };

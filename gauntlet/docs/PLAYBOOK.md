@@ -111,6 +111,35 @@ builds the raw material for the video. Nothing here calls a model or costs money
 5. Say it honestly on screen: the time limit is the same for every model, but API speed differs by provider,
    so the score only counts right and wrong. Response times are shown under each model's name.
 
+## Making a versus video
+
+"Model A vs Model B" uses results you have **already recorded**, so it costs nothing and calls no model.
+
+1. **Run the same tests on both models** (any suite, any number of runs). Only tests *both* models finished
+   count, and inside a test only the questions both answered, so a half-finished run can't tilt it.
+2. **Open Head to Head** in the sidebar (`#/versus`). It starts with the two best models that share the most
+   tests; change the **Left corner** / **Right corner**, swap sides with the arrows button, or pick one run under
+   **Results from** (default: every valid result, the same pool as the Leaderboard).
+3. **What's on the page**, top to bottom:
+   - the face-off: both model badges in their colours, and the **tale of the tape** (maker, price to read and to
+     write per million tokens, memory). A ★ marks the better of the two on that line;
+   - **round by round**: one card per test with the category icon, both scores as bars growing towards each
+     other, a winner badge ("Nova 3 Pro wins by 18 points"; less than **2 points** apart is a **draw**), cost and
+     time, and the **decisive moment**: one question where one model was right (green) and the other wrong (red),
+     with the correct answer and both replies quoted from the recording (shortened, marked "…");
+   - **the result**: rounds won ("Nova 3 Pro wins 7–4"), average score, total cost and time to run these tests
+     once, writing speed and **value** (score points per dollar).
+   Anything not recorded says "not recorded" — nothing is estimated.
+4. **Record it as slides:** press **Present as slides** (or open `#/present/versus?a=<model>&b=<model>`).
+   Face-off → one slide per round with a live "score so far" that ticks up after the winner is stamped → final
+   result. Same keys as the Presenter: **→ / ←**, **F** full screen, **A** auto (9 s per slide), **?** help.
+5. **Shorts card:** at the bottom of the page (and in **Studio → Thumbnails & Shorts**, for a run's models) is a
+   vertical 1080×1920 card with the result, up to eight rounds (the most one-sided ones when there are more)
+   and the cost. **Download PNG** renders it with Chrome/Edge when the server has one, otherwise in your browser.
+6. Say it honestly: costs are what these tests cost *once*; a model run several times is averaged, not added.
+
+Demo it with no keys: `?mock=1#/versus`. Screenshots: `docs/screenshots/next-level/versus/`.
+
 ## Answer vs truth: showing one answer on screen
 
 Most prompt tests now draw the model's answer against the answer key, so a viewer can see *why* it scored what

@@ -14,6 +14,7 @@ import { Icon } from '../components/icons.tsx';
 import { ScriptPanel } from '../components/studio/ScriptPanel.tsx';
 import { CardsPanel } from '../components/studio/CardsPanel.tsx';
 import { OverlayPanel } from '../components/studio/OverlayPanel.tsx';
+import { StudioVersusCard } from '../versus/StudioVersusCard.tsx';
 import { HIGHLIGHT_LABELS } from '../../../src/media/highlights.ts';
 import type { Highlight, HighlightType, RunListItem, StudioPayload } from '../types.ts';
 import '../styles/studio.css';
@@ -227,6 +228,7 @@ function Studio({ runId }: { runId: string }) {
         {tab === 'highlights' && <HighlightsPanel s={s} />}
         {tab === 'script' && <ScriptPanel s={s} />}
         {tab === 'cards' && <CardsPanel s={s} highlightId={query.get('h') ?? undefined} />}
+        {tab === 'cards' && <StudioVersusCard runId={s.runId} />}
         {tab === 'overlay' && <OverlayPanel s={s} />}
       </div>
     </div>

@@ -687,6 +687,7 @@ export async function handle(method: string, fullPath: string, body: unknown): P
   const [a, b, c, d] = parts;
   const route = `${method} ${a ?? ''}`;
   if (a === 'arena') return (await import('./arenaMock.ts')).handleArena(method, parts.slice(1), body);
+  if (a === 'versus') return (await import('./versusMock.ts')).handleVersus(method, parts.slice(1), q, body);
 
   switch (route) {
     case 'GET meta':
