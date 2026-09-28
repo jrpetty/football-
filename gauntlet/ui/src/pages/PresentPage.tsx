@@ -371,7 +371,7 @@ function captionFor(slide: Slide, deck: Deck): Caption {
     case 'how':
       return {
         text: 'The rules: every test is scored out of 100, the Gauntlet Index averages the categories into one number, and brackets show how certain each score is.',
-        fine: `Uncertainty = 95% bootstrap CI over test cases · temperature ${m.settings?.temperature ?? 0}${deck.hasManual ? ' · hand-pasted chatbots used their own apps' : ''}`,
+        fine: `Thin lines = likely range (95%) · temperature ${m.settings?.temperature ?? 0}${deck.hasManual ? ' · hand-pasted chatbots used their own apps' : ''}`,
       };
     case 'explainer': {
       const t = slide.test;
@@ -395,18 +395,18 @@ function captionFor(slide: Slide, deck: Deck): Caption {
       const unc = hasCi ? ` Brackets show uncertainty${baseNote}.` : baseNote ? `${baseNote}.` : '';
       return {
         text: program ? `Each model’s score out of 100 — longer is better — with how its typical run went underneath.${unc}` : `Each model’s score on this test, out of 100 — longer is better.${unc}`,
-        fine: `Average of ${n} ${casesWord(t, n)} × ${R} ${noun(R, 'attempt')} · uncertainty = 95% bootstrap CI · time = median per ${program ? 'run' : casesWord(t, 1)}`,
+        fine: `Average of ${n} ${casesWord(t, n)} × ${R} ${noun(R, 'attempt')} · thin lines = likely range · time = median per ${program ? 'run' : casesWord(t, 1)}`,
       };
     }
     case 'final':
       return {
         text: 'The final ranking: the Gauntlet Index combines every category into one score out of 100. Squares show each category; brackets show uncertainty.',
-        fine: `Uncertainty: 95% bootstrap CI · cost per point = spend ÷ Index${deck.hasManual ? ' · * pasted by hand' : ''}`,
+        fine: `Thin lines = likely range · cost per point = spend ÷ Index${deck.hasManual ? ' · * pasted by hand' : ''}`,
       };
     case 'scatter':
       return {
         text: 'Up and to the left is better: higher score, lower cost. The bright line links the models that give the best score for the money.',
-        fine: 'x-axis: total API spend in USD (log scale) · line: Pareto frontier · whiskers: 95% CI',
+        fine: 'Across: total spend in USD · line: best score for the money · thin lines: likely range',
       };
     case 'medals':
       return {
