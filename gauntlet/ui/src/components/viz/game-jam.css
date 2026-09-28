@@ -587,3 +587,9 @@ html[data-broadcast='on'] .jam-crit-l { font-size: 1.1rem; }
 .s-jam-table .r.first { font-weight: 900; }
 .s-jam-table .r i { width: 22px; height: 22px; border-radius: 50%; }
 .s-jam-trophy { width: 120px; height: 120px; }
+
+/* Long model names wrap on the shelf rather than being cut off. */
+.jam-shelf-model .mb-name {
+  white-space: normal;
+  overflow: visible;
+}
