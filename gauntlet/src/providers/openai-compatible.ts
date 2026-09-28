@@ -33,8 +33,8 @@ export function createOpenAICompatibleAdapter(ctx: AdapterContext): ProviderAdap
   const opts = ctx.contestant.options ?? {};
   const isOpenAI = (ctx.provider.baseUrl ?? '').includes('api.openai.com');
   const maxTokensParam = ctx.provider.maxTokensParam ?? (isOpenAI ? 'max_completion_tokens' : 'max_tokens');
-  // Mistral's strict request validation rejects `stream_options.include_usage` with a 422; it sends usage in the
-  // final stream chunk without being asked.
+  // Mistral's chat API does not document `stream_options` and validates request fields strictly (unknown fields are a
+  // 422 risk); it sends usage in the final stream chunk without being asked, so we don't send the option at all.
   const isMistral = (ctx.provider.baseUrl ?? '').includes('api.mistral.ai');
 
   return {
