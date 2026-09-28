@@ -138,7 +138,7 @@ export function buildScript(input: StudioInput, highlights: Highlight[], slides:
   });
 
   // ── Final reveal ──
-  const final = slideOf(slides, 'final');
+  const final = slideOf(slides, 'podium') ?? slideOf(slides, 'final');
   if (final && st.length) {
     const lines = [`[Slide ${final}] The final standings. The Gauntlet Index is the overall score out of 100, averaged across every category.`];
     for (let place = st.length; place >= 2; place--) {

@@ -144,16 +144,21 @@ test('slides: same running order and numbering as the Presenter', () => {
       '2:how',
       '3:explainer:math.x',
       '4:result:math.x',
-      '5:explainer:honesty.trap',
-      '6:result:honesty.trap',
-      '7:explainer:agentic.island',
-      '8:result:agentic.island',
-      '9:explainer:creative.future-game',
-      '10:result:creative.future-game',
-      '11:final',
-      '12:scatter',
-      '13:medals',
-      '14:outro',
+      '5:standings:math.x',
+      '6:explainer:honesty.trap',
+      '7:result:honesty.trap',
+      '8:standings:honesty.trap',
+      '9:explainer:agentic.island',
+      '10:result:agentic.island',
+      '11:standings:agentic.island',
+      '12:explainer:creative.future-game',
+      '13:result:creative.future-game',
+      '14:standings:creative.future-game',
+      '15:podium',
+      '16:final',
+      '17:scatter',
+      '18:medals',
+      '19:outro',
     ],
   );
 });
@@ -174,11 +179,11 @@ test('script: hook, intro with prices, per-test segments with slide cues, recap,
   assert.match(text('test-math.x'), /^\[Slide 3\] Test one: Competition Maths\. Twenty contest problems\. No partial credit\./);
   assert.match(text('test-math.x'), /\[Slide 4\] Budget Mini takes it with 100, ahead of Mid Pro on 83\./);
   assert.match(text('test-agentic.island'), /\[Replay: Survival Island, Flagship Ultra, step 3\] Flagship Ultra dies on day 2/);
-  assert.match(text('final'), /^\[Slide 11\]/);
+  assert.match(text('final'), /^\[Slide 15\]/); // the podium reveal
   assert.match(text('final'), /And the winner: Budget Mini, with 75\.0!/);
   // The reveal goes from last place to first.
   assert.ok(text('final').indexOf('Flagship Ultra') < text('final').indexOf('Mid Pro'));
-  assert.match(text('outro'), /^\[Slide 14\]/);
+  assert.match(text('outro'), /^\[Slide 19\]/);
   // Each test gets at most one highlight; no highlight is used twice.
   const cues = s.sections.flatMap((x) => x.lines).join('\n').match(/\[(Replay|Case):[^\]]+\]/g) ?? [];
   assert.equal(new Set(cues).size, cues.length);

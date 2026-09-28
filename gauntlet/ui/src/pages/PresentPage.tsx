@@ -7,14 +7,18 @@
  * with a plain-English "What you're seeing" caption.
  *
  * Keys: → / Space / PageDown next · ← / PageUp back · Home / End · F full screen
- *       A auto (reveal / advance) · ? help · Esc exit.
+ *       A auto (reveal / advance) · S sound effects · ? help · Esc exit.
+ *
+ * Game-show extras: a "Standings after N of M tests" bar race after every test,
+ * a last-to-first podium reveal before the final table, synthesised sound
+ * effects (components/present/sfx.ts) and "random guessing: X%" reference lines.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { api } from '../api.ts';
 import { useAsync, useCountUp, useElementSize, useHotkeys, useInterval } from '../hooks.ts';
 import { navigate, pathOf, setQuery, useRoute } from '../router.tsx';
-import { useMeta } from '../context.tsx';
+import { useMeta, usePrefs } from '../context.tsx';
 import { cx } from '../components/ui.tsx';
 import { Icon } from '../components/icons.tsx';
 import { BrandMark } from '../components/Brand.tsx';
@@ -27,6 +31,14 @@ import { selectTrickHighlights, type TrickHighlight } from '../../../src/present
 import { TruthSlide } from '../components/present/TruthSlide.tsx';
 import { pickInterestingCase, type InterestPick } from '../../../src/presenter/visuals/interest.ts';
 import { visualEntry, visualFamilyFor } from '../components/viz/caseVisuals.tsx';
+import { runningStandings, revealSteps, revealState, type StandingsStep } from '../../../src/presenter/standings.ts';
+import { StandingsSlide } from '../components/present/StandingsSlide.tsx';
+import { PodiumSlide } from '../components/present/PodiumSlide.tsx';
+import { RandomGuessLine, randomGuessText } from '../components/viz/RandomGuessLine.tsx';
+import { setSfxOn, sfx, useSfx } from '../components/present/sfx.ts';
+import { autoHoldMs, stageBusy } from '../components/present/autoPace.ts';
+import '../styles/show.css';
+import { AutoRing, SoundControls, SoundFlash, SpeakerIcon } from '../components/present/ShowChrome.tsx';
 
 /** Compact money for big slide type: $52.57, $0.23, $0.0063, <$0.001. */
 function shortCost(usd: number | null | undefined): string {
@@ -48,10 +60,7 @@ const H = 1080;
 /** Shorts stage (?vertical=1): only the "Can It Be Fooled?" slides, 1080×1920. */
 const VW = 1080;
 const VH = 1920;
-const AUTO_REVEAL_MS = 1200;
-/** Auto mode pauses longer between the reveal steps of a trick slide. */
-const AUTO_TRICK_REVEAL_MS = 3500;
-const AUTO_ADVANCE_MS = 9000;
+// Auto-play hold times live in components/present/autoPace.ts.
 
 // ───────────────────────────── Deck model ─────────────────────────────
 
@@ -89,6 +98,14 @@ interface Deck {
   trick: Map<string, TrickHighlight[]>;
   /** "Answer vs truth" picks per test id (only with ?truth=1). */
   truth: Map<string, InterestPick>;
+  /** Running standings after each test, in episode order (src/presenter/standings.ts). */
+  standings: StandingsStep[];
+}
+
+/** Game-show extras (?race=0 / ?podium=0 turn them off). */
+interface ShowOpts {
+  race: boolean;
+  podium: boolean;
 }
 
 type Slide =
@@ -104,7 +121,9 @@ type Slide =
   | { kind: 'trick-empty' }
   | { kind: 'truth'; test: DeckTest; pick: InterestPick }
   | { kind: 'sim'; test: DeckTest; pick: CaseResultLite }
-  | { kind: 'moment'; test: DeckTest; moment: MomentKind };
+  | { kind: 'moment'; test: DeckTest; moment: MomentKind }
+  | { kind: 'standings'; test: DeckTest; step: number }
+  | { kind: 'podium' };
 
 interface Caption {
   text: string;
@@ -275,6 +294,7 @@ function buildDeck(d: RunDetail, details: Map<string, TestDetail>, metaCats: Cat
     hasPrivate: [...details.values()].some((t) => t.summary?.source === 'private'),
     trick,
     truth,
+    standings: lb ? runningStandings(lb, ordered.map((t) => t.snap.id), new Set(contenders.filter((c) => c.baseline).map((c) => c.id))) : [],
   };
 }
 
@@ -297,7 +317,7 @@ function momentSlides(deck: Deck, test: DeckTest): Slide[] {
   return moment ? [{ kind: 'moment', test, moment }] : [];
 }
 
-function buildSlides(deck: Deck, vertical = false): Slide[] {
+function buildSlides(deck: Deck, vertical = false, show: ShowOpts = { race: true, podium: true }): Slide[] {
   if (vertical) {
     const shorts = deck.tests.flatMap((t) => trickSlides(deck, t));
     return shorts.length ? shorts : [{ kind: 'trick-empty' }];
@@ -307,9 +327,12 @@ function buildSlides(deck: Deck, vertical = false): Slide[] {
     slides.push({ kind: 'explainer', test }, { kind: 'result', test }, ...simSlides(deck, test), ...momentSlides(deck, test), ...trickSlides(deck, test));
     const pick = deck.truth.get(test.snap.id);
     if (pick) slides.push({ kind: 'truth', test, pick });
+    const step = deck.standings.findIndex((st) => st.testId === test.snap.id);
+    if (show.race && step >= 0 && deck.standings[step]!.rows.some((r) => r.index !== null)) slides.push({ kind: 'standings', test, step });
   }
   // Summary slides only when they have something to show (e.g. a baseline-only smoke test has none).
   const comps = standings(deck).filter((r) => typeof r.index === 'number');
+  if (comps.length && show.podium) slides.push({ kind: 'podium' });
   if (comps.length) slides.push({ kind: 'final' });
   if (comps.some((r) => (r.totals?.costUsd ?? 0) > 0)) slides.push({ kind: 'scatter' });
   if (comps.length && (deck.lb?.medals ?? []).some((e) => e.gold || e.silver || e.bronze)) slides.push({ kind: 'medals' });
@@ -417,6 +440,19 @@ function captionFor(slide: Slide, deck: Deck): Caption {
     }
     case 'moment':
       return momentCaption(slide.moment);
+    case 'standings': {
+      const st = deck.standings[slide.step]!;
+      const base = typeof st.baseline === 'number';
+      return {
+        text: `The overall race after ${st.step} of ${st.of} ${noun(st.of, 'test')}: longer bar = higher score so far. Arrows show who moved up or down after “${slide.test.snap.name}”.${base ? ' The dashed line is what random guessing scores.' : ''}`,
+        fine: `Running Gauntlet Index: the leaderboard formula applied to the tests played so far${base ? ` · ${randomGuessText(st.baseline!)}` : ''}${deck.hasManual ? ' · * pasted by hand' : ''}`,
+      };
+    }
+    case 'podium':
+      return {
+        text: 'The final ranking, revealed from last place to first. Each model’s overall score out of 100, with the test it did best and worst on.',
+        fine: `Gauntlet Index = every category averaged into one score · best/worst = highest and lowest test score${deck.hasManual ? ' · * pasted by hand' : ''}`,
+      };
     case 'outro':
       return {
         text: deck.hasPrivate
@@ -453,6 +489,10 @@ function sectionFor(slide: Slide, deck: Deck): string {
       return `Answer vs truth · ${slide.test.snap.name}`;
     case 'sim':
       return `Test ${slide.test.n} of ${deck.tests.length} · Best moment`;
+    case 'standings':
+      return `Standings · after ${deck.standings[slide.step]?.step ?? slide.test.n} of ${deck.tests.length}`;
+    case 'podium':
+      return 'The verdict';
   }
 }
 
@@ -795,11 +835,7 @@ function RaceRow({
       </div>
       <div className="rr-main">
         <div className="rr-track">
-          {baseLine !== null && e.score !== null && (
-            <i className="rr-bmark" style={{ left: `${baseLine * 100}%` }} aria-hidden="true">
-              {baseLabel && <span>random guessing</span>}
-            </i>
-          )}
+          {baseLine !== null && e.score !== null && <RandomGuessLine pct={baseLine * 100} label={baseLabel} />}
           {e.score === null ? (
             <span className="rr-none">{(e.agg?.skipped ?? 0) > 0 && !e.agg?.n ? 'Skipped: this model can’t see images' : nullNote}</span>
           ) : (
@@ -860,7 +896,7 @@ function ResultSlide({ deck, test }: { deck: Deck; test: DeckTest }) {
   const winner = competitors.find((e) => e.medal === 'gold') ?? (competitors[0]?.score !== null ? competitors[0] : undefined);
   const pending = ordered.some((e) => (e.agg?.pendingHuman ?? 0) > 0);
   const nullNote = pending ? 'Awaiting human review' : 'No score — every attempt failed';
-  const baseLine = base?.score !== null && base?.score !== undefined && base.score > 0.02 ? base.score : null;
+  const baseLine = typeof base?.score === 'number' ? base.score : null;
 
   return (
     <div className="s-res">
@@ -916,7 +952,7 @@ function CatCells({ row, cats, dim }: { row: LeaderboardRow; cats: CategoryInfo[
   );
 }
 
-function FinalRow({ row, place, cats, baseline }: { row: LeaderboardRow; place: number; cats: CategoryInfo[]; baseline?: boolean }) {
+function FinalRow({ row, place, cats, baseline, guess, guessLabel }: { row: LeaderboardRow; place: number; cats: CategoryInfo[]; baseline?: boolean; guess?: number | null; guessLabel?: boolean }) {
   const idx = typeof row.index === 'number' ? row.index : null;
   const v = useCountUp(idx ?? 0, 1100, 120);
   const medal = !baseline && place <= 3 && idx !== null ? (['gold', 'silver', 'bronze'] as const)[place - 1] : null;
@@ -936,6 +972,7 @@ function FinalRow({ row, place, cats, baseline }: { row: LeaderboardRow; place: 
         <span className="fs-bar" aria-hidden="true">
           <i className="fs-fill" style={{ width: `${v}%` }} />
           {row.indexCi95 && <i className="fs-ci" style={{ left: `${row.indexCi95[0]}%`, width: `${Math.max(0.5, row.indexCi95[1] - row.indexCi95[0])}%` }} />}
+          {!baseline && <RandomGuessLine pct={guess} label={guessLabel} placement="below" />}
         </span>
       </span>
       <CatCells row={row} cats={cats} dim={baseline} />
@@ -960,6 +997,7 @@ function FinalRow({ row, place, cats, baseline }: { row: LeaderboardRow; place: 
 function FinalSlide({ deck, reveal }: { deck: Deck; reveal: number }) {
   const rows = standings(deck);
   const base = baselineRow(deck);
+  const guess = typeof base?.index === 'number' ? base.index : null;
   const n = rows.length;
   const cats = deck.cats;
   return (
@@ -983,7 +1021,7 @@ function FinalSlide({ deck, reveal }: { deck: Deck; reveal: number }) {
         </div>
         {rows.map((r, i) =>
           i >= n - reveal ? (
-            <FinalRow key={r.contestantId} row={r} place={i + 1} cats={cats} />
+            <FinalRow key={r.contestantId} row={r} place={i + 1} cats={cats} guess={guess} guessLabel={i === n - 1} />
           ) : (
             <div key={r.contestantId} className="fs-row fs-hidden" aria-hidden="true">
               <span className="fs-rank tnum">{r.rank ?? i + 1}</span>
@@ -1006,7 +1044,7 @@ function ScatterSlide({ deck }: { deck: Deck }) {
     <div className="s-scatter">
       <SlideHead eyebrow="Value for money" title="Score vs cost" sub="Is the most expensive model worth it?" />
       <div className="sc-wrap" ref={ref}>
-        {size.height > 0 && <ScoreCostScatter rows={deck.lb?.rows ?? []} mode="total" fontScale={1.72} height={h} />}
+        {size.height > 0 && <ScoreCostScatter rows={deck.lb?.rows ?? []} mode="total" fontScale={1.72} height={h} baselineText={randomGuessText} />}
       </div>
     </div>
   );
@@ -1122,6 +1160,10 @@ function OutroSlide({ deck }: { deck: Deck }) {
   );
 }
 
+function showModels(deck: Deck) {
+  return new Map(deck.contenders.map((c) => [c.id, { label: c.label, vendor: c.vendor, color: c.color, manual: c.manual }]));
+}
+
 function SlideView({ slide, deck, reveal, vertical }: { slide: Slide; deck: Deck; reveal: number; vertical: boolean }) {
   switch (slide.kind) {
     case 'trick':
@@ -1156,6 +1198,21 @@ function SlideView({ slide, deck, reveal, vertical }: { slide: Slide; deck: Deck
       );
     case 'final':
       return <FinalSlide deck={deck} reveal={reveal} />;
+    case 'standings': {
+      const st = deck.standings[slide.step]!;
+      return <StandingsSlide step={st} prevBaseline={deck.standings[slide.step - 1]?.baseline ?? null} models={showModels(deck)} testName={slide.test.snap.name} />;
+    }
+    case 'podium': {
+      const base = baselineRow(deck);
+      return (
+        <PodiumSlide
+          rows={standings(deck).filter((r) => typeof r.index === 'number')}
+          tests={deck.tests.map((t) => ({ id: t.snap.id, name: t.snap.name }))}
+          baseline={typeof base?.index === 'number' ? base.index : null}
+          reveal={reveal}
+        />
+      );
+    }
     case 'scatter':
       return <ScatterSlide deck={deck} />;
     case 'medals':
@@ -1183,10 +1240,13 @@ const KEYS: Array<[string, string]> = [
   ['→  Space', 'Next slide / reveal next row'],
   ['←', 'Back'],
   ['Home  End', 'First / last slide'],
-  ['A', 'Auto: reveal rows every 1.2 s, then advance'],
+  ['A', 'Auto-play: holds longer on reveals, waits for animations; the ring shows the next advance'],
+  ['S', 'Sound effects on / off (remembered; off by default)'],
   ['?vertical=1', 'Shorts: only the “Can It Be Fooled?” slides, 1080×1920'],
   ['?traps=5', 'How many “Can It Be Fooled?” slides per trick test (default 3)'],
   ['?truth=1', 'Add an “answer vs truth” slide per test: the case the models disagreed on most'],
+  ['?race=0', 'Leave out the “Standings after N tests” bar race slides'],
+  ['?podium=0', 'Leave out the last-to-first podium reveal (the table reveals row by row instead)'],
   ['F', 'Full screen'],
   ['?', 'Show or hide this help'],
   ['Esc', 'Leave the presenter'],
@@ -1216,14 +1276,17 @@ export default function PresentPage({ runId }: { runId: string }) {
     () => (state.data ? buildDeck(state.data.d, state.data.details, categories, cat, meta?.programs ?? [], meta?.settings?.judgeExcludeSameVendor, manualProviders, traps, truthOn) : null),
     [state.data, categories, cat, meta, manualProviders, traps, truthOn],
   );
-  const slides = useMemo(() => (deck ? buildSlides(deck, vertical) : []), [deck, vertical]);
+  const raceOn = query.get('race') !== '0';
+  const podiumOn = query.get('podium') !== '0';
+  const slides = useMemo(() => (deck ? buildSlides(deck, vertical, { race: raceOn, podium: podiumOn }) : []), [deck, vertical, raceOn, podiumOn]);
   const finalRows = deck ? standings(deck).length : 0;
+  const podiumN = deck ? standings(deck).filter((r) => typeof r.index === 'number').length : 0;
 
   const requested = Math.max(1, Number(query.get('s')) || 1) - 1;
   const idx = slides.length ? Math.min(requested, slides.length - 1) : 0;
   const slide = slides[idx];
   /** Reveal steps on this slide: final-standings rows, or question → answers → verdicts on a trick slide. */
-  const maxReveal = slide?.kind === 'final' ? finalRows : slide?.kind === 'trick' ? TRICK_REVEAL_STEPS : 0;
+  const maxReveal = slide?.kind === 'final' ? (podiumOn ? 0 : finalRows) : slide?.kind === 'trick' ? TRICK_REVEAL_STEPS : slide?.kind === 'podium' ? revealSteps(podiumN) : 0;
 
   const [reveal, setReveal] = useState(0);
   const [auto, setAuto] = useState(false);
@@ -1234,6 +1297,18 @@ export default function PresentPage({ runId }: { runId: string }) {
   const dirRef = useRef<1 | -1>(1);
   const prevIdx = useRef(idx);
   const ctrlTimer = useRef<number | undefined>(undefined);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const sound = useSfx();
+  const { broadcast } = usePrefs();
+  const [flash, setFlash] = useState<{ on: boolean; k: number } | null>(null);
+  const flashTimer = useRef<number | undefined>(undefined);
+  const toggleSound = useCallback(() => {
+    const on = !sound.on;
+    setSfxOn(on);
+    setFlash({ on, k: Date.now() });
+    window.clearTimeout(flashTimer.current);
+    flashTimer.current = window.setTimeout(() => setFlash(null), 1000);
+  }, [sound.on]);
 
   // Entering the final slide: fresh reveal going forward, fully revealed going back.
   if (prevIdx.current !== idx) {
@@ -1301,6 +1376,7 @@ export default function PresentPage({ runId }: { runId: string }) {
     End: (e) => (e.preventDefault(), go(slides.length - 1)),
     f: () => toggleFs(),
     a: () => setAuto((x) => !x),
+    s: () => toggleSound(),
     '?': () => setHelp((h) => !h),
     h: () => setHelp((h) => !h),
     Escape: () => {
@@ -1309,17 +1385,43 @@ export default function PresentPage({ runId }: { runId: string }) {
     },
   });
 
-  // Auto mode: reveal final rows every 1.2 s, otherwise advance every 9 s.
+  // Auto mode: each step holds as long as it needs (components/present/autoPace.ts),
+  // and never moves on while the stage is still animating.
   const stepKey = `${idx}:${reveal}`;
   const stepRef = useRef({ key: stepKey, at: Date.now() });
   if (stepRef.current.key !== stepKey) stepRef.current = { key: stepKey, at: Date.now() };
+  const podiumSt = slide?.kind === 'podium' ? revealState(podiumN, reveal) : null;
+  const hold = autoHoldMs({ kind: slide?.kind ?? '', reveal, maxReveal, rows: deck?.contenders.length, drumroll: podiumSt?.drumroll, winner: podiumSt?.winner });
+  const [autoP, setAutoP] = useState({ p: 0, wait: false });
   useInterval(
     () => {
-      const period = reveal < maxReveal ? (slide?.kind === 'trick' ? AUTO_TRICK_REVEAL_MS : AUTO_REVEAL_MS) : AUTO_ADVANCE_MS;
-      if (Date.now() - stepRef.current.at >= period) next();
+      const el = Date.now() - stepRef.current.at;
+      const busy = el >= hold && stageBusy(stageRef.current);
+      setAutoP({ p: Math.min(1, el / hold), wait: busy });
+      if (el >= hold && !busy) next();
     },
     auto ? 200 : null,
   );
+
+  // Sound cues: a whoosh on every slide change; tick/buzz on the reveals that have a verdict.
+  const cueRef = useRef({ idx, reveal });
+  useEffect(() => {
+    const was = cueRef.current;
+    cueRef.current = { idx, reveal };
+    if (!slide || (was.idx === idx && was.reveal === reveal)) return;
+    if (was.idx !== idx) sfx.whoosh();
+    const forward = idx > was.idx || (idx === was.idx && reveal > was.reveal);
+    if (!forward) return;
+    if (slide.kind === 'trick' && reveal === TRICK_REVEAL_STEPS) {
+      const right = slide.h.models.filter((m) => m.verdict === 'correct').length;
+      if (right * 2 >= slide.h.models.length) sfx.ding(0.05);
+      else sfx.buzz(0.05);
+    } else if (slide.kind === 'truth' && was.idx !== idx) {
+      const featured = slide.pick.perModel.find((m) => m.contestantId === slide.pick.featuredContestantId);
+      if (featured && featured.mean >= 0.999) sfx.ding(0.9);
+      else if (featured) sfx.buzz(0.9);
+    }
+  }, [idx, reveal, slide]);
 
   useEffect(() => {
     const on = () => setIsFs(!!document.fullscreenElement);
@@ -1381,7 +1483,7 @@ export default function PresentPage({ runId }: { runId: string }) {
 
   return (
     <div className={cx('deck', !ctrl && 'hide-cursor')}>
-      <div className={cx('deck-stage', vertical && 'vertical')} style={{ transform: `translate(-50%, -50%) scale(${scale})` }} data-slide={slide.kind}>
+      <div ref={stageRef} className={cx('deck-stage', vertical && 'vertical')} style={{ transform: `translate(-50%, -50%) scale(${scale})` }} data-slide={slide.kind}>
         <div className="deck-bg" aria-hidden="true">
           <div className="glow a" />
           <div className="glow b" />
@@ -1403,10 +1505,16 @@ export default function PresentPage({ runId }: { runId: string }) {
               <b style={{ width: `${((idx + 1) / total) * 100}%` }} />
             </i>
             {auto && <em>AUTO</em>}
+            {auto && <AutoRing key={stepKey} p={autoP.p} wait={autoP.wait} />}
+            {sound.on && !broadcast && (
+              <span className="d-sound" title="Sound effects on (S)">
+                <SpeakerIcon on />
+              </span>
+            )}
           </span>
         </header>
         <main className="d-body" key={idx} data-dir={dirRef.current > 0 ? 'fwd' : 'back'} aria-live="polite">
-          <SlideView slide={slide} deck={deck} reveal={reveal} vertical={vertical} />
+          <SlideView slide={slide} deck={deck} reveal={slide.kind === 'final' && podiumOn ? finalRows : reveal} vertical={vertical} />
         </main>
         <footer className="d-cap" key={`cap-${idx}`}>
           <span className="d-cap-k">What you’re seeing</span>
@@ -1425,6 +1533,7 @@ export default function PresentPage({ runId }: { runId: string }) {
         <button className={cx('btn sm', auto && 'primary')} onClick={() => setAuto((x) => !x)} aria-pressed={auto} title="Auto (A)">
           {auto ? <Icon.Pause /> : <Icon.Play />} Auto
         </button>
+        <SoundControls onToggle={toggleSound} />
         <button className="btn sm icon" onClick={toggleFs} aria-label={isFs ? 'Exit full screen' : 'Full screen'} title="Full screen (F)">
           <Icon.Maximize />
         </button>
@@ -1436,9 +1545,11 @@ export default function PresentPage({ runId }: { runId: string }) {
         </button>
       </div>
 
+      {flash && <SoundFlash key={flash.k} on={flash.on} />}
+
       {hint && !help && (
         <div className="deck-hint" aria-hidden="true">
-          <kbd>→</kbd> next · <kbd>←</kbd> back · <kbd>F</kbd> full screen · <kbd>A</kbd> auto · <kbd>?</kbd> keys
+          <kbd>→</kbd> next · <kbd>←</kbd> back · <kbd>F</kbd> full screen · <kbd>A</kbd> auto · <kbd>S</kbd> sound · <kbd>?</kbd> keys
         </div>
       )}
 

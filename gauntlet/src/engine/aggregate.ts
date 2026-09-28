@@ -70,7 +70,8 @@ function weightedMean(entries: Array<{ value: number | null; weight: number }>):
   return w > 0 ? s / w : null;
 }
 
-function indexFromTestScores(tests: AggregateTest[], testScores: Map<string, number | null>, categoryWeights: Record<string, number>): { index: number | null; categories: Record<string, number | null> } {
+/** Gauntlet Index (0..100) and category scores from per-test scores (0..1); exported for the Presenter's running standings. */
+export function indexFromTestScores(tests: AggregateTest[], testScores: Map<string, number | null>, categoryWeights: Record<string, number>): { index: number | null; categories: Record<string, number | null> } {
   const categories: Record<string, number | null> = {};
   const cats = [...new Set(tests.map((t) => t.category))];
   for (const cat of cats) {

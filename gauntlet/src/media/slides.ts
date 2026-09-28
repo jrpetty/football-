@@ -5,6 +5,7 @@
  */
 import { isBaselineId } from './common.ts';
 import type { SlideRef, StudioInput } from './types.ts';
+import { runningStandings } from '../presenter/standings.ts';
 
 /** Tests in the Presenter's running order: by category (canonical order), then manifest order. */
 export function runningOrder(input: StudioInput): string[] {
@@ -20,10 +21,18 @@ export function runningOrder(input: StudioInput): string[] {
 
 export function presenterSlides(input: StudioInput): SlideRef[] {
   const out: Array<Omit<SlideRef, 'n'>> = [{ kind: 'title' }, { kind: 'how' }];
-  for (const testId of runningOrder(input)) out.push({ kind: 'explainer', testId }, { kind: 'result', testId });
   const rows = input.leaderboard?.rows ?? [];
+  const order = runningOrder(input);
+  const baseIds = new Set(rows.filter((r) => isBaselineId({ id: r.contestantId, vendor: r.vendor, label: r.label })).map((r) => r.contestantId));
+  const race = input.leaderboard ? runningStandings(input.leaderboard, order, baseIds) : [];
+  for (const testId of order) {
+    out.push({ kind: 'explainer', testId }, { kind: 'result', testId });
+    // "Standings after N of M tests" bar race (ui/src/components/present/StandingsSlide.tsx).
+    if (race.find((st) => st.testId === testId)?.rows.some((r) => r.index !== null)) out.push({ kind: 'standings', testId });
+  }
   const comps = rows.filter((r) => !isBaselineId({ id: r.contestantId, vendor: r.vendor, label: r.label }) && typeof r.index === 'number');
-  if (comps.length) out.push({ kind: 'final' });
+  // Last-to-first podium reveal, then the full table.
+  if (comps.length) out.push({ kind: 'podium' }, { kind: 'final' });
   if (comps.some((r) => (r.totals?.costUsd ?? 0) > 0)) out.push({ kind: 'scatter' });
   if (comps.length && (input.leaderboard?.medals ?? []).some((e) => e.gold || e.silver || e.bronze)) out.push({ kind: 'medals' });
   out.push({ kind: 'outro' });

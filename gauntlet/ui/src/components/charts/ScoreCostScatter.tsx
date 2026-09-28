@@ -42,6 +42,7 @@ export function ScoreCostScatter({
   tall,
   fontScale,
   height: fixedHeight,
+  baselineText,
 }: {
   rows: LeaderboardRow[];
   mode: CostMode;
@@ -50,6 +51,8 @@ export function ScoreCostScatter({
   fontScale?: number;
   /** Fixed SVG height in px. */
   height?: number;
+  /** Optional wording for the random-baseline line, e.g. "random guessing: 12%" (the Presenter). */
+  baselineText?: (index: number) => string;
 }) {
   const [ref, size] = useElementSize<HTMLDivElement>();
   const fs = useRootFontSize();
@@ -286,7 +289,7 @@ export function ScoreCostScatter({
             <g className="baseline-ref">
               <line x1={margin.left} x2={margin.left + plotW} y1={y(baseline.index)} y2={y(baseline.index)} />
               <text x={margin.left + plotW - 4 * s} y={y(baseline.index) - 6 * s} textAnchor="end" style={{ fontSize: tickSize }}>
-                {baseline.label} · {fmtIndex(baseline.index)}
+                {baselineText ? baselineText(baseline.index) : `${baseline.label} · ${fmtIndex(baseline.index)}`}
               </text>
             </g>
           )}
@@ -370,7 +373,7 @@ export function ScoreCostScatter({
         {baseline && (
           <span className="lg-item">
             <span className="lg-line dashed" />
-            {baseline.label}
+            {baselineText ? 'Random guessing' : baseline.label}
           </span>
         )}
         <span className="lg-item">
