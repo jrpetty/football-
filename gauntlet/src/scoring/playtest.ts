@@ -319,7 +319,10 @@ async function session(html: string, steps: Step[] | null, liveKey?: string): Pr
       out.externalRequests.push(url);
       return route.abort();
     });
-    await page.clock.install({ time: CLOCK_START });
+    await page.clock.install({ time: CLOCK_START - 1000 });
+    // Freeze time: from here on the game's clock moves only when the harness advances it, so loading speed and
+    // machine speed never change what is on screen at a given moment.
+    await page.clock.pauseAt(CLOCK_START);
     await page.addInitScript(SEED_SCRIPT);
     await within(page.setContent(html, { waitUntil: 'load', timeout: LOAD_TIMEOUT_MS }), LOAD_TIMEOUT_MS + 2000, 0, 'loading').catch((e: Error) => {
       if (e instanceof Hung) throw e;
@@ -348,7 +351,18 @@ async function session(html: string, steps: Step[] | null, liveKey?: string): Pr
         }
       }
     };
-    const shoot = async () => within(page.screenshot({ type: 'png', timeout: STEP_TIMEOUT_MS }), STEP_TIMEOUT_MS + 1000, now, 'drawing a frame');
+    // Time is frozen while shooting, so the picture must be stable; a capture can still catch the compositor one
+    // frame behind the canvas, so shoot until two consecutive captures agree (repeatable screenshots).
+    const capture = () => within(page.screenshot({ type: 'png', timeout: STEP_TIMEOUT_MS }), STEP_TIMEOUT_MS + 1000, now, 'drawing a frame');
+    const shoot = async () => {
+      let prev = await capture();
+      for (let i = 0; i < 3; i++) {
+        const next = await capture();
+        if (next.equals(prev)) return next;
+        prev = next;
+      }
+      return prev;
+    };
     const shotQueue = [...SHOT_TIMES];
     const actions = steps ?? [];
     let ai = 0;

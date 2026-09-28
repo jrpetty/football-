@@ -135,7 +135,7 @@ export function jamGenreInfo(g: string): (typeof JAM_GENRES)[number] | undefined
 }
 
 /** The recorded Game Jam detail of a result, if any (older or other results have none). */
-export function gameJamOf(detail: { gameJam?: unknown } | undefined | null): GameJamDetail | null {
+export function gameJamOf(detail: { [key: string]: unknown } | undefined | null): GameJamDetail | null {
   const g = detail?.gameJam as GameJamDetail | undefined;
   return g && typeof g === 'object' && typeof g.genre === 'string' && Array.isArray(g.requirements) ? g : null;
 }
