@@ -141,8 +141,52 @@ medal.
 * Judges never grade a model from their own vendor while another judge is available. Split verdicts go to human
   arbitration.
 * Judge cost is tracked separately and is **not** added to a contestant's cost.
-* Judges grade text only. HTML games are graded from their source together with the automated
-  browser-check results, and humans can add a blind rating on top.
+* During runs, judges grade text only. HTML games are graded from their source together with the automated
+  browser-check results, and humans can add a blind rating on top. The Grading Station (5.6) can re-ask judges
+  after a run and attaches pictures and screenshots for judges that accept images.
+
+### 5.6 Grading Station: people, AI judges, or both
+
+Any stored result can be graded after a run in the Grading Station (`src/grading/`). Rules:
+
+* **One definition of "graded on".** `gradingSpecFor(test)` derives the checklist, the rubric criteria with their
+  points and anchors (parsed from the rubric the judges get), requirement lists (from the numbered requirements in
+  the case prompt), labels, weights and the answer key from the test's real scorer config, program formula and
+  explainer. People and AI judges grade from the same spec.
+* **Answer keys are never overwritten.** Results of objective scorers (`exact`, `number`, `choice`, `regex`,
+  `contains`, `constraints`, `json`, `code-js`) and simulations keep the machine's score. A person can record a
+  **dispute** (`CaseResult.disputes`), shown in the result inspector; the score does not change.
+* **Human grades** are stored in `CaseResult.humanScores` (per rater; re-grading replaces your entry) with the
+  rubric points, requirement verdicts or chosen label, a note and whether names were hidden (`blind`).
+* **AI grades** use the configured judges and the test's fixed judge prompts. The station's panel is strict: never
+  a judge from the contestant's vendor, never the contestant itself, and at least two judges, or it refuses.
+  Judges that accept images receive the test's images and recorded screenshots/renders (up to 4). The estimated
+  cost is shown and must be confirmed (`confirmCostUsd`) before any call; calls and costs are appended to the
+  transcript and `judgeCostUsd`; each verdict and its rationale is stored in `CaseResult.aiGrades`.
+* **Which grade counts** (`config/settings.json → gradingOfficial`):
+
+  | Policy | Official score |
+  |---|---|
+  | `methodology` (default) | The run's judges count. The human mean counts for `human` tests, arbitrates when the run's judges disagreed (as in 5.5: it becomes the whole score), and counts when the run recorded no AI verdict. |
+  | `human` | A human grade, when present, replaces the judged part. |
+  | `ai` | AI judges count wherever they graded; people only where no AI grade exists. |
+  | `average` | Mean of the human and AI grades. |
+
+  For artifact tests the grade replaces only the judged share: `(1 − w) × checks + w × grade` (methodology
+  arbitration excepted). Grading Station AI verdicts count only where the run recorded none (for example the run had
+  no judge keys): re-asking judges can never replace a verdict the run recorded, so judges can't be re-rolled until
+  a result looks better. Human-scored tests count station AI grades only under `ai` or `average`. Every official
+  score records its source and policy (`scoreDetail.official`), and the original machine/run score is kept in
+  `scoreDetail.autoScore`.
+
+### 5.7 30-word performance summaries
+
+For each model × test, `templateSummary()` (`src/grading/summary.ts`) writes at most 30 words (whitespace-separated
+tokens, enforced) from recorded data only: the test score (mean of case means, as in 5.2), the weakest case and the
+stored reason it lost points (answer vs key, failed check, judge label or rationale, time-out, refusal), errors and
+skips, mean time per case and total cost (omitted for manual contestants). An optional AI-written version is produced
+by a judge from a different vendor from the same facts, capped at 30 words, shown with its cost first and cached in
+`data/runs/<id>/summaries.json` until the results change.
 
 ## 6. Metrics recorded for every case
 
