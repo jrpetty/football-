@@ -210,7 +210,8 @@ function applyEvent(s: Store, e: RunEvent) {
       const l = s.lanes.get(e.contestantId);
       if (!l) return;
       adoptJob(l, e.key);
-      l.buffers.set(e.key, trim((l.buffers.get(e.key) ?? '') + e.text));
+      // reset: a failed attempt is being retried; its partial text is not part of the answer.
+      l.buffers.set(e.key, trim((l.buffers.get(e.key) ?? '') + (e.reset ? '\n\n── retrying ──\n\n' : '') + e.text));
       if (!l.focusKey || !l.inFlight.has(l.focusKey)) l.focusKey = e.key;
       return;
     }
@@ -740,6 +741,11 @@ export default function LiveArenaPage({ runId }: { runId: string }) {
             <span className="k">ETA</span>
             <span className="v tnum">{eta === null ? '—' : fmtClock(eta)}</span>
           </div>
+          {active && (
+            <Link to={pathOf('runs', runId, 'watch')} className="btn no-broadcast" title="Every model's answer typing in live, with commentary">
+              <Icon.Eye /> Watch it think
+            </Link>
+          )}
           {s.completed > 0 && (
             <Link to={pathOf('present', runId)} className="btn no-broadcast" title="Episode presenter: full-screen slides for recording">
               <Icon.Present /> Present

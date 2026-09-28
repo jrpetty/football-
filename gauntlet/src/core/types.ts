@@ -765,9 +765,10 @@ export type RunEvent =
   | { type: 'run.status'; runId: string; status: RunStatus; at: string; error?: string }
   | { type: 'run.progress'; runId: string; completed: number; total: number; costUsd: number; at: string }
   | { type: 'job.started'; runId: string; key: string; contestantId: string; testId: string; caseId: string; repeat: number; at: string }
-  | { type: 'job.delta'; runId: string; key: string; contestantId: string; text: string; label?: string }
+  /** Streamed answer text (display only). `reset`: drop what this job's current call streamed so far (a failed attempt is being retried), then append `text`. */
+  | { type: 'job.delta'; runId: string; key: string; contestantId: string; text: string; label?: string; reset?: boolean }
   | { type: 'job.step'; runId: string; key: string; contestantId: string; label: string; frame?: ReplayFrame }
-  | { type: 'job.finished'; runId: string; key: string; contestantId: string; testId: string; caseId: string; repeat: number; status: ResultStatus; score: number | null; summary: string; metrics: CaseMetrics; at: string }
+  | { type: 'job.finished'; runId: string; key: string; contestantId: string; testId: string; caseId: string; repeat: number; status: ResultStatus; score: number | null; passed?: boolean | null; summary: string; metrics: CaseMetrics; at: string }
   | { type: 'log'; runId: string; level: 'info' | 'warn' | 'error'; message: string; at: string }
   | { type: 'manual.request'; runId: string; request: ManualRequest }
   | { type: 'manual.resolved'; runId: string; requestId: string };

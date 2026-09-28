@@ -34,6 +34,7 @@ const ChannelSlidesPage = lazy(() => import('./channel/ChannelSlidesPage.tsx'));
 const KeysPage = lazy(() => import('./keys/KeysPage.tsx'));
 const StudioPage = lazy(() => import('./pages/StudioPage.tsx'));
 const OverlayPage = lazy(() => import('./pages/OverlayPage.tsx'));
+const WatchPage = lazy(() => import('./pages/WatchPage.tsx'));
 const ArenaPage = lazy(() => import('./pages/ArenaPage.tsx'));
 const ArenaNewPage = lazy(() => import('./pages/ArenaNewPage.tsx'));
 const ArenaTournamentPage = lazy(() => import('./pages/ArenaTournamentPage.tsx'));
@@ -112,6 +113,7 @@ function resolve(parts: string[]): Resolved {
   if (a === 'runs') {
     if (!b) return { el: <RunsPage />, crumb: 'Runs' };
     if (c === 'live') return { el: <LiveArenaPage key={b} runId={b} />, crumb: 'Live Arena' };
+    if (c === 'watch') return { el: <WatchPage key={b} runId={b} />, crumb: 'Watch it think' };
     return { el: <RunDetailPage key={b} runId={b} />, crumb: 'Run detail' };
   }
   if (a === 'tests') {

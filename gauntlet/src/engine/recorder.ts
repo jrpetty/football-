@@ -130,6 +130,11 @@ export function createRecorder(opts: {
   signal: AbortSignal;
   maxOutputTokens: number;
   onDelta?: (text: string, label?: string) => void;
+  /**
+   * Live view only: the text streamed so far for the current call was thrown away (a failed attempt is
+   * being retried), so a watcher should drop it. Never affects what is recorded.
+   */
+  onDeltaReset?: (label: string) => void;
   onCall?: (label: string) => void;
   onRetry?: (attempt: number, waitMs: number, err: Error) => void;
   /** Identifies the job (for manual copy & paste requests). */
@@ -161,6 +166,8 @@ export function createRecorder(opts: {
     const label = req.label ?? `call ${callNo}`;
     opts.onCall?.(label);
     const started = Date.now();
+    // Characters streamed to the live view during the current attempt (display only).
+    let streamed = 0;
     try {
       const r = await callWithRetry(
         opts.target,
@@ -169,17 +176,28 @@ export function createRecorder(opts: {
           messages: req.messages,
           maxOutputTokens: req.maxOutputTokens ?? opts.maxOutputTokens,
           temperature: opts.policy.temperature,
-          onDelta: opts.onDelta ? (t) => opts.onDelta!(t, label) : undefined,
+          onDelta: opts.onDelta
+            ? (t) => {
+                streamed += t.length;
+                opts.onDelta!(t, label);
+              }
+            : undefined,
           callContext: opts.callContext ? { ...opts.callContext, label } : undefined,
         },
         opts.policy,
         opts.signal,
         (attempt, wait, err) => {
           rec.retries++;
+          if (streamed > 0) {
+            streamed = 0;
+            opts.onDeltaReset?.(label);
+          }
           opts.onRetry?.(attempt, wait, err);
         },
         opts.attemptLimitMs,
       );
+      // A provider that could not stream still shows its answer live: all at once, when it arrives.
+      if (opts.onDelta && streamed === 0 && r.text) opts.onDelta(r.text, label);
       const cost = r.costUsd ?? computeCost(r.usage, opts.target.contestant.pricing);
       rec.usage = addUsage(rec.usage, r.usage);
       rec.costUsd += cost;

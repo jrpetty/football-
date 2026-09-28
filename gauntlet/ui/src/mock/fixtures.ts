@@ -979,6 +979,18 @@ export const RUN_SPECS: RunSpec[] = [
     concurrency: 1,
     notes: 'Manual contestant — every prompt is pasted into a fresh Orbit Chat conversation.',
   },
+  // Watch it think: eight models answering the same quick questions live.
+  {
+    id: 'run-2026-09-28-live',
+    name: 'Eight-model quiz · live',
+    status: 'running',
+    contestantIds: ['meridian-atlas-4-ultra', 'kestrel-kite-reasoner', 'helios-nova-3-pro', 'obsidian-sable-large', 'helios-quill-flash', 'meridian-atlas-4-mini', 'manual-orbit-chat', 'random-baseline'],
+    testIds: ['reasoning.knights-knaves', 'math.probability-traps', 'math.competition-mix'],
+    repeats: 1,
+    createdAt: new Date(Date.now() - 64_000).toISOString(),
+    completedFrac: 0.12,
+    concurrency: 8,
+  },
   TRICK_RUN_SPEC,
 ];
 

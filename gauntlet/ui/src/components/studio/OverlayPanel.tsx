@@ -41,7 +41,7 @@ export function OverlayPanel({ s }: { s: StudioPayload }) {
   const id = target === 'run' ? s.runId : target;
   const params = { view, theme: theme === 'glass' ? '' : theme, pos, safe: safe ? '' : '0' };
   const url = overlayUrl(id, params);
-  const isBar = view === 'ticker';
+  const isBar = view === 'ticker' || view === 'live';
 
   return (
     <div className="stack loose">
@@ -149,6 +149,9 @@ export function OverlayPanel({ s }: { s: StudioPayload }) {
           </li>
         </ol>
         <p className="muted" style={{ margin: '12px 0 0' }}>
+          Recording a run live? Use the <b>Live run</b> band: <code>{overlayUrl('live', {})}</code> follows the run in progress (add <code>?run=&lt;run id&gt;</code> for one run). It shows the leader, a progress bar, the money spent so far and a crawl of plain-English commentary written from the results as they arrive.
+        </p>
+        <p className="muted" style={{ margin: '8px 0 0' }}>
           Tip: with <b>Always the latest</b> you set this up once — it follows every new run. Use <b>Demo</b> to position things before you go live. Add several Browser sources (scoreboard + ticker + lower third) for a full broadcast look.
         </p>
       </Card>
