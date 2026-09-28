@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { api, exportUrl } from '../api.ts';
-import { useAsync, useInterval } from '../hooks.ts';
+import { useAsync, useInterval, useLocalStorage } from '../hooks.ts';
 import { Link, navigate, pathOf, setQuery, useRoute } from '../router.tsx';
 import { useMeta, useToast, useViewerCaption } from '../context.tsx';
 import { CategoryChip, ConfirmDialog, ErrorState, HashTag, LoadingPage, ModelChip, PageHead, Progress, RunStatusBadge, Tabs } from '../components/ui.tsx';
@@ -15,6 +15,7 @@ import { durationBetween, fmtCost, fmtDateTime, fmtInt, fmtMs, fmtPricePerM, sho
 import type { RunDetail } from '../types.ts';
 import { LiveRaceCard } from '../components/LiveRaceCard.tsx';
 import { LiveWatchPanel } from '../components/live/LiveWatchPanel.tsx';
+import { SummaryToolbar, TestSummaries } from '../grading/RunSummaries.tsx';
 
 type Tab = 'leaderboard' | 'matrix' | 'config';
 
@@ -26,6 +27,7 @@ export default function RunDetailPage({ runId }: { runId: string }) {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [resumeOpen, setResumeOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [showSums, setShowSums] = useLocalStorage('gauntlet.run.summaries', true);
   const d = state.data;
   useInterval(() => state.reload(), d?.active ? 5000 : null);
 
@@ -255,7 +257,13 @@ export default function RunDetailPage({ runId }: { runId: string }) {
 
       {tab === 'matrix' && (
         <section className="card">
-          <ResultsMatrix manifest={m} results={d.results} onCell={(testId, c) => setQuery({ test: testId, c, key: null })} />
+          <SummaryToolbar runId={runId} show={showSums} onShow={setShowSums} />
+          <ResultsMatrix
+            manifest={m}
+            results={d.results}
+            onCell={(testId, c) => setQuery({ test: testId, c, key: null })}
+            belowTest={showSums ? (testId) => <TestSummaries runId={runId} testId={testId} contestants={m.contestants} /> : undefined}
+          />
         </section>
       )}
 

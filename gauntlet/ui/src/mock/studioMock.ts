@@ -3,6 +3,8 @@
  * finder, script generator and card data builder from src/media on the
  * bundled fixture runs, so the Studio can be demoed with no server.
  */
+import { studioFacts } from '../../../src/grading/facts.ts';
+import { numberTokens } from '../../../src/media/common.ts';
 import type { ContestantView, ExportResult, OverlayData, PolishEstimate, PolishResult, StudioInput, StudioPayload, StudioResult, TestDefinition } from '../types.ts';
 import { ApiError } from '../api.ts';
 import { findHighlights } from '../../../src/media/highlights.ts';
@@ -59,6 +61,7 @@ export function mockStudio(run: MockRun, tests: TestDefinition[], contestants: C
   const slides = presenterSlides(input);
   const highlights = findHighlights(input, slides);
   const script = buildScript(input, highlights, slides);
+  const facts = studioFacts(input);
   const payload: StudioPayload = {
     runId: run.manifest.id,
     runName: run.manifest.name,
@@ -70,7 +73,8 @@ export function mockStudio(run: MockRun, tests: TestDefinition[], contestants: C
     markdown: scriptToMarkdown(script),
     text: scriptToText(script),
     cardData: cardData(input, highlights),
-    allowedNumbers: [...allowedNumbers(input, highlights, slides)],
+    allowedNumbers: [...new Set([...allowedNumbers(input, highlights, slides), ...facts.flatMap((f) => numberTokens(f.text))])],
+    facts,
     browser: { available: false, hint: 'Demo mode: PNGs are rendered in your browser.' },
     exportDir: `data/runs/${run.manifest.id}/studio`,
   };

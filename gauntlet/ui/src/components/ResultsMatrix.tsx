@@ -1,5 +1,5 @@
 /** Tests × contestants matrix, grouped by category, cells coloured good / partial / poor by mean score. */
-import { memo, useMemo, useState } from 'react';
+import { memo, useMemo, useState, type ReactNode } from 'react';
 import type { CaseResultLite, RunManifest } from '../types.ts';
 import { fmtPct, fmtScore100 } from '../format.ts';
 import { useMeta } from '../context.tsx';
@@ -37,7 +37,7 @@ export function SeqLegend() {
   );
 }
 
-export const ResultsMatrix = memo(function ResultsMatrix({ manifest, results, onCell }: { manifest: RunManifest; results: CaseResultLite[]; onCell: (testId: string, contestantId: string) => void }) {
+export const ResultsMatrix = memo(function ResultsMatrix({ manifest, results, onCell, belowTest }: { manifest: RunManifest; results: CaseResultLite[]; onCell: (testId: string, contestantId: string) => void; /** Optional extra row under each test (e.g. the 30-word performance summaries). */ belowTest?: (testId: string) => ReactNode }) {
   const { cat, categories } = useMeta();
   const [q, setQ] = useState('');
 
@@ -124,7 +124,9 @@ export const ResultsMatrix = memo(function ResultsMatrix({ manifest, results, on
                     </span>
                   </td>
                 </tr>,
-                ...tests.map((t) => (
+                ...tests.flatMap((t) => {
+                  const below = belowTest?.(t.id);
+                  return [
                   <tr key={t.id}>
                     <td className="m-test">
                       <div className="m-test-name ellipsis" title={t.name}>
@@ -168,8 +170,16 @@ export const ResultsMatrix = memo(function ResultsMatrix({ manifest, results, on
                         </td>
                       );
                     })}
-                  </tr>
-                )),
+                  </tr>,
+                  ...(below
+                    ? [
+                        <tr key={`${t.id}-below`} className="m-sum-row">
+                          <td colSpan={cons.length + 1}>{below}</td>
+                        </tr>,
+                      ]
+                    : []),
+                  ];
+                }),
               ];
             })}
           </tbody>

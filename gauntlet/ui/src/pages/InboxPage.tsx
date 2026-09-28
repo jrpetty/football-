@@ -14,6 +14,7 @@ import type { ContestantView, ManualReply, ManualRequest, RunListItem } from '..
 import { VisionBadge, VisionImage } from '../components/VisionImage.tsx';
 import { manualImageUrl } from '../vision.ts';
 import { GAMES } from '../../../src/arena/games/index.ts';
+import { ReplyFiles, fileToReplyText } from '../grading/ReplyFiles.tsx';
 
 /** Arena games whose seat-swapped pair shares hidden cards (duplicate poker): a remembering chat would leak them. */
 const needsFreshChat = (req: ManualRequest) => req.testId.startsWith('arena.') && Boolean(GAMES[req.testId.slice(6)]?.sequentialPairs);
@@ -218,6 +219,18 @@ function RequestCard({
                   placeholder="Paste the complete reply exactly as the chatbot wrote it…"
                   value={draft.text}
                   onChange={(e) => onDraft({ ...draft, text: e.target.value })}
+                  onPaste={(e) => {
+                    // Pasted files (pictures, games, PDFs…) are added to the reply as files (src/grading/attachments.ts).
+                    const files = Array.from(e.clipboardData.files);
+                    if (!files.length) return;
+                    e.preventDefault();
+                    void Promise.all(files.map(fileToReplyText)).then((rs) => {
+                      const ok = rs.flatMap((r) => ('text' in r ? [r.text] : []));
+                      const bad = rs.flatMap((r) => ('error' in r ? [r.error] : []));
+                      if (bad.length) toast.error(bad.join(' '), 'File too big');
+                      if (ok.length) onDraft({ ...draft, text: [draft.text.trim(), ...ok].filter(Boolean).join('\n\n') });
+                    });
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                       e.preventDefault();
@@ -225,6 +238,7 @@ function RequestCard({
                     }
                   }}
                 />
+                <ReplyFiles text={draft.text} onAdd={(t) => onDraft({ ...draft, text: [draft.text.trim(), t].filter(Boolean).join('\n\n') })} />
                 <details className="collapse">
                   <summary>Usage &amp; cost (optional) — leave blank if unknown</summary>
                   <div className="inner">

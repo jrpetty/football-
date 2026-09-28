@@ -137,7 +137,7 @@ export function missReason(r: SummaryResult): string {
     return `a judge noted "${firstSentence(worst.rationale, 9)}"`;
   }
   if (typeof d.loadError === 'string') return 'its code failed to load';
-  if (r.summary) return quoteSnippet(r.summary, 7).replace(/^"|"$/g, '').replace(/…$/, '');
+  if (r.summary) return `recorded as ${quoteSnippet(r.summary, 6)}`;
   return 'lost points';
 }
 
@@ -159,20 +159,23 @@ export function templateSummary(input: SummaryInput): string {
   if (!results.length) return 'No results recorded for this test yet.';
 
   const skipped = results.filter((r) => r.status === 'skipped');
-  const errors = results.filter((r) => r.status === 'error' || r.status === 'cancelled');
-  const pending = results.filter((r) => r.status === 'pending-human' || (r.score === null && r.status === 'ok'));
+  // An answer whose judges were missing is not broken: it is waiting to be graded (the Grading Station can do it).
+  const judgeWait = (r: SummaryResult) => r.status === 'error' && /all judges failed|no judges/i.test(r.error ?? '');
+  const errors = results.filter((r) => (r.status === 'error' && !judgeWait(r)) || r.status === 'cancelled');
+  const noJudge = results.filter(judgeWait);
+  const pending = results.filter((r) => r.status === 'pending-human' || (r.score === null && r.status === 'ok') || judgeWait(r));
   const scored = results.filter((r) => typeof r.score === 'number' && r.status !== 'skipped');
   const caseIds = [...new Set(results.map((r) => r.caseId))];
 
   if (!scored.length) {
     if (skipped.length === results.length) return clampWords(`Skipped all ${plural(new Set(skipped.map((r) => r.caseId)).size, `picture ${unit}`, `picture ${units}`)}: this model cannot see images, so they are not counted against it.`);
-    if (pending.length && !errors.length) return clampWords(`No score yet: ${plural(pending.length, 'answer')} ${pending.length === 1 ? 'is' : 'are'} waiting for grading in the Grading Station.`);
+    if (pending.length && !errors.length) {
+      if (noJudge.length === pending.length) return clampWords(`No score yet: no AI judge could grade ${noJudge.length === 1 ? 'this answer' : `these ${noJudge.length} answers`} during the run, so ${noJudge.length === 1 ? 'it waits' : 'they wait'} in the Grading Station.`);
+      return clampWords(`No score yet: ${plural(pending.length, 'answer')} ${pending.length === 1 ? 'is' : 'are'} waiting for grading in the Grading Station.`);
+    }
     if (errors.length) {
-      const err = errors.find((r) => r.error)?.error;
-      const judgeFail = err && /all judges failed|no judges/i.test(err);
-      const head = `No score: ${errors.length === results.length ? 'every attempt' : plural(errors.length, 'attempt')} failed${judgeFail ? ' because no judge could grade it' : ' with an error'}.`;
-      const tail = judgeFail ? ' Grade it in the Grading Station.' : ' Errors are left out of the average; resume the run to retry.';
-      return clampWords(head + (pending.length ? ` ${plural(pending.length, 'more answer')} awaiting grading.` : '') + tail);
+      const head = `No score: ${errors.length === results.length ? 'every attempt' : plural(errors.length, 'attempt')} failed with an error.`;
+      return clampWords(head + (pending.length ? ` ${pending.length} more awaiting grading.` : '') + ' Errors are left out of the average; resume the run to retry.');
     }
     return 'No scored results yet.';
   }

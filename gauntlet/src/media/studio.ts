@@ -22,6 +22,9 @@ import { findHighlights } from './highlights.ts';
 import { overlayData } from './overlay.ts';
 import { allowedNumbers, buildScript, scriptToMarkdown, scriptToText, unverifiedNumbers } from './script.ts';
 import { presenterSlides } from './slides.ts';
+import { numberTokens } from './common.ts';
+import { studioFacts } from '../grading/facts.ts';
+import { performanceFacts } from '../grading/station.ts';
 import type { CardSpec, CardStyle, ExportResult, PolishEstimate, PolishResult, StudioInput, StudioPayload, StudioResult, StudioTestInfo } from './types.ts';
 
 // ─────────────────────────────── Loading ───────────────────────────────
@@ -71,6 +74,8 @@ export function loadStudioInput(runId: string): StudioInput | null {
 
 export function studioPayload(input: StudioInput) {
   const slides = presenterSlides(input);
+  // 30-word performance summaries (AI-written ones where current) as facts for the script.
+  const facts = studioFacts(input, performanceFacts(input.manifest.id));
   const highlights = findHighlights(input, slides);
   const script = buildScript(input, highlights, slides);
   return {
@@ -84,7 +89,8 @@ export function studioPayload(input: StudioInput) {
     markdown: scriptToMarkdown(script),
     text: scriptToText(script),
     cardData: cardData(input, highlights),
-    allowedNumbers: [...allowedNumbers(input, highlights, slides)].sort((a, b) => Number(a) - Number(b)),
+    allowedNumbers: [...new Set([...allowedNumbers(input, highlights, slides), ...facts.flatMap((f) => numberTokens(f.text))])].sort((a, b) => Number(a) - Number(b)),
+    facts,
   };
 }
 

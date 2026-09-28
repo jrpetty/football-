@@ -193,6 +193,7 @@ export default function GradingStationPage() {
 
   const refreshAfter = async (key: string) => {
     invalidateSummaries(runId);
+    runsState.reload();
     const q = await gradingApi.queue(runId).catch(() => null);
     const list = q?.items ?? queue ?? [];
     if (q) setQueue(q.items);
@@ -273,7 +274,12 @@ export default function GradingStationPage() {
       setCost({ open: false, est: null, keys: [], title: '' });
       invalidateSummaries(runId);
       await loadQueue();
-      if (current) setItem(await gradingApi.item(runId, current.key));
+      runsState.reload();
+      // Stay on the answer so its verdicts are on screen.
+      if (current && cost.keys.includes(current.key)) {
+        setQuery({ key: current.key });
+        setItem(await gradingApi.item(runId, current.key));
+      }
     } catch (e) {
       toast.error(e, 'AI grading failed');
     } finally {

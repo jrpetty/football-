@@ -257,7 +257,7 @@ test('template summaries are grounded, natural and never over 30 words', () => {
     ['empty', { unit: 'question', kind: 'prompt', results: [] }, /No results/],
     ['all skipped', { unit: 'question', kind: 'prompt', results: [ok('c1', 0, { status: 'skipped', score: null })] }, /Skipped all 1 picture question: this model cannot see images/],
     ['all errors', { unit: 'question', kind: 'prompt', results: [ok('c1', 0, { status: 'error', score: null, error: 'HTTP 500' }), ok('c2', 0, { status: 'error', score: null })] }, /No score: every attempt failed with an error/],
-    ['judges failed', { unit: 'question', kind: 'prompt', results: [ok('c1', 0, { status: 'error', score: null, error: 'All judges failed: no judges configured' })] }, /no judge could grade it\. Grade it in the Grading Station\./],
+    ['judges failed', { unit: 'question', kind: 'prompt', results: [ok('c1', 0, { status: 'error', score: null, error: 'All judges failed: no judges configured' })] }, /No score yet: no AI judge could grade this answer during the run, so it waits in the Grading Station\./],
     ['pending', { unit: 'task', kind: 'prompt', results: [ok('c1', 0, { status: 'pending-human', score: null })] }, /waiting for grading/],
     ['perfect', { unit: 'question', kind: 'prompt', results: [ok('c1', 1), ok('c2', 1)] }, /Got 2 of 2 questions right \(100\/100\)\. Perfect on every question\./],
     ['none right', { unit: 'question', kind: 'prompt', results: [ok('c1', 0, { status: 'timeout' }), ok('c2', 0)] }, /Got none of 2 questions right \(0\/100\)\. Every question missed, e\.g\. question 1: ran out of time\./],

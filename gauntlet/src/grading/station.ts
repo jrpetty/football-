@@ -18,7 +18,7 @@ import { getProvider, hasApiKey, loadContestants, loadProviders, loadSettings, s
 import { computeCost } from '../core/cost.ts';
 import { sha256 } from '../core/hash.ts';
 import { mean } from '../core/stats.ts';
-import { caseScorer, getTest, renderCase, type RenderedCase } from '../core/registry.ts';
+import { caseScorer, loadTests, renderCase, type LoadedTest, type RenderedCase } from '../core/registry.ts';
 import { estimateImageTokens, imageInfo, loadTestImage, stripImageData, supportsVision, testBaseDir } from '../core/vision.ts';
 import { explainerForDefinition, type TestExplainer } from '../core/explainers.ts';
 import { extractTagged, parseNumber } from '../core/extract.ts';
@@ -73,6 +73,13 @@ interface TestCtx {
   c?: PromptTestCase;
   spec: GradingSpec;
   explainer: TestExplainer | null;
+}
+
+// Loading the library parses and hashes every test file: do it at most once every two seconds, not once per result.
+let libCache: { at: number; byId: Map<string, LoadedTest> } | null = null;
+function getTest(id: string): LoadedTest | undefined {
+  if (!libCache || Date.now() - libCache.at > 2000) libCache = { at: Date.now(), byId: new Map(loadTests().map((t) => [t.definition.id, t])) };
+  return libCache.byId.get(id);
 }
 
 function testCtx(testId: string, caseId: string, fallbackName = testId): TestCtx {

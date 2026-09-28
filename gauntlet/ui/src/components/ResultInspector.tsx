@@ -16,6 +16,9 @@ import { Jargon } from './clarity/Jargon.tsx';
 import { plainAttempt, plainCaseName, plainKey, plainValue } from './clarity/plain.ts';
 import { ModelBadge } from './viz/ModelBadge.tsx';
 import { AboutTestPanel } from './ExplainerCard.tsx';
+import { InspectorGrading, InspectorSummary } from '../grading/InspectorGrading.tsx';
+import { UniversalViewer } from './viewer/UniversalViewer.tsx';
+import { outputFilesFor, primaryFile } from './viewer/outputFiles.ts';
 
 export interface InspectorTarget {
   testId: string;
@@ -130,7 +133,7 @@ export function ScoreBreakdownView({ d, passed, humanScores, names }: { d: Score
       )}
       {r.humanScores && r.humanScores.length > 0 && (
         <div>
-          <div className="mini-title">Human scores</div>
+          <div className="mini-title">Human scores · graded by people</div>
           <div className="chip-list">
             {r.humanScores.map((h, i) => (
               <span key={i} className="chip pill" title={h.note}>
@@ -227,7 +230,8 @@ function ResultDetail({ runId, lite, names, target }: { runId: string; lite: Cas
   if (err) return <ErrorState error={err} onRetry={() => setNonce((n) => n + 1)} title="Couldn’t load this result" />;
   if (!res) return <SkeletonRows rows={8} h={34} />;
 
-  const arts = res.artifacts ?? [];
+  // Every file the result produced, for the universal viewer (the replay and transcript have their own tabs).
+  const files = outputFilesFor(res, { runId }).filter((f) => f.id !== 'replay' && f.id !== 'transcript' && f.id !== 'reply');
   const images = resultImages(res);
   const showcase = !!showcaseArtifact(res) && (res.scoreDetail?.items?.length ?? 0) > 0;
   return (
@@ -255,7 +259,7 @@ function ResultDetail({ runId, lite, names, target }: { runId: string; lite: Cas
         tabs={[
           { id: 'overview', label: 'Score' },
           { id: 'transcript', label: 'Transcript', count: res.transcript?.length ?? 0 },
-          { id: 'artifacts', label: 'Artifacts', count: arts.length, hidden: arts.length === 0 },
+          { id: 'artifacts', label: 'Files', count: files.length, hidden: files.length === 0 },
           { id: 'replay', label: 'Replay', hidden: !res.replay },
         ]}
       />
@@ -271,6 +275,7 @@ function ResultDetail({ runId, lite, names, target }: { runId: string; lite: Cas
           ) : (
             <Breakdown r={res} names={names} />
           )}
+          <InspectorGrading res={res} />
           <div>
             <div className="mini-title">Metrics</div>
             <Metrics r={res} />
@@ -282,13 +287,7 @@ function ResultDetail({ runId, lite, names, target }: { runId: string; lite: Cas
         </>
       )}
       {tab === 'transcript' && <TranscriptView entries={res.transcript ?? []} />}
-      {tab === 'artifacts' && (
-        <div className="stack loose">
-          {arts.map((a) => (
-            <ArtifactView key={a.file} runId={runId} art={a} />
-          ))}
-        </div>
-      )}
+      {tab === 'artifacts' && <UniversalViewer files={files} activeId={primaryFile(files)} height={560} />}
       {tab === 'replay' && res.replay && (
         <ReplayPlayer
           key={startStep ?? 0}
@@ -378,6 +377,7 @@ export function ResultInspector({
       }
     >
       {target && <AboutTestPanel testId={target.testId} model={{ label: target.contestantLabel, color: target.contestantColor, score: mean }} randomScore={randomMean} />}
+      {target && <InspectorSummary runId={runId} testId={target.testId} contestantId={target.contestantId} label={target.contestantLabel} color={target.contestantColor} />}
       <div className="inspector">
         <div className="insp-list" role="listbox" aria-label="Cases">
           {rows.length === 0 && <div className="chart-empty">No results for this cell.</div>}
