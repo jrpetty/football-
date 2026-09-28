@@ -55,6 +55,8 @@ import type { CaseResultLite, CategoryInfo, Leaderboard, LeaderboardRow, Program
 import { VisionExplainerCard, examplePicture } from '../components/VisionPresenter.tsx';
 import { SIM_PROGRAMS, SimMomentSlide, pickSimCase } from '../components/present/SimMomentSlide.tsx';
 import { IntroSlide, introCaption } from '../components/present/IntroSlide.tsx';
+import { GalleryBriefSlide, GalleryWinnerSlide, galleryCaseIds, type GallerySlideData } from '../components/present/GallerySlide.tsx';
+import { isGalleryTest } from '../components/viz/galleryModel.ts';
 
 const W = 1920;
 const H = 1080;
@@ -125,7 +127,9 @@ type Slide =
   | { kind: 'sim'; test: DeckTest; pick: CaseResultLite }
   | { kind: 'moment'; test: DeckTest; moment: MomentKind }
   | { kind: 'standings'; test: DeckTest; step: number }
-  | { kind: 'podium' };
+  | { kind: 'podium' }
+  | { kind: 'gallery'; test: DeckTest; caseId: string; i: number; of: number }
+  | { kind: 'gallery-winner'; test: DeckTest };
 
 interface Caption {
   text: string;
@@ -319,6 +323,25 @@ function momentSlides(deck: Deck, test: DeckTest): Slide[] {
   return moment ? [{ kind: 'moment', test, moment }] : [];
 }
 
+/** The Gallery: one gallery-wall slide per commission, then the Masterpiece of the Show. */
+function gallerySlides(deck: Deck, test: DeckTest): Slide[] {
+  if (!isGalleryTest(test.snap.id)) return [];
+  const ids = galleryCaseIds(deck.d.results ?? [], test.snap.id, test.snap.caseIds);
+  if (!ids.length) return [];
+  return [...ids.map((caseId, i): Slide => ({ kind: 'gallery', test, caseId, i: i + 1, of: ids.length })), { kind: 'gallery-winner', test }];
+}
+
+function galleryData(deck: Deck, test: DeckTest): GallerySlideData {
+  const manual = new Set(deck.contenders.filter((c) => c.manual).map((c) => c.id));
+  return {
+    runId: deck.d.manifest.id,
+    testId: test.snap.id,
+    results: deck.d.results ?? [],
+    contestants: deck.d.manifest.contestants,
+    manualProviders: new Set(deck.d.manifest.contestants.filter((c) => manual.has(c.id)).map((c) => c.provider)),
+  };
+}
+
 /** "What this test is" intro when the test has a hand-written explainer; the classic explainer slide otherwise. */
 function introOrExplainer(test: DeckTest): Slide {
   const x = test.detail?.explainer;
@@ -342,7 +365,7 @@ function buildSlides(deck: Deck, vertical = false, show: ShowOpts = { race: true
   }
   const slides: Slide[] = [{ kind: 'title' }, { kind: 'how' }];
   for (const test of deck.tests) {
-    slides.push(introOrExplainer(test), { kind: 'result', test }, ...simSlides(deck, test), ...momentSlides(deck, test), ...trickSlides(deck, test));
+    slides.push(introOrExplainer(test), { kind: 'result', test }, ...gallerySlides(deck, test), ...simSlides(deck, test), ...momentSlides(deck, test), ...trickSlides(deck, test));
     const pick = deck.truth.get(test.snap.id);
     if (pick) slides.push({ kind: 'truth', test, pick });
     const step = deck.standings.findIndex((st) => st.testId === test.snap.id);
@@ -473,6 +496,18 @@ function captionFor(slide: Slide, deck: Deck): Caption {
         text: 'The final ranking, revealed from last place to first. Each model’s overall score out of 100, with the test it did best and worst on.',
         fine: `Gauntlet Index = every category averaged into one score · best/worst = highest and lowest test score${deck.hasManual ? ' · * pasted by hand' : ''}`,
       };
+    case 'gallery': {
+      const code = slide.test.snap.id.includes('painted-in-code');
+      return {
+        text: `Commission ${slide.i} of ${slide.of}: every AI ${code ? 'painted the same museum brief in SVG code' : 'painted the same museum brief'}. Each placard shows how much of the brief it followed and its artistry out of 10; the rosette marks the best score.`,
+        fine: 'Ticks on each painting = brief lines met (green yes · amber partly · red no) · artistry = median of AI judges from other companies · a judgement, not a measurement',
+      };
+    }
+    case 'gallery-winner':
+      return {
+        text: `The Masterpiece of the Show: the highest-scoring painting across all ${slide.test.snap.caseIds.length} commissions of “${slide.test.snap.name}”.`,
+        fine: 'Score = half brief followed + half artistry ÷ 10 · ties go to the higher artistry · judges never grade their own company’s model',
+      };
     case 'outro':
       return {
         text: deck.hasPrivate
@@ -514,6 +549,10 @@ function sectionFor(slide: Slide, deck: Deck): string {
       return `Standings · after ${deck.standings[slide.step]?.step ?? slide.test.n} of ${deck.tests.length}`;
     case 'podium':
       return 'The verdict';
+    case 'gallery':
+      return `The Gallery · commission ${slide.i} of ${slide.of}`;
+    case 'gallery-winner':
+      return 'The Gallery · Masterpiece of the Show';
   }
 }
 
@@ -858,7 +897,7 @@ function RaceRow({
         <div className="rr-track">
           {baseLine !== null && e.score !== null && <RandomGuessLine pct={baseLine * 100} label={baseLabel} />}
           {e.score === null ? (
-            <span className="rr-none">{(e.agg?.skipped ?? 0) > 0 && !e.agg?.n ? 'Skipped: this model can’t see images' : nullNote}</span>
+            <span className="rr-none">{(e.agg?.skipped ?? 0) > 0 && !e.agg?.n ? (/image output/.test(e.agg?.summary ?? '') ? 'Skipped: this model can’t make pictures' : /picture-only/.test(e.agg?.summary ?? '') ? 'Skipped: picture-only model' : 'Skipped: this model can’t see images') : nullNote}</span>
           ) : (
             <>
               <div className="rr-fill" style={{ width: `${v}%` }} />
@@ -1242,6 +1281,12 @@ function SlideView({ slide, deck, reveal, vertical }: { slide: Slide; deck: Deck
       return <MedalsSlide deck={deck} />;
     case 'outro':
       return <OutroSlide deck={deck} />;
+    case 'gallery':
+      return <GalleryBriefSlide data={galleryData(deck, slide.test)} caseId={slide.caseId} n={slide.i} of={slide.of} />;
+    case 'gallery-winner': {
+      const names = new Map([...deck.d.manifest.judges, ...deck.d.manifest.contestants].map((c) => [c.id, c.label]));
+      return <GalleryWinnerSlide data={galleryData(deck, slide.test)} caseIds={slide.test.snap.caseIds} names={(id) => names.get(id) ?? names.get(id.replace(/@judge$/, '')) ?? id.replace(/@judge$/, '')} />;
+    }
   }
 }
 

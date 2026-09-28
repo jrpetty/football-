@@ -45,11 +45,12 @@ export function ChecklistLegend() {
   );
 }
 
-export function BriefChecklist({ detail, names, reasons = true, compact, title = 'The brief, line by line' }: { detail: GalleryDetail; names?: (id: string) => string; reasons?: boolean; compact?: boolean; title?: string }) {
+export function BriefChecklist({ detail, names, reasons = true, compact, title = 'The brief, line by line', rulesSummary }: { detail: GalleryDetail; names?: (id: string) => string; reasons?: boolean; compact?: boolean; title?: string; /** Show the rules as one line ("Rules respected 3/3") instead of listing them. */ rulesSummary?: boolean }) {
   const name = (id: string) => (names ? names(id) : id.replace(/@judge$/, ''));
+  const rules = detail.items.filter((i) => i.kind === 'avoid');
   const groups: Array<{ label: string; items: GalleryItem[] }> = [
     { label: 'Required elements', items: detail.items.filter((i) => i.kind === 'element') },
-    { label: 'Rules (must not appear)', items: detail.items.filter((i) => i.kind === 'avoid') },
+    ...(rulesSummary ? [] : [{ label: 'Rules (must not appear)', items: rules }]),
   ];
   const judged = detail.items.some((i) => i.verdicts.length > 0);
   return (
@@ -95,6 +96,16 @@ export function BriefChecklist({ detail, names, reasons = true, compact, title =
           </ul>
         </div>
       ))}
+      {rulesSummary && (
+        <div className="bc-rules-line">
+          <span className="bc-group-label">Rules</span>
+          {rules.map((r) => (
+            <span key={r.id} title={r.text}>
+              <MarkGlyph mark={markOf(r)} size={18} /> {r.id === 'N1' ? 'no text' : r.id === 'N2' ? 'no drawn frame' : r.text.split(/[:,.]/)[0]!.replace(/^No /, 'no ').replace(/^Nothing /, 'nothing ').slice(0, 40)}
+            </span>
+          ))}
+        </div>
+      )}
       <ChecklistLegend />
     </section>
   );

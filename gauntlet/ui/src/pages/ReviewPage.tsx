@@ -6,6 +6,7 @@ import { Link, setQuery, useRoute } from '../router.tsx';
 import { useToast, useViewerCaption } from '../context.tsx';
 import { Callout, Empty, ErrorState, ModelChip, PageHead, ScorePill, SkeletonRows, cx } from '../components/ui.tsx';
 import { Icon } from '../components/icons.tsx';
+import { isGalleryTest, paintingArtifact } from '../components/viz/galleryModel.ts';
 import type { CaseResult, ContestantView, ReviewItem, ReviewReason, TestDetail, TestSummary } from '../types.ts';
 
 const REASONS: Record<ReviewReason, { label: string; long: string; tone: string }> = {
@@ -24,7 +25,7 @@ interface Side {
 function BlindOutput({ result }: { result: CaseResult | null | 'error' }) {
   if (result === 'error') return <div className="chart-empty">Couldn’t load this output.</div>;
   if (!result) return <SkeletonRows rows={5} h={28} />;
-  const art = result.artifacts?.find((a) => a.kind === 'html' || a.kind === 'svg' || a.kind === 'png');
+  const art = paintingArtifact(result) ?? result.artifacts?.find((a) => a.kind === 'html' || a.kind === 'svg' || a.kind === 'png' || a.kind === 'jpg');
   if (art) {
     const url = artifactUrl(result.runId, art.file);
     return art.kind === 'html' ? (
@@ -160,6 +161,8 @@ export default function ReviewPage() {
   const def = testDetail?.definition;
   const rubric = def && def.kind === 'prompt' ? ('rubric' in def.scorer ? def.scorer.rubric : 'instructions' in def.scorer ? def.scorer.instructions : undefined) : undefined;
   const reason = sides[0] ? reasonOf(sides[0].item) : null;
+  // The Gallery: people rate the ARTISTRY; it replaces the judges' artistry (the brief checklist stays judged).
+  const gallery = isGalleryTest(sides[0]?.item.testId);
 
   return (
     <div className="page review-page">
@@ -241,6 +244,14 @@ export default function ReviewPage() {
                   {pending.length} waiting
                 </span>
               </div>
+              {gallery && (
+                <div className="callout plain">
+                  <Icon.Target />
+                  <div>
+                    <strong>Rate the artistry, 0–10:</strong> composition, light, colour harmony, craft, faithfulness to the requested style, and whether a museum would hang it. Your rating replaces the AI judges’ artistry for these paintings; whether the brief was followed stays as the judges checked it.
+                  </div>
+                </div>
+              )}
               {rubric && (
                 <div className="callout plain">
                   <Icon.Target />
@@ -298,8 +309,8 @@ export default function ReviewPage() {
                     />
                     <div className="slider-scale" aria-hidden="true">
                       <span>0 broken</span>
-                      <span>5 okay</span>
-                      <span>10 would ship</span>
+                      <span>5 {gallery ? 'competent' : 'okay'}</span>
+                      <span>10 {gallery ? 'masterpiece' : 'would ship'}</span>
                     </div>
                   </div>
                 </section>

@@ -177,7 +177,7 @@ function GalleryRunView({ runId }: { runId: string }) {
       <PageHead
         eyebrow={
           <span className="row" style={{ gap: 8 }}>
-            <Icon.Image style={{ width: 14, height: 14 }} /> The Gallery · {run.detail.manifest.name}
+            <Icon.Image style={{ width: 14, height: 14 }} /> Art · {run.detail.manifest.name}
           </span>
         }
         title="The Gallery"

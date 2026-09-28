@@ -77,7 +77,7 @@ export interface WallEntry {
 
 const isBaselineC = (c: Pick<ContestantSnapshot, 'id' | 'label' | 'provider'>) => /(^|[-_.])(random|baseline)([-_.]|$)/i.test(c.id) || /random baseline/i.test(c.label);
 
-export function stateOf(r: CaseResultLite | null, g: GalleryDetail | null): WallState {
+export function stateOf(r: Pick<CaseResultLite, 'status' | 'artifacts'> | null, g: GalleryDetail | null): WallState {
   if (!r) return 'missing';
   if (r.status === 'skipped') return 'no-output';
   if (r.status === 'error' || r.status === 'cancelled' || r.status === 'timeout') return 'error';

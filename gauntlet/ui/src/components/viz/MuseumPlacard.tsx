@@ -57,7 +57,7 @@ export function MuseumPlacard({
             <span className="gp-dot" style={{ background: color }} aria-hidden="true" />
             <span>
               Artist: <b>{artist}</b>
-              {manual && <span className="gp-tag"> · made in a chat app</span>}
+              {manual && <span className="gp-tag"> · {size === 'sm' ? 'chat app' : 'made in a chat app'}</span>}
               {baseline && <span className="gp-tag"> · random floor</span>}
             </span>
           </>

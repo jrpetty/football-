@@ -42,7 +42,8 @@ export function GalleryWall({
   footer?: ReactNode;
 }) {
   const best = winner ? bestOf(entries) : null;
-  const cols = wallColumns(entries.length);
+  // The Presenter hangs up to six paintings in one row, like a real gallery wall.
+  const cols = variant === 'slide' && entries.length <= 6 ? Math.max(1, entries.length) : wallColumns(entries.length);
   const frame = frameFor(brief.n);
   const small = variant === 'slide' && entries.length > 4;
   return (

@@ -906,7 +906,7 @@ async function executeJob(job: Job, env: JobEnv): Promise<CaseResult> {
           save(name, kind, content);
         },
         artifactBytes: (name, kind, content) => {
-          save(name, kind, content);
+          save(name, kind, Buffer.from(content));
         },
         ...(programJudges ? { judges: programJudges } : {}),
       };

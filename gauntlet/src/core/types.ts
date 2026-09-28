@@ -536,7 +536,7 @@ export interface ProgramContext {
   /** Save a file artifact (HTML/SVG/text) shown in the UI. */
   artifact(name: string, kind: ArtifactKind, content: string): void;
   /** Save a binary artifact (e.g. a generated picture). Optional: older harnesses and test helpers lack it. */
-  artifactBytes?(name: string, kind: ArtifactKind, content: Buffer): void;
+  artifactBytes?(name: string, kind: ArtifactKind, content: Uint8Array): void;
   /** The judge panel, for programs that declare `judges` (undefined otherwise). */
   judges?: ProgramJudges;
 }
