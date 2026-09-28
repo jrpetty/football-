@@ -48,6 +48,7 @@ test('artifact tests: a 0/10 from the judges zeroes the score, so hygiene checks
   for (const caseId of ['g01', 'g02', 'g03']) {
     const r = await score('creative.one-shot-games', caseId, EMPTY_GAME, 0);
     assert.equal(r.score, 0, `one-shot-games ${caseId}: ${r.summary}`);
+    assert.equal(r.detail.zeroedByJudges, true, 'the inspector headline reads this flag');
   }
   for (const caseId of ['v01', 'v02', 'v03', 'v04']) {
     const r = await score('visual.svg-illustration', caseId, GREY_CIRCLE, 0);
@@ -56,6 +57,7 @@ test('artifact tests: a 0/10 from the judges zeroes the score, so hygiene checks
   // A real attempt the judges rate above zero keeps its check credit.
   const ok = await score('visual.svg-illustration', 'v03', barChart('"'), 6);
   assert.ok((ok.score ?? 0) > 0.6, ok.summary);
+  assert.equal(ok.detail.zeroedByJudges, undefined);
 });
 
 test('artifact scorer without the opt-in flag keeps the old weighting (stored results stay comparable)', async () => {
@@ -92,6 +94,20 @@ test('chain of whispers: "a cave … glittering with blue crystals" counts as th
   // Written by the auditor while blind-playing the hard chain: the fact is there, 9 words apart.
   assert.ok(factPresent('It was on the way down that they found it: a cave in the mountainside, its walls glittering with blue crystals.', cave));
   assert.ok(!factPresent('They found a cave. Days later, far away, someone sold blue crystals.', cave));
+});
+
+test('chain of whispers: a compressed age ("oldest Brenna Brodsky, 59") still counts in a 60-word summary', async () => {
+  const { generateStory } = await import('../src/programs/lib/chain-of-whispers-story.ts');
+  const { createRng } = await import('../src/core/rng.ts');
+  for (let seed = 1; seed <= 40; seed++) {
+    const st = generateStory(createRng(seed), 'expedition', 20);
+    const f = st.facts.find((x) => x.id === 'oldAge')!;
+    const age = f.groups[0]![0]!;
+    const who = /oldest climber was ([A-Z][a-z]+ [A-Z][a-z]+)/.exec(st.text)![1]!;
+    assert.ok(factPresent(`Guide Tobiah; oldest ${who}, ${age}; 16 mules.`, f), `seed ${seed}`);
+    assert.ok(factPresent(`${who} (${age}) was the oldest.`, f), `seed ${seed}`);
+    assert.ok(!factPresent(`The oldest climber was ${who}. They waited ${Number(age) + 100} hours.`, f), `seed ${seed}`);
+  }
 });
 
 test('needle in a haystack: answers given as a Markdown table are read', () => {

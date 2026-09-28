@@ -410,6 +410,7 @@ async function scoreArtifact(input: ScoringInput, format: 'html' | 'svg', checks
       checkScore: round(checkScore),
       judgeScore: judgeScore === null ? undefined : round(judgeScore),
       skippedChecks: skipped.length ? skipped : undefined,
+      zeroedByJudges: gated || undefined,
       consoleErrors: probe?.consoleErrors.slice(0, 5),
       judgeDisagreement: judgeNotes?.startsWith('Judges disagree') || undefined,
       notes: judgeNotes,
