@@ -12,6 +12,8 @@ import { fmtCost, fmtInt, fmtPricePerM } from '../format.ts';
 import { arenaApi } from '../arena/client.ts';
 import type { ArenaEstimate, ArenaFormat, ArenaRequest, ArenaSeeding } from '../arena/types.ts';
 import { GameGlyph } from '../arena/ArenaIcon.tsx';
+import { useBudget } from '../budget/budgetApi.ts';
+import { BudgetRunLine } from '../budget/BudgetParts.tsx';
 import '../arena/arena.css';
 import '../arena/formats.css';
 
@@ -35,6 +37,14 @@ export default function ArenaNewPage() {
   const [estErr, setEstErr] = useState<string | null>(null);
   const [estLoading, setEstLoading] = useState(false);
   const [starting, setStarting] = useState(false);
+  // "My budget": pre-select the saved default run limit once (still changeable here).
+  const { budget } = useBudget();
+  const [budgetDefaults, setBudgetDefaults] = useState(false);
+  useEffect(() => {
+    if (!budget || budgetDefaults) return;
+    if (budget.settings.defaultRunUsd !== undefined) setCapUsd((v) => v ?? budget.settings.defaultRunUsd!);
+    setBudgetDefaults(true);
+  }, [budget, budgetDefaults]);
   useViewerCaption('Setting up a head-to-head tournament: pick a game and the models, and Gauntlet shows the bracket and what it will cost before anything is spent.');
 
   const enabled = useMemo(() => (cons.data ?? []).filter((c) => c.enabled), [cons.data]);
@@ -315,7 +325,7 @@ export default function ArenaNewPage() {
                   }
                   hint={cap === null ? 'No limit: the tournament finishes whatever it costs.' : `Players and judges never spend more than ${fmtCost(cap)}: every move reserves its worst case first, and the tournament stops cleanly when the money left cannot pay for one.`}
                 >
-                  <MoneyLimitPicker idBase="ar-cap" label="Spending limit" valueUsd={capUsd} onChange={setCapUsd} presets={[5, 10, 30, 50]} />
+                  <MoneyLimitPicker key={budgetDefaults ? 'with-budget-defaults' : 'plain'} idBase="ar-cap" label="Spending limit" valueUsd={capUsd} onChange={setCapUsd} presets={[5, 10, 30, 50]} />
                 </Field>
                 <Field label="Games at once" hint="Parallel games. 1 is easiest to follow live on video." htmlFor="ar-conc">
                   <input id="ar-conc" className="input" type="number" min={1} max={16} value={concurrency} onChange={(e) => setConcurrency(Math.max(1, Math.min(16, Number(e.target.value) || 1)))} />
@@ -467,7 +477,8 @@ export default function ArenaNewPage() {
               )}
             </div>
             <div className="card-foot stack">
-              <button className="btn primary lg block" disabled={!req || !est || starting} onClick={start}>
+              <BudgetRunLine status={budget} capUsd={cap} upperUsd={est?.estCostUsdHigh ?? null} what="tournament" />
+              <button className="btn primary lg block" disabled={!req || !est || starting || !!budget?.blocked} onClick={start}>
                 <Icon.Play /> {starting ? 'Starting…' : 'Start tournament'}
               </button>
             </div>

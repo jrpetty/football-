@@ -716,6 +716,35 @@ the run page, and printed on the Presenter's closing methods slide, so your vide
 From the command line: `--max-cost 40` (US dollars), `--per-answer 2.5` (US dollars per reply) and
 `--same-tokens 64000`.
 
+### Your own budget
+
+Tired of picking a limit every time? Set your own budget once, on the **Budget** page (left menu, under Lab; New Run
+links to it as well). Everything is typed in pounds, with the same **£5 / £10 / … / Custom** buttons, so any amount
+works.
+
+* **Monthly budget**, e.g. **£50 a month**. The page shows a meter of what you have spent this month: green, amber
+  from 80 %, red once it is used up. Below it are a bar per day and a **Recent spending** list (every run, Arena
+  tournament, AI judge grading a pasted answer, and Studio script polish), plus the date it resets. A "month" is the
+  calendar month on your computer's clock, so it starts again at midnight on the 1st. Money is counted in the month
+  it was spent: finishing an August run in September counts the new spending in September. Manual (copy & paste) and
+  Random Baseline contestants cost nothing; the AI judges that grade them do count.
+* **Hard stop** (optional, needs a monthly budget). **On:** once the month's budget is used up, no run or tournament
+  can start or resume (you get a clear message with the reset date). While money is left, a new run's limit is
+  lowered automatically to what is left, and New Run says so: "Limited to £12.40: what's left of your £50 monthly
+  budget". The run then stops cleanly like any spend limit and you can resume it next month. **Off:** you only get
+  warnings.
+* **Default whole-run limit** and **default per-answer limit**. Pre-selected in New Run (and the run limit in new
+  Arena tournaments). You can still change them for any single run.
+
+On New Run and the Arena setup, a line above the start button reads e.g. "This month: £40.77 of £50.00 spent · this
+run up to £9.23", and warns if the run's upper-bound estimate is more than what is left. It is hidden in Broadcast
+mode, so your budget never appears in a recording. The rules are also checked by the server itself, so nothing can
+sneak past them (not even the command line).
+
+From the command line: `node src/cli.ts budget` shows the month; `node src/cli.ts budget set monthly 50`,
+`budget set hard-stop on`, `budget set run 10`, `budget set per-answer 2` and `budget set monthly off` change it
+(amounts in pounds). The settings are saved in `config/settings.json` under `budget`.
+
 ## Cost-saving tips
 
 * Iterate on `quick` with 1 repeat. Use `core` with 3 repeats only for the published run.

@@ -9,6 +9,8 @@ import { fmtCost, fmtInt, fmtPricePerM } from '../format.ts';
 import type { ContestantView, RunEstimate, RunRequest, SuiteView, TestSummary } from '../types.ts';
 import { isBaseline } from '../components/leaderboard/util.ts';
 import { SpendLimitsSection, parseSameTokens, type OutputChoice } from '../components/SpendLimits.tsx';
+import { useBudget } from '../budget/budgetApi.ts';
+import { BudgetRunLine, budgetBlocker } from '../budget/BudgetParts.tsx';
 import { displayCurrency } from '../money.ts';
 
 const ALLOW_WORDS: Record<string, string> = {
@@ -46,6 +48,7 @@ function EstimatePanel({
   starting,
   onStart,
   blockers,
+  extra,
 }: {
   est: RunEstimate | null;
   loading: boolean;
@@ -56,6 +59,8 @@ function EstimatePanel({
   starting: boolean;
   onStart: () => void;
   blockers: string[];
+  /** The "My budget" line, shown just above the start button. */
+  extra?: import('react').ReactNode;
 }) {
   const byId = useMemo(() => new Map(contestants.map((c) => [c.id, c])), [contestants]);
   const maxHigh = Math.max(1e-9, ...(est?.perContestant ?? []).map((p) => p.estCostUsdHigh));
@@ -212,6 +217,7 @@ function EstimatePanel({
             )}
           </div>
         )}
+        {extra}
         {blockers.length > 0 && (
           <ul className="warn-list muted-list">
             {blockers.map((b) => (
@@ -264,6 +270,15 @@ export default function NewRunPage() {
   const [search, setSearch] = useState('');
   const [starting, setStarting] = useState(false);
   const [forceVision, setForceVision] = useState(false);
+  // "My budget": pre-select the saved default limits once (the owner can still change them for this run).
+  const { budget } = useBudget();
+  const [budgetDefaults, setBudgetDefaults] = useState(false);
+  useEffect(() => {
+    if (!budget || budgetDefaults) return;
+    if (budget.settings.defaultRunUsd !== undefined) setCapUsd((v) => v ?? budget.settings.defaultRunUsd!);
+    if (budget.settings.defaultPerAnswerUsd !== undefined) setPerAnswerUsd((v) => v ?? budget.settings.defaultPerAnswerUsd!);
+    setBudgetDefaults(true);
+  }, [budget, budgetDefaults]);
 
   const enabled = useMemo(() => contestants.filter((c) => c.enabled), [contestants]);
   const suite = suites.find((s) => s.id === suiteId);
@@ -366,6 +381,8 @@ export default function NewRunPage() {
   if (!selectedCons.length) blockers.push('Pick at least one contestant.');
   if (mode === 'pick' && picked.size === 0) blockers.push('Pick at least one test (or switch to a suite).');
   if (!sameValid) blockers.push('The same-for-every-model output limit must be a whole number of tokens (256 to 1,000,000).');
+  const budgetStop = budgetBlocker(budget);
+  if (budgetStop) blockers.push(budgetStop);
   const canStart = blockers.length === 0 && !!request;
   const noKeys = enabled.length > 0 && enabled.every((c) => !c.hasKey && !isManual(c) && !isBaseline({ contestantId: c.id, vendor: c.vendor, label: c.label }));
 
@@ -698,6 +715,7 @@ export default function NewRunPage() {
               </div>
               <div className="card-body">
                 <SpendLimitsSection
+                  key={budgetDefaults ? 'with-budget-defaults' : 'plain'}
                   capUsd={capUsd}
                   onCap={setCapUsd}
                   perAnswerUsd={perAnswerUsd}
@@ -713,7 +731,7 @@ export default function NewRunPage() {
           </div>
 
           <div className="sticky-col">
-            <EstimatePanel est={est} loading={estLoading} error={estErr} contestants={contestants} cap={cap !== null && capValid ? cap : null} canStart={canStart} starting={starting} onStart={start} blockers={blockers} />
+            <EstimatePanel est={est} loading={estLoading} error={estErr} contestants={contestants} cap={cap !== null && capValid ? cap : null} canStart={canStart} starting={starting} onStart={start} blockers={blockers} extra={<BudgetRunLine status={budget} capUsd={cap} upperUsd={est ? (est.estCostUsdMax ?? est.estCostUsdHigh) : null} showBlocked={false} />} />
           </div>
         </div>
       )}

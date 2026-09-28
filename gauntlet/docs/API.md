@@ -137,6 +137,32 @@ available, otherwise across models), falling back to each test's declared `estim
 |---|---|---|
 | GET | `/api/costs?suite=core&repeats=1&models=a,b` | `RunEstimate` for the suite. `models` defaults to every enabled API model (manual and baseline excluded). Use `perTest` to render a test × model cost table. |
 
+## Your own budget
+
+"My budget" settings live in `config/settings.json` under an optional `budget` key; all amounts are US dollars
+(the UI converts to the display currency). Spend is read from the stored runs (`results.jsonl`), tournaments
+(`games.jsonl`) and `data/budget/spend-log.jsonl` (AI judges grading a pasted reply, Studio script polish), counted in
+the calendar month (server's local time) in which it was spent. Manual and Random Baseline contestants cost 0; their
+judges still count.
+
+| Method | Path | Body | Returns |
+|---|---|---|---|
+| GET | `/api/budget` | – | `BudgetStatus`: `{ settings, currency, month: { key, label, start, nextReset, nextResetLabel }, spentUsd, committedUsd, remainingUsd, availableUsd, fraction, tone: 'none'\|'ok'\|'warn'\|'over', blocked, items: BudgetItem[], days: Array<{ date, spentUsd }> }` |
+| PUT | `/api/budget` | `{ monthlyUsd?, hardStop?, defaultRunUsd?, defaultPerAnswerUsd? }` | `BudgetStatus`. A number sets a value, `null` clears it, a missing field keeps it. `hardStop` needs a monthly budget. Loopback only. |
+
+`BudgetSettings` = `{ monthlyUsd?, hardStop?, defaultRunUsd?, defaultPerAnswerUsd? }` (see
+[`src/budget/budget.ts`](../src/budget/budget.ts)). `committedUsd` is what running runs and tournaments may still
+spend under their limits; `availableUsd` = monthly − spent − committed.
+
+**Enforcement.** With `hardStop` on, `POST /api/runs`, `POST /api/runs/:id/resume`, `POST /api/arena/tournaments` and
+`POST /api/arena/tournaments/:id/resume` refuse to start (4xx with a plain-English `error` naming the reset date) when nothing is
+left, and otherwise lower the whole-run limit to what is left (for a resume: what the job already spent plus what is
+left). A lowered limit is recorded as `settings.limits.budgetNote` (runs) or `settings.budgetNote` (tournaments),
+e.g. "Limited to £12.40: what's left of your £50.00 monthly budget." With `hardStop` off the budget only warns.
+
+CLI: `node src/cli.ts budget` (show), `budget set monthly 50` (display currency), `budget set run 10`,
+`budget set per-answer 2`, `budget set hard-stop on|off`, `budget set monthly off`.
+
 ## Manual (copy & paste) contestants
 
 A contestant whose provider has `type: "manual"` never calls an API: every model call becomes a pending

@@ -30,6 +30,8 @@ import { playJudgedGame, verdictSnapshot } from './judged.ts';
 import { playGame } from './match.ts';
 import { playTurnGame, type PlayedGameExt } from './turns.ts';
 import { ARENA_PROMPT_VERSION } from './prompt.ts';
+import { gateResume, gateStart, tournamentSpentUsd } from '../budget/spend.ts';
+import { isBudgetBlockedError } from '../budget/budget.ts';
 import { appendGame, createTournamentFolder, listTournamentIds, newTournamentId, readGames, readTournament, spentUsd, toGameLite, writeTournament } from './store.ts';
 import type {
   ArenaEntrant,
@@ -417,6 +419,9 @@ export async function waitForTournament(id: string): Promise<void> {
 
 export function startTournament(req: ArenaRequest): string {
   const plan = planTournament(req);
+  // "My budget": the hard stop refuses to start when the month's budget is used up, and lowers the limit to what is left.
+  const budgetGate = gateStart(plan.settings.maxCostUsd, 'tournament');
+  if (budgetGate.clamped) plan.settings = { ...plan.settings, maxCostUsd: budgetGate.capUsd, budgetNote: budgetGate.message };
   const game = getGame(plan.gameId);
   const id = newTournamentId();
   const manifest: TournamentManifest = {
@@ -456,6 +461,9 @@ export function resumeTournament(id: string, opts: { maxCostUsd?: number | null 
   });
   if (changed.length) throw new Error(`Cannot resume: these models were changed or removed since the tournament started: ${changed.map((e) => e.label).join(', ')}`);
   if (opts.maxCostUsd !== undefined) manifest.settings.maxCostUsd = opts.maxCostUsd === null ? undefined : opts.maxCostUsd;
+  // "My budget": resuming is also held to the monthly budget (the limit covers what the tournament already spent).
+  const budgetGate = gateResume(manifest.settings.maxCostUsd, tournamentSpentUsd(id), 'tournament');
+  if (budgetGate.clamped) manifest.settings = { ...manifest.settings, maxCostUsd: budgetGate.capUsd, budgetNote: budgetGate.message };
   manifest.error = undefined;
   launch(manifest);
 }
@@ -1032,8 +1040,15 @@ export function submitHumanVerdict(id: string, key: string, input: HumanVerdictI
     manifest.error = awaitingMessage(state.awaitingJudges);
     writeTournament(manifest);
   } else if (manifest.status === 'interrupted' && playableSlots(state, new Set(), { pairsInOrder: game.sequentialPairs }).length) {
-    resumeTournament(id);
-    resumed = true;
+    try {
+      resumeTournament(id);
+      resumed = true;
+    } catch (err) {
+      // The verdict is saved either way; a used-up monthly budget only stops the tournament carrying on by itself.
+      if (!isBudgetBlockedError(err)) throw err;
+      manifest.error = (err as Error).message;
+      writeTournament(manifest);
+    }
   }
   return { record, resumed };
 }

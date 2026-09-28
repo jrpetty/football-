@@ -818,6 +818,8 @@ export interface RunLimits {
   sameOutputTokens?: number;
   /** The display currency and rate the limits were typed in, e.g. { code: 'GBP', usdPerUnit: 1.33 }. */
   currency?: { code: string; usdPerUnit: number };
+  /** Set when the monthly budget's hard stop lowered the whole-run limit, e.g. "Limited to £12.40: what's left of your £50 monthly budget." */
+  budgetNote?: string;
 }
 
 export interface RunListItem {

@@ -58,6 +58,8 @@ import { recoverInterruptedTournaments } from '../arena/tournament.ts';
 import { registerVersusRoutes } from '../versus/server.ts';
 import { registerGalleryRoutes } from './gallery-routes.ts';
 import { registerMoneyRoutes } from './money-routes.ts';
+import { registerBudgetRoutes } from '../budget/routes.ts';
+import { recordSpend } from '../budget/spend.ts';
 
 class HttpError extends Error {
   status: number;
@@ -466,7 +468,9 @@ route('POST', '/api/manual/:id/fail', async ({ params, body }) => {
 
 route('POST', '/api/grade', async ({ body }) => {
   try {
-    return await gradePasted((await body()) as Parameters<typeof gradePasted>[0]);
+    const graded = await gradePasted((await body()) as Parameters<typeof gradePasted>[0]);
+    recordSpend({ kind: 'grade', name: 'AI judges graded a pasted answer', costUsd: graded.judgeCostUsd });
+    return graded;
   } catch (err) {
     throw new HttpError(400, (err as Error).message);
   }
@@ -575,6 +579,8 @@ registerExplainRoutes({ route, httpError: (status, message) => new HttpError(sta
 registerGalleryRoutes({ route, httpError: (status, message) => new HttpError(status, message) });
 // Display currency and exchange rate (src/server/money-routes.ts).
 registerMoneyRoutes({ route, httpError: (status, message) => new HttpError(status, message) });
+// "My budget": default limits, monthly budget and this month's spend (src/budget/routes.ts).
+registerBudgetRoutes({ route, httpError: (status, message) => new HttpError(status, message) });
 
 // ─────────────────────────────────────────────────────────────────────────────
 

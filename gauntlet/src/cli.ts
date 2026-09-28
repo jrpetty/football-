@@ -68,6 +68,8 @@ Usage: node src/cli.ts <command> [options]
   serve [--port 7777] [--host 127.0.0.1]     Start the dashboard + API server
   keys [setup | set <provider> <key> | test [provider] | remove <provider>]
                                              Add and check API keys (or use the dashboard → API Keys)
+  budget [show | set monthly|run|per-answer <amount|off> | set hard-stop on|off]
+                                             Your own budget: monthly budget (in pounds), default limits, spend this month
   run --models a,b [--suite core | --tests x,y] [--repeats 3] [--concurrency 6]
       [--max-cost 5] [--name "..."] [--judges j1,j2] [--notes "..."] [--yes]
       [--force-vision]                       Run a benchmark (shows a cost estimate first;
@@ -417,6 +419,7 @@ async function main(): Promise<void> {
       if (!testId || !caseId) throw new Error('Usage: grade <testId> <caseId> [--file reply.txt] [--vendor Vendor]   (reply is read from stdin when no --file)');
       const response = typeof flags.file === 'string' ? readFileSync(flags.file, 'utf8') : readFileSync(0, 'utf8');
       const r = await gradePasted({ testId, caseId, response, vendor: typeof flags.vendor === 'string' ? flags.vendor : undefined });
+      (await import('./budget/spend.ts')).recordSpend({ kind: 'grade', name: 'AI judges graded a pasted answer', costUsd: r.judgeCostUsd });
       const sc = r.outcome.score;
       console.log(`${c.bold('Score')}: ${sc === null ? 'pending human review' : `${(sc * 100).toFixed(1)}%`}  ${r.outcome.passed ? c.green('PASS') : c.red('FAIL')}  ${r.outcome.summary}`);
       for (const item of r.outcome.detail.items ?? []) console.log(`  ${item.passed ? c.green('✓') : c.red('✗')} ${item.label}${item.detail ? c.dim(` — ${item.detail}`) : ''}`);
@@ -498,6 +501,10 @@ async function main(): Promise<void> {
 
     case 'keys': {
       await (await import('./keys-cli.ts')).keysCommand(positional);
+      return;
+    }
+    case 'budget': {
+      await (await import('./budget/cli.ts')).budgetCommand(positional);
       return;
     }
 

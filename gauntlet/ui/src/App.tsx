@@ -9,6 +9,7 @@ import { useHotkeys, useNow } from './hooks.ts';
 import { MOCK, api } from './api.ts';
 import { ArenaIcon } from './arena/ArenaIcon.tsx';
 import { VersusIcon } from './versus/VersusIcon.tsx';
+import { BudgetIcon } from './budget/BudgetParts.tsx';
 
 const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage.tsx'));
 const NewRunPage = lazy(() => import('./pages/NewRunPage.tsx'));
@@ -33,6 +34,7 @@ const HistoryPage = lazy(() => import('./channel/HistoryPage.tsx'));
 const ChallengePage = lazy(() => import('./channel/ChallengePage.tsx'));
 const ChannelSlidesPage = lazy(() => import('./channel/ChannelSlidesPage.tsx'));
 const KeysPage = lazy(() => import('./keys/KeysPage.tsx'));
+const BudgetPage = lazy(() => import('./budget/BudgetPage.tsx'));
 const StudioPage = lazy(() => import('./pages/StudioPage.tsx'));
 const OverlayPage = lazy(() => import('./pages/OverlayPage.tsx'));
 const WatchPage = lazy(() => import('./pages/WatchPage.tsx'));
@@ -77,6 +79,7 @@ const NAV: NavItem[] = [
   { to: '/keys', label: 'API Keys', icon: Icon.Key, match: (p) => p.startsWith('/keys') },
   { to: '/models', label: 'Models', icon: Icon.Cpu, match: (p) => p.startsWith('/models') },
   { to: '/costs', label: 'Cost Planner', icon: Icon.Dollar, match: (p) => p.startsWith('/costs') },
+  { to: '/budget', label: 'Budget', icon: BudgetIcon, match: (p) => p.startsWith('/budget') },
   { to: '/newmodel', label: 'New Model Day', icon: Icon.Sparkles, section: 'Channel', match: (p) => p.startsWith('/newmodel') },
   { to: '/history', label: 'History', icon: Icon.Chart, match: (p) => p.startsWith('/history') },
   { to: '/challenge', label: 'Viewer Challenge', icon: Icon.Flag, match: (p) => p.startsWith('/challenge') },
@@ -147,6 +150,7 @@ function resolve(parts: string[]): Resolved {
   if (a === 'inbox') return { el: <InboxPage />, crumb: 'Manual Inbox' };
   if (a === 'grade') return { el: <GradePage />, crumb: 'Grader' };
   if (a === 'costs') return { el: <CostsPage />, crumb: 'Cost Planner' };
+  if (a === 'budget') return { el: <BudgetPage />, crumb: 'My budget' };
   if (a === 'publish') return { el: <PublishPage />, crumb: 'Publish' };
   if (a === 'newmodel') return { el: <NewModelPage />, crumb: 'New Model Day' };
   if (a === 'history') return { el: <HistoryPage />, crumb: 'Model history' };
