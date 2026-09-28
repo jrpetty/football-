@@ -1,0 +1,235 @@
+{
+  "kind": "prompt",
+  "id": "horizon.nonogram-ladder",
+  "version": "1.0.0",
+  "name": "Horizon: The Picture Logic Ladder",
+  "category": "horizon",
+  "description": "Ten nonograms (paint-by-numbers logic puzzles) from 5x5 up to 25x25, 625 cells, each with exactly one solution. The pictures are random, so nothing can be guessed from a shape: every cell has to be deduced from the row and column clues, and the big ones need long chains of deductions and case analysis. The whole grid must be exactly right. Uniqueness is proven by two independent solvers.",
+  "difficulty": "extreme",
+  "tags": [
+    "horizon",
+    "ladder",
+    "constraint-puzzle",
+    "nonogram",
+    "sat-verified"
+  ],
+  "hook": "Can it deduce a 625-cell picture from numbers alone?",
+  "maxOutputTokens": 64000,
+  "timeLimitSec": 3600,
+  "estimate": {
+    "inputTokens": 700,
+    "outputTokens": 30000
+  },
+  "author": "Gauntlet Horizon",
+  "createdAt": "2026-09-28",
+  "scorer": {
+    "type": "ladder",
+    "answer": "grid"
+  },
+  "cases": [
+    {
+      "id": "L01",
+      "prompt": "Solve this nonogram (paint-by-numbers). The grid has 5 rows and 5 columns. Every cell is either filled or empty.\n\nThe numbers for a row give the lengths of the runs of consecutive filled cells in that row, in order from left to right; the numbers for a column give the runs from top to bottom. Runs are separated by at least one empty cell. The puzzle has exactly one solution. The picture is random, so it does not show anything recognisable.\n\nRows (top to bottom):\nRow 1: 3 1\nRow 2: 3 1\nRow 3: 4\nRow 4: 5\nRow 5: 1 2\n\nColumns (left to right):\nColumn 1: 2 1\nColumn 2: 5\nColumn 3: 4\nColumn 4: 3\nColumn 5: 5\n\nWhen you are finished, write the line FINAL ANSWER: and then the 5 rows of the grid, top to bottom, one row per line, using # for a filled cell and . for an empty cell (5 characters per row, no spaces). For example, a 3x3 answer looks like:\nFINAL ANSWER:\n#.#\n###\n..#",
+      "expected": [
+        "###.#",
+        "###.#",
+        ".####",
+        "#####",
+        ".#.##"
+      ],
+      "notes": "[level 1] 5x5, 20 filled cells. Uniqueness proven by OR-Tools CP-SAT (automaton constraints; the found solution is excluded and the solver proves infeasibility) and independently by a JavaScript line-solver with backtracking that counts solutions (verify.mjs). Horizon ladder: ten frozen levels (L01 easiest, L10 hardest), each strictly more work than the one below. Every level is worth the same, so the test score is the share of the ladder climbed; the headline is the highest level solved reliably."
+    },
+    {
+      "id": "L02",
+      "prompt": "Solve this nonogram (paint-by-numbers). The grid has 6 rows and 6 columns. Every cell is either filled or empty.\n\nThe numbers for a row give the lengths of the runs of consecutive filled cells in that row, in order from left to right; the numbers for a column give the runs from top to bottom. Runs are separated by at least one empty cell. The puzzle has exactly one solution. The picture is random, so it does not show anything recognisable.\n\nRows (top to bottom):\nRow 1: 4\nRow 2: 3 2\nRow 3: 2 1\nRow 4: 2\nRow 5: 2 1\nRow 6: 3 1\n\nColumns (left to right):\nColumn 1: 1\nColumn 2: 4 1\nColumn 3: 6\nColumn 4: 1 2\nColumn 5: 2\nColumn 6: 2 2\n\nWhen you are finished, write the line FINAL ANSWER: and then the 6 rows of the grid, top to bottom, one row per line, using # for a filled cell and . for an empty cell (6 characters per row, no spaces). For example, a 3x3 answer looks like:\nFINAL ANSWER:\n#.#\n###\n..#",
+      "expected": [
+        ".####.",
+        "###.##",
+        ".##..#",
+        ".##...",
+        "..##.#",
+        ".###.#"
+      ],
+      "notes": "[level 2] 6x6, 21 filled cells. Uniqueness proven by OR-Tools CP-SAT (automaton constraints; the found solution is excluded and the solver proves infeasibility) and independently by a JavaScript line-solver with backtracking that counts solutions (verify.mjs)."
+    },
+    {
+      "id": "L03",
+      "prompt": "Solve this nonogram (paint-by-numbers). The grid has 8 rows and 8 columns. Every cell is either filled or empty.\n\nThe numbers for a row give the lengths of the runs of consecutive filled cells in that row, in order from left to right; the numbers for a column give the runs from top to bottom. Runs are separated by at least one empty cell. The puzzle has exactly one solution. The picture is random, so it does not show anything recognisable.\n\nRows (top to bottom):\nRow 1: 1 1\nRow 2: 2 1 2\nRow 3: 1 3\nRow 4: 4 1\nRow 5: 2 4\nRow 6: 1 1 1 1\nRow 7: 2 2\nRow 8: 2 3\n\nColumns (left to right):\nColumn 1: 1 1 1\nColumn 2: 6\nColumn 3: 1 1\nColumn 4: 8\nColumn 5: 3 1\nColumn 6: 1 2 1\nColumn 7: 1 2 1\nColumn 8: 2 1 1\n\nWhen you are finished, write the line FINAL ANSWER: and then the 8 rows of the grid, top to bottom, one row per line, using # for a filled cell and . for an empty cell (8 characters per row, no spaces). For example, a 3x3 answer looks like:\nFINAL ANSWER:\n#.#\n###\n..#",
+      "expected": [
+        "...#...#",
+        "##.#..##",
+        ".#.###..",
+        ".####.#.",
+        "##.####.",
+        ".#.#.#.#",
+        "##.##...",
+        "..##.###"
+      ],
+      "notes": "[level 3] 8x8, 35 filled cells. Uniqueness proven by OR-Tools CP-SAT (automaton constraints; the found solution is excluded and the solver proves infeasibility) and independently by a JavaScript line-solver with backtracking that counts solutions (verify.mjs)."
+    },
+    {
+      "id": "L04",
+      "prompt": "Solve this nonogram (paint-by-numbers). The grid has 10 rows and 10 columns. Every cell is either filled or empty.\n\nThe numbers for a row give the lengths of the runs of consecutive filled cells in that row, in order from left to right; the numbers for a column give the runs from top to bottom. Runs are separated by at least one empty cell. The puzzle has exactly one solution. The picture is random, so it does not show anything recognisable.\n\nRows (top to bottom):\nRow 1: 1 1 2\nRow 2: 8\nRow 3: 3 3\nRow 4: 1 3 2\nRow 5: 1 2 1\nRow 6: 4 2\nRow 7: 1 4\nRow 8: 5 1 1\nRow 9: 1 2 1 2\nRow 10: 4 2\n\nColumns (left to right):\nColumn 1: 1 2 2\nColumn 2: 2 3 1\nColumn 3: 3 2 3\nColumn 4: 5 3\nColumn 5: 1 1 3\nColumn 6: 2 1 3\nColumn 7: 2 1\nColumn 8: 2 4 1\nColumn 9: 1 2 1 2\nColumn 10: 1 1 2\n\nWhen you are finished, write the line FINAL ANSWER: and then the 10 rows of the grid, top to bottom, one row per line, using # for a filled cell and . for an empty cell (10 characters per row, no spaces). For example, a 3x3 answer looks like:\nFINAL ANSWER:\n#.#\n###\n..#",
+      "expected": [
+        "..#..#..##",
+        "########..",
+        ".###..###.",
+        "#..###..##",
+        "#.##...#..",
+        ".####..##.",
+        ".#..####..",
+        ".#####.#.#",
+        "#.##.#..##",
+        "####...##."
+      ],
+      "notes": "[level 4] 10x10, 58 filled cells. Uniqueness proven by OR-Tools CP-SAT (automaton constraints; the found solution is excluded and the solver proves infeasibility) and independently by a JavaScript line-solver with backtracking that counts solutions (verify.mjs)."
+    },
+    {
+      "id": "L05",
+      "prompt": "Solve this nonogram (paint-by-numbers). The grid has 12 rows and 12 columns. Every cell is either filled or empty.\n\nThe numbers for a row give the lengths of the runs of consecutive filled cells in that row, in order from left to right; the numbers for a column give the runs from top to bottom. Runs are separated by at least one empty cell. The puzzle has exactly one solution. The picture is random, so it does not show anything recognisable.\n\nRows (top to bottom):\nRow 1: 6 3\nRow 2: 2 1 2 1\nRow 3: 1 7\nRow 4: 1 2 1 1\nRow 5: 1 5 1 1\nRow 6: 2 4 2\nRow 7: 2 3\nRow 8: 1 3 1 2\nRow 9: 2 2 2\nRow 10: 1 4 1\nRow 11: 1 3\nRow 12: 2 3 2 1\n\nColumns (left to right):\nColumn 1: 2 2 2 1\nColumn 2: 2 2 2 1\nColumn 3: 1 1 2\nColumn 4: 1 3 2 2\nColumn 5: 3 5 1\nColumn 6: 1 5 1 1\nColumn 7: 7 1\nColumn 8: 2 1 1\nColumn 9: 3 5\nColumn 10: 1 1 1 2\nColumn 11: 1 1 1 2\nColumn 12: 2 3 1 1\n\nWhen you are finished, write the line FINAL ANSWER: and then the 12 rows of the grid, top to bottom, one row per line, using # for a filled cell and . for an empty cell (12 characters per row, no spaces). For example, a 3x3 answer looks like:\nFINAL ANSWER:\n#.#\n###\n..#",
+      "expected": [
+        ".######..###",
+        "##..#.##...#",
+        "#..#######..",
+        "...#.##.#..#",
+        "#.#####.#..#",
+        "##..####..##",
+        ".##.###.....",
+        "#.###...#.##",
+        "##.##...##..",
+        ".#...####.#.",
+        "...#....###.",
+        "##.###..##.#"
+      ],
+      "notes": "[level 5] 12x12, 80 filled cells. Uniqueness proven by OR-Tools CP-SAT (automaton constraints; the found solution is excluded and the solver proves infeasibility) and independently by a JavaScript line-solver with backtracking that counts solutions (verify.mjs)."
+    },
+    {
+      "id": "L06",
+      "prompt": "Solve this nonogram (paint-by-numbers). The grid has 14 rows and 14 columns. Every cell is either filled or empty.\n\nThe numbers for a row give the lengths of the runs of consecutive filled cells in that row, in order from left to right; the numbers for a column give the runs from top to bottom. Runs are separated by at least one empty cell. The puzzle has exactly one solution. The picture is random, so it does not show anything recognisable.\n\nRows (top to bottom):\nRow 1: 1 6 2\nRow 2: 3 4 1\nRow 3: 8 2\nRow 4: 1 2 1 3 2\nRow 5: 3 4 1 1\nRow 6: 3 3 2\nRow 7: 2 3 1 2 1\nRow 8: 3 6\nRow 9: 1 3 7\nRow 10: 3 2 1 3\nRow 11: 1 2 7\nRow 12: 4 2 2 2\nRow 13: 5 1 5\nRow 14: 5 2 1 1\n\nColumns (left to right):\nColumn 1: 1 2 7\nColumn 2: 3 1 2 1 3\nColumn 3: 5 7\nColumn 4: 2 2 1 4\nColumn 5: 1 1 2 1 2\nColumn 6: 5 1 1 1\nColumn 7: 3 2 3\nColumn 8: 3 2 3 2\nColumn 9: 9 2 1\nColumn 10: 1 1 6\nColumn 11: 6 1 2\nColumn 12: 2 6 1\nColumn 13: 1 2 7\nColumn 14: 3 4 2\n\nWhen you are finished, write the line FINAL ANSWER: and then the 14 rows of the grid, top to bottom, one row per line, using # for a filled cell and . for an empty cell (14 characters per row, no spaces). For example, a 3x3 answer looks like:\nFINAL ANSWER:\n#.#\n###\n..#",
+      "expected": [
+        ".#..######.##.",
+        "###..####..#..",
+        ".########...##",
+        "#.##.#..###.##",
+        "###..####.#..#",
+        "..###.###.##..",
+        "##.###..#.##.#",
+        "###.....######",
+        "#.###..#######",
+        "###...##.#.###",
+        "#.##..#######.",
+        "####.##.##..##",
+        "#####..#.#####",
+        ".#####.##.#.#."
+      ],
+      "notes": "[level 6] 14x14, 131 filled cells. Uniqueness proven by OR-Tools CP-SAT (automaton constraints; the found solution is excluded and the solver proves infeasibility) and independently by a JavaScript line-solver with backtracking that counts solutions (verify.mjs)."
+    },
+    {
+      "id": "L07",
+      "prompt": "Solve this nonogram (paint-by-numbers). The grid has 16 rows and 16 columns. Every cell is either filled or empty.\n\nThe numbers for a row give the lengths of the runs of consecutive filled cells in that row, in order from left to right; the numbers for a column give the runs from top to bottom. Runs are separated by at least one empty cell. The puzzle has exactly one solution. The picture is random, so it does not show anything recognisable.\n\nRows (top to bottom):\nRow 1: 4 8\nRow 2: 2 1 1 2 1 2\nRow 3: 6 4 1 1\nRow 4: 1 5 6\nRow 5: 1 1 1 1 1\nRow 6: 3 1 1 2\nRow 7: 1 1 3 2 1\nRow 8: 1 2 3 2\nRow 9: 1 1 3 1 1 1\nRow 10: 1 4 4 4\nRow 11: 8 2 2\nRow 12: 4 6 1\nRow 13: 1 1 1 1 1 1 1\nRow 14: 2 1 1 3 1 1\nRow 15: 2 5 3\nRow 16: 1 2 1 5\n\nColumns (left to right):\nColumn 1: 1 3 3 1\nColumn 2: 3 1 1 6\nColumn 3: 7 4 1\nColumn 4: 1 1 1 4 2\nColumn 5: 4 1 1 3 3\nColumn 6: 2 3 1\nColumn 7: 1 1 1 1 2 2\nColumn 8: 4 5 1\nColumn 9: 4 1 1 1 1 1\nColumn 10: 3 1 1 1 3\nColumn 11: 1 2 2 1 1 3\nColumn 12: 5 3 3 2\nColumn 13: 1 1 1 2 3\nColumn 14: 1 2 1 3 2 1\nColumn 15: 2 1 2 2 1 1\nColumn 16: 4 3 1\n\nWhen you are finished, write the line FINAL ANSWER: and then the 16 rows of the grid, top to bottom, one row per line, using # for a filled cell and . for an empty cell (16 characters per row, no spaces). For example, a 3x3 answer looks like:\nFINAL ANSWER:\n#.#\n###\n..#",
+      "expected": [
+        ".####...########",
+        ".##.#.#.##.#..##",
+        "######..####.#.#",
+        "..#.#####.######",
+        "#.#....#.#.#....",
+        "###.#..#....##..",
+        "#.#...###.##..#.",
+        ".#.##....###.##.",
+        "#.#..###...#.#.#",
+        "#.####.####.####",
+        "########...##.##",
+        ".####.######.#..",
+        ".#.#...#.#.#.#.#",
+        ".##.#.#.###.#.#.",
+        "##.#####..###...",
+        ".#.##...#.#####."
+      ],
+      "notes": "[level 7] 16x16, 152 filled cells. Uniqueness proven by OR-Tools CP-SAT (automaton constraints; the found solution is excluded and the solver proves infeasibility) and independently by a JavaScript line-solver with backtracking that counts solutions (verify.mjs)."
+    },
+    {
+      "id": "L08",
+      "prompt": "Solve this nonogram (paint-by-numbers). The grid has 18 rows and 18 columns. Every cell is either filled or empty.\n\nThe numbers for a row give the lengths of the runs of consecutive filled cells in that row, in order from left to right; the numbers for a column give the runs from top to bottom. Runs are separated by at least one empty cell. The puzzle has exactly one solution. The picture is random, so it does not show anything recognisable.\n\nRows (top to bottom):\nRow 1: 1 1 2 1 2 3\nRow 2: 1 2 2 1 1 3\nRow 3: 4 2 5 1\nRow 4: 1 3 1 4\nRow 5: 1 1 2 5\nRow 6: 2 1 2 2 2\nRow 7: 1 1 1 3 4\nRow 8: 3 3 6 1\nRow 9: 1 4 2 2 1\nRow 10: 4 1 1 6\nRow 11: 6 1 5\nRow 12: 3 7 1 1\nRow 13: 9 3 3\nRow 14: 4 1 6 1\nRow 15: 1 2 1 1 5\nRow 16: 2 3 1 1\nRow 17: 2 4 2 3\nRow 18: 9 2 2\n\nColumns (left to right):\nColumn 1: 1 1 1 2 3 3\nColumn 2: 2 1 1 9\nColumn 3: 1 1 10 1\nColumn 4: 2 3 2 3\nColumn 5: 2 6 1 3\nColumn 6: 1 2 2 1 1 4\nColumn 7: 4 4 1 2\nColumn 8: 3 1 3 1\nColumn 9: 3 1 2 2 2 1\nColumn 10: 1 1 4 2\nColumn 11: 3 1 2\nColumn 12: 4 3 3\nColumn 13: 1 1 6 3 2\nColumn 14: 3 4 2 3 2\nColumn 15: 3 2 3 2\nColumn 16: 5 1 2 3 1\nColumn 17: 2 1 4 1 4\nColumn 18: 4 5 2\n\nWhen you are finished, write the line FINAL ANSWER: and then the 18 rows of the grid, top to bottom, one row per line, using # for a filled cell and . for an empty cell (18 characters per row, no spaces). For example, a 3x3 answer looks like:\nFINAL ANSWER:\n#.#\n###\n..#",
+      "expected": [
+        "#.#.##...#..##.###",
+        ".#.##..##..#.#.###",
+        "####...##..#####.#",
+        ".....#.###.#..####",
+        "#.#..##....#####..",
+        ".##.#.##.##.##....",
+        "..#.#.#.###.####..",
+        "###.###..######.#.",
+        "#.####..##.##...#.",
+        ".####.#.#..######.",
+        ".######..#...#####",
+        "###...#######.#..#",
+        "#########..###.###",
+        "####...#..######.#",
+        ".#...##.#.#..#####",
+        "##.###..#.......#.",
+        "##.####.....##.###",
+        "#########...##..##"
+      ],
+      "notes": "[level 8] 18x18, 196 filled cells. Uniqueness proven by OR-Tools CP-SAT (automaton constraints; the found solution is excluded and the solver proves infeasibility) and independently by a JavaScript line-solver with backtracking that counts solutions (verify.mjs)."
+    },
+    {
+      "id": "L09",
+      "prompt": "Solve this nonogram (paint-by-numbers). The grid has 20 rows and 20 columns. Every cell is either filled or empty.\n\nThe numbers for a row give the lengths of the runs of consecutive filled cells in that row, in order from left to right; the numbers for a column give the runs from top to bottom. Runs are separated by at least one empty cell. The puzzle has exactly one solution. The picture is random, so it does not show anything recognisable.\n\nRows (top to bottom):\nRow 1: 1 2 3 1 3\nRow 2: 2 3 3\nRow 3: 2 1 2 4 4\nRow 4: 1 2 1 2 2 3 1 1\nRow 5: 1 1 4 3\nRow 6: 3 1 2 1 1 2\nRow 7: 3 1 1 1 1 2 1\nRow 8: 2 1 3 3 1\nRow 9: 6 1 1 4\nRow 10: 3 1 7 2\nRow 11: 9 1 2\nRow 12: 3 2 3 3 4\nRow 13: 2 4 1 2 1 1\nRow 14: 2 10\nRow 15: 3 4 1 1 1 2\nRow 16: 6 1 1 3 3\nRow 17: 1 1 3 1 1 1 4\nRow 18: 1 2 5 2 2\nRow 19: 6 1 1 3\nRow 20: 2 1 2 3 2 1\n\nColumns (left to right):\nColumn 1: 1 2 2 1 2 2 1\nColumn 2: 2 6 2 1 3\nColumn 3: 2 1 7 3 1\nColumn 4: 1 1 3 7\nColumn 5: 1 3 3 2 2\nColumn 6: 2 6 2 2\nColumn 7: 1 1 3 1 2\nColumn 8: 6 8\nColumn 9: 4 1 3 2 3\nColumn 10: 2 1 9 1 1\nColumn 11: 2 1 1 2 1 2 1\nColumn 12: 1 2 2 1 3 1 2\nColumn 13: 1 1 1 6 1 1\nColumn 14: 2 1 1 1 1 1 1 1\nColumn 15: 2 4 5\nColumn 16: 1 1 1 1 1 1\nColumn 17: 2 2 1 3 1 1 1\nColumn 18: 5 1 2 2 1\nColumn 19: 3 2 1 1 1 5\nColumn 20: 1 2 2 1 2 5\n\nWhen you are finished, write the line FINAL ANSWER: and then the 20 rows of the grid, top to bottom, one row per line, using # for a filled cell and . for an empty cell (20 characters per row, no spaces). For example, a 3x3 answer looks like:\nFINAL ANSWER:\n#.#\n###\n..#",
+      "expected": [
+        "#.##......###..#.###",
+        ".##.....###.....###.",
+        "##...#..##.####.####",
+        "#.##.#.##.##.###.#.#",
+        ".#..#.####......###.",
+        "###....#..##.#..#.##",
+        "###.#..#.#.#..##...#",
+        ".##.#..###..###...#.",
+        "######.#.#....####..",
+        ".###.#..#######...##",
+        "..#########.#...##..",
+        "###.##.###.###..####",
+        "##..####.#.##...#..#",
+        "..##.##########.....",
+        "..###.####..#.#.#.##",
+        "######.#...#.###.###",
+        "#..#.###..#.#.#.####",
+        ".#.##..#####..##..##",
+        ".######.#..#.....###",
+        "##.#.##.###.##..#..."
+      ],
+      "notes": "[level 9] 20x20, 230 filled cells. Uniqueness proven by OR-Tools CP-SAT (automaton constraints; the found solution is excluded and the solver proves infeasibility) and independently by a JavaScript line-solver with backtracking that counts solutions (verify.mjs)."
+    },
+    {
+      "id": "L10",
+      "prompt": "Solve this nonogram (paint-by-numbers). The grid has 25 rows and 25 columns. Every cell is either filled or empty.\n\nThe numbers for a row give the lengths of the runs of consecutive filled cells in that row, in order from left to right; the numbers for a column give the runs from top to bottom. Runs are separated by at least one empty cell. The puzzle has exactly one solution. The picture is random, so it does not show anything recognisable.\n\nRows (top to bottom):\nRow 1: 2 3 3 1 5\nRow 2: 1 1 1 2 4 1 1 2 2\nRow 3: 6 1 1 4 3\nRow 4: 1 1 4 4 5\nRow 5: 4 3 2 4 1 1\nRow 6: 2 1 7 1 5 1\nRow 7: 1 3 1 2 3 2 1\nRow 8: 3 4 1 1 1 4 2\nRow 9: 1 1 6 10 1\nRow 10: 1 1 1 4 5 2 1\nRow 11: 1 3 3 2 4\nRow 12: 10 1 1 1 1 2\nRow 13: 2 2 3 1 1 1 2 1 2\nRow 14: 7 6 1 2\nRow 15: 3 3 2 1 6 1\nRow 16: 7 1 2 5 1\nRow 17: 2 3 7 6 1\nRow 18: 1 1 1 5 1 3 1\nRow 19: 3 1 1 1 2 1 1 1 1\nRow 20: 3 7 1 3 2\nRow 21: 1 1 5 3 3 1 1\nRow 22: 1 8 1 1 1\nRow 23: 2 2 1 1 1 1 6 1\nRow 24: 2 6 1 2 2 5\nRow 25: 3 1 1 2 5 1 2\n\nColumns (left to right):\nColumn 1: 1 2 3 1 1 1 1 2\nColumn 2: 1 3 1 1 1 7 2\nColumn 3: 2 1 1 3 2 1\nColumn 4: 1 1 1 1 1 2 4 1\nColumn 5: 1 2 2 8 3\nColumn 6: 3 1 2 6 3 1\nColumn 7: 1 1 2 1 2 3 5 2\nColumn 8: 1 10 1 5\nColumn 9: 3 4 4 1 4 2\nColumn 10: 2 7 2 1 2 5\nColumn 11: 1 4 3 1 6 1\nColumn 12: 2 1 1 1 1 7 1\nColumn 13: 1 8 2 2 2\nColumn 14: 2 1 1 2 3 1\nColumn 15: 1 2 8 2 2\nColumn 16: 5 2 1 1 1 3\nColumn 17: 4 3 4 3 1\nColumn 18: 1 3 1 3 4 2 3\nColumn 19: 2 6 6 2 3\nColumn 20: 1 1 4 2 9\nColumn 21: 6 4 5 2\nColumn 22: 4 8 3 1 3\nColumn 23: 1 2 2 1 5\nColumn 24: 2 1 7 2 2\nColumn 25: 1 4 5 1 5\n\nWhen you are finished, write the line FINAL ANSWER: and then the 25 rows of the grid, top to bottom, one row per line, using # for a filled cell and . for an empty cell (25 characters per row, no spaces). For example, a 3x3 answer looks like:\nFINAL ANSWER:\n#.#\n###\n..#",
+      "expected": [
+        ".##.###..###.....#.#####.",
+        "#.#..#..##.####.#.#.##.##",
+        "...######.#..#.####.###..",
+        ".#..#...####..####.#####.",
+        "####.###.##...####..#...#",
+        "##..#.#######..#..#####.#",
+        "....#..###..#.##.###.##.#",
+        "###....####.#.#.#.####.##",
+        "#..#.######.##########.#.",
+        "#....#.#.####.#####.##.#.",
+        ".#....###...###..##.####.",
+        "...##########.#.#..#.#.##",
+        "##..##.###..#.#.#.##.#.##",
+        "..#######....######.#..##",
+        "###.###..##..#..######..#",
+        ".#######..#...##.#####..#",
+        "##.###..#######.######.#.",
+        ".#..#.#..#####..#.###..#.",
+        "###.#.#.#.##.#..#..#....#",
+        ".###.#######...#.###.##..",
+        ".#.#.#####.###...###..#.#",
+        "...#.########......#..#.#",
+        "##.##..#.#.#...#.######.#",
+        "##..######..#.##.##.#####",
+        "..###.#.#..##.#####..#.##"
+      ],
+      "notes": "[level 10] 25x25, 381 filled cells. Uniqueness proven by OR-Tools CP-SAT (automaton constraints; the found solution is excluded and the solver proves infeasibility) and independently by a JavaScript line-solver with backtracking that counts solutions (verify.mjs)."
+    }
+  ]
+}

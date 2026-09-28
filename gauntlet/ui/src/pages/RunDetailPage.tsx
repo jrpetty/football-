@@ -359,6 +359,7 @@ export default function RunDetailPage({ runId }: { runId: string }) {
         onClose={() => setQuery({ test: null, c: null, key: null })}
         onSelectKey={(key) => setQuery({ key })}
         names={new Map([...m.contestants, ...(m.judges ?? [])].map((c) => [c.id, c.label]))}
+        contestants={m.contestants.map((c) => ({ id: c.id, label: c.label, color: c.color }))}
       />
 
       {resumeOpen && (

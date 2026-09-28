@@ -4,6 +4,7 @@ import { checkConstraints } from './constraints.ts';
 import { compareJson } from './json-compare.ts';
 import { runCodeTests, type CodeTest } from './code-sandbox.ts';
 import { probeHtml, renderSvg } from './browser.ts';
+import { scoreLadder } from './ladder.ts';
 import { JUDGE_ARTIFACT_TEMPLATE, JUDGE_CLASSIFY_TEMPLATE, JUDGE_RUBRIC_TEMPLATE, JUDGE_SYSTEM, fill } from './judge-prompts.ts';
 
 export interface JudgeCall {
@@ -208,6 +209,8 @@ export async function scoreResponse(input: ScoringInput): Promise<ScoringOutcome
       return scoreArtifact(input, scorer.format, scorer.checks ?? [{ check: 'parses' }], scorer.rubric, scorer.judgeWeight ?? 0);
     case 'human':
       return { score: null, passed: null, summary: 'Awaiting human review', detail: { notes: scorer.rubric }, pendingHuman: true };
+    case 'ladder':
+      return scoreLadder(scorer.answer, expected, response);
   }
 }
 

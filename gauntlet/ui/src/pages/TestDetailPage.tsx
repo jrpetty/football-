@@ -40,6 +40,12 @@ export function describeScorer(s: ScorerSpec | undefined): string {
       return `Extracts a ${s.format.toUpperCase()} artifact, runs ${s.checks?.length ?? 0} automated checks${s.rubric ? `, then a judge (weight ${s.judgeWeight ?? 0.5})` : ''}.`;
     case 'human':
       return 'Scored by humans in Blind Review (0–10).';
+    case 'ladder':
+      return s.answer === 'plan'
+        ? 'Horizon ladder: the plan is replayed move by move; the proven minimum scores 1, a longer plan that solves it scores at most 0.25.'
+        : s.answer === 'grid'
+          ? 'Horizon ladder: the whole grid after FINAL ANSWER must match the unique solution (all or nothing).'
+          : 'Horizon ladder: the exact whole number on the FINAL ANSWER line (any size, compared digit by digit).';
   }
 }
 

@@ -272,7 +272,9 @@ export type ScorerSpec =
   /** Extracts an HTML/SVG artifact, runs automated checks, optionally judges it. */
   | { type: 'artifact'; format: 'html' | 'svg'; checks?: ArtifactCheck[]; rubric?: string; judgeWeight?: number }
   /** Scored by humans in the Blind Review screen. */
-  | { type: 'human'; rubric: string };
+  | { type: 'human'; rubric: string }
+  /** Horizon ladder rung (src/scoring/ladder.ts): exact big integer, a replayed sliding-tile plan, or a whole grid. */
+  | { type: 'ladder'; answer: 'integer' | 'plan' | 'grid' };
 
 export interface PromptTestCase {
   id: string;
