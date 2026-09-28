@@ -11,6 +11,7 @@ import type { ScorerSpec, TestDetail } from '../types.ts';
 import { Jargon } from '../components/clarity/Jargon.tsx';
 import { plainCaseName } from '../components/clarity/plain.ts';
 import { CaseImages, VisionBadge } from '../components/VisionImage.tsx';
+import { ExplainerCard } from '../components/ExplainerCard.tsx';
 
 export function describeScorer(s: ScorerSpec | undefined): string {
   if (!s) return '—';
@@ -137,6 +138,8 @@ export default function TestDetailPage({ testId }: { testId: string }) {
           </>
         }
       />
+
+      <ExplainerCard testId={testId} explainer={d.explainer} />
 
       {def.hook && (
         <blockquote className="hook-quote">

@@ -42,7 +42,9 @@ Keys are stored in `gauntlet/.env` (git-ignored) and applied immediately; the fu
 | Method | Path | Body | Returns |
 |---|---|---|---|
 | GET | `/api/tests` | – | `TestSummary[]` |
-| GET | `/api/tests/:id` | – | `{ definition: TestDefinition, summary: TestSummary, rendered: RenderedCase[], program?: { id, name, description, scoring } }` |
+| GET | `/api/tests/:id` | – | `{ definition: TestDefinition, summary: TestSummary, rendered: RenderedCase[], program?: { id, name, description, scoring }, explainer?: TestExplainer }` — `explainer` is the plain-English explainer (see `src/core/explainers.ts`); custom tests without one get a plain version built from their description (`generated: true`) |
+| GET | `/api/tests/:id/sample` | `?reveal=1` optional | `TestSample` — the first case as a viewer sees it: the question trimmed for the screen (`text`, and for book-length prompts the `tail` with the questions plus `skippedWords`), its pictures (`images[].path` → `/api/test-files/<path>`), shared instructions (`context`, `contextKind`). Programs: `situation` plus the real first message of seed 1, captured without calling any model. Arena games use the id `arena.<gameId>` and return the opening position. The answer (`answer`, `answerNote`) is only included with `?reveal=1`; `hasAnswer` says whether there is one. Held-out tests return `private: true` and no question |
+| GET | `/api/explainers` | – | `{ explainers: Record<testId, TestExplainer> }` — every hand-written explainer, Arena games as `arena.<gameId>` |
 | POST | `/api/tests/validate` | `{ definition: TestDefinition }` | `{ ok: boolean, errors: string[], hash?: string }` |
 | POST | `/api/tests` | `{ definition: TestDefinition }` | `TestSummary` — saves to `tests/custom/<id>.json` (409 if id exists) |
 | PUT | `/api/tests/:id` | `{ definition: TestDefinition }` | `TestSummary` — custom tests only; version auto-bumped (patch) if content changed and version not changed |

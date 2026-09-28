@@ -22,6 +22,7 @@ import type {
 
 export type * from '../../src/core/types.ts';
 export type * from '../../src/media/types.ts';
+export type { ExplainIconName, ExplainStep, SampleImage, TestExplainer, TestSample } from '../../src/core/explainers.ts';
 
 export interface Settings {
   judges: string[];
@@ -91,6 +92,8 @@ export interface TestDetail {
   summary: TestSummary;
   rendered: RenderedCase[];
   program?: ProgramInfo;
+  /** Plain-English explainer (hand-written, or `generated` from the definition for custom tests). */
+  explainer?: import('../../src/core/explainers.ts').TestExplainer;
 }
 
 export interface ValidateResult {

@@ -31,6 +31,7 @@ import type {
   ValidateResult,
 } from './types.ts';
 import type { CardSpec, CardStyle, ExportResult, OverlayData, PolishEstimate, PolishResult, RenderResult, StudioPayload } from './types.ts';
+import type { TestExplainer, TestSample } from './types.ts';
 import { mockArtifactUrls } from './mock/registry.ts';
 
 export class ApiError extends Error {
@@ -109,6 +110,8 @@ export const api = {
   // Tests & suites
   tests: () => request<TestSummary[]>('GET', '/api/tests'),
   test: (id: string) => request<TestDetail>('GET', `/api/tests/${enc(id)}`),
+  testSample: (id: string, reveal = false) => request<TestSample>('GET', `/api/tests/${enc(id)}/sample${reveal ? '?reveal=1' : ''}`),
+  explainers: () => request<{ explainers: Record<string, TestExplainer> }>('GET', '/api/explainers'),
   validateTest: (definition: TestDefinition) => request<ValidateResult>('POST', '/api/tests/validate', { definition }),
   createTest: (definition: TestDefinition) => request<TestSummary>('POST', '/api/tests', { definition }),
   updateTest: (id: string, definition: TestDefinition) => request<TestSummary>('PUT', `/api/tests/${enc(id)}`, { definition }),

@@ -17,6 +17,9 @@ npm test                      # includes answer-key self-consistency checks
 node src/cli.ts show <testId> # prints the exact prompts every model will receive
 ```
 
+Every built-in test also needs a **plain-English explainer** (what the viewer is told about it) — see
+[Write an explainer](#5-write-an-explainer-for-every-test). `npm test` fails until it has one.
+
 To include a test in the official leaderboard, add its id to `suites/core.json` (and bump that suite's
 `version`). Picture (vision) tests go in `suites/vision.json` instead, so Core results stay comparable
 across models that can't see images. Custom tests are always available through the **Everything** suite and hand-picked runs.
@@ -423,3 +426,52 @@ Rules of thumb:
 * **A provider with its own API:** implement `ProviderAdapter` in `src/providers/`, streaming text through
   `onDelta` and returning normalised usage (uncached input, cached input, output including reasoning,
   reasoning), then add it to `createAdapter`.
+
+---
+
+## 5. Write an explainer for every test
+
+Viewers who know nothing about AI see a **“What this test is”** slide before each test in the Presenter, an
+explainer card at the top of the test's page and an **About this test** panel in the result inspector. The
+words come from one entry per test in `src/core/explainers.ts`, keyed by the test id (Arena games use
+`arena.<gameId>`). They are display text only: never sent to a model and not part of the test hash, so you can
+polish them at any time without invalidating results.
+
+```ts
+'math.train-meet': {
+  hook: 'Two trains, one track: can it work out exactly when they meet?',   // one line, ideally a question
+  whatItTests: 'Relative-speed word problems with distractor numbers.',    // one sentence
+  whyHard: 'Every problem hides a number that looks useful and isn’t.',    // one honest sentence
+  howScored: [                                                              // 2–4 short steps (≤ 64 characters)
+    { icon: 'target', text: 'One number per problem' },
+    { icon: 'check', text: 'Must match the answer key exactly' },
+  ],
+  goodScore: '100 means all 12 right; each problem is worth about 8 points.',
+  icon: 'route',                                                            // one of EXPLAIN_ICONS
+  // opening: 'Programs and Arena games only: the situation at the start, true for every seed.',
+},
+```
+
+Rules of thumb:
+
+* **Read the scorer before writing `howScored`.** The steps must say exactly what the scorer does: the
+  scorer type and its options in the test JSON (`allOrNothing`, `tolerance`, `judgeWeight`, …) or, for a
+  program, its `scoring` text and code. Say “all or nothing” only when it is; give real percentages.
+* **Never invent numbers.** Counts in the text (“20 problems”, “30 seconds”) must match the test file.
+  Don't claim how well models do: the Presenter works that out from recorded results (the difficulty
+  meter only appears when a run has scores).
+* **Write for a phone screen with the sound off.** Plain words, no jargon (“JSON” gets explained as
+  “data”), short enough to read in five seconds.
+* **Icons:** pick one from `EXPLAIN_ICONS`. To add one, add its name there and draw it (24×24, stroke) in
+  `ui/src/components/viz/ExplainIcon.tsx`; `npm run typecheck` fails until both exist.
+
+**Why a unit test enforces it:** `test/explain.test.ts` fails when any built-in test or Arena game has no
+explainer, when an explainer points at a test that no longer exists, or when a hook or step is too long for
+the slide. Without that guard a new test would reach a video with a blank intro slide. Custom tests from the
+Test Builder are not checked: they get a plain explainer built from their own description and scorer
+(marked “built from the test's own description” on the test page) until you add a proper one.
+
+The sample question on the slide and the test page comes from `GET /api/tests/:id/sample`: the first case,
+trimmed for the screen, with its picture for vision tests. Programs show the real first message of seed 1
+(captured without calling a model) under your `opening` sentence. The answer only appears after a click
+on **Reveal answer**.

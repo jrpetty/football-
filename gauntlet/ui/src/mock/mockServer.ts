@@ -732,10 +732,14 @@ export async function handle(method: string, fullPath: string, body: unknown): P
       return { models: DISCOVERABLE[b] ?? [] };
     case 'GET tests': {
       if (!b) return tests.map((t) => ({ ...summaryOf(t), source: sourceOf(t.id) }));
+      if (c === 'sample') return (await import('./explainMock.ts')).mockSampleRoute(b, tests.find((x) => x.id === b), q.get('reveal') === '1', sourceOf(b) === 'private');
       const t = tests.find((x) => x.id === b);
       if (!t) throw new ApiError(`Test not found: ${b}`, 404);
-      return { definition: t, summary: { ...summaryOf(t), source: sourceOf(t.id) }, rendered: renderedOf(t), program: t.kind === 'program' ? PROGRAMS.find((p) => p.id === t.program) : undefined };
+      const program = t.kind === 'program' ? PROGRAMS.find((p) => p.id === t.program) : undefined;
+      return { definition: t, summary: { ...summaryOf(t), source: sourceOf(t.id) }, rendered: renderedOf(t), program, explainer: (await import('./explainMock.ts')).mockExplainerFor(t, program) };
     }
+    case 'GET explainers':
+      return { explainers: (await import('./explainMock.ts')).mockExplainers() };
     case 'POST tests': {
       const def = (body as { definition: TestDefinition }).definition;
       const errors = validate(def);

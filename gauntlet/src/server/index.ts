@@ -52,6 +52,8 @@ import { registerChannelRoutes } from '../channel/routes.ts';
 import { registerKeyRoutes } from './keys-routes.ts';
 import { overlayRedirect, registerStudioRoutes } from '../media/studio.ts';
 import { registerArenaRoutes } from '../arena/server.ts';
+import { registerExplainRoutes } from './explain-routes.ts';
+import { explainerForDefinition } from '../core/explainers.ts';
 import { recoverInterruptedTournaments } from '../arena/tournament.ts';
 import { registerVersusRoutes } from '../versus/server.ts';
 
@@ -203,6 +205,7 @@ route('GET', '/api/tests/:id', ({ params }) => {
     summary: summarize(t),
     rendered,
     program: program ? { id: program.id, name: program.name, description: program.description, scoring: program.scoring } : undefined,
+    explainer: explainerForDefinition(d, program?.scoring),
   };
 });
 
@@ -556,6 +559,8 @@ registerKeyRoutes({ route, httpError: (status, message) => new HttpError(status,
 registerArenaRoutes({ route, httpError: (status, message, details) => new HttpError(status, message, details), streaming: STREAMING });
 // Head to Head: two models compared round by round on stored results (src/versus/server.ts).
 registerVersusRoutes({ route, httpError: (status, message, details) => new HttpError(status, message, details) });
+
+registerExplainRoutes({ route, httpError: (status, message) => new HttpError(status, message) });
 
 // ─────────────────────────────────────────────────────────────────────────────
 

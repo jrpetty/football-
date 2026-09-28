@@ -54,6 +54,7 @@ const noun = (n: number, one: string, many = `${one}s`) => (n === 1 ? one : many
 import type { CaseResultLite, CategoryInfo, Leaderboard, LeaderboardRow, ProgramInfo, RunDetail, TestAggregate, TestDefinition, TestDetail, TestSnapshot } from '../types.ts';
 import { VisionExplainerCard, examplePicture } from '../components/VisionPresenter.tsx';
 import { SIM_PROGRAMS, SimMomentSlide, pickSimCase } from '../components/present/SimMomentSlide.tsx';
+import { IntroSlide, introCaption } from '../components/present/IntroSlide.tsx';
 
 const W = 1920;
 const H = 1080;
@@ -112,6 +113,7 @@ type Slide =
   | { kind: 'title' }
   | { kind: 'how' }
   | { kind: 'explainer'; test: DeckTest }
+  | { kind: 'intro'; test: DeckTest }
   | { kind: 'result'; test: DeckTest }
   | { kind: 'final' }
   | { kind: 'scatter' }
@@ -317,6 +319,22 @@ function momentSlides(deck: Deck, test: DeckTest): Slide[] {
   return moment ? [{ kind: 'moment', test, moment }] : [];
 }
 
+/** "What this test is" intro when the test has a hand-written explainer; the classic explainer slide otherwise. */
+function introOrExplainer(test: DeckTest): Slide {
+  const x = test.detail?.explainer;
+  return x && !x.generated ? { kind: 'intro', test } : { kind: 'explainer', test };
+}
+
+/** Recorded scores of the real models, and of the Random Baseline, on one test in this run. */
+function introScores(deck: Deck, test: DeckTest): { modelScores: Array<number | null>; randomScore: number | null } {
+  const score = (id: string) => {
+    const v = deck.rowsById.get(id)?.tests?.[test.snap.id]?.score;
+    return typeof v === 'number' ? v : null;
+  };
+  const base = deck.contenders.find((c) => c.baseline);
+  return { modelScores: deck.contenders.filter((c) => !c.baseline).map((c) => score(c.id)), randomScore: base ? score(base.id) : null };
+}
+
 function buildSlides(deck: Deck, vertical = false, show: ShowOpts = { race: true, podium: true }): Slide[] {
   if (vertical) {
     const shorts = deck.tests.flatMap((t) => trickSlides(deck, t));
@@ -324,7 +342,7 @@ function buildSlides(deck: Deck, vertical = false, show: ShowOpts = { race: true
   }
   const slides: Slide[] = [{ kind: 'title' }, { kind: 'how' }];
   for (const test of deck.tests) {
-    slides.push({ kind: 'explainer', test }, { kind: 'result', test }, ...simSlides(deck, test), ...momentSlides(deck, test), ...trickSlides(deck, test));
+    slides.push(introOrExplainer(test), { kind: 'result', test }, ...simSlides(deck, test), ...momentSlides(deck, test), ...trickSlides(deck, test));
     const pick = deck.truth.get(test.snap.id);
     if (pick) slides.push({ kind: 'truth', test, pick });
     const step = deck.standings.findIndex((st) => st.testId === test.snap.id);
@@ -373,6 +391,8 @@ function captionFor(slide: Slide, deck: Deck): Caption {
         text: 'The rules: every test is scored out of 100, the Gauntlet Index averages the categories into one number, and brackets show how certain each score is.',
         fine: `Thin lines = likely range (95%) · temperature ${m.settings?.temperature ?? 0}${deck.hasManual ? ' · hand-pasted chatbots used their own apps' : ''}`,
       };
+    case 'intro':
+      return introCaption({ name: slide.test.snap.name, n: slide.test.n, total: deck.tests.length, modelScores: introScores(deck, slide.test).modelScores });
     case 'explainer': {
       const t = slide.test;
       const sc = friendlyScoring(t.detail?.definition, t.detail?.program ?? deck.programs.get(t.detail?.definition.kind === 'program' ? t.detail.definition.program : ''), deck.judgeCross);
@@ -470,6 +490,7 @@ function sectionFor(slide: Slide, deck: Deck): string {
     case 'how':
       return 'How it works';
     case 'explainer':
+    case 'intro':
     case 'result':
     case 'moment':
       return `Test ${slide.test.n} of ${deck.tests.length} · ${slide.test.cat.name}`;
@@ -1178,6 +1199,8 @@ function SlideView({ slide, deck, reveal, vertical }: { slide: Slide; deck: Deck
       return <HowSlide deck={deck} />;
     case 'explainer':
       return <ExplainerSlide deck={deck} test={slide.test} />;
+    case 'intro':
+      return <IntroSlide testId={slide.test.snap.id} name={slide.test.snap.name} cat={slide.test.cat} n={slide.test.n} total={deck.tests.length} explainer={slide.test.detail!.explainer!} {...introScores(deck, slide.test)} />;
     case 'result':
       return <ResultSlide deck={deck} test={slide.test} />;
     case 'sim': {
