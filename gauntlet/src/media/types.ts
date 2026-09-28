@@ -86,7 +86,7 @@ export interface Highlight {
 /** One slide of the Presenter deck, numbered exactly as the Presenter numbers them. */
 export interface SlideRef {
   n: number;
-  kind: 'title' | 'how' | 'explainer' | 'result' | 'final' | 'scatter' | 'medals' | 'outro';
+  kind: 'title' | 'how' | 'explainer' | 'result' | 'standings' | 'podium' | 'final' | 'scatter' | 'medals' | 'outro';
   testId?: string;
 }
 

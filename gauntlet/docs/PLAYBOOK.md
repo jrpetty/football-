@@ -94,6 +94,37 @@ builds the raw material for the video. Nothing here calls a model or costs money
      `pos=tl|tr|bl|br` (or `top|bottom` for the ticker), `safe=0` to ignore the 5% TV-safe margin, `scale=1.3`
      to make it bigger.
 
+## Running the show (Presenter)
+
+Open a run and press **Present** (or go to `#/present/<run id>`). The Presenter is a full-screen deck made
+from the run's recorded results; it plays like a game show, so a viewer can follow it with the sound off.
+
+* **The race so far.** After every test there is a **Standings after N of M tests** slide. It opens on the
+  previous standings, the bars grow or shrink to the new overall scores, the rows slide into their new order,
+  and then the new leader (crown) and the biggest mover (e.g. "▲2 Nova 3 Pro") are called out. Green and red
+  arrows on the right show who moved up or down. The number is the same Gauntlet Index the final table uses,
+  calculated on the tests played so far, so the last race slide always matches the final result.
+* **The reveal.** Before the final table, the **And the winner is…** slide counts down from last place to
+  first, one model per press of **→**. Each model gets the spotlight: its final score counts up, with the test
+  it did best and worst on. Third and second step onto the podium, the next press is a drumroll, and the last
+  press shows the winner with the trophy and a confetti burst. The full results table follows it.
+* **Random guessing line.** If the run includes the Random Baseline, every score bar and the score-vs-cost
+  chart get a dashed "random guessing: X%" line, using what random guessing actually scored. It tells the
+  viewer whether a score is good or bad. Without the baseline in the run, the line is simply not there.
+* **Sound effects: S.** Press **S** (or the *Sound* button in the controls that appear when you move the
+  mouse) to switch sound effects on or off. They are made live by the browser, so there are no audio files:
+  a tick for each reveal, a ding for a right answer or a new leader, a buzz for a wrong one, a whoosh between
+  slides, a drumroll before the winner and a fanfare for the winner. Sound is **off by default** and the
+  browser remembers your choice. A small "Sound effects on/off" note shows for one second in the bottom-left
+  corner; the slider next to the button sets the volume. Tip: record sound effects on their own track, or
+  leave them off and add your own in the edit.
+* **Episode auto-play: A.** Press **A** and the deck runs itself. It pauses longer on reveals (the winner gets
+  about 11 seconds), never moves on while bars or numbers are still animating, and a small ring next to
+  *AUTO* at the top right fills up until the next step. Press **A** again to stop.
+* **Address options.** `?race=0` leaves out the race slides (handy for a short episode); `?podium=0` goes
+  back to the table that reveals row by row; `?s=12` opens slide 12. Press **?** for every shortcut.
+* Motion is reduced automatically (no confetti, no sliding) when Windows' "Show animations" setting is off.
+
 ## Making a "Can It Be Fooled?" Short
 
 1. **New Run → suite "Can It Be Fooled?"** (`trick`). Three tests, 71 short questions, 3 attempts each. It is
