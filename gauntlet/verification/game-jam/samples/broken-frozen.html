@@ -1,0 +1,15 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Broken: frozen loop</title><style>html,body{margin:0;background:#222}canvas{display:block}</style></head>
+<body><canvas id="c" width="1280" height="720"></canvas><script>
+// The title screen draws, but starting the game enters an endless "wait for the level" loop: the page freezes.
+const x = document.getElementById('c').getContext('2d');
+let started = false, level = null;
+function loop(t) {
+  x.fillStyle = '#222'; x.fillRect(0, 0, 1280, 720);
+  x.fillStyle = '#fff'; x.font = '48px sans-serif'; x.fillText(started ? 'Loading…' : 'FROZEN RUN · press Enter', 380, 360);
+  x.fillStyle = '#4cf'; x.fillRect(640 + Math.sin(t / 200) * 200, 450, 30, 30);
+  if (started) while (!level) { /* level is never generated */ }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+addEventListener('keydown', (e) => { if (e.code === 'Enter') started = true; });
+</script></body></html>

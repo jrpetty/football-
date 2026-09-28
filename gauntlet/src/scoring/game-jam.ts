@@ -351,8 +351,8 @@ export async function scoreGameJam(input: ScoringInput, scorer: Extract<ScorerSp
   }
 
   let score = judgeScore === null ? automated : (1 - judgeWeight) * automated + judgeWeight * judgeScore;
-  if (capReason && score > BROKEN_CAP) {
-    score = BROKEN_CAP;
+  if (capReason) {
+    score = Math.min(score, BROKEN_CAP);
     gj.cap = `The game ${capReason}, so its score is capped at ${Math.round(BROKEN_CAP * 100)}.`;
   }
   const passedChecks = items.filter((i) => i.passed).length;

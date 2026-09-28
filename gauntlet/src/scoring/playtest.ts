@@ -33,6 +33,10 @@ export const BLANK_THRESHOLD = 0.003;
 /** Real-time budget for one step of the page (a longer wait means an endless loop froze it). */
 const STEP_TIMEOUT_MS = 10_000;
 const LOAD_TIMEOUT_MS = 12_000;
+/** The fake clock's start (a fixed date, so games that read the time of day behave the same on every run). */
+const CLOCK_START = Date.UTC(2026, 0, 1, 12, 0, 0);
+/** Errors thrown by the game's own callbacks before the harness stops running them one by one. */
+const MAX_CALLBACK_ERRORS = 25;
 
 /** Deterministic Math.random (same generator as the one-shot game checks). */
 const SEED_SCRIPT = `(() => { let s = 1234567; Math.random = () => { s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; })();`;
@@ -315,16 +319,34 @@ async function session(html: string, steps: Step[] | null, liveKey?: string): Pr
       out.externalRequests.push(url);
       return route.abort();
     });
-    await page.clock.install({ time: new Date('2026-01-01T12:00:00Z') });
+    await page.clock.install({ time: CLOCK_START });
     await page.addInitScript(SEED_SCRIPT);
     await within(page.setContent(html, { waitUntil: 'load', timeout: LOAD_TIMEOUT_MS }), LOAD_TIMEOUT_MS + 2000, 0, 'loading').catch((e: Error) => {
       if (e instanceof Hung) throw e;
       note(`load: ${e.message.split('\n')[0]}`);
     });
+    // An exception thrown inside one of the game's timers or frame callbacks surfaces from runFor (a real browser
+    // would log it and carry on): record it as a page error, find out how far the fake clock got, and keep going.
+    // A game that throws on every frame stops being advanced after MAX_CALLBACK_ERRORS (its picture is frozen anyway).
+    let callbackErrors = 0;
     const advance = async (to: number, phase: string) => {
-      if (to <= now) return;
-      await within(page.clock.runFor(to - now), STEP_TIMEOUT_MS, now, phase);
-      now = to;
+      while (to > now) {
+        if (callbackErrors >= MAX_CALLBACK_ERRORS) {
+          await within(page.clock.fastForward(to - now).catch(() => {}), STEP_TIMEOUT_MS, now, phase);
+          now = to;
+          return;
+        }
+        try {
+          await within(page.clock.runFor(to - now), STEP_TIMEOUT_MS, now, phase);
+          now = to;
+        } catch (e) {
+          if (e instanceof Hung) throw e;
+          callbackErrors++;
+          note((e as Error).message.replace(/^clock\.runFor:\s*/, '').split('\n')[0]!);
+          const at = (await within(page.evaluate('Date.now()') as Promise<number>, STEP_TIMEOUT_MS, now, phase)) - CLOCK_START;
+          now = Math.min(to, Math.max(now + 1, at));
+        }
+      }
     };
     const shoot = async () => within(page.screenshot({ type: 'png', timeout: STEP_TIMEOUT_MS }), STEP_TIMEOUT_MS + 1000, now, 'drawing a frame');
     const shotQueue = [...SHOT_TIMES];

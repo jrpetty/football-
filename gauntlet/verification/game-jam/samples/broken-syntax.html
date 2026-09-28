@@ -1,0 +1,8 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Broken: syntax error</title><style>html,body{margin:0;background:#123}canvas{display:block}</style></head>
+<body><canvas id="c" width="1280" height="720"></canvas><script>
+// A typo leaves a brace unclosed: the whole script fails to parse, so nothing ever draws.
+const x = document.getElementById('c').getContext('2d');
+function loop(t) { x.fillStyle = '#123'; x.fillRect(0, 0, 1280, 720); x.fillStyle = '#fc0'; x.fillRect(600 + Math.sin(t / 300) * 100, 340, 40, 40);
+requestAnimationFrame(loop);
+addEventListener('keydown', () => { x.fillStyle = 'red'; );
+</script></body></html>

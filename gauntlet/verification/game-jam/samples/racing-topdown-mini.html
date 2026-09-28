@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Micro Rally (mini)</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#2b3a22}canvas{display:block;width:100vw;height:100vh}</style></head>
+<body><canvas id="c"></canvas><script>
+'use strict';
+// A deliberately SMALL top-down racer for the Game Jam demo set: a car with grip and slip, skid marks, three AI
+// cars on a racing line around an oval, laps and a minimal HUD. No nitro, results table or sound.
+const c = document.getElementById('c'), x = c.getContext('2d');
+let W, H; function fit() { W = c.width = innerWidth; H = c.height = innerHeight; } addEventListener('resize', fit); fit();
+const RX = 520, RY = 280, TW = 120, LAPS = 3;
+const track = (a) => ({ x: Math.cos(a) * RX * (1 + 0.18 * Math.sin(2 * a)), y: Math.sin(a) * RY });
+let mode = 'title', car = null, ai = [], skids = [], t = 0, count = 0;
+function start() { mode = 'count'; count = 3; t = 0; skids = []; car = { x: RX, y: 20, a: Math.PI / 2, vx: 0, vy: 0, lap: 0, prev: 0 }; ai = ['#e63946', '#ffb703', '#8338ec'].map((col, i) => ({ col, s: -0.05 - i * 0.04, v: 0.46 + i * 0.03, lap: 0 })); }
+const keys = {}; addEventListener('keydown', (e) => { keys[e.code] = true; if (mode !== 'race' && mode !== 'count' && (e.code === 'Enter' || e.code === 'Space')) start(); }); addEventListener('keyup', (e) => { keys[e.code] = false; });
+c.addEventListener('pointerdown', () => { if (mode === 'title' || mode === 'done') start(); });
+function update(dt) {
+  if (mode === 'count') { count -= dt; if (count <= 0) mode = 'race'; return; }
+  if (mode !== 'race') return; t += dt;
+  const steer = (keys.ArrowRight || keys.KeyD ? 1 : 0) - (keys.ArrowLeft || keys.KeyA ? 1 : 0), gas = keys.ArrowUp || keys.KeyW, brake = keys.ArrowDown || keys.KeyS;
+  const speed = Math.hypot(car.vx, car.vy); car.a += steer * dt * 2.6 * Math.min(1, speed / 150);
+  const fx = Math.cos(car.a), fy = Math.sin(car.a);
+  if (gas) { car.vx += fx * 420 * dt; car.vy += fy * 420 * dt; } if (brake) { car.vx *= 0.96; car.vy *= 0.96; }
+  const fwd = car.vx * fx + car.vy * fy, lat = -car.vx * fy + car.vy * fx, grip = keys.Space ? 0.9 : 0.8;
+  const nl = lat * Math.pow(1 - grip, dt * 10); car.vx = fx * fwd * 0.995 - fy * nl; car.vy = fy * fwd * 0.995 + fx * nl;
+  if (Math.abs(lat) > 90) skids.push({ x: car.x, y: car.y, life: 3 });
+  const ang = Math.atan2(car.y / RY, car.x / RX), on = Math.abs(Math.hypot(car.x / (RX * (1 + 0.18 * Math.sin(2 * ang))), car.y / RY) - 1) * RY < TW / 2;
+  if (!on) { car.vx *= 0.97; car.vy *= 0.97; }
+  car.x += car.vx * dt; car.y += car.vy * dt;
+  const a = (Math.atan2(car.y, car.x) + Math.PI * 2) % (Math.PI * 2); if (car.prev > 5.5 && a < 0.8) car.lap++; car.prev = a;
+  for (const o of ai) { o.s += o.v * dt * (1 + 0.06 * Math.sin(t + o.v * 9)); if (o.s > Math.PI * 2) { o.s -= Math.PI * 2; o.lap++; } }
+  for (const s of skids) s.life -= dt; skids = skids.filter((s) => s.life > 0);
+  if (car.lap >= LAPS) mode = 'done';
+}
+function carShape(px, py, a, col) { x.save(); x.translate(px, py); x.rotate(a); x.fillStyle = '#111'; x.fillRect(-14, -12, 8, 24); x.fillRect(8, -12, 8, 24); x.fillStyle = col; x.fillRect(-18, -9, 36, 18); x.fillStyle = '#9cd'; x.fillRect(2, -7, 8, 14); x.restore(); }
+function draw() {
+  x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = '#3f6b2f'; x.fillRect(0, 0, W, H);
+  const k = Math.min(W / (RX * 2.7), H / (RY * 2.8)); x.setTransform(k, 0, 0, k, W / 2, H / 2);
+  x.lineWidth = TW + 16; x.strokeStyle = '#e8e8e8'; x.setLineDash([30, 30]); x.beginPath(); for (let i = 0; i <= 200; i++) { const p = track(i / 200 * Math.PI * 2); i ? x.lineTo(p.x, p.y) : x.moveTo(p.x, p.y); } x.stroke(); x.setLineDash([]);
+  x.lineWidth = TW; x.strokeStyle = '#555a60'; x.stroke();
+  x.fillStyle = '#fff'; x.fillRect(RX * 1 - TW / 2, -4, TW, 8);
+  x.fillStyle = 'rgba(20,20,20,0.35)'; for (const s of skids) x.fillRect(s.x - 3, s.y - 3, 6, 6);
+  for (const o of ai) { const p = track(o.s), q = track(o.s + 0.01); carShape(p.x, p.y, Math.atan2(q.y - p.y, q.x - p.x), o.col); }
+  if (car) carShape(car.x, car.y, car.a, '#4cc9f0');
+  x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = '#fff'; x.font = '900 28px system-ui'; x.textAlign = 'center';
+  if (mode === 'title') { x.font = '900 72px system-ui'; x.fillText('MICRO RALLY', W / 2, H / 2); x.font = '24px system-ui'; x.fillText('Enter to race · arrows/WASD · Space to drift', W / 2, H / 2 + 50); return; }
+  if (mode === 'count') x.fillText(String(Math.ceil(count)), W / 2, H / 2);
+  if (mode === 'done') x.fillText(`FINISHED in ${t.toFixed(2)} s · Enter to race again`, W / 2, H / 2);
+  if (!car) return; x.textAlign = 'left'; x.font = '700 22px system-ui'; x.fillText(`LAP ${Math.min(LAPS, car.lap + 1)}/${LAPS}   ${t.toFixed(2)} s   ${Math.round(Math.hypot(car.vx, car.vy) / 2)} km/h`, 20, 36);
+}
+let last = performance.now(); function loop(now) { const dt = Math.min(0.05, (now - last) / 1000); last = now; update(dt); draw(); requestAnimationFrame(loop); } requestAnimationFrame(loop);
+</script></body></html>
