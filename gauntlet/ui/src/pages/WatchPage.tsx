@@ -38,7 +38,7 @@ export default function WatchPage({ runId }: { runId: string }) {
   const n = w?.tiles.size ?? 0;
 
   useViewerCaption(
-    !w ? null : live.active ? `${n} AI models answer the same question at once. Each box shows one model’s answer as it types, then flashes green if it’s right, red if it’s wrong.` : 'This run has finished. Each box shows the last answer that model gave.',
+    !w ? null : live.active ? `${n} AI models take the same test side by side. Each box shows what one model is writing right now, then flashes green (good), amber (partly right) or red (wrong) the moment it’s graded.` : 'This run has finished. Each box shows the last answer that model gave.',
     live.active ? 'Scores are out of 100 · token and cost figures marked ≈ are estimates until the answer is graded' : undefined,
   );
 
