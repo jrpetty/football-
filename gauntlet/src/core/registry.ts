@@ -7,6 +7,7 @@ import { PROTOCOL_VERSION } from './version.ts';
 import { writeJsonAtomic, loadCategories } from './config.ts';
 import { JUDGE_PROMPT_FINGERPRINT } from '../scoring/judge-prompts.ts';
 import { PROGRAMS } from '../programs/index.ts';
+import { validateGameJamCase } from '../scoring/game-jam-shared.ts';
 import { caseImageRefs, resolveTestImage, testBaseDir, testHasImages, testImageDigests, testsRelativePath, validateCaseImages } from './vision.ts';
 import type { PromptTest, PromptTestCase, ScorerSpec, Suite, TestDefinition } from './types.ts';
 
@@ -351,6 +352,7 @@ export function validateTest(def: TestDefinition, allTests?: LoadedTest[], opts:
       const scorer = c?.scorer ?? def.scorer;
       if (c?.scorer) validateScorer(c.scorer, where, errors);
       if (scorer && SCORER_TYPES.has(scorer.type)) validateExpected(scorer, c?.expected, where, errors);
+      if (scorer?.type === 'artifact' && scorer.playtest) errors.push(...validateGameJamCase(scorer, c?.expected, c?.prompt, where));
       if (c) validateCaseImages(c, opts.baseDir ?? testBaseDir(opts.selfFile), where, errors);
     });
   } else if (def.kind === 'program') {

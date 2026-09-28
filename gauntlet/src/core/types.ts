@@ -94,6 +94,12 @@ export interface Contestant {
   releaseDate?: string;
   /** Size tier within its family (optional). */
   tier?: 'flagship' | 'mid' | 'small';
+  /**
+   * The model's own hard limit on output tokens per reply (the API rejects larger requests). Requests above it are
+   * lowered to it, so a test asking for more (e.g. The Game Jam's 64k) still runs instead of failing. Optional, and
+   * not part of the config hash: it only turns would-be API errors into valid calls, never changes a successful one.
+   */
+  maxOutputTokens?: number;
 }
 
 /** Contestant plus derived runtime info (never includes secrets). */
@@ -199,7 +205,15 @@ export interface TestBase {
   /** Wall-clock limit per case in seconds (default 600). */
   timeLimitSec?: number;
   /** Rough per-case token estimate used for pre-run cost estimates. */
-  estimate?: { inputTokens: number; outputTokens: number; calls?: number };
+  estimate?: {
+    inputTokens: number;
+    outputTokens: number;
+    calls?: number;
+    /** Judge-scored tests: input tokens each judge reads per case (default: a fixed prompt plus half the reply). */
+    judgeInputTokens?: number;
+    /** Judge-scored tests: output tokens each judge writes per case (default 1,500). */
+    judgeOutputTokens?: number;
+  };
   author?: string;
   createdAt?: string;
   /**
@@ -269,10 +283,20 @@ export type ScorerSpec =
   | { type: 'judge'; rubric: string; passThreshold?: number }
   /** LLM-judge classifies the response into one of the labels; each label maps to a score. */
   | { type: 'judge-classify'; instructions: string; labels: JudgeLabel[] }
-  /** Extracts an HTML/SVG artifact, runs automated checks, optionally judges it. */
-  | { type: 'artifact'; format: 'html' | 'svg'; checks?: ArtifactCheck[]; rubric?: string; judgeWeight?: number }
+  /**
+   * Extracts an HTML/SVG artifact, runs automated checks, optionally judges it. With `playtest` (The Game Jam), the
+   * game is also played by a scripted player for its genre (case.expected.genre) and the judges grade a numbered
+   * requirement checklist plus fixed criteria, seeing the playtest screenshots (see src/scoring/game-jam.ts).
+   */
+  | { type: 'artifact'; format: 'html' | 'svg'; checks?: ArtifactCheck[]; rubric?: string; judgeWeight?: number; playtest?: PlaytestSpec }
   /** Scored by humans in the Blind Review screen. */
   | { type: 'human'; rubric: string };
+
+/** Genre playtest + checklist judging for game artifacts (The Game Jam). */
+export interface PlaytestSpec {
+  /** Version of the playtest script and judge format in src/scoring/game-jam.ts; must match the code (bump both together). */
+  protocol: number;
+}
 
 export interface PromptTestCase {
   id: string;
