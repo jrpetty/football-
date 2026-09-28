@@ -381,6 +381,70 @@ model's document strip, the "what survived" grid, the original next to every red
 by side, or the picture with the answer key and each model's answer. Try it with no keys: open the dashboard
 with `?mock=1` and the run *Long context & drawing · replays* (or *Vision · picture questions*).
 
+## Running the Gallery test (AI art)
+
+**The Gallery Masterpiece** asks every model to paint the same eight museum commissions: a lighthouse keeper's
+daughter reading at dusk in the manner of Vermeer, an Impressionist harbour at sunrise, a Romantic storm over a
+mountain pass, a ukiyo-e bridge in the rain, an Art Nouveau muse, a Renaissance fresco, a Pre-Raphaelite herb
+gatherer and a Hudson River School evening. Each brief names six things that must be in the picture, three
+things that must not (no lettering, no drawn-in frame, nothing modern) and what the artist may choose freely.
+**Painted in Code** gives the same briefs to text models, which paint them as SVG code; it is a separate test
+with its own leaderboard column, never mixed with the image generators.
+
+**1. Pick the painters.** Picture-making models are ready in `config/models.json`: **GPT Image 1** (OpenAI,
+`OPENAI_API_KEY`), **Gemini 2.5 Flash Image** and **Gemini 3 Pro Image** (`GEMINI_API_KEY`) and **Grok 2 Image**
+(`XAI_API_KEY`). They are marked *Makes images* and *Pictures only* (Models → Edit), so text tests skip them. Any
+model without *Makes images* is skipped on the image test, never scored 0. Chat apps (ChatGPT, the Gemini app,
+Midjourney…) take part as a Manual contestant: set its *vendor* to the right company so its judges are fair.
+
+**2. Check the judges.** Judging uses the judges in Settings (`config/settings.json → judges`). Every painting
+needs **at least two judges that can see images, from companies other than the artist's**. With the default
+three judges (Anthropic, OpenAI, Google) every painter gets two. If fewer than two are available the painting
+is kept and waits for your own rating in **Blind Review** (the New Run page warns you before you start).
+
+**3. Check the cost.** New Run → suite **Art** shows the estimate before you spend anything. One attempt at all
+8 commissions costs about $2.02 with GPT Image 1 at high quality (about $0.25 a painting), $0.31 with Gemini 2.5
+Flash Image, $1.08 with Gemini 3 Pro Image and $0.56 with Grok 2 Image. Judging costs about $0.06 per painting
+per judge-pair. Set `imageOptions.quality` to `"medium"` on GPT Image 1 to paint for about $0.063 each.
+
+**4. Manual chat apps.** When a Manual contestant reaches a commission, the Manual Inbox shows a card marked
+**picture reply**. Copy the prompt into a new chat, paste it exactly, and upload the first picture the app makes:
+drop the file on the card, click to choose it, or copy the picture in the app and press **Ctrl+V**. Any format
+works (WebP and others are converted); a thumbnail or the wrong shape gets a warning. Enter the cost if you know it.
+
+**5. Watch it.** Open the run and press **The Gallery** (or the sidebar's *The Gallery*). Each commission is a
+room: every painting in a frame under a spotlight, with a museum placard (title, *Artist: model*, medium, **Brief
+followed 8/9**, **Artistry 7.5/10**, cost per image). The rosette marks the best painting of the room. Press
+**T** to show or hide the ticks on each painting (green = there, amber = partly, red = missing or broken),
+**← →** to walk between rooms and **F** for full screen. Click a painting for the full checklist with every
+judge's one-line reason, the six artistry scores with each judge's dot, and how far apart the judges were.
+The same view is in the result inspector (Run → click an Art cell).
+
+**6. Present it.** The Presenter adds, after the Art test's results, **one gallery-wall slide per commission**
+(every model's painting side by side, with ticks and placards) and a **Masterpiece of the Show** slide: the
+highest-scoring painting of the whole test, big, with its brief checklist. Studio → Thumbnails has a **Gallery
+thumbnail**: the best painting of the top three artists framed on a museum wall with your headline.
+
+**7. Let people vote.** The Gallery → **Blind vote** shows the paintings of one commission as A, B, C… with the
+artists hidden. Click a painting (or press 1 for A, 2 for B…) for each vote from your audience, then **Reveal** (R).
+**Save votes** stores each painting's share of the votes as a human score (rater *Blind vote*). It shows as the
+*People's choice* and never changes the judged score.
+
+**8. Overrule the judges if you disagree.** Art is subjective, and the app says so. Paintings where the judges'
+artistry differs by 2 points or more (or where one judge says yes and another no on a checklist line) are
+flagged *judges disagree* and go to the top of **Blind Review**. Every painting can be rated there: your rating
+(0–10) **replaces the judges' artistry**; whether the brief was followed stays as the judges checked it. The
+placard then says *Artistry · owner*.
+
+**How it's scored, in one line for viewers:** half is how much of the brief it followed (the median judge
+verdict on each of the 9 lines), half is artistry (the median of the judges' averages over composition, light,
+colour harmony, craft, style and gallery-worthiness, each 1–10). A refusal or no picture scores 0. The Random
+Baseline paints coloured noise, so the floor is visible.
+
+**Try it with no keys:** open the dashboard with `?mock=1` and the run *The Gallery · September 2026* (made-up
+models, locally drawn placeholder paintings). `node verification/gallery/selfcheck.mts` runs two hand-painted SVG
+paintings through the real pipeline with local mock judges (free).
+
 ## Arena episode: poker, debates and mock trials
 
 1. **Poker:** Arena → New tournament → *Heads-up Poker*, 4 or 8 models, *Hands per match* 20 (40 for a closer

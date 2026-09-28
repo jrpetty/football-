@@ -1,6 +1,6 @@
 /**
  * Blind vote — the paintings of one commission, anonymised as A, B, C…, for the owner or a live audience to
- * pick favourites. Click a painting (or press its letter) to add a vote, − to take one back. "Reveal" shows the
+ * pick favourites. Click a painting (or press 1 for A, 2 for B…) to add a vote, − to take one back. "Reveal" shows the
  * artists; "Save votes" stores each painting's share of the votes as a human score (rater "Blind vote"). Votes
  * are recorded and shown as the People's choice; they never change the judged score.
  */
@@ -96,7 +96,8 @@ export default function GalleryVotePage({ runId }: { runId: string }) {
   };
 
   const keys: Record<string, () => void> = { r: () => setRevealed(true), ArrowRight: () => go(1), ArrowLeft: () => go(-1) };
-  paintings.forEach((e, i) => (keys[LETTERS[i]!.toLowerCase()] = () => add(e.key, 1)));
+  // Number keys, not letters: B, C and F already toggle Broadcast mode, captions and full screen.
+  paintings.slice(0, 9).forEach((e, i) => (keys[String(i + 1)] = () => add(e.key, 1)));
   useHotkeys(keys, !!run);
 
   useViewerCaption(
@@ -119,7 +120,7 @@ export default function GalleryVotePage({ runId }: { runId: string }) {
             Blind vote · Commission No. {brief.n} · {mode === 'code' ? 'painted in SVG code' : 'painted by image generators'}
           </div>
           <h2 className="grh-title">{brief.title}</h2>
-          <div className="grh-medium">{revealed ? 'The artists, revealed' : 'Which painting is the masterpiece? Click a painting (or press its letter) to vote.'}</div>
+          <div className="grh-medium">{revealed ? 'The artists, revealed' : 'Which painting is the masterpiece? Click a painting to vote (or press 1 for A, 2 for B…).'}</div>
         </header>
         <div className={cx('gal-wall is-page vote-wall', `cols-${cols}`)} style={{ ['--cols' as string]: String(cols) }}>
           {paintings.map((e, i) => {

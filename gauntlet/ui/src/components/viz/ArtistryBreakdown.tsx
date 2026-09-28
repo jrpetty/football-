@@ -41,12 +41,23 @@ export function ArtistryBreakdown({ detail, names, note = true }: { detail: Gall
             </b>
           </div>
         ))}
-        <div className="ar-scale" aria-hidden="true">
-          <span>1 broken</span>
-          <span>5 competent</span>
-          <span>8 accomplished</span>
-          <span>10 masterpiece</span>
+        <div className="ar-row ar-scale-row" aria-hidden="true">
+          <span />
+          <span className="ar-scale">
+            {([
+              [1, 'broken'],
+              [5, 'competent'],
+              [8, 'accomplished'],
+              [10, 'masterpiece'],
+            ] as const).map(([v, t]) => (
+              <span key={v} style={{ left: pct(v) }} className={cx(v === 1 && 'first', v === 10 && 'last')}>
+                <b title={t}>{v}</b>
+              </span>
+            ))}
+          </span>
+          <span />
         </div>
+        <div className="ar-scale-key">Scale: 1 broken · 5 competent · 8 accomplished · 10 museum masterpiece · dots = each judge</div>
       </div>
       {judges.length > 0 && (
         <ul className="ar-judges">

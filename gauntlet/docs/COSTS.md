@@ -114,6 +114,26 @@ and DeepSeek V4 Flash as configured) are skipped and cost $0. One repeat, before
 
 Per-test numbers: `node src/cli.ts costs --suite vision --format md`.
 
+## Art (`art`)
+
+The Gallery Masterpiece (8 paintings per image model) and Painted in Code (8 SVG paintings per text model), one
+attempt. Estimates before any measured run; judging (two or three vision judges per painting) adds about $0.30
+per model for the 8 paintings.
+
+| Model | Test | Cost |
+|---|---|---:|
+| GPT Image 1 (high, 1536×1024, $0.25 per picture) | Gallery Masterpiece | $2.02 |
+| Gemini 2.5 Flash Image ($0.039 per picture) | Gallery Masterpiece | $0.31 |
+| Gemini 3 Pro Image ($0.134 per picture) | Gallery Masterpiece | $1.08 |
+| Grok 2 Image ($0.07 per picture) | Gallery Masterpiece | $0.56 |
+| Claude Opus 5.5 | Painted in Code | $2.58 |
+| GPT-5.6 Sol | Painted in Code | $3.86 |
+| Gemini 3.1 Pro | Painted in Code | $1.55 |
+
+Per-image prices are from the vendors' published price pages (dates in `config/models.json → imagePricing.source`)
+and are marked unverified: check them before a paid run. Picture-only models cost $0 on every other suite (they
+are skipped).
+
 ## Frontier Gauntlet (`frontier`)
 
 | Test | Cases | Claude Opus 5.5 | Claude Sonnet 5 | Claude Haiku 4.5 | GPT-5.6 Sol | GPT-5.6 Terra | GPT-5.6 Luna | Gemini 3.1 Pro | Gemini 3.5 Flash | Grok 4.7 | DeepSeek V4 Flash | Judges |

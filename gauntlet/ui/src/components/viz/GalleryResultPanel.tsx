@@ -83,6 +83,7 @@ export function GalleryResultPanel({ res, modelLabel, modelColor, names, manual 
               </a>
             )}
           </div>
+          {g && (g.artistry !== null || g.judges.length > 0) && <ArtistryBreakdown detail={g} names={judgeName} />}
         </div>
         <div className="gal-result-right">
           {g && g.items.length > 0 && judged ? (
@@ -110,7 +111,6 @@ export function GalleryResultPanel({ res, modelLabel, modelColor, names, manual 
               </ul>
             </div>
           )}
-          {g && (g.artistry !== null || g.judges.length > 0) && <ArtistryBreakdown detail={g} names={judgeName} />}
           {g?.votes && g.votes.of > 0 && (
             <p className="gal-muted">
               Blind vote: {g.votes.votes} of {g.votes.of} votes ({Math.round(g.votes.share * 100)}%). Votes are recorded, not scored.

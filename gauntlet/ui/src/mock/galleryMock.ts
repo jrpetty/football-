@@ -196,7 +196,7 @@ export function decorateGallery(t: TestDefinition, lite: CaseResultLite): CaseRe
   const image = t.id === IMAGE_TEST;
   const metrics = image ? { ...zero, apiCalls: 1, inputTokens: 480, costUsd: PRICE[lite.contestantId] ?? 0, judgeCostUsd: 0.011, wallMs: 18_000 + Math.round(lite.metrics.wallMs % 20_000) } : { ...lite.metrics, judgeCostUsd: 0.011, costUsd: lite.contestantId === 'random-baseline' ? 0 : lite.metrics.costUsd };
   if (plan.kind === 'refused') {
-    return { ...lite, status: 'refusal', score: 0, passed: false, summary: 'Refused to paint · 0', scoreDetail: { gallery: detail, notes: 'The model said: This request may violate our content policy.' }, metrics: { ...metrics, judgeCostUsd: 0 }, artifacts: [], error: undefined, hasReplay: false, humanScores: undefined };
+    return { ...lite, status: 'refusal', score: 0, passed: false, summary: 'Refused to paint · 0', scoreDetail: { gallery: detail, notes: 'The model said: This request may violate our content policy.' }, metrics: { ...metrics, costUsd: 0, judgeCostUsd: 0 }, artifacts: [], error: undefined, hasReplay: false, humanScores: undefined };
   }
   const artifacts: ArtifactRef[] = [];
   const add = (name: string, kind: ArtifactRef['kind'], content: string) => {

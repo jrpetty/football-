@@ -17,7 +17,7 @@ import { plainAttempt, plainCaseName, plainKey, plainValue } from './clarity/pla
 import { ModelBadge } from './viz/ModelBadge.tsx';
 import { AboutTestPanel } from './ExplainerCard.tsx';
 import { GalleryResultPanel } from './viz/GalleryResultPanel.tsx';
-import { isGalleryTest } from './viz/galleryModel.ts';
+import { briefForCase, isGalleryTest } from './viz/galleryModel.ts';
 
 export interface InspectorTarget {
   testId: string;
@@ -401,7 +401,7 @@ export function ResultInspector({
             >
               <div className="row" style={{ gap: 8 }}>
                 <span className="mono insp-case">
-                  <Jargon dev={r.caseId} plain={plainCaseName(r.caseId)} />
+                  {isGalleryTest(r.testId) && briefForCase(r.caseId) ? `No. ${briefForCase(r.caseId)!.n} · ${briefForCase(r.caseId)!.title}` : <Jargon dev={r.caseId} plain={plainCaseName(r.caseId)} />}
                 </span>
                 <span className="muted" style={{ fontSize: '0.76rem' }}>
                   <Jargon dev={`r${r.repeat + 1}`} plain={plainAttempt(r.repeat)} />

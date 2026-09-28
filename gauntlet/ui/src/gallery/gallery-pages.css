@@ -397,3 +397,24 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Broadcast (B): the room fills the screen; paintings sized so wall, placards and caption fit at 1920×1080. */
+html[data-broadcast='on'] .gal-hall .gal-wall {
+  padding-top: 44px;
+  padding-bottom: 150px;
+}
+.gal-wall.is-one-row {
+  --gap: 34px;
+  padding-left: 34px;
+  padding-right: 34px;
+}
+.gal-wall.is-one-row > .gal-slot {
+  max-width: 520px;
+}
+.gal-wall.is-one-row .gal-placard {
+  width: 100%;
+  font-size: 0.82rem;
+}
+html[data-broadcast='on'] .gal-hall .grh-title {
+  font-size: 2.1rem;
+}

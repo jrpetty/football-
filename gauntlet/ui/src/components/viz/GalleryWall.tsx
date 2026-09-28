@@ -28,6 +28,7 @@ export function GalleryWall({
   onSelect,
   selectedKey,
   footer,
+  oneRow,
 }: {
   brief: Brief;
   entries: WallEntry[];
@@ -40,14 +41,16 @@ export function GalleryWall({
   onSelect?: (e: WallEntry) => void;
   selectedKey?: string | null;
   footer?: ReactNode;
+  /** Hang up to six paintings in one row with compact placards (Broadcast mode, full screen). */
+  oneRow?: boolean;
 }) {
   const best = winner ? bestOf(entries) : null;
   // The Presenter hangs up to six paintings in one row, like a real gallery wall.
-  const cols = variant === 'slide' && entries.length <= 6 ? Math.max(1, entries.length) : wallColumns(entries.length);
+  const cols = (variant === 'slide' || oneRow) && entries.length <= 6 ? Math.max(1, entries.length) : wallColumns(entries.length);
   const frame = frameFor(brief.n);
-  const small = variant === 'slide' && entries.length > 4;
+  const small = (variant === 'slide' || oneRow) && entries.length > 4;
   return (
-    <div className={cx('gal-wall', `is-${variant}`, `cols-${cols}`, small && 'is-dense')} style={{ ['--cols' as string]: String(cols) }}>
+    <div className={cx('gal-wall', `is-${variant}`, `cols-${cols}`, small && 'is-dense', oneRow && 'is-one-row')} style={{ ['--cols' as string]: String(cols) }}>
       {entries.map((e) => (
         <div key={e.key} className={cx('gal-slot', selectedKey === e.key && 'is-selected', e.baseline && 'is-baseline')}>
           <GalleryFrame
@@ -76,7 +79,7 @@ export function GalleryWall({
             manual={e.manual}
             baseline={e.baseline}
             mode={mode}
-            size={variant === 'slide' ? 'sm' : 'md'}
+            size={variant === 'slide' || oneRow ? 'sm' : 'md'}
           />
         </div>
       ))}

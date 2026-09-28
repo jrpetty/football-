@@ -227,6 +227,39 @@ Logic grids need `Full solution by position: 1: …, … | 2: …` in the notes;
 the notes. Mock mode shows a demo run of every visual (`node verification/case_visual_fixtures.mjs` rebuilds its
 fixtures; `node verification/case_visual_screens.mts <server url>` retakes the screenshots).
 
+### Picture-making tests (The Gallery)
+
+A program can ask for a picture instead of text: set `requiresImageOutput: true` and `imagesPerCase` on the
+`ProgramDefinition` and call `ctx.model.generateImage({ prompt, aspectRatio: '3:2' })`. It returns the first
+picture (`image`, base64 PNG/JPEG with its size) or `null` with the refusal text. The harness skips contestants
+without image output (`imageOutput: true` in `config/models.json`, always on for Manual and the Random Baseline),
+and skips every other test for contestants marked `imageOnly`. Save the picture with `ctx.artifactBytes`.
+
+To judge pictures, declare `judges: { vision: true, strictVendor: true, perCase: { inputTokens, outputTokens,
+images, imageSize } }`; the program then gets `ctx.judges.ask(system, user, label, images)`, the panel already
+filtered to vision judges from other vendors, and the `perCase` numbers feed the cost estimate. Return
+`status: 'pending-human'` when too few judges answered and `status: 'refusal'` for refusals. See
+`src/programs/gallery-masterpiece.ts` and `src/programs/lib/gallery-*.ts`. The commission briefs live in
+`src/programs/lib/gallery-briefs.ts`: they are part of the program's source hash, so editing a brief changes the
+test hash (bump the version).
+
+**Providers.** Image calls live in `src/providers/image-gen.ts`: the OpenAI Images API
+(`POST {baseUrl}/images/generations`, also used for xAI and any OpenAI-compatible provider that offers it) and
+Gemini `generateContent` with `responseModalities: ["TEXT", "IMAGE"]`. Per-contestant settings:
+
+```jsonc
+"imageOutput": true,          // can make pictures
+"imageOnly": true,            // makes pictures only: text tests are skipped
+"imageOptions": { "size": "1536x1024", "quality": "high", "responseFormat": null },  // null = don't send
+"imagePricing": {             // USD per picture; "*" matches any size or quality
+  "perImage": { "1536x1024": { "low": 0.016, "medium": 0.063, "high": 0.25 } },
+  "source": "…", "verifiedAt": null
+}
+```
+
+A picture costs `images × perImage + prompt tokens × pricing.inputPerM`. Without `imagePricing`, the call's
+token usage is billed with the normal token prices.
+
 ---
 
 ## 2. Programs (simulations and pipelines)

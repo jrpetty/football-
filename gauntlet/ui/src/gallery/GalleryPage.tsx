@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.ts';
 import { useAsync, useHotkeys, useLocalStorage } from '../hooks.ts';
 import { Link, href, navigate, pathOf, setQuery, useRoute } from '../router.tsx';
-import { useViewerCaption } from '../context.tsx';
+import { usePrefs, useViewerCaption } from '../context.tsx';
 import { Empty, ErrorState, LoadingPage, PageHead, Seg, cx } from '../components/ui.tsx';
 import { Icon } from '../components/icons.tsx';
 import { GalleryWall } from '../components/viz/GalleryWall.tsx';
@@ -118,6 +118,7 @@ function GalleryRunView({ runId }: { runId: string }) {
   const { run, loading, error, reload } = useGalleryRun(runId);
   const [ticks, setTicks] = useLocalStorage('gauntlet.gallery.ticks', true);
   const [full, setFull] = useState(false);
+  const { broadcast } = usePrefs();
   const room = useRef<HTMLElement>(null);
   const testId = (run?.tests.find((t) => t.id === query.get('test')) ?? run?.tests[0])?.id ?? '';
   const briefs = run && testId ? run.briefs(testId) : [];
@@ -174,6 +175,7 @@ function GalleryRunView({ runId }: { runId: string }) {
 
   return (
     <div className="page gallery-page">
+      <div className="no-broadcast">
       <PageHead
         eyebrow={
           <span className="row" style={{ gap: 8 }}>
@@ -201,6 +203,7 @@ function GalleryRunView({ runId }: { runId: string }) {
           </div>
         }
       />
+      </div>
 
       <nav className="gal-rooms no-broadcast" aria-label="Commissions">
         {briefs.map((b, i) => (
@@ -228,7 +231,7 @@ function GalleryRunView({ runId }: { runId: string }) {
         </div>
         <RoomHeader brief={brief} mode={mode} n={idx + 1} of={briefs.length} />
         {entries.length ? (
-          <GalleryWall brief={brief} entries={entries} mode={mode} ribbons={ticks} selectedKey={selectedKey} onSelect={(e) => setQuery({ p: e.key === selectedKey ? null : e.key })} />
+          <GalleryWall brief={brief} entries={entries} mode={mode} ribbons={ticks} oneRow={broadcast || full} selectedKey={selectedKey} onSelect={(e) => setQuery({ p: e.key === selectedKey ? null : e.key })} />
         ) : (
           <p className="gal-muted" style={{ textAlign: 'center', padding: 40 }}>
             No painting for this commission yet.

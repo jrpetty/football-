@@ -728,25 +728,29 @@
   font-size: 0.92rem;
 }
 .ar-scale {
-  display: grid;
-  grid-template-columns: 11.5em 1fr 2.4em;
-  gap: 10px;
+  position: relative;
+  height: 16px;
   font-size: 0.66rem;
   color: var(--gal-ink-3);
 }
-.ar-scale {
-  grid-template-columns: repeat(4, 1fr);
-  padding-left: calc(9.6em + 10px);
-  padding-right: calc(2.4em + 10px);
+.ar-scale span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
 }
-.ar-scale span:nth-child(2) {
-  text-align: center;
+.ar-scale span.first {
+  transform: none;
 }
-.ar-scale span:nth-child(3) {
-  text-align: center;
+.ar-scale span.last {
+  transform: translateX(-100%);
 }
-.ar-scale span:last-child {
-  text-align: right;
+.ar-scale b {
+  color: var(--gal-ink-2);
+}
+.ar-scale-key {
+  font-size: 0.7rem;
+  color: var(--gal-ink-3);
 }
 .ar-judges {
   list-style: none;
@@ -831,6 +835,9 @@
 }
 .gal-result-left {
   min-width: 0;
+}
+.gal-result-left > .artistry {
+  align-self: stretch;
 }
 .gal-toolbar {
   display: flex;

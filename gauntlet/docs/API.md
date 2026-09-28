@@ -138,6 +138,20 @@ then graded exactly like an API reply. Manual jobs run in their own queue and ha
 Show `combinedPrompt` for a **new** chat (it includes any system prompt and earlier turns) and, when
 `isContinuation` is true, offer `latestUserMessage` for continuing the **same** chat.
 
+## The Gallery (picture replies)
+
+| Method | Path | Body | Returns |
+|---|---|---|---|
+| POST | `/api/manual/:requestId/image` | `{ data: base64 or data: URL (PNG/JPEG, ≤ 20 MB), costUsd?, note? }` | `{ ok: true, width, height, bytes, mediaType }` — answers a Manual Inbox request whose `expects` is `"image"` (it also carries `aspectRatio`). A text reply to such a request is refused with 400. |
+
+Gallery results carry `scoreDetail.gallery` (`GalleryDetail` in `src/programs/lib/gallery-judge.ts`): the
+brief, the painting's size, every checklist line with each judge's verdict and reason, the six artistry criteria
+with each judge's score, the judges' spread and whether they disagree. The painting is the artifact
+`painting.png` (or `painting.jpg`; Painted in Code also stores `painting.svg`). Owner ratings and blind votes use
+`POST /api/review/score`: a rater named `Blind vote` is recorded only; any other rater's score (0–1) becomes the
+painting's artistry (× 10) and the score is recomputed. Skipped results say why in `summary`: *Skipped — model
+has no image output* or *Skipped — picture-only model*.
+
 ## Grade a pasted reply (no run needed)
 
 | Method | Path | Body | Returns |
