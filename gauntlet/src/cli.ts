@@ -72,6 +72,8 @@ Usage: node src/cli.ts <command> [options]
       [--max-cost 5] [--name "..."] [--judges j1,j2] [--notes "..."] [--yes]
       [--force-vision]                       Run a benchmark (shows a cost estimate first;
                                              --max-cost is a hard USD spending cap;
+                                             --per-answer 2 caps each reply at $2 (output limit per model = what $2 buys);
+                                             --same-tokens 64000 gives every model the same output limit on "model maximum" tests;
                                              --force-vision sends image cases to text-only models)
   estimate --models a,b [--suite core | --tests x,y] [--repeats 3]
   costs [--suite core] [--models a,b] [--repeats 1] [--format table|md]
@@ -128,6 +130,8 @@ function runRequest(flags: Record<string, string | boolean>): RunRequest {
     name: typeof flags.name === 'string' ? flags.name : undefined,
     judgeIds: list(flags.judges),
     maxCostUsd: num(flags['max-cost']),
+    // Optional: --per-answer 2.5 (USD per reply) and --same-tokens 64000 (the same output limit for every model).
+    ...(num(flags['per-answer']) !== undefined || num(flags['same-tokens']) !== undefined ? { limits: { perAnswerUsd: num(flags['per-answer']), sameOutputTokens: num(flags['same-tokens']) } } : {}),
     notes: typeof flags.notes === 'string' ? flags.notes : undefined,
     forceVision: flags['force-vision'] === true ? true : undefined,
   };

@@ -11,5 +11,10 @@
   "defaultTimeLimitSec": 1800,
   "maxRetries": 4,
   "judgeExcludeSameVendor": true,
-  "judgeEffort": "medium"
+  "judgeEffort": "medium",
+  "currency": {
+    "code": "GBP",
+    "usdPerUnit": 1.33,
+    "rateDate": "2026-09-28"
+  }
 }

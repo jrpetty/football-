@@ -32,6 +32,7 @@ import { PROGRAMS } from '../programs/index.ts';
 import { scoreResponse, type JudgePanel, type JudgeAskOptions } from '../scoring/index.ts';
 import { browserAvailable } from '../scoring/browser.ts';
 import { Semaphore } from './semaphore.ts';
+import { SpendGuard, checkedLimits, isSpendLimitError, outputAllowance } from './spend-guard.ts';
 import { callWithRetry, createRecorder, effectiveMaxOutputTokens, resolveOutputBudget, OutOfTimeError, type CallPolicy, type CallTarget } from './recorder.ts';
 import { appendResult, createRunFolder, listRunIds, newRunId, readManifest, readResults, saveArtifact, writeManifest } from './store.ts';
 import { caseImageRefs, caseImageSizes, estimateImageTokens, loadTestImage, stripImageData, supportsVision, testBaseDir } from '../core/vision.ts';
@@ -123,6 +124,8 @@ export interface RunPlan {
   concurrency: number;
   temperature: number;
   maxCostUsd?: number;
+  /** Per-answer cap and output-limit choice (see RunLimits); empty = each model's own maximum, no per-answer cap. */
+  limits: { perAnswerUsd?: number; sameOutputTokens?: number };
   judgeExcludeSameVendor: boolean;
   forceVision: boolean;
   fingerprint: string;
@@ -251,6 +254,8 @@ export function planRun(req: RunRequest): RunPlan {
   const manual = contestants.filter((c) => providerOf(c)?.type === 'manual');
   if (manual.length) warnings.push(`${manual.map((c) => c.label).join(', ')}: manual contestant — every prompt waits in the Manual Inbox for you to paste the model's reply`);
   if (req.maxCostUsd !== undefined && !(req.maxCostUsd > 0)) throw new Error('maxCostUsd must be a positive number');
+  const limits = checkedLimits(req.limits);
+  if (limits.perAnswerUsd) warnings.push('Per-answer spend limit: each model gets as many output tokens per reply as that money buys at its own price, so cheaper models get more room (not token-fair; see Methodology)');
   const humanTests = tests.filter((t) => t.definition.kind === 'prompt' && t.definition.cases.some((c) => caseScorer(t.definition as PromptTest, c).type === 'human'));
   if (humanTests.length) warnings.push(`${humanTests.length} test(s) need human scoring in Blind Review before they count`);
   return {
@@ -262,6 +267,7 @@ export function planRun(req: RunRequest): RunPlan {
     concurrency: Math.max(1, Math.min(64, req.concurrency ?? settings.defaultConcurrency)),
     temperature: req.temperature ?? settings.temperature,
     maxCostUsd: req.maxCostUsd,
+    limits,
     judgeExcludeSameVendor: settings.judgeExcludeSameVendor,
     forceVision: Boolean(req.forceVision),
     fingerprint: fingerprint(tests),
@@ -291,7 +297,7 @@ export interface TestCostEstimate {
 export interface RunEstimate {
   jobs: number;
   calls: number;
-  perContestant: Array<{ contestantId: string; jobs: number; estCostUsd: number; estCostUsdHigh: number; manual: boolean; /** Ceiling when "model's maximum" tests use the full output limit (only when the run has such a test). */ estCostUsdMax?: number; /** The model's output limit used for that ceiling. */ maxOutputTokens?: number }>;
+  perContestant: Array<{ contestantId: string; jobs: number; estCostUsd: number; estCostUsdHigh: number; manual: boolean; /** Ceiling when "model's maximum" tests use the full output limit (only when the run has such a test). */ estCostUsdMax?: number; /** The model's output limit used for that ceiling. */ maxOutputTokens?: number; /** What set that limit: the model's own maximum, the run's same-for-all number, or the per-answer spend cap. */ outputLimitBy?: 'test' | 'model-max' | 'same-tokens' | 'per-answer' }>;
   perTest: TestCostEstimate[];
   judgeCostUsd: number;
   /** Central estimate (contestants + judges). */
@@ -376,7 +382,10 @@ export async function estimateRun(req: RunRequest): Promise<RunEstimate> {
     let costHigh = 0;
     let costMax = 0;
     let anyModelMax = false;
-    const budgetFor = (t: (typeof plan.tests)[number]) => effectiveMaxOutputTokens(c, resolveOutputBudget(t.definition.maxOutputTokens, c, settingsNow.defaultMaxOutputTokens));
+    // The output limit per reply under the run's limits (own maximum, same-for-all, or what the per-answer cap buys).
+    const allowanceFor = (t: (typeof plan.tests)[number], inputTokens: number) =>
+      outputAllowance({ requested: t.definition.maxOutputTokens, contestant: c, defaultMaxOutputTokens: settingsNow.defaultMaxOutputTokens, limits: plan.limits, inputTokens });
+    let firstMax: ReturnType<typeof allowanceFor> | null = null;
     plan.tests.forEach((t, i) => {
       const selected = selectedCaseIds(t);
       const visionIds = visionCaseIds(t);
@@ -416,10 +425,14 @@ export async function estimateRun(req: RunRequest): Promise<RunEstimate> {
       // A model cannot write more than its own output limit (a Game Jam game hits it; see Contestant.maxOutputTokens).
       output = Math.min(output, effectiveMaxOutputTokens(c, Math.max(output, 1)));
       const pictures = programOf(t)?.imagesPerCase ?? 0;
+      const allow = allowanceFor(t, input / Math.max(1, perCaseCalls));
+      // A per-answer cap (or a same-for-all limit) can also stop a reply short: each call writes at most its allowance.
+      if (pictures === 0) output = Math.min(output, allow.tokens * Math.max(1, perCaseCalls));
       // Picture-making programs are billed per image (plus the prompt text), not per output token.
       const testCost = isManual ? 0 : pictures > 0 ? n * estimateImageUsd(c, pictures, input, plannedImageSettings(c, provider?.baseUrl, providerType)) : (n * (input * c.pricing.inputPerM + output * c.pricing.outputPerM)) / 1e6;
       const modelMax = t.definition.maxOutputTokens === 'model-max' && pictures === 0;
-      const maxOut = modelMax ? budgetFor(t) : 0;
+      const maxOut = modelMax ? allow.tokens : 0;
+      if (modelMax && !firstMax) firstMax = allow;
       const testMax = !modelMax || isManual ? testCost : (n * (input * c.pricing.inputPerM + maxOut * perCaseCalls * c.pricing.outputPerM)) / 1e6;
       costMax += testMax;
       if (modelMax) {
@@ -478,14 +491,14 @@ export async function estimateRun(req: RunRequest): Promise<RunEstimate> {
     });
     high += costHigh;
     maxExtra += costMax - cost;
-    const maxTests = plan.tests.filter((t) => t.definition.maxOutputTokens === 'model-max');
+    const fm = firstMax as ReturnType<typeof allowanceFor> | null;
     return {
       contestantId: c.id,
       jobs,
       estCostUsd: Math.round(cost * 10000) / 10000,
       estCostUsdHigh: Math.round(costHigh * 10000) / 10000,
       manual: isManual,
-      ...(anyModelMax ? { estCostUsdMax: Math.round(costMax * 10000) / 10000, maxOutputTokens: budgetFor(maxTests[0]!) } : {}),
+      ...(anyModelMax && fm ? { estCostUsdMax: Math.round(costMax * 10000) / 10000, maxOutputTokens: fm.tokens, outputLimitBy: fm.by } : {}),
     };
   });
   const warnings = plan.warnings.slice();
@@ -546,6 +559,7 @@ export async function startRun(req: RunRequest): Promise<string> {
       temperature: plan.temperature,
       protocolVersion: PROTOCOL_VERSION,
       maxCostUsd: plan.maxCostUsd,
+      limits: { ...(plan.maxCostUsd !== undefined ? { maxCostUsd: plan.maxCostUsd } : {}), ...plan.limits, ...(req.limits?.currency ? { currency: req.limits.currency } : {}) },
       judgeExcludeSameVendor: plan.judgeExcludeSameVendor,
       ...(plan.forceVision ? { forceVision: true } : {}),
     },
@@ -561,7 +575,14 @@ export function resumeRun(runId: string, opts: { maxCostUsd?: number | null } = 
   if (active.has(runId)) throw new Error('Run is already active');
   const manifest = readManifest(runId);
   if (!manifest) throw new Error('Run not found');
-  if (opts.maxCostUsd !== undefined) manifest.settings.maxCostUsd = opts.maxCostUsd === null ? undefined : opts.maxCostUsd;
+  if (opts.maxCostUsd !== undefined) {
+    manifest.settings.maxCostUsd = opts.maxCostUsd === null ? undefined : opts.maxCostUsd;
+    // Keep the recorded limits in step (the run page and the Presenter disclose them).
+    if (manifest.settings.limits) {
+      const { maxCostUsd: _old, ...rest } = manifest.settings.limits;
+      manifest.settings.limits = { ...rest, ...(manifest.settings.maxCostUsd !== undefined ? { maxCostUsd: manifest.settings.maxCostUsd } : {}) };
+    }
+  }
   const loaded = loadTests();
   const tests: Array<LoadedTest & { caseFilter?: string[] }> = [];
   const changed: string[] = [];
@@ -573,6 +594,7 @@ export function resumeRun(runId: string, opts: { maxCostUsd?: number | null } = 
   if (changed.length) throw new Error(`Cannot resume: these tests changed since the run started (results would not be comparable): ${changed.join(', ')}`);
   const done = new Set(readResults(runId).filter((r) => r.status !== 'error' && r.status !== 'cancelled').map((r) => r.key));
   manifest.error = undefined;
+  manifest.stopReason = undefined;
   launch(manifest, tests, done);
 }
 
@@ -610,7 +632,8 @@ function launch(manifest: RunManifest, tests: Array<LoadedTest & { caseFilter?: 
   const progress = {
     completed: previous.length,
     total: manifest.totalJobs,
-    costUsd: previous.reduce((s, r) => s + r.metrics.costUsd + r.metrics.judgeCostUsd, 0),
+    // Spend on cases a spend limit stopped half-way is not in any result, but it was spent: it counts too.
+    costUsd: previous.reduce((s, r) => s + r.metrics.costUsd + r.metrics.judgeCostUsd, 0) + (manifest.unrecordedCostUsd ?? 0),
   };
   const run: ActiveRun = { manifest, controller, events, progress, done: Promise.resolve() };
   active.set(manifest.id, run);
@@ -653,7 +676,10 @@ function launch(manifest: RunManifest, tests: Array<LoadedTest & { caseFilter?: 
       if (t instanceof Error) throw t;
       return t;
     };
-    const policy: CallPolicy = { maxRetries: settings.maxRetries, temperature: manifest.settings.temperature, defaultMaxOutputTokens: settings.defaultMaxOutputTokens };
+    const cap = manifest.settings.maxCostUsd;
+    // The spend limit is enforced per call (every call's worst case is reserved first; see spend-guard.ts).
+    const guard = cap !== undefined ? new SpendGuard(cap, progress.costUsd) : undefined;
+    const policy: CallPolicy = { maxRetries: settings.maxRetries, temperature: manifest.settings.temperature, defaultMaxOutputTokens: settings.defaultMaxOutputTokens, ...(guard ? { spend: guard } : {}) };
 
     // Throttled streaming deltas (≈10 events/s per job).
     const deltas = new Map<string, { contestantId: string; text: string; label?: string; reset?: boolean }>();
@@ -663,20 +689,22 @@ function launch(manifest: RunManifest, tests: Array<LoadedTest & { caseFilter?: 
       deltas.clear();
     }, 100);
 
-    const cap = manifest.settings.maxCostUsd;
     let budgetHit = false;
+    const stopForBudget = () => {
+      if (budgetHit) return;
+      budgetHit = true;
+      manifest.stopReason = 'spend-limit';
+      manifest.error = `Stopped: spend limit of $${(cap ?? 0).toFixed(2)} reached ($${progress.costUsd.toFixed(4)} spent). Every finished result is kept; resume with a higher limit to finish.`;
+      emit({ type: 'log', runId: manifest.id, level: 'warn', message: manifest.error, at: now() });
+    };
     const queues = [
       { jobs: apiJobs, cursor: 0, workers: Math.min(manifest.settings.concurrency, Math.max(1, apiJobs.length)) },
       { jobs: manualJobs, cursor: 0, workers: Math.min(200, manualJobs.length) },
     ];
     const worker = async (queue: (typeof queues)[number]) => {
       while (!controller.signal.aborted) {
-        if (cap !== undefined && progress.costUsd >= cap) {
-          if (!budgetHit) {
-            budgetHit = true;
-            manifest.error = `Budget cap of $${cap.toFixed(2)} reached ($${progress.costUsd.toFixed(4)} spent). Resume with a higher cap to finish.`;
-            emit({ type: 'log', runId: manifest.id, level: 'warn', message: manifest.error, at: now() });
-          }
+        if (cap !== undefined && (budgetHit || guard?.hit || progress.costUsd >= cap)) {
+          stopForBudget();
           return;
         }
         const job = queue.jobs[queue.cursor++];
@@ -712,6 +740,17 @@ function launch(manifest: RunManifest, tests: Array<LoadedTest & { caseFilter?: 
           deltas.delete(job.key);
         }
         if (result.status === 'cancelled' && controller.signal.aborted) return;
+        // Stopped half-way by the spend limit: not a model failure, so no result is stored (resume re-runs the case);
+        // whatever it already spent is remembered so the cap still counts it.
+        if (result.status === 'cancelled' && result.summary === SPEND_LIMIT_SUMMARY) {
+          const spent = result.metrics.costUsd + result.metrics.judgeCostUsd;
+          if (spent > 0) {
+            manifest.unrecordedCostUsd = Math.round(((manifest.unrecordedCostUsd ?? 0) + spent) * 1e8) / 1e8;
+            progress.costUsd += spent;
+          }
+          stopForBudget();
+          return;
+        }
         appendResult(result);
         progress.completed++;
         progress.costUsd += result.metrics.costUsd + result.metrics.judgeCostUsd;
@@ -758,6 +797,9 @@ function launch(manifest: RunManifest, tests: Array<LoadedTest & { caseFilter?: 
 export async function waitForRun(runId: string): Promise<void> {
   await active.get(runId)?.done;
 }
+
+/** Summary of a case the run's spend limit stopped before it finished (never stored as a result). */
+export const SPEND_LIMIT_SUMMARY = 'Stopped: spend limit';
 
 interface JobEnv {
   isManual: (c: Contestant) => boolean;
@@ -867,14 +909,20 @@ async function executeJob(job: Job, env: JobEnv): Promise<CaseResult> {
   let error: string | undefined;
 
   let recorder: ReturnType<typeof createRecorder> | null = null;
+  const limits = manifest.settings.limits;
   try {
     if (targetError || !target) throw targetError ?? new Error('No target');
     recorder = createRecorder({
       target,
       callContext: { runId: manifest.id, key: job.key, testId: def.id, testName: def.name, caseId: job.caseId },
-      policy: def.maxRetries !== undefined ? { ...env.policy, maxRetries: Math.min(env.policy.maxRetries, def.maxRetries) } : env.policy,
+      // The model's own calls: fewer retries for very long generations, and the per-answer spend cap (judges never get it).
+      policy: {
+        ...env.policy,
+        ...(def.maxRetries !== undefined ? { maxRetries: Math.min(env.policy.maxRetries, def.maxRetries) } : {}),
+        ...(limits?.perAnswerUsd ? { perAnswerUsd: limits.perAnswerUsd } : {}),
+      },
       signal: controller.signal,
-      maxOutputTokens: resolveOutputBudget(def.maxOutputTokens, job.contestant, settings.defaultMaxOutputTokens),
+      maxOutputTokens: resolveOutputBudget(def.maxOutputTokens, job.contestant, settings.defaultMaxOutputTokens, limits?.sameOutputTokens),
       onDelta: env.onDelta,
       onDeltaReset: env.onDeltaReset,
       attemptLimitMs: answerSec ? answerSec * 1000 : undefined,
@@ -916,6 +964,7 @@ async function executeJob(job: Job, env: JobEnv): Promise<CaseResult> {
           expected: tc.expected,
           response: reply!.text,
           stopReason: reply!.stopReason,
+          ...(reply!.outputLimitBy ? { outputLimitBy: reply!.outputLimitBy } : {}),
           taskText,
           judges,
           saveArtifact: save,
@@ -926,7 +975,8 @@ async function executeJob(job: Job, env: JobEnv): Promise<CaseResult> {
         summary = outcome.summary;
         detail = outcome.detail;
         if (outcome.pendingHuman) status = 'pending-human';
-        if (reply!.stopReason === 'max_tokens') detail.notes = `${detail.notes ? detail.notes + ' · ' : ''}Response hit the output token limit`;
+        if (reply!.stopReason === 'max_tokens')
+          detail.notes = `${detail.notes ? detail.notes + ' · ' : ''}Response hit the output token limit${reply!.outputLimitBy === 'per-answer' ? ' (stopped by your per-answer spend limit)' : reply!.outputLimitBy === 'spend-limit' ? ' (lowered by your run spend limit)' : ''}`;
       }
       if (answerSec) {
         detail.timeLimitSec = answerSec;
@@ -951,7 +1001,7 @@ async function executeJob(job: Job, env: JobEnv): Promise<CaseResult> {
         rng: createRng(seed),
         config: { ...(program.defaults ?? {}), ...(pdef.config ?? {}) },
         model: rec.handle,
-        maxOutputTokens: resolveOutputBudget(def.maxOutputTokens, job.contestant, settings.defaultMaxOutputTokens),
+        maxOutputTokens: resolveOutputBudget(def.maxOutputTokens, job.contestant, settings.defaultMaxOutputTokens, limits?.sameOutputTokens),
         signal: controller.signal,
         artifact: (name, kind, content) => {
           save(name, kind, content);
@@ -975,7 +1025,12 @@ async function executeJob(job: Job, env: JobEnv): Promise<CaseResult> {
       replay = out.replay;
     }
   } catch (err) {
-    if (err instanceof OutOfTimeError && !env.signal.aborted) {
+    if (isSpendLimitError(err) && !env.signal.aborted) {
+      // Not the model's fault: the run's money ran out before this case could finish. The worker keeps no result.
+      status = 'cancelled';
+      summary = SPEND_LIMIT_SUMMARY;
+      error = (err as Error).message;
+    } else if (err instanceof OutOfTimeError && !env.signal.aborted) {
       status = 'timeout';
       score = 0;
       passed = false;
@@ -1096,7 +1151,8 @@ export function createJudgePanel(opts: {
             });
             return { judgeId: j.id, text: r.text, sawImages: sees };
           } catch (err) {
-            if (signal.aborted) throw err;
+            // Out of money is not a judge failure: stop the case so it can be finished on resume.
+            if (signal.aborted || isSpendLimitError(err)) throw err;
             opts.record({
               label: `${label} · ${j.label}`,
               judge: true,

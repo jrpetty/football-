@@ -246,7 +246,7 @@ export async function runJudgeStep<S>(o: JudgeStepOptions<S>): Promise<ArenaJudg
         v = { judgeId: j.id, judgeLabel: j.label, vendor: j.vendor, sideA, winner: null, rationale: '', error: `Unreadable verdict: ${p.error}`, costUsd: cost };
       }
     } catch (err) {
-      if (o.signal?.aborted || (err as Error).name === 'AbortError' || (err as Error).name === 'BudgetReached') throw err;
+      if (o.signal?.aborted || (err as Error).name === 'AbortError' || (err as Error).name === 'BudgetReached' || (err as Error).name === 'SpendLimitError') throw err;
       v = { judgeId: j.id, judgeLabel: j.label, vendor: j.vendor, sideA, winner: null, rationale: '', error: (err as Error).message.slice(0, 300), costUsd: Math.round(((j.meter?.() ?? 0) - before) * 1e8) / 1e8 };
     }
     verdicts.push(v);

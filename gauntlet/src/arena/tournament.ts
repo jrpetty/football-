@@ -19,6 +19,7 @@ import type { Contestant, ManualRequest, ProviderConfig } from '../core/types.ts
 import { HARNESS_VERSION, PROTOCOL_VERSION } from '../core/version.ts';
 import { combinedLeaderboard } from '../engine/leaderboards.ts';
 import { createRecorder, type CallPolicy, type CallTarget, type CaseRecorder } from '../engine/recorder.ts';
+import { SpendGuard, isSpendLimitError } from '../engine/spend-guard.ts';
 import { Semaphore } from '../engine/semaphore.ts';
 import { createAdapter } from '../providers/index.ts';
 import { manualEvents } from '../providers/manual.ts';
@@ -539,9 +540,11 @@ function launch(manifest: TournamentManifest): void {
     }
     return target;
   };
-  const policy: CallPolicy = { maxRetries: settings.maxRetries, temperature: manifest.settings.temperature, defaultMaxOutputTokens: manifest.settings.maxOutputTokens };
-  const entrant = new Map(manifest.entrants.map((e) => [e.id, e]));
   const cap = manifest.settings.maxCostUsd;
+  // Spend limit per call: every move and judge call reserves its worst case first (see engine/spend-guard.ts).
+  const guard = cap !== undefined ? new SpendGuard(cap, spentUsd(manifest.id)) : undefined;
+  const policy: CallPolicy = { maxRetries: settings.maxRetries, temperature: manifest.settings.temperature, defaultMaxOutputTokens: manifest.settings.maxOutputTokens, ...(guard ? { spend: guard } : {}) };
+  const entrant = new Map(manifest.entrants.map((e) => [e.id, e]));
   const judgePool = game.judge ? arenaJudgePool().judges.map((j) => asJudge(j, settings.judgeEffort)) : [];
   const inFlightRecorders = new Set<CaseRecorder>();
   const liveSpend = () => [...inFlightRecorders].reduce((s, r) => s + r.costUsd, 0);
@@ -729,7 +732,9 @@ function launch(manifest: TournamentManifest): void {
       };
       if (record.status === 'awaiting-judges') log('warn', `${slot.key}: ${played.judging?.note ?? 'awaiting human judging'}`);
     } catch (err) {
-      const aborted = (ctrl.signal.aborted && !timedOut) || err instanceof BudgetReached;
+      const outOfMoney = err instanceof BudgetReached || isSpendLimitError(err);
+      if (outOfMoney) budgetHit = true;
+      const aborted = (ctrl.signal.aborted && !timedOut) || outOfMoney;
       if (timedOut) err = new Error(`No reply within ${Math.round(moveLimitMs / 1000)} s for one move`);
       if (!aborted) log('error', `${slot.key}: ${(err as Error).message}`);
       record = {
@@ -741,7 +746,7 @@ function launch(manifest: TournamentManifest): void {
         players: [p0, p1],
         status: aborted ? 'cancelled' : 'error',
         winner: null,
-        reason: aborted ? (err instanceof BudgetReached ? 'Stopped: budget cap reached' : 'Cancelled') : 'Error',
+        reason: aborted ? (outOfMoney ? 'Stopped: spend limit reached' : 'Cancelled') : 'Error',
         moves: liveGame.moves,
         initial: liveGame.initial,
         strikes: liveGame.strikes,
@@ -820,7 +825,7 @@ function launch(manifest: TournamentManifest): void {
       else if (controller.signal.aborted) manifest.status = 'cancelled';
       else if (budgetHit) {
         manifest.status = 'cancelled';
-        manifest.error = `Budget cap of $${(cap ?? 0).toFixed(2)} reached ($${final.costUsd.toFixed(4)} spent). Resume with a higher cap to finish.`;
+        manifest.error = `Stopped: spend limit of $${(cap ?? 0).toFixed(2)} reached ($${final.costUsd.toFixed(4)} spent). Every finished game is kept; resume with a higher limit to finish.`;
         log('warn', manifest.error);
       } else if (!failed.size && final.awaitingJudges) {
         manifest.status = 'interrupted';

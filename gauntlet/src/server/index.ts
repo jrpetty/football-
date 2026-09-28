@@ -57,6 +57,7 @@ import { explainerForDefinition } from '../core/explainers.ts';
 import { recoverInterruptedTournaments } from '../arena/tournament.ts';
 import { registerVersusRoutes } from '../versus/server.ts';
 import { registerGalleryRoutes } from './gallery-routes.ts';
+import { registerMoneyRoutes } from './money-routes.ts';
 
 class HttpError extends Error {
   status: number;
@@ -572,6 +573,8 @@ registerVersusRoutes({ route, httpError: (status, message, details) => new HttpE
 registerExplainRoutes({ route, httpError: (status, message) => new HttpError(status, message) });
 // The Gallery Masterpiece: picture replies in the Manual Inbox (src/server/gallery-routes.ts).
 registerGalleryRoutes({ route, httpError: (status, message) => new HttpError(status, message) });
+// Display currency and exchange rate (src/server/money-routes.ts).
+registerMoneyRoutes({ route, httpError: (status, message) => new HttpError(status, message) });
 
 // ─────────────────────────────────────────────────────────────────────────────
 

@@ -475,6 +475,8 @@ export interface ModelReply {
   totalMs: number;
   ttftMs: number | null;
   outputTokens: number;
+  /** Set when a spend limit lowered this call's output limit ('spend-limit' = the run's cap, 'per-answer' = the per-answer cap). */
+  outputLimitBy?: 'spend-limit' | 'per-answer';
 }
 
 export interface ChatSession {
@@ -650,6 +652,9 @@ export interface TranscriptEntry {
   error?: string;
   /** True for judge calls (billed to judgeCostUsd, not the contestant). */
   judge?: boolean;
+  /** A spend limit lowered this call's output limit (to maxOutputTokens). */
+  outputLimitBy?: 'spend-limit' | 'per-answer';
+  maxOutputTokens?: number;
 }
 
 /** `skipped`: the case needs image input and the model has none; not scored, excluded from means. */
@@ -741,8 +746,10 @@ export interface RunRequest {
   temperature?: number;
   /** Judge contestant ids (default: settings.judges). */
   judgeIds?: string[];
-  /** Hard spending cap in USD (contestant + judge cost). The run stops starting new cases once reached. */
+  /** Hard spending cap in USD (contestant + judge cost). No call may start whose worst case the money left cannot pay for. */
   maxCostUsd?: number;
+  /** Optional per-answer cap and output-limit choice (see RunLimits). */
+  limits?: Pick<RunLimits, 'perAnswerUsd' | 'sameOutputTokens' | 'currency'>;
   notes?: string;
   /** Send image cases to models not marked `vision: true` instead of skipping them. */
   forceVision?: boolean;
@@ -789,10 +796,28 @@ export interface RunManifest {
     maxCostUsd?: number;
     judgeExcludeSameVendor?: boolean;
     forceVision?: boolean;
+    /** The spend and output limits this run used (absent on runs started before limits existed: model maximum, no caps). */
+    limits?: RunLimits;
   };
   totalJobs: number;
   notes?: string;
   error?: string;
+  /** Why an unfinished run stopped when it was not a failure: 'spend-limit' = the run's spend limit was reached. */
+  stopReason?: 'spend-limit';
+  /** Money spent on cases that were stopped half-way by the spend limit (not in any result; counted towards the cap on resume). */
+  unrecordedCostUsd?: number;
+}
+
+/** The limits a run was started with, recorded in its manifest so a video can disclose them. All money in USD. */
+export interface RunLimits {
+  /** Whole-run cap (contestants + judges); same value as settings.maxCostUsd. */
+  maxCostUsd?: number;
+  /** Per-answer cap: each model's output limit per reply is what this buys at its own prices (not token-fair). */
+  perAnswerUsd?: number;
+  /** The fair alternative: every model gets this many output tokens on "model's maximum" tests (or its own maximum, if lower). */
+  sameOutputTokens?: number;
+  /** The display currency and rate the limits were typed in, e.g. { code: 'GBP', usdPerUnit: 1.33 }. */
+  currency?: { code: string; usdPerUnit: number };
 }
 
 export interface RunListItem {

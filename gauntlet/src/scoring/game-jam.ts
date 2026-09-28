@@ -225,6 +225,13 @@ function emptyCriteria(): Partial<Record<JamCriterion, number | null>> {
   return Object.fromEntries(criteriaOf(JAM_WEIGHTS).map((id) => [id, null]));
 }
 
+/** The "ran out of output space" line, naming a spend limit when one set the output limit (not the model's fault). */
+export function outOfSpaceWords(by: 'spend-limit' | 'per-answer' | undefined): string {
+  if (by === 'per-answer') return 'Ran out of output space: stopped by your per-answer spend limit (the reply hit the output limit that money buys)';
+  if (by === 'spend-limit') return 'Ran out of output space: stopped by your run spend limit (the money left lowered the output limit)';
+  return 'Ran out of output space: the reply hit the output-token limit';
+}
+
 export async function scoreGameJam(input: ScoringInput, scorer: Extract<ScorerSpec, { type: 'artifact' }>): Promise<ScoringOutcome> {
   const spec = jamCaseSpec(input.expected);
   const g = GENRES[spec.genre];
@@ -234,6 +241,7 @@ export async function scoreGameJam(input: ScoringInput, scorer: Extract<ScorerSp
     genre: spec.genre,
     genreLabel: g.label,
     truncated,
+    ...(truncated && input.outputLimitBy ? { truncatedBy: input.outputLimitBy } : {}),
     playtest: null,
     requirements: spec.requirements.map((label, i) => ({ id: `R${i + 1}`, label, verdict: null, votes: {}, split: false })),
     judges: [],
@@ -244,7 +252,7 @@ export async function scoreGameJam(input: ScoringInput, scorer: Extract<ScorerSp
     judgeScore: null,
     spread: null,
   };
-  const outOfSpace = 'Ran out of output space: the reply hit the output-token limit, so the game file is unfinished';
+  const outOfSpace = `${outOfSpaceWords(truncated ? input.outputLimitBy : undefined)}, so the game file is unfinished`;
   const artifact = extractJamHtml(input.response, truncated);
   if (!artifact) {
     const summary = truncated ? `${outOfSpace} and no game code arrived` : 'No HTML game found in the reply';

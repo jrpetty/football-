@@ -85,6 +85,8 @@ export interface GameJamDetail {
   genreLabel: string;
   /** The reply hit the output-token limit, so the file is cut off. */
   truncated: boolean;
+  /** Who set the output limit a truncated reply hit: absent = the model's own maximum (or the test's limit). */
+  truncatedBy?: 'spend-limit' | 'per-answer';
   playtest: PlaytestSummary | null;
   requirements: JamRequirement[];
   judges: JamJudgeCard[];
