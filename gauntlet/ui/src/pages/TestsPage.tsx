@@ -8,6 +8,7 @@ import { Icon } from '../components/icons.tsx';
 import { fmtInt, shortHash } from '../format.ts';
 import type { TestSummary } from '../types.ts';
 import { VisionBadge } from '../components/VisionImage.tsx';
+import { Jargon } from '../components/clarity/Jargon.tsx';
 
 export function SourceBadge({ source, compact }: { source: TestSummary['source'] | undefined; compact?: boolean }) {
   if (source === 'custom') return <span className="badge info">custom</span>;
@@ -33,15 +34,19 @@ export function TestCard({ t }: { t: TestSummary }) {
         <span className="badge outline">{t.kind === 'program' ? 'simulation' : 'prompt'}</span>
       </div>
       <h3>{t.name}</h3>
-      <div className="mono muted tc-id">{t.id}</div>
+      <div className="mono muted tc-id" data-dev>
+        {t.id}
+      </div>
       {t.hook ? <p className="tc-hook">“{t.hook}”</p> : <p className="tc-desc">{t.description}</p>}
       <div className="tc-meta">
         <span title="Cases">
-          <b>{fmtInt(t.caseCount)}</b> {t.kind === 'program' ? 'seeds' : 'cases'}
+          <b>{fmtInt(t.caseCount)}</b> <Jargon dev={t.kind === 'program' ? 'seeds' : 'cases'} plain={t.kind === 'program' ? (t.caseCount === 1 ? 'game world' : 'game worlds') : t.caseCount === 1 ? 'question' : 'questions'} />
         </span>
-        <span title="Scorer">{t.scorerType.replace(/^program:/, '')}</span>
-        <span title="Version">v{t.version}</span>
-        <span className="hash" title={`Test hash ${t.hash}`}>
+        <span title="Scorer" data-dev>{t.scorerType.replace(/^program:/, '')}</span>
+        <span title="Version" data-dev>
+          v{t.version}
+        </span>
+        <span className="hash" data-dev title={`Test hash ${t.hash}`}>
           {shortHash(t.hash)}
         </span>
       </div>

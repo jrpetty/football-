@@ -10,6 +10,8 @@ import { ScoreCostScatter } from '../charts/ScoreCostScatter.tsx';
 import type { CostMode } from '../charts/ScoreCostScatter.tsx';
 import { costOf } from '../charts/ScoreCostScatter.tsx';
 import { isBaseline, olympicCompare, shortCat } from './util.ts';
+import { ModelMonogram } from '../viz/ModelBadge.tsx';
+import { Jargon } from '../clarity/Jargon.tsx';
 
 // ───────────────────────────── Medal table ─────────────────────────────
 
@@ -157,13 +159,16 @@ export function Podium({ rows, big }: { rows: LeaderboardRow[]; big?: boolean })
           <div key={r.contestantId} className={cx('podium-step', `p${place + 1}`)} role="listitem" style={{ ['--c' as string]: r.color }}>
             <div className="podium-medal">
               <Medal kind={kinds[place]} lg />
+              <ModelMonogram label={r.label} color={r.color} size="lg" />
             </div>
             <div className="podium-name" title={r.label}>
               {r.label}
             </div>
             <div className="podium-vendor">{r.vendor}</div>
             <div className="podium-index">{fmtIndex(r.index)}</div>
-            <div className="podium-ci">{r.indexCi95 ? `95% CI ${fmtIndex(r.indexCi95[0])}–${fmtIndex(r.indexCi95[1])}` : 'Gauntlet Index'}</div>
+            <div className="podium-ci">
+              {r.indexCi95 ? <Jargon dev={`95% CI ${fmtIndex(r.indexCi95[0])}–${fmtIndex(r.indexCi95[1])}`} plain={`out of 100 · likely range ${fmtIndex(r.indexCi95[0])}–${fmtIndex(r.indexCi95[1])}`} /> : 'Gauntlet Index · out of 100'}
+            </div>
             <div className="podium-bar" />
           </div>
         );

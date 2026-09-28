@@ -52,6 +52,45 @@ This checks the install, the dashboard, the Live Arena and the replays without s
 * Games from **Build a Game in One Shot** are playable inside the result inspector, and there's a screenshot
   of each.
 
+### What Broadcast mode hides (and translates)
+
+Broadcast mode is written for a viewer who has never heard of Gauntlet. Your normal view keeps every detail;
+press **B** and the screen swaps owner-only detail for plain English:
+
+| Where | Normal mode (you) | Broadcast mode (viewers) |
+| --- | --- | --- |
+| Everywhere | protocol version in the top strip | hidden |
+| Leaderboard | fingerprint and protocol chips | hidden; a "Score out of 100" strip says what 100 means and what random guessing scored |
+| Podium | "95% CI 72.5–79.3" | "out of 100 · likely range 72.5–79.3" |
+| Run detail | run id, fingerprint, harness, git commit, environment, created time | hidden |
+| Run detail | "1,575 jobs", "3× repeats · concurrency 6 · temp 0" | "1,575 answers", "Every question asked 3 times" |
+| Results matrix | test ids (`reasoning.river-crossing`), "4 cases × 3" | "4 questions × 3 tries" |
+| Result inspector | `seed-101`, `c03`, `r2`, "Copy key", hashes line | "World #101", "Question 3", "Try 2"; key and hashes hidden |
+| Result inspector | "Extracted answer / Expected" | "Model's answer / Correct answer" |
+| Result inspector | Details: `checkScore`, `judgeScore`, `bytes`… | "Automatic checks 80 / 100", "Judges' score", "File size 1.6 KB"… |
+| Result inspector | 12 metrics (API calls, cached input, retries…) | 5: time taken, text read, text written, thinking, cost |
+| Replay header | "seed 101" | "world #101" |
+| Test library / test page | test id, scorer type, version, hash, file path, limits, scorer JSON, reproducibility notes | hidden; "5 cases" → "5 questions", "3 seeds" → "3 game worlds" |
+| Runs list | fingerprint, suite id, CSV / JSON / delete | hidden; "jobs" → "answers" |
+| Models | model id, price verified, key, enabled, actions, providers | hidden; "In / 1M" → "Price to read 1M tokens" |
+| Methodology | the Σ formula | "average of the categories · shown out of 100" |
+
+**Colours now mean the same thing everywhere.** In the results matrix and on score pills: green = mostly right
+(80–100), amber = partly right (40–79), red = mostly wrong (0–39). A legend sits above the matrix.
+
+**Model badges.** Every model has a round monogram in its contestant colour (A4 = Atlas-4 Ultra, and so on) on
+the leaderboard, podium, matrix, inspector and Models page. The random baseline gets a dashed "?" so it never
+looks like a competitor. Change a model's colour in **Models → Edit** and the badge follows.
+
+**Viewer guide.** *About → Viewer guide* explains 15 words a viewer will hear (benchmark, test, question, run,
+score out of 100, pass/partial/fail, Gauntlet Index, random baseline, judge, tokens, reasoning tokens, context
+length, cost per run, seed, likely range), each with a drawing. Press **Full screen** for one term per screen
+(← → or Space to move, Esc to leave) — handy as a 5-second cut-in when you first use a word.
+
+For developers: mark any owner-only element with a `data-dev` attribute (or `.dev-only` class) and it
+disappears in Broadcast mode; `<Jargon dev="…" plain="…" />` shows each version in its own mode. Plain labels
+for score-detail keys live in `ui/src/components/clarity/plain.ts`.
+
 ## 4b. Making the video (Studio)
 
 Open **Studio** in the sidebar (or the **Studio** button on a run's page). It reads the run you just finished and

@@ -7,6 +7,7 @@ import './styles/components.css';
 import './styles/charts.css';
 import './styles/pages.css';
 import './styles/present.css';
+import './styles/clarity.css';
 
 const root = document.getElementById('root');
 if (root) {

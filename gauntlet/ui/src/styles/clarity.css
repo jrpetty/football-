@@ -1,0 +1,478 @@
+/*
+ * Viewer clarity: jargon hiding, score meaning, model badges, viewer guide.
+ *
+ * Central mechanism — Broadcast mode hides owner-only detail:
+ *   data-dev attribute / .dev-only  → hidden in Broadcast mode
+ *   .plain-only                      → shown only in Broadcast mode
+ */
+
+:root,
+:root[data-theme='dark'] {
+  --band-good: #1d8a45;
+  --band-good-ink: #ffffff;
+  --band-partial: #d99a1e;
+  --band-partial-ink: #1d1400;
+  --band-poor: #b8383c;
+  --band-poor-ink: #ffffff;
+}
+:root[data-theme='light'] {
+  --band-good: #1a7f3f;
+  --band-good-ink: #ffffff;
+  --band-partial: #f0b431;
+  --band-partial-ink: #2a1c00;
+  --band-poor: #c43a3e;
+  --band-poor-ink: #ffffff;
+}
+
+/* ───────── Broadcast jargon switch ───────── */
+.plain-only {
+  display: none !important;
+}
+html[data-broadcast='on'] .plain-only {
+  display: revert !important;
+}
+html[data-broadcast='on'] [data-dev],
+html[data-broadcast='on'] .dev-only {
+  display: none !important;
+}
+
+/* ───────── Score hint ("?") ───────── */
+.score-hint {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 1.15em;
+  height: 1.15em;
+  margin-left: 0.35em;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  color: var(--text-2);
+  font-size: 0.78em;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+  vertical-align: middle;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.score-hint-pop {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 8px);
+  z-index: 40;
+  width: max-content;
+  max-width: 280px;
+  transform: translateX(-50%);
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--surface-4);
+  border: 1px solid var(--border-strong);
+  color: var(--text-1);
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: left;
+  white-space: normal;
+  box-shadow: 0 12px 28px -12px rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--t-fast, 120ms);
+}
+.score-hint:hover .score-hint-pop,
+.score-hint:focus-visible .score-hint-pop {
+  opacity: 1;
+}
+html[data-broadcast='on'] .score-hint {
+  display: none;
+}
+
+/* ───────── Score bands (matrix, legend) ───────── */
+.band-legend {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  font-size: 0.86rem;
+}
+.band-legend.compact {
+  font-size: 0.8rem;
+  gap: 4px 12px;
+}
+.band-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.band-key b {
+  font-weight: 600;
+  color: var(--text-1);
+}
+.band-sw {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+}
+.band-sw.band-good,
+.mcell.band-good {
+  background: var(--band-good);
+  color: var(--band-good-ink);
+}
+.band-sw.band-partial,
+.mcell.band-partial {
+  background: var(--band-partial);
+  color: var(--band-partial-ink);
+}
+.band-sw.band-poor,
+.mcell.band-poor {
+  background: var(--band-poor);
+  color: var(--band-poor-ink);
+}
+
+/* ───────── "Score out of 100" strip ───────── */
+.score-scale {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: 0.86rem;
+}
+.score-scale .ss-k {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.score-scale .ss-t b {
+  color: var(--text-1);
+}
+.score-scale .band-legend {
+  margin-left: auto;
+}
+html[data-broadcast='on'] .score-scale {
+  font-size: 0.95rem;
+  padding: 10px 18px;
+}
+html[data-broadcast='on'] .score-scale .ss-k {
+  font-size: 0.8rem;
+}
+
+/* ───────── Model badge ───────── */
+.model-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55em;
+  min-width: 0;
+  max-width: 100%;
+  vertical-align: middle;
+}
+.mb-mono {
+  --mb-size: 1.9rem;
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: var(--mb-size);
+  height: var(--mb-size);
+  border-radius: 50%;
+  font-weight: 800;
+  font-size: max(12px, calc(var(--mb-size) * 0.42));
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  box-shadow:
+    0 0 0 1.5px var(--surface-1),
+    0 0 0 2.5px color-mix(in srgb, var(--mb-c) 70%, var(--text-1));
+}
+.mb-mono.mb-sm {
+  --mb-size: 1.75rem;
+}
+.mb-mono.mb-lg {
+  --mb-size: 2.4rem;
+}
+.mb-mono.mb-xl {
+  --mb-size: 3.7rem;
+}
+.mb-mono.mb-baseline {
+  background: transparent;
+  color: var(--text-2);
+  box-shadow: none;
+  border: 2px dashed color-mix(in srgb, var(--mb-c) 60%, var(--text-3));
+}
+.mb-names {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+.mb-name {
+  font-weight: 700;
+  color: var(--text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.is-baseline .mb-name {
+  font-style: italic;
+  color: var(--text-2);
+}
+.mb-vendor {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8em;
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.model-badge.mb-lg {
+  font-size: 1.05rem;
+}
+.model-badge.mb-xl {
+  font-size: 1.4rem;
+}
+/* Matrix column head: badge stacked over name so long names wrap instead of clipping. */
+.m-col-head .model-badge {
+  flex-direction: column;
+  gap: 6px;
+  text-align: center;
+}
+.m-col-head .model-badge .mb-name {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.15;
+}
+/* Leaderboard model cell monogram (ModelCell). */
+.model-cell .mb-mono {
+  align-self: center;
+}
+
+/* ───────── Broadcast readability floor (nothing under ~12px on camera) ───────── */
+html[data-broadcast='on'] .model-cell .manual-tag {
+  height: auto;
+  padding: 1px 6px;
+  font-size: max(0.66rem, 12.5px);
+}
+
+/* ───────── Viewer guide ───────── */
+.guide-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+.guide-card {
+  display: grid;
+  grid-template-columns: 6.9rem minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  padding: 18px;
+  border-radius: 14px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+}
+.guide-card h3 {
+  margin: 0 0 4px;
+  font-size: 1.12rem;
+}
+.guide-card .g-say {
+  margin: 0;
+  color: var(--text-1);
+  line-height: 1.45;
+}
+.guide-card .g-eg {
+  margin: 8px 0 0;
+  color: var(--text-3);
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+.guide-art {
+  width: 6.9rem;
+  height: 6.9rem;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  display: grid;
+  place-items: center;
+}
+.guide-art svg {
+  width: 5.8rem;
+  height: 5.8rem;
+  overflow: visible;
+}
+.guide-art svg text {
+  font-family: var(--font-sans);
+  font-weight: 700;
+}
+html[data-broadcast='on'] .guide-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.1rem;
+}
+html[data-broadcast='on'] .guide-card h3 {
+  font-size: 1.2rem;
+}
+
+/* Full-screen guide (one term at a time, for recording). */
+.guide-show {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  background:
+    radial-gradient(1200px 600px at 20% 0%, var(--bg-glow-1), transparent 60%),
+    radial-gradient(1000px 600px at 90% 100%, var(--bg-glow-2), transparent 60%),
+    var(--bg);
+  color: var(--text-1);
+  font-size: clamp(15px, 1.02vw, 26px);
+}
+.guide-show-top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 2.2vw 3.2vw 0;
+}
+.guide-show-top .eyebrow {
+  font-size: 0.95rem;
+  color: var(--accent);
+}
+.guide-show-top .count {
+  margin-left: auto;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+.guide-show-body {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  align-items: center;
+  gap: 4vw;
+  padding: 0 6vw;
+}
+.guide-show-art {
+  aspect-ratio: 1;
+  max-height: 62vh;
+  justify-self: center;
+  width: 100%;
+  max-width: 62vh;
+  border-radius: 28px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  display: grid;
+  place-items: center;
+}
+.guide-show-art svg {
+  width: 78%;
+  height: 78%;
+  overflow: visible;
+}
+.guide-show-art svg text {
+  font-family: var(--font-sans);
+  font-weight: 700;
+}
+.guide-show h1 {
+  margin: 0 0 0.4em;
+  font-size: 4.2rem;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+}
+.guide-show .g-say {
+  margin: 0;
+  font-size: 1.9rem;
+  line-height: 1.35;
+}
+.guide-show .g-eg {
+  margin: 1.1em 0 0;
+  font-size: 1.25rem;
+  line-height: 1.45;
+  color: var(--text-2);
+}
+.guide-show-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 3.2vw 2.2vw;
+}
+.guide-dots {
+  display: flex;
+  gap: 8px;
+  margin: 0 auto;
+}
+.guide-dots button {
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  border-radius: 50%;
+  border: 0;
+  background: var(--surface-4);
+  cursor: pointer;
+}
+.guide-dots button[aria-current='true'] {
+  background: var(--accent);
+}
+.guide-show .guide-exit {
+  opacity: 0.35;
+  transition: opacity var(--t-fast, 120ms);
+}
+.guide-show:hover .guide-exit {
+  opacity: 1;
+}
+@media (max-width: 900px) {
+  .guide-show-body {
+    grid-template-columns: 1fr;
+    padding: 0 16px;
+    gap: 16px;
+  }
+  .guide-show h1 {
+    font-size: 2.4rem;
+  }
+  .guide-show .g-say {
+    font-size: 1.2rem;
+  }
+}
+
+/* ───────── Leaderboard ───────── */
+.lb-scale {
+  margin: 0 16px 12px;
+}
+.podium-medal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+/* Long model names wrap onto two lines instead of clipping. */
+.podium-name {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.15;
+}
+.m-col-head {
+  justify-content: center;
+}
+
+/* ───────── Arena index cards: long tournament names wrap instead of clipping ───────── */
+.ar-card-top {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+.ar-card-top > .stack {
+  flex: 1 1 calc(100% - 90px) !important;
+}
+.ar-card-top > .badge {
+  margin-left: auto;
+}
+.ar-card-name.ellipsis {
+  white-space: normal;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.2;
+}

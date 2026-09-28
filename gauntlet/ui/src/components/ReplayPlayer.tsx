@@ -13,6 +13,7 @@ import { usePrefs, useViewerCaption } from '../context.tsx';
 import { CodeAgentStage } from './CodeAgentReplay.tsx';
 import { SimStage, hasSimStage } from './viz/SimStage.tsx';
 import { CustomReplayStage, stageKind } from './viz/replayStages.tsx';
+import { Jargon } from './clarity/Jargon.tsx';
 
 const SPEEDS = [0.5, 1, 2, 4];
 const BASE_MS = 1100;
@@ -246,7 +247,9 @@ export function ReplayPlayer({ replay, autoPlay = false, context, startStep }: {
                 {context.seed !== undefined && (
                   <>
                     <span className="rp-dot">·</span>
-                    <span className="mono rp-seed">seed {context.seed}</span>
+                    <span className="mono rp-seed">
+                      <Jargon dev={`seed ${context.seed}`} plain={`world #${context.seed}`} />
+                    </span>
                   </>
                 )}
               </>

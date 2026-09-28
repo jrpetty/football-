@@ -3,6 +3,7 @@ import { api, exportUrl } from '../api.ts';
 import { useAsync, useInterval } from '../hooks.ts';
 import { Link, navigate, pathOf } from '../router.tsx';
 import { useToast, useViewerCaption } from '../context.tsx';
+import { Jargon } from '../components/clarity/Jargon.tsx';
 import { ConfirmDialog, Empty, ErrorState, HashTag, ModelChip, PageHead, Progress, RunStatusBadge, SkeletonRows, cx } from '../components/ui.tsx';
 import { Icon } from '../components/icons.tsx';
 import { ResumeDialog } from '../components/ResumeDialog.tsx';
@@ -172,8 +173,10 @@ export default function RunsPage() {
                           {r.name || r.id}
                         </Link>
                         <div className="row" style={{ gap: 6, marginTop: 3 }}>
-                          {r.suiteId && <span className="badge outline">suite: {r.suiteId}</span>}
-                          <HashTag value={r.fingerprint} label="Fingerprint" n={8} />
+                          {r.suiteId && <span className="badge outline" data-dev>suite: {r.suiteId}</span>}
+                          <span data-dev>
+                            <HashTag value={r.fingerprint} label="Fingerprint" n={8} />
+                          </span>
                         </div>
                       </td>
                       <td style={{ maxWidth: 320 }}>
@@ -193,7 +196,7 @@ export default function RunsPage() {
                         <div className="stack tight">
                           <Progress value={frac} striped={live} color={r.status === 'failed' ? 'var(--bad)' : r.status === 'interrupted' ? 'var(--warn)' : undefined} label={`${r.completedJobs} of ${r.totalJobs} jobs`} />
                           <span className="muted tnum" style={{ fontSize: '0.78rem' }}>
-                            {fmtInt(r.completedJobs)} / {fmtInt(r.totalJobs)} jobs · {Math.round(frac * 100)}%
+                            {fmtInt(r.completedJobs)} / {fmtInt(r.totalJobs)} <Jargon dev="jobs" plain="answers" /> · {Math.round(frac * 100)}%
                           </span>
                         </div>
                       </td>
@@ -221,13 +224,13 @@ export default function RunsPage() {
                           <Link to={pathOf('runs', r.id)} className="btn xs">
                             Open
                           </Link>
-                          <a className="btn xs ghost" href={exportUrl(r.id, 'csv')} download={`${r.id}.csv`} aria-label={`Export ${r.name} as CSV`} title="Export CSV">
+                          <a className="btn xs ghost" data-dev href={exportUrl(r.id, 'csv')} download={`${r.id}.csv`} aria-label={`Export ${r.name} as CSV`} title="Export CSV">
                             CSV
                           </a>
-                          <a className="btn xs ghost" href={exportUrl(r.id, 'json')} download={`${r.id}.json`} aria-label={`Export ${r.name} as JSON`} title="Export JSON">
+                          <a className="btn xs ghost" data-dev href={exportUrl(r.id, 'json')} download={`${r.id}.json`} aria-label={`Export ${r.name} as JSON`} title="Export JSON">
                             JSON
                           </a>
-                          <button className={cx('btn xs ghost icon')} aria-label={`Delete ${r.name}`} title="Delete run" onClick={() => setConfirm(r)} disabled={live}>
+                          <button className={cx('btn xs ghost icon')} data-dev aria-label={`Delete ${r.name}`} title="Delete run" onClick={() => setConfirm(r)} disabled={live}>
                             <Icon.Trash />
                           </button>
                         </div>

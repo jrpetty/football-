@@ -1,10 +1,13 @@
-/** Tests × contestants matrix, grouped by category, cells shaded on a sequential ramp by mean score. */
+/** Tests × contestants matrix, grouped by category, cells coloured good / partial / poor by mean score. */
 import { memo, useMemo, useState } from 'react';
 import type { CaseResultLite, RunManifest } from '../types.ts';
 import { fmtPct, fmtScore100 } from '../format.ts';
 import { useMeta } from '../context.tsx';
 import { cx } from './ui.tsx';
 import { Icon } from './icons.tsx';
+import { ModelBadge } from './viz/ModelBadge.tsx';
+import { BandLegend, Jargon, ScoreHint } from './clarity/Jargon.tsx';
+import { scoreBand } from './clarity/plain.ts';
 
 interface Cell {
   mean: number | null;
@@ -81,9 +84,10 @@ export const ResultsMatrix = memo(function ResultsMatrix({ manifest, results, on
         </div>
         <span className="spacer" />
         <span className="muted" style={{ fontSize: '0.8rem' }}>
-          Mean score ×100 over cases × repeats · click a cell to inspect
+          <Jargon dev="Mean score ×100 over cases × repeats · click a cell to inspect" plain="Each cell: average score out of 100 · 100 = every question right" />
+          <ScoreHint text="Each cell is the model’s average score on that test, out of 100, over every question and every try. 100 means it got everything right; 0 means nothing." />
         </span>
-        <SeqLegend />
+        <BandLegend compact />
       </div>
       <div className="table-wrap scroll-shadow">
         <table className="table matrix">
@@ -93,8 +97,7 @@ export const ResultsMatrix = memo(function ResultsMatrix({ manifest, results, on
               {cons.map((c) => (
                 <th key={c.id} className="m-col" title={c.label}>
                   <span className="m-col-head">
-                    <span className="sw" style={{ background: c.color }} />
-                    <span className="ellipsis">{c.label}</span>
+                    <ModelBadge label={c.label} color={c.color} size="sm" baseline={/(^|[-_.])(random|baseline)([-_.]|$)/i.test(c.id)} />
                   </span>
                 </th>
               ))}
@@ -128,21 +131,28 @@ export const ResultsMatrix = memo(function ResultsMatrix({ manifest, results, on
                         {t.name}
                       </div>
                       <div className="m-test-meta">
-                        <span className="mono">{t.id}</span> · {t.caseIds.length} case{t.caseIds.length === 1 ? '' : 's'}
-                        {reps > 1 ? ` × ${reps}` : ''}
-                        {t.kind === 'program' ? ' · sim' : ''}
+                        <Jargon
+                          dev={
+                            <>
+                              <span className="mono">{t.id}</span> · {t.caseIds.length} case{t.caseIds.length === 1 ? '' : 's'}
+                              {reps > 1 ? ` × ${reps}` : ''}
+                              {t.kind === 'program' ? ' · sim' : ''}
+                            </>
+                          }
+                          plain={`${t.caseIds.length} ${t.kind === 'program' ? (t.caseIds.length === 1 ? 'game' : 'games') : t.caseIds.length === 1 ? 'question' : 'questions'}${reps > 1 ? ` × ${reps} tries` : ''}`}
+                        />
                       </div>
                     </td>
                     {cons.map((c) => {
                       const cell = cells.get(`${c.id}|${t.id}`);
                       const expected = t.caseIds.length * reps;
-                      const step = seqStep(cell?.mean ?? null);
+                      const band = scoreBand(cell?.mean ?? null);
                       const label = cell
                         ? `${c.label} on ${t.name}: ${cell.mean === null ? 'no score' : fmtPct(cell.mean, 1)} over ${cell.scored} scored of ${expected}${cell.errors ? `, ${cell.errors} errors` : ''}${cell.pending ? `, ${cell.pending} awaiting review` : ''}`
                         : `${c.label} on ${t.name}: no results`;
                       return (
                         <td key={c.id} className="m-cell">
-                          <button type="button" className={cx('mcell', step >= 0 ? `s${step}` : 'empty', cell && cell.n < expected && 'partial')} onClick={() => onCell(t.id, c.id)} aria-label={label} title={label} disabled={!cell}>
+                          <button type="button" className={cx('mcell', band ? `band-${band}` : 'empty', cell && cell.n < expected && 'partial')} onClick={() => onCell(t.id, c.id)} aria-label={label} title={label} disabled={!cell}>
                             <span className="mv">{cell ? (cell.mean === null ? (cell.pending ? 'review' : '—') : fmtScore100(cell.mean)) : '—'}</span>
                             {cell && cell.errors > 0 && (
                               <span className="m-flag err" aria-hidden="true">

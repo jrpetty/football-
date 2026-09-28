@@ -40,6 +40,7 @@ const ArenaTournamentPage = lazy(() => import('./pages/ArenaTournamentPage.tsx')
 const ArenaGamePage = lazy(() => import('./pages/ArenaGamePage.tsx'));
 const ArenaCardPage = lazy(() => import('./pages/ArenaCardPage.tsx'));
 const ArenaJudgePage = lazy(() => import('./pages/ArenaJudgePage.tsx'));
+const ViewerGuidePage = lazy(() => import('./pages/ViewerGuidePage.tsx'));
 
 interface NavItem {
   to: string;
@@ -70,6 +71,7 @@ const NAV: NavItem[] = [
   { to: '/challenge', label: 'Viewer Challenge', icon: Icon.Flag, match: (p) => p.startsWith('/challenge') },
   { to: '/publish', label: 'Publish', icon: Icon.Upload, match: (p) => p.startsWith('/publish') },
   { to: '/methodology', label: 'Methodology', icon: Icon.Book, section: 'About', match: (p) => p.startsWith('/methodology') },
+  { to: '/guide', label: 'Viewer guide', icon: Icon.Info, match: (p) => p.startsWith('/guide') },
 ];
 
 /** Pending copy & paste requests (polls GET /api/manual every 2 s while the tab is visible). */
@@ -124,6 +126,7 @@ function resolve(parts: string[]): Resolved {
   if (a === 'keys') return { el: <KeysPage />, crumb: 'API Keys' };
   if (a === 'review') return { el: <ReviewPage />, crumb: 'Blind Review' };
   if (a === 'methodology') return { el: <MethodologyPage />, crumb: 'Methodology' };
+  if (a === 'guide') return b === 'show' ? { el: <ViewerGuidePage show />, crumb: 'Viewer guide', bare: true } : { el: <ViewerGuidePage />, crumb: 'Viewer guide' };
   if (a === 'inbox') return { el: <InboxPage />, crumb: 'Manual Inbox' };
   if (a === 'grade') return { el: <GradePage />, crumb: 'Grader' };
   if (a === 'costs') return { el: <CostsPage />, crumb: 'Cost Planner' };
@@ -325,7 +328,11 @@ function Shell() {
             {crumb}
           </span>
           <span className="tnum">{new Date(now).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-          {meta && <span className="hash">protocol {meta.protocolVersion}</span>}
+          {meta && (
+            <span className="hash" data-dev>
+              protocol {meta.protocolVersion}
+            </span>
+          )}
         </div>
       </div>
 

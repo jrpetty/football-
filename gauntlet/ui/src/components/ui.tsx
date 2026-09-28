@@ -6,6 +6,7 @@ import { Icon } from './icons.tsx';
 import { copyText } from '../hooks.ts';
 import { fmtScore, scoreTone, shortHash } from '../format.ts';
 import type { Difficulty, ResultStatus, RunStatus } from '../types.ts';
+import { ModelMonogram } from './viz/ModelBadge.tsx';
 
 export function cx(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(' ');
@@ -180,10 +181,10 @@ export function ModelChip({ label, color, pill, round, title }: { label: string;
   );
 }
 
-export function ModelCell({ label, vendor, color, tag }: { label: string; vendor?: string; color?: string; tag?: ReactNode }) {
+export function ModelCell({ label, vendor, color, tag, baseline }: { label: string; vendor?: string; color?: string; tag?: ReactNode; baseline?: boolean }) {
   return (
     <div className="model-cell">
-      <span className="bar" style={{ background: color || 'var(--text-3)' }} aria-hidden="true" />
+      <ModelMonogram label={label} color={color} baseline={baseline} />
       <div className="names">
         <span className="label" title={label}>
           {label}
