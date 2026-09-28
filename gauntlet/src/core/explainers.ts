@@ -217,7 +217,7 @@ const LADDER_STEPS = (what: string): ExplainStep[] => [
   { icon: 'ladder', text: 'Ten levels, each harder than the last' },
   { icon: 'target', text: what },
   { icon: 'check', text: 'Checked by machine against a double-proven key' },
-  { icon: 'flag', text: 'Headline: the highest level it solves reliably' },
+  { icon: 'flag', text: 'Headline: how high it climbs without missing a rung' },
 ];
 const LADDER_SCORE = 'Every level is worth 10 points, so 30 means three levels solved. The ladder was built so today’s best models stall low and future ones can climb.';
 
