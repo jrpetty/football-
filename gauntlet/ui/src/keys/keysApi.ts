@@ -3,6 +3,10 @@
  * In mock mode (?mock=1) an in-memory stand-in answers, so the page can be demoed with no server.
  */
 import { MOCK, request } from '../api.ts';
+import { detectProvider, parsePastedKeys } from '../../../src/core/key-detect.ts';
+import { KEY_GUIDES, type KeyGuide } from '../../../src/core/key-guides.ts';
+
+export type { KeyGuide };
 
 export interface KeyStatus {
   providerId: string;
@@ -34,6 +38,58 @@ export interface SaveResult {
   status: KeyStatus;
 }
 
+/** Where the owner's keys, runs and settings are kept (outside the app folder, so updates never delete them). */
+export interface Storage {
+  dir: string;
+  envFile: string;
+  dataDir: string;
+  settingsFile: string;
+  /** Portable mode: everything inside the app folder (GAUNTLET_PORTABLE=1). */
+  portable: boolean;
+  windows: boolean;
+}
+export interface SetupInfo {
+  storage: Storage;
+  guides: KeyGuide[];
+  anyKey: boolean;
+  keys: string[];
+}
+export interface PasteResult {
+  line: number;
+  masked: string;
+  providerId?: string;
+  label?: string;
+  how: 'shape' | 'name' | 'chosen' | 'unknown';
+  ok: boolean;
+  saved: boolean;
+  needsChoice?: boolean;
+  error?: string;
+  warning?: string;
+  ready: Array<{ id: string; label: string; vendor: string }>;
+  unchecked?: boolean;
+}
+export interface RouteRow {
+  id: string;
+  label: string;
+  vendor: string;
+  provider: string;
+  providerLabel: string;
+  directKey: boolean;
+  slug: string | null;
+  source: 'override' | 'matched' | 'none';
+  routed: boolean;
+  openRouterPrice?: { inputPerM: number; outputPerM: number };
+  directPrice: { inputPerM: number; outputPerM: number };
+}
+export interface RoutingStatus {
+  hasKey: boolean;
+  setting: 'auto' | 'on' | 'off';
+  active: boolean;
+  catalogFetchedAt: string | null;
+  catalogSize: number;
+  rows: RouteRow[];
+}
+
 type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
 
 async function call<T>(method: Method, path: string, body?: unknown): Promise<T> {
@@ -42,7 +98,13 @@ async function call<T>(method: Method, path: string, body?: unknown): Promise<T>
 }
 
 export const keysApi = {
-  list: () => call<{ file: string; keys: KeyStatus[] }>('GET', '/api/keys'),
+  list: () => call<{ file: string; storage?: Storage; keys: KeyStatus[] }>('GET', '/api/keys'),
+  setup: () => call<SetupInfo>('GET', '/api/setup'),
+  /** Paste any key (or several, or .env lines): the company is detected, the key checked for free and saved. */
+  paste: (text: string, provider?: string) => call<{ results: PasteResult[]; storage: Storage }>('POST', '/api/keys/paste', { text, ...(provider ? { provider } : {}) }),
+  openrouter: () => call<RoutingStatus>('GET', '/api/openrouter'),
+  openrouterRefresh: () => call<RoutingStatus>('POST', '/api/openrouter/refresh'),
+  openrouterRouting: (setting: 'auto' | 'on' | 'off') => call<RoutingStatus>('PUT', '/api/openrouter/routing', { setting }),
   save: (provider: string, key: string) => call<SaveResult>('PUT', `/api/keys/${encodeURIComponent(provider)}`, { key }),
   remove: (provider: string) => call<{ ok: boolean; status: KeyStatus }>('DELETE', `/api/keys/${encodeURIComponent(provider)}`),
   test: (provider: string, send = false) => call<KeyCheck>('POST', `/api/keys/${encodeURIComponent(provider)}/test`, { send }),
@@ -62,10 +124,97 @@ const MOCK_KEYS: KeyStatus[] = [
   { providerId: 'together', label: 'Together AI', env: 'TOGETHER_API_KEY', set: false, source: null, masked: null, getKeyUrl: 'https://api.together.ai/settings/api-keys', steps: 'Sign in → Settings → API Keys.', models: [] },
 ];
 
+/** `#/keys?fresh=1` in mock mode shows the first-run welcome (no keys saved yet). */
+const MOCK_FRESH = typeof window !== 'undefined' && /[?&]fresh=1/.test(window.location.hash + window.location.search);
+if (MOCK_FRESH) for (const k of MOCK_KEYS) Object.assign(k, { set: false, source: null, masked: null });
+
+const MOCK_STORAGE: Storage = {
+  dir: 'C:\\Users\\you\\AppData\\Roaming\\Gauntlet',
+  envFile: 'C:\\Users\\you\\AppData\\Roaming\\Gauntlet\\.env',
+  dataDir: 'C:\\Users\\you\\AppData\\Roaming\\Gauntlet\\data',
+  settingsFile: 'C:\\Users\\you\\AppData\\Roaming\\Gauntlet\\settings.json',
+  portable: false,
+  windows: true,
+};
+
+/** Every model OpenRouter reaches in the demo, with its slug (null = not available via OpenRouter). */
+const MOCK_ROUTES: Array<[string, string, string, string, string | null, number, number]> = [
+  ['claude-opus-5-5', 'Claude Opus 5.5', 'Anthropic', 'anthropic', 'anthropic/claude-opus-5.5', 4, 20],
+  ['claude-sonnet-5', 'Claude Sonnet 5', 'Anthropic', 'anthropic', 'anthropic/claude-sonnet-5', 2, 10],
+  ['claude-haiku-4-5', 'Claude Haiku 4.5', 'Anthropic', 'anthropic', 'anthropic/claude-haiku-4.5', 1, 5],
+  ['gpt-5.6-sol', 'GPT-5.6 Sol', 'OpenAI', 'openai', 'openai/gpt-5.6-sol', 5, 30],
+  ['gpt-5.6-terra', 'GPT-5.6 Terra', 'OpenAI', 'openai', 'openai/gpt-5.6-terra', 2.5, 15],
+  ['gpt-5-mini', 'GPT-5 mini', 'OpenAI', 'openai', 'openai/gpt-5-mini', 0.25, 2],
+  ['gemini-3.1-pro', 'Gemini 3.1 Pro', 'Google', 'google', 'google/gemini-3.1-pro-preview', 2, 12],
+  ['gemini-3.5-flash', 'Gemini 3.5 Flash', 'Google', 'google', 'google/gemini-3.5-flash', 1.5, 9],
+  ['grok-4.7', 'Grok 4.7', 'xAI', 'xai', 'x-ai/grok-4.7', 2, 6],
+  ['deepseek-v4-flash', 'DeepSeek V4 Flash', 'DeepSeek', 'deepseek', 'deepseek/deepseek-v4-flash', 0.3, 1.2],
+  ['claude-fable-5-1', 'Claude Fable 5.1', 'Anthropic', 'anthropic', null, 10, 50],
+];
+let mockRouting: 'auto' | 'on' | 'off' = 'auto';
+
+function mockRoutingStatus(): RoutingStatus {
+  const orKey = MOCK_KEYS.find((k) => k.providerId === 'openrouter')!;
+  const active = orKey.set && mockRouting !== 'off';
+  return {
+    hasKey: orKey.set,
+    setting: mockRouting,
+    active,
+    catalogFetchedAt: orKey.set ? '2026-09-29T09:12:00.000Z' : null,
+    catalogSize: orKey.set ? 412 : 0,
+    rows: MOCK_ROUTES.map(([id, label, vendor, provider, slug, i, o]) => {
+      const p = MOCK_KEYS.find((k) => k.providerId === provider);
+      const directKey = Boolean(p?.set);
+      return {
+        id,
+        label,
+        vendor,
+        provider,
+        providerLabel: p?.label ?? vendor,
+        directKey,
+        slug,
+        source: slug ? 'matched' : 'none',
+        routed: active && !directKey && Boolean(slug),
+        ...(slug ? { openRouterPrice: { inputPerM: i, outputPerM: o } } : {}),
+        directPrice: { inputPerM: i, outputPerM: o },
+      } satisfies RouteRow;
+    }),
+  };
+}
+
+function mockPaste(body: unknown): { results: PasteResult[]; storage: Storage } {
+  const b = (body ?? {}) as { text?: string; provider?: string };
+  const items = parsePastedKeys(b.text ?? '');
+  if (!items.length) throw new Error('Paste the key into the box first.');
+  const results = items.map((item): PasteResult => {
+    const masked = `${item.key.slice(0, 7)}…${item.key.slice(-4)}`;
+    const id = b.provider ?? detectProvider(item.key).providerId;
+    const k = MOCK_KEYS.find((x) => x.providerId === id);
+    if (!k) return { line: item.line, masked, how: 'unknown', ok: false, saved: false, needsChoice: true, ready: [], error: 'We couldn’t tell which company this key is from.' };
+    const how = b.provider ? 'chosen' : 'shape';
+    if (/bad|wrong/i.test(item.key)) return { line: item.line, masked, providerId: k.providerId, label: k.label, how, ok: false, saved: false, ready: [], error: 'The provider rejected this key. Check you copied all of it, or create a new one. It was not saved.' };
+    if (/nocredit/i.test(item.key)) {
+      Object.assign(k, { set: true, source: 'file', masked });
+      return { line: item.line, masked, providerId: k.providerId, label: k.label, how, ok: false, saved: true, unchecked: true, ready: k.models.map((m) => ({ ...m, vendor: k.label })), error: 'The key works but the account has no credit. Add a payment method or credit on the provider’s billing page.' };
+    }
+    Object.assign(k, { set: true, source: 'file', masked });
+    const ready = k.providerId === 'openrouter' ? MOCK_ROUTES.filter((r) => r[4]).map(([rid, label, vendor]) => ({ id: rid, label, vendor })) : k.models.map((m) => ({ ...m, vendor: k.label }));
+    return { line: item.line, masked, providerId: k.providerId, label: k.label, how, ok: true, saved: true, ready };
+  });
+  return { results, storage: MOCK_STORAGE };
+}
+
 function mockKeys(method: Method, path: string, body?: unknown): unknown {
+  if (path === '/api/setup') return { storage: MOCK_STORAGE, guides: KEY_GUIDES, anyKey: MOCK_KEYS.some((k) => k.set), keys: MOCK_KEYS.filter((k) => k.set).map((k) => k.providerId) };
+  if (path === '/api/keys/paste') return mockPaste(body);
+  if (path === '/api/openrouter' || path === '/api/openrouter/refresh') return mockRoutingStatus();
+  if (path === '/api/openrouter/routing') {
+    mockRouting = ((body as { setting?: 'auto' | 'on' | 'off' })?.setting ?? 'auto');
+    return mockRoutingStatus();
+  }
   const m = /^\/api\/keys\/([^/]+)(\/test)?$/.exec(path);
   const k = m ? MOCK_KEYS.find((x) => x.providerId === decodeURIComponent(m[1]!)) : undefined;
-  if (method === 'GET') return { file: 'gauntlet/.env', keys: MOCK_KEYS.map((x) => ({ ...x })) };
+  if (method === 'GET') return { file: MOCK_STORAGE.envFile, storage: MOCK_STORAGE, keys: MOCK_KEYS.map((x) => ({ ...x })) };
   if (!k) throw new Error('Unknown provider');
   if (method === 'PUT') {
     const key = String((body as { key?: string })?.key ?? '').trim();

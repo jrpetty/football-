@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import type { ComponentType, ReactNode } from 'react';
 import { useRoute, Link } from './router.tsx';
+import { useFirstRunRedirect } from './keys/firstRun.ts';
 import { CaptionProvider, MetaProvider, PrefsProvider, ToastProvider, useCurrentCaption, useMeta, usePrefs } from './context.tsx';
 import { BrandMark, Wordmark } from './components/Brand.tsx';
 import { Icon } from './components/icons.tsx';
@@ -201,6 +202,7 @@ function resolve(parts: string[]): Resolved {
 
 function Shell() {
   const route = useRoute();
+  useFirstRunRedirect();
   const { meta, error, reload, loading } = useMeta();
   const { theme, setTheme, broadcast, setBroadcast, captions, setCaptions } = usePrefs();
   const [navOpen, setNavOpen] = useState(false);

@@ -1,34 +1,70 @@
-/** API Keys: paste a provider key, save it, and it's checked for free straight away. No files to edit, no restart. */
-import { useState } from 'react';
+/** API Keys: paste any key (the company is detected), it's checked for free and saved. First run shows a 3-step welcome. No files, no restart. */
+import { useEffect, useState } from 'react';
 import { useAsync } from '../hooks.ts';
 import { useToast, useViewerCaption } from '../context.tsx';
 import { Callout, Card, ErrorState, PageHead, SkeletonRows, cx } from '../components/ui.tsx';
 import { Icon } from '../components/icons.tsx';
-import { Link } from '../router.tsx';
+import { Link, useRoute } from '../router.tsx';
+import { Guides, OpenRouterPanel, PasteBox, StorageNote, Welcome } from './EasySetup.tsx';
 import { keysApi, type KeyCheck, type KeyStatus } from './keysApi.ts';
 import './keys.css';
+import './easy-setup.css';
 
 export default function KeysPage() {
-  const data = useAsync(() => keysApi.list(), []);
+  const data = useAsync(() => Promise.all([keysApi.list(), keysApi.setup()]), []);
+  const { query } = useRoute();
   const [showAll, setShowAll] = useState(false);
-  useViewerCaption('Connecting AI companies: each key is checked for free the moment it is saved, and stays on this computer.');
+  const [welcome, setWelcome] = useState<boolean | null>(null);
+  const [savedNow, setSavedNow] = useState(false);
+  const [orReload, setOrReload] = useState(0);
+  useViewerCaption('Connecting AI companies: paste a key, Gauntlet works out whose it is, checks it for free and keeps it on this computer.');
+  // The welcome shows when the page opens with no key saved (or with ?welcome=1), and stays until the page is left.
+  useEffect(() => {
+    if (welcome === null && data.data) setWelcome(query.get('welcome') === '1' || !data.data[0].keys.some((k) => k.set));
+  }, [data.data, welcome, query]);
 
   if (data.error) return <div className="page"><ErrorState error={data.error} onRetry={data.reload} /></div>;
-  if (!data.data) return <div className="page"><SkeletonRows rows={8} /></div>;
+  if (!data.data || welcome === null) return <div className="page"><SkeletonRows rows={8} /></div>;
 
-  const keys = data.data.keys;
-  const update = (next: KeyStatus) => data.setData({ ...data.data!, keys: keys.map((k) => (k.providerId === next.providerId ? next : k)) });
+  const [list, setup] = data.data;
+  const keys = list.keys;
+  const storage = list.storage ?? setup.storage;
+  const update = (next: KeyStatus) => data.setData([{ ...list, keys: keys.map((k) => (k.providerId === next.providerId ? next : k)) }, setup]);
+  const onSaved = () => {
+    setSavedNow(true);
+    setOrReload((n) => n + 1);
+    data.reload();
+  };
   const connected = keys.filter((k) => k.set);
   const used = keys.filter((k) => k.models.length > 0 || k.set);
   const others = keys.filter((k) => !used.includes(k));
   const ready = connected.reduce((n, k) => n + k.models.length, 0);
+
+  if (welcome) {
+    return (
+      <div className="page keys-page">
+        <PageHead eyebrow="Setup" title="Let’s get you set up" sub="You need one API key: a password that lets Gauntlet ask AI models questions on your account. It takes about five minutes." />
+        <Welcome keys={keys} guides={setup.guides} storage={storage} onSaved={onSaved} done={savedNow || connected.length > 0} />
+        <OpenRouterPanel reloadKey={orReload} />
+        {connected.length > 0 && (
+          <div className="keys-grid">
+            {connected.map((k) => (
+              <KeyCard key={k.providerId} k={k} onChange={update} />
+            ))}
+          </div>
+        )}
+        <Guides guides={setup.guides} keys={keys} />
+        <SecretNote />
+      </div>
+    );
+  }
 
   return (
     <div className="page keys-page">
       <PageHead
         eyebrow="Setup"
         title="API Keys"
-        sub="Paste a key and press Save. Gauntlet checks it straight away (free) and keeps it only on this computer, in the gauntlet/.env file. No restart needed."
+        sub="Paste a key: Gauntlet works out which company it’s from, checks it straight away (free) and keeps it only on this computer. No restart needed."
       />
 
       <div className="keys-summary">
@@ -41,14 +77,14 @@ export default function KeysPage() {
           <span>{ready === 1 ? 'model ready to test' : 'models ready to test'}</span>
         </div>
         <div className="ks-note">
-          {connected.length === 0 && <>Start with one company you already use. Anthropic, OpenAI and Google are the most popular.</>}
-          {connected.length === 1 && (
+          {connected.length === 0 && <>Start with one key. OpenRouter is the easiest: one key reaches Claude, GPT, Gemini, Grok and DeepSeek.</>}
+          {connected.length === 1 && connected[0]!.providerId !== 'openrouter' && (
             <>
-              Add <b>one more company</b> too: the AI judges never mark their own company’s models, so judge-scored tests (Honesty, games, drawings, debates)
-              need at least two.
+              Add <b>one more company</b> too (or an OpenRouter key): the AI judges never mark their own company’s models, so judge-scored tests (Honesty, games,
+              drawings, debates) need at least two.
             </>
           )}
-          {connected.length >= 2 && (
+          {(connected.length >= 2 || connected[0]?.providerId === 'openrouter') && (
             <>
               You’re set up. Next: <Link to="/costs">check what a run costs</Link>, then <Link to="/run/new">start one</Link> with a spending cap.
             </>
@@ -56,6 +92,11 @@ export default function KeysPage() {
         </div>
       </div>
 
+      <PasteBox keys={keys} onSaved={onSaved} />
+      <StorageNote storage={storage} />
+      <OpenRouterPanel reloadKey={orReload} />
+
+      <h2 className="keys-section-title">Your companies</h2>
       <div className="keys-grid">
         {used.map((k) => (
           <KeyCard key={k.providerId} k={k} onChange={update} />
@@ -77,12 +118,19 @@ export default function KeysPage() {
         </div>
       )}
 
-      <Callout tone="plain" icon={<Icon.Lock />}>
-        <b>Keep keys secret.</b> Anyone with a key can spend your credit. Gauntlet never shows a full key again after you save it, never sends it
-        anywhere except that company’s own API, and only accepts key changes from this computer. Don’t show the <code>.env</code> file on camera. If a key
-        leaks, delete it on the company’s site and make a new one.
-      </Callout>
+      <Guides guides={setup.guides} keys={keys} />
+      <SecretNote />
     </div>
+  );
+}
+
+function SecretNote() {
+  return (
+    <Callout tone="plain" icon={<Icon.Lock />}>
+      <b>Keep keys secret.</b> Anyone with a key can spend your credit. Gauntlet never shows a full key again after you save it, never sends it anywhere
+      except that company’s own API, and only accepts key changes from this computer. The paste box hides what you paste, so it’s safe on camera. If a key
+      leaks, delete it on the company’s site and make a new one.
+    </Callout>
   );
 }
 
