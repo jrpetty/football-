@@ -158,11 +158,17 @@ Any stored result can be graded after a run in the Grading Station (`src/grading
   **dispute** (`CaseResult.disputes`), shown in the result inspector; the score does not change.
 * **Human grades** are stored in `CaseResult.humanScores` (per rater; re-grading replaces your entry) with the
   rubric points, requirement verdicts or chosen label, a note and whether names were hidden (`blind`).
-* **AI grades** use the configured judges and the test's fixed judge prompts. The station's panel is strict: never
-  a judge from the contestant's vendor, never the contestant itself, and at least two judges, or it refuses.
-  Judges that accept images receive the test's images and recorded screenshots/renders (up to 4). The estimated
-  cost is shown and must be confirmed (`confirmCostUsd`) before any call; calls and costs are appended to the
-  transcript and `judgeCostUsd`; each verdict and its rationale is stored in `CaseResult.aiGrades`.
+* **AI grades** use the configured judges and the test's own scorer and judge prompts. The station's panel is strict:
+  never a judge from the contestant's vendor, never the contestant itself, and at least two judges, or it refuses.
+  Judges that accept images receive the test's images and recorded screenshots/renders (up to 4); The Game Jam's own
+  scorer replays the game (the 30 s full-HD playtest) and sends its 8 screenshots and the motion strip; The Gallery
+  sends the painting to vision judges only. Each verdict and its rationale is stored in `CaseResult.aiGrades`, and
+  the calls are appended to the transcript.
+* **Money.** The estimated cost is shown in the owner's display currency and must be confirmed (`confirmCostUsd`)
+  before any call. Every station judge call (and every AI-written summary) is logged in the monthly budget's spend
+  log (`data/budget/spend-log.jsonl`) in the month it was made, and is **not** added to the run's `judgeCostUsd`, so
+  it is counted exactly once. With the budget's hard stop on, a spend larger than what is left is refused before any
+  call, and a batch stops between answers once the money runs out.
 * **Which grade counts** (`config/settings.json → gradingOfficial`):
 
   | Policy | Official score |
@@ -178,14 +184,23 @@ Any stored result can be graded after a run in the Grading Station (`src/grading
   a result looks better. Human-scored tests count station AI grades only under `ai` or `average`. Every official
   score records its source and policy (`scoreDetail.official`), and the original machine/run score is kept in
   `scoreDetail.autoScore`.
+* **Programs graded by judges (The Gallery).** Both Gallery tests keep the program's own rule under every policy: a
+  person's grade is an **artistry** rating (six criteria, 1–10, on the judges' anchors) that replaces the judges'
+  artistry, while brief adherence stays as judged (score = 0.5 × adherence + 0.5 × artistry ÷ 10; with no judge
+  verdict, artistry is the whole score). This is the same rule Blind Review uses. In AI mode the station re-judges
+  the stored painting with the Gallery's judge prompt; a painting that waited because no judge answered during the
+  run gets the panel's score, otherwise the verdicts are stored as a second opinion. Other simulations are
+  machine-scored (dispute only).
 
 ### 5.7 30-word performance summaries
 
 For each model × test, `templateSummary()` (`src/grading/summary.ts`) writes at most 30 words (whitespace-separated
-tokens, enforced) from recorded data only: the test score (mean of case means, as in 5.2), the weakest case and the
+tokens, enforced) from recorded data only: the test score (mean of case means over exactly the results the
+leaderboard counts, as in 5.2, so the two numbers always agree), the weakest case and the
 stored reason it lost points (answer vs key, failed check, judge label or rationale, time-out, refusal), errors and
-skips, mean time per case and total cost (omitted for manual contestants). An optional AI-written version is produced
-by a judge from a different vendor from the same facts, capped at 30 words, shown with its cost first and cached in
+skips, mean time per case and total cost in the owner's display currency (omitted for manual contestants). An
+optional AI-written version is produced by a judge from a different vendor from the same facts, capped at 30 words
+(cut if longer), shown with its cost first, counted in the monthly budget and cached in
 `data/runs/<id>/summaries.json` until the results change.
 
 ## 6. Metrics recorded for every case

@@ -272,14 +272,28 @@ single test and it applies to that test only.
   from. Type a short note if you like, then press **Enter** to save and jump to the next answer.
 * **AI**: the configured judge models grade with the same rubric. Judges never grade a model from their own
   company, at least two must take part, and judges that can see pictures get the test's images and the
-  screenshots. **You always see the cost first** (usually a fraction of a cent per answer) and nothing is spent
-  until you confirm. Every judge's score and reasoning is saved.
+  screenshots (for The Game Jam: the game is played again for 30 seconds at full HD and they see 8 screenshots and
+  a motion strip; for The Gallery: the painting itself, and only judges that can see pictures are asked). **You
+  always see the cost first**, in pounds, with how much of this month's budget is left, and nothing is spent until
+  you confirm. Every judge's score and reasoning is saved.
+* **Money**: everything the AI judges cost here shows up on the **Budget** page ("Grading Station: AI judges…"), in
+  the month you spent it. If you switched on the budget's **hard stop** and the month's money is used up (or the
+  estimate is bigger than what's left), the button says **Blocked by your budget** and nothing is sent.
 * **Both**: your grade and the AI's side by side, with a green / amber / red "agree, close, disagree" meter.
 
 **Keyboard (no mouse needed)**: `1`–`9` score the highlighted line (`0` = 10 on a 0–10 scale, `X` = zero); for a
 requirement `1` = met, `2` = half met, `0` = missed; `↑`/`↓` move between lines, `←`/`→` nudge by half a point;
 `Enter` saves; `J`/`K` next / previous answer; `P` plays the game or media; `F` full screen; `R` reveals the model
 names; `N` jumps to the note box; `A` asks the AI judges; `D` disputes a machine score; `?` shows the list.
+
+**Paintings (The Gallery).** Your grade is an *artistry* rating: six lines (composition, light, colour, craft,
+style, gallery-worthiness), each 1–10 with the same descriptions the judges use (`1`–`9`, `0` = 10). It replaces the
+judges' artistry; their brief checklist (the 9 lines of the commission) still counts for the other half. The queue
+calls each painting a "commission", and marks judged ones **Your rating counts**.
+
+**Games (The Game Jam).** The rubric shows its real weights next to each line: visuals 30%, creativity 25%,
+requirement checklist 20%, plays 10%, feel 10%, ambition 5%. Press `P` to play the game; the strip under it shows the
+screenshots from the harness's 30-second playtest and the motion strip. The model had its own maximum output length.
 
 **Blind grading.** Models are shown as "Model A", "Model B"… (the same letter all session) until you press `R`.
 Your grade records whether names were hidden. Good for recording: nobody on camera sees which model is which.
@@ -314,7 +328,14 @@ the script.
 
 **Pasting replies with files (Manual Inbox).** Drop, paste or attach files under the reply box: a game's `.html`
 file, a picture, a PDF, a ZIP… They are added to the reply as files, graded exactly like a pasted answer, and show
-up in the viewer.
+up in the viewer. Up to 3.5 MB per file.
+
+**File types the viewer opens**: games and web pages (`.html`), drawings (`.svg`, shown safely), pictures (`.png`,
+`.jpg`, `.gif`, `.webp`, `.avif`, `.bmp`, `.ico`), `.pdf`, audio (`.wav`, `.mp3`, `.ogg`, `.m4a`, `.flac`), video
+(`.mp4`, `.webm`, `.mov`), data (`.json` with a comparison against the answer key, `.csv`/`.tsv` as a table),
+`.md` (formatted), code (`.js`, `.ts`, `.py` and 20 more, coloured), diffs/patches, `.txt`/`.log`, `.zip` (list of
+files), Gauntlet's own replays and transcripts, and anything else as a download with a peek at the first bytes. The
+viewer checks what a file really is from its first bytes, so a picture with the wrong extension still shows.
 
 ## 6. Publish
 

@@ -525,13 +525,20 @@ judges get into the human grading panel, so both grade the same thing. Lines lik
 Automatic zero: if the image is not of the subject in the brief, the score is 0.
 ```
 
-become one criterion each with its points and the anchors after `=`; a criterion that mentions *numbered
+become one criterion each with its points and the anchors after `=` (weights are the points' share of the total;
+The Game Jam's own weights come from `JAM_WEIGHTS`); a criterion that mentions *numbered
 requirements* becomes a checklist of the `1.` `2.` … lines in the case prompt (share, or "start from N and subtract"
 when the rubric says so); `requirements A-C` becomes a checklist of the `A.` `B.` lines (all-or-nothing); lines
 starting `Automatic …` / `Rounding` are shown as rules. A rubric without numbered criteria still works: people get a
 0–10 overall score. `judge-classify` tests get their labels, and `For type "x": LABEL …` lines in the instructions
 fade labels that don't apply to a case. Check the result with `GET /api/grading/spec/<id>?case=<case>`; the
 unit test `test/grading.test.ts` runs `gradingSpecFor` over every test in the library.
+
+Programs are machine-scored (people can dispute) unless they are judged: a new program whose judges grade a picture
+the way The Gallery does gets its criteria by adding its id to `GALLERY_PROGRAMS` in `src/grading/spec.ts`; any
+other judged program needs its own branch in `gradingSpecFor` (criteria from its judge rubric) and in
+`aiGradeOne` (`src/grading/station.ts`, re-running its judge step on the stored output). Give its judges an honest
+`judges.perCase` estimate: the station's cost estimate reads it.
 
 **2. Let the output be a file.** Replies are plain text, so files travel inside them the way models write them:
 text files as a fenced block whose language is the type (```` ```html ````, ```` ```svg ````, ```` ```json ````,

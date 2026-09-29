@@ -249,18 +249,18 @@ People, AI judges or both grade stored results (`src/grading/`; METHODOLOGY 5.6)
 |---|---|---|---|
 | GET | `/api/grading/settings` | – | `{ official: 'methodology' \| 'human' \| 'ai' \| 'average', policies }` |
 | PUT | `/api/grading/settings` | `{ official }` | Same. Saved to `config/settings.json → gradingOfficial`. |
-| GET | `/api/grading/spec/:testId?case=` | – | `GradingSpec`: kind, `gradedOn`, `humanRole` (`grade` \| `second-opinion` \| `dispute`), `aiRole`, checklist, rubric `criteria` (points, anchors, requirement lists), `labels`, `judgeWeight`, `rules`, `answerKey` (with `case`). `arena.<game>` for judged Arena games. |
+| GET | `/api/grading/spec/:testId?case=` | – | `GradingSpec`: kind, `gradedOn`, `humanRole` (`grade` \| `second-opinion` \| `dispute`), `aiRole`, checklist, rubric `criteria` (points, weights, anchors, requirement lists), `labels`, `judgeWeight`, `rules`, `answerKey` (with `case`), `scoreRule`, `maxOutputTokens`, `playtest` (The Game Jam), `judgeSees`, `minJudges`, `brief` (The Gallery, with `case=seed-N`). `arena.<game>` for judged Arena games. |
 | GET | `/api/grading/runs` | – | `{ runs: Array<{ id, name, createdAt, status, results, todo, gradable }>, arena: Array<{ id, name, game, gameName, pending }>, official }` |
-| GET | `/api/grading/queue?runId=` | – | `{ items: QueueItem[], official }` — one per result with `need` (`grade` \| `judge-failed` \| `arbitrate` \| `second-opinion` \| `review`), `todo`, counts of human/AI grades and disputes |
+| GET | `/api/grading/queue?runId=&testId=` | – | `{ items: QueueItem[], official }` — one per result with `need` (`grade` \| `judge-failed` \| `arbitrate` \| `second-opinion` \| `owner-rating` \| `review`), `unit`, `todo`, counts of human/AI grades and disputes |
 | GET | `/api/grading/item/:runId/:key` | – | `StationItem`: full `CaseResult`, the case's `GradingSpec`, rendered prompt, test and contestant info, explainer, policy, official source, human-vs-AI `agreement`, and the AI panel that would be used (or why none can) |
 | POST | `/api/grading/human` | `{ runId, key, rater, criteria?: Record<id, points>, requirements?: Record<'<criterion>:<req>', 'met' \| 'partial' \| 'missed'>, label?, score? /* 0..1, only for single-criterion specs */, note?, blind? }` | `CaseResultLite` with the updated `humanScores` and official score. 400 for machine-scored (dispute-only) results. |
 | POST | `/api/grading/dispute` | `{ runId, key, rater, note }` | `CaseResultLite` (`disputes` appended; score unchanged) |
-| POST | `/api/grading/ai/estimate` | `{ runId, keys: string[] }` | `{ items: Array<{ key, ok, reason?, judges: Array<{ id, label, vendor, vision, images, estUsd }>, estUsd }>, totalUsd, totalUsdHigh, gradable }` — no model is called |
-| POST | `/api/grading/ai/grade` | `{ runId, keys, confirmCostUsd }` | `{ outcomes: Array<{ key, ok, error?, costUsd, result? }>, costUsd }`. 409 unless `confirmCostUsd` covers a fresh estimate. |
+| POST | `/api/grading/ai/estimate` | `{ runId, keys: string[] }` | `{ items: Array<{ key, ok, reason?, judges: Array<{ id, label, vendor, vision, images, estUsd }>, estUsd }>, totalUsd, totalUsdHigh, gradable, budget: BudgetCheck }` — no model is called. `BudgetCheck = { line, blocked, message?, availableUsd, hardStop }` is the monthly budget's view of this spend. |
+| POST | `/api/grading/ai/grade` | `{ runId, keys, confirmCostUsd }` | `{ outcomes: Array<{ key, ok, error?, costUsd, result? }>, costUsd }`. 409 unless `confirmCostUsd` covers a fresh estimate, or when the budget's hard stop blocks it. The spend is logged in "My budget" (`kind: 'grade'`). |
 | POST | `/api/grading/runs/:id/reapply` | – | `{ updated }` — re-scores graded results under the current policy |
 | GET | `/api/grading/runs/:id/summaries` | – | `{ template: Record<'contestantId\|testId', string>, ai: Record<…, { text, writerId, writerLabel, vendor, costUsd, at, basis, stale }> }` |
-| POST | `/api/grading/runs/:id/summaries/estimate` | `{ pairs?: string[] }` | `{ pairs: Array<{ key, contestantId, testId, writer, estUsd, reason?, cached }>, totalUsd, totalUsdHigh }` |
-| POST | `/api/grading/runs/:id/summaries` | `{ pairs?, confirmCostUsd }` | `{ summaries, costUsd, errors }` — AI-written summaries (≤ 30 words), cached in the run folder |
+| POST | `/api/grading/runs/:id/summaries/estimate` | `{ pairs?: string[] }` | `{ pairs: Array<{ key, contestantId, testId, writer, estUsd, reason?, cached }>, totalUsd, totalUsdHigh, budget: BudgetCheck }` |
+| POST | `/api/grading/runs/:id/summaries` | `{ pairs?, confirmCostUsd }` | `{ summaries, costUsd, errors }` — AI-written summaries (≤ 30 words), cached in the run folder; logged in "My budget" (`kind: 'other'`); 409 under the hard stop |
 
 `CaseResult` gained optional fields (older results have none): `humanScores[].criteria / requirements / label / blind`,
 `aiGrades: AiGrade[]`, `disputes`, and `scoreDetail.official = { source, policy, why }`, `scoreDetail.autoScore`.
