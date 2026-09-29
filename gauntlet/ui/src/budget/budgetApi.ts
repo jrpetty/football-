@@ -50,9 +50,15 @@ function mockItems(now: Date): BudgetItem[] {
   ];
 }
 
+/** Paid calls made in mock mode (e.g. Grading Station AI judges), shown in the demo month like the real spend log. */
+const mockExtra: BudgetItem[] = [];
+export function mockRecordSpend(item: Omit<BudgetItem, 'at'>): void {
+  if (item.spentUsd > 0) mockExtra.push({ ...item, at: new Date().toISOString() });
+}
+
 function mockStatus(now = new Date()): BudgetStatus {
   const b = monthBounds(now);
-  const items = mockItems(now).sort((x, y) => y.at.localeCompare(x.at));
+  const items = [...mockItems(now), ...mockExtra].sort((x, y) => y.at.localeCompare(x.at));
   const spent = Math.round(items.reduce((s, i) => s + i.spentUsd, 0) * 100) / 100;
   const days = new Map<string, number>();
   for (const i of items) days.set(localDate(new Date(i.at)), (days.get(localDate(new Date(i.at))) ?? 0) + i.spentUsd);

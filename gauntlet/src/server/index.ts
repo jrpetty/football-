@@ -60,6 +60,7 @@ import { registerGalleryRoutes } from './gallery-routes.ts';
 import { registerMoneyRoutes } from './money-routes.ts';
 import { registerBudgetRoutes } from '../budget/routes.ts';
 import { recordSpend } from '../budget/spend.ts';
+import { registerGradingRoutes } from '../grading/routes.ts';
 
 class HttpError extends Error {
   status: number;
@@ -410,6 +411,29 @@ const ARTIFACT_TYPES: Record<string, string> = {
   '.json': 'application/json; charset=utf-8',
   '.js': 'text/plain; charset=utf-8',
   '.txt': 'text/plain; charset=utf-8',
+  // Every other file type the output viewer shows (src/grading, ui/src/components/viewer).
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.avif': 'image/avif',
+  '.bmp': 'image/bmp',
+  '.ico': 'image/x-icon',
+  '.pdf': 'application/pdf',
+  '.wav': 'audio/wav',
+  '.mp3': 'audio/mpeg',
+  '.ogg': 'audio/ogg',
+  '.mp4': 'video/mp4',
+  '.webm': 'video/webm',
+  '.csv': 'text/csv; charset=utf-8',
+  '.tsv': 'text/tab-separated-values; charset=utf-8',
+  '.md': 'text/markdown; charset=utf-8',
+  '.log': 'text/plain; charset=utf-8',
+  '.diff': 'text/plain; charset=utf-8',
+  '.patch': 'text/plain; charset=utf-8',
+  '.py': 'text/plain; charset=utf-8',
+  '.ts': 'text/plain; charset=utf-8',
+  '.css': 'text/plain; charset=utf-8',
+  '.zip': 'application/zip',
 };
 
 route('GET', '/api/runs/:id/artifacts/(.+)', ({ res, params }) => {
@@ -581,6 +605,8 @@ registerGalleryRoutes({ route, httpError: (status, message) => new HttpError(sta
 registerMoneyRoutes({ route, httpError: (status, message) => new HttpError(status, message) });
 // "My budget": default limits, monthly budget and this month's spend (src/budget/routes.ts).
 registerBudgetRoutes({ route, httpError: (status, message) => new HttpError(status, message) });
+// Grading Station: human / AI / both grading, grading specs, 30-word summaries (src/grading/).
+registerGradingRoutes({ route, httpError: (status, message, details) => new HttpError(status, message, details) });
 
 // ─────────────────────────────────────────────────────────────────────────────
 

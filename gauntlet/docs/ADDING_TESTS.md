@@ -509,3 +509,65 @@ The sample question on the slide and the test page comes from `GET /api/tests/:i
 trimmed for the screen, with its picture for vision tests. Programs show the real first message of seed 1
 (captured without calling a model) under your `opening` sentence. The answer only appears after a click
 on **Reveal answer**.
+
+## 6. Grading and showing a new test (Grading Station, output viewer)
+
+New tests plug into the Grading Station and the output viewer with no special code, as long as they follow
+three conventions.
+
+**1. Write the rubric in the standard shape.** `gradingSpecFor(test)` (`src/grading/spec.ts`) turns the rubric the
+judges get into the human grading panel, so both grade the same thing. Lines like
+
+```
+1. Composition (0-4 points): 4 = balanced and deliberate; 2 = acceptable; 0 = chaotic.
+2. Numbered requirements (0-6 points): Divide 6 points equally among them. Partially met requirements earn half.
+3. Technical requirements A-C (0-1 point): 1 if all of A-C are met; otherwise 0.
+Automatic zero: if the image is not of the subject in the brief, the score is 0.
+```
+
+become one criterion each with its points and the anchors after `=` (weights are the points' share of the total;
+The Game Jam's own weights come from `JAM_WEIGHTS`); a criterion that mentions *numbered
+requirements* becomes a checklist of the `1.` `2.` … lines in the case prompt (share, or "start from N and subtract"
+when the rubric says so); `requirements A-C` becomes a checklist of the `A.` `B.` lines (all-or-nothing); lines
+starting `Automatic …` / `Rounding` are shown as rules. A rubric without numbered criteria still works: people get a
+0–10 overall score. `judge-classify` tests get their labels, and `For type "x": LABEL …` lines in the instructions
+fade labels that don't apply to a case. Check the result with `GET /api/grading/spec/<id>?case=<case>`; the
+unit test `test/grading.test.ts` runs `gradingSpecFor` over every test in the library.
+
+Programs are machine-scored (people can dispute) unless they are judged: a new program whose judges grade a picture
+the way The Gallery does gets its criteria by adding its id to `GALLERY_PROGRAMS` in `src/grading/spec.ts`; any
+other judged program needs its own branch in `gradingSpecFor` (criteria from its judge rubric) and in
+`aiGradeOne` (`src/grading/station.ts`, re-running its judge step on the stored output). Give its judges an honest
+`judges.perCase` estimate: the station's cost estimate reads it.
+
+**2. Let the output be a file.** Replies are plain text, so files travel inside them the way models write them:
+text files as a fenced block whose language is the type (```` ```html ````, ```` ```svg ````, ```` ```json ````,
+```` ```csv ````, ```` ```python ````…), optionally preceded by `File: name.ext`; binary files (images, audio, video,
+PDF, ZIP) as a data-URL link: `![poster.png](data:image/png;base64,…)` or `[plan.pdf](data:application/pdf;base64,…)`.
+`src/grading/attachments.ts` reads and writes this format (`extractAttachments`, `textFileToReply`,
+`binaryFileToReply`); the Manual Inbox uses it for uploads. A program or scorer can also save files with
+`ctx.artifact(name, kind, content)` / `saveArtifact`: stored artifacts appear as tabs, and PNGs named `screenshot…`
+or `render…` are shown as the recorded screenshots of the game they belong to.
+
+**3. Showing a new file type.** The viewer (`ui/src/components/viewer/`) picks a view by magic bytes, then MIME type,
+then extension (`detect.ts`). Built in: HTML games/pages (sandboxed, Play/Restart/Full screen, screenshot strip), SVG
+(sanitised, shown as a picture, source view), PNG/JPEG/GIF/WebP/AVIF/BMP/ICO, PDF (browser viewer + extracted text),
+WAV/MP3/OGG/WebM/FLAC audio (with a waveform), MP4/WebM/OGG/MOV video, JSON (pretty + diff against the answer key),
+CSV/TSV tables, Markdown (safe renderer), code with syntax colouring, diffs/patches, text and logs, ZIP listings,
+replays, transcripts, and anything else as a hex preview with a download link. To add a type, write one component
+that takes `ViewerProps` and register it:
+
+```ts
+import { registerViewer } from '../components/viewer/registry.tsx';
+registerViewer({ kind: 'stl', label: '3D model', needs: 'bytes', Component: StlView });
+```
+
+then map its extension/MIME in `detect.ts` (`EXT`, `kindForMime`, `sniffBytes`). Keep views safe: never run model
+code outside a sandboxed iframe (`sandboxedSrcdoc` adds the no-network policy), never load remote URLs from model
+output, and respect the size limits in `LIMITS`.
+
+The 30-word summaries need nothing from a new test: they are built from the stored results (score, which cases
+missed and the stored reason, judge rationales, time and cost). Give your scorer's `detail` an `extracted` /
+`expected` pair, `items` with clear labels, or a `label` for classifications, and the summaries will say why a case
+lost points.
+

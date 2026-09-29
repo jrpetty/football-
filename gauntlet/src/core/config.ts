@@ -19,6 +19,8 @@ export interface Settings {
   judgeEffort: 'low' | 'medium' | 'high' | null;
   /** Display currency and exchange rate (GBP by default); every cost is still measured and stored in USD. */
   currency?: CurrencySettings;
+  /** Which grade counts when a person and/or AI judges grade a result (src/grading/policy.ts). Default "methodology". */
+  gradingOfficial?: 'methodology' | 'human' | 'ai' | 'average';
 }
 
 interface ModelsFile {
