@@ -7,7 +7,8 @@ import { useState } from 'react';
 import { Modal } from '../components/ui.tsx';
 import { Icon } from '../components/icons.tsx';
 import { useToast } from '../context.tsx';
-import { fmtCost } from '../format.ts';
+import { money } from '../money.ts';
+import { BudgetNote } from './AiPanel.tsx';
 import { gradingApi, type SummaryEstimate } from './gradingApi.ts';
 import { PerformanceSummary, SummaryGlyph } from './PerformanceSummary.tsx';
 import { invalidateSummaries, summaryFor, useRunSummaries } from './useSummaries.ts';
@@ -46,7 +47,7 @@ export function SummaryToolbar({ runId, show, onShow }: { runId: string; show: b
     try {
       const r = await gradingApi.summaryGenerate(runId, undefined, est.totalUsd);
       const errs = Object.keys(r.errors).length;
-      toast.success(`${Object.keys(r.summaries).length} summaries ready for ${fmtCost(r.costUsd)}${errs ? ` · ${errs} could not be written` : ''}.`, 'AI summaries written');
+      toast.success(`${Object.keys(r.summaries).length} summaries ready for ${money(r.costUsd)}${errs ? ` · ${errs} could not be written` : ''}.`, 'AI summaries written');
       invalidateSummaries(runId);
       setOpen(false);
     } catch (e) {
@@ -81,8 +82,8 @@ export function SummaryToolbar({ runId, show, onShow }: { runId: string; show: b
             <button className="btn ghost" onClick={() => setOpen(false)} disabled={busy}>
               Cancel
             </button>
-            <button className="btn primary" onClick={() => void go()} disabled={busy || !est || writable.length === 0} data-autofocus>
-              {busy ? 'Writing…' : `Spend about ${fmtCost(est?.totalUsd ?? 0)} for ${writable.length}`}
+            <button className="btn primary" onClick={() => void go()} disabled={busy || !est || writable.length === 0 || !!est.budget?.blocked} data-autofocus>
+              {busy ? 'Writing…' : est?.budget?.blocked ? 'Blocked by your budget' : `Spend about ${money(est?.totalUsd ?? 0)} for ${writable.length}`}
             </button>
           </>
         }
@@ -93,9 +94,10 @@ export function SummaryToolbar({ runId, show, onShow }: { runId: string; show: b
           <div className="stack">
             <div className="cd-total">
               <span className="cd-k">Estimated cost</span>
-              <span className="cd-v tnum">{fmtCost(est.totalUsd)}</span>
-              <span className="muted">up to {fmtCost(est.totalUsdHigh)} · nothing is spent until you confirm</span>
+              <span className="cd-v tnum">{money(est.totalUsd)}</span>
+              <span className="muted">up to {money(est.totalUsdHigh)} · nothing is spent until you confirm</span>
             </div>
+            <BudgetNote b={est.budget} />
             <p className="gs-small" style={{ margin: 0 }}>
               Each model’s summary is written by a judge from a different company, from the recorded scores, cases and judge notes only, cut to 30 words. The free summaries stay available; AI ones are cached until the results change.
             </p>

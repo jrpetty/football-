@@ -14,14 +14,14 @@ import { Link, pathOf, setQuery, useRoute } from '../router.tsx';
 import { useToast, useViewerCaption } from '../context.tsx';
 import { Empty, ErrorState, PageHead, Seg, SkeletonRows, Switch, cx } from '../components/ui.tsx';
 import { Icon } from '../components/icons.tsx';
-import { fmtCost } from '../format.ts';
+import { money } from '../money.ts';
 import { ModelBadge } from '../components/viz/ModelBadge.tsx';
 import { sendViewerCommand } from '../components/viewer/commands.ts';
 import type { ContestantView } from '../types.ts';
 import { gradingApi, type AiEstimate, type GradingNeed, type OfficialPolicy, type QueueItem, type StationItem } from './gradingApi.ts';
 import { HumanPanel } from './HumanPanel.tsx';
 import { Agreement, CostDialog, Verdicts } from './AiPanel.tsx';
-import { Brief, ChecksAndKey, OutputViewer } from './ItemView.tsx';
+import { Brief, ChecksAndKey, OutputViewer, SpecFacts } from './ItemView.tsx';
 import { applyKey, draftScore, emptyDraft, isStopDone, nudge, stopsFor, type RubricDraft } from './rubricKeys.ts';
 import { PerformanceSummary } from './PerformanceSummary.tsx';
 import { invalidateSummaries, summaryFor, useRunSummaries } from './useSummaries.ts';
@@ -269,7 +269,7 @@ export default function GradingStationPage() {
       const r = await gradingApi.aiGrade(runId, cost.keys, cost.est.totalUsd);
       const ok = r.outcomes.filter((o) => o.ok).length;
       const failed = r.outcomes.filter((o) => !o.ok);
-      if (ok) toast.success(`${ok} graded by AI judges for ${fmtCost(r.costUsd)}.${failed.length ? ` ${failed.length} could not be graded.` : ''}`, 'AI grades saved');
+      if (ok) toast.success(`${ok} graded by AI judges for ${money(r.costUsd)}.${failed.length ? ` ${failed.length} could not be graded.` : ''}`, 'AI grades saved');
       else toast.error(failed[0]?.error ?? 'No judge verdicts', 'AI grading failed');
       setCost({ open: false, est: null, keys: [], title: '' });
       invalidateSummaries(runId);
@@ -613,6 +613,7 @@ export default function GradingStationPage() {
                       ))}
                     </ol>
                   )}
+                  <SpecFacts spec={item.spec} />
                   {shown && <PerformanceSummary s={shown} variant="card" label={model?.hidden ? `${model.label} on this test` : `${model?.label} on this test`} />}
                 </section>
 

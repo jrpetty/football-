@@ -1,8 +1,27 @@
 /** AI side of the Grading Station: the judge panel, every recorded AI verdict with its rationale, the cost-confirm dialog, and human-vs-AI agreement. */
 import { Icon } from '../components/icons.tsx';
 import { Modal, cx } from '../components/ui.tsx';
-import { fmtCost } from '../format.ts';
-import type { AiEstimate, StationItem } from './gradingApi.ts';
+import { money } from '../money.ts';
+import { BudgetIcon } from '../budget/BudgetParts.tsx';
+import type { AiEstimate, BudgetCheck, StationItem } from './gradingApi.ts';
+
+/** The monthly budget under a cost: "This month: £38 of £50 spent", and why the hard stop blocks it (or a warning). */
+export function BudgetNote({ b }: { b: BudgetCheck | undefined }) {
+  if (!b) return null;
+  return (
+    <div className={cx('cd-budget', b.blocked ? 'blocked' : b.message ? 'warn' : '')}>
+      <BudgetIcon />
+      <div>
+        <div>
+          {b.line}
+          {b.hardStop && !b.blocked && b.availableUsd !== null ? ` · ${money(b.availableUsd)} left under the hard stop` : ''}
+        </div>
+        {b.message && <div className="cd-budget-msg">{b.message}</div>}
+        <div className="muted">Counted in My budget, like every paid judge call.</div>
+      </div>
+    </div>
+  );
+}
 
 export function Verdicts({ item, names }: { item: StationItem; names: Map<string, string> }) {
   const run = item.result.scoreDetail?.judge ?? [];
@@ -91,8 +110,8 @@ export function CostDialog({ open, est, busy, title, onCancel, onConfirm }: { op
           <button className="btn ghost" onClick={onCancel}>
             Cancel <kbd>Esc</kbd>
           </button>
-          <button className="btn primary" onClick={onConfirm} disabled={busy || !est || ok.length === 0} data-autofocus>
-            {busy ? 'Grading…' : `Spend about ${fmtCost(est?.totalUsd ?? 0)} and grade ${ok.length}`}
+          <button className="btn primary" onClick={onConfirm} disabled={busy || !est || ok.length === 0 || !!est.budget?.blocked} data-autofocus>
+            {busy ? 'Grading…' : est?.budget?.blocked ? 'Blocked by your budget' : `Spend about ${money(est?.totalUsd ?? 0)} and grade ${ok.length}`}
           </button>
         </>
       }
@@ -103,9 +122,10 @@ export function CostDialog({ open, est, busy, title, onCancel, onConfirm }: { op
         <div className="stack">
           <div className="cd-total">
             <span className="cd-k">Estimated cost</span>
-            <span className="cd-v tnum">{fmtCost(est.totalUsd)}</span>
-            <span className="muted">up to {fmtCost(est.totalUsdHigh)} if the judges think for a long time · nothing is spent until you confirm</span>
+            <span className="cd-v tnum">{money(est.totalUsd)}</span>
+            <span className="muted">up to {money(est.totalUsdHigh)} if the judges think for a long time · nothing is spent until you confirm</span>
           </div>
+          <BudgetNote b={est.budget} />
           {judges.size > 0 && (
             <ul className="cd-judges">
               {[...judges.entries()].map(([id, j]) => (
@@ -120,7 +140,7 @@ export function CostDialog({ open, est, busy, title, onCancel, onConfirm }: { op
                     <span className="badge outline">text only</span>
                   )}
                   <span className="spacer" />
-                  <span className="tnum">{fmtCost(j.usd)}</span>
+                  <span className="tnum">{money(j.usd)}</span>
                 </li>
               ))}
             </ul>

@@ -949,6 +949,44 @@
   flex-basis: 100%;
   font-size: 0.82rem;
 }
+.cd-budget {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+.cd-budget > svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  margin-top: 1px;
+  color: var(--text-2);
+}
+.cd-budget .muted {
+  font-size: 0.8rem;
+}
+.cd-budget-msg {
+  font-weight: 700;
+  margin-top: 2px;
+}
+.cd-budget.warn {
+  background: color-mix(in srgb, var(--warn) 14%, var(--surface-2));
+}
+.cd-budget.warn > svg,
+.cd-budget.warn .cd-budget-msg {
+  color: var(--warn-text);
+}
+.cd-budget.blocked {
+  background: color-mix(in srgb, var(--bad) 16%, var(--surface-2));
+}
+.cd-budget.blocked > svg,
+.cd-budget.blocked .cd-budget-msg {
+  color: var(--bad-text);
+}
 .cd-judges {
   list-style: none;
   margin: 0;
@@ -1091,4 +1129,18 @@ html[data-broadcast='on'] .gs-head-actions .field:first-child {
   flex-wrap: wrap;
   gap: 6px;
   flex-basis: 100%;
+}
+
+/* How this test is graded, in facts: output limit, playtest, what vision judges see. */
+.gs-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 8px;
+  font-size: 0.84rem;
+  color: var(--text-2);
+}
+.gs-fact b {
+  color: var(--text-1);
+  font-weight: 700;
 }

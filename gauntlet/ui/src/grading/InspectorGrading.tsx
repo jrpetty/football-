@@ -48,7 +48,7 @@ export function InspectorGrading({ res }: { res: CaseResult }) {
           {official.why && <span className="muted"> · {official.why}</span>}
         </div>
       )}
-      {humans.some((h) => h.criteria || h.label) && (
+      {humans.length > 0 && (
         <div>
           <div className="mini-title">Human grades · by people</div>
           <div className="ig-list">

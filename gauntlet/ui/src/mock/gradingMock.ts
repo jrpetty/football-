@@ -6,7 +6,13 @@
  */
 import { ApiError } from '../api.ts';
 import { mockArtifactUrls } from './registry.ts';
-import { CONTESTANTS, SETTINGS, TESTS, artifactContent, detailFor, renderedOf } from './fixtures.ts';
+import { CONTESTANTS, PROGRAMS, SETTINGS, TESTS, artifactContent, detailFor, renderedOf } from './fixtures.ts';
+import { GALLERY_PROGRAMS, GALLERY_RUN_SPEC, GALLERY_TESTS } from './galleryMock.ts';
+import { GAME_JAM_RUN_SPEC } from './gameJamMock.ts';
+import { budgetApi, mockRecordSpend } from '../budget/budgetApi.ts';
+import { budgetLine, MIN_BUDGET_LEFT_USD } from '../../../src/budget/budget.ts';
+import { applyGalleryHumanScores, isGalleryResult } from '../../../src/engine/gallery-review.ts';
+import { money } from '../money.ts';
 import { mockRunForFeatures } from './mockServer.ts';
 import { DEMO_RUN_ID, DEMO_RUN_NAME, demoData, demoImages, demoTest, demoTurns } from './gradingDemo.ts';
 import type { AiGrade, CaseResult, CaseResultLite, TestDefinition } from '../types.ts';
@@ -15,21 +21,34 @@ import { applyOfficial, humanMean, needOf, runAiScore, stationAiScore } from '..
 import { agreement, type OfficialPolicy } from '../../../src/grading/policy.ts';
 import { templateSummary } from '../../../src/grading/summary.ts';
 import { explainerForDefinition } from '../../../src/core/explainers.ts';
-import type { AiEstimate, AiSummary, GradingRunInfo, HumanGradeInput, QueueItem, RunSummaries, StationItem } from '../../../src/grading/types.ts';
+import type { AiEstimate, AiSummary, BudgetCheck, GradingRunInfo, HumanGradeInput, QueueItem, RunSummaries, StationItem } from '../../../src/grading/types.ts';
 
-const STATION_RUNS = [DEMO_RUN_ID, 'run-2026-09-12-creative', 'run-2026-09-21-core'];
+const STATION_RUNS = [DEMO_RUN_ID, GAME_JAM_RUN_SPEC.id, GALLERY_RUN_SPEC.id, 'run-2026-09-12-creative', 'run-2026-09-21-core'];
+
+/** The mock month's budget (budgetApi's demo month), as the server's spendCheck would report it. */
+async function budgetCheck(estUsd: number, what: string): Promise<BudgetCheck> {
+  const st = await budgetApi.get();
+  const line = budgetLine(st, st.currency, undefined, what).replace(/ · this .*$/, '');
+  const avail = st.availableUsd;
+  const base = { line, availableUsd: avail, hardStop: !!st.settings.hardStop };
+  if (st.settings.monthlyUsd === undefined || avail === null) return { ...base, blocked: false };
+  if (st.settings.hardStop && avail < MIN_BUDGET_LEFT_USD) return { ...base, blocked: true, message: `Your ${money(st.settings.monthlyUsd)} monthly budget is used up, so the hard stop will not let ${what} spend anything.` };
+  if (st.settings.hardStop && estUsd > avail) return { ...base, blocked: true, message: `This would cost about ${money(estUsd)}, but only ${money(avail)} is left of your monthly budget, so the hard stop blocks it.` };
+  return { ...base, blocked: false };
+}
 let policy: OfficialPolicy = 'methodology';
 const store = new Map<string, Map<string, CaseResult>>();
 const aiSummaries = new Map<string, Record<string, AiSummary>>();
 
 function testDef(id: string): TestDefinition | undefined {
-  return demoTest(id) ?? TESTS.find((t) => t.id === id);
+  return demoTest(id) ?? TESTS.find((t) => t.id === id) ?? GALLERY_TESTS.find((t) => t.id === id);
 }
 
 function specOf(r: Pick<CaseResult, 'testId' | 'caseId'>): GradingSpec {
   const d = testDef(r.testId);
-  if (!d) return { testId: r.testId, testName: r.testId, kind: 'objective', scorerType: 'unknown', gradedOn: 'Unknown test.', howScored: [], humanRole: 'dispute', aiRole: 'none', unit: 'question', criteria: [], scaleMax: 0, checklist: [], passThreshold: 1, rules: [], output: 'text' };
-  return gradingSpecFor(d, { caseId: d.kind === 'prompt' ? r.caseId : undefined, programScoring: d.kind === 'program' ? 'Score = 0.5 × locks opened + 0.3 for escaping + 0.2 × efficiency (optimal moves ÷ moves used).' : undefined });
+  if (!d) return { testId: r.testId, testName: r.testId, kind: 'objective', scorerType: 'unknown', gradedOn: 'Unknown test.', howScored: [], humanRole: 'dispute', aiRole: 'none', unit: 'question', criteria: [], scaleMax: 0, checklist: [], passThreshold: 1, rules: [], output: 'text', minJudges: 0 };
+  const programScoring = d.kind === 'program' ? [...PROGRAMS, ...GALLERY_PROGRAMS].find((p) => p.id === d.program)?.scoring : undefined;
+  return gradingSpecFor(d, { caseId: r.caseId, programScoring });
 }
 
 async function results(runId: string): Promise<Map<string, CaseResult>> {
@@ -143,24 +162,35 @@ async function human(b: HumanGradeInput): Promise<CaseResultLite> {
   const score = scoreFromGrade(spec, { criteria, label: b.label });
   if (score === null) throw new ApiError('Grade every criterion before saving.', 400);
   const humanScores = [...(r.humanScores ?? []).filter((h) => h.rater !== b.rater.trim()), { rater: b.rater.trim(), score, at: new Date().toISOString(), note: b.note, criteria, requirements: b.requirements, label: b.label, blind: b.blind }];
+  if (isGalleryResult(r)) {
+    // The Gallery's own rule: the owner's artistry replaces the judges' artistry (same code as the server).
+    const g = applyGalleryHumanScores({ ...r, humanScores });
+    g.scoreDetail = { ...g.scoreDetail, official: { source: 'human', policy, why: 'The Gallery’s rule: your artistry rating replaces the judges’ artistry; brief adherence stays as judged.' } };
+    (await results(b.runId)).set(b.key, g);
+    return lite(g);
+  }
   const next = applyOfficial({ ...r, humanScores }, spec, policy);
   (await results(b.runId)).set(b.key, next);
   return lite(next);
 }
 
-function estimate(runId: string, keys: string[], m: Map<string, CaseResult>): AiEstimate {
+async function estimate(runId: string, keys: string[], m: Map<string, CaseResult>): Promise<AiEstimate> {
   const items = keys.map((k) => {
     const r = m.get(k);
     if (!r) return { key: k, ok: false, reason: 'Result not found', judges: [], estUsd: 0 };
     const spec = specOf(r);
     if (spec.aiRole === 'none') return { key: k, ok: false, reason: 'Scored by machine: nothing for an AI judge to grade.', judges: [], estUsd: 0 };
-    const images = (r.artifacts ?? []).filter((a) => a.kind === 'png').length + (demoImages(testDef(r.testId)!, r.caseId)?.length ?? 0);
-    const js = judgesFor(r.contestantId).map((j) => ({ ...j, images: j.vision ? images : 0, estUsd: 0.0042 + images * 0.0011 }));
+    // Same pictures as the server: playtest frames + motion strip for the Game Jam, the painting for the Gallery, else screenshots and test images.
+    const images = spec.playtest ? spec.playtest.screenshots + (spec.playtest.motionStrip ? 1 : 0) : isGalleryResult(r) ? 1 : (r.artifacts ?? []).filter((a) => a.kind === 'png').length + (demoImages(testDef(r.testId)!, r.caseId)?.length ?? 0);
+    const text = spec.playtest ? 0.03 : 0.0042;
+    const js = judgesFor(r.contestantId)
+      .filter((j) => !isGalleryResult(r) || j.vision)
+      .map((j) => ({ ...j, images: j.vision ? images : 0, estUsd: text + (j.vision ? images * 0.0011 : 0) }));
     return { key: k, ok: js.length >= 2, reason: js.length < 2 ? 'Needs at least 2 judges from other vendors.' : undefined, judges: js, estUsd: js.reduce((s, j) => s + j.estUsd, 0) };
   });
   void runId;
-  const total = items.reduce((s, i) => s + i.estUsd, 0);
-  return { items, totalUsd: Math.round(total * 1e6) / 1e6, totalUsdHigh: Math.round(total * 2.5 * 1e6) / 1e6, gradable: items.filter((i) => i.ok).length };
+  const total = Math.round(items.reduce((s, i) => s + i.estUsd, 0) * 1e6) / 1e6;
+  return { items, totalUsd: total, totalUsdHigh: Math.round(total * 2.5 * 1e6) / 1e6, gradable: items.filter((i) => i.ok).length, budget: await budgetCheck(total, 'AI grading') };
 }
 
 const DEMO_RATIONALES = [
@@ -171,7 +201,8 @@ const DEMO_RATIONALES = [
 
 async function aiGrade(runId: string, keys: string[]): Promise<{ outcomes: Array<{ key: string; ok: boolean; error?: string; costUsd: number; result?: CaseResultLite }>; costUsd: number }> {
   const m = await results(runId);
-  const est = estimate(runId, keys, m);
+  const est = await estimate(runId, keys, m);
+  if (est.budget.blocked) throw new ApiError(est.budget.message ?? 'The monthly budget’s hard stop blocks this.', 409);
   const outcomes = [];
   let spent = 0;
   for (const it of est.items) {
@@ -190,10 +221,13 @@ async function aiGrade(runId: string, keys: string[]): Promise<{ outcomes: Array
       return { judgeId: j.id, judgeLabel: j.label, vendor: j.vendor, score, label: label?.id, rationale: DEMO_RATIONALES[(seed + i) % 3]!, at, batch, costUsd: j.estUsd, images: j.images };
     });
     spent += it.estUsd;
-    const next = applyOfficial({ ...r, aiGrades: [...(r.aiGrades ?? []), ...grades], metrics: { ...r.metrics, judgeCostUsd: (r.metrics?.judgeCostUsd ?? 0) + it.estUsd } }, spec, policy);
+    const withGrades = { ...r, aiGrades: [...(r.aiGrades ?? []), ...grades] };
+    const next = isGalleryResult(r) ? withGrades : applyOfficial(withGrades, spec, policy);
     m.set(it.key, next);
     outcomes.push({ key: it.key, ok: true, costUsd: it.estUsd, result: lite(next) });
   }
+  const graded = outcomes.filter((o) => o.ok).length;
+  mockRecordSpend({ kind: 'grade', name: `Grading Station: AI judges graded ${graded} answer${graded === 1 ? '' : 's'} (${runName(runId)})`, spentUsd: spent });
   return { outcomes, costUsd: spent };
 }
 
@@ -252,7 +286,7 @@ export async function handleGrading(method: string, parts: string[], q: URLSearc
     const x = body as { runId: string; keys: string[] };
     const m = await results(x.runId);
     for (const k of x.keys) await full(x.runId, k).catch(() => null);
-    return estimate(x.runId, x.keys, m);
+    return await estimate(x.runId, x.keys, m);
   }
   if (a === 'ai' && b === 'grade') {
     const x = body as { runId: string; keys: string[] };
@@ -277,7 +311,7 @@ export async function handleGrading(method: string, parts: string[], q: URLSearc
     if (d === 'estimate') {
       const list = pairs.map((k) => ({ key: k, contestantId: k.split('|')[0]!, testId: k.split('|')[1]!, writer: writer(k.split('|')[0]!) ?? null, estUsd: s.ai[k] ? 0 : 0.0009, cached: !!s.ai[k] }));
       const total = list.reduce((t, p) => t + p.estUsd, 0);
-      return { pairs: list, totalUsd: total, totalUsdHigh: total * 3 };
+      return { pairs: list, totalUsd: total, totalUsdHigh: total * 3, budget: await budgetCheck(total, 'AI summaries') };
     }
     const out = { ...(aiSummaries.get(b) ?? {}) };
     for (const k of pairs) {
@@ -285,6 +319,7 @@ export async function handleGrading(method: string, parts: string[], q: URLSearc
       if (w && !out[k]) out[k] = { text: s.template[k]!, writerId: w.id, writerLabel: w.label, vendor: w.vendor, costUsd: 0.0009, at: new Date().toISOString(), basis: 'demo' };
     }
     aiSummaries.set(b, out);
+    mockRecordSpend({ kind: 'other', name: `AI-written performance summaries (${runName(b)})`, spentUsd: pairs.length * 0.0009 });
     return { summaries: out, costUsd: pairs.length * 0.0009, errors: {} };
   }
   throw new ApiError(`Mock: no grading route for ${method} ${parts.join('/')}`, 404);

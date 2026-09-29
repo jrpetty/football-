@@ -17,6 +17,8 @@ import type { ArtifactCheck, Constraint, JudgeLabel, PromptTestCase, ScorerSpec,
 import { explainerForDefinition, type ExplainStep, type TestExplainer } from '../core/explainers.ts';
 import { checkConstraints } from '../scoring/constraints.ts';
 import { JAM_CRITERIA, JAM_WEIGHTS } from '../scoring/game-jam-shared.ts';
+import { ARTISTRY_CRITERIA, JUDGE_WEIGHTS as GALLERY_WEIGHTS, MIN_JUDGES as GALLERY_MIN_JUDGES } from '../programs/lib/gallery-judge.ts';
+import { briefForSeed, briefItems, codePrompt, imagePrompt } from '../programs/lib/gallery-briefs.ts';
 
 /**
  *  - objective: scored against an answer key or by machine (exact, number, JSON, code, constraints…); people may only dispute.
@@ -65,7 +67,7 @@ export interface ChecklistItem {
   id: string;
   label: string;
   /** Where the check comes from. */
-  source: 'answer-key' | 'auto-check' | 'constraint' | 'unit-tests' | 'field' | 'phrase' | 'formula' | 'browser';
+  source: 'answer-key' | 'auto-check' | 'constraint' | 'unit-tests' | 'field' | 'phrase' | 'formula' | 'browser' | 'brief';
 }
 
 export interface LabelOption extends JudgeLabel {
@@ -123,6 +125,22 @@ export interface GradingSpec {
   answerKey?: AnswerKey;
   /** What the output viewer should expect: 'html' | 'svg' | 'json' | 'code' | 'text' | 'replay' | 'image'. */
   output: string;
+  /**
+   * How rubric points become a 0..1 score:
+   *  - range (default): each criterion's share of its min–max range, weighted;
+   *  - mean-over-max: the mean of the points ÷ the maximum (The Gallery's artistry: 7/10 → 0.7).
+   */
+  scoreRule?: 'range' | 'mean-over-max';
+  /** The output-token budget the model had ("model-max" = the model's own maximum). */
+  maxOutputTokens?: number | 'model-max';
+  /** Game tests played by the harness (The Game Jam): what the judges and the grader get to see. */
+  playtest?: { seconds: number; width: number; height: number; screenshots: number; motionStrip: boolean; protocol: number };
+  /** What a vision judge is shown, in one line (judges without image input read the text only). */
+  judgeSees?: string;
+  /** Fewest AI judges whose verdicts an AI grade needs (0 = AI judges do not grade this test). */
+  minJudges: number;
+  /** Programs graded by judges (The Gallery): the exact brief the model got for this case. */
+  brief?: string;
 }
 
 const GENERIC_ANCHORS: RubricAnchor[] = [
@@ -244,12 +262,19 @@ export function requirementPoints(c: RubricCriterion, states: Record<string, Req
 }
 
 /** 0..1 score from rubric points (criterion id → points), or from a chosen label. */
-export function scoreFromGrade(spec: Pick<GradingSpec, 'criteria' | 'labels'>, grade: { criteria?: Record<string, number>; label?: string }): number | null {
+export function scoreFromGrade(spec: Pick<GradingSpec, 'criteria' | 'labels' | 'scoreRule'>, grade: { criteria?: Record<string, number>; label?: string }): number | null {
   if (spec.labels?.length) {
     const l = spec.labels.find((x) => x.id === grade.label);
     return l ? l.score : null;
   }
   if (!spec.criteria.length) return null;
+  if (spec.scoreRule === 'mean-over-max') {
+    const vals = spec.criteria.map((c) => grade.criteria?.[c.id]);
+    if (vals.some((v) => typeof v !== 'number' || !Number.isFinite(v))) return null;
+    const max = Math.max(...spec.criteria.map((c) => c.max));
+    const m = spec.criteria.reduce((sum, c, i) => sum + Math.min(c.max, Math.max(c.min, vals[i] as number)), 0) / spec.criteria.length;
+    return Math.round((m / (max || 1)) * 10000) / 10000;
+  }
   // Weighted mean of each criterion's share of its range. For parsed rubrics the weight is the criterion's share of
   // the points, so this equals "points earned ÷ points available"; the Game Jam gives its own weights.
   let got = 0;
@@ -294,6 +319,66 @@ function jamRubric(rubric: string | undefined, expected: unknown): { criteria: R
   }
   const rules = text.split('\n').filter((l) => /^hard rules?:/i.test(l.trim()));
   return { criteria, rules };
+}
+
+/**
+ * The Game Jam playtest as the judges see it (mirrors src/scoring/playtest.ts, which needs Node and a browser:
+ * test/grading.test.ts checks these numbers against it). Protocol 2: 30 s of play at full HD, eight screenshots
+ * and a motion strip (six frames 0.1 s apart on one sheet).
+ */
+export const JAM_PLAYTEST = { protocol: 2, seconds: 30, width: 1920, height: 1080, screenshots: 8, motionStrip: true } as const;
+
+/** Programs whose pictures are graded with The Gallery's judge rubric (src/programs/lib/gallery-judge.ts). */
+export const GALLERY_PROGRAMS = new Set(['gallery-masterpiece', 'gallery-code']);
+
+/** The Gallery's artistry scale (the judges' own anchors, 1–10), highest first. */
+const ARTISTRY_ANCHORS: RubricAnchor[] = [
+  { value: 10, text: 'Museum masterpiece with nothing to fix (rare)' },
+  { value: 9, text: 'Exceptional: master level, a distinctive vision' },
+  { value: 7, text: 'Accomplished: confident and coherent, would hang in a good gallery' },
+  { value: 5, text: 'Competent illustration: pleasant but generic, visible flaws' },
+  { value: 3, text: 'Amateur: clumsy, flat or muddy, obvious drawing errors' },
+  { value: 1, text: 'Broken or not a painting (noise, blank, glitches)' },
+];
+
+function gallerySpec(def: Extract<TestDefinition, { kind: 'program' }>, base: Pick<GradingSpec, 'testId' | 'testName' | 'howScored' | 'unit'>, opts: SpecOptions): GradingSpec {
+  const code = def.program === 'gallery-code';
+  const seed = /^seed-(\d+)$/.exec(opts.caseId ?? '')?.[1];
+  let brief: ReturnType<typeof briefForSeed> | null = null;
+  try {
+    brief = seed ? briefForSeed(Number(seed)) : null;
+  } catch {
+    brief = null;
+  }
+  const criteria: RubricCriterion[] = ARTISTRY_CRITERIA.map((c) => ({ id: c.id, label: c.label, help: `${c.text.charAt(0).toUpperCase()}${c.text.slice(1)}.`, min: 1, max: 10, step: 0.5, weight: 1 / ARTISTRY_CRITERIA.length, anchors: ARTISTRY_ANCHORS }));
+  const checklist: ChecklistItem[] = brief
+    ? briefItems(brief).map((i) => ({ id: i.id, label: i.kind === 'avoid' ? `Avoids: ${i.text}` : i.text, source: 'brief' as const }))
+    : [{ id: 'brief', label: 'Each of the 6 required elements and 3 "do not include" lines: yes, partly or no', source: 'brief' }];
+  return {
+    ...base,
+    kind: 'judged',
+    scorerType: `program:${def.program}`,
+    gradedOn: `Vision judges from other companies check every line of the brief (${Math.round(GALLERY_WEIGHTS.adherence * 100)}%) and rate the artistry on six 1–10 scales (${Math.round(GALLERY_WEIGHTS.artistry * 100)}%). Your grade is an artistry rating: it replaces the judges' artistry, and the brief checklist stays as judged.`,
+    humanRole: 'grade',
+    aiRole: 'grade',
+    criteria,
+    scaleMax: 10,
+    scoreRule: 'mean-over-max',
+    checklist,
+    passThreshold: 0.7,
+    rules: [
+      'Score = 0.5 × brief adherence + 0.5 × artistry ÷ 10.',
+      'A refusal or no picture scores 0.',
+      `At least ${GALLERY_MIN_JUDGES} vision judges must answer; with fewer, the painting waits for your rating.`,
+      'Judges whose artistry differs by 2 or more points are flagged for your review.',
+    ],
+    formula: opts.programScoring,
+    output: code ? 'svg' : 'image',
+    maxOutputTokens: def.maxOutputTokens,
+    judgeSees: code ? 'The SVG rendered to a 1536 × 1024 picture, anonymised as "painting.png", plus the brief.' : 'The painting, anonymised as "painting.png", plus the brief.',
+    minJudges: GALLERY_MIN_JUDGES,
+    brief: brief ? (code ? codePrompt(brief) : imagePrompt(brief)) : undefined,
+  };
 }
 
 function overallCriterion(help?: string): RubricCriterion {
@@ -439,6 +524,7 @@ export interface SpecOptions {
 export function gradingSpecFor(def: TestDefinition, opts: SpecOptions = {}): GradingSpec {
   const explainer = opts.explainer ?? explainerForDefinition(def, opts.programScoring);
   const base = { testId: def.id, testName: def.name, howScored: explainer.howScored, unit: unitFor(def) };
+  if (def.kind === 'program' && GALLERY_PROGRAMS.has(def.program)) return gallerySpec(def, base, opts);
   if (def.kind === 'program') {
     return {
       ...base,
@@ -456,6 +542,8 @@ export function gradingSpecFor(def: TestDefinition, opts: SpecOptions = {}): Gra
       rules: [],
       formula: opts.programScoring,
       output: 'replay',
+      maxOutputTokens: def.maxOutputTokens,
+      minJudges: 0,
     };
   }
   const c = opts.caseId ? def.cases.find((x) => x.id === opts.caseId) : undefined;
@@ -465,7 +553,16 @@ export function gradingSpecFor(def: TestDefinition, opts: SpecOptions = {}): Gra
     ? { expected: c.expected, display: c.displayAnswer, lure: c.lure, notes: c.notes, rule: answerRule(sc) }
     : undefined;
   const images = (c?.images?.length ?? 0) > 0;
-  const common = { ...base, scorerType: sc.type, checklist: checklistFor(sc, c), answerKey, output: images && OBJECTIVE.has(sc.type) ? (outputKind(sc) === 'text' ? 'image' : outputKind(sc)) : outputKind(sc) };
+  const common = {
+    ...base,
+    scorerType: sc.type,
+    checklist: checklistFor(sc, c),
+    answerKey,
+    output: images && OBJECTIVE.has(sc.type) ? (outputKind(sc) === 'text' ? 'image' : outputKind(sc)) : outputKind(sc),
+    maxOutputTokens: def.maxOutputTokens,
+    minJudges: 2,
+    judgeSees: images ? 'The test pictures, plus the question and the answer.' : undefined,
+  };
 
   if (sc.type !== 'judge-classify' && sc.type !== 'judge' && sc.type !== 'human' && sc.type !== 'artifact') {
     return {
@@ -483,6 +580,8 @@ export function gradingSpecFor(def: TestDefinition, opts: SpecOptions = {}): Gra
       scaleMax: 0,
       passThreshold: 1,
       rules: [],
+      minJudges: 0,
+      judgeSees: undefined,
     };
   }
 
@@ -539,6 +638,12 @@ export function gradingSpecFor(def: TestDefinition, opts: SpecOptions = {}): Gra
     passThreshold: 0.7,
     rules: parsed.rules,
     rubricText: sc.rubric,
+    playtest: sc.playtest ? { ...JAM_PLAYTEST, protocol: sc.playtest.protocol ?? JAM_PLAYTEST.protocol } : undefined,
+    judgeSees: sc.playtest
+      ? `The whole game file, the playtest log, ${JAM_PLAYTEST.screenshots} full-HD screenshots from a ${JAM_PLAYTEST.seconds} s playtest and a motion strip.`
+      : sc.format === 'svg' || sc.checks?.some((x) => x.check === 'has_canvas_or_svg')
+        ? 'The code, plus the screenshots the harness recorded.'
+        : common.judgeSees,
   };
 }
 
@@ -577,5 +682,6 @@ export function gradingSpecForArena(game: { id: string; name: string; rubric: Ar
     passThreshold: 0.5,
     rules: [],
     output: 'transcript',
+    minJudges: 1,
   };
 }

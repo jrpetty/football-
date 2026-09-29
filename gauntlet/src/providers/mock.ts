@@ -57,6 +57,16 @@ function respond(prompt: string, rng: ReturnType<typeof createRng>): string {
     const labels = [...prompt.matchAll(/^- ([A-Z][A-Z0-9_]*): /gm)].map((m) => m[1]!);
     if (labels.length) return `A random label: this judge does not read the answer.\nLABEL: ${rng.pick(labels)}`;
   }
+  // A Gallery judge prompt (src/programs/lib/gallery-judge.ts): random but well-formed JSON verdicts.
+  if (/^Answer every checklist line below:/m.test(prompt) && /Reply with one JSON object/.test(prompt)) {
+    const ids = [...prompt.matchAll(/^([EN]\d+) \((?:required element|rule)\):/gm)].map((m) => m[1]!);
+    const criteria = /all \d+ criteria: ([a-z, ]+)\):/.exec(prompt)?.[1]?.split(/,\s*/) ?? [];
+    return JSON.stringify({
+      checklist: ids.map((id) => ({ id, verdict: rng.pick(['yes', 'partly', 'no']), reason: 'A random verdict: this judge does not look at the picture.' })),
+      artistry: Object.fromEntries(criteria.map((c) => [c, { score: rng.int(1, 10), reason: 'A random score.' }])),
+      summary: 'A random verdict from a test judge.',
+    });
+  }
   // Performance-summary requests (Grading Station): repeat the template summary it was given.
   const template = /^Template summary: (.+)$/m.exec(prompt);
   if (template && /Write the performance summary/.test(prompt)) return template[1]!.trim();

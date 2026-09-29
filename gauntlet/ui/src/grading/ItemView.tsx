@@ -16,14 +16,54 @@ function showKey(v: unknown): string {
   return prettyJson(v);
 }
 
+/** The first prompt a program sent the model (programs write their prompts at run time, so it lives in the transcript). */
+function firstProgramPrompt(item: StationItem): string | null {
+  const e = (item.result.transcript ?? []).find((t) => !t.judge);
+  const m = e?.messages.find((x) => x.role === 'user');
+  return m?.content?.trim() ? m.content : null;
+}
+
+/** One line of facts about how this test is graded: output limit, the playtest, what vision judges see. */
+export function SpecFacts({ spec }: { spec: StationItem['spec'] }) {
+  const facts: Array<[string, string]> = [];
+  if (spec.playtest) facts.push(['Playtest', `${spec.playtest.seconds} s at ${spec.playtest.width} × ${spec.playtest.height} · ${spec.playtest.screenshots} screenshots${spec.playtest.motionStrip ? ' + a motion strip' : ''}`]);
+  if (spec.maxOutputTokens === 'model-max') facts.push(['Output limit', 'the model’s own maximum']);
+  else if (typeof spec.maxOutputTokens === 'number') facts.push(['Output limit', `${spec.maxOutputTokens.toLocaleString('en-GB')} tokens`]);
+  if (spec.judgeSees && spec.aiRole !== 'none') facts.push(['Vision judges see', spec.judgeSees]);
+  if (spec.minJudges >= 2 && spec.aiRole !== 'none') facts.push(['AI judges', `at least ${spec.minJudges}, never from the model’s own company`]);
+  if (!facts.length) return null;
+  return (
+    <div className="gs-facts">
+      {facts.map(([k, v]) => (
+        <span key={k} className="gs-fact">
+          <b>{k}:</b> {v}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export function Brief({ item }: { item: StationItem }) {
   const [open, setOpen] = useState(item.spec.kind !== 'simulation');
   const r = item.rendered;
   if (!r) {
+    // Programs: the Gallery's commission (identical for every model), else the first prompt the program sent.
+    const exact = item.spec.brief ?? firstProgramPrompt(item);
     return (
       <section className="gs-card gs-brief">
-        <div className="gs-card-k">The brief</div>
-        <p className="gs-brief-sim">{item.explainer?.opening ?? item.test?.description ?? 'A simulation: the program writes a new prompt every turn from the world state. Every turn is in the replay and transcript.'}</p>
+        <button type="button" className="gs-card-k gs-toggle" onClick={() => setOpen(!open)} aria-expanded={open}>
+          <Icon.ChevronDown className={cx('chev', !open && 'closed')} /> {item.spec.brief ? 'The exact brief the model got' : exact ? 'The brief: the first prompt the program sent' : 'The brief'}
+        </button>
+        {item.explainer?.opening && !item.spec.brief && <p className="gs-brief-sim">{item.explainer.opening}</p>}
+        {open && exact && (
+          <div className={cx('gs-brief-body', exact.length > 900 && 'long')}>
+            <div className="gs-turn">
+              <pre>{exact}</pre>
+            </div>
+            {!item.spec.brief && <div className="muted gs-small">Every later turn is in the replay and the transcript.</div>}
+          </div>
+        )}
+        {!exact && !item.explainer?.opening && <p className="gs-brief-sim">{item.test?.description ?? 'A simulation: the program writes a new prompt every turn from the world state. Every turn is in the replay and transcript.'}</p>}
       </section>
     );
   }

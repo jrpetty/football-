@@ -123,6 +123,17 @@ export interface AiEstimate {
   /** Conservative upper bound (long reasoning). */
   totalUsdHigh: number;
   gradable: number;
+  /** What the monthly budget says (the hard stop can block it); shown before anything is spent. */
+  budget: BudgetCheck;
+}
+
+/** The monthly budget's view of a paid grading action (src/grading/station.ts → spendCheck). */
+export interface BudgetCheck {
+  line: string;
+  blocked: boolean;
+  message?: string;
+  availableUsd: number | null;
+  hardStop: boolean;
 }
 
 export interface AiGradeOutcome {
@@ -155,4 +166,5 @@ export interface SummaryEstimate {
   pairs: Array<{ key: string; contestantId: string; testId: string; writer: JudgeInfo | null; estUsd: number; reason?: string; cached: boolean }>;
   totalUsd: number;
   totalUsdHigh: number;
+  budget: BudgetCheck;
 }

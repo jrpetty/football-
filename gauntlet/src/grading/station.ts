@@ -22,7 +22,15 @@ import { caseScorer, loadTests, renderCase, type LoadedTest, type RenderedCase }
 import { estimateImageTokens, imageInfo, loadTestImage, stripImageData, supportsVision, testBaseDir } from '../core/vision.ts';
 import { explainerForDefinition, type TestExplainer } from '../core/explainers.ts';
 import { extractTagged, parseNumber } from '../core/extract.ts';
-import type { AiGrade, CaseResult, CaseResultLite, ChatImage, Contestant, ContestantSnapshot, HumanScore, PromptTestCase, RunManifest, TestDefinition, TranscriptEntry } from '../core/types.ts';
+import type { AiGrade, CaseResult, CaseResultLite, ChatImage, Contestant, ContestantSnapshot, HumanScore, ProgramContext, PromptTestCase, RunManifest, TestDefinition, TranscriptEntry } from '../core/types.ts';
+import { formatMoney, normalizeCurrency } from '../core/currency.ts';
+import { MIN_BUDGET_LEFT_USD, BudgetBlockedError, budgetLine } from '../budget/budget.ts';
+import { budgetStatus, loadBudget, recordSpend } from '../budget/spend.ts';
+import { applyGalleryHumanScores, isGalleryResult } from '../engine/gallery-review.ts';
+import { briefForSeed } from '../programs/lib/gallery-briefs.ts';
+import { finishPainting } from '../programs/lib/gallery-core.ts';
+import { galleryScore, type GalleryDetail } from '../programs/lib/gallery-judge.ts';
+import { MOTION_SIZE, SHOT_TIMES, VIEWPORT } from '../scoring/playtest.ts';
 import { appendResult, artifactPath, listRunIds, readManifest, readResults, runDir, saveArtifact, toLite } from '../engine/store.ts';
 import { asJudge } from '../engine/runner.ts';
 import { callWithRetry, type CallTarget } from '../engine/recorder.ts';
@@ -31,7 +39,7 @@ import { createAdapter } from '../providers/index.ts';
 import { PROGRAMS } from '../programs/index.ts';
 import { scoreResponse, type JudgePanel } from '../scoring/index.ts';
 import { JUDGE_RUBRIC_TEMPLATE, JUDGE_SYSTEM, fill } from '../scoring/judge-prompts.ts';
-import { gradingSpecFor, requirementPoints, scoreFromGrade, type GradingSpec } from './spec.ts';
+import { GALLERY_PROGRAMS, gradingSpecFor, requirementPoints, scoreFromGrade, type GradingSpec } from './spec.ts';
 import { OFFICIAL_POLICIES, agreement, type OfficialPolicy, type OfficialSource } from './policy.ts';
 import { applyOfficial, humanMean, judgeFailed, needOf, r4, runAiScore, stationAiScore } from './official.ts';
 import { SUMMARY_WORD_LIMIT, clampWords, missReason, templateSummary } from './summary.ts';
@@ -51,6 +59,45 @@ export function setGradingPolicy(policy: OfficialPolicy): OfficialPolicy {
   if (!OFFICIAL_POLICIES.includes(policy)) throw new Error(`official must be one of ${OFFICIAL_POLICIES.join(', ')}`);
   saveSettings({ ...loadSettings(), gradingOfficial: policy });
   return policy;
+}
+
+// ───────────────────────────── Money & the monthly budget ─────────────────────────────
+
+/** An amount in the owner's display currency (GBP by default), e.g. "£0.0042". */
+function fmtMoney(usd: number): string {
+  return formatMoney(usd, normalizeCurrency(loadSettings().currency));
+}
+
+/** What the monthly budget says about spending `estUsd` now (shown in the cost dialog before anything is spent). */
+export interface SpendCheck {
+  /** "This month: £12.40 of £50 spent · …" */
+  line: string;
+  /** The hard stop refuses this spend. */
+  blocked: boolean;
+  /** Why it is blocked, or a warning when the hard stop is off. */
+  message?: string;
+  /** What is left under the hard stop (USD), null without a monthly budget. */
+  availableUsd: number | null;
+  hardStop: boolean;
+}
+
+export function spendCheck(estUsd: number, what: string): SpendCheck {
+  const settings = loadBudget();
+  const status = budgetStatus(new Date(), settings);
+  const currency = normalizeCurrency(loadSettings().currency);
+  const fmt = (usd: number) => formatMoney(usd, currency);
+  const line = budgetLine(status, currency, undefined, what).replace(/ · this .*$/, '');
+  const avail = status.availableUsd;
+  const base = { line, availableUsd: avail, hardStop: !!settings.hardStop };
+  if (settings.monthlyUsd === undefined || avail === null) return { ...base, blocked: false };
+  const monthly = fmt(settings.monthlyUsd);
+  if (settings.hardStop) {
+    if (avail < MIN_BUDGET_LEFT_USD) return { ...base, blocked: true, message: `Your ${monthly} monthly budget is used up, so the hard stop will not let ${what} spend anything. It resets on ${status.month.nextResetLabel}. Raise the budget or turn off the hard stop on the Budget page to go ahead.` };
+    if (estUsd > avail) return { ...base, blocked: true, message: `This would cost about ${fmt(estUsd)}, but only ${fmt(avail)} is left of your ${monthly} monthly budget, so the hard stop blocks it. Grade fewer answers, raise the budget, or turn off the hard stop.` };
+    return { ...base, blocked: false };
+  }
+  if (estUsd > avail) return { ...base, blocked: false, message: `Warning: this may spend more than the ${fmt(avail)} left of your ${monthly} monthly budget (the hard stop is off).` };
+  return { ...base, blocked: false };
 }
 
 // ───────────────────────────── Helpers ─────────────────────────────
@@ -78,8 +125,11 @@ interface TestCtx {
 // Loading the library parses and hashes every test file: do it at most once every two seconds, not once per result.
 let libCache: { at: number; byId: Map<string, LoadedTest> } | null = null;
 function getTest(id: string): LoadedTest | undefined {
-  if (!libCache || Date.now() - libCache.at > 2000) libCache = { at: Date.now(), byId: new Map(loadTests().map((t) => [t.definition.id, t])) };
-  return libCache.byId.get(id);
+  const fresh = () => (libCache = { at: Date.now(), byId: new Map(loadTests().map((t) => [t.definition.id, t])) });
+  if (!libCache || Date.now() - libCache.at > 2000) fresh();
+  // A test added a moment ago: look again once before treating it as deleted.
+  if (!libCache!.byId.has(id) && Date.now() - libCache!.at > 50) fresh();
+  return libCache!.byId.get(id);
 }
 
 function testCtx(testId: string, caseId: string, fallbackName = testId): TestCtx {
@@ -89,7 +139,7 @@ function testCtx(testId: string, caseId: string, fallbackName = testId): TestCtx
     return {
       def: null,
       explainer: null,
-      spec: { testId, testName: fallbackName, kind: 'objective', scorerType: 'unknown', gradedOn: 'This test is no longer in the library, so only disputes can be recorded.', howScored: [], humanRole: 'dispute', aiRole: 'none', unit: 'question', criteria: [], scaleMax: 0, checklist: [], passThreshold: 1, rules: [], output: 'text' },
+      spec: { testId, testName: fallbackName, kind: 'objective', scorerType: 'unknown', gradedOn: 'This test is no longer in the library, so only disputes can be recorded.', howScored: [], humanRole: 'dispute', aiRole: 'none', unit: 'question', criteria: [], scaleMax: 0, checklist: [], passThreshold: 1, rules: [], output: 'text', minJudges: 0 },
     };
   }
   const def = t.definition;
@@ -187,7 +237,7 @@ export function stationItem(runId: string, key: string): StationItem {
   const manualProviders = new Set(loadProviders().filter((p) => p.type === 'manual').map((p) => p.id));
   const human = humanMean(r);
   const ai = stationAiScore(r) ?? runAiScore(r, ctx.spec);
-  const panel = con ? panelFor(con) : { judges: [], reason: 'Unknown contestant' };
+  const panel = con ? panelFor(con, { vision: needsVision(ctx) }) : { judges: [], reason: 'Unknown contestant' };
   const official = (r.scoreDetail?.official as { source?: OfficialSource; why?: string } | undefined) ?? {};
   return {
     result: r,
@@ -236,6 +286,14 @@ export function saveHumanGrade(input: HumanGradeInput): CaseResultLite {
     blind: input.blind,
   };
   const humanScores = [...(current.humanScores ?? []).filter((h) => h.rater !== rater), entry];
+  if (isGalleryResult(current)) {
+    // The Gallery's own rule (src/engine/gallery-review.ts): the owner's artistry replaces the judges' artistry,
+    // brief adherence stays as judged. The same rule Blind Review uses, so both places agree.
+    const g = applyGalleryHumanScores({ ...current, humanScores, scoreDetail: { ...current.scoreDetail, humanScore: r4(humanMean({ humanScores }) ?? score) } });
+    g.scoreDetail = { ...g.scoreDetail, official: { source: 'human', policy: gradingPolicy(), why: 'The Gallery’s rule: your artistry rating replaces the judges’ artistry; brief adherence stays as judged.' } };
+    appendResult(g);
+    return toLite(g);
+  }
   const updated = applyOfficial({ ...current, humanScores }, spec, gradingPolicy());
   appendResult(updated);
   return toLite(updated);
@@ -260,6 +318,8 @@ export function reapplyPolicy(runId: string): { updated: number } {
   let n = 0;
   for (const r of readResults(runId)) {
     if (!r.humanScores?.length && !r.aiGrades?.length) continue;
+    // The Gallery follows its own program rule under every policy.
+    if (isGalleryResult(r)) continue;
     const { spec } = testCtx(r.testId, r.caseId);
     const next = applyOfficial(r, spec, policy);
     if (next.score !== r.score || next.summary !== r.summary || JSON.stringify(next.scoreDetail.official) !== JSON.stringify(r.scoreDetail.official)) {
@@ -293,10 +353,14 @@ function judgePool(): Contestant[] {
     .map((j) => asJudge(j, settings.judgeEffort));
 }
 
-/** The station's panel for one contestant: never its own vendor, never itself, at least two judges. */
-export function panelFor(contestant: Pick<Contestant, 'vendor' | 'model' | 'provider'>): { judges: Contestant[]; reason?: string } {
+/**
+ * The station's panel for one contestant: never its own vendor, never itself, at least two judges.
+ * `vision`: the test is judged from a picture (The Gallery), so only judges that can see images take part.
+ */
+export function panelFor(contestant: Pick<Contestant, 'vendor' | 'model' | 'provider'>, opts: { vision?: boolean } = {}): { judges: Contestant[]; reason?: string } {
   const pool = judgePool();
-  const judges = pool.filter((j) => j.vendor.toLowerCase() !== contestant.vendor.toLowerCase() && !(j.model === contestant.model && j.provider === contestant.provider));
+  const other = pool.filter((j) => j.vendor.toLowerCase() !== contestant.vendor.toLowerCase() && !(j.model === contestant.model && j.provider === contestant.provider));
+  const judges = opts.vision ? other.filter((j) => supportsVision(j, providerTypeOf(j))) : other;
   if (judges.length >= 2) return { judges };
   const configured = loadSettings().judges.length;
   return {
@@ -304,8 +368,15 @@ export function panelFor(contestant: Pick<Contestant, 'vendor' | 'model' | 'prov
     reason:
       pool.length < 2
         ? `AI grading needs at least 2 judge models with API keys (${pool.length} of ${configured} configured judges have one). Add keys on the API Keys page or more judges in config/settings.json.`
-        : `AI grading needs at least 2 judges from vendors other than ${contestant.vendor}; only ${judges.length} available.`,
+        : opts.vision && other.length >= 2
+          ? `This test is judged from the picture, so it needs at least 2 judges that can see images from vendors other than ${contestant.vendor}; only ${judges.length} available.`
+          : `AI grading needs at least 2 judges from vendors other than ${contestant.vendor}; only ${judges.length} available.`,
   };
+}
+
+/** Tests whose AI grade needs vision judges (the picture is the answer). */
+function needsVision(ctx: Pick<TestCtx, 'def'>): boolean {
+  return ctx.def?.kind === 'program' && GALLERY_PROGRAMS.has(ctx.def.program);
 }
 
 interface GradeImage extends ChatImage {
@@ -327,7 +398,7 @@ function imagesFor(r: CaseResult, def: TestDefinition | null, file: string | und
     }
   }
   for (const a of r.artifacts ?? []) {
-    if (a.kind !== 'png' || out.length >= 4) continue;
+    if (!['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(String(a.kind)) || out.length >= 4) continue;
     const full = artifactPath(r.runId, a.file);
     if (!full) continue;
     const buf = readFileSync(full);
@@ -342,24 +413,60 @@ function providerTypeOf(j: Contestant) {
   return loadProviders().find((p) => p.id === j.provider)?.type;
 }
 
+/** The stored painting of a Gallery result, as the picture its judges see. */
+function galleryPainting(r: CaseResult): { name: string; mediaType: 'image/png' | 'image/jpeg'; data: string; width: number; height: number; bytes: number } | null {
+  const g = r.scoreDetail?.gallery as GalleryDetail | undefined;
+  if (!g?.painting) return null;
+  const a = (r.artifacts ?? []).find((x) => x.name === g.painting!.name);
+  const full = a ? artifactPath(r.runId, a.file) : null;
+  if (!full || !existsSync(full)) return null;
+  const buf = readFileSync(full);
+  const info = imageInfo(buf);
+  if (!info) return null;
+  return { name: g.painting.name, mediaType: info.mediaType === 'image/png' ? 'image/png' : 'image/jpeg', data: buf.toString('base64'), width: info.width, height: info.height, bytes: buf.length };
+}
+
+/** Pictures and output a judge will get, for the estimate: [text tokens, pictures (w × h), output tokens]. */
+function judgeLoad(r: CaseResult, ctx: TestCtx): { textTokens: number; pictures: Array<{ width: number; height: number }>; outputTokens: number } | { reason: string } {
+  const def = ctx.def;
+  if (def?.kind === 'program' && GALLERY_PROGRAMS.has(def.program)) {
+    const g = r.scoreDetail?.gallery as GalleryDetail | undefined;
+    if (!g?.painting) return { reason: 'No painting was recorded, so there is nothing to judge.' };
+    const per = PROGRAMS[def.program]?.judges?.perCase;
+    return { textTokens: per?.inputTokens ?? 1900, pictures: [{ width: g.painting.width || 1536, height: g.painting.height || 1024 }], outputTokens: per?.outputTokens ?? 1600 };
+  }
+  const response = finalResponse(r);
+  if (!response.trim()) return { reason: 'No reply recorded to grade.' };
+  const rendered = def?.kind === 'prompt' && ctx.c ? renderCase(def, ctx.c, testBaseDir(ctx.file)) : null;
+  const task = (rendered ? taskText(rendered) : '').length;
+  if (ctx.spec.playtest) {
+    // The Game Jam: judges read the whole game file (up to ~1.1M characters) and see every playtest frame plus the motion strip.
+    const pictures = [...SHOT_TIMES.map(() => ({ ...VIEWPORT })), ...(ctx.spec.playtest.motionStrip ? [{ ...MOTION_SIZE }] : [])];
+    return { textTokens: 1500 + Math.ceil((Math.min(response.length, 1_100_000) + task + (ctx.spec.rubricText?.length ?? 0)) / 3.8), pictures, outputTokens: 3000 };
+  }
+  const images = imagesFor(r, def, ctx.file, ctx.c);
+  return {
+    textTokens: 700 + Math.ceil((Math.min(response.length, 60_000) + Math.min(task, 30_000) + (ctx.spec.rubricText?.length ?? 0)) / 3.8),
+    pictures: images.map((im) => ({ width: im.width ?? 1024, height: im.height ?? 1024 })),
+    outputTokens: 1500,
+  };
+}
+
 function estimateItem(m: RunManifest, r: CaseResult): AiEstimateItem {
   const ctx = testCtx(r.testId, r.caseId);
   if (ctx.spec.aiRole === 'none') return { key: r.key, ok: false, reason: 'Scored by machine: nothing for an AI judge to grade.', judges: [], estUsd: 0 };
   const con = m.contestants.find((c) => c.id === r.contestantId);
   if (!con) return { key: r.key, ok: false, reason: 'Unknown contestant', judges: [], estUsd: 0 };
-  const panel = panelFor(con);
+  const panel = panelFor(con, { vision: needsVision(ctx) });
   if (panel.judges.length < 2) return { key: r.key, ok: false, reason: panel.reason, judges: panel.judges.map((j) => ({ ...judgeInfo(j), images: 0, estUsd: 0 })), estUsd: 0 };
-  const response = finalResponse(r);
-  if (!response.trim()) return { key: r.key, ok: false, reason: 'No reply recorded to grade.', judges: [], estUsd: 0 };
-  const rendered = ctx.def?.kind === 'prompt' && ctx.c ? renderCase(ctx.def, ctx.c, testBaseDir(ctx.file)) : null;
-  const textTokens = 700 + Math.ceil((Math.min(response.length, 60_000) + Math.min((rendered ? taskText(rendered) : '').length, 30_000) + (ctx.spec.rubricText?.length ?? 0)) / 3.8);
-  const images = imagesFor(r, ctx.def, ctx.file, ctx.c);
+  const load = judgeLoad(r, ctx);
+  if ('reason' in load) return { key: r.key, ok: false, reason: load.reason, judges: [], estUsd: 0 };
   const judges = panel.judges.map((j) => {
     const pt = providerTypeOf(j);
     const vision = supportsVision(j, pt);
-    const imgTokens = vision ? images.reduce((s, im) => s + estimateImageTokens(im.width ?? 1024, im.height ?? 1024, pt, j.model), 0) : 0;
-    const estUsd = computeCost({ inputTokens: textTokens + imgTokens, outputTokens: 1500, reasoningTokens: 0, cachedInputTokens: 0, cacheWriteTokens: 0 }, j.pricing);
-    return { ...judgeInfo(j), images: vision ? images.length : 0, estUsd: Math.round(estUsd * 1e6) / 1e6 };
+    const imgTokens = vision ? load.pictures.reduce((s, im) => s + estimateImageTokens(im.width, im.height, pt, j.model), 0) : 0;
+    const estUsd = computeCost({ inputTokens: load.textTokens + imgTokens, outputTokens: load.outputTokens, reasoningTokens: 0, cachedInputTokens: 0, cacheWriteTokens: 0 }, j.pricing);
+    return { ...judgeInfo(j), images: vision ? load.pictures.length : 0, estUsd: Math.round(estUsd * 1e6) / 1e6 };
   });
   return { key: r.key, ok: true, judges, estUsd: judges.reduce((s, j) => s + j.estUsd, 0) };
 }
@@ -372,15 +479,21 @@ export function aiEstimate(runId: string, keys: string[]): AiEstimate {
     return r ? estimateItem(m, r) : { key: k, ok: false, reason: 'Result not found', judges: [], estUsd: 0 };
   });
   const total = items.reduce((s, i) => s + i.estUsd, 0);
-  return { items, totalUsd: Math.round(total * 1e6) / 1e6, totalUsdHigh: Math.round(total * 2.5 * 1e6) / 1e6, gradable: items.filter((i) => i.ok).length };
+  const totalUsd = Math.round(total * 1e6) / 1e6;
+  return { items, totalUsd, totalUsdHigh: Math.round(total * 2.5 * 1e6) / 1e6, gradable: items.filter((i) => i.ok).length, budget: spendCheck(totalUsd, 'AI grading') };
 }
 
 /** Grade results with AI judges. `confirmCostUsd` must cover a fresh estimate: nothing is spent without it. */
 export async function aiGrade(runId: string, keys: string[], confirmCostUsd: number, signal?: AbortSignal): Promise<{ outcomes: AiGradeOutcome[]; costUsd: number }> {
   const est = aiEstimate(runId, keys);
   if (!(typeof confirmCostUsd === 'number' && Number.isFinite(confirmCostUsd))) throw new Error('Confirm the cost first: call the estimate, then send confirmCostUsd.');
-  if (est.totalUsd > confirmCostUsd * 1.05 + 0.0005) throw new Error(`The estimate is now $${est.totalUsd.toFixed(4)}, more than the $${confirmCostUsd.toFixed(4)} you confirmed. Review the new estimate.`);
+  if (est.totalUsd > confirmCostUsd * 1.05 + 0.0005) throw new Error(`The estimate is now ${fmtMoney(est.totalUsd)}, more than the ${fmtMoney(confirmCostUsd)} you confirmed. Review the new estimate.`);
+  // The monthly budget's hard stop: refuse up front, and stop between answers once what is left runs out.
+  const gate = spendCheck(est.totalUsd, 'AI grading');
+  if (gate.blocked) throw new BudgetBlockedError(gate.message ?? 'The monthly budget’s hard stop blocks this.');
+  const m = requireRun(runId);
   const settings = loadSettings();
+  let spent = 0;
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), 15 * 60 * 1000);
   signal?.addEventListener('abort', () => ctl.abort(), { once: true });
@@ -401,7 +514,10 @@ export async function aiGrade(runId: string, keys: string[], confirmCostUsd: num
         if (!item.ok) return { key: item.key, ok: false, error: item.reason, costUsd: 0 };
         const release = await sem.acquire();
         try {
-          return await aiGradeOne(runId, item.key, targetFor, settings.maxRetries, ctl.signal);
+          if (gate.hardStop && gate.availableUsd !== null && spent + item.estUsd > gate.availableUsd) return { key: item.key, ok: false, error: 'Not graded: the monthly budget’s hard stop was reached.', costUsd: 0 };
+          const out = await aiGradeOne(runId, item.key, targetFor, settings.maxRetries, ctl.signal);
+          spent += out.costUsd;
+          return out;
         } catch (err) {
           return { key: item.key, ok: false, error: (err as Error).message, costUsd: 0 };
         } finally {
@@ -412,6 +528,9 @@ export async function aiGrade(runId: string, keys: string[], confirmCostUsd: num
     return { outcomes, costUsd: Math.round(outcomes.reduce((s, o) => s + o.costUsd, 0) * 1e6) / 1e6 };
   } finally {
     clearTimeout(timer);
+    // Every judge call counts in "My budget" (data/budget/spend-log.jsonl), in the month it was made.
+    const graded = est.items.filter((i) => i.ok).length;
+    recordSpend({ kind: 'grade', name: `Grading Station: AI judges graded ${graded} answer${graded === 1 ? '' : 's'} (${m.name || runId})`, costUsd: spent });
   }
 }
 
@@ -420,13 +539,13 @@ async function aiGradeOne(runId: string, key: string, targetFor: (j: Contestant)
   const r = requireResult(runId, key);
   const ctx = testCtx(r.testId, r.caseId);
   const { def, c, spec } = ctx;
-  if (!def || def.kind !== 'prompt' || !c) throw new Error('Only prompt tests can be graded by AI judges.');
+  const gallery = def?.kind === 'program' && GALLERY_PROGRAMS.has(def.program);
+  if (!def || (!gallery && (def.kind !== 'prompt' || !c))) throw new Error('Only tests with a rubric can be graded by AI judges.');
   const con = m.contestants.find((x) => x.id === r.contestantId)!;
-  const { judges } = panelFor(con);
+  const { judges } = panelFor(con, { vision: gallery });
   if (judges.length < 2) throw new Error('Not enough eligible judges.');
   const response = finalResponse(r);
-  const rendered = renderCase(def, c, testBaseDir(ctx.file));
-  const images = imagesFor(r, def, ctx.file, c);
+  const images = def.kind === 'prompt' && c ? imagesFor(r, def, ctx.file, c) : [];
   const batch = randomUUID().slice(0, 8);
   const at = new Date().toISOString();
   const transcript: TranscriptEntry[] = [];
@@ -458,6 +577,9 @@ async function aiGradeOne(runId: string, key: string, targetFor: (j: Contestant)
       ),
   };
 
+  if (gallery) return galleryGradeOne(r, panel, judges, perJudge, transcript, { at, batch, spec });
+  if (def.kind !== 'prompt' || !c) throw new Error('Only tests with a rubric can be graded by AI judges.');
+  const rendered = renderCase(def, c, testBaseDir(ctx.file));
   const sc = caseScorer(def, c);
   let verdicts: Array<{ contestantId: string; score: number; label?: string; rationale: string }> = [];
   let extraDetail: Record<string, unknown> = {};
@@ -502,18 +624,78 @@ async function aiGradeOne(runId: string, key: string, targetFor: (j: Contestant)
     return { judgeId: v.contestantId.replace(/@judge$/, ''), judgeLabel: j?.label ?? v.contestantId, vendor: j?.vendor ?? '', score: r4(v.score), label: v.label, rationale: v.rationale, at, batch, costUsd: Math.round((perJudge.get(v.contestantId)?.cost ?? 0) * 1e6) / 1e6, images: perJudge.get(v.contestantId)?.images ?? 0 };
   });
   const cost = transcript.reduce((s, e) => s + e.costUsd, 0);
-  // Record the calls (and their cost) even when grading failed: money was spent.
+  // Record the calls even when grading failed: money was spent. The cost lives on each AI grade and in the budget's
+  // spend log (aiGrade → recordSpend), not in metrics.judgeCostUsd, so "My budget" counts it once, in the month it was spent.
   const latest = requireResult(runId, key);
   let next: CaseResult = {
     ...latest,
     transcript: [...(latest.transcript ?? []), ...transcript],
-    metrics: { ...latest.metrics, judgeCostUsd: Math.round(((latest.metrics?.judgeCostUsd ?? 0) + cost) * 1e6) / 1e6 },
     aiGrades: [...(latest.aiGrades ?? []), ...grades],
     scoreDetail: { ...(latest.scoreDetail ?? {}), ...extraDetail },
   };
   if (grades.length) next = applyOfficial(next, spec, gradingPolicy());
   appendResult(next);
   return { key, ok: grades.length > 0, error: grades.length ? undefined : (error ?? 'No judge verdicts'), costUsd: cost, result: toLite(next) };
+}
+
+/**
+ * The Gallery: the station's panel judges the stored painting with the program's own judge prompt and rubric
+ * (src/programs/lib/gallery-judge.ts). Each verdict is stored as an AI grade. When the run's judges never answered
+ * (the painting waits for a rating), the new panel's verdict becomes the score, exactly as it would have in the run.
+ */
+async function galleryGradeOne(
+  r: CaseResult,
+  panel: JudgePanel,
+  judges: Contestant[],
+  perJudge: Map<string, { cost: number; images: number }>,
+  transcript: TranscriptEntry[],
+  x: { at: string; batch: string; spec: GradingSpec },
+): Promise<AiGradeOutcome> {
+  const g = r.scoreDetail?.gallery as GalleryDetail;
+  const img = galleryPainting(r);
+  if (!img) throw new Error('The painting file is missing from the run folder.');
+  const brief = briefForSeed(g.brief.n);
+  const mode = g.mode;
+  // finishPainting judges the picture and builds the result; the station's panel stands in for the run's.
+  const ctx = { judges: panel } as unknown as ProgramContext;
+  const res = await finishPainting(ctx, brief, { kind: 'painting', image: img, costUsd: g.paintingCostUsd }, mode);
+  const fresh = res.detail?.gallery as GalleryDetail | undefined;
+  const byId = new Map(judges.map((j) => [j.id, j]));
+  const grades: AiGrade[] = (fresh?.judges ?? [])
+    .filter((row) => row.artistry !== null)
+    .map((row) => {
+      const j = byId.get(row.judgeId);
+      return {
+        judgeId: row.judgeId.replace(/@judge$/, ''),
+        judgeLabel: j?.label ?? row.judgeId,
+        vendor: j?.vendor ?? '',
+        score: r4(galleryScore(row.adherence, row.artistry) ?? 0),
+        rationale: `Brief ${row.adherence === null ? '—' : Math.round(row.adherence * 100)}% · artistry ${row.artistry!.toFixed(1)}/10. ${row.summary}`.trim(),
+        at: x.at,
+        batch: x.batch,
+        costUsd: Math.round((perJudge.get(row.judgeId)?.cost ?? 0) * 1e6) / 1e6,
+        images: perJudge.get(row.judgeId)?.images ?? 0,
+      };
+    });
+  const cost = transcript.reduce((s, e) => s + e.costUsd, 0);
+  const latest = requireResult(r.runId, r.key);
+  let next: CaseResult = { ...latest, transcript: [...(latest.transcript ?? []), ...transcript], aiGrades: [...(latest.aiGrades ?? []), ...grades] };
+  const waiting = latest.status === 'pending-human' && !(latest.humanScores ?? []).length;
+  if (waiting && res.status !== 'pending-human' && fresh) {
+    // Nobody graded it in the run: the station's judges give it the score the run's judges would have.
+    next = {
+      ...next,
+      status: 'ok',
+      error: undefined,
+      score: res.score,
+      passed: res.passed ?? res.score >= x.spec.passThreshold,
+      summary: res.summary,
+      scoreDetail: { ...latest.scoreDetail, ...res.detail, official: { source: 'ai', policy: gradingPolicy(), why: 'No judge answered during the run, so the Grading Station’s vision judges graded the painting with the Gallery’s own rubric.' } },
+    };
+  }
+  appendResult(next);
+  const failed = (fresh?.judges ?? []).filter((row) => row.error).map((row) => `${row.judgeId}: ${row.error}`);
+  return { key: r.key, ok: grades.length > 0, error: grades.length ? undefined : failed.join('; ') || 'No judge verdicts', costUsd: cost, result: toLite(next) };
 }
 
 // ───────────────────────────── Performance summaries ─────────────────────────────
@@ -557,13 +739,14 @@ export function runSummaries(runId: string): RunSummaries {
   const manual = new Set(loadProviders().filter((p) => p.type === 'manual').map((p) => p.id));
   const manualIds = new Set(m.contestants.filter((c) => manual.has(c.provider)).map((c) => c.id));
   const template: Record<string, string> = {};
+  const currency = normalizeCurrency(loadSettings().currency);
   const groups = pairResults(runId);
   const cache = new Map<string, { unit: string; kind: 'prompt' | 'program' }>();
   for (const [k, rs] of groups) {
     const testId = rs[0]!.testId;
     let uk = cache.get(testId);
     if (!uk) cache.set(testId, (uk = unitAndKind(testId)));
-    template[k] = templateSummary({ ...uk, results: rs, manual: manualIds.has(rs[0]!.contestantId) });
+    template[k] = templateSummary({ ...uk, results: rs, manual: manualIds.has(rs[0]!.contestantId), currency });
   }
   const ai: Record<string, AiSummary & { stale: boolean }> = {};
   for (const [k, s] of Object.entries(readAiSummaries(runId))) {
@@ -609,7 +792,7 @@ function summaryPrompt(con: ContestantSnapshot, testId: string, testName: string
     cases,
     judgeRationales: rationales.length ? rationales : undefined,
     avgSecondsPerCase: Math.round((mean(rs.map((r) => r.metrics?.wallMs ?? 0)) ?? 0) / 100) / 10,
-    costUsd: Math.round(rs.reduce((s, r) => s + (r.metrics?.costUsd ?? 0), 0) * 10000) / 10000,
+    cost: fmtMoney(rs.reduce((s, r) => s + (r.metrics?.costUsd ?? 0), 0)),
   };
   void con;
   return `Facts (JSON):\n${JSON.stringify(facts, null, 1)}\n\nTemplate summary: ${template}\n\nWrite the performance summary (at most ${SUMMARY_WORD_LIMIT} words).`;
@@ -641,14 +824,16 @@ export function aiSummaryEstimate(runId: string, pairs?: string[]): SummaryEstim
     out.push({ key: k, contestantId, testId, writer: judgeInfo(w), estUsd: Math.round(estUsd * 1e6) / 1e6, cached });
   }
   const total = out.reduce((s, p) => s + p.estUsd, 0);
-  return { pairs: out, totalUsd: Math.round(total * 1e6) / 1e6, totalUsdHigh: Math.round(total * 3 * 1e6) / 1e6 };
+  const totalUsd = Math.round(total * 1e6) / 1e6;
+  return { pairs: out, totalUsd, totalUsdHigh: Math.round(total * 3 * 1e6) / 1e6, budget: spendCheck(totalUsd, 'AI summaries') };
 }
 
 /** Write AI summaries (cached per model × test until the results change). Requires the confirmed cost. */
 export async function aiSummaryGenerate(runId: string, pairs: string[] | undefined, confirmCostUsd: number): Promise<{ summaries: Record<string, AiSummary>; costUsd: number; errors: Record<string, string> }> {
   const est = aiSummaryEstimate(runId, pairs);
   if (!(typeof confirmCostUsd === 'number' && Number.isFinite(confirmCostUsd))) throw new Error('Confirm the cost first: call the estimate, then send confirmCostUsd.');
-  if (est.totalUsd > confirmCostUsd * 1.05 + 0.0005) throw new Error(`The estimate is now $${est.totalUsd.toFixed(4)}, more than the $${confirmCostUsd.toFixed(4)} you confirmed.`);
+  if (est.totalUsd > confirmCostUsd * 1.05 + 0.0005) throw new Error(`The estimate is now ${fmtMoney(est.totalUsd)}, more than the ${fmtMoney(confirmCostUsd)} you confirmed.`);
+  if (est.budget.blocked) throw new BudgetBlockedError(est.budget.message ?? 'The monthly budget’s hard stop blocks this.');
   const m = requireRun(runId);
   const groups = pairResults(runId);
   const { template } = runSummaries(runId);
@@ -695,6 +880,7 @@ export async function aiSummaryGenerate(runId: string, pairs: string[] | undefin
     );
   } finally {
     clearTimeout(timer);
+    recordSpend({ kind: 'other', name: `AI-written performance summaries (${m.name || runId})`, costUsd: spent });
   }
   writeJsonAtomic(summariesFile(runId), store);
   return { summaries: store, costUsd: Math.round(spent * 1e6) / 1e6, errors };

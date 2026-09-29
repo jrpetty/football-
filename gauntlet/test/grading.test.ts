@@ -21,7 +21,7 @@ cpSync(new URL('../config', import.meta.url), join(sandbox, 'config'), { recursi
   const models = JSON.parse(readFileSync(file, 'utf8'));
   // Two fake judges from two other vendors (baseline provider: no network; they answer judge prompts with random verdicts).
   models.contestants.push({ id: 'fake-judge-a', label: 'Fake Judge A', vendor: 'JudgeCo A', provider: 'baseline', model: 'judge-a', color: '#111111', enabled: true, vision: true, pricing: { inputPerM: 1, outputPerM: 2 } });
-  models.contestants.push({ id: 'fake-judge-b', label: 'Fake Judge B', vendor: 'JudgeCo B', provider: 'baseline', model: 'judge-b', color: '#222222', enabled: true, pricing: { inputPerM: 1, outputPerM: 2 } });
+  models.contestants.push({ id: 'fake-judge-b', label: 'Fake Judge B', vendor: 'JudgeCo B', provider: 'baseline', model: 'judge-b', color: '#222222', enabled: true, vision: false, pricing: { inputPerM: 1, outputPerM: 2 } });
   // A contestant from judge A's vendor: judge A must never grade it.
   models.contestants.push({ id: 'same-vendor', label: 'Same Vendor Model', vendor: 'JudgeCo A', provider: 'baseline', model: 'sv', color: '#333333', enabled: true, pricing: { inputPerM: 0, outputPerM: 0 } });
   writeFileSync(file, JSON.stringify(models));
@@ -164,10 +164,19 @@ test('gradingSpecFor covers every scorer type with a consistent spec', () => {
 
 test('gradingSpecFor covers every program and judged Arena game', () => {
   for (const p of Object.values(PROGRAMS)) {
-    const s = spec.gradingSpecFor({ ...base, kind: 'program', id: `agentic.${p.id}`, program: p.id, seeds: [1] }, { programScoring: p.scoring });
-    assert.equal(s.kind, 'simulation');
-    assert.equal(s.humanRole, 'dispute');
+    const s = spec.gradingSpecFor({ ...base, kind: 'program', id: `agentic.${p.id}`, program: p.id, seeds: [1] }, { programScoring: p.scoring, caseId: 'seed-1' });
     assert.equal(s.formula, p.scoring);
+    if (spec.GALLERY_PROGRAMS.has(p.id)) {
+      // Programs graded by vision judges: people rate artistry, AI judges re-judge the picture.
+      assert.equal(s.kind, 'judged', p.id);
+      assert.equal(s.humanRole, 'grade');
+      assert.equal(s.aiRole, 'grade');
+      continue;
+    }
+    assert.equal(s.kind, 'simulation', p.id);
+    assert.equal(s.humanRole, 'dispute');
+    assert.equal(s.aiRole, 'none');
+    assert.equal(s.minJudges, 0);
     assert.equal(s.output, 'replay');
   }
   const judged = Object.values(GAMES).filter((g) => g.judge);
@@ -227,6 +236,46 @@ test('Game Jam (artifact with playtest): checklist + five weighted criteria with
   assert.equal(spec.scoreFromGrade(s, { criteria: { ...zero, visual: 10 } }), 0.3);
   assert.equal(spec.scoreFromGrade(s, { criteria: { ...zero, creativity: 10 } }), 0.25);
   assert.equal(spec.scoreFromGrade(s, { criteria: { ...zero, ambition: 10 } }), 0.05);
+  // v2 playtest: 30 s at full HD, 8 screenshots and a motion strip; the model had its own maximum output.
+  assert.equal(jam.version, '2.0.0');
+  assert.equal(s.maxOutputTokens, 'model-max');
+  assert.deepEqual(s.playtest, { protocol: 2, seconds: 30, width: 1920, height: 1080, screenshots: 8, motionStrip: true });
+  assert.match(s.judgeSees ?? '', /8 full-HD screenshots from a 30 s playtest and a motion strip/);
+  assert.equal(s.judgeWeight, 0.75);
+  assert.equal(s.checklist.length, 6, 'the six automated browser checks');
+});
+
+test('the Game Jam playtest numbers in the grading spec match the real playtest', async () => {
+  const pt = await import('../src/scoring/playtest.ts');
+  assert.equal(spec.JAM_PLAYTEST.width, pt.VIEWPORT.width);
+  assert.equal(spec.JAM_PLAYTEST.height, pt.VIEWPORT.height);
+  assert.equal(spec.JAM_PLAYTEST.screenshots, pt.SHOT_TIMES.length);
+  assert.equal(spec.JAM_PLAYTEST.seconds * 1000, Math.max(...pt.SHOT_TIMES));
+  const shared = await import('../src/scoring/game-jam-shared.ts');
+  assert.equal(spec.JAM_PLAYTEST.protocol, shared.GAME_JAM_PROTOCOL);
+});
+
+test('The Gallery (both tests): artistry rubric with the judges’ anchors, the brief checklist per seed', () => {
+  for (const file of ['gallery-masterpiece', 'gallery-painted-in-code']) {
+    const def = JSON.parse(readFileSync(new URL(`../tests/art/${file}.json`, import.meta.url), 'utf8'));
+    const p = PROGRAMS[def.program]!;
+    const s = spec.gradingSpecFor(def, { caseId: 'seed-3', programScoring: p.scoring });
+    assert.equal(s.kind, 'judged');
+    assert.equal(s.scorerType, `program:${def.program}`);
+    assert.equal(s.criteria.length, 6);
+    assert.ok(s.criteria.every((c) => c.min === 1 && c.max === 10 && c.anchors[0]!.value === 10 && c.anchors.at(-1)!.value === 1));
+    assert.equal(s.checklist.length, 9, '6 required elements + 3 things to avoid');
+    assert.ok(s.checklist.every((c) => c.source === 'brief'));
+    assert.equal(s.minJudges, 2);
+    assert.equal(s.output, file === 'gallery-painted-in-code' ? 'svg' : 'image');
+    assert.match(s.brief ?? '', /COMMISSION No\. 3/);
+    assert.match(s.judgeSees ?? '', /painting\.png/);
+    // A rating is artistry out of 10: all sevens → 0.7 (the Gallery stores artistry = score × 10).
+    assert.equal(spec.scoreFromGrade(s, { criteria: Object.fromEntries(s.criteria.map((c) => [c.id, 7])) }), 0.7);
+    assert.equal(spec.scoreFromGrade(s, { criteria: { composition: 7 } }), null, 'every line must be rated');
+    // Without a case: still a usable spec.
+    assert.equal(spec.gradingSpecFor(def, { programScoring: p.scoring }).checklist.length, 1);
+  }
 });
 
 test('gradingSpecFor works for every test in the library', async () => {
@@ -271,9 +320,14 @@ const ok = (caseId: string, score: number, extra: Partial<R> = {}): R => ({ case
 
 test('template summaries are grounded, natural and never over 30 words', () => {
   const tenQ = Array.from({ length: 10 }, (_, i) => ok(`c${i + 1}`, i === 6 ? 0 : 1, i === 6 ? { scoreDetail: { extracted: 'Wolf', expected: 'Fox' } } : {}));
-  const s1 = summary.templateSummary({ unit: 'question', kind: 'prompt', results: tenQ });
+  const USD = { code: 'USD' as const, usdPerUnit: 1 };
+  const s1 = summary.templateSummary({ unit: 'question', kind: 'prompt', results: tenQ, currency: USD });
   assert.match(s1, /^Got 9 of 10 questions right \(90\/100\)\. Missed question 7: answered "Wolf", key says "Fox"\./);
   assert.match(s1, /Took 12 s per question on average; cost \$0\.04\./);
+  // The owner's currency (pounds by default): $0.04 at $1.33 per pound.
+  assert.match(summary.templateSummary({ unit: 'question', kind: 'prompt', results: tenQ }), /cost £0\.03\./);
+  assert.match(summary.templateSummary({ unit: 'question', kind: 'prompt', results: [ok('c1', 1, { metrics: { wallMs: 1000, costUsd: 0.001 } })] }), /cost under £0\.01\./);
+  assert.match(summary.templateSummary({ unit: 'question', kind: 'prompt', results: [ok('c1', 1, { metrics: { wallMs: 1000, costUsd: 26.6 } })] }), /cost £20\./);
 
   const cases: Array<[string, import('../src/grading/summary.ts').SummaryInput, RegExp]> = [
     ['empty', { unit: 'question', kind: 'prompt', results: [] }, /No results/],
@@ -483,4 +537,99 @@ test('station: policy changes re-apply; summaries (template + AI) are cached and
   assert.equal(again.totalUsd, 0, 'cached summaries cost nothing');
   const facts = station.performanceFacts(runId);
   assert.equal(facts.find((f) => f.testId === 'math.tiny' && f.contestantId === 'random-baseline')!.source, 'ai');
+});
+
+// ───────────────────────────── Money: the monthly budget ─────────────────────────────
+
+test('station: AI grading and AI summaries are logged in My budget once, and the hard stop blocks them', async () => {
+  const spend = await import('../src/budget/spend.ts');
+  const settingsFile = join(sandbox, 'config', 'settings.json');
+  const logged = (re: RegExp) => spend.monthSpend().items.filter((i) => re.test(i.name));
+  // The earlier AI grades and summaries were logged as paid one-off calls…
+  assert.ok(logged(/^Grading Station: AI judges graded/).length >= 3);
+  assert.ok(logged(/^AI-written performance summaries/).length >= 1);
+  // …and not counted a second time inside the run (the grades' cost is not added to metrics.judgeCostUsd).
+  const runSpend = spend.runSpentUsd(runId);
+  const q = station.gradingQueue(runId);
+  const key = q.find((i) => i.testId === 'honesty.mini' && i.contestantId === 'random-baseline')!.key;
+  const est = station.aiEstimate(runId, [key]);
+  assert.equal(est.budget.blocked, false);
+  assert.match(est.budget.line, /^This month: £/);
+  const before = spend.monthSpend().spentUsd;
+  const res = await station.aiGrade(runId, [key], est.totalUsd);
+  assert.ok(res.costUsd > 0);
+  assert.equal(spend.runSpentUsd(runId), runSpend, 'the run’s own spend is unchanged');
+  assert.ok(Math.abs(spend.monthSpend().spentUsd - before - res.costUsd) < 1e-6, 'the month grew by exactly what the judges cost');
+
+  // Hard stop with nothing left: the estimate says so, and nothing is spent.
+  const s = JSON.parse(readFileSync(settingsFile, 'utf8'));
+  writeFileSync(settingsFile, JSON.stringify({ ...s, budget: { monthlyUsd: 0.000001 + spend.monthSpend().spentUsd / 2, hardStop: true } }));
+  const blocked = station.aiEstimate(runId, [key]);
+  assert.equal(blocked.budget.blocked, true);
+  assert.match(blocked.budget.message!, /monthly budget is used up.*hard stop/);
+  const n = store.readResults(runId).find((r) => r.key === key)!.aiGrades!.length;
+  await assert.rejects(() => station.aiGrade(runId, [key], blocked.totalUsd), /hard stop/);
+  assert.equal(store.readResults(runId).find((r) => r.key === key)!.aiGrades!.length, n, 'no judge was called');
+  const sumEst = station.aiSummaryEstimate(runId, ['random-baseline|honesty.mini']);
+  assert.equal(sumEst.budget.blocked, true);
+  await assert.rejects(() => station.aiSummaryGenerate(runId, ['random-baseline|honesty.mini'], sumEst.totalUsd), /hard stop/);
+  // Hard stop off: a warning only.
+  writeFileSync(settingsFile, JSON.stringify({ ...s, budget: { monthlyUsd: 0.000001 + spend.monthSpend().spentUsd / 2 } }));
+  const warn = station.aiEstimate(runId, [key]);
+  assert.equal(warn.budget.blocked, false);
+  assert.match(warn.budget.message ?? '', /^Warning/);
+  writeFileSync(settingsFile, JSON.stringify(s));
+});
+
+// ───────────────────────────── The Gallery (a program graded by vision judges) ─────────────────────────────
+
+test('station: a Gallery painting is rated by a person (artistry) and re-judged by vision judges only', async () => {
+  mkdirSync(join(sandbox, 'tests', 'art'), { recursive: true });
+  const def = JSON.parse(readFileSync(new URL('../tests/art/gallery-masterpiece.json', import.meta.url), 'utf8'));
+  writeFileSync(join(sandbox, 'tests', 'art', 'gallery.json'), JSON.stringify({ ...def, seeds: [1, 2] }));
+  const settingsFile = join(sandbox, 'config', 'settings.json');
+  const s = JSON.parse(readFileSync(settingsFile, 'utf8'));
+  writeFileSync(settingsFile, JSON.stringify({ ...s, judges: [] }));
+  const gRun = await runner.startRun({ contestantIds: ['random-baseline'], testIds: ['art.gallery-masterpiece'], repeats: 1 });
+  await runner.waitForRun(gRun);
+  const q = station.gradingQueue(gRun);
+  assert.equal(q.length, 2);
+  assert.ok(q.every((i) => i.need === 'grade' && i.todo && i.kind === 'judged'), JSON.stringify(q.map((i) => [i.need, i.todo, i.kind, i.status, i.summary])));
+  const [a, b] = q;
+  const item = station.stationItem(gRun, a!.key);
+  assert.equal(item.spec.checklist.length, 9);
+  assert.match(item.spec.brief!, /COMMISSION No\. 1/);
+  assert.equal(item.aiPanel.ok, false, 'no judges configured');
+
+  // A person rates artistry 8/10 on every line: brief adherence was never judged, so artistry is the whole score.
+  const lite = station.saveHumanGrade({ runId: gRun, key: a!.key, rater: 'mika', criteria: Object.fromEntries(item.spec.criteria.map((c) => [c.id, 8])) });
+  assert.equal(lite.status, 'ok');
+  assert.equal(lite.score, 0.8);
+  assert.match(lite.summary, /Artistry 8\.0\/10 \(owner\)/);
+  const stored = store.readResults(gRun).find((r) => r.key === a!.key)!;
+  assert.equal((stored.scoreDetail.gallery as { owner?: { artistry: number } }).owner?.artistry, 8);
+  assert.equal((stored.scoreDetail.official as { source: string }).source, 'human');
+
+  // AI mode: only judges that can see pictures (A and C; B is text-only) from other vendors.
+  writeFileSync(settingsFile, JSON.stringify({ ...s, judges: ['fake-judge-a', 'fake-judge-b'] }));
+  const few = station.aiEstimate(gRun, [b!.key]);
+  assert.equal(few.items[0]!.ok, false);
+  assert.match(few.items[0]!.reason!, /judges that can see images/);
+  const models = JSON.parse(readFileSync(join(sandbox, 'config', 'models.json'), 'utf8'));
+  models.contestants.push({ id: 'fake-judge-c', label: 'Fake Judge C', vendor: 'JudgeCo C', provider: 'baseline', model: 'judge-c', color: '#444444', enabled: true, vision: true, pricing: { inputPerM: 1, outputPerM: 2 } });
+  writeFileSync(join(sandbox, 'config', 'models.json'), JSON.stringify(models));
+  writeFileSync(settingsFile, JSON.stringify({ ...s, judges: ['fake-judge-a', 'fake-judge-b', 'fake-judge-c'] }));
+  const est = station.aiEstimate(gRun, [b!.key]);
+  assert.equal(est.items[0]!.ok, true, est.items[0]!.reason);
+  assert.deepEqual(est.items[0]!.judges.map((j) => j.id).sort(), ['fake-judge-a', 'fake-judge-c']);
+  assert.ok(est.items[0]!.judges.every((j) => j.images === 1));
+  const res = await station.aiGrade(gRun, [b!.key], est.totalUsd);
+  assert.ok(res.outcomes[0]!.ok, res.outcomes[0]!.error);
+  const judged = store.readResults(gRun).find((r) => r.key === b!.key)!;
+  assert.equal(judged.status, 'ok', 'the waiting painting now has the panel’s score');
+  assert.equal(judged.aiGrades!.length, 2);
+  assert.ok(judged.aiGrades!.every((g) => /^Brief \d+% · artistry \d+\.\d\/10\./.test(g.rationale) && g.images === 1));
+  assert.equal((judged.scoreDetail.gallery as { status: string }).status, 'judged');
+  assert.equal((judged.scoreDetail.official as { source: string }).source, 'ai');
+  writeFileSync(settingsFile, JSON.stringify(s));
 });

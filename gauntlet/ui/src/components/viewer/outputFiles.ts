@@ -28,7 +28,9 @@ export function outputFilesFor(r: CaseResult, opts: { runId?: string; replayCont
   const hasHtml = main.some((a) => a.kind === 'html');
   const hasSvg = main.some((a) => a.kind === 'svg');
   for (const a of main) {
-    const role = a.kind === 'html' ? 'The build' : a.kind === 'svg' ? 'The drawing' : a.kind === 'png' ? 'Picture' : /solution|\.js$/.test(a.name) ? 'Code' : 'File';
+    // The Gallery: the painting (a picture, or the PNG a painted-in-code SVG rendered to) comes first.
+    const painting = /^painting\.(png|jpe?g|webp)$/i.test(a.name);
+    const role = painting ? 'The painting' : a.name === 'painting.svg' ? 'SVG source' : a.kind === 'html' ? 'The build' : a.kind === 'svg' ? 'The drawing' : a.kind === 'png' || a.kind === 'jpg' ? 'Picture' : /solution|\.js$/.test(a.name) ? 'Code' : 'File';
     out.push({ id: `art:${a.file}`, name: a.name, url: urlFor(a.file), size: a.bytes, role, screenshots: a.kind === 'html' ? shotFiles : undefined, hint: a.kind === 'html' ? 'html' : a.kind === 'svg' ? 'svg' : undefined });
   }
   // Screenshots of an SVG render (no HTML to attach them to) are shown as pictures.
@@ -65,5 +67,5 @@ export function outputFilesFor(r: CaseResult, opts: { runId?: string; replayCont
 
 /** The file to open first: the replay, the build, the JSON answer, else the first file. */
 export function primaryFile(files: ViewerFile[]): string | undefined {
-  return (files.find((f) => f.id === 'replay') ?? files.find((f) => f.hint === 'html' || f.hint === 'svg') ?? files.find((f) => f.id === 'extracted-json') ?? files.find((f) => f.id.startsWith('att:') && !!f.url) ?? files.find((f) => f.id === 'reply') ?? files[0])?.id;
+  return (files.find((f) => f.id === 'replay') ?? files.find((f) => f.role === 'The painting') ?? files.find((f) => f.hint === 'html' || f.hint === 'svg') ?? files.find((f) => f.id === 'extracted-json') ?? files.find((f) => f.id.startsWith('att:') && !!f.url) ?? files.find((f) => f.id === 'reply') ?? files[0])?.id;
 }

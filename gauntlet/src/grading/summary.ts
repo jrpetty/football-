@@ -8,6 +8,7 @@
  * Grading Station, the Presenter and the Studio all call it directly.
  */
 import type { CaseMetrics, ResultStatus, ScoreDetail } from '../core/types.ts';
+import { CURRENCIES, DEFAULT_CURRENCY, fromUsd, type CurrencySettings } from '../core/currency.ts';
 
 export const SUMMARY_WORD_LIMIT = 30;
 
@@ -34,6 +35,8 @@ export interface SummaryInput {
   results: SummaryResult[];
   /** Answers pasted by hand: time and cost are not measurements, so they are left out. */
   manual?: boolean;
+  /** The owner's display currency (GBP by default); costs are stored in USD. */
+  currency?: CurrencySettings;
 }
 
 // ───────────────────────────── Word helpers ─────────────────────────────
@@ -101,11 +104,14 @@ function fmtSec(ms: number): string {
   return `${(s / 60).toFixed(1)} min`;
 }
 
-function fmtUsd(usd: number): string {
+/** A cost in the display currency, rounded for a spoken sentence: "nothing", "under £0.01", "£0.52", "£14". */
+export function spokenMoney(usd: number, c: CurrencySettings = DEFAULT_CURRENCY): string {
   if (usd <= 0) return 'nothing';
-  if (usd < 0.01) return 'under 1¢';
-  if (usd < 10) return `$${usd.toFixed(2)}`;
-  return `$${Math.round(usd)}`;
+  const sym = CURRENCIES[c.code].symbol;
+  const v = fromUsd(usd, c);
+  if (v < 0.01) return `under ${sym}0.01`;
+  if (v < 10) return `${sym}${v.toFixed(2)}`;
+  return `${sym}${Math.round(v).toLocaleString('en-US')}`;
 }
 
 // ───────────────────────────── Why a case missed ─────────────────────────────
@@ -258,7 +264,7 @@ export function templateSummary(input: SummaryInput): string {
   if (!input.manual) {
     const walls = scored.map((r) => r.metrics?.wallMs).filter((x): x is number => typeof x === 'number' && x > 0);
     const spend = scored.reduce((s, r) => s + (r.metrics?.costUsd ?? 0), 0);
-    if (walls.length) cost = `Took ${fmtSec(walls.reduce((s, x) => s + x, 0) / walls.length)} per ${unit} on average; cost ${fmtUsd(spend)}.`;
+    if (walls.length) cost = `Took ${fmtSec(walls.reduce((s, x) => s + x, 0) / walls.length)} per ${unit} on average; cost ${spokenMoney(spend, input.currency)}.`;
   } else cost = 'Answers pasted by hand.';
 
   // Assemble within the word limit, most important first.
