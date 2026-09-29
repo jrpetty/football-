@@ -42,20 +42,27 @@ export const ResultsMatrix = memo(function ResultsMatrix({ manifest, results, on
   const [q, setQ] = useState('');
 
   const cells = useMemo(() => {
-    const m = new Map<string, Cell & { sum: number }>();
+    // Same average as the leaderboard (src/engine/aggregate.ts): only results it counts, mean over repeats per case,
+    // then mean over cases, so a cell always equals the leaderboard's test score and the 30-word summary.
+    const m = new Map<string, Cell & { byCase: Map<string, number[]> }>();
     for (const r of results) {
       const k = `${r.contestantId}|${r.testId}`;
       let c = m.get(k);
-      if (!c) m.set(k, (c = { mean: null, n: 0, scored: 0, errors: 0, pending: 0, sum: 0 }));
+      if (!c) m.set(k, (c = { mean: null, n: 0, scored: 0, errors: 0, pending: 0, byCase: new Map() }));
       c.n++;
-      if (typeof r.score === 'number') {
+      if (typeof r.score === 'number' && !['skipped', 'error', 'cancelled', 'pending-human'].includes(r.status)) {
         c.scored++;
-        c.sum += r.score;
+        const list = c.byCase.get(r.caseId) ?? [];
+        list.push(r.score);
+        c.byCase.set(r.caseId, list);
       }
       if (r.status === 'error' || r.status === 'timeout') c.errors++;
       if (r.status === 'pending-human') c.pending++;
     }
-    for (const c of m.values()) c.mean = c.scored ? c.sum / c.scored : null;
+    for (const c of m.values()) {
+      const caseMeans = [...c.byCase.values()].map((xs) => xs.reduce((a, b) => a + b, 0) / xs.length);
+      c.mean = caseMeans.length ? caseMeans.reduce((a, b) => a + b, 0) / caseMeans.length : null;
+    }
     return m;
   }, [results]);
 
@@ -84,7 +91,7 @@ export const ResultsMatrix = memo(function ResultsMatrix({ manifest, results, on
         </div>
         <span className="spacer" />
         <span className="muted" style={{ fontSize: '0.8rem' }}>
-          <Jargon dev="Mean score ×100 over cases × repeats · click a cell to inspect" plain="Each cell: average score out of 100 · 100 = every question right" />
+          <Jargon dev="Mean score ×100 (repeats averaged per case, then cases) · click a cell to inspect" plain="Each cell: average score out of 100 · 100 = every question right" />
           <ScoreHint text="Each cell is the model’s average score on that test, out of 100, over every question and every try. 100 means it got everything right; 0 means nothing." />
         </span>
         <BandLegend compact />
