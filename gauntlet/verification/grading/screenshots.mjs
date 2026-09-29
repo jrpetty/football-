@@ -13,8 +13,11 @@ const { chromium } = await import('playwright-core');
 const exe = process.env.GAUNTLET_CHROMIUM ?? (existsSync('/opt/pw-browsers') ? readdirSync('/opt/pw-browsers').filter((d) => /^chromium-\d/.test(d)).map((d) => join('/opt/pw-browsers', d, 'chrome-linux', 'chrome'))[0] : undefined);
 const browser = await chromium.launch({ executablePath: exe });
 
-const K = (key) => `${base}/?mock=1#/grading?key=${encodeURIComponent(key)}&show=all`;
+const K = (key, run = 'run-grading-demo') => `${base}/?mock=1#/grading?run=${run}&key=${encodeURIComponent(key)}&show=all`;
 const GAME = K('helios-nova-3-pro::creative.one-shot-games::g01::r0');
+const JAM = K('meridian-atlas-4-ultra::creative.game-jam::j1-flappy::r0', 'run-2026-09-28-game-jam');
+const PAINTING = K('meridian-canvas-2::art.gallery-masterpiece::seed-1::r0', 'run-2026-09-28-gallery');
+const SVG_PAINTING = K('meridian-atlas-4-ultra::art.gallery-painted-in-code::seed-2::r0', 'run-2026-09-28-gallery');
 const shots = [
   // name, url, mode, steps
   ['station-game', GAME, 'dark', [{ key: '3' }, { key: '1' }, { key: '1' }, { key: '1' }, { key: '0' }, { wait: 300 }]],
@@ -22,8 +25,19 @@ const shots = [
   ['station-game-light', GAME, 'light', [{ key: '3' }, { key: '1' }, { wait: 300 }]],
   ['station-game-playing', GAME, 'dark', [{ key: 'p' }, { wait: 1200 }, { click: '.uv-html-stage' }, { wait: 1500 }]],
   ['station-svg-both', K('meridian-atlas-4-ultra::visual.svg-illustration::v01::r0'), 'dark', [{ click: 'button[title*="side by side"]' }, { wait: 300 }, { key: '1' }, { key: '1' }, { key: '2' }, { key: '1' }, { key: '1' }, { key: '1' }, { key: '2' }, { wait: 300 }]],
+  ['station-gamejam', JAM, 'dark', [{ key: '8' }, { key: '7' }, { wait: 300 }]],
+  ['station-gamejam-broadcast', JAM, 'broadcast', [{ key: '8' }, { wait: 300 }]],
+  ['station-gamejam-light', JAM, 'light', [{ key: '8' }, { wait: 300 }]],
+  ['station-gamejam-ai-cost', JAM, 'dark', [{ click: 'button[title*="AI judges from"]' }, { wait: 300 }, { key: 'a' }, { wait: 1200 }]],
+  ['station-gallery', PAINTING, 'dark', [{ key: '8' }, { key: '7' }, { key: '8' }, { wait: 300 }]],
+  ['station-gallery-broadcast', PAINTING, 'broadcast', [{ key: '8' }, { wait: 300 }]],
+  ['station-gallery-light', PAINTING, 'light', [{ key: '8' }, { wait: 300 }]],
+  ['station-gallery-both', PAINTING, 'dark', [{ click: 'button[title*="side by side"]' }, { wait: 300 }, ...Array.from({ length: 6 }, () => ({ key: '7' })), { wait: 300 }]],
+  ['station-gallery-code', SVG_PAINTING, 'dark', [{ wait: 600 }]],
   ['station-image-chart', K('meridian-atlas-4-ultra::vision.read-the-chart::c01::r0'), 'dark', [{ scroll: '.gs-brief' }]],
   ['station-json-key', K('helios-nova-3-pro::extraction.structured-json::e01::r0'), 'dark', []],
+  ['station-json-key-light', K('helios-nova-3-pro::extraction.structured-json::e01::r0'), 'light', []],
+  ['station-sim-replay-broadcast', K('kestrel-kite-reasoner::agentic.escape-room::seed-1::r0'), 'broadcast', [{ wait: 800 }]],
   ['station-sim-replay', K('kestrel-kite-reasoner::agentic.escape-room::seed-1::r0'), 'dark', [{ wait: 800 }]],
   ['station-honesty-labels', K('kestrel-kite-reasoner::honesty.honesty-trap::r01::r0'), 'dark', [{ key: '1' }, { wait: 200 }]],
   ['station-ai-cost', K('kestrel-kite-reasoner::honesty.honesty-trap::r01::r0'), 'dark', [{ click: 'button[title*="AI judges from"]' }, { wait: 300 }, { key: 'a' }, { wait: 900 }]],
@@ -38,6 +52,7 @@ const shots = [
   ['run-detail-summaries-light', `${base}/?mock=1#/runs/run-2026-09-12-creative?tab=matrix`, 'light', [{ scroll: '.sum-toolbar' }]],
   ['inspector-summary', `${base}/?mock=1#/runs/run-2026-09-12-creative?tab=matrix&test=creative.one-shot-game&c=helios-nova-3-pro`, 'dark', [{ wait: 800 }]],
   ['presenter-summaries', `${base}/?mock=1#/present/run-2026-09-12-creative`, 'dark', [{ key: 'ArrowRight' }, { wait: 300 }, { key: 'ArrowRight' }, { wait: 300 }, { key: 'ArrowRight' }, { wait: 2600 }]],
+  ['presenter-summaries-broadcast', `${base}/?mock=1#/present/run-2026-09-12-creative`, 'broadcast', [{ key: 'ArrowRight' }, { wait: 300 }, { key: 'ArrowRight' }, { wait: 300 }, { key: 'ArrowRight' }, { wait: 2600 }]],
   ['presenter-summaries-light', `${base}/?mock=1#/present/run-2026-09-12-creative`, 'light', [{ key: 'ArrowRight' }, { wait: 300 }, { key: 'ArrowRight' }, { wait: 300 }, { key: 'ArrowRight' }, { wait: 2600 }]],
   ['studio-facts', `${base}/?mock=1#/studio/run-2026-09-12-creative`, 'dark', [{ click: 'button[role="tab"]:has-text("Video script")' }, { wait: 800 }]],
   ['inbox-attach-files', `${base}/?mock=1#/inbox`, 'dark', [{ wait: 800 }]],
