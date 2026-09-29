@@ -489,6 +489,11 @@ async function main(): Promise<void> {
           console.log(c.red(`✗ model ${m.id}: ${errs.join('; ')}`));
         }
       }
+      // The copy & paste model catalogue (config/model-catalog.json).
+      const catalogErrs = (await import('./manual-models/store.ts')).catalogProblems();
+      errors += catalogErrs.length;
+      for (const e of catalogErrs) console.log(c.red(`✗ model catalogue: ${e}`));
+      if (!catalogErrs.length) console.log(c.green('✓ ') + 'model catalogue (config/model-catalog.json)');
       const settings = loadSettings();
       for (const j of settings.judges) if (!loadContestants().some((m) => m.id === j)) console.log(c.yellow(`⚠ judge "${j}" is not a configured model`));
       console.log(errors ? c.red(`\n${errors} problem(s) found`) : c.green(`\nAll ${all.length} tests valid.`));

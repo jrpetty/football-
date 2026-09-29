@@ -19,7 +19,9 @@ for screen-recording, so results can go straight into videos.
   consistency across repeats. Confidence intervals come from a cluster bootstrap.
 * **Test any model, even without an API.** A *manual* contestant turns every prompt into an item in the
   **Manual Inbox**: copy it into any chatbot (old, current or future), paste the reply back, and it is graded
-  by the same scorer. Single replies can also be graded on the spot (**Grader** or `node src/cli.ts grade`).
+  by the same scorer. New Run's **Test models by copy & paste** picks from a catalogue of 78 models back to
+  Claude 3 Opus (with where each can still be used), and **Best on each test** ranks API and hand-copied models
+  together. Single replies can also be graded on the spot (**Grader** or `node src/cli.ts grade`).
 * **Fair play.** Fresh stateless conversation per case, no tools, answer keys never sent, hedged answers
   marked wrong, judges blind to identity and never grading their own vendor, split verdicts sent to human
   arbitration, held-out private tests, and a contamination canary.

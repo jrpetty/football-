@@ -878,7 +878,7 @@
     },
     {
       "id": "manual-chat",
-      "label": "Manual entry (any chatbot)",
+      "label": "Manual entry (unspecified model)",
       "vendor": "Manual",
       "provider": "manual",
       "model": "any",
@@ -891,7 +891,7 @@
         "source": "Manual entry — enter real token counts/costs in the Manual Inbox if you know them",
         "verifiedAt": "2026-09-24"
       },
-      "notes": "Duplicate this for each model you test by copy & paste (e.g. 'ChatGPT app (manual)', 'Future Model X (manual)'). Set vendor correctly so judges from the same company are excluded."
+      "notes": "Copy & paste without saying which model. Easier: in New Run choose 'Test models by copy & paste' and pick models from the catalogue, or pick 'Which model are you using?' on each Manual Inbox card. Old results of this entry can be moved to a named model with 'Reassign to a model' in the Manual Inbox."
     },
     {
       "id": "random-baseline",

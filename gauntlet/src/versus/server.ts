@@ -54,7 +54,7 @@ export function loadScope(runId?: string, suiteId?: string): Scope {
       scope: { kind: 'run', runId: manifest.id, runName: manifest.name || manifest.id },
       tests: manifest.tests.map((t) => ({ id: t.id, name: t.name, category: t.category, hook: hook.get(t.id) })),
       fighters: manifest.contestants.map((c) => fighterOf(c, flagsFor(c))),
-      results: readResults(runId),
+      results: readResults(runId).filter((r) => !r.reassignedTo),
     };
   }
   const all = loadTests();
@@ -72,6 +72,7 @@ export function loadScope(runId?: string, suiteId?: string): Scope {
   for (const id of listRunIds()) {
     for (const r of readResults(id)) {
       if (hashById.get(r.testId) !== r.testHash || configHash.get(r.contestantId) !== r.contestantHash) continue;
+      if (r.reassignedTo) continue; // moved to a named copy & paste model (counted there)
       if (caseFilter.get(r.testId) && !caseFilter.get(r.testId)!.has(r.caseId)) continue;
       results.push(r);
     }

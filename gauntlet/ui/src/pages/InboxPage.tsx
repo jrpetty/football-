@@ -16,6 +16,8 @@ import { manualImageUrl } from '../vision.ts';
 import { GAMES } from '../../../src/arena/games/index.ts';
 import { ImageReplyUpload } from '../gallery/ImageReplyUpload.tsx';
 import { ReplyFiles, fileToReplyText } from '../grading/ReplyFiles.tsx';
+import { BatchChooser, InboxHeadChip, InboxModelBar, ReassignPanel, choiceKey, isUnspecified } from '../manual-models/InboxModelBar.tsx';
+import { mmApi, type ModelCatalog, type PendingChoiceView } from '../manual-models/mmApi.ts';
 
 /** Arena games whose seat-swapped pair shares hidden cards (duplicate poker): a remembering chat would leak them. */
 const needsFreshChat = (req: ManualRequest) => req.testId.startsWith('arena.') && Boolean(GAMES[req.testId.slice(6)]?.sequentialPairs);
@@ -63,8 +65,18 @@ function RequestCard({
   onDraft,
   onDone,
   autoFocus,
+  contestant,
+  catalog,
+  choice,
+  onChoice,
+  reloadCatalog,
 }: {
   req: ManualRequest;
+  contestant?: ContestantView;
+  catalog: ModelCatalog | null;
+  choice?: PendingChoiceView;
+  onChoice: () => void;
+  reloadCatalog: () => void;
   color?: string;
   runName?: string;
   open: boolean;
@@ -132,6 +144,7 @@ function RequestCard({
     <article className={cx('card inbox-card', open && 'open')} style={{ ['--c' as string]: color ?? 'var(--accent)' }} aria-label={`${req.contestantLabel}: ${req.testName} ${req.caseId}`}>
       <button type="button" className="inbox-head" onClick={onOpen} aria-expanded={open}>
         <ModelChip label={req.contestantLabel} color={color} pill />
+        <InboxHeadChip req={req} contestant={contestant} choice={choice} />
         <span className="inbox-test">
           <strong>{req.testName}</strong>
           <span className="muted"> · {req.caseId}</span>
@@ -149,6 +162,7 @@ function RequestCard({
 
       {open && (
         <div className="inbox-body">
+          <InboxModelBar req={req} contestant={contestant} catalog={catalog} choice={choice} onChoice={onChoice} reloadCatalog={reloadCatalog} />
           {needsFreshChat(req) && (
             <div style={{ marginBottom: 12 }}>
               <Callout tone="warn" icon={<Icon.Alert />}>
@@ -325,6 +339,16 @@ export default function InboxPage() {
   const [justDone, setJustDone] = useState(0);
   const meta = useAsync<[ContestantView[], RunListItem[]]>(() => Promise.all([api.contestants().catch(() => []), api.runs().catch(() => [])]), []);
   const colors = useMemo(() => new Map((meta.data?.[0] ?? []).map((c) => [c.id, c.color])), [meta.data]);
+  const byId = useMemo(() => new Map((meta.data?.[0] ?? []).map((c) => [c.id, c])), [meta.data]);
+  // Copy & paste models: the catalogue, and models picked for prompts that don't name one (src/manual-models/).
+  const catalog = useAsync(() => mmApi.catalog(), []);
+  const [choices, setChoices] = useState<Map<string, PendingChoiceView>>(new Map());
+  const loadChoices = useCallback(() => {
+    mmApi
+      .choices()
+      .then((l) => setChoices(new Map(l.map((c) => [choiceKey(c.runId, c.caseKey), c]))))
+      .catch(() => undefined);
+  }, []);
   const runNames = useMemo(() => new Map((meta.data?.[1] ?? []).map((r) => [r.id, r.name])), [meta.data]);
 
   const poll = useCallback(async () => {
@@ -332,13 +356,23 @@ export default function InboxPage() {
       const l = await api.manualQueue();
       setList([...l].sort((a, b) => a.createdAt.localeCompare(b.createdAt)));
       setError(null);
+      loadChoices();
     } catch (e) {
       setError(e instanceof Error ? e : new Error(String(e)));
     }
-  }, []);
+  }, [loadChoices]);
   useEffect(() => {
     void poll();
   }, [poll]);
+  // A prompt of a model made moments ago (e.g. New Run's copy & paste mode) may not be in the model list yet.
+  const unknownIds = [...new Set((list ?? []).map((r) => r.contestantId).filter((id) => meta.data && !byId.has(id)))].sort().join(',');
+  const reloadedFor = useRef('');
+  useEffect(() => {
+    if (!unknownIds || reloadedFor.current === unknownIds) return;
+    reloadedFor.current = unknownIds;
+    meta.reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unknownIds]);
   useInterval(() => void poll(), 2000);
 
   const filtered = useMemo(() => (list ?? []).filter((r) => (!runFilter || r.runId === runFilter) && (!modelFilter || r.contestantId === modelFilter)), [list, runFilter, modelFilter]);
@@ -428,8 +462,8 @@ export default function InboxPage() {
                 </button>
               ) : (
                 <>
-                  <Link to="/models" className="btn">
-                    <Icon.Cpu /> Add a manual model
+                  <Link to="/run/new?copy=1" className="btn">
+                    <Icon.Copy /> Test models by copy &amp; paste
                   </Link>
                   <Link to="/run/new" className="btn primary">
                     <Icon.Rocket /> Start a run
@@ -445,6 +479,12 @@ export default function InboxPage() {
         </div>
       ) : (
         <div className="stack">
+          <BatchChooser
+            requests={filtered.filter((r) => isUnspecified(r, byId.get(r.contestantId)) && !choices.has(choiceKey(r.runId, r.key)))}
+            catalog={catalog.data ?? null}
+            onDone={loadChoices}
+            reloadCatalog={catalog.reload}
+          />
           {filtered.map((r, i) => (
             <RequestCard
               key={r.id}
@@ -457,10 +497,17 @@ export default function InboxPage() {
               onDraft={(d) => setDraft(r.id, d)}
               onDone={done}
               autoFocus={justDone > 0 && i === 0}
+              contestant={byId.get(r.contestantId)}
+              catalog={catalog.data ?? null}
+              choice={choices.get(choiceKey(r.runId, r.key))}
+              onChoice={loadChoices}
+              reloadCatalog={catalog.reload}
             />
           ))}
         </div>
       )}
+
+      <ReassignPanel catalog={catalog.data ?? null} reloadCatalog={catalog.reload} />
     </div>
   );
 }

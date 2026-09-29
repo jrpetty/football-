@@ -90,7 +90,8 @@ export function listRuns(): RunListItem[] {
     const m = readManifest(id);
     if (!m) continue;
     const results = readResults(id);
-    const done = results.filter((r) => r.status !== 'error' && r.status !== 'cancelled').length;
+    // A copy & paste result moved to a named model is one job, not two.
+    const done = results.filter((r) => r.status !== 'error' && r.status !== 'cancelled' && !r.manualOrigin).length;
     out.push({
       id,
       name: m.name,
@@ -103,7 +104,7 @@ export function listRuns(): RunListItem[] {
       testCount: m.tests.length,
       totalJobs: m.totalJobs,
       completedJobs: done,
-      costUsd: round6(results.reduce((s, r) => s + r.metrics.costUsd + r.metrics.judgeCostUsd, 0)),
+      costUsd: round6(results.reduce((s, r) => s + (r.reassignedTo ? 0 : r.metrics.costUsd + r.metrics.judgeCostUsd), 0)),
     });
   }
   return out;

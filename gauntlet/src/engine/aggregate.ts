@@ -99,7 +99,9 @@ export function buildLeaderboard(opts: {
   results: CaseResult[];
   staleExcluded?: number;
 }): Leaderboard {
-  const { tests, contestants, results } = opts;
+  const { tests, contestants } = opts;
+  // A copy & paste result moved to a named model (src/manual-models/reassign.ts) counts only under that model.
+  const results = opts.results.filter((r) => !r.reassignedTo);
   const categoryWeights: Record<string, number> = {};
   for (const c of opts.categories) categoryWeights[c.id] = opts.categoryWeights?.[c.id] ?? c.weight ?? 1;
   const testIds = new Set(tests.map((t) => t.id));

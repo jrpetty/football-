@@ -187,6 +187,27 @@ then graded exactly like an API reply. Manual jobs run in their own queue and ha
 Show `combinedPrompt` for a **new** chat (it includes any system prompt and earlier turns) and, when
 `isContinuation` is true, offer `latestUserMessage` for continuing the **same** chat.
 
+### Copy & paste models (catalogue, model picks, reassigning)
+
+The model catalogue (`config/model-catalog.json`, validated by `node src/cli.ts validate`) lists notable models since
+March 2024 with release dates, availability, a `source` and `verifiedAt` (null = `status: "unverified"`). A
+catalogue contestant has id `manual.<catalog id>.<interface>[.think-on|.think-off][.web]`, the catalogue vendor, and
+`manualModel: { catalogId, interface, thinking, webSearch, note? }`; its `model` field encodes model + interface +
+settings, so they are part of the config hash. These contestants are stored in `<user folder>/data/manual-models/`.
+
+| Method | Path | Body | Returns |
+|---|---|---|---|
+| GET | `/api/manual-models/catalog` | – | `{ checkedAt, vendors, models, problems }` (the owner's own additions have `custom: true`) |
+| POST | `/api/manual-models/catalog` | `{ label, vendor, released: "YYYY-MM" }` | the new unverified entry ("Suggest a model not in the list") |
+| POST | `/api/manual-models/contestants` | `{ models: [{ catalogId, interface?, thinking?, webSearch?, note? }] }` | `ContestantView[]` (made or found; used by New Run) |
+| GET | `/api/manual-models/choices` | – | models picked for prompts of unspecified manual contestants |
+| POST | `/api/manual-models/choice` | `{ requestId, choice: { catalogId, interface, thinking, webSearch, note? } }` | `{ choice, contestant }`. When the case is graded its result moves to that model (`manualOrigin.how: "paste"`). 409 after a reply of the case was submitted with another model. |
+| DELETE | `/api/manual-models/choice/:requestId` | – | `{ ok }` |
+| GET | `/api/manual-models/unspecified` | – | old results of "Manual entry (unspecified model)", grouped by run and test |
+| POST | `/api/manual-models/reassign` | `{ runId, keys, to: { catalogId, interface, … }, note?, confirm: true }` | `{ moved, skipped, to }`. Appends a copy under the model's key (`manualOrigin.how: "reassign"`) and marks the original `reassignedTo` (no longer scored; kept so resume never re-asks). Logged to `reassign-log.jsonl`. |
+| GET | `/api/manual-models/reassign-log` | – | moves, newest first |
+| GET | `/api/best-per-test` | – | `BestData` (`src/manual-models/best-rank.ts`): per test, every model's score, answers, runs and last tested date, pooled like the combined leaderboard |
+
 ## The Gallery (picture replies)
 
 | Method | Path | Body | Returns |

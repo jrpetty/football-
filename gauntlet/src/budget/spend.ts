@@ -67,9 +67,10 @@ function freeProviders(): Set<string> {
 /** Every spend of a run, dated. One line per answer attempt: re-scored copies of the same attempt count once. */
 export function runSpendLines(m: RunManifest, free = freeProviders()): SpendLine[] {
   const freeContestants = new Set(m.contestants.filter((c) => free.has(c.provider)).map((c) => c.id));
-  type Line = { key: string; contestantId: string; startedAt?: string; metrics?: { costUsd?: number; judgeCostUsd?: number } };
+  type Line = { key: string; contestantId: string; startedAt?: string; metrics?: { costUsd?: number; judgeCostUsd?: number }; manualOrigin?: unknown };
   const attempts = new Map<string, Line>();
-  for (const r of jsonLines<Line>(join(RUNS_DIR, m.id, 'results.jsonl'))) attempts.set(`${r.key}@${r.startedAt ?? ''}`, r);
+  // A copy & paste result moved to a named model (manualOrigin) is the same attempt as its original: count it once.
+  for (const r of jsonLines<Line>(join(RUNS_DIR, m.id, 'results.jsonl'))) if (!r.manualOrigin) attempts.set(`${r.key}@${r.startedAt ?? ''}`, r);
   const out: SpendLine[] = [];
   for (const r of attempts.values()) {
     const usd = (freeContestants.has(r.contestantId) ? 0 : (r.metrics?.costUsd ?? 0)) + (r.metrics?.judgeCostUsd ?? 0);

@@ -285,6 +285,8 @@ export const CONTESTANTS: ContestantView[] = [
     enabled: true,
     pricing: { inputPerM: 0, outputPerM: 0, source: 'manual — subscription app, cost entered by hand', verifiedAt: '2026-09-20' },
     notes: 'Consumer chat app with no API. Prompts are pasted by hand into a fresh chat.',
+    // A copy & paste model (src/manual-models/): pasted into the company's own chat app, default settings.
+    manualModel: { catalogId: 'orbit-chat', interface: 'company-app', thinking: 'default', webSearch: false },
   }),
 ];
 
@@ -1125,6 +1127,7 @@ export function buildLeaderboard(manifest: RunManifest, results: CaseResultLite[
     const refusals = mine.filter((r) => r.status === 'refusal').length;
     rows.push({
       manual: isManualId(c.id) || undefined,
+      ...(CONTESTANTS.find((x) => x.id === c.id)?.manualModel ? { manualModel: CONTESTANTS.find((x) => x.id === c.id)!.manualModel } : {}),
       contestantId: c.id,
       label: c.label,
       vendor: c.vendor,

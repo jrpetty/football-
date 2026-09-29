@@ -6,6 +6,7 @@ import { fmtCost, fmtIndex, fmtMs, fmtPct, fmtRate, fmtScore100 } from '../../fo
 import { MedalsInline, ModelCell, SortHeader, cx } from '../ui.tsx';
 import { errorRate, isBaseline, olympicCompare, shortCat } from './util.ts';
 import { ScoreHint, ScoreScale } from '../clarity/Jargon.tsx';
+import { copiedByHandText } from '../../../../src/manual-models/identity.ts';
 
 type Group = 'categories' | 'economics' | 'speed' | 'reliability';
 type SortKey = string;
@@ -105,8 +106,11 @@ const Row = memo(function Row({
           color={row.color}
           tag={
             row.manual ? (
-              <span className="badge info manual-tag" title="Replies pasted in by hand — speed is human time and cost is user-entered, so they are not comparable">
-                manual
+              <span
+                className="badge info manual-tag"
+                title={`${row.manualModel ? `${copiedByHandText(row.manualModel)}. ` : ''}Replies pasted in by hand — speed is human time and cost is user-entered, so they are not comparable`}
+              >
+                {row.manualModel ? 'hand-copied' : 'manual'}
               </span>
             ) : undefined
           }

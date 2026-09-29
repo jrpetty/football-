@@ -158,6 +158,22 @@ export const GLOSSARY: GlossaryTerm[] = [
     ),
   },
   {
+    id: 'hand-copied',
+    term: 'Copied by hand',
+    say: 'Some models, including old ones that have been switched off for developers, can only be reached through a chat app. The same prompt was copied into that app and the reply pasted back, then marked exactly like every other answer.',
+    eg: 'Claude 3 Opus (claude.ai) · copied by hand. Chat apps can add their own hidden instructions, so small gaps are a draw.',
+    art: (
+      <Art>
+        <rect x="8" y="14" width="30" height="40" rx="5" fill={S3} stroke={T3} strokeWidth="2.5" />
+        <path d="M14 24h18M14 31h18M14 38h12" stroke={T1} strokeWidth="2.5" strokeLinecap="round" />
+        <rect x="44" y="26" width="30" height="40" rx="5" fill="none" stroke={T1} strokeWidth="2.5" />
+        <path d="M50 36h18M50 43h18M50 50h12" stroke={A} strokeWidth="2.5" strokeLinecap="round" />
+        <path d="M30 62c6 6 14 6 18-2" fill="none" stroke={A2} strokeWidth="3" strokeLinecap="round" />
+        <path d="M46 56l2 5-5 1" fill="none" stroke={A2} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+      </Art>
+    ),
+  },
+  {
     id: 'judge',
     term: 'Judge',
     say: 'For open-ended tasks with no single right answer, other AI models mark the work against a fixed checklist. A model never judges its own company’s work.',
