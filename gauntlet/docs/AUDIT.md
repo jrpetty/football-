@@ -184,6 +184,80 @@ sites for Groq and Mistral were unreachable. These are unconfirmed:
 
 A one-case run per provider with real keys would settle all of these.
 
+## Horizon tier: blind calibration
+
+The Horizon suite (five ten-level ladders, see [METHODOLOGY §7d](METHODOLOGY.md#7d-the-horizon-tier-tests-built-for-future-models))
+must be solvable at the bottom, far out of reach at the top, and worth about 0 to a guesser. This was measured, not assumed.
+
+**How it was run.** Every level's exact rendered prompt was sent, alone, to a fresh headless Claude session (`claude -p`)
+started in an empty folder outside the repository, with **every tool disabled** (`--tools=`: no files, no code
+execution, no web) and a neutral system prompt. The solver saw only the prompt text; no key, generator or repo file
+was reachable. Opus 5.5 ran at high effort with its 128,000-token maximum, Haiku 4.5 with its 64,000-token maximum
+(the `model-max` setting the tests now use). One attempt per level. The replies were graded with Gauntlet's real
+ladder scorer (`src/scoring/ladder.ts`). `git status` was clean after every round. The Random Baseline was run through
+the real engine: `run --models random-baseline --suite horizon --repeats 3`, 150 results.
+
+**Keys.** Every key is computed twice by independent programs (Python generators; `verify.mjs` re-parses each puzzle
+from the prompt text and recomputes it in JavaScript with a different algorithm). After the ladders were changed, all
+50 keys were re-verified: all match, and every nonogram has exactly one solution (CP-SAT and a JavaScript
+backtracking solver).
+
+**Result, final levels** (each cell: Opus 5.5 / Haiku 4.5; ✓ = full marks, a number = partial credit for a valid but
+longer sliding plan, ✗ = wrong answer):
+
+| Level | Run It In Your Head | No Calculator | The Picture Logic Ladder | The Sliding Ladder | Count Every Tiling |
+|---|---|---|---|---|---|
+| L01 | ✓ / ✗ | ✓ / ✗ | ✓ / ✓ | ✓ / ✗ | ✓ / ✗ |
+| L02 | ✓ / ✗ | ✓ / ✗ | ✓ / ✗ | over limit / ✗ | ✗ / ✗ |
+| L03 | blocked / ✗ | ✗ / ✗ | ✓ / ✗ | ✓ / ✗ | ✓ / ✗ |
+| L04 | ✓ / ✗ | no answer / ✗ | ✗ / no answer | time-out / ✗ | ✓ / ✗ |
+| L05 | ✗ / ✗ | ✗ / ✗ | ✓ / no answer | time-out / ✗ | no answer / ✗ |
+| L06 | no answer / ✗ | no answer / ✗ | over limit / no answer | time-out / ✗ | no answer / ✗ |
+| L07 | no answer / ✗ | no answer / ✗ | no answer / no answer | time-out / ✗ | no answer / ✗ |
+| L08 | no answer / ✗ | no answer / ✗ | no answer / no answer | 0.12 / ✗ | no answer / ✗ |
+| L09 | blocked / ✗ | no answer / ✗ | no answer / no answer | 0.16 / ✗ | no answer / ✗ |
+| L10 | ✗ / ✗ | no answer / ✗ | over limit / no answer | 0.13 / ✗ | no answer / ✗ |
+| **Score** | **30% / 0%** | **20% / 0%** | **40% / 10%** | **24% / 0%** | **30% / 0%** |
+
+| | Opus 5.5 | Haiku 4.5 | Random Baseline |
+|---|---:|---:|---:|
+| Whole suite | **28.8%** (14.4 of 50 levels) | **2.0%** (1 level) | **0%** (0 of 150 results) |
+| Ladder height (single attempt) | 2 · 2 · 3 · 1 · 1 | 0 · 0 · 1 · 0 · 0 | 0 everywhere |
+
+**Reading the table.**
+- *no answer*: the model worked (often for 100,000+ tokens) and then said it could not give a verified value
+  without running code. Scored 0, as in a real run.
+- *over limit*: the reply hit the model's 128,000-token maximum before answering. Gauntlet does not retry this, so it
+  scores 0. (The CLI solver retries on its own; only the first attempt is counted.)
+- *time-out*: no answer within 75 minutes; the tests allow 60, so 0.
+- *blocked*: the solver harness's safety filter stopped the request within seconds, three times in a row
+  (`[reasoning_extraction]`), for Run It In Your Head L03 and L09. **These two levels are unmeasured** for Opus;
+  they count as 0 above. Opus's suite score over the 48 measured levels is 30.0%; if it had solved both blocked
+  levels it would be 32.8%. Whether the plain API (what Gauntlet calls) blocks them too is unknown.
+- Opus is clearly above zero on the first rungs of every ladder (11 of the 15 levels 1–3 solved), which shows the
+  tests are well-posed and solvable. Its misses are real slips (the L02 tiling count 9,214 against 9,610; a 20×20
+  nonogram with 2 of 400 cells wrong; a modular power wrong in the low digits).
+
+**What the calibration changed.** The first round (before this section) had Opus solving the Picture Logic Ladder to
+level 6 (20×20) and Count Every Tiling to level 7 (12×10, a 10-digit count): about 39% overall. Those two ladders
+were made harder, never trickier:
+- Picture Logic: levels 4–10 are now 20×20 to 50×50 with 30–60% of the grid left open by line-by-line logic (was 15×15
+  to 35×35). Levels 1–3 are unchanged.
+- Count Every Tiling: levels 5–10 are now 12×12 to 18×18 boards (counts of 12 to 31 digits; was 10×8 to 16×14).
+  Levels 1–4 are unchanged.
+- All five tests now ask for each model's own maximum output (`model-max`, one retry at most). A fixed 64,000
+  would have been unfair: Opus used up to 117,000 tokens on a nonogram level it solved.
+- The output estimate is now 60,000 tokens per level (Opus averaged 63,000, counting over-limit replies as
+  128,000; Haiku averaged 16,000).
+
+**Cost of this calibration** (as reported by the CLI, all rounds including the replaced levels and the solver's own
+retries): Opus about $175, Haiku about $12. A real Gauntlet run is cheaper per model because over-limit replies are
+not retried: estimate $60 for Opus, ceiling $128; estimate $15 (real about $4) for Haiku, ceiling $16.
+
+**Not measured.** Only one attempt per level, so "solved reliably" (2 of 3) was not tested and the heights above are
+single-attempt heights. The two blocked Opus levels. No non-Anthropic model was run. The timings come from the CLI,
+not the Gauntlet engine.
+
 ## What the audit changed
 
 The blind play found real problems, and each was fixed before release:

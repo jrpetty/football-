@@ -296,7 +296,7 @@ comparable.
 
 **Output limit and cost.** Horizon tests ask for each model's **own maximum output** (`"maxOutputTokens":
 "model-max"`, e.g. 128,000 tokens for Opus 5.5, 64,000 for Haiku 4.5), so no model is held back by an artificial
-cap: in the calibration Opus needed 67,000–96,000 tokens for levels it solved, more than a fixed 64,000 would
+cap: in the calibration Opus used up to 117,000 tokens on a level it solved, more than a fixed 64,000 would
 allow. A long reply that fails is not retried more than once (`maxRetries: 1`), and the time limit is one hour per
 level. The estimate is 60,000 output tokens per level, from the calibration (Opus averaged 63,000 per level,
 counting a reply that hit its maximum as the full 128,000; Haiku averaged 16,000): about **$60 per repeat for all
