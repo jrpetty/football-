@@ -591,6 +591,15 @@
   flex: 1;
   min-width: 0;
 }
+.hp-crit-w {
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 999px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  margin-right: 8px;
+}
 .hp-crit-val {
   font-size: 1.15rem;
   font-weight: 800;

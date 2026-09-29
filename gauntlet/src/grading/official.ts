@@ -116,5 +116,7 @@ export function needOf(r: CaseResult, spec: GradingSpec): GradingNeed {
   if (r.status === 'pending-human') return 'grade';
   if (judgeFailed(r)) return 'judge-failed';
   if (r.scoreDetail?.judgeDisagreement) return 'arbitrate';
+  // The Gallery: the owner's artistry rating always counts (it replaces the judges' artistry).
+  if (spec.scorerType.startsWith('program:gallery')) return 'owner-rating';
   return 'second-opinion';
 }

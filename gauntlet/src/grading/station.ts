@@ -192,6 +192,7 @@ export function gradingQueue(runId: string, testId?: string): QueueItem[] {
       score: r.score,
       summary: r.summary,
       kind: spec.kind,
+      unit: spec.unit,
       humanRole: spec.humanRole,
       aiRole: spec.aiRole,
       need,

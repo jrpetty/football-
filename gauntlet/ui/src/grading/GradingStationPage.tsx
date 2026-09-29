@@ -19,7 +19,7 @@ import { ModelBadge } from '../components/viz/ModelBadge.tsx';
 import { sendViewerCommand } from '../components/viewer/commands.ts';
 import type { ContestantView } from '../types.ts';
 import { gradingApi, type AiEstimate, type GradingNeed, type OfficialPolicy, type QueueItem, type StationItem } from './gradingApi.ts';
-import { HumanPanel } from './HumanPanel.tsx';
+import { HumanPanel, customWeights } from './HumanPanel.tsx';
 import { Agreement, CostDialog, Verdicts } from './AiPanel.tsx';
 import { Brief, ChecksAndKey, OutputViewer, SpecFacts } from './ItemView.tsx';
 import { applyKey, draftScore, emptyDraft, isStopDone, nudge, stopsFor, type RubricDraft } from './rubricKeys.ts';
@@ -36,6 +36,7 @@ const NEED: Record<GradingNeed, { label: string; tone: string; long: string }> =
   'judge-failed': { label: 'Judges missing', tone: 'bad', long: 'No AI judge could grade this during the run. Grade it yourself or ask the AI judges now.' },
   arbitrate: { label: 'Judges split', tone: 'warn', long: 'The run’s judges disagreed by more than 3 points: your grade decides it.' },
   'second-opinion': { label: 'Second opinion', tone: 'accent', long: 'Already graded by the run’s judges. Your grade is stored next to theirs.' },
+  'owner-rating': { label: 'Your rating counts', tone: 'accent', long: 'Judged already, but your artistry rating replaces the judges’ artistry (the Gallery’s rule).' },
   review: { label: 'Machine-scored', tone: 'info', long: 'Scored by machine. You can check it and flag a dispute; you can’t overwrite the key.' },
 };
 
@@ -549,7 +550,7 @@ export default function GradingStationPage() {
                         <span className="gs-q-main">
                           <span className="gs-q-who">{w.label}</span>
                           <span className="gs-q-case">
-                            {caseName(i.caseId, 'question')}
+                            {caseName(i.caseId, i.unit ?? 'question')}
                             {i.repeat > 0 ? ` · try ${i.repeat + 1}` : ''}
                           </span>
                         </span>
@@ -641,7 +642,7 @@ export default function GradingStationPage() {
                   <section className="card gs-panel">
                     <div className="gs-panel-head">
                       <h3>Your grade</h3>
-                      <span className="muted">{item.spec.labels?.length ? 'pick one label' : `${item.spec.criteria.length} rubric line${item.spec.criteria.length === 1 ? '' : 's'} · ${item.spec.scaleMax} points`}</span>
+                      <span className="muted">{item.spec.labels?.length ? 'pick one label' : `${item.spec.criteria.length} rubric line${item.spec.criteria.length === 1 ? '' : 's'} · ${customWeights(item.spec) ? 'weighted as shown' : item.spec.scoreRule === 'mean-over-max' ? 'artistry, each out of 10' : `${item.spec.scaleMax} points`}`}</span>
                     </div>
                     {item.spec.humanRole === 'second-opinion' && <div className="gs-small muted" style={{ marginBottom: 8 }}>Second opinion: stored and shown next to the machine score, which stays official.</div>}
                     <HumanPanel ref={noteRef} spec={item.spec} draft={draft} stops={stops} focus={focus} onFocus={setFocus} onChange={setDraft} note={note} onNote={setNote} />

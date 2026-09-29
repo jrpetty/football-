@@ -10,7 +10,7 @@ import type { OfficialPolicy, OfficialSource } from './policy.ts';
 export type { OfficialPolicy, OfficialSource };
 
 /** Why a result is in the grading queue. */
-export type GradingNeed = 'grade' | 'judge-failed' | 'arbitrate' | 'second-opinion' | 'review';
+export type GradingNeed = 'grade' | 'judge-failed' | 'arbitrate' | 'second-opinion' | 'owner-rating' | 'review';
 
 export interface QueueItem {
   runId: string;
@@ -25,6 +25,8 @@ export interface QueueItem {
   score: number | null;
   summary: string;
   kind: GradingKind;
+  /** Singular noun for one case ("question", "world", "commission"…). */
+  unit?: string;
   humanRole: HumanRole;
   aiRole: AiRole;
   need: GradingNeed;

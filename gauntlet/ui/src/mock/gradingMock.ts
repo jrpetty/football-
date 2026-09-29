@@ -106,7 +106,7 @@ async function queue(runId: string): Promise<QueueItem[]> {
     const humans = r.humanScores?.length ?? 0;
     const ais = r.aiGrades?.length ?? 0;
     const todo = need === 'grade' ? humans === 0 && !(ais > 0 && policy !== 'methodology') : need === 'arbitrate' ? humans === 0 : need === 'judge-failed' ? humans === 0 && ais === 0 : false;
-    out.push({ runId, key: r.key, testId: r.testId, testName: testName(r.testId), category: testDef(r.testId)?.category ?? '', caseId: r.caseId, repeat: r.repeat, contestantId: r.contestantId, status: r.status, score: r.score, summary: r.summary, kind: spec.kind, humanRole: spec.humanRole, aiRole: spec.aiRole, need, todo, humans, ais, disputes: r.disputes?.length ?? 0, official: (r.scoreDetail?.official as { source?: QueueItem['official'] } | undefined)?.source, hasReplay: Boolean(r.replay) || Boolean((r as unknown as CaseResultLite).hasReplay), artifacts: (r.artifacts ?? []).map((a) => a.name) });
+    out.push({ runId, key: r.key, testId: r.testId, testName: testName(r.testId), category: testDef(r.testId)?.category ?? '', caseId: r.caseId, repeat: r.repeat, contestantId: r.contestantId, status: r.status, score: r.score, summary: r.summary, kind: spec.kind, unit: spec.unit, humanRole: spec.humanRole, aiRole: spec.aiRole, need, todo, humans, ais, disputes: r.disputes?.length ?? 0, official: (r.scoreDetail?.official as { source?: QueueItem['official'] } | undefined)?.source, hasReplay: Boolean(r.replay) || Boolean((r as unknown as CaseResultLite).hasReplay), artifacts: (r.artifacts ?? []).map((a) => a.name) });
   }
   // Group by test, keeping each test's first appearance.
   const order = new Map<string, number>();
@@ -182,7 +182,8 @@ async function estimate(runId: string, keys: string[], m: Map<string, CaseResult
     if (spec.aiRole === 'none') return { key: k, ok: false, reason: 'Scored by machine: nothing for an AI judge to grade.', judges: [], estUsd: 0 };
     // Same pictures as the server: playtest frames + motion strip for the Game Jam, the painting for the Gallery, else screenshots and test images.
     const images = spec.playtest ? spec.playtest.screenshots + (spec.playtest.motionStrip ? 1 : 0) : isGalleryResult(r) ? 1 : (r.artifacts ?? []).filter((a) => a.kind === 'png').length + (demoImages(testDef(r.testId)!, r.caseId)?.length ?? 0);
-    const text = spec.playtest ? 0.03 : 0.0042;
+    // The Game Jam: judges read the whole game file (tens of thousands of tokens) as well as the pictures.
+    const text = spec.playtest ? 0.21 : 0.0042;
     const js = judgesFor(r.contestantId)
       .filter((j) => !isGalleryResult(r) || j.vision)
       .map((j) => ({ ...j, images: j.vision ? images : 0, estUsd: text + (j.vision ? images * 0.0011 : 0) }));

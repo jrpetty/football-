@@ -21,7 +21,18 @@ function stopIs(s: Stop | undefined, x: Stop): boolean {
   return s.type === 'labels';
 }
 
-function Criterion({ c, value, focused, onSet, onFocus }: { c: RubricCriterion; value: number | undefined; focused: boolean; onSet: (v: number) => void; onFocus: () => void }) {
+/** True when the rubric weighs its lines itself (The Game Jam: visual 30%, creativity 25%…) instead of by points. */
+export function customWeights(spec: Pick<GradingSpec, 'criteria' | 'scoreRule'>): boolean {
+  if (spec.scoreRule === 'mean-over-max') return false;
+  const total = spec.criteria.reduce((t, c) => t + (c.max - c.min), 0);
+  return total > 0 && spec.criteria.some((c) => Math.abs(c.weight - (c.max - c.min) / total) > 0.001);
+}
+
+function WeightTag({ w }: { w: number | null }) {
+  return w === null ? null : <span className="hp-crit-w" title="Share of the grade">{Math.round(w * 100)}%</span>;
+}
+
+function Criterion({ c, value, focused, onSet, onFocus, weight }: { c: RubricCriterion; value: number | undefined; focused: boolean; onSet: (v: number) => void; onFocus: () => void; weight: number | null }) {
   // Whole points as buttons (keys 0–9); half points with ←/→.
   const discrete = c.max - c.min <= 10;
   const values = discrete ? Array.from({ length: Math.floor(c.max - c.min) + 1 }, (_, i) => c.min + i) : [];
@@ -31,6 +42,7 @@ function Criterion({ c, value, focused, onSet, onFocus }: { c: RubricCriterion; 
     <div className={cx('hp-crit', focused && 'focus', value !== undefined && 'done')} onClick={onFocus}>
       <div className="hp-crit-head">
         <span className="hp-crit-label">{c.label}</span>
+        <WeightTag w={weight} />
         <span className="hp-crit-val tnum">
           {value === undefined ? '–' : value}
           <span className="muted">/{c.max}</span>
@@ -71,6 +83,7 @@ export const HumanPanel = forwardRef<HTMLTextAreaElement, {
   const score = draftScore(spec, draft);
   const cur = stops[focus];
   const idx = (s: Stop) => stops.findIndex((x) => stopIs(x, s));
+  const weighted = customWeights(spec);
   return (
     <div className="hp">
       {spec.labels?.length ? (
@@ -93,6 +106,7 @@ export const HumanPanel = forwardRef<HTMLTextAreaElement, {
             <div key={c.id} className={cx('hp-crit', 'reqs', pts[c.id] !== undefined && 'done')}>
               <div className="hp-crit-head">
                 <span className="hp-crit-label">{c.label}</span>
+                <WeightTag w={weighted ? c.weight : null} />
                 <span className="hp-crit-val tnum">
                   {pts[c.id] ?? '–'}
                   <span className="muted">/{c.max}</span>
@@ -129,7 +143,7 @@ export const HumanPanel = forwardRef<HTMLTextAreaElement, {
               </ol>
             </div>
           ) : (
-            <Criterion key={c.id} c={c} value={draft.criteria[c.id]} focused={cur?.type === 'criterion' && cur.id === c.id} onFocus={() => onFocus(idx({ type: 'criterion', id: c.id }))} onSet={(v) => onChange({ ...draft, criteria: { ...draft.criteria, [c.id]: v } })} />
+            <Criterion key={c.id} c={c} value={draft.criteria[c.id]} focused={cur?.type === 'criterion' && cur.id === c.id} onFocus={() => onFocus(idx({ type: 'criterion', id: c.id }))} onSet={(v) => onChange({ ...draft, criteria: { ...draft.criteria, [c.id]: v } })} weight={weighted ? c.weight : null} />
           ),
         )
       )}

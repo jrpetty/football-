@@ -81,10 +81,10 @@ export function quoteSnippet(s: unknown, maxWords = 3): string {
   return `"${cut}${more ? '…' : ''}"`;
 }
 
-/** "c7" → "question 7", "seed-42" → "world 42", other ids as they are. */
+/** "c7" → "question 7", "seed-42" → "world 42" (or "commission 42" for The Gallery), other ids as they are. */
 export function caseName(caseId: string, unit: string): string {
   const seed = /^seed[-_]?(\d+)$/i.exec(caseId);
-  if (seed) return `world ${Number(seed[1])}`;
+  if (seed) return `${['question', 'task', 'conversation'].includes(unit) ? 'world' : unit} ${Number(seed[1])}`;
   const q = /^(?:c|case|q)[-_]?(\d+)$/i.exec(caseId);
   if (q) return `${unit} ${Number(q[1])}`;
   return caseId;
@@ -174,7 +174,8 @@ export function templateSummary(input: SummaryInput): string {
   const errors = results.filter((r) => (r.status === 'error' && !judgeWait(r)) || r.status === 'cancelled');
   const noJudge = results.filter(judgeWait);
   const pending = results.filter((r) => r.status === 'pending-human' || (r.score === null && r.status === 'ok') || judgeWait(r));
-  const scored = results.filter((r) => typeof r.score === 'number' && r.status !== 'skipped');
+  // Exactly the results the leaderboard counts (src/engine/aggregate.ts → isScored), so the numbers always agree.
+  const scored = results.filter((r) => typeof r.score === 'number' && !['skipped', 'error', 'cancelled', 'pending-human'].includes(r.status));
   const caseIds = [...new Set(results.map((r) => r.caseId))];
 
   if (!scored.length) {

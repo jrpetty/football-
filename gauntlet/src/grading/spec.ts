@@ -164,6 +164,7 @@ function clipText(s: string, max: number): string {
 
 /** Singular noun for one case of a test (matches the Presenter's wording). */
 export function unitFor(def: TestDefinition): string {
+  if (def.kind === 'program' && GALLERY_PROGRAMS.has(def.program)) return 'commission';
   if (def.kind === 'program') return 'world';
   if (def.cases.some((c) => (c.turns?.length ?? 0) > 1)) return 'conversation';
   if (def.scorer.type === 'code-js' || def.scorer.type === 'artifact' || def.scorer.type === 'human') return 'task';
@@ -374,7 +375,8 @@ function gallerySpec(def: Extract<TestDefinition, { kind: 'program' }>, base: Pi
     ],
     formula: opts.programScoring,
     output: code ? 'svg' : 'image',
-    maxOutputTokens: def.maxOutputTokens,
+    // An image model's output is the picture: its text-token limit means nothing to a viewer.
+    maxOutputTokens: code ? def.maxOutputTokens : undefined,
     judgeSees: code ? 'The SVG rendered to a 1536 × 1024 picture, anonymised as "painting.png", plus the brief.' : 'The painting, anonymised as "painting.png", plus the brief.',
     minJudges: GALLERY_MIN_JUDGES,
     brief: brief ? (code ? codePrompt(brief) : imagePrompt(brief)) : undefined,
