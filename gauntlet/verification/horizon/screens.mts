@@ -82,6 +82,7 @@ await inspector('rung-sliding-other', 'horizon.sliding-ladder', 'L02', 'meridian
 await inspector('rung-nonogram-wrong', 'horizon.nonogram-ladder', 'L04', 'kestrel-kite-reasoner', { scrollTo: '.hz-rung-card' });
 await inspector('rung-nonogram-right', 'horizon.nonogram-ladder', 'L02', 'meridian-atlas-4-ultra', { scrollTo: '.hz-rung-card' });
 await inspector('rung-tiling-wrong', 'horizon.tiling-count', 'L04', 'kestrel-kite-reasoner', { scrollTo: '.hz-rung-card' });
+await inspector('rung-nonogram-top-50x50', 'horizon.nonogram-ladder', 'L10', 'kestrel-kite-reasoner', { scrollTo: '.hz-rung-card' });
 
 if (!filter || filter === 'slides') {
   const probe = await browser.newPage({ viewport: { width: 1920, height: 1080 } });

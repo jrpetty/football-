@@ -145,7 +145,7 @@ function Plan({ c, tone }: { c: PlanCompare; tone: VizTone }) {
 
 function MiniGrid({ rows, other, title }: { rows: string[]; other?: string[] | null; title: string }) {
   const n = Math.max(rows.length, rows[0]?.length ?? 0);
-  const cell = n > 20 ? '0.55em' : n > 14 ? '0.7em' : n > 9 ? '0.9em' : '1.2em';
+  const cell = n > 40 ? '0.35em' : n > 30 ? '0.45em' : n > 20 ? '0.55em' : n > 14 ? '0.7em' : n > 9 ? '0.9em' : '1.2em';
   return (
     <div>
       <div className="hz-k">{title}</div>
