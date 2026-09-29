@@ -4,16 +4,20 @@ No typing, no commands. You need a Windows computer and about ten minutes.
 
 ## First time
 
-1. **Unzip.** Right-click the Gauntlet zip file → **Extract All…** → **Extract**. A folder opens.
+1. **Unblock the zip first.** Right-click the Gauntlet zip file → **Properties** → at the bottom of the **General** tab,
+   tick **Unblock** → **OK**. (Windows 11's **Smart App Control** otherwise refuses to start downloaded files and gives
+   no "Run anyway" button. Don't turn Smart App Control off: Windows can't switch it back on without a reset.)
+   No Unblock box? It's already unblocked; carry on.
+2. **Unzip.** Right-click the Gauntlet zip file → **Extract All…** → **Extract**. A folder opens.
    (Anywhere is fine: Desktop, Documents, Downloads, OneDrive.)
-2. **Start.** In that folder, double-click **`start-gauntlet.bat`**.
+3. **Start.** In that folder, double-click **`start-gauntlet.bat`**.
    * If Windows says **"Windows protected your PC"**, click **More info** → **Run anyway**. (Windows says this about
      every file downloaded from the internet that isn't from a big company.)
    * If it says Node.js isn't installed, press **Y**. When it finishes, close the black window and double-click
      `start-gauntlet.bat` again.
    * The first start takes a minute or two (it downloads Gauntlet's building blocks). Later starts take seconds.
    * Keep the black window open while you use Gauntlet. Closing it stops Gauntlet.
-3. **Paste your key.** Your browser opens on the **Welcome** page:
+4. **Paste your key.** Your browser opens on the **Welcome** page:
    1. **Get one key.** We recommend **OpenRouter**: one key for every AI (Claude, GPT, Gemini, Grok, DeepSeek) and one
       bill. Press **Get an OpenRouter key**, sign up, add about £5 of credit, press **Create Key** and copy it.
       (Prefer a company's own key? Open **Step-by-step help** for Anthropic, OpenAI, Google and others.)
@@ -22,13 +26,13 @@ No typing, no commands. You need a Windows computer and about ten minutes.
       **"✓ OpenRouter key works — 18 models ready"**.
    3. **Try it.** Press **Free demo** to look around with sample results, or **2p test run** for a real test on the two
       cheapest models (the exact cost is shown before you press Start).
-4. **Next time:** double-click **Gauntlet** on your desktop.
+5. **Next time:** double-click **Gauntlet** on your desktop.
 
 ![The welcome page](docs/screenshots/easy-setup/01-welcome-first-run.png)
 
 ## Updating to a new version
 
-Extract the new zip **anywhere** (a new folder is fine, or over the old one) and double-click its
+Unblock the new zip first (right-click → **Properties** → **Unblock** → **OK**), then extract it **anywhere** (a new folder is fine, or over the old one) and double-click its
 `start-gauntlet.bat`. Your keys, runs and settings are kept. The desktop shortcut is moved to the new copy
 automatically. You can delete the old folder afterwards if you like.
 
@@ -59,6 +63,7 @@ wins. The API Keys page shows which OpenRouter model each Gauntlet model uses ("
 | What you see | What to do |
 |---|---|
 | **"Windows protected your PC"** | Click **More info** → **Run anyway**. |
+| **"Smart App Control blocked…"** (no Run anyway button) | Delete the extracted folder. Right-click the **zip** → **Properties** → tick **Unblock** → **OK**, then extract again. Still blocked? Open the extracted folder, click the address bar, type `powershell`, press Enter, paste `Get-ChildItem -Recurse \| Unblock-File`, press Enter, close the window and double-click `start-gauntlet.bat` again. Don't turn Smart App Control off. |
 | **"Node.js (the engine Gauntlet runs on) is not installed."** | Press **Y** to install it. If that fails, download the **LTS** version from nodejs.org, install it, then double-click `start-gauntlet.bat` again. |
 | **"Your Node.js is version … Gauntlet needs 22.18 or newer."** | Install the **LTS** version from nodejs.org (it replaces the old one), then start again. |
 | **"Something went wrong above. Copy the red text and ask for help."** | Usually no internet on the first start (Gauntlet downloads its building blocks once). Check the connection and double-click `start-gauntlet.bat` again. |
