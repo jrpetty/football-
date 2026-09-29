@@ -11,3 +11,6 @@ site/
 site.zip
 data/arena/
 .env.tmp-*
+
+# Launcher state (start-gauntlet.bat)
+.shortcut-made
