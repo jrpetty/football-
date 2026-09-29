@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "name": "Horizon: The Picture Logic Ladder",
   "category": "horizon",
-  "description": "Ten nonograms (paint-by-numbers logic puzzles) from 8x8 up to 35x35, 1,225 cells, each with exactly one solution. The pictures are random, so nothing can be guessed from a shape: every cell has to be deduced from the row and column clues. From level 3 on, looking at one row or column at a time is not enough: a growing share of the grid can only be settled by case analysis (try a cell, follow it to a contradiction). The whole grid must be exactly right. Uniqueness is proven by two independent solvers.",
+  "description": "Ten nonograms (paint-by-numbers logic puzzles) from 8x8 up to 50x50, 2,500 cells, each with exactly one solution. The pictures are random, so nothing can be guessed from a shape: every cell has to be deduced from the row and column clues. From level 3 on, looking at one row or column at a time is not enough: a growing share of the grid can only be settled by case analysis (try a cell, follow it to a contradiction). The whole grid must be exactly right. Uniqueness is proven by two independent solvers.",
   "difficulty": "extreme",
   "tags": [
     "horizon",
@@ -13,7 +13,7 @@
     "nonogram",
     "sat-verified"
   ],
-  "hook": "Can it deduce a 1,225-cell picture from numbers alone?",
+  "hook": "Can it deduce a 2,500-cell picture from numbers alone?",
   "maxOutputTokens": "model-max",
   "timeLimitSec": 3600,
   "maxRetries": 1,

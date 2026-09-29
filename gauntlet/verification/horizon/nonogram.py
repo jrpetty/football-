@@ -1,6 +1,6 @@
 """Horizon: The Picture Logic Ladder (horizon.nonogram-ladder).
 
-Ten nonograms (paint-by-numbers) from 8x8 to 35x35. Every puzzle has exactly ONE solution. That is proven
+Ten nonograms (paint-by-numbers) from 8x8 to 50x50. Every puzzle has exactly ONE solution. That is proven
 by Google OR-Tools CP-SAT here (each row and column is an automaton constraint; after the first solution
 is found it is forbidden and the solver must prove there is no second one), and independently by
 nonogram_check.mjs (JavaScript line-solving with full backtracking, counting solutions up to two).
@@ -26,9 +26,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 # From level 3 on, the puzzle cannot be finished by looking at one line at a time: after every line has been
 # pushed as far as it goes, at least that share of the grid is still open and needs case analysis
 # (try a cell, follow the consequences to a contradiction), which is the hard part for a human too.
-LEVELS = {1: (8, 8, 0.55, 0.0), 2: (10, 10, 0.55, 0.0), 3: (12, 12, 0.52, 0.10), 4: (15, 15, 0.52, 0.15),
-          5: (18, 18, 0.52, 0.2), 6: (20, 20, 0.52, 0.25), 7: (22, 22, 0.52, 0.3), 8: (25, 25, 0.52, 0.3),
-          9: (30, 30, 0.52, 0.35), 10: (35, 35, 0.52, 0.4)}
+# Levels 4-10 were made steeper after the blind calibration (an Opus-class model solved 20x20 with a quarter of
+# the grid left open by line logic): bigger grids AND more case analysis per cell from level 4 on.
+LEVELS = {1: (8, 8, 0.55, 0.0), 2: (10, 10, 0.55, 0.0), 3: (12, 12, 0.52, 0.10), 4: (20, 20, 0.52, 0.3),
+          5: (25, 25, 0.52, 0.4), 6: (30, 30, 0.52, 0.45), 7: (35, 35, 0.52, 0.5), 8: (40, 40, 0.52, 0.55),
+          9: (45, 45, 0.52, 0.58), 10: (50, 50, 0.52, 0.6)}
 
 
 def clues(line: list[int]) -> list[int]:

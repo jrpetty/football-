@@ -180,14 +180,14 @@ def nonogram():
     return {
         'kind': 'prompt', 'id': 'horizon.nonogram-ladder', 'version': VERSION, 'name': 'Horizon: The Picture Logic Ladder',
         'category': 'horizon',
-        'description': ('Ten nonograms (paint-by-numbers logic puzzles) from 8x8 up to 35x35, 1,225 cells, each with exactly one '
+        'description': ('Ten nonograms (paint-by-numbers logic puzzles) from 8x8 up to 50x50, 2,500 cells, each with exactly one '
                         'solution. The pictures are random, so nothing can be guessed from a shape: every cell has to be deduced from '
                         'the row and column clues. From level 3 on, looking at one row or column at a time is not enough: a growing '
                         'share of the grid can only be settled by case analysis (try a cell, follow it to a contradiction). The whole grid '
                         'must be exactly right. Uniqueness is proven by two independent solvers.'),
         'difficulty': 'extreme',
         'tags': ['horizon', 'ladder', 'constraint-puzzle', 'nonogram', 'sat-verified'],
-        'hook': 'Can it deduce a 1,225-cell picture from numbers alone?',
+        'hook': 'Can it deduce a 2,500-cell picture from numbers alone?',
         'maxOutputTokens': 'model-max', 'timeLimitSec': 3600, 'maxRetries': 1,
         'estimate': {'inputTokens': 700, 'outputTokens': 30000},
         'author': 'Gauntlet Horizon', 'createdAt': CREATED,
@@ -220,13 +220,13 @@ def tilings():
     return {
         'kind': 'prompt', 'id': 'horizon.tiling-count', 'version': VERSION, 'name': 'Horizon: Count Every Tiling',
         'category': 'horizon',
-        'description': ('Ten boards with holes, from 6x6 to 16x14. The task: the exact number of ways to cover each board with '
-                        'dominoes, a count that grows from 110 to a 22-digit number. It can be done by hand, column by '
+        'description': ('Ten boards with holes, from 6x6 to 18x18. The task: the exact number of ways to cover each board with '
+                        'dominoes, a count that grows from 110 to a 31-digit number. It can be done by hand, column by '
                         'column, but only by keeping perfect books over thousands of partial patterns. Keys are computed by two '
                         'different exact algorithms.'),
         'difficulty': 'extreme',
         'tags': ['horizon', 'ladder', 'combinatorics', 'counting', 'exact'],
-        'hook': 'Can it count every domino tiling when the answer has 22 digits?',
+        'hook': 'Can it count every domino tiling when the answer has 31 digits?',
         'maxOutputTokens': 'model-max', 'timeLimitSec': 3600, 'maxRetries': 1,
         'estimate': {'inputTokens': 350, 'outputTokens': 30000},
         'author': 'Gauntlet Horizon', 'createdAt': CREATED,

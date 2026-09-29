@@ -295,27 +295,29 @@ function solveNonogram(rows, cols, cap = 2) {
   }
 }
 
-// ─── Count Every Tiling: memoised "cover the first empty square" search with BigInt ─────────────────
+// ─── Count Every Tiling: row-by-row, cell-by-cell "broken profile" count with BigInt ────────────────
+// (The generator counts column by column with a depth-first fill of each column; this walks the board in
+// reading order, one cell at a time, keeping only which of the next C cells are already covered.)
 function countTilings(board) {
   const R = board.length, C = board[0].length, N = R * C;
-  let full = 0n;
-  for (let i = 0; i < N; i++) if (board[Math.floor(i / C)][i % C] === '.') full |= 1n << BigInt(i);
-  const memo = new Map();
-  const go = (filled, from) => {
-    let i = from;
-    while (i < N && (filled >> BigInt(i)) & 1n) i++;
-    if (i === N) return 1n;
-    const key = filled;
-    if (memo.has(key)) return memo.get(key);
-    let total = 0n;
+  const hole = (i) => (i < N && board[Math.floor(i / C)][i % C] === '.' ? 1 : 0);
+  const top = 1 << (C - 1);
+  let init = 0;
+  for (let k = 0; k < C; k++) if (hole(k)) init |= 1 << k;
+  let cur = new Map([[init, 1n]]);
+  for (let i = 0; i < N; i++) {
     const r = Math.floor(i / C), c = i % C;
-    const bit = 1n << BigInt(i);
-    if (c + 1 < C && !((filled >> BigInt(i + 1)) & 1n)) total += go(filled | bit | (1n << BigInt(i + 1)), i);
-    if (r + 1 < R && !((filled >> BigInt(i + C)) & 1n)) total += go(filled | bit | (1n << BigInt(i + C)), i);
-    memo.set(key, total);
-    return total;
-  };
-  return go(full, 0);
+    const enter = hole(i + C) ? top : 0;
+    const next = new Map();
+    const add = (s, w) => next.set(s, (next.get(s) ?? 0n) + w);
+    for (const [s, w] of cur) {
+      if (s & 1) { add((s >>> 1) | enter, w); continue; }
+      if (c + 1 < C && !(s & 2)) add(((s | 2) >>> 1) | enter, w);
+      if (r + 1 < R && !hole(i + C)) add((s >>> 1) | top, w);
+    }
+    cur = next;
+  }
+  return cur.get(0) ?? 0n;
 }
 {
   if (countTilings(Array(8).fill('########')) !== 12988816n) throw new Error('tiling counter self-test failed');

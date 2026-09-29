@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "name": "Horizon: Count Every Tiling",
   "category": "horizon",
-  "description": "Ten boards with holes, from 6x6 to 16x14. The task: the exact number of ways to cover each board with dominoes, a count that grows from 110 to a 22-digit number. It can be done by hand, column by column, but only by keeping perfect books over thousands of partial patterns. Keys are computed by two different exact algorithms.",
+  "description": "Ten boards with holes, from 6x6 to 18x18. The task: the exact number of ways to cover each board with dominoes, a count that grows from 110 to a 31-digit number. It can be done by hand, column by column, but only by keeping perfect books over thousands of partial patterns. Keys are computed by two different exact algorithms.",
   "difficulty": "extreme",
   "tags": [
     "horizon",
@@ -13,7 +13,7 @@
     "counting",
     "exact"
   ],
-  "hook": "Can it count every domino tiling when the answer has 22 digits?",
+  "hook": "Can it count every domino tiling when the answer has 31 digits?",
   "maxOutputTokens": "model-max",
   "timeLimitSec": 3600,
   "maxRetries": 1,
@@ -54,39 +54,39 @@
     },
     {
       "id": "L05",
-      "prompt": "Here is a board with 10 rows and 8 columns. Squares marked # must be covered; squares marked . are holes and must stay uncovered.\n\n########\n#.######\n########\n########\n########\n#####.##\n#.#####.\n#.######\n#######.\n########\n\nA domino is a 1x2 tile that covers two squares sharing a side (it can lie horizontally or vertically). In how many different ways can the 74 marked squares be covered completely with 37 dominoes, with no overlaps, no domino on a hole and nothing sticking out of the board? Two coverings are different if some pair of squares is covered by one domino in one covering but not in the other.\n\nGive the exact count as a single integer, all digits, with no spaces, commas or other separators.",
-      "expected": "267464",
-      "notes": "[level 5] 10x8 board, 74 squares. Key by column-by-column transfer-matrix counting (Python, big integers), re-checked by an independent memoised first-empty-square search in JavaScript (verify.mjs)."
+      "prompt": "Here is a board with 12 rows and 12 columns. Squares marked # must be covered; squares marked . are holes and must stay uncovered.\n\n############\n#####.######\n#.##########\n############\n############\n############\n############\n#####.####.#\n#.##########\n##.####.####\n############\n#########.##\n\nA domino is a 1x2 tile that covers two squares sharing a side (it can lie horizontally or vertically). In how many different ways can the 136 marked squares be covered completely with 68 dominoes, with no overlaps, no domino on a hole and nothing sticking out of the board? Two coverings are different if some pair of squares is covered by one domino in one covering but not in the other.\n\nGive the exact count as a single integer, all digits, with no spaces, commas or other separators.",
+      "expected": "979975631680",
+      "notes": "[level 5] 12x12 board, 136 squares. Key by column-by-column transfer-matrix counting (Python, big integers), re-checked by an independent memoised first-empty-square search in JavaScript (verify.mjs)."
     },
     {
       "id": "L06",
-      "prompt": "Here is a board with 10 rows and 10 columns. Squares marked # must be covered; squares marked . are holes and must stay uncovered.\n\n####.#####\n##########\n##########\n##..######\n##########\n###..#####\n##########\n##########\n#####.####\n##########\n\nA domino is a 1x2 tile that covers two squares sharing a side (it can lie horizontally or vertically). In how many different ways can the 94 marked squares be covered completely with 47 dominoes, with no overlaps, no domino on a hole and nothing sticking out of the board? Two coverings are different if some pair of squares is covered by one domino in one covering but not in the other.\n\nGive the exact count as a single integer, all digits, with no spaces, commas or other separators.",
-      "expected": "789173544",
-      "notes": "[level 6] 10x10 board, 94 squares. Key by column-by-column transfer-matrix counting (Python, big integers), re-checked by an independent memoised first-empty-square search in JavaScript (verify.mjs)."
+      "prompt": "Here is a board with 14 rows and 12 columns. Squares marked # must be covered; squares marked . are holes and must stay uncovered.\n\n########.###\n############\n#.#.########\n############\n############\n#####.#.####\n############\n############\n########.###\n###.########\n############\n######.#####\n############\n########.#.#\n\nA domino is a 1x2 tile that covers two squares sharing a side (it can lie horizontally or vertically). In how many different ways can the 158 marked squares be covered completely with 79 dominoes, with no overlaps, no domino on a hole and nothing sticking out of the board? Two coverings are different if some pair of squares is covered by one domino in one covering but not in the other.\n\nGive the exact count as a single integer, all digits, with no spaces, commas or other separators.",
+      "expected": "642136710384",
+      "notes": "[level 6] 14x12 board, 158 squares. Key by column-by-column transfer-matrix counting (Python, big integers), re-checked by an independent memoised first-empty-square search in JavaScript (verify.mjs)."
     },
     {
       "id": "L07",
-      "prompt": "Here is a board with 12 rows and 10 columns. Squares marked # must be covered; squares marked . are holes and must stay uncovered.\n\n##########\n###.######\n##########\n##########\n##########\n###..###.#\n.#########\n#######.##\n#####.####\n##########\n#.########\n##########\n\nA domino is a 1x2 tile that covers two squares sharing a side (it can lie horizontally or vertically). In how many different ways can the 112 marked squares be covered completely with 56 dominoes, with no overlaps, no domino on a hole and nothing sticking out of the board? Two coverings are different if some pair of squares is covered by one domino in one covering but not in the other.\n\nGive the exact count as a single integer, all digits, with no spaces, commas or other separators.",
-      "expected": "8188881004",
-      "notes": "[level 7] 12x10 board, 112 squares. Key by column-by-column transfer-matrix counting (Python, big integers), re-checked by an independent memoised first-empty-square search in JavaScript (verify.mjs)."
+      "prompt": "Here is a board with 14 rows and 14 columns. Squares marked # must be covered; squares marked . are holes and must stay uncovered.\n\n##############\n###########.##\n#####.########\n##############\n##############\n##############\n#######.######\n#########..###\n#######..#####\n##############\n##############\n#.############\n.######.######\n##############\n\nA domino is a 1x2 tile that covers two squares sharing a side (it can lie horizontally or vertically). In how many different ways can the 186 marked squares be covered completely with 93 dominoes, with no overlaps, no domino on a hole and nothing sticking out of the board? Two coverings are different if some pair of squares is covered by one domino in one covering but not in the other.\n\nGive the exact count as a single integer, all digits, with no spaces, commas or other separators.",
+      "expected": "138707088166639488",
+      "notes": "[level 7] 14x14 board, 186 squares. Key by column-by-column transfer-matrix counting (Python, big integers), re-checked by an independent memoised first-empty-square search in JavaScript (verify.mjs)."
     },
     {
       "id": "L08",
-      "prompt": "Here is a board with 12 rows and 12 columns. Squares marked # must be covered; squares marked . are holes and must stay uncovered.\n\n##.#########\n############\n############\n#######.####\n#######.####\n#####.#.####\n#.##########\n############\n############\n######.#####\n#########.##\n############\n\nA domino is a 1x2 tile that covers two squares sharing a side (it can lie horizontally or vertically). In how many different ways can the 136 marked squares be covered completely with 68 dominoes, with no overlaps, no domino on a hole and nothing sticking out of the board? Two coverings are different if some pair of squares is covered by one domino in one covering but not in the other.\n\nGive the exact count as a single integer, all digits, with no spaces, commas or other separators.",
-      "expected": "1924707889472",
-      "notes": "[level 8] 12x12 board, 136 squares. Key by column-by-column transfer-matrix counting (Python, big integers), re-checked by an independent memoised first-empty-square search in JavaScript (verify.mjs)."
+      "prompt": "Here is a board with 16 rows and 14 columns. Squares marked # must be covered; squares marked . are holes and must stay uncovered.\n\n##.###########\n##############\n##############\n#.############\n#########..###\n##.###########\n##############\n##############\n##############\n##.###########\n#########.####\n.#############\n############.#\n##############\n###.##########\n###.#######.##\n\nA domino is a 1x2 tile that covers two squares sharing a side (it can lie horizontally or vertically). In how many different ways can the 212 marked squares be covered completely with 106 dominoes, with no overlaps, no domino on a hole and nothing sticking out of the board? Two coverings are different if some pair of squares is covered by one domino in one covering but not in the other.\n\nGive the exact count as a single integer, all digits, with no spaces, commas or other separators.",
+      "expected": "294016251928191489432",
+      "notes": "[level 8] 16x14 board, 212 squares. Key by column-by-column transfer-matrix counting (Python, big integers), re-checked by an independent memoised first-empty-square search in JavaScript (verify.mjs)."
     },
     {
       "id": "L09",
-      "prompt": "Here is a board with 14 rows and 12 columns. Squares marked # must be covered; squares marked . are holes and must stay uncovered.\n\n##.#########\n###########.\n############\n############\n############\n##########.#\n#####.######\n##.#####.###\n###.########\n###########.\n##.#########\n############\n############\n###.########\n\nA domino is a 1x2 tile that covers two squares sharing a side (it can lie horizontally or vertically). In how many different ways can the 158 marked squares be covered completely with 79 dominoes, with no overlaps, no domino on a hole and nothing sticking out of the board? Two coverings are different if some pair of squares is covered by one domino in one covering but not in the other.\n\nGive the exact count as a single integer, all digits, with no spaces, commas or other separators.",
-      "expected": "107550563127456",
-      "notes": "[level 9] 14x12 board, 158 squares. Key by column-by-column transfer-matrix counting (Python, big integers), re-checked by an independent memoised first-empty-square search in JavaScript (verify.mjs)."
+      "prompt": "Here is a board with 16 rows and 16 columns. Squares marked # must be covered; squares marked . are holes and must stay uncovered.\n\n####.###########\n################\n############.###\n################\n################\n################\n################\n################\n############.###\n##########..####\n###############.\n########.#######\n#####.#.########\n.###############\n############.###\n#######.########\n\nA domino is a 1x2 tile that covers two squares sharing a side (it can lie horizontally or vertically). In how many different ways can the 244 marked squares be covered completely with 122 dominoes, with no overlaps, no domino on a hole and nothing sticking out of the board? Two coverings are different if some pair of squares is covered by one domino in one covering but not in the other.\n\nGive the exact count as a single integer, all digits, with no spaces, commas or other separators.",
+      "expected": "213237049917782317161984",
+      "notes": "[level 9] 16x16 board, 244 squares. Key by column-by-column transfer-matrix counting (Python, big integers), re-checked by an independent memoised first-empty-square search in JavaScript (verify.mjs)."
     },
     {
       "id": "L10",
-      "prompt": "Here is a board with 16 rows and 14 columns. Squares marked # must be covered; squares marked . are holes and must stay uncovered.\n\n###########.##\n#..########.##\n####.#########\n##############\n#############.\n##############\n##############\n##.###########\n.######..#####\n##############\n#####.########\n##############\n.#############\n##############\n##############\n##############\n\nA domino is a 1x2 tile that covers two squares sharing a side (it can lie horizontally or vertically). In how many different ways can the 212 marked squares be covered completely with 106 dominoes, with no overlaps, no domino on a hole and nothing sticking out of the board? Two coverings are different if some pair of squares is covered by one domino in one covering but not in the other.\n\nGive the exact count as a single integer, all digits, with no spaces, commas or other separators.",
-      "expected": "6264566672676677547822",
-      "notes": "[level 10] 16x14 board, 212 squares. Key by column-by-column transfer-matrix counting (Python, big integers), re-checked by an independent memoised first-empty-square search in JavaScript (verify.mjs)."
+      "prompt": "Here is a board with 18 rows and 18 columns. Squares marked # must be covered; squares marked . are holes and must stay uncovered.\n\n##################\n#####.#######..###\n##############.###\n#############.####\n##################\n##################\n#######.##########\n############.#####\n##################\n##################\n##################\n####.#############\n########.#########\n#####.#.##########\n##################\n############.#####\n#.################\n.#################\n\nA domino is a 1x2 tile that covers two squares sharing a side (it can lie horizontally or vertically). In how many different ways can the 310 marked squares be covered completely with 155 dominoes, with no overlaps, no domino on a hole and nothing sticking out of the board? Two coverings are different if some pair of squares is covered by one domino in one covering but not in the other.\n\nGive the exact count as a single integer, all digits, with no spaces, commas or other separators.",
+      "expected": "1125231810800593344527269733088",
+      "notes": "[level 10] 18x18 board, 310 squares. Key by column-by-column transfer-matrix counting (Python, big integers), re-checked by an independent memoised first-empty-square search in JavaScript (verify.mjs)."
     }
   ]
 }
