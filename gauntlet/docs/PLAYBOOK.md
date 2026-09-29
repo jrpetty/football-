@@ -39,8 +39,9 @@ This checks the install, the dashboard, the Live Arena and the replays without s
 * Or from the terminal: `node src/cli.ts run --models a,b,c --suite core --repeats 3 --max-cost 25 --name "Episode 12"`.
 * If you hit the cap, or a provider has an outage: **Runs → Resume**. Finished cases are kept; only missing or
   errored ones re-run.
-* To test a model that has no API (a chat app, a model that isn't out yet): add a **manual** model (Models →
-  Add → provider *Manual*) and answer its prompts in the **Manual Inbox**.
+* To test a model that has no API (a chat app, an old model, a model that isn't out yet): in New Run press
+  **Test models by copy & paste**, tick the models, and answer their prompts in the **Manual Inbox**. See
+  [Testing old or chat-only models by copy & paste](#testing-old-or-chat-only-models-by-copy--paste).
 
 ## 4. Record
 
@@ -919,4 +920,70 @@ models on their own companies' keys, or say on screen that some ran via OpenRout
 **The 2p Quick Check:** the `quick-check` suite (five short, exactly graded questions, no judges) checks that a new key
 works end to end. On the two cheapest models it costs about 2p. The Welcome page's **2p test run** button opens New Run
 with it and those two models ticked. It tells you nothing about which model is best.
+
+## Testing old or chat-only models by copy & paste
+
+Gauntlet can score any model you can chat with, back to Claude 3 Opus (March 2024): you copy each prompt into
+the chat app, paste the reply back, and it is marked exactly like an API answer. Gauntlet keeps a **model
+catalogue** of 78 notable models from March 2024 to today (Anthropic, OpenAI, Google, xAI, Meta, Mistral,
+DeepSeek, Alibaba/Qwen, Moonshot/Kimi), each with its release date and **where you can still use it**.
+
+**What's still available (checked 29 Sep 2026).** The picker shows it on every model, for example:
+
+* *Claude 3 Opus* · retired from Anthropic's API on 5 Jan 2026 · **still in claude.ai on paid plans** · API access
+  by request. Anthropic kept it on purpose, so a paid claude.ai account is the easy way to test it.
+* *Claude 3.5 Sonnet, 3.7 Sonnet, Claude 4, Opus 4.1* · retired from Anthropic's API · may still be on AWS Bedrock,
+  Google Vertex AI, OpenRouter or Poe (**not checked**: look before you plan an episode).
+* *GPT-4, GPT-4 Turbo, o1, o3-mini, o4-mini* · still on OpenAI's API until **23 Oct 2026**, then gone. *GPT-5, o3*:
+  until 11 Dec 2026. *GPT-4o*: out of ChatGPT but still on the API. Record these soon.
+* *Gemini 2.5 Pro / Flash* · shut down on the Gemini API on 16 Oct 2026. Gemini 1.5 and 2.0 are gone.
+* Open-weights models (Llama, DeepSeek V3/R1, Qwen, Kimi) stay reachable through hosts such as OpenRouter.
+* **Unverified** means we couldn't confirm it (15 of 78, e.g. Grok 2 and 3, GPT-4.1, GPT-5.1/5.2): check the app's
+  model menu and write what it says in the note.
+
+**Set up the run (one step).**
+
+1. **New Run → Test models by copy & paste → Choose models.** Search ("opus 3", "gpt-4o", "2024"), tick the
+   models, and for each one say where you'll paste it: its company's chat app (claude.ai, ChatGPT…), the API
+   playground, OpenRouter's chat, Poe, an arena site, a cloud console or another app.
+2. Leave **Thinking** "as the app has it" unless you switch it on or off yourself, and keep **Web search off**
+   (API models can't search, so a model that can is doing a different test).
+3. **Add to this run**, pick the tests, **Start run**. No Models page, no JSON.
+
+Each model + app + setting is its own contestant: "Claude 3 Opus (claude.ai)" and "Claude 3 Opus (API playground)"
+never mix, and results with thinking or web search on are labelled so. The same model through the same app adds up
+across runs. These models are saved in your Gauntlet folder (`%APPDATA%\Gauntlet\data\manual-models`), so
+updating Gauntlet never loses them.
+
+**Answer in the Manual Inbox.** Every card shows, in big type, **You are testing Claude 3 Opus in claude.ai**,
+with its availability and an **Open claude.ai** button, so you never paste into the wrong model. Copy the prompt
+into a **new chat**, paste the whole reply back, **Submit**.
+
+* A prompt from the old **Manual entry (unspecified model)** asks **Which model are you using?** first. Pick it
+  before you paste; once a reply of that conversation is submitted the model is locked for the rest of it.
+  **Use one model for all of them** sets it for every waiting prompt at once. Your last choice is remembered.
+* Model not in the list? **Suggest a model not in the list** adds it to your own list, marked "unverified".
+
+**Old results that don't say which model.** At the bottom of the Inbox, **Old copy & paste results without a model
+name** lists results saved as "Manual entry (unspecified model)". Only if you're sure which model and app you used,
+tick them, pick the model, say why, and **Reassign**. Moved results are labelled "reassigned" on Best on each test,
+and every move is written to `reassign-log.jsonl` in the same folder.
+
+**Compare them.** Hand-copied results are ordinary results, so they appear on the **Leaderboard** (tagged
+*hand-copied*), **Model History** (at their release date), **Head to Head** ("pasted by hand") and the new
+**Best on each test** page:
+
+* **Rankings:** every test, every model that has taken it (API and copy & paste together), the leader with its
+  score, how many answers it is based on and when it was tested. Ties share a place. Filter by company, release
+  year, API vs copied by hand, and test category.
+* **Timeline:** pick a test and see every model at its release date, with "Since Claude 3 Opus (Mar 2024): 25 →
+  best now …: 99, +74 points". Press **B** for Broadcast mode. This is the "how far AI has come" shot.
+
+**Say this on camera.** Chat apps can add their own hidden instructions, use different settings from the API, and
+quietly update a model over time, so a hand-copied score is not a perfect match for the same model through the API.
+Treat small gaps as a draw. The page shows this note whenever hand-copied results are on screen.
+
+**Keeping the catalogue current.** It is plain data in `config/model-catalog.json`: to add a model, copy an entry and
+change the fields. Each entry has a `source` and a `verifiedAt` date; anything we couldn't check is `"unverified"`.
+`node src/cli.ts validate` checks it (unique ids, real dates, required fields).
 
