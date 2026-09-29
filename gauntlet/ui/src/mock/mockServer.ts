@@ -57,8 +57,13 @@ import { mockTurnImages } from './vision.ts';
 import { mockExport, mockOverlay, mockPolish, mockPolishEstimate, mockStudio } from './studioMock.ts';
 import { finalizeLive, liveAnswerText, thinkTicks } from './liveMock.ts';
 import { answerGalleryRequest, galleryManualRequests } from './galleryMock.ts';
+import { answerMockManualModel, mockManualContestants, mockManualModelRequests, rememberMockRequests } from './manualModelsMock.ts';
 
 const contestants: ContestantView[] = CONTESTANTS.map((c) => ({ ...c }));
+/** Copy & paste models from the catalogue (manualModelsMock.ts): added to the model list as they are made. */
+const syncManualContestants = () => {
+  for (const c of mockManualContestants()) if (!contestants.some((x) => x.id === c.id)) contestants.push(c);
+};
 const tests: TestDefinition[] = [...TESTS];
 const customIds = new Set(['reasoning.calendar-puzzle']);
 const sourceOf = (id: string) => (customIds.has(id) ? 'custom' : PRIVATE_IDS.has(id) ? 'private' : 'builtin');
@@ -732,6 +737,8 @@ export async function handle(method: string, fullPath: string, body: unknown): P
   if (a === 'arena') return (await import('./arenaMock.ts')).handleArena(method, parts.slice(1), body);
   if (a === 'versus') return (await import('./versusMock.ts')).handleVersus(method, parts.slice(1), q, body);
   if (a === 'grading') return (await import('./gradingMock.ts')).handleGrading(method, parts.slice(1), q, body);
+  syncManualContestants();
+  if (a === 'manual-models' || a === 'best-per-test') return (await import('./manualModelsMock.ts')).handleManualModels(method, parts, q, body);
 
   switch (route) {
     case 'GET meta':
@@ -824,10 +831,13 @@ export async function handle(method: string, fullPath: string, body: unknown): P
     case 'GET manual': {
       for (const [id, spec] of specs) if (spec.status === 'running') ensureSim(id);
       const runId = q.get('runId');
-      return [...manualPending.values()].map((p) => p.req).concat(galleryManualRequests()).filter((r) => !runId || r.runId === runId).sort((x, y) => x.createdAt.localeCompare(y.createdAt));
+      const waiting = [...manualPending.values()].map((p) => p.req).concat(galleryManualRequests(), mockManualModelRequests()).filter((r) => !runId || r.runId === runId).sort((x, y) => x.createdAt.localeCompare(y.createdAt));
+      rememberMockRequests(waiting);
+      return waiting;
     }
     case 'POST manual': {
       if (c === 'image') return answerGalleryRequest(b);
+      if (!c && answerMockManualModel(b)) return { ok: true };
       if (c === 'fail') {
         resolveManual(b, null, (body as { reason?: string })?.reason);
         return { ok: true };

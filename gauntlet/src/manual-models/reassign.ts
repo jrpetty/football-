@@ -14,7 +14,9 @@ import { existsSync, readFileSync } from 'node:fs';
 import { contestantConfigHash, loadContestants, loadProviders } from '../core/config.ts';
 import type { CaseResult, Contestant, ManualModelInfo } from '../core/types.ts';
 import { appendResult, listRunIds, readManifest, readResults, writeManifest } from '../engine/store.ts';
-import { buildManualContestant, manualContestantId, normalizeInfo } from './identity.ts';
+import { buildManualContestant, manualContestantId, normalizeInfo, type ReassignOutcome, type UnspecifiedGroup } from './identity.ts';
+
+export type { ReassignOutcome, UnspecifiedGroup };
 import { PENDING_CHOICES_FILE, REASSIGN_LOG, appendLog, loadCatalog, readJson, saveUserManualContestant, writeJson } from './store.ts';
 
 export class ManualModelError extends Error {
@@ -59,12 +61,6 @@ export function ensureManualContestant(infoIn: Partial<ManualModelInfo> & { cata
 
 function newKeyFor(r: CaseResult, toId: string): string {
   return `${toId}::${r.testId}::${r.caseId}::r${r.repeat}`;
-}
-
-export interface ReassignOutcome {
-  moved: number;
-  skipped: Array<{ key: string; reason: string }>;
-  to: { id: string; label: string };
 }
 
 /**
@@ -142,19 +138,6 @@ export function reassignLog(limit = 50): Array<Record<string, unknown>> {
 }
 
 // ───────────────────────────── Unspecified results (for the reassign panel) ─────────────────────────────
-
-export interface UnspecifiedGroup {
-  runId: string;
-  runName: string;
-  createdAt: string;
-  contestantId: string;
-  contestantLabel: string;
-  testId: string;
-  testName: string;
-  keys: string[];
-  scored: number;
-  lastAt: string;
-}
 
 /** Every copy & paste result that still says "unspecified model", grouped by run, contestant and test. */
 export function listUnspecified(): UnspecifiedGroup[] {

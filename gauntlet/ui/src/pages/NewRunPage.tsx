@@ -12,6 +12,8 @@ import { SpendLimitsSection, parseSameTokens, type OutputChoice } from '../compo
 import { useBudget } from '../budget/budgetApi.ts';
 import { BudgetRunLine, budgetBlocker } from '../budget/BudgetParts.tsx';
 import { displayCurrency } from '../money.ts';
+import { CopyPasteRunPanel } from '../manual-models/CopyPasteRunPanel.tsx';
+import { copiedByHandText } from '../../../src/manual-models/identity.ts';
 
 const ALLOW_WORDS: Record<string, string> = {
   'model-max': 'its own maximum',
@@ -578,6 +580,13 @@ export default function NewRunPage() {
                     </Callout>
                   </div>
                 )}
+                <CopyPasteRunPanel
+                  defaultOpen={query.get('copy') === '1'}
+                  onAdded={(views) => {
+                    data.reload();
+                    setSelected((s) => new Set([...(s ?? []), ...views.map((v) => v.id)]));
+                  }}
+                />
                 <div className="con-grid">
                   {enabled.map((c) => {
                     const on = sel.has(c.id);
@@ -594,7 +603,7 @@ export default function NewRunPage() {
                             {c.providerLabel && c.providerLabel !== c.vendor ? ` · ${c.providerLabel}` : ''}
                           </div>
                           <div className="mono muted ellipsis" style={{ fontSize: '0.72rem' }}>
-                            {c.model}
+                            {c.manualModel ? copiedByHandText(c.manualModel) : c.model}
                           </div>
                           <div className="row wrap" style={{ gap: 5, marginTop: 4 }}>
                             {manual ? (

@@ -55,6 +55,8 @@ const GalleryPage = lazy(() => import('./gallery/GalleryPage.tsx'));
 const GalleryVotePage = lazy(() => import('./gallery/GalleryVotePage.tsx'));
 // Grading Station (ui/src/grading/)
 const GradingStationPage = lazy(() => import('./grading/GradingStationPage.tsx'));
+// Best on each test (ui/src/manual-models/)
+const BestPerTestPage = lazy(() => import('./manual-models/BestPerTestPage.tsx'));
 
 interface NavItem {
   to: string;
@@ -72,6 +74,7 @@ const NAV: NavItem[] = [
   { to: '/runs', label: 'Runs', icon: Icon.History, match: (p) => p.startsWith('/runs') },
   { to: '/arena', label: 'Arena', icon: ArenaIcon, match: (p) => p.startsWith('/arena') },
   { to: '/versus', label: 'Head to Head', icon: VersusIcon, match: (p) => p.startsWith('/versus') },
+  { to: '/best', label: 'Best on each test', icon: Icon.Layers, match: (p) => p.startsWith('/best') },
   { to: '/present', label: 'Presenter', icon: Icon.Present, match: (p) => p.startsWith('/present') },
   { to: '/studio', label: 'Studio', icon: Icon.Clapper, match: (p) => p.startsWith('/studio') },
   { to: '/gallery', label: 'The Gallery', icon: Icon.Image, match: (p) => p.startsWith('/gallery') },
@@ -172,6 +175,7 @@ function resolve(parts: string[]): Resolved {
     return { el: <ArenaTournamentPage key={b} id={b} />, crumb: 'Tournament' };
   }
   if (a === 'versus') return { el: <VersusPage />, crumb: 'Head to Head' };
+  if (a === 'best') return { el: <BestPerTestPage />, crumb: 'Best on each test' };
   if (a === 'present' && b === 'versus') return { el: <VersusDeckPage />, crumb: 'Presenter', bare: true };
   if (a === 'present') {
     if (!b) return { el: <PresentPickerPage />, crumb: 'Presenter' };

@@ -332,3 +332,25 @@ export function matchesSearch(m: CatalogModel, q: string): boolean {
   const hay = `${m.label} ${m.id} ${m.vendor} ${m.family} ${m.apiModelId ?? ''} ${m.released}`.toLowerCase();
   return t.split(/\s+/).every((w) => hay.includes(w));
 }
+
+// ───────────────────────────── API shapes (src/manual-models/reassign.ts) ─────────────────────────────
+
+export interface ReassignOutcome {
+  moved: number;
+  skipped: Array<{ key: string; reason: string }>;
+  to: { id: string; label: string };
+}
+
+/** Copy & paste results that don't say which model made them, grouped by run, contestant and test. */
+export interface UnspecifiedGroup {
+  runId: string;
+  runName: string;
+  createdAt: string;
+  contestantId: string;
+  contestantLabel: string;
+  testId: string;
+  testName: string;
+  keys: string[];
+  scored: number;
+  lastAt: string;
+}
