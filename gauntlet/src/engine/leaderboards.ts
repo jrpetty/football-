@@ -8,6 +8,11 @@ function markManual(board: Leaderboard, contestants: Contestant[]): Leaderboard 
   const providers = loadProviders();
   const manual = new Set(contestants.filter((c) => providers.find((p) => p.id === c.provider)?.type === 'manual').map((c) => c.id));
   for (const row of board.rows) if (manual.has(row.contestantId)) row.manual = true;
+  // Copy & paste models from the catalogue: interface + settings for the "copied by hand · …" label.
+  for (const row of board.rows) {
+    const info = contestants.find((c) => c.id === row.contestantId)?.manualModel;
+    if (info) row.manualModel = info;
+  }
   return board;
 }
 

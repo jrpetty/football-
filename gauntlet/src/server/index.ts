@@ -62,6 +62,7 @@ import { registerMoneyRoutes } from './money-routes.ts';
 import { registerBudgetRoutes } from '../budget/routes.ts';
 import { recordSpend } from '../budget/spend.ts';
 import { registerGradingRoutes } from '../grading/routes.ts';
+import { registerManualModelRoutes } from '../manual-models/routes.ts';
 
 class HttpError extends Error {
   status: number;
@@ -609,6 +610,8 @@ registerMoneyRoutes({ route, httpError: (status, message) => new HttpError(statu
 registerBudgetRoutes({ route, httpError: (status, message) => new HttpError(status, message) });
 // Grading Station: human / AI / both grading, grading specs, 30-word summaries (src/grading/).
 registerGradingRoutes({ route, httpError: (status, message, details) => new HttpError(status, message, details) });
+// Copy & paste models: model catalogue, "Which model are you using?", reassigning, Best on each test (src/manual-models/).
+registerManualModelRoutes({ route, httpError: (status, message) => new HttpError(status, message) });
 
 // ─────────────────────────────────────────────────────────────────────────────
 

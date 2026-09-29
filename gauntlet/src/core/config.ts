@@ -5,6 +5,7 @@ import { contentHash } from './hash.ts';
 import { normalizeCurrency, type CurrencySettings } from './currency.ts';
 import { routeFor } from './openrouter.ts';
 import type { CategoryInfo, Contestant, ContestantSnapshot, ContestantView, ProviderConfig } from './types.ts';
+import { deleteUserManualContestant, isUserManualContestant, loadUserManualContestants, saveUserManualContestant } from '../manual-models/store.ts';
 
 export interface Settings {
   judges: string[];
@@ -123,7 +124,10 @@ export function loadProviders(): ProviderConfig[] {
 }
 
 export function loadContestants(): Contestant[] {
-  return loadModelsFile().contestants;
+  const shipped = loadModelsFile().contestants;
+  // Copy & paste models made from the model catalogue live in the user folder (src/manual-models/store.ts).
+  const ids = new Set(shipped.map((c) => c.id));
+  return [...shipped, ...loadUserManualContestants().filter((c) => !ids.has(c.id))];
 }
 
 export function getProvider(id: string): ProviderConfig {
@@ -206,6 +210,9 @@ export function validateContestant(c: Contestant): string[] {
 }
 
 export function upsertContestant(c: Contestant): void {
+  if (c.manualModel || isUserManualContestant(c.id)) {
+    if (!loadModelsFile().contestants.some((x) => x.id === c.id)) return saveUserManualContestant(c);
+  }
   const file = loadModelsFile();
   const idx = file.contestants.findIndex((x) => x.id === c.id);
   if (idx >= 0) file.contestants[idx] = c;
@@ -214,6 +221,7 @@ export function upsertContestant(c: Contestant): void {
 }
 
 export function deleteContestant(id: string): boolean {
+  if (deleteUserManualContestant(id)) return true;
   const file = loadModelsFile();
   const before = file.contestants.length;
   file.contestants = file.contestants.filter((x) => x.id !== id);

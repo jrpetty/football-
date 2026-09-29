@@ -114,6 +114,24 @@ export interface Contestant {
   openrouterModel?: string;
   /** Set when this contestant ran through OpenRouter instead of its own company's API (recorded in run manifests). */
   route?: ContestantRoute;
+  /** Copy & paste contestants made from the model catalogue: which model, through which app, with which settings (src/manual-models/). */
+  manualModel?: ManualModelInfo;
+}
+
+/** Where a copy & paste reply was typed: the company's own chat app, an API playground, OpenRouter's chat, Poe, an arena site… */
+export type ManualInterface = 'company-app' | 'api-playground' | 'openrouter' | 'poe' | 'arena' | 'cloud' | 'other';
+
+/** A copy & paste contestant's identity (model + interface + settings are all part of its config hash). */
+export interface ManualModelInfo {
+  /** Model catalogue id (config/model-catalog.json), e.g. "claude-3-opus". */
+  catalogId: string;
+  interface: ManualInterface;
+  /** Thinking / extended reasoning: "default" = left as the app had it. */
+  thinking: 'default' | 'on' | 'off';
+  /** Web search on (unfair for most tests: recorded and flagged). */
+  webSearch: boolean;
+  /** Free-text note (not part of the identity), e.g. "Pro plan, UK". */
+  note?: string;
 }
 
 /** How a routed contestant reached its model: "via OpenRouter", with what it would have been called directly. */
@@ -750,6 +768,13 @@ export interface CaseResult {
   aiGrades?: AiGrade[];
   /** Grading Station: a person disputes an objective (answer-key / machine) score. The score itself never changes. */
   disputes?: Array<{ rater: string; note: string; at: string }>;
+  /**
+   * This copy & paste result was moved to a named model (src/manual-models/reassign.ts); a copy under that model's
+   * key holds it now, and this line no longer counts anywhere. Kept so resuming the run never asks for it again.
+   */
+  reassignedTo?: { contestantId: string; key: string; at: string };
+  /** This result came from another contestant's copy & paste result: "paste" = model picked in the Manual Inbox, "reassign" = moved later by hand. */
+  manualOrigin?: { from: string; fromKey: string; how: 'paste' | 'reassign'; at: string; note?: string };
 }
 
 /** A human grade. Optional fields come from the Grading Station's rubric (older entries have only rater/score/at/note). */
@@ -967,6 +992,8 @@ export interface LeaderboardRow {
   consistency: number | null;
   /** True when this contestant's results were entered manually (copy & paste); speed/cost figures are not API measurements. */
   manual?: boolean;
+  /** Copy & paste contestants from the model catalogue: model, interface and settings (for the "copied by hand · …" label). */
+  manualModel?: ManualModelInfo;
 }
 
 export interface MedalEntry {
