@@ -182,6 +182,12 @@ export default function ReviewPage() {
         }
       />
 
+      <div className="callout plain no-broadcast" style={{ marginBottom: 12 }}>
+        <Icon.Target />
+        <div>
+          Want the test’s full rubric, every file the model produced, AI judges or both? Use the <Link to="/grading">Grading Station</Link>. Grades from both places are stored the same way.
+        </div>
+      </div>
       <div className="filter-bar">
         <div className="seg" role="group" aria-label="Filter by reason">
           {(['all', 'judge-disagreement', 'human-scored', 'second-opinion'] as const).map((r) => (

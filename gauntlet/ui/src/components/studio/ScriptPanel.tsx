@@ -1,4 +1,5 @@
 /** Studio → Video script: editable draft, number check, exports, and the optional "Polish with AI" (cost shown first). */
+import { StudioFacts } from '../../grading/StudioFacts.tsx';
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../api.ts';
 import { useAsync, useLocalStorage } from '../../hooks.ts';
@@ -140,6 +141,7 @@ export function ScriptPanel({ s }: { s: StudioPayload }) {
       </Card>
 
       <div className="stack loose">
+        <StudioFacts facts={s.facts} onInsert={(line) => setDraft(`${draft.replace(/\s*$/, '')}\n\n${line}\n`)} />
         <Card title="Running order" desc={total ? `About ${fmtDur(total)} of narration` : undefined}>
           <ol className="script-outline">
             {parts.map((p, i) => (

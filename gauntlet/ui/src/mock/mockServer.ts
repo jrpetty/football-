@@ -79,6 +79,15 @@ function getRun(id: string): MockRun {
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** Read-only access for feature mocks (e.g. gradingMock.ts): a run's manifest and results, or null. */
+export function mockRunForFeatures(id: string): MockRun | null {
+  try {
+    return getRun(id);
+  } catch {
+    return null;
+  }
+}
+
 function registerExports(run: MockRun) {
   const id = run.manifest.id;
   const json = JSON.stringify({ manifest: run.manifest, results: run.results }, null, 2);
@@ -488,7 +497,8 @@ function estimateRun(req: RunRequest): RunEstimate {
       const fromDef = (est.inputTokens * c.pricing.inputPerM + est.outputTokens * c.pricing.outputPerM) / 1e6;
       // "Model's maximum" tests (The Game Jam): the typical cost stops at the allowance, and a ceiling at the full allowance.
       // Picture-only models are skipped on text tests (as in a real run).
-      const pictureOnly = Boolean(c.imageOnly) && t.kind === 'prompt';
+      // Like the engine: a picture-only model takes only the picture-making test and skips every other one.
+      const pictureOnly = Boolean(c.imageOnly) && t.id !== 'art.gallery-masterpiece';
       const modelMax = t.maxOutputTokens === 'model-max' && !pictureOnly;
       const allow = outputAllowance({ requested: t.maxOutputTokens, contestant: c, defaultMaxOutputTokens: 16000, limits, inputTokens: est.inputTokens });
       const typicalOut = Math.min(est.outputTokens, allow.tokens);
@@ -497,7 +507,7 @@ function estimateRun(req: RunRequest): RunEstimate {
       if (measured !== null) anyMeasured = true;
       else if (!manual) allMeasured = false;
       const usd = perCase * n;
-      row[c.id] = usd;
+      if (!pictureOnly) row[c.id] = usd; // skipped tests have no cell (shown as “skipped”)
       const acc = perCon.get(c.id) ?? { jobs: 0, est: 0, high: 0, max: 0 };
       acc.jobs += n;
       acc.est += usd;
@@ -721,6 +731,7 @@ export async function handle(method: string, fullPath: string, body: unknown): P
   const route = `${method} ${a ?? ''}`;
   if (a === 'arena') return (await import('./arenaMock.ts')).handleArena(method, parts.slice(1), body);
   if (a === 'versus') return (await import('./versusMock.ts')).handleVersus(method, parts.slice(1), q, body);
+  if (a === 'grading') return (await import('./gradingMock.ts')).handleGrading(method, parts.slice(1), q, body);
 
   switch (route) {
     case 'GET meta':

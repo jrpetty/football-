@@ -519,10 +519,10 @@ test('estimates: per-image prices for painters, nothing for skipped models, judg
     assert.equal(gm.perContestant.painter, Math.round((0.25 + (480 * 5) / 1e6) * 10000) / 10000);
     assert.equal(gm.perContestant['gem-painter'], Math.round((0.039 + (480 * 0.3) / 1e6) * 10000) / 10000);
   }
-  assert.equal(gm.perContestant.coder, 0, 'no image output: skipped, costs nothing');
+  assert.equal(gm.perContestant.coder, undefined, 'no image output: skipped, so no cost cell (shown as "skipped")');
   assert.equal(gm.perContestant['manual-chat'], 0);
   const code = est.perTest.find((t) => t.testId === 'art.gallery-painted-in-code')!;
-  assert.equal(code.perContestant.painter, 0, 'picture-only: skipped on the code test');
+  assert.equal(code.perContestant.painter, undefined, 'picture-only: skipped on the code test');
   assert.ok(code.perContestant.coder! > 0);
   assert.ok(est.judgeCostUsd > 0);
   assert.ok(per('painter').estCostUsd > 0.25);

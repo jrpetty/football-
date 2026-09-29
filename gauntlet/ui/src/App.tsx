@@ -52,6 +52,8 @@ const VersusDeckPage = lazy(() => import('./versus/VersusDeckPage.tsx'));
 // The Gallery (ui/src/gallery/)
 const GalleryPage = lazy(() => import('./gallery/GalleryPage.tsx'));
 const GalleryVotePage = lazy(() => import('./gallery/GalleryVotePage.tsx'));
+// Grading Station (ui/src/grading/)
+const GradingStationPage = lazy(() => import('./grading/GradingStationPage.tsx'));
 
 interface NavItem {
   to: string;
@@ -73,6 +75,7 @@ const NAV: NavItem[] = [
   { to: '/studio', label: 'Studio', icon: Icon.Clapper, match: (p) => p.startsWith('/studio') },
   { to: '/gallery', label: 'The Gallery', icon: Icon.Image, match: (p) => p.startsWith('/gallery') },
   { to: '/inbox', label: 'Manual Inbox', icon: Icon.Inbox, badge: 'manual', match: (p) => p.startsWith('/inbox') },
+  { to: '/grading', label: 'Grading Station', icon: Icon.Target, match: (p) => p.startsWith('/grading') },
   { to: '/review', label: 'Blind Review', icon: Icon.Eye, match: (p) => p.startsWith('/review') },
   { to: '/tests', label: 'Tests', icon: Icon.Flask, section: 'Lab', match: (p) => p.startsWith('/tests') },
   { to: '/grade', label: 'Grader', icon: Icon.Target, match: (p) => p.startsWith('/grade') },
@@ -141,6 +144,7 @@ function resolve(parts: string[]): Resolved {
   if (a === 'models') return { el: <ModelsPage />, crumb: 'Models' };
   if (a === 'keys') return { el: <KeysPage />, crumb: 'API Keys' };
   if (a === 'review') return { el: <ReviewPage />, crumb: 'Blind Review' };
+  if (a === 'grading') return { el: <GradingStationPage />, crumb: 'Grading Station' };
   if (a === 'methodology') return { el: <MethodologyPage />, crumb: 'Methodology' };
   if (a === 'guide') return b === 'show' ? { el: <ViewerGuidePage show />, crumb: 'Viewer guide', bare: true } : { el: <ViewerGuidePage />, crumb: 'Viewer guide' };
   if (a === 'gallery') {

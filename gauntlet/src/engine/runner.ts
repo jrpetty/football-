@@ -445,7 +445,8 @@ export async function estimateRun(req: RunRequest): Promise<RunEstimate> {
       cost += testCost;
       // The conservative bound never exceeds the true ceiling of a "model's maximum" test.
       costHigh += Math.min(testCost * (basis === 'measured' ? 1.2 : 1.6), modelMax ? Math.max(testCost, testMax) : Infinity);
-      perTest[i]!.perContestant[c.id] = Math.round(testCost * 10000) / 10000;
+      // A test this model skips entirely (picture-only model, no image output) has no cell: the UI shows “skipped”, not £0.
+      if (runnable.length > 0 || selected.length === 0) perTest[i]!.perContestant[c.id] = Math.round(testCost * 10000) / 10000;
       if (perTest[i]!.basis !== 'measured') perTest[i]!.basis = basis;
       const judgePool = plan.plannedJudges;
       const rules = programOf(t)?.judges;

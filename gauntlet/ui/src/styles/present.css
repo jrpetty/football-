@@ -1761,3 +1761,15 @@
     padding: 5px 10px;
   }
 }
+
+/* 30-word performance summary under each model's bar (src/grading/summary.ts) */
+.rr-perf {
+  margin: 4px 120px 0 0;
+  font-size: 17px;
+  line-height: 1.35;
+  color: var(--text-2);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

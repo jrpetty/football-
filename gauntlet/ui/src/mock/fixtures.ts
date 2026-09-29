@@ -1045,7 +1045,8 @@ export function buildLeaderboard(manifest: RunManifest, results: CaseResultLite[
     const caseMeansByTest: Record<string, number[]> = {};
     for (const t of tests) {
       const rs = mine.filter((r) => r.testId === t.id);
-      const scored = rs.filter((r) => typeof r.score === 'number');
+      // Same rule as the server (src/engine/aggregate.ts): errors, cancellations and answers awaiting a grade don't count.
+      const scored = rs.filter((r) => typeof r.score === 'number' && r.status !== 'error' && r.status !== 'cancelled' && r.status !== 'pending-human');
       const byCase = new Map<string, number[]>();
       for (const r of scored) {
         const arr = byCase.get(r.caseId) ?? [];
@@ -1054,7 +1055,8 @@ export function buildLeaderboard(manifest: RunManifest, results: CaseResultLite[
       }
       const caseMeans = [...byCase.values()].map(mean);
       caseMeansByTest[t.id] = caseMeans;
-      const sc = scored.length ? mean(scored.map((r) => r.score as number)) : null;
+      // Mean over repeats, then over cases (clusterMean on the server).
+      const sc = caseMeans.length ? mean(caseMeans) : null;
       let ci: [number, number] | null = null;
       if (caseMeans.length > 1) {
         const rnd = rngFrom(`boot|${manifest.id}|${c.id}|${t.id}`);

@@ -724,7 +724,46 @@ export interface CaseResult {
   error?: string;
   startedAt: string;
   finishedAt: string;
-  humanScores?: Array<{ rater: string; score: number; at: string; note?: string }>;
+  /** Human grades (Blind Review, Grading Station). One entry per rater; a rater re-grading replaces their entry. */
+  humanScores?: HumanScore[];
+  /** Grading Station: AI judges run after the fact, one entry per judge verdict (see src/grading/station.ts). */
+  aiGrades?: AiGrade[];
+  /** Grading Station: a person disputes an objective (answer-key / machine) score. The score itself never changes. */
+  disputes?: Array<{ rater: string; note: string; at: string }>;
+}
+
+/** A human grade. Optional fields come from the Grading Station's rubric (older entries have only rater/score/at/note). */
+export interface HumanScore {
+  rater: string;
+  /** 0..1 */
+  score: number;
+  at: string;
+  note?: string;
+  /** Rubric points per criterion id (see src/grading/spec.ts). */
+  criteria?: Record<string, number>;
+  /** Per-requirement verdicts for requirement criteria, keyed "<criterion id>:<requirement id>". */
+  requirements?: Record<string, 'met' | 'partial' | 'missed'>;
+  /** judge-classify tests: the label the person picked. */
+  label?: string;
+  /** True when model names were hidden while grading. */
+  blind?: boolean;
+}
+
+/** One AI judge's verdict from the Grading Station's AI mode. */
+export interface AiGrade {
+  judgeId: string;
+  judgeLabel: string;
+  vendor: string;
+  /** 0..1 */
+  score: number;
+  label?: string;
+  rationale: string;
+  at: string;
+  /** Batch id: every judge asked in one "grade with AI" action shares it. */
+  batch: string;
+  costUsd: number;
+  /** Images (test pictures, screenshots) attached for a vision judge. */
+  images: number;
 }
 
 /** Lightweight result row (no transcript / replay) for tables. */

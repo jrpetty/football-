@@ -14,6 +14,7 @@
  * effects (components/present/sfx.ts) and "random guessing: X%" reference lines.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { summaryFor, useRunSummaries } from '../grading/useSummaries.ts';
 import type { CSSProperties, ReactNode } from 'react';
 import { api } from '../api.ts';
 import { useAsync, useCountUp, useElementSize, useHotkeys, useInterval } from '../hooks.ts';
@@ -895,7 +896,10 @@ function RaceRow({
   baseLine,
   baseLabel,
   unit,
+  perf,
 }: {
+  /** The model's 30-word performance summary on this test (src/grading/summary.ts), shown as a small line. */
+  perf?: string;
   e: RaceEntry;
   i: number;
   program: boolean;
@@ -953,6 +957,7 @@ function RaceRow({
             </a>
           )}
         </div>
+        {perf && <div className="rr-perf">{perf}</div>}
       </div>
     </div>
   );
@@ -960,6 +965,7 @@ function RaceRow({
 
 function ResultSlide({ deck, test }: { deck: Deck; test: DeckTest }) {
   const program = test.snap.kind === 'program';
+  const perfs = useRunSummaries(deck.d.manifest.id);
   const medalEntry = deck.lb?.medals?.find((x) => x.testId === test.snap.id);
   const medalOf = (id: string): RaceEntry['medal'] => (medalEntry?.gold === id ? 'gold' : medalEntry?.silver === id ? 'silver' : medalEntry?.bronze === id ? 'bronze' : null);
 
@@ -1023,7 +1029,7 @@ function ResultSlide({ deck, test }: { deck: Deck; test: DeckTest }) {
       ) : (
         <div className={cx('race', program && 'with-sum', ordered.length > 8 && 'dense')} style={{ ['--rows' as string]: ordered.length }}>
           {ordered.map((e, i) => (
-            <RaceRow key={e.id} e={e} i={i} program={program} runId={deck.d.manifest.id} testId={test.snap.id} nullNote={nullNote} baseLine={e.baseline ? null : baseLine} baseLabel={i === 0} unit={program ? 'run' : casesWord(test, 1)} />
+            <RaceRow key={e.id} e={e} i={i} program={program} runId={deck.d.manifest.id} testId={test.snap.id} nullNote={nullNote} baseLine={e.baseline ? null : baseLine} baseLabel={i === 0} unit={program ? 'run' : casesWord(test, 1)} perf={ordered.length <= 7 && !e.baseline ? summaryFor(perfs, e.id, test.snap.id)?.text : undefined} />
           ))}
         </div>
       )}

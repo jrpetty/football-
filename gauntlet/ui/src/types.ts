@@ -35,6 +35,7 @@ export interface Settings {
   judgeExcludeSameVendor?: boolean;
   /** Display currency (GBP by default); costs are always stored in USD. */
   currency?: import('../../src/core/currency.ts').CurrencySettings;
+  gradingOfficial?: 'methodology' | 'human' | 'ai' | 'average';
 }
 
 export interface ProgramInfo {
@@ -174,7 +175,7 @@ export interface ReviewItem {
   contestantId: string;
   status: ResultStatus;
   score: number | null;
-  humanScores?: Array<{ rater: string; score: number; at: string; note?: string }>;
+  humanScores?: import('../../src/core/types.ts').HumanScore[];
 }
 
 export interface ReviewScoreRequest {

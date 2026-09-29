@@ -190,6 +190,18 @@ export interface StudioPayload {
   browser: { available: boolean; hint?: string };
   /** Where "Export all" writes (inside the run's folder). */
   exportDir: string;
+  /** 30-word performance summaries per model × test, offered to the script as facts (src/grading/facts.ts). */
+  facts?: StudioFact[];
+}
+
+/** One performance fact for the script: a ≤ 30-word summary built from the recorded results (or written by an AI judge). */
+export interface StudioFact {
+  contestantId: string;
+  label: string;
+  testId: string;
+  testName: string;
+  text: string;
+  source: 'template' | 'ai';
 }
 
 /** POST /api/studio/:runId/polish/estimate */
