@@ -225,11 +225,12 @@ export default function CostsPage() {
                         </td>
                         <td className="num">{t.cases}</td>
                         {cols.map((p) => {
-                          const v = t.perContestant[p.contestantId] ?? 0;
+                          const raw = t.perContestant[p.contestantId];
+                          const v = raw ?? 0;
                           const a = Math.round(Math.sqrt(v / maxCell) * 55);
                           return (
                             <td key={p.contestantId} className={cx('num cost-cell', hover === p.contestantId && 'hl')} style={p.manual ? undefined : { background: `color-mix(in srgb, var(--seq-6) ${a}%, transparent)` }}>
-                              {p.manual ? <span className="muted">manual</span> : fmtCost(v)}
+                              {p.manual ? <span className="muted">manual</span> : raw === undefined ? <span className="muted" title="This model does not take this test (e.g. a picture-only model on a text test), so it costs nothing and is left out of its means">skipped</span> : fmtCost(v)}
                             </td>
                           );
                         })}
