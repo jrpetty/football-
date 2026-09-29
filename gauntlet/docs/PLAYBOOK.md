@@ -610,8 +610,8 @@ Haiku 4.5**. New Run and the Cost Planner show both numbers before you start. Se
 
 **What today's models score** (blind calibration, one attempt per level, September 2026; details in
 [AUDIT.md](AUDIT.md#horizon-tier-blind-calibration)): Opus 5.5 29% of the suite, solving 11 of the 15 levels 1–3 and
-little above level 5; Haiku 4.5 about 2%; random guessing 0%. So a new model that reaches
-level 5 anywhere is news.
+little above level 5; Haiku 4.5 about 2%; random guessing 0%. So a new model that climbs past level 5 on
+any ladder is news.
 
 **Mock mode.** `?mock=1` has a demo run, *Horizon ladders · demo climb*, with fictional models at different
 heights, so you can rehearse the slides with no API keys. The screenshots are in `docs/screenshots/horizon/`.
