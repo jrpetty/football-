@@ -1,22 +1,47 @@
 <!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0b1220" />
-    <meta
-      name="description"
-      content="Gaffer — a soccer coaching and player analysis app: squad management, match analysis, tactics board, training planner and performance analytics."
-    />
-    <link rel="manifest" href="./manifest.webmanifest" />
-    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="./icon.svg" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <title>Gaffer · Football Analysis</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Catch the Football</title>
+<style>
+  body{margin:0;background:#1b5e20;color:#fff;font-family:sans-serif;text-align:center}
+  canvas{background:#2e7d32;border:3px solid #fff;margin-top:10px;max-width:95vw;touch-action:none}
+</style>
+</head>
+<body>
+<h2>🏈 Catch the Football — Score: <span id="s">0</span></h2>
+<canvas id="c" width="400" height="500"></canvas>
+<p>Move with mouse/touch or ← → keys. Miss 3 and it's game over (click to restart).</p>
+<script>
+const c=document.getElementById('c'),x=c.getContext('2d');
+let px=180,balls,score,lives,over,keys={};
+function reset(){balls=[];score=0;lives=3;over=false;document.getElementById('s').textContent=0}
+reset();
+onkeydown=e=>keys[e.key]=1;onkeyup=e=>keys[e.key]=0;
+function move(e){const r=c.getBoundingClientRect(),t=e.touches?e.touches[0]:e;px=(t.clientX-r.left)*c.width/r.width-30}
+c.onmousemove=move;c.ontouchmove=e=>{e.preventDefault();move(e)};
+c.onclick=()=>{if(over)reset()};
+function loop(){
+  if(keys.ArrowLeft)px-=6;if(keys.ArrowRight)px+=6;
+  px=Math.max(0,Math.min(340,px));
+  if(!over){
+    if(Math.random()<0.02+score*0.0003)balls.push({x:Math.random()*380+10,y:0,v:2+Math.random()*2+score*0.05});
+    balls.forEach(b=>b.y+=b.v);
+    balls=balls.filter(b=>{
+      if(b.y>470&&b.x>px-5&&b.x<px+65){score++;document.getElementById('s').textContent=score;return false}
+      if(b.y>500){if(--lives<=0)over=true;return false}
+      return true;
+    });
+  }
+  x.clearRect(0,0,400,500);
+  x.fillStyle='#fff';x.fillRect(px,480,60,12);
+  x.font='28px serif';balls.forEach(b=>x.fillText('🏈',b.x-14,b.y));
+  x.font='18px sans-serif';x.fillText('Lives: '+'❤️'.repeat(lives),10,25);
+  if(over){x.font='32px sans-serif';x.fillText('Game Over',115,240);x.font='16px sans-serif';x.fillText('Click to restart',150,270)}
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
 </html>
