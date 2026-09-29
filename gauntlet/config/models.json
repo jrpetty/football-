@@ -232,7 +232,8 @@
       },
       "family": "Claude",
       "tier": "small",
-      "releaseDate": "2025-10-15"
+      "releaseDate": "2025-10-15",
+      "openrouterModel": "anthropic/claude-haiku-4.5"
     },
     {
       "id": "gpt-5.6-sol",
@@ -336,7 +337,8 @@
         "verifiedAt": null
       },
       "family": "Gemini",
-      "tier": "flagship"
+      "tier": "flagship",
+      "openrouterModel": "google/gemini-3.1-pro-preview"
     },
     {
       "id": "gemini-3.5-flash",
@@ -519,7 +521,8 @@
       },
       "family": "Claude",
       "tier": "flagship",
-      "releaseDate": "2026-02-05"
+      "releaseDate": "2026-02-05",
+      "openrouterModel": "anthropic/claude-opus-4.6"
     },
     {
       "id": "claude-sonnet-4-6",
@@ -546,7 +549,8 @@
         "verifiedAt": "2026-06-24"
       },
       "family": "Claude",
-      "tier": "mid"
+      "tier": "mid",
+      "openrouterModel": "anthropic/claude-sonnet-4.6"
     },
     {
       "id": "gpt-5.5",
@@ -597,7 +601,8 @@
       },
       "family": "GPT",
       "tier": "flagship",
-      "releaseDate": "2025-08-07"
+      "releaseDate": "2025-08-07",
+      "openrouterModel": "openai/gpt-5"
     },
     {
       "id": "gpt-5-mini",
@@ -623,7 +628,8 @@
       },
       "family": "GPT",
       "tier": "mid",
-      "releaseDate": "2025-08-07"
+      "releaseDate": "2025-08-07",
+      "openrouterModel": "openai/gpt-5-mini"
     },
     {
       "id": "gpt-4o",
@@ -649,7 +655,8 @@
       "notes": "Non-reasoning model from 2024: a useful historical reference point.",
       "family": "GPT",
       "tier": "flagship",
-      "releaseDate": "2024-05-13"
+      "releaseDate": "2024-05-13",
+      "openrouterModel": "openai/gpt-4o"
     },
     {
       "id": "gemini-2.5-pro",
@@ -676,7 +683,8 @@
       "notes": "Uses Gemini 2.5's default dynamic thinking (thinkingLevel is a Gemini 3+ setting).",
       "family": "Gemini",
       "tier": "flagship",
-      "releaseDate": "2025-03-25"
+      "releaseDate": "2025-03-25",
+      "openrouterModel": "google/gemini-2.5-pro"
     },
     {
       "id": "gemini-2.5-flash",
@@ -702,7 +710,8 @@
       },
       "family": "Gemini",
       "tier": "mid",
-      "releaseDate": "2025-04-17"
+      "releaseDate": "2025-04-17",
+      "openrouterModel": "google/gemini-2.5-flash"
     },
     {
       "id": "grok-4",
@@ -727,7 +736,8 @@
       },
       "family": "Grok",
       "tier": "flagship",
-      "releaseDate": "2025-07-09"
+      "releaseDate": "2025-07-09",
+      "openrouterModel": "x-ai/grok-4"
     },
     {
       "id": "gpt-image-1",

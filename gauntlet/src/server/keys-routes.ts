@@ -2,6 +2,8 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { getContestant, loadContestants, loadProviders } from '../core/config.ts';
 import { ENV_FILE, cleanKey, explainKeyError, isRejection, keyFormatWarning, keyStatus, removeKey, saveKey } from '../core/keys.ts';
 import { discoverModels } from '../providers/index.ts';
+import { OPENROUTER_ID, ensureFreshCatalog } from '../core/openrouter.ts';
+import { storageInfo } from './setup-routes.ts';
 
 /**
  * API Keys page routes. Keys are written to gauntlet/.env and applied immediately.
@@ -58,6 +60,7 @@ export function registerKeyRoutes({ route, httpError, ping }: Deps): void {
 
   route('GET', '/api/keys', () => ({
     file: ENV_FILE,
+    storage: storageInfo(),
     keys: loadProviders()
       .map((p) => keyStatus(p, providerModels(p.id)))
       .filter((k) => k !== null),
@@ -76,6 +79,7 @@ export function registerKeyRoutes({ route, httpError, ping }: Deps): void {
       return { ok: false, saved: false, warning: keyFormatWarning(p.id, key), check, status: keyStatus(p, providerModels(p.id)) };
     }
     saveKey(env, key);
+    if (p.id === OPENROUTER_ID) await ensureFreshCatalog(0);
     return { ok: true, saved: true, warning: keyFormatWarning(p.id, key), check, status: keyStatus(p, providerModels(p.id)) };
   });
 

@@ -24,7 +24,7 @@ export interface Settings {
   gradingOfficial?: 'methodology' | 'human' | 'ai' | 'average';
   /**
    * "One key for everything": run a model through OpenRouter when its own company's key is missing (src/core/openrouter.ts).
-   * "auto" (default) = on when OpenRouter is the only key saved; "on" / "off" = always / never.
+   * "auto" (default) and "on" = on whenever an OpenRouter key is saved; "off" = never. A direct key always wins.
    */
   openrouterRouting?: 'auto' | 'on' | 'off';
 }

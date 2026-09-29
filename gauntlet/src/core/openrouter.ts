@@ -191,11 +191,6 @@ export function openRouterPricing(entry: OpenRouterModel | undefined, fetchedAt?
 
 // ───────────────────────────── Routing ─────────────────────────────
 
-/** Providers that need a key, other than OpenRouter itself. */
-function directKeyProviders(providers: ProviderConfig[]): ProviderConfig[] {
-  return providers.filter((p) => p.apiKeyEnv && p.id !== OPENROUTER_ID);
-}
-
 export type RoutingSetting = 'auto' | 'on' | 'off';
 
 export function routingSetting(): RoutingSetting {
@@ -203,11 +198,13 @@ export function routingSetting(): RoutingSetting {
   return v === 'on' || v === 'off' ? v : 'auto';
 }
 
-/** Is routing through OpenRouter switched on right now? ("auto" = on when OpenRouter is the only key saved.) */
+/**
+ * Is routing through OpenRouter switched on right now? On by default as soon as an OpenRouter key is saved (so a
+ * beginner with only that key can run everything); the owner can switch it off. It only ever applies to models whose
+ * own company key is missing: a direct key always wins.
+ */
 export function routingActive(providers: ProviderConfig[] = loadProviders(), setting: RoutingSetting = routingSetting()): boolean {
-  if (!openRouterKey(providers) || setting === 'off') return false;
-  if (setting === 'on') return true;
-  return !directKeyProviders(providers).some((p) => Boolean(process.env[p.apiKeyEnv!]));
+  return Boolean(openRouterKey(providers)) && setting !== 'off';
 }
 
 /** Kinds of contestant that are never routed: no key needed, picture makers (a different API), OpenRouter's own. */

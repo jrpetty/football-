@@ -50,6 +50,7 @@ import { registerVisionRoutes } from './vision-routes.ts';
 import { testBaseDir } from '../core/vision.ts';
 import { registerChannelRoutes } from '../channel/routes.ts';
 import { registerKeyRoutes } from './keys-routes.ts';
+import { registerSetupRoutes } from './setup-routes.ts';
 import { overlayRedirect, registerStudioRoutes } from '../media/studio.ts';
 import { registerArenaRoutes } from '../arena/server.ts';
 import { registerExplainRoutes } from './explain-routes.ts';
@@ -592,6 +593,7 @@ registerVisionRoutes({ route, httpError: (status, message) => new HttpError(stat
 // Channel tools: public site, New Model Day, history, viewer challenge (src/channel/).
 registerChannelRoutes(route, (status, message, details) => new HttpError(status, message, details), STREAMING);
 // API Keys page: save, test and remove provider keys (gauntlet/.env), applied without a restart.
+registerSetupRoutes({ route, httpError: (status, message) => new HttpError(status, message) });
 registerKeyRoutes({ route, httpError: (status, message) => new HttpError(status, message), ping: pingContestant });
 // The Arena (head-to-head games): routes live in src/arena/server.ts.
 registerArenaRoutes({ route, httpError: (status, message, details) => new HttpError(status, message, details), streaming: STREAMING });
