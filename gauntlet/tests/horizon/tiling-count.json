@@ -14,8 +14,9 @@
     "exact"
   ],
   "hook": "Can it count every domino tiling when the answer has 22 digits?",
-  "maxOutputTokens": 64000,
+  "maxOutputTokens": "model-max",
   "timeLimitSec": 3600,
+  "maxRetries": 1,
   "estimate": {
     "inputTokens": 350,
     "outputTokens": 30000

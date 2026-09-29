@@ -14,8 +14,9 @@
     "exact"
   ],
   "hook": "Can it do 44-digit arithmetic in its head, with no mistakes?",
-  "maxOutputTokens": 64000,
+  "maxOutputTokens": "model-max",
   "timeLimitSec": 3600,
+  "maxRetries": 1,
   "estimate": {
     "inputTokens": 250,
     "outputTokens": 30000

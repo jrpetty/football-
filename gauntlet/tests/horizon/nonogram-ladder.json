@@ -14,8 +14,9 @@
     "sat-verified"
   ],
   "hook": "Can it deduce a 1,225-cell picture from numbers alone?",
-  "maxOutputTokens": 64000,
+  "maxOutputTokens": "model-max",
   "timeLimitSec": 3600,
+  "maxRetries": 1,
   "estimate": {
     "inputTokens": 700,
     "outputTokens": 30000

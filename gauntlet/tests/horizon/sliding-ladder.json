@@ -14,8 +14,9 @@
     "bfs-verified"
   ],
   "hook": "Can it find the shortest solution when the answer is 56 moves long?",
-  "maxOutputTokens": 64000,
+  "maxOutputTokens": "model-max",
   "timeLimitSec": 3600,
+  "maxRetries": 1,
   "estimate": {
     "inputTokens": 400,
     "outputTokens": 30000

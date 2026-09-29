@@ -13,8 +13,9 @@
     "execution-verified"
   ],
   "hook": "Can it run a program for 70,000 steps in its head?",
-  "maxOutputTokens": 64000,
+  "maxOutputTokens": "model-max",
   "timeLimitSec": 3600,
+  "maxRetries": 1,
   "estimate": {
     "inputTokens": 2400,
     "outputTokens": 30000
