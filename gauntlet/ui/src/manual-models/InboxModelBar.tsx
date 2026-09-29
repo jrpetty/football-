@@ -23,14 +23,14 @@ export function isUnspecified(req: ManualRequest, c: ContestantView | undefined)
 }
 
 /** The big "You are testing …" banner. */
-export function TargetBanner({ catalog, info, label, locked, onChange }: { catalog: ModelCatalog; info: ManualModelInfo; label: string; locked?: boolean; onChange?: () => void }) {
+export function TargetBanner({ catalog, info, label, locked, onChange, eyebrow = 'You are testing' }: { catalog: ModelCatalog; info: ManualModelInfo; label: string; locked?: boolean; onChange?: () => void; eyebrow?: string }) {
   const model = catalog.models.find((m) => m.id === info.catalogId);
   const vendor = model ? vendorOf(catalog, model.vendor) : undefined;
   const where = interfaceShort(info.interface, vendor);
   return (
     <div className={cx('mm-target', info.webSearch && 'web')} style={{ ['--c' as string]: vendor?.color ?? 'var(--accent)' }}>
       <div className="mm-target-main">
-        <div className="mm-eyebrow">You are testing</div>
+        <div className="mm-eyebrow">{eyebrow}</div>
         <div className="mm-target-name">{model?.label ?? label}</div>
         <div className="mm-target-how">
           in <b>{where}</b>
@@ -197,7 +197,10 @@ export function ReassignPanel({ catalog, reloadCatalog }: { catalog: ModelCatalo
         <div className="t">
           <h2>Old copy &amp; paste results without a model name</h2>
           <div className="desc">
-            {list.reduce((s, g) => s + g.keys.length, 0)} results were saved as “Manual entry (unspecified model)”. If you know which model made them, you can reassign them.
+            {(() => {
+              const n = list.reduce((s, g) => s + g.keys.length, 0);
+              return `${n} result${n === 1 ? ' was' : 's were'} saved as “Manual entry (unspecified model)”. If you know which model made ${n === 1 ? 'it' : 'them'}, you can reassign ${n === 1 ? 'it' : 'them'}.`;
+            })()}
           </div>
         </div>
       </summary>
@@ -246,7 +249,7 @@ export function ReassignPanel({ catalog, reloadCatalog }: { catalog: ModelCatalo
         {chosen.length > 0 && (
           <>
             {choice && model ? (
-              <TargetBanner catalog={catalog} info={choice} label={model.label} onChange={() => setChoice(null)} />
+              <TargetBanner catalog={catalog} info={choice} label={model.label} onChange={() => setChoice(null)} eyebrow="Move them to" />
             ) : (
               <ChoiceEditor catalog={catalog} initial={lastChoice()} onConfirm={setChoice} confirmLabel="Choose this model" onCatalogChanged={reloadCatalog} />
             )}
