@@ -244,8 +244,8 @@ grid, a bigger board. A unit test (`test/horizon.test.ts`) checks the growth for
 | Run It In Your Head (`horizon.mind-runner`) | The exact number a JavaScript program prints | ~150 → ~73,000 statements executed | 15 minutes → two to three working weeks |
 | No Calculator (`horizon.modpow-ladder`) | a^e mod m, exactly | 8-digit → 44-digit numbers | two hours → about a month |
 | The Sliding Ladder (`horizon.sliding-ladder`) | A provably shortest sliding-puzzle plan | 20 moves (3×3) → 56 moves (4×4) | an hour → months of systematic search |
-| The Picture Logic Ladder (`horizon.nonogram-ladder`) | A whole nonogram grid | 8×8 → 35×35 (1,225 cells) | 15 minutes → a few days |
-| Count Every Tiling (`horizon.tiling-count`) | The exact number of domino tilings of a board with holes | 6×6 (110) → 16×14 (22 digits) | 30 minutes → several weeks |
+| The Picture Logic Ladder (`horizon.nonogram-ladder`) | A whole nonogram grid | 8×8 → 50×50 (2,500 cells) | 15 minutes → a few weeks |
+| Count Every Tiling (`horizon.tiling-count`) | The exact number of domino tilings of a board with holes | 6×6 (110) → 18×18 (31 digits) | 30 minutes → months |
 
 **Fair, not tricky.** Every item is a plainly worded, fully specified task with one checkable answer. There
 are no gotchas in the wording and no opinions: difficulty comes only from depth, length and exactness. Every
@@ -294,10 +294,21 @@ hash. Never regenerate a published version: a model measured in 2030 must meet t
 models top out, add levels L11, L12, … in a new version and keep L01–L10 unchanged, so old and new heights stay
 comparable.
 
-**Cost.** Replies are long (tests allow 64,000 output tokens per level; strong models often use 10,000–40,000
-on the levels they attempt, while weaker ones stop early). The estimate is 30,000 output tokens per level:
-about **$0.60 per level, $30 per full suite run per model** at $20 per million output tokens (one repeat),
-or a few dollars for small models. The blind calibration is in [AUDIT.md](AUDIT.md).
+**Output limit and cost.** Horizon tests ask for each model's **own maximum output** (`"maxOutputTokens":
+"model-max"`, e.g. 128,000 tokens for Opus 5.5, 64,000 for Haiku 4.5), so no model is held back by an artificial
+cap: in the calibration Opus needed 67,000–96,000 tokens for levels it solved, more than a fixed 64,000 would
+allow. A long reply that fails is not retried more than once (`maxRetries: 1`), and the time limit is one hour per
+level. The estimate is 30,000 output tokens per level (strong models think long on low levels and often stop
+early on levels they judge hopeless): about **$30 per model per repeat for all 50 levels at Opus prices** and
+about **$7.50 for Haiku**. The honest **upper bound** is every level using the model's whole maximum: 50 ×
+128,000 tokens ≈ **$128 for Opus 5.5** and 50 × 64,000 ≈ **$16 for Haiku 4.5** per repeat. New Run and the Cost
+Planner show both numbers, and a spending cap (`--max-cost`, or "same token limit for every model") keeps a run
+inside a budget.
+
+**Calibration.** The ladders were calibrated with blind solvers before release (today's strongest model should
+score clearly above zero on the first rungs and well under a third overall); the per-level results are in
+[AUDIT.md](AUDIT.md#horizon-tier-blind-calibration). Two ladders (Picture Logic and Count Every Tiling) were made
+steeper from level 4 and level 5 after the first calibration showed Opus climbing them too easily.
 
 ## 8. The random baseline
 
@@ -322,7 +333,7 @@ clear: a score close to the baseline means a test isn't measuring skill for that
 
 ## 9b. Output and spending limits, and fairness
 
-**Default: no artificial limits.** Tests that ask for `"model-max"` (The Game Jam) let every model write up to its
+**Default: no artificial limits.** Tests that ask for `"model-max"` (The Game Jam and the Horizon ladders) let every model write up to its
 own maximum output, taken from the provider's documentation and recorded per model in `config/models.json`
 (`maxOutputTokens`, with `maxOutputTokensSource` saying where the number came from, or "unverified"). These
 maxima differ (for example 128,000 tokens for current Claude and GPT-5.x models, 65,536 for Gemini): that is part

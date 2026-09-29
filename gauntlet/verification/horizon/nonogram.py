@@ -30,7 +30,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 # the grid left open by line logic): bigger grids AND more case analysis per cell from level 4 on.
 LEVELS = {1: (8, 8, 0.55, 0.0), 2: (10, 10, 0.55, 0.0), 3: (12, 12, 0.52, 0.10), 4: (20, 20, 0.52, 0.3),
           5: (25, 25, 0.52, 0.4), 6: (30, 30, 0.52, 0.45), 7: (35, 35, 0.52, 0.5), 8: (40, 40, 0.52, 0.55),
-          9: (45, 45, 0.52, 0.58), 10: (50, 50, 0.52, 0.6)}
+          9: (45, 45, 0.55, 0.4), 10: (50, 50, 0.56, 0.35)}
+# (Above 40x40, random grids at density 0.52 almost never have a unique solution, so the two top levels use a
+# slightly denser fill; they are harder by size: 2,025 and 2,500 cells with 800+ cells left for case analysis.)
 
 
 def clues(line: list[int]) -> list[int]:
