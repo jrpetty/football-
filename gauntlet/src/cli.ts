@@ -21,9 +21,13 @@ import { manualEvents, submitManual, failManual } from './providers/manual.ts';
 import { gradePasted } from './engine/grade.ts';
 import { readFileSync } from 'node:fs';
 import { ENV_FILE } from './core/keys.ts';
+import { prepareUserDir } from './core/startup.ts';
 import type { ManualRequest } from './core/types.ts';
 
-// Load API keys from gauntlet/.env when present (never overrides real env vars).
+// First start with a user folder: copy keys/runs/settings over from an older in-folder install (core/migrate.ts).
+prepareUserDir();
+
+// Load API keys from the user folder's .env when present (never overrides real env vars).
 const envFile = ENV_FILE;
 if (existsSync(envFile)) {
   try {

@@ -14,7 +14,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { getProvider, hasApiKey, loadContestants, loadProviders, loadSettings, saveSettings, writeJsonAtomic } from '../core/config.ts';
+import { effectiveContestant } from '../core/openrouter.ts';
+import { canCall, getProvider, hasApiKey, loadContestants, loadProviders, loadSettings, updateSettings, writeJsonAtomic } from '../core/config.ts';
 import { computeCost } from '../core/cost.ts';
 import { sha256 } from '../core/hash.ts';
 import { mean } from '../core/stats.ts';
@@ -57,7 +58,7 @@ export function gradingPolicy(): OfficialPolicy {
 
 export function setGradingPolicy(policy: OfficialPolicy): OfficialPolicy {
   if (!OFFICIAL_POLICIES.includes(policy)) throw new Error(`official must be one of ${OFFICIAL_POLICIES.join(', ')}`);
-  saveSettings({ ...loadSettings(), gradingOfficial: policy });
+  updateSettings({ gradingOfficial: policy });
   return policy;
 }
 
@@ -336,7 +337,7 @@ export function reapplyPolicy(runId: string): { updated: number } {
 function judgeInfo(j: Contestant): JudgeInfo {
   const providers = loadProviders();
   const p = providers.find((x) => x.id === j.provider);
-  return { id: j.id.replace(/@judge$/, ''), label: j.label, vendor: j.vendor, vision: supportsVision(j, p?.type), hasKey: p ? hasApiKey(p) : false };
+  return { id: j.id.replace(/@judge$/, ''), label: j.label, vendor: j.vendor, vision: supportsVision(j, p?.type), hasKey: p ? hasApiKey(p) || canCall(j, providers) : false };
 }
 
 /** Configured judges with a key (manual copy & paste models can't judge). */
@@ -347,6 +348,7 @@ function judgePool(): Contestant[] {
   return settings.judges
     .map((id) => all.find((m) => m.id === id))
     .filter((m): m is Contestant => Boolean(m))
+    .map((m) => effectiveContestant(m, providers))
     .filter((m) => {
       const p = providers.find((x) => x.id === m.provider);
       return p ? hasApiKey(p) && p.type !== 'manual' : false;

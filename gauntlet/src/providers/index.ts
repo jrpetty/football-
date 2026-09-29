@@ -1,4 +1,5 @@
 import { getProvider, hasApiKey } from '../core/config.ts';
+import { routeFor } from '../core/openrouter.ts';
 import type { Contestant, ProviderConfig } from '../core/types.ts';
 import { createAnthropicAdapter, listAnthropicModels } from './anthropic.ts';
 import { createGeminiAdapter, listGeminiModels } from './gemini.ts';
@@ -17,7 +18,16 @@ function contextFor(provider: ProviderConfig, contestant: Contestant): AdapterCo
   return { provider, contestant, apiKey: provider.apiKeyEnv ? process.env[provider.apiKeyEnv] : undefined };
 }
 
-export function createAdapter(contestant: Contestant, provider: ProviderConfig = getProvider(contestant.provider)): ProviderAdapter {
+/**
+ * `noRoute`: never switch to OpenRouter here. Benchmark runs and tournaments resolve routes when they are planned (so
+ * the manifest records them) and pass this, so a resumed run can't silently change how a model is reached.
+ */
+export function createAdapter(contestant: Contestant, provider: ProviderConfig = getProvider(contestant.provider), opts: { noRoute?: boolean } = {}): ProviderAdapter {
+  // "One key for everything": no key for this company but an OpenRouter key → call the model through OpenRouter.
+  if (!hasApiKey(provider) && !opts.noRoute) {
+    const routed = routeFor(contestant);
+    if (routed) return createAdapter(routed, getProvider(routed.provider));
+  }
   const ctx = contextFor(provider, contestant);
   switch (provider.type) {
     case 'anthropic':

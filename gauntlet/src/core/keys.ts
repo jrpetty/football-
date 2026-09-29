@@ -1,17 +1,18 @@
-import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { ROOT } from './paths.ts';
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { USER_DIR } from './userdir.ts';
 import type { ProviderConfig } from './types.ts';
 
 /**
  * API keys, managed from the dashboard (API Keys page) or `node src/cli.ts keys`.
  *
- * Keys live in gauntlet/.env (git-ignored), one `NAME=value` line each, and are
+ * Keys live in <user folder>/.env (see userdir.ts: %APPDATA%\Gauntlet on Windows, ~/.gauntlet elsewhere;
+ * gauntlet/.env in portable mode), one `NAME=value` line each, and are
  * applied to process.env immediately, so a saved key works without a restart.
  * The full key is never sent back to the browser: only a masked hint.
  */
 
-export const ENV_FILE = process.env.GAUNTLET_ENV_FILE ?? join(ROOT, '.env');
+export const ENV_FILE = process.env.GAUNTLET_ENV_FILE ?? join(USER_DIR, '.env');
 
 /** Where to get a key, and what a key usually looks like (a hint, never a hard rule). */
 export const KEY_HELP: Record<string, { url: string; prefix?: string; steps: string }> = {
@@ -52,6 +53,7 @@ export function envFileValue(name: string): string | undefined {
 /** Write the file atomically (temp file + rename) so a crash never leaves a half-written .env. */
 function writeLines(lines: string[]): void {
   while (lines.length && lines[lines.length - 1] === '') lines.pop();
+  mkdirSync(dirname(ENV_FILE), { recursive: true });
   const tmp = `${ENV_FILE}.tmp-${process.pid}`;
   writeFileSync(tmp, lines.join('\n') + '\n', { encoding: 'utf8', mode: 0o600 });
   renameSync(tmp, ENV_FILE);

@@ -27,6 +27,7 @@ import type {
   TranscriptEntry,
 } from '../core/types.ts';
 import { createAdapter } from '../providers/index.ts';
+import { effectiveContestant, ensureFreshCatalog } from '../core/openrouter.ts';
 import { manualEvents } from '../providers/manual.ts';
 import { PROGRAMS } from '../programs/index.ts';
 import { scoreResponse, type JudgePanel, type JudgeAskOptions } from '../scoring/index.ts';
@@ -200,7 +201,8 @@ export function planRun(req: RunRequest): RunPlan {
   const contestants = req.contestantIds.map((id) => {
     const c = all.find((x) => x.id === id);
     if (!c) throw new Error(`Unknown model "${id}"`);
-    return c;
+    // No key of its own but an OpenRouter key: planned (and recorded) as "via OpenRouter" (core/openrouter.ts).
+    return effectiveContestant(c, providers);
   });
   const judgeIds = req.judgeIds ?? settings.judges;
   const warnings: string[] = [];
@@ -211,16 +213,19 @@ export function planRun(req: RunRequest): RunPlan {
     else if (!hasApiKey(p)) warnings.push(`${c.label}: ${p.apiKeyEnv} is not set — its jobs will fail`);
     if (!c.pricing.verifiedAt) warnings.push(`${c.label}: pricing is unverified — cost figures may be wrong`);
   }
+  const routed = contestants.filter((c) => c.route);
+  if (routed.length) warnings.push(`${routed.map((c) => c.label).join(', ')}: no key of ${routed.length === 1 ? 'its' : 'their'} own — ${routed.length === 1 ? 'runs' : 'run'} through OpenRouter at OpenRouter's prices. Marked "via OpenRouter" and kept apart from direct results (direct keys are the gold standard for published leaderboards)`);
   const judgeNeeded = tests.some(usesJudges);
   const judges: Contestant[] = [];
   const plannedJudges: Contestant[] = [];
   if (judgeNeeded) {
     for (const id of judgeIds) {
-      const j = all.find((x) => x.id === id);
-      if (!j) {
+      const found = all.find((x) => x.id === id);
+      if (!found) {
         warnings.push(`Judge "${id}" is not a configured model — skipped`);
         continue;
       }
+      const j = effectiveContestant(found, providers);
       plannedJudges.push(asJudge(j, settings.judgeEffort));
       const p = providerOf(j);
       if (!p || !hasApiKey(p)) {
@@ -528,6 +533,8 @@ export async function estimateRun(req: RunRequest): Promise<RunEstimate> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function startRun(req: RunRequest): Promise<string> {
+  // Routed models use OpenRouter's current slugs and prices: refresh the cached model list first when it is old.
+  await ensureFreshCatalog();
   const plan = planRun(req);
   // "My budget": the hard stop refuses to start when the month's budget is used up, and lowers the limit to what is left.
   const budgetGate = gateStart(plan.maxCostUsd, 'run');
@@ -679,7 +686,7 @@ function launch(manifest: RunManifest, tests: Array<LoadedTest & { caseFilter?: 
         try {
           const p = providers.find((x) => x.id === c.provider);
           if (!p) throw new Error(`Provider "${c.provider}" is not configured`);
-          t = { contestant: c, adapter: createAdapter(c, p), semaphore: semFor(p) };
+          t = { contestant: c, adapter: createAdapter(c, p, { noRoute: true }), semaphore: semFor(p) };
         } catch (e) {
           t = e as Error;
         }

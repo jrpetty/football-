@@ -1,14 +1,11 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { join } from 'node:path';
-import { readFileSync } from 'node:fs';
-import { CONFIG_DIR } from '../core/paths.ts';
-import { loadSettings, writeJsonAtomic } from '../core/config.ts';
+import { loadSettings, updateSettings } from '../core/config.ts';
 import { isCurrencyCode, normalizeCurrency, type CurrencySettings } from '../core/currency.ts';
 
 /**
  * Display currency (GBP by default).
  *  GET /api/settings/currency                          the current currency and exchange rate
- *  PUT /api/settings/currency  {code, usdPerUnit}      change them (saved in config/settings.json)
+ *  PUT /api/settings/currency  {code, usdPerUnit}      change them (saved in the owner's settings file, kept across updates)
  * The rate is whatever the owner types: nothing is fetched from the internet. Writes only from this computer.
  */
 
@@ -39,10 +36,8 @@ export function registerMoneyRoutes({ route, httpError }: Deps): void {
     if (!isLocal(req)) throw httpError(403, 'The currency can only be changed from this computer');
     const next = checkCurrencyInput(await body());
     if (typeof next === 'string') throw httpError(400, next);
-    // Only the currency key changes; every other setting is written back exactly as stored.
-    const file = join(CONFIG_DIR, 'settings.json');
-    const stored = JSON.parse(readFileSync(file, 'utf8')) as Record<string, unknown>;
-    writeJsonAtomic(file, { ...stored, currency: next });
+    // Only the currency key changes, in the owner's own settings file (kept when Gauntlet is updated).
+    updateSettings({ currency: next });
     return next;
   });
 }
