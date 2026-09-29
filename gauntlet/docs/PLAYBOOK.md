@@ -976,8 +976,8 @@ and every move is written to `reassign-log.jsonl` in the same folder.
 * **Rankings:** every test, every model that has taken it (API and copy & paste together), the leader with its
   score, how many answers it is based on and when it was tested. Ties share a place. Filter by company, release
   year, API vs copied by hand, and test category.
-* **Timeline:** pick a test and see every model at its release date, with "Since Claude 3 Opus (Mar 2024): 25 →
-  best now …: 99, +74 points". Press **B** for Broadcast mode. This is the "how far AI has come" shot.
+* **Timeline:** pick a test and see every model at its release date, with a line like "Since Claude 3 Opus (Mar 2024):
+  <its score> → best now <model>: <score>, +N points" (choose the starting model from the list). Press **B** for Broadcast mode. This is the "how far AI has come" shot.
 
 **Say this on camera.** Chat apps can add their own hidden instructions, use different settings from the API, and
 quietly update a model over time, so a hand-copied score is not a perfect match for the same model through the API.
