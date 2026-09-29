@@ -1,0 +1,12 @@
+{
+  "id": "quick-check",
+  "version": "1.0.0",
+  "name": "Quick Check",
+  "description": "A first test that costs about 2p: five short questions (two maths word problems, two follow-the-rules prompts, one data extraction), graded exactly with no judges. Use it to check that a new key works end to end. It proves nothing about which model is best; use Quick Look or Core for that.",
+  "repeats": 1,
+  "tests": [
+    { "id": "math.word-problems", "cases": ["w12", "w16"] },
+    { "id": "instruction.system-prompt-adherence", "cases": ["s09", "s11"] },
+    { "id": "extraction.structured-json", "cases": ["e07"] }
+  ]
+}

@@ -39,6 +39,9 @@ export function createOpenAICompatibleAdapter(ctx: AdapterContext): ProviderAdap
   // Mistral's chat API does not document `stream_options` and validates request fields strictly (unknown fields are a
   // 422 risk); it sends usage in the final stream chunk without being asked, so we don't send the option at all.
   const isMistral = (ctx.provider.baseUrl ?? '').includes('api.mistral.ai');
+  // OpenRouter takes one unified `reasoning: { effort }` object for every vendor (openrouter.ai/docs → Reasoning Tokens);
+  // its highest level is "xhigh", so Gauntlet's "max" maps to it.
+  const isOpenRouter = (ctx.provider.baseUrl ?? '').includes('openrouter.ai') || ctx.provider.id === 'openrouter';
 
   return {
     generateImage: (req) => openAIImageGenerate(ctx, req),
@@ -55,7 +58,8 @@ export function createOpenAICompatibleAdapter(ctx: AdapterContext): ProviderAdap
         [maxTokensParam]: req.maxOutputTokens,
       };
       if (!isMistral) body.stream_options = { include_usage: true };
-      if (opts.effort) body.reasoning_effort = opts.effort;
+      if (opts.effort && isOpenRouter) body.reasoning = { effort: opts.effort === 'max' ? 'xhigh' : opts.effort };
+      else if (opts.effort) body.reasoning_effort = opts.effort;
       // Never let the provider retain benchmark prompts/completions (no stored conversations, no memory between cases).
       if (isOpenAI) body.store = false;
       if (opts.supportsTemperature && req.temperature !== undefined) body.temperature = opts.temperature ?? req.temperature;

@@ -12,6 +12,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { contestantConfigHash, hasApiKey, loadContestants, loadProviders, loadSettings, snapshotContestant } from '../core/config.ts';
+import { effectiveContestant } from '../core/openrouter.ts';
 import { contentHash, sha256 } from '../core/hash.ts';
 import { ROOT } from '../core/paths.ts';
 import { createRng, hashString } from '../core/rng.ts';
@@ -117,7 +118,8 @@ export function arenaJudgePool(): { judges: Contestant[]; warnings: string[] } {
   const judges: Contestant[] = [];
   const warnings: string[] = [];
   for (const id of settings.judges) {
-    const j = all.find((x) => x.id === id);
+    const found = all.find((x) => x.id === id);
+    const j = found ? effectiveContestant(found, providers) : undefined;
     if (!j) {
       warnings.push(`Judge "${id}" is not a configured model — skipped`);
       continue;
@@ -180,7 +182,7 @@ export function planTournament(req: ArenaRequest): ArenaPlan {
   const contestants = ids.map((id) => {
     const c = all.find((x) => x.id === id);
     if (!c) throw new Error(`Unknown model "${id}"`);
-    return c;
+    return effectiveContestant(c, providers);
   });
   const seeding = req.seeding ?? 'index';
   const index = seeding === 'index' ? currentIndex() : new Map<string, number>();
@@ -543,7 +545,7 @@ function launch(manifest: TournamentManifest): void {
       if (!p) throw new Error(`Provider "${c.provider}" is not configured`);
       let sem = semaphores.get(p.id);
       if (!sem) semaphores.set(p.id, (sem = new Semaphore(p.maxConcurrency ?? 8)));
-      target = { contestant: c, adapter: createAdapter(c, p), semaphore: sem };
+      target = { contestant: c, adapter: createAdapter(c, p, { noRoute: true }), semaphore: sem };
       targets.set(c.id, target);
     }
     return target;

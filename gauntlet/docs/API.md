@@ -18,7 +18,8 @@ treat their latency/throughput as not comparable (human time), and their cost as
 
 ## API keys
 
-Keys are stored in `gauntlet/.env` (git-ignored) and applied immediately; the full key is never returned.
+Keys are stored in the user folder's `.env` (`%APPDATA%\Gauntlet\.env` on Windows, `~/.gauntlet/.env` elsewhere,
+`gauntlet/.env` with `GAUNTLET_PORTABLE=1`) and applied immediately; the full key is never returned.
 
 | Method | Path | Body | Returns |
 |---|---|---|---|
@@ -26,6 +27,14 @@ Keys are stored in `gauntlet/.env` (git-ignored) and applied immediately; the fu
 | PUT | `/api/keys/:provider` | `{ key }` | `{ ok, saved, warning?, check: { ok, models?, error?, rejected? }, status }`. The key is checked for free first (listing models); a key the provider rejects is **not** saved. Accepts pasted `NAME=value` lines and quotes. Loopback only. |
 | DELETE | `/api/keys/:provider` | – | `{ ok, status }`: removes a key saved in `.env` (keys from the system environment are left alone). Loopback only. |
 | POST | `/api/keys/:provider/test` | `{ send?: boolean, model? }` | Free check by default; `send: true` sends a one-word message to the cheapest enabled model of that provider (a fraction of a cent) |
+| POST | `/api/keys/paste` | `{ text, provider? }` | "Paste any API key": `text` is a key, several keys (one per line) or `.env` lines. Each key's company is detected by its shape (or its `NAME=`), checked for free and saved; a rejected key is not saved. Returns `{ results: [{ line, masked, providerId?, label?, how, ok, saved, needsChoice?, error?, warning?, ready: [{id,label,vendor}] }], storage }`. `needsChoice`: send it again with `provider`. Loopback only. |
+| GET | `/api/setup` | – | `{ storage: { dir, envFile, dataDir, settingsFile, portable, windows }, guides: KeyGuide[], anyKey, keys, ready }`: where things are kept, the "get a key" guides, and how many models can run now |
+| GET | `/api/openrouter` | – | `{ hasKey, setting, active, catalogFetchedAt, catalogSize, rows: [{ id, label, vendor, provider, directKey, slug, source, routed, openRouterPrice?, directPrice }] }`: each model's OpenRouter slug (`slug: null` = not available via OpenRouter) |
+| POST | `/api/openrouter/refresh` | – | Re-downloads OpenRouter's model list (free). Loopback only. |
+| PUT | `/api/openrouter/routing` | `{ setting: "auto" \| "on" \| "off" }` | Routing through OpenRouter for models without their own key (default on when an OpenRouter key is saved). Saved in the user settings. Loopback only. |
+
+Settings changed from the dashboard (currency, budget, grading policy, OpenRouter routing) are saved in the user folder's
+`settings.json`, merged over the shipped `config/settings.json`, so updating Gauntlet never resets them.
 
 ## Contestants (models)
 
@@ -139,7 +148,7 @@ available, otherwise across models), falling back to each test's declared `estim
 
 ## Your own budget
 
-"My budget" settings live in `config/settings.json` under an optional `budget` key; all amounts are US dollars
+"My budget" settings live in the user settings file (merged over `config/settings.json`) under an optional `budget` key; all amounts are US dollars
 (the UI converts to the display currency). Spend is read from the stored runs (`results.jsonl`), tournaments
 (`games.jsonl`) and `data/budget/spend-log.jsonl` (AI judges grading a pasted reply, Studio script polish), counted in
 the calendar month (server's local time) in which it was spent. Manual and Random Baseline contestants cost 0; their
@@ -248,7 +257,7 @@ People, AI judges or both grade stored results (`src/grading/`; METHODOLOGY 5.6)
 | Method | Path | Body | Returns |
 |---|---|---|---|
 | GET | `/api/grading/settings` | – | `{ official: 'methodology' \| 'human' \| 'ai' \| 'average', policies }` |
-| PUT | `/api/grading/settings` | `{ official }` | Same. Saved to `config/settings.json → gradingOfficial`. |
+| PUT | `/api/grading/settings` | `{ official }` | Same. Saved to the user settings file → `gradingOfficial`. |
 | GET | `/api/grading/spec/:testId?case=` | – | `GradingSpec`: kind, `gradedOn`, `humanRole` (`grade` \| `second-opinion` \| `dispute`), `aiRole`, checklist, rubric `criteria` (points, weights, anchors, requirement lists), `labels`, `judgeWeight`, `rules`, `answerKey` (with `case`), `scoreRule`, `maxOutputTokens`, `playtest` (The Game Jam), `judgeSees`, `minJudges`, `brief` (The Gallery, with `case=seed-N`). `arena.<game>` for judged Arena games. |
 | GET | `/api/grading/runs` | – | `{ runs: Array<{ id, name, createdAt, status, results, todo, gradable }>, arena: Array<{ id, name, game, gameName, pending }>, official }` |
 | GET | `/api/grading/queue?runId=&testId=` | – | `{ items: QueueItem[], official }` — one per result with `need` (`grade` \| `judge-failed` \| `arbitrate` \| `second-opinion` \| `owner-rating` \| `review`), `unit`, `todo`, counts of human/AI grades and disputes |

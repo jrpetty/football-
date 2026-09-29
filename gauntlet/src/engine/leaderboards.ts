@@ -27,6 +27,11 @@ export function runLeaderboard(runId: string): Leaderboard | null {
   }), manifest.contestants);
 }
 
+/** Leaderboard row id for a model's results that ran through OpenRouter. */
+export function routedRowId(contestantId: string): string {
+  return `${contestantId}~openrouter`;
+}
+
 /**
  * Combined leaderboard for a suite across every run.
  *
@@ -46,13 +51,26 @@ export function combinedLeaderboard(suiteId: string): Leaderboard {
   const configHash = new Map(contestants.map((c) => [c.id, contestantConfigHash(c)]));
 
   const results: CaseResult[] = [];
+  // Results that ran "via OpenRouter" get their own row ("… (via OpenRouter)"), never pooled with direct results.
+  const routedRows = new Map<string, Contestant>();
   let stale = 0;
   for (const runId of listRunIds()) {
+    const routedHash = new Map<string, string>();
+    for (const s of readManifest(runId)?.contestants ?? []) {
+      if (s.route && s.route.directHash === configHash.get(s.id)) routedHash.set(s.id, s.configHash);
+    }
     for (const r of readResults(runId)) {
       const currentTestHash = hashById.get(r.testId);
       const currentConfig = configHash.get(r.contestantId);
       if (currentTestHash === undefined || currentConfig === undefined) continue;
       if (caseFilter.get(r.testId) && !caseFilter.get(r.testId)!.has(r.caseId)) continue;
+      if (r.testHash === currentTestHash && routedHash.has(r.contestantId) && r.contestantHash === routedHash.get(r.contestantId)) {
+        const base = contestants.find((c) => c.id === r.contestantId)!;
+        const id = routedRowId(base.id);
+        if (!routedRows.has(id)) routedRows.set(id, { ...base, id, label: `${base.label} (via OpenRouter)` });
+        results.push({ ...r, contestantId: id });
+        continue;
+      }
       if (r.testHash !== currentTestHash || r.contestantHash !== currentConfig) {
         stale++;
         continue;
@@ -69,7 +87,7 @@ export function combinedLeaderboard(suiteId: string): Leaderboard {
     hash: t.hash,
   }));
   const withResults = new Set(results.map((r) => r.contestantId));
-  const board: Contestant[] = contestants.filter((c) => withResults.has(c.id));
+  const board: Contestant[] = [...contestants.filter((c) => withResults.has(c.id)), ...routedRows.values()];
   return markManual(buildLeaderboard({
     scope: { kind: 'combined', suiteId },
     fingerprint: fingerprint(tests),

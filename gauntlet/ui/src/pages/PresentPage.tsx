@@ -88,6 +88,8 @@ interface Contender {
   color: string;
   baseline: boolean;
   manual: boolean;
+  /** Reached through OpenRouter (no key of its own when the run started). */
+  via?: boolean;
 }
 
 interface Deck {
@@ -274,6 +276,7 @@ function buildDeck(d: RunDetail, details: Map<string, TestDetail>, metaCats: Cat
       color: c.color,
       baseline: isBaseline({ contestantId: c.id, vendor: c.vendor, label: c.label }),
       manual: !!row?.manual || manualProviders.has(c.provider),
+      ...(c.route?.via === 'openrouter' ? { via: true } : {}),
     };
   });
   contenders.sort((a, b) => Number(a.baseline) - Number(b.baseline));
@@ -434,7 +437,7 @@ function captionFor(slide: Slide, deck: Deck): Caption {
     case 'how':
       return {
         text: 'The rules: every test is scored out of 100, the Gauntlet Index averages the categories into one number, and brackets show how certain each score is.',
-        fine: `Thin lines = likely range (95%) · temperature ${m.settings?.temperature ?? 0}${deck.hasManual ? ' · hand-pasted chatbots used their own apps' : ''}`,
+        fine: `Thin lines = likely range (95%) · temperature ${m.settings?.temperature ?? 0}${deck.hasManual ? ' · hand-pasted chatbots used their own apps' : ''}${viaOpenRouter(deck).length ? ` · via OpenRouter: ${viaOpenRouter(deck).join(', ')}` : ''}`,
       };
     case 'intro':
       return introCaption({ name: slide.test.snap.name, n: slide.test.n, total: deck.tests.length, modelScores: introScores(deck, slide.test).modelScores });
@@ -684,7 +687,7 @@ function TitleSlide({ deck }: { deck: Deck }) {
           <div key={c.id} className={cx('t-card', c.baseline && 'is-base')} style={{ ['--c' as string]: c.baseline ? 'var(--text-3)' : c.color, ['--i' as string]: i }}>
             <span className="t-sw" aria-hidden="true" />
             <div className="t-lbl">{c.baseline ? 'Random guessing' : c.label}</div>
-            <div className="t-ven">{c.baseline ? 'Reference player' : c.vendor}</div>
+            <div className="t-ven">{c.baseline ? 'Reference player' : c.via ? `${c.vendor} · via OpenRouter` : c.vendor}</div>
             {c.manual && <span className="t-tag">Pasted by hand</span>}
             {c.baseline && <span className="t-tag">Sets the floor</span>}
           </div>
@@ -762,11 +765,21 @@ function HowSlide({ deck }: { deck: Deck }) {
           <h2>A fair fight</h2>
           <p>
             Every model sees every test fresh, with no tools, and gets exactly the same prompts{deck.repeats > 1 ? ` — ${deck.repeats} attempts at each question` : ''}.
+            {viaOpenRouter(deck).length > 0 && ` ${listNames(viaOpenRouter(deck))} ${viaOpenRouter(deck).length === 1 ? 'was' : 'were'} reached through OpenRouter, not ${viaOpenRouter(deck).length === 1 ? 'its maker’s' : 'their makers’'} own service.`}
           </p>
         </section>
       </div>
     </div>
   );
+}
+
+/** Contestants that ran "via OpenRouter" (no key of their own); named on the rules slide and its caption. */
+function viaOpenRouter(deck: Deck): string[] {
+  return deck.d.manifest.contestants.filter((c) => c.route?.via === 'openrouter').map((c) => c.label);
+}
+
+function listNames(names: string[]): string {
+  return names.length <= 1 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
 
 function ExplainerSlide({ deck, test }: { deck: Deck; test: DeckTest }) {

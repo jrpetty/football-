@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { effectiveContestant } from '../core/openrouter.ts';
 import { hasApiKey, loadContestants, loadProviders, loadSettings, snapshotContestant } from '../core/config.ts';
 import { DATA_DIR } from '../core/paths.ts';
 import { caseScorer, getTest, renderCase, type RenderedCase } from '../core/registry.ts';
@@ -53,6 +54,7 @@ export async function gradePasted(req: GradeRequest): Promise<GradeResult> {
   const judges: Contestant[] = judgeIds
     .map((id) => all.find((m) => m.id === id))
     .filter((m): m is Contestant => Boolean(m))
+    .map((m) => effectiveContestant(m, providers))
     .filter((m) => {
       const p = providers.find((x) => x.id === m.provider);
       return p ? hasApiKey(p) && p.type !== 'manual' : false;

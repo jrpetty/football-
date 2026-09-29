@@ -110,6 +110,22 @@ export interface Contestant {
   imagePricing?: ImagePricing;
   /** Image-generation request options (size, quality, …); see src/providers/image-gen.ts. */
   imageOptions?: ImageOptions;
+  /** OpenRouter model slug (e.g. "anthropic/claude-opus-4.6"), overriding the automatic match (src/core/openrouter.ts). Optional. */
+  openrouterModel?: string;
+  /** Set when this contestant ran through OpenRouter instead of its own company's API (recorded in run manifests). */
+  route?: ContestantRoute;
+}
+
+/** How a routed contestant reached its model: "via OpenRouter", with what it would have been called directly. */
+export interface ContestantRoute {
+  via: 'openrouter';
+  /** The model's own provider id and model id (what a direct run uses). */
+  provider: string;
+  model: string;
+  /** The OpenRouter model slug actually called. */
+  slug: string;
+  /** Config hash of the direct configuration (lets a leaderboard show routed results next to, never mixed with, direct ones). */
+  directHash: string;
 }
 
 /**
@@ -135,6 +151,10 @@ export interface ImageOptions {
 export interface ContestantView extends Contestant {
   configHash: string;
   hasKey: boolean;
+  /** "openrouter" when it has no key of its own and will run through OpenRouter (hasKey is then true). */
+  via?: 'openrouter';
+  /** The OpenRouter slug it will use when routed. */
+  viaModel?: string;
   providerLabel: string;
   providerType: ProviderType;
 }

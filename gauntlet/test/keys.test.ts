@@ -77,7 +77,7 @@ test('keyStatus reports source and a masked hint, never the key', () => {
   assert.equal(s.set, true);
   assert.equal(s.source, 'file');
   assert.ok(!JSON.stringify(s).includes('SECRET'));
-  assert.match(s.getKeyUrl!, /anthropic/);
+  assert.match(s.getKeyUrl!, /anthropic|claude\.com/); // the Claude Console moved to platform.claude.com
   process.env.STATUS_API_KEY = 'sk-other-value-8888';
   assert.equal(keys.keyStatus({ id: 'x', type: 'anthropic', label: 'X', apiKeyEnv: 'STATUS_API_KEY' }, [])!.source, 'system');
   assert.equal(keys.keyStatus({ id: 'x', type: 'mock', label: 'X', apiKeyEnv: null }, []), null);

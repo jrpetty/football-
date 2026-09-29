@@ -330,7 +330,10 @@ export default function RunDetailPage({ runId }: { runId: string }) {
             <div className="card-head">
               <div className="t">
                 <h2>Contestants ({m.contestants.length})</h2>
-                <div className="desc">Model configs and the pricing snapshot used to cost this run.</div>
+                <div className="desc">
+                  Model configs and the pricing snapshot used to cost this run.
+                  {m.contestants.some((c) => c.route) && ' Models marked “via OpenRouter” were reached through OpenRouter (its prices; their own leaderboard row).'}
+                </div>
               </div>
             </div>
             <div className="table-wrap">
@@ -353,6 +356,11 @@ export default function RunDetailPage({ runId }: { runId: string }) {
                         <div className="muted" style={{ fontSize: '0.74rem' }}>
                           {c.vendor} · {c.provider}
                         </div>
+                        {c.route && (
+                          <span className="badge info" title={`No ${c.route.provider} key when this run started: called through OpenRouter as ${c.route.slug} at OpenRouter’s price. Kept apart from direct results.`}>
+                            via OpenRouter
+                          </span>
+                        )}
                       </td>
                       <td className="mono" style={{ fontSize: '0.8rem' }}>
                         {c.model}

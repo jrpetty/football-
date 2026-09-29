@@ -1,8 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { join } from 'node:path';
-import { readFileSync } from 'node:fs';
-import { CONFIG_DIR } from '../core/paths.ts';
-import { writeJsonAtomic } from '../core/config.ts';
+import { updateSettings } from '../core/config.ts';
 import { checkBudgetInput, type BudgetSettings } from './budget.ts';
 import { budgetStatus, loadBudget } from './spend.ts';
 
@@ -26,11 +23,9 @@ export function isLocal(req: IncomingMessage): boolean {
   return a === '127.0.0.1' || a === '::1' || a === '::ffff:127.0.0.1';
 }
 
-/** Save the budget into config/settings.json, keeping every other setting exactly as stored. */
+/** Save the budget into the owner's settings file (kept when Gauntlet is updated), keeping every other setting as stored. */
 export function saveBudget(next: BudgetSettings): void {
-  const file = join(CONFIG_DIR, 'settings.json');
-  const stored = JSON.parse(readFileSync(file, 'utf8')) as Record<string, unknown>;
-  writeJsonAtomic(file, { ...stored, budget: next });
+  updateSettings({ budget: next });
 }
 
 export function registerBudgetRoutes({ route, httpError }: Deps): void {

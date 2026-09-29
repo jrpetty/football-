@@ -24,6 +24,22 @@ type Mode = 'suite' | 'pick';
 
 const isManual = (c: ContestantView) => c.providerType === 'manual';
 
+/**
+ * `?models=a,b` preselects those models; `?models=cheap` picks the two cheapest text models that can run right now,
+ * from different companies where possible (the API Keys page's "Cheap test run").
+ */
+function presetSelection(param: string | null, enabled: ContestantView[]): Set<string> | null {
+  if (!param) return null;
+  if (param !== 'cheap') return new Set(param.split(',').filter((id) => enabled.some((c) => c.id === id)));
+  const ready = enabled
+    .filter((c) => c.hasKey && !c.imageOnly && c.providerType !== 'manual' && c.providerType !== 'mock')
+    .sort((a, b) => a.pricing.inputPerM + a.pricing.outputPerM * 4 - (b.pricing.inputPerM + b.pricing.outputPerM * 4));
+  const picked: ContestantView[] = [];
+  for (const c of ready) if (picked.length < 2 && !picked.some((p) => p.vendor === c.vendor)) picked.push(c);
+  for (const c of ready) if (picked.length < 2 && !picked.includes(c)) picked.push(c);
+  return new Set(picked.map((c) => c.id));
+}
+
 function TriCheck({ checked, indeterminate, onChange, label }: { checked: boolean; indeterminate: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
     <input
@@ -286,7 +302,7 @@ export default function NewRunPage() {
   // Defaults once data arrives.
   useEffect(() => {
     if (!data.data) return;
-    setSelected((s) => s ?? new Set(enabled.filter((c) => (c.hasKey || isManual(c)) && !isManual(c)).map((c) => c.id)));
+    setSelected((s) => s ?? presetSelection(query.get('models'), enabled) ?? new Set(enabled.filter((c) => (c.hasKey || isManual(c)) && !isManual(c)).map((c) => c.id)));
   }, [data.data, enabled]);
   useEffect(() => {
     if (meta) {
@@ -588,6 +604,11 @@ export default function NewRunPage() {
                             ) : (
                               <span className="badge outline tnum" title="USD per 1M input / output tokens">
                                 {fmtPricePerM(c.pricing?.inputPerM)} / {fmtPricePerM(c.pricing?.outputPerM)}
+                              </span>
+                            )}
+                            {c.via === 'openrouter' && (
+                              <span className="badge info" title={`No ${c.providerLabel} key: runs through OpenRouter as ${c.viaModel ?? ''}, at OpenRouter’s price`}>
+                                via OpenRouter
                               </span>
                             )}
                             {!c.hasKey && !manual && (

@@ -34,8 +34,10 @@ for screen-recording, so results can go straight into videos.
 
 Requirements: **Node.js ≥ 22.18** (runs TypeScript natively; no build step for the engine).
 
-**On Windows:** double-click **`start-gauntlet.bat`** in the `gauntlet` folder. The first time, it installs and builds
-everything (a minute or two), then opens the dashboard. Keep its window open while you use Gauntlet.
+**On Windows (no typing):** see **[SETUP-WINDOWS.md](SETUP-WINDOWS.md)** (or `README-FIRST.txt`). In short: right-click the
+zip → **Extract All**, double-click **`start-gauntlet.bat`**, paste one key into the page that opens. Next time, double-click
+**Gauntlet** on your desktop. To update, extract the new zip anywhere and double-click its `start-gauntlet.bat`: your keys, runs
+and settings are kept.
 
 **Anywhere else (or from a terminal):**
 
@@ -45,10 +47,17 @@ npm install
 npm start                     # builds the dashboard and serves it on http://localhost:7777
 ```
 
-**Add your API keys in the dashboard:** open **API Keys** in the sidebar. For each company, click the link, create a key,
-paste it and press **Save**. Gauntlet checks the key for free on the spot and only saves it if the company accepts it. It
-works immediately, with no files to edit and no restart. Prefer the terminal? `node src/cli.ts keys setup` does the same, one
-company at a time. (Keys are stored in `gauntlet/.env`, which is never committed.)
+**Add your API keys in the dashboard:** with no key saved, the dashboard opens on a 3-step **Welcome**. Paste any key into
+**Paste any API key** (Ctrl+V, or **Paste from clipboard**): Gauntlet works out which company it's from by its shape, checks
+it for free and saves it only if the company accepts it. Several keys at once and `.env` lines work too. Easiest of all is
+**one OpenRouter key**: models whose own company key is missing then run *via OpenRouter* (labelled everywhere; see
+Methodology §4a). Prefer the terminal? `node src/cli.ts keys setup`.
+
+**Where things are kept:** keys (`.env`), runs (`data/`) and your changed settings (`settings.json`, merged over the shipped
+`config/settings.json`) live in a per-user folder: `%APPDATA%\Gauntlet` on Windows, `~/.gauntlet` elsewhere. Updating or moving
+the app folder never loses them; the first start copies them over once from an older in-folder install. `GAUNTLET_PORTABLE=1`
+keeps everything in the app folder (as does the test suite); `GAUNTLET_USER_DIR`, `GAUNTLET_ENV_FILE`, `GAUNTLET_DATA_DIR` and
+`GAUNTLET_USER_SETTINGS` override single locations.
 
 A first run that needs no API keys, useful for checking the install:
 
@@ -302,7 +311,7 @@ later price changes don't rewrite history.
 ## Data
 
 ```
-data/runs/<runId>/
+<user folder>/data/runs/<runId>/     (%APPDATA%\Gauntlet on Windows, ~/.gauntlet elsewhere)
   manifest.json    run config, test hashes, model + pricing snapshots, fingerprint, status
   results.jsonl    one CaseResult per line (transcript, scores, metrics, replay)
   artifacts/       generated games, SVGs, screenshots, code
@@ -320,7 +329,7 @@ and via the API (`docs/API.md`).
   live only in memory inside that process; they can require their own files and nothing else.
 * Model-generated HTML/SVG is served with a sandbox CSP (opaque origin, no network, no forms) and embedded
   in sandboxed iframes. Headless browser checks block all network requests.
-* API keys come from the environment / `.env` and are never sent to the dashboard.
+* API keys come from the environment / the user folder's `.env` and are never sent to the dashboard (only a masked hint).
 
 ## Development
 

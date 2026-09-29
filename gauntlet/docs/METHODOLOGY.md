@@ -57,7 +57,7 @@ the answer instruction or the judge prompts change.
 | Simulation self-reports ("I escaped!") | Simulation scores come only from the world state produced by the model's actions. |
 | Coding agent editing the tests or hard-coding answers (Fix the Bug) | Test files are read-only: edits are rejected and each attempt costs 0.1. The score comes from **hidden tests** the model never sees, run on its code in the sandbox, measured against the untouched repo (doing nothing scores 0; breaking working code counts against it). Project code cannot reach the test runner, the assertions or anything outside its in-memory files. The fixtures (hidden tests, reference fix) live in the repository and are covered by the test hash, so an edited fixture changes the hash and its results are excluded; never let a player with disk access (a local agent) play it. |
 | Training-data contamination | Tests are original, seeded worlds are regenerated from seeds, held-out tests in `tests/private/` are never committed or published, and a **canary string** marks Gauntlet data. `node src/cli.ts probe-contamination --models …` checks whether a model can complete it. |
-| Silent substitution by another model | Provider fallback and routing features are disabled; the model that answered is recorded (`servedModel`). |
+| Silent substitution by another model | Provider fallback features are disabled; the model that answered is recorded (`servedModel`). Routing through OpenRouter only happens openly, when a model has no key of its own, and is recorded and labelled (§4a). |
 | Changing a test after seeing results | Tests are hashed. Any edit creates a new hash, and old results stop counting. |
 
 ## 4. Testing any model: API or copy & paste
@@ -77,6 +77,36 @@ graded by exactly the same scorer. Rules for manual entry:
 
 A single reply can also be graded without a run (`Grader` screen or `node src/cli.ts grade <test> <case>`),
 but only results recorded in runs count toward the leaderboard.
+
+## 4a. One key for everything: OpenRouter
+
+**Direct keys are the gold standard for published leaderboards. OpenRouter is for convenience.**
+
+With an OpenRouter key saved (and **Use OpenRouter** on, the default), a model whose own company key is missing is called
+through OpenRouter instead of its maker's API. It is never silent:
+
+* **Planned and recorded.** The switch happens when a run (or tournament) is planned. The manifest's contestant snapshot
+  gets `provider: "openrouter"`, the OpenRouter slug as `model`, and `route: { via: "openrouter", provider, model, slug,
+  directHash }`. A resumed run never changes route.
+* **Its own config hash.** The route is part of the contestant's config hash, so routed and direct results never pool. On
+  the combined leaderboard, routed results get a separate row, "<model> (via OpenRouter)".
+* **Labelled.** The New Run page, the run page and the Presenter (title slide, rules slide and caption) say which models
+  ran via OpenRouter.
+* **Slugs.** Each model maps to an OpenRouter slug through `openrouterModel` in `config/models.json` (checked defaults
+  for a few models), or by an exact vendor + name match against OpenRouter's model list (`GET /api/v1/models`, cached in
+  `data/openrouter-models.json`). Near names are never guessed: no exact match means "not available via OpenRouter".
+* **Prices.** Cost estimates and recorded costs use OpenRouter's listed per-token prices for that slug. They are usually
+  the same as the maker's, but can differ slightly. OpenRouter also charges a fee when you buy credit (about 5%), which is
+  not part of the run cost.
+* **Reasoning effort** is sent as OpenRouter's unified `reasoning: { effort }` parameter (Gauntlet's `max` maps to
+  OpenRouter's `xhigh`) instead of each maker's native setting. OpenRouter translates it per maker, e.g. to a thinking-token
+  budget for Claude models, so the model may think a little more or less than with a direct key. Temperature and output
+  limits are passed through unchanged.
+* **Who serves the model.** OpenRouter may send a request to any host it lists for that model (for example the maker or a
+  cloud reseller). The model that answered is recorded (`servedModel`) as for every call.
+* Picture-making models (The Gallery) are never routed.
+
+These differences are small but real, which is why published comparisons should use direct keys.
 
 ## 5. Scoring
 
@@ -414,7 +444,7 @@ can disclose them. A reply cut off by a spending limit is labelled as such ("sto
 limit"), never as the model's own failure to finish.
 
 **Currency.** Costs are measured and stored in US dollars, the unit providers bill in. The display currency
-(pounds by default) and its exchange rate are a display setting typed in by the owner (`config/settings.json`);
+(pounds by default) and its exchange rate are a display setting typed in by the owner (saved in the user settings file, merged over `config/settings.json`);
 they never change a stored result and are never fetched from the internet.
 
 ## 9a. The Arena (head-to-head games)
