@@ -51,6 +51,15 @@ export function createMockAdapter(ctx: AdapterContext): ProviderAdapter {
 }
 
 function respond(prompt: string, rng: ReturnType<typeof createRng>): string {
+  // A baseline model configured as a judge (e.g. the fake judges in tests): a well-formed verdict that ignores the answer.
+  if (/SCORE: <integer 0-10>\s*$/.test(prompt)) return `A random grade: this judge does not read the answer.\nSCORE: ${rng.int(0, 10)}`;
+  if (/LABEL: <one label id from the list>\s*$/.test(prompt)) {
+    const labels = [...prompt.matchAll(/^- ([A-Z][A-Z0-9_]*): /gm)].map((m) => m[1]!);
+    if (labels.length) return `A random label: this judge does not read the answer.\nLABEL: ${rng.pick(labels)}`;
+  }
+  // Performance-summary requests (Grading Station): repeat the template summary it was given.
+  const template = /^Template summary: (.+)$/m.exec(prompt);
+  if (template && /Write the performance summary/.test(prompt)) return template[1]!.trim();
   const options = [...prompt.matchAll(/`([^`\n]{1,120})`/g)].map((m) => m[1]!.trim()).filter(Boolean);
   if (options.length > 0) {
     // Options formatted as "TAG: value" are decision lines — choose one per tag.

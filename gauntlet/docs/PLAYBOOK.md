@@ -239,10 +239,82 @@ simply get the plain score view, as before. Add `?plain=1` to the address to see
 
 ## 5. Review
 
-* **Blind Review**: rate the games and illustrations, and settle any case where the judges disagreed. Model
-  identities are hidden until you've scored.
+* **Grading Station** (see the next section): grade answers yourself, with AI judges, or both, and settle any
+  case where the judges disagreed. Model identities are hidden until you reveal them.
+* **Blind Review**: the older side-by-side rater for games and illustrations still works; grades from both
+  places are stored the same way.
 * Skim errors and refusals in the run detail. Don't quietly re-run until they vanish: they're part of the
   result.
+
+## Grading: you, the AI, or both
+
+Open **Grading Station** in the sidebar. It lists every answer in a run that a person can look at, with the ones
+that still need a grade first. Pick a run at the top, then work through the list on the left.
+
+**What you see for each answer**
+
+* **Graded on**: one plain sentence saying how this test is scored, taken from the test itself (for example
+  "Opened in a real browser and checked automatically (50% of the score), then graded against the rubric (50%)").
+* **The output**: whatever the model produced, shown the right way. A game gets a big **Play it** button (it runs
+  in a sealed sandbox with no internet), a drawing is shown as a picture, JSON is compared field by field with the
+  answer key, pictures, PDFs, audio, video, tables, code, logs and ZIP files all open in place. Tabs across the top
+  switch between the files; **Download** saves any of them.
+* **The exact brief** the model got, **what the machine checked** (ticks and crosses) and **the answer key**
+  (never shown to the models).
+* A **30-word summary** of how that model did on the whole test.
+
+**Choose who grades: Human, AI or Both** (top right). The choice is remembered for the run; switch it on a
+single test and it applies to that test only.
+
+* **Human**: the right-hand panel is the test's real rubric: one line per criterion with its points and what
+  each score means ("3 = loads without errors and the full loop works"). Games and drawings also list the numbered
+  requirements from the prompt so you can tick them off one by one; honesty tests show the labels the judges pick
+  from. Type a short note if you like, then press **Enter** to save and jump to the next answer.
+* **AI**: the configured judge models grade with the same rubric. Judges never grade a model from their own
+  company, at least two must take part, and judges that can see pictures get the test's images and the
+  screenshots. **You always see the cost first** (usually a fraction of a cent per answer) and nothing is spent
+  until you confirm. Every judge's score and reasoning is saved.
+* **Both**: your grade and the AI's side by side, with a green / amber / red "agree, close, disagree" meter.
+
+**Keyboard (no mouse needed)**: `1`–`9` score the highlighted line (`0` = 10 on a 0–10 scale, `X` = zero); for a
+requirement `1` = met, `2` = half met, `0` = missed; `↑`/`↓` move between lines, `←`/`→` nudge by half a point;
+`Enter` saves; `J`/`K` next / previous answer; `P` plays the game or media; `F` full screen; `R` reveals the model
+names; `N` jumps to the note box; `A` asks the AI judges; `D` disputes a machine score; `?` shows the list.
+
+**Blind grading.** Models are shown as "Model A", "Model B"… (the same letter all session) until you press `R`.
+Your grade records whether names were hidden. Good for recording: nobody on camera sees which model is which.
+
+**What you can and can't change**
+
+* Tests with an **answer key** (maths, logic, JSON, code with hidden tests, simulations) are scored by the machine,
+  and nobody can overwrite that. If a key looks wrong, press `D` and write why: the **dispute** is shown next to the
+  score in the result inspector, and you can fix the test.
+* Tests graded against a **rubric** (games, drawings, honesty, human-scored tests) can be graded by you. Which grade
+  counts is set in **Which grade counts** (bottom right):
+  * **Methodology** (default): the AI judges from the run count. Your grade counts on human-scored tests, when the
+    judges disagreed by more than 3 points (your grade settles it), and when no judge could grade the answer.
+  * **Human first**: your grade replaces the judges' part of the score.
+  * **AI first**: the judges count wherever they graded.
+  * **Average**: the mean of your grade and the AI's.
+  Changing it re-scores the graded answers in the run you have open. For games and drawings the automated checks
+  always keep their share of the score.
+
+**Judges missing?** If a run had no judge keys, judged answers show "Judges missing". Add keys on the API Keys page,
+switch to **AI**, and press **Whole test** to grade them all at once (cost shown first), or grade them yourself.
+
+**Arena debates and mock trials** waiting for a human verdict are listed at the top of the queue and open the
+Arena judging page.
+
+**The 30-word summaries** appear under each test in Run detail (Results matrix), in the result inspector, in the
+Grading Station and as a small line under each model's bar on the Presenter's results slides. They are built from
+the recorded results only: the score, which cases missed and why, the judges' notes, time and cost. **Write with
+AI…** (Run detail) has a judge from a different company rewrite them from the same facts, cut to 30 words, with
+the cost shown first; they are saved with the run. The Studio lists them as **Performance facts** you can add to
+the script.
+
+**Pasting replies with files (Manual Inbox).** Drop, paste or attach files under the reply box: a game's `.html`
+file, a picture, a PDF, a ZIP… They are added to the reply as files, graded exactly like a pasted answer, and show
+up in the viewer.
 
 ## 6. Publish
 
