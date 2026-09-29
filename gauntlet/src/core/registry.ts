@@ -136,7 +136,7 @@ export function getTest(id: string): LoadedTest | undefined {
 }
 
 export function needsFinalAnswer(scorer: ScorerSpec): boolean {
-  return scorer.type === 'exact' || scorer.type === 'number' || scorer.type === 'choice' || (scorer.type === 'regex' && !scorer.fullText);
+  return scorer.type === 'exact' || scorer.type === 'number' || scorer.type === 'choice' || (scorer.type === 'regex' && !scorer.fullText) || (scorer.type === 'ladder' && scorer.answer !== 'grid');
 }
 
 export function caseScorer(test: PromptTest, c: PromptTestCase): ScorerSpec {
@@ -223,7 +223,7 @@ export function summarize(t: LoadedTest): TestSummary {
 
 const TEST_ID_RE = /^[a-z0-9][a-z0-9-]*\.[a-z0-9][a-z0-9.-]*$/;
 const VERSION_RE = /^\d+\.\d+\.\d+$/;
-const SCORER_TYPES = new Set(['exact', 'number', 'choice', 'regex', 'contains', 'constraints', 'json', 'code-js', 'judge', 'judge-classify', 'artifact', 'human']);
+const SCORER_TYPES = new Set(['exact', 'number', 'choice', 'regex', 'contains', 'constraints', 'json', 'code-js', 'judge', 'judge-classify', 'artifact', 'human', 'ladder']);
 const CONSTRAINT_CHECKS = new Set([
   'word_count', 'sentence_count', 'paragraph_count', 'line_count', 'bullet_count', 'include', 'exclude', 'no_letter',
   'starts_with', 'ends_with', 'all_lowercase', 'all_uppercase', 'no_commas', 'json', 'json_keys', 'regex',
@@ -246,6 +246,7 @@ function validateScorer(s: ScorerSpec | undefined, where: string, errors: string
       errors.push(`${where}: invalid regex (${(e as Error).message})`);
     }
   }
+  if (s.type === 'ladder' && !['integer', 'plan', 'grid'].includes(s.answer)) errors.push(`${where}: ladder scorer answer must be integer, plan or grid`);
   if (s.type === 'judge' && !s.rubric?.trim()) errors.push(`${where}: judge scorer needs a rubric`);
   if (s.type === 'human' && !s.rubric?.trim()) errors.push(`${where}: human scorer needs a rubric`);
   if (s.type === 'judge-classify') {
@@ -297,6 +298,17 @@ function validateExpected(s: ScorerSpec, expected: unknown, where: string, error
     case 'json':
       if (!expected || typeof expected !== 'object') errors.push(`${where}: json scorer needs an expected object`);
       break;
+    case 'ladder': {
+      if (s.answer === 'integer' && !(typeof expected === 'string' && /^\d+$/.test(expected))) errors.push(`${where}: ladder integer key must be a digit string`);
+      if (s.answer === 'grid' && !(Array.isArray(expected) && expected.length > 0 && expected.every((r) => typeof r === 'string' && /^[#.]+$/.test(r) && r.length === (expected[0] as string).length)))
+        errors.push(`${where}: ladder grid key must be equal-length rows of # and .`);
+      if (s.answer === 'plan') {
+        const k = expected as { rows?: number; cols?: number; start?: unknown; optimal?: number } | undefined;
+        if (!k || !Number.isInteger(k.rows) || !Number.isInteger(k.cols) || !Array.isArray(k.start) || k.start.length !== k.rows! * k.cols! || !Number.isInteger(k.optimal))
+          errors.push(`${where}: ladder plan key needs rows, cols, start[rows*cols] and optimal`);
+      }
+      break;
+    }
     case 'code-js': {
       const e = expected as { functionName?: unknown; tests?: unknown };
       if (!e || typeof e.functionName !== 'string' || !/^[A-Za-z_$][\w$]*$/.test(e.functionName)) errors.push(`${where}: code-js needs expected.functionName`);

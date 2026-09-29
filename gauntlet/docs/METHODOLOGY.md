@@ -229,6 +229,75 @@ test was blind-played by models that saw only the prompt (results in [AUDIT.md](
   owner's rating replaces the judges' artistry. Blind votes are recorded but never scored.
 * **Costs.** Image models are billed per picture (`imagePricing`), plus the prompt. Prices in
   `config/models.json` carry their source and date and are marked unverified until you check them.
+## 7d. The Horizon tier: tests built for future models
+
+Standard and Frontier measure what today's models can do. The **Horizon** tier (suite `horizon`, category
+`horizon`) measures how far they still have to go. It is built so that today's strongest model scores low and
+future models visibly climb, on exactly the same questions, for years.
+
+**Five ladders.** Each Horizon test is a *ladder* of ten frozen levels (case ids `L01` to `L10`). Every level
+is strictly more work than the one below it: more steps, more digits, a longer proven-shortest plan, a bigger
+grid, a bigger board. A unit test (`test/horizon.test.ts`) checks the growth for every ladder.
+
+| Test | What a level asks | Level 1 → level 10 | Pencil-and-paper time for a patient expert |
+|---|---|---|---|
+| Run It In Your Head (`horizon.mind-runner`) | The exact number a JavaScript program prints | ~150 → ~73,000 statements executed | 15 minutes → two to three working weeks |
+| No Calculator (`horizon.modpow-ladder`) | a^e mod m, exactly | 8-digit → 44-digit numbers | two hours → about a month |
+| The Sliding Ladder (`horizon.sliding-ladder`) | A provably shortest sliding-puzzle plan | 20 moves (3×3) → 56 moves (4×4) | an hour → months of systematic search |
+| The Picture Logic Ladder (`horizon.nonogram-ladder`) | A whole nonogram grid | 8×8 → 35×35 (1,225 cells) | 15 minutes → a few days |
+| Count Every Tiling (`horizon.tiling-count`) | The exact number of domino tilings of a board with holes | 6×6 (110) → 16×14 (22 digits) | 30 minutes → several weeks |
+
+**Fair, not tricky.** Every item is a plainly worded, fully specified task with one checkable answer. There
+are no gotchas in the wording and no opinions: difficulty comes only from depth, length and exactness. Every
+item can be solved by a patient person with pencil and paper (the method is standard: trace the program,
+square-and-multiply, search, case analysis, column-by-column counting); it just takes a long time. The top
+rungs are deliberately beyond what any person would do by hand in practice, which is the point: they are there for
+the models of the next few years.
+
+**Double-verified keys** (`verification/horizon/`):
+
+* Programs are generated as a syntax tree and rendered twice, as JavaScript (what the model sees) and Python.
+  The key is the printed number when *both* are actually run, and `verify.mjs` re-runs the exact program text
+  from the prompt in a fresh V8 context.
+* Modular powers: Python's `pow`, a left-to-right binary method, and an independent JavaScript BigInt
+  right-to-left method.
+* Sliding puzzles: the minimum is proven by breadth-first search over all 181,440 positions (3×3) or IDA*
+  with an admissible heuristic (larger boards) in Python, and re-proven in JavaScript by a different search
+  (bidirectional BFS / its own IDA*). A compiled C search is used only to *find* deep candidates quickly.
+* Nonograms: uniqueness is proven by OR-Tools CP-SAT (after the solution is found it is forbidden and the
+  solver must prove no other exists) and independently by a JavaScript line solver with full backtracking.
+  From level 3 on, row-by-row logic alone is guaranteed to leave part of the grid open, so case analysis is
+  required.
+* Tilings: column-by-column transfer-matrix counting in Python, re-checked by a memoised
+  cover-the-first-empty-square search in JavaScript; both self-test on the 8×8 board (12,988,816).
+
+`verify.mjs` parses every puzzle back **out of the prompt text** the models see, so a key can never drift
+from its prompt.
+
+**Scoring** (`{ "type": "ladder" }`, `src/scoring/ladder.ts`):
+
+* Whole numbers are compared digit by digit (any size; separators and a stated `x =` are tolerated, two
+  numbers or a hedge are wrong).
+* A sliding-puzzle plan is *replayed* on the start board. The proven minimum scores 1; a longer plan that
+  really solves the puzzle scores 0.25 × minimum ÷ length (so never more than a quarter); an illegal move or
+  an unfinished board scores 0.
+* A nonogram needs the whole grid right (all or nothing).
+
+Every level is worth the same, so a test score is *the share of the ladder climbed*. The headline number is
+the **ladder height**: the highest level L such that every level from 1 to L was solved reliably (full marks on
+at least two of three attempts, or on the single attempt when running one repeat). A lucky solve higher up
+is shown ("once solved level 7") but never lifts the climber past a rung it missed. Random filler scores 0
+(regression-tested).
+
+**Reproducible for years.** The ten levels of each test are frozen in the test files and covered by the test
+hash. Never regenerate a published version: a model measured in 2030 must meet the very same rungs. When
+models top out, add levels L11, L12, … in a new version and keep L01–L10 unchanged, so old and new heights stay
+comparable.
+
+**Cost.** Replies are long (tests allow 64,000 output tokens per level; strong models often use 10,000–40,000
+on the levels they attempt, while weaker ones stop early). The estimate is 30,000 output tokens per level:
+about **$0.60 per level, $30 per full suite run per model** at $20 per million output tokens (one repeat),
+or a few dollars for small models. The blind calibration is in [AUDIT.md](AUDIT.md).
 
 ## 8. The random baseline
 

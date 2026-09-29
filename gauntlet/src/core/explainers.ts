@@ -69,6 +69,7 @@ export const EXPLAIN_ICONS = [
   'zero',
   'star',
   'key',
+  'ladder',
 ] as const;
 
 export type ExplainIconName = (typeof EXPLAIN_ICONS)[number];
@@ -212,6 +213,14 @@ const DRAW_STEPS = (weights: string): ExplainStep[] => [
   { icon: 'target', text: weights },
   { icon: 'cross', text: 'Digits in the words or extra shapes cost points' },
 ];
+
+const LADDER_STEPS = (what: string): ExplainStep[] => [
+  { icon: 'ladder', text: 'Ten levels, each harder than the last' },
+  { icon: 'target', text: what },
+  { icon: 'check', text: 'Checked by machine against a double-proven key' },
+  { icon: 'flag', text: 'Headline: how high it climbs without missing a rung' },
+];
+const LADDER_SCORE = 'Every level is worth 10 points, so 30 means three levels solved. The ladder was built so today’s best models stall low and future ones can climb.';
 
 export const EXPLAINERS: Record<string, TestExplainer> = {
   // ─────────────── Agentic ───────────────
@@ -794,6 +803,50 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     goodScore: 'Winning both games of a pairing means it argued the evidence better from both sides.',
     icon: 'gavel',
     opening: 'A fictional case file with lettered exhibits. One model prosecutes, the other defends, then they swap.',
+  },  'horizon.mind-runner': {
+    hook: 'Can it run a program for 70,000 steps in its head, without a computer?',
+    whatItTests: 'Executing code by pure reasoning: tracking every variable through loops, arrays and function calls to the exact number printed.',
+    whyHard: 'The top level runs about 73,000 statements, and one slip anywhere changes the final number.',
+    howScored: LADDER_STEPS('The exact number the program prints'),
+    goodScore: LADDER_SCORE,
+    icon: 'code',
+  },
+  'horizon.modpow-ladder': {
+    hook: 'Can it do 44-digit arithmetic in its head, with no mistakes?',
+    whatItTests: 'Long exact arithmetic: a huge number raised to a huge power, then divided, keeping only the remainder.',
+    whyHard: 'There is no shortcut: the top level needs about 180 long multiplications and divisions of 44-digit numbers, every digit right.',
+    howScored: LADDER_STEPS('The exact remainder, every digit'),
+    goodScore: LADDER_SCORE,
+    icon: 'sigma',
+  },
+  'horizon.sliding-ladder': {
+    hook: 'Can it find the shortest solution when the answer is 56 moves long?',
+    whatItTests: 'Deep planning: solving a sliding-tile puzzle in the fewest possible moves, proven by computer search.',
+    whyHard: 'Finding a solution is easy; finding the shortest one means ruling out billions of alternatives.',
+    howScored: [
+      { icon: 'ladder', text: 'Ten puzzles, each needing more moves' },
+      { icon: 'moves', text: 'Its whole plan is replayed tile by tile' },
+      { icon: 'trophy', text: 'Shortest possible plan: full marks' },
+      { icon: 'percent', text: 'Longer plan that works: at most a quarter' },
+    ],
+    goodScore: LADDER_SCORE,
+    icon: 'route',
+  },
+  'horizon.nonogram-ladder': {
+    hook: 'Can it deduce a 1,225-cell picture from numbers alone?',
+    whatItTests: 'Constraint solving: filling a paint-by-numbers grid, up to 35 by 35, that has exactly one solution.',
+    whyHard: 'The pictures are random, so nothing can be guessed: every cell follows from long chains of logic.',
+    howScored: LADDER_STEPS('The whole grid, every cell'),
+    goodScore: LADDER_SCORE,
+    icon: 'grid',
+  },
+  'horizon.tiling-count': {
+    hook: 'Can it count every domino tiling when the answer has 22 digits?',
+    whatItTests: 'Exact counting: in how many ways dominoes can cover a board with holes, from a 6x6 board to a 16x14 one.',
+    whyHard: 'The count explodes to 22 digits, so it must be organised perfectly: no guessing, no estimating.',
+    howScored: LADDER_STEPS('The exact count, every digit'),
+    goodScore: LADDER_SCORE,
+    icon: 'count',
   },
 };
 
@@ -844,6 +897,11 @@ function scorerSteps(sc: ScorerSpec): ExplainStep[] {
       return [{ icon: 'play', text: 'What it builds is opened and checked' }, ...(sc.rubric && (sc.judgeWeight ?? 0) > 0 ? [{ icon: 'scale' as const, text: 'AI judges rate it too' }] : [])];
     case 'human':
       return [{ icon: 'scale', text: 'Rated blind by people' }];
+    case 'ladder':
+      return [
+        { icon: 'target', text: 'One exact answer per level' },
+        { icon: 'check', text: 'Checked by machine: right or wrong' },
+      ];
   }
 }
 

@@ -374,7 +374,9 @@ export type ScorerSpec =
       playtest?: PlaytestSpec;
     }
   /** Scored by humans in the Blind Review screen. */
-  | { type: 'human'; rubric: string };
+  | { type: 'human'; rubric: string }
+  /** Horizon ladder rung (src/scoring/ladder.ts): exact big integer, a replayed sliding-tile plan, or a whole grid. */
+  | { type: 'ladder'; answer: 'integer' | 'plan' | 'grid' };
 
 /** Genre playtest + checklist judging for game artifacts (The Game Jam). */
 export interface PlaytestSpec {

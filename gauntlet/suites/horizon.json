@@ -1,0 +1,14 @@
+{
+  "id": "horizon",
+  "version": "1.0.0",
+  "name": "Horizon: Tests Built for Future Models",
+  "description": "Five difficulty ladders that today's best models cannot finish: running programs in your head, 44-digit arithmetic, provably shortest sliding-puzzle plans, 35x35 logic pictures and exact domino-tiling counts. Each test has ten frozen levels, each strictly harder than the last, so a model measured years from now climbs exactly the same ladder. The score is the share of the ladder climbed; the headline is the highest level solved reliably. Every answer is checked by machine against a key proven by two independent solvers. Long replies: budget roughly $15-25 per frontier model per repeat.",
+  "repeats": 1,
+  "tests": [
+    { "id": "horizon.mind-runner" },
+    { "id": "horizon.modpow-ladder" },
+    { "id": "horizon.sliding-ladder" },
+    { "id": "horizon.nonogram-ladder" },
+    { "id": "horizon.tiling-count" }
+  ]
+}

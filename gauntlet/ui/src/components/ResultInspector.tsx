@@ -18,6 +18,8 @@ import { ModelBadge } from './viz/ModelBadge.tsx';
 import { AboutTestPanel } from './ExplainerCard.tsx';
 import { GalleryResultPanel } from './viz/GalleryResultPanel.tsx';
 import { briefForCase, isGalleryTest } from './viz/galleryModel.ts';
+import { HorizonLadderPanel, type LadderContestant } from './viz/HorizonLadderPanel.tsx';
+import { isHorizonTest, ladderLevel } from '../../../src/presenter/visuals/horizon.ts';
 
 export interface InspectorTarget {
   testId: string;
@@ -324,6 +326,7 @@ export function ResultInspector({
   onClose,
   onSelectKey,
   names,
+  contestants,
 }: {
   runId: string;
   target: InspectorTarget | null;
@@ -333,6 +336,8 @@ export function ResultInspector({
   onSelectKey?: (key: string | null) => void;
   /** contestant id → label, used to name judges. */
   names?: Map<string, string>;
+  /** Every contestant of the run (Horizon ladder: all models on one picture). */
+  contestants?: LadderContestant[];
 }) {
   const rows = useMemo(
     () => (target ? results.filter((r) => r.testId === target.testId && r.contestantId === target.contestantId).sort((a, b) => a.caseId.localeCompare(b.caseId) || a.repeat - b.repeat) : []),
@@ -384,6 +389,17 @@ export function ResultInspector({
       }
     >
       {target && <AboutTestPanel testId={target.testId} model={{ label: target.contestantLabel, color: target.contestantColor, score: mean }} randomScore={randomMean} />}
+      {target && isHorizonTest(target.testId) && (
+        <details className="hz-panel" open>
+          <summary>How far up the ladder each model climbed</summary>
+          <HorizonLadderPanel
+            testId={target.testId}
+            results={results}
+            contestants={contestants ?? [{ id: target.contestantId, label: target.contestantLabel, color: target.contestantColor }]}
+            highlight={selected ? (ladderLevel(selected.caseId) ?? undefined) : undefined}
+          />
+        </details>
+      )}
       <div className="inspector">
         <div className="insp-list" role="listbox" aria-label="Cases">
           {rows.length === 0 && <div className="chart-empty">No results for this cell.</div>}

@@ -63,6 +63,8 @@ function defaultScorer(type: ScorerType): ScorerSpec {
       return { type, format: 'html', checks: [{ check: 'parses' }, { check: 'no_external_requests' }, { check: 'runs_without_errors' }], rubric: '', judgeWeight: 0.5 };
     case 'human':
       return { type, rubric: '' };
+    case 'ladder':
+      return { type, answer: 'integer' };
   }
 }
 

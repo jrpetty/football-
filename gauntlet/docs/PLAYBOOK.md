@@ -567,6 +567,47 @@ to line it up before a real run.
 * The viewer caption strip (press **C** in Broadcast mode) explains the screen in one sentence. The tiles make room
   for it.
 
+## The Horizon tier: tests built for future models
+
+The Horizon suite is for the question every AI video eventually runs into: *"the best model already gets 100%,
+so what now?"* Its five tests are ladders of ten levels, built so that today's best models stall low and
+tomorrow's can climb. The story on screen is simple: **how far up the ladder did each model get?**
+
+**Run it.** New Run → suite **Horizon: Tests Built for Future Models** (or `node src/cli.ts run --models a,b --suite horizon --repeats 1 --max-cost 60`).
+Use 1 repeat for a first look and 3 for a published result. Replies are long; see the cost note below and set a
+spending cap.
+
+**What viewers see.**
+
+* **The explainer slide** asks the question in one line ("Can it run a program for 70,000 steps in its head?").
+* **"How far up the ladder"** (a Presenter slide after each Horizon test's results, and at the top of the result
+  inspector): a mountain with a ten-rung ladder. Each model's token stands on the highest rung it reached
+  without missing one below; the dots on every rung show that level's result (filled = solved, ring = solved
+  sometimes or partly, empty = failed, dashed = not run). The summit, level 10, is labelled "the horizon".
+  The board on the right gives each model's height in big numbers, and notes a lucky solve higher up.
+* **One level, answer vs truth** (click any level in the inspector): a mini ladder showing where the level
+  sits, then the model's answer against the key. Numbers are compared digit by digit ("right for 11 digits,
+  then wrong"); sliding-puzzle plans are replayed with the first illegal move boxed in red and the proven
+  minimum beside the model's move count; nonogram grids are drawn side by side with every wrong cell in red.
+
+**Talking points that are true.**
+
+* Every answer is checked by machine against a key proven by two independent programs; there is no judge and
+  no opinion anywhere in this suite.
+* Every level can be done with pencil and paper; the top ones would take a person weeks. The difficulty is
+  depth and exactness, not trick wording.
+* The levels never change. When you film the same suite in two years, a new model is climbing exactly the same
+  ladder, so "it got two rungs higher" is a real, comparable result.
+* A model that honestly says "I can't do this reliably without a computer" scores 0 on that level, the same as a
+  wrong answer. That is fine to show: knowing its limits is good behaviour, but the ladder measures ability.
+
+**Cost.** Budget roughly **$15–30 per frontier model per repeat** for the whole suite (at $20 per million output
+tokens) and **$2–5 for a small model**. Most of it is the first few levels, where strong models think for a long
+time; on levels they judge hopeless they often stop early. The Cost Planner shows the estimate before you start.
+
+**Mock mode.** `?mock=1` has a demo run, *Horizon ladders · demo climb*, with fictional models at different
+heights, so you can rehearse the slides with no API keys. The screenshots are in `docs/screenshots/horizon/`.
+
 ## Running the Game Jam
 
 **The Game Jam** (`creative.game-jam`, version 2, in its own `games` suite) gives every model five full game

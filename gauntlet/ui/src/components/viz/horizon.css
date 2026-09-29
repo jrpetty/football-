@@ -1,0 +1,524 @@
+/*
+ * Horizon tier visuals: the ladder/mountain (HorizonLadder.tsx) and one rung's answer vs truth
+ * (HorizonRungCard.tsx). Colours come from tokens.css; the mountain palette is derived from them.
+ */
+
+.hz-ladder,
+.hz-rung-card {
+  --hz-sky-top: color-mix(in srgb, var(--accent-2) 22%, var(--surface-1));
+  --hz-sky-bottom: color-mix(in srgb, var(--accent) 10%, var(--surface-1));
+  --hz-rock-top: color-mix(in srgb, var(--text-3) 38%, var(--surface-3));
+  --hz-rock-bottom: color-mix(in srgb, var(--text-3) 12%, var(--surface-2));
+  --hz-far-top: color-mix(in srgb, var(--accent-2) 16%, var(--surface-2));
+  --hz-far-bottom: var(--surface-2);
+  --hz-rail: color-mix(in srgb, var(--gold) 70%, var(--text-2));
+}
+:root[data-theme='light'] .hz-ladder,
+:root[data-theme='light'] .hz-rung-card {
+  --hz-sky-top: color-mix(in srgb, var(--accent-2) 22%, #ffffff);
+  --hz-sky-bottom: color-mix(in srgb, var(--accent) 12%, #ffffff);
+  --hz-rock-top: color-mix(in srgb, var(--text-3) 42%, #ffffff);
+  --hz-rock-bottom: color-mix(in srgb, var(--text-3) 22%, #ffffff);
+  --hz-far-top: color-mix(in srgb, var(--accent-2) 20%, #ffffff);
+  --hz-far-bottom: color-mix(in srgb, var(--accent-2) 6%, #ffffff);
+  --hz-rail: color-mix(in srgb, var(--gold-deep) 85%, #000000);
+}
+
+.hz-ladder {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  gap: 0.8em 1.4em;
+  align-items: center;
+  font-size: 1rem;
+  color: var(--text-1);
+}
+.hz-ladder svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  grid-row: 1 / span 2;
+}
+.hz-slide.hz-ladder {
+  font-size: 22px;
+  height: 100%;
+  min-height: 0;
+}
+.hz-slide.hz-ladder svg {
+  max-height: 100%;
+}
+
+.hz-ground {
+  fill: color-mix(in srgb, var(--surface-inset) 70%, var(--hz-rock-bottom));
+}
+.hz-snow {
+  fill: color-mix(in srgb, #ffffff 88%, var(--accent));
+  opacity: 0.92;
+}
+.hz-pole {
+  stroke: var(--text-2);
+  stroke-width: 3;
+}
+.hz-flag {
+  fill: var(--text-3);
+}
+.hz-flag.won {
+  fill: var(--gold);
+}
+.hz-summit {
+  fill: var(--text-2);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.hz-rails line {
+  stroke: var(--hz-rail);
+  stroke-width: 9;
+  stroke-linecap: round;
+}
+.hz-rung line {
+  stroke: color-mix(in srgb, var(--hz-rail) 55%, transparent);
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+.hz-rung.reached line {
+  stroke: var(--hz-rail);
+}
+.hz-rung.hl line {
+  stroke: var(--accent);
+  stroke-width: 8;
+}
+.hz-lv {
+  fill: var(--text-2);
+  font-size: 26px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.hz-lv.base {
+  font-size: 20px;
+  font-weight: 600;
+  fill: var(--text-3);
+}
+.hz-rung.hl .hz-lv {
+  fill: var(--accent);
+}
+.hz-cap {
+  fill: var(--text-2);
+  font-size: 21px;
+  font-weight: 600;
+}
+.hz-dot {
+  stroke: var(--c);
+  stroke-width: 3.5;
+}
+.hz-dot.s-full {
+  fill: var(--c);
+}
+.hz-dot.s-some {
+  fill: color-mix(in srgb, var(--c) 30%, transparent);
+}
+.hz-dot.s-fail {
+  fill: var(--surface-1);
+  stroke: color-mix(in srgb, var(--c) 45%, var(--surface-3));
+}
+.hz-dot.s-none {
+  fill: none;
+  stroke: var(--text-3);
+  stroke-dasharray: 3 4;
+  stroke-width: 2;
+}
+.hz-climber {
+  transition: transform 1.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.hz-tok {
+  fill: var(--c);
+  stroke: var(--surface-1);
+  stroke-width: 4;
+}
+.hz-climber.baseline .hz-tok {
+  fill: var(--text-3);
+}
+.hz-tok-t {
+  fill: #ffffff;
+  font-size: 15px;
+  font-weight: 800;
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.45);
+  stroke-width: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hz-climber {
+    transition: none;
+  }
+}
+
+.hz-board {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+  align-self: end;
+  min-width: 0;
+}
+.hz-board li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.7em;
+  align-items: center;
+  padding: 0.55em 0.8em;
+  border-radius: var(--r-md, 10px);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 5px solid var(--c);
+}
+.hz-board li.baseline {
+  opacity: 0.8;
+  border-left-color: var(--text-3);
+}
+.hz-sw {
+  width: 0.8em;
+  height: 0.8em;
+  border-radius: 50%;
+  background: var(--c);
+}
+.hz-board li.baseline .hz-sw {
+  background: var(--text-3);
+}
+.hz-who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.hz-who b {
+  font-size: 1.05em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hz-who small {
+  color: var(--text-3);
+  font-size: 0.8em;
+}
+.hz-h {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3em;
+  white-space: nowrap;
+}
+.hz-h b {
+  font-size: 2em;
+  line-height: 1;
+  color: var(--text-1);
+}
+.hz-h small {
+  color: var(--text-3);
+  font-size: 0.8em;
+}
+.hz-slide .hz-board li {
+  padding: 0.6em 0.9em;
+}
+.hz-slide .hz-h b {
+  font-size: 2.5em;
+}
+.hz-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em 1.1em;
+  color: var(--text-2);
+  font-size: 0.85em;
+  align-self: start;
+}
+.hz-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+}
+.hz-lg {
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 50%;
+  border: 2.5px solid var(--text-2);
+  display: inline-block;
+}
+.hz-lg.s-full {
+  background: var(--text-2);
+}
+.hz-lg.s-some {
+  background: color-mix(in srgb, var(--text-2) 30%, transparent);
+}
+.hz-lg.s-fail {
+  border-color: var(--text-3);
+  background: var(--surface-1);
+}
+.hz-lg.s-none {
+  border-style: dashed;
+  border-color: var(--text-3);
+}
+@media (max-width: 900px) {
+  .hz-ladder {
+    grid-template-columns: 1fr;
+  }
+  .hz-ladder svg {
+    grid-row: auto;
+  }
+}
+
+/* ─── one rung (Result Inspector case visual) ─────────────────────────────── */
+.hz-rung-body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1.2em;
+  align-items: start;
+}
+.hz-mini {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.22em;
+  padding: 0.5em 0.6em;
+  border-radius: 10px;
+  background: linear-gradient(180deg, var(--hz-sky-top), var(--hz-sky-bottom));
+  border: 1px solid var(--border);
+}
+.hz-mini span {
+  display: grid;
+  grid-template-columns: 1.6em 3.6em;
+  align-items: center;
+  font-size: 0.78em;
+  font-weight: 700;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+.hz-mini span i {
+  height: 0.38em;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--hz-rail) 45%, transparent);
+}
+.hz-mini span.below i {
+  background: var(--hz-rail);
+}
+.hz-mini span.cur {
+  color: var(--text-1);
+}
+.hz-mini span.cur.t-good i {
+  background: var(--good-text);
+  height: 0.6em;
+}
+.hz-mini span.cur.t-bad i {
+  background: var(--bad-text);
+  height: 0.6em;
+}
+.hz-mini span.cur.t-half i {
+  background: var(--warn-text);
+  height: 0.6em;
+}
+.hz-cmp {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9em;
+  min-width: 0;
+}
+.hz-k {
+  font-size: 0.78em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 0.3em;
+}
+.hz-digits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.18em;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-weight: 800;
+  font-size: 1.35em;
+}
+.hz-digits i {
+  font-style: normal;
+  min-width: 1.05em;
+  text-align: center;
+  padding: 0.12em 0.05em;
+  border-radius: 6px;
+  background: var(--surface-3);
+  color: var(--text-1);
+}
+.hz-digits i.ok {
+  background: var(--good-soft);
+  color: var(--good-text);
+}
+.hz-digits i.no {
+  background: var(--bad-soft);
+  color: var(--bad-text);
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}
+.hz-digits i.key {
+  background: color-mix(in srgb, var(--good-soft) 60%, var(--surface-3));
+  color: var(--text-1);
+}
+.hz-note {
+  color: var(--text-2);
+  font-size: 0.9em;
+}
+.hz-boards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2em;
+  align-items: flex-start;
+}
+.hz-board-mini {
+  display: grid;
+  gap: 0.18em;
+  width: max-content;
+}
+.hz-board-mini i {
+  font-style: normal;
+  width: 1.9em;
+  height: 1.9em;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--hz-rail) 26%, var(--surface-3));
+  color: var(--text-1);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.hz-board-mini i.gap {
+  background: var(--surface-inset);
+  border: 1px dashed var(--border-strong);
+}
+.hz-board-mini i.home {
+  background: var(--good-soft);
+  color: var(--good-text);
+}
+.hz-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35em;
+}
+.hz-bar {
+  display: grid;
+  grid-template-columns: 9.5em minmax(0, 1fr) 3.2em;
+  gap: 0.6em;
+  align-items: center;
+  font-size: 0.92em;
+}
+.hz-bar > span:first-child {
+  color: var(--text-2);
+}
+.hz-bar em {
+  display: block;
+  height: 0.8em;
+  border-radius: 99px;
+  background: var(--good-text);
+  transition: width 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.hz-bar.model em {
+  background: var(--c, var(--accent));
+}
+.hz-bar.model.t-bad em {
+  background: var(--bad-text);
+}
+.hz-bar.model.t-half em {
+  background: var(--warn-text);
+}
+.hz-bar b {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.hz-moves {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.22em;
+  font-variant-numeric: tabular-nums;
+}
+.hz-moves i {
+  font-style: normal;
+  min-width: 1.7em;
+  text-align: center;
+  padding: 0.1em 0.2em;
+  border-radius: 5px;
+  background: var(--surface-3);
+  font-size: 0.85em;
+  font-weight: 700;
+}
+.hz-moves i.bad {
+  background: var(--bad-soft);
+  color: var(--bad-text);
+  outline: 2px solid var(--bad-text);
+}
+.hz-moves i.after {
+  opacity: 0.45;
+}
+.hz-moves.key i {
+  background: var(--good-soft);
+  color: var(--good-text);
+}
+.hz-grids {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.4em;
+}
+.hz-grid {
+  display: grid;
+  gap: 1px;
+  background: var(--border-strong);
+  border: 1px solid var(--border-strong);
+  width: max-content;
+}
+.hz-grid i {
+  width: var(--cell, 0.9em);
+  height: var(--cell, 0.9em);
+  background: var(--surface-1);
+}
+.hz-grid i.f {
+  background: var(--text-1);
+}
+.hz-grid i.wf {
+  background: var(--bad-text);
+}
+.hz-grid i.we {
+  background: var(--bad-soft);
+  box-shadow: inset 0 0 0 2px var(--bad-text);
+}
+@media (prefers-reduced-motion: reduce) {
+  .hz-bar em {
+    transition: none;
+  }
+}
+
+/* ─── Result Inspector panel and Presenter slide ─────────────────────────── */
+.hz-panel {
+  margin: 0 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 10px 14px 14px;
+  background: var(--surface-1);
+}
+.hz-panel > summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--text-1);
+  margin-bottom: 10px;
+}
+.s-ladder {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+}
+.s-ladder-main {
+  flex: 1;
+  min-height: 0;
+}
+.s-ladder .tr-k {
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--text-1);
+}

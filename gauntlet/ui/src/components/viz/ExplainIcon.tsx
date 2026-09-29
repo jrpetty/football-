@@ -349,6 +349,12 @@ const PATHS: Record<ExplainIconName, ReactNode> = {
       <path d="m7 19 10-14" />
     </>
   ),
+  ladder: (
+    <>
+      <path d="M7 3v18M17 3v18" />
+      <path d="M7 7h10M7 11.5h10M7 16h10" />
+    </>
+  ),
   star: <path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9L12 3Z" />,
   key: (
     <>
