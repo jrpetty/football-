@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { loadContestants, loadProviders, updateSettings } from '../core/config.ts';
+import { canCall, loadContestants, loadProviders, updateSettings } from '../core/config.ts';
 import { ENV_FILE, cleanKey, explainKeyError, isRejection, keyFormatWarning, maskKey, saveKey } from '../core/keys.ts';
 import { ENV_NAME_PROVIDER, detectProvider, parsePastedKeys } from '../core/key-detect.ts';
 import { KEY_GUIDES } from '../core/key-guides.ts';
@@ -11,7 +11,7 @@ import type { ProviderConfig } from '../core/types.ts';
 
 /**
  * Easy setup: one paste box for any key, first-run welcome, where things are stored, and "one key for everything".
- *  GET  /api/setup                        where keys/runs/settings are stored, the "get a key" guides, whether any key is saved
+ *  GET  /api/setup                        where keys/runs/settings are stored, the "get a key" guides, whether any key is saved, models ready
  *  POST /api/keys/paste  {text, provider?}  detect the company of each pasted key, check it for free and save it
  *  GET  /api/openrouter                   routing on/off and each model's OpenRouter slug ("not available via OpenRouter" when none)
  *  POST /api/openrouter/refresh           re-download OpenRouter's model list (free)
@@ -148,7 +148,11 @@ export function registerSetupRoutes({ route, httpError }: Deps): void {
   route('GET', '/api/setup', () => {
     const providers = loadProviders();
     const withKey = providers.filter((p) => p.apiKeyEnv && process.env[p.apiKeyEnv]);
-    return { storage: storageInfo(), guides: KEY_GUIDES, anyKey: withKey.length > 0, keys: withKey.map((p) => p.id) };
+    const ready = loadContestants().filter((c) => {
+      const p = providers.find((x) => x.id === c.provider);
+      return c.enabled && p && p.apiKeyEnv && canCall(c, providers);
+    }).length;
+    return { storage: storageInfo(), guides: KEY_GUIDES, anyKey: withKey.length > 0, keys: withKey.map((p) => p.id), ready };
   });
 
   route('POST', '/api/keys/paste', async ({ req, body }) => {

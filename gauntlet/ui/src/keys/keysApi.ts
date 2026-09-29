@@ -53,6 +53,8 @@ export interface SetupInfo {
   guides: KeyGuide[];
   anyKey: boolean;
   keys: string[];
+  /** Models that can run right now (own key or via OpenRouter). */
+  ready?: number;
 }
 export interface PasteResult {
   line: number;
@@ -205,7 +207,11 @@ function mockPaste(body: unknown): { results: PasteResult[]; storage: Storage } 
 }
 
 function mockKeys(method: Method, path: string, body?: unknown): unknown {
-  if (path === '/api/setup') return { storage: MOCK_STORAGE, guides: KEY_GUIDES, anyKey: MOCK_KEYS.some((k) => k.set), keys: MOCK_KEYS.filter((k) => k.set).map((k) => k.providerId) };
+  if (path === '/api/setup') {
+    const routed = mockRoutingStatus().rows.filter((r) => r.routed).length;
+    const ready = MOCK_KEYS.filter((k) => k.set).reduce((n, k) => n + k.models.length, 0) + routed;
+    return { storage: MOCK_STORAGE, guides: KEY_GUIDES, anyKey: MOCK_KEYS.some((k) => k.set), keys: MOCK_KEYS.filter((k) => k.set).map((k) => k.providerId), ready };
+  }
   if (path === '/api/keys/paste') return mockPaste(body);
   if (path === '/api/openrouter' || path === '/api/openrouter/refresh') return mockRoutingStatus();
   if (path === '/api/openrouter/routing') {

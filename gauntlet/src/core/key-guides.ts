@@ -39,7 +39,7 @@ export const KEY_GUIDES: KeyGuide[] = [
       'Open Keys and press Create Key. Call it “Gauntlet”; leave the limit empty or set one.',
       'Copy the key (it starts with sk-or-). It is only shown once, so paste it here straight away.',
     ],
-    credit: '£5 is plenty to try every model on the Quick Look tests. OpenRouter adds a small fee (about 5%) when you buy credit; the models cost the same as buying from each company.',
+    credit: 'About £5 is plenty to start: the Quick Check costs about 2p, a Quick Look on two cheap models about £1. OpenRouter adds a small fee (about 5%) when you buy credit; its model prices are close to each company’s own (Gauntlet uses OpenRouter’s listed prices).',
     looksLike: 'starts with sk-or-',
     unlocks: 'Almost every model in Gauntlet',
     recommended: true,

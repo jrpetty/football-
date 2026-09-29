@@ -38,12 +38,16 @@ export default function KeysPage() {
   const connected = keys.filter((k) => k.set);
   const used = keys.filter((k) => k.models.length > 0 || k.set);
   const others = keys.filter((k) => !used.includes(k));
-  const ready = connected.reduce((n, k) => n + k.models.length, 0);
+  const ready = setup.ready ?? connected.reduce((n, k) => n + k.models.length, 0);
 
   if (welcome) {
     return (
       <div className="page keys-page">
-        <PageHead eyebrow="Setup" title="Let’s get you set up" sub="You need one API key: a password that lets Gauntlet ask AI models questions on your account. It takes about five minutes." />
+        <PageHead
+          eyebrow="Setup"
+          title="Welcome to Gauntlet"
+          sub="Three steps and you’re testing AI models: no typing, no files. You need one API key (a password that lets Gauntlet ask AI models questions on your account); it takes about five minutes."
+        />
         <Welcome keys={keys} guides={setup.guides} storage={storage} onSaved={onSaved} done={savedNow || connected.length > 0} />
         <OpenRouterPanel reloadKey={orReload} />
         {connected.length > 0 && (

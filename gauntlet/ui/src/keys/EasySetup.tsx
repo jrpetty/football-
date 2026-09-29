@@ -250,17 +250,13 @@ export function Welcome({ keys, guides, storage, onSaved, done }: { keys: KeySta
   const or = guides.find((g) => g.providerId === 'openrouter');
   return (
     <div className="es-welcome">
-      <div className="es-welcome-head">
-        <h2>Welcome to Gauntlet</h2>
-        <p>Three steps and you’re testing AI models. No typing, no files.</p>
-      </div>
       <ol className="es-steps">
         <li className="es-step">
           <span className="es-num">1</span>
           <div className="es-step-body">
             <h3>Get one key</h3>
             <p>
-              We recommend <b>OpenRouter</b>: one key for every AI (Claude, GPT, Gemini, Grok, DeepSeek) and one bill. {or?.credit.split('.')[0]}.
+              We recommend <b>OpenRouter</b>: one key for every AI (Claude, GPT, Gemini, Grok, DeepSeek) and one bill. Add about £5 of credit to start.
             </p>
             {or && (
               <a className="btn primary lg" href={or.url} target="_blank" rel="noreferrer noopener">
@@ -284,13 +280,13 @@ export function Welcome({ keys, guides, storage, onSaved, done }: { keys: KeySta
           <span className="es-num">3</span>
           <div className="es-step-body">
             <h3>Try it</h3>
-            <p>Watch a demo with sample results (free, no key needed), or run a real test on two cheap models: it costs pennies, and the exact cost is shown before you start.</p>
+            <p>Watch a demo with sample results (free, no key needed), or run the Quick Check: five short questions on the two cheapest models, about 2p. The exact cost is shown before you start.</p>
             <div className="row wrap" style={{ gap: 10 }}>
               <a className="btn lg" href="?mock=1#/" target="_blank" rel="noreferrer">
                 <Icon.Play /> Free demo
               </a>
-              <Link className={cx('btn lg', done && 'primary')} to="/run/new?suite=quick&models=cheap" aria-disabled={!done}>
-                <Icon.Rocket /> Cheap test run
+              <Link className={cx('btn lg', done && 'primary')} to="/run/new?suite=quick-check&models=cheap" aria-disabled={!done}>
+                <Icon.Rocket /> 2p test run
               </Link>
             </div>
           </div>
@@ -429,7 +425,7 @@ export function OpenRouterPanel({ reloadKey }: { reloadKey: number }) {
             </tr>
           </thead>
           <tbody>
-            {st.rows.map((r) => (
+            {[...st.rows].sort((a, b) => Number(!a.slug) - Number(!b.slug)).map((r) => (
               <tr key={r.id} className={cx(!r.slug && 'is-none')}>
                 <td>
                   <b>{r.label}</b>
