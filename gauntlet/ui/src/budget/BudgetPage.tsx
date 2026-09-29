@@ -202,7 +202,7 @@ function SettingsCard({ status, onSaved }: { status: BudgetStatus; onSaved: () =
     <Card
       className="bud-settings"
       title="Your budget settings"
-      desc="Type any amount with Custom. Saved on this computer in config/settings.json."
+      desc="Type any amount with Custom. Saved on this computer in your Gauntlet settings (kept when you update)."
       foot={
         <div className="row bud-save">
           {dirty && <span className="muted small">Unsaved changes</span>}

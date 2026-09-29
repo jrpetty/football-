@@ -18,8 +18,11 @@ A practical checklist for running a benchmark you can put on video and defend in
 3. **Check the price** in **Cost Planner** or with `node src/cli.ts costs --suite core --models a,b,c`. The
    table shows every test × model and a conservative upper bound.
 4. **Verify pricing** for every model you'll show costs for (Models → edit → set *verified* date).
-5. **Connect and test your keys** on the dashboard's **API Keys** page: paste, Save (checked free), and optionally
-   *Send a test message* (costs a fraction of a cent). From a terminal: `node src/cli.ts keys setup`, `node src/cli.ts keys test`.
+5. **Connect and test your keys** on the dashboard's **API Keys** page: paste any key into **Paste any API key**
+   (Gauntlet detects the company and checks it for free), and optionally *Send a test message* on a company's card (a
+   fraction of a cent). One **OpenRouter** key runs every model whose own key is missing, labelled *via OpenRouter*; for a
+   published leaderboard, use each company's own key where you can (see *One key for everything* below). First install or
+   update on Windows: [SETUP-WINDOWS.md](../SETUP-WINDOWS.md). From a terminal: `node src/cli.ts keys setup`.
 
 ## 2. Dry run (free)
 
@@ -825,7 +828,7 @@ ceiling, you have three optional controls, all under **New Run → 4 · Spending
 think, the OBS overlay, the Presenter). Next to the limit you see the rate, e.g. "£1 = $1.33 · edit". Click
 **edit** to type today's rate from your bank (or switch to dollars or euros); Gauntlet never looks the rate up
 online. Underneath, everything is still measured and stored in US dollars, the unit providers bill in, so changing
-the rate never changes a result. The setting lives in `config/settings.json` (`currency`).
+the rate never changes a result. The setting is saved in your own settings file (`settings.json` in `%APPDATA%\Gauntlet`), so updates keep it.
 
 **1. Spending limit for the whole run.** Pick **No limit, £5, £10, £30, £50 or Custom**. Models and judges together
 never spend more than this:
@@ -885,7 +888,7 @@ sneak past them (not even the command line).
 
 From the command line: `node src/cli.ts budget` shows the month; `node src/cli.ts budget set monthly 50`,
 `budget set hard-stop on`, `budget set run 10`, `budget set per-answer 2` and `budget set monthly off` change it
-(amounts in pounds). The settings are saved in `config/settings.json` under `budget`.
+(amounts in pounds). The settings are saved in your own settings file (`settings.json` in `%APPDATA%\Gauntlet`, under `budget`), so updates keep them.
 
 ## Cost-saving tips
 
@@ -895,3 +898,25 @@ From the command line: `node src/cli.ts budget` shows the month; `node src/cli.t
 * Estimates get sharper after your first real run of each test, because Gauntlet measures actual token usage.
 * Judge-scored tests (Honesty Trap, games, SVG) add judge cost. The same-vendor exclusion means each model is
   graded by the other two judges, not all three.
+
+## One key for everything (OpenRouter)
+
+An OpenRouter key reaches Claude, GPT, Gemini, Grok and DeepSeek on one bill. With one saved:
+
+* Every model whose own company key is missing runs **via OpenRouter**. A company's own key always wins. The switch
+  **Use OpenRouter** on the API Keys page turns this off.
+* The API Keys page shows the map: "Claude Opus 5.5 → anthropic/claude-opus-5.5 ✓", or "not available via OpenRouter".
+  The model list comes from OpenRouter (refreshed daily, or press **Refresh list**).
+* New Run shows a **via OpenRouter** badge on those models and a warning above Start. Costs use OpenRouter's listed
+  prices. OpenRouter also takes a small fee (about 5%) when you buy credit, which isn't part of the run cost.
+* The run page and the Presenter say which models ran via OpenRouter (the title slide, the rules slide and its caption).
+* On the combined leaderboard, routed results get their own row ("Claude Opus 5.5 (via OpenRouter)") and never mix with
+  direct ones.
+
+**For videos:** OpenRouter is fine for a first look, a Short or a practice run. For a leaderboard you publish, run the
+models on their own companies' keys, or say on screen that some ran via OpenRouter.
+
+**The 2p Quick Check:** the `quick-check` suite (five short, exactly graded questions, no judges) checks that a new key
+works end to end. On the two cheapest models it costs about 2p. The Welcome page's **2p test run** button opens New Run
+with it and those two models ticked. It tells you nothing about which model is best.
+

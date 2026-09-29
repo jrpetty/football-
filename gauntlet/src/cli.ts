@@ -22,6 +22,7 @@ import { gradePasted } from './engine/grade.ts';
 import { readFileSync } from 'node:fs';
 import { ENV_FILE } from './core/keys.ts';
 import { prepareUserDir } from './core/startup.ts';
+import { USER_DIR } from './core/userdir.ts';
 import type { ManualRequest } from './core/types.ts';
 
 // First start with a user folder: copy keys/runs/settings over from an older in-folder install (core/migrate.ts).
@@ -249,6 +250,7 @@ async function main(): Promise<void> {
       console.log(`${c.bold('GAUNTLET')} dashboard → ${c.cyan(url)}${flags.dev ? c.dim('  (dev: run `npm run dev:ui` for the hot-reloading UI on :5173)') : ''}`);
       const keys = loadProviders().filter((p) => p.apiKeyEnv && hasApiKey(p)).map((p) => p.label);
       console.log(c.dim(`API keys found for: ${keys.length ? keys.join(', ') : 'none (only the Random Baseline can run)'}`));
+      console.log(c.dim(`Your keys, runs and settings are kept in ${USER_DIR} (updating Gauntlet never deletes them)`));
       if (!keys.length) console.log(`Add your API keys here → ${c.cyan(`${url.replace(/\/$/, '')}/#/keys`)}  (paste, save, done)`);
       if (host === '0.0.0.0') console.log(c.yellow('⚠ Listening on all interfaces. Anyone who can reach this port can spend your API credits.'));
       return;
