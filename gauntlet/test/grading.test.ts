@@ -346,6 +346,12 @@ test('template summaries are grounded, natural and never over 30 words', () => {
     ['manual', { unit: 'question', kind: 'prompt', results: [ok('c1', 1)], manual: true }, /Answers pasted by hand\./],
     ['human', { unit: 'task', kind: 'prompt', results: [ok('c1', 0.7, { scoreDetail: { humanScored: true } })] }, /^Human-graded 70\/100 over 1 task\./],
     ['free', { unit: 'question', kind: 'prompt', results: [ok('c1', 1, { metrics: { wallMs: 300, costUsd: 0 } })] }, /Took 0\.3 s per question on average; cost nothing\./],
+    // Placeholder scores the leaderboard ignores (a painting waiting for its rating is stored with score 0): ignored here too.
+    ['waiting placeholder', { unit: 'commission', kind: 'program', results: [ok('seed-1', 0.9, { summary: 'Brief followed 8/9 · Artistry 8.1/10' }), ok('seed-2', 0, { status: 'pending-human', summary: 'Awaiting your rating' })] }, /^Averaged 90\/100 over 1 commission\. Full marks|^Averaged 90\/100 over 1 commission\..*1 still awaiting grading\./],
+    ['gallery units', { unit: 'commission', kind: 'program', results: [ok('seed-1', 0.9, { summary: 'Brief followed 8/9' }), ok('seed-3', 0.5, { summary: 'Brief followed 4/9 · Artistry 6.0/10' })] }, /Weakest: commission 3 at 50\/100, "Brief followed 4\/9 · Artistry 6\.0\/10"\./],
+    ['errored with a score', { unit: 'question', kind: 'prompt', results: [ok('c1', 1), ok('c2', 0, { status: 'error', error: 'HTTP 500' })] }, /^Got 1 of 1 question right \(100\/100\)\..*1 attempt errored and was left out\./],
+    ['station AI label', { unit: 'question', kind: 'prompt', results: [ok('q1', 0, { aiGrades: [{ score: 0, label: 'HALLUCINATED', rationale: 'Invented a paper.' }] })] }, /judged hallucinated/],
+    ['refusal', { unit: 'question', kind: 'prompt', results: [ok('c1', 0, { status: 'refusal' }), ok('c2', 1)] }, /Missed question 1: refused/],
     ['long quotes', { unit: 'question', kind: 'prompt', results: Array.from({ length: 12 }, (_, i) => ok(`c${i + 1}`, i % 3 ? 1 : 0, { scoreDetail: { extracted: 'an extremely long answer that goes on and on for many words', expected: 'short' } })) }, /Missed 4, e\.g\. question 1: answered "an extremely long…", key says "short"\./],
   ];
   for (const [name, input, re] of cases) {
