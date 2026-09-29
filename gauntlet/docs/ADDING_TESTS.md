@@ -124,6 +124,7 @@ Three optional fields, used by the `trick` tests but available to any prompt tes
 | `{ "type": "judge-classify", "instructions": "...", "labels": [{ "id": "CORRECT", "description": "...", "score": 1 }] }` | reference for the judge | Label ids in UPPER_SNAKE_CASE |
 | `{ "type": "artifact", "format": "html", "checks": [...], "rubric": "...", "judgeWeight": 0.5 }` | – | Checks: `parses`, `contains`, `max_bytes`, `no_external_requests`, `runs_without_errors`, `has_canvas_or_svg`, `responds_to_input` |
 | `{ "type": "human", "rubric": "..." }` | – | Scored in Blind Review |
+| `{ "type": "ladder", "answer": "integer" \| "plan" \| "grid" }` | a digit string · `{ rows, cols, start, optimal, plan }` · rows of `#`/`.` | Horizon ladders (case ids `L01`…): exact big integers; sliding plans replayed (minimum = 1, longer ≤ 0.25); whole grids. See METHODOLOGY §7c |
 
 ### Constraint reference (`constraints` scorer)
 

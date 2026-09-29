@@ -40,6 +40,7 @@ import { CODE_AGENT_PROGRAM, CODE_AGENT_TEST, codeAgentReplay, codeAgentSummary 
 import { VISUAL_RUN_SPEC, VISUAL_TESTS, decorateVisual, visualDetail } from './caseVisualsMock.ts';
 import { simReplay } from './simReplayMock.ts';
 import { GALLERY_CONTESTANTS, GALLERY_PROGRAMS, GALLERY_RUN_SPEC, GALLERY_TESTS, decorateGallery, galleryDetail } from './galleryMock.ts';
+import { HORIZON_RUN_SPEC, HORIZON_SUITE, HORIZON_TESTS, decorateHorizon, horizonDetail } from './horizonMock.ts';
 import { VISUAL_PASS_PROGRAMS, VISUAL_PASS_RUN_SPEC, VISUAL_PASS_TESTS, decorateVisualPass, visualPassDetail } from './visualPassMock.ts';
 import { GAME_JAM_RUN_SPEC, GAME_JAM_SUITE, GAME_JAM_TESTS, decorateGameJam, gameJamDetail } from './gameJamMock.ts';
 
@@ -760,7 +761,7 @@ function genLite(runId: string, c: ContestantView, t: TestDefinition, caseId: st
   if (type === 'human') artifacts.push({ name: 'page.html', kind: 'html', file: `${c.id}/${t.id}/${caseId}-r${repeat}.html`, bytes: 8000 + Math.round(r.next() * 9000) });
   if (t.kind === 'program' && t.program === 'draw-it-blind') artifacts.push({ name: 'reconstruction.svg', kind: 'svg', file: `${c.id}/${t.id}/${caseId}-r${repeat}.svg`, bytes: 2400 });
 
-  return decorateGallery(t, decorateGameJam(t, decorateVisualPass(t, mockVisionSkip(decorateVisual(t, decorateTrick(t, {
+  return decorateHorizon(t, decorateGallery(t, decorateGameJam(t, decorateVisualPass(t, mockVisionSkip(decorateVisual(t, decorateTrick(t, {
     key,
     runId,
     contestantId: c.id,
@@ -783,7 +784,7 @@ function genLite(runId: string, c: ContestantView, t: TestDefinition, caseId: st
     finishedAt: finished,
     humanScores,
     hasReplay: t.kind === 'program',
-  }), SETTINGS.judges), c, t))));
+  }), SETTINGS.judges), c, t)))));
 }
 
 function summaryText(t: TestDefinition, score: number | null, status: ResultStatus, u: number): string {
@@ -1428,6 +1429,8 @@ export function artifactContent(ref: ArtifactRef): string {
 export function detailFor(lite: CaseResultLite): CaseResult {
   const t = testById(lite.testId);
   if (t && t.category === 'art') return galleryDetail({ ...lite, transcript: [], artifacts: lite.artifacts } as CaseResult);
+  const hz = t && lite.status !== 'skipped' ? horizonDetail(t, lite, renderedOf(t).find((x) => x.caseId === lite.caseId)?.turns ?? ['']) : null;
+  if (hz) return hz;
   const vis = t && lite.status !== 'skipped' ? visualDetail(t, lite, renderedOf(t).find((x) => x.caseId === lite.caseId)?.turns ?? [''], SETTINGS.judges) : null;
   if (vis) return vis;
   const r = rngFrom(`detail|${lite.key}`);
@@ -1556,3 +1559,8 @@ PROGRAMS.push(...GALLERY_PROGRAMS);
 CONTESTANTS.push(...GALLERY_CONTESTANTS);
 RUN_SPECS.push(GALLERY_RUN_SPEC);
 SUITES.push({ id: 'art', version: '1.0.0', name: 'Art', description: 'The Gallery Masterpiece and Painted in Code: museum commissions judged for brief and artistry.', tests: GALLERY_TESTS.map((t) => ({ id: t.id })), repeats: 1, fingerprint: 'fp-art-suite', testCount: GALLERY_TESTS.length });
+
+// Horizon tier: the five real ladders and a demo climb (see horizonMock.ts).
+TESTS.push(...HORIZON_TESTS);
+SUITES.push(HORIZON_SUITE);
+RUN_SPECS.push(HORIZON_RUN_SPEC);

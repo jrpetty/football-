@@ -16,6 +16,7 @@ import { extractionVisual } from '../../../../src/presenter/visuals/extraction.t
 import { honestyVisual } from '../../../../src/presenter/visuals/honesty.ts';
 import { trickVisual } from '../../../../src/presenter/visuals/trick.ts';
 import { codeVisual } from '../../../../src/presenter/visuals/code.ts';
+import { horizonVisual, type RungModel } from '../../../../src/presenter/visuals/horizon.ts';
 import type { VizMode } from './VizFrame.tsx';
 import { DeductionGridVisual } from './DeductionGridVisual.tsx';
 import { IslandersVisual } from './IslandersVisual.tsx';
@@ -26,8 +27,9 @@ import { JsonTruthDiff } from './JsonTruthDiff.tsx';
 import { HonestyTrapCard } from './HonestyTrapCard.tsx';
 import { TrickAnswerCard } from './TrickAnswerCard.tsx';
 import { CodeTestBoard } from './CodeTestBoard.tsx';
+import { HorizonRungCard } from './HorizonRungCard.tsx';
 
-export type CaseVisualFamily = 'grid' | 'islanders' | 'plan' | 'maths' | 'instruction' | 'extraction' | 'honesty' | 'trick' | 'code';
+export type CaseVisualFamily = 'grid' | 'islanders' | 'plan' | 'maths' | 'instruction' | 'extraction' | 'honesty' | 'trick' | 'code' | 'horizon';
 
 export interface VisualContext {
   /** Contestant id → display label (judges). */
@@ -101,6 +103,12 @@ const ENTRIES: Record<CaseVisualFamily, Entry<unknown>> = {
     build: codeVisual,
     render: (v, mode) => <CodeTestBoard v={v} mode={mode} />,
   }),
+  horizon: entry({
+    family: 'horizon',
+    caption: 'One level of a Horizon ladder: where it sits on the ladder, and the model’s answer against the double-checked key. Green matches, red is where it went wrong.',
+    build: horizonVisual,
+    render: (v, mode, input) => <HorizonRungCard m={v as RungModel} mode={mode} modelLabel={input.modelLabel} />,
+  }),
 };
 
 const BY_ID: Record<string, CaseVisualFamily> = {
@@ -130,6 +138,7 @@ const BY_ID: Record<string, CaseVisualFamily> = {
 /** Which visual (if any) draws cases of this test. */
 export function visualFamilyFor(testId: string, scorerType?: string, category?: string): CaseVisualFamily | null {
   if (BY_ID[testId]) return BY_ID[testId]!;
+  if (testId.startsWith('horizon.') || scorerType === 'ladder') return 'horizon';
   if (category === 'trick') return 'trick';
   switch (scorerType) {
     case 'code-js':

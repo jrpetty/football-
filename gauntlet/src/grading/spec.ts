@@ -485,6 +485,12 @@ function answerRule(sc: ScorerSpec): string {
       return 'Ground truth for the grader: pick the label that fits.';
     case 'artifact':
       return 'Automated checks plus the rubric.';
+    case 'ladder':
+      return sc.answer === 'plan'
+        ? 'The plan is replayed: the proven minimum scores 1, a longer plan that solves it at most 0.25, an illegal move 0.'
+        : sc.answer === 'grid'
+          ? 'The whole grid after FINAL ANSWER must match, every cell.'
+          : 'The FINAL ANSWER number must equal the key, every digit. Hedged or two numbers are wrong.';
   }
 }
 

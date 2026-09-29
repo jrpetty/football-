@@ -47,6 +47,8 @@ export function scoringText(def: TestDefinition): string {
       return `The ${sc.format === 'html' ? 'web page' : 'drawing'} each model builds is opened and checked automatically${sc.rubric ? ', then rated by a judge panel' : ''}.`;
     case 'human':
       return 'Rated blind by people who never see which model made which answer.';
+    case 'ladder':
+      return 'Ten levels, each checked exactly by machine. The score is the share of the ladder climbed.';
     default:
       return 'Scored automatically by the Gauntlet harness.';
   }

@@ -1,0 +1,92 @@
+{
+  "kind": "prompt",
+  "id": "horizon.modpow-ladder",
+  "version": "1.0.0",
+  "name": "Horizon: No Calculator",
+  "category": "horizon",
+  "description": "Ten exact modular powers a^e mod m, from an 8-digit modulus to a 44-digit one with a 36-digit exponent. There is no trick: the only way is square-and-multiply, dozens of long multiplications and long divisions done exactly. Every level has longer numbers and more steps. A single wrong digit anywhere gives a different answer. Keys are computed by two independent big-integer implementations.",
+  "difficulty": "extreme",
+  "tags": [
+    "horizon",
+    "ladder",
+    "arithmetic",
+    "number-theory",
+    "exact"
+  ],
+  "hook": "Can it do 44-digit arithmetic in its head, with no mistakes?",
+  "maxOutputTokens": "model-max",
+  "timeLimitSec": 3600,
+  "maxRetries": 1,
+  "estimate": {
+    "inputTokens": 250,
+    "outputTokens": 60000
+  },
+  "author": "Gauntlet Horizon",
+  "createdAt": "2026-09-28",
+  "scorer": {
+    "type": "ladder",
+    "answer": "integer"
+  },
+  "cases": [
+    {
+      "id": "L01",
+      "prompt": "Compute a modular power exactly, without a calculator:\n\na = 55531001\ne = 1452576\nm = 71053033\n\nWhat is the remainder when a to the power e (a multiplied by itself e times) is divided by m? The answer is a whole number from 0 to m - 1. Give it as a single integer, all digits, with no spaces, commas or other separators.",
+      "expected": "67190563",
+      "notes": "[level 1] m has 8 digits, e has 7 digits (21 bits), so about 28 modular multiplications. Key = Python pow(a, e, m), re-checked by a left-to-right binary method and by an independent JavaScript BigInt implementation (verify.mjs). Horizon ladder: ten frozen levels (L01 easiest, L10 hardest), each strictly more work than the one below. Every level is worth the same, so the test score is the share of the ladder climbed; the headline is the highest level solved reliably."
+    },
+    {
+      "id": "L02",
+      "prompt": "Compute a modular power exactly, without a calculator:\n\na = 971124211\ne = 78373898\nm = 2153465759\n\nWhat is the remainder when a to the power e (a multiplied by itself e times) is divided by m? The answer is a whole number from 0 to m - 1. Give it as a single integer, all digits, with no spaces, commas or other separators.",
+      "expected": "1527494774",
+      "notes": "[level 2] m has 10 digits, e has 8 digits (27 bits), so about 39 modular multiplications. Key = Python pow(a, e, m), re-checked by a left-to-right binary method and by an independent JavaScript BigInt implementation (verify.mjs)."
+    },
+    {
+      "id": "L03",
+      "prompt": "Compute a modular power exactly, without a calculator:\n\na = 98261080452\ne = 6337952584\nm = 179294012347\n\nWhat is the remainder when a to the power e (a multiplied by itself e times) is divided by m? The answer is a whole number from 0 to m - 1. Give it as a single integer, all digits, with no spaces, commas or other separators.",
+      "expected": "152727452681",
+      "notes": "[level 3] m has 12 digits, e has 10 digits (33 bits), so about 51 modular multiplications. Key = Python pow(a, e, m), re-checked by a left-to-right binary method and by an independent JavaScript BigInt implementation (verify.mjs)."
+    },
+    {
+      "id": "L04",
+      "prompt": "Compute a modular power exactly, without a calculator:\n\na = 27258597990780\ne = 132335472469\nm = 60551892655799\n\nWhat is the remainder when a to the power e (a multiplied by itself e times) is divided by m? The answer is a whole number from 0 to m - 1. Give it as a single integer, all digits, with no spaces, commas or other separators.",
+      "expected": "33446650890059",
+      "notes": "[level 4] m has 14 digits, e has 12 digits (37 bits), so about 61 modular multiplications. Key = Python pow(a, e, m), re-checked by a left-to-right binary method and by an independent JavaScript BigInt implementation (verify.mjs)."
+    },
+    {
+      "id": "L05",
+      "prompt": "Compute a modular power exactly, without a calculator:\n\na = 420087725318243\ne = 95340985544080\nm = 4804895641206527\n\nWhat is the remainder when a to the power e (a multiplied by itself e times) is divided by m? The answer is a whole number from 0 to m - 1. Give it as a single integer, all digits, with no spaces, commas or other separators.",
+      "expected": "1391402689375621",
+      "notes": "[level 5] m has 16 digits, e has 14 digits (47 bits), so about 71 modular multiplications. Key = Python pow(a, e, m), re-checked by a left-to-right binary method and by an independent JavaScript BigInt implementation (verify.mjs)."
+    },
+    {
+      "id": "L06",
+      "prompt": "Compute a modular power exactly, without a calculator:\n\na = 21829968121809041454\ne = 70423410787126006\nm = 94146555166004827217\n\nWhat is the remainder when a to the power e (a multiplied by itself e times) is divided by m? The answer is a whole number from 0 to m - 1. Give it as a single integer, all digits, with no spaces, commas or other separators.",
+      "expected": "26058700406272230106",
+      "notes": "[level 6] m has 20 digits, e has 17 digits (56 bits), so about 87 modular multiplications. Key = Python pow(a, e, m), re-checked by a left-to-right binary method and by an independent JavaScript BigInt implementation (verify.mjs)."
+    },
+    {
+      "id": "L07",
+      "prompt": "Compute a modular power exactly, without a calculator:\n\na = 486391298168347253451182\ne = 64671248473770926862\nm = 514639404894212637140603\n\nWhat is the remainder when a to the power e (a multiplied by itself e times) is divided by m? The answer is a whole number from 0 to m - 1. Give it as a single integer, all digits, with no spaces, commas or other separators.",
+      "expected": "422189539440179981348685",
+      "notes": "[level 7] m has 24 digits, e has 20 digits (66 bits), so about 97 modular multiplications. Key = Python pow(a, e, m), re-checked by a left-to-right binary method and by an independent JavaScript BigInt implementation (verify.mjs)."
+    },
+    {
+      "id": "L08",
+      "prompt": "Compute a modular power exactly, without a calculator:\n\na = 229209835598164565192645546368\ne = 4346514495169808609480728\nm = 275742774972342642064214406661\n\nWhat is the remainder when a to the power e (a multiplied by itself e times) is divided by m? The answer is a whole number from 0 to m - 1. Give it as a single integer, all digits, with no spaces, commas or other separators.",
+      "expected": "124439754578369694191137375233",
+      "notes": "[level 8] m has 30 digits, e has 25 digits (82 bits), so about 114 modular multiplications. Key = Python pow(a, e, m), re-checked by a left-to-right binary method and by an independent JavaScript BigInt implementation (verify.mjs)."
+    },
+    {
+      "id": "L09",
+      "prompt": "Compute a modular power exactly, without a calculator:\n\na = 52282088300690775616435267682024739\ne = 554370081847941597356281610269\nm = 994598529653807258636901342618447017\n\nWhat is the remainder when a to the power e (a multiplied by itself e times) is divided by m? The answer is a whole number from 0 to m - 1. Give it as a single integer, all digits, with no spaces, commas or other separators.",
+      "expected": "735904653358136742267212882127596576",
+      "notes": "[level 9] m has 36 digits, e has 30 digits (99 bits), so about 145 modular multiplications. Key = Python pow(a, e, m), re-checked by a left-to-right binary method and by an independent JavaScript BigInt implementation (verify.mjs)."
+    },
+    {
+      "id": "L10",
+      "prompt": "Compute a modular power exactly, without a calculator:\n\na = 87832325774865319813756234312951075180830437\ne = 398782625579414325427676546440844321\nm = 93233303191488268052177721462445581264250021\n\nWhat is the remainder when a to the power e (a multiplied by itself e times) is divided by m? The answer is a whole number from 0 to m - 1. Give it as a single integer, all digits, with no spaces, commas or other separators.",
+      "expected": "3468449807487716134915822685097303728466637",
+      "notes": "[level 10] m has 44 digits, e has 36 digits (119 bits), so about 173 modular multiplications. Key = Python pow(a, e, m), re-checked by a left-to-right binary method and by an independent JavaScript BigInt implementation (verify.mjs)."
+    }
+  ]
+}

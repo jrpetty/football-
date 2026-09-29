@@ -288,6 +288,87 @@ test was blind-played by models that saw only the prompt (results in [AUDIT.md](
   owner's rating replaces the judges' artistry. Blind votes are recorded but never scored.
 * **Costs.** Image models are billed per picture (`imagePricing`), plus the prompt. Prices in
   `config/models.json` carry their source and date and are marked unverified until you check them.
+## 7d. The Horizon tier: tests built for future models
+
+Standard and Frontier measure what today's models can do. The **Horizon** tier (suite `horizon`, category
+`horizon`) measures how far they still have to go. It is built so that today's strongest model scores low and
+future models visibly climb, on exactly the same questions, for years.
+
+**Five ladders.** Each Horizon test is a *ladder* of ten frozen levels (case ids `L01` to `L10`). Every level
+is strictly more work than the one below it: more steps, more digits, a longer proven-shortest plan, a bigger
+grid, a bigger board. A unit test (`test/horizon.test.ts`) checks the growth for every ladder.
+
+| Test | What a level asks | Level 1 → level 10 | Pencil-and-paper time for a patient expert |
+|---|---|---|---|
+| Run It In Your Head (`horizon.mind-runner`) | The exact number a JavaScript program prints | ~150 → ~73,000 statements executed | 15 minutes → two to three working weeks |
+| No Calculator (`horizon.modpow-ladder`) | a^e mod m, exactly | 8-digit → 44-digit numbers | two hours → about a month |
+| The Sliding Ladder (`horizon.sliding-ladder`) | A provably shortest sliding-puzzle plan | 20 moves (3×3) → 56 moves (4×4) | an hour → months of systematic search |
+| The Picture Logic Ladder (`horizon.nonogram-ladder`) | A whole nonogram grid | 8×8 → 50×50 (2,500 cells) | 15 minutes → a few weeks |
+| Count Every Tiling (`horizon.tiling-count`) | The exact number of domino tilings of a board with holes | 6×6 (110) → 18×18 (31 digits) | 30 minutes → months |
+
+**Fair, not tricky.** Every item is a plainly worded, fully specified task with one checkable answer. There
+are no gotchas in the wording and no opinions: difficulty comes only from depth, length and exactness. Every
+item can be solved by a patient person with pencil and paper (the method is standard: trace the program,
+square-and-multiply, search, case analysis, column-by-column counting); it just takes a long time. The top
+rungs are deliberately beyond what any person would do by hand in practice, which is the point: they are there for
+the models of the next few years.
+
+**Double-verified keys** (`verification/horizon/`):
+
+* Programs are generated as a syntax tree and rendered twice, as JavaScript (what the model sees) and Python.
+  The key is the printed number when *both* are actually run, and `verify.mjs` re-runs the exact program text
+  from the prompt in a fresh V8 context.
+* Modular powers: Python's `pow`, a left-to-right binary method, and an independent JavaScript BigInt
+  right-to-left method.
+* Sliding puzzles: the minimum is proven by breadth-first search over all 181,440 positions (3×3) or IDA*
+  with an admissible heuristic (larger boards) in Python, and re-proven in JavaScript by a different search
+  (bidirectional BFS / its own IDA*). A compiled C search is used only to *find* deep candidates quickly.
+* Nonograms: uniqueness is proven by OR-Tools CP-SAT (after the solution is found it is forbidden and the
+  solver must prove no other exists) and independently by a JavaScript line solver with full backtracking.
+  From level 3 on, row-by-row logic alone is guaranteed to leave part of the grid open, so case analysis is
+  required.
+* Tilings: column-by-column transfer-matrix counting in Python, re-checked by a memoised
+  cover-the-first-empty-square search in JavaScript; both self-test on the 8×8 board (12,988,816).
+
+`verify.mjs` parses every puzzle back **out of the prompt text** the models see, so a key can never drift
+from its prompt.
+
+**Scoring** (`{ "type": "ladder" }`, `src/scoring/ladder.ts`):
+
+* Whole numbers are compared digit by digit (any size; separators and a stated `x =` are tolerated, two
+  numbers or a hedge are wrong).
+* A sliding-puzzle plan is *replayed* on the start board. The proven minimum scores 1; a longer plan that
+  really solves the puzzle scores 0.25 × minimum ÷ length (so never more than a quarter); an illegal move or
+  an unfinished board scores 0.
+* A nonogram needs the whole grid right (all or nothing).
+
+Every level is worth the same, so a test score is *the share of the ladder climbed*. The headline number is
+the **ladder height**: the highest level L such that every level from 1 to L was solved reliably (full marks on
+at least two of three attempts, or on the single attempt when running one repeat). A lucky solve higher up
+is shown ("once solved level 7") but never lifts the climber past a rung it missed. Random filler scores 0
+(regression-tested).
+
+**Reproducible for years.** The ten levels of each test are frozen in the test files and covered by the test
+hash. Never regenerate a published version: a model measured in 2030 must meet the very same rungs. When
+models top out, add levels L11, L12, … in a new version and keep L01–L10 unchanged, so old and new heights stay
+comparable.
+
+**Output limit and cost.** Horizon tests ask for each model's **own maximum output** (`"maxOutputTokens":
+"model-max"`, e.g. 128,000 tokens for Opus 5.5, 64,000 for Haiku 4.5), so no model is held back by an artificial
+cap: in the calibration Opus used up to 117,000 tokens on a level it solved, more than a fixed 64,000 would
+allow. A long reply that fails is not retried more than once (`maxRetries: 1`), and the time limit is one hour per
+level. The estimate is 60,000 output tokens per level, from the calibration (Opus averaged 63,000 per level,
+counting a reply that hit its maximum as the full 128,000; Haiku averaged 16,000): about **$60 per repeat for all
+50 levels for Opus 5.5**. For small models the estimate is on the safe side: Haiku 4.5 is estimated at $15 but
+cost about $4 in the calibration. The honest **upper bound** is every level using the model's whole maximum: 50 ×
+128,000 tokens ≈ **$128 for Opus 5.5** and 50 × 64,000 ≈ **$16 for Haiku 4.5** per repeat. New Run and the Cost
+Planner show both numbers, and a spending cap (`--max-cost`, or "same token limit for every model") keeps a run
+inside a budget.
+
+**Calibration.** The ladders were calibrated with blind solvers before release (today's strongest model should
+score clearly above zero on the first rungs and well under a third overall); the per-level results are in
+[AUDIT.md](AUDIT.md#horizon-tier-blind-calibration). Two ladders (Picture Logic and Count Every Tiling) were made
+steeper from level 4 and level 5 after the first calibration showed Opus climbing them too easily.
 
 ## 8. The random baseline
 
@@ -312,7 +393,7 @@ clear: a score close to the baseline means a test isn't measuring skill for that
 
 ## 9b. Output and spending limits, and fairness
 
-**Default: no artificial limits.** Tests that ask for `"model-max"` (The Game Jam) let every model write up to its
+**Default: no artificial limits.** Tests that ask for `"model-max"` (The Game Jam and the Horizon ladders) let every model write up to its
 own maximum output, taken from the provider's documentation and recorded per model in `config/models.json`
 (`maxOutputTokens`, with `maxOutputTokensSource` saying where the number came from, or "unverified"). These
 maxima differ (for example 128,000 tokens for current Claude and GPT-5.x models, 65,536 for Gemini): that is part

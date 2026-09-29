@@ -30,6 +30,8 @@ import { TrickEmptySlide, TrickSlide, TRICK_REVEAL_STEPS } from '../components/p
 import { MomentSlide, momentCaption, momentKindFor, type MomentKind } from '../components/present/MomentSlide.tsx';
 import { selectTrickHighlights, type TrickHighlight } from '../../../src/presenter/trick-highlights.ts';
 import { TruthSlide } from '../components/present/TruthSlide.tsx';
+import { LadderSlide } from '../components/present/LadderSlide.tsx';
+import { isHorizonTest } from '../../../src/presenter/visuals/horizon.ts';
 import { pickInterestingCase, type InterestPick } from '../../../src/presenter/visuals/interest.ts';
 import { visualEntry, visualFamilyFor } from '../components/viz/caseVisuals.tsx';
 import { runningStandings, revealSteps, revealState, type StandingsStep } from '../../../src/presenter/standings.ts';
@@ -132,6 +134,7 @@ type Slide =
   | { kind: 'moment'; test: DeckTest; moment: MomentKind }
   | { kind: 'standings'; test: DeckTest; step: number }
   | { kind: 'podium' }
+  | { kind: 'ladder'; test: DeckTest }
   | { kind: 'jam-genre'; test: DeckTest; caseId: string }
   | { kind: 'jam-winner'; test: DeckTest }
 
@@ -316,6 +319,12 @@ function trickSlides(deck: Deck, test: DeckTest): Slide[] {
   return hs.map((h, i) => ({ kind: 'trick', test, h, i: i + 1, of: hs.length }));
 }
 
+/** "How far up the ladder" for a Horizon test that has recorded results (components/present/LadderSlide.tsx). */
+function ladderSlides(deck: Deck, test: DeckTest): Slide[] {
+  if (!isHorizonTest(test.snap.id)) return [];
+  return (deck.d.results ?? []).some((r) => r.testId === test.snap.id && typeof r.score === 'number') ? [{ kind: 'ladder', test }] : [];
+}
+
 /** A best-moment slide for the simulation tests (island, escape room, startup, liar's table). */
 function simSlides(deck: Deck, test: DeckTest): Slide[] {
   const def = test.detail?.definition;
@@ -378,7 +387,7 @@ function buildSlides(deck: Deck, vertical = false, show: ShowOpts = { race: true
   }
   const slides: Slide[] = [{ kind: 'title' }, { kind: 'how' }];
   for (const test of deck.tests) {
-    slides.push(introOrExplainer(test), { kind: 'result', test }, ...gallerySlides(deck, test), ...simSlides(deck, test), ...(test.snap.id === JAM_TEST_ID ? jamSlides(deck, test) : momentSlides(deck, test)), ...trickSlides(deck, test));
+    slides.push(introOrExplainer(test), { kind: 'result', test }, ...gallerySlides(deck, test), ...ladderSlides(deck, test), ...simSlides(deck, test), ...(test.snap.id === JAM_TEST_ID ? jamSlides(deck, test) : momentSlides(deck, test)), ...trickSlides(deck, test));
     const pick = deck.truth.get(test.snap.id);
     if (pick) slides.push({ kind: 'truth', test, pick });
     const step = deck.standings.findIndex((st) => st.testId === test.snap.id);
@@ -496,6 +505,11 @@ function captionFor(slide: Slide, deck: Deck): Caption {
     }
     case 'moment':
       return momentCaption(slide.moment);
+    case 'ladder':
+      return {
+        text: 'How far up the ladder: ten levels, each harder than the last. Each model stands on the highest rung it reached without missing one below; the dots show every level’s result.',
+        fine: `Solved reliably = full marks on ${R > 1 ? 'at least 2 in 3 attempts' : 'its attempt'} · a lucky solve higher up is listed but does not lift the climber · the levels are frozen, so future models climb the same ladder`,
+      };
     case 'jam-genre': {
       const r = (deck.d.results ?? []).find((x) => x.testId === slide.test.snap.id && x.caseId === slide.caseId);
       return jamGenreCaption(r ? entryOf(r).genre : 'flappy');
@@ -574,6 +588,8 @@ function sectionFor(slide: Slide, deck: Deck): string {
       return `The Gallery · commission ${slide.i} of ${slide.of}`;
     case 'gallery-winner':
       return 'The Gallery · Masterpiece of the Show';
+    case 'ladder':
+      return `Test ${slide.test.n} of ${deck.tests.length} · How far up the ladder`;
   }
 }
 
@@ -1258,6 +1274,8 @@ function SlideView({ slide, deck, reveal, vertical }: { slide: Slide; deck: Deck
       return <TrickSlide h={slide.h} cat={slide.test.cat} reveal={reveal} index={slide.i} total={slide.of} vertical={vertical} />;
     case 'trick-empty':
       return <TrickEmptySlide />;
+    case 'ladder':
+      return <LadderSlide testId={slide.test.snap.id} testName={slide.test.snap.name} cat={slide.test.cat} detail={slide.test.detail} results={deck.d.results ?? []} contenders={deck.contenders} />;
     case 'truth':
       return <TruthSlide runId={deck.d.manifest.id} testName={slide.test.snap.name} cat={slide.test.cat} detail={slide.test.detail} pick={slide.pick} contenders={deck.contenders} />;
     case 'title':
