@@ -106,8 +106,11 @@ const Row = memo(function Row({
           color={row.color}
           tag={
             row.manual ? (
-              <span className="badge info manual-tag" title="Replies pasted in by hand — speed is human time and cost is user-entered, so they are not comparable">
-                {row.manualModel ? copiedByHandText(row.manualModel) : 'manual'}
+              <span
+                className="badge info manual-tag"
+                title={`${row.manualModel ? `${copiedByHandText(row.manualModel)}. ` : ''}Replies pasted in by hand — speed is human time and cost is user-entered, so they are not comparable`}
+              >
+                {row.manualModel ? 'hand-copied' : 'manual'}
               </span>
             ) : undefined
           }

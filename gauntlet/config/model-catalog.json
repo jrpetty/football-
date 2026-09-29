@@ -1,5 +1,5 @@
 {
-  "$comment": "Model catalogue for copy & paste testing (src/manual-models/catalog.ts). Data only: add a model by copying an entry. released is YYYY-MM; releaseDate, retiredDate and shutdownDate are YYYY-MM-DD (retiredDate may be YYYY-MM when only the month is known). status: available | deprecated (still works until shutdownDate) | retired | unverified (could not confirm). verifiedAt is the day the entry was checked against its source; null when the status or availability could not be confirmed. access.mayStillBeOn lists places a model MIGHT still be reachable: these were NOT checked.",
+  "$comment": "Model catalogue for copy & paste testing (src/manual-models/identity.ts and store.ts). Data only: add a model by copying an entry. released is YYYY-MM; releaseDate, retiredDate and shutdownDate are YYYY-MM-DD (retiredDate may be YYYY-MM when only the month is known). status: available | deprecated (still works until shutdownDate) | retired | unverified (could not confirm). verifiedAt is the day the entry was checked against its source; null when the status or availability could not be confirmed. access.mayStillBeOn lists places a model MIGHT still be reachable: these were NOT checked.",
   "checkedAt": "2026-09-29",
   "vendors": [
     {

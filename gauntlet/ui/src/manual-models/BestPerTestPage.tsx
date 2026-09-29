@@ -19,6 +19,8 @@ import './manual-models.css';
 
 const pct = (v: number | null) => (v === null ? '—' : (v * 100).toFixed(v >= 0.995 || v === 0 ? 0 : 1));
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+/** Hand-copied models carry the app in their tag, so the name can drop the "(claude.ai)" suffix. */
+const shortName = (m: BestModel) => (m.manualModel ? m.label.replace(/ \([^()]*\)$/, '') : m.label);
 const monthYear = (d: string | null) => (d ? `${MONTHS[Number(d.slice(5, 7)) - 1]} ${d.slice(0, 4)}` : 'release date unknown');
 
 function HowTag({ m }: { m: BestModel }) {
@@ -36,7 +38,7 @@ function EntryRow({ e, m, max }: { e: RankedEntry; m: BestModel; max: number }) 
       <span className="mm-rank tnum">{e.rank ?? '–'}</span>
       <span className="mm-entry-name">
         <span className="mm-entry-label ellipsis" title={m.label}>
-          {m.label}
+          {shortName(m)}
         </span>
         <span className="mm-entry-meta">
           <HowTag m={m} />
@@ -83,7 +85,13 @@ function TestCard({ t, data, limit }: { t: ReturnType<typeof viewBest>[number]; 
           <Icon.Trophy className="mm-leader-icon" />
           <div className="mm-leader-main">
             <div className="mm-eyebrow">{leaders.length > 1 ? `Joint leaders (${leaders.length})` : 'Leader'}</div>
-            <div className="mm-leader-name">{leaders.map((e) => models.get(e.contestantId)!.label).join(' = ')}</div>
+            <div className="mm-leader-name">
+              {leaders
+                .slice(0, 2)
+                .map((e) => shortName(models.get(e.contestantId)!))
+                .join(' = ')}
+              {leaders.length > 2 && <span className="muted"> + {leaders.length - 2} more</span>}
+            </div>
             <div className="mm-leader-meta">
               <HowTag m={lm} />
               <span>
@@ -130,13 +138,14 @@ function timelineData(points: ReturnType<typeof timelineFor>): HistoryData {
   return { suiteId: '', metric: 'index', families, undated: [], noResults: [], jumps: [], generatedAt: '' };
 }
 
-function Timeline({ data, filters, testId, onTest }: { data: BestData; filters: BestFilters; testId: string; onTest: (id: string) => void }) {
+function Timeline({ data, filters, testId, onTest, fromId, onFrom }: { data: BestData; filters: BestFilters; testId: string; onTest: (id: string) => void; fromId: string; onFrom: (id: string) => void }) {
   const tests = viewBest(data, { ...filters, category: '' });
   const counts = new Map(tests.map((t) => [t.id, timelineFor(data, t.id, filters).length]));
   const chosen = tests.some((t) => t.id === testId) ? testId : [...tests].sort((a, b) => (counts.get(b.id) ?? 0) - (counts.get(a.id) ?? 0))[0]?.id ?? '';
   const points = timelineFor(data, chosen, filters);
   const hist = useMemo(() => timelineData(points), [points]);
-  const first = points[0];
+  // "Since …": the owner's pick, else Claude 3 Opus when it took the test, else the oldest model.
+  const first = points.find((p) => p.model.id === fromId) ?? points.find((p) => (p.model.manualModel?.catalogId ?? p.model.id) === 'claude-3-opus') ?? points[0];
   const best = points.reduce<(typeof points)[number] | null>((b, p) => (!b || (p.entry.score ?? 0) > (b.entry.score ?? 0) ? p : b), null);
   const testName = tests.find((t) => t.id === chosen)?.name ?? '';
   return (
@@ -166,11 +175,19 @@ function Timeline({ data, filters, testId, onTest }: { data: BestData; filters: 
             {first && best && best !== first && (
               <div className="mm-since">
                 <span>
-                  Since <b>{first.model.label}</b> ({monthYear(first.model.releaseDate)}): <b className="tnum">{pct(first.entry.score)}</b>
+                  Since{' '}
+                  <select className="select sm mm-since-pick no-broadcast" value={first.model.id} onChange={(e) => onFrom(e.target.value)} aria-label="Compare from">
+                    {points.map((p) => (
+                      <option key={p.model.id} value={p.model.id}>
+                        {p.model.label}
+                      </option>
+                    ))}
+                  </select>
+                  <b className="only-broadcast">{shortName(first.model)}</b> ({monthYear(first.model.releaseDate)}): <b className="tnum">{pct(first.entry.score)}</b>
                 </span>
                 <Icon.ChevronRight />
                 <span>
-                  best now <b>{best.model.label}</b> ({monthYear(best.model.releaseDate)}): <b className="tnum">{pct(best.entry.score)}</b>
+                  best now <b>{shortName(best.model)}</b> ({monthYear(best.model.releaseDate)}): <b className="tnum">{pct(best.entry.score)}</b>
                 </span>
                 <span className="mm-since-delta tnum">{((best.entry.score ?? 0) - (first.entry.score ?? 0)) * 100 >= 0 ? '+' : ''}{(((best.entry.score ?? 0) - (first.entry.score ?? 0)) * 100).toFixed(0)} points</span>
               </div>
@@ -180,7 +197,9 @@ function Timeline({ data, filters, testId, onTest }: { data: BestData; filters: 
               {points.map(({ model, entry }) => (
                 <li key={model.id} style={{ ['--c' as string]: model.color }} className={cx(entry.leader && 'lead')}>
                   <span className="mm-strip-date">{monthYear(model.releaseDate)}</span>
-                  <span className="mm-strip-name">{model.label}</span>
+                  <span className="mm-strip-name" title={model.label}>
+                    {shortName(model)}
+                  </span>
                   <span className="mm-strip-score tnum">{pct(entry.score)}</span>
                   <HowTag m={model} />
                 </li>
@@ -321,11 +340,11 @@ export default function BestPerTestPage() {
           </Empty>
         </div>
       ) : view === 'timeline' ? (
-        <Timeline data={data} filters={filters} testId={query.get('test') ?? ''} onTest={(id) => setQuery({ test: id })} />
+        <Timeline data={data} filters={filters} testId={query.get('test') ?? ''} onTest={(id) => setQuery({ test: id })} fromId={query.get('from') ?? ''} onFrom={(id) => setQuery({ from: id })} />
       ) : (
         <div className="mm-grid">
           {shown.map((t) => (
-            <TestCard key={t.id} t={t} data={data} limit={6} />
+            <TestCard key={t.id} t={t} data={data} limit={8} />
           ))}
         </div>
       )}

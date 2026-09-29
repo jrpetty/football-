@@ -96,13 +96,17 @@ export function CopyPasteRunPanel({ onAdded, defaultOpen }: { onAdded: (views: C
                 return (
                   <div key={id} className="mm-run-item" style={{ ['--c' as string]: v?.color ?? 'var(--accent)' }}>
                     <div className="row" style={{ gap: 8 }}>
-                      <strong className="ellipsis">{m.label}</strong>
-                      <span className="muted tnum">{fmtCatalogDate(m.released)}</span>
+                      <strong className="ellipsis" title={m.label}>
+                        {m.label}
+                      </strong>
                       <span className="spacer" />
-                      <StatusBadge model={m} />
                       <button type="button" className="btn xs ghost icon" aria-label={`Remove ${m.label}`} onClick={() => setPicked((p) => new Map([...p].filter(([k]) => k !== id)))}>
                         <Icon.X />
                       </button>
+                    </div>
+                    <div className="row" style={{ gap: 8 }}>
+                      <span className="muted tnum">{fmtCatalogDate(m.released)}</span>
+                      <StatusBadge model={m} />
                     </div>
                     <select className="select sm" value={iface} aria-label={`Where you will paste ${m.label}`} onChange={(e) => setPicked((p) => new Map(p).set(id, e.target.value as ManualInterface))}>
                       {interfaceOptions(v).map((i) => (

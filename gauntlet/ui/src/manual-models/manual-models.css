@@ -329,7 +329,7 @@
 }
 .mm-run-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr);
+  grid-template-columns: minmax(0, 1.5fr) minmax(340px, 1fr);
   gap: 16px;
 }
 .mm-run-side {
@@ -354,7 +354,7 @@
 .mm-run-item {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
   padding: 8px 10px;
   border-radius: var(--r-sm);
   border-left: 4px solid var(--c);
@@ -376,7 +376,7 @@
 }
 .mm-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(520px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(640px, 1fr));
   gap: 16px;
   align-items: start;
 }
@@ -463,7 +463,7 @@
 }
 .mm-entry {
   display: grid;
-  grid-template-columns: 26px minmax(0, 1.5fr) minmax(60px, 1fr) 46px 36px;
+  grid-template-columns: 26px minmax(0, 2.2fr) minmax(60px, 1fr) 46px 36px;
   gap: 10px;
   align-items: center;
   padding: 5px 4px;
@@ -482,8 +482,12 @@
 }
 .mm-entry-name {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.mm-entry-name .mm-entry-label {
+  flex: 0 1 auto;
   min-width: 0;
 }
 .mm-entry-label {
@@ -492,7 +496,14 @@
 .mm-entry-meta {
   display: flex;
   gap: 6px;
-  flex-wrap: wrap;
+  flex: none;
+  max-width: 55%;
+  overflow: hidden;
+}
+.mm-entry-meta .badge {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .badge.mm-how {
   font-size: 0.68rem;
@@ -609,4 +620,12 @@ html[data-broadcast='on'] .mm-target-name {
   .mm-target-side {
     align-items: flex-start;
   }
+}
+
+.mm-since-pick {
+  display: inline-block;
+  width: auto;
+  max-width: 320px;
+  margin: 0 4px;
+  font-weight: 700;
 }

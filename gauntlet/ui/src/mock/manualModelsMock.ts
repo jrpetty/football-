@@ -157,9 +157,10 @@ function bestData(): BestData {
       // Not every model took every test (missing data); one test has a tie at the top.
       if ((mi + ti) % 5 === 3 && mi < 12) return [];
       const age = (Date.parse(m.releaseDate!) - t0) / (t1 - t0);
-      const n = m.manual ? 4 : 12;
-      let score = Math.round(Math.min(1, Math.max(0, 0.22 + 0.72 * age + (rng.next() - 0.5) * 0.18)) * n) / n;
-      if (tid === 'math.competition-mix' && (m.id === 'claude-opus-5-5' || m.id === 'gpt-5-6-sol')) score = 11 / 12;
+      const n = m.manual ? 8 : 24;
+      const reasoning = model(m.manualModel?.catalogId ?? m.id).reasoning ? 0.1 : 0;
+      let score = Math.round(Math.min(0.99, Math.max(0.02, 0.2 + 0.66 * age + reasoning + (rng.next() - 0.5) * 0.16)) * 1000) / 1000;
+      if (tid === 'math.competition-mix' && (m.id === 'claude-opus-5-5' || m.id === 'gpt-5-6-sol')) score = 0.958;
       const day = 1 + ((mi * 3 + ti) % 26);
       return [{ contestantId: m.id, score: m.id === 'o1' && ti === 2 ? null : score, ci95: null, n: m.id === 'o1' && ti === 2 ? 0 : n, attempts: n, passRate: null, lastTestedAt: `2026-09-${String(day).padStart(2, '0')}T12:00:00Z`, runs: m.manual ? 1 : 2, reassigned: m.id.startsWith('manual.claude-3-opus') && ti === 1 ? 3 : 0 }];
     });
