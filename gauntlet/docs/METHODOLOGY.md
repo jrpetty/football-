@@ -298,9 +298,10 @@ comparable.
 "model-max"`, e.g. 128,000 tokens for Opus 5.5, 64,000 for Haiku 4.5), so no model is held back by an artificial
 cap: in the calibration Opus needed 67,000–96,000 tokens for levels it solved, more than a fixed 64,000 would
 allow. A long reply that fails is not retried more than once (`maxRetries: 1`), and the time limit is one hour per
-level. The estimate is 30,000 output tokens per level (strong models think long on low levels and often stop
-early on levels they judge hopeless): about **$30 per model per repeat for all 50 levels at Opus prices** and
-about **$7.50 for Haiku**. The honest **upper bound** is every level using the model's whole maximum: 50 ×
+level. The estimate is 60,000 output tokens per level, from the calibration (Opus averaged 63,000 per level,
+counting a reply that hit its maximum as the full 128,000; Haiku averaged 16,000): about **$60 per repeat for all
+50 levels for Opus 5.5**. For small models the estimate is on the safe side: Haiku 4.5 is estimated at $15 but
+cost about $4 in the calibration. The honest **upper bound** is every level using the model's whole maximum: 50 ×
 128,000 tokens ≈ **$128 for Opus 5.5** and 50 × 64,000 ≈ **$16 for Haiku 4.5** per repeat. New Run and the Cost
 Planner show both numbers, and a spending cap (`--max-cost`, or "same token limit for every model") keeps a run
 inside a budget.

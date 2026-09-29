@@ -19,7 +19,7 @@
   "maxRetries": 1,
   "estimate": {
     "inputTokens": 350,
-    "outputTokens": 30000
+    "outputTokens": 60000
   },
   "author": "Gauntlet Horizon",
   "createdAt": "2026-09-28",

@@ -573,7 +573,7 @@ The Horizon suite is for the question every AI video eventually runs into: *"the
 so what now?"* Its five tests are ladders of ten levels, built so that today's best models stall low and
 tomorrow's can climb. The story on screen is simple: **how far up the ladder did each model get?**
 
-**Run it.** New Run → suite **Horizon: Tests Built for Future Models** (or `node src/cli.ts run --models a,b --suite horizon --repeats 1 --max-cost 60`).
+**Run it.** New Run → suite **Horizon: Tests Built for Future Models** (or `node src/cli.ts run --models a,b --suite horizon --repeats 1 --max-cost 150`).
 Use 1 repeat for a first look and 3 for a published result. Replies are long; see the cost note below and set a
 spending cap.
 
@@ -603,8 +603,8 @@ spending cap.
 
 **Cost.** Every model may write up to its own maximum reply ("model's maximum", e.g. 128,000 tokens for Opus
 5.5), because the best answers are long: in the calibration Opus used 67,000–96,000 tokens on some levels it
-solved. The estimate is about **$30 per frontier model per repeat** for the whole suite and **$7–8 for a small
-model**; the worst case (every level using the whole maximum) is about **$128 for Opus 5.5** and **$16 for
+solved. The estimate is about **$60 per frontier model per repeat** for the whole suite (Opus 5.5 really used
+about that much) and at most **$15 for a small model** (Haiku 4.5 really cost about $4); the worst case (every level using the whole maximum) is about **$128 for Opus 5.5** and **$16 for
 Haiku 4.5**. New Run and the Cost Planner show both numbers before you start. Set a spending cap, or pick
 "Same token limit for every model" if you want a cheaper, level playing field.
 
