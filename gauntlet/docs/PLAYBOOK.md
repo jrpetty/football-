@@ -601,9 +601,17 @@ spending cap.
 * A model that honestly says "I can't do this reliably without a computer" scores 0 on that level, the same as a
   wrong answer. That is fine to show: knowing its limits is good behaviour, but the ladder measures ability.
 
-**Cost.** Budget roughly **$15–30 per frontier model per repeat** for the whole suite (at $20 per million output
-tokens) and **$2–5 for a small model**. Most of it is the first few levels, where strong models think for a long
-time; on levels they judge hopeless they often stop early. The Cost Planner shows the estimate before you start.
+**Cost.** Every model may write up to its own maximum reply ("model's maximum", e.g. 128,000 tokens for Opus
+5.5), because the best answers are long: in the calibration Opus used 67,000–96,000 tokens on some levels it
+solved. The estimate is about **$30 per frontier model per repeat** for the whole suite and **$7–8 for a small
+model**; the worst case (every level using the whole maximum) is about **$128 for Opus 5.5** and **$16 for
+Haiku 4.5**. New Run and the Cost Planner show both numbers before you start. Set a spending cap, or pick
+"Same token limit for every model" if you want a cheaper, level playing field.
+
+**What today's models score** (blind calibration, one attempt per level, September 2026; details in
+[AUDIT.md](AUDIT.md#horizon-tier-blind-calibration)): Opus 5.5 about a quarter of the suite, clearly solving the
+first two to four levels of every ladder; Haiku 4.5 about 2%; random guessing 0%. So a new model that reaches
+level 5 anywhere is news.
 
 **Mock mode.** `?mock=1` has a demo run, *Horizon ladders · demo climb*, with fictional models at different
 heights, so you can rehearse the slides with no API keys. The screenshots are in `docs/screenshots/horizon/`.
